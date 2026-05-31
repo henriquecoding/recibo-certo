@@ -5,6 +5,7 @@ import { gerarPrazos, diasAte, META_CATEGORIA, type Prazo, type CategoriaPrazo }
 import CalendarioPrazos from "@/components/dashboard/CalendarioPrazos";
 import { Calendar, LayoutGrid, BellAlert } from "@/components/ui/Icons";
 import ProHint from "@/components/ui/ProHint";
+import PartnerSpot from "@/components/dashboard/PartnerSpot";
 
 const FILTROS: { id: CategoriaPrazo | "todos"; label: string }[] = [
   { id: "todos", label: "Todos" },
@@ -121,7 +122,11 @@ export default function PrazosPage() {
         </ul>
       )}
 
-      <p className="text-xs text-stone-400 mt-8 leading-relaxed">
+      <div className="mt-8 max-w-sm">
+        <PartnerSpot context="prazos" />
+      </div>
+
+      <p className="text-xs text-stone-400 mt-6 leading-relaxed">
         Datas com base nas regras gerais para trabalhadores independentes. Alguns prazos podem variar consoante o teu
         enquadramento (regime de IVA, retenção, etc.). Confirma sempre no Portal das Finanças e na Segurança Social Direta.
       </p>

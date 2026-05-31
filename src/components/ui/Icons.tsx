@@ -228,6 +228,56 @@ export function ArrowLeft({ size = 14, className }: IconProps) {
   );
 }
 
+// ─── Ícones de parceiros ─────────────────────────────────────
+export function Bank({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M3 21h18M3 10h18M12 3l9 7H3l9-7z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M7 10v7M12 10v7M17 10v7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function Building({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M3 21V8l9-5 9 5v13" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M9 21v-5h6v5" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <rect x="8" y="9.5" width="2" height="2" rx="0.4" fill="currentColor" />
+      <rect x="14" y="9.5" width="2" height="2" rx="0.4" fill="currentColor" />
+      <rect x="8" y="13.5" width="2" height="2" rx="0.4" fill="currentColor" />
+      <rect x="14" y="13.5" width="2" height="2" rx="0.4" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function FileSign({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V8l-6-5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M14 3v5h5M8 12h8M8 16h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function Heart({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M12 21C5.5 17.4 3 13.5 3 10a5 5 0 0110-1 1 1 0 002 0 5 5 0 0110 1c0 3.5-2.5 7.4-9 11z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Invoice({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V8l-6-5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M14 3v5h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 11h8M8 14h5M8 17h3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 // ─── Logótipo (marca de palavra) ─────────────────────────────
 export function Logo({ small = false }: { small?: boolean }): ReactNode {
   const box = small ? "w-6 h-6" : "w-7 h-7";

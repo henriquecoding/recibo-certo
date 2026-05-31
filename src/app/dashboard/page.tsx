@@ -16,6 +16,7 @@ import DistribuicaoDonut from "@/components/dashboard/DistribuicaoDonut";
 import TabelaRecibos from "@/components/dashboard/TabelaRecibos";
 import MiniCalendario from "@/components/dashboard/MiniCalendario";
 import Onboarding from "@/components/dashboard/Onboarding";
+import PartnerSpot from "@/components/dashboard/PartnerSpot";
 
 function mesAtual(recibos: Recibo[]): Recibo[] {
   const agora = new Date();
@@ -195,6 +196,13 @@ export default function VisaoGeral() {
                   ))}
                 </ul>
               </div>
+            </div>
+          )}
+
+          {/* Parceiro contextual */}
+          {temRecibos && (
+            <div className="col-span-12 sm:col-span-6 lg:col-span-4">
+              <PartnerSpot context="dashboard" />
             </div>
           )}
 

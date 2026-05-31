@@ -9,6 +9,7 @@ import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
 import InfoTip from "@/components/ui/InfoTip";
 import ProHint from "@/components/ui/ProHint";
+import PartnerSpot from "@/components/dashboard/PartnerSpot";
 import {
   ATIVIDADES,
   efeitoFiscal,
@@ -458,7 +459,11 @@ export default function SimuladorPage() {
         Gostavas de guardar esta simulação e compará-la com outros cenários ao longo do ano? Isso faz parte do Pro.
       </ProHint>
 
-      <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-alert-border bg-alert-bg p-4">
+      <div className="mt-4">
+        <PartnerSpot context="simulador" />
+      </div>
+
+      <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-alert-border bg-alert-bg p-4">
         <span className="mt-0.5 flex-shrink-0 text-alert-text"><Warning size={14} /></span>
         <p className="text-xs leading-relaxed text-alert-text">
           {categoria === "F"
