@@ -1,5 +1,6 @@
 // Sistema de parceiros — recomendações nativas contextuais.
-// Substitui os `url` pelos links de afiliado reais antes de ir a produção.
+// O catálogo vem do Supabase (gerido pelo admin); fallback para dados estáticos
+// se o Supabase não estiver disponível.
 
 export interface Partner {
   id: string;
@@ -11,7 +12,8 @@ export interface Partner {
   icone: "bank" | "building" | "file-sign" | "heart" | "invoice";
 }
 
-const CATALOG: Partner[] = [
+// Catálogo estático de fallback (usado quando Supabase não responde)
+export const STATIC_CATALOG: Partner[] = [
   {
     id: "conta-pj",
     nome: "Conta profissional online",
@@ -64,13 +66,15 @@ const CATALOG: Partner[] = [
   },
 ];
 
-// Tracking por contexto (idempotente: mesmo contexto devolve sempre o mesmo parceiro
-// na sessão, o que é seguro com o double-invoke do React StrictMode em dev).
+// ── Tracking de frequência (client-side) ────────────────────
+// Idempotente por contexto — o mesmo contexto devolve sempre o mesmo parceiro
+// na sessão, tornando-o seguro com o double-invoke do React StrictMode em dev.
+
 const KEY_DISMISSED = (id: string) => `recibocerto:partner:${id}:dismissed`;
 const KEY_SESSION_MAP = "recibocerto:partner:contextmap";
 const SESSION_CAP = 2; // máx. contextos distintos por sessão
 
-type ContextMap = Record<string, string>; // contexto → partnerId
+type ContextMap = Record<string, string>;
 
 function getContextMap(): ContextMap {
   try {
@@ -104,21 +108,25 @@ export function dismissPartner(id: string): void {
   }
 }
 
-export function getPartnerForContext(context: string): Partner | null {
+/**
+ * Devolve o parceiro a mostrar para o `context` dado.
+ * Aceita um `catalog` externo (vindo do Supabase); se omitido usa STATIC_CATALOG.
+ */
+export function getPartnerForContext(context: string, catalog?: Partner[]): Partner | null {
   if (typeof window === "undefined") return null;
 
+  const src = catalog ?? STATIC_CATALOG;
   const map = getContextMap();
 
-  // Já foi mostrado um parceiro para este contexto nesta sessão → devolver o mesmo
+  // Já mostrado neste contexto nesta sessão → devolver o mesmo
   if (map[context]) {
-    return CATALOG.find((p) => p.id === map[context]) ?? null;
+    return src.find((p) => p.id === map[context]) ?? null;
   }
 
   // Cap de sessão (nº de contextos distintos já cobertos)
   if (Object.keys(map).length >= SESSION_CAP) return null;
 
-  // Candidatos para este contexto que ainda não foram dispensados
-  const candidates = CATALOG.filter(
+  const candidates = src.filter(
     (p) => p.contextos.includes(context) && !isDismissed(p.id)
   );
   if (!candidates.length) return null;

@@ -1,0 +1,92 @@
+// Helpers de acesso ao Supabase para a área de admin.
+// Todas as operações de escrita passam pela RLS — só funcionam com sessão admin.
+
+import { getSupabase } from "./client";
+
+export interface PartnerRow {
+  id: string;
+  nome: string;
+  descricao: string;
+  url: string;
+  cta: string;
+  contextos: string[];
+  icone: "bank" | "building" | "file-sign" | "heart" | "invoice";
+  ativo: boolean;
+  ordem: number;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export type PartnerInput = Omit<PartnerRow, "criado_em" | "atualizado_em">;
+
+// ── Parceiros ────────────────────────────────────────────────
+
+export async function listarParceirosTodos(): Promise<PartnerRow[]> {
+  const { data, error } = await getSupabase()
+    .from("admin_partners")
+    .select("*")
+    .order("ordem", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PartnerRow[];
+}
+
+export async function listarParceirosAtivos(): Promise<PartnerRow[]> {
+  const { data, error } = await getSupabase()
+    .from("admin_partners")
+    .select("*")
+    .eq("ativo", true)
+    .order("ordem", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PartnerRow[];
+}
+
+export async function buscarParceiro(id: string): Promise<PartnerRow | null> {
+  const { data } = await getSupabase()
+    .from("admin_partners")
+    .select("*")
+    .eq("id", id)
+    .single();
+  return (data as PartnerRow | null) ?? null;
+}
+
+export async function criarParceiro(p: PartnerInput): Promise<{ erro?: string }> {
+  const { error } = await getSupabase().from("admin_partners").insert(p);
+  return error ? { erro: error.message } : {};
+}
+
+export async function atualizarParceiro(
+  id: string,
+  dados: Partial<Omit<PartnerInput, "id">>
+): Promise<{ erro?: string }> {
+  const { error } = await getSupabase()
+    .from("admin_partners")
+    .update(dados)
+    .eq("id", id);
+  return error ? { erro: error.message } : {};
+}
+
+export async function eliminarParceiro(id: string): Promise<{ erro?: string }> {
+  const { error } = await getSupabase()
+    .from("admin_partners")
+    .delete()
+    .eq("id", id);
+  return error ? { erro: error.message } : {};
+}
+
+// ── Perfis / utilizadores ────────────────────────────────────
+
+export async function verificarAdmin(userId: string): Promise<boolean> {
+  const { data } = await getSupabase()
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .single();
+  return data?.role === "admin";
+}
+
+export async function contarUtilizadores(): Promise<number> {
+  const { count } = await getSupabase()
+    .from("profiles")
+    .select("*", { count: "exact", head: true });
+  return count ?? 0;
+}
