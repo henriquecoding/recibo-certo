@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Logo, LayoutGrid, Receipt, History, Calendar, Calculator, Scale, ArrowLeft, User } from "@/components/ui/Icons";
+import { Logo, LayoutGrid, Receipt, History, Calendar, Calculator, ArrowLeft, User } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { AuthProvider } from "@/lib/supabase/auth";
 import AccountBox from "@/components/dashboard/AccountBox";
@@ -21,7 +21,6 @@ const NAV: NavItem[] = [
   { href: "/dashboard/receitas", label: "Receitas", short: "Receitas", icon: History },
   { href: "/dashboard/prazos", label: "Prazos fiscais", short: "Prazos", icon: Calendar },
   { href: "/dashboard/simulador", label: "Simulador IRS", short: "IRS", icon: Calculator },
-  { href: "/dashboard/comparador", label: "Recibos vs empresa", short: "Comparar", icon: Scale },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -97,7 +96,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <main className="min-h-screen p-5 pb-24 sm:p-6 lg:p-10 lg:pb-10">{children}</main>
 
       {/* Bottom nav (mobile) */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-stone-100 bg-white/95 backdrop-blur-xl lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-stone-100 bg-white/95 backdrop-blur-xl lg:hidden">
         {NAV.map((item) => {
           const active = isActive(pathname, item.href);
           const Icon = item.icon;

@@ -371,7 +371,7 @@ export default function Calculadora() {
               <AnimatedNumber value={result.liquido} />
             </div>
             <div className="text-sm text-stone-400 mt-1">
-              de <AnimatedNumber value={result.bruto} /> faturados
+              de <AnimatedNumber value={result.bruto + result.iva} /> faturados
               {result.taxaIVA > 0 && (
                 <span>
                   {" · "}entra na conta: <AnimatedNumber value={result.entradaConta} />
@@ -503,6 +503,15 @@ export default function Calculadora() {
               <path d="M5 12h13M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </Link>
+          <a
+            href="#empresa"
+            className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-brand transition-colors hover:text-brand-dark"
+          >
+            Será que vale a pena abrir uma empresa? Descobre
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M5 12h13M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </a>
         </div>
       </div>
     </div>

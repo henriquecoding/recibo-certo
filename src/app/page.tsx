@@ -7,6 +7,7 @@ import FAQ from "@/components/FAQ";
 import Fontes from "@/components/Fontes";
 import EmailCapture from "@/components/EmailCapture";
 import Comparacao from "@/components/Comparacao";
+import SimuladorEmpresa from "@/components/SimuladorEmpresa";
 import Precos from "@/components/Precos";
 import Footer from "@/components/Footer";
 import Reveal from "@/components/ui/Reveal";
@@ -64,6 +65,8 @@ export default function Home() {
               </Reveal>
             </div>
           </section>
+
+          <SimuladorEmpresa />
 
           <Stats />
 
