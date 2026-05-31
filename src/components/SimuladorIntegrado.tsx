@@ -59,14 +59,14 @@
  *  · IRS dividendos: 28% (taxa liberatória, Art. 71.º CIRS)
  *  · SS gerente: empresa 23,75% + trabalhador 11% sobre salário bruto
  *
- * Bugs corrigidos vs versão anterior:
- *  · Slider bug visual: thumb e balão flutuante agora sincronizados
- *  · Sincronização bidirecional bruto ↔ brutoAnual (÷12 / ×12)
- *  · breakEven memoizado com dep [custosEmpresa] (não recalculado cada render)
- *  · Regime simplificado: SS deduzida antes de calcular rendimento tributável
- *  · IRS Jovem: aplica-se ao rendimento coletável (não ao bruto)
- *  · Painel Empresa: agora inclui despesas, custos extra, salário gerente
- *  · Derrama municipal separada de IRC
+ * Correções aplicadas:
+ *  · [BUG1] Thumb slider: contentor agora tem h-8, visual bar absoluta em
+ *    top-1/2 -translate-y-1/2. Thumb 100% dentro do hit area — sem deslocamento.
+ *  · [BUG2] IVA: removido toggle "Com IVA incluído / IVA à parte" que entrava
+ *    em conflito com o seletor de regime IVA. Input sempre em base pré-IVA.
+ *  · [BUG3] Inputs: adicionado clampFree (só min/max, sem step) para inputs de
+ *    texto — permite qualquer valor decimal. clamp com step mantido apenas para
+ *    arrastar slider e botões ±.
  */
 
 import {
@@ -101,37 +101,19 @@ import {
 import { calcular, taxaIVAEfetiva, type RegimeIVA } from "@/lib/fiscal";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CONSTANTES FISCAIS 2026 (todas verificadas com fontes oficiais)
+// CONSTANTES FISCAIS 2026
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** IAS 2026 — Indexante dos Apoios Sociais */
 const IAS_2026 = 537.13;
-
-/** Mínimo de existência IRS 2026 (OE2026 — 14×SMN = 14×920€) */
 const MINIMO_EXISTENCIA_2026 = 12_880;
-
-/** Taxa SS trabalhadores independentes */
 const SS_TAXA_TI = 0.214;
-
-/** Base SS: 70% do rendimento relevante */
 const SS_BASE_PCT = 0.7;
-
-/** Máximo de contribuição mensal SS: 12×IAS */
-const SS_MAX_MENSAL = 12 * IAS_2026 * SS_TAXA_TI; // ≈ 1379€
-
-/** Mínimo de contribuição mensal SS */
+const SS_MAX_MENSAL = 12 * IAS_2026 * SS_TAXA_TI;
 const SS_MIN_MENSAL = 20;
-
-/** Limite isenção IVA Art. 53.º (2026) */
 const IVA_ISENCAO_LIMITE = 15_000;
-
-/** Limite imediato IVA (25% acima do limite) */
 const IVA_ISENCAO_LIMITE_IMEDIATO = 18_750;
+const IRS_JOVEM_LIMITE_2026 = 55 * IAS_2026;
 
-/** IRS Jovem — limite de isenção: 55×IAS 2026 */
-const IRS_JOVEM_LIMITE_2026 = 55 * IAS_2026; // 29 542,15€
-
-/** IRS Jovem — percentagens de isenção por ano (índice 1–10) */
 const IRS_JOVEM_ISENCAO: Record<number, number> = {
   1: 1.0,
   2: 0.75,
@@ -145,14 +127,8 @@ const IRS_JOVEM_ISENCAO: Record<number, number> = {
   10: 0.25,
 };
 
-/** IRS Jovem — idade máxima (35 anos inclusive) */
 const IRS_JOVEM_IDADE_MAX = 35;
 
-/**
- * Escalões IRS 2026 (Art. 68.º CIRS, atualizados 3,51% pelo OE2026)
- * Fonte: OE2026 / Crowe Portugal / FedFinance / SimuladorNeto
- * Redução de 0,3pp nas taxas dos escalões 2.º ao 5.º
- */
 const ESCALOES_IRS_2026 = [
   { ate: 8_342, taxa: 0.125 },
   { ate: 12_587, taxa: 0.167 },
@@ -162,13 +138,9 @@ const ESCALOES_IRS_2026 = [
   { ate: 43_092, taxa: 0.364 },
   { ate: 80_000, taxa: 0.45 },
   { ate: 250_000, taxa: 0.48 },
-  { ate: Infinity, taxa: 0.48 }, // solidariedade 5% acima de 250k (≈53%)
+  { ate: Infinity, taxa: 0.48 },
 ] as const;
 
-/**
- * Coeficientes regime simplificado (Art. 31.º CIRS)
- * e taxas de retenção na fonte (Art. 101.º CIRS, OE2025 — mantidos 2026)
- */
 const TIPO_ATIVIDADE_PARAMS = {
   art151: {
     coef: 0.75,
@@ -187,31 +159,21 @@ const TIPO_ATIVIDADE_PARAMS = {
 
 type TipoAtividade = keyof typeof TIPO_ATIVIDADE_PARAMS;
 
-/** IRC PME 2026 (OE2026) */
 const IRC_PME = {
-  taxa1: 0.15, // primeiros 50 000€
+  taxa1: 0.15,
   limite: 50_000,
-  taxa2: 0.19, // excedente
+  taxa2: 0.19,
 };
 
-/** Derrama municipal média (Lisboa/Porto: 1,5%) */
 const DERRAMA_MUNI = 0.015;
-
-/** IRS dividendos — taxa liberatória (Art. 71.º CIRS) */
 const IRS_DIVIDENDOS = 0.28;
-
-/** SS empresa (gerente-sócio) */
-const SS_EMP_TAXA = 0.2375; // contribuição patronal
-const SS_TRAB_TAXA = 0.11; // contribuição trabalhador
+const SS_EMP_TAXA = 0.2375;
+const SS_TRAB_TAXA = 0.11;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FUNÇÕES DE CÁLCULO FISCAL
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Calcula IRS com base nos escalões progressivos 2026.
- * Retorna o imposto total (não a taxa marginal).
- */
 function calcularIRS(rendTributavel: number): number {
   if (rendTributavel <= 0) return 0;
   if (rendTributavel <= MINIMO_EXISTENCIA_2026) return 0;
@@ -233,11 +195,6 @@ function calcularIRS(rendTributavel: number): number {
   return Math.max(0, imposto);
 }
 
-/**
- * Calcula contribuições SS anuais para trabalhador independente.
- * Fórmula: faturação × 70% ÷ 12 × 21,4% × 12 = faturação × 70% × 21,4%
- * Clampado entre min 20€/mês e max 12×IAS×21,4%/mês
- */
 function calcularSSAnual(faturacaoAnual: number): number {
   const rendRelevMensal = (faturacaoAnual * SS_BASE_PCT) / 12;
   const contribuicaoMensal = Math.min(
@@ -247,7 +204,6 @@ function calcularSSAnual(faturacaoAnual: number): number {
   return contribuicaoMensal * 12;
 }
 
-/** Resultado de simulação anual — Recibos Verdes */
 interface ResultadoAnualRV {
   faturacao: number;
   coeficiente: number;
@@ -258,7 +214,7 @@ interface ResultadoAnualRV {
   rendTributavel: number;
   irs: number;
   retencaoAnual: number;
-  acertoIRS: number; // positivo = reembolso; negativo = pagar
+  acertoIRS: number;
   liquido: number;
   taxaEfetiva: number;
 }
@@ -274,13 +230,11 @@ function simularAnualRV(
 
   const ssAnual = isencaoSS ? 0 : calcularSSAnual(faturacao);
 
-  // IRS Jovem aplica-se ao rendimento coletável até ao limite
   const isencaoPct =
     irsJovemAno > 0 ? (IRS_JOVEM_ISENCAO[irsJovemAno] ?? 0) : 0;
   const baseJovem = Math.min(rendColetavel, IRS_JOVEM_LIMITE_2026);
   const isencaoJovemValor = baseJovem * isencaoPct;
 
-  // Rendimento tributável = colectável − SS − isenção IRS Jovem
   const rendTributavel = Math.max(
     0,
     rendColetavel - ssAnual - isencaoJovemValor,
@@ -288,7 +242,7 @@ function simularAnualRV(
 
   const irs = calcularIRS(rendTributavel);
   const retencaoAnual = faturacao * ret;
-  const acertoIRS = retencaoAnual - irs; // positivo = reembolso
+  const acertoIRS = retencaoAnual - irs;
 
   const liquido = faturacao - irs - ssAnual;
 
@@ -308,7 +262,6 @@ function simularAnualRV(
   };
 }
 
-/** Resultado de simulação — Empresa Lda */
 interface ResultadoEmpresa {
   faturacao: number;
   despesasOper: number;
@@ -322,7 +275,7 @@ interface ResultadoEmpresa {
   lucroLiquido: number;
   dividendos: number;
   irsDividendos: number;
-  liquidoGerente: number; // inclui salário líquido + dividendos líquidos
+  liquidoGerente: number;
   taxaEfetiva: number;
 }
 
@@ -338,7 +291,6 @@ function simularEmpresa(
   const totalCustos = despesasOper + custosExtra + salGerente + ssSalGerente;
   const lucroTributavel = Math.max(0, faturacao - totalCustos);
 
-  // IRC PME 2026: 15% até 50k€ + 19% no excedente
   let irc = 0;
   if (lucroTributavel <= IRC_PME.limite) {
     irc = lucroTributavel * IRC_PME.taxa1;
@@ -358,9 +310,7 @@ function simularEmpresa(
     irsDividendos = dividendos * IRS_DIVIDENDOS;
   }
 
-  // Salário líquido do gerente (retira SS trabalhador 11%)
   const salarioLiqGerente = salGerente * (1 - SS_TRAB_TAXA);
-
   const liquidoGerente = salarioLiqGerente + (dividendos - irsDividendos);
 
   return {
@@ -381,7 +331,6 @@ function simularEmpresa(
   };
 }
 
-/** Calcula o ponto de viragem (break-even) empresa vs RV */
 function calcularBreakEven(
   tipo: TipoAtividade,
   custosExtra: number,
@@ -422,7 +371,13 @@ const ESCALAO_LABEL: Record<EscalaoIVA, string> = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// COMPONENTE: NumericSlider (corrigido — sem bug de scroll)
+// COMPONENTE: NumericSlider
+// ─────────────────────────────────────────────────────────────────────────────
+// CORREÇÕES APLICADAS:
+//  [BUG1] Hit area: trackRef agora tem h-8, visual bar é div absoluta centrada.
+//         Thumb (h-6) fica 100% dentro do contentor de eventos — sem gap.
+//  [BUG3] clampFree: inputs de texto usam clampFree (só min/max, sem step).
+//         Slider e botões ± continuam a usar clamp com step.
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface NumericSliderProps {
@@ -463,9 +418,16 @@ function NumericSlider({
     if (!focused) setInputStr(String(value));
   }, [value, focused]);
 
+  // [BUG3 FIX] clamp com step — para slider e botões ±
   const clamp = useCallback(
     (v: number) => Math.round(Math.min(max, Math.max(min, v)) / step) * step,
     [min, max, step],
+  );
+
+  // [BUG3 FIX] clampFree sem step — para inputs de texto (aceita qualquer decimal)
+  const clampFree = useCallback(
+    (v: number) => Math.min(max, Math.max(min, v)),
+    [min, max],
   );
 
   const pctVal = ((value - min) / (max - min)) * 100;
@@ -520,17 +482,19 @@ function NumericSlider({
     [value, step, min, max, clamp, onChange],
   );
 
+  // [BUG3 FIX] handleInputChange usa clampFree → permite qualquer valor decimal
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/[^\d,\.]/g, "");
     setInputStr(raw);
     const n = parseFloat(raw.replace(",", "."));
-    if (!isNaN(n)) onChange(clamp(n));
+    if (!isNaN(n)) onChange(clampFree(n));
   };
 
+  // [BUG3 FIX] handleInputBlur usa clampFree → não arredonda ao step
   const handleInputBlur = () => {
     setFocused(false);
     const n = parseFloat(inputStr.replace(",", "."));
-    const v = isNaN(n) ? value : clamp(n);
+    const v = isNaN(n) ? value : clampFree(n);
     onChange(v);
     setInputStr(String(v));
   };
@@ -549,6 +513,7 @@ function NumericSlider({
         </div>
 
         <div className="flex items-center gap-1.5">
+          {/* Botão − usa clamp com step */}
           <button
             type="button"
             onPointerDown={(e) => {
@@ -590,6 +555,7 @@ function NumericSlider({
             />
           </div>
 
+          {/* Botão + usa clamp com step */}
           <button
             type="button"
             onPointerDown={(e) => {
@@ -606,8 +572,19 @@ function NumericSlider({
         </div>
       </div>
 
-      {/* Balão flutuante — posicionado DENTRO do bloco de pista para evitar deslocamento */}
-      <div className="pointer-events-none relative h-7">
+      {/*
+       * [BUG1 FIX] Slider restructured:
+       * Antes: balloon (h-7 separado) + track (h-3, ref aqui, thumb absoluto com top-1/2 -translate-y-1/2)
+       *        → thumb (h-6=24px) estendia fora do track (h-3=12px), lower half sem eventos
+       *
+       * Agora: balloon (h-6 separado) + trackRef div (h-8=32px, hit area grande)
+       *        → visual bar é absoluta centrada dentro do h-8
+       *        → thumb (h-6=24px) centrado via top-1/2/-translate-y-1/2 dentro do h-8
+       *        → thumb fica totalmente dentro do hit area: (32-24)/2=4px de margem em cima e baixo
+       */}
+
+      {/* Balão flutuante — separado mas sem eventos */}
+      <div className="pointer-events-none relative h-6">
         <div
           className="absolute bottom-0 -translate-x-1/2"
           style={{ left: `${Math.min(96, Math.max(4, pctVal))}%` }}
@@ -622,7 +599,7 @@ function NumericSlider({
         </div>
       </div>
 
-      {/* Pista + thumb */}
+      {/* Hit area (h-8) — ref aqui, capta eventos em toda a altura */}
       <div
         ref={trackRef}
         role="slider"
@@ -636,46 +613,52 @@ function NumericSlider({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onKeyDown={onKeyDown}
-        className={`relative h-3 select-none rounded-full bg-stone-100 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 dark:bg-stone-800 ${
+        className={`relative h-8 select-none focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${
           dragging ? "cursor-grabbing" : "cursor-grab"
         }`}
       >
-        {/* Faixa preenchida */}
-        <div
-          className="h-full rounded-full bg-brand transition-none"
-          style={{ width: `${pctVal}%` }}
-        />
-
-        {/* Marcador break-even */}
-        {bePct != null && (
+        {/* Visual track bar — absoluta e centrada verticalmente dentro do h-8 */}
+        <div className="absolute inset-x-0 top-1/2 h-3 -translate-y-1/2 rounded-full bg-stone-100 dark:bg-stone-800">
+          {/* Faixa preenchida */}
           <div
-            className="absolute top-1/2 h-4 w-0.5 -translate-x-1/2 -translate-y-1/2 bg-alert-text"
-            style={{ left: `${bePct}%` }}
-            aria-hidden
+            className="h-full rounded-full bg-brand transition-none"
+            style={{ width: `${pctVal}%` }}
           />
-        )}
 
-        {/* Thumb */}
-        <m.div
+          {/* Marcador break-even */}
+          {bePct != null && (
+            <div
+              className="absolute top-1/2 h-4 w-0.5 -translate-x-1/2 -translate-y-1/2 bg-alert-text"
+              style={{ left: `${bePct}%` }}
+              aria-hidden
+            />
+          )}
+        </div>
+
+        {/* Thumb — centrado dentro do h-8 (4px de margem top e bottom) */}
+        <div
           className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
           style={{ left: `${pctVal}%` }}
-          animate={{ scale: dragging ? 1.15 : 1 }}
-          transition={{ duration: 0.1 }}
         >
-          <div
-            className={`flex h-6 w-6 items-center justify-center rounded-full border-2 bg-white shadow-md transition-all dark:bg-stone-900 ${
-              dragging
-                ? "border-brand-dark shadow-[0_0_0_4px_rgba(29,158,117,0.2)]"
-                : "border-brand shadow-[0_2px_8px_rgba(29,158,117,0.2)]"
-            }`}
+          <m.div
+            animate={{ scale: dragging ? 1.15 : 1 }}
+            transition={{ duration: 0.1 }}
           >
-            <div className="flex gap-0.5">
-              <span className="block h-1.5 w-0.5 rounded-full bg-brand opacity-70" />
-              <span className="block h-1.5 w-0.5 rounded-full bg-brand opacity-70" />
-              <span className="block h-1.5 w-0.5 rounded-full bg-brand opacity-70" />
+            <div
+              className={`flex h-6 w-6 items-center justify-center rounded-full border-2 bg-white shadow-md transition-all dark:bg-stone-900 ${
+                dragging
+                  ? "border-brand-dark shadow-[0_0_0_4px_rgba(29,158,117,0.2)]"
+                  : "border-brand shadow-[0_2px_8px_rgba(29,158,117,0.2)]"
+              }`}
+            >
+              <div className="flex gap-0.5">
+                <span className="block h-1.5 w-0.5 rounded-full bg-brand opacity-70" />
+                <span className="block h-1.5 w-0.5 rounded-full bg-brand opacity-70" />
+                <span className="block h-1.5 w-0.5 rounded-full bg-brand opacity-70" />
+              </div>
             </div>
-          </div>
-        </m.div>
+          </m.div>
+        </div>
       </div>
 
       {/* Rótulos min / break-even / max */}
@@ -764,7 +747,7 @@ function DetalheRow({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// COMPONENTE: EmpresaInputs (novo — visível no painel Empresa)
+// COMPONENTE: EmpresaInputs
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface EmpresaInputsProps {
@@ -794,7 +777,6 @@ function EmpresaInputs({
         Parâmetros da empresa
       </div>
 
-      {/* Despesas operacionais */}
       <NumericSlider
         label="Despesas operacionais (€/ano)"
         value={despesasOper}
@@ -813,7 +795,6 @@ function EmpresaInputs({
         }
       />
 
-      {/* Custos extra da empresa */}
       <NumericSlider
         label="Custos extra — estrutura (€/ano)"
         value={custosExtra}
@@ -832,7 +813,6 @@ function EmpresaInputs({
         }
       />
 
-      {/* Salário gerente */}
       <NumericSlider
         label="Salário gerente (€/mês bruto)"
         value={salGerenteMensal}
@@ -852,7 +832,6 @@ function EmpresaInputs({
         }
       />
 
-      {/* Distribuição de dividendos */}
       <div>
         <div className="mb-2 flex items-center gap-1.5">
           <span className="text-sm font-medium uppercase tracking-wider text-stone-500">
@@ -903,20 +882,24 @@ export default function SimuladorIntegrado() {
 
   // ── Valores de entrada ───────────────────────────────────────────────────
   const [bruto, setBruto] = useState(1_500);
-  const [brutoAnual, setBrutoAnual] = useState(18_000); // 1 500 × 12
+  const [brutoAnual, setBrutoAnual] = useState(18_000);
 
   const [atividade, setAtividade] = useState<Atividade>(ATIVIDADE_DEFAULT);
   const [regiao, setRegiao] = useState<Regiao>("continente");
   const [regimeIVA, setRegimeIVA] = useState<RegimeIVA>("isento");
-  const [ivaIncluido, setIvaIncluido] = useState(true);
+
+  // [BUG2 FIX] Removido estado ivaIncluido — o input é sempre a base pré-IVA.
+  // O toggle "Com IVA incluído / IVA à parte" entrava em conflito com o
+  // seletor de regime IVA já existente. Agora o fluxo é simples:
+  //   → utilizador introduz o valor do serviço (sem IVA)
+  //   → seletor de regime IVA determina a taxa aplicada
+  //   → IVA calculado e apresentado no breakdown
 
   const [dispensaRetencao, setDispensaRetencao] = useState(false);
   const [isencaoSSPrimeiroAno, setIsencaoSSPrimeiroAno] = useState(false);
   const [acumulaEmprego, setAcumulaEmprego] = useState(false);
 
   const [irsJovemAno, setIrsJovemAno] = useState(0);
-
-  // Tipo de atividade (direto, não dependente do ActivityCombobox)
   const [tipoAtiv, setTipoAtiv] = useState<TipoAtividade>("art151");
 
   // ── Inputs Empresa ───────────────────────────────────────────────────────
@@ -929,7 +912,6 @@ export default function SimuladorIntegrado() {
   const [advanced, setAdvanced] = useState(false);
 
   // ── Sincronização bruto ↔ brutoAnual ────────────────────────────────────
-
   const handleBrutoChange = useCallback((v: number) => {
     setBruto(v);
     setBrutoAnual(Math.round(v * 12));
@@ -943,14 +925,14 @@ export default function SimuladorIntegrado() {
   // ── IVA ──────────────────────────────────────────────────────────────────
   const taxaIva = taxaIVAEfetiva(regiao, regimeIVA);
   const temIva = taxaIva > 0;
-  const base = ivaIncluido && temIva ? bruto / (1 + taxaIva) : bruto;
-  const labelValor = !temIva
-    ? "Valor do serviço (€)"
-    : ivaIncluido
-      ? "Valor cobrado ao cliente, com IVA (€)"
-      : "O teu honorário, sem IVA (€)";
 
-  // ── Resultado por recibo (usa fiscal.ts existente) ───────────────────────
+  // [BUG2 FIX] base é sempre o valor introduzido (pré-IVA)
+  const base = bruto;
+  const labelValor = temIva
+    ? `Valor do serviço (€) — IVA ${pct(taxaIva)} adicionado ao cliente`
+    : "Valor do serviço (€)";
+
+  // ── Resultado por recibo ─────────────────────────────────────────────────
   const isencaoSS = isencaoSSPrimeiroAno || acumulaEmprego;
 
   const resultRecibo = useMemo(
@@ -980,7 +962,7 @@ export default function SimuladorIntegrado() {
     ],
   );
 
-  // ── Resultado anual RV (usa o novo motor interno) ─────────────────────────
+  // ── Resultado anual RV ────────────────────────────────────────────────────
   const resultAnualRV = useMemo(
     () => simularAnualRV(brutoAnual, tipoAtiv, irsJovemAno, isencaoSS),
     [brutoAnual, tipoAtiv, irsJovemAno, isencaoSS],
@@ -1187,6 +1169,11 @@ export default function SimuladorIntegrado() {
                     exit={{ opacity: 0, x: 8 }}
                     transition={{ duration: 0.18 }}
                   >
+                    {/*
+                     * [BUG2 FIX] Toggle "Com IVA incluído / IVA à parte" removido.
+                     * O input é sempre o valor base do serviço (pré-IVA).
+                     * O IVA é determinado exclusivamente pelo seletor de regime abaixo.
+                     */}
                     <NumericSlider
                       label={labelValor}
                       value={bruto}
@@ -1198,43 +1185,12 @@ export default function SimuladorIntegrado() {
                       presets={[500, 1000, 1500, 2500, 5000]}
                       tooltip={
                         <>
-                          Valor total que o cliente paga. Se há IVA, podes
-                          indicar o total com IVA incluído ou o honorário
-                          líquido sem IVA — escolhe em baixo.
+                          Valor do teu serviço antes de IVA. O IVA (quando
+                          aplicável) é calculado automaticamente e adicionado ao
+                          valor cobrado ao cliente.
                         </>
                       }
                     />
-                    {temIva && (
-                      <div
-                        role="group"
-                        aria-label="O valor inclui IVA?"
-                        className="mt-3 inline-flex items-center gap-1 rounded-xl border border-stone-200 bg-stone-50 p-1"
-                      >
-                        {(
-                          [
-                            { incl: true, label: "Com IVA incluído" },
-                            { incl: false, label: "IVA à parte" },
-                          ] as const
-                        ).map((o) => {
-                          const active = ivaIncluido === o.incl;
-                          return (
-                            <button
-                              key={o.label}
-                              type="button"
-                              aria-pressed={active}
-                              onClick={() => setIvaIncluido(o.incl)}
-                              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                                active
-                                  ? "bg-white text-brand-dark shadow-card"
-                                  : "text-stone-500 hover:text-stone-700"
-                              }`}
-                            >
-                              {o.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
                   </m.div>
                 ) : (
                   <m.div
@@ -1308,7 +1264,6 @@ export default function SimuladorIntegrado() {
               </div>
               <ActivityCombobox value={atividade} onChange={setAtividade} />
 
-              {/* Seletor de tipo diretamente */}
               <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {(
                   Object.entries(TIPO_ATIVIDADE_PARAMS) as [
