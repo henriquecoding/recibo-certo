@@ -3,23 +3,30 @@
 import { useState, type FormEvent } from "react";
 import { m } from "motion/react";
 import { Check } from "@/components/ui/Icons";
+import { getSupabase, supabaseConfigurado } from "@/lib/supabase/client";
 
-export default function EmailCapture() {
+export default function EmailCapture({ fonte = "landing" }: { fonte?: string }) {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState(false);
+  const [aEnviar, setAEnviar] = useState(false);
 
   const isValid = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!isValid(email)) {
-      setError(true);
-      return;
-    }
+    if (!isValid(email)) { setError(true); return; }
     setError(false);
-    // MVP: sem backend. Integrar com Resend / Supabase posteriormente.
+    setAEnviar(true);
+
+    if (supabaseConfigurado()) {
+      await getSupabase()
+        .from("email_waitlist")
+        .upsert({ email: email.trim().toLowerCase(), fonte }, { onConflict: "email" });
+    }
+
     setSent(true);
+    setAEnviar(false);
   };
 
   return (
@@ -43,17 +50,12 @@ export default function EmailCapture() {
         {!sent ? (
           <form onSubmit={submit} className="flex flex-col sm:flex-row gap-3 max-w-sm mx-auto" noValidate>
             <div className="flex-1">
-              <label htmlFor="email-capture" className="sr-only">
-                O teu email
-              </label>
+              <label htmlFor="email-capture" className="sr-only">O teu email</label>
               <input
                 id="email-capture"
                 type="email"
                 value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (error) setError(false);
-                }}
+                onChange={(e) => { setEmail(e.target.value); if (error) setError(false); }}
                 placeholder="o.teu@email.pt"
                 aria-invalid={error}
                 aria-describedby={error ? "email-error" : undefined}
@@ -62,11 +64,12 @@ export default function EmailCapture() {
             </div>
             <m.button
               type="submit"
+              disabled={aEnviar}
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.97 }}
-              className="btn-shine flex-shrink-0 rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-brand-dark shadow-lift transition-colors hover:bg-green-50"
+              className="btn-shine flex-shrink-0 rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-brand-dark shadow-lift transition-colors hover:bg-green-50 disabled:opacity-70"
             >
-              Entrar
+              {aEnviar ? "A guardar…" : "Entrar"}
             </m.button>
           </form>
         ) : (

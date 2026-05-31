@@ -100,3 +100,36 @@ export async function contarUtilizadores(): Promise<number> {
     .select("*", { count: "exact", head: true });
   return count ?? 0;
 }
+
+// ── Lista de espera ──────────────────────────────────────────
+
+export interface WaitlistRow {
+  id: string;
+  email: string;
+  fonte: string;
+  criado_em: string;
+}
+
+export async function listarWaitlist(): Promise<WaitlistRow[]> {
+  const { data, error } = await getSupabase()
+    .from("email_waitlist")
+    .select("*")
+    .order("criado_em", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as WaitlistRow[];
+}
+
+export async function contarWaitlist(): Promise<number> {
+  const { count } = await getSupabase()
+    .from("email_waitlist")
+    .select("*", { count: "exact", head: true });
+  return count ?? 0;
+}
+
+export async function eliminarWaitlistEntry(id: string): Promise<{ erro?: string }> {
+  const { error } = await getSupabase()
+    .from("email_waitlist")
+    .delete()
+    .eq("id", id);
+  return error ? { erro: error.message } : {};
+}

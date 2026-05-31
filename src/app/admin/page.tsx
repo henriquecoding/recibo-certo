@@ -2,19 +2,26 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { listarParceirosTodos, contarUtilizadores, type PartnerRow } from "@/lib/supabase/admin";
-import { ShieldCheck, ArrowRight, Check } from "@/components/ui/Icons";
+import {
+  listarParceirosTodos,
+  contarUtilizadores,
+  contarWaitlist,
+  type PartnerRow,
+} from "@/lib/supabase/admin";
+import { ShieldCheck, ArrowRight, Check, BellAlert } from "@/components/ui/Icons";
 
 export default function AdminHome() {
   const [parceiros, setParceiros] = useState<PartnerRow[]>([]);
   const [nUtilizadores, setNUtilizadores] = useState(0);
+  const [nWaitlist, setNWaitlist] = useState(0);
   const [carregado, setCarregado] = useState(false);
 
   useEffect(() => {
-    Promise.all([listarParceirosTodos(), contarUtilizadores()])
-      .then(([p, u]) => {
+    Promise.all([listarParceirosTodos(), contarUtilizadores(), contarWaitlist()])
+      .then(([p, u, w]) => {
         setParceiros(p);
         setNUtilizadores(u);
+        setNWaitlist(w);
         setCarregado(true);
       })
       .catch(() => setCarregado(true));
@@ -31,14 +38,15 @@ export default function AdminHome() {
       </header>
 
       {/* Estatísticas */}
-      <div className="mb-8 grid gap-4 sm:grid-cols-3">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Parceiros ativos" value={carregado ? ativos : "—"} total={carregado ? parceiros.length : undefined} cor="brand" />
-        <StatCard label="Total de parceiros" value={carregado ? parceiros.length : "—"} cor="stone" />
-        <StatCard label="Utilizadores registados" value={carregado ? nUtilizadores : "—"} cor="stone" />
+        <StatCard label="Total parceiros" value={carregado ? parceiros.length : "—"} cor="stone" />
+        <StatCard label="Utilizadores" value={carregado ? nUtilizadores : "—"} cor="stone" />
+        <StatCard label="Lista de espera" value={carregado ? nWaitlist : "—"} cor="stone" />
       </div>
 
       {/* Acções rápidas */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <ActionCard
           href="/admin/parceiros"
           titulo="Gerir parceiros"
@@ -51,14 +59,20 @@ export default function AdminHome() {
           descricao="Criar um parceiro novo para aparecer nas páginas do dashboard."
           icon={<Check size={20} />}
         />
+        <ActionCard
+          href="/admin/waitlist"
+          titulo="Lista de espera"
+          descricao={`${carregado ? nWaitlist : "—"} emails inscritos para o plano Pro.`}
+          icon={<BellAlert size={20} />}
+        />
       </div>
 
-      {/* Lista rápida de parceiros activos */}
+      {/* Lista rápida de parceiros */}
       {carregado && parceiros.length > 0 && (
         <div className="mt-8 rounded-4xl border border-stone-100 bg-white p-6 shadow-card">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-stone-700">Parceiros configurados</h2>
-            <Link href="/admin/parceiros" className="flex items-center gap-1 text-xs font-medium text-brand hover:gap-1.5 transition-all">
+            <Link href="/admin/parceiros" className="flex items-center gap-1 text-xs font-medium text-brand transition-all hover:gap-1.5">
               Ver todos <ArrowRight size={11} />
             </Link>
           </div>
@@ -79,27 +93,53 @@ export default function AdminHome() {
   );
 }
 
-function StatCard({ label, value, total, cor }: { label: string; value: number | string; total?: number; cor: "brand" | "stone" }) {
+function StatCard({
+  label,
+  value,
+  total,
+  cor,
+}: {
+  label: string;
+  value: number | string;
+  total?: number;
+  cor: "brand" | "stone";
+}) {
   return (
     <div className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card">
       <div className="text-xs font-medium uppercase tracking-wider text-stone-400">{label}</div>
       <div className={`mt-1 font-display text-3xl font-semibold tabular-nums ${cor === "brand" ? "text-brand" : "text-stone-800"}`}>
         {value}
-        {total !== undefined && <span className="ml-1 text-lg font-normal text-stone-400">/{total}</span>}
+        {total !== undefined && (
+          <span className="ml-1 text-lg font-normal text-stone-400">/{total}</span>
+        )}
       </div>
     </div>
   );
 }
 
-function ActionCard({ href, titulo, descricao, icon }: { href: string; titulo: string; descricao: string; icon: React.ReactNode }) {
+function ActionCard({
+  href,
+  titulo,
+  descricao,
+  icon,
+}: {
+  href: string;
+  titulo: string;
+  descricao: string;
+  icon: React.ReactNode;
+}) {
   return (
-    <Link href={href} className="group flex items-start gap-4 rounded-4xl border border-stone-100 bg-white p-5 shadow-card transition-all hover:shadow-lift">
+    <Link
+      href={href}
+      className="group flex items-start gap-4 rounded-4xl border border-stone-100 bg-white p-5 shadow-card transition-all hover:shadow-lift"
+    >
       <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-light text-brand">
         {icon}
       </span>
       <div className="min-w-0">
-        <div className="flex items-center gap-1.5 text-sm font-semibold text-stone-800 group-hover:text-brand transition-colors">
-          {titulo} <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="flex items-center gap-1.5 text-sm font-semibold text-stone-800 transition-colors group-hover:text-brand">
+          {titulo}
+          <ArrowRight size={12} className="opacity-0 transition-opacity group-hover:opacity-100" />
         </div>
         <p className="mt-0.5 text-xs leading-relaxed text-stone-500">{descricao}</p>
       </div>
