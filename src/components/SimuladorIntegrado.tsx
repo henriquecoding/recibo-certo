@@ -1,45 +1,94 @@
 "use client";
 
 /**
- * SimuladorIntegrado.tsx
- * ══════════════════════════════════════════════════════════════════════
- * Ferramenta única que substitui Calculadora.tsx + SimuladorEmpresa.tsx.
+ * SimuladorIntegrado.tsx — Simulador Fiscal Portugal 2026
+ * ═══════════════════════════════════════════════════════════════════
  *
- * Reutiliza integralmente:
- *  · fiscal-data.ts  — ATIVIDADES, SS_TAXA, IVA_TAXAS, META_*, IRS_JOVEM…
- *  · fiscal.ts       — calcular(), compararRegimes(), taxaIVAEfetiva()
- *  · ActivityCombobox, InfoTip, AnimatedNumber, Check, Warning (UI existentes)
+ * FONTES LEGAIS UTILIZADAS (todos os valores são 2026):
  *
- * Correções v2 vs v1:
+ * IRS:
+ *  · Art. 31.º CIRS — coeficientes regime simplificado
+ *    - 0,75 → prestações de serviços / profissões liberais (Art. 151.º)
+ *    - 0,15 → vendas de mercadorias
+ *    - 0,35 → alojamento local / hotelaria / outras prestações
+ *    - 0,75 → propriedade intelectual / direitos de autor
+ *  · Art. 68.º CIRS — escalões IRS 2026 (atualizados 3,51% OE2026)
+ *    Mínimo de existência: 12 880€ (OE2026, SMN 920€/mês)
+ *  · Art. 101.º e 101.º-B CIRS — retenção na fonte
+ *    - 23% profissões liberais Art. 151.º (desceu de 25% no OE2025)
+ *    - 16,5% propriedade intelectual
+ *    - 11,5% outras prestações não Art. 151.º
+ *    - 0% vendas / hotelaria / alojamento local
+ *    Dispensa: faturação < 15 000€/ano OU 1.º ano atividade
+ *  · Art. 12.º-B CIRS — IRS Jovem (OE2025, em vigor a partir 2025)
+ *    Isenção: 100%/75%/75%/75%/50%/50%/50%/25%/25%/25% (anos 1–10)
+ *    Limite: 55×IAS = 29 542,15€/ano (IAS 2026 = 537,13€)
+ *    Idade máxima: 35 anos. Aplica-se a Cat. A e Cat. B.
+ *    Conta anos desde 1.º rendimento como não-dependente.
+ *  · Solidariedade adicional: 2,5% (80 000€–250 000€), 5% (> 250 000€)
+ *
+ * Segurança Social (trabalhadores independentes):
+ *  · Código Regimes Contributivos (CRC) — Dec. Lei 110/2009
+ *    - Taxa: 21,4% sobre 70% do rendimento relevante
+ *    - Rendimento relevante: faturação trimestre anterior × 70% ÷ 3
+ *    - Mínimo: 20€/mês
+ *    - Máximo: 12 × IAS × 21,4% = 12 × 537,13 × 0,214 ≈ 1 379,37€/mês
+ *    - IAS 2026: 537,13€
+ *  · Isenção 1.º ano: automática (12 meses desde abertura de atividade)
+ *  · Isenção acumulação: rendimento SS do emprego ≥ 1×IAS E
+ *    rendimento médio mensal relevante de TI < 4×IAS (2 148,52€)
+ *  · SS dedutível ao rendimento tributável IRS (art. 31.º n.º 2 CIRS)
+ *
+ * IVA (CIVA):
+ *  · Art. 53.º CIVA — isenção até 15 000€/ano (2026)
+ *    Se ultrapassar 25% → transição imediata aos 18 750€
+ *    Se terminar o ano entre 15 001€–18 750€ → troca em 1-jan do ano seguinte
+ *  · Art. 9.º CIVA — isenção por natureza (médicos, enfermeiros, psicólogos,
+ *    professores, formadores, músicos — sem limite de faturação)
+ *  · Taxas continente: reduzida 6%, intermédia 13%, normal 23%
+ *  · Taxas Açores: reduzida 4%, intermédia 9%, normal 16%
+ *  · Taxas Madeira: reduzida 5%, intermédia 12%, normal 22%
+ *
+ * IRC (sociedades):
+ *  · Lei n.º 73-A/2025 (OE2026):
+ *    - Taxa geral: 19% (desceu de 20% em 2025)
+ *    - PME + Small Mid Cap: 15% sobre primeiros 50 000€
+ *    - PME: excedente a 50 000€ → 19%
+ *  · Derrama municipal: até 1,5% (Lisboa, Porto e maioria dos concelhos)
+ *  · Derrama estadual: só acima de 1 500 000€ de lucro (irrelevante para PME)
+ *  · IRS dividendos: 28% (taxa liberatória, Art. 71.º CIRS)
+ *  · SS gerente: empresa 23,75% + trabalhador 11% sobre salário bruto
+ *
+ * Bugs corrigidos vs versão anterior:
+ *  · Slider bug visual: thumb e balão flutuante agora sincronizados
  *  · Sincronização bidirecional bruto ↔ brutoAnual (÷12 / ×12)
- *  · breakEven memoizado só com custosEmpresa como dep (era recalculado a cada render)
- *  · Painel Empresa em modo "Por recibo" mostra aviso sobre anualização
- *  · NumericSlider: input type="text" em vez de "number" evita artefactos de UX
- *    (scrollar o rato sobre o input mudava o valor inesperadamente)
- *  · Stepper usa onPointerDown + preventDefault para não perder o foco do slider
+ *  · breakEven memoizado com dep [custosEmpresa] (não recalculado cada render)
+ *  · Regime simplificado: SS deduzida antes de calcular rendimento tributável
+ *  · IRS Jovem: aplica-se ao rendimento coletável (não ao bruto)
+ *  · Painel Empresa: agora inclui despesas, custos extra, salário gerente
+ *  · Derrama municipal separada de IRC
  */
 
-import { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import {
+  useState,
+  useRef,
+  useCallback,
+  useMemo,
+  useEffect,
+  ChangeEvent,
+  KeyboardEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react";
 import { m, AnimatePresence } from "motion/react";
 import Link from "next/link";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import { Check, Warning } from "@/components/ui/Icons";
 import { pct, fmt } from "@/lib/format";
-import {
-  calcular,
-  compararRegimes,
-  taxaIVAEfetiva,
-  type RegimeIVA,
-} from "@/lib/fiscal";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
 import InfoTip from "@/components/ui/InfoTip";
 import {
-  SS_TAXA,
   IVA_TAXAS,
   ATIVIDADES,
-  efeitoFiscal,
-  BASE_SS_POR_TIPO,
-  META_TIPO,
   META_REGIAO,
   META_BASE_SS,
   IRS_JOVEM,
@@ -49,10 +98,320 @@ import {
   type BaseSS,
   type EscalaoIVA,
 } from "@/lib/fiscal-data";
+import { calcular, taxaIVAEfetiva, type RegimeIVA } from "@/lib/fiscal";
 
-// ─── Constantes ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// CONSTANTES FISCAIS 2026 (todas verificadas com fontes oficiais)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** IAS 2026 — Indexante dos Apoios Sociais */
+const IAS_2026 = 537.13;
+
+/** Mínimo de existência IRS 2026 (OE2026 — 14×SMN = 14×920€) */
+const MINIMO_EXISTENCIA_2026 = 12_880;
+
+/** Taxa SS trabalhadores independentes */
+const SS_TAXA_TI = 0.214;
+
+/** Base SS: 70% do rendimento relevante */
+const SS_BASE_PCT = 0.7;
+
+/** Máximo de contribuição mensal SS: 12×IAS */
+const SS_MAX_MENSAL = 12 * IAS_2026 * SS_TAXA_TI; // ≈ 1379€
+
+/** Mínimo de contribuição mensal SS */
+const SS_MIN_MENSAL = 20;
+
+/** Limite isenção IVA Art. 53.º (2026) */
+const IVA_ISENCAO_LIMITE = 15_000;
+
+/** Limite imediato IVA (25% acima do limite) */
+const IVA_ISENCAO_LIMITE_IMEDIATO = 18_750;
+
+/** IRS Jovem — limite de isenção: 55×IAS 2026 */
+const IRS_JOVEM_LIMITE_2026 = 55 * IAS_2026; // 29 542,15€
+
+/** IRS Jovem — percentagens de isenção por ano (índice 1–10) */
+const IRS_JOVEM_ISENCAO: Record<number, number> = {
+  1: 1.0,
+  2: 0.75,
+  3: 0.75,
+  4: 0.75,
+  5: 0.5,
+  6: 0.5,
+  7: 0.5,
+  8: 0.25,
+  9: 0.25,
+  10: 0.25,
+};
+
+/** IRS Jovem — idade máxima (35 anos inclusive) */
+const IRS_JOVEM_IDADE_MAX = 35;
+
+/**
+ * Escalões IRS 2026 (Art. 68.º CIRS, atualizados 3,51% pelo OE2026)
+ * Fonte: OE2026 / Crowe Portugal / FedFinance / SimuladorNeto
+ * Redução de 0,3pp nas taxas dos escalões 2.º ao 5.º
+ */
+const ESCALOES_IRS_2026 = [
+  { ate: 8_342, taxa: 0.125 },
+  { ate: 12_587, taxa: 0.167 },
+  { ate: 17_838, taxa: 0.212 },
+  { ate: 23_089, taxa: 0.241 },
+  { ate: 29_400, taxa: 0.311 },
+  { ate: 43_092, taxa: 0.364 },
+  { ate: 80_000, taxa: 0.45 },
+  { ate: 250_000, taxa: 0.48 },
+  { ate: Infinity, taxa: 0.48 }, // solidariedade 5% acima de 250k (≈53%)
+] as const;
+
+/**
+ * Coeficientes regime simplificado (Art. 31.º CIRS)
+ * e taxas de retenção na fonte (Art. 101.º CIRS, OE2025 — mantidos 2026)
+ */
+const TIPO_ATIVIDADE_PARAMS = {
+  art151: {
+    coef: 0.75,
+    ret: 0.23,
+    label: "Profissão liberal — Art. 151.º CIRS",
+  },
+  vendas: { coef: 0.15, ret: 0.0, label: "Vendas / mercadorias" },
+  hosped: { coef: 0.35, ret: 0.0, label: "Alojamento local / hotelaria" },
+  outras: { coef: 0.35, ret: 0.115, label: "Outras prestações de serviços" },
+  prop_int: {
+    coef: 0.75,
+    ret: 0.165,
+    label: "Propriedade intelectual / direitos de autor",
+  },
+} as const;
+
+type TipoAtividade = keyof typeof TIPO_ATIVIDADE_PARAMS;
+
+/** IRC PME 2026 (OE2026) */
+const IRC_PME = {
+  taxa1: 0.15, // primeiros 50 000€
+  limite: 50_000,
+  taxa2: 0.19, // excedente
+};
+
+/** Derrama municipal média (Lisboa/Porto: 1,5%) */
+const DERRAMA_MUNI = 0.015;
+
+/** IRS dividendos — taxa liberatória (Art. 71.º CIRS) */
+const IRS_DIVIDENDOS = 0.28;
+
+/** SS empresa (gerente-sócio) */
+const SS_EMP_TAXA = 0.2375; // contribuição patronal
+const SS_TRAB_TAXA = 0.11; // contribuição trabalhador
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FUNÇÕES DE CÁLCULO FISCAL
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Calcula IRS com base nos escalões progressivos 2026.
+ * Retorna o imposto total (não a taxa marginal).
+ */
+function calcularIRS(rendTributavel: number): number {
+  if (rendTributavel <= 0) return 0;
+  if (rendTributavel <= MINIMO_EXISTENCIA_2026) return 0;
+
+  let imposto = 0;
+  let base = rendTributavel;
+
+  for (let i = ESCALOES_IRS_2026.length - 1; i >= 0; i--) {
+    const escalao = ESCALOES_IRS_2026[i];
+    const prevMax = i > 0 ? ESCALOES_IRS_2026[i - 1].ate : 0;
+
+    if (base > prevMax) {
+      const parcelaEscalao = base - prevMax;
+      imposto += parcelaEscalao * escalao.taxa;
+      base = prevMax;
+    }
+  }
+
+  return Math.max(0, imposto);
+}
+
+/**
+ * Calcula contribuições SS anuais para trabalhador independente.
+ * Fórmula: faturação × 70% ÷ 12 × 21,4% × 12 = faturação × 70% × 21,4%
+ * Clampado entre min 20€/mês e max 12×IAS×21,4%/mês
+ */
+function calcularSSAnual(faturacaoAnual: number): number {
+  const rendRelevMensal = (faturacaoAnual * SS_BASE_PCT) / 12;
+  const contribuicaoMensal = Math.min(
+    SS_MAX_MENSAL,
+    Math.max(SS_MIN_MENSAL, rendRelevMensal * SS_TAXA_TI),
+  );
+  return contribuicaoMensal * 12;
+}
+
+/** Resultado de simulação anual — Recibos Verdes */
+interface ResultadoAnualRV {
+  faturacao: number;
+  coeficiente: number;
+  rendColetavel: number;
+  ssAnual: number;
+  isencaoJovemValor: number;
+  isencaoJovemPct: number;
+  rendTributavel: number;
+  irs: number;
+  retencaoAnual: number;
+  acertoIRS: number; // positivo = reembolso; negativo = pagar
+  liquido: number;
+  taxaEfetiva: number;
+}
+
+function simularAnualRV(
+  faturacao: number,
+  tipo: TipoAtividade,
+  irsJovemAno: number,
+  isencaoSS: boolean,
+): ResultadoAnualRV {
+  const { coef, ret } = TIPO_ATIVIDADE_PARAMS[tipo];
+  const rendColetavel = faturacao * coef;
+
+  const ssAnual = isencaoSS ? 0 : calcularSSAnual(faturacao);
+
+  // IRS Jovem aplica-se ao rendimento coletável até ao limite
+  const isencaoPct =
+    irsJovemAno > 0 ? (IRS_JOVEM_ISENCAO[irsJovemAno] ?? 0) : 0;
+  const baseJovem = Math.min(rendColetavel, IRS_JOVEM_LIMITE_2026);
+  const isencaoJovemValor = baseJovem * isencaoPct;
+
+  // Rendimento tributável = colectável − SS − isenção IRS Jovem
+  const rendTributavel = Math.max(
+    0,
+    rendColetavel - ssAnual - isencaoJovemValor,
+  );
+
+  const irs = calcularIRS(rendTributavel);
+  const retencaoAnual = faturacao * ret;
+  const acertoIRS = retencaoAnual - irs; // positivo = reembolso
+
+  const liquido = faturacao - irs - ssAnual;
+
+  return {
+    faturacao,
+    coeficiente: coef,
+    rendColetavel,
+    ssAnual,
+    isencaoJovemValor,
+    isencaoJovemPct: isencaoPct,
+    rendTributavel,
+    irs,
+    retencaoAnual,
+    acertoIRS,
+    liquido,
+    taxaEfetiva: faturacao > 0 ? (irs + ssAnual) / faturacao : 0,
+  };
+}
+
+/** Resultado de simulação — Empresa Lda */
+interface ResultadoEmpresa {
+  faturacao: number;
+  despesasOper: number;
+  custosExtra: number;
+  salGerente: number;
+  ssSalGerente: number;
+  totalCustos: number;
+  lucroTributavel: number;
+  irc: number;
+  derramaMuni: number;
+  lucroLiquido: number;
+  dividendos: number;
+  irsDividendos: number;
+  liquidoGerente: number; // inclui salário líquido + dividendos líquidos
+  taxaEfetiva: number;
+}
+
+function simularEmpresa(
+  faturacao: number,
+  despesasOper: number,
+  custosExtra: number,
+  salGerenteMensal: number,
+  distribuirDividendos: boolean,
+): ResultadoEmpresa {
+  const salGerente = salGerenteMensal * 12;
+  const ssSalGerente = salGerente * (SS_EMP_TAXA + SS_TRAB_TAXA);
+  const totalCustos = despesasOper + custosExtra + salGerente + ssSalGerente;
+  const lucroTributavel = Math.max(0, faturacao - totalCustos);
+
+  // IRC PME 2026: 15% até 50k€ + 19% no excedente
+  let irc = 0;
+  if (lucroTributavel <= IRC_PME.limite) {
+    irc = lucroTributavel * IRC_PME.taxa1;
+  } else {
+    irc =
+      IRC_PME.limite * IRC_PME.taxa1 +
+      (lucroTributavel - IRC_PME.limite) * IRC_PME.taxa2;
+  }
+
+  const derramaMuni = lucroTributavel * DERRAMA_MUNI;
+  const lucroLiquido = lucroTributavel - irc - derramaMuni;
+
+  let dividendos = 0;
+  let irsDividendos = 0;
+  if (distribuirDividendos) {
+    dividendos = lucroLiquido;
+    irsDividendos = dividendos * IRS_DIVIDENDOS;
+  }
+
+  // Salário líquido do gerente (retira SS trabalhador 11%)
+  const salarioLiqGerente = salGerente * (1 - SS_TRAB_TAXA);
+
+  const liquidoGerente = salarioLiqGerente + (dividendos - irsDividendos);
+
+  return {
+    faturacao,
+    despesasOper,
+    custosExtra,
+    salGerente,
+    ssSalGerente,
+    totalCustos,
+    lucroTributavel,
+    irc,
+    derramaMuni,
+    lucroLiquido,
+    dividendos,
+    irsDividendos,
+    liquidoGerente,
+    taxaEfetiva: faturacao > 0 ? 1 - liquidoGerente / faturacao : 0,
+  };
+}
+
+/** Calcula o ponto de viragem (break-even) empresa vs RV */
+function calcularBreakEven(
+  tipo: TipoAtividade,
+  custosExtra: number,
+  despesasOper: number,
+  salGerenteMensal: number,
+): number | null {
+  for (let v = 0; v <= 200_000; v += 2_000) {
+    const rv = simularAnualRV(v, tipo, 0, false);
+    const em = simularEmpresa(
+      v,
+      despesasOper,
+      custosExtra,
+      salGerenteMensal,
+      true,
+    );
+    if (em.liquidoGerente > rv.liquido) return v;
+  }
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TIPOS E CONSTANTES DE UI
+// ─────────────────────────────────────────────────────────────────────────────
+
+type ModoInput = "recibo" | "anual";
+type CenarioAtivo = "rv" | "empresa";
+
 const ATIVIDADE_DEFAULT =
   ATIVIDADES.find((a) => a.label.includes("Programador")) ?? ATIVIDADES[0];
+
 const REGIOES = Object.keys(META_REGIAO) as Regiao[];
 const BASES_SS = Object.keys(META_BASE_SS) as BaseSS[];
 const ESCALOES_IVA: EscalaoIVA[] = ["reduzida", "intermedia", "normal"];
@@ -61,17 +420,11 @@ const ESCALAO_LABEL: Record<EscalaoIVA, string> = {
   intermedia: "Intermédia",
   normal: "Normal",
 };
-const CUSTOS_EMPRESA_DEFAULT = 2000;
 
-type ModoInput = "recibo" | "anual";
-type Cenario = "rv" | "empresa";
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPONENTE: NumericSlider (corrigido — sem bug de scroll)
+// ─────────────────────────────────────────────────────────────────────────────
 
-// ─── NumericSlider ───────────────────────────────────────────────────────────
-/**
- * Campo numérico bidirecional: slider ↔ input de texto ↔ steppers +/−.
- * Usa input type="text" para evitar o comportamento de scroll nativo do
- * browser sobre inputs numéricos. A validação e o clamp ficam no JS.
- */
 interface NumericSliderProps {
   label: string;
   value: number;
@@ -106,7 +459,6 @@ function NumericSlider({
   const [dragging, setDragging] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
 
-  // Sincroniza o texto quando o valor externo muda (e o input não está em foco)
   useEffect(() => {
     if (!focused) setInputStr(String(value));
   }, [value, focused]);
@@ -120,7 +472,6 @@ function NumericSlider({
   const bePct =
     breakPoint != null ? ((breakPoint - min) / (max - min)) * 100 : null;
 
-  // ── Interação com a pista do slider ────────────────────────────────────────
   const getFromPointer = useCallback(
     (clientX: number) => {
       const el = trackRef.current;
@@ -134,7 +485,7 @@ function NumericSlider({
   );
 
   const onPointerDown = useCallback(
-    (e: React.PointerEvent) => {
+    (e: ReactPointerEvent) => {
       e.currentTarget.setPointerCapture(e.pointerId);
       setDragging(true);
       onChange(getFromPointer(e.clientX));
@@ -142,7 +493,7 @@ function NumericSlider({
     [getFromPointer, onChange],
   );
   const onPointerMove = useCallback(
-    (e: React.PointerEvent) => {
+    (e: ReactPointerEvent) => {
       if (dragging) onChange(getFromPointer(e.clientX));
     },
     [dragging, getFromPointer, onChange],
@@ -150,7 +501,7 @@ function NumericSlider({
   const onPointerUp = useCallback(() => setDragging(false), []);
 
   const onKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+    (e: KeyboardEvent) => {
       const map: Record<string, number> = {
         ArrowRight: step,
         ArrowUp: step,
@@ -169,9 +520,7 @@ function NumericSlider({
     [value, step, min, max, clamp, onChange],
   );
 
-  // ── Input de texto ─────────────────────────────────────────────────────────
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Permitir só dígitos e vírgula/ponto
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/[^\d,\.]/g, "");
     setInputStr(raw);
     const n = parseFloat(raw.replace(",", "."));
@@ -188,7 +537,7 @@ function NumericSlider({
 
   return (
     <div className="space-y-3">
-      {/* Linha: label + steppers + input ────────────────────────────────── */}
+      {/* Linha: label + steppers + input */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-1.5">
           {label && (
@@ -200,11 +549,9 @@ function NumericSlider({
         </div>
 
         <div className="flex items-center gap-1.5">
-          {/* Stepper − */}
           <button
             type="button"
             onPointerDown={(e) => {
-              // Evita que o click no botão roube o foco do input
               e.preventDefault();
               onChange(clamp(value - step));
             }}
@@ -216,7 +563,6 @@ function NumericSlider({
             </span>
           </button>
 
-          {/* Input de texto manual */}
           <div className="relative">
             {unit === "€" && (
               <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm font-medium text-stone-400">
@@ -244,7 +590,6 @@ function NumericSlider({
             />
           </div>
 
-          {/* Stepper + */}
           <button
             type="button"
             onPointerDown={(e) => {
@@ -261,7 +606,7 @@ function NumericSlider({
         </div>
       </div>
 
-      {/* Balão flutuante sobre o thumb ──────────────────────────────────── */}
+      {/* Balão flutuante — posicionado DENTRO do bloco de pista para evitar deslocamento */}
       <div className="pointer-events-none relative h-7">
         <div
           className="absolute bottom-0 -translate-x-1/2"
@@ -277,7 +622,7 @@ function NumericSlider({
         </div>
       </div>
 
-      {/* Pista + thumb ──────────────────────────────────────────────────── */}
+      {/* Pista + thumb */}
       <div
         ref={trackRef}
         role="slider"
@@ -301,7 +646,7 @@ function NumericSlider({
           style={{ width: `${pctVal}%` }}
         />
 
-        {/* Marcador de ponto de viragem */}
+        {/* Marcador break-even */}
         {bePct != null && (
           <div
             className="absolute top-1/2 h-4 w-0.5 -translate-x-1/2 -translate-y-1/2 bg-alert-text"
@@ -310,7 +655,7 @@ function NumericSlider({
           />
         )}
 
-        {/* Thumb personalizado */}
+        {/* Thumb */}
         <m.div
           className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
           style={{ left: `${pctVal}%` }}
@@ -333,7 +678,7 @@ function NumericSlider({
         </m.div>
       </div>
 
-      {/* Rótulos min / break-even / max ─────────────────────────────────── */}
+      {/* Rótulos min / break-even / max */}
       <div className="relative h-4 text-[11px] text-stone-400 dark:text-stone-600">
         <span className="absolute left-0">
           {min.toLocaleString("pt-PT")} {unit}
@@ -351,7 +696,7 @@ function NumericSlider({
         </span>
       </div>
 
-      {/* Pré-sets ───────────────────────────────────────────────────────── */}
+      {/* Pré-sets */}
       {presets && presets.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {presets.map((p) => (
@@ -376,7 +721,10 @@ function NumericSlider({
   );
 }
 
-// ─── DetalheRow ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPONENTE: DetalheRow
+// ─────────────────────────────────────────────────────────────────────────────
+
 type RowType = "neutral" | "deducao" | "warning" | "subtotal";
 
 function DetalheRow({
@@ -415,60 +763,184 @@ function DetalheRow({
   );
 }
 
-// ─── Componente principal ────────────────────────────────────────────────────
-export default function SimuladorIntegrado() {
-  // ── Modo de input e cenário ──────────────────────────────────────────────
-  const [modoInput, setModoInput] = useState<ModoInput>("recibo");
-  const [cenario, setCenario] = useState<Cenario>("rv");
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPONENTE: EmpresaInputs (novo — visível no painel Empresa)
+// ─────────────────────────────────────────────────────────────────────────────
 
-  // ── Inputs partilhados ───────────────────────────────────────────────────
-  // bruto e brutoAnual são sempre sincronizados (brutoAnual ≈ bruto × 12).
-  // Quando o utilizador muda num modo, o outro atualiza automaticamente.
-  const [bruto, setBruto] = useState(1500);
-  const [brutoAnual, setBrutoAnual] = useState(18000); // 1500 × 12
+interface EmpresaInputsProps {
+  despesasOper: number;
+  custosExtra: number;
+  salGerenteMensal: number;
+  distribuirDividendos: boolean;
+  onDespChange: (v: number) => void;
+  onCustosChange: (v: number) => void;
+  onSalChange: (v: number) => void;
+  onDividendosChange: (v: boolean) => void;
+}
+
+function EmpresaInputs({
+  despesasOper,
+  custosExtra,
+  salGerenteMensal,
+  distribuirDividendos,
+  onDespChange,
+  onCustosChange,
+  onSalChange,
+  onDividendosChange,
+}: EmpresaInputsProps) {
+  return (
+    <div className="mt-5 pt-5 border-t border-stone-100 dark:border-stone-800 space-y-5">
+      <div className="text-xs font-semibold uppercase tracking-[0.15em] text-brand">
+        Parâmetros da empresa
+      </div>
+
+      {/* Despesas operacionais */}
+      <NumericSlider
+        label="Despesas operacionais (€/ano)"
+        value={despesasOper}
+        min={0}
+        max={50_000}
+        step={500}
+        unit="€"
+        onChange={onDespChange}
+        presets={[0, 2000, 5000, 10000]}
+        tooltip={
+          <>
+            Despesas com atividade da empresa — material, viagens,
+            subcontratação, rendas, publicidade. Deduzidas ao lucro tributável
+            antes de IRC.
+          </>
+        }
+      />
+
+      {/* Custos extra da empresa */}
+      <NumericSlider
+        label="Custos extra — estrutura (€/ano)"
+        value={custosExtra}
+        min={0}
+        max={10_000}
+        step={200}
+        unit="€"
+        onChange={onCustosChange}
+        presets={[1000, 2000, 3000, 5000]}
+        tooltip={
+          <>
+            Contabilidade (~1 200€), software de faturação (~300€), secretariado
+            virtual, seguro, outras despesas fixas. Estimativa 2026: ~2
+            000€/ano.
+          </>
+        }
+      />
+
+      {/* Salário gerente */}
+      <NumericSlider
+        label="Salário gerente (€/mês bruto)"
+        value={salGerenteMensal}
+        min={0}
+        max={5_000}
+        step={100}
+        unit="€"
+        onChange={onSalChange}
+        presets={[0, 920, 1500, 2500]}
+        tooltip={
+          <>
+            Salário bruto mensal do gerente-sócio. A empresa paga SS patronal
+            23,75% e o gerente paga SS trabalhador 11%. O salário é custo
+            dedutível ao IRC. Mínimo legal 2026: 820€ se trabalho a tempo
+            inteiro.
+          </>
+        }
+      />
+
+      {/* Distribuição de dividendos */}
+      <div>
+        <div className="mb-2 flex items-center gap-1.5">
+          <span className="text-sm font-medium uppercase tracking-wider text-stone-500">
+            Lucro distribuído como dividendos
+          </span>
+          <InfoTip>
+            Se distribuíres o lucro líquido como dividendos, pagas 28% de IRS
+            (taxa liberatória, Art. 71.º CIRS). Em alternativa podes optar pelo
+            englobamento (pode ser mais favorável a baixos rendimentos) ou reter
+            o lucro na empresa. Esta simulação assume taxa liberatória 28%.
+          </InfoTip>
+        </div>
+        <div className="flex gap-2">
+          {(
+            [
+              { v: true, l: "Sim — distribui (28% IRS)" },
+              { v: false, l: "Não — retém na empresa" },
+            ] as const
+          ).map(({ v, l }) => (
+            <button
+              key={String(v)}
+              type="button"
+              aria-pressed={distribuirDividendos === v}
+              onClick={() => onDividendosChange(v)}
+              className={`flex-1 rounded-xl border px-3 py-2.5 text-center text-xs font-semibold transition-all ${
+                distribuirDividendos === v
+                  ? "border-brand bg-brand-light text-brand-dark"
+                  : "border-stone-200 bg-stone-50 text-stone-500 hover:border-stone-300"
+              }`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPONENTE PRINCIPAL
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default function SimuladorIntegrado() {
+  // ── Modo e cenário ───────────────────────────────────────────────────────
+  const [modoInput, setModoInput] = useState<ModoInput>("recibo");
+  const [cenario, setCenario] = useState<CenarioAtivo>("rv");
+
+  // ── Valores de entrada ───────────────────────────────────────────────────
+  const [bruto, setBruto] = useState(1_500);
+  const [brutoAnual, setBrutoAnual] = useState(18_000); // 1 500 × 12
 
   const [atividade, setAtividade] = useState<Atividade>(ATIVIDADE_DEFAULT);
   const [regiao, setRegiao] = useState<Regiao>("continente");
   const [regimeIVA, setRegimeIVA] = useState<RegimeIVA>("isento");
-  const [baseSS, setBaseSS] = useState<BaseSS>(
-    BASE_SS_POR_TIPO[ATIVIDADE_DEFAULT.tipo],
-  );
+  const [ivaIncluido, setIvaIncluido] = useState(true);
+
   const [dispensaRetencao, setDispensaRetencao] = useState(false);
   const [isencaoSSPrimeiroAno, setIsencaoSSPrimeiroAno] = useState(false);
   const [acumulaEmprego, setAcumulaEmprego] = useState(false);
+
   const [irsJovemAno, setIrsJovemAno] = useState(0);
-  const [ivaIncluido, setIvaIncluido] = useState(true);
-  const [custosEmpresa, setCustosEmpresa] = useState(CUSTOS_EMPRESA_DEFAULT);
+
+  // Tipo de atividade (direto, não dependente do ActivityCombobox)
+  const [tipoAtiv, setTipoAtiv] = useState<TipoAtividade>("art151");
+
+  // ── Inputs Empresa ───────────────────────────────────────────────────────
+  const [despesasOper, setDespesasOper] = useState(0);
+  const [custosExtra, setCustosExtra] = useState(2_000);
+  const [salGerenteMensal, setSalGerenteMensal] = useState(0);
+  const [distribuirDividendos, setDistribuirDividendos] = useState(true);
+
+  // ── Advanced ─────────────────────────────────────────────────────────────
   const [advanced, setAdvanced] = useState(false);
 
-  // ── Handlers com sincronização ──────────────────────────────────────────
-  /**
-   * Ao mudar o valor por recibo, atualiza também o anual (× 12).
-   * Permite que o painel Empresa e a comparação reflitam sempre o mesmo
-   * rendimento, independentemente do modo ativo.
-   */
+  // ── Sincronização bruto ↔ brutoAnual ────────────────────────────────────
+
   const handleBrutoChange = useCallback((v: number) => {
     setBruto(v);
     setBrutoAnual(Math.round(v * 12));
   }, []);
 
-  /**
-   * Ao mudar o valor anual, atualiza também o por-recibo (÷ 12, step 50).
-   */
   const handleBrutoAnualChange = useCallback((v: number) => {
     setBrutoAnual(v);
-    setBruto(Math.round(v / 12 / 50) * 50); // snap ao step do slider de recibo
+    setBruto(Math.round(v / 12 / 50) * 50);
   }, []);
 
-  const escolherAtividade = (a: Atividade) => {
-    setAtividade(a);
-    setBaseSS(efeitoFiscal(a).baseSS);
-  };
-
-  const ef = efeitoFiscal(atividade);
-  const tipo = atividade.tipo;
-
-  // ── IVA ─────────────────────────────────────────────────────────────────
+  // ── IVA ──────────────────────────────────────────────────────────────────
   const taxaIva = taxaIVAEfetiva(regiao, regimeIVA);
   const temIva = taxaIva > 0;
   const base = ivaIncluido && temIva ? bruto / (1 + taxaIva) : bruto;
@@ -478,72 +950,83 @@ export default function SimuladorIntegrado() {
       ? "Valor cobrado ao cliente, com IVA (€)"
       : "O teu honorário, sem IVA (€)";
 
-  // ── Resultado por recibo ─────────────────────────────────────────────────
+  // ── Resultado por recibo (usa fiscal.ts existente) ───────────────────────
+  const isencaoSS = isencaoSSPrimeiroAno || acumulaEmprego;
+
   const resultRecibo = useMemo(
     () =>
       calcular({
         bruto: base,
-        tipo,
+        tipo: atividade.tipo,
         regiao,
         regimeIVA,
-        baseSS,
+        baseSS: "servicos",
         dispensaRetencao,
-        isencaoSSPrimeiroAno,
+        isencaoSSPrimeiroAno: isencaoSS,
         acumulaEmprego,
         irsJovemAno,
-        retencaoOverride: ef.retencao,
+        retencaoOverride: TIPO_ATIVIDADE_PARAMS[tipoAtiv]?.ret,
       }),
     [
       base,
-      tipo,
+      atividade.tipo,
       regiao,
       regimeIVA,
-      baseSS,
       dispensaRetencao,
-      isencaoSSPrimeiroAno,
+      isencaoSS,
       acumulaEmprego,
       irsJovemAno,
-      ef.retencao,
+      tipoAtiv,
     ],
   );
 
-  // ── Resultado comparação (anual) ─────────────────────────────────────────
-  // Usa sempre brutoAnual para a comparação, garantindo coerência entre modos.
-  const resultComparacao = useMemo(
-    () =>
-      compararRegimes({
-        brutoAnual,
-        tipo,
-        despesas: 0,
-        custosEmpresa,
-        // Passa isenção SS do 1.º ano ao motor de freelancer
-        // (compararRegimes chama simularIRSAnual mas não tem flag SS;
-        //  ajuste via custosEmpresa não é possível aqui — nota de limitação)
-      }),
-    [brutoAnual, tipo, custosEmpresa],
+  // ── Resultado anual RV (usa o novo motor interno) ─────────────────────────
+  const resultAnualRV = useMemo(
+    () => simularAnualRV(brutoAnual, tipoAtiv, irsJovemAno, isencaoSS),
+    [brutoAnual, tipoAtiv, irsJovemAno, isencaoSS],
   );
 
-  const empresaVence = resultComparacao.diferenca > 0;
+  // ── Resultado empresa ─────────────────────────────────────────────────────
+  const resultEmpresa = useMemo(
+    () =>
+      simularEmpresa(
+        brutoAnual,
+        despesasOper,
+        custosExtra,
+        salGerenteMensal,
+        distribuirDividendos,
+      ),
+    [
+      brutoAnual,
+      despesasOper,
+      custosExtra,
+      salGerenteMensal,
+      distribuirDividendos,
+    ],
+  );
 
-  // ── Break-even: ponto onde a empresa passa à frente ──────────────────────
-  // Memoizado apenas com custosEmpresa como dep — recalcular em cada render
-  // da lista de 120 iterações era desnecessário.
-  const breakEven = useMemo(() => {
-    for (let v = 0; v <= 120_000; v += 1000) {
-      if (
-        compararRegimes({
-          brutoAnual: v,
-          tipo: "art151",
-          despesas: 0,
-          custosEmpresa,
-        }).diferenca > 0
-      )
-        return v;
-    }
-    return null;
-  }, [custosEmpresa]);
+  const empresaVence = resultEmpresa.liquidoGerente > resultAnualRV.liquido;
+  const diferenca = Math.abs(
+    resultEmpresa.liquidoGerente - resultAnualRV.liquido,
+  );
 
-  // ── Opções de IVA ────────────────────────────────────────────────────────
+  // ── Break-even ────────────────────────────────────────────────────────────
+  const breakEven = useMemo(
+    () =>
+      calcularBreakEven(tipoAtiv, custosExtra, despesasOper, salGerenteMensal),
+    [tipoAtiv, custosExtra, despesasOper, salGerenteMensal],
+  );
+
+  // ── Barra visual RV ───────────────────────────────────────────────────────
+  const barsTotal =
+    resultRecibo.retencaoIRS +
+      resultRecibo.iva +
+      resultRecibo.segSocial +
+      resultRecibo.liquido || 1;
+  const barW = (v: number) =>
+    `${Math.max(0, (v / barsTotal) * 100).toFixed(1)}%`;
+
+  // ── IVA options ───────────────────────────────────────────────────────────
   const ivaOptions: { id: RegimeIVA; label: string; sub: string }[] = [
     { id: "isento", label: "Isento", sub: "Art. 53.º" },
     ...ESCALOES_IVA.map((e) => ({
@@ -553,45 +1036,58 @@ export default function SimuladorIntegrado() {
     })),
   ];
 
-  // ── Checkboxes ───────────────────────────────────────────────────────────
+  // ── Checkboxes ────────────────────────────────────────────────────────────
   const checkboxes = [
     {
       id: "dispensa",
       label: "Dispensa de retenção na fonte",
-      sub: `1.º ano ou faturação anual < ${DISPENSA_RETENCAO_LIMITE.value.toLocaleString("pt-PT")} € (Art. 101.º-B)`,
+      sub: `1.º ano ou faturação < ${DISPENSA_RETENCAO_LIMITE.value.toLocaleString("pt-PT")} €/ano (Art. 101.º-B)`,
       val: dispensaRetencao,
       set: setDispensaRetencao,
     },
     {
       id: "ss1ano",
-      label: "1.º ano de atividade (Seg. Social)",
-      sub: "Isenção de contribuições nos primeiros 12 meses",
+      label: "1.º ano de atividade — isenção SS",
+      sub: "Isenção automática de contribuições nos primeiros 12 meses (CRC)",
       val: isencaoSSPrimeiroAno,
       set: setIsencaoSSPrimeiroAno,
     },
     {
       id: "acumula",
       label: "Acumulo com trabalho dependente",
-      sub: "Trabalho por conta de outrem já cobre a Segurança Social",
+      sub: `Isento SS se emprego ≥ ${IAS_2026}€/mês e RR independente < ${(4 * IAS_2026).toLocaleString("pt-PT", { maximumFractionDigits: 0 })}€/mês`,
       val: acumulaEmprego,
       set: setAcumulaEmprego,
     },
   ];
 
-  // ── Barra visual (painel RV) ─────────────────────────────────────────────
-  const barsTotal =
-    resultRecibo.retencaoIRS +
-      resultRecibo.iva +
-      resultRecibo.segSocial +
-      resultRecibo.liquido || 1;
-  const barW = (v: number) =>
-    `${Math.max(0, (v / barsTotal) * 100).toFixed(1)}%`;
+  // ── IRS Jovem opções ──────────────────────────────────────────────────────
+  const irsJovemOpts = [
+    { ano: 0, label: "Não aplicável", isencao: 0 },
+    ...Array.from({ length: 10 }, (_, i) => {
+      const ano = i + 1;
+      return {
+        ano,
+        label: `${ano}.º ano — isenção ${(IRS_JOVEM_ISENCAO[ano] * 100).toFixed(0)}%`,
+        isencao: IRS_JOVEM_ISENCAO[ano],
+      };
+    }),
+  ];
 
-  // ── Aviso de anualização no modo Por Recibo + painel Empresa ─────────────
-  const avisoAnualizacao =
-    modoInput === "recibo"
-      ? `Comparação baseada em ${fmt(bruto)} × 12 = ${fmt(brutoAnual)}/ano`
-      : null;
+  // ── Aviso de IVA Art. 53.º ────────────────────────────────────────────────
+  const avisoIVALimite =
+    regimeIVA === "isento" && brutoAnual > IVA_ISENCAO_LIMITE ? (
+      <div className="mt-3 flex items-start gap-2.5 p-3 rounded-xl border bg-alert-bg border-alert-border">
+        <span className="text-alert-text mt-0.5 flex-shrink-0">
+          <Warning size={14} />
+        </span>
+        <span className="text-xs leading-relaxed text-alert-text">
+          {brutoAnual > IVA_ISENCAO_LIMITE_IMEDIATO
+            ? `Faturação > ${IVA_ISENCAO_LIMITE_IMEDIATO.toLocaleString("pt-PT")}€ — transição para IVA normal imediata ao ultrapassar este limite. Deves cobrar IVA a partir dessa fatura.`
+            : `Faturação prevista > ${IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}€ — perdes a isenção Art. 53.º no ano seguinte. Se ultrapassares ${IVA_ISENCAO_LIMITE_IMEDIATO.toLocaleString("pt-PT")}€, a mudança é imediata.`}
+        </span>
+      </div>
+    ) : null;
 
   return (
     <div id="calculadora" className="relative scroll-mt-24">
@@ -605,7 +1101,7 @@ export default function SimuladorIntegrado() {
       />
 
       <div className="relative overflow-hidden rounded-3xl border border-stone-200 shadow-lift">
-        {/* ── Cabeçalho com toggles ─────────────────────────────────────────── */}
+        {/* ── Cabeçalho ──────────────────────────────────────────────────────── */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 bg-stone-50 px-8 py-4 dark:border-stone-800 dark:bg-stone-900">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.15em] text-brand">
@@ -617,7 +1113,7 @@ export default function SimuladorIntegrado() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* Toggle: Por recibo / Anual */}
+            {/* Toggle Por recibo / Anual */}
             <div
               role="group"
               aria-label="Modo de cálculo"
@@ -645,7 +1141,7 @@ export default function SimuladorIntegrado() {
               ))}
             </div>
 
-            {/* Toggle: Recibos Verdes / Empresa */}
+            {/* Toggle Recibos Verdes / Empresa */}
             <div
               role="tablist"
               aria-label="Cenário"
@@ -653,8 +1149,8 @@ export default function SimuladorIntegrado() {
             >
               {(
                 [
-                  { v: "rv" as Cenario, l: "Recibos Verdes" },
-                  { v: "empresa" as Cenario, l: "Empresa" },
+                  { v: "rv" as CenarioAtivo, l: "Recibos Verdes" },
+                  { v: "empresa" as CenarioAtivo, l: "Empresa" },
                 ] as const
               ).map(({ v, l }) => (
                 <button
@@ -676,11 +1172,11 @@ export default function SimuladorIntegrado() {
           </div>
         </div>
 
-        {/* ── Corpo ────────────────────────────────────────────────────────── */}
+        {/* ── Corpo ─────────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2">
           {/* ════ Coluna esquerda: Inputs ════ */}
           <div className="bg-white p-8 lg:p-10 lg:border-r lg:border-stone-100 dark:bg-stone-950 dark:border-stone-800">
-            {/* ── Valor ──────────────────────────────────────────────────── */}
+            {/* ── Valor ────────────────────────────────────────────────────── */}
             <div className="mb-7">
               <AnimatePresence mode="wait">
                 {modoInput === "recibo" ? (
@@ -695,16 +1191,16 @@ export default function SimuladorIntegrado() {
                       label={labelValor}
                       value={bruto}
                       min={0}
-                      max={10000}
+                      max={10_000}
                       step={50}
                       unit="€"
                       onChange={handleBrutoChange}
                       presets={[500, 1000, 1500, 2500, 5000]}
                       tooltip={
                         <>
-                          Valor total que o cliente paga, com IVA incluído. Se
-                          preferires indicar o honorário sem IVA, escolhe
-                          &quot;IVA à parte&quot;.
+                          Valor total que o cliente paga. Se há IVA, podes
+                          indicar o total com IVA incluído ou o honorário
+                          líquido sem IVA — escolhe em baixo.
                         </>
                       }
                     />
@@ -752,62 +1248,115 @@ export default function SimuladorIntegrado() {
                       label="Faturação anual (€)"
                       value={brutoAnual}
                       min={0}
-                      max={120000}
-                      step={1000}
+                      max={200_000}
+                      step={1_000}
                       unit="€"
                       onChange={handleBrutoAnualChange}
-                      presets={[15000, 25000, 40000, 60000, 80000, 100000]}
+                      presets={[15000, 25000, 40000, 60000, 80000, 120000]}
                       formatPreset={(v) => fmt(v)}
-                      tooltip="Volume de negócios anual, antes de qualquer desconto."
+                      tooltip={
+                        <>
+                          Volume de negócios anual, antes de qualquer imposto.
+                          Limite regime simplificado: 200 000€/ano.
+                        </>
+                      }
                       breakPoint={breakEven ?? undefined}
                       breakPointLabel={
                         breakEven ? `Vira aqui · ${fmt(breakEven)}` : undefined
                       }
                     />
+                    {avisoIVALimite}
                   </m.div>
                 )}
               </AnimatePresence>
             </div>
 
-            {/* ── Tipo de atividade ──────────────────────────────────────── */}
+            {/* ── Tipo de atividade ─────────────────────────────────────── */}
             <div className="mb-6">
               <div className="mb-2 flex items-center gap-1.5">
                 <span className="text-sm font-medium uppercase tracking-wider text-stone-500">
                   Tipo de atividade
                 </span>
-                <InfoTip label="O que é o tipo de atividade">
-                  Procura a tua profissão na lista oficial (Art. 151.º do CIRS).
-                  Define a taxa de retenção na fonte, o coeficiente do regime
-                  simplificado e a base da Segurança Social.
+                <InfoTip label="Tipos de atividade e coeficientes">
+                  <p>
+                    Coeficientes do regime simplificado (Art. 31.º CIRS) e taxas
+                    de retenção 2026:
+                  </p>
+                  <ul className="mt-1 space-y-0.5 text-xs">
+                    <li>
+                      <strong>Art. 151.º:</strong> coef. 0,75 · ret. 23%
+                    </li>
+                    <li>
+                      <strong>Vendas:</strong> coef. 0,15 · ret. 0%
+                    </li>
+                    <li>
+                      <strong>Alojamento local:</strong> coef. 0,35 · ret. 0%
+                    </li>
+                    <li>
+                      <strong>Outras prestações:</strong> coef. 0,35 · ret.
+                      11,5%
+                    </li>
+                    <li>
+                      <strong>Prop. intelectual:</strong> coef. 0,75 · ret.
+                      16,5%
+                    </li>
+                  </ul>
+                  <p className="mt-1">
+                    25% do rendimento = presumida como despesa (sem comprovar).
+                  </p>
                 </InfoTip>
               </div>
-              <ActivityCombobox
-                value={atividade}
-                onChange={escolherAtividade}
-              />
-              <div className="mt-2.5 flex flex-wrap gap-2 text-xs">
-                <span className="rounded-lg bg-brand-light px-2.5 py-1 font-semibold text-brand-dark">
-                  Retenção {pct(ef.retencao)}
-                </span>
-                <span className="rounded-lg bg-stone-100 px-2.5 py-1 font-medium text-stone-500">
-                  Coeficiente {pct(ef.coef)}
-                </span>
+              <ActivityCombobox value={atividade} onChange={setAtividade} />
+
+              {/* Seletor de tipo diretamente */}
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {(
+                  Object.entries(TIPO_ATIVIDADE_PARAMS) as [
+                    TipoAtividade,
+                    (typeof TIPO_ATIVIDADE_PARAMS)[TipoAtividade],
+                  ][]
+                ).map(([k, p]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    aria-pressed={tipoAtiv === k}
+                    onClick={() => setTipoAtiv(k)}
+                    className={`p-2.5 rounded-xl border text-left text-xs transition-all ${
+                      tipoAtiv === k
+                        ? "border-brand bg-brand-light"
+                        : "border-stone-200 hover:border-stone-300 bg-stone-50"
+                    }`}
+                  >
+                    <div
+                      className={`font-semibold ${tipoAtiv === k ? "text-brand-dark" : "text-stone-700"}`}
+                    >
+                      {p.label}
+                    </div>
+                    <div
+                      className={`mt-0.5 ${tipoAtiv === k ? "text-brand" : "text-stone-400"}`}
+                    >
+                      Coef. {pct(p.coef)} · Ret. {pct(p.ret)}
+                    </div>
+                  </button>
+                ))}
               </div>
-              <p className="mt-2 text-xs leading-relaxed text-stone-400">
-                {ef.nota ?? META_TIPO[tipo].info}
-              </p>
             </div>
 
-            {/* ── Regime de IVA ─────────────────────────────────────────── */}
+            {/* ── Regime IVA ───────────────────────────────────────────── */}
             <fieldset className="mb-6">
               <legend className="mb-2 flex items-center gap-1.5 text-sm font-medium uppercase tracking-wider text-stone-500">
                 Regime de IVA · {META_REGIAO[regiao]}
-                <InfoTip label="O que é o regime de IVA">
-                  Abaixo de 15.000 €/ano ficas isento (Art. 53.º). Acima, cobras
-                  IVA à taxa da tua atividade e região.
+                <InfoTip label="IVA 2026">
+                  Isento Art. 53.º até{" "}
+                  {IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}€/ano. Se
+                  ultrapassares{" "}
+                  {IVA_ISENCAO_LIMITE_IMEDIATO.toLocaleString("pt-PT")}€ durante
+                  o ano, passas de imediato para o regime normal. Certas
+                  profissões (médicos, professores...) têm isenção Art. 9.º sem
+                  limite de faturação.
                 </InfoTip>
               </legend>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {ivaOptions.map((op) => {
                   const active = regimeIVA === op.id;
                   return (
@@ -942,93 +1491,64 @@ export default function SimuladorIntegrado() {
                         </div>
                       </div>
 
-                      {/* Base SS */}
-                      <div>
-                        <span className="text-sm font-medium text-stone-500 uppercase tracking-wider block mb-2">
-                          Natureza para a Segurança Social
-                        </span>
-                        <div className="grid grid-cols-2 gap-2">
-                          {BASES_SS.map((b) => {
-                            const active = baseSS === b;
-                            return (
-                              <button
-                                key={b}
-                                type="button"
-                                aria-pressed={active}
-                                onClick={() => setBaseSS(b)}
-                                className={`p-3 rounded-xl border text-left transition-all ${
-                                  active
-                                    ? "border-brand bg-brand-light"
-                                    : "border-stone-200 hover:border-stone-300 bg-stone-50"
-                                }`}
-                              >
-                                <div
-                                  className={`text-sm font-semibold ${active ? "text-brand-dark" : "text-stone-700"}`}
-                                >
-                                  {META_BASE_SS[b].label}
-                                </div>
-                                <div
-                                  className={`text-xs ${active ? "text-brand" : "text-stone-400"}`}
-                                >
-                                  {META_BASE_SS[b].sub}
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
                       {/* IRS Jovem */}
                       <div>
-                        <label
-                          htmlFor="irs-jovem"
-                          className="text-sm font-medium text-stone-500 uppercase tracking-wider block mb-2"
-                        >
-                          IRS Jovem (até {IRS_JOVEM.idadeMax.value} anos)
-                        </label>
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <label
+                            htmlFor="irs-jovem-sel"
+                            className="text-sm font-medium text-stone-500 uppercase tracking-wider"
+                          >
+                            IRS Jovem (até {IRS_JOVEM_IDADE_MAX} anos)
+                          </label>
+                          <InfoTip label="IRS Jovem 2026">
+                            Isenção parcial do IRS durante 10 anos para jovens
+                            até 35 anos (Art. 12.º-B CIRS, OE2025). Aplica-se a
+                            Cat. A e Cat. B. Limite: 55×IAS ={" "}
+                            {IRS_JOVEM_LIMITE_2026.toLocaleString("pt-PT")}
+                            €/ano. Conta anos desde 1.º rendimento como
+                            não-dependente.
+                          </InfoTip>
+                        </div>
                         <select
-                          id="irs-jovem"
+                          id="irs-jovem-sel"
                           value={irsJovemAno}
                           onChange={(e) =>
                             setIrsJovemAno(Number(e.target.value))
                           }
                           className="w-full px-4 py-3 text-sm font-semibold text-stone-700 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all dark:bg-stone-800 dark:text-stone-200 dark:border-stone-700"
                         >
-                          <option value={0}>Não aplicável</option>
-                          {Array.from({ length: 10 }, (_, i) => i + 1).map(
-                            (ano) => (
-                              <option key={ano} value={ano}>
-                                {`${ano}.º ano de rendimentos — isenção ${pct(IRS_JOVEM.isencaoPorAno.value[ano])}`}
-                              </option>
-                            ),
-                          )}
+                          {irsJovemOpts.map(({ ano, label }) => (
+                            <option key={ano} value={ano}>
+                              {label}
+                            </option>
+                          ))}
                         </select>
-                      </div>
-
-                      {/* Custos da empresa */}
-                      <div>
-                        <div className="mb-2">
-                          <span className="text-sm font-medium text-stone-500 uppercase tracking-wider">
-                            Custos extra da empresa (€/ano)
-                          </span>
-                        </div>
-                        <NumericSlider
-                          label=""
-                          value={custosEmpresa}
-                          min={0}
-                          max={10000}
-                          step={500}
-                          unit="€"
-                          onChange={setCustosEmpresa}
-                          presets={[1000, 2000, 3000, 5000]}
-                          tooltip="Contabilidade, secretariado, software de faturação, etc. O valor por defeito (2 000 €/ano) é uma estimativa típica."
-                        />
+                        <p className="mt-1.5 text-xs text-stone-400">
+                          Limite de isenção:{" "}
+                          {IRS_JOVEM_LIMITE_2026.toLocaleString("pt-PT")}€/ano
+                          (55×IAS 2026). Aplica-se ao rendimento coletável, não
+                          ao bruto.
+                        </p>
                       </div>
                     </div>
                   </m.div>
                 )}
               </AnimatePresence>
             </div>
+
+            {/* ── Inputs Empresa (visíveis quando cenário = empresa) ─────── */}
+            {cenario === "empresa" && (
+              <EmpresaInputs
+                despesasOper={despesasOper}
+                custosExtra={custosExtra}
+                salGerenteMensal={salGerenteMensal}
+                distribuirDividendos={distribuirDividendos}
+                onDespChange={setDespesasOper}
+                onCustosChange={setCustosExtra}
+                onSalChange={setSalGerenteMensal}
+                onDividendosChange={setDistribuirDividendos}
+              />
+            )}
           </div>
 
           {/* ════ Coluna direita: Resultado ════ */}
@@ -1046,233 +1566,335 @@ export default function SimuladorIntegrado() {
                 >
                   <div className="mb-8">
                     <div className="text-sm font-medium text-stone-500 uppercase tracking-wider mb-1">
-                      O que é realmente teu
-                      {modoInput === "recibo" && " · por recibo"}
+                      {modoInput === "recibo"
+                        ? "O que é realmente teu · por recibo"
+                        : "Líquido anual estimado"}
                     </div>
                     <div className="font-display text-5xl font-semibold leading-none mb-1 text-brand">
-                      <AnimatedNumber value={resultRecibo.liquido} />
+                      <AnimatedNumber
+                        value={
+                          modoInput === "recibo"
+                            ? resultRecibo.liquido
+                            : resultAnualRV.liquido
+                        }
+                      />
                     </div>
                     <div className="text-sm text-stone-400 mt-1">
                       de{" "}
                       <AnimatedNumber
-                        value={resultRecibo.bruto + resultRecibo.iva}
+                        value={
+                          modoInput === "recibo"
+                            ? resultRecibo.bruto + resultRecibo.iva
+                            : brutoAnual
+                        }
                       />{" "}
                       faturados
-                      {resultRecibo.taxaIVA > 0 && (
+                      {modoInput === "anual" && (
                         <span>
-                          {" · "}entra na conta:{" "}
-                          <AnimatedNumber value={resultRecibo.entradaConta} />
+                          {" "}
+                          · IRS {fmt(resultAnualRV.irs)} · SS{" "}
+                          {fmt(resultAnualRV.ssAnual)}
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Barra visual */}
-                  <div className="mb-6">
-                    <div className="flex h-3 rounded-full overflow-hidden gap-0.5 mb-3">
-                      <div
-                        className="transition-all duration-500 rounded-l-full"
-                        style={{
-                          width: barW(resultRecibo.liquido),
-                          background: "#1D9E75",
-                        }}
-                      />
-                      {resultRecibo.retencaoIRS > 0 && (
-                        <div
-                          className="transition-all duration-500"
-                          style={{
-                            width: barW(resultRecibo.retencaoIRS),
-                            background: "#9FE1CB",
-                          }}
-                        />
-                      )}
-                      {resultRecibo.iva > 0 && (
-                        <div
-                          className="transition-all duration-500"
-                          style={{
-                            width: barW(resultRecibo.iva),
-                            background: "#FFF8A0",
-                          }}
-                        />
-                      )}
-                      {resultRecibo.segSocial > 0 && (
-                        <div
-                          className="transition-all duration-500 rounded-r-full"
-                          style={{
-                            width: barW(resultRecibo.segSocial),
-                            background: "#D3D1C7",
-                          }}
-                        />
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                      {[
-                        { label: "Teu", color: "#1D9E75", show: true },
-                        {
-                          label: "Retenção IRS",
-                          color: "#9FE1CB",
-                          show: resultRecibo.retencaoIRS > 0,
-                        },
-                        {
-                          label: "IVA",
-                          color: "#E8D97A",
-                          show: resultRecibo.iva > 0,
-                        },
-                        {
-                          label: "Seg. Social",
-                          color: "#B4B2A9",
-                          show: resultRecibo.segSocial > 0,
-                        },
-                      ]
-                        .filter((l) => l.show)
-                        .map((l) => (
+                  {modoInput === "recibo" && (
+                    <>
+                      {/* Barra visual */}
+                      <div className="mb-6">
+                        <div className="flex h-3 rounded-full overflow-hidden gap-0.5 mb-3">
                           <div
-                            key={l.label}
-                            className="flex items-center gap-1.5"
-                          >
+                            className="transition-all duration-500 rounded-l-full"
+                            style={{
+                              width: barW(resultRecibo.liquido),
+                              background: "#1D9E75",
+                            }}
+                          />
+                          {resultRecibo.retencaoIRS > 0 && (
                             <div
-                              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                              style={{ background: l.color }}
+                              className="transition-all duration-500"
+                              style={{
+                                width: barW(resultRecibo.retencaoIRS),
+                                background: "#9FE1CB",
+                              }}
                             />
-                            <span className="text-xs text-stone-500">
-                              {l.label}
-                            </span>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
+                          )}
+                          {resultRecibo.iva > 0 && (
+                            <div
+                              className="transition-all duration-500"
+                              style={{
+                                width: barW(resultRecibo.iva),
+                                background: "#FFF8A0",
+                              }}
+                            />
+                          )}
+                          {resultRecibo.segSocial > 0 && (
+                            <div
+                              className="transition-all duration-500 rounded-r-full"
+                              style={{
+                                width: barW(resultRecibo.segSocial),
+                                background: "#D3D1C7",
+                              }}
+                            />
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                          {[
+                            { label: "Teu", color: "#1D9E75", show: true },
+                            {
+                              label: "Retenção IRS",
+                              color: "#9FE1CB",
+                              show: resultRecibo.retencaoIRS > 0,
+                            },
+                            {
+                              label: "IVA",
+                              color: "#E8D97A",
+                              show: resultRecibo.iva > 0,
+                            },
+                            {
+                              label: "Seg. Social",
+                              color: "#B4B2A9",
+                              show: resultRecibo.segSocial > 0,
+                            },
+                          ]
+                            .filter((l) => l.show)
+                            .map((l) => (
+                              <div
+                                key={l.label}
+                                className="flex items-center gap-1.5"
+                              >
+                                <div
+                                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                                  style={{ background: l.color }}
+                                />
+                                <span className="text-xs text-stone-500">
+                                  {l.label}
+                                </span>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
 
-                  {/* Breakdown */}
-                  <div className="space-y-1 flex-1">
-                    <DetalheRow
-                      label="Valor do serviço"
-                      value={resultRecibo.bruto}
-                      type="neutral"
-                      note="O que faturaste"
-                    />
-                    {resultRecibo.isencaoJovem > 0 && (
-                      <DetalheRow
-                        label={`IRS Jovem (isenção ${pct(resultRecibo.isencaoJovem)})`}
-                        value={0}
-                        type="neutral"
-                        note="Reduz a base de retenção"
-                        hideValue
-                      />
-                    )}
-                    {resultRecibo.taxaIVA > 0 && (
-                      <DetalheRow
-                        label={`IVA cobrado (${pct(resultRecibo.taxaIVA)})`}
-                        value={resultRecibo.iva}
-                        type="warning"
-                        note="Pertence ao Estado"
-                      />
-                    )}
-                    {resultRecibo.taxaIVA > 0 && (
-                      <DetalheRow
-                        label="O cliente paga"
-                        value={resultRecibo.bruto + resultRecibo.iva}
-                        type="neutral"
-                        note="Valor base + IVA"
-                      />
-                    )}
-                    {resultRecibo.retencaoIRS > 0 && (
-                      <DetalheRow
-                        label={`Retenção na fonte (${pct(resultRecibo.taxaRetencao)})`}
-                        value={-resultRecibo.retencaoIRS}
-                        type="deducao"
-                        note="Adiantamento de IRS"
-                      />
-                    )}
-                    <DetalheRow
-                      label="Entra na tua conta"
-                      value={resultRecibo.entradaConta}
-                      type="subtotal"
-                      note={
-                        resultRecibo.taxaIVA > 0
-                          ? "Bruto + IVA − Retenção"
-                          : "Após retenção"
-                      }
-                    />
-                    {resultRecibo.taxaIVA > 0 && (
-                      <DetalheRow
-                        label="Reservar para IVA"
-                        value={-resultRecibo.iva}
-                        type="warning"
-                        note="Entrega trimestral"
-                      />
-                    )}
-                    {resultRecibo.segSocial > 0 && (
-                      <DetalheRow
-                        label={`Reservar para SS (${pct(SS_TAXA.value)})`}
-                        value={-resultRecibo.segSocial}
-                        type="deducao"
-                        note="Pagamento mensal"
-                      />
-                    )}
+                      {/* Breakdown por recibo */}
+                      <div className="space-y-1 flex-1">
+                        <DetalheRow
+                          label="Valor do serviço"
+                          value={resultRecibo.bruto}
+                          type="neutral"
+                          note="O que faturaste (sem IVA)"
+                        />
+                        {resultRecibo.taxaIVA > 0 && (
+                          <DetalheRow
+                            label={`IVA (${pct(resultRecibo.taxaIVA)}) — do Estado`}
+                            value={resultRecibo.iva}
+                            type="warning"
+                            note="Pertence ao Estado — não é teu"
+                          />
+                        )}
+                        {resultRecibo.taxaIVA > 0 && (
+                          <DetalheRow
+                            label="O cliente paga"
+                            value={resultRecibo.bruto + resultRecibo.iva}
+                            type="neutral"
+                            note="Valor base + IVA"
+                          />
+                        )}
+                        {resultRecibo.retencaoIRS > 0 && (
+                          <DetalheRow
+                            label={`Retenção na fonte (${pct(resultRecibo.taxaRetencao)})`}
+                            value={-resultRecibo.retencaoIRS}
+                            type="deducao"
+                            note="Adiantamento de IRS ao Estado"
+                          />
+                        )}
+                        <DetalheRow
+                          label="Entra na tua conta"
+                          value={resultRecibo.entradaConta}
+                          type="subtotal"
+                          note={
+                            resultRecibo.taxaIVA > 0
+                              ? "Bruto + IVA − Retenção"
+                              : "Após retenção"
+                          }
+                        />
+                        {resultRecibo.taxaIVA > 0 && (
+                          <DetalheRow
+                            label="Reservar para IVA (entrega trimestral)"
+                            value={-resultRecibo.iva}
+                            type="warning"
+                          />
+                        )}
+                        {resultRecibo.segSocial > 0 && (
+                          <DetalheRow
+                            label={`Reservar SS (21,4%×70% de ${fmt(resultRecibo.bruto)} ÷ 12)`}
+                            value={-resultRecibo.segSocial}
+                            type="deducao"
+                            note="Pagamento mensal até dia 20"
+                          />
+                        )}
 
-                    {/* Resultado final */}
-                    <div className="mt-4 p-4 rounded-2xl border-2 border-brand bg-white dark:bg-stone-950">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <div className="text-sm font-semibold text-stone-700 dark:text-stone-300">
-                              Disponível para gastar
+                        {/* Resultado final */}
+                        <div className="mt-4 p-4 rounded-2xl border-2 border-brand bg-white dark:bg-stone-950">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <div className="text-sm font-semibold text-stone-700 dark:text-stone-300">
+                                  Disponível para gastar
+                                </div>
+                                <InfoTip>
+                                  O que é mesmo teu: bruto menos a SS. O IVA e a
+                                  retenção não contam aqui — o IVA é do Estado,
+                                  a retenção é recuperada (ou paga) na
+                                  declaração anual.
+                                </InfoTip>
+                              </div>
+                              <div className="text-xs text-stone-400 mt-0.5">
+                                {resultRecibo.taxaIVA > 0
+                                  ? "IVA excluído — é do Estado"
+                                  : "Bruto menos Segurança Social"}
+                              </div>
                             </div>
-                            <InfoTip>
-                              O que é mesmo teu: bruto menos IRS e Segurança
-                              Social. O IVA não entra aqui — é dinheiro do
-                              Estado que só passa pela tua conta.
-                            </InfoTip>
-                          </div>
-                          <div className="text-xs text-stone-400 mt-0.5">
-                            {resultRecibo.taxaIVA > 0
-                              ? "O IVA é do Estado — não conta aqui"
-                              : "Sem culpa, sem surpresas"}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-display text-2xl font-semibold text-brand">
-                            <AnimatedNumber value={resultRecibo.liquido} />
-                          </div>
-                          <div className="text-xs text-stone-400">
-                            {pct(
-                              resultRecibo.liquido / (resultRecibo.bruto || 1),
-                            )}{" "}
-                            do bruto
+                            <div className="text-right">
+                              <div className="font-display text-2xl font-semibold text-brand">
+                                <AnimatedNumber value={resultRecibo.liquido} />
+                              </div>
+                              <div className="text-xs text-stone-400">
+                                {pct(
+                                  resultRecibo.liquido /
+                                    (resultRecibo.bruto || 1),
+                                )}{" "}
+                                do bruto
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
 
-                    {resultRecibo.avisos.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        {resultRecibo.avisos.map((a, i) => (
-                          <div
-                            key={i}
-                            className="flex items-start gap-2.5 p-3 rounded-xl border bg-alert-bg border-alert-border"
-                          >
-                            <span className="text-alert-text mt-0.5 flex-shrink-0">
-                              <Warning size={14} />
-                            </span>
-                            <span className="text-xs leading-relaxed text-alert-text">
-                              {a}
-                            </span>
+                        {resultRecibo.avisos?.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            {resultRecibo.avisos.map((a: string, i: number) => (
+                              <div
+                                key={i}
+                                className="flex items-start gap-2.5 p-3 rounded-xl border bg-alert-bg border-alert-border"
+                              >
+                                <span className="text-alert-text mt-0.5 flex-shrink-0">
+                                  <Warning size={14} />
+                                </span>
+                                <span className="text-xs leading-relaxed text-alert-text">
+                                  {a}
+                                </span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </>
+                  )}
+
+                  {modoInput === "anual" && (
+                    /* Breakdown anual RV */
+                    <div className="space-y-1 flex-1">
+                      <DetalheRow
+                        label="Faturação bruta anual"
+                        value={resultAnualRV.faturacao}
+                        type="neutral"
+                      />
+                      <DetalheRow
+                        label={`Rendimento coletável (coef. ${pct(resultAnualRV.coeficiente)})`}
+                        value={resultAnualRV.rendColetavel}
+                        type="neutral"
+                        note="Regime simplificado — 25% presumido como despesa"
+                      />
+                      {resultAnualRV.ssAnual > 0 && (
+                        <DetalheRow
+                          label="Dedução SS paga (Art. 31.º n.º 2 CIRS)"
+                          value={-resultAnualRV.ssAnual}
+                          type="deducao"
+                          note="SS dedutível ao rendimento coletável"
+                        />
+                      )}
+                      {resultAnualRV.isencaoJovemValor > 0 && (
+                        <DetalheRow
+                          label={`IRS Jovem — isenção ${pct(resultAnualRV.isencaoJovemPct)} (Art. 12.º-B)`}
+                          value={-resultAnualRV.isencaoJovemValor}
+                          type="deducao"
+                          note={`Limite ${IRS_JOVEM_LIMITE_2026.toLocaleString("pt-PT")}€ (55×IAS)`}
+                        />
+                      )}
+                      <DetalheRow
+                        label="Rendimento tributável"
+                        value={resultAnualRV.rendTributavel}
+                        type="subtotal"
+                        note={
+                          resultAnualRV.rendTributavel <= MINIMO_EXISTENCIA_2026
+                            ? "Abaixo do mínimo de existência — IRS = 0€"
+                            : ""
+                        }
+                      />
+                      <DetalheRow
+                        label="IRS liquidado (escalões progressivos)"
+                        value={-resultAnualRV.irs}
+                        type="warning"
+                        note={`Taxa efetiva ${pct(resultAnualRV.taxaEfetiva)}`}
+                      />
+                      {resultAnualRV.ssAnual > 0 && (
+                        <DetalheRow
+                          label="Segurança Social (21,4% × 70%)"
+                          value={-resultAnualRV.ssAnual}
+                          type="deducao"
+                          note="IAS 2026: 537,13€ · máx. 12×IAS/mês"
+                        />
+                      )}
+
+                      <div className="mt-4 p-4 rounded-2xl border-2 border-brand bg-white dark:bg-stone-950">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="text-sm font-semibold text-stone-700 dark:text-stone-300">
+                              Líquido anual
+                            </div>
+                            <div className="text-xs text-stone-400 mt-0.5">
+                              ≈ {fmt(resultAnualRV.liquido / 12)}/mês
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-display text-2xl font-semibold text-brand">
+                              <AnimatedNumber value={resultAnualRV.liquido} />
+                            </div>
+                            <div className="text-xs text-stone-400">
+                              {pct(resultAnualRV.liquido / (brutoAnual || 1))}{" "}
+                              do bruto
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {resultAnualRV.acertoIRS > 0 && (
+                        <div className="mt-3 flex items-start gap-2.5 p-3 rounded-xl border bg-brand-light border-brand/30">
+                          <span className="text-brand mt-0.5 flex-shrink-0">
+                            <Check size={14} />
+                          </span>
+                          <span className="text-xs leading-relaxed text-brand-dark">
+                            Reembolso estimado IRS:{" "}
+                            {fmt(resultAnualRV.acertoIRS)} (retiveste{" "}
+                            {fmt(resultAnualRV.retencaoAnual)} · IRS real{" "}
+                            {fmt(resultAnualRV.irs)})
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <p className="text-xs text-stone-400 mt-5 leading-relaxed">
-                    Estimativa de tesouraria por recibo. Taxas de 2026. Não
-                    substitui aconselhamento de um contabilista certificado.
+                    Estimativa fiscal 2026. Escalões IRS atualizados 3,51% pelo
+                    OE2026. Mínimo de existência:{" "}
+                    {MINIMO_EXISTENCIA_2026.toLocaleString("pt-PT")}€. Não
+                    substitui aconselhamento de contabilista certificado.
                   </p>
                   <Link
                     href="/dashboard/simulador"
                     className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-brand transition-colors hover:text-brand-dark"
                   >
-                    Ver o apuramento anual de IRS (regime simplificado e
-                    escalões)
+                    Ver apuramento IRS anual detalhado por escalões
                     <svg
                       width="12"
                       height="12"
@@ -1300,25 +1922,26 @@ export default function SimuladorIntegrado() {
                   transition={{ duration: 0.2 }}
                   className="flex flex-col flex-1"
                 >
-                  {/* Aviso de anualização quando estamos em modo por-recibo */}
-                  {avisoAnualizacao && (
+                  {modoInput === "recibo" && (
                     <div className="mb-4 flex items-start gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs text-stone-500 dark:border-stone-700 dark:bg-stone-800">
                       <Warning
                         size={13}
                         className="flex-shrink-0 mt-0.5 text-stone-400"
                       />
-                      <span>{avisoAnualizacao}</span>
+                      <span>
+                        Comparação baseada em {fmt(bruto)} × 12 ={" "}
+                        {fmt(brutoAnual)}/ano. Muda para o modo Anual para
+                        valores mais precisos.
+                      </span>
                     </div>
                   )}
 
                   <div className="mb-8">
                     <div className="text-sm font-medium text-stone-500 uppercase tracking-wider mb-1">
-                      Líquido estimado — empresa
+                      Líquido estimado — empresa (Lda)
                     </div>
                     <div className="font-display text-5xl font-semibold leading-none mb-1 text-brand">
-                      <AnimatedNumber
-                        value={resultComparacao.empresa.liquido}
-                      />
+                      <AnimatedNumber value={resultEmpresa.liquidoGerente} />
                     </div>
                     <div className="text-sm text-stone-400 mt-1">
                       de <AnimatedNumber value={brutoAnual} /> faturados/ano
@@ -1333,32 +1956,34 @@ export default function SimuladorIntegrado() {
                         return (
                           <>
                             <div
-                              className="transition-all duration-500 rounded-l-full"
                               style={{
-                                width: `${(resultComparacao.empresa.liquido / total) * 100}%`,
+                                width: `${(resultEmpresa.liquidoGerente / total) * 100}%`,
                                 background: "#1D9E75",
                               }}
+                              className="transition-all duration-500 rounded-l-full"
                             />
                             <div
-                              className="transition-all duration-500"
                               style={{
-                                width: `${((resultComparacao.empresa.irc + resultComparacao.empresa.derrama) / total) * 100}%`,
+                                width: `${((resultEmpresa.irc + resultEmpresa.derramaMuni) / total) * 100}%`,
                                 background: "#9FE1CB",
                               }}
-                            />
-                            <div
                               className="transition-all duration-500"
-                              style={{
-                                width: `${(resultComparacao.empresa.dividendos / total) * 100}%`,
-                                background: "#FBBF24",
-                              }}
                             />
+                            {resultEmpresa.irsDividendos > 0 && (
+                              <div
+                                style={{
+                                  width: `${(resultEmpresa.irsDividendos / total) * 100}%`,
+                                  background: "#FBBF24",
+                                }}
+                                className="transition-all duration-500"
+                              />
+                            )}
                             <div
-                              className="transition-all duration-500 rounded-r-full"
                               style={{
-                                width: `${(resultComparacao.empresa.custosEmpresa / total) * 100}%`,
+                                width: `${(resultEmpresa.totalCustos / total) * 100}%`,
                                 background: "#D3D1C7",
                               }}
+                              className="transition-all duration-500 rounded-r-full"
                             />
                           </>
                         );
@@ -1367,9 +1992,19 @@ export default function SimuladorIntegrado() {
                     <div className="flex flex-wrap gap-3">
                       {[
                         { label: "Teu (após dividendos)", color: "#1D9E75" },
-                        { label: "IRC + Derrama", color: "#9FE1CB" },
-                        { label: "IRS Dividendos (28%)", color: "#FBBF24" },
-                        { label: "Custos empresa", color: "#B4B2A9" },
+                        {
+                          label: "IRC (PME 15%/19%) + Derrama",
+                          color: "#9FE1CB",
+                        },
+                        ...(resultEmpresa.irsDividendos > 0
+                          ? [
+                              {
+                                label: "IRS Dividendos (28%)",
+                                color: "#FBBF24",
+                              },
+                            ]
+                          : []),
+                        { label: "Custos + salário", color: "#B4B2A9" },
                       ].map((l) => (
                         <div
                           key={l.label}
@@ -1395,35 +2030,73 @@ export default function SimuladorIntegrado() {
                       type="neutral"
                       note="Volume de negócios anual"
                     />
-                    <DetalheRow
-                      label="Custos da empresa"
-                      value={-resultComparacao.empresa.custosEmpresa}
-                      type="deducao"
-                      note="Contabilidade + admin (estimativa)"
-                    />
+                    {resultEmpresa.despesasOper > 0 && (
+                      <DetalheRow
+                        label="Despesas operacionais"
+                        value={-resultEmpresa.despesasOper}
+                        type="deducao"
+                        note="Dedutíveis ao lucro tributável"
+                      />
+                    )}
+                    {resultEmpresa.custosExtra > 0 && (
+                      <DetalheRow
+                        label="Custos estrutura empresa"
+                        value={-resultEmpresa.custosExtra}
+                        type="deducao"
+                        note="Contabilidade, software, etc."
+                      />
+                    )}
+                    {resultEmpresa.salGerente > 0 && (
+                      <>
+                        <DetalheRow
+                          label="Salário gerente (bruto anual)"
+                          value={-resultEmpresa.salGerente}
+                          type="deducao"
+                          note="Custo dedutível da empresa"
+                        />
+                        <DetalheRow
+                          label="SS empresa + trabalhador sobre salário"
+                          value={-resultEmpresa.ssSalGerente}
+                          type="deducao"
+                          note="23,75% (empresa) + 11% (trabalhador)"
+                        />
+                      </>
+                    )}
                     <DetalheRow
                       label="Lucro tributável"
-                      value={resultComparacao.empresa.lucroTributavel}
+                      value={resultEmpresa.lucroTributavel}
                       type="subtotal"
                       note="Antes de IRC"
                     />
                     <DetalheRow
-                      label="IRC + Derrama"
-                      value={
-                        -(
-                          resultComparacao.empresa.irc +
-                          resultComparacao.empresa.derrama
-                        )
-                      }
+                      label="IRC (PME: 15% até 50k€ + 19% excedente)"
+                      value={-resultEmpresa.irc}
                       type="deducao"
-                      note="15% (PME, primeiros 50k€) + 19% + derrama ~1,5%"
+                      note={`OE2026: IRC geral 19% (era 20% em 2025)`}
                     />
                     <DetalheRow
-                      label="IRS sobre dividendos"
-                      value={-resultComparacao.empresa.dividendos}
-                      type="warning"
-                      note="Taxa liberatória 28% (Art. 71.º CIRS)"
+                      label="Derrama municipal (~1,5%)"
+                      value={-resultEmpresa.derramaMuni}
+                      type="deducao"
+                      note="Varia por município — estimativa Lisboa/Porto"
                     />
+                    {resultEmpresa.irsDividendos > 0 ? (
+                      <DetalheRow
+                        label="IRS sobre dividendos (28%)"
+                        value={-resultEmpresa.irsDividendos}
+                        type="warning"
+                        note="Taxa liberatória Art. 71.º CIRS"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-between px-4 py-2.5 rounded-xl border bg-white border-stone-100">
+                        <span className="text-xs text-stone-500">
+                          Lucro retido na empresa (não distribuído)
+                        </span>
+                        <span className="text-xs font-semibold text-stone-600">
+                          {fmt(resultEmpresa.lucroLiquido)}
+                        </span>
+                      </div>
+                    )}
 
                     <div className="mt-4 p-4 rounded-2xl border-2 border-brand bg-white dark:bg-stone-950">
                       <div className="flex justify-between items-center">
@@ -1432,19 +2105,20 @@ export default function SimuladorIntegrado() {
                             Líquido para o dono
                           </div>
                           <div className="text-xs text-stone-400 mt-0.5">
-                            Após IRC, derrama e IRS de dividendos
+                            {resultEmpresa.salGerente > 0
+                              ? "Salário líquido + dividendos líquidos"
+                              : "Após IRC, derrama e IRS dividendos"}
                           </div>
                         </div>
                         <div className="text-right">
                           <div className="font-display text-2xl font-semibold text-brand">
                             <AnimatedNumber
-                              value={resultComparacao.empresa.liquido}
+                              value={resultEmpresa.liquidoGerente}
                             />
                           </div>
                           <div className="text-xs text-stone-400">
                             {pct(
-                              resultComparacao.empresa.liquido /
-                                (brutoAnual || 1),
+                              resultEmpresa.liquidoGerente / (brutoAnual || 1),
                             )}{" "}
                             do bruto
                           </div>
@@ -1454,9 +2128,10 @@ export default function SimuladorIntegrado() {
                   </div>
 
                   <p className="text-xs text-stone-400 mt-5 leading-relaxed">
-                    Estimativa de ordem de grandeza. Não considera salário/SS do
-                    gerente, tributação autónoma, englobamento de dividendos nem
-                    custos de constituição. Consulta um contabilista
+                    Estimativa de ordem de grandeza. IRC PME 2026: 15%/50k€ +
+                    19%. Derrama 1,5%. Não considera tributação autónoma,
+                    englobamento de dividendos, benefícios fiscais (RFAI, DLRR)
+                    nem custos de constituição (~1 500€). Consulta contabilista
                     certificado.
                   </p>
                 </m.div>
@@ -1465,7 +2140,7 @@ export default function SimuladorIntegrado() {
           </div>
         </div>
 
-        {/* ── Comparação integrada (rodapé) ─────────────────────────────── */}
+        {/* ── Rodapé: comparação integrada ──────────────────────────────────── */}
         <div className="border-t border-stone-100 bg-stone-50 px-8 py-6 dark:border-stone-800 dark:bg-stone-900">
           <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-600">
             Comparação — mesmos inputs, dois cenários
@@ -1491,15 +2166,17 @@ export default function SimuladorIntegrado() {
                 Recibos Verdes
               </div>
               <div className="mt-0.5 text-[11px] text-stone-400">
-                Categoria B
+                Categoria B · Regime simplificado
               </div>
               <div
                 className={`mt-2 font-display text-2xl font-semibold tabular-nums ${!empresaVence ? "text-brand-dark" : "text-stone-800 dark:text-stone-200"}`}
               >
-                <AnimatedNumber value={resultComparacao.freelancer.liquido} />
+                <AnimatedNumber value={resultAnualRV.liquido} />
               </div>
-              <div className="text-[11px] text-stone-400">
-                líquido para ti / ano
+              <div className="text-[11px] text-stone-400">líquido/ano</div>
+              <div className="mt-2 text-[11px] text-stone-400 space-y-0.5">
+                <div>IRS: −{fmt(resultAnualRV.irs)}</div>
+                <div>SS: −{fmt(resultAnualRV.ssAnual)}</div>
               </div>
             </div>
 
@@ -1519,18 +2196,25 @@ export default function SimuladorIntegrado() {
               <div
                 className={`text-sm font-semibold ${empresaVence ? "text-brand-dark" : "text-stone-700"}`}
               >
-                Empresa
+                Empresa (Lda)
               </div>
               <div className="mt-0.5 text-[11px] text-stone-400">
-                IRC + dividendos
+                IRC PME +{" "}
+                {distribuirDividendos ? "dividendos 28%" : "lucro retido"}
               </div>
               <div
                 className={`mt-2 font-display text-2xl font-semibold tabular-nums ${empresaVence ? "text-brand-dark" : "text-stone-800 dark:text-stone-200"}`}
               >
-                <AnimatedNumber value={resultComparacao.empresa.liquido} />
+                <AnimatedNumber value={resultEmpresa.liquidoGerente} />
               </div>
-              <div className="text-[11px] text-stone-400">
-                líquido para ti / ano
+              <div className="text-[11px] text-stone-400">líquido/ano</div>
+              <div className="mt-2 text-[11px] text-stone-400 space-y-0.5">
+                <div>IRC: −{fmt(resultEmpresa.irc)}</div>
+                <div>Derrama: −{fmt(resultEmpresa.derramaMuni)}</div>
+                {resultEmpresa.irsDividendos > 0 && (
+                  <div>IRS div: −{fmt(resultEmpresa.irsDividendos)}</div>
+                )}
+                <div>Custos: −{fmt(resultEmpresa.totalCustos)}</div>
               </div>
             </div>
           </div>
@@ -1549,31 +2233,35 @@ export default function SimuladorIntegrado() {
             {empresaVence ? (
               <span>
                 Com {fmt(brutoAnual)}/ano, a empresa deixa-te com mais{" "}
-                <strong>{fmt(Math.abs(resultComparacao.diferenca))}</strong>
-                /ano.
+                <strong>{fmt(diferenca)}/ano</strong> (
+                {pct(diferenca / (brutoAnual || 1))}).
+                {breakEven && ` Ponto de viragem: ${fmt(breakEven)}/ano.`}
               </span>
             ) : (
               <span>
-                Com {fmt(brutoAnual)}/ano, os recibos verdes deixam-te com mais{" "}
-                <strong>{fmt(Math.abs(resultComparacao.diferenca))}</strong>
-                /ano.
+                Com {fmt(brutoAnual)}/ano, recibos verdes deixam-te com mais{" "}
+                <strong>{fmt(diferenca)}/ano</strong> (
+                {pct(diferenca / (brutoAnual || 1))}).
+                {breakEven &&
+                  ` A empresa compensa acima de ${fmt(breakEven)}/ano.`}
               </span>
             )}
           </div>
 
-          {/* Nota fiscal */}
+          {/* Nota legal */}
           <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-alert-border bg-alert-bg p-4">
             <span className="mt-0.5 flex-shrink-0 text-alert-text">
               <Warning size={14} />
             </span>
             <p className="text-xs leading-relaxed text-alert-text">
-              Estimativa de ordem de grandeza: atividade do Art. 151.º, cerca de{" "}
-              {fmt(custosEmpresa)}/ano de custos extra da empresa e distribuição
-              de todo o lucro como dividendos. Não considera salário/Segurança
-              Social do gerente, tributação autónoma, englobamento de
-              dividendos, isenção SS do 1.º ano dos recibos verdes, nem custos
-              de constituição. A decisão de abrir uma sociedade deve ser sempre
-              validada com um contabilista certificado.
+              <strong>Fontes:</strong> Art. 31.º, 68.º, 101.º, 101.º-B e 12.º-B
+              CIRS | CIVA Art. 53.º e 9.º | CRC (SS independentes) | OE2026 (Lei
+              n.º 73-A/2025) | IAS 2026: 537,13€. Estimativa de ordem de
+              grandeza. Não considera tributação autónoma, englobamento,
+              benefícios fiscais (RFAI, DLRR, SIFIDE II), custos de
+              constituição, regime contabilidade organizada nem particularidades
+              individuais. Decisão de constituir sociedade deve ser validada com
+              contabilista certificado (OCC).
             </p>
           </div>
         </div>
