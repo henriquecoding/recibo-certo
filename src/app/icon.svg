@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Fundo: rounded square na cor da marca (#1D9E75) -->
+  <rect width="32" height="32" rx="7" fill="#1D9E75"/>
+  <!-- CheckTrend: linha de tendência ascendente com check (24×24 → 20×20, centrado em 32×32) -->
+  <g transform="translate(6,6) scale(0.8333)">
+    <path
+      d="M3 17l6-6 4 4 7-8"
+      stroke="white"
+      stroke-width="2.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      fill="none"
+    />
+  </g>
+</svg>

@@ -44,6 +44,13 @@ export const metadata: Metadata = {
   authors: [{ name: "ReciboCerto", url: SITE_URL }],
   creator: "ReciboCerto",
   publisher: "ReciboCerto",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
