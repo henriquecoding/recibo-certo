@@ -1,13 +1,12 @@
 import Nav from "@/components/Nav";
 import Hero from "@/components/Hero";
 import Stats from "@/components/Stats";
-import Calculadora from "@/components/Calculadora";
+import SimuladorIntegrado from "@/components/SimuladorIntegrado";
 import Features from "@/components/Features";
 import FAQ from "@/components/FAQ";
 import Fontes from "@/components/Fontes";
 import EmailCapture from "@/components/EmailCapture";
 import Comparacao from "@/components/Comparacao";
-import SimuladorEmpresa from "@/components/SimuladorEmpresa";
 import Precos from "@/components/Precos";
 import Footer from "@/components/Footer";
 import Reveal from "@/components/ui/Reveal";
@@ -15,7 +14,6 @@ import { faqs } from "@/lib/faq";
 
 const SITE_URL = "https://recibocerto.pt";
 
-// Dados estruturados (JSON-LD) — melhoram a indexação e os rich results.
 const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
@@ -44,29 +42,48 @@ const jsonLd = {
 export default function Home() {
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div id="top">
         <Nav />
         <main>
           <Hero />
 
-          <section className="grain border-y border-stone-100 bg-white px-6 py-24">
+          {/*
+           * ── Simulador integrado ──────────────────────────────────────────
+           * Substitui Calculadora.tsx + SimuladorEmpresa.tsx.
+           * Uma única ferramenta com:
+           *  · slider bidirecional + input manual para todos os campos numéricos
+           *  · ActivityCombobox com catálogo completo Art. 151.º
+           *  · toggle Por recibo / Anual (partilhado entre cenários)
+           *  · toggle Recibos Verdes / Empresa (mesmos inputs, dois painéis)
+           *  · comparação integrada no rodapé com ponto de viragem
+           */}
+          <section
+            id="calculadora"
+            className="grain border-y border-stone-100 bg-white px-6 py-24 scroll-mt-20"
+          >
             <div className="mx-auto max-w-5xl">
               <Reveal className="mb-10 text-center">
-                <div className="eyebrow mb-3 text-brand">Experimenta com o teu valor</div>
-                <h2 className="font-display display-2 font-semibold text-ink">Quanto fica realmente teu?</h2>
-                <p className="mx-auto mt-3 max-w-md text-stone-500">
-                  Muda o valor e vê, em tempo real, o que é teu e o que reservar. IRS, Segurança Social e IVA, com as
-                  taxas de 2026.
+                <div className="eyebrow mb-3 text-brand">
+                  Experimenta com o teu valor
+                </div>
+                <h2 className="font-display display-2 font-semibold text-ink">
+                  Quanto fica realmente teu?
+                </h2>
+                <p className="mx-auto mt-3 max-w-lg text-stone-500">
+                  Configura uma vez — vê o líquido como recibos verdes e como
+                  empresa, em tempo real. IRS, Segurança Social, IRC e
+                  dividendos com as taxas de 2026.
                 </p>
               </Reveal>
               <Reveal delay={0.08}>
-                <Calculadora />
+                <SimuladorIntegrado />
               </Reveal>
             </div>
           </section>
-
-          <SimuladorEmpresa />
 
           <Stats />
 
