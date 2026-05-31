@@ -7,8 +7,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: SITE_URL,
       lastModified: new Date(),
-      changeFrequency: "monthly",
+      changeFrequency: "weekly",
       priority: 1,
+    },
+    {
+      url: `${SITE_URL}/precos`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
     },
   ];
 }

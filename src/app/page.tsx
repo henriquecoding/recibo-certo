@@ -11,31 +11,22 @@ import Precos from "@/components/Precos";
 import Footer from "@/components/Footer";
 import Reveal from "@/components/ui/Reveal";
 import { faqs } from "@/lib/faq";
-
-const SITE_URL = "https://recibocerto.pt";
+import {
+  generateWebSiteSchema,
+  generateOrganizationSchema,
+  generateSoftwareApplicationSchema,
+  generateBreadcrumbSchema,
+  generateFAQSchema,
+} from "@/lib/seo";
 
 const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
-    {
-      "@type": "WebApplication",
-      name: "ReciboCerto",
-      url: SITE_URL,
-      applicationCategory: "FinanceApplication",
-      operatingSystem: "Web",
-      inLanguage: "pt-PT",
-      description:
-        "Calculadora de recibos verdes para trabalhadores independentes em Portugal: IRS, Segurança Social e IVA com as taxas de 2026.",
-      offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
-    },
-    {
-      "@type": "FAQPage",
-      mainEntity: faqs.map((f) => ({
-        "@type": "Question",
-        name: f.q,
-        acceptedAnswer: { "@type": "Answer", text: f.a },
-      })),
-    },
+    generateWebSiteSchema(),
+    generateOrganizationSchema(),
+    generateSoftwareApplicationSchema(),
+    generateBreadcrumbSchema([{ name: "Início", url: "/" }]),
+    generateFAQSchema(faqs),
   ],
 };
 
