@@ -914,23 +914,30 @@ export default function SimuladorIntegrado() {
   // ── Sincronização bruto ↔ brutoAnual ────────────────────────────────────
   const handleBrutoChange = useCallback((v: number) => {
     setBruto(v);
-    setBrutoAnual(Math.round(v * 12));
-  }, []);
+    // brutoAnual armazena a base anual (sem IVA) para simulações IRS/SS
+    const t = taxaIVAEfetiva(regiao, regimeIVA);
+    const baseV = t > 0 ? v / (1 + t) : v;
+    setBrutoAnual(Math.round(baseV * 12));
+  }, [regiao, regimeIVA]);
 
   const handleBrutoAnualChange = useCallback((v: number) => {
     setBrutoAnual(v);
-    setBruto(Math.round(v / 12 / 50) * 50);
-  }, []);
+    // bruto (slider por recibo) mostra o total com IVA
+    const t = taxaIVAEfetiva(regiao, regimeIVA);
+    const totalMensal = t > 0 ? (v / 12) * (1 + t) : v / 12;
+    setBruto(Math.round(totalMensal / 50) * 50);
+  }, [regiao, regimeIVA]);
 
   // ── IVA ──────────────────────────────────────────────────────────────────
   const taxaIva = taxaIVAEfetiva(regiao, regimeIVA);
   const temIva = taxaIva > 0;
 
-  // [BUG2 FIX] base é sempre o valor introduzido (pré-IVA)
-  const base = bruto;
+  // O input é o total que a pessoa cobra ao cliente (já com IVA incluído quando aplicável).
+  // Extraímos a base pré-IVA para passar ao motor de cálculo.
+  const base = temIva ? bruto / (1 + taxaIva) : bruto;
   const labelValor = temIva
-    ? `Valor do serviço (€) — IVA ${pct(taxaIva)} adicionado ao cliente`
-    : "Valor do serviço (€)";
+    ? `Total a cobrar ao cliente (€) — IVA ${pct(taxaIva)} incluído`
+    : "Valor do recibo (€)";
 
   // ── Resultado por recibo ─────────────────────────────────────────────────
   const isencaoSS = isencaoSSPrimeiroAno || acumulaEmprego;
@@ -1090,7 +1097,7 @@ export default function SimuladorIntegrado() {
               Calculadora 2026
             </div>
             <h3 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-200">
-              Quanto fica realmente teu?
+              O teu líquido real
             </h3>
           </div>
 
@@ -1185,9 +1192,10 @@ export default function SimuladorIntegrado() {
                       presets={[500, 1000, 1500, 2500, 5000]}
                       tooltip={
                         <>
-                          Valor do teu serviço antes de IVA. O IVA (quando
-                          aplicável) é calculado automaticamente e adicionado ao
-                          valor cobrado ao cliente.
+                          Valor total que vais cobrar ao cliente (já com IVA
+                          incluído, se aplicável). O ReciboCerto extrai
+                          automaticamente a base pré-IVA e calcula IRS, SS e
+                          quanto podes gastar.
                         </>
                       }
                     />
@@ -1522,7 +1530,7 @@ export default function SimuladorIntegrado() {
                   <div className="mb-8">
                     <div className="text-sm font-medium text-stone-500 uppercase tracking-wider mb-1">
                       {modoInput === "recibo"
-                        ? "O que é realmente teu · por recibo"
+                        ? "Disponível para gastar · por recibo"
                         : "Líquido anual estimado"}
                     </div>
                     <div className="font-display text-5xl font-semibold leading-none mb-1 text-brand">
@@ -1634,10 +1642,10 @@ export default function SimuladorIntegrado() {
                       {/* Breakdown por recibo */}
                       <div className="space-y-1 flex-1">
                         <DetalheRow
-                          label="Valor do serviço"
+                          label={resultRecibo.taxaIVA > 0 ? "Base do serviço (sem IVA)" : "Valor do recibo"}
                           value={resultRecibo.bruto}
                           type="neutral"
-                          note="O que faturaste (sem IVA)"
+                          note={resultRecibo.taxaIVA > 0 ? `Total ÷ (1 + ${pct(resultRecibo.taxaIVA)})` : "O que faturaste"}
                         />
                         {resultRecibo.taxaIVA > 0 && (
                           <DetalheRow
@@ -1682,7 +1690,7 @@ export default function SimuladorIntegrado() {
                         )}
                         {resultRecibo.segSocial > 0 && (
                           <DetalheRow
-                            label={`Reservar SS (21,4%×70% de ${fmt(resultRecibo.bruto)} ÷ 12)`}
+                            label={`Reservar SS (21,4%×70% de ${fmt(resultRecibo.bruto)})`}
                             value={-resultRecibo.segSocial}
                             type="deducao"
                             note="Pagamento mensal até dia 20"
@@ -1698,16 +1706,16 @@ export default function SimuladorIntegrado() {
                                   Disponível para gastar
                                 </div>
                                 <InfoTip>
-                                  O que é mesmo teu: bruto menos a SS. O IVA e a
-                                  retenção não contam aqui — o IVA é do Estado,
-                                  a retenção é recuperada (ou paga) na
-                                  declaração anual.
+                                  O que podes gastar sem medo: o que entra na
+                                  tua conta, já com IVA e Segurança Social
+                                  reservados. A retenção foi adiantada pelo
+                                  cliente — será acertada no IRS anual.
                                 </InfoTip>
                               </div>
                               <div className="text-xs text-stone-400 mt-0.5">
                                 {resultRecibo.taxaIVA > 0
-                                  ? "IVA excluído — é do Estado"
-                                  : "Bruto menos Segurança Social"}
+                                  ? "Depois de IVA e SS reservados"
+                                  : "Depois de SS reservada"}
                               </div>
                             </div>
                             <div className="text-right">
@@ -1715,11 +1723,8 @@ export default function SimuladorIntegrado() {
                                 <AnimatedNumber value={resultRecibo.liquido} />
                               </div>
                               <div className="text-xs text-stone-400">
-                                {pct(
-                                  resultRecibo.liquido /
-                                    (resultRecibo.bruto || 1),
-                                )}{" "}
-                                do bruto
+                                {pct(resultRecibo.liquido / (bruto || 1))}{" "}
+                                do total
                               </div>
                             </div>
                           </div>
