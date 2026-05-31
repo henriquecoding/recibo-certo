@@ -10,6 +10,21 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 let cliente: SupabaseClient | null = null;
 
+/**
+ * Normaliza a URL do projeto: o cliente espera a RAIZ (https://xxx.supabase.co).
+ * Tolera o erro comum de colar a URL da API REST (…/rest/v1/) ou de Auth, e
+ * remove barras finais — senão o cliente gera caminhos como /rest/v1/auth/v1/…
+ * que o gateway rejeita ("Invalid path specified in request URL", PGRST125).
+ */
+function normalizarUrl(raw: string): string {
+  return raw
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\/rest\/v1$/, "")
+    .replace(/\/auth\/v1$/, "")
+    .replace(/\/+$/, "");
+}
+
 /** Devolve o cliente Supabase (singleton). Lança se as variáveis faltarem. */
 export function getSupabase(): SupabaseClient {
   if (cliente) return cliente;
@@ -23,7 +38,7 @@ export function getSupabase(): SupabaseClient {
     );
   }
 
-  cliente = createClient(url, chave);
+  cliente = createClient(normalizarUrl(url), chave.trim());
   return cliente;
 }
 

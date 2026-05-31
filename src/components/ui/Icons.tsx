@@ -211,6 +211,15 @@ export function Scale({ size = 18, className }: IconProps) {
   );
 }
 
+export function User({ size = 16, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M5 20a7 7 0 0114 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function ArrowLeft({ size = 14, className }: IconProps) {
   return (
     <svg {...svgProps(size, className)}>

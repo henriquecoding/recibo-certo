@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/supabase/auth";
+import { User } from "@/components/ui/Icons";
 
 // Caixa de estado de conta na barra lateral. Ciente da sessão: mostra o modo
 // local (sem conta) ou a conta iniciada, sempre com acesso ao ecrã /dashboard/conta.
@@ -25,14 +26,21 @@ export default function AccountBox() {
   }
 
   return (
-    <div className="rounded-xl bg-cream px-3.5 py-2.5">
-      <div className="mb-0.5 text-xs font-semibold text-stone-600">Modo local</div>
-      <p className="text-[11px] leading-snug text-stone-400">Os dados ficam só neste dispositivo.</p>
+    <div>
       {disponivel && (
-        <Link href="/dashboard/conta" className="mt-1.5 inline-block text-[11px] font-medium text-brand-dark hover:underline">
-          Entrar na nuvem
+        <Link
+          href="/dashboard/conta"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-3.5 py-2.5 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
+        >
+          <User size={16} />
+          Entrar ou criar conta
         </Link>
       )}
+      <p className="mt-2 px-1 text-[11px] leading-snug text-stone-400">
+        {disponivel
+          ? "Sem conta, os dados ficam só neste dispositivo. Entra para os teres na nuvem."
+          : "Modo local — os dados ficam só neste dispositivo."}
+      </p>
     </div>
   );
 }

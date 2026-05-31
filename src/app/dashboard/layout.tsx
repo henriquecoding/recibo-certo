@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Logo, LayoutGrid, Receipt, History, Calendar, Calculator, Scale, ArrowLeft } from "@/components/ui/Icons";
+import { Logo, LayoutGrid, Receipt, History, Calendar, Calculator, Scale, ArrowLeft, User } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { AuthProvider } from "@/lib/supabase/auth";
 import AccountBox from "@/components/dashboard/AccountBox";
@@ -80,9 +80,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <Link href="/" aria-label="ReciboCerto — início">
           <Logo small />
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <ThemeToggle />
-          <Link href="/" className="text-xs font-medium text-stone-400">Site</Link>
+          <Link
+            href="/dashboard/conta"
+            aria-label="Conta na nuvem"
+            className="flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-xs font-semibold text-white"
+          >
+            <User size={15} />
+            Conta
+          </Link>
         </div>
       </header>
 
