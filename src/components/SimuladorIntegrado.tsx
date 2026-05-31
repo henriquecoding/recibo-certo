@@ -1166,7 +1166,7 @@ export default function SimuladorIntegrado() {
           {/* ════ Coluna esquerda: Inputs ════ */}
           <div className="bg-white p-8 lg:p-10 lg:border-r lg:border-stone-100 dark:bg-stone-950 dark:border-stone-800">
             {/* ── Valor ────────────────────────────────────────────────────── */}
-            <div className="mb-7">
+            <div className="mb-5">
               <AnimatePresence mode="wait">
                 {modoInput === "recibo" ? (
                   <m.div
@@ -1176,11 +1176,8 @@ export default function SimuladorIntegrado() {
                     exit={{ opacity: 0, x: 8 }}
                     transition={{ duration: 0.18 }}
                   >
-                    {/*
-                     * [BUG2 FIX] Toggle "Com IVA incluído / IVA à parte" removido.
-                     * O input é sempre o valor base do serviço (pré-IVA).
-                     * O IVA é determinado exclusivamente pelo seletor de regime abaixo.
-                     */}
+                    {/* O input é o total a cobrar ao cliente (com IVA incluído
+                        se aplicável). A base pré-IVA é extraída internamente. */}
                     <NumericSlider
                       label={labelValor}
                       value={bruto}
@@ -1234,6 +1231,51 @@ export default function SimuladorIntegrado() {
                 )}
               </AnimatePresence>
             </div>
+
+            {/* ── Regime IVA — logo abaixo do valor (afecta a interpretação do input) ── */}
+            <fieldset className="mb-6">
+              <legend className="mb-2 flex items-center gap-1.5 text-sm font-medium uppercase tracking-wider text-stone-500">
+                Regime de IVA · {META_REGIAO[regiao]}
+                <InfoTip label="IVA 2026">
+                  Isento Art. 53.º até{" "}
+                  {IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}€/ano. Se
+                  ultrapassares{" "}
+                  {IVA_ISENCAO_LIMITE_IMEDIATO.toLocaleString("pt-PT")}€ durante
+                  o ano, passas de imediato para o regime normal. Certas
+                  profissões (médicos, professores...) têm isenção Art. 9.º sem
+                  limite de faturação.
+                </InfoTip>
+              </legend>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {ivaOptions.map((op) => {
+                  const active = regimeIVA === op.id;
+                  return (
+                    <button
+                      key={op.id}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setRegimeIVA(op.id)}
+                      className={`p-3 rounded-xl border text-center transition-all ${
+                        active
+                          ? "border-brand bg-brand-light"
+                          : "border-stone-200 hover:border-stone-300 bg-stone-50"
+                      }`}
+                    >
+                      <div
+                        className={`text-sm font-semibold ${active ? "text-brand-dark" : "text-stone-700"}`}
+                      >
+                        {op.label}
+                      </div>
+                      <div
+                        className={`text-xs ${active ? "text-brand" : "text-stone-400"}`}
+                      >
+                        {op.sub}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
 
             {/* ── Tipo de atividade ─────────────────────────────────────── */}
             <div className="mb-6">
@@ -1304,51 +1346,6 @@ export default function SimuladorIntegrado() {
                 ))}
               </div>
             </div>
-
-            {/* ── Regime IVA ───────────────────────────────────────────── */}
-            <fieldset className="mb-6">
-              <legend className="mb-2 flex items-center gap-1.5 text-sm font-medium uppercase tracking-wider text-stone-500">
-                Regime de IVA · {META_REGIAO[regiao]}
-                <InfoTip label="IVA 2026">
-                  Isento Art. 53.º até{" "}
-                  {IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}€/ano. Se
-                  ultrapassares{" "}
-                  {IVA_ISENCAO_LIMITE_IMEDIATO.toLocaleString("pt-PT")}€ durante
-                  o ano, passas de imediato para o regime normal. Certas
-                  profissões (médicos, professores...) têm isenção Art. 9.º sem
-                  limite de faturação.
-                </InfoTip>
-              </legend>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {ivaOptions.map((op) => {
-                  const active = regimeIVA === op.id;
-                  return (
-                    <button
-                      key={op.id}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => setRegimeIVA(op.id)}
-                      className={`p-3 rounded-xl border text-center transition-all ${
-                        active
-                          ? "border-brand bg-brand-light"
-                          : "border-stone-200 hover:border-stone-300 bg-stone-50"
-                      }`}
-                    >
-                      <div
-                        className={`text-sm font-semibold ${active ? "text-brand-dark" : "text-stone-700"}`}
-                      >
-                        {op.label}
-                      </div>
-                      <div
-                        className={`text-xs ${active ? "text-brand" : "text-stone-400"}`}
-                      >
-                        {op.sub}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </fieldset>
 
             {/* ── Situação fiscal ──────────────────────────────────────── */}
             <div className="space-y-3">
@@ -1730,23 +1727,48 @@ export default function SimuladorIntegrado() {
                           </div>
                         </div>
 
-                        {resultRecibo.avisos?.length > 0 && (
-                          <div className="mt-3 space-y-2">
-                            {resultRecibo.avisos.map((a: string, i: number) => (
-                              <div
-                                key={i}
-                                className="flex items-start gap-2.5 p-3 rounded-xl border bg-alert-bg border-alert-border"
-                              >
-                                <span className="text-alert-text mt-0.5 flex-shrink-0">
-                                  <Warning size={14} />
-                                </span>
-                                <span className="text-xs leading-relaxed text-alert-text">
-                                  {a}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        {/* ── Alertas fiscais contextuais ─────────────────── */}
+                        <div className="mt-3 space-y-2">
+                          {/* Avisos do motor fiscal (dispensa retenção, limites) */}
+                          {resultRecibo.avisos?.map((a: string, i: number) => (
+                            <div
+                              key={i}
+                              className="flex items-start gap-2.5 p-3 rounded-xl border bg-alert-bg border-alert-border"
+                            >
+                              <span className="text-alert-text mt-0.5 flex-shrink-0">
+                                <Warning size={14} />
+                              </span>
+                              <span className="text-xs leading-relaxed text-alert-text">
+                                {a}
+                              </span>
+                            </div>
+                          ))}
+
+                          {/* Alerta: IVA cobrado mas faturação estimada abaixo do limite Art. 53.º */}
+                          {temIva && base * 12 < IVA_ISENCAO_LIMITE && (
+                            <div className="flex items-start gap-2.5 p-3 rounded-xl border bg-alert-bg border-alert-border">
+                              <span className="text-alert-text mt-0.5 flex-shrink-0">
+                                <Warning size={14} />
+                              </span>
+                              <span className="text-xs leading-relaxed text-alert-text">
+                                Com esta faturação estimada ({fmt(Math.round(base * 12))}/ano), provavelmente qualificavas para <strong>isenção de IVA (Art. 53.º CIVA)</strong> — limite {IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")} €/ano. Sendo isento, não cobras IVA e o teu disponível sobe para{" "}
+                                <strong>{fmt(Math.round(bruto - bruto * TIPO_ATIVIDADE_PARAMS[tipoAtiv].ret - bruto * SS_BASE_PCT * SS_TAXA_TI))}</strong>.
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Info: retenção possivelmente reembolsada (abaixo do mínimo de existência) */}
+                          {resultRecibo.retencaoIRS > 0 && base * 12 < MINIMO_EXISTENCIA_2026 && (
+                            <div className="flex items-start gap-2.5 p-3 rounded-xl border border-brand/30 bg-brand-light">
+                              <span className="text-brand mt-0.5 flex-shrink-0">
+                                <Check size={14} />
+                              </span>
+                              <span className="text-xs leading-relaxed text-brand-dark">
+                                Com faturação anual estimada de {fmt(Math.round(base * 12))} €, o teu rendimento coletável fica abaixo do <strong>mínimo de existência ({MINIMO_EXISTENCIA_2026.toLocaleString("pt-PT")} €)</strong> — IRS = 0 €. A retenção na fonte ({fmt(Math.round(resultRecibo.retencaoIRS * 12))}/ano) deve ser totalmente <strong>reembolsada</strong> na declaração de IRS anual.
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </>
                   )}
