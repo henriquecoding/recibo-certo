@@ -159,16 +159,125 @@ const TIPO_ATIVIDADE_PARAMS = {
 
 type TipoAtividade = keyof typeof TIPO_ATIVIDADE_PARAMS;
 
+const DERRAMA_MUNI = 0.015;
+const IRS_DIVIDENDOS = 0.28;
+const SS_EMP_TAXA = 0.2375;
+const SS_TRAB_TAXA = 0.11;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TRIBUTAÇÃO AUTÓNOMA (Art. 88.º CIRC 2026)
+// Taxas incidem sobre os ENCARGOS anuais; os limiares referem-se ao CUSTO DE
+// AQUISIÇÃO da viatura.
+// Combustão: revistas pelo OE2025, em vigor desde 1-jan-2025 (Art. 88.º n.º 3)
+//   – OCC: "taxas em vigor desde 1 de janeiro de 2025: 8%, 25%, 32%"
+// PHEV: OE2026 alargou a norma Euro 6e-bis com emissões <80 gCO₂/km
+//   – Os limiares são os mesmos que combustão (€37 500 e €45 000)
+// Elétrica: isenta (excluída explicitamente do Art. 88.º n.º 3)
+// ─────────────────────────────────────────────────────────────────────────────
+
+type TipoViatura =
+  | "eletrica" // 0% — excluída do Art. 88.º n.º 3
+  | "phev_baixo" // PHEV custo aquisição ≤ €37 500 → 2,5%
+  | "phev_medio" // PHEV custo aquisição €37 500–€45 000 → 7,5%
+  | "phev_alto" // PHEV custo aquisição > €45 000 → 15%
+  | "comb_baixo" // Combustão custo aquisição < €37 500 → 8%
+  | "comb_medio" // Combustão custo aquisição €37 500–€45 000 → 25%
+  | "comb_alto"; // Combustão custo aquisição ≥ €45 000 → 32%
+
+const TA_VIATURAS: Record<TipoViatura, number> = {
+  eletrica: 0.0,
+  phev_baixo: 0.025,
+  phev_medio: 0.075,
+  phev_alto: 0.15,
+  comb_baixo: 0.08, // Art. 88.º n.º 3 al. a) — OE2025
+  comb_medio: 0.25, // Art. 88.º n.º 3 al. b) — OE2025
+  comb_alto: 0.32, // Art. 88.º n.º 3 al. c) — OE2025
+};
+
+const TIPO_VIATURA_META: Record<TipoViatura, string> = {
+  eletrica: "Elétrica — isenta (0%)",
+  phev_baixo: "PHEV / Plug-in ≤ 37 500€ aquisição — 2,5%",
+  phev_medio: "PHEV / Plug-in 37 500–45 000€ aquisição — 7,5%",
+  phev_alto: "PHEV / Plug-in > 45 000€ aquisição — 15%",
+  comb_baixo: "Combustão < 37 500€ aquisição — 8%",
+  comb_medio: "Combustão 37 500–45 000€ aquisição — 25%",
+  comb_alto: "Combustão ≥ 45 000€ aquisição — 32%",
+};
+
+const TA_TAXA_REPRESENTACAO = 0.1; // Art. 88.º n.º 7 CIRC
+const TA_TAXA_AJUDAS_CUSTO = 0.05; // Art. 88.º n.º 9 CIRC
+const TA_TAXA_NAO_DOC = 0.5; // Art. 88.º n.º 1 CIRC
+const TA_AGRAVAMENTO = 0.1; // Art. 88.º n.º 14 (OE2026 — renovou excl.)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RFAI — Regime Fiscal de Apoio ao Investimento (Art. 22.º–26.º CFI)
+// Vigora até 31-dez-2027 (Lei nº 12/2022, prolongamento do CFI).
+// Norte/Centro/Alentejo/Açores/Madeira: 30% (≤ €15M) + 10% (excedente)
+// Lisboa/Algarve: 10% flat
+// Limite anual: 50% da coleta IRC; 100% nos primeiros 3 períodos de atividade
+// Reportável: até ao 10.º período seguinte
+// Fontes: estrategor.pt jan-2026, santander.pt abr-2026, start-pme.pt jan-2026
+// ─────────────────────────────────────────────────────────────────────────────
+
+type RegiaoRFAI = "interior" | "litoral";
+
+const RFAI_TAXA_INTERIOR = 0.3; // Norte, Centro, Alentejo, Açores, Madeira
+const RFAI_TAXA_EXCEDENTE = 0.1; // Parcela > €15M
+const RFAI_TAXA_LITORAL = 0.1; // Lisboa, Algarve
+const RFAI_LIMITE_INVEST = 15_000_000; // Limiar entre taxa 30% e 10%
+const RFAI_LIMITE_COLETA = 0.5; // 50% da coleta (100% nos primeiros 3 anos)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DLRR — Dedução por Lucros Retidos e Reinvestidos (Art. 27.º-A CFI)
+// Só PME/Small Mid Cap.
+// 10% dos lucros retidos reinvestidos em ativos elegíveis (≤ 4 anos)
+// Limite: 25% da coleta IRC
+// Lucros elegíveis máximos: €5 000 000
+// ─────────────────────────────────────────────────────────────────────────────
+
+const DLRR_TAXA = 0.1;
+const DLRR_LIMITE_COLETA = 0.25;
+const DLRR_MAX_LUCROS = 5_000_000;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SIFIDE II — Sistema de Incentivos Fiscais I&D (Art. 37.º–40.º CFI/EBF)
+//
+// Taxa base: 32,5% das despesas elegíveis do exercício (todas as empresas)
+// Taxa incremental: 50% do acréscimo vs. média dos 2 anos anteriores (max €1,5M)
+// PME < 2 exercícios sem histórico incremental: majoração +15% → taxa = 47,5%
+// Startup sem I&D nos 2 anos anteriores: base 32,5% + incremental 50% = 82,5%
+// Reportável: até ao 12.º exercício seguinte (ANI, Ayming, Zabala 2026)
+//
+// Fonte OCC: "32,5% x aplicações + 50% x aplicações = 82,5%" (sem histórico)
+// ─────────────────────────────────────────────────────────────────────────────
+
+type TipoEmpresaSifide = "startup" | "pme_jovem" | "pme_normal" | "grande";
+
+const SIFIDE_TAXA_BASE = 0.325; // 32,5% — base obrigatória
+const SIFIDE_TAXA_INCREMENTAL = 0.5; // 50% sobre acréscimo (max €1,5M)
+const SIFIDE_MAJORACAO_PME = 0.15; // +15% para PME <2 exercícios sem increm.
+const SIFIDE_MAX_INCREMENTAL = 1_500_000;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENGLOBAMENTO DE DIVIDENDOS (Art. 40.º-A CIRS)
+// Só 50% dos dividendos de entidades nacionais incluído no rendimento coletável
+// Tributado às taxas progressivas do IRS (vs. 28% liberatória do Art. 71.º)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const DIV_INCLUSAO_ENGLOBAMENTO = 0.5;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CUSTOS TÍPICOS (estimativas 2026 para o simulador)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CUSTO_CONSTITUICAO_DEFAULT = 1_200; // registo (~€360) + setup OCC (~€800)
+const CONTAB_ORG_CUSTO_MENSAL = 200; // OCC: €150–300/mês; média conservadora
+
 const IRC_PME = {
   taxa1: 0.15,
   limite: 50_000,
   taxa2: 0.19,
 };
-
-const DERRAMA_MUNI = 0.015;
-const IRS_DIVIDENDOS = 0.28;
-const SS_EMP_TAXA = 0.2375;
-const SS_TRAB_TAXA = 0.11;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FUNÇÕES DE CÁLCULO FISCAL
@@ -195,6 +304,16 @@ function calcularIRS(rendTributavel: number): number {
   return Math.max(0, imposto);
 }
 
+/** Taxa marginal do último euro de rendimento tributável — para calcular
+ *  o IRS incremental no englobamento de dividendos. */
+function calcularTaxaMarginal(rendTributavel: number): number {
+  if (rendTributavel <= MINIMO_EXISTENCIA_2026) return 0;
+  for (const escalao of ESCALOES_IRS_2026) {
+    if (rendTributavel <= escalao.ate) return escalao.taxa;
+  }
+  return 0.48;
+}
+
 function calcularSSAnual(faturacaoAnual: number): number {
   const rendRelevMensal = (faturacaoAnual * SS_BASE_PCT) / 12;
   const contribuicaoMensal = Math.min(
@@ -202,6 +321,128 @@ function calcularSSAnual(faturacaoAnual: number): number {
     Math.max(SS_MIN_MENSAL, rendRelevMensal * SS_TAXA_TI),
   );
   return contribuicaoMensal * 12;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TRIBUTAÇÃO AUTÓNOMA
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface ResultadoTA {
+  viatura: number;
+  representacao: number;
+  ajudasCusto: number;
+  naoDocumentadas: number;
+  total: number;
+}
+
+/**
+ * Calcula a tributação autónoma (Art. 88.º CIRC).
+ * @param encargosViatura  Total de encargos anuais com a viatura (combustível,
+ *                         manutenção, seguros, portagens, leasing, etc.)
+ * @param tipoViatura      Categoria da viatura (determina a taxa)
+ * @param despRepresentacao Despesas de representação (refeições, eventos, ofertas)
+ * @param ajudasCusto      Ajudas de custo / compensação por viatura própria
+ * @param naoDocumentadas  Despesas sem documento fiscal válido
+ * @param emPrejuizo       A empresa está em prejuízo fiscal?
+ * @param excecaoPrejuizo  Exclui o agravamento: lucro em ≥1 dos 3 anos ant.
+ *                         OU primeiros 3 anos de atividade (OE2026)
+ */
+function calcularTributacaoAutonoma(
+  encargosViatura: number,
+  tipoViatura: TipoViatura,
+  despRepresentacao: number,
+  ajudasCusto: number,
+  naoDocumentadas: number,
+  emPrejuizo: boolean,
+  excecaoPrejuizo: boolean,
+): ResultadoTA {
+  const agrav = emPrejuizo && !excecaoPrejuizo ? TA_AGRAVAMENTO : 0;
+  const taxaViat = TA_VIATURAS[tipoViatura];
+
+  // Elétricas: sempre 0%, sem possibilidade de agravamento
+  const viatura =
+    tipoViatura === "eletrica" ? 0 : encargosViatura * (taxaViat + agrav);
+
+  const representacao = despRepresentacao * (TA_TAXA_REPRESENTACAO + agrav);
+  const ajudas = ajudasCusto * (TA_TAXA_AJUDAS_CUSTO + agrav);
+  const naoDoc = naoDocumentadas * (TA_TAXA_NAO_DOC + agrav);
+
+  return {
+    viatura,
+    representacao,
+    ajudasCusto: ajudas,
+    naoDocumentadas: naoDoc,
+    total: viatura + representacao + ajudas + naoDoc,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BENEFÍCIOS FISCAIS IRC
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface ResultadoBeneficios {
+  rfai: number; // RFAI efetivo (limitado à coleta)
+  rfaiBruto: number; // RFAI antes do limite de coleta
+  dlrr: number;
+  dlrrBruto: number;
+  sifide: number;
+  sifideBruto: number;
+  total: number;
+}
+
+function calcularBeneficios(
+  coleta: number,
+  rfaiInvest: number,
+  regiaoRFAI: RegiaoRFAI,
+  dlrrLucros: number,
+  sifideDespesas: number,
+  tipoSifide: TipoEmpresaSifide,
+  primeirosAnos: boolean,
+): ResultadoBeneficios {
+  // ── RFAI ──────────────────────────────────────────────────────────────────
+  let rfaiBruto: number;
+  if (regiaoRFAI === "interior") {
+    const base = Math.min(rfaiInvest, RFAI_LIMITE_INVEST);
+    const excedente = Math.max(0, rfaiInvest - RFAI_LIMITE_INVEST);
+    rfaiBruto = base * RFAI_TAXA_INTERIOR + excedente * RFAI_TAXA_EXCEDENTE;
+  } else {
+    rfaiBruto = rfaiInvest * RFAI_TAXA_LITORAL;
+  }
+  const maxRFAI = coleta * (primeirosAnos ? 1.0 : RFAI_LIMITE_COLETA);
+  const rfai = Math.min(rfaiBruto, Math.max(0, maxRFAI));
+
+  // ── DLRR (só PME) ─────────────────────────────────────────────────────────
+  const dlrrBase = Math.min(dlrrLucros, DLRR_MAX_LUCROS);
+  const dlrrBruto = dlrrBase * DLRR_TAXA;
+  const maxDLRR = Math.max(0, coleta - rfai) * DLRR_LIMITE_COLETA;
+  const dlrr = Math.min(dlrrBruto, maxDLRR);
+
+  // ── SIFIDE II ─────────────────────────────────────────────────────────────
+  // Simplificação conservadora para o simulador (sem dados de 2 anos anteriores):
+  //  startup   → 82,5% (base 32,5% + incremental 50% × tudo, pois média=0)
+  //  pme_jovem → 47,5% (base 32,5% + majoração 15% para PME <2 exercícios)
+  //  pme_normal→ 32,5% (só base; incremental requer dados históricos reais)
+  //  grande    → 32,5% (base conservadora)
+  const taxaSifide =
+    tipoSifide === "startup"
+      ? SIFIDE_TAXA_BASE + SIFIDE_TAXA_INCREMENTAL // 82,5%
+      : tipoSifide === "pme_jovem"
+        ? SIFIDE_TAXA_BASE + SIFIDE_MAJORACAO_PME // 47,5%
+        : SIFIDE_TAXA_BASE; // 32,5%
+
+  const sifideBruto = sifideDespesas * taxaSifide;
+  const maxSifide = Math.max(0, coleta - rfai - dlrr);
+  const sifide = Math.min(sifideBruto, maxSifide);
+
+  return {
+    rfai,
+    rfaiBruto,
+    dlrr,
+    dlrrBruto,
+    sifide,
+    sifideBruto,
+    total: rfai + dlrr + sifide,
+  };
 }
 
 interface ResultadoAnualRV {
@@ -268,14 +509,23 @@ interface ResultadoEmpresa {
   custosExtra: number;
   salGerente: number;
   ssSalGerente: number;
+  custoConstituicao: number;
   totalCustos: number;
   lucroTributavel: number;
-  irc: number;
+  coleta: number; // IRC base antes de benefícios e TA
+  beneficios: ResultadoBeneficios;
+  ircAposBeneficios: number;
+  ta: ResultadoTA;
   derramaMuni: number;
+  ircTotal: number; // ircAposBeneficios + ta.total + derrama
   lucroLiquido: number;
   dividendos: number;
-  irsDividendos: number;
-  liquidoGerente: number;
+  irsDividendosLiberatoria: number; // 28%
+  irsDividendosEnglobamento: number; // 50% inclusão × taxa marginal
+  taxaMarginalGerente: number;
+  liquidoGerenteLiberatoria: number;
+  liquidoGerenteEnglobamento: number;
+  liquidoGerente: number; // conforme opcaoEnglobamento
   taxaEfetiva: number;
 }
 
@@ -285,33 +535,104 @@ function simularEmpresa(
   custosExtra: number,
   salGerenteMensal: number,
   distribuirDividendos: boolean,
+  opcaoEnglobamento: boolean,
+  // Tributação Autónoma
+  encargosViatura: number,
+  tipoViatura: TipoViatura,
+  despRepresentacao: number,
+  ajudasCusto: number,
+  naoDocumentadas: number,
+  emPrejuizo: boolean,
+  excecaoPrejuizo: boolean,
+  // Benefícios Fiscais
+  rfaiInvest: number,
+  regiaoRFAI: RegiaoRFAI,
+  dlrrLucros: number,
+  sifideDespesas: number,
+  tipoSifide: TipoEmpresaSifide,
+  primeirosAnos: boolean,
+  // Custos de constituição (já anualizados)
+  custoConstituicao: number,
 ): ResultadoEmpresa {
   const salGerente = salGerenteMensal * 12;
   const ssSalGerente = salGerente * (SS_EMP_TAXA + SS_TRAB_TAXA);
-  const totalCustos = despesasOper + custosExtra + salGerente + ssSalGerente;
+  const totalCustos =
+    despesasOper + custosExtra + salGerente + ssSalGerente + custoConstituicao;
   const lucroTributavel = Math.max(0, faturacao - totalCustos);
 
-  let irc = 0;
+  // ── IRC base (coleta) ──────────────────────────────────────────────────────
+  let coleta = 0;
   if (lucroTributavel <= IRC_PME.limite) {
-    irc = lucroTributavel * IRC_PME.taxa1;
+    coleta = lucroTributavel * IRC_PME.taxa1;
   } else {
-    irc =
+    coleta =
       IRC_PME.limite * IRC_PME.taxa1 +
       (lucroTributavel - IRC_PME.limite) * IRC_PME.taxa2;
   }
 
-  const derramaMuni = lucroTributavel * DERRAMA_MUNI;
-  const lucroLiquido = lucroTributavel - irc - derramaMuni;
+  // ── Benefícios fiscais (reduzem coleta) ───────────────────────────────────
+  const beneficios = calcularBeneficios(
+    coleta,
+    rfaiInvest,
+    regiaoRFAI,
+    dlrrLucros,
+    sifideDespesas,
+    tipoSifide,
+    primeirosAnos,
+  );
+  const ircAposBeneficios = Math.max(0, coleta - beneficios.total);
 
+  // ── Tributação Autónoma (soma-se ao IRC, não é compensada por benefícios) ─
+  const ta = calcularTributacaoAutonoma(
+    encargosViatura,
+    tipoViatura,
+    despRepresentacao,
+    ajudasCusto,
+    naoDocumentadas,
+    emPrejuizo,
+    excecaoPrejuizo,
+  );
+
+  // ── Derrama municipal ─────────────────────────────────────────────────────
+  const derramaMuni = lucroTributavel * DERRAMA_MUNI;
+
+  // ── IRC total ─────────────────────────────────────────────────────────────
+  const ircTotal = ircAposBeneficios + ta.total + derramaMuni;
+
+  // ── Lucro líquido disponível para distribuição ────────────────────────────
+  const lucroLiquido = Math.max(0, lucroTributavel - ircTotal);
+
+  // ── Dividendos e IRS sobre dividendos ─────────────────────────────────────
   let dividendos = 0;
-  let irsDividendos = 0;
+  let irsDividendosLiberatoria = 0;
+  let irsDividendosEnglobamento = 0;
+  let taxaMarginalGerente = 0;
+
   if (distribuirDividendos) {
     dividendos = lucroLiquido;
-    irsDividendos = dividendos * IRS_DIVIDENDOS;
+
+    // Opção A — taxa liberatória 28% (Art. 71.º CIRS)
+    irsDividendosLiberatoria = dividendos * IRS_DIVIDENDOS;
+
+    // Opção B — englobamento (Art. 40.º-A CIRS)
+    // Apenas 50% dos dividendos de entidades nacionais incluído no rendimento
+    const salarioTributavel = salGerente * (1 - SS_TRAB_TAXA);
+    taxaMarginalGerente = calcularTaxaMarginal(salarioTributavel);
+    const irsComDividendos = calcularIRS(
+      salarioTributavel + dividendos * DIV_INCLUSAO_ENGLOBAMENTO,
+    );
+    const irsSoSalario = calcularIRS(salarioTributavel);
+    irsDividendosEnglobamento = Math.max(0, irsComDividendos - irsSoSalario);
   }
 
   const salarioLiqGerente = salGerente * (1 - SS_TRAB_TAXA);
-  const liquidoGerente = salarioLiqGerente + (dividendos - irsDividendos);
+  const liquidoGerenteLiberatoria =
+    salarioLiqGerente + (dividendos - irsDividendosLiberatoria);
+  const liquidoGerenteEnglobamento =
+    salarioLiqGerente + (dividendos - irsDividendosEnglobamento);
+  const liquidoGerente = opcaoEnglobamento
+    ? liquidoGerenteEnglobamento
+    : liquidoGerenteLiberatoria;
 
   return {
     faturacao,
@@ -319,13 +640,22 @@ function simularEmpresa(
     custosExtra,
     salGerente,
     ssSalGerente,
+    custoConstituicao,
     totalCustos,
     lucroTributavel,
-    irc,
+    coleta,
+    beneficios,
+    ircAposBeneficios,
+    ta,
     derramaMuni,
+    ircTotal,
     lucroLiquido,
     dividendos,
-    irsDividendos,
+    irsDividendosLiberatoria,
+    irsDividendosEnglobamento,
+    taxaMarginalGerente,
+    liquidoGerenteLiberatoria,
+    liquidoGerenteEnglobamento,
     liquidoGerente,
     taxaEfetiva: faturacao > 0 ? 1 - liquidoGerente / faturacao : 0,
   };
@@ -336,6 +666,7 @@ function calcularBreakEven(
   custosExtra: number,
   despesasOper: number,
   salGerenteMensal: number,
+  custoConstAnual: number,
 ): number | null {
   for (let v = 0; v <= 200_000; v += 2_000) {
     const rv = simularAnualRV(v, tipo, 0, false);
@@ -345,6 +676,21 @@ function calcularBreakEven(
       custosExtra,
       salGerenteMensal,
       true,
+      false,
+      0,
+      "comb_baixo",
+      0,
+      0,
+      0,
+      false,
+      true,
+      0,
+      "interior",
+      0,
+      0,
+      "pme_normal",
+      false,
+      custoConstAnual,
     );
     if (em.liquidoGerente > rv.liquido) return v;
   }
@@ -708,7 +1054,7 @@ function NumericSlider({
 // COMPONENTE: DetalheRow
 // ─────────────────────────────────────────────────────────────────────────────
 
-type RowType = "neutral" | "deducao" | "warning" | "subtotal";
+type RowType = "neutral" | "deducao" | "warning" | "subtotal" | "beneficio";
 
 function DetalheRow({
   label,
@@ -728,6 +1074,7 @@ function DetalheRow({
     deducao: "bg-clay-bg border-clay-border text-clay-text",
     warning: "bg-alert-bg border-alert-border text-alert-text",
     subtotal: "bg-stone-100 border-stone-200 text-stone-800 font-semibold",
+    beneficio: "bg-emerald-50 border-emerald-200 text-emerald-800",
   };
   return (
     <div
@@ -747,18 +1094,140 @@ function DetalheRow({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// COMPONENTE: CollapsibleSection — acordeão genérico para seções avançadas
+// ─────────────────────────────────────────────────────────────────────────────
+
+function CollapsibleSection({
+  title,
+  badge,
+  badgeColor = "stone",
+  children,
+  defaultOpen = false,
+}: {
+  title: string;
+  badge?: string;
+  badgeColor?: "stone" | "brand" | "amber" | "emerald";
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const badgeStyles: Record<string, string> = {
+    stone: "bg-stone-100 text-stone-600",
+    brand: "bg-brand-light text-brand-dark",
+    amber: "bg-amber-50 text-amber-700 border border-amber-200",
+    emerald: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  };
+  return (
+    <div className="border border-stone-100 rounded-2xl overflow-hidden dark:border-stone-800">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-stone-50 hover:bg-stone-100 transition-colors dark:bg-stone-900 dark:hover:bg-stone-800"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold uppercase tracking-[0.15em] text-stone-600 dark:text-stone-400">
+            {title}
+          </span>
+          {badge && (
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${badgeStyles[badgeColor]}`}
+            >
+              {badge}
+            </span>
+          )}
+        </div>
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          className={`transition-transform text-stone-400 ${open ? "rotate-180" : ""}`}
+          aria-hidden
+        >
+          <path
+            d="M6 9l6 6 6-6"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <m.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 space-y-4 bg-white dark:bg-stone-950">
+              {children}
+            </div>
+          </m.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // COMPONENTE: EmpresaInputs
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface EmpresaInputsProps {
+  // Parâmetros base
   despesasOper: number;
   custosExtra: number;
   salGerenteMensal: number;
   distribuirDividendos: boolean;
+  opcaoEnglobamento: boolean;
+  // Tributação Autónoma
+  encargosViatura: number;
+  tipoViatura: TipoViatura;
+  despRepresentacao: number;
+  ajudasCusto: number;
+  naoDocumentadas: number;
+  emPrejuizo: boolean;
+  excecaoPrejuizo: boolean;
+  // Benefícios Fiscais
+  rfaiInvest: number;
+  regiaoRFAI: RegiaoRFAI;
+  dlrrLucros: number;
+  sifideDespesas: number;
+  tipoSifide: TipoEmpresaSifide;
+  primeirosAnos: boolean;
+  // Custos de constituição
+  incluirConstituicao: boolean;
+  custoConstituicao: number;
+  anosAmortizacao: number;
+  // Resultados para exibir nos badges
+  resultBeneficios: ResultadoBeneficios;
+  totalTA: number;
+  // Callbacks
   onDespChange: (v: number) => void;
   onCustosChange: (v: number) => void;
   onSalChange: (v: number) => void;
   onDividendosChange: (v: boolean) => void;
+  onEnglobamentoChange: (v: boolean) => void;
+  onEncargosViaturaChange: (v: number) => void;
+  onTipoViaturaChange: (v: TipoViatura) => void;
+  onDespRepresentacaoChange: (v: number) => void;
+  onAjudasCustoChange: (v: number) => void;
+  onNaoDocumentadasChange: (v: number) => void;
+  onEmPrejuizoChange: (v: boolean) => void;
+  onExcecaoPrejuizoChange: (v: boolean) => void;
+  onRfaiInvestChange: (v: number) => void;
+  onRegiaoRFAIChange: (v: RegiaoRFAI) => void;
+  onDlrrLucrosChange: (v: number) => void;
+  onSifideDespesasChange: (v: number) => void;
+  onTipoSifideChange: (v: TipoEmpresaSifide) => void;
+  onPrimeirosAnosChange: (v: boolean) => void;
+  onIncluirConstituicaoChange: (v: boolean) => void;
+  onCustoConstituicaoChange: (v: number) => void;
+  onAnosAmortizacaoChange: (v: number) => void;
 }
 
 function EmpresaInputs({
@@ -766,49 +1235,93 @@ function EmpresaInputs({
   custosExtra,
   salGerenteMensal,
   distribuirDividendos,
+  opcaoEnglobamento,
+  encargosViatura,
+  tipoViatura,
+  despRepresentacao,
+  ajudasCusto,
+  naoDocumentadas,
+  emPrejuizo,
+  excecaoPrejuizo,
+  rfaiInvest,
+  regiaoRFAI,
+  dlrrLucros,
+  sifideDespesas,
+  tipoSifide,
+  primeirosAnos,
+  incluirConstituicao,
+  custoConstituicao,
+  anosAmortizacao,
+  resultBeneficios,
+  totalTA,
   onDespChange,
   onCustosChange,
   onSalChange,
   onDividendosChange,
+  onEnglobamentoChange,
+  onEncargosViaturaChange,
+  onTipoViaturaChange,
+  onDespRepresentacaoChange,
+  onAjudasCustoChange,
+  onNaoDocumentadasChange,
+  onEmPrejuizoChange,
+  onExcecaoPrejuizoChange,
+  onRfaiInvestChange,
+  onRegiaoRFAIChange,
+  onDlrrLucrosChange,
+  onSifideDespesasChange,
+  onTipoSifideChange,
+  onPrimeirosAnosChange,
+  onIncluirConstituicaoChange,
+  onCustoConstituicaoChange,
+  onAnosAmortizacaoChange,
 }: EmpresaInputsProps) {
+  const custAnual = incluirConstituicao
+    ? Math.round(custoConstituicao / Math.max(1, anosAmortizacao))
+    : 0;
+
+  const sifideTaxaLabel: Record<TipoEmpresaSifide, string> = {
+    startup: "82,5%",
+    pme_jovem: "47,5%",
+    pme_normal: "32,5%",
+    grande: "32,5%",
+  };
+
   return (
     <div className="mt-5 pt-5 border-t border-stone-100 dark:border-stone-800 space-y-5">
       <div className="text-xs font-semibold uppercase tracking-[0.15em] text-brand">
         Parâmetros da empresa
       </div>
 
+      {/* ── Base ─────────────────────────────────────────────────────────── */}
       <NumericSlider
         label="Despesas operacionais (€/ano)"
         value={despesasOper}
         min={0}
         max={50_000}
         step={500}
-        unit="€"
         onChange={onDespChange}
         presets={[0, 2000, 5000, 10000]}
         tooltip={
           <>
-            Despesas com atividade da empresa — material, viagens,
-            subcontratação, rendas, publicidade. Deduzidas ao lucro tributável
-            antes de IRC.
+            Material, viagens, subcontratação, rendas, publicidade. Deduzidas ao
+            lucro tributável antes de IRC.
           </>
         }
       />
 
       <NumericSlider
-        label="Custos extra — estrutura (€/ano)"
+        label="Custos estrutura (€/ano)"
         value={custosExtra}
         min={0}
         max={10_000}
         step={200}
-        unit="€"
         onChange={onCustosChange}
         presets={[1000, 2000, 3000, 5000]}
         tooltip={
           <>
-            Contabilidade (~1 200€), software de faturação (~300€), secretariado
-            virtual, seguro, outras despesas fixas. Estimativa 2026: ~2
-            000€/ano.
+            Contabilidade (~1 200€/ano), software de faturação (~300€),
+            secretariado, seguro. Estimativa 2026: ~2 000€/ano.
           </>
         }
       />
@@ -819,36 +1332,36 @@ function EmpresaInputs({
         min={0}
         max={5_000}
         step={100}
-        unit="€"
         onChange={onSalChange}
         presets={[0, 920, 1500, 2500]}
         tooltip={
           <>
-            Salário bruto mensal do gerente-sócio. A empresa paga SS patronal
-            23,75% e o gerente paga SS trabalhador 11%. O salário é custo
-            dedutível ao IRC. Mínimo legal 2026: 820€ se trabalho a tempo
-            inteiro.
+            Salário bruto mensal do gerente-sócio. SS patronal 23,75% e SS
+            trabalhador 11%. Custo dedutível ao IRC. Mínimo legal 2026: 820€
+            (tempo inteiro).
           </>
         }
       />
 
+      {/* ── Dividendos + Englobamento ─────────────────────────────────────── */}
       <div>
         <div className="mb-2 flex items-center gap-1.5">
           <span className="text-sm font-medium uppercase tracking-wider text-stone-500">
-            Lucro distribuído como dividendos
+            Lucro como dividendos
           </span>
           <InfoTip>
-            Se distribuíres o lucro líquido como dividendos, pagas 28% de IRS
-            (taxa liberatória, Art. 71.º CIRS). Em alternativa podes optar pelo
-            englobamento (pode ser mais favorável a baixos rendimentos) ou reter
-            o lucro na empresa. Esta simulação assume taxa liberatória 28%.
+            Opção A — Liberatória 28% (Art. 71.º CIRS): direto e simples. Opção
+            B — Englobamento (Art. 40.º-A CIRS): só 50% dos dividendos nacionais
+            entra no rendimento coletável, tributado à taxa marginal
+            progressiva. Quase sempre mais favorável para rendimentos abaixo de
+            €80 000.
           </InfoTip>
         </div>
         <div className="flex gap-2">
           {(
             [
-              { v: true, l: "Sim — distribui (28% IRS)" },
-              { v: false, l: "Não — retém na empresa" },
+              { v: true as boolean, l: "Sim — distribui" },
+              { v: false as boolean, l: "Não — retém" },
             ] as const
           ).map(({ v, l }) => (
             <button
@@ -866,7 +1379,574 @@ function EmpresaInputs({
             </button>
           ))}
         </div>
+
+        {distribuirDividendos && (
+          <div className="mt-2 flex gap-2">
+            {(
+              [
+                { v: false, l: "28% Liberatória", sub: "Art. 71.º CIRS" },
+                { v: true, l: "Englobamento 50%", sub: "Art. 40.º-A CIRS" },
+              ] as const
+            ).map(({ v, l, sub }) => (
+              <button
+                key={String(v)}
+                type="button"
+                aria-pressed={opcaoEnglobamento === v}
+                onClick={() => onEnglobamentoChange(v)}
+                className={`flex-1 rounded-xl border px-2.5 py-2 text-center transition-all ${
+                  opcaoEnglobamento === v
+                    ? "border-brand bg-brand-light"
+                    : "border-stone-200 bg-stone-50 hover:border-stone-300"
+                }`}
+              >
+                <div
+                  className={`text-xs font-bold ${opcaoEnglobamento === v ? "text-brand-dark" : "text-stone-600"}`}
+                >
+                  {l}
+                </div>
+                <div
+                  className={`text-[10px] ${opcaoEnglobamento === v ? "text-brand" : "text-stone-400"}`}
+                >
+                  {sub}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* ── Custos de Constituição ─────────────────────────────────────────── */}
+      <CollapsibleSection
+        title="Custos de Constituição"
+        badgeColor="brand"
+        badge={incluirConstituicao ? `−${fmt(custAnual)}/ano` : "~1 200€"}
+      >
+        <div className="space-y-4">
+          <p className="text-[11px] text-stone-500 leading-relaxed">
+            Empresa na hora (balcão/online): ~360–400€ (registo + publicações
+            DRE). Setup contabilista OCC: ~500–800€. Capital social mínimo: 1€
+            (simbólico).
+          </p>
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={incluirConstituicao}
+            onClick={() => onIncluirConstituicaoChange(!incluirConstituicao)}
+            className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+              incluirConstituicao
+                ? "border-brand bg-brand-light"
+                : "border-stone-200 bg-stone-50"
+            }`}
+          >
+            <div
+              className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${incluirConstituicao ? "bg-brand border-brand text-white" : "border-stone-300 text-transparent"}`}
+            >
+              <Check size={12} />
+            </div>
+            <div>
+              <div
+                className={`text-sm font-semibold ${incluirConstituicao ? "text-brand-dark" : "text-stone-700"}`}
+              >
+                Incluir custos de constituição
+              </div>
+              <div
+                className={`text-xs ${incluirConstituicao ? "text-brand" : "text-stone-400"}`}
+              >
+                Amortizado ao longo dos primeiros anos
+              </div>
+            </div>
+          </button>
+
+          {incluirConstituicao && (
+            <>
+              <NumericSlider
+                label="Custo total de constituição (€)"
+                value={custoConstituicao}
+                min={360}
+                max={3_000}
+                step={50}
+                onChange={onCustoConstituicaoChange}
+                presets={[360, 800, 1200, 1500]}
+              />
+              <div>
+                <span className="text-xs font-medium text-stone-500 uppercase tracking-wider block mb-2">
+                  Amortizar em
+                </span>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 5].map((a) => (
+                    <button
+                      key={a}
+                      type="button"
+                      aria-pressed={anosAmortizacao === a}
+                      onClick={() => onAnosAmortizacaoChange(a)}
+                      className={`flex-1 rounded-xl border py-2 text-center text-xs font-semibold transition-all ${
+                        anosAmortizacao === a
+                          ? "border-brand bg-brand-light text-brand-dark"
+                          : "border-stone-200 bg-stone-50 text-stone-500"
+                      }`}
+                    >
+                      {a} {a === 1 ? "ano" : "anos"}
+                      <div
+                        className={`text-[10px] mt-0.5 ${anosAmortizacao === a ? "text-brand" : "text-stone-400"}`}
+                      >
+                        {fmt(Math.round(custoConstituicao / a))}/ano
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </CollapsibleSection>
+
+      {/* ── Tributação Autónoma ────────────────────────────────────────────── */}
+      <CollapsibleSection
+        title="Tributação Autónoma"
+        badge={totalTA > 0 ? `+${fmt(Math.round(totalTA))}` : "Art. 88.º CIRC"}
+        badgeColor={totalTA > 0 ? "amber" : "stone"}
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
+            <Warning
+              size={13}
+              className="flex-shrink-0 mt-0.5 text-amber-600"
+            />
+            <p className="text-[11px] text-amber-700 leading-relaxed">
+              Incide sobre os <strong>encargos anuais</strong> da viatura
+              (combustível, manutenção, seguros, portagens, leasing),
+              independentemente de haver lucro. Os limiares indicados referem-se
+              ao <strong>custo de aquisição</strong> da viatura.
+            </p>
+          </div>
+
+          {/* Tipo de viatura */}
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider text-stone-500 block mb-2">
+              Tipo de viatura (custo de aquisição)
+            </span>
+            <div className="space-y-1">
+              {(Object.keys(TA_VIATURAS) as TipoViatura[]).map((tv) => (
+                <button
+                  key={tv}
+                  type="button"
+                  aria-pressed={tipoViatura === tv}
+                  onClick={() => onTipoViaturaChange(tv)}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-semibold transition-all text-left ${
+                    tipoViatura === tv
+                      ? "border-brand bg-brand-light text-brand-dark"
+                      : "border-stone-200 bg-stone-50 text-stone-600 hover:border-stone-300"
+                  }`}
+                >
+                  <span>{TIPO_VIATURA_META[tv]}</span>
+                  <span
+                    className={`text-[11px] font-bold ${tipoViatura === tv ? "text-brand" : "text-stone-400"}`}
+                  >
+                    {pct(TA_VIATURAS[tv])}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <NumericSlider
+            label="Encargos anuais c/ viatura (€)"
+            value={encargosViatura}
+            min={0}
+            max={20_000}
+            step={200}
+            onChange={onEncargosViaturaChange}
+            presets={[0, 1500, 3000, 6000]}
+          />
+          <NumericSlider
+            label="Despesas de representação (€/ano)"
+            value={despRepresentacao}
+            min={0}
+            max={10_000}
+            step={100}
+            onChange={onDespRepresentacaoChange}
+            presets={[0, 500, 1000, 2000]}
+            tooltip={
+              <>
+                Refeições com clientes, eventos, ofertas. Taxa: 10% (n.º 7).
+                Publicidade/marketing não incluída.
+              </>
+            }
+          />
+          <NumericSlider
+            label="Ajudas de custo / viatura própria (€/ano)"
+            value={ajudasCusto}
+            min={0}
+            max={5_000}
+            step={50}
+            onChange={onAjudasCustoChange}
+            presets={[0, 300, 600, 1200]}
+            tooltip={
+              <>
+                Ajudas de custo sem comprovativos + compensação por viatura
+                própria. Taxa: 5% (n.º 9).
+              </>
+            }
+          />
+          <NumericSlider
+            label="Despesas não documentadas (€/ano)"
+            value={naoDocumentadas}
+            min={0}
+            max={2_000}
+            step={50}
+            onChange={onNaoDocumentadasChange}
+            presets={[0]}
+            tooltip={
+              <>
+                Sem fatura ou documento válido. Taxa: 50% (n.º 1). Fortemente
+                penalizadoras — a evitar.
+              </>
+            }
+          />
+
+          {/* Situação de prejuízo */}
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={emPrejuizo}
+            onClick={() => onEmPrejuizoChange(!emPrejuizo)}
+            className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+              emPrejuizo
+                ? "border-amber-300 bg-amber-50"
+                : "border-stone-200 bg-stone-50"
+            }`}
+          >
+            <div
+              className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${emPrejuizo ? "bg-amber-500 border-amber-500 text-white" : "border-stone-300 text-transparent"}`}
+            >
+              <Check size={12} />
+            </div>
+            <div>
+              <div
+                className={`text-sm font-semibold ${emPrejuizo ? "text-amber-800" : "text-stone-700"}`}
+              >
+                Empresa em prejuízo fiscal
+              </div>
+              <div
+                className={`text-xs ${emPrejuizo ? "text-amber-600" : "text-stone-400"}`}
+              >
+                Agravamento +10 pp nas taxas de TA (Art. 88.º n.º 14)
+              </div>
+            </div>
+          </button>
+
+          {emPrejuizo && (
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={excecaoPrejuizo}
+              onClick={() => onExcecaoPrejuizoChange(!excecaoPrejuizo)}
+              className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                excecaoPrejuizo
+                  ? "border-brand bg-brand-light"
+                  : "border-stone-200 bg-stone-50"
+              }`}
+            >
+              <div
+                className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${excecaoPrejuizo ? "bg-brand border-brand text-white" : "border-stone-300 text-transparent"}`}
+              >
+                <Check size={12} />
+              </div>
+              <div>
+                <div
+                  className={`text-xs font-semibold ${excecaoPrejuizo ? "text-brand-dark" : "text-stone-600"}`}
+                >
+                  Exceção ao agravamento (OE2026)
+                </div>
+                <div
+                  className={`text-[11px] ${excecaoPrejuizo ? "text-brand" : "text-stone-400"}`}
+                >
+                  Lucro em ≥1 dos 3 anos anteriores OU primeiros 3 anos de
+                  atividade
+                </div>
+              </div>
+            </button>
+          )}
+
+          {totalTA > 0 && (
+            <div className="flex items-center justify-between p-3 rounded-xl bg-amber-100 border border-amber-300">
+              <span className="text-xs font-bold text-amber-800">
+                Total tributação autónoma
+              </span>
+              <span className="text-sm font-bold text-amber-900">
+                +{fmt(Math.round(totalTA))}
+              </span>
+            </div>
+          )}
+        </div>
+      </CollapsibleSection>
+
+      {/* ── Benefícios Fiscais ────────────────────────────────────────────── */}
+      <CollapsibleSection
+        title="Benefícios Fiscais"
+        badge={
+          resultBeneficios.total > 0
+            ? `−${fmt(Math.round(resultBeneficios.total))}`
+            : "RFAI · DLRR · SIFIDE"
+        }
+        badgeColor={resultBeneficios.total > 0 ? "emerald" : "stone"}
+      >
+        <div className="space-y-5">
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+            <Check
+              size={13}
+              className="flex-shrink-0 mt-0.5 text-emerald-600"
+            />
+            <p className="text-[11px] text-emerald-700 leading-relaxed">
+              Reduzem diretamente a coleta de IRC (imposto base). RFAI vigora
+              até 31-dez-2027. SIFIDE II: candidatura à ANI obrigatória.
+              Poupança máxima teórica: RFAI 30% + SIFIDE 82,5% sobre
+              investimento/I&D.
+            </p>
+          </div>
+
+          {/* Primeiros 3 anos */}
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={primeirosAnos}
+            onClick={() => onPrimeirosAnosChange(!primeirosAnos)}
+            className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+              primeirosAnos
+                ? "border-brand bg-brand-light"
+                : "border-stone-200 bg-stone-50"
+            }`}
+          >
+            <div
+              className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${primeirosAnos ? "bg-brand border-brand text-white" : "border-stone-300 text-transparent"}`}
+            >
+              <Check size={12} />
+            </div>
+            <div>
+              <div
+                className={`text-sm font-semibold ${primeirosAnos ? "text-brand-dark" : "text-stone-700"}`}
+              >
+                Primeiros 3 períodos de atividade
+              </div>
+              <div
+                className={`text-xs ${primeirosAnos ? "text-brand" : "text-stone-400"}`}
+              >
+                RFAI sem limite de 50% — pode deduzir até 100% da coleta IRC
+              </div>
+            </div>
+          </button>
+
+          {/* RFAI */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-stone-500">
+                RFAI — Regime Fiscal Apoio ao Investimento
+              </span>
+              <InfoTip label="RFAI 2026">
+                Norte/Centro/Alentejo/Açores/Madeira: 30% (≤€15M) + 10%
+                (excedente). Lisboa/Algarve: 10%. Limite: 50% da coleta (100%
+                primeiros 3 anos). Reportável 10 anos.
+              </InfoTip>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {(["interior", "litoral"] as RegiaoRFAI[]).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  aria-pressed={regiaoRFAI === r}
+                  onClick={() => onRegiaoRFAIChange(r)}
+                  className={`p-2.5 rounded-xl border text-center text-xs font-semibold transition-all ${
+                    regiaoRFAI === r
+                      ? "border-brand bg-brand-light text-brand-dark"
+                      : "border-stone-200 bg-stone-50 text-stone-600"
+                  }`}
+                >
+                  {r === "interior"
+                    ? "Norte/Centro/Alentejo/Açores/Madeira"
+                    : "Lisboa / Algarve"}
+                  <div
+                    className={`text-[10px] mt-0.5 ${regiaoRFAI === r ? "text-brand" : "text-stone-400"}`}
+                  >
+                    {r === "interior" ? "30% até €15M" : "10% flat"}
+                  </div>
+                </button>
+              ))}
+            </div>
+            <NumericSlider
+              label="Investimento elegível RFAI (€/ano)"
+              value={rfaiInvest}
+              min={0}
+              max={200_000}
+              step={1_000}
+              onChange={onRfaiInvestChange}
+              presets={[0, 10000, 25000, 50000, 100000]}
+              formatPreset={fmt}
+              tooltip={
+                <>
+                  Ativos fixos tangíveis/intangíveis elegíveis: máquinas,
+                  equipamento, software. Não elegível: imóveis de habitação,
+                  viaturas ligeiras de passageiros.
+                </>
+              }
+            />
+            {resultBeneficios.rfaiBruto > 0 && (
+              <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50 border border-emerald-200">
+                <span className="text-xs text-emerald-700">
+                  RFAI bruto: {fmt(Math.round(resultBeneficios.rfaiBruto))}
+                  {resultBeneficios.rfai < resultBeneficios.rfaiBruto && (
+                    <span className="ml-1 opacity-60">
+                      (limitado pela coleta)
+                    </span>
+                  )}
+                </span>
+                <span className="text-xs font-bold text-emerald-800">
+                  −{fmt(Math.round(resultBeneficios.rfai))}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* DLRR */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-stone-500">
+                DLRR — Lucros Retidos e Reinvestidos
+              </span>
+              <InfoTip label="DLRR 2026">
+                Só PME/Small Mid Cap. 10% dos lucros retidos reinvestidos em
+                ativos elegíveis (prazo ≤4 anos). Limite: 25% da coleta IRC.
+                Máx. €5M de lucros elegíveis. Cumulável com RFAI (em períodos
+                diferentes).
+              </InfoTip>
+            </div>
+            <NumericSlider
+              label="Lucros a reter e reinvestir (€/ano)"
+              value={dlrrLucros}
+              min={0}
+              max={200_000}
+              step={1_000}
+              onChange={onDlrrLucrosChange}
+              presets={[0, 10000, 25000, 50000, 100000]}
+              formatPreset={fmt}
+            />
+            {resultBeneficios.dlrrBruto > 0 && (
+              <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50 border border-emerald-200">
+                <span className="text-xs text-emerald-700">
+                  DLRR (10% de {fmt(Math.round(dlrrLucros))})
+                </span>
+                <span className="text-xs font-bold text-emerald-800">
+                  −{fmt(Math.round(resultBeneficios.dlrr))}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* SIFIDE II */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-stone-500">
+                SIFIDE II — Incentivos Fiscais I&D
+              </span>
+              <InfoTip label="SIFIDE II 2026">
+                Base 32,5% + incremental 50% do acréscimo vs. média 2 anos ant.
+                (max €1,5M). Startup sem histórico I&D: 82,5%. PME &lt;2
+                exercícios sem incremental: 47,5% (majoração +15%). Candidatura
+                à ANI obrigatória. Reportável 12 anos.
+              </InfoTip>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  {
+                    v: "startup" as TipoEmpresaSifide,
+                    l: "Startup",
+                    sub: "82,5% — sem I&D anterior",
+                  },
+                  {
+                    v: "pme_jovem" as TipoEmpresaSifide,
+                    l: "PME < 2 exercícios",
+                    sub: "47,5% — majoração 15%",
+                  },
+                  {
+                    v: "pme_normal" as TipoEmpresaSifide,
+                    l: "PME com histórico I&D",
+                    sub: "32,5% base (conservador)",
+                  },
+                  {
+                    v: "grande" as TipoEmpresaSifide,
+                    l: "Grande empresa",
+                    sub: "32,5% base",
+                  },
+                ] as const
+              ).map(({ v, l, sub }) => (
+                <button
+                  key={v}
+                  type="button"
+                  aria-pressed={tipoSifide === v}
+                  onClick={() => onTipoSifideChange(v)}
+                  className={`p-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
+                    tipoSifide === v
+                      ? "border-brand bg-brand-light text-brand-dark"
+                      : "border-stone-200 bg-stone-50 text-stone-600"
+                  }`}
+                >
+                  {l}
+                  <div
+                    className={`text-[10px] mt-0.5 ${tipoSifide === v ? "text-brand" : "text-stone-400"}`}
+                  >
+                    {sub}
+                  </div>
+                </button>
+              ))}
+            </div>
+            <NumericSlider
+              label="Despesas elegíveis I&D (€/ano)"
+              value={sifideDespesas}
+              min={0}
+              max={200_000}
+              step={1_000}
+              onChange={onSifideDespesasChange}
+              presets={[0, 10000, 25000, 50000, 100000]}
+              formatPreset={fmt}
+              tooltip={
+                <>
+                  Pessoal de I&D, materiais, equipamento dedicado, contratos com
+                  entidades de I&D. Exige certificação pela ANI (submissão até
+                  maio do ano seguinte).
+                </>
+              }
+            />
+            {resultBeneficios.sifideBruto > 0 && (
+              <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50 border border-emerald-200">
+                <span className="text-xs text-emerald-700">
+                  SIFIDE ({sifideTaxaLabel[tipoSifide]} de{" "}
+                  {fmt(Math.round(sifideDespesas))})
+                  {resultBeneficios.sifide < resultBeneficios.sifideBruto && (
+                    <span className="ml-1 opacity-60">
+                      (limitado pela coleta)
+                    </span>
+                  )}
+                </span>
+                <span className="text-xs font-bold text-emerald-800">
+                  −{fmt(Math.round(resultBeneficios.sifide))}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Total benefícios */}
+          {resultBeneficios.total > 0 && (
+            <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-100 border border-emerald-300">
+              <span className="text-sm font-bold text-emerald-800">
+                Total benefícios fiscais
+              </span>
+              <span className="text-sm font-bold text-emerald-900">
+                −{fmt(Math.round(resultBeneficios.total))}
+              </span>
+            </div>
+          )}
+        </div>
+      </CollapsibleSection>
     </div>
   );
 }
@@ -908,25 +1988,58 @@ export default function SimuladorIntegrado() {
   const [salGerenteMensal, setSalGerenteMensal] = useState(0);
   const [distribuirDividendos, setDistribuirDividendos] = useState(true);
 
+  // ── Englobamento ──────────────────────────────────────────────────────────
+  const [opcaoEnglobamento, setOpcaoEnglobamento] = useState(false);
+
+  // ── Empresa — Tributação Autónoma ────────────────────────────────────────
+  const [encargosViatura, setEncargosViatura] = useState(0);
+  const [tipoViatura, setTipoViatura] = useState<TipoViatura>("comb_baixo");
+  const [despRepresentacao, setDespRepresentacao] = useState(0);
+  const [ajudasCusto, setAjudasCusto] = useState(0);
+  const [naoDocumentadas, setNaoDocumentadas] = useState(0);
+  const [emPrejuizo, setEmPrejuizo] = useState(false);
+  const [excecaoPrejuizo, setExcecaoPrejuizo] = useState(true);
+
+  // ── Empresa — Benefícios Fiscais ─────────────────────────────────────────
+  const [rfaiInvest, setRfaiInvest] = useState(0);
+  const [regiaoRFAI, setRegiaoRFAI] = useState<RegiaoRFAI>("interior");
+  const [dlrrLucros, setDlrrLucros] = useState(0);
+  const [sifideDespesas, setSifideDespesas] = useState(0);
+  const [tipoSifide, setTipoSifide] = useState<TipoEmpresaSifide>("pme_normal");
+  const [primeirosAnos, setPrimeirosAnos] = useState(false);
+
+  // ── Empresa — Custos de Constituição ─────────────────────────────────────
+  const [incluirConstituicao, setIncluirConstituicao] = useState(false);
+  const [custoConstituicao, setCustoConstituicao] = useState(
+    CUSTO_CONSTITUICAO_DEFAULT,
+  );
+  const [anosAmortizacao, setAnosAmortizacao] = useState(3);
+
   // ── Advanced ─────────────────────────────────────────────────────────────
   const [advanced, setAdvanced] = useState(false);
 
   // ── Sincronização bruto ↔ brutoAnual ────────────────────────────────────
-  const handleBrutoChange = useCallback((v: number) => {
-    setBruto(v);
-    // brutoAnual armazena a base anual (sem IVA) para simulações IRS/SS
-    const t = taxaIVAEfetiva(regiao, regimeIVA);
-    const baseV = t > 0 ? v / (1 + t) : v;
-    setBrutoAnual(Math.round(baseV * 12));
-  }, [regiao, regimeIVA]);
+  const handleBrutoChange = useCallback(
+    (v: number) => {
+      setBruto(v);
+      // brutoAnual armazena a base anual (sem IVA) para simulações IRS/SS
+      const t = taxaIVAEfetiva(regiao, regimeIVA);
+      const baseV = t > 0 ? v / (1 + t) : v;
+      setBrutoAnual(Math.round(baseV * 12));
+    },
+    [regiao, regimeIVA],
+  );
 
-  const handleBrutoAnualChange = useCallback((v: number) => {
-    setBrutoAnual(v);
-    // bruto (slider por recibo) mostra o total com IVA
-    const t = taxaIVAEfetiva(regiao, regimeIVA);
-    const totalMensal = t > 0 ? (v / 12) * (1 + t) : v / 12;
-    setBruto(Math.round(totalMensal / 50) * 50);
-  }, [regiao, regimeIVA]);
+  const handleBrutoAnualChange = useCallback(
+    (v: number) => {
+      setBrutoAnual(v);
+      // bruto (slider por recibo) mostra o total com IVA
+      const t = taxaIVAEfetiva(regiao, regimeIVA);
+      const totalMensal = t > 0 ? (v / 12) * (1 + t) : v / 12;
+      setBruto(Math.round(totalMensal / 50) * 50);
+    },
+    [regiao, regimeIVA],
+  );
 
   // ── IVA ──────────────────────────────────────────────────────────────────
   const taxaIva = taxaIVAEfetiva(regiao, regimeIVA);
@@ -976,6 +2089,10 @@ export default function SimuladorIntegrado() {
   );
 
   // ── Resultado empresa ─────────────────────────────────────────────────────
+  const custoConstituicaoAnual = incluirConstituicao
+    ? Math.round(custoConstituicao / Math.max(1, anosAmortizacao))
+    : 0;
+
   const resultEmpresa = useMemo(
     () =>
       simularEmpresa(
@@ -984,6 +2101,21 @@ export default function SimuladorIntegrado() {
         custosExtra,
         salGerenteMensal,
         distribuirDividendos,
+        opcaoEnglobamento,
+        encargosViatura,
+        tipoViatura,
+        despRepresentacao,
+        ajudasCusto,
+        naoDocumentadas,
+        emPrejuizo,
+        excecaoPrejuizo,
+        rfaiInvest,
+        regiaoRFAI,
+        dlrrLucros,
+        sifideDespesas,
+        tipoSifide,
+        primeirosAnos,
+        custoConstituicaoAnual,
       ),
     [
       brutoAnual,
@@ -991,6 +2123,21 @@ export default function SimuladorIntegrado() {
       custosExtra,
       salGerenteMensal,
       distribuirDividendos,
+      opcaoEnglobamento,
+      encargosViatura,
+      tipoViatura,
+      despRepresentacao,
+      ajudasCusto,
+      naoDocumentadas,
+      emPrejuizo,
+      excecaoPrejuizo,
+      rfaiInvest,
+      regiaoRFAI,
+      dlrrLucros,
+      sifideDespesas,
+      tipoSifide,
+      primeirosAnos,
+      custoConstituicaoAnual,
     ],
   );
 
@@ -1002,8 +2149,20 @@ export default function SimuladorIntegrado() {
   // ── Break-even ────────────────────────────────────────────────────────────
   const breakEven = useMemo(
     () =>
-      calcularBreakEven(tipoAtiv, custosExtra, despesasOper, salGerenteMensal),
-    [tipoAtiv, custosExtra, despesasOper, salGerenteMensal],
+      calcularBreakEven(
+        tipoAtiv,
+        custosExtra,
+        despesasOper,
+        salGerenteMensal,
+        custoConstituicaoAnual,
+      ),
+    [
+      tipoAtiv,
+      custosExtra,
+      despesasOper,
+      salGerenteMensal,
+      custoConstituicaoAnual,
+    ],
   );
 
   // ── Barra visual RV ───────────────────────────────────────────────────────
@@ -1503,10 +2662,46 @@ export default function SimuladorIntegrado() {
                 custosExtra={custosExtra}
                 salGerenteMensal={salGerenteMensal}
                 distribuirDividendos={distribuirDividendos}
+                opcaoEnglobamento={opcaoEnglobamento}
+                encargosViatura={encargosViatura}
+                tipoViatura={tipoViatura}
+                despRepresentacao={despRepresentacao}
+                ajudasCusto={ajudasCusto}
+                naoDocumentadas={naoDocumentadas}
+                emPrejuizo={emPrejuizo}
+                excecaoPrejuizo={excecaoPrejuizo}
+                rfaiInvest={rfaiInvest}
+                regiaoRFAI={regiaoRFAI}
+                dlrrLucros={dlrrLucros}
+                sifideDespesas={sifideDespesas}
+                tipoSifide={tipoSifide}
+                primeirosAnos={primeirosAnos}
+                incluirConstituicao={incluirConstituicao}
+                custoConstituicao={custoConstituicao}
+                anosAmortizacao={anosAmortizacao}
+                resultBeneficios={resultEmpresa.beneficios}
+                totalTA={resultEmpresa.ta.total}
                 onDespChange={setDespesasOper}
                 onCustosChange={setCustosExtra}
                 onSalChange={setSalGerenteMensal}
                 onDividendosChange={setDistribuirDividendos}
+                onEnglobamentoChange={setOpcaoEnglobamento}
+                onEncargosViaturaChange={setEncargosViatura}
+                onTipoViaturaChange={setTipoViatura}
+                onDespRepresentacaoChange={setDespRepresentacao}
+                onAjudasCustoChange={setAjudasCusto}
+                onNaoDocumentadasChange={setNaoDocumentadas}
+                onEmPrejuizoChange={setEmPrejuizo}
+                onExcecaoPrejuizoChange={setExcecaoPrejuizo}
+                onRfaiInvestChange={setRfaiInvest}
+                onRegiaoRFAIChange={setRegiaoRFAI}
+                onDlrrLucrosChange={setDlrrLucros}
+                onSifideDespesasChange={setSifideDespesas}
+                onTipoSifideChange={setTipoSifide}
+                onPrimeirosAnosChange={setPrimeirosAnos}
+                onIncluirConstituicaoChange={setIncluirConstituicao}
+                onCustoConstituicaoChange={setCustoConstituicao}
+                onAnosAmortizacaoChange={setAnosAmortizacao}
               />
             )}
           </div>
@@ -1639,10 +2834,18 @@ export default function SimuladorIntegrado() {
                       {/* Breakdown por recibo */}
                       <div className="space-y-1 flex-1">
                         <DetalheRow
-                          label={resultRecibo.taxaIVA > 0 ? "Base do serviço (sem IVA)" : "Valor do recibo"}
+                          label={
+                            resultRecibo.taxaIVA > 0
+                              ? "Base do serviço (sem IVA)"
+                              : "Valor do recibo"
+                          }
                           value={resultRecibo.bruto}
                           type="neutral"
-                          note={resultRecibo.taxaIVA > 0 ? `Total ÷ (1 + ${pct(resultRecibo.taxaIVA)})` : "O que faturaste"}
+                          note={
+                            resultRecibo.taxaIVA > 0
+                              ? `Total ÷ (1 + ${pct(resultRecibo.taxaIVA)})`
+                              : "O que faturaste"
+                          }
                         />
                         {resultRecibo.taxaIVA > 0 && (
                           <DetalheRow
@@ -1720,8 +2923,8 @@ export default function SimuladorIntegrado() {
                                 <AnimatedNumber value={resultRecibo.liquido} />
                               </div>
                               <div className="text-xs text-stone-400">
-                                {pct(resultRecibo.liquido / (bruto || 1))}{" "}
-                                do total
+                                {pct(resultRecibo.liquido / (bruto || 1))} do
+                                total
                               </div>
                             </div>
                           </div>
@@ -1751,23 +2954,57 @@ export default function SimuladorIntegrado() {
                                 <Warning size={14} />
                               </span>
                               <span className="text-xs leading-relaxed text-alert-text">
-                                Com esta faturação estimada ({fmt(Math.round(base * 12))}/ano), provavelmente qualificavas para <strong>isenção de IVA (Art. 53.º CIVA)</strong> — limite {IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")} €/ano. Sendo isento, não cobras IVA e o teu disponível sobe para{" "}
-                                <strong>{fmt(Math.round(bruto - bruto * TIPO_ATIVIDADE_PARAMS[tipoAtiv].ret - bruto * SS_BASE_PCT * SS_TAXA_TI))}</strong>.
+                                Com esta faturação estimada (
+                                {fmt(Math.round(base * 12))}/ano), provavelmente
+                                qualificavas para{" "}
+                                <strong>isenção de IVA (Art. 53.º CIVA)</strong>{" "}
+                                — limite{" "}
+                                {IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}{" "}
+                                €/ano. Sendo isento, não cobras IVA e o teu
+                                disponível sobe para{" "}
+                                <strong>
+                                  {fmt(
+                                    Math.round(
+                                      bruto -
+                                        bruto *
+                                          TIPO_ATIVIDADE_PARAMS[tipoAtiv].ret -
+                                        base * 0.7 * SS_TAXA_TI,
+                                    ),
+                                  )}
+                                </strong>
+                                .
                               </span>
                             </div>
                           )}
 
                           {/* Info: retenção possivelmente reembolsada (abaixo do mínimo de existência) */}
-                          {resultRecibo.retencaoIRS > 0 && base * 12 < MINIMO_EXISTENCIA_2026 && (
-                            <div className="flex items-start gap-2.5 p-3 rounded-xl border border-brand/30 bg-brand-light">
-                              <span className="text-brand mt-0.5 flex-shrink-0">
-                                <Check size={14} />
-                              </span>
-                              <span className="text-xs leading-relaxed text-brand-dark">
-                                Com faturação anual estimada de {fmt(Math.round(base * 12))} €, o teu rendimento coletável fica abaixo do <strong>mínimo de existência ({MINIMO_EXISTENCIA_2026.toLocaleString("pt-PT")} €)</strong> — IRS = 0 €. A retenção na fonte ({fmt(Math.round(resultRecibo.retencaoIRS * 12))}/ano) deve ser totalmente <strong>reembolsada</strong> na declaração de IRS anual.
-                              </span>
-                            </div>
-                          )}
+                          {resultRecibo.retencaoIRS > 0 &&
+                            base * 12 < MINIMO_EXISTENCIA_2026 && (
+                              <div className="flex items-start gap-2.5 p-3 rounded-xl border border-brand/30 bg-brand-light">
+                                <span className="text-brand mt-0.5 flex-shrink-0">
+                                  <Check size={14} />
+                                </span>
+                                <span className="text-xs leading-relaxed text-brand-dark">
+                                  Com faturação anual estimada de{" "}
+                                  {fmt(Math.round(base * 12))} €, o teu
+                                  rendimento coletável fica abaixo do{" "}
+                                  <strong>
+                                    mínimo de existência (
+                                    {MINIMO_EXISTENCIA_2026.toLocaleString(
+                                      "pt-PT",
+                                    )}{" "}
+                                    €)
+                                  </strong>{" "}
+                                  — IRS = 0 €. A retenção na fonte (
+                                  {fmt(
+                                    Math.round(resultRecibo.retencaoIRS * 12),
+                                  )}
+                                  /ano) deve ser totalmente{" "}
+                                  <strong>reembolsada</strong> na declaração de
+                                  IRS anual.
+                                </span>
+                              </div>
+                            )}
                         </div>
                       </div>
                     </>
@@ -1930,11 +3167,14 @@ export default function SimuladorIntegrado() {
                     </div>
                   </div>
 
-                  {/* Barra empresa */}
+                  {/* Barra empresa — atualizada com TA e benefícios */}
                   <div className="mb-6">
                     <div className="flex h-3 rounded-full overflow-hidden gap-0.5 mb-3">
                       {(() => {
                         const total = brutoAnual || 1;
+                        const irsDiv = opcaoEnglobamento
+                          ? resultEmpresa.irsDividendosEnglobamento
+                          : resultEmpresa.irsDividendosLiberatoria;
                         return (
                           <>
                             <div
@@ -1946,15 +3186,24 @@ export default function SimuladorIntegrado() {
                             />
                             <div
                               style={{
-                                width: `${((resultEmpresa.irc + resultEmpresa.derramaMuni) / total) * 100}%`,
+                                width: `${(resultEmpresa.ircAposBeneficios / total) * 100}%`,
                                 background: "#9FE1CB",
                               }}
                               className="transition-all duration-500"
                             />
-                            {resultEmpresa.irsDividendos > 0 && (
+                            {resultEmpresa.ta.total > 0 && (
                               <div
                                 style={{
-                                  width: `${(resultEmpresa.irsDividendos / total) * 100}%`,
+                                  width: `${(resultEmpresa.ta.total / total) * 100}%`,
+                                  background: "#FCD34D",
+                                }}
+                                className="transition-all duration-500"
+                              />
+                            )}
+                            {irsDiv > 0 && (
+                              <div
+                                style={{
+                                  width: `${(irsDiv / total) * 100}%`,
                                   background: "#FBBF24",
                                 }}
                                 className="transition-all duration-500"
@@ -1973,38 +3222,47 @@ export default function SimuladorIntegrado() {
                     </div>
                     <div className="flex flex-wrap gap-3">
                       {[
-                        { label: "Teu (após dividendos)", color: "#1D9E75" },
+                        { label: "Teu", color: "#1D9E75", show: true },
                         {
-                          label: "IRC (PME 15%/19%) + Derrama",
+                          label: "IRC após benefícios",
                           color: "#9FE1CB",
+                          show: true,
                         },
-                        ...(resultEmpresa.irsDividendos > 0
-                          ? [
-                              {
-                                label: "IRS Dividendos (28%)",
-                                color: "#FBBF24",
-                              },
-                            ]
-                          : []),
-                        { label: "Custos + salário", color: "#B4B2A9" },
-                      ].map((l) => (
-                        <div
-                          key={l.label}
-                          className="flex items-center gap-1.5"
-                        >
+                        {
+                          label: "Tributação Autónoma",
+                          color: "#FCD34D",
+                          show: resultEmpresa.ta.total > 0,
+                        },
+                        {
+                          label: `IRS Div. (${opcaoEnglobamento ? "englobamento" : "28%"})`,
+                          color: "#FBBF24",
+                          show: distribuirDividendos,
+                        },
+                        {
+                          label: "Custos + salário",
+                          color: "#B4B2A9",
+                          show: true,
+                        },
+                      ]
+                        .filter((l) => l.show)
+                        .map((l) => (
                           <div
-                            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                            style={{ background: l.color }}
-                          />
-                          <span className="text-xs text-stone-500">
-                            {l.label}
-                          </span>
-                        </div>
-                      ))}
+                            key={l.label}
+                            className="flex items-center gap-1.5"
+                          >
+                            <div
+                              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                              style={{ background: l.color }}
+                            />
+                            <span className="text-xs text-stone-500">
+                              {l.label}
+                            </span>
+                          </div>
+                        ))}
                     </div>
                   </div>
 
-                  {/* Breakdown empresa */}
+                  {/* Breakdown empresa — detalhado */}
                   <div className="space-y-1 flex-1">
                     <DetalheRow
                       label="Faturação"
@@ -2012,6 +3270,7 @@ export default function SimuladorIntegrado() {
                       type="neutral"
                       note="Volume de negócios anual"
                     />
+
                     {resultEmpresa.despesasOper > 0 && (
                       <DetalheRow
                         label="Despesas operacionais"
@@ -2028,6 +3287,14 @@ export default function SimuladorIntegrado() {
                         note="Contabilidade, software, etc."
                       />
                     )}
+                    {resultEmpresa.custoConstituicao > 0 && (
+                      <DetalheRow
+                        label="Custo constituição (amortizado)"
+                        value={-resultEmpresa.custoConstituicao}
+                        type="deducao"
+                        note={`${custoConstituicao}€ ÷ ${anosAmortizacao} anos`}
+                      />
+                    )}
                     {resultEmpresa.salGerente > 0 && (
                       <>
                         <DetalheRow
@@ -2037,13 +3304,14 @@ export default function SimuladorIntegrado() {
                           note="Custo dedutível da empresa"
                         />
                         <DetalheRow
-                          label="SS empresa + trabalhador sobre salário"
+                          label="SS empresa + trabalhador"
                           value={-resultEmpresa.ssSalGerente}
                           type="deducao"
                           note="23,75% (empresa) + 11% (trabalhador)"
                         />
                       </>
                     )}
+
                     <DetalheRow
                       label="Lucro tributável"
                       value={resultEmpresa.lucroTributavel}
@@ -2051,24 +3319,141 @@ export default function SimuladorIntegrado() {
                       note="Antes de IRC"
                     />
                     <DetalheRow
-                      label="IRC (PME: 15% até 50k€ + 19% excedente)"
-                      value={-resultEmpresa.irc}
+                      label="IRC base — coleta (PME 15%/50k€ + 19%)"
+                      value={-resultEmpresa.coleta}
                       type="deducao"
-                      note={`OE2026: IRC geral 19% (era 20% em 2025)`}
+                      note="OE2026: taxa geral 19% (era 20% em 2025)"
                     />
+
+                    {/* Benefícios fiscais */}
+                    {resultEmpresa.beneficios.rfai > 0 && (
+                      <DetalheRow
+                        label={`RFAI — ${regiaoRFAI === "interior" ? "Norte/Centro/Alentejo/Açores/Madeira (30%)" : "Lisboa/Algarve (10%)"}`}
+                        value={resultEmpresa.beneficios.rfai}
+                        type="beneficio"
+                        note={
+                          resultEmpresa.beneficios.rfai <
+                          resultEmpresa.beneficios.rfaiBruto
+                            ? `Bruto: ${fmt(Math.round(resultEmpresa.beneficios.rfaiBruto))} — limitado à coleta`
+                            : "Dedução à coleta IRC (Art. 22.º CFI)"
+                        }
+                      />
+                    )}
+                    {resultEmpresa.beneficios.dlrr > 0 && (
+                      <DetalheRow
+                        label="DLRR — 10% dos lucros retidos reinvestidos"
+                        value={resultEmpresa.beneficios.dlrr}
+                        type="beneficio"
+                        note="Limite 25% da coleta IRC (Art. 27.º-A CFI)"
+                      />
+                    )}
+                    {resultEmpresa.beneficios.sifide > 0 && (
+                      <DetalheRow
+                        label={`SIFIDE II — I&D (${tipoSifide === "startup" ? "82,5%" : tipoSifide === "pme_jovem" ? "47,5%" : "32,5%"})`}
+                        value={resultEmpresa.beneficios.sifide}
+                        type="beneficio"
+                        note="Certificação ANI. Reportável 12 anos."
+                      />
+                    )}
+                    {resultEmpresa.beneficios.total > 0 && (
+                      <DetalheRow
+                        label="IRC após benefícios fiscais"
+                        value={-resultEmpresa.ircAposBeneficios}
+                        type="deducao"
+                        note={`Poupança RFAI+DLRR+SIFIDE: ${fmt(Math.round(resultEmpresa.beneficios.total))}`}
+                      />
+                    )}
+
+                    {/* Tributação Autónoma */}
+                    {resultEmpresa.ta.total > 0 && (
+                      <>
+                        {resultEmpresa.ta.viatura > 0 && (
+                          <DetalheRow
+                            label={`TA — Viaturas (${pct(TA_VIATURAS[tipoViatura])}${emPrejuizo && !excecaoPrejuizo ? " +10pp" : ""})`}
+                            value={-resultEmpresa.ta.viatura}
+                            type="warning"
+                            note="Art. 88.º n.º 3/18 CIRC — sobre encargos anuais"
+                          />
+                        )}
+                        {resultEmpresa.ta.representacao > 0 && (
+                          <DetalheRow
+                            label="TA — Despesas de representação (10%)"
+                            value={-resultEmpresa.ta.representacao}
+                            type="warning"
+                            note="Art. 88.º n.º 7 CIRC"
+                          />
+                        )}
+                        {resultEmpresa.ta.ajudasCusto > 0 && (
+                          <DetalheRow
+                            label="TA — Ajudas de custo (5%)"
+                            value={-resultEmpresa.ta.ajudasCusto}
+                            type="warning"
+                            note="Art. 88.º n.º 9 CIRC"
+                          />
+                        )}
+                        {resultEmpresa.ta.naoDocumentadas > 0 && (
+                          <DetalheRow
+                            label="TA — Despesas não documentadas (50%)"
+                            value={-resultEmpresa.ta.naoDocumentadas}
+                            type="warning"
+                            note="Art. 88.º n.º 1 CIRC"
+                          />
+                        )}
+                      </>
+                    )}
+
                     <DetalheRow
                       label="Derrama municipal (~1,5%)"
                       value={-resultEmpresa.derramaMuni}
                       type="deducao"
-                      note="Varia por município — estimativa Lisboa/Porto"
+                      note="Estimativa Lisboa/Porto — varia por município"
                     />
-                    {resultEmpresa.irsDividendos > 0 ? (
-                      <DetalheRow
-                        label="IRS sobre dividendos (28%)"
-                        value={-resultEmpresa.irsDividendos}
-                        type="warning"
-                        note="Taxa liberatória Art. 71.º CIRS"
-                      />
+
+                    {/* Dividendos */}
+                    {distribuirDividendos ? (
+                      <>
+                        {resultEmpresa.irsDividendosEnglobamento <
+                          resultEmpresa.irsDividendosLiberatoria && (
+                          <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200">
+                            <Check
+                              size={12}
+                              className="flex-shrink-0 mt-0.5 text-emerald-600"
+                            />
+                            <span className="text-[11px] text-emerald-700">
+                              Englobamento poupa{" "}
+                              {fmt(
+                                Math.round(
+                                  resultEmpresa.irsDividendosLiberatoria -
+                                    resultEmpresa.irsDividendosEnglobamento,
+                                ),
+                              )}
+                              /ano vs. taxa liberatória 28%
+                              {opcaoEnglobamento
+                                ? " — já aplicado ✓"
+                                : " — activa acima"}
+                              .
+                            </span>
+                          </div>
+                        )}
+                        <DetalheRow
+                          label={
+                            opcaoEnglobamento
+                              ? `IRS dividendos (englobamento 50% × ${pct(resultEmpresa.taxaMarginalGerente)} marg.)`
+                              : "IRS dividendos (28% taxa liberatória)"
+                          }
+                          value={
+                            -(opcaoEnglobamento
+                              ? resultEmpresa.irsDividendosEnglobamento
+                              : resultEmpresa.irsDividendosLiberatoria)
+                          }
+                          type="warning"
+                          note={
+                            opcaoEnglobamento
+                              ? "Art. 40.º-A CIRS — 50% incluído no rendimento coletável"
+                              : "Art. 71.º CIRS — taxa liberatória final"
+                          }
+                        />
+                      </>
                     ) : (
                       <div className="flex items-center justify-between px-4 py-2.5 rounded-xl border bg-white border-stone-100">
                         <span className="text-xs text-stone-500">
@@ -2089,7 +3474,7 @@ export default function SimuladorIntegrado() {
                           <div className="text-xs text-stone-400 mt-0.5">
                             {resultEmpresa.salGerente > 0
                               ? "Salário líquido + dividendos líquidos"
-                              : "Após IRC, derrama e IRS dividendos"}
+                              : "Após IRC, TA, derrama e IRS dividendos"}
                           </div>
                         </div>
                         <div className="text-right">
@@ -2110,11 +3495,13 @@ export default function SimuladorIntegrado() {
                   </div>
 
                   <p className="text-xs text-stone-400 mt-5 leading-relaxed">
-                    Estimativa de ordem de grandeza. IRC PME 2026: 15%/50k€ +
-                    19%. Derrama 1,5%. Não considera tributação autónoma,
-                    englobamento de dividendos, benefícios fiscais (RFAI, DLRR)
-                    nem custos de constituição (~1 500€). Consulta contabilista
-                    certificado.
+                    IRC PME 2026: 15%/50k€ + 19% (OE2026). TA viaturas:
+                    8%/25%/32% (OE2025); PHEV: 2,5%/7,5%/15%. RFAI: 30% interior
+                    + 10% litoral. SIFIDE II: 32,5%–82,5% (certificação ANI).
+                    Derrama ~1,5%. Não considera tributação autónoma
+                    personalizada, englobamento com outros rendimentos, RFAI por
+                    contrato, nem custos de constituição individuais. Validar
+                    com contabilista certificado (OCC).
                   </p>
                 </m.div>
               )}
@@ -2191,10 +3578,22 @@ export default function SimuladorIntegrado() {
               </div>
               <div className="text-[11px] text-stone-400">líquido/ano</div>
               <div className="mt-2 text-[11px] text-stone-400 space-y-0.5">
-                <div>IRC: −{fmt(resultEmpresa.irc)}</div>
+                <div>IRC: −{fmt(resultEmpresa.ircAposBeneficios)}</div>
+                {resultEmpresa.ta.total > 0 && (
+                  <div>TA: +{fmt(Math.round(resultEmpresa.ta.total))}</div>
+                )}
                 <div>Derrama: −{fmt(resultEmpresa.derramaMuni)}</div>
-                {resultEmpresa.irsDividendos > 0 && (
-                  <div>IRS div: −{fmt(resultEmpresa.irsDividendos)}</div>
+                {distribuirDividendos && (
+                  <div>
+                    IRS div: −
+                    {fmt(
+                      Math.round(
+                        opcaoEnglobamento
+                          ? resultEmpresa.irsDividendosEnglobamento
+                          : resultEmpresa.irsDividendosLiberatoria,
+                      ),
+                    )}
+                  </div>
                 )}
                 <div>Custos: −{fmt(resultEmpresa.totalCustos)}</div>
               </div>
@@ -2239,11 +3638,12 @@ export default function SimuladorIntegrado() {
               <strong>Fontes:</strong> Art. 31.º, 68.º, 101.º, 101.º-B e 12.º-B
               CIRS | CIVA Art. 53.º e 9.º | CRC (SS independentes) | OE2026 (Lei
               n.º 73-A/2025) | IAS 2026: 537,13€. Estimativa de ordem de
-              grandeza. Não considera tributação autónoma, englobamento,
-              benefícios fiscais (RFAI, DLRR, SIFIDE II), custos de
-              constituição, regime contabilidade organizada nem particularidades
-              individuais. Decisão de constituir sociedade deve ser validada com
-              contabilista certificado (OCC).
+              grandeza. Inclui Tributação Autónoma (Art. 88.º CIRC),
+              Englobamento (Art. 40.º-A CIRS), RFAI/DLRR/SIFIDE II e custos de
+              constituição. Não considera regime de contabilidade organizada
+              para TI, RFAI contratual, benefícios municipais (IMI/IMT) nem
+              particularidades individuais. Decisão de constituir sociedade deve
+              ser validada com contabilista certificado (OCC).
             </p>
           </div>
         </div>
