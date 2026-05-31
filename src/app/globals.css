@@ -1,0 +1,268 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f5f4f0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: #292524;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tipografia editorial para títulos (next/font expõe a variável). */
+.font-display {
+  font-family: var(--font-playfair), Georgia, serif;
+}
+
+/* Escala display fluida — hierarquia editorial forte e responsiva. */
+.display-1 {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+.display-2 {
+  font-size: clamp(1.9rem, 4vw, 3rem);
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+}
+.text-balance {
+  text-wrap: balance;
+}
+
+/* Eyebrow — rótulo de secção consistente. */
+.eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+/* Grão subtil para dar atmosfera a fundos planos. */
+.grain {
+  position: relative;
+  isolation: isolate;
+}
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.4;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+}
+
+/* Inputs */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  opacity: 0.4;
+}
+
+/* Botão tátil — brilho que percorre ao passar o rato. */
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+}
+.btn-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.25) 50%,
+    transparent 70%
+  );
+}
+.btn-shine:hover::after {
+  animation: shimmer 0.9s ease;
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   DARK MODE CINEMATOGRÁFICO
+   Camada de override ativada pela classe .dark no <html>. Remapeia apenas
+   os neutros (não toca em text-white, bg-brand ou cores inline da marca),
+   garantindo que o modo claro fica intacto. Tons quentes, não frios.
+   ════════════════════════════════════════════════════════════════════ */
+.dark {
+  --background: #141613;
+  color-scheme: dark;
+}
+.dark body {
+  color: #e2e0d6;
+}
+
+/* Superfícies — cartões ligeiramente destacados do fundo (menos plano). */
+.dark .bg-white {
+  background-color: #1e221b;
+}
+.dark .bg-cream {
+  background-color: #161914;
+}
+.dark .bg-sand {
+  background-color: #181b15;
+}
+.dark .bg-stone-50 {
+  background-color: #1a1d18;
+}
+.dark .bg-stone-100 {
+  background-color: #24281f;
+}
+.dark .bg-stone-200 {
+  background-color: #2e3329;
+}
+.dark .bg-brand-light {
+  background-color: #143329;
+}
+
+/* Texto (quente, alto contraste mas suave) */
+.dark .text-ink,
+.dark .text-stone-800 {
+  color: #f2f0e8;
+}
+.dark .text-stone-700 {
+  color: #e2e0d6;
+}
+.dark .text-stone-600 {
+  color: #cfcdc3;
+}
+.dark .text-stone-500 {
+  color: #a8a69c;
+}
+.dark .text-stone-400 {
+  color: #8a887e;
+}
+.dark .text-stone-300 {
+  color: #6a6860;
+}
+.dark .text-stone-200 {
+  color: #2e3329;
+}
+.dark .text-brand-dark {
+  color: #6fceac;
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Acentos da marca no escuro — verde-menta calmo, menos saturado, para
+   não "gritar" sobre o fundo escuro. Mantém a identidade sem o efeito néon.
+   Tudo scoped a .dark: o modo claro fica intacto.
+   `bg-brand` (preenchimentos de CTA/realce) NÃO é alterado, para o texto
+   branco manter contraste e os botões manterem presença.
+   ────────────────────────────────────────────────────────────────── */
+.dark .text-brand {
+  color: #5ec6a0;
+}
+.dark .border-brand {
+  border-color: #347460;
+}
+
+/* Bordas */
+.dark .border-stone-100 {
+  border-color: #2a2f25;
+}
+.dark .border-stone-200 {
+  border-color: #2e3329;
+}
+.dark .border-stone-300 {
+  border-color: #3a4034;
+}
+.dark .border-transparent {
+  border-color: transparent;
+}
+
+/* Alertas — dourado suave adaptado ao escuro (calmo, não berrante) */
+.dark .bg-alert-bg {
+  background-color: #26230f;
+}
+.dark .border-alert-border {
+  border-color: #45401e;
+}
+.dark .text-alert-text {
+  color: #d8bf72;
+}
+.dark .bg-alert-text {
+  background-color: #b59647;
+}
+
+/* Argila/terracota — tom pastel suave para valores que saem, no escuro. */
+.dark .bg-clay-bg {
+  background-color: #2a1d16;
+}
+.dark .border-clay-border {
+  border-color: #4a3325;
+}
+.dark .text-clay-text {
+  color: #e0a48c;
+}
+
+/* Sombras mais profundas no escuro */
+.dark .shadow-card {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px -16px rgba(0, 0, 0, 0.6);
+}
+.dark .shadow-lift,
+.dark .shadow-soft {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 24px 48px -20px rgba(0, 0, 0, 0.7);
+}
+
+/* Nav/topbar com blur translúcido sobre fundo escuro */
+.dark .bg-cream\/85 {
+  background-color: rgba(20, 22, 19, 0.85);
+}
+.dark .bg-white\/80,
+.dark .bg-white\/95 {
+  background-color: rgba(28, 31, 26, 0.9);
+}
+
+/* Scrollbar discreta no escuro */
+.dark ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #2e3329;
+  border-radius: 8px;
+}
+
+/* Acessibilidade: respeitar preferência de movimento reduzido. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .btn-shine:hover::after {
+    animation: none;
+  }
+  .animate-float {
+    animation: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,13 @@
+# Normaliza finais de linha: LF no repositório (consistente em Linux/Vercel),
+# checkout nativo em cada sistema. Evita ruído CRLF↔LF nos diffs.
+* text=auto eol=lf
+
+# Ficheiros binários — nunca normalizar.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary

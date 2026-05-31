@@ -1,0 +1,71 @@
+name: Verificação de dados fiscais
+
+# Monitor mensal dos dados fiscais. Se detetar desatualização, abre uma issue
+# para revisão HUMANA. Nunca altera nem aplica dados automaticamente.
+
+on:
+  schedule:
+    # Dia 1 de cada mês, às 07:00 UTC.
+    - cron: "0 7 1 * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Correr monitor de dados fiscais
+        id: check
+        run: |
+          set +e
+          node scripts/check-fiscal-data.mjs --check-sources
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+
+      - name: Confirmar que as skills do Claude estão sincronizadas
+        run: node scripts/sync-skills-fiscal.mjs --check
+
+      - name: Abrir issue se requer reverificação
+        if: steps.check.outputs.exit_code != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body = 'O monitor de dados fiscais detetou que os dados precisam de reverificação.';
+            try { body = fs.readFileSync('fiscal-check-report.md', 'utf8'); } catch {}
+
+            const title = `Reverificar dados fiscais — ${new Date().toISOString().slice(0,10)}`;
+
+            // Evita duplicar: reutiliza issue aberta com a mesma etiqueta.
+            const { data: abertas } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'dados-fiscais',
+            });
+
+            if (abertas.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: abertas[0].number,
+                body: `Nova verificação (${new Date().toISOString().slice(0,10)}):\n\n${body}`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['dados-fiscais'],
+              });
+            }
