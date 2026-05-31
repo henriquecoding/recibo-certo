@@ -12,6 +12,7 @@
     "skills:check": "node scripts/sync-skills-fiscal.mjs --check"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.106.2",
     "motion": "^12.40.0",
     "next": "^16.2.6",
     "react": "^19.2.6",

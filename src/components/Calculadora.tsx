@@ -55,14 +55,19 @@ export default function Calculadora() {
   const [acumulaEmprego, setAcumulaEmprego] = useState(false);
   const [irsJovemAno, setIrsJovemAno] = useState(0);
   const [advanced, setAdvanced] = useState(false);
-  // O recibo verde indica, por norma, o valor BASE (o IVA é somado por cima).
-  // Se o utilizador combinou um preço final com IVA incluído, convertemos para
-  // a base antes de calcular (base = total / (1 + taxa)).
-  const [ivaIncluido, setIvaIncluido] = useState(false);
+  // Por defeito, assumimos que o valor escrito é o TOTAL que o cliente paga (IVA
+  // incluído): extraímos o IVA por dentro (base = total / (1 + taxa)), pelo que o
+  // IVA reduz o disponível. Quem fatura "honorário + IVA por cima" desliga o toggle.
+  const [ivaIncluido, setIvaIncluido] = useState(true);
 
   const taxaIva = taxaIVAEfetiva(regiao, regimeIVA);
   const temIva = taxaIva > 0;
   const base = ivaIncluido && temIva ? bruto / (1 + taxaIva) : bruto;
+  const labelValor = !temIva
+    ? "Valor do serviço (€)"
+    : ivaIncluido
+      ? "Valor cobrado ao cliente, com IVA (€)"
+      : "O teu honorário, sem IVA (€)";
 
   const result = calcular({
     bruto: base,
@@ -138,11 +143,12 @@ export default function Calculadora() {
           <div className="mb-6">
             <div className="mb-2 flex items-center gap-1.5">
               <label htmlFor="valor-recibo" className="text-sm font-medium uppercase tracking-wider text-stone-500">
-                Valor do serviço (€)
+                {labelValor}
               </label>
               <InfoTip label="O que indicar aqui">
-                Por norma, o recibo verde indica o valor base e o IVA é somado por cima — o cliente paga base + IVA. Se
-                combinaste um preço final com IVA já incluído, ativa &quot;com IVA incluído&quot; e nós separamos a base.
+                Assumimos que o valor que escreves é o total que o cliente te paga, com IVA incluído — separamos o IVA
+                por dentro, por isso ele reduz o que te sobra. Se preferires indicar só o teu honorário e somar o IVA
+                por cima, escolhe &quot;IVA à parte&quot;.
               </InfoTip>
             </div>
             <div className="relative">
@@ -162,8 +168,8 @@ export default function Calculadora() {
             {temIva && (
               <div role="group" aria-label="O valor inclui IVA?" className="mt-2 inline-flex items-center gap-1 rounded-xl border border-stone-200 bg-stone-50 p-1">
                 {([
-                  { incl: false, label: "Sem IVA" },
                   { incl: true, label: "Com IVA incluído" },
+                  { incl: false, label: "IVA à parte" },
                 ] as const).map((o) => {
                   const active = ivaIncluido === o.incl;
                   return (

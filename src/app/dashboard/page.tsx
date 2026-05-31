@@ -24,7 +24,7 @@ function mesAtual(recibos: Recibo[]): Recibo[] {
 }
 
 export default function VisaoGeral() {
-  const { recibos, carregado } = useRecibos();
+  const { recibos, carregado, naNuvem, locaisPorImportar, importarLocais, adiarImportacao } = useRecibos();
   const [insights, setInsights] = useState<Insight[]>([]);
   const [saude, setSaude] = useState<SaudeFiscal>({ score: 0, estado: "Tranquilo", fatores: [] });
   const [onboarded, setOnboarded] = useState(true);
@@ -79,13 +79,42 @@ export default function VisaoGeral() {
         <Onboarding onConcluir={concluirOnboarding} />
       ) : (
         <div className="grid grid-cols-12 items-start gap-4">
-          {/* Gatilho de upgrade: proteger o histórico (só quando há dados a proteger) */}
-          {temRecibos && (
+          {/* Sem sessão + com dados locais → convidar a guardar na nuvem */}
+          {!naNuvem && temRecibos && (
             <div className="col-span-12">
-              <ProHint id="cloud-historico" icon={<History size={18} />}>
-                O teu histórico vive só neste dispositivo. Com o Pro, fica seguro na nuvem e acede-lo do telemóvel ao
-                portátil.
+              <ProHint id="cloud-historico" icon={<History size={18} />} cta="Criar conta / entrar" href="/dashboard/conta">
+                O teu histórico vive só neste dispositivo. Cria uma conta e fica seguro na nuvem, acessível do telemóvel
+                ao portátil.
               </ProHint>
+            </div>
+          )}
+
+          {/* Com sessão + recibos locais por trazer → oferecer importação */}
+          {naNuvem && locaisPorImportar > 0 && (
+            <div className="col-span-12">
+              <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-brand/30 bg-brand-light px-4 py-3">
+                <span className="flex-shrink-0 text-brand"><History size={18} /></span>
+                <p className="min-w-0 flex-1 text-sm text-brand-dark">
+                  Tens {locaisPorImportar} {locaisPorImportar === 1 ? "recibo guardado" : "recibos guardados"} neste
+                  dispositivo. Queres trazê-{locaisPorImportar === 1 ? "lo" : "los"} para a tua conta na nuvem?
+                </p>
+                <div className="flex flex-shrink-0 gap-2">
+                  <button
+                    type="button"
+                    onClick={importarLocais}
+                    className="rounded-xl bg-brand px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
+                  >
+                    Trazer para a nuvem
+                  </button>
+                  <button
+                    type="button"
+                    onClick={adiarImportacao}
+                    className="rounded-xl px-3 py-2 text-sm font-medium text-brand-dark transition-colors hover:bg-white/40"
+                  >
+                    Agora não
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 

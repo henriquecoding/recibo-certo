@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo, LayoutGrid, Receipt, History, Calendar, Calculator, Scale, ArrowLeft } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import { AuthProvider } from "@/lib/supabase/auth";
+import AccountBox from "@/components/dashboard/AccountBox";
 import type { ComponentType, ReactNode } from "react";
 
 interface NavItem {
@@ -30,6 +32,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   return (
+    <AuthProvider>
     <div className="min-h-screen bg-cream lg:grid lg:grid-cols-[264px_1fr]">
       {/* Sidebar (desktop) */}
       <aside className="sticky top-0 hidden h-screen flex-col border-r border-stone-200 bg-white lg:flex">
@@ -61,10 +64,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </ul>
         </nav>
         <div className="border-t border-stone-100 p-4">
-          <div className="rounded-xl bg-cream px-3.5 py-2.5">
-            <div className="mb-0.5 text-xs font-semibold text-stone-600">Modo local</div>
-            <p className="text-[11px] leading-snug text-stone-400">Os dados ficam só neste dispositivo. Em breve: conta na nuvem.</p>
-          </div>
+          <AccountBox />
           <div className="mt-3 flex items-center justify-between px-1">
             <Link href="/" className="flex items-center gap-2 px-2.5 text-xs text-stone-400 transition-colors hover:text-stone-700">
               <ArrowLeft size={12} />
@@ -110,5 +110,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         })}
       </nav>
     </div>
+    </AuthProvider>
   );
 }
