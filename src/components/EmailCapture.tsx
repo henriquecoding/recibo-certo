@@ -40,11 +40,11 @@ export default function EmailCapture({ fonte = "landing" }: { fonte?: string }) 
         className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 rounded-full bg-white/10 blur-3xl"
       />
       <div className="relative mx-auto max-w-xl text-center">
-        <div className="text-sm font-semibold uppercase tracking-[0.15em] text-green-200 mb-3">Em breve</div>
-        <h2 className="font-display text-3xl font-semibold text-white mb-4">Dashboard completo a chegar</h2>
+        <div className="text-sm font-semibold uppercase tracking-[0.15em] text-green-200 mb-3">Plano Pro — em breve</div>
+        <h2 className="font-display text-3xl font-semibold text-white mb-4">Garante o preço de fundador</h2>
         <p className="text-green-100 text-sm leading-relaxed mb-8">
-          Regista-te para acesso antecipado ao dashboard que separa automaticamente o teu dinheiro dos impostos, alerta
-          prazos fiscais e simula o teu IRS anual.
+          O plano Pro traz alertas de prazos antes de cada entrega, histórico seguro na nuvem e exportação
+          direta para o teu contabilista. Entra na lista e paga menos para sempre.
         </p>
 
         {!sent ? (
@@ -69,7 +69,7 @@ export default function EmailCapture({ fonte = "landing" }: { fonte?: string }) 
               whileTap={{ scale: 0.97 }}
               className="btn-shine flex-shrink-0 rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-brand-dark shadow-lift transition-colors hover:bg-green-50 disabled:opacity-70"
             >
-              {aEnviar ? "A guardar…" : "Entrar"}
+              {aEnviar ? "A guardar…" : "Quero o preço de fundador"}
             </m.button>
           </form>
         ) : (

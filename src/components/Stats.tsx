@@ -10,18 +10,18 @@ interface Pilar {
 const PILARES: Pilar[] = [
   {
     icon: <ShieldCheck size={18} />,
-    title: "Taxas de 2026 verificadas",
-    sub: "Cada parâmetro com base legal e fonte oficial — revisto e datado.",
+    title: "Taxas de 2026 com fonte legal",
+    sub: "IRS 23 %, SS 21,4 %, IVA art. 53.º — cada valor com base legal citada e data de verificação.",
   },
   {
     icon: <Lock size={18} />,
     title: "Os teus dados ficam contigo",
-    sub: "Tudo corre no teu dispositivo. Sem conta, sem partilha, sem rasto.",
+    sub: "Tudo corre no teu browser. Sem conta obrigatória, sem telemetria, sem acesso ao servidor.",
   },
   {
     icon: <Flag size={18} />,
-    title: "Feito para a lei portuguesa",
-    sub: "IRS, Segurança Social e IVA, com as regras de Portugal — num só sítio.",
+    title: "Feito para Portugal, em português",
+    sub: "Recibos verdes, regime simplificado, IRS Jovem e isenções — só as regras que te afetam.",
   },
 ];
 

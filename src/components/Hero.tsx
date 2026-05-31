@@ -54,8 +54,8 @@ export default function Hero() {
           </m.h1>
 
           <m.p variants={staggerItem} className="mt-6 max-w-md text-lg leading-relaxed text-stone-500">
-            Separamos, em segundos, o que fica para ti do que é do Estado — IRS, Segurança Social e IVA. E mostramos-te
-            quanto podes gastar, sem sobressaltos no fim do trimestre.
+            Calcula IRS, Segurança Social e IVA num segundo — e sabe exatamente quanto podes gastar sem apanhar
+            surpresas no fim do trimestre.
           </m.p>
 
           <m.div variants={staggerItem} className="mt-9 flex flex-wrap gap-3">

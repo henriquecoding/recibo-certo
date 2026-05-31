@@ -15,7 +15,7 @@ export default function FAQ() {
       <div className="mx-auto max-w-2xl">
         <Reveal className="mb-12 text-center">
           <div className="eyebrow mb-3 text-brand">Dúvidas frequentes</div>
-          <h2 className="font-display display-2 font-semibold text-ink">As perguntas que todos fazem</h2>
+          <h2 className="font-display display-2 font-semibold text-ink">Tudo sobre recibos verdes, respondido.</h2>
         </Reveal>
 
         <div className="space-y-3">

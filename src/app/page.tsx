@@ -59,15 +59,14 @@ export default function Home() {
             <div className="mx-auto max-w-5xl">
               <Reveal className="mb-10 text-center">
                 <div className="eyebrow mb-3 text-brand">
-                  Experimenta com o teu valor
+                  Calculadora de recibos verdes 2026
                 </div>
                 <h2 className="font-display display-2 font-semibold text-ink">
-                  Quanto fica realmente teu?
+                  Calcula o teu líquido real.<br className="hidden sm:block" /> IRS, SS e IVA em segundos.
                 </h2>
                 <p className="mx-auto mt-3 max-w-lg text-stone-500">
-                  Configura uma vez — vê o líquido como recibos verdes e como
-                  empresa, em tempo real. IRS, Segurança Social, IRC e
-                  dividendos com as taxas de 2026.
+                  Ajusta o valor e a atividade — vê imediatamente quanto recebes a limpo como recibos verdes
+                  e quanto ficarias como empresa. Taxas de 2026, verificadas com fonte legal.
                 </p>
               </Reveal>
               <Reveal delay={0.08}>
