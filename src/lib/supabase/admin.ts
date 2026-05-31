@@ -76,12 +76,22 @@ export async function eliminarParceiro(id: string): Promise<{ erro?: string }> {
 // ── Perfis / utilizadores ────────────────────────────────────
 
 export async function verificarAdmin(userId: string): Promise<boolean> {
-  const { data } = await getSupabase()
+  const sb = getSupabase();
+
+  // 1.ª tentativa: verificar via tabela profiles (caminho normal após migration)
+  const { data } = await sb
     .from("profiles")
     .select("role")
     .eq("id", userId)
     .single();
-  return data?.role === "admin";
+
+  if (data?.role === "admin") return true;
+
+  // Fallback: se a tabela ainda não foi criada ou o perfil não existe,
+  // verifica pelo email do utilizador autenticado. Seguro porque a sessão
+  // Supabase já validou a identidade — só permite o email exato de admin.
+  const { data: au } = await sb.auth.getUser();
+  return au.user?.email === "admin@recibocerto.pt";
 }
 
 export async function contarUtilizadores(): Promise<number> {
