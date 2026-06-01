@@ -111,6 +111,34 @@ export const SOURCES = {
     label: "IRS — rendimentos prediais e tributação autónoma · Ordem dos Contabilistas Certificados",
     url: "https://www.occ.pt/pt-pt/noticias/irs-rendimentos-prediais-e-tributacao-autonoma",
   },
+  occTA: {
+    label: "Tributação Autónoma — Art. 88.º CIRC (OE2025/OE2026) · OCC",
+    url: "https://portal.occ.pt/pt-pt/noticias/irc-tributacao-autonoma",
+  },
+  occRFAI: {
+    label: "RFAI — Regime Fiscal de Apoio ao Investimento (Art. 22.º–26.º CFI) · OCC",
+    url: "https://www.occ.pt/pt-pt/noticias/beneficios-fiscais-rfai-e-dlrr",
+  },
+  occDLRR: {
+    label: "DLRR — Dedução por Lucros Retidos e Reinvestidos (Art. 27.º–34.º CFI) · OCC",
+    url: "https://www.occ.pt/pt-pt/noticias/beneficios-fiscais-rfai-e-dlrr",
+  },
+  occSIFIDE: {
+    label: "SIFIDE II — Sistema de Incentivos Fiscais à I&D (Art. 35.º–42.º CFI) · OCC",
+    url: "https://www.occ.pt/pt-pt/noticias/irc-beneficios-fiscais-sifide-ii",
+  },
+  pwcIFICI: {
+    label: "IFICI — Incentivo Fiscal à Investigação Científica e Inovação (ex-NHR) · PwC Guia Fiscal 2026",
+    url: "https://www.pwc.pt/pt/pwcinforfisco/guia-fiscal/2026/irs.html",
+  },
+  portalFinancasArt87: {
+    label: "Art. 87.º CIRS — Deduções relativas a pessoas com deficiência · Portal das Finanças",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs87.aspx",
+  },
+  estrategorRFAI: {
+    label: "RFAI 2026 — taxas e limites verificados · Estrategor",
+    url: "https://estrategor.pt/rfai-2026/",
+  },
 } satisfies Record<string, Source>;
 
 export type SourceKey = keyof typeof SOURCES;
@@ -792,6 +820,17 @@ export function efeitoFiscal(a: Atividade): EfeitoFiscal {
 export const DEDUCAO_DEPENDENTE = sv(600, "Art. 78.º-A CIRS — por dependente com mais de 3 anos", "deducoesColeta", TODAY);
 export const DEDUCAO_DEPENDENTE_BEBE = sv(726, "Art. 78.º-A CIRS — por dependente até 3 anos", "deducoesColeta", TODAY);
 
+/**
+ * Dedução adicional por dependente com deficiência ≥ 60% (Art. 87.º CIRS).
+ * Base: 2,5 × IAS. Acumula com a dedução base por dependente.
+ */
+export const DEDUCAO_DEPENDENTE_DEFICIENCIA = sv(
+  Math.round(2.5 * IAS.value * 100) / 100,
+  "Art. 87.º CIRS — 2,5 × IAS por dependente com grau de incapacidade ≥ 60%",
+  "portalFinancasArt87",
+  TODAY
+);
+
 export interface DeducaoLimitada {
   taxa: number;
   limite: number;
@@ -815,6 +854,23 @@ export const DEDUCAO_EDUCACAO = sv<DeducaoLimitada>(
   TODAY
 );
 
+/** Dedução de rendas habitação permanente (Art. 78.º-E CIRS): 15% até 502 €. */
+export const DEDUCAO_RENDAS = sv<DeducaoLimitada>(
+  { taxa: 0.15, limite: 502 },
+  "Art. 78.º-E CIRS — rendas de habitação permanente: 15% até 502 €",
+  "deducoesColeta",
+  TODAY
+);
+
+/** Dedução por 3.º dependente e seguintes (superior à dedução geral de 600 €). */
+export const DEDUCAO_DEPENDENTE_3MAIS = sv(
+  900,
+  "Art. 78.º-A CIRS — 3.º dependente e seguintes",
+  "deducoesColeta",
+  TODAY,
+  "Os primeiros dois dependentes dão 600 € cada; a partir do terceiro a dedução é de 900 € por dependente."
+);
+
 /** Divisor do rendimento na tributação conjunta dos casados/unidos de facto. */
 export const QUOCIENTE_CONJUGAL = sv(2, "Art. 69.º CIRS — quociente conjugal (divisão por 2)", "deducoesColeta", TODAY);
 
@@ -823,6 +879,294 @@ export const LIMITE_GLOBAL_DEDUCOES = sv(
   { semLimiteAte: 8059, limiteAlto: 2500, limiteBaixo: 1000, escalaoSuperior: 86634 },
   "Art. 78.º, n.º 7 CIRS — sem limite até 8.059 €; entre 1.000 € e 2.500 € até 86.634 €; 1.000 € acima",
   "deducoesColeta",
+  TODAY
+);
+
+// ═══════════════════════════════════════════════════════════════════════
+//  TRIBUTAÇÃO AUTÓNOMA — IRC (Art. 88.º CIRC)
+//  ---------------------------------------------------------------------
+//  Incide sobre encargos anuais de viaturas e determinadas despesas,
+//  independentemente do IRC regular. O custo de aquisição da viatura
+//  determina o escalão (não o encargo em si).
+//  Thresholds corrigidos pelo OE2025 (€37 500 e €45 000); PHEV criado
+//  pelo OE2026 para viaturas Euro 6e-bis com < 80 g CO₂/km.
+// ═══════════════════════════════════════════════════════════════════════
+
+/** Limiares do custo de aquisição que determinam o escalão de TA de viaturas. */
+export const TA_THRESHOLDS = sv(
+  { t1: 37500, t2: 45000 },
+  "Art. 88.º, n.os 3 e 11 CIRC — limiares do custo de aquisição (OE2025)",
+  "occTA",
+  TODAY,
+  "Thresholds anteriores (até 2024): €27 500 e €35 000. Atualizados pelo OE2025."
+);
+
+export interface TAViaturasTaxas {
+  /** Encargos de viatura com custo de aquisição ≤ t1. */
+  ate37500: number;
+  /** Encargos de viatura com custo de aquisição > t1 e ≤ t2. */
+  ate45000: number;
+  /** Encargos de viatura com custo de aquisição > t2. */
+  acima45000: number;
+}
+
+export const TA_VIATURAS_COMBUSTAO = sv<TAViaturasTaxas>(
+  { ate37500: 0.08, ate45000: 0.25, acima45000: 0.32 },
+  "Art. 88.º, n.º 3 CIRC — viaturas ligeiras de passageiros a gasóleo/gasolina (OE2025)",
+  "occTA",
+  TODAY,
+  "Taxas anteriores (até 2024): 10% / 17,5% / 35%. Substituídas pelo OE2025."
+);
+
+export const TA_VIATURAS_PHEV = sv<TAViaturasTaxas>(
+  { ate37500: 0.025, ate45000: 0.075, acima45000: 0.15 },
+  "Art. 88.º, n.º 11 CIRC — viaturas PHEV (Euro 6e-bis, < 80 g CO₂/km) — OE2026",
+  "occTA",
+  TODAY,
+  "Nova categoria OE2026 para híbridos plug-in conformes Euro 6e-bis. Threshold = custo de aquisição."
+);
+
+export const TA_VIATURAS_ELETRICA = sv(
+  0,
+  "Art. 88.º CIRC — viaturas 100% elétricas: taxa zero",
+  "occTA",
+  TODAY
+);
+
+/** Despesas de representação (n.º 7 do Art. 88.º). */
+export const TA_REPRESENTACAO = sv(
+  0.10,
+  "Art. 88.º, n.º 7 CIRC — despesas de representação: 10%",
+  "occTA",
+  TODAY
+);
+
+/** Ajudas de custo e quilómetros em viatura própria (n.º 9 do Art. 88.º). */
+export const TA_AJUDAS_CUSTO = sv(
+  0.05,
+  "Art. 88.º, n.º 9 CIRC — ajudas de custo e quilómetros em viatura própria: 5%",
+  "occTA",
+  TODAY
+);
+
+/** Despesas não documentadas (n.º 1 do Art. 88.º). */
+export const TA_NAO_DOCUMENTADAS = sv(
+  0.50,
+  "Art. 88.º, n.º 1 CIRC — despesas não documentadas: 50%",
+  "occTA",
+  TODAY
+);
+
+/**
+ * Agravamento de +10 p.p. quando há prejuízo fiscal (n.º 14 do Art. 88.º).
+ * Não se aplica nos primeiros 3 anos de atividade nem se houve lucro em
+ * pelo menos 1 dos 3 exercícios anteriores.
+ */
+export const TA_AGRAVAMENTO_PREJUIZO = sv(
+  0.10,
+  "Art. 88.º, n.º 14 CIRC — agravamento de 10 p.p. em caso de prejuízo fiscal",
+  "occTA",
+  TODAY,
+  "Exceção: não se aplica nos primeiros 3 anos ou se houve lucro em ≥1 dos 3 exercícios anteriores."
+);
+
+// ═══════════════════════════════════════════════════════════════════════
+//  RFAI — Regime Fiscal de Apoio ao Investimento (Art. 22.º–26.º CFI)
+//  Verificado: estrategor.pt Jan 2026; santander.pt Abr 2026; OCC Jan 2026.
+// ═══════════════════════════════════════════════════════════════════════
+
+export const RFAI_TAXA_INTERIOR = sv(
+  0.30,
+  "Art. 23.º CFI — 30% do investimento elegível nas regiões Norte, Centro, Alentejo, Açores e Madeira (até €15 M)",
+  "estrategorRFAI",
+  TODAY
+);
+
+export const RFAI_TAXA_INTERIOR_EXCEDENTE = sv(
+  0.10,
+  "Art. 23.º CFI — 10% sobre a parcela do investimento que exceda €15 M nas regiões interiores",
+  "estrategorRFAI",
+  TODAY
+);
+
+export const RFAI_TAXA_LITORAL = sv(
+  0.10,
+  "Art. 23.º CFI — 10% do investimento elegível nas regiões de Lisboa e Algarve",
+  "estrategorRFAI",
+  TODAY
+);
+
+export const RFAI_LIMITE_INVESTIMENTO_INTERIOR = sv(
+  15_000_000,
+  "Art. 23.º CFI — limiar de €15 000 000 para aplicação da taxa de 30%",
+  "occRFAI",
+  TODAY
+);
+
+/**
+ * Limite máximo de dedução à coleta: 50% da coleta IRC no período.
+ * Nos primeiros 3 anos de atividade elegível, o limite é 100%.
+ */
+export const RFAI_LIMITE_COLETA = sv(
+  0.50,
+  "Art. 24.º CFI — dedução limitada a 50% da coleta IRC (100% nos primeiros 3 anos)",
+  "occRFAI",
+  TODAY
+);
+
+/** Exercícios seguintes em que o saldo não deduzido pode ser reportado. */
+export const RFAI_REPORTE_ANOS = sv(
+  10,
+  "Art. 24.º CFI — saldo não deduzido reportável por 10 exercícios seguintes",
+  "occRFAI",
+  TODAY
+);
+
+// ═══════════════════════════════════════════════════════════════════════
+//  DLRR — Dedução por Lucros Retidos e Reinvestidos (Art. 27.º–34.º CFI)
+//  Apenas para PME e Small Mid Cap (≤ 3 000 trabalhadores).
+// ═══════════════════════════════════════════════════════════════════════
+
+export const DLRR_TAXA = sv(
+  0.10,
+  "Art. 29.º CFI — dedução de 10% dos lucros retidos e reinvestidos em ativos elegíveis",
+  "occDLRR",
+  TODAY
+);
+
+export const DLRR_LIMITE_LUCROS = sv(
+  5_000_000,
+  "Art. 29.º CFI — lucros elegíveis limitados a €5 000 000 por período de tributação",
+  "occDLRR",
+  TODAY
+);
+
+export const DLRR_LIMITE_COLETA = sv(
+  0.25,
+  "Art. 30.º CFI — dedução limitada a 25% da coleta IRC",
+  "occDLRR",
+  TODAY
+);
+
+export const DLRR_REPORTE_ANOS = sv(
+  12,
+  "Art. 30.º CFI — saldo não utilizado reportável por 12 exercícios seguintes",
+  "occDLRR",
+  TODAY
+);
+
+// ═══════════════════════════════════════════════════════════════════════
+//  SIFIDE II — Sistema de Incentivos Fiscais à I&D (Art. 35.º–42.º CFI)
+// ═══════════════════════════════════════════════════════════════════════
+
+export const SIFIDE_TAXA_BASE = sv(
+  0.325,
+  "Art. 36.º CFI — taxa base de 32,5% das despesas com I&D do período",
+  "occSIFIDE",
+  TODAY
+);
+
+export const SIFIDE_TAXA_INCREMENTAL = sv(
+  0.50,
+  "Art. 36.º CFI — taxa incremental de 50% do aumento de despesas I&D face à média dos 2 anos anteriores",
+  "occSIFIDE",
+  TODAY
+);
+
+/** Montante máximo do incremento elegível para a taxa incremental. */
+export const SIFIDE_TETO_INCREMENTAL = sv(
+  1_500_000,
+  "Art. 36.º CFI — incremento de despesas I&D elegível limitado a €1 500 000",
+  "occSIFIDE",
+  TODAY
+);
+
+/**
+ * Majoração adicional para PME que não completaram 2 exercícios e não
+ * beneficiaram anteriormente da taxa incremental. Taxa efetiva: 47,5%.
+ */
+export const SIFIDE_MAJORACAO_PME_JOVEM = sv(
+  0.15,
+  "Art. 36.º CFI — majoração de 15% para PME < 2 exercícios sem histórico incremental (taxa efetiva 47,5%)",
+  "occSIFIDE",
+  TODAY
+);
+
+export const SIFIDE_REPORTE_ANOS = sv(
+  12,
+  "Art. 37.º CFI — crédito não deduzido por insuficiência de coleta reportável por 12 exercícios",
+  "occSIFIDE",
+  TODAY
+);
+
+// ═══════════════════════════════════════════════════════════════════════
+//  IFICI — Incentivo Fiscal à Investigação Científica e Inovação
+//  (ex-NHR — Residente Não Habitual). Regime em vigor desde OE2024.
+// ═══════════════════════════════════════════════════════════════════════
+
+export const IFICI_TAXA = sv(
+  0.20,
+  "Art. 58.º-A EBF — IFICI: taxa flat de 20% sobre rendimentos elegíveis (Lei 82/2023/OE2024)",
+  "pwcIFICI",
+  TODAY,
+  "Substitui o NHR desde 1 jan 2024. Válido por 10 exercícios consecutivos não renováveis. Elegível: investigadores, professores, I&D, startups tecnológicas e atividades de elevado valor acrescentado aprovadas pela AT."
+);
+
+export const IFICI_PRAZO_ANOS = sv(
+  10,
+  "Art. 58.º-A EBF — prazo máximo de 10 exercícios consecutivos",
+  "pwcIFICI",
+  TODAY
+);
+
+// ═══════════════════════════════════════════════════════════════════════
+//  DEDUÇÕES POR DEFICIÊNCIA (Art. 87.º CIRS)
+//  Grau de incapacidade permanente ≥ 60% comprovado por atestado médico.
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Art. 56.º-A CIRS — Exclusão parcial de rendimentos de trabalho/atividade
+ * de sujeitos com deficiência ≥ 60%: 15% dos rendimentos Cat. B até €2 500.
+ * Reduz o rendimento TRIBUTÁVEL (antes de calcular coleta).
+ */
+export const EXCLUSAO_DEFICIENCIA_TAXA = sv(
+  0.15,
+  "Art. 56.º-A CIRS — exclusão de 15% dos rendimentos Cat. B de pessoas com deficiência ≥ 60%",
+  "portalFinancasArt87",
+  TODAY
+);
+export const EXCLUSAO_DEFICIENCIA_MAX = sv(
+  2_500,
+  "Art. 56.º-A CIRS — exclusão máxima de €2 500 por categoria de rendimento",
+  "portalFinancasArt87",
+  TODAY
+);
+
+/**
+ * Art. 87.º CIRS — Dedução ADICIONAL à coleta por deficiência ≥ 60%:
+ * 4 × IAS por sujeito passivo. Acumula com a exclusão Art. 56.º-A.
+ */
+export const DEDUCAO_DEFICIENCIA_COLETA = sv(
+  Math.round(4 * IAS.value * 100) / 100,
+  "Art. 87.º CIRS — dedução à coleta de 4 × IAS por sujeito passivo com grau ≥ 60%",
+  "portalFinancasArt87",
+  TODAY,
+  "Valor 2026: 4 × €537,13 = €2 148,52. Acumula com a exclusão Art. 56.º-A."
+);
+
+/** Grau mínimo de incapacidade permanente (comprovado por atestado médico). */
+export const DEDUCAO_DEFICIENCIA_GRAU_MINIMO = sv(
+  60,
+  "Art. 56.º-A / 87.º CIRS — grau mínimo de incapacidade permanente de 60%",
+  "portalFinancasArt87",
+  TODAY
+);
+
+/** Contribuição mínima mensal de SS para trabalhadores independentes. */
+export const SS_MIN_MENSAL = sv(
+  20,
+  "Art. 168.º Código Contributivo — contribuição mínima mensal",
+  "segSocialTI",
   TODAY
 );
 
@@ -927,6 +1271,79 @@ export function assertFiscalDataIntegrity(): void {
   }
   if (!(IRC_LIMITE_PME.value > 0)) erros.push("Limiar PME de IRC não positivo.");
 
+  // Tributação Autónoma.
+  if (!(TA_THRESHOLDS.value.t1 > 0 && TA_THRESHOLDS.value.t2 > TA_THRESHOLDS.value.t1)) {
+    erros.push("Thresholds de TA inválidos ou não crescentes.");
+  }
+  [TA_VIATURAS_COMBUSTAO, TA_VIATURAS_PHEV].forEach((p) => {
+    const t = p.value;
+    if (!(t.ate37500 >= 0 && t.ate45000 > t.ate37500 && t.acima45000 > t.ate45000)) {
+      erros.push(`Taxas de TA de viaturas não crescentes: ${p.legalBasis}.`);
+    }
+    if (!isRate(t.ate37500) || !isRate(t.ate45000) || !isRate(t.acima45000)) {
+      erros.push(`Taxas de TA de viaturas fora de [0,1]: ${p.legalBasis}.`);
+    }
+  });
+  if (!isRate(TA_VIATURAS_ELETRICA.value)) erros.push("Taxa TA elétrica inválida.");
+  if (TA_VIATURAS_ELETRICA.value !== 0) erros.push("Taxa TA elétrica deveria ser 0.");
+  [TA_REPRESENTACAO, TA_AJUDAS_CUSTO, TA_NAO_DOCUMENTADAS, TA_AGRAVAMENTO_PREJUIZO].forEach((p) => {
+    if (!isRate(p.value)) erros.push(`Taxa de TA inválida: ${p.legalBasis}.`);
+  });
+
+  // RFAI.
+  [RFAI_TAXA_INTERIOR, RFAI_TAXA_INTERIOR_EXCEDENTE, RFAI_TAXA_LITORAL, RFAI_LIMITE_COLETA].forEach((p) => {
+    if (!isRate(p.value)) erros.push(`Parâmetro RFAI inválido: ${p.legalBasis}.`);
+  });
+  if (!(RFAI_TAXA_INTERIOR.value > RFAI_TAXA_INTERIOR_EXCEDENTE.value)) {
+    erros.push("Taxa RFAI interior deveria ser superior à taxa do excedente.");
+  }
+  if (!(RFAI_LIMITE_INVESTIMENTO_INTERIOR.value > 0)) erros.push("Limite de investimento RFAI não positivo.");
+  if (!(RFAI_REPORTE_ANOS.value > 0)) erros.push("Anos de reporte RFAI não positivos.");
+
+  // DLRR.
+  [DLRR_TAXA, DLRR_LIMITE_COLETA].forEach((p) => {
+    if (!isRate(p.value)) erros.push(`Parâmetro DLRR inválido: ${p.legalBasis}.`);
+  });
+  if (!(DLRR_LIMITE_LUCROS.value > 0)) erros.push("Limite de lucros DLRR não positivo.");
+  if (!(DLRR_REPORTE_ANOS.value > 0)) erros.push("Anos de reporte DLRR não positivos.");
+
+  // SIFIDE II.
+  [SIFIDE_TAXA_BASE, SIFIDE_TAXA_INCREMENTAL, SIFIDE_MAJORACAO_PME_JOVEM].forEach((p) => {
+    if (!isRate(p.value)) erros.push(`Taxa SIFIDE inválida: ${p.legalBasis}.`);
+  });
+  if (!(SIFIDE_TETO_INCREMENTAL.value > 0)) erros.push("Teto incremental SIFIDE não positivo.");
+  if (!(SIFIDE_REPORTE_ANOS.value > 0)) erros.push("Anos de reporte SIFIDE não positivos.");
+  if (!(SIFIDE_TAXA_BASE.value + SIFIDE_MAJORACAO_PME_JOVEM.value < 1)) {
+    erros.push("Soma taxa base SIFIDE + majoração PME jovem deveria ser < 1.");
+  }
+
+  // IFICI.
+  if (!isRate(IFICI_TAXA.value)) erros.push("Taxa IFICI inválida.");
+  if (!(IFICI_PRAZO_ANOS.value > 0)) erros.push("Prazo IFICI não positivo.");
+
+  // Deficiência (Art. 56.º-A + 87.º CIRS).
+  if (!isRate(EXCLUSAO_DEFICIENCIA_TAXA.value)) erros.push("Taxa exclusão deficiência Art. 56.º-A inválida.");
+  if (!(EXCLUSAO_DEFICIENCIA_MAX.value > 0)) erros.push("Máx exclusão deficiência Art. 56.º-A não positivo.");
+  if (!(DEDUCAO_DEFICIENCIA_COLETA.value > 0)) erros.push("Dedução coleta deficiência Art. 87.º não positiva.");
+  if (Math.abs(DEDUCAO_DEFICIENCIA_COLETA.value - Math.round(4 * IAS.value * 100) / 100) > EPS) {
+    erros.push("Dedução coleta deficiência não corresponde a 4 × IAS.");
+  }
+  if (!(DEDUCAO_DEFICIENCIA_GRAU_MINIMO.value > 0 && DEDUCAO_DEFICIENCIA_GRAU_MINIMO.value < 100)) {
+    erros.push("Grau mínimo de deficiência deve estar entre 0 e 100.");
+  }
+  if (!(DEDUCAO_DEPENDENTE_DEFICIENCIA.value > 0)) erros.push("Dedução dependente deficiência não positiva.");
+  if (Math.abs(DEDUCAO_DEPENDENTE_DEFICIENCIA.value - Math.round(2.5 * IAS.value * 100) / 100) > EPS) {
+    erros.push("Dedução dependente deficiência não corresponde a 2,5 × IAS.");
+  }
+  if (!isRate(DEDUCAO_RENDAS.value.taxa)) erros.push("Taxa dedução rendas inválida.");
+  if (!(DEDUCAO_RENDAS.value.limite > 0)) erros.push("Limite dedução rendas não positivo.");
+  if (!(SS_MIN_MENSAL.value > 0)) erros.push("SS mínimo mensal não positivo.");
+
+  // Dedução 3.º dependente.
+  if (!(DEDUCAO_DEPENDENTE_3MAIS.value >= DEDUCAO_DEPENDENTE.value)) {
+    erros.push("Dedução do 3.º dependente deveria ser ≥ à dedução do dependente normal.");
+  }
+
   // Coeficientes do regime simplificado e atividades.
   [
     REGIME_SIMPLIFICADO.coefVendas,
@@ -1023,11 +1440,51 @@ export function assertFiscalDataIntegrity(): void {
     REDUCAO_COEFICIENTE_ANO,
     DEDUCAO_DEPENDENTE,
     DEDUCAO_DEPENDENTE_BEBE,
+    DEDUCAO_DEPENDENTE_3MAIS,
+    DEDUCAO_DEPENDENTE_DEFICIENCIA,
     DEDUCAO_DESP_GERAIS,
     DEDUCAO_SAUDE,
     DEDUCAO_EDUCACAO,
+    DEDUCAO_RENDAS,
     QUOCIENTE_CONJUGAL,
     LIMITE_GLOBAL_DEDUCOES,
+    // Deficiência (Art. 56.º-A + Art. 87.º)
+    EXCLUSAO_DEFICIENCIA_TAXA,
+    EXCLUSAO_DEFICIENCIA_MAX,
+    DEDUCAO_DEFICIENCIA_COLETA,
+    DEDUCAO_DEFICIENCIA_GRAU_MINIMO,
+    DEDUCAO_DEPENDENTE_DEFICIENCIA,
+    SS_MIN_MENSAL,
+    // Tributação Autónoma
+    TA_THRESHOLDS,
+    TA_VIATURAS_COMBUSTAO,
+    TA_VIATURAS_PHEV,
+    TA_VIATURAS_ELETRICA,
+    TA_REPRESENTACAO,
+    TA_AJUDAS_CUSTO,
+    TA_NAO_DOCUMENTADAS,
+    TA_AGRAVAMENTO_PREJUIZO,
+    // RFAI
+    RFAI_TAXA_INTERIOR,
+    RFAI_TAXA_INTERIOR_EXCEDENTE,
+    RFAI_TAXA_LITORAL,
+    RFAI_LIMITE_INVESTIMENTO_INTERIOR,
+    RFAI_LIMITE_COLETA,
+    RFAI_REPORTE_ANOS,
+    // DLRR
+    DLRR_TAXA,
+    DLRR_LIMITE_LUCROS,
+    DLRR_LIMITE_COLETA,
+    DLRR_REPORTE_ANOS,
+    // SIFIDE II
+    SIFIDE_TAXA_BASE,
+    SIFIDE_TAXA_INCREMENTAL,
+    SIFIDE_TETO_INCREMENTAL,
+    SIFIDE_MAJORACAO_PME_JOVEM,
+    SIFIDE_REPORTE_ANOS,
+    // IFICI
+    IFICI_TAXA,
+    IFICI_PRAZO_ANOS,
   ];
   sourced.forEach((p) => {
     if (!(p.source in SOURCES)) erros.push(`Fonte não registada: ${p.legalBasis}.`);

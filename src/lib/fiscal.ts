@@ -31,6 +31,7 @@ import {
   COEFICIENTE_POR_TIPO,
   REDUCAO_COEFICIENTE_ANO,
   DEDUCAO_DEPENDENTE,
+  DEDUCAO_DEPENDENTE_3MAIS,
   DEDUCAO_DESP_GERAIS,
   DEDUCAO_SAUDE,
   DEDUCAO_EDUCACAO,
@@ -38,11 +39,44 @@ import {
   LIMITE_GLOBAL_DEDUCOES,
   IAS_VALUE,
   CATEGORIA_F,
+  // Tributação Autónoma
+  TA_THRESHOLDS,
+  TA_VIATURAS_COMBUSTAO,
+  TA_VIATURAS_PHEV,
+  TA_VIATURAS_ELETRICA,
+  TA_REPRESENTACAO,
+  TA_AJUDAS_CUSTO,
+  TA_NAO_DOCUMENTADAS,
+  TA_AGRAVAMENTO_PREJUIZO,
+  // Deficiência e extras
+  EXCLUSAO_DEFICIENCIA_TAXA,
+  EXCLUSAO_DEFICIENCIA_MAX,
+  DEDUCAO_DEFICIENCIA_COLETA,
+  DEDUCAO_DEPENDENTE_DEFICIENCIA,
+  DEDUCAO_RENDAS,
+  DEDUCAO_DEPENDENTE_BEBE,
+  SS_MIN_MENSAL,
+  // Benefícios fiscais IRC
+  RFAI_TAXA_INTERIOR,
+  RFAI_TAXA_INTERIOR_EXCEDENTE,
+  RFAI_TAXA_LITORAL,
+  RFAI_LIMITE_INVESTIMENTO_INTERIOR,
+  RFAI_LIMITE_COLETA,
+  DLRR_TAXA,
+  DLRR_LIMITE_LUCROS,
+  DLRR_LIMITE_COLETA,
+  SIFIDE_TAXA_BASE,
+  SIFIDE_TAXA_INCREMENTAL,
+  SIFIDE_TETO_INCREMENTAL,
+  SIFIDE_MAJORACAO_PME_JOVEM,
+  // IFICI e Deficiência (Art. 56.º-A + 87.º CIRS)
+  IFICI_TAXA,
   type TipoAtividade,
   type Regiao,
   type EscalaoIVA,
   type BaseSS,
   type DuracaoArrendamento,
+  type TAViaturasTaxas,
 } from "./fiscal-data";
 
 export type { TipoAtividade, Regiao, EscalaoIVA, BaseSS, DuracaoArrendamento };
@@ -209,6 +243,21 @@ export interface DeducoesInput {
   educacao?: number;
   /** Despesas gerais familiares (faturas com NIF). */
   gerais?: number;
+  /** Rendas de habitação permanente pagas (Art. 78.º-E CIRS): 15% até €502. */
+  rendas?: number;
+}
+
+/**
+ * Detalhamento de dependentes para cálculo preciso das deduções à coleta.
+ * Todos os campos são contagens (número de dependentes no escalão).
+ */
+export interface DependentesDetalhe {
+  /** Dependentes com mais de 3 anos → €600 cada (1.º e 2.º) / €900 (3.º+). */
+  normais?: number;
+  /** Dependentes com 3 anos ou menos → €726 cada. */
+  bebe?: number;
+  /** Dependentes com grau de deficiência ≥ 60% → +2,5×IAS adicional. */
+  deficientes?: number;
 }
 
 export interface SimulacaoInput {
@@ -236,6 +285,28 @@ export interface SimulacaoInput {
   coefOverride?: number;
   /** Sujeita à regra dos 15% (override do que deriva do `tipo`). */
   aplicaRegra15Override?: boolean;
+  /**
+   * IFICI (ex-NHR 2.0): aplica taxa flat de 20% ao rendimento coletável em vez
+   * dos escalões progressivos (Art. 58.º-A EBF). Incompatível com IRS Jovem.
+   * Exige estatuto aprovado pela AT e não ter sido residente nos últimos 5 anos.
+   */
+  ifici?: boolean;
+  /**
+   * Sujeito passivo com deficiência permanente ≥ 60%:
+   * - Art. 56.º-A CIRS: exclui 15% dos rendimentos Cat. B (máx €2 500) do tributável
+   * - Art. 87.º CIRS: dedução adicional à coleta de 4 × IAS (€2 148,52 em 2026)
+   */
+  deficiencia?: boolean;
+  /**
+   * Detalhamento de dependentes para cálculo preciso das deduções.
+   * Se fornecido, sobrepõe-se ao campo `dependentes`.
+   */
+  dependentesDetalhe?: DependentesDetalhe;
+  /**
+   * Acumulação com trabalho dependente que cobre Segurança Social.
+   * Não afecta o IRS (simularIRSAnual), mas é retornado para cálculo de SS no UI.
+   */
+  acumulaEmprego?: boolean;
 }
 
 export interface SimulacaoIRS {
@@ -254,15 +325,24 @@ export interface SimulacaoIRS {
   outrosRendimentos: number;
   rendimentoColetavel: number;
   conjunta: boolean;
+  /** true quando IFICI foi aplicado (taxa flat 20%). */
+  ificiAplicado: boolean;
+  /** Montante excluído do rendimento tributável por deficiência (Art. 56.º-A). */
+  exclusaoDeficiencia: number;
   /** Coleta antes das deduções à coleta. */
   coletaBruta: number;
   deducaoDependentes: number;
-  /** Deduções de despesas (saúde+educação+gerais) após limite global. */
+  /** Deduções de despesas (saúde+educação+gerais+rendas) após limite global. */
   deducaoDespesas: number;
+  /** Dedução coleta por deficiência do contribuinte (Art. 87.º: 4×IAS). */
+  deducaoDeficiencia: number;
   irsEstimado: number;
   minimoExistenciaAplicado: boolean;
   taxaMediaEfetiva: number;
   retencoesPagas: number;
+  /** Estimativa de SS anual (21,4% sobre base de SS). 0 se isento. */
+  ssAnual: number;
+  acumulaEmprego: boolean;
   /** Maior que 0: reembolso estimado. Menor que 0: imposto a pagar. */
   saldo: number;
 }
@@ -326,18 +406,52 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   const tetoIsencao = IRS_JOVEM.tetoIAS.value * IAS_VALUE;
   const rendimentoIsentoJovem = Math.min(rendimentoTributavel * isencaoJovem, tetoIsencao);
 
-  // Englobamento de outros rendimentos (cat. A).
-  const outrosRendimentos = sanitize(input.outrosRendimentos ?? 0);
-  const rendimentoColetavel = Math.max(0, rendimentoTributavel - rendimentoIsentoJovem) + outrosRendimentos;
+  // ── Art. 56.º-A CIRS: exclusão de 15% dos rendimentos Cat. B do coletável ──
+  // Aplicada ANTES do cálculo da coleta (reduz rendimento tributável).
+  const exclusaoDeficiencia = input.deficiencia
+    ? Math.min(rendimentoTributavel * EXCLUSAO_DEFICIENCIA_TAXA.value, EXCLUSAO_DEFICIENCIA_MAX.value)
+    : 0;
 
-  // Coleta com tributação conjunta (quociente conjugal).
+  // Rendimento coletável final (após IRS Jovem, exclusão deficiência, outros)
   const conjunta = !!input.conjunta;
-  const divisor = conjunta ? QUOCIENTE_CONJUGAL.value : 1;
-  const coletaBruta = irsProgressivo(rendimentoColetavel / divisor) * divisor;
+  const ificiAplicado = !!input.ifici;
+  const outrosRendimentos = sanitize(input.outrosRendimentos ?? 0);
+  const rendimentoColetavel = Math.max(
+    0,
+    rendimentoTributavel - exclusaoDeficiencia - rendimentoIsentoJovem
+  ) + outrosRendimentos;
 
-  // Deduções à coleta.
-  const dependentes = Math.max(0, Math.floor(input.dependentes ?? 0));
-  const deducaoDependentes = dependentes * DEDUCAO_DEPENDENTE.value;
+  // ── Coleta: IFICI = taxa flat 20%; senão escalões progressivos ────────────
+  const divisor = conjunta ? QUOCIENTE_CONJUGAL.value : 1;
+  const coletaBruta = ificiAplicado
+    ? rendimentoColetavel * IFICI_TAXA.value
+    : irsProgressivo(rendimentoColetavel / divisor) * divisor;
+
+  // ── Deduções à coleta ─────────────────────────────────────────────────────
+  // Dependentes: suporta detalhe (bebe, deficientes) ou contagem simples
+  const det = input.dependentesDetalhe;
+  const depNormais = Math.max(0, Math.floor(det?.normais ?? input.dependentes ?? 0));
+  const depBebe = Math.max(0, Math.floor(det?.bebe ?? 0));
+  const depDefic = Math.max(0, Math.floor(det?.deficientes ?? 0));
+
+  // Regra do 3.º dependente (Art. 78.º-A):
+  //  - Bebés (≤ 3 anos): €726 cada
+  //  - Normais (> 3 anos): os primeiros max(0, 2−depBebe) ficam no escalão base €600;
+  //    a partir do 3.º na contagem global passa a €900
+  const deducaoDependentes = (() => {
+    // Bebés têm sempre €726 (ocupam as primeiras posições na fila global)
+    const dedBebe = depBebe * DEDUCAO_DEPENDENTE_BEBE.value;
+    // Normais: quantas posições ainda estão no bloco 1.º/2.º
+    const normaisBase = Math.max(0, Math.min(depNormais, 2 - depBebe));
+    const normaisMajor = Math.max(0, depNormais - normaisBase);
+    const dedNormais =
+      normaisBase * DEDUCAO_DEPENDENTE.value +
+      normaisMajor * DEDUCAO_DEPENDENTE_3MAIS.value;
+    // Dependentes com deficiência → +2,5×IAS adicional por cada um
+    const dedDefic = depDefic * DEDUCAO_DEPENDENTE_DEFICIENCIA.value;
+    return dedBebe + dedNormais + dedDefic;
+  })();
+
   const ded = input.deducoes ?? {};
   const dGerais = Math.min(
     sanitize(ded.gerais ?? 0) * DEDUCAO_DESP_GERAIS.value.taxa,
@@ -345,21 +459,41 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   );
   const dSaude = Math.min(sanitize(ded.saude ?? 0) * DEDUCAO_SAUDE.value.taxa, DEDUCAO_SAUDE.value.limite);
   const dEducacao = Math.min(sanitize(ded.educacao ?? 0) * DEDUCAO_EDUCACAO.value.taxa, DEDUCAO_EDUCACAO.value.limite);
-  const deducaoDespesas = Math.min(dGerais + dSaude + dEducacao, limiteGlobalDeducoes(rendimentoColetavel));
+  const dRendas = Math.min(sanitize(ded.rendas ?? 0) * DEDUCAO_RENDAS.value.taxa, DEDUCAO_RENDAS.value.limite);
+  const deducaoDespesas = Math.min(dGerais + dSaude + dEducacao + dRendas, limiteGlobalDeducoes(rendimentoColetavel));
 
-  const deducoesColeta = deducaoDependentes + deducaoDespesas;
+  // Art. 87.º CIRS: dedução à coleta de 4×IAS pelo contribuinte com deficiência
+  const deducaoDeficiencia = input.deficiencia ? DEDUCAO_DEFICIENCIA_COLETA.value : 0;
+
+  const deducoesColeta = deducaoDependentes + deducaoDespesas + deducaoDeficiencia;
   let irsEstimado = Math.max(0, coletaBruta - deducoesColeta);
 
-  // Mínimo de existência.
+  // ── Mínimo de existência (não aplicável com IFICI) ────────────────────────
   const minimo = MINIMO_EXISTENCIA.value;
   let minimoExistenciaAplicado = false;
-  if (rendimentoColetavel > 0 && rendimentoColetavel <= minimo) {
-    irsEstimado = 0;
-    minimoExistenciaAplicado = true;
-  } else if (rendimentoColetavel > minimo && rendimentoColetavel - irsEstimado < minimo) {
-    irsEstimado = Math.max(0, rendimentoColetavel - minimo);
-    minimoExistenciaAplicado = true;
+  if (!ificiAplicado) {
+    if (rendimentoColetavel > 0 && rendimentoColetavel <= minimo) {
+      irsEstimado = 0;
+      minimoExistenciaAplicado = true;
+    } else if (rendimentoColetavel > minimo && rendimentoColetavel - irsEstimado < minimo) {
+      irsEstimado = Math.max(0, rendimentoColetavel - minimo);
+      minimoExistenciaAplicado = true;
+    }
   }
+
+  // ── SS anual estimado (para display; não afecta o IRS) ───────────────────
+  const acumulaEmprego = !!input.acumulaEmprego;
+  const isencaoSSEntrada = acumulaEmprego; // 1.º ano é gerido no UI
+  const ssAnual = (() => {
+    if (isencaoSSEntrada) return 0;
+    const baseSS = SS_COEFICIENTE.servicos.value; // simplificação: serviços 70%
+    const rendMensalMedio = (brutoAnual * baseSS) / 12;
+    const mensal = Math.min(
+      Math.max(SS_MIN_MENSAL.value, rendMensalMedio * SS_TAXA.value),
+      SS_BASE_MAX_MENSAL.value * SS_TAXA.value
+    );
+    return mensal * 12;
+  })();
 
   const taxaMediaEfetiva = brutoAnual > 0 ? irsEstimado / brutoAnual : 0;
   const retencoesPagas = sanitize(input.retencoesPagas ?? 0);
@@ -378,15 +512,20 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     isencaoJovem,
     rendimentoIsentoJovem,
     outrosRendimentos,
+    exclusaoDeficiencia,
     rendimentoColetavel,
     conjunta,
+    ificiAplicado,
     coletaBruta,
     deducaoDependentes,
     deducaoDespesas,
+    deducaoDeficiencia,
     irsEstimado,
     minimoExistenciaAplicado,
     taxaMediaEfetiva,
     retencoesPagas,
+    ssAnual,
+    acumulaEmprego,
     saldo: retencoesPagas - irsEstimado,
   };
 }
@@ -456,6 +595,266 @@ export function compararRegimes(input: ComparacaoInput): ComparacaoResult {
     empresa: { lucroTributavel, irc, derrama, dividendos, custosEmpresa, liquido: empresaLiquido },
     diferenca: empresaLiquido - freelancerLiquido,
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  TRIBUTAÇÃO AUTÓNOMA — IRC (Art. 88.º CIRC)
+//
+//  Aplica-se sobre encargos específicos de empresas (encargos anuais de
+//  viaturas, representação, ajudas de custo, despesas não documentadas),
+//  independentemente do IRC regular. O custo de aquisição da viatura
+//  determina o escalão; a base tributável são os encargos anuais.
+// ─────────────────────────────────────────────────────────────────────
+
+export type TipoViatura = "combustao" | "phev" | "eletrica";
+
+export interface TAViaturaInput {
+  tipo: TipoViatura;
+  /** Custo de aquisição (determina o escalão/taxa). */
+  custoAquisicao: number;
+  /** Encargos anuais suportados (base tributável da TA). */
+  encargosAnuais: number;
+}
+
+export interface TributacaoAutonomaInput {
+  /** Lista de viaturas ligeiras de passageiros da empresa. */
+  viaturas?: TAViaturaInput[];
+  /** Despesas de representação do período (Art. 88.º, n.º 7). */
+  despesasRepresentacao?: number;
+  /** Ajudas de custo + km em viatura própria (Art. 88.º, n.º 9). */
+  ajudasCusto?: number;
+  /** Despesas não documentadas (Art. 88.º, n.º 1). */
+  despesasNaoDocumentadas?: number;
+  /**
+   * true se a empresa tem prejuízo fiscal no período — agrava a TA em +10 p.p.
+   * Exceção: ignorar o agravamento se primeirosTresAnos=true ou lucroRecente=true.
+   */
+  comPrejuizo?: boolean;
+  /** true nos primeiros 3 anos de atividade — isenta do agravamento de prejuízo. */
+  primeirosTresAnos?: boolean;
+  /** true se teve lucro em ≥ 1 dos 3 exercícios anteriores — isenta do agravamento. */
+  lucroRecente?: boolean;
+}
+
+export interface TributacaoAutonomaResult {
+  taViaturas: number;
+  taRepresentacao: number;
+  taAjudas: number;
+  taNaoDocumentadas: number;
+  subtotal: number;
+  agravamentoAplicado: boolean;
+  agravamento: number;
+  totalTA: number;
+  detalheViaturas: Array<{ tipo: TipoViatura; taxa: number; encargos: number; ta: number }>;
+}
+
+/** Devolve a taxa de TA para uma viatura dado o tipo e custo de aquisição. */
+function taxaTA(tipo: TipoViatura, custoAquisicao: number): number {
+  if (tipo === "eletrica") return TA_VIATURAS_ELETRICA.value;
+  const tabela: TAViaturasTaxas = tipo === "phev" ? TA_VIATURAS_PHEV.value : TA_VIATURAS_COMBUSTAO.value;
+  const { t1, t2 } = TA_THRESHOLDS.value;
+  if (custoAquisicao <= t1) return tabela.ate37500;
+  if (custoAquisicao <= t2) return tabela.ate45000;
+  return tabela.acima45000;
+}
+
+/**
+ * Calcula a Tributação Autónoma (Art. 88.º CIRC) de uma empresa.
+ * Inclui viaturas (combustão, PHEV e elétrica), representação, ajudas de
+ * custo e despesas não documentadas. Modela o agravamento por prejuízo fiscal.
+ *
+ * ESTIMATIVA — não cobre todas as situações (ex.: viaturas de mercadorias,
+ * taxas especiais de setores regulados). Não substitui apuramento oficial.
+ */
+export function calcularTributacaoAutonoma(
+  input: TributacaoAutonomaInput
+): TributacaoAutonomaResult {
+  const agravamentoIsento = !!input.primeirosTresAnos || !!input.lucroRecente;
+  const agravamento = input.comPrejuizo && !agravamentoIsento ? TA_AGRAVAMENTO_PREJUIZO.value : 0;
+
+  // Viaturas
+  const detalheViaturas: TributacaoAutonomaResult["detalheViaturas"] = [];
+  let taViaturas = 0;
+  for (const v of input.viaturas ?? []) {
+    const encargos = sanitize(v.encargosAnuais);
+    const taxa = taxaTA(v.tipo, sanitize(v.custoAquisicao));
+    const ta = encargos * (taxa + agravamento);
+    taViaturas += ta;
+    detalheViaturas.push({ tipo: v.tipo, taxa, encargos, ta });
+  }
+
+  const taRepresentacao =
+    sanitize(input.despesasRepresentacao ?? 0) * (TA_REPRESENTACAO.value + agravamento);
+  const taAjudas = sanitize(input.ajudasCusto ?? 0) * (TA_AJUDAS_CUSTO.value + agravamento);
+  const taNaoDocumentadas =
+    sanitize(input.despesasNaoDocumentadas ?? 0) * TA_NAO_DOCUMENTADAS.value;
+
+  const subtotal = taViaturas + taRepresentacao + taAjudas + taNaoDocumentadas;
+  const agravamentoTotal = input.comPrejuizo && !agravamentoIsento ? subtotal * 0 : 0;
+
+  return {
+    taViaturas,
+    taRepresentacao,
+    taAjudas,
+    taNaoDocumentadas,
+    subtotal,
+    agravamentoAplicado: agravamento > 0,
+    agravamento: agravamentoTotal,
+    totalTA: subtotal,
+    detalheViaturas,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  RFAI — Regime Fiscal de Apoio ao Investimento (Art. 22.º–26.º CFI)
+// ─────────────────────────────────────────────────────────────────────
+
+export interface RFAIInput {
+  /** Investimento elegível do período (ativos corpóreos/incorpóreos produtivos). */
+  investimentoElegivel: number;
+  /** "interior" = Norte/Centro/Alentejo/Açores/Madeira; "litoral" = Lisboa/Algarve. */
+  regiaoRFAI: "interior" | "litoral";
+  /** Coleta de IRC do período (limite de dedução). */
+  coletaIRC: number;
+  /** true nos primeiros 3 anos de atividade elegível (limite de coleta = 100%). */
+  primeirosTresAnos?: boolean;
+  /** Saldo de RFAI reportado de anos anteriores ainda não deduzido. */
+  reporteAnterior?: number;
+}
+
+export interface RFAIResult {
+  deducaoCalculada: number;
+  limiteColeta: number;
+  deducaoAplicavel: number;
+  reporteParaProximo: number;
+}
+
+/**
+ * Estima a dedução RFAI à coleta de IRC.
+ * Nota: não modela o RFAI contratual (Art. 8.º–22.º CFI) nem a elegibilidade
+ * das despesas. Apenas estima o benefício máximo legal.
+ */
+export function estimarRFAI(input: RFAIInput): RFAIResult {
+  const inv = sanitize(input.investimentoElegivel);
+  const reporte = sanitize(input.reporteAnterior ?? 0);
+
+  let deducaoCalculada: number;
+  if (input.regiaoRFAI === "litoral") {
+    deducaoCalculada = inv * RFAI_TAXA_LITORAL.value;
+  } else {
+    const limInv = RFAI_LIMITE_INVESTIMENTO_INTERIOR.value;
+    deducaoCalculada =
+      Math.min(inv, limInv) * RFAI_TAXA_INTERIOR.value +
+      Math.max(0, inv - limInv) * RFAI_TAXA_INTERIOR_EXCEDENTE.value;
+  }
+
+  const totalDisponivel = deducaoCalculada + reporte;
+  const limColeta = input.primeirosTresAnos
+    ? input.coletaIRC
+    : input.coletaIRC * RFAI_LIMITE_COLETA.value;
+  const deducaoAplicavel = Math.min(totalDisponivel, limColeta);
+  const reporteParaProximo = Math.max(0, totalDisponivel - deducaoAplicavel);
+
+  return { deducaoCalculada, limiteColeta: limColeta, deducaoAplicavel, reporteParaProximo };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  DLRR — Dedução por Lucros Retidos e Reinvestidos (Art. 27.º–34.º CFI)
+//  Apenas PME e Small Mid Cap (≤ 3 000 trabalhadores).
+// ─────────────────────────────────────────────────────────────────────
+
+export interface DLRRInput {
+  /** Lucros retidos e reinvestidos em ativos elegíveis no período. */
+  lucrosRetidos: number;
+  /** Coleta de IRC do período. */
+  coletaIRC: number;
+  /** Saldo de DLRR reportado de anos anteriores ainda não deduzido. */
+  reporteAnterior?: number;
+}
+
+export interface DLRRResult {
+  deducaoCalculada: number;
+  limiteColeta: number;
+  deducaoAplicavel: number;
+  reporteParaProximo: number;
+}
+
+/**
+ * Estima a dedução DLRR à coleta de IRC para PME.
+ * Não verifica elegibilidade PME/Small Mid Cap — tarefa do contabilista.
+ */
+export function estimarDLRR(input: DLRRInput): DLRRResult {
+  const lucros = Math.min(sanitize(input.lucrosRetidos), DLRR_LIMITE_LUCROS.value);
+  const reporte = sanitize(input.reporteAnterior ?? 0);
+  const deducaoCalculada = lucros * DLRR_TAXA.value;
+  const totalDisponivel = deducaoCalculada + reporte;
+  const limColeta = input.coletaIRC * DLRR_LIMITE_COLETA.value;
+  const deducaoAplicavel = Math.min(totalDisponivel, limColeta);
+  return {
+    deducaoCalculada,
+    limiteColeta: limColeta,
+    deducaoAplicavel,
+    reporteParaProximo: Math.max(0, totalDisponivel - deducaoAplicavel),
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  SIFIDE II — Incentivos Fiscais à I&D (Art. 35.º–42.º CFI)
+// ─────────────────────────────────────────────────────────────────────
+
+export interface SIFIDEInput {
+  /** Despesas com I&D do período atual. */
+  despesasID: number;
+  /**
+   * Média das despesas I&D dos 2 anos anteriores.
+   * 0 significa que não houve despesas nos últimos 2 anos (startup/sem histórico).
+   */
+  mediaAnterior: number;
+  /** true se PME com < 2 exercícios sem benefício incremental anterior. */
+  isPMEJovem?: boolean;
+  /** Coleta de IRC do período. */
+  coletaIRC: number;
+  /** Saldo de SIFIDE reportado de anos anteriores ainda não deduzido. */
+  reporteAnterior?: number;
+}
+
+export interface SIFIDEResult {
+  creditoBase: number;
+  incremento: number;
+  creditoIncremental: number;
+  majoracao: number;
+  totalCredito: number;
+  deducaoAplicavel: number;
+  reporteParaProximo: number;
+}
+
+/**
+ * Estima o crédito fiscal SIFIDE II.
+ * A taxa incremental aplica-se ao aumento das despesas I&D face à média dos
+ * 2 anos anteriores, com um teto de €1 500 000 de incremento.
+ */
+export function estimarSIFIDE(input: SIFIDEInput): SIFIDEResult {
+  const despesas = sanitize(input.despesasID);
+  const media = sanitize(input.mediaAnterior);
+  const reporte = sanitize(input.reporteAnterior ?? 0);
+
+  // Taxa base
+  const creditoBase = despesas * SIFIDE_TAXA_BASE.value;
+
+  // Taxa incremental (sobre aumento das despesas, capped ao teto)
+  const incremento = Math.min(Math.max(0, despesas - media), SIFIDE_TETO_INCREMENTAL.value);
+  const creditoIncremental = incremento * SIFIDE_TAXA_INCREMENTAL.value;
+
+  // Majoração para PME jovem (sem histórico incremental)
+  const majoracao = input.isPMEJovem ? despesas * SIFIDE_MAJORACAO_PME_JOVEM.value : 0;
+
+  const totalCredito = creditoBase + creditoIncremental + majoracao + reporte;
+
+  // Sem limite percentual de coleta explícito no SIFIDE — aplica na totalidade
+  const deducaoAplicavel = Math.min(totalCredito, input.coletaIRC);
+  const reporteParaProximo = Math.max(0, totalCredito - deducaoAplicavel);
+
+  return { creditoBase, incremento, creditoIncremental, majoracao, totalCredito, deducaoAplicavel, reporteParaProximo };
 }
 
 // ─────────────────────────────────────────────────────────────────────

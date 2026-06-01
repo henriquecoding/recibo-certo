@@ -228,6 +228,32 @@ export function ArrowLeft({ size = 14, className }: IconProps) {
   );
 }
 
+export function Close({ size = 14, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Sparkle({ size = 14, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8L12 2z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Rocket({ size = 14, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M12 2C7 2 4 7 4 12c0 1 .2 2 .5 3L8 17.5C9 17.8 10 18 11 18h2c1 0 2-.2 3-.5L19.5 15c.3-1 .5-2 .5-3 0-5-3-10-8-10z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <circle cx="12" cy="11" r="2.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M7 18l-2 4M17 18l2 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 // ─── Ícones de parceiros ─────────────────────────────────────
 export function Bank({ size = 18, className }: IconProps) {
   return (

@@ -75,8 +75,8 @@ export default function Fontes() {
         <div>
           <h3 className="text-sm font-semibold text-stone-700 mb-3">Fontes consultadas</h3>
           <ul className="space-y-2">
-            {Object.values(SOURCES).map((s) => (
-              <li key={s.url}>
+            {Object.entries(SOURCES).map(([sourceKey, s]) => (
+              <li key={sourceKey}>
                 <a
                   href={s.url}
                   target="_blank"

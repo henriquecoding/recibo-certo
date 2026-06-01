@@ -2744,6 +2744,10 @@ export default function SimuladorIntegrado() {
   // ── Advanced ─────────────────────────────────────────────────────────────
   const [advanced, setAdvanced] = useState(false);
 
+  // ── Painéis contextuais ───────────────────────────────────────────────────
+  const [painelIVA, setPainelIVA] = useState(false);
+  const [painelAtividade, setPainelAtividade] = useState(false);
+
   // ── Sincronização bruto ↔ brutoAnual ────────────────────────────────────
   const handleBrutoChange = useCallback(
     (v: number) => {
@@ -3040,6 +3044,166 @@ export default function SimuladorIntegrado() {
     }),
   ];
 
+  // ── Motor de Regras Fiscais (Rule Engine) ────────────────────────────────
+  interface RegraFiscal {
+    id: string;
+    prioridade: "erro" | "aviso" | "info" | "oportunidade";
+    mensagem: string;
+    detalhe: string;
+  }
+
+  const regras: RegraFiscal[] = useMemo(() => {
+    const r: RegraFiscal[] = [];
+
+    // IVA: isenção acima do limite imediato
+    if (regimeIVA === "isento" && brutoAnual > IVA_ISENCAO_LIMITE_IMEDIATO) {
+      r.push({
+        id: "iva-excesso",
+        prioridade: "erro",
+        mensagem: "Isenção de IVA incompatível com esta faturação",
+        detalhe: `Com ${fmt(brutoAnual)}/ano ultrapassas o limite de ${IVA_ISENCAO_LIMITE_IMEDIATO.toLocaleString("pt-PT")}€ — a transição para IVA normal é imediata (Art. 53.º / Art. 58.º CIVA).`,
+      });
+    } else if (regimeIVA === "isento" && brutoAnual > IVA_ISENCAO_LIMITE) {
+      r.push({
+        id: "iva-limite",
+        prioridade: "aviso",
+        mensagem: "Estás na zona de transição do limiar de IVA",
+        detalhe: `Com ${fmt(brutoAnual)}/ano ultrapassas os €15 000 do Art. 53.º CIVA. Perdes a isenção no ano seguinte; se ultrapassares €18 750, a mudança é imediata.`,
+      });
+    }
+
+    // IVA intermédia ou reduzida com profissão liberal Art. 151.º
+    if ((regimeIVA === "intermedia" || regimeIVA === "reduzida") && tipoAtiv === "art151") {
+      r.push({
+        id: "iva-taxa-atividade",
+        prioridade: "aviso",
+        mensagem: `Taxa de IVA ${regimeIVA === "intermedia" ? "intermédia" : "reduzida"} improvável para profissões do Art. 151.º`,
+        detalhe: `A maioria das profissões liberais aplica IVA normal (${pct(IVA_TAXAS[regiao].value.normal)}). As taxas reduzida e intermédia aplicam-se a listas específicas do CIVA (restauração, alojamento, medicamentos). Verifica com o teu contabilista.`,
+      });
+    }
+
+    // IFICI + IRS Jovem: incompatíveis
+    if (ifici && irsJovemAno > 0) {
+      r.push({
+        id: "ifici-jovem",
+        prioridade: "erro",
+        mensagem: "IFICI e IRS Jovem são regimes incompatíveis",
+        detalhe: "Não podes beneficiar simultaneamente do IFICI/NHR 2.0 (taxa flat 20%) e do IRS Jovem (isenção progressiva). Escolhe um dos dois e desativa o outro.",
+      });
+    }
+
+    // Dispensa de retenção acima do limite legal
+    if (dispensaRetencao && brutoAnual > DISPENSA_RETENCAO_LIMITE.value) {
+      r.push({
+        id: "dispensa-limite",
+        prioridade: "aviso",
+        mensagem: "Dispensa de retenção pode não ser válida à tua faturação",
+        detalhe: `A dispensa (Art. 101.º-B CIRS) só é válida quando a faturação anual prevista é inferior a ${DISPENSA_RETENCAO_LIMITE.value.toLocaleString("pt-PT")}€. Com ${fmt(brutoAnual)}/ano previsto, deves reter na fonte.`,
+      });
+    }
+
+    // Isenção SS dupla ativa
+    if (isencaoSSPrimeiroAno && acumulaEmprego) {
+      r.push({
+        id: "ss-dupla",
+        prioridade: "info",
+        mensagem: "Dois motivos de isenção de SS ativos em simultâneo",
+        detalhe: "Isenção do 1.º ano e acumulação com emprego produzem o mesmo resultado (SS = 0). Podes deixar apenas um ativo — não muda o cálculo.",
+      });
+    }
+
+    // IVA isento + atividade vendas (congruente — oportunidade)
+    if (regimeIVA === "isento" && tipoAtiv === "vendas" && brutoAnual <= IVA_ISENCAO_LIMITE) {
+      r.push({
+        id: "isento-vendas-ok",
+        prioridade: "oportunidade",
+        mensagem: "Isenção de IVA compatível com atividade de vendas e faturação",
+        detalhe: `Com ${fmt(brutoAnual)}/ano em vendas e isenção Art. 53.º, não precisas de cobrar IVA ao cliente. Verifica se os teus fornecedores também são isentos.`,
+      });
+    }
+
+    return r;
+  }, [regimeIVA, brutoAnual, tipoAtiv, regiao, ifici, irsJovemAno, dispensaRetencao, isencaoSSPrimeiroAno, acumulaEmprego]);
+
+  const regrasErro = regras.filter((r) => r.prioridade === "erro");
+  const regrasAviso = regras.filter((r) => r.prioridade === "aviso");
+  const regrasInfo = regras.filter((r) => r.prioridade === "info");
+  const regrasOport = regras.filter((r) => r.prioridade === "oportunidade");
+
+  // ── Metadados para painel contextual de IVA ───────────────────────────────
+  const ivaPainelMeta = {
+    isento: {
+      titulo: "Isenção de IVA — Art. 53.º CIVA",
+      quando: `Aplica-se quando a faturação anual é inferior a €${IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}. Não cobras IVA ao cliente nem podes deduzir IVA das tuas compras. Acima de €${IVA_ISENCAO_LIMITE_IMEDIATO.toLocaleString("pt-PT")} a transição para regime normal é imediata.`,
+      compativel: "Qualquer atividade com faturação abaixo do limiar",
+      incompativel: `Faturação acima de €${IVA_ISENCAO_LIMITE_IMEDIATO.toLocaleString("pt-PT")} — saída imediata da isenção`,
+    },
+    reduzida: {
+      titulo: `Taxa reduzida — ${pct(IVA_TAXAS[regiao].value.reduzida)}`,
+      quando: "Bens e serviços das Listas I e II do CIVA: medicamentos, produtos alimentares básicos, livros, assistência médica específica, alguns produtos agrícolas.",
+      compativel: "Farmacêuticos (medicamentos), saúde (serviços específicos), produção agrícola, bens alimentares",
+      incompativel: "Maioria das profissões liberais do Art. 151.º — aplicam taxa normal",
+    },
+    intermedia: {
+      titulo: `Taxa intermédia — ${pct(IVA_TAXAS[regiao].value.intermedia)}`,
+      quando: "Lista II-A do CIVA: serviços de alimentação e bebidas (restauração), alojamento turístico, alguns produtos agrícolas.",
+      compativel: "Restauração, alojamento local e hotelaria, alguns produtos agrícolas",
+      incompativel: "Profissões liberais (Art. 151.º), consultoria, TI, engenharia — aplicam taxa normal",
+    },
+    normal: {
+      titulo: `Taxa normal — ${pct(IVA_TAXAS[regiao].value.normal)}`,
+      quando: "Todos os bens e serviços que não constam das listas de taxa reduzida ou intermédia. É a taxa geral aplicável à maioria dos serviços.",
+      compativel: "Todas as profissões liberais (Art. 151.º), consultoria, TI, engenharia, advocacia",
+      incompativel: null,
+    },
+  }[regimeIVA];
+
+  const ivaAlertaAtividade =
+    (regimeIVA === "intermedia" || regimeIVA === "reduzida") && tipoAtiv === "art151";
+  const ivaAlertaFaturacao = regimeIVA === "isento" && brutoAnual > IVA_ISENCAO_LIMITE;
+
+  // ── Metadados para painel contextual de atividade ─────────────────────────
+  const atividadePainelMeta: Record<
+    TipoAtividade,
+    { titulo: string; descricao: string; ivaEsperado: string; nota: string | null }
+  > = {
+    art151: {
+      titulo: "Profissão liberal — Art. 151.º CIRS",
+      descricao: "Profissões da tabela da Portaria 1011/2001 (engenheiros, advogados, médicos, programadores, designers, contabilistas, etc.). Coef. 0,75 · Ret. 23% · SS sobre 70%.",
+      ivaEsperado: "normal",
+      nota: "15% do rendimento bruto deve ser justificado com despesas (regra dos 15%). O excesso não justificado é acrescido ao tributável.",
+    },
+    vendas: {
+      titulo: "Venda de bens / mercadorias",
+      descricao: "Comércio, produção e revenda. Coeficiente muito baixo (0,15) porque as margens brutas são reduzidas. Sem retenção na fonte. SS sobre 20%.",
+      ivaEsperado: "normal",
+      nota: "A Segurança Social incide sobre apenas 20% do rendimento (base reduzida para vendas e restauração).",
+    },
+    hosped: {
+      titulo: "Alojamento local / hotelaria",
+      descricao: "Alojamento local em estabelecimento (coef. 0,15), moradia/apartamento (coef. 0,35) ou zona de contenção (coef. 0,50). Sem retenção. SS sobre 20%.",
+      ivaEsperado: "intermedia",
+      nota: "Em zona de pressão urbanística o coeficiente sobe para 0,50 (exige Anexo 13F na Mod. 3). A isenção de SS em AL exclusivo é condicional — confirmar com contabilista.",
+    },
+    outras: {
+      titulo: "Outras prestações de serviços",
+      descricao: "Código 1519 — serviços não enquadrados no Art. 151.º. Retenção de 11,5% (inferior à das profissões liberais). Coef. 0,35. SS sobre 70%.",
+      ivaEsperado: "normal",
+      nota: null,
+    },
+    prop_int: {
+      titulo: "Propriedade intelectual / direitos de autor",
+      descricao: "Royalties, licenciamento de software, obra própria (livros, música, arte). Coef. 0,75 mas retenção de 16,5%. SS sobre 70%.",
+      ivaEsperado: "normal",
+      nota: "Só para titulares da obra original. Coeficiente 0,95 quando o autor cede obra a entidade única — verificar enquadramento com contabilista.",
+    },
+  };
+
+  const atividadeAtual = atividadePainelMeta[tipoAtiv];
+  const atividadeIVACoerente =
+    atividadeAtual.ivaEsperado === regimeIVA ||
+    (atividadeAtual.ivaEsperado === "normal" && regimeIVA === "isento" && brutoAnual <= IVA_ISENCAO_LIMITE);
+
   // ── Aviso de IVA Art. 53.º ────────────────────────────────────────────────
   const avisoIVALimite =
     regimeIVA === "isento" && brutoAnual > IVA_ISENCAO_LIMITE ? (
@@ -3231,7 +3395,7 @@ export default function SimuladorIntegrado() {
                       key={op.id}
                       type="button"
                       aria-pressed={active}
-                      onClick={() => setRegimeIVA(op.id)}
+                      onClick={() => { setRegimeIVA(op.id); setPainelIVA(true); }}
                       className={`p-3 rounded-xl border text-center transition-all ${
                         active
                           ? "border-brand bg-brand-light"
@@ -3253,6 +3417,58 @@ export default function SimuladorIntegrado() {
                 })}
               </div>
             </fieldset>
+
+            {/* ── Painel contextual IVA ────────────────────────────────── */}
+            {painelIVA && (
+              <div className="mb-4 rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-900">
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
+                    {ivaPainelMeta.titulo}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPainelIVA(false)}
+                    className="flex-shrink-0 text-xs text-stone-400 hover:text-stone-600 transition-colors"
+                    aria-label="Fechar painel"
+                  >
+                    fechar
+                  </button>
+                </div>
+                <p className="mb-3 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
+                  {ivaPainelMeta.quando}
+                </p>
+                <div className="space-y-1.5">
+                  <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
+                    <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
+                    <span>
+                      <strong className="text-stone-700 dark:text-stone-200">Compatível com:</strong>{" "}
+                      {ivaPainelMeta.compativel}
+                    </span>
+                  </div>
+                  {ivaPainelMeta.incompativel && (
+                    <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
+                      <Warning size={11} className="mt-0.5 flex-shrink-0 text-alert-text" />
+                      <span>
+                        <strong className="text-stone-700 dark:text-stone-200">Incompatível com:</strong>{" "}
+                        {ivaPainelMeta.incompativel}
+                      </span>
+                    </div>
+                  )}
+                  {ivaAlertaAtividade && (
+                    <div className="mt-2 rounded-lg border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">
+                      A atividade selecionada ({TIPO_ATIVIDADE_PARAMS[tipoAtiv].label}) aplica normalmente IVA{" "}
+                      {regiao === "continente" ? "normal (23%)" : `normal (${pct(IVA_TAXAS[regiao].value.normal)})`}. Verifica se prestaste serviços específicos sujeitos a esta taxa.
+                    </div>
+                  )}
+                  {ivaAlertaFaturacao && (
+                    <div className="mt-2 rounded-lg border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">
+                      A tua faturação estimada ({fmt(brutoAnual)}) ultrapassa o limiar de isenção de{" "}
+                      €{IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}. Verifica se ainda tens isenção ou se já deves cobrar IVA.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* ── Tipo de atividade ─────────────────────────────────────── */}
             <div className="mb-6">
@@ -3289,7 +3505,10 @@ export default function SimuladorIntegrado() {
                   </p>
                 </InfoTip>
               </div>
-              <ActivityCombobox value={atividade} onChange={setAtividade} />
+              <ActivityCombobox
+                value={atividade}
+                onChange={(a) => { setAtividade(a); setPainelAtividade(true); }}
+              />
 
               <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {(
@@ -3302,7 +3521,7 @@ export default function SimuladorIntegrado() {
                     key={k}
                     type="button"
                     aria-pressed={tipoAtiv === k}
-                    onClick={() => setTipoAtiv(k)}
+                    onClick={() => { setTipoAtiv(k); setPainelAtividade(true); }}
                     className={`p-2.5 rounded-xl border text-left text-xs transition-all ${
                       tipoAtiv === k
                         ? "border-brand bg-brand-light"
@@ -3322,6 +3541,68 @@ export default function SimuladorIntegrado() {
                   </button>
                 ))}
               </div>
+
+              {/* Painel contextual da atividade */}
+              {painelAtividade && (
+                <div className="mt-3 rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-900">
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
+                      {atividadeAtual.titulo}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPainelAtividade(false)}
+                      className="flex-shrink-0 text-xs text-stone-400 hover:text-stone-600 transition-colors"
+                      aria-label="Fechar painel"
+                    >
+                      fechar
+                    </button>
+                  </div>
+
+                  {/* Métricas em cards */}
+                  <div className="mb-3 grid grid-cols-3 gap-2">
+                    {[
+                      { label: "Coeficiente", value: pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef), note: "do rendimento é tributável" },
+                      { label: "Retenção", value: pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].ret), note: "retida pelo cliente" },
+                      { label: "Base SS", value: tipoAtiv === "vendas" || tipoAtiv === "hosped" ? "20%" : "70%", note: "do rendimento" },
+                    ].map((m) => (
+                      <div key={m.label} className="rounded-xl border border-stone-200 bg-white p-2 text-center dark:border-stone-700 dark:bg-stone-800">
+                        <div className="text-sm font-bold text-stone-800 dark:text-stone-100">{m.value}</div>
+                        <div className="text-[10px] font-medium text-stone-500">{m.label}</div>
+                        <div className="text-[10px] text-stone-400">{m.note}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="mb-2 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
+                    {atividadeAtual.descricao}
+                  </p>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
+                      <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
+                      <span>
+                        <strong className="text-stone-600 dark:text-stone-200">IVA típico:</strong>{" "}
+                        {atividadeAtual.ivaEsperado === "normal"
+                          ? `Taxa normal (${pct(IVA_TAXAS[regiao].value.normal)}) ou isenção Art. 53.º se faturação < €15 000`
+                          : atividadeAtual.ivaEsperado === "intermedia"
+                          ? `Taxa intermédia (${pct(IVA_TAXAS[regiao].value.intermedia)}) — restauração e alojamento`
+                          : "Isento"}
+                      </span>
+                    </div>
+                    {!atividadeIVACoerente && (
+                      <div className="mt-1 rounded-lg border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">
+                        O regime de IVA selecionado ({regimeIVA === "isento" ? "Isento" : pct(IVA_TAXAS[regiao].value[regimeIVA as EscalaoIVA])}) pode não ser o habitual para esta atividade. Verifica com o teu contabilista.
+                      </div>
+                    )}
+                    {atividadeAtual.nota && (
+                      <div className="mt-2 rounded-lg border border-brand/20 bg-brand-light/50 px-3 py-2 text-xs leading-relaxed text-brand-dark">
+                        {atividadeAtual.nota}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ── Situação fiscal ──────────────────────────────────────── */}
@@ -3363,6 +3644,45 @@ export default function SimuladorIntegrado() {
                 </button>
               ))}
             </div>
+
+            {/* ── Motor de Regras Fiscais ──────────────────────────────── */}
+            {regras.length > 0 && (
+              <div className="mt-5 space-y-2">
+                {[...regrasErro, ...regrasAviso, ...regrasInfo, ...regrasOport].map((r) => {
+                  const estilos = {
+                    erro: {
+                      wrapper: "border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/20",
+                      icon: <Warning size={13} className="text-red-600 dark:text-red-400" />,
+                      titulo: "text-red-700 dark:text-red-300",
+                    },
+                    aviso: {
+                      wrapper: "border-alert-border bg-alert-bg",
+                      icon: <Warning size={13} className="text-alert-text" />,
+                      titulo: "text-alert-text",
+                    },
+                    info: {
+                      wrapper: "border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/60",
+                      icon: <Check size={13} className="text-stone-400" />,
+                      titulo: "text-stone-600 dark:text-stone-300",
+                    },
+                    oportunidade: {
+                      wrapper: "border-brand/20 bg-brand-light/50",
+                      icon: <Check size={13} className="text-brand" />,
+                      titulo: "text-brand-dark",
+                    },
+                  }[r.prioridade];
+                  return (
+                    <div key={r.id} className={`flex items-start gap-2.5 rounded-2xl border p-3 ${estilos.wrapper}`}>
+                      <span className="mt-0.5 flex-shrink-0">{estilos.icon}</span>
+                      <div>
+                        <p className={`text-xs font-semibold ${estilos.titulo}`}>{r.mensagem}</p>
+                        <p className={`mt-0.5 text-xs leading-relaxed ${estilos.titulo} opacity-75`}>{r.detalhe}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* ── Opções avançadas ─────────────────────────────────────── */}
             <div className="mt-5 pt-5 border-t border-stone-100 dark:border-stone-800">
