@@ -273,6 +273,52 @@ const DIV_INCLUSAO_ENGLOBAMENTO = 0.5;
 const CUSTO_CONSTITUICAO_DEFAULT = 1_200; // registo (~€360) + setup OCC (~€800)
 const CONTAB_ORG_CUSTO_MENSAL = 200; // OCC: €150–300/mês; média conservadora
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PARTICULARIDADES INDIVIDUAIS — IRS
+//
+// Deficiência (Art. 56.º-A + 87.º CIRS):
+//   - 15% dos rendimentos Cat. B excluídos de tributação (máx €2 500/cat)
+//   - Dedução à coleta: 4 × IAS 2026 = €2 148,52
+// IFICI/NHR 2.0 (Art. 58.º-A EBF):
+//   - Taxa flat 20% sobre rendimentos líquidos Cat. B de fonte portuguesa
+//   - 10 anos, não renovável, só elegíveis que não foram residentes nos últimos 5 anos
+// Dependentes (Art. 78.º-A CIRS):
+//   - 600€ / dep. > 3 anos | 726€ / dep. ≤ 3 anos | 900€ / 2.º+ dep. ≤ 6 anos
+// ─────────────────────────────────────────────────────────────────────────────
+
+const DEFICIENCIA_EXCLUSAO_PCT = 0.15; // 15% Cat. B excluídos (Art. 56.º-A)
+const DEFICIENCIA_EXCLUSAO_MAX = 2_500; // max €2 500/categoria (Art. 56.º-A)
+const DEFICIENCIA_DEDUCAO_COLETA = 4 * IAS_2026; // 4 × IAS 2026 = €2 148,52
+
+const IFICI_TAXA_FLAT = 0.2; // Art. 58.º-A EBF — taxa 20% sobre Cat. B elegível
+
+const DEPENDENTE_DEDUCAO_3PLUS = 600; // Art. 78.º-A n.º 1 al. a)
+const DEPENDENTE_DEDUCAO_3MINUS = 726; // Art. 78.º-A n.º 1 al. b) ≤ 3 anos
+const DEPENDENTE_DEDUCAO_2_6 = 900; // Art. 78.º-A n.º 1 al. c) 2.º+ ≤ 6 anos
+const DEPENDENTE_DEDUCAO_DEFIC = 2.5 * IAS_2026; // Art. 87.º — 2,5 × IAS 2026
+
+// Deduções gerais à coleta IRS (máximos por agregado familiar)
+const DEDUCAO_SAUDE_PCT = 0.15; // Art. 78.º-C — 15% das despesas
+const DEDUCAO_SAUDE_MAX = 1_000; // máx €1 000/agregado
+const DEDUCAO_EDUCACAO_PCT = 0.3; // Art. 78.º-D — 30% das despesas
+const DEDUCAO_EDUCACAO_MAX = 800; // máx €800/agregado
+const DEDUCAO_GERAIS_PCT = 0.35; // Art. 78.º-B — 35% das despesas
+const DEDUCAO_GERAIS_MAX = 250; // máx €250/sujeito passivo
+const DEDUCAO_RENDAS_PCT = 0.15; // Art. 78.º-E — 15% das rendas
+const DEDUCAO_RENDAS_MAX = 502; // máx €502/sujeito passivo (habitação permanente)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IMPOSTOS MUNICIPAIS (empresa com imóvel próprio)
+// IMI: Art. 112.º CIMI — taxa urban mínima 0,3%, máxima 0,45%
+// IMT: Art. 17.º CIMT — taxa serviços/comércio 6,5% do valor de transmissão
+// IS: 0,8% do valor da aquisição (Verba 1.1 TGIS)
+// Isenção RFAI: Art. 22.º–26.º CFI — até 10 anos, aprovação assembleia mun.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const IMI_TAXA_PADRAO = 0.003; // 0,3% — taxa mínima urbana (Art. 112.º CIMI)
+const IMT_TAXA_COMERCIAL = 0.065; // 6,5% — transmissão imóveis não habitacionais
+const IS_TAXA_AQUISICAO = 0.008; // 0,8% — Verba 1.1 TGIS (aquisição imóvel)
+
 const IRC_PME = {
   taxa1: 0.15,
   limite: 50_000,
@@ -381,12 +427,13 @@ function calcularTributacaoAutonoma(
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface ResultadoBeneficios {
-  rfai: number; // RFAI efetivo (limitado à coleta)
-  rfaiBruto: number; // RFAI antes do limite de coleta
+  rfai: number;
+  rfaiBruto: number;
   dlrr: number;
   dlrrBruto: number;
   sifide: number;
   sifideBruto: number;
+  rfaiContratual: number; // Benefício fiscal contratual (entrada manual)
   total: number;
 }
 
@@ -441,7 +488,181 @@ function calcularBeneficios(
     dlrrBruto,
     sifide,
     sifideBruto,
+    rfaiContratual: 0, // preenchido separadamente em simularEmpresa
     total: rfai + dlrr + sifide,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTABILIDADE ORGANIZADA TI (Art. 28.º / 32.º CIRS)
+//
+// Rendimento tributável = faturação − despesas reais − custo contabilista − SS
+// Sujeita a tributação autónoma via Art. 73.º CIRS (remissão ao Art. 88.º CIRC)
+// Vantajosa quando despesas reais > (faturação × (1 − coef)) − custo OCC
+// Exemplo Art. 151.º (coef 0,75): breakeven quando despesas > 25% − custo OCC
+// Obrigatória quando faturação > €200 000 em dois exercícios consecutivos
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface ResultadoContabOrganizada {
+  faturacao: number;
+  despesasReais: number;
+  custoContabilista: number;
+  rendimentoLiquido: number;
+  ssAnual: number;
+  isencaoJovemValor: number;
+  rendimentoTributavel: number;
+  irs: number;
+  ta: ResultadoTA;
+  liquido: number;
+  taxaEfetiva: number;
+  vantagemVsSimplificado: number; // > 0 = organizada é melhor
+  breakEvenDespesas: number; // despesas mínimas para compensar
+}
+
+function simularContabOrganizada(
+  faturacao: number,
+  despesasReais: number,
+  irsJovemAno: number,
+  isencaoSS: boolean,
+  tipoAtiv: TipoAtividade,
+  // Tributação Autónoma (mesmas regras que empresa, via Art. 73.º CIRS)
+  encargosViatura: number,
+  tipoViatura: TipoViatura,
+  despRepresentacao: number,
+  ajudasCusto: number,
+  naoDocumentadas: number,
+  // Comparação com simplificado
+  liquidoSimplificado: number,
+): ResultadoContabOrganizada {
+  const custoContabilista = CONTAB_ORG_CUSTO_MENSAL * 12;
+  const rendimentoLiquido = Math.max(
+    0,
+    faturacao - despesasReais - custoContabilista,
+  );
+  const ssAnual = isencaoSS ? 0 : calcularSSAnual(faturacao);
+
+  // IRS Jovem aplica-se à Contabilidade Organizada (Categoria B)
+  const isencaoPct =
+    irsJovemAno > 0 ? (IRS_JOVEM_ISENCAO[irsJovemAno] ?? 0) : 0;
+  const baseJovem = Math.min(rendimentoLiquido, IRS_JOVEM_LIMITE_2026);
+  const isencaoJovemValor = baseJovem * isencaoPct;
+
+  const rendimentoTributavel = Math.max(
+    0,
+    rendimentoLiquido - ssAnual - isencaoJovemValor,
+  );
+  const irs = calcularIRS(rendimentoTributavel);
+
+  // TA: TI organizado está sujeito ao Art. 88.º CIRC via Art. 73.º CIRS
+  // Nota: o agravamento de prejuízo (n.º 14) não se aplica — TI não tem "lucro tributável"
+  // Para simplificação, não aplicamos agravamento ao TI organizado
+  const ta = calcularTributacaoAutonoma(
+    encargosViatura,
+    tipoViatura,
+    despRepresentacao,
+    ajudasCusto,
+    naoDocumentadas,
+    false, // emPrejuizo = false para TI organizado (sem "lucro tributável")
+    true, // excecaoPrejuizo = true (irrelevante, mas garante sem agravamento)
+  );
+
+  const liquido = Math.max(
+    0,
+    faturacao - despesasReais - custoContabilista - irs - ssAnual - ta.total,
+  );
+
+  // Ponto de equilíbrio: despesas a partir das quais organizada é melhor
+  // breakEven = faturação × (1 − coef) − custo_contabilista
+  const coef = TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef;
+  const breakEvenDespesas = Math.max(
+    0,
+    faturacao * (1 - coef) - custoContabilista,
+  );
+
+  return {
+    faturacao,
+    despesasReais,
+    custoContabilista,
+    rendimentoLiquido,
+    ssAnual,
+    isencaoJovemValor,
+    rendimentoTributavel,
+    irs,
+    ta,
+    liquido,
+    taxaEfetiva: faturacao > 0 ? (irs + ssAnual + ta.total) / faturacao : 0,
+    vantagemVsSimplificado: liquido - liquidoSimplificado,
+    breakEvenDespesas,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DEDUÇÕES À COLETA IRS — Particularidades
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface DeducoesColeta {
+  dependentes: number;
+  deficienciaContrib: number;
+  deficienciaDepend: number;
+  saude: number;
+  educacao: number;
+  gerais: number;
+  rendas: number;
+  total: number;
+}
+
+interface InputsParticularidades {
+  deficiencia: boolean;
+  ifici: boolean;
+  numDep3plus: number; // dependentes > 3 anos
+  numDep3minus: number; // dependentes ≤ 3 anos
+  numDep2_6: number; // 2.º+ dependentes ≤ 6 anos
+  numDepDefic: number; // dependentes com deficiência
+  despSaude: number; // despesas saúde totais
+  despEducacao: number; // despesas educação totais
+  despGerais: number; // despesas gerais familiares totais
+  despRendas: number; // rendas de habitação pagas
+}
+
+function calcularDeducoesColeta(p: InputsParticularidades): DeducoesColeta {
+  // Dependentes (fixas, não limitadas por rendimento para valores base)
+  const deducaoDep3plus = p.numDep3plus * DEPENDENTE_DEDUCAO_3PLUS;
+  const deducaoDep3minus = p.numDep3minus * DEPENDENTE_DEDUCAO_3MINUS;
+  const deducaoDep2_6 = p.numDep2_6 * DEPENDENTE_DEDUCAO_2_6;
+  const deducaoDepDefic = p.numDepDefic * DEPENDENTE_DEDUCAO_DEFIC;
+  const dependentes =
+    deducaoDep3plus + deducaoDep3minus + deducaoDep2_6 + deducaoDepDefic;
+
+  // Deficiência do contribuinte
+  const deficienciaContrib = p.deficiencia ? DEFICIENCIA_DEDUCAO_COLETA : 0;
+
+  // Deduções por despesas (limitadas)
+  const saude = Math.min(p.despSaude * DEDUCAO_SAUDE_PCT, DEDUCAO_SAUDE_MAX);
+  const educacao = Math.min(
+    p.despEducacao * DEDUCAO_EDUCACAO_PCT,
+    DEDUCAO_EDUCACAO_MAX,
+  );
+  const gerais = Math.min(
+    p.despGerais * DEDUCAO_GERAIS_PCT,
+    DEDUCAO_GERAIS_MAX,
+  );
+  const rendas = Math.min(
+    p.despRendas * DEDUCAO_RENDAS_PCT,
+    DEDUCAO_RENDAS_MAX,
+  );
+
+  const total =
+    dependentes + deficienciaContrib + saude + educacao + gerais + rendas;
+
+  return {
+    dependentes,
+    deficienciaContrib,
+    deficienciaDepend: deducaoDepDefic,
+    saude,
+    educacao,
+    gerais,
+    rendas,
+    total,
   };
 }
 
@@ -449,15 +670,19 @@ interface ResultadoAnualRV {
   faturacao: number;
   coeficiente: number;
   rendColetavel: number;
+  rendColetavelAjustado: number; // após exclusão deficiência (Art. 56.º-A)
   ssAnual: number;
   isencaoJovemValor: number;
   isencaoJovemPct: number;
   rendTributavel: number;
-  irs: number;
+  irsBruto: number; // IRS antes de deduções à coleta
+  deducoesColeta: DeducoesColeta;
+  irs: number; // IRS líquido (após deduções à coleta)
   retencaoAnual: number;
   acertoIRS: number;
   liquido: number;
   taxaEfetiva: number;
+  ificiAtivo: boolean;
 }
 
 function simularAnualRV(
@@ -465,41 +690,79 @@ function simularAnualRV(
   tipo: TipoAtividade,
   irsJovemAno: number,
   isencaoSS: boolean,
+  partic: InputsParticularidades = {
+    deficiencia: false,
+    ifici: false,
+    numDep3plus: 0,
+    numDep3minus: 0,
+    numDep2_6: 0,
+    numDepDefic: 0,
+    despSaude: 0,
+    despEducacao: 0,
+    despGerais: 0,
+    despRendas: 0,
+  },
 ): ResultadoAnualRV {
   const { coef, ret } = TIPO_ATIVIDADE_PARAMS[tipo];
   const rendColetavel = faturacao * coef;
-
   const ssAnual = isencaoSS ? 0 : calcularSSAnual(faturacao);
 
+  // ── Deficiência: exclusão de 15% do rendimento Cat. B (Art. 56.º-A CIRS) ──
+  const exclusaoDeficiencia = partic.deficiencia
+    ? Math.min(
+        rendColetavel * DEFICIENCIA_EXCLUSAO_PCT,
+        DEFICIENCIA_EXCLUSAO_MAX,
+      )
+    : 0;
+  const rendColetavelAjustado = Math.max(
+    0,
+    rendColetavel - exclusaoDeficiencia,
+  );
+
+  // ── IRS Jovem ─────────────────────────────────────────────────────────────
   const isencaoPct =
     irsJovemAno > 0 ? (IRS_JOVEM_ISENCAO[irsJovemAno] ?? 0) : 0;
-  const baseJovem = Math.min(rendColetavel, IRS_JOVEM_LIMITE_2026);
+  const baseJovem = Math.min(rendColetavelAjustado, IRS_JOVEM_LIMITE_2026);
   const isencaoJovemValor = baseJovem * isencaoPct;
 
   const rendTributavel = Math.max(
     0,
-    rendColetavel - ssAnual - isencaoJovemValor,
+    rendColetavelAjustado - ssAnual - isencaoJovemValor,
   );
 
-  const irs = calcularIRS(rendTributavel);
+  // ── IRS: IFICI (taxa flat 20%) ou escalões progressivos ──────────────────
+  let irsBruto: number;
+  if (partic.ifici) {
+    irsBruto = rendTributavel * IFICI_TAXA_FLAT;
+  } else {
+    irsBruto = calcularIRS(rendTributavel);
+  }
+
+  // ── Deduções à coleta (dependentes, deficiência, saúde, educação...) ──────
+  const deducoesColeta = calcularDeducoesColeta(partic);
+  const irs = Math.max(0, irsBruto - deducoesColeta.total);
+
   const retencaoAnual = faturacao * ret;
   const acertoIRS = retencaoAnual - irs;
-
   const liquido = faturacao - irs - ssAnual;
 
   return {
     faturacao,
     coeficiente: coef,
     rendColetavel,
+    rendColetavelAjustado,
     ssAnual,
     isencaoJovemValor,
     isencaoJovemPct: isencaoPct,
     rendTributavel,
+    irsBruto,
+    deducoesColeta,
     irs,
     retencaoAnual,
     acertoIRS,
     liquido,
     taxaEfetiva: faturacao > 0 ? (irs + ssAnual) / faturacao : 0,
+    ificiAtivo: partic.ifici,
   };
 }
 
@@ -553,6 +816,8 @@ function simularEmpresa(
   primeirosAnos: boolean,
   // Custos de constituição (já anualizados)
   custoConstituicao: number,
+  // RFAI Contratual (entrada manual — crédito fiscal negociado)
+  rfaiContratualValor: number,
 ): ResultadoEmpresa {
   const salGerente = salGerenteMensal * 12;
   const ssSalGerente = salGerente * (SS_EMP_TAXA + SS_TRAB_TAXA);
@@ -582,6 +847,23 @@ function simularEmpresa(
   );
   const ircAposBeneficios = Math.max(0, coleta - beneficios.total);
 
+  // RFAI Contratual: crédito fiscal adicional sobre ircAposBeneficios
+  const rfaiContratualEfetivo = Math.min(
+    rfaiContratualValor,
+    Math.max(0, ircAposBeneficios),
+  );
+  const ircAposBeneficiosTotal = Math.max(
+    0,
+    ircAposBeneficios - rfaiContratualEfetivo,
+  );
+  // Atualizar benefícios com o contratual
+  beneficios.rfaiContratual = rfaiContratualEfetivo;
+  beneficios.total =
+    beneficios.rfai +
+    beneficios.dlrr +
+    beneficios.sifide +
+    rfaiContratualEfetivo;
+
   // ── Tributação Autónoma (soma-se ao IRC, não é compensada por benefícios) ─
   const ta = calcularTributacaoAutonoma(
     encargosViatura,
@@ -597,7 +879,7 @@ function simularEmpresa(
   const derramaMuni = lucroTributavel * DERRAMA_MUNI;
 
   // ── IRC total ─────────────────────────────────────────────────────────────
-  const ircTotal = ircAposBeneficios + ta.total + derramaMuni;
+  const ircTotal = ircAposBeneficiosTotal + ta.total + derramaMuni;
 
   // ── Lucro líquido disponível para distribuição ────────────────────────────
   const lucroLiquido = Math.max(0, lucroTributavel - ircTotal);
@@ -645,7 +927,7 @@ function simularEmpresa(
     lucroTributavel,
     coleta,
     beneficios,
-    ircAposBeneficios,
+    ircAposBeneficios: ircAposBeneficiosTotal,
     ta,
     derramaMuni,
     ircTotal,
@@ -691,6 +973,7 @@ function calcularBreakEven(
       "pme_normal",
       false,
       custoConstAnual,
+      0,
     );
     if (em.liquidoGerente > rv.liquido) return v;
   }
@@ -1206,6 +1489,18 @@ interface EmpresaInputsProps {
   // Resultados para exibir nos badges
   resultBeneficios: ResultadoBeneficios;
   totalTA: number;
+  // Benefícios Municipais IMI/IMT
+  temImovelEmpresa: boolean;
+  vptImovel: number;
+  taxaIMI: number;
+  isencaoIMI_RFAI: boolean;
+  valorAquisicaoImovel: number;
+  isencaoIMT_RFAI: boolean;
+  anosAmortizacaoIMT: number;
+  poupancaIMI: number;
+  poupancaIMT: number;
+  imiAnual: number;
+  imtOnTime: number;
   // Callbacks
   onDespChange: (v: number) => void;
   onCustosChange: (v: number) => void;
@@ -1225,6 +1520,15 @@ interface EmpresaInputsProps {
   onSifideDespesasChange: (v: number) => void;
   onTipoSifideChange: (v: TipoEmpresaSifide) => void;
   onPrimeirosAnosChange: (v: boolean) => void;
+  rfaiContratualValor: number;
+  onRfaiContratualChange: (v: number) => void;
+  onTemImovelChange: (v: boolean) => void;
+  onVptChange: (v: number) => void;
+  onTaxaIMIChange: (v: number) => void;
+  onIsencaoIMIChange: (v: boolean) => void;
+  onValorAquisicaoChange: (v: number) => void;
+  onIsencaoIMTChange: (v: boolean) => void;
+  onAnosAmortizacaoIMTChange: (v: number) => void;
   onIncluirConstituicaoChange: (v: boolean) => void;
   onCustoConstituicaoChange: (v: number) => void;
   onAnosAmortizacaoChange: (v: number) => void;
@@ -1272,9 +1576,29 @@ function EmpresaInputs({
   onSifideDespesasChange,
   onTipoSifideChange,
   onPrimeirosAnosChange,
+  rfaiContratualValor,
+  onRfaiContratualChange,
   onIncluirConstituicaoChange,
   onCustoConstituicaoChange,
   onAnosAmortizacaoChange,
+  temImovelEmpresa,
+  vptImovel,
+  taxaIMI,
+  isencaoIMI_RFAI,
+  valorAquisicaoImovel,
+  isencaoIMT_RFAI,
+  anosAmortizacaoIMT,
+  poupancaIMI,
+  poupancaIMT,
+  imiAnual,
+  imtOnTime,
+  onTemImovelChange,
+  onVptChange,
+  onTaxaIMIChange,
+  onIsencaoIMIChange,
+  onValorAquisicaoChange,
+  onIsencaoIMTChange,
+  onAnosAmortizacaoIMTChange,
 }: EmpresaInputsProps) {
   const custAnual = incluirConstituicao
     ? Math.round(custoConstituicao / Math.max(1, anosAmortizacao))
@@ -1934,6 +2258,74 @@ function EmpresaInputs({
             )}
           </div>
 
+          {/* RFAI Contratual */}
+          <div className="space-y-3 pt-3 border-t border-emerald-100">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-stone-500">
+                RFAI Contratual (investimento ≥ €3M)
+              </span>
+              <InfoTip label="RFAI Contratual 2026">
+                Regime de benefícios fiscais em regime contratual (Art. 8.º–22.º
+                CFI). Aplicável a projetos de investimento elegível ≥ €3 000
+                000. Negociado com IAPMEI, AICEP ou Turismo de Portugal.
+                Duração: até 10 anos após conclusão do projeto. Inclui IRC
+                (25–50%), IMI, IMT e IS. Valores específicos por contrato —
+                inserir o crédito fiscal anual acordado.
+              </InfoTip>
+            </div>
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+              <Check
+                size={12}
+                className="flex-shrink-0 mt-0.5 text-emerald-600"
+              />
+              <p className="text-[11px] text-emerald-700 leading-relaxed">
+                RFAI contratual não é automaticamente calculado — depende do
+                contrato negociado com a entidade competente. Insere o crédito
+                fiscal anual acordado para o incluir na simulação.
+              </p>
+            </div>
+            <NumericSlider
+              label="Crédito fiscal contratual (€/ano)"
+              value={rfaiContratualValor}
+              min={0}
+              max={500_000}
+              step={5_000}
+              onChange={onRfaiContratualChange}
+              presets={[0, 50000, 100000, 200000]}
+              formatPreset={fmt}
+              tooltip={
+                <>
+                  Crédito fiscal contratual negociado com IAPMEI/AICEP. Deduzido
+                  à coleta IRC após RFAI, DLRR e SIFIDE. Reportável até 10 anos.
+                  Consulta o teu contrato de investimento.
+                </>
+              }
+            />
+            {rfaiContratualValor > 0 &&
+              resultBeneficios.rfaiContratual < rfaiContratualValor && (
+                <div className="flex items-center justify-between p-2 rounded-lg bg-amber-50 border border-amber-200">
+                  <span className="text-xs text-amber-700">
+                    Limitado pela coleta restante (bruto:{" "}
+                    {fmt(Math.round(rfaiContratualValor))})
+                  </span>
+                  <span className="text-xs font-bold text-amber-800">
+                    −{fmt(Math.round(resultBeneficios.rfaiContratual))}
+                  </span>
+                </div>
+              )}
+            {rfaiContratualValor > 0 &&
+              resultBeneficios.rfaiContratual >= rfaiContratualValor && (
+                <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50 border border-emerald-200">
+                  <span className="text-xs text-emerald-700">
+                    RFAI Contratual aplicado integralmente
+                  </span>
+                  <span className="text-xs font-bold text-emerald-800">
+                    −{fmt(Math.round(resultBeneficios.rfaiContratual))}
+                  </span>
+                </div>
+              )}
+          </div>
+
           {/* Total benefícios */}
           {resultBeneficios.total > 0 && (
             <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-100 border border-emerald-300">
@@ -1943,6 +2335,307 @@ function EmpresaInputs({
               <span className="text-sm font-bold text-emerald-900">
                 −{fmt(Math.round(resultBeneficios.total))}
               </span>
+            </div>
+          )}
+        </div>
+      </CollapsibleSection>
+      {/* ── Benefícios Municipais IMI/IMT ─────────────────────────────── */}
+      <CollapsibleSection
+        title="Benefícios Municipais IMI/IMT"
+        badge={
+          poupancaIMI + poupancaIMT > 0
+            ? `−${fmt(Math.round(poupancaIMI + poupancaIMT))}/ano`
+            : "IMI · IMT · IS"
+        }
+        badgeColor={poupancaIMI + poupancaIMT > 0 ? "emerald" : "stone"}
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-stone-50 border border-stone-200">
+            <Warning
+              size={13}
+              className="flex-shrink-0 mt-0.5 text-stone-400"
+            />
+            <p className="text-[11px] text-stone-500 leading-relaxed">
+              No âmbito do RFAI, os imóveis que constituam investimento
+              relevante podem beneficiar de isenção ou redução de IMI (até 10
+              anos) e isenção de IMT e IS na aquisição — mediante aprovação da
+              assembleia municipal (Art. 22.º–26.º CFI).
+            </p>
+          </div>
+
+          {/* Toggle tem imóvel */}
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={temImovelEmpresa}
+            onClick={() => onTemImovelChange(!temImovelEmpresa)}
+            className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+              temImovelEmpresa
+                ? "border-brand bg-brand-light"
+                : "border-stone-200 bg-stone-50"
+            }`}
+          >
+            <div
+              className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${temImovelEmpresa ? "bg-brand border-brand text-white" : "border-stone-300 text-transparent"}`}
+            >
+              <Check size={12} />
+            </div>
+            <div>
+              <div
+                className={`text-sm font-semibold ${temImovelEmpresa ? "text-brand-dark" : "text-stone-700"}`}
+              >
+                A empresa tem ou vai adquirir imóvel próprio
+              </div>
+              <div
+                className={`text-xs ${temImovelEmpresa ? "text-brand" : "text-stone-400"}`}
+              >
+                Inclui instalações fabris, escritórios próprios, unidades de
+                produção
+              </div>
+            </div>
+          </button>
+
+          {temImovelEmpresa && (
+            <div className="space-y-4">
+              {/* IMI */}
+              <div className="space-y-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-stone-500 block">
+                  IMI — Imposto Municipal sobre Imóveis
+                </span>
+                <NumericSlider
+                  label="Valor Patrimonial Tributário — VPT (€)"
+                  value={vptImovel}
+                  min={0}
+                  max={2_000_000}
+                  step={10_000}
+                  onChange={onVptChange}
+                  presets={[100000, 250000, 500000, 1000000]}
+                  formatPreset={fmt}
+                  tooltip={
+                    <>
+                      Valor patrimonial tributário do imóvel — consta na
+                      caderneta predial. Para imóveis industriais, pode ser
+                      diferente do valor de mercado.
+                    </>
+                  }
+                />
+                <div>
+                  <span className="text-xs font-medium text-stone-500 uppercase tracking-wider block mb-2">
+                    Taxa IMI
+                  </span>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {([0.003, 0.0035, 0.004, 0.0045] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        aria-pressed={taxaIMI === t}
+                        onClick={() => onTaxaIMIChange(t)}
+                        className={`p-2 rounded-xl border text-center text-xs font-semibold transition-all ${
+                          taxaIMI === t
+                            ? "border-brand bg-brand-light text-brand-dark"
+                            : "border-stone-200 bg-stone-50 text-stone-600"
+                        }`}
+                      >
+                        {pct(t)}
+                        <div
+                          className={`text-[10px] mt-0.5 ${taxaIMI === t ? "text-brand" : "text-stone-400"}`}
+                        >
+                          {t === 0.003 ? "Mín." : t === 0.0045 ? "Máx." : ""}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {vptImovel > 0 && (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-stone-50 border border-stone-200">
+                    <span className="text-xs text-stone-600">
+                      IMI anual ({pct(taxaIMI)} × {fmt(vptImovel)})
+                    </span>
+                    <span className="text-xs font-bold text-stone-700">
+                      {fmt(Math.round(vptImovel * taxaIMI))}/ano
+                    </span>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={isencaoIMI_RFAI}
+                  onClick={() => onIsencaoIMIChange(!isencaoIMI_RFAI)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                    isencaoIMI_RFAI
+                      ? "border-emerald-400 bg-emerald-50"
+                      : "border-stone-200 bg-stone-50"
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${isencaoIMI_RFAI ? "bg-emerald-500 border-emerald-500 text-white" : "border-stone-300 text-transparent"}`}
+                  >
+                    <Check size={12} />
+                  </div>
+                  <div>
+                    <div
+                      className={`text-sm font-semibold ${isencaoIMI_RFAI ? "text-emerald-800" : "text-stone-700"}`}
+                    >
+                      Isenção IMI via RFAI (aprovada pela assembleia municipal)
+                    </div>
+                    <div
+                      className={`text-xs ${isencaoIMI_RFAI ? "text-emerald-600" : "text-stone-400"}`}
+                    >
+                      Poupança: {fmt(Math.round(vptImovel * taxaIMI))}/ano
+                      durante até 10 anos
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {/* IMT e IS — one-time */}
+              <div className="space-y-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-stone-500 block">
+                  IMT + IS — Aquisição (one-time)
+                </span>
+                <NumericSlider
+                  label="Valor de aquisição do imóvel (€)"
+                  value={valorAquisicaoImovel}
+                  min={0}
+                  max={5_000_000}
+                  step={25_000}
+                  onChange={onValorAquisicaoChange}
+                  presets={[0, 250000, 500000, 1000000, 2000000]}
+                  formatPreset={fmt}
+                  tooltip={
+                    <>
+                      Valor pelo qual o imóvel foi adquirido. IMT
+                      comercial/serviços: 6,5%. IS: 0,8%. Total one-time = 7,3%
+                      do valor de aquisição, amortizado nos anos de análise.
+                    </>
+                  }
+                />
+
+                {valorAquisicaoImovel > 0 && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-stone-50 border border-stone-200">
+                      <span className="text-xs text-stone-600">
+                        IMT (6,5% × {fmt(valorAquisicaoImovel)})
+                      </span>
+                      <span className="text-xs font-bold text-stone-700">
+                        {fmt(
+                          Math.round(valorAquisicaoImovel * IMT_TAXA_COMERCIAL),
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-stone-50 border border-stone-200">
+                      <span className="text-xs text-stone-600">
+                        IS (0,8% × {fmt(valorAquisicaoImovel)})
+                      </span>
+                      <span className="text-xs font-bold text-stone-700">
+                        {fmt(
+                          Math.round(valorAquisicaoImovel * IS_TAXA_AQUISICAO),
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-stone-100 border border-stone-200">
+                      <span className="text-xs font-semibold text-stone-700">
+                        Total one-time IMT + IS
+                      </span>
+                      <span className="text-xs font-bold text-stone-800">
+                        {fmt(
+                          Math.round(
+                            valorAquisicaoImovel *
+                              (IMT_TAXA_COMERCIAL + IS_TAXA_AQUISICAO),
+                          ),
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={isencaoIMT_RFAI}
+                  onClick={() => onIsencaoIMTChange(!isencaoIMT_RFAI)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                    isencaoIMT_RFAI
+                      ? "border-emerald-400 bg-emerald-50"
+                      : "border-stone-200 bg-stone-50"
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${isencaoIMT_RFAI ? "bg-emerald-500 border-emerald-500 text-white" : "border-stone-300 text-transparent"}`}
+                  >
+                    <Check size={12} />
+                  </div>
+                  <div>
+                    <div
+                      className={`text-sm font-semibold ${isencaoIMT_RFAI ? "text-emerald-800" : "text-stone-700"}`}
+                    >
+                      Isenção IMT + IS via RFAI
+                    </div>
+                    <div
+                      className={`text-xs ${isencaoIMT_RFAI ? "text-emerald-600" : "text-stone-400"}`}
+                    >
+                      Poupança one-time:{" "}
+                      {fmt(
+                        Math.round(
+                          valorAquisicaoImovel *
+                            (IMT_TAXA_COMERCIAL + IS_TAXA_AQUISICAO),
+                        ),
+                      )}
+                    </div>
+                  </div>
+                </button>
+
+                {isencaoIMT_RFAI && valorAquisicaoImovel > 0 && (
+                  <div>
+                    <span className="text-xs font-medium text-stone-500 uppercase tracking-wider block mb-2">
+                      Amortizar poupança IMT+IS em
+                    </span>
+                    <div className="flex gap-2">
+                      {[5, 10, 15, 20].map((a) => (
+                        <button
+                          key={a}
+                          type="button"
+                          aria-pressed={anosAmortizacaoIMT === a}
+                          onClick={() => onAnosAmortizacaoIMTChange(a)}
+                          className={`flex-1 rounded-xl border py-2 text-center text-xs font-semibold transition-all ${
+                            anosAmortizacaoIMT === a
+                              ? "border-brand bg-brand-light text-brand-dark"
+                              : "border-stone-200 bg-stone-50 text-stone-500"
+                          }`}
+                        >
+                          {a} anos
+                          <div
+                            className={`text-[10px] mt-0.5 ${anosAmortizacaoIMT === a ? "text-brand" : "text-stone-400"}`}
+                          >
+                            {fmt(
+                              Math.round(
+                                (valorAquisicaoImovel *
+                                  (IMT_TAXA_COMERCIAL + IS_TAXA_AQUISICAO)) /
+                                  a,
+                              ),
+                            )}
+                            /ano
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Resumo poupanças municipais */}
+              {poupancaIMI + poupancaIMT > 0 && (
+                <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-100 border border-emerald-300">
+                  <span className="text-sm font-bold text-emerald-800">
+                    Poupança municipal anual
+                  </span>
+                  <span className="text-sm font-bold text-emerald-900">
+                    +{fmt(Math.round(poupancaIMI + poupancaIMT))}/ano
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -2008,12 +2701,45 @@ export default function SimuladorIntegrado() {
   const [tipoSifide, setTipoSifide] = useState<TipoEmpresaSifide>("pme_normal");
   const [primeirosAnos, setPrimeirosAnos] = useState(false);
 
+  // ── Empresa — RFAI Contratual ─────────────────────────────────────────────
+  const [rfaiContratualValor, setRfaiContratualValor] = useState(0);
+
+  // ── Empresa — Benefícios Municipais IMI/IMT ───────────────────────────────
+  const [temImovelEmpresa, setTemImovelEmpresa] = useState(false);
+  const [vptImovel, setVptImovel] = useState(0); // Valor Patrimonial Tributário
+  const [taxaIMI, setTaxaIMI] = useState(IMI_TAXA_PADRAO); // taxa municipal aplicável
+  const [isencaoIMI_RFAI, setIsencaoIMI_RFAI] = useState(false); // isenção RFAI aprovada
+  const [valorAquisicaoImovel, setValorAquisicaoImovel] = useState(0); // para IMT one-time
+  const [isencaoIMT_RFAI, setIsencaoIMT_RFAI] = useState(false);
+  const [anosAmortizacaoIMT, setAnosAmortizacaoIMT] = useState(10); // amortizar IMT em X anos
+
   // ── Empresa — Custos de Constituição ─────────────────────────────────────
   const [incluirConstituicao, setIncluirConstituicao] = useState(false);
   const [custoConstituicao, setCustoConstituicao] = useState(
     CUSTO_CONSTITUICAO_DEFAULT,
   );
   const [anosAmortizacao, setAnosAmortizacao] = useState(3);
+
+  // ── Contabilidade Organizada TI ──────────────────────────────────────────
+  const [contabOrganizada, setContabOrganizada] = useState(false);
+  const [despesasReaisTI, setDespesasReaisTI] = useState(0);
+  const [encargosViatTI, setEncargosViatTI] = useState(0);
+  const [tipoViatTI, setTipoViatTI] = useState<TipoViatura>("comb_baixo");
+  const [despRepTI, setDespRepTI] = useState(0);
+  const [ajudasTI, setAjudasTI] = useState(0);
+  const [naoDocTI, setNaoDocTI] = useState(0);
+
+  // ── Particularidades Individuais ─────────────────────────────────────────
+  const [deficiencia, setDeficiencia] = useState(false);
+  const [ifici, setIfici] = useState(false);
+  const [numDep3plus, setNumDep3plus] = useState(0);
+  const [numDep3minus, setNumDep3minus] = useState(0);
+  const [numDep2_6, setNumDep2_6] = useState(0);
+  const [numDepDefic, setNumDepDefic] = useState(0);
+  const [despSaude, setDespSaude] = useState(0);
+  const [despEducacao, setDespEducacao] = useState(0);
+  const [despGerais, setDespGerais] = useState(0);
+  const [despRendas, setDespRendas] = useState(0);
 
   // ── Advanced ─────────────────────────────────────────────────────────────
   const [advanced, setAdvanced] = useState(false);
@@ -2082,10 +2808,46 @@ export default function SimuladorIntegrado() {
     ],
   );
 
+  // ── Objeto de particularidades (passado às simulações RV) ─────────────────
+  const particularidades: InputsParticularidades = {
+    deficiencia,
+    ifici,
+    numDep3plus,
+    numDep3minus,
+    numDep2_6,
+    numDepDefic,
+    despSaude,
+    despEducacao,
+    despGerais,
+    despRendas,
+  };
+
   // ── Resultado anual RV ────────────────────────────────────────────────────
   const resultAnualRV = useMemo(
-    () => simularAnualRV(brutoAnual, tipoAtiv, irsJovemAno, isencaoSS),
-    [brutoAnual, tipoAtiv, irsJovemAno, isencaoSS],
+    () =>
+      simularAnualRV(
+        brutoAnual,
+        tipoAtiv,
+        irsJovemAno,
+        isencaoSS,
+        particularidades,
+      ),
+    [
+      brutoAnual,
+      tipoAtiv,
+      irsJovemAno,
+      isencaoSS,
+      deficiencia,
+      ifici,
+      numDep3plus,
+      numDep3minus,
+      numDep2_6,
+      numDepDefic,
+      despSaude,
+      despEducacao,
+      despGerais,
+      despRendas,
+    ],
   );
 
   // ── Resultado empresa ─────────────────────────────────────────────────────
@@ -2116,6 +2878,7 @@ export default function SimuladorIntegrado() {
         tipoSifide,
         primeirosAnos,
         custoConstituicaoAnual,
+        rfaiContratualValor,
       ),
     [
       brutoAnual,
@@ -2138,14 +2901,69 @@ export default function SimuladorIntegrado() {
       tipoSifide,
       primeirosAnos,
       custoConstituicaoAnual,
+      rfaiContratualValor,
     ],
   );
 
-  const empresaVence = resultEmpresa.liquidoGerente > resultAnualRV.liquido;
-  const diferenca = Math.abs(
-    resultEmpresa.liquidoGerente - resultAnualRV.liquido,
-  );
+  // ── Resultado Contabilidade Organizada TI ─────────────────────────────────
+  const resultOrganizada = useMemo(() => {
+    if (!contabOrganizada) return null;
+    return simularContabOrganizada(
+      brutoAnual,
+      despesasReaisTI,
+      irsJovemAno,
+      isencaoSS,
+      tipoAtiv,
+      encargosViatTI,
+      tipoViatTI,
+      despRepTI,
+      ajudasTI,
+      naoDocTI,
+      resultAnualRV.liquido,
+    );
+  }, [
+    contabOrganizada,
+    brutoAnual,
+    despesasReaisTI,
+    irsJovemAno,
+    isencaoSS,
+    tipoAtiv,
+    encargosViatTI,
+    tipoViatTI,
+    despRepTI,
+    ajudasTI,
+    naoDocTI,
+    resultAnualRV.liquido,
+  ]);
 
+  // ── Poupança IMI/IMT (benefícios municipais) ──────────────────────────────
+  const imiAnual = temImovelEmpresa ? vptImovel * taxaIMI : 0;
+  const poupancaIMI = isencaoIMI_RFAI ? imiAnual : 0;
+
+  const imtOnTime =
+    temImovelEmpresa && valorAquisicaoImovel > 0
+      ? valorAquisicaoImovel * IMT_TAXA_COMERCIAL
+      : 0;
+  const isOnTime =
+    temImovelEmpresa && valorAquisicaoImovel > 0
+      ? valorAquisicaoImovel * IS_TAXA_AQUISICAO
+      : 0;
+  const poupancaIMT = isencaoIMT_RFAI
+    ? (imtOnTime + isOnTime) / Math.max(1, anosAmortizacaoIMT) // amortizado
+    : 0;
+
+  // O líquido da empresa é ajustado pela poupança/custo dos impostos municipais
+  // IMI que não foi isento = custo adicional para a empresa (já não está em custosExtra)
+  const imiCustoAnual = temImovelEmpresa && !isencaoIMI_RFAI ? imiAnual : 0;
+  const liquidoEmpresaComMunicipal =
+    resultEmpresa.liquidoGerente -
+    imiCustoAnual + // IMI sem isenção é custo real
+    poupancaIMI + // se isento, poupança vs. pagar IMI
+    poupancaIMT; // IMT e IS amortizados (poupança se isento)
+
+  const liquidoEmpresaFinal = liquidoEmpresaComMunicipal; // inclui IMI/IMT
+  const empresaVence = liquidoEmpresaFinal > resultAnualRV.liquido;
+  const diferenca = Math.abs(liquidoEmpresaFinal - resultAnualRV.liquido);
   // ── Break-even ────────────────────────────────────────────────────────────
   const breakEven = useMemo(
     () =>
@@ -2649,6 +3467,548 @@ export default function SimuladorIntegrado() {
                           ao bruto.
                         </p>
                       </div>
+                      {/* ── Particularidades Individuais ─────────────── */}
+                      <div className="pt-4 border-t border-stone-100 dark:border-stone-800">
+                        <div className="flex items-center gap-1.5 mb-3">
+                          <span className="text-sm font-medium text-stone-500 uppercase tracking-wider">
+                            Particularidades Individuais
+                          </span>
+                          <InfoTip label="Particularidades fiscais individuais">
+                            Estas situações alteram o cálculo do IRS:
+                            deficiência (exclusão 15% + dedução €2 148),
+                            IFICI/NHR 2.0 (taxa flat 20%), dependentes (€600–900
+                            cada) e deduções por despesas de saúde, educação,
+                            rendas e gerais.
+                          </InfoTip>
+                        </div>
+
+                        {/* ── Deficiência ──────────────────────────────────── */}
+                        <div className="space-y-2 mb-4">
+                          <button
+                            type="button"
+                            role="checkbox"
+                            aria-checked={deficiencia}
+                            onClick={() => setDeficiencia((v) => !v)}
+                            className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
+                              deficiencia
+                                ? "border-brand bg-brand-light"
+                                : "border-stone-200 hover:border-stone-300 bg-stone-50"
+                            }`}
+                          >
+                            <div
+                              className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${deficiencia ? "bg-brand border-brand text-white" : "border-stone-300 text-transparent"}`}
+                            >
+                              <Check size={12} />
+                            </div>
+                            <div>
+                              <div
+                                className={`text-sm font-semibold ${deficiencia ? "text-brand-dark" : "text-stone-700"}`}
+                              >
+                                Deficiência ≥ 60% (Art. 56.º-A + 87.º CIRS)
+                              </div>
+                              <div
+                                className={`text-xs ${deficiencia ? "text-brand" : "text-stone-400"}`}
+                              >
+                                15% Cat. B excluídos (máx €2 500) · Dedução
+                                coleta:{" "}
+                                {fmt(Math.round(DEFICIENCIA_DEDUCAO_COLETA))}
+                              </div>
+                            </div>
+                          </button>
+                        </div>
+
+                        {/* ── IFICI / NHR 2.0 ─────────────────────────────── */}
+                        <div className="space-y-2 mb-4">
+                          <button
+                            type="button"
+                            role="checkbox"
+                            aria-checked={ifici}
+                            onClick={() => setIfici((v) => !v)}
+                            className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
+                              ifici
+                                ? "border-brand bg-brand-light"
+                                : "border-stone-200 hover:border-stone-300 bg-stone-50"
+                            }`}
+                          >
+                            <div
+                              className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${ifici ? "bg-brand border-brand text-white" : "border-stone-300 text-transparent"}`}
+                            >
+                              <Check size={12} />
+                            </div>
+                            <div>
+                              <div
+                                className={`text-sm font-semibold ${ifici ? "text-brand-dark" : "text-stone-700"}`}
+                              >
+                                IFICI / NHR 2.0 — taxa flat 20% (Art. 58.º-A
+                                EBF)
+                              </div>
+                              <div
+                                className={`text-xs ${ifici ? "text-brand" : "text-stone-400"}`}
+                              >
+                                10 anos · Só elegíveis · Não residente em
+                                Portugal nos últimos 5 anos
+                              </div>
+                            </div>
+                          </button>
+                          {ifici && (
+                            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200">
+                              <Warning
+                                size={12}
+                                className="flex-shrink-0 mt-0.5 text-amber-600"
+                              />
+                              <p className="text-[10px] text-amber-700 leading-relaxed">
+                                IFICI aplica taxa de 20% sobre rendimentos
+                                líquidos de Cat. B de atividades elegíveis (I&D,
+                                tech, inovação). Incompatível com IRS Jovem (não
+                                cumuláveis). Rendimentos estrangeiros: sujeitos
+                                às regras gerais do CIRS (sem isenção
+                                automática, ao contrário do antigo NHR).
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* ── Dependentes ─────────────────────────────────── */}
+                        <CollapsibleSection
+                          title="Dependentes e Agregado Familiar"
+                          badgeColor="brand"
+                          badge={
+                            numDep3plus * DEPENDENTE_DEDUCAO_3PLUS +
+                              numDep3minus * DEPENDENTE_DEDUCAO_3MINUS +
+                              numDep2_6 * DEPENDENTE_DEDUCAO_2_6 +
+                              numDepDefic * DEPENDENTE_DEDUCAO_DEFIC >
+                            0
+                              ? `−${fmt(Math.round(numDep3plus * DEPENDENTE_DEDUCAO_3PLUS + numDep3minus * DEPENDENTE_DEDUCAO_3MINUS + numDep2_6 * DEPENDENTE_DEDUCAO_2_6 + numDepDefic * DEPENDENTE_DEDUCAO_DEFIC))}`
+                              : "Art. 78.º-A CIRS"
+                          }
+                        >
+                          <div className="space-y-4">
+                            <div className="flex items-start gap-2 p-3 rounded-xl bg-stone-50 border border-stone-200">
+                              <p className="text-[11px] text-stone-500 leading-relaxed">
+                                Deduções fixas à coleta por dependente (Art.
+                                78.º-A CIRS). Dependentes com deficiência:
+                                +2,5×IAS ={" "}
+                                {fmt(Math.round(DEPENDENTE_DEDUCAO_DEFIC))}.
+                              </p>
+                            </div>
+                            {[
+                              {
+                                label: `Dependentes > 3 anos — €${DEPENDENTE_DEDUCAO_3PLUS}/dep.`,
+                                val: numDep3plus,
+                                set: setNumDep3plus,
+                              },
+                              {
+                                label: `Dependentes ≤ 3 anos — €${DEPENDENTE_DEDUCAO_3MINUS}/dep.`,
+                                val: numDep3minus,
+                                set: setNumDep3minus,
+                              },
+                              {
+                                label: `2.º+ dependentes ≤ 6 anos — €${DEPENDENTE_DEDUCAO_2_6}/dep.`,
+                                val: numDep2_6,
+                                set: setNumDep2_6,
+                              },
+                              {
+                                label: `Dependentes com deficiência — €${Math.round(DEPENDENTE_DEDUCAO_DEFIC)}/dep.`,
+                                val: numDepDefic,
+                                set: setNumDepDefic,
+                              },
+                            ].map(({ label, val, set }) => (
+                              <div
+                                key={label}
+                                className="flex items-center justify-between gap-4"
+                              >
+                                <span className="text-xs text-stone-600 flex-1">
+                                  {label}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => set(Math.max(0, val - 1))}
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-600 hover:border-brand hover:text-brand transition-all"
+                                  >
+                                    <span className="text-sm font-semibold leading-none">
+                                      −
+                                    </span>
+                                  </button>
+                                  <span className="w-8 text-center text-sm font-bold text-stone-800">
+                                    {val}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => set(val + 1)}
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-600 hover:border-brand hover:text-brand transition-all"
+                                  >
+                                    <span className="text-sm font-semibold leading-none">
+                                      +
+                                    </span>
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </CollapsibleSection>
+
+                        {/* ── Deduções à coleta ────────────────────────────── */}
+                        <div className="mt-4">
+                          <CollapsibleSection
+                            title="Deduções à Coleta IRS"
+                            badgeColor="brand"
+                            badge={
+                              calcularDeducoesColeta(particularidades).total > 0
+                                ? `−${fmt(Math.round(calcularDeducoesColeta(particularidades).total))}`
+                                : "Saúde · Educ. · Rendas"
+                            }
+                          >
+                            <div className="space-y-3">
+                              <div className="flex items-start gap-2 p-3 rounded-xl bg-stone-50 border border-stone-200">
+                                <p className="text-[11px] text-stone-500 leading-relaxed">
+                                  Deduções à coleta (subtraídas diretamente ao
+                                  IRS, não ao rendimento). Inserir as despesas
+                                  totais — o simulador calcula as deduções com
+                                  os limites legais.
+                                </p>
+                              </div>
+                              {[
+                                {
+                                  label: `Despesas saúde (ded. 15%, máx €${DEDUCAO_SAUDE_MAX})`,
+                                  val: despSaude,
+                                  set: setDespSaude,
+                                  max: 6_670,
+                                  note: "Consultas, medicamentos, seguros saúde",
+                                },
+                                {
+                                  label: `Despesas educação (ded. 30%, máx €${DEDUCAO_EDUCACAO_MAX})`,
+                                  val: despEducacao,
+                                  set: setDespEducacao,
+                                  max: 2_667,
+                                  note: "Propinas, material escolar, rendas de estudante",
+                                },
+                                {
+                                  label: `Rendas habitação (ded. 15%, máx €${DEDUCAO_RENDAS_MAX})`,
+                                  val: despRendas,
+                                  set: setDespRendas,
+                                  max: 3_347,
+                                  note: "Arrendamento habitação permanente",
+                                },
+                                {
+                                  label: `Despesas gerais (ded. 35%, máx €${DEDUCAO_GERAIS_MAX}/pessoa)`,
+                                  val: despGerais,
+                                  set: setDespGerais,
+                                  max: 714,
+                                  note: "Luz, água, telecomunicações, supermercado",
+                                },
+                              ].map(({ label, val, set, max, note }) => (
+                                <NumericSlider
+                                  key={label}
+                                  label={label}
+                                  value={val}
+                                  min={0}
+                                  max={max}
+                                  step={100}
+                                  onChange={set}
+                                  presets={[
+                                    0,
+                                    Math.round(max / 4),
+                                    Math.round(max / 2),
+                                    max,
+                                  ]}
+                                  tooltip={<>{note}</>}
+                                />
+                              ))}
+
+                              {/* Resumo deduções */}
+                              {calcularDeducoesColeta(particularidades).total >
+                                0 && (
+                                <div className="space-y-1">
+                                  {(
+                                    [
+                                      {
+                                        label: "Dependentes",
+                                        val: calcularDeducoesColeta(
+                                          particularidades,
+                                        ).dependentes,
+                                      },
+                                      {
+                                        label: "Deficiência (contribuinte)",
+                                        val: calcularDeducoesColeta(
+                                          particularidades,
+                                        ).deficienciaContrib,
+                                      },
+                                      {
+                                        label: "Saúde",
+                                        val: calcularDeducoesColeta(
+                                          particularidades,
+                                        ).saude,
+                                      },
+                                      {
+                                        label: "Educação",
+                                        val: calcularDeducoesColeta(
+                                          particularidades,
+                                        ).educacao,
+                                      },
+                                      {
+                                        label: "Rendas",
+                                        val: calcularDeducoesColeta(
+                                          particularidades,
+                                        ).rendas,
+                                      },
+                                      {
+                                        label: "Gerais",
+                                        val: calcularDeducoesColeta(
+                                          particularidades,
+                                        ).gerais,
+                                      },
+                                    ] as const
+                                  )
+                                    .filter((r) => r.val > 0)
+                                    .map((r) => (
+                                      <div
+                                        key={r.label}
+                                        className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-emerald-50"
+                                      >
+                                        <span className="text-xs text-emerald-700">
+                                          {r.label}
+                                        </span>
+                                        <span className="text-xs font-bold text-emerald-800">
+                                          −{fmt(Math.round(r.val))}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-emerald-100 border border-emerald-300">
+                                    <span className="text-xs font-bold text-emerald-800">
+                                      Total deduções à coleta
+                                    </span>
+                                    <span className="text-xs font-bold text-emerald-900">
+                                      −
+                                      {fmt(
+                                        Math.round(
+                                          calcularDeducoesColeta(
+                                            particularidades,
+                                          ).total,
+                                        ),
+                                      )}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </CollapsibleSection>
+                        </div>
+                      </div>
+                      {/* ── Contabilidade Organizada TI ─────────────── */}
+                      <div className="pt-4 border-t border-stone-100 dark:border-stone-800">
+                        <div className="flex items-center gap-1.5 mb-3">
+                          <span className="text-sm font-medium text-stone-500 uppercase tracking-wider">
+                            Contabilidade Organizada (Art. 28.º CIRS)
+                          </span>
+                          <InfoTip label="Contab. Organizada vs. Simplificado">
+                            No regime organizado, todas as despesas reais
+                            documentadas são dedutíveis (em vez dos
+                            coeficientes). Exige OCC (~€200/mês = €2 400/ano).
+                            Sujeita a tributação autónoma (Art. 73.º → Art. 88.º
+                            CIRC). Compensa quando despesas reais &gt;{" "}
+                            {pct(1 - TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef)} da
+                            faturação (coef.{" "}
+                            {pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef)}).
+                          </InfoTip>
+                        </div>
+
+                        <button
+                          type="button"
+                          role="checkbox"
+                          aria-checked={contabOrganizada}
+                          onClick={() => setContabOrganizada((v) => !v)}
+                          className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
+                            contabOrganizada
+                              ? "border-brand bg-brand-light"
+                              : "border-stone-200 hover:border-stone-300 bg-stone-50"
+                          }`}
+                        >
+                          <div
+                            className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${contabOrganizada ? "bg-brand border-brand text-white" : "border-stone-300 text-transparent"}`}
+                          >
+                            <Check size={12} />
+                          </div>
+                          <div>
+                            <div
+                              className={`text-sm font-semibold ${contabOrganizada ? "text-brand-dark" : "text-stone-700"}`}
+                            >
+                              Simular contabilidade organizada
+                            </div>
+                            <div
+                              className={`text-xs ${contabOrganizada ? "text-brand" : "text-stone-400"}`}
+                            >
+                              Custo OCC: {fmt(CONTAB_ORG_CUSTO_MENSAL)}/mês ·{" "}
+                              {fmt(CONTAB_ORG_CUSTO_MENSAL * 12)}/ano
+                            </div>
+                          </div>
+                        </button>
+
+                        {contabOrganizada && (
+                          <m.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="mt-3 space-y-4">
+                              {resultOrganizada && (
+                                <div
+                                  className={`flex items-center justify-between p-3 rounded-xl border ${
+                                    resultOrganizada.vantagemVsSimplificado >= 0
+                                      ? "bg-emerald-50 border-emerald-200"
+                                      : "bg-amber-50 border-amber-200"
+                                  }`}
+                                >
+                                  <span
+                                    className={`text-xs font-semibold ${resultOrganizada.vantagemVsSimplificado >= 0 ? "text-emerald-700" : "text-amber-700"}`}
+                                  >
+                                    {resultOrganizada.vantagemVsSimplificado >=
+                                    0
+                                      ? `✓ Organizada poupa ${fmt(Math.round(resultOrganizada.vantagemVsSimplificado))}/ano`
+                                      : `✗ Simplificado é melhor por ${fmt(Math.round(Math.abs(resultOrganizada.vantagemVsSimplificado)))}/ano`}
+                                  </span>
+                                  <span
+                                    className={`text-xs ${resultOrganizada.vantagemVsSimplificado >= 0 ? "text-emerald-600" : "text-amber-600"}`}
+                                  >
+                                    Breakeven:{" "}
+                                    {fmt(
+                                      Math.round(
+                                        resultOrganizada.breakEvenDespesas,
+                                      ),
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+
+                              <NumericSlider
+                                label="Despesas profissionais reais (€/ano)"
+                                value={despesasReaisTI}
+                                min={0}
+                                max={Math.min(brutoAnual, 100_000)}
+                                step={500}
+                                onChange={setDespesasReaisTI}
+                                presets={[0, 2000, 5000, 10000, 20000]}
+                                tooltip={
+                                  <>
+                                    Todas as despesas diretamente relacionadas
+                                    com a atividade, comprovadas com faturas:
+                                    rendas de escritório, hardware, software,
+                                    formação, viagens, seguros. O OCC verifica e
+                                    contabiliza tudo.
+                                  </>
+                                }
+                              />
+
+                              <p className="text-xs text-stone-400">
+                                Ponto de equilíbrio (sem despesas de viatura,
+                                representação, etc.): despesas &gt;{" "}
+                                <strong>
+                                  {fmt(
+                                    Math.round(
+                                      brutoAnual *
+                                        (1 -
+                                          TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef),
+                                    ),
+                                  )}
+                                </strong>{" "}
+                                ({pct(1 - TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef)}{" "}
+                                de {fmt(brutoAnual)}) para compensar o
+                                simplificado. Com o custo do OCC (~
+                                {fmt(CONTAB_ORG_CUSTO_MENSAL * 12)}/ano), o
+                                limiar real é{" "}
+                                <strong>
+                                  {fmt(
+                                    Math.round(
+                                      brutoAnual *
+                                        (1 -
+                                          TIPO_ATIVIDADE_PARAMS[tipoAtiv]
+                                            .coef) +
+                                        CONTAB_ORG_CUSTO_MENSAL * 12,
+                                    ),
+                                  )}
+                                </strong>
+                                .
+                              </p>
+
+                              {/* TA para TI organizado */}
+                              <CollapsibleSection
+                                title="Tributação Autónoma (TI organizado)"
+                                badgeColor="amber"
+                              >
+                                <p className="text-[11px] text-stone-500 leading-relaxed">
+                                  Com contabilidade organizada, o TI fica
+                                  sujeito ao Art. 88.º CIRC (via Art. 73.º
+                                  CIRS). Preenche apenas se tiveres estas
+                                  despesas.
+                                </p>
+                                <div className="space-y-3 mt-3">
+                                  <div>
+                                    <label className="text-xs font-medium text-stone-500 uppercase tracking-wider block mb-1.5">
+                                      Tipo de viatura
+                                    </label>
+                                    <select
+                                      value={tipoViatTI}
+                                      onChange={(e) =>
+                                        setTipoViatTI(
+                                          e.target.value as TipoViatura,
+                                        )
+                                      }
+                                      className="w-full px-3 py-2 text-xs font-semibold text-stone-700 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand dark:bg-stone-800 dark:text-stone-200 dark:border-stone-700"
+                                    >
+                                      {(
+                                        Object.keys(
+                                          TA_VIATURAS,
+                                        ) as TipoViatura[]
+                                      ).map((tv) => (
+                                        <option key={tv} value={tv}>
+                                          {TIPO_VIATURA_META[tv]}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <NumericSlider
+                                    label="Encargos viatura (€/ano)"
+                                    value={encargosViatTI}
+                                    min={0}
+                                    max={20_000}
+                                    step={200}
+                                    onChange={setEncargosViatTI}
+                                    presets={[0, 1500, 3000, 6000]}
+                                  />
+                                  <NumericSlider
+                                    label="Representação (€/ano)"
+                                    value={despRepTI}
+                                    min={0}
+                                    max={5_000}
+                                    step={100}
+                                    onChange={setDespRepTI}
+                                    presets={[0, 500, 1000, 2000]}
+                                  />
+                                  <NumericSlider
+                                    label="Ajudas de custo (€/ano)"
+                                    value={ajudasTI}
+                                    min={0}
+                                    max={3_000}
+                                    step={50}
+                                    onChange={setAjudasTI}
+                                    presets={[0, 300, 600, 1200]}
+                                  />
+                                  <NumericSlider
+                                    label="Não documentadas (€/ano)"
+                                    value={naoDocTI}
+                                    min={0}
+                                    max={2_000}
+                                    step={50}
+                                    onChange={setNaoDocTI}
+                                    presets={[0]}
+                                  />
+                                </div>
+                              </CollapsibleSection>
+                            </div>
+                          </m.div>
+                        )}
+                      </div>
                     </div>
                   </m.div>
                 )}
@@ -2699,9 +4059,29 @@ export default function SimuladorIntegrado() {
                 onSifideDespesasChange={setSifideDespesas}
                 onTipoSifideChange={setTipoSifide}
                 onPrimeirosAnosChange={setPrimeirosAnos}
+                rfaiContratualValor={rfaiContratualValor}
+                onRfaiContratualChange={setRfaiContratualValor}
                 onIncluirConstituicaoChange={setIncluirConstituicao}
                 onCustoConstituicaoChange={setCustoConstituicao}
                 onAnosAmortizacaoChange={setAnosAmortizacao}
+                temImovelEmpresa={temImovelEmpresa}
+                vptImovel={vptImovel}
+                taxaIMI={taxaIMI}
+                isencaoIMI_RFAI={isencaoIMI_RFAI}
+                valorAquisicaoImovel={valorAquisicaoImovel}
+                isencaoIMT_RFAI={isencaoIMT_RFAI}
+                anosAmortizacaoIMT={anosAmortizacaoIMT}
+                poupancaIMI={poupancaIMI}
+                poupancaIMT={poupancaIMT}
+                imiAnual={imiAnual}
+                imtOnTime={imtOnTime}
+                onTemImovelChange={setTemImovelEmpresa}
+                onVptChange={setVptImovel}
+                onTaxaIMIChange={setTaxaIMI}
+                onIsencaoIMIChange={setIsencaoIMI_RFAI}
+                onValorAquisicaoChange={setValorAquisicaoImovel}
+                onIsencaoIMTChange={setIsencaoIMT_RFAI}
+                onAnosAmortizacaoIMTChange={setAnosAmortizacaoIMT}
               />
             )}
           </div>
@@ -3005,6 +4385,18 @@ export default function SimuladorIntegrado() {
                                 </span>
                               </div>
                             )}
+                          {ifici && irsJovemAno > 0 && (
+                            <div className="flex items-start gap-2 p-3 rounded-xl bg-alert-bg border border-alert-border">
+                              <Warning
+                                size={14}
+                                className="flex-shrink-0 mt-0.5 text-alert-text"
+                              />
+                              <span className="text-xs text-alert-text">
+                                IFICI e IRS Jovem são incompatíveis — não podem
+                                ser cumulados. Usa apenas um.
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </>
@@ -3032,6 +4424,44 @@ export default function SimuladorIntegrado() {
                           note="SS dedutível ao rendimento coletável"
                         />
                       )}
+                      {/* Particularidades individuais no breakdown */}
+                      {resultAnualRV.rendColetavelAjustado <
+                        resultAnualRV.rendColetavel && (
+                        <DetalheRow
+                          label="Exclusão deficiência Cat. B (Art. 56.º-A CIRS)"
+                          value={
+                            -(
+                              resultAnualRV.rendColetavel -
+                              resultAnualRV.rendColetavelAjustado
+                            )
+                          }
+                          type="deducao"
+                          note="15% excluídos, máx €2 500 por categoria"
+                        />
+                      )}
+                      {resultAnualRV.ificiAtivo ? (
+                        <DetalheRow
+                          label={`IRS IFICI — taxa flat ${pct(IFICI_TAXA_FLAT)} (Art. 58.º-A EBF)`}
+                          value={-resultAnualRV.irsBruto}
+                          type="warning"
+                          note="Taxa autónoma 20% durante 10 anos · profissões elegíveis"
+                        />
+                      ) : (
+                        <DetalheRow
+                          label="IRS liquidado (escalões progressivos)"
+                          value={-resultAnualRV.irsBruto}
+                          type="warning"
+                          note={`Taxa efetiva ${pct(resultAnualRV.taxaEfetiva)}`}
+                        />
+                      )}
+                      {resultAnualRV.deducoesColeta.total > 0 && (
+                        <DetalheRow
+                          label="Deduções à coleta (dependentes, saúde, educação...)"
+                          value={resultAnualRV.deducoesColeta.total}
+                          type="beneficio"
+                          note="Subtraídas diretamente ao IRS calculado"
+                        />
+                      )}
                       {resultAnualRV.isencaoJovemValor > 0 && (
                         <DetalheRow
                           label={`IRS Jovem — isenção ${pct(resultAnualRV.isencaoJovemPct)} (Art. 12.º-B)`}
@@ -3049,12 +4479,6 @@ export default function SimuladorIntegrado() {
                             ? "Abaixo do mínimo de existência — IRS = 0€"
                             : ""
                         }
-                      />
-                      <DetalheRow
-                        label="IRS liquidado (escalões progressivos)"
-                        value={-resultAnualRV.irs}
-                        type="warning"
-                        note={`Taxa efetiva ${pct(resultAnualRV.taxaEfetiva)}`}
                       />
                       {resultAnualRV.ssAnual > 0 && (
                         <DetalheRow
@@ -3086,6 +4510,109 @@ export default function SimuladorIntegrado() {
                           </div>
                         </div>
                       </div>
+
+                      {/* ── Comparação com Contabilidade Organizada ── */}
+                      {contabOrganizada && resultOrganizada && (
+                        <div
+                          className={`mt-4 rounded-2xl border ${
+                            resultOrganizada.vantagemVsSimplificado >= 0
+                              ? "border-emerald-300 bg-emerald-50"
+                              : "border-dashed border-stone-300 bg-stone-50"
+                          } p-4 space-y-2 dark:border-stone-700 dark:bg-stone-900`}
+                        >
+                          <div className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">
+                            Alternativa: Contabilidade Organizada (Art. 28.º
+                            CIRS)
+                          </div>
+                          <div className="space-y-1">
+                            <DetalheRow
+                              label="Faturação"
+                              value={resultOrganizada.faturacao}
+                              type="neutral"
+                            />
+                            <DetalheRow
+                              label="Despesas reais documentadas"
+                              value={-resultOrganizada.despesasReais}
+                              type="deducao"
+                            />
+                            <DetalheRow
+                              label={`Custo contabilista OCC (${fmt(CONTAB_ORG_CUSTO_MENSAL)}/mês)`}
+                              value={-resultOrganizada.custoContabilista}
+                              type="deducao"
+                            />
+                            <DetalheRow
+                              label="Rendimento líquido de despesas"
+                              value={resultOrganizada.rendimentoLiquido}
+                              type="subtotal"
+                            />
+                            {resultOrganizada.ssAnual > 0 && (
+                              <DetalheRow
+                                label="Segurança Social (21,4% × 70%)"
+                                value={-resultOrganizada.ssAnual}
+                                type="deducao"
+                              />
+                            )}
+                            {resultOrganizada.isencaoJovemValor > 0 && (
+                              <DetalheRow
+                                label="IRS Jovem — isenção"
+                                value={-resultOrganizada.isencaoJovemValor}
+                                type="deducao"
+                              />
+                            )}
+                            <DetalheRow
+                              label="IRS (escalões progressivos)"
+                              value={-resultOrganizada.irs}
+                              type="warning"
+                              note={`Taxa efetiva ${pct(resultOrganizada.taxaEfetiva)}`}
+                            />
+                            {resultOrganizada.ta.total > 0 && (
+                              <DetalheRow
+                                label="Tributação Autónoma (Art. 88.º CIRC)"
+                                value={-resultOrganizada.ta.total}
+                                type="warning"
+                                note="Viaturas, representação, ajudas de custo"
+                              />
+                            )}
+                          </div>
+                          <div
+                            className={`flex items-center justify-between p-3 rounded-xl border-2 mt-2 ${
+                              resultOrganizada.vantagemVsSimplificado >= 0
+                                ? "border-emerald-400 bg-white"
+                                : "border-stone-200 bg-white"
+                            }`}
+                          >
+                            <div>
+                              <div
+                                className={`text-sm font-semibold ${resultOrganizada.vantagemVsSimplificado >= 0 ? "text-emerald-800" : "text-stone-700"}`}
+                              >
+                                Líquido — organizada
+                              </div>
+                              <div
+                                className={`text-xs mt-0.5 ${resultOrganizada.vantagemVsSimplificado >= 0 ? "text-emerald-600" : "text-stone-400"}`}
+                              >
+                                {resultOrganizada.vantagemVsSimplificado >= 0
+                                  ? `✓ Mais ${fmt(Math.round(resultOrganizada.vantagemVsSimplificado))}/ano que simplificado`
+                                  : `✗ Menos ${fmt(Math.round(Math.abs(resultOrganizada.vantagemVsSimplificado)))}/ano que simplificado`}
+                              </div>
+                            </div>
+                            <div
+                              className={`font-display text-xl font-semibold ${resultOrganizada.vantagemVsSimplificado >= 0 ? "text-emerald-800" : "text-stone-700"}`}
+                            >
+                              <AnimatedNumber
+                                value={resultOrganizada.liquido}
+                              />
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-stone-400 leading-relaxed mt-2">
+                            Ponto de equilíbrio (breakeven): despesas reais &gt;{" "}
+                            {fmt(
+                              Math.round(resultOrganizada.breakEvenDespesas),
+                            )}{" "}
+                            sem TA. Com TA, o limiar sobe conforme encargos com
+                            viatura e representação.
+                          </p>
+                        </div>
+                      )}
 
                       {resultAnualRV.acertoIRS > 0 && (
                         <div className="mt-3 flex items-start gap-2.5 p-3 rounded-xl border bg-brand-light border-brand/30">
@@ -3160,7 +4687,7 @@ export default function SimuladorIntegrado() {
                       Líquido estimado — empresa (Lda)
                     </div>
                     <div className="font-display text-5xl font-semibold leading-none mb-1 text-brand">
-                      <AnimatedNumber value={resultEmpresa.liquidoGerente} />
+                      <AnimatedNumber value={liquidoEmpresaFinal} />
                     </div>
                     <div className="text-sm text-stone-400 mt-1">
                       de <AnimatedNumber value={brutoAnual} /> faturados/ano
@@ -3179,7 +4706,7 @@ export default function SimuladorIntegrado() {
                           <>
                             <div
                               style={{
-                                width: `${(resultEmpresa.liquidoGerente / total) * 100}%`,
+                                width: `${(liquidoEmpresaFinal / total) * 100}%`,
                                 background: "#1D9E75",
                               }}
                               className="transition-all duration-500 rounded-l-full"
@@ -3355,6 +4882,14 @@ export default function SimuladorIntegrado() {
                         note="Certificação ANI. Reportável 12 anos."
                       />
                     )}
+                    {resultEmpresa.beneficios.rfaiContratual > 0 && (
+                      <DetalheRow
+                        label="RFAI Contratual (Art. 8.º–22.º CFI)"
+                        value={resultEmpresa.beneficios.rfaiContratual}
+                        type="beneficio"
+                        note="Crédito fiscal contratual — negociado com IAPMEI/AICEP"
+                      />
+                    )}
                     {resultEmpresa.beneficios.total > 0 && (
                       <DetalheRow
                         label="IRC após benefícios fiscais"
@@ -3479,15 +5014,11 @@ export default function SimuladorIntegrado() {
                         </div>
                         <div className="text-right">
                           <div className="font-display text-2xl font-semibold text-brand">
-                            <AnimatedNumber
-                              value={resultEmpresa.liquidoGerente}
-                            />
+                            <AnimatedNumber value={liquidoEmpresaFinal} />
                           </div>
                           <div className="text-xs text-stone-400">
-                            {pct(
-                              resultEmpresa.liquidoGerente / (brutoAnual || 1),
-                            )}{" "}
-                            do bruto
+                            {pct(liquidoEmpresaFinal / (brutoAnual || 1))} do
+                            bruto
                           </div>
                         </div>
                       </div>
@@ -3574,7 +5105,7 @@ export default function SimuladorIntegrado() {
               <div
                 className={`mt-2 font-display text-2xl font-semibold tabular-nums ${empresaVence ? "text-brand-dark" : "text-stone-800 dark:text-stone-200"}`}
               >
-                <AnimatedNumber value={resultEmpresa.liquidoGerente} />
+                <AnimatedNumber value={liquidoEmpresaFinal} />
               </div>
               <div className="text-[11px] text-stone-400">líquido/ano</div>
               <div className="mt-2 text-[11px] text-stone-400 space-y-0.5">
