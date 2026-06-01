@@ -5486,15 +5486,23 @@ export default function SimuladorIntegrado() {
               <Warning size={14} />
             </span>
             <p className="text-xs leading-relaxed text-alert-text">
-              <strong>Fontes:</strong> Art. 31.º, 68.º, 101.º, 101.º-B e 12.º-B
-              CIRS | CIVA Art. 53.º e 9.º | CRC (SS independentes) | OE2026 (Lei
-              n.º 73-A/2025) | IAS 2026: 537,13€. Estimativa de ordem de
-              grandeza. Inclui Tributação Autónoma (Art. 88.º CIRC),
-              Englobamento (Art. 40.º-A CIRS), RFAI/DLRR/SIFIDE II e custos de
-              constituição. Não considera regime de contabilidade organizada
-              para TI, RFAI contratual, benefícios municipais (IMI/IMT) nem
-              particularidades individuais. Decisão de constituir sociedade deve
-              ser validada com contabilista certificado (OCC).
+              <strong>Fontes:</strong> Art. 31.º, 56.º-A, 68.º, 87.º, 101.º,
+              101.º-B, 12.º-B CIRS | Art. 58.º-A EBF (IFICI) | CIVA Art. 53.º
+              e 9.º | Art. 88.º CIRC (TA) | CFI Art. 22.º–42.º
+              (RFAI/DLRR/SIFIDE II) | CRC (SS independentes) | OE2026 (Lei n.º
+              73-A/2025) | IAS 2026: 537,13€. Estimativa de ordem de grandeza.{" "}
+              <strong>Inclui:</strong> Tributação Autónoma viaturas e encargos
+              (Art. 88.º CIRC), RFAI/DLRR/SIFIDE II, RFAI contratual, custos
+              de constituição, benefícios municipais (IMI/IMT via RFAI),
+              contabilidade organizada TI (Art. 28.º/73.º CIRS), particularidades
+              individuais (deficiência Art. 56.º-A + 87.º; IFICI Art. 58.º-A
+              EBF; dependentes; deduções à coleta), englobamento de dividendos
+              (Art. 40.º-A CIRS).{" "}
+              <strong>Não modela:</strong> mais-valias e rendimentos de capitais,
+              derrama estadual (&gt;€1,5M lucro), elegibilidade real de
+              investimentos para RFAI, regimes de grupos de sociedades, nem
+              dupla tributação internacional. Decisão de constituir sociedade
+              deve ser validada com contabilista certificado (OCC).
             </p>
           </div>
         </div>
