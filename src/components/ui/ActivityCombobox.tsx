@@ -21,6 +21,7 @@ export default function ActivityCombobox({
   const listId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const interagindoDropdown = useRef(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -120,7 +121,16 @@ export default function ActivityCombobox({
           left: pos.left,
           width: pos.width,
           zIndex: 9999,
+          touchAction: "pan-y",
         }}
+        onMouseDown={(e) => {
+          // Impede blur do input em desktop ao clicar na lista
+          e.preventDefault();
+          interagindoDropdown.current = true;
+        }}
+        onMouseUp={() => { interagindoDropdown.current = false; }}
+        onTouchStart={() => { interagindoDropdown.current = true; }}
+        onTouchEnd={() => { setTimeout(() => { interagindoDropdown.current = false; }, 0); }}
         className="max-h-64 overflow-auto rounded-xl border border-stone-200 bg-white py-1 shadow-float dark:border-stone-700 dark:bg-stone-950"
       >
         {filtradas.length === 0 && (
@@ -131,14 +141,7 @@ export default function ActivityCombobox({
             key={a.label}
             role="option"
             aria-selected={value?.label === a.label}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              escolher(a);
-            }}
-            onTouchEnd={(e) => {
-              e.preventDefault();
-              escolher(a);
-            }}
+            onClick={() => escolher(a)}
             onMouseEnter={() => setActive(i)}
             className={`flex cursor-pointer items-start gap-3 px-3.5 py-2.5 text-sm transition-colors ${
               i === active
@@ -185,7 +188,10 @@ export default function ActivityCombobox({
             calcPos();
             setOpen(true);
           }}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onBlur={() => {
+            if (interagindoDropdown.current) return;
+            setTimeout(() => setOpen(false), 150);
+          }}
           onKeyDown={onKeyDown}
           className="w-full bg-transparent py-3 text-base text-stone-800 placeholder-stone-400 focus:outline-none dark:text-stone-200"
         />

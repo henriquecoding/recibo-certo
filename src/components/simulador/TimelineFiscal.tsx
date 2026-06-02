@@ -126,68 +126,108 @@ export default function TimelineFiscal({
         </div>
       </div>
 
-      <div className="-mx-1 overflow-x-auto pb-1">
-        <div className="flex min-w-[680px] gap-1.5 px-1">
+      <div className="-mx-1 overflow-x-auto pb-2">
+        <div className="flex gap-2 px-1">
           {meses.map((m, idx) => {
             const ehAtual = idx === mesAtual;
             const ehJunhoComIRS = idx === MES_IRS && irsAPagar > 0;
             const ehPrimeiroIsento = idx === 0 && isencaoSS;
+            const isPassado = idx < mesAtual;
+            const temEventos = m.eventos.length > 0;
             return (
               <div
                 key={m.nome}
                 aria-current={ehAtual ? "date" : undefined}
-                className={`relative flex-1 rounded-xl border p-2 text-center transition-colors ${
+                className={`relative min-w-[84px] flex-1 rounded-xl border px-2.5 py-2.5 transition-colors ${
                   ehAtual
                     ? "border-brand bg-brand-light shadow-card ring-1 ring-brand/40 dark:bg-brand/10"
-                    : ehJunhoComIRS
-                      ? "border-red-300 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20"
+                    : ehJunhoComIRS && !isPassado
+                      ? "border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20"
                       : m.intensidade >= 2
                         ? "border-stone-200 bg-stone-100 dark:border-stone-700 dark:bg-stone-800"
-                        : "border-stone-100 bg-stone-50 dark:border-stone-800 dark:bg-stone-900"
+                        : isPassado
+                          ? "border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-950"
+                          : "border-stone-100 bg-stone-50 dark:border-stone-800 dark:bg-stone-900"
                 }`}
               >
-                <div
-                  className={`flex items-center justify-center gap-1 text-[11px] font-semibold ${
-                    ehAtual
-                      ? "text-brand-dark"
-                      : "text-stone-600 dark:text-stone-300"
-                  }`}
-                >
-                  {m.nome}
+                {/* Cabeçalho: nome do mês + badge "agora" */}
+                <div className="flex items-start justify-between gap-1 mb-1">
+                  <span
+                    className={`text-[11px] font-bold uppercase tracking-wide leading-tight ${
+                      ehAtual
+                        ? "text-brand-dark"
+                        : isPassado
+                          ? "text-stone-400 dark:text-stone-600"
+                          : "text-stone-600 dark:text-stone-300"
+                    }`}
+                  >
+                    {m.nome}
+                  </span>
                   {ehAtual && (
-                    <span className="rounded-full bg-brand px-1.5 py-px text-[8px] font-bold uppercase tracking-wide text-white">
+                    <span className="flex-shrink-0 rounded-full bg-brand px-1 py-px text-[7px] font-bold uppercase tracking-wide text-white leading-tight">
                       agora
                     </span>
                   )}
                 </div>
-                <div className="mt-1.5 space-y-1">
+
+                {/* Data-limite */}
+                {temEventos && (
+                  <div
+                    className={`text-[9px] font-semibold mb-2 tabular-nums ${
+                      ehAtual
+                        ? "text-brand/60"
+                        : isPassado
+                          ? "text-stone-300 dark:text-stone-700"
+                          : "text-stone-400 dark:text-stone-500"
+                    }`}
+                  >
+                    até dia 20
+                  </div>
+                )}
+
+                {/* Eventos */}
+                <div className="space-y-1.5">
                   {ehPrimeiroIsento && (
                     <span className="inline-block rounded-full bg-brand-light px-1.5 py-px text-[8px] font-bold uppercase tracking-wide text-brand-dark">
                       SS isento
                     </span>
                   )}
-                  {m.eventos.length === 0 && !ehPrimeiroIsento ? (
-                    <div className="text-[11px] text-stone-300 dark:text-stone-600">
+                  {!temEventos && !ehPrimeiroIsento && (
+                    <div
+                      className={`text-[11px] ${
+                        isPassado
+                          ? "text-stone-200 dark:text-stone-800"
+                          : "text-stone-300 dark:text-stone-600"
+                      }`}
+                    >
                       —
                     </div>
-                  ) : (
-                    m.eventos.map((ev, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-center gap-1"
-                      >
-                        <span
-                          className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${dotCor[ev.tipo]}`}
-                          aria-hidden
-                        />
-                        <span className="text-[11px] font-semibold tabular-nums text-stone-600 dark:text-stone-300">
-                          {ev.texto}
-                        </span>
-                      </div>
-                    ))
                   )}
+                  {m.eventos.map((ev, i) => (
+                    <div key={i} className="flex items-center gap-1">
+                      <span
+                        className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${dotCor[ev.tipo]} ${isPassado ? "opacity-50" : ""}`}
+                        aria-hidden
+                      />
+                      <span
+                        className={`text-[11px] font-semibold tabular-nums leading-tight ${
+                          isPassado
+                            ? "text-stone-400 dark:text-stone-600"
+                            : "text-stone-700 dark:text-stone-200"
+                        }`}
+                      >
+                        {ev.texto}
+                      </span>
+                    </div>
+                  ))}
                   {ehJunhoComIRS && (
-                    <span className="inline-block rounded-full bg-red-100 px-1.5 py-px text-[8px] font-bold uppercase tracking-wide text-red-700 dark:bg-red-950/40 dark:text-red-300">
+                    <span
+                      className={`inline-block rounded-full px-1.5 py-px text-[8px] font-bold uppercase tracking-wide ${
+                        isPassado
+                          ? "bg-stone-100 text-stone-400 dark:bg-stone-800 dark:text-stone-600"
+                          : "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                      }`}
+                    >
                       Acerto IRS
                     </span>
                   )}
