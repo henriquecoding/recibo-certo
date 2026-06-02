@@ -149,7 +149,7 @@ export default function ActivityCombobox({
 
   const [active, setActive] = useState(0);
   const [mounted, setMounted] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 300 });
+  const [pos, setPos] = useState({ top: 0, bottomOffset: 0, left: 0, width: 300, above: false });
   const [historico, setHistorico] = useState<Atividade[]>([]);
 
   const listId = useId();
@@ -173,7 +173,13 @@ export default function ActivityCombobox({
     const spaceBelow = vh - r.bottom - 4;
     const above = spaceBelow < MAX_H && r.top > MAX_H;
     const left = Math.max(0, Math.min(r.left, vw - r.width));
-    setPos({ top: above ? r.top - MAX_H - 4 : r.bottom + 4, left, width: r.width });
+    setPos({
+      top: r.bottom + 4,
+      bottomOffset: window.innerHeight - r.top + 4,
+      left,
+      width: r.width,
+      above,
+    });
   }, []);
 
   const calcPos = useCallback(() => {
@@ -264,7 +270,9 @@ export default function ActivityCombobox({
         role="listbox"
         style={{
           position: "fixed",
-          top: pos.top,
+          ...(pos.above
+            ? { bottom: pos.bottomOffset, top: "auto" }
+            : { top: pos.top, bottom: "auto" }),
           left: pos.left,
           width: pos.width,
           maxHeight: MAX_H,
