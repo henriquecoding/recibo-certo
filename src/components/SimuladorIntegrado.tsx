@@ -1005,6 +1005,125 @@ const ESCALAO_LABEL: Record<EscalaoIVA, string> = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// COMPONENTE: IvaZonas — explica a situação de IVA em 3 zonas claras
+// ─────────────────────────────────────────────────────────────────────────────
+// Os limiares €15.000 (isenção Art. 53.º) e €18.750 (transição imediata)
+// mantêm-se inalterados em 2026. O D.L. 35/2025 não criou um limiar novo de
+// €18.000 — apenas alterou outras regras (contabilidade organizada pode usar
+// isenção, transações transfronteiriças). Tornamos a zona de transição
+// (€15.000–€18.750), que já existia, muito mais explícita.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function IvaZonas({ faturacaoAnual }: { faturacaoAnual: number }) {
+  const limiteIsencao = IVA_ISENCAO_LIMITE;
+  const limiteImediato = IVA_ISENCAO_LIMITE_IMEDIATO;
+
+  // Zona 1 — isento
+  if (faturacaoAnual <= limiteIsencao) {
+    return (
+      <div className="rounded-xl border border-brand/30 bg-brand-light/60 p-4">
+        <div className="flex items-start gap-2.5">
+          <span className="mt-0.5 flex-shrink-0 text-brand-dark">
+            <Check size={14} />
+          </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-brand-dark">
+                Estás isento de IVA
+              </span>
+              <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold text-white">
+                Isento
+              </span>
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-brand-dark/80">
+              <strong>O que acontece:</strong> com {fmt(faturacaoAnual)}/ano
+              estás abaixo de {fmt(limiteIsencao)} — beneficias da isenção do
+              Art. 53.º do CIVA. Não cobras IVA ao cliente nem o entregas ao
+              Estado (também não podes deduzir o IVA das tuas compras).
+            </p>
+            <p className="mt-1.5 text-xs leading-relaxed text-brand-dark/80">
+              <strong>O que tens de fazer:</strong> nada de especial — apenas
+              não passar de {fmt(limiteIsencao)} de faturação anual.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Zona 2 — transição no ano seguinte (âmbar)
+  if (faturacaoAnual <= limiteImediato) {
+    return (
+      <div className="rounded-xl border border-alert-border bg-alert-bg p-4">
+        <div className="flex items-start gap-2.5">
+          <span className="mt-0.5 flex-shrink-0 text-alert-text">
+            <Warning size={14} />
+          </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-alert-text">
+                Vais perder a isenção em janeiro
+              </span>
+              <span className="rounded-full border border-alert-border bg-white/40 px-2 py-0.5 text-[10px] font-bold text-alert-text">
+                Zona de transição
+              </span>
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-alert-text">
+              <strong>O que acontece:</strong> faturaste entre{" "}
+              {fmt(limiteIsencao)} e {fmt(limiteImediato)} este ano. Vais perder
+              a isenção de IVA — mas só no futuro, não já.
+            </p>
+            <p className="mt-1.5 text-xs leading-relaxed text-alert-text">
+              <strong>Quando acontece:</strong> a{" "}
+              <strong>1 de janeiro do próximo ano</strong>. Continuas isento até
+              lá.
+            </p>
+            <p className="mt-1.5 text-xs leading-relaxed text-alert-text">
+              <strong>O que tens de fazer:</strong> prepara-te para cobrar IVA a
+              partir de janeiro. Fala com o teu contabilista para fazeres a
+              alteração de regime atempadamente.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Zona 3 — transição imediata (vermelho)
+  return (
+    <div className="rounded-xl border border-red-300 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/20">
+      <div className="flex items-start gap-2.5">
+        <span className="mt-0.5 flex-shrink-0 text-red-600 dark:text-red-400">
+          <Warning size={14} />
+        </span>
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-red-700 dark:text-red-300">
+              Perdes a isenção imediatamente
+            </span>
+            <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white">
+              Ação urgente
+            </span>
+          </div>
+          <p className="mt-1 text-xs leading-relaxed text-red-700 dark:text-red-300">
+            <strong>O que acontece:</strong> ultrapassaste {fmt(limiteImediato)}{" "}
+            este ano. Perdes a isenção do Art. 53.º de forma imediata.
+          </p>
+          <p className="mt-1.5 text-xs leading-relaxed text-red-700 dark:text-red-300">
+            <strong>Quando acontece:</strong> <strong>já</strong> — a fatura que
+            ultrapassou {fmt(limiteImediato)} já devia incluir IVA.
+          </p>
+          <p className="mt-1.5 text-xs leading-relaxed text-red-700 dark:text-red-300">
+            <strong>O que tens de fazer:</strong> contacta o teu contabilista
+            com urgência para regularizares a situação e começares a cobrar IVA.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // COMPONENTE: NumericSlider
 // ─────────────────────────────────────────────────────────────────────────────
 // CORREÇÕES APLICADAS:
@@ -2766,6 +2885,32 @@ export default function SimuladorIntegrado() {
   const [tipoAtivEscolhido, setTipoAtivEscolhido] = useState(false);
   const [mostrarOpcoes, setMostrarOpcoes] = useState(false);
   const [mostrarTimeline, setMostrarTimeline] = useState(false);
+  // Atividade específica escolhida via combobox no modo guiado (apenas para
+  // mostrar o label e os parâmetros; o cálculo usa sempre tipoAtiv).
+  const [atividadeGuiada, setAtividadeGuiada] = useState<Atividade | null>(null);
+  // Sub-formulário de deduções dentro do modo guiado (Card E).
+  const [mostrarDeducoesGuiado, setMostrarDeducoesGuiado] = useState(false);
+
+  // Mapeia o `tipo` da fiscal-data (4 valores) para o TipoAtividade local
+  // (5 valores). "hosped" não existe na fiscal-data e só vem do selector manual.
+  const mapaAtivParaTipoAtiv: Record<string, TipoAtividade> = {
+    art151: "art151",
+    outros: "outras",
+    vendas: "vendas",
+    diretosAutor: "prop_int",
+  };
+
+  const handleEscolherAtividadeGuiada = useCallback(
+    (a: Atividade) => {
+      setAtividadeGuiada(a);
+      setAtividade(a);
+      setTipoAtiv(mapaAtivParaTipoAtiv[a.tipo] ?? "art151");
+      setTipoAtivEscolhido(true);
+    },
+    // mapaAtivParaTipoAtiv é estável (literal sem dependências de estado)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   const handleSelectModo = useCallback(
     (modo: "guiado" | "profissional") => {
@@ -2779,6 +2924,12 @@ export default function SimuladorIntegrado() {
 
   const handleResetModo = useCallback(() => {
     setModoSimulacao("nao_selecionado");
+    // Limpa o estado do fluxo guiado para que, ao reentrar, o passo de
+    // escolha de atividade comece consistente (sem seleção fantasma).
+    setTipoAtivEscolhido(false);
+    setMostrarOpcoes(false);
+    setAtividadeGuiada(null);
+    setMostrarDeducoesGuiado(false);
     if (typeof window !== "undefined") {
       localStorage.removeItem("rc-modo-simulacao");
     }
@@ -2861,6 +3012,35 @@ export default function SimuladorIntegrado() {
     despGerais,
     despRendas,
   };
+
+  // Total das deduções à coleta activadas (para o badge do Card E no guiado).
+  const deducoesColetaTotal = useMemo(
+    () =>
+      calcularDeducoesColeta({
+        deficiencia,
+        ifici,
+        numDep3plus,
+        numDep3minus,
+        numDep2_6,
+        numDepDefic,
+        despSaude,
+        despEducacao,
+        despGerais,
+        despRendas,
+      }).total,
+    [
+      deficiencia,
+      ifici,
+      numDep3plus,
+      numDep3minus,
+      numDep2_6,
+      numDepDefic,
+      despSaude,
+      despEducacao,
+      despGerais,
+      despRendas,
+    ],
+  );
 
   // ── Resultado anual RV ────────────────────────────────────────────────────
   const resultAnualRV = useMemo(
@@ -3021,6 +3201,42 @@ export default function SimuladorIntegrado() {
       salGerenteMensal,
       custoConstituicaoAnual,
     ],
+  );
+
+  // ── Funções de cálculo para a calculadora interactiva de break-even ───────
+  // Injectadas no ComparacaoNarrativa, que não tem acesso às funções de
+  // simulação (vivem neste módulo). Mantêm o tipo de atividade actual e
+  // ignoram particularidades individuais para uma comparação "limpa".
+  const calcularLiquidoRVFat = useCallback(
+    (fat: number) => simularAnualRV(fat, tipoAtiv, 0, false).liquido,
+    [tipoAtiv],
+  );
+  const calcularLiquidoEmpresaFat = useCallback(
+    (fat: number) =>
+      simularEmpresa(
+        fat,
+        0,
+        2_000,
+        0,
+        true,
+        false,
+        0,
+        "comb_baixo",
+        0,
+        0,
+        0,
+        false,
+        true,
+        0,
+        "interior",
+        0,
+        0,
+        "pme_normal",
+        false,
+        400,
+        0,
+      ).liquidoGerente,
+    [],
   );
 
   // ── Barra visual RV ───────────────────────────────────────────────────────
@@ -3243,15 +3459,8 @@ export default function SimuladorIntegrado() {
   // ── Aviso de IVA Art. 53.º ────────────────────────────────────────────────
   const avisoIVALimite =
     regimeIVA === "isento" && brutoAnual > IVA_ISENCAO_LIMITE ? (
-      <div className="mt-3 flex items-start gap-2.5 p-3 rounded-xl border bg-alert-bg border-alert-border">
-        <span className="text-alert-text mt-0.5 flex-shrink-0">
-          <Warning size={14} />
-        </span>
-        <span className="text-xs leading-relaxed text-alert-text">
-          {brutoAnual > IVA_ISENCAO_LIMITE_IMEDIATO
-            ? `Faturação > ${IVA_ISENCAO_LIMITE_IMEDIATO.toLocaleString("pt-PT")}€ — transição para IVA normal imediata ao ultrapassar este limite. Deves cobrar IVA a partir dessa fatura.`
-            : `Faturação prevista > ${IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}€ — perdes a isenção Art. 53.º no ano seguinte. Se ultrapassares ${IVA_ISENCAO_LIMITE_IMEDIATO.toLocaleString("pt-PT")}€, a mudança é imediata.`}
-        </span>
+      <div className="mt-3">
+        <IvaZonas faturacaoAnual={brutoAnual} />
       </div>
     ) : null;
 
@@ -3436,6 +3645,7 @@ export default function SimuladorIntegrado() {
                         onClick={() => {
                           setTipoAtiv(k);
                           setTipoAtivEscolhido(true);
+                          setAtividadeGuiada(null);
                         }}
                         className={`rounded-2xl border p-4 text-left transition-all hover:shadow-card ${
                           isActive
@@ -3465,6 +3675,66 @@ export default function SimuladorIntegrado() {
                       </button>
                     );
                   })}
+                </div>
+
+                {/* Selector de atividade específica */}
+                <div className="mt-4">
+                  <div className="mb-3 flex items-center gap-3">
+                    <span className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
+                    <span className="text-xs font-medium text-stone-400">
+                      ou escolhe a tua atividade específica
+                    </span>
+                    <span className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
+                  </div>
+                  <ActivityCombobox
+                    value={atividadeGuiada}
+                    onChange={handleEscolherAtividadeGuiada}
+                  />
+
+                  {atividadeGuiada && (
+                    <div className="mt-3 rounded-2xl border border-brand/20 bg-brand-light/40 p-3">
+                      <div className="mb-2 flex items-center gap-2">
+                        <Check size={13} className="text-brand" />
+                        <span className="text-xs font-semibold text-brand-dark">
+                          {atividadeGuiada.label}
+                        </span>
+                        <span className="text-[10px] text-brand-dark/60">
+                          {TIPO_ATIVIDADE_PARAMS[tipoAtiv].label}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          {
+                            label: "Coeficiente",
+                            value: pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef),
+                          },
+                          {
+                            label: "Retenção",
+                            value: pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].ret),
+                          },
+                          {
+                            label: "Base SS",
+                            value:
+                              tipoAtiv === "vendas" || tipoAtiv === "hosped"
+                                ? "20%"
+                                : "70%",
+                          },
+                        ].map((c) => (
+                          <div
+                            key={c.label}
+                            className="rounded-xl border border-stone-200 bg-white p-2 text-center dark:border-stone-700 dark:bg-stone-900"
+                          >
+                            <div className="text-sm font-bold tabular-nums text-stone-800 dark:text-stone-100">
+                              {c.value}
+                            </div>
+                            <div className="text-[10px] font-medium text-stone-500">
+                              {c.label}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </section>
 
@@ -3503,31 +3773,12 @@ export default function SimuladorIntegrado() {
                       }
                     />
 
-                    {/* IVA auto-detectado */}
-                    <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 dark:border-stone-700 dark:bg-stone-900">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
-                            IVA
-                          </span>
-                          <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
-                            {brutoAnual <= IVA_ISENCAO_LIMITE
-                              ? `Com ${fmt(brutoAnual)}/ano, estás isento de IVA (Art. 53.º) — não cobras IVA ao cliente nem o entregas ao Estado.`
-                              : brutoAnual <= IVA_ISENCAO_LIMITE_IMEDIATO
-                              ? `Com ${fmt(brutoAnual)}/ano ultrapassas os €15 000 — perdes a isenção no próximo ano.`
-                              : `Com ${fmt(brutoAnual)}/ano, precisas de cobrar IVA. A transição é imediata acima de €18 750.`}
-                          </p>
-                        </div>
-                        <span
-                          className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${
-                            brutoAnual <= IVA_ISENCAO_LIMITE
-                              ? "bg-brand-light text-brand-dark"
-                              : "border border-alert-border bg-alert-bg text-alert-text"
-                          }`}
-                        >
-                          {brutoAnual <= IVA_ISENCAO_LIMITE ? "Isento" : "Com IVA"}
-                        </span>
-                      </div>
+                    {/* IVA — situação explicada em zonas claras */}
+                    <div>
+                      <h4 className="eyebrow mb-2 text-stone-500">
+                        A tua situação de IVA
+                      </h4>
+                      <IvaZonas faturacaoAnual={brutoAnual} />
                     </div>
 
                     {/* Emprego acumulado */}
@@ -3758,6 +4009,147 @@ export default function SimuladorIntegrado() {
                       )}
                     </DecisionCard>
 
+                    {/* Card D: Região fiscal */}
+                    <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-900">
+                      <div className="mb-1 text-sm font-semibold text-stone-700 dark:text-stone-200">
+                        Onde tens a tua atividade?
+                      </div>
+                      <p className="mb-3 text-xs text-stone-400">
+                        A região determina a taxa de IVA aplicável quando
+                        deixares de estar isento.
+                      </p>
+                      <div
+                        role="group"
+                        aria-label="Região fiscal"
+                        className="grid grid-cols-3 gap-2"
+                      >
+                        {REGIOES.map((r) => {
+                          const active = regiao === r;
+                          return (
+                            <button
+                              key={r}
+                              type="button"
+                              aria-pressed={active}
+                              onClick={() => setRegiao(r)}
+                              className={`rounded-xl border p-2.5 text-center text-sm font-semibold transition-all ${
+                                active
+                                  ? "border-brand bg-brand-light text-brand-dark"
+                                  : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-300"
+                              }`}
+                            >
+                              {META_REGIAO[r]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="mt-2 text-[11px] text-stone-400">
+                        IVA normal nesta região:{" "}
+                        <span className="font-semibold tabular-nums text-stone-500">
+                          {pct(IVA_TAXAS[regiao].value.normal)}
+                        </span>
+                      </p>
+                    </div>
+
+                    {/* Card E: Deduções ao IRS */}
+                    <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-900">
+                      <button
+                        type="button"
+                        aria-expanded={mostrarDeducoesGuiado}
+                        onClick={() =>
+                          setMostrarDeducoesGuiado((v) => !v)
+                        }
+                        className="flex w-full items-center justify-between gap-2 text-left"
+                      >
+                        <div>
+                          <div className="text-sm font-semibold text-stone-700 dark:text-stone-200">
+                            Tens despesas que dão dedução ao IRS?
+                          </div>
+                          <p className="mt-0.5 text-xs text-stone-400">
+                            Saúde, educação, rendas e despesas gerais abatem
+                            diretamente ao imposto.
+                          </p>
+                        </div>
+                        <div className="flex flex-shrink-0 items-center gap-2">
+                          {deducoesColetaTotal > 0 && (
+                            <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold tabular-nums text-white">
+                              −{fmt(Math.round(deducoesColetaTotal))}
+                            </span>
+                          )}
+                          <span className="text-stone-400">
+                            {mostrarDeducoesGuiado ? (
+                              <ArrowRight
+                                size={14}
+                                className="rotate-90 transition-transform"
+                              />
+                            ) : (
+                              <ArrowRight size={14} />
+                            )}
+                          </span>
+                        </div>
+                      </button>
+
+                      <AnimatePresence>
+                        {mostrarDeducoesGuiado && (
+                          <m.div
+                            key="deducoes-guiado"
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="mt-4 space-y-4"
+                          >
+                            {[
+                              {
+                                label: `Despesas de saúde (ded. 15%, máx €${DEDUCAO_SAUDE_MAX})`,
+                                val: despSaude,
+                                set: setDespSaude,
+                                max: 6_670,
+                                note: "Consultas, medicamentos, seguros de saúde",
+                              },
+                              {
+                                label: `Despesas de educação (ded. 30%, máx €${DEDUCAO_EDUCACAO_MAX})`,
+                                val: despEducacao,
+                                set: setDespEducacao,
+                                max: 2_667,
+                                note: "Propinas, material escolar, rendas de estudante",
+                              },
+                              {
+                                label: `Rendas de habitação (ded. 15%, máx €${DEDUCAO_RENDAS_MAX})`,
+                                val: despRendas,
+                                set: setDespRendas,
+                                max: 3_347,
+                                note: "Arrendamento de habitação permanente",
+                              },
+                              {
+                                label: `Despesas gerais (ded. 35%, máx €${DEDUCAO_GERAIS_MAX})`,
+                                val: despGerais,
+                                set: setDespGerais,
+                                max: 714,
+                                note: "Luz, água, telecomunicações, supermercado",
+                              },
+                            ].map(({ label, val, set, max, note }) => (
+                              <NumericSlider
+                                key={label}
+                                label={label}
+                                value={val}
+                                min={0}
+                                max={max}
+                                step={100}
+                                onChange={set}
+                                presets={[
+                                  0,
+                                  Math.round(max / 4),
+                                  Math.round(max / 2),
+                                  max,
+                                ]}
+                                tooltip={<>{note}</>}
+                              />
+                            ))}
+                          </m.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
                     {/* Motor de regras */}
                     {regras.length > 0 && (
                       <div className="space-y-2">
@@ -3828,15 +4220,126 @@ export default function SimuladorIntegrado() {
                       </div>
                     )}
 
-                    {/* Link para modo profissional */}
-                    <div className="pt-1 text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleSelectModo("profissional")}
-                        className="text-sm font-medium text-brand transition-colors hover:text-brand-dark"
-                      >
-                        Ver simulador completo com todas as opções →
-                      </button>
+                    {/* Card F: Modo detalhado */}
+                    <button
+                      type="button"
+                      onClick={() => handleSelectModo("profissional")}
+                      className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white p-4 text-left transition-all hover:border-brand hover:shadow-card dark:border-stone-700 dark:bg-stone-950"
+                    >
+                      <div>
+                        <div className="text-sm font-semibold text-stone-700 group-hover:text-brand-dark dark:text-stone-200">
+                          Quero ver todas as opções do simulador completo
+                        </div>
+                        <p className="mt-0.5 text-xs text-stone-400">
+                          Empresa, contabilidade organizada, benefícios fiscais,
+                          tributação autónoma e mais.
+                        </p>
+                      </div>
+                      <span className="flex-shrink-0 text-brand transition-transform group-hover:translate-x-1">
+                        <ArrowRight size={16} />
+                      </span>
+                    </button>
+                  </m.section>
+                )}
+              </AnimatePresence>
+
+              {/* O QUE CONFIGURASTE — resumo sempre visível com faturação */}
+              <AnimatePresence>
+                {bruto > 0 && (
+                  <m.section
+                    key="resumo-config"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <div className="rounded-3xl border border-stone-200 bg-white p-5 dark:border-stone-700 dark:bg-stone-950 sm:p-6">
+                      <h4 className="eyebrow mb-4 text-stone-500">
+                        O que configuraste
+                      </h4>
+
+                      <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+                        <div className="flex items-start justify-between gap-3 border-b border-stone-100 pb-2 dark:border-stone-800">
+                          <dt className="text-xs text-stone-400">Atividade</dt>
+                          <dd className="text-right text-xs font-semibold text-stone-700 dark:text-stone-200">
+                            {atividadeGuiada?.label ??
+                              TIPO_ATIVIDADE_PARAMS[tipoAtiv].label}
+                            <span className="mt-0.5 block font-normal text-[11px] text-stone-400">
+                              Coef. {pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef)} ·
+                              Ret. {pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].ret)}
+                            </span>
+                          </dd>
+                        </div>
+
+                        <div className="flex items-start justify-between gap-3 border-b border-stone-100 pb-2 dark:border-stone-800">
+                          <dt className="text-xs text-stone-400">Faturação</dt>
+                          <dd className="text-right text-xs font-semibold tabular-nums text-stone-700 dark:text-stone-200">
+                            {fmt(bruto)}/recibo
+                            <span className="mt-0.5 block font-normal text-[11px] text-stone-400">
+                              {fmt(brutoAnual)}/ano
+                            </span>
+                          </dd>
+                        </div>
+
+                        <div className="flex items-start justify-between gap-3 border-b border-stone-100 pb-2 dark:border-stone-800">
+                          <dt className="text-xs text-stone-400">IVA</dt>
+                          <dd className="text-right text-xs font-semibold text-stone-700 dark:text-stone-200">
+                            {brutoAnual <= IVA_ISENCAO_LIMITE
+                              ? "Isento (Art. 53.º)"
+                              : brutoAnual <= IVA_ISENCAO_LIMITE_IMEDIATO
+                                ? "Isento — perde no próximo ano"
+                                : `Sujeito a IVA (${pct(IVA_TAXAS[regiao].value.normal)})`}
+                          </dd>
+                        </div>
+
+                        <div className="flex items-start justify-between gap-3 border-b border-stone-100 pb-2 dark:border-stone-800">
+                          <dt className="text-xs text-stone-400">Isenções</dt>
+                          <dd className="flex flex-wrap justify-end gap-1.5">
+                            {!isencaoSSPrimeiroAno &&
+                              !acumulaEmprego &&
+                              irsJovemAno === 0 && (
+                                <span className="text-xs font-medium text-stone-400">
+                                  Nenhuma activa
+                                </span>
+                              )}
+                            {isencaoSSPrimeiroAno && (
+                              <span className="rounded-full bg-brand-light px-2 py-0.5 text-[10px] font-semibold text-brand-dark">
+                                SS — 1.º ano
+                              </span>
+                            )}
+                            {acumulaEmprego && (
+                              <span className="rounded-full bg-brand-light px-2 py-0.5 text-[10px] font-semibold text-brand-dark">
+                                SS — acumula emprego
+                              </span>
+                            )}
+                            {irsJovemAno > 0 && (
+                              <span className="rounded-full bg-brand-light px-2 py-0.5 text-[10px] font-semibold text-brand-dark">
+                                IRS Jovem ({irsJovemAno}.º ano)
+                              </span>
+                            )}
+                          </dd>
+                        </div>
+                      </dl>
+
+                      {/* Resultado final grande */}
+                      <div className="mt-5 flex flex-wrap items-end justify-between gap-3 rounded-2xl border border-brand/20 bg-brand-light/40 p-4">
+                        <div>
+                          <div className="eyebrow mb-1 text-stone-500">
+                            Líquido anual estimado
+                          </div>
+                          <div className="font-display text-4xl font-semibold leading-none text-brand">
+                            <AnimatedNumber value={resultAnualRV.liquido} />
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[11px] text-stone-400">
+                            Taxa efetiva
+                          </div>
+                          <div className="font-display text-xl font-semibold tabular-nums text-stone-700 dark:text-stone-200">
+                            {pct(resultAnualRV.taxaEfetiva)}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </m.section>
                 )}
@@ -3852,6 +4355,8 @@ export default function SimuladorIntegrado() {
                   custoFixoEstimado={custosExtra}
                   onVerDetalhe={() => handleSelectModo("profissional")}
                   modoAtivo="rv"
+                  calcularLiquidoRV={calcularLiquidoRVFat}
+                  calcularLiquidoEmpresa={calcularLiquidoEmpresaFat}
                 />
               )}
             </div>
@@ -5879,6 +6384,8 @@ export default function SimuladorIntegrado() {
             custoFixoEstimado={custosExtra}
             onVerDetalhe={() => setCenario("empresa")}
             modoAtivo={cenario}
+            calcularLiquidoRV={calcularLiquidoRVFat}
+            calcularLiquidoEmpresa={calcularLiquidoEmpresaFat}
           />
         </div>
 
