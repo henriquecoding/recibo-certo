@@ -1014,9 +1014,20 @@ const ESCALAO_LABEL: Record<EscalaoIVA, string> = {
 // (€15.000–€18.750), que já existia, muito mais explícita.
 // ─────────────────────────────────────────────────────────────────────────────
 
-function IvaZonas({ faturacaoAnual }: { faturacaoAnual: number }) {
+function IvaZonas({
+  faturacaoAnual,
+  regimeIVA,
+  onRegimeIVAChange,
+  regiao,
+}: {
+  faturacaoAnual: number;
+  regimeIVA?: RegimeIVA;
+  onRegimeIVAChange?: (r: RegimeIVA) => void;
+  regiao?: Regiao;
+}) {
   const limiteIsencao = IVA_ISENCAO_LIMITE;
   const limiteImediato = IVA_ISENCAO_LIMITE_IMEDIATO;
+  const regiaoAtual = regiao ?? "continente";
 
   // Zona 1 — isento
   if (faturacaoAnual <= limiteIsencao) {
@@ -1083,6 +1094,26 @@ function IvaZonas({ faturacaoAnual }: { faturacaoAnual: number }) {
               partir de janeiro. Fala com o teu contabilista para fazeres a
               alteração de regime atempadamente.
             </p>
+            {onRegimeIVAChange && (
+              <div className="mt-3">
+                <p className="mb-2 text-xs font-semibold text-alert-text">
+                  Que taxa de IVA vais cobrar a partir de janeiro?
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {(["reduzida", "intermedia", "normal"] as const).map((e) => (
+                    <button
+                      key={e}
+                      type="button"
+                      aria-pressed={regimeIVA === e}
+                      onClick={() => onRegimeIVAChange(e)}
+                      className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${regimeIVA === e ? "border-amber-600 bg-amber-100 text-amber-800" : "border-amber-300 bg-white/60 text-alert-text hover:border-amber-500"}`}
+                    >
+                      {e === "reduzida" ? `Reduzida ${pct(IVA_TAXAS[regiaoAtual].value.reduzida)}` : e === "intermedia" ? `Intermédia ${pct(IVA_TAXAS[regiaoAtual].value.intermedia)}` : `Normal ${pct(IVA_TAXAS[regiaoAtual].value.normal)}`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1117,6 +1148,26 @@ function IvaZonas({ faturacaoAnual }: { faturacaoAnual: number }) {
             <strong>O que tens de fazer:</strong> contacta o teu contabilista
             com urgência para regularizares a situação e começares a cobrar IVA.
           </p>
+          {onRegimeIVAChange && (
+            <div className="mt-3">
+              <p className="mb-2 text-xs font-semibold text-red-700 dark:text-red-300">
+                Que taxa de IVA cobras?
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(["reduzida", "intermedia", "normal"] as const).map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    aria-pressed={regimeIVA === e}
+                    onClick={() => onRegimeIVAChange(e)}
+                    className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${regimeIVA === e ? "border-red-600 bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200" : "border-red-300 bg-white/60 text-red-700 hover:border-red-500 dark:border-red-800 dark:bg-transparent"}`}
+                  >
+                    {e === "reduzida" ? `Reduzida ${pct(IVA_TAXAS[regiaoAtual].value.reduzida)}` : e === "intermedia" ? `Intermédia ${pct(IVA_TAXAS[regiaoAtual].value.intermedia)}` : `Normal ${pct(IVA_TAXAS[regiaoAtual].value.normal)}`}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1177,13 +1228,14 @@ function NumericSlider({
     [min, max, step],
   );
 
-  // [BUG3 FIX] clampFree sem step — para inputs de texto (aceita qualquer decimal)
+  // clampFree: só enforça o min, não o max — permite digitar valores acima do slider
   const clampFree = useCallback(
-    (v: number) => Math.min(max, Math.max(min, v)),
-    [min, max],
+    (v: number) => Math.max(min, v),
+    [min],
   );
 
-  const pctVal = ((value - min) / (max - min)) * 100;
+  // posição visual limitada a [0,100]% mesmo que value > max
+  const pctVal = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
   const bePct =
     breakPoint != null ? ((breakPoint - min) / (max - min)) * 100 : null;
 
@@ -3778,7 +3830,12 @@ export default function SimuladorIntegrado() {
                       <h4 className="eyebrow mb-2 text-stone-500">
                         A tua situação de IVA
                       </h4>
-                      <IvaZonas faturacaoAnual={brutoAnual} />
+                      <IvaZonas
+                        faturacaoAnual={brutoAnual}
+                        regimeIVA={regimeIVA}
+                        onRegimeIVAChange={setRegimeIVA}
+                        regiao={regiao}
+                      />
                     </div>
 
                     {/* Emprego acumulado */}
