@@ -3852,6 +3852,58 @@ export default function SimuladorIntegrado() {
                     </div>
                   )}
                 </div>
+
+                {/* Painel contextual da atividade selecionada */}
+                {tipoAtivEscolhido && (
+                  <div className="mt-4 rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-900">
+                    <div className="mb-3 text-xs font-semibold text-stone-600 dark:text-stone-300">
+                      {atividadeAtual.titulo}
+                    </div>
+
+                    {/* Métricas */}
+                    <div className="mb-3 grid grid-cols-3 gap-2">
+                      {[
+                        { label: "Coeficiente", value: pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef), note: "do rendimento é tributável" },
+                        { label: "Retenção", value: pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].ret), note: "retida pelo cliente" },
+                        { label: "Base SS", value: tipoAtiv === "vendas" || tipoAtiv === "hosped" ? "20%" : "70%", note: "do rendimento" },
+                      ].map((m) => (
+                        <div key={m.label} className="rounded-xl border border-stone-200 bg-white p-2 text-center dark:border-stone-700 dark:bg-stone-800">
+                          <div className="text-sm font-bold text-stone-800 dark:text-stone-100">{m.value}</div>
+                          <div className="text-[10px] font-medium text-stone-500">{m.label}</div>
+                          <div className="text-[10px] text-stone-400">{m.note}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="mb-2 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
+                      {atividadeAtual.descricao}
+                    </p>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
+                        <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
+                        <span>
+                          <strong className="text-stone-600 dark:text-stone-200">IVA típico:</strong>{" "}
+                          {atividadeAtual.ivaEsperado === "normal"
+                            ? `Taxa normal (${pct(IVA_TAXAS[regiao].value.normal)}) ou isenção Art. 53.º se faturação < €15 000`
+                            : atividadeAtual.ivaEsperado === "intermedia"
+                            ? `Taxa intermédia (${pct(IVA_TAXAS[regiao].value.intermedia)}) — restauração e alojamento`
+                            : "Isento"}
+                        </span>
+                      </div>
+                      {!atividadeIVACoerente && (
+                        <div className="mt-1 rounded-lg border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">
+                          O regime de IVA selecionado ({regimeIVA === "isento" ? "Isento" : pct(IVA_TAXAS[regiao].value[regimeIVA as EscalaoIVA])}) pode não ser o habitual para esta atividade. Verifica com o teu contabilista.
+                        </div>
+                      )}
+                      {atividadeAtual.nota && (
+                        <div className="mt-2 rounded-lg border border-brand/20 bg-brand-light/50 px-3 py-2 text-xs leading-relaxed text-brand-dark">
+                          {atividadeAtual.nota}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </section>
 
               {/* ETAPA 1b: Faturação — aparece após escolha de tipo */}
@@ -3900,6 +3952,42 @@ export default function SimuladorIntegrado() {
                         onRegimeIVAChange={setRegimeIVA}
                         regiao={regiao}
                       />
+
+                      {/* Painel contextual da taxa de IVA — só quando em regime ativo (não isento ou em zona de transição com taxa escolhida) */}
+                      {regimeIVA !== "isento" && (
+                        <div className="mt-3 rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-900">
+                          <div className="mb-2 text-xs font-semibold text-stone-600 dark:text-stone-300">
+                            {ivaPainelMeta.titulo}
+                          </div>
+                          <p className="mb-3 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
+                            {ivaPainelMeta.quando}
+                          </p>
+                          <div className="space-y-1.5">
+                            <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
+                              <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
+                              <span>
+                                <strong className="text-stone-700 dark:text-stone-200">Compatível com:</strong>{" "}
+                                {ivaPainelMeta.compativel}
+                              </span>
+                            </div>
+                            {ivaPainelMeta.incompativel && (
+                              <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
+                                <Warning size={11} className="mt-0.5 flex-shrink-0 text-alert-text" />
+                                <span>
+                                  <strong className="text-stone-700 dark:text-stone-200">Incompatível com:</strong>{" "}
+                                  {ivaPainelMeta.incompativel}
+                                </span>
+                              </div>
+                            )}
+                            {ivaAlertaAtividade && (
+                              <div className="mt-2 rounded-lg border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">
+                                A atividade selecionada ({TIPO_ATIVIDADE_PARAMS[tipoAtiv].label}) aplica normalmente IVA{" "}
+                                {regiao === "continente" ? "normal (23%)" : `normal (${pct(IVA_TAXAS[regiao].value.normal)})`}. Verifica se prestaste serviços específicos sujeitos a esta taxa.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Emprego acumulado */}
