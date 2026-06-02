@@ -82,7 +82,7 @@ import {
 import { m, AnimatePresence } from "motion/react";
 import Link from "next/link";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
-import { Check, Warning } from "@/components/ui/Icons";
+import { Check, Warning, ArrowRight } from "@/components/ui/Icons";
 import { pct, fmt } from "@/lib/format";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
 import InfoTip from "@/components/ui/InfoTip";
@@ -99,6 +99,11 @@ import {
   type EscalaoIVA,
 } from "@/lib/fiscal-data";
 import { calcular, taxaIVAEfetiva, type RegimeIVA } from "@/lib/fiscal";
+import OnboardingGate from "@/components/simulador/OnboardingGate";
+import EuroBreakdown from "@/components/simulador/EuroBreakdown";
+import DecisionCard from "@/components/simulador/DecisionCard";
+import TimelineFiscal from "@/components/simulador/TimelineFiscal";
+import ComparacaoNarrativa from "@/components/simulador/ComparacaoNarrativa";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTES FISCAIS 2026
@@ -2748,6 +2753,37 @@ export default function SimuladorIntegrado() {
   const [painelIVA, setPainelIVA] = useState(false);
   const [painelAtividade, setPainelAtividade] = useState(false);
 
+  // ── Modo de simulação ────────────────────────────────────────────────────
+  const [modoSimulacao, setModoSimulacao] = useState<
+    "nao_selecionado" | "guiado" | "profissional"
+  >(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("rc-modo-simulacao");
+      if (saved === "guiado" || saved === "profissional") return saved;
+    }
+    return "nao_selecionado";
+  });
+  const [tipoAtivEscolhido, setTipoAtivEscolhido] = useState(false);
+  const [mostrarOpcoes, setMostrarOpcoes] = useState(false);
+  const [mostrarTimeline, setMostrarTimeline] = useState(false);
+
+  const handleSelectModo = useCallback(
+    (modo: "guiado" | "profissional") => {
+      setModoSimulacao(modo);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("rc-modo-simulacao", modo);
+      }
+    },
+    [],
+  );
+
+  const handleResetModo = useCallback(() => {
+    setModoSimulacao("nao_selecionado");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("rc-modo-simulacao");
+    }
+  }, []);
+
   // ── Sincronização bruto ↔ brutoAnual ────────────────────────────────────
   const handleBrutoChange = useCallback(
     (v: number) => {
@@ -3232,75 +3268,599 @@ export default function SimuladorIntegrado() {
 
       <div className="relative overflow-hidden rounded-3xl border border-stone-200 shadow-lift">
         {/* ── Cabeçalho ──────────────────────────────────────────────────────── */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 bg-stone-50 px-8 py-4 dark:border-stone-800 dark:bg-stone-900">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 bg-stone-50 px-6 py-4 dark:border-stone-800 dark:bg-stone-900">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.15em] text-brand">
-              Calculadora 2026
-            </div>
+            <div className="eyebrow text-brand">Calculadora 2026</div>
             <h3 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-200">
               O teu líquido real
             </h3>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Toggle Por recibo / Anual */}
-            <div
-              role="group"
-              aria-label="Modo de cálculo"
-              className="flex rounded-xl border border-stone-200 bg-white p-1 dark:border-stone-700 dark:bg-stone-900"
-            >
-              {(
-                [
-                  { v: "recibo" as ModoInput, l: "Por recibo" },
-                  { v: "anual" as ModoInput, l: "Anual" },
-                ] as const
-              ).map(({ v, l }) => (
-                <button
-                  key={v}
-                  type="button"
-                  aria-pressed={modoInput === v}
-                  onClick={() => setModoInput(v)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                    modoInput === v
-                      ? "bg-brand text-white shadow-glow"
-                      : "text-stone-500 hover:text-stone-800 dark:text-stone-400"
-                  }`}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Toggles Por recibo/Anual + RV/Empresa — só no modo profissional */}
+            {modoSimulacao === "profissional" && (
+              <>
+                <div
+                  role="group"
+                  aria-label="Modo de cálculo"
+                  className="flex rounded-xl border border-stone-200 bg-white p-1 dark:border-stone-700 dark:bg-stone-900"
                 >
-                  {l}
-                </button>
-              ))}
-            </div>
-
-            {/* Toggle Recibos Verdes / Empresa */}
-            <div
-              role="tablist"
-              aria-label="Cenário"
-              className="flex rounded-xl border border-stone-200 bg-white p-1 dark:border-stone-700 dark:bg-stone-900"
-            >
-              {(
-                [
-                  { v: "rv" as CenarioAtivo, l: "Recibos Verdes" },
-                  { v: "empresa" as CenarioAtivo, l: "Empresa" },
-                ] as const
-              ).map(({ v, l }) => (
-                <button
-                  key={v}
-                  role="tab"
-                  aria-selected={cenario === v}
-                  type="button"
-                  onClick={() => setCenario(v)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                    cenario === v
-                      ? "bg-brand text-white shadow-glow"
-                      : "text-stone-500 hover:text-stone-800 dark:text-stone-400"
-                  }`}
+                  {(
+                    [
+                      { v: "recibo" as ModoInput, l: "Por recibo" },
+                      { v: "anual" as ModoInput, l: "Anual" },
+                    ] as const
+                  ).map(({ v, l }) => (
+                    <button
+                      key={v}
+                      type="button"
+                      aria-pressed={modoInput === v}
+                      onClick={() => setModoInput(v)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                        modoInput === v
+                          ? "bg-brand text-white shadow-glow"
+                          : "text-stone-500 hover:text-stone-800 dark:text-stone-400"
+                      }`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+                <div
+                  role="tablist"
+                  aria-label="Cenário"
+                  className="flex rounded-xl border border-stone-200 bg-white p-1 dark:border-stone-700 dark:bg-stone-900"
                 >
-                  {l}
-                </button>
-              ))}
-            </div>
+                  {(
+                    [
+                      { v: "rv" as CenarioAtivo, l: "Recibos Verdes" },
+                      { v: "empresa" as CenarioAtivo, l: "Empresa" },
+                    ] as const
+                  ).map(({ v, l }) => (
+                    <button
+                      key={v}
+                      role="tab"
+                      aria-selected={cenario === v}
+                      type="button"
+                      onClick={() => setCenario(v)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                        cenario === v
+                          ? "bg-brand text-white shadow-glow"
+                          : "text-stone-500 hover:text-stone-800 dark:text-stone-400"
+                      }`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            {/* Toggle Por recibo/Anual no modo guiado */}
+            {modoSimulacao === "guiado" && (
+              <div
+                role="group"
+                aria-label="Modo de cálculo"
+                className="flex rounded-xl border border-stone-200 bg-white p-1 dark:border-stone-700 dark:bg-stone-900"
+              >
+                {(
+                  [
+                    { v: "recibo" as ModoInput, l: "Por recibo" },
+                    { v: "anual" as ModoInput, l: "Anual" },
+                  ] as const
+                ).map(({ v, l }) => (
+                  <button
+                    key={v}
+                    type="button"
+                    aria-pressed={modoInput === v}
+                    onClick={() => setModoInput(v)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                      modoInput === v
+                        ? "bg-brand text-white shadow-glow"
+                        : "text-stone-500 hover:text-stone-800 dark:text-stone-400"
+                    }`}
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
+            )}
+            {/* Botão para mudar modo */}
+            {modoSimulacao !== "nao_selecionado" && (
+              <button
+                type="button"
+                onClick={handleResetModo}
+                className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-medium text-stone-500 transition-all hover:border-stone-300 hover:text-stone-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400"
+              >
+                Mudar modo
+              </button>
+            )}
           </div>
         </div>
+
+        {/* ── Gate: escolha de modo ──────────────────────────────────────────── */}
+        {modoSimulacao === "nao_selecionado" && (
+          <OnboardingGate onSelect={handleSelectModo} />
+        )}
+
+        {/* ── Modo Guiado ──────────────────────────────────────────────────── */}
+        {modoSimulacao === "guiado" && (
+          <m.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className="bg-white p-6 dark:bg-stone-950 sm:p-8"
+          >
+            <div className="mx-auto max-w-2xl space-y-8">
+              {/* ETAPA 1: Tipo de trabalho */}
+              <section>
+                <h4 className="eyebrow mb-4 text-stone-500">O que vais fazer?</h4>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {(
+                    Object.entries(TIPO_ATIVIDADE_PARAMS) as [
+                      TipoAtividade,
+                      (typeof TIPO_ATIVIDADE_PARAMS)[TipoAtividade],
+                    ][]
+                  ).map(([k, p]) => {
+                    const labels: Record<
+                      TipoAtividade,
+                      { titulo: string; sub: string }
+                    > = {
+                      art151: {
+                        titulo: "Consultor / Programador / Designer",
+                        sub: "Profissão liberal (Art. 151.º CIRS)",
+                      },
+                      vendas: {
+                        titulo: "Vendo produtos",
+                        sub: "Comércio e revenda de mercadorias",
+                      },
+                      hosped: {
+                        titulo: "Alojamento / Hostelaria",
+                        sub: "Alojamento local ou estabelecimento hoteleiro",
+                      },
+                      outras: {
+                        titulo: "Outros serviços",
+                        sub: "Serviços não enquadrados no Art. 151.º",
+                      },
+                      prop_int: {
+                        titulo: "Direitos de autor / Royalties",
+                        sub: "Propriedade intelectual e licenciamento",
+                      },
+                    };
+                    const info = labels[k];
+                    const isActive = tipoAtiv === k && tipoAtivEscolhido;
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        aria-pressed={isActive}
+                        onClick={() => {
+                          setTipoAtiv(k);
+                          setTipoAtivEscolhido(true);
+                        }}
+                        className={`rounded-2xl border p-4 text-left transition-all hover:shadow-card ${
+                          isActive
+                            ? "border-brand bg-brand-light"
+                            : "border-stone-200 bg-stone-50 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-900"
+                        }`}
+                      >
+                        <div
+                          className={`text-sm font-semibold ${
+                            isActive
+                              ? "text-brand-dark"
+                              : "text-stone-700 dark:text-stone-200"
+                          }`}
+                        >
+                          {info.titulo}
+                        </div>
+                        <div
+                          className={`mt-0.5 text-xs ${
+                            isActive ? "text-brand" : "text-stone-400"
+                          }`}
+                        >
+                          {info.sub}
+                        </div>
+                        <div className="mt-1.5 text-[10px] text-stone-400">
+                          Coef. {pct(p.coef)} · Ret. {pct(p.ret)}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* ETAPA 1b: Faturação — aparece após escolha de tipo */}
+              <AnimatePresence>
+                {tipoAtivEscolhido && (
+                  <m.section
+                    key="faturacao"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                    className="space-y-4"
+                  >
+                    <h4 className="eyebrow text-stone-500">
+                      Quanto pensas faturar?
+                    </h4>
+                    <NumericSlider
+                      label="Valor por recibo"
+                      value={bruto}
+                      min={0}
+                      max={10_000}
+                      step={50}
+                      unit="€"
+                      onChange={handleBrutoChange}
+                      presets={[800, 1200, 2500, 3500, 7000]}
+                      formatPreset={(v) =>
+                        v >= 1000 ? `${(v / 1000).toFixed(1)}k€` : `${v}€`
+                      }
+                      tooltip={
+                        <>
+                          Valor que cobras ao cliente por cada recibo, antes de
+                          IVA. Se não sabes ainda, começa pelo que gostavas de
+                          ganhar por mês.
+                        </>
+                      }
+                    />
+
+                    {/* IVA auto-detectado */}
+                    <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 dark:border-stone-700 dark:bg-stone-900">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
+                            IVA
+                          </span>
+                          <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
+                            {brutoAnual <= IVA_ISENCAO_LIMITE
+                              ? `Com ${fmt(brutoAnual)}/ano, estás isento de IVA (Art. 53.º) — não cobras IVA ao cliente nem o entregas ao Estado.`
+                              : brutoAnual <= IVA_ISENCAO_LIMITE_IMEDIATO
+                              ? `Com ${fmt(brutoAnual)}/ano ultrapassas os €15 000 — perdes a isenção no próximo ano.`
+                              : `Com ${fmt(brutoAnual)}/ano, precisas de cobrar IVA. A transição é imediata acima de €18 750.`}
+                          </p>
+                        </div>
+                        <span
+                          className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                            brutoAnual <= IVA_ISENCAO_LIMITE
+                              ? "bg-brand-light text-brand-dark"
+                              : "border border-alert-border bg-alert-bg text-alert-text"
+                          }`}
+                        >
+                          {brutoAnual <= IVA_ISENCAO_LIMITE ? "Isento" : "Com IVA"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Emprego acumulado */}
+                    <DecisionCard
+                      titulo="Já tens emprego por conta de outrem?"
+                      descricao="Tens um trabalho com contrato de trabalho a tempo inteiro ou parcial?"
+                      isActive={acumulaEmprego}
+                      onToggle={setAcumulaEmprego}
+                      impacto={
+                        acumulaEmprego
+                          ? `Poupas ${fmt(Math.round(calcularSSAnual(brutoAnual)))}/ano em SS`
+                          : undefined
+                      }
+                      vantagens={[
+                        "Podes ficar isento de Segurança Social como independente",
+                        "Pagas SS só pelo emprego principal",
+                      ]}
+                      desvantagens={[
+                        "Exige emprego com SS ≥ 537€/mês",
+                        "Rendimento independente deve ser < 2.149€/mês",
+                      ]}
+                    />
+                  </m.section>
+                )}
+              </AnimatePresence>
+
+              {/* RESULTADO BASE — aparece quando há faturação */}
+              <AnimatePresence>
+                {tipoAtivEscolhido && bruto > 0 && (
+                  <m.section
+                    key="resultado"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <div className="rounded-3xl border border-stone-200 bg-cream p-6 dark:border-stone-700 dark:bg-stone-900">
+                      <div className="eyebrow mb-1 text-stone-500">
+                        {modoInput === "recibo"
+                          ? "Disponível para ti — por recibo"
+                          : "Líquido anual estimado"}
+                      </div>
+                      <div className="font-display text-5xl font-semibold leading-none text-brand">
+                        <AnimatedNumber
+                          value={
+                            modoInput === "recibo"
+                              ? resultRecibo.liquido
+                              : resultAnualRV.liquido
+                          }
+                        />
+                      </div>
+                      <div className="mt-1 text-sm text-stone-400">
+                        de{" "}
+                        <AnimatedNumber
+                          value={
+                            modoInput === "recibo"
+                              ? resultRecibo.bruto + resultRecibo.iva
+                              : brutoAnual
+                          }
+                        />{" "}
+                        faturados
+                      </div>
+                      <div className="mt-5">
+                        <EuroBreakdown
+                          faturacao={
+                            modoInput === "recibo"
+                              ? resultRecibo.bruto + resultRecibo.iva
+                              : brutoAnual
+                          }
+                          liquido={
+                            modoInput === "recibo"
+                              ? resultRecibo.liquido
+                              : resultAnualRV.liquido
+                          }
+                          irs={
+                            modoInput === "recibo"
+                              ? resultRecibo.retencaoIRS
+                              : resultAnualRV.irs
+                          }
+                          ss={
+                            modoInput === "recibo"
+                              ? resultRecibo.segSocial
+                              : resultAnualRV.ssAnual
+                          }
+                          iva={
+                            modoInput === "recibo" ? resultRecibo.iva : 0
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    {/* Botão afinar */}
+                    {!mostrarOpcoes && (
+                      <div className="mt-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setMostrarOpcoes(true)}
+                          className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-stone-50 px-5 py-2.5 text-sm font-semibold text-stone-600 transition-all hover:border-brand hover:bg-brand-light hover:text-brand-dark dark:border-stone-700 dark:bg-stone-900"
+                        >
+                          Quero afinar o resultado
+                          <ArrowRight size={14} />
+                        </button>
+                        <p className="mt-2 text-xs text-stone-400">
+                          Há fatores que podem mudar este valor
+                        </p>
+                      </div>
+                    )}
+                  </m.section>
+                )}
+              </AnimatePresence>
+
+              {/* DECISÕES — aparecem ao clicar "afinar" */}
+              <AnimatePresence>
+                {mostrarOpcoes && (
+                  <m.section
+                    key="decisoes"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.35 }}
+                    className="space-y-3"
+                  >
+                    <h4 className="eyebrow text-stone-500">Afina o teu cenário</h4>
+
+                    {/* IRS Jovem */}
+                    <DecisionCard
+                      titulo="Tens menos de 35 anos?"
+                      descricao="O IRS Jovem isenta parte do teu rendimento durante até 10 anos."
+                      isActive={irsJovemAno > 0}
+                      onToggle={(v) => setIrsJovemAno(v ? 1 : 0)}
+                      impacto={
+                        irsJovemAno > 0
+                          ? `Isenção de ${pct(IRS_JOVEM_ISENCAO[irsJovemAno] ?? 0)} no ${irsJovemAno}.º ano`
+                          : undefined
+                      }
+                      vantagens={[
+                        "Isenção progressiva de IRS durante 10 anos",
+                        "1.º ano: 100% isento; anos 2–4: 75%; anos 5–7: 50%; anos 8–10: 25%",
+                      ]}
+                      desvantagens={[
+                        "Só para quem tem ≤ 35 anos",
+                        `Limite: 29.542€/ano (55×IAS 2026)`,
+                        "Incompatível com IFICI/NHR 2.0",
+                      ]}
+                    >
+                      {irsJovemAno > 0 && (
+                        <div className="mt-2">
+                          <span className="mb-2 block text-xs font-medium uppercase tracking-wider text-stone-500">
+                            Em que ano estás?
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {Array.from({ length: 10 }, (_, i) => i + 1).map(
+                              (ano) => (
+                                <button
+                                  key={ano}
+                                  type="button"
+                                  aria-pressed={irsJovemAno === ano}
+                                  onClick={() => setIrsJovemAno(ano)}
+                                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
+                                    irsJovemAno === ano
+                                      ? "border-brand bg-brand text-white"
+                                      : "border-stone-200 bg-stone-50 text-stone-500 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-800"
+                                  }`}
+                                >
+                                  {ano}.º —{" "}
+                                  {(
+                                    (IRS_JOVEM_ISENCAO[ano] ?? 0) * 100
+                                  ).toFixed(0)}
+                                  %
+                                </button>
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </DecisionCard>
+
+                    {/* 1.º Ano */}
+                    <DecisionCard
+                      titulo="É o teu 1.º ano como independente?"
+                      descricao="No primeiro ano de atividade, não pagas Segurança Social durante 12 meses."
+                      isActive={isencaoSSPrimeiroAno}
+                      onToggle={setIsencaoSSPrimeiroAno}
+                      impacto={
+                        isencaoSSPrimeiroAno
+                          ? `Poupas ${fmt(Math.round(calcularSSAnual(brutoAnual)))}/ano em SS`
+                          : undefined
+                      }
+                      vantagens={[
+                        "Zero Segurança Social no primeiro ano (12 meses)",
+                        "Aplica-se desde a data de abertura de atividade nas Finanças",
+                        "Automático — sem pedido necessário",
+                      ]}
+                      desvantagens={[
+                        "Só para quem nunca teve atividade independente",
+                        "O 2.º ano começa a pagar SS normalmente",
+                      ]}
+                      disabled={acumulaEmprego}
+                      disabledRazao="Já tens isenção de SS por acumulação com emprego — é equivalente."
+                    />
+
+                    {/* Calendário */}
+                    <DecisionCard
+                      titulo="Ver quando tens de pagar"
+                      descricao="Calendário fiscal anual com todos os pagamentos estimados."
+                      isActive={mostrarTimeline}
+                      onToggle={setMostrarTimeline}
+                      vantagens={[
+                        "Saber com antecedência o que sai em cada mês",
+                        "SS mensal, IRS anual e IVA trimestral num só sítio",
+                      ]}
+                      desvantagens={[]}
+                    >
+                      {mostrarTimeline && (
+                        <TimelineFiscal
+                          ssAnualMensal={
+                            isencaoSS
+                              ? 0
+                              : calcularSSAnual(brutoAnual) / 12
+                          }
+                          isencaoSS={isencaoSS}
+                          acertoIRS={resultAnualRV.acertoIRS}
+                          temIva={temIva}
+                          ivaTotal={temIva ? resultRecibo.iva * 12 : 0}
+                          faturacaoAnual={brutoAnual}
+                          className="mt-3"
+                        />
+                      )}
+                    </DecisionCard>
+
+                    {/* Motor de regras */}
+                    {regras.length > 0 && (
+                      <div className="space-y-2">
+                        {[
+                          ...regrasErro,
+                          ...regrasAviso,
+                          ...regrasInfo,
+                          ...regrasOport,
+                        ].map((r) => {
+                          const estilos = {
+                            erro: {
+                              wrapper:
+                                "border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/20",
+                              titulo: "text-red-700 dark:text-red-300",
+                              icon: (
+                                <Warning
+                                  size={13}
+                                  className="text-red-600 dark:text-red-400"
+                                />
+                              ),
+                            },
+                            aviso: {
+                              wrapper: "border-alert-border bg-alert-bg",
+                              titulo: "text-alert-text",
+                              icon: (
+                                <Warning size={13} className="text-alert-text" />
+                              ),
+                            },
+                            info: {
+                              wrapper:
+                                "border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/60",
+                              titulo: "text-stone-600 dark:text-stone-300",
+                              icon: (
+                                <Check size={13} className="text-stone-400" />
+                              ),
+                            },
+                            oportunidade: {
+                              wrapper: "border-brand/20 bg-brand-light/50",
+                              titulo: "text-brand-dark",
+                              icon: (
+                                <Check size={13} className="text-brand" />
+                              ),
+                            },
+                          }[r.prioridade];
+                          return (
+                            <div
+                              key={r.id}
+                              className={`flex items-start gap-2.5 rounded-2xl border p-3 ${estilos.wrapper}`}
+                            >
+                              <span className="mt-0.5 flex-shrink-0">
+                                {estilos.icon}
+                              </span>
+                              <div>
+                                <p
+                                  className={`text-xs font-semibold ${estilos.titulo}`}
+                                >
+                                  {r.mensagem}
+                                </p>
+                                <p
+                                  className={`mt-0.5 text-xs leading-relaxed ${estilos.titulo} opacity-75`}
+                                >
+                                  {r.detalhe}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Link para modo profissional */}
+                    <div className="pt-1 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectModo("profissional")}
+                        className="text-sm font-medium text-brand transition-colors hover:text-brand-dark"
+                      >
+                        Ver simulador completo com todas as opções →
+                      </button>
+                    </div>
+                  </m.section>
+                )}
+              </AnimatePresence>
+
+              {/* COMPARAÇÃO — sempre visível quando há resultado */}
+              {tipoAtivEscolhido && bruto > 0 && (
+                <ComparacaoNarrativa
+                  liquidoRV={resultAnualRV.liquido}
+                  liquidoEmpresa={liquidoEmpresaFinal}
+                  faturacaoAnual={brutoAnual}
+                  breakEven={breakEven}
+                  custoFixoEstimado={custosExtra}
+                  onVerDetalhe={() => handleSelectModo("profissional")}
+                  modoAtivo="rv"
+                />
+              )}
+            </div>
+          </m.div>
+        )}
+
+        {/* ── Modo Profissional ────────────────────────────────────────────── */}
+        {modoSimulacao === "profissional" && (
+          <>
 
         {/* ── Corpo ─────────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2">
@@ -4456,79 +5016,15 @@ export default function SimuladorIntegrado() {
 
                   {modoInput === "recibo" && (
                     <>
-                      {/* Barra visual */}
+                      {/* Breakdown visual */}
                       <div className="mb-6">
-                        <div className="flex h-3 rounded-full overflow-hidden gap-0.5 mb-3">
-                          <div
-                            className="transition-all duration-500 rounded-l-full"
-                            style={{
-                              width: barW(resultRecibo.liquido),
-                              background: "#1D9E75",
-                            }}
-                          />
-                          {resultRecibo.retencaoIRS > 0 && (
-                            <div
-                              className="transition-all duration-500"
-                              style={{
-                                width: barW(resultRecibo.retencaoIRS),
-                                background: "#9FE1CB",
-                              }}
-                            />
-                          )}
-                          {resultRecibo.iva > 0 && (
-                            <div
-                              className="transition-all duration-500"
-                              style={{
-                                width: barW(resultRecibo.iva),
-                                background: "#FFF8A0",
-                              }}
-                            />
-                          )}
-                          {resultRecibo.segSocial > 0 && (
-                            <div
-                              className="transition-all duration-500 rounded-r-full"
-                              style={{
-                                width: barW(resultRecibo.segSocial),
-                                background: "#D3D1C7",
-                              }}
-                            />
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-3">
-                          {[
-                            { label: "Teu", color: "#1D9E75", show: true },
-                            {
-                              label: "Retenção IRS",
-                              color: "#9FE1CB",
-                              show: resultRecibo.retencaoIRS > 0,
-                            },
-                            {
-                              label: "IVA",
-                              color: "#E8D97A",
-                              show: resultRecibo.iva > 0,
-                            },
-                            {
-                              label: "Seg. Social",
-                              color: "#B4B2A9",
-                              show: resultRecibo.segSocial > 0,
-                            },
-                          ]
-                            .filter((l) => l.show)
-                            .map((l) => (
-                              <div
-                                key={l.label}
-                                className="flex items-center gap-1.5"
-                              >
-                                <div
-                                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                                  style={{ background: l.color }}
-                                />
-                                <span className="text-xs text-stone-500">
-                                  {l.label}
-                                </span>
-                              </div>
-                            ))}
-                        </div>
+                        <EuroBreakdown
+                          faturacao={resultRecibo.bruto + resultRecibo.iva}
+                          liquido={resultRecibo.liquido}
+                          irs={resultRecibo.retencaoIRS}
+                          ss={resultRecibo.segSocial}
+                          iva={resultRecibo.iva}
+                        />
                       </div>
 
                       {/* Breakdown por recibo */}
@@ -4950,6 +5446,19 @@ export default function SimuladorIntegrado() {
                     </div>
                   )}
 
+                  {/* Calendário fiscal */}
+                  <TimelineFiscal
+                    ssAnualMensal={
+                      isencaoSS ? 0 : calcularSSAnual(brutoAnual) / 12
+                    }
+                    isencaoSS={isencaoSS}
+                    acertoIRS={resultAnualRV.acertoIRS}
+                    temIva={temIva}
+                    ivaTotal={temIva ? resultRecibo.iva * 12 : 0}
+                    faturacaoAnual={brutoAnual}
+                    className="mb-5"
+                  />
+
                   <p className="text-xs text-stone-400 mt-5 leading-relaxed">
                     Estimativa fiscal 2026. Escalões IRS atualizados 3,51% pelo
                     OE2026. Mínimo de existência:{" "}
@@ -5360,6 +5869,19 @@ export default function SimuladorIntegrado() {
           </div>
         </div>
 
+        {/* ── ComparacaoNarrativa ─────────────────────────────────────────── */}
+        <div className="border-t border-stone-100 dark:border-stone-800">
+          <ComparacaoNarrativa
+            liquidoRV={resultAnualRV.liquido}
+            liquidoEmpresa={liquidoEmpresaFinal}
+            faturacaoAnual={brutoAnual}
+            breakEven={breakEven}
+            custoFixoEstimado={custosExtra}
+            onVerDetalhe={() => setCenario("empresa")}
+            modoAtivo={cenario}
+          />
+        </div>
+
         {/* ── Rodapé: comparação integrada ──────────────────────────────────── */}
         <div className="border-t border-stone-100 bg-stone-50 px-8 py-6 dark:border-stone-800 dark:bg-stone-900">
           <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-600">
@@ -5506,6 +6028,8 @@ export default function SimuladorIntegrado() {
             </p>
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   );
