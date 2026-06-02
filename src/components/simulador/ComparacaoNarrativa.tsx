@@ -314,13 +314,13 @@ export default function ComparacaoNarrativa({
           )}
         </AnimatePresence>
 
-        {/* Bolha flutuante acima do thumb */}
-        <div className="pointer-events-none relative h-10 mb-1">
+        {/* Bolha flutuante acima do thumb — posição clamped para não sair dos limites */}
+        <div className="pointer-events-none relative h-10 mb-1 overflow-visible">
           <div
             className="absolute bottom-0 -translate-x-1/2"
-            style={{ left: `${sliderPctVisual}%` }}
+            style={{ left: `clamp(1.75rem, ${sliderPctVisual}%, calc(100% - 1.75rem))` }}
           >
-            <div className={`relative rounded-lg px-2.5 py-1 text-[11px] font-black text-white shadow-md transition-all ${dragging ? "scale-105 bg-brand-dark" : "bg-brand"}`}>
+            <div className={`relative whitespace-nowrap rounded-lg px-2.5 py-1 text-[11px] font-black text-white shadow-md transition-all ${dragging ? "scale-105 bg-brand-dark" : "bg-brand"}`}>
               {fmt(slider)}
               {/* Seta */}
               <div className="absolute left-1/2 top-full -translate-x-1/2">
@@ -345,12 +345,13 @@ export default function ComparacaoNarrativa({
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onKeyDown={onKeyDown}
-          className={`relative h-4 select-none rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
+          className={`relative h-5 select-none rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
         >
           {/* Fundo do track */}
-          <div className="absolute inset-0 overflow-hidden rounded-full bg-stone-100 shadow-inner dark:bg-stone-800">
+          <div className="absolute inset-0 overflow-hidden rounded-full bg-stone-150 shadow-inner dark:bg-stone-800" style={{ background: 'var(--tw-shadow-color, #e7e5e4)' }}>
+            <div className="absolute inset-0 rounded-full bg-stone-200 dark:bg-stone-700" />
             <div
-              className="h-full rounded-full bg-brand transition-none"
+              className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-brand to-brand-dark transition-none"
               style={{ width: `${sliderPctVisual}%` }}
             />
           </div>
@@ -388,11 +389,11 @@ export default function ComparacaoNarrativa({
             animate={{ scale: dragging ? 1.12 : 1 }}
             transition={{ duration: 0.1 }}
           >
-            <div className={`flex h-8 w-8 items-center justify-center rounded-full border-2 bg-white shadow-md transition-all dark:bg-stone-900 ${dragging ? "border-brand-dark shadow-[0_0_0_4px_rgba(29,158,117,0.2)]" : "border-brand shadow-[0_2px_8px_rgba(29,158,117,0.2)]"}`}>
-              <div className="flex gap-0.5">
-                <span className="block h-2 w-0.5 rounded-full bg-brand opacity-60" />
-                <span className="block h-2 w-0.5 rounded-full bg-brand opacity-60" />
-                <span className="block h-2 w-0.5 rounded-full bg-brand opacity-60" />
+            <div className={`flex h-9 w-9 items-center justify-center rounded-full border-[3px] bg-white transition-all dark:bg-stone-900 ${dragging ? "border-brand-dark shadow-[0_0_0_5px_rgba(29,158,117,0.15)]" : "border-brand shadow-[0_4px_12px_rgba(29,158,117,0.3)]"}`}>
+              <div className="flex gap-[3px]">
+                <span className="block h-2.5 w-[2px] rounded-full bg-brand" />
+                <span className="block h-2.5 w-[2px] rounded-full bg-brand" />
+                <span className="block h-2.5 w-[2px] rounded-full bg-brand" />
               </div>
             </div>
           </m.div>

@@ -91,6 +91,8 @@ import {
   Home,
   Briefcase,
   PenLine,
+  Receipt,
+  Building,
 } from "@/components/ui/Icons";
 import { pct, fmt } from "@/lib/format";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
@@ -3538,79 +3540,21 @@ export default function SimuladorIntegrado() {
 
       <div className="relative overflow-hidden rounded-3xl border border-stone-200 shadow-lift">
         {/* ── Cabeçalho ──────────────────────────────────────────────────────── */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 bg-stone-50 px-6 py-4 dark:border-stone-800 dark:bg-stone-900">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 bg-white px-6 py-5 dark:border-stone-800 dark:bg-stone-950">
           <div>
             <div className="eyebrow text-brand">Calculadora 2026</div>
-            <h3 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-200">
+            <h3 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-200">
               O teu líquido real
             </h3>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Toggles Por recibo/Anual + RV/Empresa — só no modo profissional */}
-            {modoSimulacao === "profissional" && (
-              <>
-                <div
-                  role="group"
-                  aria-label="Modo de cálculo"
-                  className="flex rounded-xl border border-stone-200 bg-white p-1 dark:border-stone-700 dark:bg-stone-900"
-                >
-                  {(
-                    [
-                      { v: "recibo" as ModoInput, l: "Por recibo" },
-                      { v: "anual" as ModoInput, l: "Anual" },
-                    ] as const
-                  ).map(({ v, l }) => (
-                    <button
-                      key={v}
-                      type="button"
-                      aria-pressed={modoInput === v}
-                      onClick={() => setModoInput(v)}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                        modoInput === v
-                          ? "bg-brand text-white shadow-glow"
-                          : "text-stone-500 hover:text-stone-800 dark:text-stone-400"
-                      }`}
-                    >
-                      {l}
-                    </button>
-                  ))}
-                </div>
-                <div
-                  role="tablist"
-                  aria-label="Cenário"
-                  className="flex rounded-xl border border-stone-200 bg-white p-1 dark:border-stone-700 dark:bg-stone-900"
-                >
-                  {(
-                    [
-                      { v: "rv" as CenarioAtivo, l: "Recibos Verdes" },
-                      { v: "empresa" as CenarioAtivo, l: "Empresa" },
-                    ] as const
-                  ).map(({ v, l }) => (
-                    <button
-                      key={v}
-                      role="tab"
-                      aria-selected={cenario === v}
-                      type="button"
-                      onClick={() => setCenario(v)}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                        cenario === v
-                          ? "bg-brand text-white shadow-glow"
-                          : "text-stone-500 hover:text-stone-800 dark:text-stone-400"
-                      }`}
-                    >
-                      {l}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-            {/* Toggle Por recibo/Anual no modo guiado */}
-            {modoSimulacao === "guiado" && (
+            {/* Segmented control Por recibo / Anual */}
+            {modoSimulacao !== "nao_selecionado" && (
               <div
                 role="group"
                 aria-label="Modo de cálculo"
-                className="flex rounded-xl border border-stone-200 bg-white p-1 dark:border-stone-700 dark:bg-stone-900"
+                className="flex items-center rounded-2xl border border-stone-200 bg-stone-50 p-1 shadow-sm dark:border-stone-700 dark:bg-stone-900"
               >
                 {(
                   [
@@ -3623,10 +3567,10 @@ export default function SimuladorIntegrado() {
                     type="button"
                     aria-pressed={modoInput === v}
                     onClick={() => setModoInput(v)}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                    className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all ${
                       modoInput === v
-                        ? "bg-brand text-white shadow-glow"
-                        : "text-stone-500 hover:text-stone-800 dark:text-stone-400"
+                        ? "bg-brand text-white shadow-md"
+                        : "text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200"
                     }`}
                   >
                     {l}
@@ -3634,13 +3578,50 @@ export default function SimuladorIntegrado() {
                 ))}
               </div>
             )}
-            {/* Botão para mudar modo */}
+
+            {/* Tabs RV / Empresa — só modo profissional */}
+            {modoSimulacao === "profissional" && (
+              <div
+                role="tablist"
+                aria-label="Cenário"
+                className="flex items-center rounded-2xl border border-stone-200 bg-stone-50 p-1 shadow-sm dark:border-stone-700 dark:bg-stone-900"
+              >
+                {(
+                  [
+                    { v: "rv" as CenarioAtivo, l: "Recibos Verdes", Icon: Receipt },
+                    { v: "empresa" as CenarioAtivo, l: "Empresa", Icon: Building },
+                  ] as const
+                ).map(({ v, l, Icon }) => (
+                  <button
+                    key={v}
+                    role="tab"
+                    aria-selected={cenario === v}
+                    type="button"
+                    onClick={() => setCenario(v)}
+                    className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition-all ${
+                      cenario === v
+                        ? "bg-brand text-white shadow-md"
+                        : "text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200"
+                    }`}
+                  >
+                    <Icon size={14} />
+                    {l}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Mudar modo */}
             {modoSimulacao !== "nao_selecionado" && (
               <button
                 type="button"
                 onClick={handleResetModo}
-                className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-medium text-stone-500 transition-all hover:border-stone-300 hover:text-stone-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400"
+                className="flex items-center gap-1.5 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-2 text-sm font-medium text-stone-500 shadow-sm transition-all hover:border-stone-300 hover:bg-white hover:text-stone-700 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-400 dark:hover:text-stone-200"
               >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden className="flex-shrink-0">
+                  <path d="M4 12a8 8 0 108-8 8 8 0 00-6.3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                  <path d="M4 4v4h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
                 Mudar modo
               </button>
             )}
@@ -3723,7 +3704,7 @@ export default function SimuladorIntegrado() {
                           setTipoAtivEscolhido(true);
                           setAtividadeGuiada(null);
                         }}
-                        className={`group relative rounded-2xl border-2 p-5 text-left transition-all duration-200 ${
+                        className={`group relative overflow-hidden rounded-2xl border-2 p-5 text-left transition-all duration-200 ${
                           isActive
                             ? "border-brand bg-brand-light shadow-lift"
                             : "border-stone-200 bg-white hover:border-brand/40 hover:bg-stone-50 hover:shadow-card dark:border-stone-700 dark:bg-stone-900 dark:hover:border-brand/40"
