@@ -38,3 +38,6 @@ audit-report.txt
 next-env.d.ts
 
 .vercel
+
+# Claude Code — worktrees temporários (criados internamente, não pertencem ao repo)
+.claude/worktrees/
