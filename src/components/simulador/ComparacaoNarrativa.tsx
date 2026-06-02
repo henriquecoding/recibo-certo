@@ -345,38 +345,33 @@ export default function ComparacaoNarrativa({
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onKeyDown={onKeyDown}
-          className={`relative h-5 select-none rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
+          className={`relative h-10 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
         >
-          {/* Fundo do track */}
-          <div className="absolute inset-0 overflow-hidden rounded-full bg-stone-150 shadow-inner dark:bg-stone-800" style={{ background: 'var(--tw-shadow-color, #e7e5e4)' }}>
-            <div className="absolute inset-0 rounded-full bg-stone-200 dark:bg-stone-700" />
+          {/* Track visual — centrado verticalmente no hit area */}
+          <div className="absolute inset-x-0 top-1/2 h-2.5 -translate-y-1/2 overflow-hidden rounded-full bg-stone-200 dark:bg-stone-700">
             <div
-              className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-brand to-brand-dark transition-none"
+              className="h-full rounded-full bg-brand transition-none"
               style={{ width: `${sliderPctVisual}%` }}
             />
           </div>
 
-          {/* Marcador break-even */}
+          {/* Marcador break-even — linha vertical centrada no track */}
           {bePct != null && (
             <div
-              className="absolute bottom-0 top-0 z-10 w-0.5 -translate-x-1/2 bg-amber-500"
+              className="absolute top-1/2 z-10 h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-400"
               style={{ left: `${bePct}%` }}
               aria-hidden
-            >
-              <span className="absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap text-[9px] font-black text-amber-600">
-                ≈ equilíbrio
-              </span>
-            </div>
+            />
           )}
 
           {/* Marcador "tu, hoje" */}
           {faturacaoAnual > 0 && faturacaoAnual !== slider && (
             <div
-              className="absolute top-1/2 z-10 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-stone-400 shadow dark:border-stone-800"
+              className="absolute top-1/2 z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-stone-400 shadow dark:border-stone-800"
               style={{ left: `${Math.min(100, hojePct)}%` }}
               aria-hidden
             >
-              <span className="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 whitespace-nowrap text-[9px] font-semibold text-stone-500">
+              <span className="absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold text-stone-500">
                 hoje
               </span>
             </div>
@@ -386,14 +381,18 @@ export default function ComparacaoNarrativa({
           <m.div
             className="pointer-events-none absolute top-1/2 z-20 -translate-x-1/2 -translate-y-1/2"
             style={{ left: `${sliderPctVisual}%` }}
-            animate={{ scale: dragging ? 1.12 : 1 }}
+            animate={{ scale: dragging ? 1.1 : 1 }}
             transition={{ duration: 0.1 }}
           >
-            <div className={`flex h-9 w-9 items-center justify-center rounded-full border-[3px] bg-white transition-all dark:bg-stone-900 ${dragging ? "border-brand-dark shadow-[0_0_0_5px_rgba(29,158,117,0.15)]" : "border-brand shadow-[0_4px_12px_rgba(29,158,117,0.3)]"}`}>
-              <div className="flex gap-[3px]">
-                <span className="block h-2.5 w-[2px] rounded-full bg-brand" />
-                <span className="block h-2.5 w-[2px] rounded-full bg-brand" />
-                <span className="block h-2.5 w-[2px] rounded-full bg-brand" />
+            <div className={`flex h-8 w-8 items-center justify-center rounded-full border-2 bg-white transition-all dark:bg-stone-900 ${
+              dragging
+                ? "border-brand-dark shadow-[0_0_0_4px_rgba(29,158,117,0.2)]"
+                : "border-brand shadow-[0_2px_10px_rgba(29,158,117,0.35)]"
+            }`}>
+              <div className="flex gap-0.5">
+                <span className="block h-2.5 w-0.5 rounded-full bg-brand" />
+                <span className="block h-2.5 w-0.5 rounded-full bg-brand" />
+                <span className="block h-2.5 w-0.5 rounded-full bg-brand" />
               </div>
             </div>
           </m.div>

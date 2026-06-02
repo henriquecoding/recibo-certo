@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState, useId } from "react";
+import { useMemo, useRef, useState, useId, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { ATIVIDADES, type Atividade } from "@/lib/fiscal-data";
 
 // Seletor de atividade pesquisável e acessível (combobox + listbox).
-// Suporta teclado (setas, Enter, Escape) e rato.
+// O dropdown usa createPortal + position:fixed para escapar de qualquer
+// ancestor com overflow:hidden (como o container do simulador).
 export default function ActivityCombobox({
   value,
   onChange,
@@ -15,14 +17,36 @@ export default function ActivityCombobox({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
+  const [mounted, setMounted] = useState(false);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
   const listId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const filtradas = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return ATIVIDADES;
-    return ATIVIDADES.filter((a) => `${a.label} ${a.grupo}`.toLowerCase().includes(q));
+    return ATIVIDADES.filter((a) =>
+      `${a.label} ${a.grupo}`.toLowerCase().includes(q),
+    );
   }, [query]);
+
+  const updateDropdownPosition = () => {
+    if (wrapperRef.current) {
+      const rect = wrapperRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: "fixed",
+        top: rect.bottom + 6,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      });
+    }
+  };
 
   const escolher = (a: Atividade) => {
     onChange(a);
@@ -46,12 +70,57 @@ export default function ActivityCombobox({
     }
   };
 
+  const dropdown = open && mounted ? (
+    <ul
+      id={listId}
+      role="listbox"
+      style={dropdownStyle}
+      className="max-h-72 overflow-auto rounded-xl border border-stone-200 bg-white py-1 shadow-float dark:border-stone-700 dark:bg-stone-950"
+    >
+      {filtradas.length === 0 && (
+        <li className="px-3.5 py-2 text-sm text-stone-400">Sem resultados</li>
+      )}
+      {filtradas.map((a, i) => (
+        <li
+          key={a.label}
+          role="option"
+          aria-selected={value?.label === a.label}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            escolher(a);
+          }}
+          onMouseEnter={() => setActive(i)}
+          className={`flex cursor-pointer items-center justify-between gap-3 px-3.5 py-2 text-sm transition-colors ${
+            i === active
+              ? "bg-brand-light text-brand-dark"
+              : "text-stone-700 hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-900"
+          }`}
+        >
+          <span>{a.label}</span>
+          <span className="shrink-0 text-[11px] text-stone-400">{a.grupo}</span>
+        </li>
+      ))}
+    </ul>
+  ) : null;
+
   return (
-    <div className="relative">
-      <div className="flex items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-3.5 transition-all focus-within:border-brand focus-within:ring-2 focus-within:ring-brand">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden className="flex-shrink-0 text-stone-400">
+    <div ref={wrapperRef} className="relative">
+      <div className="flex items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-3.5 transition-all focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/30 dark:border-stone-700 dark:bg-stone-900">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden
+          className="flex-shrink-0 text-stone-400"
+        >
           <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" />
-          <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path
+            d="M20 20l-3.5-3.5"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
         </svg>
         <input
           ref={inputRef}
@@ -67,43 +136,17 @@ export default function ActivityCombobox({
             setOpen(true);
             setActive(0);
           }}
-          onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 120)}
+          onFocus={() => {
+            updateDropdownPosition();
+            setOpen(true);
+          }}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
           onKeyDown={onKeyDown}
-          className="w-full bg-transparent py-2.5 text-sm text-stone-800 placeholder-stone-400 focus:outline-none"
+          className="w-full bg-transparent py-3 text-sm text-stone-800 placeholder-stone-400 focus:outline-none dark:text-stone-200"
         />
       </div>
 
-      {open && (
-        <ul
-          id={listId}
-          role="listbox"
-          className="absolute z-50 mt-1.5 max-h-72 w-full overflow-auto rounded-xl border border-stone-200 bg-white py-1 shadow-lift"
-        >
-          {filtradas.length === 0 && <li className="px-3.5 py-2 text-sm text-stone-400">Sem resultados</li>}
-          {filtradas.map((a, i) => {
-            const selected = value?.label === a.label;
-            return (
-              <li
-                key={a.label}
-                role="option"
-                aria-selected={selected}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  escolher(a);
-                }}
-                onMouseEnter={() => setActive(i)}
-                className={`flex cursor-pointer items-center justify-between gap-3 px-3.5 py-2 text-sm ${
-                  i === active ? "bg-brand-light text-brand-dark" : "text-stone-700"
-                }`}
-              >
-                <span>{a.label}</span>
-                <span className="text-[11px] text-stone-400">{a.grupo}</span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      {mounted && dropdown && createPortal(dropdown, document.body)}
     </div>
   );
 }
