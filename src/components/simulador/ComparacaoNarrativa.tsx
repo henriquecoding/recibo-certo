@@ -267,12 +267,12 @@ export default function ComparacaoNarrativa({
           </div>
         </div>
 
-        {/* Valor + input manual */}
-        <div className="mb-3 flex items-end justify-between">
-          <span className="text-sm font-semibold text-stone-600 dark:text-stone-300">
+        {/* Valor + input manual — centrado */}
+        <div className="mb-4 text-center">
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
             Faturação anual para simulação
-          </span>
-          <div className="flex items-baseline gap-1">
+          </p>
+          <div className="flex items-baseline justify-center gap-2">
             {inputFocused ? (
               <input
                 type="text"
@@ -281,20 +281,23 @@ export default function ComparacaoNarrativa({
                 value={inputStr}
                 onChange={handleInputChange}
                 onBlur={handleInputBlur}
-                className="w-28 rounded-xl border border-brand bg-white px-2 py-1 text-right text-xl font-black text-stone-800 tabular-nums outline-none ring-2 ring-brand/20 dark:bg-stone-900 dark:text-stone-100"
+                className="w-40 rounded-xl border border-brand bg-white px-2 py-1 text-center text-3xl font-black text-stone-800 tabular-nums outline-none ring-2 ring-brand/20 dark:bg-stone-900 dark:text-stone-100"
                 aria-label="Faturação anual"
               />
             ) : (
               <button
                 type="button"
                 onClick={() => { setInputStr(String(slider)); setInputFocused(true); setInteragiu(true); }}
-                className="rounded-xl px-1 text-right text-xl font-black tabular-nums text-stone-800 transition-colors hover:text-brand dark:text-stone-100"
+                className="group flex items-center gap-1.5 rounded-xl px-2 py-1 text-3xl font-black tabular-nums text-stone-800 transition-all hover:bg-stone-50 hover:text-brand dark:text-stone-100 dark:hover:bg-stone-800"
                 title="Clica para editar"
               >
                 {fmt(slider)}
+                <span className="text-[10px] font-medium text-stone-300 transition-colors group-hover:text-brand/50">
+                  editar
+                </span>
               </button>
             )}
-            <span className="text-xs text-stone-400">/ano</span>
+            <span className="text-sm font-medium text-stone-400">/ano</span>
           </div>
         </div>
 
@@ -377,25 +380,28 @@ export default function ComparacaoNarrativa({
             </div>
           )}
 
-          {/* Thumb */}
-          <m.div
+          {/* Thumb — wrapper posiciona em XY; m.div só anima scale */}
+          <div
             className="pointer-events-none absolute top-1/2 z-20 -translate-x-1/2 -translate-y-1/2"
             style={{ left: `${sliderPctVisual}%` }}
-            animate={{ scale: dragging ? 1.1 : 1 }}
-            transition={{ duration: 0.1 }}
           >
-            <div className={`flex h-8 w-8 items-center justify-center rounded-full border-2 bg-white transition-all dark:bg-stone-900 ${
-              dragging
-                ? "border-brand-dark shadow-[0_0_0_4px_rgba(29,158,117,0.2)]"
-                : "border-brand shadow-[0_2px_10px_rgba(29,158,117,0.35)]"
-            }`}>
-              <div className="flex gap-0.5">
-                <span className="block h-2.5 w-0.5 rounded-full bg-brand" />
-                <span className="block h-2.5 w-0.5 rounded-full bg-brand" />
-                <span className="block h-2.5 w-0.5 rounded-full bg-brand" />
+            <m.div
+              animate={{ scale: dragging ? 1.1 : 1 }}
+              transition={{ duration: 0.1 }}
+            >
+              <div className={`flex h-8 w-8 items-center justify-center rounded-full border-2 bg-white transition-all dark:bg-stone-900 ${
+                dragging
+                  ? "border-brand-dark shadow-[0_0_0_4px_rgba(29,158,117,0.2)]"
+                  : "border-brand shadow-[0_2px_10px_rgba(29,158,117,0.35)]"
+              }`}>
+                <div className="flex gap-0.5">
+                  <span className="block h-2.5 w-0.5 rounded-full bg-brand" />
+                  <span className="block h-2.5 w-0.5 rounded-full bg-brand" />
+                  <span className="block h-2.5 w-0.5 rounded-full bg-brand" />
+                </div>
               </div>
-            </div>
-          </m.div>
+            </m.div>
+          </div>
         </div>
 
         {/* Ticks + labels */}
