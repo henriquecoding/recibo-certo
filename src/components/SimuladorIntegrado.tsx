@@ -1110,18 +1110,24 @@ function IvaZonas({
                 <p className="mb-2 text-xs font-semibold text-alert-text">
                   Que taxa de IVA vais cobrar a partir de janeiro?
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {(["reduzida", "intermedia", "normal"] as const).map((e) => (
-                    <button
-                      key={e}
-                      type="button"
-                      aria-pressed={regimeIVA === e}
-                      onClick={() => onRegimeIVAChange(e)}
-                      className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${regimeIVA === e ? "border-amber-600 bg-amber-100 text-amber-800" : "border-amber-300 bg-white/60 text-alert-text hover:border-amber-500"}`}
-                    >
-                      {e === "reduzida" ? `Reduzida ${pct(IVA_TAXAS[regiaoAtual].value.reduzida)}` : e === "intermedia" ? `Intermédia ${pct(IVA_TAXAS[regiaoAtual].value.intermedia)}` : `Normal ${pct(IVA_TAXAS[regiaoAtual].value.normal)}`}
-                    </button>
-                  ))}
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {(["reduzida", "intermedia", "normal"] as const).map((e) => {
+                    const taxa = IVA_TAXAS[regiaoAtual].value[e];
+                    const desc = e === "reduzida" ? "saúde, alimentação, livros" : e === "intermedia" ? "restauração, alojamento local" : "maioria dos serviços, TI, consultoria";
+                    const label = e === "reduzida" ? "Reduzida" : e === "intermedia" ? "Intermédia" : "Normal";
+                    return (
+                      <button
+                        key={e}
+                        type="button"
+                        aria-pressed={regimeIVA === e}
+                        onClick={() => onRegimeIVAChange(e)}
+                        className={`rounded-xl border p-2.5 text-left transition-all ${regimeIVA === e ? "border-amber-600 bg-amber-100 text-amber-800" : "border-amber-300 bg-white/60 text-alert-text hover:border-amber-500"}`}
+                      >
+                        <div className="text-xs font-bold">{label} {pct(taxa)}</div>
+                        <div className="mt-0.5 text-[10px] opacity-70">{desc}</div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1164,18 +1170,24 @@ function IvaZonas({
               <p className="mb-2 text-xs font-semibold text-red-700 dark:text-red-300">
                 Que taxa de IVA cobras?
               </p>
-              <div className="flex flex-wrap gap-2">
-                {(["reduzida", "intermedia", "normal"] as const).map((e) => (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {(["reduzida", "intermedia", "normal"] as const).map((e) => {
+                  const taxa = IVA_TAXAS[regiaoAtual].value[e];
+                  const desc = e === "reduzida" ? "saúde, alimentação, livros" : e === "intermedia" ? "restauração, alojamento local" : "maioria dos serviços, TI, consultoria";
+                  const label = e === "reduzida" ? "Reduzida" : e === "intermedia" ? "Intermédia" : "Normal";
+                  return (
                   <button
                     key={e}
                     type="button"
                     aria-pressed={regimeIVA === e}
                     onClick={() => onRegimeIVAChange(e)}
-                    className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${regimeIVA === e ? "border-red-600 bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200" : "border-red-300 bg-white/60 text-red-700 hover:border-red-500 dark:border-red-800 dark:bg-transparent"}`}
+                    className={`rounded-xl border p-2.5 text-left transition-all ${regimeIVA === e ? "border-red-600 bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200" : "border-red-300 bg-white/60 text-red-700 hover:border-red-500 dark:border-red-800 dark:bg-transparent"}`}
                   >
-                    {e === "reduzida" ? `Reduzida ${pct(IVA_TAXAS[regiaoAtual].value.reduzida)}` : e === "intermedia" ? `Intermédia ${pct(IVA_TAXAS[regiaoAtual].value.intermedia)}` : `Normal ${pct(IVA_TAXAS[regiaoAtual].value.normal)}`}
+                    <div className="text-xs font-bold">{label} {pct(taxa)}</div>
+                    <div className="mt-0.5 text-[10px] opacity-70">{desc}</div>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1429,7 +1441,7 @@ function NumericSlider({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onKeyDown={onKeyDown}
-        className={`relative h-8 select-none focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${
+        className={`relative h-8 touch-none select-none focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${
           dragging ? "cursor-grabbing" : "cursor-grab"
         }`}
       >

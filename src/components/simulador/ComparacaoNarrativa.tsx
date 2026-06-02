@@ -33,6 +33,10 @@ function fmtPreset(v: number) {
   return `${v}€`;
 }
 
+function fmtInt(v: number): string {
+  return Math.round(v).toLocaleString("pt-PT") + " €";
+}
+
 export default function ComparacaoNarrativa({
   liquidoRV,
   liquidoEmpresa,
@@ -255,11 +259,11 @@ export default function ComparacaoNarrativa({
       </div>
 
       {/* ── Calculadora interactiva ─────────────────────────────────────────── */}
-      <div className="mt-3 rounded-3xl border border-stone-200 bg-white p-5 dark:border-stone-700 dark:bg-stone-950">
+      <div className="mt-3 overflow-hidden rounded-3xl border border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-950">
         {/* Cabeçalho */}
-        <div className="mb-4 flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-light">
-            <ChartProjection size={16} className="text-brand-dark" />
+        <div className="flex items-center gap-2.5 border-b border-stone-100 px-5 py-4 dark:border-stone-800">
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light">
+            <ChartProjection size={18} className="text-brand-dark" />
           </div>
           <div>
             <h4 className="text-sm font-bold text-stone-800 dark:text-stone-100">Calculadora de poupança</h4>
@@ -267,245 +271,229 @@ export default function ComparacaoNarrativa({
           </div>
         </div>
 
-        {/* Valor + input manual — centrado */}
-        <div className="mb-4 text-center">
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
-            Faturação anual para simulação
-          </p>
-          <div className="flex items-baseline justify-center gap-2">
-            {inputFocused ? (
-              <input
-                type="text"
-                inputMode="numeric"
-                autoFocus
-                value={inputStr}
-                onChange={handleInputChange}
-                onBlur={handleInputBlur}
-                className="w-40 rounded-xl border border-brand bg-white px-2 py-1 text-center text-3xl font-black text-stone-800 tabular-nums outline-none ring-2 ring-brand/20 dark:bg-stone-900 dark:text-stone-100"
-                aria-label="Faturação anual"
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={() => { setInputStr(String(slider)); setInputFocused(true); setInteragiu(true); }}
-                className="group flex items-center gap-1.5 rounded-xl px-2 py-1 text-3xl font-black tabular-nums text-stone-800 transition-all hover:bg-stone-50 hover:text-brand dark:text-stone-100 dark:hover:bg-stone-800"
-                title="Clica para editar"
+        <div className="px-5 pb-5 pt-4">
+          {/* Valor central — clicável para editar */}
+          <div className="mb-3 flex flex-col items-center text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">
+              Faturação anual para simulação
+            </p>
+            <div className="mt-2">
+              {inputFocused ? (
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoFocus
+                  value={inputStr}
+                  onChange={handleInputChange}
+                  onBlur={handleInputBlur}
+                  className="w-44 rounded-xl border border-brand bg-white px-3 py-1.5 text-center text-3xl font-black text-stone-800 tabular-nums outline-none ring-2 ring-brand/20 dark:bg-stone-900 dark:text-stone-100"
+                  aria-label="Faturação anual"
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { setInputStr(String(slider)); setInputFocused(true); setInteragiu(true); }}
+                  className="group relative rounded-xl px-3 py-1 text-3xl font-black tabular-nums text-stone-800 transition-all hover:bg-stone-50 hover:text-brand dark:text-stone-100 dark:hover:bg-stone-800"
+                  title="Toca para editar"
+                >
+                  {fmtInt(slider)}
+                  <span className="absolute -right-1 -top-1 rounded-full bg-stone-100 px-1.5 py-0.5 text-[9px] font-semibold text-stone-400 opacity-0 transition-opacity group-hover:opacity-100 dark:bg-stone-800">
+                    editar
+                  </span>
+                </button>
+              )}
+            </div>
+            <p className="mt-0.5 text-xs text-stone-400">/ano · toca para editar</p>
+          </div>
+
+          {/* Hint arraste */}
+          <AnimatePresence>
+            {!interagiu && (
+              <m.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="mb-2 text-center text-[11px] text-stone-300 dark:text-stone-600"
               >
-                {fmt(slider)}
-                <span className="text-[10px] font-medium text-stone-300 transition-colors group-hover:text-brand/50">
-                  editar
-                </span>
-              </button>
+                ‹ arraste o slider ou edita o valor ›
+              </m.div>
             )}
-            <span className="text-sm font-medium text-stone-400">/ano</span>
-          </div>
-        </div>
+          </AnimatePresence>
 
-        {/* Hint arraste */}
-        <AnimatePresence>
-          {!interagiu && (
-            <m.div
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="mb-3 flex items-center justify-center gap-1 text-[11px] font-semibold text-stone-400"
+          {/* Bolha acima do thumb */}
+          <div className="pointer-events-none relative mb-1 h-12 overflow-visible">
+            <div
+              className="absolute bottom-0 -translate-x-1/2"
+              style={{ left: `clamp(1.25rem, ${sliderPctVisual}%, calc(100% - 1.25rem))` }}
             >
-              <span>‹</span>
-              <span>Arraste ou clique no valor para ajustar</span>
-              <span>›</span>
-            </m.div>
-          )}
-        </AnimatePresence>
-
-        {/* Bolha flutuante acima do thumb — posição clamped para não sair dos limites */}
-        <div className="pointer-events-none relative h-10 mb-1 overflow-visible">
-          <div
-            className="absolute bottom-0 -translate-x-1/2"
-            style={{ left: `clamp(1.75rem, ${sliderPctVisual}%, calc(100% - 1.75rem))` }}
-          >
-            <div className={`relative whitespace-nowrap rounded-lg px-2.5 py-1 text-[11px] font-black text-white shadow-md transition-all ${dragging ? "scale-105 bg-brand-dark" : "bg-brand"}`}>
-              {fmt(slider)}
-              {/* Seta */}
-              <div className="absolute left-1/2 top-full -translate-x-1/2">
-                <div className="h-0 w-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent border-t-brand" />
-                <div className="mx-auto h-2 w-px bg-brand/30" />
+              <div className={`whitespace-nowrap rounded-lg px-2.5 py-1 text-[11px] font-black text-white shadow transition-all ${dragging ? "scale-105 bg-brand-dark" : "bg-brand"}`}>
+                {fmtInt(slider)}
               </div>
+              {/* Seta apontadora */}
+              <div className="mx-auto mt-0.5 h-0 w-0 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-brand" />
             </div>
           </div>
-        </div>
 
-        {/* Track + thumb */}
-        <div
-          ref={trackRef}
-          role="slider"
-          aria-valuemin={MIN}
-          aria-valuemax={MAX}
-          aria-valuenow={slider}
-          aria-label="Faturação anual para simulação"
-          tabIndex={0}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-          onKeyDown={onKeyDown}
-          className={`relative h-10 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
-        >
-          {/* Track visual — centrado verticalmente no hit area */}
-          <div className="absolute inset-x-0 top-1/2 h-2.5 -translate-y-1/2 overflow-hidden rounded-full bg-stone-200 dark:bg-stone-700">
-            <div
-              className="h-full rounded-full bg-brand transition-none"
-              style={{ width: `${sliderPctVisual}%` }}
-            />
-          </div>
-
-          {/* Marcador break-even — linha vertical centrada no track */}
-          {bePct != null && (
-            <div
-              className="absolute top-1/2 z-10 h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-400"
-              style={{ left: `${bePct}%` }}
-              aria-hidden
-            />
-          )}
-
-          {/* Marcador "tu, hoje" */}
-          {faturacaoAnual > 0 && faturacaoAnual !== slider && (
-            <div
-              className="absolute top-1/2 z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-stone-400 shadow dark:border-stone-800"
-              style={{ left: `${Math.min(100, hojePct)}%` }}
-              aria-hidden
-            >
-              <span className="absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold text-stone-500">
-                hoje
-              </span>
-            </div>
-          )}
-
-          {/* Thumb — wrapper posiciona em XY; m.div só anima scale */}
+          {/* Slider — touch-none previne conflito com scroll em mobile */}
           <div
-            className="pointer-events-none absolute top-1/2 z-20 -translate-x-1/2 -translate-y-1/2"
-            style={{ left: `${sliderPctVisual}%` }}
+            ref={trackRef}
+            role="slider"
+            aria-valuemin={MIN}
+            aria-valuemax={MAX}
+            aria-valuenow={slider}
+            aria-label="Faturação anual para simulação"
+            tabIndex={0}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+            onKeyDown={onKeyDown}
+            className={`relative h-12 touch-none select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
           >
-            <m.div
-              animate={{ scale: dragging ? 1.1 : 1 }}
-              transition={{ duration: 0.1 }}
+            {/* Track visual */}
+            <div className="absolute inset-x-0 top-1/2 h-3 -translate-y-1/2 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
+              <div
+                className="h-full rounded-full bg-brand transition-none"
+                style={{ width: `${sliderPctVisual}%` }}
+              />
+            </div>
+
+            {/* Marcador break-even */}
+            {bePct != null && (
+              <div
+                className="absolute top-1/2 z-10 h-6 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-400"
+                style={{ left: `${bePct}%` }}
+                aria-hidden
+              />
+            )}
+
+            {/* Marcador "tu, hoje" */}
+            {faturacaoAnual > 0 && faturacaoAnual !== slider && (
+              <div
+                className="absolute top-1/2 z-10 -translate-x-1/2 -translate-y-1/2"
+                style={{ left: `${Math.min(100, hojePct)}%` }}
+                aria-hidden
+              >
+                <div className="h-4 w-4 rounded-full border-2 border-white bg-stone-400 shadow dark:border-stone-800" />
+                <span className="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 whitespace-nowrap text-[9px] font-semibold text-stone-400">
+                  hoje
+                </span>
+              </div>
+            )}
+
+            {/* Thumb — wrapper: XY; m.div: apenas scale */}
+            <div
+              className="pointer-events-none absolute top-1/2 z-20 -translate-x-1/2 -translate-y-1/2"
+              style={{ left: `${sliderPctVisual}%` }}
             >
-              <div className={`flex h-8 w-8 items-center justify-center rounded-full border-2 bg-white transition-all dark:bg-stone-900 ${
-                dragging
-                  ? "border-brand-dark shadow-[0_0_0_4px_rgba(29,158,117,0.2)]"
-                  : "border-brand shadow-[0_2px_10px_rgba(29,158,117,0.35)]"
-              }`}>
-                <div className="flex gap-0.5">
-                  <span className="block h-2.5 w-0.5 rounded-full bg-brand" />
-                  <span className="block h-2.5 w-0.5 rounded-full bg-brand" />
-                  <span className="block h-2.5 w-0.5 rounded-full bg-brand" />
+              <m.div animate={{ scale: dragging ? 1.1 : 1 }} transition={{ duration: 0.1 }}>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-full border-2 bg-white dark:bg-stone-900 ${
+                  dragging
+                    ? "border-brand-dark shadow-[0_0_0_6px_rgba(29,158,117,0.15)]"
+                    : "border-brand shadow-[0_2px_12px_rgba(29,158,117,0.3)]"
+                }`}>
+                  <div className="flex gap-0.5">
+                    <span className="block h-3 w-0.5 rounded-full bg-brand" />
+                    <span className="block h-3 w-0.5 rounded-full bg-brand" />
+                    <span className="block h-3 w-0.5 rounded-full bg-brand" />
+                  </div>
                 </div>
+              </m.div>
+            </div>
+          </div>
+
+          {/* Ticks */}
+          <div className="relative h-5 text-[10px] font-medium text-stone-400">
+            <span className="absolute left-0">0€</span>
+            {bePct != null && breakEvenCalc != null && (
+              <span
+                className="absolute -translate-x-1/2 whitespace-nowrap font-bold text-amber-600"
+                style={{ left: `${bePct}%` }}
+              >
+                {fmtPreset(breakEvenCalc)}
+              </span>
+            )}
+            <span className="absolute right-0">200k€</span>
+          </div>
+
+          {/* Presets */}
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {PRESETS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                aria-pressed={slider === p}
+                onClick={() => { setSlider(p); setInteragiu(true); }}
+                className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-bold tabular-nums transition-all ${
+                  slider === p
+                    ? "border-brand bg-brand text-white shadow-sm"
+                    : "border-stone-200 bg-stone-50 text-stone-500 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400"
+                }`}
+              >
+                {fmtPreset(p)}
+              </button>
+            ))}
+          </div>
+
+          {/* Cards de comparação */}
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            {/* Recibos Verdes */}
+            <div className={`rounded-2xl border-2 p-3 transition-all ${!empresaMelhorSlider ? "border-brand bg-brand-light" : "border-stone-100 bg-stone-50 dark:border-stone-700 dark:bg-stone-900"}`}>
+              <div className="mb-2 flex items-center gap-1">
+                <Receipt size={12} className="flex-shrink-0 text-stone-400" />
+                <span className="min-w-0 truncate text-[10px] font-bold text-stone-500 dark:text-stone-400">Recibos Verdes</span>
               </div>
-            </m.div>
-          </div>
-        </div>
-
-        {/* Ticks + labels */}
-        <div className="relative mt-5 text-[10px] font-medium text-stone-400">
-          <span className="absolute left-0">0€</span>
-          {bePct != null && breakEvenCalc != null && (
-            <span
-              className="-translate-x-1/2 absolute font-bold text-amber-600 whitespace-nowrap"
-              style={{ left: `${bePct}%` }}
-            >
-              {fmtPreset(breakEvenCalc)}
-            </span>
-          )}
-          <span className="absolute right-0">200k€</span>
-        </div>
-
-        {/* Presets */}
-        <div className="mt-6 flex flex-wrap gap-1.5">
-          {PRESETS.map((p) => (
-            <button
-              key={p}
-              type="button"
-              aria-pressed={slider === p}
-              onClick={() => { setSlider(p); setInteragiu(true); }}
-              className={`rounded-lg border px-2.5 py-1 text-[11px] font-bold tabular-nums transition-all ${
-                slider === p
-                  ? "border-brand bg-brand text-white shadow-sm"
-                  : "border-stone-200 bg-stone-50 text-stone-500 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400"
-              }`}
-            >
-              {fmtPreset(p)}
-            </button>
-          ))}
-        </div>
-
-        {/* Dois cards de comparação */}
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <div className={`rounded-2xl border-2 p-3.5 transition-all ${!empresaMelhorSlider ? "border-brand bg-brand-light" : "border-stone-100 bg-stone-50 dark:border-stone-700 dark:bg-stone-900"}`}>
-            <div className="mb-1 flex items-center gap-1.5">
-              <Receipt size={13} className="text-stone-400" />
-              <span className="text-[11px] font-black text-stone-500 dark:text-stone-400">Recibos Verdes</span>
               {!empresaMelhorSlider && (
-                <span className="inline-flex items-center gap-0.5 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-black text-white">
-                  <Check size={8} /> Melhor
+                <span className="mb-1.5 inline-flex items-center gap-0.5 rounded-full bg-brand px-2 py-0.5 text-[9px] font-black text-white">
+                  ✓ Melhor
                 </span>
               )}
+              <p className={`text-lg font-black tabular-nums leading-none ${!empresaMelhorSlider ? "text-brand-dark" : "text-stone-800 dark:text-stone-100"}`}>
+                {fmtInt(Math.round(liquidoRVSlider))}
+              </p>
+              <p className="mt-1 text-[10px] text-stone-400">líquido/ano</p>
             </div>
-            <p className={`text-xl font-black tabular-nums ${!empresaMelhorSlider ? "text-brand-dark" : "text-stone-800 dark:text-stone-100"}`}>
-              {fmt(Math.round(liquidoRVSlider))}
-            </p>
-            <p className="text-[10px] text-stone-400">líquido/ano</p>
-          </div>
 
-          <div className={`rounded-2xl border-2 p-3.5 transition-all ${empresaMelhorSlider ? "border-brand bg-brand-light" : "border-stone-100 bg-stone-50 dark:border-stone-700 dark:bg-stone-900"}`}>
-            <div className="mb-1 flex items-center gap-1.5">
-              <Building size={13} className="text-stone-400" />
-              <span className="text-[11px] font-black text-stone-500 dark:text-stone-400">Empresa (Lda)</span>
+            {/* Empresa */}
+            <div className={`rounded-2xl border-2 p-3 transition-all ${empresaMelhorSlider ? "border-brand bg-brand-light" : "border-stone-100 bg-stone-50 dark:border-stone-700 dark:bg-stone-900"}`}>
+              <div className="mb-2 flex items-center gap-1">
+                <Building size={12} className="flex-shrink-0 text-stone-400" />
+                <span className="min-w-0 truncate text-[10px] font-bold text-stone-500 dark:text-stone-400">Empresa (Lda)</span>
+              </div>
               {empresaMelhorSlider && (
-                <span className="inline-flex items-center gap-0.5 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-black text-white">
-                  <Check size={8} /> Melhor
+                <span className="mb-1.5 inline-flex items-center gap-0.5 rounded-full bg-brand px-2 py-0.5 text-[9px] font-black text-white">
+                  ✓ Melhor
                 </span>
               )}
+              <p className={`text-lg font-black tabular-nums leading-none ${empresaMelhorSlider ? "text-brand-dark" : "text-stone-800 dark:text-stone-100"}`}>
+                {fmtInt(Math.round(liquidoEmpresaSlider))}
+              </p>
+              <p className="mt-1 text-[10px] text-stone-400">líquido/ano</p>
             </div>
-            <p className={`text-xl font-black tabular-nums ${empresaMelhorSlider ? "text-brand-dark" : "text-stone-800 dark:text-stone-100"}`}>
-              {fmt(Math.round(liquidoEmpresaSlider))}
-            </p>
-            <p className="text-[10px] text-stone-400">líquido/ano</p>
           </div>
-        </div>
 
-        {/* Resultado dinâmico */}
-        <m.div
-          key={empresaMelhorSlider ? "emp" : "rv"}
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-          className={`mt-3 flex items-center gap-2 rounded-2xl p-3 text-sm font-semibold ${
-            !empresaMelhorSlider && !empresaMelhorSlider && diferencaSlider === 0
-              ? "bg-stone-50 text-stone-600 dark:bg-stone-800"
-              : empresaMelhorSlider
-              ? "bg-brand-light text-brand-dark"
-              : "bg-brand-light text-brand-dark"
-          }`}
-        >
-          <Check size={14} className="flex-shrink-0 text-brand" />
-          {diferencaSlider === 0 ? (
-            "Ponto de equilíbrio — os dois cenários dão o mesmo resultado."
-          ) : (
-            <>
-              Com {fmt(slider)}/ano,{" "}
-              <span className="font-black">
-                {empresaMelhorSlider ? "a Empresa" : "os Recibos Verdes"}
-              </span>{" "}
-              {empresaMelhorSlider ? "dá-te" : "dão-te"} mais{" "}
-              <span className="tabular-nums font-black">{fmt(Math.round(diferencaSlider))}/ano</span>.
-            </>
+          {/* Conclusão — texto simples, sem flex que parte em mobile */}
+          <m.div
+            key={empresaMelhorSlider ? "emp" : "rv"}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="mt-3 flex items-start gap-2 rounded-2xl bg-brand-light p-3"
+          >
+            <Check size={14} className="mt-0.5 flex-shrink-0 text-brand" />
+            <p className="text-sm font-semibold leading-snug text-brand-dark">
+              {diferencaSlider === 0
+                ? "Ponto de equilíbrio — os dois cenários dão o mesmo resultado."
+                : `Com ${fmtPreset(slider)}/ano, ${empresaMelhorSlider ? "a Empresa" : "os Recibos Verdes"} ${empresaMelhorSlider ? "dá-te" : "dão-te"} mais ${fmtPreset(Math.round(diferencaSlider))}/ano.`}
+            </p>
+          </m.div>
+
+          {breakEvenCalc != null && (
+            <p className="mt-2 text-center text-[11px] text-stone-400">
+              A empresa compensa acima de {fmtInt(breakEvenCalc)}/ano neste cenário
+            </p>
           )}
-        </m.div>
-
-        <p className="mt-2 text-center text-[11px] text-stone-400">
-          {breakEvenCalc != null
-            ? `A empresa passa a compensar acima de ${fmt(breakEvenCalc)}/ano neste cenário`
-            : "Com estes parâmetros, os Recibos Verdes compensam em toda a gama simulada"}
-        </p>
+        </div>
       </div>
 
       {/* CTA */}
