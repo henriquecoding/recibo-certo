@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/supabase/auth";
 import { Check, Warning, History, BellAlert, ArrowLeft } from "@/components/ui/Icons";
 
 const campo =
-  "w-full px-3.5 py-2.5 text-sm text-stone-800 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all";
+  "w-full px-3.5 py-2.5 text-[16px] text-stone-800 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all";
 const rotulo = "mb-1.5 block text-xs font-medium uppercase tracking-wider text-stone-500";
 
 export default function ContaPage() {

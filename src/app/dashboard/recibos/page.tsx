@@ -111,7 +111,7 @@ export default function RecibosPage() {
     return new Date(Number(ano), Number(mes) - 1, 1).toLocaleDateString("pt-PT", { month: "long", year: "numeric" });
   };
 
-  const campo = "w-full px-3.5 py-2.5 text-sm text-stone-800 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all";
+  const campo = "w-full px-3.5 py-2.5 text-[16px] text-stone-800 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all";
   const rotulo = "text-xs font-medium text-stone-500 uppercase tracking-wider block mb-1.5";
 
   return (

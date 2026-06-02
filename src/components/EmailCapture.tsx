@@ -59,7 +59,7 @@ export default function EmailCapture({ fonte = "landing" }: { fonte?: string }) 
                 placeholder="o.teu@email.pt"
                 aria-invalid={error}
                 aria-describedby={error ? "email-error" : undefined}
-                className="w-full px-4 py-3.5 rounded-xl text-sm bg-white/10 text-white placeholder-green-200 border border-white/20 focus:outline-none focus:border-white/70 focus:ring-2 focus:ring-white/30 transition-all"
+                className="w-full px-4 py-3.5 rounded-xl text-[16px] bg-white/10 text-white placeholder-green-200 border border-white/20 focus:outline-none focus:border-white/70 focus:ring-2 focus:ring-white/30 transition-all"
               />
             </div>
             <m.button

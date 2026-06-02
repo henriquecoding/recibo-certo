@@ -17,7 +17,7 @@ export default function ActivityCombobox({
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const [mounted, setMounted] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 300 });
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 300, above: false });
   const listId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -30,7 +30,18 @@ export default function ActivityCombobox({
       requestAnimationFrame(() => {
         if (wrapperRef.current) {
           const r = wrapperRef.current.getBoundingClientRect();
-          setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+          const vh = window.visualViewport?.height ?? window.innerHeight;
+          const vw = window.innerWidth;
+          const maxH = 256; // max-h-64
+          const spaceBelow = vh - r.bottom - 4;
+          const above = spaceBelow < maxH && r.top > maxH;
+          const left = Math.max(0, Math.min(r.left, vw - r.width));
+          setPos({
+            top: above ? r.top - maxH - 4 : r.bottom + 4,
+            left,
+            width: r.width,
+            above,
+          });
         }
       });
     });
@@ -42,14 +53,29 @@ export default function ActivityCombobox({
     const handle = () => {
       if (wrapperRef.current) {
         const r = wrapperRef.current.getBoundingClientRect();
-        setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+        const vh = window.visualViewport?.height ?? window.innerHeight;
+        const vw = window.innerWidth;
+        const maxH = 256;
+        const spaceBelow = vh - r.bottom - 4;
+        const above = spaceBelow < maxH && r.top > maxH;
+        const left = Math.max(0, Math.min(r.left, vw - r.width));
+        setPos({
+          top: above ? r.top - maxH - 4 : r.bottom + 4,
+          left,
+          width: r.width,
+          above,
+        });
       }
     };
     window.addEventListener("scroll", handle, true);
     window.addEventListener("resize", handle);
+    window.visualViewport?.addEventListener("resize", handle);
+    window.visualViewport?.addEventListener("scroll", handle);
     return () => {
       window.removeEventListener("scroll", handle, true);
       window.removeEventListener("resize", handle);
+      window.visualViewport?.removeEventListener("resize", handle);
+      window.visualViewport?.removeEventListener("scroll", handle);
     };
   }, [open]);
 
@@ -109,14 +135,18 @@ export default function ActivityCombobox({
               e.preventDefault();
               escolher(a);
             }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              escolher(a);
+            }}
             onMouseEnter={() => setActive(i)}
-            className={`flex cursor-pointer items-center justify-between gap-3 px-3.5 py-2 text-sm transition-colors ${
+            className={`flex cursor-pointer items-start gap-3 px-3.5 py-2.5 text-sm transition-colors ${
               i === active
                 ? "bg-brand-light text-brand-dark"
                 : "text-stone-700 hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-900"
             }`}
           >
-            <span>{a.label}</span>
+            <span className="min-w-0 flex-1 truncate">{a.label}</span>
             <span className="shrink-0 text-[11px] text-stone-400">{a.grupo}</span>
           </li>
         ))}
@@ -157,7 +187,7 @@ export default function ActivityCombobox({
           }}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           onKeyDown={onKeyDown}
-          className="w-full bg-transparent py-3 text-sm text-stone-800 placeholder-stone-400 focus:outline-none dark:text-stone-200"
+          className="w-full bg-transparent py-3 text-base text-stone-800 placeholder-stone-400 focus:outline-none dark:text-stone-200"
         />
       </div>
       {mounted && dropdown && createPortal(dropdown, document.body)}

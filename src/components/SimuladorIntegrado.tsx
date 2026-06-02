@@ -718,8 +718,10 @@ function simularAnualRV(
     despGerais: 0,
     despRendas: 0,
   },
+  coefOverride?: number,
 ): ResultadoAnualRV {
-  const { coef, ret } = TIPO_ATIVIDADE_PARAMS[tipo];
+  const { coef: coefBase, ret } = TIPO_ATIVIDADE_PARAMS[tipo];
+  const coef = coefOverride ?? coefBase;
   const rendColetavel = faturacao * coef;
   const ssAnual = isencaoSS ? 0 : calcularSSAnual(faturacao);
 
@@ -1348,7 +1350,7 @@ function NumericSlider({
               e.preventDefault();
               onChange(clamp(value - step));
             }}
-            className="flex h-8 w-8 items-center justify-center rounded-xl border border-stone-200 bg-stone-50 text-stone-600 transition-all hover:border-brand hover:bg-brand-light hover:text-brand-dark active:scale-95 dark:border-stone-700 dark:bg-stone-800"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-stone-200 bg-stone-50 text-stone-600 transition-all hover:border-brand hover:bg-brand-light hover:text-brand-dark active:scale-95 dark:border-stone-700 dark:bg-stone-800"
             aria-label={`Diminuir ${label}`}
           >
             <span className="text-base font-semibold leading-none select-none">
@@ -1372,7 +1374,7 @@ function NumericSlider({
               }}
               onChange={handleInputChange}
               onBlur={handleInputBlur}
-              className={`h-8 rounded-xl border bg-white text-right text-sm font-semibold text-stone-800 tabular-nums outline-none transition-all dark:bg-stone-900 dark:text-stone-200 ${
+              className={`h-10 rounded-xl border bg-white text-right text-[16px] font-semibold text-stone-800 tabular-nums outline-none transition-all dark:bg-stone-900 dark:text-stone-200 ${
                 unit === "€" ? "w-28 pl-6 pr-2" : "w-20 px-2"
               } ${
                 focused
@@ -1390,7 +1392,7 @@ function NumericSlider({
               e.preventDefault();
               onChange(clamp(value + step));
             }}
-            className="flex h-8 w-8 items-center justify-center rounded-xl border border-stone-200 bg-stone-50 text-stone-600 transition-all hover:border-brand hover:bg-brand-light hover:text-brand-dark active:scale-95 dark:border-stone-700 dark:bg-stone-800"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-stone-200 bg-stone-50 text-stone-600 transition-all hover:border-brand hover:bg-brand-light hover:text-brand-dark active:scale-95 dark:border-stone-700 dark:bg-stone-800"
             aria-label={`Aumentar ${label}`}
           >
             <span className="text-base font-semibold leading-none select-none">
@@ -1515,7 +1517,7 @@ function NumericSlider({
               key={p}
               type="button"
               onClick={() => onChange(p)}
-              className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all ${
+              className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-all min-h-[36px] ${
                 value === p
                   ? "border-brand bg-brand text-white shadow-sm"
                   : "border-stone-200 bg-stone-50 text-stone-500 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400"
@@ -3059,11 +3061,12 @@ export default function SimuladorIntegrado() {
         isencaoSSPrimeiroAno: isencaoSS,
         acumulaEmprego,
         irsJovemAno,
-        retencaoOverride: TIPO_ATIVIDADE_PARAMS[tipoAtiv]?.ret,
+        retencaoOverride: atividade.retencao ?? TIPO_ATIVIDADE_PARAMS[tipoAtiv]?.ret,
       }),
     [
       base,
       atividade.tipo,
+      atividade.retencao,
       regiao,
       regimeIVA,
       dispensaRetencao,
@@ -3126,11 +3129,13 @@ export default function SimuladorIntegrado() {
         irsJovemAno,
         isencaoSS,
         particularidades,
+        atividade.coef,
       ),
     [
       brutoAnual,
       tipoAtiv,
       irsJovemAno,
+      atividade.coef,
       isencaoSS,
       deficiencia,
       ifici,
@@ -3552,7 +3557,7 @@ export default function SimuladorIntegrado() {
 
       <div className="relative overflow-hidden rounded-3xl border border-stone-200 shadow-lift">
         {/* ── Cabeçalho ──────────────────────────────────────────────────────── */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 bg-white px-6 py-5 dark:border-stone-800 dark:bg-stone-950">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 bg-white px-4 py-4 sm:px-6 sm:py-5 dark:border-stone-800 dark:bg-stone-950">
           <div>
             <div className="eyebrow text-brand">Calculadora 2026</div>
             <h3 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-200">
@@ -3715,6 +3720,13 @@ export default function SimuladorIntegrado() {
                           setTipoAtiv(k);
                           setTipoAtivEscolhido(true);
                           setAtividadeGuiada(null);
+                          // Limpa overrides de atividade específica
+                          const tipoFiscal: Atividade["tipo"] =
+                            k === "prop_int" ? "diretosAutor" :
+                            k === "outras" ? "outros" :
+                            (k === "hosped" || k === "vendas") ? "vendas" :
+                            "art151";
+                          setAtividade({ label: TIPO_ATIVIDADE_PARAMS[k].label, tipo: tipoFiscal, grupo: "" });
                         }}
                         className={`group relative overflow-hidden rounded-2xl border-2 p-5 text-left transition-all duration-200 ${
                           isActive
@@ -3822,16 +3834,16 @@ export default function SimuladorIntegrado() {
                         {[
                           {
                             label: "Coeficiente",
-                            value: pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef),
+                            value: pct(atividadeGuiada.coef ?? TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef),
                           },
                           {
                             label: "Retenção",
-                            value: pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].ret),
+                            value: pct(atividadeGuiada.retencao ?? TIPO_ATIVIDADE_PARAMS[tipoAtiv].ret),
                           },
                           {
                             label: "Base SS",
                             value:
-                              tipoAtiv === "vendas" || tipoAtiv === "hosped"
+                              (atividadeGuiada.baseSS ?? (tipoAtiv === "vendas" || tipoAtiv === "hosped" ? "bens" : "servicos")) === "bens"
                                 ? "20%"
                                 : "70%",
                           },
@@ -3863,9 +3875,9 @@ export default function SimuladorIntegrado() {
                     {/* Métricas */}
                     <div className="mb-3 grid grid-cols-3 gap-2">
                       {[
-                        { label: "Coeficiente", value: pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef), note: "do rendimento é tributável" },
-                        { label: "Retenção", value: pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].ret), note: "retida pelo cliente" },
-                        { label: "Base SS", value: tipoAtiv === "vendas" || tipoAtiv === "hosped" ? "20%" : "70%", note: "do rendimento" },
+                        { label: "Coeficiente", value: pct(atividade.coef ?? TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef), note: "do rendimento é tributável" },
+                        { label: "Retenção", value: pct(atividade.retencao ?? TIPO_ATIVIDADE_PARAMS[tipoAtiv].ret), note: "retida pelo cliente" },
+                        { label: "Base SS", value: (atividade.baseSS ?? (tipoAtiv === "vendas" || tipoAtiv === "hosped" ? "bens" : "servicos")) === "bens" ? "20%" : "70%", note: "do rendimento" },
                       ].map((m) => (
                         <div key={m.label} className="rounded-xl border border-stone-200 bg-white p-2 text-center dark:border-stone-700 dark:bg-stone-800">
                           <div className="text-sm font-bold text-stone-800 dark:text-stone-100">{m.value}</div>
@@ -4030,7 +4042,7 @@ export default function SimuladorIntegrado() {
                           ? "Disponível para ti — por recibo"
                           : "Líquido anual estimado"}
                       </div>
-                      <div className="font-display text-5xl font-semibold leading-none text-brand">
+                      <div className="font-display text-4xl sm:text-5xl font-semibold leading-none text-brand">
                         <AnimatedNumber
                           value={
                             modoInput === "recibo"
@@ -4536,7 +4548,7 @@ export default function SimuladorIntegrado() {
                           <div className="eyebrow mb-1 text-stone-500">
                             Líquido anual estimado
                           </div>
-                          <div className="font-display text-4xl font-semibold leading-none text-brand">
+                          <div className="font-display text-3xl sm:text-4xl font-semibold leading-none text-brand">
                             <AnimatedNumber value={resultAnualRV.liquido} />
                           </div>
                         </div>
@@ -4579,7 +4591,7 @@ export default function SimuladorIntegrado() {
         {/* ── Corpo ─────────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2">
           {/* ════ Coluna esquerda: Inputs ════ */}
-          <div className="bg-white p-8 lg:p-10 lg:border-r lg:border-stone-100 dark:bg-stone-950 dark:border-stone-800">
+          <div className="bg-white p-5 sm:p-8 lg:p-10 lg:border-r lg:border-stone-100 dark:bg-stone-950 dark:border-stone-800">
             {/* ── Valor ────────────────────────────────────────────────────── */}
             <div className="mb-5">
               <AnimatePresence mode="wait">
@@ -4781,7 +4793,7 @@ export default function SimuladorIntegrado() {
               </div>
               <ActivityCombobox
                 value={atividade}
-                onChange={(a) => { setAtividade(a); setPainelAtividade(true); }}
+                onChange={(a) => { setAtividade(a); setTipoAtiv(mapaAtivParaTipoAtiv[a.tipo] ?? "art151"); setPainelAtividade(true); }}
               />
 
               <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -4795,7 +4807,19 @@ export default function SimuladorIntegrado() {
                     key={k}
                     type="button"
                     aria-pressed={tipoAtiv === k}
-                    onClick={() => { setTipoAtiv(k); setPainelAtividade(true); }}
+                    onClick={() => {
+                      setTipoAtiv(k);
+                      // Limpa overrides de atividade específica para não manter
+                      // coef/retenção incompatíveis com o novo tipo selecionado.
+                      const tipoFiscal: Atividade["tipo"] =
+                        k === "prop_int" ? "diretosAutor" :
+                        k === "outras" ? "outros" :
+                        k === "hosped" ? "vendas" :
+                        k === "vendas" ? "vendas" :
+                        "art151";
+                      setAtividade({ label: p.label, tipo: tipoFiscal, grupo: "" });
+                      setPainelAtividade(true);
+                    }}
                     className={`p-2.5 rounded-xl border text-left text-xs transition-all ${
                       tipoAtiv === k
                         ? "border-brand bg-brand-light"
@@ -5046,7 +5070,7 @@ export default function SimuladorIntegrado() {
                           onChange={(e) =>
                             setIrsJovemAno(Number(e.target.value))
                           }
-                          className="w-full px-4 py-3 text-sm font-semibold text-stone-700 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all dark:bg-stone-800 dark:text-stone-200 dark:border-stone-700"
+                          className="w-full px-4 py-3 text-[16px] font-semibold text-stone-700 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all dark:bg-stone-800 dark:text-stone-200 dark:border-stone-700"
                         >
                           {irsJovemOpts.map(({ ano, label }) => (
                             <option key={ano} value={ano}>
@@ -5548,7 +5572,7 @@ export default function SimuladorIntegrado() {
                                           e.target.value as TipoViatura,
                                         )
                                       }
-                                      className="w-full px-3 py-2 text-xs font-semibold text-stone-700 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand dark:bg-stone-800 dark:text-stone-200 dark:border-stone-700"
+                                      className="w-full px-3 py-2 text-[16px] font-semibold text-stone-700 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand dark:bg-stone-800 dark:text-stone-200 dark:border-stone-700"
                                     >
                                       {(
                                         Object.keys(
@@ -5681,7 +5705,7 @@ export default function SimuladorIntegrado() {
           </div>
 
           {/* ════ Coluna direita: Resultado ════ */}
-          <div className="bg-cream p-8 lg:p-10 flex flex-col dark:bg-stone-900">
+          <div className="bg-cream p-5 sm:p-8 lg:p-10 flex flex-col dark:bg-stone-900">
             <AnimatePresence mode="wait">
               {cenario === "rv" ? (
                 /* ── Painel Recibos Verdes ── */
@@ -5699,7 +5723,7 @@ export default function SimuladorIntegrado() {
                         ? "Disponível para gastar · por recibo"
                         : "Líquido anual estimado"}
                     </div>
-                    <div className="font-display text-5xl font-semibold leading-none mb-1 text-brand">
+                    <div className="font-display text-4xl sm:text-5xl font-semibold leading-none mb-1 text-brand">
                       <AnimatedNumber
                         value={
                           modoInput === "recibo"
@@ -6229,7 +6253,7 @@ export default function SimuladorIntegrado() {
                     <div className="text-sm font-medium text-stone-500 uppercase tracking-wider mb-1">
                       Líquido estimado — empresa (Lda)
                     </div>
-                    <div className="font-display text-5xl font-semibold leading-none mb-1 text-brand">
+                    <div className="font-display text-4xl sm:text-5xl font-semibold leading-none mb-1 text-brand">
                       <AnimatedNumber value={liquidoEmpresaFinal} />
                     </div>
                     <div className="text-sm text-stone-400 mt-1">
@@ -6599,7 +6623,7 @@ export default function SimuladorIntegrado() {
         </div>
 
         {/* ── Rodapé: comparação integrada ──────────────────────────────────── */}
-        <div className="border-t border-stone-100 bg-stone-50 px-8 py-6 dark:border-stone-800 dark:bg-stone-900">
+        <div className="border-t border-stone-100 bg-stone-50 px-4 py-5 sm:px-8 sm:py-6 dark:border-stone-800 dark:bg-stone-900">
           <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-600">
             Comparação — mesmos inputs, dois cenários
           </div>

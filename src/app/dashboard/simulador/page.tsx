@@ -66,7 +66,7 @@ const ATIVIDADE_DEFAULT =
 const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
 
 const campo =
-  "w-full px-3.5 py-2.5 text-sm text-stone-800 bg-stone-50 rounded-xl border border-stone-200 " +
+  "w-full px-3.5 py-2.5 text-[16px] text-stone-800 bg-stone-50 rounded-xl border border-stone-200 " +
   "focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all " +
   "dark:bg-stone-800/50 dark:text-stone-100 dark:border-stone-700";
 
@@ -944,7 +944,7 @@ function Campo({ id, label, value, onChange, step = 100, placeholder = "0", tool
   step?: number; placeholder?: string; tooltip?: string;
 }) {
   const rotulo = "text-xs font-medium text-stone-500 uppercase tracking-wider dark:text-stone-400";
-  const campo = "w-full px-3.5 py-2.5 text-sm text-stone-800 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all dark:bg-stone-800/50 dark:text-stone-100 dark:border-stone-700";
+  const campo = "w-full px-3.5 py-2.5 text-[16px] text-stone-800 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all dark:bg-stone-800/50 dark:text-stone-100 dark:border-stone-700";
   return (
     <div>
       <div className="mb-1.5 flex items-center gap-1.5">

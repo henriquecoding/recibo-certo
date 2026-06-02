@@ -77,7 +77,7 @@ export default function DecisionCard({
           aria-label={titulo}
           disabled={disabled}
           onClick={() => !disabled && onToggle(!isActive)}
-          className={`inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full p-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${
+          className={`inline-flex h-8 w-12 flex-shrink-0 items-center rounded-full p-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${
             isActive && !disabled
               ? "bg-brand"
               : "bg-stone-200 dark:bg-stone-700"
