@@ -77,15 +77,15 @@ export default function DecisionCard({
           aria-label={titulo}
           disabled={disabled}
           onClick={() => !disabled && onToggle(!isActive)}
-          className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${
+          className={`inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full p-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${
             isActive && !disabled
               ? "bg-brand"
-              : "bg-stone-300 dark:bg-stone-600"
-          } ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+              : "bg-stone-200 dark:bg-stone-700"
+          } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
         >
           <span
-            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-              isActive ? "translate-x-[22px]" : "translate-x-0.5"
+            className={`h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-200 ${
+              isActive ? "translate-x-5" : "translate-x-0"
             }`}
           />
         </button>

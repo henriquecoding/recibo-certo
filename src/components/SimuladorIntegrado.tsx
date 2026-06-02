@@ -82,7 +82,16 @@ import {
 import { m, AnimatePresence } from "motion/react";
 import Link from "next/link";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
-import { Check, Warning, ArrowRight } from "@/components/ui/Icons";
+import {
+  Check,
+  Warning,
+  ArrowRight,
+  Laptop,
+  ShoppingBag,
+  Home,
+  Briefcase,
+  PenLine,
+} from "@/components/ui/Icons";
 import { pct, fmt } from "@/lib/format";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
 import InfoTip from "@/components/ui/InfoTip";
@@ -3654,40 +3663,55 @@ export default function SimuladorIntegrado() {
             <div className="mx-auto max-w-2xl space-y-8">
               {/* ETAPA 1: Tipo de trabalho */}
               <section>
-                <h4 className="eyebrow mb-4 text-stone-500">O que vais fazer?</h4>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="mb-5">
+                  <h4 className="text-xl font-display font-semibold text-stone-800 dark:text-stone-100">
+                    O que vais fazer?
+                  </h4>
+                  <p className="mt-1 text-sm text-stone-500">
+                    Escolhe a categoria que melhor descreve a tua atividade
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {(
-                    Object.entries(TIPO_ATIVIDADE_PARAMS) as [
-                      TipoAtividade,
-                      (typeof TIPO_ATIVIDADE_PARAMS)[TipoAtividade],
-                    ][]
-                  ).map(([k, p]) => {
-                    const labels: Record<
-                      TipoAtividade,
-                      { titulo: string; sub: string }
-                    > = {
-                      art151: {
-                        titulo: "Consultor / Programador / Designer",
-                        sub: "Profissão liberal (Art. 151.º CIRS)",
+                    [
+                      {
+                        k: "art151" as TipoAtividade,
+                        titulo: "Consultor, Programador ou Designer",
+                        sub: "Profissão liberal listada no Art. 151.º CIRS",
+                        exemplos: "Dev, designer, advogado, arquiteto…",
+                        Icon: Laptop,
                       },
-                      vendas: {
+                      {
+                        k: "vendas" as TipoAtividade,
                         titulo: "Vendo produtos",
-                        sub: "Comércio e revenda de mercadorias",
+                        sub: "Comércio, produção e revenda de mercadorias",
+                        exemplos: "E-commerce, artesanato, manufatura…",
+                        Icon: ShoppingBag,
                       },
-                      hosped: {
-                        titulo: "Alojamento / Hostelaria",
-                        sub: "Alojamento local ou estabelecimento hoteleiro",
+                      {
+                        k: "hosped" as TipoAtividade,
+                        titulo: "Alojamento ou Hostelaria",
+                        sub: "Alojamento local, hotel ou restauração",
+                        exemplos: "Airbnb, hostel, restaurante, café…",
+                        Icon: Home,
                       },
-                      outras: {
+                      {
+                        k: "outras" as TipoAtividade,
                         titulo: "Outros serviços",
-                        sub: "Serviços não enquadrados no Art. 151.º",
+                        sub: "Serviços não listados no Art. 151.º",
+                        exemplos: "Explicações, motorista, jardinagem…",
+                        Icon: Briefcase,
                       },
-                      prop_int: {
-                        titulo: "Direitos de autor / Royalties",
+                      {
+                        k: "prop_int" as TipoAtividade,
+                        titulo: "Direitos de autor ou Royalties",
                         sub: "Propriedade intelectual e licenciamento",
+                        exemplos: "Livros, música, software, patentes…",
+                        Icon: PenLine,
                       },
-                    };
-                    const info = labels[k];
+                    ] as const
+                  ).map(({ k, titulo, sub, exemplos, Icon }) => {
+                    const p = TIPO_ATIVIDADE_PARAMS[k];
                     const isActive = tipoAtiv === k && tipoAtivEscolhido;
                     return (
                       <button
@@ -3699,31 +3723,78 @@ export default function SimuladorIntegrado() {
                           setTipoAtivEscolhido(true);
                           setAtividadeGuiada(null);
                         }}
-                        className={`rounded-2xl border p-4 text-left transition-all hover:shadow-card ${
+                        className={`group relative rounded-2xl border-2 p-5 text-left transition-all duration-200 ${
                           isActive
-                            ? "border-brand bg-brand-light"
-                            : "border-stone-200 bg-stone-50 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-900"
+                            ? "border-brand bg-brand-light shadow-lift"
+                            : "border-stone-200 bg-white hover:border-brand/40 hover:bg-stone-50 hover:shadow-card dark:border-stone-700 dark:bg-stone-900 dark:hover:border-brand/40"
                         }`}
                       >
+                        {/* Ícone */}
                         <div
-                          className={`text-sm font-semibold ${
+                          className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
+                            isActive
+                              ? "bg-brand text-white"
+                              : "bg-stone-100 text-stone-500 group-hover:bg-brand-light group-hover:text-brand dark:bg-stone-800 dark:text-stone-400"
+                          }`}
+                        >
+                          <Icon size={20} />
+                        </div>
+
+                        {/* Texto */}
+                        <div
+                          className={`text-sm font-bold leading-snug ${
                             isActive
                               ? "text-brand-dark"
-                              : "text-stone-700 dark:text-stone-200"
+                              : "text-stone-800 dark:text-stone-100"
                           }`}
                         >
-                          {info.titulo}
+                          {titulo}
                         </div>
                         <div
-                          className={`mt-0.5 text-xs ${
-                            isActive ? "text-brand" : "text-stone-400"
+                          className={`mt-0.5 text-xs leading-relaxed ${
+                            isActive ? "text-brand-dark/80" : "text-stone-500 dark:text-stone-400"
                           }`}
                         >
-                          {info.sub}
+                          {sub}
                         </div>
-                        <div className="mt-1.5 text-[10px] text-stone-400">
-                          Coef. {pct(p.coef)} · Ret. {pct(p.ret)}
+                        <div
+                          className={`mt-1 text-[11px] italic ${
+                            isActive ? "text-brand/70" : "text-stone-400"
+                          }`}
+                        >
+                          {exemplos}
                         </div>
+
+                        {/* Chips fiscais */}
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              isActive
+                                ? "bg-brand/15 text-brand-dark"
+                                : "bg-stone-100 text-stone-500 dark:bg-stone-800"
+                            }`}
+                          >
+                            Coef. {pct(p.coef)}
+                          </span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              isActive
+                                ? "bg-brand/15 text-brand-dark"
+                                : "bg-stone-100 text-stone-500 dark:bg-stone-800"
+                            }`}
+                          >
+                            Ret. {pct(p.ret)}
+                          </span>
+                        </div>
+
+                        {/* Seta de selecção */}
+                        {isActive && (
+                          <div className="absolute right-4 top-4">
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-brand">
+                              <Check size={11} className="text-white" />
+                            </div>
+                          </div>
+                        )}
                       </button>
                     );
                   })}
@@ -4302,7 +4373,7 @@ export default function SimuladorIntegrado() {
 
               {/* O QUE CONFIGURASTE — resumo sempre visível com faturação */}
               <AnimatePresence>
-                {bruto > 0 && (
+                {tipoAtivEscolhido && bruto > 0 && (
                   <m.section
                     key="resumo-config"
                     initial={{ opacity: 0, y: 8 }}

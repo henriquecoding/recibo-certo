@@ -304,6 +304,55 @@ export function Invoice({ size = 18, className }: IconProps) {
   );
 }
 
+export function Laptop({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <rect x="2" y="4" width="20" height="13" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M2 17h20l1.5 3H0.5L2 17z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M9 9h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ShoppingBag({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M6 2l2 4h8l2-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="3" y="6" width="18" height="15" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M9 11a3 3 0 006 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function Home({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M3 10.5L12 3l9 7.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 8.5V20a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1V8.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Briefcase({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <rect x="2" y="8" width="20" height="13" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8 8V6a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M2 14h20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M12 14v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function PenLine({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M12 20h9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 // ─── Logótipo (marca de palavra) ─────────────────────────────
 export function Logo({ small = false }: { small?: boolean }): ReactNode {
   const box = small ? "w-6 h-6" : "w-7 h-7";
