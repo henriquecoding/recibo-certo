@@ -10,6 +10,7 @@ interface EuroBreakdownProps {
   ss: number; // segurança social
   iva: number; // IVA (0 se isento)
   className?: string;
+  compact?: boolean; // força 2 colunas (para containers estreitos como o painel lateral)
 }
 
 interface Segmento {
@@ -31,6 +32,7 @@ export default function EuroBreakdown({
   ss,
   iva,
   className = "",
+  compact = false,
 }: EuroBreakdownProps) {
   const total = Math.max(faturacao, liquido + irs + ss + iva, 1);
 
@@ -98,8 +100,8 @@ export default function EuroBreakdown({
         })}
       </div>
 
-      {/* Legenda em 2 colunas (mobile) → linha */}
-      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+      {/* Legenda em 2 colunas (mobile) → linha (ou sempre 2 em modo compacto) */}
+      <dl className={`mt-3 grid gap-x-4 gap-y-2 ${compact ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}`}>
         {segmentos.map((s) => {
           const p = s.valor / total;
           return (
