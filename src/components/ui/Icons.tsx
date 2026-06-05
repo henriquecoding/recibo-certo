@@ -466,6 +466,14 @@ export function ExternalLink({ size = 14, className }: IconProps) {
   );
 }
 
+export function ChevronRight({ size = 16, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function ChevronDown({ size = 16, className }: IconProps) {
   return (
     <svg {...svgProps(size, className)}>

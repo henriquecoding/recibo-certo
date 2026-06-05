@@ -17,8 +17,11 @@ export const SITE_NAME = "ReciboCerto";
 // ─── Rotas públicas (para sitemap) ───────────────────────────────────────────
 
 export const SITE_ROUTES = [
-  { url: "/",       changeFrequency: "weekly"  as const, priority: 1.0 },
-  { url: "/precos", changeFrequency: "monthly" as const, priority: 0.8 },
+  { url: "/",            changeFrequency: "weekly"  as const, priority: 1.0 },
+  { url: "/precos",      changeFrequency: "monthly" as const, priority: 0.8 },
+  { url: "/privacidade", changeFrequency: "monthly" as const, priority: 0.5 },
+  { url: "/termos",      changeFrequency: "monthly" as const, priority: 0.5 },
+  { url: "/cookies",     changeFrequency: "monthly" as const, priority: 0.5 },
 ];
 
 // ─── Schema: WebSite ─────────────────────────────────────────────────────────
