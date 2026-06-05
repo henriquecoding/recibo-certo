@@ -3,6 +3,93 @@
 
 import { getSupabase } from "./client";
 
+// ── Anúncios ─────────────────────────────────────────────────
+
+export type TipoAnuncio = "parceiro" | "google_ads" | "banner" | "nativo";
+
+export interface AnuncioRow {
+  id: string;
+  tipo: TipoAnuncio;
+  nome: string;
+  descricao: string;
+  ativo: boolean;
+  ordem: number;
+  posicoes: string[];
+  mostrar_desktop: boolean;
+  mostrar_mobile: boolean;
+  // parceiro
+  url: string | null;
+  cta: string | null;
+  icone: string | null;
+  logo_url: string | null;
+  // google ads
+  google_client_id: string | null;
+  google_slot_id: string | null;
+  google_format: string | null;
+  google_responsive: boolean | null;
+  // banner
+  banner_titulo: string | null;
+  banner_texto: string | null;
+  banner_url: string | null;
+  banner_cor_fundo: string | null;
+  banner_cor_texto: string | null;
+  banner_imagem_url: string | null;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export type AnuncioInput = Omit<AnuncioRow, "criado_em" | "atualizado_em">;
+
+export async function listarAnunciosTodos(): Promise<AnuncioRow[]> {
+  const { data, error } = await getSupabase()
+    .from("anuncios")
+    .select("*")
+    .order("ordem", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as AnuncioRow[];
+}
+
+export async function buscarAnuncio(id: string): Promise<AnuncioRow | null> {
+  const { data } = await getSupabase()
+    .from("anuncios")
+    .select("*")
+    .eq("id", id)
+    .single();
+  return (data as AnuncioRow | null) ?? null;
+}
+
+export async function criarAnuncio(a: AnuncioInput): Promise<{ erro?: string }> {
+  const { error } = await getSupabase().from("anuncios").insert(a);
+  return error ? { erro: error.message } : {};
+}
+
+export async function atualizarAnuncio(
+  id: string,
+  dados: Partial<Omit<AnuncioInput, "id">>
+): Promise<{ erro?: string }> {
+  const { error } = await getSupabase()
+    .from("anuncios")
+    .update(dados)
+    .eq("id", id);
+  return error ? { erro: error.message } : {};
+}
+
+export async function eliminarAnuncio(id: string): Promise<{ erro?: string }> {
+  const { error } = await getSupabase().from("anuncios").delete().eq("id", id);
+  return error ? { erro: error.message } : {};
+}
+
+export async function reordenarAnuncios(
+  items: { id: string; ordem: number }[]
+): Promise<{ erro?: string }> {
+  const sb = getSupabase();
+  for (const { id, ordem } of items) {
+    const { error } = await sb.from("anuncios").update({ ordem }).eq("id", id);
+    if (error) return { erro: error.message };
+  }
+  return {};
+}
+
 export interface PartnerRow {
   id: string;
   nome: string;

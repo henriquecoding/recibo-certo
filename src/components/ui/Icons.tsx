@@ -353,6 +353,125 @@ export function PenLine({ size = 18, className }: IconProps) {
   );
 }
 
+export function Megaphone({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M3 11v2a6 6 0 006 6h1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M21 5.5C21 5.5 17 8 12 8H7a4 4 0 000 8h5c5 0 9 2.5 9 2.5V5.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Monitor({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <rect x="2" y="3" width="20" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8 21h8M12 17v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function Smartphone({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <rect x="5" y="2" width="14" height="20" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M10 18h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function Eye({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+export function EyeOff({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19M10.73 10.73A2 2 0 0013.27 13.27M3 3l18 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function GripVertical({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <circle cx="9" cy="6" r="1.2" fill="currentColor" />
+      <circle cx="15" cy="6" r="1.2" fill="currentColor" />
+      <circle cx="9" cy="12" r="1.2" fill="currentColor" />
+      <circle cx="15" cy="12" r="1.2" fill="currentColor" />
+      <circle cx="9" cy="18" r="1.2" fill="currentColor" />
+      <circle cx="15" cy="18" r="1.2" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function GoogleAds({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <circle cx="17.5" cy="6.5" r="3.5" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="6.5" cy="17.5" r="3.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M5.19 5.19l13.62 13.62" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ImageIcon({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <rect x="3" y="3" width="18" height="18" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M21 15l-5-5L5 21" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Link({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Copy({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ChevronDown({ size = 16, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function ChevronUp({ size = 16, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M18 15l-6-6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Filter({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 // ─── Logótipo (marca de palavra) ─────────────────────────────
 export function Logo({ small = false }: { small?: boolean }): ReactNode {
   const box = small ? "w-6 h-6" : "w-7 h-7";
