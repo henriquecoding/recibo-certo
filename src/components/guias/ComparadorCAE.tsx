@@ -14,10 +14,8 @@ import ActivityCombobox from "@/components/ui/ActivityCombobox";
 import InfoTip from "@/components/ui/InfoTip";
 import Badge from "@/components/ui/Badge";
 import { Check, ArrowRight } from "@/components/ui/Icons";
-import type { ATIVIDADES } from "@/lib/fiscal-data";
+import type { Atividade } from "@/lib/fiscal-data";
 import Link from "next/link";
-
-type Atividade = (typeof ATIVIDADES)[0];
 
 const TIPO_BADGE: Record<string, { label: string; tone: "brand" | "neutral" | "alert" | "info" }> = {
   art151: { label: "Art. 151.º CIRS", tone: "brand" },
@@ -93,7 +91,7 @@ export function ComparadorCAE() {
           <div className="rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 p-5">
             <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
               <div>
-                <p className="text-xs text-stone-400 mb-0.5">{atividade.codigo} — {atividade.nome}</p>
+                <p className="text-xs text-stone-400 mb-0.5">{atividade.label}</p>
                 <Badge tone={TIPO_BADGE[tipo].tone}>{TIPO_BADGE[tipo].label}</Badge>
               </div>
               <div className="text-right">
