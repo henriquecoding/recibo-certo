@@ -49,20 +49,23 @@ const NAV = [
     ],
   },
   {
-    heading: "Recursos",
+    heading: "Conteúdo",
     links: [
-      { label: "Fontes fiscais", href: "/#fontes" },
-      { label: "Perguntas frequentes", href: "/#faq" },
-      { label: "Planos e preços", href: "/#precos" },
-      { label: "Entrar no dashboard", href: "/dashboard" },
+      { label: "Todos os guias", href: "/guias" },
+      { label: "Abrir atividade", href: "/guias/abrir-atividade" },
+      { label: "Regime simplificado", href: "/guias/regime-simplificado" },
+      { label: "Decisor ato isolado", href: "/ferramentas/ato-isolado" },
+      { label: "Classificar atividade", href: "/ferramentas/classificar-atividade" },
     ],
   },
   {
-    heading: "Legal",
+    heading: "Recursos",
     links: [
+      { label: "Planos e preços", href: "/precos" },
+      { label: "Perguntas frequentes", href: "/#faq" },
+      { label: "Fontes fiscais", href: "/#fontes" },
       { label: "Política de privacidade", href: "/privacidade" },
       { label: "Termos de utilização", href: "/termos" },
-      { label: "Cookies", href: "/cookies" },
     ],
   },
 ];

@@ -139,6 +139,30 @@ export const SOURCES = {
     label: "RFAI 2026 — taxas e limites verificados · Estrategor",
     url: "https://estrategor.pt/rfai-2026/",
   },
+  govptTrabIndependente: {
+    label: "Trabalhar por conta própria — guia para trabalhadores independentes · Gov.pt",
+    url: "https://www.gov.pt/guias/trabalhar-por-conta-propria-guia-para-trabalhadores-independentes/",
+  },
+  art33civa: {
+    label: "Art. 33.º CIVA — Cessação de atividade · Portal das Finanças",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-33-do-civa.aspx",
+  },
+  art12bCirs: {
+    label: "Art. 12.º-B CIRS — IRS Jovem · Portal das Finanças",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs12b.aspx",
+  },
+  art6civa: {
+    label: "Art. 6.º CIVA — Localização das operações intracomunitárias · Portal das Finanças",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-6-do-civa.aspx",
+  },
+  viesValidation: {
+    label: "VIES — Validação de número de identificação para efeitos do IVA · Comissão Europeia",
+    url: "https://ec.europa.eu/taxation_customs/vies",
+  },
+  simuladorNetoSS: {
+    label: "Segurança Social para trabalhadores independentes 2026 · SimuladorNeto",
+    url: "https://simuladorneto.pt/seguranca-social-trabalhadores-independentes",
+  },
 } satisfies Record<string, Source>;
 
 export type SourceKey = keyof typeof SOURCES;

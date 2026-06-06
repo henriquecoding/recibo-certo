@@ -236,6 +236,14 @@ export function Close({ size = 14, className }: IconProps) {
   );
 }
 
+export function Menu({ size = 20, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function Sparkle({ size = 14, className }: IconProps) {
   return (
     <svg {...svgProps(size, className)}>

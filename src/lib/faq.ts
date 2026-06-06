@@ -32,4 +32,24 @@ export const faqs: FaqItem[] = [
     q: "Tenho de entregar declarações trimestrais à Segurança Social?",
     a: "Sim, em janeiro, abril, julho e outubro. O incumprimento destes prazos pode gerar coimas. O ReciboCerto avisa-te com antecedência.",
   },
+  {
+    q: "Qual a diferença entre ato isolado e recibos verdes?",
+    a: "O ato isolado é para um único serviço pontual e não repetido. Podes emitir sem abrir atividade, mas pagas IVA (23% na maioria dos casos) e só podes usar uma vez por ano. Com recibos verdes (atividade aberta), podes faturar regularmente e estás isento de IVA se faturares menos de 15 000 € por ano.",
+  },
+  {
+    q: "Tenho emprego e quero passar recibos verdes. E a Segurança Social?",
+    a: "Se o teu cliente dos recibos for diferente do teu empregador, podes estar isento de SS pelos recibos verdes, desde que a média mensal desses recibos seja inferior a 4 × IAS (2 148,52 € em 2026) e o teu salário seja de pelo menos 1 × IAS. Nesse caso, a SS é paga apenas pelo empregador.",
+  },
+  {
+    q: "Quando começo a pagar Segurança Social?",
+    a: "Existe isenção total durante os primeiros 12 meses, a contar da data de abertura de atividade nas Finanças. No 13.º mês, as contribuições (21,4% sobre 70% da faturação média do trimestre anterior) começam automaticamente. Mesmo durante a isenção, é obrigatório entregar as declarações trimestrais.",
+  },
+  {
+    q: "Trabalho para clientes fora de Portugal. Tenho de fazer retenção na fonte?",
+    a: "Não. Clientes estrangeiros não estão sujeitos à retenção na fonte de IRS português — recebes o valor total do recibo. Quanto ao IVA, se o cliente é uma empresa europeia com NIF VIES válido, aplicas autoliquidação (sem IVA português). Se for uma empresa fora da UE, o serviço fica fora do território nacional.",
+  },
+  {
+    q: "O que acontece se não fechar a atividade quando paro de faturar?",
+    a: "A Autoridade Tributária considera-te ainda em atividade. Tens de continuar a entregar declarações (incluindo o Anexo B no IRS) e as declarações trimestrais à Segurança Social, mesmo sem rendimentos. As coimas por incumprimento vão de 50 € a 7 500 € conforme a infração.",
+  },
 ];
