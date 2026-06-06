@@ -17,11 +17,11 @@ import { Check, ArrowRight } from "@/components/ui/Icons";
 import type { Atividade } from "@/lib/fiscal-data";
 import Link from "next/link";
 
-const TIPO_BADGE: Record<string, { label: string; tone: "brand" | "neutral" | "alert" | "info" }> = {
+const TIPO_BADGE: Record<string, { label: string; tone: "brand" | "neutral" | "alert" | "danger" }> = {
   art151: { label: "Art. 151.º CIRS", tone: "brand" },
   outros: { label: "Categoria B — outros", tone: "neutral" },
   vendas: { label: "Comércio / produção", tone: "neutral" },
-  diretosAutor: { label: "Direitos de autor", tone: "info" },
+  diretosAutor: { label: "Direitos de autor", tone: "danger" },
 };
 
 const IMPLICACOES: Record<string, string[]> = {
