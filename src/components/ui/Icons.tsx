@@ -244,6 +244,15 @@ export function Menu({ size = 20, className }: IconProps) {
   );
 }
 
+export function Search({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16.5 16.5L21 21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function Sparkle({ size = 14, className }: IconProps) {
   return (
     <svg {...svgProps(size, className)}>
