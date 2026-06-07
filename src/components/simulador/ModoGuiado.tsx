@@ -793,6 +793,7 @@ function PassoAtividade({
           const ef = efeitoFiscal(atividadeEspecifica);
           const tipo = atividadeEspecifica.tipo;
           const metaTipo = META_TIPO[tipo];
+          const cardAtiv = CARDS_ATIV.find((c) => c.id === tipoAtiv)!;
           const TIPO_LABEL: Record<string, string> = {
             art151: "Art. 151.º CIRS",
             outros: "Cat. B — outros serviços",
@@ -866,7 +867,7 @@ function PassoAtividade({
                   </li>
                 ))}
               </ul>
-              {(ef.coef !== card.coef || ef.retencao !== card.ret) && (
+              {(ef.coef !== cardAtiv.coef || ef.retencao !== cardAtiv.ret) && (
                 <div className="mt-2.5 flex items-start gap-1.5 border-t border-brand/10 pt-2.5">
                   <Warning
                     size={10}
