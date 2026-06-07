@@ -574,6 +574,8 @@ export default function ModoGuiado({
                     irsAnual={irsAnual}
                     ssAnual={ssAnual}
                     ivaAnual={ivaAnual}
+                    taxaIVA={resultRecibo.taxaIVA}
+                    regimeIVA={regimeIVA}
                     recibosAno={recibosAno}
                     resultRecibo={resultRecibo}
                     card={card}
@@ -1635,12 +1637,107 @@ function DecisorAtoIsoladoInline({
   );
 }
 
+// ─── Sub-componentes de ResultadoFinal ───────────────────────────────────────
+
+/** Uma linha de cálculo numa cascata, com tooltip expansível ao clicar. */
+function LinhaCalculo({
+  label,
+  valor,
+  corValor,
+  nota,
+  explicacao,
+  isResultado = false,
+  isTotal = false,
+  indent = false,
+}: {
+  label: string;
+  valor: number;
+  corValor?: string;
+  nota?: string;
+  explicacao?: string;
+  isResultado?: boolean;
+  isTotal?: boolean;
+  indent?: boolean;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const temExplicacao = !!explicacao;
+
+  const corDefault =
+    valor < 0
+      ? "text-red-500 dark:text-red-400"
+      : "text-stone-800 dark:text-stone-100";
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => temExplicacao && setAberto((v) => !v)}
+        className={`w-full text-left ${isTotal ? "bg-stone-50 dark:bg-stone-800/50" : ""} ${temExplicacao ? "cursor-pointer" : "cursor-default"}`}
+      >
+        <div
+          className={`flex items-center justify-between gap-2 px-4 ${isTotal ? "py-3" : "py-2.5"} ${indent ? "pl-7" : ""}`}
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            {temExplicacao && (
+              <span
+                className={`flex-shrink-0 text-stone-400 transition-transform duration-150 ${aberto ? "rotate-180" : ""}`}
+              >
+                <ChevronDown size={11} />
+              </span>
+            )}
+            <div className="min-w-0">
+              <span
+                className={`${isTotal ? "text-sm font-bold text-stone-700 dark:text-stone-200" : isResultado ? "text-xs font-semibold text-stone-700 dark:text-stone-200" : "text-xs text-stone-600 dark:text-stone-400"}`}
+              >
+                {label}
+              </span>
+              {nota && !aberto && (
+                <span className="ml-1.5 text-[10px] text-stone-400">
+                  ({nota})
+                </span>
+              )}
+            </div>
+          </div>
+          <span
+            className={`flex-shrink-0 tabular-nums ${isTotal ? "font-display text-lg font-bold text-brand" : isResultado ? "text-sm font-bold" : "text-xs font-semibold"} ${corValor ?? corDefault}`}
+          >
+            {valor < 0 ? "−" : isResultado || isTotal ? "" : "+"}
+            {fmt(Math.abs(valor))}
+          </span>
+        </div>
+      </button>
+      {aberto && explicacao && (
+        <div className="mx-3 mb-2 rounded-lg border border-stone-100 bg-stone-50 px-3 py-2.5 dark:border-stone-700 dark:bg-stone-800/60">
+          <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+            {explicacao}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Separador entre blocos dentro do painel. */
+function SeparadorBloco({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2 border-y border-stone-100 bg-stone-50/70 px-4 py-2 dark:border-stone-800 dark:bg-stone-800/30">
+      <span className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+// ─── ResultadoFinal ───────────────────────────────────────────────────────────
+
 function ResultadoFinal({
   brutoAnual,
   liquidoAnual,
   irsAnual,
   ssAnual,
   ivaAnual,
+  taxaIVA,
+  regimeIVA,
   recibosAno,
   resultRecibo,
   card,
@@ -1662,6 +1759,8 @@ function ResultadoFinal({
   irsAnual: number;
   ssAnual: number;
   ivaAnual: number;
+  taxaIVA: number;
+  regimeIVA: RegimeIVA;
   recibosAno: number;
   resultRecibo: {
     liquido: number;
@@ -1717,8 +1816,13 @@ function ResultadoFinal({
     brutoAnual > 0 ? (simAnual.irsEstimado + ssAnual) / brutoAnual : 0;
   const liquidoFinal = brutoAnual - simAnual.irsEstimado - ssAnual;
 
+  // Deduções à coleta detalhadas (para mostrar no bloco IRS)
+  const deducoesColeta = simAnual.deducaoDespesas + simAnual.deducaoDeficiencia;
+  const temDeducoes = deducoesColeta > 0;
+
   return (
     <div>
+      {/* Título */}
       <div className="mb-6">
         <h3 className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100">
           O teu resultado
@@ -1728,7 +1832,7 @@ function ResultadoFinal({
         </p>
       </div>
 
-      {/* Líquido anual */}
+      {/* Líquido anual — destaque */}
       <div className="mb-6 rounded-3xl border border-brand/20 bg-brand-light/40 p-6">
         <div className="text-xs font-semibold uppercase tracking-wider text-brand-dark/60">
           Líquido anual estimado
@@ -1744,111 +1848,255 @@ function ResultadoFinal({
         </div>
       </div>
 
-      {/* Regime simplificado — breakdown */}
-      <div className="mb-6 rounded-2xl border border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900">
-        <div className="border-b border-stone-100 px-4 py-3 dark:border-stone-800">
-          <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
-            Regime simplificado — como chegámos ao IRS
-          </p>
-        </div>
-        {[
-          { label: "Faturação bruta", val: brutoAnual, cor: "", note: null },
-          {
-            label: `Rendimento coletável (coef. ${pct(simAnual.coeficiente)})`,
-            val: simAnual.rendimentoCoeficiente,
-            cor: "text-stone-600 dark:text-stone-300",
-            note: `${pct(simAnual.coeficiente)} × ${fmt(brutoAnual)}`,
-          },
-          ...(simAnual.exclusaoDeficiencia > 0
-            ? [
-                {
-                  label: "Exclusão deficiência (Art. 56.º-A)",
-                  val: -simAnual.exclusaoDeficiencia,
-                  cor: "text-brand",
-                  note: "15% do rend. Cat. B",
-                },
-              ]
-            : []),
-          {
-            label: "SS deduzida ao tributável",
-            val: -ssAnual,
-            cor: "text-amber-600 dark:text-amber-400",
-            note: null,
-          },
-          ...(simAnual.isencaoJovem > 0
-            ? [
-                {
-                  label: `IRS Jovem (isenção ${pct(simAnual.isencaoJovem)})`,
-                  val: -simAnual.rendimentoIsentoJovem,
-                  cor: "text-brand",
-                  note: null,
-                },
-              ]
-            : []),
-          {
-            label: ifici
-              ? "Rendimento tributável (IFICI 20%)"
-              : "Rendimento tributável",
-            val: simAnual.rendimentoTributavel,
-            cor: "text-stone-700 dark:text-stone-200",
-            note: "base do IRS",
-          },
-          {
-            label: simAnual.ificiAplicado
-              ? `IRS estimado (taxa flat ${pct(0.2)})`
-              : "IRS estimado (escalões progressivos)",
-            val: -simAnual.irsEstimado,
-            cor: "text-red-500 dark:text-red-400",
-            note: null,
-          },
-          ...(simAnual.deducaoDespesas > 0 || simAnual.deducaoDeficiencia > 0
-            ? [
-                {
-                  label: "Deduções à coleta",
-                  val: -(
-                    simAnual.deducaoDespesas + simAnual.deducaoDeficiencia
-                  ),
-                  cor: "text-brand",
-                  note: "saúde, educação…",
-                },
-              ]
-            : []),
-        ].map(({ label, val, cor, note }, i, arr) => (
-          <div
-            key={label}
-            className={`flex items-center justify-between gap-2 px-4 py-2.5 ${i < arr.length - 1 ? "border-b border-stone-100 dark:border-stone-800" : ""}`}
-          >
-            <div className="min-w-0">
-              <span className="text-xs text-stone-600 dark:text-stone-400">
-                {label}
-              </span>
-              {note && (
-                <span className="ml-1.5 text-[10px] text-stone-400">
-                  ({note})
-                </span>
-              )}
-            </div>
-            <span
-              className={`flex-shrink-0 text-xs font-semibold tabular-nums ${cor || (val < 0 ? "text-red-500" : "text-stone-800 dark:text-stone-100")}`}
-            >
-              {val < 0 ? "−" : ""}
-              {fmt(Math.abs(val))}
-            </span>
+      {/* ── BLOCO 1: O teu líquido ───────────────────────────────────────── */}
+      <div className="mb-3 rounded-2xl border border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900">
+        {/* Cabeçalho bloco */}
+        <div className="flex items-center gap-2 border-b border-stone-100 px-4 py-3 dark:border-stone-800">
+          <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-brand text-[10px] font-bold text-white">
+            1
           </div>
-        ))}
-        <div className="flex items-center justify-between bg-stone-50 px-4 py-3 dark:bg-stone-800/50">
           <div>
-            <span className="text-sm font-bold text-stone-700 dark:text-stone-200">
-              Líquido disponível
-            </span>
-            <span className="ml-2 text-xs text-stone-400">
-              Taxa efectiva {pct(taxaEfetiva)}
+            <p className="text-xs font-semibold text-stone-700 dark:text-stone-200">
+              O teu dinheiro
+            </p>
+            <p className="text-[10px] text-stone-400">
+              O que fica para ti depois de pagar impostos e SS
+            </p>
+          </div>
+        </div>
+
+        {/* Faturação */}
+        <LinhaCalculo
+          label="Faturação bruta"
+          valor={brutoAnual}
+          corValor="text-stone-800 dark:text-stone-100"
+          explicacao="O total que faturaste durante o ano — o valor que os teus clientes te pagam, antes de qualquer desconto ou imposto."
+        />
+
+        <div className="border-t border-stone-100 dark:border-stone-800" />
+
+        {/* IVA — bloco separado pois tem natureza diferente */}
+        {regimeIVA === "isento" ? (
+          <div className="flex items-center justify-between gap-2 px-4 py-2.5">
+            <div className="min-w-0">
+              <span className="text-xs text-stone-400 dark:text-stone-500">
+                IVA
+              </span>
+              <span className="ml-1.5 text-[10px] text-stone-400">
+                (isento — Art. 53.º CIVA)
+              </span>
+            </div>
+            <span className="flex-shrink-0 text-xs font-semibold tabular-nums text-stone-400">
+              —
             </span>
           </div>
-          <span className="font-display text-lg font-bold text-brand">
-            <AnimatedNumber value={Math.max(0, liquidoFinal)} />
-          </span>
+        ) : (
+          <div>
+            {/* Linha IVA cobrado */}
+            <div className="flex items-center justify-between gap-2 px-4 py-2.5">
+              <div className="min-w-0">
+                <span className="text-xs text-stone-600 dark:text-stone-400">
+                  IVA cobrado ao cliente
+                </span>
+                <span className="ml-1.5 text-[10px] text-stone-400">
+                  ({pct(taxaIVA)} × {fmt(brutoAnual)})
+                </span>
+              </div>
+              <span className="flex-shrink-0 text-xs font-semibold tabular-nums text-stone-500 dark:text-stone-400">
+                +{fmt(ivaAnual)}
+              </span>
+            </div>
+            {/* Caixa explicativa IVA — sempre visível pois é conceito crítico */}
+            <div className="mx-3 mb-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2.5 dark:border-amber-900/40 dark:bg-amber-900/20">
+              <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-400">
+                <span className="font-semibold">O IVA não é teu.</span> Cobras{" "}
+                {fmt(ivaAnual)} ao cliente, guardas numa conta separada, e
+                entregas ao Estado trimestralmente. Não entra no teu líquido nem
+                sai — passa pelo teu bolso.
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="border-t border-stone-100 dark:border-stone-800" />
+
+        {/* SS */}
+        <LinhaCalculo
+          label="Segurança Social"
+          valor={-ssAnual}
+          corValor="text-amber-600 dark:text-amber-400"
+          nota={`${pct(0.214)} × base SS`}
+          explicacao={`Como trabalhador independente pagas 21,4% de SS sobre 70% do que faturaste. Isto garante acesso a subsídio de doença, parentalidade e reforma futura. O valor é pago trimestralmente à Segurança Social.`}
+        />
+
+        <div className="border-t border-stone-100 dark:border-stone-800" />
+
+        {/* IRS (valor final, resumido) */}
+        <LinhaCalculo
+          label={
+            simAnual.ificiAplicado
+              ? "IRS (taxa flat 20%)"
+              : "IRS (após deduções)"
+          }
+          valor={-simAnual.irsEstimado}
+          corValor="text-red-500 dark:text-red-400"
+          nota="ver cálculo detalhado abaixo"
+          explicacao={`Este é o IRS que pagas no final — já com todas as deduções aplicadas (saúde, educação, etc.). O cálculo detalhado de como se chegou a este valor está no Bloco 2 abaixo.`}
+        />
+
+        {/* Total líquido */}
+        <div className="border-t border-stone-200 dark:border-stone-700" />
+        <LinhaCalculo
+          label="Líquido disponível"
+          valor={Math.max(0, liquidoFinal)}
+          corValor="text-brand"
+          isTotal
+          nota={`Taxa efectiva ${pct(taxaEfetiva)}`}
+          explicacao={`Faturação (${fmt(brutoAnual)}) − SS (${fmt(ssAnual)}) − IRS (${fmt(simAnual.irsEstimado)}) = ${fmt(Math.max(0, liquidoFinal))}. O IVA não conta — é dinheiro que nunca foi teu. A taxa efectiva é a percentagem de SS + IRS sobre a faturação.`}
+        />
+      </div>
+
+      {/* ── BLOCO 2: Como se calculou o IRS ─────────────────────────────── */}
+      <div className="mb-6 rounded-2xl border border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900">
+        {/* Cabeçalho bloco */}
+        <div className="flex items-center gap-2 border-b border-stone-100 px-4 py-3 dark:border-stone-800">
+          <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">
+            2
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-stone-700 dark:text-stone-200">
+              Como se calculou o IRS
+            </p>
+            <p className="text-[10px] text-stone-400">
+              A base tributável não é o que faturaste — clica em cada linha para
+              saber porquê
+            </p>
+          </div>
         </div>
+
+        <SeparadorBloco label="Passo 1 — Da faturação ao rendimento tributável" />
+
+        {/* Faturação bruta (referência) */}
+        <LinhaCalculo
+          label="Faturação bruta"
+          valor={brutoAnual}
+          corValor="text-stone-800 dark:text-stone-100"
+          explicacao="Ponto de partida: o total faturado no ano."
+        />
+
+        <div className="border-t border-stone-100 dark:border-stone-800" />
+
+        {/* Coeficiente */}
+        <LinhaCalculo
+          label={`Coeficiente fiscal (×${pct(simAnual.coeficiente)})`}
+          valor={simAnual.rendimentoCoeficiente - brutoAnual}
+          corValor="text-brand"
+          nota={`${pct(simAnual.coeficiente)} × ${fmt(brutoAnual)} = ${fmt(simAnual.rendimentoCoeficiente)}`}
+          explicacao={`No regime simplificado, o Estado assume que uma parte da tua faturação são "despesas" — e só tributa uma fração. Para a tua atividade, esse coeficiente é ${pct(simAnual.coeficiente)}. Isto significa que apenas ${fmt(simAnual.rendimentoCoeficiente)} são considerados rendimento, mesmo que tenhas faturado ${fmt(brutoAnual)}.`}
+        />
+
+        <div className="border-t border-stone-100 dark:border-stone-800" />
+
+        {/* Exclusão deficiência, se aplicável */}
+        {simAnual.exclusaoDeficiencia > 0 && (
+          <>
+            <LinhaCalculo
+              label="Exclusão por deficiência (Art. 56.º-A)"
+              valor={-simAnual.exclusaoDeficiencia}
+              corValor="text-brand"
+              nota="15% do rendimento Cat. B"
+              explicacao="Contribuintes com deficiência igual ou superior a 60% beneficiam de uma exclusão adicional de 15% do rendimento da Categoria B, com limite definido por lei."
+            />
+            <div className="border-t border-stone-100 dark:border-stone-800" />
+          </>
+        )}
+
+        {/* IRS Jovem, se aplicável */}
+        {simAnual.isencaoJovem > 0 && (
+          <>
+            <LinhaCalculo
+              label={`IRS Jovem — isenção ${pct(simAnual.isencaoJovem)}`}
+              valor={-simAnual.rendimentoIsentoJovem}
+              corValor="text-brand"
+              explicacao={`O IRS Jovem isenta ${pct(simAnual.isencaoJovem)} do rendimento da Categoria B nos primeiros anos de trabalho. Aplica-se sobre o rendimento após coeficiente, até ao limite legal de 55 × IAS.`}
+            />
+            <div className="border-t border-stone-100 dark:border-stone-800" />
+          </>
+        )}
+
+        {/* Rendimento tributável — resultado intercalar */}
+        <LinhaCalculo
+          label={
+            ifici
+              ? "Rendimento tributável (IFICI 20%)"
+              : "Rendimento tributável"
+          }
+          valor={simAnual.rendimentoTributavel}
+          corValor="text-stone-700 dark:text-stone-200"
+          isResultado
+          nota="base sobre a qual se aplica a tabela de IRS"
+          explicacao={`Este é o rendimento que entra na tabela do IRS — não o que faturaste. Resulta de aplicar o coeficiente ${pct(simAnual.coeficiente)} à tua faturação${simAnual.exclusaoDeficiencia > 0 ? ", com a exclusão por deficiência" : ""}${simAnual.isencaoJovem > 0 ? " e a isenção IRS Jovem" : ""}.`}
+        />
+
+        <SeparadorBloco label="Passo 2 — Da coleta bruta ao IRS final" />
+
+        {/* Coleta bruta */}
+        <LinhaCalculo
+          label={
+            simAnual.ificiAplicado
+              ? `Coleta (taxa flat ${pct(0.2)})`
+              : "Coleta (escalões progressivos)"
+          }
+          valor={-simAnual.coletaBruta}
+          corValor="text-red-400 dark:text-red-300"
+          nota={
+            simAnual.ificiAplicado
+              ? `20% × ${fmt(simAnual.rendimentoTributavel)}`
+              : `tabela IRS sobre ${fmt(simAnual.rendimentoTributavel)}`
+          }
+          explicacao={
+            simAnual.ificiAplicado
+              ? `Com o estatuto IFICI (ex-residente não habitual), aplica-se uma taxa flat de 20% sobre o rendimento tributável, em vez dos escalões progressivos normais.`
+              : `O IRS em Portugal é progressivo: pagas percentagens crescentes consoante o escalão. A coleta bruta é o imposto calculado pela tabela, antes de subtrair as deduções a que tens direito (saúde, educação, etc.).`
+          }
+        />
+
+        {/* Deduções à coleta (se existirem) */}
+        {temDeducoes && (
+          <>
+            <div className="border-t border-stone-100 dark:border-stone-800" />
+            <LinhaCalculo
+              label="Deduções à coleta"
+              valor={-deducoesColeta}
+              corValor="text-brand"
+              nota="saúde, educação, rendas…"
+              explicacao={`As deduções à coleta reduzem directamente o imposto a pagar — não o rendimento. Ou seja, subtraem ao valor da coleta bruta.${simAnual.deducaoDespesas > 0 ? ` Despesas dedutíveis: ${fmt(simAnual.deducaoDespesas)}.` : ""}${simAnual.deducaoDeficiencia > 0 ? ` Dedução por deficiência (Art. 87.º — 4×IAS): ${fmt(simAnual.deducaoDeficiencia)}.` : ""}`}
+            />
+          </>
+        )}
+
+        {/* IRS final — resultado do bloco 2 */}
+        <div className="border-t border-stone-200 dark:border-stone-700" />
+        <LinhaCalculo
+          label={
+            simAnual.ificiAplicado
+              ? "IRS a pagar (taxa flat 20%)"
+              : "IRS a pagar"
+          }
+          valor={-simAnual.irsEstimado}
+          corValor="text-red-500 dark:text-red-400"
+          isTotal
+          nota={
+            temDeducoes
+              ? `coleta (${fmt(simAnual.coletaBruta)}) − deduções (${fmt(deducoesColeta)})`
+              : undefined
+          }
+          explicacao={
+            temDeducoes
+              ? `IRS final = coleta bruta (${fmt(simAnual.coletaBruta)}) − deduções à coleta (${fmt(deducoesColeta)}) = ${fmt(simAnual.irsEstimado)}. Este é o valor que aparece no Bloco 1.`
+              : `IRS final = coleta bruta calculada pelos escalões progressivos sobre o rendimento tributável de ${fmt(simAnual.rendimentoTributavel)}.`
+          }
+        />
       </div>
 
       {/* Breakdown visual */}
