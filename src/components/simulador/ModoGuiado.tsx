@@ -150,6 +150,28 @@ const CARDS_ATIV: CardAtiv[] = [
 const PRESETS_BRUTO = [500, 800, 1_000, 1_500, 2_000, 3_000, 5_000];
 const PRESETS_RECIBOS = [1, 2, 4, 6, 8, 12];
 
+// ─── Tipos e constantes para o novo PassoFaturacao ────────────────────────────
+
+interface ReciboItem {
+  id: number;
+  descricao: string;
+  valorComIva: string;
+  taxaIva: number;
+}
+
+const IVA_OPCOES_FAT = [
+  { taxa: 0, curto: "Isento", longo: "0%" },
+  { taxa: 0.06, curto: "Reduzida", longo: "6%" },
+  { taxa: 0.13, curto: "Intermédia", longo: "13%" },
+  { taxa: 0.23, curto: "Normal", longo: "23%" },
+] as const;
+
+const MESES_OPCOES_FAT = [1, 2, 3, 4, 6, 8, 10, 12] as const;
+
+function parseMontante(s: string): number {
+  return parseFloat(String(s).replace(",", ".").replace(/\s/g, "")) || 0;
+}
+
 const ATIV_META: Record<
   TipoAtiv,
   {
@@ -233,12 +255,42 @@ export default function ModoGuiado({
   const [tipoSelecionado, setTipoSelecionado] = useState(false);
   const [mostrarDetalheAtiv, setMostrarDetalheAtiv] = useState(false);
 
-  // Passo 2: Faturação
-  const [bruto, setBruto] = useState(1_500);
-  const [brutoInput, setBrutoInput] = useState("1500");
-  const [recibosAno, setRecibosAno] = useState(12);
+  // Passo 2: Faturação — novo modelo recibos
+  const [modoFat, setModoFat] = useState<"total" | "individual">("total");
+  const [totalInput, setTotalInput] = useState("1500");
+  const [totalIva, setTotalIva] = useState(0.23);
+  const [recibosItems, setRecibosItems] = useState<ReciboItem[]>([
+    { id: 1, descricao: "", valorComIva: "", taxaIva: 0.23 },
+  ]);
+  const [mesesFat, setMesesFat] = useState(12);
   const [regiao, setRegiao] = useState<Regiao>("continente");
   const [regimeIVA, setRegimeIVA] = useState<RegimeIVA>("isento");
+
+  // Derivados de faturação: sempre SEM IVA para os cálculos fiscais
+  const { mensalSemIva, mensalComIva, mensalIva } = useMemo(() => {
+    let comIva = 0;
+    let semIva = 0;
+    if (modoFat === "total") {
+      const v = parseMontante(totalInput);
+      comIva = v;
+      semIva = totalIva > 0 ? v / (1 + totalIva) : v;
+    } else {
+      for (const r of recibosItems) {
+        const v = parseMontante(r.valorComIva);
+        comIva += v;
+        semIva += r.taxaIva > 0 ? v / (1 + r.taxaIva) : v;
+      }
+    }
+    return {
+      mensalSemIva: semIva,
+      mensalComIva: comIva,
+      mensalIva: comIva - semIva,
+    };
+  }, [modoFat, totalInput, totalIva, recibosItems]);
+
+  // bruto (sem IVA) e recibosAno mantidos para compatibilidade com o resto do componente
+  const bruto = mensalSemIva;
+  const recibosAno = mesesFat;
 
   // Passo 3: Situação
   const [acumulaEmprego, setAcumulaEmprego] = useState(false);
@@ -315,7 +367,7 @@ export default function ModoGuiado({
   const ssAnual = isencaoSS
     ? 0
     : Math.min(bruto * SS_BASE_SERVICOS * SS_TAXA, 1_379) * recibosAno;
-  const ivaAnual = resultRecibo.iva * recibosAno;
+  const ivaAnual = mensalIva * mesesFat;
   const liquidoAnual = brutoAnual - irsAnual - ssAnual;
 
   const estadoSaida: EstadoGuiadoSaida = {
@@ -494,26 +546,25 @@ export default function ModoGuiado({
                   transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
                 >
                   <PassoFaturacao
-                    bruto={bruto}
-                    brutoInput={brutoInput}
-                    recibosAno={recibosAno}
+                    modoFat={modoFat}
+                    totalInput={totalInput}
+                    totalIva={totalIva}
+                    recibosItems={recibosItems}
+                    mesesFat={mesesFat}
+                    mensalSemIva={mensalSemIva}
+                    mensalIva={mensalIva}
                     brutoAnual={brutoAnual}
                     regiao={regiao}
                     regimeIVA={regimeIVA}
                     tipoAtiv={tipoAtiv}
-                    onBrutoChange={(v) => {
-                      setBruto(v);
-                      setBrutoInput(String(v));
-                      if (v * recibosAno <= IVA_LIMITE) setRegimeIVA("isento");
-                    }}
-                    onBrutoInputChange={(s) => {
-                      setBrutoInput(s);
-                      const v = parseFloat(s) || 0;
-                      if (v > 0) setBruto(v);
-                    }}
-                    onRecibosAnoChange={(r) => {
-                      setRecibosAno(r);
-                      if (bruto * r <= IVA_LIMITE) setRegimeIVA("isento");
+                    onModoFat={setModoFat}
+                    onTotalInput={setTotalInput}
+                    onTotalIva={setTotalIva}
+                    onRecibosItems={setRecibosItems}
+                    onMesesFat={(m) => {
+                      setMesesFat(m);
+                      if (mensalSemIva * m <= IVA_LIMITE)
+                        setRegimeIVA("isento");
                     }}
                     onRegiaoChange={setRegiao}
                     onRegimeIVAChange={setRegimeIVA}
@@ -574,7 +625,7 @@ export default function ModoGuiado({
                     irsAnual={irsAnual}
                     ssAnual={ssAnual}
                     ivaAnual={ivaAnual}
-                    taxaIVA={resultRecibo.taxaIVA}
+                    taxaIVA={mensalSemIva > 0 ? mensalIva / mensalSemIva : 0}
                     regimeIVA={regimeIVA}
                     recibosAno={recibosAno}
                     resultRecibo={resultRecibo}
@@ -932,119 +983,422 @@ function PassoAtividade({
   );
 }
 
-// ─── Passo 2: Faturação ───────────────────────────────────────────────────────
+// ─── Passo 2: Faturação (novo) ────────────────────────────────────────────────
+
+function TagComIvaBadge() {
+  return (
+    <span className="rounded-full border border-brand/30 bg-brand-light px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-brand-dark">
+      com IVA
+    </span>
+  );
+}
 
 function PassoFaturacao({
-  bruto,
-  brutoInput,
-  recibosAno,
+  modoFat,
+  totalInput,
+  totalIva,
+  recibosItems,
+  mesesFat,
+  mensalSemIva,
+  mensalIva,
   brutoAnual,
   regiao,
   regimeIVA,
   tipoAtiv,
-  onBrutoChange,
-  onBrutoInputChange,
-  onRecibosAnoChange,
+  onModoFat,
+  onTotalInput,
+  onTotalIva,
+  onRecibosItems,
+  onMesesFat,
   onRegiaoChange,
   onRegimeIVAChange,
 }: {
-  bruto: number;
-  brutoInput: string;
-  recibosAno: number;
+  modoFat: "total" | "individual";
+  totalInput: string;
+  totalIva: number;
+  recibosItems: ReciboItem[];
+  mesesFat: number;
+  mensalSemIva: number;
+  mensalIva: number;
   brutoAnual: number;
   regiao: Regiao;
   regimeIVA: RegimeIVA;
   tipoAtiv: TipoAtiv;
-  onBrutoChange: (v: number) => void;
-  onBrutoInputChange: (s: string) => void;
-  onRecibosAnoChange: (v: number) => void;
+  onModoFat: (m: "total" | "individual") => void;
+  onTotalInput: (v: string) => void;
+  onTotalIva: (taxa: number) => void;
+  onRecibosItems: React.Dispatch<React.SetStateAction<ReciboItem[]>>;
+  onMesesFat: (m: number) => void;
   onRegiaoChange: (v: Regiao) => void;
   onRegimeIVAChange: (v: RegimeIVA) => void;
 }) {
   const taxasIVA = IVA_TAXAS[regiao].value;
 
+  function adicionarRecibo() {
+    onRecibosItems((prev) => {
+      const ultimaIva = prev[prev.length - 1]?.taxaIva ?? 0.23;
+      const newId = Date.now();
+      return [
+        ...prev,
+        { id: newId, descricao: "", valorComIva: "", taxaIva: ultimaIva },
+      ];
+    });
+  }
+
+  function removerRecibo(id: number) {
+    onRecibosItems((prev) =>
+      prev.length > 1 ? prev.filter((r) => r.id !== id) : prev,
+    );
+  }
+
+  function atualizarRecibo(
+    id: number,
+    campo: keyof ReciboItem,
+    valor: string | number,
+  ) {
+    onRecibosItems((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, [campo]: valor } : r)),
+    );
+  }
+
+  const montanteTotal = parseMontante(totalInput);
+  const baseTotalSemIva =
+    totalIva > 0 ? montanteTotal / (1 + totalIva) : montanteTotal;
+  const ivaTotalExtraido = montanteTotal - baseTotalSemIva;
+
   return (
     <div>
       <div className="mb-6">
         <h3 className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100">
-          Quanto faturarás?
+          Quanto faturaste?
         </h3>
         <p className="mt-1 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
-          Valor por recibo, antes de IVA.
+          Introduz o valor que o cliente pagou — já com IVA incluído.
         </p>
       </div>
 
-      {/* Valor por recibo */}
-      <div className="mb-6">
-        <label className="mb-2.5 block text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-          Valor por recibo (€)
-        </label>
-        <div className="flex flex-wrap gap-2">
-          {PRESETS_BRUTO.map((v) => (
-            <button
-              key={v}
-              type="button"
-              aria-pressed={bruto === v}
-              onClick={() => onBrutoChange(v)}
-              className={`rounded-xl border px-3 py-2 text-sm font-semibold transition-all ${
-                bruto === v
-                  ? "border-brand bg-brand text-white"
-                  : "border-stone-200 bg-stone-50 text-stone-600 hover:border-brand/40 hover:bg-brand-light hover:text-brand-dark dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300"
-              }`}
+      {/* Tabs modo */}
+      <div className="mb-5 flex gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800">
+        {(["total", "individual"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            role="tab"
+            aria-selected={modoFat === m}
+            onClick={() => onModoFat(m)}
+            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all ${
+              modoFat === m
+                ? "bg-white text-stone-800 shadow-sm dark:bg-stone-700 dark:text-white"
+                : "text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200"
+            }`}
+          >
+            {m === "total" ? "Um valor total" : "Recibo a recibo"}
+          </button>
+        ))}
+      </div>
+
+      {/* Modo: total do mês */}
+      {modoFat === "total" && (
+        <div className="mb-5 rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-700 dark:bg-stone-900">
+          {/* Banner */}
+          <div className="mb-4 flex gap-2.5 rounded-xl border border-brand/20 bg-brand-light/50 px-3.5 py-2.5 dark:bg-brand/10">
+            <svg
+              className="mt-0.5 h-4 w-4 shrink-0 text-brand"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden
             >
-              {v >= 1_000
-                ? `${(v / 1_000).toFixed(1).replace(".0", "")}k€`
-                : `${v}€`}
-            </button>
-          ))}
-          <div className="flex items-center gap-1.5 rounded-xl border border-stone-200 bg-stone-50 px-3 dark:border-stone-700 dark:bg-stone-800">
-            <span className="text-sm text-stone-400">€</span>
-            <input
-              type="number"
-              inputMode="decimal"
-              min={0}
-              step={50}
-              value={brutoInput}
-              onChange={(e) => onBrutoInputChange(e.target.value)}
-              onBlur={() => onBrutoChange(parseFloat(brutoInput) || bruto)}
-              placeholder="outro"
-              className="w-20 bg-transparent py-2 text-sm font-semibold text-stone-700 outline-none dark:text-stone-200"
-            />
+              <circle
+                cx="8"
+                cy="8"
+                r="7"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <path
+                d="M8 5v3.5M8 10.5h.01"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+            <p className="text-xs text-brand-dark dark:text-brand">
+              <strong>Valor com IVA incluído</strong> — o total que o cliente
+              pagou, como aparece no recibo.
+            </p>
+          </div>
+
+          {/* Campo valor */}
+          <div className="mb-4">
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                Total recebido este mês
+              </label>
+              <TagComIvaBadge />
+            </div>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-base text-stone-400">
+                €
+              </span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={totalInput}
+                onChange={(e) => onTotalInput(e.target.value)}
+                placeholder="0,00"
+                className="w-full rounded-xl border border-stone-200 bg-white py-3 pl-9 pr-4 text-lg font-semibold text-stone-800 focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-white"
+              />
+            </div>
+          </div>
+
+          {/* Taxa IVA */}
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+            IVA cobrado ao cliente
+          </label>
+          <div className="mb-4 grid grid-cols-4 gap-2">
+            {IVA_OPCOES_FAT.map((o) => (
+              <button
+                key={o.taxa}
+                type="button"
+                onClick={() => onTotalIva(o.taxa)}
+                aria-pressed={totalIva === o.taxa}
+                className={`rounded-xl border py-2.5 text-center transition-all ${
+                  totalIva === o.taxa
+                    ? "border-brand bg-brand"
+                    : "border-stone-200 bg-white hover:border-brand/30 dark:border-stone-700 dark:bg-stone-800"
+                }`}
+              >
+                <span
+                  className={`block text-[10px] font-bold uppercase tracking-wider ${totalIva === o.taxa ? "text-white/70" : "text-stone-400"}`}
+                >
+                  {o.curto}
+                </span>
+                <span
+                  className={`mt-0.5 block text-sm font-bold ${totalIva === o.taxa ? "text-white" : "text-stone-800 dark:text-stone-100"}`}
+                >
+                  {o.longo}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Desdobramento */}
+          {montanteTotal > 0 && (
+            <div className="space-y-1.5 rounded-xl bg-stone-50 px-4 py-3 dark:bg-stone-800/60">
+              <div className="flex justify-between">
+                <span className="text-xs text-stone-500">
+                  A tua faturação (sem IVA)
+                </span>
+                <span className="text-xs font-semibold text-stone-800 tabular-nums dark:text-stone-100">
+                  {fmt(baseTotalSemIva)}
+                </span>
+              </div>
+              {totalIva > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-xs text-stone-400">
+                    IVA — não é teu, passa pelo teu bolso
+                  </span>
+                  <span className="text-xs font-semibold text-stone-400 tabular-nums">
+                    {fmt(ivaTotalExtraido)}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modo: recibo a recibo */}
+      {modoFat === "individual" && (
+        <div className="mb-5">
+          {recibosItems.map((r, i) => {
+            const v = parseMontante(r.valorComIva);
+            const base = r.taxaIva > 0 ? v / (1 + r.taxaIva) : v;
+            const ivaItem = v - base;
+            return (
+              <div
+                key={r.id}
+                className="mb-3 rounded-2xl border border-stone-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900"
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-brand">
+                    Recibo {i + 1}
+                  </span>
+                  {recibosItems.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removerRecibo(r.id)}
+                      className="text-xs text-stone-400 transition-colors hover:text-red-500"
+                    >
+                      Remover
+                    </button>
+                  )}
+                </div>
+
+                <input
+                  type="text"
+                  value={r.descricao}
+                  onChange={(e) =>
+                    atualizarRecibo(r.id, "descricao", e.target.value)
+                  }
+                  placeholder="Descrição (opcional)"
+                  className="mb-3 w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-700 focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200"
+                />
+
+                <div className="grid grid-cols-[1fr_130px] gap-3">
+                  <div>
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                        Valor pago
+                      </label>
+                      <TagComIvaBadge />
+                    </div>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400">
+                        €
+                      </span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={r.valorComIva}
+                        onChange={(e) =>
+                          atualizarRecibo(r.id, "valorComIva", e.target.value)
+                        }
+                        placeholder="0,00"
+                        className="w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-8 pr-3 text-sm font-semibold text-stone-800 focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-white"
+                      />
+                    </div>
+                    {v > 0 && r.taxaIva > 0 && (
+                      <p className="mt-1.5 text-[11px] text-stone-400">
+                        Base:{" "}
+                        <strong className="text-stone-600 tabular-nums dark:text-stone-300">
+                          {fmt(base)}
+                        </strong>
+                        {" · "}
+                        IVA:{" "}
+                        <strong className="text-stone-400 tabular-nums">
+                          {fmt(ivaItem)}
+                        </strong>
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                      IVA cobrado
+                    </label>
+                    <select
+                      value={r.taxaIva}
+                      onChange={(e) =>
+                        atualizarRecibo(
+                          r.id,
+                          "taxaIva",
+                          parseFloat(e.target.value),
+                        )
+                      }
+                      className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-700 focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200"
+                    >
+                      {IVA_OPCOES_FAT.map((o) => (
+                        <option key={o.taxa} value={o.taxa}>
+                          {o.curto} ({o.longo})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={adicionarRecibo}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-stone-300 bg-white py-3 text-sm font-semibold text-brand transition-all hover:border-brand/50 hover:bg-brand-light/30 dark:border-stone-700 dark:bg-transparent"
+          >
+            <svg
+              className="h-4 w-4"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden
+            >
+              <path
+                d="M8 2v12M2 8h12"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+            Adicionar recibo
+          </button>
+
+          {/* Resumo total dos recibos */}
+          {mensalSemIva > 0 && (
+            <div className="mt-3 space-y-1.5 rounded-xl bg-stone-50 px-4 py-3 dark:bg-stone-800/60">
+              <div className="flex justify-between">
+                <span className="text-xs text-stone-500">
+                  Total faturado (sem IVA)
+                </span>
+                <span className="text-xs font-semibold text-stone-800 tabular-nums dark:text-stone-100">
+                  {fmt(mensalSemIva)}
+                </span>
+              </div>
+              {mensalIva > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-xs text-stone-400">
+                    IVA total — não é teu
+                  </span>
+                  <span className="text-xs font-semibold text-stone-400 tabular-nums">
+                    {fmt(mensalIva)}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Projecção anual */}
+      <div className="mb-6 rounded-2xl border border-stone-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">
+              Projecção anual
+            </p>
+            <p className="text-xs text-stone-500 dark:text-stone-400">
+              Repetir ×
+              <strong className="text-stone-700 tabular-nums dark:text-stone-200">
+                {mesesFat}
+              </strong>{" "}
+              {mesesFat === 1 ? "mês" : "meses"}
+            </p>
+          </div>
+          <div
+            className="flex flex-wrap gap-1.5"
+            role="group"
+            aria-label="Meses activos"
+          >
+            {MESES_OPCOES_FAT.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => onMesesFat(m)}
+                aria-pressed={mesesFat === m}
+                className={`h-9 w-9 rounded-xl border text-sm font-semibold transition-all ${
+                  mesesFat === m
+                    ? "border-brand bg-brand text-white"
+                    : "border-stone-200 bg-white text-stone-500 hover:border-brand/30 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400"
+                }`}
+              >
+                {m}
+              </button>
+            ))}
           </div>
         </div>
-      </div>
-
-      {/* Frequência */}
-      <div className="mb-6">
-        <div className="mb-2.5 flex items-center gap-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-            Recibos por mês
-          </label>
-          <InfoTip>
-            Determina a faturação anual. Um recibo grande por mês → escolhe 1.
-            Vários clientes → escolhe mais.
-          </InfoTip>
-        </div>
-        <div className="flex gap-2">
-          {PRESETS_RECIBOS.map((r) => (
-            <button
-              key={r}
-              type="button"
-              aria-pressed={recibosAno === r}
-              onClick={() => onRecibosAnoChange(r)}
-              className={`flex-1 rounded-xl border py-2 text-sm font-semibold transition-all ${
-                recibosAno === r
-                  ? "border-brand bg-brand-light text-brand-dark"
-                  : "border-stone-200 bg-stone-50 text-stone-600 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300"
-              }`}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-        <p className="mt-1.5 text-[11px] text-stone-400">
-          {fmt(brutoAnual)} / ano estimados
-        </p>
+        {mensalSemIva > 0 && (
+          <p className="mt-2.5 text-[11px] text-stone-400">
+            {fmt(mensalSemIva * mesesFat)} sem IVA / ano estimados
+          </p>
+        )}
       </div>
 
       {/* IVA */}
