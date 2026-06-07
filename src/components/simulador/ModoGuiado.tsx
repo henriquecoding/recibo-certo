@@ -16,7 +16,6 @@ import {
   Briefcase,
   PenLine,
   ChevronDown,
-  ChevronRight,
 } from "@/components/ui/Icons";
 import EuroBreakdown from "@/components/simulador/EuroBreakdown";
 import { pct, fmt } from "@/lib/format";
@@ -285,7 +284,34 @@ export default function ModoGuiado({
     ],
   );
 
-  const irsAnual = resultRecibo.retencaoIRS * recibosAno;
+  const simPreview = useMemo(
+    () =>
+      simularIRSAnual({
+        brutoAnual,
+        tipo: card.tipoFiscal,
+        irsJovemAno: jovemAno > 0 ? jovemAno : undefined,
+        ifici,
+        deficiencia,
+        deducoes: {
+          saude: despSaude,
+          educacao: despEducacao,
+          gerais: despGerais,
+          rendas: despRendas,
+        },
+      }),
+    [
+      brutoAnual,
+      card.tipoFiscal,
+      jovemAno,
+      ifici,
+      deficiencia,
+      despSaude,
+      despEducacao,
+      despGerais,
+      despRendas,
+    ],
+  );
+  const irsAnual = simPreview.irsEstimado;
   const ssAnual = isencaoSS
     ? 0
     : Math.min(bruto * SS_BASE_SERVICOS * SS_TAXA, 1_379) * recibosAno;
@@ -333,14 +359,37 @@ export default function ModoGuiado({
   if (passo === 0) {
     return (
       <div className="min-h-0 bg-white dark:bg-stone-950">
-        <DecisorInicio
-          onTemAtividade={() => {
-            // Tem atividade → vai direto ao simulador completo com defaults
-            onIrParaSimuladorCompleto(estadoSaida);
-          }}
-          onNaoTemAtividade={() => setPasso(1)}
-          onSaltarParaCompleto={() => onIrParaSimuladorCompleto(estadoSaida)}
-        />
+        <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 py-12 sm:px-8">
+          <div className="w-full max-w-md">
+            <span className="mb-6 inline-flex items-center gap-1.5 rounded-full border border-brand/20 bg-brand-light/60 px-3 py-1 text-xs font-semibold text-brand-dark">
+              <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+              Simulador guiado
+            </span>
+            <h2 className="font-display mb-2 text-3xl font-semibold text-stone-800 sm:text-4xl dark:text-stone-100">
+              Precisas de abrir atividade?
+            </h2>
+            <p className="mb-8 text-sm text-stone-500 dark:text-stone-400">
+              4 perguntas rápidas para perceber o teu caso.
+            </p>
+            <DecisorAtoIsoladoInline
+              onDecisao={(d) => {
+                if (d === "RECIBO_VERDE") {
+                  onIrParaSimuladorCompleto(estadoSaida);
+                } else if (d === "ABRIR_ATIVIDADE" || d === "CONSIDERAR") {
+                  setPasso(1);
+                }
+                // ATO_ISOLADO: fica no componente, mostra guia
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => onIrParaSimuladorCompleto(estadoSaida)}
+              className="mt-4 w-full text-center text-xs text-stone-400 transition-colors hover:text-stone-600"
+            >
+              Saltar — já sei o que preciso →
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -612,103 +661,6 @@ export default function ModoGuiado({
 }
 
 // ─── Pré-passo 0: Decisor de entrada ─────────────────────────────────────────
-
-function DecisorInicio({
-  onTemAtividade,
-  onNaoTemAtividade,
-  onSaltarParaCompleto,
-}: {
-  onTemAtividade: () => void;
-  onNaoTemAtividade: () => void;
-  onSaltarParaCompleto: () => void;
-}) {
-  return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 py-12 text-center sm:px-8">
-      {/* Badge */}
-      <span className="mb-6 inline-flex items-center gap-1.5 rounded-full border border-brand/20 bg-brand-light/60 px-3 py-1 text-xs font-semibold text-brand-dark">
-        <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-        Simulador guiado
-      </span>
-
-      <h2 className="font-display text-3xl font-semibold text-stone-800 dark:text-stone-100 sm:text-4xl">
-        Já tens atividade aberta?
-      </h2>
-      <p className="mt-3 max-w-sm text-base leading-relaxed text-stone-500 dark:text-stone-400">
-        Na Autoridade Tributária (Finanças). A resposta determina o que podes
-        faturar.
-      </p>
-
-      {/* Opções principais */}
-      <div className="mt-10 flex w-full max-w-md flex-col gap-3">
-        <button
-          type="button"
-          onClick={onNaoTemAtividade}
-          className="group relative flex items-center justify-between rounded-2xl border-2 border-brand bg-brand-light/40 px-6 py-4 text-left transition-all hover:border-brand hover:bg-brand-light/70 hover:shadow-lift"
-        >
-          <div>
-            <div className="text-base font-bold text-brand-dark">
-              Não, ainda não
-            </div>
-            <div className="mt-0.5 text-sm text-brand-dark/70">
-              Vou ajudar-te a perceber o que esperar
-            </div>
-          </div>
-          <ArrowRight
-            size={18}
-            className="flex-shrink-0 text-brand transition-transform group-hover:translate-x-0.5"
-          />
-        </button>
-
-        <button
-          type="button"
-          onClick={onTemAtividade}
-          className="group flex items-center justify-between rounded-2xl border border-stone-200 bg-white px-6 py-4 text-left transition-all hover:border-stone-300 hover:shadow-card dark:border-stone-700 dark:bg-stone-900 dark:hover:border-stone-600"
-        >
-          <div>
-            <div className="text-base font-bold text-stone-800 dark:text-stone-100">
-              Sim, já tenho
-            </div>
-            <div className="mt-0.5 text-sm text-stone-500">
-              Vou ao simulador completo diretamente
-            </div>
-          </div>
-          <ArrowRight
-            size={18}
-            className="flex-shrink-0 text-stone-400 transition-transform group-hover:translate-x-0.5"
-          />
-        </button>
-      </div>
-
-      {/* O que é a atividade aberta */}
-      <details className="mt-10 w-full max-w-md text-left">
-        <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-stone-400 hover:text-stone-600 dark:hover:text-stone-300">
-          <ChevronRight
-            size={12}
-            className="transition-transform [[open]_&]:rotate-90"
-          />
-          O que é "abrir atividade"?
-        </summary>
-        <div className="mt-3 rounded-xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-900/60">
-          <p className="text-xs leading-relaxed text-stone-600 dark:text-stone-300">
-            Abrir atividade é o registo obrigatório nas Finanças para emitir
-            recibos verdes. É gratuito, feito online em minutos em{" "}
-            <strong>eportugal.gov.pt</strong>, e permite-te faturar regularmente
-            como trabalhador independente. No 1.º ano estás automaticamente
-            isento de Segurança Social.
-          </p>
-        </div>
-      </details>
-
-      <button
-        type="button"
-        onClick={onSaltarParaCompleto}
-        className="mt-8 text-xs text-stone-400 transition-colors hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300"
-      >
-        Saltar para o simulador completo →
-      </button>
-    </div>
-  );
-}
 
 // ─── Passo 1: Atividade ───────────────────────────────────────────────────────
 
@@ -1569,7 +1521,11 @@ const DECISAO_TEXTOS: Record<
   },
 };
 
-function DecisorAtoIsoladoInline() {
+function DecisorAtoIsoladoInline({
+  onDecisao,
+}: {
+  onDecisao?: (d: DecisaoId) => void;
+} = {}) {
   const [perguntaId, setPerguntaId] = useState("q1");
   const [decisao, setDecisao] = useState<DecisaoId | null>(null);
   const [historico, setHistorico] = useState<string[]>([]);
@@ -1611,13 +1567,37 @@ function DecisorAtoIsoladoInline() {
           <p className="mt-1 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
             {DECISAO_TEXTOS[decisao].desc}
           </p>
-          <button
-            type="button"
-            onClick={reiniciar}
-            className="mt-2.5 text-xs font-medium text-brand transition-colors hover:text-brand-dark"
-          >
-            ← Recomeçar
-          </button>
+          <div className="mt-3 flex flex-col gap-1.5">
+            {onDecisao && decisao !== "ATO_ISOLADO" && (
+              <button
+                type="button"
+                onClick={() => onDecisao(decisao)}
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand px-4 py-2.5 text-xs font-semibold text-white transition-all hover:bg-brand-dark"
+              >
+                {decisao === "RECIBO_VERDE"
+                  ? "Ir para o simulador"
+                  : "Continuar"}{" "}
+                <ArrowRight size={12} />
+              </button>
+            )}
+            {onDecisao && decisao === "ATO_ISOLADO" && (
+              <a
+                href="/guias/ato-isolado"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand px-4 py-2.5 text-xs font-semibold text-white transition-all hover:bg-brand-dark"
+              >
+                Ver guia Ato Isolado <ArrowRight size={12} />
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={reiniciar}
+              className="text-xs font-medium text-stone-400 transition-colors hover:text-stone-600"
+            >
+              ← Recomeçar
+            </button>
+          </div>
         </div>
       ) : pergunta ? (
         <div>
@@ -1883,11 +1863,6 @@ function ResultadoFinal({
           ss={ssAnual}
           iva={ivaAnual}
         />
-      </div>
-
-      {/* Decisor ato isolado */}
-      <div className="mb-6">
-        <DecisorAtoIsoladoInline />
       </div>
 
       {/* Aviso */}
