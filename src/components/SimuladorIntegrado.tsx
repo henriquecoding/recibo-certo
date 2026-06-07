@@ -115,7 +115,9 @@ import EuroBreakdown from "@/components/simulador/EuroBreakdown";
 import DecisionCard from "@/components/simulador/DecisionCard";
 import TimelineFiscal from "@/components/simulador/TimelineFiscal";
 import ComparacaoNarrativa from "@/components/simulador/ComparacaoNarrativa";
-import ModoGuiado, { type EstadoGuiadoSaida } from "@/components/simulador/ModoGuiado";
+import ModoGuiado, {
+  type EstadoGuiadoSaida,
+} from "@/components/simulador/ModoGuiado";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTES FISCAIS 2026
@@ -1116,8 +1118,18 @@ function IvaZonas({
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                   {(["reduzida", "intermedia", "normal"] as const).map((e) => {
                     const taxa = IVA_TAXAS[regiaoAtual].value[e];
-                    const desc = e === "reduzida" ? "saúde, alimentação, livros" : e === "intermedia" ? "restauração, alojamento local" : "maioria dos serviços, TI, consultoria";
-                    const label = e === "reduzida" ? "Reduzida" : e === "intermedia" ? "Intermédia" : "Normal";
+                    const desc =
+                      e === "reduzida"
+                        ? "saúde, alimentação, livros"
+                        : e === "intermedia"
+                          ? "restauração, alojamento local"
+                          : "maioria dos serviços, TI, consultoria";
+                    const label =
+                      e === "reduzida"
+                        ? "Reduzida"
+                        : e === "intermedia"
+                          ? "Intermédia"
+                          : "Normal";
                     return (
                       <button
                         key={e}
@@ -1126,8 +1138,12 @@ function IvaZonas({
                         onClick={() => onRegimeIVAChange(e)}
                         className={`rounded-xl border p-2.5 text-left transition-all ${regimeIVA === e ? "border-amber-600 bg-amber-100 text-amber-800" : "border-amber-300 bg-white/60 text-alert-text hover:border-amber-500"}`}
                       >
-                        <div className="text-xs font-bold">{label} {pct(taxa)}</div>
-                        <div className="mt-0.5 text-[10px] opacity-70">{desc}</div>
+                        <div className="text-xs font-bold">
+                          {label} {pct(taxa)}
+                        </div>
+                        <div className="mt-0.5 text-[10px] opacity-70">
+                          {desc}
+                        </div>
                       </button>
                     );
                   })}
@@ -1176,19 +1192,33 @@ function IvaZonas({
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {(["reduzida", "intermedia", "normal"] as const).map((e) => {
                   const taxa = IVA_TAXAS[regiaoAtual].value[e];
-                  const desc = e === "reduzida" ? "saúde, alimentação, livros" : e === "intermedia" ? "restauração, alojamento local" : "maioria dos serviços, TI, consultoria";
-                  const label = e === "reduzida" ? "Reduzida" : e === "intermedia" ? "Intermédia" : "Normal";
+                  const desc =
+                    e === "reduzida"
+                      ? "saúde, alimentação, livros"
+                      : e === "intermedia"
+                        ? "restauração, alojamento local"
+                        : "maioria dos serviços, TI, consultoria";
+                  const label =
+                    e === "reduzida"
+                      ? "Reduzida"
+                      : e === "intermedia"
+                        ? "Intermédia"
+                        : "Normal";
                   return (
-                  <button
-                    key={e}
-                    type="button"
-                    aria-pressed={regimeIVA === e}
-                    onClick={() => onRegimeIVAChange(e)}
-                    className={`rounded-xl border p-2.5 text-left transition-all ${regimeIVA === e ? "border-red-600 bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200" : "border-red-300 bg-white/60 text-red-700 hover:border-red-500 dark:border-red-800 dark:bg-transparent"}`}
-                  >
-                    <div className="text-xs font-bold">{label} {pct(taxa)}</div>
-                    <div className="mt-0.5 text-[10px] opacity-70">{desc}</div>
-                  </button>
+                    <button
+                      key={e}
+                      type="button"
+                      aria-pressed={regimeIVA === e}
+                      onClick={() => onRegimeIVAChange(e)}
+                      className={`rounded-xl border p-2.5 text-left transition-all ${regimeIVA === e ? "border-red-600 bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200" : "border-red-300 bg-white/60 text-red-700 hover:border-red-500 dark:border-red-800 dark:bg-transparent"}`}
+                    >
+                      <div className="text-xs font-bold">
+                        {label} {pct(taxa)}
+                      </div>
+                      <div className="mt-0.5 text-[10px] opacity-70">
+                        {desc}
+                      </div>
+                    </button>
                   );
                 })}
               </div>
@@ -1255,13 +1285,13 @@ function NumericSlider({
   );
 
   // clampFree: só enforça o min, não o max — permite digitar valores acima do slider
-  const clampFree = useCallback(
-    (v: number) => Math.max(min, v),
-    [min],
-  );
+  const clampFree = useCallback((v: number) => Math.max(min, v), [min]);
 
   // posição visual limitada a [0,100]% mesmo que value > max
-  const pctVal = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
+  const pctVal = Math.min(
+    100,
+    Math.max(0, ((value - min) / (max - min)) * 100),
+  );
   const bePct =
     breakPoint != null ? ((breakPoint - min) / (max - min)) * 100 : null;
 
@@ -2968,15 +2998,12 @@ export default function SimuladorIntegrado() {
     diretosAutor: "prop_int",
   };
 
-  const handleSelectModo = useCallback(
-    (modo: "guiado" | "profissional") => {
-      setModoSimulacao(modo);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("rc-modo-simulacao", modo);
-      }
-    },
-    [],
-  );
+  const handleSelectModo = useCallback((modo: "guiado" | "profissional") => {
+    setModoSimulacao(modo);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("rc-modo-simulacao", modo);
+    }
+  }, []);
 
   const handleResetModo = useCallback(() => {
     setModoSimulacao("nao_selecionado");
@@ -3034,7 +3061,8 @@ export default function SimuladorIntegrado() {
         isencaoSSPrimeiroAno: isencaoSS,
         acumulaEmprego,
         irsJovemAno,
-        retencaoOverride: atividade.retencao ?? TIPO_ATIVIDADE_PARAMS[tipoAtiv]?.ret,
+        retencaoOverride:
+          atividade.retencao ?? TIPO_ATIVIDADE_PARAMS[tipoAtiv]?.ret,
       }),
     [
       base,
@@ -3378,7 +3406,10 @@ export default function SimuladorIntegrado() {
     }
 
     // IVA intermédia ou reduzida com profissão liberal Art. 151.º
-    if ((regimeIVA === "intermedia" || regimeIVA === "reduzida") && tipoAtiv === "art151") {
+    if (
+      (regimeIVA === "intermedia" || regimeIVA === "reduzida") &&
+      tipoAtiv === "art151"
+    ) {
       r.push({
         id: "iva-taxa-atividade",
         prioridade: "aviso",
@@ -3393,7 +3424,8 @@ export default function SimuladorIntegrado() {
         id: "ifici-jovem",
         prioridade: "erro",
         mensagem: "IFICI e IRS Jovem são regimes incompatíveis",
-        detalhe: "Não podes beneficiar simultaneamente do IFICI/NHR 2.0 (taxa flat 20%) e do IRS Jovem (isenção progressiva). Escolhe um dos dois e desativa o outro.",
+        detalhe:
+          "Não podes beneficiar simultaneamente do IFICI/NHR 2.0 (taxa flat 20%) e do IRS Jovem (isenção progressiva). Escolhe um dos dois e desativa o outro.",
       });
     }
 
@@ -3413,22 +3445,38 @@ export default function SimuladorIntegrado() {
         id: "ss-dupla",
         prioridade: "info",
         mensagem: "Dois motivos de isenção de SS ativos em simultâneo",
-        detalhe: "Isenção do 1.º ano e acumulação com emprego produzem o mesmo resultado (SS = 0). Podes deixar apenas um ativo — não muda o cálculo.",
+        detalhe:
+          "Isenção do 1.º ano e acumulação com emprego produzem o mesmo resultado (SS = 0). Podes deixar apenas um ativo — não muda o cálculo.",
       });
     }
 
     // IVA isento + atividade vendas (congruente — oportunidade)
-    if (regimeIVA === "isento" && tipoAtiv === "vendas" && brutoAnual <= IVA_ISENCAO_LIMITE) {
+    if (
+      regimeIVA === "isento" &&
+      tipoAtiv === "vendas" &&
+      brutoAnual <= IVA_ISENCAO_LIMITE
+    ) {
       r.push({
         id: "isento-vendas-ok",
         prioridade: "oportunidade",
-        mensagem: "Isenção de IVA compatível com atividade de vendas e faturação",
+        mensagem:
+          "Isenção de IVA compatível com atividade de vendas e faturação",
         detalhe: `Com ${fmt(brutoAnual)}/ano em vendas e isenção Art. 53.º, não precisas de cobrar IVA ao cliente. Verifica se os teus fornecedores também são isentos.`,
       });
     }
 
     return r;
-  }, [regimeIVA, brutoAnual, tipoAtiv, regiao, ifici, irsJovemAno, dispensaRetencao, isencaoSSPrimeiroAno, acumulaEmprego]);
+  }, [
+    regimeIVA,
+    brutoAnual,
+    tipoAtiv,
+    regiao,
+    ifici,
+    irsJovemAno,
+    dispensaRetencao,
+    isencaoSSPrimeiroAno,
+    acumulaEmprego,
+  ]);
 
   const regrasErro = regras.filter((r) => r.prioridade === "erro");
   const regrasAviso = regras.filter((r) => r.prioridade === "aviso");
@@ -3445,60 +3493,80 @@ export default function SimuladorIntegrado() {
     },
     reduzida: {
       titulo: `Taxa reduzida — ${pct(IVA_TAXAS[regiao].value.reduzida)}`,
-      quando: "Bens e serviços das Listas I e II do CIVA: medicamentos, produtos alimentares básicos, livros, assistência médica específica, alguns produtos agrícolas.",
-      compativel: "Farmacêuticos (medicamentos), saúde (serviços específicos), produção agrícola, bens alimentares",
-      incompativel: "Maioria das profissões liberais do Art. 151.º — aplicam taxa normal",
+      quando:
+        "Bens e serviços das Listas I e II do CIVA: medicamentos, produtos alimentares básicos, livros, assistência médica específica, alguns produtos agrícolas.",
+      compativel:
+        "Farmacêuticos (medicamentos), saúde (serviços específicos), produção agrícola, bens alimentares",
+      incompativel:
+        "Maioria das profissões liberais do Art. 151.º — aplicam taxa normal",
     },
     intermedia: {
       titulo: `Taxa intermédia — ${pct(IVA_TAXAS[regiao].value.intermedia)}`,
-      quando: "Lista II-A do CIVA: serviços de alimentação e bebidas (restauração), alojamento turístico, alguns produtos agrícolas.",
-      compativel: "Restauração, alojamento local e hotelaria, alguns produtos agrícolas",
-      incompativel: "Profissões liberais (Art. 151.º), consultoria, TI, engenharia — aplicam taxa normal",
+      quando:
+        "Lista II-A do CIVA: serviços de alimentação e bebidas (restauração), alojamento turístico, alguns produtos agrícolas.",
+      compativel:
+        "Restauração, alojamento local e hotelaria, alguns produtos agrícolas",
+      incompativel:
+        "Profissões liberais (Art. 151.º), consultoria, TI, engenharia — aplicam taxa normal",
     },
     normal: {
       titulo: `Taxa normal — ${pct(IVA_TAXAS[regiao].value.normal)}`,
-      quando: "Todos os bens e serviços que não constam das listas de taxa reduzida ou intermédia. É a taxa geral aplicável à maioria dos serviços.",
-      compativel: "Todas as profissões liberais (Art. 151.º), consultoria, TI, engenharia, advocacia",
+      quando:
+        "Todos os bens e serviços que não constam das listas de taxa reduzida ou intermédia. É a taxa geral aplicável à maioria dos serviços.",
+      compativel:
+        "Todas as profissões liberais (Art. 151.º), consultoria, TI, engenharia, advocacia",
       incompativel: null,
     },
   }[regimeIVA];
 
   const ivaAlertaAtividade =
-    (regimeIVA === "intermedia" || regimeIVA === "reduzida") && tipoAtiv === "art151";
-  const ivaAlertaFaturacao = regimeIVA === "isento" && brutoAnual > IVA_ISENCAO_LIMITE;
+    (regimeIVA === "intermedia" || regimeIVA === "reduzida") &&
+    tipoAtiv === "art151";
+  const ivaAlertaFaturacao =
+    regimeIVA === "isento" && brutoAnual > IVA_ISENCAO_LIMITE;
 
   // ── Metadados para painel contextual de atividade ─────────────────────────
   const atividadePainelMeta: Record<
     TipoAtividade,
-    { titulo: string; descricao: string; ivaEsperado: string; nota: string | null }
+    {
+      titulo: string;
+      descricao: string;
+      ivaEsperado: string;
+      nota: string | null;
+    }
   > = {
     art151: {
       titulo: "Profissão liberal — Art. 151.º CIRS",
-      descricao: "Profissões da tabela da Portaria 1011/2001 (engenheiros, advogados, médicos, programadores, designers, contabilistas, etc.). Coef. 0,75 · Ret. 23% · SS sobre 70%.",
+      descricao:
+        "Profissões da tabela da Portaria 1011/2001 (engenheiros, advogados, médicos, programadores, designers, contabilistas, etc.). Coef. 0,75 · Ret. 23% · SS sobre 70%.",
       ivaEsperado: "normal",
       nota: "15% do rendimento bruto deve ser justificado com despesas (regra dos 15%). O excesso não justificado é acrescido ao tributável.",
     },
     vendas: {
       titulo: "Venda de bens / mercadorias",
-      descricao: "Comércio, produção e revenda. Coeficiente muito baixo (0,15) porque as margens brutas são reduzidas. Sem retenção na fonte. SS sobre 20%.",
+      descricao:
+        "Comércio, produção e revenda. Coeficiente muito baixo (0,15) porque as margens brutas são reduzidas. Sem retenção na fonte. SS sobre 20%.",
       ivaEsperado: "normal",
       nota: "A Segurança Social incide sobre apenas 20% do rendimento (base reduzida para vendas e restauração).",
     },
     hosped: {
       titulo: "Alojamento local / hotelaria",
-      descricao: "Alojamento local em estabelecimento (coef. 0,15), moradia/apartamento (coef. 0,35) ou zona de contenção (coef. 0,50). Sem retenção. SS sobre 20%.",
+      descricao:
+        "Alojamento local em estabelecimento (coef. 0,15), moradia/apartamento (coef. 0,35) ou zona de contenção (coef. 0,50). Sem retenção. SS sobre 20%.",
       ivaEsperado: "intermedia",
       nota: "Em zona de pressão urbanística o coeficiente sobe para 0,50 (exige Anexo 13F na Mod. 3). A isenção de SS em AL exclusivo é condicional — confirmar com contabilista.",
     },
     outras: {
       titulo: "Outras prestações de serviços",
-      descricao: "Código 1519 — serviços não enquadrados no Art. 151.º. Retenção de 11,5% (inferior à das profissões liberais). Coef. 0,35. SS sobre 70%.",
+      descricao:
+        "Código 1519 — serviços não enquadrados no Art. 151.º. Retenção de 11,5% (inferior à das profissões liberais). Coef. 0,35. SS sobre 70%.",
       ivaEsperado: "normal",
       nota: null,
     },
     prop_int: {
       titulo: "Propriedade intelectual / direitos de autor",
-      descricao: "Royalties, licenciamento de software, obra própria (livros, música, arte). Coef. 0,75 mas retenção de 16,5%. SS sobre 70%.",
+      descricao:
+        "Royalties, licenciamento de software, obra própria (livros, música, arte). Coef. 0,75 mas retenção de 16,5%. SS sobre 70%.",
       ivaEsperado: "normal",
       nota: "Só para titulares da obra original. Coeficiente 0,95 quando o autor cede obra a entidade única — verificar enquadramento com contabilista.",
     },
@@ -3507,7 +3575,9 @@ export default function SimuladorIntegrado() {
   const atividadeAtual = atividadePainelMeta[tipoAtiv];
   const atividadeIVACoerente =
     atividadeAtual.ivaEsperado === regimeIVA ||
-    (atividadeAtual.ivaEsperado === "normal" && regimeIVA === "isento" && brutoAnual <= IVA_ISENCAO_LIMITE);
+    (atividadeAtual.ivaEsperado === "normal" &&
+      regimeIVA === "isento" &&
+      brutoAnual <= IVA_ISENCAO_LIMITE);
 
   // ── Aviso de IVA Art. 53.º ────────────────────────────────────────────────
   const avisoIVALimite =
@@ -3578,8 +3648,16 @@ export default function SimuladorIntegrado() {
               >
                 {(
                   [
-                    { v: "rv" as CenarioAtivo, l: "Recibos Verdes", Icon: Receipt },
-                    { v: "empresa" as CenarioAtivo, l: "Empresa", Icon: Building },
+                    {
+                      v: "rv" as CenarioAtivo,
+                      l: "Recibos Verdes",
+                      Icon: Receipt,
+                    },
+                    {
+                      v: "empresa" as CenarioAtivo,
+                      l: "Empresa",
+                      Icon: Building,
+                    },
                   ] as const
                 ).map(({ v, l, Icon }) => (
                   <button
@@ -3608,9 +3686,27 @@ export default function SimuladorIntegrado() {
                 onClick={handleResetModo}
                 className="flex items-center gap-1.5 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-2 text-sm font-medium text-stone-500 shadow-sm transition-all hover:border-stone-300 hover:bg-white hover:text-stone-700 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-400 dark:hover:text-stone-200"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden className="flex-shrink-0">
-                  <path d="M4 12a8 8 0 108-8 8 8 0 00-6.3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                  <path d="M4 4v4h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden
+                  className="flex-shrink-0"
+                >
+                  <path
+                    d="M4 12a8 8 0 108-8 8 8 0 00-6.3 3"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M4 4v4h4"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
                 Mudar modo
               </button>
@@ -3622,7 +3718,6 @@ export default function SimuladorIntegrado() {
         {modoSimulacao === "nao_selecionado" && (
           <OnboardingGate onSelect={handleSelectModo} />
         )}
-
 
         {/* ── Modo Guiado ──────────────────────────────────────────────────── */}
         {modoSimulacao === "guiado" && (
@@ -3641,6 +3736,8 @@ export default function SimuladorIntegrado() {
               setDespEducacao(estado.despEducacao);
               setDespGerais(estado.despGerais);
               setDespRendas(estado.despRendas);
+              if (estado.ifici) setIfici(true);
+              if (estado.deficiencia) setDeficiencia(true);
               handleSelectModo("profissional");
             }}
           />
@@ -3649,2187 +3746,2322 @@ export default function SimuladorIntegrado() {
         {/* ── Modo Profissional ────────────────────────────────────────────── */}
         {modoSimulacao === "profissional" && (
           <>
-
-        {/* ── Corpo ─────────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2">
-          {/* ════ Coluna esquerda: Inputs ════ */}
-          <div className="bg-white p-5 sm:p-8 lg:p-10 lg:border-r lg:border-stone-100 dark:bg-stone-950 dark:border-stone-800">
-            {/* ── Valor ────────────────────────────────────────────────────── */}
-            <div className="mb-5">
-              <AnimatePresence mode="wait">
-                {modoInput === "recibo" ? (
-                  <m.div
-                    key="recibo"
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 8 }}
-                    transition={{ duration: 0.18 }}
-                  >
-                    {/* O input é o total a cobrar ao cliente (com IVA incluído
+            {/* ── Corpo ─────────────────────────────────────────────────────────── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2">
+              {/* ════ Coluna esquerda: Inputs ════ */}
+              <div className="bg-white p-5 sm:p-8 lg:p-10 lg:border-r lg:border-stone-100 dark:bg-stone-950 dark:border-stone-800">
+                {/* ── Valor ────────────────────────────────────────────────────── */}
+                <div className="mb-5">
+                  <AnimatePresence mode="wait">
+                    {modoInput === "recibo" ? (
+                      <m.div
+                        key="recibo"
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 8 }}
+                        transition={{ duration: 0.18 }}
+                      >
+                        {/* O input é o total a cobrar ao cliente (com IVA incluído
                         se aplicável). A base pré-IVA é extraída internamente. */}
-                    <NumericSlider
-                      label={labelValor}
-                      value={bruto}
-                      min={0}
-                      max={10_000}
-                      step={50}
-                      unit="€"
-                      onChange={handleBrutoChange}
-                      presets={[500, 1000, 1500, 2500, 5000]}
-                      tooltip={
-                        <>
-                          Valor total que vais cobrar ao cliente (já com IVA
-                          incluído, se aplicável). O ReciboCerto extrai
-                          automaticamente a base pré-IVA e calcula IRS, SS e
-                          quanto podes gastar.
-                        </>
-                      }
-                    />
-                  </m.div>
-                ) : (
-                  <m.div
-                    key="anual"
-                    initial={{ opacity: 0, x: 8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -8 }}
-                    transition={{ duration: 0.18 }}
-                  >
-                    <NumericSlider
-                      label="Faturação anual (€)"
-                      value={brutoAnual}
-                      min={0}
-                      max={200_000}
-                      step={1_000}
-                      unit="€"
-                      onChange={handleBrutoAnualChange}
-                      presets={[15000, 25000, 40000, 60000, 80000, 120000]}
-                      formatPreset={(v) => fmt(v)}
-                      tooltip={
-                        <>
-                          Volume de negócios anual, antes de qualquer imposto.
-                          Limite regime simplificado: 200 000€/ano.
-                        </>
-                      }
-                      breakPoint={breakEven ?? undefined}
-                      breakPointLabel={
-                        breakEven ? `Vira aqui · ${fmt(breakEven)}` : undefined
-                      }
-                    />
-                    {avisoIVALimite}
-                  </m.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* ── Regime IVA — logo abaixo do valor (afecta a interpretação do input) ── */}
-            <fieldset className="mb-6">
-              <legend className="mb-2 flex items-center gap-1.5 text-sm font-medium uppercase tracking-wider text-stone-500">
-                Regime de IVA · {META_REGIAO[regiao]}
-                <InfoTip label="IVA 2026">
-                  Isento Art. 53.º até{" "}
-                  {IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}€/ano. Se
-                  ultrapassares{" "}
-                  {IVA_ISENCAO_LIMITE_IMEDIATO.toLocaleString("pt-PT")}€ durante
-                  o ano, passas de imediato para o regime normal. Certas
-                  profissões (médicos, professores...) têm isenção Art. 9.º sem
-                  limite de faturação.
-                </InfoTip>
-              </legend>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {ivaOptions.map((op) => {
-                  const active = regimeIVA === op.id;
-                  return (
-                    <button
-                      key={op.id}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => { setRegimeIVA(op.id); setPainelIVA(true); }}
-                      className={`p-3 rounded-xl border text-center transition-all ${
-                        active
-                          ? "border-brand bg-brand-light"
-                          : "border-stone-200 hover:border-stone-300 bg-stone-50"
-                      }`}
-                    >
-                      <div
-                        className={`text-sm font-semibold ${active ? "text-brand-dark" : "text-stone-700"}`}
-                      >
-                        {op.label}
-                      </div>
-                      <div
-                        className={`text-xs ${active ? "text-brand" : "text-stone-400"}`}
-                      >
-                        {op.sub}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </fieldset>
-
-            {/* ── Painel contextual IVA ────────────────────────────────── */}
-            {painelIVA && (
-              <div className="mb-4 rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-900">
-                <div className="mb-2 flex items-start justify-between gap-2">
-                  <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
-                    {ivaPainelMeta.titulo}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setPainelIVA(false)}
-                    className="flex-shrink-0 text-xs text-stone-400 hover:text-stone-600 transition-colors"
-                    aria-label="Fechar painel"
-                  >
-                    fechar
-                  </button>
-                </div>
-                <p className="mb-3 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
-                  {ivaPainelMeta.quando}
-                </p>
-                <div className="space-y-1.5">
-                  <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
-                    <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
-                    <span>
-                      <strong className="text-stone-700 dark:text-stone-200">Compatível com:</strong>{" "}
-                      {ivaPainelMeta.compativel}
-                    </span>
-                  </div>
-                  {ivaPainelMeta.incompativel && (
-                    <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
-                      <Warning size={11} className="mt-0.5 flex-shrink-0 text-alert-text" />
-                      <span>
-                        <strong className="text-stone-700 dark:text-stone-200">Incompatível com:</strong>{" "}
-                        {ivaPainelMeta.incompativel}
-                      </span>
-                    </div>
-                  )}
-                  {ivaAlertaAtividade && (
-                    <div className="mt-2 rounded-lg border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">
-                      A atividade selecionada ({TIPO_ATIVIDADE_PARAMS[tipoAtiv].label}) aplica normalmente IVA{" "}
-                      {regiao === "continente" ? "normal (23%)" : `normal (${pct(IVA_TAXAS[regiao].value.normal)})`}. Verifica se prestaste serviços específicos sujeitos a esta taxa.
-                    </div>
-                  )}
-                  {ivaAlertaFaturacao && (
-                    <div className="mt-2 rounded-lg border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">
-                      A tua faturação estimada ({fmt(brutoAnual)}) ultrapassa o limiar de isenção de{" "}
-                      €{IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}. Verifica se ainda tens isenção ou se já deves cobrar IVA.
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ── Tipo de atividade ─────────────────────────────────────── */}
-            <div className="mb-6">
-              <div className="mb-2 flex items-center gap-1.5">
-                <span className="text-sm font-medium uppercase tracking-wider text-stone-500">
-                  Tipo de atividade
-                </span>
-                <InfoTip label="Tipos de atividade e coeficientes">
-                  <p>
-                    Coeficientes do regime simplificado (Art. 31.º CIRS) e taxas
-                    de retenção 2026:
-                  </p>
-                  <ul className="mt-1 space-y-0.5 text-xs">
-                    <li>
-                      <strong>Art. 151.º:</strong> coef. 0,75 · ret. 23%
-                    </li>
-                    <li>
-                      <strong>Vendas:</strong> coef. 0,15 · ret. 0%
-                    </li>
-                    <li>
-                      <strong>Alojamento local:</strong> coef. 0,35 · ret. 0%
-                    </li>
-                    <li>
-                      <strong>Outras prestações:</strong> coef. 0,35 · ret.
-                      11,5%
-                    </li>
-                    <li>
-                      <strong>Prop. intelectual:</strong> coef. 0,75 · ret.
-                      16,5%
-                    </li>
-                  </ul>
-                  <p className="mt-1">
-                    25% do rendimento = presumida como despesa (sem comprovar).
-                  </p>
-                </InfoTip>
-              </div>
-              <ActivityCombobox
-                value={atividade}
-                onChange={(a) => { setAtividade(a); setTipoAtiv(mapaAtivParaTipoAtiv[a.tipo] ?? "art151"); setPainelAtividade(true); }}
-              />
-
-              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {(
-                  Object.entries(TIPO_ATIVIDADE_PARAMS) as [
-                    TipoAtividade,
-                    (typeof TIPO_ATIVIDADE_PARAMS)[TipoAtividade],
-                  ][]
-                ).map(([k, p]) => (
-                  <button
-                    key={k}
-                    type="button"
-                    aria-pressed={tipoAtiv === k}
-                    onClick={() => {
-                      setTipoAtiv(k);
-                      // Limpa overrides de atividade específica para não manter
-                      // coef/retenção incompatíveis com o novo tipo selecionado.
-                      const tipoFiscal: Atividade["tipo"] =
-                        k === "prop_int" ? "diretosAutor" :
-                        k === "outras" ? "outros" :
-                        k === "hosped" ? "vendas" :
-                        k === "vendas" ? "vendas" :
-                        "art151";
-                      setAtividade({ label: p.label, tipo: tipoFiscal, grupo: "" });
-                      setPainelAtividade(true);
-                    }}
-                    className={`p-2.5 rounded-xl border text-left text-xs transition-all ${
-                      tipoAtiv === k
-                        ? "border-brand bg-brand-light"
-                        : "border-stone-200 hover:border-stone-300 bg-stone-50"
-                    }`}
-                  >
-                    <div
-                      className={`font-semibold ${tipoAtiv === k ? "text-brand-dark" : "text-stone-700"}`}
-                    >
-                      {p.label}
-                    </div>
-                    <div
-                      className={`mt-0.5 ${tipoAtiv === k ? "text-brand" : "text-stone-400"}`}
-                    >
-                      Coef. {pct(p.coef)} · Ret. {pct(p.ret)}
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              {/* Painel contextual da atividade */}
-              {painelAtividade && (
-                <div className="mt-3 rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-900">
-                  <div className="mb-2 flex items-start justify-between gap-2">
-                    <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
-                      {atividadeAtual.titulo}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setPainelAtividade(false)}
-                      className="flex-shrink-0 text-xs text-stone-400 hover:text-stone-600 transition-colors"
-                      aria-label="Fechar painel"
-                    >
-                      fechar
-                    </button>
-                  </div>
-
-                  {/* Métricas em cards */}
-                  <div className="mb-3 grid grid-cols-3 gap-2">
-                    {[
-                      { label: "Coeficiente", value: pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef), note: "do rendimento é tributável" },
-                      { label: "Retenção", value: pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].ret), note: "retida pelo cliente" },
-                      { label: "Base SS", value: tipoAtiv === "vendas" || tipoAtiv === "hosped" ? "20%" : "70%", note: "do rendimento" },
-                    ].map((m) => (
-                      <div key={m.label} className="rounded-xl border border-stone-200 bg-white p-2 text-center dark:border-stone-700 dark:bg-stone-800">
-                        <div className="text-sm font-bold text-stone-800 dark:text-stone-100">{m.value}</div>
-                        <div className="text-[10px] font-medium text-stone-500">{m.label}</div>
-                        <div className="text-[10px] text-stone-400">{m.note}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <p className="mb-2 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
-                    {atividadeAtual.descricao}
-                  </p>
-
-                  <div className="space-y-1.5">
-                    <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
-                      <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
-                      <span>
-                        <strong className="text-stone-600 dark:text-stone-200">IVA típico:</strong>{" "}
-                        {atividadeAtual.ivaEsperado === "normal"
-                          ? `Taxa normal (${pct(IVA_TAXAS[regiao].value.normal)}) ou isenção Art. 53.º se faturação < €15 000`
-                          : atividadeAtual.ivaEsperado === "intermedia"
-                          ? `Taxa intermédia (${pct(IVA_TAXAS[regiao].value.intermedia)}) — restauração e alojamento`
-                          : "Isento"}
-                      </span>
-                    </div>
-                    {!atividadeIVACoerente && (
-                      <div className="mt-1 rounded-lg border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">
-                        O regime de IVA selecionado ({regimeIVA === "isento" ? "Isento" : pct(IVA_TAXAS[regiao].value[regimeIVA as EscalaoIVA])}) pode não ser o habitual para esta atividade. Verifica com o teu contabilista.
-                      </div>
-                    )}
-                    {atividadeAtual.nota && (
-                      <div className="mt-2 rounded-lg border border-brand/20 bg-brand-light/50 px-3 py-2 text-xs leading-relaxed text-brand-dark">
-                        {atividadeAtual.nota}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* ── Situação fiscal ──────────────────────────────────────── */}
-            <div className="space-y-3">
-              {checkboxes.map((cb) => (
-                <button
-                  key={cb.id}
-                  type="button"
-                  role="checkbox"
-                  aria-checked={cb.val}
-                  onClick={() => cb.set(!cb.val)}
-                  className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
-                    cb.val
-                      ? "border-brand bg-brand-light"
-                      : "border-stone-200 hover:border-stone-300 bg-stone-50"
-                  }`}
-                >
-                  <div
-                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                      cb.val
-                        ? "bg-brand border-brand text-white"
-                        : "border-stone-300 text-transparent"
-                    }`}
-                  >
-                    <Check size={12} />
-                  </div>
-                  <div>
-                    <div
-                      className={`text-sm font-semibold ${cb.val ? "text-brand-dark" : "text-stone-700"}`}
-                    >
-                      {cb.label}
-                    </div>
-                    <div
-                      className={`text-xs ${cb.val ? "text-brand" : "text-stone-400"}`}
-                    >
-                      {cb.sub}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {/* ── Motor de Regras Fiscais ──────────────────────────────── */}
-            {regras.length > 0 && (
-              <div className="mt-5 space-y-2">
-                {[...regrasErro, ...regrasAviso, ...regrasInfo, ...regrasOport].map((r) => {
-                  const estilos = {
-                    erro: {
-                      wrapper: "border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/20",
-                      icon: <Warning size={13} className="text-red-600 dark:text-red-400" />,
-                      titulo: "text-red-700 dark:text-red-300",
-                    },
-                    aviso: {
-                      wrapper: "border-alert-border bg-alert-bg",
-                      icon: <Warning size={13} className="text-alert-text" />,
-                      titulo: "text-alert-text",
-                    },
-                    info: {
-                      wrapper: "border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/60",
-                      icon: <Check size={13} className="text-stone-400" />,
-                      titulo: "text-stone-600 dark:text-stone-300",
-                    },
-                    oportunidade: {
-                      wrapper: "border-brand/20 bg-brand-light/50",
-                      icon: <Check size={13} className="text-brand" />,
-                      titulo: "text-brand-dark",
-                    },
-                  }[r.prioridade];
-                  return (
-                    <div key={r.id} className={`flex items-start gap-2.5 rounded-2xl border p-3 ${estilos.wrapper}`}>
-                      <span className="mt-0.5 flex-shrink-0">{estilos.icon}</span>
-                      <div>
-                        <p className={`text-xs font-semibold ${estilos.titulo}`}>{r.mensagem}</p>
-                        <p className={`mt-0.5 text-xs leading-relaxed ${estilos.titulo} opacity-75`}>{r.detalhe}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* ── Opções avançadas ─────────────────────────────────────── */}
-            <div className="mt-5 pt-5 border-t border-stone-100 dark:border-stone-800">
-              <button
-                type="button"
-                aria-expanded={advanced}
-                onClick={() => setAdvanced((v) => !v)}
-                className="flex items-center gap-2 text-sm font-semibold text-stone-500 hover:text-stone-700 transition-colors"
-              >
-                <span>Opções avançadas</span>
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className={`transition-transform ${advanced ? "rotate-180" : ""}`}
-                  aria-hidden
-                >
-                  <path
-                    d="M6 9l6 6 6-6"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
-
-              <AnimatePresence>
-                {advanced && (
-                  <m.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="mt-4 space-y-5">
-                      {/* Região */}
-                      <div>
-                        <span className="text-sm font-medium text-stone-500 uppercase tracking-wider block mb-2">
-                          Região
-                        </span>
-                        <div className="grid grid-cols-3 gap-2">
-                          {REGIOES.map((r) => {
-                            const active = regiao === r;
-                            return (
-                              <button
-                                key={r}
-                                type="button"
-                                aria-pressed={active}
-                                onClick={() => setRegiao(r)}
-                                className={`p-2.5 rounded-xl border text-center text-sm font-semibold transition-all ${
-                                  active
-                                    ? "border-brand bg-brand-light text-brand-dark"
-                                    : "border-stone-200 hover:border-stone-300 bg-stone-50 text-stone-600"
-                                }`}
-                              >
-                                {META_REGIAO[r]}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* IRS Jovem */}
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <label
-                            htmlFor="irs-jovem-sel"
-                            className="text-sm font-medium text-stone-500 uppercase tracking-wider"
-                          >
-                            IRS Jovem (até {IRS_JOVEM_IDADE_MAX} anos)
-                          </label>
-                          <InfoTip label="IRS Jovem 2026">
-                            Isenção parcial do IRS durante 10 anos para jovens
-                            até 35 anos (Art. 12.º-B CIRS, OE2025). Aplica-se a
-                            Cat. A e Cat. B. Limite: 55×IAS ={" "}
-                            {IRS_JOVEM_LIMITE_2026.toLocaleString("pt-PT")}
-                            €/ano. Conta anos desde 1.º rendimento como
-                            não-dependente.
-                          </InfoTip>
-                        </div>
-                        <select
-                          id="irs-jovem-sel"
-                          value={irsJovemAno}
-                          onChange={(e) =>
-                            setIrsJovemAno(Number(e.target.value))
+                        <NumericSlider
+                          label={labelValor}
+                          value={bruto}
+                          min={0}
+                          max={10_000}
+                          step={50}
+                          unit="€"
+                          onChange={handleBrutoChange}
+                          presets={[500, 1000, 1500, 2500, 5000]}
+                          tooltip={
+                            <>
+                              Valor total que vais cobrar ao cliente (já com IVA
+                              incluído, se aplicável). O ReciboCerto extrai
+                              automaticamente a base pré-IVA e calcula IRS, SS e
+                              quanto podes gastar.
+                            </>
                           }
-                          className="w-full px-4 py-3 text-[16px] font-semibold text-stone-700 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all dark:bg-stone-800 dark:text-stone-200 dark:border-stone-700"
-                        >
-                          {irsJovemOpts.map(({ ano, label }) => (
-                            <option key={ano} value={ano}>
-                              {label}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="mt-1.5 text-xs text-stone-400">
-                          Limite de isenção:{" "}
-                          {IRS_JOVEM_LIMITE_2026.toLocaleString("pt-PT")}€/ano
-                          (55×IAS 2026). Aplica-se ao rendimento coletável, não
-                          ao bruto.
-                        </p>
-                      </div>
-                      {/* ── Particularidades Individuais ─────────────── */}
-                      <div className="pt-4 border-t border-stone-100 dark:border-stone-800">
-                        <div className="flex items-center gap-1.5 mb-3">
-                          <span className="text-sm font-medium text-stone-500 uppercase tracking-wider">
-                            Particularidades Individuais
-                          </span>
-                          <InfoTip label="Particularidades fiscais individuais">
-                            Estas situações alteram o cálculo do IRS:
-                            deficiência (exclusão 15% + dedução €2 148),
-                            IFICI/NHR 2.0 (taxa flat 20%), dependentes (€600–900
-                            cada) e deduções por despesas de saúde, educação,
-                            rendas e gerais.
-                          </InfoTip>
-                        </div>
-
-                        {/* ── Deficiência ──────────────────────────────────── */}
-                        <div className="space-y-2 mb-4">
-                          <button
-                            type="button"
-                            role="checkbox"
-                            aria-checked={deficiencia}
-                            onClick={() => setDeficiencia((v) => !v)}
-                            className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
-                              deficiencia
-                                ? "border-brand bg-brand-light"
-                                : "border-stone-200 hover:border-stone-300 bg-stone-50"
-                            }`}
-                          >
-                            <div
-                              className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${deficiencia ? "bg-brand border-brand text-white" : "border-stone-300 text-transparent"}`}
-                            >
-                              <Check size={12} />
-                            </div>
-                            <div>
-                              <div
-                                className={`text-sm font-semibold ${deficiencia ? "text-brand-dark" : "text-stone-700"}`}
-                              >
-                                Deficiência ≥ 60% (Art. 56.º-A + 87.º CIRS)
-                              </div>
-                              <div
-                                className={`text-xs ${deficiencia ? "text-brand" : "text-stone-400"}`}
-                              >
-                                15% Cat. B excluídos (máx €2 500) · Dedução
-                                coleta:{" "}
-                                {fmt(Math.round(DEFICIENCIA_DEDUCAO_COLETA))}
-                              </div>
-                            </div>
-                          </button>
-                        </div>
-
-                        {/* ── IFICI / NHR 2.0 ─────────────────────────────── */}
-                        <div className="space-y-2 mb-4">
-                          <button
-                            type="button"
-                            role="checkbox"
-                            aria-checked={ifici}
-                            onClick={() => setIfici((v) => !v)}
-                            className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
-                              ifici
-                                ? "border-brand bg-brand-light"
-                                : "border-stone-200 hover:border-stone-300 bg-stone-50"
-                            }`}
-                          >
-                            <div
-                              className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${ifici ? "bg-brand border-brand text-white" : "border-stone-300 text-transparent"}`}
-                            >
-                              <Check size={12} />
-                            </div>
-                            <div>
-                              <div
-                                className={`text-sm font-semibold ${ifici ? "text-brand-dark" : "text-stone-700"}`}
-                              >
-                                IFICI / NHR 2.0 — taxa flat 20% (Art. 58.º-A
-                                EBF)
-                              </div>
-                              <div
-                                className={`text-xs ${ifici ? "text-brand" : "text-stone-400"}`}
-                              >
-                                10 anos · Só elegíveis · Não residente em
-                                Portugal nos últimos 5 anos
-                              </div>
-                            </div>
-                          </button>
-                          {ifici && (
-                            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200">
-                              <Warning
-                                size={12}
-                                className="flex-shrink-0 mt-0.5 text-amber-600"
-                              />
-                              <p className="text-[10px] text-amber-700 leading-relaxed">
-                                IFICI aplica taxa de 20% sobre rendimentos
-                                líquidos de Cat. B de atividades elegíveis (I&D,
-                                tech, inovação). Incompatível com IRS Jovem (não
-                                cumuláveis). Rendimentos estrangeiros: sujeitos
-                                às regras gerais do CIRS (sem isenção
-                                automática, ao contrário do antigo NHR).
-                              </p>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* ── Dependentes ─────────────────────────────────── */}
-                        <CollapsibleSection
-                          title="Dependentes e Agregado Familiar"
-                          badgeColor="brand"
-                          badge={
-                            numDep3plus * DEPENDENTE_DEDUCAO_3PLUS +
-                              numDep3minus * DEPENDENTE_DEDUCAO_3MINUS +
-                              numDep2_6 * DEPENDENTE_DEDUCAO_2_6 +
-                              numDepDefic * DEPENDENTE_DEDUCAO_DEFIC >
-                            0
-                              ? `−${fmt(Math.round(numDep3plus * DEPENDENTE_DEDUCAO_3PLUS + numDep3minus * DEPENDENTE_DEDUCAO_3MINUS + numDep2_6 * DEPENDENTE_DEDUCAO_2_6 + numDepDefic * DEPENDENTE_DEDUCAO_DEFIC))}`
-                              : "Art. 78.º-A CIRS"
+                        />
+                      </m.div>
+                    ) : (
+                      <m.div
+                        key="anual"
+                        initial={{ opacity: 0, x: 8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -8 }}
+                        transition={{ duration: 0.18 }}
+                      >
+                        <NumericSlider
+                          label="Faturação anual (€)"
+                          value={brutoAnual}
+                          min={0}
+                          max={200_000}
+                          step={1_000}
+                          unit="€"
+                          onChange={handleBrutoAnualChange}
+                          presets={[15000, 25000, 40000, 60000, 80000, 120000]}
+                          formatPreset={(v) => fmt(v)}
+                          tooltip={
+                            <>
+                              Volume de negócios anual, antes de qualquer
+                              imposto. Limite regime simplificado: 200 000€/ano.
+                            </>
                           }
-                        >
-                          <div className="space-y-4">
-                            <div className="flex items-start gap-2 p-3 rounded-xl bg-stone-50 border border-stone-200">
-                              <p className="text-[11px] text-stone-500 leading-relaxed">
-                                Deduções fixas à coleta por dependente (Art.
-                                78.º-A CIRS). Dependentes com deficiência:
-                                +2,5×IAS ={" "}
-                                {fmt(Math.round(DEPENDENTE_DEDUCAO_DEFIC))}.
-                              </p>
-                            </div>
-                            {[
-                              {
-                                label: `Dependentes > 3 anos — €${DEPENDENTE_DEDUCAO_3PLUS}/dep.`,
-                                val: numDep3plus,
-                                set: setNumDep3plus,
-                              },
-                              {
-                                label: `Dependentes ≤ 3 anos — €${DEPENDENTE_DEDUCAO_3MINUS}/dep.`,
-                                val: numDep3minus,
-                                set: setNumDep3minus,
-                              },
-                              {
-                                label: `2.º+ dependentes ≤ 6 anos — €${DEPENDENTE_DEDUCAO_2_6}/dep.`,
-                                val: numDep2_6,
-                                set: setNumDep2_6,
-                              },
-                              {
-                                label: `Dependentes com deficiência — €${Math.round(DEPENDENTE_DEDUCAO_DEFIC)}/dep.`,
-                                val: numDepDefic,
-                                set: setNumDepDefic,
-                              },
-                            ].map(({ label, val, set }) => (
-                              <div
-                                key={label}
-                                className="flex items-center justify-between gap-4"
-                              >
-                                <span className="text-xs text-stone-600 flex-1">
-                                  {label}
-                                </span>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => set(Math.max(0, val - 1))}
-                                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-600 hover:border-brand hover:text-brand transition-all"
-                                  >
-                                    <span className="text-sm font-semibold leading-none">
-                                      −
-                                    </span>
-                                  </button>
-                                  <span className="w-8 text-center text-sm font-bold text-stone-800">
-                                    {val}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => set(val + 1)}
-                                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-600 hover:border-brand hover:text-brand transition-all"
-                                  >
-                                    <span className="text-sm font-semibold leading-none">
-                                      +
-                                    </span>
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </CollapsibleSection>
+                          breakPoint={breakEven ?? undefined}
+                          breakPointLabel={
+                            breakEven
+                              ? `Vira aqui · ${fmt(breakEven)}`
+                              : undefined
+                          }
+                        />
+                        {avisoIVALimite}
+                      </m.div>
+                    )}
+                  </AnimatePresence>
+                </div>
 
-                        {/* ── Deduções à coleta ────────────────────────────── */}
-                        <div className="mt-4">
-                          <CollapsibleSection
-                            title="Deduções à Coleta IRS"
-                            badgeColor="brand"
-                            badge={
-                              calcularDeducoesColeta(particularidades).total > 0
-                                ? `−${fmt(Math.round(calcularDeducoesColeta(particularidades).total))}`
-                                : "Saúde · Educ. · Rendas"
-                            }
-                          >
-                            <div className="space-y-3">
-                              <div className="flex items-start gap-2 p-3 rounded-xl bg-stone-50 border border-stone-200">
-                                <p className="text-[11px] text-stone-500 leading-relaxed">
-                                  Deduções à coleta (subtraídas diretamente ao
-                                  IRS, não ao rendimento). Inserir as despesas
-                                  totais — o simulador calcula as deduções com
-                                  os limites legais.
-                                </p>
-                              </div>
-                              {[
-                                {
-                                  label: `Despesas saúde (ded. 15%, máx €${DEDUCAO_SAUDE_MAX})`,
-                                  val: despSaude,
-                                  set: setDespSaude,
-                                  max: 6_670,
-                                  note: "Consultas, medicamentos, seguros saúde",
-                                },
-                                {
-                                  label: `Despesas educação (ded. 30%, máx €${DEDUCAO_EDUCACAO_MAX})`,
-                                  val: despEducacao,
-                                  set: setDespEducacao,
-                                  max: 2_667,
-                                  note: "Propinas, material escolar, rendas de estudante",
-                                },
-                                {
-                                  label: `Rendas habitação (ded. 15%, máx €${DEDUCAO_RENDAS_MAX})`,
-                                  val: despRendas,
-                                  set: setDespRendas,
-                                  max: 3_347,
-                                  note: "Arrendamento habitação permanente",
-                                },
-                                {
-                                  label: `Despesas gerais (ded. 35%, máx €${DEDUCAO_GERAIS_MAX}/pessoa)`,
-                                  val: despGerais,
-                                  set: setDespGerais,
-                                  max: 714,
-                                  note: "Luz, água, telecomunicações, supermercado",
-                                },
-                              ].map(({ label, val, set, max, note }) => (
-                                <NumericSlider
-                                  key={label}
-                                  label={label}
-                                  value={val}
-                                  min={0}
-                                  max={max}
-                                  step={100}
-                                  onChange={set}
-                                  presets={[
-                                    0,
-                                    Math.round(max / 4),
-                                    Math.round(max / 2),
-                                    max,
-                                  ]}
-                                  tooltip={<>{note}</>}
-                                />
-                              ))}
-
-                              {/* Resumo deduções */}
-                              {calcularDeducoesColeta(particularidades).total >
-                                0 && (
-                                <div className="space-y-1">
-                                  {(
-                                    [
-                                      {
-                                        label: "Dependentes",
-                                        val: calcularDeducoesColeta(
-                                          particularidades,
-                                        ).dependentes,
-                                      },
-                                      {
-                                        label: "Deficiência (contribuinte)",
-                                        val: calcularDeducoesColeta(
-                                          particularidades,
-                                        ).deficienciaContrib,
-                                      },
-                                      {
-                                        label: "Saúde",
-                                        val: calcularDeducoesColeta(
-                                          particularidades,
-                                        ).saude,
-                                      },
-                                      {
-                                        label: "Educação",
-                                        val: calcularDeducoesColeta(
-                                          particularidades,
-                                        ).educacao,
-                                      },
-                                      {
-                                        label: "Rendas",
-                                        val: calcularDeducoesColeta(
-                                          particularidades,
-                                        ).rendas,
-                                      },
-                                      {
-                                        label: "Gerais",
-                                        val: calcularDeducoesColeta(
-                                          particularidades,
-                                        ).gerais,
-                                      },
-                                    ] as const
-                                  )
-                                    .filter((r) => r.val > 0)
-                                    .map((r) => (
-                                      <div
-                                        key={r.label}
-                                        className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-emerald-50"
-                                      >
-                                        <span className="text-xs text-emerald-700">
-                                          {r.label}
-                                        </span>
-                                        <span className="text-xs font-bold text-emerald-800">
-                                          −{fmt(Math.round(r.val))}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-emerald-100 border border-emerald-300">
-                                    <span className="text-xs font-bold text-emerald-800">
-                                      Total deduções à coleta
-                                    </span>
-                                    <span className="text-xs font-bold text-emerald-900">
-                                      −
-                                      {fmt(
-                                        Math.round(
-                                          calcularDeducoesColeta(
-                                            particularidades,
-                                          ).total,
-                                        ),
-                                      )}
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </CollapsibleSection>
-                        </div>
-                      </div>
-                      {/* ── Contabilidade Organizada TI ─────────────── */}
-                      <div className="pt-4 border-t border-stone-100 dark:border-stone-800">
-                        <div className="flex items-center gap-1.5 mb-3">
-                          <span className="text-sm font-medium text-stone-500 uppercase tracking-wider">
-                            Contabilidade Organizada (Art. 28.º CIRS)
-                          </span>
-                          <InfoTip label="Contab. Organizada vs. Simplificado">
-                            No regime organizado, todas as despesas reais
-                            documentadas são dedutíveis (em vez dos
-                            coeficientes). Exige OCC (~€200/mês = €2 400/ano).
-                            Sujeita a tributação autónoma (Art. 73.º → Art. 88.º
-                            CIRC). Compensa quando despesas reais &gt;{" "}
-                            {pct(1 - TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef)} da
-                            faturação (coef.{" "}
-                            {pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef)}).
-                          </InfoTip>
-                        </div>
-
+                {/* ── Regime IVA — logo abaixo do valor (afecta a interpretação do input) ── */}
+                <fieldset className="mb-6">
+                  <legend className="mb-2 flex items-center gap-1.5 text-sm font-medium uppercase tracking-wider text-stone-500">
+                    Regime de IVA · {META_REGIAO[regiao]}
+                    <InfoTip label="IVA 2026">
+                      Isento Art. 53.º até{" "}
+                      {IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}€/ano. Se
+                      ultrapassares{" "}
+                      {IVA_ISENCAO_LIMITE_IMEDIATO.toLocaleString("pt-PT")}€
+                      durante o ano, passas de imediato para o regime normal.
+                      Certas profissões (médicos, professores...) têm isenção
+                      Art. 9.º sem limite de faturação.
+                    </InfoTip>
+                  </legend>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {ivaOptions.map((op) => {
+                      const active = regimeIVA === op.id;
+                      return (
                         <button
+                          key={op.id}
                           type="button"
-                          role="checkbox"
-                          aria-checked={contabOrganizada}
-                          onClick={() => setContabOrganizada((v) => !v)}
-                          className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
-                            contabOrganizada
+                          aria-pressed={active}
+                          onClick={() => {
+                            setRegimeIVA(op.id);
+                            setPainelIVA(true);
+                          }}
+                          className={`p-3 rounded-xl border text-center transition-all ${
+                            active
                               ? "border-brand bg-brand-light"
                               : "border-stone-200 hover:border-stone-300 bg-stone-50"
                           }`}
                         >
                           <div
-                            className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${contabOrganizada ? "bg-brand border-brand text-white" : "border-stone-300 text-transparent"}`}
+                            className={`text-sm font-semibold ${active ? "text-brand-dark" : "text-stone-700"}`}
                           >
-                            <Check size={12} />
+                            {op.label}
                           </div>
-                          <div>
-                            <div
-                              className={`text-sm font-semibold ${contabOrganizada ? "text-brand-dark" : "text-stone-700"}`}
-                            >
-                              Simular contabilidade organizada
-                            </div>
-                            <div
-                              className={`text-xs ${contabOrganizada ? "text-brand" : "text-stone-400"}`}
-                            >
-                              Custo OCC: {fmt(CONTAB_ORG_CUSTO_MENSAL)}/mês ·{" "}
-                              {fmt(CONTAB_ORG_CUSTO_MENSAL * 12)}/ano
-                            </div>
+                          <div
+                            className={`text-xs ${active ? "text-brand" : "text-stone-400"}`}
+                          >
+                            {op.sub}
                           </div>
                         </button>
+                      );
+                    })}
+                  </div>
+                </fieldset>
 
-                        {contabOrganizada && (
-                          <m.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="mt-3 space-y-4">
-                              {resultOrganizada && (
-                                <div
-                                  className={`flex items-center justify-between p-3 rounded-xl border ${
-                                    resultOrganizada.vantagemVsSimplificado >= 0
-                                      ? "bg-emerald-50 border-emerald-200"
-                                      : "bg-amber-50 border-amber-200"
-                                  }`}
-                                >
-                                  <span
-                                    className={`text-xs font-semibold ${resultOrganizada.vantagemVsSimplificado >= 0 ? "text-emerald-700" : "text-amber-700"}`}
-                                  >
-                                    {resultOrganizada.vantagemVsSimplificado >=
-                                    0
-                                      ? `✓ Organizada poupa ${fmt(Math.round(resultOrganizada.vantagemVsSimplificado))}/ano`
-                                      : `✗ Simplificado é melhor por ${fmt(Math.round(Math.abs(resultOrganizada.vantagemVsSimplificado)))}/ano`}
-                                  </span>
-                                  <span
-                                    className={`text-xs ${resultOrganizada.vantagemVsSimplificado >= 0 ? "text-emerald-600" : "text-amber-600"}`}
-                                  >
-                                    Breakeven:{" "}
-                                    {fmt(
-                                      Math.round(
-                                        resultOrganizada.breakEvenDespesas,
-                                      ),
-                                    )}
-                                  </span>
-                                </div>
-                              )}
-
-                              <NumericSlider
-                                label="Despesas profissionais reais (€/ano)"
-                                value={despesasReaisTI}
-                                min={0}
-                                max={Math.min(brutoAnual, 100_000)}
-                                step={500}
-                                onChange={setDespesasReaisTI}
-                                presets={[0, 2000, 5000, 10000, 20000]}
-                                tooltip={
-                                  <>
-                                    Todas as despesas diretamente relacionadas
-                                    com a atividade, comprovadas com faturas:
-                                    rendas de escritório, hardware, software,
-                                    formação, viagens, seguros. O OCC verifica e
-                                    contabiliza tudo.
-                                  </>
-                                }
-                              />
-
-                              <p className="text-xs text-stone-400">
-                                Ponto de equilíbrio (sem despesas de viatura,
-                                representação, etc.): despesas &gt;{" "}
-                                <strong>
-                                  {fmt(
-                                    Math.round(
-                                      brutoAnual *
-                                        (1 -
-                                          TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef),
-                                    ),
-                                  )}
-                                </strong>{" "}
-                                ({pct(1 - TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef)}{" "}
-                                de {fmt(brutoAnual)}) para compensar o
-                                simplificado. Com o custo do OCC (~
-                                {fmt(CONTAB_ORG_CUSTO_MENSAL * 12)}/ano), o
-                                limiar real é{" "}
-                                <strong>
-                                  {fmt(
-                                    Math.round(
-                                      brutoAnual *
-                                        (1 -
-                                          TIPO_ATIVIDADE_PARAMS[tipoAtiv]
-                                            .coef) +
-                                        CONTAB_ORG_CUSTO_MENSAL * 12,
-                                    ),
-                                  )}
-                                </strong>
-                                .
-                              </p>
-
-                              {/* TA para TI organizado */}
-                              <CollapsibleSection
-                                title="Tributação Autónoma (TI organizado)"
-                                badgeColor="amber"
-                              >
-                                <p className="text-[11px] text-stone-500 leading-relaxed">
-                                  Com contabilidade organizada, o TI fica
-                                  sujeito ao Art. 88.º CIRC (via Art. 73.º
-                                  CIRS). Preenche apenas se tiveres estas
-                                  despesas.
-                                </p>
-                                <div className="space-y-3 mt-3">
-                                  <div>
-                                    <label className="text-xs font-medium text-stone-500 uppercase tracking-wider block mb-1.5">
-                                      Tipo de viatura
-                                    </label>
-                                    <select
-                                      value={tipoViatTI}
-                                      onChange={(e) =>
-                                        setTipoViatTI(
-                                          e.target.value as TipoViatura,
-                                        )
-                                      }
-                                      className="w-full px-3 py-2 text-[16px] font-semibold text-stone-700 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand dark:bg-stone-800 dark:text-stone-200 dark:border-stone-700"
-                                    >
-                                      {(
-                                        Object.keys(
-                                          TA_VIATURAS,
-                                        ) as TipoViatura[]
-                                      ).map((tv) => (
-                                        <option key={tv} value={tv}>
-                                          {TIPO_VIATURA_META[tv]}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                  <NumericSlider
-                                    label="Encargos viatura (€/ano)"
-                                    value={encargosViatTI}
-                                    min={0}
-                                    max={20_000}
-                                    step={200}
-                                    onChange={setEncargosViatTI}
-                                    presets={[0, 1500, 3000, 6000]}
-                                  />
-                                  <NumericSlider
-                                    label="Representação (€/ano)"
-                                    value={despRepTI}
-                                    min={0}
-                                    max={5_000}
-                                    step={100}
-                                    onChange={setDespRepTI}
-                                    presets={[0, 500, 1000, 2000]}
-                                  />
-                                  <NumericSlider
-                                    label="Ajudas de custo (€/ano)"
-                                    value={ajudasTI}
-                                    min={0}
-                                    max={3_000}
-                                    step={50}
-                                    onChange={setAjudasTI}
-                                    presets={[0, 300, 600, 1200]}
-                                  />
-                                  <NumericSlider
-                                    label="Não documentadas (€/ano)"
-                                    value={naoDocTI}
-                                    min={0}
-                                    max={2_000}
-                                    step={50}
-                                    onChange={setNaoDocTI}
-                                    presets={[0]}
-                                  />
-                                </div>
-                              </CollapsibleSection>
-                            </div>
-                          </m.div>
-                        )}
-                      </div>
+                {/* ── Painel contextual IVA ────────────────────────────────── */}
+                {painelIVA && (
+                  <div className="mb-4 rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-900">
+                    <div className="mb-2 flex items-start justify-between gap-2">
+                      <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
+                        {ivaPainelMeta.titulo}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPainelIVA(false)}
+                        className="flex-shrink-0 text-xs text-stone-400 hover:text-stone-600 transition-colors"
+                        aria-label="Fechar painel"
+                      >
+                        fechar
+                      </button>
                     </div>
-                  </m.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* ── Inputs Empresa (visíveis quando cenário = empresa) ─────── */}
-            {cenario === "empresa" && (
-              <EmpresaInputs
-                despesasOper={despesasOper}
-                custosExtra={custosExtra}
-                salGerenteMensal={salGerenteMensal}
-                distribuirDividendos={distribuirDividendos}
-                opcaoEnglobamento={opcaoEnglobamento}
-                encargosViatura={encargosViatura}
-                tipoViatura={tipoViatura}
-                despRepresentacao={despRepresentacao}
-                ajudasCusto={ajudasCusto}
-                naoDocumentadas={naoDocumentadas}
-                emPrejuizo={emPrejuizo}
-                excecaoPrejuizo={excecaoPrejuizo}
-                rfaiInvest={rfaiInvest}
-                regiaoRFAI={regiaoRFAI}
-                dlrrLucros={dlrrLucros}
-                sifideDespesas={sifideDespesas}
-                tipoSifide={tipoSifide}
-                primeirosAnos={primeirosAnos}
-                incluirConstituicao={incluirConstituicao}
-                custoConstituicao={custoConstituicao}
-                anosAmortizacao={anosAmortizacao}
-                resultBeneficios={resultEmpresa.beneficios}
-                totalTA={resultEmpresa.ta.total}
-                onDespChange={setDespesasOper}
-                onCustosChange={setCustosExtra}
-                onSalChange={setSalGerenteMensal}
-                onDividendosChange={setDistribuirDividendos}
-                onEnglobamentoChange={setOpcaoEnglobamento}
-                onEncargosViaturaChange={setEncargosViatura}
-                onTipoViaturaChange={setTipoViatura}
-                onDespRepresentacaoChange={setDespRepresentacao}
-                onAjudasCustoChange={setAjudasCusto}
-                onNaoDocumentadasChange={setNaoDocumentadas}
-                onEmPrejuizoChange={setEmPrejuizo}
-                onExcecaoPrejuizoChange={setExcecaoPrejuizo}
-                onRfaiInvestChange={setRfaiInvest}
-                onRegiaoRFAIChange={setRegiaoRFAI}
-                onDlrrLucrosChange={setDlrrLucros}
-                onSifideDespesasChange={setSifideDespesas}
-                onTipoSifideChange={setTipoSifide}
-                onPrimeirosAnosChange={setPrimeirosAnos}
-                rfaiContratualValor={rfaiContratualValor}
-                onRfaiContratualChange={setRfaiContratualValor}
-                onIncluirConstituicaoChange={setIncluirConstituicao}
-                onCustoConstituicaoChange={setCustoConstituicao}
-                onAnosAmortizacaoChange={setAnosAmortizacao}
-                temImovelEmpresa={temImovelEmpresa}
-                vptImovel={vptImovel}
-                taxaIMI={taxaIMI}
-                isencaoIMI_RFAI={isencaoIMI_RFAI}
-                valorAquisicaoImovel={valorAquisicaoImovel}
-                isencaoIMT_RFAI={isencaoIMT_RFAI}
-                anosAmortizacaoIMT={anosAmortizacaoIMT}
-                poupancaIMI={poupancaIMI}
-                poupancaIMT={poupancaIMT}
-                imiAnual={imiAnual}
-                imtOnTime={imtOnTime}
-                onTemImovelChange={setTemImovelEmpresa}
-                onVptChange={setVptImovel}
-                onTaxaIMIChange={setTaxaIMI}
-                onIsencaoIMIChange={setIsencaoIMI_RFAI}
-                onValorAquisicaoChange={setValorAquisicaoImovel}
-                onIsencaoIMTChange={setIsencaoIMT_RFAI}
-                onAnosAmortizacaoIMTChange={setAnosAmortizacaoIMT}
-              />
-            )}
-          </div>
-
-          {/* ════ Coluna direita: Resultado ════ */}
-          <div className="bg-cream p-5 sm:p-8 lg:p-10 flex flex-col dark:bg-stone-900">
-            <AnimatePresence mode="wait">
-              {cenario === "rv" ? (
-                /* ── Painel Recibos Verdes ── */
-                <m.div
-                  key="rv"
-                  initial={{ opacity: 0, x: 12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -12 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex flex-col flex-1"
-                >
-                  <div className="mb-8">
-                    <div className="text-sm font-medium text-stone-500 uppercase tracking-wider mb-1">
-                      {modoInput === "recibo"
-                        ? "Disponível para gastar · por recibo"
-                        : "Líquido anual estimado"}
-                    </div>
-                    <div className="font-display text-4xl sm:text-5xl font-semibold leading-none mb-1 text-brand">
-                      <AnimatedNumber
-                        value={
-                          modoInput === "recibo"
-                            ? resultRecibo.liquido
-                            : resultAnualRV.liquido
-                        }
-                      />
-                    </div>
-                    <div className="text-sm text-stone-400 mt-1">
-                      de{" "}
-                      <AnimatedNumber
-                        value={
-                          modoInput === "recibo"
-                            ? resultRecibo.bruto + resultRecibo.iva
-                            : brutoAnual
-                        }
-                      />{" "}
-                      faturados
-                      {modoInput === "anual" && (
+                    <p className="mb-3 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
+                      {ivaPainelMeta.quando}
+                    </p>
+                    <div className="space-y-1.5">
+                      <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
+                        <Check
+                          size={11}
+                          className="mt-0.5 flex-shrink-0 text-brand"
+                        />
                         <span>
-                          {" "}
-                          · IRS {fmt(resultAnualRV.irs)} · SS{" "}
-                          {fmt(resultAnualRV.ssAnual)}
+                          <strong className="text-stone-700 dark:text-stone-200">
+                            Compatível com:
+                          </strong>{" "}
+                          {ivaPainelMeta.compativel}
                         </span>
+                      </div>
+                      {ivaPainelMeta.incompativel && (
+                        <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
+                          <Warning
+                            size={11}
+                            className="mt-0.5 flex-shrink-0 text-alert-text"
+                          />
+                          <span>
+                            <strong className="text-stone-700 dark:text-stone-200">
+                              Incompatível com:
+                            </strong>{" "}
+                            {ivaPainelMeta.incompativel}
+                          </span>
+                        </div>
+                      )}
+                      {ivaAlertaAtividade && (
+                        <div className="mt-2 rounded-lg border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">
+                          A atividade selecionada (
+                          {TIPO_ATIVIDADE_PARAMS[tipoAtiv].label}) aplica
+                          normalmente IVA{" "}
+                          {regiao === "continente"
+                            ? "normal (23%)"
+                            : `normal (${pct(IVA_TAXAS[regiao].value.normal)})`}
+                          . Verifica se prestaste serviços específicos sujeitos
+                          a esta taxa.
+                        </div>
+                      )}
+                      {ivaAlertaFaturacao && (
+                        <div className="mt-2 rounded-lg border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">
+                          A tua faturação estimada ({fmt(brutoAnual)})
+                          ultrapassa o limiar de isenção de €
+                          {IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}. Verifica
+                          se ainda tens isenção ou se já deves cobrar IVA.
+                        </div>
                       )}
                     </div>
                   </div>
+                )}
 
-                  {modoInput === "recibo" && (
-                    <>
-                      {/* Breakdown visual */}
-                      <div className="mb-6">
-                        <EuroBreakdown
-                          faturacao={resultRecibo.bruto + resultRecibo.iva}
-                          liquido={resultRecibo.liquido}
-                          irs={resultRecibo.retencaoIRS}
-                          ss={resultRecibo.segSocial}
-                          iva={resultRecibo.iva}
-                        />
-                      </div>
-
-                      {/* Breakdown por recibo */}
-                      <div className="space-y-1 flex-1">
-                        <DetalheRow
-                          label={
-                            resultRecibo.taxaIVA > 0
-                              ? "Base do serviço (sem IVA)"
-                              : "Valor do recibo"
-                          }
-                          value={resultRecibo.bruto}
-                          type="neutral"
-                          note={
-                            resultRecibo.taxaIVA > 0
-                              ? `Total ÷ (1 + ${pct(resultRecibo.taxaIVA)})`
-                              : "O que faturaste"
-                          }
-                        />
-                        {resultRecibo.taxaIVA > 0 && (
-                          <DetalheRow
-                            label={`IVA (${pct(resultRecibo.taxaIVA)}) — do Estado`}
-                            value={resultRecibo.iva}
-                            type="warning"
-                            note="Pertence ao Estado — não é teu"
-                          />
-                        )}
-                        {resultRecibo.taxaIVA > 0 && (
-                          <DetalheRow
-                            label="O cliente paga"
-                            value={resultRecibo.bruto + resultRecibo.iva}
-                            type="neutral"
-                            note="Valor base + IVA"
-                          />
-                        )}
-                        {resultRecibo.retencaoIRS > 0 && (
-                          <DetalheRow
-                            label={`Retenção na fonte (${pct(resultRecibo.taxaRetencao)})`}
-                            value={-resultRecibo.retencaoIRS}
-                            type="deducao"
-                            note="Adiantamento de IRS ao Estado"
-                          />
-                        )}
-                        <DetalheRow
-                          label="Entra na tua conta"
-                          value={resultRecibo.entradaConta}
-                          type="subtotal"
-                          note={
-                            resultRecibo.taxaIVA > 0
-                              ? "Bruto + IVA − Retenção"
-                              : "Após retenção"
-                          }
-                        />
-                        {resultRecibo.taxaIVA > 0 && (
-                          <DetalheRow
-                            label="Reservar para IVA (entrega trimestral)"
-                            value={-resultRecibo.iva}
-                            type="warning"
-                          />
-                        )}
-                        {resultRecibo.segSocial > 0 && (
-                          <DetalheRow
-                            label={`Reservar SS (21,4%×70% de ${fmt(resultRecibo.bruto)})`}
-                            value={-resultRecibo.segSocial}
-                            type="deducao"
-                            note="Pagamento mensal até dia 20"
-                          />
-                        )}
-
-                        {/* Resultado final */}
-                        <div className="mt-4 p-4 rounded-2xl border-2 border-brand bg-white dark:bg-stone-950">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <div className="flex items-center gap-1.5">
-                                <div className="text-sm font-semibold text-stone-700 dark:text-stone-300">
-                                  Disponível para gastar
-                                </div>
-                                <InfoTip>
-                                  O que podes gastar sem medo: o que entra na
-                                  tua conta, já com IVA e Segurança Social
-                                  reservados. A retenção foi adiantada pelo
-                                  cliente — será acertada no IRS anual.
-                                </InfoTip>
-                              </div>
-                              <div className="text-xs text-stone-400 mt-0.5">
-                                {resultRecibo.taxaIVA > 0
-                                  ? "Depois de IVA e SS reservados"
-                                  : "Depois de SS reservada"}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-display text-2xl font-semibold text-brand">
-                                <AnimatedNumber value={resultRecibo.liquido} />
-                              </div>
-                              <div className="text-xs text-stone-400">
-                                {pct(resultRecibo.liquido / (bruto || 1))} do
-                                total
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* ── Alertas fiscais contextuais ─────────────────── */}
-                        <div className="mt-3 space-y-2">
-                          {/* Avisos do motor fiscal (dispensa retenção, limites) */}
-                          {resultRecibo.avisos?.map((a: string, i: number) => (
-                            <div
-                              key={i}
-                              className="flex items-start gap-2.5 p-3 rounded-xl border bg-alert-bg border-alert-border"
-                            >
-                              <span className="text-alert-text mt-0.5 flex-shrink-0">
-                                <Warning size={14} />
-                              </span>
-                              <span className="text-xs leading-relaxed text-alert-text">
-                                {a}
-                              </span>
-                            </div>
-                          ))}
-
-                          {/* Alerta: IVA cobrado mas faturação estimada abaixo do limite Art. 53.º */}
-                          {temIva && base * 12 < IVA_ISENCAO_LIMITE && (
-                            <div className="flex items-start gap-2.5 p-3 rounded-xl border bg-alert-bg border-alert-border">
-                              <span className="text-alert-text mt-0.5 flex-shrink-0">
-                                <Warning size={14} />
-                              </span>
-                              <span className="text-xs leading-relaxed text-alert-text">
-                                Com esta faturação estimada (
-                                {fmt(Math.round(base * 12))}/ano), provavelmente
-                                qualificavas para{" "}
-                                <strong>isenção de IVA (Art. 53.º CIVA)</strong>{" "}
-                                — limite{" "}
-                                {IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}{" "}
-                                €/ano. Sendo isento, não cobras IVA e o teu
-                                disponível sobe para{" "}
-                                <strong>
-                                  {fmt(
-                                    Math.round(
-                                      bruto -
-                                        bruto *
-                                          TIPO_ATIVIDADE_PARAMS[tipoAtiv].ret -
-                                        base * 0.7 * SS_TAXA_TI,
-                                    ),
-                                  )}
-                                </strong>
-                                .
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Info: retenção possivelmente reembolsada (abaixo do mínimo de existência) */}
-                          {resultRecibo.retencaoIRS > 0 &&
-                            base * 12 < MINIMO_EXISTENCIA_2026 && (
-                              <div className="flex items-start gap-2.5 p-3 rounded-xl border border-brand/30 bg-brand-light">
-                                <span className="text-brand mt-0.5 flex-shrink-0">
-                                  <Check size={14} />
-                                </span>
-                                <span className="text-xs leading-relaxed text-brand-dark">
-                                  Com faturação anual estimada de{" "}
-                                  {fmt(Math.round(base * 12))} €, o teu
-                                  rendimento coletável fica abaixo do{" "}
-                                  <strong>
-                                    mínimo de existência (
-                                    {MINIMO_EXISTENCIA_2026.toLocaleString(
-                                      "pt-PT",
-                                    )}{" "}
-                                    €)
-                                  </strong>{" "}
-                                  — IRS = 0 €. A retenção na fonte (
-                                  {fmt(
-                                    Math.round(resultRecibo.retencaoIRS * 12),
-                                  )}
-                                  /ano) deve ser totalmente{" "}
-                                  <strong>reembolsada</strong> na declaração de
-                                  IRS anual.
-                                </span>
-                              </div>
-                            )}
-                          {ifici && irsJovemAno > 0 && (
-                            <div className="flex items-start gap-2 p-3 rounded-xl bg-alert-bg border border-alert-border">
-                              <Warning
-                                size={14}
-                                className="flex-shrink-0 mt-0.5 text-alert-text"
-                              />
-                              <span className="text-xs text-alert-text">
-                                IFICI e IRS Jovem são incompatíveis — não podem
-                                ser cumulados. Usa apenas um.
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {modoInput === "anual" && (
-                    /* Breakdown anual RV */
-                    <div className="space-y-1 flex-1">
-                      <DetalheRow
-                        label="Faturação bruta anual"
-                        value={resultAnualRV.faturacao}
-                        type="neutral"
-                      />
-                      <DetalheRow
-                        label={`Rendimento coletável (coef. ${pct(resultAnualRV.coeficiente)})`}
-                        value={resultAnualRV.rendColetavel}
-                        type="neutral"
-                        note="Regime simplificado — 25% presumido como despesa"
-                      />
-                      {resultAnualRV.ssAnual > 0 && (
-                        <DetalheRow
-                          label="Dedução SS paga (Art. 31.º n.º 2 CIRS)"
-                          value={-resultAnualRV.ssAnual}
-                          type="deducao"
-                          note="SS dedutível ao rendimento coletável"
-                        />
-                      )}
-                      {/* Particularidades individuais no breakdown */}
-                      {resultAnualRV.rendColetavelAjustado <
-                        resultAnualRV.rendColetavel && (
-                        <DetalheRow
-                          label="Exclusão deficiência Cat. B (Art. 56.º-A CIRS)"
-                          value={
-                            -(
-                              resultAnualRV.rendColetavel -
-                              resultAnualRV.rendColetavelAjustado
-                            )
-                          }
-                          type="deducao"
-                          note="15% excluídos, máx €2 500 por categoria"
-                        />
-                      )}
-                      {resultAnualRV.ificiAtivo ? (
-                        <DetalheRow
-                          label={`IRS IFICI — taxa flat ${pct(IFICI_TAXA_FLAT)} (Art. 58.º-A EBF)`}
-                          value={-resultAnualRV.irsBruto}
-                          type="warning"
-                          note="Taxa autónoma 20% durante 10 anos · profissões elegíveis"
-                        />
-                      ) : (
-                        <DetalheRow
-                          label="IRS liquidado (escalões progressivos)"
-                          value={-resultAnualRV.irsBruto}
-                          type="warning"
-                          note={`Taxa efetiva ${pct(resultAnualRV.taxaEfetiva)}`}
-                        />
-                      )}
-                      {resultAnualRV.deducoesColeta.total > 0 && (
-                        <DetalheRow
-                          label="Deduções à coleta (dependentes, saúde, educação...)"
-                          value={resultAnualRV.deducoesColeta.total}
-                          type="beneficio"
-                          note="Subtraídas diretamente ao IRS calculado"
-                        />
-                      )}
-                      {resultAnualRV.isencaoJovemValor > 0 && (
-                        <DetalheRow
-                          label={`IRS Jovem — isenção ${pct(resultAnualRV.isencaoJovemPct)} (Art. 12.º-B)`}
-                          value={-resultAnualRV.isencaoJovemValor}
-                          type="deducao"
-                          note={`Limite ${IRS_JOVEM_LIMITE_2026.toLocaleString("pt-PT")}€ (55×IAS)`}
-                        />
-                      )}
-                      <DetalheRow
-                        label="Rendimento tributável"
-                        value={resultAnualRV.rendTributavel}
-                        type="subtotal"
-                        note={
-                          resultAnualRV.rendTributavel <= MINIMO_EXISTENCIA_2026
-                            ? "Abaixo do mínimo de existência — IRS = 0€"
-                            : ""
-                        }
-                      />
-                      {resultAnualRV.ssAnual > 0 && (
-                        <DetalheRow
-                          label="Segurança Social (21,4% × 70%)"
-                          value={-resultAnualRV.ssAnual}
-                          type="deducao"
-                          note="IAS 2026: 537,13€ · máx. 12×IAS/mês"
-                        />
-                      )}
-
-                      <div className="mt-4 p-4 rounded-2xl border-2 border-brand bg-white dark:bg-stone-950">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <div className="text-sm font-semibold text-stone-700 dark:text-stone-300">
-                              Líquido anual
-                            </div>
-                            <div className="text-xs text-stone-400 mt-0.5">
-                              ≈ {fmt(resultAnualRV.liquido / 12)}/mês
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-display text-2xl font-semibold text-brand">
-                              <AnimatedNumber value={resultAnualRV.liquido} />
-                            </div>
-                            <div className="text-xs text-stone-400">
-                              {pct(resultAnualRV.liquido / (brutoAnual || 1))}{" "}
-                              do bruto
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* ── Comparação com Contabilidade Organizada ── */}
-                      {contabOrganizada && resultOrganizada && (
-                        <div
-                          className={`mt-4 rounded-2xl border ${
-                            resultOrganizada.vantagemVsSimplificado >= 0
-                              ? "border-emerald-300 bg-emerald-50"
-                              : "border-dashed border-stone-300 bg-stone-50"
-                          } p-4 space-y-2 dark:border-stone-700 dark:bg-stone-900`}
-                        >
-                          <div className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">
-                            Alternativa: Contabilidade Organizada (Art. 28.º
-                            CIRS)
-                          </div>
-                          <div className="space-y-1">
-                            <DetalheRow
-                              label="Faturação"
-                              value={resultOrganizada.faturacao}
-                              type="neutral"
-                            />
-                            <DetalheRow
-                              label="Despesas reais documentadas"
-                              value={-resultOrganizada.despesasReais}
-                              type="deducao"
-                            />
-                            <DetalheRow
-                              label={`Custo contabilista OCC (${fmt(CONTAB_ORG_CUSTO_MENSAL)}/mês)`}
-                              value={-resultOrganizada.custoContabilista}
-                              type="deducao"
-                            />
-                            <DetalheRow
-                              label="Rendimento líquido de despesas"
-                              value={resultOrganizada.rendimentoLiquido}
-                              type="subtotal"
-                            />
-                            {resultOrganizada.ssAnual > 0 && (
-                              <DetalheRow
-                                label="Segurança Social (21,4% × 70%)"
-                                value={-resultOrganizada.ssAnual}
-                                type="deducao"
-                              />
-                            )}
-                            {resultOrganizada.isencaoJovemValor > 0 && (
-                              <DetalheRow
-                                label="IRS Jovem — isenção"
-                                value={-resultOrganizada.isencaoJovemValor}
-                                type="deducao"
-                              />
-                            )}
-                            <DetalheRow
-                              label="IRS (escalões progressivos)"
-                              value={-resultOrganizada.irs}
-                              type="warning"
-                              note={`Taxa efetiva ${pct(resultOrganizada.taxaEfetiva)}`}
-                            />
-                            {resultOrganizada.ta.total > 0 && (
-                              <DetalheRow
-                                label="Tributação Autónoma (Art. 88.º CIRC)"
-                                value={-resultOrganizada.ta.total}
-                                type="warning"
-                                note="Viaturas, representação, ajudas de custo"
-                              />
-                            )}
-                          </div>
-                          <div
-                            className={`flex items-center justify-between p-3 rounded-xl border-2 mt-2 ${
-                              resultOrganizada.vantagemVsSimplificado >= 0
-                                ? "border-emerald-400 bg-white"
-                                : "border-stone-200 bg-white"
-                            }`}
-                          >
-                            <div>
-                              <div
-                                className={`text-sm font-semibold ${resultOrganizada.vantagemVsSimplificado >= 0 ? "text-emerald-800" : "text-stone-700"}`}
-                              >
-                                Líquido — organizada
-                              </div>
-                              <div
-                                className={`text-xs mt-0.5 ${resultOrganizada.vantagemVsSimplificado >= 0 ? "text-emerald-600" : "text-stone-400"}`}
-                              >
-                                {resultOrganizada.vantagemVsSimplificado >= 0
-                                  ? `✓ Mais ${fmt(Math.round(resultOrganizada.vantagemVsSimplificado))}/ano que simplificado`
-                                  : `✗ Menos ${fmt(Math.round(Math.abs(resultOrganizada.vantagemVsSimplificado)))}/ano que simplificado`}
-                              </div>
-                            </div>
-                            <div
-                              className={`font-display text-xl font-semibold ${resultOrganizada.vantagemVsSimplificado >= 0 ? "text-emerald-800" : "text-stone-700"}`}
-                            >
-                              <AnimatedNumber
-                                value={resultOrganizada.liquido}
-                              />
-                            </div>
-                          </div>
-                          <p className="text-[10px] text-stone-400 leading-relaxed mt-2">
-                            Ponto de equilíbrio (breakeven): despesas reais &gt;{" "}
-                            {fmt(
-                              Math.round(resultOrganizada.breakEvenDespesas),
-                            )}{" "}
-                            sem TA. Com TA, o limiar sobe conforme encargos com
-                            viatura e representação.
-                          </p>
-                        </div>
-                      )}
-
-                      {resultAnualRV.acertoIRS > 0 && (
-                        <div className="mt-3 flex items-start gap-2.5 p-3 rounded-xl border bg-brand-light border-brand/30">
-                          <span className="text-brand mt-0.5 flex-shrink-0">
-                            <Check size={14} />
-                          </span>
-                          <span className="text-xs leading-relaxed text-brand-dark">
-                            Reembolso estimado IRS:{" "}
-                            {fmt(resultAnualRV.acertoIRS)} (retiveste{" "}
-                            {fmt(resultAnualRV.retencaoAnual)} · IRS real{" "}
-                            {fmt(resultAnualRV.irs)})
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Calendário fiscal */}
-                  <TimelineFiscal
-                    ssAnualMensal={
-                      isencaoSS ? 0 : calcularSSAnual(brutoAnual) / 12
-                    }
-                    isencaoSS={isencaoSS}
-                    acertoIRS={resultAnualRV.acertoIRS}
-                    temIva={temIva}
-                    ivaTotal={temIva ? resultRecibo.iva * 12 : 0}
-                    faturacaoAnual={brutoAnual}
-                    className="mb-5"
+                {/* ── Tipo de atividade ─────────────────────────────────────── */}
+                <div className="mb-6">
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <span className="text-sm font-medium uppercase tracking-wider text-stone-500">
+                      Tipo de atividade
+                    </span>
+                    <InfoTip label="Tipos de atividade e coeficientes">
+                      <p>
+                        Coeficientes do regime simplificado (Art. 31.º CIRS) e
+                        taxas de retenção 2026:
+                      </p>
+                      <ul className="mt-1 space-y-0.5 text-xs">
+                        <li>
+                          <strong>Art. 151.º:</strong> coef. 0,75 · ret. 23%
+                        </li>
+                        <li>
+                          <strong>Vendas:</strong> coef. 0,15 · ret. 0%
+                        </li>
+                        <li>
+                          <strong>Alojamento local:</strong> coef. 0,35 · ret.
+                          0%
+                        </li>
+                        <li>
+                          <strong>Outras prestações:</strong> coef. 0,35 · ret.
+                          11,5%
+                        </li>
+                        <li>
+                          <strong>Prop. intelectual:</strong> coef. 0,75 · ret.
+                          16,5%
+                        </li>
+                      </ul>
+                      <p className="mt-1">
+                        25% do rendimento = presumida como despesa (sem
+                        comprovar).
+                      </p>
+                    </InfoTip>
+                  </div>
+                  <ActivityCombobox
+                    value={atividade}
+                    onChange={(a) => {
+                      setAtividade(a);
+                      setTipoAtiv(mapaAtivParaTipoAtiv[a.tipo] ?? "art151");
+                      setPainelAtividade(true);
+                    }}
                   />
 
-                  <p className="text-xs text-stone-400 mt-5 leading-relaxed">
-                    Estimativa fiscal 2026. Escalões IRS atualizados 3,51% pelo
-                    OE2026. Mínimo de existência:{" "}
-                    {MINIMO_EXISTENCIA_2026.toLocaleString("pt-PT")}€. Não
-                    substitui aconselhamento de contabilista certificado.
-                  </p>
-                  <Link
-                    href="/dashboard/simulador"
-                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-brand transition-colors hover:text-brand-dark"
+                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {(
+                      Object.entries(TIPO_ATIVIDADE_PARAMS) as [
+                        TipoAtividade,
+                        (typeof TIPO_ATIVIDADE_PARAMS)[TipoAtividade],
+                      ][]
+                    ).map(([k, p]) => (
+                      <button
+                        key={k}
+                        type="button"
+                        aria-pressed={tipoAtiv === k}
+                        onClick={() => {
+                          setTipoAtiv(k);
+                          // Limpa overrides de atividade específica para não manter
+                          // coef/retenção incompatíveis com o novo tipo selecionado.
+                          const tipoFiscal: Atividade["tipo"] =
+                            k === "prop_int"
+                              ? "diretosAutor"
+                              : k === "outras"
+                                ? "outros"
+                                : k === "hosped"
+                                  ? "vendas"
+                                  : k === "vendas"
+                                    ? "vendas"
+                                    : "art151";
+                          setAtividade({
+                            label: p.label,
+                            tipo: tipoFiscal,
+                            grupo: "",
+                          });
+                          setPainelAtividade(true);
+                        }}
+                        className={`p-2.5 rounded-xl border text-left text-xs transition-all ${
+                          tipoAtiv === k
+                            ? "border-brand bg-brand-light"
+                            : "border-stone-200 hover:border-stone-300 bg-stone-50"
+                        }`}
+                      >
+                        <div
+                          className={`font-semibold ${tipoAtiv === k ? "text-brand-dark" : "text-stone-700"}`}
+                        >
+                          {p.label}
+                        </div>
+                        <div
+                          className={`mt-0.5 ${tipoAtiv === k ? "text-brand" : "text-stone-400"}`}
+                        >
+                          Coef. {pct(p.coef)} · Ret. {pct(p.ret)}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Painel contextual da atividade */}
+                  {painelAtividade && (
+                    <div className="mt-3 rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-900">
+                      <div className="mb-2 flex items-start justify-between gap-2">
+                        <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
+                          {atividadeAtual.titulo}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setPainelAtividade(false)}
+                          className="flex-shrink-0 text-xs text-stone-400 hover:text-stone-600 transition-colors"
+                          aria-label="Fechar painel"
+                        >
+                          fechar
+                        </button>
+                      </div>
+
+                      {/* Métricas em cards */}
+                      <div className="mb-3 grid grid-cols-3 gap-2">
+                        {[
+                          {
+                            label: "Coeficiente",
+                            value: pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef),
+                            note: "do rendimento é tributável",
+                          },
+                          {
+                            label: "Retenção",
+                            value: pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].ret),
+                            note: "retida pelo cliente",
+                          },
+                          {
+                            label: "Base SS",
+                            value:
+                              tipoAtiv === "vendas" || tipoAtiv === "hosped"
+                                ? "20%"
+                                : "70%",
+                            note: "do rendimento",
+                          },
+                        ].map((m) => (
+                          <div
+                            key={m.label}
+                            className="rounded-xl border border-stone-200 bg-white p-2 text-center dark:border-stone-700 dark:bg-stone-800"
+                          >
+                            <div className="text-sm font-bold text-stone-800 dark:text-stone-100">
+                              {m.value}
+                            </div>
+                            <div className="text-[10px] font-medium text-stone-500">
+                              {m.label}
+                            </div>
+                            <div className="text-[10px] text-stone-400">
+                              {m.note}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <p className="mb-2 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
+                        {atividadeAtual.descricao}
+                      </p>
+
+                      <div className="space-y-1.5">
+                        <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
+                          <Check
+                            size={11}
+                            className="mt-0.5 flex-shrink-0 text-brand"
+                          />
+                          <span>
+                            <strong className="text-stone-600 dark:text-stone-200">
+                              IVA típico:
+                            </strong>{" "}
+                            {atividadeAtual.ivaEsperado === "normal"
+                              ? `Taxa normal (${pct(IVA_TAXAS[regiao].value.normal)}) ou isenção Art. 53.º se faturação < €15 000`
+                              : atividadeAtual.ivaEsperado === "intermedia"
+                                ? `Taxa intermédia (${pct(IVA_TAXAS[regiao].value.intermedia)}) — restauração e alojamento`
+                                : "Isento"}
+                          </span>
+                        </div>
+                        {!atividadeIVACoerente && (
+                          <div className="mt-1 rounded-lg border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">
+                            O regime de IVA selecionado (
+                            {regimeIVA === "isento"
+                              ? "Isento"
+                              : pct(
+                                  IVA_TAXAS[regiao].value[
+                                    regimeIVA as EscalaoIVA
+                                  ],
+                                )}
+                            ) pode não ser o habitual para esta atividade.
+                            Verifica com o teu contabilista.
+                          </div>
+                        )}
+                        {atividadeAtual.nota && (
+                          <div className="mt-2 rounded-lg border border-brand/20 bg-brand-light/50 px-3 py-2 text-xs leading-relaxed text-brand-dark">
+                            {atividadeAtual.nota}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Situação fiscal ──────────────────────────────────────── */}
+                <div className="space-y-3">
+                  {checkboxes.map((cb) => (
+                    <button
+                      key={cb.id}
+                      type="button"
+                      role="checkbox"
+                      aria-checked={cb.val}
+                      onClick={() => cb.set(!cb.val)}
+                      className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
+                        cb.val
+                          ? "border-brand bg-brand-light"
+                          : "border-stone-200 hover:border-stone-300 bg-stone-50"
+                      }`}
+                    >
+                      <div
+                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                          cb.val
+                            ? "bg-brand border-brand text-white"
+                            : "border-stone-300 text-transparent"
+                        }`}
+                      >
+                        <Check size={12} />
+                      </div>
+                      <div>
+                        <div
+                          className={`text-sm font-semibold ${cb.val ? "text-brand-dark" : "text-stone-700"}`}
+                        >
+                          {cb.label}
+                        </div>
+                        <div
+                          className={`text-xs ${cb.val ? "text-brand" : "text-stone-400"}`}
+                        >
+                          {cb.sub}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* ── Motor de Regras Fiscais ──────────────────────────────── */}
+                {regras.length > 0 && (
+                  <div className="mt-5 space-y-2">
+                    {[
+                      ...regrasErro,
+                      ...regrasAviso,
+                      ...regrasInfo,
+                      ...regrasOport,
+                    ].map((r) => {
+                      const estilos = {
+                        erro: {
+                          wrapper:
+                            "border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/20",
+                          icon: (
+                            <Warning
+                              size={13}
+                              className="text-red-600 dark:text-red-400"
+                            />
+                          ),
+                          titulo: "text-red-700 dark:text-red-300",
+                        },
+                        aviso: {
+                          wrapper: "border-alert-border bg-alert-bg",
+                          icon: (
+                            <Warning size={13} className="text-alert-text" />
+                          ),
+                          titulo: "text-alert-text",
+                        },
+                        info: {
+                          wrapper:
+                            "border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/60",
+                          icon: <Check size={13} className="text-stone-400" />,
+                          titulo: "text-stone-600 dark:text-stone-300",
+                        },
+                        oportunidade: {
+                          wrapper: "border-brand/20 bg-brand-light/50",
+                          icon: <Check size={13} className="text-brand" />,
+                          titulo: "text-brand-dark",
+                        },
+                      }[r.prioridade];
+                      return (
+                        <div
+                          key={r.id}
+                          className={`flex items-start gap-2.5 rounded-2xl border p-3 ${estilos.wrapper}`}
+                        >
+                          <span className="mt-0.5 flex-shrink-0">
+                            {estilos.icon}
+                          </span>
+                          <div>
+                            <p
+                              className={`text-xs font-semibold ${estilos.titulo}`}
+                            >
+                              {r.mensagem}
+                            </p>
+                            <p
+                              className={`mt-0.5 text-xs leading-relaxed ${estilos.titulo} opacity-75`}
+                            >
+                              {r.detalhe}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* ── Opções avançadas ─────────────────────────────────────── */}
+                <div className="mt-5 pt-5 border-t border-stone-100 dark:border-stone-800">
+                  <button
+                    type="button"
+                    aria-expanded={advanced}
+                    onClick={() => setAdvanced((v) => !v)}
+                    className="flex items-center gap-2 text-sm font-semibold text-stone-500 hover:text-stone-700 transition-colors"
                   >
-                    Ver apuramento IRS anual detalhado por escalões
+                    <span>Opções avançadas</span>
                     <svg
                       width="12"
                       height="12"
                       viewBox="0 0 24 24"
                       fill="none"
+                      className={`transition-transform ${advanced ? "rotate-180" : ""}`}
                       aria-hidden
                     >
                       <path
-                        d="M5 12h13M13 6l6 6-6 6"
+                        d="M6 9l6 6 6-6"
                         stroke="currentColor"
                         strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       />
                     </svg>
-                  </Link>
-                </m.div>
-              ) : (
-                /* ── Painel Empresa ── */
-                <m.div
-                  key="empresa"
-                  initial={{ opacity: 0, x: 12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -12 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex flex-col flex-1"
-                >
-                  {modoInput === "recibo" && (
-                    <div className="mb-4 flex items-start gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs text-stone-500 dark:border-stone-700 dark:bg-stone-800">
-                      <Warning
-                        size={13}
-                        className="flex-shrink-0 mt-0.5 text-stone-400"
-                      />
-                      <span>
-                        Comparação baseada em {fmt(bruto)} × 12 ={" "}
-                        {fmt(brutoAnual)}/ano. Muda para o modo Anual para
-                        valores mais precisos.
-                      </span>
-                    </div>
-                  )}
+                  </button>
 
-                  <div className="mb-8">
-                    <div className="text-sm font-medium text-stone-500 uppercase tracking-wider mb-1">
-                      Líquido estimado — empresa (Lda)
-                    </div>
-                    <div className="font-display text-4xl sm:text-5xl font-semibold leading-none mb-1 text-brand">
-                      <AnimatedNumber value={liquidoEmpresaFinal} />
-                    </div>
-                    <div className="text-sm text-stone-400 mt-1">
-                      de <AnimatedNumber value={brutoAnual} /> faturados/ano
-                    </div>
-                  </div>
-
-                  {/* Barra empresa — atualizada com TA e benefícios */}
-                  <div className="mb-6">
-                    <div className="flex h-3 rounded-full overflow-hidden gap-0.5 mb-3">
-                      {(() => {
-                        const total = brutoAnual || 1;
-                        const irsDiv = opcaoEnglobamento
-                          ? resultEmpresa.irsDividendosEnglobamento
-                          : resultEmpresa.irsDividendosLiberatoria;
-                        return (
-                          <>
-                            <div
-                              style={{
-                                width: `${(liquidoEmpresaFinal / total) * 100}%`,
-                                background: "#1D9E75",
-                              }}
-                              className="transition-all duration-500 rounded-l-full"
-                            />
-                            <div
-                              style={{
-                                width: `${(resultEmpresa.ircAposBeneficios / total) * 100}%`,
-                                background: "#9FE1CB",
-                              }}
-                              className="transition-all duration-500"
-                            />
-                            {resultEmpresa.ta.total > 0 && (
-                              <div
-                                style={{
-                                  width: `${(resultEmpresa.ta.total / total) * 100}%`,
-                                  background: "#FCD34D",
-                                }}
-                                className="transition-all duration-500"
-                              />
-                            )}
-                            {irsDiv > 0 && (
-                              <div
-                                style={{
-                                  width: `${(irsDiv / total) * 100}%`,
-                                  background: "#FBBF24",
-                                }}
-                                className="transition-all duration-500"
-                              />
-                            )}
-                            <div
-                              style={{
-                                width: `${(resultEmpresa.totalCustos / total) * 100}%`,
-                                background: "#D3D1C7",
-                              }}
-                              className="transition-all duration-500 rounded-r-full"
-                            />
-                          </>
-                        );
-                      })()}
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                      {[
-                        { label: "Teu", color: "#1D9E75", show: true },
-                        {
-                          label: "IRC após benefícios",
-                          color: "#9FE1CB",
-                          show: true,
-                        },
-                        {
-                          label: "Tributação Autónoma",
-                          color: "#FCD34D",
-                          show: resultEmpresa.ta.total > 0,
-                        },
-                        {
-                          label: `IRS Div. (${opcaoEnglobamento ? "englobamento" : "28%"})`,
-                          color: "#FBBF24",
-                          show: distribuirDividendos,
-                        },
-                        {
-                          label: "Custos + salário",
-                          color: "#B4B2A9",
-                          show: true,
-                        },
-                      ]
-                        .filter((l) => l.show)
-                        .map((l) => (
-                          <div
-                            key={l.label}
-                            className="flex items-center gap-1.5"
-                          >
-                            <div
-                              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                              style={{ background: l.color }}
-                            />
-                            <span className="text-xs text-stone-500">
-                              {l.label}
+                  <AnimatePresence>
+                    {advanced && (
+                      <m.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-4 space-y-5">
+                          {/* Região */}
+                          <div>
+                            <span className="text-sm font-medium text-stone-500 uppercase tracking-wider block mb-2">
+                              Região
                             </span>
+                            <div className="grid grid-cols-3 gap-2">
+                              {REGIOES.map((r) => {
+                                const active = regiao === r;
+                                return (
+                                  <button
+                                    key={r}
+                                    type="button"
+                                    aria-pressed={active}
+                                    onClick={() => setRegiao(r)}
+                                    className={`p-2.5 rounded-xl border text-center text-sm font-semibold transition-all ${
+                                      active
+                                        ? "border-brand bg-brand-light text-brand-dark"
+                                        : "border-stone-200 hover:border-stone-300 bg-stone-50 text-stone-600"
+                                    }`}
+                                  >
+                                    {META_REGIAO[r]}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
-                        ))}
-                    </div>
-                  </div>
 
-                  {/* Breakdown empresa — detalhado */}
-                  <div className="space-y-1 flex-1">
-                    <DetalheRow
-                      label="Faturação"
-                      value={brutoAnual}
-                      type="neutral"
-                      note="Volume de negócios anual"
-                    />
+                          {/* IRS Jovem */}
+                          <div>
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <label
+                                htmlFor="irs-jovem-sel"
+                                className="text-sm font-medium text-stone-500 uppercase tracking-wider"
+                              >
+                                IRS Jovem (até {IRS_JOVEM_IDADE_MAX} anos)
+                              </label>
+                              <InfoTip label="IRS Jovem 2026">
+                                Isenção parcial do IRS durante 10 anos para
+                                jovens até 35 anos (Art. 12.º-B CIRS, OE2025).
+                                Aplica-se a Cat. A e Cat. B. Limite: 55×IAS ={" "}
+                                {IRS_JOVEM_LIMITE_2026.toLocaleString("pt-PT")}
+                                €/ano. Conta anos desde 1.º rendimento como
+                                não-dependente.
+                              </InfoTip>
+                            </div>
+                            <select
+                              id="irs-jovem-sel"
+                              value={irsJovemAno}
+                              onChange={(e) =>
+                                setIrsJovemAno(Number(e.target.value))
+                              }
+                              className="w-full px-4 py-3 text-[16px] font-semibold text-stone-700 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all dark:bg-stone-800 dark:text-stone-200 dark:border-stone-700"
+                            >
+                              {irsJovemOpts.map(({ ano, label }) => (
+                                <option key={ano} value={ano}>
+                                  {label}
+                                </option>
+                              ))}
+                            </select>
+                            <p className="mt-1.5 text-xs text-stone-400">
+                              Limite de isenção:{" "}
+                              {IRS_JOVEM_LIMITE_2026.toLocaleString("pt-PT")}
+                              €/ano (55×IAS 2026). Aplica-se ao rendimento
+                              coletável, não ao bruto.
+                            </p>
+                          </div>
+                          {/* ── Particularidades Individuais ─────────────── */}
+                          <div className="pt-4 border-t border-stone-100 dark:border-stone-800">
+                            <div className="flex items-center gap-1.5 mb-3">
+                              <span className="text-sm font-medium text-stone-500 uppercase tracking-wider">
+                                Particularidades Individuais
+                              </span>
+                              <InfoTip label="Particularidades fiscais individuais">
+                                Estas situações alteram o cálculo do IRS:
+                                deficiência (exclusão 15% + dedução €2 148),
+                                IFICI/NHR 2.0 (taxa flat 20%), dependentes
+                                (€600–900 cada) e deduções por despesas de
+                                saúde, educação, rendas e gerais.
+                              </InfoTip>
+                            </div>
 
-                    {resultEmpresa.despesasOper > 0 && (
-                      <DetalheRow
-                        label="Despesas operacionais"
-                        value={-resultEmpresa.despesasOper}
-                        type="deducao"
-                        note="Dedutíveis ao lucro tributável"
-                      />
-                    )}
-                    {resultEmpresa.custosExtra > 0 && (
-                      <DetalheRow
-                        label="Custos estrutura empresa"
-                        value={-resultEmpresa.custosExtra}
-                        type="deducao"
-                        note="Contabilidade, software, etc."
-                      />
-                    )}
-                    {resultEmpresa.custoConstituicao > 0 && (
-                      <DetalheRow
-                        label="Custo constituição (amortizado)"
-                        value={-resultEmpresa.custoConstituicao}
-                        type="deducao"
-                        note={`${custoConstituicao}€ ÷ ${anosAmortizacao} anos`}
-                      />
-                    )}
-                    {resultEmpresa.salGerente > 0 && (
-                      <>
-                        <DetalheRow
-                          label="Salário gerente (bruto anual)"
-                          value={-resultEmpresa.salGerente}
-                          type="deducao"
-                          note="Custo dedutível da empresa"
-                        />
-                        <DetalheRow
-                          label="SS empresa + trabalhador"
-                          value={-resultEmpresa.ssSalGerente}
-                          type="deducao"
-                          note="23,75% (empresa) + 11% (trabalhador)"
-                        />
-                      </>
-                    )}
+                            {/* ── Deficiência ──────────────────────────────────── */}
+                            <div className="space-y-2 mb-4">
+                              <button
+                                type="button"
+                                role="checkbox"
+                                aria-checked={deficiencia}
+                                onClick={() => setDeficiencia((v) => !v)}
+                                className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
+                                  deficiencia
+                                    ? "border-brand bg-brand-light"
+                                    : "border-stone-200 hover:border-stone-300 bg-stone-50"
+                                }`}
+                              >
+                                <div
+                                  className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${deficiencia ? "bg-brand border-brand text-white" : "border-stone-300 text-transparent"}`}
+                                >
+                                  <Check size={12} />
+                                </div>
+                                <div>
+                                  <div
+                                    className={`text-sm font-semibold ${deficiencia ? "text-brand-dark" : "text-stone-700"}`}
+                                  >
+                                    Deficiência ≥ 60% (Art. 56.º-A + 87.º CIRS)
+                                  </div>
+                                  <div
+                                    className={`text-xs ${deficiencia ? "text-brand" : "text-stone-400"}`}
+                                  >
+                                    15% Cat. B excluídos (máx €2 500) · Dedução
+                                    coleta:{" "}
+                                    {fmt(
+                                      Math.round(DEFICIENCIA_DEDUCAO_COLETA),
+                                    )}
+                                  </div>
+                                </div>
+                              </button>
+                            </div>
 
-                    <DetalheRow
-                      label="Lucro tributável"
-                      value={resultEmpresa.lucroTributavel}
-                      type="subtotal"
-                      note="Antes de IRC"
-                    />
-                    <DetalheRow
-                      label="IRC base — coleta (PME 15%/50k€ + 19%)"
-                      value={-resultEmpresa.coleta}
-                      type="deducao"
-                      note="OE2026: taxa geral 19% (era 20% em 2025)"
-                    />
+                            {/* ── IFICI / NHR 2.0 ─────────────────────────────── */}
+                            <div className="space-y-2 mb-4">
+                              <button
+                                type="button"
+                                role="checkbox"
+                                aria-checked={ifici}
+                                onClick={() => setIfici((v) => !v)}
+                                className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
+                                  ifici
+                                    ? "border-brand bg-brand-light"
+                                    : "border-stone-200 hover:border-stone-300 bg-stone-50"
+                                }`}
+                              >
+                                <div
+                                  className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${ifici ? "bg-brand border-brand text-white" : "border-stone-300 text-transparent"}`}
+                                >
+                                  <Check size={12} />
+                                </div>
+                                <div>
+                                  <div
+                                    className={`text-sm font-semibold ${ifici ? "text-brand-dark" : "text-stone-700"}`}
+                                  >
+                                    IFICI / NHR 2.0 — taxa flat 20% (Art. 58.º-A
+                                    EBF)
+                                  </div>
+                                  <div
+                                    className={`text-xs ${ifici ? "text-brand" : "text-stone-400"}`}
+                                  >
+                                    10 anos · Só elegíveis · Não residente em
+                                    Portugal nos últimos 5 anos
+                                  </div>
+                                </div>
+                              </button>
+                              {ifici && (
+                                <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200">
+                                  <Warning
+                                    size={12}
+                                    className="flex-shrink-0 mt-0.5 text-amber-600"
+                                  />
+                                  <p className="text-[10px] text-amber-700 leading-relaxed">
+                                    IFICI aplica taxa de 20% sobre rendimentos
+                                    líquidos de Cat. B de atividades elegíveis
+                                    (I&D, tech, inovação). Incompatível com IRS
+                                    Jovem (não cumuláveis). Rendimentos
+                                    estrangeiros: sujeitos às regras gerais do
+                                    CIRS (sem isenção automática, ao contrário
+                                    do antigo NHR).
+                                  </p>
+                                </div>
+                              )}
+                            </div>
 
-                    {/* Benefícios fiscais */}
-                    {resultEmpresa.beneficios.rfai > 0 && (
-                      <DetalheRow
-                        label={`RFAI — ${regiaoRFAI === "interior" ? "Norte/Centro/Alentejo/Açores/Madeira (30%)" : "Lisboa/Algarve (10%)"}`}
-                        value={resultEmpresa.beneficios.rfai}
-                        type="beneficio"
-                        note={
-                          resultEmpresa.beneficios.rfai <
-                          resultEmpresa.beneficios.rfaiBruto
-                            ? `Bruto: ${fmt(Math.round(resultEmpresa.beneficios.rfaiBruto))} — limitado à coleta`
-                            : "Dedução à coleta IRC (Art. 22.º CFI)"
-                        }
-                      />
-                    )}
-                    {resultEmpresa.beneficios.dlrr > 0 && (
-                      <DetalheRow
-                        label="DLRR — 10% dos lucros retidos reinvestidos"
-                        value={resultEmpresa.beneficios.dlrr}
-                        type="beneficio"
-                        note="Limite 25% da coleta IRC (Art. 27.º-A CFI)"
-                      />
-                    )}
-                    {resultEmpresa.beneficios.sifide > 0 && (
-                      <DetalheRow
-                        label={`SIFIDE II — I&D (${tipoSifide === "startup" ? "82,5%" : tipoSifide === "pme_jovem" ? "47,5%" : "32,5%"})`}
-                        value={resultEmpresa.beneficios.sifide}
-                        type="beneficio"
-                        note="Certificação ANI. Reportável 12 anos."
-                      />
-                    )}
-                    {resultEmpresa.beneficios.rfaiContratual > 0 && (
-                      <DetalheRow
-                        label="RFAI Contratual (Art. 8.º–22.º CFI)"
-                        value={resultEmpresa.beneficios.rfaiContratual}
-                        type="beneficio"
-                        note="Crédito fiscal contratual — negociado com IAPMEI/AICEP"
-                      />
-                    )}
-                    {resultEmpresa.beneficios.total > 0 && (
-                      <DetalheRow
-                        label="IRC após benefícios fiscais"
-                        value={-resultEmpresa.ircAposBeneficios}
-                        type="deducao"
-                        note={`Poupança RFAI+DLRR+SIFIDE: ${fmt(Math.round(resultEmpresa.beneficios.total))}`}
-                      />
-                    )}
+                            {/* ── Dependentes ─────────────────────────────────── */}
+                            <CollapsibleSection
+                              title="Dependentes e Agregado Familiar"
+                              badgeColor="brand"
+                              badge={
+                                numDep3plus * DEPENDENTE_DEDUCAO_3PLUS +
+                                  numDep3minus * DEPENDENTE_DEDUCAO_3MINUS +
+                                  numDep2_6 * DEPENDENTE_DEDUCAO_2_6 +
+                                  numDepDefic * DEPENDENTE_DEDUCAO_DEFIC >
+                                0
+                                  ? `−${fmt(Math.round(numDep3plus * DEPENDENTE_DEDUCAO_3PLUS + numDep3minus * DEPENDENTE_DEDUCAO_3MINUS + numDep2_6 * DEPENDENTE_DEDUCAO_2_6 + numDepDefic * DEPENDENTE_DEDUCAO_DEFIC))}`
+                                  : "Art. 78.º-A CIRS"
+                              }
+                            >
+                              <div className="space-y-4">
+                                <div className="flex items-start gap-2 p-3 rounded-xl bg-stone-50 border border-stone-200">
+                                  <p className="text-[11px] text-stone-500 leading-relaxed">
+                                    Deduções fixas à coleta por dependente (Art.
+                                    78.º-A CIRS). Dependentes com deficiência:
+                                    +2,5×IAS ={" "}
+                                    {fmt(Math.round(DEPENDENTE_DEDUCAO_DEFIC))}.
+                                  </p>
+                                </div>
+                                {[
+                                  {
+                                    label: `Dependentes > 3 anos — €${DEPENDENTE_DEDUCAO_3PLUS}/dep.`,
+                                    val: numDep3plus,
+                                    set: setNumDep3plus,
+                                  },
+                                  {
+                                    label: `Dependentes ≤ 3 anos — €${DEPENDENTE_DEDUCAO_3MINUS}/dep.`,
+                                    val: numDep3minus,
+                                    set: setNumDep3minus,
+                                  },
+                                  {
+                                    label: `2.º+ dependentes ≤ 6 anos — €${DEPENDENTE_DEDUCAO_2_6}/dep.`,
+                                    val: numDep2_6,
+                                    set: setNumDep2_6,
+                                  },
+                                  {
+                                    label: `Dependentes com deficiência — €${Math.round(DEPENDENTE_DEDUCAO_DEFIC)}/dep.`,
+                                    val: numDepDefic,
+                                    set: setNumDepDefic,
+                                  },
+                                ].map(({ label, val, set }) => (
+                                  <div
+                                    key={label}
+                                    className="flex items-center justify-between gap-4"
+                                  >
+                                    <span className="text-xs text-stone-600 flex-1">
+                                      {label}
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          set(Math.max(0, val - 1))
+                                        }
+                                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-600 hover:border-brand hover:text-brand transition-all"
+                                      >
+                                        <span className="text-sm font-semibold leading-none">
+                                          −
+                                        </span>
+                                      </button>
+                                      <span className="w-8 text-center text-sm font-bold text-stone-800">
+                                        {val}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => set(val + 1)}
+                                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-600 hover:border-brand hover:text-brand transition-all"
+                                      >
+                                        <span className="text-sm font-semibold leading-none">
+                                          +
+                                        </span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </CollapsibleSection>
 
-                    {/* Tributação Autónoma */}
-                    {resultEmpresa.ta.total > 0 && (
-                      <>
-                        {resultEmpresa.ta.viatura > 0 && (
-                          <DetalheRow
-                            label={`TA — Viaturas (${pct(TA_VIATURAS[tipoViatura])}${emPrejuizo && !excecaoPrejuizo ? " +10pp" : ""})`}
-                            value={-resultEmpresa.ta.viatura}
-                            type="warning"
-                            note="Art. 88.º n.º 3/18 CIRC — sobre encargos anuais"
+                            {/* ── Deduções à coleta ────────────────────────────── */}
+                            <div className="mt-4">
+                              <CollapsibleSection
+                                title="Deduções à Coleta IRS"
+                                badgeColor="brand"
+                                badge={
+                                  calcularDeducoesColeta(particularidades)
+                                    .total > 0
+                                    ? `−${fmt(Math.round(calcularDeducoesColeta(particularidades).total))}`
+                                    : "Saúde · Educ. · Rendas"
+                                }
+                              >
+                                <div className="space-y-3">
+                                  <div className="flex items-start gap-2 p-3 rounded-xl bg-stone-50 border border-stone-200">
+                                    <p className="text-[11px] text-stone-500 leading-relaxed">
+                                      Deduções à coleta (subtraídas diretamente
+                                      ao IRS, não ao rendimento). Inserir as
+                                      despesas totais — o simulador calcula as
+                                      deduções com os limites legais.
+                                    </p>
+                                  </div>
+                                  {[
+                                    {
+                                      label: `Despesas saúde (ded. 15%, máx €${DEDUCAO_SAUDE_MAX})`,
+                                      val: despSaude,
+                                      set: setDespSaude,
+                                      max: 6_670,
+                                      note: "Consultas, medicamentos, seguros saúde",
+                                    },
+                                    {
+                                      label: `Despesas educação (ded. 30%, máx €${DEDUCAO_EDUCACAO_MAX})`,
+                                      val: despEducacao,
+                                      set: setDespEducacao,
+                                      max: 2_667,
+                                      note: "Propinas, material escolar, rendas de estudante",
+                                    },
+                                    {
+                                      label: `Rendas habitação (ded. 15%, máx €${DEDUCAO_RENDAS_MAX})`,
+                                      val: despRendas,
+                                      set: setDespRendas,
+                                      max: 3_347,
+                                      note: "Arrendamento habitação permanente",
+                                    },
+                                    {
+                                      label: `Despesas gerais (ded. 35%, máx €${DEDUCAO_GERAIS_MAX}/pessoa)`,
+                                      val: despGerais,
+                                      set: setDespGerais,
+                                      max: 714,
+                                      note: "Luz, água, telecomunicações, supermercado",
+                                    },
+                                  ].map(({ label, val, set, max, note }) => (
+                                    <NumericSlider
+                                      key={label}
+                                      label={label}
+                                      value={val}
+                                      min={0}
+                                      max={max}
+                                      step={100}
+                                      onChange={set}
+                                      presets={[
+                                        0,
+                                        Math.round(max / 4),
+                                        Math.round(max / 2),
+                                        max,
+                                      ]}
+                                      tooltip={<>{note}</>}
+                                    />
+                                  ))}
+
+                                  {/* Resumo deduções */}
+                                  {calcularDeducoesColeta(particularidades)
+                                    .total > 0 && (
+                                    <div className="space-y-1">
+                                      {(
+                                        [
+                                          {
+                                            label: "Dependentes",
+                                            val: calcularDeducoesColeta(
+                                              particularidades,
+                                            ).dependentes,
+                                          },
+                                          {
+                                            label: "Deficiência (contribuinte)",
+                                            val: calcularDeducoesColeta(
+                                              particularidades,
+                                            ).deficienciaContrib,
+                                          },
+                                          {
+                                            label: "Saúde",
+                                            val: calcularDeducoesColeta(
+                                              particularidades,
+                                            ).saude,
+                                          },
+                                          {
+                                            label: "Educação",
+                                            val: calcularDeducoesColeta(
+                                              particularidades,
+                                            ).educacao,
+                                          },
+                                          {
+                                            label: "Rendas",
+                                            val: calcularDeducoesColeta(
+                                              particularidades,
+                                            ).rendas,
+                                          },
+                                          {
+                                            label: "Gerais",
+                                            val: calcularDeducoesColeta(
+                                              particularidades,
+                                            ).gerais,
+                                          },
+                                        ] as const
+                                      )
+                                        .filter((r) => r.val > 0)
+                                        .map((r) => (
+                                          <div
+                                            key={r.label}
+                                            className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-emerald-50"
+                                          >
+                                            <span className="text-xs text-emerald-700">
+                                              {r.label}
+                                            </span>
+                                            <span className="text-xs font-bold text-emerald-800">
+                                              −{fmt(Math.round(r.val))}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-emerald-100 border border-emerald-300">
+                                        <span className="text-xs font-bold text-emerald-800">
+                                          Total deduções à coleta
+                                        </span>
+                                        <span className="text-xs font-bold text-emerald-900">
+                                          −
+                                          {fmt(
+                                            Math.round(
+                                              calcularDeducoesColeta(
+                                                particularidades,
+                                              ).total,
+                                            ),
+                                          )}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </CollapsibleSection>
+                            </div>
+                          </div>
+                          {/* ── Contabilidade Organizada TI ─────────────── */}
+                          <div className="pt-4 border-t border-stone-100 dark:border-stone-800">
+                            <div className="flex items-center gap-1.5 mb-3">
+                              <span className="text-sm font-medium text-stone-500 uppercase tracking-wider">
+                                Contabilidade Organizada (Art. 28.º CIRS)
+                              </span>
+                              <InfoTip label="Contab. Organizada vs. Simplificado">
+                                No regime organizado, todas as despesas reais
+                                documentadas são dedutíveis (em vez dos
+                                coeficientes). Exige OCC (~€200/mês = €2
+                                400/ano). Sujeita a tributação autónoma (Art.
+                                73.º → Art. 88.º CIRC). Compensa quando despesas
+                                reais &gt;{" "}
+                                {pct(1 - TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef)}{" "}
+                                da faturação (coef.{" "}
+                                {pct(TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef)}).
+                              </InfoTip>
+                            </div>
+
+                            <button
+                              type="button"
+                              role="checkbox"
+                              aria-checked={contabOrganizada}
+                              onClick={() => setContabOrganizada((v) => !v)}
+                              className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
+                                contabOrganizada
+                                  ? "border-brand bg-brand-light"
+                                  : "border-stone-200 hover:border-stone-300 bg-stone-50"
+                              }`}
+                            >
+                              <div
+                                className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${contabOrganizada ? "bg-brand border-brand text-white" : "border-stone-300 text-transparent"}`}
+                              >
+                                <Check size={12} />
+                              </div>
+                              <div>
+                                <div
+                                  className={`text-sm font-semibold ${contabOrganizada ? "text-brand-dark" : "text-stone-700"}`}
+                                >
+                                  Simular contabilidade organizada
+                                </div>
+                                <div
+                                  className={`text-xs ${contabOrganizada ? "text-brand" : "text-stone-400"}`}
+                                >
+                                  Custo OCC: {fmt(CONTAB_ORG_CUSTO_MENSAL)}/mês
+                                  · {fmt(CONTAB_ORG_CUSTO_MENSAL * 12)}/ano
+                                </div>
+                              </div>
+                            </button>
+
+                            {contabOrganizada && (
+                              <m.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                transition={{ duration: 0.2 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="mt-3 space-y-4">
+                                  {resultOrganizada && (
+                                    <div
+                                      className={`flex items-center justify-between p-3 rounded-xl border ${
+                                        resultOrganizada.vantagemVsSimplificado >=
+                                        0
+                                          ? "bg-emerald-50 border-emerald-200"
+                                          : "bg-amber-50 border-amber-200"
+                                      }`}
+                                    >
+                                      <span
+                                        className={`text-xs font-semibold ${resultOrganizada.vantagemVsSimplificado >= 0 ? "text-emerald-700" : "text-amber-700"}`}
+                                      >
+                                        {resultOrganizada.vantagemVsSimplificado >=
+                                        0
+                                          ? `✓ Organizada poupa ${fmt(Math.round(resultOrganizada.vantagemVsSimplificado))}/ano`
+                                          : `✗ Simplificado é melhor por ${fmt(Math.round(Math.abs(resultOrganizada.vantagemVsSimplificado)))}/ano`}
+                                      </span>
+                                      <span
+                                        className={`text-xs ${resultOrganizada.vantagemVsSimplificado >= 0 ? "text-emerald-600" : "text-amber-600"}`}
+                                      >
+                                        Breakeven:{" "}
+                                        {fmt(
+                                          Math.round(
+                                            resultOrganizada.breakEvenDespesas,
+                                          ),
+                                        )}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  <NumericSlider
+                                    label="Despesas profissionais reais (€/ano)"
+                                    value={despesasReaisTI}
+                                    min={0}
+                                    max={Math.min(brutoAnual, 100_000)}
+                                    step={500}
+                                    onChange={setDespesasReaisTI}
+                                    presets={[0, 2000, 5000, 10000, 20000]}
+                                    tooltip={
+                                      <>
+                                        Todas as despesas diretamente
+                                        relacionadas com a atividade,
+                                        comprovadas com faturas: rendas de
+                                        escritório, hardware, software,
+                                        formação, viagens, seguros. O OCC
+                                        verifica e contabiliza tudo.
+                                      </>
+                                    }
+                                  />
+
+                                  <p className="text-xs text-stone-400">
+                                    Ponto de equilíbrio (sem despesas de
+                                    viatura, representação, etc.): despesas &gt;{" "}
+                                    <strong>
+                                      {fmt(
+                                        Math.round(
+                                          brutoAnual *
+                                            (1 -
+                                              TIPO_ATIVIDADE_PARAMS[tipoAtiv]
+                                                .coef),
+                                        ),
+                                      )}
+                                    </strong>{" "}
+                                    (
+                                    {pct(
+                                      1 - TIPO_ATIVIDADE_PARAMS[tipoAtiv].coef,
+                                    )}{" "}
+                                    de {fmt(brutoAnual)}) para compensar o
+                                    simplificado. Com o custo do OCC (~
+                                    {fmt(CONTAB_ORG_CUSTO_MENSAL * 12)}/ano), o
+                                    limiar real é{" "}
+                                    <strong>
+                                      {fmt(
+                                        Math.round(
+                                          brutoAnual *
+                                            (1 -
+                                              TIPO_ATIVIDADE_PARAMS[tipoAtiv]
+                                                .coef) +
+                                            CONTAB_ORG_CUSTO_MENSAL * 12,
+                                        ),
+                                      )}
+                                    </strong>
+                                    .
+                                  </p>
+
+                                  {/* TA para TI organizado */}
+                                  <CollapsibleSection
+                                    title="Tributação Autónoma (TI organizado)"
+                                    badgeColor="amber"
+                                  >
+                                    <p className="text-[11px] text-stone-500 leading-relaxed">
+                                      Com contabilidade organizada, o TI fica
+                                      sujeito ao Art. 88.º CIRC (via Art. 73.º
+                                      CIRS). Preenche apenas se tiveres estas
+                                      despesas.
+                                    </p>
+                                    <div className="space-y-3 mt-3">
+                                      <div>
+                                        <label className="text-xs font-medium text-stone-500 uppercase tracking-wider block mb-1.5">
+                                          Tipo de viatura
+                                        </label>
+                                        <select
+                                          value={tipoViatTI}
+                                          onChange={(e) =>
+                                            setTipoViatTI(
+                                              e.target.value as TipoViatura,
+                                            )
+                                          }
+                                          className="w-full px-3 py-2 text-[16px] font-semibold text-stone-700 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand dark:bg-stone-800 dark:text-stone-200 dark:border-stone-700"
+                                        >
+                                          {(
+                                            Object.keys(
+                                              TA_VIATURAS,
+                                            ) as TipoViatura[]
+                                          ).map((tv) => (
+                                            <option key={tv} value={tv}>
+                                              {TIPO_VIATURA_META[tv]}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <NumericSlider
+                                        label="Encargos viatura (€/ano)"
+                                        value={encargosViatTI}
+                                        min={0}
+                                        max={20_000}
+                                        step={200}
+                                        onChange={setEncargosViatTI}
+                                        presets={[0, 1500, 3000, 6000]}
+                                      />
+                                      <NumericSlider
+                                        label="Representação (€/ano)"
+                                        value={despRepTI}
+                                        min={0}
+                                        max={5_000}
+                                        step={100}
+                                        onChange={setDespRepTI}
+                                        presets={[0, 500, 1000, 2000]}
+                                      />
+                                      <NumericSlider
+                                        label="Ajudas de custo (€/ano)"
+                                        value={ajudasTI}
+                                        min={0}
+                                        max={3_000}
+                                        step={50}
+                                        onChange={setAjudasTI}
+                                        presets={[0, 300, 600, 1200]}
+                                      />
+                                      <NumericSlider
+                                        label="Não documentadas (€/ano)"
+                                        value={naoDocTI}
+                                        min={0}
+                                        max={2_000}
+                                        step={50}
+                                        onChange={setNaoDocTI}
+                                        presets={[0]}
+                                      />
+                                    </div>
+                                  </CollapsibleSection>
+                                </div>
+                              </m.div>
+                            )}
+                          </div>
+                        </div>
+                      </m.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* ── Inputs Empresa (visíveis quando cenário = empresa) ─────── */}
+                {cenario === "empresa" && (
+                  <EmpresaInputs
+                    despesasOper={despesasOper}
+                    custosExtra={custosExtra}
+                    salGerenteMensal={salGerenteMensal}
+                    distribuirDividendos={distribuirDividendos}
+                    opcaoEnglobamento={opcaoEnglobamento}
+                    encargosViatura={encargosViatura}
+                    tipoViatura={tipoViatura}
+                    despRepresentacao={despRepresentacao}
+                    ajudasCusto={ajudasCusto}
+                    naoDocumentadas={naoDocumentadas}
+                    emPrejuizo={emPrejuizo}
+                    excecaoPrejuizo={excecaoPrejuizo}
+                    rfaiInvest={rfaiInvest}
+                    regiaoRFAI={regiaoRFAI}
+                    dlrrLucros={dlrrLucros}
+                    sifideDespesas={sifideDespesas}
+                    tipoSifide={tipoSifide}
+                    primeirosAnos={primeirosAnos}
+                    incluirConstituicao={incluirConstituicao}
+                    custoConstituicao={custoConstituicao}
+                    anosAmortizacao={anosAmortizacao}
+                    resultBeneficios={resultEmpresa.beneficios}
+                    totalTA={resultEmpresa.ta.total}
+                    onDespChange={setDespesasOper}
+                    onCustosChange={setCustosExtra}
+                    onSalChange={setSalGerenteMensal}
+                    onDividendosChange={setDistribuirDividendos}
+                    onEnglobamentoChange={setOpcaoEnglobamento}
+                    onEncargosViaturaChange={setEncargosViatura}
+                    onTipoViaturaChange={setTipoViatura}
+                    onDespRepresentacaoChange={setDespRepresentacao}
+                    onAjudasCustoChange={setAjudasCusto}
+                    onNaoDocumentadasChange={setNaoDocumentadas}
+                    onEmPrejuizoChange={setEmPrejuizo}
+                    onExcecaoPrejuizoChange={setExcecaoPrejuizo}
+                    onRfaiInvestChange={setRfaiInvest}
+                    onRegiaoRFAIChange={setRegiaoRFAI}
+                    onDlrrLucrosChange={setDlrrLucros}
+                    onSifideDespesasChange={setSifideDespesas}
+                    onTipoSifideChange={setTipoSifide}
+                    onPrimeirosAnosChange={setPrimeirosAnos}
+                    rfaiContratualValor={rfaiContratualValor}
+                    onRfaiContratualChange={setRfaiContratualValor}
+                    onIncluirConstituicaoChange={setIncluirConstituicao}
+                    onCustoConstituicaoChange={setCustoConstituicao}
+                    onAnosAmortizacaoChange={setAnosAmortizacao}
+                    temImovelEmpresa={temImovelEmpresa}
+                    vptImovel={vptImovel}
+                    taxaIMI={taxaIMI}
+                    isencaoIMI_RFAI={isencaoIMI_RFAI}
+                    valorAquisicaoImovel={valorAquisicaoImovel}
+                    isencaoIMT_RFAI={isencaoIMT_RFAI}
+                    anosAmortizacaoIMT={anosAmortizacaoIMT}
+                    poupancaIMI={poupancaIMI}
+                    poupancaIMT={poupancaIMT}
+                    imiAnual={imiAnual}
+                    imtOnTime={imtOnTime}
+                    onTemImovelChange={setTemImovelEmpresa}
+                    onVptChange={setVptImovel}
+                    onTaxaIMIChange={setTaxaIMI}
+                    onIsencaoIMIChange={setIsencaoIMI_RFAI}
+                    onValorAquisicaoChange={setValorAquisicaoImovel}
+                    onIsencaoIMTChange={setIsencaoIMT_RFAI}
+                    onAnosAmortizacaoIMTChange={setAnosAmortizacaoIMT}
+                  />
+                )}
+              </div>
+
+              {/* ════ Coluna direita: Resultado ════ */}
+              <div className="bg-cream p-5 sm:p-8 lg:p-10 flex flex-col dark:bg-stone-900">
+                <AnimatePresence mode="wait">
+                  {cenario === "rv" ? (
+                    /* ── Painel Recibos Verdes ── */
+                    <m.div
+                      key="rv"
+                      initial={{ opacity: 0, x: 12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -12 }}
+                      transition={{ duration: 0.2 }}
+                      className="flex flex-col flex-1"
+                    >
+                      <div className="mb-8">
+                        <div className="text-sm font-medium text-stone-500 uppercase tracking-wider mb-1">
+                          {modoInput === "recibo"
+                            ? "Disponível para gastar · por recibo"
+                            : "Líquido anual estimado"}
+                        </div>
+                        <div className="font-display text-4xl sm:text-5xl font-semibold leading-none mb-1 text-brand">
+                          <AnimatedNumber
+                            value={
+                              modoInput === "recibo"
+                                ? resultRecibo.liquido
+                                : resultAnualRV.liquido
+                            }
                           />
-                        )}
-                        {resultEmpresa.ta.representacao > 0 && (
-                          <DetalheRow
-                            label="TA — Despesas de representação (10%)"
-                            value={-resultEmpresa.ta.representacao}
-                            type="warning"
-                            note="Art. 88.º n.º 7 CIRC"
-                          />
-                        )}
-                        {resultEmpresa.ta.ajudasCusto > 0 && (
-                          <DetalheRow
-                            label="TA — Ajudas de custo (5%)"
-                            value={-resultEmpresa.ta.ajudasCusto}
-                            type="warning"
-                            note="Art. 88.º n.º 9 CIRC"
-                          />
-                        )}
-                        {resultEmpresa.ta.naoDocumentadas > 0 && (
-                          <DetalheRow
-                            label="TA — Despesas não documentadas (50%)"
-                            value={-resultEmpresa.ta.naoDocumentadas}
-                            type="warning"
-                            note="Art. 88.º n.º 1 CIRC"
-                          />
-                        )}
-                      </>
-                    )}
+                        </div>
+                        <div className="text-sm text-stone-400 mt-1">
+                          de{" "}
+                          <AnimatedNumber
+                            value={
+                              modoInput === "recibo"
+                                ? resultRecibo.bruto + resultRecibo.iva
+                                : brutoAnual
+                            }
+                          />{" "}
+                          faturados
+                          {modoInput === "anual" && (
+                            <span>
+                              {" "}
+                              · IRS {fmt(resultAnualRV.irs)} · SS{" "}
+                              {fmt(resultAnualRV.ssAnual)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
 
-                    <DetalheRow
-                      label="Derrama municipal (~1,5%)"
-                      value={-resultEmpresa.derramaMuni}
-                      type="deducao"
-                      note="Estimativa Lisboa/Porto — varia por município"
-                    />
-
-                    {/* Dividendos */}
-                    {distribuirDividendos ? (
-                      <>
-                        {resultEmpresa.irsDividendosEnglobamento <
-                          resultEmpresa.irsDividendosLiberatoria && (
-                          <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200">
-                            <Check
-                              size={12}
-                              className="flex-shrink-0 mt-0.5 text-emerald-600"
+                      {modoInput === "recibo" && (
+                        <>
+                          {/* Breakdown visual */}
+                          <div className="mb-6">
+                            <EuroBreakdown
+                              faturacao={resultRecibo.bruto + resultRecibo.iva}
+                              liquido={resultRecibo.liquido}
+                              irs={resultRecibo.retencaoIRS}
+                              ss={resultRecibo.segSocial}
+                              iva={resultRecibo.iva}
                             />
-                            <span className="text-[11px] text-emerald-700">
-                              Englobamento poupa{" "}
-                              {fmt(
-                                Math.round(
-                                  resultEmpresa.irsDividendosLiberatoria -
-                                    resultEmpresa.irsDividendosEnglobamento,
+                          </div>
+
+                          {/* Breakdown por recibo */}
+                          <div className="space-y-1 flex-1">
+                            <DetalheRow
+                              label={
+                                resultRecibo.taxaIVA > 0
+                                  ? "Base do serviço (sem IVA)"
+                                  : "Valor do recibo"
+                              }
+                              value={resultRecibo.bruto}
+                              type="neutral"
+                              note={
+                                resultRecibo.taxaIVA > 0
+                                  ? `Total ÷ (1 + ${pct(resultRecibo.taxaIVA)})`
+                                  : "O que faturaste"
+                              }
+                            />
+                            {resultRecibo.taxaIVA > 0 && (
+                              <DetalheRow
+                                label={`IVA (${pct(resultRecibo.taxaIVA)}) — do Estado`}
+                                value={resultRecibo.iva}
+                                type="warning"
+                                note="Pertence ao Estado — não é teu"
+                              />
+                            )}
+                            {resultRecibo.taxaIVA > 0 && (
+                              <DetalheRow
+                                label="O cliente paga"
+                                value={resultRecibo.bruto + resultRecibo.iva}
+                                type="neutral"
+                                note="Valor base + IVA"
+                              />
+                            )}
+                            {resultRecibo.retencaoIRS > 0 && (
+                              <DetalheRow
+                                label={`Retenção na fonte (${pct(resultRecibo.taxaRetencao)})`}
+                                value={-resultRecibo.retencaoIRS}
+                                type="deducao"
+                                note="Adiantamento de IRS ao Estado"
+                              />
+                            )}
+                            <DetalheRow
+                              label="Entra na tua conta"
+                              value={resultRecibo.entradaConta}
+                              type="subtotal"
+                              note={
+                                resultRecibo.taxaIVA > 0
+                                  ? "Bruto + IVA − Retenção"
+                                  : "Após retenção"
+                              }
+                            />
+                            {resultRecibo.taxaIVA > 0 && (
+                              <DetalheRow
+                                label="Reservar para IVA (entrega trimestral)"
+                                value={-resultRecibo.iva}
+                                type="warning"
+                              />
+                            )}
+                            {resultRecibo.segSocial > 0 && (
+                              <DetalheRow
+                                label={`Reservar SS (21,4%×70% de ${fmt(resultRecibo.bruto)})`}
+                                value={-resultRecibo.segSocial}
+                                type="deducao"
+                                note="Pagamento mensal até dia 20"
+                              />
+                            )}
+
+                            {/* Resultado final */}
+                            <div className="mt-4 p-4 rounded-2xl border-2 border-brand bg-white dark:bg-stone-950">
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="text-sm font-semibold text-stone-700 dark:text-stone-300">
+                                      Disponível para gastar
+                                    </div>
+                                    <InfoTip>
+                                      O que podes gastar sem medo: o que entra
+                                      na tua conta, já com IVA e Segurança
+                                      Social reservados. A retenção foi
+                                      adiantada pelo cliente — será acertada no
+                                      IRS anual.
+                                    </InfoTip>
+                                  </div>
+                                  <div className="text-xs text-stone-400 mt-0.5">
+                                    {resultRecibo.taxaIVA > 0
+                                      ? "Depois de IVA e SS reservados"
+                                      : "Depois de SS reservada"}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-display text-2xl font-semibold text-brand">
+                                    <AnimatedNumber
+                                      value={resultRecibo.liquido}
+                                    />
+                                  </div>
+                                  <div className="text-xs text-stone-400">
+                                    {pct(resultRecibo.liquido / (bruto || 1))}{" "}
+                                    do total
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* ── Alertas fiscais contextuais ─────────────────── */}
+                            <div className="mt-3 space-y-2">
+                              {/* Avisos do motor fiscal (dispensa retenção, limites) */}
+                              {resultRecibo.avisos?.map(
+                                (a: string, i: number) => (
+                                  <div
+                                    key={i}
+                                    className="flex items-start gap-2.5 p-3 rounded-xl border bg-alert-bg border-alert-border"
+                                  >
+                                    <span className="text-alert-text mt-0.5 flex-shrink-0">
+                                      <Warning size={14} />
+                                    </span>
+                                    <span className="text-xs leading-relaxed text-alert-text">
+                                      {a}
+                                    </span>
+                                  </div>
                                 ),
                               )}
-                              /ano vs. taxa liberatória 28%
-                              {opcaoEnglobamento
-                                ? " — já aplicado ✓"
-                                : " — activa acima"}
-                              .
+
+                              {/* Alerta: IVA cobrado mas faturação estimada abaixo do limite Art. 53.º */}
+                              {temIva && base * 12 < IVA_ISENCAO_LIMITE && (
+                                <div className="flex items-start gap-2.5 p-3 rounded-xl border bg-alert-bg border-alert-border">
+                                  <span className="text-alert-text mt-0.5 flex-shrink-0">
+                                    <Warning size={14} />
+                                  </span>
+                                  <span className="text-xs leading-relaxed text-alert-text">
+                                    Com esta faturação estimada (
+                                    {fmt(Math.round(base * 12))}/ano),
+                                    provavelmente qualificavas para{" "}
+                                    <strong>
+                                      isenção de IVA (Art. 53.º CIVA)
+                                    </strong>{" "}
+                                    — limite{" "}
+                                    {IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}{" "}
+                                    €/ano. Sendo isento, não cobras IVA e o teu
+                                    disponível sobe para{" "}
+                                    <strong>
+                                      {fmt(
+                                        Math.round(
+                                          bruto -
+                                            bruto *
+                                              TIPO_ATIVIDADE_PARAMS[tipoAtiv]
+                                                .ret -
+                                            base * 0.7 * SS_TAXA_TI,
+                                        ),
+                                      )}
+                                    </strong>
+                                    .
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Info: retenção possivelmente reembolsada (abaixo do mínimo de existência) */}
+                              {resultRecibo.retencaoIRS > 0 &&
+                                base * 12 < MINIMO_EXISTENCIA_2026 && (
+                                  <div className="flex items-start gap-2.5 p-3 rounded-xl border border-brand/30 bg-brand-light">
+                                    <span className="text-brand mt-0.5 flex-shrink-0">
+                                      <Check size={14} />
+                                    </span>
+                                    <span className="text-xs leading-relaxed text-brand-dark">
+                                      Com faturação anual estimada de{" "}
+                                      {fmt(Math.round(base * 12))} €, o teu
+                                      rendimento coletável fica abaixo do{" "}
+                                      <strong>
+                                        mínimo de existência (
+                                        {MINIMO_EXISTENCIA_2026.toLocaleString(
+                                          "pt-PT",
+                                        )}{" "}
+                                        €)
+                                      </strong>{" "}
+                                      — IRS = 0 €. A retenção na fonte (
+                                      {fmt(
+                                        Math.round(
+                                          resultRecibo.retencaoIRS * 12,
+                                        ),
+                                      )}
+                                      /ano) deve ser totalmente{" "}
+                                      <strong>reembolsada</strong> na declaração
+                                      de IRS anual.
+                                    </span>
+                                  </div>
+                                )}
+                              {ifici && irsJovemAno > 0 && (
+                                <div className="flex items-start gap-2 p-3 rounded-xl bg-alert-bg border border-alert-border">
+                                  <Warning
+                                    size={14}
+                                    className="flex-shrink-0 mt-0.5 text-alert-text"
+                                  />
+                                  <span className="text-xs text-alert-text">
+                                    IFICI e IRS Jovem são incompatíveis — não
+                                    podem ser cumulados. Usa apenas um.
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {modoInput === "anual" && (
+                        /* Breakdown anual RV */
+                        <div className="space-y-1 flex-1">
+                          <DetalheRow
+                            label="Faturação bruta anual"
+                            value={resultAnualRV.faturacao}
+                            type="neutral"
+                          />
+                          <DetalheRow
+                            label={`Rendimento coletável (coef. ${pct(resultAnualRV.coeficiente)})`}
+                            value={resultAnualRV.rendColetavel}
+                            type="neutral"
+                            note="Regime simplificado — 25% presumido como despesa"
+                          />
+                          {resultAnualRV.ssAnual > 0 && (
+                            <DetalheRow
+                              label="Dedução SS paga (Art. 31.º n.º 2 CIRS)"
+                              value={-resultAnualRV.ssAnual}
+                              type="deducao"
+                              note="SS dedutível ao rendimento coletável"
+                            />
+                          )}
+                          {/* Particularidades individuais no breakdown */}
+                          {resultAnualRV.rendColetavelAjustado <
+                            resultAnualRV.rendColetavel && (
+                            <DetalheRow
+                              label="Exclusão deficiência Cat. B (Art. 56.º-A CIRS)"
+                              value={
+                                -(
+                                  resultAnualRV.rendColetavel -
+                                  resultAnualRV.rendColetavelAjustado
+                                )
+                              }
+                              type="deducao"
+                              note="15% excluídos, máx €2 500 por categoria"
+                            />
+                          )}
+                          {resultAnualRV.ificiAtivo ? (
+                            <DetalheRow
+                              label={`IRS IFICI — taxa flat ${pct(IFICI_TAXA_FLAT)} (Art. 58.º-A EBF)`}
+                              value={-resultAnualRV.irsBruto}
+                              type="warning"
+                              note="Taxa autónoma 20% durante 10 anos · profissões elegíveis"
+                            />
+                          ) : (
+                            <DetalheRow
+                              label="IRS liquidado (escalões progressivos)"
+                              value={-resultAnualRV.irsBruto}
+                              type="warning"
+                              note={`Taxa efetiva ${pct(resultAnualRV.taxaEfetiva)}`}
+                            />
+                          )}
+                          {resultAnualRV.deducoesColeta.total > 0 && (
+                            <DetalheRow
+                              label="Deduções à coleta (dependentes, saúde, educação...)"
+                              value={resultAnualRV.deducoesColeta.total}
+                              type="beneficio"
+                              note="Subtraídas diretamente ao IRS calculado"
+                            />
+                          )}
+                          {resultAnualRV.isencaoJovemValor > 0 && (
+                            <DetalheRow
+                              label={`IRS Jovem — isenção ${pct(resultAnualRV.isencaoJovemPct)} (Art. 12.º-B)`}
+                              value={-resultAnualRV.isencaoJovemValor}
+                              type="deducao"
+                              note={`Limite ${IRS_JOVEM_LIMITE_2026.toLocaleString("pt-PT")}€ (55×IAS)`}
+                            />
+                          )}
+                          <DetalheRow
+                            label="Rendimento tributável"
+                            value={resultAnualRV.rendTributavel}
+                            type="subtotal"
+                            note={
+                              resultAnualRV.rendTributavel <=
+                              MINIMO_EXISTENCIA_2026
+                                ? "Abaixo do mínimo de existência — IRS = 0€"
+                                : ""
+                            }
+                          />
+                          {resultAnualRV.ssAnual > 0 && (
+                            <DetalheRow
+                              label="Segurança Social (21,4% × 70%)"
+                              value={-resultAnualRV.ssAnual}
+                              type="deducao"
+                              note="IAS 2026: 537,13€ · máx. 12×IAS/mês"
+                            />
+                          )}
+
+                          <div className="mt-4 p-4 rounded-2xl border-2 border-brand bg-white dark:bg-stone-950">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <div className="text-sm font-semibold text-stone-700 dark:text-stone-300">
+                                  Líquido anual
+                                </div>
+                                <div className="text-xs text-stone-400 mt-0.5">
+                                  ≈ {fmt(resultAnualRV.liquido / 12)}/mês
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-display text-2xl font-semibold text-brand">
+                                  <AnimatedNumber
+                                    value={resultAnualRV.liquido}
+                                  />
+                                </div>
+                                <div className="text-xs text-stone-400">
+                                  {pct(
+                                    resultAnualRV.liquido / (brutoAnual || 1),
+                                  )}{" "}
+                                  do bruto
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* ── Comparação com Contabilidade Organizada ── */}
+                          {contabOrganizada && resultOrganizada && (
+                            <div
+                              className={`mt-4 rounded-2xl border ${
+                                resultOrganizada.vantagemVsSimplificado >= 0
+                                  ? "border-emerald-300 bg-emerald-50"
+                                  : "border-dashed border-stone-300 bg-stone-50"
+                              } p-4 space-y-2 dark:border-stone-700 dark:bg-stone-900`}
+                            >
+                              <div className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">
+                                Alternativa: Contabilidade Organizada (Art. 28.º
+                                CIRS)
+                              </div>
+                              <div className="space-y-1">
+                                <DetalheRow
+                                  label="Faturação"
+                                  value={resultOrganizada.faturacao}
+                                  type="neutral"
+                                />
+                                <DetalheRow
+                                  label="Despesas reais documentadas"
+                                  value={-resultOrganizada.despesasReais}
+                                  type="deducao"
+                                />
+                                <DetalheRow
+                                  label={`Custo contabilista OCC (${fmt(CONTAB_ORG_CUSTO_MENSAL)}/mês)`}
+                                  value={-resultOrganizada.custoContabilista}
+                                  type="deducao"
+                                />
+                                <DetalheRow
+                                  label="Rendimento líquido de despesas"
+                                  value={resultOrganizada.rendimentoLiquido}
+                                  type="subtotal"
+                                />
+                                {resultOrganizada.ssAnual > 0 && (
+                                  <DetalheRow
+                                    label="Segurança Social (21,4% × 70%)"
+                                    value={-resultOrganizada.ssAnual}
+                                    type="deducao"
+                                  />
+                                )}
+                                {resultOrganizada.isencaoJovemValor > 0 && (
+                                  <DetalheRow
+                                    label="IRS Jovem — isenção"
+                                    value={-resultOrganizada.isencaoJovemValor}
+                                    type="deducao"
+                                  />
+                                )}
+                                <DetalheRow
+                                  label="IRS (escalões progressivos)"
+                                  value={-resultOrganizada.irs}
+                                  type="warning"
+                                  note={`Taxa efetiva ${pct(resultOrganizada.taxaEfetiva)}`}
+                                />
+                                {resultOrganizada.ta.total > 0 && (
+                                  <DetalheRow
+                                    label="Tributação Autónoma (Art. 88.º CIRC)"
+                                    value={-resultOrganizada.ta.total}
+                                    type="warning"
+                                    note="Viaturas, representação, ajudas de custo"
+                                  />
+                                )}
+                              </div>
+                              <div
+                                className={`flex items-center justify-between p-3 rounded-xl border-2 mt-2 ${
+                                  resultOrganizada.vantagemVsSimplificado >= 0
+                                    ? "border-emerald-400 bg-white"
+                                    : "border-stone-200 bg-white"
+                                }`}
+                              >
+                                <div>
+                                  <div
+                                    className={`text-sm font-semibold ${resultOrganizada.vantagemVsSimplificado >= 0 ? "text-emerald-800" : "text-stone-700"}`}
+                                  >
+                                    Líquido — organizada
+                                  </div>
+                                  <div
+                                    className={`text-xs mt-0.5 ${resultOrganizada.vantagemVsSimplificado >= 0 ? "text-emerald-600" : "text-stone-400"}`}
+                                  >
+                                    {resultOrganizada.vantagemVsSimplificado >=
+                                    0
+                                      ? `✓ Mais ${fmt(Math.round(resultOrganizada.vantagemVsSimplificado))}/ano que simplificado`
+                                      : `✗ Menos ${fmt(Math.round(Math.abs(resultOrganizada.vantagemVsSimplificado)))}/ano que simplificado`}
+                                  </div>
+                                </div>
+                                <div
+                                  className={`font-display text-xl font-semibold ${resultOrganizada.vantagemVsSimplificado >= 0 ? "text-emerald-800" : "text-stone-700"}`}
+                                >
+                                  <AnimatedNumber
+                                    value={resultOrganizada.liquido}
+                                  />
+                                </div>
+                              </div>
+                              <p className="text-[10px] text-stone-400 leading-relaxed mt-2">
+                                Ponto de equilíbrio (breakeven): despesas reais
+                                &gt;{" "}
+                                {fmt(
+                                  Math.round(
+                                    resultOrganizada.breakEvenDespesas,
+                                  ),
+                                )}{" "}
+                                sem TA. Com TA, o limiar sobe conforme encargos
+                                com viatura e representação.
+                              </p>
+                            </div>
+                          )}
+
+                          {resultAnualRV.acertoIRS > 0 && (
+                            <div className="mt-3 flex items-start gap-2.5 p-3 rounded-xl border bg-brand-light border-brand/30">
+                              <span className="text-brand mt-0.5 flex-shrink-0">
+                                <Check size={14} />
+                              </span>
+                              <span className="text-xs leading-relaxed text-brand-dark">
+                                Reembolso estimado IRS:{" "}
+                                {fmt(resultAnualRV.acertoIRS)} (retiveste{" "}
+                                {fmt(resultAnualRV.retencaoAnual)} · IRS real{" "}
+                                {fmt(resultAnualRV.irs)})
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Calendário fiscal */}
+                      <TimelineFiscal
+                        ssAnualMensal={
+                          isencaoSS ? 0 : calcularSSAnual(brutoAnual) / 12
+                        }
+                        isencaoSS={isencaoSS}
+                        acertoIRS={resultAnualRV.acertoIRS}
+                        temIva={temIva}
+                        ivaTotal={temIva ? resultRecibo.iva * 12 : 0}
+                        faturacaoAnual={brutoAnual}
+                        className="mb-5"
+                      />
+
+                      <p className="text-xs text-stone-400 mt-5 leading-relaxed">
+                        Estimativa fiscal 2026. Escalões IRS atualizados 3,51%
+                        pelo OE2026. Mínimo de existência:{" "}
+                        {MINIMO_EXISTENCIA_2026.toLocaleString("pt-PT")}€. Não
+                        substitui aconselhamento de contabilista certificado.
+                      </p>
+                      <Link
+                        href="/dashboard/simulador"
+                        className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-brand transition-colors hover:text-brand-dark"
+                      >
+                        Ver apuramento IRS anual detalhado por escalões
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          aria-hidden
+                        >
+                          <path
+                            d="M5 12h13M13 6l6 6-6 6"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </Link>
+                    </m.div>
+                  ) : (
+                    /* ── Painel Empresa ── */
+                    <m.div
+                      key="empresa"
+                      initial={{ opacity: 0, x: 12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -12 }}
+                      transition={{ duration: 0.2 }}
+                      className="flex flex-col flex-1"
+                    >
+                      {modoInput === "recibo" && (
+                        <div className="mb-4 flex items-start gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs text-stone-500 dark:border-stone-700 dark:bg-stone-800">
+                          <Warning
+                            size={13}
+                            className="flex-shrink-0 mt-0.5 text-stone-400"
+                          />
+                          <span>
+                            Comparação baseada em {fmt(bruto)} × 12 ={" "}
+                            {fmt(brutoAnual)}/ano. Muda para o modo Anual para
+                            valores mais precisos.
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="mb-8">
+                        <div className="text-sm font-medium text-stone-500 uppercase tracking-wider mb-1">
+                          Líquido estimado — empresa (Lda)
+                        </div>
+                        <div className="font-display text-4xl sm:text-5xl font-semibold leading-none mb-1 text-brand">
+                          <AnimatedNumber value={liquidoEmpresaFinal} />
+                        </div>
+                        <div className="text-sm text-stone-400 mt-1">
+                          de <AnimatedNumber value={brutoAnual} /> faturados/ano
+                        </div>
+                      </div>
+
+                      {/* Barra empresa — atualizada com TA e benefícios */}
+                      <div className="mb-6">
+                        <div className="flex h-3 rounded-full overflow-hidden gap-0.5 mb-3">
+                          {(() => {
+                            const total = brutoAnual || 1;
+                            const irsDiv = opcaoEnglobamento
+                              ? resultEmpresa.irsDividendosEnglobamento
+                              : resultEmpresa.irsDividendosLiberatoria;
+                            return (
+                              <>
+                                <div
+                                  style={{
+                                    width: `${(liquidoEmpresaFinal / total) * 100}%`,
+                                    background: "#1D9E75",
+                                  }}
+                                  className="transition-all duration-500 rounded-l-full"
+                                />
+                                <div
+                                  style={{
+                                    width: `${(resultEmpresa.ircAposBeneficios / total) * 100}%`,
+                                    background: "#9FE1CB",
+                                  }}
+                                  className="transition-all duration-500"
+                                />
+                                {resultEmpresa.ta.total > 0 && (
+                                  <div
+                                    style={{
+                                      width: `${(resultEmpresa.ta.total / total) * 100}%`,
+                                      background: "#FCD34D",
+                                    }}
+                                    className="transition-all duration-500"
+                                  />
+                                )}
+                                {irsDiv > 0 && (
+                                  <div
+                                    style={{
+                                      width: `${(irsDiv / total) * 100}%`,
+                                      background: "#FBBF24",
+                                    }}
+                                    className="transition-all duration-500"
+                                  />
+                                )}
+                                <div
+                                  style={{
+                                    width: `${(resultEmpresa.totalCustos / total) * 100}%`,
+                                    background: "#D3D1C7",
+                                  }}
+                                  className="transition-all duration-500 rounded-r-full"
+                                />
+                              </>
+                            );
+                          })()}
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                          {[
+                            { label: "Teu", color: "#1D9E75", show: true },
+                            {
+                              label: "IRC após benefícios",
+                              color: "#9FE1CB",
+                              show: true,
+                            },
+                            {
+                              label: "Tributação Autónoma",
+                              color: "#FCD34D",
+                              show: resultEmpresa.ta.total > 0,
+                            },
+                            {
+                              label: `IRS Div. (${opcaoEnglobamento ? "englobamento" : "28%"})`,
+                              color: "#FBBF24",
+                              show: distribuirDividendos,
+                            },
+                            {
+                              label: "Custos + salário",
+                              color: "#B4B2A9",
+                              show: true,
+                            },
+                          ]
+                            .filter((l) => l.show)
+                            .map((l) => (
+                              <div
+                                key={l.label}
+                                className="flex items-center gap-1.5"
+                              >
+                                <div
+                                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                                  style={{ background: l.color }}
+                                />
+                                <span className="text-xs text-stone-500">
+                                  {l.label}
+                                </span>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+
+                      {/* Breakdown empresa — detalhado */}
+                      <div className="space-y-1 flex-1">
+                        <DetalheRow
+                          label="Faturação"
+                          value={brutoAnual}
+                          type="neutral"
+                          note="Volume de negócios anual"
+                        />
+
+                        {resultEmpresa.despesasOper > 0 && (
+                          <DetalheRow
+                            label="Despesas operacionais"
+                            value={-resultEmpresa.despesasOper}
+                            type="deducao"
+                            note="Dedutíveis ao lucro tributável"
+                          />
+                        )}
+                        {resultEmpresa.custosExtra > 0 && (
+                          <DetalheRow
+                            label="Custos estrutura empresa"
+                            value={-resultEmpresa.custosExtra}
+                            type="deducao"
+                            note="Contabilidade, software, etc."
+                          />
+                        )}
+                        {resultEmpresa.custoConstituicao > 0 && (
+                          <DetalheRow
+                            label="Custo constituição (amortizado)"
+                            value={-resultEmpresa.custoConstituicao}
+                            type="deducao"
+                            note={`${custoConstituicao}€ ÷ ${anosAmortizacao} anos`}
+                          />
+                        )}
+                        {resultEmpresa.salGerente > 0 && (
+                          <>
+                            <DetalheRow
+                              label="Salário gerente (bruto anual)"
+                              value={-resultEmpresa.salGerente}
+                              type="deducao"
+                              note="Custo dedutível da empresa"
+                            />
+                            <DetalheRow
+                              label="SS empresa + trabalhador"
+                              value={-resultEmpresa.ssSalGerente}
+                              type="deducao"
+                              note="23,75% (empresa) + 11% (trabalhador)"
+                            />
+                          </>
+                        )}
+
+                        <DetalheRow
+                          label="Lucro tributável"
+                          value={resultEmpresa.lucroTributavel}
+                          type="subtotal"
+                          note="Antes de IRC"
+                        />
+                        <DetalheRow
+                          label="IRC base — coleta (PME 15%/50k€ + 19%)"
+                          value={-resultEmpresa.coleta}
+                          type="deducao"
+                          note="OE2026: taxa geral 19% (era 20% em 2025)"
+                        />
+
+                        {/* Benefícios fiscais */}
+                        {resultEmpresa.beneficios.rfai > 0 && (
+                          <DetalheRow
+                            label={`RFAI — ${regiaoRFAI === "interior" ? "Norte/Centro/Alentejo/Açores/Madeira (30%)" : "Lisboa/Algarve (10%)"}`}
+                            value={resultEmpresa.beneficios.rfai}
+                            type="beneficio"
+                            note={
+                              resultEmpresa.beneficios.rfai <
+                              resultEmpresa.beneficios.rfaiBruto
+                                ? `Bruto: ${fmt(Math.round(resultEmpresa.beneficios.rfaiBruto))} — limitado à coleta`
+                                : "Dedução à coleta IRC (Art. 22.º CFI)"
+                            }
+                          />
+                        )}
+                        {resultEmpresa.beneficios.dlrr > 0 && (
+                          <DetalheRow
+                            label="DLRR — 10% dos lucros retidos reinvestidos"
+                            value={resultEmpresa.beneficios.dlrr}
+                            type="beneficio"
+                            note="Limite 25% da coleta IRC (Art. 27.º-A CFI)"
+                          />
+                        )}
+                        {resultEmpresa.beneficios.sifide > 0 && (
+                          <DetalheRow
+                            label={`SIFIDE II — I&D (${tipoSifide === "startup" ? "82,5%" : tipoSifide === "pme_jovem" ? "47,5%" : "32,5%"})`}
+                            value={resultEmpresa.beneficios.sifide}
+                            type="beneficio"
+                            note="Certificação ANI. Reportável 12 anos."
+                          />
+                        )}
+                        {resultEmpresa.beneficios.rfaiContratual > 0 && (
+                          <DetalheRow
+                            label="RFAI Contratual (Art. 8.º–22.º CFI)"
+                            value={resultEmpresa.beneficios.rfaiContratual}
+                            type="beneficio"
+                            note="Crédito fiscal contratual — negociado com IAPMEI/AICEP"
+                          />
+                        )}
+                        {resultEmpresa.beneficios.total > 0 && (
+                          <DetalheRow
+                            label="IRC após benefícios fiscais"
+                            value={-resultEmpresa.ircAposBeneficios}
+                            type="deducao"
+                            note={`Poupança RFAI+DLRR+SIFIDE: ${fmt(Math.round(resultEmpresa.beneficios.total))}`}
+                          />
+                        )}
+
+                        {/* Tributação Autónoma */}
+                        {resultEmpresa.ta.total > 0 && (
+                          <>
+                            {resultEmpresa.ta.viatura > 0 && (
+                              <DetalheRow
+                                label={`TA — Viaturas (${pct(TA_VIATURAS[tipoViatura])}${emPrejuizo && !excecaoPrejuizo ? " +10pp" : ""})`}
+                                value={-resultEmpresa.ta.viatura}
+                                type="warning"
+                                note="Art. 88.º n.º 3/18 CIRC — sobre encargos anuais"
+                              />
+                            )}
+                            {resultEmpresa.ta.representacao > 0 && (
+                              <DetalheRow
+                                label="TA — Despesas de representação (10%)"
+                                value={-resultEmpresa.ta.representacao}
+                                type="warning"
+                                note="Art. 88.º n.º 7 CIRC"
+                              />
+                            )}
+                            {resultEmpresa.ta.ajudasCusto > 0 && (
+                              <DetalheRow
+                                label="TA — Ajudas de custo (5%)"
+                                value={-resultEmpresa.ta.ajudasCusto}
+                                type="warning"
+                                note="Art. 88.º n.º 9 CIRC"
+                              />
+                            )}
+                            {resultEmpresa.ta.naoDocumentadas > 0 && (
+                              <DetalheRow
+                                label="TA — Despesas não documentadas (50%)"
+                                value={-resultEmpresa.ta.naoDocumentadas}
+                                type="warning"
+                                note="Art. 88.º n.º 1 CIRC"
+                              />
+                            )}
+                          </>
+                        )}
+
+                        <DetalheRow
+                          label="Derrama municipal (~1,5%)"
+                          value={-resultEmpresa.derramaMuni}
+                          type="deducao"
+                          note="Estimativa Lisboa/Porto — varia por município"
+                        />
+
+                        {/* Dividendos */}
+                        {distribuirDividendos ? (
+                          <>
+                            {resultEmpresa.irsDividendosEnglobamento <
+                              resultEmpresa.irsDividendosLiberatoria && (
+                              <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200">
+                                <Check
+                                  size={12}
+                                  className="flex-shrink-0 mt-0.5 text-emerald-600"
+                                />
+                                <span className="text-[11px] text-emerald-700">
+                                  Englobamento poupa{" "}
+                                  {fmt(
+                                    Math.round(
+                                      resultEmpresa.irsDividendosLiberatoria -
+                                        resultEmpresa.irsDividendosEnglobamento,
+                                    ),
+                                  )}
+                                  /ano vs. taxa liberatória 28%
+                                  {opcaoEnglobamento
+                                    ? " — já aplicado ✓"
+                                    : " — activa acima"}
+                                  .
+                                </span>
+                              </div>
+                            )}
+                            <DetalheRow
+                              label={
+                                opcaoEnglobamento
+                                  ? `IRS dividendos (englobamento 50% × ${pct(resultEmpresa.taxaMarginalGerente)} marg.)`
+                                  : "IRS dividendos (28% taxa liberatória)"
+                              }
+                              value={
+                                -(opcaoEnglobamento
+                                  ? resultEmpresa.irsDividendosEnglobamento
+                                  : resultEmpresa.irsDividendosLiberatoria)
+                              }
+                              type="warning"
+                              note={
+                                opcaoEnglobamento
+                                  ? "Art. 40.º-A CIRS — 50% incluído no rendimento coletável"
+                                  : "Art. 71.º CIRS — taxa liberatória final"
+                              }
+                            />
+                          </>
+                        ) : (
+                          <div className="flex items-center justify-between px-4 py-2.5 rounded-xl border bg-white border-stone-100">
+                            <span className="text-xs text-stone-500">
+                              Lucro retido na empresa (não distribuído)
+                            </span>
+                            <span className="text-xs font-semibold text-stone-600">
+                              {fmt(resultEmpresa.lucroLiquido)}
                             </span>
                           </div>
                         )}
-                        <DetalheRow
-                          label={
+
+                        <div className="mt-4 p-4 rounded-2xl border-2 border-brand bg-white dark:bg-stone-950">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <div className="text-sm font-semibold text-stone-700 dark:text-stone-300">
+                                Líquido para o dono
+                              </div>
+                              <div className="text-xs text-stone-400 mt-0.5">
+                                {resultEmpresa.salGerente > 0
+                                  ? "Salário líquido + dividendos líquidos"
+                                  : "Após IRC, TA, derrama e IRS dividendos"}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-display text-2xl font-semibold text-brand">
+                                <AnimatedNumber value={liquidoEmpresaFinal} />
+                              </div>
+                              <div className="text-xs text-stone-400">
+                                {pct(liquidoEmpresaFinal / (brutoAnual || 1))}{" "}
+                                do bruto
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-stone-400 mt-5 leading-relaxed">
+                        IRC PME 2026: 15%/50k€ + 19% (OE2026). TA viaturas:
+                        8%/25%/32% (OE2025); PHEV: 2,5%/7,5%/15%. RFAI: 30%
+                        interior + 10% litoral. SIFIDE II: 32,5%–82,5%
+                        (certificação ANI). Derrama ~1,5%. Não considera
+                        tributação autónoma personalizada, englobamento com
+                        outros rendimentos, RFAI por contrato, nem custos de
+                        constituição individuais. Validar com contabilista
+                        certificado (OCC).
+                      </p>
+                    </m.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+
+            {/* ── ComparacaoNarrativa ─────────────────────────────────────────── */}
+            <div className="border-t border-stone-100 dark:border-stone-800">
+              <ComparacaoNarrativa
+                liquidoRV={resultAnualRV.liquido}
+                liquidoEmpresa={liquidoEmpresaFinal}
+                faturacaoAnual={brutoAnual}
+                breakEven={breakEven}
+                custoFixoEstimado={custosExtra}
+                onVerDetalhe={() => setCenario("empresa")}
+                modoAtivo={cenario}
+                calcularLiquidoRV={calcularLiquidoRVFat}
+                calcularLiquidoEmpresa={calcularLiquidoEmpresaFat}
+              />
+            </div>
+
+            {/* ── Rodapé: comparação integrada ──────────────────────────────────── */}
+            <div className="border-t border-stone-100 bg-stone-50 px-4 py-5 sm:px-8 sm:py-6 dark:border-stone-800 dark:bg-stone-900">
+              <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-600">
+                Comparação — mesmos inputs, dois cenários
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 mb-3">
+                {/* Card Recibos Verdes */}
+                <div
+                  className={`relative rounded-2xl p-4 transition-all ${
+                    !empresaVence
+                      ? "border-2 border-brand bg-brand-light dark:bg-brand/10"
+                      : "border border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900"
+                  }`}
+                >
+                  {!empresaVence && (
+                    <span className="absolute right-3 top-3 rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-bold text-white">
+                      Melhor
+                    </span>
+                  )}
+                  <div
+                    className={`text-sm font-semibold ${!empresaVence ? "text-brand-dark" : "text-stone-700"}`}
+                  >
+                    Recibos Verdes
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-stone-400">
+                    Categoria B · Regime simplificado
+                  </div>
+                  <div
+                    className={`mt-2 font-display text-2xl font-semibold tabular-nums ${!empresaVence ? "text-brand-dark" : "text-stone-800 dark:text-stone-200"}`}
+                  >
+                    <AnimatedNumber value={resultAnualRV.liquido} />
+                  </div>
+                  <div className="text-[11px] text-stone-400">líquido/ano</div>
+                  <div className="mt-2 text-[11px] text-stone-400 space-y-0.5">
+                    <div>IRS: −{fmt(resultAnualRV.irs)}</div>
+                    <div>SS: −{fmt(resultAnualRV.ssAnual)}</div>
+                  </div>
+                </div>
+
+                {/* Card Empresa */}
+                <div
+                  className={`relative rounded-2xl p-4 transition-all ${
+                    empresaVence
+                      ? "border-2 border-brand bg-brand-light dark:bg-brand/10"
+                      : "border border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900"
+                  }`}
+                >
+                  {empresaVence && (
+                    <span className="absolute right-3 top-3 rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-bold text-white">
+                      Melhor
+                    </span>
+                  )}
+                  <div
+                    className={`text-sm font-semibold ${empresaVence ? "text-brand-dark" : "text-stone-700"}`}
+                  >
+                    Empresa (Lda)
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-stone-400">
+                    IRC PME +{" "}
+                    {distribuirDividendos ? "dividendos 28%" : "lucro retido"}
+                  </div>
+                  <div
+                    className={`mt-2 font-display text-2xl font-semibold tabular-nums ${empresaVence ? "text-brand-dark" : "text-stone-800 dark:text-stone-200"}`}
+                  >
+                    <AnimatedNumber value={liquidoEmpresaFinal} />
+                  </div>
+                  <div className="text-[11px] text-stone-400">líquido/ano</div>
+                  <div className="mt-2 text-[11px] text-stone-400 space-y-0.5">
+                    <div>IRC: −{fmt(resultEmpresa.ircAposBeneficios)}</div>
+                    {resultEmpresa.ta.total > 0 && (
+                      <div>TA: +{fmt(Math.round(resultEmpresa.ta.total))}</div>
+                    )}
+                    <div>Derrama: −{fmt(resultEmpresa.derramaMuni)}</div>
+                    {distribuirDividendos && (
+                      <div>
+                        IRS div: −
+                        {fmt(
+                          Math.round(
                             opcaoEnglobamento
-                              ? `IRS dividendos (englobamento 50% × ${pct(resultEmpresa.taxaMarginalGerente)} marg.)`
-                              : "IRS dividendos (28% taxa liberatória)"
-                          }
-                          value={
-                            -(opcaoEnglobamento
                               ? resultEmpresa.irsDividendosEnglobamento
-                              : resultEmpresa.irsDividendosLiberatoria)
-                          }
-                          type="warning"
-                          note={
-                            opcaoEnglobamento
-                              ? "Art. 40.º-A CIRS — 50% incluído no rendimento coletável"
-                              : "Art. 71.º CIRS — taxa liberatória final"
-                          }
-                        />
-                      </>
-                    ) : (
-                      <div className="flex items-center justify-between px-4 py-2.5 rounded-xl border bg-white border-stone-100">
-                        <span className="text-xs text-stone-500">
-                          Lucro retido na empresa (não distribuído)
-                        </span>
-                        <span className="text-xs font-semibold text-stone-600">
-                          {fmt(resultEmpresa.lucroLiquido)}
-                        </span>
+                              : resultEmpresa.irsDividendosLiberatoria,
+                          ),
+                        )}
                       </div>
                     )}
-
-                    <div className="mt-4 p-4 rounded-2xl border-2 border-brand bg-white dark:bg-stone-950">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <div className="text-sm font-semibold text-stone-700 dark:text-stone-300">
-                            Líquido para o dono
-                          </div>
-                          <div className="text-xs text-stone-400 mt-0.5">
-                            {resultEmpresa.salGerente > 0
-                              ? "Salário líquido + dividendos líquidos"
-                              : "Após IRC, TA, derrama e IRS dividendos"}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-display text-2xl font-semibold text-brand">
-                            <AnimatedNumber value={liquidoEmpresaFinal} />
-                          </div>
-                          <div className="text-xs text-stone-400">
-                            {pct(liquidoEmpresaFinal / (brutoAnual || 1))} do
-                            bruto
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <div>Custos: −{fmt(resultEmpresa.totalCustos)}</div>
                   </div>
+                </div>
+              </div>
 
-                  <p className="text-xs text-stone-400 mt-5 leading-relaxed">
-                    IRC PME 2026: 15%/50k€ + 19% (OE2026). TA viaturas:
-                    8%/25%/32% (OE2025); PHEV: 2,5%/7,5%/15%. RFAI: 30% interior
-                    + 10% litoral. SIFIDE II: 32,5%–82,5% (certificação ANI).
-                    Derrama ~1,5%. Não considera tributação autónoma
-                    personalizada, englobamento com outros rendimentos, RFAI por
-                    contrato, nem custos de constituição individuais. Validar
-                    com contabilista certificado (OCC).
-                  </p>
-                </m.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        {/* ── ComparacaoNarrativa ─────────────────────────────────────────── */}
-        <div className="border-t border-stone-100 dark:border-stone-800">
-          <ComparacaoNarrativa
-            liquidoRV={resultAnualRV.liquido}
-            liquidoEmpresa={liquidoEmpresaFinal}
-            faturacaoAnual={brutoAnual}
-            breakEven={breakEven}
-            custoFixoEstimado={custosExtra}
-            onVerDetalhe={() => setCenario("empresa")}
-            modoAtivo={cenario}
-            calcularLiquidoRV={calcularLiquidoRVFat}
-            calcularLiquidoEmpresa={calcularLiquidoEmpresaFat}
-          />
-        </div>
-
-        {/* ── Rodapé: comparação integrada ──────────────────────────────────── */}
-        <div className="border-t border-stone-100 bg-stone-50 px-4 py-5 sm:px-8 sm:py-6 dark:border-stone-800 dark:bg-stone-900">
-          <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-600">
-            Comparação — mesmos inputs, dois cenários
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 mb-3">
-            {/* Card Recibos Verdes */}
-            <div
-              className={`relative rounded-2xl p-4 transition-all ${
-                !empresaVence
-                  ? "border-2 border-brand bg-brand-light dark:bg-brand/10"
-                  : "border border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900"
-              }`}
-            >
-              {!empresaVence && (
-                <span className="absolute right-3 top-3 rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-bold text-white">
-                  Melhor
+              {/* Veredicto */}
+              <div
+                className={`flex items-center gap-2.5 rounded-2xl p-3.5 text-sm font-semibold ${
+                  empresaVence
+                    ? "bg-brand-light text-brand-dark"
+                    : "bg-cream text-stone-700"
+                }`}
+              >
+                <span className="flex-shrink-0 text-brand">
+                  <Check size={16} />
                 </span>
-              )}
-              <div
-                className={`text-sm font-semibold ${!empresaVence ? "text-brand-dark" : "text-stone-700"}`}
-              >
-                Recibos Verdes
+                {empresaVence ? (
+                  <span>
+                    Com {fmt(brutoAnual)}/ano, a empresa deixa-te com mais{" "}
+                    <strong>{fmt(diferenca)}/ano</strong> (
+                    {pct(diferenca / (brutoAnual || 1))}).
+                    {breakEven && ` Ponto de viragem: ${fmt(breakEven)}/ano.`}
+                  </span>
+                ) : (
+                  <span>
+                    Com {fmt(brutoAnual)}/ano, recibos verdes deixam-te com mais{" "}
+                    <strong>{fmt(diferenca)}/ano</strong> (
+                    {pct(diferenca / (brutoAnual || 1))}).
+                    {breakEven &&
+                      ` A empresa compensa acima de ${fmt(breakEven)}/ano.`}
+                  </span>
+                )}
               </div>
-              <div className="mt-0.5 text-[11px] text-stone-400">
-                Categoria B · Regime simplificado
-              </div>
-              <div
-                className={`mt-2 font-display text-2xl font-semibold tabular-nums ${!empresaVence ? "text-brand-dark" : "text-stone-800 dark:text-stone-200"}`}
-              >
-                <AnimatedNumber value={resultAnualRV.liquido} />
-              </div>
-              <div className="text-[11px] text-stone-400">líquido/ano</div>
-              <div className="mt-2 text-[11px] text-stone-400 space-y-0.5">
-                <div>IRS: −{fmt(resultAnualRV.irs)}</div>
-                <div>SS: −{fmt(resultAnualRV.ssAnual)}</div>
+
+              {/* Nota legal */}
+              <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-alert-border bg-alert-bg p-4">
+                <span className="mt-0.5 flex-shrink-0 text-alert-text">
+                  <Warning size={14} />
+                </span>
+                <p className="text-xs leading-relaxed text-alert-text">
+                  <strong>Fontes:</strong> Art. 31.º, 56.º-A, 68.º, 87.º, 101.º,
+                  101.º-B, 12.º-B CIRS | Art. 58.º-A EBF (IFICI) | CIVA Art.
+                  53.º e 9.º | Art. 88.º CIRC (TA) | CFI Art. 22.º–42.º
+                  (RFAI/DLRR/SIFIDE II) | CRC (SS independentes) | OE2026 (Lei
+                  n.º 73-A/2025) | IAS 2026: 537,13€. Estimativa de ordem de
+                  grandeza. <strong>Inclui:</strong> Tributação Autónoma
+                  viaturas e encargos (Art. 88.º CIRC), RFAI/DLRR/SIFIDE II,
+                  RFAI contratual, custos de constituição, benefícios municipais
+                  (IMI/IMT via RFAI), contabilidade organizada TI (Art.
+                  28.º/73.º CIRS), particularidades individuais (deficiência
+                  Art. 56.º-A + 87.º; IFICI Art. 58.º-A EBF; dependentes;
+                  deduções à coleta), englobamento de dividendos (Art. 40.º-A
+                  CIRS). <strong>Não modela:</strong> mais-valias e rendimentos
+                  de capitais, derrama estadual (&gt;€1,5M lucro), elegibilidade
+                  real de investimentos para RFAI, regimes de grupos de
+                  sociedades, nem dupla tributação internacional. Decisão de
+                  constituir sociedade deve ser validada com contabilista
+                  certificado (OCC).
+                </p>
               </div>
             </div>
-
-            {/* Card Empresa */}
-            <div
-              className={`relative rounded-2xl p-4 transition-all ${
-                empresaVence
-                  ? "border-2 border-brand bg-brand-light dark:bg-brand/10"
-                  : "border border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900"
-              }`}
-            >
-              {empresaVence && (
-                <span className="absolute right-3 top-3 rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-bold text-white">
-                  Melhor
-                </span>
-              )}
-              <div
-                className={`text-sm font-semibold ${empresaVence ? "text-brand-dark" : "text-stone-700"}`}
-              >
-                Empresa (Lda)
-              </div>
-              <div className="mt-0.5 text-[11px] text-stone-400">
-                IRC PME +{" "}
-                {distribuirDividendos ? "dividendos 28%" : "lucro retido"}
-              </div>
-              <div
-                className={`mt-2 font-display text-2xl font-semibold tabular-nums ${empresaVence ? "text-brand-dark" : "text-stone-800 dark:text-stone-200"}`}
-              >
-                <AnimatedNumber value={liquidoEmpresaFinal} />
-              </div>
-              <div className="text-[11px] text-stone-400">líquido/ano</div>
-              <div className="mt-2 text-[11px] text-stone-400 space-y-0.5">
-                <div>IRC: −{fmt(resultEmpresa.ircAposBeneficios)}</div>
-                {resultEmpresa.ta.total > 0 && (
-                  <div>TA: +{fmt(Math.round(resultEmpresa.ta.total))}</div>
-                )}
-                <div>Derrama: −{fmt(resultEmpresa.derramaMuni)}</div>
-                {distribuirDividendos && (
-                  <div>
-                    IRS div: −
-                    {fmt(
-                      Math.round(
-                        opcaoEnglobamento
-                          ? resultEmpresa.irsDividendosEnglobamento
-                          : resultEmpresa.irsDividendosLiberatoria,
-                      ),
-                    )}
-                  </div>
-                )}
-                <div>Custos: −{fmt(resultEmpresa.totalCustos)}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Veredicto */}
-          <div
-            className={`flex items-center gap-2.5 rounded-2xl p-3.5 text-sm font-semibold ${
-              empresaVence
-                ? "bg-brand-light text-brand-dark"
-                : "bg-cream text-stone-700"
-            }`}
-          >
-            <span className="flex-shrink-0 text-brand">
-              <Check size={16} />
-            </span>
-            {empresaVence ? (
-              <span>
-                Com {fmt(brutoAnual)}/ano, a empresa deixa-te com mais{" "}
-                <strong>{fmt(diferenca)}/ano</strong> (
-                {pct(diferenca / (brutoAnual || 1))}).
-                {breakEven && ` Ponto de viragem: ${fmt(breakEven)}/ano.`}
-              </span>
-            ) : (
-              <span>
-                Com {fmt(brutoAnual)}/ano, recibos verdes deixam-te com mais{" "}
-                <strong>{fmt(diferenca)}/ano</strong> (
-                {pct(diferenca / (brutoAnual || 1))}).
-                {breakEven &&
-                  ` A empresa compensa acima de ${fmt(breakEven)}/ano.`}
-              </span>
-            )}
-          </div>
-
-          {/* Nota legal */}
-          <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-alert-border bg-alert-bg p-4">
-            <span className="mt-0.5 flex-shrink-0 text-alert-text">
-              <Warning size={14} />
-            </span>
-            <p className="text-xs leading-relaxed text-alert-text">
-              <strong>Fontes:</strong> Art. 31.º, 56.º-A, 68.º, 87.º, 101.º,
-              101.º-B, 12.º-B CIRS | Art. 58.º-A EBF (IFICI) | CIVA Art. 53.º
-              e 9.º | Art. 88.º CIRC (TA) | CFI Art. 22.º–42.º
-              (RFAI/DLRR/SIFIDE II) | CRC (SS independentes) | OE2026 (Lei n.º
-              73-A/2025) | IAS 2026: 537,13€. Estimativa de ordem de grandeza.{" "}
-              <strong>Inclui:</strong> Tributação Autónoma viaturas e encargos
-              (Art. 88.º CIRC), RFAI/DLRR/SIFIDE II, RFAI contratual, custos
-              de constituição, benefícios municipais (IMI/IMT via RFAI),
-              contabilidade organizada TI (Art. 28.º/73.º CIRS), particularidades
-              individuais (deficiência Art. 56.º-A + 87.º; IFICI Art. 58.º-A
-              EBF; dependentes; deduções à coleta), englobamento de dividendos
-              (Art. 40.º-A CIRS).{" "}
-              <strong>Não modela:</strong> mais-valias e rendimentos de capitais,
-              derrama estadual (&gt;€1,5M lucro), elegibilidade real de
-              investimentos para RFAI, regimes de grupos de sociedades, nem
-              dupla tributação internacional. Decisão de constituir sociedade
-              deve ser validada com contabilista certificado (OCC).
-            </p>
-          </div>
-        </div>
           </>
         )}
       </div>
