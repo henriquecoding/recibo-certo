@@ -215,6 +215,18 @@ export function limiteGlobalDeducoes(coletavel: number): number {
   );
 }
 
+/** Escalão aplicado no cálculo progressivo do IRS. */
+export interface EscalaoAplicado {
+  /** Limite superior do escalão (null = sem limite). */
+  ate: number | null;
+  /** Taxa marginal aplicada. */
+  taxa: number;
+  /** Rendimento que caiu dentro deste escalão. */
+  rendimento: number;
+  /** Imposto calculado neste escalão (rendimento × taxa). */
+  imposto: number;
+}
+
 /**
  * IRS sobre o rendimento coletável, pelo método progressivo por escalões
  * (cada fração do rendimento é tributada à taxa marginal do seu escalão).
@@ -234,6 +246,38 @@ export function irsProgressivo(coletavel: number): number {
     if (restante <= 0) break;
   }
   return imposto;
+}
+
+/**
+ * Versão detalhada de irsProgressivo: retorna o imposto total e o detalhamento
+ * por escalão (quais escalões foram tocados e quanto).
+ */
+export function irsProgressivoDetalhado(coletavel: number): {
+  imposto: number;
+  escaloes: EscalaoAplicado[];
+} {
+  let restante = sanitize(coletavel);
+  if (restante === 0) return { imposto: 0, escaloes: [] };
+  let imposto = 0;
+  let inferior = 0;
+  const escaloes: EscalaoAplicado[] = [];
+  for (const escalao of ESCALOES_IRS.value) {
+    const superior = escalao.ate ?? Infinity;
+    const tranche = Math.min(restante + inferior, superior) - inferior;
+    if (tranche <= 0) break;
+    const impostoEscalao = tranche * escalao.taxa;
+    imposto += impostoEscalao;
+    escaloes.push({
+      ate: escalao.ate,
+      taxa: escalao.taxa,
+      rendimento: tranche,
+      imposto: impostoEscalao,
+    });
+    restante -= tranche;
+    inferior = superior;
+    if (restante <= 0) break;
+  }
+  return { imposto, escaloes };
 }
 
 export interface DeducoesInput {
@@ -331,6 +375,8 @@ export interface SimulacaoIRS {
   exclusaoDeficiencia: number;
   /** Coleta antes das deduções à coleta. */
   coletaBruta: number;
+  /** Detalhamento por escalão progressivo (vazio se IFICI aplicado). */
+  escaloesAplicados: EscalaoAplicado[];
   deducaoDependentes: number;
   /** Deduções de despesas (saúde+educação+gerais+rendas) após limite global. */
   deducaoDespesas: number;
@@ -423,9 +469,23 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
 
   // ── Coleta: IFICI = taxa flat 20%; senão escalões progressivos ────────────
   const divisor = conjunta ? QUOCIENTE_CONJUGAL.value : 1;
-  const coletaBruta = ificiAplicado
-    ? rendimentoColetavel * IFICI_TAXA.value
-    : irsProgressivo(rendimentoColetavel / divisor) * divisor;
+  let coletaBruta: number;
+  let escaloesAplicados: EscalaoAplicado[];
+  if (ificiAplicado) {
+    coletaBruta = rendimentoColetavel * IFICI_TAXA.value;
+    escaloesAplicados = [];
+  } else {
+    const detalhado = irsProgressivoDetalhado(rendimentoColetavel / divisor);
+    coletaBruta = detalhado.imposto * divisor;
+    // Escalar de volta se divisor != 1 (tributação conjunta)
+    escaloesAplicados = divisor !== 1
+      ? detalhado.escaloes.map(e => ({
+          ...e,
+          rendimento: e.rendimento * divisor,
+          imposto: e.imposto * divisor,
+        }))
+      : detalhado.escaloes;
+  }
 
   // ── Deduções à coleta ─────────────────────────────────────────────────────
   // Dependentes: suporta detalhe (bebe, deficientes) ou contagem simples
@@ -517,6 +577,7 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     conjunta,
     ificiAplicado,
     coletaBruta,
+    escaloesAplicados,
     deducaoDependentes,
     deducaoDespesas,
     deducaoDeficiencia,

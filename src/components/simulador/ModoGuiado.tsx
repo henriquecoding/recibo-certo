@@ -34,8 +34,6 @@ import { calcular, simularIRSAnual, type RegimeIVA } from "@/lib/fiscal";
 
 const IVA_LIMITE = 15_000;
 const IVA_LIMITE_IMEDIATO = 18_750;
-const SS_TAXA = 0.214;
-const SS_BASE_SERVICOS = 0.7;
 const IRS_JOVEM_ISENCAO: Record<number, number> = {
   1: 1.0,
   2: 0.75,
@@ -94,7 +92,7 @@ const CARDS_ATIV: CardAtiv[] = [
     id: "art151",
     titulo: "Consultor / Programador / Designer",
     sub: "Profissão liberal (Art. 151.º CIRS)",
-    exemplos: "Dev, designer, advogado, arquiteto…",
+    exemplos: "Dev, designer, arquiteto, advogado, solicitador, médico, psicólogo, nutricionista, enfermeiro, engenheiro, consultor, gestor, contabilista, jornalista, ator, músico, professor…",
     coef: 0.75,
     ret: 0.23,
     baseSS: "servicos",
@@ -258,7 +256,8 @@ export default function ModoGuiado({
   // Passo 2: Faturação — novo modelo recibos
   const [modoFat, setModoFat] = useState<"total" | "individual">("total");
   const [totalInput, setTotalInput] = useState("1500");
-  const [totalIva, setTotalIva] = useState(0.23);
+  // 0 = isento por defeito (sincronizado com regimeIVA="isento")
+  const [totalIva, setTotalIva] = useState(0);
   const [recibosItems, setRecibosItems] = useState<ReciboItem[]>([
     { id: 1, descricao: "", valorComIva: "", taxaIva: 0.23 },
   ]);
@@ -295,9 +294,12 @@ export default function ModoGuiado({
   // Passo 3: Situação
   const [acumulaEmprego, setAcumulaEmprego] = useState(false);
   const [isencaoSSPrimeiroAno, setIsencaoSSPrimeiroAno] = useState(false);
+  const [isencaoCpas, setIsencaoCpas] = useState(false); // CPAS/CGA — paga outro regime
   const [irsJovemOn, setIrsJovemOn] = useState(false);
   const [irsJovemAno, setIrsJovemAno] = useState(1);
   const [ifici, setIfici] = useState(false);
+  const [rnhAntigo, setRnhAntigo] = useState(false); // RNH antigo — ainda em vigência
+  const [exResidente, setExResidente] = useState(false); // Programa Regressar
   const [deficiencia, setDeficiencia] = useState(false);
   const [mostrarDeducoes, setMostrarDeducoes] = useState(false);
   const [despSaude, setDespSaude] = useState(0);
@@ -307,7 +309,7 @@ export default function ModoGuiado({
 
   // Dados derivados
   const card = CARDS_ATIV.find((c) => c.id === tipoAtiv)!;
-  const isencaoSS = isencaoSSPrimeiroAno || acumulaEmprego;
+  const isencaoSS = isencaoSSPrimeiroAno || acumulaEmprego || isencaoCpas;
   const jovemAno = irsJovemOn ? irsJovemAno : 0;
   const brutoAnual = bruto * recibosAno;
 
@@ -364,9 +366,8 @@ export default function ModoGuiado({
     ],
   );
   const irsAnual = simPreview.irsEstimado;
-  const ssAnual = isencaoSS
-    ? 0
-    : Math.min(bruto * SS_BASE_SERVICOS * SS_TAXA, 1_379) * recibosAno;
+  // Usa segSocial do calcular() que já aplica o coeficiente correto (bens=0,2 / serviços=0,7)
+  const ssAnual = resultRecibo.segSocial * recibosAno;
   const ivaAnual = mensalIva * mesesFat;
   const liquidoAnual = brutoAnual - irsAnual - ssAnual;
 
@@ -563,11 +564,28 @@ export default function ModoGuiado({
                     onRecibosItems={setRecibosItems}
                     onMesesFat={(m) => {
                       setMesesFat(m);
-                      if (mensalSemIva * m <= IVA_LIMITE)
+                      if (mensalSemIva * m <= IVA_LIMITE) {
                         setRegimeIVA("isento");
+                        setTotalIva(0);
+                      }
                     }}
                     onRegiaoChange={setRegiao}
-                    onRegimeIVAChange={setRegimeIVA}
+                    onRegimeIVAChange={(regime) => {
+                      setRegimeIVA(regime);
+                      // Sincronizar totalIva com o regime selecionado
+                      if (regime === "isento") {
+                        setTotalIva(0);
+                      } else {
+                        const taxas = IVA_TAXAS[regiao].value;
+                        const taxa =
+                          regime === "reduzida"
+                            ? taxas.reduzida
+                            : regime === "intermedia"
+                              ? taxas.intermedia
+                              : taxas.normal;
+                        setTotalIva(taxa);
+                      }
+                    }}
                   />
                 </m.div>
               )}
@@ -585,12 +603,18 @@ export default function ModoGuiado({
                     setAcumulaEmprego={setAcumulaEmprego}
                     isencaoSSPrimeiroAno={isencaoSSPrimeiroAno}
                     setIsencaoSSPrimeiroAno={setIsencaoSSPrimeiroAno}
+                    isencaoCpas={isencaoCpas}
+                    setIsencaoCpas={setIsencaoCpas}
                     irsJovemOn={irsJovemOn}
                     setIrsJovemOn={setIrsJovemOn}
                     irsJovemAno={irsJovemAno}
                     setIrsJovemAno={setIrsJovemAno}
                     ifici={ifici}
                     setIfici={setIfici}
+                    rnhAntigo={rnhAntigo}
+                    setRnhAntigo={setRnhAntigo}
+                    exResidente={exResidente}
+                    setExResidente={setExResidente}
                     deficiencia={deficiencia}
                     setDeficiencia={setDeficiencia}
                     mostrarDeducoes={mostrarDeducoes}
@@ -603,10 +627,7 @@ export default function ModoGuiado({
                     setDespRendas={setDespRendas}
                     despGerais={despGerais}
                     setDespGerais={setDespGerais}
-                    ssAnualPoupanca={
-                      Math.min(bruto * SS_BASE_SERVICOS * SS_TAXA, 1_379) *
-                      recibosAno
-                    }
+                    ssAnualPoupanca={resultRecibo.segSocial * recibosAno}
                   />
                 </m.div>
               )}
@@ -1472,12 +1493,18 @@ function PassoSituacao({
   setAcumulaEmprego,
   isencaoSSPrimeiroAno,
   setIsencaoSSPrimeiroAno,
+  isencaoCpas,
+  setIsencaoCpas,
   irsJovemOn,
   setIrsJovemOn,
   irsJovemAno,
   setIrsJovemAno,
   ifici,
   setIfici,
+  rnhAntigo,
+  setRnhAntigo,
+  exResidente,
+  setExResidente,
   deficiencia,
   setDeficiencia,
   mostrarDeducoes,
@@ -1496,12 +1523,18 @@ function PassoSituacao({
   setAcumulaEmprego: (v: boolean) => void;
   isencaoSSPrimeiroAno: boolean;
   setIsencaoSSPrimeiroAno: (v: boolean) => void;
+  isencaoCpas: boolean;
+  setIsencaoCpas: (v: boolean) => void;
   irsJovemOn: boolean;
   setIrsJovemOn: (v: boolean) => void;
   irsJovemAno: number;
   setIrsJovemAno: (v: number) => void;
   ifici: boolean;
   setIfici: (v: boolean) => void;
+  rnhAntigo: boolean;
+  setRnhAntigo: (v: boolean) => void;
+  exResidente: boolean;
+  setExResidente: (v: boolean) => void;
   deficiencia: boolean;
   setDeficiencia: (v: boolean) => void;
   mostrarDeducoes: boolean;
@@ -1516,7 +1549,7 @@ function PassoSituacao({
   setDespGerais: (v: number) => void;
   ssAnualPoupanca: number;
 }) {
-  const isencaoSS = isencaoSSPrimeiroAno || acumulaEmprego;
+  const isencaoSS = isencaoSSPrimeiroAno || acumulaEmprego || isencaoCpas;
   const deducoesTotal =
     despSaude * 0.15 +
     despEducacao * 0.3 +
@@ -1575,6 +1608,31 @@ function PassoSituacao({
               }
               badgeTipo="positivo"
             />
+            <ToggleCard
+              titulo="Advogado, solicitador ou funcionário público pré-2006?"
+              descricao="Advogados e solicitadores descontam para a CPAS; funcionários públicos com vínculo anterior a jan/2006 descontam para a CGA — não para a Segurança Social geral."
+              ativo={isencaoCpas}
+              onToggle={() => {
+                if (!isencaoCpas) {
+                  setIsencaoSSPrimeiroAno(false);
+                  setAcumulaEmprego(false);
+                }
+                setIsencaoCpas(!isencaoCpas);
+              }}
+              desativado={isencaoSSPrimeiroAno || acumulaEmprego}
+              desativadoMensagem="Já tens outra isenção de SS ativa"
+              badge={isencaoCpas ? "CPAS / CGA" : undefined}
+              badgeTipo="neutro"
+            >
+              {isencaoCpas && (
+                <div className="mt-2.5 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 dark:border-stone-700 dark:bg-stone-800/60">
+                  <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                    A SS geral não é deduzida. As taxas da CPAS e CGA são
+                    diferentes — consulta a tua caixa para o valor exacto.
+                  </p>
+                </div>
+              )}
+            </ToggleCard>
           </div>
         </div>
 
@@ -1593,7 +1651,7 @@ function PassoSituacao({
                 setIrsJovemOn(!irsJovemOn);
               }}
               desativado={ifici}
-              desativadoMensagem="Incompatível com IFICI/NHR 2.0 — desativa primeiro"
+              desativadoMensagem="Incompatível com IFICI/RNH 2.0 — desativa primeiro"
               badge={
                 irsJovemOn
                   ? `Isenção ${pct(IRS_JOVEM_ISENCAO[irsJovemAno] ?? 0)}`
@@ -1634,7 +1692,7 @@ function PassoSituacao({
             </ToggleCard>
 
             <ToggleCard
-              titulo="Tens estatuto IFICI / NHR 2.0?"
+              titulo="Tens estatuto IFICI / RNH 2.0?"
               descricao="Taxa flat de 20% sobre rendimentos Cat. B (Art. 58.º-A EBF). Exige aprovação prévia da AT."
               ativo={ifici}
               onToggle={() => {
@@ -1647,6 +1705,46 @@ function PassoSituacao({
               badgeTipo="neutro"
             />
 
+            <ToggleCard
+              titulo="Ainda beneficias do RNH antigo (pré-2024)?"
+              descricao="O antigo Residente Não Habitual (RNH) encerrou em 2023, mas quem tinha o estatuto continua a beneficiar até completar os 10 anos. As taxas são distintas do IFICI."
+              ativo={rnhAntigo}
+              onToggle={() => {
+                if (!rnhAntigo && ifici) setIfici(false);
+                setRnhAntigo(!rnhAntigo);
+              }}
+              desativado={ifici || irsJovemOn}
+              desativadoMensagem="Incompatível com IFICI ou IRS Jovem — desativa primeiro"
+              badge={rnhAntigo ? "RNH — 10 anos" : undefined}
+              badgeTipo="neutro"
+            >
+              {rnhAntigo && (
+                <div className="mt-2.5 rounded-lg border border-alert-border bg-alert-bg px-3 py-2">
+                  <p className="text-[11px] leading-relaxed text-alert-text">
+                    O simulador não modela o RNH antigo — as regras diferem do
+                    IFICI. Consulta um contabilista para o cálculo exacto.
+                  </p>
+                </div>
+              )}
+            </ToggleCard>
+            <ToggleCard
+              titulo="Regressaste a Portugal? (Programa Regressar)"
+              descricao="Ex-residentes que regressam podem beneficiar de uma exclusão de 50% dos rendimentos de trabalho (Cat. A e B), durante 5 anos."
+              ativo={exResidente}
+              onToggle={() => setExResidente(!exResidente)}
+              badge={exResidente ? "Exclusão 50%" : undefined}
+              badgeTipo="neutro"
+            >
+              {exResidente && (
+                <div className="mt-2.5 rounded-lg border border-alert-border bg-alert-bg px-3 py-2">
+                  <p className="text-[11px] leading-relaxed text-alert-text">
+                    O simulador ainda não modela o Programa Regressar. Consulta
+                    um contabilista para o cálculo exacto ao abrigo do Art.
+                    12.º-A CIRS.
+                  </p>
+                </div>
+              )}
+            </ToggleCard>
             <ToggleCard
               titulo="Tens deficiência permanente ≥ 60%?"
               descricao="Exclusão de 15% do rendimento Cat. B (máx €2.500) + dedução de €2.148 à coleta."
@@ -2174,6 +2272,9 @@ function ResultadoFinal({
   const deducoesColeta = simAnual.deducaoDespesas + simAnual.deducaoDeficiencia;
   const temDeducoes = deducoesColeta > 0;
 
+  // Escalões — expandir/colapsar
+  const [mostrarEscaloes, setMostrarEscaloes] = useState(false);
+
   return (
     <div>
       {/* Título */}
@@ -2410,10 +2511,99 @@ function ResultadoFinal({
           }
           explicacao={
             simAnual.ificiAplicado
-              ? `Com o estatuto IFICI (ex-residente não habitual), aplica-se uma taxa flat de 20% sobre o rendimento tributável, em vez dos escalões progressivos normais.`
+              ? `Com o estatuto IFICI (Incentivo Fiscal à Investigação Científica e Inovação — RNH 2.0), aplica-se uma taxa flat de 20% sobre o rendimento tributável, em vez dos escalões progressivos normais.`
               : `O IRS em Portugal é progressivo: pagas percentagens crescentes consoante o escalão. A coleta bruta é o imposto calculado pela tabela, antes de subtrair as deduções a que tens direito (saúde, educação, etc.).`
           }
         />
+
+        {/* ── Escalões IRS — expansível (só se não IFICI) ──────────────── */}
+        {!simAnual.ificiAplicado && simAnual.escaloesAplicados.length > 0 && (
+          <>
+            <div className="border-t border-stone-100 dark:border-stone-800" />
+            <button
+              type="button"
+              aria-expanded={mostrarEscaloes}
+              onClick={() => setMostrarEscaloes((v) => !v)}
+              className="flex w-full items-center justify-between px-4 py-2 text-left hover:bg-stone-50 dark:hover:bg-stone-800/40"
+            >
+              <span className="text-[11px] font-semibold text-stone-500 dark:text-stone-400">
+                {mostrarEscaloes
+                  ? "Ocultar escalões"
+                  : `Ver ${simAnual.escaloesAplicados.length} escalão${simAnual.escaloesAplicados.length > 1 ? "s" : ""} aplicado${simAnual.escaloesAplicados.length > 1 ? "s" : ""}`}
+              </span>
+              <ChevronDown
+                size={12}
+                className={`text-stone-400 transition-transform ${mostrarEscaloes ? "rotate-180" : ""}`}
+              />
+            </button>
+            <AnimatePresence>
+              {mostrarEscaloes && (
+                <m.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mx-3 mb-2 overflow-hidden rounded-xl border border-stone-100 dark:border-stone-700">
+                    <table className="w-full text-[11px]">
+                      <thead>
+                        <tr className="border-b border-stone-100 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/60">
+                          <th className="px-3 py-1.5 text-left font-semibold text-stone-400">
+                            Escalão
+                          </th>
+                          <th className="px-3 py-1.5 text-right font-semibold text-stone-400">
+                            Rendimento
+                          </th>
+                          <th className="px-3 py-1.5 text-right font-semibold text-stone-400">
+                            Taxa
+                          </th>
+                          <th className="px-3 py-1.5 text-right font-semibold text-stone-400">
+                            Imposto
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {simAnual.escaloesAplicados.map((e, i) => (
+                          <tr
+                            key={i}
+                            className="border-b border-stone-50 last:border-0 dark:border-stone-800"
+                          >
+                            <td className="px-3 py-1.5 text-stone-500 dark:text-stone-400">
+                              {e.ate
+                                ? `até ${fmt(e.ate)}`
+                                : `acima de ${fmt(simAnual.escaloesAplicados[i - 1]?.ate ?? 0)}`}
+                            </td>
+                            <td className="px-3 py-1.5 text-right tabular-nums text-stone-600 dark:text-stone-300">
+                              {fmt(Math.round(e.rendimento))}
+                            </td>
+                            <td className="px-3 py-1.5 text-right tabular-nums font-semibold text-stone-700 dark:text-stone-200">
+                              {pct(e.taxa)}
+                            </td>
+                            <td className="px-3 py-1.5 text-right tabular-nums text-red-500 dark:text-red-400">
+                              {fmt(Math.round(e.imposto))}
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="border-t border-stone-200 bg-stone-50/80 dark:border-stone-700 dark:bg-stone-800/40">
+                          <td
+                            colSpan={3}
+                            className="px-3 py-1.5 font-semibold text-stone-600 dark:text-stone-300"
+                          >
+                            Total coleta
+                          </td>
+                          <td className="px-3 py-1.5 text-right tabular-nums font-bold text-red-500 dark:text-red-400">
+                            {fmt(Math.round(simAnual.coletaBruta))}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </m.div>
+              )}
+            </AnimatePresence>
+          </>
+        )}
 
         {/* Deduções à coleta (se existirem) */}
         {temDeducoes && (
@@ -2429,13 +2619,39 @@ function ResultadoFinal({
           </>
         )}
 
+        {/* Mínimo de existência — se aplicado */}
+        {simAnual.minimoExistenciaAplicado && (
+          <>
+            <div className="border-t border-stone-100 dark:border-stone-800" />
+            <div className="flex items-start gap-2.5 px-4 py-2.5">
+              <Check
+                size={12}
+                className="mt-0.5 flex-shrink-0 text-brand"
+              />
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-brand-dark dark:text-brand">
+                  Mínimo de existência aplicado (Art. 70.º CIRS)
+                </p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                  O teu rendimento coletável (
+                  {fmt(simAnual.rendimentoColetavel)}) é igual ou inferior a{" "}
+                  €12.880 — o Estado protege este montante de IRS. O imposto foi
+                  reduzido ou anulado. Muda anualmente com o IAS.
+                </p>
+              </div>
+            </div>
+          </>
+        )}
+
         {/* IRS final — resultado do bloco 2 */}
         <div className="border-t border-stone-200 dark:border-stone-700" />
         <LinhaCalculo
           label={
             simAnual.ificiAplicado
               ? "IRS a pagar (taxa flat 20%)"
-              : "IRS a pagar"
+              : simAnual.minimoExistenciaAplicado
+                ? "IRS a pagar (mínimo de existência)"
+                : "IRS a pagar"
           }
           valor={-simAnual.irsEstimado}
           corValor="text-red-500 dark:text-red-400"

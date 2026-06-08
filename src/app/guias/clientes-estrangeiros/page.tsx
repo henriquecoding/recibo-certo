@@ -44,7 +44,7 @@ export default function ClientesEstrangeirosPage() {
         <div className="grid sm:grid-cols-2 gap-3 mb-6">
           <div className="rounded-2xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 p-4">
             <p className="text-xs font-semibold text-stone-400 mb-1">NÃO muda</p>
-            <p className="text-sm text-stone-600 dark:text-stone-400">Continuas a ter obrigações fiscais e de SS em Portugal (se aqui resides). Declares tudo no IRS português (Anexo B).</p>
+            <p className="text-sm text-stone-600 dark:text-stone-400">Continuas a ter obrigações fiscais e de SS em Portugal (se aqui resides). Rendimentos de fonte <strong>portuguesa</strong> declaras no Anexo B; rendimentos de fonte <strong>estrangeira</strong> declaras no <strong>Anexo J</strong> do IRS.</p>
           </div>
           <div className="rounded-2xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 p-4">
             <p className="text-xs font-semibold text-brand mb-1">MUDA</p>
