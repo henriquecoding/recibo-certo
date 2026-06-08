@@ -32,13 +32,14 @@ const FONTES = [
 ];
 
 const ias = IAS_VALUE;
-const teto = IRS_JOVEM.tetoIAS.value * ias;
+// Art. 12.º-B n.º 3 CIRS: o teto dos rendimentos excluídos é 55 × IAS em todos os anos.
+const tetoIAS = IRS_JOVEM.tetoIAS.value; // 55
 
 const ISENCOES = [
-  { anos: "1.º ano", pct: 1.0, tetoIAS: 55 },
-  { anos: "2.º a 4.º ano", pct: 0.75, tetoIAS: 41 },
-  { anos: "5.º a 7.º ano", pct: 0.5, tetoIAS: 33 },
-  { anos: "8.º a 10.º ano", pct: 0.25, tetoIAS: 20 },
+  { anos: "1.º ano", pct: 1.0, tetoIAS },
+  { anos: "2.º a 4.º ano", pct: 0.75, tetoIAS },
+  { anos: "5.º a 7.º ano", pct: 0.5, tetoIAS },
+  { anos: "8.º a 10.º ano", pct: 0.25, tetoIAS },
 ];
 
 export default function IRSJovemPage() {
@@ -118,7 +119,7 @@ export default function IRSJovemPage() {
           Incompatibilidades
         </h2>
         <div className="rounded-2xl border border-clay-text/30 bg-clay-bg dark:bg-red-950/30 px-4 py-3 text-sm text-stone-700 dark:text-stone-300">
-          <span className="font-semibold">IRS Jovem é incompatível com IFICI (ex-NHR 2.0).</span>{" "}
+          <span className="font-semibold">IRS Jovem é incompatível com IFICI (ex-RNH 2.0).</span>{" "}
           Se tens o estatuto IFICI aprovado pela AT, não podes usar o IRS Jovem simultaneamente.
         </div>
       </section>

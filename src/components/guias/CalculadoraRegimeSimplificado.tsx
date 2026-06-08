@@ -5,6 +5,7 @@ import { m } from "motion/react";
 import { EASE } from "@/lib/motion";
 import {
   REDUCAO_COEFICIENTE_ANO,
+  DEDUCAO_ESPECIFICA_CATB,
   efeitoFiscal,
   ATIVIDADES,
 } from "@/lib/fiscal-data";
@@ -14,6 +15,11 @@ import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import Badge from "@/components/ui/Badge";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
+
+// Limiar abaixo do qual a dedução específica cobre automaticamente a regra dos 15%.
+// = DEDUCAO_ESPECIFICA_CATB / 0,15 (Art. 31.º CIRS). Para 2026 = 4 587,09 / 0,15 ≈ 30 580 €.
+const DEDUCAO_ESPECIFICA = DEDUCAO_ESPECIFICA_CATB.value;
+const LIMIAR_REGRA15 = Math.floor(DEDUCAO_ESPECIFICA / 0.15);
 
 const ANOS = [
   { valor: 1, label: "1.º ano (-50%)" },
@@ -156,7 +162,7 @@ export function CalculadoraRegimeSimplificado() {
             <div className="rounded-2xl border border-stone-100 dark:border-stone-700 bg-white dark:bg-stone-800 p-4 text-sm text-stone-600 dark:text-stone-400">
               <span className="font-semibold text-stone-700 dark:text-stone-300">Regra dos 15%: </span>
               Para coeficientes 0,75 e 0,35, é obrigatório justificar 15% da faturação em despesas de atividade.
-              {bruto <= 27360 && " Para faturação até 27 360 €, a dedução automática de 4 104 € cobre este requisito."}
+              {bruto <= LIMIAR_REGRA15 && ` Para faturação até ${fmt(LIMIAR_REGRA15)} €, a dedução automática de ${fmt(DEDUCAO_ESPECIFICA)} € cobre este requisito.`}
             </div>
           )}
         </m.div>

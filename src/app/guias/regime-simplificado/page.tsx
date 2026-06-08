@@ -7,6 +7,7 @@ import { ComparadorCAE } from "@/components/guias/ComparadorCAE";
 import InfoTip from "@/components/ui/InfoTip";
 import {
   COEFICIENTE_POR_TIPO,
+  DEDUCAO_ESPECIFICA_CATB,
   REDUCAO_COEFICIENTE_ANO,
   REGIME_SIMPLIFICADO,
   RETENCAO,
@@ -101,7 +102,7 @@ export default function RegimeSimplificadoPage() {
         </h2>
         <div className="space-y-3 text-sm text-stone-600 dark:text-stone-400">
           <p>Para coeficientes 0,75 e 0,35, é obrigatório justificar 15% da faturação em despesas de atividade (e-fatura, rendas, pessoal, etc.).</p>
-          <p>Exceção: se o rendimento bruto for igual ou inferior a 27 360 €, é aplicada automaticamente uma dedução de 4 104 € — não precisas de justificar despesas nesse caso.</p>
+          <p>Exceção: se o rendimento bruto for igual ou inferior a {fmt(Math.floor(DEDUCAO_ESPECIFICA_CATB.value / 0.15))} €, é aplicada automaticamente uma dedução de {fmt(DEDUCAO_ESPECIFICA_CATB.value)} € — não precisas de justificar despesas nesse caso.</p>
         </div>
       </section>
 
