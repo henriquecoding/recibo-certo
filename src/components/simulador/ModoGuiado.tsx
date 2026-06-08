@@ -214,27 +214,19 @@ const IVA_META = {
   isento: {
     titulo: "Regime de isenção — Art. 53.º CIVA",
     quando: "Não cobras IVA ao cliente nem entregas ao Estado.",
-    compativel: "Qualquer atividade abaixo de €15.000/ano.",
-    incompativel: null,
   },
   reduzida: {
     titulo: "Taxa reduzida",
     quando: "Aplica-se a bens essenciais e alguns serviços específicos.",
-    compativel: "Géneros alimentares, medicina, restauração, AL.",
-    incompativel: "Consultoria, serviços digitais, direitos de autor.",
   },
   intermedia: {
     titulo: "Taxa intermédia",
     quando:
       "Aplica-se a determinados bens agrícolas e serviços de restauração.",
-    compativel: "Alguns produtos agrícolas, restauração em certos casos.",
-    incompativel: "A maioria dos serviços liberais e digitais.",
   },
   normal: {
     titulo: "Taxa normal",
     quando: "Aplica-se à generalidade dos bens e serviços.",
-    compativel: "Consultoria, design, programação, direitos de autor.",
-    incompativel: null,
   },
 };
 
@@ -573,6 +565,7 @@ export default function ModoGuiado({
                     regiao={regiao}
                     regimeIVA={regimeIVA}
                     tipoAtiv={tipoAtiv}
+                    atividadeEspecifica={atividadeEspecifica}
                     onModoFat={setModoFat}
                     onTotalInput={setTotalInput}
                     onRecibosItems={setRecibosItems}
@@ -1026,6 +1019,7 @@ function PassoFaturacao({
   regiao,
   regimeIVA,
   tipoAtiv,
+  atividadeEspecifica,
   onModoFat,
   onTotalInput,
   onRecibosItems,
@@ -1043,6 +1037,7 @@ function PassoFaturacao({
   regiao: Regiao;
   regimeIVA: RegimeIVA;
   tipoAtiv: TipoAtiv;
+  atividadeEspecifica: Atividade | null;
   onModoFat: (m: "total" | "individual") => void;
   onTotalInput: (v: string) => void;
   onRecibosItems: React.Dispatch<React.SetStateAction<ReciboItem[]>>;
@@ -1093,6 +1088,16 @@ function PassoFaturacao({
     taxaIvaAtual > 0 ? montanteTotal / (1 + taxaIvaAtual) : montanteTotal;
   const ivaTotalExtraido = montanteTotal - baseTotalSemIva;
 
+  // Deteção de cenário de ato isolado: uma única fatura no ano.
+  const recibosComValor = recibosItems.filter(
+    (r) => parseMontante(r.valorComIva) > 0,
+  );
+  const atoIsoladoProvavel =
+    mesesFat === 1 &&
+    (modoFat === "individual"
+      ? recibosComValor.length === 1
+      : montanteTotal > 0);
+
   return (
     <div>
       <div className="mb-6">
@@ -1100,7 +1105,8 @@ function PassoFaturacao({
           Quanto faturaste?
         </h3>
         <p className="mt-1 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
-          Introduz o total faturado. A situação de IVA é tratada mais abaixo.
+          Indica quanto faturas por mês e em quantos meses do ano. A situação de
+          IVA é tratada mais abaixo.
         </p>
       </div>
 
@@ -1131,7 +1137,7 @@ function PassoFaturacao({
           <div className="mb-4">
             <div className="mb-1.5 flex items-center justify-between">
               <label className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                Total faturado este mês
+                Total faturado por mês
               </label>
               {taxaIvaAtual > 0 && <TagComIvaBadge />}
             </div>
@@ -1369,6 +1375,47 @@ function PassoFaturacao({
         )}
       </div>
 
+      {/* Aviso: cenário de ato isolado (uma única fatura no ano) */}
+      {atoIsoladoProvavel && (
+        <div className="mb-6 rounded-2xl border border-brand/25 bg-brand-light/40 p-4 dark:bg-brand/10">
+          <div className="flex gap-2.5">
+            <svg
+              className="mt-0.5 h-4 w-4 shrink-0 text-brand"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden
+            >
+              <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+              <path
+                d="M8 5v3.5M8 10.5h.01"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+            <div>
+              <p className="text-sm font-semibold text-brand-dark dark:text-brand">
+                Foi um serviço único?
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-brand-dark/80 dark:text-brand/80">
+                Se só vais emitir esta fatura uma vez no ano, podes não precisar
+                de abrir atividade — o <strong>ato isolado</strong> costuma ser
+                mais simples. Mas atenção: aí cobras IVA a 23% (sem a isenção dos{" "}
+                {fmt(IVA_LIMITE)}) e não há contribuições para a Segurança
+                Social. Estes números assumem atividade aberta.
+              </p>
+              <a
+                href="/guias/ato-isolado"
+                className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-brand transition-colors hover:text-brand-dark"
+              >
+                Comparar ato isolado vs recibos verdes
+                <ArrowRight size={12} />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* IVA */}
       <div className="mb-6">
         <div className="mb-2.5 flex items-center gap-1.5">
@@ -1385,6 +1432,7 @@ function PassoFaturacao({
           regimeIVA={regimeIVA}
           regiao={regiao}
           tipoAtiv={tipoAtiv}
+          atividadeEspecifica={atividadeEspecifica}
           onRegimeIVAChange={onRegimeIVAChange}
         />
       </div>
@@ -2720,8 +2768,8 @@ const PASSO_DICA: Record<1 | 2 | 3, { titulo: string; desc: string }> = {
     desc: "A retenção e o coeficiente variam bastante. Um programador (23%) vs outros serviços (11,5%).",
   },
   2: {
-    titulo: "Faturação anual",
-    desc: "Abaixo de €15.000/ano estás isento de IVA automaticamente.",
+    titulo: "Isenção de IVA",
+    desc: `Ficas isento se a tua faturação anual não passar os ${fmt(IVA_LIMITE)} (Art. 53.º). No 1.º ano, o limite é proporcional aos meses de atividade; nos anos seguintes conta a faturação do ano anterior.`,
   },
   3: {
     titulo: "Pode fazer diferença",
@@ -2780,16 +2828,19 @@ function PainelResultadoVivo({
 
         <div className="mb-4">
           <div className="text-[11px] font-medium text-stone-400">
-            Líquido mensal
+            {recibosAno >= 12 ? "Líquido mensal" : "Líquido por mês faturado"}
           </div>
           <div className="font-display text-3xl font-bold text-brand">
             <AnimatedNumber
-              value={Math.max(0, Math.round(liquidoAnual / 12))}
+              value={Math.max(
+                0,
+                Math.round(liquidoAnual / Math.max(1, recibosAno)),
+              )}
             />
           </div>
           <div className="text-[11px] text-stone-400">
-            {fmt(brutoAnual > 0 ? Math.round(brutoAnual / recibosAno) : 0)}
-            /recibo faturado
+            {fmt(brutoAnual > 0 ? Math.round(brutoAnual / Math.max(1, recibosAno)) : 0)}{" "}
+            faturado/mês
           </div>
         </div>
 
@@ -2868,17 +2919,31 @@ function ZonaIVA({
   regimeIVA,
   regiao,
   tipoAtiv,
+  atividadeEspecifica,
   onRegimeIVAChange,
 }: {
   brutoAnual: number;
   regimeIVA: RegimeIVA;
   regiao: Regiao;
   tipoAtiv: TipoAtiv;
+  atividadeEspecifica: Atividade | null;
   onRegimeIVAChange: (r: RegimeIVA) => void;
 }) {
   const taxasIVA = IVA_TAXAS[regiao].value;
   const ivaEsperado = ATIV_META[tipoAtiv].ivaEsperado;
   const ivaIncoerente = regimeIVA !== "isento" && regimeIVA !== ivaEsperado;
+
+  // Nome da atividade do utilizador: específica se escolhida, senão a categoria.
+  const cardAtiv = CARDS_ATIV.find((c) => c.id === tipoAtiv)!;
+  const nomeAtividade = atividadeEspecifica?.label ?? cardAtiv.titulo;
+
+  // Rótulo legível da taxa de IVA habitual para a atividade.
+  const ESPERADO_LABEL: Record<typeof ivaEsperado, string> = {
+    isento: "isento",
+    reduzida: `taxa reduzida (${pct(taxasIVA.reduzida)})`,
+    intermedia: `taxa intermédia (${pct(taxasIVA.intermedia)})`,
+    normal: `taxa normal (${pct(taxasIVA.normal)})`,
+  };
 
   function BotoesIVA({ cor }: { cor: "amber" | "red" }) {
     const base =
@@ -2914,9 +2979,9 @@ function ZonaIVA({
     );
   }
 
-  function PainelCompatibilidade() {
-    const meta =
-      IVA_META[regimeIVA as keyof typeof IVA_META] ?? IVA_META.normal;
+  function PainelCompatibilidade({ regime }: { regime: RegimeIVA }) {
+    const meta = IVA_META[regime as keyof typeof IVA_META] ?? IVA_META.normal;
+    const coerente = regime === ivaEsperado;
     return (
       <div className="mt-3 rounded-xl border border-stone-200 bg-stone-50 p-3.5 dark:border-stone-700 dark:bg-stone-900/60">
         <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-stone-400">
@@ -2925,43 +2990,53 @@ function ZonaIVA({
         <p className="mb-2 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
           {meta.quando}
         </p>
-        <div className="space-y-1">
+        <div className="space-y-1.5">
+          {/* Atividade do utilizador */}
           <div className="flex items-start gap-1.5">
             <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
             <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
               <strong className="text-stone-700 dark:text-stone-200">
-                Compatível com:
+                A tua atividade:
               </strong>{" "}
-              {meta.compativel}
+              {nomeAtividade} — IVA habitual: {ESPERADO_LABEL[ivaEsperado]}.
             </p>
           </div>
-          {meta.incompativel && (
+
+          {/* Estado consoante o regime efetivo */}
+          {regime === "isento" ? (
+            <>
+              <div className="flex items-start gap-1.5">
+                <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
+                <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                  Não cobras IVA, seja qual for a atividade, enquanto ficares
+                  abaixo de {fmt(IVA_LIMITE)}.
+                </p>
+              </div>
+              <p className="pl-[18px] text-[11px] leading-relaxed text-stone-400 dark:text-stone-500">
+                O limite conta a faturação do ano anterior; no 1.º ano de
+                atividade é proporcional aos meses trabalhados.
+              </p>
+            </>
+          ) : coerente ? (
             <div className="flex items-start gap-1.5">
+              <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
+              <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                A taxa selecionada é a habitual para a tua atividade.
+              </p>
+            </div>
+          ) : (
+            <div className="flex items-start gap-1.5 rounded-lg border border-alert-border bg-alert-bg px-2.5 py-2">
               <Warning
                 size={11}
                 className="mt-0.5 flex-shrink-0 text-alert-text"
               />
-              <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-                <strong className="text-stone-700 dark:text-stone-200">
-                  Incompatível com:
-                </strong>{" "}
-                {meta.incompativel}
+              <p className="text-[11px] leading-relaxed text-alert-text">
+                Esta taxa não é a habitual para {nomeAtividade}. Confirma com o
+                teu contabilista.
               </p>
             </div>
           )}
         </div>
-        {ivaIncoerente && (
-          <div className="mt-2.5 flex items-start gap-1.5 rounded-lg border border-alert-border bg-alert-bg px-2.5 py-2">
-            <Warning
-              size={11}
-              className="mt-0.5 flex-shrink-0 text-alert-text"
-            />
-            <p className="text-[11px] leading-relaxed text-alert-text">
-              O regime de IVA pode não ser o habitual para a tua atividade.
-              Confirma com o teu contabilista.
-            </p>
-          </div>
-        )}
       </div>
     );
   }
@@ -2981,7 +3056,7 @@ function ZonaIVA({
             </p>
           </div>
         </div>
-        <PainelCompatibilidade />
+        <PainelCompatibilidade regime="isento" />
       </div>
     );
   }
@@ -3010,7 +3085,7 @@ function ZonaIVA({
             </div>
           </div>
         </div>
-        {regimeIVA !== "isento" && <PainelCompatibilidade />}
+        {regimeIVA !== "isento" && <PainelCompatibilidade regime={regimeIVA} />}
       </div>
     );
   }
@@ -3038,7 +3113,7 @@ function ZonaIVA({
           </div>
         </div>
       </div>
-      {regimeIVA !== "isento" && <PainelCompatibilidade />}
+      {regimeIVA !== "isento" && <PainelCompatibilidade regime={regimeIVA} />}
     </div>
   );
 }
