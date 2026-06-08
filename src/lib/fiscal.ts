@@ -336,6 +336,19 @@ export interface SimulacaoInput {
    */
   ifici?: boolean;
   /**
+   * RNH antigo (pré-2024): beneficiário ainda dentro dos 10 anos de estatuto.
+   * Aplica taxa flat de 20% — mesmo mecanismo que IFICI. Incompatível com IFICI.
+   * Art. 16.º n.º 1 CIRS (regime transitório OE2024).
+   */
+  rnhAntigo?: boolean;
+  /**
+   * Programa Regressar / Ex-Residentes (Art. 12.º-A CIRS):
+   * 50% dos rendimentos Cat. A e B excluídos de tributação durante 5 anos,
+   * a contar do regresso (residente após ≥ 3 anos de ausência, desde 2020).
+   * Incompatível com IFICI e RNH antigo.
+   */
+  programaRegressar?: boolean;
+  /**
    * Sujeito passivo com deficiência permanente ≥ 60%:
    * - Art. 56.º-A CIRS: exclui 15% dos rendimentos Cat. B (máx €2 500) do tributável
    * - Art. 87.º CIRS: dedução adicional à coleta de 4 × IAS (€2 148,52 em 2026)
@@ -371,6 +384,12 @@ export interface SimulacaoIRS {
   conjunta: boolean;
   /** true quando IFICI foi aplicado (taxa flat 20%). */
   ificiAplicado: boolean;
+  /** true quando o RNH antigo foi aplicado (taxa flat 20%). */
+  rnhAntigoAplicado: boolean;
+  /** true quando o Programa Regressar foi aplicado (exclusão 50%, Art. 12.º-A CIRS). */
+  programaRegressarAplicado: boolean;
+  /** Montante excluído de tributação pelo Programa Regressar. 0 se não aplicado. */
+  exclusaoProgramaRegressar: number;
   /** Montante excluído do rendimento tributável por deficiência (Art. 56.º-A). */
   exclusaoDeficiencia: number;
   /** Coleta antes das deduções à coleta. */
@@ -458,24 +477,33 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     ? Math.min(rendimentoTributavel * EXCLUSAO_DEFICIENCIA_TAXA.value, EXCLUSAO_DEFICIENCIA_MAX.value)
     : 0;
 
-  // Rendimento coletável final (após IRS Jovem, exclusão deficiência, outros)
+  // Rendimento coletável base (após IRS Jovem, exclusão deficiência, outros)
   const conjunta = !!input.conjunta;
   const ificiAplicado = !!input.ifici;
+  const rnhAntigoAplicado = !!input.rnhAntigo && !ificiAplicado;
+  const programaRegressarAplicado = !!input.programaRegressar && !ificiAplicado && !rnhAntigoAplicado;
+  // Regime de taxa flat: IFICI (20%) ou RNH antigo (20%) — sem escalões
+  const regimeFlatRate = ificiAplicado || rnhAntigoAplicado;
   const outrosRendimentos = sanitize(input.outrosRendimentos ?? 0);
   const rendimentoColetavel = Math.max(
     0,
     rendimentoTributavel - exclusaoDeficiencia - rendimentoIsentoJovem
   ) + outrosRendimentos;
 
-  // ── Coleta: IFICI = taxa flat 20%; senão escalões progressivos ────────────
+  // Programa Regressar (Art. 12.º-A CIRS): 50% do rendimento coletável base excluído
+  const exclusaoProgramaRegressar = programaRegressarAplicado ? rendimentoColetavel * 0.5 : 0;
+  // Rendimento efetivamente sujeito a IRS (após todas as exclusões)
+  const rendimentoColetavelFinal = Math.max(0, rendimentoColetavel - exclusaoProgramaRegressar);
+
+  // ── Coleta: flat 20% (IFICI / RNH antigo) ou escalões progressivos ────────
   const divisor = conjunta ? QUOCIENTE_CONJUGAL.value : 1;
   let coletaBruta: number;
   let escaloesAplicados: EscalaoAplicado[];
-  if (ificiAplicado) {
-    coletaBruta = rendimentoColetavel * IFICI_TAXA.value;
+  if (regimeFlatRate) {
+    coletaBruta = rendimentoColetavelFinal * IFICI_TAXA.value;
     escaloesAplicados = [];
   } else {
-    const detalhado = irsProgressivoDetalhado(rendimentoColetavel / divisor);
+    const detalhado = irsProgressivoDetalhado(rendimentoColetavelFinal / divisor);
     coletaBruta = detalhado.imposto * divisor;
     // Escalar de volta se divisor != 1 (tributação conjunta)
     escaloesAplicados = divisor !== 1
@@ -520,7 +548,7 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   const dSaude = Math.min(sanitize(ded.saude ?? 0) * DEDUCAO_SAUDE.value.taxa, DEDUCAO_SAUDE.value.limite);
   const dEducacao = Math.min(sanitize(ded.educacao ?? 0) * DEDUCAO_EDUCACAO.value.taxa, DEDUCAO_EDUCACAO.value.limite);
   const dRendas = Math.min(sanitize(ded.rendas ?? 0) * DEDUCAO_RENDAS.value.taxa, DEDUCAO_RENDAS.value.limite);
-  const deducaoDespesas = Math.min(dGerais + dSaude + dEducacao + dRendas, limiteGlobalDeducoes(rendimentoColetavel));
+  const deducaoDespesas = Math.min(dGerais + dSaude + dEducacao + dRendas, limiteGlobalDeducoes(rendimentoColetavelFinal));
 
   // Art. 87.º CIRS: dedução à coleta de 4×IAS pelo contribuinte com deficiência
   const deducaoDeficiencia = input.deficiencia ? DEDUCAO_DEFICIENCIA_COLETA.value : 0;
@@ -528,15 +556,15 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   const deducoesColeta = deducaoDependentes + deducaoDespesas + deducaoDeficiencia;
   let irsEstimado = Math.max(0, coletaBruta - deducoesColeta);
 
-  // ── Mínimo de existência (não aplicável com IFICI) ────────────────────────
+  // ── Mínimo de existência (não aplicável com regime de taxa flat) ─────────
   const minimo = MINIMO_EXISTENCIA.value;
   let minimoExistenciaAplicado = false;
-  if (!ificiAplicado) {
-    if (rendimentoColetavel > 0 && rendimentoColetavel <= minimo) {
+  if (!regimeFlatRate) {
+    if (rendimentoColetavelFinal > 0 && rendimentoColetavelFinal <= minimo) {
       irsEstimado = 0;
       minimoExistenciaAplicado = true;
-    } else if (rendimentoColetavel > minimo && rendimentoColetavel - irsEstimado < minimo) {
-      irsEstimado = Math.max(0, rendimentoColetavel - minimo);
+    } else if (rendimentoColetavelFinal > minimo && rendimentoColetavelFinal - irsEstimado < minimo) {
+      irsEstimado = Math.max(0, rendimentoColetavelFinal - minimo);
       minimoExistenciaAplicado = true;
     }
   }
@@ -573,9 +601,12 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     rendimentoIsentoJovem,
     outrosRendimentos,
     exclusaoDeficiencia,
-    rendimentoColetavel,
+    rendimentoColetavel: rendimentoColetavelFinal,
     conjunta,
     ificiAplicado,
+    rnhAntigoAplicado,
+    programaRegressarAplicado,
+    exclusaoProgramaRegressar,
     coletaBruta,
     escaloesAplicados,
     deducaoDependentes,

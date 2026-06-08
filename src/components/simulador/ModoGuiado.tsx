@@ -90,8 +90,8 @@ interface ModoGuiadoProps {
 const CARDS_ATIV: CardAtiv[] = [
   {
     id: "art151",
-    titulo: "Consultor / Programador / Designer",
-    sub: "Profissão liberal (Art. 151.º CIRS)",
+    titulo: "Profissão liberal",
+    sub: "Serviços técnicos e liberais (Art. 151.º CIRS)",
     exemplos: "Dev, designer, arquiteto, advogado, solicitador, médico, psicólogo, nutricionista, enfermeiro, engenheiro, consultor, gestor, contabilista, jornalista, ator, músico, professor…",
     coef: 0.75,
     ret: 0.23,
@@ -256,14 +256,21 @@ export default function ModoGuiado({
   // Passo 2: Faturação — novo modelo recibos
   const [modoFat, setModoFat] = useState<"total" | "individual">("total");
   const [totalInput, setTotalInput] = useState("1500");
-  // 0 = isento por defeito (sincronizado com regimeIVA="isento")
-  const [totalIva, setTotalIva] = useState(0);
   const [recibosItems, setRecibosItems] = useState<ReciboItem[]>([
     { id: 1, descricao: "", valorComIva: "", taxaIva: 0.23 },
   ]);
   const [mesesFat, setMesesFat] = useState(12);
   const [regiao, setRegiao] = useState<Regiao>("continente");
   const [regimeIVA, setRegimeIVA] = useState<RegimeIVA>("isento");
+
+  // Taxa de IVA derivada do regime — única fonte de verdade para extracção do IVA
+  const totalIva = (() => {
+    if (regimeIVA === "isento") return 0;
+    const t = IVA_TAXAS[regiao].value;
+    if (regimeIVA === "reduzida") return t.reduzida;
+    if (regimeIVA === "intermedia") return t.intermedia;
+    return t.normal;
+  })();
 
   // Derivados de faturação: sempre SEM IVA para os cálculos fiscais
   const { mensalSemIva, mensalComIva, mensalIva } = useMemo(() => {
@@ -345,6 +352,8 @@ export default function ModoGuiado({
         tipo: card.tipoFiscal,
         irsJovemAno: jovemAno > 0 ? jovemAno : undefined,
         ifici,
+        rnhAntigo,
+        programaRegressar: exResidente,
         deficiencia,
         deducoes: {
           saude: despSaude,
@@ -358,6 +367,8 @@ export default function ModoGuiado({
       card.tipoFiscal,
       jovemAno,
       ifici,
+      rnhAntigo,
+      exResidente,
       deficiencia,
       despSaude,
       despEducacao,
@@ -366,8 +377,9 @@ export default function ModoGuiado({
     ],
   );
   const irsAnual = simPreview.irsEstimado;
-  // Usa segSocial do calcular() que já aplica o coeficiente correto (bens=0,2 / serviços=0,7)
-  const ssAnual = resultRecibo.segSocial * recibosAno;
+  // Usa segSocial do calcular() que já aplica o coeficiente correto (bens=0,2 / serviços=0,7).
+  // CPAS/CGA: quando isencaoCpas=true não há desconto para o Regime Geral → 0 para o simulador.
+  const ssAnual = isencaoCpas ? 0 : resultRecibo.segSocial * recibosAno;
   const ivaAnual = mensalIva * mesesFat;
   const liquidoAnual = brutoAnual - irsAnual - ssAnual;
 
@@ -532,6 +544,10 @@ export default function ModoGuiado({
                           diretosAutor: "prop_int",
                         };
                         setTipoAtiv(mapa[a.tipo] ?? "art151");
+                        // Advogados e solicitadores pagam CPAS, não SS geral — auto-detectar
+                        setIsencaoCpas(/Advogad|Solicitad/i.test(a.label));
+                      } else {
+                        setIsencaoCpas(false);
                       }
                     }}
                   />
@@ -549,7 +565,6 @@ export default function ModoGuiado({
                   <PassoFaturacao
                     modoFat={modoFat}
                     totalInput={totalInput}
-                    totalIva={totalIva}
                     recibosItems={recibosItems}
                     mesesFat={mesesFat}
                     mensalSemIva={mensalSemIva}
@@ -560,32 +575,15 @@ export default function ModoGuiado({
                     tipoAtiv={tipoAtiv}
                     onModoFat={setModoFat}
                     onTotalInput={setTotalInput}
-                    onTotalIva={setTotalIva}
                     onRecibosItems={setRecibosItems}
                     onMesesFat={(m) => {
                       setMesesFat(m);
                       if (mensalSemIva * m <= IVA_LIMITE) {
                         setRegimeIVA("isento");
-                        setTotalIva(0);
                       }
                     }}
                     onRegiaoChange={setRegiao}
-                    onRegimeIVAChange={(regime) => {
-                      setRegimeIVA(regime);
-                      // Sincronizar totalIva com o regime selecionado
-                      if (regime === "isento") {
-                        setTotalIva(0);
-                      } else {
-                        const taxas = IVA_TAXAS[regiao].value;
-                        const taxa =
-                          regime === "reduzida"
-                            ? taxas.reduzida
-                            : regime === "intermedia"
-                              ? taxas.intermedia
-                              : taxas.normal;
-                        setTotalIva(taxa);
-                      }
-                    }}
+                    onRegimeIVAChange={setRegimeIVA}
                   />
                 </m.div>
               )}
@@ -654,6 +652,9 @@ export default function ModoGuiado({
                     regiao={regiao}
                     tipoAtiv={tipoAtiv}
                     isencaoSS={isencaoSS}
+                    isencaoCpas={isencaoCpas}
+                    rnhAntigo={rnhAntigo}
+                    exResidente={exResidente}
                     irsJovemAno={jovemAno}
                     ifici={ifici}
                     deficiencia={deficiencia}
@@ -1017,7 +1018,6 @@ function TagComIvaBadge() {
 function PassoFaturacao({
   modoFat,
   totalInput,
-  totalIva,
   recibosItems,
   mesesFat,
   mensalSemIva,
@@ -1028,7 +1028,6 @@ function PassoFaturacao({
   tipoAtiv,
   onModoFat,
   onTotalInput,
-  onTotalIva,
   onRecibosItems,
   onMesesFat,
   onRegiaoChange,
@@ -1036,7 +1035,6 @@ function PassoFaturacao({
 }: {
   modoFat: "total" | "individual";
   totalInput: string;
-  totalIva: number;
   recibosItems: ReciboItem[];
   mesesFat: number;
   mensalSemIva: number;
@@ -1047,13 +1045,21 @@ function PassoFaturacao({
   tipoAtiv: TipoAtiv;
   onModoFat: (m: "total" | "individual") => void;
   onTotalInput: (v: string) => void;
-  onTotalIva: (taxa: number) => void;
   onRecibosItems: React.Dispatch<React.SetStateAction<ReciboItem[]>>;
   onMesesFat: (m: number) => void;
   onRegiaoChange: (v: Regiao) => void;
   onRegimeIVAChange: (v: RegimeIVA) => void;
 }) {
   const taxasIVA = IVA_TAXAS[regiao].value;
+  // Taxa efectiva derivada do regime — única fonte de verdade
+  const taxaIvaAtual =
+    regimeIVA === "isento"
+      ? 0
+      : regimeIVA === "reduzida"
+        ? taxasIVA.reduzida
+        : regimeIVA === "intermedia"
+          ? taxasIVA.intermedia
+          : taxasIVA.normal;
 
   function adicionarRecibo() {
     onRecibosItems((prev) => {
@@ -1084,7 +1090,7 @@ function PassoFaturacao({
 
   const montanteTotal = parseMontante(totalInput);
   const baseTotalSemIva =
-    totalIva > 0 ? montanteTotal / (1 + totalIva) : montanteTotal;
+    taxaIvaAtual > 0 ? montanteTotal / (1 + taxaIvaAtual) : montanteTotal;
   const ivaTotalExtraido = montanteTotal - baseTotalSemIva;
 
   return (
@@ -1094,7 +1100,7 @@ function PassoFaturacao({
           Quanto faturaste?
         </h3>
         <p className="mt-1 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
-          Introduz o valor que o cliente pagou — já com IVA incluído.
+          Introduz o total faturado. A situação de IVA é tratada mais abaixo.
         </p>
       </div>
 
@@ -1121,41 +1127,13 @@ function PassoFaturacao({
       {/* Modo: total do mês */}
       {modoFat === "total" && (
         <div className="mb-5 rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-700 dark:bg-stone-900">
-          {/* Banner */}
-          <div className="mb-4 flex gap-2.5 rounded-xl border border-brand/20 bg-brand-light/50 px-3.5 py-2.5 dark:bg-brand/10">
-            <svg
-              className="mt-0.5 h-4 w-4 shrink-0 text-brand"
-              viewBox="0 0 16 16"
-              fill="none"
-              aria-hidden
-            >
-              <circle
-                cx="8"
-                cy="8"
-                r="7"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              />
-              <path
-                d="M8 5v3.5M8 10.5h.01"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-            <p className="text-xs text-brand-dark dark:text-brand">
-              <strong>Valor com IVA incluído</strong> — o total que o cliente
-              pagou, como aparece no recibo.
-            </p>
-          </div>
-
           {/* Campo valor */}
           <div className="mb-4">
             <div className="mb-1.5 flex items-center justify-between">
               <label className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                Total recebido este mês
+                Total faturado este mês
               </label>
-              <TagComIvaBadge />
+              {taxaIvaAtual > 0 && <TagComIvaBadge />}
             </div>
             <div className="relative">
               <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-base text-stone-400">
@@ -1172,39 +1150,8 @@ function PassoFaturacao({
             </div>
           </div>
 
-          {/* Taxa IVA */}
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-            IVA cobrado ao cliente
-          </label>
-          <div className="mb-4 grid grid-cols-4 gap-2">
-            {IVA_OPCOES_FAT.map((o) => (
-              <button
-                key={o.taxa}
-                type="button"
-                onClick={() => onTotalIva(o.taxa)}
-                aria-pressed={totalIva === o.taxa}
-                className={`rounded-xl border py-2.5 text-center transition-all ${
-                  totalIva === o.taxa
-                    ? "border-brand bg-brand"
-                    : "border-stone-200 bg-white hover:border-brand/30 dark:border-stone-700 dark:bg-stone-800"
-                }`}
-              >
-                <span
-                  className={`block text-[10px] font-bold uppercase tracking-wider ${totalIva === o.taxa ? "text-white/70" : "text-stone-400"}`}
-                >
-                  {o.curto}
-                </span>
-                <span
-                  className={`mt-0.5 block text-sm font-bold ${totalIva === o.taxa ? "text-white" : "text-stone-800 dark:text-stone-100"}`}
-                >
-                  {o.longo}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* Desdobramento */}
-          {montanteTotal > 0 && (
+          {/* Desdobramento (só visível quando há IVA) */}
+          {montanteTotal > 0 && taxaIvaAtual > 0 && (
             <div className="space-y-1.5 rounded-xl bg-stone-50 px-4 py-3 dark:bg-stone-800/60">
               <div className="flex justify-between">
                 <span className="text-xs text-stone-500">
@@ -1214,16 +1161,14 @@ function PassoFaturacao({
                   {fmt(baseTotalSemIva)}
                 </span>
               </div>
-              {totalIva > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-xs text-stone-400">
-                    IVA — não é teu, passa pelo teu bolso
-                  </span>
-                  <span className="text-xs font-semibold text-stone-400 tabular-nums">
-                    {fmt(ivaTotalExtraido)}
-                  </span>
-                </div>
-              )}
+              <div className="flex justify-between">
+                <span className="text-xs text-stone-400">
+                  IVA ({pct(taxaIvaAtual)}) — não é teu, passa pelo teu bolso
+                </span>
+                <span className="text-xs font-semibold text-stone-400 tabular-nums">
+                  {fmt(ivaTotalExtraido)}
+                </span>
+              </div>
             </div>
           )}
         </div>
@@ -1378,25 +1323,25 @@ function PassoFaturacao({
         </div>
       )}
 
-      {/* Projecção anual */}
+      {/* Meses faturados */}
       <div className="mb-6 rounded-2xl border border-stone-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">
-              Projecção anual
+              Meses faturados este ano
             </p>
             <p className="text-xs text-stone-500 dark:text-stone-400">
-              Repetir ×
+              Emitiste recibos em{" "}
               <strong className="text-stone-700 tabular-nums dark:text-stone-200">
                 {mesesFat}
               </strong>{" "}
-              {mesesFat === 1 ? "mês" : "meses"}
+              {mesesFat === 1 ? "mês" : "meses"} do ano
             </p>
           </div>
           <div
             className="flex flex-wrap gap-1.5"
             role="group"
-            aria-label="Meses activos"
+            aria-label="Meses faturados"
           >
             {MESES_OPCOES_FAT.map((m) => (
               <button
@@ -1417,7 +1362,9 @@ function PassoFaturacao({
         </div>
         {mensalSemIva > 0 && (
           <p className="mt-2.5 text-[11px] text-stone-400">
-            {fmt(mensalSemIva * mesesFat)} sem IVA / ano estimados
+            {mesesFat < 12
+              ? `Total anual: ${fmt(mensalSemIva * mesesFat)} € (sem IVA) — ${mesesFat} ${mesesFat === 1 ? "mês" : "meses"} de atividade`
+              : `Total anual: ${fmt(mensalSemIva * 12)} € (sem IVA)`}
           </p>
         )}
       </div>
@@ -2196,6 +2143,9 @@ function ResultadoFinal({
   regiao,
   tipoAtiv,
   isencaoSS,
+  isencaoCpas,
+  rnhAntigo,
+  exResidente,
   irsJovemAno,
   ifici,
   deficiencia,
@@ -2225,6 +2175,9 @@ function ResultadoFinal({
   regiao: Regiao;
   tipoAtiv: TipoAtiv;
   isencaoSS: boolean;
+  isencaoCpas: boolean;
+  rnhAntigo: boolean;
+  exResidente: boolean;
   irsJovemAno: number;
   ifici: boolean;
   deficiencia: boolean;
@@ -2242,6 +2195,8 @@ function ResultadoFinal({
         tipo: card.tipoFiscal,
         irsJovemAno: irsJovemAno > 0 ? irsJovemAno : undefined,
         ifici,
+        rnhAntigo,
+        programaRegressar: exResidente,
         deficiencia,
         deducoes: {
           saude: despSaude,
@@ -2256,6 +2211,8 @@ function ResultadoFinal({
       irsJovemAno,
       isencaoSS,
       ifici,
+      rnhAntigo,
+      exResidente,
       deficiencia,
       despSaude,
       despEducacao,
@@ -2377,12 +2334,21 @@ function ResultadoFinal({
 
         {/* SS */}
         <LinhaCalculo
-          label="Segurança Social"
+          label={isencaoCpas ? "Segurança Social (CPAS/CGA)" : "Segurança Social"}
           valor={-ssAnual}
-          corValor="text-amber-600 dark:text-amber-400"
-          nota={`${pct(0.214)} × base SS`}
-          explicacao={`Como trabalhador independente pagas 21,4% de SS sobre 70% do que faturaste. Isto garante acesso a subsídio de doença, parentalidade e reforma futura. O valor é pago trimestralmente à Segurança Social.`}
+          corValor={isencaoCpas ? "text-stone-400 dark:text-stone-500" : "text-amber-600 dark:text-amber-400"}
+          nota={isencaoCpas ? "Não descontas para o Regime Geral" : `${pct(0.214)} × base SS`}
+          explicacao={isencaoCpas
+            ? "Advogados e solicitadores pagam para a CPAS (Caixa de Previdência dos Advogados e Solicitadores) em vez do Regime Geral da Segurança Social. As contribuições CPAS têm regras e taxas próprias — consulta o teu painel CPAS para o valor exacto. Este simulador não modela a CPAS."
+            : `Como trabalhador independente pagas 21,4% de SS sobre 70% do que faturaste. Isto garante acesso a subsídio de doença, parentalidade e reforma futura. O valor é pago trimestralmente à Segurança Social.`}
         />
+        {isencaoCpas && (
+          <div className="mx-3 mb-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2.5 dark:border-stone-700 dark:bg-stone-800/60">
+            <p className="text-[11px] leading-relaxed text-stone-600 dark:text-stone-400">
+              <span className="font-semibold">CPAS — não modelado.</span> O teu líquido real é inferior ao estimado: as contribuições para a CPAS ainda se aplicam. Consulta a tua caixa para o valor exacto.
+            </p>
+          </div>
+        )}
 
         <div className="border-t border-stone-100 dark:border-stone-800" />
 
@@ -2390,13 +2356,23 @@ function ResultadoFinal({
         <LinhaCalculo
           label={
             simAnual.ificiAplicado
-              ? "IRS (taxa flat 20%)"
-              : "IRS (após deduções)"
+              ? "IRS (taxa flat 20% — IFICI/RNH 2.0)"
+              : simAnual.rnhAntigoAplicado
+                ? "IRS (taxa flat 20% — RNH antigo)"
+                : simAnual.programaRegressarAplicado
+                  ? "IRS (escalões sobre 50% — Programa Regressar)"
+                  : "IRS (após deduções)"
           }
           valor={-simAnual.irsEstimado}
           corValor="text-red-500 dark:text-red-400"
           nota="ver cálculo detalhado abaixo"
-          explicacao={`Este é o IRS que pagas no final — já com todas as deduções aplicadas (saúde, educação, etc.). O cálculo detalhado de como se chegou a este valor está no Bloco 2 abaixo.`}
+          explicacao={
+            simAnual.ificiAplicado || simAnual.rnhAntigoAplicado
+              ? `Taxa flat de 20% sobre o rendimento coletável (${fmt(simAnual.rendimentoColetavel)}). Sem escalões progressivos.`
+              : simAnual.programaRegressarAplicado
+                ? `50% do rendimento é excluído (${fmt(simAnual.exclusaoProgramaRegressar)}). Os escalões progressivos aplicam-se apenas aos restantes 50% — ${fmt(simAnual.rendimentoColetavel)}.`
+                : `Este é o IRS que pagas no final — já com todas as deduções aplicadas (saúde, educação, etc.). O cálculo detalhado de como se chegou a este valor está no Bloco 2 abaixo.`
+          }
         />
 
         {/* Total líquido */}
@@ -2479,18 +2455,34 @@ function ResultadoFinal({
           </>
         )}
 
-        {/* Rendimento tributável — resultado intercalar */}
+        {/* Programa Regressar — exclusão 50%, se aplicável */}
+        {simAnual.programaRegressarAplicado && simAnual.exclusaoProgramaRegressar > 0 && (
+          <>
+            <LinhaCalculo
+              label="Programa Regressar — exclusão 50%"
+              valor={-simAnual.exclusaoProgramaRegressar}
+              corValor="text-brand"
+              nota="Art. 12.º-A CIRS"
+              explicacao="O Programa Regressar (Art. 12.º-A CIRS) exclui 50% dos rendimentos Cat. A e B de tributação durante 5 anos a contar do regresso. Os escalões progressivos aplicam-se apenas à metade restante."
+            />
+            <div className="border-t border-stone-100 dark:border-stone-800" />
+          </>
+        )}
+
+        {/* Rendimento coletável — resultado intercalar */}
         <LinhaCalculo
           label={
-            ifici
-              ? "Rendimento tributável (IFICI 20%)"
-              : "Rendimento tributável"
+            (simAnual.ificiAplicado || simAnual.rnhAntigoAplicado)
+              ? "Rendimento coletável (taxa flat 20%)"
+              : simAnual.programaRegressarAplicado
+                ? "Rendimento coletável (após exclusão 50%)"
+                : "Rendimento coletável"
           }
-          valor={simAnual.rendimentoTributavel}
+          valor={simAnual.rendimentoColetavel}
           corValor="text-stone-700 dark:text-stone-200"
           isResultado
           nota="base sobre a qual se aplica a tabela de IRS"
-          explicacao={`Este é o rendimento que entra na tabela do IRS — não o que faturaste. Resulta de aplicar o coeficiente ${pct(simAnual.coeficiente)} à tua faturação${simAnual.exclusaoDeficiencia > 0 ? ", com a exclusão por deficiência" : ""}${simAnual.isencaoJovem > 0 ? " e a isenção IRS Jovem" : ""}.`}
+          explicacao={`Este é o rendimento que entra na tabela do IRS — não o que faturaste. Resulta de aplicar o coeficiente ${pct(simAnual.coeficiente)} à tua faturação${simAnual.exclusaoDeficiencia > 0 ? ", com a exclusão por deficiência" : ""}${simAnual.isencaoJovem > 0 ? " e a isenção IRS Jovem" : ""}${simAnual.programaRegressarAplicado ? " e a exclusão de 50% do Programa Regressar" : ""}.`}
         />
 
         <SeparadorBloco label="Passo 2 — Da coleta bruta ao IRS final" />
@@ -2498,26 +2490,32 @@ function ResultadoFinal({
         {/* Coleta bruta */}
         <LinhaCalculo
           label={
-            simAnual.ificiAplicado
+            (simAnual.ificiAplicado || simAnual.rnhAntigoAplicado)
               ? `Coleta (taxa flat ${pct(0.2)})`
-              : "Coleta (escalões progressivos)"
+              : simAnual.programaRegressarAplicado
+                ? "Coleta (escalões sobre 50% do rendimento)"
+                : "Coleta (escalões progressivos)"
           }
           valor={-simAnual.coletaBruta}
           corValor="text-red-400 dark:text-red-300"
           nota={
-            simAnual.ificiAplicado
-              ? `20% × ${fmt(simAnual.rendimentoTributavel)}`
-              : `tabela IRS sobre ${fmt(simAnual.rendimentoTributavel)}`
+            (simAnual.ificiAplicado || simAnual.rnhAntigoAplicado)
+              ? `20% × ${fmt(simAnual.rendimentoColetavel)}`
+              : `tabela IRS sobre ${fmt(simAnual.rendimentoColetavel)}`
           }
           explicacao={
             simAnual.ificiAplicado
-              ? `Com o estatuto IFICI (Incentivo Fiscal à Investigação Científica e Inovação — RNH 2.0), aplica-se uma taxa flat de 20% sobre o rendimento tributável, em vez dos escalões progressivos normais.`
-              : `O IRS em Portugal é progressivo: pagas percentagens crescentes consoante o escalão. A coleta bruta é o imposto calculado pela tabela, antes de subtrair as deduções a que tens direito (saúde, educação, etc.).`
+              ? `Com o estatuto IFICI (RNH 2.0), aplica-se uma taxa flat de 20% sobre o rendimento coletável (${fmt(simAnual.rendimentoColetavel)}), em vez dos escalões progressivos normais.`
+              : simAnual.rnhAntigoAplicado
+                ? `O RNH antigo (pré-2024) aplica uma taxa flat de 20% sobre o rendimento coletável (${fmt(simAnual.rendimentoColetavel)}). Os escalões progressivos não se aplicam durante o período de benefício.`
+                : simAnual.programaRegressarAplicado
+                  ? `Programa Regressar: 50% do rendimento foi excluído. Os escalões progressivos aplicam-se apenas ao rendimento coletável restante (${fmt(simAnual.rendimentoColetavel)}).`
+                  : `O IRS em Portugal é progressivo: pagas percentagens crescentes consoante o escalão. A coleta bruta é o imposto calculado pela tabela, antes de subtrair as deduções a que tens direito (saúde, educação, etc.).`
           }
         />
 
         {/* ── Escalões IRS — expansível (só se não IFICI) ──────────────── */}
-        {!simAnual.ificiAplicado && simAnual.escaloesAplicados.length > 0 && (
+        {!simAnual.ificiAplicado && !simAnual.rnhAntigoAplicado && simAnual.escaloesAplicados.length > 0 && (
           <>
             <div className="border-t border-stone-100 dark:border-stone-800" />
             <button
