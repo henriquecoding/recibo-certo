@@ -84,7 +84,7 @@ export default function OnboardingGate({ onSelect }: OnboardingGateProps) {
           <button
             type="button"
             onClick={() => onSelect("profissional")}
-            className="text-xs font-medium text-stone-400 underline-offset-2 transition-colors hover:text-stone-600 hover:underline dark:hover:text-stone-300"
+            className="px-3 py-2.5 text-xs font-medium text-stone-400 underline-offset-2 transition-colors hover:text-stone-600 hover:underline dark:hover:text-stone-300"
           >
             Já escolhi antes — ignorar esta pergunta
           </button>

@@ -3736,17 +3736,18 @@ export default function SimuladorIntegrado() {
 
       <div className="relative overflow-hidden rounded-4xl border border-stone-200 shadow-lift">
         {/* ── Cabeçalho ──────────────────────────────────────────────────────── */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 bg-white px-5 py-5 sm:px-7 dark:border-stone-800 dark:bg-stone-950">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-stone-100 bg-white px-4 py-4 sm:gap-3 sm:px-7 sm:py-5 dark:border-stone-800 dark:bg-stone-950">
           <div>
             <div className="eyebrow text-brand">Calculadora 2026</div>
-            <h3 className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-200">
+            <h3 className="font-display text-xl font-semibold text-stone-800 sm:text-2xl dark:text-stone-200">
               O teu líquido real
             </h3>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Segmented control Por recibo / Anual */}
-            {modoSimulacao !== "nao_selecionado" && (
+            {/* Segmented control Por recibo / Anual — só modo profissional
+                (no guiado o input é gerido dentro do wizard) */}
+            {modoSimulacao === "profissional" && (
               <div
                 role="group"
                 aria-label="Modo de cálculo"
@@ -5256,7 +5257,7 @@ export default function SimuladorIntegrado() {
                               ? "Disponível para gastar · por recibo"
                               : "Líquido anual estimado"}
                           </div>
-                          <div className="mt-1 font-display text-5xl font-semibold leading-none tabular-nums sm:text-6xl">
+                          <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-6xl">
                             <AnimatedNumber
                               value={
                                 modoInput === "recibo"
@@ -5314,7 +5315,7 @@ export default function SimuladorIntegrado() {
                         const pcSS = fatRef > 0 ? ssVal / fatRef : 0;
                         const pcIVA = fatRef + ivaVal > 0 ? ivaVal / (fatRef) : 0;
                         return (
-                          <div className={`mb-6 grid gap-3 ${ivaVal > 0 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
+                          <div className={`mb-6 grid gap-3 ${ivaVal > 0 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-3"}`}>
                             <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
                               <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">{isRecibo ? "IRS retido" : "IRS anual"}</p>
                               <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">{fmt(Math.round(irsVal))}</p>
@@ -5332,7 +5333,7 @@ export default function SimuladorIntegrado() {
                                 <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{pct(pcIVA)} do total</p>
                               </div>
                             )}
-                            <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+                            <div className={`rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900 ${ivaVal > 0 ? "" : "col-span-2 sm:col-span-1"}`}>
                               <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">{isRecibo ? "Disponível" : "Líquido/mês"}</p>
                               <p className="mt-1 font-display text-xl font-semibold tabular-nums text-brand">{fmt(Math.round(liquidoMes))}</p>
                               <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{isRecibo ? "por recibo" : `${fmt(Math.round(brutoAnual / 12))} faturado`}</p>
@@ -5897,7 +5898,7 @@ export default function SimuladorIntegrado() {
                           <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">
                             Líquido estimado · empresa (Lda)
                           </div>
-                          <div className="mt-1 font-display text-5xl font-semibold leading-none tabular-nums sm:text-6xl">
+                          <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-6xl">
                             <AnimatedNumber value={liquidoEmpresaFinal} />
                           </div>
                           <div className="mt-4">

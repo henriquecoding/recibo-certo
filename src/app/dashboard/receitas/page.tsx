@@ -106,7 +106,7 @@ export default function ReceitasPage() {
                   <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">
                     Líquido para ti · {periodo === "ano" ? new Date().getFullYear() : "todo o período"}
                   </div>
-                  <div className="mt-1 font-display text-6xl font-semibold leading-none tabular-nums sm:text-7xl">
+                  <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-6xl lg:text-7xl">
                     {fmt(kpis.liquido)}
                   </div>
                   {kpis.bruto > 0 && (
@@ -127,7 +127,7 @@ export default function ReceitasPage() {
             </div>
 
             {/* 3 satélites */}
-            <div className="col-span-12 flex flex-row gap-4 lg:col-span-4 lg:flex-col">
+            <div className="col-span-12 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:col-span-4 lg:grid-cols-1">
               {[
                 { l: "Faturado", v: fmt(kpis.bruto) },
                 { l: "Recibos emitidos", v: String(kpis.total) },

@@ -518,7 +518,7 @@ export default function ModoGuiado({
                 <button
                   type="button"
                   onClick={() => setJaTemAtividade(null)}
-                  className="mb-3 inline-flex items-center gap-1.5 text-xs font-medium text-stone-400 transition-colors hover:text-stone-600"
+                  className="mb-2 inline-flex items-center gap-1.5 py-2 pr-3 text-xs font-medium text-stone-400 transition-colors hover:text-stone-600"
                 >
                   <ArrowLeft size={12} /> Voltar
                 </button>
@@ -584,7 +584,7 @@ export default function ModoGuiado({
                 <button
                   type="button"
                   onClick={() => setJaTemAtividade(null)}
-                  className="mb-3 inline-flex items-center gap-1.5 text-xs font-medium text-stone-400 transition-colors hover:text-stone-600"
+                  className="mb-2 inline-flex items-center gap-1.5 py-2 pr-3 text-xs font-medium text-stone-400 transition-colors hover:text-stone-600"
                 >
                   <ArrowLeft size={12} /> Voltar
                 </button>
@@ -613,7 +613,7 @@ export default function ModoGuiado({
             <button
               type="button"
               onClick={() => onIrParaSimuladorCompleto(estadoSaida)}
-              className="mt-4 w-full text-center text-xs text-stone-400 transition-colors hover:text-stone-600"
+              className="mt-3 w-full py-2.5 text-center text-xs text-stone-400 transition-colors hover:text-stone-600"
             >
               Saltar — já sei o que preciso →
             </button>
@@ -2569,7 +2569,7 @@ function ResultadoFinal({
               <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">
                 Líquido anual estimado
               </div>
-              <div className="mt-1 font-display text-5xl font-semibold leading-none tabular-nums sm:text-6xl">
+              <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-6xl">
                 <AnimatedNumber value={Math.max(0, liquidoFinal)} />
               </div>
               <div className="mt-4">
@@ -2593,7 +2593,7 @@ function ResultadoFinal({
           </div>
 
           {/* ── Stat cards ──────────────────────────────────────────────── */}
-          <div className={`grid gap-3 ${ivaAnual > 0 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
+          <div className={`grid gap-3 ${ivaAnual > 0 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-3"}`}>
             <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
               <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">IRS anual</p>
               <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
@@ -2624,7 +2624,7 @@ function ResultadoFinal({
               </div>
             )}
 
-            <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+            <div className={`rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900 ${ivaAnual > 0 ? "" : "col-span-2 sm:col-span-1"}`}>
               <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">Líquido/mês</p>
               <p className="mt-1 font-display text-xl font-semibold tabular-nums text-brand">
                 {fmt(liquidoMes)}
@@ -2945,8 +2945,8 @@ function ResultadoFinal({
                   transition={{ duration: 0.2 }}
                   className="overflow-hidden"
                 >
-                  <div className="mx-3 mb-2 overflow-hidden rounded-xl border border-stone-100 dark:border-stone-700">
-                    <table className="w-full text-[11px]">
+                  <div className="mx-3 mb-2 overflow-x-auto rounded-xl border border-stone-100 dark:border-stone-700">
+                    <table className="w-full min-w-[300px] text-[11px]">
                       <thead>
                         <tr className="border-b border-stone-100 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/60">
                           <th className="px-3 py-1.5 text-left font-semibold text-stone-400">
