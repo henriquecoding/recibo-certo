@@ -470,6 +470,15 @@ export default function ModoGuiado({
 
   return (
     <div className="min-h-0 bg-white dark:bg-stone-950">
+      {/* ── Faixa verde ────────────────────────────────────────────────────── */}
+      <div className="border-b border-brand/10 bg-brand-light/40 px-6 py-2 dark:bg-brand/5 dark:border-brand/10">
+        <div className="mx-auto max-w-3xl">
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-brand-dark/70 dark:text-brand/70">
+            Simulador guiado · 2026
+          </span>
+        </div>
+      </div>
+
       {/* ── Barra de progresso ─────────────────────────────────────────────── */}
       <div className="border-b border-stone-100 px-6 py-4 dark:border-stone-800">
         <div className="mx-auto max-w-3xl">
@@ -689,7 +698,7 @@ export default function ModoGuiado({
                 <button
                   type="button"
                   onClick={recuar}
-                  className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-medium text-stone-500 transition-all hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800"
+                  className="flex items-center gap-1.5 rounded-2xl border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-500 transition-all hover:bg-stone-50 hover:text-stone-800 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800"
                 >
                   <ArrowLeft size={14} />
                   {passo === 1 ? "Recomeçar" : "Voltar"}
@@ -699,7 +708,7 @@ export default function ModoGuiado({
                   type="button"
                   onClick={avancar}
                   disabled={passo === 1 && !tipoSelecionado}
-                  className="flex items-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-dark hover:shadow-float disabled:cursor-not-allowed disabled:opacity-40"
+                  className="btn-shine flex items-center gap-2 rounded-2xl bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-glow transition-all hover:bg-brand-dark hover:shadow-float disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {passo === 3 ? "Ver o meu resultado" : "Continuar"}
                   <ArrowRight size={14} />
@@ -787,7 +796,7 @@ function PassoAtividade({
               type="button"
               aria-pressed={active}
               onClick={() => onSelecionarTipo(id)}
-              className={`group relative overflow-hidden rounded-2xl border-2 p-4 text-left transition-all duration-200 ${
+              className={`group relative overflow-hidden rounded-3xl border-2 p-4 text-left transition-all duration-200 ${
                 active
                   ? "border-brand bg-brand-light shadow-lift"
                   : "border-stone-200 bg-white hover:border-brand/30 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900/60 dark:hover:border-brand/30"
@@ -911,7 +920,7 @@ function PassoAtividade({
                     transition={{ duration: 0.25 }}
                     className="overflow-hidden"
                   >
-                    <div className="mt-3 rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-900/60">
+                    <div className="mt-3 rounded-3xl border border-stone-100 bg-white shadow-card p-4 dark:border-stone-800 dark:bg-stone-900">
                       {/* Header */}
                       <div className="mb-3 flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -1140,7 +1149,7 @@ function PassoFaturacao({
       </div>
 
       {/* Tabs modo */}
-      <div className="mb-5 flex gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800">
+      <div className="mb-5 flex gap-1 rounded-3xl bg-stone-100 p-1 dark:bg-stone-800">
         {(["total", "individual"] as const).map((m) => (
           <button
             key={m}
@@ -1161,7 +1170,7 @@ function PassoFaturacao({
 
       {/* Modo: total do mês */}
       {modoFat === "total" && (
-        <div className="mb-5 rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-700 dark:bg-stone-900">
+        <div className="mb-5 rounded-3xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
           {/* Campo valor */}
           <div className="mb-4">
             <div className="mb-1.5 flex items-center justify-between">
@@ -1248,7 +1257,7 @@ function PassoFaturacao({
             return (
               <div
                 key={r.id}
-                className="mb-3 rounded-2xl border border-stone-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900"
+                className="mb-3 rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900"
               >
                 <div className="mb-3 flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-brand">
@@ -1343,7 +1352,7 @@ function PassoFaturacao({
           <button
             type="button"
             onClick={adicionarRecibo}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-stone-300 bg-white py-3 text-sm font-semibold text-brand transition-all hover:border-brand/50 hover:bg-brand-light/30 dark:border-stone-700 dark:bg-transparent"
+            className="flex w-full items-center justify-center gap-2 rounded-3xl border border-dashed border-stone-300 bg-white py-3 text-sm font-semibold text-brand transition-all hover:border-brand/50 hover:bg-brand-light/30 dark:border-stone-700 dark:bg-transparent"
           >
             <svg
               className="h-4 w-4"
@@ -1450,7 +1459,7 @@ function PassoFaturacao({
       </div>
 
       {/* Meses faturados — depois de configurado o IVA e a região */}
-      <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900">
+      <div className="mt-6 rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">
@@ -1497,7 +1506,7 @@ function PassoFaturacao({
 
       {/* Aviso: cenário de ato isolado (uma única fatura no ano) */}
       {atoIsoladoProvavel && (
-        <div className="mt-4 rounded-2xl border border-brand/25 bg-brand-light/40 p-4 dark:bg-brand/10">
+        <div className="mt-4 rounded-3xl border border-brand/25 bg-brand-light/40 p-4 dark:bg-brand/10">
           <div className="flex gap-2.5">
             <svg
               className="mt-0.5 h-4 w-4 shrink-0 text-brand"
@@ -1620,10 +1629,10 @@ function PassoSituacao({
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         {/* ── Secção SS ─────────────────────────────────────────────────── */}
         <div>
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+          <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-stone-400">
             Segurança Social
           </p>
           <div className="space-y-2">
@@ -1691,7 +1700,7 @@ function PassoSituacao({
 
         {/* ── Secção IRS ────────────────────────────────────────────────── */}
         <div>
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+          <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-stone-400">
             IRS — benefícios fiscais
           </p>
           <div className="space-y-2">
@@ -1809,10 +1818,10 @@ function PassoSituacao({
             type="button"
             aria-expanded={mostrarDeducoes}
             onClick={() => setMostrarDeducoes(!mostrarDeducoes)}
-            className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3.5 text-left transition-all ${
+            className={`flex w-full items-center justify-between rounded-3xl border px-4 py-3.5 text-left transition-all ${
               mostrarDeducoes
                 ? "border-brand bg-brand-light/30"
-                : "border-stone-200 bg-stone-50 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-900/60"
+                : "border-stone-100 bg-white shadow-card hover:border-stone-200 dark:border-stone-800 dark:bg-stone-900"
             }`}
           >
             <div>
@@ -2053,7 +2062,7 @@ function DecisorAtoIsoladoInline({
   }
 
   return (
-    <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-900/60">
+    <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
       <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-stone-400">
         Precisas de abrir atividade?
       </p>
@@ -2411,62 +2420,52 @@ function ResultadoFinal({
         </div>
       </div>
 
-      {/* ── Stat cards ──────────────────────────────────────────────────── */}
-      <div className={`mb-6 grid gap-3 ${ivaAnual > 0 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
-        {/* IRS */}
-        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 dark:border-red-900/30 dark:bg-red-950/20">
-          <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-red-400 dark:text-red-500">IRS anual</p>
-          <p className="font-display text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
+      {/* ── Stat cards — uniforme, só cor no valor ──────────────────────── */}
+      <div className={`mb-4 grid gap-3 ${ivaAnual > 0 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
+        <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">IRS anual</p>
+          <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
             {fmt(Math.round(simAnual.irsEstimado))}
           </p>
-          <p className="mt-0.5 text-[11px] tabular-nums text-red-400 dark:text-red-500">
-            {pct(pcIRS)} da faturação
-          </p>
+          <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{pct(pcIRS)} do faturado</p>
         </div>
 
-        {/* SS */}
-        <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 dark:border-amber-900/30 dark:bg-amber-950/20">
-          <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-amber-500 dark:text-amber-600">
-            {isencaoCpas ? "Seg. Social*" : "Seg. Social"}
+        <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">
+            {isencaoCpas ? "SS*" : "Seg. Social"}
           </p>
-          <p className="font-display text-xl font-bold tabular-nums text-amber-700 dark:text-amber-400">
+          <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
             {isencaoCpas ? "—" : fmt(Math.round(ssAnual))}
           </p>
-          <p className="mt-0.5 text-[11px] tabular-nums text-amber-500 dark:text-amber-600">
-            {isencaoCpas ? "CPAS — ver nota" : `${pct(pcSS)} da faturação`}
+          <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">
+            {isencaoCpas ? "CPAS" : `${pct(pcSS)} do faturado`}
           </p>
         </div>
 
-        {/* IVA — só se não isento */}
         {ivaAnual > 0 && (
-          <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/40">
-            <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-stone-400">IVA cobrado</p>
-            <p className="font-display text-xl font-bold tabular-nums text-stone-700 dark:text-stone-200">
+          <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">IVA cobrado</p>
+            <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
               {fmt(Math.round(ivaAnual))}
             </p>
-            <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">
-              {pct(pcIVA)} do total c/ IVA
-            </p>
+            <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{pct(pcIVA)} do total</p>
           </div>
         )}
 
-        {/* Líquido/mês */}
-        <div className="rounded-2xl border border-brand/20 bg-brand-light/50 p-4 dark:border-brand/20 dark:bg-brand/10">
-          <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-brand-dark/60 dark:text-brand/60">
-            Líquido/mês
-          </p>
-          <p className="font-display text-xl font-bold tabular-nums text-brand">
+        <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">Líquido/mês</p>
+          <p className="mt-1 font-display text-xl font-semibold tabular-nums text-brand">
             {fmt(liquidoMes)}
           </p>
-          <p className="mt-0.5 text-[11px] tabular-nums text-brand-dark/50 dark:text-brand/50">
-            {fmt(Math.round(brutoAnual / Math.max(1, recibosAno)))} faturado/mês
+          <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">
+            {fmt(Math.round(brutoAnual / Math.max(1, recibosAno)))} faturado
           </p>
         </div>
       </div>
 
-      {/* ── Breakdown visual ─────────────────────────────────────────────── */}
-      <div className="mb-6 rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-700 dark:bg-stone-900">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400">
+      {/* ── Breakdown visual — integrado ─────────────────────────────────── */}
+      <div className="mb-6 rounded-3xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
+        <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-stone-400">
           Distribuição por euro faturado
         </p>
         <EuroBreakdown
@@ -2479,7 +2478,7 @@ function ResultadoFinal({
       </div>
 
       {/* ── Calendário fiscal ────────────────────────────────────────────── */}
-      <div className="mb-6 rounded-2xl border border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900">
+      <div className="mb-6 rounded-3xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900">
         <div className="flex items-center gap-2 border-b border-stone-100 px-4 py-3 dark:border-stone-800">
           <Calendar size={14} className="flex-shrink-0 text-brand" />
           <div>
@@ -2574,7 +2573,7 @@ function ResultadoFinal({
       </div>
 
       {/* ── BLOCO 1: O teu líquido ───────────────────────────────────────── */}
-      <div className="mb-3 rounded-2xl border border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900">
+      <div className="mb-3 rounded-3xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900">
         {/* Cabeçalho bloco */}
         <div className="flex items-center gap-2 border-b border-stone-100 px-4 py-3 dark:border-stone-800">
           <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-brand text-[10px] font-bold text-white">
@@ -2701,7 +2700,7 @@ function ResultadoFinal({
       </div>
 
       {/* ── BLOCO 2: Como se calculou o IRS ─────────────────────────────── */}
-      <div className="mb-6 rounded-2xl border border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900">
+      <div className="mb-6 rounded-3xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900">
         {/* Cabeçalho bloco */}
         <div className="flex items-center gap-2 border-b border-stone-100 px-4 py-3 dark:border-stone-800">
           <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">
@@ -2981,7 +2980,7 @@ function ResultadoFinal({
       </div>
 
       {/* Aviso */}
-      <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-alert-border bg-alert-bg px-4 py-3">
+      <div className="mb-6 flex items-start gap-2.5 rounded-3xl border border-alert-border bg-alert-bg px-4 py-3">
         <Warning size={13} className="mt-0.5 flex-shrink-0 text-alert-text" />
         <p className="text-xs leading-relaxed text-alert-text">
           Estimativa informativa. IRS e SS são adiantamentos — o apuramento
@@ -2995,14 +2994,14 @@ function ResultadoFinal({
         <button
           type="button"
           onClick={onIrParaSimuladorCompleto}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-dark hover:shadow-float"
+          className="btn-shine flex flex-1 items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:bg-brand-dark hover:shadow-float"
         >
           Simulador completo <ArrowRight size={14} />
         </button>
         <button
           type="button"
           onClick={onRecomecar}
-          className="flex items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white px-5 py-3 text-sm font-semibold text-stone-600 transition-all hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
+          className="flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-5 py-3 text-sm font-semibold text-stone-600 transition-all hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
         >
           Recomeçar
         </button>
@@ -3052,12 +3051,12 @@ function PainelResultadoVivo({
   if (!tipoAtiv) {
     return (
       <div className="space-y-3">
-        <div className="rounded-2xl border border-dashed border-stone-200 bg-stone-50 p-5 text-center dark:border-stone-700 dark:bg-stone-900/60">
+        <div className="rounded-3xl border border-dashed border-stone-200 bg-stone-50 p-5 text-center dark:border-stone-700 dark:bg-stone-900/60">
           <p className="text-xs text-stone-400">
             Seleciona a tua atividade para ver o resultado ao vivo
           </p>
         </div>
-        <div className="rounded-2xl border border-brand/15 bg-brand-light/20 p-4">
+        <div className="rounded-3xl border border-brand/15 bg-brand-light/20 p-4">
           <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-brand-dark/60">
             Sabia que…
           </p>
@@ -3203,7 +3202,7 @@ function PainelResultadoVivo({
       </div>
 
       {/* Dica contextual ao passo */}
-      <div className="rounded-2xl border border-brand/15 bg-brand-light/20 p-4">
+      <div className="rounded-3xl border border-brand/15 bg-brand-light/20 p-4">
         <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-brand-dark/60">
           Dica
         </p>
@@ -3465,12 +3464,12 @@ function ToggleCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border p-4 transition-all ${
+      className={`rounded-3xl border p-4 transition-all ${
         desativado
           ? "border-stone-100 bg-stone-50 opacity-60 dark:border-stone-800 dark:bg-stone-900/40"
           : ativo
             ? "border-brand bg-brand-light/40"
-            : "border-stone-200 bg-stone-50 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-900/60"
+            : "border-stone-100 bg-white shadow-card hover:border-stone-200 dark:border-stone-800 dark:bg-stone-900"
       }`}
     >
       <button
