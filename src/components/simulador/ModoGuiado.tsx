@@ -1384,93 +1384,6 @@ function PassoFaturacao({
         </div>
       )}
 
-      {/* Meses faturados */}
-      <div className="mb-6 rounded-2xl border border-stone-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">
-              Meses faturados este ano
-            </p>
-            <p className="text-xs text-stone-500 dark:text-stone-400">
-              Emitiste recibos em{" "}
-              <strong className="text-stone-700 tabular-nums dark:text-stone-200">
-                {mesesFat}
-              </strong>{" "}
-              {mesesFat === 1 ? "mês" : "meses"} do ano
-            </p>
-          </div>
-          <div
-            className="flex flex-wrap gap-1.5"
-            role="group"
-            aria-label="Meses faturados"
-          >
-            {MESES_OPCOES_FAT.map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => onMesesFat(m)}
-                aria-pressed={mesesFat === m}
-                className={`h-9 w-9 rounded-xl border text-sm font-semibold transition-all ${
-                  mesesFat === m
-                    ? "border-brand bg-brand text-white"
-                    : "border-stone-200 bg-white text-stone-500 hover:border-brand/30 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400"
-                }`}
-              >
-                {m}
-              </button>
-            ))}
-          </div>
-        </div>
-        {mensalSemIva > 0 && (
-          <p className="mt-2.5 text-[11px] text-stone-400">
-            {mesesFat < 12
-              ? `Total anual: ${fmt(mensalSemIva * mesesFat)} € (sem IVA) — ${mesesFat} ${mesesFat === 1 ? "mês" : "meses"} de atividade`
-              : `Total anual: ${fmt(mensalSemIva * 12)} € (sem IVA)`}
-          </p>
-        )}
-      </div>
-
-      {/* Aviso: cenário de ato isolado (uma única fatura no ano) */}
-      {atoIsoladoProvavel && (
-        <div className="mb-6 rounded-2xl border border-brand/25 bg-brand-light/40 p-4 dark:bg-brand/10">
-          <div className="flex gap-2.5">
-            <svg
-              className="mt-0.5 h-4 w-4 shrink-0 text-brand"
-              viewBox="0 0 16 16"
-              fill="none"
-              aria-hidden
-            >
-              <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
-              <path
-                d="M8 5v3.5M8 10.5h.01"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-            <div>
-              <p className="text-sm font-semibold text-brand-dark dark:text-brand">
-                Foi um serviço único?
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-brand-dark/80 dark:text-brand/80">
-                Se só vais emitir esta fatura uma vez no ano, podes não precisar
-                de abrir atividade — o <strong>ato isolado</strong> costuma ser
-                mais simples. Mas atenção: aí cobras IVA a 23% (sem a isenção dos{" "}
-                {fmt(IVA_LIMITE)}) e não há contribuições para a Segurança
-                Social. Estes números assumem atividade aberta.
-              </p>
-              <a
-                href="/guias/ato-isolado"
-                className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-brand transition-colors hover:text-brand-dark"
-              >
-                Comparar ato isolado vs recibos verdes
-                <ArrowRight size={12} />
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* IVA */}
       <div className="mb-6">
         <div className="mb-2.5 flex items-center gap-1.5">
@@ -1532,6 +1445,93 @@ function PassoFaturacao({
           </p>
         )}
       </div>
+
+      {/* Meses faturados — depois de configurado o IVA e a região */}
+      <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">
+              Meses faturados este ano
+            </p>
+            <p className="text-xs text-stone-500 dark:text-stone-400">
+              Emitiste recibos em{" "}
+              <strong className="text-stone-700 tabular-nums dark:text-stone-200">
+                {mesesFat}
+              </strong>{" "}
+              {mesesFat === 1 ? "mês" : "meses"} do ano
+            </p>
+          </div>
+          <div
+            className="flex flex-wrap gap-1.5"
+            role="group"
+            aria-label="Meses faturados"
+          >
+            {MESES_OPCOES_FAT.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => onMesesFat(m)}
+                aria-pressed={mesesFat === m}
+                className={`h-9 w-9 rounded-xl border text-sm font-semibold transition-all ${
+                  mesesFat === m
+                    ? "border-brand bg-brand text-white"
+                    : "border-stone-200 bg-white text-stone-500 hover:border-brand/30 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400"
+                }`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+        </div>
+        {mensalSemIva > 0 && (
+          <p className="mt-2.5 text-[11px] text-stone-400">
+            {mesesFat < 12
+              ? `Faturação anual (sem IVA): ${fmt(mensalSemIva * mesesFat)} — ${mesesFat} ${mesesFat === 1 ? "mês" : "meses"} de atividade`
+              : `Faturação anual (sem IVA): ${fmt(mensalSemIva * 12)}`}
+          </p>
+        )}
+      </div>
+
+      {/* Aviso: cenário de ato isolado (uma única fatura no ano) */}
+      {atoIsoladoProvavel && (
+        <div className="mt-4 rounded-2xl border border-brand/25 bg-brand-light/40 p-4 dark:bg-brand/10">
+          <div className="flex gap-2.5">
+            <svg
+              className="mt-0.5 h-4 w-4 shrink-0 text-brand"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden
+            >
+              <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+              <path
+                d="M8 5v3.5M8 10.5h.01"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+            <div>
+              <p className="text-sm font-semibold text-brand-dark dark:text-brand">
+                Foi um serviço único?
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-brand-dark/80 dark:text-brand/80">
+                Se só vais emitir esta fatura uma vez no ano, podes não precisar
+                de abrir atividade — o <strong>ato isolado</strong> costuma ser
+                mais simples. Mas atenção: aí cobras IVA a 23% (sem a isenção dos{" "}
+                {fmt(IVA_LIMITE)}) e não há contribuições para a Segurança
+                Social. Estes números assumem atividade aberta.
+              </p>
+              <a
+                href="/guias/ato-isolado"
+                className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-brand transition-colors hover:text-brand-dark"
+              >
+                Comparar ato isolado vs recibos verdes
+                <ArrowRight size={12} />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3034,6 +3034,16 @@ function ZonaIVA({
     normal: `taxa normal (${pct(taxasIVA.normal)})`,
   };
 
+  // Exemplos de bens/serviços que tipicamente usam cada taxa (Listas I e II do CIVA).
+  const IVA_EXEMPLOS: Record<RegimeIVA, string> = {
+    isento: "",
+    reduzida:
+      "alimentos essenciais, livros, medicamentos, alojamento e transporte de passageiros",
+    intermedia:
+      "restauração (refeições), vinhos comuns e alguns produtos agrícolas",
+    normal: "consultoria, advocacia, design, programação e a maioria dos serviços",
+  };
+
   function BotoesIVA({ cor }: { cor: "amber" | "red" }) {
     const base =
       cor === "amber"
@@ -3114,15 +3124,23 @@ function ZonaIVA({
               </p>
             </div>
           ) : (
-            <div className="flex items-start gap-1.5 rounded-lg border border-alert-border bg-alert-bg px-2.5 py-2">
-              <Warning
-                size={11}
-                className="mt-0.5 flex-shrink-0 text-alert-text"
-              />
-              <p className="text-[11px] leading-relaxed text-alert-text">
-                Esta taxa não é a habitual para {nomeAtividade}. Confirma com o
-                teu contabilista.
-              </p>
+            <div className="rounded-lg border border-alert-border bg-alert-bg px-2.5 py-2">
+              <div className="flex items-start gap-1.5">
+                <Warning
+                  size={11}
+                  className="mt-0.5 flex-shrink-0 text-alert-text"
+                />
+                <p className="text-[11px] leading-relaxed text-alert-text">
+                  Esta taxa não é a habitual para {nomeAtividade}. Confirma com o
+                  teu contabilista.
+                </p>
+              </div>
+              {IVA_EXEMPLOS[regime] && (
+                <p className="mt-1 pl-[18px] text-[11px] leading-relaxed text-alert-text/80">
+                  A {meta.titulo.toLowerCase()} costuma aplicar-se a:{" "}
+                  {IVA_EXEMPLOS[regime]}.
+                </p>
+              )}
             </div>
           )}
         </div>

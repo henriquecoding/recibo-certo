@@ -457,9 +457,12 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
 
     // Regra dos 15% — só para coeficientes 0,75 (art151) e 0,35 (outros serviços).
     const aplicaRegra15 = input.aplicaRegra15Override ?? (tipo === "art151" || tipo === "outros");
-    const ssAnual = brutoAnual * SS_COEFICIENTE.servicos.value * SS_TAXA.value;
-    const ssExcedente = Math.max(0, ssAnual - 0.1 * brutoAnual);
-    despesasAutomaticas = Math.max(DEDUCAO_ESPECIFICA_CATB.value, ssExcedente);
+    // Art. 31.º n.º 13 al. a) CIRS: do somatório que abate aos 15% do rendimento
+    // bruto, a componente automática é a dedução específica (4 104 €/8,54×IAS)
+    // OU as contribuições obrigatórias TOTAIS para a Segurança Social, a maior.
+    // (Não é a parte que excede 10% — isso é a dedução autónoma do n.º 2.)
+    const ssContribuicoes = brutoAnual * SS_COEFICIENTE.servicos.value * SS_TAXA.value;
+    despesasAutomaticas = Math.max(DEDUCAO_ESPECIFICA_CATB.value, ssContribuicoes);
     acrescimo15 = aplicaRegra15
       ? Math.max(0, REGIME_15PCT.value * brutoAnual - (despesasAutomaticas + despesasJustificadas))
       : 0;
