@@ -108,8 +108,15 @@ import {
   type Regiao,
   type BaseSS,
   type EscalaoIVA,
+  type TipoAtividade as TipoFiscalCanonico,
 } from "@/lib/fiscal-data";
-import { calcular, taxaIVAEfetiva, type RegimeIVA } from "@/lib/fiscal";
+import {
+  calcular,
+  taxaIVAEfetiva,
+  simularIRSAnual,
+  type RegimeIVA,
+  type SimulacaoIRS,
+} from "@/lib/fiscal";
 import OnboardingGate from "@/components/simulador/OnboardingGate";
 import EuroBreakdown from "@/components/simulador/EuroBreakdown";
 import DecisionCard from "@/components/simulador/DecisionCard";
@@ -177,6 +184,20 @@ const TIPO_ATIVIDADE_PARAMS = {
 } as const;
 
 type TipoAtividade = keyof typeof TIPO_ATIVIDADE_PARAMS;
+
+/**
+ * Mapa do tipo de atividade local → tipo fiscal canónico (`lib/fiscal-data`),
+ * espelhando exatamente o que o Modo Guiado usa. Alojamento local é tratado
+ * fiscalmente como "vendas" (sem regra dos 15%); o coeficiente real é passado
+ * por `coefOverride`.
+ */
+const TIPO_LOCAL_PARA_CANONICO: Record<TipoAtividade, TipoFiscalCanonico> = {
+  art151: "art151",
+  vendas: "vendas",
+  hosped: "vendas",
+  outras: "outros",
+  prop_int: "diretosAutor",
+};
 
 const DERRAMA_MUNI = 0.015;
 const IRS_DIVIDENDOS = 0.28;
@@ -305,11 +326,7 @@ const CONTAB_ORG_CUSTO_MENSAL = 200; // OCC: €150–300/mês; média conservad
 //   - 600€ / dep. > 3 anos | 726€ / dep. ≤ 3 anos | 900€ / 2.º+ dep. ≤ 6 anos
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DEFICIENCIA_EXCLUSAO_PCT = 0.15; // 15% Cat. B excluídos (Art. 56.º-A)
-const DEFICIENCIA_EXCLUSAO_MAX = 2_500; // max €2 500/categoria (Art. 56.º-A)
 const DEFICIENCIA_DEDUCAO_COLETA = 4 * IAS_2026; // 4 × IAS 2026 = €2 148,52
-
-const IFICI_TAXA_FLAT = 0.2; // Art. 58.º-A EBF — taxa 20% sobre Cat. B elegível
 
 const DEPENDENTE_DEDUCAO_3PLUS = 600; // Art. 78.º-A n.º 1 al. a)
 const DEPENDENTE_DEDUCAO_3MINUS = 726; // Art. 78.º-A n.º 1 al. b) ≤ 3 anos
@@ -633,6 +650,11 @@ interface DeducoesColeta {
 interface InputsParticularidades {
   deficiencia: boolean;
   ifici: boolean;
+  rnhAntigo?: boolean; // RNH antigo pré-2024 (taxa flat 20%)
+  programaRegressar?: boolean; // Ex-residente / Programa Regressar (exclusão 50%)
+  conjunta?: boolean; // tributação conjunta (quociente conjugal)
+  outrosRendimentos?: number; // outros rendimentos (Cat. A / pensões) a englobar
+  anoAtividade?: number; // 1.º/2.º ano → redução do coeficiente
   numDep3plus: number; // dependentes > 3 anos
   numDep3minus: number; // dependentes ≤ 3 anos
   numDep2_6: number; // 2.º+ dependentes ≤ 6 anos
@@ -685,25 +707,35 @@ function calcularDeducoesColeta(p: InputsParticularidades): DeducoesColeta {
   };
 }
 
-interface ResultadoAnualRV {
+/**
+ * Resultado anual de Recibos Verdes (Cat. B).
+ *
+ * Estende `SimulacaoIRS` — o motor canónico de `lib/fiscal.ts` (a mesma fonte
+ * de verdade que o Modo Guiado usa) — com alguns campos derivados/legados que a
+ * UI do modo profissional consome. NÃO há lógica fiscal duplicada: tudo deriva
+ * de `simularIRSAnual`.
+ */
+interface ResultadoAnualRV extends SimulacaoIRS {
   faturacao: number;
-  coeficiente: number;
-  rendColetavel: number;
-  rendColetavelAjustado: number; // após exclusão deficiência (Art. 56.º-A)
-  ssAnual: number;
-  isencaoJovemValor: number;
-  isencaoJovemPct: number;
-  rendTributavel: number;
-  irsBruto: number; // IRS antes de deduções à coleta
+  rendColetavel: number; // = rendimentoCoeficiente (rendimento após coeficiente)
+  rendColetavelAjustado: number; // rendimento coletável final (após exclusões)
+  isencaoJovemValor: number; // = rendimentoIsentoJovem
+  isencaoJovemPct: number; // = isencaoJovem
+  rendTributavel: number; // = rendimentoColetavel (base sujeita a IRS)
+  irsBruto: number; // = coletaBruta (IRS antes de deduções à coleta)
   deducoesColeta: DeducoesColeta;
-  irs: number; // IRS líquido (após deduções à coleta)
+  irs: number; // = irsEstimado (IRS líquido após deduções à coleta)
   retencaoAnual: number;
   acertoIRS: number;
   liquido: number;
   taxaEfetiva: number;
-  ificiAtivo: boolean;
+  ificiAtivo: boolean; // = ificiAplicado
 }
 
+/**
+ * Adaptador fino sobre `simularIRSAnual` (motor canónico verificado).
+ * Mantém a assinatura histórica para não partir os consumidores da UI.
+ */
 function simularAnualRV(
   faturacao: number,
   tipo: TipoAtividade,
@@ -723,67 +755,67 @@ function simularAnualRV(
   },
   coefOverride?: number,
 ): ResultadoAnualRV {
-  const { coef: coefBase, ret } = TIPO_ATIVIDADE_PARAMS[tipo];
-  const coef = coefOverride ?? coefBase;
-  const rendColetavel = faturacao * coef;
-  const ssAnual = isencaoSS ? 0 : calcularSSAnual(faturacao);
+  const { ret } = TIPO_ATIVIDADE_PARAMS[tipo];
 
-  // ── Deficiência: exclusão de 15% do rendimento Cat. B (Art. 56.º-A CIRS) ──
-  const exclusaoDeficiencia = partic.deficiencia
-    ? Math.min(
-        rendColetavel * DEFICIENCIA_EXCLUSAO_PCT,
-        DEFICIENCIA_EXCLUSAO_MAX,
-      )
-    : 0;
-  const rendColetavelAjustado = Math.max(
-    0,
-    rendColetavel - exclusaoDeficiencia,
-  );
-
-  // ── IRS Jovem ─────────────────────────────────────────────────────────────
-  const isencaoPct =
-    irsJovemAno > 0 ? (IRS_JOVEM_ISENCAO[irsJovemAno] ?? 0) : 0;
-  const baseJovem = Math.min(rendColetavelAjustado, IRS_JOVEM_LIMITE_2026);
-  const isencaoJovemValor = baseJovem * isencaoPct;
-
-  const rendTributavel = Math.max(
-    0,
-    rendColetavelAjustado - ssAnual - isencaoJovemValor,
-  );
-
-  // ── IRS: IFICI (taxa flat 20%) ou escalões progressivos ──────────────────
-  let irsBruto: number;
-  if (partic.ifici) {
-    irsBruto = rendTributavel * IFICI_TAXA_FLAT;
-  } else {
-    irsBruto = calcularIRS(rendTributavel);
-  }
-
-  // ── Deduções à coleta (dependentes, deficiência, saúde, educação...) ──────
-  const deducoesColeta = calcularDeducoesColeta(partic);
-  const irs = Math.max(0, irsBruto - deducoesColeta.total);
+  const sim = simularIRSAnual({
+    brutoAnual: faturacao,
+    tipo: TIPO_LOCAL_PARA_CANONICO[tipo],
+    coefOverride,
+    anoAtividade: partic.anoAtividade ?? 3,
+    irsJovemAno: irsJovemAno > 0 ? irsJovemAno : undefined,
+    ifici: partic.ifici,
+    rnhAntigo: partic.rnhAntigo,
+    programaRegressar: partic.programaRegressar,
+    deficiencia: partic.deficiencia,
+    conjunta: partic.conjunta,
+    outrosRendimentos: partic.outrosRendimentos,
+    dependentesDetalhe: {
+      normais: partic.numDep3plus + partic.numDep2_6,
+      bebe: partic.numDep3minus,
+      deficientes: partic.numDepDefic,
+    },
+    deducoes: {
+      saude: partic.despSaude,
+      educacao: partic.despEducacao,
+      gerais: partic.despGerais,
+      rendas: partic.despRendas,
+    },
+    // A isenção de SS (1.º ano OU acumulação) é resolvida no UI; força SS=0.
+    acumulaEmprego: isencaoSS,
+  });
 
   const retencaoAnual = faturacao * ret;
-  const acertoIRS = retencaoAnual - irs;
+  const irs = sim.irsEstimado;
+  const ssAnual = sim.ssAnual;
   const liquido = faturacao - irs - ssAnual;
 
+  const deducoesColeta: DeducoesColeta = {
+    dependentes: sim.deducaoDependentes,
+    deficienciaContrib: sim.deducaoDeficiencia,
+    deficienciaDepend: 0,
+    saude: 0,
+    educacao: 0,
+    gerais: 0,
+    rendas: 0,
+    total: sim.deducaoDependentes + sim.deducaoDespesas + sim.deducaoDeficiencia,
+  };
+
   return {
+    ...sim,
     faturacao,
-    coeficiente: coef,
-    rendColetavel,
-    rendColetavelAjustado,
-    ssAnual,
-    isencaoJovemValor,
-    isencaoJovemPct: isencaoPct,
-    rendTributavel,
-    irsBruto,
+    rendColetavel: sim.rendimentoCoeficiente,
+    rendColetavelAjustado: Math.max(0, sim.rendimentoColetavel),
+    isencaoJovemValor: sim.rendimentoIsentoJovem,
+    isencaoJovemPct: sim.isencaoJovem,
+    rendTributavel: sim.rendimentoColetavel,
+    irsBruto: sim.coletaBruta,
     deducoesColeta,
     irs,
     retencaoAnual,
-    acertoIRS,
+    acertoIRS: retencaoAnual - irs,
     liquido,
     taxaEfetiva: faturacao > 0 ? (irs + ssAnual) / faturacao : 0,
-    ificiAtivo: partic.ifici,
+    ificiAtivo: sim.ificiAplicado,
   };
 }
 
@@ -2964,6 +2996,12 @@ export default function SimuladorIntegrado() {
   // ── Particularidades Individuais ─────────────────────────────────────────
   const [deficiencia, setDeficiencia] = useState(false);
   const [ifici, setIfici] = useState(false);
+  // Ano de atividade (1.º/2.º reduzem o coeficiente); recebido do modo guiado.
+  const [anoAtividade, setAnoAtividade] = useState(3);
+  const [rnhAntigo, setRnhAntigo] = useState(false); // RNH antigo pré-2024 (flat 20%)
+  const [exResidente, setExResidente] = useState(false); // Programa Regressar (exclusão 50%)
+  const [conjunta, setConjunta] = useState(false); // tributação conjunta
+  const [outrosRendimentos, setOutrosRendimentos] = useState(0); // Cat. A / pensões
   const [numDep3plus, setNumDep3plus] = useState(0);
   const [numDep3minus, setNumDep3minus] = useState(0);
   const [numDep2_6, setNumDep2_6] = useState(0);
@@ -3082,6 +3120,11 @@ export default function SimuladorIntegrado() {
   const particularidades: InputsParticularidades = {
     deficiencia,
     ifici,
+    rnhAntigo,
+    programaRegressar: exResidente,
+    conjunta,
+    outrosRendimentos,
+    anoAtividade,
     numDep3plus,
     numDep3minus,
     numDep2_6,
@@ -3140,6 +3183,11 @@ export default function SimuladorIntegrado() {
       isencaoSS,
       deficiencia,
       ifici,
+      rnhAntigo,
+      exResidente,
+      conjunta,
+      outrosRendimentos,
+      anoAtividade,
       numDep3plus,
       numDep3minus,
       numDep2_6,
@@ -3361,6 +3409,27 @@ export default function SimuladorIntegrado() {
       sub: `Isento SS se emprego ≥ ${IAS_2026}€/mês e RR independente < ${(4 * IAS_2026).toLocaleString("pt-PT", { maximumFractionDigits: 0 })}€/mês`,
       val: acumulaEmprego,
       set: setAcumulaEmprego,
+    },
+    {
+      id: "conjunta",
+      label: "Tributação conjunta (casado / unido de facto)",
+      sub: "Quociente conjugal — divide o rendimento coletável por 2 (Art. 69.º CIRS)",
+      val: conjunta,
+      set: setConjunta,
+    },
+    {
+      id: "rnhAntigo",
+      label: "RNH antigo (pré-2024) ainda em vigência",
+      sub: "Taxa flat de 20% sobre Cat. B até completar 10 anos (regime transitório OE2024)",
+      val: rnhAntigo,
+      set: setRnhAntigo,
+    },
+    {
+      id: "programaRegressar",
+      label: "Programa Regressar / Ex-residente",
+      sub: "Exclui 50% dos rendimentos durante 5 anos após o regresso (Art. 12.º-A CIRS)",
+      val: exResidente,
+      set: setExResidente,
     },
   ];
 
@@ -3731,12 +3800,15 @@ export default function SimuladorIntegrado() {
               setRegimeIVA(estado.regimeIVA);
               setAcumulaEmprego(estado.acumulaEmprego);
               setIsencaoSSPrimeiroAno(estado.isencaoSSPrimeiroAno);
+              setAnoAtividade(estado.anoAtividade);
               setIrsJovemAno(estado.irsJovemAno);
               setDespSaude(estado.despSaude);
               setDespEducacao(estado.despEducacao);
               setDespGerais(estado.despGerais);
               setDespRendas(estado.despRendas);
               if (estado.ifici) setIfici(true);
+              if (estado.rnhAntigo) setRnhAntigo(true);
+              if (estado.exResidente) setExResidente(true);
               if (estado.deficiencia) setDeficiencia(true);
               handleSelectModo("profissional");
             }}
@@ -3869,7 +3941,7 @@ export default function SimuladorIntegrado() {
 
                 {/* ── Painel contextual IVA ────────────────────────────────── */}
                 {painelIVA && (
-                  <div className="mb-4 rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-900">
+                  <div className="mb-4 rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
                     <div className="mb-2 flex items-start justify-between gap-2">
                       <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
                         {ivaPainelMeta.titulo}
@@ -4037,7 +4109,7 @@ export default function SimuladorIntegrado() {
 
                   {/* Painel contextual da atividade */}
                   {painelAtividade && (
-                    <div className="mt-3 rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-900">
+                    <div className="mt-3 rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
                       <div className="mb-2 flex items-start justify-between gap-2">
                         <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
                           {atividadeAtual.titulo}
@@ -4076,7 +4148,7 @@ export default function SimuladorIntegrado() {
                         ].map((m) => (
                           <div
                             key={m.label}
-                            className="rounded-xl border border-stone-200 bg-white p-2 text-center dark:border-stone-700 dark:bg-stone-800"
+                            className="rounded-2xl border border-stone-100 bg-stone-50 p-2 text-center dark:border-stone-700 dark:bg-stone-800"
                           >
                             <div className="text-sm font-bold text-stone-800 dark:text-stone-100">
                               {m.value}
@@ -4134,6 +4206,62 @@ export default function SimuladorIntegrado() {
                       </div>
                     </div>
                   )}
+                </div>
+
+                {/* ── Ano de atividade ─────────────────────────────────────── */}
+                <div className="mb-5">
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <span className="text-sm font-medium uppercase tracking-wider text-stone-500">
+                      Há quanto tempo tens atividade?
+                    </span>
+                    <InfoTip label="Ano de atividade">
+                      O 1.º e 2.º ano de atividade reduzem o coeficiente do
+                      regime simplificado (Art. 31.º n.º 10 CIRS): −50% no 1.º
+                      ano, −25% no 2.º. No 1.º ano há ainda isenção automática de
+                      Segurança Social (Art. 157.º Código Contributivo).
+                    </InfoTip>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(
+                      [
+                        { ano: 1, label: "1.º ano", sub: "Coef. −50%" },
+                        { ano: 2, label: "2.º ano", sub: "Coef. −25%" },
+                        { ano: 3, label: "3.º+ ano", sub: "Integral" },
+                      ] as const
+                    ).map((o) => {
+                      const active = anoAtividade === o.ano;
+                      return (
+                        <button
+                          key={o.ano}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => {
+                            setAnoAtividade(o.ano);
+                            // 1.º ano → isenção automática de SS; sair do 1.º ano remove-a.
+                            if (o.ano === 1) setIsencaoSSPrimeiroAno(true);
+                            else if (isencaoSSPrimeiroAno)
+                              setIsencaoSSPrimeiroAno(false);
+                          }}
+                          className={`rounded-xl border p-3 text-center transition-all ${
+                            active
+                              ? "border-brand bg-brand-light"
+                              : "border-stone-200 bg-stone-50 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-800/40"
+                          }`}
+                        >
+                          <div
+                            className={`text-sm font-semibold ${active ? "text-brand-dark" : "text-stone-700 dark:text-stone-200"}`}
+                          >
+                            {o.label}
+                          </div>
+                          <div
+                            className={`text-xs ${active ? "text-brand" : "text-stone-400"}`}
+                          >
+                            {o.sub}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* ── Situação fiscal ──────────────────────────────────────── */}
@@ -4345,6 +4473,40 @@ export default function SimuladorIntegrado() {
                               coletável, não ao bruto.
                             </p>
                           </div>
+
+                          {/* Outros rendimentos (englobamento) */}
+                          <div>
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <label
+                                htmlFor="outros-rend"
+                                className="text-sm font-medium text-stone-500 uppercase tracking-wider"
+                              >
+                                Outros rendimentos anuais (€)
+                              </label>
+                              <InfoTip label="Englobamento de outros rendimentos">
+                                Rendimentos de trabalho dependente (Cat. A),
+                                pensões ou outros, somados ao rendimento da Cat. B
+                                para o cálculo do IRS anual. Empurram o teu
+                                rendimento para escalões mais altos.
+                              </InfoTip>
+                            </div>
+                            <input
+                              id="outros-rend"
+                              type="number"
+                              inputMode="decimal"
+                              min={0}
+                              step={500}
+                              value={outrosRendimentos || ""}
+                              onChange={(e) =>
+                                setOutrosRendimentos(
+                                  Math.max(0, Number(e.target.value) || 0),
+                                )
+                              }
+                              placeholder="0"
+                              className="w-full px-4 py-3 text-[16px] font-semibold text-stone-700 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all dark:bg-stone-800 dark:text-stone-200 dark:border-stone-700"
+                            />
+                          </div>
+
                           {/* ── Particularidades Individuais ─────────────── */}
                           <div className="pt-4 border-t border-stone-100 dark:border-stone-800">
                             <div className="flex items-center gap-1.5 mb-3">
@@ -5046,6 +5208,45 @@ export default function SimuladorIntegrado() {
                         </div>
                       </div>
 
+                      {/* ── Stat cards — uniforme, só cor no valor ──────────── */}
+                      {(() => {
+                        const isRecibo = modoInput === "recibo";
+                        const irsVal = isRecibo ? resultRecibo.retencaoIRS : resultAnualRV.irs;
+                        const ssVal = isRecibo ? resultRecibo.segSocial : resultAnualRV.ssAnual;
+                        const ivaVal = isRecibo ? resultRecibo.iva : Math.round(brutoAnual * taxaIva);
+                        const liquidoMes = isRecibo ? resultRecibo.liquido : Math.round(resultAnualRV.liquido / 12);
+                        const fatRef = isRecibo ? resultRecibo.bruto + resultRecibo.iva : brutoAnual;
+                        const pcIRS = fatRef > 0 ? irsVal / fatRef : 0;
+                        const pcSS = fatRef > 0 ? ssVal / fatRef : 0;
+                        const pcIVA = fatRef + ivaVal > 0 ? ivaVal / (fatRef) : 0;
+                        return (
+                          <div className={`mb-6 grid gap-3 ${ivaVal > 0 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
+                            <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+                              <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">{isRecibo ? "IRS retido" : "IRS anual"}</p>
+                              <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">{fmt(Math.round(irsVal))}</p>
+                              <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{pct(pcIRS)} do faturado</p>
+                            </div>
+                            <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+                              <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">Seg. Social</p>
+                              <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">{ssVal > 0 ? fmt(Math.round(ssVal)) : "—"}</p>
+                              <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{ssVal > 0 ? `${pct(pcSS)} do faturado` : "Isento"}</p>
+                            </div>
+                            {ivaVal > 0 && (
+                              <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+                                <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">IVA cobrado</p>
+                                <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">{fmt(Math.round(ivaVal))}</p>
+                                <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{pct(pcIVA)} do total</p>
+                              </div>
+                            )}
+                            <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+                              <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">{isRecibo ? "Disponível" : "Líquido/mês"}</p>
+                              <p className="mt-1 font-display text-xl font-semibold tabular-nums text-brand">{fmt(Math.round(liquidoMes))}</p>
+                              <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{isRecibo ? "por recibo" : `${fmt(Math.round(brutoAnual / 12))} faturado`}</p>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       {modoInput === "recibo" && (
                         <>
                           {/* Breakdown visual */}
@@ -5126,7 +5327,7 @@ export default function SimuladorIntegrado() {
                             )}
 
                             {/* Resultado final */}
-                            <div className="mt-4 p-4 rounded-2xl border-2 border-brand bg-white dark:bg-stone-950">
+                            <div className="mt-4 p-5 rounded-3xl border-2 border-brand bg-white shadow-card dark:bg-stone-950">
                               <div className="flex justify-between items-center">
                                 <div>
                                   <div className="flex items-center gap-1.5">
@@ -5263,50 +5464,92 @@ export default function SimuladorIntegrado() {
                       {modoInput === "anual" && (
                         /* Breakdown anual RV */
                         <div className="space-y-1 flex-1">
+                          {/* Distribuição visual por euro faturado */}
+                          <div className="mb-5">
+                            <EuroBreakdown
+                              faturacao={brutoAnual}
+                              liquido={resultAnualRV.liquido}
+                              irs={resultAnualRV.irs}
+                              ss={resultAnualRV.ssAnual}
+                              iva={Math.round(brutoAnual * taxaIva)}
+                            />
+                          </div>
                           <DetalheRow
                             label="Faturação bruta anual"
                             value={resultAnualRV.faturacao}
                             type="neutral"
                           />
                           <DetalheRow
-                            label={`Rendimento coletável (coef. ${pct(resultAnualRV.coeficiente)})`}
+                            label={`Rendimento após coeficiente (×${pct(resultAnualRV.coeficiente)})`}
                             value={resultAnualRV.rendColetavel}
                             type="neutral"
-                            note="Regime simplificado — 25% presumido como despesa"
+                            note={
+                              resultAnualRV.reducaoAno > 0
+                                ? `Coeficiente reduzido ${pct(resultAnualRV.reducaoAno)} (início de atividade)`
+                                : "Regime simplificado — parte presumida como despesa"
+                            }
                           />
-                          {resultAnualRV.ssAnual > 0 && (
+                          {resultAnualRV.acrescimo15 > 0 && (
                             <DetalheRow
-                              label="Dedução SS paga (Art. 31.º n.º 2 CIRS)"
-                              value={-resultAnualRV.ssAnual}
-                              type="deducao"
-                              note="SS dedutível ao rendimento coletável"
+                              label="Acréscimo — regra dos 15% (Art. 31.º n.º 13)"
+                              value={resultAnualRV.acrescimo15}
+                              type="warning"
+                              note="Despesas não justificadas acrescem ao rendimento"
                             />
                           )}
-                          {/* Particularidades individuais no breakdown */}
-                          {resultAnualRV.rendColetavelAjustado <
-                            resultAnualRV.rendColetavel && (
+                          {resultAnualRV.exclusaoDeficiencia > 0 && (
                             <DetalheRow
                               label="Exclusão deficiência Cat. B (Art. 56.º-A CIRS)"
-                              value={
-                                -(
-                                  resultAnualRV.rendColetavel -
-                                  resultAnualRV.rendColetavelAjustado
-                                )
-                              }
+                              value={-resultAnualRV.exclusaoDeficiencia}
                               type="deducao"
-                              note="15% excluídos, máx €2 500 por categoria"
+                              note="15% excluídos, máx €2 500"
                             />
                           )}
-                          {resultAnualRV.ificiAtivo ? (
+                          {resultAnualRV.rendimentoIsentoJovem > 0 && (
                             <DetalheRow
-                              label={`IRS IFICI — taxa flat ${pct(IFICI_TAXA_FLAT)} (Art. 58.º-A EBF)`}
+                              label={`IRS Jovem — isenção ${pct(resultAnualRV.isencaoJovemPct)} (Art. 12.º-B)`}
+                              value={-resultAnualRV.rendimentoIsentoJovem}
+                              type="deducao"
+                              note={`Limite ${IRS_JOVEM_LIMITE_2026.toLocaleString("pt-PT")}€ (55×IAS)`}
+                            />
+                          )}
+                          {resultAnualRV.outrosRendimentos > 0 && (
+                            <DetalheRow
+                              label="Outros rendimentos (englobamento)"
+                              value={resultAnualRV.outrosRendimentos}
+                              type="warning"
+                              note="Cat. A / pensões somados ao rendimento"
+                            />
+                          )}
+                          {resultAnualRV.exclusaoProgramaRegressar > 0 && (
+                            <DetalheRow
+                              label="Programa Regressar — exclusão 50% (Art. 12.º-A)"
+                              value={-resultAnualRV.exclusaoProgramaRegressar}
+                              type="deducao"
+                              note="Metade do rendimento excluída durante 5 anos"
+                            />
+                          )}
+                          <DetalheRow
+                            label="Rendimento coletável"
+                            value={resultAnualRV.rendTributavel}
+                            type="subtotal"
+                            note={
+                              resultAnualRV.minimoExistenciaAplicado
+                                ? "Protegido pelo mínimo de existência (Art. 70.º)"
+                                : "Base sujeita a IRS"
+                            }
+                          />
+                          {resultAnualRV.ificiAtivo ||
+                          resultAnualRV.rnhAntigoAplicado ? (
+                            <DetalheRow
+                              label={`Coleta — taxa flat 20% (${resultAnualRV.ificiAtivo ? "IFICI / RNH 2.0" : "RNH antigo"})`}
                               value={-resultAnualRV.irsBruto}
                               type="warning"
-                              note="Taxa autónoma 20% durante 10 anos · profissões elegíveis"
+                              note="Sem escalões progressivos (Art. 58.º-A EBF)"
                             />
                           ) : (
                             <DetalheRow
-                              label="IRS liquidado (escalões progressivos)"
+                              label="Coleta (escalões progressivos)"
                               value={-resultAnualRV.irsBruto}
                               type="warning"
                               note={`Taxa efetiva ${pct(resultAnualRV.taxaEfetiva)}`}
@@ -5320,35 +5563,25 @@ export default function SimuladorIntegrado() {
                               note="Subtraídas diretamente ao IRS calculado"
                             />
                           )}
-                          {resultAnualRV.isencaoJovemValor > 0 && (
-                            <DetalheRow
-                              label={`IRS Jovem — isenção ${pct(resultAnualRV.isencaoJovemPct)} (Art. 12.º-B)`}
-                              value={-resultAnualRV.isencaoJovemValor}
-                              type="deducao"
-                              note={`Limite ${IRS_JOVEM_LIMITE_2026.toLocaleString("pt-PT")}€ (55×IAS)`}
-                            />
-                          )}
                           <DetalheRow
-                            label="Rendimento tributável"
-                            value={resultAnualRV.rendTributavel}
-                            type="subtotal"
-                            note={
-                              resultAnualRV.rendTributavel <=
-                              MINIMO_EXISTENCIA_2026
-                                ? "Abaixo do mínimo de existência — IRS = 0€"
-                                : ""
+                            label={
+                              resultAnualRV.minimoExistenciaAplicado
+                                ? "IRS a pagar (mínimo de existência)"
+                                : "IRS a pagar"
                             }
+                            value={-resultAnualRV.irs}
+                            type="subtotal"
                           />
                           {resultAnualRV.ssAnual > 0 && (
                             <DetalheRow
                               label="Segurança Social (21,4% × 70%)"
                               value={-resultAnualRV.ssAnual}
                               type="deducao"
-                              note="IAS 2026: 537,13€ · máx. 12×IAS/mês"
+                              note="IAS 2026: 537,13€ · paga à parte, mensal"
                             />
                           )}
 
-                          <div className="mt-4 p-4 rounded-2xl border-2 border-brand bg-white dark:bg-stone-950">
+                          <div className="mt-4 p-5 rounded-3xl border-2 border-brand bg-white shadow-card dark:bg-stone-950">
                             <div className="flex justify-between items-center">
                               <div>
                                 <div className="text-sm font-semibold text-stone-700 dark:text-stone-300">
@@ -5896,7 +6129,7 @@ export default function SimuladorIntegrado() {
                           </div>
                         )}
 
-                        <div className="mt-4 p-4 rounded-2xl border-2 border-brand bg-white dark:bg-stone-950">
+                        <div className="mt-4 p-5 rounded-3xl border-2 border-brand bg-white shadow-card dark:bg-stone-950">
                           <div className="flex justify-between items-center">
                             <div>
                               <div className="text-sm font-semibold text-stone-700 dark:text-stone-300">

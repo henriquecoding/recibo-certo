@@ -19,6 +19,7 @@ import {
   Swap,
   Calendar,
   Clock,
+  Sparkle,
 } from "@/components/ui/Icons";
 import EuroBreakdown from "@/components/simulador/EuroBreakdown";
 import { pct, fmt } from "@/lib/format";
@@ -32,7 +33,7 @@ import {
   type Regiao,
 } from "@/lib/fiscal-data";
 import { calcular, simularIRSAnual, type RegimeIVA } from "@/lib/fiscal";
-import { gerarPrazos, diasAte, META_CATEGORIA } from "@/lib/prazos";
+import { gerarPrazos, diasAte } from "@/lib/prazos";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -78,12 +79,15 @@ export interface EstadoGuiadoSaida {
   regimeIVA: RegimeIVA;
   acumulaEmprego: boolean;
   isencaoSSPrimeiroAno: boolean;
+  anoAtividade: number;
   irsJovemAno: number;
   despSaude: number;
   despEducacao: number;
   despGerais: number;
   despRendas: number;
   ifici: boolean;
+  rnhAntigo: boolean;
+  exResidente: boolean;
   deficiencia: boolean;
 }
 
@@ -242,6 +246,13 @@ export default function ModoGuiado({
   // Navegação — começa no pré-passo (decisor)
   const [passo, setPasso] = useState<Passo>(0);
 
+  // Passo 0: situação face à atividade
+  // anoAtividade controla a redução do coeficiente (1.º −50%, 2.º −25%, 3.º+ integral).
+  const [anoAtividade, setAnoAtividade] = useState(3);
+  const [jaTemAtividade, setJaTemAtividade] = useState<null | "sim" | "nao">(
+    null,
+  );
+
   // Passo 1: Atividade
   const [tipoAtiv, setTipoAtiv] = useState<TipoAtiv>("art151");
   const [atividadeEspecifica, setAtividadeEspecifica] =
@@ -356,6 +367,7 @@ export default function ModoGuiado({
       simularIRSAnual({
         brutoAnual,
         tipo: card.tipoFiscal,
+        anoAtividade,
         irsJovemAno: jovemAno > 0 ? jovemAno : undefined,
         ifici,
         rnhAntigo,
@@ -371,6 +383,7 @@ export default function ModoGuiado({
     [
       brutoAnual,
       card.tipoFiscal,
+      anoAtividade,
       jovemAno,
       ifici,
       rnhAntigo,
@@ -398,12 +411,15 @@ export default function ModoGuiado({
     regimeIVA,
     acumulaEmprego,
     isencaoSSPrimeiroAno,
+    anoAtividade,
     irsJovemAno: jovemAno,
     despSaude,
     despEducacao,
     despGerais,
     despRendas,
     ifici,
+    rnhAntigo,
+    exResidente,
     deficiencia,
   };
 
@@ -426,7 +442,7 @@ export default function ModoGuiado({
     else if (passo === "resultado") setPasso(3);
   }
 
-  // Passo 0: decisor pré-wizard
+  // Passo 0: situação face à atividade (+ decisor para quem ainda não abriu)
   if (passo === 0) {
     return (
       <div className="min-h-0 bg-white dark:bg-stone-950">
@@ -436,22 +452,162 @@ export default function ModoGuiado({
               <span className="h-1.5 w-1.5 rounded-full bg-brand" />
               Simulador guiado
             </span>
-            <h2 className="font-display mb-2 text-3xl font-semibold text-stone-800 sm:text-4xl dark:text-stone-100">
-              Precisas de abrir atividade?
-            </h2>
-            <p className="mb-8 text-sm text-stone-500 dark:text-stone-400">
-              4 perguntas rápidas para perceber o teu caso.
-            </p>
-            <DecisorAtoIsoladoInline
-              onDecisao={(d) => {
-                if (d === "RECIBO_VERDE") {
-                  onIrParaSimuladorCompleto(estadoSaida);
-                } else if (d === "ABRIR_ATIVIDADE" || d === "CONSIDERAR") {
-                  setPasso(1);
-                }
-                // ATO_ISOLADO: fica no componente, mostra guia
-              }}
-            />
+
+            {/* ── Pergunta inicial: já tens atividade? ── */}
+            {jaTemAtividade === null && (
+              <>
+                <h2 className="font-display mb-2 text-3xl font-semibold text-stone-800 sm:text-4xl dark:text-stone-100">
+                  Já tens atividade aberta?
+                </h2>
+                <p className="mb-8 text-sm text-stone-500 dark:text-stone-400">
+                  Ajustamos o cálculo à tua situação — o 1.º e 2.º ano têm
+                  coeficiente reduzido e isenção de Segurança Social.
+                </p>
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => setJaTemAtividade("sim")}
+                    className="group flex w-full items-center gap-3 rounded-3xl border-2 border-stone-100 bg-white p-4 text-left shadow-card transition-all hover:border-brand hover:shadow-glow focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-800 dark:bg-stone-900"
+                  >
+                    <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-light text-brand transition-colors group-hover:bg-brand group-hover:text-white">
+                      <Check size={18} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-stone-800 dark:text-stone-100">
+                        Sim, já trabalho como independente
+                      </span>
+                      <span className="mt-0.5 block text-xs text-stone-500 dark:text-stone-400">
+                        Vou simular os meus impostos
+                      </span>
+                    </span>
+                    <ArrowRight
+                      size={16}
+                      className="flex-shrink-0 text-stone-300 transition-colors group-hover:text-brand"
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setJaTemAtividade("nao")}
+                    className="group flex w-full items-center gap-3 rounded-3xl border-2 border-stone-100 bg-white p-4 text-left shadow-card transition-all hover:border-brand hover:shadow-glow focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-800 dark:bg-stone-900"
+                  >
+                    <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 transition-colors group-hover:bg-brand group-hover:text-white dark:bg-stone-800">
+                      <Sparkle size={18} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-stone-800 dark:text-stone-100">
+                        Ainda não / estou a avaliar
+                      </span>
+                      <span className="mt-0.5 block text-xs text-stone-500 dark:text-stone-400">
+                        Ajuda-me a perceber o que preciso
+                      </span>
+                    </span>
+                    <ArrowRight
+                      size={16}
+                      className="flex-shrink-0 text-stone-300 transition-colors group-hover:text-brand"
+                    />
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ── Há quanto tempo? (define ano de atividade) ── */}
+            {jaTemAtividade === "sim" && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setJaTemAtividade(null)}
+                  className="mb-3 inline-flex items-center gap-1.5 text-xs font-medium text-stone-400 transition-colors hover:text-stone-600"
+                >
+                  <ArrowLeft size={12} /> Voltar
+                </button>
+                <h2 className="font-display mb-2 text-3xl font-semibold text-stone-800 sm:text-4xl dark:text-stone-100">
+                  Há quanto tempo tens atividade?
+                </h2>
+                <p className="mb-8 text-sm text-stone-500 dark:text-stone-400">
+                  Determina o coeficiente aplicável e a isenção de Segurança
+                  Social do 1.º ano.
+                </p>
+                <div className="space-y-3">
+                  {[
+                    {
+                      ano: 1,
+                      titulo: "Estou no 1.º ano",
+                      desc: "Coeficiente reduzido 50% · isenção de Segurança Social",
+                    },
+                    {
+                      ano: 2,
+                      titulo: "No 2.º ano",
+                      desc: "Coeficiente reduzido 25% · já descontas para a SS",
+                    },
+                    {
+                      ano: 3,
+                      titulo: "Há 3 anos ou mais",
+                      desc: "Coeficiente integral · Segurança Social normal",
+                    },
+                  ].map((o) => (
+                    <button
+                      key={o.ano}
+                      type="button"
+                      onClick={() => {
+                        setAnoAtividade(o.ano);
+                        setIsencaoSSPrimeiroAno(o.ano === 1);
+                        setPasso(1);
+                      }}
+                      className="group flex w-full items-center gap-3 rounded-3xl border-2 border-stone-100 bg-white p-4 text-left shadow-card transition-all hover:border-brand hover:shadow-glow focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-800 dark:bg-stone-900"
+                    >
+                      <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-light font-display text-base font-bold text-brand-dark transition-colors group-hover:bg-brand group-hover:text-white">
+                        {o.ano === 3 ? "3+" : `${o.ano}.º`}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-stone-800 dark:text-stone-100">
+                          {o.titulo}
+                        </span>
+                        <span className="mt-0.5 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+                          {o.desc}
+                        </span>
+                      </span>
+                      <ArrowRight
+                        size={16}
+                        className="flex-shrink-0 text-stone-300 transition-colors group-hover:text-brand"
+                      />
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* ── Decisor: para quem ainda não abriu ── */}
+            {jaTemAtividade === "nao" && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setJaTemAtividade(null)}
+                  className="mb-3 inline-flex items-center gap-1.5 text-xs font-medium text-stone-400 transition-colors hover:text-stone-600"
+                >
+                  <ArrowLeft size={12} /> Voltar
+                </button>
+                <h2 className="font-display mb-2 text-3xl font-semibold text-stone-800 sm:text-4xl dark:text-stone-100">
+                  Precisas de abrir atividade?
+                </h2>
+                <p className="mb-8 text-sm text-stone-500 dark:text-stone-400">
+                  4 perguntas rápidas para perceber o teu caso.
+                </p>
+                <DecisorAtoIsoladoInline
+                  onDecisao={(d) => {
+                    if (d === "RECIBO_VERDE") {
+                      onIrParaSimuladorCompleto(estadoSaida);
+                    } else if (d === "ABRIR_ATIVIDADE" || d === "CONSIDERAR") {
+                      // Quem vai abrir agora está no 1.º ano: coef. reduzido + SS isenta.
+                      setAnoAtividade(1);
+                      setIsencaoSSPrimeiroAno(true);
+                      setPasso(1);
+                    }
+                    // ATO_ISOLADO: fica no componente, mostra guia
+                  }}
+                />
+              </>
+            )}
+
             <button
               type="button"
               onClick={() => onIrParaSimuladorCompleto(estadoSaida)}
@@ -669,6 +825,7 @@ export default function ModoGuiado({
                     card={card}
                     regiao={regiao}
                     tipoAtiv={tipoAtiv}
+                    anoAtividade={anoAtividade}
                     isencaoSS={isencaoSS}
                     isencaoCpas={isencaoCpas}
                     rnhAntigo={rnhAntigo}
@@ -2251,6 +2408,7 @@ function ResultadoFinal({
   card,
   regiao,
   tipoAtiv,
+  anoAtividade,
   isencaoSS,
   isencaoCpas,
   rnhAntigo,
@@ -2283,6 +2441,7 @@ function ResultadoFinal({
   card: CardAtiv;
   regiao: Regiao;
   tipoAtiv: TipoAtiv;
+  anoAtividade: number;
   isencaoSS: boolean;
   isencaoCpas: boolean;
   rnhAntigo: boolean;
@@ -2302,6 +2461,7 @@ function ResultadoFinal({
       simularIRSAnual({
         brutoAnual,
         tipo: card.tipoFiscal,
+        anoAtividade,
         irsJovemAno: irsJovemAno > 0 ? irsJovemAno : undefined,
         ifici,
         rnhAntigo,
@@ -2317,6 +2477,7 @@ function ResultadoFinal({
     [
       brutoAnual,
       card.tipoFiscal,
+      anoAtividade,
       irsJovemAno,
       isencaoSS,
       ifici,
@@ -2340,6 +2501,9 @@ function ResultadoFinal({
 
   // Escalões — expandir/colapsar
   const [mostrarEscaloes, setMostrarEscaloes] = useState(false);
+  // Blocos de detalhe — colapsados por defeito
+  const [mostrarBloco1, setMostrarBloco1] = useState(false);
+  const [mostrarBloco2, setMostrarBloco2] = useState(false);
 
   // ── Cálculo de prazos fiscais relevantes para este utilizador ──
   const prazosRel = useMemo(() => {
@@ -2380,7 +2544,7 @@ function ResultadoFinal({
   return (
     <div>
       {/* ── Título ──────────────────────────────────────────────────────── */}
-      <div className="mb-6">
+      <div className="mb-5">
         <h3 className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100">
           O teu resultado
         </h3>
@@ -2389,334 +2553,258 @@ function ResultadoFinal({
         </p>
       </div>
 
-      {/* ── Hero: Líquido anual ──────────────────────────────────────────── */}
-      <div className="relative mb-4 overflow-hidden rounded-4xl border border-brand bg-brand p-6 text-white shadow-glow">
-        <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/5 blur-xl" />
-        <div className="relative">
-          <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">
-            Líquido anual estimado
-          </div>
-          <div className="mt-1 font-display text-5xl font-semibold leading-none tabular-nums sm:text-6xl">
-            <AnimatedNumber value={Math.max(0, liquidoFinal)} />
-          </div>
-          <div className="mt-4">
-            <div className="flex h-1.5 overflow-hidden rounded-full bg-white/15">
-              <div
-                className="rounded-full bg-white/70 transition-all duration-500"
-                style={{ width: `${Math.round(Math.max(0, liquidoFinal) / Math.max(1, brutoAnual) * 100)}%` }}
-              />
-            </div>
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-green-100/50">
-              <span>de {fmt(brutoAnual)} faturados</span>
-              <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/80">
-                {fmt(liquidoMes)}/mês
-              </span>
-              <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/80">
-                Taxa efectiva {pct(taxaEfetiva)}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* ── Layout 2 colunas ─────────────────────────────────────────────── */}
+      <div className="grid gap-4 lg:grid-cols-[1fr_280px] lg:items-start">
 
-      {/* ── Stat cards — uniforme, só cor no valor ──────────────────────── */}
-      <div className={`mb-4 grid gap-3 ${ivaAnual > 0 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
-        <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">IRS anual</p>
-          <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
-            {fmt(Math.round(simAnual.irsEstimado))}
-          </p>
-          <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{pct(pcIRS)} do faturado</p>
-        </div>
+        {/* ════ COLUNA PRINCIPAL ════════════════════════════════════════════ */}
+        <div className="space-y-4">
 
-        <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">
-            {isencaoCpas ? "SS*" : "Seg. Social"}
-          </p>
-          <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
-            {isencaoCpas ? "—" : fmt(Math.round(ssAnual))}
-          </p>
-          <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">
-            {isencaoCpas ? "CPAS" : `${pct(pcSS)} do faturado`}
-          </p>
-        </div>
-
-        {ivaAnual > 0 && (
-          <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">IVA cobrado</p>
-            <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
-              {fmt(Math.round(ivaAnual))}
-            </p>
-            <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{pct(pcIVA)} do total</p>
-          </div>
-        )}
-
-        <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">Líquido/mês</p>
-          <p className="mt-1 font-display text-xl font-semibold tabular-nums text-brand">
-            {fmt(liquidoMes)}
-          </p>
-          <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">
-            {fmt(Math.round(brutoAnual / Math.max(1, recibosAno)))} faturado
-          </p>
-        </div>
-      </div>
-
-      {/* ── Breakdown visual — integrado ─────────────────────────────────── */}
-      <div className="mb-6 rounded-3xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
-        <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-stone-400">
-          Distribuição por euro faturado
-        </p>
-        <EuroBreakdown
-          faturacao={brutoAnual}
-          liquido={Math.max(0, liquidoFinal)}
-          irs={simAnual.irsEstimado}
-          ss={ssAnual}
-          iva={ivaAnual}
-        />
-      </div>
-
-      {/* ── Calendário fiscal ────────────────────────────────────────────── */}
-      <div className="mb-6 rounded-3xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900">
-        <div className="flex items-center gap-2 border-b border-stone-100 px-4 py-3 dark:border-stone-800">
-          <Calendar size={14} className="flex-shrink-0 text-brand" />
-          <div>
-            <p className="text-xs font-semibold text-stone-700 dark:text-stone-200">
-              Próximos prazos fiscais
-            </p>
-            <p className="text-[10px] text-stone-400">
-              Obrigações relevantes para a tua situação
-              {regimeIVA === "isento" ? " (IVA omitido — estás isento)" : ""}
-            </p>
-          </div>
-        </div>
-
-        {prazosRel.length === 0 ? (
-          <div className="px-4 py-6 text-center text-xs text-stone-400">
-            Sem prazos próximos.
-          </div>
-        ) : (
-          <div className="divide-y divide-stone-50 dark:divide-stone-800">
-            {prazosRel.map((prazo) => {
-              const dias = diasAte(prazo.data);
-              const urgencia = urgenciaPrazo(dias);
-              const { dia, mes, ano: anoP } = formatDataPrazo(prazo.data);
-              const hoje = new Date();
-              const isOutroAno = anoP !== String(hoje.getFullYear());
-              const catMeta = META_CATEGORIA[prazo.categoria];
-
-              const corCat =
-                prazo.categoria === "iva"
-                  ? "bg-amber-400"
-                  : prazo.categoria === "irs"
-                    ? "bg-brand-deep"
-                    : "bg-brand";
-
-              const corTextoUrgencia =
-                urgencia === "critico"
-                  ? "text-red-600 dark:text-red-400"
-                  : urgencia === "proximo"
-                    ? "text-amber-600 dark:text-amber-400"
-                    : "text-stone-400";
-
-              return (
-                <div key={prazo.id} className="flex items-start gap-3 px-4 py-3 hover:bg-stone-50/60 dark:hover:bg-stone-800/30">
-                  {/* Data visual */}
-                  <div className="flex-shrink-0 text-center">
-                    <div className={`w-10 rounded-lg ${urgencia === "critico" ? "bg-red-50 dark:bg-red-950/30" : urgencia === "proximo" ? "bg-amber-50 dark:bg-amber-950/20" : "bg-stone-50 dark:bg-stone-800"} py-1`}>
-                      <p className={`text-[10px] font-bold uppercase tracking-wide ${urgencia === "critico" ? "text-red-500" : urgencia === "proximo" ? "text-amber-500" : "text-stone-400"}`}>
-                        {mes}
-                      </p>
-                      <p className={`font-display text-base font-bold leading-none tabular-nums ${urgencia === "critico" ? "text-red-600 dark:text-red-400" : urgencia === "proximo" ? "text-amber-700 dark:text-amber-400" : "text-stone-700 dark:text-stone-200"}`}>
-                        {dia}
-                      </p>
-                      {isOutroAno && (
-                        <p className="text-[9px] text-stone-400">{anoP}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Detalhes */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${corCat}`} aria-hidden />
-                      <p className="text-xs font-semibold text-stone-700 dark:text-stone-200 truncate">
-                        {prazo.titulo}
-                      </p>
-                    </div>
-                    <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400 line-clamp-2">
-                      {prazo.descricao}
-                    </p>
-                  </div>
-
-                  {/* Dias restantes */}
-                  <div className="flex-shrink-0 text-right">
-                    {dias === 0 ? (
-                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950/40 dark:text-red-400">
-                        Hoje
-                      </span>
-                    ) : (
-                      <div className="flex items-center gap-1">
-                        <Clock size={10} className={corTextoUrgencia} />
-                        <span className={`text-[11px] font-semibold tabular-nums ${corTextoUrgencia}`}>
-                          {dias}d
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* ── BLOCO 1: O teu líquido ───────────────────────────────────────── */}
-      <div className="mb-3 rounded-3xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900">
-        {/* Cabeçalho bloco */}
-        <div className="flex items-center gap-2 border-b border-stone-100 px-4 py-3 dark:border-stone-800">
-          <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-brand text-[10px] font-bold text-white">
-            1
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-stone-700 dark:text-stone-200">
-              O teu dinheiro
-            </p>
-            <p className="text-[10px] text-stone-400">
-              O que fica para ti depois de pagar impostos e SS
-            </p>
-          </div>
-        </div>
-
-        {/* Faturação */}
-        <LinhaCalculo
-          label="Faturação bruta"
-          valor={brutoAnual}
-          corValor="text-stone-800 dark:text-stone-100"
-          explicacao="O total que faturaste durante o ano — o valor que os teus clientes te pagam, antes de qualquer desconto ou imposto."
-        />
-
-        <div className="border-t border-stone-100 dark:border-stone-800" />
-
-        {/* IVA — bloco separado pois tem natureza diferente */}
-        {regimeIVA === "isento" ? (
-          <div className="flex items-center justify-between gap-2 px-4 py-2.5">
-            <div className="min-w-0">
-              <span className="text-xs text-stone-400 dark:text-stone-500">
-                IVA
-              </span>
-              <span className="ml-1.5 text-[10px] text-stone-400">
-                (isento — Art. 53.º CIVA)
-              </span>
-            </div>
-            <span className="flex-shrink-0 text-xs font-semibold tabular-nums text-stone-400">
-              —
-            </span>
-          </div>
-        ) : (
-          <div>
-            {/* Linha IVA cobrado */}
-            <div className="flex items-center justify-between gap-2 px-4 py-2.5">
-              <div className="min-w-0">
-                <span className="text-xs text-stone-600 dark:text-stone-400">
-                  IVA cobrado ao cliente
-                </span>
-                <span className="ml-1.5 text-[10px] text-stone-400">
-                  ({pct(taxaIVA)} × {fmt(brutoAnual)})
-                </span>
+          {/* ── Hero: Líquido anual ──────────────────────────────────────── */}
+          <div className="relative overflow-hidden rounded-4xl border border-brand bg-brand p-6 text-white shadow-glow">
+            <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+            <div aria-hidden className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/5 blur-xl" />
+            <div className="relative">
+              <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">
+                Líquido anual estimado
               </div>
-              <span className="flex-shrink-0 text-xs font-semibold tabular-nums text-stone-500 dark:text-stone-400">
-                +{fmt(ivaAnual)}
-              </span>
+              <div className="mt-1 font-display text-5xl font-semibold leading-none tabular-nums sm:text-6xl">
+                <AnimatedNumber value={Math.max(0, liquidoFinal)} />
+              </div>
+              <div className="mt-4">
+                <div className="flex h-1.5 overflow-hidden rounded-full bg-white/15">
+                  <div
+                    className="rounded-full bg-white/70 transition-all duration-500"
+                    style={{ width: `${Math.round(Math.max(0, liquidoFinal) / Math.max(1, brutoAnual) * 100)}%` }}
+                  />
+                </div>
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-green-100/50">
+                  <span>de {fmt(brutoAnual)} faturados</span>
+                  <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/80">
+                    {fmt(liquidoMes)}/mês
+                  </span>
+                  <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/80">
+                    Taxa efectiva {pct(taxaEfetiva)}
+                  </span>
+                </div>
+              </div>
             </div>
-            {/* Caixa explicativa IVA — sempre visível pois é conceito crítico */}
-            <div className="mx-3 mb-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2.5 dark:border-amber-900/40 dark:bg-amber-900/20">
-              <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-400">
-                <span className="font-semibold">O IVA não é teu.</span> Cobras{" "}
-                {fmt(ivaAnual)} ao cliente, guardas numa conta separada, e
-                entregas ao Estado trimestralmente. Não entra no teu líquido nem
-                sai — passa pelo teu bolso.
+          </div>
+
+          {/* ── Stat cards ──────────────────────────────────────────────── */}
+          <div className={`grid gap-3 ${ivaAnual > 0 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
+            <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">IRS anual</p>
+              <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+                {fmt(Math.round(simAnual.irsEstimado))}
+              </p>
+              <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{pct(pcIRS)} do faturado</p>
+            </div>
+
+            <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">
+                {isencaoCpas ? "SS*" : "Seg. Social"}
+              </p>
+              <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+                {isencaoCpas ? "—" : fmt(Math.round(ssAnual))}
+              </p>
+              <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">
+                {isencaoCpas ? "CPAS" : `${pct(pcSS)} do faturado`}
+              </p>
+            </div>
+
+            {ivaAnual > 0 && (
+              <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">IVA cobrado</p>
+                <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+                  {fmt(Math.round(ivaAnual))}
+                </p>
+                <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{pct(pcIVA)} do total</p>
+              </div>
+            )}
+
+            <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">Líquido/mês</p>
+              <p className="mt-1 font-display text-xl font-semibold tabular-nums text-brand">
+                {fmt(liquidoMes)}
+              </p>
+              <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">
+                {fmt(Math.round(brutoAnual / Math.max(1, recibosAno)))} faturado
               </p>
             </div>
           </div>
-        )}
 
-        <div className="border-t border-stone-100 dark:border-stone-800" />
-
-        {/* SS */}
-        <LinhaCalculo
-          label={isencaoCpas ? "Segurança Social (CPAS/CGA)" : "Segurança Social"}
-          valor={-ssAnual}
-          corValor={isencaoCpas ? "text-stone-400 dark:text-stone-500" : "text-amber-600 dark:text-amber-400"}
-          nota={isencaoCpas ? "Não descontas para o Regime Geral" : `${pct(0.214)} × base SS`}
-          explicacao={isencaoCpas
-            ? "Advogados e solicitadores pagam para a CPAS (Caixa de Previdência dos Advogados e Solicitadores) em vez do Regime Geral da Segurança Social. As contribuições CPAS têm regras e taxas próprias — consulta o teu painel CPAS para o valor exacto. Este simulador não modela a CPAS."
-            : `Como trabalhador independente pagas 21,4% de SS sobre 70% do que faturaste. Isto garante acesso a subsídio de doença, parentalidade e reforma futura. O valor é pago trimestralmente à Segurança Social.`}
-        />
-        {isencaoCpas && (
-          <div className="mx-3 mb-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2.5 dark:border-stone-700 dark:bg-stone-800/60">
-            <p className="text-[11px] leading-relaxed text-stone-600 dark:text-stone-400">
-              <span className="font-semibold">CPAS — não modelado.</span> O teu líquido real é inferior ao estimado: as contribuições para a CPAS ainda se aplicam. Consulta a tua caixa para o valor exacto.
+          {/* ── Breakdown visual ─────────────────────────────────────────── */}
+          <div className="rounded-3xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
+            <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+              Distribuição por euro faturado
             </p>
+            <EuroBreakdown
+              faturacao={brutoAnual}
+              liquido={Math.max(0, liquidoFinal)}
+              irs={simAnual.irsEstimado}
+              ss={ssAnual}
+              iva={ivaAnual}
+            />
           </div>
-        )}
 
-        <div className="border-t border-stone-100 dark:border-stone-800" />
+          {/* ── BLOCO 1: O teu líquido (colapsável) ─────────────────────── */}
+          <div className="rounded-3xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900">
+            <button
+              type="button"
+              aria-expanded={mostrarBloco1}
+              onClick={() => setMostrarBloco1((v) => !v)}
+              className="flex w-full items-center gap-2.5 px-4 py-3.5 text-left hover:bg-stone-50/60 dark:hover:bg-stone-800/30"
+            >
+              <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-brand text-[10px] font-bold text-white">
+                1
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-stone-700 dark:text-stone-200">O teu dinheiro</p>
+                <p className="text-[10px] text-stone-400">Faturação → SS → IRS → líquido</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-xs font-semibold tabular-nums text-brand">{fmt(Math.max(0, liquidoFinal))}</span>
+                <ChevronDown size={13} className={`text-stone-400 transition-transform ${mostrarBloco1 ? "rotate-180" : ""}`} />
+              </div>
+            </button>
 
-        {/* IRS (valor final, resumido) */}
-        <LinhaCalculo
-          label={
-            simAnual.ificiAplicado
-              ? "IRS (taxa flat 20% — IFICI/RNH 2.0)"
-              : simAnual.rnhAntigoAplicado
-                ? "IRS (taxa flat 20% — RNH antigo)"
-                : simAnual.programaRegressarAplicado
-                  ? "IRS (escalões sobre 50% — Programa Regressar)"
-                  : "IRS (após deduções)"
-          }
-          valor={-simAnual.irsEstimado}
-          corValor="text-red-500 dark:text-red-400"
-          nota="ver cálculo detalhado abaixo"
-          explicacao={
-            simAnual.ificiAplicado || simAnual.rnhAntigoAplicado
-              ? `Taxa flat de 20% sobre o rendimento coletável (${fmt(simAnual.rendimentoColetavel)}). Sem escalões progressivos.`
-              : simAnual.programaRegressarAplicado
-                ? `50% do rendimento é excluído (${fmt(simAnual.exclusaoProgramaRegressar)}). Os escalões progressivos aplicam-se apenas aos restantes 50% — ${fmt(simAnual.rendimentoColetavel)}.`
-                : `Este é o IRS que pagas no final — já com todas as deduções aplicadas (saúde, educação, etc.). O cálculo detalhado de como se chegou a este valor está no Bloco 2 abaixo.`
-          }
-        />
+            <AnimatePresence initial={false}>
+              {mostrarBloco1 && (
+                <m.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div className="border-t border-stone-100 dark:border-stone-800">
+                    {/* Faturação */}
+                    <LinhaCalculo
+                      label="Faturação bruta"
+                      valor={brutoAnual}
+                      corValor="text-stone-800 dark:text-stone-100"
+                      explicacao="O total que faturaste durante o ano — o valor que os teus clientes te pagam, antes de qualquer desconto ou imposto."
+                    />
+                    <div className="border-t border-stone-100 dark:border-stone-800" />
 
-        {/* Total líquido */}
-        <div className="border-t border-stone-200 dark:border-stone-700" />
-        <LinhaCalculo
-          label="Líquido disponível"
-          valor={Math.max(0, liquidoFinal)}
-          corValor="text-brand"
-          isTotal
-          nota={`Taxa efectiva ${pct(taxaEfetiva)}`}
-          explicacao={`Faturação (${fmt(brutoAnual)}) − SS (${fmt(ssAnual)}) − IRS (${fmt(simAnual.irsEstimado)}) = ${fmt(Math.max(0, liquidoFinal))}. O IVA não conta — é dinheiro que nunca foi teu. A taxa efectiva é a percentagem de SS + IRS sobre a faturação.`}
-        />
-      </div>
+                    {/* IVA */}
+                    {regimeIVA === "isento" ? (
+                      <div className="flex items-center justify-between gap-2 px-4 py-2.5">
+                        <div className="min-w-0">
+                          <span className="text-xs text-stone-400 dark:text-stone-500">IVA</span>
+                          <span className="ml-1.5 text-[10px] text-stone-400">(isento — Art. 53.º CIVA)</span>
+                        </div>
+                        <span className="flex-shrink-0 text-xs font-semibold tabular-nums text-stone-400">—</span>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex items-center justify-between gap-2 px-4 py-2.5">
+                          <div className="min-w-0">
+                            <span className="text-xs text-stone-600 dark:text-stone-400">IVA cobrado ao cliente</span>
+                            <span className="ml-1.5 text-[10px] text-stone-400">({pct(taxaIVA)} × {fmt(brutoAnual)})</span>
+                          </div>
+                          <span className="flex-shrink-0 text-xs font-semibold tabular-nums text-stone-500 dark:text-stone-400">
+                            +{fmt(ivaAnual)}
+                          </span>
+                        </div>
+                        <div className="mx-3 mb-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2.5 dark:border-amber-900/40 dark:bg-amber-900/20">
+                          <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-400">
+                            <span className="font-semibold">O IVA não é teu.</span> Cobras {fmt(ivaAnual)} ao cliente, guardas numa conta separada, e entregas ao Estado trimestralmente.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    <div className="border-t border-stone-100 dark:border-stone-800" />
 
-      {/* ── BLOCO 2: Como se calculou o IRS ─────────────────────────────── */}
-      <div className="mb-6 rounded-3xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900">
-        {/* Cabeçalho bloco */}
-        <div className="flex items-center gap-2 border-b border-stone-100 px-4 py-3 dark:border-stone-800">
+                    {/* SS */}
+                    <LinhaCalculo
+                      label={isencaoCpas ? "Segurança Social (CPAS/CGA)" : "Segurança Social"}
+                      valor={-ssAnual}
+                      corValor={isencaoCpas ? "text-stone-400 dark:text-stone-500" : "text-amber-600 dark:text-amber-400"}
+                      nota={isencaoCpas ? "Não descontas para o Regime Geral" : `${pct(0.214)} × base SS`}
+                      explicacao={isencaoCpas
+                        ? "Advogados e solicitadores pagam para a CPAS em vez do Regime Geral. As contribuições CPAS têm regras próprias — consulta o teu painel CPAS."
+                        : `Como trabalhador independente pagas 21,4% de SS sobre 70% do que faturaste.`}
+                    />
+                    {isencaoCpas && (
+                      <div className="mx-3 mb-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2.5 dark:border-stone-700 dark:bg-stone-800/60">
+                        <p className="text-[11px] leading-relaxed text-stone-600 dark:text-stone-400">
+                          <span className="font-semibold">CPAS — não modelado.</span> O teu líquido real é inferior ao estimado.
+                        </p>
+                      </div>
+                    )}
+                    <div className="border-t border-stone-100 dark:border-stone-800" />
+
+                    {/* IRS */}
+                    <LinhaCalculo
+                      label={
+                        simAnual.ificiAplicado ? "IRS (taxa flat 20% — IFICI/RNH 2.0)"
+                          : simAnual.rnhAntigoAplicado ? "IRS (taxa flat 20% — RNH antigo)"
+                          : simAnual.programaRegressarAplicado ? "IRS (escalões sobre 50% — Programa Regressar)"
+                          : "IRS (após deduções)"
+                      }
+                      valor={-simAnual.irsEstimado}
+                      corValor="text-red-500 dark:text-red-400"
+                      nota="ver cálculo detalhado abaixo"
+                      explicacao={
+                        simAnual.ificiAplicado || simAnual.rnhAntigoAplicado
+                          ? `Taxa flat de 20% sobre o rendimento coletável (${fmt(simAnual.rendimentoColetavel)}).`
+                          : `IRS calculado pelos escalões progressivos sobre o rendimento tributável.`
+                      }
+                    />
+                    <div className="border-t border-stone-200 dark:border-stone-700" />
+
+                    {/* Total */}
+                    <LinhaCalculo
+                      label="Líquido disponível"
+                      valor={Math.max(0, liquidoFinal)}
+                      corValor="text-brand"
+                      isTotal
+                      nota={`Taxa efectiva ${pct(taxaEfetiva)}`}
+                      explicacao={`Faturação (${fmt(brutoAnual)}) − SS (${fmt(ssAnual)}) − IRS (${fmt(simAnual.irsEstimado)}) = ${fmt(Math.max(0, liquidoFinal))}.`}
+                    />
+                  </div>
+                </m.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* ── BLOCO 2: Como se calculou o IRS (colapsável) ─────────────── */}
+          <div className="rounded-3xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900">
+        {/* Cabeçalho bloco — botão */}
+        <button
+          type="button"
+          aria-expanded={mostrarBloco2}
+          onClick={() => setMostrarBloco2((v) => !v)}
+          className="flex w-full items-center gap-2.5 px-4 py-3.5 text-left hover:bg-stone-50/60 dark:hover:bg-stone-800/30"
+        >
           <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">
             2
           </div>
-          <div>
+          <div className="flex-1">
             <p className="text-xs font-semibold text-stone-700 dark:text-stone-200">
               Como se calculou o IRS
             </p>
             <p className="text-[10px] text-stone-400">
-              A base tributável não é o que faturaste — clica em cada linha para
-              saber porquê
+              Da faturação ao imposto final, passo a passo
             </p>
           </div>
-        </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-xs font-semibold tabular-nums text-red-500 dark:text-red-400">{fmt(Math.round(simAnual.irsEstimado))}</span>
+            <ChevronDown size={13} className={`text-stone-400 transition-transform ${mostrarBloco2 ? "rotate-180" : ""}`} />
+          </div>
+        </button>
 
+        <AnimatePresence initial={false}>
+          {mostrarBloco2 && (
+            <m.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="overflow-hidden"
+            >
+              <div className="border-t border-stone-100 dark:border-stone-800">
         <SeparadorBloco label="Passo 1 — Da faturação ao rendimento tributável" />
 
         {/* Faturação bruta (referência) */}
@@ -2977,34 +3065,137 @@ function ResultadoFinal({
               : `IRS final = coleta bruta calculada pelos escalões progressivos sobre o rendimento tributável de ${fmt(simAnual.rendimentoTributavel)}.`
           }
         />
-      </div>
+              </div>
+            </m.div>
+          )}
+        </AnimatePresence>
+          </div>
 
-      {/* Aviso */}
-      <div className="mb-6 flex items-start gap-2.5 rounded-3xl border border-alert-border bg-alert-bg px-4 py-3">
-        <Warning size={13} className="mt-0.5 flex-shrink-0 text-alert-text" />
-        <p className="text-xs leading-relaxed text-alert-text">
-          Estimativa informativa. IRS e SS são adiantamentos — o apuramento
-          final depende da declaração de rendimentos. Verifica com o teu
-          contabilista.
-        </p>
-      </div>
+          {/* ── Aviso ────────────────────────────────────────────────────── */}
+          <div className="flex items-start gap-2.5 rounded-3xl border border-alert-border bg-alert-bg px-4 py-3">
+            <Warning size={13} className="mt-0.5 flex-shrink-0 text-alert-text" />
+            <p className="text-xs leading-relaxed text-alert-text">
+              Estimativa informativa. IRS e SS são adiantamentos — o apuramento
+              final depende da declaração de rendimentos. Verifica com o teu
+              contabilista.
+            </p>
+          </div>
+        </div>
 
-      {/* CTAs */}
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <button
-          type="button"
-          onClick={onIrParaSimuladorCompleto}
-          className="btn-shine flex flex-1 items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:bg-brand-dark hover:shadow-float"
-        >
-          Simulador completo <ArrowRight size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={onRecomecar}
-          className="flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-5 py-3 text-sm font-semibold text-stone-600 transition-all hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
-        >
-          Recomeçar
-        </button>
+        {/* ════ COLUNA LATERAL: prazos + ações ══════════════════════════════ */}
+        <div className="space-y-4 lg:sticky lg:top-6">
+          {/* ── CTAs ─────────────────────────────────────────────────────── */}
+          <div className="flex flex-col gap-2.5">
+            <button
+              type="button"
+              onClick={onIrParaSimuladorCompleto}
+              className="btn-shine flex items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:bg-brand-dark hover:shadow-float"
+            >
+              Simulador completo <ArrowRight size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={onRecomecar}
+              className="flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-5 py-3 text-sm font-semibold text-stone-600 transition-all hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
+            >
+              Recomeçar
+            </button>
+          </div>
+
+          {/* ── Calendário fiscal ───────────────────────────────────────── */}
+          <div className="rounded-3xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900">
+            <div className="flex items-center gap-2 border-b border-stone-100 px-4 py-3 dark:border-stone-800">
+              <Calendar size={14} className="flex-shrink-0 text-brand" />
+              <div>
+                <p className="text-xs font-semibold text-stone-700 dark:text-stone-200">
+                  Próximos prazos
+                </p>
+                <p className="text-[10px] text-stone-400">
+                  Relevantes para a tua situação
+                  {regimeIVA === "isento" ? " (sem IVA)" : ""}
+                </p>
+              </div>
+            </div>
+
+            {prazosRel.length === 0 ? (
+              <div className="px-4 py-6 text-center text-xs text-stone-400">
+                Sem prazos próximos.
+              </div>
+            ) : (
+              <div className="divide-y divide-stone-50 dark:divide-stone-800">
+                {prazosRel.map((prazo) => {
+                  const dias = diasAte(prazo.data);
+                  const urgencia = urgenciaPrazo(dias);
+                  const { dia, mes, ano: anoP } = formatDataPrazo(prazo.data);
+                  const hoje = new Date();
+                  const isOutroAno = anoP !== String(hoje.getFullYear());
+
+                  const corCat =
+                    prazo.categoria === "iva"
+                      ? "bg-amber-400"
+                      : prazo.categoria === "irs"
+                        ? "bg-brand-deep"
+                        : "bg-brand";
+
+                  const corTextoUrgencia =
+                    urgencia === "critico"
+                      ? "text-red-600 dark:text-red-400"
+                      : urgencia === "proximo"
+                        ? "text-amber-600 dark:text-amber-400"
+                        : "text-stone-400";
+
+                  return (
+                    <div key={prazo.id} className="flex items-start gap-3 px-4 py-3 hover:bg-stone-50/60 dark:hover:bg-stone-800/30">
+                      {/* Data visual */}
+                      <div className="flex-shrink-0 text-center">
+                        <div className={`w-10 rounded-lg ${urgencia === "critico" ? "bg-red-50 dark:bg-red-950/30" : urgencia === "proximo" ? "bg-amber-50 dark:bg-amber-950/20" : "bg-stone-50 dark:bg-stone-800"} py-1`}>
+                          <p className={`text-[10px] font-bold uppercase tracking-wide ${urgencia === "critico" ? "text-red-500" : urgencia === "proximo" ? "text-amber-500" : "text-stone-400"}`}>
+                            {mes}
+                          </p>
+                          <p className={`font-display text-base font-bold leading-none tabular-nums ${urgencia === "critico" ? "text-red-600 dark:text-red-400" : urgencia === "proximo" ? "text-amber-700 dark:text-amber-400" : "text-stone-700 dark:text-stone-200"}`}>
+                            {dia}
+                          </p>
+                          {isOutroAno && (
+                            <p className="text-[9px] text-stone-400">{anoP}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Detalhes */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${corCat}`} aria-hidden />
+                          <p className="text-xs font-semibold text-stone-700 dark:text-stone-200 truncate">
+                            {prazo.titulo}
+                          </p>
+                        </div>
+                        <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400 line-clamp-2">
+                          {prazo.descricao}
+                        </p>
+                      </div>
+
+                      {/* Dias restantes */}
+                      <div className="flex-shrink-0 text-right">
+                        {dias === 0 ? (
+                          <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950/40 dark:text-red-400">
+                            Hoje
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <Clock size={10} className={corTextoUrgencia} />
+                            <span className={`text-[11px] font-semibold tabular-nums ${corTextoUrgencia}`}>
+                              {dias}d
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
