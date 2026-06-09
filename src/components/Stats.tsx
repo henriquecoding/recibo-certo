@@ -1,39 +1,59 @@
 import { ShieldCheck, Lock, Flag } from "@/components/ui/Icons";
 import { StaggerGroup, StaggerItem } from "@/components/ui/motion/Stagger";
+import {
+  RETENCAO,
+  SS_TAXA,
+  IVA_ISENCAO_LIMITE,
+} from "@/lib/fiscal-data";
+import { pct } from "@/lib/format";
 
-interface Pilar {
-  icon: React.ReactNode;
-  title: string;
-  sub: string;
-}
-
-const PILARES: Pilar[] = [
+const PILARES = [
   {
-    icon: <ShieldCheck size={18} />,
-    title: "Taxas de 2026 com fonte legal",
-    sub: "IRS 23 %, SS 21,4 %, IVA art. 53.º — cada valor com base legal citada e data de verificação.",
+    icon: <ShieldCheck size={16} />,
+    metric: pct(RETENCAO.art151.value),
+    accent: "text-brand",
+    label: "Retenção IRS Art. 151.º",
+    sub: "Verificado com fonte AT · 2026",
   },
   {
-    icon: <Lock size={18} />,
-    title: "Os teus dados ficam contigo",
-    sub: "Tudo corre no teu browser. Sem conta obrigatória, sem telemetria, sem acesso ao servidor.",
+    icon: <Lock size={16} />,
+    metric: "0 €",
+    accent: "text-stone-800",
+    label: "Custo para começar",
+    sub: "Sem conta, sem dados enviados",
   },
   {
-    icon: <Flag size={18} />,
-    title: "Feito para Portugal, em português",
-    sub: "Recibos verdes, regime simplificado, IRS Jovem e isenções — só as regras que te afetam.",
+    icon: <Flag size={16} />,
+    metric: pct(SS_TAXA.value),
+    accent: "text-stone-800",
+    label: "Taxa Segurança Social",
+    sub: "Regime simplificado · Recibos verdes",
   },
-];
+  {
+    icon: <ShieldCheck size={16} />,
+    metric: `${(IVA_ISENCAO_LIMITE.value / 1000).toFixed(0)}k €`,
+    accent: "text-stone-800",
+    label: "Limite isenção IVA",
+    sub: "Art. 53.º CIVA · art. 282.º CIVA",
+  },
+] as const;
 
 export default function Stats() {
   return (
-    <section className="px-6 py-12">
-      <StaggerGroup className="mx-auto grid max-w-5xl gap-px overflow-hidden rounded-4xl border border-stone-100 bg-stone-100 shadow-card sm:grid-cols-3">
+    <section className="px-6 py-10">
+      <StaggerGroup className="mx-auto grid max-w-5xl grid-cols-2 gap-3 lg:grid-cols-4">
         {PILARES.map((p) => (
-          <StaggerItem key={p.title} className="bg-white p-6">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-light text-brand">{p.icon}</div>
-            <div className="mt-4 text-sm font-semibold text-stone-800">{p.title}</div>
-            <p className="mt-1 text-xs leading-relaxed text-stone-500">{p.sub}</p>
+          <StaggerItem key={p.label}>
+            <div className="group h-full rounded-3xl border border-stone-100 bg-white p-5 shadow-card transition-shadow hover:shadow-lift">
+              <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl bg-brand-light text-brand">
+                {p.icon}
+              </div>
+              <div className={`font-display text-3xl font-semibold tabular-nums leading-none ${p.accent}`}>
+                {p.metric}
+              </div>
+              <div className="mt-2 text-xs font-semibold text-stone-700">{p.label}</div>
+              <p className="mt-0.5 text-[11px] leading-snug text-stone-400">{p.sub}</p>
+            </div>
           </StaggerItem>
         ))}
       </StaggerGroup>

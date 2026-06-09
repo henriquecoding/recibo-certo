@@ -198,6 +198,7 @@ function Wrapper({ children }: { children: React.ReactNode }) {
         Voltar ao painel
       </Link>
       <header className="mb-6">
+        <p className="mb-1 text-xs font-medium uppercase tracking-wider text-stone-400">Conta · Sincronização</p>
         <h1 className="font-display text-3xl font-semibold text-stone-800">Conta na nuvem</h1>
         <p className="mt-1 text-sm text-stone-500">Entra para guardares os teus recibos na nuvem e em todos os dispositivos.</p>
       </header>

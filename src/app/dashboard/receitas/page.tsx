@@ -56,8 +56,9 @@ export default function ReceitasPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
+          <p className="mb-1 text-xs font-medium uppercase tracking-wider text-stone-400">Análise · {new Date().getFullYear()}</p>
           <h1 className="font-display text-3xl font-semibold text-stone-800">Receitas</h1>
           <p className="mt-1 text-sm text-stone-500">A evolução do teu rendimento, por mês e por categoria.</p>
         </div>
@@ -94,19 +95,50 @@ export default function ReceitasPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {/* KPIs */}
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {[
-              { l: "Faturado", v: fmt(kpis.bruto) },
-              { l: "Líquido para ti", v: fmt(kpis.liquido), brand: true },
-              { l: "Recibos", v: String(kpis.total) },
-              { l: "Ticket médio", v: fmt(kpis.ticket) },
-            ].map((k) => (
-              <div key={k.l} className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card">
-                <div className="text-xs font-medium uppercase tracking-wider text-stone-400">{k.l}</div>
-                <div className={`mt-1 font-display text-2xl font-semibold ${k.brand ? "text-brand" : "text-stone-800"}`}>{k.v}</div>
+          {/* ── KPIs: hero líquido + 3 satélites ── */}
+          <div className="grid grid-cols-12 gap-4">
+            {/* Métrica principal */}
+            <div className="col-span-12 lg:col-span-8">
+              <div className="relative overflow-hidden rounded-4xl border border-brand bg-brand p-7 text-white shadow-glow">
+                <div aria-hidden className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute -bottom-8 -left-8 h-36 w-36 rounded-full bg-white/5 blur-2xl" />
+                <div className="relative">
+                  <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">
+                    Líquido para ti · {periodo === "ano" ? new Date().getFullYear() : "todo o período"}
+                  </div>
+                  <div className="mt-1 font-display text-6xl font-semibold leading-none tabular-nums sm:text-7xl">
+                    {fmt(kpis.liquido)}
+                  </div>
+                  {kpis.bruto > 0 && (
+                    <div className="mt-4">
+                      <div className="flex h-1.5 overflow-hidden rounded-full bg-white/15">
+                        <div
+                          className="rounded-full bg-white/70"
+                          style={{ width: `${Math.round((kpis.liquido / kpis.bruto) * 100)}%` }}
+                        />
+                      </div>
+                      <div className="mt-1.5 text-[11px] text-green-100/50">
+                        {Math.round((kpis.liquido / kpis.bruto) * 100)}% do faturado fica para ti
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            ))}
+            </div>
+
+            {/* 3 satélites */}
+            <div className="col-span-12 flex flex-row gap-4 lg:col-span-4 lg:flex-col">
+              {[
+                { l: "Faturado", v: fmt(kpis.bruto) },
+                { l: "Recibos emitidos", v: String(kpis.total) },
+                { l: "Ticket médio", v: fmt(kpis.ticket) },
+              ].map((k) => (
+                <div key={k.l} className="flex-1 rounded-3xl border border-stone-100 bg-white px-4 py-4 shadow-card">
+                  <div className="text-[11px] font-medium uppercase tracking-wider text-stone-400">{k.l}</div>
+                  <div className="mt-1 font-display text-2xl font-semibold text-stone-800">{k.v}</div>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">

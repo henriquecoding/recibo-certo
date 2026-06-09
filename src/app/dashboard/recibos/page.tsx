@@ -116,8 +116,9 @@ export default function RecibosPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
+          <p className="mb-1 text-xs font-medium uppercase tracking-wider text-stone-400">Gestão · Recibos verdes</p>
           <h1 className="font-display text-3xl font-semibold text-stone-800">Recibos</h1>
           <p className="mt-1 text-sm text-stone-500">Regista os teus recibos e acompanha o que fica realmente teu.</p>
         </div>
@@ -150,7 +151,7 @@ export default function RecibosPage() {
 
       <div className="grid lg:grid-cols-[360px_1fr] gap-6 items-start">
         {/* Formulário */}
-        <form onSubmit={submit} className="p-6 rounded-2xl bg-white border border-stone-100 space-y-4">
+        <form onSubmit={submit} className="rounded-4xl border border-stone-100 bg-white p-6 shadow-card space-y-4">
           <h2 className="text-sm font-semibold text-stone-700">{editId ? "Editar recibo" : "Novo recibo"}</h2>
 
           <div className="grid grid-cols-2 gap-3">
@@ -276,8 +277,8 @@ export default function RecibosPage() {
           {!carregado ? (
             <div className="p-10 text-center text-sm text-stone-400">A carregar…</div>
           ) : recibos.length === 0 ? (
-            <div className="p-10 rounded-2xl bg-white border border-stone-100 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-brand-light text-brand flex items-center justify-center mx-auto mb-4">
+            <div className="rounded-4xl border border-stone-100 bg-white p-10 text-center shadow-card">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-light text-brand">
                 <Receipt size={22} />
               </div>
               <p className="text-sm text-stone-500">Os recibos que registares aparecem aqui.</p>
@@ -311,8 +312,10 @@ export default function RecibosPage() {
                         return (
                           <li
                             key={r.id}
-                            className={`flex items-center gap-3 rounded-2xl border bg-white p-4 transition-all ${emEdicao ? "border-brand shadow-card" : "border-stone-100 hover:shadow-card"}`}
+                            className={`flex items-center gap-3 rounded-3xl border bg-white p-4 transition-all ${emEdicao ? "border-brand shadow-glow" : "border-stone-100 hover:border-stone-200 hover:shadow-card"}`}
                           >
+                            {/* Color dot */}
+                            <span className="hidden h-2 w-2 flex-shrink-0 rounded-full bg-brand sm:block" />
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 <span className="truncate text-sm font-semibold text-stone-800">{r.cliente || "Sem nome"}</span>

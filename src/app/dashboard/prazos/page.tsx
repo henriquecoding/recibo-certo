@@ -37,10 +37,11 @@ export default function PrazosPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
+          <p className="mb-1 text-xs font-medium uppercase tracking-wider text-stone-400">Calendário fiscal · {new Date().getFullYear()}</p>
           <h1 className="font-display text-3xl font-semibold text-stone-800">Prazos fiscais</h1>
-          <p className="text-sm text-stone-500 mt-1">As obrigações que aí vêm. Nunca mais uma coima por esquecimento.</p>
+          <p className="mt-1 text-sm text-stone-500">As obrigações que aí vêm. Nunca mais uma coima por esquecimento.</p>
         </div>
         {/* Alternar vista */}
         <div className="flex items-center gap-1 p-1 rounded-xl bg-white border border-stone-200">

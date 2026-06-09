@@ -2,7 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Logo, LayoutGrid, Receipt, History, Calendar, Calculator, ArrowLeft, User } from "@/components/ui/Icons";
+import {
+  Logo,
+  LayoutGrid,
+  Receipt,
+  History,
+  Calendar,
+  Calculator,
+  ArrowLeft,
+  User,
+  FileSign,
+  Briefcase,
+} from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { AuthProvider } from "@/lib/supabase/auth";
 import AccountBox from "@/components/dashboard/AccountBox";
@@ -23,6 +34,11 @@ const NAV: NavItem[] = [
   { href: "/dashboard/simulador", label: "Simulador IRS", short: "IRS", icon: Calculator },
 ];
 
+const NAV_RECURSOS: NavItem[] = [
+  { href: "/guias", label: "Guias fiscais", short: "Guias", icon: FileSign },
+  { href: "/ferramentas", label: "Ferramentas", short: "Tools", icon: Briefcase },
+];
+
 function isActive(pathname: string, href: string): boolean {
   return href === "/dashboard" ? pathname === href : pathname.startsWith(href);
 }
@@ -32,90 +48,140 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <AuthProvider>
-    <div className="min-h-screen bg-cream lg:grid lg:grid-cols-[264px_1fr]">
-      {/* Sidebar (desktop) */}
-      <aside className="sticky top-0 hidden h-screen flex-col border-r border-stone-200 bg-white lg:flex">
-        <div className="border-b border-stone-100 p-6">
-          <Link href="/" aria-label="ReciboCerto — início">
-            <Logo />
-          </Link>
-        </div>
-        <nav className="flex-1 p-4">
-          <ul className="flex flex-col gap-1">
-            {NAV.map((item) => {
-              const active = isActive(pathname, item.href);
-              const Icon = item.icon;
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
-                    className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all ${
-                      active ? "bg-brand-light text-brand-dark" : "text-stone-500 hover:bg-stone-50 hover:text-stone-800"
-                    }`}
-                  >
-                    <Icon size={18} />
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-        <div className="border-t border-stone-100 p-4">
-          <AccountBox />
-          <div className="mt-3 flex items-center justify-between px-1">
-            <Link href="/" className="flex items-center gap-2 px-2.5 text-xs text-stone-400 transition-colors hover:text-stone-700">
-              <ArrowLeft size={12} />
-              Voltar ao site
+      <div className="min-h-screen bg-cream lg:grid lg:grid-cols-[256px_1fr]">
+
+        {/* ─── Sidebar (desktop) ─────────────────────────────────── */}
+        <aside className="sticky top-0 hidden h-screen flex-col border-r border-stone-100 bg-white lg:flex">
+
+          {/* Logo */}
+          <div className="flex-shrink-0 border-b border-stone-100 px-6 py-5">
+            <Link href="/" aria-label="ReciboCerto — início">
+              <Logo />
             </Link>
-            <ThemeToggle />
           </div>
-        </div>
-      </aside>
 
-      {/* Top bar (mobile) */}
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-stone-100 bg-cream/85 px-5 py-3 backdrop-blur-xl lg:hidden">
-        <Link href="/" aria-label="ReciboCerto — início">
-          <Logo small />
-        </Link>
-        <div className="flex items-center gap-1.5">
-          <ThemeToggle />
-          <Link
-            href="/dashboard/conta"
-            aria-label="Conta na nuvem"
-            className="flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-xs font-semibold text-white"
-          >
-            <User size={15} />
-            Conta
+          {/* Navegação principal */}
+          <nav className="flex flex-1 flex-col overflow-y-auto px-3 pt-4 pb-2">
+            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-stone-300">
+              Menu
+            </p>
+            <ul className="flex flex-col gap-0.5">
+              {NAV.map((item) => {
+                const active = isActive(pathname, item.href);
+                const Icon = item.icon;
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      aria-current={active ? "page" : undefined}
+                      className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-150 ${
+                        active
+                          ? "bg-brand font-semibold text-white shadow-sm"
+                          : "text-stone-500 hover:bg-stone-50 hover:text-stone-800"
+                      }`}
+                    >
+                      <Icon size={18} className="flex-shrink-0" />
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div className="mt-5 mb-2">
+              <div className="mx-3 border-t border-stone-100" />
+            </div>
+            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-stone-300">
+              Recursos
+            </p>
+            <ul className="flex flex-col gap-0.5">
+              {NAV_RECURSOS.map((item) => {
+                const active = pathname.startsWith(item.href);
+                const Icon = item.icon;
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      aria-current={active ? "page" : undefined}
+                      className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-150 ${
+                        active
+                          ? "bg-brand-light font-semibold text-brand-dark"
+                          : "text-stone-400 hover:bg-stone-50 hover:text-stone-700"
+                      }`}
+                    >
+                      <Icon size={18} className="flex-shrink-0" />
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+
+          {/* Bottom: conta + controlos */}
+          <div className="flex-shrink-0 space-y-3 border-t border-stone-100 px-3 py-4">
+            <AccountBox />
+            <div className="flex items-center justify-between px-1">
+              <Link
+                href="/"
+                className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs text-stone-400 transition-colors hover:bg-stone-50 hover:text-stone-700"
+              >
+                <ArrowLeft size={12} />
+                Voltar ao site
+              </Link>
+              <ThemeToggle />
+            </div>
+          </div>
+        </aside>
+
+        {/* ─── Top bar (mobile) ───────────────────────────────────── */}
+        <header className="sticky top-0 z-40 flex items-center justify-between border-b border-stone-100 bg-cream/85 px-5 py-3.5 backdrop-blur-xl lg:hidden">
+          <Link href="/" aria-label="ReciboCerto — início">
+            <Logo small />
           </Link>
-        </div>
-      </header>
-
-      {/* Conteúdo */}
-      <main className="min-h-screen p-5 pb-24 sm:p-6 lg:p-10 lg:pb-10">{children}</main>
-
-      {/* Bottom nav (mobile) */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-stone-100 bg-white/95 backdrop-blur-xl lg:hidden">
-        {NAV.map((item) => {
-          const active = isActive(pathname, item.href);
-          const Icon = item.icon;
-          return (
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? "page" : undefined}
-              className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors ${
-                active ? "text-brand" : "text-stone-400"
-              }`}
+              href="/dashboard/conta"
+              aria-label="Conta"
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/10 text-brand transition-colors hover:bg-brand hover:text-white"
             >
-              <Icon size={20} />
-              {item.short}
+              <User size={16} />
             </Link>
-          );
-        })}
-      </nav>
-    </div>
+          </div>
+        </header>
+
+        {/* ─── Conteúdo ─────────────────────────────────────────── */}
+        <main className="min-h-screen p-5 pb-24 sm:p-6 lg:p-10 lg:pb-10">
+          {children}
+        </main>
+
+        {/* ─── Bottom nav (mobile) ───────────────────────────────── */}
+        <nav
+          className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-stone-100 bg-white/95 backdrop-blur-xl lg:hidden"
+          aria-label="Navegação principal"
+        >
+          {NAV.map((item) => {
+            const active = isActive(pathname, item.href);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors ${
+                  active ? "text-brand" : "text-stone-400 hover:text-stone-600"
+                }`}
+              >
+                <span className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors ${active ? "bg-brand/10" : ""}`}>
+                  <Icon size={19} />
+                </span>
+                {item.short}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
     </AuthProvider>
   );
 }
