@@ -16,6 +16,7 @@ import {
   Briefcase,
   PenLine,
   ChevronDown,
+  Swap,
 } from "@/components/ui/Icons";
 import EuroBreakdown from "@/components/simulador/EuroBreakdown";
 import { pct, fmt } from "@/lib/format";
@@ -248,6 +249,9 @@ export default function ModoGuiado({
   // Passo 2: Faturação — novo modelo recibos
   const [modoFat, setModoFat] = useState<"total" | "individual">("total");
   const [totalInput, setTotalInput] = useState("1500");
+  // Como interpretar o valor introduzido no modo "total": já inclui IVA (o que o
+  // cliente paga) ou é a faturação base à qual o IVA é acrescentado.
+  const [valorComIva, setValorComIva] = useState(true);
   const [recibosItems, setRecibosItems] = useState<ReciboItem[]>([
     { id: 1, descricao: "", valorComIva: "", taxaIva: 0.23 },
   ]);
@@ -270,8 +274,15 @@ export default function ModoGuiado({
     let semIva = 0;
     if (modoFat === "total") {
       const v = parseMontante(totalInput);
-      comIva = v;
-      semIva = totalIva > 0 ? v / (1 + totalIva) : v;
+      if (totalIva > 0 && !valorComIva) {
+        // Valor introduzido é a base; o IVA é acrescentado por cima.
+        semIva = v;
+        comIva = v * (1 + totalIva);
+      } else {
+        // Valor introduzido já inclui IVA (ou regime isento).
+        comIva = v;
+        semIva = totalIva > 0 ? v / (1 + totalIva) : v;
+      }
     } else {
       for (const r of recibosItems) {
         const v = parseMontante(r.valorComIva);
@@ -284,7 +295,7 @@ export default function ModoGuiado({
       mensalComIva: comIva,
       mensalIva: comIva - semIva,
     };
-  }, [modoFat, totalInput, totalIva, recibosItems]);
+  }, [modoFat, totalInput, totalIva, valorComIva, recibosItems]);
 
   // bruto (sem IVA) e recibosAno mantidos para compatibilidade com o resto do componente
   const bruto = mensalSemIva;
@@ -557,6 +568,7 @@ export default function ModoGuiado({
                   <PassoFaturacao
                     modoFat={modoFat}
                     totalInput={totalInput}
+                    valorComIva={valorComIva}
                     recibosItems={recibosItems}
                     mesesFat={mesesFat}
                     mensalSemIva={mensalSemIva}
@@ -568,6 +580,7 @@ export default function ModoGuiado({
                     atividadeEspecifica={atividadeEspecifica}
                     onModoFat={setModoFat}
                     onTotalInput={setTotalInput}
+                    onValorComIva={setValorComIva}
                     onRecibosItems={setRecibosItems}
                     onMesesFat={(m) => {
                       setMesesFat(m);
@@ -1011,6 +1024,7 @@ function TagComIvaBadge() {
 function PassoFaturacao({
   modoFat,
   totalInput,
+  valorComIva,
   recibosItems,
   mesesFat,
   mensalSemIva,
@@ -1022,6 +1036,7 @@ function PassoFaturacao({
   atividadeEspecifica,
   onModoFat,
   onTotalInput,
+  onValorComIva,
   onRecibosItems,
   onMesesFat,
   onRegiaoChange,
@@ -1029,6 +1044,7 @@ function PassoFaturacao({
 }: {
   modoFat: "total" | "individual";
   totalInput: string;
+  valorComIva: boolean;
   recibosItems: ReciboItem[];
   mesesFat: number;
   mensalSemIva: number;
@@ -1040,6 +1056,7 @@ function PassoFaturacao({
   atividadeEspecifica: Atividade | null;
   onModoFat: (m: "total" | "individual") => void;
   onTotalInput: (v: string) => void;
+  onValorComIva: (v: boolean) => void;
   onRecibosItems: React.Dispatch<React.SetStateAction<ReciboItem[]>>;
   onMesesFat: (m: number) => void;
   onRegiaoChange: (v: Regiao) => void;
@@ -1084,9 +1101,18 @@ function PassoFaturacao({
   }
 
   const montanteTotal = parseMontante(totalInput);
+  // Desdobramento consoante o valor introduzido inclua ou não IVA.
   const baseTotalSemIva =
-    taxaIvaAtual > 0 ? montanteTotal / (1 + taxaIvaAtual) : montanteTotal;
-  const ivaTotalExtraido = montanteTotal - baseTotalSemIva;
+    taxaIvaAtual > 0 && valorComIva
+      ? montanteTotal / (1 + taxaIvaAtual)
+      : montanteTotal;
+  const ivaTotalExtraido =
+    taxaIvaAtual > 0
+      ? valorComIva
+        ? montanteTotal - baseTotalSemIva
+        : montanteTotal * taxaIvaAtual
+      : 0;
+  const totalComIvaCliente = baseTotalSemIva + ivaTotalExtraido;
 
   // Deteção de cenário de ato isolado: uma única fatura no ano.
   const recibosComValor = recibosItems.filter(
@@ -1139,7 +1165,26 @@ function PassoFaturacao({
               <label className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                 Total faturado por mês
               </label>
-              {taxaIvaAtual > 0 && <TagComIvaBadge />}
+              {taxaIvaAtual > 0 && (
+                <button
+                  type="button"
+                  onClick={() => onValorComIva(!valorComIva)}
+                  aria-label={
+                    valorComIva
+                      ? "O valor inclui IVA. Clica para passar a sem IVA."
+                      : "O valor é sem IVA. Clica para passar a com IVA."
+                  }
+                  title="Alternar entre valor com IVA e sem IVA"
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                    valorComIva
+                      ? "border-brand/30 bg-brand-light text-brand-dark hover:border-brand/50 dark:bg-brand/15 dark:text-brand"
+                      : "border-stone-300 bg-stone-100 text-stone-500 hover:border-stone-400 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-300"
+                  }`}
+                >
+                  <Swap size={11} />
+                  {valorComIva ? "com IVA" : "sem IVA"}
+                </button>
+              )}
             </div>
             <div className="relative">
               <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-base text-stone-400">
@@ -1169,10 +1214,20 @@ function PassoFaturacao({
               </div>
               <div className="flex justify-between">
                 <span className="text-xs text-stone-400">
-                  IVA ({pct(taxaIvaAtual)}) — não é teu, passa pelo teu bolso
+                  IVA ({pct(taxaIvaAtual)}){" "}
+                  {valorComIva ? "— já incluído" : "— a acrescentar"}
                 </span>
                 <span className="text-xs font-semibold text-stone-400 tabular-nums">
+                  {valorComIva ? "" : "+"}
                   {fmt(ivaTotalExtraido)}
+                </span>
+              </div>
+              <div className="flex justify-between border-t border-stone-200 pt-1.5 dark:border-stone-700">
+                <span className="text-xs text-stone-500">
+                  Total pago pelo cliente
+                </span>
+                <span className="text-xs font-semibold text-stone-800 tabular-nums dark:text-stone-100">
+                  {fmt(totalComIvaCliente)}
                 </span>
               </div>
             </div>
@@ -2845,34 +2900,68 @@ function PainelResultadoVivo({
         </div>
 
         <div className="mb-4 space-y-1.5">
-          {[
-            {
-              label: "Faturação anual",
-              val: brutoAnual,
-              cor: "text-stone-700 dark:text-stone-200",
-            },
-            {
-              label: "IRS (retenção)",
-              val: -irsAnual,
-              cor: "text-red-500 dark:text-red-400",
-            },
-            {
-              label: "Seg. Social",
-              val: -ssAnual,
-              cor: "text-amber-600 dark:text-amber-400",
-            },
-            ...(ivaAnual > 0
-              ? [{ label: "IVA", val: -ivaAnual, cor: "text-stone-400" }]
-              : []),
-            {
-              label: "Líquido anual",
-              val: Math.max(0, liquidoAnual),
-              cor: "text-brand font-bold",
-            },
-          ].map(({ label, val, cor }, i, arr) => (
+          {(ivaAnual > 0
+            ? [
+                {
+                  label: "Faturado (com IVA)",
+                  val: brutoAnual + ivaAnual,
+                  cor: "text-stone-700 dark:text-stone-200",
+                },
+                {
+                  label: "IVA (não é teu)",
+                  val: -ivaAnual,
+                  cor: "text-stone-400",
+                },
+                {
+                  label: "A tua faturação",
+                  val: brutoAnual,
+                  cor: "text-stone-700 dark:text-stone-200",
+                  sep: true,
+                },
+                {
+                  label: "IRS (retenção)",
+                  val: -irsAnual,
+                  cor: "text-red-500 dark:text-red-400",
+                },
+                {
+                  label: "Seg. Social",
+                  val: -ssAnual,
+                  cor: "text-amber-600 dark:text-amber-400",
+                },
+                {
+                  label: "Líquido anual",
+                  val: Math.max(0, liquidoAnual),
+                  cor: "text-brand font-bold",
+                  total: true,
+                },
+              ]
+            : [
+                {
+                  label: "Faturação anual",
+                  val: brutoAnual,
+                  cor: "text-stone-700 dark:text-stone-200",
+                },
+                {
+                  label: "IRS (retenção)",
+                  val: -irsAnual,
+                  cor: "text-red-500 dark:text-red-400",
+                },
+                {
+                  label: "Seg. Social",
+                  val: -ssAnual,
+                  cor: "text-amber-600 dark:text-amber-400",
+                },
+                {
+                  label: "Líquido anual",
+                  val: Math.max(0, liquidoAnual),
+                  cor: "text-brand font-bold",
+                  total: true,
+                },
+              ]
+          ).map(({ label, val, cor, sep, total }) => (
             <div
               key={label}
-              className={`flex items-center justify-between ${i === arr.length - 1 ? "border-t border-stone-100 pt-1.5 dark:border-stone-800" : ""}`}
+              className={`flex items-center justify-between ${sep || total ? "border-t border-stone-100 pt-1.5 dark:border-stone-800" : ""}`}
             >
               <span className="text-[11px] text-stone-500 dark:text-stone-400">
                 {label}
@@ -3008,13 +3097,13 @@ function ZonaIVA({
               <div className="flex items-start gap-1.5">
                 <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
                 <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-                  Não cobras IVA, seja qual for a atividade, enquanto ficares
-                  abaixo de {fmt(IVA_LIMITE)}.
+                  A isenção mantém-se em <strong>cada ano</strong> em que ficares
+                  abaixo de {fmt(IVA_LIMITE)} — não é só no 1.º ano.
                 </p>
               </div>
               <p className="pl-[18px] text-[11px] leading-relaxed text-stone-400 dark:text-stone-500">
-                O limite conta a faturação do ano anterior; no 1.º ano de
-                atividade é proporcional aos meses trabalhados.
+                No 1.º ano o limite é proporcional aos meses de atividade; nos
+                anos seguintes conta a faturação do ano anterior.
               </p>
             </>
           ) : coerente ? (

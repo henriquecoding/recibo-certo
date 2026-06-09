@@ -499,6 +499,14 @@ export function ChevronDown({ size = 16, className }: IconProps) {
   );
 }
 
+export function Swap({ size = 14, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M7 4L3 8l4 4M3 8h12M17 20l4-4-4-4M21 16H9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function ChevronUp({ size = 16, className }: IconProps) {
   return (
     <svg {...svgProps(size, className)}>
