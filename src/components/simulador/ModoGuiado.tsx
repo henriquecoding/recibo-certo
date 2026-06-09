@@ -17,6 +17,8 @@ import {
   PenLine,
   ChevronDown,
   Swap,
+  Calendar,
+  Clock,
 } from "@/components/ui/Icons";
 import EuroBreakdown from "@/components/simulador/EuroBreakdown";
 import { pct, fmt } from "@/lib/format";
@@ -30,6 +32,7 @@ import {
   type Regiao,
 } from "@/lib/fiscal-data";
 import { calcular, simularIRSAnual, type RegimeIVA } from "@/lib/fiscal";
+import { gerarPrazos, diasAte, META_CATEGORIA } from "@/lib/prazos";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -1696,12 +1699,9 @@ function PassoSituacao({
               titulo="Tens menos de 35 anos? (IRS Jovem)"
               descricao="Isenta uma parte crescente do rendimento nos primeiros 10 anos de atividade."
               ativo={irsJovemOn}
-              onToggle={() => {
-                if (!irsJovemOn && ifici) setIfici(false);
-                setIrsJovemOn(!irsJovemOn);
-              }}
-              desativado={ifici}
-              desativadoMensagem="Incompatível com IFICI/RNH 2.0 — desativa primeiro"
+              onToggle={() => setIrsJovemOn(!irsJovemOn)}
+              desativado={ifici || rnhAntigo}
+              desativadoMensagem="Incompatível com IFICI ou RNH antigo — desativa primeiro"
               badge={
                 irsJovemOn
                   ? `Isenção ${pct(IRS_JOVEM_ISENCAO[irsJovemAno] ?? 0)}`
@@ -1745,34 +1745,29 @@ function PassoSituacao({
               titulo="Tens estatuto IFICI / RNH 2.0?"
               descricao="Taxa flat de 20% sobre rendimentos Cat. B (Art. 58.º-A EBF). Exige aprovação prévia da AT."
               ativo={ifici}
-              onToggle={() => {
-                if (!ifici && irsJovemOn) setIrsJovemOn(false);
-                setIfici(!ifici);
-              }}
-              desativado={irsJovemOn}
-              desativadoMensagem="Incompatível com IRS Jovem — desativa primeiro"
+              onToggle={() => setIfici(!ifici)}
+              desativado={irsJovemOn || rnhAntigo || exResidente}
+              desativadoMensagem="Incompatível com IRS Jovem, RNH antigo ou Programa Regressar — desativa primeiro"
               badge={ifici ? "Taxa flat 20%" : undefined}
               badgeTipo="neutro"
             />
 
             <ToggleCard
               titulo="Ainda beneficias do RNH antigo (pré-2024)?"
-              descricao="O antigo Residente Não Habitual (RNH) encerrou em 2023, mas quem tinha o estatuto continua a beneficiar até completar os 10 anos. As taxas são distintas do IFICI."
+              descricao="O antigo Residente Não Habitual (RNH) encerrou em 2023, mas quem já tinha o estatuto continua a beneficiar até completar os 10 anos — taxa flat de 20% sobre o rendimento de Cat. B."
               ativo={rnhAntigo}
-              onToggle={() => {
-                if (!rnhAntigo && ifici) setIfici(false);
-                setRnhAntigo(!rnhAntigo);
-              }}
-              desativado={ifici || irsJovemOn}
-              desativadoMensagem="Incompatível com IFICI ou IRS Jovem — desativa primeiro"
+              onToggle={() => setRnhAntigo(!rnhAntigo)}
+              desativado={ifici || irsJovemOn || exResidente}
+              desativadoMensagem="Incompatível com IFICI, IRS Jovem ou Programa Regressar — desativa primeiro"
               badge={rnhAntigo ? "RNH — 10 anos" : undefined}
               badgeTipo="neutro"
             >
               {rnhAntigo && (
-                <div className="mt-2.5 rounded-lg border border-alert-border bg-alert-bg px-3 py-2">
-                  <p className="text-[11px] leading-relaxed text-alert-text">
-                    O simulador não modela o RNH antigo — as regras diferem do
-                    IFICI. Consulta um contabilista para o cálculo exacto.
+                <div className="mt-2.5 rounded-lg border border-brand/20 bg-brand-light/40 px-3 py-2 dark:bg-brand/10">
+                  <p className="text-[11px] leading-relaxed text-brand-dark dark:text-brand">
+                    Aplicámos a taxa flat de 20% ao teu rendimento coletável, em
+                    vez dos escalões progressivos. Confirma a elegibilidade e o
+                    tratamento de rendimentos estrangeiros com um contabilista.
                   </p>
                 </div>
               )}
@@ -1782,15 +1777,17 @@ function PassoSituacao({
               descricao="Ex-residentes que regressam podem beneficiar de uma exclusão de 50% dos rendimentos de trabalho (Cat. A e B), durante 5 anos."
               ativo={exResidente}
               onToggle={() => setExResidente(!exResidente)}
+              desativado={ifici || rnhAntigo}
+              desativadoMensagem="Incompatível com IFICI ou RNH antigo — desativa primeiro"
               badge={exResidente ? "Exclusão 50%" : undefined}
               badgeTipo="neutro"
             >
               {exResidente && (
-                <div className="mt-2.5 rounded-lg border border-alert-border bg-alert-bg px-3 py-2">
-                  <p className="text-[11px] leading-relaxed text-alert-text">
-                    O simulador ainda não modela o Programa Regressar. Consulta
-                    um contabilista para o cálculo exacto ao abrigo do Art.
-                    12.º-A CIRS.
+                <div className="mt-2.5 rounded-lg border border-brand/20 bg-brand-light/40 px-3 py-2 dark:bg-brand/10">
+                  <p className="text-[11px] leading-relaxed text-brand-dark dark:text-brand">
+                    Aplicámos a exclusão de 50% dos rendimentos (Art. 12.º-A
+                    CIRS); os escalões incidem apenas sobre a metade restante.
+                    Confirma os anos de elegibilidade com um contabilista.
                   </p>
                 </div>
               )}
@@ -2335,32 +2332,233 @@ function ResultadoFinal({
   // Escalões — expandir/colapsar
   const [mostrarEscaloes, setMostrarEscaloes] = useState(false);
 
+  // ── Cálculo de prazos fiscais relevantes para este utilizador ──
+  const prazosRel = useMemo(() => {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const todos = [...gerarPrazos(ano), ...gerarPrazos(ano + 1)];
+    return todos
+      .filter((p) => diasAte(p.data, hoje) >= 0)
+      .filter((p) => {
+        // Ocultar prazos de IVA se isento
+        if (p.categoria === "iva" && regimeIVA === "isento") return false;
+        // Ocultar declarações SS periódicas se isento no primeiro ano (mas manter visíveis os outros)
+        return true;
+      })
+      .slice(0, 8);
+  }, [regimeIVA]);
+
+  // ── Breakdowns para os stat cards ──
+  const pcIRS = brutoAnual > 0 ? simAnual.irsEstimado / brutoAnual : 0;
+  const pcSS = brutoAnual > 0 ? ssAnual / brutoAnual : 0;
+  const pcIVA = (brutoAnual + ivaAnual) > 0 ? ivaAnual / (brutoAnual + ivaAnual) : 0;
+  const liquidoMes = Math.round(liquidoFinal / Math.max(1, recibosAno));
+
+  // Nomes dos meses para o calendário
+  const MESES_PT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+  function formatDataPrazo(dataIso: string): { dia: string; mes: string; ano: string } {
+    const [y, m, d] = dataIso.split("-");
+    return { dia: d, mes: MESES_PT[parseInt(m) - 1], ano: y };
+  }
+
+  function urgenciaPrazo(dias: number): "critico" | "proximo" | "normal" {
+    if (dias <= 7) return "critico";
+    if (dias <= 30) return "proximo";
+    return "normal";
+  }
+
   return (
     <div>
-      {/* Título */}
+      {/* ── Título ──────────────────────────────────────────────────────── */}
       <div className="mb-6">
         <h3 className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100">
           O teu resultado
         </h3>
         <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-          Estimativa para {recibosAno} recibo{recibosAno > 1 ? "s" : ""}/mês.
+          Estimativa para {recibosAno} {recibosAno === 1 ? "mês" : "meses"} de atividade.
         </p>
       </div>
 
-      {/* Líquido anual — destaque */}
-      <div className="mb-6 rounded-3xl border border-brand/20 bg-brand-light/40 p-6">
-        <div className="text-xs font-semibold uppercase tracking-wider text-brand-dark/60">
+      {/* ── Hero: Líquido anual ──────────────────────────────────────────── */}
+      <div className="mb-4 rounded-3xl border border-brand/20 bg-brand-light/40 p-6 dark:bg-brand/10">
+        <div className="text-xs font-semibold uppercase tracking-wider text-brand-dark/60 dark:text-brand/60">
           Líquido anual estimado
         </div>
         <div className="mt-1 font-display text-5xl font-bold text-brand">
           <AnimatedNumber value={Math.max(0, liquidoFinal)} />
         </div>
-        <div className="mt-1 text-sm text-brand-dark/60">
-          de {fmt(brutoAnual)} faturados ·{" "}
-          <span className="font-semibold">
-            {fmt(Math.round(liquidoFinal / 12))}/mês
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-brand-dark/60 dark:text-brand/50">
+          <span>de {fmt(brutoAnual)} faturados</span>
+          <span className="font-semibold text-brand-dark dark:text-brand">
+            {fmt(liquidoMes)}/mês
+          </span>
+          <span className="rounded-full border border-brand/20 bg-brand-light px-2 py-0.5 text-[11px] font-bold text-brand-dark dark:bg-brand/10 dark:text-brand">
+            Taxa efectiva {pct(taxaEfetiva)}
           </span>
         </div>
+      </div>
+
+      {/* ── Stat cards ──────────────────────────────────────────────────── */}
+      <div className={`mb-6 grid gap-3 ${ivaAnual > 0 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
+        {/* IRS */}
+        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 dark:border-red-900/30 dark:bg-red-950/20">
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-red-400 dark:text-red-500">IRS anual</p>
+          <p className="font-display text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
+            {fmt(Math.round(simAnual.irsEstimado))}
+          </p>
+          <p className="mt-0.5 text-[11px] tabular-nums text-red-400 dark:text-red-500">
+            {pct(pcIRS)} da faturação
+          </p>
+        </div>
+
+        {/* SS */}
+        <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 dark:border-amber-900/30 dark:bg-amber-950/20">
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-amber-500 dark:text-amber-600">
+            {isencaoCpas ? "Seg. Social*" : "Seg. Social"}
+          </p>
+          <p className="font-display text-xl font-bold tabular-nums text-amber-700 dark:text-amber-400">
+            {isencaoCpas ? "—" : fmt(Math.round(ssAnual))}
+          </p>
+          <p className="mt-0.5 text-[11px] tabular-nums text-amber-500 dark:text-amber-600">
+            {isencaoCpas ? "CPAS — ver nota" : `${pct(pcSS)} da faturação`}
+          </p>
+        </div>
+
+        {/* IVA — só se não isento */}
+        {ivaAnual > 0 && (
+          <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/40">
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-stone-400">IVA cobrado</p>
+            <p className="font-display text-xl font-bold tabular-nums text-stone-700 dark:text-stone-200">
+              {fmt(Math.round(ivaAnual))}
+            </p>
+            <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">
+              {pct(pcIVA)} do total c/ IVA
+            </p>
+          </div>
+        )}
+
+        {/* Líquido/mês */}
+        <div className="rounded-2xl border border-brand/20 bg-brand-light/50 p-4 dark:border-brand/20 dark:bg-brand/10">
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-brand-dark/60 dark:text-brand/60">
+            Líquido/mês
+          </p>
+          <p className="font-display text-xl font-bold tabular-nums text-brand">
+            {fmt(liquidoMes)}
+          </p>
+          <p className="mt-0.5 text-[11px] tabular-nums text-brand-dark/50 dark:text-brand/50">
+            {fmt(Math.round(brutoAnual / Math.max(1, recibosAno)))} faturado/mês
+          </p>
+        </div>
+      </div>
+
+      {/* ── Breakdown visual ─────────────────────────────────────────────── */}
+      <div className="mb-6 rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-700 dark:bg-stone-900">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400">
+          Distribuição por euro faturado
+        </p>
+        <EuroBreakdown
+          faturacao={brutoAnual}
+          liquido={Math.max(0, liquidoFinal)}
+          irs={simAnual.irsEstimado}
+          ss={ssAnual}
+          iva={ivaAnual}
+        />
+      </div>
+
+      {/* ── Calendário fiscal ────────────────────────────────────────────── */}
+      <div className="mb-6 rounded-2xl border border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900">
+        <div className="flex items-center gap-2 border-b border-stone-100 px-4 py-3 dark:border-stone-800">
+          <Calendar size={14} className="flex-shrink-0 text-brand" />
+          <div>
+            <p className="text-xs font-semibold text-stone-700 dark:text-stone-200">
+              Próximos prazos fiscais
+            </p>
+            <p className="text-[10px] text-stone-400">
+              Obrigações relevantes para a tua situação
+              {regimeIVA === "isento" ? " (IVA omitido — estás isento)" : ""}
+            </p>
+          </div>
+        </div>
+
+        {prazosRel.length === 0 ? (
+          <div className="px-4 py-6 text-center text-xs text-stone-400">
+            Sem prazos próximos.
+          </div>
+        ) : (
+          <div className="divide-y divide-stone-50 dark:divide-stone-800">
+            {prazosRel.map((prazo) => {
+              const dias = diasAte(prazo.data);
+              const urgencia = urgenciaPrazo(dias);
+              const { dia, mes, ano: anoP } = formatDataPrazo(prazo.data);
+              const hoje = new Date();
+              const isOutroAno = anoP !== String(hoje.getFullYear());
+              const catMeta = META_CATEGORIA[prazo.categoria];
+
+              const corCat =
+                prazo.categoria === "iva"
+                  ? "bg-amber-400"
+                  : prazo.categoria === "irs"
+                    ? "bg-brand-deep"
+                    : "bg-brand";
+
+              const corTextoUrgencia =
+                urgencia === "critico"
+                  ? "text-red-600 dark:text-red-400"
+                  : urgencia === "proximo"
+                    ? "text-amber-600 dark:text-amber-400"
+                    : "text-stone-400";
+
+              return (
+                <div key={prazo.id} className="flex items-start gap-3 px-4 py-3 hover:bg-stone-50/60 dark:hover:bg-stone-800/30">
+                  {/* Data visual */}
+                  <div className="flex-shrink-0 text-center">
+                    <div className={`w-10 rounded-lg ${urgencia === "critico" ? "bg-red-50 dark:bg-red-950/30" : urgencia === "proximo" ? "bg-amber-50 dark:bg-amber-950/20" : "bg-stone-50 dark:bg-stone-800"} py-1`}>
+                      <p className={`text-[10px] font-bold uppercase tracking-wide ${urgencia === "critico" ? "text-red-500" : urgencia === "proximo" ? "text-amber-500" : "text-stone-400"}`}>
+                        {mes}
+                      </p>
+                      <p className={`font-display text-base font-bold leading-none tabular-nums ${urgencia === "critico" ? "text-red-600 dark:text-red-400" : urgencia === "proximo" ? "text-amber-700 dark:text-amber-400" : "text-stone-700 dark:text-stone-200"}`}>
+                        {dia}
+                      </p>
+                      {isOutroAno && (
+                        <p className="text-[9px] text-stone-400">{anoP}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Detalhes */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${corCat}`} aria-hidden />
+                      <p className="text-xs font-semibold text-stone-700 dark:text-stone-200 truncate">
+                        {prazo.titulo}
+                      </p>
+                    </div>
+                    <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400 line-clamp-2">
+                      {prazo.descricao}
+                    </p>
+                  </div>
+
+                  {/* Dias restantes */}
+                  <div className="flex-shrink-0 text-right">
+                    {dias === 0 ? (
+                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950/40 dark:text-red-400">
+                        Hoje
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <Clock size={10} className={corTextoUrgencia} />
+                        <span className={`text-[11px] font-semibold tabular-nums ${corTextoUrgencia}`}>
+                          {dias}d
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ── BLOCO 1: O teu líquido ───────────────────────────────────────── */}
@@ -2767,20 +2965,6 @@ function ResultadoFinal({
               ? `IRS final = coleta bruta (${fmt(simAnual.coletaBruta)}) − deduções à coleta (${fmt(deducoesColeta)}) = ${fmt(simAnual.irsEstimado)}. Este é o valor que aparece no Bloco 1.`
               : `IRS final = coleta bruta calculada pelos escalões progressivos sobre o rendimento tributável de ${fmt(simAnual.rendimentoTributavel)}.`
           }
-        />
-      </div>
-
-      {/* Breakdown visual */}
-      <div className="mb-6 rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-700 dark:bg-stone-900">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400">
-          Distribuição por euro faturado
-        </p>
-        <EuroBreakdown
-          faturacao={brutoAnual}
-          liquido={Math.max(0, liquidoFinal)}
-          irs={simAnual.irsEstimado}
-          ss={ssAnual}
-          iva={ivaAnual}
         />
       </div>
 
