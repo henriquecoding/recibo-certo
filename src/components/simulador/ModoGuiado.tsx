@@ -2381,21 +2381,33 @@ function ResultadoFinal({
       </div>
 
       {/* ── Hero: Líquido anual ──────────────────────────────────────────── */}
-      <div className="mb-4 rounded-3xl border border-brand/20 bg-brand-light/40 p-6 dark:bg-brand/10">
-        <div className="text-xs font-semibold uppercase tracking-wider text-brand-dark/60 dark:text-brand/60">
-          Líquido anual estimado
-        </div>
-        <div className="mt-1 font-display text-5xl font-bold text-brand">
-          <AnimatedNumber value={Math.max(0, liquidoFinal)} />
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-brand-dark/60 dark:text-brand/50">
-          <span>de {fmt(brutoAnual)} faturados</span>
-          <span className="font-semibold text-brand-dark dark:text-brand">
-            {fmt(liquidoMes)}/mês
-          </span>
-          <span className="rounded-full border border-brand/20 bg-brand-light px-2 py-0.5 text-[11px] font-bold text-brand-dark dark:bg-brand/10 dark:text-brand">
-            Taxa efectiva {pct(taxaEfetiva)}
-          </span>
+      <div className="relative mb-4 overflow-hidden rounded-4xl border border-brand bg-brand p-6 text-white shadow-glow">
+        <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/5 blur-xl" />
+        <div className="relative">
+          <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">
+            Líquido anual estimado
+          </div>
+          <div className="mt-1 font-display text-5xl font-semibold leading-none tabular-nums sm:text-6xl">
+            <AnimatedNumber value={Math.max(0, liquidoFinal)} />
+          </div>
+          <div className="mt-4">
+            <div className="flex h-1.5 overflow-hidden rounded-full bg-white/15">
+              <div
+                className="rounded-full bg-white/70 transition-all duration-500"
+                style={{ width: `${Math.round(Math.max(0, liquidoFinal) / Math.max(1, brutoAnual) * 100)}%` }}
+              />
+            </div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-green-100/50">
+              <span>de {fmt(brutoAnual)} faturados</span>
+              <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/80">
+                {fmt(liquidoMes)}/mês
+              </span>
+              <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/80">
+                Taxa efectiva {pct(taxaEfetiva)}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -3060,30 +3072,49 @@ function PainelResultadoVivo({
 
   return (
     <div className="space-y-3">
-      <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900">
-        <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-stone-400">
-          Resultado ao vivo
-        </p>
+      <div className="relative overflow-hidden rounded-4xl border border-brand bg-brand p-5 text-white shadow-glow">
+        <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+        <div className="relative">
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-green-100/60">
+            Resultado ao vivo
+          </p>
 
-        <div className="mb-4">
-          <div className="text-[11px] font-medium text-stone-400">
-            {recibosAno >= 12 ? "Líquido mensal" : "Líquido por mês faturado"}
+          <div className="mb-1">
+            <div className="text-[11px] text-green-100/60">
+              {recibosAno >= 12 ? "Líquido mensal" : "Líquido por mês faturado"}
+            </div>
+            <div className="font-display text-3xl font-semibold leading-none tabular-nums">
+              <AnimatedNumber
+                value={Math.max(
+                  0,
+                  Math.round(liquidoAnual / Math.max(1, recibosAno)),
+                )}
+              />
+            </div>
+            <div className="mt-0.5 text-[11px] text-green-100/50">
+              {fmt(brutoAnual > 0 ? Math.round(brutoAnual / Math.max(1, recibosAno)) : 0)}{" "}
+              faturado/mês
+            </div>
           </div>
-          <div className="font-display text-3xl font-bold text-brand">
-            <AnimatedNumber
-              value={Math.max(
-                0,
-                Math.round(liquidoAnual / Math.max(1, recibosAno)),
-              )}
-            />
-          </div>
-          <div className="text-[11px] text-stone-400">
-            {fmt(brutoAnual > 0 ? Math.round(brutoAnual / Math.max(1, recibosAno)) : 0)}{" "}
-            faturado/mês
-          </div>
+          {brutoAnual > 0 && (
+            <div className="mt-3">
+              <div className="flex h-1 overflow-hidden rounded-full bg-white/15">
+                <div
+                  className="rounded-full bg-white/70"
+                  style={{ width: `${Math.round(Math.max(0, liquidoAnual) / Math.max(1, brutoAnual) * 100)}%` }}
+                />
+              </div>
+              <div className="mt-1 text-[10px] text-green-100/40">
+                {Math.round(Math.max(0, liquidoAnual) / Math.max(1, brutoAnual) * 100)}% de {fmt(brutoAnual)}
+              </div>
+            </div>
+          )}
         </div>
+      </div>
 
-        <div className="mb-4 space-y-1.5">
+      {/* Breakdown separado */}
+      <div className="rounded-3xl border border-stone-200 bg-white p-4 shadow-card dark:border-stone-700 dark:bg-stone-900">
+        <div className="space-y-1.5">
           {(ivaAnual > 0
             ? [
                 {

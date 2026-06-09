@@ -3598,12 +3598,12 @@ export default function SimuladorIntegrado() {
         }}
       />
 
-      <div className="relative overflow-hidden rounded-3xl border border-stone-200 shadow-lift">
+      <div className="relative overflow-hidden rounded-4xl border border-stone-200 shadow-lift">
         {/* ── Cabeçalho ──────────────────────────────────────────────────────── */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 bg-white px-4 py-4 sm:px-6 sm:py-5 dark:border-stone-800 dark:bg-stone-950">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 bg-white px-5 py-5 sm:px-7 dark:border-stone-800 dark:bg-stone-950">
           <div>
             <div className="eyebrow text-brand">Calculadora 2026</div>
-            <h3 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-200">
+            <h3 className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-200">
               O teu líquido real
             </h3>
           </div>
@@ -4990,38 +4990,59 @@ export default function SimuladorIntegrado() {
                       transition={{ duration: 0.2 }}
                       className="flex flex-col flex-1"
                     >
-                      <div className="mb-8">
-                        <div className="text-sm font-medium text-stone-500 uppercase tracking-wider mb-1">
-                          {modoInput === "recibo"
-                            ? "Disponível para gastar · por recibo"
-                            : "Líquido anual estimado"}
-                        </div>
-                        <div className="font-display text-4xl sm:text-5xl font-semibold leading-none mb-1 text-brand">
-                          <AnimatedNumber
-                            value={
-                              modoInput === "recibo"
-                                ? resultRecibo.liquido
-                                : resultAnualRV.liquido
-                            }
-                          />
-                        </div>
-                        <div className="text-sm text-stone-400 mt-1">
-                          de{" "}
-                          <AnimatedNumber
-                            value={
-                              modoInput === "recibo"
-                                ? resultRecibo.bruto + resultRecibo.iva
-                                : brutoAnual
-                            }
-                          />{" "}
-                          faturados
-                          {modoInput === "anual" && (
-                            <span>
-                              {" "}
-                              · IRS {fmt(resultAnualRV.irs)} · SS{" "}
-                              {fmt(resultAnualRV.ssAnual)}
-                            </span>
-                          )}
+                      {/* Hero metric card */}
+                      <div className="relative mb-6 overflow-hidden rounded-4xl border border-brand bg-brand p-6 text-white shadow-glow">
+                        <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+                        <div aria-hidden className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/5 blur-xl" />
+                        <div className="relative">
+                          <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">
+                            {modoInput === "recibo"
+                              ? "Disponível para gastar · por recibo"
+                              : "Líquido anual estimado"}
+                          </div>
+                          <div className="mt-1 font-display text-5xl font-semibold leading-none tabular-nums sm:text-6xl">
+                            <AnimatedNumber
+                              value={
+                                modoInput === "recibo"
+                                  ? resultRecibo.liquido
+                                  : resultAnualRV.liquido
+                              }
+                            />
+                          </div>
+                          <div className="mt-4">
+                            <div className="flex h-1.5 overflow-hidden rounded-full bg-white/15">
+                              <div
+                                className="rounded-full bg-white/70 transition-all duration-500"
+                                style={{
+                                  width: `${Math.round(
+                                    (modoInput === "recibo"
+                                      ? resultRecibo.liquido / Math.max(1, resultRecibo.bruto + resultRecibo.iva)
+                                      : resultAnualRV.liquido / Math.max(1, brutoAnual)
+                                    ) * 100
+                                  )}%`,
+                                }}
+                              />
+                            </div>
+                            <div className="mt-1 text-[11px] text-green-100/50">
+                              {Math.round(
+                                (modoInput === "recibo"
+                                  ? resultRecibo.liquido / Math.max(1, resultRecibo.bruto + resultRecibo.iva)
+                                  : resultAnualRV.liquido / Math.max(1, brutoAnual)
+                                ) * 100
+                              )}% de{" "}
+                              <AnimatedNumber
+                                value={
+                                  modoInput === "recibo"
+                                    ? resultRecibo.bruto + resultRecibo.iva
+                                    : brutoAnual
+                                }
+                              />{" "}
+                              faturados
+                              {modoInput === "anual" && (
+                                <span> · IRS {fmt(resultAnualRV.irs)} · SS {fmt(resultAnualRV.ssAnual)}</span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
 
@@ -5541,15 +5562,31 @@ export default function SimuladorIntegrado() {
                         </div>
                       )}
 
-                      <div className="mb-8">
-                        <div className="text-sm font-medium text-stone-500 uppercase tracking-wider mb-1">
-                          Líquido estimado — empresa (Lda)
-                        </div>
-                        <div className="font-display text-4xl sm:text-5xl font-semibold leading-none mb-1 text-brand">
-                          <AnimatedNumber value={liquidoEmpresaFinal} />
-                        </div>
-                        <div className="text-sm text-stone-400 mt-1">
-                          de <AnimatedNumber value={brutoAnual} /> faturados/ano
+                      {/* Hero metric card — Empresa */}
+                      <div className="relative mb-6 overflow-hidden rounded-4xl border border-brand bg-brand p-6 text-white shadow-glow">
+                        <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+                        <div aria-hidden className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/5 blur-xl" />
+                        <div className="relative">
+                          <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">
+                            Líquido estimado · empresa (Lda)
+                          </div>
+                          <div className="mt-1 font-display text-5xl font-semibold leading-none tabular-nums sm:text-6xl">
+                            <AnimatedNumber value={liquidoEmpresaFinal} />
+                          </div>
+                          <div className="mt-4">
+                            <div className="flex h-1.5 overflow-hidden rounded-full bg-white/15">
+                              <div
+                                className="rounded-full bg-white/70 transition-all duration-500"
+                                style={{
+                                  width: `${Math.round(liquidoEmpresaFinal / Math.max(1, brutoAnual) * 100)}%`,
+                                }}
+                              />
+                            </div>
+                            <div className="mt-1 text-[11px] text-green-100/50">
+                              {Math.round(liquidoEmpresaFinal / Math.max(1, brutoAnual) * 100)}% de{" "}
+                              <AnimatedNumber value={brutoAnual} /> faturados/ano
+                            </div>
+                          </div>
                         </div>
                       </div>
 
