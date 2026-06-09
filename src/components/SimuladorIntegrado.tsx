@@ -104,6 +104,7 @@ import {
   META_BASE_SS,
   IRS_JOVEM,
   DISPENSA_RETENCAO_LIMITE,
+  ESCALOES_IRS,
   type Atividade,
   type Regiao,
   type BaseSS,
@@ -114,6 +115,7 @@ import {
   calcular,
   taxaIVAEfetiva,
   simularIRSAnual,
+  irsProgressivo,
   type RegimeIVA,
   type SimulacaoIRS,
 } from "@/lib/fiscal";
@@ -154,18 +156,6 @@ const IRS_JOVEM_ISENCAO: Record<number, number> = {
 };
 
 const IRS_JOVEM_IDADE_MAX = 35;
-
-const ESCALOES_IRS_2026 = [
-  { ate: 8_342, taxa: 0.125 },
-  { ate: 12_587, taxa: 0.167 },
-  { ate: 17_838, taxa: 0.212 },
-  { ate: 23_089, taxa: 0.241 },
-  { ate: 29_400, taxa: 0.311 },
-  { ate: 43_092, taxa: 0.364 },
-  { ate: 80_000, taxa: 0.45 },
-  { ate: 250_000, taxa: 0.48 },
-  { ate: Infinity, taxa: 0.48 },
-] as const;
 
 const TIPO_ATIVIDADE_PARAMS = {
   art151: {
@@ -365,35 +355,28 @@ const IRC_PME = {
 // FUNÇÕES DE CÁLCULO FISCAL
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * IRS pelos escalões progressivos com mínimo de existência (Art. 70.º CIRS).
+ * Delega no motor canónico `irsProgressivo` (lib/fiscal) — única fonte da
+ * tabela de escalões (Art. 68.º CIRS, fiscal-data.ts).
+ */
 function calcularIRS(rendTributavel: number): number {
   if (rendTributavel <= 0) return 0;
   if (rendTributavel <= MINIMO_EXISTENCIA_2026) return 0;
-
-  let imposto = 0;
-  let base = rendTributavel;
-
-  for (let i = ESCALOES_IRS_2026.length - 1; i >= 0; i--) {
-    const escalao = ESCALOES_IRS_2026[i];
-    const prevMax = i > 0 ? ESCALOES_IRS_2026[i - 1].ate : 0;
-
-    if (base > prevMax) {
-      const parcelaEscalao = base - prevMax;
-      imposto += parcelaEscalao * escalao.taxa;
-      base = prevMax;
-    }
-  }
-
-  return Math.max(0, imposto);
+  const imposto = irsProgressivo(rendTributavel);
+  // Art. 70.º: o imposto não pode deixar o rendimento abaixo do mínimo.
+  return Math.min(imposto, Math.max(0, rendTributavel - MINIMO_EXISTENCIA_2026));
 }
 
 /** Taxa marginal do último euro de rendimento tributável — para calcular
- *  o IRS incremental no englobamento de dividendos. */
+ *  o IRS incremental no englobamento de dividendos. Usa a tabela canónica. */
 function calcularTaxaMarginal(rendTributavel: number): number {
   if (rendTributavel <= MINIMO_EXISTENCIA_2026) return 0;
-  for (const escalao of ESCALOES_IRS_2026) {
-    if (rendTributavel <= escalao.ate) return escalao.taxa;
+  for (const escalao of ESCALOES_IRS.value) {
+    if (escalao.ate === null || rendTributavel <= escalao.ate)
+      return escalao.taxa;
   }
-  return 0.48;
+  return ESCALOES_IRS.value[ESCALOES_IRS.value.length - 1].taxa;
 }
 
 function calcularSSAnual(faturacaoAnual: number): number {
@@ -2935,6 +2918,9 @@ export default function SimuladorIntegrado() {
   const [dispensaRetencao, setDispensaRetencao] = useState(false);
   const [isencaoSSPrimeiroAno, setIsencaoSSPrimeiroAno] = useState(false);
   const [acumulaEmprego, setAcumulaEmprego] = useState(false);
+  // CPAS/CGA — advogados, solicitadores e funcionários públicos pré-2006
+  // descontam para outra caixa; a SS do Regime Geral não se aplica.
+  const [isencaoCpas, setIsencaoCpas] = useState(false);
 
   const [irsJovemAno, setIrsJovemAno] = useState(0);
   const [tipoAtiv, setTipoAtiv] = useState<TipoAtividade>("art151");
@@ -3085,7 +3071,7 @@ export default function SimuladorIntegrado() {
     : "Valor do recibo (€)";
 
   // ── Resultado por recibo ─────────────────────────────────────────────────
-  const isencaoSS = isencaoSSPrimeiroAno || acumulaEmprego;
+  const isencaoSS = isencaoSSPrimeiroAno || acumulaEmprego || isencaoCpas;
 
   const resultRecibo = useMemo(
     () =>
@@ -3401,14 +3387,43 @@ export default function SimuladorIntegrado() {
       label: "1.º ano de atividade — isenção SS",
       sub: "Isenção automática de contribuições nos primeiros 12 meses (CRC)",
       val: isencaoSSPrimeiroAno,
-      set: setIsencaoSSPrimeiroAno,
+      set: (v: boolean) => {
+        if (v) setAcumulaEmprego(false);
+        setIsencaoSSPrimeiroAno(v);
+      },
+      disabled: acumulaEmprego || isencaoCpas,
+      disabledMsg: acumulaEmprego
+        ? "Já tens isenção por acumulação com emprego"
+        : "CPAS/CGA ativo — não descontas para o Regime Geral",
     },
     {
       id: "acumula",
       label: "Acumulo com trabalho dependente",
       sub: `Isento SS se emprego ≥ ${IAS_2026}€/mês e RR independente < ${(4 * IAS_2026).toLocaleString("pt-PT", { maximumFractionDigits: 0 })}€/mês`,
       val: acumulaEmprego,
-      set: setAcumulaEmprego,
+      set: (v: boolean) => {
+        if (v) setIsencaoSSPrimeiroAno(false);
+        setAcumulaEmprego(v);
+      },
+      disabled: isencaoSSPrimeiroAno || isencaoCpas,
+      disabledMsg: isencaoSSPrimeiroAno
+        ? "Já tens isenção de 1.º ano"
+        : "CPAS/CGA ativo — não descontas para o Regime Geral",
+    },
+    {
+      id: "cpas",
+      label: "CPAS / CGA — caixa de previdência própria",
+      sub: "Advogados, solicitadores e funcionários públicos pré-2006 não descontam para a SS geral",
+      val: isencaoCpas,
+      set: (v: boolean) => {
+        if (v) {
+          setIsencaoSSPrimeiroAno(false);
+          setAcumulaEmprego(false);
+        }
+        setIsencaoCpas(v);
+      },
+      disabled: isencaoSSPrimeiroAno || acumulaEmprego,
+      disabledMsg: "Já tens outra isenção de SS ativa",
     },
     {
       id: "conjunta",
@@ -3423,6 +3438,9 @@ export default function SimuladorIntegrado() {
       sub: "Taxa flat de 20% sobre Cat. B até completar 10 anos (regime transitório OE2024)",
       val: rnhAntigo,
       set: setRnhAntigo,
+      disabled: ifici || irsJovemAno > 0 || exResidente,
+      disabledMsg:
+        "Incompatível com IFICI, IRS Jovem ou Programa Regressar — desativa primeiro",
     },
     {
       id: "programaRegressar",
@@ -3430,6 +3448,8 @@ export default function SimuladorIntegrado() {
       sub: "Exclui 50% dos rendimentos durante 5 anos após o regresso (Art. 12.º-A CIRS)",
       val: exResidente,
       set: setExResidente,
+      disabled: ifici || rnhAntigo,
+      disabledMsg: "Incompatível com IFICI ou RNH antigo — desativa primeiro",
     },
   ];
 
@@ -3498,6 +3518,50 @@ export default function SimuladorIntegrado() {
       });
     }
 
+    // RNH antigo + IRS Jovem: incompatíveis (Art. 12.º-B n.º 2 CIRS)
+    if (rnhAntigo && irsJovemAno > 0) {
+      r.push({
+        id: "rnh-jovem",
+        prioridade: "erro",
+        mensagem: "RNH antigo e IRS Jovem são regimes incompatíveis",
+        detalhe:
+          "Quem beneficia (ou beneficiou) do regime do residente não habitual não pode aceder ao IRS Jovem (Art. 12.º-B n.º 2 CIRS). Desativa um dos dois.",
+      });
+    }
+
+    // IFICI + RNH antigo: mutuamente exclusivos
+    if (ifici && rnhAntigo) {
+      r.push({
+        id: "ifici-rnh",
+        prioridade: "erro",
+        mensagem: "IFICI e RNH antigo não são cumuláveis",
+        detalhe:
+          "São dois regimes de taxa flat distintos — o IFICI (Art. 58.º-A EBF) substituiu o RNH desde 2024. Só um pode estar ativo; o cálculo usa o IFICI e ignora o RNH.",
+      });
+    }
+
+    // Programa Regressar + regimes de taxa flat: incompatíveis
+    if (exResidente && (ifici || rnhAntigo)) {
+      r.push({
+        id: "regressar-flat",
+        prioridade: "erro",
+        mensagem: "Programa Regressar incompatível com IFICI / RNH antigo",
+        detalhe:
+          "A exclusão de 50% dos rendimentos (Art. 12.º-A CIRS) não é cumulável com os regimes de taxa flat de 20%. Desativa um dos dois — o cálculo usa o regime de taxa flat e ignora a exclusão.",
+      });
+    }
+
+    // CPAS/CGA ativo: SS geral não modelada
+    if (isencaoCpas) {
+      r.push({
+        id: "cpas-info",
+        prioridade: "info",
+        mensagem: "CPAS/CGA — contribuições não incluídas na estimativa",
+        detalhe:
+          "Não descontas para o Regime Geral da SS, mas as contribuições para a CPAS/CGA continuam a existir e têm regras próprias. O teu líquido real é inferior ao estimado — consulta a tua caixa de previdência.",
+      });
+    }
+
     // Dispensa de retenção acima do limite legal
     if (dispensaRetencao && brutoAnual > DISPENSA_RETENCAO_LIMITE.value) {
       r.push({
@@ -3541,6 +3605,9 @@ export default function SimuladorIntegrado() {
     tipoAtiv,
     regiao,
     ifici,
+    rnhAntigo,
+    exResidente,
+    isencaoCpas,
     irsJovemAno,
     dispensaRetencao,
     isencaoSSPrimeiroAno,
@@ -3800,16 +3867,20 @@ export default function SimuladorIntegrado() {
               setRegimeIVA(estado.regimeIVA);
               setAcumulaEmprego(estado.acumulaEmprego);
               setIsencaoSSPrimeiroAno(estado.isencaoSSPrimeiroAno);
+              setIsencaoCpas(estado.isencaoCpas);
               setAnoAtividade(estado.anoAtividade);
               setIrsJovemAno(estado.irsJovemAno);
               setDespSaude(estado.despSaude);
               setDespEducacao(estado.despEducacao);
               setDespGerais(estado.despGerais);
               setDespRendas(estado.despRendas);
-              if (estado.ifici) setIfici(true);
-              if (estado.rnhAntigo) setRnhAntigo(true);
-              if (estado.exResidente) setExResidente(true);
-              if (estado.deficiencia) setDeficiencia(true);
+              // Sets incondicionais: sincronizam TODO o estado dos regimes
+              // mutuamente exclusivos — evita combinações inválidas herdadas
+              // de uma sessão anterior do modo profissional.
+              setIfici(estado.ifici);
+              setRnhAntigo(estado.rnhAntigo);
+              setExResidente(estado.exResidente);
+              setDeficiencia(estado.deficiencia);
               handleSelectModo("profissional");
             }}
           />
@@ -4266,42 +4337,51 @@ export default function SimuladorIntegrado() {
 
                 {/* ── Situação fiscal ──────────────────────────────────────── */}
                 <div className="space-y-3">
-                  {checkboxes.map((cb) => (
-                    <button
-                      key={cb.id}
-                      type="button"
-                      role="checkbox"
-                      aria-checked={cb.val}
-                      onClick={() => cb.set(!cb.val)}
-                      className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
-                        cb.val
-                          ? "border-brand bg-brand-light"
-                          : "border-stone-200 hover:border-stone-300 bg-stone-50"
-                      }`}
-                    >
-                      <div
-                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                          cb.val
-                            ? "bg-brand border-brand text-white"
-                            : "border-stone-300 text-transparent"
+                  {checkboxes.map((cb) => {
+                    const bloqueado = !!cb.disabled && !cb.val;
+                    return (
+                      <button
+                        key={cb.id}
+                        type="button"
+                        role="checkbox"
+                        aria-checked={cb.val}
+                        aria-disabled={bloqueado}
+                        onClick={() => {
+                          if (bloqueado) return;
+                          cb.set(!cb.val);
+                        }}
+                        className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
+                          bloqueado
+                            ? "border-stone-100 bg-stone-50 opacity-60 cursor-not-allowed dark:border-stone-800 dark:bg-stone-900/40"
+                            : cb.val
+                              ? "border-brand bg-brand-light"
+                              : "border-stone-200 hover:border-stone-300 bg-stone-50"
                         }`}
                       >
-                        <Check size={12} />
-                      </div>
-                      <div>
                         <div
-                          className={`text-sm font-semibold ${cb.val ? "text-brand-dark" : "text-stone-700"}`}
+                          className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                            cb.val
+                              ? "bg-brand border-brand text-white"
+                              : "border-stone-300 text-transparent"
+                          }`}
                         >
-                          {cb.label}
+                          <Check size={12} />
                         </div>
-                        <div
-                          className={`text-xs ${cb.val ? "text-brand" : "text-stone-400"}`}
-                        >
-                          {cb.sub}
+                        <div>
+                          <div
+                            className={`text-sm font-semibold ${cb.val ? "text-brand-dark" : "text-stone-700"}`}
+                          >
+                            {cb.label}
+                          </div>
+                          <div
+                            className={`text-xs ${cb.val ? "text-brand" : "text-stone-400"}`}
+                          >
+                            {bloqueado && cb.disabledMsg ? cb.disabledMsg : cb.sub}
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* ── Motor de Regras Fiscais ──────────────────────────────── */}
@@ -4455,10 +4535,11 @@ export default function SimuladorIntegrado() {
                             <select
                               id="irs-jovem-sel"
                               value={irsJovemAno}
+                              disabled={ifici || rnhAntigo}
                               onChange={(e) =>
                                 setIrsJovemAno(Number(e.target.value))
                               }
-                              className="w-full px-4 py-3 text-[16px] font-semibold text-stone-700 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all dark:bg-stone-800 dark:text-stone-200 dark:border-stone-700"
+                              className="w-full px-4 py-3 text-[16px] font-semibold text-stone-700 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all disabled:cursor-not-allowed disabled:opacity-60 dark:bg-stone-800 dark:text-stone-200 dark:border-stone-700"
                             >
                               {irsJovemOpts.map(({ ano, label }) => (
                                 <option key={ano} value={ano}>
@@ -4467,10 +4548,9 @@ export default function SimuladorIntegrado() {
                               ))}
                             </select>
                             <p className="mt-1.5 text-xs text-stone-400">
-                              Limite de isenção:{" "}
-                              {IRS_JOVEM_LIMITE_2026.toLocaleString("pt-PT")}
-                              €/ano (55×IAS 2026). Aplica-se ao rendimento
-                              coletável, não ao bruto.
+                              {ifici || rnhAntigo
+                                ? "Incompatível com IFICI / RNH antigo (Art. 12.º-B n.º 2 CIRS) — desativa primeiro."
+                                : `Limite de isenção: ${IRS_JOVEM_LIMITE_2026.toLocaleString("pt-PT")}€/ano (55×IAS 2026). Aplica-se ao rendimento coletável, não ao bruto.`}
                             </p>
                           </div>
 
@@ -4561,15 +4641,26 @@ export default function SimuladorIntegrado() {
 
                             {/* ── IFICI / NHR 2.0 ─────────────────────────────── */}
                             <div className="space-y-2 mb-4">
+                              {(() => {
+                                const ificiBloqueado =
+                                  !ifici &&
+                                  (irsJovemAno > 0 || rnhAntigo || exResidente);
+                                return (
                               <button
                                 type="button"
                                 role="checkbox"
                                 aria-checked={ifici}
-                                onClick={() => setIfici((v) => !v)}
+                                aria-disabled={ificiBloqueado}
+                                onClick={() => {
+                                  if (ificiBloqueado) return;
+                                  setIfici((v) => !v);
+                                }}
                                 className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
-                                  ifici
-                                    ? "border-brand bg-brand-light"
-                                    : "border-stone-200 hover:border-stone-300 bg-stone-50"
+                                  ificiBloqueado
+                                    ? "border-stone-100 bg-stone-50 opacity-60 cursor-not-allowed dark:border-stone-800 dark:bg-stone-900/40"
+                                    : ifici
+                                      ? "border-brand bg-brand-light"
+                                      : "border-stone-200 hover:border-stone-300 bg-stone-50"
                                 }`}
                               >
                                 <div
@@ -4587,11 +4678,14 @@ export default function SimuladorIntegrado() {
                                   <div
                                     className={`text-xs ${ifici ? "text-brand" : "text-stone-400"}`}
                                   >
-                                    10 anos · Só elegíveis · Não residente em
-                                    Portugal nos últimos 5 anos
+                                    {ificiBloqueado
+                                      ? "Incompatível com IRS Jovem, RNH antigo ou Programa Regressar — desativa primeiro"
+                                      : "10 anos · Só elegíveis · Não residente em Portugal nos últimos 5 anos"}
                                   </div>
                                 </div>
                               </button>
+                                );
+                              })()}
                               {ifici && (
                                 <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200">
                                   <Warning
@@ -5229,7 +5323,7 @@ export default function SimuladorIntegrado() {
                             <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
                               <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">Seg. Social</p>
                               <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">{ssVal > 0 ? fmt(Math.round(ssVal)) : "—"}</p>
-                              <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{ssVal > 0 ? `${pct(pcSS)} do faturado` : "Isento"}</p>
+                              <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{ssVal > 0 ? `${pct(pcSS)} do faturado` : isencaoCpas ? "CPAS/CGA" : "Isento"}</p>
                             </div>
                             {ivaVal > 0 && (
                               <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">

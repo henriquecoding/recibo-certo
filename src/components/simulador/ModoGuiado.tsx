@@ -79,6 +79,7 @@ export interface EstadoGuiadoSaida {
   regimeIVA: RegimeIVA;
   acumulaEmprego: boolean;
   isencaoSSPrimeiroAno: boolean;
+  isencaoCpas: boolean;
   anoAtividade: number;
   irsJovemAno: number;
   despSaude: number;
@@ -411,6 +412,7 @@ export default function ModoGuiado({
     regimeIVA,
     acumulaEmprego,
     isencaoSSPrimeiroAno,
+    isencaoCpas,
     anoAtividade,
     irsJovemAno: jovemAno,
     despSaude,
