@@ -196,6 +196,17 @@ input[type="number"]::-webkit-outer-spin-button {
   border-color: transparent;
 }
 
+/* Variantes com opacidade (text-brand-dark/70, bg-brand-light/40…) compilam
+   para classes próprias que escapam aos overrides exatos acima — sem isto, o
+   verde-escuro da marca fica invisível sobre o fundo escuro. Os seletores por
+   substring apanham qualquer opacidade. Scoped a .dark: o claro fica intacto. */
+.dark [class*="text-brand-dark/"] {
+  color: rgb(111 206 172 / 0.88);
+}
+.dark [class*="bg-brand-light/"] {
+  background-color: rgb(20 51 41 / 0.55);
+}
+
 /* Alertas — dourado suave adaptado ao escuro (calmo, não berrante) */
 .dark .bg-alert-bg {
   background-color: #26230f;

@@ -881,7 +881,7 @@ export default function ModoGuiado({
                 <button
                   type="button"
                   onClick={() => onIrParaSimuladorCompleto(estadoSaida)}
-                  className="text-xs text-stone-400 transition-colors hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300"
+                  className="px-3 py-2.5 text-xs text-stone-400 transition-colors hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300"
                 >
                   Saltar para o simulador completo →
                 </button>

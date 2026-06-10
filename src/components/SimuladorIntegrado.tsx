@@ -93,6 +93,7 @@ import {
   PenLine,
   Receipt,
   Building,
+  Swap,
 } from "@/components/ui/Icons";
 import { pct, fmt } from "@/lib/format";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
@@ -3036,38 +3037,42 @@ export default function SimuladorIntegrado() {
     }
   }, []);
 
+  // Como interpretar o valor introduzido (paridade com o modo guiado):
+  // true → o valor já inclui IVA (total cobrado ao cliente); extraímos a base.
+  // false → o valor é a base do serviço; o IVA acresce por cima.
+  const [valorComIva, setValorComIva] = useState(true);
+
   // ── Sincronização bruto ↔ brutoAnual ────────────────────────────────────
   const handleBrutoChange = useCallback(
     (v: number) => {
       setBruto(v);
       // brutoAnual armazena a base anual (sem IVA) para simulações IRS/SS
       const t = taxaIVAEfetiva(regiao, regimeIVA);
-      const baseV = t > 0 ? v / (1 + t) : v;
+      const baseV = t > 0 && valorComIva ? v / (1 + t) : v;
       setBrutoAnual(Math.round(baseV * 12));
     },
-    [regiao, regimeIVA],
+    [regiao, regimeIVA, valorComIva],
   );
 
   const handleBrutoAnualChange = useCallback(
     (v: number) => {
       setBrutoAnual(v);
-      // bruto (slider por recibo) mostra o total com IVA
+      // bruto (slider por recibo) reflete a interpretação ativa do input
       const t = taxaIVAEfetiva(regiao, regimeIVA);
-      const totalMensal = t > 0 ? (v / 12) * (1 + t) : v / 12;
+      const totalMensal = t > 0 && valorComIva ? (v / 12) * (1 + t) : v / 12;
       setBruto(Math.round(totalMensal / 50) * 50);
     },
-    [regiao, regimeIVA],
+    [regiao, regimeIVA, valorComIva],
   );
 
   // ── IVA ──────────────────────────────────────────────────────────────────
   const taxaIva = taxaIVAEfetiva(regiao, regimeIVA);
   const temIva = taxaIva > 0;
-
-  // O input é o total que a pessoa cobra ao cliente (já com IVA incluído quando aplicável).
-  // Extraímos a base pré-IVA para passar ao motor de cálculo.
-  const base = temIva ? bruto / (1 + taxaIva) : bruto;
+  const base = temIva && valorComIva ? bruto / (1 + taxaIva) : bruto;
   const labelValor = temIva
-    ? `Total a cobrar ao cliente (€) — IVA ${pct(taxaIva)} incluído`
+    ? valorComIva
+      ? `Total a cobrar ao cliente (€) — IVA ${pct(taxaIva)} incluído`
+      : `Valor base do serviço (€) — IVA ${pct(taxaIva)} acresce`
     : "Valor do recibo (€)";
 
   // ── Resultado por recibo ─────────────────────────────────────────────────
@@ -3863,6 +3868,8 @@ export default function SimuladorIntegrado() {
               setTipoAtiv(estado.tipoAtiv as TipoAtividade);
               if (estado.atividade) setAtividade(estado.atividade);
               setBruto(estado.bruto);
+              // O guiado envia o bruto SEM IVA → interpretar como base.
+              setValorComIva(false);
               setBrutoAnual(estado.brutoAnual);
               setRegiao(estado.regiao);
               setRegimeIVA(estado.regimeIVA);
@@ -3905,8 +3912,8 @@ export default function SimuladorIntegrado() {
                         exit={{ opacity: 0, x: 8 }}
                         transition={{ duration: 0.18 }}
                       >
-                        {/* O input é o total a cobrar ao cliente (com IVA incluído
-                        se aplicável). A base pré-IVA é extraída internamente. */}
+                        {/* A interpretação do input (com/sem IVA) é controlada
+                        pelo toggle abaixo — paridade com o modo guiado. */}
                         <NumericSlider
                           label={labelValor}
                           value={bruto}
@@ -3918,13 +3925,43 @@ export default function SimuladorIntegrado() {
                           presets={[500, 1000, 1500, 2500, 5000]}
                           tooltip={
                             <>
-                              Valor total que vais cobrar ao cliente (já com IVA
-                              incluído, se aplicável). O ReciboCerto extrai
-                              automaticamente a base pré-IVA e calcula IRS, SS e
-                              quanto podes gastar.
+                              Valor do recibo. Com o toggle "já inclui IVA"
+                              ativo, o ReciboCerto extrai a base pré-IVA; caso
+                              contrário, o IVA acresce por cima. Em ambos os
+                              casos calcula IRS, SS e quanto podes gastar.
                             </>
                           }
                         />
+                        {temIva && (
+                          <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={valorComIva}
+                              onClick={() => {
+                                const novo = !valorComIva;
+                                setValorComIva(novo);
+                                // Ressincronizar o anual: o número mantém-se,
+                                // a interpretação muda.
+                                const baseV = novo
+                                  ? bruto / (1 + taxaIva)
+                                  : bruto;
+                                setBrutoAnual(Math.round(baseV * 12));
+                              }}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-brand/25 bg-brand-light px-3 py-1.5 text-[11px] font-semibold text-brand-dark transition-all hover:border-brand/40"
+                            >
+                              <Swap size={11} />
+                              {valorComIva
+                                ? "O valor já inclui IVA"
+                                : "O IVA acresce ao valor"}
+                            </button>
+                            <span className="text-[11px] tabular-nums text-stone-400">
+                              {valorComIva
+                                ? `Base: ${fmt(base)} + IVA ${fmt(bruto - base)}`
+                                : `Cliente paga ${fmt(bruto * (1 + taxaIva))} (IVA ${fmt(bruto * taxaIva)})`}
+                            </span>
+                          </div>
+                        )}
                       </m.div>
                     ) : (
                       <m.div
@@ -4764,7 +4801,7 @@ export default function SimuladorIntegrado() {
                                         onClick={() =>
                                           set(Math.max(0, val - 1))
                                         }
-                                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-600 hover:border-brand hover:text-brand transition-all"
+                                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-600 hover:border-brand hover:text-brand transition-all"
                                       >
                                         <span className="text-sm font-semibold leading-none">
                                           −
@@ -4776,7 +4813,7 @@ export default function SimuladorIntegrado() {
                                       <button
                                         type="button"
                                         onClick={() => set(val + 1)}
-                                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-600 hover:border-brand hover:text-brand transition-all"
+                                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-600 hover:border-brand hover:text-brand transition-all"
                                       >
                                         <span className="text-sm font-semibold leading-none">
                                           +
