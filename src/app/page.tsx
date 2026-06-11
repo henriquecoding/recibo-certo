@@ -1,5 +1,5 @@
 import Nav from "@/components/Nav";
-import BetaPopup from "@/components/BetaPopup";
+
 import Hero from "@/components/Hero";
 import Stats from "@/components/Stats";
 import SimuladorIntegrado from "@/components/SimuladorIntegrado";
@@ -38,7 +38,6 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <BetaPopup />
       <div id="top">
         <Nav />
         <main>
