@@ -42,7 +42,9 @@ import {
   EXCLUSAO_DEFICIENCIA_TAXA,
   EXCLUSAO_DEFICIENCIA_MAX,
   DEDUCAO_DEFICIENCIA_COLETA,
+  SOURCES,
   type Sourced,
+  type SourceKey,
 } from "@/lib/fiscal-data";
 import {
   calcular,
@@ -51,7 +53,12 @@ import {
   irsProgressivo,
 } from "@/lib/fiscal";
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  TIPOS PARTILHADOS
+// ═══════════════════════════════════════════════════════════════════════════
+
 type Severidade = "ok" | "info" | "aviso" | "erro";
+type Confianca = "alta" | "media" | "baixa" | "nenhuma";
 
 interface ResultadoTeste {
   id: string;
@@ -61,6 +68,10 @@ interface ResultadoTeste {
   esperado: string;
   obtido: string;
   detalhes?: string;
+  fonteUrl?: string;
+  fonteNome?: string;
+  confianca?: Confianca;
+  citacao?: string;
 }
 
 function isRate(v: number) {
@@ -86,6 +97,479 @@ function check(
     detalhes,
   };
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  AGENTE: FONTES OFICIAIS — busca real a fontes online
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface FonteStatus {
+  key: SourceKey;
+  nome: string;
+  url: string;
+  acessivel: boolean;
+  texto: string;
+  erro?: string;
+}
+
+const FONTES_A_CONSULTAR: { key: SourceKey; prioridade: "primaria" | "secundaria" }[] = [
+  { key: "escaloesIRS", prioridade: "primaria" },
+  { key: "pwcGuiaIRS", prioridade: "primaria" },
+  { key: "decoRetencao", prioridade: "primaria" },
+  { key: "portalFinancasIVA", prioridade: "primaria" },
+  { key: "occIVA", prioridade: "primaria" },
+  { key: "pwcGuiaSS", prioridade: "primaria" },
+  { key: "segSocialTI", prioridade: "primaria" },
+  { key: "minimoExistencia", prioridade: "primaria" },
+  { key: "art31", prioridade: "primaria" },
+  { key: "dividendos", prioridade: "primaria" },
+  { key: "art72", prioridade: "primaria" },
+  { key: "pwcIRC", prioridade: "primaria" },
+  { key: "decoIRSJovem", prioridade: "primaria" },
+  { key: "occRegimeSimplificado", prioridade: "secundaria" },
+  { key: "deducoesColeta", prioridade: "secundaria" },
+  { key: "govptTrabIndependente", prioridade: "secundaria" },
+];
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&euro;/gi, "€")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n)))
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function fetchFonte(key: SourceKey): Promise<FonteStatus> {
+  const src = SOURCES[key];
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 12_000);
+    const res = await fetch(src.url, {
+      signal: ctrl.signal,
+      headers: {
+        Accept: "text/html,application/xhtml+xml,*/*",
+        "User-Agent": "ReciboCerto-FiscalAudit/1.0",
+        "Accept-Language": "pt-PT,pt;q=0.9",
+      },
+    });
+    clearTimeout(timer);
+    if (!res.ok) {
+      return { key, nome: src.label, url: src.url, acessivel: false, texto: "", erro: `HTTP ${res.status}` };
+    }
+    const html = await res.text();
+    const texto = stripHtml(html);
+    return { key, nome: src.label, url: src.url, acessivel: true, texto };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Erro desconhecido";
+    return { key, nome: src.label, url: src.url, acessivel: false, texto: "", erro: msg };
+  }
+}
+
+// ── Geradores de padrões regex para formatos numéricos portugueses ───────
+
+function amountPat(n: number): string {
+  if (Number.isInteger(n)) {
+    const s = String(n);
+    if (s.length <= 3) return s;
+    const groups: string[] = [];
+    for (let i = s.length; i > 0; i -= 3) {
+      groups.unshift(s.slice(Math.max(0, i - 3), i));
+    }
+    return groups.join("[\\s. ]?");
+  }
+  const fixed = n.toFixed(2);
+  const [ip, dp] = fixed.split(".");
+  let intPat: string;
+  if (ip.length <= 3) {
+    intPat = ip;
+  } else {
+    const groups: string[] = [];
+    for (let i = ip.length; i > 0; i -= 3) {
+      groups.unshift(ip.slice(Math.max(0, i - 3), i));
+    }
+    intPat = groups.join("[\\s. ]?");
+  }
+  return `${intPat}[,.]${dp}`;
+}
+
+function percentPat(rate: number): string {
+  const pct = rate * 100;
+  if (Number.isInteger(pct)) {
+    return `${pct}\\s*%`;
+  }
+  const fixed = pct.toFixed(1);
+  const [ip, dp] = fixed.split(".");
+  return `${ip}[,.]${dp}\\s*%`;
+}
+
+function coefPat(coef: number): string {
+  const fixed = coef.toFixed(2).replace(/0+$/, "");
+  const [ip, dp] = fixed.split(".");
+  if (!dp) return ip;
+  return `${ip}[,.]${dp}`;
+}
+
+// ── Busca de padrão em texto com contexto ───────────────────────────────
+
+interface SearchHit {
+  found: boolean;
+  match?: string;
+  context?: string;
+  nearKeyword: boolean;
+}
+
+function searchInText(
+  texto: string,
+  pattern: string,
+  keywords: string[],
+): SearchHit {
+  let regex: RegExp;
+  try {
+    regex = new RegExp(pattern, "gi");
+  } catch {
+    return { found: false, nearKeyword: false };
+  }
+
+  const matches: { index: number; match: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(texto)) !== null) {
+    matches.push({ index: m.index, match: m[0] });
+    if (matches.length > 50) break;
+  }
+
+  if (matches.length === 0) return { found: false, nearKeyword: false };
+
+  const textoLower = texto.toLowerCase();
+  for (const hit of matches) {
+    for (const kw of keywords) {
+      const searchStart = Math.max(0, hit.index - 400);
+      const searchEnd = Math.min(texto.length, hit.index + hit.match.length + 400);
+      const slice = textoLower.slice(searchStart, searchEnd);
+      if (slice.includes(kw.toLowerCase())) {
+        const ctxStart = Math.max(0, hit.index - 100);
+        const ctxEnd = Math.min(texto.length, hit.index + hit.match.length + 100);
+        return {
+          found: true,
+          match: hit.match,
+          context: texto.slice(ctxStart, ctxEnd).trim().replace(/\s+/g, " "),
+          nearKeyword: true,
+        };
+      }
+    }
+  }
+
+  const first = matches[0];
+  const ctxStart = Math.max(0, first.index - 100);
+  const ctxEnd = Math.min(texto.length, first.index + first.match.length + 100);
+  return {
+    found: true,
+    match: first.match,
+    context: texto.slice(ctxStart, ctxEnd).trim().replace(/\s+/g, " "),
+    nearKeyword: false,
+  };
+}
+
+// ── Definição de cada verificação ───────────────────────────────────────
+
+interface VerificacaoDef {
+  id: string;
+  grupo: string;
+  nome: string;
+  valorLocal: string;
+  fontes: SourceKey[];
+  pattern: string;
+  keywords: string[];
+}
+
+function defAmount(
+  id: string, grupo: string, nome: string,
+  valor: number, fontes: SourceKey[], keywords: string[],
+): VerificacaoDef {
+  const fmt = Number.isInteger(valor)
+    ? valor.toLocaleString("pt-PT")
+    : valor.toLocaleString("pt-PT", { minimumFractionDigits: 2 });
+  return { id, grupo, nome, valorLocal: `${fmt} €`, fontes, pattern: amountPat(valor), keywords };
+}
+
+function defPercent(
+  id: string, grupo: string, nome: string,
+  rate: number, fontes: SourceKey[], keywords: string[],
+): VerificacaoDef {
+  const pct = rate * 100;
+  const fmt = Number.isInteger(pct) ? `${pct}%` : `${pct.toFixed(1).replace(".", ",")}%`;
+  return { id, grupo, nome, valorLocal: fmt, fontes, pattern: percentPat(rate), keywords };
+}
+
+function defCoef(
+  id: string, grupo: string, nome: string,
+  coef: number, fontes: SourceKey[], keywords: string[],
+): VerificacaoDef {
+  return {
+    id, grupo, nome,
+    valorLocal: coef.toFixed(2).replace(".", ","),
+    fontes, pattern: coefPat(coef), keywords,
+  };
+}
+
+function buildVerificacoes(): VerificacaoDef[] {
+  const v: VerificacaoDef[] = [];
+
+  // ── IAS ──
+  v.push(defAmount("f-ias", "IAS", "Indexante dos Apoios Sociais 2026",
+    537.13, ["pwcGuiaSS", "segSocialTI", "govptTrabIndependente"],
+    ["IAS", "indexante", "apoios sociais"]));
+
+  // ── Escalões IRS ──
+  const escLabels = ["1.º", "2.º", "3.º", "4.º", "5.º", "6.º", "7.º", "8.º", "9.º"];
+  const esc = ESCALOES_IRS.value;
+  for (let i = 0; i < esc.length; i++) {
+    if (esc[i].ate !== null) {
+      v.push(defAmount(`f-esc${i + 1}-lim`, "Escalões IRS", `${escLabels[i]} escalão — limite`,
+        esc[i].ate!, ["escaloesIRS", "pwcGuiaIRS"],
+        ["escalão", "escalao", "rendimento coletável", "coletavel", "tabela", `${escLabels[i]}`]));
+    }
+    v.push(defPercent(`f-esc${i + 1}-tx`, "Escalões IRS", `${escLabels[i]} escalão — taxa`,
+      esc[i].taxa, ["escaloesIRS", "pwcGuiaIRS"],
+      ["escalão", "escalao", "taxa", "marginal", `${escLabels[i]}`]));
+  }
+
+  // ── Retenção ──
+  v.push(defPercent("f-ret-151", "Retenção na fonte", "Art. 151.º — profissões liberais",
+    0.23, ["decoRetencao", "pwcGuiaIRS"],
+    ["retenção", "retencao", "Art. 151", "profissões liberais", "23"]));
+  v.push(defPercent("f-ret-outros", "Retenção na fonte", "Outros serviços",
+    0.115, ["decoRetencao", "pwcGuiaIRS"],
+    ["retenção", "retencao", "11,5", "outros serviços", "11.5"]));
+  v.push(defPercent("f-ret-ip", "Retenção na fonte", "Propriedade intelectual",
+    0.165, ["decoRetencao", "pwcGuiaIRS"],
+    ["retenção", "retencao", "16,5", "propriedade intelectual", "direitos de autor"]));
+  v.push(defAmount("f-ret-dispensa", "Retenção na fonte", "Limite de dispensa",
+    15000, ["decoRetencao", "govptTrabIndependente"],
+    ["dispensa", "retenção", "15.000", "15 000"]));
+
+  // ── IVA ──
+  v.push(defAmount("f-iva-isencao", "IVA", "Isenção Art. 53.º CIVA",
+    15000, ["portalFinancasIVA", "occIVA", "govptTrabIndependente"],
+    ["isenção", "isencao", "Art. 53", "15.000", "15 000", "volume de negócios"]));
+  v.push(defPercent("f-iva-cont-red", "IVA", "Continente — taxa reduzida",
+    0.06, ["occIVA"],
+    ["continente", "reduzida", "6%", "Lista I"]));
+  v.push(defPercent("f-iva-cont-int", "IVA", "Continente — taxa intermédia",
+    0.13, ["occIVA"],
+    ["continente", "intermédia", "intermedia", "13%", "Lista II"]));
+  v.push(defPercent("f-iva-cont-nor", "IVA", "Continente — taxa normal",
+    0.23, ["occIVA"],
+    ["continente", "normal", "23%"]));
+  v.push(defPercent("f-iva-mad-red", "IVA", "Madeira — taxa reduzida",
+    0.04, ["occIVA"],
+    ["Madeira", "reduzida", "4%"]));
+  v.push(defPercent("f-iva-mad-int", "IVA", "Madeira — taxa intermédia",
+    0.12, ["occIVA"],
+    ["Madeira", "intermédia", "intermedia", "12%"]));
+  v.push(defPercent("f-iva-mad-nor", "IVA", "Madeira — taxa normal",
+    0.22, ["occIVA"],
+    ["Madeira", "normal", "22%"]));
+  v.push(defPercent("f-iva-ac-red", "IVA", "Açores — taxa reduzida",
+    0.04, ["occIVA"],
+    ["Açores", "Acores", "reduzida", "4%"]));
+  v.push(defPercent("f-iva-ac-int", "IVA", "Açores — taxa intermédia",
+    0.09, ["occIVA"],
+    ["Açores", "Acores", "intermédia", "intermedia", "9%"]));
+  v.push(defPercent("f-iva-ac-nor", "IVA", "Açores — taxa normal",
+    0.16, ["occIVA"],
+    ["Açores", "Acores", "normal", "16%"]));
+
+  // ── Segurança Social ──
+  v.push(defPercent("f-ss-taxa", "Segurança Social", "Taxa contributiva TI",
+    0.214, ["pwcGuiaSS", "segSocialTI", "govptTrabIndependente"],
+    ["21,4", "taxa contributiva", "trabalhador independente", "Segurança Social"]));
+  v.push(defPercent("f-ss-coef-serv", "Segurança Social", "Base serviços (70%)",
+    0.70, ["pwcGuiaSS", "segSocialTI"],
+    ["70%", "serviços", "rendimento relevante"]));
+  v.push(defPercent("f-ss-coef-bens", "Segurança Social", "Base bens/hotelaria (20%)",
+    0.20, ["pwcGuiaSS", "segSocialTI"],
+    ["20%", "bens", "hotelaria", "produção"]));
+  v.push(defAmount("f-ss-teto", "Segurança Social", "Teto mensal (12×IAS)",
+    6445.56, ["pwcGuiaSS", "segSocialTI"],
+    ["teto", "limite", "12", "IAS", "6.445", "6 445"]));
+
+  // ── Regime Simplificado (coeficientes) ──
+  v.push(defCoef("f-rs-151", "Regime Simplificado", "Coef. Art. 151.º — serviços",
+    0.75, ["art31", "occRegimeSimplificado", "pwcGuiaIRS"],
+    ["0,75", "Art. 151", "serviços", "profissões liberais", "alínea b"]));
+  v.push(defCoef("f-rs-outros", "Regime Simplificado", "Coef. outros serviços",
+    0.35, ["art31", "occRegimeSimplificado"],
+    ["0,35", "outros", "prestações de serviços", "alínea c"]));
+  v.push(defCoef("f-rs-vendas", "Regime Simplificado", "Coef. vendas/hotelaria",
+    0.15, ["art31", "occRegimeSimplificado"],
+    ["0,15", "vendas", "hotelaria", "restauração", "alínea a"]));
+  v.push(defCoef("f-rs-ip", "Regime Simplificado", "Coef. propriedade intelectual",
+    0.95, ["art31", "occRegimeSimplificado"],
+    ["0,95", "propriedade intelectual", "industrial", "alínea d"]));
+
+  // ── IRC ──
+  v.push(defPercent("f-irc-geral", "IRC", "Taxa geral",
+    0.19, ["pwcIRC"],
+    ["19%", "taxa geral", "IRC", "matéria coletável"]));
+  v.push(defPercent("f-irc-pme", "IRC", "Taxa reduzida PME",
+    0.15, ["pwcIRC"],
+    ["15%", "PME", "pequena", "média", "50.000", "50 000"]));
+  v.push(defAmount("f-irc-lim-pme", "IRC", "Limiar taxa PME",
+    50000, ["pwcIRC"],
+    ["50.000", "50 000", "PME", "primeiros"]));
+  v.push(defPercent("f-irc-divid", "IRC", "Dividendos — taxa liberatória",
+    0.28, ["dividendos", "pwcIRC"],
+    ["28%", "dividendos", "taxa liberatória", "Art. 71"]));
+
+  // ── Mínimo de existência ──
+  v.push(defAmount("f-min-exist", "Mínimo de existência", "Valor 2026",
+    12880, ["minimoExistencia"],
+    ["mínimo de existência", "minimo", "12.880", "12 880", "920"]));
+
+  // ── Categoria F ──
+  v.push(defPercent("f-catf-hab", "Categoria F", "Taxa habitação",
+    0.25, ["art72"],
+    ["25%", "habitação", "prediais", "arrendamento"]));
+  v.push(defPercent("f-catf-nhab", "Categoria F", "Taxa não habitação",
+    0.28, ["art72"],
+    ["28%", "não habitacional", "prediais"]));
+
+  // ── IRS Jovem ──
+  v.push({
+    id: "f-irsj-idade", grupo: "IRS Jovem", nome: "Idade máxima",
+    valorLocal: "35 anos", fontes: ["decoIRSJovem", "pwcGuiaIRS"],
+    pattern: "35\\s*anos", keywords: ["IRS Jovem", "idade", "35"],
+  });
+  v.push({
+    id: "f-irsj-teto", grupo: "IRS Jovem", nome: "Teto anual (55×IAS)",
+    valorLocal: "55×IAS", fontes: ["decoIRSJovem"],
+    pattern: "55\\s*[×x]?\\s*IAS", keywords: ["IRS Jovem", "teto", "limite", "55", "IAS"],
+  });
+  v.push(defPercent("f-irsj-100", "IRS Jovem", "1.º ano — isenção 100%",
+    1.0, ["decoIRSJovem"],
+    ["100%", "1.º ano", "primeiro ano", "IRS Jovem"]));
+  v.push(defPercent("f-irsj-75", "IRS Jovem", "2.º–4.º ano — isenção 75%",
+    0.75, ["decoIRSJovem"],
+    ["75%", "2.º", "3.º", "4.º", "IRS Jovem"]));
+  v.push(defPercent("f-irsj-50", "IRS Jovem", "5.º–7.º ano — isenção 50%",
+    0.50, ["decoIRSJovem"],
+    ["50%", "5.º", "6.º", "7.º", "IRS Jovem"]));
+  v.push(defPercent("f-irsj-25", "IRS Jovem", "8.º–10.º ano — isenção 25%",
+    0.25, ["decoIRSJovem"],
+    ["25%", "8.º", "9.º", "10.º", "IRS Jovem"]));
+
+  // ── Deduções à coleta ──
+  v.push(defAmount("f-ded-dep", "Deduções à coleta", "Por dependente (>3 anos)",
+    600, ["deducoesColeta"],
+    ["600", "dependente", "dedução"]));
+  v.push(defAmount("f-ded-saude", "Deduções à coleta", "Saúde — limite",
+    1000, ["deducoesColeta"],
+    ["1.000", "1 000", "saúde", "15%"]));
+  v.push(defAmount("f-ded-educ", "Deduções à coleta", "Educação — limite",
+    800, ["deducoesColeta"],
+    ["800", "educação", "30%"]));
+  v.push(defAmount("f-ded-rendas", "Deduções à coleta", "Rendas habitação — limite",
+    900, ["deducoesColeta"],
+    ["900", "rendas", "habitação", "78.º-E"]));
+
+  return v;
+}
+
+async function auditarFontesOficiais(): Promise<{
+  fontes: { key: string; nome: string; url: string; acessivel: boolean; erro?: string }[];
+  resultados: ResultadoTeste[];
+}> {
+  const fontesKeys = [...new Set(FONTES_A_CONSULTAR.map((f) => f.key))];
+  const fetched = await Promise.all(fontesKeys.map(fetchFonte));
+
+  const fontesMap = new Map<SourceKey, FonteStatus>();
+  for (const f of fetched) fontesMap.set(f.key, f);
+
+  const fontesResumo = fetched.map((f) => ({
+    key: f.key, nome: f.nome, url: f.url, acessivel: f.acessivel, erro: f.erro,
+  }));
+
+  const verificacoes = buildVerificacoes();
+  const resultados: ResultadoTeste[] = [];
+
+  for (const v of verificacoes) {
+    let melhorHit: SearchHit | null = null;
+    let fonteUsada: FonteStatus | null = null;
+
+    for (const fKey of v.fontes) {
+      const fonte = fontesMap.get(fKey);
+      if (!fonte || !fonte.acessivel || !fonte.texto) continue;
+
+      const hit = searchInText(fonte.texto, v.pattern, v.keywords);
+      if (hit.found) {
+        if (!melhorHit || (hit.nearKeyword && !melhorHit.nearKeyword)) {
+          melhorHit = hit;
+          fonteUsada = fonte;
+        }
+        if (hit.nearKeyword) break;
+      }
+    }
+
+    const algumAcessivel = v.fontes.some((k) => fontesMap.get(k)?.acessivel);
+
+    if (!algumAcessivel) {
+      resultados.push({
+        id: v.id,
+        grupo: v.grupo,
+        nome: v.nome,
+        severidade: "info",
+        esperado: v.valorLocal,
+        obtido: "Fonte inacessível",
+        detalhes: `Nenhuma das fontes configuradas respondeu. Não foi possível verificar.`,
+        fonteUrl: SOURCES[v.fontes[0]].url,
+        fonteNome: SOURCES[v.fontes[0]].label,
+        confianca: "nenhuma",
+      });
+    } else if (melhorHit && fonteUsada) {
+      resultados.push({
+        id: v.id,
+        grupo: v.grupo,
+        nome: v.nome,
+        severidade: "ok",
+        esperado: v.valorLocal,
+        obtido: `Confirmado: ${melhorHit.match}`,
+        detalhes: melhorHit.nearKeyword
+          ? "Valor encontrado próximo de palavras-chave relevantes."
+          : "Valor encontrado no texto, mas sem proximidade direta a palavras-chave esperadas.",
+        fonteUrl: fonteUsada.url,
+        fonteNome: fonteUsada.nome,
+        confianca: melhorHit.nearKeyword ? "alta" : "media",
+        citacao: melhorHit.context,
+      });
+    } else {
+      resultados.push({
+        id: v.id,
+        grupo: v.grupo,
+        nome: v.nome,
+        severidade: "aviso",
+        esperado: v.valorLocal,
+        obtido: "Não encontrado",
+        detalhes: `O valor ${v.valorLocal} não foi localizado no texto das fontes consultadas. Isto não significa que está errado — o formato do texto pode diferir do esperado. Recomenda-se verificação manual.`,
+        fonteUrl: SOURCES[v.fontes[0]].url,
+        fonteNome: SOURCES[v.fontes[0]].label,
+        confianca: "baixa",
+      });
+    }
+  }
+
+  return { fontes: fontesResumo, resultados };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  AGENTE: DADOS FISCAIS — verificação interna de consistência
+// ═══════════════════════════════════════════════════════════════════════════
 
 function auditarDadosFiscais(): ResultadoTeste[] {
   const r: ResultadoTeste[] = [];
@@ -213,6 +697,10 @@ function auditarDadosFiscais(): ResultadoTeste[] {
   return r;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  AGENTE: MOTOR DE CÁLCULO — testes de cenários contra o motor
+// ═══════════════════════════════════════════════════════════════════════════
+
 function auditarMotorCalculo(): ResultadoTeste[] {
   const r: ResultadoTeste[] = [];
 
@@ -327,13 +815,30 @@ function auditarMotorCalculo(): ResultadoTeste[] {
   return r;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  HANDLER
+// ═══════════════════════════════════════════════════════════════════════════
+
 export async function GET(req: NextRequest) {
   const agente = req.nextUrl.searchParams.get("agente");
+
+  if (agente === "fontes") {
+    const { fontes, resultados } = await auditarFontesOficiais();
+    return NextResponse.json({
+      agente: "Auditor de Fontes Oficiais",
+      descricao: "Consulta fontes oficiais portuguesas (Portal das Finanças, PwC, OCC, DECO, CGD) em tempo real e compara os valores encontrados com os dados do sistema.",
+      executadoEm: new Date().toISOString(),
+      anoFiscal: FISCAL_YEAR,
+      ultimaRevisao: DATA_LAST_REVIEW,
+      fontes,
+      resultados,
+    });
+  }
 
   if (agente === "dados") {
     return NextResponse.json({
       agente: "Auditor de Dados Fiscais",
-      descricao: "Verifica todos os parâmetros fiscais (taxas, limites, coeficientes, escalões) contra os valores oficiais de 2026.",
+      descricao: "Verifica a consistência interna dos parâmetros fiscais (taxas, limites, coeficientes, escalões) contra os valores esperados de 2026.",
       executadoEm: new Date().toISOString(),
       anoFiscal: FISCAL_YEAR,
       ultimaRevisao: DATA_LAST_REVIEW,
@@ -351,5 +856,8 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  return NextResponse.json({ erro: "Parâmetro agente obrigatório: ?agente=dados ou ?agente=motor" }, { status: 400 });
+  return NextResponse.json(
+    { erro: "Parâmetro agente obrigatório: ?agente=fontes, ?agente=dados ou ?agente=motor" },
+    { status: 400 },
+  );
 }
