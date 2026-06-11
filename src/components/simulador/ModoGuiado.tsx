@@ -25,6 +25,9 @@ import EuroBreakdown from "@/components/simulador/EuroBreakdown";
 import { pct, fmt } from "@/lib/format";
 import {
   IVA_TAXAS,
+  IVA_ISENCAO_LIMITE,
+  IVA_ISENCAO_EXCESSO,
+  IRS_JOVEM,
   efeitoFiscal,
   META_TIPO,
   RETENCAO,
@@ -37,20 +40,9 @@ import { gerarPrazos, diasAte } from "@/lib/prazos";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-const IVA_LIMITE = 15_000;
-const IVA_LIMITE_IMEDIATO = 18_750;
-const IRS_JOVEM_ISENCAO: Record<number, number> = {
-  1: 1.0,
-  2: 0.75,
-  3: 0.75,
-  4: 0.75,
-  5: 0.5,
-  6: 0.5,
-  7: 0.5,
-  8: 0.25,
-  9: 0.25,
-  10: 0.25,
-};
+const IVA_LIMITE = IVA_ISENCAO_LIMITE.value;
+const IVA_LIMITE_IMEDIATO = IVA_ISENCAO_EXCESSO.value;
+const IRS_JOVEM_ISENCAO = IRS_JOVEM.isencaoPorAno.value;
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -146,7 +138,7 @@ const CARDS_ATIV: CardAtiv[] = [
     titulo: "Direitos de autor / Royalties",
     sub: "Propriedade intelectual e licenciamento",
     exemplos: "Livros, música, software, patentes…",
-    coef: 0.75,
+    coef: 0.95,
     ret: 0.165,
     baseSS: "servicos",
     tipoFiscal: "diretosAutor",
@@ -213,7 +205,7 @@ const ATIV_META: Record<
   },
   prop_int: {
     descricao:
-      "Direitos de autor e royalties. Coef. 0,75 · Ret. 16,5% · SS sobre 70%.",
+      "Direitos de autor e royalties. Coef. 0,95 · Ret. 16,5% · SS sobre 70%.",
     ivaEsperado: "isento",
     nota: "Podem beneficiar de 50% de exclusão (Art. 50.º-A CIRS) se obra original.",
   },
@@ -337,6 +329,7 @@ export default function ModoGuiado({
   const isencaoSS = isencaoSSPrimeiroAno || acumulaEmprego || isencaoCpas;
   const jovemAno = irsJovemOn ? irsJovemAno : 0;
   const brutoAnual = bruto * recibosAno;
+  const efAtiv = atividadeEspecifica ? efeitoFiscal(atividadeEspecifica) : null;
 
   const resultRecibo = useMemo(
     () =>
@@ -350,6 +343,7 @@ export default function ModoGuiado({
         isencaoSSPrimeiroAno,
         acumulaEmprego,
         irsJovemAno: jovemAno,
+        retencaoOverride: efAtiv?.retencao,
       }),
     [
       bruto,
@@ -360,6 +354,7 @@ export default function ModoGuiado({
       isencaoSSPrimeiroAno,
       acumulaEmprego,
       jovemAno,
+      efAtiv?.retencao,
     ],
   );
 
@@ -374,6 +369,8 @@ export default function ModoGuiado({
         rnhAntigo,
         programaRegressar: exResidente,
         deficiencia,
+        coefOverride: efAtiv?.coef,
+        aplicaRegra15Override: efAtiv?.regra15,
         deducoes: {
           saude: despSaude,
           educacao: despEducacao,
@@ -390,6 +387,8 @@ export default function ModoGuiado({
       rnhAntigo,
       exResidente,
       deficiencia,
+      efAtiv?.coef,
+      efAtiv?.regra15,
       despSaude,
       despEducacao,
       despGerais,
@@ -825,6 +824,7 @@ export default function ModoGuiado({
                     recibosAno={recibosAno}
                     resultRecibo={resultRecibo}
                     card={card}
+                    atividadeEspecifica={atividadeEspecifica}
                     regiao={regiao}
                     tipoAtiv={tipoAtiv}
                     anoAtividade={anoAtividade}
@@ -2409,6 +2409,7 @@ function ResultadoFinal({
   recibosAno,
   resultRecibo,
   card,
+  atividadeEspecifica,
   regiao,
   tipoAtiv,
   anoAtividade,
@@ -2443,6 +2444,7 @@ function ResultadoFinal({
     bruto: number;
   };
   card: CardAtiv;
+  atividadeEspecifica: Atividade | null;
   regiao: Regiao;
   tipoAtiv: TipoAtiv;
   anoAtividade: number;
@@ -2461,6 +2463,7 @@ function ResultadoFinal({
   onRecomecar: () => void;
   onVoltar: () => void;
 }) {
+  const efAtiv = atividadeEspecifica ? efeitoFiscal(atividadeEspecifica) : null;
   const simAnual = useMemo(
     () =>
       simularIRSAnual({
@@ -2472,6 +2475,8 @@ function ResultadoFinal({
         rnhAntigo,
         programaRegressar: exResidente,
         deficiencia,
+        coefOverride: efAtiv?.coef,
+        aplicaRegra15Override: efAtiv?.regra15,
         deducoes: {
           saude: despSaude,
           educacao: despEducacao,
@@ -2489,6 +2494,8 @@ function ResultadoFinal({
       rnhAntigo,
       exResidente,
       deficiencia,
+      efAtiv?.coef,
+      efAtiv?.regra15,
       despSaude,
       despEducacao,
       despGerais,
@@ -2729,7 +2736,7 @@ function ResultadoFinal({
                       nota={isencaoCpas ? "Não descontas para o Regime Geral" : `${pct(0.214)} × base SS`}
                       explicacao={isencaoCpas
                         ? "Advogados e solicitadores pagam para a CPAS em vez do Regime Geral. As contribuições CPAS têm regras próprias — consulta o teu painel CPAS."
-                        : `Como trabalhador independente pagas 21,4% de SS sobre 70% do que faturaste.`}
+                        : `Como trabalhador independente pagas 21,4% de SS sobre ${card.baseSS === "bens" ? "20%" : "70%"} do que faturaste.`}
                     />
                     {isencaoCpas && (
                       <div className="mx-3 mb-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2.5 dark:border-stone-700 dark:bg-stone-800/60">
