@@ -19,11 +19,19 @@ export default function EmailCapture({ fonte = "landing" }: { fonte?: string }) 
     setError(false);
     setAEnviar(true);
 
+    const emailLimpo = email.trim().toLowerCase();
+
     if (supabaseConfigurado()) {
       await getSupabase()
         .from("email_waitlist")
-        .upsert({ email: email.trim().toLowerCase(), fonte }, { onConflict: "email" });
+        .upsert({ email: emailLimpo, fonte }, { onConflict: "email" });
     }
+
+    fetch("/api/email/waitlist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: emailLimpo }),
+    }).catch(() => {});
 
     setSent(true);
     setAEnviar(false);

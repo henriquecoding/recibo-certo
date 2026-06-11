@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getStripe } from "@/lib/stripe/server";
 import { createClient } from "@supabase/supabase-js";
+import { enviarEmail } from "@/lib/email/send";
+import { emailSubscricaoAtivada, emailSubscricaoCancelada } from "@/lib/email/templates";
 import type Stripe from "stripe";
 
 function getSupabaseAdmin() {
@@ -8,6 +10,17 @@ function getSupabaseAdmin() {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) return null;
   return createClient(url, serviceKey);
+}
+
+async function obterEmailCliente(customerId: string): Promise<string | null> {
+  try {
+    const stripe = getStripe();
+    const customer = await stripe.customers.retrieve(customerId);
+    if (customer.deleted) return null;
+    return customer.email ?? null;
+  } catch {
+    return null;
+  }
 }
 
 async function atualizarSubscricao(
@@ -61,6 +74,16 @@ export async function POST(req: NextRequest) {
         const sub = event.data.object as Stripe.Subscription;
         const uid = sub.metadata.supabase_uid;
         if (uid) await atualizarSubscricao(uid, sub);
+
+        if (event.type === "customer.subscription.created" && sub.status === "active") {
+          const customerEmail = await obterEmailCliente(sub.customer as string);
+          const item = sub.items.data[0];
+          const int = item?.price?.recurring?.interval === "year" ? "annual" as const : "monthly" as const;
+          if (customerEmail) {
+            const tpl = emailSubscricaoAtivada(int);
+            enviarEmail({ to: customerEmail, ...tpl }).catch(() => {});
+          }
+        }
         break;
       }
       case "customer.subscription.deleted": {
@@ -69,6 +92,11 @@ export async function POST(req: NextRequest) {
         if (uid) {
           (sub as Stripe.Subscription).status = "canceled";
           await atualizarSubscricao(uid, sub);
+        }
+        const customerEmail = await obterEmailCliente(sub.customer as string);
+        if (customerEmail) {
+          const tpl = emailSubscricaoCancelada();
+          enviarEmail({ to: customerEmail, ...tpl }).catch(() => {});
         }
         break;
       }
