@@ -3230,7 +3230,7 @@ const PASSO_DICA: Record<1 | 2 | 3, { titulo: string; desc: string }> = {
   },
   2: {
     titulo: "Isenção de IVA",
-    desc: `Ficas isento se a tua faturação anual não passar os ${fmt(IVA_LIMITE)} (Art. 53.º). No 1.º ano, o limite é proporcional aos meses de atividade; nos anos seguintes conta a faturação do ano anterior.`,
+    desc: `Ficas isento se a tua faturação anual não passar os ${fmt(IVA_LIMITE)} (Art. 53.º CIVA). No 1.º ano conta o volume de negócios estimado até ao fim do ano (sem anualização); nos anos seguintes conta a faturação do ano civil anterior.`,
   },
   3: {
     titulo: "Pode fazer diferença",
@@ -3537,8 +3537,9 @@ function ZonaIVA({
                 </p>
               </div>
               <p className="pl-[18px] text-[11px] leading-relaxed text-stone-400 dark:text-stone-500">
-                No 1.º ano o limite é proporcional aos meses de atividade; nos
-                anos seguintes conta a faturação do ano anterior.
+                No 1.º ano conta o volume de negócios estimado até ao fim do
+                ano (sem anualização — DL 35/2025); nos anos seguintes conta a
+                faturação do ano civil anterior.
               </p>
             </>
           ) : coerente ? (
