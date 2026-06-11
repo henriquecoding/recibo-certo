@@ -1101,13 +1101,16 @@ export const DEDUCAO_RENDAS = sv<DeducaoLimitada>(
   TODAY
 );
 
-/** Dedução por 3.º dependente e seguintes (superior à dedução geral de 600 €). */
+/** Dedução majorada por dependente (Art. 78.º-A n.º 6 CIRS).
+ *  Na lei: 900 € aplica-se a partir do 2.º dependente com até 6 anos.
+ *  No simulador: usado como majoração a partir do 3.º dependente (simplificação
+ *  conservadora — a UI não recolhe a faixa etária 3–6 anos). */
 export const DEDUCAO_DEPENDENTE_3MAIS = sv(
   900,
-  "Art. 78.º-A CIRS — 3.º dependente e seguintes",
+  "Art. 78.º-A n.º 6 CIRS — 2.º dependente e seguintes até 6 anos (900 €)",
   "deducoesColeta",
   TODAY,
-  "Os primeiros dois dependentes dão 600 € cada; a partir do terceiro a dedução é de 900 € por dependente."
+  "Na lei: 900 € por dependente a partir do 2.º, até 6 anos. O simulador aplica-a a partir do 3.º (simplificação conservadora — não recolhe faixa 3–6 anos)."
 );
 
 /** Divisor do rendimento na tributação conjunta dos casados/unidos de facto. */
@@ -1578,9 +1581,9 @@ export function assertFiscalDataIntegrity(): void {
   if (!(DEDUCAO_RENDAS.value.limite > 0)) erros.push("Limite dedução rendas não positivo.");
   if (!(SS_MIN_MENSAL.value > 0)) erros.push("SS mínimo mensal não positivo.");
 
-  // Dedução 3.º dependente.
+  // Dedução majorada (2.º+ dependente até 6 anos / simplificação 3.º+).
   if (!(DEDUCAO_DEPENDENTE_3MAIS.value >= DEDUCAO_DEPENDENTE.value)) {
-    erros.push("Dedução do 3.º dependente deveria ser ≥ à dedução do dependente normal.");
+    erros.push("Dedução majorada por dependente deveria ser ≥ à dedução base.");
   }
 
   // Coeficientes do regime simplificado e atividades.
