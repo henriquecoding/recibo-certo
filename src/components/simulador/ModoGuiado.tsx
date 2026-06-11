@@ -685,8 +685,8 @@ export default function ModoGuiado({
       </div>
 
       {/* ── Corpo ──────────────────────────────────────────────────────────── */}
-      <div className="mx-auto max-w-3xl px-6 py-8 sm:px-8">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_270px]">
+      <div className={`mx-auto px-6 py-8 sm:px-8 ${passo === "resultado" ? "max-w-5xl" : "max-w-3xl"}`}>
+        <div className={`grid gap-8 ${passo === "resultado" ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-[1fr_270px]"}`}>
           {/* ── Conteúdo do passo ────────────────────────────────────────── */}
           <div className="min-w-0">
             <AnimatePresence mode="wait">
@@ -2566,7 +2566,7 @@ function ResultadoFinal({
       </div>
 
       {/* ── Layout 2 colunas ─────────────────────────────────────────────── */}
-      <div className="grid gap-4 lg:grid-cols-[1fr_300px] lg:items-start">
+      <div className="grid gap-5 md:grid-cols-[1fr_280px] md:items-start">
 
         {/* ════ COLUNA PRINCIPAL ════════════════════════════════════════════ */}
         <div className="space-y-4">
@@ -2603,7 +2603,7 @@ function ResultadoFinal({
           </div>
 
           {/* ── Stat cards ──────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
               <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">IRS anual</p>
               <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
@@ -3095,7 +3095,7 @@ function ResultadoFinal({
         </div>
 
         {/* ════ COLUNA LATERAL: prazos + ações ══════════════════════════════ */}
-        <div className="min-w-0 space-y-4 lg:sticky lg:top-6">
+        <div className="min-w-0 space-y-4 md:sticky md:top-6">
           {/* ── CTAs ─────────────────────────────────────────────────────── */}
           <div className="flex flex-col gap-2.5">
             <button

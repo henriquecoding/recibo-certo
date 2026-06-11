@@ -101,20 +101,20 @@ export default function EuroBreakdown({
       </div>
 
       {/* Legenda em 2 colunas (mobile) → linha (ou sempre 2 em modo compacto) */}
-      <dl className={`mt-3 grid gap-x-4 gap-y-2 ${compact ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}`}>
+      <dl className={`mt-3 grid gap-x-5 gap-y-2.5 ${compact ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}`}>
         {segmentos.map((s) => {
           const p = s.valor / total;
           return (
-            <div key={s.id} className="flex items-start gap-2">
+            <div key={s.id} className="flex items-start gap-2 overflow-hidden">
               <span
                 className={`mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full ${s.dot}`}
                 aria-hidden
               />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <dt className="text-xs font-medium text-stone-500 dark:text-stone-400">
                   {s.label}
                 </dt>
-                <dd className="text-sm font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+                <dd className="truncate text-sm font-semibold tabular-nums text-stone-800 dark:text-stone-100">
                   {fmt(s.valor)}
                 </dd>
                 <dd className="text-[11px] tabular-nums text-stone-400">
