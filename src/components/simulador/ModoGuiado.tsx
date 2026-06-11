@@ -846,6 +846,7 @@ export default function ModoGuiado({
                       setPasso(1);
                       setTipoSelecionado(false);
                     }}
+                    onVoltar={() => setPasso(3)}
                   />
                 </m.div>
               )}
@@ -2424,6 +2425,7 @@ function ResultadoFinal({
   despRendas,
   onIrParaSimuladorCompleto,
   onRecomecar,
+  onVoltar,
 }: {
   brutoAnual: number;
   liquidoAnual: number;
@@ -2457,6 +2459,7 @@ function ResultadoFinal({
   despRendas: number;
   onIrParaSimuladorCompleto: () => void;
   onRecomecar: () => void;
+  onVoltar: () => void;
 }) {
   const simAnual = useMemo(
     () =>
@@ -2562,17 +2565,17 @@ function ResultadoFinal({
         <div className="space-y-4">
 
           {/* ── Hero: Líquido anual ──────────────────────────────────────── */}
-          <div className="relative overflow-hidden rounded-4xl border border-brand bg-brand p-6 text-white shadow-glow">
+          <div className="relative overflow-hidden rounded-4xl border border-brand bg-brand p-5 text-white shadow-glow">
             <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
             <div aria-hidden className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/5 blur-xl" />
             <div className="relative">
               <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">
                 Líquido anual estimado
               </div>
-              <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-6xl">
+              <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-5xl">
                 <AnimatedNumber value={Math.max(0, liquidoFinal)} />
               </div>
-              <div className="mt-4">
+              <div className="mt-3">
                 <div className="flex h-1.5 overflow-hidden rounded-full bg-white/15">
                   <div
                     className="rounded-full bg-white/70 transition-all duration-500"
@@ -2593,20 +2596,20 @@ function ResultadoFinal({
           </div>
 
           {/* ── Stat cards ──────────────────────────────────────────────── */}
-          <div className={`grid gap-3 ${ivaAnual > 0 ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2 lg:grid-cols-3"}`}>
-            <div className="min-w-0 rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
               <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">IRS anual</p>
-              <p className="mt-1 truncate font-display text-lg font-semibold tabular-nums text-stone-800 dark:text-stone-100 sm:text-xl">
+              <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
                 {fmt(Math.round(simAnual.irsEstimado))}
               </p>
               <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{pct(pcIRS)} do faturado</p>
             </div>
 
-            <div className="min-w-0 rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+            <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
               <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">
                 {isencaoCpas ? "SS*" : "Seg. Social"}
               </p>
-              <p className="mt-1 truncate font-display text-lg font-semibold tabular-nums text-stone-800 dark:text-stone-100 sm:text-xl">
+              <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
                 {isencaoCpas ? "—" : fmt(Math.round(ssAnual))}
               </p>
               <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">
@@ -2615,18 +2618,18 @@ function ResultadoFinal({
             </div>
 
             {ivaAnual > 0 && (
-              <div className="min-w-0 rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+              <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
                 <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">IVA cobrado</p>
-                <p className="mt-1 truncate font-display text-lg font-semibold tabular-nums text-stone-800 dark:text-stone-100 sm:text-xl">
+                <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
                   {fmt(Math.round(ivaAnual))}
                 </p>
                 <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{pct(pcIVA)} do total</p>
               </div>
             )}
 
-            <div className={`min-w-0 rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900 ${ivaAnual > 0 ? "" : "col-span-2 sm:col-span-1"}`}>
+            <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
               <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">Líquido/mês</p>
-              <p className="mt-1 truncate font-display text-lg font-semibold tabular-nums text-brand sm:text-xl">
+              <p className="mt-1 font-display text-xl font-semibold tabular-nums text-brand">
                 {fmt(liquidoMes)}
               </p>
               <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">
@@ -3090,6 +3093,14 @@ function ResultadoFinal({
           <div className="flex flex-col gap-2.5">
             <button
               type="button"
+              onClick={onVoltar}
+              className="flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-5 py-3 text-sm font-semibold text-stone-600 transition-all hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
+            >
+              <ArrowLeft size={14} />
+              Alterar dados
+            </button>
+            <button
+              type="button"
               onClick={onIrParaSimuladorCompleto}
               className="btn-shine flex items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:bg-brand-dark hover:shadow-float"
             >
@@ -3098,9 +3109,9 @@ function ResultadoFinal({
             <button
               type="button"
               onClick={onRecomecar}
-              className="flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-5 py-3 text-sm font-semibold text-stone-600 transition-all hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
+              className="flex items-center justify-center gap-2 rounded-2xl px-5 py-2 text-xs text-stone-400 transition-colors hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300"
             >
-              Recomeçar
+              Recomeçar do início
             </button>
           </div>
 
