@@ -18,7 +18,7 @@
 export const FISCAL_YEAR = 2026 as const;
 
 /** Data da última revisão completa dos dados (ISO 8601). */
-export const DATA_LAST_REVIEW = "2026-05-30" as const;
+export const DATA_LAST_REVIEW = "2026-06-11" as const;
 
 // ─── Registo de fontes (evita repetir URLs longos) ─────────────────────
 export interface Source {
@@ -190,7 +190,7 @@ function sv<T>(
   return { value, legalBasis, source, lastVerified, note };
 }
 
-const TODAY = "2026-05-30";
+const TODAY = "2026-06-11";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  INDEXANTE DOS APOIOS SOCIAIS (IAS) — base de vários limites
@@ -299,8 +299,8 @@ export const IVA_TAXAS: Record<Regiao, Sourced<Record<EscalaoIVA, number>>> = {
     TODAY
   ),
   madeira: sv(
-    { reduzida: 0.05, intermedia: 0.12, normal: 0.22 },
-    "Art. 18.º CIVA — Região Autónoma da Madeira",
+    { reduzida: 0.04, intermedia: 0.12, normal: 0.22 },
+    "Art. 18.º CIVA — Região Autónoma da Madeira (DLR 6/2024/M: reduzida 4% desde out/2024)",
     "occIVA",
     TODAY
   ),
@@ -875,46 +875,41 @@ export const ATIVIDADES: Atividade[] = [
   },
 
   // ── Criadores, artistas e media ─────────────────────────────────────────
-  // Profissões criativas não incluídas no Art. 151.º: coef. 0,35, retenção 25%
+  // Profissões criativas não incluídas no Art. 151.º: coef. 0,35, retenção 11,5% (Art. 101.º, al. c)
   {
     label: "Fotógrafo / fotógrafa",
     tipo: "outros",
     grupo: "Criadores, artistas e media",
-    retencao: 0.25,
     legalCoef: "Art. 31.º, al. c) CIRS — outras prestações de serviços",
-    nota: "Coeficiente 0,35. Retenção de 25%. Se cederes os direitos de autor das fotografias, parte dos rendimentos pode enquadrar-se em propriedade intelectual (coef. 0,95, ret. 16,5%).",
+    nota: "Coeficiente 0,35. Retenção de 11,5% (Art. 101.º, al. c). Se cederes os direitos de autor das fotografias, parte dos rendimentos pode enquadrar-se em propriedade intelectual (coef. 0,95, ret. 16,5%).",
   },
   {
     label: "Videógrafo / realizador de vídeo",
     tipo: "outros",
     grupo: "Criadores, artistas e media",
-    retencao: 0.25,
     legalCoef: "Art. 31.º, al. c) CIRS",
-    nota: "Coeficiente 0,35. Retenção de 25%. Tal como na fotografia, a cedência de direitos de autor pode ter enquadramento distinto.",
+    nota: "Coeficiente 0,35. Retenção de 11,5% (Art. 101.º, al. c). Tal como na fotografia, a cedência de direitos de autor pode ter enquadramento distinto.",
   },
   {
     label: "Influencer / criador de conteúdo digital",
     tipo: "outros",
     grupo: "Criadores, artistas e media",
-    retencao: 0.25,
     legalCoef: "Art. 31.º, al. c) CIRS",
-    nota: "Coeficiente 0,35. Retenção de 25% quando o cliente é uma entidade com contabilidade organizada. Patrocínios e publicidade são rendimentos de serviços.",
+    nota: "Coeficiente 0,35. Retenção de 11,5% (Art. 101.º, al. c) quando o cliente é uma entidade com contabilidade organizada. Patrocínios e publicidade são rendimentos de serviços.",
   },
   {
     label: "DJ profissional",
     tipo: "outros",
     grupo: "Criadores, artistas e media",
-    retencao: 0.25,
     legalCoef: "Art. 31.º, al. c) CIRS",
-    nota: "Coeficiente 0,35. Retenção de 25% em geral. Se atuares como artista de espetáculo ao vivo pode aplicar-se a taxa de 11,5% (Art. 101.º, al. h) CIRS) — confirma com o teu contabilista.",
+    nota: "Coeficiente 0,35. Retenção de 11,5% (Art. 101.º, al. c). Se atuares como artista de espetáculo ao vivo e estiveres no Art. 151.º, a retenção é de 23% — confirma com o teu contabilista.",
   },
   {
     label: "Modelo profissional",
     tipo: "outros",
     grupo: "Criadores, artistas e media",
-    retencao: 0.25,
     legalCoef: "Art. 31.º, al. c) CIRS",
-    nota: "Coeficiente 0,35. Retenção de 25%.",
+    nota: "Coeficiente 0,35. Retenção de 11,5% (Art. 101.º, al. c).",
   },
   {
     label: "Escritor / autor (obra própria)",
@@ -932,20 +927,18 @@ export const ATIVIDADES: Atividade[] = [
   },
 
   // ── Serviços em geral ───────────────────────────────────────────────────
-  // Profissões de serviços não incluídas no Art. 151.º: coef. 0,35, ret. 25%
+  // Profissões de serviços não incluídas no Art. 151.º: coef. 0,35, ret. 11,5% (Art. 101.º, al. c)
   {
     label: "Personal trainer / instrutor de fitness",
     tipo: "outros",
     grupo: "Serviços em geral",
-    retencao: 0.25,
     legalCoef: "Art. 31.º, al. c) CIRS",
-    nota: "Coeficiente 0,35. Retenção de 25%. Distinto de 1323 Desportistas (atletas profissionais). Aplicável a treino pessoal, aulas de grupo e similares.",
+    nota: "Coeficiente 0,35. Retenção de 11,5% (Art. 101.º, al. c). Distinto de 1323 Desportistas (atletas profissionais). Aplicável a treino pessoal, aulas de grupo e similares.",
   },
   {
     label: "Cozinheiro / chef freelance",
     tipo: "outros",
     grupo: "Serviços em geral",
-    retencao: 0.25,
     legalCoef: "Art. 31.º, al. c) CIRS",
     nota: "Coeficiente 0,35 para prestação de serviços de cozinha. Se explorares estabelecimento de restauração próprio, usa a categoria Restauração e bebidas (coef. 0,15).",
   },
@@ -953,15 +946,13 @@ export const ATIVIDADES: Atividade[] = [
     label: "Consultor de marketing / redes sociais",
     tipo: "outros",
     grupo: "Serviços em geral",
-    retencao: 0.25,
     legalCoef: "Art. 31.º, al. c) CIRS",
-    nota: "Coeficiente 0,35. Retenção de 25%. Se exerceres com o código 1333 (Publicitários) do Art. 151.º, o coeficiente passa a 0,75 e a retenção a 23%.",
+    nota: "Coeficiente 0,35. Retenção de 11,5% (Art. 101.º, al. c). Se exerceres com o código 1333 (Publicitários) do Art. 151.º, o coeficiente passa a 0,75 e a retenção a 23%.",
   },
   {
     label: "Técnico de informática / suporte IT",
     tipo: "outros",
     grupo: "Serviços em geral",
-    retencao: 0.25,
     legalCoef: "Art. 31.º, al. c) CIRS",
     nota: "Coeficiente 0,35 para suporte e manutenção informática. Se desenvolveres software, considera 1332 Programadores informáticos (Art. 151.º, coef. 0,75).",
   },
@@ -969,7 +960,6 @@ export const ATIVIDADES: Atividade[] = [
     label: "Explicador / tutor privado",
     tipo: "outros",
     grupo: "Serviços em geral",
-    retencao: 0.25,
     legalCoef: "Art. 31.º, al. c) CIRS",
     nota: "Coeficiente 0,35. Alternativa: código 8010 Explicadores do Art. 151.º (coef. 0,75, ret. 23%) se realizares explicações no sentido tradicional.",
   },
@@ -977,7 +967,6 @@ export const ATIVIDADES: Atividade[] = [
     label: "Esteticista / manicure / pedicure",
     tipo: "outros",
     grupo: "Serviços em geral",
-    retencao: 0.25,
     legalCoef: "Art. 31.º, al. c) CIRS",
     nota: "Coeficiente 0,35. Alternativa: código 1325 do Art. 151.º (coef. 0,75, ret. 23%) — confirma com o teu contabilista qual o enquadramento mais favorável.",
   },
@@ -985,7 +974,6 @@ export const ATIVIDADES: Atividade[] = [
     label: "Mediador imobiliário (não certificado IMPIC)",
     tipo: "outros",
     grupo: "Serviços em geral",
-    retencao: 0.25,
     legalCoef: "Art. 31.º, al. c) CIRS",
     nota: "Coeficiente 0,35. Mediadores certificados pelo IMPIC podem usar o código 1330 do Art. 151.º (coef. 0,75, ret. 23%).",
   },
@@ -993,7 +981,6 @@ export const ATIVIDADES: Atividade[] = [
     label: "Comercial / vendedor freelance (serviços)",
     tipo: "outros",
     grupo: "Serviços em geral",
-    retencao: 0.25,
     legalCoef: "Art. 31.º, al. c) CIRS",
     nota: "Coeficiente 0,35 para comissionistas de serviços. Se comissionas vendas de bens pode aplicar-se coef. 0,15 (1319 Comissionistas, Art. 151.º).",
   },
@@ -1001,9 +988,8 @@ export const ATIVIDADES: Atividade[] = [
     label: "Prestação de serviços (outra — não Art. 151.º)",
     tipo: "outros",
     grupo: "Serviços em geral",
-    retencao: 0.25,
     legalCoef: "Art. 31.º, al. c) CIRS",
-    nota: "Para serviços não enquadráveis em nenhuma das categorias acima. Coeficiente 0,35. Retenção de 25%.",
+    nota: "Para serviços não enquadráveis em nenhuma das categorias acima. Coeficiente 0,35. Retenção de 11,5% (Art. 101.º, al. c).",
   },
 
   // ── Comércio e transportes ──────────────────────────────────────────────
@@ -1093,12 +1079,13 @@ export const DEDUCAO_EDUCACAO = sv<DeducaoLimitada>(
   TODAY
 );
 
-/** Dedução de rendas habitação permanente (Art. 78.º-E CIRS): 15% até 502 €. */
+/** Dedução de rendas habitação permanente (Art. 78.º-E CIRS): 15% até 900 € (Lei 36/2024). */
 export const DEDUCAO_RENDAS = sv<DeducaoLimitada>(
-  { taxa: 0.15, limite: 502 },
-  "Art. 78.º-E CIRS — rendas de habitação permanente: 15% até 502 €",
+  { taxa: 0.15, limite: 900 },
+  "Art. 78.º-E CIRS — rendas de habitação permanente: 15% até 900 € (Lei 36/2024, rendimentos de 2026)",
   "deducoesColeta",
-  TODAY
+  TODAY,
+  "Limite atualizado pela Lei 36/2024: 700 € em 2025, 900 € em 2026, 1.000 € a partir de 2027."
 );
 
 /** Dedução majorada por dependente (Art. 78.º-A n.º 6 CIRS).
@@ -1118,10 +1105,11 @@ export const QUOCIENTE_CONJUGAL = sv(2, "Art. 69.º CIRS — quociente conjugal 
 
 /** Limite global das deduções à coleta (Art. 78.º, n.º 7), escalonado. */
 export const LIMITE_GLOBAL_DEDUCOES = sv(
-  { semLimiteAte: 8059, limiteAlto: 2500, limiteBaixo: 1000, escalaoSuperior: 86634 },
-  "Art. 78.º, n.º 7 CIRS — sem limite até 8.059 €; entre 1.000 € e 2.500 € até 86.634 €; 1.000 € acima",
+  { semLimiteAte: 8342, limiteAlto: 2500, limiteBaixo: 1000, escalaoSuperior: 80000 },
+  "Art. 78.º, n.º 7 CIRS — sem limite até 8.342 € (1.º escalão Art. 68.º 2026); entre 1.000 € e 2.500 € até 80.000 € (Art. 68.º-A); 1.000 € acima",
   "deducoesColeta",
-  TODAY
+  TODAY,
+  "semLimiteAte = 1.º escalão Art. 68.º (8.342 € em 2026); escalaoSuperior = 1.º escalão Art. 68.º-A (80.000 €, fixo)."
 );
 
 // ═══════════════════════════════════════════════════════════════════════

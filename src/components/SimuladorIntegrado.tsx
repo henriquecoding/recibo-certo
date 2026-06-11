@@ -47,7 +47,7 @@
  *    professores, formadores, músicos — sem limite de faturação)
  *  · Taxas continente: reduzida 6%, intermédia 13%, normal 23%
  *  · Taxas Açores: reduzida 4%, intermédia 9%, normal 16%
- *  · Taxas Madeira: reduzida 5%, intermédia 12%, normal 22%
+ *  · Taxas Madeira: reduzida 4%, intermédia 12%, normal 22% (DLR 6/2024/M)
  *
  * IRC (sociedades):
  *  · Lei n.º 73-A/2025 (OE2026):
@@ -332,7 +332,7 @@ const DEDUCAO_EDUCACAO_MAX = 800; // máx €800/agregado
 const DEDUCAO_GERAIS_PCT = 0.35; // Art. 78.º-B — 35% das despesas
 const DEDUCAO_GERAIS_MAX = 250; // máx €250/sujeito passivo
 const DEDUCAO_RENDAS_PCT = 0.15; // Art. 78.º-E — 15% das rendas
-const DEDUCAO_RENDAS_MAX = 502; // máx €502/sujeito passivo (habitação permanente)
+const DEDUCAO_RENDAS_MAX = 900; // máx €900/sujeito passivo (habitação permanente, Lei 36/2024)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // IMPOSTOS MUNICIPAIS (empresa com imóvel próprio)

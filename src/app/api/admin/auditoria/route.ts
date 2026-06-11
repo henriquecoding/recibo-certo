@@ -142,7 +142,7 @@ function auditarDadosFiscais(): ResultadoTeste[] {
   r.push(check("iva-cont-int", "IVA", "Continente intermédia", cont.intermedia === 0.13, "13%", `${cont.intermedia * 100}%`));
   r.push(check("iva-cont-nor", "IVA", "Continente normal", cont.normal === 0.23, "23%", `${cont.normal * 100}%`));
   const mad = IVA_TAXAS.madeira.value;
-  r.push(check("iva-mad-red", "IVA", "Madeira reduzida", mad.reduzida === 0.05, "5%", `${mad.reduzida * 100}%`));
+  r.push(check("iva-mad-red", "IVA", "Madeira reduzida", mad.reduzida === 0.04, "4%", `${mad.reduzida * 100}%`));
   r.push(check("iva-mad-int", "IVA", "Madeira intermédia", mad.intermedia === 0.12, "12%", `${mad.intermedia * 100}%`));
   r.push(check("iva-mad-nor", "IVA", "Madeira normal", mad.normal === 0.22, "22%", `${mad.normal * 100}%`));
   const ac = IVA_TAXAS.acores.value;
@@ -230,7 +230,7 @@ function auditarMotorCalculo(): ResultadoTeste[] {
 
   r.push(check("calc-ret-art151", "Motor: Recibo", "Retenção Art. 151 (1.000€)", Math.abs(rec1.retencaoIRS - 230) < 0.01, "230.00", rec1.retencaoIRS.toFixed(2)));
   r.push(check("calc-iva-normal", "Motor: Recibo", "IVA normal 23% (1.000€)", Math.abs(rec1.iva - 230) < 0.01, "230.00", rec1.iva.toFixed(2)));
-  const ssSvc = 1000 * 0.7 / 3 * 0.214;
+  const ssSvc = 1000 * 0.7 * 0.214;
   r.push(check("calc-ss-serv", "Motor: Recibo", "SS serviços (1.000€)", Math.abs(rec1.segSocial - ssSvc) < 0.01, ssSvc.toFixed(2), rec1.segSocial.toFixed(2)));
 
   // ── Cálculo por recibo: vendas, isento, Açores ──

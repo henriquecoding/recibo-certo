@@ -29,6 +29,7 @@ import {
   DERRAMA_MAX,
   DIVIDENDOS_TAXA,
   COEFICIENTE_POR_TIPO,
+  BASE_SS_POR_TIPO,
   REDUCAO_COEFICIENTE_ANO,
   DEDUCAO_DEPENDENTE,
   DEDUCAO_DEPENDENTE_3MAIS,
@@ -287,7 +288,7 @@ export interface DeducoesInput {
   educacao?: number;
   /** Despesas gerais familiares (faturas com NIF). */
   gerais?: number;
-  /** Rendas de habitação permanente pagas (Art. 78.º-E CIRS): 15% até €502. */
+  /** Rendas de habitação permanente pagas (Art. 78.º-E CIRS): 15% até €900 (Lei 36/2024). */
   rendas?: number;
 }
 
@@ -577,7 +578,7 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   const isencaoSSEntrada = acumulaEmprego; // 1.º ano é gerido no UI
   const ssAnual = (() => {
     if (isencaoSSEntrada) return 0;
-    const baseSS = SS_COEFICIENTE.servicos.value; // simplificação: serviços 70%
+    const baseSS = SS_COEFICIENTE[BASE_SS_POR_TIPO[tipo]].value;
     const rendMensalMedio = (brutoAnual * baseSS) / 12;
     const mensal = Math.min(
       Math.max(SS_MIN_MENSAL.value, rendMensalMedio * SS_TAXA.value),

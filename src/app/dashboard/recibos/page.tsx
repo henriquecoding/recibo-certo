@@ -206,7 +206,7 @@ export default function RecibosPage() {
             <div>
               <div className="mb-1.5 flex items-center gap-1.5">
                 <label htmlFor="regiao" className="text-xs font-medium uppercase tracking-wider text-stone-500">Região</label>
-                <InfoTip>Determina as taxas de IVA aplicáveis: Continente (6/13/23%), Madeira (5/12/22%) ou Açores (4/9/16%).</InfoTip>
+                <InfoTip>Determina as taxas de IVA aplicáveis: Continente (6/13/23%), Madeira (4/12/22%) ou Açores (4/9/16%).</InfoTip>
               </div>
               <select id="regiao" value={form.regiao} onChange={(e) => setForm({ ...form, regiao: e.target.value as Regiao })} className={campo}>
                 {(Object.keys(META_REGIAO) as Regiao[]).map((r) => (
