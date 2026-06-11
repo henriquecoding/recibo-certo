@@ -1,10 +1,9 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { BellAlert, History, Wallet, Export, ChartProjection, Check, ArrowRight, Lock } from "@/components/ui/Icons";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Passar ao Pro — ReciboCerto",
-};
+import { useState } from "react";
+import { useAuth } from "@/lib/supabase/auth";
+import { useSubscricao } from "@/lib/stripe/subscription";
+import { BellAlert, History, Wallet, Export, ChartProjection, Check, ArrowRight, Lock } from "@/components/ui/Icons";
 
 const BENEFICIOS = [
   {
@@ -35,6 +34,44 @@ const BENEFICIOS = [
 ];
 
 export default function UpgradePage() {
+  const { user } = useAuth();
+  const { plano, abrirCheckout, abrirPortal } = useSubscricao();
+  const [anual, setAnual] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubscrever = async () => {
+    setLoading(true);
+    try {
+      await abrirCheckout(anual ? "annual" : "monthly");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (plano === "pro") {
+    return (
+      <div className="mx-auto max-w-lg text-center">
+        <div className="rounded-4xl border border-brand bg-white p-10 shadow-glow">
+          <span className="inline-flex items-center rounded-full bg-brand px-3 py-1 text-xs font-semibold text-white">
+            Pro ativo
+          </span>
+          <h1 className="mt-4 font-display text-2xl font-semibold text-ink">Já tens o ReciboCerto Pro</h1>
+          <p className="mt-2 text-sm text-stone-500">
+            Obrigado por subscreveres. Tens acesso a todas as funcionalidades.
+          </p>
+          <button
+            type="button"
+            onClick={abrirPortal}
+            className="mt-6 inline-flex items-center gap-2 rounded-2xl border border-stone-200 px-5 py-3 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300"
+          >
+            Gerir subscrição
+            <ArrowRight size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-4xl">
       <header className="mb-8 text-center">
@@ -62,25 +99,63 @@ export default function UpgradePage() {
 
       {/* Preço + CTA */}
       <div className="mt-6 flex flex-col items-center rounded-4xl border border-brand bg-white p-8 text-center shadow-glow">
+        {/* Toggle mensal/anual */}
+        <div role="group" aria-label="Período de faturação" className="mb-5 inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 p-1">
+          <button
+            type="button"
+            aria-pressed={!anual}
+            onClick={() => setAnual(false)}
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-all ${!anual ? "bg-white text-brand-dark shadow-card" : "text-stone-500 hover:text-stone-700"}`}
+          >
+            Mensal
+          </button>
+          <button
+            type="button"
+            aria-pressed={anual}
+            onClick={() => setAnual(true)}
+            className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-all ${anual ? "bg-white text-brand-dark shadow-card" : "text-stone-500 hover:text-stone-700"}`}
+          >
+            Anual
+            <span className="rounded-full bg-brand-light px-2 py-0.5 text-[11px] font-semibold text-brand-dark">-33%</span>
+          </button>
+        </div>
+
         <div className="flex items-baseline gap-1.5">
-          <span className="font-display text-4xl font-semibold text-ink tabular-nums">5,99 €</span>
+          <span className="font-display text-4xl font-semibold text-ink tabular-nums">
+            {anual ? "4,00 €" : "5,99 €"}
+          </span>
           <span className="text-sm text-stone-400">por mês</span>
         </div>
-        <p className="mt-1 text-xs text-stone-400">ou 47,99 € por ano — poupa 33% (≈ 4,00 €/mês)</p>
+        <p className="mt-1 text-xs text-stone-400">
+          {anual ? "faturado 47,99 € por ano · poupa 33%" : "faturado mensalmente"}
+        </p>
 
-        <Link
-          href="/precos"
-          className="btn-shine mt-5 inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
-        >
-          Quero o preço de fundador
-          <ArrowRight size={14} />
-        </Link>
+        {user ? (
+          <button
+            type="button"
+            onClick={handleSubscrever}
+            disabled={loading}
+            className="btn-shine mt-5 inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float disabled:opacity-50"
+          >
+            {loading ? "A preparar..." : "Subscrever o Pro"}
+            {!loading && <ArrowRight size={14} />}
+          </button>
+        ) : (
+          <a
+            href="/dashboard/conta"
+            className="btn-shine mt-5 inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
+          >
+            Entra para subscrever
+            <ArrowRight size={14} />
+          </a>
+        )}
+
         <p className="mt-3 text-xs text-stone-400">
-          O Pro chega em breve. Entra na lista e garantes o preço de fundador, com acesso antecipado.
+          Pagamento seguro via Stripe. Cancela quando quiseres.
         </p>
 
         <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-          {["Sem cartão para entrar na lista", "Cancela quando quiseres", "Dados em servidores na UE"].map((g) => (
+          {["Cancela quando quiseres", "Sem compromisso", "Dados em servidores na UE"].map((g) => (
             <li key={g} className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-500">
               <span className="text-brand"><Check size={13} /></span>
               {g}
@@ -91,7 +166,7 @@ export default function UpgradePage() {
 
       <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs text-stone-400">
         <span className="text-stone-400"><Lock size={12} /></span>
-        Enquanto não há Pro, tudo o que usas hoje continua grátis e sem limites.
+        Tudo o que usas no plano Grátis continua grátis e sem limites.
       </p>
     </div>
   );

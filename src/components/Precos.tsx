@@ -5,11 +5,6 @@ import Link from "next/link";
 import { m } from "motion/react";
 import { Check, Lock, ShieldCheck, Flag } from "@/components/ui/Icons";
 import Reveal from "@/components/ui/Reveal";
-import { scrollToId } from "@/lib/scroll";
-
-// ─── Estrutura de planos (Cenário C — crescimento sustentável) ──────────
-// Dois planos: o Grátis resolve a dor aguda (calcular, simular, comparar) e
-// o Pro vende tranquilidade contínua (alertas, nuvem, handoff ao contabilista).
 
 const GRATIS = [
   "Calculadora completa de recibo verde",
@@ -19,7 +14,6 @@ const GRATIS = [
   "Comparador: vale a pena abrir empresa?",
 ];
 
-// Benefícios do Pro descritos pelo resultado, não pela funcionalidade.
 const PRO = [
   "Avisamos-te antes de cada prazo — nunca mais uma coima",
   "O teu histórico seguro e em todos os dispositivos",
@@ -28,7 +22,6 @@ const PRO = [
   "Cenários do simulador guardados e comparáveis",
 ];
 
-// Matriz de comparação (divulgação progressiva — fica num acordeão).
 const MATRIZ: { f: string; gratis: boolean | string; pro: boolean | string }[] = [
   { f: "Calculadora de recibo verde", gratis: true, pro: true },
   { f: "Simulador de IRS anual", gratis: true, pro: true },
@@ -43,7 +36,7 @@ const MATRIZ: { f: string; gratis: boolean | string; pro: boolean | string }[] =
 ];
 
 const GARANTIAS = [
-  { icon: <Lock size={14} />, texto: "Sem cartão para experimentar" },
+  { icon: <Lock size={14} />, texto: "Pagamento seguro via Stripe" },
   { icon: <ShieldCheck size={14} />, texto: "Cancela quando quiseres" },
   { icon: <Flag size={14} />, texto: "Dados em servidores na UE" },
 ];
@@ -157,14 +150,13 @@ export default function Precos() {
                 ))}
               </ul>
 
-              <button
-                type="button"
-                onClick={() => scrollToId("lista")}
+              <Link
+                href="/dashboard/upgrade"
                 className="btn-shine mt-7 inline-flex justify-center rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
               >
-                Quero o preço de fundador
-              </button>
-              <p className="mt-2 text-center text-xs text-stone-400">Acesso antecipado · sem compromisso</p>
+                Subscrever o Pro
+              </Link>
+              <p className="mt-2 text-center text-xs text-stone-400">Cancela quando quiseres · sem compromisso</p>
             </m.div>
           </Reveal>
         </div>
@@ -210,10 +202,6 @@ export default function Precos() {
             </div>
           </details>
         </Reveal>
-
-        <p className="mt-8 text-center text-xs text-stone-400">
-          O Pro chega em breve. Entra na lista e garante o preço de fundador — e acesso antecipado.
-        </p>
       </div>
     </section>
   );

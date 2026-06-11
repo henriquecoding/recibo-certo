@@ -3,7 +3,8 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/supabase/auth";
-import { Check, Warning, History, BellAlert, ArrowLeft } from "@/components/ui/Icons";
+import { useSubscricao } from "@/lib/stripe/subscription";
+import { Check, Warning, History, BellAlert, ArrowLeft, ArrowRight } from "@/components/ui/Icons";
 
 const campo =
   "w-full px-3.5 py-2.5 text-[16px] text-stone-800 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all";
@@ -70,6 +71,8 @@ export default function ContaPage() {
               <p className="truncate text-sm text-stone-500">{user.email}</p>
             </div>
           </div>
+
+          <SecaoSubscricao />
 
           <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5">
             <Beneficio icon={<History size={16} />} texto="Os teus recibos vão ficar seguros na nuvem e em todos os dispositivos." />
@@ -212,6 +215,50 @@ function Beneficio({ icon, texto }: { icon: React.ReactNode; texto: string }) {
     <div className="flex items-start gap-2.5">
       <span className="mt-0.5 flex-shrink-0 text-brand">{icon}</span>
       <span className="text-sm leading-relaxed text-stone-600">{texto}</span>
+    </div>
+  );
+}
+
+function SecaoSubscricao() {
+  const { plano, status, abrirPortal } = useSubscricao();
+
+  if (plano === "pro") {
+    return (
+      <div className="mt-5 flex items-center justify-between rounded-2xl border border-brand/20 bg-brand-light/50 px-4 py-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-stone-800">Plano Pro</span>
+            <span className="inline-flex items-center rounded-full bg-brand px-2 py-0.5 text-[9px] font-semibold text-white">
+              {status === "active" ? "Ativo" : "A experimentar"}
+            </span>
+          </div>
+          <p className="mt-0.5 text-xs text-stone-500">Acesso a todas as funcionalidades.</p>
+        </div>
+        <button
+          type="button"
+          onClick={abrirPortal}
+          className="flex items-center gap-1 text-xs font-semibold text-brand-dark transition-colors hover:underline"
+        >
+          Gerir
+          <ArrowRight size={11} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-5 flex items-center justify-between rounded-2xl border border-stone-100 bg-stone-50 px-4 py-3">
+      <div>
+        <span className="text-sm font-semibold text-stone-800">Plano Grátis</span>
+        <p className="mt-0.5 text-xs text-stone-500">Passa ao Pro para desbloquear alertas, nuvem e exportação.</p>
+      </div>
+      <a
+        href="/dashboard/upgrade"
+        className="flex items-center gap-1 rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-shadow hover:shadow-glow"
+      >
+        Upgrade
+        <ArrowRight size={11} />
+      </a>
     </div>
   );
 }

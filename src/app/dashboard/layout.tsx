@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { AuthProvider } from "@/lib/supabase/auth";
+import { SubscricaoProvider } from "@/lib/stripe/subscription";
 import AccountBox from "@/components/dashboard/AccountBox";
 import type { ComponentType, ReactNode } from "react";
 
@@ -48,6 +49,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <AuthProvider>
+      <SubscricaoProvider>
       <div className="min-h-screen bg-cream lg:grid lg:grid-cols-[256px_1fr]">
 
         {/* ─── Sidebar (desktop) ─────────────────────────────────── */}
@@ -182,6 +184,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           })}
         </nav>
       </div>
+      </SubscricaoProvider>
     </AuthProvider>
   );
 }

@@ -2,7 +2,27 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/supabase/auth";
+import { useSubscricao } from "@/lib/stripe/subscription";
 import { User } from "@/components/ui/Icons";
+
+function PlanoBadge() {
+  const { plano } = useSubscricao();
+  if (plano === "pro") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-brand px-2 py-0.5 text-[9px] font-semibold text-white">
+        Pro
+      </span>
+    );
+  }
+  return (
+    <Link
+      href="/dashboard/upgrade"
+      className="inline-flex items-center rounded-full bg-stone-100 px-2 py-0.5 text-[9px] font-semibold text-stone-500 transition-colors hover:bg-brand-light hover:text-brand-dark"
+    >
+      Grátis
+    </Link>
+  );
+}
 
 export default function AccountBox() {
   const { user, carregado, disponivel, sair } = useAuth();
@@ -14,7 +34,10 @@ export default function AccountBox() {
           <User size={15} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-semibold text-stone-600">Conta na nuvem</div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-stone-600">Conta</span>
+            <PlanoBadge />
+          </div>
           <p className="truncate text-[10px] text-stone-400" title={user.email ?? undefined}>
             {user.email}
           </p>

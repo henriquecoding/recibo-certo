@@ -12,11 +12,13 @@
     "skills:check": "node scripts/sync-skills-fiscal.mjs --check"
   },
   "dependencies": {
+    "@stripe/stripe-js": "^9.8.0",
     "@supabase/supabase-js": "^2.106.2",
     "motion": "^12.40.0",
     "next": "^16.2.6",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "stripe": "^22.2.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
