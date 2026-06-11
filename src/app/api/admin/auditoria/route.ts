@@ -42,9 +42,30 @@ import {
   EXCLUSAO_DEFICIENCIA_TAXA,
   EXCLUSAO_DEFICIENCIA_MAX,
   DEDUCAO_DEFICIENCIA_COLETA,
+  DEDUCAO_DEFICIENCIA_GRAU_MINIMO,
   SOURCES,
+  TA_THRESHOLDS,
+  TA_VIATURAS_COMBUSTAO,
+  TA_REPRESENTACAO,
+  TA_AJUDAS_CUSTO,
+  TA_NAO_DOCUMENTADAS,
+  RFAI_TAXA_INTERIOR,
+  RFAI_TAXA_LITORAL,
+  RFAI_LIMITE_COLETA,
+  RFAI_REPORTE_ANOS,
+  DLRR_TAXA,
+  DLRR_LIMITE_LUCROS,
+  DLRR_LIMITE_COLETA,
+  DLRR_REPORTE_ANOS,
+  SIFIDE_TAXA_BASE,
+  SIFIDE_TAXA_INCREMENTAL,
+  SIFIDE_TETO_INCREMENTAL,
+  SIFIDE_REPORTE_ANOS,
+  IFICI_TAXA,
+  IFICI_PRAZO_ANOS,
   type Sourced,
   type SourceKey,
+  type TAViaturasTaxas,
 } from "@/lib/fiscal-data";
 import {
   calcular,
@@ -72,6 +93,8 @@ interface ResultadoTeste {
   fonteNome?: string;
   confianca?: Confianca;
   citacao?: string;
+  confirmacoes?: number;
+  fontesConsultadas?: number;
 }
 
 function isRate(v: number) {
@@ -125,9 +148,17 @@ const FONTES_A_CONSULTAR: { key: SourceKey; prioridade: "primaria" | "secundaria
   { key: "art72", prioridade: "primaria" },
   { key: "pwcIRC", prioridade: "primaria" },
   { key: "decoIRSJovem", prioridade: "primaria" },
+  { key: "occTA", prioridade: "primaria" },
+  { key: "occRFAI", prioridade: "primaria" },
+  { key: "occDLRR", prioridade: "primaria" },
+  { key: "occSIFIDE", prioridade: "primaria" },
+  { key: "pwcIFICI", prioridade: "primaria" },
   { key: "occRegimeSimplificado", prioridade: "secundaria" },
   { key: "deducoesColeta", prioridade: "secundaria" },
   { key: "govptTrabIndependente", prioridade: "secundaria" },
+  { key: "portalFinancasArt87", prioridade: "secundaria" },
+  { key: "estrategorRFAI", prioridade: "secundaria" },
+  { key: "simuladorNetoSS", prioridade: "secundaria" },
 ];
 
 function stripHtml(html: string): string {
@@ -182,7 +213,7 @@ function amountPat(n: number): string {
     for (let i = s.length; i > 0; i -= 3) {
       groups.unshift(s.slice(Math.max(0, i - 3), i));
     }
-    return groups.join("[\\s. ]?");
+    return groups.join("[\\s. ]?");
   }
   const fixed = n.toFixed(2);
   const [ip, dp] = fixed.split(".");
@@ -194,7 +225,7 @@ function amountPat(n: number): string {
     for (let i = ip.length; i > 0; i -= 3) {
       groups.unshift(ip.slice(Math.max(0, i - 3), i));
     }
-    intPat = groups.join("[\\s. ]?");
+    intPat = groups.join("[\\s. ]?");
   }
   return `${intPat}[,.]${dp}`;
 }
@@ -479,12 +510,156 @@ function buildVerificacoes(): VerificacaoDef[] {
     900, ["deducoesColeta"],
     ["900", "rendas", "habitação", "78.º-E"]));
 
+  // ══════════════════════════════════════════════════════════════════════
+  //  NOVAS VERIFICAÇÕES
+  // ══════════════════════════════════════════════════════════════════════
+
+  // ── Tributação Autónoma ──
+  v.push(defAmount("f-ta-t1", "Tributação Autónoma", "Threshold inferior viaturas",
+    37500, ["occTA"],
+    ["37.500", "37 500", "custo de aquisição", "viatura"]));
+  v.push(defAmount("f-ta-t2", "Tributação Autónoma", "Threshold superior viaturas",
+    45000, ["occTA"],
+    ["45.000", "45 000", "custo de aquisição", "viatura"]));
+  v.push(defPercent("f-ta-comb-1", "Tributação Autónoma", "Combustão ≤ 37.500€",
+    0.08, ["occTA"],
+    ["8%", "combustão", "gasóleo", "gasolina"]));
+  v.push(defPercent("f-ta-comb-2", "Tributação Autónoma", "Combustão 37.500–45.000€",
+    0.25, ["occTA"],
+    ["25%", "combustão", "gasóleo"]));
+  v.push(defPercent("f-ta-comb-3", "Tributação Autónoma", "Combustão > 45.000€",
+    0.32, ["occTA"],
+    ["32%", "combustão"]));
+  v.push(defPercent("f-ta-repr", "Tributação Autónoma", "Despesas de representação",
+    0.10, ["occTA"],
+    ["10%", "representação", "n.º 7"]));
+  v.push(defPercent("f-ta-ajudas", "Tributação Autónoma", "Ajudas de custo/km",
+    0.05, ["occTA"],
+    ["5%", "ajudas de custo", "quilómetros"]));
+  v.push(defPercent("f-ta-ndoc", "Tributação Autónoma", "Despesas não documentadas",
+    0.50, ["occTA"],
+    ["50%", "não documentadas"]));
+
+  // ── RFAI ──
+  v.push(defPercent("f-rfai-int", "RFAI", "Taxa interior (até 15M)",
+    0.30, ["occRFAI", "estrategorRFAI"],
+    ["30%", "RFAI", "interior", "Norte", "Centro"]));
+  v.push(defPercent("f-rfai-lit", "RFAI", "Taxa litoral",
+    0.10, ["occRFAI", "estrategorRFAI"],
+    ["10%", "RFAI", "Lisboa", "Algarve", "litoral"]));
+  v.push(defPercent("f-rfai-coleta", "RFAI", "Limite coleta",
+    0.50, ["occRFAI"],
+    ["50%", "coleta", "RFAI"]));
+  v.push({
+    id: "f-rfai-reporte", grupo: "RFAI", nome: "Reporte saldo não deduzido",
+    valorLocal: "10 exercícios", fontes: ["occRFAI"],
+    pattern: "10\\s*(?:anos|exercícios)",
+    keywords: ["10", "exercícios", "reporte", "RFAI"],
+  });
+
+  // ── DLRR ──
+  v.push(defPercent("f-dlrr-taxa", "DLRR", "Taxa de dedução",
+    0.10, ["occDLRR"],
+    ["10%", "DLRR", "lucros retidos"]));
+  v.push(defAmount("f-dlrr-limite", "DLRR", "Limite lucros elegíveis",
+    5000000, ["occDLRR"],
+    ["5.000.000", "5 000 000", "lucros", "DLRR"]));
+  v.push(defPercent("f-dlrr-coleta", "DLRR", "Limite coleta",
+    0.25, ["occDLRR"],
+    ["25%", "coleta", "DLRR"]));
+  v.push({
+    id: "f-dlrr-reporte", grupo: "DLRR", nome: "Reporte saldo não utilizado",
+    valorLocal: "12 exercícios", fontes: ["occDLRR"],
+    pattern: "12\\s*(?:anos|exercícios)",
+    keywords: ["12", "exercícios", "reporte", "DLRR"],
+  });
+
+  // ── SIFIDE II ──
+  v.push(defPercent("f-sifide-base", "SIFIDE II", "Taxa base",
+    0.325, ["occSIFIDE"],
+    ["32,5%", "32.5%", "taxa base", "SIFIDE"]));
+  v.push(defPercent("f-sifide-incr", "SIFIDE II", "Taxa incremental",
+    0.50, ["occSIFIDE"],
+    ["50%", "incremental", "SIFIDE"]));
+  v.push(defAmount("f-sifide-teto", "SIFIDE II", "Teto incremental",
+    1500000, ["occSIFIDE"],
+    ["1.500.000", "1 500 000", "teto", "incremento", "SIFIDE"]));
+  v.push({
+    id: "f-sifide-reporte", grupo: "SIFIDE II", nome: "Reporte crédito",
+    valorLocal: "12 exercícios", fontes: ["occSIFIDE"],
+    pattern: "12\\s*(?:anos|exercícios)",
+    keywords: ["12", "exercícios", "reporte", "SIFIDE"],
+  });
+
+  // ── IFICI ──
+  v.push(defPercent("f-ifici-taxa", "IFICI", "Taxa flat",
+    0.20, ["pwcIFICI"],
+    ["20%", "IFICI", "NHR", "flat"]));
+  v.push({
+    id: "f-ifici-prazo", grupo: "IFICI", nome: "Prazo",
+    valorLocal: "10 anos", fontes: ["pwcIFICI"],
+    pattern: "10\\s*(?:anos|exercícios)",
+    keywords: ["10", "anos", "IFICI", "NHR"],
+  });
+
+  // ── Deficiência ──
+  v.push(defPercent("f-def-exclusao", "Deficiência", "Exclusão rendimentos (15%)",
+    0.15, ["portalFinancasArt87"],
+    ["15%", "deficiência", "exclusão", "56.º-A"]));
+  v.push(defAmount("f-def-max", "Deficiência", "Exclusão máxima",
+    2500, ["portalFinancasArt87"],
+    ["2.500", "2 500", "deficiência", "exclusão"]));
+  v.push({
+    id: "f-def-grau", grupo: "Deficiência", nome: "Grau mínimo de incapacidade",
+    valorLocal: "60%", fontes: ["portalFinancasArt87"],
+    pattern: "60\\s*%",
+    keywords: ["60%", "deficiência", "incapacidade", "grau"],
+  });
+
+  // ── Regime Simplificado (coeficientes adicionais) ──
+  v.push(defCoef("f-rs-al-mor", "Regime Simplificado", "Coef. AL moradia/apartamento",
+    0.35, ["art31", "occRegimeSimplificado"],
+    ["0,35", "alojamento local", "moradia", "apartamento"]));
+  v.push(defCoef("f-rs-al-cont", "Regime Simplificado", "Coef. AL zona de contenção",
+    0.50, ["art31", "occRegimeSimplificado"],
+    ["0,50", "contenção", "alojamento local"]));
+  v.push({
+    id: "f-rs-transp", grupo: "Regime Simplificado", nome: "Coef. transparência fiscal",
+    valorLocal: "1,00", fontes: ["art31"],
+    pattern: "1[,.]0",
+    keywords: ["1,0", "transparência"],
+  });
+  v.push(defCoef("f-rs-sub-nexpl", "Regime Simplificado", "Coef. subsídios não exploração",
+    0.30, ["art31"],
+    ["0,30", "subsídios", "não destinados", "exploração"]));
+
+  // ── Categoria F (reduções por duração de contrato) ──
+  v.push({
+    id: "f-catf-red-5a10", grupo: "Categoria F", nome: "Redução 5–10 anos",
+    valorLocal: "−10 p.p.", fontes: ["art72"],
+    pattern: "10\\s*(?:p\\.?p\\.?|pontos\\s*percentuais)",
+    keywords: ["redução", "5", "10", "contrato", "duração"],
+  });
+  v.push({
+    id: "f-catf-red-10a20", grupo: "Categoria F", nome: "Redução 10–20 anos",
+    valorLocal: "−15 p.p.", fontes: ["art72"],
+    pattern: "15\\s*(?:p\\.?p\\.?|pontos\\s*percentuais)",
+    keywords: ["redução", "10", "20", "contrato", "duração"],
+  });
+  v.push({
+    id: "f-catf-red-20mais", grupo: "Categoria F", nome: "Redução ≥ 20 anos",
+    valorLocal: "−20 p.p.", fontes: ["art72"],
+    pattern: "20\\s*(?:p\\.?p\\.?|pontos\\s*percentuais)",
+    keywords: ["redução", "20", "contrato", "duração"],
+  });
+
   return v;
 }
 
 async function auditarFontesOficiais(): Promise<{
   fontes: { key: string; nome: string; url: string; acessivel: boolean; erro?: string }[];
   resultados: ResultadoTeste[];
+  cobertura: { total: number; verificados: number; percentagem: number };
 }> {
   const fontesKeys = [...new Set(FONTES_A_CONSULTAR.map((f) => f.key))];
   const fetched = await Promise.all(fontesKeys.map(fetchFonte));
@@ -500,6 +675,9 @@ async function auditarFontesOficiais(): Promise<{
   const resultados: ResultadoTeste[] = [];
 
   for (const v of verificacoes) {
+    // Multi-source confirmation: search ALL configured sources
+    let fontesAcessiveis = 0;
+    let confirmacoes = 0;
     let melhorHit: SearchHit | null = null;
     let fonteUsada: FonteStatus | null = null;
 
@@ -507,19 +685,19 @@ async function auditarFontesOficiais(): Promise<{
       const fonte = fontesMap.get(fKey);
       if (!fonte || !fonte.acessivel || !fonte.texto) continue;
 
+      fontesAcessiveis++;
       const hit = searchInText(fonte.texto, v.pattern, v.keywords);
       if (hit.found) {
+        confirmacoes++;
+        // Keep the best hit (prefer nearKeyword) for citation
         if (!melhorHit || (hit.nearKeyword && !melhorHit.nearKeyword)) {
           melhorHit = hit;
           fonteUsada = fonte;
         }
-        if (hit.nearKeyword) break;
       }
     }
 
-    const algumAcessivel = v.fontes.some((k) => fontesMap.get(k)?.acessivel);
-
-    if (!algumAcessivel) {
+    if (fontesAcessiveis === 0) {
       resultados.push({
         id: v.id,
         grupo: v.grupo,
@@ -531,22 +709,36 @@ async function auditarFontesOficiais(): Promise<{
         fonteUrl: SOURCES[v.fontes[0]].url,
         fonteNome: SOURCES[v.fontes[0]].label,
         confianca: "nenhuma",
+        confirmacoes: 0,
+        fontesConsultadas: 0,
       });
-    } else if (melhorHit && fonteUsada) {
+    } else if (confirmacoes > 0 && melhorHit && fonteUsada) {
+      // Determine confidence based on confirmation ratio
+      let confianca: Confianca;
+      if (confirmacoes === fontesAcessiveis) {
+        confianca = "alta";
+      } else if (confirmacoes / fontesAcessiveis > 0.5) {
+        confianca = "media";
+      } else {
+        confianca = "baixa";
+      }
+
       resultados.push({
         id: v.id,
         grupo: v.grupo,
         nome: v.nome,
         severidade: "ok",
         esperado: v.valorLocal,
-        obtido: `Confirmado: ${melhorHit.match}`,
+        obtido: `Confirmado por ${confirmacoes}/${fontesAcessiveis} fontes`,
         detalhes: melhorHit.nearKeyword
           ? "Valor encontrado próximo de palavras-chave relevantes."
           : "Valor encontrado no texto, mas sem proximidade direta a palavras-chave esperadas.",
         fonteUrl: fonteUsada.url,
         fonteNome: fonteUsada.nome,
-        confianca: melhorHit.nearKeyword ? "alta" : "media",
+        confianca,
         citacao: melhorHit.context,
+        confirmacoes,
+        fontesConsultadas: fontesAcessiveis,
       });
     } else {
       resultados.push({
@@ -560,11 +752,26 @@ async function auditarFontesOficiais(): Promise<{
         fonteUrl: SOURCES[v.fontes[0]].url,
         fonteNome: SOURCES[v.fontes[0]].label,
         confianca: "baixa",
+        confirmacoes: 0,
+        fontesConsultadas: fontesAcessiveis,
       });
     }
   }
 
-  return { fontes: fontesResumo, resultados };
+  // Coverage calculation
+  const totalParametros = verificacoes.length;
+  const verificados = resultados.filter(r => r.severidade === "ok").length;
+  const cobertura = totalParametros > 0 ? verificados / totalParametros : 0;
+
+  return {
+    fontes: fontesResumo,
+    resultados,
+    cobertura: {
+      total: totalParametros,
+      verificados,
+      percentagem: Math.round(cobertura * 100),
+    },
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -823,7 +1030,7 @@ export async function GET(req: NextRequest) {
   const agente = req.nextUrl.searchParams.get("agente");
 
   if (agente === "fontes") {
-    const { fontes, resultados } = await auditarFontesOficiais();
+    const { fontes, resultados, cobertura } = await auditarFontesOficiais();
     return NextResponse.json({
       agente: "Auditor de Fontes Oficiais",
       descricao: "Consulta fontes oficiais portuguesas (Portal das Finanças, PwC, OCC, DECO, CGD) em tempo real e compara os valores encontrados com os dados do sistema.",
@@ -832,6 +1039,7 @@ export async function GET(req: NextRequest) {
       ultimaRevisao: DATA_LAST_REVIEW,
       fontes,
       resultados,
+      cobertura,
     });
   }
 

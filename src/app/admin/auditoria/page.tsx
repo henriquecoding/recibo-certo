@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ShieldCheck, Check, Warning, Clock, ExternalLink, ChevronDown, ChevronUp, Search } from "@/components/ui/Icons";
+import { useState, useMemo } from "react";
+import { ShieldCheck, Check, Warning, Clock, ExternalLink, ChevronDown, ChevronUp, Search, Filter, Export } from "@/components/ui/Icons";
 
 type Severidade = "ok" | "info" | "aviso" | "erro";
 type Confianca = "alta" | "media" | "baixa" | "nenhuma";
@@ -18,6 +18,8 @@ interface ResultadoTeste {
   fonteNome?: string;
   confianca?: Confianca;
   citacao?: string;
+  confirmacoes?: number;
+  fontesConsultadas?: number;
 }
 
 interface FonteResumo {
@@ -28,6 +30,12 @@ interface FonteResumo {
   erro?: string;
 }
 
+interface Cobertura {
+  total: number;
+  verificados: number;
+  percentagem: number;
+}
+
 interface RespostaAuditoria {
   agente: string;
   descricao: string;
@@ -36,6 +44,7 @@ interface RespostaAuditoria {
   ultimaRevisao?: string;
   fontes?: FonteResumo[];
   resultados: ResultadoTeste[];
+  cobertura?: Cobertura;
 }
 
 const AGENTES = [
@@ -58,6 +67,8 @@ const AGENTES = [
     lento: false,
   },
 ] as const;
+
+const SEV_ORDER: Severidade[] = ["erro", "aviso", "info", "ok"];
 
 function BadgeSeveridade({ severidade }: { severidade: Severidade }) {
   const styles: Record<Severidade, string> = {
@@ -99,6 +110,53 @@ function BadgeConfianca({ confianca }: { confianca: Confianca }) {
   );
 }
 
+function BadgeConfirmacoes({ confirmacoes, fontesConsultadas }: { confirmacoes: number; fontesConsultadas: number }) {
+  const ratio = fontesConsultadas > 0 ? confirmacoes / fontesConsultadas : 0;
+  const bg = ratio >= 1
+    ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
+    : ratio > 0.5
+      ? "bg-sky-50 text-sky-600 dark:bg-sky-900/20 dark:text-sky-400"
+      : ratio > 0
+        ? "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
+        : "bg-stone-100 text-stone-500 dark:bg-stone-700 dark:text-stone-400";
+
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums ${bg}`}>
+      {confirmacoes}/{fontesConsultadas}
+    </span>
+  );
+}
+
+function CoberturaBar({ cobertura }: { cobertura: Cobertura }) {
+  const pct = cobertura.percentagem;
+  const cor = pct >= 80 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-400" : "bg-red-400";
+  const corTexto = pct >= 80
+    ? "text-emerald-700 dark:text-emerald-300"
+    : pct >= 50
+      ? "text-amber-700 dark:text-amber-300"
+      : "text-red-700 dark:text-red-300";
+
+  return (
+    <div className="rounded-2xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-700 dark:bg-stone-800">
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+          Cobertura de verificação
+        </h3>
+        <span className={`text-sm font-bold tabular-nums ${corTexto}`}>{pct}%</span>
+      </div>
+      <div className="h-2.5 w-full overflow-hidden rounded-full bg-stone-100 dark:bg-stone-700">
+        <div
+          className={`h-full rounded-full transition-all duration-700 ease-out ${cor}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="mt-2 text-[11px] text-stone-400 dark:text-stone-500">
+        {cobertura.verificados} de {cobertura.total} parâmetros confirmados por fontes oficiais.
+      </p>
+    </div>
+  );
+}
+
 function Resumo({ resultados }: { resultados: ResultadoTeste[] }) {
   const ok = resultados.filter((r) => r.severidade === "ok").length;
   const info = resultados.filter((r) => r.severidade === "info").length;
@@ -133,8 +191,10 @@ function Resumo({ resultados }: { resultados: ResultadoTeste[] }) {
 }
 
 function FontesResumo({ fontes }: { fontes: FonteResumo[] }) {
+  const [expandido, setExpandido] = useState(false);
   const acessiveis = fontes.filter((f) => f.acessivel);
   const inacessiveis = fontes.filter((f) => !f.acessivel);
+  const mostrar = expandido ? fontes : fontes.slice(0, 8);
 
   return (
     <div className="rounded-2xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-700 dark:bg-stone-800">
@@ -142,7 +202,7 @@ function FontesResumo({ fontes }: { fontes: FonteResumo[] }) {
         Fontes consultadas ({acessiveis.length}/{fontes.length} acessíveis)
       </h3>
       <div className="space-y-1.5">
-        {fontes.map((f) => (
+        {mostrar.map((f) => (
           <div key={f.key} className="flex items-start gap-2 text-xs">
             <span className={`mt-0.5 inline-block h-2 w-2 shrink-0 rounded-full ${f.acessivel ? "bg-emerald-400" : "bg-red-400"}`} />
             <div className="min-w-0 flex-1">
@@ -163,6 +223,16 @@ function FontesResumo({ fontes }: { fontes: FonteResumo[] }) {
           </div>
         ))}
       </div>
+      {fontes.length > 8 && (
+        <button
+          type="button"
+          onClick={() => setExpandido(!expandido)}
+          className="mt-2 flex items-center gap-1 text-[11px] font-medium text-brand hover:text-brand-dark"
+        >
+          {expandido ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+          {expandido ? "Mostrar menos" : `Ver todas (${fontes.length})`}
+        </button>
+      )}
       {inacessiveis.length > 0 && (
         <p className="mt-3 text-[11px] text-stone-400 dark:text-stone-500">
           {inacessiveis.length} fonte{inacessiveis.length > 1 ? "s" : ""} inacessível{inacessiveis.length > 1 ? "eis" : ""}.
@@ -195,17 +265,123 @@ function CitacaoExpandivel({ citacao }: { citacao: string }) {
   );
 }
 
-function TabelaResultados({ resultados, temFontes }: { resultados: ResultadoTeste[]; temFontes: boolean }) {
-  const grupos = [...new Set(resultados.map((r) => r.grupo))];
+function FiltroSeveridade({
+  filtros,
+  onToggle,
+}: {
+  filtros: Set<Severidade>;
+  onToggle: (s: Severidade) => void;
+}) {
+  const opcoes: { sev: Severidade; label: string; cor: string; corActive: string }[] = [
+    { sev: "ok", label: "OK", cor: "border-stone-200 text-stone-500 dark:border-stone-600 dark:text-stone-400", corActive: "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
+    { sev: "info", label: "Info", cor: "border-stone-200 text-stone-500 dark:border-stone-600 dark:text-stone-400", corActive: "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+    { sev: "aviso", label: "Avisos", cor: "border-stone-200 text-stone-500 dark:border-stone-600 dark:text-stone-400", corActive: "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+    { sev: "erro", label: "Erros", cor: "border-stone-200 text-stone-500 dark:border-stone-600 dark:text-stone-400", corActive: "border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-900/30 dark:text-red-400" },
+  ];
+
+  return (
+    <div className="flex items-center gap-2">
+      <Filter size={13} className="text-stone-400 dark:text-stone-500" />
+      <div className="flex gap-1.5">
+        {opcoes.map(({ sev, label, cor, corActive }) => (
+          <button
+            key={sev}
+            type="button"
+            onClick={() => onToggle(sev)}
+            aria-pressed={filtros.has(sev)}
+            className={`rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-colors ${filtros.has(sev) ? corActive : cor}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InsightsPanel({ resultados }: { resultados: ResultadoTeste[] }) {
+  const erros = resultados.filter((r) => r.severidade === "erro");
+  const avisos = resultados.filter((r) => r.severidade === "aviso");
+  const info = resultados.filter((r) => r.severidade === "info");
+
+  if (erros.length === 0 && avisos.length === 0 && info.length === 0) return null;
+
+  return (
+    <div className="rounded-2xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-700 dark:bg-stone-800">
+      <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+        Ações recomendadas
+      </h3>
+      <div className="space-y-2">
+        {erros.length > 0 && (
+          <div className="flex items-start gap-2 rounded-xl bg-red-50 px-3 py-2.5 dark:bg-red-900/15">
+            <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-red-500" />
+            <p className="text-xs text-red-700 dark:text-red-400">
+              <span className="font-semibold">{erros.length} erro{erros.length > 1 ? "s" : ""} detetado{erros.length > 1 ? "s" : ""}:</span>{" "}
+              {erros.slice(0, 3).map((e) => e.nome).join(", ")}
+              {erros.length > 3 && ` e mais ${erros.length - 3}`}.
+              Valores podem estar incorretos — verificar manualmente.
+            </p>
+          </div>
+        )}
+        {avisos.length > 0 && (
+          <div className="flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2.5 dark:bg-amber-900/15">
+            <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-amber-400" />
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              <span className="font-semibold">{avisos.length} valor{avisos.length > 1 ? "es" : ""} não confirmado{avisos.length > 1 ? "s" : ""}:</span>{" "}
+              o formato do texto das fontes pode diferir do esperado. Recomenda-se verificação manual nos links indicados.
+            </p>
+          </div>
+        )}
+        {info.length > 0 && (
+          <div className="flex items-start gap-2 rounded-xl bg-blue-50 px-3 py-2.5 dark:bg-blue-900/15">
+            <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-blue-400" />
+            <p className="text-xs text-blue-700 dark:text-blue-400">
+              <span className="font-semibold">{info.length} fonte{info.length > 1 ? "s" : ""} inacessível{info.length > 1 ? "eis" : ""}.</span>{" "}
+              Estas verificações não puderam ser realizadas por problemas de rede. Tente novamente mais tarde.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TabelaResultados({
+  resultados,
+  temFontes,
+  filtros,
+}: {
+  resultados: ResultadoTeste[];
+  temFontes: boolean;
+  filtros: Set<Severidade>;
+}) {
+  const filtrados = filtros.size === 4
+    ? resultados
+    : resultados.filter((r) => filtros.has(r.severidade));
+
+  const grupos = [...new Set(filtrados.map((r) => r.grupo))];
+
+  if (filtrados.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-stone-200 py-8 text-center dark:border-stone-600">
+        <p className="text-sm text-stone-400 dark:text-stone-500">
+          Nenhum resultado corresponde aos filtros selecionados.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
       {grupos.map((grupo) => {
-        const testes = resultados.filter((r) => r.grupo === grupo);
+        const testes = filtrados.filter((r) => r.grupo === grupo);
         return (
           <div key={grupo} className="overflow-hidden rounded-2xl border border-stone-100 bg-white shadow-card dark:border-stone-700 dark:bg-stone-800">
             <div className="border-b border-stone-100 bg-stone-50/60 px-5 py-3 dark:border-stone-700 dark:bg-stone-800/80">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">{grupo}</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">{grupo}</h3>
+                <span className="text-[11px] tabular-nums text-stone-400 dark:text-stone-500">{testes.length} teste{testes.length !== 1 ? "s" : ""}</span>
+              </div>
             </div>
             <div className="divide-y divide-stone-100 dark:divide-stone-700">
               {testes.map((t) => (
@@ -223,6 +399,9 @@ function TabelaResultados({ resultados, temFontes }: { resultados: ResultadoTest
                     <div className="hidden text-right text-xs tabular-nums text-stone-400 sm:block dark:text-stone-500">
                       <span className="text-stone-300 dark:text-stone-600">Fonte:</span> {t.obtido}
                     </div>
+                    {temFontes && t.confirmacoes !== undefined && t.fontesConsultadas !== undefined && t.fontesConsultadas > 0 && (
+                      <BadgeConfirmacoes confirmacoes={t.confirmacoes} fontesConsultadas={t.fontesConsultadas} />
+                    )}
                     {temFontes && t.confianca && <BadgeConfianca confianca={t.confianca} />}
                     <BadgeSeveridade severidade={t.severidade} />
                   </div>
@@ -257,10 +436,51 @@ function truncate(s: string, max: number): string {
   return s.length <= max ? s : s.slice(0, max - 1) + "…";
 }
 
+function exportarCSV(dados: Record<string, RespostaAuditoria | null>) {
+  const linhas: string[] = ["Agente;Grupo;Teste;Severidade;Esperado;Obtido;Confiança;Confirmações;Fontes Consultadas"];
+  for (const agente of AGENTES) {
+    const d = dados[agente.id];
+    if (!d) continue;
+    for (const r of d.resultados) {
+      linhas.push([
+        agente.titulo,
+        r.grupo,
+        r.nome,
+        r.severidade,
+        `"${r.esperado}"`,
+        `"${r.obtido}"`,
+        r.confianca ?? "",
+        r.confirmacoes?.toString() ?? "",
+        r.fontesConsultadas?.toString() ?? "",
+      ].join(";"));
+    }
+  }
+  const blob = new Blob(["﻿" + linhas.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `auditoria-fiscal-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function AdminAuditoria() {
   const [resultados, setResultados] = useState<Record<string, RespostaAuditoria | null>>({});
   const [carregando, setCarregando] = useState<Record<string, boolean>>({});
   const [erros, setErros] = useState<Record<string, string>>({});
+  const [filtros, setFiltros] = useState<Set<Severidade>>(new Set(SEV_ORDER));
+
+  const toggleFiltro = (s: Severidade) => {
+    setFiltros((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) {
+        if (next.size > 1) next.delete(s);
+      } else {
+        next.add(s);
+      }
+      return next;
+    });
+  };
 
   const executar = async (agenteId: string) => {
     setCarregando((p) => ({ ...p, [agenteId]: true }));
@@ -287,6 +507,21 @@ export default function AdminAuditoria() {
     return r && r.resultados.every((t) => t.severidade === "ok" || t.severidade === "info");
   });
 
+  const totalGeral = useMemo(() => {
+    let total = 0, ok = 0, avisos = 0, errosCount = 0;
+    for (const a of AGENTES) {
+      const d = resultados[a.id];
+      if (!d) continue;
+      for (const r of d.resultados) {
+        total++;
+        if (r.severidade === "ok") ok++;
+        else if (r.severidade === "aviso") avisos++;
+        else if (r.severidade === "erro") errosCount++;
+      }
+    }
+    return { total, ok, avisos, erros: errosCount };
+  }, [resultados]);
+
   return (
     <div className="mx-auto max-w-5xl">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -299,32 +534,56 @@ export default function AdminAuditoria() {
             Agentes de verificação que validam os dados e cálculos fiscais contra as normas de Portugal.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={executarTodos}
-          disabled={AGENTES.some((a) => carregando[a.id])}
-          className="inline-flex items-center gap-2 rounded-xl border border-brand bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-card transition-all hover:bg-brand-dark hover:shadow-lift disabled:opacity-50"
-        >
-          <ShieldCheck size={16} />
-          Executar todos
-        </button>
+        <div className="flex items-center gap-3">
+          {temResultados && (
+            <button
+              type="button"
+              onClick={() => exportarCSV(resultados)}
+              className="inline-flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 shadow-card transition-all hover:border-stone-300 hover:shadow-lift dark:border-stone-600 dark:bg-stone-700 dark:text-stone-200 dark:hover:border-stone-500"
+            >
+              <Export size={15} />
+              Exportar
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={executarTodos}
+            disabled={AGENTES.some((a) => carregando[a.id])}
+            className="inline-flex items-center gap-2 rounded-xl border border-brand bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-card transition-all hover:bg-brand-dark hover:shadow-lift disabled:opacity-50"
+          >
+            <ShieldCheck size={16} />
+            Executar todos
+          </button>
+        </div>
       </header>
 
       {temResultados && todosOk && (
         <div className="mb-6 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 dark:border-emerald-800 dark:bg-emerald-900/20">
-          <Check size={18} className="text-emerald-600 dark:text-emerald-400" />
-          <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
-            Todos os testes passaram. Os dados e o motor de cálculo estão alinhados com o sistema fiscal de Portugal 2026.
-          </p>
+          <Check size={18} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <div>
+            <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
+              Todos os testes passaram. Os dados e o motor de cálculo estão alinhados com o sistema fiscal de Portugal 2026.
+            </p>
+            {totalGeral.total > 0 && (
+              <p className="mt-0.5 text-xs text-emerald-600/70 dark:text-emerald-400/60">
+                {totalGeral.ok} verificações confirmadas em {AGENTES.filter((a) => resultados[a.id]).length} agentes.
+              </p>
+            )}
+          </div>
         </div>
       )}
 
       {temResultados && !todosOk && (
         <div className="mb-6 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 dark:border-amber-800 dark:bg-amber-900/20">
-          <Warning size={18} className="text-amber-600 dark:text-amber-400" />
-          <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-            Foram detetados avisos ou erros. Reveja os resultados abaixo.
-          </p>
+          <Warning size={18} className="shrink-0 text-amber-600 dark:text-amber-400" />
+          <div>
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+              Foram detetados avisos ou erros. Reveja os resultados abaixo.
+            </p>
+            <p className="mt-0.5 text-xs text-amber-600/70 dark:text-amber-400/60">
+              {totalGeral.ok} OK · {totalGeral.avisos} aviso{totalGeral.avisos !== 1 ? "s" : ""} · {totalGeral.erros} erro{totalGeral.erros !== 1 ? "s" : ""} — total de {totalGeral.total} verificações.
+            </p>
+          </div>
         </div>
       )}
 
@@ -346,7 +605,7 @@ export default function AdminAuditoria() {
                   <p className="mt-0.5 text-sm text-stone-500 dark:text-stone-400">{agente.descricao}</p>
                   {isFontes && (
                     <p className="mt-1 text-[11px] text-stone-400 dark:text-stone-500">
-                      Consulta fontes externas em tempo real — pode demorar 10–15 segundos.
+                      Consulta {dados?.fontes?.length ?? "24"} fontes externas em tempo real — pode demorar 15–20 segundos.
                     </p>
                   )}
                 </div>
@@ -390,10 +649,15 @@ export default function AdminAuditoria() {
                     {dados.ultimaRevisao && <span>Última revisão: {dados.ultimaRevisao}</span>}
                   </div>
 
+                  {isFontes && dados.cobertura && <CoberturaBar cobertura={dados.cobertura} />}
                   {isFontes && dados.fontes && <FontesResumo fontes={dados.fontes} />}
+                  {isFontes && <InsightsPanel resultados={dados.resultados} />}
 
                   <Resumo resultados={dados.resultados} />
-                  <TabelaResultados resultados={dados.resultados} temFontes={isFontes} />
+
+                  <FiltroSeveridade filtros={filtros} onToggle={toggleFiltro} />
+
+                  <TabelaResultados resultados={dados.resultados} temFontes={isFontes} filtros={filtros} />
                 </div>
               )}
 
