@@ -4,9 +4,6 @@ const INK = "#1C1917";
 const MUTED = "#78716C";
 const BG = "#FAFAF9";
 
-const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32"><rect width="32" height="32" rx="7" fill="${BRAND}"/><g transform="translate(6,6) scale(0.8333)"><path d="M3 17l6-6 4 4 7-8" stroke="white" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></g></svg>`;
-const LOGO_BASE64 = `data:image/svg+xml;base64,${Buffer.from(LOGO_SVG).toString("base64")}`;
-
 function layout(conteudo: string): string {
   return `<!DOCTYPE html>
 <html lang="pt">
@@ -18,8 +15,10 @@ function layout(conteudo: string): string {
 
 <!-- Header com logo -->
 <tr><td style="padding:32px 32px 24px;text-align:center;border-bottom:1px solid #F5F5F4;">
-  <img src="${LOGO_BASE64}" width="32" height="32" alt="" style="display:inline-block;vertical-align:middle;margin-right:10px;" />
-  <span style="display:inline-block;vertical-align:middle;font-size:18px;font-weight:700;color:${INK};">Recibo<span style="color:${BRAND};">Certo</span></span>
+  <table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr>
+    <td style="width:32px;height:32px;background:${BRAND};border-radius:7px;text-align:center;vertical-align:middle;font-size:18px;line-height:32px;color:#FFFFFF;">&#10003;</td>
+    <td style="padding-left:10px;font-size:18px;font-weight:700;color:${INK};vertical-align:middle;">Recibo<span style="color:${BRAND};">Certo</span></td>
+  </tr></table>
 </td></tr>
 
 <!-- Conteúdo -->
@@ -52,17 +51,18 @@ function botao(texto: string, url: string): string {
 
 export function emailBoasVindasWaitlist(email: string): { subject: string; html: string } {
   return {
-    subject: "Bem-vindo ao ReciboCerto — estás na lista",
+    subject: "Bem-vindo ao ReciboCerto",
     html: layout(`
-      <h2 style="margin:0 0 16px;font-size:20px;font-weight:700;color:${INK};">Estás na lista!</h2>
+      <h2 style="margin:0 0 16px;font-size:20px;font-weight:700;color:${INK};">Bem-vindo ao ReciboCerto!</h2>
       <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:${MUTED};">
-        Obrigado por te inscreveres, <strong style="color:${INK};">${email}</strong>.
-        Vais ser dos primeiros a experimentar o ReciboCerto Pro quando estiver pronto.
+        Obrigado por te registares, <strong style="color:${INK};">${email}</strong>.
+        O teu copiloto financeiro para recibos verdes está pronto a usar.
       </p>
       <p style="margin:0 0 8px;font-size:14px;line-height:1.7;color:${MUTED};">
-        Enquanto isso, a calculadora, o simulador de IRS e o comparador já estão a funcionar — grátis e sem registo.
+        A calculadora, o simulador de IRS e o comparador de regimes estão disponíveis — grátis e sem registo.
+        Queres alertas de prazos e histórico na nuvem? O plano Pro já está disponível.
       </p>
-      ${botao("Experimentar agora", "https://recibocerto.pt/dashboard")}
+      ${botao("Começar a usar", "https://recibocerto.pt/dashboard")}
     `),
   };
 }

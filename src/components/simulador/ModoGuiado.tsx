@@ -3455,12 +3455,12 @@ function ZonaIVA({
     const base =
       cor === "amber"
         ? {
-            sel: "border-amber-600 bg-amber-100 text-amber-800",
-            def: "border-amber-300 bg-white/60 text-alert-text hover:border-amber-500",
+            sel: "border-amber-600 bg-amber-100 text-amber-800 dark:border-amber-500 dark:bg-amber-900/40 dark:text-amber-200",
+            def: "border-amber-300 bg-white/60 text-alert-text hover:border-amber-500 dark:border-amber-700 dark:bg-amber-950/30 dark:hover:border-amber-500",
           }
         : {
-            sel: "border-red-600 bg-red-100 text-red-800",
-            def: "border-red-300 bg-white/60 text-red-700 hover:border-red-500 dark:border-red-800 dark:bg-transparent",
+            sel: "border-red-600 bg-red-100 text-red-800 dark:border-red-500 dark:bg-red-900/40 dark:text-red-200",
+            def: "border-red-300 bg-white/60 text-red-700 hover:border-red-500 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300 dark:hover:border-red-500",
           };
     return (
       <div className="mt-1.5 grid grid-cols-3 gap-1.5">

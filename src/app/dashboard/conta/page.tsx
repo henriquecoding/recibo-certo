@@ -76,11 +76,11 @@ export default function ContaPage() {
 
           <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5">
             <Beneficio icon={<History size={16} />} texto="Os teus recibos vão ficar seguros na nuvem e em todos os dispositivos." />
-            <Beneficio icon={<BellAlert size={16} />} texto="Em breve: alertas de prazos por email para nunca falhares um pagamento." />
+            <Beneficio icon={<BellAlert size={16} />} texto="Alertas de prazos por email para nunca falhares um pagamento." />
           </div>
 
           <p className="mt-5 rounded-xl bg-cream p-3 text-xs leading-relaxed text-stone-500">
-            A sincronização automática dos recibos está a ser ligada. Para já, a tua conta está criada e pronta.
+            A tua conta está criada e pronta. Com o plano Pro, os teus recibos ficam sincronizados na nuvem em todos os dispositivos.
           </p>
 
           <button

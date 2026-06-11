@@ -48,11 +48,11 @@ export default function EmailCapture({ fonte = "landing" }: { fonte?: string }) 
         className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 rounded-full bg-white/10 blur-3xl"
       />
       <div className="relative mx-auto max-w-xl text-center">
-        <div className="text-sm font-semibold uppercase tracking-[0.15em] text-green-200 mb-3">Plano Pro — em breve</div>
-        <h2 className="font-display text-3xl font-semibold text-white mb-4">Garante o preço de fundador</h2>
+        <div className="text-sm font-semibold uppercase tracking-[0.15em] text-green-200 mb-3">Plano Pro</div>
+        <h2 className="font-display text-3xl font-semibold text-white mb-4">Deixa de te preocupar com prazos</h2>
         <p className="text-green-100 text-sm leading-relaxed mb-8">
           O plano Pro traz alertas de prazos antes de cada entrega, histórico seguro na nuvem e exportação
-          direta para o teu contabilista. Entra na lista e paga menos para sempre.
+          direta para o teu contabilista. Regista-te e experimenta.
         </p>
 
         {!sent ? (
@@ -77,7 +77,7 @@ export default function EmailCapture({ fonte = "landing" }: { fonte?: string }) 
               whileTap={{ scale: 0.97 }}
               className="btn-shine flex-shrink-0 rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-brand-dark shadow-lift transition-colors hover:bg-green-50 disabled:opacity-70"
             >
-              {aEnviar ? "A guardar…" : "Quero o preço de fundador"}
+              {aEnviar ? "A guardar…" : "Quero experimentar"}
             </m.button>
           </form>
         ) : (
@@ -85,7 +85,7 @@ export default function EmailCapture({ fonte = "landing" }: { fonte?: string }) 
             <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-white">
               <Check size={14} />
             </div>
-            <span className="text-white text-sm font-medium">Registado! Avisamos quando lançar.</span>
+            <span className="text-white text-sm font-medium">Registado com sucesso!</span>
           </div>
         )}
 

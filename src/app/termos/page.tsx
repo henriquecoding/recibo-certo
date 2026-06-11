@@ -126,8 +126,8 @@ export default function TermosPage() {
               "Calculadora, simulador, comparador, prazos, arquivo local (localStorage)",
             ],
             [
-              "Pro (em breve)",
-              "A anunciar",
+              "Pro",
+              "5,99 €/mês ou 47,99 €/ano",
               "Sincronização na nuvem, exportação avançada, alertas por email, multi-dispositivo",
             ],
           ]}
