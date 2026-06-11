@@ -207,18 +207,18 @@ input[type="number"]::-webkit-outer-spin-button {
   background-color: rgb(20 51 41 / 0.55);
 }
 
-/* Alertas — dourado suave adaptado ao escuro (calmo, não berrante) */
+/* Alertas — dourado adaptado ao escuro, contraste reforçado */
 .dark .bg-alert-bg {
-  background-color: #26230f;
+  background-color: #302b12;
 }
 .dark .border-alert-border {
-  border-color: #45401e;
+  border-color: #554d28;
 }
 .dark .text-alert-text {
-  color: #d8bf72;
+  color: #ebd68a;
 }
 .dark .bg-alert-text {
-  background-color: #b59647;
+  background-color: #c4a24e;
 }
 
 /* Argila/terracota — tom pastel suave para valores que saem, no escuro. */

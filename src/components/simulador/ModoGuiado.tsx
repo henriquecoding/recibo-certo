@@ -2556,7 +2556,7 @@ function ResultadoFinal({
       </div>
 
       {/* ── Layout 2 colunas ─────────────────────────────────────────────── */}
-      <div className="grid gap-4 lg:grid-cols-[1fr_280px] lg:items-start">
+      <div className="grid gap-4 lg:grid-cols-[1fr_300px] lg:items-start">
 
         {/* ════ COLUNA PRINCIPAL ════════════════════════════════════════════ */}
         <div className="space-y-4">
@@ -2593,20 +2593,20 @@ function ResultadoFinal({
           </div>
 
           {/* ── Stat cards ──────────────────────────────────────────────── */}
-          <div className={`grid gap-3 ${ivaAnual > 0 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-3"}`}>
-            <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+          <div className={`grid gap-3 ${ivaAnual > 0 ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2 lg:grid-cols-3"}`}>
+            <div className="min-w-0 rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
               <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">IRS anual</p>
-              <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+              <p className="mt-1 truncate font-display text-lg font-semibold tabular-nums text-stone-800 dark:text-stone-100 sm:text-xl">
                 {fmt(Math.round(simAnual.irsEstimado))}
               </p>
               <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{pct(pcIRS)} do faturado</p>
             </div>
 
-            <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+            <div className="min-w-0 rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
               <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">
                 {isencaoCpas ? "SS*" : "Seg. Social"}
               </p>
-              <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+              <p className="mt-1 truncate font-display text-lg font-semibold tabular-nums text-stone-800 dark:text-stone-100 sm:text-xl">
                 {isencaoCpas ? "—" : fmt(Math.round(ssAnual))}
               </p>
               <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">
@@ -2615,18 +2615,18 @@ function ResultadoFinal({
             </div>
 
             {ivaAnual > 0 && (
-              <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+              <div className="min-w-0 rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
                 <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">IVA cobrado</p>
-                <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+                <p className="mt-1 truncate font-display text-lg font-semibold tabular-nums text-stone-800 dark:text-stone-100 sm:text-xl">
                   {fmt(Math.round(ivaAnual))}
                 </p>
                 <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{pct(pcIVA)} do total</p>
               </div>
             )}
 
-            <div className={`rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900 ${ivaAnual > 0 ? "" : "col-span-2 sm:col-span-1"}`}>
+            <div className={`min-w-0 rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900 ${ivaAnual > 0 ? "" : "col-span-2 sm:col-span-1"}`}>
               <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">Líquido/mês</p>
-              <p className="mt-1 font-display text-xl font-semibold tabular-nums text-brand">
+              <p className="mt-1 truncate font-display text-lg font-semibold tabular-nums text-brand sm:text-xl">
                 {fmt(liquidoMes)}
               </p>
               <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">
@@ -3085,7 +3085,7 @@ function ResultadoFinal({
         </div>
 
         {/* ════ COLUNA LATERAL: prazos + ações ══════════════════════════════ */}
-        <div className="space-y-4 lg:sticky lg:top-6">
+        <div className="min-w-0 space-y-4 lg:sticky lg:top-6">
           {/* ── CTAs ─────────────────────────────────────────────────────── */}
           <div className="flex flex-col gap-2.5">
             <button
