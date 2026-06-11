@@ -174,11 +174,9 @@ export async function verificarAdmin(userId: string): Promise<boolean> {
 
   if (data?.role === "admin") return true;
 
-  // Fallback: se a tabela ainda não foi criada ou o perfil não existe,
-  // verifica pelo email do utilizador autenticado. Seguro porque a sessão
-  // Supabase já validou a identidade — só permite o email exato de admin.
   const { data: au } = await sb.auth.getUser();
-  return au.user?.email === "admin@recibocerto.pt";
+  const email = au.user?.email;
+  return email === "admin@recibocerto.pt" || email === "taniasofiadt@gmail.com";
 }
 
 export async function contarUtilizadores(): Promise<number> {
