@@ -27,88 +27,117 @@ export interface Source {
 }
 
 export const SOURCES = {
+  // ── Portal das Finanças (AT) — Códigos tributários ──────────────────
   portalFinancasIVA: {
-    label: "Art. 53.º do CIVA — Portal das Finanças (AT)",
+    label: "Art. 53.º CIVA — Isenção de IVA · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-53-o-do-civa.aspx",
   },
-  occIVA: {
-    label: "IVA — Taxas em Portugal continental e regiões autónomas · Ordem dos Contabilistas Certificados",
-    url: "https://www.occ.pt/pt-pt/noticias/iva-taxas-em-portugal-continental-e-acores",
+  art18civa: {
+    label: "Art. 18.º CIVA — Taxas do imposto · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-18-do-civa.aspx",
   },
-  decoRetencao: {
-    label: "Retenção na fonte para recibos verdes · DECO PROteste",
-    url: "https://www.deco.proteste.pt/dinheiro/impostos/dicas/retencao-fonte-recibos-verdes",
+  art33civa: {
+    label: "Art. 33.º CIVA — Cessação de atividade · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-33-do-civa.aspx",
   },
-  doutorFinancasDispensa: {
-    label: "Dispensa de retenção (Art. 101.º-B CIRS) · Doutor Finanças",
-    url: "https://www.doutorfinancas.pt/carreira-e-rendimentos/trabalhadores-independentes/2-artigos-de-isencao-irs-para-recibos-verdes/",
-  },
-  pwcGuiaSS: {
-    label: "Guia Fiscal 2026 — Segurança Social · PwC",
-    url: "https://www.pwc.pt/pt/pwcinforfisco/guia-fiscal/2026/seguranca-social.html",
-  },
-  pwcGuiaIRS: {
-    label: "Guia Fiscal 2026 — IRS (regime simplificado) · PwC",
-    url: "https://www.pwc.pt/pt/pwcinforfisco/guia-fiscal/2026/irs.html",
-  },
-  segSocialTI: {
-    label: "Trabalhador independente: obrigações para com a Segurança Social · Montepio",
-    url: "https://www.montepio.org/ei/mais-recentes/trabalhador-independente-obrigacoes-para-com-a-seguranca-social/",
-  },
-  decoIRSJovem: {
-    label: "IRS Jovem: o que é e como funciona em 2026 · DECO PROteste",
-    url: "https://www.deco.proteste.pt/dinheiro/impostos/dicas/irs-jovem-como-funciona",
-  },
-  escaloesIRS: {
-    label: "Escalões de IRS 2026 — tabela atualizada · Especialista do IRS",
-    url: "https://www.especialistadoirs.pt/blog/escaloes-irs-2026-tabela-atualizada",
-  },
-  deducaoEspecifica: {
-    label: "Deduções específicas no IRS — valores · Montepio",
-    url: "https://www.montepio.org/ei/mais-recentes/deducoes-especificas-no-irs-saiba-o-que-sao-e-os-valores/",
-  },
-  occRegimeSimplificado: {
-    label: "IRS — Regime simplificado (coeficientes e regra dos 15%) · Ordem dos Contabilistas Certificados",
-    url: "https://www.occ.pt/pt-pt/noticias/irs-regime-simplificado-1",
-  },
-  minimoExistencia: {
-    label: "Mínimo de existência: até que valor não paga IRS · CGD Saldo Positivo",
-    url: "https://www.cgd.pt/Site/Saldo-Positivo/leis-e-impostos/Pages/minimo-de-existencia.aspx",
-  },
-  pwcIRC: {
-    label: "IRC no OE 2026 — taxas gerais e reduzida PME · PwC",
-    url: "https://www.pwc.pt/pt/pwcinforfisco/orcamentoestado/irc.html",
-  },
-  dividendos: {
-    label: "Art. 71.º CIRS — taxas liberatórias (dividendos) · Portal das Finanças",
-    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs71.aspx",
-  },
-  portaria151: {
-    label: "Tabela de atividades do Art. 151.º CIRS — Portaria 1011/2001 · Diário da República",
-    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/portaria/2001-177307831",
+  art6civa: {
+    label: "Art. 6.º CIVA — Localização das operações intracomunitárias · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-6-do-civa.aspx",
   },
   art31: {
-    label: "Art. 31.º CIRS — coeficientes do regime simplificado · Portal das Finanças",
+    label: "Art. 31.º CIRS — Coeficientes do regime simplificado · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs31.aspx",
   },
-  alojamentoLocal: {
-    label: "IRS do alojamento local — coeficientes (0,15 / 0,35 / 0,50) · Ordem dos Contabilistas Certificados",
-    url: "https://www.occ.pt/pt-pt/noticias/irs-regime-simplificado-alojamento-local",
+  art68cirs: {
+    label: "Art. 68.º CIRS — Taxas gerais (escalões IRS) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs68.aspx",
   },
-  retencaoEstrangeiro: {
-    label: "Retenção na fonte e clientes estrangeiros (Art. 101.º CIRS) · Doutor Finanças",
-    url: "https://www.doutorfinancas.pt/carreira-e-rendimentos/trabalhadores-independentes/recibos-verdes-para-empresas-estrangeiras-5-cuidados-a-ter/",
+  art70cirs: {
+    label: "Art. 70.º CIRS — Mínimo de existência · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs70.aspx",
   },
-  deducoesColeta: {
-    label: "Deduções à coleta do IRS — valores e limites · Montepio",
-    url: "https://www.montepio.org/ei/pessoal/impostos/deducoes-a-coleta-saiba-quanto-pode-descontar-no-irs/",
+  art71cirs: {
+    label: "Art. 71.º CIRS — Taxas liberatórias (dividendos) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs71.aspx",
   },
   art72: {
-    label: "Art. 72.º CIRS — taxas especiais (rendimentos prediais, categoria F) · Portal das Finanças",
+    label: "Art. 72.º CIRS — Taxas especiais (rendimentos prediais, categoria F) · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs72.aspx",
   },
+  art78cirs: {
+    label: "Art. 78.º CIRS — Deduções à coleta · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs78.aspx",
+  },
+  art78aCirs: {
+    label: "Art. 78.º-A CIRS — Dedução por dependentes · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs78a.aspx",
+  },
+  portalFinancasArt87: {
+    label: "Art. 87.º CIRS — Deduções relativas a pessoas com deficiência · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs87.aspx",
+  },
+  art101cirs: {
+    label: "Art. 101.º CIRS — Retenção na fonte sobre rendimentos Cat. B · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs101.aspx",
+  },
+  art101bCirs: {
+    label: "Art. 101.º-B CIRS — Dispensa de retenção na fonte · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs101b.aspx",
+  },
+  art12bCirs: {
+    label: "Art. 12.º-B CIRS — IRS Jovem · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs12b.aspx",
+  },
+  art56aCirs: {
+    label: "Art. 56.º-A CIRS — Exclusão de rendimentos de pessoas com deficiência · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs56a.aspx",
+  },
+  art87circ: {
+    label: "Art. 87.º CIRC — Taxas de IRC · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc87.aspx",
+  },
+  art88circ: {
+    label: "Art. 88.º CIRC — Tributação autónoma · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc88.aspx",
+  },
+
+  // ── Diário da República (DRE) — Legislação consolidada ──────────────
+  portaria151: {
+    label: "Portaria 1011/2001 — Tabela de atividades do Art. 151.º CIRS · Diário da República",
+    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/portaria/2001-177307831",
+  },
+  cfi: {
+    label: "DL 162/2014 — Código Fiscal do Investimento (CFI: RFAI, DLRR, SIFIDE) · Diário da República",
+    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/2014-128418757",
+  },
+
+  // ── Segurança Social — Portal oficial ───────────────────────────────
+  segSocialGov: {
+    label: "Trabalhadores independentes — obrigações contributivas · Segurança Social (Gov)",
+    url: "https://www.seg-social.pt/trabalhadores-independentes",
+  },
+
+  // ── Governo de Portugal — Guias oficiais ────────────────────────────
+  govptTrabIndependente: {
+    label: "Trabalhar por conta própria — guia para trabalhadores independentes · Gov.pt",
+    url: "https://www.gov.pt/guias/trabalhar-por-conta-propria-guia-para-trabalhadores-independentes/",
+  },
+
+  // ── Ordem dos Contabilistas Certificados (OCC) — entidade oficial ──
+  occIVA: {
+    label: "IVA — Taxas em Portugal continental e regiões autónomas · OCC",
+    url: "https://www.occ.pt/pt-pt/noticias/iva-taxas-em-portugal-continental-e-acores",
+  },
+  occRegimeSimplificado: {
+    label: "IRS — Regime simplificado (coeficientes e regra dos 15%) · OCC",
+    url: "https://www.occ.pt/pt-pt/noticias/irs-regime-simplificado-1",
+  },
+  alojamentoLocal: {
+    label: "IRS do alojamento local — coeficientes (0,15 / 0,35 / 0,50) · OCC",
+    url: "https://www.occ.pt/pt-pt/noticias/irs-regime-simplificado-alojamento-local",
+  },
   rendasPrediais: {
-    label: "IRS — rendimentos prediais e tributação autónoma · Ordem dos Contabilistas Certificados",
+    label: "IRS — rendimentos prediais e tributação autónoma · OCC",
     url: "https://www.occ.pt/pt-pt/noticias/irs-rendimentos-prediais-e-tributacao-autonoma",
   },
   occTA: {
@@ -127,41 +156,15 @@ export const SOURCES = {
     label: "SIFIDE II — Sistema de Incentivos Fiscais à I&D (Art. 35.º–42.º CFI) · OCC",
     url: "https://www.occ.pt/pt-pt/noticias/irc-beneficios-fiscais-sifide-ii",
   },
-  pwcIFICI: {
-    label: "IFICI — Incentivo Fiscal à Investigação Científica e Inovação (ex-NHR) · PwC Guia Fiscal 2026",
-    url: "https://www.pwc.pt/pt/pwcinforfisco/guia-fiscal/2026/irs.html",
+  occIFICI: {
+    label: "IFICI — Incentivo Fiscal à Investigação Científica e Inovação (ex-NHR) · OCC",
+    url: "https://www.occ.pt/pt-pt/noticias/irs-ifici-ex-nhr",
   },
-  portalFinancasArt87: {
-    label: "Art. 87.º CIRS — Deduções relativas a pessoas com deficiência · Portal das Finanças",
-    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs87.aspx",
-  },
-  estrategorRFAI: {
-    label: "RFAI 2026 — taxas e limites verificados · Estrategor",
-    url: "https://estrategor.pt/rfai-2026/",
-  },
-  govptTrabIndependente: {
-    label: "Trabalhar por conta própria — guia para trabalhadores independentes · Gov.pt",
-    url: "https://www.gov.pt/guias/trabalhar-por-conta-propria-guia-para-trabalhadores-independentes/",
-  },
-  art33civa: {
-    label: "Art. 33.º CIVA — Cessação de atividade · Portal das Finanças",
-    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-33-do-civa.aspx",
-  },
-  art12bCirs: {
-    label: "Art. 12.º-B CIRS — IRS Jovem · Portal das Finanças",
-    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs12b.aspx",
-  },
-  art6civa: {
-    label: "Art. 6.º CIVA — Localização das operações intracomunitárias · Portal das Finanças",
-    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-6-do-civa.aspx",
-  },
+
+  // ── Comissão Europeia ───────────────────────────────────────────────
   viesValidation: {
     label: "VIES — Validação de número de identificação para efeitos do IVA · Comissão Europeia",
     url: "https://ec.europa.eu/taxation_customs/vies",
-  },
-  simuladorNetoSS: {
-    label: "Segurança Social para trabalhadores independentes 2026 · SimuladorNeto",
-    url: "https://simuladorneto.pt/seguranca-social-trabalhadores-independentes",
   },
 } satisfies Record<string, Source>;
 
@@ -198,7 +201,7 @@ const TODAY = "2026-06-11";
 export const IAS = sv(
   537.13,
   "Indexante dos Apoios Sociais (IAS) 2026",
-  "pwcGuiaSS",
+  "segSocialGov",
   TODAY,
   "Base de cálculo de limites da Segurança Social e do teto do IRS Jovem."
 );
@@ -212,27 +215,27 @@ export const RETENCAO: Record<TipoAtividade, Sourced<number>> = {
   art151: sv(
     0.23,
     "Art. 101.º, n.º 1, al. a) CIRS · Art. 151.º CIRS",
-    "decoRetencao",
+    "art101cirs",
     TODAY,
     "Profissões liberais. Reduzida de 25% para 23% pelo OE2025; mantém-se em 2026."
   ),
   outros: sv(
     0.115,
     "Art. 101.º CIRS — atividades não previstas no Art. 151.º",
-    "decoRetencao",
+    "art101cirs",
     TODAY
   ),
   vendas: sv(
     0,
     "Vendas de bens/mercadorias — não sujeitas a retenção na fonte",
-    "decoRetencao",
+    "art101cirs",
     TODAY,
     "A retenção na fonte incide sobre prestações de serviços, não sobre vendas de bens."
   ),
   diretosAutor: sv(
     0.165,
     "Art. 101.º CIRS — direitos de autor e propriedade intelectual",
-    "decoRetencao",
+    "art101cirs",
     TODAY
   ),
 };
@@ -264,7 +267,7 @@ export const META_TIPO: Record<TipoAtividade, { label: string; sub: string; info
 export const DISPENSA_RETENCAO_LIMITE = sv(
   15000,
   "Art. 101.º-B, n.º 1, al. a) CIRS",
-  "doutorFinancasDispensa",
+  "art101bCirs",
   TODAY,
   "Quem prevê faturar menos do que este valor no ano pode dispensar a retenção na fonte."
 );
@@ -324,18 +327,18 @@ export const META_REGIAO: Record<Regiao, string> = {
 export const SS_TAXA = sv(
   0.214,
   "Art. 168.º do Código Contributivo — taxa contributiva do TI",
-  "segSocialTI",
+  "segSocialGov",
   TODAY
 );
 
 /** Coeficiente do rendimento relevante consoante a natureza da atividade. */
 export type BaseSS = "servicos" | "bens";
 export const SS_COEFICIENTE: Record<BaseSS, Sourced<number>> = {
-  servicos: sv(0.7, "Art. 162.º Código Contributivo — prestação de serviços", "segSocialTI", TODAY),
+  servicos: sv(0.7, "Art. 162.º Código Contributivo — prestação de serviços", "segSocialGov", TODAY),
   bens: sv(
     0.2,
     "Art. 162.º Código Contributivo — produção/venda de bens, hotelaria e restauração",
-    "segSocialTI",
+    "segSocialGov",
     TODAY
   ),
 };
@@ -349,14 +352,14 @@ export const META_BASE_SS: Record<BaseSS, { label: string; sub: string }> = {
 export const SS_BASE_MAX_MENSAL = sv(
   6445.56,
   "Limite de 12 × IAS ao rendimento relevante mensal médio",
-  "pwcGuiaSS",
+  "segSocialGov",
   TODAY
 );
 
 export const SS_ISENCAO_PRIMEIRO_ANO_MESES = sv(
   12,
   "Art. 157.º Código Contributivo — isenção nos primeiros 12 meses de atividade",
-  "segSocialTI",
+  "segSocialGov",
   TODAY,
   "Aplica-se a quem não teve atividade independente nos 3 anos anteriores."
 );
@@ -368,7 +371,7 @@ export const REGIME_SIMPLIFICADO = {
   limite: sv(
     200000,
     "Art. 28.º CIRS — limite de rendimento bruto do regime simplificado",
-    "pwcGuiaIRS",
+    "art68cirs",
     TODAY
   ),
   coefServicos151: sv(0.75, "Art. 31.º, n.º 1, al. b) CIRS — serviços do Art. 151.º", "art31", TODAY),
@@ -424,14 +427,14 @@ export const REDUCAO_COEFICIENTE_ANO = sv<Record<number, number>>(
 //  IRS JOVEM — isenção progressiva (categorias A e B)
 // ═══════════════════════════════════════════════════════════════════════
 export const IRS_JOVEM = {
-  idadeMax: sv(35, "Regime IRS Jovem — até 35 anos no último dia do ano", "decoIRSJovem", TODAY),
+  idadeMax: sv(35, "Regime IRS Jovem — até 35 anos no último dia do ano", "art12bCirs", TODAY),
   /** Teto anual de rendimento isento = 55 × IAS. */
-  tetoIAS: sv(55, "Teto anual de isenção = 55 × IAS", "decoIRSJovem", TODAY),
+  tetoIAS: sv(55, "Teto anual de isenção = 55 × IAS", "art12bCirs", TODAY),
   /** Percentagem de isenção por ano de obtenção de rendimentos (1 a 10). */
   isencaoPorAno: sv<Record<number, number>>(
     { 1: 1.0, 2: 0.75, 3: 0.75, 4: 0.75, 5: 0.5, 6: 0.5, 7: 0.5, 8: 0.25, 9: 0.25, 10: 0.25 },
     "Regime IRS Jovem — 100% (1.º), 75% (2.º–4.º), 50% (5.º–7.º), 25% (8.º–10.º)",
-    "decoIRSJovem",
+    "art12bCirs",
     TODAY
   ),
 };
@@ -460,7 +463,7 @@ export const ESCALOES_IRS = sv<EscalaoIRS[]>(
     { ate: null, taxa: 0.48 },
   ],
   "Art. 68.º CIRS — escalões 2026 (Portugal continental)",
-  "escaloesIRS",
+  "art68cirs",
   TODAY,
   "Taxas marginais. Confirmar anualmente contra a tabela oficial da AT."
 );
@@ -495,7 +498,7 @@ export const REGIME_15PCT = sv(
 export const MINIMO_EXISTENCIA = sv(
   12880,
   "Art. 70.º CIRS — mínimo de existência 2026 (RMMG 920 € × 14)",
-  "minimoExistencia",
+  "art70cirs",
   TODAY
 );
 
@@ -505,21 +508,21 @@ export const MINIMO_EXISTENCIA = sv(
 export const IRC_TAXA_GERAL = sv(
   0.19,
   "Art. 87.º CIRC — taxa geral 2026 (reduzida de 20% para 19% pelo OE2026)",
-  "pwcIRC",
+  "art87circ",
   TODAY
 );
 export const IRC_TAXA_PME = sv(
   0.15,
   "Art. 87.º CIRC — taxa reduzida PME nos primeiros 50.000 € de matéria coletável",
-  "pwcIRC",
+  "art87circ",
   TODAY
 );
-export const IRC_LIMITE_PME = sv(50000, "Art. 87.º CIRC — limiar da taxa reduzida PME", "pwcIRC", TODAY);
-export const DERRAMA_MAX = sv(0.015, "Derrama municipal — taxa máxima legal sobre o lucro tributável", "pwcIRC", TODAY);
+export const IRC_LIMITE_PME = sv(50000, "Art. 87.º CIRC — limiar da taxa reduzida PME", "art87circ", TODAY);
+export const DERRAMA_MAX = sv(0.015, "Derrama municipal — taxa máxima legal sobre o lucro tributável", "art87circ", TODAY);
 export const DIVIDENDOS_TAXA = sv(
   0.28,
   "Art. 71.º CIRS — taxa liberatória sobre dividendos distribuídos",
-  "dividendos",
+  "art71cirs",
   TODAY
 );
 
@@ -1042,8 +1045,8 @@ export function efeitoFiscal(a: Atividade): EfeitoFiscal {
 // ═══════════════════════════════════════════════════════════════════════
 //  DEDUÇÕES À COLETA (IRS) — valores 2026
 // ═══════════════════════════════════════════════════════════════════════
-export const DEDUCAO_DEPENDENTE = sv(600, "Art. 78.º-A CIRS — por dependente com mais de 3 anos", "deducoesColeta", TODAY);
-export const DEDUCAO_DEPENDENTE_BEBE = sv(726, "Art. 78.º-A CIRS — por dependente até 3 anos", "deducoesColeta", TODAY);
+export const DEDUCAO_DEPENDENTE = sv(600, "Art. 78.º-A CIRS — por dependente com mais de 3 anos", "art78aCirs", TODAY);
+export const DEDUCAO_DEPENDENTE_BEBE = sv(726, "Art. 78.º-A CIRS — por dependente até 3 anos", "art78aCirs", TODAY);
 
 /**
  * Dedução adicional por dependente com deficiência ≥ 60% (Art. 87.º CIRS).
@@ -1063,19 +1066,19 @@ export interface DeducaoLimitada {
 export const DEDUCAO_DESP_GERAIS = sv<DeducaoLimitada>(
   { taxa: 0.35, limite: 250 },
   "Art. 78.º-B CIRS — despesas gerais familiares: 35% até 250 €/sujeito",
-  "deducoesColeta",
+  "art78aCirs",
   TODAY
 );
 export const DEDUCAO_SAUDE = sv<DeducaoLimitada>(
   { taxa: 0.15, limite: 1000 },
   "Art. 78.º-C CIRS — saúde: 15% até 1.000 €",
-  "deducoesColeta",
+  "art78aCirs",
   TODAY
 );
 export const DEDUCAO_EDUCACAO = sv<DeducaoLimitada>(
   { taxa: 0.3, limite: 800 },
   "Art. 78.º-D CIRS — educação: 30% até 800 €",
-  "deducoesColeta",
+  "art78aCirs",
   TODAY
 );
 
@@ -1083,7 +1086,7 @@ export const DEDUCAO_EDUCACAO = sv<DeducaoLimitada>(
 export const DEDUCAO_RENDAS = sv<DeducaoLimitada>(
   { taxa: 0.15, limite: 900 },
   "Art. 78.º-E CIRS — rendas de habitação permanente: 15% até 900 € (Lei 36/2024, rendimentos de 2026)",
-  "deducoesColeta",
+  "art78aCirs",
   TODAY,
   "Limite atualizado pela Lei 36/2024: 700 € em 2025, 900 € em 2026, 1.000 € a partir de 2027."
 );
@@ -1095,19 +1098,19 @@ export const DEDUCAO_RENDAS = sv<DeducaoLimitada>(
 export const DEDUCAO_DEPENDENTE_3MAIS = sv(
   900,
   "Art. 78.º-A n.º 6 CIRS — 2.º dependente e seguintes até 6 anos (900 €)",
-  "deducoesColeta",
+  "art78aCirs",
   TODAY,
   "Na lei: 900 € por dependente a partir do 2.º, até 6 anos. O simulador aplica-a a partir do 3.º (simplificação conservadora — não recolhe faixa 3–6 anos)."
 );
 
 /** Divisor do rendimento na tributação conjunta dos casados/unidos de facto. */
-export const QUOCIENTE_CONJUGAL = sv(2, "Art. 69.º CIRS — quociente conjugal (divisão por 2)", "deducoesColeta", TODAY);
+export const QUOCIENTE_CONJUGAL = sv(2, "Art. 69.º CIRS — quociente conjugal (divisão por 2)", "art78aCirs", TODAY);
 
 /** Limite global das deduções à coleta (Art. 78.º, n.º 7), escalonado. */
 export const LIMITE_GLOBAL_DEDUCOES = sv(
   { semLimiteAte: 8342, limiteAlto: 2500, limiteBaixo: 1000, escalaoSuperior: 80000 },
   "Art. 78.º, n.º 7 CIRS — sem limite até 8.342 € (1.º escalão Art. 68.º 2026); entre 1.000 € e 2.500 € até 80.000 € (Art. 68.º-A); 1.000 € acima",
-  "deducoesColeta",
+  "art78aCirs",
   TODAY,
   "semLimiteAte = 1.º escalão Art. 68.º (8.342 € em 2026); escalaoSuperior = 1.º escalão Art. 68.º-A (80.000 €, fixo)."
 );
@@ -1208,21 +1211,21 @@ export const TA_AGRAVAMENTO_PREJUIZO = sv(
 export const RFAI_TAXA_INTERIOR = sv(
   0.30,
   "Art. 23.º CFI — 30% do investimento elegível nas regiões Norte, Centro, Alentejo, Açores e Madeira (até €15 M)",
-  "estrategorRFAI",
+  "cfi",
   TODAY
 );
 
 export const RFAI_TAXA_INTERIOR_EXCEDENTE = sv(
   0.10,
   "Art. 23.º CFI — 10% sobre a parcela do investimento que exceda €15 M nas regiões interiores",
-  "estrategorRFAI",
+  "cfi",
   TODAY
 );
 
 export const RFAI_TAXA_LITORAL = sv(
   0.10,
   "Art. 23.º CFI — 10% do investimento elegível nas regiões de Lisboa e Algarve",
-  "estrategorRFAI",
+  "cfi",
   TODAY
 );
 
@@ -1337,7 +1340,7 @@ export const SIFIDE_REPORTE_ANOS = sv(
 export const IFICI_TAXA = sv(
   0.20,
   "Art. 58.º-A EBF — IFICI: taxa flat de 20% sobre rendimentos elegíveis (Lei 82/2023/OE2024)",
-  "pwcIFICI",
+  "occIFICI",
   TODAY,
   "Substitui o NHR desde 1 jan 2024. Válido por 10 exercícios consecutivos não renováveis. Elegível: investigadores, professores, I&D, startups tecnológicas e atividades de elevado valor acrescentado aprovadas pela AT."
 );
@@ -1345,7 +1348,7 @@ export const IFICI_TAXA = sv(
 export const IFICI_PRAZO_ANOS = sv(
   10,
   "Art. 58.º-A EBF — prazo máximo de 10 exercícios consecutivos",
-  "pwcIFICI",
+  "occIFICI",
   TODAY
 );
 
@@ -1362,13 +1365,13 @@ export const IFICI_PRAZO_ANOS = sv(
 export const EXCLUSAO_DEFICIENCIA_TAXA = sv(
   0.15,
   "Art. 56.º-A CIRS — exclusão de 15% dos rendimentos Cat. B de pessoas com deficiência ≥ 60%",
-  "portalFinancasArt87",
+  "art56aCirs",
   TODAY
 );
 export const EXCLUSAO_DEFICIENCIA_MAX = sv(
   2_500,
   "Art. 56.º-A CIRS — exclusão máxima de €2 500 por categoria de rendimento",
-  "portalFinancasArt87",
+  "art56aCirs",
   TODAY
 );
 
@@ -1396,7 +1399,7 @@ export const DEDUCAO_DEFICIENCIA_GRAU_MINIMO = sv(
 export const SS_MIN_MENSAL = sv(
   20,
   "Art. 168.º Código Contributivo — contribuição mínima mensal",
-  "segSocialTI",
+  "segSocialGov",
   TODAY
 );
 

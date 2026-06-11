@@ -135,30 +135,37 @@ interface FonteStatus {
 }
 
 const FONTES_A_CONSULTAR: { key: SourceKey; prioridade: "primaria" | "secundaria" }[] = [
-  { key: "escaloesIRS", prioridade: "primaria" },
-  { key: "pwcGuiaIRS", prioridade: "primaria" },
-  { key: "decoRetencao", prioridade: "primaria" },
+  // ── Portal das Finanças (AT) — Códigos tributários ──
+  { key: "art68cirs", prioridade: "primaria" },
+  { key: "art101cirs", prioridade: "primaria" },
+  { key: "art101bCirs", prioridade: "primaria" },
   { key: "portalFinancasIVA", prioridade: "primaria" },
-  { key: "occIVA", prioridade: "primaria" },
-  { key: "pwcGuiaSS", prioridade: "primaria" },
-  { key: "segSocialTI", prioridade: "primaria" },
-  { key: "minimoExistencia", prioridade: "primaria" },
+  { key: "art18civa", prioridade: "primaria" },
   { key: "art31", prioridade: "primaria" },
-  { key: "dividendos", prioridade: "primaria" },
+  { key: "art70cirs", prioridade: "primaria" },
+  { key: "art71cirs", prioridade: "primaria" },
   { key: "art72", prioridade: "primaria" },
-  { key: "pwcIRC", prioridade: "primaria" },
-  { key: "decoIRSJovem", prioridade: "primaria" },
-  { key: "occTA", prioridade: "primaria" },
-  { key: "occRFAI", prioridade: "primaria" },
-  { key: "occDLRR", prioridade: "primaria" },
-  { key: "occSIFIDE", prioridade: "primaria" },
-  { key: "pwcIFICI", prioridade: "primaria" },
+  { key: "art78cirs", prioridade: "primaria" },
+  { key: "art78aCirs", prioridade: "primaria" },
+  { key: "art87circ", prioridade: "primaria" },
+  { key: "art88circ", prioridade: "primaria" },
+  { key: "art12bCirs", prioridade: "primaria" },
+  { key: "art56aCirs", prioridade: "primaria" },
+  { key: "portalFinancasArt87", prioridade: "primaria" },
+  // ── Segurança Social oficial ──
+  { key: "segSocialGov", prioridade: "primaria" },
+  // ── Governo de Portugal ──
+  { key: "govptTrabIndependente", prioridade: "primaria" },
+  // ── Diário da República — legislação consolidada ──
+  { key: "cfi", prioridade: "primaria" },
+  // ── OCC — entidade oficial de regulação ──
+  { key: "occIVA", prioridade: "secundaria" },
   { key: "occRegimeSimplificado", prioridade: "secundaria" },
-  { key: "deducoesColeta", prioridade: "secundaria" },
-  { key: "govptTrabIndependente", prioridade: "secundaria" },
-  { key: "portalFinancasArt87", prioridade: "secundaria" },
-  { key: "estrategorRFAI", prioridade: "secundaria" },
-  { key: "simuladorNetoSS", prioridade: "secundaria" },
+  { key: "occTA", prioridade: "secundaria" },
+  { key: "occRFAI", prioridade: "secundaria" },
+  { key: "occDLRR", prioridade: "secundaria" },
+  { key: "occSIFIDE", prioridade: "secundaria" },
+  { key: "occIFICI", prioridade: "secundaria" },
 ];
 
 function stripHtml(html: string): string {
@@ -354,7 +361,7 @@ function buildVerificacoes(): VerificacaoDef[] {
 
   // ── IAS ──
   v.push(defAmount("f-ias", "IAS", "Indexante dos Apoios Sociais 2026",
-    537.13, ["pwcGuiaSS", "segSocialTI", "govptTrabIndependente"],
+    537.13, ["segSocialGov", "govptTrabIndependente"],
     ["IAS", "indexante", "apoios sociais"]));
 
   // ── Escalões IRS ──
@@ -363,26 +370,26 @@ function buildVerificacoes(): VerificacaoDef[] {
   for (let i = 0; i < esc.length; i++) {
     if (esc[i].ate !== null) {
       v.push(defAmount(`f-esc${i + 1}-lim`, "Escalões IRS", `${escLabels[i]} escalão — limite`,
-        esc[i].ate!, ["escaloesIRS", "pwcGuiaIRS"],
+        esc[i].ate!, ["art68cirs"],
         ["escalão", "escalao", "rendimento coletável", "coletavel", "tabela", `${escLabels[i]}`]));
     }
     v.push(defPercent(`f-esc${i + 1}-tx`, "Escalões IRS", `${escLabels[i]} escalão — taxa`,
-      esc[i].taxa, ["escaloesIRS", "pwcGuiaIRS"],
+      esc[i].taxa, ["art68cirs"],
       ["escalão", "escalao", "taxa", "marginal", `${escLabels[i]}`]));
   }
 
   // ── Retenção ──
   v.push(defPercent("f-ret-151", "Retenção na fonte", "Art. 151.º — profissões liberais",
-    0.23, ["decoRetencao", "pwcGuiaIRS"],
+    0.23, ["art101cirs", "govptTrabIndependente"],
     ["retenção", "retencao", "Art. 151", "profissões liberais", "23"]));
   v.push(defPercent("f-ret-outros", "Retenção na fonte", "Outros serviços",
-    0.115, ["decoRetencao", "pwcGuiaIRS"],
+    0.115, ["art101cirs", "govptTrabIndependente"],
     ["retenção", "retencao", "11,5", "outros serviços", "11.5"]));
   v.push(defPercent("f-ret-ip", "Retenção na fonte", "Propriedade intelectual",
-    0.165, ["decoRetencao", "pwcGuiaIRS"],
+    0.165, ["art101cirs", "govptTrabIndependente"],
     ["retenção", "retencao", "16,5", "propriedade intelectual", "direitos de autor"]));
   v.push(defAmount("f-ret-dispensa", "Retenção na fonte", "Limite de dispensa",
-    15000, ["decoRetencao", "govptTrabIndependente"],
+    15000, ["art101bCirs", "govptTrabIndependente"],
     ["dispensa", "retenção", "15.000", "15 000"]));
 
   // ── IVA ──
@@ -390,50 +397,50 @@ function buildVerificacoes(): VerificacaoDef[] {
     15000, ["portalFinancasIVA", "occIVA", "govptTrabIndependente"],
     ["isenção", "isencao", "Art. 53", "15.000", "15 000", "volume de negócios"]));
   v.push(defPercent("f-iva-cont-red", "IVA", "Continente — taxa reduzida",
-    0.06, ["occIVA"],
+    0.06, ["art18civa", "occIVA"],
     ["continente", "reduzida", "6%", "Lista I"]));
   v.push(defPercent("f-iva-cont-int", "IVA", "Continente — taxa intermédia",
-    0.13, ["occIVA"],
+    0.13, ["art18civa", "occIVA"],
     ["continente", "intermédia", "intermedia", "13%", "Lista II"]));
   v.push(defPercent("f-iva-cont-nor", "IVA", "Continente — taxa normal",
-    0.23, ["occIVA"],
+    0.23, ["art18civa", "occIVA"],
     ["continente", "normal", "23%"]));
   v.push(defPercent("f-iva-mad-red", "IVA", "Madeira — taxa reduzida",
-    0.04, ["occIVA"],
+    0.04, ["art18civa", "occIVA"],
     ["Madeira", "reduzida", "4%"]));
   v.push(defPercent("f-iva-mad-int", "IVA", "Madeira — taxa intermédia",
-    0.12, ["occIVA"],
+    0.12, ["art18civa", "occIVA"],
     ["Madeira", "intermédia", "intermedia", "12%"]));
   v.push(defPercent("f-iva-mad-nor", "IVA", "Madeira — taxa normal",
-    0.22, ["occIVA"],
+    0.22, ["art18civa", "occIVA"],
     ["Madeira", "normal", "22%"]));
   v.push(defPercent("f-iva-ac-red", "IVA", "Açores — taxa reduzida",
-    0.04, ["occIVA"],
+    0.04, ["art18civa", "occIVA"],
     ["Açores", "Acores", "reduzida", "4%"]));
   v.push(defPercent("f-iva-ac-int", "IVA", "Açores — taxa intermédia",
-    0.09, ["occIVA"],
+    0.09, ["art18civa", "occIVA"],
     ["Açores", "Acores", "intermédia", "intermedia", "9%"]));
   v.push(defPercent("f-iva-ac-nor", "IVA", "Açores — taxa normal",
-    0.16, ["occIVA"],
+    0.16, ["art18civa", "occIVA"],
     ["Açores", "Acores", "normal", "16%"]));
 
   // ── Segurança Social ──
   v.push(defPercent("f-ss-taxa", "Segurança Social", "Taxa contributiva TI",
-    0.214, ["pwcGuiaSS", "segSocialTI", "govptTrabIndependente"],
+    0.214, ["segSocialGov", "govptTrabIndependente"],
     ["21,4", "taxa contributiva", "trabalhador independente", "Segurança Social"]));
   v.push(defPercent("f-ss-coef-serv", "Segurança Social", "Base serviços (70%)",
-    0.70, ["pwcGuiaSS", "segSocialTI"],
+    0.70, ["segSocialGov", "govptTrabIndependente"],
     ["70%", "serviços", "rendimento relevante"]));
   v.push(defPercent("f-ss-coef-bens", "Segurança Social", "Base bens/hotelaria (20%)",
-    0.20, ["pwcGuiaSS", "segSocialTI"],
+    0.20, ["segSocialGov", "govptTrabIndependente"],
     ["20%", "bens", "hotelaria", "produção"]));
   v.push(defAmount("f-ss-teto", "Segurança Social", "Teto mensal (12×IAS)",
-    6445.56, ["pwcGuiaSS", "segSocialTI"],
+    6445.56, ["segSocialGov", "govptTrabIndependente"],
     ["teto", "limite", "12", "IAS", "6.445", "6 445"]));
 
   // ── Regime Simplificado (coeficientes) ──
   v.push(defCoef("f-rs-151", "Regime Simplificado", "Coef. Art. 151.º — serviços",
-    0.75, ["art31", "occRegimeSimplificado", "pwcGuiaIRS"],
+    0.75, ["art31", "occRegimeSimplificado"],
     ["0,75", "Art. 151", "serviços", "profissões liberais", "alínea b"]));
   v.push(defCoef("f-rs-outros", "Regime Simplificado", "Coef. outros serviços",
     0.35, ["art31", "occRegimeSimplificado"],
@@ -447,21 +454,21 @@ function buildVerificacoes(): VerificacaoDef[] {
 
   // ── IRC ──
   v.push(defPercent("f-irc-geral", "IRC", "Taxa geral",
-    0.19, ["pwcIRC"],
+    0.19, ["art87circ"],
     ["19%", "taxa geral", "IRC", "matéria coletável"]));
   v.push(defPercent("f-irc-pme", "IRC", "Taxa reduzida PME",
-    0.15, ["pwcIRC"],
+    0.15, ["art87circ"],
     ["15%", "PME", "pequena", "média", "50.000", "50 000"]));
   v.push(defAmount("f-irc-lim-pme", "IRC", "Limiar taxa PME",
-    50000, ["pwcIRC"],
+    50000, ["art87circ"],
     ["50.000", "50 000", "PME", "primeiros"]));
   v.push(defPercent("f-irc-divid", "IRC", "Dividendos — taxa liberatória",
-    0.28, ["dividendos", "pwcIRC"],
+    0.28, ["art71cirs", "art87circ"],
     ["28%", "dividendos", "taxa liberatória", "Art. 71"]));
 
   // ── Mínimo de existência ──
   v.push(defAmount("f-min-exist", "Mínimo de existência", "Valor 2026",
-    12880, ["minimoExistencia"],
+    12880, ["art70cirs"],
     ["mínimo de existência", "minimo", "12.880", "12 880", "920"]));
 
   // ── Categoria F ──
@@ -475,39 +482,39 @@ function buildVerificacoes(): VerificacaoDef[] {
   // ── IRS Jovem ──
   v.push({
     id: "f-irsj-idade", grupo: "IRS Jovem", nome: "Idade máxima",
-    valorLocal: "35 anos", fontes: ["decoIRSJovem", "pwcGuiaIRS"],
+    valorLocal: "35 anos", fontes: ["art12bCirs"],
     pattern: "35\\s*anos", keywords: ["IRS Jovem", "idade", "35"],
   });
   v.push({
     id: "f-irsj-teto", grupo: "IRS Jovem", nome: "Teto anual (55×IAS)",
-    valorLocal: "55×IAS", fontes: ["decoIRSJovem"],
+    valorLocal: "55×IAS", fontes: ["art12bCirs"],
     pattern: "55\\s*[×x]?\\s*IAS", keywords: ["IRS Jovem", "teto", "limite", "55", "IAS"],
   });
   v.push(defPercent("f-irsj-100", "IRS Jovem", "1.º ano — isenção 100%",
-    1.0, ["decoIRSJovem"],
+    1.0, ["art12bCirs"],
     ["100%", "1.º ano", "primeiro ano", "IRS Jovem"]));
   v.push(defPercent("f-irsj-75", "IRS Jovem", "2.º–4.º ano — isenção 75%",
-    0.75, ["decoIRSJovem"],
+    0.75, ["art12bCirs"],
     ["75%", "2.º", "3.º", "4.º", "IRS Jovem"]));
   v.push(defPercent("f-irsj-50", "IRS Jovem", "5.º–7.º ano — isenção 50%",
-    0.50, ["decoIRSJovem"],
+    0.50, ["art12bCirs"],
     ["50%", "5.º", "6.º", "7.º", "IRS Jovem"]));
   v.push(defPercent("f-irsj-25", "IRS Jovem", "8.º–10.º ano — isenção 25%",
-    0.25, ["decoIRSJovem"],
+    0.25, ["art12bCirs"],
     ["25%", "8.º", "9.º", "10.º", "IRS Jovem"]));
 
   // ── Deduções à coleta ──
   v.push(defAmount("f-ded-dep", "Deduções à coleta", "Por dependente (>3 anos)",
-    600, ["deducoesColeta"],
+    600, ["art78aCirs", "art78cirs"],
     ["600", "dependente", "dedução"]));
   v.push(defAmount("f-ded-saude", "Deduções à coleta", "Saúde — limite",
-    1000, ["deducoesColeta"],
+    1000, ["art78cirs", "art78aCirs"],
     ["1.000", "1 000", "saúde", "15%"]));
   v.push(defAmount("f-ded-educ", "Deduções à coleta", "Educação — limite",
-    800, ["deducoesColeta"],
+    800, ["art78cirs", "art78aCirs"],
     ["800", "educação", "30%"]));
   v.push(defAmount("f-ded-rendas", "Deduções à coleta", "Rendas habitação — limite",
-    900, ["deducoesColeta"],
+    900, ["art78cirs", "art78aCirs"],
     ["900", "rendas", "habitação", "78.º-E"]));
 
   // ══════════════════════════════════════════════════════════════════════
@@ -516,36 +523,36 @@ function buildVerificacoes(): VerificacaoDef[] {
 
   // ── Tributação Autónoma ──
   v.push(defAmount("f-ta-t1", "Tributação Autónoma", "Threshold inferior viaturas",
-    37500, ["occTA"],
+    37500, ["art88circ", "occTA"],
     ["37.500", "37 500", "custo de aquisição", "viatura"]));
   v.push(defAmount("f-ta-t2", "Tributação Autónoma", "Threshold superior viaturas",
-    45000, ["occTA"],
+    45000, ["art88circ", "occTA"],
     ["45.000", "45 000", "custo de aquisição", "viatura"]));
   v.push(defPercent("f-ta-comb-1", "Tributação Autónoma", "Combustão ≤ 37.500€",
-    0.08, ["occTA"],
+    0.08, ["art88circ", "occTA"],
     ["8%", "combustão", "gasóleo", "gasolina"]));
   v.push(defPercent("f-ta-comb-2", "Tributação Autónoma", "Combustão 37.500–45.000€",
-    0.25, ["occTA"],
+    0.25, ["art88circ", "occTA"],
     ["25%", "combustão", "gasóleo"]));
   v.push(defPercent("f-ta-comb-3", "Tributação Autónoma", "Combustão > 45.000€",
-    0.32, ["occTA"],
+    0.32, ["art88circ", "occTA"],
     ["32%", "combustão"]));
   v.push(defPercent("f-ta-repr", "Tributação Autónoma", "Despesas de representação",
-    0.10, ["occTA"],
+    0.10, ["art88circ", "occTA"],
     ["10%", "representação", "n.º 7"]));
   v.push(defPercent("f-ta-ajudas", "Tributação Autónoma", "Ajudas de custo/km",
-    0.05, ["occTA"],
+    0.05, ["art88circ", "occTA"],
     ["5%", "ajudas de custo", "quilómetros"]));
   v.push(defPercent("f-ta-ndoc", "Tributação Autónoma", "Despesas não documentadas",
-    0.50, ["occTA"],
+    0.50, ["art88circ", "occTA"],
     ["50%", "não documentadas"]));
 
   // ── RFAI ──
   v.push(defPercent("f-rfai-int", "RFAI", "Taxa interior (até 15M)",
-    0.30, ["occRFAI", "estrategorRFAI"],
+    0.30, ["cfi", "occRFAI"],
     ["30%", "RFAI", "interior", "Norte", "Centro"]));
   v.push(defPercent("f-rfai-lit", "RFAI", "Taxa litoral",
-    0.10, ["occRFAI", "estrategorRFAI"],
+    0.10, ["cfi", "occRFAI"],
     ["10%", "RFAI", "Lisboa", "Algarve", "litoral"]));
   v.push(defPercent("f-rfai-coleta", "RFAI", "Limite coleta",
     0.50, ["occRFAI"],
@@ -559,59 +566,59 @@ function buildVerificacoes(): VerificacaoDef[] {
 
   // ── DLRR ──
   v.push(defPercent("f-dlrr-taxa", "DLRR", "Taxa de dedução",
-    0.10, ["occDLRR"],
+    0.10, ["cfi", "occDLRR"],
     ["10%", "DLRR", "lucros retidos"]));
   v.push(defAmount("f-dlrr-limite", "DLRR", "Limite lucros elegíveis",
-    5000000, ["occDLRR"],
+    5000000, ["cfi", "occDLRR"],
     ["5.000.000", "5 000 000", "lucros", "DLRR"]));
   v.push(defPercent("f-dlrr-coleta", "DLRR", "Limite coleta",
-    0.25, ["occDLRR"],
+    0.25, ["cfi", "occDLRR"],
     ["25%", "coleta", "DLRR"]));
   v.push({
     id: "f-dlrr-reporte", grupo: "DLRR", nome: "Reporte saldo não utilizado",
-    valorLocal: "12 exercícios", fontes: ["occDLRR"],
+    valorLocal: "12 exercícios", fontes: ["cfi", "occDLRR"],
     pattern: "12\\s*(?:anos|exercícios)",
     keywords: ["12", "exercícios", "reporte", "DLRR"],
   });
 
   // ── SIFIDE II ──
   v.push(defPercent("f-sifide-base", "SIFIDE II", "Taxa base",
-    0.325, ["occSIFIDE"],
+    0.325, ["cfi", "occSIFIDE"],
     ["32,5%", "32.5%", "taxa base", "SIFIDE"]));
   v.push(defPercent("f-sifide-incr", "SIFIDE II", "Taxa incremental",
-    0.50, ["occSIFIDE"],
+    0.50, ["cfi", "occSIFIDE"],
     ["50%", "incremental", "SIFIDE"]));
   v.push(defAmount("f-sifide-teto", "SIFIDE II", "Teto incremental",
-    1500000, ["occSIFIDE"],
+    1500000, ["cfi", "occSIFIDE"],
     ["1.500.000", "1 500 000", "teto", "incremento", "SIFIDE"]));
   v.push({
     id: "f-sifide-reporte", grupo: "SIFIDE II", nome: "Reporte crédito",
-    valorLocal: "12 exercícios", fontes: ["occSIFIDE"],
+    valorLocal: "12 exercícios", fontes: ["cfi", "occSIFIDE"],
     pattern: "12\\s*(?:anos|exercícios)",
     keywords: ["12", "exercícios", "reporte", "SIFIDE"],
   });
 
   // ── IFICI ──
   v.push(defPercent("f-ifici-taxa", "IFICI", "Taxa flat",
-    0.20, ["pwcIFICI"],
+    0.20, ["occIFICI"],
     ["20%", "IFICI", "NHR", "flat"]));
   v.push({
     id: "f-ifici-prazo", grupo: "IFICI", nome: "Prazo",
-    valorLocal: "10 anos", fontes: ["pwcIFICI"],
+    valorLocal: "10 anos", fontes: ["occIFICI"],
     pattern: "10\\s*(?:anos|exercícios)",
     keywords: ["10", "anos", "IFICI", "NHR"],
   });
 
   // ── Deficiência ──
   v.push(defPercent("f-def-exclusao", "Deficiência", "Exclusão rendimentos (15%)",
-    0.15, ["portalFinancasArt87"],
+    0.15, ["art56aCirs", "portalFinancasArt87"],
     ["15%", "deficiência", "exclusão", "56.º-A"]));
   v.push(defAmount("f-def-max", "Deficiência", "Exclusão máxima",
-    2500, ["portalFinancasArt87"],
+    2500, ["art56aCirs", "portalFinancasArt87"],
     ["2.500", "2 500", "deficiência", "exclusão"]));
   v.push({
     id: "f-def-grau", grupo: "Deficiência", nome: "Grau mínimo de incapacidade",
-    valorLocal: "60%", fontes: ["portalFinancasArt87"],
+    valorLocal: "60%", fontes: ["art56aCirs", "portalFinancasArt87"],
     pattern: "60\\s*%",
     keywords: ["60%", "deficiência", "incapacidade", "grau"],
   });
@@ -1033,7 +1040,7 @@ export async function GET(req: NextRequest) {
     const { fontes, resultados, cobertura } = await auditarFontesOficiais();
     return NextResponse.json({
       agente: "Auditor de Fontes Oficiais",
-      descricao: "Consulta fontes oficiais portuguesas (Portal das Finanças, PwC, OCC, DECO, CGD) em tempo real e compara os valores encontrados com os dados do sistema.",
+      descricao: "Consulta fontes oficiais (Portal das Finanças, Segurança Social, gov.pt, DRE, OCC) em tempo real e compara os valores encontrados com os dados do sistema.",
       executadoEm: new Date().toISOString(),
       anoFiscal: FISCAL_YEAR,
       ultimaRevisao: DATA_LAST_REVIEW,
