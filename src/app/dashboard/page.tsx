@@ -117,13 +117,15 @@ export default function VisaoGeral() {
           {/* ── Banner: importar recibos locais ──────────────────── */}
           {naNuvem && locaisPorImportar > 0 && (
             <div className="col-span-12">
-              <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-brand/30 bg-brand-light px-4 py-3">
-                <span className="flex-shrink-0 text-brand"><History size={18} /></span>
-                <p className="min-w-0 flex-1 text-sm text-brand-dark">
-                  Tens {locaisPorImportar} {locaisPorImportar === 1 ? "recibo guardado" : "recibos guardados"} neste
-                  dispositivo. Queres trazê-{locaisPorImportar === 1 ? "lo" : "los"} para a tua conta na nuvem?
-                </p>
-                <div className="flex flex-shrink-0 gap-2">
+              <div className="rounded-2xl border border-brand/30 bg-brand-light px-4 py-3">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 flex-shrink-0 text-brand"><History size={18} /></span>
+                  <p className="text-sm text-brand-dark">
+                    Tens {locaisPorImportar} {locaisPorImportar === 1 ? "recibo guardado" : "recibos guardados"} neste
+                    dispositivo. Queres trazê-{locaisPorImportar === 1 ? "lo" : "los"} para a tua conta na nuvem?
+                  </p>
+                </div>
+                <div className="mt-3 flex gap-2 pl-[30px]">
                   <button type="button" onClick={importarLocais}
                     className="rounded-xl bg-brand px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-dark">
                     Trazer para a nuvem

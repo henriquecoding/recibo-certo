@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   Logo,
   LayoutGrid,
@@ -13,10 +14,12 @@ import {
   User,
   FileSign,
   Briefcase,
+  ShieldCheck,
 } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
-import { AuthProvider } from "@/lib/supabase/auth";
+import { AuthProvider, useAuth } from "@/lib/supabase/auth";
 import { SubscricaoProvider } from "@/lib/stripe/subscription";
+import { verificarAdmin } from "@/lib/supabase/admin";
 import AccountBox from "@/components/dashboard/AccountBox";
 import type { ComponentType, ReactNode } from "react";
 
@@ -39,6 +42,32 @@ const NAV_RECURSOS: NavItem[] = [
   { href: "/guias", label: "Guias fiscais", short: "Guias", icon: FileSign },
   { href: "/ferramentas", label: "Ferramentas", short: "Tools", icon: Briefcase },
 ];
+
+function AdminLink({ mobile }: { mobile?: boolean }) {
+  const { user } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    verificarAdmin(user.id).then(setIsAdmin).catch(() => setIsAdmin(false));
+  }, [user]);
+
+  if (!isAdmin) return null;
+
+  if (mobile) {
+    return (
+      <Link
+        href="/admin"
+        aria-label="Painel de administração"
+        className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/10 text-brand transition-colors hover:bg-brand hover:text-white"
+      >
+        <ShieldCheck size={16} />
+      </Link>
+    );
+  }
+
+  return null;
+}
 
 function isActive(pathname: string, href: string): boolean {
   return href === "/dashboard" ? pathname === href : pathname.startsWith(href);
@@ -142,6 +171,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <Logo small />
           </Link>
           <div className="flex items-center gap-2">
+            <AdminLink mobile />
             <ThemeToggle />
             <Link
               href="/dashboard/conta"
