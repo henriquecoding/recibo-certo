@@ -138,6 +138,7 @@ export interface UseQuizFiscalReturn {
   tempoRestante: number;
   mostrarExplicacao: boolean;
 
+  respostas: RespostaRegistada[];
   vantagens: VantagensEstado;
   eliminadas: number[];
   dicaVisivel: boolean;
@@ -372,6 +373,7 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
     respondida,
     tempoRestante,
     mostrarExplicacao,
+    respostas,
     vantagens,
     eliminadas,
     dicaVisivel,

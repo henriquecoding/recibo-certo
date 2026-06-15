@@ -554,6 +554,40 @@ export function Spinner({ size = 18, className }: IconProps) {
   );
 }
 
+// ─── Gamificação / engagement ───────────────────────────────
+export function Fire({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M12 22c-4.42 0-7-3.13-7-7 0-3.5 2.5-6.5 4-8 .5 2 2 3 2 3s1-2.5 2-4c1 2 2 4 2 4s1.5-1 2-3c1.5 2.5 2 4.5 2 6 0 4.5-2 9-5 9z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Lightbulb({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M9 18h6M10 21h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M12 2a7 7 0 00-4 12.7V16h8v-1.3A7 7 0 0012 2z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Star({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Zap({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 // ─── Marca do ícone (V2) ────────────────────────────────────
 export function LogoMark({ size = 28, className }: IconProps) {
   return (
