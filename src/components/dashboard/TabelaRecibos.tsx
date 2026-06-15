@@ -11,7 +11,7 @@ export default function TabelaRecibos({ recibos }: { recibos: Recibo[] }) {
   const recentes = recibos.slice(0, 6);
 
   return (
-    <div className="flex h-full flex-col rounded-4xl border border-stone-100 bg-white p-6 shadow-card">
+    <div className="flex h-full flex-col rounded-4xl border border-stone-100 bg-white p-6 shadow-card" style={{ contentVisibility: "auto", containIntrinsicSize: "0 400px" }}>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-stone-700">Recibos recentes</h2>
         <Link href="/dashboard/recibos" className="flex items-center gap-1 text-xs font-semibold text-brand hover:text-brand-dark">

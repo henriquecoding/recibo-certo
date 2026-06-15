@@ -127,6 +127,127 @@ export function emailSubscricaoAtivada(intervalo: "monthly" | "annual"): { subje
   };
 }
 
+export type NivelGuardiao = "aviso" | "preparacao" | "critico" | "ultrapassado";
+
+interface GuardiaoInput {
+  faturado: number;
+  limite: number;
+  restante: number;
+  percentagem: number;
+  nivel: NivelGuardiao;
+}
+
+const GUARDIAO_META: Record<NivelGuardiao, { label: string; cor: string; bgCor: string }> = {
+  aviso:        { label: "Aviso (80%)",        cor: "#D97706", bgCor: "#FFFBEB" },
+  preparacao:   { label: "Preparacao (90%)",   cor: "#EA580C", bgCor: "#FFF7ED" },
+  critico:      { label: "Critico (95%)",      cor: "#DC2626", bgCor: "#FEF2F2" },
+  ultrapassado: { label: "Limite ultrapassado", cor: "#991B1B", bgCor: "#FEF2F2" },
+};
+
+export function emailGuardiaoFiscal(input: GuardiaoInput): { subject: string; html: string } {
+  const { faturado, limite, restante, percentagem, nivel } = input;
+  const pct = Math.round(percentagem * 100);
+  const meta = GUARDIAO_META[nivel];
+  const fmtEur = (v: number) => v.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
+
+  const mensagem = nivel === "ultrapassado"
+    ? "Ultrapassaste o limite de isencao de IVA. Altera o regime no Portal das Financas para evitar coimas."
+    : nivel === "critico"
+    ? `Atingiste ${pct}% do limite. Prepara a alteracao de regime de IVA este mes.`
+    : nivel === "preparacao"
+    ? `Atingiste ${pct}% do limite. A isencao termina no mes seguinte a ultrapassagem — prepara-te.`
+    : `Ja faturaste ${pct}% do limite de isencao. Monitoriza de perto.`;
+
+  return {
+    subject: nivel === "ultrapassado"
+      ? "Limite de isencao de IVA ultrapassado"
+      : `Guardiao Fiscal: ${pct}% do limite de IVA`,
+    html: layout(`
+      <h2 style="margin:0 0 16px;font-size:20px;font-weight:700;color:${INK};">Guardiao Fiscal — ${meta.label}</h2>
+      <div style="margin:0 0 20px;padding:16px;border-radius:12px;background:${meta.bgCor};border:1px solid ${meta.cor}20;">
+        <p style="margin:0;font-size:14px;font-weight:600;color:${meta.cor};">${mensagem}</p>
+      </div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+        <tr>
+          <td style="padding:8px 0;font-size:13px;color:${MUTED};">Faturado este ano</td>
+          <td style="padding:8px 0;text-align:right;font-size:14px;font-weight:600;color:${INK};">${fmtEur(faturado)}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;font-size:13px;color:${MUTED};border-top:1px solid #F5F5F4;">Limite de isencao</td>
+          <td style="padding:8px 0;text-align:right;font-size:14px;font-weight:600;color:${INK};border-top:1px solid #F5F5F4;">${fmtEur(limite)}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;font-size:13px;color:${MUTED};border-top:1px solid #F5F5F4;">${nivel === "ultrapassado" ? "Excedido em" : "Faltam"}</td>
+          <td style="padding:8px 0;text-align:right;font-size:14px;font-weight:700;color:${meta.cor};border-top:1px solid #F5F5F4;">${fmtEur(restante)}</td>
+        </tr>
+      </table>
+      ${botao("Ver detalhes no painel", "https://recibocerto.pt/dashboard")}
+      <p style="margin:20px 0 0;font-size:12px;color:#A8A29E;text-align:center;">
+        Recebes este email porque tens alertas ativos no ReciboCerto Pro.
+      </p>
+    `),
+  };
+}
+
+export function emailAlertaIVA(faturado: number, limite: number, nivel: "aviso" | "critico"): { subject: string; html: string } {
+  const pct = Math.round((faturado / limite) * 100);
+  const subject = nivel === "critico"
+    ? `Alerta: atingiste ${pct}% do limite de isencao de IVA`
+    : `Aviso: ja faturaste ${pct}% do limite de IVA`;
+
+  const cor = nivel === "critico" ? "#DC2626" : "#D97706";
+  const bgCor = nivel === "critico" ? "#FEF2F2" : "#FFFBEB";
+
+  return {
+    subject,
+    html: layout(`
+      <h2 style="margin:0 0 16px;font-size:20px;font-weight:700;color:${INK};">Alerta de IVA — ${pct}%</h2>
+      <div style="margin:0 0 20px;padding:16px;border-radius:12px;background:${bgCor};border:1px solid ${cor}20;">
+        <p style="margin:0;font-size:14px;font-weight:600;color:${cor};">
+          ${nivel === "critico"
+            ? `Atingiste ${pct}% do limite de isencao. Prepara a alteracao de regime no Portal das Financas.`
+            : `Ja faturaste ${pct}% do limite. Monitoriza de perto a tua faturacao.`}
+        </p>
+      </div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+        <tr>
+          <td style="padding:8px 0;font-size:13px;color:${MUTED};">Faturado este ano</td>
+          <td style="padding:8px 0;text-align:right;font-size:14px;font-weight:600;color:${INK};">${faturado.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;font-size:13px;color:${MUTED};border-top:1px solid #F5F5F4;">Limite de isencao</td>
+          <td style="padding:8px 0;text-align:right;font-size:14px;font-weight:600;color:${INK};border-top:1px solid #F5F5F4;">${limite.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })}</td>
+        </tr>
+      </table>
+      ${botao("Ver detalhes no painel", "https://recibocerto.pt/dashboard")}
+      <p style="margin:20px 0 0;font-size:12px;color:#A8A29E;text-align:center;">
+        Recebes este email porque tens alertas ativos no ReciboCerto.
+      </p>
+    `),
+  };
+}
+
+export function emailAlertaSS(trimestre: string, valor: number, prazo: string): { subject: string; html: string } {
+  return {
+    subject: `Seguranca Social: ${valor.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })} a reservar — ${trimestre}`,
+    html: layout(`
+      <h2 style="margin:0 0 16px;font-size:20px;font-weight:700;color:${INK};">Contribuicao de Seguranca Social</h2>
+      <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:${MUTED};">
+        Com base nos teus recibos do <strong style="color:${INK};">${trimestre}</strong>, estimamos que deves reservar:
+      </p>
+      <div style="margin:0 0 20px;padding:20px;border-radius:12px;background:#F5F5F4;text-align:center;">
+        <p style="margin:0 0 4px;font-size:12px;color:${MUTED};">Valor estimado</p>
+        <p style="margin:0;font-size:28px;font-weight:700;color:${INK};">${valor.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })}</p>
+        <p style="margin:8px 0 0;font-size:12px;color:${MUTED};">Prazo: ${prazo}</p>
+      </div>
+      ${botao("Ver calculo detalhado", "https://recibocerto.pt/dashboard")}
+      <p style="margin:20px 0 0;font-size:11px;color:#A8A29E;text-align:center;">
+        Valor estimativo — confirma na Seguranca Social Direta.
+      </p>
+    `),
+  };
+}
+
 export function emailSubscricaoCancelada(): { subject: string; html: string } {
   return {
     subject: "Subscrição Pro cancelada — vamos sentir a tua falta",

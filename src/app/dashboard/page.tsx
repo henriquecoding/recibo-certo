@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useRecibos, resumir, type Recibo } from "@/lib/store/recibos";
 import { gerarInsights, saudeFiscal, type Insight, type SaudeFiscal } from "@/lib/insights";
@@ -9,14 +10,24 @@ import { Receipt, Warning, Check, ArrowRight, History, Calendar } from "@/compon
 import InfoTip from "@/components/ui/InfoTip";
 import ProHint from "@/components/ui/ProHint";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
-import ReceitaChart from "@/components/dashboard/ReceitaChart";
 import IvaProgresso from "@/components/dashboard/IvaProgresso";
 import PoupancaTrimestral from "@/components/dashboard/PoupancaTrimestral";
-import DistribuicaoDonut from "@/components/dashboard/DistribuicaoDonut";
+import GuardiaoRetencao from "@/components/dashboard/GuardiaoRetencao";
+import GuardiaoSS from "@/components/dashboard/GuardiaoSS";
 import TabelaRecibos from "@/components/dashboard/TabelaRecibos";
 import MiniCalendario from "@/components/dashboard/MiniCalendario";
 import Onboarding from "@/components/dashboard/Onboarding";
 import PartnerSpot from "@/components/dashboard/PartnerSpot";
+
+const ReceitaChart = dynamic(() => import("@/components/dashboard/ReceitaChart"), {
+  ssr: false,
+  loading: () => <div className="h-64 animate-pulse rounded-4xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900" />,
+});
+
+const DistribuicaoDonut = dynamic(() => import("@/components/dashboard/DistribuicaoDonut"), {
+  ssr: false,
+  loading: () => <div className="h-64 animate-pulse rounded-4xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900" />,
+});
 
 function mesAtual(recibos: Recibo[]): Recibo[] {
   const agora = new Date();
@@ -117,13 +128,15 @@ export default function VisaoGeral() {
           {/* ── Banner: importar recibos locais ──────────────────── */}
           {naNuvem && locaisPorImportar > 0 && (
             <div className="col-span-12">
-              <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-brand/30 bg-brand-light px-4 py-3">
-                <span className="flex-shrink-0 text-brand"><History size={18} /></span>
-                <p className="min-w-0 flex-1 text-sm text-brand-dark">
-                  Tens {locaisPorImportar} {locaisPorImportar === 1 ? "recibo guardado" : "recibos guardados"} neste
-                  dispositivo. Queres trazê-{locaisPorImportar === 1 ? "lo" : "los"} para a tua conta na nuvem?
-                </p>
-                <div className="flex flex-shrink-0 gap-2">
+              <div className="rounded-2xl border border-brand/30 bg-brand-light px-4 py-3">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 flex-shrink-0 text-brand"><History size={18} /></span>
+                  <p className="text-sm text-brand-dark">
+                    Tens {locaisPorImportar} {locaisPorImportar === 1 ? "recibo guardado" : "recibos guardados"} neste
+                    dispositivo. Queres trazê-{locaisPorImportar === 1 ? "lo" : "los"} para a tua conta na nuvem?
+                  </p>
+                </div>
+                <div className="mt-3 flex gap-2 pl-[30px]">
                   <button type="button" onClick={importarLocais}
                     className="rounded-xl bg-brand px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-dark">
                     Trazer para a nuvem
@@ -243,6 +256,16 @@ export default function VisaoGeral() {
 
           <div className="col-span-12 lg:col-span-4">
             <PoupancaTrimestral recibos={recibos} />
+          </div>
+
+          {/* ══ ROW 3b: Guardiões (Retenção + Seg. Social) ══════ */}
+
+          <div className="col-span-12 sm:col-span-6">
+            <GuardiaoRetencao recibos={recibos} />
+          </div>
+
+          <div className="col-span-12 sm:col-span-6">
+            <GuardiaoSS recibos={recibos} />
           </div>
 
           {/* ══ ROW 4: Tabela de recibos + Insights ══════════════ */}

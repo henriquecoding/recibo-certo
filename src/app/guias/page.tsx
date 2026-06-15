@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Reveal from "@/components/ui/Reveal";
-import { ArrowRight, FileSign, Calculator, ShieldCheck, Calendar, Receipt, Building, Flag, ChevronRight } from "@/components/ui/Icons";
+import { ArrowRight, FileSign, Calculator, ShieldCheck, Calendar, Receipt, Building, Flag, ChevronRight, Wallet } from "@/components/ui/Icons";
 
 export const metadata: Metadata = {
   title: "Guias para trabalhadores independentes 2026 | ReciboCerto",
@@ -114,6 +114,14 @@ const GUIAS = [
     icon: Calculator,
     prioridade: false,
   },
+  {
+    href: "/guias/merchant-of-record",
+    titulo: "Merchant of Record (MoR)",
+    descricao: "Paddle, Lemon Squeezy e como emitir 1 recibo/mês.",
+    tempo: 6,
+    icon: Wallet,
+    prioridade: false,
+  },
 ];
 
 export default function GuiasPage() {
@@ -187,6 +195,7 @@ export default function GuiasPage() {
             { label: "Ato isolado ou abrir atividade?", href: "/ferramentas/ato-isolado", desc: "Decisor em 4 perguntas" },
             { label: "Calculadora de regime simplificado", href: "/ferramentas/regime-simplificado", desc: "IRS estimado e taxa efetiva" },
             { label: "Classificar atividade fiscal", href: "/ferramentas/classificar-atividade", desc: "Art. 151.º vs Categoria B" },
+            { label: "Wizard recibo MoR", href: "/ferramentas/payout-mor", desc: "Recibo ao Paddle/Lemon Squeezy" },
           ].map((f) => (
             <Link
               key={f.href}
