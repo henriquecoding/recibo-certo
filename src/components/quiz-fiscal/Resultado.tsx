@@ -1,8 +1,7 @@
 "use client";
 
 import Reveal from "@/components/ui/Reveal";
-import Button from "@/components/ui/Button";
-import { Check, Close, Rocket, LayoutGrid, ChartProjection, Sparkle, ShieldCheck } from "@/components/ui/Icons";
+import { Check, Close, Rocket, LayoutGrid, ChartProjection, Sparkle, ShieldCheck, ArrowRight } from "@/components/ui/Icons";
 import { resolveQuizIcon } from "./icon-map";
 import { META_CATEGORIA_QUIZ } from "@/lib/quiz-fiscal";
 import type { UseQuizFiscalReturn, ClassificacaoQuiz } from "@/hooks/useQuizFiscal";
@@ -30,13 +29,13 @@ export default function Resultado({ quiz }: ResultadoProps) {
       {/* Hero */}
       <Reveal>
         <div className="text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-brand-light text-brand-dark">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-quiz-sage-light text-quiz-forest-deep dark:bg-quiz-olive/30 dark:text-quiz-sage-light">
             <ClassIcon size={32} />
           </div>
-          <h1 className="mt-3 font-display text-2xl font-semibold text-ink dark:text-stone-100 sm:text-3xl">
+          <h1 className="mt-3 font-display text-2xl font-semibold text-quiz-forest-deep dark:text-quiz-parchment sm:text-3xl">
             {classificacao.titulo}
           </h1>
-          <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-stone-500 dark:text-stone-400">
+          <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-quiz-sage-dark dark:text-quiz-sage">
             {classificacao.mensagem}
           </p>
         </div>
@@ -44,21 +43,21 @@ export default function Resultado({ quiz }: ResultadoProps) {
 
       {/* Score */}
       <Reveal delay={0.05}>
-        <div className="mt-8 rounded-3xl border border-stone-200 bg-white p-6 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-7">
+        <div className="mt-8 rounded-2xl border-2 border-quiz-parchment-mid bg-quiz-parchment-warm p-6 shadow-md dark:border-quiz-olive/40 dark:bg-quiz-forest/60 sm:p-7">
           <div className="flex items-center justify-center gap-6">
             <div className="text-center">
-              <div className="font-display text-4xl font-semibold text-brand-dark dark:text-brand-light sm:text-5xl">
+              <div className="font-display text-4xl font-semibold text-quiz-olive dark:text-quiz-sage-light sm:text-5xl">
                 {acertos}
-                <span className="text-xl text-stone-300 dark:text-stone-600">/{totalPerguntas}</span>
+                <span className="text-xl text-quiz-sage/50 dark:text-quiz-sage/40">/{totalPerguntas}</span>
               </div>
-              <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-stone-400">
+              <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-quiz-sage dark:text-quiz-sage">
                 respostas certas
               </p>
             </div>
-            <div className="h-12 w-px bg-stone-200 dark:bg-stone-700" />
+            <div className="h-12 w-px bg-quiz-parchment-mid dark:bg-quiz-olive/40" />
             <div className="text-center">
-              <div className="font-display text-4xl font-semibold text-ink dark:text-stone-100 sm:text-5xl">{percentagem}%</div>
-              <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-stone-400">
+              <div className="font-display text-4xl font-semibold text-quiz-forest-deep dark:text-quiz-parchment sm:text-5xl">{percentagem}%</div>
+              <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-quiz-sage dark:text-quiz-sage">
                 aproveitamento
               </p>
             </div>
@@ -70,28 +69,28 @@ export default function Resultado({ quiz }: ResultadoProps) {
       {porCategoria.length > 0 && (
         <Reveal delay={0.1}>
           <div className="mt-6">
-            <h2 className="mb-3 font-display text-base font-semibold text-ink dark:text-stone-100">Desempenho por tema</h2>
+            <h2 className="mb-3 font-display text-base font-semibold text-quiz-forest-deep dark:text-quiz-parchment">Desempenho por tema</h2>
             <div className="flex flex-col gap-2.5">
               {porCategoria.map((cat) => {
                 const meta = META_CATEGORIA_QUIZ[cat.categoria];
                 const CatIcon = resolveQuizIcon(meta.icon);
                 const pct = cat.total > 0 ? Math.round((cat.acertos / cat.total) * 100) : 0;
                 return (
-                  <div key={cat.categoria} className="rounded-2xl border border-stone-200 bg-white p-3.5 shadow-card dark:border-stone-700 dark:bg-stone-900">
+                  <div key={cat.categoria} className="rounded-2xl border-2 border-quiz-parchment-mid bg-quiz-parchment-warm p-3.5 shadow-sm dark:border-quiz-olive/40 dark:bg-quiz-forest/60">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-2 font-medium text-ink dark:text-stone-100">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-cream text-brand-dark dark:bg-stone-800">
+                      <span className="flex items-center gap-2 font-medium text-quiz-forest-deep dark:text-quiz-parchment">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-quiz-sage text-white dark:bg-quiz-sage/80">
                           <CatIcon size={14} />
                         </span>
                         {meta.label}
                       </span>
-                      <span className="font-mono text-xs font-semibold text-stone-500 dark:text-stone-400">
+                      <span className="font-mono text-xs font-semibold text-quiz-sage dark:text-quiz-sage">
                         {cat.acertos}/{cat.total}
                       </span>
                     </div>
-                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
+                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-quiz-parchment-border dark:bg-quiz-olive/40">
                       <div
-                        className="h-full rounded-full bg-brand transition-all duration-700"
+                        className="h-full rounded-full bg-quiz-olive transition-all duration-700 dark:bg-quiz-sage-dark"
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -106,7 +105,7 @@ export default function Resultado({ quiz }: ResultadoProps) {
       {/* Review */}
       <Reveal delay={0.15}>
         <div className="mt-6">
-          <h2 className="mb-3 font-display text-base font-semibold text-ink dark:text-stone-100">Revisao</h2>
+          <h2 className="mb-3 font-display text-base font-semibold text-quiz-forest-deep dark:text-quiz-parchment">Revisao</h2>
           <div className="flex flex-col gap-2.5">
             {respostas.map((resp, i) => {
               const item = sessao[i];
@@ -117,20 +116,22 @@ export default function Resultado({ quiz }: ResultadoProps) {
               return (
                 <div
                   key={resp.perguntaId}
-                  className={`rounded-2xl border p-3.5 text-sm ${
-                    resp.acertou ? "border-brand/20 bg-brand-light/40" : "border-clay-border bg-clay-bg/60"
+                  className={`rounded-2xl border-2 p-3.5 text-sm ${
+                    resp.acertou
+                      ? "border-quiz-sage-border/60 bg-quiz-sage-light/60 dark:border-quiz-sage-dark/30 dark:bg-quiz-olive/20"
+                      : "border-clay-border bg-clay-bg/60"
                   }`}
                 >
                   <div className="flex items-start gap-2.5">
                     <span
                       className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-                        resp.acertou ? "bg-brand text-white" : "bg-clay text-white"
+                        resp.acertou ? "bg-quiz-sage-dark text-white" : "bg-clay text-white"
                       }`}
                     >
                       {resp.acertou ? <Check size={11} /> : <Close size={11} />}
                     </span>
                     <div className="flex-1">
-                      <p className="font-medium leading-snug text-ink dark:text-stone-100">{item.pergunta.pergunta}</p>
+                      <p className="font-medium leading-snug text-quiz-forest-deep dark:text-quiz-parchment">{item.pergunta.pergunta}</p>
                       {!resp.acertou && (
                         <div className="mt-1.5 space-y-0.5 text-xs">
                           {opcaoEscolhida && (
@@ -139,7 +140,7 @@ export default function Resultado({ quiz }: ResultadoProps) {
                               {opcaoEscolhida.texto}
                             </p>
                           )}
-                          <p className="text-brand-dark dark:text-brand-light">
+                          <p className="text-quiz-olive dark:text-quiz-sage-light">
                             <span className="font-semibold">Resposta certa: </span>
                             {opcaoCorreta.texto}
                           </p>
@@ -157,17 +158,25 @@ export default function Resultado({ quiz }: ResultadoProps) {
       {/* Actions */}
       <Reveal delay={0.2}>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Button variant="primary" size="lg" onClick={jogarNovamente} className="flex-1">
+          <button
+            type="button"
+            onClick={jogarNovamente}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-quiz-forest px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-quiz-forest-deep active:scale-[0.98] dark:bg-quiz-olive dark:hover:bg-quiz-sage-dark"
+          >
             <Rocket size={16} />
             Jogar novamente
-          </Button>
-          <Button variant="secondary" size="lg" onClick={reiniciar} className="flex-1">
+          </button>
+          <button
+            type="button"
+            onClick={reiniciar}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-quiz-parchment-mid bg-quiz-parchment-warm px-6 py-3.5 text-sm font-semibold text-quiz-forest-deep shadow-md transition-all hover:border-quiz-sage/60 hover:shadow-lg active:scale-[0.98] dark:border-quiz-olive/40 dark:bg-quiz-forest/60 dark:text-quiz-parchment dark:hover:border-quiz-sage/50"
+          >
             <LayoutGrid size={16} />
             Escolher outro tema
-          </Button>
+          </button>
         </div>
         {modo === "normal" && (
-          <p className="mt-3 text-center text-xs text-stone-400">
+          <p className="mt-3 text-center text-xs text-quiz-sage">
             Queres entender o porque de cada resposta? Experimenta o Modo Guiado.
           </p>
         )}
