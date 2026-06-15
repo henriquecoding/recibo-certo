@@ -28,17 +28,17 @@ function VantagemBtn({ label, usada, disabled, icon, onClick }: VantagemBtnProps
       disabled={usada || disabled}
       onClick={onClick}
       aria-label={label}
-      className={`group flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition-all duration-200 ${
+      className={`group flex items-center gap-1.5 rounded-xl border-2 px-3 py-2 text-xs font-semibold transition-all duration-200 ${
         usada
-          ? "border-stone-100 bg-stone-50 text-stone-300 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-600"
+          ? "border-quiz-parchment-mid bg-quiz-parchment text-quiz-sage dark:border-quiz-olive/30 dark:bg-quiz-forest/40 dark:text-quiz-sage/60"
           : disabled
-          ? "border-stone-200 bg-stone-50 text-stone-400 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-500"
-          : "border-brand/30 bg-white text-brand-dark shadow-card hover:border-brand hover:shadow-lift active:scale-[0.97] dark:border-brand/20 dark:bg-stone-900 dark:text-brand-light"
+          ? "border-quiz-parchment-mid bg-quiz-parchment-warm text-quiz-sage dark:border-quiz-olive/30 dark:bg-quiz-forest/40 dark:text-quiz-sage/60"
+          : "border-quiz-sage/40 bg-quiz-parchment-warm text-quiz-forest-deep shadow-md hover:border-quiz-olive hover:shadow-lg active:scale-[0.97] dark:border-quiz-sage-dark/60 dark:bg-quiz-olive/30 dark:text-quiz-parchment dark:hover:border-quiz-sage"
       }`}
     >
       {icon}
       <span className="hidden sm:inline">{label}</span>
-      {usada && <span className="text-[10px] text-stone-400 dark:text-stone-600">usada</span>}
+      {usada && <span className="text-[10px] text-quiz-sage/70 dark:text-quiz-sage/50">usada</span>}
     </button>
   );
 }
@@ -54,7 +54,7 @@ export default function VantagensBar({
 }: VantagensBarProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+      <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-quiz-sage dark:text-quiz-sage">
         Vantagens
       </span>
       <VantagemBtn

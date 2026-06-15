@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Button from "@/components/ui/Button";
 import Reveal from "@/components/ui/Reveal";
 import { Clock, Sparkle, Check, ArrowRight, LayoutGrid } from "@/components/ui/Icons";
 import { resolveQuizIcon } from "./icon-map";
@@ -49,14 +48,14 @@ export default function SelecaoModo({ onComecar }: SelecaoModoProps) {
     <div className="mx-auto max-w-4xl px-4 py-10 sm:py-14">
       <Reveal>
         <div className="text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-light px-3 py-1 text-xs font-semibold text-brand-dark">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-quiz-sage-border bg-quiz-sage-light px-3 py-1 text-xs font-semibold text-quiz-forest-deep dark:border-quiz-olive dark:bg-quiz-olive/30 dark:text-quiz-sage-light">
             <Sparkle size={13} />
             {TOTAL_PERGUNTAS} perguntas · baseado no sistema fiscal portugues
           </span>
-          <h1 className="mt-4 font-display text-3xl font-semibold text-ink dark:text-stone-100 sm:text-4xl">
+          <h1 className="mt-4 font-display text-3xl font-semibold text-quiz-forest-deep dark:text-quiz-parchment sm:text-4xl">
             Quiz Fiscal
           </h1>
-          <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-stone-500 dark:text-stone-400 sm:text-base">
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-quiz-sage-dark dark:text-quiz-sage sm:text-base">
             Testa os teus conhecimentos sobre IRS, IVA, Seguranca Social e o regime
             de trabalhador independente em Portugal — com referencias legais reais.
           </p>
@@ -65,7 +64,9 @@ export default function SelecaoModo({ onComecar }: SelecaoModoProps) {
 
       <Reveal delay={0.05}>
         <div className="mt-10">
-          <h2 className="mb-3 font-display text-lg font-semibold text-ink dark:text-stone-100">1. Escolhe o modo</h2>
+          <h2 className="mb-3 font-display text-lg font-semibold text-quiz-forest-deep dark:text-quiz-parchment">
+            1. Escolhe o modo
+          </h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <ModoCard
               ativo={modo === "normal"}
@@ -89,7 +90,9 @@ export default function SelecaoModo({ onComecar }: SelecaoModoProps) {
 
       <Reveal delay={0.1}>
         <div className="mt-10">
-          <h2 className="mb-3 font-display text-lg font-semibold text-ink dark:text-stone-100">2. Escolhe um tema</h2>
+          <h2 className="mb-3 font-display text-lg font-semibold text-quiz-forest-deep dark:text-quiz-parchment">
+            2. Escolhe um tema
+          </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <CategoriaCard
               ativo={categoria === "todas"}
@@ -119,18 +122,17 @@ export default function SelecaoModo({ onComecar }: SelecaoModoProps) {
 
       <Reveal delay={0.15}>
         <div className="mt-10 flex flex-col items-center gap-3">
-          <Button
-            variant="primary"
-            size="lg"
+          <button
+            type="button"
             disabled={!modo}
             onClick={handleComecar}
-            className="w-full sm:w-auto sm:px-10"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-quiz-forest px-10 py-3.5 text-sm font-semibold text-white shadow-lg transition-all duration-200 hover:bg-quiz-forest-deep active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-quiz-olive dark:hover:bg-quiz-sage-dark sm:w-auto"
           >
             Comecar Quiz
             <ArrowRight size={16} />
-          </Button>
+          </button>
           {!modo && (
-            <p className="text-xs text-stone-400">Escolhe um modo para continuar.</p>
+            <p className="text-xs text-quiz-sage dark:text-quiz-sage">Escolhe um modo para continuar.</p>
           )}
         </div>
       </Reveal>
@@ -157,36 +159,40 @@ function ModoCard({
     <button
       type="button"
       onClick={onClick}
-      className={`group relative flex flex-col gap-3 rounded-3xl border p-5 text-left transition-all duration-200 ${
+      className={`group relative flex flex-col gap-3 rounded-2xl border-2 p-5 text-left transition-all duration-200 ${
         ativo
-          ? "border-brand bg-brand-light shadow-glow dark:bg-brand-light/10"
-          : "border-stone-200 bg-white shadow-card hover:border-brand/40 hover:shadow-lift dark:border-stone-700 dark:bg-stone-900"
+          ? "border-quiz-olive bg-quiz-sage-light shadow-lg dark:border-quiz-sage-dark dark:bg-quiz-olive/30"
+          : "border-quiz-parchment-mid bg-quiz-parchment-warm shadow-md hover:border-quiz-sage hover:shadow-lg dark:border-quiz-olive/40 dark:bg-quiz-forest/60 dark:hover:border-quiz-sage/60"
       }`}
     >
       <div className="flex items-center justify-between">
         <span
-          className={`flex h-10 w-10 items-center justify-center rounded-2xl ${
-            ativo ? "bg-brand text-white" : "bg-cream text-brand-dark dark:bg-stone-800"
+          className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+            ativo
+              ? "bg-quiz-olive text-white dark:bg-quiz-sage-dark"
+              : "bg-quiz-parchment-border text-quiz-forest-deep dark:bg-quiz-olive/50 dark:text-quiz-parchment"
           }`}
         >
           {icon}
         </span>
         {ativo && (
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand text-white">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-quiz-olive text-white dark:bg-quiz-sage-dark">
             <Check size={12} />
           </span>
         )}
       </div>
       <div>
-        <h3 className="font-display text-base font-semibold text-ink dark:text-stone-100">{titulo}</h3>
-        <p className="mt-1 text-sm leading-relaxed text-stone-500 dark:text-stone-400">{descricao}</p>
+        <h3 className="font-display text-base font-semibold text-quiz-forest-deep dark:text-quiz-parchment">{titulo}</h3>
+        <p className="mt-1 text-sm leading-relaxed text-quiz-sage-dark dark:text-quiz-sage">{descricao}</p>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {tags.map((tag) => (
           <span
             key={tag}
             className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-              ativo ? "bg-white/70 text-brand-dark dark:bg-white/20 dark:text-brand-light" : "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400"
+              ativo
+                ? "bg-quiz-olive/10 text-quiz-olive dark:bg-quiz-sage-dark/30 dark:text-quiz-sage-light"
+                : "bg-quiz-parchment text-quiz-sage-dark dark:bg-quiz-forest/80 dark:text-quiz-sage"
             }`}
           >
             {tag}
@@ -216,24 +222,26 @@ function CategoriaCard({
     <button
       type="button"
       onClick={onClick}
-      className={`flex flex-col items-start gap-2 rounded-2xl border p-3.5 text-left transition-all duration-200 ${
+      className={`flex flex-col items-start gap-2 rounded-2xl border-2 p-3.5 text-left transition-all duration-200 ${
         ativo
-          ? "border-brand bg-brand-light shadow-glow dark:bg-brand-light/10"
+          ? "border-quiz-olive bg-quiz-sage-light shadow-lg dark:border-quiz-sage-dark dark:bg-quiz-olive/30"
           : destaque
-          ? "border-brand/30 bg-white shadow-card hover:border-brand/50 dark:border-brand/20 dark:bg-stone-900"
-          : "border-stone-200 bg-white shadow-card hover:border-brand/30 hover:shadow-lift dark:border-stone-700 dark:bg-stone-900"
+          ? "border-quiz-sage/40 bg-quiz-parchment-warm shadow-md hover:border-quiz-sage hover:shadow-lg dark:border-quiz-olive/40 dark:bg-quiz-forest/60"
+          : "border-quiz-parchment-mid bg-quiz-parchment-warm shadow-md hover:border-quiz-sage/60 hover:shadow-lg dark:border-quiz-olive/30 dark:bg-quiz-forest/60"
       }`}
     >
       <span
         className={`flex h-8 w-8 items-center justify-center rounded-xl ${
-          ativo ? "bg-brand text-white" : "bg-cream text-brand-dark dark:bg-stone-800"
+          ativo
+            ? "bg-quiz-olive text-white dark:bg-quiz-sage-dark"
+            : "bg-quiz-parchment-border text-quiz-forest-deep dark:bg-quiz-olive/50 dark:text-quiz-parchment"
         }`}
       >
         {icon}
       </span>
       <div>
-        <h3 className="text-sm font-semibold leading-tight text-ink dark:text-stone-100">{titulo}</h3>
-        <p className="mt-0.5 text-[11px] text-stone-400">{total} perguntas</p>
+        <h3 className="text-sm font-semibold leading-tight text-quiz-forest-deep dark:text-quiz-parchment">{titulo}</h3>
+        <p className="mt-0.5 text-[11px] text-quiz-sage dark:text-quiz-sage">{total} perguntas</p>
       </div>
     </button>
   );
