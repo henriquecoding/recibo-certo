@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Reveal from "@/components/ui/Reveal";
-import { ArrowRight, Calculator, Receipt, Search, Wallet } from "@/components/ui/Icons";
+import { ArrowRight, Calculator, Receipt, Search, Wallet, Sparkle } from "@/components/ui/Icons";
 
 export const metadata: Metadata = {
   title: "Ferramentas para trabalhadores independentes 2026 | ReciboCerto",
@@ -45,6 +45,13 @@ const FERRAMENTAS = [
     descricao: "Configura o recibo verde para payout do Paddle ou Lemon Squeezy em 5 passos. IVA, retenção e NIF preenchidos.",
     icon: Wallet,
     badge: "Wizard",
+  },
+  {
+    href: "/quiz-fiscal",
+    titulo: "Quiz Fiscal",
+    descricao: "60 perguntas sobre IRS, IVA, Segurança Social e mais — com base legal e fontes oficiais. Testa os teus conhecimentos.",
+    icon: Sparkle,
+    badge: "Quiz",
   },
 ];
 
