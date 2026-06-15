@@ -7,75 +7,122 @@ import { type Recibo } from "@/lib/store/recibos";
 import { EASE } from "@/lib/motion";
 import Link from "next/link";
 
+// ── Função pura exportável para testes ───────────────────────────────────────
+export function projetarDataLimite(
+  faturado: number,
+  limite: number,
+  mesAtual: number, // 0-indexed (Date.getMonth())
+): Date | null {
+  if (faturado >= limite) return null;
+  const mesesDecorridos = mesAtual + 1;
+  if (mesesDecorridos <= 0) return null;
+  const mediaMensal = faturado / mesesDecorridos;
+  if (mediaMensal <= 0) return null;
+  const mesesRestantes = Math.ceil((limite - faturado) / mediaMensal);
+  if (mesesRestantes <= 0) return null;
+  const hoje = new Date();
+  return new Date(hoje.getFullYear(), hoje.getMonth() + mesesRestantes, 1);
+}
+
+// ── 6 níveis de alerta (ordem de precedência) ────────────────────────────────
+type Nivel = "urgente" | "critico" | "alerta" | "preparacao" | "aviso" | "ok";
+
+function calcularNivel(faturado: number, limite: number, limiteExcesso: number): Nivel {
+  if (faturado >= limiteExcesso)         return "urgente";
+  if (faturado >= limite * 0.95)         return "critico";
+  if (faturado >= limite)                return "alerta";
+  if (faturado >= limite * 0.90)         return "preparacao";
+  if (faturado >= limite * 0.80)         return "aviso";
+  return "ok";
+}
+
+const MENSAGENS: Record<Nivel, string> = {
+  urgente:    "Faturação muito acima do limite — risco de auditoria fiscal. Age já.",
+  critico:    "Atingiste 95 % do limite — altera o regime de IVA no Portal das Finanças este mês.",
+  alerta:     "Ultrapassaste o limite. Altera o regime imediatamente para evitar coimas.",
+  preparacao: "Atingiste 90 % — prepara a alteração de regime. A isenção termina no mês seguinte à ultrapassagem.",
+  aviso:      "Atingiste 80 % do limite de isenção de IVA. Monitoriza de perto.",
+  ok:         "",
+};
+
+const BADGE: Partial<Record<Nivel, { label: string; cls: string }>> = {
+  urgente:    { label: "Urgente",     cls: "text-clay-text" },
+  critico:    { label: "Crítico",     cls: "text-clay-text" },
+  alerta:     { label: "Alerta",      cls: "text-alert-text" },
+  preparacao: { label: "Preparação",  cls: "text-alert-text" },
+  aviso:      { label: "Aviso",       cls: "text-amber-600 dark:text-amber-400" },
+};
+
 export default function IvaProgresso({ recibos }: { recibos: Recibo[] }) {
   const ano = new Date().getFullYear();
+  const mesAtual = new Date().getMonth();
+
   const faturado = recibos
     .filter((r) => new Date(r.data + "T00:00:00").getFullYear() === ano)
     .reduce((a, r) => a + r.valor, 0);
 
-  const limite = IVA_ISENCAO_LIMITE.value;
+  const limite       = IVA_ISENCAO_LIMITE.value;
   const limiteExcesso = IVA_ISENCAO_EXCESSO.value;
-  const alerta80 = limite * 0.8;
+  const nivel        = calcularNivel(faturado, limite, limiteExcesso);
+  const restante     = Math.max(0, limite - faturado);
+  const pctv         = Math.min(100, (faturado / limite) * 100);
 
-  const pctv = Math.min(100, (faturado / limite) * 100);
-  const restante = Math.max(0, limite - faturado);
+  // Data projetada — só para aviso e preparacao
+  const dataProjetada =
+    nivel === "aviso" || nivel === "preparacao"
+      ? projetarDataLimite(faturado, limite, mesAtual)
+      : null;
 
-  // Nível 3 — URGENTE: excedeu 18 750 € — mudança imediata
-  const nivelUrgente = faturado >= limiteExcesso;
-  // Nível 2 — ALERTA: entre 15 000 € e 18 750 €
-  const nivelAlerta = !nivelUrgente && faturado >= limite;
-  // Nível 1 — AVISO: entre 12 000 € e 15 000 €
-  const nivelAviso = !nivelAlerta && !nivelUrgente && faturado >= alerta80;
+  // ── Tokens de cor por nível ─────────────────────────────────────────────
+  const barColor =
+    nivel === "urgente" || nivel === "critico" ? "bg-clay-text" :
+    nivel === "alerta"                         ? "bg-alert-text" :
+    nivel === "preparacao"                     ? "bg-alert-text" :
+    nivel === "aviso"                          ? "bg-amber-400"  :
+    "bg-brand";
 
-  const barColor = nivelUrgente
-    ? "bg-clay-text"
-    : nivelAlerta
-    ? "bg-alert-text"
-    : nivelAviso
-    ? "bg-amber-400"
-    : "bg-brand";
+  const borderBg =
+    nivel === "urgente" || nivel === "critico"
+      ? "border-clay-text/30 bg-clay-bg dark:bg-red-950/20"
+      : nivel === "alerta" || nivel === "preparacao" || nivel === "aviso"
+      ? "border-alert-text/30 bg-alert-bg dark:bg-amber-950/20"
+      : "border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900";
 
-  const textColor = nivelUrgente
-    ? "text-clay-text"
-    : nivelAlerta
-    ? "text-alert-text"
-    : nivelAviso
-    ? "text-amber-600 dark:text-amber-400"
-    : "text-brand";
-
-  const mensagem = nivelUrgente
-    ? "Passas ao regime normal de IVA imediatamente — age já."
-    : nivelAlerta
-    ? `Ultrapassaste ${fmt(limite)} — passas ao regime normal de IVA em janeiro.`
-    : nivelAviso
-    ? `Faltam ${fmt(restante)} para o limite — prepara-te para cobrar IVA.`
-    : `Faltam ${fmt(restante)} para teres de cobrar IVA.`;
+  const badge = BADGE[nivel];
+  const mensagem = MENSAGENS[nivel];
 
   return (
-    <div className={`rounded-4xl border p-6 shadow-card ${
-      nivelUrgente
-        ? "border-clay-text/30 bg-clay-bg dark:bg-red-950/20"
-        : nivelAlerta
-        ? "border-alert-text/30 bg-alert-bg dark:bg-amber-950/20"
-        : "border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900"
-    }`}>
+    <div className={`rounded-4xl border p-6 shadow-card ${borderBg}`}>
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-sm font-semibold text-stone-700 dark:text-stone-300">
           Limite de isenção de IVA
         </h2>
-        {nivelUrgente && (
-          <span className="text-xs font-bold text-clay-text uppercase tracking-wide">Urgente</span>
-        )}
-        {nivelAlerta && (
-          <span className="text-xs font-bold text-alert-text uppercase tracking-wide">Alerta</span>
-        )}
-        {nivelAviso && (
-          <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">Aviso</span>
+        {badge && (
+          <span className={`text-xs font-bold uppercase tracking-wide ${badge.cls}`}>
+            {badge.label}
+          </span>
         )}
       </div>
-      <p className={`mb-4 text-xs ${nivelUrgente || nivelAlerta ? "font-medium " + textColor : "text-stone-400"}`}>
-        {mensagem}
-      </p>
+
+      {mensagem && (
+        <p className={`mb-4 text-xs font-medium leading-relaxed ${
+          nivel === "urgente" || nivel === "critico" ? "text-clay-text" :
+          nivel === "alerta"  || nivel === "preparacao" ? "text-alert-text" :
+          "text-amber-600 dark:text-amber-400"
+        }`}>
+          {mensagem}
+        </p>
+      )}
+
+      {/* Data projetada de ultrapassagem */}
+      {dataProjetada && (
+        <p className="mb-3 text-xs text-stone-400">
+          Ao ritmo atual, ultrapassas o limite em{" "}
+          <span className="font-semibold text-amber-600 dark:text-amber-400">
+            {dataProjetada.toLocaleDateString("pt-PT", { month: "long", year: "numeric" })}
+          </span>
+        </p>
+      )}
 
       <div className="mb-2 flex items-baseline justify-between">
         <span className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100">
@@ -84,26 +131,43 @@ export default function IvaProgresso({ recibos }: { recibos: Recibo[] }) {
         <span className="text-xs text-stone-400">de {fmt(limite)}</span>
       </div>
 
-      <div className="h-2.5 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
-        <m.div
-          initial={{ width: "0%" }}
-          whileInView={{ width: `${pctv}%` }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, ease: EASE }}
-          className={`h-full rounded-full ${barColor}`}
-        />
-      </div>
-      <div className={`mt-2 text-right text-xs font-semibold ${textColor}`}>
-        {pctv.toFixed(0).replace(".", ",")}%
+      {/* Barra de progresso com marcadores de limiar */}
+      <div className="relative">
+        <div className="h-2.5 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
+          <m.div
+            initial={{ width: "0%" }}
+            whileInView={{ width: `${pctv}%` }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, ease: EASE }}
+            className={`h-full rounded-full ${barColor}`}
+          />
+        </div>
+        {/* Marcadores: 80%, 90%, 95% */}
+        {[80, 90, 95].map((p) => (
+          <div
+            key={p}
+            className="absolute top-0 h-2.5 w-px bg-stone-300 dark:bg-stone-600"
+            style={{ left: `${p}%` }}
+          />
+        ))}
       </div>
 
-      {(nivelUrgente || nivelAlerta || nivelAviso) && (
-        <div className="mt-3 pt-3 border-t border-stone-100 dark:border-stone-800">
-          <Link
-            href="/guias/iva-recibos-verdes"
-            className="text-xs text-brand hover:underline font-semibold"
-          >
-            Ver guia de IVA →
+      <div className="mt-1 flex justify-between text-[10px] text-stone-400">
+        <span />
+        <span style={{ position: "absolute", left: "calc(80% - 10px)", marginTop: "2px" }}>80%</span>
+        <span style={{ position: "absolute", left: "calc(90% - 10px)", marginTop: "2px" }}>90%</span>
+        <span style={{ position: "absolute", left: "calc(95% - 10px)", marginTop: "2px" }}>95%</span>
+        <span className="ml-auto">{pctv.toFixed(0)}%</span>
+      </div>
+
+      {nivel !== "ok" && (
+        <div className="mt-3 pt-3 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between">
+          <span className="text-xs text-stone-400">
+            {nivel === "urgente" || nivel === "alerta" ? "Excedido em" : "Faltam"}{" "}
+            <strong className="text-stone-600 dark:text-stone-300">{fmt(restante)}</strong>
+          </span>
+          <Link href="/guias/iva-recibos-verdes" className="text-xs font-semibold text-brand hover:underline">
+            Ver guia →
           </Link>
         </div>
       )}

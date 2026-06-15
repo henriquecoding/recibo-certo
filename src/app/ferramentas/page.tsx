@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Reveal from "@/components/ui/Reveal";
-import { ArrowRight, Calculator, Receipt, Search } from "@/components/ui/Icons";
+import { ArrowRight, Calculator, Receipt, Search, Wallet } from "@/components/ui/Icons";
 
 export const metadata: Metadata = {
   title: "Ferramentas para trabalhadores independentes 2026 | ReciboCerto",
@@ -38,6 +38,13 @@ const FERRAMENTAS = [
     descricao: "Pesquisa a tua profissão e descobre a retenção na fonte, o coeficiente e a base de Segurança Social aplicável.",
     icon: Search,
     badge: "Comparador",
+  },
+  {
+    href: "/ferramentas/payout-mor",
+    titulo: "Wizard recibo Merchant of Record",
+    descricao: "Configura o recibo verde para payout do Paddle ou Lemon Squeezy em 5 passos. IVA, retenção e NIF preenchidos.",
+    icon: Wallet,
+    badge: "Wizard",
   },
 ];
 

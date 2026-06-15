@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useRecibos, resumir, type Recibo } from "@/lib/store/recibos";
 import { gerarInsights, saudeFiscal, type Insight, type SaudeFiscal } from "@/lib/insights";
@@ -9,14 +10,24 @@ import { Receipt, Warning, Check, ArrowRight, History, Calendar } from "@/compon
 import InfoTip from "@/components/ui/InfoTip";
 import ProHint from "@/components/ui/ProHint";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
-import ReceitaChart from "@/components/dashboard/ReceitaChart";
 import IvaProgresso from "@/components/dashboard/IvaProgresso";
 import PoupancaTrimestral from "@/components/dashboard/PoupancaTrimestral";
-import DistribuicaoDonut from "@/components/dashboard/DistribuicaoDonut";
+import GuardiaoRetencao from "@/components/dashboard/GuardiaoRetencao";
+import GuardiaoSS from "@/components/dashboard/GuardiaoSS";
 import TabelaRecibos from "@/components/dashboard/TabelaRecibos";
 import MiniCalendario from "@/components/dashboard/MiniCalendario";
 import Onboarding from "@/components/dashboard/Onboarding";
 import PartnerSpot from "@/components/dashboard/PartnerSpot";
+
+const ReceitaChart = dynamic(() => import("@/components/dashboard/ReceitaChart"), {
+  ssr: false,
+  loading: () => <div className="h-64 animate-pulse rounded-4xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900" />,
+});
+
+const DistribuicaoDonut = dynamic(() => import("@/components/dashboard/DistribuicaoDonut"), {
+  ssr: false,
+  loading: () => <div className="h-64 animate-pulse rounded-4xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900" />,
+});
 
 function mesAtual(recibos: Recibo[]): Recibo[] {
   const agora = new Date();
@@ -245,6 +256,16 @@ export default function VisaoGeral() {
 
           <div className="col-span-12 lg:col-span-4">
             <PoupancaTrimestral recibos={recibos} />
+          </div>
+
+          {/* ══ ROW 3b: Guardiões (Retenção + Seg. Social) ══════ */}
+
+          <div className="col-span-12 sm:col-span-6">
+            <GuardiaoRetencao recibos={recibos} />
+          </div>
+
+          <div className="col-span-12 sm:col-span-6">
+            <GuardiaoSS recibos={recibos} />
           </div>
 
           {/* ══ ROW 4: Tabela de recibos + Insights ══════════════ */}
