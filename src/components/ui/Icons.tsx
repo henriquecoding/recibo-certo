@@ -554,16 +554,26 @@ export function Spinner({ size = 18, className }: IconProps) {
   );
 }
 
+// ─── Marca do ícone (V2) ────────────────────────────────────
+export function LogoMark({ size = 28, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 500 500" fill="none" className={className} aria-hidden focusable={false}>
+      <path d="M401.84 287.26V79.76c0-3.85-1.53-7.54-4.25-10.26a14.52 14.52 0 00-10.26-4.26H97.87L401.84 287.26z" fill="#0F3F25" transform="matrix(1,0,0,-1,0,500)"/>
+      <path d="M104.23 46.99c-6.15-4.6-14.37-5.33-21.24-1.89-6.87 3.44-11.2 10.46-11.2 18.14 0 97.06 0 335.09 0 335.09 0 15.6 6.2 30.56 17.23 41.59 11.03 11.03 25.99 17.23 41.6 17.23h273.98c6.26 0 12.27-2.49 16.7-6.92 4.43-4.43 6.92-10.44 6.92-16.7V297.57c0-5.39-2.54-10.47-6.86-13.69C381.92 254.42 183.21 105.99 104.23 46.99z" fill="#05815F" transform="matrix(1,0,0,-1,0,500)"/>
+      <path d="M133.27 50.54c-1.45-1.09-2.05-2.99-1.47-4.71.57-1.72 2.19-2.89 4-2.89h58.37c2.13 0 4.21.63 5.98 1.81 25.89 17.21 228.06 151.57 228.06 151.57v61.85c0 2.51-1.42 4.81-3.67 5.94-2.25 1.12-4.94.88-6.95-.62C370.35 228.09 179.54 85.19 133.27 50.54z" fill="#0E6740" transform="matrix(1,0,0,-1,0,500)"/>
+      <path d="M428.21 383.42v23.69s-220.96-104.97-241.78-114.86c-.97-.46-2.12-.37-3 .24-8.51 5.83-52.79 36.16-77.01 52.76-2.43 1.67-5.65 1.64-7.25-.08-1.6-1.15-2.67-3.18-1.88-6.02 10.67-38.41 34.93-125.74 43.75-157.52.74-2.67 2.76-4.8 5.38-5.69 2.63-.89 5.52-.44 7.73 1.22 50.19 37.83 275.67 213.09 275.67 213.09z" fill="#EAF7EB" transform="matrix(1,0,0,-1,0,500)"/>
+    </svg>
+  );
+}
+
 // ─── Logótipo (marca de palavra) ─────────────────────────────
 export function Logo({ small = false }: { small?: boolean }): ReactNode {
-  const box = small ? "w-6 h-6" : "w-7 h-7";
+  const sz = small ? 24 : 28;
   const text = small ? "text-sm" : "text-[1.1rem]";
   return (
     <div className="flex items-center gap-2">
-      <div className={`${box} rounded-lg flex items-center justify-center bg-brand`}>
-        <CheckTrend size={small ? 12 : 14} className="text-white" />
-      </div>
-      <span className={`font-display font-semibold text-stone-800 ${text}`}>
+      <LogoMark size={sz} />
+      <span className={`font-display font-semibold text-stone-800 dark:text-stone-100 ${text}`}>
         Recibo<span className="text-brand">Certo</span>
       </span>
     </div>
