@@ -12,6 +12,7 @@ const LINKS = [
   { label: "Calculadora", href: "/#calculadora" },
   { label: "Guias", href: "/guias" },
   { label: "Ferramentas", href: "/ferramentas" },
+  { label: "Quiz Fiscal", href: "/quiz-fiscal" },
   { label: "Preços", href: "/precos" },
 ];
 
