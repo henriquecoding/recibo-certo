@@ -5,9 +5,11 @@
 // dos recibos é tratada no repositório, no passo seguinte). Sem login, a app
 // funciona toda em localStorage — mantém a promessa "Sem registo".
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import { getSupabase, supabaseConfigurado } from "./client";
+
+type ModoModal = "entrar" | "criar";
 
 interface AuthContexto {
   user: User | null;
@@ -18,6 +20,13 @@ interface AuthContexto {
   entrar: (email: string, password: string) => Promise<{ erro?: string }>;
   registar: (email: string, password: string) => Promise<{ erro?: string; confirmarEmail?: boolean }>;
   sair: () => Promise<void>;
+  entrarComGoogle: () => Promise<{ erro?: string }>;
+  entrarComGitHub: () => Promise<{ erro?: string }>;
+  /** Estado do modal de autenticação global. */
+  modalAberto: boolean;
+  modoModal: ModoModal;
+  abrirModal: (modo?: ModoModal) => void;
+  fecharModal: () => void;
 }
 
 const Ctx = createContext<AuthContexto | null>(null);
@@ -38,6 +47,8 @@ function traduzErro(msg: string): string {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [carregado, setCarregado] = useState(false);
+  const [modalAberto, setModalAberto] = useState(false);
+  const [modoModal, setModoModal] = useState<ModoModal>("entrar");
   const disponivel = supabaseConfigurado();
 
   useEffect(() => {
@@ -56,6 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: sub } = sb.auth.onAuthStateChange((_evento, session) => {
       setUser(session?.user ?? null);
+      // Fecha o modal ao autenticar com sucesso
+      if (session?.user) setModalAberto(false);
     });
 
     return () => {
@@ -77,7 +90,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data, error } = await getSupabase().auth.signUp({ email: email.trim(), password });
       if (error) return { erro: traduzErro(error.message) };
-      // Sem sessão imediata → o projeto exige confirmação por email.
       return { confirmarEmail: !data.session };
     } catch (e) {
       return { erro: (e as Error).message };
@@ -89,7 +101,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await getSupabase().auth.signOut();
   };
 
-  return <Ctx.Provider value={{ user, carregado, disponivel, entrar, registar, sair }}>{children}</Ctx.Provider>;
+  const entrarComGoogle = async () => {
+    try {
+      const { error } = await getSupabase().auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/dashboard` },
+      });
+      return error ? { erro: error.message } : {};
+    } catch (e) {
+      return { erro: (e as Error).message };
+    }
+  };
+
+  const entrarComGitHub = async () => {
+    try {
+      const { error } = await getSupabase().auth.signInWithOAuth({
+        provider: "github",
+        options: { redirectTo: `${window.location.origin}/dashboard` },
+      });
+      return error ? { erro: error.message } : {};
+    } catch (e) {
+      return { erro: (e as Error).message };
+    }
+  };
+
+  const abrirModal = useCallback((modo: ModoModal = "entrar") => {
+    setModoModal(modo);
+    setModalAberto(true);
+  }, []);
+
+  const fecharModal = useCallback(() => {
+    setModalAberto(false);
+  }, []);
+
+  return (
+    <Ctx.Provider value={{
+      user, carregado, disponivel,
+      entrar, registar, sair,
+      entrarComGoogle, entrarComGitHub,
+      modalAberto, modoModal, abrirModal, fecharModal,
+    }}>
+      {children}
+    </Ctx.Provider>
+  );
 }
 
 export function useAuth(): AuthContexto {

@@ -77,16 +77,19 @@ export default function AccountBox() {
     );
   }
 
+  const { abrirModal } = useAuth();
+
   return (
     <div className="space-y-2">
       {disponivel && (
-        <Link
-          href="/dashboard/conta"
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand px-3.5 py-2.5 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
+        <button
+          type="button"
+          onClick={() => abrirModal("entrar")}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand px-3.5 py-2.5 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
         >
           <User size={15} />
           Entrar ou criar conta
-        </Link>
+        </button>
       )}
       <p className="px-1 text-[11px] leading-snug text-stone-400">
         {disponivel
