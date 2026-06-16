@@ -1,9 +1,10 @@
 "use client";
 
-import QuizBookShell from "./QuizBookShell";
 import type { OpcaoEstado } from "./QuizBookShell";
 import type { UseQuizFiscalReturn } from "@/hooks/useQuizFiscal";
 import { TIMER_NORMAL_SEGUNDOS } from "@/hooks/useQuizFiscal";
+import QuizDesktop from "./QuizDesktop";
+import QuizMobile from "./QuizMobile";
 
 const LETRAS = ["A", "B", "C", "D"];
 
@@ -45,38 +46,47 @@ export default function QuizNormal({ quiz, onSair }: QuizNormalProps) {
         .filter((o) => o.idx !== correta)
     : undefined;
 
+  const sharedProps = {
+    categoriaAtiva: config?.categoria,
+    indice,
+    total: sessao.length,
+    pergunta: pergunta.pergunta,
+    opcoes,
+    opcaoEstados,
+    onOpcaoClick: responderNormal,
+    respondida,
+    acertou,
+    tempoRestante,
+    tempoTotal: TIMER_NORMAL_SEGUNDOS,
+    vantagens,
+    modo: "normal" as const,
+    onEliminar2: usarEliminar2,
+    onDica: usarDica,
+    onTempoExtra: usarTempoExtra,
+    onExplicacao: usarExplicacao,
+    dicaVisivel,
+    legalBasis: pergunta.legalBasis,
+    mostrarExplicacao: shouldShowExplanation,
+    explicacaoCorreta: shouldShowExplanation ? opcoes[correta].porque : undefined,
+    explicacoesErradas,
+    fonteLabel: pergunta.fonte.label,
+    fonteUrl: pergunta.fonte.url,
+    onSeguinte: seguinte,
+    onSair,
+    ultimaPergunta: indice === sessao.length - 1,
+    acertosAteAgora,
+    errosAteAgora,
+    vantagensUsadas,
+  };
+
   return (
-    <QuizBookShell
-      categoriaAtiva={config?.categoria}
-      indice={indice}
-      total={sessao.length}
-      pergunta={pergunta.pergunta}
-      opcoes={opcoes}
-      opcaoEstados={opcaoEstados}
-      onOpcaoClick={responderNormal}
-      respondida={respondida}
-      acertou={acertou}
-      tempoRestante={tempoRestante}
-      tempoTotal={TIMER_NORMAL_SEGUNDOS}
-      vantagens={vantagens}
-      modo="normal"
-      onEliminar2={usarEliminar2}
-      onDica={usarDica}
-      onTempoExtra={usarTempoExtra}
-      onExplicacao={usarExplicacao}
-      dicaVisivel={dicaVisivel}
-      legalBasis={pergunta.legalBasis}
-      mostrarExplicacao={shouldShowExplanation}
-      explicacaoCorreta={shouldShowExplanation ? opcoes[correta].porque : undefined}
-      explicacoesErradas={explicacoesErradas}
-      fonteLabel={pergunta.fonte.label}
-      fonteUrl={pergunta.fonte.url}
-      onSeguinte={seguinte}
-      onSair={onSair}
-      ultimaPergunta={indice === sessao.length - 1}
-      acertosAteAgora={acertosAteAgora}
-      errosAteAgora={errosAteAgora}
-      vantagensUsadas={vantagensUsadas}
-    />
+    <>
+      <div className="hidden md:block">
+        <QuizDesktop {...sharedProps} />
+      </div>
+      <div className="block md:hidden">
+        <QuizMobile {...sharedProps} />
+      </div>
+    </>
   );
 }

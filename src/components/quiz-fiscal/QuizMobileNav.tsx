@@ -1,12 +1,15 @@
 "use client";
 
-import { Home, LayoutGrid, History, User } from "@/components/ui/Icons";
+import { Home, Trophy, History, LayoutGrid, User } from "@/components/ui/Icons";
+
+export type MobileNavTab = "home" | "ranking" | "historico" | "categorias" | "perfil";
 
 interface QuizMobileNavProps {
-  activeTab?: "home" | "categorias" | "historico" | "perfil";
+  activeTab?: MobileNavTab;
   onHome?: () => void;
-  onCategorias?: () => void;
+  onRanking?: () => void;
   onHistorico?: () => void;
+  onCategorias?: () => void;
   onPerfil?: () => void;
 }
 
@@ -16,21 +19,23 @@ const NAV_ACTIVE = "#145532";
 export default function QuizMobileNav({
   activeTab = "home",
   onHome,
-  onCategorias,
+  onRanking,
   onHistorico,
+  onCategorias,
   onPerfil,
 }: QuizMobileNavProps) {
   const items = [
     { key: "home" as const, Icon: Home, label: "Início", onClick: onHome },
-    { key: "categorias" as const, Icon: LayoutGrid, label: "Categorias", onClick: onCategorias },
+    { key: "ranking" as const, Icon: Trophy, label: "Ranking", onClick: onRanking },
     { key: "historico" as const, Icon: History, label: "Histórico", onClick: onHistorico },
+    { key: "categorias" as const, Icon: LayoutGrid, label: "Categorias", onClick: onCategorias },
     { key: "perfil" as const, Icon: User, label: "Perfil", onClick: onPerfil },
   ];
 
   return (
     <nav
-      className="flex items-center justify-around border-t px-2 py-1 shrink-0"
-      style={{ backgroundColor: "#f1e4d4", borderColor: "#d4b896" }}
+      className="flex items-center justify-around border-t px-1 py-1.5 shrink-0"
+      style={{ backgroundColor: "#f5f0e8", borderColor: "#d4c4b0" }}
       aria-label="Navegação principal"
     >
       {items.map(({ key, Icon, label, onClick }) => {
@@ -40,13 +45,13 @@ export default function QuizMobileNav({
             key={key}
             type="button"
             onClick={onClick}
-            className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-opacity hover:opacity-70 active:scale-95"
+            className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg transition-opacity hover:opacity-70 active:scale-95 min-w-[52px]"
             style={{ color: isActive ? NAV_ACTIVE : NAV_COLOR }}
             aria-label={label}
             aria-current={isActive ? "page" : undefined}
           >
             <Icon size={22} />
-            <span className="text-[9px] font-semibold leading-none mt-0.5">{label}</span>
+            <span className="text-[9px] font-semibold leading-none">{label}</span>
           </button>
         );
       })}

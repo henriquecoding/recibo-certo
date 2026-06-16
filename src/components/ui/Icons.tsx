@@ -607,6 +607,36 @@ export function Trophy({ size = 18, className }: IconProps) {
   );
 }
 
+export function Coin({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12 7v1M12 16v1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M9 10a3 3 0 015 2.24c0 1.56-1 2.76-3 3.76" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Target({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function BookOpen({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M2 4a2 2 0 012-2h7v18H4a2 2 0 01-2-2V4z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M22 4a2 2 0 00-2-2h-7v18h7a2 2 0 002-2V4z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M11 4v14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 // ─── Marca do ícone (V2) ────────────────────────────────────
 export function LogoMark({ size = 28, className }: IconProps) {
   return (
