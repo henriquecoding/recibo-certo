@@ -682,6 +682,102 @@ export function Shield({ size = 18, className }: IconProps) {
   );
 }
 
+export function Volume({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <polygon points="11,5 6,9 2,9 2,15 6,15 11,19" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" fill="none" />
+      <path d="M15.54 8.46a5 5 0 010 7.07" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M19.07 4.93a10 10 0 010 14.14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function VolumeOff({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <polygon points="11,5 6,9 2,9 2,15 6,15 11,19" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" fill="none" />
+      <line x1="23" y1="9" x2="17" y2="15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <line x1="17" y1="9" x2="23" y2="15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function Keyboard({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <rect x="2" y="5" width="20" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M10 13h.01M14 13h.01M18 13h.01M8 17h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function RotateCcw({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M3 12a9 9 0 109-9H3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 3v6h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function LogOut({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline points="16,17 21,12 16,7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function Award({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <circle cx="12" cy="9" r="6" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Gauge({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M12 2a10 10 0 100 20A10 10 0 0012 2z" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12 12L8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M7 16.5a6 6 0 0110 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function BarChart2({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <rect x="18" y="3" width="4" height="18" rx="1" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="10" y="8" width="4" height="13" rx="1" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="2" y="13" width="4" height="8" rx="1" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+export function Google({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M21.805 10.023H12.18v3.955h5.52c-.237 1.28-1.024 2.362-2.183 3.087v2.566h3.536c2.07-1.906 3.265-4.716 3.265-8.036 0-.524-.047-1.03-.13-1.523l-.383-.05z" stroke="none" fill="currentColor" />
+      <path d="M12.18 22c2.77 0 5.095-.917 6.793-2.492l-3.536-2.566c-.918.616-2.094.98-3.257.98-2.505 0-4.626-1.69-5.384-3.966H3.146v2.634A10.003 10.003 0 0012.18 22z" stroke="none" fill="currentColor" opacity=".8" />
+      <path d="M6.796 13.956A6.025 6.025 0 016.48 12c0-.679.117-1.34.316-1.956V7.41H3.146A10.003 10.003 0 002 12c0 1.614.386 3.14 1.146 4.59l3.65-2.634z" stroke="none" fill="currentColor" opacity=".6" />
+      <path d="M12.18 6.078c1.413 0 2.68.487 3.677 1.44l2.759-2.76C16.942 3.178 14.79 2.18 12.18 2.18A10.003 10.003 0 003.146 7.41l3.65 2.634c.758-2.277 2.879-3.966 5.384-3.966z" stroke="none" fill="currentColor" opacity=".7" />
+    </svg>
+  );
+}
+
+export function GitHub({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" stroke="none" fill="currentColor" />
+    </svg>
+  );
+}
+
 // ─── Marca do ícone (V2) ────────────────────────────────────
 export function LogoMark({ size = 28, className }: IconProps) {
   return (

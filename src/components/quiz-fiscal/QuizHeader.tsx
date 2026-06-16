@@ -46,7 +46,7 @@ export default function QuizHeader({
         aria-expanded={menuAberto}
         aria-haspopup="menu"
       >
-        <Menu size={20} />
+        <Menu size={24} />
       </button>
 
       {/* Logo */}
@@ -121,7 +121,7 @@ export default function QuizHeader({
         aria-label="Configurações do Quiz"
         title="Configurações"
       >
-        <Settings size={20} />
+        <Settings size={24} />
       </button>
     </header>
   );

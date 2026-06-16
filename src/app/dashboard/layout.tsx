@@ -17,7 +17,7 @@ import {
   ShieldCheck,
 } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
-import { AuthProvider, useAuth } from "@/lib/supabase/auth";
+import { useAuth } from "@/lib/supabase/auth";
 import { SubscricaoProvider } from "@/lib/stripe/subscription";
 import { verificarAdmin } from "@/lib/supabase/admin";
 import AccountBox from "@/components/dashboard/AccountBox";
@@ -77,8 +77,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <AuthProvider>
-      <SubscricaoProvider>
+    <SubscricaoProvider>
       <div className="min-h-screen bg-cream lg:grid lg:grid-cols-[256px_1fr]">
 
         {/* ─── Sidebar (desktop) ─────────────────────────────────── */}
@@ -214,7 +213,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           })}
         </nav>
       </div>
-      </SubscricaoProvider>
-    </AuthProvider>
+    </SubscricaoProvider>
   );
 }

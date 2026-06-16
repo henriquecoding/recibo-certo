@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { EASE } from "@/lib/motion";
+import { useAuth } from "@/lib/supabase/auth";
 
 const SUBMENU_RECURSOS = [
   {
@@ -39,6 +40,7 @@ const SUBMENU_RECURSOS = [
 ];
 
 export default function Nav() {
+  const { abrirModal, disponivel, user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [visible, setVisible] = useState(true);
   const [open, setOpen] = useState(false);
@@ -219,21 +221,44 @@ export default function Nav() {
           {/* CTAs desktop */}
           <div className="hidden items-center gap-2 sm:flex">
             <ThemeToggle />
-            <Link
-              href="/dashboard"
-              className="rounded-xl px-3.5 py-2 text-sm font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
-            >
-              Entrar
-            </Link>
-            <m.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
+            {user ? (
               <Link
                 href="/dashboard"
-                className="btn-shine inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
+                className="rounded-xl px-3.5 py-2 text-sm font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
               >
-                Começar Grátis
-                <ArrowRight size={13} />
+                Dashboard
               </Link>
-            </m.div>
+            ) : disponivel ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => abrirModal("entrar")}
+                  className="rounded-xl px-3.5 py-2 text-sm font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
+                >
+                  Entrar
+                </button>
+                <m.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
+                  <button
+                    type="button"
+                    onClick={() => abrirModal("criar")}
+                    className="btn-shine inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
+                  >
+                    Começar Grátis
+                    <ArrowRight size={13} />
+                  </button>
+                </m.div>
+              </>
+            ) : (
+              <m.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
+                <Link
+                  href="/dashboard"
+                  className="btn-shine inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
+                >
+                  Começar Grátis
+                  <ArrowRight size={13} />
+                </Link>
+              </m.div>
+            )}
           </div>
 
           {/* Mobile: tema + hambúrguer */}
@@ -360,19 +385,40 @@ export default function Nav() {
               </Link>
 
               <div className="mt-4 flex flex-col gap-2.5 border-t border-stone-100 pt-4 dark:border-stone-800">
-                <Link
-                  href="/dashboard"
-                  className="flex w-full items-center justify-center rounded-2xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
-                >
-                  Entrar
-                </Link>
-                <Link
-                  href="/dashboard"
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-glow"
-                >
-                  Começar Grátis
-                  <ArrowRight size={13} />
-                </Link>
+                {user ? (
+                  <Link
+                    href="/dashboard"
+                    className="flex w-full items-center justify-center rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-glow"
+                  >
+                    Dashboard
+                  </Link>
+                ) : disponivel ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { setOpen(false); abrirModal("entrar"); }}
+                      className="flex w-full items-center justify-center rounded-2xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
+                    >
+                      Entrar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setOpen(false); abrirModal("criar"); }}
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-glow"
+                    >
+                      Começar Grátis
+                      <ArrowRight size={13} />
+                    </button>
+                  </>
+                ) : (
+                  <Link
+                    href="/dashboard"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-glow"
+                  >
+                    Começar Grátis
+                    <ArrowRight size={13} />
+                  </Link>
+                )}
               </div>
             </nav>
           </m.div>

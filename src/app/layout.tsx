@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Playfair_Display, DM_Sans } from "next/font/google";
 import MotionProvider from "@/components/ui/motion/MotionProvider";
+import { AuthProvider } from "@/lib/supabase/auth";
+import AuthModal from "@/components/ui/AuthModal";
+import NovidadesModal from "@/components/ui/NovidadesModal";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -109,7 +112,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="font-sans antialiased">
-        <MotionProvider>{children}</MotionProvider>
+        <AuthProvider>
+          <MotionProvider>
+            {children}
+            <AuthModal />
+            <NovidadesModal />
+          </MotionProvider>
+        </AuthProvider>
       </body>
     </html>
   );
