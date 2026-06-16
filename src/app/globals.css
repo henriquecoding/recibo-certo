@@ -112,6 +112,16 @@ input[type="number"]::-webkit-outer-spin-button {
    ════════════════════════════════════════════════════════════════════ */
 .dark {
   --background: #141613;
+  --quiz-page-bg: #181b16;
+  --quiz-heading: #e8e6dc;
+  --quiz-muted: #9a9889;
+  --quiz-card-bg: #1e2219;
+  --quiz-card-border: #2e3327;
+  --quiz-card-active-bg: #252e1f;
+  --quiz-card-active-border: #4D6243;
+  --quiz-tag-bg: #242820;
+  --quiz-stat-bg: #1a1d16;
+  --quiz-dot-empty: #2e3327;
   color-scheme: dark;
 }
 .dark body {
