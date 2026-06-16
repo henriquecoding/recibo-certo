@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/Icons";
 import type { VantagensEstado, SessaoPergunta } from "@/hooks/useQuizFiscal";
 import type { QuizOpcao } from "@/lib/quiz-fiscal";
+import QuizHeader from "./QuizHeader";
+import QuizMobileNav from "./QuizMobileNav";
 
 const LETRAS = ["A", "B", "C", "D"];
 
@@ -86,23 +88,19 @@ export default function QuizBookShell(props: QuizBookShellProps) {
   const pontos = (indice + 1) * 40;
 
   return (
-    <div className="min-h-screen bg-quiz-leather-dark pb-0 dark:bg-[#1a2318]">
-      {/* ── Stats footer bar ── */}
-      <div className="sticky top-0 z-30 flex items-center justify-center gap-6 border-b border-quiz-forest/40 bg-quiz-forest px-4 py-2.5 text-xs font-semibold text-quiz-parchment sm:gap-10 sm:text-sm">
-        <StatItem icon={<Check size={14} />} label="Acertos" value={String(acertosAteAgora)} />
-        {tempoRestante != null && (
-          <StatItem icon={<Clock size={14} />} label="Tempo" value={`${tempoRestante}s`} />
-        )}
-        <StatItem icon={<Sparkle size={14} />} label="Vantagens" value={String(vantagensUsadas)} />
-        <StatItem icon={<Close size={14} />} label="Erros" value={String(errosAteAgora)} />
-        <button
-          type="button"
-          onClick={onSair}
-          className="ml-auto text-quiz-parchment/60 transition-colors hover:text-white"
-          aria-label="Sair do quiz"
-        >
-          ← Sair
-        </button>
+    <div className="flex min-h-screen flex-col bg-quiz-leather-dark pb-0 dark:bg-[#1a2318]">
+      {/* ── Header (Etapa 1) ── */}
+      <div className="sticky top-0 z-30">
+        <QuizHeader onSair={onSair} onMenuToggle={() => {}} />
+        {/* Stats row — placeholder until Etapa 5 (footer dark bar) */}
+        <div className="flex items-center justify-center gap-5 border-b border-quiz-forest/40 bg-quiz-forest px-4 py-1.5 text-xs font-semibold text-quiz-parchment sm:gap-8">
+          <StatItem icon={<Check size={12} />} label="Acertos" value={String(acertosAteAgora)} />
+          {tempoRestante != null && (
+            <StatItem icon={<Clock size={12} />} label="Tempo" value={`${tempoRestante}s`} />
+          )}
+          <StatItem icon={<Sparkle size={12} />} label="Vantagens" value={String(vantagensUsadas)} />
+          <StatItem icon={<Close size={12} />} label="Erros" value={String(errosAteAgora)} />
+        </div>
       </div>
 
       <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6">
@@ -427,6 +425,11 @@ export default function QuizBookShell(props: QuizBookShellProps) {
             </m.div>
           )}
         </AnimatePresence>
+      </div>
+
+      {/* ── Mobile bottom nav (Etapa 1) ── */}
+      <div className="mt-auto lg:hidden">
+        <QuizMobileNav activeTab="home" onHome={onSair} />
       </div>
     </div>
   );

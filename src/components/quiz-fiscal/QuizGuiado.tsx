@@ -1,8 +1,9 @@
 "use client";
 
-import QuizBookShell from "./QuizBookShell";
 import type { OpcaoEstado } from "./QuizBookShell";
 import type { UseQuizFiscalReturn } from "@/hooks/useQuizFiscal";
+import QuizDesktop from "./QuizDesktop";
+import QuizMobile from "./QuizMobile";
 
 const LETRAS = ["A", "B", "C", "D"];
 
@@ -43,38 +44,47 @@ export default function QuizGuiado({ quiz, onSair }: QuizGuiadoProps) {
         .filter((o) => o.idx !== correta)
     : undefined;
 
+  const sharedProps = {
+    categoriaAtiva: config?.categoria,
+    indice,
+    total: sessao.length,
+    pergunta: pergunta.pergunta,
+    opcoes,
+    opcaoEstados,
+    onOpcaoClick: selecionarOpcao,
+    respondida,
+    acertou,
+    vantagens,
+    modo: "guiado" as const,
+    onEliminar2: usarEliminar2,
+    onDica: usarDica,
+    onTempoExtra: usarTempoExtra,
+    onExplicacao: usarExplicacao,
+    dicaVisivel,
+    legalBasis: pergunta.legalBasis,
+    mostrarExplicacao,
+    explicacaoCorreta: mostrarExplicacao ? opcoes[correta].porque : undefined,
+    explicacoesErradas,
+    fonteLabel: pergunta.fonte.label,
+    fonteUrl: pergunta.fonte.url,
+    onSeguinte: seguinte,
+    onSair,
+    ultimaPergunta: indice === sessao.length - 1,
+    podeConfirmar: selecionada !== null,
+    onConfirmar: confirmarResposta,
+    acertosAteAgora,
+    errosAteAgora,
+    vantagensUsadas,
+  };
+
   return (
-    <QuizBookShell
-      categoriaAtiva={config?.categoria}
-      indice={indice}
-      total={sessao.length}
-      pergunta={pergunta.pergunta}
-      opcoes={opcoes}
-      opcaoEstados={opcaoEstados}
-      onOpcaoClick={selecionarOpcao}
-      respondida={respondida}
-      acertou={acertou}
-      vantagens={vantagens}
-      modo="guiado"
-      onEliminar2={usarEliminar2}
-      onDica={usarDica}
-      onTempoExtra={usarTempoExtra}
-      onExplicacao={usarExplicacao}
-      dicaVisivel={dicaVisivel}
-      legalBasis={pergunta.legalBasis}
-      mostrarExplicacao={mostrarExplicacao}
-      explicacaoCorreta={mostrarExplicacao ? opcoes[correta].porque : undefined}
-      explicacoesErradas={explicacoesErradas}
-      fonteLabel={pergunta.fonte.label}
-      fonteUrl={pergunta.fonte.url}
-      onSeguinte={seguinte}
-      onSair={onSair}
-      ultimaPergunta={indice === sessao.length - 1}
-      podeConfirmar={selecionada !== null}
-      onConfirmar={confirmarResposta}
-      acertosAteAgora={acertosAteAgora}
-      errosAteAgora={errosAteAgora}
-      vantagensUsadas={vantagensUsadas}
-    />
+    <>
+      <div className="hidden md:block">
+        <QuizDesktop {...sharedProps} />
+      </div>
+      <div className="block md:hidden">
+        <QuizMobile {...sharedProps} />
+      </div>
+    </>
   );
 }
