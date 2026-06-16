@@ -86,12 +86,9 @@ export default function NovidadesModal() {
                     {/* Linha temporal */}
                     <div className="flex flex-col items-center shrink-0">
                       <div
-                        className="mt-1 h-3 w-3 rounded-full shrink-0 ring-2 ring-offset-2 ring-offset-white dark:ring-offset-stone-900"
+                        className={`mt-1 h-3 w-3 rounded-full shrink-0 ${isNova ? "ring-2 ring-brand ring-offset-2 ring-offset-white dark:ring-offset-stone-900" : "border-2 border-stone-300 dark:border-stone-600"}`}
                         style={{
                           backgroundColor: isNova ? "#1D9E75" : "transparent",
-                          borderWidth: isNova ? 0 : 2,
-                          borderColor: "#d1d5db",
-                          ringColor: isNova ? "#1D9E75" : "transparent",
                         }}
                         aria-hidden
                       />
