@@ -2,6 +2,7 @@
 
 import type { OpcaoEstado } from "./QuizBookShell";
 import type { UseQuizFiscalReturn } from "@/hooks/useQuizFiscal";
+import type { QuizProgressoProps } from "./QuizFiscalApp";
 import QuizDesktop from "./QuizDesktop";
 import QuizMobile from "./QuizMobile";
 
@@ -9,16 +10,17 @@ const LETRAS = ["A", "B", "C", "D"];
 
 interface QuizGuiadoProps {
   quiz: UseQuizFiscalReturn;
+  progresso: QuizProgressoProps;
   onSair: () => void;
 }
 
-export default function QuizGuiado({ quiz, onSair }: QuizGuiadoProps) {
+export default function QuizGuiado({ quiz, progresso, onSair }: QuizGuiadoProps) {
   const {
     atual, indice, sessao, selecionada, respondida, mostrarExplicacao,
     selecionarOpcao, confirmarResposta, seguinte, respostas,
     vantagens, eliminadas, dicaVisivel,
     usarEliminar2, usarDica, usarTempoExtra, usarExplicacao,
-    config,
+    config, pontosAtuais, streakAtual,
   } = quiz;
 
   if (!atual) return null;
@@ -75,6 +77,9 @@ export default function QuizGuiado({ quiz, onSair }: QuizGuiadoProps) {
     acertosAteAgora,
     errosAteAgora,
     vantagensUsadas,
+    pontosAtuais,
+    streakAtual,
+    progresso,
   };
 
   return (

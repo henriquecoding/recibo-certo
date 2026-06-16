@@ -4,13 +4,15 @@ import { m, AnimatePresence } from "motion/react";
 import { resolveQuizIcon } from "./icon-map";
 import { META_CATEGORIA_QUIZ } from "@/lib/quiz-fiscal";
 import {
-  Check, Close, ArrowRight, Fire, Lightbulb, Star, PaperClip,
+  Check, Close, ArrowRight, Fire, Star, PaperClip,
 } from "@/components/ui/Icons";
 import QuizHeader from "./QuizHeader";
 import QuizMobileNav from "./QuizMobileNav";
+import QuizVantagens from "./QuizVantagens";
 import type { OpcaoEstado } from "./QuizBookShell";
 import type { VantagensEstado } from "@/hooks/useQuizFiscal";
 import type { QuizOpcao, QuizCategoria } from "@/lib/quiz-fiscal";
+import type { QuizProgressoProps } from "./QuizFiscalApp";
 
 const LETRAS = ["A", "B", "C", "D"];
 
@@ -47,6 +49,9 @@ interface QuizMobileProps {
   acertosAteAgora: number;
   errosAteAgora: number;
   vantagensUsadas: number;
+  pontosAtuais: number;
+  streakAtual: number;
+  progresso: QuizProgressoProps;
 }
 
 const QUIZ_DARK = "#3a5232";
@@ -66,17 +71,16 @@ export default function QuizMobile({
   acertou,
   tempoRestante,
   tempoTotal,
-  vantagens: _vantagens,
+  vantagens,
   modo,
-  onEliminar2: _onEliminar2,
-  onDica: _onDica,
-  onTempoExtra: _onTempoExtra,
-  onExplicacao: _onExplicacao,
-  dicaVisivel: _dicaVisivel,
+  onEliminar2,
+  onDica,
+  onTempoExtra,
+  onExplicacao,
+  dicaVisivel,
   legalBasis,
   mostrarExplicacao,
   explicacaoCorreta,
-  explicacoesErradas: _explicacoesErradas,
   onSeguinte,
   onSair,
   ultimaPergunta,
@@ -85,6 +89,9 @@ export default function QuizMobile({
   acertosAteAgora,
   errosAteAgora: _errosAteAgora,
   vantagensUsadas: _vantagensUsadas,
+  pontosAtuais,
+  streakAtual,
+  progresso,
 }: QuizMobileProps) {
   const progressPct = Math.round(((indice + 1) / total) * 100);
   const tPct = tempoRestante != null && tempoTotal ? (tempoRestante / tempoTotal) * 100 : null;
@@ -92,17 +99,25 @@ export default function QuizMobile({
   const catMeta = categoriaAtiva ? META_CATEGORIA_QUIZ[categoriaAtiva] : null;
   const CatIcon = catMeta ? resolveQuizIcon(catMeta.icon) : null;
 
-  const streakAtual = acertosAteAgora;
+  // XP progress
+  const xpNoNivel = progresso.xpAtual - progresso.xpNivelBase;
+  const xpRange = progresso.xpProximo - progresso.xpNivelBase;
+  const xpPct = xpRange > 0 ? Math.min(100, Math.round((xpNoNivel / xpRange) * 100)) : 100;
 
   return (
-    <div
-      className="flex flex-col min-h-screen pb-1"
-      style={{ backgroundColor: PARCHMENT_BG }}
-    >
-      {/* ── 1. Header (logo + nível + XP + settings) ── */}
-      <QuizHeader onSair={onSair} onMenuToggle={() => {}} />
+    <div className="flex flex-col min-h-screen pb-1" style={{ backgroundColor: PARCHMENT_BG }}>
+      {/* ── 1. Header ── */}
+      <QuizHeader
+        onSair={onSair}
+        onMenuToggle={() => {}}
+        nivel={progresso.nivel}
+        tituloNivel={progresso.tituloNivel}
+        xpAtual={progresso.xpAtual}
+        xpTotal={progresso.xpProximo}
+        xpPct={xpPct}
+      />
 
-      {/* ── 2. Dark "Quiz Fiscal" section bar ── */}
+      {/* ── 2. Dark "Quiz Fiscal" bar ── */}
       <div
         className="mx-3 mt-3 rounded-t-2xl py-3 text-center"
         style={{ backgroundColor: QUIZ_DARK }}
@@ -134,23 +149,14 @@ export default function QuizMobile({
               >
                 <div
                   className="h-full rounded-full"
-                  style={{
-                    width: `${progressPct}%`,
-                    backgroundColor: QUIZ_DARK,
-                    transition: "width 0.4s ease",
-                  }}
+                  style={{ width: `${progressPct}%`, backgroundColor: QUIZ_DARK, transition: "width 0.4s ease" }}
                 />
               </div>
               {tPct != null && (
-                <div
-                  className="h-2 w-12 rounded-full overflow-hidden"
-                  style={{ backgroundColor: "#d4c4b0" }}
-                >
+                <div className="h-2 w-12 rounded-full overflow-hidden" style={{ backgroundColor: "#d4c4b0" }}>
                   <m.div
                     className="h-full rounded-full"
-                    style={{
-                      background: tPct > 60 ? QUIZ_DARK : tPct > 30 ? "#b59562" : "#c2745a",
-                    }}
+                    style={{ background: tPct > 60 ? QUIZ_DARK : tPct > 30 ? "#b59562" : "#c2745a" }}
                     animate={{ width: `${tPct}%` }}
                     transition={{ duration: 0.9, ease: "linear" }}
                   />
@@ -158,14 +164,33 @@ export default function QuizMobile({
               )}
               <div className="flex items-center gap-1 shrink-0">
                 <Star size={13} className="text-amber-400" />
-                <span className="text-[11px] font-bold" style={{ color: "#6b5240" }}>
-                  {(indice + 1) * 40} pts
+                <span className="text-[11px] font-bold tabular-nums" style={{ color: "#6b5240" }}>
+                  {pontosAtuais}
                 </span>
               </div>
             </div>
           </div>
 
           <div className="mx-4 h-px" style={{ backgroundColor: "#e8dcc8" }} />
+
+          {/* Dica hint */}
+          <AnimatePresence>
+            {dicaVisivel && !respondida && (
+              <m.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="mx-4 mt-3 flex items-start gap-2 rounded-xl border p-2.5"
+                  style={{ backgroundColor: "#fffbeb", borderColor: "#fbbf24" }}>
+                  <p className="text-[11px] leading-snug" style={{ color: "#78350f" }}>
+                    <strong>Dica: </strong>{legalBasis}
+                  </p>
+                </div>
+              </m.div>
+            )}
+          </AnimatePresence>
 
           {/* Category icon + Question text */}
           <div className="px-4 py-4">
@@ -203,15 +228,13 @@ export default function QuizMobile({
                   <span className="flex-1 text-left text-[14px] font-medium leading-snug" style={{ color: "#1a1a17" }}>
                     {opcao.texto}
                   </span>
-                  {estado === "correta" && (
-                    <Check size={16} className="shrink-0 text-green-600" />
-                  )}
+                  {estado === "correta" && <Check size={16} className="shrink-0 text-green-600" />}
                 </button>
               );
             })}
           </div>
 
-          {/* Responder button (guiado mode) */}
+          {/* Responder button (guiado) */}
           {!respondida && modo === "guiado" && (
             <div className="px-3 pb-3">
               <button
@@ -228,7 +251,23 @@ export default function QuizMobile({
         </div>
       </div>
 
-      {/* ── 4. Explanation card (after answering) ── */}
+      {/* ── 4. Vantagens row ── */}
+      {!respondida && (
+        <div className="mx-3 mt-2 px-3 py-2.5 rounded-2xl flex items-center gap-2" style={{ backgroundColor: "#ffffff", border: `1px solid ${BORDER_COLOR}` }}>
+          <QuizVantagens
+            vantagens={vantagens}
+            modo={modo}
+            respondida={respondida}
+            onEliminar2={onEliminar2}
+            onDica={onDica}
+            onTempoExtra={onTempoExtra}
+            onExplicacao={onExplicacao}
+            compact
+          />
+        </div>
+      )}
+
+      {/* ── 5. Explanation card (after answering) ── */}
       <AnimatePresence>
         {respondida && (
           <m.div
@@ -255,12 +294,15 @@ export default function QuizMobile({
                   {explicacaoCorreta}
                 </p>
               )}
+              <p className="mt-2 text-[11px]" style={{ color: "#8a7355" }}>
+                {legalBasis}
+              </p>
             </div>
           </m.div>
         )}
       </AnimatePresence>
 
-      {/* ── 5. Sequência + Dica row ── */}
+      {/* ── 6. Sequência + Pontos row ── */}
       <AnimatePresence>
         {respondida && (
           <m.div
@@ -282,33 +324,36 @@ export default function QuizMobile({
               </div>
               <div>
                 <div className="text-[10px] font-semibold" style={{ color: "#8a7355" }}>Sequência</div>
-                <div className="text-[22px] font-bold leading-none" style={{ color: "#1a1a17" }}>{streakAtual}</div>
+                <div className="text-[22px] font-bold leading-none tabular-nums" style={{ color: "#1a1a17" }}>
+                  {streakAtual}
+                </div>
               </div>
             </div>
 
-            {/* Dica Fiscal */}
+            {/* Acertos + Pontos */}
             <div
-              className="flex flex-1 items-start gap-2 rounded-2xl p-3"
+              className="flex flex-1 items-center gap-4 rounded-2xl px-4"
               style={{ backgroundColor: "#ffffff", border: `1px solid ${BORDER_COLOR}` }}
             >
-              <div
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full mt-0.5"
-                style={{ backgroundColor: QUIZ_DARK }}
-              >
-                <Lightbulb size={18} className="text-amber-300" />
+              <div className="flex flex-col items-center">
+                <span className="text-[10px] font-semibold" style={{ color: "#8a7355" }}>Acertos</span>
+                <span className="text-[20px] font-bold tabular-nums" style={{ color: "#415439" }}>
+                  {acertosAteAgora}
+                </span>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[12px] font-bold" style={{ color: "#1a1a17" }}>Dica Fiscal</div>
-                <p className="text-[11px] leading-snug mt-0.5 line-clamp-3" style={{ color: "#4a4a44" }}>
-                  {legalBasis}
-                </p>
+              <div className="h-8 w-px" style={{ backgroundColor: "#e2d9c8" }} />
+              <div className="flex flex-col items-center">
+                <span className="text-[10px] font-semibold" style={{ color: "#8a7355" }}>Pontos</span>
+                <span className="text-[20px] font-bold tabular-nums" style={{ color: "#b59562" }}>
+                  {pontosAtuais}
+                </span>
               </div>
             </div>
           </m.div>
         )}
       </AnimatePresence>
 
-      {/* ── 6. Próxima button ── */}
+      {/* ── 7. Próxima button ── */}
       <AnimatePresence>
         {respondida && (
           <m.div
@@ -332,34 +377,32 @@ export default function QuizMobile({
 
       <div className="flex-1" />
 
-      {/* ── 7. Bottom nav ── */}
+      {/* ── 8. Bottom nav ── */}
       <QuizMobileNav activeTab="home" onHome={onSair} />
     </div>
   );
 }
 
-/* ── Option styling helpers ── */
-
 function mobileOpcaoBtnClass(estado: OpcaoEstado): string {
   const base = "flex w-full items-center gap-3 rounded-xl border px-3 py-3 transition-all duration-150 active:scale-[0.99]";
   switch (estado) {
-    case "correta": return `${base} border-green-300 bg-green-50`;
-    case "errada": return `${base} border-red-200 bg-red-50`;
+    case "correta":   return `${base} border-green-300 bg-green-50`;
+    case "errada":    return `${base} border-red-200 bg-red-50`;
     case "eliminada": return `${base} border-stone-200 bg-stone-100 opacity-30 line-through`;
-    case "apagada": return `${base} border-stone-200 bg-stone-50 opacity-50`;
+    case "apagada":   return `${base} border-stone-200 bg-stone-50 opacity-50`;
     case "selecionada": return `${base} border-[#415439] bg-green-50 ring-1 ring-[#415439]/20`;
-    default: return `${base} border-[#e2d9c8] bg-white hover:border-[#415439]/40 hover:shadow-sm`;
+    default:          return `${base} border-[#e2d9c8] bg-white hover:border-[#415439]/40 hover:shadow-sm`;
   }
 }
 
 function mobileLetraBadgeClass(estado: OpcaoEstado): string {
   const base = "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[13px] font-bold";
   switch (estado) {
-    case "correta": return `${base} bg-[#415439] text-white`;
-    case "errada": return `${base} bg-[#c2745a] text-white`;
+    case "correta":   return `${base} bg-[#415439] text-white`;
+    case "errada":    return `${base} bg-[#c2745a] text-white`;
     case "eliminada":
-    case "apagada": return `${base} bg-stone-200 text-stone-400`;
+    case "apagada":   return `${base} bg-stone-200 text-stone-400`;
     case "selecionada": return `${base} bg-[#415439] text-white`;
-    default: return `${base} bg-[#415439] text-white`;
+    default:          return `${base} bg-[#415439] text-white`;
   }
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Reveal from "@/components/ui/Reveal";
-import { Clock, Sparkle, Check, ArrowRight, LayoutGrid } from "@/components/ui/Icons";
+import { Clock, Sparkle, Check, ArrowRight, LayoutGrid, Fire } from "@/components/ui/Icons";
 import { resolveQuizIcon } from "./icon-map";
 import {
   META_CATEGORIA_QUIZ,
@@ -11,9 +11,13 @@ import {
   type QuizCategoria,
 } from "@/lib/quiz-fiscal";
 import type { QuizFiscalConfig, QuizModo } from "@/hooks/useQuizFiscal";
+import type { SessaoHistorico } from "@/lib/store/quiz-progresso";
 
 interface SelecaoModoProps {
   onComecar: (config: QuizFiscalConfig) => void;
+  energiaRestante?: number;
+  energiaTotal?: number;
+  sessoes?: SessaoHistorico[];
 }
 
 const CATEGORIAS_ORDEM: QuizCategoria[] = [
@@ -29,7 +33,7 @@ const CATEGORIAS_ORDEM: QuizCategoria[] = [
   "geral",
 ];
 
-export default function SelecaoModo({ onComecar }: SelecaoModoProps) {
+export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTotal = 5, sessoes = [] }: SelecaoModoProps) {
   const [modo, setModo] = useState<QuizModo | null>(null);
   const [categoria, setCategoria] = useState<QuizCategoria | "todas">("todas");
 
@@ -121,18 +125,46 @@ export default function SelecaoModo({ onComecar }: SelecaoModoProps) {
       </Reveal>
 
       <Reveal delay={0.15}>
-        <div className="mt-10 flex flex-col items-center gap-3">
+        <div className="mt-10 flex flex-col items-center gap-4">
+          {/* Energia diária */}
+          <div className="flex items-center gap-3 rounded-2xl border-2 border-quiz-parchment-mid bg-quiz-parchment-warm px-5 py-3 shadow-sm dark:border-quiz-olive/40 dark:bg-quiz-forest/60">
+            <Fire size={18} />
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-quiz-sage dark:text-quiz-sage">Energia diaria</span>
+              <div className="flex items-center gap-1.5">
+                {Array.from({ length: energiaTotal }).map((_, i) => (
+                  <span
+                    key={i}
+                    className={`h-2.5 w-2.5 rounded-full transition-colors ${
+                      i < energiaRestante
+                        ? "bg-amber-400 dark:bg-amber-400"
+                        : "bg-quiz-parchment-border dark:bg-quiz-olive/30"
+                    }`}
+                  />
+                ))}
+                <span className="ml-1 text-xs font-semibold text-quiz-sage-dark dark:text-quiz-sage tabular-nums">
+                  {energiaRestante}/{energiaTotal}
+                </span>
+              </div>
+            </div>
+          </div>
+
           <button
             type="button"
-            disabled={!modo}
+            disabled={!modo || energiaRestante <= 0}
             onClick={handleComecar}
             className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-quiz-forest px-10 py-3.5 text-sm font-semibold text-white shadow-lg transition-all duration-200 hover:bg-quiz-forest-deep active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-quiz-olive dark:hover:bg-quiz-sage-dark sm:w-auto"
           >
             Comecar Quiz
             <ArrowRight size={16} />
           </button>
-          {!modo && (
+          {!modo && energiaRestante > 0 && (
             <p className="text-xs text-quiz-sage dark:text-quiz-sage">Escolhe um modo para continuar.</p>
+          )}
+          {energiaRestante <= 0 && (
+            <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+              Sem energia hoje. Volta amanha para continuar!
+            </p>
           )}
         </div>
       </Reveal>

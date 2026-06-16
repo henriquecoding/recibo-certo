@@ -1,7 +1,7 @@
 "use client";
 
 import Reveal from "@/components/ui/Reveal";
-import { Check, Close, Rocket, LayoutGrid, ChartProjection, Sparkle, ShieldCheck, ArrowRight } from "@/components/ui/Icons";
+import { Check, Close, Rocket, LayoutGrid, ChartProjection, Sparkle, ShieldCheck, Star, Zap } from "@/components/ui/Icons";
 import { resolveQuizIcon } from "./icon-map";
 import { META_CATEGORIA_QUIZ } from "@/lib/quiz-fiscal";
 import type { UseQuizFiscalReturn, ClassificacaoQuiz } from "@/hooks/useQuizFiscal";
@@ -15,9 +15,12 @@ const CLASSIFICACAO_ICON: Record<ClassificacaoQuiz["icone"], (props: { size?: nu
 
 interface ResultadoProps {
   quiz: UseQuizFiscalReturn;
+  xpGanho?: number;
+  levelUp?: boolean;
+  nivelNovo?: { nivel: number; titulo: string };
 }
 
-export default function Resultado({ quiz }: ResultadoProps) {
+export default function Resultado({ quiz, xpGanho = 0, levelUp = false, nivelNovo }: ResultadoProps) {
   const { resultado, sessao, jogarNovamente, reiniciar } = quiz;
   if (!resultado) return null;
 
@@ -44,7 +47,7 @@ export default function Resultado({ quiz }: ResultadoProps) {
       {/* Score */}
       <Reveal delay={0.05}>
         <div className="mt-8 rounded-2xl border-2 border-quiz-parchment-mid bg-quiz-parchment-warm p-6 shadow-md dark:border-quiz-olive/40 dark:bg-quiz-forest/60 sm:p-7">
-          <div className="flex items-center justify-center gap-6">
+          <div className="flex items-center justify-center gap-4 sm:gap-6">
             <div className="text-center">
               <div className="font-display text-4xl font-semibold text-quiz-olive dark:text-quiz-sage-light sm:text-5xl">
                 {acertos}
@@ -61,9 +64,57 @@ export default function Resultado({ quiz }: ResultadoProps) {
                 aproveitamento
               </p>
             </div>
+            {resultado.pontos > 0 && (
+              <>
+                <div className="h-12 w-px bg-quiz-parchment-mid dark:bg-quiz-olive/40" />
+                <div className="text-center">
+                  <div className="font-display text-4xl font-semibold text-quiz-forest-deep dark:text-quiz-parchment sm:text-5xl tabular-nums">{resultado.pontos}</div>
+                  <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-quiz-sage dark:text-quiz-sage">
+                    pontos
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </Reveal>
+
+      {/* XP ganho + level-up */}
+      {xpGanho > 0 && (
+        <Reveal delay={0.08}>
+          <div className="mt-4 flex flex-col gap-3">
+            {/* XP gained pill */}
+            <div className="flex items-center justify-center gap-2 rounded-2xl border-2 border-quiz-parchment-mid bg-quiz-parchment-warm px-5 py-3 shadow-sm dark:border-quiz-olive/40 dark:bg-quiz-forest/60">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-quiz-olive/10 text-quiz-olive dark:bg-quiz-sage-dark/20 dark:text-quiz-sage-light">
+                <Star size={16} />
+              </span>
+              <div className="flex flex-col leading-none">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-quiz-sage dark:text-quiz-sage">XP ganho</span>
+                <span className="mt-0.5 font-display text-xl font-semibold text-quiz-forest-deep dark:text-quiz-parchment">
+                  +{xpGanho} XP
+                </span>
+              </div>
+            </div>
+
+            {/* Level up banner */}
+            {levelUp && nivelNovo && (
+              <div className="flex items-center gap-3 rounded-2xl border-2 border-quiz-olive/40 bg-quiz-olive/10 px-5 py-3.5 shadow-sm dark:border-quiz-sage-dark/40 dark:bg-quiz-olive/20">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-quiz-olive text-white dark:bg-quiz-sage-dark">
+                  <Zap size={18} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-quiz-olive dark:text-quiz-sage-light">
+                    Subiste de nivel!
+                  </p>
+                  <p className="mt-0.5 font-display text-base font-semibold text-quiz-forest-deep dark:text-quiz-parchment truncate">
+                    Nivel {nivelNovo.nivel} — {nivelNovo.titulo}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </Reveal>
+      )}
 
       {/* Per-category breakdown */}
       {porCategoria.length > 0 && (

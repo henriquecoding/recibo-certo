@@ -2,6 +2,7 @@
 
 import type { OpcaoEstado } from "./QuizBookShell";
 import type { UseQuizFiscalReturn } from "@/hooks/useQuizFiscal";
+import type { QuizProgressoProps } from "./QuizFiscalApp";
 import { TIMER_NORMAL_SEGUNDOS } from "@/hooks/useQuizFiscal";
 import QuizDesktop from "./QuizDesktop";
 import QuizMobile from "./QuizMobile";
@@ -10,16 +11,17 @@ const LETRAS = ["A", "B", "C", "D"];
 
 interface QuizNormalProps {
   quiz: UseQuizFiscalReturn;
+  progresso: QuizProgressoProps;
   onSair: () => void;
 }
 
-export default function QuizNormal({ quiz, onSair }: QuizNormalProps) {
+export default function QuizNormal({ quiz, progresso, onSair }: QuizNormalProps) {
   const {
     atual, indice, sessao, selecionada, respondida, tempoRestante,
     responderNormal, vantagens, eliminadas, dicaVisivel,
     mostrarExplicacao, verExplicacaoAtiva, seguinte, respostas,
     usarEliminar2, usarDica, usarTempoExtra, usarExplicacao,
-    config,
+    config, pontosAtuais, streakAtual,
   } = quiz;
   if (!atual) return null;
 
@@ -37,7 +39,6 @@ export default function QuizNormal({ quiz, onSair }: QuizNormalProps) {
   const acertosAteAgora = respostas.filter((r) => r.acertou).length;
   const errosAteAgora = respostas.filter((r) => !r.acertou).length;
   const vantagensUsadas = [vantagens.eliminar2, vantagens.dica, vantagens.tempoExtra, vantagens.explicacao].filter(Boolean).length;
-
   const shouldShowExplanation = mostrarExplicacao && verExplicacaoAtiva && respondida;
 
   const explicacoesErradas = shouldShowExplanation
@@ -77,6 +78,9 @@ export default function QuizNormal({ quiz, onSair }: QuizNormalProps) {
     acertosAteAgora,
     errosAteAgora,
     vantagensUsadas,
+    pontosAtuais,
+    streakAtual,
+    progresso,
   };
 
   return (
