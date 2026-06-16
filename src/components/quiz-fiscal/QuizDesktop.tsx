@@ -1,13 +1,17 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { m, AnimatePresence } from "motion/react";
 import { resolveQuizIcon } from "./icon-map";
 import { META_CATEGORIA_QUIZ } from "@/lib/quiz-fiscal";
 import {
-  Check, Close, ArrowRight, ExternalLink, Fire, Star, Target, Zap, PaperClip,
+  Check, Close, ArrowRight, ExternalLink, Fire, Star, Target, Zap,
 } from "@/components/ui/Icons";
 import QuizHeader from "./QuizHeader";
 import QuizVantagens from "./QuizVantagens";
+import QuizMenuLateral from "./QuizMenuLateral";
+import QuizConfigModal from "./QuizConfigModal";
+import { useGameJuice } from "@/hooks/useGameJuice";
 import type { OpcaoEstado } from "./QuizBookShell";
 import type { VantagensEstado } from "@/hooks/useQuizFiscal";
 import type { QuizOpcao, QuizCategoria } from "@/lib/quiz-fiscal";
@@ -109,6 +113,50 @@ export default function QuizDesktop({
   streakAtual,
   progresso,
 }: QuizDesktopProps) {
+  const { soarAcerto, soarErro, soarToque } = useGameJuice();
+  const [tremendoTela, setTremendoTela] = useState(false);
+  const [menuAberto, setMenuAberto] = useState(false);
+  const [configAberta, setConfigAberta] = useState(false);
+  const prevRespondida = useRef(false);
+
+  // Game juice ao responder
+  useEffect(() => {
+    if (respondida && !prevRespondida.current) {
+      prevRespondida.current = true;
+      if (acertou) {
+        soarAcerto();
+      } else {
+        soarErro();
+        setTremendoTela(true);
+        const t = setTimeout(() => setTremendoTela(false), 500);
+        return () => clearTimeout(t);
+      }
+    }
+    if (!respondida) prevRespondida.current = false;
+  }, [respondida, acertou, soarAcerto, soarErro]);
+
+  // Atalhos de teclado: 1-4 / A-D para opções, Enter/Espaço para avançar
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const mapa: Record<string, number> = {
+        "1": 0, "2": 1, "3": 2, "4": 3,
+        "a": 0, "b": 1, "c": 2, "d": 3,
+      };
+      const idx = mapa[e.key.toLowerCase()];
+      if (!respondida && idx !== undefined && idx < opcoes.length) {
+        soarToque();
+        onOpcaoClick(idx);
+      }
+      if ((e.key === "Enter" || e.key === " ") && respondida) {
+        e.preventDefault();
+        onSeguinte();
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [respondida, opcoes, onOpcaoClick, onSeguinte, soarToque]);
+
   const progressPct = Math.round(((indice + 1) / total) * 100);
   const tPct = tempoRestante != null && tempoTotal ? (tempoRestante / tempoTotal) * 100 : null;
   const acertoPct = total > 0 ? Math.round((acertosAteAgora / (indice + 1 || 1)) * 100) : 0;
@@ -116,7 +164,6 @@ export default function QuizDesktop({
   const catMeta = categoriaAtiva ? META_CATEGORIA_QUIZ[categoriaAtiva] : null;
   const CatIcon = catMeta ? resolveQuizIcon(catMeta.icon) : null;
 
-  // XP progress within current level
   const xpNoNivel = progresso.xpAtual - progresso.xpNivelBase;
   const xpRange = progresso.xpProximo - progresso.xpNivelBase;
   const xpPct = xpRange > 0 ? Math.min(100, Math.round((xpNoNivel / xpRange) * 100)) : 100;
@@ -125,8 +172,9 @@ export default function QuizDesktop({
     <div className="flex flex-col min-h-screen" style={{ backgroundColor: "#6b5240" }}>
       {/* ── Header ── */}
       <QuizHeader
-        onSair={onSair}
-        onMenuToggle={() => {}}
+        menuAberto={menuAberto}
+        onMenuToggle={() => setMenuAberto(true)}
+        onConfiguracoes={() => setConfigAberta(true)}
         nivel={progresso.nivel}
         tituloNivel={progresso.tituloNivel}
         xpAtual={progresso.xpAtual}
@@ -144,19 +192,14 @@ export default function QuizDesktop({
             className="rounded-2xl p-4 shadow-sm"
             style={{ backgroundColor: PARCHMENT_SIDEBAR, border: `1px solid ${BORDER}` }}
           >
-            <span className="text-[12px] font-semibold" style={{ color: "#8a7355" }}>Sequência</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#8a7355" }}>Sequência</span>
             <div className="flex items-center gap-3 mt-2">
-              <div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
-                style={{ backgroundColor: QUIZ_DARK }}
-              >
-                <Fire size={26} />
-              </div>
+              <span style={{ color: "#C07828" }}><Fire size={42} /></span>
               <div>
-                <div className="text-[32px] font-bold leading-none tabular-nums" style={{ color: "#1a1a17" }}>
+                <div className="text-[42px] font-bold leading-none tabular-nums font-display" style={{ color: "#1a1a17" }}>
                   {streakAtual}
                 </div>
-                <div className="text-[11px]" style={{ color: "#8a7355" }}>
+                <div className="text-[11px] mt-0.5" style={{ color: "#8a7355" }}>
                   {pontosAtuais} pts acumulados
                 </div>
               </div>
@@ -168,22 +211,20 @@ export default function QuizDesktop({
             className="rounded-2xl p-4 shadow-sm"
             style={{ backgroundColor: PARCHMENT_SIDEBAR, border: `1px solid ${BORDER}` }}
           >
-            <span className="text-[12px] font-semibold block mb-3" style={{ color: "#8a7355" }}>Vantagens</span>
-            <div className="flex flex-col gap-2">
-              <QuizVantagens
-                vantagens={vantagens}
-                modo={modo}
-                respondida={respondida}
-                onEliminar2={onEliminar2}
-                onDica={onDica}
-                onTempoExtra={onTempoExtra}
-                onExplicacao={onExplicacao}
-                onPular={onPular}
-                onDobrar={onDobrar}
-                onSegundaChance={onSegundaChance}
-                onEscudo={onEscudo}
-              />
-            </div>
+            <span className="text-[12px] font-semibold block mb-2.5" style={{ color: "#8a7355" }}>Vantagens</span>
+            <QuizVantagens
+              vantagens={vantagens}
+              modo={modo}
+              respondida={respondida}
+              onEliminar2={onEliminar2}
+              onDica={onDica}
+              onTempoExtra={onTempoExtra}
+              onExplicacao={onExplicacao}
+              onPular={onPular}
+              onDobrar={onDobrar}
+              onSegundaChance={onSegundaChance}
+              onEscudo={onEscudo}
+            />
           </div>
 
           {/* Energia */}
@@ -202,9 +243,7 @@ export default function QuizDesktop({
                 <div
                   key={i}
                   className="flex-1 h-2 rounded-full"
-                  style={{
-                    backgroundColor: i < progresso.energiaRestante ? "#F59E0B" : "#d4c4b0",
-                  }}
+                  style={{ backgroundColor: i < progresso.energiaRestante ? "#C07828" : "#d4c4b0" }}
                 />
               ))}
             </div>
@@ -213,148 +252,163 @@ export default function QuizDesktop({
 
         {/* ── Center: book card + below ── */}
         <div className="flex flex-1 flex-col gap-3 min-w-0">
-          {/* Book card wrapper — relative for paper clip positioning */}
-          <div className="relative" style={{ paddingTop: "22px" }}>
-            <span className="absolute top-0 left-8 z-10 text-[#9ca3af]" aria-hidden>
-              <PaperClip size={18} />
-            </span>
-
-            {/* Book card */}
-            <div
-              className="rounded-2xl shadow-xl"
-              style={{ backgroundColor: BOOK_BG, border: `1px solid ${BORDER}` }}
+          {/* Book card wrapper — shake no erro */}
+          <div>
+            <m.div
+              animate={tremendoTela ? { x: [0, -7, 7, -5, 5, -2, 2, 0] } : { x: 0 }}
+              transition={{ duration: 0.4 }}
             >
-              {/* Progress header row */}
-              <div className="flex items-center gap-3 px-6 py-4">
-                <div
-                  className="rounded-lg px-3 py-1.5 text-[12px] font-bold"
-                  style={{ backgroundColor: "#e8dcc8", color: "#415439" }}
-                >
-                  {indice + 1}/{total}
-                </div>
-                <div
-                  className="flex-1 h-2.5 rounded-full overflow-hidden"
-                  style={{ backgroundColor: "#d4c4b0" }}
-                  role="progressbar"
-                  aria-valuenow={indice + 1}
-                  aria-valuemax={total}
-                >
+              <div
+                className="rounded-2xl shadow-xl"
+                style={{ backgroundColor: BOOK_BG, border: `1px solid ${BORDER}` }}
+              >
+                {/* Progress header row */}
+                <div className="flex items-center gap-3 px-6 py-4">
                   <div
-                    className="h-full rounded-full transition-all"
-                    style={{ width: `${progressPct}%`, backgroundColor: QUIZ_DARK }}
-                  />
-                </div>
-                {tPct != null && (
+                    className="rounded-lg px-3 py-1.5 text-[12px] font-bold"
+                    style={{ backgroundColor: "#e8dcc8", color: "#415439" }}
+                  >
+                    {indice + 1}/{total}
+                  </div>
                   <div
-                    className="flex-1 h-2 rounded-full overflow-hidden max-w-[100px]"
+                    className="flex-1 h-2.5 rounded-full overflow-hidden"
                     style={{ backgroundColor: "#d4c4b0" }}
+                    role="progressbar"
+                    aria-valuenow={indice + 1}
+                    aria-valuemax={total}
+                    aria-label={`Pergunta ${indice + 1} de ${total}`}
                   >
                     <m.div
                       className="h-full rounded-full"
-                      style={{ background: tPct > 60 ? QUIZ_DARK : tPct > 30 ? "#b59562" : "#c2745a" }}
-                      animate={{ width: `${tPct}%` }}
-                      transition={{ duration: 0.9, ease: "linear" }}
+                      style={{ backgroundColor: QUIZ_DARK }}
+                      animate={{ width: `${progressPct}%` }}
+                      transition={{ duration: 0.5, ease: "easeOut" }}
                     />
                   </div>
-                )}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Star size={15} className="text-amber-400" />
-                  <span className="text-[13px] font-bold tabular-nums" style={{ color: "#6b5240" }}>
-                    {pontosAtuais} pts
-                  </span>
-                </div>
-              </div>
-
-              <div className="mx-6 h-px" style={{ backgroundColor: "#e8dcc8" }} />
-
-              {/* Question area */}
-              <div className="px-6 py-5">
-                {CatIcon && (
-                  <div className="mb-4 flex items-center gap-3">
+                  {tPct != null && (
                     <div
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
-                      style={{ backgroundColor: "#e8f0e4", color: "#415439" }}
+                      className="flex-1 h-2 rounded-full overflow-hidden max-w-[100px]"
+                      style={{ backgroundColor: "#d4c4b0" }}
                     >
-                      <CatIcon size={24} />
+                      <m.div
+                        className="h-full rounded-full"
+                        style={{ background: tPct > 60 ? QUIZ_DARK : tPct > 30 ? "#b59562" : "#c2745a" }}
+                        animate={{ width: `${tPct}%` }}
+                        transition={{ duration: 0.9, ease: "linear" }}
+                      />
                     </div>
+                  )}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span style={{ color: "#C07828" }}><Star size={15} /></span>
+                    <span className="text-[13px] font-bold tabular-nums" style={{ color: "#6b5240" }}>
+                      {pontosAtuais} pts
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mx-6 h-px" style={{ backgroundColor: "#e8dcc8" }} />
+
+                {/* Question area */}
+                <div className="px-6 py-5">
+                  {CatIcon && (
+                    <div className="mb-4 flex items-center gap-3">
+                      <div
+                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
+                        style={{ backgroundColor: "#e8f0e4", color: "#415439" }}
+                      >
+                        <CatIcon size={24} />
+                      </div>
+                    </div>
+                  )}
+                  <p className="font-display text-[20px] font-bold leading-snug" style={{ color: "#1a1a17" }}>
+                    {pergunta}
+                  </p>
+                </div>
+
+                {/* Dica hint */}
+                <AnimatePresence>
+                  {dicaVisivel && !respondida && (
+                    <m.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mx-6 mb-3 flex items-start gap-3 rounded-xl border p-3"
+                        style={{ backgroundColor: "#fef6e4", borderColor: "#D4A030" }}>
+                        <span className="shrink-0 mt-0.5" style={{ color: "#C07828" }}>
+                          <Star size={16} />
+                        </span>
+                        <p className="text-[12px] leading-snug" style={{ color: "#78350f" }}>
+                          <strong className="block mb-0.5">Dica Fiscal</strong>
+                          {legalBasis}
+                        </p>
+                      </div>
+                    </m.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Hint teclado — só aparece antes de responder */}
+                {!respondida && (
+                  <p className="px-6 pb-2 text-[10px] text-right" style={{ color: "#b0a090" }}>
+                    Atalho: teclas A–D ou 1–4
+                  </p>
+                )}
+
+                {/* Options */}
+                <div className="px-6 pb-5 space-y-2.5">
+                  {opcoes.map((opcao, idx) => {
+                    const estado = opcaoEstados[idx];
+                    if (!estado) return null;
+                    const { className: btnClass, style: btnStyle } = getDesktopOpcaoProps(estado);
+                    return (
+                      <m.button
+                        key={idx}
+                        type="button"
+                        disabled={respondida || estado === "eliminada"}
+                        onClick={() => { soarToque(); onOpcaoClick(idx); }}
+                        className={`${btnClass} relative overflow-visible focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#3a5232]`}
+                        style={btnStyle}
+                        whileHover={!respondida && estado === "default" ? { scale: 1.015, y: -1 } : undefined}
+                        whileTap={!respondida && estado !== "eliminada" ? { scale: 0.96 } : undefined}
+                        transition={{ type: "spring", stiffness: 500, damping: 26 }}
+                        aria-label={`Opção ${LETRAS[idx]}: ${opcao.texto}`}
+                      >
+                        <span
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[13px] font-bold"
+                          style={getDesktopLetraBadgeStyle(estado)}
+                        >
+                          {estado === "correta" ? <Check size={14} /> : estado === "errada" ? <Close size={14} /> : LETRAS[idx]}
+                        </span>
+                        <span className="flex-1 text-left text-[15px] font-medium leading-snug">
+                          {opcao.texto}
+                        </span>
+                        {estado === "correta" && <Check size={18} className="shrink-0 text-[#3a5232]" />}
+                        {estado === "correta" && <ParticulasAcerto />}
+                      </m.button>
+                    );
+                  })}
+                </div>
+
+                {/* Guiado mode: Responder button */}
+                {!respondida && modo === "guiado" && (
+                  <div className="px-6 pb-5 pt-1">
+                    <button
+                      type="button"
+                      disabled={!podeConfirmar}
+                      onClick={onConfirmar}
+                      className="w-full rounded-xl py-3 text-[15px] font-semibold text-white transition-opacity disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#3a5232]"
+                      style={{ backgroundColor: QUIZ_DARK }}
+                    >
+                      Responder
+                    </button>
                   </div>
                 )}
-                <p className="font-display text-[20px] font-bold leading-snug" style={{ color: "#1a1a17" }}>
-                  {pergunta}
-                </p>
               </div>
+            </m.div>
+          </div>
 
-              {/* Dica hint (when activated) */}
-              <AnimatePresence>
-                {dicaVisivel && !respondida && (
-                  <m.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="mx-6 mb-3 flex items-start gap-3 rounded-xl border p-3"
-                      style={{ backgroundColor: "#fffbeb", borderColor: "#fbbf24" }}>
-                      <span className="text-amber-500 shrink-0 mt-0.5">
-                        <Star size={16} />
-                      </span>
-                      <p className="text-[12px] leading-snug" style={{ color: "#78350f" }}>
-                        <strong className="block mb-0.5">Dica Fiscal</strong>
-                        {legalBasis}
-                      </p>
-                    </div>
-                  </m.div>
-                )}
-              </AnimatePresence>
-
-              {/* Options */}
-              <div className="px-6 pb-5 space-y-2.5">
-                {opcoes.map((opcao, idx) => {
-                  const estado = opcaoEstados[idx];
-                  if (!estado) return null;
-                  const { className: btnClass, style: btnStyle } = getDesktopOpcaoProps(estado);
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      disabled={respondida || estado === "eliminada"}
-                      onClick={() => onOpcaoClick(idx)}
-                      className={btnClass}
-                      style={btnStyle}
-                    >
-                      <span
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[13px] font-bold"
-                        style={getDesktopLetraBadgeStyle(estado)}
-                      >
-                        {estado === "correta" ? <Check size={14} /> : estado === "errada" ? <Close size={14} /> : LETRAS[idx]}
-                      </span>
-                      <span className="flex-1 text-left text-[15px] font-medium leading-snug">
-                        {opcao.texto}
-                      </span>
-                      {estado === "correta" && <Check size={18} className="shrink-0 text-[#3a5232]" />}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Guiado mode: Responder button */}
-              {!respondida && modo === "guiado" && (
-                <div className="px-6 pb-5 pt-1">
-                  <button
-                    type="button"
-                    disabled={!podeConfirmar}
-                    onClick={onConfirmar}
-                    className="w-full rounded-xl py-3 text-[15px] font-semibold text-white transition-opacity disabled:opacity-40"
-                    style={{ backgroundColor: QUIZ_DARK }}
-                  >
-                    Responder
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>{/* end book card wrapper */}
-
-          {/* Below book: Dica Fiscal + Próxima */}
+          {/* Below book: Base Legal + Próxima */}
           <AnimatePresence>
             {respondida && (
               <m.div
@@ -363,16 +417,15 @@ export default function QuizDesktop({
                 transition={{ duration: 0.25 }}
                 className="flex items-stretch gap-3"
               >
-                {/* Dica Fiscal */}
                 <div
                   className="flex flex-1 items-start gap-3 rounded-2xl p-4"
                   style={{ backgroundColor: PARCHMENT_SIDEBAR, border: `1px solid ${BORDER}` }}
                 >
                   <div
                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full self-center"
-                    style={{ backgroundColor: QUIZ_DARK }}
+                    style={{ backgroundColor: "#e8dcc8" }}
                   >
-                    <Star size={18} className="text-amber-300" />
+                    <span style={{ color: "#C07828" }}><Star size={18} /></span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-bold" style={{ color: "#1a1a17" }}>Base Legal</div>
@@ -386,16 +439,18 @@ export default function QuizDesktop({
                   </div>
                 </div>
 
-                {/* Próxima button */}
-                <button
+                <m.button
                   type="button"
                   onClick={onSeguinte}
-                  className="flex shrink-0 items-center justify-center gap-2 rounded-2xl px-8 text-[16px] font-semibold text-white transition-opacity hover:opacity-90 active:scale-[0.98]"
+                  className="flex shrink-0 items-center justify-center gap-2 rounded-2xl px-8 text-[16px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#3a5232]"
                   style={{ backgroundColor: QUIZ_DARK, minWidth: "160px" }}
+                  whileHover={{ scale: 1.02, y: -1 }}
+                  whileTap={{ scale: 0.97 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 26 }}
                 >
                   {ultimaPergunta ? "Ver resultado" : "Próxima"}
                   <ArrowRight size={20} />
-                </button>
+                </m.button>
               </m.div>
             )}
           </AnimatePresence>
@@ -409,23 +464,16 @@ export default function QuizDesktop({
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 16 }}
               transition={{ duration: 0.3 }}
-              className="relative w-60 xl:w-72 shrink-0 self-start sticky top-[72px]"
-              style={{ paddingTop: "22px" }}
+              className="w-60 xl:w-72 shrink-0 self-start sticky top-[72px]"
             >
-              <span className="absolute top-0 right-6 z-10 text-[#9ca3af]" aria-hidden>
-                <PaperClip size={18} />
-              </span>
-
               <div
                 className="rounded-2xl shadow-md overflow-hidden"
                 style={{ backgroundColor: PARCHMENT_SIDEBAR, border: `1px solid ${BORDER}` }}
               >
-                {/* Panel header */}
                 <div className="px-4 py-3 text-center" style={{ backgroundColor: QUIZ_DARK }}>
                   <span className="text-[14px] font-bold text-white">Explicação Fiscal</span>
                 </div>
 
-                {/* Result badge */}
                 <div className="p-4">
                   <div
                     className="flex items-center gap-2 rounded-xl py-2.5 px-3"
@@ -477,7 +525,7 @@ export default function QuizDesktop({
                       href={fonteUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-[12px] font-semibold transition-opacity hover:opacity-80"
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-[12px] font-semibold transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3a5232]"
                       style={{ backgroundColor: "#e8dcc8", color: "#415439", border: `1px solid ${BORDER}` }}
                     >
                       <ExternalLink size={12} />
@@ -485,7 +533,7 @@ export default function QuizDesktop({
                     </a>
                   )}
                 </div>
-              </div>{/* end inner card */}
+              </div>
             </m.aside>
           )}
         </AnimatePresence>
@@ -504,9 +552,24 @@ export default function QuizDesktop({
         <div className="h-5 w-px opacity-30" style={{ backgroundColor: "#ebd4a4" }} aria-hidden />
         <FooterStat icon={<Close size={16} className="text-[#ebd4a4]" />} label="Erros" value={String(errosAteAgora)} />
       </div>
+
+      <QuizMenuLateral
+        aberto={menuAberto}
+        onFechar={() => setMenuAberto(false)}
+        categoriaAtiva={categoriaAtiva}
+        onSair={onSair}
+      />
+      <QuizConfigModal
+        aberto={configAberta}
+        onFechar={() => setConfigAberta(false)}
+        onReiniciar={onSair}
+        onSair={onSair}
+      />
     </div>
   );
 }
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function FooterStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
@@ -520,8 +583,38 @@ function FooterStat({ icon, label, value }: { icon: React.ReactNode; label: stri
   );
 }
 
+function ParticulasAcerto() {
+  const ITENS = [
+    { cor: "#3a5232", dist: 48 }, { cor: "#D4A030", dist: 56 },
+    { cor: "#6d815a", dist: 44 }, { cor: "#4a9e4a", dist: 60 },
+    { cor: "#b59562", dist: 52 }, { cor: "#3a5232", dist: 40 },
+  ];
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-visible" aria-hidden>
+      {ITENS.map((p, i) => {
+        const angulo = (i / ITENS.length) * 360;
+        return (
+          <m.div
+            key={i}
+            initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+            animate={{
+              x: Math.cos((angulo * Math.PI) / 180) * p.dist,
+              y: Math.sin((angulo * Math.PI) / 180) * p.dist,
+              opacity: 0,
+              scale: 0.2,
+            }}
+            transition={{ duration: 0.55, delay: 0.04 + i * 0.025, ease: "easeOut" }}
+            className="absolute h-2.5 w-2.5 rounded-full"
+            style={{ backgroundColor: p.cor, left: "50%", top: "50%", marginLeft: -5, marginTop: -5 }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 function getDesktopOpcaoProps(estado: OpcaoEstado): { className: string; style: React.CSSProperties } {
-  const base = "flex w-full items-center gap-3 rounded-xl border-2 px-4 py-3.5 text-left transition-all duration-150 active:scale-[0.99]";
+  const base = "flex w-full items-center gap-3 rounded-xl border-2 px-4 py-3.5 text-left transition-colors duration-150";
   switch (estado) {
     case "correta":
       return { className: base, style: { backgroundColor: "#d8f5d8", borderColor: "#4a9e4a", color: "#145532" } };

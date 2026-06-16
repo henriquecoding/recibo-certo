@@ -91,7 +91,7 @@ export default function QuizBookShell(props: QuizBookShellProps) {
     <div className="flex min-h-screen flex-col bg-quiz-leather-dark pb-0 dark:bg-[#1a2318]">
       {/* ── Header (Etapa 1) ── */}
       <div className="sticky top-0 z-30">
-        <QuizHeader onSair={onSair} onMenuToggle={() => {}} />
+        <QuizHeader onConfiguracoes={onSair} onMenuToggle={() => {}} />
         {/* Stats row — placeholder until Etapa 5 (footer dark bar) */}
         <div className="flex items-center justify-center gap-5 border-b border-quiz-forest/40 bg-quiz-forest px-4 py-1.5 text-xs font-semibold text-quiz-parchment sm:gap-8">
           <StatItem icon={<Check size={12} />} label="Acertos" value={String(acertosAteAgora)} />
