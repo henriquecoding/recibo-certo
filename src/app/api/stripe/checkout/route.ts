@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       customer: customerId,
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
-      payment_method_types: ["card", "mb_way", "multibanco"],
+      automatic_payment_methods: { enabled: true },
       success_url: STRIPE_CONFIG.checkoutSuccessUrl,
       cancel_url: STRIPE_CONFIG.checkoutCancelUrl,
       subscription_data: {
