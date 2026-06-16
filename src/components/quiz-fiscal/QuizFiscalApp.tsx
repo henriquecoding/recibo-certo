@@ -71,7 +71,7 @@ export default function QuizFiscalApp() {
   return (
     <>
       <Nav />
-      <div className="min-h-screen bg-quiz-parchment dark:bg-quiz-forest">
+      <div className="min-h-screen" style={{ backgroundColor: "var(--quiz-page-bg, #FAF4EC)" }}>
         <nav
           aria-label="Localização"
           className="mx-auto flex max-w-4xl items-center gap-1.5 px-4 pt-6 text-xs text-quiz-sage"

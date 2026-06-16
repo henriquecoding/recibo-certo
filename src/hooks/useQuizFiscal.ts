@@ -7,7 +7,9 @@ import {
   type QuizOpcao,
   type QuizPergunta,
 } from "@/lib/quiz-fiscal";
+import { gerarPerguntasAtividade } from "@/lib/quiz-fiscal/gerador-atividade";
 import { calcularPontosPergunta, calcularStreakMaximo } from "@/lib/quiz-fiscal/progresso";
+import type { Atividade } from "@/lib/fiscal-data";
 
 export type QuizModo = "normal" | "guiado";
 export type QuizStatus = "selecao" | "jogando" | "resultado";
@@ -15,6 +17,7 @@ export type QuizStatus = "selecao" | "jogando" | "resultado";
 export interface QuizFiscalConfig {
   modo: QuizModo;
   categoria?: QuizCategoria;
+  atividade?: Atividade;
   quantidade?: number;
 }
 
@@ -207,10 +210,18 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
   const inicioSessaoRef = useRef<number>(Date.now());
 
   const construirSessao = useCallback((cfg: QuizFiscalConfig): SessaoPergunta[] => {
-    const perguntas = getPerguntasAleatorias({
-      quantidade: cfg.quantidade ?? QUANTIDADE_DEFAULT,
-      categoria: cfg.categoria,
-    });
+    const quantidade = cfg.quantidade ?? QUANTIDADE_DEFAULT;
+    let perguntas: QuizPergunta[];
+
+    if (cfg.atividade) {
+      perguntas = gerarPerguntasAtividade(cfg.atividade, quantidade);
+    } else {
+      perguntas = getPerguntasAleatorias({
+        quantidade,
+        categoria: cfg.categoria,
+      });
+    }
+
     return perguntas.map((pergunta) => {
       const { opcoes, correta } = embaralharOpcoes(pergunta);
       return { pergunta, opcoes, correta };
