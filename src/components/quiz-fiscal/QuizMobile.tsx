@@ -5,7 +5,7 @@ import { m, AnimatePresence } from "motion/react";
 import { resolveQuizIcon } from "./icon-map";
 import { META_CATEGORIA_QUIZ } from "@/lib/quiz-fiscal";
 import {
-  Check, Close, ArrowRight, Fire, Star, PaperClip,
+  Check, Close, ArrowRight, Fire, Star,
 } from "@/components/ui/Icons";
 import QuizHeader from "./QuizHeader";
 import QuizMobileNav from "./QuizMobileNav";
@@ -169,28 +169,20 @@ export default function QuizMobile({
         xpPct={xpPct}
       />
 
-      {/* ── 2. Dark "Quiz Fiscal" bar ── */}
-      <div
-        className="mx-3 mt-3 rounded-t-2xl py-3 text-center"
-        style={{ backgroundColor: QUIZ_DARK }}
-      >
-        <span className="text-[15px] font-semibold text-white">Quiz Fiscal</span>
-      </div>
-
       {/* ── 3. Question card com tremor no erro ── */}
-      <div className="mx-3 relative" style={{ paddingTop: "18px" }}>
-        <span className="absolute top-0 left-7 z-10 text-[#9ca3af]" aria-hidden>
-          <PaperClip size={17} />
-        </span>
-
+      <div className="mx-3 mt-3">
         <m.div
           animate={tremendoCard ? { x: [0, -7, 7, -5, 5, -2, 2, 0] } : { x: 0 }}
           transition={{ duration: 0.4 }}
         >
           <div
-            className="rounded-b-2xl shadow-md"
-            style={{ backgroundColor: CARD_BG, border: `1px solid ${BORDER_COLOR}`, borderTop: "none" }}
+            className="rounded-2xl shadow-md overflow-hidden"
+            style={{ backgroundColor: CARD_BG, border: `1px solid ${BORDER_COLOR}` }}
           >
+            {/* Cabeçalho escuro do cartão */}
+            <div className="py-2.5 text-center" style={{ backgroundColor: QUIZ_DARK }}>
+              <span className="text-[13px] font-semibold text-white tracking-wide">Quiz Fiscal</span>
+            </div>
             {/* Progress header */}
             <div className="px-4 pt-4 pb-3">
               <div className="flex items-center gap-2">
@@ -223,7 +215,7 @@ export default function QuizMobile({
                   </div>
                 )}
                 <div className="flex items-center gap-1 shrink-0">
-                  <Star size={13} className="text-amber-400" />
+                  <Star size={13} style={{ color: "#C07828" }} />
                   <span className="text-[11px] font-bold tabular-nums" style={{ color: "#6b5240" }}>
                     {pontosAtuais}
                   </span>
@@ -243,7 +235,7 @@ export default function QuizMobile({
                   className="overflow-hidden"
                 >
                   <div className="mx-4 mt-3 flex items-start gap-2 rounded-xl border p-2.5"
-                    style={{ backgroundColor: "#fffbeb", borderColor: "#fbbf24" }}>
+                    style={{ backgroundColor: "#fef6e4", borderColor: "#D4A030" }}>
                     <p className="text-[11px] leading-snug" style={{ color: "#78350f" }}>
                       <strong>Dica: </strong>{legalBasis}
                     </p>
@@ -387,15 +379,10 @@ export default function QuizMobile({
             className="mx-3 mt-2 flex gap-2"
           >
             <div
-              className="flex items-center gap-3 rounded-2xl p-3"
+              className="flex items-center gap-2.5 rounded-2xl p-3"
               style={{ backgroundColor: "#ffffff", border: `1px solid ${BORDER_COLOR}`, flex: "0 0 auto" }}
             >
-              <div
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-                style={{ backgroundColor: QUIZ_DARK }}
-              >
-                <Fire size={22} />
-              </div>
+              <Fire size={30} />
               <div>
                 <div className="text-[10px] font-semibold" style={{ color: "#8a7355" }}>Sequência</div>
                 <div className="text-[22px] font-bold leading-none tabular-nums" style={{ color: "#1a1a17" }}>
@@ -462,7 +449,7 @@ export default function QuizMobile({
 
 function ParticulasAcerto() {
   const ITENS = [
-    { cor: "#3a5232", dist: 40 }, { cor: "#fbbf24", dist: 48 },
+    { cor: "#3a5232", dist: 40 }, { cor: "#D4A030", dist: 48 },
     { cor: "#6d815a", dist: 36 }, { cor: "#4a9e4a", dist: 52 },
     { cor: "#b59562", dist: 44 }, { cor: "#3a5232", dist: 34 },
   ];

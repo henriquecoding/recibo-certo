@@ -5,7 +5,7 @@ import { m, AnimatePresence } from "motion/react";
 import { resolveQuizIcon } from "./icon-map";
 import { META_CATEGORIA_QUIZ } from "@/lib/quiz-fiscal";
 import {
-  Check, Close, ArrowRight, ExternalLink, Fire, Star, Target, Zap, PaperClip,
+  Check, Close, ArrowRight, ExternalLink, Fire, Star, Target, Zap,
 } from "@/components/ui/Icons";
 import QuizHeader from "./QuizHeader";
 import QuizVantagens from "./QuizVantagens";
@@ -187,19 +187,14 @@ export default function QuizDesktop({
             className="rounded-2xl p-4 shadow-sm"
             style={{ backgroundColor: PARCHMENT_SIDEBAR, border: `1px solid ${BORDER}` }}
           >
-            <span className="text-[12px] font-semibold" style={{ color: "#8a7355" }}>Sequência</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#8a7355" }}>Sequência</span>
             <div className="flex items-center gap-3 mt-2">
-              <div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
-                style={{ backgroundColor: QUIZ_DARK }}
-              >
-                <Fire size={26} />
-              </div>
+              <Fire size={42} />
               <div>
-                <div className="text-[32px] font-bold leading-none tabular-nums" style={{ color: "#1a1a17" }}>
+                <div className="text-[42px] font-bold leading-none tabular-nums font-display" style={{ color: "#1a1a17" }}>
                   {streakAtual}
                 </div>
-                <div className="text-[11px]" style={{ color: "#8a7355" }}>
+                <div className="text-[11px] mt-0.5" style={{ color: "#8a7355" }}>
                   {pontosAtuais} pts acumulados
                 </div>
               </div>
@@ -243,7 +238,7 @@ export default function QuizDesktop({
                 <div
                   key={i}
                   className="flex-1 h-2 rounded-full"
-                  style={{ backgroundColor: i < progresso.energiaRestante ? "#F59E0B" : "#d4c4b0" }}
+                  style={{ backgroundColor: i < progresso.energiaRestante ? "#C07828" : "#d4c4b0" }}
                 />
               ))}
             </div>
@@ -253,12 +248,7 @@ export default function QuizDesktop({
         {/* ── Center: book card + below ── */}
         <div className="flex flex-1 flex-col gap-3 min-w-0">
           {/* Book card wrapper — shake no erro */}
-          <div className="relative" style={{ paddingTop: "22px" }}>
-            <span className="absolute top-0 left-8 z-10 text-[#9ca3af]" aria-hidden>
-              <PaperClip size={18} />
-            </span>
-
-            {/* Wrapper com tremor */}
+          <div>
             <m.div
               animate={tremendoTela ? { x: [0, -7, 7, -5, 5, -2, 2, 0] } : { x: 0 }}
               transition={{ duration: 0.4 }}
@@ -304,7 +294,7 @@ export default function QuizDesktop({
                     </div>
                   )}
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <Star size={15} className="text-amber-400" />
+                    <Star size={15} style={{ color: "#C07828" }} />
                     <span className="text-[13px] font-bold tabular-nums" style={{ color: "#6b5240" }}>
                       {pontosAtuais} pts
                     </span>
@@ -340,8 +330,8 @@ export default function QuizDesktop({
                       className="overflow-hidden"
                     >
                       <div className="mx-6 mb-3 flex items-start gap-3 rounded-xl border p-3"
-                        style={{ backgroundColor: "#fffbeb", borderColor: "#fbbf24" }}>
-                        <span className="text-amber-500 shrink-0 mt-0.5">
+                        style={{ backgroundColor: "#fef6e4", borderColor: "#D4A030" }}>
+                        <span className="shrink-0 mt-0.5" style={{ color: "#C07828" }}>
                           <Star size={16} />
                         </span>
                         <p className="text-[12px] leading-snug" style={{ color: "#78350f" }}>
@@ -428,9 +418,9 @@ export default function QuizDesktop({
                 >
                   <div
                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full self-center"
-                    style={{ backgroundColor: QUIZ_DARK }}
+                    style={{ backgroundColor: "#e8dcc8" }}
                   >
-                    <Star size={18} className="text-amber-300" />
+                    <Star size={18} style={{ color: "#C07828" }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-bold" style={{ color: "#1a1a17" }}>Base Legal</div>
@@ -469,13 +459,8 @@ export default function QuizDesktop({
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 16 }}
               transition={{ duration: 0.3 }}
-              className="relative w-60 xl:w-72 shrink-0 self-start sticky top-[72px]"
-              style={{ paddingTop: "22px" }}
+              className="w-60 xl:w-72 shrink-0 self-start sticky top-[72px]"
             >
-              <span className="absolute top-0 right-6 z-10 text-[#9ca3af]" aria-hidden>
-                <PaperClip size={18} />
-              </span>
-
               <div
                 className="rounded-2xl shadow-md overflow-hidden"
                 style={{ backgroundColor: PARCHMENT_SIDEBAR, border: `1px solid ${BORDER}` }}
@@ -582,7 +567,7 @@ function FooterStat({ icon, label, value }: { icon: React.ReactNode; label: stri
 
 function ParticulasAcerto() {
   const ITENS = [
-    { cor: "#3a5232", dist: 48 }, { cor: "#fbbf24", dist: 56 },
+    { cor: "#3a5232", dist: 48 }, { cor: "#D4A030", dist: 56 },
     { cor: "#6d815a", dist: 44 }, { cor: "#4a9e4a", dist: 60 },
     { cor: "#b59562", dist: 52 }, { cor: "#3a5232", dist: 40 },
   ];
