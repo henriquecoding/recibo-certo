@@ -13,6 +13,7 @@ import QuizVantagens from "./QuizVantagens";
 import QuizMenuLateral from "./QuizMenuLateral";
 import QuizConfigModal from "./QuizConfigModal";
 import { useGameJuice } from "@/hooks/useGameJuice";
+import { useQuizConfig } from "@/hooks/useQuizConfig";
 import type { OpcaoEstado } from "./QuizBookShell";
 import type { VantagensEstado } from "@/hooks/useQuizFiscal";
 import type { QuizOpcao, QuizCategoria } from "@/lib/quiz-fiscal";
@@ -106,6 +107,7 @@ export default function QuizMobile({
   progresso,
 }: QuizMobileProps) {
   const { soarAcerto, soarErro, soarToque } = useGameJuice();
+  const { config, updateConfig } = useQuizConfig();
   const [tremendoCard, setTremendoCard] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
   const [configAberta, setConfigAberta] = useState(false);
@@ -467,12 +469,20 @@ export default function QuizMobile({
         onFechar={() => setMenuAberto(false)}
         categoriaAtiva={categoriaAtiva}
         onSair={onSair}
+        acertosAteAgora={acertosAteAgora}
+        errosAteAgora={errosAteAgora}
+        streakAtual={streakAtual}
+        pontosAtuais={pontosAtuais}
+        indice={indice}
+        total={total}
       />
       <QuizConfigModal
         aberto={configAberta}
         onFechar={() => setConfigAberta(false)}
         onReiniciar={onSair}
         onSair={onSair}
+        config={config}
+        onConfigChange={updateConfig}
       />
     </div>
   );
