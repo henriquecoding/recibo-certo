@@ -25,6 +25,13 @@ interface PillProps {
 
 function VantagemPill({ label, icon, usada, disabled, onClick, compact }: PillProps) {
   const ativo = !usada && !disabled;
+
+  const pillStyle: React.CSSProperties = usada
+    ? { backgroundColor: "#e8dcc8", color: "#9a8a6a", borderColor: "#d4c4b0" }
+    : disabled
+    ? { backgroundColor: "#e8dcc8", color: "#9a8a6a", borderColor: "#d4c4b0" }
+    : { backgroundColor: "#f0e8d8", color: "#415439", borderColor: "#c4a876" };
+
   return (
     <button
       type="button"
@@ -34,18 +41,14 @@ function VantagemPill({ label, icon, usada, disabled, onClick, compact }: PillPr
       aria-label={usada ? `${label} (já usada)` : label}
       aria-pressed={usada}
       className={`
-        flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[12px] font-semibold
+        flex items-center gap-1.5 rounded-xl border font-semibold
         transition-all duration-150 active:scale-[0.95]
-        ${compact ? "px-2 py-1.5 text-[11px]" : ""}
-        ${usada
-          ? "border-stone-200 bg-stone-100 text-stone-400 cursor-not-allowed opacity-60"
-          : disabled
-          ? "border-stone-200 bg-stone-50 text-stone-400 cursor-not-allowed opacity-50"
-          : "border-[#b59562]/40 bg-[#f0e8d8] text-[#415439] shadow-sm hover:border-[#b59562] hover:shadow-md cursor-pointer"
-        }
+        ${compact ? "px-2 py-1.5 text-[11px]" : "px-3 py-2 text-[12px]"}
+        ${(usada || disabled) ? "cursor-not-allowed opacity-60" : "shadow-sm hover:shadow-md cursor-pointer"}
       `}
+      style={pillStyle}
     >
-      <span className={ativo ? "text-[#415439]" : "text-stone-400"}>{icon}</span>
+      <span style={{ color: ativo ? "#415439" : "#9a8a6a" }}>{icon}</span>
       {!compact && <span>{label}</span>}
       {compact && <span className="sr-only">{label}</span>}
       {usada && !compact && (
@@ -66,12 +69,11 @@ export default function QuizVantagens({
   compact = false,
 }: QuizVantagensProps) {
   return (
-    <div className={`flex items-center gap-2 ${compact ? "flex-wrap" : ""}`} role="group" aria-label="Vantagens">
-      {!compact && (
-        <span className="text-[10px] font-bold uppercase tracking-wider shrink-0" style={{ color: "#8a7355" }}>
-          Vantagens
-        </span>
-      )}
+    <div
+      className={compact ? "flex items-center gap-2 flex-wrap" : "grid grid-cols-2 gap-1.5"}
+      role="group"
+      aria-label="Vantagens"
+    >
       <VantagemPill
         label="Eliminar 2"
         icon={<Zap size={compact ? 14 : 13} />}
@@ -88,26 +90,22 @@ export default function QuizVantagens({
         onClick={onDica}
         compact={compact}
       />
-      {modo === "normal" && (
-        <>
-          <VantagemPill
-            label="+10s"
-            icon={<Clock size={compact ? 14 : 13} />}
-            usada={vantagens.tempoExtra}
-            disabled={respondida}
-            onClick={onTempoExtra}
-            compact={compact}
-          />
-          <VantagemPill
-            label="Explicar"
-            icon={<Eye size={compact ? 14 : 13} />}
-            usada={vantagens.explicacao}
-            disabled={respondida}
-            onClick={onExplicacao}
-            compact={compact}
-          />
-        </>
-      )}
+      <VantagemPill
+        label="+10s"
+        icon={<Clock size={compact ? 14 : 13} />}
+        usada={vantagens.tempoExtra}
+        disabled={respondida || modo === "guiado"}
+        onClick={onTempoExtra}
+        compact={compact}
+      />
+      <VantagemPill
+        label="Explicar"
+        icon={<Eye size={compact ? 14 : 13} />}
+        usada={vantagens.explicacao}
+        disabled={respondida || modo === "guiado"}
+        onClick={onExplicacao}
+        compact={compact}
+      />
     </div>
   );
 }

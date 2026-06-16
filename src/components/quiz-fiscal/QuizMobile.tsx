@@ -214,21 +214,26 @@ export default function QuizMobile({
             {opcoes.map((opcao, idx) => {
               const estado = opcaoEstados[idx];
               if (!estado) return null;
+              const { className: btnClass, style: btnStyle } = getMobileOpcaoProps(estado);
               return (
                 <button
                   key={idx}
                   type="button"
                   disabled={respondida || estado === "eliminada"}
                   onClick={() => onOpcaoClick(idx)}
-                  className={mobileOpcaoBtnClass(estado)}
+                  className={btnClass}
+                  style={btnStyle}
                 >
-                  <span className={mobileLetraBadgeClass(estado)}>
+                  <span
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[13px] font-bold"
+                    style={getMobileLetraBadgeStyle(estado)}
+                  >
                     {estado === "correta" ? <Check size={14} /> : estado === "errada" ? <Close size={14} /> : LETRAS[idx]}
                   </span>
-                  <span className="flex-1 text-left text-[14px] font-medium leading-snug" style={{ color: "#1a1a17" }}>
+                  <span className="flex-1 text-left text-[14px] font-medium leading-snug">
                     {opcao.texto}
                   </span>
-                  {estado === "correta" && <Check size={16} className="shrink-0 text-green-600" />}
+                  {estado === "correta" && <Check size={16} className="shrink-0 text-[#3a5232]" />}
                 </button>
               );
             })}
@@ -383,26 +388,30 @@ export default function QuizMobile({
   );
 }
 
-function mobileOpcaoBtnClass(estado: OpcaoEstado): string {
+function getMobileOpcaoProps(estado: OpcaoEstado): { className: string; style: React.CSSProperties } {
   const base = "flex w-full items-center gap-3 rounded-xl border px-3 py-3 transition-all duration-150 active:scale-[0.99]";
   switch (estado) {
-    case "correta":   return `${base} border-green-300 bg-green-50`;
-    case "errada":    return `${base} border-red-200 bg-red-50`;
-    case "eliminada": return `${base} border-stone-200 bg-stone-100 opacity-30 line-through`;
-    case "apagada":   return `${base} border-stone-200 bg-stone-50 opacity-50`;
-    case "selecionada": return `${base} border-[#415439] bg-green-50 ring-1 ring-[#415439]/20`;
-    default:          return `${base} border-[#e2d9c8] bg-white hover:border-[#415439]/40 hover:shadow-sm`;
+    case "correta":
+      return { className: base, style: { backgroundColor: "#d8f5d8", borderColor: "#4a9e4a", color: "#145532" } };
+    case "errada":
+      return { className: base, style: { backgroundColor: "#f9e4db", borderColor: "#c2745a", color: "#7a3c28" } };
+    case "eliminada":
+      return { className: `${base} opacity-30 line-through pointer-events-none`, style: { backgroundColor: "#f0e8d8", borderColor: "#d4c4b0", color: "#8a7355" } };
+    case "apagada":
+      return { className: base, style: { backgroundColor: "#f5f0e8", borderColor: "#e2d9c8", color: "#a0907a", opacity: 0.55 } };
+    case "selecionada":
+      return { className: base, style: { backgroundColor: "#e8f0e4", borderColor: "#3a5232", boxShadow: "0 0 0 2px rgba(58,82,50,0.12)", color: "#1a1a17" } };
+    default:
+      return { className: `${base} cursor-pointer`, style: { backgroundColor: "#ffffff", borderColor: "#e2d9c8", color: "#1a1a17" } };
   }
 }
 
-function mobileLetraBadgeClass(estado: OpcaoEstado): string {
-  const base = "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[13px] font-bold";
+function getMobileLetraBadgeStyle(estado: OpcaoEstado): React.CSSProperties {
   switch (estado) {
-    case "correta":   return `${base} bg-[#415439] text-white`;
-    case "errada":    return `${base} bg-[#c2745a] text-white`;
+    case "correta":   return { backgroundColor: "#3a5232", color: "#ffffff" };
+    case "errada":    return { backgroundColor: "#c2745a", color: "#ffffff" };
     case "eliminada":
-    case "apagada":   return `${base} bg-stone-200 text-stone-400`;
-    case "selecionada": return `${base} bg-[#415439] text-white`;
-    default:          return `${base} bg-[#415439] text-white`;
+    case "apagada":   return { backgroundColor: "#d4c4b0", color: "#8a7355" };
+    default:          return { backgroundColor: "#3a5232", color: "#ffffff" };
   }
 }

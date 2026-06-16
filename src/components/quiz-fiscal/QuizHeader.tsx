@@ -29,15 +29,15 @@ export default function QuizHeader({
 
   return (
     <header
-      className="flex items-center gap-3 px-4 py-2.5 border-b shrink-0"
-      style={{ backgroundColor: "#f1e4d4", borderColor: "#d4b896" }}
+      className="flex items-center gap-3 px-4 py-3 border-b shrink-0"
+      style={{ backgroundColor: "#f0e8d8", borderColor: "#d4b896" }}
     >
       {/* Hamburger */}
       <button
         type="button"
         onClick={onMenuToggle}
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded transition-opacity hover:opacity-70 active:scale-95"
-        style={{ border: "1px solid #b59562", color: "#b59562" }}
+        style={{ color: "#8a7355" }}
         aria-label="Abrir menu de categorias"
         aria-expanded={false}
       >
@@ -82,7 +82,7 @@ export default function QuizHeader({
           </span>
           <div className="flex items-center gap-1.5">
             <div
-              className="h-1.5 w-24 rounded-full overflow-hidden"
+              className="h-1.5 w-28 rounded-full overflow-hidden"
               style={{ backgroundColor: "#d4c4b0" }}
               role="progressbar"
               aria-valuenow={pct}
