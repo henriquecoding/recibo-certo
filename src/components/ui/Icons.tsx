@@ -557,8 +557,18 @@ export function Spinner({ size = 18, className }: IconProps) {
 // ─── Gamificação / engagement ───────────────────────────────
 export function Fire({ size = 18, className }: IconProps) {
   return (
-    <svg {...svgProps(size, className)}>
-      <path d="M12 22c-4.42 0-7-3.13-7-7 0-3.5 2.5-6.5 4-8 .5 2 2 3 2 3s1-2.5 2-4c1 2 2 4 2 4s1.5-1 2-3c1.5 2.5 2 4.5 2 6 0 4.5-2 9-5 9z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden focusable={false}>
+      <path d="M12 22c-4.42 0-7-3.13-7-7 0-3.5 2.5-6.5 4-8 .5 2 2 3 2 3s1-2.5 2-4c1 2 2 4 2 4s1.5-1 2-3c1.5 2.5 2 4.5 2 6 0 4.5-2 9-5 9z" />
+    </svg>
+  );
+}
+
+export function PaperClip({ size = 20, className }: IconProps) {
+  const h = Math.round(size * 2.6);
+  return (
+    <svg width={size} height={h} viewBox="0 0 20 52" fill="none" className={className} aria-hidden focusable={false}>
+      <path d="M15 11C15 5 5 5 5 11L5 38C5 47 15 47 15 38L15 21" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M10 11L10 38C10 43 15 43 15 38" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }

@@ -4,7 +4,7 @@ import { m, AnimatePresence } from "motion/react";
 import { resolveQuizIcon } from "./icon-map";
 import { META_CATEGORIA_QUIZ } from "@/lib/quiz-fiscal";
 import {
-  Check, Close, ArrowRight, ExternalLink, Fire, Lightbulb, Star, Target, Zap,
+  Check, Close, ArrowRight, ExternalLink, Fire, Lightbulb, Star, Target, Zap, PaperClip,
 } from "@/components/ui/Icons";
 import QuizHeader from "./QuizHeader";
 import type { OpcaoEstado } from "./QuizBookShell";
@@ -177,7 +177,12 @@ export default function QuizDesktop({
               Sequência
             </span>
             <div className="flex items-center gap-3 mt-2">
-              <Fire size={32} className="text-orange-500 shrink-0" />
+              <div
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: QUIZ_DARK }}
+              >
+                <Fire size={26} className="text-orange-400" />
+              </div>
               <div>
                 <div className="text-[32px] font-bold leading-none" style={{ color: "#1a1a17" }}>
                   {streakAtual}
@@ -192,18 +197,16 @@ export default function QuizDesktop({
 
         {/* ── Center: book card + below ── */}
         <div className="flex flex-1 flex-col gap-3 min-w-0">
+          {/* Book card wrapper — relative for paper clip positioning */}
+          <div className="relative" style={{ paddingTop: "22px" }}>
+            <span className="absolute top-0 left-8 z-10 text-[#9ca3af]" aria-hidden>
+              <PaperClip size={18} />
+            </span>
           {/* Book card */}
           <div
-            className="rounded-2xl shadow-xl overflow-hidden relative"
+            className="rounded-2xl shadow-xl"
             style={{ backgroundColor: BOOK_BG, border: `1px solid ${BORDER}` }}
           >
-            {/* Paper clip decoration */}
-            <div className="absolute -top-1 left-8 z-10" aria-hidden>
-              <svg width="18" height="44" viewBox="0 0 18 44" fill="none">
-                <path d="M9 4C6.2 4 4 6.2 4 9v20c0 3.9 1.7 7 5 7s5-3.1 5-7V10" stroke="#9ca3af" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-                <path d="M9 14V9c0-2.8 4.5-2.8 4.5 0v19c0 6.5-9 6.5-9 0V9C4.5 2.5 13.5 2.5 13.5 9" stroke="#b0b7c0" strokeWidth="1.8" strokeLinecap="round" fill="none" />
-              </svg>
-            </div>
 
             {/* Progress header row */}
             <div className="flex items-center gap-3 px-6 py-4">
@@ -312,6 +315,7 @@ export default function QuizDesktop({
               </div>
             )}
           </div>
+          </div>{/* end book card wrapper */}
 
           {/* Below book: Dica + Próxima */}
           <AnimatePresence>
@@ -327,7 +331,12 @@ export default function QuizDesktop({
                   className="flex flex-1 items-start gap-3 rounded-2xl p-4"
                   style={{ backgroundColor: PARCHMENT_SIDEBAR, border: `1px solid ${BORDER}` }}
                 >
-                  <span className="shrink-0 mt-0.5 text-[#415439]"><Lightbulb size={20} /></span>
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full self-center"
+                    style={{ backgroundColor: QUIZ_DARK }}
+                  >
+                    <Lightbulb size={18} className="text-amber-300" />
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-bold" style={{ color: "#1a1a17" }}>
                       Dica Fiscal
@@ -369,16 +378,18 @@ export default function QuizDesktop({
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 16 }}
               transition={{ duration: 0.3 }}
-              className="w-60 xl:w-72 shrink-0 rounded-2xl overflow-hidden shadow-md self-start sticky top-[88px]"
-              style={{ backgroundColor: PARCHMENT_SIDEBAR, border: `1px solid ${BORDER}` }}
+              className="relative w-60 xl:w-72 shrink-0 self-start sticky top-[88px]"
+              style={{ paddingTop: "22px" }}
             >
               {/* Paper clip top-right */}
-              <div className="absolute -top-1 right-6 z-10" aria-hidden>
-                <svg width="18" height="44" viewBox="0 0 18 44" fill="none">
-                  <path d="M9 4C6.2 4 4 6.2 4 9v20c0 3.9 1.7 7 5 7s5-3.1 5-7V10" stroke="#9ca3af" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-                  <path d="M9 14V9c0-2.8 4.5-2.8 4.5 0v19c0 6.5-9 6.5-9 0V9C4.5 2.5 13.5 2.5 13.5 9" stroke="#b0b7c0" strokeWidth="1.8" strokeLinecap="round" fill="none" />
-                </svg>
-              </div>
+              <span className="absolute top-0 right-6 z-10 text-[#9ca3af]" aria-hidden>
+                <PaperClip size={18} />
+              </span>
+
+              <div
+                className="rounded-2xl shadow-md overflow-hidden"
+                style={{ backgroundColor: PARCHMENT_SIDEBAR, border: `1px solid ${BORDER}` }}
+              >
 
               {/* Panel header */}
               <div
@@ -468,6 +479,7 @@ export default function QuizDesktop({
                   </a>
                 )}
               </div>
+              </div>{/* end inner card */}
             </m.aside>
           )}
         </AnimatePresence>
