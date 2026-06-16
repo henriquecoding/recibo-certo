@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { m } from "motion/react";
 import { Menu, Settings, LogoMark } from "@/components/ui/Icons";
 
 interface QuizHeaderProps {
@@ -9,6 +10,7 @@ interface QuizHeaderProps {
   xpAtual?: number;
   xpTotal?: number;
   xpPct?: number;
+  menuAberto?: boolean;
   onMenuToggle?: () => void;
   onSair?: () => void;
 }
@@ -19,6 +21,7 @@ export default function QuizHeader({
   xpAtual = 0,
   xpTotal = 200,
   xpPct,
+  menuAberto = false,
   onMenuToggle,
   onSair,
 }: QuizHeaderProps) {
@@ -37,16 +40,20 @@ export default function QuizHeader({
       <button
         type="button"
         onClick={onMenuToggle}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-opacity hover:opacity-70 active:scale-95"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-opacity hover:opacity-70 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#3a5232]"
         style={{ color: "#6b5240" }}
         aria-label="Abrir menu de categorias"
-        aria-expanded={false}
+        aria-expanded={menuAberto}
+        aria-haspopup="menu"
       >
         <Menu size={20} />
       </button>
 
-      {/* Logo — links to homepage */}
-      <Link href="/" className="flex items-center gap-2.5 shrink-0 transition-opacity hover:opacity-80">
+      {/* Logo */}
+      <Link
+        href="/"
+        className="flex items-center gap-2.5 shrink-0 transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#3a5232] rounded"
+      >
         <LogoMark size={34} />
         <div className="flex flex-col leading-none">
           <span className="font-display text-[15px] font-bold leading-tight tracking-tight">
@@ -63,17 +70,19 @@ export default function QuizHeader({
 
       {/* Level badge + XP */}
       <div className="flex items-center gap-3">
-        <div
+        <m.div
           className="flex h-11 w-11 shrink-0 items-center justify-center text-[15px] font-bold text-white"
           style={{
             backgroundColor: "#415439",
             clipPath: "polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%)",
           }}
-          aria-label={`Nivel ${nivel}`}
+          whileHover={{ scale: 1.08 }}
+          transition={{ type: "spring", stiffness: 500, damping: 24 }}
+          aria-label={`Nível ${nivel}`}
           title={tituloNivel}
         >
           {nivel}
-        </div>
+        </m.div>
 
         <div className="hidden sm:flex flex-col gap-1 min-w-0">
           <span className="text-[12px] font-semibold truncate" style={{ color: "#415439" }}>
@@ -87,15 +96,13 @@ export default function QuizHeader({
               aria-valuenow={pct}
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-label={`${pct}% para o proximo nivel`}
+              aria-label={`${pct}% para o próximo nível`}
             >
-              <div
+              <m.div
                 className="h-full rounded-full"
-                style={{
-                  width: `${pct}%`,
-                  background: "linear-gradient(to right, #425c3b, #6d815a)",
-                  transition: "width 0.6s cubic-bezier(0.16,1,0.3,1)",
-                }}
+                style={{ background: "linear-gradient(to right, #425c3b, #6d815a)" }}
+                animate={{ width: `${pct}%` }}
+                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
               />
             </div>
             <span className="text-[11px] font-bold tabular-nums whitespace-nowrap" style={{ color: "#415439" }}>
@@ -109,7 +116,7 @@ export default function QuizHeader({
       <button
         type="button"
         onClick={onSair}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-opacity hover:opacity-70 active:scale-95"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-opacity hover:opacity-70 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#3a5232]"
         style={{ color: "#6b5240" }}
         aria-label="Sair do Quiz"
         title="Sair do Quiz"
