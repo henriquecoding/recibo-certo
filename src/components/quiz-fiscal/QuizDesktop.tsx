@@ -294,7 +294,7 @@ export default function QuizDesktop({
                     </div>
                   )}
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <Star size={15} style={{ color: "#C07828" }} />
+                    <span style={{ color: "#C07828" }}><Star size={15} /></span>
                     <span className="text-[13px] font-bold tabular-nums" style={{ color: "#6b5240" }}>
                       {pontosAtuais} pts
                     </span>
@@ -420,7 +420,7 @@ export default function QuizDesktop({
                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full self-center"
                     style={{ backgroundColor: "#e8dcc8" }}
                   >
-                    <Star size={18} style={{ color: "#C07828" }} />
+                    <span style={{ color: "#C07828" }}><Star size={18} /></span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-bold" style={{ color: "#1a1a17" }}>Base Legal</div>

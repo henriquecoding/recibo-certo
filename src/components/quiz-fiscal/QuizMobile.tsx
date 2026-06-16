@@ -215,7 +215,7 @@ export default function QuizMobile({
                   </div>
                 )}
                 <div className="flex items-center gap-1 shrink-0">
-                  <Star size={13} style={{ color: "#C07828" }} />
+                  <span style={{ color: "#C07828" }}><Star size={13} /></span>
                   <span className="text-[11px] font-bold tabular-nums" style={{ color: "#6b5240" }}>
                     {pontosAtuais}
                   </span>
