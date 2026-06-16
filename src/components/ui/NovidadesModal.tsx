@@ -36,21 +36,24 @@ export default function NovidadesModal() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[9000] bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-[9000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
             onClick={fechar}
             aria-hidden
-          />
+          >
+            {/* Camada clicável separada do modal para não propagar o click */}
+            <div className="absolute inset-0" onClick={fechar} aria-hidden />
+          </m.div>
           <m.div
             key="modal"
-            initial={{ opacity: 0, scale: 0.95, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 420, damping: 38 }}
             role="dialog"
             aria-modal
             aria-labelledby="novidades-titulo"
-            className="fixed left-1/2 top-1/2 z-[9001] w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-4xl bg-white shadow-float dark:bg-stone-900"
-            style={{ maxHeight: "90dvh", display: "flex", flexDirection: "column" }}
+            className="fixed inset-0 z-[9001] m-auto w-full max-w-md rounded-4xl bg-white shadow-float dark:bg-stone-900"
+            style={{ maxHeight: "min(90dvh, 680px)", height: "fit-content", display: "flex", flexDirection: "column" }}
           >
             {/* Cabeçalho */}
             <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-stone-100 dark:border-stone-800 shrink-0">

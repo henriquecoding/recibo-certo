@@ -96,14 +96,15 @@ export default function AuthModal() {
 
           <m.div
             key="modal"
-            initial={{ opacity: 0, scale: 0.95, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 420, damping: 38 }}
             role="dialog"
             aria-modal
             aria-labelledby="auth-modal-titulo"
-            className="fixed left-1/2 top-1/2 z-[8001] w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-4xl bg-white shadow-float dark:bg-stone-900"
+            className="fixed inset-0 z-[8001] m-auto w-full max-w-sm rounded-4xl bg-white shadow-float dark:bg-stone-900"
+            style={{ height: "fit-content", maxHeight: "90dvh", overflowY: "auto" }}
           >
             {/* Cabeçalho */}
             <div className="relative flex flex-col items-center px-8 pt-8 pb-5 border-b border-stone-100 dark:border-stone-800">
