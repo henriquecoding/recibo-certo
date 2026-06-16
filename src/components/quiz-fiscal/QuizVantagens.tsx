@@ -1,6 +1,6 @@
 "use client";
 
-import { Zap, Lightbulb, Clock, Eye } from "@/components/ui/Icons";
+import { Zap, Lightbulb, Clock, Eye, SkipForward, Target, Repeat, Shield } from "@/components/ui/Icons";
 import type { VantagensEstado } from "@/hooks/useQuizFiscal";
 
 interface QuizVantagensProps {
@@ -11,7 +11,11 @@ interface QuizVantagensProps {
   onDica: () => void;
   onTempoExtra: () => void;
   onExplicacao: () => void;
-  compact?: boolean; // para mobile
+  onPular: () => void;
+  onDobrar: () => void;
+  onSegundaChance: () => void;
+  onEscudo: () => void;
+  compact?: boolean;
 }
 
 interface PillProps {
@@ -66,46 +70,27 @@ export default function QuizVantagens({
   onDica,
   onTempoExtra,
   onExplicacao,
+  onPular,
+  onDobrar,
+  onSegundaChance,
+  onEscudo,
   compact = false,
 }: QuizVantagensProps) {
+  const sz = compact ? 14 : 13;
   return (
     <div
-      className={compact ? "flex items-center gap-2 flex-wrap" : "grid grid-cols-2 gap-1.5"}
+      className={compact ? "flex items-center gap-2 flex-wrap" : "grid grid-cols-4 gap-1.5"}
       role="group"
       aria-label="Vantagens"
     >
-      <VantagemPill
-        label="Eliminar 2"
-        icon={<Zap size={compact ? 14 : 13} />}
-        usada={vantagens.eliminar2}
-        disabled={respondida}
-        onClick={onEliminar2}
-        compact={compact}
-      />
-      <VantagemPill
-        label="Dica"
-        icon={<Lightbulb size={compact ? 14 : 13} />}
-        usada={vantagens.dica}
-        disabled={respondida}
-        onClick={onDica}
-        compact={compact}
-      />
-      <VantagemPill
-        label="+10s"
-        icon={<Clock size={compact ? 14 : 13} />}
-        usada={vantagens.tempoExtra}
-        disabled={respondida || modo === "guiado"}
-        onClick={onTempoExtra}
-        compact={compact}
-      />
-      <VantagemPill
-        label="Explicar"
-        icon={<Eye size={compact ? 14 : 13} />}
-        usada={vantagens.explicacao}
-        disabled={respondida || modo === "guiado"}
-        onClick={onExplicacao}
-        compact={compact}
-      />
+      <VantagemPill label="Eliminar 2" icon={<Zap size={sz} />} usada={vantagens.eliminar2} disabled={respondida} onClick={onEliminar2} compact={compact} />
+      <VantagemPill label="Dica" icon={<Lightbulb size={sz} />} usada={vantagens.dica} disabled={respondida} onClick={onDica} compact={compact} />
+      <VantagemPill label="+10s" icon={<Clock size={sz} />} usada={vantagens.tempoExtra} disabled={respondida || modo === "guiado"} onClick={onTempoExtra} compact={compact} />
+      <VantagemPill label="Explicar" icon={<Eye size={sz} />} usada={vantagens.explicacao} disabled={respondida || modo === "guiado"} onClick={onExplicacao} compact={compact} />
+      <VantagemPill label="Pular" icon={<SkipForward size={sz} />} usada={vantagens.pular} disabled={respondida} onClick={onPular} compact={compact} />
+      <VantagemPill label="Dobrar" icon={<Target size={sz} />} usada={vantagens.dobrar} disabled={respondida} onClick={onDobrar} compact={compact} />
+      <VantagemPill label="2.ª Chance" icon={<Repeat size={sz} />} usada={vantagens.segundaChance} disabled={respondida} onClick={onSegundaChance} compact={compact} />
+      <VantagemPill label="Escudo" icon={<Shield size={sz} />} usada={vantagens.escudo} disabled={respondida} onClick={onEscudo} compact={compact} />
     </div>
   );
 }

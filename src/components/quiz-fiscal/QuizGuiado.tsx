@@ -20,6 +20,7 @@ export default function QuizGuiado({ quiz, progresso, onSair }: QuizGuiadoProps)
     selecionarOpcao, confirmarResposta, seguinte, respostas,
     vantagens, eliminadas, dicaVisivel,
     usarEliminar2, usarDica, usarTempoExtra, usarExplicacao,
+    usarPular, usarDobrar, usarSegundaChance, usarEscudo,
     config, pontosAtuais, streakAtual,
   } = quiz;
 
@@ -38,7 +39,7 @@ export default function QuizGuiado({ quiz, progresso, onSair }: QuizGuiadoProps)
 
   const acertosAteAgora = respostas.filter((r) => r.acertou).length;
   const errosAteAgora = respostas.filter((r) => !r.acertou).length;
-  const vantagensUsadas = [vantagens.eliminar2, vantagens.dica, vantagens.tempoExtra, vantagens.explicacao].filter(Boolean).length;
+  const vantagensUsadas = Object.values(vantagens).filter(Boolean).length;
 
   const explicacoesErradas = mostrarExplicacao
     ? opcoes
@@ -62,6 +63,10 @@ export default function QuizGuiado({ quiz, progresso, onSair }: QuizGuiadoProps)
     onDica: usarDica,
     onTempoExtra: usarTempoExtra,
     onExplicacao: usarExplicacao,
+    onPular: usarPular,
+    onDobrar: usarDobrar,
+    onSegundaChance: usarSegundaChance,
+    onEscudo: usarEscudo,
     dicaVisivel,
     legalBasis: pergunta.legalBasis,
     mostrarExplicacao,

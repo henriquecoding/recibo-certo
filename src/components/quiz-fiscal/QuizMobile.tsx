@@ -34,6 +34,10 @@ interface QuizMobileProps {
   onDica: () => void;
   onTempoExtra: () => void;
   onExplicacao: () => void;
+  onPular: () => void;
+  onDobrar: () => void;
+  onSegundaChance: () => void;
+  onEscudo: () => void;
   dicaVisivel: boolean;
   legalBasis: string;
   mostrarExplicacao: boolean;
@@ -77,6 +81,10 @@ export default function QuizMobile({
   onDica,
   onTempoExtra,
   onExplicacao,
+  onPular,
+  onDobrar,
+  onSegundaChance,
+  onEscudo,
   dicaVisivel,
   legalBasis,
   mostrarExplicacao,
@@ -267,6 +275,10 @@ export default function QuizMobile({
             onDica={onDica}
             onTempoExtra={onTempoExtra}
             onExplicacao={onExplicacao}
+            onPular={onPular}
+            onDobrar={onDobrar}
+            onSegundaChance={onSegundaChance}
+            onEscudo={onEscudo}
             compact
           />
         </div>

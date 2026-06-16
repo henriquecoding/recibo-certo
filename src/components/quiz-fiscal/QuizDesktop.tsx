@@ -15,17 +15,6 @@ import type { QuizProgressoProps } from "./QuizFiscalApp";
 
 const LETRAS = ["A", "B", "C", "D"];
 
-const ALL_CATEGORIES: { key: QuizCategoria | "todas"; label: string; icon: string }[] = [
-  { key: "todas", label: "Todas", icon: "LayoutGrid" },
-  { key: "iva", label: "IVA", icon: "Scale" },
-  { key: "retencao", label: "IRS", icon: "Wallet" },
-  { key: "seguranca_social", label: "Seg. Social", icon: "ShieldCheck" },
-  { key: "regime_simplificado", label: "Regime Simpl.", icon: "ChartProjection" },
-  { key: "atividades", label: "Atividades", icon: "Briefcase" },
-  { key: "categoria_f", label: "Rendimentos Pred.", icon: "Home" },
-  { key: "prazos", label: "Obrigações Fiscais", icon: "Calendar" },
-];
-
 interface QuizDesktopProps {
   categoriaAtiva?: QuizCategoria;
   indice: number;
@@ -44,6 +33,10 @@ interface QuizDesktopProps {
   onDica: () => void;
   onTempoExtra: () => void;
   onExplicacao: () => void;
+  onPular: () => void;
+  onDobrar: () => void;
+  onSegundaChance: () => void;
+  onEscudo: () => void;
   dicaVisivel: boolean;
   legalBasis: string;
   mostrarExplicacao: boolean;
@@ -94,6 +87,10 @@ export default function QuizDesktop({
   onDica,
   onTempoExtra,
   onExplicacao,
+  onPular,
+  onDobrar,
+  onSegundaChance,
+  onEscudo,
   dicaVisivel,
   legalBasis,
   mostrarExplicacao,
@@ -142,40 +139,6 @@ export default function QuizDesktop({
 
         {/* ── Left sidebar ── */}
         <aside className="w-60 xl:w-64 shrink-0 flex flex-col gap-3 self-start sticky top-[72px]">
-          {/* Categories card */}
-          <div
-            className="rounded-2xl overflow-hidden shadow-md"
-            style={{ backgroundColor: PARCHMENT_SIDEBAR, border: `1px solid ${BORDER}` }}
-          >
-            <div
-              className="flex items-center justify-between px-4 py-3 border-b"
-              style={{ borderColor: BORDER }}
-            >
-              <span className="text-[13px] font-semibold" style={{ color: "#415439" }}>
-                Categorias
-              </span>
-              <div className="h-6 w-3 rounded-b" style={{ backgroundColor: "#415439" }} aria-hidden />
-            </div>
-            <nav className="py-1">
-              {ALL_CATEGORIES.map(({ key, label, icon }) => {
-                const Icon = resolveQuizIcon(icon);
-                const isActive = key === "todas" ? !categoriaAtiva : categoriaAtiva === key;
-                return (
-                  <div
-                    key={key}
-                    className={`flex items-center gap-2.5 px-4 py-2.5 text-[13px] font-medium transition-colors cursor-default ${
-                      isActive ? "text-white" : "hover:bg-black/5"
-                    }`}
-                    style={isActive ? { backgroundColor: QUIZ_DARK, color: "#fff" } : { color: "#415439" }}
-                  >
-                    <Icon size={16} />
-                    {label}
-                  </div>
-                );
-              })}
-            </nav>
-          </div>
-
           {/* Sequência card */}
           <div
             className="rounded-2xl p-4 shadow-sm"
@@ -215,6 +178,10 @@ export default function QuizDesktop({
                 onDica={onDica}
                 onTempoExtra={onTempoExtra}
                 onExplicacao={onExplicacao}
+                onPular={onPular}
+                onDobrar={onDobrar}
+                onSegundaChance={onSegundaChance}
+                onEscudo={onEscudo}
               />
             </div>
           </div>

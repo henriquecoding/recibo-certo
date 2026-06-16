@@ -654,6 +654,34 @@ export function BookOpen({ size = 18, className }: IconProps) {
   );
 }
 
+export function SkipForward({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <polygon points="5,4 15,12 5,20" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" fill="none" />
+      <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function Repeat({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M17 1l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 11V9a4 4 0 014-4h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7 23l-4-4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M21 13v2a4 4 0 01-4 4H3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Shield({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" fill="none" />
+    </svg>
+  );
+}
+
 // ─── Marca do ícone (V2) ────────────────────────────────────
 export function LogoMark({ size = 28, className }: IconProps) {
   return (
