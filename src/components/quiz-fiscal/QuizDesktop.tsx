@@ -211,22 +211,20 @@ export default function QuizDesktop({
             className="rounded-2xl p-4 shadow-sm"
             style={{ backgroundColor: PARCHMENT_SIDEBAR, border: `1px solid ${BORDER}` }}
           >
-            <span className="text-[12px] font-semibold block mb-3" style={{ color: "#8a7355" }}>Vantagens</span>
-            <div className="flex flex-col gap-2">
-              <QuizVantagens
-                vantagens={vantagens}
-                modo={modo}
-                respondida={respondida}
-                onEliminar2={onEliminar2}
-                onDica={onDica}
-                onTempoExtra={onTempoExtra}
-                onExplicacao={onExplicacao}
-                onPular={onPular}
-                onDobrar={onDobrar}
-                onSegundaChance={onSegundaChance}
-                onEscudo={onEscudo}
-              />
-            </div>
+            <span className="text-[12px] font-semibold block mb-2.5" style={{ color: "#8a7355" }}>Vantagens</span>
+            <QuizVantagens
+              vantagens={vantagens}
+              modo={modo}
+              respondida={respondida}
+              onEliminar2={onEliminar2}
+              onDica={onDica}
+              onTempoExtra={onTempoExtra}
+              onExplicacao={onExplicacao}
+              onPular={onPular}
+              onDobrar={onDobrar}
+              onSegundaChance={onSegundaChance}
+              onEscudo={onEscudo}
+            />
           </div>
 
           {/* Energia */}

@@ -18,49 +18,27 @@ interface QuizVantagensProps {
   compact?: boolean;
 }
 
-interface PillProps {
+const QUIZ_DARK = "#3a5232";
+
+interface ItemVantagem {
+  chave: keyof VantagensEstado;
   label: string;
-  icon: React.ReactNode;
-  usada: boolean;
-  disabled: boolean;
-  onClick: () => void;
-  compact?: boolean;
+  labelCurto: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Icone: React.ComponentType<any>;
+  isDesativadoFn: (respondida: boolean, modo: string) => boolean;
 }
 
-function VantagemPill({ label, icon, usada, disabled, onClick, compact }: PillProps) {
-  const ativo = !usada && !disabled;
-
-  const pillStyle: React.CSSProperties = usada
-    ? { backgroundColor: "#e8dcc8", color: "#9a8a6a", borderColor: "#d4c4b0" }
-    : disabled
-    ? { backgroundColor: "#e8dcc8", color: "#9a8a6a", borderColor: "#d4c4b0" }
-    : { backgroundColor: "#f0e8d8", color: "#415439", borderColor: "#c4a876" };
-
-  return (
-    <button
-      type="button"
-      disabled={usada || disabled}
-      onClick={onClick}
-      title={label}
-      aria-label={usada ? `${label} (já usada)` : label}
-      aria-pressed={usada}
-      className={`
-        flex items-center gap-1.5 rounded-xl border font-semibold
-        transition-all duration-150 active:scale-[0.95]
-        ${compact ? "px-2 py-1.5 text-[11px]" : "px-3 py-2 text-[12px]"}
-        ${(usada || disabled) ? "cursor-not-allowed opacity-60" : "shadow-sm hover:shadow-md cursor-pointer"}
-      `}
-      style={pillStyle}
-    >
-      <span style={{ color: ativo ? "#415439" : "#9a8a6a" }}>{icon}</span>
-      {!compact && <span>{label}</span>}
-      {compact && <span className="sr-only">{label}</span>}
-      {usada && !compact && (
-        <span className="ml-0.5 text-[9px] font-normal opacity-60">usada</span>
-      )}
-    </button>
-  );
-}
+const ITENS: ItemVantagem[] = [
+  { chave: "eliminar2",     label: "Eliminar 2",    labelCurto: "Elim.",  Icone: Zap,         isDesativadoFn: (r) => r },
+  { chave: "dica",          label: "Dica",          labelCurto: "Dica",   Icone: Lightbulb,   isDesativadoFn: (r) => r },
+  { chave: "tempoExtra",    label: "+10 segundos",  labelCurto: "+10s",   Icone: Clock,       isDesativadoFn: (r, m) => r || m === "guiado" },
+  { chave: "explicacao",    label: "Explicação",    labelCurto: "Expl.",  Icone: Eye,         isDesativadoFn: (r, m) => r || m === "guiado" },
+  { chave: "pular",         label: "Pular",         labelCurto: "Pular",  Icone: SkipForward, isDesativadoFn: (r) => r },
+  { chave: "dobrar",        label: "Dobrar pts",    labelCurto: "×2",     Icone: Target,      isDesativadoFn: (r) => r },
+  { chave: "segundaChance", label: "2.ª Chance",    labelCurto: "2.ª C.", Icone: Repeat,      isDesativadoFn: (r) => r },
+  { chave: "escudo",        label: "Escudo",        labelCurto: "Esd.",   Icone: Shield,      isDesativadoFn: (r) => r },
+];
 
 export default function QuizVantagens({
   vantagens,
@@ -76,21 +54,67 @@ export default function QuizVantagens({
   onEscudo,
   compact = false,
 }: QuizVantagensProps) {
-  const sz = compact ? 14 : 13;
+  const handlers: Record<keyof VantagensEstado, () => void> = {
+    eliminar2:     onEliminar2,
+    dica:          onDica,
+    tempoExtra:    onTempoExtra,
+    explicacao:    onExplicacao,
+    pular:         onPular,
+    dobrar:        onDobrar,
+    segundaChance: onSegundaChance,
+    escudo:        onEscudo,
+  };
+
+  const iconSz  = compact ? 14 : 16;
+  const minH    = compact ? "44px" : "54px";
+  const lblSize = compact ? "8px" : "9px";
+
   return (
     <div
-      className={compact ? "flex items-center gap-2 flex-wrap" : "grid grid-cols-4 gap-1.5"}
+      className="grid grid-cols-4 gap-1.5 w-full"
       role="group"
-      aria-label="Vantagens"
+      aria-label="Vantagens disponíveis"
     >
-      <VantagemPill label="Eliminar 2" icon={<Zap size={sz} />} usada={vantagens.eliminar2} disabled={respondida} onClick={onEliminar2} compact={compact} />
-      <VantagemPill label="Dica" icon={<Lightbulb size={sz} />} usada={vantagens.dica} disabled={respondida} onClick={onDica} compact={compact} />
-      <VantagemPill label="+10s" icon={<Clock size={sz} />} usada={vantagens.tempoExtra} disabled={respondida || modo === "guiado"} onClick={onTempoExtra} compact={compact} />
-      <VantagemPill label="Explicar" icon={<Eye size={sz} />} usada={vantagens.explicacao} disabled={respondida || modo === "guiado"} onClick={onExplicacao} compact={compact} />
-      <VantagemPill label="Pular" icon={<SkipForward size={sz} />} usada={vantagens.pular} disabled={respondida} onClick={onPular} compact={compact} />
-      <VantagemPill label="Dobrar" icon={<Target size={sz} />} usada={vantagens.dobrar} disabled={respondida} onClick={onDobrar} compact={compact} />
-      <VantagemPill label="2.ª Chance" icon={<Repeat size={sz} />} usada={vantagens.segundaChance} disabled={respondida} onClick={onSegundaChance} compact={compact} />
-      <VantagemPill label="Escudo" icon={<Shield size={sz} />} usada={vantagens.escudo} disabled={respondida} onClick={onEscudo} compact={compact} />
+      {ITENS.map(({ chave, label, labelCurto, Icone, isDesativadoFn }) => {
+        const usada    = vantagens[chave];
+        const desativ  = isDesativadoFn(respondida, modo);
+        const inativo  = usada || desativ;
+
+        const bg     = usada   ? "#f0ebe0"   : desativ ? "#f5f2ee"   : "#e8f0e4";
+        const border = usada   ? "#d4c4b0"   : desativ ? "#e0d8cc"   : QUIZ_DARK;
+        const cor    = usada   ? "#b0a090"   : desativ ? "#c4b8a8"   : QUIZ_DARK;
+        const opac   = usada   ? 0.65        : desativ ? 0.42        : 1;
+
+        return (
+          <button
+            key={chave}
+            type="button"
+            disabled={inativo}
+            onClick={handlers[chave]}
+            title={usada ? `${label} — já usada` : desativ ? `${label} — indisponível` : label}
+            aria-label={usada ? `${label}, já usada` : desativ ? `${label}, indisponível` : label}
+            aria-pressed={usada}
+            className="flex flex-col items-center justify-center gap-0.5 rounded-xl border transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#3a5232]"
+            style={{
+              minHeight: minH,
+              padding: compact ? "5px 3px" : "7px 4px",
+              backgroundColor: bg,
+              borderColor: border,
+              opacity: opac,
+            }}
+          >
+            <span style={{ color: cor }}>
+              <Icone size={iconSz} />
+            </span>
+            <span
+              className="font-bold leading-none text-center"
+              style={{ fontSize: lblSize, color: cor }}
+            >
+              {labelCurto}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }

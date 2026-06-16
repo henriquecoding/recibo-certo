@@ -321,9 +321,10 @@ export default function QuizMobile({
         </m.div>
       </div>
 
-      {/* ── 4. Vantagens row ── */}
+      {/* ── 4. Vantagens grid ── */}
       {!respondida && (
-        <div className="mx-3 mt-2 px-3 py-2.5 rounded-2xl flex items-center gap-2" style={{ backgroundColor: "#ffffff", border: `1px solid ${BORDER_COLOR}` }}>
+        <div className="mx-3 mt-2 rounded-2xl p-3" style={{ backgroundColor: "#ffffff", border: `1px solid ${BORDER_COLOR}` }}>
+          <span className="block mb-2 text-[11px] font-semibold" style={{ color: "#8a7355" }}>Vantagens</span>
           <QuizVantagens
             vantagens={vantagens}
             modo={modo}
