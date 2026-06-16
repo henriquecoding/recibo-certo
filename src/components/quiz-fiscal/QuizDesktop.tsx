@@ -376,7 +376,7 @@ export default function QuizDesktop({
                         onClick={() => { soarToque(); onOpcaoClick(idx); }}
                         className={`${btnClass} relative overflow-visible focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#3a5232]`}
                         style={btnStyle}
-                        whileHover={!respondida && estado === "neutra" ? { scale: 1.015, y: -1 } : undefined}
+                        whileHover={!respondida && estado === "default" ? { scale: 1.015, y: -1 } : undefined}
                         whileTap={!respondida && estado !== "eliminada" ? { scale: 0.96 } : undefined}
                         transition={{ type: "spring", stiffness: 500, damping: 26 }}
                         aria-label={`Opção ${LETRAS[idx]}: ${opcao.texto}`}
