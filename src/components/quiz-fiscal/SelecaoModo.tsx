@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Reveal from "@/components/ui/Reveal";
-import { Clock, Sparkle, Check, ArrowRight, LayoutGrid, Fire, Search } from "@/components/ui/Icons";
+import { Clock, Sparkle, Check, ArrowRight, LayoutGrid, Fire, Search, Target, Gauge, BookOpen } from "@/components/ui/Icons";
 import { resolveQuizIcon } from "./icon-map";
 import {
   META_CATEGORIA_QUIZ,
@@ -12,6 +11,7 @@ import {
 } from "@/lib/quiz-fiscal";
 import { ATIVIDADES, efeitoFiscal, type Atividade } from "@/lib/fiscal-data";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
+import { useQuizConfig, DEFAULT_QUIZ_CONFIG } from "@/hooks/useQuizConfig";
 import type { QuizFiscalConfig, QuizModo } from "@/hooks/useQuizFiscal";
 import type { SessaoHistorico } from "@/lib/store/quiz-progresso";
 
@@ -25,146 +25,109 @@ interface SelecaoModoProps {
 type QuizTipo = "geral" | "atividade";
 
 const CATEGORIAS_ORDEM: QuizCategoria[] = [
-  "retencao",
-  "iva",
-  "seguranca_social",
-  "regime_simplificado",
-  "irs_jovem",
-  "escaloes_deducoes",
-  "atividades",
-  "categoria_f",
-  "prazos",
-  "geral",
+  "retencao", "iva", "seguranca_social", "regime_simplificado",
+  "irs_jovem", "escaloes_deducoes", "atividades", "categoria_f", "prazos", "geral",
 ];
 
-const CARD_BG = "#F7EDE1";
-const CARD_ACTIVE_BG = "#DBDCC4";
-const CARD_BORDER = "#E8DBCB";
-const CARD_ACTIVE_BORDER = "#4D6243";
-const DARK_CARD_BG = "#1e2219";
-const DARK_CARD_ACTIVE_BG = "#2a3324";
-const DARK_CARD_BORDER = "#2e3327";
-const DARK_CARD_ACTIVE_BORDER = "#4D6243";
-const TEXT_DARK = "#1C3A22";
+const QD = "#3a5232";
+const PARCHMENT = "#F7EDE1";
+const BORDER = "#E8DBCB";
+const ACTIVE_BG = "#e4ede0";
+const ACTIVE_BORDER = "#4D6243";
+const TEXT_HEAD = "#1C3A22";
 const TEXT_MID = "#607757";
-const TEXT_LIGHT = "#768771";
-const DARK_TEXT_LIGHT = "#c4c2b6";
-const DARK_TEXT_MID = "#a8a69c";
+const TEXT_MUTED = "#8a7a6a";
 
 export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTotal = 5 }: SelecaoModoProps) {
+  const { config, updateConfig } = useQuizConfig();
   const [modo, setModo] = useState<QuizModo | null>(null);
   const [tipoQuiz, setTipoQuiz] = useState<QuizTipo>("geral");
   const [categoria, setCategoria] = useState<QuizCategoria | "todas">("todas");
   const [atividade, setAtividade] = useState<Atividade | null>(null);
-
   const estatisticas = getEstatisticasBanco();
 
   const handleComecar = () => {
     if (!modo) return;
-    if (tipoQuiz === "atividade" && atividade) {
-      onComecar({
-        modo,
-        atividade,
-        quantidade: 10,
-      });
-    } else {
-      onComecar({
-        modo,
-        categoria: categoria === "todas" ? undefined : categoria,
-        quantidade: 10,
-      });
-    }
+    const cfg: QuizFiscalConfig = tipoQuiz === "atividade" && atividade
+      ? { modo, atividade, quantidade: config.perguntasPorSessao }
+      : { modo, categoria: categoria === "todas" ? undefined : categoria, quantidade: config.perguntasPorSessao };
+    onComecar(cfg);
   };
 
-  const podeIniciar = modo && (tipoQuiz === "geral" || atividade) && energiaRestante > 0;
+  const podeIniciar = !!modo && (tipoQuiz === "geral" || !!atividade) && energiaRestante > 0;
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:py-14">
-      <Reveal>
-        <div className="text-center">
-          <span
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
-            style={{ backgroundColor: CARD_ACTIVE_BG, color: TEXT_DARK, border: `1px solid ${CARD_ACTIVE_BORDER}` }}
-          >
-            <Sparkle size={13} />
-            {TOTAL_PERGUNTAS}+ perguntas · baseado no sistema fiscal portugues
-          </span>
-          <h1
-            className="mt-4 font-display text-3xl font-semibold sm:text-4xl"
-            style={{ color: "var(--quiz-heading, #1C3A22)" }}
-          >
-            Quiz Fiscal
-          </h1>
-          <p
-            className="mx-auto mt-3 max-w-xl text-sm leading-relaxed sm:text-base"
-            style={{ color: "var(--quiz-muted, #768771)" }}
-          >
-            Testa os teus conhecimentos sobre IRS, IVA, Seguranca Social e o regime
-            de trabalhador independente em Portugal — com referencias legais reais.
-          </p>
-        </div>
-      </Reveal>
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:py-10">
 
-      {/* Step 1: Mode */}
-      <Reveal delay={0.05}>
-        <div className="mt-10">
-          <SectionTitle number={1} text="Escolhe o modo" />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <ModoCard
-              ativo={modo === "normal"}
-              onClick={() => setModo("normal")}
-              icon={<Clock size={22} />}
-              titulo="Quiz Normal"
-              descricao="10 perguntas, 20 segundos cada. Resposta certa/errada na hora, pontuacao final."
-              tags={["Rapido", "Com cronometro"]}
-            />
-            <ModoCard
-              ativo={modo === "guiado"}
-              onClick={() => setModo("guiado")}
-              icon={<Sparkle size={22} />}
-              titulo="Quiz Guiado"
-              descricao="Sem pressao de tempo. Cada resposta — certa ou errada — vem com explicacao completa, base legal e fonte."
-              tags={["Sem tempo", "Explicacoes detalhadas"]}
-            />
-          </div>
-        </div>
-      </Reveal>
+      {/* Cabeçalho compacto */}
+      <div className="mb-6 text-center">
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+          style={{ backgroundColor: ACTIVE_BG, color: TEXT_HEAD, border: `1px solid ${ACTIVE_BORDER}` }}
+        >
+          <Sparkle size={12} />
+          {TOTAL_PERGUNTAS}+ perguntas · sistema fiscal português
+        </span>
+        <h1 className="mt-3 font-display text-2xl font-semibold sm:text-3xl" style={{ color: TEXT_HEAD }}>
+          Quiz Fiscal
+        </h1>
+      </div>
 
-      {/* Step 2: Quiz Type */}
-      <Reveal delay={0.1}>
-        <div className="mt-10">
-          <SectionTitle number={2} text="Tipo de quiz" />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <QuizTipoCard
-              ativo={tipoQuiz === "geral"}
-              onClick={() => setTipoQuiz("geral")}
-              icon={<LayoutGrid size={22} />}
-              titulo="Quiz por Categoria"
-              descricao="Escolhe um tema fiscal — IRS, IVA, Seg. Social, etc. — ou joga todas as categorias misturadas."
-            />
-            <QuizTipoCard
-              ativo={tipoQuiz === "atividade"}
-              onClick={() => setTipoQuiz("atividade")}
-              icon={<Search size={22} />}
-              titulo="Quiz por Atividade"
-              descricao="Seleciona a tua atividade profissional e recebe perguntas especificas para o teu enquadramento fiscal."
-            />
-          </div>
-        </div>
-      </Reveal>
+      {/* Layout 2 colunas: seleções à esquerda, configurações à direita */}
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px] lg:items-start lg:gap-5">
 
-      {/* Step 3: Category or Activity selection */}
-      <Reveal delay={0.15}>
-        <div className="mt-10">
+        {/* ── Coluna esquerda: Modo + Tema + Categoria/Atividade ── */}
+        <div className="flex flex-col gap-4">
+
+          {/* Modo */}
+          <Section title="Modo de jogo">
+            <div className="grid grid-cols-2 gap-2.5">
+              <ModoCard
+                ativo={modo === "normal"}
+                onClick={() => setModo("normal")}
+                icon={<Clock size={18} />}
+                titulo="Normal"
+                tags={["Cronómetro", "Rápido"]}
+                descricao="Resposta certa/errada na hora"
+              />
+              <ModoCard
+                ativo={modo === "guiado"}
+                onClick={() => setModo("guiado")}
+                icon={<Sparkle size={18} />}
+                titulo="Guiado"
+                tags={["Sem tempo", "Explicações"]}
+                descricao="Explicação completa com base legal"
+              />
+            </div>
+          </Section>
+
+          {/* Tipo */}
+          <Section title="Tipo de quiz">
+            <div className="grid grid-cols-2 gap-2.5">
+              <PillCard
+                ativo={tipoQuiz === "geral"}
+                onClick={() => setTipoQuiz("geral")}
+                icon={<LayoutGrid size={17} />}
+                label="Por categoria"
+              />
+              <PillCard
+                ativo={tipoQuiz === "atividade"}
+                onClick={() => setTipoQuiz("atividade")}
+                icon={<Search size={17} />}
+                label="Por atividade"
+              />
+            </div>
+          </Section>
+
+          {/* Categoria ou Atividade */}
           {tipoQuiz === "geral" ? (
-            <>
-              <SectionTitle number={3} text="Escolhe um tema" />
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <CategoriaCard
+            <Section title="Tema">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <CategoriaChip
                   ativo={categoria === "todas"}
                   onClick={() => setCategoria("todas")}
-                  icon={<LayoutGrid size={20} />}
-                  titulo="Todas as categorias"
+                  icon={<LayoutGrid size={15} />}
+                  label="Todas"
                   total={TOTAL_PERGUNTAS}
                   destaque
                 />
@@ -172,239 +135,266 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
                   const meta = META_CATEGORIA_QUIZ[cat];
                   const Icon = resolveQuizIcon(meta.icon);
                   return (
-                    <CategoriaCard
+                    <CategoriaChip
                       key={cat}
                       ativo={categoria === cat}
                       onClick={() => setCategoria(cat)}
-                      icon={<Icon size={20} />}
-                      titulo={meta.label}
+                      icon={<Icon size={15} />}
+                      label={meta.label}
                       total={estatisticas[cat].total}
                     />
                   );
                 })}
               </div>
-            </>
+            </Section>
           ) : (
-            <>
-              <SectionTitle number={3} text="Seleciona a tua atividade" />
+            <Section title="Atividade profissional">
               <div
-                className="rounded-2xl p-5 shadow-md"
-                style={{
-                  backgroundColor: "var(--quiz-card-bg, #F7EDE1)",
-                  border: `1px solid var(--quiz-card-border, #E8DBCB)`,
-                }}
+                className="rounded-xl p-4"
+                style={{ backgroundColor: PARCHMENT, border: `1px solid ${BORDER}` }}
               >
                 <ActivityCombobox value={atividade} onChange={setAtividade} />
-                {atividade && (
-                  <AtividadeResumo atividade={atividade} />
-                )}
+                {atividade && <AtividadeResumo atividade={atividade} />}
               </div>
-            </>
+            </Section>
           )}
         </div>
-      </Reveal>
 
-      {/* Energy + Start */}
-      <Reveal delay={0.2}>
-        <div className="mt-10 flex flex-col items-center gap-4">
+        {/* ── Coluna direita: Configurações + Energia + Botão ── */}
+        <div className="flex flex-col gap-4 lg:sticky lg:top-6">
+
+          {/* Configurações */}
           <div
-            className="flex items-center gap-3 rounded-2xl px-5 py-3 shadow-sm"
-            style={{
-              backgroundColor: "var(--quiz-card-bg, #F7EDE1)",
-              border: `1px solid var(--quiz-card-border, #E8DBCB)`,
-            }}
+            className="rounded-2xl p-4"
+            style={{ backgroundColor: PARCHMENT, border: `1px solid ${BORDER}` }}
           >
-            <Fire size={18} />
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--quiz-muted, #768771)" }}>
-                Energia diaria
+            <div className="flex items-center gap-2 mb-4">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ backgroundColor: ACTIVE_BG, color: QD }}>
+                <Gauge size={14} />
               </span>
+              <span className="text-[13px] font-bold" style={{ color: TEXT_HEAD }}>Configurações</span>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              {/* Dificuldade */}
+              <ConfigRow label="Dificuldade" icon={<Target size={13} />}>
+                <div className="flex gap-1.5">
+                  {(["facil", "normal", "dificil"] as const).map((d) => (
+                    <OptionChip
+                      key={d}
+                      ativo={config.dificuldade === d}
+                      onClick={() => updateConfig({ dificuldade: d })}
+                      label={d === "facil" ? "Fácil" : d === "normal" ? "Normal" : "Difícil"}
+                    />
+                  ))}
+                </div>
+              </ConfigRow>
+
+              {/* Perguntas */}
+              <ConfigRow label="Perguntas" icon={<BookOpen size={13} />}>
+                <div className="flex gap-1.5">
+                  {([5, 10, 15, 20] as const).map((n) => (
+                    <OptionChip
+                      key={n}
+                      ativo={config.perguntasPorSessao === n}
+                      onClick={() => updateConfig({ perguntasPorSessao: n })}
+                      label={String(n)}
+                    />
+                  ))}
+                </div>
+              </ConfigRow>
+
+              {/* Tempo */}
+              <ConfigRow label="Tempo/pergunta" icon={<Clock size={13} />}>
+                <div className="flex gap-1.5 flex-wrap">
+                  {([0, 30, 60, 90] as const).map((t) => (
+                    <OptionChip
+                      key={t}
+                      ativo={config.tempoPorPergunta === t}
+                      onClick={() => updateConfig({ tempoPorPergunta: t })}
+                      label={t === 0 ? "Livre" : `${t}s`}
+                    />
+                  ))}
+                </div>
+              </ConfigRow>
+
+              {/* Preferências rápidas */}
+              <ConfigRow label="Sons" icon={<Sparkle size={13} />}>
+                <button
+                  type="button"
+                  onClick={() => updateConfig({ somAtivo: !config.somAtivo })}
+                  className="relative h-5 w-9 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#3a5232]"
+                  style={{ backgroundColor: config.somAtivo ? QD : "#d4c4b0" }}
+                  role="switch"
+                  aria-checked={config.somAtivo}
+                >
+                  <span
+                    className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all"
+                    style={{ left: config.somAtivo ? "calc(100% - 18px)" : "2px" }}
+                  />
+                </button>
+              </ConfigRow>
+
+              {/* Reset */}
+              {JSON.stringify(config) !== JSON.stringify(DEFAULT_QUIZ_CONFIG) && (
+                <button
+                  type="button"
+                  onClick={() => updateConfig(DEFAULT_QUIZ_CONFIG)}
+                  className="text-[11px] font-medium transition-colors hover:underline self-start"
+                  style={{ color: TEXT_MUTED }}
+                >
+                  Repor predefinições
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Energia */}
+          <div
+            className="flex items-center gap-3 rounded-xl px-4 py-3"
+            style={{ backgroundColor: PARCHMENT, border: `1px solid ${BORDER}` }}
+          >
+            <span style={{ color: energiaRestante > 0 ? "#C07828" : "#aaa" }}>
+              <Fire size={18} />
+            </span>
+            <div className="flex-1">
+              <div className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: TEXT_MUTED }}>
+                Energia diária
+              </div>
               <div className="flex items-center gap-1.5">
                 {Array.from({ length: energiaTotal }).map((_, i) => (
                   <span
                     key={i}
-                    className="h-2.5 w-2.5 rounded-full transition-colors"
-                    style={{ backgroundColor: i < energiaRestante ? "#F59E0B" : "var(--quiz-dot-empty, #d4c4b0)" }}
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: i < energiaRestante ? "#C07828" : "#d4c4b0" }}
                   />
                 ))}
-                <span className="ml-1 text-xs font-semibold tabular-nums" style={{ color: "var(--quiz-muted, #768771)" }}>
+                <span className="ml-1 text-[11px] font-bold tabular-nums" style={{ color: TEXT_MID }}>
                   {energiaRestante}/{energiaTotal}
                 </span>
               </div>
             </div>
           </div>
 
+          {/* Botão iniciar */}
           <button
             type="button"
             disabled={!podeIniciar}
             onClick={handleComecar}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl px-10 py-4 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
-            style={{ backgroundColor: "#3a5232" }}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-[15px] font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+            style={{ backgroundColor: QD }}
           >
-            Comecar Quiz
-            <ArrowRight size={18} />
+            Começar Quiz
+            <ArrowRight size={17} />
           </button>
+
+          {/* Mensagens de ajuda */}
           {!modo && energiaRestante > 0 && (
-            <p className="text-xs" style={{ color: "var(--quiz-muted, #768771)" }}>Escolhe um modo para continuar.</p>
+            <p className="text-center text-xs" style={{ color: TEXT_MUTED }}>
+              Escolhe um modo para continuar.
+            </p>
           )}
           {tipoQuiz === "atividade" && !atividade && modo && (
-            <p className="text-xs" style={{ color: "var(--quiz-muted, #768771)" }}>Seleciona uma atividade para continuar.</p>
+            <p className="text-center text-xs" style={{ color: TEXT_MUTED }}>
+              Seleciona uma atividade para continuar.
+            </p>
           )}
           {energiaRestante <= 0 && (
-            <p className="text-xs font-semibold" style={{ color: "#D97706" }}>
-              Sem energia hoje. Volta amanha para continuar!
+            <p className="text-center text-xs font-semibold" style={{ color: "#C07828" }}>
+              Sem energia hoje. Volta amanhã!
             </p>
           )}
         </div>
-      </Reveal>
+      </div>
     </div>
   );
 }
 
-function SectionTitle({ number, text }: { number: number; text: string }) {
-  return (
-    <h2
-      className="mb-3 font-display text-lg font-semibold"
-      style={{ color: "var(--quiz-heading, #1C3A22)" }}
-    >
-      {number}. {text}
-    </h2>
-  );
-}
+// ── Sub-componentes ────────────────────────────────────────────
 
-function AtividadeResumo({ atividade }: { atividade: Atividade }) {
-  const ef = efeitoFiscal(atividade);
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div
-      className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4"
-    >
-      <ResumoStat label="Retencao" value={ef.retencao > 0 ? `${(ef.retencao * 100).toFixed(1)}%` : "Isenta"} />
-      <ResumoStat label="Coeficiente" value={ef.coef.toFixed(2)} />
-      <ResumoStat label="Base SS" value={ef.baseSS === "servicos" ? "70%" : "20%"} />
-      <ResumoStat label="Regra 15%" value={ef.regra15 ? "Sim" : "Nao"} />
+    <div>
+      <h2 className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: TEXT_MUTED }}>
+        {title}
+      </h2>
+      {children}
     </div>
   );
 }
 
-function ResumoStat({ label, value }: { label: string; value: string }) {
+function ConfigRow({ label, icon, children }: { label: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div
-      className="rounded-xl p-3 text-center"
-      style={{
-        backgroundColor: "var(--quiz-stat-bg, #FAF4EC)",
-        border: "1px solid var(--quiz-card-border, #E8DBCB)",
-      }}
-    >
-      <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--quiz-muted, #768771)" }}>
-        {label}
-      </p>
-      <p className="mt-0.5 font-display text-base font-bold" style={{ color: "var(--quiz-heading, #1C3A22)" }}>
-        {value}
-      </p>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5">
+        <span style={{ color: TEXT_MID }}>{icon}</span>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: TEXT_MUTED }}>
+          {label}
+        </span>
+      </div>
+      {children}
     </div>
   );
 }
 
-function QuizTipoCard({
-  ativo,
-  onClick,
-  icon,
-  titulo,
-  descricao,
-}: {
-  ativo: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  titulo: string;
-  descricao: string;
-}) {
+function OptionChip({ ativo, onClick, label }: { ativo: boolean; onClick: () => void; label: string }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group relative flex flex-col gap-3 rounded-2xl border-2 p-5 text-left transition-all duration-200"
+      className="rounded-lg px-2.5 py-1 text-[12px] font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#3a5232]"
       style={{
-        backgroundColor: ativo ? "var(--quiz-card-active-bg, #DBDCC4)" : "var(--quiz-card-bg, #F7EDE1)",
-        borderColor: ativo ? "var(--quiz-card-active-border, #4D6243)" : "var(--quiz-card-border, #E8DBCB)",
+        backgroundColor: ativo ? QD : "#ece4d8",
+        color: ativo ? "#fff" : TEXT_MID,
+        border: `1px solid ${ativo ? QD : BORDER}`,
       }}
     >
-      <div className="flex items-center justify-between">
-        <span
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-white"
-          style={{ backgroundColor: ativo ? "#3a5232" : "#8a7355" }}
-        >
-          {icon}
-        </span>
-        {ativo && (
-          <span
-            className="flex h-6 w-6 items-center justify-center rounded-full text-white"
-            style={{ backgroundColor: "#3a5232" }}
-          >
-            <Check size={12} />
-          </span>
-        )}
-      </div>
-      <div>
-        <h3 className="font-display text-base font-semibold" style={{ color: "var(--quiz-heading, #1C3A22)" }}>{titulo}</h3>
-        <p className="mt-1 text-sm leading-relaxed" style={{ color: "var(--quiz-muted, #768771)" }}>{descricao}</p>
-      </div>
+      {label}
     </button>
   );
 }
 
 function ModoCard({
-  ativo,
-  onClick,
-  icon,
-  titulo,
-  descricao,
-  tags,
+  ativo, onClick, icon, titulo, tags, descricao,
 }: {
-  ativo: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  titulo: string;
-  descricao: string;
-  tags: string[];
+  ativo: boolean; onClick: () => void; icon: React.ReactNode;
+  titulo: string; tags: string[]; descricao: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group relative flex flex-col gap-3 rounded-2xl border-2 p-5 text-left transition-all duration-200"
+      className="group relative flex flex-col gap-2 rounded-xl border-2 p-3.5 text-left transition-all"
       style={{
-        backgroundColor: ativo ? "var(--quiz-card-active-bg, #DBDCC4)" : "var(--quiz-card-bg, #F7EDE1)",
-        borderColor: ativo ? "var(--quiz-card-active-border, #4D6243)" : "var(--quiz-card-border, #E8DBCB)",
+        backgroundColor: ativo ? ACTIVE_BG : PARCHMENT,
+        borderColor: ativo ? ACTIVE_BORDER : BORDER,
       }}
     >
       <div className="flex items-center justify-between">
         <span
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-white"
-          style={{ backgroundColor: ativo ? "#3a5232" : "#8a7355" }}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-white"
+          style={{ backgroundColor: ativo ? QD : "#8a7355" }}
         >
           {icon}
         </span>
         {ativo && (
-          <span
-            className="flex h-6 w-6 items-center justify-center rounded-full text-white"
-            style={{ backgroundColor: "#3a5232" }}
-          >
-            <Check size={12} />
+          <span className="flex h-5 w-5 items-center justify-center rounded-full text-white" style={{ backgroundColor: QD }}>
+            <Check size={10} />
           </span>
         )}
       </div>
       <div>
-        <h3 className="font-display text-base font-semibold" style={{ color: "var(--quiz-heading, #1C3A22)" }}>{titulo}</h3>
-        <p className="mt-1 text-sm leading-relaxed" style={{ color: "var(--quiz-muted, #768771)" }}>{descricao}</p>
+        <h3 className="text-[13px] font-bold" style={{ color: TEXT_HEAD }}>{titulo}</h3>
+        <p className="mt-0.5 text-[11px] leading-snug" style={{ color: TEXT_MUTED }}>{descricao}</p>
       </div>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1">
         {tags.map((tag) => (
           <span
             key={tag}
-            className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+            className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
             style={{
-              backgroundColor: ativo ? "rgba(58,82,50,0.12)" : "var(--quiz-tag-bg, #FAF4EC)",
-              color: ativo ? "#3a5232" : "var(--quiz-muted, #768771)",
+              backgroundColor: ativo ? "rgba(58,82,50,0.12)" : "#ece4d8",
+              color: ativo ? QD : TEXT_MUTED,
             }}
           >
             {tag}
@@ -415,41 +405,94 @@ function ModoCard({
   );
 }
 
-function CategoriaCard({
-  ativo,
-  onClick,
-  icon,
-  titulo,
-  total,
-  destaque = false,
+function PillCard({
+  ativo, onClick, icon, label,
 }: {
-  ativo: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  titulo: string;
-  total: number;
-  destaque?: boolean;
+  ativo: boolean; onClick: () => void; icon: React.ReactNode; label: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex flex-col items-start gap-2 rounded-2xl border-2 p-3.5 text-left transition-all duration-200"
+      className="flex items-center gap-2.5 rounded-xl border-2 px-3.5 py-3 text-left transition-all"
       style={{
-        backgroundColor: ativo ? "var(--quiz-card-active-bg, #DBDCC4)" : "var(--quiz-card-bg, #F7EDE1)",
-        borderColor: ativo ? "var(--quiz-card-active-border, #4D6243)" : "var(--quiz-card-border, #E8DBCB)",
+        backgroundColor: ativo ? ACTIVE_BG : PARCHMENT,
+        borderColor: ativo ? ACTIVE_BORDER : BORDER,
       }}
     >
       <span
-        className="flex h-8 w-8 items-center justify-center rounded-xl text-white"
-        style={{ backgroundColor: ativo ? "#3a5232" : "#8a7355" }}
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white"
+        style={{ backgroundColor: ativo ? QD : "#8a7355" }}
       >
         {icon}
       </span>
-      <div>
-        <h3 className="text-sm font-semibold leading-tight" style={{ color: "var(--quiz-heading, #1C3A22)" }}>{titulo}</h3>
-        <p className="mt-0.5 text-[11px]" style={{ color: "var(--quiz-muted, #768771)" }}>{total} perguntas</p>
-      </div>
+      <span className="text-[13px] font-semibold" style={{ color: ativo ? TEXT_HEAD : TEXT_MID }}>
+        {label}
+      </span>
+      {ativo && (
+        <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full text-white" style={{ backgroundColor: QD }}>
+          <Check size={10} />
+        </span>
+      )}
     </button>
+  );
+}
+
+function CategoriaChip({
+  ativo, onClick, icon, label, total, destaque = false,
+}: {
+  ativo: boolean; onClick: () => void; icon: React.ReactNode;
+  label: string; total: number; destaque?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left transition-all"
+      style={{
+        backgroundColor: ativo ? ACTIVE_BG : PARCHMENT,
+        borderColor: ativo ? ACTIVE_BORDER : BORDER,
+        gridColumn: destaque ? "1 / -1" : undefined,
+      }}
+    >
+      <span
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white"
+        style={{ backgroundColor: ativo ? QD : "#8a7355" }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <div className="text-[12px] font-semibold truncate" style={{ color: ativo ? TEXT_HEAD : TEXT_MID }}>
+          {label}
+        </div>
+        <div className="text-[10px]" style={{ color: TEXT_MUTED }}>{total} perguntas</div>
+      </div>
+      {ativo && (
+        <span className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white" style={{ backgroundColor: QD }}>
+          <Check size={10} />
+        </span>
+      )}
+    </button>
+  );
+}
+
+function AtividadeResumo({ atividade }: { atividade: Atividade }) {
+  const ef = efeitoFiscal(atividade);
+  return (
+    <div className="mt-3 grid grid-cols-4 gap-2">
+      <ResumoStat label="Retenção" value={ef.retencao > 0 ? `${(ef.retencao * 100).toFixed(0)}%` : "Isenta"} />
+      <ResumoStat label="Coef." value={ef.coef.toFixed(2)} />
+      <ResumoStat label="Base SS" value={ef.baseSS === "servicos" ? "70%" : "20%"} />
+      <ResumoStat label="Regra 15%" value={ef.regra15 ? "Sim" : "Não"} />
+    </div>
+  );
+}
+
+function ResumoStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg p-2 text-center" style={{ backgroundColor: "#FAF4EC", border: `1px solid ${BORDER}` }}>
+      <p className="text-[9px] font-semibold uppercase tracking-wide" style={{ color: TEXT_MUTED }}>{label}</p>
+      <p className="mt-0.5 text-[13px] font-bold" style={{ color: TEXT_HEAD }}>{value}</p>
+    </div>
   );
 }
