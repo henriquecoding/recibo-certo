@@ -189,7 +189,7 @@ export default function QuizDesktop({
           >
             <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#8a7355" }}>Sequência</span>
             <div className="flex items-center gap-3 mt-2">
-              <Fire size={42} />
+              <span style={{ color: "#C07828" }}><Fire size={42} /></span>
               <div>
                 <div className="text-[42px] font-bold leading-none tabular-nums font-display" style={{ color: "#1a1a17" }}>
                   {streakAtual}

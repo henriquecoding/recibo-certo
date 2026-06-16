@@ -382,7 +382,7 @@ export default function QuizMobile({
               className="flex items-center gap-2.5 rounded-2xl p-3"
               style={{ backgroundColor: "#ffffff", border: `1px solid ${BORDER_COLOR}`, flex: "0 0 auto" }}
             >
-              <Fire size={30} />
+              <span style={{ color: "#C07828" }}><Fire size={30} /></span>
               <div>
                 <div className="text-[10px] font-semibold" style={{ color: "#8a7355" }}>Sequência</div>
                 <div className="text-[22px] font-bold leading-none tabular-nums" style={{ color: "#1a1a17" }}>

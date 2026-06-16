@@ -555,24 +555,16 @@ export function Spinner({ size = 18, className }: IconProps) {
 }
 
 // ─── Gamificação / engagement ───────────────────────────────
-// Flame com 3 camadas inspirado no Phosphor Icons / Lucide Flame
+// Path idêntico ao Lucide "Flame" — stroke currentColor como todos os outros ícones
 export function Fire({ size = 18, className }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} aria-hidden focusable={false}>
-      {/* Outer flame — base larga que afunila num pico */}
+    <svg {...svgProps(size, className)}>
       <path
-        d="M12 2c3.5 4 6 8 6 12.5a6 6 0 01-12 0C6 10 8.5 6 12 2z"
-        fill="#B47025"
-      />
-      {/* Middle flame — camada intermédia mais brilhante */}
-      <path
-        d="M12 8c2 2.5 3.5 5 3.5 7.5a3.5 3.5 0 01-7 0C8.5 13 10 10.5 12 8z"
-        fill="#D4922A"
-      />
-      {/* Inner core — ponto mais quente da chama */}
-      <path
-        d="M12 15c.6.9 1 1.8 1 2.5a1 1 0 01-2 0c0-.7.4-1.6 1-2.5z"
-        fill="#F0BC3C"
+        d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 3z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
