@@ -557,8 +557,15 @@ export function Spinner({ size = 18, className }: IconProps) {
 // ─── Gamificação / engagement ───────────────────────────────
 export function Fire({ size = 18, className }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden focusable={false}>
-      <path d="M12 22c-4.42 0-7-3.13-7-7 0-3.5 2.5-6.5 4-8 .5 2 2 3 2 3s1-2.5 2-4c1 2 2 4 2 4s1.5-1 2-3c1.5 2.5 2 4.5 2 6 0 4.5-2 9-5 9z" />
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden focusable={false}>
+      <path
+        d="M12 23c-5.2 0-8-3.7-8-8.2 0-2.7 1.2-5.3 2.8-7.2.6-.7 1.2-1.3 1.7-1.8.3-.3.8-.1.8.3.2 1.4.9 2.6 1.8 3.4.1-.8.4-1.8 1-2.9.8-1.5 1.6-2.7 2.2-4.1.2-.4.7-.5 1-.2C17.8 4.6 20 8.2 20 12v2.8c0 4.5-2.8 8.2-8 8.2z"
+        fill="#F59E0B"
+      />
+      <path
+        d="M12 23c-3.3 0-5-2.5-5-5.5 0-2.2 1.5-4.2 3-5.5.3-.2.7 0 .7.4 0 .8.3 1.6.8 2.1.2-.6.5-1.3 1-2 .2-.3.6-.3.8 0 .8 1.2 1.7 2.8 1.7 5 0 3-1.7 5.5-3 5.5z"
+        fill="#FBBF24"
+      />
     </svg>
   );
 }
