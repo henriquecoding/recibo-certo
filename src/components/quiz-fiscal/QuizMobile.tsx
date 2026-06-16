@@ -278,7 +278,7 @@ export default function QuizMobile({
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
                 style={{ backgroundColor: QUIZ_DARK }}
               >
-                <Fire size={22} className="text-orange-400" />
+                <Fire size={22} />
               </div>
               <div>
                 <div className="text-[10px] font-semibold" style={{ color: "#8a7355" }}>Sequência</div>

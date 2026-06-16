@@ -181,7 +181,7 @@ export default function QuizDesktop({
                 className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
                 style={{ backgroundColor: QUIZ_DARK }}
               >
-                <Fire size={26} className="text-orange-400" />
+                <Fire size={26} />
               </div>
               <div>
                 <div className="text-[32px] font-bold leading-none" style={{ color: "#1a1a17" }}>
