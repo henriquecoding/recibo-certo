@@ -14,14 +14,63 @@
 export const SITE_URL = "https://recibocerto.pt";
 export const SITE_NAME = "ReciboCerto";
 
-// ─── Rotas públicas (para sitemap) ───────────────────────────────────────────
+// ─── Registo central de rotas públicas indexáveis ────────────────────────────
+// Fonte única para o sitemap. Ao criar uma página pública nova, adicioná-la aqui
+// (o `scripts/seo-audit.mjs` deteta páginas em falta no registo).
 
-export const SITE_ROUTES = [
-  { url: "/",            changeFrequency: "weekly"  as const, priority: 1.0 },
-  { url: "/precos",      changeFrequency: "monthly" as const, priority: 0.8 },
-  { url: "/privacidade", changeFrequency: "monthly" as const, priority: 0.5 },
-  { url: "/termos",      changeFrequency: "monthly" as const, priority: 0.5 },
-  { url: "/cookies",     changeFrequency: "monthly" as const, priority: 0.5 },
+export type ChangeFrequency = "weekly" | "monthly" | "yearly";
+
+export interface PublicRoute {
+  path: string;
+  changeFrequency: ChangeFrequency;
+  priority: number;
+}
+
+/** Slugs dos guias em `src/app/guias/<slug>`. */
+export const GUIA_SLUGS = [
+  "abrir-atividade",
+  "ato-isolado",
+  "regime-simplificado",
+  "retencao-na-fonte",
+  "iva-recibos-verdes",
+  "seguranca-social",
+  "irs-jovem",
+  "escaloes-irs",
+  "acumulacao-emprego",
+  "clientes-estrangeiros",
+  "cessar-atividade",
+  "deducoes-coleta",
+  "merchant-of-record",
+  "fatura-vs-recibo",
+] as const;
+
+/** Slugs das ferramentas em `src/app/ferramentas/<slug>`. */
+export const FERRAMENTA_SLUGS = [
+  "ato-isolado",
+  "regime-simplificado",
+  "classificar-atividade",
+  "payout-mor",
+] as const;
+
+export const PUBLIC_ROUTES: PublicRoute[] = [
+  { path: "/",            changeFrequency: "weekly",  priority: 1.0 },
+  { path: "/precos",      changeFrequency: "monthly", priority: 0.8 },
+  { path: "/quiz-fiscal", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/guias",       changeFrequency: "monthly", priority: 0.8 },
+  ...GUIA_SLUGS.map((slug) => ({
+    path: `/guias/${slug}`,
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  })),
+  { path: "/ferramentas", changeFrequency: "monthly", priority: 0.8 },
+  ...FERRAMENTA_SLUGS.map((slug) => ({
+    path: `/ferramentas/${slug}`,
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  })),
+  { path: "/privacidade", changeFrequency: "yearly", priority: 0.3 },
+  { path: "/termos",      changeFrequency: "yearly", priority: 0.3 },
+  { path: "/cookies",     changeFrequency: "yearly", priority: 0.3 },
 ];
 
 // ─── Schema: WebSite ─────────────────────────────────────────────────────────
@@ -60,8 +109,8 @@ export function generateOrganizationSchema() {
     logo: {
       "@type": "ImageObject",
       url: `${SITE_URL}/logo.svg`,
-      width: 120,
-      height: 32,
+      width: 220,
+      height: 48,
     },
     description:
       "Copiloto financeiro para trabalhadores independentes em Portugal. Calculadora de recibos verdes com IRS, Segurança Social e IVA. Taxas de 2026 verificadas com fonte legal.",
@@ -153,5 +202,32 @@ export function generateFAQSchema(faqs: { q: string; a: string }[]) {
         text: f.a,
       },
     })),
+  };
+}
+
+// ─── Schema: Article (guias) ─────────────────────────────────────────────────
+
+export function generateArticleSchema(opts: {
+  headline: string;
+  description: string;
+  path: string;
+  datePublished?: string;
+  dateModified?: string;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: opts.headline,
+    description: opts.description,
+    inLanguage: "pt-PT",
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${SITE_URL}${opts.path}`,
+    },
+    url: `${SITE_URL}${opts.path}`,
+    author: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+    publisher: { "@id": `${SITE_URL}/#organization` },
+    ...(opts.datePublished ? { datePublished: opts.datePublished } : {}),
+    dateModified: opts.dateModified ?? opts.datePublished,
   };
 }

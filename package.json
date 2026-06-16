@@ -8,6 +8,7 @@
     "start": "next start",
     "fiscal:check": "node scripts/check-fiscal-data.mjs",
     "fiscal:check:sources": "node scripts/check-fiscal-data.mjs --check-sources",
+    "seo:audit": "node scripts/seo-audit.mjs",
     "skills:sync": "node scripts/sync-skills-fiscal.mjs",
     "skills:check": "node scripts/sync-skills-fiscal.mjs --check"
   },

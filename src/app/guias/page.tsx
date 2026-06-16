@@ -115,6 +115,14 @@ const GUIAS = [
     prioridade: false,
   },
   {
+    href: "/guias/fatura-vs-recibo",
+    titulo: "Fatura, recibo e fatura-recibo",
+    descricao: "As diferenças e onde entram os recibos verdes.",
+    tempo: 4,
+    icon: Receipt,
+    prioridade: false,
+  },
+  {
     href: "/guias/merchant-of-record",
     titulo: "Merchant of Record (MoR)",
     descricao: "Paddle, Lemon Squeezy e como emitir 1 recibo/mês.",

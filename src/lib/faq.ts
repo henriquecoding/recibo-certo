@@ -52,4 +52,12 @@ export const faqs: FaqItem[] = [
     q: "O que acontece se não fechar a atividade quando paro de faturar?",
     a: "A Autoridade Tributária considera-te ainda em atividade. Tens de continuar a entregar declarações (incluindo o Anexo B no IRS) e as declarações trimestrais à Segurança Social, mesmo sem rendimentos. As coimas por incumprimento vão de 50 € a 7 500 € conforme a infração.",
   },
+  {
+    q: "Qual a diferença entre fatura e recibo?",
+    a: "A fatura titula a transação e a obrigação de pagamento; o recibo comprova que o pagamento foi feito. Quando os dois coincidem no tempo, junta-se tudo numa fatura-recibo — que é o formato dos recibos verdes eletrónicos.",
+  },
+  {
+    q: "O ReciboCerto emite os meus recibos verdes?",
+    a: "Não. A emissão legal dos recibos verdes faz-se gratuitamente no Portal das Finanças. O ReciboCerto é o teu copiloto financeiro: calcula ao cêntimo quanto do recibo é teu, quanto reservar para IRS, Segurança Social e IVA, e avisa-te dos prazos para não pagares coimas.",
+  },
 ];

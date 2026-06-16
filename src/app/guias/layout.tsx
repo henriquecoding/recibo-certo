@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import { ChevronRight } from "@/components/ui/Icons";
+import { generateBreadcrumbSchema } from "@/lib/seo";
 
 const GUIAS_NAV = [
   { label: "Abrir atividade", href: "/guias/abrir-atividade" },
@@ -20,6 +21,8 @@ const GUIAS_NAV = [
   { label: "Clientes estrangeiros", href: "/guias/clientes-estrangeiros" },
   { label: "Cessar atividade", href: "/guias/cessar-atividade" },
   { label: "Deduções à coleta", href: "/guias/deducoes-coleta" },
+  { label: "Fatura vs recibo", href: "/guias/fatura-vs-recibo" },
+  { label: "Merchant of Record", href: "/guias/merchant-of-record" },
 ];
 
 const FERRAMENTAS_NAV = [
@@ -34,8 +37,18 @@ export default function GuiasLayout({ children }: { children: ReactNode }) {
   // Breadcrumb: guia ativo
   const guiaAtivo = GUIAS_NAV.find((g) => g.href === pathname);
 
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: "Início", url: "/" },
+    { name: "Guias", url: "/guias" },
+    ...(guiaAtivo ? [{ name: guiaAtivo.label, url: guiaAtivo.href }] : []),
+  ]);
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <Nav />
       <div className="min-h-screen bg-cream dark:bg-stone-950">
         <div className="mx-auto max-w-5xl px-6 py-8">

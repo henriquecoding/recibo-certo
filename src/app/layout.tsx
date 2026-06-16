@@ -22,6 +22,12 @@ const dmSans = DM_Sans({
 
 const SITE_URL = "https://recibocerto.pt";
 
+// Códigos de verificação de propriedade dos motores de busca. Definir como
+// variáveis de ambiente (ver `.env.example` e `docs/SEO.md`). Ficam fora do
+// código para não expor tokens no repositório e permitir rotação fácil.
+const GOOGLE_SITE_VERIFICATION = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
+const BING_SITE_VERIFICATION = process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION;
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
@@ -63,21 +69,15 @@ export const metadata: Metadata = {
     title: "Calculadora de Recibos Verdes 2026 — ReciboCerto",
     description:
       "Sabe exatamente o que fica teu após IRS, SS e IVA. Taxas 2026 verificadas com fonte legal. Grátis e sem registo.",
-    images: [
-      {
-        url: "/og-home.png",
-        width: 1200,
-        height: 630,
-        alt: "ReciboCerto — Calculadora de Recibos Verdes 2026",
-      },
-    ],
+    // A imagem é gerada por `src/app/opengraph-image.tsx` (convenção do Next) e
+    // aplicada automaticamente a todas as páginas que não definam a sua própria.
   },
   twitter: {
     card: "summary_large_image",
     title: "Calculadora de Recibos Verdes 2026 — ReciboCerto",
     description:
       "Quanto fica realmente teu após IRS, SS e IVA. Taxas 2026 verificadas. Grátis.",
-    images: ["/og-home.png"],
+    // Imagem via `src/app/twitter-image.tsx`.
   },
   robots: {
     index: true,
@@ -88,6 +88,12 @@ export const metadata: Metadata = {
       "max-image-preview": "large",
       "max-snippet": -1,
     },
+  },
+  verification: {
+    ...(GOOGLE_SITE_VERIFICATION ? { google: GOOGLE_SITE_VERIFICATION } : {}),
+    ...(BING_SITE_VERIFICATION
+      ? { other: { "msvalidate.01": BING_SITE_VERIFICATION } }
+      : {}),
   },
   category: "finance",
 };

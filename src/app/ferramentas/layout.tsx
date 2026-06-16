@@ -6,19 +6,31 @@ import { usePathname } from "next/navigation";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import { ChevronRight } from "@/components/ui/Icons";
+import { generateBreadcrumbSchema } from "@/lib/seo";
 
 const FERRAMENTAS_NAV = [
   { label: "Ato isolado ou atividade?", href: "/ferramentas/ato-isolado" },
   { label: "Calculadora de regime simplificado", href: "/ferramentas/regime-simplificado" },
   { label: "Classificar atividade fiscal", href: "/ferramentas/classificar-atividade" },
+  { label: "Recibo ao Merchant of Record", href: "/ferramentas/payout-mor" },
 ];
 
 export default function FerramentasLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const ferramentaAtiva = FERRAMENTAS_NAV.find((f) => f.href === pathname);
 
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: "Início", url: "/" },
+    { name: "Ferramentas", url: "/ferramentas" },
+    ...(ferramentaAtiva ? [{ name: ferramentaAtiva.label, url: ferramentaAtiva.href }] : []),
+  ]);
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <Nav />
       <div className="min-h-screen bg-cream dark:bg-stone-950">
         <div className="mx-auto max-w-3xl px-6 py-8">
