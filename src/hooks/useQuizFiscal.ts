@@ -67,6 +67,10 @@ export interface VantagensEstado {
   dica: boolean;
   tempoExtra: boolean;
   explicacao: boolean;
+  pular: boolean;
+  dobrar: boolean;
+  segundaChance: boolean;
+  escudo: boolean;
 }
 
 export const TIMER_NORMAL_SEGUNDOS = 20;
@@ -80,7 +84,13 @@ const VANTAGENS_INICIAL: VantagensEstado = {
   dica: false,
   tempoExtra: false,
   explicacao: false,
+  pular: false,
+  dobrar: false,
+  segundaChance: false,
+  escudo: false,
 };
+
+const DOBRAR_MULTIPLICADOR = 2;
 
 function classificar(percentagem: number): ClassificacaoQuiz {
   if (percentagem >= 90) return {
@@ -174,6 +184,11 @@ export interface UseQuizFiscalReturn {
   pontosAtuais: number;
   streakAtual: number;
 
+  // Flags de vantagens ativas
+  dobrarAtivo: boolean;
+  segundaChanceAtiva: boolean;
+  escudoAtivo: boolean;
+
   iniciar: (cfg: QuizFiscalConfig) => void;
   responderNormal: (opcaoIdx: number | null) => void;
   selecionarOpcao: (opcaoIdx: number) => void;
@@ -186,6 +201,10 @@ export interface UseQuizFiscalReturn {
   usarDica: () => void;
   usarTempoExtra: () => void;
   usarExplicacao: () => void;
+  usarPular: () => void;
+  usarDobrar: () => void;
+  usarSegundaChance: () => void;
+  usarEscudo: () => void;
 }
 
 export function useQuizFiscal(): UseQuizFiscalReturn {
@@ -205,6 +224,11 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
   const [eliminadas, setEliminadas] = useState<number[]>([]);
   const [dicaVisivel, setDicaVisivel] = useState(false);
   const [verExplicacaoAtiva, setVerExplicacaoAtiva] = useState(false);
+
+  const [dobrarAtivo, setDobrarAtivo] = useState(false);
+  const [segundaChanceAtiva, setSegundaChanceAtiva] = useState(false);
+  const [escudoAtivo, setEscudoAtivo] = useState(false);
+  const [emSegundaTentativa, setEmSegundaTentativa] = useState(false);
 
   const inicioPerguntaRef = useRef<number>(Date.now());
   const inicioSessaoRef = useRef<number>(Date.now());
@@ -244,6 +268,10 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
     setEliminadas([]);
     setDicaVisivel(false);
     setVerExplicacaoAtiva(false);
+    setDobrarAtivo(false);
+    setSegundaChanceAtiva(false);
+    setEscudoAtivo(false);
+    setEmSegundaTentativa(false);
     setStatus("jogando");
     inicioPerguntaRef.current = agora;
     inicioSessaoRef.current = agora;
@@ -269,6 +297,10 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
     setEliminadas([]);
     setDicaVisivel(false);
     setVerExplicacaoAtiva(false);
+    setDobrarAtivo(false);
+    setSegundaChanceAtiva(false);
+    setEscudoAtivo(false);
+    setEmSegundaTentativa(false);
   }, []);
 
   const irParaProxima = useCallback(
@@ -287,6 +319,10 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
       setEliminadas([]);
       setDicaVisivel(false);
       setVerExplicacaoAtiva(false);
+      setDobrarAtivo(false);
+      setSegundaChanceAtiva(false);
+      setEscudoAtivo(false);
+      setEmSegundaTentativa(false);
       inicioPerguntaRef.current = Date.now();
     },
     [indice, sessao, config]
@@ -302,7 +338,16 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
       const acertou = opcaoIdx !== null && opcaoIdx === item.correta;
       const streakAntes = streakActualDe(respostas);
 
-      const pontos = acertou
+      // Segunda Chance: if wrong and active, allow a second try instead of finalizing
+      if (!acertou && segundaChanceAtiva && !emSegundaTentativa && opcaoIdx !== null) {
+        setSelecionada(opcaoIdx);
+        setEliminadas((prev) => [...prev, opcaoIdx]);
+        setEmSegundaTentativa(true);
+        setSegundaChanceAtiva(false);
+        return;
+      }
+
+      let pontos = acertou
         ? calcularPontosPergunta({
             dificuldade: item.pergunta.dificuldade,
             streakAntes,
@@ -311,6 +356,13 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
           })
         : 0;
 
+      if (acertou && dobrarAtivo) pontos *= DOBRAR_MULTIPLICADOR;
+
+      // Escudo: protect streak if wrong
+      const streakFinal = acertou
+        ? streakAntes + 1
+        : escudoAtivo ? streakAntes : 0;
+
       const registo: RespostaRegistada = {
         perguntaId: item.pergunta.id,
         categoria: item.pergunta.categoria,
@@ -318,11 +370,12 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
         acertou,
         tempoGastoSeg,
         pontos,
-        streakAoResponder: acertou ? streakAntes + 1 : 0,
+        streakAoResponder: streakFinal,
       };
 
       setSelecionada(opcaoIdx);
       setRespondida(true);
+      if (escudoAtivo && !acertou) setEscudoAtivo(false);
 
       const novasRespostas = [...respostas, registo];
       setRespostas(novasRespostas);
@@ -333,7 +386,7 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
         setTimeout(() => irParaProxima(novasRespostas), PAUSA_FEEDBACK_MS);
       }
     },
-    [respondida, sessao, indice, respostas, irParaProxima, verExplicacaoAtiva, config]
+    [respondida, sessao, indice, respostas, irParaProxima, verExplicacaoAtiva, config, dobrarAtivo, segundaChanceAtiva, emSegundaTentativa, escudoAtivo]
   );
 
   const selecionarOpcao = useCallback(
@@ -354,7 +407,16 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
     const acertou = selecionada === item.correta;
     const streakAntes = streakActualDe(respostas);
 
-    const pontos = acertou
+    // Segunda Chance in guiado mode
+    if (!acertou && segundaChanceAtiva && !emSegundaTentativa) {
+      setEliminadas((prev) => [...prev, selecionada]);
+      setSelecionada(null);
+      setEmSegundaTentativa(true);
+      setSegundaChanceAtiva(false);
+      return;
+    }
+
+    let pontos = acertou
       ? calcularPontosPergunta({
           dificuldade: item.pergunta.dificuldade,
           streakAntes,
@@ -363,6 +425,12 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
         })
       : 0;
 
+    if (acertou && dobrarAtivo) pontos *= DOBRAR_MULTIPLICADOR;
+
+    const streakFinal = acertou
+      ? streakAntes + 1
+      : escudoAtivo ? streakAntes : 0;
+
     const registo: RespostaRegistada = {
       perguntaId: item.pergunta.id,
       categoria: item.pergunta.categoria,
@@ -370,13 +438,14 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
       acertou,
       tempoGastoSeg,
       pontos,
-      streakAoResponder: acertou ? streakAntes + 1 : 0,
+      streakAoResponder: streakFinal,
     };
 
     setRespostas((prev) => [...prev, registo]);
     setRespondida(true);
     setMostrarExplicacao(true);
-  }, [respondida, selecionada, sessao, indice, respostas]);
+    if (escudoAtivo && !acertou) setEscudoAtivo(false);
+  }, [respondida, selecionada, sessao, indice, respostas, dobrarAtivo, segundaChanceAtiva, emSegundaTentativa, escudoAtivo]);
 
   const seguinte = useCallback(() => {
     if (!respondida) return;
@@ -413,6 +482,30 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
     setVantagens((v) => ({ ...v, explicacao: true }));
   }, [vantagens.explicacao, respondida, config?.modo]);
 
+  const usarPular = useCallback(() => {
+    if (vantagens.pular || respondida) return;
+    setVantagens((v) => ({ ...v, pular: true }));
+    irParaProxima(respostas);
+  }, [vantagens.pular, respondida, irParaProxima, respostas]);
+
+  const usarDobrar = useCallback(() => {
+    if (vantagens.dobrar || respondida) return;
+    setDobrarAtivo(true);
+    setVantagens((v) => ({ ...v, dobrar: true }));
+  }, [vantagens.dobrar, respondida]);
+
+  const usarSegundaChance = useCallback(() => {
+    if (vantagens.segundaChance || respondida) return;
+    setSegundaChanceAtiva(true);
+    setVantagens((v) => ({ ...v, segundaChance: true }));
+  }, [vantagens.segundaChance, respondida]);
+
+  const usarEscudo = useCallback(() => {
+    if (vantagens.escudo || respondida) return;
+    setEscudoAtivo(true);
+    setVantagens((v) => ({ ...v, escudo: true }));
+  }, [vantagens.escudo, respondida]);
+
   // Timer (modo normal)
   useEffect(() => {
     if (config?.modo !== "normal" || status !== "jogando" || respondida) return;
@@ -446,6 +539,9 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
     verExplicacaoAtiva,
     pontosAtuais,
     streakAtual,
+    dobrarAtivo,
+    segundaChanceAtiva,
+    escudoAtivo,
     iniciar,
     responderNormal,
     selecionarOpcao,
@@ -457,5 +553,9 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
     usarDica,
     usarTempoExtra,
     usarExplicacao,
+    usarPular,
+    usarDobrar,
+    usarSegundaChance,
+    usarEscudo,
   };
 }

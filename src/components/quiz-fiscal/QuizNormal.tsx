@@ -21,6 +21,7 @@ export default function QuizNormal({ quiz, progresso, onSair }: QuizNormalProps)
     responderNormal, vantagens, eliminadas, dicaVisivel,
     mostrarExplicacao, verExplicacaoAtiva, seguinte, respostas,
     usarEliminar2, usarDica, usarTempoExtra, usarExplicacao,
+    usarPular, usarDobrar, usarSegundaChance, usarEscudo,
     config, pontosAtuais, streakAtual,
   } = quiz;
   if (!atual) return null;
@@ -38,7 +39,7 @@ export default function QuizNormal({ quiz, progresso, onSair }: QuizNormalProps)
 
   const acertosAteAgora = respostas.filter((r) => r.acertou).length;
   const errosAteAgora = respostas.filter((r) => !r.acertou).length;
-  const vantagensUsadas = [vantagens.eliminar2, vantagens.dica, vantagens.tempoExtra, vantagens.explicacao].filter(Boolean).length;
+  const vantagensUsadas = Object.values(vantagens).filter(Boolean).length;
   const shouldShowExplanation = mostrarExplicacao && verExplicacaoAtiva && respondida;
 
   const explicacoesErradas = shouldShowExplanation
@@ -65,6 +66,10 @@ export default function QuizNormal({ quiz, progresso, onSair }: QuizNormalProps)
     onDica: usarDica,
     onTempoExtra: usarTempoExtra,
     onExplicacao: usarExplicacao,
+    onPular: usarPular,
+    onDobrar: usarDobrar,
+    onSegundaChance: usarSegundaChance,
+    onEscudo: usarEscudo,
     dicaVisivel,
     legalBasis: pergunta.legalBasis,
     mostrarExplicacao: shouldShowExplanation,

@@ -1,6 +1,16 @@
 import { PERGUNTAS_PARTE_1 } from "./perguntas-parte1";
 import { PERGUNTAS_PARTE_2 } from "./perguntas-parte2";
 import { PERGUNTAS_PARTE_3 } from "./perguntas-parte3";
+import { PERGUNTAS_RETENCAO } from "./perguntas-retencao";
+import { PERGUNTAS_IVA } from "./perguntas-iva";
+import { PERGUNTAS_SS } from "./perguntas-ss";
+import { PERGUNTAS_REGIME } from "./perguntas-regime";
+import { PERGUNTAS_IRS_JOVEM } from "./perguntas-irs-jovem";
+import { PERGUNTAS_ESCALOES } from "./perguntas-escaloes";
+import { PERGUNTAS_ATIVIDADES } from "./perguntas-atividades";
+import { PERGUNTAS_CATF } from "./perguntas-catf";
+import { PERGUNTAS_PRAZOS } from "./perguntas-prazos";
+import { PERGUNTAS_GERAL } from "./perguntas-geral";
 import {
   META_CATEGORIA_QUIZ,
   type QuizCategoria,
@@ -21,6 +31,16 @@ export const QUIZ_PERGUNTAS: QuizPergunta[] = [
   ...PERGUNTAS_PARTE_1,
   ...PERGUNTAS_PARTE_2,
   ...PERGUNTAS_PARTE_3,
+  ...PERGUNTAS_RETENCAO,
+  ...PERGUNTAS_IVA,
+  ...PERGUNTAS_SS,
+  ...PERGUNTAS_REGIME,
+  ...PERGUNTAS_IRS_JOVEM,
+  ...PERGUNTAS_ESCALOES,
+  ...PERGUNTAS_ATIVIDADES,
+  ...PERGUNTAS_CATF,
+  ...PERGUNTAS_PRAZOS,
+  ...PERGUNTAS_GERAL,
 ];
 
 export function embaralhar<T>(arr: T[]): T[] {
