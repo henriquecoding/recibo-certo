@@ -5,11 +5,13 @@ import { m, AnimatePresence } from "motion/react";
 import { resolveQuizIcon } from "./icon-map";
 import { META_CATEGORIA_QUIZ } from "@/lib/quiz-fiscal";
 import {
-  Check, Close, ArrowRight, Fire, Star,
+  Check, Close, ArrowRight, Fire, Star, Target, Zap,
 } from "@/components/ui/Icons";
 import QuizHeader from "./QuizHeader";
 import QuizMobileNav from "./QuizMobileNav";
 import QuizVantagens from "./QuizVantagens";
+import QuizMenuLateral from "./QuizMenuLateral";
+import QuizConfigModal from "./QuizConfigModal";
 import { useGameJuice } from "@/hooks/useGameJuice";
 import type { OpcaoEstado } from "./QuizBookShell";
 import type { VantagensEstado } from "@/hooks/useQuizFiscal";
@@ -97,7 +99,7 @@ export default function QuizMobile({
   podeConfirmar,
   onConfirmar,
   acertosAteAgora,
-  errosAteAgora: _errosAteAgora,
+  errosAteAgora,
   vantagensUsadas: _vantagensUsadas,
   pontosAtuais,
   streakAtual,
@@ -105,6 +107,8 @@ export default function QuizMobile({
 }: QuizMobileProps) {
   const { soarAcerto, soarErro, soarToque } = useGameJuice();
   const [tremendoCard, setTremendoCard] = useState(false);
+  const [menuAberto, setMenuAberto] = useState(false);
+  const [configAberta, setConfigAberta] = useState(false);
   const prevRespondida = useRef(false);
 
   // Feedback sensorial ao responder
@@ -154,14 +158,16 @@ export default function QuizMobile({
   const xpNoNivel = progresso.xpAtual - progresso.xpNivelBase;
   const xpRange = progresso.xpProximo - progresso.xpNivelBase;
   const xpPct = xpRange > 0 ? Math.min(100, Math.round((xpNoNivel / xpRange) * 100)) : 100;
+  const acertoPct = Math.round((acertosAteAgora / (indice + 1 || 1)) * 100);
 
   return (
     // 100dvh evita que o teclado virtual quebre o layout em iOS/Android
     <div className="flex flex-col min-h-[100dvh] pb-1" style={{ backgroundColor: PARCHMENT_BG }}>
       {/* ── 1. Header ── */}
       <QuizHeader
-        onSair={onSair}
-        onMenuToggle={() => {}}
+        menuAberto={menuAberto}
+        onMenuToggle={() => setMenuAberto(true)}
+        onConfiguracoes={() => setConfigAberta(true)}
         nivel={progresso.nivel}
         tituloNivel={progresso.tituloNivel}
         xpAtual={progresso.xpAtual}
@@ -439,13 +445,59 @@ export default function QuizMobile({
 
       <div className="flex-1" />
 
+      {/* ── Footer stats bar ── */}
+      <div
+        className="flex items-center justify-center gap-4 px-4 py-2.5 shrink-0"
+        style={{ backgroundColor: "#1d2218" }}
+      >
+        <MobileFooterStat icon={<Target size={14} className="text-[#ebd4a4]" />} label="Acertos" value={`${acertoPct}%`} />
+        <div className="h-4 w-px opacity-30" style={{ backgroundColor: "#ebd4a4" }} aria-hidden />
+        <MobileFooterStat icon={<Zap size={14} className="text-[#ebd4a4]" />} label="Tempo" value={formatTempoMobile(tempoRestante)} />
+        <div className="h-4 w-px opacity-30" style={{ backgroundColor: "#ebd4a4" }} aria-hidden />
+        <MobileFooterStat icon={<Star size={14} className="text-[#ebd4a4]" />} label="Pontos" value={String(pontosAtuais)} />
+        <div className="h-4 w-px opacity-30" style={{ backgroundColor: "#ebd4a4" }} aria-hidden />
+        <MobileFooterStat icon={<Close size={14} className="text-[#ebd4a4]" />} label="Erros" value={String(errosAteAgora)} />
+      </div>
+
       {/* ── 8. Bottom nav ── */}
       <QuizMobileNav activeTab="home" onHome={onSair} />
+
+      <QuizMenuLateral
+        aberto={menuAberto}
+        onFechar={() => setMenuAberto(false)}
+        categoriaAtiva={categoriaAtiva}
+        onSair={onSair}
+      />
+      <QuizConfigModal
+        aberto={configAberta}
+        onFechar={() => setConfigAberta(false)}
+        onReiniciar={onSair}
+        onSair={onSair}
+      />
     </div>
   );
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatTempoMobile(seg: number | undefined): string {
+  if (seg == null) return "—";
+  const m = Math.floor(seg / 60);
+  const s = seg % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function MobileFooterStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {icon}
+      <div className="flex flex-col leading-none">
+        <span className="text-[9px] font-semibold" style={{ color: "#ebd4a4", opacity: 0.6 }}>{label}</span>
+        <span className="text-[12px] font-bold tabular-nums" style={{ color: "#ebd4a4" }}>{value}</span>
+      </div>
+    </div>
+  );
+}
 
 function ParticulasAcerto() {
   const ITENS = [

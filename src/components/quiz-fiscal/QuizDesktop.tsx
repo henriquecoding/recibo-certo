@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/Icons";
 import QuizHeader from "./QuizHeader";
 import QuizVantagens from "./QuizVantagens";
+import QuizMenuLateral from "./QuizMenuLateral";
+import QuizConfigModal from "./QuizConfigModal";
 import { useGameJuice } from "@/hooks/useGameJuice";
 import type { OpcaoEstado } from "./QuizBookShell";
 import type { VantagensEstado } from "@/hooks/useQuizFiscal";
@@ -113,6 +115,8 @@ export default function QuizDesktop({
 }: QuizDesktopProps) {
   const { soarAcerto, soarErro, soarToque } = useGameJuice();
   const [tremendoTela, setTremendoTela] = useState(false);
+  const [menuAberto, setMenuAberto] = useState(false);
+  const [configAberta, setConfigAberta] = useState(false);
   const prevRespondida = useRef(false);
 
   // Game juice ao responder
@@ -168,8 +172,9 @@ export default function QuizDesktop({
     <div className="flex flex-col min-h-screen" style={{ backgroundColor: "#6b5240" }}>
       {/* ── Header ── */}
       <QuizHeader
-        onSair={onSair}
-        onMenuToggle={() => {}}
+        menuAberto={menuAberto}
+        onMenuToggle={() => setMenuAberto(true)}
+        onConfiguracoes={() => setConfigAberta(true)}
         nivel={progresso.nivel}
         tituloNivel={progresso.tituloNivel}
         xpAtual={progresso.xpAtual}
@@ -547,6 +552,19 @@ export default function QuizDesktop({
         <div className="h-5 w-px opacity-30" style={{ backgroundColor: "#ebd4a4" }} aria-hidden />
         <FooterStat icon={<Close size={16} className="text-[#ebd4a4]" />} label="Erros" value={String(errosAteAgora)} />
       </div>
+
+      <QuizMenuLateral
+        aberto={menuAberto}
+        onFechar={() => setMenuAberto(false)}
+        categoriaAtiva={categoriaAtiva}
+        onSair={onSair}
+      />
+      <QuizConfigModal
+        aberto={configAberta}
+        onFechar={() => setConfigAberta(false)}
+        onReiniciar={onSair}
+        onSair={onSair}
+      />
     </div>
   );
 }

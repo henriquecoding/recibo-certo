@@ -12,7 +12,7 @@ interface QuizHeaderProps {
   xpPct?: number;
   menuAberto?: boolean;
   onMenuToggle?: () => void;
-  onSair?: () => void;
+  onConfiguracoes?: () => void;
 }
 
 export default function QuizHeader({
@@ -23,7 +23,7 @@ export default function QuizHeader({
   xpPct,
   menuAberto = false,
   onMenuToggle,
-  onSair,
+  onConfiguracoes,
 }: QuizHeaderProps) {
   const pct = xpPct != null
     ? xpPct
@@ -112,14 +112,14 @@ export default function QuizHeader({
         </div>
       </div>
 
-      {/* Sair */}
+      {/* Configurações */}
       <button
         type="button"
-        onClick={onSair}
+        onClick={onConfiguracoes}
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-opacity hover:opacity-70 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#3a5232]"
         style={{ color: "#6b5240" }}
-        aria-label="Sair do Quiz"
-        title="Sair do Quiz"
+        aria-label="Configurações do Quiz"
+        title="Configurações"
       >
         <Settings size={20} />
       </button>
