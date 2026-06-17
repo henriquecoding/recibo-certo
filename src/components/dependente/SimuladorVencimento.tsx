@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { m } from "motion/react";
 import { EASE } from "@/lib/motion";
-import { calcularVencimento, calcularVencimentoAnual } from "@/lib/fiscal-dependente";
+import { calcularVencimento, calcularVencimentoAnual, mealheiroDependente } from "@/lib/fiscal-dependente";
 import { SS_DEPENDENTE, SUBSIDIO_REFEICAO } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
@@ -29,6 +29,8 @@ export function SimuladorVencimento() {
   // Como são pagos os subsídios de férias/Natal: por inteiro (nos meses
   // próprios) ou diluídos em duodécimos (frequente nos contratos a termo).
   const [duodecimos, setDuodecimos] = useState(false);
+  // Rendimentos variáveis anuais (comissões, prémios, horas extra) para o mealheiro.
+  const [variavelStr, setVariavelStr] = useState("");
 
   // Valores numéricos derivados — tolerantes a vírgula e a campo vazio.
   const bruto = num(brutoStr);
@@ -56,6 +58,12 @@ export function SimuladorVencimento() {
         diasUteis,
       }),
     [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis]
+  );
+
+  const variavelAnual = num(variavelStr);
+  const meal = useMemo(
+    () => mealheiroDependente({ salarioBruto: bruto, dependentes, variavelAnual }),
+    [bruto, dependentes, variavelAnual]
   );
 
   const limiteSubsidio = cartao ? SUBSIDIO_REFEICAO.cartao.value : SUBSIDIO_REFEICAO.dinheiro.value;
@@ -376,6 +384,54 @@ export function SimuladorVencimento() {
               <dd className="font-medium text-stone-800 dark:text-stone-100 tabular-nums">−{fmt(ra.irsAnual + ra.ssAnual)}</dd>
             </div>
           </dl>
+        </div>
+
+        {/* Mealheiro fiscal — acerto anual de IRS */}
+        <div className="rounded-2xl bg-white dark:bg-stone-800 border border-stone-100 dark:border-stone-700 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <p className="text-xs font-semibold text-stone-600 dark:text-stone-400 flex items-center gap-1.5">
+              Mealheiro fiscal · acerto anual
+              <InfoTip label="Rendimentos variáveis">
+                Comissões, prémios e horas extra são muitas vezes sub-retidos: a retenção mensal
+                segue o salário base, mas o IRS anual incide sobre o total. Mostramos quanto reservar.
+              </InfoTip>
+            </p>
+            <div className="relative w-36">
+              <input
+                id="variavel"
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                value={variavelStr}
+                onChange={(e) => setVariavelStr(soDecimal(e.target.value))}
+                placeholder="Variável/ano"
+                aria-label="Rendimentos variáveis anuais"
+                className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900 px-3 py-2 text-sm text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand"
+              />
+              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-stone-400">€</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm">
+            <div>
+              <dt className="text-xs text-stone-400">IRS apurado/ano</dt>
+              <dd className="font-medium text-stone-800 dark:text-stone-100 tabular-nums">{fmt(meal.irsApurado)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-stone-400">IRS retido/ano</dt>
+              <dd className="font-medium text-stone-800 dark:text-stone-100 tabular-nums">{fmt(meal.irsRetido)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-stone-400">{meal.acerto > 0 ? "A reservar/mês" : "Reembolso estimado"}</dt>
+              <dd className={`font-semibold tabular-nums ${meal.acerto > 0 ? "text-alert-text dark:text-amber-400" : "text-brand"}`}>
+                {meal.acerto > 0 ? fmt(meal.reservaMensal) : fmt(Math.abs(meal.acerto))}
+              </dd>
+            </div>
+          </div>
+          <p className="text-xs text-stone-400 mt-2">
+            {meal.acerto > 0
+              ? `Reserva ${fmt(meal.reservaMensal)}/mês (${fmt(meal.acerto)} no ano) para o acerto de IRS.`
+              : "Pela estimativa, não deverás IRS adicional no acerto anual."}
+          </p>
         </div>
 
         <p className="text-xs text-stone-400 leading-relaxed pt-1">

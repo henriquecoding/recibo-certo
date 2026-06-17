@@ -16,10 +16,14 @@ import {
   SUBSIDIO_REFEICAO,
   RETENCAO_DEP_POR_DEPENDENTE,
   RETENCAO_DEP_CONTINENTE_T1,
+  DEDUCAO_ESPECIFICA_DEPENDENTE,
+  DEDUCAO_DEPENDENTE,
+  DEDUCAO_DEPENDENTE_3MAIS,
+  MINIMO_EXISTENCIA,
   type EscalaoRetencao,
   type TipoAtividade,
 } from "./fiscal-data";
-import { compararRegimes, type ComparacaoResult } from "./fiscal";
+import { compararRegimes, irsProgressivo, type ComparacaoResult } from "./fiscal";
 
 const cent = (n: number) => Math.round(n * 100) / 100;
 
@@ -283,4 +287,68 @@ export function compararCategorias(input: ComparacaoCategoriasInput): Comparacao
   );
 
   return { dependente, freelancer: base.freelancer, empresa: base.empresa, melhor };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  Mealheiro fiscal — acerto anual de IRS (Categoria A)
+//  ---------------------------------------------------------------------
+//  Os rendimentos variáveis (comissões, prémios, horas extra) são muitas
+//  vezes sub-retidos: a retenção mensal segue o salário base, mas o IRS
+//  anual incide sobre o total. Este motor estima o imposto anual devido
+//  (dedução específica 8,54×IAS, escalões progressivos, deduções por
+//  dependente, mínimo de existência) e compara com o retido — sugerindo
+//  quanto reservar para o acerto. ESTIMATIVA — apuramento oficial difere.
+// ─────────────────────────────────────────────────────────────────────
+
+export interface MealheiroDependenteInput {
+  salarioBruto: number;
+  dependentes?: number;
+  /** Rendimentos variáveis anuais (comissões, prémios, horas extra). */
+  variavelAnual?: number;
+}
+
+export interface MealheiroDependenteResult {
+  brutoAnual: number;
+  deducaoEspecifica: number;
+  rendimentoColetavel: number;
+  irsApurado: number;
+  irsRetido: number;
+  /** Positivo → falta pagar (reservar); negativo → reembolso esperado. */
+  acerto: number;
+  /** Reserva mensal sugerida para cobrir o acerto (0 se houver reembolso). */
+  reservaMensal: number;
+}
+
+function deducaoDependentes(dep: number): number {
+  const n = Math.max(0, Math.floor(dep));
+  return Math.min(n, 2) * DEDUCAO_DEPENDENTE.value + Math.max(0, n - 2) * DEDUCAO_DEPENDENTE_3MAIS.value;
+}
+
+export function mealheiroDependente(input: MealheiroDependenteInput): MealheiroDependenteResult {
+  const base = Math.max(0, input.salarioBruto);
+  const dep = Math.max(0, Math.floor(input.dependentes ?? 0));
+  const variavel = Math.max(0, input.variavelAnual ?? 0);
+
+  const brutoAnual = cent(base * 14 + variavel);
+  const ssAnual = cent(brutoAnual * SS_DEPENDENTE.trabalhador.value);
+
+  // Dedução específica: 8,54 × IAS ou as contribuições para a SS, se superiores.
+  const deducaoEspecifica = cent(Math.max(DEDUCAO_ESPECIFICA_DEPENDENTE.value, ssAnual));
+  const rendimentoColetavel = cent(Math.max(0, brutoAnual - deducaoEspecifica));
+
+  const irsBruto = irsProgressivo(rendimentoColetavel);
+  const irsAposDeducoes = Math.max(0, irsBruto - deducaoDependentes(dep));
+  // Mínimo de existência: o rendimento líquido não pode descer abaixo do limiar.
+  const irsMaximo = Math.max(0, rendimentoColetavel - MINIMO_EXISTENCIA.value);
+  const irsApurado = cent(Math.min(irsAposDeducoes, irsMaximo));
+
+  // Retido na fonte estimado: salário (14 meses) + variável à taxa efetiva do mês.
+  const irsRetidoBase = calcularVencimentoAnual({ salarioBruto: base, dependentes: dep, subsidioRefeicaoDia: 0 }).irsAnual;
+  const taxaEfetivaMes = base > 0 ? retencaoIRSDependente(base, dep) / base : 0;
+  const irsRetido = cent(irsRetidoBase + variavel * taxaEfetivaMes);
+
+  const acerto = cent(irsApurado - irsRetido);
+  const reservaMensal = acerto > 0 ? cent(acerto / 12) : 0;
+
+  return { brutoAnual, deducaoEspecifica, rendimentoColetavel, irsApurado, irsRetido, acerto, reservaMensal };
 }

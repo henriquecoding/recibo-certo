@@ -132,3 +132,32 @@ describe("gerarCSVCenarios", () => {
     expect(dados).toContain("1500,00");
   });
 });
+
+// ── mealheiroDependente ───────────────────────────────────────────────────────
+
+import { mealheiroDependente } from "@/lib/fiscal-dependente";
+import { DEDUCAO_ESPECIFICA_DEPENDENTE, IAS } from "@/lib/fiscal-data";
+
+describe("mealheiroDependente", () => {
+  it("dedução específica é 8,54 × IAS", () => {
+    expect(DEDUCAO_ESPECIFICA_DEPENDENTE.value).toBeCloseTo(8.54 * IAS.value, 2);
+  });
+
+  it("rendimentos variáveis aumentam o IRS apurado e o acerto", () => {
+    const sem = mealheiroDependente({ salarioBruto: 2000 });
+    const com = mealheiroDependente({ salarioBruto: 2000, variavelAnual: 6000 });
+    expect(com.irsApurado).toBeGreaterThan(sem.irsApurado);
+    expect(com.acerto).toBeGreaterThan(sem.acerto);
+  });
+
+  it("a reserva mensal é o acerto / 12 quando há acerto a pagar", () => {
+    const m = mealheiroDependente({ salarioBruto: 3000, variavelAnual: 10000 });
+    if (m.acerto > 0) expect(m.reservaMensal).toBeCloseTo(m.acerto / 12, 1);
+    else expect(m.reservaMensal).toBe(0);
+  });
+
+  it("coletável = bruto anual − dedução específica", () => {
+    const m = mealheiroDependente({ salarioBruto: 1500 });
+    expect(m.rendimentoColetavel).toBeCloseTo(Math.max(0, m.brutoAnual - m.deducaoEspecifica), 2);
+  });
+});

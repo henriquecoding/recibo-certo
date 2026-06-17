@@ -52,6 +52,10 @@ export const SOURCES = {
     label: "Art. 68.º CIRS — Taxas gerais (escalões IRS) · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs68.aspx",
   },
+  art25cirs: {
+    label: "Art. 25.º CIRS — Dedução específica do trabalho dependente · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs25.aspx",
+  },
   art70cirs: {
     label: "Art. 70.º CIRS — Mínimo de existência · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs70.aspx",
@@ -1473,6 +1477,18 @@ export const SUBSIDIO_REFEICAO = {
   ),
 };
 
+/**
+ * Dedução específica do trabalho dependente (Categoria A): 8,54 × IAS — ou, se
+ * superior, o total das contribuições obrigatórias para a Segurança Social.
+ * Usada no apuramento anual de IRS (não na retenção mensal).
+ */
+export const DEDUCAO_ESPECIFICA_DEPENDENTE = sv(
+  Math.round(8.54 * IAS.value * 100) / 100,
+  "Art. 25.º CIRS — dedução específica = 8,54 × IAS (ou contribuições SS, se superiores)",
+  "art25cirs",
+  DEP_TODAY
+);
+
 /** Remuneração mensal até este valor: isenta de retenção na fonte (acompanha o SMN). */
 export const RETENCAO_DEP_ISENCAO = sv(
   920,
@@ -1762,6 +1778,9 @@ export function assertFiscalDataIntegrity(): void {
   }
   if (!(RETENCAO_DEP_ISENCAO.value > 0)) erros.push("Limiar de isenção de retenção (cat. A) não positivo.");
   if (!(RETENCAO_DEP_POR_DEPENDENTE.value > 0)) erros.push("Parcela por dependente (cat. A) não positiva.");
+  if (Math.abs(DEDUCAO_ESPECIFICA_DEPENDENTE.value - Math.round(8.54 * IAS.value * 100) / 100) > EPS) {
+    erros.push("Dedução específica (cat. A) deve ser 8,54 × IAS.");
+  }
   {
     const t = RETENCAO_DEP_CONTINENTE_T1.value;
     let ateAnt = -1;
@@ -1782,6 +1801,7 @@ export function assertFiscalDataIntegrity(): void {
     SS_DEPENDENTE.trabalhador, SS_DEPENDENTE.entidade, SS_DEPENDENTE.ipss,
     SUBSIDIO_REFEICAO.dinheiro, SUBSIDIO_REFEICAO.cartao,
     RETENCAO_DEP_ISENCAO, RETENCAO_DEP_POR_DEPENDENTE, RETENCAO_DEP_CONTINENTE_T1,
+    DEDUCAO_ESPECIFICA_DEPENDENTE,
     ...Object.values(RETENCAO),
     DISPENSA_RETENCAO_LIMITE,
     IVA_ISENCAO_LIMITE,
