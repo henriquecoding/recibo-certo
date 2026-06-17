@@ -22,10 +22,13 @@ const dmSans = DM_Sans({
 
 const SITE_URL = "https://recibocerto.pt";
 
-// Códigos de verificação de propriedade dos motores de busca. Definir como
-// variáveis de ambiente (ver `.env.example` e `docs/SEO.md`). Ficam fora do
-// código para não expor tokens no repositório e permitir rotação fácil.
-const GOOGLE_SITE_VERIFICATION = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
+// Códigos de verificação de propriedade dos motores de busca.
+// O token do Google é PÚBLICO (aparece no <head> para o Search Console
+// validar) — fica embebido como omissão para a verificação não depender da
+// configuração de ambientes na Vercel. A env var, se definida, tem precedência.
+const GOOGLE_SITE_VERIFICATION =
+  process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ||
+  "i_bvY0e1N1qrkR7hX_XYz-KiWQMr1oHbM3J3GfaT_r0";
 const BING_SITE_VERIFICATION = process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION;
 
 export const metadata: Metadata = {
