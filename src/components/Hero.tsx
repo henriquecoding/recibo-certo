@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import Link from "next/link";
 import { m } from "motion/react";
 import { ArrowRight, Lock, ShieldCheck, Flag, Warning, Calendar } from "@/components/ui/Icons";
 import { scrollToId } from "@/lib/scroll";
 import { staggerContainer, staggerItem, EASE } from "@/lib/motion";
-
-type Perfil = "independente" | "dependente";
+import { usePerfil, type Perfil } from "@/lib/perfil";
 
 const TRUST = [
   { icon: <Lock />, text: "Sem registo" },
@@ -76,7 +75,7 @@ const EXEMPLO: Record<
       </>
     ),
     sub: "Vê o que devias receber ao fim do mês — com a retenção de IRS de 2026, a Segurança Social e os subsídios de férias e de Natal. Depois compara com o teu recibo de vencimento.",
-    primary: { label: "Simular o meu salário", href: "/ferramentas/recibo-vencimento" },
+    primary: { label: "Simular o meu salário", scrollTo: "calculadora" },
     secondary: { label: "Comparar caminhos", href: "/ferramentas/comparador" },
     card: {
       etiqueta: "Salário de 1 500 € · Continente",
@@ -102,7 +101,7 @@ const PERFIS: { chave: Perfil; label: string }[] = [
 ];
 
 export default function Hero() {
-  const [perfil, setPerfil] = useState<Perfil>("independente");
+  const { perfil, definir } = usePerfil();
   const dados = EXEMPLO[perfil];
   const c = dados.card;
   const pctTeu = Math.round((c.teu / c.bruto) * 100);
@@ -139,7 +138,7 @@ export default function Hero() {
                 key={p.chave}
                 type="button"
                 aria-pressed={perfil === p.chave}
-                onClick={() => setPerfil(p.chave)}
+                onClick={() => definir(p.chave)}
                 className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
                   perfil === p.chave
                     ? "bg-brand text-white shadow-glow"

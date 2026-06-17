@@ -7,7 +7,6 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import { ChevronRight } from "@/components/ui/Icons";
 import { generateBreadcrumbSchema } from "@/lib/seo";
-import { SubscricaoProvider } from "@/lib/stripe/subscription";
 
 const FERRAMENTAS_NAV = [
   { label: "Simulador de recibo de vencimento", href: "/ferramentas/recibo-vencimento" },
@@ -29,7 +28,7 @@ export default function FerramentasLayout({ children }: { children: ReactNode })
   ]);
 
   return (
-    <SubscricaoProvider>
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
@@ -54,6 +53,6 @@ export default function FerramentasLayout({ children }: { children: ReactNode })
         </div>
       </div>
       <Footer />
-    </SubscricaoProvider>
+    </>
   );
 }

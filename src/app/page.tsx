@@ -2,7 +2,7 @@ import Nav from "@/components/Nav";
 
 import Hero from "@/components/Hero";
 import Stats from "@/components/Stats";
-import SimuladorIntegrado from "@/components/SimuladorIntegrado";
+import CalculadoraSecao from "@/components/CalculadoraSecao";
 import Features from "@/components/Features";
 import FAQ from "@/components/FAQ";
 import Fontes from "@/components/Fontes";
@@ -10,7 +10,6 @@ import EmailCapture from "@/components/EmailCapture";
 import Comparacao from "@/components/Comparacao";
 import Precos from "@/components/Precos";
 import Footer from "@/components/Footer";
-import Reveal from "@/components/ui/Reveal";
 import { faqs } from "@/lib/faq";
 import {
   generateWebSiteSchema,
@@ -57,23 +56,7 @@ export default function Home() {
             id="calculadora"
             className="grain border-y border-stone-100 bg-white px-6 py-24 scroll-mt-20"
           >
-            <div className="mx-auto max-w-5xl">
-              <Reveal className="mb-10 text-center">
-                <div className="eyebrow mb-3 text-brand">
-                  Calculadora de recibos verdes 2026
-                </div>
-                <h2 className="font-display display-2 font-semibold text-ink">
-                  Calcula o teu líquido real.<br className="hidden sm:block" /> IRS, SS e IVA em segundos.
-                </h2>
-                <p className="mx-auto mt-3 max-w-lg text-stone-500">
-                  Ajusta o valor e a atividade — vê imediatamente quanto recebes a limpo como recibos verdes
-                  e quanto ficarias como empresa. Taxas de 2026, verificadas com fonte legal.
-                </p>
-              </Reveal>
-              <Reveal delay={0.08}>
-                <SimuladorIntegrado />
-              </Reveal>
-            </div>
+            <CalculadoraSecao />
           </section>
 
           <Stats />

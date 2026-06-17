@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Playfair_Display, DM_Sans } from "next/font/google";
 import MotionProvider from "@/components/ui/motion/MotionProvider";
 import { AuthProvider } from "@/lib/supabase/auth";
+import { PerfilProvider } from "@/lib/perfil";
+import { SubscricaoProvider } from "@/lib/stripe/subscription";
 import AuthModal from "@/components/ui/AuthModal";
 import NovidadesModal from "@/components/ui/NovidadesModal";
 import "./globals.css";
@@ -122,11 +124,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-sans antialiased">
         <AuthProvider>
-          <MotionProvider>
-            {children}
-            <AuthModal />
-            <NovidadesModal />
-          </MotionProvider>
+          <SubscricaoProvider>
+            <PerfilProvider>
+              <MotionProvider>
+                {children}
+                <AuthModal />
+                <NovidadesModal />
+              </MotionProvider>
+            </PerfilProvider>
+          </SubscricaoProvider>
         </AuthProvider>
       </body>
     </html>
