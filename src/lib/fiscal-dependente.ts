@@ -352,3 +352,74 @@ export function mealheiroDependente(input: MealheiroDependenteInput): MealheiroD
 
   return { brutoAnual, deducaoEspecifica, rendimentoColetavel, irsApurado, irsRetido, acerto, reservaMensal };
 }
+
+// ─────────────────────────────────────────────────────────────────────
+//  Auditoria de recibo de vencimento (Pro)
+//  ---------------------------------------------------------------------
+//  Compara o que o recibo MOSTRA (introduzido pelo trabalhador) com o que
+//  as tabelas de 2026 determinam, sinalizando divergências de SS e IRS.
+//  Tolerância pequena para absorver arredondamentos e acertos legítimos.
+// ─────────────────────────────────────────────────────────────────────
+
+export interface AuditoriaInput extends VencimentoInput {
+  /** IRS retido que consta no recibo. */
+  irsDeclarado: number;
+  /** Segurança Social descontada que consta no recibo. */
+  ssDeclarado: number;
+}
+
+export interface AuditoriaResult {
+  ssEsperado: number;
+  irsEsperado: number;
+  /** Declarado − esperado (positivo: desconto a mais). */
+  ssDiferenca: number;
+  irsDiferenca: number;
+  ssOk: boolean;
+  irsOk: boolean;
+  /** Parte do subsídio de refeição acima do limite (tributável). */
+  subsidioExcede: number;
+  alertas: string[];
+  tudoOk: boolean;
+}
+
+/** Tolerância (€) para divergências consideradas normais (arredondamentos). */
+const AUDIT_TOLERANCIA = 2;
+
+export function auditarRecibo(input: AuditoriaInput): AuditoriaResult {
+  const r = calcularVencimento(input);
+  const ssEsperado = r.ssTrabalhador;
+  const irsEsperado = r.irsRetido;
+  const ssDiferenca = cent(Math.max(0, input.ssDeclarado) - ssEsperado);
+  const irsDiferenca = cent(Math.max(0, input.irsDeclarado) - irsEsperado);
+  const ssOk = Math.abs(ssDiferenca) <= AUDIT_TOLERANCIA;
+  const irsOk = Math.abs(irsDiferenca) <= AUDIT_TOLERANCIA;
+
+  const alertas: string[] = [];
+  if (!ssOk) {
+    alertas.push(
+      `Segurança Social: o recibo desconta ${input.ssDeclarado.toFixed(2)} €, mas a taxa de ${(SS_DEPENDENTE.trabalhador.value * 100).toFixed(0)}% dá ${ssEsperado.toFixed(2)} € (diferença de ${Math.abs(ssDiferenca).toFixed(2)} €).`
+    );
+  }
+  if (!irsOk) {
+    alertas.push(
+      `Retenção de IRS: o recibo retém ${input.irsDeclarado.toFixed(2)} €, mas a tabela de 2026 dá ${irsEsperado.toFixed(2)} € (diferença de ${Math.abs(irsDiferenca).toFixed(2)} €).`
+    );
+  }
+  if (r.subsidioRefeicaoTributado > 0) {
+    alertas.push(
+      `Subsídio de refeição: ${r.subsidioRefeicaoTributado.toFixed(2)} € estão acima do limite isento e deviam ser tributados.`
+    );
+  }
+
+  return {
+    ssEsperado,
+    irsEsperado,
+    ssDiferenca,
+    irsDiferenca,
+    ssOk,
+    irsOk,
+    subsidioExcede: r.subsidioRefeicaoTributado,
+    alertas,
+    tudoOk: ssOk && irsOk,
+  };
+}

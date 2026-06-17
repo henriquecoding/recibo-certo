@@ -161,3 +161,31 @@ describe("mealheiroDependente", () => {
     expect(m.rendimentoColetavel).toBeCloseTo(Math.max(0, m.brutoAnual - m.deducaoEspecifica), 2);
   });
 });
+
+// ── auditarRecibo ─────────────────────────────────────────────────────────────
+
+import { auditarRecibo } from "@/lib/fiscal-dependente";
+
+describe("auditarRecibo", () => {
+  it("aprova um recibo com SS e IRS corretos", () => {
+    const esperadoIrs = retencaoIRSDependente(1500, 0);
+    const r = auditarRecibo({ salarioBruto: 1500, dependentes: 0, ssDeclarado: 165, irsDeclarado: esperadoIrs });
+    expect(r.ssOk).toBe(true);
+    expect(r.irsOk).toBe(true);
+    expect(r.tudoOk).toBe(true);
+    expect(r.alertas).toHaveLength(0);
+  });
+
+  it("deteta Segurança Social mal descontada", () => {
+    const r = auditarRecibo({ salarioBruto: 1500, dependentes: 0, ssDeclarado: 120, irsDeclarado: retencaoIRSDependente(1500, 0) });
+    expect(r.ssOk).toBe(false);
+    expect(r.tudoOk).toBe(false);
+    expect(r.alertas.length).toBeGreaterThan(0);
+  });
+
+  it("deteta retenção de IRS divergente", () => {
+    const r = auditarRecibo({ salarioBruto: 1500, dependentes: 0, ssDeclarado: 165, irsDeclarado: 50 });
+    expect(r.irsOk).toBe(false);
+    expect(r.tudoOk).toBe(false);
+  });
+});

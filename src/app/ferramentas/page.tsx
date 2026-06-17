@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Reveal from "@/components/ui/Reveal";
-import { ArrowRight, Calculator, Receipt, Search, Wallet, Sparkle, User, Scale } from "@/components/ui/Icons";
+import { ArrowRight, Calculator, Receipt, Search, Wallet, Sparkle, User, Scale, ShieldCheck } from "@/components/ui/Icons";
 
 export const metadata: Metadata = {
   title: "Ferramentas para trabalhadores independentes 2026 | ReciboCerto",
@@ -24,6 +24,13 @@ const FERRAMENTAS = [
     descricao: "Por conta de outrem? Do salário bruto ao líquido — IRS retido, Segurança Social e subsídio de refeição, com as tabelas oficiais de 2026.",
     icon: User,
     badge: "Simulador",
+  },
+  {
+    href: "/ferramentas/auditoria-recibo",
+    titulo: "Auditoria do recibo de vencimento",
+    descricao: "Introduz os valores do teu recibo e descobre se a entidade aplicou bem o IRS e a Segurança Social de 2026. Deteta erros a teu favor.",
+    icon: ShieldCheck,
+    badge: "Pro",
   },
   {
     href: "/ferramentas/comparador",
