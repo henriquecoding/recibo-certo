@@ -39,6 +39,11 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
    (0 high) + smoke em runtime. Ver skill `verificacao-e-qualidade`.
 7. **Planear e validar** mudanças grandes com o utilizador antes de implementar.
 8. Manter o nome **ReciboCerto**. Não inventar testemunhos nem métricas.
+9. **Changelog a cada merge para `main`.** Sobe `APP_VERSION` e acrescenta uma
+   entrada (pt-PT, voltada ao utilizador) NO TOPO de `CHANGELOG` em
+   `src/lib/version.ts` — é o que alimenta o popup "Novidades & Atualizações".
+   `assertChangelogIntegrity()` falha o build e o workflow `changelog-check.yml`
+   falha o PR se esqueceres.
 
 ## Mapa rápido
 
@@ -47,6 +52,7 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
 - `src/lib/insights.ts` — insights proativos + `saudeFiscal`.
 - `src/lib/store/recibos.ts` — repositório (localStorage; trocar por Supabase no futuro).
 - `src/lib/motion.ts` — variantes de animação.
+- `src/lib/version.ts` — ★ `APP_VERSION` + `CHANGELOG` do popup de Novidades (subir a cada merge para `main`; ver regra 9).
 - `src/app/` — landing (`page.tsx`) + `dashboard/*` (visão geral, recibos, receitas, prazos, simulador, comparador) + `api/fiscal-data`.
 - `src/components/ui/` — primitivas (Button, Badge, InfoTip, ActivityCombobox, Reveal, CountUp, ThemeToggle, Icons…).
 - `scripts/check-fiscal-data.mjs` + `.github/workflows/` — monitor fiscal + auditoria de segurança.

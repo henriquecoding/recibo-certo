@@ -1,0 +1,41 @@
+name: Changelog na main
+
+# Garante que NENHUMA mudança chega a `main` sem atualizar o popup de Novidades.
+# Cada PR para main tem de subir APP_VERSION em src/lib/version.ts — o que, por
+# imposição de assertChangelogIntegrity() (no próprio ficheiro), obriga a uma
+# entrada nova no CHANGELOG. Assim o popup "Novidades & Atualizações" nunca
+# fica dessincronizado após um merge.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Confirmar bump de APP_VERSION
+        run: |
+          set -e
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          extrair='s/.*APP_VERSION = "([^"]+)".*/\1/p'
+          BASE_VER="$(git show "origin/${{ github.base_ref }}:src/lib/version.ts" | sed -nE "$extrair" | head -1)"
+          HEAD_VER="$(sed -nE "$extrair" src/lib/version.ts | head -1)"
+          echo "APP_VERSION em ${{ github.base_ref }}: ${BASE_VER:-<não encontrado>}"
+          echo "APP_VERSION neste PR:                  ${HEAD_VER:-<não encontrado>}"
+          if [ -z "$HEAD_VER" ]; then
+            echo "::error file=src/lib/version.ts::Não consegui ler APP_VERSION."
+            exit 1
+          fi
+          if [ "$BASE_VER" = "$HEAD_VER" ]; then
+            echo "::error file=src/lib/version.ts::APP_VERSION não mudou ($HEAD_VER). Sobe a versão e acrescenta uma entrada ao CHANGELOG em src/lib/version.ts — o popup de Novidades depende disto."
+            exit 1
+          fi
+          echo "OK: APP_VERSION subiu de $BASE_VER para $HEAD_VER."
