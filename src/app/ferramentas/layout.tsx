@@ -7,9 +7,11 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import { ChevronRight } from "@/components/ui/Icons";
 import { generateBreadcrumbSchema } from "@/lib/seo";
+import { SubscricaoProvider } from "@/lib/stripe/subscription";
 
 const FERRAMENTAS_NAV = [
   { label: "Simulador de recibo de vencimento", href: "/ferramentas/recibo-vencimento" },
+  { label: "Recibos verdes, contrato ou empresa?", href: "/ferramentas/comparador" },
   { label: "Ato isolado ou atividade?", href: "/ferramentas/ato-isolado" },
   { label: "Calculadora de regime simplificado", href: "/ferramentas/regime-simplificado" },
   { label: "Classificar atividade fiscal", href: "/ferramentas/classificar-atividade" },
@@ -27,7 +29,7 @@ export default function FerramentasLayout({ children }: { children: ReactNode })
   ]);
 
   return (
-    <>
+    <SubscricaoProvider>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
@@ -52,6 +54,6 @@ export default function FerramentasLayout({ children }: { children: ReactNode })
         </div>
       </div>
       <Footer />
-    </>
+    </SubscricaoProvider>
   );
 }

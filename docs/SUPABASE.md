@@ -13,16 +13,20 @@ Diagnóstico feito contra o projeto Supabase ao vivo e contra produção:
 | Item | Estado |
 |---|---|
 | Projeto Supabase | `sxdditwefdzuqeephqiy` — ativo (`/auth/v1/health` → 200) |
-| Schema (migrations 001–009) | **Aplicado** — as 10 tabelas existem |
+| Schema (migrations 001–010) | **Aplicado** — as 11 tabelas existem |
 | Produção (`recibocerto.pt`) | **Ligada** — env definidas na Vercel; o site mostra "Entrar" |
 | Auth email/password | **Ativa** (signup aberto, autoconfirm ligado) |
 | Auth Google | **Ativada** no painel (cliente OAuth configurado) |
 | Auth LinkedIn | Pendente — botão na UI; falta ativar o provedor "LinkedIn (OIDC)" |
-| Repositório de dados | `store/recibos.ts` em **modo duplo** (localStorage sem sessão, tabela `recibos` com sessão) |
+| Repositório de dados | `store/recibos.ts` e `store/vencimentos.ts` em **modo duplo** (localStorage sem sessão; tabelas `recibos` / `recibos_vencimento` com sessão) |
 
 Tabelas confirmadas: `profiles`, `recibos`, `subscriptions`, `anuncios`,
 `admin_partners`, `email_waitlist`, `alertas_guardiao`, `quiz_profiles`,
-`quiz_sessions`, `site_settings`.
+`quiz_sessions`, `site_settings`, `recibos_vencimento`.
+
+> **`recibos_vencimento`** (migration 010, aplicada 17/06/2026 via Management API):
+> cenários guardados do simulador de vencimento. RLS own+admin. Tiering: grátis
+> guarda até 3 cenários em localStorage; Pro sincroniza na nuvem (ilimitado).
 
 > **Conclusão:** a app já está ligada ao Supabase (auth + dados + admin +
 > subscrições). As únicas lacunas funcionais são os provedores OAuth
@@ -113,7 +117,7 @@ curl -s -H "apikey: <ANON_KEY>" \
 
 ## Migrations
 
-As migrations vivem em `supabase/migrations/` (001–009) e **já estão aplicadas**
+As migrations vivem em `supabase/migrations/` (001–010) e **já estão aplicadas**
 no projeto. Para um projeto novo (ou staging), aplica-as por ordem via:
 
 - **Supabase Studio** → SQL Editor → colar e correr cada ficheiro, **ou**

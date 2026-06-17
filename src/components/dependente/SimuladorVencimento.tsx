@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { m } from "motion/react";
 import { EASE } from "@/lib/motion";
 import { calcularVencimento, calcularVencimentoAnual } from "@/lib/fiscal-dependente";
 import { SS_DEPENDENTE, SUBSIDIO_REFEICAO } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
+import { useVencimentos, type CenarioVencimento } from "@/lib/store/vencimentos";
+import { History, Trash, Plus, ShieldCheck } from "@/components/ui/Icons";
 
 const DEPENDENTES = [0, 1, 2, 3, 4];
 
@@ -61,6 +64,33 @@ export function SimuladorVencimento() {
   // Em duodécimos o líquido distribui-se por 12 meses iguais; por inteiro, o
   // mês normal não traz subsídio (esse recebe-se em junho/novembro).
   const liquidoMostrado = duodecimos ? ra.liquidoMedioMes : r.liquido;
+
+  // Cenários guardados (modo duplo: local no grátis, nuvem no Pro).
+  const { cenarios, carregado: cenariosProntos, naNuvem, limite, limiteAtingido, guardar, remover } = useVencimentos();
+  const [avisoGuardar, setAvisoGuardar] = useState<string | null>(null);
+
+  function guardarCenario() {
+    const res = guardar({
+      salarioBruto: bruto,
+      dependentes,
+      subsidioRefeicaoDia: temSubsidio ? subsidioDia : 0,
+      subsidioRefeicaoCartao: cartao,
+      diasUteis,
+      duodecimos,
+    });
+    setAvisoGuardar(res.erro ?? null);
+  }
+
+  function carregarCenario(c: CenarioVencimento) {
+    setBrutoStr(String(c.salarioBruto));
+    setDependentes(c.dependentes);
+    setTemSubsidio(c.subsidioRefeicaoDia > 0);
+    setSubsidioDiaStr(String(c.subsidioRefeicaoDia || 6));
+    setCartao(c.subsidioRefeicaoCartao);
+    setDiasUteisStr(String(c.diasUteis));
+    setDuodecimos(c.duodecimos);
+    setAvisoGuardar(null);
+  }
 
   return (
     <div className="rounded-3xl border border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 p-6 my-8">
@@ -344,6 +374,68 @@ export function SimuladorVencimento() {
           recibo oficial nem aconselhamento de um contabilista.
         </p>
       </m.div>
+
+      {/* Guardar / histórico de cenários (modo duplo + tiering) */}
+      <div className="mt-5 border-t border-stone-100 dark:border-stone-800 pt-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs font-semibold text-stone-600 dark:text-stone-400 flex items-center gap-1.5">
+            <History size={14} /> Cenários guardados
+            <span className="text-stone-400 font-normal">
+              {naNuvem ? "· sincronizados (Pro)" : `· ${cenarios.length}/${limite} grátis`}
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={guardarCenario}
+            disabled={limiteAtingido}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-brand/30 bg-brand-light px-3 py-1.5 text-xs font-semibold text-brand-dark transition-all hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Plus size={14} /> Guardar este cenário
+          </button>
+        </div>
+
+        {avisoGuardar && (
+          <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-brand/20 bg-brand-light p-3">
+            <span className="text-brand-dark mt-0.5"><ShieldCheck size={14} /></span>
+            <p className="text-xs text-brand-dark">
+              {avisoGuardar}{" "}
+              <Link href="/precos" className="font-semibold underline underline-offset-2">Ver o plano Pro</Link>
+            </p>
+          </div>
+        )}
+
+        {cenariosProntos && cenarios.length > 0 && (
+          <ul className="mt-3 space-y-2">
+            {cenarios.map((c) => (
+              <li
+                key={c.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-stone-100 dark:border-stone-700 bg-white dark:bg-stone-800 px-3 py-2"
+              >
+                <button
+                  type="button"
+                  onClick={() => carregarCenario(c)}
+                  className="flex-1 text-left"
+                >
+                  <span className="text-sm font-medium text-stone-800 dark:text-stone-100 tabular-nums">
+                    {fmt(c.salarioBruto)}/mês
+                  </span>
+                  <span className="text-xs text-stone-400">
+                    {" "}· {c.dependentes} dep.{c.duodecimos ? " · duodécimos" : ""}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => remover(c.id)}
+                  aria-label="Remover cenário"
+                  className="flex-shrink-0 rounded-lg p-1.5 text-stone-400 transition-colors hover:bg-stone-100 dark:hover:bg-stone-700 hover:text-alert-text"
+                >
+                  <Trash size={14} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
