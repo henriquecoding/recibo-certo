@@ -1,4 +1,12 @@
-export const APP_VERSION = "1.2.0";
+// Versão da app + changelog do popup "Novidades & Atualizações".
+//
+// ⚠️ REGRA: a cada merge para `main`, sobe `APP_VERSION` e acrescenta uma
+// entrada NO TOPO de `CHANGELOG`. O popup só reaparece a um utilizador quando
+// `APP_VERSION` muda (guarda a última vista em localStorage). Se esqueceres:
+//   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
+//   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
+
+export const APP_VERSION = "1.3.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -9,6 +17,18 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.3.0",
+    data: "2026-06-17",
+    titulo: "Página inicial unificada e relatório de salário",
+    itens: [
+      "Página inicial para os dois perfis — trabalhador independente e por conta de outrem — com o seletor logo no topo.",
+      "Nova secção que mostra o custo de fazer as contas à mão, no lugar da antiga comparação com o Excel.",
+      "Perguntas frequentes organizadas por tema: Geral, Recibos Verdes e Contratos de Trabalho.",
+      "Relatório do recibo de vencimento em PDF, pronto a apresentar numa negociação salarial (Pro).",
+      "Páginas de ferramentas otimizadas para encontrares o simulador de salário líquido 2026.",
+    ],
+  },
   {
     version: "1.2.0",
     data: "2026-06-16",
@@ -47,3 +67,35 @@ export const CHANGELOG: EntradaChangelog[] = [
     ],
   },
 ];
+
+// ── Garantia de integridade (corre ao importar o módulo) ────────────────
+// O popup de Novidades depende de `APP_VERSION` coincidir com a entrada mais
+// recente do CHANGELOG. Se não coincidir (ou o CHANGELOG estiver malformado),
+// LANÇA — e o build falha, tal como em `fiscal-data.ts`.
+function assertChangelogIntegrity(): void {
+  const erros: string[] = [];
+
+  if (CHANGELOG.length === 0) {
+    erros.push("CHANGELOG vazio.");
+  } else if (CHANGELOG[0].version !== APP_VERSION) {
+    erros.push(
+      `A entrada mais recente do CHANGELOG (v${CHANGELOG[0].version}) não corresponde a APP_VERSION (${APP_VERSION}). Atualiza ambos em src/lib/version.ts.`
+    );
+  }
+
+  const vistos = new Set<string>();
+  CHANGELOG.forEach((e, i) => {
+    if (!/^\d+\.\d+\.\d+$/.test(e.version)) erros.push(`Versão inválida na posição ${i}: "${e.version}".`);
+    if (vistos.has(e.version)) erros.push(`Versão duplicada no CHANGELOG: "${e.version}".`);
+    vistos.add(e.version);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(e.data)) erros.push(`Data inválida em v${e.version}: "${e.data}".`);
+    if (!e.titulo?.trim()) erros.push(`Título em falta em v${e.version}.`);
+    if (!e.itens?.length) erros.push(`Sem itens em v${e.version}.`);
+  });
+
+  if (erros.length > 0) {
+    throw new Error(`[version] CHANGELOG inconsistente — build bloqueado:\n - ${erros.join("\n - ")}`);
+  }
+}
+
+assertChangelogIntegrity();
