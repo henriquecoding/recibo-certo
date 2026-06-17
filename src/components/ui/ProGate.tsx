@@ -7,8 +7,9 @@ import { useSubscricao } from "@/lib/stripe/subscription";
 
 // Bloqueio Pro contextual (abordagem mista): o conteúdo avançado continua
 // presente, mas desfocado e inerte para quem não tem Pro, com uma camada de
-// desbloqueio por cima. Mostra que a funcionalidade existe sem a esconder.
-// As calculadoras base NÃO usam este gate — só extras claramente Pro.
+// desbloqueio por cima. A camada fica EM FLUXO (define a altura do contentor) e
+// a pré-visualização desfocada fica atrás, em absoluto — assim o texto nunca é
+// cortado, em qualquer ecrã. As calculadoras base NÃO usam este gate.
 export default function ProGate({
   title,
   description,
@@ -30,15 +31,14 @@ export default function ProGate({
   if (!carregado || plano === "pro") return <>{children}</>;
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl ${className}`}>
-      {/* Pré-visualização real do que o Pro desbloqueia — desfocada e inerte
-          (não recebe foco nem cliques; oculta de leitores de ecrã). */}
-      <div inert aria-hidden className="pointer-events-none select-none blur-[5px] opacity-50">
+    <div className={`relative overflow-hidden rounded-2xl border border-stone-100 dark:border-stone-800 ${className}`}>
+      {/* Pré-visualização real, desfocada e inerte — atrás da camada. */}
+      <div inert aria-hidden className="pointer-events-none absolute inset-0 select-none blur-[5px] opacity-40">
         {children}
       </div>
 
-      {/* Camada de desbloqueio */}
-      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-white/55 dark:bg-stone-900/60 p-6 text-center">
+      {/* Camada de desbloqueio — em fluxo, define a altura (não corta o texto). */}
+      <div className="relative z-10 flex flex-col items-center justify-center gap-2 bg-white/55 px-5 py-7 text-center dark:bg-stone-900/55">
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-light text-brand">
           <Lock size={18} />
         </span>
