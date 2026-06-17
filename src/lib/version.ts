@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.4.0";
+export const APP_VERSION = "1.4.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.4.1",
+    data: "2026-06-17",
+    titulo: "Afinações no simulador de salário",
+    itens: [
+      "Corrigido o texto cortado no relatório PDF, na legenda do gráfico e na forma de pagamento do subsídio de refeição.",
+      "Informação melhor estruturada e layout otimizado para telemóvel.",
+    ],
+  },
   {
     version: "1.4.0",
     data: "2026-06-17",

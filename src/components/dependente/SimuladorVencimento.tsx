@@ -343,48 +343,50 @@ export function SimuladorVencimento() {
               </InfoTip>
             </label>
             {temSubsidio && (
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div>
-                  <label htmlFor="subdia" className="mb-1.5 block text-xs font-medium text-stone-500 dark:text-stone-400">
-                    Valor por dia
-                  </label>
-                  <div className="relative">
+              <div className="mt-4 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="subdia" className="mb-1.5 block text-xs font-medium text-stone-500 dark:text-stone-400">
+                      Valor por dia
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="subdia"
+                        type="text"
+                        inputMode="decimal"
+                        autoComplete="off"
+                        value={subsidioDiaStr}
+                        onChange={(e) => setSubsidioDiaStr(soDecimal(e.target.value))}
+                        className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-3 py-2 text-sm text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand"
+                      />
+                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-stone-400">€</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="dias" className="mb-1.5 block text-xs font-medium text-stone-500 dark:text-stone-400">
+                      Dias úteis
+                    </label>
                     <input
-                      id="subdia"
+                      id="dias"
                       type="text"
-                      inputMode="decimal"
+                      inputMode="numeric"
                       autoComplete="off"
-                      value={subsidioDiaStr}
-                      onChange={(e) => setSubsidioDiaStr(soDecimal(e.target.value))}
+                      value={diasUteisStr}
+                      onChange={(e) => setDiasUteisStr(soInteiro(e.target.value))}
                       className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-3 py-2 text-sm text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand"
                     />
-                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-stone-400">€</span>
                   </div>
                 </div>
                 <div>
-                  <span className="mb-1.5 block text-xs font-medium text-stone-500 dark:text-stone-400">Forma</span>
-                  <div className="flex gap-1.5">
-                    <button type="button" aria-pressed={cartao} onClick={() => setCartao(true)} className={`flex-1 ${seg(cartao)}`}>
+                  <span className="mb-1.5 block text-xs font-medium text-stone-500 dark:text-stone-400">Forma de pagamento</span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button type="button" aria-pressed={cartao} onClick={() => setCartao(true)} className={seg(cartao)}>
                       Cartão
                     </button>
-                    <button type="button" aria-pressed={!cartao} onClick={() => setCartao(false)} className={`flex-1 ${seg(!cartao)}`}>
+                    <button type="button" aria-pressed={!cartao} onClick={() => setCartao(false)} className={seg(!cartao)}>
                       Dinheiro
                     </button>
                   </div>
-                </div>
-                <div>
-                  <label htmlFor="dias" className="mb-1.5 block text-xs font-medium text-stone-500 dark:text-stone-400">
-                    Dias úteis
-                  </label>
-                  <input
-                    id="dias"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    value={diasUteisStr}
-                    onChange={(e) => setDiasUteisStr(soInteiro(e.target.value))}
-                    className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-3 py-2 text-sm text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand"
-                  />
                 </div>
               </div>
             )}
@@ -413,57 +415,46 @@ export function SimuladorVencimento() {
               </div>
             </div>
             <SegBar segs={segBruto} />
-            <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
-              {segBruto.map((s) => (
-                <li key={s.label} className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400">
-                  <span className={`h-2.5 w-2.5 rounded-full ${s.brand ? "bg-brand" : ""}`} style={{ background: s.brand ? undefined : s.color }} />
-                  {s.label} <span className="font-semibold tabular-nums text-stone-700 dark:text-stone-300">{fmt(s.value)}</span>
-                </li>
-              ))}
-            </ul>
           </div>
 
-          {/* Donut + métricas */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className={`flex items-center gap-4 ${subCard}`}>
+          {/* Para onde vai o bruto — donut + legenda com espaço (sem cortes) */}
+          <div className={subCard}>
+            <p className={eyebrow}>Para onde vai o bruto</p>
+            <div className="mt-3 flex flex-col items-center gap-5 sm:flex-row sm:items-center">
               <Donut
                 segs={segBruto}
                 centro={r.bruto > 0 ? pct(ficaPct) : "—"}
                 centroSub={r.bruto > 0 ? "é teu" : "sem dados"}
               />
-              <div className="min-w-0 flex-1">
-                <p className={eyebrow}>Para onde vai o bruto</p>
-                <ul className="mt-2 space-y-2">
-                  {segBruto.map((s) => (
-                    <li key={s.label} className="flex items-center gap-2">
-                      <span className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${s.brand ? "bg-brand" : ""}`} style={{ background: s.brand ? undefined : s.color }} />
-                      <span className="min-w-0 flex-1 truncate text-xs text-stone-500 dark:text-stone-400">{s.label}</span>
-                      <span className="flex-shrink-0 text-xs font-semibold tabular-nums text-stone-700 dark:text-stone-300">{fmt(s.value)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <ul className="w-full space-y-2.5 sm:flex-1">
+                {segBruto.map((s) => (
+                  <li key={s.label} className="flex items-center gap-2.5">
+                    <span
+                      className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${s.brand ? "bg-brand" : ""}`}
+                      style={{ background: s.brand ? undefined : s.color }}
+                    />
+                    <span className="flex-1 text-sm text-stone-600 dark:text-stone-400">{s.label}</span>
+                    <span className="whitespace-nowrap text-sm font-semibold tabular-nums text-stone-800 dark:text-stone-100">{fmt(s.value)}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
+          </div>
 
-            <div className="grid gap-3">
-              <Metric
-                icon={<Gauge size={15} />}
-                label="Taxa efetiva"
-                value={pct(r.taxaEfetiva)}
-                sub="IRS + Segurança Social / bruto"
-              />
-              <Metric
-                icon={<Building size={15} />}
-                label={
-                  <>
-                    Custo para a empresa{" "}
-                    <InfoTip label="TSU">Bruto + {pct(SS_DEPENDENTE.entidade.value)} de contribuição da entidade.</InfoTip>
-                  </>
-                }
-                value={`${fmt(r.custoEmpresa)}`}
-                sub="por mês, com a Taxa Social Única"
-              />
-            </div>
+          {/* Métricas */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Metric icon={<Gauge size={15} />} label="Taxa efetiva" value={pct(r.taxaEfetiva)} sub="IRS + Segurança Social / bruto" />
+            <Metric
+              icon={<Building size={15} />}
+              label={
+                <>
+                  Custo para a empresa{" "}
+                  <InfoTip label="TSU">Bruto + {pct(SS_DEPENDENTE.entidade.value)} de contribuição da entidade.</InfoTip>
+                </>
+              }
+              value={fmt(r.custoEmpresa)}
+              sub="por mês, com a Taxa Social Única"
+            />
           </div>
 
           {/* Subsídio de refeição (quando aplicável) */}
