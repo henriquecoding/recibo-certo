@@ -3,15 +3,15 @@
 import { type ReactNode } from "react";
 import Link from "next/link";
 import { m } from "motion/react";
-import { ArrowRight, Lock, ShieldCheck, Flag, Warning, Calendar } from "@/components/ui/Icons";
+import { ArrowRight, ShieldCheck, Bank, FileSign, Warning, Calendar } from "@/components/ui/Icons";
 import { scrollToId } from "@/lib/scroll";
 import { staggerContainer, staggerItem, EASE } from "@/lib/motion";
 import { usePerfil, type Perfil } from "@/lib/perfil";
 
 const TRUST = [
-  { icon: <Lock />, text: "Sem registo" },
-  { icon: <ShieldCheck />, text: "Taxas 2026 verificadas" },
-  { icon: <Flag />, text: "Feito para Portugal" },
+  { icon: <ShieldCheck size={14} />, text: "Taxas de 2026 verificadas" },
+  { icon: <Bank size={14} />, text: "Fontes oficiais: AT e Segurança Social" },
+  { icon: <FileSign size={14} />, text: "Base legal em cada cálculo" },
 ];
 
 const eur0 = (n: number) => `${Math.round(n).toLocaleString("pt-PT")} €`;
@@ -36,6 +36,7 @@ const EXEMPLO: Record<
       pctSufixo: string;
       linhas: { l: string; v: string; strong?: boolean }[];
       box: { tom: "alerta" | "info"; titulo: string; sub: string };
+      nota: string;
     };
   }
 > = {
@@ -62,6 +63,7 @@ const EXEMPLO: Record<
         { l: "Disponível para gastar", v: "1 241 €", strong: true },
       ],
       box: { tom: "alerta", titulo: "Prazo SS — 20 julho", sub: "Reserva 299 € · avisamos a tempo" },
+      nota: "Atividade estabelecida (2.º ano ou seguinte). No 1.º ano de atividade, a Segurança Social é isenta e a retenção na fonte pode ser dispensada.",
     },
   },
   dependente: {
@@ -89,6 +91,7 @@ const EXEMPLO: Record<
         { l: "Vencimento líquido", v: "1 167 €", strong: true },
       ],
       box: { tom: "info", titulo: "14 meses por ano", sub: "Subsídios de férias e de Natal incluídos" },
+      nota: "Líquido de um mês normal, sem subsídio de refeição. Tabela I (não casado, sem dependentes), Continente.",
     },
   },
 };
@@ -106,7 +109,7 @@ export default function Hero() {
   const seg = [
     { v: c.teu, color: "#1D9E75" },
     { v: c.irs, color: "#9FE1CB" },
-    { v: c.ss, color: "#D3D1C7" },
+    { v: c.ss, color: "#C2745A" },
   ];
   const total = seg.reduce((s, p) => s + p.v, 0) || 1;
 
@@ -267,6 +270,8 @@ export default function Hero() {
                 </div>
               </div>
             )}
+
+            <p className="mt-3 text-[11px] leading-relaxed text-stone-400">{c.nota}</p>
           </div>
         </m.div>
       </div>

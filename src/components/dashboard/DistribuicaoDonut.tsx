@@ -6,7 +6,7 @@ import { fmt, pct } from "@/lib/format";
 const SEG = [
   { key: "liquido", label: "Teu", color: "#1D9E75" },
   { key: "retencao", label: "Retenção IRS", color: "#9FE1CB" },
-  { key: "segSocial", label: "Seg. Social", color: "#D3D1C7" },
+  { key: "segSocial", label: "Seg. Social", color: "#C2745A" },
 ] as const;
 
 // Donut de distribuição do recibo: para onde vai o que faturaste no mês.

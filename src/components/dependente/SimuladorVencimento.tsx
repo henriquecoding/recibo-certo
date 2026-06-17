@@ -27,7 +27,7 @@ const soInteiro = (s: string) => s.replace(/\D/g, "").slice(0, 2);
 // Tons da marca para os segmentos (verde = é teu; pastéis para o que sai).
 type Seg = { label: string; value: number; color: string; brand?: boolean };
 const COR_IRS = "#9FE1CB"; // brand-mint
-const COR_SS = "#D3D1C7"; // stone quente
+const COR_SS = "#C2745A"; // acento quente (clay) — evita o cinza de "ausência"
 
 // ── Donut genérico (SVG, sem dependências; igual à técnica do DistribuicaoDonut) ──
 function Donut({ segs, centro, centroSub }: { segs: Seg[]; centro: string; centroSub: string }) {

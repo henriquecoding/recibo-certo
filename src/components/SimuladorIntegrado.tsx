@@ -6000,7 +6000,7 @@ export default function SimuladorIntegrado() {
                                 <div
                                   style={{
                                     width: `${(resultEmpresa.totalCustos / total) * 100}%`,
-                                    background: "#D3D1C7",
+                                    background: "#C2745A",
                                   }}
                                   className="transition-all duration-500 rounded-r-full"
                                 />
@@ -6028,7 +6028,7 @@ export default function SimuladorIntegrado() {
                             },
                             {
                               label: "Custos + salário",
-                              color: "#B4B2A9",
+                              color: "#C2745A",
                               show: true,
                             },
                           ]
