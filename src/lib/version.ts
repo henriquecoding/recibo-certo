@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.4.2";
+export const APP_VERSION = "1.4.3";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.4.3",
+    data: "2026-06-17",
+    titulo: "Mensagens da página inicial e do rodapé",
+    itens: [
+      "Nova mensagem de destaque para trabalhadores independentes na página inicial.",
+      "O seletor de perfil passa a indicar \"Sou Trabalhador\".",
+      "Rodapé atualizado para refletir os dois perfis — independentes e por conta de outrem.",
+    ],
+  },
   {
     version: "1.4.2",
     data: "2026-06-17",
