@@ -10,13 +10,24 @@ import InfoTip from "@/components/ui/InfoTip";
 
 const DEPENDENTES = [0, 1, 2, 3, 4];
 
+// Aceita vírgula ou ponto como separador decimal (pt-PT); nunca devolve NaN.
+const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
+// Sanitização ao escrever: dígitos + separador decimal (euros) ou só dígitos.
+const soDecimal = (s: string) => s.replace(/[^\d.,]/g, "");
+const soInteiro = (s: string) => s.replace(/\D/g, "").slice(0, 2);
+
 export function SimuladorVencimento() {
-  const [bruto, setBruto] = useState(1500);
+  const [brutoStr, setBrutoStr] = useState("1500");
   const [dependentes, setDependentes] = useState(0);
   const [temSubsidio, setTemSubsidio] = useState(true);
-  const [subsidioDia, setSubsidioDia] = useState(6);
+  const [subsidioDiaStr, setSubsidioDiaStr] = useState("6");
   const [cartao, setCartao] = useState(true);
-  const [diasUteis, setDiasUteis] = useState(22);
+  const [diasUteisStr, setDiasUteisStr] = useState("22");
+
+  // Valores numéricos derivados — tolerantes a vírgula e a campo vazio.
+  const bruto = num(brutoStr);
+  const subsidioDia = num(subsidioDiaStr);
+  const diasUteis = Math.min(31, Math.round(num(diasUteisStr)));
 
   const r = useMemo(
     () =>
@@ -48,12 +59,11 @@ export function SimuladorVencimento() {
           <div className="relative">
             <input
               id="bruto"
-              type="number"
-              min={0}
-              max={20000}
-              step={50}
-              value={bruto}
-              onChange={(e) => setBruto(Math.max(0, Number(e.target.value)))}
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              value={brutoStr}
+              onChange={(e) => setBrutoStr(soDecimal(e.target.value))}
               className="w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-4 py-2.5 text-sm font-medium text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">€</span>
@@ -65,7 +75,7 @@ export function SimuladorVencimento() {
             max={6000}
             step={50}
             value={Math.min(bruto, 6000)}
-            onChange={(e) => setBruto(Number(e.target.value))}
+            onChange={(e) => setBrutoStr(e.target.value)}
             className="w-full mt-2 accent-brand"
           />
         </div>
@@ -120,11 +130,11 @@ export function SimuladorVencimento() {
               <div className="relative">
                 <input
                   id="subdia"
-                  type="number"
-                  min={0}
-                  step={0.05}
-                  value={subsidioDia}
-                  onChange={(e) => setSubsidioDia(Math.max(0, Number(e.target.value)))}
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  value={subsidioDiaStr}
+                  onChange={(e) => setSubsidioDiaStr(soDecimal(e.target.value))}
                   className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900 px-3 py-2 text-sm text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand"
                 />
                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-stone-400">€</span>
@@ -157,12 +167,11 @@ export function SimuladorVencimento() {
               </label>
               <input
                 id="dias"
-                type="number"
-                min={0}
-                max={31}
-                step={1}
-                value={diasUteis}
-                onChange={(e) => setDiasUteis(Math.max(0, Math.min(31, Number(e.target.value))))}
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                value={diasUteisStr}
+                onChange={(e) => setDiasUteisStr(soInteiro(e.target.value))}
                 className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900 px-3 py-2 text-sm text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand"
               />
             </div>
