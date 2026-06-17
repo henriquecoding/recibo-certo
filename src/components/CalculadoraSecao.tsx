@@ -65,7 +65,7 @@ export default function CalculadoraSecao() {
         <p className="mx-auto mt-3 max-w-lg text-stone-500 dark:text-stone-400">
           {dep
             ? "Do salário bruto ao líquido — IRS retido, Segurança Social, subsídio de refeição e os subsídios de férias e de Natal. Taxas oficiais de 2026."
-            : "Ajusta o valor e a atividade — vê imediatamente quanto recebes a limpo como recibos verdes e quanto ficarias como empresa. Taxas de 2026, verificadas com fonte legal."}
+            : "Ajusta o valor e a atividade — vê imediatamente o teu rendimento líquido como trabalhador independente e compara com o cenário de abertura de empresa. Com as taxas oficiais de 2026."}
         </p>
       </Reveal>
 
