@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Reveal from "@/components/ui/Reveal";
-import { ArrowRight, Calculator, Receipt, Search, Wallet, Sparkle } from "@/components/ui/Icons";
+import { ArrowRight, Calculator, Receipt, Search, Wallet, Sparkle, User } from "@/components/ui/Icons";
 
 export const metadata: Metadata = {
   title: "Ferramentas para trabalhadores independentes 2026 | ReciboCerto",
@@ -18,6 +18,13 @@ export const metadata: Metadata = {
 };
 
 const FERRAMENTAS = [
+  {
+    href: "/ferramentas/recibo-vencimento",
+    titulo: "Simulador de recibo de vencimento",
+    descricao: "Por conta de outrem? Do salário bruto ao líquido — IRS retido, Segurança Social e subsídio de refeição, com as tabelas oficiais de 2026.",
+    icon: User,
+    badge: "Simulador",
+  },
   {
     href: "/ferramentas/ato-isolado",
     titulo: "Ato isolado ou atividade?",

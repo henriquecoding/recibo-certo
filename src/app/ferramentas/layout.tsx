@@ -9,6 +9,7 @@ import { ChevronRight } from "@/components/ui/Icons";
 import { generateBreadcrumbSchema } from "@/lib/seo";
 
 const FERRAMENTAS_NAV = [
+  { label: "Simulador de recibo de vencimento", href: "/ferramentas/recibo-vencimento" },
   { label: "Ato isolado ou atividade?", href: "/ferramentas/ato-isolado" },
   { label: "Calculadora de regime simplificado", href: "/ferramentas/regime-simplificado" },
   { label: "Classificar atividade fiscal", href: "/ferramentas/classificar-atividade" },

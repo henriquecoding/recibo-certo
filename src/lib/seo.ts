@@ -50,6 +50,7 @@ export const FERRAMENTA_SLUGS = [
   "regime-simplificado",
   "classificar-atividade",
   "payout-mor",
+  "recibo-vencimento",
 ] as const;
 
 export const PUBLIC_ROUTES: PublicRoute[] = [
