@@ -7,7 +7,7 @@ import Features from "@/components/Features";
 import FAQ from "@/components/FAQ";
 import Fontes from "@/components/Fontes";
 import EmailCapture from "@/components/EmailCapture";
-import Comparacao from "@/components/Comparacao";
+import CustoOmissao from "@/components/CustoOmissao";
 import Precos from "@/components/Precos";
 import Footer from "@/components/Footer";
 import { faqs } from "@/lib/faq";
@@ -64,7 +64,7 @@ export default function Home() {
           <Features />
 
           <div className="border-y border-stone-100 bg-white">
-            <Comparacao />
+            <CustoOmissao />
           </div>
 
           <Precos />
