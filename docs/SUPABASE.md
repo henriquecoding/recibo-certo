@@ -6,7 +6,7 @@ variáveis de ambiente da Vercel (produção).
 
 ---
 
-## Estado verificado (16/06/2026)
+## Estado verificado (17/06/2026)
 
 Diagnóstico feito contra o projeto Supabase ao vivo e contra produção:
 
@@ -14,19 +14,24 @@ Diagnóstico feito contra o projeto Supabase ao vivo e contra produção:
 |---|---|
 | Projeto Supabase | `sxdditwefdzuqeephqiy` — ativo (`/auth/v1/health` → 200) |
 | Schema (migrations 001–009) | **Aplicado** — as 10 tabelas existem |
-| Produção (`recibocerto.pt`) | **Ligada** — env definidas na Vercel; o site mostra "Entrar" |
+| Produção (`www.recibocerto.pt`) | **Ligada** — env definidas na Vercel; deploy `READY` |
 | Auth email/password | **Ativa** (signup aberto, autoconfirm ligado) |
-| Auth Google | **Ativada** no painel (cliente OAuth configurado) |
-| Auth LinkedIn | Pendente — botão na UI; falta ativar o provedor "LinkedIn (OIDC)" |
+| Auth Google | **Ativada e verificada** (`/authorize` → 302 → `accounts.google.com`) |
+| Auth LinkedIn (OIDC) | **Ativada e verificada** (`/authorize` → 302 → `api.linkedin.com`) |
+| Site URL + redirect allow-list | **Corrigidos** — ver abaixo |
 | Repositório de dados | `store/recibos.ts` em **modo duplo** (localStorage sem sessão, tabela `recibos` com sessão) |
 
 Tabelas confirmadas: `profiles`, `recibos`, `subscriptions`, `anuncios`,
 `admin_partners`, `email_waitlist`, `alertas_guardiao`, `quiz_profiles`,
 `quiz_sessions`, `site_settings`.
 
-> **Conclusão:** a app já está ligada ao Supabase (auth + dados + admin +
-> subscrições). As únicas lacunas funcionais são os provedores OAuth
-> (Google/LinkedIn) — ver abaixo.
+> **Conclusão:** a app está totalmente ligada ao Supabase (auth e-mail + Google +
+> LinkedIn OIDC, dados, admin, subscrições). Os três provedores de login foram
+> verificados ao vivo. Não há lacunas funcionais conhecidas na auth.
+>
+> **Domínio canónico:** `https://www.recibocerto.pt`. O apex `recibocerto.pt`
+> faz 307 para `www` (configurado na Vercel), por isso tudo no Supabase
+> (Site URL, allow-list, callbacks) aponta para o `www`.
 
 ---
 
@@ -65,8 +70,8 @@ Environment Variables, ambiente *Production* e *Preview*) e, para dev local, no
 
 ## Ativar Google e LinkedIn (OAuth)
 
-Hoje os botões existem mas os provedores estão desligados → quem clica apanha
-erro. Para os ativar:
+> **Estado (17/06/2026): ambos ATIVOS e verificados.** Esta secção fica como
+> referência para reativar/rodar credenciais ou replicar num projeto novo.
 
 ### URL de callback (igual para os dois)
 ```
@@ -95,12 +100,16 @@ https://sxdditwefdzuqeephqiy.supabase.co/auth/v1/callback
 > "LinkedIn" está descontinuado — não uses esse.
 
 ### URLs do site (importante para o redirect pós-login)
-Supabase → Authentication → URL Configuration:
-- **Site URL:** `https://recibocerto.pt`
-- **Redirect URLs** (allow-list): `https://recibocerto.pt/**` e, para dev,
-  `http://localhost:3000/**`
+Supabase → Authentication → URL Configuration (valores **já aplicados**):
+- **Site URL:** `https://www.recibocerto.pt` (domínio canónico — ver nota no topo)
+- **Redirect URLs** (allow-list): `https://www.recibocerto.pt/**`,
+  `https://recibocerto.pt/**` e, para dev, `http://localhost:3000/**`
 
-(No código, `entrarComGoogle`/`entrarComGitHub` em `src/lib/supabase/auth.tsx`
+> Antes desta correção o Site URL estava em `http://localhost:3000` (resíduo de
+> dev) — partia os links de confirmação/recuperação por email e o redirect de
+> fallback do OAuth. Corrigido a 17/06/2026 via Management API.
+
+(No código, `entrarComGoogle`/`entrarComLinkedin` em `src/lib/supabase/auth.tsx`
 redirecionam para `${origin}/dashboard`.)
 
 ### Verificar
