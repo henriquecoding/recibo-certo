@@ -126,28 +126,30 @@ export default function Hero() {
       <div className="mx-auto grid max-w-5xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
         {/* Texto */}
         <m.div initial="hidden" animate="visible" variants={staggerContainer}>
-          {/* Seletor de perfil — ramifica a experiência */}
-          <m.div
-            variants={staggerItem}
-            role="group"
-            aria-label="O teu perfil"
-            className="mb-6 inline-flex rounded-full border border-stone-200 bg-white p-1 shadow-card"
-          >
-            {PERFIS.map((p) => (
-              <button
-                key={p.chave}
-                type="button"
-                aria-pressed={perfil === p.chave}
-                onClick={() => definir(p.chave)}
-                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
-                  perfil === p.chave
-                    ? "bg-brand text-white shadow-glow"
-                    : "text-stone-500 hover:text-stone-700"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
+          {/* Seletor de perfil — dupla entrada que ramifica toda a experiência */}
+          <m.div variants={staggerItem} className="mb-6 flex items-center gap-3">
+            <span className="text-xs font-medium text-stone-400">Sou</span>
+            <div
+              role="group"
+              aria-label="O teu perfil"
+              className="inline-flex rounded-full border border-stone-200 bg-white p-1 shadow-card"
+            >
+              {PERFIS.map((p) => (
+                <button
+                  key={p.chave}
+                  type="button"
+                  aria-pressed={perfil === p.chave}
+                  onClick={() => definir(p.chave)}
+                  className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
+                    perfil === p.chave
+                      ? "bg-brand text-white shadow-glow"
+                      : "text-stone-500 hover:text-stone-700"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
           </m.div>
 
           <m.h1 variants={staggerItem} className="font-display display-1 text-balance font-semibold text-ink">
