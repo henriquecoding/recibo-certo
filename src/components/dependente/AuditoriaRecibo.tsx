@@ -9,7 +9,8 @@ import { SS_DEPENDENTE } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import { useSubscricao } from "@/lib/stripe/subscription";
-import { Check, Warning, ShieldCheck, Lock } from "@/components/ui/Icons";
+import { getSupabase } from "@/lib/supabase/client";
+import { Check, Warning, ShieldCheck, Lock, Mail } from "@/components/ui/Icons";
 
 const DEPENDENTES = [0, 1, 2, 3, 4];
 const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
@@ -24,6 +25,32 @@ export function AuditoriaRecibo() {
   const [irsStr, setIrsStr] = useState("");
   const [ssStr, setSsStr] = useState("");
   const [submetido, setSubmetido] = useState(false);
+  const [envio, setEnvio] = useState<"idle" | "a-enviar" | "enviado" | "erro">("idle");
+
+  async function enviarPorEmail() {
+    setEnvio("a-enviar");
+    try {
+      const { data } = await getSupabase().auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) {
+        setEnvio("erro");
+        return;
+      }
+      const res = await fetch("/api/email/auditoria", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          salarioBruto: num(brutoStr),
+          dependentes,
+          irsDeclarado: num(irsStr),
+          ssDeclarado: num(ssStr),
+        }),
+      });
+      setEnvio(res.ok ? "enviado" : "erro");
+    } catch {
+      setEnvio("erro");
+    }
+  }
 
   const resultado = useMemo(
     () =>
@@ -159,6 +186,19 @@ export function AuditoriaRecibo() {
                 ))}
               </ul>
             )}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={enviarPorEmail}
+                disabled={envio === "a-enviar" || envio === "enviado"}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-3 py-1.5 text-xs font-semibold text-stone-600 dark:text-stone-300 transition-all hover:border-brand hover:text-brand disabled:opacity-60"
+              >
+                <Mail size={14} />
+                {envio === "enviado" ? "Enviado" : envio === "a-enviar" ? "A enviar…" : "Enviar relatório por email"}
+              </button>
+              {envio === "erro" && <span className="text-xs text-alert-text dark:text-amber-400">Não foi possível enviar.</span>}
+            </div>
+
             <p className="text-xs text-stone-400 leading-relaxed">
               Estimativa pela Tabela I (não casado ou casado, dois titulares), Continente. Pequenas
               diferenças podem resultar de arredondamentos ou de acertos a meio do ano.
