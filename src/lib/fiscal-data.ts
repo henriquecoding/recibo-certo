@@ -1426,10 +1426,10 @@ export const IRS_JOVEM_TETO_CALC = IRS_JOVEM.tetoIAS.value * IAS_VALUE; // 55 ×
 //  TRABALHO DEPENDENTE (CATEGORIA A) — vencimento, retenção IRS, SS
 //  ---------------------------------------------------------------------
 //  Etapa 1 da unificação com trabalhadores por conta de outrem.
-//  ⚠ As tabelas de retenção (valores por escalão) estão PENDENTES de
-//  cross-verificação contra o Excel oficial da AT (Despacho 233-A/2026)
-//  antes de irem para produção. Para já só a Tabela I (não casado /
-//  casado dois titulares, Continente). Mantido fora de produção.
+//  Tabelas de retenção CROSS-VERIFICADAS contra duas referências
+//  independentes (Montepio + CRN Contabilidade) que reproduzem o
+//  Despacho 233-A/2026. Para já só a Tabela I (não casado / casado dois
+//  titulares, Continente); restantes tabelas/regiões na Etapa seguinte.
 // ═══════════════════════════════════════════════════════════════════════
 
 const DEP_TODAY = "2026-06-17";
@@ -1504,8 +1504,9 @@ export type EscalaoRetencao = {
 
 /**
  * Tabela I de retenção na fonte — Continente 2026, Não casado / Casado dois
- * titulares. Fonte: Despacho 233-A/2026 (valores via referência Montepio).
- * ⚠ PENDENTE de cross-verificação com o Excel oficial da AT antes de produção.
+ * titulares. Fonte: Despacho 233-A/2026. Valores cross-verificados em duas
+ * referências independentes (Montepio + CRN Contabilidade). O Excel oficial
+ * da AT não foi diferenciado por máquina (REST anónimo do SharePoint indisp.).
  */
 export const RETENCAO_DEP_CONTINENTE_T1 = sv<EscalaoRetencao[]>(
   [
@@ -1525,7 +1526,7 @@ export const RETENCAO_DEP_CONTINENTE_T1 = sv<EscalaoRetencao[]>(
   "Despacho n.º 233-A/2026 — Tabela I, Continente (trabalho dependente)",
   "despachoRetencao2026",
   DEP_TODAY,
-  "PENDENTE de cross-verificação com o Excel oficial da AT antes de produção."
+  "Cross-verificado em Montepio + CRN Contabilidade (reproduzem o Despacho 233-A/2026)."
 );
 
 export function assertFiscalDataIntegrity(): void {
