@@ -9,9 +9,17 @@ import { SS_DEPENDENTE, SUBSIDIO_REFEICAO, type EstadoCivilRet } from "@/lib/fis
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import { useVencimentos, gerarCSVCenarios, type CenarioVencimento } from "@/lib/store/vencimentos";
-import { History, Trash, Plus, ShieldCheck, Export } from "@/components/ui/Icons";
+import { History, Trash, Plus, ShieldCheck, Export, FileSign } from "@/components/ui/Icons";
+import ProGate from "@/components/ui/ProGate";
+import { printRelatorioVencimento } from "@/lib/export-vencimento";
 
 const DEPENDENTES = [0, 1, 2, 3, 4];
+
+const SITUACAO_LABEL: Record<EstadoCivilRet, string> = {
+  naoCasado: "Não casado",
+  casadoDois: "Casado, 2 titulares",
+  casadoUnico: "Casado, 1 titular",
+};
 
 // Aceita vírgula ou ponto como separador decimal (pt-PT); nunca devolve NaN.
 const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
@@ -93,6 +101,27 @@ export function SimuladorVencimento() {
     a.download = `recibocerto-cenarios-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function descarregarRelatorio() {
+    printRelatorioVencimento({
+      situacao: SITUACAO_LABEL[estadoCivil],
+      dependentes,
+      bruto: r.bruto,
+      ssTrabalhador: r.ssTrabalhador,
+      irsRetido: r.irsRetido,
+      subsidioRefeicaoTotal: r.subsidioRefeicaoTotal,
+      subsidioRefeicaoIsento: r.subsidioRefeicaoIsento,
+      liquido: r.liquido,
+      taxaEfetiva: r.taxaEfetiva,
+      custoEmpresa: r.custoEmpresa,
+      brutoAnual: ra.brutoAnual,
+      subsidioFerias: ra.subsidioFerias,
+      subsidioNatal: ra.subsidioNatal,
+      irsAnual: ra.irsAnual,
+      ssAnual: ra.ssAnual,
+      liquidoAnual: ra.liquidoAnual,
+    });
   }
 
   function guardarCenario() {
@@ -495,6 +524,38 @@ export function SimuladorVencimento() {
           Não substitui o teu recibo oficial nem aconselhamento de um contabilista.
         </p>
       </m.div>
+
+      {/* Relatório financeiro em PDF — extra claramente Pro (bloqueio misto:
+          o cálculo é livre, só o relatório exportável é Pro). */}
+      <div className="mt-5">
+        <ProGate
+          title="Relatório financeiro em PDF"
+          description="Descarrega um relatório completo desta simulação — estrutura de custos e visão anual — pronto a apresentar numa negociação salarial."
+        >
+          <div className="rounded-2xl border border-stone-100 dark:border-stone-700 bg-white dark:bg-stone-800 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand">
+                  <FileSign size={18} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">Relatório financeiro</p>
+                  <p className="text-xs text-stone-400 tabular-nums">
+                    Líquido {fmt(liquidoMostrado)}/mês · {fmt(ra.liquidoAnual)}/ano · empresa {fmt(r.custoEmpresa)}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={descarregarRelatorio}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-glow transition-all hover:shadow-float"
+              >
+                <Export size={14} /> Descarregar PDF
+              </button>
+            </div>
+          </div>
+        </ProGate>
+      </div>
 
       {/* Guardar / histórico de cenários (modo duplo + tiering) */}
       <div className="mt-5 border-t border-stone-100 dark:border-stone-800 pt-4">
