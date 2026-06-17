@@ -1,11 +1,12 @@
-import { ShieldCheck, Lock, Flag } from "@/components/ui/Icons";
+import { ShieldCheck, Flag, Coin } from "@/components/ui/Icons";
 import { StaggerGroup, StaggerItem } from "@/components/ui/motion/Stagger";
 import {
   RETENCAO,
   SS_TAXA,
   IVA_ISENCAO_LIMITE,
+  IAS,
 } from "@/lib/fiscal-data";
-import { pct } from "@/lib/format";
+import { pct, fmt } from "@/lib/format";
 
 const PILARES = [
   {
@@ -14,13 +15,6 @@ const PILARES = [
     accent: "text-brand",
     label: "Retenção IRS Art. 151.º",
     sub: "Verificado com fonte AT · 2026",
-  },
-  {
-    icon: <Lock size={16} />,
-    metric: "0 €",
-    accent: "text-stone-800",
-    label: "Custo para começar",
-    sub: "Sem conta, sem dados enviados",
   },
   {
     icon: <Flag size={16} />,
@@ -35,6 +29,13 @@ const PILARES = [
     accent: "text-stone-800",
     label: "Limite isenção IVA",
     sub: "Art. 53.º CIVA · art. 282.º CIVA",
+  },
+  {
+    icon: <Coin size={16} />,
+    metric: fmt(IAS.value),
+    accent: "text-stone-800",
+    label: "Indexante (IAS) 2026",
+    sub: "Base de SS, IRS Jovem e deduções",
   },
 ] as const;
 
