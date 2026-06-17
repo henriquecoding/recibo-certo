@@ -42,12 +42,10 @@ const EXEMPLO: Record<
   independente: {
     h1: (
       <>
-        De cada recibo,
-        <br />
-        sabe o que é <span className="text-brand">mesmo teu.</span>
+        Sabe quanto é <span className="text-brand">teu</span>, quanto reservar e quando pagar.
       </>
     ),
-    sub: "Calcula IRS, Segurança Social e IVA num segundo — e sabe exatamente quanto podes gastar sem apanhar surpresas no fim do trimestre.",
+    sub: "O copiloto financeiro para trabalhadores independentes em Portugal — sem surpresas no fim do ano.",
     primary: { label: "Calcular o meu recibo", scrollTo: "calculadora" },
     secondary: { label: "Como funciona", scrollTo: "features" },
     card: {
@@ -127,8 +125,8 @@ export default function Hero() {
         {/* Texto */}
         <m.div initial="hidden" animate="visible" variants={staggerContainer}>
           {/* Seletor de perfil — dupla entrada que ramifica toda a experiência */}
-          <m.div variants={staggerItem} className="mb-6 flex items-center gap-3">
-            <span className="text-xs font-medium text-stone-400">Sou</span>
+          <m.div variants={staggerItem} className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span className="text-xs font-medium text-stone-400">Sou Trabalhador</span>
             <div
               role="group"
               aria-label="O teu perfil"
