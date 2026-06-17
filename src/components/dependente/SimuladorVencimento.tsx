@@ -8,8 +8,8 @@ import { calcularVencimento, calcularVencimentoAnual } from "@/lib/fiscal-depend
 import { SS_DEPENDENTE, SUBSIDIO_REFEICAO } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
-import { useVencimentos, type CenarioVencimento } from "@/lib/store/vencimentos";
-import { History, Trash, Plus, ShieldCheck } from "@/components/ui/Icons";
+import { useVencimentos, gerarCSVCenarios, type CenarioVencimento } from "@/lib/store/vencimentos";
+import { History, Trash, Plus, ShieldCheck, Export } from "@/components/ui/Icons";
 
 const DEPENDENTES = [0, 1, 2, 3, 4];
 
@@ -66,8 +66,19 @@ export function SimuladorVencimento() {
   const liquidoMostrado = duodecimos ? ra.liquidoMedioMes : r.liquido;
 
   // Cenários guardados (modo duplo: local no grátis, nuvem no Pro).
-  const { cenarios, carregado: cenariosProntos, naNuvem, limite, limiteAtingido, guardar, remover } = useVencimentos();
+  const { cenarios, carregado: cenariosProntos, naNuvem, plano, limite, limiteAtingido, guardar, remover } = useVencimentos();
   const [avisoGuardar, setAvisoGuardar] = useState<string | null>(null);
+
+  function exportarCSV() {
+    const csv = gerarCSVCenarios(cenarios);
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `recibocerto-cenarios-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   function guardarCenario() {
     const res = guardar({
@@ -434,6 +445,27 @@ export function SimuladorVencimento() {
               </li>
             ))}
           </ul>
+        )}
+
+        {cenariosProntos && cenarios.length > 0 && (
+          <div className="mt-3 flex justify-end">
+            {plano === "pro" ? (
+              <button
+                type="button"
+                onClick={exportarCSV}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-500 dark:text-stone-400 transition-colors hover:text-brand"
+              >
+                <Export size={14} /> Exportar CSV
+              </button>
+            ) : (
+              <Link
+                href="/precos"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-400 transition-colors hover:text-brand"
+              >
+                <Export size={14} /> Exportar CSV (Pro)
+              </Link>
+            )}
+          </div>
         )}
       </div>
     </div>

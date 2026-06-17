@@ -106,3 +106,29 @@ describe("compararCategorias", () => {
     expect(c.melhor).toBe(maxChave);
   });
 });
+
+// ── gerarCSVCenarios ──────────────────────────────────────────────────────────
+
+import { gerarCSVCenarios } from "@/lib/store/vencimentos";
+
+describe("gerarCSVCenarios", () => {
+  const cenario = {
+    id: "x", nome: "Teste", salarioBruto: 1500, dependentes: 0,
+    subsidioRefeicaoDia: 0, subsidioRefeicaoCartao: true, diasUteis: 22,
+    duodecimos: false, criadoEm: "2026-06-17T00:00:00.000Z",
+  };
+
+  it("inclui cabeçalho e uma linha por cenário", () => {
+    const csv = gerarCSVCenarios([cenario]);
+    const linhas = csv.split("\n");
+    expect(linhas).toHaveLength(2);
+    expect(linhas[0]).toContain("liquido_anual");
+  });
+
+  it("usa ; como separador e vírgula decimal (Excel pt-PT)", () => {
+    const csv = gerarCSVCenarios([cenario]);
+    const dados = csv.split("\n")[1];
+    expect(dados).toContain(";");
+    expect(dados).toContain("1500,00");
+  });
+});

@@ -7,31 +7,35 @@ import { Check, Lock, ShieldCheck, Flag } from "@/components/ui/Icons";
 import Reveal from "@/components/ui/Reveal";
 
 const GRATIS = [
-  "Calculadora completa de recibo verde",
+  "Calculadora de recibos verdes (Cat. B)",
+  "Simulador de recibo de vencimento (Cat. A)",
   "Simulador de IRS anual",
+  "Comparador: dependente vs. recibos verdes vs. empresa",
   "Calendário de prazos fiscais",
   "Histórico neste dispositivo",
-  "Comparador: vale a pena abrir empresa?",
 ];
 
 const PRO = [
   "Avisamos-te antes de cada prazo — nunca mais uma coima",
+  "Auditoria do teu recibo de vencimento — deteta erros de IRS e SS",
   "O teu histórico seguro e em todos os dispositivos",
   "Um clique e fica pronto para o teu contabilista (CSV e PDF)",
   "Mealheiro fiscal: quanto reservar este mês, automático",
-  "Cenários do simulador guardados e comparáveis",
+  "Cenários guardados e comparáveis (recibos verdes e vencimento)",
 ];
 
 const MATRIZ: { f: string; gratis: boolean | string; pro: boolean | string }[] = [
-  { f: "Calculadora de recibo verde", gratis: true, pro: true },
+  { f: "Calculadora de recibos verdes (Cat. B)", gratis: true, pro: true },
+  { f: "Simulador de recibo de vencimento (Cat. A)", gratis: true, pro: true },
   { f: "Simulador de IRS anual", gratis: true, pro: true },
+  { f: "Comparador A vs B vs empresa", gratis: true, pro: true },
   { f: "Calendário de prazos fiscais", gratis: true, pro: true },
-  { f: "Comparador recibos vs empresa", gratis: true, pro: true },
   { f: "Histórico", gratis: "Neste dispositivo", pro: "Na nuvem, em todos" },
-  { f: "Alertas de prazos por email", gratis: false, pro: true },
+  { f: "Cenários guardados", gratis: "Até 3", pro: "Ilimitados" },
+  { f: "Auditoria de recibo de vencimento (PDF)", gratis: false, pro: true },
+  { f: "Alertas de prazos e de erros por email", gratis: false, pro: true },
   { f: "Exportação CSV e PDF", gratis: false, pro: true },
   { f: "Mealheiro fiscal automático", gratis: false, pro: true },
-  { f: "Cenários do simulador guardados", gratis: false, pro: true },
   { f: "Suporte", gratis: "—", pro: "Por email" },
 ];
 

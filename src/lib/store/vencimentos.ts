@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/auth";
 import { useSubscricao } from "@/lib/stripe/subscription";
+import { calcularVencimento, calcularVencimentoAnual } from "@/lib/fiscal-dependente";
 
 export interface CenarioVencimento {
   id: string;
@@ -58,6 +59,42 @@ function uid(): string {
 
 const ordenar = (xs: CenarioVencimento[]) =>
   [...xs].sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
+
+// ─── Exportação CSV (Pro) ────────────────────────────────────────────────
+// Texto livre que pode conter ; ou " é citado; separador ; e decimais com
+// vírgula para abrir corretamente no Excel pt-PT.
+const txt = (s: string) => (/[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
+const eur = (n: number) => n.toFixed(2).replace(".", ",");
+
+/** Gera um CSV dos cenários com os valores líquidos recalculados pelos motores
+ *  verificados (recibo mensal + visão anual de 14 meses). */
+export function gerarCSVCenarios(cenarios: CenarioVencimento[]): string {
+  const cabecalho = [
+    "nome", "salario_bruto", "dependentes", "subsidio_refeicao_dia",
+    "subsidio_refeicao", "dias_uteis", "duodecimos",
+    "liquido_mensal", "liquido_anual", "irs_anual", "ss_anual", "criado_em",
+  ];
+  const linhas = cenarios.map((c) => {
+    const args = {
+      salarioBruto: c.salarioBruto,
+      dependentes: c.dependentes,
+      subsidioRefeicaoDia: c.subsidioRefeicaoDia,
+      subsidioRefeicaoCartao: c.subsidioRefeicaoCartao,
+      diasUteis: c.diasUteis,
+    };
+    const m = calcularVencimento(args);
+    const a = calcularVencimentoAnual(args);
+    return [
+      txt(c.nome ?? ""),
+      eur(c.salarioBruto), c.dependentes, eur(c.subsidioRefeicaoDia),
+      c.subsidioRefeicaoCartao ? "cartão" : "dinheiro", c.diasUteis,
+      c.duodecimos ? "sim" : "não",
+      eur(m.liquido), eur(a.liquidoAnual), eur(a.irsAnual), eur(a.ssAnual),
+      c.criadoEm,
+    ].join(";");
+  });
+  return [cabecalho.join(";"), ...linhas].join("\n");
+}
 
 // ─── Mapeamento Supabase ────────────────────────────────────────────────
 interface CenarioRow {
