@@ -51,6 +51,7 @@ export const FERRAMENTA_SLUGS = [
   "classificar-atividade",
   "payout-mor",
   "recibo-vencimento",
+  "comparador",
 ] as const;
 
 export const PUBLIC_ROUTES: PublicRoute[] = [

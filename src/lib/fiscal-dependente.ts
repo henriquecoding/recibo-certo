@@ -17,7 +17,9 @@ import {
   RETENCAO_DEP_POR_DEPENDENTE,
   RETENCAO_DEP_CONTINENTE_T1,
   type EscalaoRetencao,
+  type TipoAtividade,
 } from "./fiscal-data";
+import { compararRegimes, type ComparacaoResult } from "./fiscal";
 
 const cent = (n: number) => Math.round(n * 100) / 100;
 
@@ -205,4 +207,80 @@ export function calcularVencimentoAnual(input: VencimentoAnualInput): Vencimento
     liquidoMedioMes,
     taxaEfetiva,
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  Comparador A vs B vs empresa
+//  ---------------------------------------------------------------------
+//  Para um mesmo rendimento anual ilíquido, estima o líquido como:
+//   · trabalhador dependente (Cat. A) — salário em 14 meses;
+//   · trabalhador independente (Cat. B) — recibos verdes (regime simplificado);
+//   · sociedade — IRC + distribuição de dividendos.
+//  Reutiliza compararRegimes (B vs empresa) e calcularVencimentoAnual (A).
+//  ESTIMATIVA: o cenário empresa não modela salário/SS do gerente nem
+//  tributação autónoma (ver compararRegimes). A Cat. A ignora o subsídio de
+//  refeição para uma comparação limpa do bruto.
+// ─────────────────────────────────────────────────────────────────────
+
+export interface ComparacaoCategoriasInput {
+  /** Rendimento anual ilíquido a comparar (salário de 14 meses OU faturação). */
+  brutoAnual: number;
+  /** Tipo de atividade para o cenário de recibos verdes (default art151). */
+  tipo?: TipoAtividade;
+  /** Dependentes (afeta a retenção na Categoria A). */
+  dependentes?: number;
+  /** Despesas de atividade (recibos verdes e empresa). */
+  despesas?: number;
+  /** Custos extra exclusivos da empresa (contabilista, admin…). */
+  custosEmpresa?: number;
+  derrama?: number;
+  irsJovemAno?: number;
+}
+
+export interface ComparacaoCategoriasResult {
+  dependente: { bruto: number; ss: number; irs: number; liquido: number; taxaEfetiva: number };
+  freelancer: ComparacaoResult["freelancer"];
+  empresa: ComparacaoResult["empresa"];
+  /** Categoria com maior líquido disponível. */
+  melhor: "dependente" | "freelancer" | "empresa";
+}
+
+export function compararCategorias(input: ComparacaoCategoriasInput): ComparacaoCategoriasResult {
+  const bruto = Math.max(0, input.brutoAnual);
+
+  // Cat. B (recibos verdes) + empresa — motor existente.
+  const base = compararRegimes({
+    brutoAnual: bruto,
+    tipo: input.tipo ?? "art151",
+    despesas: input.despesas,
+    custosEmpresa: input.custosEmpresa,
+    derrama: input.derrama,
+    irsJovemAno: input.irsJovemAno,
+  });
+
+  // Cat. A (trabalho dependente): o mesmo bruto como salário de 14 meses,
+  // sem subsídio de refeição para uma comparação limpa.
+  const anual = calcularVencimentoAnual({
+    salarioBruto: bruto / 14,
+    dependentes: input.dependentes,
+    subsidioRefeicaoDia: 0,
+  });
+  const dependente = {
+    bruto: anual.brutoAnual,
+    ss: anual.ssAnual,
+    irs: anual.irsAnual,
+    liquido: anual.liquidoAnual,
+    taxaEfetiva: anual.taxaEfetiva,
+  };
+
+  const liquidos = {
+    dependente: dependente.liquido,
+    freelancer: base.freelancer.liquido,
+    empresa: base.empresa.liquido,
+  } as const;
+  const melhor = (Object.keys(liquidos) as (keyof typeof liquidos)[]).reduce((a, b) =>
+    liquidos[b] > liquidos[a] ? b : a
+  );
+
+  return { dependente, freelancer: base.freelancer, empresa: base.empresa, melhor };
 }

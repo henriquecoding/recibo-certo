@@ -3,6 +3,7 @@ import {
   retencaoIRSDependente,
   calcularVencimento,
   calcularVencimentoAnual,
+  compararCategorias,
 } from "@/lib/fiscal-dependente";
 import { SS_DEPENDENTE } from "@/lib/fiscal-data";
 
@@ -73,5 +74,35 @@ describe("calcularVencimentoAnual", () => {
     const anual = calcularVencimentoAnual(args);
     expect(anual.liquidoMedioMes).toBeGreaterThan(mensal.liquido);
     expect(anual.liquidoMedioMes).toBeCloseTo(anual.liquidoAnual / 12, 2);
+  });
+});
+
+// ── compararCategorias ────────────────────────────────────────────────────────
+
+describe("compararCategorias", () => {
+  it("devolve os três cenários com líquido positivo e abaixo do bruto", () => {
+    const c = compararCategorias({ brutoAnual: 30000 });
+    for (const v of [c.dependente.liquido, c.freelancer.liquido, c.empresa.liquido]) {
+      expect(v).toBeGreaterThan(0);
+      expect(v).toBeLessThan(30000);
+    }
+  });
+
+  it("o bruto da Categoria A iguala o rendimento anual indicado", () => {
+    const c = compararCategorias({ brutoAnual: 28000 });
+    expect(c.dependente.bruto).toBeCloseTo(28000, 0);
+  });
+
+  it("'melhor' aponta para o cenário de maior líquido", () => {
+    const c = compararCategorias({ brutoAnual: 45000, despesas: 2000 });
+    const liq = {
+      dependente: c.dependente.liquido,
+      freelancer: c.freelancer.liquido,
+      empresa: c.empresa.liquido,
+    };
+    const maxChave = (Object.keys(liq) as (keyof typeof liq)[]).reduce((a, b) =>
+      liq[b] > liq[a] ? b : a
+    );
+    expect(c.melhor).toBe(maxChave);
   });
 });
