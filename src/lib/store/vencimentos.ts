@@ -61,18 +61,52 @@ const ordenar = (xs: CenarioVencimento[]) =>
   [...xs].sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
 
 // ─── Exportação CSV (Pro) ────────────────────────────────────────────────
-// Texto livre que pode conter ; ou " é citado; separador ; e decimais com
-// vírgula para abrir corretamente no Excel pt-PT.
+// Documento detalhado: preâmbulo com fonte/data, cabeçalhos legíveis com
+// unidades e a decomposição completa (mensal + anual de 14 meses), recalculada
+// pelos motores verificados. Separador ';' e decimais com vírgula para abrir
+// corretamente no Excel pt-PT (a BOM é adicionada por quem faz o download).
 const txt = (s: string) => (/[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
-const eur = (n: number) => n.toFixed(2).replace(".", ",");
+const eur = (n: number) => (Number.isFinite(n) ? n : 0).toFixed(2).replace(".", ",");
+const pctv = (n: number) => `${(n * 100).toFixed(1).replace(".", ",")}%`;
+const dataCurta = (iso: string) => {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("pt-PT");
+};
 
-/** Gera um CSV dos cenários com os valores líquidos recalculados pelos motores
- *  verificados (recibo mensal + visão anual de 14 meses). */
+/** Gera um CSV detalhado dos cenários com a decomposição mensal e anual
+ *  recalculada pelos motores verificados (recibo mensal + 14 meses). */
 export function gerarCSVCenarios(cenarios: CenarioVencimento[]): string {
+  const preambulo = [
+    "ReciboCerto — Cenários de vencimento",
+    `Gerado em;${new Date().toLocaleDateString("pt-PT")}`,
+    "Fonte;Despacho n.º 233-A/2026 (Tabelas I a VII, Continente)",
+    "Nota;Valores em euros, decimais com vírgula. Estimativa — não substitui o recibo oficial.",
+    "",
+  ];
   const cabecalho = [
-    "nome", "salario_bruto", "dependentes", "subsidio_refeicao_dia",
-    "subsidio_refeicao", "dias_uteis", "duodecimos",
-    "liquido_mensal", "liquido_anual", "irs_anual", "ss_anual", "criado_em",
+    "Cenário",
+    "Salário bruto (€)",
+    "Dependentes",
+    "Situação",
+    "Subsídio refeição/dia (€)",
+    "Forma",
+    "Dias úteis",
+    "Subsídios em duodécimos",
+    "Subsídio refeição/mês (€)",
+    "Subsídio isento/mês (€)",
+    "Segurança Social/mês (€)",
+    "Retenção IRS/mês (€)",
+    "Vencimento líquido/mês (€)",
+    "Taxa efetiva",
+    "Custo p/ empresa/mês (€)",
+    "Bruto anual (€)",
+    "Subsídio de férias (€)",
+    "Subsídio de Natal (€)",
+    "IRS anual (€)",
+    "Segurança Social anual (€)",
+    "Líquido anual (€)",
+    "Líquido médio/mês (€)",
+    "Criado em",
   ];
   const linhas = cenarios.map((c) => {
     const args = {
@@ -85,15 +119,32 @@ export function gerarCSVCenarios(cenarios: CenarioVencimento[]): string {
     const m = calcularVencimento(args);
     const a = calcularVencimentoAnual(args);
     return [
-      txt(c.nome ?? ""),
-      eur(c.salarioBruto), c.dependentes, eur(c.subsidioRefeicaoDia),
-      c.subsidioRefeicaoCartao ? "cartão" : "dinheiro", c.diasUteis,
-      c.duodecimos ? "sim" : "não",
-      eur(m.liquido), eur(a.liquidoAnual), eur(a.irsAnual), eur(a.ssAnual),
-      c.criadoEm,
+      txt(c.nome ?? "(sem nome)"),
+      eur(c.salarioBruto),
+      c.dependentes,
+      "Não casado",
+      eur(c.subsidioRefeicaoDia),
+      c.subsidioRefeicaoDia > 0 ? (c.subsidioRefeicaoCartao ? "Cartão" : "Dinheiro") : "—",
+      c.diasUteis,
+      c.duodecimos ? "Sim" : "Não",
+      eur(m.subsidioRefeicaoTotal),
+      eur(m.subsidioRefeicaoIsento),
+      eur(m.ssTrabalhador),
+      eur(m.irsRetido),
+      eur(m.liquido),
+      pctv(m.taxaEfetiva),
+      eur(m.custoEmpresa),
+      eur(a.brutoAnual),
+      eur(a.subsidioFerias),
+      eur(a.subsidioNatal),
+      eur(a.irsAnual),
+      eur(a.ssAnual),
+      eur(a.liquidoAnual),
+      eur(a.liquidoMedioMes),
+      dataCurta(c.criadoEm),
     ].join(";");
   });
-  return [cabecalho.join(";"), ...linhas].join("\n");
+  return [...preambulo, cabecalho.join(";"), ...linhas].join("\r\n");
 }
 
 // ─── Mapeamento Supabase ────────────────────────────────────────────────
