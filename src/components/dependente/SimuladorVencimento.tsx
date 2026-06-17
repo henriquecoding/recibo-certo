@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { m } from "motion/react";
 import { EASE } from "@/lib/motion";
-import { calcularVencimento } from "@/lib/fiscal-dependente";
+import { calcularVencimento, calcularVencimentoAnual } from "@/lib/fiscal-dependente";
 import { SS_DEPENDENTE, SUBSIDIO_REFEICAO } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
@@ -23,6 +23,9 @@ export function SimuladorVencimento() {
   const [subsidioDiaStr, setSubsidioDiaStr] = useState("6");
   const [cartao, setCartao] = useState(true);
   const [diasUteisStr, setDiasUteisStr] = useState("22");
+  // Como são pagos os subsídios de férias/Natal: por inteiro (nos meses
+  // próprios) ou diluídos em duodécimos (frequente nos contratos a termo).
+  const [duodecimos, setDuodecimos] = useState(false);
 
   // Valores numéricos derivados — tolerantes a vírgula e a campo vazio.
   const bruto = num(brutoStr);
@@ -40,9 +43,24 @@ export function SimuladorVencimento() {
       }),
     [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis]
   );
+  const ra = useMemo(
+    () =>
+      calcularVencimentoAnual({
+        salarioBruto: bruto,
+        dependentes,
+        subsidioRefeicaoDia: temSubsidio ? subsidioDia : 0,
+        subsidioRefeicaoCartao: cartao,
+        diasUteis,
+      }),
+    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis]
+  );
 
   const limiteSubsidio = cartao ? SUBSIDIO_REFEICAO.cartao.value : SUBSIDIO_REFEICAO.dinheiro.value;
   const subsidioExcede = temSubsidio && subsidioDia > limiteSubsidio;
+
+  // Em duodécimos o líquido distribui-se por 12 meses iguais; por inteiro, o
+  // mês normal não traz subsídio (esse recebe-se em junho/novembro).
+  const liquidoMostrado = duodecimos ? ra.liquidoMedioMes : r.liquido;
 
   return (
     <div className="rounded-3xl border border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 p-6 my-8">
@@ -187,16 +205,48 @@ export function SimuladorVencimento() {
         transition={{ duration: 0.35, ease: EASE }}
         className="space-y-3"
       >
+        {/* Subsídios de férias e Natal — por inteiro vs. duodécimos */}
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-stone-100 dark:border-stone-700 bg-white dark:bg-stone-800 px-4 py-2.5">
+          <span className="text-xs font-semibold text-stone-600 dark:text-stone-400 flex items-center gap-1.5">
+            Subsídios de férias e Natal
+            <InfoTip label="Como recebes os subsídios">
+              Por inteiro: recebes 14 meses (o de férias e o de Natal nos meses próprios).
+              Em duodécimos, cada subsídio é diluído por 12 meses — comum nos contratos a termo.
+              O IRS anual é igual nos dois casos; só muda a distribuição.
+            </InfoTip>
+          </span>
+          <div className="flex gap-1.5" role="group" aria-label="Pagamento dos subsídios">
+            <button
+              type="button"
+              aria-pressed={!duodecimos}
+              onClick={() => setDuodecimos(false)}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${!duodecimos ? "border-brand bg-brand text-white" : "border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:border-brand"}`}
+            >
+              Por inteiro
+            </button>
+            <button
+              type="button"
+              aria-pressed={duodecimos}
+              onClick={() => setDuodecimos(true)}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${duodecimos ? "border-brand bg-brand text-white" : "border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:border-brand"}`}
+            >
+              Em duodécimos
+            </button>
+          </div>
+        </div>
+
         {/* Líquido — número-herói */}
         <div className="rounded-2xl bg-brand/8 dark:bg-brand/10 border border-brand/20 p-5 text-center">
           <p className="text-xs font-semibold uppercase tracking-wide text-brand mb-1">
             Vencimento líquido estimado
           </p>
           <p className="font-display text-4xl font-semibold text-brand tabular-nums">
-            {fmt(r.liquido)}
+            {fmt(liquidoMostrado)}
           </p>
           <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
-            por mês · compara com o teu recibo de vencimento
+            {duodecimos
+              ? "por mês, em média (subsídios em duodécimos)"
+              : "num mês normal, sem subsídio · compara com o teu recibo"}
           </p>
         </div>
 
@@ -251,10 +301,47 @@ export function SimuladorVencimento() {
           </div>
         </div>
 
+        {/* Visão anual — 14 meses */}
+        <div className="rounded-2xl bg-white dark:bg-stone-800 border border-stone-100 dark:border-stone-700 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-semibold text-stone-600 dark:text-stone-400 flex items-center gap-1.5">
+              Ao ano (14 meses)
+              <InfoTip label="Retenção autónoma">
+                Os subsídios de férias e de Natal são tributados em separado do salário
+                (Art. 99.º-C CIRS): a fórmula da tabela aplica-se ao valor de cada um.
+              </InfoTip>
+            </p>
+            <span className="text-xs text-stone-400">líquido {fmt(ra.liquidoAnual)}/ano</span>
+          </div>
+          <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-sm">
+            <div>
+              <dt className="text-xs text-stone-400">Bruto anual</dt>
+              <dd className="font-medium text-stone-800 dark:text-stone-100 tabular-nums">{fmt(ra.brutoAnual)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-stone-400">Subsídio de férias</dt>
+              <dd className="font-medium text-stone-800 dark:text-stone-100 tabular-nums">
+                {fmt(ra.subsidioFerias)} <span className="text-xs text-stone-400">· −{fmt(ra.irsFerias)} IRS</span>
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-stone-400">Subsídio de Natal</dt>
+              <dd className="font-medium text-stone-800 dark:text-stone-100 tabular-nums">
+                {fmt(ra.subsidioNatal)} <span className="text-xs text-stone-400">· −{fmt(ra.irsNatal)} IRS</span>
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-stone-400">IRS + SS no ano</dt>
+              <dd className="font-medium text-stone-800 dark:text-stone-100 tabular-nums">−{fmt(ra.irsAnual + ra.ssAnual)}</dd>
+            </div>
+          </dl>
+        </div>
+
         <p className="text-xs text-stone-400 leading-relaxed pt-1">
-          Estimativa para o Continente, contrato com subsídios pagos mensalmente. Os subsídios de
-          férias e de Natal (e os duodécimos dos contratos a termo) entram numa próxima atualização.
-          Não substitui o teu recibo oficial nem aconselhamento de um contabilista.
+          Estimativa para o Continente (Tabela I — não casado ou casado, dois titulares), ano
+          completo de trabalho e ambos os subsídios iguais ao salário base. Não modela o excesso
+          do subsídio de refeição nem as tabelas de outras situações/regiões. Não substitui o teu
+          recibo oficial nem aconselhamento de um contabilista.
         </p>
       </m.div>
     </div>

@@ -49,8 +49,10 @@ export default function ReciboVencimentoPage() {
           ({pct(SS_DEPENDENTE.trabalhador.value)} sobre o bruto) e a retenção na fonte de IRS,
           calculada pela fórmula oficial <span className="text-stone-700 dark:text-stone-300">remuneração × taxa
           marginal − parcela a abater − parcela por dependente</span> (Despacho 233-A/2026). O subsídio
-          de refeição é somado e fica isento até ao limite diário; o excesso é tributado. A entidade
-          empregadora suporta ainda a Taxa Social Única ({pct(SS_DEPENDENTE.entidade.value)}).
+          de refeição é somado e fica isento até ao limite diário; o excesso é tributado. Os subsídios
+          de férias e de Natal são tributados em separado (retenção autónoma, Art. 99.º-C CIRS), seja
+          recebidos por inteiro ou em duodécimos. A entidade empregadora suporta ainda a Taxa Social
+          Única ({pct(SS_DEPENDENTE.entidade.value)}).
         </p>
       </div>
     </>

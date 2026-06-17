@@ -114,3 +114,95 @@ export function calcularVencimento(input: VencimentoInput): VencimentoResult {
     custoEmpresa,
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────
+//  Visão anual — 14 meses (salário + subsídios de férias e de Natal)
+//  ---------------------------------------------------------------------
+//  Subsídios de férias e de Natal são objeto de RETENÇÃO AUTÓNOMA: nunca
+//  se somam à remuneração mensal; a fórmula da tabela aplica-se ao valor
+//  de cada subsídio em separado (Art. 99.º-C CIRS; Despacho 233-A/2026).
+//  Estão sujeitos a Segurança Social como o salário (base contributiva do
+//  Código Contributivo). Em duodécimos o TOTAL anual de IRS é o mesmo —
+//  só muda a distribuição mensal (a taxa efetiva do subsídio inteiro
+//  aplica-se a cada 1/12). Cada subsídio vale um mês de salário base.
+// ─────────────────────────────────────────────────────────────────────
+
+export interface VencimentoAnualInput extends VencimentoInput {
+  /** Meses em que o subsídio de refeição é pago (default 11 — exclui férias). */
+  mesesSubsidioRefeicao?: number;
+}
+
+export interface VencimentoAnualResult {
+  /** Salário base × 14 (12 meses + férias + Natal). */
+  brutoAnual: number;
+  subsidioFerias: number;
+  subsidioNatal: number;
+  /** Segurança Social do trabalhador sobre os 14 meses. */
+  ssAnual: number;
+  irsAnual: number;
+  /** Retenção dos 12 meses de salário. */
+  irsSalario: number;
+  /** Retenção autónoma do subsídio de férias. */
+  irsFerias: number;
+  /** Retenção autónoma do subsídio de Natal. */
+  irsNatal: number;
+  subsidioRefeicaoAnual: number;
+  subsidioRefeicaoIsentoAnual: number;
+  liquidoAnual: number;
+  /** Líquido anual ÷ 12 — o que se recebe por mês se os subsídios forem em duodécimos. */
+  liquidoMedioMes: number;
+  taxaEfetiva: number;
+}
+
+/**
+ * Decompõe o vencimento ANUAL (14 meses), com os subsídios de férias e de
+ * Natal e respetiva retenção autónoma. Estimativa — assume um ano completo de
+ * trabalho e ambos os subsídios iguais ao salário base.
+ */
+export function calcularVencimentoAnual(input: VencimentoAnualInput): VencimentoAnualResult {
+  const bruto = Math.max(0, input.salarioBruto);
+  const dependentes = Math.max(0, Math.floor(input.dependentes ?? 0));
+
+  const subsidioFerias = bruto;
+  const subsidioNatal = bruto;
+  const brutoAnual = cent(bruto * 14);
+
+  // SS incide sobre salário + ambos os subsídios.
+  const ssAnual = cent(brutoAnual * SS_DEPENDENTE.trabalhador.value);
+
+  // Retenção autónoma: fórmula aplicada a cada remuneração em separado.
+  const irsSalario = cent(retencaoIRSDependente(bruto, dependentes) * 12);
+  const irsFerias = retencaoIRSDependente(subsidioFerias, dependentes);
+  const irsNatal = retencaoIRSDependente(subsidioNatal, dependentes);
+  const irsAnual = cent(irsSalario + irsFerias + irsNatal);
+
+  // Subsídio de refeição: pago só nos meses trabalhados (default 11).
+  const meses = Math.max(0, input.mesesSubsidioRefeicao ?? 11);
+  const dias = Math.max(0, input.diasUteis ?? 22);
+  const valorDia = Math.max(0, input.subsidioRefeicaoDia ?? 0);
+  const limiteDia = input.subsidioRefeicaoCartao
+    ? SUBSIDIO_REFEICAO.cartao.value
+    : SUBSIDIO_REFEICAO.dinheiro.value;
+  const subsidioRefeicaoAnual = cent(valorDia * dias * meses);
+  const subsidioRefeicaoIsentoAnual = cent(Math.min(valorDia, limiteDia) * dias * meses);
+
+  const liquidoAnual = cent(brutoAnual - ssAnual - irsAnual + subsidioRefeicaoAnual);
+  const liquidoMedioMes = cent(liquidoAnual / 12);
+  const taxaEfetiva = brutoAnual > 0 ? (ssAnual + irsAnual) / brutoAnual : 0;
+
+  return {
+    brutoAnual,
+    subsidioFerias,
+    subsidioNatal,
+    ssAnual,
+    irsAnual,
+    irsSalario,
+    irsFerias,
+    irsNatal,
+    subsidioRefeicaoAnual,
+    subsidioRefeicaoIsentoAnual,
+    liquidoAnual,
+    liquidoMedioMes,
+    taxaEfetiva,
+  };
+}
