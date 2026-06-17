@@ -5,7 +5,7 @@ import Link from "next/link";
 import { m } from "motion/react";
 import { EASE } from "@/lib/motion";
 import { calcularVencimento, calcularVencimentoAnual, mealheiroDependente } from "@/lib/fiscal-dependente";
-import { SS_DEPENDENTE, SUBSIDIO_REFEICAO } from "@/lib/fiscal-data";
+import { SS_DEPENDENTE, SUBSIDIO_REFEICAO, type EstadoCivilRet } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import { useVencimentos, gerarCSVCenarios, type CenarioVencimento } from "@/lib/store/vencimentos";
@@ -31,6 +31,9 @@ export function SimuladorVencimento() {
   const [duodecimos, setDuodecimos] = useState(false);
   // Rendimentos variáveis anuais (comissões, prémios, horas extra) para o mealheiro.
   const [variavelStr, setVariavelStr] = useState("");
+  // Situação familiar para escolher a tabela de retenção (Despacho 233-A/2026).
+  const [estadoCivil, setEstadoCivil] = useState<EstadoCivilRet>("naoCasado");
+  const [deficiencia, setDeficiencia] = useState(false);
 
   // Valores numéricos derivados — tolerantes a vírgula e a campo vazio.
   const bruto = num(brutoStr);
@@ -45,8 +48,10 @@ export function SimuladorVencimento() {
         subsidioRefeicaoDia: temSubsidio ? subsidioDia : 0,
         subsidioRefeicaoCartao: cartao,
         diasUteis,
+        estadoCivil,
+        deficiencia,
       }),
-    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis]
+    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis, estadoCivil, deficiencia]
   );
   const ra = useMemo(
     () =>
@@ -56,14 +61,16 @@ export function SimuladorVencimento() {
         subsidioRefeicaoDia: temSubsidio ? subsidioDia : 0,
         subsidioRefeicaoCartao: cartao,
         diasUteis,
+        estadoCivil,
+        deficiencia,
       }),
-    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis]
+    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis, estadoCivil, deficiencia]
   );
 
   const variavelAnual = num(variavelStr);
   const meal = useMemo(
-    () => mealheiroDependente({ salarioBruto: bruto, dependentes, variavelAnual }),
-    [bruto, dependentes, variavelAnual]
+    () => mealheiroDependente({ salarioBruto: bruto, dependentes, variavelAnual, estadoCivil, deficiencia }),
+    [bruto, dependentes, variavelAnual, estadoCivil, deficiencia]
   );
 
   const limiteSubsidio = cartao ? SUBSIDIO_REFEICAO.cartao.value : SUBSIDIO_REFEICAO.dinheiro.value;
@@ -168,6 +175,53 @@ export function SimuladorVencimento() {
               </button>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Situação familiar — define a tabela de retenção */}
+      <div className="grid gap-4 sm:grid-cols-2 mb-5">
+        <div>
+          <span className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-2">
+            Situação{" "}
+            <InfoTip label="Tabela de retenção">
+              "Casado, único titular" aplica-se quando o cônjuge não tem rendimentos (ou tem menos de 5%).
+              Define a tabela de retenção do Despacho 233-A/2026.
+            </InfoTip>
+          </span>
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Situação familiar">
+            {([
+              ["naoCasado", "Não casado"],
+              ["casadoDois", "Casado, 2 titulares"],
+              ["casadoUnico", "Casado, 1 titular"],
+            ] as [EstadoCivilRet, string][]).map(([k, label]) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={estadoCivil === k}
+                onClick={() => setEstadoCivil(k)}
+                className={`rounded-xl border px-3 py-2 text-xs font-semibold transition-all ${
+                  estadoCivil === k
+                    ? "border-brand bg-brand text-white shadow-glow"
+                    : "border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:border-brand"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <span className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-2">
+            Deficiência{" "}
+            <InfoTip label="Grau ≥ 60%">
+              Titular com grau de incapacidade permanente igual ou superior a 60% — usa as tabelas IV a VII.
+            </InfoTip>
+          </span>
+          <label className="flex items-center gap-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-4 py-2.5 cursor-pointer">
+            <input type="checkbox" checked={deficiencia} onChange={(e) => setDeficiencia(e.target.checked)} className="h-4 w-4 accent-brand" />
+            <span className="text-sm text-stone-700 dark:text-stone-300">Tenho grau de incapacidade ≥ 60%</span>
+          </label>
         </div>
       </div>
 
@@ -435,10 +489,10 @@ export function SimuladorVencimento() {
         </div>
 
         <p className="text-xs text-stone-400 leading-relaxed pt-1">
-          Estimativa para o Continente (Tabela I — não casado ou casado, dois titulares), ano
-          completo de trabalho e ambos os subsídios iguais ao salário base. Não modela o excesso
-          do subsídio de refeição nem as tabelas de outras situações/regiões. Não substitui o teu
-          recibo oficial nem aconselhamento de um contabilista.
+          Estimativa para o Continente (Tabelas I a VII do Despacho 233-A/2026, conforme a situação
+          e a deficiência), ano completo de trabalho e ambos os subsídios iguais ao salário base.
+          Não cobre as Regiões Autónomas (Açores/Madeira) nem o excesso do subsídio de refeição.
+          Não substitui o teu recibo oficial nem aconselhamento de um contabilista.
         </p>
       </m.div>
 

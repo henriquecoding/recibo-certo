@@ -20,7 +20,9 @@ import {
   DEDUCAO_DEPENDENTE,
   DEDUCAO_DEPENDENTE_3MAIS,
   MINIMO_EXISTENCIA,
+  tabelaRetencaoDependente,
   type EscalaoRetencao,
+  type EstadoCivilRet,
   type TipoAtividade,
 } from "./fiscal-data";
 import { compararRegimes, irsProgressivo, type ComparacaoResult } from "./fiscal";
@@ -36,21 +38,34 @@ function parcelaAbater(esc: EscalaoRetencao, remuneracao: number): number {
 /**
  * Retenção na fonte de IRS mensal de um trabalhador dependente, pela fórmula
  * oficial: `R × taxa marginal máxima − parcela a abater − (parcela por
- * dependente × n.º dependentes)`, nunca negativa.
+ * dependente × n.º dependentes)`, nunca negativa. Com 3+ dependentes aplica-se
+ * a redução de 1 p.p. na taxa marginal (Despacho 233-A/2026, n.º 5 al. h).
  */
 export function retencaoIRSDependente(
   salarioBruto: number,
   dependentes = 0,
-  tabela: EscalaoRetencao[] = RETENCAO_DEP_CONTINENTE_T1.value
+  tabela: EscalaoRetencao[] = RETENCAO_DEP_CONTINENTE_T1.value,
+  parcelaDependente: number = RETENCAO_DEP_POR_DEPENDENTE.value
 ): number {
   const R = Math.max(0, salarioBruto);
+  const dep = Math.max(0, dependentes);
   const esc = tabela.find((e) => R <= e.ate) ?? tabela[tabela.length - 1];
   if (esc.taxa === 0) return 0;
-  const ret =
-    R * esc.taxa -
-    parcelaAbater(esc, R) -
-    RETENCAO_DEP_POR_DEPENDENTE.value * Math.max(0, dependentes);
+  // n.º 5 al. h): 3+ dependentes → −1 p.p. na taxa marginal (parcela inalterada).
+  const taxa = dep >= 3 ? Math.max(0, esc.taxa - 0.01) : esc.taxa;
+  const ret = R * taxa - parcelaAbater(esc, R) - parcelaDependente * dep;
   return Math.max(0, cent(ret));
+}
+
+/** Retenção mensal resolvendo a tabela pela situação familiar (estado civil + deficiência). */
+function retencaoPorSituacao(
+  salarioBruto: number,
+  dependentes: number,
+  estadoCivil: EstadoCivilRet,
+  deficiencia: boolean
+): number {
+  const tab = tabelaRetencaoDependente(estadoCivil, dependentes, deficiencia);
+  return retencaoIRSDependente(salarioBruto, dependentes, tab.escaloes, tab.parcelaDependente);
 }
 
 export interface VencimentoInput {
@@ -64,6 +79,10 @@ export interface VencimentoInput {
   subsidioRefeicaoCartao?: boolean;
   /** Dias úteis do mês (default 22). */
   diasUteis?: number;
+  /** Situação familiar para a tabela de retenção (default não casado). */
+  estadoCivil?: EstadoCivilRet;
+  /** Titular com deficiência ≥ 60% (tabelas IV-VII). */
+  deficiencia?: boolean;
 }
 
 export interface VencimentoResult {
@@ -92,7 +111,12 @@ export function calcularVencimento(input: VencimentoInput): VencimentoResult {
   const dependentes = Math.max(0, Math.floor(input.dependentes ?? 0));
 
   const ssTrabalhador = cent(bruto * SS_DEPENDENTE.trabalhador.value);
-  const irsRetido = retencaoIRSDependente(bruto, dependentes);
+  const irsRetido = retencaoPorSituacao(
+    bruto,
+    dependentes,
+    input.estadoCivil ?? "naoCasado",
+    input.deficiencia ?? false
+  );
 
   const dias = Math.max(0, input.diasUteis ?? 22);
   const valorDia = Math.max(0, input.subsidioRefeicaoDia ?? 0);
@@ -177,9 +201,11 @@ export function calcularVencimentoAnual(input: VencimentoAnualInput): Vencimento
   const ssAnual = cent(brutoAnual * SS_DEPENDENTE.trabalhador.value);
 
   // Retenção autónoma: fórmula aplicada a cada remuneração em separado.
-  const irsSalario = cent(retencaoIRSDependente(bruto, dependentes) * 12);
-  const irsFerias = retencaoIRSDependente(subsidioFerias, dependentes);
-  const irsNatal = retencaoIRSDependente(subsidioNatal, dependentes);
+  const ec = input.estadoCivil ?? "naoCasado";
+  const def = input.deficiencia ?? false;
+  const irsSalario = cent(retencaoPorSituacao(bruto, dependentes, ec, def) * 12);
+  const irsFerias = retencaoPorSituacao(subsidioFerias, dependentes, ec, def);
+  const irsNatal = retencaoPorSituacao(subsidioNatal, dependentes, ec, def);
   const irsAnual = cent(irsSalario + irsFerias + irsNatal);
 
   // Subsídio de refeição: pago só nos meses trabalhados (default 11).
@@ -305,6 +331,8 @@ export interface MealheiroDependenteInput {
   dependentes?: number;
   /** Rendimentos variáveis anuais (comissões, prémios, horas extra). */
   variavelAnual?: number;
+  estadoCivil?: EstadoCivilRet;
+  deficiencia?: boolean;
 }
 
 export interface MealheiroDependenteResult {
@@ -343,8 +371,10 @@ export function mealheiroDependente(input: MealheiroDependenteInput): MealheiroD
   const irsApurado = cent(Math.min(irsAposDeducoes, irsMaximo));
 
   // Retido na fonte estimado: salário (14 meses) + variável à taxa efetiva do mês.
-  const irsRetidoBase = calcularVencimentoAnual({ salarioBruto: base, dependentes: dep, subsidioRefeicaoDia: 0 }).irsAnual;
-  const taxaEfetivaMes = base > 0 ? retencaoIRSDependente(base, dep) / base : 0;
+  const ec = input.estadoCivil ?? "naoCasado";
+  const def = input.deficiencia ?? false;
+  const irsRetidoBase = calcularVencimentoAnual({ salarioBruto: base, dependentes: dep, subsidioRefeicaoDia: 0, estadoCivil: ec, deficiencia: def }).irsAnual;
+  const taxaEfetivaMes = base > 0 ? retencaoPorSituacao(base, dep, ec, def) / base : 0;
   const irsRetido = cent(irsRetidoBase + variavel * taxaEfetivaMes);
 
   const acerto = cent(irsApurado - irsRetido);

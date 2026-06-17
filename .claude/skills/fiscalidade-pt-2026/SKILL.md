@@ -84,12 +84,12 @@ cat. B. Dados em `CATEGORIA_F` (`fiscal-data.ts`); motor próprio
 - **IAS** 537,13 €.
 - **Retenção na fonte** (cat. B): Art. 151.º 23% · outros serviços 11,5% · direitos de autor 16,5% · vendas sem retenção. Dispensa abaixo de 15 000 €/ano.
 - **Coeficientes do regime simplificado**: serviços 151.º 0,75 · outros 0,35 · vendas/hotelaria 0,15 · propriedade intelectual 0,95 · AL moradia 0,35 (contenção 0,50) · transparência 1,0 · **subsídios não destinados à exploração 0,30** · **subsídios à exploração 0,10**.
-- **IVA**: isenção até 15 000 € (excesso 18 750 €). Continente 6/13/23, Madeira 4/12/22 (DLR 6/2024/M), Açores 4/9/16.
+- **IVA**: isenção até 15 000 € (excesso 18 750 €). Continente 6/13/23, Madeira 5/12/22, Açores 4/9/16.
 - **Segurança Social**: taxa 21,4% sobre 70% (serviços) ou 20% (bens/hotelaria).
 - **Categoria F (rendas puras)**: taxa autónoma habitação 25% · não habitacional 28%; reduções por duração do contrato habitacional (5–10 anos −10 p.p.; 10–20 −15 p.p.; ≥20 −20 p.p.). Sem SS, sem IVA. Motor próprio `calcularCategoriaF`.
 - **IRS**: escalões de 12,5% a 48%; mínimo de existência 12 880 €.
 - **IRC** (comparador): geral 19% · PME 15% até 50 000 €; dividendos 28%.
-- **Catálogo**: 99 atividades (Art. 151.º + regimes especiais + subsídios).
+- **Catálogo**: 123 atividades (Art. 151.º + regimes especiais + subsídios).
 <!-- /AUTO-GERADO:valores-fiscais -->
 
 ## Manutenção automática

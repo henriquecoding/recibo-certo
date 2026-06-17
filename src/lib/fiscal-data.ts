@@ -1536,14 +1536,136 @@ export const RETENCAO_DEP_CONTINENTE_T1 = sv<EscalaoRetencao[]>(
     { ate: 2499, taxa: 0.349, parcelaAbater: 401.19 },
     { ate: 3305, taxa: 0.3836, parcelaAbater: 487.66 },
     { ate: 5547, taxa: 0.3969, parcelaAbater: 531.62 },
-    { ate: 20221, taxa: 0.4495, parcelaAbater: 893.75 },
+    { ate: 20221, taxa: 0.4495, parcelaAbater: 823.40 },
     { ate: Infinity, taxa: 0.4717, parcelaAbater: 1272.31 },
   ],
   "Despacho n.º 233-A/2026 — Tabela I, Continente (trabalho dependente)",
   "despachoRetencao2026",
   DEP_TODAY,
-  "Cross-verificado em Montepio + CRN Contabilidade (reproduzem o Despacho 233-A/2026)."
+  "Transcrito do Despacho oficial (Diário da República). Parcela do escalão 20 221 € corrigida para 823,40 (a taxa efetiva 40,9% confirma)."
 );
+
+/**
+ * Tabelas de retenção na fonte do trabalho dependente — Continente 2026.
+ * Transcritas do Despacho n.º 233-A/2026 (DR). Cada tabela traz os seus
+ * escalões e a parcela adicional a abater por dependente:
+ *   I   — não casado sem dependentes ou casado dois titulares (21,43)
+ *   II  — não casado com um ou mais dependentes (34,29)
+ *   III — casado, único titular (42,86)
+ *   IV  — não casado/casado dois titulares sem dependentes, deficiência (0)
+ *   V   — não casado com dependentes, deficiência (42,86)
+ *   VI  — casado dois titulares com dependentes, deficiência (21,43)
+ *   VII — casado único titular, deficiência (42,86)
+ */
+export interface TabelaRetencaoDep {
+  escaloes: EscalaoRetencao[];
+  /** Parcela adicional a abater por dependente (€). */
+  parcelaDependente: number;
+}
+
+export type EstadoCivilRet = "naoCasado" | "casadoDois" | "casadoUnico";
+
+const ESC_T2: EscalaoRetencao[] = RETENCAO_DEP_CONTINENTE_T1.value; // II = I com outra parcela/dep
+
+export const RETENCAO_DEP_TABELAS = sv<Record<"i" | "ii" | "iii" | "iv" | "v" | "vi" | "vii", TabelaRetencaoDep>>(
+  {
+    i: { parcelaDependente: 21.43, escaloes: RETENCAO_DEP_CONTINENTE_T1.value },
+    ii: { parcelaDependente: 34.29, escaloes: ESC_T2 },
+    iii: {
+      parcelaDependente: 42.86,
+      escaloes: [
+        { ate: 991, taxa: 0, parcelaAbater: 0 },
+        { ate: 1042, taxa: 0.125, parcelaAbater: { coef: 2.6, base: 1372.15 } },
+        { ate: 1108, taxa: 0.125, parcelaAbater: { coef: 1.35, base: 1677.85 } },
+        { ate: 1119, taxa: 0.125, parcelaAbater: 96.17 },
+        { ate: 1432, taxa: 0.1272, parcelaAbater: 98.64 },
+        { ate: 1962, taxa: 0.157, parcelaAbater: 141.32 },
+        { ate: 2240, taxa: 0.1938, parcelaAbater: 213.53 },
+        { ate: 2773, taxa: 0.2277, parcelaAbater: 289.47 },
+        { ate: 3389, taxa: 0.257, parcelaAbater: 370.72 },
+        { ate: 5965, taxa: 0.2881, parcelaAbater: 476.12 },
+        { ate: 20265, taxa: 0.3843, parcelaAbater: 1049.96 },
+        { ate: Infinity, taxa: 0.4717, parcelaAbater: 2821.13 },
+      ],
+    },
+    iv: {
+      parcelaDependente: 0,
+      escaloes: [
+        { ate: 1694, taxa: 0, parcelaAbater: 0 },
+        { ate: 2063, taxa: 0.212, parcelaAbater: 359.13 },
+        { ate: 2492, taxa: 0.311, parcelaAbater: 563.37 },
+        { ate: 4487, taxa: 0.349, parcelaAbater: 658.07 },
+        { ate: 4753, taxa: 0.3836, parcelaAbater: 813.33 },
+        { ate: 6687, taxa: 0.3969, parcelaAbater: 876.55 },
+        { ate: 20468, taxa: 0.4495, parcelaAbater: 1228.29 },
+        { ate: Infinity, taxa: 0.4717, parcelaAbater: 1682.68 },
+      ],
+    },
+    v: {
+      parcelaDependente: 42.86,
+      escaloes: [
+        { ate: 1938, taxa: 0, parcelaAbater: 0 },
+        { ate: 2063, taxa: 0.2132, parcelaAbater: 413.19 },
+        { ate: 2854, taxa: 0.311, parcelaAbater: 614.96 },
+        { ate: 4504, taxa: 0.349, parcelaAbater: 723.42 },
+        { ate: 6826, taxa: 0.3836, parcelaAbater: 879.26 },
+        { ate: 7048, taxa: 0.3969, parcelaAbater: 970.05 },
+        { ate: 20468, taxa: 0.4495, parcelaAbater: 1340.78 },
+        { ate: Infinity, taxa: 0.4717, parcelaAbater: 1795.17 },
+      ],
+    },
+    vi: {
+      parcelaDependente: 21.43,
+      escaloes: [
+        { ate: 1668, taxa: 0, parcelaAbater: 0 },
+        { ate: 2068, taxa: 0.2049, parcelaAbater: 341.78 },
+        { ate: 2497, taxa: 0.241, parcelaAbater: 416.44 },
+        { ate: 3107, taxa: 0.311, parcelaAbater: 591.23 },
+        { ate: 4504, taxa: 0.349, parcelaAbater: 709.30 },
+        { ate: 6826, taxa: 0.3836, parcelaAbater: 865.14 },
+        { ate: 7048, taxa: 0.3969, parcelaAbater: 955.93 },
+        { ate: 20468, taxa: 0.4495, parcelaAbater: 1326.66 },
+        { ate: Infinity, taxa: 0.4717, parcelaAbater: 1781.05 },
+      ],
+    },
+    vii: {
+      parcelaDependente: 42.86,
+      escaloes: [
+        { ate: 2325, taxa: 0, parcelaAbater: 0 },
+        { ate: 3494, taxa: 0.2277, parcelaAbater: 529.41 },
+        { ate: 3761, taxa: 0.257, parcelaAbater: 631.79 },
+        { ate: 6687, taxa: 0.2881, parcelaAbater: 748.76 },
+        { ate: 20468, taxa: 0.4244, parcelaAbater: 1660.20 },
+        { ate: Infinity, taxa: 0.4717, parcelaAbater: 2628.34 },
+      ],
+    },
+  },
+  "Despacho n.º 233-A/2026 — Tabelas I-VII, Continente (trabalho dependente)",
+  "despachoRetencao2026",
+  DEP_TODAY,
+  "Transcritas integralmente do Despacho oficial publicado em Diário da República."
+);
+
+/**
+ * Seleciona a tabela de retenção do trabalho dependente conforme a situação
+ * familiar (Despacho 233-A/2026, n.º 1 als. a e b).
+ */
+export function tabelaRetencaoDependente(
+  estadoCivil: EstadoCivilRet,
+  dependentes: number,
+  deficiencia: boolean
+): TabelaRetencaoDep {
+  const t = RETENCAO_DEP_TABELAS.value;
+  const temDeps = dependentes >= 1;
+  if (!deficiencia) {
+    if (estadoCivil === "casadoUnico") return t.iii;
+    if (estadoCivil === "casadoDois") return t.i;
+    return temDeps ? t.ii : t.i; // não casado
+  }
+  if (estadoCivil === "casadoUnico") return t.vii;
+  if (estadoCivil === "casadoDois") return temDeps ? t.vi : t.iv;
+  return temDeps ? t.v : t.iv; // não casado
+}
 
 export function assertFiscalDataIntegrity(): void {
   const erros: string[] = [];
@@ -1781,18 +1903,19 @@ export function assertFiscalDataIntegrity(): void {
   if (Math.abs(DEDUCAO_ESPECIFICA_DEPENDENTE.value - Math.round(8.54 * IAS.value * 100) / 100) > EPS) {
     erros.push("Dedução específica (cat. A) deve ser 8,54 × IAS.");
   }
-  {
-    const t = RETENCAO_DEP_CONTINENTE_T1.value;
+  for (const [nome, tab] of Object.entries(RETENCAO_DEP_TABELAS.value)) {
+    const t = tab.escaloes;
+    if (tab.parcelaDependente < 0) erros.push(`Retenção cat. A (${nome}): parcela por dependente negativa.`);
     let ateAnt = -1;
     let taxaAnt = -1;
     t.forEach((e, i) => {
-      if (!isRate(e.taxa)) erros.push(`Retenção cat. A escalão ${i + 1}: taxa fora de [0,1].`);
-      if (e.taxa < taxaAnt - EPS) erros.push(`Retenção cat. A escalão ${i + 1}: taxa decrescente.`);
+      if (!isRate(e.taxa)) erros.push(`Retenção cat. A (${nome}) escalão ${i + 1}: taxa fora de [0,1].`);
+      if (e.taxa < taxaAnt - EPS) erros.push(`Retenção cat. A (${nome}) escalão ${i + 1}: taxa decrescente.`);
       taxaAnt = e.taxa;
-      if (!(e.ate > ateAnt)) erros.push(`Retenção cat. A escalão ${i + 1}: limite não crescente.`);
+      if (!(e.ate > ateAnt)) erros.push(`Retenção cat. A (${nome}) escalão ${i + 1}: limite não crescente.`);
       ateAnt = e.ate;
     });
-    if (t[t.length - 1].ate !== Infinity) erros.push("Último escalão de retenção cat. A deve ser Infinity.");
+    if (t[t.length - 1].ate !== Infinity) erros.push(`Retenção cat. A (${nome}): último escalão deve ser Infinity.`);
   }
 
   // 6) Proveniência obrigatória: fonte registada + data válida em cada parâmetro.
@@ -1801,6 +1924,7 @@ export function assertFiscalDataIntegrity(): void {
     SS_DEPENDENTE.trabalhador, SS_DEPENDENTE.entidade, SS_DEPENDENTE.ipss,
     SUBSIDIO_REFEICAO.dinheiro, SUBSIDIO_REFEICAO.cartao,
     RETENCAO_DEP_ISENCAO, RETENCAO_DEP_POR_DEPENDENTE, RETENCAO_DEP_CONTINENTE_T1,
+    RETENCAO_DEP_TABELAS,
     DEDUCAO_ESPECIFICA_DEPENDENTE,
     ...Object.values(RETENCAO),
     DISPENSA_RETENCAO_LIMITE,

@@ -189,3 +189,42 @@ describe("auditarRecibo", () => {
     expect(r.tudoOk).toBe(false);
   });
 });
+
+// ── Tabelas de retenção por situação (Despacho 233-A/2026) ────────────────────
+
+import { tabelaRetencaoDependente } from "@/lib/fiscal-data";
+
+describe("tabelaRetencaoDependente", () => {
+  it("não casado: 0 dep → Tabela I (21,43); com dep → Tabela II (34,29)", () => {
+    expect(tabelaRetencaoDependente("naoCasado", 0, false).parcelaDependente).toBe(21.43);
+    expect(tabelaRetencaoDependente("naoCasado", 2, false).parcelaDependente).toBe(34.29);
+  });
+  it("casado único titular → Tabela III (42,86)", () => {
+    expect(tabelaRetencaoDependente("casadoUnico", 1, false).parcelaDependente).toBe(42.86);
+  });
+  it("deficiência sem dependentes → Tabela IV (sem parcela por dependente)", () => {
+    expect(tabelaRetencaoDependente("naoCasado", 0, true).parcelaDependente).toBe(0);
+  });
+});
+
+describe("retenção por situação familiar", () => {
+  it("Tabela I: escalão 20 221 usa a parcela 823,40 (corrigido do oficial)", () => {
+    expect(retencaoIRSDependente(10000, 0)).toBeCloseTo(10000 * 0.4495 - 823.40, 2);
+  });
+  it("casado único titular retém menos que não casado (mesmo salário)", () => {
+    const naoCasado = calcularVencimento({ salarioBruto: 1500, estadoCivil: "naoCasado" });
+    const casadoUnico = calcularVencimento({ salarioBruto: 1500, estadoCivil: "casadoUnico" });
+    expect(casadoUnico.irsRetido).toBeLessThan(naoCasado.irsRetido);
+  });
+  it("titular com deficiência retém menos", () => {
+    const sem = calcularVencimento({ salarioBruto: 1500, deficiencia: false });
+    const com = calcularVencimento({ salarioBruto: 1500, deficiencia: true });
+    expect(com.irsRetido).toBeLessThan(sem.irsRetido);
+  });
+  it("3+ dependentes aplicam a redução de 1 p.p. (n.º 5 al. h)", () => {
+    const r2 = calcularVencimento({ salarioBruto: 2000, dependentes: 2, estadoCivil: "casadoDois" });
+    const r3 = calcularVencimento({ salarioBruto: 2000, dependentes: 3, estadoCivil: "casadoDois" });
+    // Diferença excede só a parcela por dependente (21,43) graças ao −1 p.p.
+    expect(r2.irsRetido - r3.irsRetido).toBeGreaterThan(21.43);
+  });
+});

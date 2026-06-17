@@ -32,7 +32,7 @@ const MATRIZ: { f: string; gratis: boolean | string; pro: boolean | string }[] =
   { f: "Calendário de prazos fiscais", gratis: true, pro: true },
   { f: "Histórico", gratis: "Neste dispositivo", pro: "Na nuvem, em todos" },
   { f: "Cenários guardados", gratis: "Até 3", pro: "Ilimitados" },
-  { f: "Auditoria de recibo de vencimento (PDF)", gratis: false, pro: true },
+  { f: "Auditoria de recibo de vencimento", gratis: false, pro: true },
   { f: "Alertas de prazos e de erros por email", gratis: false, pro: true },
   { f: "Exportação CSV e PDF", gratis: false, pro: true },
   { f: "Mealheiro fiscal automático", gratis: false, pro: true },
