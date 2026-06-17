@@ -153,12 +153,12 @@ export function relatorioVencimentoHTML(d: RelatorioVencimento): string {
   <div class="bar">
     <i style="width:${wFica}%;background:#1D9E75"></i>
     <i style="width:${wIrs}%;background:#9FE1CB"></i>
-    <i style="width:${wSs}%;background:#D3D1C7"></i>
+    <i style="width:${wSs}%;background:#C2745A"></i>
   </div>
   <div class="legend">
     <span><i class="dot" style="background:#1D9E75"></i> Fica contigo · ${eur(fica)} (${pctf(ficaPct)})</span>
     <span><i class="dot" style="background:#9FE1CB"></i> Retenção IRS · ${eur(d.irsRetido)}</span>
-    <span><i class="dot" style="background:#D3D1C7"></i> Segurança Social · ${eur(d.ssTrabalhador)}</span>
+    <span><i class="dot" style="background:#C2745A"></i> Segurança Social · ${eur(d.ssTrabalhador)}</span>
   </div>
 
   <h2>Mês normal — decomposição</h2>
