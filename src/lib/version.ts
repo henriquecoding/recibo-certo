@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.3.0";
+export const APP_VERSION = "1.4.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.4.0",
+    data: "2026-06-17",
+    titulo: "Simulador de salário com visual renovado",
+    itens: [
+      "Simulador de recibo de vencimento redesenhado num painel moderno, com controlos à esquerda e resultados à direita.",
+      "Novo gráfico que mostra para onde vai o teu salário bruto: o que fica contigo, IRS e Segurança Social.",
+      "Cartões de destaque para a taxa efetiva e o custo real para a empresa.",
+      "Visão anual (14 meses) e mealheiro fiscal reorganizados e mais fáceis de ler.",
+    ],
+  },
   {
     version: "1.3.0",
     data: "2026-06-17",
