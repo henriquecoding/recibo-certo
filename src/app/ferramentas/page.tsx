@@ -4,12 +4,19 @@ import Reveal from "@/components/ui/Reveal";
 import { ArrowRight, Calculator, Receipt, Search, Wallet, Sparkle, User, Scale, ShieldCheck } from "@/components/ui/Icons";
 
 export const metadata: Metadata = {
-  title: "Ferramentas para trabalhadores independentes 2026 | ReciboCerto",
-  description: "Calculadoras e decisores interativos para recibos verdes: regime simplificado, ato isolado vs atividade, e classificação de atividade fiscal.",
+  title: "Ferramentas fiscais 2026 — independentes e por conta de outrem | ReciboCerto",
+  description: "Calculadoras e decisores interativos para recibos verdes e para quem trabalha por conta de outrem: salário líquido, regime simplificado, ato isolado vs atividade e classificação de atividade fiscal.",
+  keywords: [
+    "calcular salário líquido 2026",
+    "simulador recibos verdes 2026",
+    "ferramentas fiscais Portugal",
+    "regime simplificado calculadora",
+    "por conta de outrem simulador",
+  ],
   alternates: { canonical: "https://recibocerto.pt/ferramentas" },
   openGraph: {
-    title: "Ferramentas fiscais para independentes 2026 | ReciboCerto",
-    description: "Decisores interativos e calculadoras para simplificar a vida fiscal de trabalhadores independentes.",
+    title: "Ferramentas fiscais 2026 — independentes e por conta de outrem | ReciboCerto",
+    description: "Decisores interativos e calculadoras para simplificar a vida fiscal — quer passes recibos verdes, quer recebas salário por conta de outrem.",
     url: "https://recibocerto.pt/ferramentas",
     siteName: "ReciboCerto",
     locale: "pt_PT",
@@ -85,7 +92,8 @@ export default function FerramentasPage() {
           Calculadoras e decisores fiscais
         </h1>
         <p className="text-lg text-stone-500 dark:text-stone-400 leading-relaxed">
-          Ferramentas interativas para clarificar a tua situação fiscal sem precisar de decorar artigos de lei.
+          Ferramentas interativas para clarificar a tua situação fiscal sem precisar de decorar artigos
+          de lei — quer trabalhes por conta própria (recibos verdes), quer por conta de outrem.
         </p>
       </Reveal>
 
