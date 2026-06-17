@@ -161,6 +161,16 @@ export const SOURCES = {
     url: "https://www.occ.pt/pt-pt/noticias/irs-ifici-ex-nhr",
   },
 
+  // ── Trabalho dependente (Categoria A) ───────────────────────────────
+  despachoRetencao2026: {
+    label: "Despacho n.º 233-A/2026 — Tabelas de retenção na fonte de IRS 2026 (Continente) · AT (ref. Montepio)",
+    url: "https://www.montepio.org/ei/pessoal/impostos/tabelas-do-irs-conheca-as-taxas-de-retencao-na-fonte/",
+  },
+  subsidioRefeicao2026: {
+    label: "Subsídio de refeição — limites de isenção 2026 (Art. 2.º, n.º 3 CIRS) · ref. Edenred/idealista",
+    url: "https://www.edenred.pt/novidades/beneficios-sociais/subsidio-de-refeicao-2026-quais-os-valores-a-considerar/",
+  },
+
   // ── Comissão Europeia ───────────────────────────────────────────────
   viesValidation: {
     label: "VIES — Validação de número de identificação para efeitos do IVA · Comissão Europeia",
@@ -1412,6 +1422,112 @@ export const IRS_JOVEM_TETO_CALC = IRS_JOVEM.tetoIAS.value * IAS_VALUE; // 55 ×
 //  SISTEMA DE GARANTIA — invariantes verificados ao carregar o módulo.
 //  Se algo for inconsistente, LANÇA e o build/dev falha imediatamente.
 // ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+//  TRABALHO DEPENDENTE (CATEGORIA A) — vencimento, retenção IRS, SS
+//  ---------------------------------------------------------------------
+//  Etapa 1 da unificação com trabalhadores por conta de outrem.
+//  ⚠ As tabelas de retenção (valores por escalão) estão PENDENTES de
+//  cross-verificação contra o Excel oficial da AT (Despacho 233-A/2026)
+//  antes de irem para produção. Para já só a Tabela I (não casado /
+//  casado dois titulares, Continente). Mantido fora de produção.
+// ═══════════════════════════════════════════════════════════════════════
+
+const DEP_TODAY = "2026-06-17";
+
+/** Taxas de contribuição para a Segurança Social — trabalho por conta de outrem. */
+export const SS_DEPENDENTE = {
+  trabalhador: sv(
+    0.11,
+    "Taxa contributiva do trabalhador por conta de outrem (11% sobre a remuneração ilíquida)",
+    "segSocialGov",
+    DEP_TODAY
+  ),
+  entidade: sv(
+    0.2375,
+    "Taxa Social Única da entidade empregadora (regime geral)",
+    "segSocialGov",
+    DEP_TODAY
+  ),
+  ipss: sv(
+    0.223,
+    "TSU da entidade — IPSS / entidades sem fins lucrativos",
+    "segSocialGov",
+    DEP_TODAY
+  ),
+};
+
+/** Subsídio de refeição — limites diários de isenção (IRS + SS), setor privado 2026. */
+export const SUBSIDIO_REFEICAO = {
+  dinheiro: sv(
+    6.15,
+    "Limite diário isento em numerário (Art. 2.º, n.º 3 CIRS)",
+    "subsidioRefeicao2026",
+    DEP_TODAY
+  ),
+  cartao: sv(
+    10.46,
+    "Limite diário isento em cartão/vale de refeição (Art. 2.º, n.º 3 CIRS)",
+    "subsidioRefeicao2026",
+    DEP_TODAY,
+    "Subiu de 6,00€/10,20€ (2025) para 6,15€/10,46€ (2026)."
+  ),
+};
+
+/** Remuneração mensal até este valor: isenta de retenção na fonte (acompanha o SMN). */
+export const RETENCAO_DEP_ISENCAO = sv(
+  920,
+  "Limiar de isenção de retenção na fonte 2026 (Despacho 233-A/2026)",
+  "despachoRetencao2026",
+  DEP_TODAY
+);
+
+/** Parcela adicional a abater por dependente (Tabela I, Continente 2026). */
+export const RETENCAO_DEP_POR_DEPENDENTE = sv(
+  21.43,
+  "Parcela adicional a abater por dependente (Tabela I, Continente)",
+  "despachoRetencao2026",
+  DEP_TODAY
+);
+
+/**
+ * Escalão de uma tabela de retenção na fonte. A `parcelaAbater`:
+ *  · `number` → valor fixo em euros;
+ *  · `{ coef, base }` → fórmula do mínimo de existência: `taxa × coef × (base − R)`.
+ */
+export type EscalaoRetencao = {
+  /** Limite superior da remuneração mensal (Infinity no último escalão). */
+  ate: number;
+  /** Taxa marginal máxima. */
+  taxa: number;
+  parcelaAbater: number | { coef: number; base: number };
+};
+
+/**
+ * Tabela I de retenção na fonte — Continente 2026, Não casado / Casado dois
+ * titulares. Fonte: Despacho 233-A/2026 (valores via referência Montepio).
+ * ⚠ PENDENTE de cross-verificação com o Excel oficial da AT antes de produção.
+ */
+export const RETENCAO_DEP_CONTINENTE_T1 = sv<EscalaoRetencao[]>(
+  [
+    { ate: 920, taxa: 0, parcelaAbater: 0 },
+    { ate: 1042, taxa: 0.125, parcelaAbater: { coef: 2.6, base: 1273.85 } },
+    { ate: 1108, taxa: 0.157, parcelaAbater: { coef: 1.35, base: 1554.83 } },
+    { ate: 1154, taxa: 0.157, parcelaAbater: 94.71 },
+    { ate: 1212, taxa: 0.212, parcelaAbater: 158.18 },
+    { ate: 1819, taxa: 0.241, parcelaAbater: 193.33 },
+    { ate: 2119, taxa: 0.311, parcelaAbater: 320.66 },
+    { ate: 2499, taxa: 0.349, parcelaAbater: 401.19 },
+    { ate: 3305, taxa: 0.3836, parcelaAbater: 487.66 },
+    { ate: 5547, taxa: 0.3969, parcelaAbater: 531.62 },
+    { ate: 20221, taxa: 0.4495, parcelaAbater: 893.75 },
+    { ate: Infinity, taxa: 0.4717, parcelaAbater: 1272.31 },
+  ],
+  "Despacho n.º 233-A/2026 — Tabela I, Continente (trabalho dependente)",
+  "despachoRetencao2026",
+  DEP_TODAY,
+  "PENDENTE de cross-verificação com o Excel oficial da AT antes de produção."
+);
+
 export function assertFiscalDataIntegrity(): void {
   const erros: string[] = [];
   const EPS = 0.01;
@@ -1633,9 +1749,38 @@ export function assertFiscalDataIntegrity(): void {
     }
   );
 
+  // 5b) Trabalho dependente (Categoria A).
+  if (!isRate(SS_DEPENDENTE.trabalhador.value)) erros.push("Taxa SS trabalhador (cat. A) inválida.");
+  if (!isRate(SS_DEPENDENTE.entidade.value)) erros.push("Taxa SS entidade/TSU (cat. A) inválida.");
+  if (!isRate(SS_DEPENDENTE.ipss.value)) erros.push("Taxa SS IPSS (cat. A) inválida.");
+  if (!(SS_DEPENDENTE.trabalhador.value < SS_DEPENDENTE.entidade.value)) {
+    erros.push("TSU da entidade deveria exceder a taxa do trabalhador.");
+  }
+  if (!(SUBSIDIO_REFEICAO.dinheiro.value > 0 && SUBSIDIO_REFEICAO.cartao.value > SUBSIDIO_REFEICAO.dinheiro.value)) {
+    erros.push("Limites do subsídio de refeição inválidos (cartão deve exceder dinheiro).");
+  }
+  if (!(RETENCAO_DEP_ISENCAO.value > 0)) erros.push("Limiar de isenção de retenção (cat. A) não positivo.");
+  if (!(RETENCAO_DEP_POR_DEPENDENTE.value > 0)) erros.push("Parcela por dependente (cat. A) não positiva.");
+  {
+    const t = RETENCAO_DEP_CONTINENTE_T1.value;
+    let ateAnt = -1;
+    let taxaAnt = -1;
+    t.forEach((e, i) => {
+      if (!isRate(e.taxa)) erros.push(`Retenção cat. A escalão ${i + 1}: taxa fora de [0,1].`);
+      if (e.taxa < taxaAnt - EPS) erros.push(`Retenção cat. A escalão ${i + 1}: taxa decrescente.`);
+      taxaAnt = e.taxa;
+      if (!(e.ate > ateAnt)) erros.push(`Retenção cat. A escalão ${i + 1}: limite não crescente.`);
+      ateAnt = e.ate;
+    });
+    if (t[t.length - 1].ate !== Infinity) erros.push("Último escalão de retenção cat. A deve ser Infinity.");
+  }
+
   // 6) Proveniência obrigatória: fonte registada + data válida em cada parâmetro.
   const sourced: Sourced<unknown>[] = [
     IAS,
+    SS_DEPENDENTE.trabalhador, SS_DEPENDENTE.entidade, SS_DEPENDENTE.ipss,
+    SUBSIDIO_REFEICAO.dinheiro, SUBSIDIO_REFEICAO.cartao,
+    RETENCAO_DEP_ISENCAO, RETENCAO_DEP_POR_DEPENDENTE, RETENCAO_DEP_CONTINENTE_T1,
     ...Object.values(RETENCAO),
     DISPENSA_RETENCAO_LIMITE,
     IVA_ISENCAO_LIMITE,
