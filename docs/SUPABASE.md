@@ -32,6 +32,33 @@ Tabelas confirmadas: `profiles`, `recibos`, `subscriptions`, `anuncios`,
 > subscrições). As únicas lacunas funcionais são os provedores OAuth
 > (Google/LinkedIn) — ver abaixo.
 
+### Re-verificação 17/06/2026 (via Supabase MCP)
+
+Confirmado contra a base de dados ao vivo:
+
+- Projeto `sxdditwefdzuqeephqiy` — `ACTIVE_HEALTHY`, PostgreSQL 17.6, eu-west-1.
+- **11 tabelas, todas com RLS ativa**: `profiles`, `recibos`, `recibos_vencimento`,
+  `subscriptions`, `quiz_profiles`, `quiz_sessions`, `anuncios`, `admin_partners`,
+  `email_waitlist`, `alertas_guardiao`, `site_settings`.
+- Wiring do código completo (`client.ts` / `auth.tsx` / `subscription.tsx` + stores
+  em modo duplo). **Não há lacunas de ligação** — só falta env local e hardening.
+
+#### Avisos de segurança (advisors — nível WARN, **não aplicados**)
+
+Nenhum erro crítico (nenhuma tabela exposta sem RLS). Há oportunidades de
+*hardening* a ponderar — exigem DDL em produção, por isso ficam documentadas e
+**não foram aplicadas**:
+
+| Aviso | Objeto | Remediação |
+|---|---|---|
+| `search_path` mutável | funções `handle_new_user`, `set_atualizado_em`, `is_admin`, `criar_quiz_profile` | fixar `search_path` (`SET search_path = ''`) — [lint 0011](https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable) |
+| `SECURITY DEFINER` executável via RPC | `handle_new_user`, `is_admin`, `criar_quiz_profile` (anon + authenticated) | `REVOKE EXECUTE` ou passar a `SECURITY INVOKER` — [lint 0028](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable) |
+| Política RLS sempre verdadeira | `email_waitlist` INSERT (`qualquer_um_insere_waitlist`, `WITH CHECK (true)`) | provavelmente intencional (inscrição pública); confirmar/limitar — [lint 0024](https://supabase.com/docs/guides/database/database-linter?lint=0024_permissive_rls_policy) |
+| Proteção de passwords vazadas desligada | Auth | ativar (HaveIBeenPwned) — [doc](https://supabase.com/docs/guides/auth/password-security) |
+
+> Os advisors de **performance** (índices não usados / FKs sem índice) são, na
+> maioria, informativos e não foram enumerados aqui.
+
 ---
 
 ## ⚠️ Rotação de chaves (fazer primeiro)
