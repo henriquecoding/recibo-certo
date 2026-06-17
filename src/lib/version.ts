@@ -19,7 +19,7 @@ export const CHANGELOG: EntradaChangelog[] = [
       "Barra de progresso e navegação por categorias no menu lateral.",
       "Painel de configurações com dificuldade, tempo por pergunta, perguntas por sessão e 5 preferências configuráveis.",
       "Configurações do quiz persistidas localmente entre sessões.",
-      "Registo e autenticação via Google e GitHub disponíveis.",
+      "Registo e autenticação via Google e LinkedIn disponíveis.",
     ],
   },
   {

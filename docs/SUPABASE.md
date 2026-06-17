@@ -16,8 +16,8 @@ Diagnóstico feito contra o projeto Supabase ao vivo e contra produção:
 | Schema (migrations 001–009) | **Aplicado** — as 10 tabelas existem |
 | Produção (`recibocerto.pt`) | **Ligada** — env definidas na Vercel; o site mostra "Entrar" |
 | Auth email/password | **Ativa** (signup aberto, autoconfirm ligado) |
-| Auth Google | **Desligada** no projeto (a UI mostra o botão) |
-| Auth GitHub | **Desligada** no projeto (a UI mostra o botão) |
+| Auth Google | **Ativada** no painel (cliente OAuth configurado) |
+| Auth LinkedIn | Pendente — botão na UI; falta ativar o provedor "LinkedIn (OIDC)" |
 | Repositório de dados | `store/recibos.ts` em **modo duplo** (localStorage sem sessão, tabela `recibos` com sessão) |
 
 Tabelas confirmadas: `profiles`, `recibos`, `subscriptions`, `anuncios`,
@@ -26,7 +26,7 @@ Tabelas confirmadas: `profiles`, `recibos`, `subscriptions`, `anuncios`,
 
 > **Conclusão:** a app já está ligada ao Supabase (auth + dados + admin +
 > subscrições). As únicas lacunas funcionais são os provedores OAuth
-> (Google/GitHub), desligados no painel — ver abaixo.
+> (Google/LinkedIn) — ver abaixo.
 
 ---
 
@@ -63,7 +63,7 @@ Environment Variables, ambiente *Production* e *Preview*) e, para dev local, no
 
 ---
 
-## Ativar Google e GitHub (OAuth)
+## Ativar Google e LinkedIn (OAuth)
 
 Hoje os botões existem mas os provedores estão desligados → quem clica apanha
 erro. Para os ativar:
@@ -80,11 +80,19 @@ https://sxdditwefdzuqeephqiy.supabase.co/auth/v1/callback
 3. Copia o **Client ID** e o **Client secret**.
 4. Supabase → Authentication → Providers → **Google** → ativa, cola o ID/secret → *Save*.
 
-### GitHub
-1. GitHub → Settings → Developer settings → **OAuth Apps** → *New OAuth App*.
-2. *Authorization callback URL* = o URL de callback acima.
-3. *Register* → copia o **Client ID** e gera um **Client secret**.
-4. Supabase → Authentication → Providers → **GitHub** → ativa, cola o ID/secret → *Save*.
+### LinkedIn
+1. [LinkedIn Developers](https://www.linkedin.com/developers/apps) → *Create app*
+   (tem de ser associada a uma Página de empresa do LinkedIn).
+2. Separador **Products** → adiciona **"Sign In with LinkedIn using OpenID Connect"**.
+3. Separador **Auth**:
+   - em *Authorized redirect URLs for your app*, cola o URL de callback acima;
+   - confirma os scopes **openid**, **profile**, **email**;
+   - copia o **Client ID** e o **Client Secret**.
+4. Supabase → Authentication → Providers → **LinkedIn (OIDC)** → ativa, cola o
+   ID/secret → *Save*.
+
+> No Supabase é o provedor **"LinkedIn (OIDC)"** (chave `linkedin_oidc`). O antigo
+> "LinkedIn" está descontinuado — não uses esse.
 
 ### URLs do site (importante para o redirect pós-login)
 Supabase → Authentication → URL Configuration:
@@ -98,7 +106,7 @@ redirecionam para `${origin}/dashboard`.)
 ### Verificar
 ```bash
 curl -s -H "apikey: <ANON_KEY>" \
-  https://sxdditwefdzuqeephqiy.supabase.co/auth/v1/settings | grep -o '"google":true\|"github":true'
+  https://sxdditwefdzuqeephqiy.supabase.co/auth/v1/settings | grep -o '"google":true\|"linkedin_oidc":true'
 ```
 
 ---

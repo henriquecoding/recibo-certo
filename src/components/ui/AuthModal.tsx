@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { m, AnimatePresence } from "motion/react";
-import { Close, ArrowRight, User, Google, GitHub } from "@/components/ui/Icons";
+import { Close, ArrowRight, User, Google, Linkedin } from "@/components/ui/Icons";
 import { useAuth } from "@/lib/supabase/auth";
 
 export default function AuthModal() {
   const {
     modalAberto, modoModal, fecharModal,
-    entrar, registar, entrarComGoogle, entrarComGitHub,
+    entrar, registar, entrarComGoogle, entrarComLinkedin,
     disponivel,
   } = useAuth();
 
@@ -18,7 +18,7 @@ export default function AuthModal() {
   const [erro, setErro] = useState("");
   const [info, setInfo] = useState("");
   const [aEnviar, setAEnviar] = useState(false);
-  const [oauthEmCurso, setOauthEmCurso] = useState<"google" | "github" | null>(null);
+  const [oauthEmCurso, setOauthEmCurso] = useState<"google" | "linkedin" | null>(null);
   const emailRef = useRef<HTMLInputElement>(null);
 
   // Sincroniza o modo quando o modal abre
@@ -70,10 +70,10 @@ export default function AuthModal() {
     if (res.erro) { setErro(res.erro); setOauthEmCurso(null); }
   }
 
-  async function handleGitHub() {
+  async function handleLinkedin() {
     setErro("");
-    setOauthEmCurso("github");
-    const res = await entrarComGitHub();
+    setOauthEmCurso("linkedin");
+    const res = await entrarComLinkedin();
     if (res.erro) { setErro(res.erro); setOauthEmCurso(null); }
   }
 
@@ -141,15 +141,15 @@ export default function AuthModal() {
                 {oauthEmCurso === "google" ? "A redirecionar…" : "Continuar com Google"}
               </button>
 
-              {/* GitHub */}
+              {/* LinkedIn */}
               <button
                 type="button"
-                onClick={handleGitHub}
+                onClick={handleLinkedin}
                 disabled={!!oauthEmCurso || aEnviar}
                 className="flex w-full items-center justify-center gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-700 transition-all hover:bg-stone-50 hover:border-stone-300 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-700"
               >
-                <GitHub size={18} className="text-stone-600 dark:text-stone-300" />
-                {oauthEmCurso === "github" ? "A redirecionar…" : "Continuar com GitHub"}
+                <Linkedin size={18} className="text-stone-600 dark:text-stone-300" />
+                {oauthEmCurso === "linkedin" ? "A redirecionar…" : "Continuar com LinkedIn"}
               </button>
 
               {/* Divisor */}

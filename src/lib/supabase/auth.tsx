@@ -21,7 +21,7 @@ interface AuthContexto {
   registar: (email: string, password: string) => Promise<{ erro?: string; confirmarEmail?: boolean }>;
   sair: () => Promise<void>;
   entrarComGoogle: () => Promise<{ erro?: string }>;
-  entrarComGitHub: () => Promise<{ erro?: string }>;
+  entrarComLinkedin: () => Promise<{ erro?: string }>;
   /** Estado do modal de autenticação global. */
   modalAberto: boolean;
   modoModal: ModoModal;
@@ -113,10 +113,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const entrarComGitHub = async () => {
+  const entrarComLinkedin = async () => {
     try {
       const { error } = await getSupabase().auth.signInWithOAuth({
-        provider: "github",
+        // Provedor "LinkedIn (OIDC)" do Supabase — chave `linkedin_oidc`
+        // (o antigo `linkedin` está descontinuado).
+        provider: "linkedin_oidc",
         options: { redirectTo: `${window.location.origin}/dashboard` },
       });
       return error ? { erro: error.message } : {};
@@ -138,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider value={{
       user, carregado, disponivel,
       entrar, registar, sair,
-      entrarComGoogle, entrarComGitHub,
+      entrarComGoogle, entrarComLinkedin,
       modalAberto, modoModal, abrirModal, fecharModal,
     }}>
       {children}
