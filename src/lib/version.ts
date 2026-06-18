@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.10.4";
+export const APP_VERSION = "1.11.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.11.0",
+    data: "2026-06-18",
+    titulo: "Leitura de recibos em PDF com motor determinístico (layout-aware)",
+    itens: [
+      "Novo motor de leitura que reconstrói a tabela do recibo pela geometria (coordenadas de cada valor) e corrige automaticamente páginas rodadas — em vez de ler o texto «em linha». Recibos de duas colunas (abonos | descontos) deixam de baralhar valores.",
+      "Validação em malha fechada: antes de preencher o simulador, o sistema confirma que os abonos somam o total ilíquido, os descontos somam o total de descontos e o líquido fecha (tolerância de 0,02 €). Só dados que «fecham as contas» são considerados fiáveis; o resto fica para confirmares à mão — nunca preenche com valores errados.",
+      "Tudo continua a ser lido no teu dispositivo, sem IA e sem enviar o ficheiro para lado nenhum.",
+    ],
+  },
   {
     version: "1.10.4",
     data: "2026-06-18",

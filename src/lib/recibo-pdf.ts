@@ -21,6 +21,8 @@
 //      implausíveis — em caso de dúvida, fica para confirmação manual.
 // ─────────────────────────────────────────────────────────────────────
 
+import { analisarLayout, extrairRubricas, type ItemGeo } from "./recibo-layout";
+
 export interface ReciboExtraido {
   empresaNome?: string;
   empresaNif?: string;
@@ -272,6 +274,15 @@ export function combinarRecibo(base: ReciboExtraido, pos: Partial<ReciboExtraido
 /**
  * Lê o PDF no browser (pdf.js) e extrai os dados. O ficheiro nunca sai do
  * dispositivo. Lança em caso de PDF inválido/sem texto (scan) — a UI trata.
+ *
+ * Pipeline (determinístico, sem IA):
+ *   1) recolhe cada fragmento com a sua GEOMETRIA (caixa delimitadora já
+ *      normalizada para a rotação da página via viewport.transform);
+ *   2) `parseReciboTexto` extrai âncoras robustas (base, sujeita+IRS, SS, total);
+ *   3) `analisarLayout` reconstrói a tabela ABONOS|DESCONTOS e VALIDA em malha
+ *      fechada (Σabonos = ilíquido). Só se validar é que as rubricas detalhadas
+ *      (subsídio dia×dias, prémio, feriados) são consideradas fiáveis;
+ *   4) caso não valide, recorre ao parser posicional com validações de sanidade.
  */
 export async function extrairReciboPDF(file: File): Promise<ReciboExtraido> {
   const pdfjs = await import("pdfjs-dist");
@@ -282,17 +293,38 @@ export async function extrairReciboPDF(file: File): Promise<ReciboExtraido> {
   const doc = await pdfjs.getDocument({ data, useSystemFonts: true }).promise;
   const strings: string[] = [];
   const posicoes: ItemPos[] = [];
+  const geos: ItemGeo[] = [];
+
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p);
+    // viewport.transform mapeia o espaço do PDF (y-up) para o ecrã (y-down) e
+    // já aplica a rotação /Rotate da página — coordenadas consistentes.
+    const viewport = page.getViewport({ scale: 1 });
+    const vt = viewport.transform;
+    const aplicar = (x: number, y: number): [number, number] => [
+      vt[0] * x + vt[2] * y + vt[4],
+      vt[1] * x + vt[3] * y + vt[5],
+    ];
     const tc = await page.getTextContent();
     for (const item of tc.items) {
-      if ("str" in item && item.str) {
-        strings.push(item.str);
-        const tr = item.transform;
-        if (Array.isArray(tr) && tr.length >= 6) {
-          posicoes.push({ str: item.str, x: tr[4], y: tr[5] });
-        }
-      }
+      if (!("str" in item) || !item.str) continue;
+      strings.push(item.str);
+      const tr = item.transform;
+      if (!Array.isArray(tr) || tr.length < 6) continue;
+      const e = tr[4];
+      const f = tr[5];
+      const w = item.width ?? 0;
+      const h = item.height ?? 0;
+      // Caixa delimitadora pela transformação das 4 esquinas (corrige rotação/escala).
+      const cantos = [aplicar(e, f), aplicar(e + w, f), aplicar(e, f + h), aplicar(e + w, f + h)];
+      const xs = cantos.map((c) => c[0]);
+      const ys = cantos.map((c) => c[1]);
+      const left = Math.min(...xs);
+      const right = Math.max(...xs);
+      const top = Math.min(...ys);
+      const bottom = Math.max(...ys);
+      posicoes.push({ str: item.str, x: left, y: top });
+      geos.push({ str: item.str, left, top, right, bottom });
     }
   }
   if (strings.join("").trim().length < 20) {
@@ -300,11 +332,35 @@ export async function extrairReciboPDF(file: File): Promise<ReciboExtraido> {
   }
 
   const base = parseReciboTexto(strings);
+
+  // Motor de layout determinístico, validado em malha fechada.
+  try {
+    const analise = analisarLayout(geos);
+    if (analise.abonosValidados) {
+      const rub = extrairRubricas(analise);
+      if (rub.salarioBase !== undefined && base.salarioBase === undefined) base.salarioBase = rub.salarioBase;
+      if (rub.subsidioRefeicaoTotal !== undefined) {
+        base.subsidioRefeicaoTotal = rub.subsidioRefeicaoTotal;
+        if (rub.subsidioRefeicaoDia !== undefined) base.subsidioRefeicaoDia = rub.subsidioRefeicaoDia;
+        if (rub.subsidioRefeicaoDias !== undefined) base.subsidioRefeicaoDias = rub.subsidioRefeicaoDias;
+        if (rub.subsidioRefeicaoCartao !== undefined) base.subsidioRefeicaoCartao = rub.subsidioRefeicaoCartao;
+      }
+      if (rub.premio !== undefined) base.premio = rub.premio;
+      if (rub.feriados !== undefined) base.feriados = rub.feriados;
+      if (base.ssDesconto === undefined && rub.ssDesconto !== undefined) base.ssDesconto = rub.ssDesconto;
+      if (base.irsRetido === undefined && rub.irsRetido !== undefined) base.irsRetido = rub.irsRetido;
+      return base;
+    }
+  } catch {
+    /* layout é best-effort — se falhar, usa o parser posicional abaixo */
+  }
+
+  // Recurso: parser posicional simples com validações de sanidade.
   let pos: Partial<ReciboExtraido> = {};
   try {
     pos = parseReciboPosicional(posicoes);
   } catch {
-    /* posicional é best-effort — ignora falhas e usa só as âncoras de texto */
+    /* ignora — usa só as âncoras de texto */
   }
   return combinarRecibo(base, pos);
 }
