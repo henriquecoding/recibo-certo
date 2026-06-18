@@ -35,6 +35,22 @@ export function ArrowRight({ size = 14, className }: IconProps) {
   );
 }
 
+export function Cookie({ size = 16, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path
+        d="M12 3a9 9 0 1 0 9 9 3.4 3.4 0 0 1-4.1-4.1A3.4 3.4 0 0 1 12 3Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <circle cx="9" cy="13" r="1" fill="currentColor" />
+      <circle cx="13" cy="16" r="1" fill="currentColor" />
+      <circle cx="15.5" cy="11" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function Plus({ size = 12, className }: IconProps) {
   return (
     <svg {...svgProps(size, className)}>

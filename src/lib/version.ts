@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.7.0";
+export const APP_VERSION = "1.7.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.7.1",
+    data: "2026-06-18",
+    titulo: "Gestão de cookies por categorias",
+    itens: [
+      "Novo painel de preferências de cookies, com categorias (estritamente necessários, estatística, marketing e personalização) e escolha clara: aceitar todos, confirmar seleção ou rejeitar.",
+      "A tua escolha fica guardada e podes voltar a alterá-la a qualquer momento no link “Cookies” do rodapé.",
+    ],
+  },
   {
     version: "1.7.0",
     data: "2026-06-18",
