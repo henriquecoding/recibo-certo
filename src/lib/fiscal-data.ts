@@ -194,6 +194,14 @@ export const SOURCES = {
     label: "Código dos Regimes Contributivos (Lei 110/2009) — base de incidência contributiva (prémios regulares) · Diário da República",
     url: "https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2009-34514575",
   },
+  madeiraRetencao2026: {
+    label: "Despacho n.º 19/2026 (SRF) — Tabelas de retenção na fonte de IRS 2026, Região Autónoma da Madeira · JORAM",
+    url: "https://joram.madeira.gov.pt/joram/2serie/Ano%20de%202026/IISerie-013-2026-01-20Supl4.pdf",
+  },
+  acoresRetencao2026: {
+    label: "Despacho n.º 1179/2026 — Tabelas de retenção na fonte de IRS 2026, Região Autónoma dos Açores · Diário da República",
+    url: "https://files.diariodarepublica.pt/2s/2026/02/023000000/0005100057.pdf",
+  },
 
   // ── Comissão Europeia ───────────────────────────────────────────────
   viesValidation: {
@@ -1720,16 +1728,208 @@ export const RETENCAO_DEP_TABELAS = sv<Record<"i" | "ii" | "iii" | "iv" | "v" | 
   "Transcritas integralmente do Despacho oficial publicado em Diário da República."
 );
 
+// ── Região Autónoma da Madeira — Despacho n.º 19/2026 (JORAM, 20-01-2026) ──
+// Tabela II = Tabela I com parcela adicional por dependente de 34,29 €.
+const ESC_MADEIRA_I: EscalaoRetencao[] = [
+  { ate: 980, taxa: 0, parcelaAbater: 0 },
+  { ate: 1028, taxa: 0.0872, parcelaAbater: { coef: 2.6, base: 1356.92 } },
+  { ate: 1099, taxa: 0.1204, parcelaAbater: { coef: 1.35, base: 1696.78 } },
+  { ate: 1201, taxa: 0.1204, parcelaAbater: 97.17 },
+  { ate: 1623, taxa: 0.1763, parcelaAbater: 164.31 },
+  { ate: 2332, taxa: 0.223, parcelaAbater: 240.11 },
+  { ate: 3203, taxa: 0.2242, parcelaAbater: 242.91 },
+  { ate: 3614, taxa: 0.237, parcelaAbater: 283.91 },
+  { ate: 6585, taxa: 0.3028, parcelaAbater: 521.72 },
+  { ate: 6954, taxa: 0.2802, parcelaAbater: 372.9 },
+  { ate: 21411, taxa: 0.2924, parcelaAbater: 457.74 },
+  { ate: Infinity, taxa: 0.3278, parcelaAbater: 1215.69 },
+];
+export const RETENCAO_DEP_MADEIRA = sv<Record<"i" | "ii" | "iii" | "iv" | "v" | "vi" | "vii", TabelaRetencaoDep>>(
+  {
+    i: { parcelaDependente: 21.43, escaloes: ESC_MADEIRA_I },
+    ii: { parcelaDependente: 34.29, escaloes: ESC_MADEIRA_I },
+    iii: {
+      parcelaDependente: 42.86,
+      escaloes: [
+        { ate: 997, taxa: 0, parcelaAbater: 0 },
+        { ate: 1099, taxa: 0.0872, parcelaAbater: { coef: 1.35, base: 1819.64 } },
+        { ate: 1141, taxa: 0.0872, parcelaAbater: 84.84 },
+        { ate: 1857, taxa: 0.1033, parcelaAbater: 103.22 },
+        { ate: 2485, taxa: 0.1091, parcelaAbater: 114.0 },
+        { ate: 3331, taxa: 0.1236, parcelaAbater: 150.04 },
+        { ate: 3895, taxa: 0.1404, parcelaAbater: 206.01 },
+        { ate: 6673, taxa: 0.1595, parcelaAbater: 280.41 },
+        { ate: 6878, taxa: 0.2213, parcelaAbater: 692.81 },
+        { ate: 21411, taxa: 0.2493, parcelaAbater: 885.4 },
+        { ate: Infinity, taxa: 0.3278, parcelaAbater: 2566.17 },
+      ],
+    },
+    iv: {
+      parcelaDependente: 0,
+      escaloes: [
+        { ate: 2053, taxa: 0, parcelaAbater: 0 },
+        { ate: 2591, taxa: 0.149, parcelaAbater: 305.9 },
+        { ate: 3622, taxa: 0.1863, parcelaAbater: 402.55 },
+        { ate: 4668, taxa: 0.2289, parcelaAbater: 556.85 },
+        { ate: 7066, taxa: 0.2616, parcelaAbater: 709.5 },
+        { ate: 7168, taxa: 0.2752, parcelaAbater: 805.6 },
+        { ate: 21625, taxa: 0.3058, parcelaAbater: 1024.95 },
+        { ate: Infinity, taxa: 0.3278, parcelaAbater: 1500.7 },
+      ],
+    },
+    v: {
+      parcelaDependente: 42.86,
+      escaloes: [
+        { ate: 2345, taxa: 0, parcelaAbater: 0 },
+        { ate: 2591, taxa: 0.1382, parcelaAbater: 324.08 },
+        { ate: 3622, taxa: 0.1863, parcelaAbater: 448.71 },
+        { ate: 4668, taxa: 0.2289, parcelaAbater: 603.01 },
+        { ate: 7066, taxa: 0.2616, parcelaAbater: 755.66 },
+        { ate: 7168, taxa: 0.2752, parcelaAbater: 851.76 },
+        { ate: 21625, taxa: 0.3058, parcelaAbater: 1071.11 },
+        { ate: Infinity, taxa: 0.3278, parcelaAbater: 1546.86 },
+      ],
+    },
+    vi: {
+      parcelaDependente: 21.43,
+      escaloes: [
+        { ate: 2019, taxa: 0, parcelaAbater: 0 },
+        { ate: 2528, taxa: 0.1566, parcelaAbater: 316.18 },
+        { ate: 3049, taxa: 0.1768, parcelaAbater: 367.25 },
+        { ate: 4272, taxa: 0.1781, parcelaAbater: 371.22 },
+        { ate: 5734, taxa: 0.228, parcelaAbater: 584.4 },
+        { ate: 7066, taxa: 0.2595, parcelaAbater: 765.03 },
+        { ate: 7550, taxa: 0.2752, parcelaAbater: 875.97 },
+        { ate: 21625, taxa: 0.3058, parcelaAbater: 1107.0 },
+        { ate: Infinity, taxa: 0.3278, parcelaAbater: 1582.75 },
+      ],
+    },
+    vii: {
+      parcelaDependente: 42.86,
+      escaloes: [
+        { ate: 3061, taxa: 0, parcelaAbater: 0 },
+        { ate: 4668, taxa: 0.0883, parcelaAbater: 270.29 },
+        { ate: 7066, taxa: 0.1334, parcelaAbater: 480.82 },
+        { ate: 7168, taxa: 0.2503, parcelaAbater: 1306.84 },
+        { ate: 21625, taxa: 0.281, parcelaAbater: 1526.9 },
+        { ate: Infinity, taxa: 0.3278, parcelaAbater: 2538.95 },
+      ],
+    },
+  },
+  "Despacho n.º 19/2026 (SRF) — Tabelas I-VII, Madeira (trabalho dependente)",
+  "madeiraRetencao2026",
+  DEP_TODAY,
+  "Transcritas do Jornal Oficial da RAM, II Série n.º 13, 4.º Suplemento, 20-01-2026."
+);
+
+// ── Região Autónoma dos Açores — Despacho n.º 1179/2026 (DR, 03-02-2026) ──
+const ESC_ACORES_I: EscalaoRetencao[] = [
+  { ate: 966, taxa: 0, parcelaAbater: 0 },
+  { ate: 1042, taxa: 0.0875, parcelaAbater: { coef: 2.6, base: 1337.54 } },
+  { ate: 1108, taxa: 0.1099, parcelaAbater: { coef: 1.35, base: 1652.49 } },
+  { ate: 1154, taxa: 0.1099, parcelaAbater: 80.79 },
+  { ate: 1212, taxa: 0.1484, parcelaAbater: 125.22 },
+  { ate: 1819, taxa: 0.1687, parcelaAbater: 149.83 },
+  { ate: 2119, taxa: 0.2177, parcelaAbater: 238.97 },
+  { ate: 2499, taxa: 0.2443, parcelaAbater: 295.34 },
+  { ate: 3305, taxa: 0.2685, parcelaAbater: 355.82 },
+  { ate: 5547, taxa: 0.2779, parcelaAbater: 386.89 },
+  { ate: 20221, taxa: 0.3146, parcelaAbater: 590.47 },
+  { ate: Infinity, taxa: 0.3302, parcelaAbater: 905.92 },
+];
+export const RETENCAO_DEP_ACORES = sv<Record<"i" | "ii" | "iii" | "iv" | "v" | "vi" | "vii", TabelaRetencaoDep>>(
+  {
+    i: { parcelaDependente: 21.43, escaloes: ESC_ACORES_I },
+    ii: { parcelaDependente: 34.29, escaloes: ESC_ACORES_I },
+    iii: {
+      parcelaDependente: 42.86,
+      escaloes: [
+        { ate: 1226, taxa: 0, parcelaAbater: 0 },
+        { ate: 1267, taxa: 0.0728, parcelaAbater: 89.26 },
+        { ate: 1602, taxa: 0.0964, parcelaAbater: 119.17 },
+        { ate: 1962, taxa: 0.1099, parcelaAbater: 140.8 },
+        { ate: 2240, taxa: 0.1357, parcelaAbater: 191.42 },
+        { ate: 2900, taxa: 0.1594, parcelaAbater: 244.51 },
+        { ate: 3389, taxa: 0.1799, parcelaAbater: 303.96 },
+        { ate: 5965, taxa: 0.2017, parcelaAbater: 377.85 },
+        { ate: 20265, taxa: 0.271, parcelaAbater: 791.23 },
+        { ate: Infinity, taxa: 0.3302, parcelaAbater: 1990.92 },
+      ],
+    },
+    iv: {
+      parcelaDependente: 0,
+      escaloes: [
+        { ate: 2119, taxa: 0, parcelaAbater: 0 },
+        { ate: 2492, taxa: 0.2177, parcelaAbater: 464.51 },
+        { ate: 2748, taxa: 0.2443, parcelaAbater: 530.8 },
+        { ate: 3012, taxa: 0.2685, parcelaAbater: 597.31 },
+        { ate: 4883, taxa: 0.2779, parcelaAbater: 625.63 },
+        { ate: 20468, taxa: 0.3102, parcelaAbater: 783.36 },
+        { ate: Infinity, taxa: 0.3255, parcelaAbater: 1096.53 },
+      ],
+    },
+    v: {
+      parcelaDependente: 42.86,
+      escaloes: [
+        { ate: 2339, taxa: 0, parcelaAbater: 0 },
+        { ate: 2488, taxa: 0.2177, parcelaAbater: 511.64 },
+        { ate: 3479, taxa: 0.2443, parcelaAbater: 577.83 },
+        { ate: 3728, taxa: 0.2685, parcelaAbater: 662.03 },
+        { ate: 6687, taxa: 0.2779, parcelaAbater: 697.08 },
+        { ate: 20468, taxa: 0.3102, parcelaAbater: 913.08 },
+        { ate: Infinity, taxa: 0.3255, parcelaAbater: 1226.25 },
+      ],
+    },
+    vi: {
+      parcelaDependente: 21.43,
+      escaloes: [
+        { ate: 2143, taxa: 0, parcelaAbater: 0 },
+        { ate: 2790, taxa: 0.1687, parcelaAbater: 363.67 },
+        { ate: 3215, taxa: 0.2177, parcelaAbater: 500.38 },
+        { ate: 3479, taxa: 0.2443, parcelaAbater: 585.9 },
+        { ate: 5915, taxa: 0.2685, parcelaAbater: 670.1 },
+        { ate: 6687, taxa: 0.2779, parcelaAbater: 725.71 },
+        { ate: 20468, taxa: 0.3102, parcelaAbater: 941.71 },
+        { ate: Infinity, taxa: 0.3255, parcelaAbater: 1254.88 },
+      ],
+    },
+    vii: {
+      parcelaDependente: 42.86,
+      escaloes: [
+        { ate: 2897, taxa: 0, parcelaAbater: 0 },
+        { ate: 4503, taxa: 0.1594, parcelaAbater: 461.79 },
+        { ate: 6818, taxa: 0.1799, parcelaAbater: 554.11 },
+        { ate: 6916, taxa: 0.2017, parcelaAbater: 702.75 },
+        { ate: 20468, taxa: 0.2926, parcelaAbater: 1331.42 },
+        { ate: Infinity, taxa: 0.3255, parcelaAbater: 2004.82 },
+      ],
+    },
+  },
+  "Despacho n.º 1179/2026 — Tabelas I-VII, Açores (trabalho dependente)",
+  "acoresRetencao2026",
+  DEP_TODAY,
+  "Transcritas do Diário da República, 2.ª série n.º 23, 03-02-2026."
+);
+
+/** Conjunto de tabelas de retenção do trabalho dependente por região. */
+export const RETENCAO_DEP_POR_REGIAO: Record<Regiao, Record<"i" | "ii" | "iii" | "iv" | "v" | "vi" | "vii", TabelaRetencaoDep>> = {
+  continente: RETENCAO_DEP_TABELAS.value,
+  madeira: RETENCAO_DEP_MADEIRA.value,
+  acores: RETENCAO_DEP_ACORES.value,
+};
+
 /**
  * Seleciona a tabela de retenção do trabalho dependente conforme a situação
- * familiar (Despacho 233-A/2026, n.º 1 als. a e b).
+ * familiar e a região (Continente: Despacho 233-A/2026; Madeira: Despacho
+ * 19/2026; Açores: Despacho 1179/2026).
  */
 export function tabelaRetencaoDependente(
   estadoCivil: EstadoCivilRet,
   dependentes: number,
-  deficiencia: boolean
+  deficiencia: boolean,
+  regiao: Regiao = "continente"
 ): TabelaRetencaoDep {
-  const t = RETENCAO_DEP_TABELAS.value;
+  const t = RETENCAO_DEP_POR_REGIAO[regiao] ?? RETENCAO_DEP_TABELAS.value;
   const temDeps = dependentes >= 1;
   if (!deficiencia) {
     if (estadoCivil === "casadoUnico") return t.iii;
@@ -1990,19 +2190,21 @@ export function assertFiscalDataIntegrity(): void {
   if (Math.abs(DEDUCAO_ESPECIFICA_DEPENDENTE.value - Math.round(8.54 * IAS.value * 100) / 100) > EPS) {
     erros.push("Dedução específica (cat. A) deve ser 8,54 × IAS.");
   }
-  for (const [nome, tab] of Object.entries(RETENCAO_DEP_TABELAS.value)) {
-    const t = tab.escaloes;
-    if (tab.parcelaDependente < 0) erros.push(`Retenção cat. A (${nome}): parcela por dependente negativa.`);
-    let ateAnt = -1;
-    let taxaAnt = -1;
-    t.forEach((e, i) => {
-      if (!isRate(e.taxa)) erros.push(`Retenção cat. A (${nome}) escalão ${i + 1}: taxa fora de [0,1].`);
-      if (e.taxa < taxaAnt - EPS) erros.push(`Retenção cat. A (${nome}) escalão ${i + 1}: taxa decrescente.`);
-      taxaAnt = e.taxa;
-      if (!(e.ate > ateAnt)) erros.push(`Retenção cat. A (${nome}) escalão ${i + 1}: limite não crescente.`);
-      ateAnt = e.ate;
-    });
-    if (t[t.length - 1].ate !== Infinity) erros.push(`Retenção cat. A (${nome}): último escalão deve ser Infinity.`);
+  // Valida as tabelas de retenção das três regiões. Nota: a taxa marginal NÃO é
+  // necessariamente crescente entre escalões (ex.: Tabela I da Madeira desce de
+  // 30,28% para 28,02%), por isso só se valida o domínio [0,1] e o limite crescente.
+  for (const reg of Object.keys(RETENCAO_DEP_POR_REGIAO) as Regiao[]) {
+    for (const [nome, tab] of Object.entries(RETENCAO_DEP_POR_REGIAO[reg])) {
+      const t = tab.escaloes;
+      if (tab.parcelaDependente < 0) erros.push(`Retenção cat. A (${reg}/${nome}): parcela por dependente negativa.`);
+      let ateAnt = -1;
+      t.forEach((e, i) => {
+        if (!isRate(e.taxa)) erros.push(`Retenção cat. A (${reg}/${nome}) escalão ${i + 1}: taxa fora de [0,1].`);
+        if (!(e.ate > ateAnt)) erros.push(`Retenção cat. A (${reg}/${nome}) escalão ${i + 1}: limite não crescente.`);
+        ateAnt = e.ate;
+      });
+      if (t[t.length - 1].ate !== Infinity) erros.push(`Retenção cat. A (${reg}/${nome}): último escalão deve ser Infinity.`);
+    }
   }
 
   // 6) Proveniência obrigatória: fonte registada + data válida em cada parâmetro.
@@ -2012,6 +2214,8 @@ export function assertFiscalDataIntegrity(): void {
     SUBSIDIO_REFEICAO.dinheiro, SUBSIDIO_REFEICAO.cartao,
     RETENCAO_DEP_ISENCAO, RETENCAO_DEP_POR_DEPENDENTE, RETENCAO_DEP_CONTINENTE_T1,
     RETENCAO_DEP_TABELAS,
+    RETENCAO_DEP_MADEIRA,
+    RETENCAO_DEP_ACORES,
     HORARIO_SEMANAL_COMPLETO,
     TRABALHO_SUPLEMENTAR.acrescimos,
     RETENCAO_SUPLEMENTAR_FATOR,

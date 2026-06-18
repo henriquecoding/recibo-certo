@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.7.2";
+export const APP_VERSION = "1.8.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.8.0",
+    data: "2026-06-18",
+    titulo: "Madeira e Açores com tabelas de IRS próprias",
+    itens: [
+      "O simulador de recibo de vencimento passa a usar as tabelas de retenção na fonte oficiais da Madeira (Despacho n.º 19/2026) e dos Açores (Despacho n.º 1179/2026) — basta escolher a região. A Segurança Social (11%) é igual em todo o país.",
+      "No simulador guiado, o valor faturado passa a ser interpretado sem IVA por omissão (a base do recibo verde) — por exemplo, 1500/mês corresponde a 18 000/ano; o IVA é mostrado à parte. Texto da faturação clarificado.",
+    ],
+  },
   {
     version: "1.7.2",
     data: "2026-06-18",

@@ -28,6 +28,7 @@ import {
   type EscalaoRetencao,
   type EstadoCivilRet,
   type TipoAtividade,
+  type Regiao,
 } from "./fiscal-data";
 import { compararRegimes, irsProgressivo, type ComparacaoResult } from "./fiscal";
 
@@ -66,9 +67,10 @@ function retencaoPorSituacao(
   salarioBruto: number,
   dependentes: number,
   estadoCivil: EstadoCivilRet,
-  deficiencia: boolean
+  deficiencia: boolean,
+  regiao: Regiao = "continente"
 ): number {
-  const tab = tabelaRetencaoDependente(estadoCivil, dependentes, deficiencia);
+  const tab = tabelaRetencaoDependente(estadoCivil, dependentes, deficiencia, regiao);
   return retencaoIRSDependente(salarioBruto, dependentes, tab.escaloes, tab.parcelaDependente);
 }
 
@@ -87,6 +89,8 @@ export interface VencimentoInput {
   estadoCivil?: EstadoCivilRet;
   /** Titular com deficiência ≥ 60% (tabelas IV-VII). */
   deficiencia?: boolean;
+  /** Região fiscal (tabelas de retenção próprias na Madeira e nos Açores). */
+  regiao?: Regiao;
 }
 
 export interface VencimentoResult {
@@ -119,7 +123,8 @@ export function calcularVencimento(input: VencimentoInput): VencimentoResult {
     bruto,
     dependentes,
     input.estadoCivil ?? "naoCasado",
-    input.deficiencia ?? false
+    input.deficiencia ?? false,
+    input.regiao ?? "continente"
   );
 
   const dias = Math.max(0, input.diasUteis ?? 22);
@@ -172,6 +177,8 @@ export interface ReciboMensalInput {
   dependentes?: number;
   estadoCivil?: EstadoCivilRet;
   deficiencia?: boolean;
+  /** Região fiscal (tabelas de retenção próprias na Madeira e nos Açores). */
+  regiao?: Regiao;
   /** Período normal de trabalho semanal (horas). Default 40. */
   horasSemanais?: number;
   // Subsídio de refeição
@@ -242,6 +249,7 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
   const dependentes = Math.max(0, Math.floor(input.dependentes ?? 0));
   const ec = input.estadoCivil ?? "naoCasado";
   const def = input.deficiencia ?? false;
+  const reg = input.regiao ?? "continente";
 
   // Retribuição horária (Art. 271.º CT).
   const horasSemanais = Math.max(1, input.horasSemanais ?? HORARIO_SEMANAL_COMPLETO.value);
@@ -303,14 +311,14 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
 
   // IRS — retenção da remuneração mensal (tabela) sobre base + prémio + excessos.
   const remMensal = cent(baseRemunerada + premio + ajudasTributadas + subsidioRefeicaoTributado);
-  const irsBaseMensal = retencaoPorSituacao(remMensal, dependentes, ec, def);
+  const irsBaseMensal = retencaoPorSituacao(remMensal, dependentes, ec, def, reg);
   // Trabalho suplementar: retenção autónoma = 50% da taxa efetiva mensal.
   const taxaEfetivaMes = remMensal > 0 ? irsBaseMensal / remMensal : 0;
   const suplementarIRS = cent(suplementarTotal * taxaEfetivaMes * RETENCAO_SUPLEMENTAR_FATOR.value);
   // Subsídios de férias/Natal: retenção autónoma (cada um pela tabela, em separado).
   const irsSubsidios = cent(
-    retencaoPorSituacao(subsidioFerias, dependentes, ec, def) +
-      retencaoPorSituacao(subsidioNatal, dependentes, ec, def)
+    retencaoPorSituacao(subsidioFerias, dependentes, ec, def, reg) +
+      retencaoPorSituacao(subsidioNatal, dependentes, ec, def, reg)
   );
   const irsTotal = cent(irsBaseMensal + suplementarIRS + irsSubsidios);
 
@@ -421,9 +429,10 @@ export function calcularVencimentoAnual(input: VencimentoAnualInput): Vencimento
   // Retenção autónoma: fórmula aplicada a cada remuneração em separado.
   const ec = input.estadoCivil ?? "naoCasado";
   const def = input.deficiencia ?? false;
-  const irsSalario = cent(retencaoPorSituacao(bruto, dependentes, ec, def) * 12);
-  const irsFerias = retencaoPorSituacao(subsidioFerias, dependentes, ec, def);
-  const irsNatal = retencaoPorSituacao(subsidioNatal, dependentes, ec, def);
+  const reg = input.regiao ?? "continente";
+  const irsSalario = cent(retencaoPorSituacao(bruto, dependentes, ec, def, reg) * 12);
+  const irsFerias = retencaoPorSituacao(subsidioFerias, dependentes, ec, def, reg);
+  const irsNatal = retencaoPorSituacao(subsidioNatal, dependentes, ec, def, reg);
   const irsAnual = cent(irsSalario + irsFerias + irsNatal);
 
   // Subsídio de refeição: pago só nos meses trabalhados (default 11).
@@ -551,6 +560,7 @@ export interface MealheiroDependenteInput {
   variavelAnual?: number;
   estadoCivil?: EstadoCivilRet;
   deficiencia?: boolean;
+  regiao?: Regiao;
 }
 
 export interface MealheiroDependenteResult {
@@ -591,8 +601,9 @@ export function mealheiroDependente(input: MealheiroDependenteInput): MealheiroD
   // Retido na fonte estimado: salário (14 meses) + variável à taxa efetiva do mês.
   const ec = input.estadoCivil ?? "naoCasado";
   const def = input.deficiencia ?? false;
-  const irsRetidoBase = calcularVencimentoAnual({ salarioBruto: base, dependentes: dep, subsidioRefeicaoDia: 0, estadoCivil: ec, deficiencia: def }).irsAnual;
-  const taxaEfetivaMes = base > 0 ? retencaoPorSituacao(base, dep, ec, def) / base : 0;
+  const reg = input.regiao ?? "continente";
+  const irsRetidoBase = calcularVencimentoAnual({ salarioBruto: base, dependentes: dep, subsidioRefeicaoDia: 0, estadoCivil: ec, deficiencia: def, regiao: reg }).irsAnual;
+  const taxaEfetivaMes = base > 0 ? retencaoPorSituacao(base, dep, ec, def, reg) / base : 0;
   const irsRetido = cent(irsRetidoBase + variavel * taxaEfetivaMes);
 
   const acerto = cent(irsApurado - irsRetido);
@@ -648,7 +659,7 @@ export function auditarRecibo(input: AuditoriaInput): AuditoriaResult {
   const usaSujeita = typeof sujeita === "number" && sujeita > 0;
   const ssEsperado = usaSujeita ? cent(sujeita * SS_DEPENDENTE.trabalhador.value) : r.ssTrabalhador;
   const irsEsperado = usaSujeita
-    ? retencaoPorSituacao(sujeita, Math.max(0, Math.floor(input.dependentes ?? 0)), input.estadoCivil ?? "naoCasado", input.deficiencia ?? false)
+    ? retencaoPorSituacao(sujeita, Math.max(0, Math.floor(input.dependentes ?? 0)), input.estadoCivil ?? "naoCasado", input.deficiencia ?? false, input.regiao ?? "continente")
     : r.irsRetido;
   const ssDiferenca = cent(Math.max(0, input.ssDeclarado) - ssEsperado);
   const irsDiferenca = cent(Math.max(0, input.irsDeclarado) - irsEsperado);
