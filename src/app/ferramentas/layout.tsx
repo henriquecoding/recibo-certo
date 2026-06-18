@@ -11,6 +11,7 @@ import { generateBreadcrumbSchema } from "@/lib/seo";
 const FERRAMENTAS_NAV = [
   { label: "Simulador de recibo de vencimento", href: "/ferramentas/recibo-vencimento" },
   { label: "Auditoria do recibo de vencimento", href: "/ferramentas/auditoria-recibo" },
+  { label: "Mapa de preços de contabilistas", href: "/ferramentas/mapa-contabilistas" },
   { label: "Recibos verdes, contrato ou empresa?", href: "/ferramentas/comparador" },
   { label: "Ato isolado ou atividade?", href: "/ferramentas/ato-isolado" },
   { label: "Calculadora de regime simplificado", href: "/ferramentas/regime-simplificado" },
