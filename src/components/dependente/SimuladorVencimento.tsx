@@ -2,16 +2,31 @@
 
 import { useState, useMemo, type ReactNode } from "react";
 import Link from "next/link";
-import { calcularVencimento, calcularVencimentoAnual, mealheiroDependente } from "@/lib/fiscal-dependente";
-import { SS_DEPENDENTE, SUBSIDIO_REFEICAO, type EstadoCivilRet } from "@/lib/fiscal-data";
+import { calcularVencimento, calcularVencimentoAnual, mealheiroDependente, calcularReciboMensal } from "@/lib/fiscal-dependente";
+import { SS_DEPENDENTE, SUBSIDIO_REFEICAO, TRABALHO_SUPLEMENTAR, AJUDAS_CUSTO, HORARIO_SEMANAL_COMPLETO, type EstadoCivilRet } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import ProGate from "@/components/ui/ProGate";
+import { AuditoriaPainel } from "@/components/dependente/AuditoriaPainel";
 import { printRelatorioVencimento } from "@/lib/export-vencimento";
 import { useVencimentos, gerarCSVCenarios, type CenarioVencimento } from "@/lib/store/vencimentos";
 import { History, Trash, Plus, ShieldCheck, Export, FileSign, Wallet, Gauge, Building, Coin } from "@/components/ui/Icons";
 
 const DEPENDENTES = [0, 1, 2, 3, 4];
+
+const MESES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
+// Rótulos dos acréscimos de trabalho suplementar (Art. 268.º CT), na ordem de
+// TRABALHO_SUPLEMENTAR.acrescimos.
+const SUPLEMENTAR_LABELS = [
+  "1.ª hora, dia útil",
+  "Horas seguintes, dia útil",
+  "Descanso ou feriado",
+  "Descanso/feriado > 100h/ano",
+];
 
 const SITUACAO_LABEL: Record<EstadoCivilRet, string> = {
   naoCasado: "Não casado",
@@ -24,10 +39,12 @@ const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
 const soDecimal = (s: string) => s.replace(/[^\d.,]/g, "");
 const soInteiro = (s: string) => s.replace(/\D/g, "").slice(0, 2);
 
-// Tons da marca para os segmentos (verde = é teu; pastéis para o que sai).
-type Seg = { label: string; value: number; color: string; brand?: boolean };
-const COR_IRS = "#9FE1CB"; // brand-mint
-const COR_SS = "#C2745A"; // acento quente (clay) — evita o cinza de "ausência"
+// Escala monocromática de verdes da marca: líquido = verde da marca (brand),
+// IRS = mint claro, Seg. Social / descontos = verde profundo. `cls` →
+// currentColor + classe que adapta ao modo escuro; `color` → hex fixo.
+type Seg = { label: string; value: number; color?: string; brand?: boolean; cls?: string };
+const COR_IRS = "#9FE1CB"; // brand-mint (segmento do IRS)
+const CLS_SS = "text-brand-deep"; // Seg. Social / descontos — verde profundo, elegante (claro e escuro)
 
 // ── Donut genérico (SVG, sem dependências; igual à técnica do DistribuicaoDonut) ──
 function Donut({ segs, centro, centroSub }: { segs: Seg[]; centro: string; centroSub: string }) {
@@ -52,8 +69,8 @@ function Donut({ segs, centro, centroSub }: { segs: Seg[]; centro: string; centr
             cy="66"
             r={r}
             fill="none"
-            className={a.brand ? "text-brand" : undefined}
-            stroke={a.brand ? "currentColor" : a.color}
+            className={a.brand ? "text-brand" : a.cls}
+            stroke={a.brand || a.cls ? "currentColor" : a.color}
             strokeWidth="15"
             strokeDasharray={`${a.len} ${C - a.len}`}
             strokeDashoffset={a.offset}
@@ -78,10 +95,10 @@ function SegBar({ segs }: { segs: Seg[] }) {
       {segs.map((s, i) => (
         <div
           key={s.label}
-          className={`${i === 0 ? "rounded-l-full" : ""} ${i === segs.length - 1 ? "rounded-r-full" : ""} ${s.brand ? "bg-brand" : ""}`}
+          className={`${i === 0 ? "rounded-l-full" : ""} ${i === segs.length - 1 ? "rounded-r-full" : ""} ${s.brand ? "bg-brand" : s.cls ?? ""}`}
           style={{
             width: `${(Math.max(0, s.value) / total) * 100}%`,
-            background: s.brand ? undefined : s.color,
+            background: s.brand ? undefined : s.cls ? "currentColor" : s.color,
             transition: "width 0.7s cubic-bezier(0.16,1,0.3,1)",
           }}
         />
@@ -107,6 +124,19 @@ function Metric({ icon, label, value, sub, tip }: { icon: ReactNode; label: Reac
   );
 }
 
+// ── Linha de decomposição do recibo (rótulo · valor) ──
+function LinhaRecibo({ label, value, sub, muted }: { label: string; value: string; sub?: string; muted?: boolean }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <dt className={`text-sm ${muted ? "text-stone-500 dark:text-stone-400" : "text-stone-600 dark:text-stone-300"}`}>{label}</dt>
+        {sub && <p className="text-[11px] text-stone-400">{sub}</p>}
+      </div>
+      <dd className="flex-shrink-0 text-sm font-medium text-stone-800 dark:text-stone-100 tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
 export function SimuladorVencimento() {
   const [brutoStr, setBrutoStr] = useState("1500");
   const [dependentes, setDependentes] = useState(0);
@@ -118,6 +148,21 @@ export function SimuladorVencimento() {
   const [variavelStr, setVariavelStr] = useState("");
   const [estadoCivil, setEstadoCivil] = useState<EstadoCivilRet>("naoCasado");
   const [deficiencia, setDeficiencia] = useState(false);
+
+  // ── Rendimentos adicionais e faltas (secção avançada) ──
+  const [mostrarExtras, setMostrarExtras] = useState(false);
+  const [mes, setMes] = useState(() => new Date().getMonth());
+  const [horasAusenciaStr, setHorasAusenciaStr] = useState("");
+  const [diasSemSubsidioStr, setDiasSemSubsidioStr] = useState("");
+  const [horasSupStr, setHorasSupStr] = useState<string[]>(["", "", "", ""]);
+  const [premioStr, setPremioStr] = useState("");
+  const [premioRegular, setPremioRegular] = useState(true);
+  const [subFeriasStr, setSubFeriasStr] = useState("");
+  const [subNatalStr, setSubNatalStr] = useState("");
+  const [ajNDiasStr, setAjNDiasStr] = useState("");
+  const [ajNValStr, setAjNValStr] = useState("");
+  const [ajEDiasStr, setAjEDiasStr] = useState("");
+  const [ajEValStr, setAjEValStr] = useState("");
 
   const bruto = num(brutoStr);
   const subsidioDia = num(subsidioDiaStr);
@@ -156,6 +201,50 @@ export function SimuladorVencimento() {
     [bruto, dependentes, variavelAnual, estadoCivil, deficiencia]
   );
 
+  // Input estável para a auditoria embutida (reflete a simulação atual).
+  const auditInput = useMemo(
+    () => ({
+      salarioBruto: bruto,
+      dependentes,
+      subsidioRefeicaoDia: temSubsidio ? subsidioDia : 0,
+      subsidioRefeicaoCartao: cartao,
+      diasUteis,
+      estadoCivil,
+      deficiencia,
+    }),
+    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis, estadoCivil, deficiencia]
+  );
+
+  // Recibo detalhado (com rendimentos adicionais e faltas).
+  const diasSemSubsidio = Math.min(diasUteis, Math.max(0, Math.round(num(diasSemSubsidioStr))));
+  const det = useMemo(
+    () =>
+      calcularReciboMensal({
+        salarioBruto: bruto,
+        dependentes,
+        estadoCivil,
+        deficiencia,
+        subsidioRefeicaoDia: temSubsidio ? subsidioDia : 0,
+        subsidioRefeicaoCartao: cartao,
+        diasSubsidio: Math.max(0, diasUteis - diasSemSubsidio),
+        horasAusencia: num(horasAusenciaStr),
+        horasSuplementares: horasSupStr.map(num),
+        premio: num(premioStr),
+        premioRegular,
+        subsidioFerias: num(subFeriasStr),
+        subsidioNatal: num(subNatalStr),
+        ajudasNacionalDias: Math.round(num(ajNDiasStr)),
+        ajudasNacionalValorDia: num(ajNValStr),
+        ajudasEstrangeiroDias: Math.round(num(ajEDiasStr)),
+        ajudasEstrangeiroValorDia: num(ajEValStr),
+      }),
+    [
+      bruto, dependentes, estadoCivil, deficiencia, temSubsidio, subsidioDia, cartao, diasUteis, diasSemSubsidio,
+      horasAusenciaStr, horasSupStr, premioStr, premioRegular, subFeriasStr, subNatalStr,
+      ajNDiasStr, ajNValStr, ajEDiasStr, ajEValStr,
+    ]
+  );
+
   const limiteSubsidio = cartao ? SUBSIDIO_REFEICAO.cartao.value : SUBSIDIO_REFEICAO.dinheiro.value;
   const subsidioExcede = temSubsidio && subsidioDia > limiteSubsidio;
   const liquidoMostrado = duodecimos ? ra.liquidoMedioMes : r.liquido;
@@ -166,19 +255,32 @@ export function SimuladorVencimento() {
   const segBruto: Seg[] = [
     { label: "Fica contigo", value: fica, color: "", brand: true },
     { label: "Retenção IRS", value: r.irsRetido, color: COR_IRS },
-    { label: "Segurança Social", value: r.ssTrabalhador, color: COR_SS },
+    { label: "Segurança Social", value: r.ssTrabalhador, cls: CLS_SS },
   ];
   const descontosAnuais = ra.irsAnual + ra.ssAnual;
   const segAno: Seg[] = [
     { label: "Líquido", value: ra.liquidoAnual, color: "", brand: true },
-    { label: "IRS + SS", value: descontosAnuais, color: COR_SS },
+    { label: "IRS + SS", value: descontosAnuais, cls: CLS_SS },
   ];
 
-  const { cenarios, carregado: cenariosProntos, naNuvem, plano, limite, limiteAtingido, guardar, remover } = useVencimentos();
+  const { cenarios, carregado: cenariosProntos, naNuvem, limite, limiteAtingido, guardar, remover } = useVencimentos();
   const [avisoGuardar, setAvisoGuardar] = useState<string | null>(null);
 
   function exportarCSV() {
-    const csv = gerarCSVCenarios(cenarios);
+    // Inclui sempre a simulação atual (mesmo sem cenários guardados) e, a seguir,
+    // o histórico guardado — para o CSV ser útil em qualquer situação.
+    const cenarioAtual: CenarioVencimento = {
+      id: "atual",
+      nome: "Simulação atual",
+      salarioBruto: bruto,
+      dependentes,
+      subsidioRefeicaoDia: temSubsidio ? subsidioDia : 0,
+      subsidioRefeicaoCartao: cartao,
+      diasUteis,
+      duodecimos,
+      criadoEm: new Date().toISOString(),
+    };
+    const csv = gerarCSVCenarios([cenarioAtual, ...cenarios]);
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -247,6 +349,9 @@ export function SimuladorVencimento() {
   // Estilos partilhados
   const subCard = "rounded-2xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-800/40 p-4";
   const eyebrow = "text-[11px] font-semibold uppercase tracking-wide text-stone-400";
+  const campoSm =
+    "w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-3 py-2 text-sm text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand";
+  const labelSm = "mb-1.5 block text-xs font-medium text-stone-500 dark:text-stone-400";
   const seg = (ativo: boolean) =>
     `rounded-xl border px-3 py-2 text-xs font-semibold transition-all ${
       ativo
@@ -403,6 +508,143 @@ export function SimuladorVencimento() {
               </div>
             )}
           </div>
+
+          {/* Rendimentos adicionais e faltas (secção avançada) */}
+          <div className="rounded-2xl border border-stone-100 dark:border-stone-700 bg-stone-50/70 dark:bg-stone-800/50">
+            <button
+              type="button"
+              onClick={() => setMostrarExtras((v) => !v)}
+              aria-expanded={mostrarExtras}
+              className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+            >
+              <span className="flex items-center gap-2 text-sm font-semibold text-stone-700 dark:text-stone-300">
+                <Coin size={15} className="text-brand" /> Rendimentos adicionais e faltas
+              </span>
+              <Plus size={16} className={`flex-shrink-0 text-stone-400 transition-transform ${mostrarExtras ? "rotate-45" : ""}`} />
+            </button>
+
+            {mostrarExtras && (
+              <div className="space-y-4 border-t border-stone-100 dark:border-stone-700 px-4 pb-4 pt-3">
+                {/* Mês e ano de referência (contexto) */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="mes" className={labelSm}>Mês de referência</label>
+                    <select id="mes" value={mes} onChange={(e) => setMes(Number(e.target.value))} className={campoSm}>
+                      {MESES.map((m, i) => (
+                        <option key={m} value={i}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <span className={labelSm}>Ano</span>
+                    <div className={`${campoSm} flex items-center text-stone-500 dark:text-stone-400`}>2026 (atual)</div>
+                  </div>
+                </div>
+
+                {/* Faltas */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="faltas" className={labelSm}>
+                      Horas de ausência{" "}
+                      <InfoTip label="Faltas">Horas de falta não remuneradas. Descontam-se à taxa horária (retribuição × 12 ÷ (52 × {HORARIO_SEMANAL_COMPLETO.value}h)).</InfoTip>
+                    </label>
+                    <input id="faltas" type="text" inputMode="decimal" autoComplete="off" value={horasAusenciaStr} onChange={(e) => setHorasAusenciaStr(soDecimal(e.target.value))} placeholder="0" className={campoSm} />
+                  </div>
+                  <div>
+                    <label htmlFor="dias-sem-sub" className={labelSm}>Dias sem subsídio refeição</label>
+                    <input id="dias-sem-sub" type="text" inputMode="numeric" autoComplete="off" value={diasSemSubsidioStr} onChange={(e) => setDiasSemSubsidioStr(soInteiro(e.target.value))} placeholder="0" className={campoSm} />
+                  </div>
+                </div>
+
+                {/* Trabalho suplementar */}
+                <div>
+                  <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-stone-600 dark:text-stone-400">
+                    Trabalho suplementar (horas)
+                    <InfoTip label="Art. 268.º do Código do Trabalho">
+                      Acréscimos sobre a retribuição horária: 25% (1.ª hora) e 37,5% (seguintes) em dia útil; 50% em dia
+                      de descanso ou feriado. Acima de 100h/ano sobem para 50%/75%/100%. A retenção de IRS sobre estas
+                      horas é metade da taxa do mês.
+                    </InfoTip>
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {TRABALHO_SUPLEMENTAR.acrescimos.value.map((acrescimo, i) => (
+                      <div key={i}>
+                        <label htmlFor={`sup-${i}`} className="mb-1 block text-[11px] text-stone-400">
+                          +{(acrescimo * 100).toString().replace(".", ",")}% · {SUPLEMENTAR_LABELS[i]}
+                        </label>
+                        <input
+                          id={`sup-${i}`}
+                          type="text"
+                          inputMode="decimal"
+                          autoComplete="off"
+                          value={horasSupStr[i]}
+                          onChange={(e) =>
+                            setHorasSupStr((arr) => arr.map((x, j) => (j === i ? soDecimal(e.target.value) : x)))
+                          }
+                          placeholder="0"
+                          className={campoSm}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Prémio */}
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <label htmlFor="premio" className={labelSm}>Prémio / bónus (€)</label>
+                    <label className="mb-1.5 flex cursor-pointer items-center gap-1.5 text-[11px] text-stone-500 dark:text-stone-400">
+                      <input type="checkbox" checked={premioRegular} onChange={(e) => setPremioRegular(e.target.checked)} className="h-3.5 w-3.5 accent-brand" />
+                      Regular
+                      <InfoTip label="Segurança Social">Prémios de caráter regular integram a base de incidência da Segurança Social (Código Contributivo). Os pontuais/voluntários não.</InfoTip>
+                    </label>
+                  </div>
+                  <input id="premio" type="text" inputMode="decimal" autoComplete="off" value={premioStr} onChange={(e) => setPremioStr(soDecimal(e.target.value))} placeholder="0" className={campoSm} />
+                </div>
+
+                {/* Subsídios pagos este mês */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="sub-ferias" className={labelSm}>Subsídio de férias (€)</label>
+                    <input id="sub-ferias" type="text" inputMode="decimal" autoComplete="off" value={subFeriasStr} onChange={(e) => setSubFeriasStr(soDecimal(e.target.value))} placeholder="0" className={campoSm} />
+                  </div>
+                  <div>
+                    <label htmlFor="sub-natal" className={labelSm}>Subsídio de Natal (€)</label>
+                    <input id="sub-natal" type="text" inputMode="decimal" autoComplete="off" value={subNatalStr} onChange={(e) => setSubNatalStr(soDecimal(e.target.value))} placeholder="0" className={campoSm} />
+                  </div>
+                </div>
+
+                {/* Ajudas de custo */}
+                <div>
+                  <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-stone-600 dark:text-stone-400">
+                    Ajudas de custo (deslocações)
+                    <InfoTip label="Limites de isenção 2026">
+                      Isentas de IRS e Segurança Social até {fmt(AJUDAS_CUSTO.nacionalDia.value)}/dia em território
+                      nacional e {fmt(AJUDAS_CUSTO.estrangeiroDia.value)}/dia no estrangeiro. O que exceder é tributado.
+                    </InfoTip>
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label htmlFor="aj-n-dias" className="mb-1 block text-[11px] text-stone-400">Dias (nacional)</label>
+                      <input id="aj-n-dias" type="text" inputMode="numeric" autoComplete="off" value={ajNDiasStr} onChange={(e) => setAjNDiasStr(soInteiro(e.target.value))} placeholder="0" className={campoSm} />
+                    </div>
+                    <div>
+                      <label htmlFor="aj-n-val" className="mb-1 block text-[11px] text-stone-400">€/dia (nacional)</label>
+                      <input id="aj-n-val" type="text" inputMode="decimal" autoComplete="off" value={ajNValStr} onChange={(e) => setAjNValStr(soDecimal(e.target.value))} placeholder="0" className={campoSm} />
+                    </div>
+                    <div>
+                      <label htmlFor="aj-e-dias" className="mb-1 block text-[11px] text-stone-400">Dias (estrangeiro)</label>
+                      <input id="aj-e-dias" type="text" inputMode="numeric" autoComplete="off" value={ajEDiasStr} onChange={(e) => setAjEDiasStr(soInteiro(e.target.value))} placeholder="0" className={campoSm} />
+                    </div>
+                    <div>
+                      <label htmlFor="aj-e-val" className="mb-1 block text-[11px] text-stone-400">€/dia (estrangeiro)</label>
+                      <input id="aj-e-val" type="text" inputMode="decimal" autoComplete="off" value={ajEValStr} onChange={(e) => setAjEValStr(soDecimal(e.target.value))} placeholder="0" className={campoSm} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── Painel de resultados ── */}
@@ -442,8 +684,8 @@ export function SimuladorVencimento() {
                 {segBruto.map((s) => (
                   <li key={s.label} className="flex items-center gap-2.5">
                     <span
-                      className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${s.brand ? "bg-brand" : ""}`}
-                      style={{ background: s.brand ? undefined : s.color }}
+                      className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${s.brand ? "bg-brand" : s.cls ?? ""}`}
+                      style={{ background: s.brand ? undefined : s.cls ? "currentColor" : s.color }}
                     />
                     <span className="flex-1 text-sm text-stone-600 dark:text-stone-400">{s.label}</span>
                     <span className="whitespace-nowrap text-sm font-semibold tabular-nums text-stone-800 dark:text-stone-100">{fmt(s.value)}</span>
@@ -527,60 +769,154 @@ export function SimuladorVencimento() {
           </dl>
         </div>
 
-        {/* Mealheiro fiscal */}
+        {/* Mealheiro fiscal — acerto anual de IRS */}
         <div className={subCard}>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className={`${eyebrow} flex items-center gap-1.5`}>
-              <Coin size={14} className="text-brand" /> Mealheiro · acerto anual
-              <InfoTip label="Rendimentos variáveis">
-                Comissões, prémios e horas extra são muitas vezes sub-retidos: a retenção mensal segue o salário base,
-                mas o IRS anual incide sobre o total. Mostramos quanto reservar.
-              </InfoTip>
-            </p>
-            <div className="relative w-32">
-              <input
-                id="variavel"
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                value={variavelStr}
-                onChange={(e) => setVariavelStr(soDecimal(e.target.value))}
-                placeholder="Variável/ano"
-                aria-label="Rendimentos variáveis anuais"
-                className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-3 py-2 text-sm text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand"
-              />
-              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-stone-400">€</span>
-            </div>
+          <div className="mb-3 flex items-center gap-1.5">
+            <Coin size={14} className="text-brand" />
+            <p className={eyebrow}>Mealheiro · acerto anual de IRS</p>
+            <InfoTip label="Como funciona">
+              A retenção mensal segue o salário base, mas o IRS do ano incide sobre tudo o que recebeste. Rendimentos
+              variáveis (comissões, prémios, horas extra) são muitas vezes sub-retidos — aqui estimamos se vais pagar ou
+              receber no acerto, e quanto convém reservar por mês. É uma estimativa.
+            </InfoTip>
           </div>
-          <div className="grid grid-cols-3 gap-x-4 gap-y-2 text-sm">
-            <div>
-              <dt className="text-xs text-stone-400">IRS apurado/ano</dt>
-              <dd className="font-medium text-stone-800 dark:text-stone-100 tabular-nums">{fmt(meal.irsApurado)}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-stone-400">IRS retido/ano</dt>
-              <dd className="font-medium text-stone-800 dark:text-stone-100 tabular-nums">{fmt(meal.irsRetido)}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-stone-400">{meal.acerto > 0 ? "A reservar/mês" : "Reembolso est."}</dt>
-              <dd className={`font-semibold tabular-nums ${meal.acerto > 0 ? "text-alert-text dark:text-amber-400" : "text-brand"}`}>
-                {meal.acerto > 0 ? fmt(meal.reservaMensal) : fmt(Math.abs(meal.acerto))}
-              </dd>
-            </div>
+
+          {/* Input claro, com rótulo e ajuda — para se perceber o que preencher. */}
+          <label htmlFor="variavel" className="mb-1.5 block text-xs font-semibold text-stone-600 dark:text-stone-400">
+            Rendimentos variáveis recebidos no ano
+          </label>
+          <div className="relative">
+            <input
+              id="variavel"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              value={variavelStr}
+              onChange={(e) => setVariavelStr(soDecimal(e.target.value))}
+              placeholder="Ex.: 3000"
+              aria-label="Rendimentos variáveis recebidos no ano"
+              className="w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-4 py-2.5 text-sm text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">€/ano</span>
           </div>
-          <p className="mt-2 text-xs text-stone-400">
-            {meal.acerto > 0
-              ? `Reserva ${fmt(meal.reservaMensal)}/mês (${fmt(meal.acerto)} no ano) para o acerto de IRS.`
-              : "Pela estimativa, não deverás IRS adicional no acerto anual."}
+          <p className="mt-1.5 text-[11px] leading-relaxed text-stone-400">
+            Comissões, prémios, horas extra e outros extras pagos ao longo do ano, além do salário base.
           </p>
+
+          {variavelAnual <= 0 ? (
+            <div className="mt-3 rounded-xl border border-dashed border-stone-200 dark:border-stone-700 px-3 py-3 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+              Indica os teus rendimentos variáveis acima para estimar o acerto anual de IRS — quanto deverás pagar ou
+              receber, e quanto reservar por mês para não seres apanhado de surpresa.
+            </div>
+          ) : (
+            <>
+              <dl className="mt-3 space-y-1.5 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-xs text-stone-400">Bruto considerado no ano</dt>
+                  <dd className="font-medium text-stone-800 dark:text-stone-100 tabular-nums">{fmt(meal.brutoAnual)}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-xs text-stone-400">IRS apurado no ano</dt>
+                  <dd className="font-medium text-stone-800 dark:text-stone-100 tabular-nums">{fmt(meal.irsApurado)}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-xs text-stone-400">IRS retido no ano (estimado)</dt>
+                  <dd className="font-medium text-stone-800 dark:text-stone-100 tabular-nums">{fmt(meal.irsRetido)}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 border-t border-stone-100 dark:border-stone-800 pt-1.5">
+                  <dt className="text-xs font-semibold text-stone-500 dark:text-stone-300">
+                    {meal.acerto > 0 ? "Falta pagar no acerto" : "Reembolso estimado"}
+                  </dt>
+                  <dd className={`font-semibold tabular-nums ${meal.acerto > 0 ? "text-alert-text dark:text-amber-400" : "text-brand"}`}>
+                    {fmt(Math.abs(meal.acerto))}
+                  </dd>
+                </div>
+              </dl>
+              <p
+                className={`mt-3 rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                  meal.acerto > 0
+                    ? "border border-alert-border bg-alert-bg text-alert-text"
+                    : "border border-brand/20 bg-brand-light text-brand-dark"
+                }`}
+              >
+                {meal.acerto > 0
+                  ? `Reserva ${fmt(meal.reservaMensal)}/mês (${fmt(meal.acerto)} no ano) para cobrires o acerto de IRS sem sustos.`
+                  : `Pela estimativa, não deverás IRS adicional — deverás até receber cerca de ${fmt(Math.abs(meal.acerto))} no acerto anual.`}
+              </p>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Relatório PDF — extra Pro (bloqueio misto) */}
+      {/* Recibo detalhado do mês — só aparece quando há rendimentos adicionais ou faltas */}
+      {det.temExtras && (
+        <div className="mt-4">
+          <div className={subCard}>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className={`${eyebrow} flex items-center gap-1.5`}>
+                <Wallet size={14} className="text-brand" /> Recibo de {MESES[mes]} 2026 · com extras
+              </p>
+              <span className="text-xs font-semibold text-brand tabular-nums">{fmt(det.brutoTotal)} bruto</span>
+            </div>
+            <dl className="space-y-1.5">
+              <LinhaRecibo label="Salário base" value={fmt(det.baseRemunerada)} sub={det.descontoFaltas > 0 ? `após ${det.horasAusencia} h de ausência` : undefined} />
+              {det.suplementarTotal > 0 && (
+                <LinhaRecibo
+                  label="Trabalho suplementar"
+                  value={`+ ${fmt(det.suplementarTotal)}`}
+                  sub={det.suplementarDetalhe
+                    .filter((d) => d.horas > 0)
+                    .map((d) => `${d.horas}h a +${(d.acrescimo * 100).toString().replace(".", ",")}%`)
+                    .join(" · ")}
+                />
+              )}
+              {det.premio > 0 && (
+                <LinhaRecibo label={`Prémio${det.premioRegular ? " (regular)" : " (pontual)"}`} value={`+ ${fmt(det.premio)}`} sub={det.premioRegular ? "integra a base da Segurança Social" : "fora da base da Segurança Social"} />
+              )}
+              {det.subsidioFerias > 0 && <LinhaRecibo label="Subsídio de férias" value={`+ ${fmt(det.subsidioFerias)}`} />}
+              {det.subsidioNatal > 0 && <LinhaRecibo label="Subsídio de Natal" value={`+ ${fmt(det.subsidioNatal)}`} />}
+              {det.ajudasTotal > 0 && (
+                <LinhaRecibo
+                  label="Ajudas de custo"
+                  value={`+ ${fmt(det.ajudasTotal)}`}
+                  sub={det.ajudasTributadas > 0 ? `${fmt(det.ajudasIsentas)} isentas · ${fmt(det.ajudasTributadas)} tributadas` : `${fmt(det.ajudasIsentas)} isentas`}
+                />
+              )}
+              {det.subsidioRefeicaoTotal > 0 && (
+                <LinhaRecibo label="Subsídio de refeição" value={`+ ${fmt(det.subsidioRefeicaoTotal)}`} sub={det.subsidioRefeicaoTributado > 0 ? `${fmt(det.subsidioRefeicaoTributado)} acima do limite (tributado)` : undefined} />
+              )}
+              <div className="my-1 border-t border-stone-100 dark:border-stone-800" />
+              <LinhaRecibo label="Segurança Social" value={`− ${fmt(det.ssTrabalhador)}`} muted sub={`11% sobre ${fmt(det.baseSS)}`} />
+              <LinhaRecibo
+                label="IRS retido"
+                value={`− ${fmt(det.irsTotal)}`}
+                muted
+                sub={det.suplementarIRS > 0 || det.irsSubsidios > 0 ? "inclui retenção autónoma do suplementar e subsídios" : undefined}
+              />
+            </dl>
+            <div className="mt-3 flex items-center justify-between border-t border-stone-100 dark:border-stone-800 pt-2.5">
+              <span className="text-sm font-semibold text-stone-700 dark:text-stone-300">Líquido total do mês</span>
+              <span className="font-display text-xl font-semibold text-brand tabular-nums">{fmt(det.liquido)}</span>
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-stone-400">
+              Estimativa. Horas extra à taxa horária (Art. 271.º CT) com os acréscimos do Art. 268.º; retenção do
+              suplementar a 50% da taxa do mês; subsídios de férias/Natal com retenção autónoma; ajudas de custo isentas
+              até ao limite legal. Não substitui o recibo oficial.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Auditoria do recibo — 1.ª grátis (com conta) · seguintes Pro */}
+      <div className="mt-4">
+        <AuditoriaPainel input={auditInput} />
+      </div>
+
+      {/* Relatório PDF + exportação CSV — extra Pro (bloqueio misto desbloqueia ambos) */}
       <div className="mt-4">
         <ProGate
-          title="Relatório financeiro em PDF"
-          description="Descarrega um relatório completo desta simulação — estrutura de custos e visão anual — pronto a apresentar numa negociação salarial."
+          title="Relatório em PDF e exportação CSV"
+          description="Descarrega esta simulação como relatório PDF — estrutura de custos e visão anual — e exporta os dados em CSV para Excel. Tudo incluído no plano Pro."
         >
           <div className={subCard}>
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -589,19 +925,28 @@ export function SimuladorVencimento() {
                   <FileSign size={18} />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">Relatório financeiro</p>
+                  <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">Relatório financeiro · PDF e CSV</p>
                   <p className="text-xs text-stone-400 tabular-nums">
                     Líquido {fmt(liquidoMostrado)}/mês · {fmt(ra.liquidoAnual)}/ano · empresa {fmt(r.custoEmpresa)}
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={descarregarRelatorio}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-glow transition-all hover:shadow-float"
-              >
-                <Export size={14} /> Descarregar PDF
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={descarregarRelatorio}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-glow transition-all hover:shadow-float"
+                >
+                  <FileSign size={14} /> Descarregar PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={exportarCSV}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-brand/30 bg-brand-light px-3.5 py-2 text-xs font-semibold text-brand-dark transition-all hover:bg-brand/15"
+                >
+                  <Export size={14} /> Exportar CSV
+                </button>
+              </div>
             </div>
           </div>
         </ProGate>
@@ -670,23 +1015,6 @@ export function SimuladorVencimento() {
           </ul>
         )}
 
-        {cenariosProntos && cenarios.length > 0 && (
-          <div className="mt-3 flex justify-end">
-            {plano === "pro" ? (
-              <button
-                type="button"
-                onClick={exportarCSV}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-500 dark:text-stone-400 transition-colors hover:text-brand"
-              >
-                <Export size={14} /> Exportar CSV
-              </button>
-            ) : (
-              <Link href="/precos" className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-400 transition-colors hover:text-brand">
-                <Export size={14} /> Exportar CSV (Pro)
-              </Link>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

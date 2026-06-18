@@ -20,6 +20,10 @@ import {
   DEDUCAO_DEPENDENTE,
   DEDUCAO_DEPENDENTE_3MAIS,
   MINIMO_EXISTENCIA,
+  HORARIO_SEMANAL_COMPLETO,
+  TRABALHO_SUPLEMENTAR,
+  RETENCAO_SUPLEMENTAR_FATOR,
+  AJUDAS_CUSTO,
   tabelaRetencaoDependente,
   type EscalaoRetencao,
   type EstadoCivilRet,
@@ -142,6 +146,220 @@ export function calcularVencimento(input: VencimentoInput): VencimentoResult {
     liquido,
     taxaEfetiva,
     custoEmpresa,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  Recibo mensal DETALHADO — rendimentos adicionais e faltas
+//  ---------------------------------------------------------------------
+//  Estende o recibo base com: trabalho suplementar (horas extra),
+//  prémios (regulares contam para a SS), subsídios de férias/Natal pagos
+//  no mês, ajudas de custo (isentas até ao limite legal) e faltas (horas
+//  de ausência não remuneradas). Cada regra fiscal vem de `fiscal-data.ts`:
+//   · retribuição horária = (base × 12) ÷ (52 × horas semanais) [Art. 271.º CT];
+//   · acréscimos do trabalho suplementar [Art. 268.º CT];
+//   · retenção autónoma do suplementar = 50% da taxa efetiva mensal (2026);
+//   · subsídios de férias/Natal: retenção autónoma (Art. 99.º-C CIRS);
+//   · ajudas de custo isentas até ao limite diário (nacional/estrangeiro);
+//   · prémios regulares integram a base de incidência da SS (Cód. Contributivo).
+//  Com todos os extras a zero, reproduz exatamente `calcularVencimento`.
+//  É ESTIMATIVA — não substitui o recibo oficial.
+// ─────────────────────────────────────────────────────────────────────
+
+export interface ReciboMensalInput {
+  /** Remuneração base mensal ilíquida. */
+  salarioBruto: number;
+  dependentes?: number;
+  estadoCivil?: EstadoCivilRet;
+  deficiencia?: boolean;
+  /** Período normal de trabalho semanal (horas). Default 40. */
+  horasSemanais?: number;
+  // Subsídio de refeição
+  subsidioRefeicaoDia?: number;
+  subsidioRefeicaoCartao?: boolean;
+  /** Dias com subsídio de refeição (já líquido dos dias sem subsídio). */
+  diasSubsidio?: number;
+  /** Horas de ausência não remuneradas (faltas). */
+  horasAusencia?: number;
+  /** Horas de trabalho suplementar por acréscimo (ordem de TRABALHO_SUPLEMENTAR.acrescimos). */
+  horasSuplementares?: number[];
+  /** Prémio pago no mês. */
+  premio?: number;
+  /** Prémio de caráter regular → integra a base da Segurança Social. */
+  premioRegular?: boolean;
+  /** Subsídio de férias pago neste mês. */
+  subsidioFerias?: number;
+  /** Subsídio de Natal pago neste mês. */
+  subsidioNatal?: number;
+  // Ajudas de custo (deslocações)
+  ajudasNacionalDias?: number;
+  ajudasNacionalValorDia?: number;
+  ajudasEstrangeiroDias?: number;
+  ajudasEstrangeiroValorDia?: number;
+}
+
+export interface ReciboMensalResult {
+  salarioBase: number;
+  retribuicaoHoraria: number;
+  horasAusencia: number;
+  descontoFaltas: number;
+  baseRemunerada: number;
+  // Trabalho suplementar
+  suplementarTotal: number;
+  suplementarDetalhe: { acrescimo: number; horas: number; valor: number }[];
+  suplementarIRS: number;
+  // Prémio
+  premio: number;
+  premioRegular: boolean;
+  // Subsídios de férias/Natal pagos no mês
+  subsidioFerias: number;
+  subsidioNatal: number;
+  irsSubsidios: number;
+  // Ajudas de custo
+  ajudasTotal: number;
+  ajudasIsentas: number;
+  ajudasTributadas: number;
+  // Subsídio de refeição
+  subsidioRefeicaoTotal: number;
+  subsidioRefeicaoIsento: number;
+  subsidioRefeicaoTributado: number;
+  // Descontos
+  baseSS: number;
+  ssTrabalhador: number;
+  irsBaseMensal: number;
+  irsTotal: number;
+  // Totais
+  brutoTotal: number;
+  liquido: number;
+  taxaEfetiva: number;
+  custoEmpresa: number;
+  /** True se há algum rendimento adicional ou falta (para a UI decidir mostrar). */
+  temExtras: boolean;
+}
+
+export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResult {
+  const salarioBase = Math.max(0, input.salarioBruto);
+  const dependentes = Math.max(0, Math.floor(input.dependentes ?? 0));
+  const ec = input.estadoCivil ?? "naoCasado";
+  const def = input.deficiencia ?? false;
+
+  // Retribuição horária (Art. 271.º CT).
+  const horasSemanais = Math.max(1, input.horasSemanais ?? HORARIO_SEMANAL_COMPLETO.value);
+  const retribuicaoHoraria = cent((salarioBase * 12) / (52 * horasSemanais));
+
+  // Faltas — horas de ausência não remuneradas reduzem a base.
+  const horasAusencia = Math.max(0, input.horasAusencia ?? 0);
+  const descontoFaltas = cent(Math.min(salarioBase, retribuicaoHoraria * horasAusencia));
+  const baseRemunerada = cent(salarioBase - descontoFaltas);
+
+  // Trabalho suplementar — por cada acréscimo legal, valor = hora × (1 + acréscimo).
+  const acrescimos = TRABALHO_SUPLEMENTAR.acrescimos.value;
+  const horasSup = input.horasSuplementares ?? [];
+  const suplementarDetalhe = acrescimos.map((acrescimo, i) => {
+    const horas = Math.max(0, horasSup[i] ?? 0);
+    return { acrescimo, horas, valor: cent(retribuicaoHoraria * horas * (1 + acrescimo)) };
+  });
+  const suplementarTotal = cent(suplementarDetalhe.reduce((s, x) => s + x.valor, 0));
+
+  // Prémio.
+  const premio = Math.max(0, input.premio ?? 0);
+  const premioRegular = !!input.premioRegular;
+
+  // Subsídios de férias/Natal pagos no mês.
+  const subsidioFerias = Math.max(0, input.subsidioFerias ?? 0);
+  const subsidioNatal = Math.max(0, input.subsidioNatal ?? 0);
+
+  // Ajudas de custo — isentas até ao limite diário; o excesso é tributado.
+  const ajN = Math.max(0, input.ajudasNacionalDias ?? 0);
+  const ajNv = Math.max(0, input.ajudasNacionalValorDia ?? 0);
+  const ajE = Math.max(0, input.ajudasEstrangeiroDias ?? 0);
+  const ajEv = Math.max(0, input.ajudasEstrangeiroValorDia ?? 0);
+  const ajudasTotal = cent(ajN * ajNv + ajE * ajEv);
+  const ajudasIsentas = cent(
+    Math.min(ajNv, AJUDAS_CUSTO.nacionalDia.value) * ajN + Math.min(ajEv, AJUDAS_CUSTO.estrangeiroDia.value) * ajE
+  );
+  const ajudasTributadas = cent(ajudasTotal - ajudasIsentas);
+
+  // Subsídio de refeição.
+  const dias = Math.max(0, input.diasSubsidio ?? 22);
+  const valorDia = Math.max(0, input.subsidioRefeicaoDia ?? 0);
+  const limiteDia = input.subsidioRefeicaoCartao ? SUBSIDIO_REFEICAO.cartao.value : SUBSIDIO_REFEICAO.dinheiro.value;
+  const subsidioRefeicaoTotal = cent(valorDia * dias);
+  const subsidioRefeicaoIsento = cent(Math.min(valorDia, limiteDia) * dias);
+  const subsidioRefeicaoTributado = cent(subsidioRefeicaoTotal - subsidioRefeicaoIsento);
+
+  // Base de incidência da Segurança Social (11% do trabalhador): base remunerada,
+  // suplementar, subsídios, prémio SE regular, e os excessos tributáveis.
+  const baseSS = cent(
+    baseRemunerada +
+      suplementarTotal +
+      (premioRegular ? premio : 0) +
+      subsidioFerias +
+      subsidioNatal +
+      ajudasTributadas +
+      subsidioRefeicaoTributado
+  );
+  const ssTrabalhador = cent(baseSS * SS_DEPENDENTE.trabalhador.value);
+
+  // IRS — retenção da remuneração mensal (tabela) sobre base + prémio + excessos.
+  const remMensal = cent(baseRemunerada + premio + ajudasTributadas + subsidioRefeicaoTributado);
+  const irsBaseMensal = retencaoPorSituacao(remMensal, dependentes, ec, def);
+  // Trabalho suplementar: retenção autónoma = 50% da taxa efetiva mensal.
+  const taxaEfetivaMes = remMensal > 0 ? irsBaseMensal / remMensal : 0;
+  const suplementarIRS = cent(suplementarTotal * taxaEfetivaMes * RETENCAO_SUPLEMENTAR_FATOR.value);
+  // Subsídios de férias/Natal: retenção autónoma (cada um pela tabela, em separado).
+  const irsSubsidios = cent(
+    retencaoPorSituacao(subsidioFerias, dependentes, ec, def) +
+      retencaoPorSituacao(subsidioNatal, dependentes, ec, def)
+  );
+  const irsTotal = cent(irsBaseMensal + suplementarIRS + irsSubsidios);
+
+  // Totais.
+  const brutoTotal = cent(
+    baseRemunerada + suplementarTotal + premio + subsidioFerias + subsidioNatal + ajudasTotal + subsidioRefeicaoTotal
+  );
+  const liquido = cent(brutoTotal - ssTrabalhador - irsTotal);
+  const rendimentoSujeito = cent(brutoTotal - ajudasIsentas - subsidioRefeicaoIsento);
+  const taxaEfetiva = rendimentoSujeito > 0 ? (ssTrabalhador + irsTotal) / rendimentoSujeito : 0;
+  const custoEmpresa = cent(baseSS * (1 + SS_DEPENDENTE.entidade.value));
+
+  const temExtras =
+    descontoFaltas > 0 ||
+    suplementarTotal > 0 ||
+    premio > 0 ||
+    subsidioFerias > 0 ||
+    subsidioNatal > 0 ||
+    ajudasTotal > 0;
+
+  return {
+    salarioBase,
+    retribuicaoHoraria,
+    horasAusencia,
+    descontoFaltas,
+    baseRemunerada,
+    suplementarTotal,
+    suplementarDetalhe,
+    suplementarIRS,
+    premio,
+    premioRegular,
+    subsidioFerias,
+    subsidioNatal,
+    irsSubsidios,
+    ajudasTotal,
+    ajudasIsentas,
+    ajudasTributadas,
+    subsidioRefeicaoTotal,
+    subsidioRefeicaoIsento,
+    subsidioRefeicaoTributado,
+    baseSS,
+    ssTrabalhador,
+    irsBaseMensal,
+    irsTotal,
+    brutoTotal,
+    liquido,
+    taxaEfetiva,
+    custoEmpresa,
+    temExtras,
   };
 }
 

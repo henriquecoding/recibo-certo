@@ -106,10 +106,12 @@ export default function Hero() {
   const dados = EXEMPLO[perfil];
   const c = dados.card;
   const pctTeu = Math.round((c.teu / c.bruto) * 100);
-  const seg = [
+  // Escala de verdes da marca: teu = verde da marca, IRS = mint, SS = verde
+  // profundo (currentColor + text-brand-deep, adapta ao modo escuro).
+  const seg: { v: number; color?: string; cls?: string }[] = [
     { v: c.teu, color: "#1D9E75" },
     { v: c.irs, color: "#9FE1CB" },
-    { v: c.ss, color: "#C2745A" },
+    { v: c.ss, cls: "text-brand-deep" },
   ];
   const total = seg.reduce((s, p) => s + p.v, 0) || 1;
 
@@ -226,9 +228,9 @@ export default function Hero() {
             <div className="mt-5 flex h-2 gap-0.5 overflow-hidden rounded-full">
               {seg.map((p, i) => (
                 <div
-                  key={p.color}
-                  className={i === 0 ? "rounded-l-full" : i === seg.length - 1 ? "rounded-r-full" : ""}
-                  style={{ background: p.color, width: `${(p.v / total) * 100}%` }}
+                  key={i}
+                  className={`${i === 0 ? "rounded-l-full" : i === seg.length - 1 ? "rounded-r-full" : ""} ${p.cls ?? ""}`}
+                  style={{ background: p.cls ? "currentColor" : p.color, width: `${(p.v / total) * 100}%` }}
                 />
               ))}
             </div>
