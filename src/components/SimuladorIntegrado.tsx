@@ -6000,16 +6000,16 @@ export default function SimuladorIntegrado() {
                                 <div
                                   style={{
                                     width: `${(resultEmpresa.totalCustos / total) * 100}%`,
-                                    background: "#C2745A",
+                                    background: "currentColor",
                                   }}
-                                  className="transition-all duration-500 rounded-r-full"
+                                  className="transition-all duration-500 rounded-r-full text-brand-deep"
                                 />
                               </>
                             );
                           })()}
                         </div>
                         <div className="flex flex-wrap gap-3">
-                          {[
+                          {([
                             { label: "Teu", color: "#1D9E75", show: true },
                             {
                               label: "IRC após benefícios",
@@ -6028,10 +6028,11 @@ export default function SimuladorIntegrado() {
                             },
                             {
                               label: "Custos + salário",
-                              color: "#C2745A",
+                              color: "#0A4A39",
+                              cls: "text-brand-deep",
                               show: true,
                             },
-                          ]
+                          ] as { label: string; color: string; cls?: string; show: boolean }[])
                             .filter((l) => l.show)
                             .map((l) => (
                               <div

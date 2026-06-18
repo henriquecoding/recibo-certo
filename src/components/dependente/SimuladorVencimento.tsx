@@ -24,10 +24,12 @@ const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
 const soDecimal = (s: string) => s.replace(/[^\d.,]/g, "");
 const soInteiro = (s: string) => s.replace(/\D/g, "").slice(0, 2);
 
-// Tons da marca para os segmentos (verde = é teu; pastéis para o que sai).
-type Seg = { label: string; value: number; color: string; brand?: boolean };
-const COR_IRS = "#9FE1CB"; // brand-mint
-const COR_SS = "#C2745A"; // acento quente (clay) — evita o cinza de "ausência"
+// Escala monocromática de verdes da marca: líquido = verde da marca (brand),
+// IRS = mint claro, Seg. Social / descontos = verde profundo. `cls` →
+// currentColor + classe que adapta ao modo escuro; `color` → hex fixo.
+type Seg = { label: string; value: number; color?: string; brand?: boolean; cls?: string };
+const COR_IRS = "#9FE1CB"; // brand-mint (segmento do IRS)
+const CLS_SS = "text-brand-deep"; // Seg. Social / descontos — verde profundo, elegante (claro e escuro)
 
 // ── Donut genérico (SVG, sem dependências; igual à técnica do DistribuicaoDonut) ──
 function Donut({ segs, centro, centroSub }: { segs: Seg[]; centro: string; centroSub: string }) {
@@ -52,8 +54,8 @@ function Donut({ segs, centro, centroSub }: { segs: Seg[]; centro: string; centr
             cy="66"
             r={r}
             fill="none"
-            className={a.brand ? "text-brand" : undefined}
-            stroke={a.brand ? "currentColor" : a.color}
+            className={a.brand ? "text-brand" : a.cls}
+            stroke={a.brand || a.cls ? "currentColor" : a.color}
             strokeWidth="15"
             strokeDasharray={`${a.len} ${C - a.len}`}
             strokeDashoffset={a.offset}
@@ -78,10 +80,10 @@ function SegBar({ segs }: { segs: Seg[] }) {
       {segs.map((s, i) => (
         <div
           key={s.label}
-          className={`${i === 0 ? "rounded-l-full" : ""} ${i === segs.length - 1 ? "rounded-r-full" : ""} ${s.brand ? "bg-brand" : ""}`}
+          className={`${i === 0 ? "rounded-l-full" : ""} ${i === segs.length - 1 ? "rounded-r-full" : ""} ${s.brand ? "bg-brand" : s.cls ?? ""}`}
           style={{
             width: `${(Math.max(0, s.value) / total) * 100}%`,
-            background: s.brand ? undefined : s.color,
+            background: s.brand ? undefined : s.cls ? "currentColor" : s.color,
             transition: "width 0.7s cubic-bezier(0.16,1,0.3,1)",
           }}
         />
@@ -166,12 +168,12 @@ export function SimuladorVencimento() {
   const segBruto: Seg[] = [
     { label: "Fica contigo", value: fica, color: "", brand: true },
     { label: "Retenção IRS", value: r.irsRetido, color: COR_IRS },
-    { label: "Segurança Social", value: r.ssTrabalhador, color: COR_SS },
+    { label: "Segurança Social", value: r.ssTrabalhador, cls: CLS_SS },
   ];
   const descontosAnuais = ra.irsAnual + ra.ssAnual;
   const segAno: Seg[] = [
     { label: "Líquido", value: ra.liquidoAnual, color: "", brand: true },
-    { label: "IRS + SS", value: descontosAnuais, color: COR_SS },
+    { label: "IRS + SS", value: descontosAnuais, cls: CLS_SS },
   ];
 
   const { cenarios, carregado: cenariosProntos, naNuvem, plano, limite, limiteAtingido, guardar, remover } = useVencimentos();
@@ -442,8 +444,8 @@ export function SimuladorVencimento() {
                 {segBruto.map((s) => (
                   <li key={s.label} className="flex items-center gap-2.5">
                     <span
-                      className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${s.brand ? "bg-brand" : ""}`}
-                      style={{ background: s.brand ? undefined : s.color }}
+                      className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${s.brand ? "bg-brand" : s.cls ?? ""}`}
+                      style={{ background: s.brand ? undefined : s.cls ? "currentColor" : s.color }}
                     />
                     <span className="flex-1 text-sm text-stone-600 dark:text-stone-400">{s.label}</span>
                     <span className="whitespace-nowrap text-sm font-semibold tabular-nums text-stone-800 dark:text-stone-100">{fmt(s.value)}</span>
