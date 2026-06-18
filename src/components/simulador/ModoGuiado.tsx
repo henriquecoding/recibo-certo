@@ -22,6 +22,7 @@ import {
   Sparkle,
 } from "@/components/ui/Icons";
 import EuroBreakdown from "@/components/simulador/EuroBreakdown";
+import { PassoContabilista } from "@/components/simulador/PassoContabilista";
 import { pct, fmt } from "@/lib/format";
 import {
   IVA_TAXAS,
@@ -47,8 +48,8 @@ const IRS_JOVEM_ISENCAO = IRS_JOVEM.isencaoPorAno.value;
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 type TipoAtiv = "art151" | "vendas" | "hosped" | "outras" | "prop_int";
-// Passo 0 = decisor; passos 1-3 = wizard; resultado = final
-type Passo = 0 | 1 | 2 | 3 | "resultado";
+// Passo 0 = decisor; passos 1-3 = wizard; resultado = final; contabilista = passo 5
+type Passo = 0 | 1 | 2 | 3 | "resultado" | "contabilista";
 
 interface CardAtiv {
   id: TipoAtiv;
@@ -483,6 +484,7 @@ export default function ModoGuiado({
     else if (passo === 2) setPasso(1);
     else if (passo === 3) setPasso(2);
     else if (passo === "resultado") setPasso(3);
+    else if (passo === "contabilista") setPasso("resultado");
   }
 
   // Passo 0: situação face à atividade (+ decisor para quem ainda não abriu)
@@ -664,8 +666,9 @@ export default function ModoGuiado({
     );
   }
 
-  const passoNum = passo === "resultado" ? 4 : (passo as number);
-  const PASSOS = ["Atividade", "Faturação", "Situação", "Resultado"];
+  const passoNum =
+    passo === "resultado" ? 4 : passo === "contabilista" ? 5 : (passo as number);
+  const PASSOS = ["Atividade", "Faturação", "Situação", "Resultado", "A seguir"];
 
   return (
     <div className="min-h-0 bg-white dark:bg-stone-950">
@@ -727,8 +730,8 @@ export default function ModoGuiado({
       </div>
 
       {/* ── Corpo ──────────────────────────────────────────────────────────── */}
-      <div className={`mx-auto px-6 py-8 sm:px-8 ${passo === "resultado" || passo === 1 ? "max-w-5xl" : "max-w-3xl"}`}>
-        <div className={`grid gap-8 ${passo === "resultado" ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-[1fr_300px]"}`}>
+      <div className={`mx-auto px-6 py-8 sm:px-8 ${passo === "resultado" || passo === "contabilista" || passo === 1 ? "max-w-5xl" : "max-w-3xl"}`}>
+        <div className={`grid gap-8 ${passo === "resultado" || passo === "contabilista" ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-[1fr_300px]"}`}>
           {/* ── Conteúdo do passo ────────────────────────────────────────── */}
           <div className="min-w-0">
             <AnimatePresence mode="wait">
@@ -886,13 +889,30 @@ export default function ModoGuiado({
                       setTipoSelecionado(false);
                     }}
                     onVoltar={() => setPasso(3)}
+                    onProximosPassos={() => setPasso("contabilista")}
+                  />
+                </m.div>
+              )}
+
+              {passo === "contabilista" && (
+                <m.div
+                  key="contabilista"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <PassoContabilista
+                    faturacaoAnual={brutoAnual}
+                    despesasEstimadas={despGerais}
+                    onVoltar={() => setPasso("resultado")}
                   />
                 </m.div>
               )}
             </AnimatePresence>
 
             {/* ── Navegação ────────────────────────────────────────────── */}
-            {passo !== "resultado" && (
+            {passo !== "resultado" && passo !== "contabilista" && (
               <div className="mt-8 flex items-center justify-between">
                 <button
                   type="button"
@@ -916,7 +936,7 @@ export default function ModoGuiado({
             )}
 
             {/* ── Link saltar para completo ─────────────────────────── */}
-            {passo !== "resultado" && (
+            {passo !== "resultado" && passo !== "contabilista" && (
               <div className="mt-4 text-center">
                 <button
                   type="button"
@@ -930,7 +950,7 @@ export default function ModoGuiado({
           </div>
 
           {/* ── Painel ao vivo ───────────────────────────────────────── */}
-          {passo !== "resultado" && (
+          {passo !== "resultado" && passo !== "contabilista" && (
             <div className="hidden lg:block">
               <div className="sticky top-24">
                 <PainelResultadoVivo
@@ -2473,6 +2493,7 @@ function ResultadoFinal({
   onIrParaSimuladorCompleto,
   onRecomecar,
   onVoltar,
+  onProximosPassos,
 }: {
   brutoAnual: number;
   liquidoAnual: number;
@@ -2508,6 +2529,7 @@ function ResultadoFinal({
   onIrParaSimuladorCompleto: () => void;
   onRecomecar: () => void;
   onVoltar: () => void;
+  onProximosPassos: () => void;
 }) {
   const efAtiv = atividadeEspecifica ? efeitoFiscal(atividadeEspecifica) : null;
   const simAnual = useMemo(
@@ -3146,18 +3168,27 @@ function ResultadoFinal({
           <div className="flex flex-col gap-2.5">
             <button
               type="button"
+              onClick={onProximosPassos}
+              className="btn-shine flex items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:bg-brand-dark hover:shadow-float"
+            >
+              <Sparkle size={14} />
+              O que fazer a seguir
+              <ArrowRight size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={onIrParaSimuladorCompleto}
+              className="flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-5 py-3 text-sm font-semibold text-stone-700 transition-all hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200"
+            >
+              Simulador completo <ArrowRight size={14} />
+            </button>
+            <button
+              type="button"
               onClick={onVoltar}
               className="flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-5 py-3 text-sm font-semibold text-stone-600 transition-all hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
             >
               <ArrowLeft size={14} />
               Alterar dados
-            </button>
-            <button
-              type="button"
-              onClick={onIrParaSimuladorCompleto}
-              className="btn-shine flex items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:bg-brand-dark hover:shadow-float"
-            >
-              Simulador completo <ArrowRight size={14} />
             </button>
             <button
               type="button"
