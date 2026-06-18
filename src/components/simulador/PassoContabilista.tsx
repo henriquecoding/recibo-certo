@@ -42,7 +42,6 @@ export function PassoContabilista({
   const [formaJuridica, setFormaJuridica] = useState<FormaJuridica>("independente");
   const [clientes, setClientes] = useState<ClientesAmbito>("nacional");
   const [despesasStr, setDespesasStr] = useState(despesasEstimadas > 0 ? String(Math.round(despesasEstimadas)) : "");
-  const [areaMetropolitana, setAreaMetropolitana] = useState(false);
   const [trabalhadores, setTrabalhadores] = useState(false);
 
   const diag = useMemo(
@@ -52,10 +51,9 @@ export function PassoContabilista({
         faturacaoAnual,
         despesasAnuais: num(despesasStr),
         clientes,
-        areaMetropolitana,
         trabalhadores,
       }),
-    [formaJuridica, faturacaoAnual, despesasStr, clientes, areaMetropolitana, trabalhadores]
+    [formaJuridica, faturacaoAnual, despesasStr, clientes, trabalhadores]
   );
 
   const estilo = NIVEL_ESTILO[diag.nivel];
@@ -129,14 +127,9 @@ export function PassoContabilista({
             </div>
 
             <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-4 py-2.5">
-              <input type="checkbox" checked={areaMetropolitana} onChange={(e) => setAreaMetropolitana(e.target.checked)} className="h-4 w-4 accent-brand" />
-              <span className="text-sm text-stone-700 dark:text-stone-300">Sede em Lisboa ou Porto</span>
-              <InfoTip label="Honorários">Nos grandes centros, os honorários tendem a ser mais altos.</InfoTip>
-            </label>
-
-            <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-4 py-2.5">
               <input type="checkbox" checked={trabalhadores} onChange={(e) => setTrabalhadores(e.target.checked)} className="h-4 w-4 accent-brand" />
               <span className="text-sm text-stone-700 dark:text-stone-300">Tenho trabalhadores a cargo</span>
+              <InfoTip label="Porque importa">Pagar salários implica processamento mensal, retenções e Segurança Social — sobe a necessidade de um contabilista.</InfoTip>
             </label>
           </div>
         </div>

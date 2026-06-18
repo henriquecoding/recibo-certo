@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.10.2";
+export const APP_VERSION = "1.10.3";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.10.3",
+    data: "2026-06-18",
+    titulo: "Mapa de contabilistas mais legível e Passo 5 mais fiel",
+    itens: [
+      "Os valores no mapa voltam a ler-se bem (etiquetas de preço centradas em cada região) e as regiões de Portugal passam a estar desenhadas, em tom pastel suave, com as fronteiras oficiais NUTS II.",
+      "Botões do mapa com animação mais cuidada. No Passo 5, retirámos a opção «Sede em Lisboa ou Porto» (o mapa já reflete a região) e a opção «Tenho trabalhadores a cargo» passa a influenciar o diagnóstico — sobe a necessidade de contabilista e o intervalo de honorários, por causa do processamento salarial.",
+      "Os preços e limites continuam a ser estimativas de mercado e limites legais oficiais — nada inventado.",
+    ],
+  },
   {
     version: "1.10.2",
     data: "2026-06-18",

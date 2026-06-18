@@ -30,9 +30,7 @@ export interface DiagnosticoInput {
   /** Despesas operacionais anuais reais estimadas. */
   despesasAnuais: number;
   clientes: ClientesAmbito;
-  /** Sede/atividade em área metropolitana (Lisboa/Porto). */
-  areaMetropolitana: boolean;
-  /** Tem trabalhadores a cargo. */
+  /** Tem trabalhadores a cargo (processamento salarial mensal). */
   trabalhadores: boolean;
 }
 
@@ -70,6 +68,8 @@ const ROTULOS: Record<NivelContabilista, string> = {
   autonomo: "Podes gerir sozinho",
 };
 
+const NIVEL_ORDEM: NivelContabilista[] = ["autonomo", "opcional", "recomendado", "muito_recomendado", "obrigatorio"];
+
 /** Diagnóstico principal (árvore de decisão da análise de custos). */
 export function diagnosticoContabilista(input: DiagnosticoInput): DiagnosticoContabilista {
   const Y = Math.max(0, input.faturacaoAnual);
@@ -77,28 +77,27 @@ export function diagnosticoContabilista(input: DiagnosticoInput): DiagnosticoCon
   const limiar25 = Y * COEF_DESPESAS_PRESUMIDAS;
   // Dedução automática equivalente à específica do trabalho dependente (4 104 €).
   const despesasNecessarias = Math.max(0, limiar25 - 4104);
-  const metro = input.areaMetropolitana;
 
-  // 1) Sociedade → contabilidade organizada obrigatória, sempre.
+  let r: DiagnosticoContabilista;
+
   if (input.formaJuridica === "sociedade") {
-    return {
+    // 1) Sociedade → contabilidade organizada obrigatória, sempre.
+    r = {
       nivel: "obrigatorio",
       rotulo: ROTULOS.obrigatorio,
       titulo: "Necessidade legal imediata",
       mensagem:
         "A constituição de uma sociedade comercial exige a nomeação de um Contabilista Certificado logo no início de atividade. Formaliza um contrato de prestação de serviços (com seguro de responsabilidade civil ativo) antes de submeter a declaração de início.",
-      avencaMin: metro ? 150 : 120,
-      avencaMax: metro ? 250 : 180,
+      avencaMin: 120,
+      avencaMax: 200,
       pontual: false,
       modelo: "Avença mensal (contabilidade organizada)",
       motivos: ["Sociedade comercial — contabilidade organizada obrigatória", "Necessário CC inscrito na OCC para assinar as declarações"],
       despesasNecessarias,
     };
-  }
-
-  // 2) Independente acima do limite do regime simplificado.
-  if (Y >= LIMITE_CONTAB_ORGANIZADA) {
-    return {
+  } else if (Y >= LIMITE_CONTAB_ORGANIZADA) {
+    // 2) Independente acima do limite do regime simplificado.
+    r = {
       nivel: "obrigatorio",
       rotulo: ROTULOS.obrigatorio,
       titulo: "Obrigatório pelo volume de negócios",
@@ -110,11 +109,9 @@ export function diagnosticoContabilista(input: DiagnosticoInput): DiagnosticoCon
       motivos: [`Faturação ≥ ${eur(LIMITE_CONTAB_ORGANIZADA)} (limite do regime simplificado)`],
       despesasNecessarias,
     };
-  }
-
-  // 3) Clientes internacionais → complexidade de IVA (VIES, recapitulativas).
-  if (input.clientes === "internacional") {
-    return {
+  } else if (input.clientes === "internacional") {
+    // 3) Clientes internacionais → complexidade de IVA (VIES, recapitulativas).
+    r = {
       nivel: "muito_recomendado",
       rotulo: ROTULOS.muito_recomendado,
       titulo: "Muito recomendado — complexidade de IVA",
@@ -127,11 +124,9 @@ export function diagnosticoContabilista(input: DiagnosticoInput): DiagnosticoCon
       motivos: ["Clientes internacionais — VIES e Declarações Recapitulativas", "Regras de localização e isenções à exportação (Art. 6.º e 14.º CIVA)"],
       despesasNecessarias,
     };
-  }
-
-  // 4) Despesas reais acima da dedução presumida de 25% → vale a pena organizar.
-  if (D > limiar25 && Y > 0) {
-    return {
+  } else if (D > limiar25 && Y > 0) {
+    // 4) Despesas reais acima da dedução presumida de 25% → vale a pena organizar.
+    r = {
       nivel: "recomendado",
       rotulo: ROTULOS.recomendado,
       titulo: "Vantagem fiscal em organizar a contabilidade",
@@ -143,11 +138,9 @@ export function diagnosticoContabilista(input: DiagnosticoInput): DiagnosticoCon
       motivos: [`Despesas reais (${eur(D)}) > 25% da faturação (${eur(limiar25)})`],
       despesasNecessarias,
     };
-  }
-
-  // 5) Acima da isenção de IVA mas dentro do simplificado, clientes nacionais.
-  if (Y >= LIMITE_ISENCAO_IVA) {
-    return {
+  } else if (Y >= LIMITE_ISENCAO_IVA) {
+    // 5) Acima da isenção de IVA mas dentro do simplificado, clientes nacionais.
+    r = {
       nivel: "opcional",
       rotulo: ROTULOS.opcional,
       titulo: "Apoio de gestão opcional",
@@ -159,21 +152,42 @@ export function diagnosticoContabilista(input: DiagnosticoInput): DiagnosticoCon
       motivos: [`Sujeito a IVA (faturação ≥ ${eur(LIMITE_ISENCAO_IVA)})`, "Declarações Periódicas de IVA e validação do e-fatura"],
       despesasNecessarias,
     };
+  } else {
+    // 6) Abaixo da isenção de IVA, clientes nacionais, despesas simples.
+    r = {
+      nivel: "autonomo",
+      rotulo: ROTULOS.autonomo,
+      titulo: "Gestão autónoma recomendada",
+      mensagem: `Beneficias de isenção de IVA (Art. 53.º — abaixo de ${eur(LIMITE_ISENCAO_IVA)}) e tens uma estrutura de despesas simples. Podes usar o ReciboCerto para emitir faturas e submeter o IRS. Sugerimos apenas uma consulta inicial para validar o enquadramento.`,
+      avencaMin: 40,
+      avencaMax: 80,
+      pontual: true,
+      modelo: "Consulta pontual (custo único)",
+      motivos: [`Isento de IVA (faturação < ${eur(LIMITE_ISENCAO_IVA)})`, "Despesas dentro dos 25% presumidos", "Operações nacionais"],
+      despesasNecessarias,
+    };
   }
 
-  // 6) Abaixo da isenção de IVA, clientes nacionais, despesas simples.
-  return {
-    nivel: "autonomo",
-    rotulo: ROTULOS.autonomo,
-    titulo: "Gestão autónoma recomendada",
-    mensagem: `Beneficias de isenção de IVA (Art. 53.º — abaixo de ${eur(LIMITE_ISENCAO_IVA)}) e tens uma estrutura de despesas simples. Podes usar o ReciboCerto para emitir faturas e submeter o IRS. Sugerimos apenas uma consulta inicial para validar o enquadramento.`,
-    avencaMin: 40,
-    avencaMax: 80,
-    pontual: true,
-    modelo: "Consulta pontual (custo único)",
-    motivos: [`Isento de IVA (faturação < ${eur(LIMITE_ISENCAO_IVA)})`, "Despesas dentro dos 25% presumidos", "Operações nacionais"],
-    despesasNecessarias,
-  };
+  // Trabalhadores a cargo → processamento salarial mensal (retenções, Segurança
+  // Social dos trabalhadores, mapa de remunerações). Sobe a necessidade para, no
+  // mínimo, "muito recomendado", acrescenta o motivo e o custo da folha salarial.
+  if (input.trabalhadores) {
+    if (NIVEL_ORDEM.indexOf(r.nivel) < NIVEL_ORDEM.indexOf("muito_recomendado")) {
+      r.nivel = "muito_recomendado";
+      r.rotulo = ROTULOS.muito_recomendado;
+      r.titulo = "Muito recomendado — tens trabalhadores";
+      r.pontual = false;
+      r.modelo = "Avença mensal (inclui processamento salarial)";
+    }
+    r.motivos = [
+      ...r.motivos,
+      "Trabalhadores a cargo — processamento de salários, retenções, Segurança Social e mapa de remunerações exigem acompanhamento mensal.",
+    ];
+    r.avencaMin += 25;
+    r.avencaMax += 50;
+  }
+
+  return r;
 }
 
 function eur(n: number): string {
