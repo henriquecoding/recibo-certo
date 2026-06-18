@@ -1,30 +1,27 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Link from "next/link";
 import { auditarRecibo } from "@/lib/fiscal-dependente";
 import { SS_DEPENDENTE } from "@/lib/fiscal-data";
 import { pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
-import { useAuditorias } from "@/lib/store/auditorias";
+import { useAuth } from "@/lib/supabase/auth";
 import { getSupabase } from "@/lib/supabase/client";
 import { ResultadoAuditoria } from "@/components/dependente/ResultadoAuditoria";
-import { ShieldCheck, Lock, Mail, Sparkle } from "@/components/ui/Icons";
+import { ShieldCheck, Mail } from "@/components/ui/Icons";
 
 const DEPENDENTES = [0, 1, 2, 3, 4];
 const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
 const soDecimal = (s: string) => s.replace(/[^\d.,]/g, "");
 
 export function AuditoriaRecibo() {
-  const { carregado, ehPro, podeAuditar, precisaLogin, precisaPro, gratisRestantes, registar, abrirLogin } =
-    useAuditorias();
+  const { user } = useAuth();
 
   const [brutoStr, setBrutoStr] = useState("1500");
   const [dependentes, setDependentes] = useState(0);
   const [irsStr, setIrsStr] = useState("");
   const [ssStr, setSsStr] = useState("");
   const [submetido, setSubmetido] = useState(false);
-  const [registado, setRegistado] = useState(false);
   const [envio, setEnvio] = useState<"idle" | "a-enviar" | "enviado" | "erro">("idle");
 
   const resultado = useMemo(
@@ -37,25 +34,6 @@ export function AuditoriaRecibo() {
       }),
     [brutoStr, dependentes, irsStr, ssStr]
   );
-
-  function aoAuditar() {
-    if (precisaLogin) {
-      abrirLogin();
-      return;
-    }
-    if (precisaPro) return; // o bloqueio Pro é mostrado em baixo
-    setSubmetido(true);
-    if (!registado) {
-      setRegistado(true);
-      void registar({
-        salarioBruto: num(brutoStr),
-        dependentes,
-        irsDeclarado: num(irsStr),
-        ssDeclarado: num(ssStr),
-        tudoOk: resultado.tudoOk,
-      });
-    }
-  }
 
   async function enviarPorEmail() {
     setEnvio("a-enviar");
@@ -87,9 +65,10 @@ export function AuditoriaRecibo() {
 
   return (
     <div className="rounded-3xl border border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 p-6 my-8">
-      <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-4">
-        Auditoria do recibo de vencimento
-      </p>
+      <div className="mb-4 flex items-center gap-2">
+        <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">Auditoria do recibo de vencimento</p>
+        <span className="rounded-full bg-brand-light px-2 py-0.5 text-[10px] font-semibold text-brand-dark">Grátis</span>
+      </div>
 
       {/* Inputs */}
       <div className="grid gap-4 sm:grid-cols-2">
@@ -144,53 +123,20 @@ export function AuditoriaRecibo() {
         </div>
       </div>
 
-      {/* Indicador do modelo: 1.ª grátis (com conta) · seguintes Pro */}
-      <p className="mt-4 flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400">
-        <ShieldCheck size={13} className="text-brand" />
-        {!carregado
-          ? "A preparar a auditoria…"
-          : ehPro
-          ? "Auditorias ilimitadas — plano Pro."
-          : precisaLogin
-          ? "A 1.ª auditoria é grátis para quem tem conta. As seguintes são Pro."
-          : podeAuditar
-          ? "Tens 1 auditoria grátis na tua conta. As seguintes são Pro."
-          : "Já usaste a tua auditoria grátis. As seguintes são Pro."}
-      </p>
-
-      {/* Ação consoante o estado */}
-      {precisaPro ? (
-        <div className="mt-4 rounded-2xl border border-brand/20 bg-brand-light p-5 text-center">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-brand text-white"><Lock size={18} /></span>
-          <p className="mt-3 text-sm font-semibold text-brand-dark">Já usaste a tua auditoria grátis</p>
-          <p className="mt-1 text-xs text-brand-dark/80">
-            Com o plano Pro auditas o teu recibo sempre que precisares e recebes o relatório por email.
-          </p>
-          <Link
-            href="/precos"
-            className="btn-shine mt-4 inline-flex items-center gap-2 rounded-2xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5"
-          >
-            Ver o plano Pro
-          </Link>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={aoAuditar}
-          disabled={!carregado}
-          className="btn-shine mt-4 inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-float disabled:opacity-60"
-        >
-          {precisaLogin ? <Sparkle size={16} /> : <ShieldCheck size={16} />}
-          {precisaLogin ? "Entrar para auditar grátis" : "Auditar o meu recibo"}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => setSubmetido(true)}
+        className="btn-shine mt-5 inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-float"
+      >
+        <ShieldCheck size={16} /> Auditar o meu recibo
+      </button>
 
       {/* Resultado */}
-      {submetido && !precisaPro && (
+      {submetido && (
         <div className="mt-6 space-y-3">
           <ResultadoAuditoria resultado={resultado} />
 
-          {ehPro ? (
+          {user && (
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -203,11 +149,6 @@ export function AuditoriaRecibo() {
               </button>
               {envio === "erro" && <span className="text-xs text-alert-text dark:text-amber-400">Não foi possível enviar.</span>}
             </div>
-          ) : (
-            <p className="rounded-xl border border-brand/20 bg-brand-light px-3 py-2 text-xs text-brand-dark">
-              Esta foi a tua auditoria grátis. Para auditares sempre que quiseres,{" "}
-              <Link href="/precos" className="font-semibold underline underline-offset-2">passa a Pro</Link>.
-            </p>
           )}
         </div>
       )}

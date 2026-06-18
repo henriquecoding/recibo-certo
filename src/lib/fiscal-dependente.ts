@@ -643,14 +643,14 @@ export function auditarRecibo(input: AuditoriaInput): AuditoriaResult {
   const irsOk = Math.abs(irsDiferenca) <= AUDIT_TOLERANCIA;
 
   const alertas: string[] = [];
-  if (!ssOk) {
-    alertas.push(
-      `Segurança Social: o recibo desconta ${input.ssDeclarado.toFixed(2)} €, mas a taxa de ${(SS_DEPENDENTE.trabalhador.value * 100).toFixed(0)}% dá ${ssEsperado.toFixed(2)} € (diferença de ${Math.abs(ssDiferenca).toFixed(2)} €).`
-    );
-  }
   if (!irsOk) {
     alertas.push(
       `Retenção de IRS: o recibo retém ${input.irsDeclarado.toFixed(2)} €, mas a tabela de 2026 dá ${irsEsperado.toFixed(2)} € (diferença de ${Math.abs(irsDiferenca).toFixed(2)} €).`
+    );
+  }
+  if (!ssOk) {
+    alertas.push(
+      `Segurança Social: o recibo desconta ${input.ssDeclarado.toFixed(2)} €, mas a taxa de ${(SS_DEPENDENTE.trabalhador.value * 100).toFixed(0)}% dá ${ssEsperado.toFixed(2)} € (diferença de ${Math.abs(ssDiferenca).toFixed(2)} €).`
     );
   }
   if (r.subsidioRefeicaoTributado > 0) {

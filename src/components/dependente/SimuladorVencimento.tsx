@@ -907,7 +907,7 @@ export function SimuladorVencimento() {
         </div>
       )}
 
-      {/* Auditoria do recibo — 1.ª grátis (com conta) · seguintes Pro */}
+      {/* Auditoria do recibo — gratuita */}
       <div className="mt-4">
         <AuditoriaPainel input={auditInput} />
       </div>
