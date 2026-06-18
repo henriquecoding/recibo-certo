@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.10.3";
+export const APP_VERSION = "1.10.4";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.10.4",
+    data: "2026-06-18",
+    titulo: "Leitura de recibo em PDF muito mais fiável",
+    itens: [
+      "A leitura do PDF passa a reconstruir a tabela do recibo pela posição de cada valor (coordenadas), em vez de adivinhar pela ordem do texto. Em recibos de duas colunas (abonos | descontos) deixa de trocar valores — por exemplo, o subsídio de refeição já não apanha a Segurança Social da coluna ao lado.",
+      "Acrescentámos validações: um valor extraído só é aceite se fizer sentido (ex.: valor/dia × nº de dias tem de bater com o total; o prémio tem de caber na remuneração sujeita). Em caso de dúvida, o campo fica para confirmares à mão, em vez de mostrar um número errado.",
+    ],
+  },
   {
     version: "1.10.3",
     data: "2026-06-18",

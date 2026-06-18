@@ -7,8 +7,18 @@
 //  dados sensíveis: morada, NIB/IBAN, nº de contribuinte do trabalhador,
 //  nº de beneficiário da Segurança Social e dados de seguro. O único dado
 //  "mais sensível" extraído é o da EMPRESA (NIF, nome) e a função.
-//  A extração é best-effort: o que não for reconhecido fica para
-//  preenchimento manual (o utilizador confirma sempre antes de aplicar).
+//
+//  ESTRATÉGIA (recibos costumam ter 2 colunas: ABONOS | DESCONTOS):
+//   1) `parseReciboTexto` — âncoras robustas sobre o TEXTO (independentes do
+//      layout): salário base, remuneração sujeita + IRS (via taxa a 4 casas),
+//      Segurança Social e total do subsídio (zip do bloco de descontos).
+//   2) `parseReciboPosicional` — usa as COORDENADAS (x/y) de cada item para
+//      reconstruir a tabela e ler, por linha, o subsídio (dias × valor/dia) e
+//      o prémio sem misturar colunas.
+//   3) `combinarRecibo` — só aceita os valores posicionais se passarem
+//      validações (ex.: dias × valor/dia tem de bater com o total conhecido;
+//      prémio tem de caber na diferença sujeita − base). Nunca mostra números
+//      implausíveis — em caso de dúvida, fica para confirmação manual.
 // ─────────────────────────────────────────────────────────────────────
 
 export interface ReciboExtraido {
@@ -27,7 +37,7 @@ export interface ReciboExtraido {
   ssDesconto?: number;
   /** Subsídio de refeição por dia (se reconhecido). */
   subsidioRefeicaoDia?: number;
-  /** Nº de dias de subsídio de refeição (quantidade da linha de abono). */
+  /** Nº de dias de subsídio de refeição. */
   subsidioRefeicaoDias?: number;
   /** Subsídio de refeição — total do mês (abono). */
   subsidioRefeicaoTotal?: number;
@@ -37,17 +47,21 @@ export interface ReciboExtraido {
   feriados?: number;
   /** Prémio pago no mês (ex.: desempenho). */
   premio?: number;
-  /** Desconto por faltas no mês (informativo — já refletido na rem. sujeita). */
-  faltasValor?: number;
   /** Campos que não foi possível extrair (para a UI sinalizar). */
   porPreencher: string[];
+}
+
+/** Item de texto com posição (coordenadas do pdf.js). */
+export interface ItemPos {
+  str: string;
+  x: number;
+  y: number;
 }
 
 const MESES = [
   "janeiro", "fevereiro", "março", "marco", "abril", "maio", "junho",
   "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
 ];
-// "março" e "marco" mapeiam ambos para o índice 2.
 const MES_INDICE: Record<string, number> = {
   janeiro: 0, fevereiro: 1, "março": 2, marco: 2, abril: 3, maio: 4, junho: 5,
   julho: 6, agosto: 7, setembro: 8, outubro: 9, novembro: 10, dezembro: 11,
@@ -73,43 +87,11 @@ function proximaMoeda(toks: string[], from: number, limite = 12): number | undef
 }
 
 /**
- * Colunas numéricas de uma linha de abono/desconto a partir do índice da
- * designação: numa tabela [Cód · Designação · Quant. · Valor Uni · Valor], devolve
- * os valores em ordem. Pára na próxima linha (código inteiro), próxima designação
- * (texto) ou em "TOTAL". Ignora texto que ainda faça parte da designação.
- */
-function colunasLinha(toks: string[], idx: number, janela = 10): number[] {
-  const out: number[] = [];
-  let comecou = false;
-  for (let i = idx + 1; i < Math.min(toks.length, idx + 1 + janela); i++) {
-    const t = toks[i];
-    if (isCurrency(t)) {
-      out.push(toNum(t));
-      comecou = true;
-      continue;
-    }
-    if (!comecou) {
-      if (/^total/i.test(t)) break;
-      continue; // ainda na designação (pode estar partida em vários tokens)
-    }
-    if (/^\d{1,4}$/.test(t) || /[A-Za-zÀ-ÿ]/.test(t) || /^total/i.test(t)) break;
-  }
-  return out;
-}
-
-/** Colunas da primeira linha cuja designação corresponde ao padrão. */
-function colunasPorDesignacao(toks: string[], re: RegExp): number[] | undefined {
-  const idx = toks.findIndex((t) => re.test(t));
-  if (idx < 0) return undefined;
-  const cols = colunasLinha(toks, idx);
-  return cols.length ? cols : undefined;
-}
-
-/**
- * Parser puro (testável sem browser). Recebe os "itens" de texto do pdf.js.
+ * Parser de TEXTO (testável sem browser): âncoras robustas que não dependem
+ * da ordem de leitura entre colunas.
  */
 export function parseReciboTexto(itens: string[]): ReciboExtraido {
-  const toks = itens.map((t) => (t ?? "").replace(/ /g, " ").trim()).filter(Boolean);
+  const toks = itens.map((t) => (t ?? "").replace(/ /g, " ").trim()).filter(Boolean);
   const full = toks.join(" ").replace(/\s+/g, " ");
   const r: ReciboExtraido = { porPreencher: [] };
 
@@ -141,7 +123,6 @@ export function parseReciboTexto(itens: string[]): ReciboExtraido {
     const sujeito = proximaMoeda(toks, idxTaxa, 4);
     if (sujeito !== undefined) {
       r.remuneracaoSujeita = sujeito;
-      // o valor retido é a moeda seguinte ao sujeito
       const idxSuj = toks.findIndex((t, i) => i > idxTaxa && isCurrency(t));
       if (idxSuj >= 0) {
         const retido = proximaMoeda(toks, idxSuj, 4);
@@ -172,37 +153,9 @@ export function parseReciboTexto(itens: string[]): ReciboExtraido {
     });
   }
 
-  // ── Subsídio de refeição: linha de abono [dias · valor/dia · total]. ──
+  // ── Forma de pagamento do subsídio de refeição (cartão vs. dinheiro). ──
   const idxSub = toks.findIndex((t) => /subs[íi]dio.*refei/i.test(t));
-  if (idxSub >= 0) {
-    r.subsidioRefeicaoCartao = /cart[ãa]o/i.test(toks[idxSub]);
-    const cols = colunasLinha(toks, idxSub);
-    if (cols.length >= 3) {
-      // [Quant. · Valor Uni · Valor] → dias, valor/dia, total.
-      r.subsidioRefeicaoDias = Math.round(cols[0]);
-      r.subsidioRefeicaoDia = cols[1];
-      if (r.subsidioRefeicaoTotal === undefined) r.subsidioRefeicaoTotal = cols[cols.length - 1];
-    } else if (cols.length >= 1 && r.subsidioRefeicaoTotal === undefined) {
-      r.subsidioRefeicaoTotal = cols[cols.length - 1];
-    }
-  }
-
-  // ── Feriados trabalhados e prémio (linhas de abono) — o "Valor" é a última coluna. ──
-  const colsFeriados = colunasPorDesignacao(toks, /feriado/i);
-  if (colsFeriados) r.feriados = colsFeriados[colsFeriados.length - 1];
-
-  const colsPremio = colunasPorDesignacao(toks, /pr[ée]mio/i);
-  if (colsPremio) r.premio = colsPremio[colsPremio.length - 1];
-
-  // ── Faltas (desconto) — informativo. ──
-  const colsFaltas = colunasPorDesignacao(toks, /\bfaltas?\b/i);
-  if (colsFaltas) r.faltasValor = colsFaltas[colsFaltas.length - 1];
-
-  // ── Reconstrução da remuneração sujeita se a âncora da taxa falhar. ──
-  if (r.remuneracaoSujeita === undefined && r.salarioBase !== undefined) {
-    const soma = r.salarioBase + (r.feriados ?? 0) + (r.premio ?? 0);
-    if (soma > r.salarioBase) r.remuneracaoSujeita = Math.round(soma * 100) / 100;
-  }
+  if (idxSub >= 0) r.subsidioRefeicaoCartao = /cart[ãa]o/i.test(toks[idxSub]);
 
   // ── Sinalizar o que ficou por extrair (preenchimento manual). ──
   if (r.salarioBase === undefined) r.porPreencher.push("Salário base");
@@ -214,27 +167,144 @@ export function parseReciboTexto(itens: string[]): ReciboExtraido {
 }
 
 /**
+ * Parser POSICIONAL (testável): reconstrói a tabela a partir das coordenadas.
+ * Separa as colunas ABONOS/DESCONTOS pela maior lacuna horizontal entre valores
+ * e, para cada linha (mesmo y), lê só os valores da coluna de abonos.
+ */
+export function parseReciboPosicional(itens: ItemPos[]): Partial<ReciboExtraido> {
+  const out: Partial<ReciboExtraido> = {};
+  const norm = itens.map((i) => ({ str: (i.str ?? "").trim(), x: i.x, y: i.y })).filter((i) => i.str);
+  const nums = norm.filter((i) => isCurrency(i.str));
+  if (nums.length < 3) return out;
+
+  // Divisória ABONOS|DESCONTOS = maior lacuna horizontal entre posições de valores.
+  const xs = [...new Set(nums.map((n) => n.x))].sort((a, b) => a - b);
+  let xSplit = Infinity;
+  let maxGap = 0;
+  for (let i = 1; i < xs.length; i++) {
+    const g = xs[i] - xs[i - 1];
+    if (g > maxGap) {
+      maxGap = g;
+      xSplit = (xs[i] + xs[i - 1]) / 2;
+    }
+  }
+  const limiteX = maxGap > 60 ? xSplit : Infinity; // sem 2 colunas → tudo é "abonos"
+  const rowTol = 5;
+
+  // Valores (coluna de abonos) na mesma linha de uma designação, da esquerda p/ direita.
+  // Usa a ocorrência MAIS À ESQUERDA da designação (a tabela de abonos é a da esquerda),
+  // evitando apanhar a linha homónima do lado dos descontos (ex.: "Subsídio … (D)").
+  const colunas = (re: RegExp): number[] | undefined => {
+    const cands = norm.filter((i) => re.test(i.str));
+    if (!cands.length) return undefined;
+    const anchor = cands.reduce((a, b) => (b.x < a.x ? b : a));
+    const linha = nums
+      .filter((n) => Math.abs(n.y - anchor.y) <= rowTol && n.x > anchor.x && n.x < limiteX)
+      .sort((a, b) => a.x - b.x)
+      .map((n) => toNum(n.str));
+    return linha.length ? linha : undefined;
+  };
+
+  const sub = colunas(/subs[íi]dio.*refei/i);
+  if (sub && sub.length >= 3) {
+    // [Quant. · Valor Uni · Valor] → dias, valor/dia, total.
+    out.subsidioRefeicaoDias = Math.round(sub[0]);
+    out.subsidioRefeicaoDia = sub[1];
+    out.subsidioRefeicaoTotal = sub[sub.length - 1];
+  } else if (sub && sub.length === 1) {
+    out.subsidioRefeicaoTotal = sub[0];
+  }
+
+  const fer = colunas(/feriado/i);
+  if (fer) out.feriados = fer[fer.length - 1];
+
+  const pre = colunas(/pr[ée]mio/i);
+  if (pre) out.premio = pre[pre.length - 1];
+
+  return out;
+}
+
+/**
+ * Combina o parser de texto (âncoras robustas) com o posicional (linhas),
+ * validando os valores posicionais antes de os aceitar — nunca devolve números
+ * implausíveis.
+ */
+export function combinarRecibo(base: ReciboExtraido, pos: Partial<ReciboExtraido>): ReciboExtraido {
+  const r: ReciboExtraido = { ...base };
+  const sujeita = r.remuneracaoSujeita;
+  const salBase = r.salarioBase ?? 0;
+  // Margem onde cabem os rendimentos sujeitos além do salário (feriados + prémio).
+  const margem = sujeita !== undefined ? Math.max(0, sujeita - salBase) : Infinity;
+
+  // Subsídio de refeição: aceitar dia/dias só se o produto bater com o total
+  // conhecido (forte validação), e se forem plausíveis.
+  const dia = pos.subsidioRefeicaoDia;
+  const dias = pos.subsidioRefeicaoDias;
+  if (dia !== undefined && dias !== undefined && dia > 0 && dia <= 30 && dias >= 1 && dias <= 31) {
+    const totalPos = Math.round(dia * dias * 100) / 100;
+    const totalConhecido = r.subsidioRefeicaoTotal ?? pos.subsidioRefeicaoTotal;
+    if (totalConhecido === undefined || Math.abs(totalPos - totalConhecido) <= 1) {
+      r.subsidioRefeicaoDia = dia;
+      r.subsidioRefeicaoDias = dias;
+      r.subsidioRefeicaoTotal = totalConhecido ?? totalPos;
+    }
+  } else if (
+    r.subsidioRefeicaoTotal === undefined &&
+    pos.subsidioRefeicaoTotal !== undefined &&
+    pos.subsidioRefeicaoTotal > 0 &&
+    pos.subsidioRefeicaoTotal < 3000
+  ) {
+    r.subsidioRefeicaoTotal = pos.subsidioRefeicaoTotal;
+  }
+
+  // Prémio: aceitar só se positivo e couber na diferença sujeita − base.
+  if (pos.premio !== undefined && pos.premio > 0 && pos.premio <= margem + 1) {
+    r.premio = pos.premio;
+  }
+  // Feriados: idem (informativo; a UI deriva o resto da sujeita).
+  if (pos.feriados !== undefined && pos.feriados > 0 && pos.feriados <= margem + 1) {
+    r.feriados = pos.feriados;
+  }
+
+  return r;
+}
+
+/**
  * Lê o PDF no browser (pdf.js) e extrai os dados. O ficheiro nunca sai do
  * dispositivo. Lança em caso de PDF inválido/sem texto (scan) — a UI trata.
  */
 export async function extrairReciboPDF(file: File): Promise<ReciboExtraido> {
   const pdfjs = await import("pdfjs-dist");
   // Worker servido na mesma origem (copiado para /public por scripts/copy-pdf-worker.mjs).
-  // Sem CDN externo — o ficheiro nunca sai do dispositivo.
   pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
   const data = new Uint8Array(await file.arrayBuffer());
   const doc = await pdfjs.getDocument({ data, useSystemFonts: true }).promise;
-  const itens: string[] = [];
+  const strings: string[] = [];
+  const posicoes: ItemPos[] = [];
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p);
     const tc = await page.getTextContent();
     for (const item of tc.items) {
-      if ("str" in item && item.str) itens.push(item.str);
+      if ("str" in item && item.str) {
+        strings.push(item.str);
+        const tr = item.transform;
+        if (Array.isArray(tr) && tr.length >= 6) {
+          posicoes.push({ str: item.str, x: tr[4], y: tr[5] });
+        }
+      }
     }
   }
-  if (itens.join("").trim().length < 20) {
+  if (strings.join("").trim().length < 20) {
     throw new Error("PDF sem texto reconhecível (provavelmente digitalizado).");
   }
-  return parseReciboTexto(itens);
+
+  const base = parseReciboTexto(strings);
+  let pos: Partial<ReciboExtraido> = {};
+  try {
+    pos = parseReciboPosicional(posicoes);
+  } catch {
+    /* posicional é best-effort — ignora falhas e usa só as âncoras de texto */
+  }
+  return combinarRecibo(base, pos);
 }
