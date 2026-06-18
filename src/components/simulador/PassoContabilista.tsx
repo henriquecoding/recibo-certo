@@ -225,6 +225,12 @@ export function PassoContabilista({
             </tbody>
           </table>
         </div>
+        <a
+          href="/ferramentas/mapa-contabilistas"
+          className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-brand transition-colors hover:text-brand-dark"
+        >
+          Ver média de preços por região no mapa →
+        </a>
       </div>
 
       {/* ── Como contratar com segurança ── */}

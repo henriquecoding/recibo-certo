@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.9.0";
+export const APP_VERSION = "1.10.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.10.0",
+    data: "2026-06-18",
+    titulo: "Novo mapa: preços de contabilistas por região",
+    itens: [
+      "Nova ferramenta com um mapa interativo de Portugal que mostra a média de honorários (avença mensal) de contabilistas por região — de Lisboa aos Açores. Toca numa região no mapa ou na lista para ver os valores.",
+      "Os preços são estimativas de mercado (a profissão tem honorários livres), com escala de cor por nível de preço, pesquisa por região/cidade e adaptação automática ao modo claro e escuro.",
+      "É a base do que aí vem: em breve poderás encontrar e contactar Contabilistas Certificados diretamente pelo mapa.",
+    ],
+  },
   {
     version: "1.9.0",
     data: "2026-06-18",

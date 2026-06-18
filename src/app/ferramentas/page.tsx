@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Reveal from "@/components/ui/Reveal";
-import { ArrowRight, Calculator, Receipt, Search, Wallet, Sparkle, User, Scale, ShieldCheck } from "@/components/ui/Icons";
+import { ArrowRight, Calculator, Receipt, Search, Wallet, Sparkle, User, Scale, ShieldCheck, MapPin } from "@/components/ui/Icons";
 
 export const metadata: Metadata = {
   title: "Ferramentas fiscais 2026 — independentes e por conta de outrem | ReciboCerto",
@@ -38,6 +38,13 @@ const FERRAMENTAS = [
     descricao: "Introduz os valores do teu recibo e descobre se a entidade aplicou bem o IRS e a Segurança Social de 2026. Deteta erros a teu favor.",
     icon: ShieldCheck,
     badge: "Pro",
+  },
+  {
+    href: "/ferramentas/mapa-contabilistas",
+    titulo: "Mapa de preços de contabilistas",
+    descricao: "Quanto custa um contabilista por região? Vê a média de honorários (avença mensal) de Lisboa aos Açores num mapa interativo. Estimativas de mercado.",
+    icon: MapPin,
+    badge: "Mapa",
   },
   {
     href: "/ferramentas/comparador",

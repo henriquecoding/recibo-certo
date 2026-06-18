@@ -319,6 +319,25 @@ export function FileSign({ size = 18, className }: IconProps) {
   );
 }
 
+export function MapPin({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0116 0z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+export function Info({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12 11v5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="12" cy="7.8" r="0.9" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function Heart({ size = 18, className }: IconProps) {
   return (
     <svg {...svgProps(size, className)}>
