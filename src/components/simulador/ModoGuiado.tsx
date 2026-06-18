@@ -256,9 +256,11 @@ export default function ModoGuiado({
   // Passo 2: Faturação — novo modelo recibos
   const [modoFat, setModoFat] = useState<"total" | "individual">("total");
   const [totalInput, setTotalInput] = useState("1500");
-  // Como interpretar o valor introduzido no modo "total": já inclui IVA (o que o
-  // cliente paga) ou é a faturação base à qual o IVA é acrescentado.
-  const [valorComIva, setValorComIva] = useState(true);
+  // Como interpretar o valor introduzido no modo "total": é a faturação base à
+  // qual o IVA é acrescentado (por omissão — é o que consta no recibo verde) ou
+  // já inclui IVA (o que o cliente paga). Por omissão = base sem IVA, para que,
+  // p.ex., 1500/mês corresponda a 18 000/ano de faturação.
+  const [valorComIva, setValorComIva] = useState(false);
   const [recibosItems, setRecibosItems] = useState<ReciboItem[]>([
     { id: 1, descricao: "", valorComIva: "", taxaIva: 0.23 },
   ]);
@@ -2692,10 +2694,10 @@ function ResultadoFinal({
                   <div className="border-t border-stone-100 dark:border-stone-800">
                     {/* Faturação */}
                     <LinhaCalculo
-                      label="Faturação bruta"
+                      label="Faturação bruta (sem IVA)"
                       valor={brutoAnual}
                       corValor="text-stone-800 dark:text-stone-100"
-                      explicacao="O total que faturaste durante o ano — o valor que os teus clientes te pagam, antes de qualquer desconto ou imposto."
+                      explicacao="A tua faturação no ano, sem IVA — é a base sobre a qual incidem a Segurança Social e o IRS. O IVA é cobrado ao cliente à parte (linha seguinte) e não é teu."
                     />
                     <div className="border-t border-stone-100 dark:border-stone-800" />
 

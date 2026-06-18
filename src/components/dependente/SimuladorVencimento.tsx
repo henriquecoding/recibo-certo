@@ -185,8 +185,9 @@ export function SimuladorVencimento() {
         diasUteis,
         estadoCivil,
         deficiencia,
+        regiao,
       }),
-    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis, estadoCivil, deficiencia]
+    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis, estadoCivil, deficiencia, regiao]
   );
   const ra = useMemo(
     () =>
@@ -198,14 +199,15 @@ export function SimuladorVencimento() {
         diasUteis,
         estadoCivil,
         deficiencia,
+        regiao,
       }),
-    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis, estadoCivil, deficiencia]
+    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis, estadoCivil, deficiencia, regiao]
   );
 
   const variavelAnual = num(variavelStr);
   const meal = useMemo(
-    () => mealheiroDependente({ salarioBruto: bruto, dependentes, variavelAnual, estadoCivil, deficiencia }),
-    [bruto, dependentes, variavelAnual, estadoCivil, deficiencia]
+    () => mealheiroDependente({ salarioBruto: bruto, dependentes, variavelAnual, estadoCivil, deficiencia, regiao }),
+    [bruto, dependentes, variavelAnual, estadoCivil, deficiencia, regiao]
   );
 
   // Input estável para a auditoria embutida (reflete a simulação atual).
@@ -218,8 +220,9 @@ export function SimuladorVencimento() {
       diasUteis,
       estadoCivil,
       deficiencia,
+      regiao,
     }),
-    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis, estadoCivil, deficiencia]
+    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis, estadoCivil, deficiencia, regiao]
   );
 
   // Recibo detalhado (com rendimentos adicionais e faltas).
@@ -231,6 +234,7 @@ export function SimuladorVencimento() {
         dependentes,
         estadoCivil,
         deficiencia,
+        regiao,
         subsidioRefeicaoDia: temSubsidio ? subsidioDia : 0,
         subsidioRefeicaoCartao: cartao,
         diasSubsidio: Math.max(0, diasUteis - diasSemSubsidio),
@@ -246,7 +250,7 @@ export function SimuladorVencimento() {
         ajudasEstrangeiroValorDia: num(ajEValStr),
       }),
     [
-      bruto, dependentes, estadoCivil, deficiencia, temSubsidio, subsidioDia, cartao, diasUteis, diasSemSubsidio,
+      bruto, dependentes, estadoCivil, deficiencia, regiao, temSubsidio, subsidioDia, cartao, diasUteis, diasSemSubsidio,
       horasAusenciaStr, horasSupStr, premioStr, premioRegular, subFeriasStr, subNatalStr,
       ajNDiasStr, ajNValStr, ajEDiasStr, ajEValStr,
     ]
@@ -506,9 +510,9 @@ export function SimuladorVencimento() {
               ))}
             </div>
             {regiao !== "continente" && (
-              <p className="mt-2 rounded-lg border border-alert-border bg-alert-bg px-3 py-1.5 text-[11px] leading-relaxed text-alert-text">
-                Estimativa de IRS pela tabela do Continente. A {regiao === "madeira" ? "Madeira" : "os Açores"} {regiao === "madeira" ? "tem" : "têm"} tabela
-                própria — a Segurança Social (11%) é igual; confirma o IRS com o teu recibo.
+              <p className="mt-2 rounded-lg border border-brand/20 bg-brand-light px-3 py-1.5 text-[11px] leading-relaxed text-brand-dark">
+                A usar as tabelas de retenção de 2026 {regiao === "madeira" ? "da Madeira (Despacho n.º 19/2026)" : "dos Açores (Despacho n.º 1179/2026)"}.
+                A Segurança Social (11%) é igual em todo o país.
               </p>
             )}
           </div>
@@ -1022,10 +1026,9 @@ export function SimuladorVencimento() {
       </div>
 
       <p className="mt-4 text-xs leading-relaxed text-stone-400">
-        Estimativa pelas Tabelas I a VII do Despacho 233-A/2026 (Continente), conforme a situação e a deficiência, ano
-        completo de trabalho e ambos os subsídios iguais ao salário base. Para a Madeira e os Açores, a Segurança Social
-        é igual mas a retenção de IRS segue tabelas regionais próprias — a estimativa usa a do Continente. Não substitui
-        o teu recibo oficial nem aconselhamento de um contabilista.
+        Estimativa pelas tabelas de retenção de 2026 — Continente (Despacho 233-A/2026), Madeira (Despacho 19/2026) e
+        Açores (Despacho 1179/2026), conforme a situação, a deficiência e a região —, ano completo de trabalho e ambos
+        os subsídios iguais ao salário base. Não substitui o teu recibo oficial nem aconselhamento de um contabilista.
       </p>
 
       {/* ── Cenários guardados (modo duplo + tiering) ── */}
