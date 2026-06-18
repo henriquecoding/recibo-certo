@@ -27,6 +27,8 @@ export interface ReciboExtraido {
   ssDesconto?: number;
   /** Subsídio de refeição por dia (se reconhecido). */
   subsidioRefeicaoDia?: number;
+  /** Subsídio de refeição — total do mês (abono). */
+  subsidioRefeicaoTotal?: number;
   /** Subsídio de refeição pago em cartão/vale. */
   subsidioRefeicaoCartao?: boolean;
   /** Campos que não foi possível extrair (para a UI sinalizar). */
@@ -125,13 +127,19 @@ export function parseReciboTexto(itens: string[]): ReciboExtraido {
       if (v === undefined) return;
       if (/seg.*social|seguran[çc]a/i.test(d) && r.ssDesconto === undefined) r.ssDesconto = toNum(v);
       if (/^irs$|reten[çc].*irs/i.test(d) && r.irsRetido === undefined) r.irsRetido = toNum(v);
+      if (/subs[íi]dio.*refei/i.test(d) && r.subsidioRefeicaoTotal === undefined) r.subsidioRefeicaoTotal = toNum(v);
     });
   }
 
-  // ── Subsídio de refeição (cartão/dinheiro) — best-effort pela designação. ──
+  // ── Subsídio de refeição (cartão/dinheiro + total) — best-effort. ──
   const idxSub = toks.findIndex((t) => /subs[íi]dio.*refei/i.test(t));
   if (idxSub >= 0) {
     r.subsidioRefeicaoCartao = /cart[ãa]o/i.test(toks[idxSub]);
+    // Fallback do total se não veio do bloco de descontos.
+    if (r.subsidioRefeicaoTotal === undefined) {
+      const v = proximaMoeda(toks, idxSub, 8);
+      if (v !== undefined) r.subsidioRefeicaoTotal = v;
+    }
   }
 
   // ── Sinalizar o que ficou por extrair (preenchimento manual). ──

@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.8.1";
+export const APP_VERSION = "1.8.2";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.8.2",
+    data: "2026-06-18",
+    titulo: "Importação de recibo em PDF mais completa",
+    itens: [
+      "A importação de recibo em PDF passa a considerar o subsídio de refeição (mesmo pago à parte em cartão) e os rendimentos sujeitos a IRS/Segurança Social além do salário base (feriados, prémios, etc.), preenchendo o simulador para os descontos baterem certo com o teu recibo.",
+      "Novo campo «Outros rendimentos sujeitos» na secção de rendimentos adicionais, preenchido automaticamente a partir do recibo.",
+    ],
+  },
   {
     version: "1.8.1",
     data: "2026-06-18",

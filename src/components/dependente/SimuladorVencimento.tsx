@@ -166,6 +166,7 @@ export function SimuladorVencimento() {
   const [premioRegular, setPremioRegular] = useState(true);
   const [subFeriasStr, setSubFeriasStr] = useState("");
   const [subNatalStr, setSubNatalStr] = useState("");
+  const [outrosSujeitosStr, setOutrosSujeitosStr] = useState("");
   const [ajNDiasStr, setAjNDiasStr] = useState("");
   const [ajNValStr, setAjNValStr] = useState("");
   const [ajEDiasStr, setAjEDiasStr] = useState("");
@@ -244,6 +245,7 @@ export function SimuladorVencimento() {
         premioRegular,
         subsidioFerias: num(subFeriasStr),
         subsidioNatal: num(subNatalStr),
+        outrosRendimentosSujeitos: num(outrosSujeitosStr),
         ajudasNacionalDias: Math.round(num(ajNDiasStr)),
         ajudasNacionalValorDia: num(ajNValStr),
         ajudasEstrangeiroDias: Math.round(num(ajEDiasStr)),
@@ -251,7 +253,7 @@ export function SimuladorVencimento() {
       }),
     [
       bruto, dependentes, estadoCivil, deficiencia, regiao, temSubsidio, subsidioDia, cartao, diasUteis, diasSemSubsidio,
-      horasAusenciaStr, horasSupStr, premioStr, premioRegular, subFeriasStr, subNatalStr,
+      horasAusenciaStr, horasSupStr, premioStr, premioRegular, subFeriasStr, subNatalStr, outrosSujeitosStr,
       ajNDiasStr, ajNValStr, ajEDiasStr, ajEValStr,
     ]
   );
@@ -359,11 +361,33 @@ export function SimuladorVencimento() {
 
   // Aplica os dados extraídos de um recibo em PDF (Pro) ao simulador.
   function aplicarReciboPdf(e: ReciboExtraido) {
+    const base = e.salarioBase ?? 0;
     if (e.salarioBase !== undefined) setBrutoStr(String(e.salarioBase).replace(".", ","));
-    if (e.subsidioRefeicaoCartao !== undefined) {
+
+    // Subsídio de refeição: usa o total extraído (pago em cartão à parte) e
+    // reparte por 22 dias úteis, para o montante mensal bater certo.
+    if (e.subsidioRefeicaoTotal !== undefined && e.subsidioRefeicaoTotal > 0) {
+      setTemSubsidio(true);
+      if (e.subsidioRefeicaoCartao !== undefined) setCartao(e.subsidioRefeicaoCartao);
+      const dias = 22;
+      setDiasUteisStr(String(dias));
+      setSubsidioDiaStr((Math.round((e.subsidioRefeicaoTotal / dias) * 100) / 100).toString().replace(".", ","));
+    } else if (e.subsidioRefeicaoCartao !== undefined) {
       setTemSubsidio(true);
       setCartao(e.subsidioRefeicaoCartao);
     }
+
+    // Rendimentos sujeitos além do salário base (feriados, prémios, etc.): a
+    // diferença entre a remuneração sujeita do recibo e o salário base, para a
+    // base de IRS/Segurança Social bater certo com o recibo importado.
+    if (e.remuneracaoSujeita !== undefined && e.remuneracaoSujeita > base + 0.01) {
+      const outros = Math.round((e.remuneracaoSujeita - base) * 100) / 100;
+      setOutrosSujeitosStr(String(outros).replace(".", ","));
+      setMostrarExtras(true);
+    } else {
+      setOutrosSujeitosStr("");
+    }
+
     if (e.mes !== undefined) setMes(e.mes);
     setReciboPdf(e);
     setPdfKey((k) => k + 1);
@@ -681,6 +705,19 @@ export function SimuladorVencimento() {
                   </div>
                 </div>
 
+                {/* Outros rendimentos sujeitos a IRS/SS (feriados, diuturnidades…) */}
+                <div>
+                  <label htmlFor="outros-sujeitos" className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-stone-500 dark:text-stone-400">
+                    Outros rendimentos sujeitos (€)
+                    <InfoTip label="O que é">
+                      Rendimentos do recibo sujeitos a IRS e Segurança Social além do salário base — feriados
+                      trabalhados, diuturnidades, etc. Ao importar um recibo em PDF, preenchemos isto com a diferença
+                      entre a remuneração sujeita e o salário base, para os descontos baterem certo.
+                    </InfoTip>
+                  </label>
+                  <input id="outros-sujeitos" type="text" inputMode="decimal" autoComplete="off" value={outrosSujeitosStr} onChange={(e) => setOutrosSujeitosStr(soDecimal(e.target.value))} placeholder="0" className={campoSm} />
+                </div>
+
                 {/* Ajudas de custo */}
                 <div>
                   <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-stone-600 dark:text-stone-400">
@@ -942,6 +979,7 @@ export function SimuladorVencimento() {
               )}
               {det.subsidioFerias > 0 && <LinhaRecibo label="Subsídio de férias" value={`+ ${fmt(det.subsidioFerias)}`} />}
               {det.subsidioNatal > 0 && <LinhaRecibo label="Subsídio de Natal" value={`+ ${fmt(det.subsidioNatal)}`} />}
+              {det.outrosSujeitos > 0 && <LinhaRecibo label="Outros rendimentos sujeitos" value={`+ ${fmt(det.outrosSujeitos)}`} sub="feriados, diuturnidades, etc." />}
               {det.ajudasTotal > 0 && (
                 <LinhaRecibo
                   label="Ajudas de custo"
