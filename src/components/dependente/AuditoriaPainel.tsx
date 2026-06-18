@@ -1,9 +1,12 @@
 "use client";
 
 // Painel de auditoria embutido no simulador de recibo de vencimento. Reutiliza
-// os dados da simulação atual (bruto, dependentes, situação, subsídio) e pede
-// apenas o que consta no recibo (IRS retido + Segurança Social), comparando com
-// as tabelas oficiais de 2026. A auditoria manual é GRATUITA. Nada é guardado.
+// os dados da simulação (situação, dependentes) e pede o que consta no recibo
+// (IRS retido + Segurança Social), comparando com as tabelas oficiais de 2026.
+// A auditoria manual é GRATUITA. Nada é guardado.
+//
+// Quando vem de um PDF importado, recebe a "remuneração sujeita" do recibo
+// (base exata do esperado) e os valores declarados já preenchidos.
 
 import { useState, useMemo } from "react";
 import { auditarRecibo, type VencimentoInput } from "@/lib/fiscal-dependente";
@@ -15,14 +18,24 @@ import { ShieldCheck } from "@/components/ui/Icons";
 const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
 const soDecimal = (s: string) => s.replace(/[^\d.,]/g, "");
 
-export function AuditoriaPainel({ input }: { input: VencimentoInput }) {
-  const [irsStr, setIrsStr] = useState("");
-  const [ssStr, setSsStr] = useState("");
-  const [submetido, setSubmetido] = useState(false);
+export function AuditoriaPainel({
+  input,
+  irsInicial = "",
+  ssInicial = "",
+  remuneracaoSujeita,
+}: {
+  input: VencimentoInput;
+  irsInicial?: string;
+  ssInicial?: string;
+  remuneracaoSujeita?: number;
+}) {
+  const [irsStr, setIrsStr] = useState(irsInicial);
+  const [ssStr, setSsStr] = useState(ssInicial);
+  const [submetido, setSubmetido] = useState(!!(irsInicial && ssInicial));
 
   const resultado = useMemo(
-    () => auditarRecibo({ ...input, irsDeclarado: num(irsStr), ssDeclarado: num(ssStr) }),
-    [input, irsStr, ssStr]
+    () => auditarRecibo({ ...input, irsDeclarado: num(irsStr), ssDeclarado: num(ssStr), remuneracaoSujeita }),
+    [input, irsStr, ssStr, remuneracaoSujeita]
   );
 
   const subCard = "rounded-2xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-800/40 p-4";
@@ -37,13 +50,16 @@ export function AuditoriaPainel({ input }: { input: VencimentoInput }) {
         <p className={eyebrow}>Auditar o meu recibo</p>
         <span className="rounded-full bg-brand-light px-2 py-0.5 text-[10px] font-semibold text-brand-dark">Grátis</span>
         <InfoTip label="Como funciona">
-          Compara o IRS retido e a Segurança Social do teu recibo com o que as tabelas oficiais de 2026 determinam para
-          esta simulação ({fmt(input.salarioBruto)} · {input.dependentes ?? 0} dep.). Assinala divergências acima de uma
-          pequena tolerância de arredondamento.
+          Compara o IRS retido e a Segurança Social do teu recibo com o que as tabelas oficiais de 2026 determinam.
+          {remuneracaoSujeita
+            ? ` Base do recibo: ${fmt(remuneracaoSujeita)} (remuneração sujeita).`
+            : ` Base desta simulação: ${fmt(input.salarioBruto)} · ${input.dependentes ?? 0} dep.`}
         </InfoTip>
       </div>
       <p className="mb-3 text-[11px] leading-relaxed text-stone-400">
-        Introduz os valores que constam no teu recibo para os confrontarmos com esta simulação.
+        {remuneracaoSujeita
+          ? `Valores do teu recibo (remuneração sujeita de ${fmt(remuneracaoSujeita)}). Podes ajustar.`
+          : "Introduz os valores que constam no teu recibo para os confrontarmos com esta simulação."}
       </p>
 
       <div className="grid gap-3 sm:grid-cols-2">

@@ -6,6 +6,7 @@ import { PerfilProvider } from "@/lib/perfil";
 import { SubscricaoProvider } from "@/lib/stripe/subscription";
 import AuthModal from "@/components/ui/AuthModal";
 import NovidadesModal from "@/components/ui/NovidadesModal";
+import CookieConsent from "@/components/ui/CookieConsent";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -130,6 +131,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 {children}
                 <AuthModal />
                 <NovidadesModal />
+                <CookieConsent />
               </MotionProvider>
             </PerfilProvider>
           </SubscricaoProvider>

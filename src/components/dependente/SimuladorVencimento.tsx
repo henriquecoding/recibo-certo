@@ -8,6 +8,8 @@ import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import ProGate from "@/components/ui/ProGate";
 import { AuditoriaPainel } from "@/components/dependente/AuditoriaPainel";
+import { ImportarReciboPDF } from "@/components/dependente/ImportarReciboPDF";
+import { type ReciboExtraido } from "@/lib/recibo-pdf";
 import { printRelatorioVencimento } from "@/lib/export-vencimento";
 import { useVencimentos, gerarCSVCenarios, type CenarioVencimento } from "@/lib/store/vencimentos";
 import { History, Trash, Plus, ShieldCheck, Export, FileSign, Wallet, Gauge, Building, Coin } from "@/components/ui/Icons";
@@ -148,6 +150,11 @@ export function SimuladorVencimento() {
   const [variavelStr, setVariavelStr] = useState("");
   const [estadoCivil, setEstadoCivil] = useState<EstadoCivilRet>("naoCasado");
   const [deficiencia, setDeficiencia] = useState(false);
+  const [regiao, setRegiao] = useState<"continente" | "madeira" | "acores">("continente");
+
+  // ── Importação de recibo em PDF (Pro) ──
+  const [reciboPdf, setReciboPdf] = useState<ReciboExtraido | null>(null);
+  const [pdfKey, setPdfKey] = useState(0);
 
   // ── Rendimentos adicionais e faltas (secção avançada) ──
   const [mostrarExtras, setMostrarExtras] = useState(false);
@@ -346,6 +353,18 @@ export function SimuladorVencimento() {
     setAvisoGuardar(null);
   }
 
+  // Aplica os dados extraídos de um recibo em PDF (Pro) ao simulador.
+  function aplicarReciboPdf(e: ReciboExtraido) {
+    if (e.salarioBase !== undefined) setBrutoStr(String(e.salarioBase).replace(".", ","));
+    if (e.subsidioRefeicaoCartao !== undefined) {
+      setTemSubsidio(true);
+      setCartao(e.subsidioRefeicaoCartao);
+    }
+    if (e.mes !== undefined) setMes(e.mes);
+    setReciboPdf(e);
+    setPdfKey((k) => k + 1);
+  }
+
   // Estilos partilhados
   const subCard = "rounded-2xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-800/40 p-4";
   const eyebrow = "text-[11px] font-semibold uppercase tracking-wide text-stone-400";
@@ -367,8 +386,22 @@ export function SimuladorVencimento() {
         </span>
         <div>
           <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">Recibo de vencimento 2026</p>
-          <p className="text-[11px] text-stone-400">Tabelas oficiais · Continente · estimativa</p>
+          <p className="text-[11px] text-stone-400">Tabelas oficiais 2026 · estimativa</p>
         </div>
+      </div>
+
+      {/* Importar recibo em PDF (Pro) — preenche o simulador automaticamente */}
+      <div className="mb-5">
+        <ImportarReciboPDF onAplicar={aplicarReciboPdf} />
+        {reciboPdf && (reciboPdf.empresaNome || reciboPdf.funcao || reciboPdf.mes !== undefined) && (
+          <p className="mt-2 text-[11px] text-stone-400">
+            Recibo importado
+            {reciboPdf.empresaNome ? ` · ${reciboPdf.empresaNome}` : ""}
+            {reciboPdf.empresaNif ? ` (${reciboPdf.empresaNif})` : ""}
+            {reciboPdf.funcao ? ` · ${reciboPdf.funcao}` : ""}
+            {reciboPdf.mes !== undefined ? ` · ${MESES[reciboPdf.mes]}${reciboPdf.ano ? ` ${reciboPdf.ano}` : ""}` : ""}
+          </p>
+        )}
       </div>
 
       <div className="grid gap-5 lg:grid-cols-5">
@@ -449,6 +482,36 @@ export function SimuladorVencimento() {
               Titular com grau de incapacidade permanente igual ou superior a 60% — usa as tabelas IV a VII.
             </InfoTip>
           </label>
+
+          {/* Região */}
+          <div>
+            <span className="mb-2 block text-xs font-semibold text-stone-600 dark:text-stone-400">
+              Região{" "}
+              <InfoTip label="Tabelas de retenção">
+                A Segurança Social (11%) é igual em todo o país. A retenção de IRS da Madeira e dos Açores segue tabelas
+                próprias (em geral mais baixas); a estimativa aqui usa a tabela do Continente — confirma com o teu recibo.
+              </InfoTip>
+            </span>
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Região">
+              {(
+                [
+                  ["continente", "Continente"],
+                  ["madeira", "Madeira"],
+                  ["acores", "Açores"],
+                ] as ["continente" | "madeira" | "acores", string][]
+              ).map(([k, label]) => (
+                <button key={k} type="button" aria-pressed={regiao === k} onClick={() => setRegiao(k)} className={seg(regiao === k)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {regiao !== "continente" && (
+              <p className="mt-2 rounded-lg border border-alert-border bg-alert-bg px-3 py-1.5 text-[11px] leading-relaxed text-alert-text">
+                Estimativa de IRS pela tabela do Continente. A {regiao === "madeira" ? "Madeira" : "os Açores"} {regiao === "madeira" ? "tem" : "têm"} tabela
+                própria — a Segurança Social (11%) é igual; confirma o IRS com o teu recibo.
+              </p>
+            )}
+          </div>
 
           {/* Subsídio de refeição */}
           <div className="rounded-2xl border border-stone-100 dark:border-stone-700 bg-stone-50/70 dark:bg-stone-800/50 p-4">
@@ -909,7 +972,13 @@ export function SimuladorVencimento() {
 
       {/* Auditoria do recibo — gratuita */}
       <div className="mt-4">
-        <AuditoriaPainel input={auditInput} />
+        <AuditoriaPainel
+          key={pdfKey}
+          input={auditInput}
+          irsInicial={reciboPdf?.irsRetido !== undefined ? String(reciboPdf.irsRetido).replace(".", ",") : ""}
+          ssInicial={reciboPdf?.ssDesconto !== undefined ? String(reciboPdf.ssDesconto).replace(".", ",") : ""}
+          remuneracaoSujeita={reciboPdf?.remuneracaoSujeita}
+        />
       </div>
 
       {/* Relatório PDF + exportação CSV — extra Pro (bloqueio misto desbloqueia ambos) */}
@@ -953,9 +1022,10 @@ export function SimuladorVencimento() {
       </div>
 
       <p className="mt-4 text-xs leading-relaxed text-stone-400">
-        Estimativa para o Continente (Tabelas I a VII do Despacho 233-A/2026, conforme a situação e a deficiência), ano
-        completo de trabalho e ambos os subsídios iguais ao salário base. Não cobre as Regiões Autónomas (Açores/Madeira)
-        nem o excesso do subsídio de refeição. Não substitui o teu recibo oficial nem aconselhamento de um contabilista.
+        Estimativa pelas Tabelas I a VII do Despacho 233-A/2026 (Continente), conforme a situação e a deficiência, ano
+        completo de trabalho e ambos os subsídios iguais ao salário base. Para a Madeira e os Açores, a Segurança Social
+        é igual mas a retenção de IRS segue tabelas regionais próprias — a estimativa usa a do Continente. Não substitui
+        o teu recibo oficial nem aconselhamento de um contabilista.
       </p>
 
       {/* ── Cenários guardados (modo duplo + tiering) ── */}

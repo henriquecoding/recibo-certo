@@ -9,6 +9,7 @@ import {
   Warning, Check, Heart,
 } from "@/components/ui/Icons";
 import { FISCAL_YEAR } from "@/lib/fiscal-data";
+import { abrirPreferenciasCookies } from "@/lib/cookie-consent";
 
 // ── Trust bar ─────────────────────────────────────────────────
 
@@ -314,6 +315,13 @@ export default function Footer() {
                   {l.label}
                 </Link>
               ))}
+              <button
+                type="button"
+                onClick={abrirPreferenciasCookies}
+                className="text-[11px] font-medium text-stone-400 transition-colors hover:text-stone-700 dark:text-stone-500 dark:hover:text-stone-300"
+              >
+                Cookies
+              </button>
             </nav>
           </m.div>
         </div>
