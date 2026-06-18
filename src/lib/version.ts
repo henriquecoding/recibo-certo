@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.11.0";
+export const APP_VERSION = "1.12.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.12.0",
+    data: "2026-06-18",
+    titulo: "IRS Jovem no recibo de vencimento e auditoria mais completa",
+    itens: [
+      "O simulador de vencimento passa a aplicar o IRS Jovem (Art. 12.º-B CIRS): ativa o regime e escolhe o ano de benefício (1.º a 10.º) para veres a isenção refletida na retenção mensal, no líquido, na visão anual e no acerto de IRS — com o teto de 55 × IAS e a poupança face a não teres o regime.",
+      "Arrasta o recibo em PDF diretamente para o simulador (drag & drop), além do botão de sempre. Continua a ser lido no teu dispositivo, sem enviar o ficheiro. Depois de aplicares, a confirmação dos dados recolhe-se — os valores ficam logo abaixo no simulador.",
+      "A função «Auditar o meu recibo» ficou mais robusta: além do IRS e da Segurança Social esperados, mostra agora a base de incidência, o custo para a entidade (TSU 23,75%), a taxa efetiva, o líquido esperado e a verificação do IRS Jovem — tudo conforme as tabelas oficiais de 2026.",
+    ],
+  },
   {
     version: "1.11.0",
     data: "2026-06-18",

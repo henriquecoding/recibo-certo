@@ -24,15 +24,56 @@ import {
   TRABALHO_SUPLEMENTAR,
   RETENCAO_SUPLEMENTAR_FATOR,
   AJUDAS_CUSTO,
+  IRS_JOVEM_TETO_CALC,
   tabelaRetencaoDependente,
   type EscalaoRetencao,
   type EstadoCivilRet,
   type TipoAtividade,
   type Regiao,
 } from "./fiscal-data";
-import { compararRegimes, irsProgressivo, type ComparacaoResult } from "./fiscal";
+import { compararRegimes, irsProgressivo, isencaoIRSJovem, type ComparacaoResult } from "./fiscal";
 
 const cent = (n: number) => Math.round(n * 100) / 100;
+
+// ─────────────────────────────────────────────────────────────────────
+//  IRS Jovem (Art. 12.º-B CIRS) na retenção mensal da Categoria A
+//  ---------------------------------------------------------------------
+//  Número de retribuições anuais (12 meses + subsídio de férias + de Natal).
+//  Base do duodécimo/décimo-quarto e do teto MENSAL de isenção do IRS Jovem.
+const MESES_RETRIBUICAO = 14;
+
+/**
+ * Teto MENSAL de rendimento isento pelo IRS Jovem = (55 × IAS) ÷ 14. O teto
+ * legal é anual; reparte-se pelas 14 retribuições para a estimativa mensal.
+ */
+export const IRS_JOVEM_TETO_MENSAL = cent(IRS_JOVEM_TETO_CALC / MESES_RETRIBUICAO);
+
+export interface IsencaoJovemMensal {
+  /** Percentagem de isenção do ano de benefício (0 se inativo). */
+  pct: number;
+  /** Valor isento de IRS aplicado a esta remuneração (€), limitado pelo teto. */
+  isentoEur: number;
+  /** Remuneração tributável (sobre a qual incide a tabela de retenção). */
+  tributavel: number;
+  /** True se o teto mensal limitou a isenção (parte volta a ser tributada). */
+  excedeTeto: boolean;
+}
+
+/**
+ * Parte isenta de uma remuneração mensal de Categoria A pelo IRS Jovem, com o
+ * teto mensal de (55 × IAS) ÷ 14. A taxa de retenção da tabela incide depois
+ * apenas sobre a parte tributável. ESTIMATIVA — a aplicação oficial é mensal e
+ * a AT pode distribuir o teto de forma diferente; o trabalhador tem de ter
+ * comunicado à entidade que pretende beneficiar do regime (não é automático).
+ */
+export function isencaoJovemRemuneracao(remuneracao: number, irsJovemAno?: number): IsencaoJovemMensal {
+  const pct = isencaoIRSJovem(irsJovemAno);
+  const R = Math.max(0, remuneracao);
+  if (pct <= 0 || R <= 0) return { pct: 0, isentoEur: 0, tributavel: R, excedeTeto: false };
+  const bruto = R * pct;
+  const isentoEur = Math.min(bruto, IRS_JOVEM_TETO_MENSAL);
+  return { pct, isentoEur: cent(isentoEur), tributavel: cent(R - isentoEur), excedeTeto: bruto > IRS_JOVEM_TETO_MENSAL + 0.005 };
+}
 
 /** Parcela a abater do escalão (valor fixo ou fórmula do mínimo de existência). */
 function parcelaAbater(esc: EscalaoRetencao, remuneracao: number): number {
@@ -74,6 +115,19 @@ function retencaoPorSituacao(
   return retencaoIRSDependente(salarioBruto, dependentes, tab.escaloes, tab.parcelaDependente);
 }
 
+/** Retenção mensal pela situação familiar, já com a isenção do IRS Jovem aplicada à base. */
+function retencaoJovem(
+  salarioBruto: number,
+  dependentes: number,
+  estadoCivil: EstadoCivilRet,
+  deficiencia: boolean,
+  regiao: Regiao,
+  irsJovemAno?: number
+): number {
+  const { tributavel } = isencaoJovemRemuneracao(salarioBruto, irsJovemAno);
+  return retencaoPorSituacao(tributavel, dependentes, estadoCivil, deficiencia, regiao);
+}
+
 export interface VencimentoInput {
   /** Remuneração base mensal ilíquida (bruto). */
   salarioBruto: number;
@@ -91,12 +145,22 @@ export interface VencimentoInput {
   deficiencia?: boolean;
   /** Região fiscal (tabelas de retenção próprias na Madeira e nos Açores). */
   regiao?: Regiao;
+  /** Ano de benefício do IRS Jovem (1 a 10); 0/undefined se não aplicável. */
+  irsJovemAno?: number;
 }
 
 export interface VencimentoResult {
   bruto: number;
   ssTrabalhador: number;
   irsRetido: number;
+  /** Retenção que haveria SEM IRS Jovem (para mostrar a poupança). */
+  irsSemJovem: number;
+  /** Percentagem de isenção do IRS Jovem aplicada (0 a 1). */
+  isencaoJovemPct: number;
+  /** Rendimento mensal isento de IRS pelo IRS Jovem (€). */
+  rendimentoIsentoJovem: number;
+  /** True se o teto mensal do IRS Jovem foi atingido. */
+  excedeTetoJovem: boolean;
   subsidioRefeicaoTotal: number;
   subsidioRefeicaoIsento: number;
   /** Parte do subsídio acima do limite — sujeita a IRS/SS (modelado na Etapa 2). */
@@ -118,14 +182,14 @@ export function calcularVencimento(input: VencimentoInput): VencimentoResult {
   const bruto = Math.max(0, input.salarioBruto);
   const dependentes = Math.max(0, Math.floor(input.dependentes ?? 0));
 
+  const ec = input.estadoCivil ?? "naoCasado";
+  const def = input.deficiencia ?? false;
+  const reg = input.regiao ?? "continente";
+
   const ssTrabalhador = cent(bruto * SS_DEPENDENTE.trabalhador.value);
-  const irsRetido = retencaoPorSituacao(
-    bruto,
-    dependentes,
-    input.estadoCivil ?? "naoCasado",
-    input.deficiencia ?? false,
-    input.regiao ?? "continente"
-  );
+  const jovem = isencaoJovemRemuneracao(bruto, input.irsJovemAno);
+  const irsRetido = retencaoPorSituacao(jovem.tributavel, dependentes, ec, def, reg);
+  const irsSemJovem = retencaoPorSituacao(bruto, dependentes, ec, def, reg);
 
   const dias = Math.max(0, input.diasUteis ?? 22);
   const valorDia = Math.max(0, input.subsidioRefeicaoDia ?? 0);
@@ -145,6 +209,10 @@ export function calcularVencimento(input: VencimentoInput): VencimentoResult {
     bruto,
     ssTrabalhador,
     irsRetido,
+    irsSemJovem,
+    isencaoJovemPct: jovem.pct,
+    rendimentoIsentoJovem: jovem.isentoEur,
+    excedeTetoJovem: jovem.excedeTeto,
     subsidioRefeicaoTotal,
     subsidioRefeicaoIsento,
     subsidioRefeicaoTributado,
@@ -179,6 +247,8 @@ export interface ReciboMensalInput {
   deficiencia?: boolean;
   /** Região fiscal (tabelas de retenção próprias na Madeira e nos Açores). */
   regiao?: Regiao;
+  /** Ano de benefício do IRS Jovem (1 a 10); 0/undefined se não aplicável. */
+  irsJovemAno?: number;
   /** Período normal de trabalho semanal (horas). Default 40. */
   horasSemanais?: number;
   // Subsídio de refeição
@@ -239,6 +309,12 @@ export interface ReciboMensalResult {
   ssTrabalhador: number;
   irsBaseMensal: number;
   irsTotal: number;
+  // IRS Jovem
+  isencaoJovemPct: number;
+  rendimentoIsentoJovem: number;
+  excedeTetoJovem: boolean;
+  /** Retenção total que haveria SEM IRS Jovem (poupança = irsSemJovem − irsTotal). */
+  irsSemJovem: number;
   // Totais
   brutoTotal: number;
   liquido: number;
@@ -321,17 +397,32 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
   const ssTrabalhador = cent(baseSS * SS_DEPENDENTE.trabalhador.value);
 
   // IRS — retenção da remuneração mensal (tabela) sobre base + prémio + excessos.
+  // O IRS Jovem isenta parte da remuneração; a tabela incide só sobre o tributável.
   const remMensal = cent(baseRemunerada + premio + outrosSujeitos + ajudasTributadas + subsidioRefeicaoTributado);
-  const irsBaseMensal = retencaoPorSituacao(remMensal, dependentes, ec, def, reg);
+  const ano = input.irsJovemAno;
+  const jovemMes = isencaoJovemRemuneracao(remMensal, ano);
+  const irsBaseMensal = retencaoPorSituacao(jovemMes.tributavel, dependentes, ec, def, reg);
   // Trabalho suplementar: retenção autónoma = 50% da taxa efetiva mensal.
   const taxaEfetivaMes = remMensal > 0 ? irsBaseMensal / remMensal : 0;
   const suplementarIRS = cent(suplementarTotal * taxaEfetivaMes * RETENCAO_SUPLEMENTAR_FATOR.value);
-  // Subsídios de férias/Natal: retenção autónoma (cada um pela tabela, em separado).
+  // Subsídios de férias/Natal: retenção autónoma (cada um pela tabela, em separado),
+  // também com a isenção do IRS Jovem aplicada à sua base.
   const irsSubsidios = cent(
-    retencaoPorSituacao(subsidioFerias, dependentes, ec, def, reg) +
-      retencaoPorSituacao(subsidioNatal, dependentes, ec, def, reg)
+    retencaoJovem(subsidioFerias, dependentes, ec, def, reg, ano) +
+      retencaoJovem(subsidioNatal, dependentes, ec, def, reg, ano)
   );
   const irsTotal = cent(irsBaseMensal + suplementarIRS + irsSubsidios);
+
+  // Decomposição do IRS Jovem (para a UI mostrar a poupança e o isento).
+  const isentoFerias = isencaoJovemRemuneracao(subsidioFerias, ano).isentoEur;
+  const isentoNatal = isencaoJovemRemuneracao(subsidioNatal, ano).isentoEur;
+  const rendimentoIsentoJovem = cent(jovemMes.isentoEur + isentoFerias + isentoNatal);
+  const irsSemJovem = cent(
+    retencaoPorSituacao(remMensal, dependentes, ec, def, reg) +
+      cent(suplementarTotal * (remMensal > 0 ? retencaoPorSituacao(remMensal, dependentes, ec, def, reg) / remMensal : 0) * RETENCAO_SUPLEMENTAR_FATOR.value) +
+      retencaoPorSituacao(subsidioFerias, dependentes, ec, def, reg) +
+      retencaoPorSituacao(subsidioNatal, dependentes, ec, def, reg)
+  );
 
   // Totais.
   const brutoTotal = cent(
@@ -376,6 +467,10 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
     ssTrabalhador,
     irsBaseMensal,
     irsTotal,
+    isencaoJovemPct: jovemMes.pct,
+    rendimentoIsentoJovem,
+    excedeTetoJovem: jovemMes.excedeTeto,
+    irsSemJovem,
     brutoTotal,
     liquido,
     taxaEfetiva,
@@ -421,6 +516,10 @@ export interface VencimentoAnualResult {
   /** Líquido anual ÷ 12 — o que se recebe por mês se os subsídios forem em duodécimos. */
   liquidoMedioMes: number;
   taxaEfetiva: number;
+  /** Percentagem de isenção do IRS Jovem aplicada (0 a 1). */
+  isencaoJovemPct: number;
+  /** Rendimento isento de IRS no ano pelo IRS Jovem (€). */
+  rendimentoIsentoJovemAnual: number;
 }
 
 /**
@@ -443,10 +542,19 @@ export function calcularVencimentoAnual(input: VencimentoAnualInput): Vencimento
   const ec = input.estadoCivil ?? "naoCasado";
   const def = input.deficiencia ?? false;
   const reg = input.regiao ?? "continente";
-  const irsSalario = cent(retencaoPorSituacao(bruto, dependentes, ec, def, reg) * 12);
-  const irsFerias = retencaoPorSituacao(subsidioFerias, dependentes, ec, def, reg);
-  const irsNatal = retencaoPorSituacao(subsidioNatal, dependentes, ec, def, reg);
+  const ano = input.irsJovemAno;
+  const irsSalario = cent(retencaoJovem(bruto, dependentes, ec, def, reg, ano) * 12);
+  const irsFerias = retencaoJovem(subsidioFerias, dependentes, ec, def, reg, ano);
+  const irsNatal = retencaoJovem(subsidioNatal, dependentes, ec, def, reg, ano);
   const irsAnual = cent(irsSalario + irsFerias + irsNatal);
+
+  // Isenção do IRS Jovem no ano: salário (×12, com teto mensal) + ambos os subsídios.
+  const jovemMes = isencaoJovemRemuneracao(bruto, ano);
+  const rendimentoIsentoJovemAnual = cent(
+    jovemMes.isentoEur * 12 +
+      isencaoJovemRemuneracao(subsidioFerias, ano).isentoEur +
+      isencaoJovemRemuneracao(subsidioNatal, ano).isentoEur
+  );
 
   // Subsídio de refeição: pago só nos meses trabalhados (default 11).
   const meses = Math.max(0, input.mesesSubsidioRefeicao ?? 11);
@@ -476,6 +584,8 @@ export function calcularVencimentoAnual(input: VencimentoAnualInput): Vencimento
     liquidoAnual,
     liquidoMedioMes,
     taxaEfetiva,
+    isencaoJovemPct: jovemMes.pct,
+    rendimentoIsentoJovemAnual,
   };
 }
 
@@ -574,11 +684,15 @@ export interface MealheiroDependenteInput {
   estadoCivil?: EstadoCivilRet;
   deficiencia?: boolean;
   regiao?: Regiao;
+  /** Ano de benefício do IRS Jovem (1 a 10); 0/undefined se não aplicável. */
+  irsJovemAno?: number;
 }
 
 export interface MealheiroDependenteResult {
   brutoAnual: number;
   deducaoEspecifica: number;
+  /** Rendimento isento de IRS no ano pelo IRS Jovem (€). */
+  rendimentoIsentoJovem: number;
   rendimentoColetavel: number;
   irsApurado: number;
   irsRetido: number;
@@ -603,7 +717,11 @@ export function mealheiroDependente(input: MealheiroDependenteInput): MealheiroD
 
   // Dedução específica: 8,54 × IAS ou as contribuições para a SS, se superiores.
   const deducaoEspecifica = cent(Math.max(DEDUCAO_ESPECIFICA_DEPENDENTE.value, ssAnual));
-  const rendimentoColetavel = cent(Math.max(0, brutoAnual - deducaoEspecifica));
+  // IRS Jovem: isenta parte do rendimento bruto, até ao teto anual de 55 × IAS.
+  const ano = input.irsJovemAno;
+  const pctJovem = isencaoIRSJovem(ano);
+  const rendimentoIsentoJovem = cent(Math.min(brutoAnual * pctJovem, IRS_JOVEM_TETO_CALC));
+  const rendimentoColetavel = cent(Math.max(0, brutoAnual - deducaoEspecifica - rendimentoIsentoJovem));
 
   const irsBruto = irsProgressivo(rendimentoColetavel);
   const irsAposDeducoes = Math.max(0, irsBruto - deducaoDependentes(dep));
@@ -615,14 +733,14 @@ export function mealheiroDependente(input: MealheiroDependenteInput): MealheiroD
   const ec = input.estadoCivil ?? "naoCasado";
   const def = input.deficiencia ?? false;
   const reg = input.regiao ?? "continente";
-  const irsRetidoBase = calcularVencimentoAnual({ salarioBruto: base, dependentes: dep, subsidioRefeicaoDia: 0, estadoCivil: ec, deficiencia: def, regiao: reg }).irsAnual;
-  const taxaEfetivaMes = base > 0 ? retencaoPorSituacao(base, dep, ec, def, reg) / base : 0;
+  const irsRetidoBase = calcularVencimentoAnual({ salarioBruto: base, dependentes: dep, subsidioRefeicaoDia: 0, estadoCivil: ec, deficiencia: def, regiao: reg, irsJovemAno: ano }).irsAnual;
+  const taxaEfetivaMes = base > 0 ? retencaoJovem(base, dep, ec, def, reg, ano) / base : 0;
   const irsRetido = cent(irsRetidoBase + variavel * taxaEfetivaMes);
 
   const acerto = cent(irsApurado - irsRetido);
   const reservaMensal = acerto > 0 ? cent(acerto / 12) : 0;
 
-  return { brutoAnual, deducaoEspecifica, rendimentoColetavel, irsApurado, irsRetido, acerto, reservaMensal };
+  return { brutoAnual, deducaoEspecifica, rendimentoIsentoJovem, rendimentoColetavel, irsApurado, irsRetido, acerto, reservaMensal };
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -648,6 +766,8 @@ export interface AuditoriaInput extends VencimentoInput {
 }
 
 export interface AuditoriaResult {
+  /** Base de incidência usada para o esperado (remuneração sujeita ou salário base). */
+  baseIncidencia: number;
   ssEsperado: number;
   irsEsperado: number;
   /** Declarado − esperado (positivo: desconto a mais). */
@@ -655,6 +775,20 @@ export interface AuditoriaResult {
   irsDiferenca: number;
   ssOk: boolean;
   irsOk: boolean;
+  /** Custo estimado para a entidade (base + TSU 23,75%). */
+  custoEmpresa: number;
+  /** Taxa efetiva esperada (IRS + SS sobre a base). */
+  taxaEfetiva: number;
+  /** Líquido esperado (base − SS esperada − IRS esperado), sem subsídios isentos. */
+  liquidoEsperado: number;
+  /** Líquido que resulta dos descontos do recibo (base − SS declarada − IRS declarado). */
+  liquidoDeclarado: number;
+  // IRS Jovem
+  /** Percentagem de isenção do IRS Jovem considerada (0 a 1). */
+  isencaoJovemPct: number;
+  /** Rendimento isento de IRS pelo IRS Jovem nesta base (€). */
+  rendimentoIsentoJovem: number;
+  excedeTetoJovem: boolean;
   /** Parte do subsídio de refeição acima do limite (tributável). */
   subsidioExcede: number;
   alertas: string[];
@@ -666,43 +800,70 @@ const AUDIT_TOLERANCIA = 2;
 
 export function auditarRecibo(input: AuditoriaInput): AuditoriaResult {
   const r = calcularVencimento(input);
+  const dep = Math.max(0, Math.floor(input.dependentes ?? 0));
+  const ec = input.estadoCivil ?? "naoCasado";
+  const def = input.deficiencia ?? false;
+  const reg = input.regiao ?? "continente";
+  const ano = input.irsJovemAno;
+
   // Se a remuneração sujeita do recibo for fornecida, o esperado é calculado
   // sobre ela (mais exato); caso contrário, sobre o salário base simulado.
   const sujeita = input.remuneracaoSujeita;
   const usaSujeita = typeof sujeita === "number" && sujeita > 0;
-  const ssEsperado = usaSujeita ? cent(sujeita * SS_DEPENDENTE.trabalhador.value) : r.ssTrabalhador;
-  const irsEsperado = usaSujeita
-    ? retencaoPorSituacao(sujeita, Math.max(0, Math.floor(input.dependentes ?? 0)), input.estadoCivil ?? "naoCasado", input.deficiencia ?? false, input.regiao ?? "continente")
-    : r.irsRetido;
+  const baseIncidencia = usaSujeita ? cent(sujeita) : r.bruto;
+  const jovem = isencaoJovemRemuneracao(baseIncidencia, ano);
+
+  const ssEsperado = usaSujeita ? cent(baseIncidencia * SS_DEPENDENTE.trabalhador.value) : r.ssTrabalhador;
+  const irsEsperado = usaSujeita ? retencaoPorSituacao(jovem.tributavel, dep, ec, def, reg) : r.irsRetido;
+  const custoEmpresa = usaSujeita ? cent(baseIncidencia * (1 + SS_DEPENDENTE.entidade.value)) : r.custoEmpresa;
+
   const ssDiferenca = cent(Math.max(0, input.ssDeclarado) - ssEsperado);
   const irsDiferenca = cent(Math.max(0, input.irsDeclarado) - irsEsperado);
   const ssOk = Math.abs(ssDiferenca) <= AUDIT_TOLERANCIA;
   const irsOk = Math.abs(irsDiferenca) <= AUDIT_TOLERANCIA;
 
+  const taxaEfetiva = baseIncidencia > 0 ? (ssEsperado + irsEsperado) / baseIncidencia : 0;
+  const liquidoEsperado = cent(baseIncidencia - ssEsperado - irsEsperado);
+  const liquidoDeclarado = cent(baseIncidencia - Math.max(0, input.ssDeclarado) - Math.max(0, input.irsDeclarado));
+
   const alertas: string[] = [];
   if (!irsOk) {
+    const maisOuMenos = irsDiferenca > 0 ? "a mais" : "a menos";
     alertas.push(
-      `Retenção de IRS: o recibo retém ${input.irsDeclarado.toFixed(2)} €, mas a tabela de 2026 dá ${irsEsperado.toFixed(2)} € (diferença de ${Math.abs(irsDiferenca).toFixed(2)} €).`
+      `Retenção de IRS: o recibo retém ${input.irsDeclarado.toFixed(2)} €, mas a tabela de 2026${ano ? " com IRS Jovem" : ""} dá ${irsEsperado.toFixed(2)} € — ${Math.abs(irsDiferenca).toFixed(2)} € ${maisOuMenos}.`
     );
   }
   if (!ssOk) {
     alertas.push(
-      `Segurança Social: o recibo desconta ${input.ssDeclarado.toFixed(2)} €, mas a taxa de ${(SS_DEPENDENTE.trabalhador.value * 100).toFixed(0)}% dá ${ssEsperado.toFixed(2)} € (diferença de ${Math.abs(ssDiferenca).toFixed(2)} €).`
+      `Segurança Social: o recibo desconta ${input.ssDeclarado.toFixed(2)} €, mas a taxa de ${(SS_DEPENDENTE.trabalhador.value * 100).toFixed(0)}% sobre ${baseIncidencia.toFixed(2)} € dá ${ssEsperado.toFixed(2)} € (diferença de ${Math.abs(ssDiferenca).toFixed(2)} €).`
+    );
+  }
+  if (ano && jovem.excedeTeto) {
+    alertas.push(
+      `IRS Jovem: a isenção está limitada ao teto mensal de ${IRS_JOVEM_TETO_MENSAL.toFixed(2)} € (55 × IAS ÷ 14). A parte do rendimento acima do teto é tributada normalmente.`
     );
   }
   if (r.subsidioRefeicaoTributado > 0) {
     alertas.push(
-      `Subsídio de refeição: ${r.subsidioRefeicaoTributado.toFixed(2)} € estão acima do limite isento e deviam ser tributados.`
+      `Subsídio de refeição: ${r.subsidioRefeicaoTributado.toFixed(2)} € estão acima do limite isento e deviam ser tributados (IRS e Segurança Social).`
     );
   }
 
   return {
+    baseIncidencia,
     ssEsperado,
     irsEsperado,
     ssDiferenca,
     irsDiferenca,
     ssOk,
     irsOk,
+    custoEmpresa,
+    taxaEfetiva,
+    liquidoEsperado,
+    liquidoDeclarado,
+    isencaoJovemPct: jovem.pct,
+    rendimentoIsentoJovem: jovem.isentoEur,
+    excedeTetoJovem: ano ? jovem.excedeTeto : false,
     subsidioExcede: r.subsidioRefeicaoTributado,
     alertas,
     tudoOk: ssOk && irsOk,

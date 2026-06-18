@@ -30,6 +30,12 @@ export interface RelatorioVencimento {
   liquidoMostrado: number;
   taxaEfetiva: number;
   custoEmpresa: number;
+  // ── IRS Jovem (opcional) ──
+  irsJovemAtivo?: boolean;
+  irsJovemPct?: number; // 0..1
+  irsJovemAno?: number; // 1..10
+  rendimentoIsentoJovem?: number;
+  irsSemJovem?: number;
   // ── Taxas (para explicação) ──
   ssTaxaTrab: number; // 0,11
   tsuTaxa: number; // 0,2375
@@ -147,6 +153,7 @@ export function relatorioVencimentoHTML(d: RelatorioVencimento): string {
     ${press("Dias úteis considerados", temSubsidio ? String(d.diasUteis) : "—")}
     ${press("Subsídios de férias/Natal", d.duodecimos ? "Em duodécimos" : "Por inteiro")}
     ${press("Região", "Continente")}
+    ${press("IRS Jovem", d.irsJovemAtivo ? `${pctf(d.irsJovemPct ?? 0)} · ${d.irsJovemAno ?? 1}.º ano` : "Não aplicável")}
   </div>
 
   <h2>Para onde vai o salário bruto</h2>
@@ -166,6 +173,15 @@ export function relatorioVencimentoHTML(d: RelatorioVencimento): string {
     ${lin("Salário bruto", "Remuneração base mensal", eur(d.bruto))}
     ${lin("Segurança Social", `Contribuição do trabalhador (${pctf(d.ssTaxaTrab)} do bruto)`, "− " + eur(d.ssTrabalhador))}
     ${lin("Retenção na fonte de IRS", "Adiantamento mensal segundo a tabela da situação familiar (Despacho 233-A/2026)", "− " + eur(d.irsRetido))}
+    ${
+      d.irsJovemAtivo
+        ? lin(
+            "IRS Jovem",
+            `Isenção de ${pctf(d.irsJovemPct ?? 0)} (${eur(d.rendimentoIsentoJovem ?? 0)} isentos) · poupança vs. sem regime`,
+            "+ " + eur(Math.max(0, (d.irsSemJovem ?? d.irsRetido) - d.irsRetido))
+          )
+        : ""
+    }
     ${
       temSubsidio
         ? lin(
