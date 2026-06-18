@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.10.1";
+export const APP_VERSION = "1.10.2";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.10.2",
+    data: "2026-06-18",
+    titulo: "Importação de recibo em PDF: extrai e ajusta cada rubrica",
+    itens: [
+      "A leitura do recibo em PDF passa a separar cada rubrica: subsídio de refeição (valor/dia, nº de dias, cartão e total), feriados trabalhados e prémios — em vez de juntar tudo num único valor.",
+      "Estes dados são mostrados no ecrã de confirmação para reveres e corrigires antes de aplicar, e o Recibo de Vencimento 2026 passa a recebê-los nos campos certos, para a Segurança Social, o IRS e o total ilíquido baterem certo com o teu recibo.",
+      "O prémio passa a entrar na base da Segurança Social (como no recibo) e o subsídio de refeição em cartão é tratado à parte.",
+    ],
+  },
   {
     version: "1.10.1",
     data: "2026-06-18",

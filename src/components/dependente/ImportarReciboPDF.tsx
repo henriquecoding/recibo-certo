@@ -37,6 +37,10 @@ export function ImportarReciboPDF({ onAplicar }: { onAplicar: (e: ReciboExtraido
   const [irs, setIrs] = useState("");
   const [ss, setSs] = useState("");
   const [cartao, setCartao] = useState(true);
+  const [subRefDia, setSubRefDia] = useState("");
+  const [subRefDias, setSubRefDias] = useState("");
+  const [subRefTotal, setSubRefTotal] = useState("");
+  const [premio, setPremio] = useState("");
 
   async function aoEscolher(file: File | undefined) {
     if (!file) return;
@@ -53,12 +57,29 @@ export function ImportarReciboPDF({ onAplicar }: { onAplicar: (e: ReciboExtraido
       setIrs(e.irsRetido !== undefined ? String(e.irsRetido).replace(".", ",") : "");
       setSs(e.ssDesconto !== undefined ? String(e.ssDesconto).replace(".", ",") : "");
       setCartao(e.subsidioRefeicaoCartao ?? true);
+      setSubRefDia(e.subsidioRefeicaoDia !== undefined ? String(e.subsidioRefeicaoDia).replace(".", ",") : "");
+      setSubRefDias(e.subsidioRefeicaoDias !== undefined ? String(e.subsidioRefeicaoDias) : "");
+      setSubRefTotal(e.subsidioRefeicaoTotal !== undefined ? String(e.subsidioRefeicaoTotal).replace(".", ",") : "");
+      setPremio(e.premio !== undefined ? String(e.premio).replace(".", ",") : "");
       setEstado("lido");
     } catch {
       setEstado("erro");
       setErro("Não foi possível ler este PDF (pode ser digitalizado/imagem). Preenche os campos manualmente.");
     }
   }
+
+  const totalSubsidio =
+    subRefDia && subRefDias
+      ? Math.round(num(subRefDia) * Math.round(num(subRefDias)) * 100) / 100
+      : subRefTotal
+        ? num(subRefTotal)
+        : undefined;
+
+  // Feriados / outros rendimentos sujeitos = remuneração sujeita − base − prémio.
+  const outrosSujeitos = Math.max(
+    0,
+    Math.round(((sujeita ? num(sujeita) : 0) - (salarioBase ? num(salarioBase) : 0) - (premio ? num(premio) : 0)) * 100) / 100
+  );
 
   function aplicar() {
     onAplicar({
@@ -71,6 +92,11 @@ export function ImportarReciboPDF({ onAplicar }: { onAplicar: (e: ReciboExtraido
       irsRetido: irs ? num(irs) : undefined,
       ssDesconto: ss ? num(ss) : undefined,
       subsidioRefeicaoCartao: cartao,
+      subsidioRefeicaoDia: subRefDia ? num(subRefDia) : undefined,
+      subsidioRefeicaoDias: subRefDias ? Math.round(num(subRefDias)) : undefined,
+      subsidioRefeicaoTotal: totalSubsidio,
+      premio: premio ? num(premio) : undefined,
+      feriados: outrosSujeitos > 0 ? outrosSujeitos : undefined,
       porPreencher: [],
     });
   }
@@ -184,6 +210,46 @@ export function ImportarReciboPDF({ onAplicar }: { onAplicar: (e: ReciboExtraido
             <div>
               <label className={lbl}>Segurança Social (€)</label>
               <input value={ss} onChange={(e) => setSs(soDecimal(e.target.value))} className={campo} />
+            </div>
+
+            {/* Rendimentos adicionais e subsídio (extraídos do recibo) */}
+            <div className="col-span-2 mt-1 border-t border-stone-100 pt-3 dark:border-stone-800">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">
+                Subsídio de refeição e rendimentos adicionais
+              </p>
+            </div>
+            <div>
+              <label className={lbl}>Subsídio refeição / dia (€)</label>
+              <input value={subRefDia} onChange={(e) => setSubRefDia(soDecimal(e.target.value))} placeholder="0" className={campo} />
+            </div>
+            <div>
+              <label className={lbl}>Dias de subsídio</label>
+              <input value={subRefDias} onChange={(e) => setSubRefDias(soDecimal(e.target.value))} placeholder="0" className={campo} />
+            </div>
+            <label className="col-span-2 flex cursor-pointer items-center gap-2 rounded-lg border border-stone-200 px-3 py-2 dark:border-stone-700">
+              <input type="checkbox" checked={cartao} onChange={(e) => setCartao(e.target.checked)} className="h-4 w-4 accent-brand" />
+              <span className="text-xs text-stone-600 dark:text-stone-300">Subsídio pago em cartão/vale (pago à parte)</span>
+              {totalSubsidio !== undefined && totalSubsidio > 0 && (
+                <span className="ml-auto text-[11px] font-semibold tabular-nums text-stone-500 dark:text-stone-400">
+                  Total {totalSubsidio.toFixed(2).replace(".", ",")} €
+                </span>
+              )}
+            </label>
+            <div>
+              <label className={lbl}>Prémio (€)</label>
+              <input value={premio} onChange={(e) => setPremio(soDecimal(e.target.value))} placeholder="0" className={campo} />
+            </div>
+            <div>
+              <label className={lbl}>
+                Feriados / outros sujeitos (€)
+              </label>
+              <input
+                value={outrosSujeitos > 0 ? outrosSujeitos.toFixed(2).replace(".", ",") : "0"}
+                readOnly
+                aria-readonly
+                title="Calculado: remuneração sujeita − salário base − prémio"
+                className={`${campo} cursor-not-allowed opacity-70`}
+              />
             </div>
           </div>
           <button

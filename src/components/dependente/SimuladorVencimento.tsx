@@ -359,34 +359,62 @@ export function SimuladorVencimento() {
     setAvisoGuardar(null);
   }
 
-  // Aplica os dados extraídos de um recibo em PDF (Pro) ao simulador.
+  // Aplica os dados extraídos de um recibo em PDF (Pro) ao simulador, decompondo
+  // o recibo nos campos certos para a base de IRS/Segurança Social bater certo.
   function aplicarReciboPdf(e: ReciboExtraido) {
     const base = e.salarioBase ?? 0;
     if (e.salarioBase !== undefined) setBrutoStr(String(e.salarioBase).replace(".", ","));
 
-    // Subsídio de refeição: usa o total extraído (pago em cartão à parte) e
-    // reparte por 22 dias úteis, para o montante mensal bater certo.
-    if (e.subsidioRefeicaoTotal !== undefined && e.subsidioRefeicaoTotal > 0) {
+    // ── Subsídio de refeição ──
+    // Preferir valor/dia × nº de dias extraídos (preserva os valores reais do
+    // recibo, ex.: 10,20 × 19 = 193,80); senão, repartir o total por 22 dias.
+    const subTotal = e.subsidioRefeicaoTotal ?? 0;
+    if ((e.subsidioRefeicaoDia ?? 0) > 0 && (e.subsidioRefeicaoDias ?? 0) > 0) {
+      setTemSubsidio(true);
+      if (e.subsidioRefeicaoCartao !== undefined) setCartao(e.subsidioRefeicaoCartao);
+      setSubsidioDiaStr(String(e.subsidioRefeicaoDia).replace(".", ","));
+      setDiasUteisStr(String(e.subsidioRefeicaoDias));
+      setDiasSemSubsidioStr("");
+    } else if (subTotal > 0) {
       setTemSubsidio(true);
       if (e.subsidioRefeicaoCartao !== undefined) setCartao(e.subsidioRefeicaoCartao);
       const dias = 22;
       setDiasUteisStr(String(dias));
-      setSubsidioDiaStr((Math.round((e.subsidioRefeicaoTotal / dias) * 100) / 100).toString().replace(".", ","));
+      setSubsidioDiaStr((Math.round((subTotal / dias) * 100) / 100).toString().replace(".", ","));
+      setDiasSemSubsidioStr("");
     } else if (e.subsidioRefeicaoCartao !== undefined) {
       setTemSubsidio(true);
       setCartao(e.subsidioRefeicaoCartao);
     }
 
-    // Rendimentos sujeitos além do salário base (feriados, prémios, etc.): a
-    // diferença entre a remuneração sujeita do recibo e o salário base, para a
-    // base de IRS/Segurança Social bater certo com o recibo importado.
-    if (e.remuneracaoSujeita !== undefined && e.remuneracaoSujeita > base + 0.01) {
-      const outros = Math.round((e.remuneracaoSujeita - base) * 100) / 100;
-      setOutrosSujeitosStr(String(outros).replace(".", ","));
-      setMostrarExtras(true);
+    // ── Prémio ──
+    // No recibo o prémio integra a base da Segurança Social → tratá-lo como
+    // regular para a base bater certo.
+    const premio = e.premio ?? 0;
+    if (premio > 0) {
+      setPremioStr(String(premio).replace(".", ","));
+      setPremioRegular(true);
     } else {
-      setOutrosSujeitosStr("");
+      setPremioStr("");
     }
+
+    // ── Feriados / outros rendimentos sujeitos ──
+    // Tudo o que é sujeito a IRS/SS além do salário base e do prémio
+    // (feriados trabalhados, diuturnidades, etc.). Garante que
+    // base + prémio + outros = remuneração sujeita do recibo.
+    let outros = 0;
+    if (e.remuneracaoSujeita !== undefined && e.remuneracaoSujeita > base + 0.01) {
+      outros = Math.round((e.remuneracaoSujeita - base - premio) * 100) / 100;
+    } else if ((e.feriados ?? 0) > 0) {
+      outros = e.feriados as number;
+    }
+    outros = Math.max(0, outros);
+    setOutrosSujeitosStr(outros > 0 ? String(outros).replace(".", ",") : "");
+
+    // ── Faltas — informativo (já refletido na remuneração sujeita). ──
+    setHorasAusenciaStr("");
+
+    if (premio > 0 || outros > 0 || subTotal > 0) setMostrarExtras(true);
 
     if (e.mes !== undefined) setMes(e.mes);
     setReciboPdf(e);

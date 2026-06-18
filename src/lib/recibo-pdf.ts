@@ -27,10 +27,18 @@ export interface ReciboExtraido {
   ssDesconto?: number;
   /** Subsídio de refeição por dia (se reconhecido). */
   subsidioRefeicaoDia?: number;
+  /** Nº de dias de subsídio de refeição (quantidade da linha de abono). */
+  subsidioRefeicaoDias?: number;
   /** Subsídio de refeição — total do mês (abono). */
   subsidioRefeicaoTotal?: number;
   /** Subsídio de refeição pago em cartão/vale. */
   subsidioRefeicaoCartao?: boolean;
+  /** Feriados trabalhados pagos no mês (sujeito a IRS/SS). */
+  feriados?: number;
+  /** Prémio pago no mês (ex.: desempenho). */
+  premio?: number;
+  /** Desconto por faltas no mês (informativo — já refletido na rem. sujeita). */
+  faltasValor?: number;
   /** Campos que não foi possível extrair (para a UI sinalizar). */
   porPreencher: string[];
 }
@@ -62,6 +70,39 @@ function proximaMoeda(toks: string[], from: number, limite = 12): number | undef
     if (isCurrency(toks[i])) return toNum(toks[i]);
   }
   return undefined;
+}
+
+/**
+ * Colunas numéricas de uma linha de abono/desconto a partir do índice da
+ * designação: numa tabela [Cód · Designação · Quant. · Valor Uni · Valor], devolve
+ * os valores em ordem. Pára na próxima linha (código inteiro), próxima designação
+ * (texto) ou em "TOTAL". Ignora texto que ainda faça parte da designação.
+ */
+function colunasLinha(toks: string[], idx: number, janela = 10): number[] {
+  const out: number[] = [];
+  let comecou = false;
+  for (let i = idx + 1; i < Math.min(toks.length, idx + 1 + janela); i++) {
+    const t = toks[i];
+    if (isCurrency(t)) {
+      out.push(toNum(t));
+      comecou = true;
+      continue;
+    }
+    if (!comecou) {
+      if (/^total/i.test(t)) break;
+      continue; // ainda na designação (pode estar partida em vários tokens)
+    }
+    if (/^\d{1,4}$/.test(t) || /[A-Za-zÀ-ÿ]/.test(t) || /^total/i.test(t)) break;
+  }
+  return out;
+}
+
+/** Colunas da primeira linha cuja designação corresponde ao padrão. */
+function colunasPorDesignacao(toks: string[], re: RegExp): number[] | undefined {
+  const idx = toks.findIndex((t) => re.test(t));
+  if (idx < 0) return undefined;
+  const cols = colunasLinha(toks, idx);
+  return cols.length ? cols : undefined;
 }
 
 /**
@@ -131,15 +172,36 @@ export function parseReciboTexto(itens: string[]): ReciboExtraido {
     });
   }
 
-  // ── Subsídio de refeição (cartão/dinheiro + total) — best-effort. ──
+  // ── Subsídio de refeição: linha de abono [dias · valor/dia · total]. ──
   const idxSub = toks.findIndex((t) => /subs[íi]dio.*refei/i.test(t));
   if (idxSub >= 0) {
     r.subsidioRefeicaoCartao = /cart[ãa]o/i.test(toks[idxSub]);
-    // Fallback do total se não veio do bloco de descontos.
-    if (r.subsidioRefeicaoTotal === undefined) {
-      const v = proximaMoeda(toks, idxSub, 8);
-      if (v !== undefined) r.subsidioRefeicaoTotal = v;
+    const cols = colunasLinha(toks, idxSub);
+    if (cols.length >= 3) {
+      // [Quant. · Valor Uni · Valor] → dias, valor/dia, total.
+      r.subsidioRefeicaoDias = Math.round(cols[0]);
+      r.subsidioRefeicaoDia = cols[1];
+      if (r.subsidioRefeicaoTotal === undefined) r.subsidioRefeicaoTotal = cols[cols.length - 1];
+    } else if (cols.length >= 1 && r.subsidioRefeicaoTotal === undefined) {
+      r.subsidioRefeicaoTotal = cols[cols.length - 1];
     }
+  }
+
+  // ── Feriados trabalhados e prémio (linhas de abono) — o "Valor" é a última coluna. ──
+  const colsFeriados = colunasPorDesignacao(toks, /feriado/i);
+  if (colsFeriados) r.feriados = colsFeriados[colsFeriados.length - 1];
+
+  const colsPremio = colunasPorDesignacao(toks, /pr[ée]mio/i);
+  if (colsPremio) r.premio = colsPremio[colsPremio.length - 1];
+
+  // ── Faltas (desconto) — informativo. ──
+  const colsFaltas = colunasPorDesignacao(toks, /\bfaltas?\b/i);
+  if (colsFaltas) r.faltasValor = colsFaltas[colsFaltas.length - 1];
+
+  // ── Reconstrução da remuneração sujeita se a âncora da taxa falhar. ──
+  if (r.remuneracaoSujeita === undefined && r.salarioBase !== undefined) {
+    const soma = r.salarioBase + (r.feriados ?? 0) + (r.premio ?? 0);
+    if (soma > r.salarioBase) r.remuneracaoSujeita = Math.round(soma * 100) / 100;
   }
 
   // ── Sinalizar o que ficou por extrair (preenchimento manual). ──
