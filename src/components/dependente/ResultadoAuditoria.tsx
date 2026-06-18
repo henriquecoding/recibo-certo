@@ -32,19 +32,20 @@ export function ResultadoAuditoria({ resultado }: { resultado: AuditoriaResult }
         </p>
       </div>
 
+      {/* Ordem alinhada com os inputs: IRS à esquerda, Segurança Social à direita. */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-white dark:bg-stone-800 border border-stone-100 dark:border-stone-700 p-4">
-          <p className="text-xs text-stone-400 mb-1">Segurança Social esperada</p>
-          <p className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100 tabular-nums">{fmt(resultado.ssEsperado)}</p>
-          <p className={`text-xs mt-0.5 ${resultado.ssOk ? "text-brand" : "text-alert-text dark:text-amber-400"}`}>
-            {resultado.ssOk ? "Corresponde" : `Diverge ${fmt(Math.abs(resultado.ssDiferenca))}`}
-          </p>
-        </div>
         <div className="rounded-2xl bg-white dark:bg-stone-800 border border-stone-100 dark:border-stone-700 p-4">
           <p className="text-xs text-stone-400 mb-1">IRS esperado</p>
           <p className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100 tabular-nums">{fmt(resultado.irsEsperado)}</p>
           <p className={`text-xs mt-0.5 ${resultado.irsOk ? "text-brand" : "text-alert-text dark:text-amber-400"}`}>
             {resultado.irsOk ? "Corresponde" : `Diverge ${fmt(Math.abs(resultado.irsDiferenca))}`}
+          </p>
+        </div>
+        <div className="rounded-2xl bg-white dark:bg-stone-800 border border-stone-100 dark:border-stone-700 p-4">
+          <p className="text-xs text-stone-400 mb-1">Segurança Social esperada</p>
+          <p className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100 tabular-nums">{fmt(resultado.ssEsperado)}</p>
+          <p className={`text-xs mt-0.5 ${resultado.ssOk ? "text-brand" : "text-alert-text dark:text-amber-400"}`}>
+            {resultado.ssOk ? "Corresponde" : `Diverge ${fmt(Math.abs(resultado.ssDiferenca))}`}
           </p>
         </div>
       </div>

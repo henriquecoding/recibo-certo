@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.6.0";
+export const APP_VERSION = "1.6.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.6.1",
+    data: "2026-06-18",
+    titulo: "Auditoria do recibo gratuita e mais legível",
+    itens: [
+      "A auditoria do recibo de vencimento passa a ser totalmente gratuita.",
+      "Corrigido o alinhamento dos resultados: o IRS e a Segurança Social esperados ficam agora por baixo dos campos correspondentes.",
+    ],
+  },
   {
     version: "1.6.0",
     data: "2026-06-18",

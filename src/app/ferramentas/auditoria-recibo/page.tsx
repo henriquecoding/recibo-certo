@@ -4,7 +4,7 @@ import { AuditoriaRecibo } from "@/components/dependente/AuditoriaRecibo";
 export const metadata: Metadata = {
   title: "Auditoria do recibo de vencimento 2026 — o teu salário está correto?",
   description:
-    "Confere se a tua entidade patronal aplicou bem as tabelas de 2026: introduz o IRS retido e a Segurança Social do teu recibo de vencimento e deteta divergências. 1.ª auditoria grátis com conta.",
+    "Confere se a tua entidade patronal aplicou bem as tabelas de 2026: introduz o IRS retido e a Segurança Social do teu recibo de vencimento e deteta divergências. Gratuito.",
   keywords: [
     "verificar recibo de vencimento",
     "o meu salário está correto",
@@ -27,7 +27,7 @@ export default function AuditoriaReciboPage() {
   return (
     <>
       <div className="mb-8">
-        <div className="eyebrow mb-3 text-brand">Por conta de outrem · 1.ª auditoria grátis</div>
+        <div className="eyebrow mb-3 text-brand">Por conta de outrem · grátis</div>
         <h1 className="font-display display-2 font-semibold text-ink mb-4 text-balance">
           O teu recibo está certo?
         </h1>
