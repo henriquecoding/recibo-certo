@@ -174,6 +174,26 @@ export const SOURCES = {
     label: "Subsídio de refeição — limites de isenção 2026 (Art. 2.º, n.º 3 CIRS) · ref. Edenred/idealista",
     url: "https://www.edenred.pt/novidades/beneficios-sociais/subsidio-de-refeicao-2026-quais-os-valores-a-considerar/",
   },
+  ct268: {
+    label: "Art. 268.º Código do Trabalho — Pagamento de trabalho suplementar (Lei 7/2009, alt. Lei 13/2023) · PGDL",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0268&nid=1047&tabela=leis",
+  },
+  ct271: {
+    label: "Art. 271.º Código do Trabalho — Cálculo do valor da retribuição horária · PGDL",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0271&nid=1047&tabela=leis",
+  },
+  retencaoSuplementar2026: {
+    label: "Trabalho suplementar — retenção na fonte 2026 (50% da taxa efetiva mensal, desde a 1.ª hora) · Doutor Finanças",
+    url: "https://www.doutorfinancas.pt/carreira-e-rendimentos/rendimentos/retencao-na-fonte-sobre-trabalho-suplementar-alteracoes-e-beneficios-fiscais/",
+  },
+  ajudasCusto2026: {
+    label: "Ajudas de custo 2026 — valores nacionais e internacionais (limites de isenção IRS/SS) · CRN Contabilidade",
+    url: "https://crncontabilidade.pt/blog/tabela-de-ajudas-de-custo-em-2026-valores-nacionais-e-internacionais-actualizados/",
+  },
+  codContributivo: {
+    label: "Código dos Regimes Contributivos (Lei 110/2009) — base de incidência contributiva (prémios regulares) · Diário da República",
+    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2009-34514575",
+  },
 
   // ── Comissão Europeia ───────────────────────────────────────────────
   viesValidation: {
@@ -1477,6 +1497,60 @@ export const SUBSIDIO_REFEICAO = {
   ),
 };
 
+/** Horário semanal a tempo completo — base da fórmula da retribuição horária. */
+export const HORARIO_SEMANAL_COMPLETO = sv(
+  40,
+  "Art. 203.º CT — limite máximo do período normal de trabalho (40h/semana)",
+  "ct271",
+  DEP_TODAY,
+  "Usado na fórmula da retribuição horária (Art. 271.º CT): (retribuição mensal × 12) ÷ (52 × horas semanais)."
+);
+
+/**
+ * Trabalho suplementar (horas extra) — acréscimos sobre a retribuição horária
+ * (Art. 268.º CT, redação da Lei 13/2023 «Agenda do Trabalho Digno»).
+ * Até 100h/ano: 25% (1.ª hora, dia útil), 37,5% (horas seguintes, dia útil),
+ * 50% (dia de descanso/feriado). Acima de 100h/ano os acréscimos sobem para
+ * 50% / 75% / 100%. Modelamos os 4 acréscimos mais comuns — o trabalhador
+ * escolhe o que consta no recibo (o de 75% corresponde a dia útil >100h).
+ */
+export const TRABALHO_SUPLEMENTAR = {
+  acrescimos: sv(
+    [0.25, 0.375, 0.5, 1.0] as number[],
+    "Art. 268.º CT — acréscimos do trabalho suplementar (Lei 7/2009, alt. Lei 13/2023)",
+    "ct268",
+    DEP_TODAY,
+    "25%/37,5% em dia útil (≤100h/ano); 50% em descanso/feriado (ou dia útil >100h, 1.ª hora); 100% em descanso/feriado >100h."
+  ),
+};
+
+/**
+ * Retenção na fonte do trabalho suplementar: desde 2026 aplica-se, a TODAS as
+ * horas, uma taxa igual a 50% da taxa efetiva mensal de retenção do salário.
+ */
+export const RETENCAO_SUPLEMENTAR_FATOR = sv(
+  0.5,
+  "Trabalho suplementar — retenção autónoma = 50% da taxa efetiva mensal (aplicável desde a 1.ª hora em 2026)",
+  "retencaoSuplementar2026",
+  DEP_TODAY
+);
+
+/** Ajudas de custo — limites diários isentos de IRS e Segurança Social (2026, «restantes trabalhadores»). */
+export const AJUDAS_CUSTO = {
+  nacionalDia: sv(
+    62.75,
+    "Limite diário isento — deslocação em território nacional (valor da Função Pública)",
+    "ajudasCusto2026",
+    DEP_TODAY
+  ),
+  estrangeiroDia: sv(
+    89.35,
+    "Limite diário isento — deslocação ao estrangeiro (valor da Função Pública)",
+    "ajudasCusto2026",
+    DEP_TODAY
+  ),
+};
+
 /**
  * Dedução específica do trabalho dependente (Categoria A): 8,54 × IAS — ou, se
  * superior, o total das contribuições obrigatórias para a Segurança Social.
@@ -1898,6 +1972,19 @@ export function assertFiscalDataIntegrity(): void {
   if (!(SUBSIDIO_REFEICAO.dinheiro.value > 0 && SUBSIDIO_REFEICAO.cartao.value > SUBSIDIO_REFEICAO.dinheiro.value)) {
     erros.push("Limites do subsídio de refeição inválidos (cartão deve exceder dinheiro).");
   }
+  if (!(HORARIO_SEMANAL_COMPLETO.value > 0 && HORARIO_SEMANAL_COMPLETO.value <= 60)) {
+    erros.push("Horário semanal completo (cat. A) fora do intervalo plausível.");
+  }
+  if (!Array.isArray(TRABALHO_SUPLEMENTAR.acrescimos.value) || TRABALHO_SUPLEMENTAR.acrescimos.value.length === 0) {
+    erros.push("Acréscimos do trabalho suplementar em falta.");
+  }
+  TRABALHO_SUPLEMENTAR.acrescimos.value.forEach((r, i) => {
+    if (!(r > 0 && r <= 2)) erros.push(`Acréscimo de trabalho suplementar ${i + 1} fora de (0, 2].`);
+  });
+  if (!isRate(RETENCAO_SUPLEMENTAR_FATOR.value)) erros.push("Fator de retenção do trabalho suplementar fora de [0,1].");
+  if (!(AJUDAS_CUSTO.nacionalDia.value > 0 && AJUDAS_CUSTO.estrangeiroDia.value > AJUDAS_CUSTO.nacionalDia.value)) {
+    erros.push("Ajudas de custo: estrangeiro deve exceder nacional e ambos positivos.");
+  }
   if (!(RETENCAO_DEP_ISENCAO.value > 0)) erros.push("Limiar de isenção de retenção (cat. A) não positivo.");
   if (!(RETENCAO_DEP_POR_DEPENDENTE.value > 0)) erros.push("Parcela por dependente (cat. A) não positiva.");
   if (Math.abs(DEDUCAO_ESPECIFICA_DEPENDENTE.value - Math.round(8.54 * IAS.value * 100) / 100) > EPS) {
@@ -1925,6 +2012,11 @@ export function assertFiscalDataIntegrity(): void {
     SUBSIDIO_REFEICAO.dinheiro, SUBSIDIO_REFEICAO.cartao,
     RETENCAO_DEP_ISENCAO, RETENCAO_DEP_POR_DEPENDENTE, RETENCAO_DEP_CONTINENTE_T1,
     RETENCAO_DEP_TABELAS,
+    HORARIO_SEMANAL_COMPLETO,
+    TRABALHO_SUPLEMENTAR.acrescimos,
+    RETENCAO_SUPLEMENTAR_FATOR,
+    AJUDAS_CUSTO.nacionalDia,
+    AJUDAS_CUSTO.estrangeiroDia,
     DEDUCAO_ESPECIFICA_DEPENDENTE,
     ...Object.values(RETENCAO),
     DISPENSA_RETENCAO_LIMITE,

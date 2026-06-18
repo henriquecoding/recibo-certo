@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.5.0";
+export const APP_VERSION = "1.6.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.6.0",
+    data: "2026-06-18",
+    titulo: "Horas extra, prémios, subsídios e ajudas de custo",
+    itens: [
+      "O simulador de recibo de vencimento ganha uma secção de rendimentos adicionais e faltas: horas extra (com os acréscimos legais do Art. 268.º do Código do Trabalho), prémios (que contam para a Segurança Social quando são regulares), subsídios de férias e de Natal pagos no mês, ajudas de custo (isentas até ao limite oficial) e horas de ausência.",
+      "Tudo é calculado com valores verificados em fontes oficiais — Código do Trabalho, tabelas de retenção de 2026 e limites de ajudas de custo — e mostrado numa decomposição clara do recibo do mês.",
+    ],
+  },
   {
     version: "1.5.0",
     data: "2026-06-18",
