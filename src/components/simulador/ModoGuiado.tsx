@@ -904,7 +904,6 @@ export default function ModoGuiado({
                 >
                   <PassoContabilista
                     faturacaoAnual={brutoAnual}
-                    despesasEstimadas={despGerais}
                     onVoltar={() => setPasso("resultado")}
                   />
                 </m.div>

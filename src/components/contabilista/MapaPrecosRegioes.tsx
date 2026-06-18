@@ -16,7 +16,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { Map as LeafletMap, Marker, TileLayer } from "leaflet";
+import type { Map as LeafletMap, Marker, TileLayer, GeoJSON as LeafletGeoJSON, PathOptions } from "leaflet";
+import type { Feature, FeatureCollection } from "geojson";
 import "leaflet/dist/leaflet.css";
 import {
   REGIOES_PRECO,
@@ -38,6 +39,43 @@ const COR_CARO: [number, number, number] = [0x0b, 0x4d, 0x3b];
 function corPorNivel(t: number): string {
   const c = COR_BARATO.map((a, i) => Math.round(a + (COR_CARO[i] - a) * t));
   return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+// Fronteiras NUTS II oficiais (Eurostat Nuts2json, WGS84, baixa resolução).
+// Reais, não inventadas — desenhadas em pastel suave por cima dos tiles.
+const GEO_URL = "https://raw.githubusercontent.com/eurostat/Nuts2json/master/pub/v2/2021/4326/20M/nutsrg_2.json";
+const NUTS2_REGIAO: Record<string, string> = {
+  PT11: "norte",
+  PT16: "centro",
+  PT17: "aml",
+  PT18: "alentejo",
+  PT15: "algarve",
+  PT20: "acores",
+  PT30: "madeira",
+};
+let geoCache: FeatureCollection | null = null;
+
+function codigoNuts(f?: Feature): string {
+  if (!f) return "";
+  const props = (f.properties ?? {}) as Record<string, unknown>;
+  return String(f.id ?? props.id ?? props.NUTS_ID ?? "");
+}
+function regiaoDeFeature(f?: Feature): string | undefined {
+  return NUTS2_REGIAO[codigoNuts(f)];
+}
+/** Estilo pastel da região (cor da paleta a baixa opacidade; realça a selecionada). */
+function estiloRegiao(regiaoId: string | undefined, selId: string | null): PathOptions {
+  const reg = REGIOES_PRECO.find((x) => x.id === regiaoId);
+  const cor = reg ? corPorNivel(nivelPreco(reg)) : "#1D9E75";
+  const sel = !!regiaoId && regiaoId === selId;
+  return {
+    color: cor,
+    weight: sel ? 2 : 1,
+    opacity: sel ? 0.85 : 0.4,
+    fillColor: cor,
+    fillOpacity: sel ? 0.22 : 0.1,
+    dashArray: sel ? undefined : "3 4",
+  };
 }
 
 const TILES_LIGHT = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
@@ -91,6 +129,7 @@ export default function MapaPrecosRegioes() {
   const markersRef = useRef<Record<string, Marker>>({});
   const userMarkerRef = useRef<Marker | null>(null);
   const tileRef = useRef<TileLayer | null>(null);
+  const geoLayerRef = useRef<LeafletGeoJSON | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notifTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reduzirRef = useRef(false);
@@ -128,14 +167,16 @@ export default function MapaPrecosRegioes() {
       userMarkerRef.current.setLatLng([lat, lng]);
       return;
     }
+    const W = 90;
+    const H = 36;
     const icon = L.divIcon({
       className: "",
-      html: `<div style="transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 3px 6px rgba(0,0,0,.35))">
-        <div style="background:#1D9E75;color:#fff;font:700 10px/1 ui-sans-serif,system-ui,sans-serif;padding:4px 8px;border-radius:9999px;white-space:nowrap;border:2px solid #fff">A tua zona</div>
-        <div style="width:2px;height:8px;background:#1D9E75"></div>
+      html: `<div style="width:${W}px;height:${H}px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;filter:drop-shadow(0 3px 6px rgba(0,0,0,.35))">
+        <span style="background:#0F6E56;color:#fff;font:700 9.5px/1 ui-sans-serif,system-ui,sans-serif;padding:3px 8px;border-radius:9999px;white-space:nowrap;border:1.5px solid #fff">A tua zona</span>
+        <span style="width:2px;height:7px;background:#0F6E56"></span>
       </div>`,
-      iconSize: [0, 0],
-      iconAnchor: [0, 0],
+      iconSize: [W, H],
+      iconAnchor: [W / 2, H],
     });
     userMarkerRef.current = L.marker([lat, lng], { icon, interactive: false, keyboard: false }).addTo(map);
   }, []);
@@ -299,16 +340,21 @@ export default function MapaPrecosRegioes() {
       const tile = L.tileLayer(isDark() ? TILES_DARK : TILES_LIGHT, { attribution: TILES_ATTR, maxZoom: 18 }).addTo(map);
       tileRef.current = tile;
 
+      const PW = 118;
+      const PH = 30;
       REGIOES_PRECO.forEach((r) => {
         const cor = corPorNivel(nivelPreco(r));
-        const html = `<div style="transform:translate(-50%,-50%);display:flex;align-items:center;white-space:nowrap;padding:5px 9px;border-radius:9999px;background:${cor};color:#fff;font:700 12px/1 ui-sans-serif,system-ui,sans-serif;border:2px solid rgba(255,255,255,.9);box-shadow:0 4px 14px rgba(10,74,57,.35);cursor:pointer">${eur0(
+        // Caixa transparente (PW×PH) centrada na coordenada; pill visível centrado dentro.
+        const html = `<div style="width:${PW}px;height:${PH}px;display:flex;align-items:center;justify-content:center;pointer-events:none">
+          <span style="pointer-events:auto;display:inline-flex;align-items:center;height:26px;padding:0 11px;border-radius:9999px;background:${cor};color:#fff;font:700 12.5px/1 ui-sans-serif,system-ui,sans-serif;border:2px solid #fff;box-shadow:0 3px 10px rgba(10,74,57,.35);white-space:nowrap;cursor:pointer">${eur0(
           r.min
-        )}–${eur0(r.max)}</div>`;
-        const icon = L.divIcon({ className: "", html, iconSize: [0, 0], iconAnchor: [0, 0] });
+        )}–${eur0(r.max)}</span></div>`;
+        const icon = L.divIcon({ className: "", html, iconSize: [PW, PH], iconAnchor: [PW / 2, PH / 2] });
         const m = L.marker([r.lat, r.lng], {
           icon,
           title: `${r.nome}: ${eur0(r.min)}–${eur0(r.max)}/mês`,
           riseOnHover: true,
+          zIndexOffset: 1000,
         })
           .addTo(map)
           .on("click", () => {
@@ -317,6 +363,36 @@ export default function MapaPrecosRegioes() {
           });
         markersRef.current[r.id] = m;
       });
+
+      // ── Fronteiras das regiões (NUTS II oficiais) em pastel suave. ──
+      try {
+        const data = geoCache ?? (await fetch(GEO_URL).then((res) => (res.ok ? res.json() : Promise.reject())));
+        geoCache = data as FeatureCollection;
+        if (!cancelado && mapRef.current) {
+          const feats = (geoCache.features ?? []).filter((f) => regiaoDeFeature(f));
+          const layer = L.geoJSON(
+            { type: "FeatureCollection", features: feats } as FeatureCollection,
+            {
+              style: (f) => estiloRegiao(regiaoDeFeature(f), null),
+              onEachFeature: (f, lyr) => {
+                const rid = regiaoDeFeature(f);
+                const reg = REGIOES_PRECO.find((x) => x.id === rid);
+                if (reg) {
+                  lyr.bindTooltip(`${reg.nome} · ${eur0(reg.min)}–${eur0(reg.max)}/mês`, { sticky: true });
+                  lyr.on("click", () => {
+                    setSelecionada(reg.id);
+                    voarPara(reg.lat, reg.lng, reg.id === "madeira" || reg.id === "acores" ? 9 : 8);
+                  });
+                }
+              },
+            }
+          ).addTo(map);
+          layer.bringToBack();
+          geoLayerRef.current = layer;
+        }
+      } catch {
+        /* sem ligação às fronteiras — o mapa funciona à mesma (fallback gracioso) */
+      }
 
       observer = new MutationObserver(() => {
         tileRef.current?.setUrl(isDark() ? TILES_DARK : TILES_LIGHT);
@@ -344,9 +420,15 @@ export default function MapaPrecosRegioes() {
       markersRef.current = {};
       userMarkerRef.current = null;
       tileRef.current = null;
+      geoLayerRef.current = null;
       LRef.current = null;
     };
   }, [voarPara]);
+
+  // Realça a região selecionada nas fronteiras (restyle pastel → sólido).
+  useEffect(() => {
+    geoLayerRef.current?.setStyle((f) => estiloRegiao(regiaoDeFeature(f), selecionada));
+  }, [selecionada]);
 
   const escolherRegiao = (id: string) => {
     setSelecionada(id);
@@ -355,7 +437,7 @@ export default function MapaPrecosRegioes() {
   };
 
   const ctrlBtn =
-    "relative flex h-9 w-9 items-center justify-center rounded-xl border bg-white text-stone-600 shadow-card transition-colors hover:border-brand hover:text-brand dark:bg-stone-900 dark:text-stone-300";
+    "relative flex h-9 w-9 items-center justify-center rounded-xl border bg-white text-stone-600 shadow-card transition-all duration-200 ease-out hover:-translate-y-0.5 hover:scale-105 hover:shadow-float hover:text-brand active:scale-95 active:translate-y-0 dark:bg-stone-900 dark:text-stone-300 motion-reduce:transform-none motion-reduce:transition-none";
   const ctrlOff = "border-stone-200 dark:border-stone-700";
   const ctrlOn = "border-brand bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand";
 
