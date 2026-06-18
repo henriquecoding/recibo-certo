@@ -17,6 +17,7 @@ import {
 import { fmt } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import { Check, Warning, Building, ShieldCheck } from "@/components/ui/Icons";
+import MapaPrecosRegioes from "@/components/contabilista/MapaPrecosRegioes";
 
 const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
 const soDecimal = (s: string) => s.replace(/[^\d.,]/g, "");
@@ -225,12 +226,17 @@ export function PassoContabilista({
             </tbody>
           </table>
         </div>
-        <a
-          href="/ferramentas/mapa-contabilistas"
-          className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-brand transition-colors hover:text-brand-dark"
-        >
-          Ver média de preços por região no mapa →
-        </a>
+      </div>
+
+      {/* ── Preços médios por região ── */}
+      <div>
+        <div className="mb-4">
+          <h3 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100">Preços médios por região</h3>
+          <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+            Quanto custa, em média, um contabilista na tua zona. Procura a tua cidade ou toca numa região.
+          </p>
+        </div>
+        <MapaPrecosRegioes />
       </div>
 
       {/* ── Como contratar com segurança ── */}

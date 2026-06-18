@@ -128,3 +128,23 @@ export function nivelPreco(r: RegiaoPreco): number {
   if (hi === lo) return 0.5;
   return (precoMedio(r) - lo) / (hi - lo);
 }
+
+/** Distância aproximada (km) entre dois pontos (Haversine). */
+function distanciaKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/** Região cujo centro está mais próximo de umas coordenadas (para a pesquisa). */
+export function regiaoMaisProxima(lat: number, lng: number): RegiaoPreco {
+  return REGIOES_PRECO.reduce((maisPerto, r) =>
+    distanciaKm(lat, lng, r.lat, r.lng) < distanciaKm(lat, lng, maisPerto.lat, maisPerto.lng)
+      ? r
+      : maisPerto
+  );
+}

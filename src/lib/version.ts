@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.10.0";
+export const APP_VERSION = "1.10.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.10.1",
+    data: "2026-06-18",
+    titulo: "Mapa de contabilistas: pesquisa real e dentro do Passo 5",
+    itens: [
+      "O mapa de preços de contabilistas passa a viver também no passo «O que fazer a seguir» do simulador guiado — logo a seguir ao diagnóstico.",
+      "A barra de pesquisa passa a funcionar a sério: escreve a tua cidade, freguesia ou código postal e o mapa voa para lá e seleciona automaticamente a região e o preço médio correspondente. Novo botão para usar a tua localização.",
+      "Correções visuais: os marcadores de preço ficam centrados na região e os controlos de zoom deixam de sobrepor a legenda.",
+    ],
+  },
   {
     version: "1.10.0",
     data: "2026-06-18",
