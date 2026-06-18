@@ -176,11 +176,24 @@ export function SimuladorVencimento() {
     { label: "IRS + SS", value: descontosAnuais, cls: CLS_SS },
   ];
 
-  const { cenarios, carregado: cenariosProntos, naNuvem, plano, limite, limiteAtingido, guardar, remover } = useVencimentos();
+  const { cenarios, carregado: cenariosProntos, naNuvem, limite, limiteAtingido, guardar, remover } = useVencimentos();
   const [avisoGuardar, setAvisoGuardar] = useState<string | null>(null);
 
   function exportarCSV() {
-    const csv = gerarCSVCenarios(cenarios);
+    // Inclui sempre a simulação atual (mesmo sem cenários guardados) e, a seguir,
+    // o histórico guardado — para o CSV ser útil em qualquer situação.
+    const cenarioAtual: CenarioVencimento = {
+      id: "atual",
+      nome: "Simulação atual",
+      salarioBruto: bruto,
+      dependentes,
+      subsidioRefeicaoDia: temSubsidio ? subsidioDia : 0,
+      subsidioRefeicaoCartao: cartao,
+      diasUteis,
+      duodecimos,
+      criadoEm: new Date().toISOString(),
+    };
+    const csv = gerarCSVCenarios([cenarioAtual, ...cenarios]);
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -529,60 +542,90 @@ export function SimuladorVencimento() {
           </dl>
         </div>
 
-        {/* Mealheiro fiscal */}
+        {/* Mealheiro fiscal — acerto anual de IRS */}
         <div className={subCard}>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className={`${eyebrow} flex items-center gap-1.5`}>
-              <Coin size={14} className="text-brand" /> Mealheiro · acerto anual
-              <InfoTip label="Rendimentos variáveis">
-                Comissões, prémios e horas extra são muitas vezes sub-retidos: a retenção mensal segue o salário base,
-                mas o IRS anual incide sobre o total. Mostramos quanto reservar.
-              </InfoTip>
-            </p>
-            <div className="relative w-32">
-              <input
-                id="variavel"
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                value={variavelStr}
-                onChange={(e) => setVariavelStr(soDecimal(e.target.value))}
-                placeholder="Variável/ano"
-                aria-label="Rendimentos variáveis anuais"
-                className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-3 py-2 text-sm text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand"
-              />
-              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-stone-400">€</span>
-            </div>
+          <div className="mb-3 flex items-center gap-1.5">
+            <Coin size={14} className="text-brand" />
+            <p className={eyebrow}>Mealheiro · acerto anual de IRS</p>
+            <InfoTip label="Como funciona">
+              A retenção mensal segue o salário base, mas o IRS do ano incide sobre tudo o que recebeste. Rendimentos
+              variáveis (comissões, prémios, horas extra) são muitas vezes sub-retidos — aqui estimamos se vais pagar ou
+              receber no acerto, e quanto convém reservar por mês. É uma estimativa.
+            </InfoTip>
           </div>
-          <div className="grid grid-cols-3 gap-x-4 gap-y-2 text-sm">
-            <div>
-              <dt className="text-xs text-stone-400">IRS apurado/ano</dt>
-              <dd className="font-medium text-stone-800 dark:text-stone-100 tabular-nums">{fmt(meal.irsApurado)}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-stone-400">IRS retido/ano</dt>
-              <dd className="font-medium text-stone-800 dark:text-stone-100 tabular-nums">{fmt(meal.irsRetido)}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-stone-400">{meal.acerto > 0 ? "A reservar/mês" : "Reembolso est."}</dt>
-              <dd className={`font-semibold tabular-nums ${meal.acerto > 0 ? "text-alert-text dark:text-amber-400" : "text-brand"}`}>
-                {meal.acerto > 0 ? fmt(meal.reservaMensal) : fmt(Math.abs(meal.acerto))}
-              </dd>
-            </div>
+
+          {/* Input claro, com rótulo e ajuda — para se perceber o que preencher. */}
+          <label htmlFor="variavel" className="mb-1.5 block text-xs font-semibold text-stone-600 dark:text-stone-400">
+            Rendimentos variáveis recebidos no ano
+          </label>
+          <div className="relative">
+            <input
+              id="variavel"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              value={variavelStr}
+              onChange={(e) => setVariavelStr(soDecimal(e.target.value))}
+              placeholder="Ex.: 3000"
+              aria-label="Rendimentos variáveis recebidos no ano"
+              className="w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-4 py-2.5 text-sm text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">€/ano</span>
           </div>
-          <p className="mt-2 text-xs text-stone-400">
-            {meal.acerto > 0
-              ? `Reserva ${fmt(meal.reservaMensal)}/mês (${fmt(meal.acerto)} no ano) para o acerto de IRS.`
-              : "Pela estimativa, não deverás IRS adicional no acerto anual."}
+          <p className="mt-1.5 text-[11px] leading-relaxed text-stone-400">
+            Comissões, prémios, horas extra e outros extras pagos ao longo do ano, além do salário base.
           </p>
+
+          {variavelAnual <= 0 ? (
+            <div className="mt-3 rounded-xl border border-dashed border-stone-200 dark:border-stone-700 px-3 py-3 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+              Indica os teus rendimentos variáveis acima para estimar o acerto anual de IRS — quanto deverás pagar ou
+              receber, e quanto reservar por mês para não seres apanhado de surpresa.
+            </div>
+          ) : (
+            <>
+              <dl className="mt-3 space-y-1.5 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-xs text-stone-400">Bruto considerado no ano</dt>
+                  <dd className="font-medium text-stone-800 dark:text-stone-100 tabular-nums">{fmt(meal.brutoAnual)}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-xs text-stone-400">IRS apurado no ano</dt>
+                  <dd className="font-medium text-stone-800 dark:text-stone-100 tabular-nums">{fmt(meal.irsApurado)}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-xs text-stone-400">IRS retido no ano (estimado)</dt>
+                  <dd className="font-medium text-stone-800 dark:text-stone-100 tabular-nums">{fmt(meal.irsRetido)}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 border-t border-stone-100 dark:border-stone-800 pt-1.5">
+                  <dt className="text-xs font-semibold text-stone-500 dark:text-stone-300">
+                    {meal.acerto > 0 ? "Falta pagar no acerto" : "Reembolso estimado"}
+                  </dt>
+                  <dd className={`font-semibold tabular-nums ${meal.acerto > 0 ? "text-alert-text dark:text-amber-400" : "text-brand"}`}>
+                    {fmt(Math.abs(meal.acerto))}
+                  </dd>
+                </div>
+              </dl>
+              <p
+                className={`mt-3 rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                  meal.acerto > 0
+                    ? "border border-alert-border bg-alert-bg text-alert-text"
+                    : "border border-brand/20 bg-brand-light text-brand-dark"
+                }`}
+              >
+                {meal.acerto > 0
+                  ? `Reserva ${fmt(meal.reservaMensal)}/mês (${fmt(meal.acerto)} no ano) para cobrires o acerto de IRS sem sustos.`
+                  : `Pela estimativa, não deverás IRS adicional — deverás até receber cerca de ${fmt(Math.abs(meal.acerto))} no acerto anual.`}
+              </p>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Relatório PDF — extra Pro (bloqueio misto) */}
+      {/* Relatório PDF + exportação CSV — extra Pro (bloqueio misto desbloqueia ambos) */}
       <div className="mt-4">
         <ProGate
-          title="Relatório financeiro em PDF"
-          description="Descarrega um relatório completo desta simulação — estrutura de custos e visão anual — pronto a apresentar numa negociação salarial."
+          title="Relatório em PDF e exportação CSV"
+          description="Descarrega esta simulação como relatório PDF — estrutura de custos e visão anual — e exporta os dados em CSV para Excel. Tudo incluído no plano Pro."
         >
           <div className={subCard}>
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -591,19 +634,28 @@ export function SimuladorVencimento() {
                   <FileSign size={18} />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">Relatório financeiro</p>
+                  <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">Relatório financeiro · PDF e CSV</p>
                   <p className="text-xs text-stone-400 tabular-nums">
                     Líquido {fmt(liquidoMostrado)}/mês · {fmt(ra.liquidoAnual)}/ano · empresa {fmt(r.custoEmpresa)}
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={descarregarRelatorio}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-glow transition-all hover:shadow-float"
-              >
-                <Export size={14} /> Descarregar PDF
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={descarregarRelatorio}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-glow transition-all hover:shadow-float"
+                >
+                  <FileSign size={14} /> Descarregar PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={exportarCSV}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-brand/30 bg-brand-light px-3.5 py-2 text-xs font-semibold text-brand-dark transition-all hover:bg-brand/15"
+                >
+                  <Export size={14} /> Exportar CSV
+                </button>
+              </div>
             </div>
           </div>
         </ProGate>
@@ -672,23 +724,6 @@ export function SimuladorVencimento() {
           </ul>
         )}
 
-        {cenariosProntos && cenarios.length > 0 && (
-          <div className="mt-3 flex justify-end">
-            {plano === "pro" ? (
-              <button
-                type="button"
-                onClick={exportarCSV}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-500 dark:text-stone-400 transition-colors hover:text-brand"
-              >
-                <Export size={14} /> Exportar CSV
-              </button>
-            ) : (
-              <Link href="/precos" className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-400 transition-colors hover:text-brand">
-                <Export size={14} /> Exportar CSV (Pro)
-              </Link>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
