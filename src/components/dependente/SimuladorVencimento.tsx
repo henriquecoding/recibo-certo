@@ -7,6 +7,7 @@ import { SS_DEPENDENTE, SUBSIDIO_REFEICAO, type EstadoCivilRet } from "@/lib/fis
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import ProGate from "@/components/ui/ProGate";
+import { AuditoriaPainel } from "@/components/dependente/AuditoriaPainel";
 import { printRelatorioVencimento } from "@/lib/export-vencimento";
 import { useVencimentos, gerarCSVCenarios, type CenarioVencimento } from "@/lib/store/vencimentos";
 import { History, Trash, Plus, ShieldCheck, Export, FileSign, Wallet, Gauge, Building, Coin } from "@/components/ui/Icons";
@@ -156,6 +157,20 @@ export function SimuladorVencimento() {
   const meal = useMemo(
     () => mealheiroDependente({ salarioBruto: bruto, dependentes, variavelAnual, estadoCivil, deficiencia }),
     [bruto, dependentes, variavelAnual, estadoCivil, deficiencia]
+  );
+
+  // Input estável para a auditoria embutida (reflete a simulação atual).
+  const auditInput = useMemo(
+    () => ({
+      salarioBruto: bruto,
+      dependentes,
+      subsidioRefeicaoDia: temSubsidio ? subsidioDia : 0,
+      subsidioRefeicaoCartao: cartao,
+      diasUteis,
+      estadoCivil,
+      deficiencia,
+    }),
+    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis, estadoCivil, deficiencia]
   );
 
   const limiteSubsidio = cartao ? SUBSIDIO_REFEICAO.cartao.value : SUBSIDIO_REFEICAO.dinheiro.value;
@@ -619,6 +634,11 @@ export function SimuladorVencimento() {
             </>
           )}
         </div>
+      </div>
+
+      {/* Auditoria do recibo — 1.ª grátis (com conta) · seguintes Pro */}
+      <div className="mt-4">
+        <AuditoriaPainel input={auditInput} />
       </div>
 
       {/* Relatório PDF + exportação CSV — extra Pro (bloqueio misto desbloqueia ambos) */}

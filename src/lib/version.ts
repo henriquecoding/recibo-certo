@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.4.8";
+export const APP_VERSION = "1.5.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.5.0",
+    data: "2026-06-18",
+    titulo: "Audita o teu recibo no próprio simulador",
+    itens: [
+      "O simulador de recibo de vencimento passa a ter uma auditoria integrada: confronta o IRS retido e a Segurança Social do teu recibo com as tabelas oficiais de 2026, a partir dos dados da simulação.",
+      "A 1.ª auditoria é grátis para quem tem conta e fica ligada à conta (não se contorna mudando de dispositivo); as auditorias seguintes fazem parte do plano Pro — indicado de forma clara.",
+    ],
+  },
   {
     version: "1.4.8",
     data: "2026-06-18",
