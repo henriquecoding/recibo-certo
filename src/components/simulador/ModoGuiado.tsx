@@ -269,42 +269,82 @@ export default function ModoGuiado({
   const [regimeIVA, setRegimeIVA] = useState<RegimeIVA>("isento");
 
   // Taxa de IVA derivada do regime — única fonte de verdade para extracção do IVA
-  const totalIva = (() => {
-    if (regimeIVA === "isento") return 0;
-    const t = IVA_TAXAS[regiao].value;
-    if (regimeIVA === "reduzida") return t.reduzida;
-    if (regimeIVA === "intermedia") return t.intermedia;
-    return t.normal;
-  })();
+  // ── IVA: regime EFETIVO, derivado reativamente ──────────────────────
+  // Princípio único: abaixo de 15 000 €/ano de faturação → ISENTO (Art. 53.º
+  // CIVA), logo SEM IVA. Acima, aplica-se o regime escolhido (ou a taxa habitual
+  // da atividade). Tudo o resto — desdobramento, situação, resultado e motor —
+  // usa isto, para o simulador estar sempre sincronizado.
+  const taxasRegiao = IVA_TAXAS[regiao].value;
+  const taxaDoRegime = (r: RegimeIVA): number =>
+    r === "reduzida" ? taxasRegiao.reduzida : r === "intermedia" ? taxasRegiao.intermedia : r === "normal" ? taxasRegiao.normal : 0;
+  const ivaEsperadoAtiv = ATIV_META[tipoAtiv].ivaEsperado;
+  // Taxa "potencial" (se ultrapassar o limite de isenção): o regime escolhido ou,
+  // se ainda estiver em "isento", a taxa habitual da atividade.
+  const taxaPotencial =
+    regimeIVA !== "isento"
+      ? taxaDoRegime(regimeIVA)
+      : ivaEsperadoAtiv !== "isento"
+        ? taxasRegiao[ivaEsperadoAtiv]
+        : taxasRegiao.normal;
 
-  // Derivados de faturação: sempre SEM IVA para os cálculos fiscais
-  const { mensalSemIva, mensalComIva, mensalIva } = useMemo(() => {
-    let comIva = 0;
-    let semIva = 0;
+  const { mensalSemIva, mensalComIva, mensalIva, isentoEfetivo, taxaIvaEfetiva } = useMemo(() => {
+    // Princípio coerente: ISENTO ⟺ NÃO está a cobrar IVA. Cobra IVA quando o
+    // utilizador escolhe "com IVA" (afirma que cobra) OU quando a faturação base
+    // ultrapassa o limite de isenção. Assim a situação de IVA, o desdobramento e
+    // o resultado usam sempre a mesma verdade — nunca "isento" e a cobrar IVA.
     if (modoFat === "total") {
       const v = parseMontante(totalInput);
-      if (totalIva > 0 && !valorComIva) {
-        // Valor introduzido é a base; o IVA é acrescentado por cima.
-        semIva = v;
-        comIva = v * (1 + totalIva);
-      } else {
-        // Valor introduzido já inclui IVA (ou regime isento).
+      const baseComoFaturacao = v; // valor tratado como faturação (sem IVA)
+      const acimaLimite = baseComoFaturacao * mesesFat > IVA_LIMITE;
+      const cobraIva = valorComIva || acimaLimite;
+      const taxaEf = cobraIva ? taxaPotencial : 0;
+      let semIva: number;
+      let comIva: number;
+      if (!cobraIva) {
+        semIva = v; // isento: o valor É a faturação (sem IVA a separar)
         comIva = v;
-        semIva = totalIva > 0 ? v / (1 + totalIva) : v;
+      } else if (valorComIva && taxaEf > 0) {
+        comIva = v; // valor já inclui IVA → retirar para obter a base
+        semIva = v / (1 + taxaEf);
+      } else {
+        semIva = v; // valor é a base → IVA acrescentado por cima
+        comIva = v * (1 + taxaEf);
       }
-    } else {
-      for (const r of recibosItems) {
-        const v = parseMontante(r.valorComIva);
+      return { mensalSemIva: semIva, mensalComIva: comIva, mensalIva: comIva - semIva, isentoEfetivo: !cobraIva, taxaIvaEfetiva: taxaEf };
+    }
+    // Modo "recibo a recibo": cobra IVA se algum recibo tiver taxa > 0.
+    let semIva = 0;
+    let comIva = 0;
+    let algumIva = false;
+    for (const r of recibosItems) {
+      const v = parseMontante(r.valorComIva);
+      if (r.taxaIva > 0) {
+        algumIva = true;
+        semIva += v / (1 + r.taxaIva);
         comIva += v;
-        semIva += r.taxaIva > 0 ? v / (1 + r.taxaIva) : v;
+      } else {
+        semIva += v;
+        comIva += v;
       }
     }
+    const cobraIva = algumIva || semIva * mesesFat > IVA_LIMITE;
     return {
       mensalSemIva: semIva,
       mensalComIva: comIva,
-      mensalIva: comIva - semIva,
+      mensalIva: cobraIva ? comIva - semIva : 0,
+      isentoEfetivo: !cobraIva,
+      taxaIvaEfetiva: cobraIva ? taxaPotencial : 0,
     };
-  }, [modoFat, totalInput, totalIva, valorComIva, recibosItems]);
+  }, [modoFat, totalInput, valorComIva, recibosItems, taxaPotencial, mesesFat]);
+
+  // Regime efetivo, para o cálculo, a situação de IVA e o resultado.
+  const regimeEfetivo: RegimeIVA = isentoEfetivo
+    ? "isento"
+    : regimeIVA !== "isento"
+      ? regimeIVA
+      : ivaEsperadoAtiv !== "isento"
+        ? ivaEsperadoAtiv
+        : "normal";
 
   // bruto (sem IVA) e recibosAno mantidos para compatibilidade com o resto do componente
   const bruto = mensalSemIva;
@@ -339,7 +379,7 @@ export default function ModoGuiado({
         bruto,
         tipo: card.tipoFiscal,
         regiao,
-        regimeIVA,
+        regimeIVA: regimeEfetivo,
         baseSS: card.baseSS,
         dispensaRetencao: false,
         isencaoSSPrimeiroAno,
@@ -352,7 +392,7 @@ export default function ModoGuiado({
       card.tipoFiscal,
       card.baseSS,
       regiao,
-      regimeIVA,
+      regimeEfetivo,
       isencaoSSPrimeiroAno,
       acumulaEmprego,
       jovemAno,
@@ -410,7 +450,7 @@ export default function ModoGuiado({
     bruto,
     brutoAnual,
     regiao,
-    regimeIVA,
+    regimeIVA: regimeEfetivo,
     acumulaEmprego,
     isencaoSSPrimeiroAno,
     isencaoCpas,
@@ -687,8 +727,8 @@ export default function ModoGuiado({
       </div>
 
       {/* ── Corpo ──────────────────────────────────────────────────────────── */}
-      <div className={`mx-auto px-6 py-8 sm:px-8 ${passo === "resultado" ? "max-w-5xl" : "max-w-3xl"}`}>
-        <div className={`grid gap-8 ${passo === "resultado" ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-[1fr_270px]"}`}>
+      <div className={`mx-auto px-6 py-8 sm:px-8 ${passo === "resultado" || passo === 1 ? "max-w-5xl" : "max-w-3xl"}`}>
+        <div className={`grid gap-8 ${passo === "resultado" ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-[1fr_300px]"}`}>
           {/* ── Conteúdo do passo ────────────────────────────────────────── */}
           <div className="min-w-0">
             <AnimatePresence mode="wait">
@@ -747,18 +787,15 @@ export default function ModoGuiado({
                     brutoAnual={brutoAnual}
                     regiao={regiao}
                     regimeIVA={regimeIVA}
+                    isentoEfetivo={isentoEfetivo}
+                    taxaIvaEfetiva={taxaIvaEfetiva}
                     tipoAtiv={tipoAtiv}
                     atividadeEspecifica={atividadeEspecifica}
                     onModoFat={setModoFat}
                     onTotalInput={setTotalInput}
                     onValorComIva={setValorComIva}
                     onRecibosItems={setRecibosItems}
-                    onMesesFat={(m) => {
-                      setMesesFat(m);
-                      if (mensalSemIva * m <= IVA_LIMITE) {
-                        setRegimeIVA("isento");
-                      }
-                    }}
+                    onMesesFat={setMesesFat}
                     onRegiaoChange={setRegiao}
                     onRegimeIVAChange={setRegimeIVA}
                   />
@@ -822,7 +859,7 @@ export default function ModoGuiado({
                     ssAnual={ssAnual}
                     ivaAnual={ivaAnual}
                     taxaIVA={mensalSemIva > 0 ? mensalIva / mensalSemIva : 0}
-                    regimeIVA={regimeIVA}
+                    regimeIVA={regimeEfetivo}
                     recibosAno={recibosAno}
                     resultRecibo={resultRecibo}
                     card={card}
@@ -1206,6 +1243,8 @@ function PassoFaturacao({
   brutoAnual,
   regiao,
   regimeIVA,
+  isentoEfetivo,
+  taxaIvaEfetiva,
   tipoAtiv,
   atividadeEspecifica,
   onModoFat,
@@ -1226,6 +1265,8 @@ function PassoFaturacao({
   brutoAnual: number;
   regiao: Regiao;
   regimeIVA: RegimeIVA;
+  isentoEfetivo: boolean;
+  taxaIvaEfetiva: number;
   tipoAtiv: TipoAtiv;
   atividadeEspecifica: Atividade | null;
   onModoFat: (m: "total" | "individual") => void;
@@ -1237,15 +1278,10 @@ function PassoFaturacao({
   onRegimeIVAChange: (v: RegimeIVA) => void;
 }) {
   const taxasIVA = IVA_TAXAS[regiao].value;
-  // Taxa efectiva derivada do regime — única fonte de verdade
-  const taxaIvaAtual =
-    regimeIVA === "isento"
-      ? 0
-      : regimeIVA === "reduzida"
-        ? taxasIVA.reduzida
-        : regimeIVA === "intermedia"
-          ? taxasIVA.intermedia
-          : taxasIVA.normal;
+  // Taxa efetiva de IVA = a do componente-pai (regime EFETIVO: 0 quando isento
+  // por estar abaixo do limite). É a única fonte de verdade, para o desdobramento
+  // e o seletor "com/sem IVA" acompanharem a situação real.
+  const taxaIvaAtual = taxaIvaEfetiva;
 
   function adicionarRecibo() {
     onRecibosItems((prev) => {
@@ -1405,6 +1441,13 @@ function PassoFaturacao({
                 </span>
               </div>
             </div>
+          )}
+
+          {/* Isento — não há IVA a separar; o valor introduzido é a faturação. */}
+          {montanteTotal > 0 && isentoEfetivo && (
+            <p className="rounded-xl bg-brand-light/60 px-4 py-2.5 text-[11px] leading-relaxed text-brand-dark dark:bg-brand/10">
+              Isento de IVA (abaixo de {fmt(IVA_LIMITE)}/ano) — este valor é a tua faturação, sem IVA a separar.
+            </p>
           )}
         </div>
       )}
@@ -1571,6 +1614,7 @@ function PassoFaturacao({
         </div>
         <ZonaIVA
           brutoAnual={brutoAnual}
+          isentoEfetivo={isentoEfetivo}
           regimeIVA={regimeIVA}
           regiao={regiao}
           tipoAtiv={tipoAtiv}
@@ -3432,6 +3476,7 @@ function PainelResultadoVivo({
 
 function ZonaIVA({
   brutoAnual,
+  isentoEfetivo,
   regimeIVA,
   regiao,
   tipoAtiv,
@@ -3439,6 +3484,7 @@ function ZonaIVA({
   onRegimeIVAChange,
 }: {
   brutoAnual: number;
+  isentoEfetivo: boolean;
   regimeIVA: RegimeIVA;
   regiao: Regiao;
   tipoAtiv: TipoAtiv;
@@ -3576,7 +3622,7 @@ function ZonaIVA({
     );
   }
 
-  if (brutoAnual <= IVA_LIMITE) {
+  if (isentoEfetivo) {
     return (
       <div className="space-y-0">
         <div className="flex items-start gap-2.5 rounded-xl border border-brand/30 bg-brand-light/60 p-3.5">

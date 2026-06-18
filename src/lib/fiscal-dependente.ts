@@ -198,6 +198,8 @@ export interface ReciboMensalInput {
   subsidioFerias?: number;
   /** Subsídio de Natal pago neste mês. */
   subsidioNatal?: number;
+  /** Outros rendimentos sujeitos a IRS/SS (feriados, diuturnidades, etc.). */
+  outrosRendimentosSujeitos?: number;
   // Ajudas de custo (deslocações)
   ajudasNacionalDias?: number;
   ajudasNacionalValorDia?: number;
@@ -222,6 +224,8 @@ export interface ReciboMensalResult {
   subsidioFerias: number;
   subsidioNatal: number;
   irsSubsidios: number;
+  /** Outros rendimentos sujeitos a IRS/SS. */
+  outrosSujeitos: number;
   // Ajudas de custo
   ajudasTotal: number;
   ajudasIsentas: number;
@@ -277,6 +281,12 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
   const subsidioFerias = Math.max(0, input.subsidioFerias ?? 0);
   const subsidioNatal = Math.max(0, input.subsidioNatal ?? 0);
 
+  // Outros rendimentos sujeitos a IRS/SS (ex.: feriados, diuturnidades, prémios
+  // não regulares já incluídos noutro campo) — captura o que um recibo real tem
+  // além do salário base, para a base de incidência bater certo (ex.: importação
+  // de PDF que conhece a "remuneração sujeita" mas não a decompõe linha a linha).
+  const outrosSujeitos = Math.max(0, input.outrosRendimentosSujeitos ?? 0);
+
   // Ajudas de custo — isentas até ao limite diário; o excesso é tributado.
   const ajN = Math.max(0, input.ajudasNacionalDias ?? 0);
   const ajNv = Math.max(0, input.ajudasNacionalValorDia ?? 0);
@@ -304,13 +314,14 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
       (premioRegular ? premio : 0) +
       subsidioFerias +
       subsidioNatal +
+      outrosSujeitos +
       ajudasTributadas +
       subsidioRefeicaoTributado
   );
   const ssTrabalhador = cent(baseSS * SS_DEPENDENTE.trabalhador.value);
 
   // IRS — retenção da remuneração mensal (tabela) sobre base + prémio + excessos.
-  const remMensal = cent(baseRemunerada + premio + ajudasTributadas + subsidioRefeicaoTributado);
+  const remMensal = cent(baseRemunerada + premio + outrosSujeitos + ajudasTributadas + subsidioRefeicaoTributado);
   const irsBaseMensal = retencaoPorSituacao(remMensal, dependentes, ec, def, reg);
   // Trabalho suplementar: retenção autónoma = 50% da taxa efetiva mensal.
   const taxaEfetivaMes = remMensal > 0 ? irsBaseMensal / remMensal : 0;
@@ -324,7 +335,7 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
 
   // Totais.
   const brutoTotal = cent(
-    baseRemunerada + suplementarTotal + premio + subsidioFerias + subsidioNatal + ajudasTotal + subsidioRefeicaoTotal
+    baseRemunerada + suplementarTotal + premio + subsidioFerias + subsidioNatal + outrosSujeitos + ajudasTotal + subsidioRefeicaoTotal
   );
   const liquido = cent(brutoTotal - ssTrabalhador - irsTotal);
   const rendimentoSujeito = cent(brutoTotal - ajudasIsentas - subsidioRefeicaoIsento);
@@ -337,6 +348,7 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
     premio > 0 ||
     subsidioFerias > 0 ||
     subsidioNatal > 0 ||
+    outrosSujeitos > 0 ||
     ajudasTotal > 0;
 
   return {
@@ -353,6 +365,7 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
     subsidioFerias,
     subsidioNatal,
     irsSubsidios,
+    outrosSujeitos,
     ajudasTotal,
     ajudasIsentas,
     ajudasTributadas,
