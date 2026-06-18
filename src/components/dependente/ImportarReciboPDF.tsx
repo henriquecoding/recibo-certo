@@ -5,7 +5,7 @@
 // para o utilizador confirmar/corrigir antes de aplicar ao simulador. O ficheiro
 // nunca é enviado nem guardado. Não-Pro vê o bloqueio com CTA.
 
-import { useRef, useState } from "react";
+import { useRef, useState, type DragEvent } from "react";
 import Link from "next/link";
 import { useSubscricao } from "@/lib/stripe/subscription";
 import { extrairReciboPDF, type ReciboExtraido } from "@/lib/recibo-pdf";
@@ -18,7 +18,7 @@ const MESES = [
 const soDecimal = (s: string) => s.replace(/[^\d.,]/g, "");
 const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
 
-type Estado = "idle" | "a-ler" | "lido" | "erro";
+type Estado = "idle" | "a-ler" | "lido" | "erro" | "aplicado";
 
 export function ImportarReciboPDF({ onAplicar }: { onAplicar: (e: ReciboExtraido) => void }) {
   const { plano, carregado } = useSubscricao();
@@ -27,6 +27,7 @@ export function ImportarReciboPDF({ onAplicar }: { onAplicar: (e: ReciboExtraido
 
   const [estado, setEstado] = useState<Estado>("idle");
   const [erro, setErro] = useState("");
+  const [arrastar, setArrastar] = useState(false);
   // Campos editáveis (seeds da extração; tudo corrigível manualmente).
   const [empresaNome, setEmpresaNome] = useState("");
   const [empresaNif, setEmpresaNif] = useState("");
@@ -44,6 +45,11 @@ export function ImportarReciboPDF({ onAplicar }: { onAplicar: (e: ReciboExtraido
 
   async function aoEscolher(file: File | undefined) {
     if (!file) return;
+    if (file.type && file.type !== "application/pdf") {
+      setEstado("erro");
+      setErro("O ficheiro tem de ser um PDF. Arrasta o teu recibo em PDF ou escolhe-o no botão.");
+      return;
+    }
     setEstado("a-ler");
     setErro("");
     try {
@@ -99,6 +105,22 @@ export function ImportarReciboPDF({ onAplicar }: { onAplicar: (e: ReciboExtraido
       feriados: outrosSujeitos > 0 ? outrosSujeitos : undefined,
       porPreencher: [],
     });
+    // Os dados já estão refletidos no simulador abaixo — recolhe a confirmação.
+    setEstado("aplicado");
+  }
+
+  // Drag-and-drop do PDF sobre a zona de carregamento.
+  function aoLargar(e: DragEvent) {
+    e.preventDefault();
+    setArrastar(false);
+    aoEscolher(e.dataTransfer.files?.[0]);
+  }
+
+  // Recomeça a leitura (ler outro recibo).
+  function lerOutro() {
+    setEstado("idle");
+    setErro("");
+    if (fileRef.current) fileRef.current.value = "";
   }
 
   const subCard = "rounded-2xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-800/40 p-4";
@@ -157,14 +179,51 @@ export function ImportarReciboPDF({ onAplicar }: { onAplicar: (e: ReciboExtraido
         className="hidden"
         onChange={(e) => aoEscolher(e.target.files?.[0])}
       />
-      <button
-        type="button"
-        onClick={() => fileRef.current?.click()}
-        disabled={estado === "a-ler"}
-        className="inline-flex items-center gap-1.5 rounded-xl border border-brand/30 bg-brand-light px-3.5 py-2 text-xs font-semibold text-brand-dark transition-all hover:bg-brand/15 disabled:opacity-60"
-      >
-        <FileSign size={14} /> {estado === "a-ler" ? "A ler o PDF…" : "Escolher recibo em PDF"}
-      </button>
+
+      {estado === "aplicado" ? (
+        // Depois de aplicar, recolhe a confirmação — os dados já estão no simulador abaixo.
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-brand/25 bg-brand-light px-3.5 py-2.5">
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-brand-dark">
+            <Check size={14} /> Recibo aplicado ao simulador
+          </span>
+          <button type="button" onClick={lerOutro} className="text-xs font-semibold text-brand-dark underline underline-offset-2 hover:opacity-80">
+            Ler outro recibo
+          </button>
+        </div>
+      ) : (
+        // Zona de carregamento com arrastar-e-largar (drag & drop).
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setArrastar(true);
+          }}
+          onDragLeave={() => setArrastar(false)}
+          onDrop={aoLargar}
+          onClick={() => fileRef.current?.click()}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              fileRef.current?.click();
+            }
+          }}
+          aria-label="Arrasta o teu recibo em PDF para aqui ou clica para escolher"
+          className={`flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed px-4 py-6 text-center transition-colors ${
+            arrastar ? "border-brand bg-brand-light" : "border-stone-200 dark:border-stone-700 hover:border-brand/60 hover:bg-brand-light/40"
+          }`}
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-light text-brand">
+            <FileSign size={18} />
+          </span>
+          <p className="text-xs font-semibold text-stone-700 dark:text-stone-300">
+            {estado === "a-ler" ? "A ler o PDF…" : "Arrasta o teu recibo em PDF para aqui"}
+          </p>
+          <span className="inline-flex items-center gap-1.5 rounded-xl border border-brand/30 bg-brand-light px-3.5 py-1.5 text-xs font-semibold text-brand-dark">
+            <FileSign size={13} /> Escolher recibo em PDF
+          </span>
+        </div>
+      )}
 
       {estado === "erro" && (
         <p className="mt-3 rounded-xl border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">{erro}</p>

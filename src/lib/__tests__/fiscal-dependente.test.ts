@@ -3,7 +3,10 @@ import {
   retencaoIRSDependente,
   calcularVencimento,
   calcularVencimentoAnual,
+  calcularReciboMensal,
   compararCategorias,
+  isencaoJovemRemuneracao,
+  IRS_JOVEM_TETO_MENSAL,
 } from "@/lib/fiscal-dependente";
 import { SS_DEPENDENTE } from "@/lib/fiscal-data";
 
@@ -118,16 +121,16 @@ describe("gerarCSVCenarios", () => {
     duodecimos: false, criadoEm: "2026-06-17T00:00:00.000Z",
   };
 
-  it("inclui cabeçalho e uma linha por cenário", () => {
+  it("inclui um cabeçalho com a coluna do líquido anual e uma linha por cenário", () => {
     const csv = gerarCSVCenarios([cenario]);
-    const linhas = csv.split("\n");
-    expect(linhas).toHaveLength(2);
-    expect(linhas[0]).toContain("liquido_anual");
+    const linhas = csv.split("\r\n");
+    expect(linhas.some((l) => l.includes("Líquido anual (€)"))).toBe(true);
+    expect(linhas.some((l) => l.startsWith("Teste;"))).toBe(true);
   });
 
   it("usa ; como separador e vírgula decimal (Excel pt-PT)", () => {
     const csv = gerarCSVCenarios([cenario]);
-    const dados = csv.split("\n")[1];
+    const dados = csv.split("\r\n").find((l) => l.startsWith("Teste;"))!;
     expect(dados).toContain(";");
     expect(dados).toContain("1500,00");
   });
@@ -162,6 +165,65 @@ describe("mealheiroDependente", () => {
   });
 });
 
+// ── IRS Jovem (Art. 12.º-B CIRS) na Categoria A ───────────────────────────────
+
+describe("IRS Jovem — retenção mensal", () => {
+  it("isencaoJovemRemuneracao: 1.º ano isenta 100% (até ao teto mensal)", () => {
+    const j = isencaoJovemRemuneracao(1500, 1);
+    expect(j.pct).toBe(1);
+    expect(j.isentoEur).toBeCloseTo(1500, 2); // 1500 < teto mensal
+    expect(j.tributavel).toBeCloseTo(0, 2);
+  });
+
+  it("isencaoJovemRemuneracao: limita a isenção ao teto mensal (55×IAS÷14)", () => {
+    const alto = 6000;
+    const j = isencaoJovemRemuneracao(alto, 1);
+    expect(j.isentoEur).toBeCloseTo(IRS_JOVEM_TETO_MENSAL, 2);
+    expect(j.excedeTeto).toBe(true);
+    expect(j.tributavel).toBeCloseTo(alto - IRS_JOVEM_TETO_MENSAL, 2);
+  });
+
+  it("sem ano de benefício não há isenção", () => {
+    expect(isencaoJovemRemuneracao(2000).pct).toBe(0);
+    expect(isencaoJovemRemuneracao(2000, 0).isentoEur).toBe(0);
+  });
+
+  it("calcularVencimento: o IRS Jovem reduz a retenção e expõe a poupança", () => {
+    const sem = calcularVencimento({ salarioBruto: 1500 });
+    const com = calcularVencimento({ salarioBruto: 1500, irsJovemAno: 1 });
+    expect(com.irsRetido).toBeLessThan(sem.irsRetido);
+    expect(com.irsRetido).toBe(0); // 100% isento abaixo do teto
+    expect(com.irsSemJovem).toBeCloseTo(sem.irsRetido, 2);
+    expect(com.rendimentoIsentoJovem).toBeGreaterThan(0);
+  });
+
+  it("a SS (11%) não é afetada pelo IRS Jovem", () => {
+    const com = calcularVencimento({ salarioBruto: 1500, irsJovemAno: 1 });
+    expect(com.ssTrabalhador).toBeCloseTo(1500 * SS_DEPENDENTE.trabalhador.value, 2);
+  });
+
+  it("anos posteriores isentam menos (5.º ano = 50%)", () => {
+    const ano1 = calcularVencimento({ salarioBruto: 2500, irsJovemAno: 1 });
+    const ano5 = calcularVencimento({ salarioBruto: 2500, irsJovemAno: 5 });
+    expect(ano5.irsRetido).toBeGreaterThan(ano1.irsRetido);
+    expect(ano5.isencaoJovemPct).toBe(0.5);
+  });
+
+  it("calcularReciboMensal expõe a isenção e a retenção sem regime", () => {
+    const det = calcularReciboMensal({ salarioBruto: 1800, irsJovemAno: 2, premio: 200, premioRegular: true });
+    expect(det.isencaoJovemPct).toBe(0.75);
+    expect(det.rendimentoIsentoJovem).toBeGreaterThan(0);
+    expect(det.irsSemJovem).toBeGreaterThanOrEqual(det.irsTotal);
+  });
+
+  it("calcularVencimentoAnual reflete a isenção anual", () => {
+    const a = calcularVencimentoAnual({ salarioBruto: 1500, irsJovemAno: 1 });
+    expect(a.isencaoJovemPct).toBe(1);
+    expect(a.rendimentoIsentoJovemAnual).toBeGreaterThan(0);
+    expect(a.irsAnual).toBe(0);
+  });
+});
+
 // ── auditarRecibo ─────────────────────────────────────────────────────────────
 
 import { auditarRecibo } from "@/lib/fiscal-dependente";
@@ -187,6 +249,29 @@ describe("auditarRecibo", () => {
     const r = auditarRecibo({ salarioBruto: 1500, dependentes: 0, ssDeclarado: 165, irsDeclarado: 50 });
     expect(r.irsOk).toBe(false);
     expect(r.tudoOk).toBe(false);
+  });
+
+  it("expõe base, custo da entidade, taxa efetiva e líquido esperado", () => {
+    const r = auditarRecibo({ salarioBruto: 1500, dependentes: 0, ssDeclarado: 165, irsDeclarado: retencaoIRSDependente(1500, 0) });
+    expect(r.baseIncidencia).toBeCloseTo(1500, 2);
+    expect(r.custoEmpresa).toBeCloseTo(1500 * (1 + SS_DEPENDENTE.entidade.value), 2);
+    expect(r.taxaEfetiva).toBeGreaterThan(0);
+    expect(r.liquidoEsperado).toBeCloseTo(1500 - r.ssEsperado - r.irsEsperado, 2);
+  });
+
+  it("com IRS Jovem o IRS esperado desce e a isenção é reportada", () => {
+    const r = auditarRecibo({ salarioBruto: 1500, dependentes: 0, irsJovemAno: 1, ssDeclarado: 165, irsDeclarado: 0 });
+    expect(r.isencaoJovemPct).toBe(1);
+    expect(r.irsEsperado).toBe(0);
+    expect(r.irsOk).toBe(true);
+    expect(r.rendimentoIsentoJovem).toBeGreaterThan(0);
+  });
+
+  it("usa a remuneração sujeita como base quando fornecida", () => {
+    const r = auditarRecibo({ salarioBruto: 1200, remuneracaoSujeita: 1800, dependentes: 0, ssDeclarado: 198, irsDeclarado: retencaoIRSDependente(1800, 0) });
+    expect(r.baseIncidencia).toBeCloseTo(1800, 2);
+    expect(r.ssEsperado).toBeCloseTo(1800 * SS_DEPENDENTE.trabalhador.value, 2);
+    expect(r.ssOk).toBe(true);
   });
 });
 

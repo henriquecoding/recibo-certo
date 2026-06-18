@@ -2,7 +2,7 @@
 
 import { useState, useMemo, type ReactNode } from "react";
 import Link from "next/link";
-import { calcularVencimento, calcularVencimentoAnual, mealheiroDependente, calcularReciboMensal } from "@/lib/fiscal-dependente";
+import { calcularVencimento, calcularVencimentoAnual, mealheiroDependente, calcularReciboMensal, IRS_JOVEM_TETO_MENSAL } from "@/lib/fiscal-dependente";
 import { SS_DEPENDENTE, SUBSIDIO_REFEICAO, TRABALHO_SUPLEMENTAR, AJUDAS_CUSTO, HORARIO_SEMANAL_COMPLETO, type EstadoCivilRet } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
@@ -151,6 +151,10 @@ export function SimuladorVencimento() {
   const [estadoCivil, setEstadoCivil] = useState<EstadoCivilRet>("naoCasado");
   const [deficiencia, setDeficiencia] = useState(false);
   const [regiao, setRegiao] = useState<"continente" | "madeira" | "acores">("continente");
+  // ── IRS Jovem (Art. 12.º-B CIRS) ──
+  const [irsJovem, setIrsJovem] = useState(false);
+  const [irsJovemAno, setIrsJovemAno] = useState(1);
+  const jovemAno = irsJovem ? irsJovemAno : undefined;
 
   // ── Importação de recibo em PDF (Pro) ──
   const [reciboPdf, setReciboPdf] = useState<ReciboExtraido | null>(null);
@@ -187,8 +191,9 @@ export function SimuladorVencimento() {
         estadoCivil,
         deficiencia,
         regiao,
+        irsJovemAno: jovemAno,
       }),
-    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis, estadoCivil, deficiencia, regiao]
+    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis, estadoCivil, deficiencia, regiao, jovemAno]
   );
   const ra = useMemo(
     () =>
@@ -201,14 +206,15 @@ export function SimuladorVencimento() {
         estadoCivil,
         deficiencia,
         regiao,
+        irsJovemAno: jovemAno,
       }),
-    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis, estadoCivil, deficiencia, regiao]
+    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis, estadoCivil, deficiencia, regiao, jovemAno]
   );
 
   const variavelAnual = num(variavelStr);
   const meal = useMemo(
-    () => mealheiroDependente({ salarioBruto: bruto, dependentes, variavelAnual, estadoCivil, deficiencia, regiao }),
-    [bruto, dependentes, variavelAnual, estadoCivil, deficiencia, regiao]
+    () => mealheiroDependente({ salarioBruto: bruto, dependentes, variavelAnual, estadoCivil, deficiencia, regiao, irsJovemAno: jovemAno }),
+    [bruto, dependentes, variavelAnual, estadoCivil, deficiencia, regiao, jovemAno]
   );
 
   // Input estável para a auditoria embutida (reflete a simulação atual).
@@ -222,8 +228,9 @@ export function SimuladorVencimento() {
       estadoCivil,
       deficiencia,
       regiao,
+      irsJovemAno: jovemAno,
     }),
-    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis, estadoCivil, deficiencia, regiao]
+    [bruto, dependentes, temSubsidio, subsidioDia, cartao, diasUteis, estadoCivil, deficiencia, regiao, jovemAno]
   );
 
   // Recibo detalhado (com rendimentos adicionais e faltas).
@@ -236,6 +243,7 @@ export function SimuladorVencimento() {
         estadoCivil,
         deficiencia,
         regiao,
+        irsJovemAno: jovemAno,
         subsidioRefeicaoDia: temSubsidio ? subsidioDia : 0,
         subsidioRefeicaoCartao: cartao,
         diasSubsidio: Math.max(0, diasUteis - diasSemSubsidio),
@@ -252,7 +260,7 @@ export function SimuladorVencimento() {
         ajudasEstrangeiroValorDia: num(ajEValStr),
       }),
     [
-      bruto, dependentes, estadoCivil, deficiencia, regiao, temSubsidio, subsidioDia, cartao, diasUteis, diasSemSubsidio,
+      bruto, dependentes, estadoCivil, deficiencia, regiao, jovemAno, temSubsidio, subsidioDia, cartao, diasUteis, diasSemSubsidio,
       horasAusenciaStr, horasSupStr, premioStr, premioRegular, subFeriasStr, subNatalStr, outrosSujeitosStr,
       ajNDiasStr, ajNValStr, ajEDiasStr, ajEValStr,
     ]
@@ -322,6 +330,11 @@ export function SimuladorVencimento() {
       liquidoMostrado,
       taxaEfetiva: r.taxaEfetiva,
       custoEmpresa: r.custoEmpresa,
+      irsJovemAtivo: irsJovem,
+      irsJovemPct: r.isencaoJovemPct,
+      irsJovemAno,
+      rendimentoIsentoJovem: r.rendimentoIsentoJovem,
+      irsSemJovem: r.irsSemJovem,
       ssTaxaTrab: SS_DEPENDENTE.trabalhador.value,
       tsuTaxa: SS_DEPENDENTE.entidade.value,
       brutoAnual: ra.brutoAnual,
@@ -566,6 +579,38 @@ export function SimuladorVencimento() {
                 A usar as tabelas de retenção de 2026 {regiao === "madeira" ? "da Madeira (Despacho n.º 19/2026)" : "dos Açores (Despacho n.º 1179/2026)"}.
                 A Segurança Social (11%) é igual em todo o país.
               </p>
+            )}
+          </div>
+
+          {/* IRS Jovem (Art. 12.º-B CIRS) */}
+          <div className="rounded-2xl border border-stone-100 dark:border-stone-700 bg-stone-50/70 dark:bg-stone-800/50 p-4">
+            <label className="flex cursor-pointer items-center gap-2.5">
+              <input type="checkbox" checked={irsJovem} onChange={(e) => setIrsJovem(e.target.checked)} className="h-4 w-4 accent-brand" />
+              <span className="text-sm font-semibold text-stone-700 dark:text-stone-300">IRS Jovem</span>
+              <InfoTip label="Art. 12.º-B CIRS">
+                Isenção parcial de IRS para quem tem até 35 anos, nos 10 primeiros anos de rendimentos de trabalho: 100% no
+                1.º ano, 75% no 2.º–4.º, 50% no 5.º–7.º e 25% no 8.º–10.º, até ao teto de 55 × IAS por ano. Não é automático:
+                tens de comunicar à entidade empregadora que queres beneficiar do regime.
+              </InfoTip>
+            </label>
+            {irsJovem && (
+              <div className="mt-4 space-y-3">
+                <div>
+                  <span className="mb-1.5 block text-xs font-medium text-stone-500 dark:text-stone-400">Ano de benefício</span>
+                  <div className="grid grid-cols-5 gap-1.5" role="group" aria-label="Ano de benefício do IRS Jovem">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((a) => (
+                      <button key={a} type="button" aria-pressed={irsJovemAno === a} onClick={() => setIrsJovemAno(a)} className={seg(irsJovemAno === a)}>
+                        {a}.º
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="rounded-lg border border-brand/20 bg-brand-light px-3 py-2 text-[11px] leading-relaxed text-brand-dark">
+                  Isenção de {pct(r.isencaoJovemPct)} sobre a remuneração{r.rendimentoIsentoJovem > 0 ? ` — ${fmt(r.rendimentoIsentoJovem)} isentos este mês` : ""}.
+                  {r.excedeTetoJovem ? ` Limitada ao teto mensal de ${fmt(IRS_JOVEM_TETO_MENSAL)} (55 × IAS ÷ 14).` : ""}
+                  {" "}Poupas {fmt(Math.max(0, r.irsSemJovem - r.irsRetido))} de IRS por mês face a não ter o regime.
+                </p>
+              </div>
             )}
           </div>
 
@@ -841,6 +886,21 @@ export function SimuladorVencimento() {
               value={fmt(r.custoEmpresa)}
               sub="por mês, com a Taxa Social Única"
             />
+            {r.isencaoJovemPct > 0 && (
+              <Metric
+                icon={<Coin size={15} />}
+                label={
+                  <>
+                    Poupança IRS Jovem{" "}
+                    <InfoTip label="Art. 12.º-B CIRS">
+                      Menos retenção de IRS por estares no regime IRS Jovem ({pct(r.isencaoJovemPct)} de isenção este ano).
+                    </InfoTip>
+                  </>
+                }
+                value={fmt(Math.max(0, r.irsSemJovem - r.irsRetido))}
+                sub={`por mês · ${fmt(r.rendimentoIsentoJovem)} isentos`}
+              />
+            )}
           </div>
 
           {/* Subsídio de refeição (quando aplicável) */}
