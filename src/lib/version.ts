@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.6.1";
+export const APP_VERSION = "1.7.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.7.0",
+    data: "2026-06-18",
+    titulo: "Importa o teu recibo em PDF e audita com mais rigor",
+    itens: [
+      "Novidade Pro: importa o teu recibo de vencimento em PDF e preenchemos o simulador automaticamente. O ficheiro é lido no teu dispositivo e nunca é enviado nem guardado — não lemos morada, IBAN, o teu número de contribuinte nem dados de seguro.",
+      "A auditoria do recibo ficou mais rigorosa: usa a remuneração sujeita do recibo para comparar a Segurança Social e o IRS com as tabelas oficiais de 2026.",
+      "Novo seletor de região (Continente, Madeira, Açores): a Segurança Social é igual em todo o país; nas Regiões Autónomas assinalamos que o IRS segue tabelas próprias.",
+    ],
+  },
   {
     version: "1.6.1",
     data: "2026-06-18",

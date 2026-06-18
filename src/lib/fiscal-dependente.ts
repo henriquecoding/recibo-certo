@@ -614,6 +614,13 @@ export interface AuditoriaInput extends VencimentoInput {
   irsDeclarado: number;
   /** Segurança Social descontada que consta no recibo. */
   ssDeclarado: number;
+  /**
+   * Remuneração mensal sujeita a IRS/SS que consta no recibo. Quando fornecida
+   * (ex.: extraída de um PDF), é a base usada para o esperado — mais exata do
+   * que reconstruir a partir do salário base, pois reflete todos os abonos
+   * sujeitos (feriados, prémios, etc.).
+   */
+  remuneracaoSujeita?: number;
 }
 
 export interface AuditoriaResult {
@@ -635,8 +642,14 @@ const AUDIT_TOLERANCIA = 2;
 
 export function auditarRecibo(input: AuditoriaInput): AuditoriaResult {
   const r = calcularVencimento(input);
-  const ssEsperado = r.ssTrabalhador;
-  const irsEsperado = r.irsRetido;
+  // Se a remuneração sujeita do recibo for fornecida, o esperado é calculado
+  // sobre ela (mais exato); caso contrário, sobre o salário base simulado.
+  const sujeita = input.remuneracaoSujeita;
+  const usaSujeita = typeof sujeita === "number" && sujeita > 0;
+  const ssEsperado = usaSujeita ? cent(sujeita * SS_DEPENDENTE.trabalhador.value) : r.ssTrabalhador;
+  const irsEsperado = usaSujeita
+    ? retencaoPorSituacao(sujeita, Math.max(0, Math.floor(input.dependentes ?? 0)), input.estadoCivil ?? "naoCasado", input.deficiencia ?? false)
+    : r.irsRetido;
   const ssDiferenca = cent(Math.max(0, input.ssDeclarado) - ssEsperado);
   const irsDiferenca = cent(Math.max(0, input.irsDeclarado) - irsEsperado);
   const ssOk = Math.abs(ssDiferenca) <= AUDIT_TOLERANCIA;
