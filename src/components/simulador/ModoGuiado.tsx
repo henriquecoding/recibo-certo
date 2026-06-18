@@ -1074,12 +1074,12 @@ function PassoAtividade({
 
       {/* Atividade específica */}
       <div className="mt-5">
-        <div className="mb-3 flex items-center gap-3">
-          <span className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
-          <span className="text-xs font-medium text-stone-400">
+        <div className="mb-3 flex items-center gap-2 sm:gap-3">
+          <span className="h-px min-w-[12px] flex-1 bg-stone-200 dark:bg-stone-800" />
+          <span className="whitespace-nowrap text-center text-[11px] font-medium text-stone-400 sm:text-xs">
             ou escolhe a tua atividade específica
           </span>
-          <span className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
+          <span className="h-px min-w-[12px] flex-1 bg-stone-200 dark:bg-stone-800" />
         </div>
         <ActivityCombobox
           value={atividadeEspecifica}
