@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.13.0";
+export const APP_VERSION = "1.13.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,14 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.13.1",
+    data: "2026-06-19",
+    titulo: "Reforço de segurança nos bastidores",
+    itens: [
+      "Endurecemos as funções internas da base de dados e deixámos de expor funções de gatilho como chamadas públicas — uma camada extra de proteção das tuas contas e dos teus dados. Não muda nada no que vês ou fazes na app.",
+    ],
+  },
   {
     version: "1.13.0",
     data: "2026-06-19",
