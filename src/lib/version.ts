@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.15.0";
+export const APP_VERSION = "1.15.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.15.1",
+    data: "2026-06-19",
+    titulo: "Correções no telemóvel: Comparar Cenários e o popup de Novidades",
+    itens: [
+      "No telemóvel, o modo «Comparar Cenários» podia ficar com um grande espaço em branco quando os mapas não carregavam. Agora as secções de mapa carregam isoladas e, se alguma falhar, o resto da página continua a funcionar — sem ecrãs em branco.",
+      "O popup «Novidades & Atualizações» voltava a aparecer cortado no telemóvel (só com o título). Passou a abrir como folha inferior, com o conteúdo a fazer scroll corretamente e respeitando a área segura do ecrã.",
+      "Reforçámos o princípio de desenho «mobile-first» em toda a app: tudo é pensado primeiro para o telemóvel.",
+    ],
+  },
   {
     version: "1.15.0",
     data: "2026-06-19",

@@ -35,6 +35,14 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
    nunca partir o claro.
 5. **Acessibilidade sempre** — semântica, `aria-*`, foco, contraste, teclado,
    `prefers-reduced-motion`.
+5b. **Mobile-first, sempre (inegociável).** Desenha primeiro para telemóvel e só
+   depois amplia (`sm:`/`lg:` adicionam, nunca a base assume desktop). Toda a UI
+   tem de funcionar e ficar legível em ~360px de largura: sem overflow horizontal,
+   alvos ≥ 36px, modais como folha inferior com corpo `min-h-0 overflow-y-auto`
+   (e `max-h-[90dvh]` + safe-area), e respeitar `dvh`/`env(safe-area-inset-*)`.
+   Secções pesadas (mapas/gráficos) carregam com `next/dynamic({ ssr:false })` e
+   ficam dentro de um `ErrorBoundary` para nunca deixarem a página em branco.
+   Verificar SEMPRE em viewport estreito antes de concluir.
 6. **Verificar antes de concluir** — `npm run build` + `npm audit --audit-level=high`
    (0 high) + smoke em runtime. Ver skill `verificacao-e-qualidade`.
 7. **Planear e validar** mudanças grandes com o utilizador antes de implementar.

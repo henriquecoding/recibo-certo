@@ -7,6 +7,7 @@
 // cenário. Tudo pelos motores verificados (compararCategorias). Estimativa.
 
 import { useCallback, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { m } from "motion/react";
 import { EASE } from "@/lib/motion";
 import { compararCategorias } from "@/lib/fiscal-dependente";
@@ -14,8 +15,22 @@ import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import { Briefcase, Receipt, Building, Check, Calendar, Scale, ChartProjection } from "@/components/ui/Icons";
 import ComparadorFAQ from "@/components/comparar/ComparadorFAQ";
-import { PassoContabilista } from "@/components/simulador/PassoContabilista";
-import MapaBeneficiosRegioes from "@/components/comparar/MapaBeneficiosRegioes";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
+
+// Secções pesadas (incl. mapas Leaflet) carregadas só no cliente, como os
+// gráficos do dashboard — evita problemas de hidratação e não bloqueia o
+// primeiro render no telemóvel.
+const SeccaoCarregar = () => (
+  <div className="h-64 w-full animate-pulse rounded-3xl border border-stone-100 bg-stone-50 dark:border-stone-800 dark:bg-stone-900/50" />
+);
+const PassoContabilista = dynamic(
+  () => import("@/components/simulador/PassoContabilista").then((m) => m.PassoContabilista),
+  { ssr: false, loading: SeccaoCarregar }
+);
+const MapaBeneficiosRegioes = dynamic(() => import("@/components/comparar/MapaBeneficiosRegioes"), {
+  ssr: false,
+  loading: SeccaoCarregar,
+});
 
 const DEPENDENTES = [0, 1, 2, 3, 4];
 const PRESETS = [15_000, 25_000, 40_000, 60_000, 80_000, 120_000];
@@ -523,10 +538,14 @@ export default function ComparadorCenarios() {
     </div>
 
     {/* ── Próximos passos: precisas de um contabilista? (diagnóstico + mapa de preços) ── */}
-    <PassoContabilista faturacaoAnual={bruto} despesasEstimadas={despesas} />
+    <ErrorBoundary etiqueta="o diagnóstico de contabilista">
+      <PassoContabilista faturacaoAnual={bruto} despesasEstimadas={despesas} />
+    </ErrorBoundary>
 
     {/* ── Onde vale a pena instalar-te: benefícios fiscais por região ── */}
-    <MapaBeneficiosRegioes />
+    <ErrorBoundary etiqueta="o mapa de benefícios por região">
+      <MapaBeneficiosRegioes />
+    </ErrorBoundary>
 
     {/* Dúvidas separadas por cenário */}
     <ComparadorFAQ />
