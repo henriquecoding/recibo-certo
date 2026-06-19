@@ -60,11 +60,13 @@ export interface IsencaoJovemMensal {
 }
 
 /**
- * Parte isenta de uma remuneração mensal de Categoria A pelo IRS Jovem, com o
- * teto mensal de (55 × IAS) ÷ 14. A taxa de retenção da tabela incide depois
- * apenas sobre a parte tributável. ESTIMATIVA — a aplicação oficial é mensal e
- * a AT pode distribuir o teto de forma diferente; o trabalhador tem de ter
- * comunicado à entidade que pretende beneficiar do regime (não é automático).
+ * Parte ISENTA de uma remuneração mensal de Categoria A pelo IRS Jovem, com o
+ * teto mensal de (55 × IAS) ÷ 14. Devolve o valor isento e a parte tributável
+ * (para mostrar a poupança/isenção na UI). A retenção na fonte NÃO se calcula
+ * sobre `tributavel` — ver `retencaoJovem`, onde a isenção incide sobre o valor
+ * da retenção. ESTIMATIVA — a aplicação oficial é mensal e a AT pode distribuir
+ * o teto de forma diferente; o trabalhador tem de ter comunicado à entidade que
+ * pretende beneficiar do regime (não é automático).
  */
 export function isencaoJovemRemuneracao(remuneracao: number, irsJovemAno?: number): IsencaoJovemMensal {
   const pct = isencaoIRSJovem(irsJovemAno);
@@ -115,7 +117,20 @@ function retencaoPorSituacao(
   return retencaoIRSDependente(salarioBruto, dependentes, tab.escaloes, tab.parcelaDependente);
 }
 
-/** Retenção mensal pela situação familiar, já com a isenção do IRS Jovem aplicada à base. */
+/**
+ * Retenção mensal de IRS de um beneficiário do IRS Jovem.
+ *
+ * MECÂNICA OFICIAL (mensal): a isenção do IRS Jovem incide sobre o VALOR da
+ * retenção, NÃO sobre a base. Apura-se a retenção normal (tabela da situação
+ * familiar) e aplica-se a fração ISENTA da remuneração — fração que já respeita
+ * o teto de 55×IAS. Equivale a `retenção_normal × (1 − isento/remuneração)`.
+ *
+ * Não se encolhe a base antes de consultar a tabela: ao fazê-lo, uma isenção
+ * parcial (ex.: 25%) podia empurrar a remuneração para o patamar de 0% e zerar
+ * indevidamente a retenção. A redução da base é a mecânica ANUAL (rendimento
+ * coletável), não a da retenção na fonte mensal.
+ * Fonte: tabelas de retenção 2026 (Despacho 233-A/2026); Doutor Finanças.
+ */
 function retencaoJovem(
   salarioBruto: number,
   dependentes: number,
@@ -124,8 +139,11 @@ function retencaoJovem(
   regiao: Regiao,
   irsJovemAno?: number
 ): number {
-  const { tributavel } = isencaoJovemRemuneracao(salarioBruto, irsJovemAno);
-  return retencaoPorSituacao(tributavel, dependentes, estadoCivil, deficiencia, regiao);
+  const R = Math.max(0, salarioBruto);
+  const retNormal = retencaoPorSituacao(R, dependentes, estadoCivil, deficiencia, regiao);
+  if (retNormal <= 0 || R <= 0) return retNormal;
+  const { isentoEur } = isencaoJovemRemuneracao(R, irsJovemAno);
+  return Math.max(0, cent(retNormal * (1 - isentoEur / R)));
 }
 
 export interface VencimentoInput {
@@ -188,7 +206,7 @@ export function calcularVencimento(input: VencimentoInput): VencimentoResult {
 
   const ssTrabalhador = cent(bruto * SS_DEPENDENTE.trabalhador.value);
   const jovem = isencaoJovemRemuneracao(bruto, input.irsJovemAno);
-  const irsRetido = retencaoPorSituacao(jovem.tributavel, dependentes, ec, def, reg);
+  const irsRetido = retencaoJovem(bruto, dependentes, ec, def, reg, input.irsJovemAno);
   const irsSemJovem = retencaoPorSituacao(bruto, dependentes, ec, def, reg);
 
   const dias = Math.max(0, input.diasUteis ?? 22);
@@ -401,7 +419,7 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
   const remMensal = cent(baseRemunerada + premio + outrosSujeitos + ajudasTributadas + subsidioRefeicaoTributado);
   const ano = input.irsJovemAno;
   const jovemMes = isencaoJovemRemuneracao(remMensal, ano);
-  const irsBaseMensal = retencaoPorSituacao(jovemMes.tributavel, dependentes, ec, def, reg);
+  const irsBaseMensal = retencaoJovem(remMensal, dependentes, ec, def, reg, ano);
   // Trabalho suplementar: retenção autónoma = 50% da taxa efetiva mensal.
   const taxaEfetivaMes = remMensal > 0 ? irsBaseMensal / remMensal : 0;
   const suplementarIRS = cent(suplementarTotal * taxaEfetivaMes * RETENCAO_SUPLEMENTAR_FATOR.value);
@@ -814,7 +832,7 @@ export function auditarRecibo(input: AuditoriaInput): AuditoriaResult {
   const jovem = isencaoJovemRemuneracao(baseIncidencia, ano);
 
   const ssEsperado = usaSujeita ? cent(baseIncidencia * SS_DEPENDENTE.trabalhador.value) : r.ssTrabalhador;
-  const irsEsperado = usaSujeita ? retencaoPorSituacao(jovem.tributavel, dep, ec, def, reg) : r.irsRetido;
+  const irsEsperado = usaSujeita ? retencaoJovem(baseIncidencia, dep, ec, def, reg, ano) : r.irsRetido;
   const custoEmpresa = usaSujeita ? cent(baseIncidencia * (1 + SS_DEPENDENTE.entidade.value)) : r.custoEmpresa;
 
   const ssDiferenca = cent(Math.max(0, input.ssDeclarado) - ssEsperado);

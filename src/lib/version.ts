@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.13.1";
+export const APP_VERSION = "1.13.2";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,14 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.13.2",
+    data: "2026-06-19",
+    titulo: "Correção no IRS Jovem do recibo de vencimento",
+    itens: [
+      "Corrigimos o cálculo do IRS Jovem na retenção mensal: a isenção passa a incidir sobre o valor da retenção (ex.: 25% de isenção → ficas a pagar 75% da retenção normal), tal como o teu recibo faz. Antes, uma isenção parcial podia zerar indevidamente o IRS estimado e mostrar uma divergência falsa na auditoria.",
+    ],
+  },
   {
     version: "1.13.1",
     data: "2026-06-19",
