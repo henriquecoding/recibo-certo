@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.12.0";
+export const APP_VERSION = "1.13.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.13.0",
+    data: "2026-06-19",
+    titulo: "Simulador de vencimento reorganizado, com importação de PDF em destaque",
+    itens: [
+      "Preencher a partir do recibo deixou de estar escondido: passa a ser a entrada principal do simulador, com uma área de arrastar-e-largar bem visível e a explicação clara de que preenchemos o simulador e a auditoria por ti — sempre lido no teu dispositivo, sem enviar o ficheiro.",
+      "Depois de confirmares os dados do PDF, basta «Aplicar ao simulador»: a confirmação recolhe-se e os teus valores ficam logo refletidos abaixo, no simulador e na auditoria.",
+      "A função «Auditar o meu recibo» foi redesenhada: um veredicto claro, a comparação lado a lado do que o teu recibo tem face ao esperado em 2026 (com a diferença destacada) e os indicadores de base de incidência, custo para a entidade, taxa efetiva e líquido — muito mais fácil de ler.",
+      "Acabamentos premium em toda a ferramenta: cartões, métricas e o regime IRS Jovem ficaram mais coerentes e legíveis, em modo claro e escuro.",
+    ],
+  },
   {
     version: "1.12.0",
     data: "2026-06-18",

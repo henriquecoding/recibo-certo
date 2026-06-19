@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, type ReactNode } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { calcularVencimento, calcularVencimentoAnual, mealheiroDependente, calcularReciboMensal, IRS_JOVEM_TETO_MENSAL } from "@/lib/fiscal-dependente";
 import { SS_DEPENDENTE, SUBSIDIO_REFEICAO, TRABALHO_SUPLEMENTAR, AJUDAS_CUSTO, HORARIO_SEMANAL_COMPLETO, type EstadoCivilRet } from "@/lib/fiscal-data";
@@ -9,10 +9,11 @@ import InfoTip from "@/components/ui/InfoTip";
 import ProGate from "@/components/ui/ProGate";
 import { AuditoriaPainel } from "@/components/dependente/AuditoriaPainel";
 import { ImportarReciboPDF } from "@/components/dependente/ImportarReciboPDF";
+import { Section, StatTile, Donut, SegBar, SegLegend, LinhaRecibo, segClass, cx, type Seg } from "@/components/dependente/ui";
 import { type ReciboExtraido } from "@/lib/recibo-pdf";
 import { printRelatorioVencimento } from "@/lib/export-vencimento";
 import { useVencimentos, gerarCSVCenarios, type CenarioVencimento } from "@/lib/store/vencimentos";
-import { History, Trash, Plus, ShieldCheck, Export, FileSign, Wallet, Gauge, Building, Coin } from "@/components/ui/Icons";
+import { History, Trash, Plus, ShieldCheck, Export, FileSign, Wallet, Gauge, Building, Coin, Sparkle } from "@/components/ui/Icons";
 
 const DEPENDENTES = [0, 1, 2, 3, 4];
 
@@ -42,102 +43,11 @@ const soDecimal = (s: string) => s.replace(/[^\d.,]/g, "");
 const soInteiro = (s: string) => s.replace(/\D/g, "").slice(0, 2);
 
 // Escala monocromática de verdes da marca: líquido = verde da marca (brand),
-// IRS = mint claro, Seg. Social / descontos = verde profundo. `cls` →
-// currentColor + classe que adapta ao modo escuro; `color` → hex fixo.
-type Seg = { label: string; value: number; color?: string; brand?: boolean; cls?: string };
+// IRS = mint claro, Seg. Social / descontos = verde profundo. Os gráficos
+// (Donut, SegBar, SegLegend) e as primitivas (Section, StatTile, LinhaRecibo)
+// vivem em `./ui`.
 const COR_IRS = "#9FE1CB"; // brand-mint (segmento do IRS)
-const CLS_SS = "text-brand-deep"; // Seg. Social / descontos — verde profundo, elegante (claro e escuro)
-
-// ── Donut genérico (SVG, sem dependências; igual à técnica do DistribuicaoDonut) ──
-function Donut({ segs, centro, centroSub }: { segs: Seg[]; centro: string; centroSub: string }) {
-  const total = segs.reduce((s, x) => s + Math.max(0, x.value), 0) || 1;
-  const r = 52;
-  const C = 2 * Math.PI * r;
-  let acc = 0;
-  const arcs = segs.map((s) => {
-    const len = (Math.max(0, s.value) / total) * C;
-    const a = { ...s, len, offset: -acc };
-    acc += len;
-    return a;
-  });
-  return (
-    <div className="relative flex-shrink-0">
-      <svg width="128" height="128" viewBox="0 0 132 132" aria-hidden>
-        <circle cx="66" cy="66" r={r} fill="none" stroke="currentColor" className="text-stone-100 dark:text-stone-800" strokeWidth="15" />
-        {arcs.map((a) => (
-          <circle
-            key={a.label}
-            cx="66"
-            cy="66"
-            r={r}
-            fill="none"
-            className={a.brand ? "text-brand" : a.cls}
-            stroke={a.brand || a.cls ? "currentColor" : a.color}
-            strokeWidth="15"
-            strokeDasharray={`${a.len} ${C - a.len}`}
-            strokeDashoffset={a.offset}
-            transform="rotate(-90 66 66)"
-            style={{ transition: "stroke-dasharray 0.7s cubic-bezier(0.16,1,0.3,1)" }}
-          />
-        ))}
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-display text-2xl font-semibold text-brand tabular-nums">{centro}</span>
-        <span className="text-[11px] text-stone-400">{centroSub}</span>
-      </div>
-    </div>
-  );
-}
-
-// ── Barra segmentada (para onde vai o bruto / o ano) ──
-function SegBar({ segs }: { segs: Seg[] }) {
-  const total = segs.reduce((s, x) => s + Math.max(0, x.value), 0) || 1;
-  return (
-    <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-full">
-      {segs.map((s, i) => (
-        <div
-          key={s.label}
-          className={`${i === 0 ? "rounded-l-full" : ""} ${i === segs.length - 1 ? "rounded-r-full" : ""} ${s.brand ? "bg-brand" : s.cls ?? ""}`}
-          style={{
-            width: `${(Math.max(0, s.value) / total) * 100}%`,
-            background: s.brand ? undefined : s.cls ? "currentColor" : s.color,
-            transition: "width 0.7s cubic-bezier(0.16,1,0.3,1)",
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-// ── Cartão de métrica ──
-function Metric({ icon, label, value, sub, tip }: { icon: ReactNode; label: ReactNode; value: string; sub?: string; tip?: ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-800/40 p-4">
-      <div className="mb-2 flex items-center gap-2">
-        <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-brand-light text-brand">{icon}</span>
-        <span className="text-xs font-medium text-stone-500 dark:text-stone-400">
-          {label}
-          {tip}
-        </span>
-      </div>
-      <p className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100 tabular-nums">{value}</p>
-      {sub && <p className="mt-0.5 text-[11px] text-stone-400">{sub}</p>}
-    </div>
-  );
-}
-
-// ── Linha de decomposição do recibo (rótulo · valor) ──
-function LinhaRecibo({ label, value, sub, muted }: { label: string; value: string; sub?: string; muted?: boolean }) {
-  return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0">
-        <dt className={`text-sm ${muted ? "text-stone-500 dark:text-stone-400" : "text-stone-600 dark:text-stone-300"}`}>{label}</dt>
-        {sub && <p className="text-[11px] text-stone-400">{sub}</p>}
-      </div>
-      <dd className="flex-shrink-0 text-sm font-medium text-stone-800 dark:text-stone-100 tabular-nums">{value}</dd>
-    </div>
-  );
-}
+const CLS_SS = "text-brand-deep"; // Seg. Social / descontos — verde profundo (claro e escuro)
 
 export function SimuladorVencimento() {
   const [brutoStr, setBrutoStr] = useState("1500");
@@ -440,30 +350,15 @@ export function SimuladorVencimento() {
   const campoSm =
     "w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-3 py-2 text-sm text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand";
   const labelSm = "mb-1.5 block text-xs font-medium text-stone-500 dark:text-stone-400";
-  const seg = (ativo: boolean) =>
-    `rounded-xl border px-3 py-2 text-xs font-semibold transition-all ${
-      ativo
-        ? "border-brand bg-brand text-white shadow-glow"
-        : "border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:border-brand"
-    }`;
+  const seg = segClass;
 
   return (
-    <div className="rounded-4xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 p-5 shadow-card sm:p-6 my-8">
-      <div className="mb-5 flex items-center gap-2.5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-light text-brand">
-          <Wallet size={18} />
-        </span>
-        <div>
-          <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">Recibo de vencimento 2026</p>
-          <p className="text-[11px] text-stone-400">Tabelas oficiais 2026 · estimativa</p>
-        </div>
-      </div>
-
-      {/* Importar recibo em PDF (Pro) — preenche o simulador automaticamente */}
-      <div className="mb-5">
+    <div className="my-8 space-y-5">
+      {/* Entrada principal: importar recibo em PDF (Pro) — preenche o simulador e a auditoria */}
+      <div>
         <ImportarReciboPDF onAplicar={aplicarReciboPdf} />
         {reciboPdf && (reciboPdf.empresaNome || reciboPdf.funcao || reciboPdf.mes !== undefined) && (
-          <p className="mt-2 text-[11px] text-stone-400">
+          <p className="mt-2 px-1 text-[11px] text-stone-400">
             Recibo importado
             {reciboPdf.empresaNome ? ` · ${reciboPdf.empresaNome}` : ""}
             {reciboPdf.empresaNif ? ` (${reciboPdf.empresaNif})` : ""}
@@ -472,6 +367,18 @@ export function SimuladorVencimento() {
           </p>
         )}
       </div>
+
+      {/* Simulador */}
+      <div className="rounded-4xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 p-5 shadow-card sm:p-6">
+        <div className="mb-5 flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-light text-brand">
+            <Wallet size={18} />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">Simulador do recibo de vencimento</p>
+            <p className="text-[11px] text-stone-400">Tabelas oficiais 2026 · estimativa</p>
+          </div>
+        </div>
 
       <div className="grid gap-5 lg:grid-cols-5">
         {/* ── Controlos ── */}
@@ -583,15 +490,17 @@ export function SimuladorVencimento() {
           </div>
 
           {/* IRS Jovem (Art. 12.º-B CIRS) */}
-          <div className="rounded-2xl border border-stone-100 dark:border-stone-700 bg-stone-50/70 dark:bg-stone-800/50 p-4">
+          <div className={cx("rounded-2xl border p-4 transition-colors", irsJovem ? "border-brand/30 bg-brand-light/50 dark:bg-brand/10" : "border-stone-100 dark:border-stone-700 bg-stone-50/70 dark:bg-stone-800/50")}>
             <label className="flex cursor-pointer items-center gap-2.5">
               <input type="checkbox" checked={irsJovem} onChange={(e) => setIrsJovem(e.target.checked)} className="h-4 w-4 accent-brand" />
+              <Sparkle size={15} className="text-brand" />
               <span className="text-sm font-semibold text-stone-700 dark:text-stone-300">IRS Jovem</span>
               <InfoTip label="Art. 12.º-B CIRS">
                 Isenção parcial de IRS para quem tem até 35 anos, nos 10 primeiros anos de rendimentos de trabalho: 100% no
                 1.º ano, 75% no 2.º–4.º, 50% no 5.º–7.º e 25% no 8.º–10.º, até ao teto de 55 × IAS por ano. Não é automático:
                 tens de comunicar à entidade empregadora que queres beneficiar do regime.
               </InfoTip>
+              <span className="ml-auto text-[11px] text-stone-400">{irsJovem ? "ativo" : "isenção parcial"}</span>
             </label>
             {irsJovem && (
               <div className="mt-4 space-y-3">
@@ -857,25 +766,16 @@ export function SimuladorVencimento() {
                 centro={r.bruto > 0 ? pct(ficaPct) : "—"}
                 centroSub={r.bruto > 0 ? "é teu" : "sem dados"}
               />
-              <ul className="w-full space-y-2.5 sm:flex-1">
-                {segBruto.map((s) => (
-                  <li key={s.label} className="flex items-center gap-2.5">
-                    <span
-                      className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${s.brand ? "bg-brand" : s.cls ?? ""}`}
-                      style={{ background: s.brand ? undefined : s.cls ? "currentColor" : s.color }}
-                    />
-                    <span className="flex-1 text-sm text-stone-600 dark:text-stone-400">{s.label}</span>
-                    <span className="whitespace-nowrap text-sm font-semibold tabular-nums text-stone-800 dark:text-stone-100">{fmt(s.value)}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="w-full sm:flex-1">
+                <SegLegend segs={segBruto} format={fmt} />
+              </div>
             </div>
           </div>
 
           {/* Métricas */}
           <div className="grid gap-3 sm:grid-cols-2">
-            <Metric icon={<Gauge size={15} />} label="Taxa efetiva" value={pct(r.taxaEfetiva)} sub="IRS + Segurança Social / bruto" />
-            <Metric
+            <StatTile icon={<Gauge size={15} />} label="Taxa efetiva" value={pct(r.taxaEfetiva)} sub="IRS + Segurança Social / bruto" />
+            <StatTile
               icon={<Building size={15} />}
               label={
                 <>
@@ -887,7 +787,8 @@ export function SimuladorVencimento() {
               sub="por mês, com a Taxa Social Única"
             />
             {r.isencaoJovemPct > 0 && (
-              <Metric
+              <StatTile
+                tone="brand"
                 icon={<Coin size={15} />}
                 label={
                   <>
@@ -1214,6 +1115,7 @@ export function SimuladorVencimento() {
           </ul>
         )}
 
+      </div>
       </div>
     </div>
   );
