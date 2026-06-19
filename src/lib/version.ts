@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.18.1";
+export const APP_VERSION = "1.19.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.19.0",
+    data: "2026-06-19",
+    titulo: "No telemóvel e tablet, o menu passou para baixo — com a pesquisa por cima",
+    itens: [
+      "Em ecrãs pequenos, o cabeçalho passou a viver no fundo (na zona do polegar) e a barra de pesquisa fica logo por cima, para navegares e procurares com uma só mão. No computador, o cabeçalho continua em cima.",
+      "O logótipo leva sempre à página inicial, e o menu inferior dá acesso a tudo: simulador, comparar cenários, ferramentas, guias, quiz e planos.",
+      "O cabeçalho e a pesquisa passaram a ser consistentes em todas as secções (incluindo os guias, as ferramentas e o quiz).",
+    ],
+  },
   {
     version: "1.18.1",
     data: "2026-06-19",

@@ -8,6 +8,7 @@ import AuthModal from "@/components/ui/AuthModal";
 import NovidadesModal from "@/components/ui/NovidadesModal";
 import CookieConsent from "@/components/ui/CookieConsent";
 import BuscaOverlay from "@/components/busca/BuscaGlobal";
+import ChromeMobile from "@/components/ChromeMobile";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -130,6 +131,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <PerfilProvider>
               <MotionProvider>
                 {children}
+                <ChromeMobile />
                 <BuscaOverlay />
                 <AuthModal />
                 <NovidadesModal />

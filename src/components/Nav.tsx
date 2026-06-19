@@ -116,14 +116,14 @@ export default function Nav() {
 
   return (
     <>
-      {/* Spacer — compensa o header fixed */}
-      <div className="h-14 sm:h-[72px]" aria-hidden />
+      {/* Spacer — compensa o header fixed (desktop; no telemóvel o chrome é inferior) */}
+      <div className="hidden lg:block lg:h-[72px]" aria-hidden />
 
       <m.nav
         initial={{ y: -80, opacity: 0 }}
         animate={{ y: visible ? 0 : "-100%", opacity: 1 }}
         transition={{ duration: 0.35, ease: EASE }}
-        className={`fixed inset-x-0 top-0 z-50 px-6 transition-[border-color,background-color,box-shadow] duration-300 ${
+        className={`fixed inset-x-0 top-0 z-50 hidden px-6 transition-[border-color,background-color,box-shadow] duration-300 lg:block ${
           scrolled || open
             ? "border-b border-stone-100 bg-cream/95 shadow-card backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/95"
             : "border-b border-transparent bg-transparent"
