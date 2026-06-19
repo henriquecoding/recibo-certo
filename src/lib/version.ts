@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.15.1";
+export const APP_VERSION = "1.15.2";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,14 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.15.2",
+    data: "2026-06-19",
+    titulo: "Resolvido o espaço em branco do «Comparar Cenários» no telemóvel",
+    itens: [
+      "A causa real era a animação de entrada: secções mais altas do que o ecrã (como o comparador) só apareciam depois de 15% ficarem visíveis — algo impossível num telemóvel —, ficando invisíveis. Agora revelam-se assim que entram no ecrã, em toda a app.",
+    ],
+  },
   {
     version: "1.15.1",
     data: "2026-06-19",
