@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.17.1";
+export const APP_VERSION = "1.18.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.18.0",
+    data: "2026-06-19",
+    titulo: "Nova pesquisa global, densa e sensível ao contexto",
+    itens: [
+      "Tens agora uma pesquisa em todo o site, com três categorias: Ferramentas (simuladores), Guias e Atividades (catálogo do Art. 151.º). Abre pelo ícone de lupa ou com ⌘K / Ctrl+K.",
+      "A pesquisa adapta-se ao sítio onde estás (nos guias começa nos guias, etc.), guarda as tuas pesquisas recentes e, no telemóvel, abre como folha inferior fácil de alcançar.",
+    ],
+  },
   {
     version: "1.17.1",
     data: "2026-06-19",

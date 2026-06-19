@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "motion/react";
+import BuscaGlobal from "@/components/busca/BuscaGlobal";
 import {
   Logo,
   Menu,
@@ -220,6 +221,7 @@ export default function Nav() {
 
           {/* CTAs desktop */}
           <div className="hidden items-center gap-2 sm:flex">
+            <BuscaGlobal />
             <ThemeToggle />
             {user ? (
               <Link
@@ -261,8 +263,9 @@ export default function Nav() {
             )}
           </div>
 
-          {/* Mobile: tema + hambúrguer */}
+          {/* Mobile: pesquisa + tema + hambúrguer */}
           <div className="flex items-center gap-1 sm:hidden">
+            <BuscaGlobal compacto />
             <ThemeToggle />
             <button
               onClick={() => setOpen((o) => !o)}
