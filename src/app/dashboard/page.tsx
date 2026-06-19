@@ -18,6 +18,7 @@ import TabelaRecibos from "@/components/dashboard/TabelaRecibos";
 import MiniCalendario from "@/components/dashboard/MiniCalendario";
 import Onboarding from "@/components/dashboard/Onboarding";
 import PartnerSpot from "@/components/dashboard/PartnerSpot";
+import HubRecursos from "@/components/dashboard/HubRecursos";
 
 const ReceitaChart = dynamic(() => import("@/components/dashboard/ReceitaChart"), {
   ssr: false,
@@ -290,6 +291,9 @@ export default function VisaoGeral() {
 
         </div>
       )}
+
+      {/* ── Hub: todo o site a partir do dashboard ───────────────── */}
+      {carregado && <HubRecursos />}
     </div>
   );
 }

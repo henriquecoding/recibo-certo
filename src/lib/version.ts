@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.16.0";
+export const APP_VERSION = "1.17.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.17.0",
+    data: "2026-06-19",
+    titulo: "Painel reestruturado: tudo o que tens, também no telemóvel",
+    itens: [
+      "O menu do painel passou a incluir todo o site, organizado por secções: Gestão, Simuladores, Ferramentas e Aprender. Tens à mão os recibos verdes, o recibo de vencimento, abrir empresa, comparar cenários, o regime simplificado, a auditoria de recibo, o mapa de contabilistas, os guias e o quiz.",
+      "No telemóvel deixas de estar limitado: um novo botão «Menu» abre o painel completo com todas as secções — exatamente os mesmos recursos do computador, sem ficar nada de fora.",
+      "A página inicial do painel ganhou um «Explorar tudo o que tens», com atalhos para os simuladores, ferramentas e guias, para lá da gestão de recibos verdes.",
+    ],
+  },
   {
     version: "1.16.0",
     data: "2026-06-19",
