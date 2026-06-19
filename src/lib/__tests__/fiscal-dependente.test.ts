@@ -209,6 +209,26 @@ describe("IRS Jovem — retenção mensal", () => {
     expect(ano5.isencaoJovemPct).toBe(0.5);
   });
 
+  // Regressão: a isenção do IRS Jovem incide sobre o VALOR da retenção, não
+  // sobre a base. 25% de isenção deve deixar 75% da retenção normal — NUNCA
+  // zerar (o bug anterior encolhia a base e caía no patamar de 0%).
+  it("25% de isenção reduz a retenção a 75% da normal (não a zera)", () => {
+    const R = 1100; // remuneração com retenção normal > 0 (acima do limiar)
+    const normal = retencaoIRSDependente(R, 0); // não casado, 0 dep, Continente
+    expect(normal).toBeGreaterThan(0);
+    const com = calcularVencimento({ salarioBruto: R, irsJovemAno: 8 }); // 8.º ano = 25%
+    expect(com.isencaoJovemPct).toBe(0.25);
+    expect(com.irsRetido).toBeGreaterThan(0);
+    expect(com.irsRetido).toBeCloseTo(normal * 0.75, 2);
+  });
+
+  it("a retenção do IRS Jovem é proporcional à normal (50% → metade)", () => {
+    const R = 1100;
+    const normal = retencaoIRSDependente(R, 0);
+    const ano5 = calcularVencimento({ salarioBruto: R, irsJovemAno: 5 }); // 50%
+    expect(ano5.irsRetido).toBeCloseTo(normal * 0.5, 2);
+  });
+
   it("calcularReciboMensal expõe a isenção e a retenção sem regime", () => {
     const det = calcularReciboMensal({ salarioBruto: 1800, irsJovemAno: 2, premio: 200, premioRegular: true });
     expect(det.isencaoJovemPct).toBe(0.75);
@@ -272,6 +292,26 @@ describe("auditarRecibo", () => {
     expect(r.baseIncidencia).toBeCloseTo(1800, 2);
     expect(r.ssEsperado).toBeCloseTo(1800 * SS_DEPENDENTE.trabalhador.value, 2);
     expect(r.ssOk).toBe(true);
+  });
+
+  // Regressão (caso reportado): remuneração sujeita 1072 € com IRS Jovem 25%.
+  // O esperado deve ser 75% da retenção normal (≈ o que o recibo retém), não 0.
+  it("remuneração sujeita + IRS Jovem 25%: esperado é 75% da normal, não zero", () => {
+    const sujeita = 1072;
+    const normal = retencaoIRSDependente(sujeita, 0);
+    expect(normal).toBeGreaterThan(0);
+    const r = auditarRecibo({
+      salarioBruto: 1072,
+      remuneracaoSujeita: sujeita,
+      dependentes: 0,
+      irsJovemAno: 8, // 25%
+      ssDeclarado: sujeita * SS_DEPENDENTE.trabalhador.value,
+      irsDeclarado: normal * 0.75,
+    });
+    expect(r.isencaoJovemPct).toBe(0.25);
+    expect(r.irsEsperado).toBeGreaterThan(0);
+    expect(r.irsEsperado).toBeCloseTo(normal * 0.75, 2);
+    expect(r.irsOk).toBe(true);
   });
 });
 
