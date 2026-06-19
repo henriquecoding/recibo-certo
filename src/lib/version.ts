@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.15.2";
+export const APP_VERSION = "1.16.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.16.0",
+    data: "2026-06-19",
+    titulo: "Um único mapa por região e gráfico «para onde vai cada euro» em verde",
+    itens: [
+      "Os dois mapas do «Comparar Cenários» passaram a ser um só: para cada região vês, no mesmo sítio, os benefícios fiscais (IRC reduzido no interior, Madeira e Açores) e o custo médio de um contabilista.",
+      "O gráfico «para onde vai cada euro» passou a usar variações de verde da marca — verde vivo para o que te fica e tons mais escuros para os impostos —, em vez da paleta anterior.",
+    ],
+  },
   {
     version: "1.15.2",
     data: "2026-06-19",

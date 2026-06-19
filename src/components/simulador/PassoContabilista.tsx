@@ -34,11 +34,14 @@ export function PassoContabilista({
   faturacaoAnual,
   despesasEstimadas = 0,
   onVoltar,
+  mostrarMapa = true,
 }: {
   faturacaoAnual: number;
   despesasEstimadas?: number;
   /** Opcional: quando ausente, esconde o botão "Voltar" (uso autónomo, ex.: comparador). */
   onVoltar?: () => void;
+  /** Quando false, esconde o mapa de preços (há um mapa unificado por fora). */
+  mostrarMapa?: boolean;
 }) {
   const [formaJuridica, setFormaJuridica] = useState<FormaJuridica>("independente");
   const [clientes, setClientes] = useState<ClientesAmbito>("nacional");
@@ -222,16 +225,18 @@ export function PassoContabilista({
         </div>
       </div>
 
-      {/* ── Preços médios por região ── */}
-      <div>
-        <div className="mb-4">
-          <h3 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100">Preços médios por região</h3>
-          <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-            Quanto custa, em média, um contabilista na tua zona. Procura a tua cidade ou toca numa região.
-          </p>
+      {/* ── Preços médios por região (oculto quando há um mapa unificado por fora) ── */}
+      {mostrarMapa && (
+        <div>
+          <div className="mb-4">
+            <h3 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100">Preços médios por região</h3>
+            <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+              Quanto custa, em média, um contabilista na tua zona. Procura a tua cidade ou toca numa região.
+            </p>
+          </div>
+          <MapaPrecosRegioes />
         </div>
-        <MapaPrecosRegioes />
-      </div>
+      )}
 
       {/* ── Como contratar com segurança ── */}
       <div className="grid gap-3 sm:grid-cols-3">

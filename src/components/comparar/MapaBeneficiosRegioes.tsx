@@ -22,8 +22,16 @@ import {
   INCENTIVOS_VERIFICADO,
   regiaoIncentivoMaisProxima,
 } from "@/lib/incentivos-regioes";
-import { MapPin, Search, Info, Plus, Minus, Crosshair, Lock, Move, Close, Spinner, Check } from "@/components/ui/Icons";
+import { REGIOES_PRECO, PRECOS_REGIOES_VERIFICADO } from "@/lib/contabilista-regioes";
+import { MapPin, Search, Info, Plus, Minus, Crosshair, Lock, Move, Close, Spinner, Check, Receipt } from "@/components/ui/Icons";
 import InfoTip from "@/components/ui/InfoTip";
+
+const eur0 = (n: number) =>
+  new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
+/** Avença mensal estimada de contabilista por região (mesmo id que os incentivos). */
+const precoPorId: Record<string, { min: number; max: number }> = Object.fromEntries(
+  REGIOES_PRECO.map((r) => [r.id, { min: r.min, max: r.max }])
+);
 
 // Escala de cor verde: menos incentivos (claro) → mais incentivos (verde profundo).
 const COR_MENOS: [number, number, number] = [0x9f, 0xe1, 0xcb];
@@ -424,8 +432,9 @@ export default function MapaBeneficiosRegioes() {
           Onde vale a pena instalar a atividade
         </h3>
         <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-          A região muda o imposto: o interior, a Madeira e os Açores oferecem IRC reduzido e mais apoios ao
-          investimento. Toca numa região ou procura a tua zona.
+          Um só mapa para a região: os <strong className="font-semibold text-stone-700 dark:text-stone-200">benefícios fiscais</strong> (IRC
+          reduzido no interior, Madeira e Açores) e o <strong className="font-semibold text-stone-700 dark:text-stone-200">custo médio de
+          contabilista</strong>. Toca numa região ou procura a tua zona.
         </p>
       </div>
 
@@ -573,6 +582,26 @@ export default function MapaBeneficiosRegioes() {
                 </div>
               </li>
             ))}
+            {/* Custo de contabilista na região (avença mensal estimada) */}
+            {precoPorId[regiaoSel.id] && (
+              <li className="rounded-2xl bg-white/70 p-3.5 dark:bg-stone-900/50">
+                <div className="flex items-start gap-2">
+                  <Receipt size={14} className="mt-0.5 flex-shrink-0 text-brand" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">
+                      Contabilista: {eur0(precoPorId[regiaoSel.id].min)}–{eur0(precoPorId[regiaoSel.id].max)}/mês
+                    </p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
+                      Avença mensal estimada para um trabalhador independente típico nesta região. Sociedades e
+                      contabilidade organizada custam mais.
+                    </p>
+                    <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-stone-400">
+                      Estimativa de mercado · {PRECOS_REGIOES_VERIFICADO}
+                    </p>
+                  </div>
+                </div>
+              </li>
+            )}
           </ul>
         </div>
       )}
@@ -600,7 +629,10 @@ export default function MapaBeneficiosRegioes() {
                     <span className={`block truncate text-sm font-semibold ${ativa ? "text-brand-dark dark:text-brand" : "text-stone-800 dark:text-stone-100"}`}>
                       {r.nome}
                     </span>
-                    <span className="block truncate text-[11px] text-stone-400">{r.headline}</span>
+                    <span className="block truncate text-[11px] text-stone-400">
+                      {r.headline}
+                      {precoPorId[r.id] && ` · contab. ${eur0(precoPorId[r.id].min)}–${eur0(precoPorId[r.id].max)}/mês`}
+                    </span>
                   </span>
                   <span className="flex-shrink-0 rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-bold text-stone-600 dark:bg-stone-800 dark:text-stone-300">
                     {r.selo}

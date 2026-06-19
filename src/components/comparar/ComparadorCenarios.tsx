@@ -131,12 +131,14 @@ export default function ComparadorCenarios() {
   // cada euro"). Cada pilha soma exatamente ao mesmo ilíquido — o verde é o que
   // fica. Paleta coerente: verde = líquido; família terracota (clay) = imposto,
   // do mais escuro (maior peso) ao mais claro; cinza neutro = custos/estrutura.
+  // Variações de verde da marca: tom vivo = líquido (o que te fica); verdes mais
+  // escuros = impostos (do mais pesado ao mais leve); verde-menta pálido = custos.
   const COR = {
-    liquido: "bg-brand",
-    impostoForte: "bg-clay-text", // IRS / SS — o desconto mais pesado
-    imposto: "bg-clay", // IRS / dividendos
-    impostoLeve: "bg-clay-border", // derrama e afins
-    custo: "bg-stone-300 dark:bg-stone-600", // despesas / estrutura (não é imposto)
+    liquido: "bg-brand", // #1D9E75 — vivo, o que fica contigo
+    impostoForte: "bg-brand-deep", // #0A4A39 — o desconto mais pesado (SS / IRC)
+    imposto: "bg-brand-dark", // #0F6E56 — IRS / dividendos
+    impostoLeve: "bg-[#5DBA98]", // verde médio — derrama e afins
+    custo: "bg-brand-mint", // #9FE1CB — custos / estrutura (não é imposto)
   };
   type Seg = { label: string; valor: number; cls: string };
   // Garante que a pilha soma ao ilíquido: o último segmento absorve o resto.
@@ -417,7 +419,7 @@ export default function ComparadorCenarios() {
             <ChartProjection size={15} className="text-brand" />
             <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-stone-500 dark:text-stone-400">Para onde vai cada euro</h3>
           </div>
-          <p className="mb-4 text-xs text-stone-400">Mesma altura porque parte do mesmo ilíquido — o verde é o que te fica.</p>
+          <p className="mb-4 text-xs text-stone-400">Mesma altura porque parte do mesmo ilíquido — o verde vivo é o que te fica; os tons mais escuros são imposto.</p>
 
           <div className="flex items-end justify-around gap-4 sm:gap-8" style={{ height: 230 }}>
             {CARTOES.map((c) => {
@@ -459,10 +461,10 @@ export default function ComparadorCenarios() {
           {/* Legenda */}
           <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 border-t border-stone-100 dark:border-stone-700 pt-3 text-[11px] text-stone-500 dark:text-stone-400">
             <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand" /> Líquido (fica contigo)</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-clay" /> IRS / dividendos</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-clay-text" /> Segurança Social / IRC</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-clay-border" /> Derrama</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-stone-300 dark:bg-stone-600" /> Despesas / estrutura</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand-dark" /> IRS / dividendos</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand-deep" /> Segurança Social / IRC</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: "#5DBA98" }} /> Derrama</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand-mint" /> Despesas / estrutura</span>
           </div>
 
           {/* Decomposição detalhada por cenário */}
@@ -486,7 +488,7 @@ export default function ComparadorCenarios() {
                     {segs.slice(1).map((s) => (
                       <div key={s.label} className="flex items-center justify-between">
                         <dt className="text-stone-500 dark:text-stone-400">− {s.label}</dt>
-                        <dd className="font-medium tabular-nums text-clay-text">−{fmt(s.valor)}</dd>
+                        <dd className="font-medium tabular-nums text-stone-500 dark:text-stone-400">−{fmt(s.valor)}</dd>
                       </div>
                     ))}
                     <div className="flex items-center justify-between border-t border-stone-100 dark:border-stone-700 pt-1.5">
@@ -539,7 +541,7 @@ export default function ComparadorCenarios() {
 
     {/* ── Próximos passos: precisas de um contabilista? (diagnóstico + mapa de preços) ── */}
     <ErrorBoundary etiqueta="o diagnóstico de contabilista">
-      <PassoContabilista faturacaoAnual={bruto} despesasEstimadas={despesas} />
+      <PassoContabilista faturacaoAnual={bruto} despesasEstimadas={despesas} mostrarMapa={false} />
     </ErrorBoundary>
 
     {/* ── Onde vale a pena instalar-te: benefícios fiscais por região ── */}
