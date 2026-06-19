@@ -7,6 +7,8 @@ import { ArrowRight, ShieldCheck, Bank, FileSign, Warning, Calendar } from "@/co
 import { scrollToId } from "@/lib/scroll";
 import { staggerContainer, staggerItem, EASE } from "@/lib/motion";
 import { usePerfil, type Perfil } from "@/lib/perfil";
+import SeletorModo from "@/components/SeletorModo";
+import { compararCategorias } from "@/lib/fiscal-dependente";
 
 const TRUST = [
   { icon: <ShieldCheck size={14} />, text: "Taxas de 2026 verificadas" },
@@ -16,6 +18,23 @@ const TRUST = [
 
 const eur0 = (n: number) => `${Math.round(n).toLocaleString("pt-PT")} €`;
 
+// Números reais dos motores (não inventados) para os cartões de "Abrir Empresa"
+// e "Comparar Cenários" — mesma faturação de referência (30 000 €/ano) usada
+// na ferramenta de comparação, via compararCategorias.
+const HERO_FAT = 30_000;
+const CMP = compararCategorias({ brutoAnual: HERO_FAT, dependentes: 0 });
+const EMP = {
+  liquido: Math.round(CMP.empresa.liquido),
+  impostos: Math.round(CMP.empresa.irc + CMP.empresa.derrama + CMP.empresa.dividendos),
+  custos: Math.round(CMP.empresa.custosEmpresa),
+};
+const CMP_LIQ = {
+  dependente: Math.round(CMP.dependente.liquido),
+  freelancer: Math.round(CMP.freelancer.liquido),
+  empresa: Math.round(CMP.empresa.liquido),
+};
+const CMP_BEST = Math.max(CMP_LIQ.dependente, CMP_LIQ.freelancer, CMP_LIQ.empresa);
+
 // Exemplos ilustrativos com números reais dos motores (não inventados).
 // Independente: recibo-tipo 2.000 € (Art. 151.º). Dependente: salário 1.500 €,
 // 0 dependentes, sem subsídio de refeição — Tabela I, Despacho 233-A/2026.
@@ -24,8 +43,8 @@ const EXEMPLO: Record<
   {
     h1: ReactNode;
     sub: string;
-    primary: { label: string; href?: string; scrollTo?: string };
-    secondary: { label: string; href?: string; scrollTo?: string };
+    primary: { label: string; href?: string; scrollTo?: string; setModo?: Perfil };
+    secondary: { label: string; href?: string; scrollTo?: string; setModo?: Perfil };
     card: {
       etiqueta: string;
       heroLabel: string;
@@ -76,7 +95,7 @@ const EXEMPLO: Record<
     ),
     sub: "Vê o que devias receber ao fim do mês — com a retenção de IRS de 2026, a Segurança Social e os subsídios de férias e de Natal. Depois compara com o teu recibo de vencimento.",
     primary: { label: "Simular o meu salário", scrollTo: "calculadora" },
-    secondary: { label: "Comparar caminhos", href: "/ferramentas/comparador" },
+    secondary: { label: "Comparar caminhos", setModo: "comparar" },
     card: {
       etiqueta: "Salário de 1 500 € · Continente",
       heroLabel: "O teu líquido",
@@ -94,12 +113,59 @@ const EXEMPLO: Record<
       nota: "Líquido de um mês normal, sem subsídio de refeição. Tabela I (não casado, sem dependentes), Continente.",
     },
   },
+  empresa: {
+    h1: (
+      <>
+        Vale a pena <span className="text-brand">abrir empresa?</span> Vê o líquido real.
+      </>
+    ),
+    sub: "Simula a tua sociedade — IRC PME, derrama, tributação autónoma e distribuição de dividendos. Descobre quanto te fica no bolso e quando compensa face aos recibos verdes.",
+    primary: { label: "Simular a minha empresa", scrollTo: "calculadora" },
+    secondary: { label: "Comparar caminhos", setModo: "comparar" },
+    card: {
+      etiqueta: "Faturação 30 000 €/ano · via empresa",
+      heroLabel: "Líquido pela empresa",
+      bruto: HERO_FAT,
+      teu: EMP.liquido,
+      irs: EMP.impostos,
+      ss: EMP.custos,
+      pctSufixo: "fica contigo via empresa",
+      linhas: [
+        { l: "IRC, derrama e dividendos", v: `− ${eur0(EMP.impostos)}` },
+        { l: "Custos de estrutura", v: `− ${eur0(EMP.custos)}` },
+        { l: "Líquido anual estimado", v: eur0(EMP.liquido), strong: true },
+      ],
+      box: { tom: "info", titulo: "IRC PME a 15%", sub: "Sobre os primeiros 50 000 € de lucro tributável" },
+      nota: "Estimativa para 30 000 €/ano de faturação. Modela IRC PME, derrama e dividendos a 28% — não substitui um contabilista certificado.",
+    },
+  },
+  comparar: {
+    h1: (
+      <>
+        Qual o <span className="text-brand">melhor caminho</span> para o teu rendimento?
+      </>
+    ),
+    sub: "Para o mesmo rendimento anual, compara o líquido como por conta de outrem, recibos verdes ou empresa — com o ponto de viragem e o calendário fiscal de cada cenário.",
+    primary: { label: "Comparar cenários", scrollTo: "calculadora" },
+    secondary: { label: "Como funciona", scrollTo: "features" },
+    card: {
+      etiqueta: "Mesmo rendimento · 30 000 €/ano",
+      heroLabel: "Mais líquido",
+      bruto: HERO_FAT,
+      teu: CMP_BEST,
+      irs: CMP_LIQ.freelancer,
+      ss: CMP_LIQ.dependente,
+      pctSufixo: "no melhor cenário",
+      linhas: [
+        { l: "Por conta de outrem", v: eur0(CMP_LIQ.dependente), strong: CMP.melhor === "dependente" },
+        { l: "Recibos verdes", v: eur0(CMP_LIQ.freelancer), strong: CMP.melhor === "freelancer" },
+        { l: "Empresa (Lda)", v: eur0(CMP_LIQ.empresa), strong: CMP.melhor === "empresa" },
+      ],
+      box: { tom: "info", titulo: "Uma base, três caminhos", sub: "Vê o ponto de viragem e o calendário fiscal" },
+      nota: "Estimativa para 30 000 €/ano. Ajusta o rendimento e os pressupostos na ferramenta de comparação.",
+    },
+  },
 };
-
-const PERFIS: { chave: Perfil; label: string }[] = [
-  { chave: "independente", label: "Independente" },
-  { chave: "dependente", label: "Por conta de outrem" },
-];
 
 export default function Hero() {
   const { perfil, definir } = usePerfil();
@@ -129,30 +195,9 @@ export default function Hero() {
       <div className="mx-auto grid max-w-5xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
         {/* Texto */}
         <m.div initial="hidden" animate="visible" variants={staggerContainer}>
-          {/* Seletor de perfil — dupla entrada que ramifica toda a experiência */}
-          <m.div variants={staggerItem} className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2">
-            <span className="text-xs font-medium text-stone-400">Sou Trabalhador</span>
-            <div
-              role="group"
-              aria-label="O teu perfil"
-              className="inline-flex rounded-full border border-stone-200 bg-white p-1 shadow-card"
-            >
-              {PERFIS.map((p) => (
-                <button
-                  key={p.chave}
-                  type="button"
-                  aria-pressed={perfil === p.chave}
-                  onClick={() => definir(p.chave)}
-                  className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
-                    perfil === p.chave
-                      ? "bg-brand text-white shadow-glow"
-                      : "text-stone-500 hover:text-stone-700"
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
+          {/* Seletor de modo — dupla entrada que ramifica toda a experiência */}
+          <m.div variants={staggerItem} className="mb-6">
+            <SeletorModo />
           </m.div>
 
           <m.h1 variants={staggerItem} className="font-display display-1 text-balance font-semibold text-ink">
@@ -164,7 +209,19 @@ export default function Hero() {
           </m.p>
 
           <m.div variants={staggerItem} className="mt-9 flex flex-wrap gap-3">
-            {dados.primary.href ? (
+            {dados.primary.setModo ? (
+              <button
+                type="button"
+                onClick={() => {
+                  definir(dados.primary.setModo!);
+                  scrollToId("calculadora");
+                }}
+                className={btnPrimario}
+              >
+                {dados.primary.label}
+                <ArrowRight />
+              </button>
+            ) : dados.primary.href ? (
               <Link href={dados.primary.href} className={btnPrimario}>
                 {dados.primary.label}
                 <ArrowRight />
@@ -175,7 +232,18 @@ export default function Hero() {
                 <ArrowRight />
               </button>
             )}
-            {dados.secondary.href ? (
+            {dados.secondary.setModo ? (
+              <button
+                type="button"
+                onClick={() => {
+                  definir(dados.secondary.setModo!);
+                  scrollToId("calculadora");
+                }}
+                className={btnSecundario}
+              >
+                {dados.secondary.label}
+              </button>
+            ) : dados.secondary.href ? (
               <Link href={dados.secondary.href} className={btnSecundario}>
                 {dados.secondary.label}
               </Link>

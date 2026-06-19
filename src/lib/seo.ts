@@ -51,7 +51,6 @@ export const FERRAMENTA_SLUGS = [
   "classificar-atividade",
   "payout-mor",
   "recibo-vencimento",
-  "comparador",
   "auditoria-recibo",
 ] as const;
 

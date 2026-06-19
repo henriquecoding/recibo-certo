@@ -2896,10 +2896,13 @@ function EmpresaInputs({
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function SimuladorIntegrado() {
+export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos" | "rv" | "empresa" } = {}) {
   // ── Modo e cenário ───────────────────────────────────────────────────────
+  // `vista` (homepage): "rv" mostra só Recibos Verdes, "empresa" só Empresa
+  // (com destaque próprio), escondendo o toggle e a comparação integrada —
+  // que vivem agora no modo "Comparar Cenários". "ambos" = comportamento legado.
   const [modoInput, setModoInput] = useState<ModoInput>("recibo");
-  const [cenario, setCenario] = useState<CenarioAtivo>("rv");
+  const [cenario, setCenario] = useState<CenarioAtivo>(vista === "empresa" ? "empresa" : "rv");
 
   // ── Valores de entrada ───────────────────────────────────────────────────
   const [bruto, setBruto] = useState(1_500);
@@ -3009,6 +3012,9 @@ export default function SimuladorIntegrado() {
   const [modoSimulacao, setModoSimulacao] = useState<
     "nao_selecionado" | "guiado" | "profissional"
   >(() => {
+    // No modo "Abrir Empresa" entramos direto no simulador profissional
+    // (o onboarding guiado é orientado a recibos verdes).
+    if (vista === "empresa") return "profissional";
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("rc-modo-simulacao");
       if (saved === "guiado" || saved === "profissional") return saved;
@@ -3781,8 +3787,8 @@ export default function SimuladorIntegrado() {
               </div>
             )}
 
-            {/* Tabs RV / Empresa — só modo profissional */}
-            {modoSimulacao === "profissional" && (
+            {/* Tabs RV / Empresa — só modo profissional e na vista combinada */}
+            {modoSimulacao === "profissional" && vista === "ambos" && (
               <div
                 role="tablist"
                 aria-label="Cenário"
@@ -3821,8 +3827,8 @@ export default function SimuladorIntegrado() {
               </div>
             )}
 
-            {/* Mudar modo */}
-            {modoSimulacao !== "nao_selecionado" && (
+            {/* Mudar modo — escondido na vista de Empresa (entra direto no profissional) */}
+            {modoSimulacao !== "nao_selecionado" && vista !== "empresa" && (
               <button
                 type="button"
                 onClick={handleResetModo}
@@ -6303,6 +6309,10 @@ export default function SimuladorIntegrado() {
               </div>
             </div>
 
+            {/* Comparação integrada — só na vista combinada; no homepage vive
+                no modo "Comparar Cenários". */}
+            {vista === "ambos" && (
+              <>
             {/* ── ComparacaoNarrativa ─────────────────────────────────────────── */}
             <div className="border-t border-stone-100 dark:border-stone-800">
               <ComparacaoNarrativa
@@ -6465,6 +6475,8 @@ export default function SimuladorIntegrado() {
                 </p>
               </div>
             </div>
+              </>
+            )}
           </>
         )}
       </div>

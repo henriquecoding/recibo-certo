@@ -47,9 +47,9 @@ const FERRAMENTAS = [
     badge: "Mapa",
   },
   {
-    href: "/ferramentas/comparador",
+    href: "/?modo=comparar",
     titulo: "Recibos verdes, contrato ou empresa?",
-    descricao: "Para o mesmo rendimento anual, compara o líquido como trabalhador por conta de outrem, em recibos verdes ou através de uma empresa (IRC + dividendos).",
+    descricao: "Para o mesmo rendimento anual, compara o líquido como trabalhador por conta de outrem, em recibos verdes ou através de uma empresa (IRC + dividendos), com o ponto de viragem e o calendário fiscal.",
     icon: Scale,
     badge: "Comparador",
   },

@@ -1,15 +1,21 @@
 "use client";
 
 // ─────────────────────────────────────────────────────────────────────
-//  Perfil do utilizador — Independente (Categoria B) vs. Por conta de
-//  outrem (Categoria A). É a escolha que ramifica toda a experiência
-//  (hero, onboarding, calculadora da homepage). Persiste em localStorage
-//  para não voltar a perguntar. Sem sessão, sem telemetria.
+//  Perfil/modo do utilizador na homepage. Ramifica toda a experiência
+//  (hero, calculadora). Quatro modos mutuamente exclusivos:
+//   · independente — Categoria B (recibos verdes)
+//   · dependente   — Categoria A (por conta de outrem)
+//   · empresa      — abertura de sociedade (IRC + dividendos)
+//   · comparar     — comparar cenários (A vs B vs Empresa)
+//  Persiste em localStorage para não voltar a perguntar. Sem sessão, sem
+//  telemetria.
 // ─────────────────────────────────────────────────────────────────────
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 
-export type Perfil = "independente" | "dependente";
+export type Perfil = "independente" | "dependente" | "empresa" | "comparar";
+
+const VALIDOS: readonly Perfil[] = ["independente", "dependente", "empresa", "comparar"];
 
 const STORAGE_KEY = "recibocerto:perfil:v1";
 
@@ -29,8 +35,17 @@ export function PerfilProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const guardado = window.localStorage.getItem(STORAGE_KEY);
-      if (guardado === "independente" || guardado === "dependente") setPerfil(guardado);
+      // Deep-link ?modo=… (ex.: /?modo=comparar) tem prioridade e persiste,
+      // para que ligações externas (e o redirect do antigo comparador) abram
+      // diretamente o modo certo.
+      const q = new URLSearchParams(window.location.search).get("modo");
+      if (q && (VALIDOS as readonly string[]).includes(q)) {
+        setPerfil(q as Perfil);
+        window.localStorage.setItem(STORAGE_KEY, q);
+      } else {
+        const guardado = window.localStorage.getItem(STORAGE_KEY);
+        if (guardado && (VALIDOS as readonly string[]).includes(guardado)) setPerfil(guardado as Perfil);
+      }
     } catch {
       /* ignora */
     }
@@ -46,8 +61,9 @@ export function PerfilProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Alterna entre os dois perfis de "Sou Trabalhador" (atalho do Nav).
   const alternar = useCallback(() => {
-    definir(perfil === "independente" ? "dependente" : "independente");
+    definir(perfil === "dependente" ? "independente" : "dependente");
   }, [perfil, definir]);
 
   return <Ctx.Provider value={{ perfil, carregado, definir, alternar }}>{children}</Ctx.Provider>;

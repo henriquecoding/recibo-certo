@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.13.2";
+export const APP_VERSION = "1.14.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.14.0",
+    data: "2026-06-19",
+    titulo: "Dois novos modos na homepage: Abrir Empresa e Comparar Cenários",
+    itens: [
+      "O seletor da homepage ganhou um novo grupo «Gostaria de», com dois caminhos: «Abrir Empresa» e «Comparar Cenários». Ao escolheres, o destaque e a calculadora adaptam-se ao que procuras.",
+      "«Abrir Empresa» abre um simulador dedicado à sociedade — IRC PME, derrama, tributação autónoma, dividendos e benefícios fiscais — com o líquido em destaque, sem se misturar com a calculadora de recibos verdes.",
+      "«Comparar Cenários» reúne, num só lugar, a comparação dos três caminhos (por conta de outrem, recibos verdes e empresa) para o mesmo rendimento: arrasta o slider de rendimento, vê o ponto de viragem (quando cada caminho compensa) e o calendário fiscal de cada cenário.",
+      "A calculadora de recibos verdes fica agora focada no essencial: o comparador integrado passou para o novo modo «Comparar Cenários».",
+    ],
+  },
   {
     version: "1.13.2",
     data: "2026-06-19",
