@@ -25,6 +25,8 @@ export const CHANGELOG: EntradaChangelog[] = [
       "O seletor da homepage ganhou um novo grupo «Gostaria de», com dois caminhos: «Abrir Empresa» e «Comparar Cenários». Ao escolheres, o destaque e a calculadora adaptam-se ao que procuras.",
       "«Abrir Empresa» abre um simulador dedicado à sociedade — IRC PME, derrama, tributação autónoma, dividendos e benefícios fiscais — com o líquido em destaque, sem se misturar com a calculadora de recibos verdes.",
       "«Comparar Cenários» reúne, num só lugar, a comparação dos três caminhos (por conta de outrem, recibos verdes e empresa) para o mesmo rendimento: arrasta o slider de rendimento, vê o ponto de viragem (quando cada caminho compensa) e o calendário fiscal de cada cenário.",
+      "No comparador, os pontos de viragem passam a estar assinalados no próprio slider e juntámos um gráfico de colunas «para onde vai cada euro», que decompõe o ilíquido em líquido, IRS/dividendos, Segurança Social/IRC e despesas, com a tabela detalhada de cada cenário por baixo.",
+      "Acrescentámos uma secção de dúvidas separada por cenário (por conta de outrem, recibos verdes e empresa), com as perguntas que decidem o caminho.",
       "A calculadora de recibos verdes fica agora focada no essencial: o comparador integrado passou para o novo modo «Comparar Cenários».",
     ],
   },

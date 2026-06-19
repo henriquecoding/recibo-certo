@@ -12,7 +12,8 @@ import { EASE } from "@/lib/motion";
 import { compararCategorias } from "@/lib/fiscal-dependente";
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
-import { Briefcase, Receipt, Building, Check, Calendar, Scale } from "@/components/ui/Icons";
+import { Briefcase, Receipt, Building, Check, Calendar, Scale, ChartProjection } from "@/components/ui/Icons";
+import ComparadorFAQ from "@/components/comparar/ComparadorFAQ";
 
 const DEPENDENTES = [0, 1, 2, 3, 4];
 const PRESETS = [15_000, 25_000, 40_000, 60_000, 80_000, 120_000];
@@ -80,6 +81,29 @@ export default function ComparadorCenarios() {
     return liquidos[ord[0]] - liquidos[ord[1]];
   })();
   const tituloMelhor = CARTOES.find((c) => c.chave === r.melhor)?.titulo ?? "";
+
+  // Decomposição do ilíquido por cenário (gráfico de colunas "para onde vai
+  // cada euro"). Cada pilha soma ao mesmo ilíquido — o verde é o que fica.
+  const segmentos: Record<Chave, { label: string; valor: number; cls: string }[]> = {
+    dependente: [
+      { label: "Líquido", valor: r.dependente.liquido, cls: "bg-brand" },
+      { label: "IRS retido", valor: r.dependente.irs, cls: "bg-clay" },
+      { label: "Segurança Social (11%)", valor: r.dependente.ss, cls: "bg-clay/60" },
+    ],
+    freelancer: [
+      { label: "Líquido", valor: r.freelancer.liquido, cls: "bg-brand" },
+      { label: "IRS", valor: r.freelancer.irs, cls: "bg-clay" },
+      { label: "Segurança Social (21,4%)", valor: r.freelancer.ss, cls: "bg-clay/60" },
+      { label: "Despesas de atividade", valor: r.freelancer.despesas, cls: "bg-stone-300 dark:bg-stone-600" },
+    ],
+    empresa: [
+      { label: "Líquido (após dividendos)", valor: r.empresa.liquido, cls: "bg-brand" },
+      { label: "Imposto sobre dividendos (28%)", valor: r.empresa.dividendos, cls: "bg-clay" },
+      { label: "Derrama municipal", valor: r.empresa.derrama, cls: "bg-clay/40" },
+      { label: "IRC (15% / 19%)", valor: r.empresa.irc, cls: "bg-clay/60" },
+      { label: "Despesas + custos de estrutura", valor: Math.max(0, bruto - r.empresa.lucroTributavel), cls: "bg-stone-300 dark:bg-stone-600" },
+    ],
+  };
 
   // Calendário fiscal por cenário (factual, não inventado).
   const calendario: { chave: Chave; titulo: string; itens: { label: string; quando: string; valor: string }[] }[] = [
@@ -158,9 +182,30 @@ export default function ComparadorCenarios() {
           aria-label="Rendimento anual"
           className="mt-4 h-2 w-full cursor-pointer appearance-none rounded-full bg-stone-200 accent-brand dark:bg-stone-700"
         />
-        <div className="flex justify-between text-[11px] text-stone-400">
-          <span>0€</span>
-          <span>{fmtK(MAX)}</span>
+        {/* Marcadores dos pontos de viragem — onde cada caminho passa a compensar */}
+        <div className="relative mt-1 h-9">
+          {breakEvenRV != null && (
+            <div
+              className="absolute top-0 -translate-x-1/2 text-center"
+              style={{ left: `clamp(2rem, ${(breakEvenRV / MAX) * 100}%, calc(100% - 2rem))` }}
+            >
+              <span className="mx-auto block h-2.5 w-0.5 rounded-full bg-alert-border" />
+              <span className="mt-0.5 block whitespace-nowrap text-[10px] font-bold text-alert-text">{fmtK(breakEvenRV)}</span>
+              <span className="block whitespace-nowrap text-[9px] font-medium text-stone-400">recibos verdes</span>
+            </div>
+          )}
+          {breakEvenEmpresa != null && (
+            <div
+              className="absolute top-0 -translate-x-1/2 text-center"
+              style={{ left: `clamp(2rem, ${(breakEvenEmpresa / MAX) * 100}%, calc(100% - 2rem))` }}
+            >
+              <span className="mx-auto block h-2.5 w-0.5 rounded-full bg-alert-border" />
+              <span className="mt-0.5 block whitespace-nowrap text-[10px] font-bold text-alert-text">{fmtK(breakEvenEmpresa)}</span>
+              <span className="block whitespace-nowrap text-[9px] font-medium text-stone-400">empresa</span>
+            </div>
+          )}
+          <span className="absolute left-0 top-0 text-[11px] text-stone-400">0€</span>
+          <span className="absolute right-0 top-0 text-[11px] text-stone-400">{fmtK(MAX)}</span>
         </div>
 
         <div className="mt-3 flex flex-wrap justify-center gap-2">
@@ -295,6 +340,89 @@ export default function ComparadorCenarios() {
         </div>
       </div>
 
+      {/* Gráfico de colunas — para onde vai cada euro */}
+      {bruto > 0 && (
+        <div className="mt-6 rounded-2xl border border-stone-100 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/40 p-5">
+          <div className="mb-1 flex items-center gap-2">
+            <ChartProjection size={15} className="text-brand" />
+            <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-stone-500 dark:text-stone-400">Para onde vai cada euro</h3>
+          </div>
+          <p className="mb-4 text-xs text-stone-400">Mesma altura porque parte do mesmo ilíquido — o verde é o que te fica.</p>
+
+          <div className="flex items-end justify-around gap-3 sm:gap-6" style={{ height: 200 }}>
+            {CARTOES.map((c) => {
+              const segs = segmentos[c.chave];
+              const melhor = r.melhor === c.chave;
+              return (
+                <div key={c.chave} className="flex h-full min-w-0 flex-1 flex-col items-center">
+                  <div
+                    className="relative flex w-full max-w-[84px] flex-col-reverse overflow-hidden rounded-xl"
+                    style={{ height: "calc(100% - 30px)" }}
+                    role="img"
+                    aria-label={`${c.titulo}: líquido ${fmt(segs[0].valor)} de ${fmt(bruto)} ilíquidos`}
+                  >
+                    {segs.map((s) => (
+                      <div
+                        key={s.label}
+                        className={`${s.cls} w-full`}
+                        style={{ height: `${bruto > 0 ? (Math.max(0, s.valor) / bruto) * 100 : 0}%` }}
+                        title={`${s.label}: ${fmt(s.valor)}`}
+                      />
+                    ))}
+                  </div>
+                  <p className={`mt-2 text-center text-[11px] font-bold leading-tight ${melhor ? "text-brand-dark dark:text-brand" : "text-stone-500 dark:text-stone-400"}`}>
+                    {fmt(segs[0].valor)}
+                  </p>
+                  <p className="text-center text-[10px] leading-tight text-stone-400">{c.titulo}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Legenda */}
+          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 border-t border-stone-100 dark:border-stone-700 pt-3 text-[11px] text-stone-500 dark:text-stone-400">
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand" /> Líquido</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-clay" /> IRS / dividendos</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-clay/60" /> SS / IRC</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-stone-300 dark:bg-stone-600" /> Despesas / estrutura</span>
+          </div>
+
+          {/* Decomposição detalhada por cenário */}
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            {CARTOES.map((c) => {
+              const segs = segmentos[c.chave];
+              const melhor = r.melhor === c.chave;
+              return (
+                <div
+                  key={c.chave}
+                  className={`rounded-2xl border p-4 ${melhor ? "border-brand/40 bg-brand/5 dark:bg-brand/10" : "border-stone-100 dark:border-stone-700 bg-white dark:bg-stone-800"}`}
+                >
+                  <p className="mb-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+                    <c.Icon size={13} className="text-stone-400" /> {c.titulo}
+                  </p>
+                  <dl className="space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <dt className="text-stone-500 dark:text-stone-400">Ilíquido</dt>
+                      <dd className="font-semibold tabular-nums text-stone-700 dark:text-stone-200">{fmt(bruto)}</dd>
+                    </div>
+                    {segs.slice(1).map((s) => (
+                      <div key={s.label} className="flex items-center justify-between">
+                        <dt className="text-stone-500 dark:text-stone-400">− {s.label}</dt>
+                        <dd className="font-medium tabular-nums text-clay-text">−{fmt(s.valor)}</dd>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between border-t border-stone-100 dark:border-stone-700 pt-1.5">
+                      <dt className="font-semibold text-stone-700 dark:text-stone-200">Líquido</dt>
+                      <dd className={`font-bold tabular-nums ${melhor ? "text-brand-dark dark:text-brand" : "text-stone-800 dark:text-stone-100"}`}>{fmt(segs[0].valor)}</dd>
+                    </div>
+                  </dl>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Calendário fiscal por cenário */}
       <div className="mt-6">
         <div className="mb-3 flex items-center gap-2">
@@ -329,6 +457,9 @@ export default function ComparadorCenarios() {
         empresa modela IRC PME, derrama e distribuição de dividendos. Não substitui o aconselhamento de um contabilista
         certificado (OCC).
       </p>
+
+      {/* Dúvidas separadas por cenário */}
+      <ComparadorFAQ />
     </div>
   );
 }
