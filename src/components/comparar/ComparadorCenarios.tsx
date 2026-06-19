@@ -6,7 +6,7 @@
 // empresa), encontra o ponto de viragem e mostra o calendário fiscal de cada
 // cenário. Tudo pelos motores verificados (compararCategorias). Estimativa.
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { m } from "motion/react";
 import { EASE } from "@/lib/motion";
 import { compararCategorias } from "@/lib/fiscal-dependente";
@@ -14,6 +14,8 @@ import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import { Briefcase, Receipt, Building, Check, Calendar, Scale, ChartProjection } from "@/components/ui/Icons";
 import ComparadorFAQ from "@/components/comparar/ComparadorFAQ";
+import { PassoContabilista } from "@/components/simulador/PassoContabilista";
+import MapaBeneficiosRegioes from "@/components/comparar/MapaBeneficiosRegioes";
 
 const DEPENDENTES = [0, 1, 2, 3, 4];
 const PRESETS = [15_000, 25_000, 40_000, 60_000, 80_000, 120_000];
@@ -41,10 +43,38 @@ export default function ComparadorCenarios() {
   const despesas = num(despesasStr);
 
   const sincronizar = (v: number) => {
-    const c = Math.max(0, Math.min(MAX, Math.round(v)));
+    const c = Math.max(0, Math.min(MAX, Math.round(v / 1000) * 1000));
     setBruto(c);
     setBrutoStr(String(c));
   };
+
+  // ── Slider personalizado (track + preenchimento + puxador) ────────────────
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const pctDe = useCallback((v: number) => Math.min(100, Math.max(0, (v / MAX) * 100)), []);
+  const valorDoPonteiro = useCallback((clientX: number) => {
+    const el = trackRef.current;
+    if (!el) return bruto;
+    const { left, width } = el.getBoundingClientRect();
+    const frac = Math.max(0, Math.min(1, (clientX - left) / width));
+    return Math.round((frac * MAX) / 1000) * 1000;
+  }, [bruto]);
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragging(true);
+    sincronizar(valorDoPonteiro(e.clientX));
+  }, [valorDoPonteiro]);
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (dragging) sincronizar(valorDoPonteiro(e.clientX));
+  }, [dragging, valorDoPonteiro]);
+  const onPointerUp = useCallback(() => setDragging(false), []);
+  const onKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const passo = e.shiftKey ? 10_000 : 1_000;
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") { e.preventDefault(); sincronizar(bruto + passo); }
+    else if (e.key === "ArrowLeft" || e.key === "ArrowDown") { e.preventDefault(); sincronizar(bruto - passo); }
+    else if (e.key === "Home") { e.preventDefault(); sincronizar(0); }
+    else if (e.key === "End") { e.preventDefault(); sincronizar(MAX); }
+  }, [bruto]);
 
   const r = useMemo(
     () => compararCategorias({ brutoAnual: bruto, dependentes, despesas }),
@@ -83,26 +113,40 @@ export default function ComparadorCenarios() {
   const tituloMelhor = CARTOES.find((c) => c.chave === r.melhor)?.titulo ?? "";
 
   // Decomposição do ilíquido por cenário (gráfico de colunas "para onde vai
-  // cada euro"). Cada pilha soma ao mesmo ilíquido — o verde é o que fica.
-  const segmentos: Record<Chave, { label: string; valor: number; cls: string }[]> = {
-    dependente: [
-      { label: "Líquido", valor: r.dependente.liquido, cls: "bg-brand" },
-      { label: "IRS retido", valor: r.dependente.irs, cls: "bg-clay" },
-      { label: "Segurança Social (11%)", valor: r.dependente.ss, cls: "bg-clay/60" },
-    ],
-    freelancer: [
-      { label: "Líquido", valor: r.freelancer.liquido, cls: "bg-brand" },
-      { label: "IRS", valor: r.freelancer.irs, cls: "bg-clay" },
-      { label: "Segurança Social (21,4%)", valor: r.freelancer.ss, cls: "bg-clay/60" },
-      { label: "Despesas de atividade", valor: r.freelancer.despesas, cls: "bg-stone-300 dark:bg-stone-600" },
-    ],
-    empresa: [
-      { label: "Líquido (após dividendos)", valor: r.empresa.liquido, cls: "bg-brand" },
-      { label: "Imposto sobre dividendos (28%)", valor: r.empresa.dividendos, cls: "bg-clay" },
-      { label: "Derrama municipal", valor: r.empresa.derrama, cls: "bg-clay/40" },
-      { label: "IRC (15% / 19%)", valor: r.empresa.irc, cls: "bg-clay/60" },
-      { label: "Despesas + custos de estrutura", valor: Math.max(0, bruto - r.empresa.lucroTributavel), cls: "bg-stone-300 dark:bg-stone-600" },
-    ],
+  // cada euro"). Cada pilha soma exatamente ao mesmo ilíquido — o verde é o que
+  // fica. Paleta coerente: verde = líquido; família terracota (clay) = imposto,
+  // do mais escuro (maior peso) ao mais claro; cinza neutro = custos/estrutura.
+  const COR = {
+    liquido: "bg-brand",
+    impostoForte: "bg-clay-text", // IRS / SS — o desconto mais pesado
+    imposto: "bg-clay", // IRS / dividendos
+    impostoLeve: "bg-clay-border", // derrama e afins
+    custo: "bg-stone-300 dark:bg-stone-600", // despesas / estrutura (não é imposto)
+  };
+  type Seg = { label: string; valor: number; cls: string };
+  // Garante que a pilha soma ao ilíquido: o último segmento absorve o resto.
+  const pilha = (liquido: number, perdas: Seg[]): Seg[] => {
+    const somaPerdas = perdas.reduce((s, p) => s + Math.max(0, p.valor), 0);
+    const resto = Math.round(bruto - liquido - somaPerdas);
+    const base: Seg[] = [{ label: "Líquido", valor: liquido, cls: COR.liquido }, ...perdas.filter((p) => p.valor > 0.5)];
+    if (resto > 0.5) base.push({ label: "Outros custos / estrutura", valor: resto, cls: COR.custo });
+    return base;
+  };
+  const segmentos: Record<Chave, Seg[]> = {
+    dependente: pilha(r.dependente.liquido, [
+      { label: "IRS retido", valor: r.dependente.irs, cls: COR.imposto },
+      { label: "Segurança Social (11%)", valor: r.dependente.ss, cls: COR.impostoForte },
+    ]),
+    freelancer: pilha(r.freelancer.liquido, [
+      { label: "IRS", valor: r.freelancer.irs, cls: COR.imposto },
+      { label: "Segurança Social (21,4%)", valor: r.freelancer.ss, cls: COR.impostoForte },
+      { label: "Despesas de atividade", valor: r.freelancer.despesas, cls: COR.custo },
+    ]),
+    empresa: pilha(r.empresa.liquido, [
+      { label: "Imposto sobre dividendos (28%)", valor: r.empresa.dividendos, cls: COR.imposto },
+      { label: "IRC (15% / 19%)", valor: r.empresa.irc, cls: COR.impostoForte },
+      { label: "Derrama municipal", valor: r.empresa.derrama, cls: COR.impostoLeve },
+    ]),
   };
 
   // Calendário fiscal por cenário (factual, não inventado).
@@ -140,7 +184,8 @@ export default function ComparadorCenarios() {
     "w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-4 py-2.5 text-sm font-medium text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand";
 
   return (
-    <div className="rounded-4xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 p-5 shadow-card sm:p-6 my-8">
+    <div className="my-8 space-y-10">
+    <div className="rounded-4xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 p-5 shadow-card sm:p-6">
       {/* Cabeçalho */}
       <div className="mb-6 flex items-center gap-2.5">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-light text-brand">
@@ -172,40 +217,50 @@ export default function ComparadorCenarios() {
           <p className="text-[11px] text-stone-400">/ano · arrasta o slider ou edita o valor</p>
         </div>
 
-        <input
-          type="range"
-          min={0}
-          max={MAX}
-          step={1000}
-          value={bruto}
-          onChange={(e) => sincronizar(Number(e.target.value))}
-          aria-label="Rendimento anual"
-          className="mt-4 h-2 w-full cursor-pointer appearance-none rounded-full bg-stone-200 accent-brand dark:bg-stone-700"
-        />
-        {/* Marcadores dos pontos de viragem — onde cada caminho passa a compensar */}
-        <div className="relative mt-1 h-9">
-          {breakEvenRV != null && (
+        {/* Slider personalizado — puxador arrastável + pontos de viragem na própria barra */}
+        <div className="mt-7 px-1">
+          <div className="relative h-2.5" style={{ touchAction: "none" }}>
+            {/* Marcadores dos pontos de viragem, ASSENTES na barra */}
+            {breakEvenRV != null && breakEvenRV <= MAX && (
+              <div className="pointer-events-none absolute -top-6 z-10 -translate-x-1/2 text-center" style={{ left: `${pctDe(breakEvenRV)}%` }}>
+                <span className="block whitespace-nowrap rounded-md bg-brand-light px-1.5 py-0.5 text-[10px] font-bold text-brand-dark">{fmtK(breakEvenRV)} · recibos verdes</span>
+                <span className="mx-auto mt-0.5 block h-3 w-px bg-brand" />
+              </div>
+            )}
+            {breakEvenEmpresa != null && breakEvenEmpresa <= MAX && (
+              <div className="pointer-events-none absolute -top-11 z-10 -translate-x-1/2 text-center" style={{ left: `${pctDe(breakEvenEmpresa)}%` }}>
+                <span className="block whitespace-nowrap rounded-md bg-alert-bg px-1.5 py-0.5 text-[10px] font-bold text-alert-text">{fmtK(breakEvenEmpresa)} · empresa</span>
+                <span className="mx-auto mt-0.5 block h-8 w-px bg-alert-border" />
+              </div>
+            )}
+
+            {/* Trilho + preenchimento + puxador */}
             <div
-              className="absolute top-0 -translate-x-1/2 text-center"
-              style={{ left: `clamp(2rem, ${(breakEvenRV / MAX) * 100}%, calc(100% - 2rem))` }}
+              ref={trackRef}
+              role="slider"
+              tabIndex={0}
+              aria-label="Rendimento anual ilíquido"
+              aria-valuemin={0}
+              aria-valuemax={MAX}
+              aria-valuenow={bruto}
+              aria-valuetext={`${fmt(bruto)} por ano`}
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onKeyDown={onKeyDown}
+              className="group absolute inset-0 cursor-pointer rounded-full bg-stone-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-stone-50 dark:bg-stone-700 dark:focus-visible:ring-offset-stone-900"
             >
-              <span className="mx-auto block h-2.5 w-0.5 rounded-full bg-alert-border" />
-              <span className="mt-0.5 block whitespace-nowrap text-[10px] font-bold text-alert-text">{fmtK(breakEvenRV)}</span>
-              <span className="block whitespace-nowrap text-[9px] font-medium text-stone-400">recibos verdes</span>
+              <div className="absolute inset-y-0 left-0 rounded-full bg-brand" style={{ width: `${pctDe(bruto)}%` }} />
+              <div
+                className={`absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-brand bg-white shadow-card transition-transform ${dragging ? "scale-110 shadow-glow" : "group-hover:scale-105"}`}
+                style={{ left: `${pctDe(bruto)}%` }}
+              />
             </div>
-          )}
-          {breakEvenEmpresa != null && (
-            <div
-              className="absolute top-0 -translate-x-1/2 text-center"
-              style={{ left: `clamp(2rem, ${(breakEvenEmpresa / MAX) * 100}%, calc(100% - 2rem))` }}
-            >
-              <span className="mx-auto block h-2.5 w-0.5 rounded-full bg-alert-border" />
-              <span className="mt-0.5 block whitespace-nowrap text-[10px] font-bold text-alert-text">{fmtK(breakEvenEmpresa)}</span>
-              <span className="block whitespace-nowrap text-[9px] font-medium text-stone-400">empresa</span>
-            </div>
-          )}
-          <span className="absolute left-0 top-0 text-[11px] text-stone-400">0€</span>
-          <span className="absolute right-0 top-0 text-[11px] text-stone-400">{fmtK(MAX)}</span>
+          </div>
+          <div className="mt-2 flex justify-between text-[11px] font-medium text-stone-400">
+            <span>0€</span>
+            <span>{fmtK(MAX)}</span>
+          </div>
         </div>
 
         <div className="mt-3 flex flex-wrap justify-center gap-2">
@@ -349,31 +404,38 @@ export default function ComparadorCenarios() {
           </div>
           <p className="mb-4 text-xs text-stone-400">Mesma altura porque parte do mesmo ilíquido — o verde é o que te fica.</p>
 
-          <div className="flex items-end justify-around gap-3 sm:gap-6" style={{ height: 200 }}>
+          <div className="flex items-end justify-around gap-4 sm:gap-8" style={{ height: 230 }}>
             {CARTOES.map((c) => {
               const segs = segmentos[c.chave];
               const melhor = r.melhor === c.chave;
+              const pctLiquido = bruto > 0 ? (segs[0].valor / bruto) * 100 : 0;
               return (
                 <div key={c.chave} className="flex h-full min-w-0 flex-1 flex-col items-center">
+                  <span className={`mb-1.5 inline-flex items-center gap-1 text-[11px] font-bold tabular-nums ${melhor ? "text-brand-dark dark:text-brand" : "text-stone-600 dark:text-stone-300"}`}>
+                    {melhor && <Check size={11} />}{fmt(segs[0].valor)}
+                  </span>
                   <div
-                    className="relative flex w-full max-w-[84px] flex-col-reverse overflow-hidden rounded-xl"
-                    style={{ height: "calc(100% - 30px)" }}
+                    className={`relative flex w-full max-w-[92px] flex-col-reverse overflow-hidden rounded-xl ring-1 ${melhor ? "ring-2 ring-brand/50" : "ring-stone-200/70 dark:ring-stone-700"}`}
+                    style={{ height: "calc(100% - 44px)" }}
                     role="img"
-                    aria-label={`${c.titulo}: líquido ${fmt(segs[0].valor)} de ${fmt(bruto)} ilíquidos`}
+                    aria-label={`${c.titulo}: líquido ${fmt(segs[0].valor)} (${Math.round(pctLiquido)}%) de ${fmt(bruto)} ilíquidos`}
                   >
-                    {segs.map((s) => (
+                    {segs.map((s, i) => (
                       <div
                         key={s.label}
-                        className={`${s.cls} w-full`}
+                        className={`${s.cls} relative w-full ${i > 0 ? "border-t border-white/50 dark:border-stone-900/40" : ""}`}
                         style={{ height: `${bruto > 0 ? (Math.max(0, s.valor) / bruto) * 100 : 0}%` }}
                         title={`${s.label}: ${fmt(s.valor)}`}
-                      />
+                      >
+                        {i === 0 && pctLiquido >= 18 && (
+                          <span className="absolute inset-x-0 bottom-1.5 text-center text-[10px] font-bold text-white/95">{Math.round(pctLiquido)}%</span>
+                        )}
+                      </div>
                     ))}
                   </div>
-                  <p className={`mt-2 text-center text-[11px] font-bold leading-tight ${melhor ? "text-brand-dark dark:text-brand" : "text-stone-500 dark:text-stone-400"}`}>
-                    {fmt(segs[0].valor)}
+                  <p className={`mt-2 flex items-center gap-1 text-center text-[10px] font-semibold leading-tight ${melhor ? "text-stone-700 dark:text-stone-200" : "text-stone-400"}`}>
+                    <c.Icon size={11} /> {c.titulo}
                   </p>
-                  <p className="text-center text-[10px] leading-tight text-stone-400">{c.titulo}</p>
                 </div>
               );
             })}
@@ -381,9 +443,10 @@ export default function ComparadorCenarios() {
 
           {/* Legenda */}
           <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 border-t border-stone-100 dark:border-stone-700 pt-3 text-[11px] text-stone-500 dark:text-stone-400">
-            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand" /> Líquido</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand" /> Líquido (fica contigo)</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-clay" /> IRS / dividendos</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-clay/60" /> SS / IRC</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-clay-text" /> Segurança Social / IRC</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-clay-border" /> Derrama</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-stone-300 dark:bg-stone-600" /> Despesas / estrutura</span>
           </div>
 
@@ -457,9 +520,16 @@ export default function ComparadorCenarios() {
         empresa modela IRC PME, derrama e distribuição de dividendos. Não substitui o aconselhamento de um contabilista
         certificado (OCC).
       </p>
+    </div>
 
-      {/* Dúvidas separadas por cenário */}
-      <ComparadorFAQ />
+    {/* ── Próximos passos: precisas de um contabilista? (diagnóstico + mapa de preços) ── */}
+    <PassoContabilista faturacaoAnual={bruto} despesasEstimadas={despesas} />
+
+    {/* ── Onde vale a pena instalar-te: benefícios fiscais por região ── */}
+    <MapaBeneficiosRegioes />
+
+    {/* Dúvidas separadas por cenário */}
+    <ComparadorFAQ />
     </div>
   );
 }

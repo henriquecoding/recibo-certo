@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.14.0";
+export const APP_VERSION = "1.15.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.15.0",
+    data: "2026-06-19",
+    titulo: "Comparar Cenários muito mais completo: slider, contabilista e mapa de benefícios",
+    itens: [
+      "O slider de rendimento foi reconstruído: agora tem um puxador arrastável suave, com os pontos de viragem (quando os recibos verdes e a empresa começam a compensar) assinalados na própria barra, e funciona com teclado.",
+      "O gráfico «para onde vai cada euro» ganhou cores coerentes com a marca e mais legíveis — verde para o que te fica, tons de terracota para os impostos e cinza para custos —, com a percentagem de líquido visível em cada coluna.",
+      "Juntámos ao comparador todo o diagnóstico «Precisas de um contabilista?»: com base no teu rendimento, dizemos-te se — e quando — compensa contratar um Contabilista Certificado, com honorários estimados e o mapa de preços médios por região.",
+      "Novo mapa «Onde vale a pena instalar a atividade»: mostra, por região, os benefícios fiscais reais — IRC de 12,5% nos concelhos do interior, IRC de 5% na Zona Franca da Madeira, redução de 30% nos Açores e RFAI de 30% fora de Lisboa e Algarve. Procura a tua zona ou toca numa região.",
+    ],
+  },
   {
     version: "1.14.0",
     data: "2026-06-19",

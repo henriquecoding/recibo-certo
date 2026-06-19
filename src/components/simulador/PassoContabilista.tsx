@@ -37,7 +37,8 @@ export function PassoContabilista({
 }: {
   faturacaoAnual: number;
   despesasEstimadas?: number;
-  onVoltar: () => void;
+  /** Opcional: quando ausente, esconde o botão "Voltar" (uso autónomo, ex.: comparador). */
+  onVoltar?: () => void;
 }) {
   const [formaJuridica, setFormaJuridica] = useState<FormaJuridica>("independente");
   const [clientes, setClientes] = useState<ClientesAmbito>("nacional");
@@ -251,15 +252,17 @@ export function PassoContabilista({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={onVoltar}
-          className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-5 py-2.5 text-sm font-semibold text-stone-600 dark:text-stone-300 transition-all hover:border-brand hover:text-brand"
-        >
-          ← Voltar ao resultado
-        </button>
-      </div>
+      {onVoltar && (
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={onVoltar}
+            className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-5 py-2.5 text-sm font-semibold text-stone-600 dark:text-stone-300 transition-all hover:border-brand hover:text-brand"
+          >
+            ← Voltar ao resultado
+          </button>
+        </div>
+      )}
 
       <p className="text-[11px] leading-relaxed text-stone-400">
         Diagnóstico informativo. Os limites legais (isenção de IVA até {fmt(LIMITE_ISENCAO_IVA)}, contabilidade organizada
