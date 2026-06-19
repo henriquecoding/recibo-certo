@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.18.0";
+export const APP_VERSION = "1.18.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.18.1",
+    data: "2026-06-19",
+    titulo: "Pesquisa mais sólida e bonita",
+    itens: [
+      "Corrigimos a janela de pesquisa que aparecia translúcida (via-se a página por trás): passa a ser um cartão opaco e nítido, com fundo escurecido e desfocado, mais fácil de ler.",
+      "A pesquisa passou a ter uma única janela partilhada por todo o site, pelo que o atalho ⌘K / Ctrl+K funciona em qualquer página sem abrir janelas repetidas.",
+    ],
+  },
   {
     version: "1.18.0",
     data: "2026-06-19",

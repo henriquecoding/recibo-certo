@@ -33,7 +33,7 @@ import { useAuth } from "@/lib/supabase/auth";
 import { SubscricaoProvider } from "@/lib/stripe/subscription";
 import { verificarAdmin } from "@/lib/supabase/admin";
 import AccountBox from "@/components/dashboard/AccountBox";
-import BuscaGlobal from "@/components/busca/BuscaGlobal";
+import { BuscaTrigger } from "@/components/busca/BuscaGlobal";
 import type { ComponentType, ReactNode } from "react";
 
 interface NavItem {
@@ -206,7 +206,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
 
           <div className="flex-shrink-0 px-3 pt-3">
-            <BuscaGlobal />
+            <BuscaTrigger />
           </div>
 
           <nav className="flex flex-1 flex-col overflow-y-auto px-3 pt-4 pb-2">
@@ -251,7 +251,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <Logo small />
           </Link>
           <div className="flex items-center gap-2">
-            <BuscaGlobal compacto />
+            <BuscaTrigger compacto />
             <AdminLink mobile />
             <ThemeToggle />
             <Link

@@ -66,8 +66,37 @@ function Realce({ texto, query }: { texto: string; query: string }) {
   );
 }
 
-/** Trigger + overlay. Coloca <BuscaGlobal /> em qualquer header. */
-export default function BuscaGlobal({ compacto = false }: { compacto?: boolean }) {
+const EVENTO_ABRIR = "recibocerto:busca:abrir";
+
+/** Botão de pesquisa (leve). Dispara a abertura do overlay global único. */
+export function BuscaTrigger({ compacto = false }: { compacto?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={() => window.dispatchEvent(new Event(EVENTO_ABRIR))}
+      aria-label="Pesquisar no ReciboCerto"
+      aria-keyshortcuts="Control+K Meta+K"
+      className={
+        compacto
+          ? "flex h-10 w-10 items-center justify-center rounded-xl text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800"
+          : "group flex items-center gap-2 rounded-xl border border-stone-200 bg-white/70 px-3 py-2 text-sm text-stone-400 transition-colors hover:border-brand/40 hover:text-stone-600 dark:border-stone-700 dark:bg-stone-900/50 dark:hover:border-brand/40"
+      }
+    >
+      <Search size={16} className="flex-shrink-0" />
+      {!compacto && (
+        <>
+          <span className="hidden md:inline">Pesquisar…</span>
+          <span className="ml-2 hidden items-center gap-0.5 rounded-md border border-stone-200 px-1.5 py-0.5 text-[10px] font-semibold text-stone-400 md:inline-flex dark:border-stone-700">
+            <Keyboard size={11} /> K
+          </span>
+        </>
+      )}
+    </button>
+  );
+}
+
+/** Overlay de pesquisa — montado UMA vez (na raiz). Abre por ⌘K/Ctrl+K ou evento. */
+export default function BuscaOverlay() {
   const router = useRouter();
   const pathname = usePathname();
   const [aberto, setAberto] = useState(false);
@@ -89,8 +118,13 @@ export default function BuscaGlobal({ compacto = false }: { compacto?: boolean }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); aberto ? setAberto(false) : abrir(); }
       else if (e.key === "Escape" && aberto) setAberto(false);
     };
+    const onAbrir = () => abrir();
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener(EVENTO_ABRIR, onAbrir);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener(EVENTO_ABRIR, onAbrir);
+    };
   }, [aberto, abrir]);
 
   useEffect(() => {
@@ -132,49 +166,27 @@ export default function BuscaGlobal({ compacto = false }: { compacto?: boolean }
 
   return (
     <>
-      {/* ── Trigger ── */}
-      <button
-        type="button"
-        onClick={abrir}
-        aria-label="Pesquisar no ReciboCerto"
-        className={
-          compacto
-            ? "flex h-10 w-10 items-center justify-center rounded-xl text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800"
-            : "group flex items-center gap-2 rounded-xl border border-stone-200 bg-white/70 px-3 py-2 text-sm text-stone-400 transition-colors hover:border-brand/40 hover:text-stone-600 dark:border-stone-700 dark:bg-stone-900/50 dark:hover:border-brand/40"
-        }
-      >
-        <Search size={16} className="flex-shrink-0" />
-        {!compacto && (
-          <>
-            <span className="hidden md:inline">Pesquisar…</span>
-            <span className="ml-2 hidden items-center gap-0.5 rounded-md border border-stone-200 px-1.5 py-0.5 text-[10px] font-semibold text-stone-400 md:inline-flex dark:border-stone-700">
-              <Keyboard size={11} /> K
-            </span>
-          </>
-        )}
-      </button>
-
-      {/* ── Overlay ── */}
+      {/* ── Overlay (instância única) ── */}
       <AnimatePresence>
         {aberto && (
           <div className="fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-label="Pesquisa">
             <m.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              className="absolute inset-0 bg-stone-900/45 backdrop-blur-md"
               onClick={() => setAberto(false)}
               aria-hidden
             />
-            <div className="pointer-events-none absolute inset-0 flex items-end justify-center p-0 sm:items-start sm:p-4 sm:pt-[8vh]">
+            <div className="pointer-events-none absolute inset-0 flex items-end justify-center p-0 sm:items-start sm:p-4 sm:pt-[7vh]">
               <m.div
-                initial={{ opacity: 0, y: 24, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 24, scale: 0.98 }}
-                transition={{ type: "spring", damping: 30, stiffness: 320 }}
-                className="pointer-events-auto flex max-h-[85dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-4xl bg-cream shadow-float dark:bg-stone-900 sm:rounded-4xl"
+                initial={{ y: 28, scale: 0.97 }}
+                animate={{ y: 0, scale: 1 }}
+                exit={{ y: 24, scale: 0.97 }}
+                transition={{ type: "spring", damping: 32, stiffness: 340 }}
+                className="pointer-events-auto flex max-h-[88dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-4xl border border-stone-200/80 bg-white shadow-float ring-1 ring-black/5 dark:border-stone-800 dark:bg-stone-900 dark:ring-white/5 sm:max-h-[80dvh] sm:rounded-4xl"
               >
                 {/* Input */}
-                <div className="flex shrink-0 items-center gap-3 border-b border-stone-100 px-4 py-3.5 dark:border-stone-800">
-                  <Search size={18} className="flex-shrink-0 text-brand" />
+                <div className="flex shrink-0 items-center gap-3 border-b border-stone-100 px-4 py-4 dark:border-stone-800">
+                  <Search size={20} className="flex-shrink-0 text-brand" />
                   <input
                     ref={inputRef}
                     value={query}
@@ -187,14 +199,14 @@ export default function BuscaGlobal({ compacto = false }: { compacto?: boolean }
                     }}
                     placeholder={catAtual.placeholder}
                     aria-label={`Pesquisar ${catAtual.label}`}
-                    className="min-w-0 flex-1 bg-transparent text-base text-stone-800 placeholder-stone-400 focus:outline-none dark:text-stone-100"
+                    className="min-w-0 flex-1 bg-transparent text-base font-medium text-stone-800 placeholder-stone-400 placeholder:font-normal focus:outline-none dark:text-stone-100"
                   />
                   {query && (
                     <button type="button" onClick={() => { setQuery(""); inputRef.current?.focus(); }} aria-label="Limpar" className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800">
                       <Close size={15} />
                     </button>
                   )}
-                  <button type="button" onClick={() => setAberto(false)} aria-label="Fechar" className="flex h-8 w-8 items-center justify-center rounded-xl text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 sm:hidden">
+                  <button type="button" onClick={() => setAberto(false)} aria-label="Fechar pesquisa" className="flex h-8 w-8 items-center justify-center rounded-xl text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800">
                     <Close size={18} />
                   </button>
                 </div>
@@ -212,7 +224,7 @@ export default function BuscaGlobal({ compacto = false }: { compacto?: boolean }
                         className={`flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
                           ativo
                             ? "border-brand bg-brand text-white shadow-glow"
-                            : "border-stone-200 bg-white text-stone-600 hover:border-brand/40 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300"
+                            : "border-stone-200 bg-stone-50 text-stone-600 hover:border-brand/40 hover:bg-white dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300"
                         }`}
                       >
                         <Icone nome={c.icone} size={14} />
@@ -233,7 +245,7 @@ export default function BuscaGlobal({ compacto = false }: { compacto?: boolean }
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {recentes.map((h) => (
-                          <button key={h} type="button" onClick={() => setQuery(h)} className="rounded-full border border-stone-200 bg-white px-2.5 py-1 text-xs font-medium text-stone-600 hover:border-brand/40 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300">
+                          <button key={h} type="button" onClick={() => setQuery(h)} className="rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1 text-xs font-medium text-stone-600 hover:border-brand/40 hover:bg-white dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300">
                             {h}
                           </button>
                         ))}
@@ -250,7 +262,7 @@ export default function BuscaGlobal({ compacto = false }: { compacto?: boolean }
                           key={it.id}
                           type="button"
                           onClick={() => navegar(it.href)}
-                          className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors hover:bg-white dark:hover:bg-stone-800"
+                          className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors hover:bg-stone-50 dark:hover:bg-stone-800"
                         >
                           <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand">
                             <Icone nome={it.icone} size={16} />
