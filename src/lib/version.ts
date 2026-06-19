@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.17.0";
+export const APP_VERSION = "1.17.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.17.1",
+    data: "2026-06-19",
+    titulo: "Simuladores e ferramentas agora dentro do painel",
+    itens: [
+      "Os simuladores (recibo de vencimento, abrir empresa, comparar cenários, regime simplificado, ato isolado) e as ferramentas (auditoria de recibo, classificar atividade, mapa de contabilistas) abrem agora dentro do próprio painel, sem te tirarem da tua área — no telemóvel e no computador.",
+      "Na barra inferior do telemóvel, o atalho rápido passou a ser «Comparar» em vez de «IRS» (o Simulador de IRS continua no menu).",
+    ],
+  },
   {
     version: "1.17.0",
     data: "2026-06-19",

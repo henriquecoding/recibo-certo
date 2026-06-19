@@ -64,19 +64,19 @@ const GRUPOS: NavGroup[] = [
     titulo: "Simuladores",
     itens: [
       { href: "/dashboard/simulador", label: "Simulador de IRS", short: "IRS", icon: Calculator },
-      { href: "/ferramentas/recibo-vencimento", label: "Recibo de vencimento", short: "Vencimento", icon: Wallet, externo: true },
-      { href: "/?modo=empresa", label: "Abrir empresa", short: "Empresa", icon: Building, externo: true },
-      { href: "/?modo=comparar", label: "Comparar cenários", short: "Comparar", icon: Scale, externo: true },
-      { href: "/ferramentas/regime-simplificado", label: "Regime simplificado", short: "Simplificado", icon: Gauge, externo: true },
-      { href: "/ferramentas/ato-isolado", label: "Ato isolado ou atividade", short: "Ato isolado", icon: Swap, externo: true },
+      { href: "/dashboard/recibo-vencimento", label: "Recibo de vencimento", short: "Vencimento", icon: Wallet },
+      { href: "/dashboard/empresa", label: "Abrir empresa", short: "Empresa", icon: Building },
+      { href: "/dashboard/comparar", label: "Comparar cenários", short: "Comparar", icon: Scale },
+      { href: "/dashboard/regime-simplificado", label: "Regime simplificado", short: "Simplificado", icon: Gauge },
+      { href: "/dashboard/ato-isolado", label: "Ato isolado ou atividade", short: "Ato isolado", icon: Swap },
     ],
   },
   {
     titulo: "Ferramentas",
     itens: [
-      { href: "/ferramentas/auditoria-recibo", label: "Auditoria do recibo", short: "Auditoria", icon: ShieldCheck, externo: true },
-      { href: "/ferramentas/classificar-atividade", label: "Classificar atividade", short: "Atividade", icon: Search, externo: true },
-      { href: "/ferramentas/mapa-contabilistas", label: "Mapa de contabilistas", short: "Mapa", icon: MapPin, externo: true },
+      { href: "/dashboard/auditoria-recibo", label: "Auditoria do recibo", short: "Auditoria", icon: ShieldCheck },
+      { href: "/dashboard/classificar-atividade", label: "Classificar atividade", short: "Atividade", icon: Search },
+      { href: "/dashboard/mapa-contabilistas", label: "Mapa de contabilistas", short: "Mapa", icon: MapPin },
       { href: "/ferramentas/payout-mor", label: "Recibo Merchant of Record", short: "Payout", icon: ShoppingBag, externo: true },
       { href: "/ferramentas", label: "Todas as ferramentas", short: "Tools", icon: Briefcase, externo: true },
     ],
@@ -102,7 +102,7 @@ const PRIMARIOS: NavItem[] = [
   { href: "/dashboard", label: "Visão geral", short: "Início", icon: LayoutGrid },
   { href: "/dashboard/recibos", label: "Recibos", short: "Recibos", icon: Receipt },
   { href: "/dashboard/prazos", label: "Prazos fiscais", short: "Prazos", icon: Calendar },
-  { href: "/dashboard/simulador", label: "Simulador de IRS", short: "IRS", icon: Calculator },
+  { href: "/dashboard/comparar", label: "Comparar cenários", short: "Comparar", icon: Scale },
 ];
 
 function AdminLink({ mobile }: { mobile?: boolean }) {

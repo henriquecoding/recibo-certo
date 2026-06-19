@@ -34,19 +34,19 @@ const BLOCOS: Bloco[] = [
   {
     titulo: "Simuladores & decisores",
     recursos: [
-      { href: "/ferramentas/recibo-vencimento", titulo: "Recibo de vencimento", desc: "Do bruto ao líquido por conta de outrem", icon: Wallet },
-      { href: "/?modo=empresa", titulo: "Abrir empresa", desc: "Líquido via sociedade: IRC + dividendos", icon: Building },
-      { href: "/?modo=comparar", titulo: "Comparar cenários", desc: "Recibos verdes vs contrato vs empresa", icon: Scale },
-      { href: "/ferramentas/regime-simplificado", titulo: "Regime simplificado", desc: "Coeficiente, tributável e IRS estimado", icon: Gauge },
-      { href: "/ferramentas/ato-isolado", titulo: "Ato isolado ou atividade", desc: "Descobre o que faz sentido para ti", icon: Swap },
+      { href: "/dashboard/recibo-vencimento", titulo: "Recibo de vencimento", desc: "Do bruto ao líquido por conta de outrem", icon: Wallet },
+      { href: "/dashboard/empresa", titulo: "Abrir empresa", desc: "Líquido via sociedade: IRC + dividendos", icon: Building },
+      { href: "/dashboard/comparar", titulo: "Comparar cenários", desc: "Recibos verdes vs contrato vs empresa", icon: Scale },
+      { href: "/dashboard/regime-simplificado", titulo: "Regime simplificado", desc: "Coeficiente, tributável e IRS estimado", icon: Gauge },
+      { href: "/dashboard/ato-isolado", titulo: "Ato isolado ou atividade", desc: "Descobre o que faz sentido para ti", icon: Swap },
     ],
   },
   {
     titulo: "Ferramentas",
     recursos: [
-      { href: "/ferramentas/auditoria-recibo", titulo: "Auditoria do recibo", desc: "Confirma se o teu recibo está certo", icon: ShieldCheck },
-      { href: "/ferramentas/classificar-atividade", titulo: "Classificar atividade", desc: "Retenção, coeficiente e SS por profissão", icon: Search },
-      { href: "/ferramentas/mapa-contabilistas", titulo: "Mapa de contabilistas", desc: "Preço médio por região, num mapa", icon: MapPin },
+      { href: "/dashboard/auditoria-recibo", titulo: "Auditoria do recibo", desc: "Confirma se o teu recibo está certo", icon: ShieldCheck },
+      { href: "/dashboard/classificar-atividade", titulo: "Classificar atividade", desc: "Retenção, coeficiente e SS por profissão", icon: Search },
+      { href: "/dashboard/mapa-contabilistas", titulo: "Mapa de contabilistas", desc: "Preço médio por região, num mapa", icon: MapPin },
       { href: "/ferramentas/payout-mor", titulo: "Recibo Merchant of Record", desc: "Paddle / Lemon Squeezy em 5 passos", icon: ShoppingBag },
     ],
   },
