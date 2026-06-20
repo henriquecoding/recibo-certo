@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Reveal from "@/components/ui/Reveal";
-import { ArrowRight, Calculator, Receipt, Search, Wallet, Sparkle } from "@/components/ui/Icons";
+import { ArrowRight, Calculator, Receipt, Search, Wallet, Sparkle, Building } from "@/components/ui/Icons";
 
 export const metadata: Metadata = {
   title: "Ferramentas para trabalhadores independentes 2026 | ReciboCerto",
@@ -38,6 +38,13 @@ const FERRAMENTAS = [
     descricao: "Pesquisa a tua profissão e descobre a retenção na fonte, o coeficiente e a base de Segurança Social aplicável.",
     icon: Search,
     badge: "Comparador",
+  },
+  {
+    href: "/ferramentas/simulador-empresa",
+    titulo: "Simulador de empresa (Lda)",
+    descricao: "Simula o resultado líquido de abrir uma sociedade: IRC, dividendos, custos de operação e passos para constituição. Guiado e completo.",
+    icon: Building,
+    badge: "Simulador",
   },
   {
     href: "/ferramentas/payout-mor",

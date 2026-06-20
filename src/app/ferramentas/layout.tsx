@@ -12,6 +12,7 @@ const FERRAMENTAS_NAV = [
   { label: "Ato isolado ou atividade?", href: "/ferramentas/ato-isolado" },
   { label: "Calculadora de regime simplificado", href: "/ferramentas/regime-simplificado" },
   { label: "Classificar atividade fiscal", href: "/ferramentas/classificar-atividade" },
+  { label: "Simulador de empresa (Lda)", href: "/ferramentas/simulador-empresa" },
   { label: "Recibo ao Merchant of Record", href: "/ferramentas/payout-mor" },
 ];
 

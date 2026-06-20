@@ -128,6 +128,7 @@ import ComparacaoNarrativa from "@/components/simulador/ComparacaoNarrativa";
 import ModoGuiado, {
   type EstadoGuiadoSaida,
 } from "@/components/simulador/ModoGuiado";
+import ModoGuiadoEmpresa from "@/components/simulador/ModoGuiadoEmpresa";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTES FISCAIS 2026
@@ -2900,6 +2901,7 @@ export default function SimuladorIntegrado() {
   // ── Modo e cenário ───────────────────────────────────────────────────────
   const [modoInput, setModoInput] = useState<ModoInput>("recibo");
   const [cenario, setCenario] = useState<CenarioAtivo>("rv");
+  const [modoEmpresa, setModoEmpresa] = useState<"guiado" | "completo">("guiado");
 
   // ── Valores de entrada ───────────────────────────────────────────────────
   const [bruto, setBruto] = useState(1_500);
@@ -5201,7 +5203,14 @@ export default function SimuladorIntegrado() {
                 </div>
 
                 {/* ── Inputs Empresa (visíveis quando cenário = empresa) ─────── */}
-                {cenario === "empresa" && (
+                {cenario === "empresa" && modoEmpresa === "guiado" && (
+                  <div className="mt-5 pt-5 border-t border-stone-100 dark:border-stone-800">
+                    <ModoGuiadoEmpresa
+                      onIrParaSimuladorCompleto={() => setModoEmpresa("completo")}
+                    />
+                  </div>
+                )}
+                {cenario === "empresa" && modoEmpresa === "completo" && (
                   <EmpresaInputs
                     despesasOper={despesasOper}
                     custosExtra={custosExtra}
@@ -5903,8 +5912,8 @@ export default function SimuladorIntegrado() {
                         </svg>
                       </Link>
                     </m.div>
-                  ) : (
-                    /* ── Painel Empresa ── */
+                  ) : modoEmpresa === "completo" ? (
+                    /* ── Painel Empresa (modo completo) ── */
                     <m.div
                       key="empresa"
                       initial={{ opacity: 0, x: 12 }}
@@ -6297,7 +6306,7 @@ export default function SimuladorIntegrado() {
                         certificado (OCC).
                       </p>
                     </m.div>
-                  )}
+                  ) : null}
                 </AnimatePresence>
               </div>
             </div>
