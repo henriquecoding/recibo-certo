@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.20.3";
+export const APP_VERSION = "1.21.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.21.0",
+    data: "2026-06-20",
+    titulo: "Quiz: a dificuldade passou a escolher mesmo as perguntas",
+    itens: [
+      "Fácil, Médio e Difícil deixaram de ser só estética: agora cada nível traz apenas perguntas desse grau de dificuldade (o banco tem mais de 1000 perguntas já classificadas). A escolha é partilhada entre o ecrã inicial e as configurações dentro do quiz.",
+      "No telemóvel, o hexágono do nível passou a usar o mesmo verde do computador e ganhou cantos mais suaves.",
+    ],
+  },
   {
     version: "1.20.3",
     data: "2026-06-20",

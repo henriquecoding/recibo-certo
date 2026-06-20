@@ -46,11 +46,15 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
   const [atividade, setAtividade] = useState<Atividade | null>(null);
   const estatisticas = getEstatisticasBanco();
 
+  // Dificuldade da config (facil/normal/dificil) → nível das perguntas (1/2/3).
+  const DIF_NIVEL = { facil: 1, normal: 2, dificil: 3 } as const;
+
   const handleComecar = () => {
     if (!modo) return;
+    const dificuldade = DIF_NIVEL[config.dificuldade];
     const cfg: QuizFiscalConfig = tipoQuiz === "atividade" && atividade
-      ? { modo, atividade, quantidade: config.perguntasPorSessao }
-      : { modo, categoria: categoria === "todas" ? undefined : categoria, quantidade: config.perguntasPorSessao };
+      ? { modo, atividade, quantidade: config.perguntasPorSessao, dificuldade }
+      : { modo, categoria: categoria === "todas" ? undefined : categoria, quantidade: config.perguntasPorSessao, dificuldade };
     onComecar(cfg);
   };
 
@@ -184,7 +188,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
                       key={d}
                       ativo={config.dificuldade === d}
                       onClick={() => updateConfig({ dificuldade: d })}
-                      label={d === "facil" ? "Fácil" : d === "normal" ? "Normal" : "Difícil"}
+                      label={d === "facil" ? "Fácil" : d === "normal" ? "Médio" : "Difícil"}
                     />
                   ))}
                 </div>

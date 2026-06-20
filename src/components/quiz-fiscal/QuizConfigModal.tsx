@@ -77,9 +77,9 @@ const DIFICULDADES: Array<{
   sub: string;
   cor: string;
 }> = [
-  { valor: "facil",   label: "Fácil",   sub: "Mais tempo + dicas",      cor: "#415439" },
-  { valor: "normal",  label: "Normal",  sub: "Equilíbrio padrão",        cor: QD },
-  { valor: "dificil", label: "Difícil", sub: "Sem dicas, tempo reduzido", cor: "#7a3c28" },
+  { valor: "facil",   label: "Fácil",  sub: "Só perguntas fáceis",    cor: "#415439" },
+  { valor: "normal",  label: "Médio",  sub: "Só perguntas médias",    cor: QD },
+  { valor: "dificil", label: "Difícil", sub: "Só perguntas difíceis",  cor: "#7a3c28" },
 ];
 
 // ── Tempo options ──────────────────────────────────────────────────────────
@@ -297,7 +297,7 @@ export default function QuizConfigModal({
                 </div>
                 {local.dificuldade === "dificil" && (
                   <p className="mt-2 text-[11px] px-1" style={{ color: "#7a3c28" }}>
-                    Modo difícil desativa as dicas automáticas e reduz o tempo disponível.
+                    O quiz passa a trazer apenas perguntas difíceis. Aplica-se na próxima sessão.
                   </p>
                 )}
                 {local.dificuldade === "facil" && (

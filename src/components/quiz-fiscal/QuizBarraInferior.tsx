@@ -15,7 +15,27 @@ import { useQuizProgresso, type SessaoHistorico } from "@/lib/store/quiz-progres
 import { NIVEIS } from "@/lib/quiz-fiscal/progresso";
 import { useAuth } from "@/lib/supabase/auth";
 
-const HEX = "polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%)";
+// Verde do nível — o MESMO do desktop (QuizHeader), não o verde da marca.
+const VERDE_NIVEL = "#415439";
+
+/** Hexágono do nível com quinas suaves (stroke-linejoin round), igual ao desktop. */
+function HexNivel({ n, size = 44, fontSize = 16, variant = "fill" }: { n: number; size?: number; fontSize?: number; variant?: "fill" | "outline" }) {
+  const filled = variant === "fill";
+  return (
+    <span className="relative inline-flex flex-shrink-0 items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox="0 0 100 100" className="absolute inset-0" aria-hidden>
+        <polygon
+          points="50,7 88,28.5 88,71.5 50,93 12,71.5 12,28.5"
+          fill={filled ? VERDE_NIVEL : "transparent"}
+          stroke={filled ? VERDE_NIVEL : "#d6d3d1"}
+          strokeWidth={filled ? 13 : 7}
+          strokeLinejoin="round"
+        />
+      </svg>
+      <span className="relative font-bold tabular-nums" style={{ fontSize, color: filled ? "#fff" : "#a0907a" }}>{n}</span>
+    </span>
+  );
+}
 
 interface Props {
   /** Valores já formatados (iguais aos da barra do desktop). */
@@ -79,7 +99,7 @@ export default function QuizBarraInferior({ acertos, tempo, pontos, erros, onCon
 
           {/* Nível (abre modal de nível + perfil) */}
           <button type="button" onClick={() => setModal("nivel")} aria-label="Ver nível e perfil" className="flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-xl px-1 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800">
-            <span className="relative flex h-11 w-11 flex-shrink-0 items-center justify-center text-base font-bold text-white" style={{ background: "#1D9E75", clipPath: HEX }}>{nivel.nivel}</span>
+            <HexNivel n={nivel.nivel} size={44} fontSize={16} />
             <span className="min-w-0 text-left">
               <span className="block truncate text-[13px] font-bold text-stone-800 dark:text-stone-100">{nivel.titulo}</span>
               <span className="mt-1 block h-1.5 w-24 max-w-full overflow-hidden rounded-full bg-stone-200 dark:bg-stone-700">
@@ -105,7 +125,7 @@ export default function QuizBarraInferior({ acertos, tempo, pontos, erros, onCon
         {modal === "nivel" && (
           <ModalBase titulo="O teu nível" onClose={() => setModal(null)}>
             <div className="flex items-center gap-4">
-              <span className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center font-display text-2xl font-bold text-white" style={{ background: "#1D9E75", clipPath: HEX }}>{nivel.nivel}</span>
+              <HexNivel n={nivel.nivel} size={64} fontSize={24} />
               <div className="min-w-0 flex-1">
                 <p className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">{nivel.titulo}</p>
                 <p className="text-xs text-stone-500 dark:text-stone-400">{prog.xp.toLocaleString("pt-PT")} XP acumulados</p>
@@ -145,7 +165,7 @@ export default function QuizBarraInferior({ acertos, tempo, pontos, erros, onCon
                 const alcancado = prog.xp >= n.xpMinimo;
                 return (
                   <li key={n.nivel} className={`flex items-center gap-3 rounded-lg px-3 py-2 ${atual ? "bg-brand-light" : ""}`}>
-                    <span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center text-xs font-bold ${alcancado ? "text-white" : "text-stone-400"}`} style={{ background: alcancado ? "#1D9E75" : "transparent", border: alcancado ? "none" : "1.5px solid #d6d3d1", clipPath: HEX }}>{n.nivel}</span>
+                    <HexNivel n={n.nivel} size={30} fontSize={12} variant={alcancado ? "fill" : "outline"} />
                     <span className={`flex-1 truncate text-sm ${atual ? "font-bold text-brand-dark dark:text-brand" : alcancado ? "font-medium text-stone-700 dark:text-stone-200" : "text-stone-400"}`}>{n.titulo}</span>
                     <span className="flex-shrink-0 text-[11px] tabular-nums text-stone-400">{n.xpMinimo.toLocaleString("pt-PT")} XP</span>
                   </li>

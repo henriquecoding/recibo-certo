@@ -19,6 +19,8 @@ export interface QuizFiscalConfig {
   categoria?: QuizCategoria;
   atividade?: Atividade;
   quantidade?: number;
+  /** Nível de dificuldade das perguntas (1=fácil, 2=médio, 3=difícil). */
+  dificuldade?: 1 | 2 | 3;
 }
 
 export interface SessaoPergunta {
@@ -243,6 +245,7 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
       perguntas = getPerguntasAleatorias({
         quantidade,
         categoria: cfg.categoria,
+        dificuldade: cfg.dificuldade,
       });
     }
 
