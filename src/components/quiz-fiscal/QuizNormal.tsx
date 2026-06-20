@@ -1,11 +1,10 @@
 "use client";
 
-import type { OpcaoEstado } from "./QuizBookShell";
+import type { OpcaoEstado } from "./tipos";
 import type { UseQuizFiscalReturn } from "@/hooks/useQuizFiscal";
 import type { QuizProgressoProps } from "./QuizFiscalApp";
 import { TIMER_NORMAL_SEGUNDOS } from "@/hooks/useQuizFiscal";
 import QuizDesktop from "./QuizDesktop";
-import QuizMobile from "./QuizMobile";
 
 const LETRAS = ["A", "B", "C", "D"];
 
@@ -88,14 +87,5 @@ export default function QuizNormal({ quiz, progresso, onSair }: QuizNormalProps)
     progresso,
   };
 
-  return (
-    <>
-      <div className="hidden md:block">
-        <QuizDesktop {...sharedProps} />
-      </div>
-      <div className="block md:hidden">
-        <QuizMobile {...sharedProps} />
-      </div>
-    </>
-  );
+  return <QuizDesktop {...sharedProps} />;
 }

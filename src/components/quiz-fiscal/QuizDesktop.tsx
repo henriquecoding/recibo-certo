@@ -13,7 +13,7 @@ import QuizMenuLateral from "./QuizMenuLateral";
 import QuizConfigModal from "./QuizConfigModal";
 import { useGameJuice } from "@/hooks/useGameJuice";
 import { useQuizConfig } from "@/hooks/useQuizConfig";
-import type { OpcaoEstado } from "./QuizBookShell";
+import type { OpcaoEstado } from "./tipos";
 import type { VantagensEstado } from "@/hooks/useQuizFiscal";
 import type { QuizOpcao, QuizCategoria } from "@/lib/quiz-fiscal";
 import type { QuizProgressoProps } from "./QuizFiscalApp";
@@ -184,11 +184,11 @@ export default function QuizDesktop({
         xpPct={xpPct}
       />
 
-      {/* ── Main 3-column layout ── */}
-      <div className="flex flex-1 items-start gap-4 p-4 mx-auto w-full max-w-screen-xl">
+      {/* ── Layout (responsivo: 3 colunas no desktop, 1 no telemóvel) ── */}
+      <div className="flex flex-1 items-start gap-4 p-3 sm:p-4 mx-auto w-full max-w-screen-xl">
 
-        {/* ── Left sidebar ── */}
-        <aside className="w-60 xl:w-64 shrink-0 flex flex-col gap-3 self-start sticky top-[72px]">
+        {/* ── Left sidebar (desktop; no telemóvel vive no menu lateral) ── */}
+        <aside className="hidden lg:flex w-60 xl:w-64 shrink-0 flex-col gap-3 self-start sticky top-[72px]">
           {/* Sequência card */}
           <div
             className="rounded-2xl p-4 shadow-sm"
@@ -466,7 +466,7 @@ export default function QuizDesktop({
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 16 }}
               transition={{ duration: 0.3 }}
-              className="w-60 xl:w-72 shrink-0 self-start sticky top-[72px]"
+              className="hidden lg:block w-60 xl:w-72 shrink-0 self-start sticky top-[72px]"
             >
               <div
                 className="rounded-2xl shadow-md overflow-hidden"
