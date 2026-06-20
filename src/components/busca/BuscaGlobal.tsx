@@ -104,10 +104,14 @@ export default function BuscaOverlay() {
   const [query, setQuery] = useState("");
   const debounced = useDebounce(query);
   const [recentes, setRecentes] = useState<string[]>([]);
+  const [filtro, setFiltro] = useState("all");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const trocarCategoria = useCallback((c: CategoriaBusca) => { setCategoria(c); setFiltro("all"); }, []);
 
   const abrir = useCallback(() => {
     setCategoria(categoriaPorContexto(pathname));
+    setFiltro("all");
     setRecentes(lerRecentes());
     setAberto(true);
   }, [pathname]);
@@ -140,13 +144,29 @@ export default function BuscaOverlay() {
 
   const itens = categoria === "guias" ? GUIAS : FERRAMENTAS;
   const resultadosItens = useMemo(
-    () => (categoria === "atividades" ? [] : pesquisarItens(itens, debounced)),
-    [categoria, itens, debounced]
+    () => (categoria === "atividades" ? [] : pesquisarItens(itens, debounced).filter((it) => filtro === "all" || it.grupo === filtro)),
+    [categoria, itens, debounced, filtro]
   );
   const resultadosAtiv = useMemo(
-    () => (categoria === "atividades" ? pesquisarAtividades(debounced) : []),
-    [categoria, debounced]
+    () => (categoria === "atividades" ? pesquisarAtividades(debounced, 80).filter((a) => filtro === "all" || a.tipo === filtro).slice(0, 30) : []),
+    [categoria, debounced, filtro]
   );
+
+  // Opções de filtro por categoria (a "potência" da barra: refinar resultados).
+  const FILTROS = useMemo<{ id: string; label: string }[]>(() => {
+    if (categoria === "atividades") {
+      return [
+        { id: "all", label: "Todas" },
+        { id: "art151", label: "Art. 151.º" },
+        { id: "outros", label: "Outros serviços" },
+        { id: "vendas", label: "Vendas / hotelaria" },
+        { id: "diretosAutor", label: "Direitos de autor" },
+      ];
+    }
+    const fonte = categoria === "guias" ? GUIAS : FERRAMENTAS;
+    const grupos = Array.from(new Set(fonte.map((i) => i.grupo)));
+    return [{ id: "all", label: "Tudo" }, ...grupos.map((g) => ({ id: g, label: g }))];
+  }, [categoria]);
 
   // Agrupa itens por grupo.
   const grupos = useMemo(() => {
@@ -220,7 +240,7 @@ export default function BuscaOverlay() {
                         key={c.id}
                         type="button"
                         aria-pressed={ativo}
-                        onClick={() => { setCategoria(c.id); inputRef.current?.focus(); }}
+                        onClick={() => { trocarCategoria(c.id); inputRef.current?.focus(); }}
                         className={`flex flex-shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
                           ativo
                             ? "border-brand bg-brand text-white shadow-glow"
@@ -233,6 +253,35 @@ export default function BuscaOverlay() {
                       </button>
                     );
                   })}
+                </div>
+
+                {/* Filtros — refinar dentro da categoria (potência tipo "toolbar") */}
+                <div className="order-2 flex shrink-0 items-center gap-1.5 overflow-x-auto border-b border-stone-100 px-3 py-2 dark:border-stone-800 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <span className="flex-shrink-0 pr-0.5 text-[10px] font-bold uppercase tracking-wider text-stone-300">Filtrar</span>
+                  {FILTROS.map((f) => {
+                    const on = filtro === f.id;
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => { setFiltro(f.id); inputRef.current?.focus(); }}
+                        className={`flex-shrink-0 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all ${
+                          on
+                            ? "border-brand/40 bg-brand-light text-brand-dark"
+                            : "border-stone-200 bg-white text-stone-500 hover:border-brand/40 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400"
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    );
+                  })}
+                  {filtro !== "all" && (
+                    <button type="button" onClick={() => setFiltro("all")} className="flex flex-shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-stone-400 hover:text-clay-text" aria-label="Limpar filtro">
+                      <Close size={12} /> Limpar
+                    </button>
+                  )}
+                  <span className="ml-auto flex-shrink-0 whitespace-nowrap pl-2 text-[11px] font-bold tabular-nums text-stone-400">{totalResultados}</span>
                 </div>
 
                 {/* Resultados */}

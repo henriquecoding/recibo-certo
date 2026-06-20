@@ -12,9 +12,6 @@ interface QuizMobileNavProps {
   onPerfil?: () => void;
 }
 
-const NAV_COLOR = "#44613d";
-const NAV_ACTIVE = "#145532";
-
 export default function QuizMobileNav({
   activeTab = "home",
   onHome,
@@ -29,11 +26,12 @@ export default function QuizMobileNav({
     { key: "perfil" as const, Icon: User, label: "Perfil", onClick: onPerfil },
   ];
 
+  // Mesma linguagem visual do chrome inferior do resto do site (limpo, verde da
+  // marca, cantos pouco arredondados), adaptado às funções do quiz.
   return (
     <nav
-      className="flex items-center justify-around border-t px-1 py-1.5 shrink-0"
-      style={{ backgroundColor: "#f5f0e8", borderColor: "#d4c4b0" }}
-      aria-label="Navegação principal"
+      className="flex shrink-0 items-center justify-around gap-1 border-t border-stone-200 bg-white px-2 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1.5 dark:border-stone-800 dark:bg-stone-900"
+      aria-label="Navegação do quiz"
     >
       {items.map(({ key, Icon, label, onClick }) => {
         const isActive = activeTab === key;
@@ -42,13 +40,16 @@ export default function QuizMobileNav({
             key={key}
             type="button"
             onClick={onClick}
-            className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg transition-opacity hover:opacity-70 active:scale-95 min-w-[60px]"
-            style={{ color: isActive ? NAV_ACTIVE : NAV_COLOR }}
+            className={`flex flex-1 flex-col items-center gap-1 rounded-lg py-1.5 text-[10px] font-semibold transition-colors active:scale-95 ${
+              isActive ? "text-brand" : "text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800"
+            }`}
             aria-label={label}
             aria-current={isActive ? "page" : undefined}
           >
-            <Icon size={22} />
-            <span className="text-[9px] font-semibold leading-none">{label}</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${isActive ? "bg-brand-light" : ""}`}>
+              <Icon size={20} />
+            </span>
+            {label}
           </button>
         );
       })}
