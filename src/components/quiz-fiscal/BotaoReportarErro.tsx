@@ -116,11 +116,15 @@ export default function BotaoReportarErro({ perguntaId, perguntaTexto, categoria
       <button
         type="button"
         onClick={abrir}
-        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#3a5232]"
-        style={{ color: TEXT_MUTED }}
+        className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[12px] font-semibold transition-all hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#3a5232]"
+        style={{
+          color: "#fff",
+          backgroundColor: "rgba(58,82,50,0.75)",
+          borderColor: "rgba(58,82,50,0.5)",
+        }}
         aria-haspopup="dialog"
       >
-        <Flag size={12} />
+        <Flag size={13} />
         Reportar erro
       </button>
 

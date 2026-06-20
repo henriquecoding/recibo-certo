@@ -10,7 +10,7 @@ import {
 import { useQuizProgresso } from "@/lib/store/quiz-progresso";
 import QuizHeader from "./QuizHeader";
 import QuizVantagens from "./QuizVantagens";
-import QuizMenuLateral from "./QuizMenuLateral";
+
 import QuizConfigModal from "./QuizConfigModal";
 import QuizBarraInferior from "./QuizBarraInferior";
 import BotaoReportarErro from "./BotaoReportarErro";
@@ -127,7 +127,6 @@ export default function Quiz({
   const { config, updateConfig } = useQuizConfig();
   const { sessoes: histSessoes } = useQuizProgresso();
   const [tremendoTela, setTremendoTela] = useState(false);
-  const [menuAberto, setMenuAberto] = useState(false);
   const [configAberta, setConfigAberta] = useState(false);
   const prevRespondida = useRef(false);
 
@@ -185,8 +184,6 @@ export default function Quiz({
       {/* ── Header (desktop; no telemóvel vive em baixo — QuizBarraInferior) ── */}
       <div className="hidden lg:block">
         <QuizHeader
-          menuAberto={menuAberto}
-          onMenuToggle={() => setMenuAberto(true)}
           onConfiguracoes={() => setConfigAberta(true)}
           nivel={progresso.nivel}
           tituloNivel={progresso.tituloNivel}
@@ -605,18 +602,6 @@ export default function Quiz({
         <FooterStat icon={<Close size={16} className="text-[#ebd4a4]" />} label="Erros" value={String(errosAteAgora)} />
       </div>
 
-      <QuizMenuLateral
-        aberto={menuAberto}
-        onFechar={() => setMenuAberto(false)}
-        categoriaAtiva={categoriaAtiva}
-        onSair={onSair}
-        acertosAteAgora={acertosAteAgora}
-        errosAteAgora={errosAteAgora}
-        streakAtual={streakAtual}
-        pontosAtuais={pontosAtuais}
-        indice={indice}
-        total={total}
-      />
       <QuizConfigModal
         aberto={configAberta}
         onFechar={() => setConfigAberta(false)}

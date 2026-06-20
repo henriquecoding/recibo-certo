@@ -12,6 +12,7 @@
 // ─────────────────────────────────────────────────────────────────────
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 
 export type Perfil = "independente" | "dependente" | "empresa" | "comparar";
 
@@ -32,17 +33,15 @@ const Ctx = createContext<PerfilContexto | null>(null);
 export function PerfilProvider({ children }: { children: ReactNode }) {
   const [perfil, setPerfil] = useState<Perfil>("independente");
   const [carregado, setCarregado] = useState(false);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     try {
-      // Deep-link ?modo=… (ex.: /?modo=comparar) tem prioridade e persiste,
-      // para que ligações externas (e o redirect do antigo comparador) abram
-      // diretamente o modo certo.
-      const q = new URLSearchParams(window.location.search).get("modo");
+      const q = searchParams.get("modo");
       if (q && (VALIDOS as readonly string[]).includes(q)) {
         setPerfil(q as Perfil);
         window.localStorage.setItem(STORAGE_KEY, q);
-      } else {
+      } else if (!carregado) {
         const guardado = window.localStorage.getItem(STORAGE_KEY);
         if (guardado && (VALIDOS as readonly string[]).includes(guardado)) setPerfil(guardado as Perfil);
       }
@@ -50,7 +49,8 @@ export function PerfilProvider({ children }: { children: ReactNode }) {
       /* ignora */
     }
     setCarregado(true);
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const definir = useCallback((p: Perfil) => {
     setPerfil(p);

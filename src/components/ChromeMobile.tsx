@@ -18,7 +18,7 @@ const EVENTO_ABRIR = "recibocerto:busca:abrir";
 
 const LINKS: { href: string; label: string; desc: string; icon: typeof Calculator }[] = [
   { href: "/#calculadora", label: "Simulador", desc: "Calcula o teu líquido", icon: Calculator },
-  { href: "/?modo=comparar", label: "Comparar cenários", desc: "Recibos verdes vs empresa", icon: Scale },
+  { href: "/dashboard/comparar", label: "Comparar cenários", desc: "Recibos verdes vs empresa", icon: Scale },
   { href: "/ferramentas", label: "Ferramentas", desc: "Simuladores e decisores", icon: Briefcase },
   { href: "/guias", label: "Guias fiscais", desc: "IRS, IVA, Segurança Social", icon: BookOpen },
   { href: "/quiz-fiscal", label: "Quiz Fiscal", desc: "Testa os teus conhecimentos", icon: Trophy },
@@ -40,8 +40,18 @@ export default function ChromeMobile() {
     return () => { document.body.style.overflow = prev; document.removeEventListener("keydown", onKey); };
   }, [menu]);
 
-  // O painel e o quiz têm o seu próprio chrome — evitar dois headers.
-  if (pathname.startsWith("/dashboard") || pathname.startsWith("/admin") || pathname.startsWith("/quiz-fiscal")) return null;
+  const [quizPlaying, setQuizPlaying] = useState(false);
+  useEffect(() => {
+    if (!pathname.startsWith("/quiz-fiscal")) { setQuizPlaying(false); return; }
+    const obs = new MutationObserver(() => {
+      setQuizPlaying(document.body.classList.contains("quiz-playing"));
+    });
+    setQuizPlaying(document.body.classList.contains("quiz-playing"));
+    obs.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, [pathname]);
+
+  if (pathname.startsWith("/dashboard") || pathname.startsWith("/admin") || quizPlaying) return null;
 
   const ativo = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href.split("?")[0].split("#")[0]) && href !== "/#calculadora");
 
@@ -79,7 +89,7 @@ export default function ChromeMobile() {
           </Link>
 
           {/* Atalho rápido: comparar cenários */}
-          <Link href="/?modo=comparar" aria-label="Comparar cenários" className="flex h-11 w-11 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800">
+          <Link href="/dashboard/comparar" aria-label="Comparar cenários" className="flex h-11 w-11 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800">
             <Scale size={20} />
           </Link>
 

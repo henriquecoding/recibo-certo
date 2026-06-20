@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Playfair_Display, DM_Sans } from "next/font/google";
 import MotionProvider from "@/components/ui/motion/MotionProvider";
 import { AuthProvider } from "@/lib/supabase/auth";
@@ -131,16 +132,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="font-sans antialiased">
         <AuthProvider>
           <SubscricaoProvider>
-            <PerfilProvider>
-              <MotionProvider>
-                {children}
-                <ChromeMobile />
-                <BuscaOverlay />
-                <AuthModal />
-                <NovidadesModal />
-                <CookieConsent />
-              </MotionProvider>
-            </PerfilProvider>
+            <Suspense>
+              <PerfilProvider>
+                <MotionProvider>
+                  {children}
+                  <ChromeMobile />
+                  <BuscaOverlay />
+                  <AuthModal />
+                  <NovidadesModal />
+                  <CookieConsent />
+                </MotionProvider>
+              </PerfilProvider>
+            </Suspense>
           </SubscricaoProvider>
         </AuthProvider>
       </body>

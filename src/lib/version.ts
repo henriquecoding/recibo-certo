@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.23.1";
+export const APP_VERSION = "1.24.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,20 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.24.0",
+    data: "2026-06-20",
+    titulo: "Plano Quiz Master, tabela de níveis, desafio Pro e melhorias no Quiz",
+    itens: [
+      "Novo plano Quiz Master a 1,99 €/mês — exclusivo para quem atinge o nível máximo (Guru do IRS, 20.000 XP). Inclui tudo do Pro mais energia ilimitada, badge exclusivo e estatísticas avançadas.",
+      "A página do Quiz Fiscal tem agora uma tabela completa com os 10 níveis e os XP necessários para cada um, além do teu progresso atual.",
+      "Desafio Pro: completa 5 quizzes perfeitos seguidos no Médio (10 perguntas) ou 3 no Difícil para ganhar um cupão de 3 meses de Pro grátis. O cupão é gerado automaticamente.",
+      "O botão «Reportar erro» ficou bem mais visível — já não desaparece no fundo da pergunta.",
+      "Removemos o menu lateral do quiz que não estava a ser usado.",
+      "Corrigimos o botão «Comparar cenários» do rodapé mobile que não abria o comparador corretamente.",
+      "A barra de navegação inferior agora aparece na página do Quiz Fiscal (seleção e resultado).",
+    ],
+  },
   {
     version: "1.23.1",
     data: "2026-06-20",

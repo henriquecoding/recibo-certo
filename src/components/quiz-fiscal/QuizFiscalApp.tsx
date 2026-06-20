@@ -4,25 +4,38 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuizFiscal } from "@/hooks/useQuizFiscal";
 import { useQuizProgresso } from "@/lib/store/quiz-progresso";
+import { useAuth } from "@/lib/supabase/auth";
+import { registarSessaoDesafio, type CupaoQuiz } from "@/lib/supabase/quiz-achievements";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import { ChevronRight } from "@/components/ui/Icons";
 import SelecaoModo from "./SelecaoModo";
+import NiveisDesafio from "./NiveisDesafio";
 import QuizNormal from "./QuizNormal";
 import QuizGuiado from "./QuizGuiado";
 import Resultado from "./Resultado";
 import type { QuizFiscalConfig } from "@/hooks/useQuizFiscal";
 import type { RegistrarSessaoResult } from "@/lib/store/quiz-progresso";
 
+const BODY_PLAYING_CLASS = "quiz-playing";
+
 export default function QuizFiscalApp() {
   const quiz = useQuizFiscal();
   const progresso = useQuizProgresso();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const playing = quiz.status === "jogando";
+    document.body.classList.toggle(BODY_PLAYING_CLASS, playing);
+    return () => { document.body.classList.remove(BODY_PLAYING_CLASS); };
+  }, [quiz.status]);
 
   // Evita registar a mesma sessão mais do que uma vez
   const sessaoRegistadaRef = useRef<string | null>(null);
   const [resultadoSessao, setResultadoSessao] = useState<RegistrarSessaoResult | null>(null);
+  const [cupaoGanho, setCupaoGanho] = useState<CupaoQuiz | null>(null);
 
-  // Quando o quiz termina, regista a sessão na persistência
+  // Quando o quiz termina, regista a sessão na persistência + verifica desafio
   useEffect(() => {
     if (quiz.status !== "resultado" || !quiz.resultado) return;
     const resultadoId = `${quiz.resultado.modo}-${quiz.resultado.acertos}-${quiz.resultado.totalPerguntas}-${quiz.resultado.pontos}`;
@@ -36,14 +49,25 @@ export default function QuizFiscalApp() {
       quiz.resultado.tempoTotalSeg
     ).then(setResultadoSessao).catch(() => {/* noop */});
     progresso.consumirEnergia();
+
+    if (user && quiz.config?.dificuldade) {
+      registarSessaoDesafio(
+        user.id,
+        quiz.config.dificuldade,
+        quiz.resultado.totalPerguntas,
+        quiz.resultado.acertos,
+      ).then((r) => {
+        if (r.cupaoGerado) setCupaoGanho(r.cupaoGerado);
+      }).catch(() => {/* noop */});
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quiz.status, quiz.resultado]);
 
-  // Limpa resultadoSessao quando volta à seleção
   useEffect(() => {
     if (quiz.status === "selecao") {
       sessaoRegistadaRef.current = null;
       setResultadoSessao(null);
+      setCupaoGanho(null);
     }
   }, [quiz.status]);
 
@@ -84,12 +108,15 @@ export default function QuizFiscalApp() {
         </nav>
 
         {quiz.status === "selecao" && (
-          <SelecaoModo
-            onComecar={handleIniciar}
-            energiaRestante={progresso.energiaRestante}
-            energiaTotal={progresso.energiaTotal}
-            sessoes={progresso.sessoes}
-          />
+          <>
+            <SelecaoModo
+              onComecar={handleIniciar}
+              energiaRestante={progresso.energiaRestante}
+              energiaTotal={progresso.energiaTotal}
+              sessoes={progresso.sessoes}
+            />
+            <NiveisDesafio />
+          </>
         )}
         {quiz.status === "resultado" && (
           <Resultado
@@ -97,6 +124,7 @@ export default function QuizFiscalApp() {
             xpGanho={resultadoSessao?.xpGanho ?? 0}
             levelUp={resultadoSessao?.levelUp ?? false}
             nivelNovo={resultadoSessao?.nivelNovo}
+            cupaoGanho={cupaoGanho}
           />
         )}
       </div>
