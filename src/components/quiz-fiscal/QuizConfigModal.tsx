@@ -37,20 +37,14 @@ function Toggle({ value, onChange, label }: { value: boolean; onChange: (v: bool
       aria-checked={value}
       aria-label={label}
       onClick={() => onChange(!value)}
-      className="relative flex-shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#3a5232]"
-      style={{
-        width: 48,
-        height: 26,
-        backgroundColor: value ? QD : BORDER,
-        transition: "background-color .2s ease",
-      }}
+      className="relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer items-center overflow-hidden rounded-full px-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#3a5232]"
+      style={{ backgroundColor: value ? QD : BORDER, transition: "background-color .2s ease" }}
     >
+      {/* Puxador — filho flex (não pode sair do trilho) */}
       <span
-        className="absolute top-[3px] rounded-full bg-white shadow-sm"
+        className="h-6 w-6 rounded-full bg-white shadow-sm"
         style={{
-          width: 20,
-          height: 20,
-          transform: value ? "translateX(25px)" : "translateX(3px)",
+          transform: value ? "translateX(20px)" : "translateX(0)",
           transition: "transform .2s cubic-bezier(.34,1.56,.64,1)",
         }}
       />
