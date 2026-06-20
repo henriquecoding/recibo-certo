@@ -11,6 +11,7 @@ import QuizHeader from "./QuizHeader";
 import QuizVantagens from "./QuizVantagens";
 import QuizMenuLateral from "./QuizMenuLateral";
 import QuizConfigModal from "./QuizConfigModal";
+import QuizBarraInferior from "./QuizBarraInferior";
 import { useGameJuice } from "@/hooks/useGameJuice";
 import { useQuizConfig } from "@/hooks/useQuizConfig";
 import type { OpcaoEstado } from "./tipos";
@@ -172,17 +173,19 @@ export default function QuizDesktop({
 
   return (
     <div className="flex flex-col min-h-screen" style={{ backgroundColor: "#6b5240" }}>
-      {/* ── Header ── */}
-      <QuizHeader
-        menuAberto={menuAberto}
-        onMenuToggle={() => setMenuAberto(true)}
-        onConfiguracoes={() => setConfigAberta(true)}
-        nivel={progresso.nivel}
-        tituloNivel={progresso.tituloNivel}
-        xpAtual={progresso.xpAtual}
-        xpTotal={progresso.xpProximo}
-        xpPct={xpPct}
-      />
+      {/* ── Header (desktop; no telemóvel vive em baixo — QuizBarraInferior) ── */}
+      <div className="hidden lg:block">
+        <QuizHeader
+          menuAberto={menuAberto}
+          onMenuToggle={() => setMenuAberto(true)}
+          onConfiguracoes={() => setConfigAberta(true)}
+          nivel={progresso.nivel}
+          tituloNivel={progresso.tituloNivel}
+          xpAtual={progresso.xpAtual}
+          xpTotal={progresso.xpProximo}
+          xpPct={xpPct}
+        />
+      </div>
 
       {/* ── Layout (responsivo: 3 colunas no desktop, 1 no telemóvel) ── */}
       <div className="flex flex-1 items-start gap-4 p-3 sm:p-4 mx-auto w-full max-w-screen-xl">
@@ -574,6 +577,16 @@ export default function QuizDesktop({
         onSair={onSair}
         config={config}
         onConfigChange={updateConfig}
+      />
+
+      {/* ── Header inferior (telemóvel) — peça responsiva, reusa o modal de configurações ── */}
+      <QuizBarraInferior
+        acertos={acertosAteAgora}
+        erros={errosAteAgora}
+        pontos={pontosAtuais}
+        tempo={tempoRestante != null ? `${tempoRestante}s` : null}
+        onConfiguracoes={() => setConfigAberta(true)}
+        onSair={onSair}
       />
     </div>
   );

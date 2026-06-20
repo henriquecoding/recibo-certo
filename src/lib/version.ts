@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.20.1";
+export const APP_VERSION = "1.20.2";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -18,12 +18,13 @@ export interface EntradaChangelog {
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
-    version: "1.20.1",
+    version: "1.20.2",
     data: "2026-06-19",
-    titulo: "Quiz Fiscal: uma só versão, agora responsiva no telemóvel",
+    titulo: "Quiz Fiscal: cabeçalho em baixo no telemóvel, com nível, perfil e histórico",
     itens: [
-      "O Quiz Fiscal tinha uma versão de telemóvel construída à parte da de computador. Passámos a ter uma única versão — a completa do computador — que se adapta ao telemóvel, com o mesmo nível, configurações, categorias e histórico (no menu lateral).",
-      "Menos código duplicado significa menos diferenças e erros entre o telemóvel e o computador: o que melhora num, melhora no outro.",
+      "No telemóvel, o cabeçalho do quiz passou para baixo (zona do polegar), com as estatísticas (acertos, tempo, pontos, erros) por cima. À esquerda: configurações e o logótipo (que leva à página inicial). Ao centro: o teu nível. À direita: o menu.",
+      "Toca no nível para abrir um painel com o teu progresso (XP, melhor streak, energia), todos os níveis e o teu perfil. O menu inclui o histórico de sessões com a percentagem de acertos, pontos e XP de cada quiz.",
+      "É uma só versão responsiva: as configurações em baixo abrem o mesmo painel completo do computador.",
     ],
   },
   {
