@@ -21,7 +21,7 @@ import type { QuizProgressoProps } from "./QuizFiscalApp";
 
 const LETRAS = ["A", "B", "C", "D"];
 
-interface QuizDesktopProps {
+interface QuizProps {
   categoriaAtiva?: QuizCategoria;
   indice: number;
   total: number;
@@ -75,7 +75,7 @@ function formatTempo(seg: number | undefined): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-export default function QuizDesktop({
+export default function Quiz({
   categoriaAtiva,
   indice,
   total,
@@ -114,7 +114,7 @@ export default function QuizDesktop({
   pontosAtuais,
   streakAtual,
   progresso,
-}: QuizDesktopProps) {
+}: QuizProps) {
   const { soarAcerto, soarErro, soarToque } = useGameJuice();
   const { config, updateConfig } = useQuizConfig();
   const [tremendoTela, setTremendoTela] = useState(false);
@@ -365,7 +365,7 @@ export default function QuizDesktop({
                   {opcoes.map((opcao, idx) => {
                     const estado = opcaoEstados[idx];
                     if (!estado) return null;
-                    const { className: btnClass, style: btnStyle } = getDesktopOpcaoProps(estado);
+                    const { className: btnClass, style: btnStyle } = getOpcaoProps(estado);
                     return (
                       <m.button
                         key={idx}
@@ -381,7 +381,7 @@ export default function QuizDesktop({
                       >
                         <span
                           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[13px] font-bold"
-                          style={getDesktopLetraBadgeStyle(estado)}
+                          style={getLetraBadgeStyle(estado)}
                         >
                           {estado === "correta" ? <Check size={14} /> : estado === "errada" ? <Close size={14} /> : LETRAS[idx]}
                         </span>
@@ -636,7 +636,7 @@ function ParticulasAcerto() {
   );
 }
 
-function getDesktopOpcaoProps(estado: OpcaoEstado): { className: string; style: React.CSSProperties } {
+function getOpcaoProps(estado: OpcaoEstado): { className: string; style: React.CSSProperties } {
   const base = "flex w-full items-center gap-3 rounded-xl border-2 px-4 py-3.5 text-left transition-colors duration-150";
   switch (estado) {
     case "correta":
@@ -654,7 +654,7 @@ function getDesktopOpcaoProps(estado: OpcaoEstado): { className: string; style: 
   }
 }
 
-function getDesktopLetraBadgeStyle(estado: OpcaoEstado): React.CSSProperties {
+function getLetraBadgeStyle(estado: OpcaoEstado): React.CSSProperties {
   switch (estado) {
     case "correta":   return { backgroundColor: "#3a5232", color: "#ffffff" };
     case "errada":    return { backgroundColor: "#c2745a", color: "#ffffff" };

@@ -1,6 +1,6 @@
 "use client";
 
-// Barra inferior do Quiz Fiscal no TELEMÓVEL (peça responsiva do QuizDesktop —
+// Barra inferior do Quiz Fiscal no TELEMÓVEL (peça responsiva do Quiz —
 // não é uma versão à parte). O header vive em baixo, com as estatísticas por
 // cima. Esquerda: configurações (abre o modal de definições do desktop) +
 // logótipo→home. Centro: nível (abre modal com progresso + perfil). Direita:

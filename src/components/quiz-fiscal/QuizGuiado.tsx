@@ -3,7 +3,7 @@
 import type { OpcaoEstado } from "./tipos";
 import type { UseQuizFiscalReturn } from "@/hooks/useQuizFiscal";
 import type { QuizProgressoProps } from "./QuizFiscalApp";
-import QuizDesktop from "./QuizDesktop";
+import Quiz from "./Quiz";
 
 const LETRAS = ["A", "B", "C", "D"];
 
@@ -86,5 +86,5 @@ export default function QuizGuiado({ quiz, progresso, onSair }: QuizGuiadoProps)
     progresso,
   };
 
-  return <QuizDesktop {...sharedProps} />;
+  return <Quiz {...sharedProps} />;
 }

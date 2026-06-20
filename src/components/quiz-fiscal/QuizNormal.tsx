@@ -4,7 +4,7 @@ import type { OpcaoEstado } from "./tipos";
 import type { UseQuizFiscalReturn } from "@/hooks/useQuizFiscal";
 import type { QuizProgressoProps } from "./QuizFiscalApp";
 import { TIMER_NORMAL_SEGUNDOS } from "@/hooks/useQuizFiscal";
-import QuizDesktop from "./QuizDesktop";
+import Quiz from "./Quiz";
 
 const LETRAS = ["A", "B", "C", "D"];
 
@@ -87,5 +87,5 @@ export default function QuizNormal({ quiz, progresso, onSair }: QuizNormalProps)
     progresso,
   };
 
-  return <QuizDesktop {...sharedProps} />;
+  return <Quiz {...sharedProps} />;
 }
