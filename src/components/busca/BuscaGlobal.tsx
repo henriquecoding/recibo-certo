@@ -182,10 +182,10 @@ export default function BuscaOverlay() {
                 animate={{ y: 0, scale: 1 }}
                 exit={{ y: 24, scale: 0.97 }}
                 transition={{ type: "spring", damping: 32, stiffness: 340 }}
-                className="pointer-events-auto flex max-h-[88dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-4xl border border-stone-200/80 bg-white shadow-float ring-1 ring-black/5 dark:border-stone-800 dark:bg-stone-900 dark:ring-white/5 sm:max-h-[80dvh] sm:rounded-4xl"
+                className="pointer-events-auto flex max-h-[88dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-stone-200/80 bg-white shadow-float ring-1 ring-black/5 dark:border-stone-800 dark:bg-stone-900 dark:ring-white/5 sm:max-h-[80dvh] sm:rounded-2xl"
               >
-                {/* Input */}
-                <div className="flex shrink-0 items-center gap-3 border-b border-stone-100 px-4 py-4 dark:border-stone-800">
+                {/* Input — em baixo no telemóvel (zona do polegar), em cima no desktop */}
+                <div className="order-3 flex shrink-0 items-center gap-3 border-stone-100 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:border-stone-800 sm:order-1 sm:border-b sm:pb-4">
                   <Search size={20} className="flex-shrink-0 text-brand" />
                   <input
                     ref={inputRef}
@@ -212,7 +212,7 @@ export default function BuscaOverlay() {
                 </div>
 
                 {/* Categorias (contexto) */}
-                <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto border-b border-stone-100 px-3 py-2.5 dark:border-stone-800 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="order-2 flex shrink-0 items-center gap-1.5 overflow-x-auto border-y border-stone-100 px-3 py-2.5 dark:border-stone-800 sm:border-t-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {CATEGORIAS.map((c) => {
                     const ativo = categoria === c.id;
                     return (
@@ -221,7 +221,7 @@ export default function BuscaOverlay() {
                         type="button"
                         aria-pressed={ativo}
                         onClick={() => { setCategoria(c.id); inputRef.current?.focus(); }}
-                        className={`flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
+                        className={`flex flex-shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
                           ativo
                             ? "border-brand bg-brand text-white shadow-glow"
                             : "border-stone-200 bg-stone-50 text-stone-600 hover:border-brand/40 hover:bg-white dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300"
@@ -236,7 +236,7 @@ export default function BuscaOverlay() {
                 </div>
 
                 {/* Resultados */}
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                <div className="order-1 min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2 sm:order-3">
                   {/* Recentes (sem query) */}
                   {!query && recentes.length > 0 && (
                     <div className="px-2 pb-2">
@@ -245,7 +245,7 @@ export default function BuscaOverlay() {
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {recentes.map((h) => (
-                          <button key={h} type="button" onClick={() => setQuery(h)} className="rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1 text-xs font-medium text-stone-600 hover:border-brand/40 hover:bg-white dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300">
+                          <button key={h} type="button" onClick={() => setQuery(h)} className="rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-1 text-xs font-medium text-stone-600 hover:border-brand/40 hover:bg-white dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300">
                             {h}
                           </button>
                         ))}
@@ -262,9 +262,9 @@ export default function BuscaOverlay() {
                           key={it.id}
                           type="button"
                           onClick={() => navegar(it.href)}
-                          className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors hover:bg-stone-50 dark:hover:bg-stone-800"
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-stone-50 dark:hover:bg-stone-800"
                         >
-                          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand">
+                          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-light text-brand">
                             <Icone nome={it.icone} size={16} />
                           </span>
                           <span className="min-w-0 flex-1">
@@ -283,9 +283,9 @@ export default function BuscaOverlay() {
                       key={a.id}
                       type="button"
                       onClick={() => navegar("/dashboard/classificar-atividade")}
-                      className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors hover:bg-white dark:hover:bg-stone-800"
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-white dark:hover:bg-stone-800"
                     >
-                      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand">
+                      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-light text-brand">
                         <Search size={15} />
                       </span>
                       <span className="min-w-0 flex-1">
@@ -307,7 +307,7 @@ export default function BuscaOverlay() {
                 </div>
 
                 {/* Rodapé */}
-                <div className="hidden shrink-0 items-center justify-between border-t border-stone-100 px-4 py-2 text-[11px] text-stone-400 dark:border-stone-800 sm:flex">
+                <div className="order-4 hidden shrink-0 items-center justify-between border-t border-stone-100 px-4 py-2 text-[11px] text-stone-400 dark:border-stone-800 sm:flex">
                   <span>Enter abre o primeiro resultado · Esc fecha</span>
                   {query && <span className="font-semibold text-brand-dark dark:text-brand">{totalResultados} resultado{totalResultados !== 1 ? "s" : ""}</span>}
                 </div>

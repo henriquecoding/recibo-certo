@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.19.0";
+export const APP_VERSION = "1.19.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.19.1",
+    data: "2026-06-19",
+    titulo: "Pesquisa e menu inferior mais práticos",
+    itens: [
+      "Na janela de pesquisa em telemóvel, a caixa de escrever passou para baixo (zona do polegar) e os resultados ficam por cima — escreves e vês sem esticar a mão.",
+      "A barra de pesquisa do menu inferior ficou bem mais visível e destacada, e o logótipo passou a ser o único botão de início (deixou de haver dois).",
+      "Dentro do Quiz Fiscal passa a existir só um cabeçalho, sem barras repetidas. Cantos menos arredondados e visual mais funcional em toda a navegação.",
+    ],
+  },
   {
     version: "1.19.0",
     data: "2026-06-19",
