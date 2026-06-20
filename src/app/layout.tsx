@@ -25,7 +25,10 @@ const dmSans = DM_Sans({
   display: "swap",
 });
 
-const SITE_URL = "https://recibocerto.pt";
+// Host canónico servido: o apex (recibocerto.pt) faz 307 para o www, por isso
+// a metadata aponta para o www — assim a og:image e o canonical da homepage
+// resolvem direto, sem o salto de redirecionamento.
+const SITE_URL = "https://www.recibocerto.pt";
 
 // Códigos de verificação de propriedade dos motores de busca.
 // O token do Google é PÚBLICO (aparece no <head> para o Search Console
