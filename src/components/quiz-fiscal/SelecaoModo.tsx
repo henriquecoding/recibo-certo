@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Clock, Sparkle, Check, ArrowRight, LayoutGrid, Fire, Search, Target, Gauge, BookOpen } from "@/components/ui/Icons";
+import { Clock, Sparkle, Check, ArrowRight, LayoutGrid, Fire, Search, Target, Gauge, BookOpen, Briefcase, Receipt, Building } from "@/components/ui/Icons";
 import { resolveQuizIcon } from "./icon-map";
 import {
   META_CATEGORIA_QUIZ,
+  META_GRUPO_QUIZ,
   TOTAL_PERGUNTAS,
   getEstatisticasBanco,
   type QuizCategoria,
+  type QuizGrupo,
 } from "@/lib/quiz-fiscal";
 import { ATIVIDADES, efeitoFiscal, type Atividade } from "@/lib/fiscal-data";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
@@ -24,10 +26,23 @@ interface SelecaoModoProps {
 
 type QuizTipo = "geral" | "atividade";
 
-const CATEGORIAS_ORDEM: QuizCategoria[] = [
-  "retencao", "iva", "seguranca_social", "regime_simplificado",
-  "irs_jovem", "escaloes_deducoes", "atividades", "categoria_f", "prazos", "geral",
-];
+// Categorias organizadas por grupo temático (Independente · Dependente · Empresas).
+const GRUPOS_ORDEM: QuizGrupo[] = ["independente", "dependente", "empresa"];
+
+const CATEGORIAS_POR_GRUPO: Record<QuizGrupo, QuizCategoria[]> = {
+  independente: [
+    "retencao", "iva", "seguranca_social", "regime_simplificado",
+    "irs_jovem", "escaloes_deducoes", "atividades", "categoria_f", "prazos", "geral",
+  ],
+  dependente: ["dep_irs", "dep_ss", "dep_subsidios"],
+  empresa: ["empresa_criacao", "empresa_legislacao", "empresa_fiscalidade"],
+};
+
+const ICON_GRUPO: Record<QuizGrupo, React.ReactNode> = {
+  independente: <Briefcase size={13} />,
+  dependente: <Receipt size={13} />,
+  empresa: <Building size={13} />,
+};
 
 const QD = "#3a5232";
 const PARCHMENT = "#F7EDE1";
@@ -126,27 +141,63 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
           {/* Categoria ou Atividade */}
           {tipoQuiz === "geral" ? (
             <Section title="Tema">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <div className="flex flex-col gap-4">
+                {/* Atalho: todas as categorias */}
                 <CategoriaChip
                   ativo={categoria === "todas"}
                   onClick={() => setCategoria("todas")}
                   icon={<LayoutGrid size={15} />}
-                  label="Todas"
+                  label="Todas as categorias"
                   total={TOTAL_PERGUNTAS}
                   destaque
                 />
-                {CATEGORIAS_ORDEM.map((cat) => {
-                  const meta = META_CATEGORIA_QUIZ[cat];
-                  const Icon = resolveQuizIcon(meta.icon);
+
+                {/* Grupos temáticos */}
+                {GRUPOS_ORDEM.map((grupo) => {
+                  const meta = META_GRUPO_QUIZ[grupo];
+                  const cats = CATEGORIAS_POR_GRUPO[grupo];
+                  const totalGrupo = cats.reduce((s, c) => s + estatisticas[c].total, 0);
                   return (
-                    <CategoriaChip
-                      key={cat}
-                      ativo={categoria === cat}
-                      onClick={() => setCategoria(cat)}
-                      icon={<Icon size={15} />}
-                      label={meta.label}
-                      total={estatisticas[cat].total}
-                    />
+                    <div key={grupo}>
+                      <div className="mb-2 flex items-center gap-2">
+                        <span
+                          className="flex h-6 w-6 items-center justify-center rounded-lg"
+                          style={{ backgroundColor: ACTIVE_BG, color: QD }}
+                        >
+                          {ICON_GRUPO[grupo]}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="text-[12px] font-bold leading-tight" style={{ color: TEXT_HEAD }}>
+                            {meta.label}
+                          </div>
+                          <div className="text-[10px] leading-tight" style={{ color: TEXT_MUTED }}>
+                            {meta.descricao}
+                          </div>
+                        </div>
+                        <span
+                          className="ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums"
+                          style={{ backgroundColor: "#ece4d8", color: TEXT_MID }}
+                        >
+                          {totalGrupo}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        {cats.map((cat) => {
+                          const cMeta = META_CATEGORIA_QUIZ[cat];
+                          const Icon = resolveQuizIcon(cMeta.icon);
+                          return (
+                            <CategoriaChip
+                              key={cat}
+                              ativo={categoria === cat}
+                              onClick={() => setCategoria(cat)}
+                              icon={<Icon size={15} />}
+                              label={cMeta.label}
+                              total={estatisticas[cat].total}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
                   );
                 })}
               </div>

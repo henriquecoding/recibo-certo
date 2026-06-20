@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.22.0";
+export const APP_VERSION = "1.22.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.22.1",
+    data: "2026-06-20",
+    titulo: "Quiz: novos temas de Trabalho Dependente e Empresas (centenas de perguntas)",
+    itens: [
+      "O Quiz Fiscal deixou de ser só para recibos verdes: ganhou um tema de Trabalho Dependente (Categoria A) com cerca de 100 perguntas por área — IRS no salário, Segurança Social (TSU) e subsídios e abonos (refeição, férias/Natal, ajudas de custo e trabalho suplementar).",
+      "Novo tema de Empresas, também com cerca de 100 perguntas por área: criar empresa (constituição, capital social, formas jurídicas), legislação e sociedades, e IRC e tributação (IRC, derrama, dividendos e benefícios fiscais).",
+      "Todos os valores e cálculos vêm das fontes oficiais já usadas na app (tabelas de retenção 2026, taxas de IRC, limites de subsídios), com a base legal indicada em cada pergunta.",
+      "O ecrã de escolha do quiz foi redesenhado: as categorias passaram a estar agrupadas por tema (Independente · Dependente · Empresas), com contagem de perguntas, para encontrares mais depressa o que queres treinar.",
+    ],
+  },
   {
     version: "1.22.0",
     data: "2026-06-20",

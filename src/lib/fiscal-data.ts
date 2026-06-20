@@ -208,6 +208,20 @@ export const SOURCES = {
     label: "VIES — Validação de número de identificação para efeitos do IVA · Comissão Europeia",
     url: "https://ec.europa.eu/taxation_customs/vies",
   },
+
+  // ── Empresas — constituição, formas jurídicas e obrigações ──────────
+  empresaConstituicao: {
+    label: "Constituição de sociedades — Empresa na Hora / Empresa Online (formas jurídicas, capital social) · gov.pt (IRN)",
+    url: "https://www2.gov.pt/espaco-empresa/empresa-online",
+  },
+  csc: {
+    label: "Código das Sociedades Comerciais (DL 262/86) — tipos de sociedade, capital e órgãos sociais · Diário da República",
+    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/1986-34443375",
+  },
+  ircObrigacoes: {
+    label: "IRC 2026 — taxas, prazos e obrigações declarativas (Modelo 22, IES) · OCC",
+    url: "https://www.occ.pt/pt-pt/noticias/irc-2026",
+  },
 } satisfies Record<string, Source>;
 
 export type SourceKey = keyof typeof SOURCES;

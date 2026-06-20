@@ -11,9 +11,13 @@ import { PERGUNTAS_ATIVIDADES } from "./perguntas-atividades";
 import { PERGUNTAS_CATF } from "./perguntas-catf";
 import { PERGUNTAS_PRAZOS } from "./perguntas-prazos";
 import { PERGUNTAS_GERAL } from "./perguntas-geral";
+import { PERGUNTAS_DEPENDENTE } from "./gerador-dependente";
+import { PERGUNTAS_EMPRESA } from "./gerador-empresa";
 import {
   META_CATEGORIA_QUIZ,
+  META_GRUPO_QUIZ,
   type QuizCategoria,
+  type QuizGrupo,
   type QuizFonte,
   type QuizOpcao,
   type QuizPergunta,
@@ -21,7 +25,9 @@ import {
 
 export {
   META_CATEGORIA_QUIZ,
+  META_GRUPO_QUIZ,
   type QuizCategoria,
+  type QuizGrupo,
   type QuizFonte,
   type QuizOpcao,
   type QuizPergunta,
@@ -41,6 +47,8 @@ export const QUIZ_PERGUNTAS: QuizPergunta[] = [
   ...PERGUNTAS_CATF,
   ...PERGUNTAS_PRAZOS,
   ...PERGUNTAS_GERAL,
+  ...PERGUNTAS_DEPENDENTE,
+  ...PERGUNTAS_EMPRESA,
 ];
 
 export function embaralhar<T>(arr: T[]): T[] {
