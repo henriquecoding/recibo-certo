@@ -1042,6 +1042,31 @@ function calcularBreakEven(
 type ModoInput = "recibo" | "anual";
 type CenarioAtivo = "rv" | "empresa";
 
+// ── Faturação "recibo a recibo" (paridade com o Modo Guiado) ─────────────────
+// No modo "Por recibo" o utilizador pode introduzir um valor único (slider) ou
+// uma lista de recibos do mês, cada um com descrição (opcional), valor e taxa
+// de IVA. O somatório (base sem IVA) alimenta o cálculo, exatamente como o
+// slider — o MOTOR é o mesmo.
+type FatModo = "total" | "individual";
+
+interface ReciboItemRV {
+  id: number;
+  descricao: string;
+  valorComIva: string;
+  taxaIva: number;
+}
+
+const IVA_OPCOES_FAT_RV = [
+  { taxa: 0, curto: "Isento", longo: "0%" },
+  { taxa: 0.06, curto: "Reduzida", longo: "6%" },
+  { taxa: 0.13, curto: "Intermédia", longo: "13%" },
+  { taxa: 0.23, curto: "Normal", longo: "23%" },
+] as const;
+
+function parseMontanteRV(s: string): number {
+  return parseFloat(String(s).replace(",", ".").replace(/\s/g, "")) || 0;
+}
+
 const ATIVIDADE_DEFAULT =
   ATIVIDADES.find((a) => a.label.includes("Programador")) ?? ATIVIDADES[0];
 
@@ -3179,6 +3204,13 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   // true → o valor já inclui IVA (total cobrado ao cliente); extraímos a base.
   const [valorComIva, setValorComIva] = useState(false);
 
+  // ── Faturação "recibo a recibo" (modo "Por recibo") ─────────────────────
+  // Tabs "Um valor total / Recibo a recibo" — paridade com o Modo Guiado.
+  const [fatModo, setFatModo] = useState<FatModo>("total");
+  const [recibosItems, setRecibosItems] = useState<ReciboItemRV[]>([
+    { id: 1, descricao: "", valorComIva: "", taxaIva: 0.23 },
+  ]);
+
   // ── IVA: regime EFETIVO, derivado reativamente ──────────────────────────
   // Princípio único (paridade com o Modo Guiado): ISENTO ⟺ NÃO cobra IVA.
   // Abaixo de 15 000 €/ano de faturação base → isento (taxa 0). Acima, cobra à
@@ -3238,6 +3270,55 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
       setBruto(Math.round(totalMensal / 50) * 50);
     },
     [taxaIva, valorComIva],
+  );
+
+  // ── Faturação "recibo a recibo": somatório do mês ────────────────────────
+  // Cada item tem o valor pago (com a sua própria taxa de IVA já incluída) e a
+  // taxa de IVA aplicada. O somatório das bases (sem IVA) é a faturação mensal
+  // que alimenta o MOTOR — exatamente como o slider, mas item a item.
+  const recibosResumo = useMemo(() => {
+    let baseSemIva = 0;
+    let iva = 0;
+    for (const r of recibosItems) {
+      const v = parseMontanteRV(r.valorComIva);
+      if (v <= 0) continue;
+      const b = r.taxaIva > 0 ? v / (1 + r.taxaIva) : v;
+      baseSemIva += b;
+      iva += v - b;
+    }
+    return { baseSemIva, iva, comValor: recibosItems.filter((r) => parseMontanteRV(r.valorComIva) > 0).length };
+  }, [recibosItems]);
+
+  // Quando o modo de faturação é "recibo a recibo" (só faz sentido em "Por
+  // recibo"), o somatório das bases alimenta bruto/brutoAnual. O resto do motor
+  // trata-o como base sem IVA (o IVA já foi separado por linha).
+  useEffect(() => {
+    if (modoInput !== "recibo" || fatModo !== "individual") return;
+    const baseMes = Math.round(recibosResumo.baseSemIva);
+    setBruto(baseMes);
+    setBrutoAnual(baseMes * 12);
+  }, [modoInput, fatModo, recibosResumo.baseSemIva]);
+
+  // Handlers da lista de recibos.
+  const adicionarReciboRV = useCallback(() => {
+    setRecibosItems((prev) => {
+      const ultimaIva = prev[prev.length - 1]?.taxaIva ?? 0.23;
+      return [
+        ...prev,
+        { id: Date.now(), descricao: "", valorComIva: "", taxaIva: ultimaIva },
+      ];
+    });
+  }, []);
+  const removerReciboRV = useCallback((id: number) => {
+    setRecibosItems((prev) => (prev.length > 1 ? prev.filter((r) => r.id !== id) : prev));
+  }, []);
+  const atualizarReciboRV = useCallback(
+    (id: number, campo: keyof ReciboItemRV, valor: string | number) => {
+      setRecibosItems((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, [campo]: valor } : r)),
+      );
+    },
+    [],
   );
 
   // ── Resultado por recibo ─────────────────────────────────────────────────
@@ -4162,193 +4243,8 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
             <div className="grid grid-cols-1 lg:grid-cols-2">
               {/* ════ Coluna esquerda: Inputs ════ */}
               <div className="bg-white p-5 sm:p-8 lg:p-10 lg:border-r lg:border-stone-100 dark:bg-stone-950 dark:border-stone-800">
-                {/* ── O teu valor (cartão essencial) ───────────────────────── */}
-                <div className="mb-5 rounded-3xl border border-stone-100 bg-white p-4 shadow-card sm:p-5 dark:border-stone-800 dark:bg-stone-900">
-                  <AnimatePresence mode="wait">
-                    {modoInput === "recibo" ? (
-                      <m.div
-                        key="recibo"
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 8 }}
-                        transition={{ duration: 0.18 }}
-                      >
-                        {/* A interpretação do input (com/sem IVA) é controlada
-                        pelo toggle abaixo — paridade com o modo guiado. */}
-                        <NumericSlider
-                          label={labelValor}
-                          value={bruto}
-                          min={0}
-                          max={10_000}
-                          step={50}
-                          unit="€"
-                          onChange={handleBrutoChange}
-                          presets={[500, 1000, 1500, 2500, 5000]}
-                          tooltip={
-                            <>
-                              Valor do recibo. Com o toggle "com IVA" ativo, o
-                              ReciboCerto extrai a base pré-IVA; com "sem IVA", o
-                              IVA acresce por cima. Em ambos os casos calcula IRS,
-                              SS e quanto podes gastar.
-                            </>
-                          }
-                        />
-                      </m.div>
-                    ) : (
-                      <m.div
-                        key="anual"
-                        initial={{ opacity: 0, x: 8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -8 }}
-                        transition={{ duration: 0.18 }}
-                      >
-                        <NumericSlider
-                          label="Faturação anual (€)"
-                          value={brutoAnual}
-                          min={0}
-                          max={200_000}
-                          step={1_000}
-                          unit="€"
-                          onChange={handleBrutoAnualChange}
-                          presets={[15000, 25000, 40000, 60000, 80000, 120000]}
-                          formatPreset={(v) => fmt(v)}
-                          tooltip={
-                            <>
-                              Volume de negócios anual, antes de qualquer
-                              imposto. Limite regime simplificado: 200 000€/ano.
-                            </>
-                          }
-                          breakPoint={breakEven ?? undefined}
-                          breakPointLabel={
-                            breakEven
-                              ? `Vira aqui · ${fmt(breakEven)}`
-                              : undefined
-                          }
-                        />
-                      </m.div>
-                    )}
-                  </AnimatePresence>
-                  {/* Toggle com/sem IVA + desdobramento ao vivo (ambos os modos) */}
-                  {ivaToggleEDesdobramento}
-                </div>
-
-                {/* ── Situação de IVA (sempre visível) ─────────────────────── */}
-                <div className="mb-6">
-                  <div className="mb-2 flex items-center gap-1.5">
-                    <span className="text-sm font-medium uppercase tracking-wider text-stone-500">
-                      Situação de IVA · {META_REGIAO[regiao]}
-                    </span>
-                    <InfoTip label="IVA 2026">
-                      Isento Art. 53.º até{" "}
-                      {IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}€/ano. Se
-                      ultrapassares{" "}
-                      {IVA_ISENCAO_LIMITE_IMEDIATO.toLocaleString("pt-PT")}€
-                      durante o ano, passas de imediato para o regime normal.
-                      Certas profissões (médicos, professores...) têm isenção
-                      Art. 9.º sem limite de faturação.
-                    </InfoTip>
-                  </div>
-
-                  {/* Seletor de regime IVA (compacto) */}
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {ivaOptions.map((op) => {
-                      const active = regimeIVA === op.id;
-                      return (
-                        <button
-                          key={op.id}
-                          type="button"
-                          aria-pressed={active}
-                          onClick={() => {
-                            setRegimeIVA(op.id);
-                            setPainelIVA(true);
-                          }}
-                          className={`rounded-xl border p-2.5 text-center transition-all ${
-                            active
-                              ? "border-brand bg-brand-light"
-                              : "border-stone-200 hover:border-stone-300 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/40"
-                          }`}
-                        >
-                          <div
-                            className={`text-sm font-semibold ${active ? "text-brand-dark" : "text-stone-700 dark:text-stone-200"}`}
-                          >
-                            {op.label}
-                          </div>
-                          <div
-                            className={`text-xs ${active ? "text-brand" : "text-stone-400"}`}
-                          >
-                            {op.sub}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* 3 zonas (isento / transição / imediata) + seletor + coerência */}
-                  {situacaoIVA}
-
-                  {/* Painel contextual IVA (detalhe da taxa escolhida) */}
-                  <AnimatePresence>
-                    {painelIVA && (
-                      <m.div
-                        key="painel-iva"
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="mt-3 rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
-                          <div className="mb-2 flex items-start justify-between gap-2">
-                            <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
-                              {ivaPainelMeta.titulo}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setPainelIVA(false)}
-                              className="flex-shrink-0 text-xs text-stone-400 hover:text-stone-600 transition-colors"
-                              aria-label="Fechar painel"
-                            >
-                              fechar
-                            </button>
-                          </div>
-                          <p className="mb-3 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
-                            {ivaPainelMeta.quando}
-                          </p>
-                          <div className="space-y-1.5">
-                            <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
-                              <Check
-                                size={11}
-                                className="mt-0.5 flex-shrink-0 text-brand"
-                              />
-                              <span>
-                                <strong className="text-stone-700 dark:text-stone-200">
-                                  Compatível com:
-                                </strong>{" "}
-                                {ivaPainelMeta.compativel}
-                              </span>
-                            </div>
-                            {ivaPainelMeta.incompativel && (
-                              <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
-                                <Warning
-                                  size={11}
-                                  className="mt-0.5 flex-shrink-0 text-alert-text"
-                                />
-                                <span>
-                                  <strong className="text-stone-700 dark:text-stone-200">
-                                    Incompatível com:
-                                  </strong>{" "}
-                                  {ivaPainelMeta.incompativel}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </m.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {/* ── Tipo de atividade ─────────────────────────────────────── */}
+                {/* ── Tipo de atividade (PRIMEIRO — influencia coeficiente,
+                     retenção, IVA esperado e base de SS) ──────────────────── */}
                 <div className="mb-6">
                   <div className="mb-2 flex items-center gap-1.5">
                     <span className="text-sm font-medium uppercase tracking-wider text-stone-500">
@@ -4545,6 +4441,396 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                       </div>
                     </div>
                   )}
+                </div>
+
+                {/* ── O teu valor (cartão essencial) ───────────────────────── */}
+                <div className="mb-5 rounded-3xl border border-stone-100 bg-white p-4 shadow-card sm:p-5 dark:border-stone-800 dark:bg-stone-900">
+                  {/* Tabs "Um valor total / Recibo a recibo" — só em "Por recibo"
+                      (paridade com o Modo Guiado). No modo anual a entrada é o
+                      volume de negócios anual. */}
+                  {modoInput === "recibo" && (
+                    <div className="mb-4 flex gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800">
+                      {(["total", "individual"] as FatModo[]).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          role="tab"
+                          aria-selected={fatModo === m}
+                          onClick={() => setFatModo(m)}
+                          className={`flex-1 rounded-xl py-2 text-xs font-semibold transition-all ${
+                            fatModo === m
+                              ? "bg-white text-stone-800 shadow-sm dark:bg-stone-700 dark:text-white"
+                              : "text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200"
+                          }`}
+                        >
+                          {m === "total" ? "Um valor total" : "Recibo a recibo"}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <AnimatePresence mode="wait">
+                    {modoInput === "recibo" && fatModo === "individual" ? (
+                      <m.div
+                        key="recibo-individual"
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 8 }}
+                        transition={{ duration: 0.18 }}
+                      >
+                        {/* Lista de recibos do mês — cada linha com descrição
+                            (opcional), valor pago (IVA incluído) e taxa de IVA.
+                            O somatório das bases alimenta o MOTOR. */}
+                        <div className="space-y-3">
+                          {recibosItems.map((r, i) => {
+                            const v = parseMontanteRV(r.valorComIva);
+                            const baseItem = r.taxaIva > 0 ? v / (1 + r.taxaIva) : v;
+                            const ivaItem = v - baseItem;
+                            return (
+                              <div
+                                key={r.id}
+                                className="rounded-2xl border border-stone-100 bg-stone-50 p-3.5 dark:border-stone-800 dark:bg-stone-900/60"
+                              >
+                                <div className="mb-2.5 flex items-center justify-between">
+                                  <span className="text-[11px] font-bold uppercase tracking-wider text-brand">
+                                    Recibo {i + 1}
+                                  </span>
+                                  {recibosItems.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => removerReciboRV(r.id)}
+                                      className="text-[11px] text-stone-400 transition-colors hover:text-red-500"
+                                    >
+                                      Remover
+                                    </button>
+                                  )}
+                                </div>
+
+                                <input
+                                  type="text"
+                                  value={r.descricao}
+                                  onChange={(e) =>
+                                    atualizarReciboRV(r.id, "descricao", e.target.value)
+                                  }
+                                  placeholder="Descrição (opcional)"
+                                  aria-label={`Descrição do recibo ${i + 1}`}
+                                  className="mb-2.5 w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200"
+                                />
+
+                                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[1fr_130px]">
+                                  <div>
+                                    <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                                      Valor pago
+                                    </label>
+                                    <div className="relative">
+                                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400">
+                                        €
+                                      </span>
+                                      <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={r.valorComIva}
+                                        onChange={(e) =>
+                                          atualizarReciboRV(r.id, "valorComIva", e.target.value)
+                                        }
+                                        placeholder="0,00"
+                                        aria-label={`Valor pago no recibo ${i + 1}`}
+                                        className="w-full rounded-xl border border-stone-200 bg-white py-2 pl-8 pr-3 text-sm font-semibold text-stone-800 focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-white"
+                                      />
+                                    </div>
+                                    {v > 0 && r.taxaIva > 0 && (
+                                      <p className="mt-1 text-[11px] text-stone-400">
+                                        Base:{" "}
+                                        <strong className="tabular-nums text-stone-600 dark:text-stone-300">
+                                          {fmt(baseItem)}
+                                        </strong>
+                                        {" · "}IVA:{" "}
+                                        <strong className="tabular-nums text-stone-400">
+                                          {fmt(ivaItem)}
+                                        </strong>
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                                      IVA cobrado
+                                    </label>
+                                    <select
+                                      value={r.taxaIva}
+                                      onChange={(e) =>
+                                        atualizarReciboRV(
+                                          r.id,
+                                          "taxaIva",
+                                          parseFloat(e.target.value),
+                                        )
+                                      }
+                                      aria-label={`Taxa de IVA do recibo ${i + 1}`}
+                                      className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200"
+                                    >
+                                      {IVA_OPCOES_FAT_RV.map((o) => (
+                                        <option key={o.taxa} value={o.taxa}>
+                                          {o.curto} ({o.longo})
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          <button
+                            type="button"
+                            onClick={adicionarReciboRV}
+                            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-stone-300 bg-white py-2.5 text-sm font-semibold text-brand transition-all hover:border-brand/50 hover:bg-brand-light/30 dark:border-stone-700 dark:bg-transparent"
+                          >
+                            <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" aria-hidden>
+                              <path
+                                d="M8 2v12M2 8h12"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                            Adicionar recibo
+                          </button>
+
+                          {/* Resumo do mês */}
+                          {recibosResumo.baseSemIva > 0 && (
+                            <div className="space-y-1.5 rounded-xl bg-stone-50 px-4 py-3 dark:bg-stone-800/60">
+                              <div className="flex justify-between">
+                                <span className="text-xs text-stone-500 dark:text-stone-400">
+                                  Total faturado/mês (sem IVA)
+                                </span>
+                                <span className="text-xs font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+                                  {fmt(recibosResumo.baseSemIva)}
+                                </span>
+                              </div>
+                              {recibosResumo.iva > 0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-xs text-stone-400">
+                                    IVA total — não é teu
+                                  </span>
+                                  <span className="text-xs font-semibold tabular-nums text-stone-400">
+                                    {fmt(recibosResumo.iva)}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </m.div>
+                    ) : modoInput === "recibo" ? (
+                      <m.div
+                        key="recibo"
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 8 }}
+                        transition={{ duration: 0.18 }}
+                      >
+                        {/* A interpretação do input (com/sem IVA) é controlada
+                        pelo toggle abaixo — paridade com o modo guiado. */}
+                        <NumericSlider
+                          label={labelValor}
+                          value={bruto}
+                          min={0}
+                          max={10_000}
+                          step={50}
+                          unit="€"
+                          onChange={handleBrutoChange}
+                          presets={[500, 1000, 1500, 2500, 5000]}
+                          tooltip={
+                            <>
+                              Valor do recibo. Com o toggle "com IVA" ativo, o
+                              ReciboCerto extrai a base pré-IVA; com "sem IVA", o
+                              IVA acresce por cima. Em ambos os casos calcula IRS,
+                              SS e quanto podes gastar.
+                            </>
+                          }
+                        />
+                      </m.div>
+                    ) : (
+                      <m.div
+                        key="anual"
+                        initial={{ opacity: 0, x: 8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -8 }}
+                        transition={{ duration: 0.18 }}
+                      >
+                        <NumericSlider
+                          label="Faturação anual (€)"
+                          value={brutoAnual}
+                          min={0}
+                          max={200_000}
+                          step={1_000}
+                          unit="€"
+                          onChange={handleBrutoAnualChange}
+                          presets={[15000, 25000, 40000, 60000, 80000, 120000]}
+                          formatPreset={(v) => fmt(v)}
+                          tooltip={
+                            <>
+                              Volume de negócios anual, antes de qualquer
+                              imposto. Limite regime simplificado: 200 000€/ano.
+                            </>
+                          }
+                          breakPoint={breakEven ?? undefined}
+                          breakPointLabel={
+                            breakEven
+                              ? `Vira aqui · ${fmt(breakEven)}`
+                              : undefined
+                          }
+                        />
+                      </m.div>
+                    )}
+                  </AnimatePresence>
+                  {/* Toggle com/sem IVA + desdobramento ao vivo — só no modo
+                      "Um valor total"/anual (no "Recibo a recibo" o IVA é por
+                      linha). */}
+                  {!(modoInput === "recibo" && fatModo === "individual") &&
+                    ivaToggleEDesdobramento}
+
+                  {/* Aviso: cenário de ato isolado (serviço único no ano) */}
+                  {modoInput === "recibo" &&
+                    fatModo === "individual" &&
+                    recibosResumo.comValor === 1 && (
+                      <div className="mt-4 rounded-2xl border border-brand/25 bg-brand-light/40 p-3.5 dark:bg-brand/10">
+                        <div className="flex gap-2.5">
+                          <span className="mt-0.5 shrink-0 text-brand">
+                            <Warning size={16} />
+                          </span>
+                          <div>
+                            <p className="text-sm font-semibold text-brand-dark dark:text-brand">
+                              Foi um serviço único?
+                            </p>
+                            <p className="mt-1 text-xs leading-relaxed text-brand-dark/80 dark:text-brand/80">
+                              Se só vais emitir esta fatura uma vez no ano, podes
+                              não precisar de abrir atividade — o{" "}
+                              <strong>ato isolado</strong> costuma ser mais
+                              simples. Mas atenção: aí cobras IVA a 23% (sem a
+                              isenção dos {fmt(IVA_ISENCAO_LIMITE)}) e não há
+                              contribuições para a Segurança Social. Estes números
+                              assumem atividade aberta.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                </div>
+
+                {/* ── Situação de IVA (sempre visível) ─────────────────────── */}
+                <div className="mb-6">
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <span className="text-sm font-medium uppercase tracking-wider text-stone-500">
+                      Situação de IVA · {META_REGIAO[regiao]}
+                    </span>
+                    <InfoTip label="IVA 2026">
+                      Isento Art. 53.º até{" "}
+                      {IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}€/ano. Se
+                      ultrapassares{" "}
+                      {IVA_ISENCAO_LIMITE_IMEDIATO.toLocaleString("pt-PT")}€
+                      durante o ano, passas de imediato para o regime normal.
+                      Certas profissões (médicos, professores...) têm isenção
+                      Art. 9.º sem limite de faturação.
+                    </InfoTip>
+                  </div>
+
+                  {/* Seletor de regime IVA (compacto) */}
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {ivaOptions.map((op) => {
+                      const active = regimeIVA === op.id;
+                      return (
+                        <button
+                          key={op.id}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => {
+                            setRegimeIVA(op.id);
+                            setPainelIVA(true);
+                          }}
+                          className={`rounded-xl border p-2.5 text-center transition-all ${
+                            active
+                              ? "border-brand bg-brand-light"
+                              : "border-stone-200 hover:border-stone-300 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/40"
+                          }`}
+                        >
+                          <div
+                            className={`text-sm font-semibold ${active ? "text-brand-dark" : "text-stone-700 dark:text-stone-200"}`}
+                          >
+                            {op.label}
+                          </div>
+                          <div
+                            className={`text-xs ${active ? "text-brand" : "text-stone-400"}`}
+                          >
+                            {op.sub}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* 3 zonas (isento / transição / imediata) + seletor + coerência */}
+                  {situacaoIVA}
+
+                  {/* Painel contextual IVA (detalhe da taxa escolhida) */}
+                  <AnimatePresence>
+                    {painelIVA && (
+                      <m.div
+                        key="painel-iva"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-3 rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+                          <div className="mb-2 flex items-start justify-between gap-2">
+                            <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
+                              {ivaPainelMeta.titulo}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setPainelIVA(false)}
+                              className="flex-shrink-0 text-xs text-stone-400 hover:text-stone-600 transition-colors"
+                              aria-label="Fechar painel"
+                            >
+                              fechar
+                            </button>
+                          </div>
+                          <p className="mb-3 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
+                            {ivaPainelMeta.quando}
+                          </p>
+                          <div className="space-y-1.5">
+                            <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
+                              <Check
+                                size={11}
+                                className="mt-0.5 flex-shrink-0 text-brand"
+                              />
+                              <span>
+                                <strong className="text-stone-700 dark:text-stone-200">
+                                  Compatível com:
+                                </strong>{" "}
+                                {ivaPainelMeta.compativel}
+                              </span>
+                            </div>
+                            {ivaPainelMeta.incompativel && (
+                              <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
+                                <Warning
+                                  size={11}
+                                  className="mt-0.5 flex-shrink-0 text-alert-text"
+                                />
+                                <span>
+                                  <strong className="text-stone-700 dark:text-stone-200">
+                                    Incompatível com:
+                                  </strong>{" "}
+                                  {ivaPainelMeta.incompativel}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </m.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* ── Ano de atividade ─────────────────────────────────────── */}
@@ -5533,16 +5819,21 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                         <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
                         <div aria-hidden className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/5 blur-xl" />
                         <div className="relative">
+                          {/* HERO = LÍQUIDO REAL (apuramento anual via motor),
+                              alinhado com o Modo Guiado. No modo "Por recibo"
+                              mostra a média mensal (líquido anual ÷ 12); no modo
+                              "Anual" mostra o líquido anual. A retenção de 23% é
+                              só um adiantamento e NÃO é a dedução do hero. */}
                           <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">
                             {modoInput === "recibo"
-                              ? "Disponível para gastar · por recibo"
-                              : "Líquido anual estimado"}
+                              ? "Líquido real estimado · por mês"
+                              : "Líquido real estimado · anual"}
                           </div>
                           <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-6xl">
                             <AnimatedNumber
                               value={
                                 modoInput === "recibo"
-                                  ? resultRecibo.liquido
+                                  ? resultAnualRV.liquido / 12
                                   : resultAnualRV.liquido
                               }
                             />
@@ -5553,52 +5844,49 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                                 className="rounded-full bg-white/70 transition-all duration-500"
                                 style={{
                                   width: `${Math.round(
-                                    (modoInput === "recibo"
-                                      ? resultRecibo.liquido / Math.max(1, resultRecibo.bruto + resultRecibo.iva)
-                                      : resultAnualRV.liquido / Math.max(1, brutoAnual)
-                                    ) * 100
+                                    (resultAnualRV.liquido / Math.max(1, brutoAnual)) * 100
                                   )}%`,
                                 }}
                               />
                             </div>
                             <div className="mt-1 text-[11px] text-green-100/50">
                               {Math.round(
-                                (modoInput === "recibo"
-                                  ? resultRecibo.liquido / Math.max(1, resultRecibo.bruto + resultRecibo.iva)
-                                  : resultAnualRV.liquido / Math.max(1, brutoAnual)
-                                ) * 100
+                                (resultAnualRV.liquido / Math.max(1, brutoAnual)) * 100
                               )}% de{" "}
                               <AnimatedNumber
                                 value={
                                   modoInput === "recibo"
-                                    ? resultRecibo.bruto + resultRecibo.iva
+                                    ? Math.round(brutoAnual / 12)
                                     : brutoAnual
                                 }
                               />{" "}
-                              faturados
-                              {modoInput === "anual" && (
-                                <span> · IRS {fmt(resultAnualRV.irs)} · SS {fmt(resultAnualRV.ssAnual)}</span>
-                              )}
+                              faturados{modoInput === "recibo" ? "/mês" : ""}
+                              <span> · IRS {fmt(resultAnualRV.irs)} · SS {fmt(resultAnualRV.ssAnual)}</span>
                             </div>
                           </div>
                         </div>
                       </div>
 
-                      {/* ── Stat cards — uniforme, só cor no valor ──────────── */}
+                      {/* ── Stat cards — uniforme, só cor no valor ──────────────
+                          Em ambos os modos refletem o apuramento REAL (anual via
+                          motor). No "Por recibo" são valores médios mensais. */}
                       {(() => {
                         const isRecibo = modoInput === "recibo";
-                        const irsVal = isRecibo ? resultRecibo.retencaoIRS : resultAnualRV.irs;
-                        const ssVal = isRecibo ? resultRecibo.segSocial : resultAnualRV.ssAnual;
+                        // IRS e SS reais (apuramento anual); no modo recibo são /12.
+                        const irsVal = isRecibo ? resultAnualRV.irs / 12 : resultAnualRV.irs;
+                        const ssVal = isRecibo ? resultAnualRV.ssAnual / 12 : resultAnualRV.ssAnual;
                         const ivaVal = isRecibo ? resultRecibo.iva : Math.round(brutoAnual * taxaIva);
-                        const liquidoMes = isRecibo ? resultRecibo.liquido : Math.round(resultAnualRV.liquido / 12);
-                        const fatRef = isRecibo ? resultRecibo.bruto + resultRecibo.iva : brutoAnual;
+                        const liquidoMes = isRecibo
+                          ? Math.round(resultAnualRV.liquido / 12)
+                          : Math.round(resultAnualRV.liquido / 12);
+                        const fatRef = isRecibo ? Math.round(brutoAnual / 12) : brutoAnual;
                         const pcIRS = fatRef > 0 ? irsVal / fatRef : 0;
                         const pcSS = fatRef > 0 ? ssVal / fatRef : 0;
                         const pcIVA = fatRef + ivaVal > 0 ? ivaVal / (fatRef) : 0;
                         return (
                           <div className={`mb-6 grid gap-3 ${ivaVal > 0 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-3"}`}>
                             <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
-                              <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">{isRecibo ? "IRS retido" : "IRS anual"}</p>
+                              <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">{isRecibo ? "IRS real/mês" : "IRS anual"}</p>
                               <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">{fmt(Math.round(irsVal))}</p>
                               <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{pct(pcIRS)} do faturado</p>
                             </div>
@@ -5615,33 +5903,42 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                               </div>
                             )}
                             <div className={`rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900 ${ivaVal > 0 ? "" : "col-span-2 sm:col-span-1"}`}>
-                              <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">{isRecibo ? "Disponível" : "Líquido/mês"}</p>
+                              <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">Líquido/mês</p>
                               <p className="mt-1 font-display text-xl font-semibold tabular-nums text-brand">{fmt(Math.round(liquidoMes))}</p>
-                              <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{isRecibo ? "por recibo" : `${fmt(Math.round(brutoAnual / 12))} faturado`}</p>
+                              <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{`${fmt(Math.round(brutoAnual / 12))} faturado`}</p>
                             </div>
                           </div>
                         );
                       })()}
 
-                      {modoInput === "recibo" && (
+                      {modoInput === "recibo" && (() => {
+                        // Valores REAIS por mês (apuramento anual via motor ÷ 12),
+                        // alinhados com o Modo Guiado. A faturação mensal e o IVA
+                        // por recibo continuam a vir de resultRecibo (tesouraria).
+                        const irsRealMes = resultAnualRV.irs / 12;
+                        const ssRealMes = resultAnualRV.ssAnual / 12;
+                        const liquidoRealMes = resultAnualRV.liquido / 12;
+                        const fatMes = resultRecibo.bruto;
+                        return (
                         <>
-                          {/* Breakdown visual */}
+                          {/* Breakdown visual — distribuição do euro faturado pelo
+                              líquido REAL (não pela retenção). */}
                           <div className="mb-6">
                             <EuroBreakdown
-                              faturacao={resultRecibo.bruto + resultRecibo.iva}
-                              liquido={resultRecibo.liquido}
-                              irs={resultRecibo.retencaoIRS}
-                              ss={resultRecibo.segSocial}
+                              faturacao={fatMes + resultRecibo.iva}
+                              liquido={liquidoRealMes}
+                              irs={irsRealMes}
+                              ss={ssRealMes}
                               iva={resultRecibo.iva}
                             />
                           </div>
 
-                          {/* Breakdown por recibo */}
-                          <div className="space-y-1 flex-1">
+                          {/* ── Apuramento real (alinhado com o guiado) ───────── */}
+                          <div className="space-y-1">
                             {resultRecibo.taxaIVA > 0 && (
                               <DetalheRow
                                 label="Faturado (com IVA)"
-                                value={resultRecibo.bruto + resultRecibo.iva}
+                                value={fatMes + resultRecibo.iva}
                                 type="neutral"
                                 note="O que o cliente paga"
                               />
@@ -5649,7 +5946,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                             {resultRecibo.taxaIVA > 0 && (
                               <DetalheRow
                                 label={`IVA (${pct(resultRecibo.taxaIVA)}) — não é teu`}
-                                value={resultRecibo.iva}
+                                value={-resultRecibo.iva}
                                 type="warning"
                                 note="Pertence ao Estado — reservar para entrega trimestral"
                               />
@@ -5660,20 +5957,84 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                                   ? "A tua faturação"
                                   : "Valor do recibo"
                               }
-                              value={resultRecibo.bruto}
-                              type="neutral"
+                              value={fatMes}
+                              type="subtotal"
                               note={
                                 resultRecibo.taxaIVA > 0
                                   ? `Faturado ÷ (1 + ${pct(resultRecibo.taxaIVA)})`
                                   : "O que faturaste"
                               }
                             />
+                            <DetalheRow
+                              label="IRS (real / apuramento anual)"
+                              value={-irsRealMes}
+                              type="deducao"
+                              note="IRS efetivo do ano ÷ 12 — não a retenção"
+                            />
+                            {ssRealMes > 0 && (
+                              <DetalheRow
+                                label="Seg. Social (21,4% × 70%)"
+                                value={-ssRealMes}
+                                type="deducao"
+                                note="Pagamento mensal até dia 20"
+                              />
+                            )}
+
+                            {/* Resultado final = LÍQUIDO REAL/mês */}
+                            <div className="mt-4 p-5 rounded-3xl border-2 border-brand bg-white shadow-card dark:bg-stone-950">
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="text-sm font-semibold text-stone-700 dark:text-stone-300">
+                                      Líquido real · por mês
+                                    </div>
+                                    <InfoTip>
+                                      O que é mesmo teu, depois do IRS efetivo do
+                                      ano e da Segurança Social. A retenção na
+                                      fonte é só um adiantamento — recuperas a
+                                      diferença no acerto anual.
+                                    </InfoTip>
+                                  </div>
+                                  <div className="text-xs text-stone-400 mt-0.5">
+                                    Apuramento anual ÷ 12
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-display text-2xl font-semibold text-brand">
+                                    <AnimatedNumber
+                                      value={liquidoRealMes}
+                                    />
+                                  </div>
+                                  <div className="text-xs text-stone-400">
+                                    {pct(liquidoRealMes / (fatMes || 1))}{" "}
+                                    da faturação
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* ── Fluxo de caixa por recibo (o que entra e o que
+                              reservar — a retenção é um ADIANTAMENTO) ─────────── */}
+                          <div className="mt-5 space-y-1 flex-1">
+                            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+                              Fluxo de caixa deste recibo
+                            </p>
+                            <DetalheRow
+                              label={
+                                resultRecibo.taxaIVA > 0
+                                  ? "A tua faturação"
+                                  : "Valor do recibo"
+                              }
+                              value={fatMes}
+                              type="neutral"
+                            />
                             {resultRecibo.retencaoIRS > 0 && (
                               <DetalheRow
-                                label={`IRS — retenção na fonte (${pct(resultRecibo.taxaRetencao)})`}
+                                label={`Retenção na fonte (${pct(resultRecibo.taxaRetencao)}) — adiantamento de IRS`}
                                 value={-resultRecibo.retencaoIRS}
                                 type="deducao"
-                                note="Adiantamento de IRS ao Estado"
+                                note="Recuperas no acerto anual — não é o teu IRS final"
                               />
                             )}
                             <DetalheRow
@@ -5695,48 +6056,12 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                             )}
                             {resultRecibo.segSocial > 0 && (
                               <DetalheRow
-                                label={`Seg. Social (21,4%×70% de ${fmt(resultRecibo.bruto)})`}
+                                label={`Reservar para Seg. Social (de ${fmt(fatMes)})`}
                                 value={-resultRecibo.segSocial}
                                 type="deducao"
                                 note="Pagamento mensal até dia 20"
                               />
                             )}
-
-                            {/* Resultado final */}
-                            <div className="mt-4 p-5 rounded-3xl border-2 border-brand bg-white shadow-card dark:bg-stone-950">
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <div className="flex items-center gap-1.5">
-                                    <div className="text-sm font-semibold text-stone-700 dark:text-stone-300">
-                                      Disponível para gastar
-                                    </div>
-                                    <InfoTip>
-                                      O que podes gastar sem medo: o que entra
-                                      na tua conta, já com IVA e Segurança
-                                      Social reservados. A retenção foi
-                                      adiantada pelo cliente — será acertada no
-                                      IRS anual.
-                                    </InfoTip>
-                                  </div>
-                                  <div className="text-xs text-stone-400 mt-0.5">
-                                    {resultRecibo.taxaIVA > 0
-                                      ? "Depois de IVA e SS reservados"
-                                      : "Depois de SS reservada"}
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="font-display text-2xl font-semibold text-brand">
-                                    <AnimatedNumber
-                                      value={resultRecibo.liquido}
-                                    />
-                                  </div>
-                                  <div className="text-xs text-stone-400">
-                                    {pct(resultRecibo.liquido / (bruto || 1))}{" "}
-                                    do total
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
 
                             {/* ── Alertas fiscais contextuais ─────────────────── */}
                             <div className="mt-3 space-y-2">
@@ -5835,7 +6160,8 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                             </div>
                           </div>
                         </>
-                      )}
+                        );
+                      })()}
 
                       {modoInput === "anual" && (
                         /* Breakdown anual RV */

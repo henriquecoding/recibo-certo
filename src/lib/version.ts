@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.22.1";
+export const APP_VERSION = "1.23.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.23.0",
+    data: "2026-06-20",
+    titulo: "Calculadora de recibos verdes: líquido real e tipo de atividade em destaque",
+    itens: [
+      "O resultado passou a mostrar o teu líquido REAL (com o IRS anual apurado) em vez do valor após a retenção de 23% — a retenção é só um adiantamento, quase todo devolvido no acerto anual. Fica alinhado com o simulador guiado, mais refinado.",
+      "O tipo de atividade subiu para o topo, por influenciar tudo: coeficiente, retenção, IVA e base de Segurança Social.",
+      "Podes lançar a faturação como um valor total ou recibo a recibo (com IVA por linha), e avisamos quando faz mais sentido um ato isolado.",
+    ],
+  },
   {
     version: "1.22.1",
     data: "2026-06-20",
