@@ -302,7 +302,7 @@ criConceptuais.forEach(([dif, p, c, d, lb, fk], i) => {
     montar(
       `emp-cri-cap-${i}`,
       "empresa_criacao",
-      2,
+      1,
       `Uma sociedade por quotas com ${socios} sócios, cada um com a quota mínima legal, tem que capital social mínimo?`,
       { texto: eurInt(socios), porque: `Correto. Cada quota ≥ 1 €, logo ${socios} × 1 € = ${eurInt(socios)}.` },
       [
@@ -345,7 +345,7 @@ TIPOS.forEach((t, i) => {
     montar(
       `emp-cri-tipo-cap-${i}`,
       "empresa_criacao",
-      2,
+      1,
       `Qual é o capital social mínimo de uma ${t.nome}?`,
       { texto: t.capital, porque: `Correto. Uma ${t.nome} tem como capital mínimo ${t.capital}.` },
       TIPOS.filter((o) => o.capital !== t.capital).map((o) => ({
@@ -359,7 +359,7 @@ TIPOS.forEach((t, i) => {
     montar(
       `emp-cri-tipo-soc-${i}`,
       "empresa_criacao",
-      2,
+      1,
       `Qual é o número mínimo de sócios de uma ${t.nome}?`,
       { texto: t.socios, porque: `Correto. Uma ${t.nome} exige ${t.socios}.` },
       TIPOS.filter((o) => o.socios !== t.socios).map((o) => ({
@@ -785,7 +785,7 @@ MATERIAS.forEach((m, i) => {
     montar(
       `emp-fis-irc-${i}`,
       "empresa_fiscalidade",
-      3,
+      2,
       `Uma PME tem ${eurInt(m)} de matéria coletável. Qual é o IRC (15% até ${eurInt(LIM_PME)}, 19% no excedente)?`,
       { texto: eur(irc), porque: `Correto. ${eurInt(Math.min(m, LIM_PME))} × 15%${m > LIM_PME ? ` + ${eurInt(m - LIM_PME)} × 19%` : ""} = ${eur(irc)}.` },
       [
@@ -826,7 +826,7 @@ DIVS.forEach((d, i) => {
     montar(
       `emp-fis-div-${i}`,
       "empresa_fiscalidade",
-      2,
+      1,
       `Um sócio pessoa singular recebe ${eurInt(d)} de dividendos. Quanto é retido a título de IRS (taxa liberatória de 28%)?`,
       { texto: eur(imp), porque: `Correto. ${eurInt(d)} × 28% = ${eur(imp)}.` },
       [
@@ -852,7 +852,7 @@ LUCROS_DERRAMA.forEach((l, i) => {
     montar(
       `emp-fis-der-${i}`,
       "empresa_fiscalidade",
-      3,
+      2,
       `Lucro tributável de ${eurInt(l)} num município com derrama à taxa máxima. Quanto é a derrama municipal (1,5%)?`,
       { texto: eur(der), porque: `Correto. ${eurInt(l)} × 1,5% = ${eur(der)}.` },
       [
@@ -954,7 +954,7 @@ CAP_QUOTA.forEach((x, i) => {
     montar(
       `emp-cri-q-${i}`,
       "empresa_criacao",
-      2,
+      i % 2 === 0 ? 2 : 3,
       `Uma sociedade por quotas tem capital de ${eurInt(x.cap)} repartido igualmente por ${x.soc} sócios. Qual é o valor de cada quota?`,
       { texto: eur(q), porque: `Correto. ${eurInt(x.cap)} ÷ ${x.soc} = ${eur(q)}.` },
       [
@@ -969,7 +969,7 @@ CAP_QUOTA.forEach((x, i) => {
     montar(
       `emp-cri-qt-${i}`,
       "empresa_criacao",
-      2,
+      1,
       `Numa sociedade por quotas, ${x.soc} sócios entram cada um com uma quota de ${eur(q)}. Qual é o capital social total?`,
       { texto: eurInt(x.cap), porque: `Correto. ${x.soc} × ${eur(q)} = ${eurInt(x.cap)}.` },
       [
@@ -1097,7 +1097,7 @@ CAP_ACAO.forEach((x, i) => {
     montar(
       `emp-leg-acao-${i}`,
       "empresa_legislacao",
-      3,
+      i % 2 === 0 ? 2 : 3,
       `Uma SA com capital de ${eurInt(x.cap)} dividido em ações de valor nominal ${eur(x.vn)}. Quantas ações tem?`,
       { texto: num.toLocaleString("pt-PT"), porque: `Correto. ${eurInt(x.cap)} ÷ ${eur(x.vn)} = ${num.toLocaleString("pt-PT")} ações.` },
       [
@@ -1112,7 +1112,7 @@ CAP_ACAO.forEach((x, i) => {
     montar(
       `emp-leg-cap-${i}`,
       "empresa_legislacao",
-      2,
+      1,
       `Uma SA emitiu ${num.toLocaleString("pt-PT")} ações de valor nominal ${eur(x.vn)}. Qual é o capital social?`,
       { texto: eurInt(x.cap), porque: `Correto. ${num.toLocaleString("pt-PT")} × ${eur(x.vn)} = ${eurInt(x.cap)}.` },
       [

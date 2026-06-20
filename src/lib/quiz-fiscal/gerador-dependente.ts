@@ -448,19 +448,40 @@ irsConceptuais.forEach(([dif, p, c, d, lb, fk], i) => {
   acc.push(montar(`dep-irs-c${i}`, "dep_irs", dif, p, c, d, lb, fk, n++));
 });
 
-// Cenários — retenção calculada pelo motor oficial (4 por salário)
+// Cenários — retenção calculada pelo motor oficial (1 fácil + 1 médio + 1 difícil por salário)
 SALARIOS.forEach((s, i) => {
   const ret0 = retencaoIRSDependente(s, 0);
   const ret2 = retencaoIRSDependente(s, 2);
   const ss = cent(s * TSU_TRAB);
   const liq = cent(s - ret0 - ss);
-  const taxaEf = s > 0 ? (ret0 + ss) / s : 0;
+  const sujeito = s > ISENCAO_RET;
   const mk = (v: number): Opt =>
     v === 0
       ? { texto: "0 € — isento de retenção", porque: "" }
       : { texto: eur(v), porque: "" };
 
   acc.push(
+    // ── FÁCIL — sujeito ou isento (limiar de 920 €) ──
+    montar(
+      `dep-irs-isento-${i}`,
+      "dep_irs",
+      1,
+      `Em 2026, um salário mensal de ${eur(s)} (sem dependentes) está, à partida, sujeito a retenção de IRS ou isento (limiar de ${eur(ISENCAO_RET)})?`,
+      sujeito
+        ? { texto: "Sujeito a retenção de IRS", porque: `Correto. ${eur(s)} está acima do limiar de ${eur(ISENCAO_RET)}, logo há retenção.` }
+        : { texto: "Isento de retenção de IRS", porque: `Correto. ${eur(s)} não ultrapassa o limiar de ${eur(ISENCAO_RET)}, logo não há retenção.` },
+      [
+        sujeito
+          ? { texto: "Isento de retenção de IRS", porque: `Acima de ${eur(ISENCAO_RET)} há retenção.` }
+          : { texto: "Sujeito a retenção de IRS", porque: `Até ${eur(ISENCAO_RET)} não há retenção.` },
+        { texto: "Só paga Segurança Social, nunca IRS", porque: "Acima do limiar, o salário fica sujeito a retenção de IRS." },
+        { texto: "Depende apenas do dia de pagamento", porque: "O que decide é o valor face ao limiar, não a data." },
+      ],
+      "Limiar de isenção de retenção 2026 (920 €)",
+      "despachoRetencao2026",
+      n++
+    ),
+    // ── MÉDIO — retenção sem dependentes ──
     montar(
       `dep-irs-ret0-${i}`,
       "dep_irs",
@@ -476,21 +497,7 @@ SALARIOS.forEach((s, i) => {
       "despachoRetencao2026",
       n++
     ),
-    montar(
-      `dep-irs-ret2-${i}`,
-      "dep_irs",
-      2,
-      `Salário bruto de ${eur(s)}, 2 dependentes, não casado, Continente. Qual a retenção mensal de IRS em 2026?`,
-      { ...mk(ret2), porque: ret2 === 0 ? `Correto. Com 2 dependentes, ${eur(s)} fica isento de retenção.` : `Correto. Pela Tabela I de 2026 com 2 dependentes, a retenção é ${eur(ret2)}.` },
-      [
-        { ...mk(ret0), porque: "É a retenção sem dependentes; com 2 dependentes abate-se mais." },
-        { texto: eur(ss), porque: "É a Segurança Social (11%), não o IRS." },
-        { texto: eur(cent(ret2 + ss)), porque: "Soma IRS e SS; a pergunta é só sobre o IRS." },
-      ],
-      "Retenção mensal com dependentes (Tabela I, 2026)",
-      "despachoRetencao2026",
-      n++
-    ),
+    // ── DIFÍCIL — líquido (multi-passo) ──
     montar(
       `dep-irs-liq-${i}`,
       "dep_irs",
@@ -503,21 +510,6 @@ SALARIOS.forEach((s, i) => {
         { texto: eur(s), porque: "É o bruto, sem qualquer desconto." },
       ],
       "Líquido = bruto − IRS − SS",
-      "despachoRetencao2026",
-      n++
-    ),
-    montar(
-      `dep-irs-txef-${i}`,
-      "dep_irs",
-      3,
-      `Salário bruto de ${eur(s)}, sem dependentes. Qual a taxa efetiva de descontos (IRS ${ret0 === 0 ? "0 €" : eur(ret0)} + SS ${eur(ss)}) sobre o bruto?`,
-      { texto: pct(taxaEf), porque: `Correto. (${eur(ret0)} + ${eur(ss)}) ÷ ${eur(s)} = ${pct(taxaEf)}.` },
-      [
-        { texto: pct(TSU_TRAB), porque: "11% é apenas a Segurança Social, falta somar o IRS." },
-        { texto: pct(s > 0 ? ret0 / s : 0), porque: "É só o peso do IRS, sem a Segurança Social." },
-        { texto: pct(TSU_TRAB + TSU_ENT), porque: "34,75% é a TSU total (inclui a parte da entidade), não a do trabalhador." },
-      ],
-      "Taxa efetiva = (IRS + SS) ÷ bruto",
       "despachoRetencao2026",
       n++
     )
@@ -745,7 +737,8 @@ BASES_SUP.forEach((base, i) => {
       montar(
         `dep-sub-sup-${i}-${j}`,
         "dep_subsidios",
-        3,
+        // 1.ª hora em dia útil é o caso mais simples → médio; os restantes → difícil.
+        j === 0 ? 2 : 3,
         `Salário base de ${eur(base)} (40h/semana). Quanto vale 1 hora suplementar ${ctx} (acréscimo de ${pct(ac)})?`,
         { texto: eur(valor), porque: `Correto. Retribuição horária ${eur(horaria)} × (1 + ${pct(ac)}) = ${eur(valor)}.` },
         [

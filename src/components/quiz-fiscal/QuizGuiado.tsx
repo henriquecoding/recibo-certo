@@ -48,6 +48,9 @@ export default function QuizGuiado({ quiz, progresso, onSair }: QuizGuiadoProps)
 
   const sharedProps = {
     categoriaAtiva: config?.categoria,
+    perguntaId: pergunta.id,
+    perguntaTexto: pergunta.pergunta,
+    categoriaPergunta: pergunta.categoria,
     indice,
     total: sessao.length,
     pergunta: pergunta.pergunta,

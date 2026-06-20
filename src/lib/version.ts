@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.23.0";
+export const APP_VERSION = "1.23.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,18 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.23.1",
+    data: "2026-06-20",
+    titulo: "Reportar erros nas perguntas (com XP) e dificuldades equilibradas",
+    itens: [
+      "Em cada pergunta podes agora reportar um erro com um toque. Se descreveres o que está mal, ganhas 15 XP por nos ajudares a melhorar o quiz.",
+      "Os reportes chegam diretamente a uma nova área de administração (Reportes do quiz), onde podem ser acompanhados (novo, em análise, resolvido) e tratados.",
+      "Corrigimos a distribuição de dificuldades: já não acontece um tema com 100 perguntas ter só 6 fáceis — cada tema tem agora uma boa quantidade de perguntas Fáceis, Médias e Difíceis.",
+      "Quando escolhes 10 perguntas, recebes mesmo 10: se um nível de dificuldade tiver poucas, a sessão é completada com outras do mesmo tema, em vez de encurtar.",
+      "O progresso do quiz (XP, nível, energia e histórico) está ligado à tua conta na nuvem quando inicias sessão, e continua a funcionar offline sem conta.",
+    ],
+  },
   {
     version: "1.23.0",
     data: "2026-06-20",

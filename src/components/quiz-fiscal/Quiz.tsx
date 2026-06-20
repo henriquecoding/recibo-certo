@@ -13,6 +13,7 @@ import QuizVantagens from "./QuizVantagens";
 import QuizMenuLateral from "./QuizMenuLateral";
 import QuizConfigModal from "./QuizConfigModal";
 import QuizBarraInferior from "./QuizBarraInferior";
+import BotaoReportarErro from "./BotaoReportarErro";
 import { useGameJuice } from "@/hooks/useGameJuice";
 import { useQuizConfig } from "@/hooks/useQuizConfig";
 import type { OpcaoEstado } from "./tipos";
@@ -24,6 +25,9 @@ const LETRAS = ["A", "B", "C", "D"];
 
 interface QuizProps {
   categoriaAtiva?: QuizCategoria;
+  perguntaId: string;
+  perguntaTexto: string;
+  categoriaPergunta: QuizCategoria;
   indice: number;
   total: number;
   pergunta: string;
@@ -78,6 +82,9 @@ function formatTempo(seg: number | undefined): string {
 
 export default function Quiz({
   categoriaAtiva,
+  perguntaId,
+  perguntaTexto,
+  categoriaPergunta,
   indice,
   total,
   pergunta,
@@ -450,42 +457,52 @@ export default function Quiz({
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25 }}
-                className="flex items-stretch gap-3"
+                className="flex flex-col gap-2"
               >
-                <div
-                  className="flex flex-1 items-start gap-3 rounded-2xl p-4"
-                  style={{ backgroundColor: PARCHMENT_SIDEBAR, border: `1px solid ${BORDER}` }}
-                >
+                <div className="flex items-stretch gap-3">
                   <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full self-center"
-                    style={{ backgroundColor: "#e8dcc8" }}
+                    className="flex flex-1 items-start gap-3 rounded-2xl p-4"
+                    style={{ backgroundColor: PARCHMENT_SIDEBAR, border: `1px solid ${BORDER}` }}
                   >
-                    <span style={{ color: "#C07828" }}><Star size={18} /></span>
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full self-center"
+                      style={{ backgroundColor: "#e8dcc8" }}
+                    >
+                      <span style={{ color: "#C07828" }}><Star size={18} /></span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[13px] font-bold" style={{ color: "#1a1a17" }}>Base Legal</div>
+                      <p className="text-[12px] leading-snug mt-0.5 line-clamp-2" style={{ color: "#4a4a44" }}>
+                        {legalBasis}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end shrink-0">
+                      <span className="text-[10px] font-semibold" style={{ color: "#8a7355" }}>Vantagens</span>
+                      <span className="text-[16px] font-bold" style={{ color: "#415439" }}>{vantagensUsadas}</span>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-bold" style={{ color: "#1a1a17" }}>Base Legal</div>
-                    <p className="text-[12px] leading-snug mt-0.5 line-clamp-2" style={{ color: "#4a4a44" }}>
-                      {legalBasis}
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end shrink-0">
-                    <span className="text-[10px] font-semibold" style={{ color: "#8a7355" }}>Vantagens</span>
-                    <span className="text-[16px] font-bold" style={{ color: "#415439" }}>{vantagensUsadas}</span>
-                  </div>
+
+                  <m.button
+                    type="button"
+                    onClick={onSeguinte}
+                    className="flex shrink-0 items-center justify-center gap-2 rounded-2xl px-8 text-[16px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#3a5232]"
+                    style={{ backgroundColor: QUIZ_DARK, minWidth: "160px" }}
+                    whileHover={{ scale: 1.02, y: -1 }}
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 26 }}
+                  >
+                    {ultimaPergunta ? "Ver resultado" : "Próxima"}
+                    <ArrowRight size={20} />
+                  </m.button>
                 </div>
 
-                <m.button
-                  type="button"
-                  onClick={onSeguinte}
-                  className="flex shrink-0 items-center justify-center gap-2 rounded-2xl px-8 text-[16px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#3a5232]"
-                  style={{ backgroundColor: QUIZ_DARK, minWidth: "160px" }}
-                  whileHover={{ scale: 1.02, y: -1 }}
-                  whileTap={{ scale: 0.97 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 26 }}
-                >
-                  {ultimaPergunta ? "Ver resultado" : "Próxima"}
-                  <ArrowRight size={20} />
-                </m.button>
+                <div className="flex justify-end">
+                  <BotaoReportarErro
+                    perguntaId={perguntaId}
+                    perguntaTexto={perguntaTexto}
+                    categoria={categoriaPergunta}
+                  />
+                </div>
               </m.div>
             )}
           </AnimatePresence>

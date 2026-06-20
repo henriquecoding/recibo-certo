@@ -53,6 +53,9 @@ export interface QuizProgressoReturn {
     tempoTotalSeg: number
   ) => Promise<RegistrarSessaoResult>;
 
+  /** Atribui XP avulso (ex.: recompensa por reportar um erro). */
+  adicionarXpBonus: (quantidade: number) => Promise<RegistrarSessaoResult>;
+
   consumirEnergia: () => void;
   refrescarEnergia: () => void;
 }
@@ -269,6 +272,39 @@ export function useQuizProgresso(): QuizProgressoReturn {
     return { xpGanho, levelUp, nivelAnterior, nivelNovo };
   }, [xp, streakRecord, energiaRestante, energiaResetAt, naNuvem, user]);
 
+  // ── XP avulso (recompensa por reportar erro, etc.) ─────────────────────
+
+  const adicionarXpBonus = useCallback(async (
+    quantidade: number
+  ): Promise<RegistrarSessaoResult> => {
+    const xpGanho = Math.max(0, Math.round(quantidade));
+    const nivelAnterior = nivelParaXP(xp);
+    const novoXP = xp + xpGanho;
+    const nivelNovo = nivelParaXP(novoXP);
+    const levelUp = nivelNovo.nivel > nivelAnterior.nivel;
+
+    setXp(novoXP);
+
+    if (xpGanho > 0) {
+      if (naNuvem && user) {
+        const sb = getSupabase();
+        await sb.from("quiz_profiles").upsert({
+          id: user.id,
+          xp: novoXP,
+          streak_record: streakRecord,
+          energia_restante: Math.max(0, energiaRestante),
+          energia_reset_at: energiaResetAt,
+          atualizado_em: new Date().toISOString(),
+        }, { onConflict: "id" });
+      } else {
+        const prog = lerProgressoLocal();
+        gravarProgressoLocal({ ...prog, xp: novoXP });
+      }
+    }
+
+    return { xpGanho, levelUp, nivelAnterior, nivelNovo };
+  }, [xp, streakRecord, energiaRestante, energiaResetAt, naNuvem, user]);
+
   // ── Consumir/refrescar energia ─────────────────────────────────────────
 
   const consumirEnergia = useCallback(() => {
@@ -309,6 +345,7 @@ export function useQuizProgresso(): QuizProgressoReturn {
     carregado,
     naNuvem,
     registrarSessao,
+    adicionarXpBonus,
     consumirEnergia,
     refrescarEnergia,
   };

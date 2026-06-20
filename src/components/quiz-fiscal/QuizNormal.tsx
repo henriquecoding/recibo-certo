@@ -49,6 +49,9 @@ export default function QuizNormal({ quiz, progresso, onSair }: QuizNormalProps)
 
   const sharedProps = {
     categoriaAtiva: config?.categoria,
+    perguntaId: pergunta.id,
+    perguntaTexto: pergunta.pergunta,
+    categoriaPergunta: pergunta.categoria,
     indice,
     total: sessao.length,
     pergunta: pergunta.pergunta,

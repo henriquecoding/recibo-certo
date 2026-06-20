@@ -31,3 +31,15 @@ describe("novos bancos do quiz", () => {
     }
   });
 });
+
+import { getPerguntasAleatorias } from "../quiz-fiscal";
+describe("seleção robusta de perguntas", () => {
+  it("completa a sessão pedida mesmo com dificuldade escassa", () => {
+    for (const cat of ["dep_irs","empresa_criacao","empresa_fiscalidade","retencao"] as const) {
+      for (const dif of [1,2,3] as const) {
+        const sel = getPerguntasAleatorias({ quantidade: 10, categoria: cat, dificuldade: dif });
+        expect(sel.length, `${cat}/${dif} devolveu ${sel.length}`).toBe(10);
+      }
+    }
+  });
+});
