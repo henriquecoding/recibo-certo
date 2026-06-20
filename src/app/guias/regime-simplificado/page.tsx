@@ -18,11 +18,11 @@ export const metadata: Metadata = {
   title: "Regime simplificado e coeficientes IRS 2026",
   description: "Percebe como funcionam os coeficientes do regime simplificado e quanto pagas realmente em IRS. Calculadora interativa com todos os coeficientes 2026.",
   keywords: ["regime simplificado IRS 2026", "coeficientes regime simplificado", "IRS recibos verdes"],
-  alternates: { canonical: "https://recibocerto.pt/guias/regime-simplificado" },
+  alternates: { canonical: "https://www.recibocerto.pt/guias/regime-simplificado" },
   openGraph: {
     title: "Regime simplificado e coeficientes IRS 2026 | ReciboCerto",
     description: "Como funcionam os coeficientes e quanto pagas realmente em IRS no regime simplificado.",
-    url: "https://recibocerto.pt/guias/regime-simplificado",
+    url: "https://www.recibocerto.pt/guias/regime-simplificado",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "article",

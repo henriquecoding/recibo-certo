@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     title: "Política de Cookies — ReciboCerto",
     description:
       "ReciboCerto não usa cookies de tracking. Apenas armazenamento local (localStorage) no teu dispositivo para guardar os teus dados fiscais.",
-    url: "https://recibocerto.pt/cookies",
+    url: "https://www.recibocerto.pt/cookies",
     type: "website",
   },
 };

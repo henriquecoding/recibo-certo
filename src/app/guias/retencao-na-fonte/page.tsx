@@ -12,11 +12,11 @@ export const metadata: Metadata = {
   title: "Retenção na fonte recibos verdes 2026",
   description: "Quando aplicar retenção na fonte, quando dispensar e quais as taxas. Clientes particulares, empresas e estrangeiros.",
   keywords: ["retenção na fonte recibos verdes", "dispensa retenção", "art 101 CIRS"],
-  alternates: { canonical: "https://recibocerto.pt/guias/retencao-na-fonte" },
+  alternates: { canonical: "https://www.recibocerto.pt/guias/retencao-na-fonte" },
   openGraph: {
     title: "Retenção na fonte recibos verdes 2026 | ReciboCerto",
     description: "Quando aplicar e quando dispensar a retenção na fonte.",
-    url: "https://recibocerto.pt/guias/retencao-na-fonte",
+    url: "https://www.recibocerto.pt/guias/retencao-na-fonte",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "article",

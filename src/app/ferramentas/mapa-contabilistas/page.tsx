@@ -12,12 +12,12 @@ export const metadata: Metadata = {
     "avença contabilidade mensal",
     "contabilista Lisboa Porto preço",
   ],
-  alternates: { canonical: "https://recibocerto.pt/ferramentas/mapa-contabilistas" },
+  alternates: { canonical: "https://www.recibocerto.pt/ferramentas/mapa-contabilistas" },
   openGraph: {
     title: "Mapa de preços de contabilistas por região 2026 | ReciboCerto",
     description:
       "A média de honorários de contabilistas por região de Portugal, num mapa interativo. Estimativas de mercado para trabalhadores independentes.",
-    url: "https://recibocerto.pt/ferramentas/mapa-contabilistas",
+    url: "https://www.recibocerto.pt/ferramentas/mapa-contabilistas",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "article",

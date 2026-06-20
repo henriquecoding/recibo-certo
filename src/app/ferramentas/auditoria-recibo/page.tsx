@@ -12,11 +12,11 @@ export const metadata: Metadata = {
     "auditar retenção IRS 2026",
     "segurança social mal descontada",
   ],
-  alternates: { canonical: "https://recibocerto.pt/ferramentas/auditoria-recibo" },
+  alternates: { canonical: "https://www.recibocerto.pt/ferramentas/auditoria-recibo" },
   openGraph: {
     title: "Auditoria do recibo de vencimento 2026 | ReciboCerto",
     description: "Deteta erros de IRS e Segurança Social no teu recibo de vencimento, face às tabelas oficiais de 2026.",
-    url: "https://recibocerto.pt/ferramentas/auditoria-recibo",
+    url: "https://www.recibocerto.pt/ferramentas/auditoria-recibo",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "article",

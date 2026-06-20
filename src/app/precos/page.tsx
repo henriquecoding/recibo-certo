@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     title: "Planos ReciboCerto — Calculadora Grátis + Pro",
     description:
       "Calculadora grátis para sempre. Pro com alertas de prazos, conta na nuvem e exportação. Começa grátis.",
-    url: "https://recibocerto.pt/precos",
+    url: "https://www.recibocerto.pt/precos",
     type: "website",
   },
   twitter: {
@@ -41,13 +41,13 @@ const jsonLd = {
     {
       "@context": "https://schema.org",
       "@type": "WebPage",
-      "@id": "https://recibocerto.pt/precos#webpage",
-      url: "https://recibocerto.pt/precos",
+      "@id": "https://www.recibocerto.pt/precos#webpage",
+      url: "https://www.recibocerto.pt/precos",
       name: "Planos e Preços — ReciboCerto",
       description:
         "Calculadora de recibos verdes grátis para sempre. Plano Pro com alertas, conta na nuvem e exportação para o contabilista.",
       inLanguage: "pt-PT",
-      isPartOf: { "@id": "https://recibocerto.pt/#website" },
+      isPartOf: { "@id": "https://www.recibocerto.pt/#website" },
     },
     generateBreadcrumbSchema([
       { name: "Início", url: "/" },

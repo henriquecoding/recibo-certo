@@ -6,11 +6,11 @@ import { ArrowRight, FileSign, Calculator, ShieldCheck, Calendar, Receipt, Build
 export const metadata: Metadata = {
   title: "Guias para trabalhadores independentes 2026 | ReciboCerto",
   description: "Guias práticos sobre recibos verdes, IRS, Segurança Social, IVA e tudo o que precisas de saber como trabalhador independente em Portugal em 2026.",
-  alternates: { canonical: "https://recibocerto.pt/guias" },
+  alternates: { canonical: "https://www.recibocerto.pt/guias" },
   openGraph: {
     title: "Guias para trabalhadores independentes 2026 | ReciboCerto",
     description: "Recibos verdes, IRS, Segurança Social e IVA — em português simples.",
-    url: "https://recibocerto.pt/guias",
+    url: "https://www.recibocerto.pt/guias",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "website",

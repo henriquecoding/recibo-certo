@@ -8,11 +8,11 @@ export const metadata: Metadata = {
   title: "Como cessar atividade nos recibos verdes 2026",
   description: "Guia passo a passo para fechar a atividade nas Finanças. Consequências de não fechar, impacto na SS e IRS.",
   keywords: ["cessar atividade recibos verdes", "fechar atividade finanças", "cessação atividade freelancer portugal"],
-  alternates: { canonical: "https://recibocerto.pt/guias/cessar-atividade" },
+  alternates: { canonical: "https://www.recibocerto.pt/guias/cessar-atividade" },
   openGraph: {
     title: "Como cessar atividade nos recibos verdes 2026 | ReciboCerto",
     description: "O que acontece se não fechares e como fechar corretamente.",
-    url: "https://recibocerto.pt/guias/cessar-atividade",
+    url: "https://www.recibocerto.pt/guias/cessar-atividade",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "article",

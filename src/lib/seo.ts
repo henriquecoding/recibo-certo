@@ -11,7 +11,7 @@
  *  • E-E-A-T: fonte legal verificada, atualização anual, grátis
  */
 
-export const SITE_URL = "https://recibocerto.pt";
+export const SITE_URL = "https://www.recibocerto.pt";
 export const SITE_NAME = "ReciboCerto";
 
 // ─── Registo central de rotas públicas indexáveis ────────────────────────────

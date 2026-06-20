@@ -13,11 +13,11 @@ export const metadata: Metadata = {
     "regime simplificado calculadora",
     "por conta de outrem simulador",
   ],
-  alternates: { canonical: "https://recibocerto.pt/ferramentas" },
+  alternates: { canonical: "https://www.recibocerto.pt/ferramentas" },
   openGraph: {
     title: "Ferramentas fiscais 2026 — independentes e por conta de outrem | ReciboCerto",
     description: "Decisores interativos e calculadoras para simplificar a vida fiscal — quer passes recibos verdes, quer recebas salário por conta de outrem.",
-    url: "https://recibocerto.pt/ferramentas",
+    url: "https://www.recibocerto.pt/ferramentas",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "website",

@@ -12,11 +12,11 @@ export const metadata: Metadata = {
   title: "IRS Jovem 2026: isenção, anos e como pedir",
   description: "Tudo sobre o IRS Jovem em 2026. Percentagens de isenção por ano de carreira, quem tem direito e como pedir na declaração de IRS.",
   keywords: ["IRS jovem 2026", "isenção IRS jovem", "IRS jovem recibos verdes"],
-  alternates: { canonical: "https://recibocerto.pt/guias/irs-jovem" },
+  alternates: { canonical: "https://www.recibocerto.pt/guias/irs-jovem" },
   openGraph: {
     title: "IRS Jovem 2026: isenção, anos e como pedir | ReciboCerto",
     description: "Nos primeiros 10 anos de carreira, pagas menos IRS ou zero sobre parte do rendimento.",
-    url: "https://recibocerto.pt/guias/irs-jovem",
+    url: "https://www.recibocerto.pt/guias/irs-jovem",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "article",

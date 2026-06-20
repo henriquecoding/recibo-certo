@@ -14,11 +14,11 @@ export const metadata: Metadata = {
     "verificar recibo de vencimento",
     "salário líquido por conta de outrem",
   ],
-  alternates: { canonical: "https://recibocerto.pt/ferramentas/recibo-vencimento" },
+  alternates: { canonical: "https://www.recibocerto.pt/ferramentas/recibo-vencimento" },
   openGraph: {
     title: "Simulador de recibo de vencimento 2026 | ReciboCerto",
     description: "Do salário bruto ao líquido: IRS, Segurança Social e subsídio de refeição, com as tabelas oficiais de 2026.",
-    url: "https://recibocerto.pt/ferramentas/recibo-vencimento",
+    url: "https://www.recibocerto.pt/ferramentas/recibo-vencimento",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "article",
