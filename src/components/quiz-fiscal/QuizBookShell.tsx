@@ -12,7 +12,7 @@ import {
 import type { VantagensEstado, SessaoPergunta } from "@/hooks/useQuizFiscal";
 import type { QuizOpcao } from "@/lib/quiz-fiscal";
 import QuizHeader from "./QuizHeader";
-import QuizMobileNav from "./QuizMobileNav";
+import QuizChromeInferior from "./QuizChromeInferior";
 
 const LETRAS = ["A", "B", "C", "D"];
 
@@ -89,8 +89,8 @@ export default function QuizBookShell(props: QuizBookShellProps) {
 
   return (
     <div className="flex min-h-screen flex-col bg-quiz-leather-dark pb-0 dark:bg-[#1a2318]">
-      {/* ── Header (Etapa 1) ── */}
-      <div className="sticky top-0 z-30">
+      {/* ── Header (desktop; no telemóvel o chrome é inferior) ── */}
+      <div className="sticky top-0 z-30 hidden lg:block">
         <QuizHeader onConfiguracoes={onSair} onMenuToggle={() => {}} />
         {/* Stats row — placeholder until Etapa 5 (footer dark bar) */}
         <div className="flex items-center justify-center gap-5 border-b border-quiz-forest/40 bg-quiz-forest px-4 py-1.5 text-xs font-semibold text-quiz-parchment sm:gap-8">
@@ -427,10 +427,14 @@ export default function QuizBookShell(props: QuizBookShellProps) {
         </AnimatePresence>
       </div>
 
-      {/* ── Mobile bottom nav (Etapa 1) ── */}
-      <div className="mt-auto lg:hidden">
-        <QuizMobileNav activeTab="home" onHome={onSair} />
-      </div>
+      {/* ── Chrome inferior (telemóvel): stats + header com nível, perfil e histórico ── */}
+      <QuizChromeInferior
+        acertos={acertosAteAgora}
+        erros={errosAteAgora}
+        pontos={pontos}
+        tempo={tempoRestante != null ? `${tempoRestante}s` : null}
+        onConfiguracoes={onSair}
+      />
     </div>
   );
 }

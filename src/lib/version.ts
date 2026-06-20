@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.19.2";
+export const APP_VERSION = "1.20.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.20.0",
+    data: "2026-06-19",
+    titulo: "Quiz Fiscal: nova navegação inferior, nível e histórico",
+    itens: [
+      "No telemóvel, o Quiz Fiscal passou a ter um cabeçalho fixo em baixo, com as estatísticas (acertos, tempo, pontos, erros) por cima: à esquerda as configurações e o logótipo (que leva à página inicial), ao centro o teu nível e à direita o menu.",
+      "Toca no nível ao centro para abrires um painel com o teu progresso (XP, melhor streak, energia), todos os níveis e o teu perfil.",
+      "O menu passou a incluir o histórico de sessões — vê a percentagem de acertos, os pontos e o XP de cada quiz que terminaste.",
+    ],
+  },
   {
     version: "1.19.2",
     data: "2026-06-19",
