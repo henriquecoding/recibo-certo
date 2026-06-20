@@ -168,7 +168,7 @@ const TIPO_ATIVIDADE_PARAMS = {
   hosped: { coef: 0.35, ret: 0.0, label: "Alojamento local / hotelaria" },
   outras: { coef: 0.35, ret: 0.115, label: "Outras prestações de serviços" },
   prop_int: {
-    coef: 0.75,
+    coef: 0.95,
     ret: 0.165,
     label: "Propriedade intelectual / direitos de autor",
   },
@@ -188,6 +188,24 @@ const TIPO_LOCAL_PARA_CANONICO: Record<TipoAtividade, TipoFiscalCanonico> = {
   hosped: "vendas",
   outras: "outros",
   prop_int: "diretosAutor",
+};
+
+/**
+ * Taxa de IVA habitual por tipo de atividade. Usada para derivar o regime
+ * EFETIVO de IVA quando o utilizador ultrapassa o limite de isenção mas ainda
+ * não escolheu uma taxa — espelha o `ivaEsperado` do Modo Guiado. Definido ao
+ * nível do módulo para poder ser usado ANTES de `atividadePainelMeta` (que vive
+ * dentro do componente, mais abaixo) sem cair em TDZ.
+ */
+const IVA_ESPERADO_POR_TIPO: Record<
+  TipoAtividade,
+  "normal" | "intermedia" | "reduzida" | "isento"
+> = {
+  art151: "normal",
+  vendas: "normal",
+  hosped: "intermedia",
+  outras: "normal",
+  prop_int: "normal",
 };
 
 const DERRAMA_MUNI = 0.015;
@@ -1051,15 +1069,126 @@ function IvaZonas({
   regimeIVA,
   onRegimeIVAChange,
   regiao,
+  isentoEfetivo,
+  tipoAtiv,
 }: {
   faturacaoAnual: number;
   regimeIVA?: RegimeIVA;
   onRegimeIVAChange?: (r: RegimeIVA) => void;
   regiao?: Regiao;
+  /** Quando fornecido, controla a apresentação da zona de isenção (em vez de
+   * depender só do limiar de faturação). */
+  isentoEfetivo?: boolean;
+  /** Para avisar se a taxa escolhida é incoerente com a atividade. */
+  tipoAtiv?: TipoAtividade;
 }) {
   const limiteIsencao = IVA_ISENCAO_LIMITE;
   const limiteImediato = IVA_ISENCAO_LIMITE_IMEDIATO;
   const regiaoAtual = regiao ?? "continente";
+
+  // Nota de coerência entre a taxa de IVA escolhida e a atividade.
+  const ivaEsperado = tipoAtiv ? IVA_ESPERADO_POR_TIPO[tipoAtiv] : undefined;
+  const taxaIncoerente =
+    !!ivaEsperado &&
+    !!regimeIVA &&
+    regimeIVA !== "isento" &&
+    regimeIVA !== ivaEsperado;
+  const notaCoerencia = taxaIncoerente ? (
+    <div className="mt-2 rounded-lg border border-alert-border bg-alert-bg px-3 py-2 text-[11px] leading-relaxed text-alert-text">
+      A taxa de IVA selecionada (
+      {pct(IVA_TAXAS[regiaoAtual].value[regimeIVA as EscalaoIVA])}) não é a
+      habitual para {TIPO_ATIVIDADE_PARAMS[tipoAtiv!].label.toLowerCase()}, que
+      normalmente aplica{" "}
+      {ivaEsperado === "isento"
+        ? "isenção"
+        : `taxa ${ivaEsperado === "reduzida" ? "reduzida" : ivaEsperado === "intermedia" ? "intermédia" : "normal"} (${pct(IVA_TAXAS[regiaoAtual].value[ivaEsperado])})`}
+      . Confirma com o teu contabilista.
+    </div>
+  ) : null;
+
+  // Zona "isento efetivo" — controlada pelo pai (ex.: sem IVA a cobrar)
+  if (isentoEfetivo) {
+    return (
+      <div className="rounded-xl border border-brand/30 bg-brand-light/60 p-4">
+        <div className="flex items-start gap-2.5">
+          <span className="mt-0.5 flex-shrink-0 text-brand-dark">
+            <Check size={14} />
+          </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-brand-dark">
+                Estás isento de IVA
+              </span>
+              <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold text-white">
+                Isento
+              </span>
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-brand-dark/80">
+              Com {fmt(faturacaoAnual)}/ano estás abaixo de {fmt(limiteIsencao)}{" "}
+              — beneficias da isenção do Art. 53.º do CIVA. Não cobras IVA ao
+              cliente nem o entregas ao Estado (também não podes deduzir o IVA
+              das tuas compras).
+            </p>
+            <p className="mt-1.5 text-xs leading-relaxed text-brand-dark/80">
+              A isenção mantém-se em <strong>cada ano</strong> em que ficares
+              abaixo de {fmt(limiteIsencao)} de faturação anual.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Caso: abaixo do limite mas o utilizador optou por cobrar IVA (com IVA).
+  // Não está isento por opção — mostra um cartão com o seletor de taxa.
+  if (faturacaoAnual <= limiteIsencao && isentoEfetivo === false) {
+    return (
+      <div className="rounded-xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-900/60">
+        <div className="flex items-start gap-2.5">
+          <span className="mt-0.5 flex-shrink-0 text-stone-500">
+            <Check size={14} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <span className="text-sm font-bold text-stone-700 dark:text-stone-200">
+              Cobras IVA por opção
+            </span>
+            <p className="mt-1 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+              Com {fmt(faturacaoAnual)}/ano podias beneficiar da isenção do Art.
+              53.º (abaixo de {fmt(limiteIsencao)}), mas escolheste cobrar IVA ao
+              cliente. Escolhe a taxa aplicável.
+            </p>
+            {onRegimeIVAChange && (
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {(["reduzida", "intermedia", "normal"] as const).map((e) => {
+                  const taxa = IVA_TAXAS[regiaoAtual].value[e];
+                  const label =
+                    e === "reduzida"
+                      ? "Reduzida"
+                      : e === "intermedia"
+                        ? "Intermédia"
+                        : "Normal";
+                  return (
+                    <button
+                      key={e}
+                      type="button"
+                      aria-pressed={regimeIVA === e}
+                      onClick={() => onRegimeIVAChange(e)}
+                      className={`rounded-xl border p-2.5 text-center transition-all ${regimeIVA === e ? "border-brand bg-brand-light text-brand-dark" : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300"}`}
+                    >
+                      <div className="text-xs font-bold">
+                        {label} {pct(taxa)}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {notaCoerencia}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Zona 1 — isento
   if (faturacaoAnual <= limiteIsencao) {
@@ -1166,6 +1295,7 @@ function IvaZonas({
                 </div>
               </div>
             )}
+            {notaCoerencia}
           </div>
         </div>
       </div>
@@ -1240,6 +1370,7 @@ function IvaZonas({
               </div>
             </div>
           )}
+          {notaCoerencia}
         </div>
       </div>
     </div>
@@ -3044,42 +3175,70 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   }, []);
 
   // Como interpretar o valor introduzido (paridade com o modo guiado):
+  // false → o valor é a base do serviço; o IVA acresce por cima (omissão).
   // true → o valor já inclui IVA (total cobrado ao cliente); extraímos a base.
-  // false → o valor é a base do serviço; o IVA acresce por cima.
-  const [valorComIva, setValorComIva] = useState(true);
+  const [valorComIva, setValorComIva] = useState(false);
 
-  // ── Sincronização bruto ↔ brutoAnual ────────────────────────────────────
+  // ── IVA: regime EFETIVO, derivado reativamente ──────────────────────────
+  // Princípio único (paridade com o Modo Guiado): ISENTO ⟺ NÃO cobra IVA.
+  // Abaixo de 15 000 €/ano de faturação base → isento (taxa 0). Acima, cobra à
+  // taxa do regime escolhido, ou — se ainda estiver "isento" — à taxa habitual
+  // da atividade. Tudo o resto (desdobramento, situação de IVA, resultado e
+  // motor) usa isto, para o simulador estar sempre sincronizado.
+  // Taxa "potencial" se ultrapassar o limite: o regime escolhido, ou a taxa
+  // habitual da atividade quando o utilizador ainda não escolheu uma taxa.
+  const ivaEsperadoTipo = IVA_ESPERADO_POR_TIPO[tipoAtiv];
+  const taxaPotencial =
+    regimeIVA !== "isento"
+      ? taxaIVAEfetiva(regiao, regimeIVA)
+      : ivaEsperadoTipo !== "isento"
+        ? IVA_TAXAS[regiao].value[ivaEsperadoTipo]
+        : IVA_TAXAS[regiao].value.normal;
+
+  // Proxy da faturação anual base: no modo "Anual" é o próprio brutoAnual; no
+  // modo "Por recibo" é o valor mensal introduzido × 12.
+  const faturacaoAnualProxy = modoInput === "anual" ? brutoAnual : bruto * 12;
+  const acimaLimiteIva = faturacaoAnualProxy > IVA_ISENCAO_LIMITE;
+  const cobraIva = valorComIva || acimaLimiteIva;
+  const isentoEfetivo = !cobraIva;
+  const taxaIva = cobraIva ? taxaPotencial : 0;
+  const temIva = taxaIva > 0;
+  const regimeEfetivo: RegimeIVA = isentoEfetivo
+    ? "isento"
+    : regimeIVA !== "isento"
+      ? regimeIVA
+      : (ivaEsperadoTipo as RegimeIVA);
+
+  // Base (sem IVA): só extraímos IVA do valor quando ele inclui IVA.
+  const base = temIva && valorComIva ? bruto / (1 + taxaIva) : bruto;
+
+  const labelValor = temIva
+    ? valorComIva
+      ? `Total a cobrar ao cliente (€) — IVA ${pct(taxaIva)} incluído`
+      : `Valor base do serviço (€) — IVA ${pct(taxaIva)} acresce`
+    : "Valor do recibo (€)";
+
+  // ── Sincronização bruto ↔ brutoAnual (usa a taxa EFETIVA) ───────────────
   const handleBrutoChange = useCallback(
     (v: number) => {
       setBruto(v);
       // brutoAnual armazena a base anual (sem IVA) para simulações IRS/SS
-      const t = taxaIVAEfetiva(regiao, regimeIVA);
-      const baseV = t > 0 && valorComIva ? v / (1 + t) : v;
+      const baseV = taxaIva > 0 && valorComIva ? v / (1 + taxaIva) : v;
       setBrutoAnual(Math.round(baseV * 12));
     },
-    [regiao, regimeIVA, valorComIva],
+    [taxaIva, valorComIva],
   );
 
   const handleBrutoAnualChange = useCallback(
     (v: number) => {
       setBrutoAnual(v);
       // bruto (slider por recibo) reflete a interpretação ativa do input
-      const t = taxaIVAEfetiva(regiao, regimeIVA);
-      const totalMensal = t > 0 && valorComIva ? (v / 12) * (1 + t) : v / 12;
+      const totalMensal =
+        taxaIva > 0 && valorComIva ? (v / 12) * (1 + taxaIva) : v / 12;
       setBruto(Math.round(totalMensal / 50) * 50);
     },
-    [regiao, regimeIVA, valorComIva],
+    [taxaIva, valorComIva],
   );
-
-  // ── IVA ──────────────────────────────────────────────────────────────────
-  const taxaIva = taxaIVAEfetiva(regiao, regimeIVA);
-  const temIva = taxaIva > 0;
-  const base = temIva && valorComIva ? bruto / (1 + taxaIva) : bruto;
-  const labelValor = temIva
-    ? valorComIva
-      ? `Total a cobrar ao cliente (€) — IVA ${pct(taxaIva)} incluído`
-      : `Valor base do serviço (€) — IVA ${pct(taxaIva)} acresce`
-    : "Valor do recibo (€)";
 
   // ── Resultado por recibo ─────────────────────────────────────────────────
   const isencaoSS = isencaoSSPrimeiroAno || acumulaEmprego || isencaoCpas;
@@ -3090,7 +3249,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
         bruto: base,
         tipo: atividade.tipo,
         regiao,
-        regimeIVA,
+        regimeIVA: regimeEfetivo,
         baseSS: "servicos",
         dispensaRetencao,
         isencaoSSPrimeiroAno: isencaoSS,
@@ -3104,7 +3263,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
       atividade.tipo,
       atividade.retencao,
       regiao,
-      regimeIVA,
+      regimeEfetivo,
       dispensaRetencao,
       isencaoSS,
       acumulaEmprego,
@@ -3666,12 +3825,6 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     },
   }[regimeIVA];
 
-  const ivaAlertaAtividade =
-    (regimeIVA === "intermedia" || regimeIVA === "reduzida") &&
-    tipoAtiv === "art151";
-  const ivaAlertaFaturacao =
-    regimeIVA === "isento" && brutoAnual > IVA_ISENCAO_LIMITE;
-
   // ── Metadados para painel contextual de atividade ─────────────────────────
   const atividadePainelMeta: Record<
     TipoAtividade,
@@ -3713,9 +3866,9 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     prop_int: {
       titulo: "Propriedade intelectual / direitos de autor",
       descricao:
-        "Royalties, licenciamento de software, obra própria (livros, música, arte). Coef. 0,75 mas retenção de 16,5%. SS sobre 70%.",
+        "Royalties, licenciamento de software, obra própria (livros, música, arte). Coef. 0,95 · Ret. 16,5% · SS sobre 70%.",
       ivaEsperado: "normal",
-      nota: "Só para titulares da obra original. Coeficiente 0,95 quando o autor cede obra a entidade única — verificar enquadramento com contabilista.",
+      nota: "Direitos de autor / propriedade intelectual: coeficiente 0,95, retenção na fonte de 16,5% e Segurança Social sobre 70% do rendimento. Só para titulares da obra original — verificar enquadramento com contabilista.",
     },
   };
 
@@ -3726,13 +3879,115 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
       regimeIVA === "isento" &&
       brutoAnual <= IVA_ISENCAO_LIMITE);
 
-  // ── Aviso de IVA Art. 53.º ────────────────────────────────────────────────
-  const avisoIVALimite =
-    regimeIVA === "isento" && brutoAnual > IVA_ISENCAO_LIMITE ? (
-      <div className="mt-3">
-        <IvaZonas faturacaoAnual={brutoAnual} />
-      </div>
-    ) : null;
+  // ── Toggle "com/sem IVA" + desdobramento ao vivo (paridade Modo Guiado) ────
+  // Funciona nos dois modos (Por recibo / Anual). O valor de referência é o que
+  // o utilizador escreveu (bruto/mês ou brutoAnual). Quando isento, mostra a
+  // nota — o valor introduzido é a faturação, sem IVA a separar.
+  const valorRef = modoInput === "anual" ? brutoAnual : bruto;
+  const periodoLabel = modoInput === "anual" ? "/ano" : "/recibo";
+  const baseRefSemIva =
+    temIva && valorComIva ? valorRef / (1 + taxaIva) : valorRef;
+  const ivaRef = temIva ? (valorComIva ? valorRef - baseRefSemIva : valorRef * taxaIva) : 0;
+  const totalRefCliente = baseRefSemIva + ivaRef;
+
+  const onToggleValorComIva = useCallback(() => {
+    setValorComIva((prev) => {
+      const novo = !prev;
+      // Mantém o número escrito; reinterpreta-o. Ressincroniza o par bruto↔anual.
+      if (modoInput === "anual") {
+        const baseV = taxaIva > 0 && novo ? brutoAnual / (1 + taxaIva) : brutoAnual;
+        setBruto(Math.round((baseV / 12) / 50) * 50);
+      } else {
+        const baseV = taxaIva > 0 && novo ? bruto / (1 + taxaIva) : bruto;
+        setBrutoAnual(Math.round(baseV * 12));
+      }
+      return novo;
+    });
+  }, [modoInput, taxaIva, bruto, brutoAnual]);
+
+  const ivaToggleEDesdobramento = (
+    <div className="mt-3">
+      {temIva && (
+        <>
+          <div className="mb-2 flex items-center justify-end">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={valorComIva}
+              onClick={onToggleValorComIva}
+              aria-label={
+                valorComIva
+                  ? "O valor inclui IVA. Clica para passar a sem IVA."
+                  : "O valor é sem IVA. Clica para passar a com IVA."
+              }
+              title="Alternar entre valor com IVA e sem IVA"
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-widest transition-colors ${
+                valorComIva
+                  ? "border-brand/30 bg-brand-light text-brand-dark hover:border-brand/50 dark:bg-brand/15 dark:text-brand"
+                  : "border-stone-300 bg-stone-100 text-stone-500 hover:border-stone-400 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-300"
+              }`}
+            >
+              <Swap size={11} />
+              {valorComIva ? "com IVA" : "sem IVA"}
+            </button>
+          </div>
+          <div className="space-y-1.5 rounded-xl bg-stone-50 px-4 py-3 dark:bg-stone-800/60">
+            <div className="flex justify-between">
+              <span className="text-xs text-stone-500 dark:text-stone-400">
+                A tua faturação (sem IVA)
+              </span>
+              <span className="text-xs font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+                {fmt(baseRefSemIva)}
+                {periodoLabel}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs text-stone-400">
+                IVA ({pct(taxaIva)}){" "}
+                {valorComIva ? "— já incluído" : "— a acrescentar"}
+              </span>
+              <span className="text-xs font-semibold tabular-nums text-stone-400">
+                {valorComIva ? "" : "+"}
+                {fmt(ivaRef)}
+              </span>
+            </div>
+            <div className="flex justify-between border-t border-stone-200 pt-1.5 dark:border-stone-700">
+              <span className="text-xs text-stone-500 dark:text-stone-400">
+                Total pago pelo cliente
+              </span>
+              <span className="text-xs font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+                {fmt(totalRefCliente)}
+                {periodoLabel}
+              </span>
+            </div>
+          </div>
+        </>
+      )}
+      {!temIva && valorRef > 0 && (
+        <p className="rounded-xl bg-brand-light/60 px-4 py-2.5 text-[11px] leading-relaxed text-brand-dark dark:bg-brand/10">
+          Isento de IVA (abaixo de {fmt(IVA_ISENCAO_LIMITE)}/ano) — este valor é a
+          tua faturação, sem IVA a separar.
+        </p>
+      )}
+    </div>
+  );
+
+  // ── Situação de IVA (sempre visível) — 3 zonas + seletor + coerência ───────
+  const situacaoIVA = (
+    <div className="mt-3">
+      <IvaZonas
+        faturacaoAnual={faturacaoAnualProxy}
+        isentoEfetivo={isentoEfetivo}
+        regimeIVA={regimeIVA}
+        regiao={regiao}
+        tipoAtiv={tipoAtiv}
+        onRegimeIVAChange={(r) => {
+          setRegimeIVA(r);
+          setPainelIVA(true);
+        }}
+      />
+    </div>
+  );
 
   return (
     <div id="calculadora" className="relative scroll-mt-24">
@@ -3907,8 +4162,8 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
             <div className="grid grid-cols-1 lg:grid-cols-2">
               {/* ════ Coluna esquerda: Inputs ════ */}
               <div className="bg-white p-5 sm:p-8 lg:p-10 lg:border-r lg:border-stone-100 dark:bg-stone-950 dark:border-stone-800">
-                {/* ── Valor ────────────────────────────────────────────────────── */}
-                <div className="mb-5">
+                {/* ── O teu valor (cartão essencial) ───────────────────────── */}
+                <div className="mb-5 rounded-3xl border border-stone-100 bg-white p-4 shadow-card sm:p-5 dark:border-stone-800 dark:bg-stone-900">
                   <AnimatePresence mode="wait">
                     {modoInput === "recibo" ? (
                       <m.div
@@ -3931,43 +4186,13 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                           presets={[500, 1000, 1500, 2500, 5000]}
                           tooltip={
                             <>
-                              Valor do recibo. Com o toggle "já inclui IVA"
-                              ativo, o ReciboCerto extrai a base pré-IVA; caso
-                              contrário, o IVA acresce por cima. Em ambos os
-                              casos calcula IRS, SS e quanto podes gastar.
+                              Valor do recibo. Com o toggle "com IVA" ativo, o
+                              ReciboCerto extrai a base pré-IVA; com "sem IVA", o
+                              IVA acresce por cima. Em ambos os casos calcula IRS,
+                              SS e quanto podes gastar.
                             </>
                           }
                         />
-                        {temIva && (
-                          <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                            <button
-                              type="button"
-                              role="switch"
-                              aria-checked={valorComIva}
-                              onClick={() => {
-                                const novo = !valorComIva;
-                                setValorComIva(novo);
-                                // Ressincronizar o anual: o número mantém-se,
-                                // a interpretação muda.
-                                const baseV = novo
-                                  ? bruto / (1 + taxaIva)
-                                  : bruto;
-                                setBrutoAnual(Math.round(baseV * 12));
-                              }}
-                              className="inline-flex items-center gap-1.5 rounded-full border border-brand/25 bg-brand-light px-3 py-1.5 text-[11px] font-semibold text-brand-dark transition-all hover:border-brand/40"
-                            >
-                              <Swap size={11} />
-                              {valorComIva
-                                ? "O valor já inclui IVA"
-                                : "O IVA acresce ao valor"}
-                            </button>
-                            <span className="text-[11px] tabular-nums text-stone-400">
-                              {valorComIva
-                                ? `Base: ${fmt(base)} + IVA ${fmt(bruto - base)}`
-                                : `Cliente paga ${fmt(bruto * (1 + taxaIva))} (IVA ${fmt(bruto * taxaIva)})`}
-                            </span>
-                          </div>
-                        )}
                       </m.div>
                     ) : (
                       <m.div
@@ -4000,16 +4225,19 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                               : undefined
                           }
                         />
-                        {avisoIVALimite}
                       </m.div>
                     )}
                   </AnimatePresence>
+                  {/* Toggle com/sem IVA + desdobramento ao vivo (ambos os modos) */}
+                  {ivaToggleEDesdobramento}
                 </div>
 
-                {/* ── Regime IVA — logo abaixo do valor (afecta a interpretação do input) ── */}
-                <fieldset className="mb-6">
-                  <legend className="mb-2 flex items-center gap-1.5 text-sm font-medium uppercase tracking-wider text-stone-500">
-                    Regime de IVA · {META_REGIAO[regiao]}
+                {/* ── Situação de IVA (sempre visível) ─────────────────────── */}
+                <div className="mb-6">
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <span className="text-sm font-medium uppercase tracking-wider text-stone-500">
+                      Situação de IVA · {META_REGIAO[regiao]}
+                    </span>
                     <InfoTip label="IVA 2026">
                       Isento Art. 53.º até{" "}
                       {IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}€/ano. Se
@@ -4019,7 +4247,9 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                       Certas profissões (médicos, professores...) têm isenção
                       Art. 9.º sem limite de faturação.
                     </InfoTip>
-                  </legend>
+                  </div>
+
+                  {/* Seletor de regime IVA (compacto) */}
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {ivaOptions.map((op) => {
                       const active = regimeIVA === op.id;
@@ -4032,14 +4262,14 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                             setRegimeIVA(op.id);
                             setPainelIVA(true);
                           }}
-                          className={`p-3 rounded-xl border text-center transition-all ${
+                          className={`rounded-xl border p-2.5 text-center transition-all ${
                             active
                               ? "border-brand bg-brand-light"
-                              : "border-stone-200 hover:border-stone-300 bg-stone-50"
+                              : "border-stone-200 hover:border-stone-300 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/40"
                           }`}
                         >
                           <div
-                            className={`text-sm font-semibold ${active ? "text-brand-dark" : "text-stone-700"}`}
+                            className={`text-sm font-semibold ${active ? "text-brand-dark" : "text-stone-700 dark:text-stone-200"}`}
                           >
                             {op.label}
                           </div>
@@ -4052,77 +4282,71 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                       );
                     })}
                   </div>
-                </fieldset>
 
-                {/* ── Painel contextual IVA ────────────────────────────────── */}
-                {painelIVA && (
-                  <div className="mb-4 rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
-                    <div className="mb-2 flex items-start justify-between gap-2">
-                      <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
-                        {ivaPainelMeta.titulo}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setPainelIVA(false)}
-                        className="flex-shrink-0 text-xs text-stone-400 hover:text-stone-600 transition-colors"
-                        aria-label="Fechar painel"
+                  {/* 3 zonas (isento / transição / imediata) + seletor + coerência */}
+                  {situacaoIVA}
+
+                  {/* Painel contextual IVA (detalhe da taxa escolhida) */}
+                  <AnimatePresence>
+                    {painelIVA && (
+                      <m.div
+                        key="painel-iva"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
                       >
-                        fechar
-                      </button>
-                    </div>
-                    <p className="mb-3 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
-                      {ivaPainelMeta.quando}
-                    </p>
-                    <div className="space-y-1.5">
-                      <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
-                        <Check
-                          size={11}
-                          className="mt-0.5 flex-shrink-0 text-brand"
-                        />
-                        <span>
-                          <strong className="text-stone-700 dark:text-stone-200">
-                            Compatível com:
-                          </strong>{" "}
-                          {ivaPainelMeta.compativel}
-                        </span>
-                      </div>
-                      {ivaPainelMeta.incompativel && (
-                        <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
-                          <Warning
-                            size={11}
-                            className="mt-0.5 flex-shrink-0 text-alert-text"
-                          />
-                          <span>
-                            <strong className="text-stone-700 dark:text-stone-200">
-                              Incompatível com:
-                            </strong>{" "}
-                            {ivaPainelMeta.incompativel}
-                          </span>
+                        <div className="mt-3 rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+                          <div className="mb-2 flex items-start justify-between gap-2">
+                            <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
+                              {ivaPainelMeta.titulo}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setPainelIVA(false)}
+                              className="flex-shrink-0 text-xs text-stone-400 hover:text-stone-600 transition-colors"
+                              aria-label="Fechar painel"
+                            >
+                              fechar
+                            </button>
+                          </div>
+                          <p className="mb-3 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
+                            {ivaPainelMeta.quando}
+                          </p>
+                          <div className="space-y-1.5">
+                            <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
+                              <Check
+                                size={11}
+                                className="mt-0.5 flex-shrink-0 text-brand"
+                              />
+                              <span>
+                                <strong className="text-stone-700 dark:text-stone-200">
+                                  Compatível com:
+                                </strong>{" "}
+                                {ivaPainelMeta.compativel}
+                              </span>
+                            </div>
+                            {ivaPainelMeta.incompativel && (
+                              <div className="flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
+                                <Warning
+                                  size={11}
+                                  className="mt-0.5 flex-shrink-0 text-alert-text"
+                                />
+                                <span>
+                                  <strong className="text-stone-700 dark:text-stone-200">
+                                    Incompatível com:
+                                  </strong>{" "}
+                                  {ivaPainelMeta.incompativel}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                      {ivaAlertaAtividade && (
-                        <div className="mt-2 rounded-lg border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">
-                          A atividade selecionada (
-                          {TIPO_ATIVIDADE_PARAMS[tipoAtiv].label}) aplica
-                          normalmente IVA{" "}
-                          {regiao === "continente"
-                            ? "normal (23%)"
-                            : `normal (${pct(IVA_TAXAS[regiao].value.normal)})`}
-                          . Verifica se prestaste serviços específicos sujeitos
-                          a esta taxa.
-                        </div>
-                      )}
-                      {ivaAlertaFaturacao && (
-                        <div className="mt-2 rounded-lg border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">
-                          A tua faturação estimada ({fmt(brutoAnual)})
-                          ultrapassa o limiar de isenção de €
-                          {IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}. Verifica
-                          se ainda tens isenção ou se já deves cobrar IVA.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                      </m.div>
+                    )}
+                  </AnimatePresence>
+                </div>
 
                 {/* ── Tipo de atividade ─────────────────────────────────────── */}
                 <div className="mb-6">
@@ -4379,53 +4603,67 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                   </div>
                 </div>
 
-                {/* ── Situação fiscal ──────────────────────────────────────── */}
-                <div className="space-y-3">
-                  {checkboxes.map((cb) => {
-                    const bloqueado = !!cb.disabled && !cb.val;
-                    return (
-                      <button
-                        key={cb.id}
-                        type="button"
-                        role="checkbox"
-                        aria-checked={cb.val}
-                        aria-disabled={bloqueado}
-                        onClick={() => {
-                          if (bloqueado) return;
-                          cb.set(!cb.val);
-                        }}
-                        className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
-                          bloqueado
-                            ? "border-stone-100 bg-stone-50 opacity-60 cursor-not-allowed dark:border-stone-800 dark:bg-stone-900/40"
-                            : cb.val
-                              ? "border-brand bg-brand-light"
-                              : "border-stone-200 hover:border-stone-300 bg-stone-50"
-                        }`}
-                      >
-                        <div
-                          className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                            cb.val
-                              ? "bg-brand border-brand text-white"
-                              : "border-stone-300 text-transparent"
-                          }`}
-                        >
-                          <Check size={12} />
-                        </div>
-                        <div>
-                          <div
-                            className={`text-sm font-semibold ${cb.val ? "text-brand-dark" : "text-stone-700"}`}
+                {/* ── Situação fiscal (colapsável — avançado) ──────────────── */}
+                <div className="mb-5">
+                  <CollapsibleSection
+                    title="A tua situação fiscal"
+                    badgeColor="brand"
+                    badge={
+                      checkboxes.filter((cb) => cb.val).length > 0
+                        ? `${checkboxes.filter((cb) => cb.val).length} ativa(s)`
+                        : "Dispensa · SS · regimes"
+                    }
+                  >
+                    <div className="space-y-3">
+                      {checkboxes.map((cb) => {
+                        const bloqueado = !!cb.disabled && !cb.val;
+                        return (
+                          <button
+                            key={cb.id}
+                            type="button"
+                            role="checkbox"
+                            aria-checked={cb.val}
+                            aria-disabled={bloqueado}
+                            onClick={() => {
+                              if (bloqueado) return;
+                              cb.set(!cb.val);
+                            }}
+                            className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
+                              bloqueado
+                                ? "border-stone-100 bg-stone-50 opacity-60 cursor-not-allowed dark:border-stone-800 dark:bg-stone-900/40"
+                                : cb.val
+                                  ? "border-brand bg-brand-light"
+                                  : "border-stone-200 hover:border-stone-300 bg-stone-50"
+                            }`}
                           >
-                            {cb.label}
-                          </div>
-                          <div
-                            className={`text-xs ${cb.val ? "text-brand" : "text-stone-400"}`}
-                          >
-                            {bloqueado && cb.disabledMsg ? cb.disabledMsg : cb.sub}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
+                            <div
+                              className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                                cb.val
+                                  ? "bg-brand border-brand text-white"
+                                  : "border-stone-300 text-transparent"
+                              }`}
+                            >
+                              <Check size={12} />
+                            </div>
+                            <div>
+                              <div
+                                className={`text-sm font-semibold ${cb.val ? "text-brand-dark" : "text-stone-700"}`}
+                              >
+                                {cb.label}
+                              </div>
+                              <div
+                                className={`text-xs ${cb.val ? "text-brand" : "text-stone-400"}`}
+                              >
+                                {bloqueado && cb.disabledMsg
+                                  ? cb.disabledMsg
+                                  : cb.sub}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </CollapsibleSection>
                 </div>
 
                 {/* ── Motor de Regras Fiscais ──────────────────────────────── */}
@@ -5400,39 +5638,39 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
 
                           {/* Breakdown por recibo */}
                           <div className="space-y-1 flex-1">
+                            {resultRecibo.taxaIVA > 0 && (
+                              <DetalheRow
+                                label="Faturado (com IVA)"
+                                value={resultRecibo.bruto + resultRecibo.iva}
+                                type="neutral"
+                                note="O que o cliente paga"
+                              />
+                            )}
+                            {resultRecibo.taxaIVA > 0 && (
+                              <DetalheRow
+                                label={`IVA (${pct(resultRecibo.taxaIVA)}) — não é teu`}
+                                value={resultRecibo.iva}
+                                type="warning"
+                                note="Pertence ao Estado — reservar para entrega trimestral"
+                              />
+                            )}
                             <DetalheRow
                               label={
                                 resultRecibo.taxaIVA > 0
-                                  ? "Base do serviço (sem IVA)"
+                                  ? "A tua faturação"
                                   : "Valor do recibo"
                               }
                               value={resultRecibo.bruto}
                               type="neutral"
                               note={
                                 resultRecibo.taxaIVA > 0
-                                  ? `Total ÷ (1 + ${pct(resultRecibo.taxaIVA)})`
+                                  ? `Faturado ÷ (1 + ${pct(resultRecibo.taxaIVA)})`
                                   : "O que faturaste"
                               }
                             />
-                            {resultRecibo.taxaIVA > 0 && (
-                              <DetalheRow
-                                label={`IVA (${pct(resultRecibo.taxaIVA)}) — do Estado`}
-                                value={resultRecibo.iva}
-                                type="warning"
-                                note="Pertence ao Estado — não é teu"
-                              />
-                            )}
-                            {resultRecibo.taxaIVA > 0 && (
-                              <DetalheRow
-                                label="O cliente paga"
-                                value={resultRecibo.bruto + resultRecibo.iva}
-                                type="neutral"
-                                note="Valor base + IVA"
-                              />
-                            )}
                             {resultRecibo.retencaoIRS > 0 && (
                               <DetalheRow
-                                label={`Retenção na fonte (${pct(resultRecibo.taxaRetencao)})`}
+                                label={`IRS — retenção na fonte (${pct(resultRecibo.taxaRetencao)})`}
                                 value={-resultRecibo.retencaoIRS}
                                 type="deducao"
                                 note="Adiantamento de IRS ao Estado"
@@ -5444,7 +5682,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                               type="subtotal"
                               note={
                                 resultRecibo.taxaIVA > 0
-                                  ? "Bruto + IVA − Retenção"
+                                  ? "Faturado + IVA − retenção"
                                   : "Após retenção"
                               }
                             />
@@ -5457,7 +5695,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                             )}
                             {resultRecibo.segSocial > 0 && (
                               <DetalheRow
-                                label={`Reservar SS (21,4%×70% de ${fmt(resultRecibo.bruto)})`}
+                                label={`Seg. Social (21,4%×70% de ${fmt(resultRecibo.bruto)})`}
                                 value={-resultRecibo.segSocial}
                                 type="deducao"
                                 note="Pagamento mensal até dia 20"

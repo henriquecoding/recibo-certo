@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.21.1";
+export const APP_VERSION = "1.22.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.22.0",
+    data: "2026-06-20",
+    titulo: "Calculadora de recibos verdes: IVA correto, com/sem IVA e layout mais limpo",
+    itens: [
+      "O IVA passou a seguir a regra real da isenção: abaixo de 15 000 €/ano de faturação ficas isento (sem IVA); acima, o simulador passa a cobrar IVA automaticamente — deixou de ser possível aparecer «isento» e a cobrar IVA ao mesmo tempo.",
+      "Podes indicar se o valor que escreves já inclui IVA ou se o IVA acresce, e vês logo o desdobramento «a tua faturação / IVA / total pago pelo cliente». A situação de IVA (com os limites de 15 000 € e 18 750 €) está sempre à vista.",
+      "Corrigimos o coeficiente da propriedade intelectual e direitos de autor para 0,95.",
+      "A calculadora ficou menos comprida: agrupámos os campos e recolhemos as opções avançadas, para chegares ao resultado com menos scroll.",
+    ],
+  },
   {
     version: "1.21.1",
     data: "2026-06-20",
