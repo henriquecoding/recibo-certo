@@ -87,7 +87,7 @@ export function generateWebSiteSchema() {
     alternateName: "Recibo Certo",
     url: SITE_URL,
     description:
-      "Calculadora de recibos verdes para trabalhadores independentes em Portugal. IRS, Segurança Social e IVA com as taxas de 2026, verificadas com fonte legal.",
+      "Copiloto financeiro em Portugal para trabalhadores independentes, por conta de outrem e futuros empresários. IRS, Segurança Social e IVA com as taxas de 2026, verificadas com fonte legal.",
     inLanguage: "pt-PT",
     potentialAction: {
       "@type": "SearchAction",
@@ -116,7 +116,7 @@ export function generateOrganizationSchema() {
       height: 48,
     },
     description:
-      "Copiloto financeiro para trabalhadores independentes em Portugal. Calculadora de recibos verdes com IRS, Segurança Social e IVA. Taxas de 2026 verificadas com fonte legal.",
+      "Copiloto financeiro em Portugal para trabalhadores independentes, por conta de outrem e futuros empresários. IRS, Segurança Social, IVA e recibo de vencimento com as taxas de 2026 verificadas com fonte legal.",
     foundingDate: "2025",
     address: {
       "@type": "PostalAddress",
@@ -129,6 +129,8 @@ export function generateOrganizationSchema() {
     knowsAbout: [
       "Recibos verdes Portugal",
       "Trabalhadores independentes Portugal",
+      "Trabalho por conta de outrem Portugal",
+      "Recibo de vencimento e salário líquido 2026",
       "IRS Portugal 2026",
       "Segurança Social Portugal",
       "IVA isenção artigo 53.º do CIVA",
@@ -151,20 +153,20 @@ export function generateSoftwareApplicationSchema() {
     url: SITE_URL,
     inLanguage: "pt-PT",
     description:
-      "Calculadora gratuita de recibos verdes para trabalhadores independentes em Portugal. Calcula IRS, Segurança Social e IVA com taxas verificadas de 2026. Grátis, sem registo.",
+      "Ferramentas gratuitas em Portugal para trabalhadores independentes, por conta de outrem e futuros empresários: recibos verdes, recibo de vencimento, IRS, Segurança Social e IVA com taxas verificadas de 2026. Grátis, sem registo.",
     offers: {
       "@type": "Offer",
       price: "0",
       priceCurrency: "EUR",
-      description: "Calculadora de recibos verdes — grátis para sempre",
+      description: "Calculadoras e simuladores — grátis para sempre",
       availability: "https://schema.org/InStock",
     },
     featureList: [
-      "Cálculo de IRS com retenção na fonte (23%)",
-      "Segurança Social para trabalhador independente (21,4%)",
-      "Limite de IVA artigo 53.º do CIVA (15.000 € em 2026)",
+      "Calculadora de recibos verdes (IRS, Segurança Social e IVA)",
+      "Simulador de recibo de vencimento (trabalho por conta de outrem)",
+      "Comparador: trabalho dependente vs. recibos verdes vs. empresa",
+      "Auditoria do recibo de vencimento face às tabelas de 2026",
       "IRS Jovem 2026 com isenção crescente por anos",
-      "Simulador comparativo recibos verdes vs. empresa (IRC + dividendos)",
       "Calendário de prazos fiscais com alertas antecipados",
       "Exportação de dados para o contabilista",
     ],

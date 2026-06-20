@@ -5,7 +5,7 @@ import { ImageResponse } from "next/og";
 // `/og-home.png` que estava referenciado mas não existia.
 
 export const runtime = "nodejs";
-export const alt = "ReciboCerto — Calculadora de Recibos Verdes 2026";
+export const alt = "ReciboCerto — quanto fica realmente teu, do recibo ao salário (2026)";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -77,7 +77,7 @@ export default function OpengraphImage() {
               letterSpacing: "-2px",
             }}
           >
-            Calculadora de
+            Quanto fica
           </div>
           <div
             style={{
@@ -88,19 +88,20 @@ export default function OpengraphImage() {
               letterSpacing: "-2px",
             }}
           >
-            Recibos Verdes 2026
+            realmente teu?
           </div>
           <div
             style={{
               fontSize: "32px",
               color: "#57534E",
               marginTop: "28px",
-              maxWidth: "900px",
+              maxWidth: "960px",
               lineHeight: 1.4,
             }}
           >
-            Quanto fica teu após IRS, Segurança Social e IVA. Taxas portuguesas
-            verificadas com fonte legal.
+            Do recibo verde ao salário: IRS, Segurança Social e IVA em segundos.
+            Para independentes, por conta de outrem e futuros empresários. Taxas
+            de 2026 verificadas com fonte legal.
           </div>
         </div>
 
