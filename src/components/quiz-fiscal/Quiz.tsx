@@ -5,8 +5,9 @@ import { m, AnimatePresence } from "motion/react";
 import { resolveQuizIcon } from "./icon-map";
 import { META_CATEGORIA_QUIZ } from "@/lib/quiz-fiscal";
 import {
-  Check, Close, ArrowRight, ExternalLink, Fire, Star, Target, Zap,
+  Check, Close, ArrowRight, ExternalLink, Fire, Star, Target, Zap, History,
 } from "@/components/ui/Icons";
+import { useQuizProgresso } from "@/lib/store/quiz-progresso";
 import QuizHeader from "./QuizHeader";
 import QuizVantagens from "./QuizVantagens";
 import QuizMenuLateral from "./QuizMenuLateral";
@@ -117,6 +118,7 @@ export default function Quiz({
 }: QuizProps) {
   const { soarAcerto, soarErro, soarToque } = useGameJuice();
   const { config, updateConfig } = useQuizConfig();
+  const { sessoes: histSessoes } = useQuizProgresso();
   const [tremendoTela, setTremendoTela] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
   const [configAberta, setConfigAberta] = useState(false);
@@ -252,6 +254,34 @@ export default function Quiz({
                 />
               ))}
             </div>
+          </div>
+
+          {/* Histórico (abaixo da Energia) */}
+          <div className="rounded-2xl p-4 shadow-sm" style={{ backgroundColor: PARCHMENT_SIDEBAR, border: `1px solid ${BORDER}` }}>
+            <div className="mb-2.5 flex items-center gap-2" style={{ color: "#8a7355" }}>
+              <History size={13} />
+              <span className="text-[12px] font-semibold">Histórico</span>
+            </div>
+            {histSessoes.length === 0 ? (
+              <p className="text-[11px]" style={{ color: "#a0907a" }}>Termina um quiz para o veres aqui.</p>
+            ) : (
+              <ul className="space-y-2">
+                {histSessoes.slice(0, 6).map((s) => {
+                  const pct = s.totalPerguntas > 0 ? Math.round((s.acertos / s.totalPerguntas) * 100) : 0;
+                  const data = new Date(s.criadoEm).toLocaleDateString("pt-PT", { day: "numeric", month: "short" });
+                  const cor = pct >= 70 ? "#2f7d56" : pct >= 40 ? "#8a6d2a" : "#9e5a44";
+                  return (
+                    <li key={s.id} className="flex items-center gap-2.5">
+                      <span className="flex h-7 w-9 flex-shrink-0 items-center justify-center rounded-md text-[12px] font-bold tabular-nums" style={{ backgroundColor: "#fffdf7", color: cor, border: `1px solid ${BORDER}` }}>{pct}%</span>
+                      <div className="min-w-0 flex-1 leading-tight">
+                        <p className="truncate text-[12px] font-semibold" style={{ color: "#1a1a17" }}>{s.acertos}/{s.totalPerguntas} certas</p>
+                        <p className="truncate text-[10px]" style={{ color: "#a0907a" }}>{data} · {s.pontos} pts · +{s.xpGanho} XP</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
         </aside>
 
@@ -544,9 +574,9 @@ export default function Quiz({
         </AnimatePresence>
       </div>
 
-      {/* ── Footer stats bar ── */}
+      {/* ── Footer stats bar (desktop; no telemóvel vive na barra inferior) ── */}
       <div
-        className="flex items-center justify-center gap-6 px-6 py-3 xl:gap-10"
+        className="hidden lg:flex items-center justify-center gap-6 px-6 py-3 xl:gap-10"
         style={{ backgroundColor: "#1d2218" }}
       >
         <FooterStat icon={<Target size={16} className="text-[#ebd4a4]" />} label="Acertos" value={`${acertoPct}%`} />
@@ -579,14 +609,13 @@ export default function Quiz({
         onConfigChange={updateConfig}
       />
 
-      {/* ── Header inferior (telemóvel) — peça responsiva, reusa o modal de configurações ── */}
+      {/* ── Header inferior (telemóvel) — mesmos valores e design da barra do desktop ── */}
       <QuizBarraInferior
-        acertos={acertosAteAgora}
-        erros={errosAteAgora}
-        pontos={pontosAtuais}
-        tempo={tempoRestante != null ? `${tempoRestante}s` : null}
+        acertos={`${acertoPct}%`}
+        tempo={formatTempo(tempoRestante)}
+        pontos={String(pontosAtuais)}
+        erros={String(errosAteAgora)}
         onConfiguracoes={() => setConfigAberta(true)}
-        onSair={onSair}
       />
     </div>
   );

@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.20.2";
+export const APP_VERSION = "1.20.3";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.20.3",
+    data: "2026-06-20",
+    titulo: "Cabeçalho do quiz no telemóvel: mais arrumado e com histórico",
+    itens: [
+      "Deixou de haver duas barras de estatísticas no quiz: fica só uma (a que gostavas), com o mesmo desenho da barra do computador.",
+      "O cabeçalho do quiz ficou organizado: logótipo maior à esquerda (vai para a página inicial), o teu nível ao lado, depois o histórico e as configurações — botões maiores e mais fáceis de tocar. Removemos o menu que não tinha função.",
+      "O histórico passou a ter botão próprio (no telemóvel) e, no computador, aparece por baixo da Energia. Nas configurações, o «Sair do quiz» passou para o topo.",
+    ],
+  },
   {
     version: "1.20.2",
     data: "2026-06-19",
