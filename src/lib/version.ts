@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.32.0";
+export const APP_VERSION = "1.33.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.33.0",
+    data: "2026-06-21",
+    titulo: "Pesquisa de atividades corrigida e ampliada",
+    itens: [
+      "Clicar numa atividade na pesquisa (Cmd+K) agora redireciona diretamente para o classificador com a atividade já selecionada — sem ter de pesquisar novamente.",
+      "Todas as atividades do catálogo são agora mostradas na pesquisa (antes limitado a 24/30).",
+    ],
+  },
   {
     version: "1.32.0",
     data: "2026-06-21",

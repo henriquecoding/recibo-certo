@@ -118,7 +118,7 @@ const TIPO_LABEL: Record<string, string> = {
 };
 
 /** Pesquisa o catálogo de atividades (Art. 151.º + categorias). */
-export function pesquisarAtividades(q: string, limite = 24): ResultadoAtividade[] {
+export function pesquisarAtividades(q: string, limite = 120): ResultadoAtividade[] {
   const base = (ATIVIDADES as Atividade[]).map((a) => {
     const resumo = a.coef != null ? `Coeficiente ${String(a.coef).replace(".", ",")}` : (TIPO_LABEL[a.tipo] ?? a.grupo ?? "");
     return { id: a.label, label: a.label, grupo: a.grupo ?? "Atividades", tipo: a.tipo, resumo };
