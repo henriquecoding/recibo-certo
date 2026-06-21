@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.33.0";
+export const APP_VERSION = "1.34.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,18 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.34.0",
+    data: "2026-06-21",
+    titulo: "Sistema de energia corrigido e energia ilimitada",
+    itens: [
+      "Energia agora descontada ao iniciar o quiz (antes só descontava ao finalizar).",
+      "Energia ilimitada desbloqueada automaticamente ao atingir o nível 7 (Especialista IRS, 5500 XP) ou com o plano Pro.",
+      "Removido o benefício «Energia ilimitada» do plano Quiz Master (já incluído no Pro e desbloqueável por nível).",
+      "Painel de configuração do quiz reorganizado: mais compacto, energia e botão unificados, menos espaçamento vertical.",
+      "Tabela de níveis agora indica que o nível 7 desbloqueia energia ilimitada.",
+    ],
+  },
   {
     version: "1.33.0",
     data: "2026-06-21",
