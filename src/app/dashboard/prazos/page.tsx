@@ -40,11 +40,11 @@ export default function PrazosPage() {
       <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="mb-1 text-xs font-medium uppercase tracking-wider text-stone-400">Calendário fiscal · {new Date().getFullYear()}</p>
-          <h1 className="font-display text-3xl font-semibold text-stone-800">Prazos fiscais</h1>
-          <p className="mt-1 text-sm text-stone-500">As obrigações que aí vêm. Nunca mais uma coima por esquecimento.</p>
+          <h1 className="font-display text-3xl font-semibold text-stone-800 dark:text-stone-100">Prazos fiscais</h1>
+          <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">As obrigações que aí vêm. Nunca mais uma coima por esquecimento.</p>
         </div>
         {/* Alternar vista */}
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-white border border-stone-200">
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-white border border-stone-200 dark:bg-stone-900 dark:border-stone-700">
           {([
             { id: "calendario", label: "Calendário", Icon: Calendar },
             { id: "lista", label: "Lista", Icon: LayoutGrid },
@@ -55,7 +55,7 @@ export default function PrazosPage() {
               aria-pressed={vista === id}
               onClick={() => setVista(id)}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                vista === id ? "bg-brand text-white" : "text-stone-500 hover:bg-stone-50"
+                vista === id ? "bg-brand text-white" : "text-stone-500 hover:bg-stone-50 dark:text-stone-400 dark:hover:bg-stone-800"
               }`}
             >
               <Icon size={15} />
@@ -73,7 +73,7 @@ export default function PrazosPage() {
             aria-pressed={filtro === f.id}
             onClick={() => setFiltro(f.id)}
             className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-all ${
-              filtro === f.id ? "bg-brand text-white" : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
+              filtro === f.id ? "bg-brand text-white" : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300 dark:bg-stone-900 dark:border-stone-700 dark:text-stone-400 dark:hover:border-stone-600"
             }`}
           >
             {f.label}
@@ -98,7 +98,7 @@ export default function PrazosPage() {
             return (
               <li
                 key={p.id}
-                className={`p-4 rounded-2xl border flex items-center gap-4 transition-all hover:shadow-soft ${urgente ? "bg-alert-bg border-alert-border" : "bg-white border-stone-100"}`}
+                className={`p-4 rounded-2xl border flex items-center gap-4 transition-all hover:shadow-soft ${urgente ? "bg-alert-bg border-alert-border" : "bg-white border-stone-100 dark:bg-stone-900 dark:border-stone-800"}`}
               >
                 <div className="flex flex-col items-center justify-center w-14 flex-shrink-0">
                   <span className={`font-display text-xl font-semibold ${urgente ? "text-alert-text" : "text-brand"}`}>{dias}</span>
@@ -111,8 +111,8 @@ export default function PrazosPage() {
                     <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: meta.cor }} />
                     <span className="text-xs font-medium text-stone-400">{meta.label}</span>
                   </div>
-                  <div className="text-sm font-semibold text-stone-800">{p.titulo}</div>
-                  <div className="text-xs text-stone-500 mt-0.5">{p.descricao}</div>
+                  <div className="text-sm font-semibold text-stone-800 dark:text-stone-100">{p.titulo}</div>
+                  <div className="text-xs text-stone-500 mt-0.5 dark:text-stone-400">{p.descricao}</div>
                 </div>
                 <div className="text-xs text-stone-400 flex-shrink-0 text-right">
                   {new Date(p.data + "T00:00:00").toLocaleDateString("pt-PT", { day: "2-digit", month: "short" })}

@@ -33,12 +33,12 @@ export default function DistribuicaoDonut({ resumo }: { resumo: ResumoRecibos })
   const teuPct = resumo.liquido / base;
 
   return (
-    <div className="flex h-full flex-col rounded-4xl border border-stone-100 bg-white p-6 shadow-card">
-      <h2 className="mb-4 text-sm font-semibold text-stone-700">Distribuição do mês</h2>
+    <div className="flex h-full flex-col rounded-4xl border border-stone-100 bg-white p-6 shadow-card dark:bg-stone-900 dark:border-stone-800">
+      <h2 className="mb-4 text-sm font-semibold text-stone-700 dark:text-stone-200">Distribuição do mês</h2>
       <div className="flex flex-1 items-center gap-5">
         <div className="relative flex-shrink-0">
           <svg width="132" height="132" viewBox="0 0 132 132">
-            <circle cx="66" cy="66" r={r} fill="none" stroke="currentColor" className="text-stone-100" strokeWidth="16" />
+            <circle cx="66" cy="66" r={r} fill="none" stroke="currentColor" className="text-stone-100 dark:text-stone-800" strokeWidth="16" />
             {arcs.map((a) => (
               <circle
                 key={a.key}
@@ -73,8 +73,8 @@ export default function DistribuicaoDonut({ resumo }: { resumo: ResumoRecibos })
                 className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${a.cls ?? ""}`}
                 style={{ background: a.cls ? "currentColor" : a.color }}
               />
-              <span className="min-w-0 flex-1 truncate text-xs text-stone-500">{a.label}</span>
-              <span className="flex-shrink-0 text-xs font-semibold tabular-nums text-stone-700">{fmt(a.value)}</span>
+              <span className="min-w-0 flex-1 truncate text-xs text-stone-500 dark:text-stone-400">{a.label}</span>
+              <span className="flex-shrink-0 text-xs font-semibold tabular-nums text-stone-700 dark:text-stone-300">{fmt(a.value)}</span>
             </li>
           ))}
         </ul>

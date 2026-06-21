@@ -79,6 +79,7 @@ export default function EstimativaIRS({
       conjunta: prefs.conjunta,
       dependentes: prefs.dependentes,
       acumulaEmprego: prefs.acumulaEmprego,
+      isencaoSSPrimeiroAno: prefs.isencaoSSPrimeiroAno,
       regimeContabilidade: prefs.regimeContabilidade,
       coefOverride: Math.abs(coefMedia - COEFICIENTE_POR_TIPO[tipo]) > 0.01 ? coefMedia : undefined,
       deducoes: {
