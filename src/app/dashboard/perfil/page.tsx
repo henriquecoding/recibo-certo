@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { m, AnimatePresence } from "motion/react";
 import { useAuth } from "@/lib/supabase/auth";
@@ -10,7 +11,7 @@ import { useQuizProgresso } from "@/lib/store/quiz-progresso";
 import { NIVEIS } from "@/lib/quiz-fiscal/progresso";
 import { saudeFiscal } from "@/lib/insights";
 import { verificarAdmin } from "@/lib/supabase/admin";
-import { obterPerfil, guardarPerfil, type DadosPerfil } from "@/lib/supabase/profile";
+import { obterPerfil, guardarPerfil, uploadAvatar, removerAvatar, type DadosPerfil } from "@/lib/supabase/profile";
 import {
   obterCupoesUtilizador,
   ativarCupao,
@@ -44,6 +45,9 @@ import {
   Pencil,
   Gift,
   Copy,
+  ImageIcon,
+  Trash,
+  Close,
 } from "@/components/ui/Icons";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -489,6 +493,12 @@ export default function PerfilPage() {
   const [cupoesCarregado, setCupoesCarregado] = useState(false);
   const [cupaoAtivando, setCupaoAtivando] = useState<string | null>(null);
 
+  // ── Avatar state ──
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const [avatarMsg, setAvatarMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+
   // ── Load profile from Supabase ──
   useEffect(() => {
     if (!user) {
@@ -554,6 +564,45 @@ export default function PerfilPage() {
     }
   }, [user]);
 
+  // ── Avatar upload ──
+  const handleAvatarFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setAvatarUploading(true);
+    setAvatarMsg(null);
+    setAvatarMenuOpen(false);
+    const { url, erro } = await uploadAvatar(user.id, file);
+    setAvatarUploading(false);
+    if (erro) {
+      setAvatarMsg({ tipo: "erro", texto: erro });
+      setTimeout(() => setAvatarMsg(null), 4000);
+    } else if (url) {
+      setPerfil((p) => ({ ...p, avatarUrl: url }));
+      setRascunho((r) => ({ ...r, avatarUrl: url }));
+      setAvatarMsg({ tipo: "ok", texto: "Foto atualizada." });
+      setTimeout(() => setAvatarMsg(null), 3000);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, [user]);
+
+  const handleRemoveAvatar = useCallback(async () => {
+    if (!user) return;
+    setAvatarUploading(true);
+    setAvatarMsg(null);
+    setAvatarMenuOpen(false);
+    const { erro } = await removerAvatar(user.id);
+    setAvatarUploading(false);
+    if (erro) {
+      setAvatarMsg({ tipo: "erro", texto: erro });
+      setTimeout(() => setAvatarMsg(null), 4000);
+    } else {
+      setPerfil((p) => ({ ...p, avatarUrl: "" }));
+      setRascunho((r) => ({ ...r, avatarUrl: "" }));
+      setAvatarMsg({ tipo: "ok", texto: "Foto removida." });
+      setTimeout(() => setAvatarMsg(null), 3000);
+    }
+  }, [user]);
+
   const saude = useMemo(
     () => (recibosCarregado ? saudeFiscal(recibos) : { score: 0, estado: "Tranquilo" as const, fatores: [] }),
     [recibosCarregado, recibos],
@@ -604,17 +653,128 @@ export default function PerfilPage() {
           <div className="relative flex flex-col gap-5 px-5 pb-6 pt-7 sm:flex-row sm:items-center sm:gap-6 sm:px-8 sm:pt-8">
             {/* Avatar */}
             <div className="relative flex-shrink-0">
-              <div className="flex h-20 w-20 items-center justify-center rounded-3xl border-2 border-brand/20 bg-gradient-to-br from-brand to-brand-dark shadow-lift sm:h-24 sm:w-24">
-                <span className="font-display text-3xl font-semibold text-white sm:text-4xl">
-                  {(perfil.nome || user?.email || "U").charAt(0).toUpperCase()}
-                </span>
+              <div className="relative h-20 w-20 sm:h-24 sm:w-24">
+                {perfil.avatarUrl ? (
+                  <Image
+                    src={perfil.avatarUrl}
+                    alt="Foto de perfil"
+                    fill
+                    className="rounded-3xl border-2 border-brand/20 object-cover shadow-lift"
+                    sizes="96px"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center rounded-3xl border-2 border-brand/20 bg-gradient-to-br from-brand to-brand-dark shadow-lift">
+                    <span className="font-display text-3xl font-semibold text-white sm:text-4xl">
+                      {(perfil.nome || user?.email || "U").charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+
+                {avatarUploading && (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-3xl bg-black/40">
+                    <span className="h-6 w-6 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  </div>
+                )}
+
+                {/* Pro-only: photo upload button */}
+                {user && plano === "pro" && !avatarUploading && (
+                  <div className="absolute -bottom-1 -right-1 z-10">
+                    <button
+                      type="button"
+                      onClick={() => setAvatarMenuOpen((v) => !v)}
+                      aria-label="Alterar foto de perfil"
+                      aria-haspopup="menu"
+                      aria-expanded={avatarMenuOpen}
+                      className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-white bg-brand text-white shadow-sm transition-colors hover:bg-brand-dark dark:border-stone-900"
+                    >
+                      <ImageIcon size={14} />
+                    </button>
+
+                    <AnimatePresence>
+                      {avatarMenuOpen && (
+                        <>
+                          <div className="fixed inset-0 z-20" onClick={() => setAvatarMenuOpen(false)} aria-hidden />
+                          <m.div
+                            initial={{ opacity: 0, scale: 0.9, y: -4 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                            transition={{ duration: 0.15, ease: EASE }}
+                            className="absolute right-0 top-full z-30 mt-1.5 w-44 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lift dark:border-stone-700 dark:bg-stone-800"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => { setAvatarMenuOpen(false); fileInputRef.current?.click(); }}
+                              className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-xs font-medium text-stone-700 transition-colors hover:bg-stone-50 dark:text-stone-200 dark:hover:bg-stone-700"
+                            >
+                              <ImageIcon size={13} className="text-brand" />
+                              {perfil.avatarUrl ? "Trocar foto" : "Carregar foto"}
+                            </button>
+                            {perfil.avatarUrl && (
+                              <button
+                                type="button"
+                                onClick={handleRemoveAvatar}
+                                className="flex w-full items-center gap-2.5 border-t border-stone-100 px-3.5 py-2.5 text-left text-xs font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-stone-700 dark:hover:bg-red-900/20"
+                              >
+                                <Trash size={13} />
+                                Remover foto
+                              </button>
+                            )}
+                          </m.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
+
+                {/* Pro badge overlay for free users */}
+                {user && plano !== "pro" && (
+                  <Link
+                    href="/dashboard/upgrade"
+                    aria-label="Fazer upgrade para adicionar foto"
+                    className="absolute -bottom-1 -right-1 z-10 flex h-8 w-8 items-center justify-center rounded-xl border-2 border-white bg-stone-200 text-stone-400 shadow-sm transition-colors hover:bg-stone-300 dark:border-stone-900 dark:bg-stone-700"
+                  >
+                    <Lock size={12} />
+                  </Link>
+                )}
+
+                {/* Guru badge — shifts left when there's a button on the right */}
+                {isGuru && (
+                  <div className="absolute -bottom-1 -left-1 flex h-7 w-7 items-center justify-center rounded-lg border-2 border-white bg-amber-400 shadow-sm dark:border-stone-900">
+                    <Trophy size={12} className="text-amber-900" />
+                  </div>
+                )}
               </div>
-              {isGuru && (
-                <div className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-xl border-2 border-white bg-amber-400 shadow-sm dark:border-stone-900">
-                  <Trophy size={14} className="text-amber-900" />
-                </div>
-              )}
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleAvatarFile}
+                className="hidden"
+                aria-label="Selecionar foto de perfil"
+              />
             </div>
+
+            {/* Avatar feedback */}
+            <AnimatePresence>
+              {avatarMsg && (
+                <m.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className={`absolute left-5 top-2 z-20 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium shadow-sm sm:left-8 ${
+                    avatarMsg.tipo === "ok"
+                      ? "bg-brand-light text-brand-dark"
+                      : "bg-red-50 text-red-700"
+                  }`}
+                >
+                  {avatarMsg.tipo === "ok" ? <Check size={11} /> : <Target size={11} />}
+                  {avatarMsg.texto}
+                </m.div>
+              )}
+            </AnimatePresence>
 
             {/* Info */}
             <div className="min-w-0 flex-1">

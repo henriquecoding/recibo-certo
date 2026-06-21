@@ -104,7 +104,7 @@ const PRIMARIOS: NavItem[] = [
   { href: "/dashboard", label: "Visão geral", short: "Início", icon: LayoutGrid },
   { href: "/dashboard/recibos", label: "Recibos", short: "Recibos", icon: Receipt },
   { href: "/dashboard/prazos", label: "Prazos fiscais", short: "Prazos", icon: Calendar },
-  { href: "/dashboard/comparar", label: "Comparar cenários", short: "Comparar", icon: Scale },
+  { href: "/dashboard/perfil", label: "O meu perfil", short: "Perfil", icon: User },
 ];
 
 function AdminLink({ mobile }: { mobile?: boolean }) {
