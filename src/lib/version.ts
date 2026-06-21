@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.44.0";
+export const APP_VERSION = "1.45.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.45.0",
+    data: "2026-06-21",
+    titulo: "Secções «Contabilista» e «Mapa de benefícios» redesenhadas",
+    itens: [
+      "Comparar Cenários: as secções «Precisas de um contabilista?» e «Onde instalar a atividade» foram reestruturadas — novo layout em cartão unificado com cabeçalho, escala de regime com indicador visual, honorários em cards em vez de tabela e dicas de contratação numeradas.",
+      "Mapa de benefícios fiscais: região selecionada agora mostra benefícios em grelha de 2 colunas, lista de regiões com tratamento visual mais polido e secção de incentivos nacionais com ícones.",
+    ],
+  },
   {
     version: "1.44.0",
     data: "2026-06-21",

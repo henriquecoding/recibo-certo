@@ -23,7 +23,7 @@ import {
   regiaoIncentivoMaisProxima,
 } from "@/lib/incentivos-regioes";
 import { REGIOES_PRECO, PRECOS_REGIOES_VERIFICADO } from "@/lib/contabilista-regioes";
-import { MapPin, Search, Info, Plus, Minus, Crosshair, Lock, Move, Close, Spinner, Check, Receipt } from "@/components/ui/Icons";
+import { MapPin, Search, Info, Plus, Minus, Crosshair, Lock, Move, Close, Spinner, Check, Receipt, Flag } from "@/components/ui/Icons";
 import InfoTip from "@/components/ui/InfoTip";
 
 const eur0 = (n: number) =>
@@ -426,25 +426,25 @@ export default function MapaBeneficiosRegioes() {
   const ctrlOn = "border-brand bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand";
 
   return (
-    <div className="space-y-5">
-      <div className="mb-1">
-        <h3 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100">
-          Onde vale a pena instalar a atividade
-        </h3>
-        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-          Um só mapa para a região: os <strong className="font-semibold text-stone-700 dark:text-stone-200">benefícios fiscais</strong> (IRC
-          reduzido no interior, Madeira e Açores) e o <strong className="font-semibold text-stone-700 dark:text-stone-200">custo médio de
-          contabilista</strong>. Toca numa região ou procura a tua zona.
-        </p>
+    <div className="rounded-4xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 p-5 shadow-card sm:p-6 space-y-5">
+      {/* ── Cabeçalho da secção ── */}
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-light text-brand dark:bg-brand/15">
+          <MapPin size={18} />
+        </span>
+        <div>
+          <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">Onde instalar a atividade</p>
+          <p className="text-[11px] text-stone-400">Benefícios fiscais por região + custo médio de contabilista</p>
+        </div>
       </div>
 
       <div
-        className="overflow-hidden rounded-3xl border border-stone-100 shadow-card dark:border-stone-800"
+        className="overflow-hidden rounded-2xl border border-stone-100 dark:border-stone-800"
         role="application"
         aria-label="Mapa de Portugal com os benefícios fiscais por região"
       >
         <div className="relative">
-          <div ref={containerRef} className="h-[420px] w-full bg-stone-100 dark:bg-stone-900" />
+          <div ref={containerRef} className="h-[400px] w-full bg-stone-100 dark:bg-stone-900" />
 
           <div
             className="absolute left-3 right-3 top-3 z-[1000]"
@@ -558,57 +558,60 @@ export default function MapaBeneficiosRegioes() {
 
       {/* ── Região selecionada — benefícios verificados ── */}
       {regiaoSel && (
-        <div className="rounded-3xl border border-brand/20 bg-brand-light/50 p-5 dark:border-brand/20">
+        <div className="rounded-2xl border border-brand/20 bg-gradient-to-b from-brand-light/60 to-transparent dark:from-brand/8 dark:to-transparent p-5">
           <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl bg-brand text-white">
-              <MapPin size={18} />
+            <span className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand text-white shadow-sm">
+              <MapPin size={16} />
             </span>
             <div className="min-w-0 flex-1">
-              <h3 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">{regiaoSel.nome}</h3>
-              <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">{regiaoSel.referencia}</p>
-              <p className="mt-1.5 text-sm font-semibold text-brand-dark dark:text-brand">{regiaoSel.headline}</p>
+              <h3 className="text-base font-bold text-stone-800 dark:text-stone-100 leading-snug">{regiaoSel.nome}</h3>
+              <p className="text-[11px] text-stone-500 dark:text-stone-400">{regiaoSel.referencia}</p>
+              <p className="mt-1 text-sm font-semibold text-brand-dark dark:text-brand">{regiaoSel.headline}</p>
             </div>
           </div>
-          <ul className="mt-4 space-y-3">
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
             {regiaoSel.beneficios.map((b) => (
-              <li key={b.titulo} className="rounded-2xl bg-white/70 p-3.5 dark:bg-stone-900/50">
+              <div key={b.titulo} className="rounded-xl border border-stone-200/50 dark:border-stone-700/50 bg-white/80 dark:bg-stone-900/50 p-3.5">
                 <div className="flex items-start gap-2">
-                  <Check size={14} className="mt-0.5 flex-shrink-0 text-brand" />
+                  <Check size={13} className="mt-0.5 flex-shrink-0 text-brand" />
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">{b.titulo}</p>
-                    <p className="mt-0.5 text-xs leading-relaxed text-stone-600 dark:text-stone-300">{b.detalhe}</p>
+                    <p className="text-xs font-semibold text-stone-800 dark:text-stone-100">{b.titulo}</p>
+                    <p className="mt-0.5 text-[11px] leading-relaxed text-stone-600 dark:text-stone-300">{b.detalhe}</p>
                     <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-stone-400">{b.base}</p>
                   </div>
                 </div>
-              </li>
+              </div>
             ))}
-            {/* Custo de contabilista na região (avença mensal estimada) */}
             {precoPorId[regiaoSel.id] && (
-              <li className="rounded-2xl bg-white/70 p-3.5 dark:bg-stone-900/50">
+              <div className="rounded-xl border border-stone-200/50 dark:border-stone-700/50 bg-white/80 dark:bg-stone-900/50 p-3.5">
                 <div className="flex items-start gap-2">
-                  <Receipt size={14} className="mt-0.5 flex-shrink-0 text-brand" />
+                  <Receipt size={13} className="mt-0.5 flex-shrink-0 text-brand" />
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">
+                    <p className="text-xs font-semibold text-stone-800 dark:text-stone-100">
                       Contabilista: {eur0(precoPorId[regiaoSel.id].min)}–{eur0(precoPorId[regiaoSel.id].max)}/mês
                     </p>
-                    <p className="mt-0.5 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
-                      Avença mensal estimada para um trabalhador independente típico nesta região. Sociedades e
-                      contabilidade organizada custam mais.
+                    <p className="mt-0.5 text-[11px] leading-relaxed text-stone-600 dark:text-stone-300">
+                      Avença mensal estimada para independente típico. Sociedades e contabilidade organizada custam mais.
                     </p>
                     <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-stone-400">
                       Estimativa de mercado · {PRECOS_REGIOES_VERIFICADO}
                     </p>
                   </div>
                 </div>
-              </li>
+              </div>
             )}
-          </ul>
+          </div>
         </div>
       )}
 
       {/* ── Lista de regiões (acessível) ── */}
       <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Todas as regiões</p>
+        <div className="mb-3 flex items-center gap-2.5">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand/10 text-brand dark:bg-brand/15">
+            <MapPin size={14} />
+          </span>
+          <p className="text-xs font-bold uppercase tracking-[0.15em] text-stone-500 dark:text-stone-400">Todas as regiões</p>
+        </div>
         <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {regioesOrdenadas.map((r) => {
             const ativa = r.id === selecionada;
@@ -618,13 +621,13 @@ export default function MapaBeneficiosRegioes() {
                   type="button"
                   aria-pressed={ativa}
                   onClick={() => escolherRegiao(r.id)}
-                  className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-all ${
+                  className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
                     ativa
-                      ? "border-brand bg-brand-light shadow-lift dark:bg-brand/10"
-                      : "border-stone-200 bg-white hover:border-brand/40 dark:border-stone-700 dark:bg-stone-900"
+                      ? "border-brand bg-brand-light shadow-sm ring-1 ring-brand/20 dark:bg-brand/10"
+                      : "border-stone-200/70 bg-stone-50 hover:border-brand/40 hover:bg-white dark:border-stone-700 dark:bg-stone-900/50 dark:hover:bg-stone-800"
                   }`}
                 >
-                  <span className="h-3 w-3 flex-shrink-0 rounded-full" style={{ background: corPorNivel(r.nivel) }} aria-hidden />
+                  <span className="h-3 w-3 flex-shrink-0 rounded-full shadow-sm" style={{ background: corPorNivel(r.nivel) }} aria-hidden />
                   <span className="min-w-0 flex-1">
                     <span className={`block truncate text-sm font-semibold ${ativa ? "text-brand-dark dark:text-brand" : "text-stone-800 dark:text-stone-100"}`}>
                       {r.nome}
@@ -634,7 +637,11 @@ export default function MapaBeneficiosRegioes() {
                       {precoPorId[r.id] && ` · contab. ${eur0(precoPorId[r.id].min)}–${eur0(precoPorId[r.id].max)}/mês`}
                     </span>
                   </span>
-                  <span className="flex-shrink-0 rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-bold text-stone-600 dark:bg-stone-800 dark:text-stone-300">
+                  <span className={`flex-shrink-0 rounded-lg px-2 py-0.5 text-[11px] font-bold ${
+                    ativa
+                      ? "bg-brand/10 text-brand-dark dark:bg-brand/20 dark:text-brand"
+                      : "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300"
+                  }`}>
                     {r.selo}
                   </span>
                 </button>
@@ -645,14 +652,17 @@ export default function MapaBeneficiosRegioes() {
       </div>
 
       {/* ── Incentivos disponíveis em todo o país ── */}
-      <div className="rounded-3xl border border-stone-100 bg-stone-50 p-5 dark:border-stone-800 dark:bg-stone-900/50">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-          Disponíveis em todo o país
-        </p>
-        <div className="grid gap-2.5 sm:grid-cols-2">
+      <div className="rounded-2xl border border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 p-4 sm:p-5">
+        <div className="mb-3 flex items-center gap-2.5">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand/10 text-brand dark:bg-brand/15">
+            <Flag size={14} />
+          </span>
+          <p className="text-xs font-bold uppercase tracking-[0.15em] text-stone-500 dark:text-stone-400">Disponíveis em todo o país</p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
           {INCENTIVOS_NACIONAIS.map((b) => (
-            <div key={b.titulo} className="flex items-start gap-2 rounded-2xl border border-stone-100 bg-white p-3 dark:border-stone-800 dark:bg-stone-900">
-              <Check size={14} className="mt-0.5 flex-shrink-0 text-brand" />
+            <div key={b.titulo} className="flex items-start gap-2.5 rounded-xl border border-stone-200/50 dark:border-stone-700/50 bg-white dark:bg-stone-800/60 p-3.5">
+              <Check size={13} className="mt-0.5 flex-shrink-0 text-brand" />
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-stone-800 dark:text-stone-100">{b.titulo}</p>
                 <p className="mt-0.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">{b.detalhe}</p>
@@ -664,29 +674,26 @@ export default function MapaBeneficiosRegioes() {
       </div>
 
       {/* ── Nota / metodologia ── */}
-      <div className="flex items-start gap-2.5 rounded-2xl border border-stone-100 bg-stone-50 px-4 py-3 dark:border-stone-800 dark:bg-stone-900/50">
-        <Info size={14} className="mt-0.5 flex-shrink-0 text-stone-400" />
-        <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-          <strong className="text-stone-600 dark:text-stone-300">Benefícios reais com base legal</strong>, não estimativas.
-          A taxa de IRC de 12,5% aplica-se a <strong>concelhos</strong> classificados como território do interior (não a
-          uma região inteira){" "}
-          <InfoTip label="Confirma o teu concelho">
-            A lista de territórios do interior consta da Portaria n.º 208/2017. A derrama municipal (0–1,5%) também varia
-            por município. Confirma sempre o teu concelho concreto.
-          </InfoTip>
-          . Madeira e Açores têm regimes próprios que abrangem toda a região. Não substitui o aconselhamento de um
-          Contabilista Certificado. Última verificação: {INCENTIVOS_VERIFICADO}.{" "}
-          {INCENTIVOS_FONTES.map((f, i) => (
-            <span key={f.url}>
-              {i > 0 ? " · " : "Fontes: "}
-              <a href={f.url} target="_blank" rel="noopener noreferrer" className="underline decoration-stone-300 underline-offset-2 hover:text-brand">
-                {f.label}
-              </a>
-            </span>
-          ))}
-          .
-        </p>
-      </div>
+      <p className="text-[11px] leading-relaxed text-stone-400">
+        <strong className="text-stone-500 dark:text-stone-400">Benefícios reais com base legal</strong>, não estimativas.
+        A taxa de IRC de 12,5% aplica-se a concelhos classificados como território do interior (não a
+        uma região inteira){" "}
+        <InfoTip label="Confirma o teu concelho">
+          A lista de territórios do interior consta da Portaria n.º 208/2017. A derrama municipal (0–1,5%) também varia
+          por município. Confirma sempre o teu concelho concreto.
+        </InfoTip>
+        . Madeira e Açores têm regimes próprios que abrangem toda a região. Não substitui o aconselhamento de um
+        Contabilista Certificado. Verificação: {INCENTIVOS_VERIFICADO}.{" "}
+        {INCENTIVOS_FONTES.map((f, i) => (
+          <span key={f.url}>
+            {i > 0 ? " · " : "Fontes: "}
+            <a href={f.url} target="_blank" rel="noopener noreferrer" className="underline decoration-stone-300 underline-offset-2 hover:text-brand">
+              {f.label}
+            </a>
+          </span>
+        ))}
+        .
+      </p>
 
       {/* ── Notificação slide-up (toast) ── */}
       {typeof document !== "undefined" &&

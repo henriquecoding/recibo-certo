@@ -16,7 +16,7 @@ import {
 } from "@/lib/contabilista";
 import { fmt } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
-import { Check, Warning, Building, ShieldCheck } from "@/components/ui/Icons";
+import { Check, Warning, Building, ShieldCheck, FileSign, Wallet } from "@/components/ui/Icons";
 import MapaPrecosRegioes from "@/components/contabilista/MapaPrecosRegioes";
 
 const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
@@ -78,23 +78,76 @@ export function PassoContabilista({
     }`;
   const labelCls = "mb-2 block text-xs font-semibold text-stone-600 dark:text-stone-400";
 
+  const regimeAtual = faturacaoAnual < LIMITE_ISENCAO_IVA
+    ? "isento"
+    : faturacaoAnual < LIMITE_CONTAB_ORGANIZADA
+      ? "simplificado"
+      : "organizada";
+
+  const DICAS = [
+    { Icon: ShieldCheck, titulo: "Valida na OCC", texto: "Confirma que o contabilista está «Ativo» no diretório da Ordem dos Contabilistas Certificados antes de começar." },
+    { Icon: Building, titulo: "Contrato + seguro", texto: "Formaliza um contrato de prestação de serviços e confirma o seguro de responsabilidade civil profissional ativo." },
+    { Icon: Warning, titulo: "Coimas > avença", texto: "As coimas por atrasos ou erros declarativos costumam ser muito superiores ao custo de meses de avença básica." },
+  ] as const;
+
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="eyebrow mb-2 text-brand">Próximos passos</div>
-        <h2 className="font-display text-3xl font-semibold text-stone-800 dark:text-stone-100">Precisas de um contabilista?</h2>
-        <p className="mt-2 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
-          Com base na tua faturação de <strong className="text-stone-700 dark:text-stone-200">{fmt(faturacaoAnual)}/ano</strong> e
-          em mais alguns dados, dizemos-te se — e quando — vale a pena contratar um Contabilista Certificado, e quanto custa.
-        </p>
+    <div className="rounded-4xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 p-5 shadow-card sm:p-6 space-y-6">
+      {/* ── Cabeçalho da secção ── */}
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-light text-brand dark:bg-brand/15">
+          <FileSign size={18} />
+        </span>
+        <div>
+          <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">Precisas de um contabilista?</p>
+          <p className="text-[11px] text-stone-400">Diagnóstico adaptado com base na tua faturação de {fmt(faturacaoAnual)}/ano</p>
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-        {/* ── Inputs ── */}
-        <div className="rounded-3xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
-          <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">A tua situação</p>
+      {/* ── Onde te situas (regime) ── */}
+      <div className="rounded-2xl border border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 p-4 sm:p-5">
+        <p className="mb-3 text-xs font-bold uppercase tracking-[0.15em] text-stone-500 dark:text-stone-400">O teu regime</p>
+        <div className="relative">
+          <div className="flex h-2.5 overflow-hidden rounded-full">
+            <div className="bg-brand/30 dark:bg-brand/20" style={{ width: `${posIsencao}%` }} />
+            <div className="bg-alert/40 dark:bg-alert/25" style={{ width: `${posOrganizada - posIsencao}%` }} />
+            <div className="bg-clay/30 dark:bg-clay/20 flex-1" />
+          </div>
+          <div
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-5 w-5 rounded-full border-2 border-white dark:border-stone-800 shadow-sm"
+            style={{
+              left: `${pos}%`,
+              background: regimeAtual === "isento" ? "#1D9E75" : regimeAtual === "simplificado" ? "#E8D97A" : "#B45B3E",
+            }}
+            aria-hidden
+          />
+        </div>
+        <div className="mt-5 grid grid-cols-3 gap-1">
+          {([
+            { id: "isento" as const, label: "Isento de IVA", sub: `< ${fmt(LIMITE_ISENCAO_IVA)}`, cor: "text-brand" },
+            { id: "simplificado" as const, label: "Simplificado + IVA", sub: `${fmt(LIMITE_ISENCAO_IVA)} – ${fmt(LIMITE_CONTAB_ORGANIZADA)}`, cor: "text-alert-text" },
+            { id: "organizada" as const, label: "Contab. organizada", sub: `≥ ${fmt(LIMITE_CONTAB_ORGANIZADA)}`, cor: "text-clay-text" },
+          ] as const).map((r) => (
+            <div
+              key={r.id}
+              className={`rounded-xl px-2 py-2 text-center transition-all ${
+                regimeAtual === r.id
+                  ? `${r.cor} bg-white dark:bg-stone-800 shadow-sm font-semibold ring-1 ring-stone-200/60 dark:ring-stone-700`
+                  : "text-stone-400"
+              }`}
+            >
+              <p className="text-[11px] leading-tight">{r.label}</p>
+              <p className="text-[10px] tabular-nums opacity-70">{r.sub}</p>
+            </div>
+          ))}
+        </div>
+      </div>
 
-          <div className="space-y-4">
+      {/* ── Inputs + Diagnóstico ── */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Painel de inputs */}
+        <div className="rounded-2xl border border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 p-4 sm:p-5">
+          <p className="mb-4 text-xs font-bold uppercase tracking-[0.15em] text-stone-500 dark:text-stone-400">A tua situação</p>
+          <div className="space-y-3.5">
             <div>
               <span className={labelCls}>Forma jurídica</span>
               <div className="flex gap-2">
@@ -124,7 +177,7 @@ export function PassoContabilista({
 
             <div>
               <label htmlFor="desp-op" className={labelCls}>
-                Despesas da atividade por ano (€){" "}
+                Despesas de atividade (€/ano){" "}
                 <InfoTip label="Porque importa">Se as tuas despesas reais (renda, equipamento, subcontratações…) superam 25% da faturação, a contabilidade organizada pode poupar IRS.</InfoTip>
               </label>
               <input id="desp-op" type="text" inputMode="decimal" autoComplete="off" value={despesasStr} onChange={(e) => setDespesasStr(soDecimal(e.target.value))} placeholder="0" className={campo} />
@@ -138,32 +191,36 @@ export function PassoContabilista({
           </div>
         </div>
 
-        {/* ── Diagnóstico ── */}
-        <div className={`rounded-3xl border p-5 ${estilo.card}`}>
-          <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${estilo.badge}`}>
-              {diag.nivel === "obrigatorio" ? <Warning size={11} /> : <Check size={11} />}
-              {diag.rotulo}
+        {/* Painel de diagnóstico */}
+        <div className={`rounded-2xl border p-4 sm:p-5 ${estilo.card}`}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${estilo.badge}`}>
+                {diag.nivel === "obrigatorio" ? <Warning size={11} /> : <Check size={11} />}
+                {diag.rotulo}
+              </span>
+              <h3 className="mt-2.5 font-display text-lg font-semibold text-stone-800 dark:text-stone-100 leading-snug">{diag.titulo}</h3>
+            </div>
+            <div className="flex gap-1 flex-shrink-0 pt-1" aria-label={`Nível ${estilo.passos} de 5`} aria-hidden>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <span key={n} className={`h-1.5 w-5 rounded-full ${n <= estilo.passos ? estilo.barra : "bg-stone-200 dark:bg-stone-700"}`} />
+              ))}
+            </div>
+          </div>
+
+          <p className="mt-2.5 text-sm leading-relaxed text-stone-600 dark:text-stone-300">{diag.mensagem}</p>
+
+          <div className="mt-4 rounded-xl bg-white/70 dark:bg-stone-900/50 p-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Honorário estimado</p>
+              <p className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 tabular-nums leading-tight">
+                {fmt(diag.avencaMin)} – {fmt(diag.avencaMax)}
+              </p>
+              <p className="mt-0.5 text-[11px] text-stone-500 dark:text-stone-400">{diag.pontual ? "Custo único" : "Por mês"} · {diag.modelo}</p>
+            </div>
+            <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/80 dark:bg-stone-800/60">
+              <Wallet size={20} className="text-brand" />
             </span>
-          </div>
-          <h3 className="mt-3 font-display text-xl font-semibold text-stone-800 dark:text-stone-100">{diag.titulo}</h3>
-
-          {/* Medidor de necessidade (1–5) */}
-          <div className="mt-3 flex items-center gap-1.5" aria-hidden>
-            {[1, 2, 3, 4, 5].map((n) => (
-              <span key={n} className={`h-1.5 flex-1 rounded-full ${n <= estilo.passos ? estilo.barra : "bg-stone-200 dark:bg-stone-700"}`} />
-            ))}
-          </div>
-
-          <p className="mt-3 text-sm leading-relaxed text-stone-600 dark:text-stone-300">{diag.mensagem}</p>
-
-          <div className="mt-4 rounded-2xl bg-white/70 p-4 dark:bg-stone-900/50">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">Honorário estimado</p>
-            <p className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100 tabular-nums">
-              {fmt(diag.avencaMin)} – {fmt(diag.avencaMax)}
-              <span className="ml-1 text-sm font-medium text-stone-400">{diag.pontual ? "· custo único" : "/mês"}</span>
-            </p>
-            <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">{diag.modelo}</p>
           </div>
 
           {diag.motivos.length > 0 && (
@@ -179,49 +236,27 @@ export function PassoContabilista({
         </div>
       </div>
 
-      {/* ── Onde te situas (limites) ── */}
-      <div className="rounded-3xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
-        <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Onde te situas</p>
-        <div className="relative h-3 rounded-full bg-gradient-to-r from-brand/30 via-alert/50 to-clay/40">
-          <span className="absolute -top-1 h-5 w-1 -translate-x-1/2 rounded-full bg-stone-800 dark:bg-white" style={{ left: `${pos}%` }} aria-hidden />
-          <span className="absolute top-4 -translate-x-1/2 text-[10px] text-stone-400" style={{ left: `${posIsencao}%` }}>{fmt(LIMITE_ISENCAO_IVA)}</span>
-          <span className="absolute top-4 -translate-x-1/2 text-[10px] text-stone-400" style={{ left: `${posOrganizada}%` }}>{fmt(LIMITE_CONTAB_ORGANIZADA)}</span>
+      {/* ── Honorários por perfil ── */}
+      <div className="rounded-2xl border border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 p-4 sm:p-5">
+        <div className="mb-1 flex items-center gap-2.5">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand/10 text-brand dark:bg-brand/15">
+            <Wallet size={14} />
+          </span>
+          <p className="text-xs font-bold uppercase tracking-[0.15em] text-stone-500 dark:text-stone-400">Honorários por perfil</p>
         </div>
-        <div className="mt-8 grid grid-cols-3 gap-2 text-center text-[11px]">
-          <div className={faturacaoAnual < LIMITE_ISENCAO_IVA ? "font-semibold text-brand" : "text-stone-400"}>Isento de IVA<br />&lt; {fmt(LIMITE_ISENCAO_IVA)}</div>
-          <div className={faturacaoAnual >= LIMITE_ISENCAO_IVA && faturacaoAnual < LIMITE_CONTAB_ORGANIZADA ? "font-semibold text-alert-text" : "text-stone-400"}>Simplificado + IVA</div>
-          <div className={faturacaoAnual >= LIMITE_CONTAB_ORGANIZADA ? "font-semibold text-clay-text" : "text-stone-400"}>Contab. organizada<br />≥ {fmt(LIMITE_CONTAB_ORGANIZADA)}</div>
-        </div>
-      </div>
-
-      {/* ── Tabela de honorários ── */}
-      <div className="rounded-3xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
-        <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Honorários por perfil</p>
-        <p className="mb-4 text-[11px] text-stone-400">Estimativas de mercado — variam por gabinete, número de documentos e região.</p>
-        <div className="-mx-1 overflow-x-auto">
-          <table className="w-full min-w-[520px] border-collapse text-left">
-            <thead>
-              <tr className="border-b border-stone-100 dark:border-stone-800 text-[11px] uppercase tracking-wider text-stone-400">
-                <th className="px-2 py-2 font-semibold">Perfil</th>
-                <th className="px-2 py-2 font-semibold">Complexidade</th>
-                <th className="px-2 py-2 text-right font-semibold">€/mês</th>
-              </tr>
-            </thead>
-            <tbody>
-              {TABELA_HONORARIOS.map((p) => (
-                <tr key={p.perfil} className="border-b border-stone-50 dark:border-stone-800/60 align-top">
-                  <td className="px-2 py-2.5">
-                    <span className="block text-xs font-semibold text-stone-800 dark:text-stone-100">{p.perfil}</span>
-                    <span className="block text-[11px] text-stone-400">{p.regime}</span>
-                  </td>
-                  <td className="px-2 py-2.5 text-[11px] text-stone-500 dark:text-stone-400">{p.complexidade}</td>
-                  <td className="px-2 py-2.5 text-right text-xs font-semibold tabular-nums text-stone-700 dark:text-stone-200">
-                    {p.min}–{p.max}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <p className="mb-4 ml-[38px] text-[11px] text-stone-400">Estimativas de mercado — variam por gabinete, documentos e região.</p>
+        <div className="space-y-2">
+          {TABELA_HONORARIOS.map((p) => (
+            <div key={p.perfil} className="flex items-center gap-3 rounded-xl border border-stone-200/60 dark:border-stone-700/60 bg-white dark:bg-stone-800 px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-stone-800 dark:text-stone-100">{p.perfil}</p>
+                <p className="text-[11px] text-stone-400 leading-tight">{p.regime} · {p.complexidade}</p>
+              </div>
+              <span className="flex-shrink-0 rounded-lg bg-brand/8 dark:bg-brand/12 px-2.5 py-1 text-xs font-bold tabular-nums text-brand-dark dark:text-brand">
+                {p.min}–{p.max}€
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -239,21 +274,25 @@ export function PassoContabilista({
       )}
 
       {/* ── Como contratar com segurança ── */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-900/50">
-          <ShieldCheck size={16} className="text-brand" />
-          <p className="mt-2 text-xs font-semibold text-stone-700 dark:text-stone-200">Valida na OCC</p>
-          <p className="mt-1 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">Confirma que o contabilista está «Ativo» no diretório da Ordem dos Contabilistas Certificados antes de começar.</p>
+      <div>
+        <div className="mb-3 flex items-center gap-2.5">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand/10 text-brand dark:bg-brand/15">
+            <ShieldCheck size={14} />
+          </span>
+          <p className="text-xs font-bold uppercase tracking-[0.15em] text-stone-500 dark:text-stone-400">Contratação segura</p>
         </div>
-        <div className="rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-900/50">
-          <Building size={16} className="text-brand" />
-          <p className="mt-2 text-xs font-semibold text-stone-700 dark:text-stone-200">Contrato + seguro</p>
-          <p className="mt-1 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">Formaliza um contrato de prestação de serviços e confirma o seguro de responsabilidade civil profissional ativo.</p>
-        </div>
-        <div className="rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-900/50">
-          <Check size={16} className="text-brand" />
-          <p className="mt-2 text-xs font-semibold text-stone-700 dark:text-stone-200">Coimas {'>'} avença</p>
-          <p className="mt-1 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">As coimas por atrasos ou erros declarativos costumam ser muito superiores ao custo de meses de avença básica.</p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {DICAS.map((d, i) => (
+            <div key={i} className="flex items-start gap-3 rounded-2xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900/60 p-4">
+              <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 text-xs font-bold">
+                {i + 1}
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-stone-700 dark:text-stone-200">{d.titulo}</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">{d.texto}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
