@@ -35,6 +35,9 @@ export interface RegistrarSessaoResult {
   nivelNovo: NivelInfo;
 }
 
+/** Nível a partir do qual a energia é ilimitada (sem necessidade de plano pago). */
+export const NIVEL_ENERGIA_ILIMITADA = 7;
+
 export interface QuizProgressoReturn {
   xp: number;
   nivel: NivelInfo;
@@ -42,9 +45,12 @@ export interface QuizProgressoReturn {
   streakRecord: number;
   energiaRestante: number;
   energiaTotal: number;
+  /** true se o utilizador tem energia ilimitada (nível >= 7 ou Pro). */
+  energiaIlimitada: boolean;
   sessoes: SessaoHistorico[];
   carregado: boolean;
   naNuvem: boolean;
+  isPro: boolean;
 
   registrarSessao: (
     resultado: ResultadoQuiz,
@@ -119,6 +125,7 @@ export function useQuizProgresso(): QuizProgressoReturn {
   const [energiaResetAt, setEnergiaResetAt] = useState<string | null>(null);
   const [sessoes, setSessoes] = useState<SessaoHistorico[]>([]);
   const [carregado, setCarregado] = useState(false);
+  const [isPro, setIsPro] = useState(false);
 
   // ── Carga inicial ──────────────────────────────────────────────────────
 
@@ -152,14 +159,21 @@ export function useQuizProgresso(): QuizProgressoReturn {
     if (!user) return;
     const sb = getSupabase();
 
-    const [{ data: perfil }, { data: historico }] = await Promise.all([
+    const [{ data: perfil }, { data: historico }, { data: subs }] = await Promise.all([
       sb.from("quiz_profiles").select("*").eq("id", user.id).maybeSingle(),
       sb.from("quiz_sessions")
         .select("*")
         .eq("user_id", user.id)
         .order("criado_em", { ascending: false })
         .limit(50),
+      sb.from("subscriptions")
+        .select("status")
+        .eq("user_id", user.id)
+        .in("status", ["active", "trialing"])
+        .limit(1),
     ]);
+
+    setIsPro(!!(subs && subs.length > 0));
 
     if (perfil) {
       const { energia, resetAt } = calcularEnergiaAtual(
@@ -307,7 +321,11 @@ export function useQuizProgresso(): QuizProgressoReturn {
 
   // ── Consumir/refrescar energia ─────────────────────────────────────────
 
+  const nivel = nivelParaXP(xp);
+  const energiaIlimitada = isPro || nivel.nivel >= NIVEL_ENERGIA_ILIMITADA;
+
   const consumirEnergia = useCallback(() => {
+    if (energiaIlimitada) return;
     const nova = Math.max(0, energiaRestante - 1);
     setEnergiaRestante(nova);
 
@@ -322,7 +340,7 @@ export function useQuizProgresso(): QuizProgressoReturn {
       const prog = lerProgressoLocal();
       gravarProgressoLocal({ ...prog, energiaRestante: nova, energiaResetAt });
     }
-  }, [energiaRestante, energiaResetAt, naNuvem, user]);
+  }, [energiaIlimitada, energiaRestante, energiaResetAt, naNuvem, user]);
 
   const refrescarEnergia = useCallback(() => {
     const { energia, resetAt } = calcularEnergiaAtual(energiaRestante, energiaResetAt);
@@ -332,8 +350,6 @@ export function useQuizProgresso(): QuizProgressoReturn {
 
   // ── Return ─────────────────────────────────────────────────────────────
 
-  const nivel = nivelParaXP(xp);
-
   return {
     xp,
     nivel,
@@ -341,9 +357,11 @@ export function useQuizProgresso(): QuizProgressoReturn {
     streakRecord,
     energiaRestante,
     energiaTotal: ENERGIA_DIARIA,
+    energiaIlimitada,
     sessoes,
     carregado,
     naNuvem,
+    isPro,
     registrarSessao,
     adicionarXpBonus,
     consumirEnergia,

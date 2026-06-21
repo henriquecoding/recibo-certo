@@ -22,12 +22,12 @@ const PRO = [
   "Um clique e fica pronto para o teu contabilista (CSV e PDF)",
   "Mealheiro fiscal: quanto reservar este mês, automático",
   "Cenários guardados e comparáveis (recibos verdes e vencimento)",
+  "Energia ilimitada no Quiz Fiscal",
 ];
 
 const QUIZ_MASTER = [
   "Tudo do plano Pro incluído",
   "Badge exclusivo de Guru do IRS no perfil",
-  "Energia ilimitada no Quiz Fiscal",
   "Estatísticas avançadas de desempenho",
   "Acesso antecipado a novas funcionalidades",
 ];
@@ -44,7 +44,7 @@ const MATRIZ: { f: string; gratis: boolean | string; pro: boolean | string; mast
   { f: "Alertas de prazos e de erros por email", gratis: false, pro: true, master: true },
   { f: "Exportação CSV e PDF", gratis: false, pro: true, master: true },
   { f: "Mealheiro fiscal automático", gratis: false, pro: true, master: true },
-  { f: "Energia ilimitada no Quiz", gratis: false, pro: false, master: true },
+  { f: "Energia ilimitada no Quiz", gratis: false, pro: true, master: true },
   { f: "Badge exclusivo e estatísticas avançadas", gratis: false, pro: false, master: true },
   { f: "Suporte", gratis: "—", pro: "Por email", master: "Por email" },
 ];

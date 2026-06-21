@@ -1,7 +1,7 @@
 "use client";
 
 import { NIVEIS } from "@/lib/quiz-fiscal/progresso";
-import { useQuizProgresso } from "@/lib/store/quiz-progresso";
+import { useQuizProgresso, NIVEL_ENERGIA_ILIMITADA } from "@/lib/store/quiz-progresso";
 import { Trophy, Zap, Star, Target, Fire, Gift } from "@/components/ui/Icons";
 
 const QD = "#3a5232";
@@ -137,6 +137,14 @@ export default function NiveisDesafio() {
                       style={{ backgroundColor: QD }}
                     >
                       Atual
+                    </span>
+                  )}
+                  {n.nivel === NIVEL_ENERGIA_ILIMITADA && !atual && (
+                    <span
+                      className="ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                      style={{ backgroundColor: "#fef3c7", color: GOLD }}
+                    >
+                      <Fire size={8} /> Energia ilimitada
                     </span>
                   )}
                   {n.nivel === 10 && !atual && (
