@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "motion/react";
 import { BuscaTrigger } from "@/components/busca/BuscaGlobal";
@@ -20,6 +21,7 @@ import {
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { EASE } from "@/lib/motion";
 import { useAuth } from "@/lib/supabase/auth";
+import { obterPerfil } from "@/lib/supabase/profile";
 
 const SUBMENU_RECURSOS = [
   {
@@ -49,10 +51,16 @@ export default function Nav() {
   const [open, setOpen] = useState(false);
   const [recursosOpen, setRecursosOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState("");
   const pathname = usePathname();
   const lastScrollY = useRef(0);
   const openRef = useRef(false);
   const dropdownTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!user) { setAvatarUrl(""); return; }
+    obterPerfil(user.id).then((p) => setAvatarUrl(p.avatarUrl));
+  }, [user]);
 
   useEffect(() => {
     openRef.current = open;
@@ -230,9 +238,13 @@ export default function Nav() {
             <Link
               href="/dashboard/perfil"
               aria-label="O meu perfil"
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-200"
+              className="relative flex h-9 w-9 items-center justify-center rounded-xl transition-colors hover:bg-stone-100 dark:hover:bg-stone-800 overflow-hidden"
             >
-              <User size={18} />
+              {avatarUrl ? (
+                <Image src={avatarUrl} alt="Perfil" fill className="rounded-xl object-cover" sizes="36px" unoptimized />
+              ) : (
+                <User size={18} className="text-stone-400" />
+              )}
             </Link>
 
             {user ? (

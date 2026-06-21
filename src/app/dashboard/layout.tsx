@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -32,6 +33,7 @@ import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useAuth } from "@/lib/supabase/auth";
 import { SubscricaoProvider } from "@/lib/stripe/subscription";
 import { verificarAdmin } from "@/lib/supabase/admin";
+import { obterPerfil } from "@/lib/supabase/profile";
 import AccountBox from "@/components/dashboard/AccountBox";
 import { BuscaTrigger } from "@/components/busca/BuscaGlobal";
 import type { ComponentType, ReactNode } from "react";
@@ -173,6 +175,13 @@ function NavLink({
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [menuAberto, setMenuAberto] = useState(false);
+  const { user } = useAuth();
+  const [avatarUrl, setAvatarUrl] = useState("");
+
+  useEffect(() => {
+    if (!user) { setAvatarUrl(""); return; }
+    obterPerfil(user.id).then((p) => setAvatarUrl(p.avatarUrl));
+  }, [user]);
 
   // Fecha o menu ao mudar de rota.
   useEffect(() => {
@@ -258,9 +267,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <Link
               href="/dashboard/perfil"
               aria-label="Perfil"
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/10 text-brand transition-colors hover:bg-brand hover:text-white"
+              className="relative flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden bg-brand/10 text-brand transition-colors hover:bg-brand hover:text-white"
             >
-              <User size={16} />
+              {avatarUrl ? (
+                <Image src={avatarUrl} alt="Perfil" fill className="rounded-xl object-cover" sizes="36px" unoptimized />
+              ) : (
+                <User size={16} />
+              )}
             </Link>
           </div>
         </header>
