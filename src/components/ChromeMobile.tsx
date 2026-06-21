@@ -9,7 +9,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "motion/react";
 import {
-  LogoMark, Search, Menu, Close, Calculator, Scale, BookOpen, Trophy, Briefcase, Coin, LayoutGrid, ArrowRight,
+  LogoMark, Search, Menu, Close, Calculator, User, BookOpen, Trophy, Briefcase, Coin, LayoutGrid, ArrowRight,
 } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useAuth } from "@/lib/supabase/auth";
@@ -18,7 +18,7 @@ const EVENTO_ABRIR = "recibocerto:busca:abrir";
 
 const LINKS: { href: string; label: string; desc: string; icon: typeof Calculator }[] = [
   { href: "/#calculadora", label: "Simulador", desc: "Calcula o teu líquido", icon: Calculator },
-  { href: "/dashboard/comparar", label: "Comparar cenários", desc: "Recibos verdes vs empresa", icon: Scale },
+  { href: "/dashboard/perfil", label: "O meu perfil", desc: "Dados pessoais e conquistas", icon: User },
   { href: "/ferramentas", label: "Ferramentas", desc: "Simuladores e decisores", icon: Briefcase },
   { href: "/guias", label: "Guias fiscais", desc: "IRS, IVA, Segurança Social", icon: BookOpen },
   { href: "/quiz-fiscal", label: "Quiz Fiscal", desc: "Testa os teus conhecimentos", icon: Trophy },
@@ -88,9 +88,9 @@ export default function ChromeMobile() {
             <LogoMark size={26} />
           </Link>
 
-          {/* Atalho rápido: comparar cenários */}
-          <Link href="/dashboard/comparar" aria-label="Comparar cenários" className="flex h-11 w-11 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800">
-            <Scale size={20} />
+          {/* Atalho rápido: perfil */}
+          <Link href="/dashboard/perfil" aria-label="O meu perfil" className="flex h-11 w-11 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800">
+            <User size={20} />
           </Link>
 
           <button type="button" onClick={() => setMenu(true)} aria-haspopup="dialog" aria-expanded={menu} aria-label="Abrir menu" className="flex h-11 w-11 items-center justify-center rounded-lg text-stone-500 transition-colors hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800">
