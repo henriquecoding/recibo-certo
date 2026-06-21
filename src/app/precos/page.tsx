@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Nav from "@/components/Nav";
 import Precos from "@/components/Precos";
 import FAQ from "@/components/FAQ";
-import EmailCapture from "@/components/EmailCapture";
+
 import Footer from "@/components/Footer";
 import { generateBreadcrumbSchema } from "@/lib/seo";
 import { faqs } from "@/lib/faq";
@@ -77,7 +77,6 @@ export default function PrecosPage() {
         <main className="pt-8">
           <Precos />
           <FAQ />
-          <EmailCapture />
         </main>
         <Footer />
       </div>

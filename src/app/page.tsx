@@ -6,7 +6,7 @@ import CalculadoraSecao from "@/components/CalculadoraSecao";
 import Features from "@/components/Features";
 import FAQ from "@/components/FAQ";
 import Fontes from "@/components/Fontes";
-import EmailCapture from "@/components/EmailCapture";
+
 import CustoOmissao from "@/components/CustoOmissao";
 import Precos from "@/components/Precos";
 import Footer from "@/components/Footer";
@@ -72,8 +72,6 @@ export default function Home() {
           <Fontes />
 
           <FAQ />
-
-          <EmailCapture />
         </main>
         <Footer />
       </div>
