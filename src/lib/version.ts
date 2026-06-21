@@ -33,8 +33,9 @@ export const CHANGELOG: EntradaChangelog[] = [
   {
     version: "1.49.0",
     data: "2026-06-21",
-    titulo: "Página de preços simplificada",
+    titulo: "Página de investidores e limpeza de preços",
     itens: [
+      "Nova página /investidores: apresentação institucional para potenciais investidores com tese de negócio, solução, mercado, modelo de receita e conformidade.",
       "Secção verde «Plano Pro» removida da landing e da página de preços (redundante com os cards de planos).",
       "Texto do plano Quiz Master encurtado para melhor leitura no card.",
     ],
