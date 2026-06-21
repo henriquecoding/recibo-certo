@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import { m, AnimatePresence } from "motion/react";
-import { Close, ArrowRight, User, Google, Linkedin } from "@/components/ui/Icons";
+import { Close, ArrowRight, User, Google, Linkedin, Check } from "@/components/ui/Icons";
 import { useAuth } from "@/lib/supabase/auth";
+import { validarPassword } from "@/lib/validacao-password";
 
 export default function AuthModal() {
   const {
@@ -41,10 +42,18 @@ export default function AuthModal() {
     return () => window.removeEventListener("keydown", handler);
   }, [modalAberto, fecharModal]);
 
+  const errosPw = modo === "criar" && password.length > 0 ? validarPassword(password) : [];
+
   async function submeter(e: React.FormEvent) {
     e.preventDefault();
     setErro("");
     setInfo("");
+
+    if (modo === "criar") {
+      const erros = validarPassword(password);
+      if (erros.length > 0) { setErro(erros[0].mensagem); return; }
+    }
+
     setAEnviar(true);
 
     if (modo === "criar") {
@@ -186,11 +195,19 @@ export default function AuthModal() {
                     type="password"
                     required
                     autoComplete={modo === "entrar" ? "current-password" : "new-password"}
+                    minLength={modo === "criar" ? 8 : 1}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-sm text-stone-800 outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand/20 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 dark:focus:border-brand"
-                    placeholder={modo === "criar" ? "Mínimo 6 caracteres" : "A tua password"}
+                    placeholder={modo === "criar" ? "Min. 8 caract., 1 maiúscula, 1 número" : "A tua password"}
                   />
+                  {modo === "criar" && password.length > 0 && (
+                    <div className="mt-2 space-y-0.5">
+                      <ReqPw ok={!errosPw.some((e) => e.tipo === "comprimento")} texto="Mínimo 8 caracteres" />
+                      <ReqPw ok={!errosPw.some((e) => e.tipo === "maiuscula")} texto="1 letra maiúscula" />
+                      <ReqPw ok={!errosPw.some((e) => e.tipo === "numero")} texto="1 número" />
+                    </div>
+                  )}
                 </div>
 
                 {erro && (
@@ -231,5 +248,16 @@ export default function AuthModal() {
         </>
       )}
     </AnimatePresence>
+  );
+}
+
+function ReqPw({ ok, texto }: { ok: boolean; texto: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className={`flex h-3 w-3 flex-shrink-0 items-center justify-center rounded-full ${ok ? "bg-brand text-white" : "border border-stone-300 dark:border-stone-600"}`}>
+        {ok && <Check size={7} />}
+      </span>
+      <span className={`text-[10px] ${ok ? "text-brand-dark dark:text-brand" : "text-stone-400"}`}>{texto}</span>
+    </div>
   );
 }

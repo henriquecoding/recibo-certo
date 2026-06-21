@@ -32,7 +32,7 @@ export async function guardarPerfil(
 ): Promise<{ erro?: string }> {
   if (!supabaseConfigurado()) return { erro: "Serviço indisponível." };
 
-  const payload: Record<string, unknown> = { atualizado_em: new Date().toISOString() };
+  const payload: Record<string, unknown> = { id: userId, atualizado_em: new Date().toISOString() };
   if (dados.nome !== undefined) payload.nome = dados.nome || null;
   if (dados.telefone !== undefined) payload.telefone = dados.telefone || null;
   if (dados.nif !== undefined) payload.nif = dados.nif || null;
@@ -40,8 +40,7 @@ export async function guardarPerfil(
 
   const { error } = await getSupabase()
     .from("profiles")
-    .update(payload)
-    .eq("id", userId);
+    .upsert(payload, { onConflict: "id" });
 
   return error ? { erro: error.message } : {};
 }
@@ -78,8 +77,10 @@ export async function uploadAvatar(
 
   const { error: dbError } = await sb
     .from("profiles")
-    .update({ avatar_url: url, atualizado_em: new Date().toISOString() })
-    .eq("id", userId);
+    .upsert(
+      { id: userId, avatar_url: url, atualizado_em: new Date().toISOString() },
+      { onConflict: "id" },
+    );
 
   if (dbError) return { erro: dbError.message };
 
@@ -98,8 +99,10 @@ export async function removerAvatar(userId: string): Promise<{ erro?: string }> 
 
   const { error } = await sb
     .from("profiles")
-    .update({ avatar_url: null, atualizado_em: new Date().toISOString() })
-    .eq("id", userId);
+    .upsert(
+      { id: userId, avatar_url: null, atualizado_em: new Date().toISOString() },
+      { onConflict: "id" },
+    );
 
   return error ? { erro: error.message } : {};
 }

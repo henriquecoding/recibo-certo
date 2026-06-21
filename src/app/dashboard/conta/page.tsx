@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/supabase/auth";
 import { useSubscricao } from "@/lib/stripe/subscription";
 import { getSupabase } from "@/lib/supabase/client";
+import { validarPassword, type ErroPassword } from "@/lib/validacao-password";
 import {
   Check, Warning, History, BellAlert, ArrowLeft, ArrowRight,
   Lock, Eye, EyeOff,
@@ -26,6 +27,15 @@ export default function ContaPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setErro("");
+
+    if (modo === "registar") {
+      const errosPassword = validarPassword(password);
+      if (errosPassword.length > 0) {
+        setErro(errosPassword[0].mensagem);
+        return;
+      }
+    }
+
     setAProcessar(true);
     const r = modo === "entrar" ? await entrar(email, password) : await registar(email, password);
     setAProcessar(false);
@@ -167,11 +177,11 @@ export default function ContaPage() {
               type="password"
               autoComplete={modo === "entrar" ? "current-password" : "new-password"}
               required
-              minLength={6}
+              minLength={modo === "registar" ? 8 : 1}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={campo}
-              placeholder="Mínimo 6 caracteres"
+              placeholder={modo === "registar" ? "Min. 8 caract., 1 maiúscula, 1 número" : "A tua password"}
             />
           </div>
 
@@ -270,19 +280,30 @@ function SecaoSubscricao() {
 }
 
 function SecaoPassword() {
+  const { user } = useAuth();
+  const [passwordAtual, setPasswordAtual] = useState("");
   const [novaPassword, setNovaPassword] = useState("");
   const [confirmarPassword, setConfirmarPassword] = useState("");
+  const [mostrarAtual, setMostrarAtual] = useState(false);
   const [mostrarNova, setMostrarNova] = useState(false);
   const [mostrarConfirmar, setMostrarConfirmar] = useState(false);
   const [aProcessar, setAProcessar] = useState(false);
   const [msg, setMsg] = useState<{ tipo: "sucesso" | "erro"; texto: string } | null>(null);
 
+  const errosNova = novaPassword.length > 0 ? validarPassword(novaPassword) : [];
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setMsg(null);
 
-    if (novaPassword.length < 6) {
-      setMsg({ tipo: "erro", texto: "A password tem de ter pelo menos 6 caracteres." });
+    if (!passwordAtual) {
+      setMsg({ tipo: "erro", texto: "Introduz a tua password atual." });
+      return;
+    }
+
+    const erros = validarPassword(novaPassword);
+    if (erros.length > 0) {
+      setMsg({ tipo: "erro", texto: erros[0].mensagem });
       return;
     }
 
@@ -293,20 +314,30 @@ function SecaoPassword() {
 
     setAProcessar(true);
     try {
-      const { error } = await getSupabase().auth.updateUser({ password: novaPassword });
+      const sb = getSupabase();
+      const { error: loginErr } = await sb.auth.signInWithPassword({
+        email: user?.email ?? "",
+        password: passwordAtual,
+      });
+      if (loginErr) {
+        setMsg({ tipo: "erro", texto: "A password atual está incorreta." });
+        setAProcessar(false);
+        return;
+      }
+
+      const { error } = await sb.auth.updateUser({ password: novaPassword });
       if (error) {
         const m = error.message.toLowerCase();
         let texto = error.message;
         if (m.includes("same password") || m.includes("different from the old")) {
           texto = "A nova password tem de ser diferente da atual.";
-        } else if (m.includes("password should be at least")) {
-          texto = "A password tem de ter pelo menos 6 caracteres.";
         } else if (m.includes("reauthentication") || m.includes("session")) {
           texto = "Por segurança, inicia sessão novamente antes de alterar a password.";
         }
         setMsg({ tipo: "erro", texto });
       } else {
         setMsg({ tipo: "sucesso", texto: "Password alterada com sucesso." });
+        setPasswordAtual("");
         setNovaPassword("");
         setConfirmarPassword("");
       }
@@ -324,11 +355,37 @@ function SecaoPassword() {
         </span>
         <div>
           <h2 className="text-sm font-semibold text-stone-800 dark:text-stone-100">Alterar password</h2>
-          <p className="text-xs text-stone-500 dark:text-stone-400">Define uma nova password para a tua conta.</p>
+          <p className="text-xs text-stone-500 dark:text-stone-400">Introduz a tua password atual e define uma nova.</p>
         </div>
       </div>
 
       <form onSubmit={submit} className="space-y-4">
+        {/* Password atual */}
+        <div>
+          <label htmlFor="password-atual" className={rotulo}>Password atual</label>
+          <div className="relative">
+            <input
+              id="password-atual"
+              type={mostrarAtual ? "text" : "password"}
+              autoComplete="current-password"
+              required
+              value={passwordAtual}
+              onChange={(e) => setPasswordAtual(e.target.value)}
+              className={`${campo} pr-11`}
+              placeholder="A tua password atual"
+            />
+            <button
+              type="button"
+              onClick={() => setMostrarAtual((v) => !v)}
+              aria-label={mostrarAtual ? "Esconder password" : "Mostrar password"}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 transition-colors hover:text-stone-600 dark:hover:text-stone-300"
+            >
+              {mostrarAtual ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Nova password */}
         <div>
           <label htmlFor="nova-password" className={rotulo}>Nova password</label>
           <div className="relative">
@@ -337,11 +394,11 @@ function SecaoPassword() {
               type={mostrarNova ? "text" : "password"}
               autoComplete="new-password"
               required
-              minLength={6}
+              minLength={8}
               value={novaPassword}
               onChange={(e) => setNovaPassword(e.target.value)}
               className={`${campo} pr-11`}
-              placeholder="Mínimo 6 caracteres"
+              placeholder="Min. 8 caract., 1 maiúscula, 1 número"
             />
             <button
               type="button"
@@ -352,17 +409,26 @@ function SecaoPassword() {
               {mostrarNova ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
+          {/* Indicadores de requisitos */}
+          {novaPassword.length > 0 && (
+            <div className="mt-2 space-y-1">
+              <RequisitoPw ok={!errosNova.some((e) => e.tipo === "comprimento")} texto="Mínimo 8 caracteres" />
+              <RequisitoPw ok={!errosNova.some((e) => e.tipo === "maiuscula")} texto="Pelo menos 1 letra maiúscula" />
+              <RequisitoPw ok={!errosNova.some((e) => e.tipo === "numero")} texto="Pelo menos 1 número" />
+            </div>
+          )}
         </div>
 
+        {/* Confirmar nova password */}
         <div>
-          <label htmlFor="confirmar-password" className={rotulo}>Confirmar password</label>
+          <label htmlFor="confirmar-password" className={rotulo}>Confirmar nova password</label>
           <div className="relative">
             <input
               id="confirmar-password"
               type={mostrarConfirmar ? "text" : "password"}
               autoComplete="new-password"
               required
-              minLength={6}
+              minLength={8}
               value={confirmarPassword}
               onChange={(e) => setConfirmarPassword(e.target.value)}
               className={`${campo} pr-11`}
@@ -402,6 +468,17 @@ function SecaoPassword() {
           {aProcessar ? "A alterar…" : "Alterar password"}
         </button>
       </form>
+    </div>
+  );
+}
+
+function RequisitoPw({ ok, texto }: { ok: boolean; texto: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className={`flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-full ${ok ? "bg-brand text-white" : "border border-stone-300 dark:border-stone-600"}`}>
+        {ok && <Check size={8} />}
+      </span>
+      <span className={`text-[11px] ${ok ? "text-brand-dark dark:text-brand" : "text-stone-400"}`}>{texto}</span>
     </div>
   );
 }
