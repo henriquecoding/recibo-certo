@@ -32,7 +32,7 @@ const QUIZ_MASTER = [
   "Acesso antecipado a novas funcionalidades",
 ];
 
-const QUIZ_MASTER_DESC = "Criado para quem acredita que saber é poder. O Quiz Master reconhece quem domina a fiscalidade portuguesa e prova que um país mais informado começa por cada contribuinte. Chega ao topo, desbloqueia o plano e junta-te à comunidade que transforma conhecimento em confiança financeira.";
+const QUIZ_MASTER_DESC = "A maioria dos portugueses paga impostos sem perceber o que paga nem porquê. O Quiz Master existe para mudar isso: é o reconhecimento de quem decidiu dominar as regras do jogo fiscal. Quanto mais souberes, melhores decisões tomas — e menos dinheiro deixas em cima da mesa.";
 
 const MATRIZ: { f: string; gratis: boolean | string; pro: boolean | string; master: boolean | string }[] = [
   { f: "Calculadora de recibos verdes (Cat. B)", gratis: true, pro: true, master: true },
