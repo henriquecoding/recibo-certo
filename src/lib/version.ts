@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.37.0";
+export const APP_VERSION = "1.38.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.38.0",
+    data: "2026-06-21",
+    titulo: "Comparador redesenhado e CTA Pro",
+    itens: [
+      "Slider do Comparador de Cenários redesenhado com bolha flutuante, thumb com grip e dica animada «Arraste para ajustar».",
+      "Marcadores de breakeven visíveis no trilho do slider para recibos verdes e empresa.",
+      "Cartões de resultado com barras de progresso animadas e badge «Mais líquido» destacado.",
+      "Secção de email substituída por CTA de subscrição Pro com lista de benefícios, botão direto para upgrade e link para planos.",
+    ],
+  },
   {
     version: "1.37.0",
     data: "2026-06-21",
