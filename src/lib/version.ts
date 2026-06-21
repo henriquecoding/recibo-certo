@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.47.0";
+export const APP_VERSION = "1.48.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.48.0",
+    data: "2026-06-21",
+    titulo: "Correções mobile e texto Quiz Master",
+    itens: [
+      "Foto de perfil agora visível no menu mobile do Nav para utilizadores Pro.",
+      "Pesquisa global: input no topo em todas as plataformas, modal ajustado para telemóveis com safe-area e cantos arredondados.",
+      "Botão «Terminar sessão» acessível no menu do dashboard mobile, com perfil e avatar visíveis.",
+      "Plano Quiz Master: novo texto motivacional e dark mode completo no card.",
+    ],
+  },
   {
     version: "1.47.0",
     data: "2026-06-21",

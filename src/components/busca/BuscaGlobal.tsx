@@ -240,10 +240,10 @@ export default function BuscaOverlay() {
               animate={{ y: 0, scale: 1 }}
               exit={{ y: 24, scale: 0.97 }}
               transition={{ type: "spring", damping: 32, stiffness: 340 }}
-              className="pointer-events-auto flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl border border-stone-200/80 bg-white shadow-float ring-1 ring-black/5 dark:border-stone-800 dark:bg-stone-900 dark:ring-white/5 sm:max-h-[82dvh] sm:rounded-2xl"
+              className="pointer-events-auto flex max-h-[100dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border border-stone-200/80 bg-white shadow-float ring-1 ring-black/5 dark:border-stone-800 dark:bg-stone-900 dark:ring-white/5 sm:max-h-[82dvh] sm:rounded-2xl"
             >
               {/* ── Input ── */}
-              <div className="order-3 flex shrink-0 items-center gap-3 px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:order-1 sm:border-b sm:border-stone-100 sm:pb-4 dark:sm:border-stone-800">
+              <div className="order-1 flex shrink-0 items-center gap-3 border-b border-stone-100 px-5 py-4 dark:border-stone-800">
                 <Search size={20} className="flex-shrink-0 text-brand" />
                 <input
                   ref={inputRef}
@@ -273,7 +273,7 @@ export default function BuscaOverlay() {
               </div>
 
               {/* ── Category tabs ── */}
-              <div className="order-2 shrink-0 border-y border-stone-100 px-4 py-3 dark:border-stone-800 sm:border-t-0">
+              <div className="order-2 shrink-0 border-b border-stone-100 px-4 py-3 dark:border-stone-800">
                 <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {CATEGORIAS.map((c) => {
                     const ativo = categoria === c.id;
@@ -305,7 +305,7 @@ export default function BuscaOverlay() {
 
               {/* ── Filter chips (visible when searching or browsing results) ── */}
               {(temQuery || categoria === "atividades") && (
-                <div className="order-2 flex shrink-0 items-center gap-1.5 overflow-x-auto border-b border-stone-100 px-4 py-2 dark:border-stone-800 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="order-2 flex shrink-0 items-center gap-1.5 overflow-x-auto border-b border-stone-100 px-4 py-2 dark:border-stone-800 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
                   <span className="flex-shrink-0 pr-0.5 text-[10px] font-bold uppercase tracking-wider text-stone-300">Filtrar</span>
                   {FILTROS.map((f) => {
                     const on = filtro === f.id;
@@ -335,7 +335,7 @@ export default function BuscaOverlay() {
               )}
 
               {/* ── Results / Default state ── */}
-              <div className="order-1 min-h-0 flex-1 overflow-y-auto overscroll-contain sm:order-3">
+              <div className="order-3 min-h-0 flex-1 overflow-y-auto overscroll-contain">
 
                 {/* ── Default state (no query): quick access ── */}
                 {!temQuery && categoria === "ferramentas" && (
@@ -531,8 +531,11 @@ export default function BuscaOverlay() {
                 )}
               </div>
 
+              {/* safe-area mobile spacer */}
+              <div className="order-4 h-[env(safe-area-inset-bottom)] sm:hidden" aria-hidden />
+
               {/* ── Footer ── */}
-              <div className="order-4 hidden shrink-0 items-center justify-between border-t border-stone-100 px-5 py-2.5 text-[11px] text-stone-400 dark:border-stone-800 sm:flex">
+              <div className="order-5 hidden shrink-0 items-center justify-between border-t border-stone-100 px-5 py-2.5 text-[11px] text-stone-400 dark:border-stone-800 sm:flex">
                 <span>Enter abre o primeiro resultado · Esc fecha</span>
                 {temQuery && <span className="font-semibold text-brand-dark dark:text-brand">{totalResultados} resultado{totalResultados !== 1 ? "s" : ""}</span>}
               </div>

@@ -453,9 +453,15 @@ export default function Nav() {
                 {user ? (
                   <Link
                     href="/dashboard"
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-glow"
+                    className="flex w-full items-center gap-3 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-glow"
                   >
-                    <LayoutGrid size={15} />
+                    <span className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/20">
+                      {avatarUrl ? (
+                        <Image src={avatarUrl} alt="" fill className="rounded-xl object-cover" sizes="32px" unoptimized />
+                      ) : (
+                        <User size={15} />
+                      )}
+                    </span>
                     Dashboard
                   </Link>
                 ) : disponivel ? (
