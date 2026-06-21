@@ -66,26 +66,78 @@ const IRS_DIVIDENDOS = DIVIDENDOS_TAXA.value;
 const DIV_INCLUSAO_ENGLOBAMENTO = 0.5;
 const SS_EMP_TAXA = 0.2375;
 const SS_TRAB_TAXA = 0.11;
-const CUSTO_CONTABILIDADE_ANUAL = 2_400;
-const CUSTO_SOFTWARE_ANUAL = 300;
+const CUSTO_CONTABILIDADE_DEFAULT = 2_400;
+const CUSTO_SOFTWARE_DEFAULT = 300;
 const CUSTO_CONSTITUICAO_DEFAULT = 360;
 const SMN_2026 = 870;
 
-// TA simplificada (Art. 88.º CIRC)
-type TipoViaturaGuiado = "nenhuma" | "eletrica" | "phev" | "combustao";
+// TA (Art. 88.º CIRC 2026)
+type TipoViaturaGuiado =
+  | "nenhuma"
+  | "eletrica"
+  | "phev_baixo"
+  | "phev_medio"
+  | "phev_alto"
+  | "comb_baixo"
+  | "comb_medio"
+  | "comb_alto";
+
 const TA_TAXAS_GUIADO: Record<TipoViaturaGuiado, number> = {
   nenhuma: 0,
   eletrica: 0,
-  phev: 0.025,
-  combustao: 0.08,
+  phev_baixo: 0.025,
+  phev_medio: 0.075,
+  phev_alto: 0.15,
+  comb_baixo: 0.08,
+  comb_medio: 0.25,
+  comb_alto: 0.32,
 };
+
+const TIPO_VIATURA_META: Record<TipoViaturaGuiado, { label: string; sub: string }> = {
+  nenhuma: { label: "Sem viatura", sub: "0%" },
+  eletrica: { label: "Elétrica", sub: "Isenta (0%)" },
+  phev_baixo: { label: "PHEV ≤ 37.500€", sub: "2,5%" },
+  phev_medio: { label: "PHEV 37.500–45.000€", sub: "7,5%" },
+  phev_alto: { label: "PHEV > 45.000€", sub: "15%" },
+  comb_baixo: { label: "Combustão < 37.500€", sub: "8%" },
+  comb_medio: { label: "Combustão 37.500–45.000€", sub: "25%" },
+  comb_alto: { label: "Combustão ≥ 45.000€", sub: "32%" },
+};
+
 const TA_TAXA_REPRESENTACAO = 0.1;
+const TA_TAXA_AJUDAS_CUSTO = 0.05;
+const TA_TAXA_NAO_DOC = 0.5;
 const TA_AGRAVAMENTO = 0.1;
 
-// RFAI simplificado (Art. 22.º CFI)
+// RFAI (Art. 22.º–26.º CFI)
 type RegiaoRFAIGuiado = "interior" | "litoral";
 const RFAI_TAXA: Record<RegiaoRFAIGuiado, number> = { interior: 0.3, litoral: 0.1 };
+const RFAI_TAXA_EXCEDENTE = 0.1;
+const RFAI_LIMITE_INVEST = 15_000_000;
 const RFAI_LIMITE_COLETA = 0.5;
+
+// DLRR (Art. 27.º–34.º CFI)
+const DLRR_TAXA = 0.1;
+const DLRR_LIMITE_COLETA = 0.25;
+const DLRR_MAX_LUCROS = 5_000_000;
+
+// SIFIDE II (Art. 35.º–42.º CFI)
+type TipoEmpresaSifide = "startup" | "pme_jovem" | "pme_normal" | "grande";
+const SIFIDE_TAXA_BASE = 0.325;
+const SIFIDE_TAXA_INCREMENTAL = 0.5;
+const SIFIDE_MAJORACAO_PME = 0.15;
+
+const SIFIDE_META: Record<TipoEmpresaSifide, { label: string; taxa: number; sub: string }> = {
+  startup: { label: "Startup", taxa: SIFIDE_TAXA_BASE + SIFIDE_TAXA_INCREMENTAL, sub: "82,5% — sem histórico I&D" },
+  pme_jovem: { label: "PME jovem", taxa: SIFIDE_TAXA_BASE + SIFIDE_MAJORACAO_PME, sub: "47,5% — < 2 exercícios" },
+  pme_normal: { label: "PME", taxa: SIFIDE_TAXA_BASE, sub: "32,5% — taxa base" },
+  grande: { label: "Grande empresa", taxa: SIFIDE_TAXA_BASE, sub: "32,5% — taxa base" },
+};
+
+// IMI/IMT
+const IMI_TAXA_PADRAO = 0.003;
+const IMT_TAXA_COMERCIAL = 0.065;
+const IS_TAXA_AQUISICAO = 0.008;
 
 type Passo = 0 | 1 | "local" | 2 | 3 | 4 | "resultado" | "aseguir";
 
@@ -111,6 +163,25 @@ function calcularIRS(coletavel: number): number {
 
 // ─── Simulação empresa simplificada ──────────────────────────────────────────
 
+interface ResultadoTA {
+  viatura: number;
+  representacao: number;
+  ajudasCusto: number;
+  naoDocumentadas: number;
+  total: number;
+}
+
+interface ResultadoBeneficios {
+  rfai: number;
+  rfaiBruto: number;
+  dlrr: number;
+  dlrrBruto: number;
+  sifide: number;
+  sifideBruto: number;
+  rfaiContratual: number;
+  total: number;
+}
+
 interface ResultadoEmpresaGuiado {
   faturacao: number;
   despesasOper: number;
@@ -121,16 +192,33 @@ interface ResultadoEmpresaGuiado {
   totalCustos: number;
   lucroTributavel: number;
   coleta: number;
-  taTotal: number;
-  rfaiBeneficio: number;
+  ta: ResultadoTA;
+  beneficios: ResultadoBeneficios;
   ircAposBeneficios: number;
   derrama: number;
   ircTotal: number;
   lucroLiquido: number;
   dividendos: number;
+  irsDividendosLiberatoria: number;
+  irsDividendosEnglobamento: number;
   irsDividendos: number;
+  taxaMarginalGerente: number;
   liquidoGerente: number;
   taxaEfetiva: number;
+  imiAnual: number;
+  poupancaIMI: number;
+  imtOneTime: number;
+  poupancaIMT: number;
+  custoMunicipalAnual: number;
+}
+
+function calcularTaxaMarginal(coletavel: number): number {
+  const escaloes = ESCALOES_IRS.value;
+  for (let i = escaloes.length - 1; i >= 0; i--) {
+    const piso = i === 0 ? 0 : (escaloes[i - 1].ate ?? 0);
+    if (coletavel > piso) return escaloes[i].taxa;
+  }
+  return escaloes[0].taxa;
 }
 
 function simularEmpresaGuiado(
@@ -141,12 +229,33 @@ function simularEmpresaGuiado(
   distribuirDividendos: boolean,
   opcaoEnglobamento: boolean,
   incluirConstituicao: boolean,
-  tipoViatura: TipoViaturaGuiado = "nenhuma",
-  encargosViatura: number = 0,
-  despRepresentacao: number = 0,
-  emPrejuizo: boolean = false,
-  rfaiRegiao: RegiaoRFAIGuiado = "interior",
-  rfaiInvest: number = 0,
+  custoConstituicaoVal: number,
+  anosAmortizacao: number,
+  // TA
+  tipoViatura: TipoViaturaGuiado,
+  encargosViatura: number,
+  despRepresentacao: number,
+  ajudasCusto: number,
+  naoDocumentadas: number,
+  emPrejuizo: boolean,
+  excecaoPrejuizo: boolean,
+  // Benefícios
+  rfaiRegiao: RegiaoRFAIGuiado,
+  rfaiInvest: number,
+  primeirosAnos: boolean,
+  dlrrLucros: number,
+  sifideDespesas: number,
+  tipoSifide: TipoEmpresaSifide,
+  rfaiContratualValor: number,
+  // Municipal
+  temImovel: boolean,
+  vptImovel: number,
+  taxaIMI: number,
+  isencaoIMI: boolean,
+  valorAquisicao: number,
+  isencaoIMT: boolean,
+  anosAmortIMT: number,
+  // Localização
   paramLocal?: ParametrosFiscaisRegiao,
 ): ResultadoEmpresaGuiado {
   const ircPME = paramLocal?.ircPME ?? IRC_TAXA_PME.value;
@@ -156,12 +265,13 @@ function simularEmpresaGuiado(
   const salGerente = salGerenteMensal * 12;
   const ssSalGerente = salGerente * (SS_EMP_TAXA + SS_TRAB_TAXA);
   const custoConstituicao = incluirConstituicao
-    ? Math.round(CUSTO_CONSTITUICAO_DEFAULT / 3)
+    ? Math.round(custoConstituicaoVal / anosAmortizacao)
     : 0;
   const totalCustos =
     despesasOper + custosEstrutura + salGerente + ssSalGerente + custoConstituicao;
   const lucroTributavel = Math.max(0, faturacao - totalCustos);
 
+  // IRC coleta
   let coleta = 0;
   if (lucroTributavel <= IRC_LIMITE) {
     coleta = lucroTributavel * ircPME;
@@ -171,43 +281,94 @@ function simularEmpresaGuiado(
       (lucroTributavel - IRC_LIMITE) * ircGeral;
   }
 
+  // Benefícios fiscais (cascading coleta caps)
+  let rfaiBruto: number;
+  if (rfaiRegiao === "interior") {
+    const base = Math.min(rfaiInvest, RFAI_LIMITE_INVEST);
+    const excedente = Math.max(0, rfaiInvest - RFAI_LIMITE_INVEST);
+    rfaiBruto = base * RFAI_TAXA.interior + excedente * RFAI_TAXA_EXCEDENTE;
+  } else {
+    rfaiBruto = rfaiInvest * RFAI_TAXA.litoral;
+  }
+  const maxRFAI = coleta * (primeirosAnos ? 1.0 : RFAI_LIMITE_COLETA);
+  const rfai = Math.min(rfaiBruto, Math.max(0, maxRFAI));
+
+  const dlrrBase = Math.min(dlrrLucros, DLRR_MAX_LUCROS);
+  const dlrrBruto = dlrrBase * DLRR_TAXA;
+  const maxDLRR = Math.max(0, coleta - rfai) * DLRR_LIMITE_COLETA;
+  const dlrr = Math.min(dlrrBruto, maxDLRR);
+
+  const taxaSifide = SIFIDE_META[tipoSifide].taxa;
+  const sifideBruto = sifideDespesas * taxaSifide;
+  const maxSifide = Math.max(0, coleta - rfai - dlrr);
+  const sifide = Math.min(sifideBruto, maxSifide);
+
+  const benefTotal = rfai + dlrr + sifide;
+  const ircAposBase = Math.max(0, coleta - benefTotal);
+  const rfaiContratualEfetivo = Math.min(rfaiContratualValor, ircAposBase);
+  const ircAposBeneficios = Math.max(0, ircAposBase - rfaiContratualEfetivo);
+
+  const beneficios: ResultadoBeneficios = {
+    rfai, rfaiBruto, dlrr, dlrrBruto, sifide, sifideBruto,
+    rfaiContratual: rfaiContratualEfetivo,
+    total: benefTotal + rfaiContratualEfetivo,
+  };
+
   // TA (Art. 88.º CIRC)
-  const agrav = emPrejuizo ? TA_AGRAVAMENTO : 0;
+  const agrav = emPrejuizo && !excecaoPrejuizo ? TA_AGRAVAMENTO : 0;
   const taViatura =
     tipoViatura === "eletrica" || tipoViatura === "nenhuma"
       ? 0
       : encargosViatura * (TA_TAXAS_GUIADO[tipoViatura] + agrav);
   const taRepr = despRepresentacao * (TA_TAXA_REPRESENTACAO + agrav);
-  const taTotal = taViatura + taRepr;
+  const taAjudas = ajudasCusto * (TA_TAXA_AJUDAS_CUSTO + agrav);
+  const taNaoDoc = naoDocumentadas * (TA_TAXA_NAO_DOC + agrav);
+  const ta: ResultadoTA = {
+    viatura: taViatura,
+    representacao: taRepr,
+    ajudasCusto: taAjudas,
+    naoDocumentadas: taNaoDoc,
+    total: taViatura + taRepr + taAjudas + taNaoDoc,
+  };
 
-  // RFAI (Art. 22.º CFI)
-  const rfaiBruto = rfaiInvest * RFAI_TAXA[rfaiRegiao];
-  const rfaiBeneficio = Math.min(rfaiBruto, Math.max(0, coleta * RFAI_LIMITE_COLETA));
-
-  const ircAposBeneficios = Math.max(0, coleta - rfaiBeneficio);
   const derrama = lucroTributavel * derramaTaxa;
-  const ircTotal = ircAposBeneficios + taTotal + derrama;
+  const ircTotal = ircAposBeneficios + ta.total + derrama;
   const lucroLiquido = Math.max(0, lucroTributavel - ircTotal);
 
+  // Dividendos
   let dividendos = 0;
-  let irsDividendos = 0;
+  let irsDividendosLiberatoria = 0;
+  let irsDividendosEnglobamento = 0;
+  let taxaMarginalGerente = 0;
 
   if (distribuirDividendos && lucroLiquido > 0) {
     dividendos = lucroLiquido;
-    if (opcaoEnglobamento) {
-      const salarioTrib = salGerenteMensal * 12 * (1 - SS_TRAB_TAXA);
-      const irsComDiv = calcularIRS(
-        salarioTrib + dividendos * DIV_INCLUSAO_ENGLOBAMENTO,
-      );
-      const irsSoSal = calcularIRS(salarioTrib);
-      irsDividendos = Math.max(0, irsComDiv - irsSoSal);
-    } else {
-      irsDividendos = dividendos * IRS_DIVIDENDOS;
-    }
+    irsDividendosLiberatoria = dividendos * IRS_DIVIDENDOS;
+
+    const salarioTrib = salGerente * (1 - SS_TRAB_TAXA);
+    taxaMarginalGerente = calcularTaxaMarginal(salarioTrib);
+    const irsComDiv = calcularIRS(
+      salarioTrib + dividendos * DIV_INCLUSAO_ENGLOBAMENTO,
+    );
+    const irsSoSal = calcularIRS(salarioTrib);
+    irsDividendosEnglobamento = Math.max(0, irsComDiv - irsSoSal);
   }
 
-  const salarioLiq = salGerenteMensal * 12 * (1 - SS_TRAB_TAXA);
+  const irsDividendos = opcaoEnglobamento
+    ? irsDividendosEnglobamento
+    : irsDividendosLiberatoria;
+
+  const salarioLiq = salGerente * (1 - SS_TRAB_TAXA);
   const liquidoGerente = salarioLiq + (dividendos - irsDividendos);
+
+  // Municipal (IMI/IMT)
+  const imiAnual = temImovel ? vptImovel * taxaIMI : 0;
+  const poupancaIMI = temImovel && isencaoIMI ? imiAnual : 0;
+  const imtOneTime = temImovel ? valorAquisicao * (IMT_TAXA_COMERCIAL + IS_TAXA_AQUISICAO) : 0;
+  const poupancaIMT = temImovel && isencaoIMT ? imtOneTime : 0;
+  const custoMunicipalAnual = temImovel
+    ? (imiAnual - poupancaIMI) + ((imtOneTime - poupancaIMT) / anosAmortIMT)
+    : 0;
 
   return {
     faturacao,
@@ -219,16 +380,24 @@ function simularEmpresaGuiado(
     totalCustos,
     lucroTributavel,
     coleta,
-    taTotal,
-    rfaiBeneficio,
+    ta,
+    beneficios,
     ircAposBeneficios,
     derrama,
     ircTotal,
     lucroLiquido,
     dividendos,
+    irsDividendosLiberatoria,
+    irsDividendosEnglobamento,
     irsDividendos,
+    taxaMarginalGerente,
     liquidoGerente,
     taxaEfetiva: faturacao > 0 ? 1 - liquidoGerente / faturacao : 0,
+    imiAnual,
+    poupancaIMI,
+    imtOneTime,
+    poupancaIMT,
+    custoMunicipalAnual,
   };
 }
 
@@ -698,52 +867,76 @@ export default function ModoGuiadoEmpresa({
   const [despesasOper, setDespesasOper] = useState(2_000);
   const [salGerenteMensal, setSalGerenteMensal] = useState(SMN_2026);
   const [incluirConstituicao, setIncluirConstituicao] = useState(true);
+  const [custoConstituicao, setCustoConstituicao] = useState(CUSTO_CONSTITUICAO_DEFAULT);
+  const [anosAmortizacao, setAnosAmortizacao] = useState(3);
+  const [custosEstrutura, setCustosEstrutura] = useState(CUSTO_CONTABILIDADE_DEFAULT + CUSTO_SOFTWARE_DEFAULT);
 
   // Passo 3: dividendos e otimização
   const [distribuirDividendos, setDistribuirDividendos] = useState(true);
   const [opcaoEnglobamento, setOpcaoEnglobamento] = useState(false);
 
-  // Passo 4: otimização fiscal (TA, RFAI)
+  // Passo 4: otimização fiscal
+  // TA
   const [tipoViatura, setTipoViatura] = useState<TipoViaturaGuiado>("nenhuma");
   const [encargosViatura, setEncargosViatura] = useState(0);
   const [despRepresentacao, setDespRepresentacao] = useState(0);
+  const [ajudasCusto, setAjudasCusto] = useState(0);
+  const [naoDocumentadas, setNaoDocumentadas] = useState(0);
   const [emPrejuizo, setEmPrejuizo] = useState(false);
+  const [excecaoPrejuizo, setExcecaoPrejuizo] = useState(true);
+  // Benefícios
   const [rfaiRegiao, setRfaiRegiao] = useState<RegiaoRFAIGuiado>("interior");
   const [rfaiInvest, setRfaiInvest] = useState(0);
-
-  // Custos de estrutura calculados
-  const custosEstrutura = CUSTO_CONTABILIDADE_ANUAL + CUSTO_SOFTWARE_ANUAL;
+  const [primeirosAnos, setPrimeirosAnos] = useState(false);
+  const [dlrrLucros, setDlrrLucros] = useState(0);
+  const [sifideDespesas, setSifideDespesas] = useState(0);
+  const [tipoSifide, setTipoSifide] = useState<TipoEmpresaSifide>("pme_normal");
+  const [rfaiContratualValor, setRfaiContratualValor] = useState(0);
+  // Municipal
+  const [temImovelEmpresa, setTemImovelEmpresa] = useState(false);
+  const [vptImovel, setVptImovel] = useState(0);
+  const [taxaIMI, setTaxaIMI] = useState(IMI_TAXA_PADRAO);
+  const [isencaoIMI_RFAI, setIsencaoIMI_RFAI] = useState(false);
+  const [valorAquisicaoImovel, setValorAquisicaoImovel] = useState(0);
+  const [isencaoIMT_RFAI, setIsencaoIMT_RFAI] = useState(false);
+  const [anosAmortizacaoIMT, setAnosAmortizacaoIMT] = useState(10);
 
   // RFAI auto-set pela localização
   const rfaiRegiaoEfetiva = localizacao
     ? localizacao.rfaiTipo
     : rfaiRegiao;
 
+  // Args comuns para simulação
+  const simArgs = [
+    faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
+    distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
+    custoConstituicao, anosAmortizacao,
+    tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
+    naoDocumentadas, emPrejuizo, excecaoPrejuizo,
+    rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
+    dlrrLucros, sifideDespesas, tipoSifide, rfaiContratualValor,
+    temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
+    valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
+    localizacao,
+  ] as const;
+
   // Simulação principal (location-aware)
   const resultado = useMemo(
     () =>
       simularEmpresaGuiado(
-        faturacaoAnual,
-        despesasOper,
-        custosEstrutura,
-        salGerenteMensal,
-        distribuirDividendos,
-        opcaoEnglobamento,
-        incluirConstituicao,
-        tipoViatura,
-        encargosViatura,
-        despRepresentacao,
-        emPrejuizo,
-        rfaiRegiaoEfetiva,
-        rfaiInvest,
+        faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
+        distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
+        custoConstituicao, anosAmortizacao,
+        tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
+        naoDocumentadas, emPrejuizo, excecaoPrejuizo,
+        rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
+        dlrrLucros, sifideDespesas, tipoSifide, rfaiContratualValor,
+        temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
+        valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
         localizacao ?? undefined,
       ),
-    [
-      faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
-      distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
-      tipoViatura, encargosViatura, despRepresentacao, emPrejuizo,
-      rfaiRegiaoEfetiva, rfaiInvest, localizacao,
-    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    simArgs,
   );
 
   // Englobamento mais favorável?
@@ -752,24 +945,34 @@ export default function ModoGuiadoEmpresa({
       simularEmpresaGuiado(
         faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
         true, false, incluirConstituicao,
-        tipoViatura, encargosViatura, despRepresentacao, emPrejuizo,
-        rfaiRegiaoEfetiva, rfaiInvest, localizacao ?? undefined,
+        custoConstituicao, anosAmortizacao,
+        tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
+        naoDocumentadas, emPrejuizo, excecaoPrejuizo,
+        rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
+        dlrrLucros, sifideDespesas, tipoSifide, rfaiContratualValor,
+        temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
+        valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
+        localizacao ?? undefined,
       ),
-    [faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
-     incluirConstituicao, tipoViatura, encargosViatura, despRepresentacao,
-     emPrejuizo, rfaiRegiaoEfetiva, rfaiInvest, localizacao],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    simArgs,
   );
   const resultEng = useMemo(
     () =>
       simularEmpresaGuiado(
         faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
         true, true, incluirConstituicao,
-        tipoViatura, encargosViatura, despRepresentacao, emPrejuizo,
-        rfaiRegiaoEfetiva, rfaiInvest, localizacao ?? undefined,
+        custoConstituicao, anosAmortizacao,
+        tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
+        naoDocumentadas, emPrejuizo, excecaoPrejuizo,
+        rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
+        dlrrLucros, sifideDespesas, tipoSifide, rfaiContratualValor,
+        temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
+        valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
+        localizacao ?? undefined,
       ),
-    [faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
-     incluirConstituicao, tipoViatura, encargosViatura, despRepresentacao,
-     emPrejuizo, rfaiRegiaoEfetiva, rfaiInvest, localizacao],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    simArgs,
   );
   const englobamentoMelhor =
     resultEng.liquidoGerente > resultLib.liquidoGerente;
@@ -1378,43 +1581,64 @@ export default function ModoGuiadoEmpresa({
                       }
                     />
 
-                    {/* Custos fixos (informativos) */}
-                    <Collapsible title="Custos fixos obrigatórios" defaultOpen>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-stone-500 dark:text-stone-400">
-                            Contabilidade (TOC inscrito OCC)
-                          </span>
-                          <span className="font-semibold text-stone-700 dark:text-stone-200 tabular-nums">
-                            ~{fmt(CUSTO_CONTABILIDADE_ANUAL)}/ano
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-stone-500 dark:text-stone-400">
-                            Software de faturação
-                          </span>
-                          <span className="font-semibold text-stone-700 dark:text-stone-200 tabular-nums">
-                            ~{fmt(CUSTO_SOFTWARE_ANUAL)}/ano
-                          </span>
+                    <Collapsible title="Custos de estrutura" defaultOpen>
+                      <NumericSlider
+                        label="Contabilidade + software (€/ano)"
+                        value={custosEstrutura}
+                        min={1_000}
+                        max={10_000}
+                        step={200}
+                        onChange={setCustosEstrutura}
+                        presets={[1_500, 2_700, 4_000, 6_000]}
+                        tooltip={<>Contabilista Certificado (OCC) + software de faturação. Obrigatório para sociedades.</>}
+                      />
+                      <div className="mt-4 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={incluirConstituicao}
+                            onClick={() => setIncluirConstituicao(!incluirConstituicao)}
+                            className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${incluirConstituicao ? "bg-brand" : "bg-stone-300 dark:bg-stone-700"}`}
+                          >
+                            <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${incluirConstituicao ? "translate-x-4" : ""}`} />
+                          </button>
+                          <span className="text-xs text-stone-600 dark:text-stone-300">Incluir custos de constituição</span>
                         </div>
                         {incluirConstituicao && (
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-stone-500 dark:text-stone-400">
-                              Constituição (Empresa na Hora)
-                            </span>
-                            <span className="font-semibold text-stone-700 dark:text-stone-200 tabular-nums">
-                              ~{fmt(CUSTO_CONSTITUICAO_DEFAULT)} (amort. 3 anos)
-                            </span>
-                          </div>
+                          <>
+                            <NumericSlider
+                              label="Custo de constituição (€)"
+                              value={custoConstituicao}
+                              min={360}
+                              max={3_000}
+                              step={100}
+                              onChange={setCustoConstituicao}
+                              presets={[360, 800, 1_200, 2_000]}
+                              tooltip={<>Empresa na Hora (~360€). Com marca registada, advogado e capital social pode chegar a 2.000€+.</>}
+                            />
+                            <div>
+                              <div className="mb-1.5 text-[11px] font-semibold text-stone-500 dark:text-stone-400">Amortizar em:</div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {([1, 2, 3, 5] as const).map((a) => (
+                                  <button
+                                    key={a}
+                                    type="button"
+                                    aria-pressed={anosAmortizacao === a}
+                                    onClick={() => setAnosAmortizacao(a)}
+                                    className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                                      anosAmortizacao === a
+                                        ? "bg-brand text-white"
+                                        : "bg-stone-100 text-stone-500 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-400"
+                                    }`}
+                                  >
+                                    {a} ano{a > 1 ? "s" : ""} ({fmt(Math.round(custoConstituicao / a))}/ano)
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </>
                         )}
-                        <div className="border-t border-stone-100 dark:border-stone-800 pt-2 flex items-center justify-between text-xs">
-                          <span className="font-semibold text-stone-600 dark:text-stone-300">
-                            Total estrutura/ano
-                          </span>
-                          <span className="font-bold text-stone-800 dark:text-stone-100 tabular-nums">
-                            {fmt(custosEstrutura + (incluirConstituicao ? Math.round(CUSTO_CONSTITUICAO_DEFAULT / 3) : 0))}
-                          </span>
-                        </div>
                       </div>
                     </Collapsible>
                   </div>
@@ -1613,7 +1837,7 @@ export default function ModoGuiadoEmpresa({
                 </m.div>
               )}
 
-              {/* ── Passo 4: Otimização fiscal (TA + RFAI) ─────────────────── */}
+              {/* ── Passo 4: Otimização fiscal ──────────────────────────────── */}
               {passo === 4 && (
                 <m.div
                   key="passo4"
@@ -1631,41 +1855,35 @@ export default function ModoGuiadoEmpresa({
                   </p>
 
                   <div className="space-y-5">
-                    {/* Viatura da empresa */}
-                    <Collapsible title="Viatura da empresa (Tributação Autónoma)" defaultOpen={tipoViatura !== "nenhuma"}>
+                    {/* ── Tributação Autónoma ─────────────────────────────── */}
+                    <Collapsible title="Tributação Autónoma (Art. 88.º CIRC)" defaultOpen={tipoViatura !== "nenhuma"}>
                       <div className="mb-3">
                         <div className="mb-2 text-xs font-semibold text-stone-600 dark:text-stone-300">
-                          Tipo de viatura
+                          Viatura da empresa
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          {([
-                            { v: "nenhuma" as const, l: "Sem viatura", sub: "0%" },
-                            { v: "eletrica" as const, l: "Elétrica", sub: "Isenta (0%)" },
-                            { v: "phev" as const, l: "Plug-in (PHEV)", sub: "2,5%" },
-                            { v: "combustao" as const, l: "Combustão", sub: "8%" },
-                          ]).map(({ v, l, sub }) => (
-                            <button
-                              key={v}
-                              type="button"
-                              aria-pressed={tipoViatura === v}
-                              onClick={() => {
-                                setTipoViatura(v);
-                                if (v === "nenhuma" || v === "eletrica") setEncargosViatura(0);
-                              }}
-                              className={`rounded-2xl border-2 p-3 text-left transition-all ${
-                                tipoViatura === v
-                                  ? "border-brand bg-brand-light/30 dark:bg-brand/5"
-                                  : "border-stone-100 bg-white hover:border-stone-200 dark:border-stone-800 dark:bg-stone-900"
-                              }`}
-                            >
-                              <div className={`text-xs font-bold ${tipoViatura === v ? "text-brand-dark dark:text-brand" : "text-stone-600 dark:text-stone-300"}`}>
-                                {l}
-                              </div>
-                              <div className={`text-[10px] mt-0.5 ${tipoViatura === v ? "text-brand/70" : "text-stone-400"}`}>
-                                {sub}
-                              </div>
-                            </button>
-                          ))}
+                        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                          {(Object.keys(TIPO_VIATURA_META) as TipoViaturaGuiado[]).map((v) => {
+                            const m = TIPO_VIATURA_META[v];
+                            return (
+                              <button
+                                key={v}
+                                type="button"
+                                aria-pressed={tipoViatura === v}
+                                onClick={() => {
+                                  setTipoViatura(v);
+                                  if (v === "nenhuma" || v === "eletrica") setEncargosViatura(0);
+                                }}
+                                className={`rounded-xl border-2 p-2 text-left transition-all ${
+                                  tipoViatura === v
+                                    ? "border-brand bg-brand-light/30 dark:bg-brand/5"
+                                    : "border-stone-100 bg-white hover:border-stone-200 dark:border-stone-800 dark:bg-stone-900"
+                                }`}
+                              >
+                                <div className={`text-[10px] font-bold leading-tight ${tipoViatura === v ? "text-brand-dark dark:text-brand" : "text-stone-600 dark:text-stone-300"}`}>{m.label}</div>
+                                <div className={`text-[9px] mt-0.5 ${tipoViatura === v ? "text-brand/70" : "text-stone-400"}`}>{m.sub}</div>
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
 
@@ -1693,35 +1911,69 @@ export default function ModoGuiadoEmpresa({
                         tooltip={<>Refeições com clientes, viagens de representação. TA 10% (Art. 88.º n.º 7 CIRC).</>}
                       />
 
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="emPrejuizo"
-                          checked={emPrejuizo}
-                          onChange={(e) => setEmPrejuizo(e.target.checked)}
-                          className="h-4 w-4 rounded border-stone-300 accent-brand"
-                        />
-                        <label htmlFor="emPrejuizo" className="text-xs text-stone-600 dark:text-stone-300">
-                          Empresa em prejuízo fiscal (agravamento +10pp)
-                        </label>
-                        <InfoTip>Art. 88.º n.º 14 CIRC — todas as taxas de TA sobem 10 pontos percentuais quando a empresa apresenta prejuízo fiscal.</InfoTip>
+                      <NumericSlider
+                        label="Ajudas de custo / km em viatura própria (€/ano)"
+                        value={ajudasCusto}
+                        min={0}
+                        max={5_000}
+                        step={100}
+                        onChange={setAjudasCusto}
+                        presets={[0, 500, 1_000, 2_000]}
+                        tooltip={<>Compensação por deslocações em viatura própria do sócio/colaborador. TA 5% (Art. 88.º n.º 9 CIRC).</>}
+                      />
+
+                      <NumericSlider
+                        label="Despesas não documentadas (€/ano)"
+                        value={naoDocumentadas}
+                        min={0}
+                        max={2_000}
+                        step={50}
+                        onChange={setNaoDocumentadas}
+                        presets={[0, 200, 500, 1_000]}
+                        tooltip={<>Despesas sem documento fiscal válido. TA 50% (Art. 88.º n.º 1 CIRC). Evitar ao máximo.</>}
+                      />
+
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <input type="checkbox" id="emPrejuizo" checked={emPrejuizo} onChange={(e) => setEmPrejuizo(e.target.checked)} className="h-4 w-4 rounded border-stone-300 accent-brand" />
+                          <label htmlFor="emPrejuizo" className="text-xs text-stone-600 dark:text-stone-300">
+                            Empresa em prejuízo fiscal (agravamento +10pp)
+                          </label>
+                          <InfoTip>Art. 88.º n.º 14 CIRC — todas as taxas de TA sobem 10 pontos percentuais quando a empresa apresenta prejuízo fiscal.</InfoTip>
+                        </div>
+                        {emPrejuizo && (
+                          <div className="ml-6 flex items-center gap-2">
+                            <input type="checkbox" id="excecaoPrejuizo" checked={excecaoPrejuizo} onChange={(e) => setExcecaoPrejuizo(e.target.checked)} className="h-4 w-4 rounded border-stone-300 accent-brand" />
+                            <label htmlFor="excecaoPrejuizo" className="text-xs text-stone-500 dark:text-stone-400">
+                              Lucro em pelo menos 1 dos 3 anos anteriores OU primeiros 3 anos de atividade
+                            </label>
+                            <InfoTip>Art. 88.º n.º 14 CIRC (OE2026) — exceção ao agravamento. Se aplica, as taxas de TA mantêm-se normais mesmo em prejuízo.</InfoTip>
+                          </div>
+                        )}
                       </div>
 
-                      {resultado.taTotal > 0 && (
-                        <div className="mt-2 flex items-center justify-between rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 dark:bg-amber-900/20 dark:border-amber-800">
-                          <span className="text-[11px] text-amber-700 dark:text-amber-300">Tributação Autónoma estimada</span>
-                          <span className="text-[11px] font-bold tabular-nums text-amber-700 dark:text-amber-300">{fmt(Math.round(resultado.taTotal))}</span>
+                      {resultado.ta.total > 0 && (
+                        <div className="mt-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 dark:bg-amber-900/20 dark:border-amber-800">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">Tributação Autónoma total</span>
+                            <span className="text-[11px] font-bold tabular-nums text-amber-700 dark:text-amber-300">{fmt(Math.round(resultado.ta.total))}</span>
+                          </div>
+                          <div className="space-y-0.5 text-[10px] text-amber-600 dark:text-amber-400">
+                            {resultado.ta.viatura > 0 && <div className="flex justify-between"><span>Viatura ({pct(TA_TAXAS_GUIADO[tipoViatura])})</span><span>{fmt(Math.round(resultado.ta.viatura))}</span></div>}
+                            {resultado.ta.representacao > 0 && <div className="flex justify-between"><span>Representação (10%)</span><span>{fmt(Math.round(resultado.ta.representacao))}</span></div>}
+                            {resultado.ta.ajudasCusto > 0 && <div className="flex justify-between"><span>Ajudas de custo (5%)</span><span>{fmt(Math.round(resultado.ta.ajudasCusto))}</span></div>}
+                            {resultado.ta.naoDocumentadas > 0 && <div className="flex justify-between"><span>Não documentadas (50%)</span><span>{fmt(Math.round(resultado.ta.naoDocumentadas))}</span></div>}
+                          </div>
                         </div>
                       )}
                     </Collapsible>
 
-                    {/* RFAI */}
-                    <Collapsible title="RFAI — Benefício ao investimento" defaultOpen={rfaiInvest > 0}>
+                    {/* ── RFAI ────────────────────────────────────────── */}
+                    <Collapsible title="RFAI — Regime Fiscal de Apoio ao Investimento" defaultOpen={rfaiInvest > 0}>
                       <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed mb-3">
-                        O RFAI (Art. 22.º CFI) permite deduzir ao IRC uma
-                        percentagem do investimento elegível (equipamentos,
-                        ativos intangíveis). Até 50% da coleta (100% nos
-                        primeiros 3 exercícios).
+                        Art. 22.º–26.º CFI — deduz ao IRC uma percentagem do investimento
+                        elegível (equipamentos, ativos intangíveis). Interior/Ilhas: 30%
+                        (até 15M) + 10% (excedente). Lisboa/Algarve: 10% flat.
                       </p>
                       {localizacao && (
                         <div className="mb-3 flex items-center gap-2 rounded-xl bg-brand-light/30 border border-brand/20 px-3 py-2">
@@ -1733,25 +1985,14 @@ export default function ModoGuiadoEmpresa({
                       )}
                       {!localizacao && (
                         <div className="mb-3">
-                          <div className="mb-2 text-xs font-semibold text-stone-600 dark:text-stone-300">
-                            Região do investimento
-                          </div>
+                          <div className="mb-2 text-xs font-semibold text-stone-600 dark:text-stone-300">Região do investimento</div>
                           <div className="grid grid-cols-2 gap-2">
                             {([
                               { v: "interior" as const, l: "Interior", sub: "Norte, Centro, Alentejo, Ilhas — 30%" },
                               { v: "litoral" as const, l: "Litoral", sub: "Lisboa, Algarve — 10%" },
                             ]).map(({ v, l, sub }) => (
-                              <button
-                                key={v}
-                                type="button"
-                                aria-pressed={rfaiRegiao === v}
-                                onClick={() => setRfaiRegiao(v)}
-                                className={`rounded-2xl border-2 p-3 text-left transition-all ${
-                                  rfaiRegiao === v
-                                    ? "border-brand bg-brand-light/30 dark:bg-brand/5"
-                                    : "border-stone-100 bg-white hover:border-stone-200 dark:border-stone-800 dark:bg-stone-900"
-                                }`}
-                              >
+                              <button key={v} type="button" aria-pressed={rfaiRegiao === v} onClick={() => setRfaiRegiao(v)}
+                                className={`rounded-2xl border-2 p-3 text-left transition-all ${rfaiRegiao === v ? "border-brand bg-brand-light/30 dark:bg-brand/5" : "border-stone-100 bg-white hover:border-stone-200 dark:border-stone-800 dark:bg-stone-900"}`}>
                                 <div className={`text-xs font-bold ${rfaiRegiao === v ? "text-brand-dark dark:text-brand" : "text-stone-600 dark:text-stone-300"}`}>{l}</div>
                                 <div className={`text-[10px] mt-0.5 ${rfaiRegiao === v ? "text-brand/70" : "text-stone-400"}`}>{sub}</div>
                               </button>
@@ -1759,42 +2000,176 @@ export default function ModoGuiadoEmpresa({
                           </div>
                         </div>
                       )}
-                      <NumericSlider
-                        label="Investimento elegível RFAI (€)"
-                        value={rfaiInvest}
-                        min={0}
-                        max={100_000}
-                        step={1_000}
-                        onChange={setRfaiInvest}
-                        presets={[0, 10_000, 25_000, 50_000]}
+                      <NumericSlider label="Investimento elegível RFAI (€)" value={rfaiInvest} min={0} max={500_000} step={5_000} onChange={setRfaiInvest} presets={[0, 25_000, 50_000, 100_000]}
                         tooltip={<>Equipamentos, ativos intangíveis elegíveis. O benefício abate ao IRC (coleta).</>}
                       />
-                      {rfaiInvest > 0 && resultado.rfaiBeneficio > 0 && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <input type="checkbox" id="primeirosAnos" checked={primeirosAnos} onChange={(e) => setPrimeirosAnos(e.target.checked)} className="h-4 w-4 rounded border-stone-300 accent-brand" />
+                        <label htmlFor="primeirosAnos" className="text-xs text-stone-600 dark:text-stone-300">Primeiros 3 períodos de atividade (limite RFAI sobe de 50% para 100% da coleta)</label>
+                      </div>
+                      {rfaiInvest > 0 && resultado.beneficios.rfai > 0 && (
                         <div className="mt-2 flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 dark:bg-emerald-900/20 dark:border-emerald-800">
-                          <span className="text-[11px] text-emerald-700 dark:text-emerald-300">
-                            Poupança RFAI ({pct(RFAI_TAXA[rfaiRegiaoEfetiva])} de {fmt(rfaiInvest)})
-                          </span>
-                          <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
-                            -{fmt(Math.round(resultado.rfaiBeneficio))}
-                          </span>
+                          <span className="text-[11px] text-emerald-700 dark:text-emerald-300">Poupança RFAI ({pct(RFAI_TAXA[rfaiRegiaoEfetiva])} de {fmt(rfaiInvest)})</span>
+                          <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">-{fmt(Math.round(resultado.beneficios.rfai))}</span>
                         </div>
                       )}
                     </Collapsible>
+
+                    {/* ── DLRR ────────────────────────────────────────── */}
+                    <Collapsible title="DLRR — Lucros Retidos e Reinvestidos" defaultOpen={dlrrLucros > 0}>
+                      <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed mb-3">
+                        Art. 27.º–34.º CFI — PME e Small Mid Cap podem deduzir 10% dos
+                        lucros retidos e reinvestidos em ativos elegíveis (máx. 5M€).
+                        Limite: 25% da coleta IRC. Reportável 12 exercícios.
+                      </p>
+                      <NumericSlider label="Lucros retidos reinvestidos (€)" value={dlrrLucros} min={0} max={200_000} step={5_000} onChange={setDlrrLucros} presets={[0, 20_000, 50_000, 100_000]}
+                        tooltip={<>Lucros do exercício anterior retidos e reinvestidos em ativos elegíveis nos 4 anos seguintes.</>}
+                      />
+                      {dlrrLucros > 0 && resultado.beneficios.dlrr > 0 && (
+                        <div className="mt-2 flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 dark:bg-emerald-900/20 dark:border-emerald-800">
+                          <span className="text-[11px] text-emerald-700 dark:text-emerald-300">Poupança DLRR (10% de {fmt(dlrrLucros)}, máx 25% coleta)</span>
+                          <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">-{fmt(Math.round(resultado.beneficios.dlrr))}</span>
+                        </div>
+                      )}
+                    </Collapsible>
+
+                    {/* ── SIFIDE II ───────────────────────────────────── */}
+                    <Collapsible title="SIFIDE II — Incentivos à I&D" defaultOpen={sifideDespesas > 0}>
+                      <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed mb-3">
+                        Art. 35.º–42.º CFI — dedução à coleta de IRC de 32,5% a 82,5%
+                        das despesas elegíveis com Investigação e Desenvolvimento.
+                        Certificação ANI necessária. Reportável 12 exercícios.
+                      </p>
+                      <div className="mb-3">
+                        <div className="mb-2 text-xs font-semibold text-stone-600 dark:text-stone-300">Tipo de empresa</div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {(Object.keys(SIFIDE_META) as TipoEmpresaSifide[]).map((t) => {
+                            const meta = SIFIDE_META[t];
+                            return (
+                              <button key={t} type="button" aria-pressed={tipoSifide === t} onClick={() => setTipoSifide(t)}
+                                className={`rounded-xl border-2 p-2 text-left transition-all ${tipoSifide === t ? "border-brand bg-brand-light/30 dark:bg-brand/5" : "border-stone-100 bg-white hover:border-stone-200 dark:border-stone-800 dark:bg-stone-900"}`}>
+                                <div className={`text-[10px] font-bold ${tipoSifide === t ? "text-brand-dark dark:text-brand" : "text-stone-600 dark:text-stone-300"}`}>{meta.label}</div>
+                                <div className={`text-[9px] mt-0.5 ${tipoSifide === t ? "text-brand/70" : "text-stone-400"}`}>{meta.sub}</div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <NumericSlider label="Despesas I&D elegíveis (€/ano)" value={sifideDespesas} min={0} max={200_000} step={5_000} onChange={setSifideDespesas} presets={[0, 10_000, 30_000, 50_000]}
+                        tooltip={<>Pessoal investigador, aquisição de equipamento I&D, patentes, subcontratação. Certificação ANI obrigatória.</>}
+                      />
+                      {sifideDespesas > 0 && resultado.beneficios.sifide > 0 && (
+                        <div className="mt-2 flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 dark:bg-emerald-900/20 dark:border-emerald-800">
+                          <span className="text-[11px] text-emerald-700 dark:text-emerald-300">Poupança SIFIDE ({pct(SIFIDE_META[tipoSifide].taxa)} de {fmt(sifideDespesas)})</span>
+                          <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">-{fmt(Math.round(resultado.beneficios.sifide))}</span>
+                        </div>
+                      )}
+                    </Collapsible>
+
+                    {/* ── RFAI Contratual ─────────────────────────────── */}
+                    <Collapsible title="RFAI Contratual (investimento >= 3M)" defaultOpen={rfaiContratualValor > 0}>
+                      <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed mb-3">
+                        Art. 8.º–22.º CFI — para investimentos de grande dimensão,
+                        negociado com IAPMEI/AICEP. Crédito fiscal adicional que
+                        se aplica após RFAI + DLRR + SIFIDE. O valor é acordado caso a caso.
+                      </p>
+                      <NumericSlider label="Crédito fiscal contratual (€/ano)" value={rfaiContratualValor} min={0} max={500_000} step={10_000} onChange={setRfaiContratualValor} presets={[0, 50_000, 100_000, 250_000]}
+                        tooltip={<>Valor anual do benefício negociado. Aplica-se após os restantes benefícios, limitado ao IRC remanescente.</>}
+                      />
+                    </Collapsible>
+
+                    {/* ── Impostos Municipais (IMI/IMT) ───────────────── */}
+                    <Collapsible title="Imóvel da empresa (IMI/IMT)" defaultOpen={temImovelEmpresa}>
+                      <div className="flex items-center gap-3 mb-3">
+                        <button type="button" role="switch" aria-checked={temImovelEmpresa} onClick={() => setTemImovelEmpresa(!temImovelEmpresa)}
+                          className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${temImovelEmpresa ? "bg-brand" : "bg-stone-300 dark:bg-stone-700"}`}>
+                          <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${temImovelEmpresa ? "translate-x-4" : ""}`} />
+                        </button>
+                        <span className="text-xs text-stone-600 dark:text-stone-300">A empresa tem ou vai adquirir imóvel próprio</span>
+                      </div>
+                      {temImovelEmpresa && (
+                        <div className="space-y-4">
+                          <NumericSlider label="Valor Patrimonial Tributário — VPT (€)" value={vptImovel} min={0} max={2_000_000} step={10_000} onChange={setVptImovel} presets={[50_000, 150_000, 300_000, 500_000]}
+                            tooltip={<>Consta na caderneta predial. O IMI incide sobre este valor.</>}
+                          />
+                          <div>
+                            <div className="mb-1.5 text-[11px] font-semibold text-stone-500 dark:text-stone-400">Taxa IMI municipal</div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {([0.003, 0.0035, 0.004, 0.0045]).map((t) => (
+                                <button key={t} type="button" aria-pressed={taxaIMI === t} onClick={() => setTaxaIMI(t)}
+                                  className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${taxaIMI === t ? "bg-brand text-white" : "bg-stone-100 text-stone-500 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-400"}`}>
+                                  {pct(t)}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          {vptImovel > 0 && (
+                            <div className="flex justify-between text-xs text-stone-500">
+                              <span>IMI anual estimado</span>
+                              <span className="font-semibold tabular-nums">{fmt(Math.round(vptImovel * taxaIMI))}/ano</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <input type="checkbox" id="isencaoIMI" checked={isencaoIMI_RFAI} onChange={(e) => setIsencaoIMI_RFAI(e.target.checked)} className="h-4 w-4 rounded border-stone-300 accent-emerald-500" />
+                            <label htmlFor="isencaoIMI" className="text-xs text-stone-600 dark:text-stone-300">Isenção IMI via RFAI (até 10 anos, aprovação municipal)</label>
+                          </div>
+
+                          <div className="border-t border-stone-100 dark:border-stone-800 pt-3">
+                            <NumericSlider label="Valor de aquisição do imóvel (€)" value={valorAquisicaoImovel} min={0} max={5_000_000} step={25_000} onChange={setValorAquisicaoImovel} presets={[0, 100_000, 250_000, 500_000]}
+                              tooltip={<>IMT (6,5%) + Imposto de Selo (0,8%) incidem sobre este valor na transmissão.</>}
+                            />
+                            {valorAquisicaoImovel > 0 && (
+                              <div className="mt-1 flex justify-between text-xs text-stone-500">
+                                <span>IMT + IS one-time</span>
+                                <span className="font-semibold tabular-nums">{fmt(Math.round(valorAquisicaoImovel * (IMT_TAXA_COMERCIAL + IS_TAXA_AQUISICAO)))}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                              <input type="checkbox" id="isencaoIMT" checked={isencaoIMT_RFAI} onChange={(e) => setIsencaoIMT_RFAI(e.target.checked)} className="h-4 w-4 rounded border-stone-300 accent-emerald-500" />
+                              <label htmlFor="isencaoIMT" className="text-xs text-stone-600 dark:text-stone-300">Isenção IMT + IS via RFAI (projeto reconhecido)</label>
+                            </div>
+                            {valorAquisicaoImovel > 0 && (
+                              <div className="mt-2">
+                                <div className="mb-1.5 text-[11px] font-semibold text-stone-500 dark:text-stone-400">Amortizar IMT em:</div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {([5, 10, 15, 20]).map((a) => (
+                                    <button key={a} type="button" aria-pressed={anosAmortizacaoIMT === a} onClick={() => setAnosAmortizacaoIMT(a)}
+                                      className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${anosAmortizacaoIMT === a ? "bg-brand text-white" : "bg-stone-100 text-stone-500 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-400"}`}>
+                                      {a} anos
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </Collapsible>
+
+                    {/* Resumo benefícios */}
+                    {resultado.beneficios.total > 0 && (
+                      <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3 dark:bg-emerald-900/20 dark:border-emerald-800">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">Total de benefícios fiscais</span>
+                          <span className="text-xs font-bold tabular-nums text-emerald-700 dark:text-emerald-300">-{fmt(Math.round(resultado.beneficios.total))}</span>
+                        </div>
+                        <div className="space-y-0.5 text-[10px] text-emerald-600 dark:text-emerald-400">
+                          {resultado.beneficios.rfai > 0 && <div className="flex justify-between"><span>RFAI</span><span>-{fmt(Math.round(resultado.beneficios.rfai))}{resultado.beneficios.rfaiBruto > resultado.beneficios.rfai ? ` (bruto ${fmt(Math.round(resultado.beneficios.rfaiBruto))}, limitado à coleta)` : ""}</span></div>}
+                          {resultado.beneficios.dlrr > 0 && <div className="flex justify-between"><span>DLRR</span><span>-{fmt(Math.round(resultado.beneficios.dlrr))}{resultado.beneficios.dlrrBruto > resultado.beneficios.dlrr ? ` (bruto ${fmt(Math.round(resultado.beneficios.dlrrBruto))})` : ""}</span></div>}
+                          {resultado.beneficios.sifide > 0 && <div className="flex justify-between"><span>SIFIDE II</span><span>-{fmt(Math.round(resultado.beneficios.sifide))}{resultado.beneficios.sifideBruto > resultado.beneficios.sifide ? ` (bruto ${fmt(Math.round(resultado.beneficios.sifideBruto))})` : ""}</span></div>}
+                          {resultado.beneficios.rfaiContratual > 0 && <div className="flex justify-between"><span>RFAI Contratual</span><span>-{fmt(Math.round(resultado.beneficios.rfaiContratual))}</span></div>}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="mt-6 flex gap-3">
-                    <button
-                      type="button"
-                      onClick={recuar}
-                      className="flex items-center gap-1.5 rounded-xl border border-stone-200 px-4 py-2.5 text-xs font-semibold text-stone-500 transition-colors hover:border-stone-300 dark:border-stone-700 dark:text-stone-400"
-                    >
+                    <button type="button" onClick={recuar}
+                      className="flex items-center gap-1.5 rounded-xl border border-stone-200 px-4 py-2.5 text-xs font-semibold text-stone-500 transition-colors hover:border-stone-300 dark:border-stone-700 dark:text-stone-400">
                       <ArrowLeft size={14} /> Voltar
                     </button>
-                    <button
-                      type="button"
-                      onClick={avancar}
-                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand py-2.5 text-sm font-bold text-white transition-all hover:bg-brand-dark"
-                    >
+                    <button type="button" onClick={avancar}
+                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand py-2.5 text-sm font-bold text-white transition-all hover:bg-brand-dark">
                       Ver resultado <ArrowRight size={14} />
                     </button>
                   </div>
@@ -1829,25 +2204,39 @@ export default function ModoGuiadoEmpresa({
                     {[
                       { label: "Faturação anual", value: resultado.faturacao, cor: "text-stone-700 dark:text-stone-200" },
                       resultado.despesasOper > 0 ? { label: "Despesas operacionais", value: -resultado.despesasOper, cor: "text-stone-500" } : null,
-                      { label: "Custos estrutura (contabilidade, software)", value: -resultado.custosEstrutura, cor: "text-stone-500" },
-                      resultado.custoConstituicao > 0 ? { label: "Constituição (amortizada 3 anos)", value: -resultado.custoConstituicao, cor: "text-stone-500" } : null,
+                      { label: "Custos estrutura (contabilidade + software)", value: -resultado.custosEstrutura, cor: "text-stone-500" },
+                      resultado.custoConstituicao > 0 ? { label: `Constituição (amortizada ${anosAmortizacao} ano${anosAmortizacao > 1 ? "s" : ""})`, value: -resultado.custoConstituicao, cor: "text-stone-500" } : null,
                       resultado.salGerente > 0 ? { label: `Salário gerente (${fmt(salGerenteMensal)}/mês × 12)`, value: -resultado.salGerente, cor: "text-stone-500" } : null,
                       resultado.ssSalGerente > 0 ? { label: "SS empresa + trabalhador (34,75%)", value: -resultado.ssSalGerente, cor: "text-amber-600 dark:text-amber-400" } : null,
                       { label: "Lucro tributável", value: resultado.lucroTributavel, cor: "text-stone-700 dark:text-stone-200 font-semibold", sep: true },
                       { label: `IRC coleta (${pct(localizacao?.ircPME ?? IRC_TAXA_PME.value)}/${fmt(IRC_LIMITE)} + ${pct(localizacao?.ircGeral ?? IRC_TAXA_GERAL.value)}${localizacao?.interior ? " · interior" : ""})`, value: -resultado.coleta, cor: "text-red-500 dark:text-red-400" },
-                      resultado.rfaiBeneficio > 0 ? { label: `RFAI (${pct(RFAI_TAXA[rfaiRegiaoEfetiva])} × ${fmt(rfaiInvest)})`, value: resultado.rfaiBeneficio, cor: "text-emerald-600 dark:text-emerald-400" } : null,
-                      resultado.taTotal > 0 ? { label: "Tributação Autónoma (Art. 88.º CIRC)", value: -resultado.taTotal, cor: "text-amber-600 dark:text-amber-400" } : null,
+                      resultado.beneficios.rfai > 0 ? { label: `RFAI (${pct(RFAI_TAXA[rfaiRegiaoEfetiva])} × ${fmt(rfaiInvest)})`, value: resultado.beneficios.rfai, cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
+                      resultado.beneficios.dlrr > 0 ? { label: `DLRR (10% × ${fmt(dlrrLucros)})`, value: resultado.beneficios.dlrr, cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
+                      resultado.beneficios.sifide > 0 ? { label: `SIFIDE II (${pct(SIFIDE_META[tipoSifide].taxa)} × ${fmt(sifideDespesas)})`, value: resultado.beneficios.sifide, cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
+                      resultado.beneficios.rfaiContratual > 0 ? { label: "RFAI Contratual", value: resultado.beneficios.rfaiContratual, cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
+                      resultado.beneficios.total > 0 ? { label: "IRC após benefícios", value: resultado.ircAposBeneficios, cor: "text-stone-600 dark:text-stone-300", sep: true } : null,
+                      resultado.ta.viatura > 0 ? { label: `TA viatura (${pct(TA_TAXAS_GUIADO[tipoViatura])})`, value: -resultado.ta.viatura, cor: "text-amber-600 dark:text-amber-400" } : null,
+                      resultado.ta.representacao > 0 ? { label: "TA representação (10%)", value: -resultado.ta.representacao, cor: "text-amber-600 dark:text-amber-400" } : null,
+                      resultado.ta.ajudasCusto > 0 ? { label: "TA ajudas de custo (5%)", value: -resultado.ta.ajudasCusto, cor: "text-amber-600 dark:text-amber-400" } : null,
+                      resultado.ta.naoDocumentadas > 0 ? { label: "TA não documentadas (50%)", value: -resultado.ta.naoDocumentadas, cor: "text-amber-600 dark:text-amber-400" } : null,
                       { label: `Derrama municipal (~${pct(localizacao?.derramaEstimada ?? 0.015)}${localizacao ? " · " + localizacao.nome : ""})`, value: -resultado.derrama, cor: "text-red-400" },
+                      resultado.custoMunicipalAnual > 0 ? { label: "IMI + IMT/IS (amortizado)", value: -resultado.custoMunicipalAnual, cor: "text-red-400" } : null,
+                      resultado.poupancaIMI > 0 || resultado.poupancaIMT > 0 ? { label: "Poupança municipal (isenções RFAI)", value: resultado.poupancaIMI + (resultado.poupancaIMT / anosAmortizacaoIMT), cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
                       { label: "Lucro líquido (disponível)", value: resultado.lucroLiquido, cor: "text-stone-700 dark:text-stone-200 font-semibold", sep: true },
-                      distribuirDividendos ? { label: opcaoEnglobamento ? "IRS dividendos (englobamento 50% × taxa marginal)" : "IRS dividendos (28% taxa liberatória)", value: -resultado.irsDividendos, cor: "text-red-500 dark:text-red-400" } : null,
+                      distribuirDividendos ? {
+                        label: opcaoEnglobamento
+                          ? `IRS dividendos (englobamento 50% × ${pct(resultado.taxaMarginalGerente)} marginal)`
+                          : "IRS dividendos (28% taxa liberatória)",
+                        value: -resultado.irsDividendos, cor: "text-red-500 dark:text-red-400",
+                      } : null,
                     ]
                       .filter(Boolean)
                       .map((item) => {
-                        const i = item!;
+                        const i = item as { label: string; value: number; cor: string; sep?: boolean; plus?: boolean };
                         return (
                           <div key={i.label} className={`flex items-center justify-between px-3 py-2 rounded-xl ${i.sep ? "border-t border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/30 mt-1" : ""}`}>
                             <span className="text-[11px] text-stone-500 dark:text-stone-400">{i.label}</span>
-                            <span className={`text-[11px] tabular-nums ${i.cor}`}>{i.value < 0 ? "−" : i.value > 0 && i.label.startsWith("RFAI") ? "+" : ""}{fmt(Math.abs(i.value))}</span>
+                            <span className={`text-[11px] tabular-nums ${i.cor}`}>{i.value < 0 ? "−" : i.plus ? "+" : ""}{fmt(Math.abs(Math.round(i.value)))}</span>
                           </div>
                         );
                       })}
@@ -1865,6 +2254,17 @@ export default function ModoGuiadoEmpresa({
                         </div>
                       </div>
                     </div>
+
+                    {/* Dica de englobamento */}
+                    {distribuirDividendos && (
+                      <div className={`mt-2 rounded-xl border px-3 py-2 ${englobamentoMelhor ? "border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800" : "border-stone-100 bg-stone-50 dark:border-stone-800 dark:bg-stone-900/50"}`}>
+                        <p className="text-[11px] text-stone-500 dark:text-stone-400">
+                          {englobamentoMelhor
+                            ? `O englobamento pouparia ${fmt(Math.round(poupancaEnglobamento))} face à taxa liberatória (taxa marginal ${pct(resultado.taxaMarginalGerente)}).`
+                            : `A taxa liberatória (28%) é mais vantajosa que o englobamento para o teu perfil (marginal ${pct(resultado.taxaMarginalGerente)}).`}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <p className="mt-3 px-1 text-[10px] leading-relaxed text-stone-400 dark:text-stone-500">
@@ -1872,9 +2272,9 @@ export default function ModoGuiadoEmpresa({
                     {localizacao ? ` para ${localizacao.nome}` : ""}.
                     IRC {localizacao ? pct(localizacao.ircPME) : "PME"},
                     derrama ~{pct(localizacao?.derramaEstimada ?? 0.015)},
-                    TA e RFAI conforme configurado. Salário antes de IRS na
-                    fonte. Não substitui aconselhamento de um contabilista
-                    certificado (OCC).
+                    TA, RFAI, DLRR, SIFIDE e IMI/IMT conforme configurado.
+                    Salário antes de IRS na fonte.
+                    Não substitui aconselhamento de um contabilista certificado (OCC).
                   </p>
 
                   <div className="mt-6 flex gap-3">
@@ -2252,8 +2652,8 @@ function PainelResumoEmpresa({
           {[
             { label: "Custos + SS gerente", val: -(resultado.totalCustos), cor: "text-stone-500" },
             { label: "IRC + derrama", val: -(resultado.ircAposBeneficios + resultado.derrama), cor: "text-red-500 dark:text-red-400" },
-            ...(resultado.taTotal > 0 ? [{ label: "Trib. Autónoma", val: -(resultado.taTotal), cor: "text-amber-500" }] : []),
-            ...(resultado.rfaiBeneficio > 0 ? [{ label: "RFAI", val: resultado.rfaiBeneficio, cor: "text-emerald-500" }] : []),
+            ...(resultado.ta.total > 0 ? [{ label: "Trib. Autónoma", val: -(resultado.ta.total), cor: "text-amber-500" }] : []),
+            ...(resultado.beneficios.total > 0 ? [{ label: "Benefícios fiscais", val: resultado.beneficios.total, cor: "text-emerald-500" }] : []),
             ...(distribuirDividendos && resultado.irsDividendos > 0 ? [{ label: "IRS dividendos", val: -(resultado.irsDividendos), cor: "text-red-400" }] : []),
             { label: "Líquido", val: resultado.liquidoGerente, cor: "text-brand font-bold", sep: true },
           ].map(({ label, val, cor, sep }) => (

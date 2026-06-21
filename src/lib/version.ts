@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.31.0";
+export const APP_VERSION = "1.32.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,19 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.32.0",
+    data: "2026-06-21",
+    titulo: "Modo guiado da empresa com paridade total ao simulador completo",
+    itens: [
+      "Tributação Autónoma completa: 8 tipos de viatura (combustão e PHEV com faixas de preço), ajudas de custo (5%), despesas não documentadas (50%) e exceção ao agravamento por prejuízo (OE2026).",
+      "DLRR (10% lucros reinvestidos, máx 5M, 25% coleta), SIFIDE II (32,5%–82,5% despesas I&D com 4 perfis de empresa) e RFAI Contratual (investimento >= 3M, IAPMEI/AICEP) agora disponíveis no modo guiado.",
+      "Imóvel da empresa: IMI (VPT × taxa municipal 0,3–0,45%), IMT + IS na aquisição (7,3%), isenções RFAI e amortização configurável.",
+      "Custos de estrutura e constituição agora ajustáveis (slider + amortização 1/2/3/5 anos), em vez de valores fixos.",
+      "RFAI com toggle «primeiros 3 períodos» (100% coleta) e cálculo excedente (30% até 15M + 10% acima).",
+      "Resultado detalhado: breakdown por categoria de TA, benefícios com bruto vs efetivo, dica automática de englobamento com taxa marginal, custos municipais.",
+    ],
+  },
   {
     version: "1.31.0",
     data: "2026-06-21",
