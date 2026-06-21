@@ -225,23 +225,24 @@ export default function Nav() {
           <div className="hidden items-center gap-2 sm:flex">
             <BuscaTrigger />
             <ThemeToggle />
+
+            {/* Botão perfil — sempre visível */}
+            <Link
+              href="/dashboard/perfil"
+              aria-label="O meu perfil"
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-200"
+            >
+              <User size={18} />
+            </Link>
+
             {user ? (
-              <>
-                <Link
-                  href="/dashboard/perfil"
-                  aria-label="O meu perfil"
-                  className="flex h-9 w-9 items-center justify-center rounded-xl text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-200"
-                >
-                  <User size={18} />
-                </Link>
-                <Link
-                  href="/dashboard"
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand/10 px-3.5 py-2 text-sm font-semibold text-brand transition-colors hover:bg-brand hover:text-white"
-                >
-                  <LayoutGrid size={15} />
-                  Dashboard
-                </Link>
-              </>
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-brand/10 px-3.5 py-2 text-sm font-semibold text-brand transition-colors hover:bg-brand hover:text-white"
+              >
+                <LayoutGrid size={15} />
+                Dashboard
+              </Link>
             ) : disponivel ? (
               <>
                 <button

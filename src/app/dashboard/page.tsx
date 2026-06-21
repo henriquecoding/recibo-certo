@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRecibos, resumir, type Recibo } from "@/lib/store/recibos";
+import { usePreferenciasFiscais } from "@/lib/store/preferencias-fiscais";
 import { gerarInsights, saudeFiscal, type Insight, type SaudeFiscal } from "@/lib/insights";
 import { fmt } from "@/lib/format";
 import { Receipt, Warning, Check, ArrowRight, History, Calendar } from "@/components/ui/Icons";
@@ -14,6 +15,7 @@ import IvaProgresso from "@/components/dashboard/IvaProgresso";
 import PoupancaTrimestral from "@/components/dashboard/PoupancaTrimestral";
 import GuardiaoRetencao from "@/components/dashboard/GuardiaoRetencao";
 import GuardiaoSS from "@/components/dashboard/GuardiaoSS";
+import EstimativaIRS from "@/components/dashboard/EstimativaIRS";
 import TabelaRecibos from "@/components/dashboard/TabelaRecibos";
 import MiniCalendario from "@/components/dashboard/MiniCalendario";
 import Onboarding from "@/components/dashboard/Onboarding";
@@ -45,10 +47,17 @@ function saudacao(): string {
 
 export default function VisaoGeral() {
   const { recibos, carregado, naNuvem, locaisPorImportar, importarLocais, adiarImportacao } = useRecibos();
+  const { prefs } = usePreferenciasFiscais();
   const [insights, setInsights] = useState<Insight[]>([]);
   const [saude, setSaude] = useState<SaudeFiscal>({ score: 0, estado: "Tranquilo", fatores: [] });
   const [onboarded, setOnboarded] = useState(true);
   const [mounted, setMounted] = useState(false);
+
+  const opcoesFiscais = useMemo(() => ({
+    isencaoSSPrimeiroAno: prefs.isencaoSSPrimeiroAno,
+    acumulaEmprego: prefs.acumulaEmprego,
+    irsJovemAno: prefs.irsJovemAno > 0 ? prefs.irsJovemAno : undefined,
+  }), [prefs]);
 
   useEffect(() => {
     setMounted(true);
@@ -75,8 +84,8 @@ export default function VisaoGeral() {
     }
   }, [carregado, recibos]);
 
-  const mes = resumir(mesAtual(recibos));
-  const ano = resumir(recibos);
+  const mes = resumir(mesAtual(recibos), opcoesFiscais);
+  const ano = resumir(recibos, opcoesFiscais);
   const temRecibos = recibos.length > 0;
 
   const dataHoje = mounted
@@ -266,10 +275,14 @@ export default function VisaoGeral() {
           </div>
 
           <div className="col-span-12 sm:col-span-6">
-            <GuardiaoSS recibos={recibos} />
+            <GuardiaoSS recibos={recibos} primeiroAno={prefs.isencaoSSPrimeiroAno} acumulaEmprego={prefs.acumulaEmprego} />
           </div>
 
-          {/* ══ ROW 4: Tabela de recibos + Insights ══════════════ */}
+          {/* ══ ROW 4: Estimativa IRS + Tabela + Insights ═══════ */}
+
+          <div className="col-span-12 lg:col-span-4">
+            <EstimativaIRS recibos={recibos} prefs={prefs} />
+          </div>
 
           <div className="col-span-12 lg:col-span-8">
             <TabelaRecibos recibos={recibos} />
@@ -277,8 +290,8 @@ export default function VisaoGeral() {
 
           <div className="col-span-12 lg:col-span-4 flex flex-col gap-4">
             {insights.length > 0 && (
-              <div className="rounded-4xl border border-stone-100 bg-white p-6 shadow-card">
-                <h2 className="mb-4 text-sm font-semibold text-stone-700">O que precisas de saber</h2>
+              <div className="rounded-4xl border border-stone-100 bg-white p-6 shadow-card dark:border-stone-800 dark:bg-stone-900">
+                <h2 className="mb-4 text-sm font-semibold text-stone-700 dark:text-stone-200">O que precisas de saber</h2>
                 <ul className="space-y-2.5">
                   {insights.map((i, idx) => (
                     <InsightRow key={idx} insight={i} />

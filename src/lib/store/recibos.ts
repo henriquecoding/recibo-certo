@@ -139,8 +139,15 @@ async function cloudList(userId: string): Promise<Recibo[]> {
 }
 
 // ─── Conversão para o motor de cálculo ──────────────────────────────────
+
+export interface OpcoesCalcRecibo {
+  isencaoSSPrimeiroAno?: boolean;
+  acumulaEmprego?: boolean;
+  irsJovemAno?: number;
+}
+
 /** Converte um recibo guardado no input do motor de cálculo. */
-export function reciboParaInput(r: Recibo): CalcInput {
+export function reciboParaInput(r: Recibo, opcoes?: OpcoesCalcRecibo): CalcInput {
   const ativ = r.atividade ? ATIVIDADES.find((a) => a.label === r.atividade) : undefined;
   const ef = ativ ? efeitoFiscal(ativ) : undefined;
   return {
@@ -150,14 +157,15 @@ export function reciboParaInput(r: Recibo): CalcInput {
     regimeIVA: r.regimeIVA,
     baseSS: ef?.baseSS ?? r.baseSS,
     dispensaRetencao: r.dispensaRetencao,
-    isencaoSSPrimeiroAno: false,
-    acumulaEmprego: false,
+    isencaoSSPrimeiroAno: opcoes?.isencaoSSPrimeiroAno ?? false,
+    acumulaEmprego: opcoes?.acumulaEmprego ?? false,
+    irsJovemAno: opcoes?.irsJovemAno,
     retencaoOverride: ef?.retencao,
   };
 }
 
-export function calcularRecibo(r: Recibo): CalcResult {
-  return calcular(reciboParaInput(r));
+export function calcularRecibo(r: Recibo, opcoes?: OpcoesCalcRecibo): CalcResult {
+  return calcular(reciboParaInput(r, opcoes));
 }
 
 export interface ResumoRecibos {
@@ -169,10 +177,10 @@ export interface ResumoRecibos {
   liquido: number;
 }
 
-export function resumir(recibos: Recibo[]): ResumoRecibos {
+export function resumir(recibos: Recibo[], opcoes?: OpcoesCalcRecibo): ResumoRecibos {
   return recibos.reduce<ResumoRecibos>(
     (acc, r) => {
-      const c = calcularRecibo(r);
+      const c = calcularRecibo(r, opcoes);
       return {
         total: acc.total + 1,
         bruto: acc.bruto + c.bruto,

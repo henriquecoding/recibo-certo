@@ -1,29 +1,34 @@
 "use client";
 
-import { SS_TAXA, SS_COEFICIENTE, SS_ISENCAO_PRIMEIRO_ANO_MESES } from "@/lib/fiscal-data";
+import { SS_TAXA, SS_COEFICIENTE, SS_ISENCAO_PRIMEIRO_ANO_MESES, ATIVIDADES, efeitoFiscal, type BaseSS } from "@/lib/fiscal-data";
 import { fmt } from "@/lib/format";
 import { type Recibo } from "@/lib/store/recibos";
 import { Warning } from "@/components/ui/Icons";
 
-// ── Funções puras exportáveis para testes ────────────────────────────────────
+function baseSsDoRecibo(r: Recibo): BaseSS {
+  if (r.atividade) {
+    const ativ = ATIVIDADES.find((a) => a.label === r.atividade);
+    if (ativ) return efeitoFiscal(ativ).baseSS;
+  }
+  return r.baseSS;
+}
 
-export function calcularSS(rendimentoTrimestre: number): number {
-  return rendimentoTrimestre * SS_COEFICIENTE.servicos.value * SS_TAXA.value;
+export function calcularSS(rendimentoTrimestre: number, baseSS: BaseSS = "servicos"): number {
+  return rendimentoTrimestre * SS_COEFICIENTE[baseSS].value * SS_TAXA.value;
 }
 
 export function prazoSS(trimestreIndex: number, ano: number): Date {
-  // trimestreIndex: 0 = Jan-Mar, 1 = Abr-Jun, 2 = Jul-Set, 3 = Out-Dez
   switch (trimestreIndex) {
-    case 0: return new Date(ano, 9, 20);      // 1.o tri -> 20 outubro
-    case 1: return new Date(ano, 9, 20);      // 2.o tri -> 20 outubro
-    case 2: return new Date(ano + 1, 0, 20); // 3.o tri -> 20 janeiro seguinte
-    case 3: return new Date(ano + 1, 3, 20); // 4.o tri -> 20 abril seguinte
+    case 0: return new Date(ano, 9, 20);
+    case 1: return new Date(ano, 9, 20);
+    case 2: return new Date(ano + 1, 0, 20);
+    case 3: return new Date(ano + 1, 3, 20);
     default: return new Date(ano, 9, 20);
   }
 }
 
 function trimestreAtual(mes: number): number {
-  return Math.floor(mes / 3); // 0-indexed
+  return Math.floor(mes / 3);
 }
 
 function recibosDoTrimestre(recibos: Recibo[], tri: number, ano: number): Recibo[] {
@@ -44,14 +49,14 @@ function nomeTrimestre(tri: number): string {
   return ["1.o", "2.o", "3.o", "4.o"][tri] ?? "";
 }
 
-// ── Componente ───────────────────────────────────────────────────────────────
-
 export default function GuardiaoSS({
   recibos,
   primeiroAno = false,
+  acumulaEmprego = false,
 }: {
   recibos: Recibo[];
   primeiroAno?: boolean;
+  acumulaEmprego?: boolean;
 }) {
   const hoje       = new Date();
   const ano        = hoje.getFullYear();
@@ -60,9 +65,8 @@ export default function GuardiaoSS({
   const prazo      = prazoSS(tri, ano);
   const dias       = diasEntreHoje(prazo);
   const nTri       = nomeTrimestre(tri);
-  const isencaoMeses = SS_ISENCAO_PRIMEIRO_ANO_MESES.value; // geralmente 12
+  const isencaoMeses = SS_ISENCAO_PRIMEIRO_ANO_MESES.value;
 
-  // Verificar isenção do 1.o ano
   if (primeiroAno && isencaoMeses > 0) {
     return (
       <div className="rounded-4xl border border-brand/20 bg-brand-light p-6 shadow-card dark:bg-brand/10">
@@ -76,12 +80,39 @@ export default function GuardiaoSS({
     );
   }
 
-  const recibosT    = recibosDoTrimestre(recibos, tri, ano);
-  const rendimentoT = recibosT.reduce((s, r) => s + r.valor, 0);
-  const base        = rendimentoT * SS_COEFICIENTE.servicos.value;
-  const valorSS     = calcularSS(rendimentoT);
+  if (acumulaEmprego) {
+    return (
+      <div className="rounded-4xl border border-brand/20 bg-brand-light p-6 shadow-card dark:bg-brand/10">
+        <h2 className="text-sm font-semibold text-stone-700 dark:text-stone-300 mb-2">
+          Segurança Social — {nTri} Trimestre
+        </h2>
+        <p className="text-xs text-stone-500 dark:text-stone-400">
+          Acumulas com trabalho dependente — a SS já está coberta pelo teu empregador.
+        </p>
+      </div>
+    );
+  }
 
-  // Badge de prazo
+  const recibosT = recibosDoTrimestre(recibos, tri, ano);
+
+  const valorSSPorBase = recibosT.reduce(
+    (acc, r) => {
+      const bs = baseSsDoRecibo(r);
+      const coef = SS_COEFICIENTE[bs].value;
+      acc.baseServicos += bs === "servicos" ? r.valor * coef : 0;
+      acc.baseBens += bs === "bens" ? r.valor * coef : 0;
+      acc.rendimento += r.valor;
+      return acc;
+    },
+    { baseServicos: 0, baseBens: 0, rendimento: 0 },
+  );
+
+  const baseTotal = valorSSPorBase.baseServicos + valorSSPorBase.baseBens;
+  const valorSS = baseTotal * SS_TAXA.value;
+  const temBens = valorSSPorBase.baseBens > 0;
+  const temServicos = valorSSPorBase.baseServicos > 0;
+  const baseMista = temBens && temServicos;
+
   const badgePrazo =
     dias <= 7  ? { label: `Urgente — vence em ${dias} dias`, cls: "bg-clay-bg text-clay-text" } :
     dias <= 30 ? { label: `Prazo em ${dias} dias`, cls: "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" } :
@@ -118,12 +149,25 @@ export default function GuardiaoSS({
       <div className="space-y-2 rounded-2xl bg-stone-50 p-4 dark:bg-stone-800/50">
         <div className="flex justify-between text-xs">
           <span className="text-stone-500">Rendimento do trimestre</span>
-          <span className="font-medium text-stone-700 dark:text-stone-300">{fmt(rendimentoT)}</span>
+          <span className="font-medium text-stone-700 dark:text-stone-300">{fmt(valorSSPorBase.rendimento)}</span>
         </div>
-        <div className="flex justify-between text-xs">
-          <span className="text-stone-500">Base de incidência (70 %)</span>
-          <span className="font-medium text-stone-700 dark:text-stone-300">{fmt(base)}</span>
-        </div>
+        {baseMista ? (
+          <>
+            <div className="flex justify-between text-xs">
+              <span className="text-stone-500">Base serviços (70%)</span>
+              <span className="font-medium text-stone-700 dark:text-stone-300">{fmt(valorSSPorBase.baseServicos)}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-stone-500">Base bens (20%)</span>
+              <span className="font-medium text-stone-700 dark:text-stone-300">{fmt(valorSSPorBase.baseBens)}</span>
+            </div>
+          </>
+        ) : (
+          <div className="flex justify-between text-xs">
+            <span className="text-stone-500">Base de incidência ({temBens ? "20" : "70"} %)</span>
+            <span className="font-medium text-stone-700 dark:text-stone-300">{fmt(baseTotal)}</span>
+          </div>
+        )}
         <div className="flex justify-between text-xs border-t border-stone-200 pt-2 dark:border-stone-700">
           <span className="font-semibold text-stone-600 dark:text-stone-400">
             Contribuição SS ({(SS_TAXA.value * 100).toFixed(1)} %)
@@ -132,7 +176,6 @@ export default function GuardiaoSS({
         </div>
       </div>
 
-      {/* Callout informativo */}
       <p className="mt-3 text-[11px] leading-relaxed text-stone-400">
         Este valor é estimativo. A base de cálculo oficial usa os rendimentos dos 3 meses anteriores ao
         trimestre de referência — confirma na Segurança Social Direta.
