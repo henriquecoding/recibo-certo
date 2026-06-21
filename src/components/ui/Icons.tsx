@@ -511,6 +511,19 @@ export function GripVertical({ size = 18, className }: IconProps) {
   );
 }
 
+export function GripHorizontal({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <circle cx="6" cy="9" r="1.2" fill="currentColor" />
+      <circle cx="12" cy="9" r="1.2" fill="currentColor" />
+      <circle cx="18" cy="9" r="1.2" fill="currentColor" />
+      <circle cx="6" cy="15" r="1.2" fill="currentColor" />
+      <circle cx="12" cy="15" r="1.2" fill="currentColor" />
+      <circle cx="18" cy="15" r="1.2" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function GoogleAds({ size = 18, className }: IconProps) {
   return (
     <svg {...svgProps(size, className)}>
@@ -563,6 +576,14 @@ export function ExternalLink({ size = 14, className }: IconProps) {
     <svg {...svgProps(size, className)}>
       <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M15 3h6v6M10 14L21 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function ChevronLeft({ size = 16, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
