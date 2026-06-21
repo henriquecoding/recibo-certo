@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.30.0";
+export const APP_VERSION = "1.31.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,18 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.31.0",
+    data: "2026-06-21",
+    titulo: "Localização precisa no simulador de empresa",
+    itens: [
+      "O simulador agora permite pesquisar a cidade ou concelho exato onde a empresa será instalada — os parâmetros fiscais (IRC, derrama, RFAI, custo de contabilista) ajustam-se automaticamente.",
+      "Pesquisa por nome (Nominatim/OSM), localização GPS, ou escolha manual por região — a localização escolhida influencia toda a simulação.",
+      "Ambos os fluxos (já tem empresa / quer abrir) pedem agora a localização, com dados fiscais regionais detalhados (interior 12,5%, ilhas, litoral).",
+      "Novo passo «A seguir» enriquecido: métricas, plano de ação, checklist de constituição, calendário fiscal e mapa de benefícios por região.",
+      "Dados regionais ampliados: DLRR (10% lucros reinvestidos) e SIFIDE II (32,5%+50% I&D) adicionados ao mapa de benefícios fiscais.",
+    ],
+  },
   {
     version: "1.30.0",
     data: "2026-06-21",

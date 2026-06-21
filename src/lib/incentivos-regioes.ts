@@ -79,6 +79,24 @@ const BENEFICIO_RFAI_30: BeneficioRegiao = {
   )}% sobre o investimento elegível (até 15 M€), por estar fora de Lisboa e Algarve. Abate à coleta de IRC.`,
   base: "Art. 23.º CFI (DL 162/2014)",
 };
+const BENEFICIO_DERRAMA_INTERIOR: BeneficioRegiao = {
+  titulo: "Derrama municipal tipicamente mais baixa (0–1%)",
+  detalhe:
+    "Os municípios do interior e de baixa densidade tendem a fixar a derrama municipal abaixo do máximo legal de 1,5% — muitos a 0% ou a 0,5%. Confirma a taxa do teu município.",
+  base: "Art. 18.º Lei das Finanças Locais · Portais municipais",
+};
+const BENEFICIO_DLRR: BeneficioRegiao = {
+  titulo: "DLRR: 10% dos lucros reinvestidos",
+  detalhe:
+    "PME e Small Mid Cap podem deduzir ao IRC 10% dos lucros retidos e reinvestidos em ativos elegíveis, até 25% da coleta. Saldo reportável por 12 exercícios.",
+  base: "Art. 27.º–34.º CFI",
+};
+const BENEFICIO_SIFIDE: BeneficioRegiao = {
+  titulo: "SIFIDE II: até 82,5% de despesas de I&D",
+  detalhe:
+    "Crédito fiscal de 32,5% (base) + 50% incremental das despesas de investigação e desenvolvimento. Sem limite à coleta; saldo reportável por 12 exercícios.",
+  base: "Art. 35.º–42.º CFI",
+};
 const BENEFICIO_RFAI_10: BeneficioRegiao = {
   titulo: `RFAI: ${(RFAI_TAXA_LITORAL.value * 100).toLocaleString("pt-PT")}% do investimento`,
   detalhe: `Crédito de IRC de ${(RFAI_TAXA_LITORAL.value * 100).toLocaleString(
@@ -106,6 +124,7 @@ export const REGIOES_INCENTIVO: RegiaoIncentivo[] = [
         detalhe: "A Madeira aplica taxas de IVA próprias, mais baixas do que no Continente (reduzida de 4% desde out/2024).",
         base: "Art. 18.º CIVA · DLR 6/2024/M",
       },
+      BENEFICIO_DLRR,
     ],
   },
   {
@@ -131,6 +150,7 @@ export const REGIOES_INCENTIVO: RegiaoIncentivo[] = [
         detalhe: "Os Açores aplicam taxas de IVA próprias, inferiores às do Continente.",
         base: "Art. 18.º CIVA",
       },
+      BENEFICIO_DLRR,
     ],
   },
   {
@@ -138,21 +158,21 @@ export const REGIOES_INCENTIVO: RegiaoIncentivo[] = [
     nivel: 0.9,
     selo: "Interior 12,5%",
     headline: "Grande parte é interior: IRC 12,5% + RFAI 30%",
-    beneficios: [BENEFICIO_INTERIOR, BENEFICIO_RFAI_30],
+    beneficios: [BENEFICIO_INTERIOR, BENEFICIO_RFAI_30, BENEFICIO_DERRAMA_INTERIOR, BENEFICIO_DLRR],
   },
   {
     ...pick(ref("centro")),
     nivel: 0.85,
     selo: "Interior 12,5%",
     headline: "Vasto interior (Beira, Guarda): IRC 12,5% + RFAI 30%",
-    beneficios: [BENEFICIO_INTERIOR, BENEFICIO_RFAI_30],
+    beneficios: [BENEFICIO_INTERIOR, BENEFICIO_RFAI_30, BENEFICIO_DERRAMA_INTERIOR, BENEFICIO_DLRR],
   },
   {
     ...pick(ref("norte")),
     nivel: 0.8,
     selo: "Interior 12,5%",
     headline: "Interior (Trás-os-Montes, Douro): IRC 12,5% + RFAI 30%",
-    beneficios: [BENEFICIO_INTERIOR, BENEFICIO_RFAI_30],
+    beneficios: [BENEFICIO_INTERIOR, BENEFICIO_RFAI_30, BENEFICIO_DERRAMA_INTERIOR, BENEFICIO_DLRR],
   },
   {
     ...pick(ref("algarve")),
@@ -167,6 +187,7 @@ export const REGIOES_INCENTIVO: RegiaoIncentivo[] = [
           "A maior parte do Algarve é litoral, mas concelhos de baixa densidade (ex.: Alcoutim, Monchique) podem qualificar-se como território do interior, com IRC de 12,5%.",
         base: "Art. 41.º-B EBF · Portaria n.º 208/2017",
       },
+      BENEFICIO_DLRR,
     ],
   },
   {
@@ -238,3 +259,107 @@ export function regiaoIncentivoMaisProxima(lat: number, lng: number): RegiaoInce
   const id = regiaoMaisProxima(lat, lng).id;
   return REGIOES_INCENTIVO.find((r) => r.id === id) ?? REGIOES_INCENTIVO[0];
 }
+
+// ─── Parâmetros fiscais por região (para o simulador de empresa) ────────────
+
+export interface ParametrosFiscaisRegiao {
+  regiaoId: string;
+  nome: string;
+  interior: boolean;
+  ircPME: number;
+  ircGeral: number;
+  derramaEstimada: number;
+  rfaiTipo: "interior" | "litoral";
+  rfaiTaxa: number;
+  contabMin: number;
+  contabMax: number;
+  selo: string;
+}
+
+const contab = (id: string) => {
+  const r = REGIOES_PRECO.find((p) => p.id === id);
+  return r ? { contabMin: r.min, contabMax: r.max } : { contabMin: 60, contabMax: 130 };
+};
+
+const PARAMS_REGIAO: Record<string, ParametrosFiscaisRegiao> = {
+  norte: {
+    regiaoId: "norte", nome: "Norte (interior)", interior: true,
+    ircPME: IRC_INTERIOR, ircGeral: IRC_INTERIOR,
+    derramaEstimada: 0.005, rfaiTipo: "interior", rfaiTaxa: RFAI_TAXA_INTERIOR.value,
+    ...contab("norte"), selo: "IRC 12,5%",
+  },
+  norte_litoral: {
+    regiaoId: "norte", nome: "Norte (Porto, litoral)", interior: false,
+    ircPME: IRC_TAXA_PME.value, ircGeral: IRC_TAXA_GERAL.value,
+    derramaEstimada: 0.0125, rfaiTipo: "interior", rfaiTaxa: RFAI_TAXA_INTERIOR.value,
+    ...contab("norte"), selo: "IRC 15%",
+  },
+  centro: {
+    regiaoId: "centro", nome: "Centro (interior)", interior: true,
+    ircPME: IRC_INTERIOR, ircGeral: IRC_INTERIOR,
+    derramaEstimada: 0.005, rfaiTipo: "interior", rfaiTaxa: RFAI_TAXA_INTERIOR.value,
+    ...contab("centro"), selo: "IRC 12,5%",
+  },
+  centro_litoral: {
+    regiaoId: "centro", nome: "Centro (Coimbra, Leiria, litoral)", interior: false,
+    ircPME: IRC_TAXA_PME.value, ircGeral: IRC_TAXA_GERAL.value,
+    derramaEstimada: 0.01, rfaiTipo: "interior", rfaiTaxa: RFAI_TAXA_INTERIOR.value,
+    ...contab("centro"), selo: "IRC 15%",
+  },
+  alentejo: {
+    regiaoId: "alentejo", nome: "Alentejo", interior: true,
+    ircPME: IRC_INTERIOR, ircGeral: IRC_INTERIOR,
+    derramaEstimada: 0.005, rfaiTipo: "interior", rfaiTaxa: RFAI_TAXA_INTERIOR.value,
+    ...contab("alentejo"), selo: "IRC 12,5%",
+  },
+  algarve: {
+    regiaoId: "algarve", nome: "Algarve", interior: false,
+    ircPME: IRC_TAXA_PME.value, ircGeral: IRC_TAXA_GERAL.value,
+    derramaEstimada: 0.01, rfaiTipo: "litoral", rfaiTaxa: RFAI_TAXA_LITORAL.value,
+    ...contab("algarve"), selo: "IRC 15%",
+  },
+  aml: {
+    regiaoId: "aml", nome: "Área Metropolitana de Lisboa", interior: false,
+    ircPME: IRC_TAXA_PME.value, ircGeral: IRC_TAXA_GERAL.value,
+    derramaEstimada: 0.015, rfaiTipo: "litoral", rfaiTaxa: RFAI_TAXA_LITORAL.value,
+    ...contab("aml"), selo: "IRC 15%",
+  },
+  acores: {
+    regiaoId: "acores", nome: "Região Autónoma dos Açores", interior: false,
+    ircPME: IRC_ACORES_PME, ircGeral: IRC_ACORES_GERAL,
+    derramaEstimada: 0.0, rfaiTipo: "interior", rfaiTaxa: RFAI_TAXA_INTERIOR.value,
+    ...contab("acores"), selo: "IRC 8,75%",
+  },
+  madeira: {
+    regiaoId: "madeira", nome: "Região Autónoma da Madeira", interior: false,
+    ircPME: IRC_TAXA_PME.value, ircGeral: IRC_TAXA_GERAL.value,
+    derramaEstimada: 0.015, rfaiTipo: "interior", rfaiTaxa: RFAI_TAXA_INTERIOR.value,
+    ...contab("madeira"), selo: "IRC 15%",
+  },
+};
+
+export function parametrosFiscaisPorRegiao(regiaoId: string, isInterior?: boolean): ParametrosFiscaisRegiao {
+  if (regiaoId === "norte" || regiaoId === "centro") {
+    return isInterior === false
+      ? PARAMS_REGIAO[`${regiaoId}_litoral`]
+      : PARAMS_REGIAO[regiaoId];
+  }
+  return PARAMS_REGIAO[regiaoId] ?? PARAMS_REGIAO.aml;
+}
+
+export function parametrosPorCoords(lat: number, lng: number): ParametrosFiscaisRegiao {
+  const regiao = regiaoIncentivoMaisProxima(lat, lng);
+  return parametrosFiscaisPorRegiao(regiao.id);
+}
+
+export const TODAS_LOCALIZACOES: ParametrosFiscaisRegiao[] = [
+  PARAMS_REGIAO.norte,
+  PARAMS_REGIAO.norte_litoral,
+  PARAMS_REGIAO.centro,
+  PARAMS_REGIAO.centro_litoral,
+  PARAMS_REGIAO.alentejo,
+  PARAMS_REGIAO.aml,
+  PARAMS_REGIAO.algarve,
+  PARAMS_REGIAO.acores,
+  PARAMS_REGIAO.madeira,
+];
