@@ -659,9 +659,9 @@ export default function PerfilPage() {
         ════════════════════════════════════════════════════════ */}
         <m.section
           variants={fadeUp}
-          className="relative overflow-hidden rounded-4xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900"
+          className="relative rounded-4xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900"
         >
-          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-br from-brand/8 via-brand-light/40 to-transparent dark:from-brand/10 dark:via-brand/5" />
+          <div className="absolute inset-x-0 top-0 h-32 rounded-t-4xl bg-gradient-to-br from-brand/8 via-brand-light/40 to-transparent dark:from-brand/10 dark:via-brand/5" />
 
           <div className="relative flex flex-col gap-5 px-5 pb-6 pt-7 sm:flex-row sm:items-start sm:gap-6 sm:px-8 sm:pt-8">
             {/* Avatar */}
