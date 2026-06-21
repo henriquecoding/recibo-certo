@@ -10,13 +10,21 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('avatars', 'avatars', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Qualquer pessoa autenticada pode ver avatares (bucket público).
-CREATE POLICY IF NOT EXISTS "avatars_select"
+-- Drop + create para idempotência (CREATE POLICY não suporta IF NOT EXISTS).
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "avatars_select" ON storage.objects;
+  DROP POLICY IF EXISTS "avatars_insert" ON storage.objects;
+  DROP POLICY IF EXISTS "avatars_update" ON storage.objects;
+  DROP POLICY IF EXISTS "avatars_delete" ON storage.objects;
+END $$;
+
+-- Qualquer pessoa pode ver avatares (bucket público).
+CREATE POLICY "avatars_select"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'avatars');
 
 -- Utilizador só pode inserir no seu próprio caminho (userId/*)
-CREATE POLICY IF NOT EXISTS "avatars_insert"
+CREATE POLICY "avatars_insert"
   ON storage.objects FOR INSERT
   WITH CHECK (
     bucket_id = 'avatars'
@@ -24,7 +32,7 @@ CREATE POLICY IF NOT EXISTS "avatars_insert"
   );
 
 -- Utilizador só pode atualizar os seus próprios ficheiros
-CREATE POLICY IF NOT EXISTS "avatars_update"
+CREATE POLICY "avatars_update"
   ON storage.objects FOR UPDATE
   USING (
     bucket_id = 'avatars'
@@ -32,7 +40,7 @@ CREATE POLICY IF NOT EXISTS "avatars_update"
   );
 
 -- Utilizador só pode apagar os seus próprios ficheiros
-CREATE POLICY IF NOT EXISTS "avatars_delete"
+CREATE POLICY "avatars_delete"
   ON storage.objects FOR DELETE
   USING (
     bucket_id = 'avatars'
