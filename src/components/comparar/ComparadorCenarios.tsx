@@ -111,13 +111,35 @@ export default function ComparadorCenarios() {
   const maxLiquido = Math.max(...Object.values(liquidos), 1);
 
   const { breakEvenEmpresa, breakEvenRV } = useMemo(() => {
-    let bEmp: number | null = null;
-    let bRV: number | null = null;
+    const amostras: { x: number; rvGanha: boolean; empGanha: boolean }[] = [];
     for (let x = 5_000; x <= MAX; x += 2_500) {
       const c = compararCategorias({ brutoAnual: x, dependentes, despesas });
-      if (bEmp === null && c.empresa.liquido > c.freelancer.liquido) bEmp = x;
-      if (bRV === null && c.freelancer.liquido > c.dependente.liquido) bRV = x;
+      amostras.push({
+        x,
+        rvGanha: c.freelancer.liquido > c.dependente.liquido + 1,
+        empGanha: c.empresa.liquido > c.freelancer.liquido + 1,
+      });
     }
+
+    let bRV: number | null = null;
+    let bEmp: number | null = null;
+
+    let ultimaDerrota = -1;
+    for (let i = 0; i < amostras.length; i++) {
+      if (!amostras[i].rvGanha) ultimaDerrota = i;
+    }
+    if (ultimaDerrota < amostras.length - 1) {
+      bRV = ultimaDerrota === -1 ? amostras[0]?.x ?? null : amostras[ultimaDerrota + 1]?.x ?? null;
+    }
+
+    ultimaDerrota = -1;
+    for (let i = 0; i < amostras.length; i++) {
+      if (!amostras[i].empGanha) ultimaDerrota = i;
+    }
+    if (ultimaDerrota < amostras.length - 1) {
+      bEmp = ultimaDerrota === -1 ? amostras[0]?.x ?? null : amostras[ultimaDerrota + 1]?.x ?? null;
+    }
+
     return { breakEvenEmpresa: bEmp, breakEvenRV: bRV };
   }, [dependentes, despesas]);
 
@@ -323,17 +345,17 @@ export default function ComparadorCenarios() {
 
         {/* Legenda de pontos de viragem */}
         {(breakEvenRV != null || breakEvenEmpresa != null) && (
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] font-medium">
+          <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] font-medium">
             {breakEvenRV != null && (
               <span className="flex items-center gap-1.5 text-brand-dark dark:text-brand">
                 <span className="h-1.5 w-1.5 rounded-full bg-brand-dark dark:bg-brand" />
-                RV a partir de ~{fmtK(breakEvenRV)}
+                RV compensa acima de ~{fmtK(breakEvenRV)}
               </span>
             )}
             {breakEvenEmpresa != null && (
               <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                Empresa a partir de ~{fmtK(breakEvenEmpresa)}
+                Empresa compensa acima de ~{fmtK(breakEvenEmpresa)}
               </span>
             )}
           </div>
@@ -409,7 +431,7 @@ export default function ComparadorCenarios() {
       </div>
 
       {/* ── Cartões de resultado — 3 vias ── */}
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
         {CARTOES.map((c) => {
           const liquido = liquidos[c.chave];
           const melhor = r.melhor === c.chave;
@@ -419,20 +441,20 @@ export default function ComparadorCenarios() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, ease: EASE }}
-              className={`relative rounded-2xl border p-5 transition-all ${
+              className={`relative overflow-hidden rounded-2xl border p-5 transition-all ${
                 melhor
-                  ? "border-brand/40 bg-brand/8 dark:bg-brand/10 shadow-glow"
+                  ? "border-brand/40 bg-gradient-to-b from-brand/8 to-transparent dark:from-brand/12 dark:to-transparent shadow-glow ring-1 ring-brand/20"
                   : "border-stone-100 dark:border-stone-700 bg-white dark:bg-stone-800"
               }`}
             >
               {melhor && (
-                <span className="absolute -top-2.5 left-5 inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                <span className="absolute -top-2.5 left-5 inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
                   <Check size={10} /> Mais líquido
                 </span>
               )}
-              <div className="mb-2 flex items-center gap-2">
-                <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${melhor ? "bg-brand/15 text-brand" : "bg-stone-100 dark:bg-stone-700 text-stone-400"}`}>
-                  <c.Icon size={15} />
+              <div className="mb-3 flex items-center gap-2.5">
+                <span className={`flex h-8 w-8 items-center justify-center rounded-xl ${melhor ? "bg-brand/15 text-brand" : "bg-stone-100 dark:bg-stone-700 text-stone-400"}`}>
+                  <c.Icon size={16} />
                 </span>
                 <div>
                   <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">{c.titulo}</p>
@@ -444,14 +466,14 @@ export default function ComparadorCenarios() {
                 initial={{ y: -4, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.15 }}
-                className={`font-display text-2xl font-semibold tabular-nums ${melhor ? "text-brand" : "text-stone-800 dark:text-stone-100"}`}
+                className={`font-display tabular-nums ${melhor ? "text-[1.75rem] font-bold text-brand" : "text-2xl font-semibold text-stone-800 dark:text-stone-100"}`}
               >
                 {fmt(liquido)}
               </m.p>
-              <p className="mt-0.5 text-xs text-stone-400">líquido/ano · {pct(cargas[c.chave])} de carga</p>
-              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-stone-100 dark:bg-stone-700">
+              <p className="mt-1 text-xs text-stone-400">líquido/ano · {pct(cargas[c.chave])} de carga fiscal</p>
+              <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-stone-100 dark:bg-stone-700">
                 <m.div
-                  className={`h-full rounded-full ${melhor ? "bg-brand" : "bg-stone-300 dark:bg-stone-600"}`}
+                  className={`h-full rounded-full ${melhor ? "bg-gradient-to-r from-brand to-brand-dark" : "bg-stone-300 dark:bg-stone-600"}`}
                   initial={false}
                   animate={{ width: `${Math.max(0, Math.min(100, (liquido / maxLiquido) * 100))}%` }}
                   transition={{ duration: 0.5, ease: EASE }}
@@ -463,31 +485,42 @@ export default function ComparadorCenarios() {
       </div>
 
       {/* ── Veredicto + pontos de viragem ── */}
-      <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-brand-light p-4 dark:bg-brand/10">
-        <span className="mt-0.5 flex-shrink-0 text-brand"><Check size={16} /></span>
-        <div className="text-sm text-brand-dark dark:text-brand">
-          <p className="font-semibold">
-            Com {fmt(bruto)}/ano, <strong>{tituloMelhor.toLowerCase()}</strong> deixa-te com mais {fmt(diffMelhor)}/ano.
-          </p>
-          <p className="mt-1 text-xs leading-relaxed text-brand-dark/80 dark:text-brand/70">
-            {breakEvenRV
-              ? `Os recibos verdes ultrapassam o salário acima de ~${fmt(breakEvenRV)}/ano. `
-              : "Até aos valores testados, o salário por conta de outrem mantém-se competitivo. "}
-            {breakEvenEmpresa
-              ? `A empresa começa a compensar acima de ~${fmt(breakEvenEmpresa)}/ano.`
-              : "A empresa só compensa em rendimentos mais altos do que os testados."}
-          </p>
+      <div className="mt-5 overflow-hidden rounded-2xl border border-brand/20 bg-gradient-to-r from-brand-light to-brand-light/60 dark:from-brand/10 dark:to-brand/5 dark:border-brand/15">
+        <div className="flex items-start gap-3 p-5">
+          <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-brand/15 text-brand">
+            <Scale size={16} />
+          </span>
+          <div className="text-sm text-brand-dark dark:text-brand">
+            <p className="font-bold leading-snug">
+              Com {fmt(bruto)}/ano, <strong>{tituloMelhor.toLowerCase()}</strong> deixa-te com mais {fmt(diffMelhor)}/ano.
+            </p>
+            <p className="mt-1.5 text-xs leading-relaxed text-brand-dark/75 dark:text-brand/65">
+              {breakEvenRV
+                ? `Acima de ~${fmt(breakEvenRV)}/ano, os recibos verdes passam a compensar de forma consistente face ao salário. `
+                : "Para estes parâmetros, o salário por conta de outrem mantém-se competitivo em toda a gama testada. "}
+              {breakEvenEmpresa
+                ? `A empresa torna-se o cenário mais vantajoso acima de ~${fmt(breakEvenEmpresa)}/ano.`
+                : "A empresa só compensa em rendimentos mais altos do que os testados."}
+            </p>
+            {!breakEvenRV && bruto > 0 && r.melhor !== "dependente" && (
+              <p className="mt-1.5 text-xs leading-relaxed text-brand-dark/55 dark:text-brand/45">
+                Nota: a comparação entre salário e recibos verdes varia consoante o escalão — para o teu caso concreto, consulta um contabilista.
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
       {/* ── Gráfico de colunas — para onde vai cada euro ── */}
       {bruto > 0 && (
-        <div className="mt-6 rounded-2xl border border-stone-100 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/40 p-5">
-          <div className="mb-1 flex items-center gap-2">
-            <ChartProjection size={15} className="text-brand" />
+        <div className="mt-6 rounded-2xl border border-stone-100 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/40 p-5 sm:p-6">
+          <div className="mb-1 flex items-center gap-2.5">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand/10 text-brand">
+              <ChartProjection size={14} />
+            </span>
             <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-stone-500 dark:text-stone-400">Para onde vai cada euro</h3>
           </div>
-          <p className="mb-4 text-xs text-stone-400">Mesma altura porque parte do mesmo ilíquido — o verde vivo é o que te fica; os tons mais escuros são imposto.</p>
+          <p className="mb-5 text-xs text-stone-400">Mesma altura porque parte do mesmo ilíquido — o verde vivo é o que te fica; os tons mais escuros são imposto.</p>
 
           <div className="flex items-end justify-around gap-4 sm:gap-8" style={{ height: 230 }}>
             {CARTOES.map((c) => {
@@ -573,8 +606,10 @@ export default function ComparadorCenarios() {
 
       {/* ── Calendário fiscal por cenário ── */}
       <div className="mt-6">
-        <div className="mb-3 flex items-center gap-2">
-          <Calendar size={15} className="text-brand" />
+        <div className="mb-3 flex items-center gap-2.5">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand/10 text-brand">
+            <Calendar size={14} />
+          </span>
           <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-stone-500 dark:text-stone-400">
             Calendário fiscal por cenário
           </h3>

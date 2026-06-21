@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.39.0";
+export const APP_VERSION = "1.40.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.40.0",
+    data: "2026-06-21",
+    titulo: "Lógica de breakeven robusta e design refinado",
+    itens: [
+      "Comparador de Cenários: breakeven agora identifica o ponto a partir do qual um regime compensa de forma consistente, eliminando oscilações enganadoras entre escalões.",
+      "Cartões de resultado com gradiente e anel visual no vencedor para distinção imediata.",
+      "Veredicto redesenhado com ícone, bordas e gradiente para maior destaque.",
+      "Secções de gráfico e calendário com ícones em caixas para coerência visual.",
+    ],
+  },
   {
     version: "1.39.0",
     data: "2026-06-21",
