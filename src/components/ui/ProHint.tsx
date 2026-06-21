@@ -46,11 +46,11 @@ export default function ProHint({
   };
 
   return (
-    <div className={`flex items-start gap-3 rounded-2xl border border-brand/30 bg-brand-light px-4 py-3 ${className}`}>
+    <div className={`flex items-start gap-3 rounded-2xl border border-brand/30 bg-brand-light px-4 py-3 dark:bg-brand/10 dark:border-brand/20 ${className}`}>
       {icon && <span className="mt-0.5 flex-shrink-0 text-brand">{icon}</span>}
       <div className="min-w-0 flex-1">
-        <p className="text-sm leading-relaxed text-brand-dark">{children}</p>
-        <Link href={href} className="mt-1.5 inline-flex items-center gap-1 text-sm font-semibold text-brand-dark hover:gap-1.5 transition-all">
+        <p className="text-sm leading-relaxed text-brand-dark dark:text-brand">{children}</p>
+        <Link href={href} className="mt-1.5 inline-flex items-center gap-1 text-sm font-semibold text-brand-dark hover:gap-1.5 transition-all dark:text-brand">
           {cta}
           <ArrowRight size={13} />
         </Link>
@@ -59,7 +59,7 @@ export default function ProHint({
         type="button"
         onClick={dispensar}
         aria-label="Dispensar sugestão"
-        className="flex-shrink-0 rounded-lg p-1 text-brand-dark/60 transition-colors hover:bg-white/40 hover:text-brand-dark"
+        className="flex-shrink-0 rounded-lg p-1 text-brand-dark/60 transition-colors hover:bg-white/40 hover:text-brand-dark dark:text-brand/60 dark:hover:bg-stone-800/50 dark:hover:text-brand"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
           <path d="M7 7l10 10M17 7L7 17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
