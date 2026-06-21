@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.34.0";
+export const APP_VERSION = "1.35.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,18 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.35.0",
+    data: "2026-06-21",
+    titulo: "Referências legais, sede virtual e perfil de estrangeiro no simulador",
+    itens: [
+      "Referências legais clicáveis em todos os passos do simulador de empresa — cada taxa e benefício mostra o artigo de lei com link direto para o Portal das Finanças ou Diário da República.",
+      "Novo seletor de tipo de sede: física, sede virtual (50–150€/mês) ou coworking (50–300€/mês) — com custo anual incluído na simulação e nota sobre obrigatoriedade de sede fiscal (Art. 12.º CSC).",
+      "Perfil do fundador: residente, cidadão UE/EEE ou extra-UE. Representante fiscal obrigatório para extra-UE (Art. 19.º LGT) com custo estimado.",
+      "IFICI (Art. 58.º-A EBF) — toggle para estrangeiros elegíveis: taxa flat de 20% sobre dividendos durante 10 anos, com cálculo de poupança face à liberatória de 28%.",
+      "Resultado e checklist adaptam-se ao perfil: custos de sede virtual e representante fiscal na cascata, passos para obter NIF e estatuto IFICI.",
+    ],
+  },
   {
     version: "1.34.0",
     data: "2026-06-21",
