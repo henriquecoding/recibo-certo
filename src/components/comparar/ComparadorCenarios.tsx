@@ -228,7 +228,7 @@ export default function ComparadorCenarios() {
             <span className="font-display text-lg font-semibold text-stone-400">€</span>
           </div>
         </div>
-        <p className="text-right text-[11px] text-stone-400 mb-5">/ano · arrasta o slider ou edita o valor</p>
+        <p className="text-right text-[11px] text-stone-400 mb-4">/ano · arrasta o slider ou edita o valor</p>
 
         {/* Dica flutuante — desaparece após 1.ª interação */}
         <AnimatePresence>
@@ -237,7 +237,7 @@ export default function ComparadorCenarios() {
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="flex items-center justify-center gap-1.5 mb-3"
+              className="flex items-center justify-center gap-1.5 mb-2"
             >
               <m.div
                 animate={{ x: [-4, 4, -4] }}
@@ -252,26 +252,24 @@ export default function ComparadorCenarios() {
           )}
         </AnimatePresence>
 
-        {/* Bolha flutuante sobre o puxador */}
-        <div className="relative h-10 mb-3 pointer-events-none">
-          <m.div
-            className="absolute -translate-x-1/2 bottom-0"
-            style={{ left: `${sliderPct}%` }}
-            animate={{ left: `${sliderPct}%` }}
-            transition={{ duration: 0, type: "tween" }}
+        {/* Espaço para a bolha flutuante */}
+        <div className="h-9" />
+
+        {/* Trilho + preenchimento + puxador */}
+        <div className="relative px-1">
+          {/* Bolha flutuante sobre o puxador */}
+          <div
+            className="absolute -translate-x-1/2 bottom-full mb-2 z-30 pointer-events-none"
+            style={{ left: `calc(${sliderPct}% + 4px)` }}
           >
             <div className={`relative px-2.5 py-1 rounded-lg text-[11px] font-bold text-white shadow-md whitespace-nowrap transition-all duration-100 ${dragging ? "bg-brand-dark scale-105" : "bg-brand"}`}>
               {fmtK(bruto)}
-              <div className="absolute top-full left-1/2 -translate-x-1/2 flex flex-col items-center">
-                <div className="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent border-t-brand" />
-                <div className="w-px h-2 bg-brand/40" />
+              <div className="absolute top-full left-1/2 -translate-x-1/2">
+                <div className={`w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent transition-colors duration-100 ${dragging ? "border-t-brand-dark" : "border-t-brand"}`} />
               </div>
             </div>
-          </m.div>
-        </div>
+          </div>
 
-        {/* Trilho + preenchimento + puxador */}
-        <div className="px-1">
           <div
             ref={trackRef}
             role="slider"
@@ -286,11 +284,11 @@ export default function ComparadorCenarios() {
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
             onKeyDown={onKeyDown}
-            className={`relative h-3.5 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-stone-50 dark:focus-visible:ring-offset-stone-900 select-none ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
+            className={`relative h-3 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-stone-50 dark:focus-visible:ring-offset-stone-900 select-none ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
             style={{ touchAction: "none" }}
           >
             {/* Fundo do trilho */}
-            <div className="absolute inset-0 rounded-full bg-stone-200 dark:bg-stone-700 shadow-inner overflow-hidden">
+            <div className="absolute inset-0 rounded-full bg-stone-200 dark:bg-stone-700 overflow-hidden">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-brand to-brand-dark transition-none"
                 style={{ width: `${sliderPct}%` }}
@@ -313,25 +311,28 @@ export default function ComparadorCenarios() {
               />
             )}
 
-            {/* Puxador */}
-            <m.div
+            {/* Puxador — wrapper posiciona, inner anima */}
+            <div
               className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 pointer-events-none"
               style={{ left: `${sliderPct}%` }}
-              animate={{ scale: dragging ? 1.15 : 1 }}
-              transition={{ duration: 0.1 }}
             >
-              <div className={`flex h-7 w-7 items-center justify-center rounded-full bg-white border-2 transition-all duration-100 ${
-                dragging
-                  ? "border-brand-dark shadow-[0_0_0_4px_rgba(29,158,117,0.18)]"
-                  : "border-brand shadow-[0_2px_8px_rgba(29,158,117,0.25)]"
-              }`}>
-                <GripHorizontal size={12} className="text-brand" />
-              </div>
-            </m.div>
+              <m.div
+                animate={{ scale: dragging ? 1.15 : 1 }}
+                transition={{ duration: 0.1 }}
+              >
+                <div className={`flex h-8 w-8 items-center justify-center rounded-full bg-white border-2 transition-all duration-100 ${
+                  dragging
+                    ? "border-brand-dark shadow-[0_0_0_5px_rgba(29,158,117,0.15)]"
+                    : "border-brand shadow-[0_2px_10px_rgba(29,158,117,0.3)]"
+                }`}>
+                  <GripHorizontal size={13} className="text-brand" />
+                </div>
+              </m.div>
+            </div>
           </div>
 
           {/* Etiquetas: mínimo / breakevens / máximo */}
-          <div className="relative mt-2.5 text-[10px] font-medium text-stone-400">
+          <div className="relative mt-3 h-4 text-[10px] font-medium text-stone-400">
             <span className="absolute left-0">0€</span>
             {breakEvenRV != null && breakEvenRV <= MAX && (
               <span
