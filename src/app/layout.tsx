@@ -43,15 +43,17 @@ const BING_SITE_VERIFICATION = process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION;
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "ReciboCerto — o teu líquido real: recibos verdes e salário 2026",
+    default:
+      "Calculadora de Recibos Verdes, Salário Líquido e Simulador de Empresa 2026 | ReciboCerto",
     template: "%s | ReciboCerto",
   },
   description:
-    "Trabalhador independente, por conta de outrem ou futuro empresário? Vê em segundos o impacto do IRS, da Segurança Social e do IVA — e quanto fica realmente teu. Taxas de 2026 verificadas com fonte legal. Grátis, sem registo.",
+    "Calcula recibos verdes, salário líquido e simula criar empresa em Portugal. IRS, Segurança Social e IVA com taxas de 2026 verificadas com fonte legal. Guias fiscais, ferramentas e quiz. Grátis, sem registo.",
   keywords: [
-    "calculadora recibos verdes",
+    "calculadora recibos verdes 2026",
     "calcular salário líquido 2026",
     "recibo de vencimento 2026",
+    "simulador empresa unipessoal portugal",
     "trabalhador por conta de outrem IRS",
     "recibos verdes 2026",
     "IRS trabalhador independente Portugal",
@@ -61,6 +63,11 @@ export const metadata: Metadata = {
     "IRS jovem 2026",
     "recibos verdes vs empresa portugal",
     "simulador IRS portugal",
+    "copiloto fiscal portugal",
+    "guia trabalhador independente 2026",
+    "ato isolado portugal 2026",
+    "comparar regime simplificado e empresa",
+    "classificar atividade CIRS portugal",
   ],
   authors: [{ name: "ReciboCerto", url: SITE_URL }],
   creator: "ReciboCerto",
@@ -78,18 +85,17 @@ export const metadata: Metadata = {
     locale: "pt_PT",
     url: SITE_URL,
     siteName: "ReciboCerto",
-    title: "ReciboCerto — quanto fica realmente teu, do recibo ao salário",
+    title:
+      "ReciboCerto — Calculadora de Recibos Verdes, Salário e Empresa 2026",
     description:
-      "Para independentes, trabalhadores por conta de outrem e futuros empresários: o impacto do IRS, da Segurança Social e do IVA em segundos. Taxas 2026 verificadas. Grátis e sem registo.",
-    // A imagem é gerada por `src/app/opengraph-image.tsx` (convenção do Next) e
-    // aplicada automaticamente a todas as páginas que não definam a sua própria.
+      "Calcula recibos verdes, salário líquido e simula criar empresa em Portugal. IRS, Segurança Social e IVA em segundos. Guias, ferramentas e quiz fiscal. Taxas 2026 verificadas. Grátis.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ReciboCerto — quanto fica realmente teu, do recibo ao salário",
+    title:
+      "ReciboCerto — Calculadora de Recibos Verdes, Salário e Empresa 2026",
     description:
-      "Do recibo verde ao salário: vê quanto fica realmente teu após IRS, SS e IVA. Taxas 2026 verificadas. Grátis.",
-    // Imagem via `src/app/twitter-image.tsx`.
+      "Calcula recibos verdes, salário líquido e simula criar empresa. IRS, SS e IVA com taxas 2026. Guias e ferramentas grátis.",
   },
   robots: {
     index: true,

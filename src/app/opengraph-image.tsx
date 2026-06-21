@@ -5,7 +5,7 @@ import { ImageResponse } from "next/og";
 // `/og-home.png` que estava referenciado mas não existia.
 
 export const runtime = "nodejs";
-export const alt = "ReciboCerto — quanto fica realmente teu, do recibo ao salário (2026)";
+export const alt = "ReciboCerto — Calculadora de Recibos Verdes, Salário Líquido e Simulador de Empresa 2026";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -70,7 +70,7 @@ export default function OpengraphImage() {
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div
             style={{
-              fontSize: "76px",
+              fontSize: "68px",
               fontWeight: 700,
               color: "#1A1A17",
               lineHeight: 1.05,
@@ -81,7 +81,7 @@ export default function OpengraphImage() {
           </div>
           <div
             style={{
-              fontSize: "76px",
+              fontSize: "68px",
               fontWeight: 700,
               color: "#0F6E56",
               lineHeight: 1.05,
@@ -92,16 +92,16 @@ export default function OpengraphImage() {
           </div>
           <div
             style={{
-              fontSize: "32px",
+              fontSize: "28px",
               color: "#57534E",
-              marginTop: "28px",
+              marginTop: "24px",
               maxWidth: "960px",
-              lineHeight: 1.4,
+              lineHeight: 1.45,
             }}
           >
-            Do recibo verde ao salário: IRS, Segurança Social e IVA em segundos.
-            Para independentes, por conta de outrem e futuros empresários. Taxas
-            de 2026 verificadas com fonte legal.
+            Calculadora de recibos verdes, simulador de salário líquido e
+            comparador empresa vs. independente. IRS, Segurança Social e IVA com
+            taxas de 2026 verificadas. Guias e ferramentas grátis.
           </div>
         </div>
 
