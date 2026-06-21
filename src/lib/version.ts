@@ -1,4 +1,4 @@
-export const APP_VERSION = "1.2.0";
+export const APP_VERSION = "1.3.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -9,6 +9,19 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.3.0",
+    data: "2026-06-21",
+    titulo: "Simulador de empresa (Lda) — modo guiado",
+    itens: [
+      "Novo modo guiado para empresa: passo a passo para simular e abrir uma sociedade (Unipessoal ou por Quotas).",
+      "Cálculo com IRC PME 2026 (15% até 50.000€ + 19%), derrama municipal, dividendos (28% liberatória ou englobamento 50%) e Segurança Social do gerente.",
+      "Dica automática de otimização: indica quando o englobamento de dividendos compensa face à taxa liberatória.",
+      "Calendário de obrigações fiscais da empresa e guia passo a passo de constituição (Empresa na Hora, capital, contabilidade).",
+      "Página dedicada em /ferramentas/simulador-empresa e alternador Guiado/Completo no simulador.",
+      "Calendário Fiscal do Ano redesenhado com grelha responsiva, progresso do ano e resumo por trimestre.",
+    ],
+  },
   {
     version: "1.2.0",
     data: "2026-06-16",

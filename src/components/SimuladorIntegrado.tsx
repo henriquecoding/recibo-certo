@@ -3753,8 +3753,9 @@ export default function SimuladorIntegrado() {
 
           <div className="flex flex-wrap items-center gap-2">
             {/* Segmented control Por recibo / Anual — só modo profissional
-                (no guiado o input é gerido dentro do wizard) */}
-            {modoSimulacao === "profissional" && (
+                (no guiado de empresa o input é gerido dentro do wizard) */}
+            {modoSimulacao === "profissional" &&
+              !(cenario === "empresa" && modoEmpresa === "guiado") && (
               <div
                 role="group"
                 aria-label="Modo de cálculo"
@@ -3899,6 +3900,51 @@ export default function SimuladorIntegrado() {
         {/* ── Modo Profissional ────────────────────────────────────────────── */}
         {modoSimulacao === "profissional" && (
           <>
+            {/* ── Empresa: alternador Guiado / Completo (full width) ───────────── */}
+            {cenario === "empresa" && (
+              <div className="border-b border-stone-100 bg-white px-5 py-5 sm:px-8 lg:px-10 dark:border-stone-800 dark:bg-stone-950">
+                <div
+                  role="tablist"
+                  aria-label="Modo do simulador de empresa"
+                  className="flex flex-wrap items-center gap-2"
+                >
+                  {(
+                    [
+                      { v: "guiado" as const, l: "Guiado" },
+                      { v: "completo" as const, l: "Completo" },
+                    ] as const
+                  ).map(({ v, l }) => (
+                    <button
+                      key={v}
+                      role="tab"
+                      type="button"
+                      aria-selected={modoEmpresa === v}
+                      onClick={() => setModoEmpresa(v)}
+                      className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                        modoEmpresa === v
+                          ? "bg-brand text-white shadow-md"
+                          : "text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200"
+                      }`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                  <span className="ml-1 text-[11px] text-stone-400 dark:text-stone-500">
+                    {modoEmpresa === "guiado"
+                      ? "Passo a passo para abrir e simular uma empresa"
+                      : "Simulação detalhada — TA, RFAI, SIFIDE, IMI/IMT"}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {cenario === "empresa" && modoEmpresa === "guiado" ? (
+              /* ── Empresa guiado (full width, layout próprio) ─────────────────── */
+              <ModoGuiadoEmpresa
+                onIrParaSimuladorCompleto={() => setModoEmpresa("completo")}
+              />
+            ) : (
+              <>
             {/* ── Corpo ─────────────────────────────────────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-2">
               {/* ════ Coluna esquerda: Inputs ════ */}
@@ -5202,14 +5248,7 @@ export default function SimuladorIntegrado() {
                   </AnimatePresence>
                 </div>
 
-                {/* ── Inputs Empresa (visíveis quando cenário = empresa) ─────── */}
-                {cenario === "empresa" && modoEmpresa === "guiado" && (
-                  <div className="mt-5 pt-5 border-t border-stone-100 dark:border-stone-800">
-                    <ModoGuiadoEmpresa
-                      onIrParaSimuladorCompleto={() => setModoEmpresa("completo")}
-                    />
-                  </div>
-                )}
+                {/* ── Inputs Empresa (modo completo; o guiado é full-width) ──── */}
                 {cenario === "empresa" && modoEmpresa === "completo" && (
                   <EmpresaInputs
                     despesasOper={despesasOper}
@@ -6473,6 +6512,8 @@ export default function SimuladorIntegrado() {
                 </p>
               </div>
             </div>
+              </>
+            )}
           </>
         )}
       </div>

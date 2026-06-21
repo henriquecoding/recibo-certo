@@ -94,8 +94,8 @@ function simularEmpresaGuiado(
   opcaoEnglobamento: boolean,
   incluirConstituicao: boolean,
 ): ResultadoEmpresaGuiado {
-  const salGerente = salGerenteMensal * 14;
-  const ssSalGerente = salGerenteMensal * 12 * (SS_EMP_TAXA + SS_TRAB_TAXA);
+  const salGerente = salGerenteMensal * 12;
+  const ssSalGerente = salGerente * (SS_EMP_TAXA + SS_TRAB_TAXA);
   const custoConstituicao = incluirConstituicao
     ? Math.round(CUSTO_CONSTITUICAO_DEFAULT / 3)
     : 0;
@@ -719,7 +719,7 @@ export default function ModoGuiadoEmpresa({
                         <>
                           Salário bruto mensal do gerente-sócio. A empresa paga
                           SS patronal (23,75%) e o trabalhador desconta 11%.
-                          Custo dedutível ao IRC. 14 meses (inclui subsídios).
+                          Custo dedutível ao IRC (12 meses).
                         </>
                       }
                     />
@@ -1008,7 +1008,7 @@ export default function ModoGuiadoEmpresa({
                         : null,
                       resultado.salGerente > 0
                         ? {
-                            label: `Salário gerente (${fmt(salGerenteMensal)}/mês × 14)`,
+                            label: `Salário gerente (${fmt(salGerenteMensal)}/mês × 12)`,
                             value: -resultado.salGerente,
                             cor: "text-stone-500",
                           }
@@ -1101,6 +1101,14 @@ export default function ModoGuiadoEmpresa({
                       </div>
                     </div>
                   </div>
+
+                  <p className="mt-3 px-1 text-[10px] leading-relaxed text-stone-400 dark:text-stone-500">
+                    Estimativa anual com as taxas oficiais de 2026. O salário
+                    líquido está após Segurança Social, mas antes da retenção de
+                    IRS na fonte (que varia com o agregado e situação pessoal). A
+                    derrama municipal usa a taxa máxima (1,5%) — confirma a do teu
+                    concelho. Não substitui aconselhamento de um contabilista.
+                  </p>
 
                   {/* Calendário fiscal resumo */}
                   <Collapsible title="Obrigações fiscais da empresa" defaultOpen={false}>
