@@ -69,7 +69,7 @@ type RegiaoRFAIGuiado = "interior" | "litoral";
 const RFAI_TAXA: Record<RegiaoRFAIGuiado, number> = { interior: 0.3, litoral: 0.1 };
 const RFAI_LIMITE_COLETA = 0.5;
 
-type Passo = 0 | 1 | 2 | 3 | 4 | "resultado";
+type Passo = 0 | 1 | 2 | 3 | 4 | "resultado" | "aseguir";
 
 type TipoSociedade = "unipessoal" | "quotas";
 
@@ -660,9 +660,8 @@ export default function ModoGuiadoEmpresa({
     if (passo === 1) setPasso(2);
     else if (passo === 2) setPasso(3);
     else if (passo === 3) setPasso(4);
-    else if (passo === 4) {
-      setPasso("resultado");
-    }
+    else if (passo === 4) setPasso("resultado");
+    else if (passo === "resultado") setPasso("aseguir");
   }
 
   function recuar() {
@@ -671,10 +670,11 @@ export default function ModoGuiadoEmpresa({
     else if (passo === 3) setPasso(2);
     else if (passo === 4) setPasso(3);
     else if (passo === "resultado") setPasso(4);
+    else if (passo === "aseguir") setPasso("resultado");
   }
 
-  const progressLabels = ["Empresa", "Receita", "Dividendos", "Otimização", "Resultado"];
-  const passoNum = passo === "resultado" ? 5 : passo;
+  const progressLabels = ["Empresa", "Receita", "Dividendos", "Otimização", "Resultado", "A seguir"];
+  const passoNum = passo === "resultado" ? 5 : passo === "aseguir" ? 6 : passo;
 
   // ─── Passo 0: pergunta inicial ─────────────────────────────────────────────
 
@@ -1486,116 +1486,146 @@ export default function ModoGuiadoEmpresa({
                     contabilista certificado (OCC).
                   </p>
 
-                  {/* ── Próximos passos ────────────────────────────────────── */}
-                  <div className="mt-6 rounded-3xl border border-stone-200 bg-stone-50 overflow-hidden dark:border-stone-800 dark:bg-stone-900/50">
-                    <div className="flex items-center gap-2.5 border-b border-stone-100 px-5 py-4 dark:border-stone-800">
-                      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light">
-                        <ChartProjection size={18} className="text-brand-dark" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-stone-800 dark:text-stone-100">O que fazer a seguir</h4>
-                        <p className="text-[11px] text-stone-400">Passos recomendados com base na tua simulação</p>
-                      </div>
-                    </div>
+                  <div className="mt-6 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={recuar}
+                      className="flex items-center gap-1.5 rounded-xl border border-stone-200 px-4 py-2.5 text-xs font-semibold text-stone-500 transition-colors hover:border-stone-300 dark:border-stone-700 dark:text-stone-400"
+                    >
+                      <ArrowLeft size={14} /> Voltar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={avancar}
+                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand py-2.5 text-sm font-bold text-white transition-all hover:bg-brand-dark"
+                    >
+                      Seguinte <ArrowRight size={14} />
+                    </button>
+                  </div>
+                </m.div>
+              )}
 
-                    <div className="px-5 pb-5 pt-4 space-y-3">
-                      {/* Comparar cenários */}
-                      <Link
-                        href="/dashboard/comparar"
-                        className="group flex items-center gap-3 rounded-2xl border-2 border-brand bg-brand-light/30 p-4 text-left transition-all hover:shadow-card dark:bg-brand/5"
+              {/* ── Passo 6: A seguir ─────────────────────────────────────── */}
+              {passo === "aseguir" && (
+                <m.div
+                  key="aseguir"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-brand/20 bg-brand-light/60 px-3 py-1 text-xs font-semibold text-brand-dark">
+                    <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+                    Próximos passos
+                  </span>
+                  <h2 className="font-display mb-2 text-2xl font-semibold text-stone-800 dark:text-stone-100">
+                    O que fazer a seguir
+                  </h2>
+                  <p className="mb-6 text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
+                    Com base na tua simulação de <strong>{fmt(faturacaoAnual)}/ano</strong> e
+                    resultado líquido de <strong>{fmt(Math.round(resultado.liquidoGerente))}</strong>,
+                    aqui estão os passos recomendados.
+                  </p>
+
+                  <div className="space-y-3">
+                    {/* Comparar cenários */}
+                    <Link
+                      href="/dashboard/comparar"
+                      className="group flex items-center gap-3 rounded-2xl border-2 border-brand bg-brand-light/30 p-4 text-left transition-all hover:shadow-card dark:bg-brand/5"
+                    >
+                      <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand text-white transition-colors">
+                        <ChartProjection size={18} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-bold text-brand-dark dark:text-brand">
+                          Comparar com recibos verdes
+                        </span>
+                        <span className="mt-0.5 block text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
+                          Descobre em que ponto a empresa compensa — com
+                          ponto de viragem, mapa por região e custo de
+                          contabilista.
+                        </span>
+                      </span>
+                      <ArrowRight
+                        size={16}
+                        className="flex-shrink-0 text-brand/50 transition-colors group-hover:text-brand"
+                      />
+                    </Link>
+
+                    {/* Simulador completo */}
+                    {onIrParaSimuladorCompleto && (
+                      <button
+                        type="button"
+                        onClick={onIrParaSimuladorCompleto}
+                        className="group flex w-full items-center gap-3 rounded-2xl border-2 border-stone-100 bg-white p-4 text-left transition-all hover:border-stone-200 hover:shadow-card dark:border-stone-800 dark:bg-stone-900"
                       >
-                        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand text-white transition-colors">
-                          <ChartProjection size={18} />
+                        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 transition-colors group-hover:bg-brand-light group-hover:text-brand dark:bg-stone-800">
+                          <Briefcase size={18} />
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-bold text-brand-dark dark:text-brand">
-                            Comparar com recibos verdes
+                          <span className="block text-sm font-bold text-stone-800 dark:text-stone-100">
+                            Simulador completo
                           </span>
                           <span className="mt-0.5 block text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
-                            Descobre em que ponto a empresa compensa — com
-                            ponto de viragem, mapa por região e custo de
-                            contabilista.
+                            DLRR, SIFIDE, IMI/IMT, tributação autónoma
+                            detalhada e mais benefícios fiscais.
                           </span>
                         </span>
                         <ArrowRight
                           size={16}
-                          className="flex-shrink-0 text-brand/50 transition-colors group-hover:text-brand"
+                          className="flex-shrink-0 text-stone-300 transition-colors group-hover:text-brand"
                         />
-                      </Link>
-
-                      {/* Simulador completo */}
-                      {onIrParaSimuladorCompleto && (
-                        <button
-                          type="button"
-                          onClick={onIrParaSimuladorCompleto}
-                          className="group flex w-full items-center gap-3 rounded-2xl border-2 border-stone-100 bg-white p-4 text-left transition-all hover:border-stone-200 hover:shadow-card dark:border-stone-800 dark:bg-stone-900"
-                        >
-                          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 transition-colors group-hover:bg-brand-light group-hover:text-brand dark:bg-stone-800">
-                            <Briefcase size={18} />
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-bold text-stone-800 dark:text-stone-100">
-                              Simulador completo
-                            </span>
-                            <span className="mt-0.5 block text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
-                              DLRR, SIFIDE, IMI/IMT, tributação autónoma
-                              detalhada e mais benefícios fiscais.
-                            </span>
-                          </span>
-                          <ArrowRight
-                            size={16}
-                            className="flex-shrink-0 text-stone-300 transition-colors group-hover:text-brand"
-                          />
-                        </button>
-                      )}
-                    </div>
+                      </button>
+                    )}
                   </div>
 
                   {/* Calendário fiscal resumo */}
-                  <Collapsible title="Obrigações fiscais da empresa" defaultOpen={false}>
-                    <div className="space-y-2">
-                      {[
-                        { quando: "Mensal (até dia 20)", obrigacoes: ["SS gerente + empresa", "Retenção IRS s/ salário", ...(faturacaoAnual >= 650_000 ? ["IVA mensal (Mod. Periódica)"] : [])] },
-                        ...(faturacaoAnual < 650_000 ? [{ quando: "Trimestral (Jan, Abr, Jul, Out)", obrigacoes: ["IVA trimestral (Mod. Periódica)"] }] : []),
-                        { quando: "Jul + Set + Dez (15 de cada mês)", obrigacoes: ["Pagamento por conta (PPC) — 3 prestações de IRC adiantado"] },
-                        { quando: "Maio (até dia 31)", obrigacoes: ["Modelo 22 (declaração anual de IRC)"] },
-                        { quando: "Jun–Jul", obrigacoes: ["IES — Informação Empresarial Simplificada"] },
-                        { quando: "Anual (novembro)", obrigacoes: ["IMI (se aplicável, em 1-3 prestações)"] },
-                      ].map((item) => (
-                        <div key={item.quando} className="flex items-start gap-3 py-2">
-                          <Calendar size={14} className="mt-0.5 flex-shrink-0 text-brand" />
-                          <div>
-                            <div className="text-xs font-bold text-stone-700 dark:text-stone-200">{item.quando}</div>
-                            {item.obrigacoes.map((o) => (<div key={o} className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">{o}</div>))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </Collapsible>
-
-                  {/* Como abrir */}
-                  {jaTemEmpresa === "nao" && (
-                    <Collapsible title="Como abrir a empresa (passo a passo)" defaultOpen={false}>
-                      <div className="space-y-3">
+                  <div className="mt-6 space-y-4">
+                    <Collapsible title="Obrigações fiscais da empresa" defaultOpen={false}>
+                      <div className="space-y-2">
                         {[
-                          { num: 1, titulo: "Escolher firma e CAE", desc: "Escolhe o nome (firma) e o código CAE que define a atividade. Podes reservar o nome online no Portal da Empresa." },
-                          { num: 2, titulo: "Empresa na Hora (balcão ou online)", desc: "Num balcão do IRN constituis a sociedade em menos de 1 hora: pacto social, registo e NIF empresarial ficam prontos. Online demora 1–2 dias úteis. Custo: ~360€." },
-                          { num: 3, titulo: "Abrir conta bancária da empresa", desc: "Depositar o capital social (mínimo 1€) e abrir a conta bancária em nome da sociedade." },
-                          { num: 4, titulo: "Início de atividade nas Finanças", desc: "Entregar a declaração de início de atividade no Portal das Finanças com o regime de IVA (geralmente trimestral) e o CAE." },
-                          { num: 5, titulo: "Inscrever na Segurança Social", desc: "Inscrever a empresa e o gerente como MOE (membro de órgão estatutário). SS patronal: 23,75%, gerente: 11%." },
-                          { num: 6, titulo: "Contratar contabilista (TOC)", desc: "Obrigatório ter um TOC inscrito na OCC para manter a contabilidade organizada. Custo: ~200€/mês." },
-                        ].map((step) => (
-                          <div key={step.num} className="flex gap-3">
-                            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand text-white text-[10px] font-bold">{step.num}</span>
+                          { quando: "Mensal (até dia 20)", obrigacoes: ["SS gerente + empresa", "Retenção IRS s/ salário", ...(faturacaoAnual >= 650_000 ? ["IVA mensal (Mod. Periódica)"] : [])] },
+                          ...(faturacaoAnual < 650_000 ? [{ quando: "Trimestral (Jan, Abr, Jul, Out)", obrigacoes: ["IVA trimestral (Mod. Periódica)"] }] : []),
+                          { quando: "Jul + Set + Dez (15 de cada mês)", obrigacoes: ["Pagamento por conta (PPC) — 3 prestações de IRC adiantado"] },
+                          { quando: "Maio (até dia 31)", obrigacoes: ["Modelo 22 (declaração anual de IRC)"] },
+                          { quando: "Jun–Jul", obrigacoes: ["IES — Informação Empresarial Simplificada"] },
+                          { quando: "Anual (novembro)", obrigacoes: ["IMI (se aplicável, em 1-3 prestações)"] },
+                        ].map((item) => (
+                          <div key={item.quando} className="flex items-start gap-3 py-2">
+                            <Calendar size={14} className="mt-0.5 flex-shrink-0 text-brand" />
                             <div>
-                              <div className="text-xs font-bold text-stone-700 dark:text-stone-200">{step.titulo}</div>
-                              <div className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">{step.desc}</div>
+                              <div className="text-xs font-bold text-stone-700 dark:text-stone-200">{item.quando}</div>
+                              {item.obrigacoes.map((o) => (<div key={o} className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">{o}</div>))}
                             </div>
                           </div>
                         ))}
                       </div>
                     </Collapsible>
-                  )}
+
+                    {/* Como abrir */}
+                    {jaTemEmpresa === "nao" && (
+                      <Collapsible title="Como abrir a empresa (passo a passo)" defaultOpen={false}>
+                        <div className="space-y-3">
+                          {[
+                            { num: 1, titulo: "Escolher firma e CAE", desc: "Escolhe o nome (firma) e o código CAE que define a atividade. Podes reservar o nome online no Portal da Empresa." },
+                            { num: 2, titulo: "Empresa na Hora (balcão ou online)", desc: "Num balcão do IRN constituis a sociedade em menos de 1 hora: pacto social, registo e NIF empresarial ficam prontos. Online demora 1–2 dias úteis. Custo: ~360€." },
+                            { num: 3, titulo: "Abrir conta bancária da empresa", desc: "Depositar o capital social (mínimo 1€) e abrir a conta bancária em nome da sociedade." },
+                            { num: 4, titulo: "Início de atividade nas Finanças", desc: "Entregar a declaração de início de atividade no Portal das Finanças com o regime de IVA (geralmente trimestral) e o CAE." },
+                            { num: 5, titulo: "Inscrever na Segurança Social", desc: "Inscrever a empresa e o gerente como MOE (membro de órgão estatutário). SS patronal: 23,75%, gerente: 11%." },
+                            { num: 6, titulo: "Contratar contabilista (TOC)", desc: "Obrigatório ter um TOC inscrito na OCC para manter a contabilidade organizada. Custo: ~200€/mês." },
+                          ].map((step) => (
+                            <div key={step.num} className="flex gap-3">
+                              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand text-white text-[10px] font-bold">{step.num}</span>
+                              <div>
+                                <div className="text-xs font-bold text-stone-700 dark:text-stone-200">{step.titulo}</div>
+                                <div className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">{step.desc}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </Collapsible>
+                    )}
+                  </div>
 
                   <div className="mt-6">
                     <button
@@ -1603,7 +1633,7 @@ export default function ModoGuiadoEmpresa({
                       onClick={recuar}
                       className="flex items-center justify-center gap-1.5 rounded-xl border border-stone-200 px-4 py-2.5 text-xs font-semibold text-stone-500 transition-colors hover:border-stone-300 dark:border-stone-700 dark:text-stone-400"
                     >
-                      <ArrowLeft size={14} /> Ajustar valores
+                      <ArrowLeft size={14} /> Voltar ao resultado
                     </button>
                   </div>
                 </m.div>

@@ -23,7 +23,7 @@ export const CHANGELOG: EntradaChangelog[] = [
     titulo: "Simulador de empresa refinado — inputs ricos e próximos passos",
     itens: [
       "Inputs do simulador guiado da empresa agora incluem botões +/−, campo editável e slider com thumb animado — mais fáceis de usar no telemóvel.",
-      "Nova secção «O que fazer a seguir» no resultado: link direto para Comparar Cenários (com mapa e contabilista) e para o simulador completo.",
+      "Novo 6.º passo «A seguir» no wizard: link direto para Comparar Cenários (com mapa e contabilista) e para o simulador completo.",
       "Removida a comparação duplicada RV vs Empresa do resultado — usa agora a página dedicada «Comparar Cenários», que é mais completa.",
     ],
   },
