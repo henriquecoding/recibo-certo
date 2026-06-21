@@ -1,9 +1,19 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import {
+  useState,
+  useMemo,
+  useRef,
+  useCallback,
+  useEffect,
+  ChangeEvent,
+  KeyboardEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react";
 import { m, AnimatePresence } from "motion/react";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import InfoTip from "@/components/ui/InfoTip";
+import Link from "next/link";
 import {
   Check,
   Warning,
@@ -14,7 +24,6 @@ import {
   ChevronDown,
   Sparkle,
   Calendar,
-  Receipt,
   ChartProjection,
 } from "@/components/ui/Icons";
 import { pct, fmt } from "@/lib/format";
@@ -25,7 +34,6 @@ import {
   IRC_LIMITE_PME,
   DERRAMA_MAX,
   DIVIDENDOS_TAXA,
-  REGIME_SIMPLIFICADO,
 } from "@/lib/fiscal-data";
 
 // ─── Constantes fiscais 2026 ─────────────────────────────────────────────────
@@ -60,9 +68,6 @@ const TA_AGRAVAMENTO = 0.1;
 type RegiaoRFAIGuiado = "interior" | "litoral";
 const RFAI_TAXA: Record<RegiaoRFAIGuiado, number> = { interior: 0.3, litoral: 0.1 };
 const RFAI_LIMITE_COLETA = 0.5;
-
-// RV simplificado para comparação
-const COEF_SERVICOS = REGIME_SIMPLIFICADO.coefServicos151.value;
 
 type Passo = 0 | 1 | 2 | 3 | 4 | "resultado";
 
@@ -204,15 +209,6 @@ function simularEmpresaGuiado(
   };
 }
 
-// ─── RV simplificado (para comparação) ──────────────────────────────────────
-
-function simularRVSimplificado(faturacao: number): number {
-  const rendTrib = faturacao * COEF_SERVICOS;
-  const irs = calcularIRS(rendTrib);
-  const ssAnual = faturacao * COEF_SERVICOS * 0.214;
-  return Math.max(0, faturacao - irs - ssAnual);
-}
-
 // ─── Tipos de sociedade ──────────────────────────────────────────────────────
 
 const TIPOS_SOCIEDADE: {
@@ -240,65 +236,278 @@ const TIPOS_SOCIEDADE: {
   },
 ];
 
-// ─── Componente auxiliar: Slider simples ─────────────────────────────────────
+// ─── Componente auxiliar: NumericSlider (inputs ricos) ───────────────────────
 
-function SliderInput({
-  label,
-  value,
-  min,
-  max,
-  step,
-  onChange,
-  presets,
-  suffix = "",
-  tooltip,
-}: {
+interface NumericSliderProps {
   label: string;
   value: number;
   min: number;
   max: number;
   step: number;
+  unit?: string;
   onChange: (v: number) => void;
   presets?: number[];
-  suffix?: string;
+  formatPreset?: (v: number) => string;
   tooltip?: React.ReactNode;
-}) {
+}
+
+function NumericSlider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  unit = "€",
+  onChange,
+  presets,
+  formatPreset,
+  tooltip,
+}: NumericSliderProps) {
+  const [inputStr, setInputStr] = useState(String(value));
+  const [focused, setFocused] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const trackRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!focused) setInputStr(String(value));
+  }, [value, focused]);
+
+  const clamp = useCallback(
+    (v: number) => Math.round(Math.min(max, Math.max(min, v)) / step) * step,
+    [min, max, step],
+  );
+
+  const clampFree = useCallback((v: number) => Math.max(min, v), [min]);
+
+  const pctVal = Math.min(
+    100,
+    Math.max(0, ((value - min) / (max - min)) * 100),
+  );
+
+  const getFromPointer = useCallback(
+    (clientX: number) => {
+      const el = trackRef.current;
+      if (!el) return value;
+      const { left, width } = el.getBoundingClientRect();
+      return clamp(
+        Math.max(0, Math.min(1, (clientX - left) / width)) * (max - min) + min,
+      );
+    },
+    [value, min, max, clamp],
+  );
+
+  const onPointerDown = useCallback(
+    (e: ReactPointerEvent) => {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setDragging(true);
+      onChange(getFromPointer(e.clientX));
+    },
+    [getFromPointer, onChange],
+  );
+  const onPointerMove = useCallback(
+    (e: ReactPointerEvent) => {
+      if (dragging) onChange(getFromPointer(e.clientX));
+    },
+    [dragging, getFromPointer, onChange],
+  );
+  const onPointerUp = useCallback(() => setDragging(false), []);
+
+  const onKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      const map: Record<string, number> = {
+        ArrowRight: step,
+        ArrowUp: step,
+        ArrowLeft: -step,
+        ArrowDown: -step,
+        PageUp: step * 10,
+        PageDown: -(step * 10),
+      };
+      const delta = map[e.key];
+      if (delta !== undefined) {
+        e.preventDefault();
+        onChange(clamp(value + delta));
+      } else if (e.key === "Home") onChange(min);
+      else if (e.key === "End") onChange(max);
+    },
+    [value, step, min, max, clamp, onChange],
+  );
+
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/[^\d,\.]/g, "");
+    setInputStr(raw);
+    const n = parseFloat(raw.replace(",", "."));
+    if (!isNaN(n)) onChange(clampFree(n));
+  };
+
+  const handleInputBlur = () => {
+    setFocused(false);
+    const n = parseFloat(inputStr.replace(",", "."));
+    const v = isNaN(n) ? value : clampFree(n);
+    onChange(v);
+    setInputStr(String(v));
+  };
+
   return (
-    <div>
-      <div className="mb-2 flex items-center gap-1.5">
-        <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
-          {label}
-        </span>
-        {tooltip && <InfoTip>{tooltip}</InfoTip>}
+    <div className="space-y-2.5">
+      {/* Linha: label + steppers + input */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+            {label}
+          </span>
+          {tooltip && <InfoTip>{tooltip}</InfoTip>}
+        </div>
+
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              onChange(clamp(value - step));
+            }}
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-stone-200 bg-stone-50 text-stone-600 transition-all hover:border-brand hover:bg-brand-light hover:text-brand-dark active:scale-95 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300"
+            aria-label={`Diminuir ${label}`}
+          >
+            <span className="text-base font-semibold leading-none select-none">
+              −
+            </span>
+          </button>
+
+          <div className="relative">
+            {unit === "€" && (
+              <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs font-medium text-stone-400">
+                €
+              </span>
+            )}
+            <input
+              type="text"
+              inputMode="decimal"
+              value={focused ? inputStr : value.toLocaleString("pt-PT")}
+              onFocus={() => {
+                setFocused(true);
+                setInputStr(String(value));
+              }}
+              onChange={handleInputChange}
+              onBlur={handleInputBlur}
+              className={`h-9 rounded-xl border bg-white text-right text-sm font-semibold text-stone-800 tabular-nums outline-none transition-all dark:bg-stone-900 dark:text-stone-200 ${
+                unit === "€" ? "w-24 pl-5 pr-2" : "w-16 px-2"
+              } ${
+                focused
+                  ? "border-brand ring-2 ring-brand/20"
+                  : "border-stone-200 hover:border-stone-300 dark:border-stone-700"
+              }`}
+              aria-label={label}
+            />
+          </div>
+
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              onChange(clamp(value + step));
+            }}
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-stone-200 bg-stone-50 text-stone-600 transition-all hover:border-brand hover:bg-brand-light hover:text-brand-dark active:scale-95 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300"
+            aria-label={`Aumentar ${label}`}
+          >
+            <span className="text-base font-semibold leading-none select-none">
+              +
+            </span>
+          </button>
+        </div>
       </div>
-      <div className="flex items-center gap-3">
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          className="flex-1 accent-brand"
-        />
-        <span className="min-w-[72px] text-right text-sm font-bold tabular-nums text-stone-800 dark:text-stone-100">
-          {fmt(value)}{suffix}
+
+      {/* Balão flutuante */}
+      <div className="pointer-events-none relative h-5">
+        <div
+          className="absolute bottom-0 -translate-x-1/2"
+          style={{ left: `${Math.min(96, Math.max(4, pctVal))}%` }}
+        >
+          <span
+            className={`inline-block rounded-lg px-1.5 py-0.5 text-[10px] font-semibold text-white transition-colors ${
+              dragging ? "bg-brand-dark" : "bg-brand"
+            }`}
+          >
+            {value.toLocaleString("pt-PT")} {unit}
+          </span>
+        </div>
+      </div>
+
+      {/* Slider track (hit area) */}
+      <div
+        ref={trackRef}
+        role="slider"
+        aria-valuemin={min}
+        aria-valuemax={max}
+        aria-valuenow={value}
+        aria-label={label}
+        tabIndex={0}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onKeyDown={onKeyDown}
+        className={`relative h-8 touch-none select-none focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${
+          dragging ? "cursor-grabbing" : "cursor-grab"
+        }`}
+      >
+        <div className="absolute inset-x-0 top-1/2 h-2.5 -translate-y-1/2 rounded-full bg-stone-100 dark:bg-stone-800">
+          <div
+            className="h-full rounded-full bg-brand transition-none"
+            style={{ width: `${pctVal}%` }}
+          />
+        </div>
+        <div
+          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+          style={{ left: `${pctVal}%` }}
+        >
+          <m.div
+            animate={{ scale: dragging ? 1.15 : 1 }}
+            transition={{ duration: 0.1 }}
+          >
+            <div
+              className={`flex h-6 w-6 items-center justify-center rounded-full border-2 bg-white shadow-md transition-all dark:bg-stone-900 ${
+                dragging
+                  ? "border-brand-dark shadow-[0_0_0_4px_rgba(29,158,117,0.2)]"
+                  : "border-brand shadow-[0_2px_8px_rgba(29,158,117,0.2)]"
+              }`}
+            >
+              <div className="flex gap-0.5">
+                <span className="block h-1.5 w-0.5 rounded-full bg-brand opacity-70" />
+                <span className="block h-1.5 w-0.5 rounded-full bg-brand opacity-70" />
+                <span className="block h-1.5 w-0.5 rounded-full bg-brand opacity-70" />
+              </div>
+            </div>
+          </m.div>
+        </div>
+      </div>
+
+      {/* Min / Max labels */}
+      <div className="relative h-3.5 text-[10px] text-stone-400 dark:text-stone-600">
+        <span className="absolute left-0">
+          {min.toLocaleString("pt-PT")} {unit}
+        </span>
+        <span className="absolute right-0">
+          {max.toLocaleString("pt-PT")} {unit}+
         </span>
       </div>
+
+      {/* Presets */}
       {presets && presets.length > 0 && (
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           {presets.map((p) => (
             <button
               key={p}
               type="button"
               onClick={() => onChange(p)}
-              className={`rounded-lg px-2 py-1 text-[10px] font-semibold transition-all ${
+              className={`rounded-lg border px-2 py-1.5 text-xs font-semibold transition-all min-h-[36px] ${
                 value === p
-                  ? "bg-brand text-white"
-                  : "bg-stone-100 text-stone-500 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-400 dark:hover:bg-stone-700"
+                  ? "border-brand bg-brand text-white shadow-sm"
+                  : "border-stone-200 bg-stone-50 text-stone-500 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400"
               }`}
             >
-              {fmt(p)}
+              {formatPreset
+                ? formatPreset(p)
+                : `${p.toLocaleString("pt-PT")} ${unit}`}
             </button>
           ))}
         </div>
@@ -387,10 +596,6 @@ export default function ModoGuiadoEmpresa({
   const [rfaiRegiao, setRfaiRegiao] = useState<RegiaoRFAIGuiado>("interior");
   const [rfaiInvest, setRfaiInvest] = useState(0);
 
-  // Passo 5 (resultado): slider comparação
-  const [sliderFat, setSliderFat] = useState(60_000);
-  const [sliderInteragiu, setSliderInteragiu] = useState(false);
-
   // Custos de estrutura calculados
   const custosEstrutura = CUSTO_CONTABILIDADE_ANUAL + CUSTO_SOFTWARE_ANUAL;
 
@@ -451,47 +656,11 @@ export default function ModoGuiadoEmpresa({
     resultEng.liquidoGerente - resultLib.liquidoGerente,
   );
 
-  // Comparação slider (passo resultado)
-  const calcEmpSlider = useMemo(
-    () => (fat: number) =>
-      simularEmpresaGuiado(
-        fat, despesasOper, custosEstrutura, salGerenteMensal,
-        distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
-        tipoViatura, encargosViatura, despRepresentacao, emPrejuizo,
-        rfaiRegiao, rfaiInvest,
-      ).liquidoGerente,
-    [despesasOper, custosEstrutura, salGerenteMensal,
-     distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
-     tipoViatura, encargosViatura, despRepresentacao, emPrejuizo,
-     rfaiRegiao, rfaiInvest],
-  );
-
-  const sliderRV = useMemo(() => simularRVSimplificado(sliderFat), [sliderFat]);
-  const sliderEmp = useMemo(() => calcEmpSlider(sliderFat), [calcEmpSlider, sliderFat]);
-  const sliderEmpMelhor = sliderEmp > sliderRV;
-
-  const breakEvenCalc = useMemo(() => {
-    for (let v = 1_000; v <= 200_000; v += 1_000) {
-      const rvPrev = simularRVSimplificado(v - 1_000);
-      const empPrev = calcEmpSlider(v - 1_000);
-      const rvNow = simularRVSimplificado(v);
-      const empNow = calcEmpSlider(v);
-      if (empPrev <= rvPrev && empNow > rvNow) return v;
-    }
-    return null;
-  }, [calcEmpSlider]);
-
-  // RV líquido para a faturação atual (comparação)
-  const liquidoRVAtual = useMemo(() => simularRVSimplificado(faturacaoAnual), [faturacaoAnual]);
-  const empresaMelhorAtual = resultado.liquidoGerente > liquidoRVAtual;
-  const diferencaAtual = Math.abs(resultado.liquidoGerente - liquidoRVAtual);
-
   function avancar() {
     if (passo === 1) setPasso(2);
     else if (passo === 2) setPasso(3);
     else if (passo === 3) setPasso(4);
     else if (passo === 4) {
-      setSliderFat(faturacaoAnual);
       setPasso("resultado");
     }
   }
@@ -786,8 +955,8 @@ export default function ModoGuiadoEmpresa({
                     Tudo é dedutível ao lucro tributável (paga IRC só sobre o que sobra).
                   </p>
 
-                  <div className="space-y-5">
-                    <SliderInput
+                  <div className="space-y-6">
+                    <NumericSlider
                       label="Faturação anual (€)"
                       value={faturacaoAnual}
                       min={0}
@@ -800,7 +969,7 @@ export default function ModoGuiadoEmpresa({
                       }
                     />
 
-                    <SliderInput
+                    <NumericSlider
                       label="Despesas operacionais (€/ano)"
                       value={despesasOper}
                       min={0}
@@ -817,7 +986,7 @@ export default function ModoGuiadoEmpresa({
                       }
                     />
 
-                    <SliderInput
+                    <NumericSlider
                       label="Salário gerente (€/mês bruto)"
                       value={salGerenteMensal}
                       min={0}
@@ -1126,7 +1295,7 @@ export default function ModoGuiadoEmpresa({
                       </div>
 
                       {tipoViatura !== "nenhuma" && tipoViatura !== "eletrica" && (
-                        <SliderInput
+                        <NumericSlider
                           label="Encargos anuais viatura (€)"
                           value={encargosViatura}
                           min={0}
@@ -1138,7 +1307,7 @@ export default function ModoGuiadoEmpresa({
                         />
                       )}
 
-                      <SliderInput
+                      <NumericSlider
                         label="Despesas de representação (€/ano)"
                         value={despRepresentacao}
                         min={0}
@@ -1205,7 +1374,7 @@ export default function ModoGuiadoEmpresa({
                           ))}
                         </div>
                       </div>
-                      <SliderInput
+                      <NumericSlider
                         label="Investimento elegível RFAI (€)"
                         value={rfaiInvest}
                         min={0}
@@ -1310,149 +1479,77 @@ export default function ModoGuiadoEmpresa({
                     </div>
                   </div>
 
-                  {/* ── Comparação RV vs Empresa (mapa interativo) ─────────────── */}
+                  <p className="mt-3 px-1 text-[10px] leading-relaxed text-stone-400 dark:text-stone-500">
+                    Estimativa anual com as taxas oficiais de 2026. Empresa: IRC
+                    PME, derrama ~1,5%, TA e RFAI conforme configurado. Salário
+                    antes de IRS na fonte. Não substitui aconselhamento de um
+                    contabilista certificado (OCC).
+                  </p>
+
+                  {/* ── Próximos passos ────────────────────────────────────── */}
                   <div className="mt-6 rounded-3xl border border-stone-200 bg-stone-50 overflow-hidden dark:border-stone-800 dark:bg-stone-900/50">
                     <div className="flex items-center gap-2.5 border-b border-stone-100 px-5 py-4 dark:border-stone-800">
                       <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light">
                         <ChartProjection size={18} className="text-brand-dark" />
                       </div>
                       <div>
-                        <h4 className="text-sm font-bold text-stone-800 dark:text-stone-100">Recibos Verdes vs. Empresa</h4>
-                        <p className="text-[11px] text-stone-400">Descobre em que ponto a empresa compensa</p>
+                        <h4 className="text-sm font-bold text-stone-800 dark:text-stone-100">O que fazer a seguir</h4>
+                        <p className="text-[11px] text-stone-400">Passos recomendados com base na tua simulação</p>
                       </div>
                     </div>
 
-                    <div className="px-5 pb-5 pt-4">
-                      {/* Cards comparação actuais */}
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div className={`rounded-2xl border-2 p-4 transition-all ${!empresaMelhorAtual ? "border-brand bg-brand-light dark:bg-brand/5" : "border-stone-100 bg-white dark:border-stone-700 dark:bg-stone-950"}`}>
-                          <div className="mb-1 flex items-center gap-1.5">
-                            <Receipt size={13} className="text-stone-400" />
-                            <span className="text-[10px] font-bold text-stone-500 dark:text-stone-400">Recibos Verdes</span>
-                          </div>
-                          {!empresaMelhorAtual && <span className="mb-1 inline-flex items-center gap-0.5 rounded-full bg-brand px-2 py-0.5 text-[9px] font-black text-white"><Check size={9} /> Melhor</span>}
-                          <div className={`font-display text-xl font-semibold tabular-nums ${!empresaMelhorAtual ? "text-brand-dark" : "text-stone-800 dark:text-stone-100"}`}>{fmt(Math.round(liquidoRVAtual))}</div>
-                          <p className="mt-0.5 text-[10px] text-stone-400">líquido/ano</p>
-                          <ul className="mt-2 space-y-0.5">
-                            {["Abertura grátis", "Sem contabilista obrigatório", "Zero custos fixos"].map((t) => (
-                              <li key={t} className="flex items-start gap-1 text-[10px] text-stone-500 dark:text-stone-400">
-                                <span className="mt-0.5 h-1 w-1 flex-shrink-0 rounded-full bg-brand" />{t}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div className={`rounded-2xl border-2 p-4 transition-all ${empresaMelhorAtual ? "border-brand bg-brand-light dark:bg-brand/5" : "border-stone-100 bg-white dark:border-stone-700 dark:bg-stone-950"}`}>
-                          <div className="mb-1 flex items-center gap-1.5">
-                            <Building size={13} className="text-stone-400" />
-                            <span className="text-[10px] font-bold text-stone-500 dark:text-stone-400">Empresa (Lda)</span>
-                          </div>
-                          {empresaMelhorAtual && <span className="mb-1 inline-flex items-center gap-0.5 rounded-full bg-brand px-2 py-0.5 text-[9px] font-black text-white"><Check size={9} /> Melhor</span>}
-                          <div className={`font-display text-xl font-semibold tabular-nums ${empresaMelhorAtual ? "text-brand-dark" : "text-stone-800 dark:text-stone-100"}`}>{fmt(Math.round(resultado.liquidoGerente))}</div>
-                          <p className="mt-0.5 text-[10px] text-stone-400">líquido/ano</p>
-                          <ul className="mt-2 space-y-0.5">
-                            {[`Constituição ~${fmt(CUSTO_CONSTITUICAO_DEFAULT)}`, `Estrutura: ~${fmt(custosEstrutura)}/ano`, `IRC PME: ${pct(IRC_PME.taxa1)} até ${fmt(IRC_PME.limite)}`].map((t) => (
-                              <li key={t} className="flex items-start gap-1 text-[10px] text-stone-500 dark:text-stone-400">
-                                <span className="mt-0.5 h-1 w-1 flex-shrink-0 rounded-full bg-stone-300" />{t}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-
-                      {/* Veredicto */}
-                      <div className={`flex items-center gap-2 rounded-2xl p-3 text-sm font-semibold ${empresaMelhorAtual ? "bg-brand-light text-brand-dark" : "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-200"}`}>
-                        <Check size={14} className="flex-shrink-0 text-brand" />
-                        <span>
-                          Com {fmt(faturacaoAnual)}/ano, {empresaMelhorAtual ? "a empresa" : "os recibos verdes"} {empresaMelhorAtual ? "dá-te" : "dão-te"} mais <strong>{fmt(Math.round(diferencaAtual))}/ano</strong>.
-                          {breakEvenCalc != null && (empresaMelhorAtual ? "" : ` A empresa compensa acima de ${fmt(breakEvenCalc)}/ano.`)}
+                    <div className="px-5 pb-5 pt-4 space-y-3">
+                      {/* Comparar cenários */}
+                      <Link
+                        href="/dashboard/comparar"
+                        className="group flex items-center gap-3 rounded-2xl border-2 border-brand bg-brand-light/30 p-4 text-left transition-all hover:shadow-card dark:bg-brand/5"
+                      >
+                        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand text-white transition-colors">
+                          <ChartProjection size={18} />
                         </span>
-                      </div>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-bold text-brand-dark dark:text-brand">
+                            Comparar com recibos verdes
+                          </span>
+                          <span className="mt-0.5 block text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
+                            Descobre em que ponto a empresa compensa — com
+                            ponto de viragem, mapa por região e custo de
+                            contabilista.
+                          </span>
+                        </span>
+                        <ArrowRight
+                          size={16}
+                          className="flex-shrink-0 text-brand/50 transition-colors group-hover:text-brand"
+                        />
+                      </Link>
 
-                      {/* Slider interativo */}
-                      <div className="mt-4">
-                        <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-widest text-stone-400">
-                          Simula com outra faturação
-                        </p>
-                        <div className="flex items-center gap-3 mb-2">
-                          <input
-                            type="range"
-                            min={0}
-                            max={200_000}
-                            step={1_000}
-                            value={sliderFat}
-                            onChange={(e) => { setSliderFat(Number(e.target.value)); setSliderInteragiu(true); }}
-                            className="flex-1 accent-brand"
-                            aria-label="Faturação anual para comparação"
+                      {/* Simulador completo */}
+                      {onIrParaSimuladorCompleto && (
+                        <button
+                          type="button"
+                          onClick={onIrParaSimuladorCompleto}
+                          className="group flex w-full items-center gap-3 rounded-2xl border-2 border-stone-100 bg-white p-4 text-left transition-all hover:border-stone-200 hover:shadow-card dark:border-stone-800 dark:bg-stone-900"
+                        >
+                          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 transition-colors group-hover:bg-brand-light group-hover:text-brand dark:bg-stone-800">
+                            <Briefcase size={18} />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-bold text-stone-800 dark:text-stone-100">
+                              Simulador completo
+                            </span>
+                            <span className="mt-0.5 block text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
+                              DLRR, SIFIDE, IMI/IMT, tributação autónoma
+                              detalhada e mais benefícios fiscais.
+                            </span>
+                          </span>
+                          <ArrowRight
+                            size={16}
+                            className="flex-shrink-0 text-stone-300 transition-colors group-hover:text-brand"
                           />
-                          <span className="min-w-[80px] text-right text-sm font-bold tabular-nums text-stone-800 dark:text-stone-100">{fmt(sliderFat)}</span>
-                        </div>
-
-                        {/* Presets */}
-                        <div className="flex flex-wrap gap-1.5 mb-3">
-                          {[15_000, 30_000, 60_000, 80_000, 120_000].map((p) => (
-                            <button
-                              key={p}
-                              type="button"
-                              onClick={() => { setSliderFat(p); setSliderInteragiu(true); }}
-                              className={`rounded-lg border px-2 py-1 text-[10px] font-bold tabular-nums transition-all ${
-                                sliderFat === p
-                                  ? "border-brand bg-brand text-white"
-                                  : "border-stone-200 bg-white text-stone-500 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400"
-                              }`}
-                            >
-                              {p >= 1000 ? `${p / 1000}k` : p}
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* Break-even marker */}
-                        {breakEvenCalc != null && (
-                          <p className="mb-2 text-center text-[11px] font-semibold text-amber-600 dark:text-amber-400">
-                            Ponto de viragem: {fmt(breakEvenCalc)}/ano
-                          </p>
-                        )}
-
-                        {/* Slider result cards */}
-                        {sliderInteragiu && (
-                          <m.div
-                            initial={{ opacity: 0, y: 6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <div className="grid grid-cols-2 gap-2 mb-2">
-                              <div className={`rounded-xl border-2 p-3 ${!sliderEmpMelhor ? "border-brand bg-brand-light/50" : "border-stone-100 bg-white dark:border-stone-700 dark:bg-stone-900"}`}>
-                                <div className="text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-1">Recibos Verdes</div>
-                                {!sliderEmpMelhor && <span className="mb-1 inline-block rounded-full bg-brand px-1.5 py-0.5 text-[8px] font-black text-white">Melhor</span>}
-                                <div className={`text-lg font-black tabular-nums ${!sliderEmpMelhor ? "text-brand-dark" : "text-stone-800 dark:text-stone-100"}`}>{fmt(Math.round(sliderRV))}</div>
-                              </div>
-                              <div className={`rounded-xl border-2 p-3 ${sliderEmpMelhor ? "border-brand bg-brand-light/50" : "border-stone-100 bg-white dark:border-stone-700 dark:bg-stone-900"}`}>
-                                <div className="text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-1">Empresa (Lda)</div>
-                                {sliderEmpMelhor && <span className="mb-1 inline-block rounded-full bg-brand px-1.5 py-0.5 text-[8px] font-black text-white">Melhor</span>}
-                                <div className={`text-lg font-black tabular-nums ${sliderEmpMelhor ? "text-brand-dark" : "text-stone-800 dark:text-stone-100"}`}>{fmt(Math.round(sliderEmp))}</div>
-                              </div>
-                            </div>
-                            <div className="flex items-start gap-2 rounded-xl bg-brand-light/50 p-2.5">
-                              <Check size={12} className="mt-0.5 flex-shrink-0 text-brand" />
-                              <p className="text-[11px] font-semibold text-brand-dark leading-snug">
-                                {Math.abs(sliderEmp - sliderRV) < 100
-                                  ? "Praticamente idênticos neste cenário."
-                                  : `Com ${fmt(sliderFat)}/ano, ${sliderEmpMelhor ? "a empresa" : "os recibos verdes"} ${sliderEmpMelhor ? "dá-te" : "dão-te"} mais ${fmt(Math.round(Math.abs(sliderEmp - sliderRV)))}/ano.`}
-                              </p>
-                            </div>
-                          </m.div>
-                        )}
-                      </div>
+                        </button>
+                      )}
                     </div>
                   </div>
-
-                  <p className="mt-3 px-1 text-[10px] leading-relaxed text-stone-400 dark:text-stone-500">
-                    Estimativa anual com as taxas oficiais de 2026. RV: regime
-                    simplificado com coeficiente {pct(COEF_SERVICOS)} (serviços)
-                    e SS sobre rendimento relevante (21,4%). Empresa: IRC PME,
-                    derrama ~1,5%, TA e RFAI conforme configurado. Salário antes
-                    de IRS na fonte. Não substitui aconselhamento de um
-                    contabilista certificado (OCC).
-                  </p>
 
                   {/* Calendário fiscal resumo */}
                   <Collapsible title="Obrigações fiscais da empresa" defaultOpen={false}>
@@ -1500,7 +1597,7 @@ export default function ModoGuiadoEmpresa({
                     </Collapsible>
                   )}
 
-                  <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                  <div className="mt-6">
                     <button
                       type="button"
                       onClick={recuar}
@@ -1508,16 +1605,6 @@ export default function ModoGuiadoEmpresa({
                     >
                       <ArrowLeft size={14} /> Ajustar valores
                     </button>
-                    {onIrParaSimuladorCompleto && (
-                      <button
-                        type="button"
-                        onClick={onIrParaSimuladorCompleto}
-                        className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand py-2.5 text-sm font-bold text-white transition-all hover:bg-brand-dark"
-                      >
-                        Simulador completo (DLRR, SIFIDE, IMI/IMT)
-                        <ArrowRight size={14} />
-                      </button>
-                    )}
                   </div>
                 </m.div>
               )}
