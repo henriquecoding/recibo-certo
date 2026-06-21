@@ -1,25 +1,19 @@
 "use client";
 
-// Comparar Cenários — a ferramenta robusta da homepage que substitui o antigo
-// comparador e a "calculadora de poupança". Para o mesmo rendimento anual,
-// compara o líquido em três caminhos (por conta de outrem, recibos verdes,
-// empresa), encontra o ponto de viragem e mostra o calendário fiscal de cada
-// cenário. Tudo pelos motores verificados (compararCategorias). Estimativa.
-
 import { useCallback, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { m } from "motion/react";
+import { m, AnimatePresence } from "motion/react";
 import { EASE } from "@/lib/motion";
 import { compararCategorias } from "@/lib/fiscal-dependente";
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
-import { Briefcase, Receipt, Building, Check, Calendar, Scale, ChartProjection } from "@/components/ui/Icons";
+import {
+  Briefcase, Receipt, Building, Check, Calendar, Scale,
+  ChartProjection, ChevronLeft, ChevronRight, GripHorizontal,
+} from "@/components/ui/Icons";
 import ComparadorFAQ from "@/components/comparar/ComparadorFAQ";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
-// Secções pesadas (incl. mapas Leaflet) carregadas só no cliente, como os
-// gráficos do dashboard — evita problemas de hidratação e não bloqueia o
-// primeiro render no telemóvel.
 const SeccaoCarregar = () => (
   <div className="h-64 w-full animate-pulse rounded-3xl border border-stone-100 bg-stone-50 dark:border-stone-800 dark:bg-stone-900/50" />
 );
@@ -35,6 +29,7 @@ const MapaBeneficiosRegioes = dynamic(() => import("@/components/comparar/MapaBe
 const DEPENDENTES = [0, 1, 2, 3, 4];
 const PRESETS = [15_000, 25_000, 40_000, 60_000, 80_000, 120_000];
 const MAX = 200_000;
+const STEP = 1_000;
 
 const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
 const soDecimal = (s: string) => s.replace(/[^\d.,]/g, "");
@@ -54,42 +49,49 @@ export default function ComparadorCenarios() {
   const [brutoStr, setBrutoStr] = useState("40000");
   const [despesasStr, setDespesasStr] = useState("");
   const [dependentes, setDependentes] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   const despesas = num(despesasStr);
+  const trackRef = useRef<HTMLDivElement>(null);
 
-  const sincronizar = (v: number) => {
-    const c = Math.max(0, Math.min(MAX, Math.round(v / 1000) * 1000));
+  const sincronizar = useCallback((v: number) => {
+    const c = Math.max(0, Math.min(MAX, Math.round(v / STEP) * STEP));
     setBruto(c);
     setBrutoStr(String(c));
-  };
+  }, []);
 
-  // ── Slider personalizado (track + preenchimento + puxador) ────────────────
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [dragging, setDragging] = useState(false);
   const pctDe = useCallback((v: number) => Math.min(100, Math.max(0, (v / MAX) * 100)), []);
+
   const valorDoPonteiro = useCallback((clientX: number) => {
     const el = trackRef.current;
-    if (!el) return bruto;
+    if (!el) return 0;
     const { left, width } = el.getBoundingClientRect();
     const frac = Math.max(0, Math.min(1, (clientX - left) / width));
-    return Math.round((frac * MAX) / 1000) * 1000;
-  }, [bruto]);
+    return Math.round((frac * MAX) / STEP) * STEP;
+  }, []);
+
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     setDragging(true);
+    setHasInteracted(true);
     sincronizar(valorDoPonteiro(e.clientX));
-  }, [valorDoPonteiro]);
+  }, [valorDoPonteiro, sincronizar]);
+
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     if (dragging) sincronizar(valorDoPonteiro(e.clientX));
-  }, [dragging, valorDoPonteiro]);
+  }, [dragging, valorDoPonteiro, sincronizar]);
+
   const onPointerUp = useCallback(() => setDragging(false), []);
+
   const onKeyDown = useCallback((e: React.KeyboardEvent) => {
-    const passo = e.shiftKey ? 10_000 : 1_000;
+    setHasInteracted(true);
+    const passo = e.shiftKey ? 10_000 : STEP;
     if (e.key === "ArrowRight" || e.key === "ArrowUp") { e.preventDefault(); sincronizar(bruto + passo); }
     else if (e.key === "ArrowLeft" || e.key === "ArrowDown") { e.preventDefault(); sincronizar(bruto - passo); }
     else if (e.key === "Home") { e.preventDefault(); sincronizar(0); }
     else if (e.key === "End") { e.preventDefault(); sincronizar(MAX); }
-  }, [bruto]);
+  }, [bruto, sincronizar]);
 
   const r = useMemo(
     () => compararCategorias({ brutoAnual: bruto, dependentes, despesas }),
@@ -108,8 +110,6 @@ export default function ComparadorCenarios() {
   };
   const maxLiquido = Math.max(...Object.values(liquidos), 1);
 
-  // Pontos de viragem: percorre o rendimento e deteta onde a empresa passa a
-  // bater os recibos verdes, e onde os recibos verdes passam a bater o salário.
   const { breakEvenEmpresa, breakEvenRV } = useMemo(() => {
     let bEmp: number | null = null;
     let bRV: number | null = null;
@@ -127,21 +127,14 @@ export default function ComparadorCenarios() {
   })();
   const tituloMelhor = CARTOES.find((c) => c.chave === r.melhor)?.titulo ?? "";
 
-  // Decomposição do ilíquido por cenário (gráfico de colunas "para onde vai
-  // cada euro"). Cada pilha soma exatamente ao mesmo ilíquido — o verde é o que
-  // fica. Paleta coerente: verde = líquido; família terracota (clay) = imposto,
-  // do mais escuro (maior peso) ao mais claro; cinza neutro = custos/estrutura.
-  // Variações de verde da marca: tom vivo = líquido (o que te fica); verdes mais
-  // escuros = impostos (do mais pesado ao mais leve); verde-menta pálido = custos.
   const COR = {
-    liquido: "bg-brand", // #1D9E75 — vivo, o que fica contigo
-    impostoForte: "bg-brand-deep", // #0A4A39 — o desconto mais pesado (SS / IRC)
-    imposto: "bg-brand-dark", // #0F6E56 — IRS / dividendos
-    impostoLeve: "bg-[#5DBA98]", // verde médio — derrama e afins
-    custo: "bg-brand-mint", // #9FE1CB — custos / estrutura (não é imposto)
+    liquido: "bg-brand",
+    impostoForte: "bg-brand-deep",
+    imposto: "bg-brand-dark",
+    impostoLeve: "bg-[#5DBA98]",
+    custo: "bg-brand-mint",
   };
   type Seg = { label: string; valor: number; cls: string };
-  // Garante que a pilha soma ao ilíquido: o último segmento absorve o resto.
   const pilha = (liquido: number, perdas: Seg[]): Seg[] => {
     const somaPerdas = perdas.reduce((s, p) => s + Math.max(0, p.valor), 0);
     const resto = Math.round(bruto - liquido - somaPerdas);
@@ -166,7 +159,6 @@ export default function ComparadorCenarios() {
     ]),
   };
 
-  // Calendário fiscal por cenário (factual, não inventado).
   const calendario: { chave: Chave; titulo: string; itens: { label: string; quando: string; valor: string }[] }[] = [
     {
       chave: "dependente",
@@ -200,6 +192,8 @@ export default function ComparadorCenarios() {
   const campo =
     "w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-4 py-2.5 text-sm font-medium text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand";
 
+  const sliderPct = pctDe(bruto);
+
   return (
     <div className="my-8 space-y-10">
     <div className="rounded-4xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 p-5 shadow-card sm:p-6">
@@ -214,11 +208,12 @@ export default function ComparadorCenarios() {
         </div>
       </div>
 
-      {/* Slider de rendimento + presets */}
+      {/* ── Slider de rendimento ── */}
       <div className="rounded-3xl border border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 p-5">
-        <div className="text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">Rendimento anual ilíquido</p>
-          <div className="relative mt-1 inline-flex items-center">
+        {/* Valor + label */}
+        <div className="flex items-end justify-between mb-1">
+          <p className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wide">Rendimento anual ilíquido</p>
+          <div className="flex items-baseline gap-1">
             <input
               aria-label="Rendimento anual ilíquido"
               value={brutoStr}
@@ -226,71 +221,150 @@ export default function ComparadorCenarios() {
                 const s = soDecimal(e.target.value);
                 setBrutoStr(s);
                 setBruto(Math.max(0, Math.min(MAX, num(s))));
+                setHasInteracted(true);
               }}
-              className="w-44 bg-transparent text-center font-display text-4xl font-semibold tabular-nums text-ink focus:outline-none"
+              className="w-32 bg-transparent text-right font-display text-3xl font-semibold tabular-nums text-ink dark:text-stone-100 focus:outline-none"
             />
-            <span className="font-display text-2xl font-semibold text-stone-400">€</span>
+            <span className="font-display text-lg font-semibold text-stone-400">€</span>
           </div>
-          <p className="text-[11px] text-stone-400">/ano · arrasta o slider ou edita o valor</p>
+        </div>
+        <p className="text-right text-[11px] text-stone-400 mb-5">/ano · arrasta o slider ou edita o valor</p>
+
+        {/* Dica flutuante — desaparece após 1.ª interação */}
+        <AnimatePresence>
+          {!hasInteracted && (
+            <m.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="flex items-center justify-center gap-1.5 mb-3"
+            >
+              <m.div
+                animate={{ x: [-4, 4, -4] }}
+                transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
+                className="flex items-center gap-1 text-brand/70 dark:text-brand/60 text-xs font-bold"
+              >
+                <ChevronLeft size={12} />
+                <span>Arraste para ajustar</span>
+                <ChevronRight size={12} />
+              </m.div>
+            </m.div>
+          )}
+        </AnimatePresence>
+
+        {/* Bolha flutuante sobre o puxador */}
+        <div className="relative h-10 mb-3 pointer-events-none">
+          <m.div
+            className="absolute -translate-x-1/2 bottom-0"
+            style={{ left: `${sliderPct}%` }}
+            animate={{ left: `${sliderPct}%` }}
+            transition={{ duration: 0, type: "tween" }}
+          >
+            <div className={`relative px-2.5 py-1 rounded-lg text-[11px] font-bold text-white shadow-md whitespace-nowrap transition-all duration-100 ${dragging ? "bg-brand-dark scale-105" : "bg-brand"}`}>
+              {fmtK(bruto)}
+              <div className="absolute top-full left-1/2 -translate-x-1/2 flex flex-col items-center">
+                <div className="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent border-t-brand" />
+                <div className="w-px h-2 bg-brand/40" />
+              </div>
+            </div>
+          </m.div>
         </div>
 
-        {/* Slider personalizado — puxador arrastável + pontos de viragem na própria barra */}
-        <div className="mt-7 px-1">
-          <div className="relative h-2.5" style={{ touchAction: "none" }}>
-            {/* Marcadores dos pontos de viragem, ASSENTES na barra */}
-            {breakEvenRV != null && breakEvenRV <= MAX && (
-              <div className="pointer-events-none absolute -top-6 z-10 -translate-x-1/2 text-center" style={{ left: `${pctDe(breakEvenRV)}%` }}>
-                <span className="block whitespace-nowrap rounded-md bg-brand-light px-1.5 py-0.5 text-[10px] font-bold text-brand-dark">{fmtK(breakEvenRV)} · recibos verdes</span>
-                <span className="mx-auto mt-0.5 block h-3 w-px bg-brand" />
-              </div>
-            )}
-            {breakEvenEmpresa != null && breakEvenEmpresa <= MAX && (
-              <div className="pointer-events-none absolute -top-11 z-10 -translate-x-1/2 text-center" style={{ left: `${pctDe(breakEvenEmpresa)}%` }}>
-                <span className="block whitespace-nowrap rounded-md bg-alert-bg px-1.5 py-0.5 text-[10px] font-bold text-alert-text">{fmtK(breakEvenEmpresa)} · empresa</span>
-                <span className="mx-auto mt-0.5 block h-8 w-px bg-alert-border" />
-              </div>
-            )}
-
-            {/* Trilho + preenchimento + puxador */}
-            <div
-              ref={trackRef}
-              role="slider"
-              tabIndex={0}
-              aria-label="Rendimento anual ilíquido"
-              aria-valuemin={0}
-              aria-valuemax={MAX}
-              aria-valuenow={bruto}
-              aria-valuetext={`${fmt(bruto)} por ano`}
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onKeyDown={onKeyDown}
-              className="group absolute inset-0 cursor-pointer rounded-full bg-stone-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-stone-50 dark:bg-stone-700 dark:focus-visible:ring-offset-stone-900"
-            >
-              <div className="absolute inset-y-0 left-0 rounded-full bg-brand" style={{ width: `${pctDe(bruto)}%` }} />
+        {/* Trilho + preenchimento + puxador */}
+        <div className="px-1">
+          <div
+            ref={trackRef}
+            role="slider"
+            tabIndex={0}
+            aria-label="Rendimento anual ilíquido"
+            aria-valuemin={0}
+            aria-valuemax={MAX}
+            aria-valuenow={bruto}
+            aria-valuetext={`${fmt(bruto)} por ano`}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+            onKeyDown={onKeyDown}
+            className={`relative h-3.5 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-stone-50 dark:focus-visible:ring-offset-stone-900 select-none ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
+            style={{ touchAction: "none" }}
+          >
+            {/* Fundo do trilho */}
+            <div className="absolute inset-0 rounded-full bg-stone-200 dark:bg-stone-700 shadow-inner overflow-hidden">
               <div
-                className={`absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-brand bg-white shadow-card transition-transform ${dragging ? "scale-110 shadow-glow" : "group-hover:scale-105"}`}
-                style={{ left: `${pctDe(bruto)}%` }}
+                className="h-full rounded-full bg-gradient-to-r from-brand to-brand-dark transition-none"
+                style={{ width: `${sliderPct}%` }}
               />
             </div>
+
+            {/* Marcador ponto de viragem — recibos verdes */}
+            {breakEvenRV != null && breakEvenRV <= MAX && (
+              <div
+                className="absolute top-0 bottom-0 w-0.5 bg-brand/60 z-10 pointer-events-none"
+                style={{ left: `${pctDe(breakEvenRV)}%` }}
+              />
+            )}
+
+            {/* Marcador ponto de viragem — empresa */}
+            {breakEvenEmpresa != null && breakEvenEmpresa <= MAX && (
+              <div
+                className="absolute top-0 bottom-0 w-0.5 bg-amber-500/60 z-10 pointer-events-none"
+                style={{ left: `${pctDe(breakEvenEmpresa)}%` }}
+              />
+            )}
+
+            {/* Puxador */}
+            <m.div
+              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 pointer-events-none"
+              style={{ left: `${sliderPct}%` }}
+              animate={{ scale: dragging ? 1.15 : 1 }}
+              transition={{ duration: 0.1 }}
+            >
+              <div className={`flex h-7 w-7 items-center justify-center rounded-full bg-white border-2 transition-all duration-100 ${
+                dragging
+                  ? "border-brand-dark shadow-[0_0_0_4px_rgba(29,158,117,0.18)]"
+                  : "border-brand shadow-[0_2px_8px_rgba(29,158,117,0.25)]"
+              }`}>
+                <GripHorizontal size={12} className="text-brand" />
+              </div>
+            </m.div>
           </div>
-          <div className="mt-2 flex justify-between text-[11px] font-medium text-stone-400">
-            <span>0€</span>
-            <span>{fmtK(MAX)}</span>
+
+          {/* Etiquetas: mínimo / breakevens / máximo */}
+          <div className="relative mt-2.5 text-[10px] font-medium text-stone-400">
+            <span className="absolute left-0">0€</span>
+            {breakEvenRV != null && breakEvenRV <= MAX && (
+              <span
+                className="absolute -translate-x-1/2 text-brand font-bold whitespace-nowrap"
+                style={{ left: `${pctDe(breakEvenRV)}%` }}
+              >
+                {fmtK(breakEvenRV)} · recibos verdes
+              </span>
+            )}
+            {breakEvenEmpresa != null && breakEvenEmpresa <= MAX && (
+              <span
+                className="absolute -translate-x-1/2 text-amber-600 dark:text-amber-400 font-bold whitespace-nowrap"
+                style={{ left: `${pctDe(breakEvenEmpresa)}%` }}
+              >
+                {fmtK(breakEvenEmpresa)} · empresa
+              </span>
+            )}
+            <span className="absolute right-0">{fmtK(MAX)}</span>
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap justify-center gap-2">
+        {/* Presets rápidos */}
+        <div className="mt-6 flex flex-wrap justify-center gap-1.5">
           {PRESETS.map((p) => (
             <button
               key={p}
               type="button"
               aria-pressed={bruto === p}
-              onClick={() => sincronizar(p)}
-              className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${
+              onClick={() => { sincronizar(p); setHasInteracted(true); }}
+              className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition-all ${
                 bruto === p
                   ? "border-brand bg-brand text-white shadow-glow"
-                  : "border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:border-brand"
+                  : "border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:border-brand hover:text-brand"
               }`}
             >
               {fmtK(p)}
@@ -348,7 +422,7 @@ export default function ComparadorCenarios() {
         </div>
       </div>
 
-      {/* Cartões — 3 vias */}
+      {/* ── Cartões de resultado — 3 vias ── */}
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         {CARTOES.map((c) => {
           const liquido = liquidos[c.chave];
@@ -359,19 +433,19 @@ export default function ComparadorCenarios() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, ease: EASE }}
-              className={`relative rounded-2xl border p-5 ${
+              className={`relative rounded-2xl border p-5 transition-all ${
                 melhor
-                  ? "border-brand/40 bg-brand/8 dark:bg-brand/10"
+                  ? "border-brand/40 bg-brand/8 dark:bg-brand/10 shadow-glow"
                   : "border-stone-100 dark:border-stone-700 bg-white dark:bg-stone-800"
               }`}
             >
               {melhor && (
-                <span className="absolute -top-2.5 left-5 rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                  Mais líquido
+                <span className="absolute -top-2.5 left-5 inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                  <Check size={10} /> Mais líquido
                 </span>
               )}
               <div className="mb-2 flex items-center gap-2">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-light text-brand">
+                <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${melhor ? "bg-brand/15 text-brand" : "bg-stone-100 dark:bg-stone-700 text-stone-400"}`}>
                   <c.Icon size={15} />
                 </span>
                 <div>
@@ -379,14 +453,22 @@ export default function ComparadorCenarios() {
                   <p className="text-[11px] text-stone-400">{c.sub}</p>
                 </div>
               </div>
-              <p className={`font-display text-2xl font-semibold tabular-nums ${melhor ? "text-brand" : "text-stone-800 dark:text-stone-100"}`}>
+              <m.p
+                key={liquido}
+                initial={{ y: -4, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.15 }}
+                className={`font-display text-2xl font-semibold tabular-nums ${melhor ? "text-brand" : "text-stone-800 dark:text-stone-100"}`}
+              >
                 {fmt(liquido)}
-              </p>
+              </m.p>
               <p className="mt-0.5 text-xs text-stone-400">líquido/ano · {pct(cargas[c.chave])} de carga</p>
               <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-stone-100 dark:bg-stone-700">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${melhor ? "bg-brand" : "bg-stone-300 dark:bg-stone-600"}`}
-                  style={{ width: `${Math.max(0, Math.min(100, (liquido / maxLiquido) * 100))}%` }}
+                <m.div
+                  className={`h-full rounded-full ${melhor ? "bg-brand" : "bg-stone-300 dark:bg-stone-600"}`}
+                  initial={false}
+                  animate={{ width: `${Math.max(0, Math.min(100, (liquido / maxLiquido) * 100))}%` }}
+                  transition={{ duration: 0.5, ease: EASE }}
                 />
               </div>
             </m.div>
@@ -394,14 +476,14 @@ export default function ComparadorCenarios() {
         })}
       </div>
 
-      {/* Veredicto + pontos de viragem */}
+      {/* ── Veredicto + pontos de viragem ── */}
       <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-brand-light p-4 dark:bg-brand/10">
         <span className="mt-0.5 flex-shrink-0 text-brand"><Check size={16} /></span>
-        <div className="text-sm text-brand-dark">
+        <div className="text-sm text-brand-dark dark:text-brand">
           <p className="font-semibold">
             Com {fmt(bruto)}/ano, <strong>{tituloMelhor.toLowerCase()}</strong> deixa-te com mais {fmt(diffMelhor)}/ano.
           </p>
-          <p className="mt-1 text-xs leading-relaxed text-brand-dark/80">
+          <p className="mt-1 text-xs leading-relaxed text-brand-dark/80 dark:text-brand/70">
             {breakEvenRV
               ? `Os recibos verdes ultrapassam o salário acima de ~${fmt(breakEvenRV)}/ano. `
               : "Até aos valores testados, o salário por conta de outrem mantém-se competitivo. "}
@@ -412,7 +494,7 @@ export default function ComparadorCenarios() {
         </div>
       </div>
 
-      {/* Gráfico de colunas — para onde vai cada euro */}
+      {/* ── Gráfico de colunas — para onde vai cada euro ── */}
       {bruto > 0 && (
         <div className="mt-6 rounded-2xl border border-stone-100 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/40 p-5">
           <div className="mb-1 flex items-center gap-2">
@@ -503,7 +585,7 @@ export default function ComparadorCenarios() {
         </div>
       )}
 
-      {/* Calendário fiscal por cenário */}
+      {/* ── Calendário fiscal por cenário ── */}
       <div className="mt-6">
         <div className="mb-3 flex items-center gap-2">
           <Calendar size={15} className="text-brand" />
@@ -539,7 +621,7 @@ export default function ComparadorCenarios() {
       </p>
     </div>
 
-    {/* ── Próximos passos: precisas de um contabilista? (diagnóstico + mapa de preços) ── */}
+    {/* ── Próximos passos: precisas de um contabilista? ── */}
     <ErrorBoundary etiqueta="o diagnóstico de contabilista">
       <PassoContabilista faturacaoAnual={bruto} despesasEstimadas={despesas} mostrarMapa={false} />
     </ErrorBoundary>

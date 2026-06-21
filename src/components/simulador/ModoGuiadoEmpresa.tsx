@@ -14,6 +14,8 @@ import { m, AnimatePresence } from "motion/react";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import InfoTip from "@/components/ui/InfoTip";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import {
   Check,
   Warning,
@@ -25,53 +27,174 @@ import {
   Sparkle,
   Calendar,
   ChartProjection,
+  MapPin,
+  Rocket,
+  Shield,
+  FileSign,
+  Scale,
+  Target,
+  Search,
+  Crosshair,
+  Globe,
+  Laptop,
+  Plane,
 } from "@/components/ui/Icons";
+
+const MapaCarregar = () => (
+  <div className="h-64 w-full animate-pulse rounded-3xl border border-stone-100 bg-stone-50 dark:border-stone-800 dark:bg-stone-900/50" />
+);
+const MapaBeneficiosRegioes = dynamic(
+  () => import("@/components/comparar/MapaBeneficiosRegioes"),
+  { ssr: false, loading: MapaCarregar },
+);
 import { pct, fmt } from "@/lib/format";
 import {
   ESCALOES_IRS,
   IRC_TAXA_GERAL,
   IRC_TAXA_PME,
   IRC_LIMITE_PME,
-  DERRAMA_MAX,
   DIVIDENDOS_TAXA,
+  IFICI_TAXA,
+  IFICI_PRAZO_ANOS,
+  SOURCES,
 } from "@/lib/fiscal-data";
+import {
+  TODAS_LOCALIZACOES,
+  parametrosFiscaisPorRegiao,
+  parametrosPorCoords,
+  type ParametrosFiscaisRegiao,
+} from "@/lib/incentivos-regioes";
 
 // ─── Constantes fiscais 2026 ─────────────────────────────────────────────────
 
-const IRC_PME = {
-  taxa1: IRC_TAXA_PME.value,
-  limite: IRC_LIMITE_PME.value,
-  taxa2: IRC_TAXA_GERAL.value,
-};
-const DERRAMA_MUNI = DERRAMA_MAX.value;
+const IRC_LIMITE = IRC_LIMITE_PME.value;
 const IRS_DIVIDENDOS = DIVIDENDOS_TAXA.value;
 const DIV_INCLUSAO_ENGLOBAMENTO = 0.5;
 const SS_EMP_TAXA = 0.2375;
 const SS_TRAB_TAXA = 0.11;
-const CUSTO_CONTABILIDADE_ANUAL = 2_400;
-const CUSTO_SOFTWARE_ANUAL = 300;
+const CUSTO_CONTABILIDADE_DEFAULT = 2_400;
+const CUSTO_SOFTWARE_DEFAULT = 300;
 const CUSTO_CONSTITUICAO_DEFAULT = 360;
 const SMN_2026 = 870;
 
-// TA simplificada (Art. 88.º CIRC)
-type TipoViaturaGuiado = "nenhuma" | "eletrica" | "phev" | "combustao";
+// TA (Art. 88.º CIRC 2026)
+type TipoViaturaGuiado =
+  | "nenhuma"
+  | "eletrica"
+  | "phev_baixo"
+  | "phev_medio"
+  | "phev_alto"
+  | "comb_baixo"
+  | "comb_medio"
+  | "comb_alto";
+
 const TA_TAXAS_GUIADO: Record<TipoViaturaGuiado, number> = {
   nenhuma: 0,
   eletrica: 0,
-  phev: 0.025,
-  combustao: 0.08,
+  phev_baixo: 0.025,
+  phev_medio: 0.075,
+  phev_alto: 0.15,
+  comb_baixo: 0.08,
+  comb_medio: 0.25,
+  comb_alto: 0.32,
 };
+
+const TIPO_VIATURA_META: Record<TipoViaturaGuiado, { label: string; sub: string }> = {
+  nenhuma: { label: "Sem viatura", sub: "0%" },
+  eletrica: { label: "Elétrica", sub: "Isenta (0%)" },
+  phev_baixo: { label: "PHEV ≤ 37.500€", sub: "2,5%" },
+  phev_medio: { label: "PHEV 37.500–45.000€", sub: "7,5%" },
+  phev_alto: { label: "PHEV > 45.000€", sub: "15%" },
+  comb_baixo: { label: "Combustão < 37.500€", sub: "8%" },
+  comb_medio: { label: "Combustão 37.500–45.000€", sub: "25%" },
+  comb_alto: { label: "Combustão ≥ 45.000€", sub: "32%" },
+};
+
 const TA_TAXA_REPRESENTACAO = 0.1;
+const TA_TAXA_AJUDAS_CUSTO = 0.05;
+const TA_TAXA_NAO_DOC = 0.5;
 const TA_AGRAVAMENTO = 0.1;
 
-// RFAI simplificado (Art. 22.º CFI)
+// RFAI (Art. 22.º–26.º CFI)
 type RegiaoRFAIGuiado = "interior" | "litoral";
 const RFAI_TAXA: Record<RegiaoRFAIGuiado, number> = { interior: 0.3, litoral: 0.1 };
+const RFAI_TAXA_EXCEDENTE = 0.1;
+const RFAI_LIMITE_INVEST = 15_000_000;
 const RFAI_LIMITE_COLETA = 0.5;
 
-type Passo = 0 | 1 | 2 | 3 | 4 | "resultado" | "aseguir";
+// DLRR (Art. 27.º–34.º CFI)
+const DLRR_TAXA = 0.1;
+const DLRR_LIMITE_COLETA = 0.25;
+const DLRR_MAX_LUCROS = 5_000_000;
+
+// SIFIDE II (Art. 35.º–42.º CFI)
+type TipoEmpresaSifide = "startup" | "pme_jovem" | "pme_normal" | "grande";
+const SIFIDE_TAXA_BASE = 0.325;
+const SIFIDE_TAXA_INCREMENTAL = 0.5;
+const SIFIDE_MAJORACAO_PME = 0.15;
+
+const SIFIDE_META: Record<TipoEmpresaSifide, { label: string; taxa: number; sub: string }> = {
+  startup: { label: "Startup", taxa: SIFIDE_TAXA_BASE + SIFIDE_TAXA_INCREMENTAL, sub: "82,5% — sem histórico I&D" },
+  pme_jovem: { label: "PME jovem", taxa: SIFIDE_TAXA_BASE + SIFIDE_MAJORACAO_PME, sub: "47,5% — < 2 exercícios" },
+  pme_normal: { label: "PME", taxa: SIFIDE_TAXA_BASE, sub: "32,5% — taxa base" },
+  grande: { label: "Grande empresa", taxa: SIFIDE_TAXA_BASE, sub: "32,5% — taxa base" },
+};
+
+// IMI/IMT
+const IMI_TAXA_PADRAO = 0.003;
+const IMT_TAXA_COMERCIAL = 0.065;
+const IS_TAXA_AQUISICAO = 0.008;
+
+// Empresa digital / sede virtual
+const CUSTO_SEDE_VIRTUAL_MIN = 50;
+const CUSTO_SEDE_VIRTUAL_MAX = 150;
+const CUSTO_SEDE_VIRTUAL_DEFAULT = 100;
+
+// Representante fiscal (não residentes)
+const CUSTO_REPRESENTANTE_FISCAL_MIN = 250;
+const CUSTO_REPRESENTANTE_FISCAL_MAX = 500;
+const CUSTO_REPRESENTANTE_FISCAL_DEFAULT = 350;
+
+// IFICI (Art. 58.º-A EBF)
+const IFICI_TAXA_FLAT = IFICI_TAXA.value;
+
+type TipoSede = "fisica" | "virtual" | "coworking";
+type PerfilFundador = "residente" | "estrangeiro_ue" | "estrangeiro_extra_ue";
+
+type Passo = 0 | 1 | "local" | 2 | 3 | 4 | "resultado" | "aseguir";
 
 type TipoSociedade = "unipessoal" | "quotas";
+
+// URLs legais para citação inline
+const LEI = {
+  art87circ: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc87.aspx",
+  art88circ: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc88.aspx",
+  art71cirs: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs71.aspx",
+  art40aCirs: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs40a.aspx",
+  art41bEBF: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-41-b.aspx",
+  art58aEBF: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-58-a.aspx",
+  cfi: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/2014-128418757",
+  csc: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/1986-34443375",
+  empresaOnline: "https://www2.gov.pt/espaco-empresa/empresa-online",
+  representanteFiscal: "https://info.portaldasfinancas.gov.pt/pt/apoio_contribuinte/Servicos_Mais_Utilizados/representacao-fiscal/Pages/default.aspx",
+  portaria208: "https://diariodarepublica.pt/dr/detalhe/portaria/208-2017-107695600",
+  lgt: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/lgt/Pages/default.aspx",
+};
+
+function LeiRef({ artigo, url }: { artigo: string; url: string }) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-0.5 rounded bg-stone-100 px-1 py-0.5 text-[9px] font-semibold text-stone-500 transition-colors hover:bg-brand-light hover:text-brand dark:bg-stone-800 dark:text-stone-400 dark:hover:bg-brand/10 dark:hover:text-brand"
+      title={`Ver legislação: ${artigo}`}
+    >
+      {artigo}
+      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="opacity-50"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" /></svg>
+    </a>
+  );
+}
 
 // ─── IRS progressivo (englobamento dividendos) ──────────────────────────────
 
@@ -93,6 +216,25 @@ function calcularIRS(coletavel: number): number {
 
 // ─── Simulação empresa simplificada ──────────────────────────────────────────
 
+interface ResultadoTA {
+  viatura: number;
+  representacao: number;
+  ajudasCusto: number;
+  naoDocumentadas: number;
+  total: number;
+}
+
+interface ResultadoBeneficios {
+  rfai: number;
+  rfaiBruto: number;
+  dlrr: number;
+  dlrrBruto: number;
+  sifide: number;
+  sifideBruto: number;
+  rfaiContratual: number;
+  total: number;
+}
+
 interface ResultadoEmpresaGuiado {
   faturacao: number;
   despesasOper: number;
@@ -103,16 +245,37 @@ interface ResultadoEmpresaGuiado {
   totalCustos: number;
   lucroTributavel: number;
   coleta: number;
-  taTotal: number;
-  rfaiBeneficio: number;
+  ta: ResultadoTA;
+  beneficios: ResultadoBeneficios;
   ircAposBeneficios: number;
   derrama: number;
   ircTotal: number;
   lucroLiquido: number;
   dividendos: number;
+  irsDividendosLiberatoria: number;
+  irsDividendosEnglobamento: number;
   irsDividendos: number;
+  taxaMarginalGerente: number;
   liquidoGerente: number;
   taxaEfetiva: number;
+  imiAnual: number;
+  poupancaIMI: number;
+  imtOneTime: number;
+  poupancaIMT: number;
+  custoMunicipalAnual: number;
+  custoRepresentanteFiscal: number;
+  custoSedeVirtual: number;
+  irsDividendosIFICI: number;
+  poupancaIFICI: number;
+}
+
+function calcularTaxaMarginal(coletavel: number): number {
+  const escaloes = ESCALOES_IRS.value;
+  for (let i = escaloes.length - 1; i >= 0; i--) {
+    const piso = i === 0 ? 0 : (escaloes[i - 1].ate ?? 0);
+    if (coletavel > piso) return escaloes[i].taxa;
+  }
+  return escaloes[0].taxa;
 }
 
 function simularEmpresaGuiado(
@@ -123,68 +286,166 @@ function simularEmpresaGuiado(
   distribuirDividendos: boolean,
   opcaoEnglobamento: boolean,
   incluirConstituicao: boolean,
-  tipoViatura: TipoViaturaGuiado = "nenhuma",
-  encargosViatura: number = 0,
-  despRepresentacao: number = 0,
-  emPrejuizo: boolean = false,
-  rfaiRegiao: RegiaoRFAIGuiado = "interior",
-  rfaiInvest: number = 0,
+  custoConstituicaoVal: number,
+  anosAmortizacao: number,
+  // TA
+  tipoViatura: TipoViaturaGuiado,
+  encargosViatura: number,
+  despRepresentacao: number,
+  ajudasCusto: number,
+  naoDocumentadas: number,
+  emPrejuizo: boolean,
+  excecaoPrejuizo: boolean,
+  // Benefícios
+  rfaiRegiao: RegiaoRFAIGuiado,
+  rfaiInvest: number,
+  primeirosAnos: boolean,
+  dlrrLucros: number,
+  sifideDespesas: number,
+  tipoSifide: TipoEmpresaSifide,
+  rfaiContratualValor: number,
+  // Municipal
+  temImovel: boolean,
+  vptImovel: number,
+  taxaIMI: number,
+  isencaoIMI: boolean,
+  valorAquisicao: number,
+  isencaoIMT: boolean,
+  anosAmortIMT: number,
+  // Localização
+  paramLocal?: ParametrosFiscaisRegiao,
+  // Novo: sede virtual e estrangeiro
+  sedeVirtualCusto?: number,
+  isEstrangeiro?: boolean,
+  custoRepFiscal?: number,
+  ifici?: boolean,
 ): ResultadoEmpresaGuiado {
+  const ircPME = paramLocal?.ircPME ?? IRC_TAXA_PME.value;
+  const ircGeral = paramLocal?.ircGeral ?? IRC_TAXA_GERAL.value;
+  const derramaTaxa = paramLocal?.derramaEstimada ?? 0.015;
+
+  const custoSedeVirtualAnual = sedeVirtualCusto ? sedeVirtualCusto * 12 : 0;
+  const custoRepresentante = isEstrangeiro && custoRepFiscal ? custoRepFiscal : 0;
+
   const salGerente = salGerenteMensal * 12;
   const ssSalGerente = salGerente * (SS_EMP_TAXA + SS_TRAB_TAXA);
   const custoConstituicao = incluirConstituicao
-    ? Math.round(CUSTO_CONSTITUICAO_DEFAULT / 3)
+    ? Math.round(custoConstituicaoVal / anosAmortizacao)
     : 0;
   const totalCustos =
-    despesasOper + custosEstrutura + salGerente + ssSalGerente + custoConstituicao;
+    despesasOper + custosEstrutura + salGerente + ssSalGerente + custoConstituicao
+    + custoSedeVirtualAnual + custoRepresentante;
   const lucroTributavel = Math.max(0, faturacao - totalCustos);
 
+  // IRC coleta
   let coleta = 0;
-  if (lucroTributavel <= IRC_PME.limite) {
-    coleta = lucroTributavel * IRC_PME.taxa1;
+  if (lucroTributavel <= IRC_LIMITE) {
+    coleta = lucroTributavel * ircPME;
   } else {
     coleta =
-      IRC_PME.limite * IRC_PME.taxa1 +
-      (lucroTributavel - IRC_PME.limite) * IRC_PME.taxa2;
+      IRC_LIMITE * ircPME +
+      (lucroTributavel - IRC_LIMITE) * ircGeral;
   }
 
+  // Benefícios fiscais (cascading coleta caps)
+  let rfaiBruto: number;
+  if (rfaiRegiao === "interior") {
+    const base = Math.min(rfaiInvest, RFAI_LIMITE_INVEST);
+    const excedente = Math.max(0, rfaiInvest - RFAI_LIMITE_INVEST);
+    rfaiBruto = base * RFAI_TAXA.interior + excedente * RFAI_TAXA_EXCEDENTE;
+  } else {
+    rfaiBruto = rfaiInvest * RFAI_TAXA.litoral;
+  }
+  const maxRFAI = coleta * (primeirosAnos ? 1.0 : RFAI_LIMITE_COLETA);
+  const rfai = Math.min(rfaiBruto, Math.max(0, maxRFAI));
+
+  const dlrrBase = Math.min(dlrrLucros, DLRR_MAX_LUCROS);
+  const dlrrBruto = dlrrBase * DLRR_TAXA;
+  const maxDLRR = Math.max(0, coleta - rfai) * DLRR_LIMITE_COLETA;
+  const dlrr = Math.min(dlrrBruto, maxDLRR);
+
+  const taxaSifide = SIFIDE_META[tipoSifide].taxa;
+  const sifideBruto = sifideDespesas * taxaSifide;
+  const maxSifide = Math.max(0, coleta - rfai - dlrr);
+  const sifide = Math.min(sifideBruto, maxSifide);
+
+  const benefTotal = rfai + dlrr + sifide;
+  const ircAposBase = Math.max(0, coleta - benefTotal);
+  const rfaiContratualEfetivo = Math.min(rfaiContratualValor, ircAposBase);
+  const ircAposBeneficios = Math.max(0, ircAposBase - rfaiContratualEfetivo);
+
+  const beneficios: ResultadoBeneficios = {
+    rfai, rfaiBruto, dlrr, dlrrBruto, sifide, sifideBruto,
+    rfaiContratual: rfaiContratualEfetivo,
+    total: benefTotal + rfaiContratualEfetivo,
+  };
+
   // TA (Art. 88.º CIRC)
-  const agrav = emPrejuizo ? TA_AGRAVAMENTO : 0;
+  const agrav = emPrejuizo && !excecaoPrejuizo ? TA_AGRAVAMENTO : 0;
   const taViatura =
     tipoViatura === "eletrica" || tipoViatura === "nenhuma"
       ? 0
       : encargosViatura * (TA_TAXAS_GUIADO[tipoViatura] + agrav);
   const taRepr = despRepresentacao * (TA_TAXA_REPRESENTACAO + agrav);
-  const taTotal = taViatura + taRepr;
+  const taAjudas = ajudasCusto * (TA_TAXA_AJUDAS_CUSTO + agrav);
+  const taNaoDoc = naoDocumentadas * (TA_TAXA_NAO_DOC + agrav);
+  const ta: ResultadoTA = {
+    viatura: taViatura,
+    representacao: taRepr,
+    ajudasCusto: taAjudas,
+    naoDocumentadas: taNaoDoc,
+    total: taViatura + taRepr + taAjudas + taNaoDoc,
+  };
 
-  // RFAI (Art. 22.º CFI)
-  const rfaiBruto = rfaiInvest * RFAI_TAXA[rfaiRegiao];
-  const rfaiBeneficio = Math.min(rfaiBruto, Math.max(0, coleta * RFAI_LIMITE_COLETA));
-
-  const ircAposBeneficios = Math.max(0, coleta - rfaiBeneficio);
-  const derrama = lucroTributavel * DERRAMA_MUNI;
-  const ircTotal = ircAposBeneficios + taTotal + derrama;
+  const derrama = lucroTributavel * derramaTaxa;
+  const ircTotal = ircAposBeneficios + ta.total + derrama;
   const lucroLiquido = Math.max(0, lucroTributavel - ircTotal);
 
+  // Dividendos
   let dividendos = 0;
-  let irsDividendos = 0;
+  let irsDividendosLiberatoria = 0;
+  let irsDividendosEnglobamento = 0;
+  let taxaMarginalGerente = 0;
 
+  let irsDividendosIFICI = 0;
   if (distribuirDividendos && lucroLiquido > 0) {
     dividendos = lucroLiquido;
-    if (opcaoEnglobamento) {
-      const salarioTrib = salGerenteMensal * 12 * (1 - SS_TRAB_TAXA);
-      const irsComDiv = calcularIRS(
-        salarioTrib + dividendos * DIV_INCLUSAO_ENGLOBAMENTO,
-      );
-      const irsSoSal = calcularIRS(salarioTrib);
-      irsDividendos = Math.max(0, irsComDiv - irsSoSal);
-    } else {
-      irsDividendos = dividendos * IRS_DIVIDENDOS;
+    irsDividendosLiberatoria = dividendos * IRS_DIVIDENDOS;
+
+    const salarioTrib = salGerente * (1 - SS_TRAB_TAXA);
+    taxaMarginalGerente = calcularTaxaMarginal(salarioTrib);
+    const irsComDiv = calcularIRS(
+      salarioTrib + dividendos * DIV_INCLUSAO_ENGLOBAMENTO,
+    );
+    const irsSoSal = calcularIRS(salarioTrib);
+    irsDividendosEnglobamento = Math.max(0, irsComDiv - irsSoSal);
+
+    // IFICI (Art. 58.º-A EBF): dividendos de fonte PT tributados a 20% flat
+    if (ifici) {
+      irsDividendosIFICI = dividendos * IFICI_TAXA_FLAT;
     }
   }
 
-  const salarioLiq = salGerenteMensal * 12 * (1 - SS_TRAB_TAXA);
+  const irsDividendos = ifici
+    ? irsDividendosIFICI
+    : opcaoEnglobamento
+      ? irsDividendosEnglobamento
+      : irsDividendosLiberatoria;
+
+  const salarioLiq = salGerente * (1 - SS_TRAB_TAXA);
   const liquidoGerente = salarioLiq + (dividendos - irsDividendos);
+  const poupancaIFICI = ifici
+    ? irsDividendosLiberatoria - irsDividendosIFICI
+    : 0;
+
+  // Municipal (IMI/IMT)
+  const imiAnual = temImovel ? vptImovel * taxaIMI : 0;
+  const poupancaIMI = temImovel && isencaoIMI ? imiAnual : 0;
+  const imtOneTime = temImovel ? valorAquisicao * (IMT_TAXA_COMERCIAL + IS_TAXA_AQUISICAO) : 0;
+  const poupancaIMT = temImovel && isencaoIMT ? imtOneTime : 0;
+  const custoMunicipalAnual = temImovel
+    ? (imiAnual - poupancaIMI) + ((imtOneTime - poupancaIMT) / anosAmortIMT)
+    : 0;
 
   return {
     faturacao,
@@ -196,16 +457,28 @@ function simularEmpresaGuiado(
     totalCustos,
     lucroTributavel,
     coleta,
-    taTotal,
-    rfaiBeneficio,
+    ta,
+    beneficios,
     ircAposBeneficios,
     derrama,
     ircTotal,
     lucroLiquido,
     dividendos,
+    irsDividendosLiberatoria,
+    irsDividendosEnglobamento,
     irsDividendos,
+    taxaMarginalGerente,
     liquidoGerente,
     taxaEfetiva: faturacao > 0 ? 1 - liquidoGerente / faturacao : 0,
+    imiAnual,
+    poupancaIMI,
+    imtOneTime,
+    poupancaIMT,
+    custoMunicipalAnual,
+    custoRepresentanteFiscal: custoRepresentante,
+    custoSedeVirtual: custoSedeVirtualAnual,
+    irsDividendosIFICI,
+    poupancaIFICI,
   };
 }
 
@@ -573,56 +846,189 @@ export default function ModoGuiadoEmpresa({
   // Passo 0: situação
   const [jaTemEmpresa, setJaTemEmpresa] = useState<null | "sim" | "nao">(null);
 
-  // Passo 1: tipo de empresa
+  // Passo 1: tipo de empresa + perfil do fundador
   const [tipoSociedade, setTipoSociedade] =
     useState<TipoSociedade>("unipessoal");
   const [tipoSelecionado, setTipoSelecionado] = useState(false);
+  const [perfilFundador, setPerfilFundador] = useState<PerfilFundador>("residente");
+  const [aplicarIFICI, setAplicarIFICI] = useState(false);
+
+  // Passo "local": localização e tipo de sede
+  const [tipoSede, setTipoSede] = useState<TipoSede>("fisica");
+  const [custoSedeVirtual, setCustoSedeVirtual] = useState(CUSTO_SEDE_VIRTUAL_DEFAULT);
+  const [localizacao, setLocalizacao] = useState<ParametrosFiscaisRegiao | null>(null);
+  const [localNome, setLocalNome] = useState("");
+
+  // Pesquisa de localização (Nominatim)
+  const [queryLocal, setQueryLocal] = useState("");
+  const [resultadosGeo, setResultadosGeo] = useState<Array<{ lat: number; lng: number; nome: string; detalhe: string }>>([]);
+  const [aPesquisarGeo, setAPesquisarGeo] = useState(false);
+  const [erroGeo, setErroGeo] = useState<string | null>(null);
+  const [dropdownGeoAberto, setDropdownGeoAberto] = useState(false);
+  const geoDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const geoWrapperRef = useRef<HTMLDivElement>(null);
+
+  const geocodificarLocal = useCallback(async (q: string) => {
+    if (q.trim().length < 3) {
+      setResultadosGeo([]);
+      setDropdownGeoAberto(false);
+      return;
+    }
+    setAPesquisarGeo(true);
+    setErroGeo(null);
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&accept-language=pt-PT&countrycodes=pt`;
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      if (!res.ok) throw new Error("geo");
+      const data: Array<{ lat: string; lon: string; display_name: string }> = await res.json();
+      const mapped = data.map((d) => {
+        const partes = d.display_name.split(",").map((s) => s.trim());
+        return {
+          lat: parseFloat(d.lat),
+          lng: parseFloat(d.lon),
+          nome: partes[0],
+          detalhe: partes.slice(1, 3).join(", "),
+        };
+      });
+      setResultadosGeo(mapped);
+      setDropdownGeoAberto(true);
+      if (mapped.length === 0) setErroGeo(`Sem resultados para «${q}».`);
+    } catch {
+      setResultadosGeo([]);
+      setErroGeo("Não foi possível pesquisar agora. Tenta de novo.");
+      setDropdownGeoAberto(true);
+    } finally {
+      setAPesquisarGeo(false);
+    }
+  }, []);
+
+  const onQueryLocalChange = (v: string) => {
+    setQueryLocal(v);
+    if (geoDebounceRef.current) clearTimeout(geoDebounceRef.current);
+    geoDebounceRef.current = setTimeout(() => geocodificarLocal(v), 450);
+  };
+
+  const escolherResultadoGeo = (r: { lat: number; lng: number; nome: string; detalhe: string }) => {
+    const params = parametrosPorCoords(r.lat, r.lng);
+    setLocalizacao(params);
+    setLocalNome(`${r.nome}, ${r.detalhe}`);
+    setRfaiRegiao(params.rfaiTipo);
+    setQueryLocal("");
+    setResultadosGeo([]);
+    setDropdownGeoAberto(false);
+  };
+
+  const usarGPS = useCallback(() => {
+    if (!("geolocation" in navigator)) return;
+    setAPesquisarGeo(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const params = parametrosPorCoords(pos.coords.latitude, pos.coords.longitude);
+        setLocalizacao(params);
+        setLocalNome("Localização GPS");
+        setRfaiRegiao(params.rfaiTipo);
+        setAPesquisarGeo(false);
+      },
+      () => {
+        setErroGeo("Não foi possível obter a localização GPS.");
+        setAPesquisarGeo(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (geoWrapperRef.current && !geoWrapperRef.current.contains(e.target as Node)) {
+        setDropdownGeoAberto(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   // Passo 2: faturação e custos
   const [faturacaoAnual, setFaturacaoAnual] = useState(60_000);
   const [despesasOper, setDespesasOper] = useState(2_000);
   const [salGerenteMensal, setSalGerenteMensal] = useState(SMN_2026);
   const [incluirConstituicao, setIncluirConstituicao] = useState(true);
+  const [custoConstituicao, setCustoConstituicao] = useState(CUSTO_CONSTITUICAO_DEFAULT);
+  const [anosAmortizacao, setAnosAmortizacao] = useState(3);
+  const [custosEstrutura, setCustosEstrutura] = useState(CUSTO_CONTABILIDADE_DEFAULT + CUSTO_SOFTWARE_DEFAULT);
 
   // Passo 3: dividendos e otimização
   const [distribuirDividendos, setDistribuirDividendos] = useState(true);
   const [opcaoEnglobamento, setOpcaoEnglobamento] = useState(false);
 
-  // Passo 4: otimização fiscal (TA, RFAI)
+  // Passo 4: otimização fiscal
+  // TA
   const [tipoViatura, setTipoViatura] = useState<TipoViaturaGuiado>("nenhuma");
   const [encargosViatura, setEncargosViatura] = useState(0);
   const [despRepresentacao, setDespRepresentacao] = useState(0);
+  const [ajudasCusto, setAjudasCusto] = useState(0);
+  const [naoDocumentadas, setNaoDocumentadas] = useState(0);
   const [emPrejuizo, setEmPrejuizo] = useState(false);
+  const [excecaoPrejuizo, setExcecaoPrejuizo] = useState(true);
+  // Benefícios
   const [rfaiRegiao, setRfaiRegiao] = useState<RegiaoRFAIGuiado>("interior");
   const [rfaiInvest, setRfaiInvest] = useState(0);
+  const [primeirosAnos, setPrimeirosAnos] = useState(false);
+  const [dlrrLucros, setDlrrLucros] = useState(0);
+  const [sifideDespesas, setSifideDespesas] = useState(0);
+  const [tipoSifide, setTipoSifide] = useState<TipoEmpresaSifide>("pme_normal");
+  const [rfaiContratualValor, setRfaiContratualValor] = useState(0);
+  // Municipal
+  const [temImovelEmpresa, setTemImovelEmpresa] = useState(false);
+  const [vptImovel, setVptImovel] = useState(0);
+  const [taxaIMI, setTaxaIMI] = useState(IMI_TAXA_PADRAO);
+  const [isencaoIMI_RFAI, setIsencaoIMI_RFAI] = useState(false);
+  const [valorAquisicaoImovel, setValorAquisicaoImovel] = useState(0);
+  const [isencaoIMT_RFAI, setIsencaoIMT_RFAI] = useState(false);
+  const [anosAmortizacaoIMT, setAnosAmortizacaoIMT] = useState(10);
 
-  // Custos de estrutura calculados
-  const custosEstrutura = CUSTO_CONTABILIDADE_ANUAL + CUSTO_SOFTWARE_ANUAL;
+  // RFAI auto-set pela localização
+  const rfaiRegiaoEfetiva = localizacao
+    ? localizacao.rfaiTipo
+    : rfaiRegiao;
 
-  // Simulação principal
+  const sedeVirtualEfetivo = tipoSede === "virtual" ? custoSedeVirtual : tipoSede === "coworking" ? custoSedeVirtual : 0;
+  const isEstrangeiro = perfilFundador !== "residente";
+  const custoRepFiscalEfetivo = isEstrangeiro ? CUSTO_REPRESENTANTE_FISCAL_DEFAULT : 0;
+
+  // Args comuns para simulação
+  const simArgs = [
+    faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
+    distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
+    custoConstituicao, anosAmortizacao,
+    tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
+    naoDocumentadas, emPrejuizo, excecaoPrejuizo,
+    rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
+    dlrrLucros, sifideDespesas, tipoSifide, rfaiContratualValor,
+    temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
+    valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
+    localizacao,
+    sedeVirtualEfetivo, isEstrangeiro, custoRepFiscalEfetivo, aplicarIFICI,
+  ] as const;
+
+  // Simulação principal (location-aware)
   const resultado = useMemo(
     () =>
       simularEmpresaGuiado(
-        faturacaoAnual,
-        despesasOper,
-        custosEstrutura,
-        salGerenteMensal,
-        distribuirDividendos,
-        opcaoEnglobamento,
-        incluirConstituicao,
-        tipoViatura,
-        encargosViatura,
-        despRepresentacao,
-        emPrejuizo,
-        rfaiRegiao,
-        rfaiInvest,
+        faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
+        distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
+        custoConstituicao, anosAmortizacao,
+        tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
+        naoDocumentadas, emPrejuizo, excecaoPrejuizo,
+        rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
+        dlrrLucros, sifideDespesas, tipoSifide, rfaiContratualValor,
+        temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
+        valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
+        localizacao ?? undefined,
+        sedeVirtualEfetivo || undefined, isEstrangeiro || undefined,
+        custoRepFiscalEfetivo || undefined, aplicarIFICI || undefined,
       ),
-    [
-      faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
-      distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
-      tipoViatura, encargosViatura, despRepresentacao, emPrejuizo,
-      rfaiRegiao, rfaiInvest,
-    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    simArgs,
   );
 
   // Englobamento mais favorável?
@@ -631,24 +1037,38 @@ export default function ModoGuiadoEmpresa({
       simularEmpresaGuiado(
         faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
         true, false, incluirConstituicao,
-        tipoViatura, encargosViatura, despRepresentacao, emPrejuizo,
-        rfaiRegiao, rfaiInvest,
+        custoConstituicao, anosAmortizacao,
+        tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
+        naoDocumentadas, emPrejuizo, excecaoPrejuizo,
+        rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
+        dlrrLucros, sifideDespesas, tipoSifide, rfaiContratualValor,
+        temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
+        valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
+        localizacao ?? undefined,
+        sedeVirtualEfetivo || undefined, isEstrangeiro || undefined,
+        custoRepFiscalEfetivo || undefined, aplicarIFICI || undefined,
       ),
-    [faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
-     incluirConstituicao, tipoViatura, encargosViatura, despRepresentacao,
-     emPrejuizo, rfaiRegiao, rfaiInvest],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    simArgs,
   );
   const resultEng = useMemo(
     () =>
       simularEmpresaGuiado(
         faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
         true, true, incluirConstituicao,
-        tipoViatura, encargosViatura, despRepresentacao, emPrejuizo,
-        rfaiRegiao, rfaiInvest,
+        custoConstituicao, anosAmortizacao,
+        tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
+        naoDocumentadas, emPrejuizo, excecaoPrejuizo,
+        rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
+        dlrrLucros, sifideDespesas, tipoSifide, rfaiContratualValor,
+        temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
+        valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
+        localizacao ?? undefined,
+        sedeVirtualEfetivo || undefined, isEstrangeiro || undefined,
+        custoRepFiscalEfetivo || undefined, aplicarIFICI || undefined,
       ),
-    [faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
-     incluirConstituicao, tipoViatura, encargosViatura, despRepresentacao,
-     emPrejuizo, rfaiRegiao, rfaiInvest],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    simArgs,
   );
   const englobamentoMelhor =
     resultEng.liquidoGerente > resultLib.liquidoGerente;
@@ -657,7 +1077,8 @@ export default function ModoGuiadoEmpresa({
   );
 
   function avancar() {
-    if (passo === 1) setPasso(2);
+    if (passo === 1) setPasso("local");
+    else if (passo === "local") setPasso(2);
     else if (passo === 2) setPasso(3);
     else if (passo === 3) setPasso(4);
     else if (passo === 4) setPasso("resultado");
@@ -666,15 +1087,16 @@ export default function ModoGuiadoEmpresa({
 
   function recuar() {
     if (passo === 1) setPasso(0);
-    else if (passo === 2) setPasso(1);
+    else if (passo === "local") setPasso(1);
+    else if (passo === 2) setPasso("local");
     else if (passo === 3) setPasso(2);
     else if (passo === 4) setPasso(3);
     else if (passo === "resultado") setPasso(4);
     else if (passo === "aseguir") setPasso("resultado");
   }
 
-  const progressLabels = ["Empresa", "Receita", "Dividendos", "Otimização", "Resultado", "A seguir"];
-  const passoNum = passo === "resultado" ? 5 : passo === "aseguir" ? 6 : passo;
+  const progressLabels = ["Empresa", "Localização", "Receita", "Dividendos", "Otimização", "Resultado", "A seguir"];
+  const passoNum = passo === "local" ? 2 : passo === 2 ? 3 : passo === 3 ? 4 : passo === 4 ? 5 : passo === "resultado" ? 6 : passo === "aseguir" ? 7 : (passo as number);
 
   // ─── Passo 0: pergunta inicial ─────────────────────────────────────────────
 
@@ -761,18 +1183,22 @@ export default function ModoGuiadoEmpresa({
                     {
                       titulo: "Empresa na Hora",
                       desc: "Constituis uma sociedade Lda num balcão do IRN em menos de 1 hora — ou online no Portal da Empresa. Custo: ~360–400€.",
+                      base: { artigo: "Portal da Empresa", url: LEI.empresaOnline },
                     },
                     {
                       titulo: "Capital social mínimo: 1€",
                       desc: "Desde 2011 não é necessário um capital elevado. 1€ para Unipessoal, 2€ para Sociedade por Quotas (1€/sócio).",
+                      base: { artigo: "Art. 270.º-A ss. CSC", url: LEI.csc },
                     },
                     {
                       titulo: "Contabilidade obrigatória",
-                      desc: "Toda a sociedade tem de ter contabilidade organizada com TOC inscrito na OCC. Custo médio: ~200€/mês.",
+                      desc: "Toda a sociedade tem de ter contabilidade organizada com Contabilista Certificado (CC) inscrito na OCC. Custo médio: ~200€/mês.",
+                      base: { artigo: "Art. 123.º CIRC", url: LEI.art87circ },
                     },
                     {
                       titulo: "Responsabilidade limitada",
                       desc: "O teu património pessoal fica separado do empresarial. Dívidas da empresa não recaem sobre bens pessoais (salvo fraude).",
+                      base: { artigo: "Art. 197.º CSC", url: LEI.csc },
                     },
                   ].map((item) => (
                     <div
@@ -789,6 +1215,7 @@ export default function ModoGuiadoEmpresa({
                         </div>
                         <div className="mt-0.5 text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
                           {item.desc}
+                          {item.base && <span className="ml-1"><LeiRef artigo={item.base.artigo} url={item.base.url} /></span>}
                         </div>
                       </div>
                     </div>
@@ -918,6 +1345,104 @@ export default function ModoGuiadoEmpresa({
                     ))}
                   </div>
 
+                  {/* ── Perfil do fundador ──────────────────────── */}
+                  <div className="mt-8">
+                    <h3 className="mb-1 text-lg font-semibold text-stone-800 dark:text-stone-100">
+                      Perfil do fundador
+                    </h3>
+                    <p className="mb-4 text-xs text-stone-500 dark:text-stone-400">
+                      A tua residência fiscal influencia obrigações e benefícios disponíveis.
+                    </p>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      {([
+                        { id: "residente" as PerfilFundador, label: "Residente em Portugal", sub: "Regime fiscal geral", icon: Building },
+                        { id: "estrangeiro_ue" as PerfilFundador, label: "Cidadão UE / EEE", sub: "Sem representante fiscal", icon: Globe },
+                        { id: "estrangeiro_extra_ue" as PerfilFundador, label: "Fora da UE", sub: "Precisa de representante fiscal", icon: Plane },
+                      ]).map((p) => {
+                        const ativo = perfilFundador === p.id;
+                        const Icon = p.icon;
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            aria-pressed={ativo}
+                            onClick={() => {
+                              setPerfilFundador(p.id);
+                              if (p.id === "residente") setAplicarIFICI(false);
+                            }}
+                            className={`group rounded-2xl border-2 p-3.5 text-left transition-all ${
+                              ativo
+                                ? "border-brand bg-brand-light/30 shadow-card dark:bg-brand/5"
+                                : "border-stone-100 bg-white hover:border-brand/30 hover:shadow-card dark:border-stone-800 dark:bg-stone-900"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${ativo ? "bg-brand text-white" : "bg-stone-100 text-stone-500 dark:bg-stone-800"}`}>
+                                <Icon size={14} />
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className={`text-xs font-bold ${ativo ? "text-brand-dark dark:text-brand" : "text-stone-800 dark:text-stone-100"}`}>
+                                  {p.label}
+                                </div>
+                                <div className="text-[10px] text-stone-400">{p.sub}</div>
+                              </div>
+                              {ativo && <Check size={12} className="text-brand" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Representante fiscal — obrigatório extra-UE */}
+                    {perfilFundador === "estrangeiro_extra_ue" && (
+                      <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800/30 dark:bg-amber-900/10">
+                        <div className="flex items-start gap-2">
+                          <Warning size={13} className="mt-0.5 flex-shrink-0 text-amber-500" />
+                          <div className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+                            <span className="font-semibold">Representante fiscal obrigatório.</span>{" "}
+                            Não residentes de fora da UE/EEE devem nomear um representante fiscal em Portugal para efeitos de cumprimento das obrigações tributárias.
+                            Custo estimado: {CUSTO_REPRESENTANTE_FISCAL_MIN}–{CUSTO_REPRESENTANTE_FISCAL_MAX}€/ano.
+                            <span className="ml-1"><LeiRef artigo="Art. 130.º CIRS / Art. 19.º LGT" url={LEI.representanteFiscal} /></span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Nota UE — sem representante */}
+                    {perfilFundador === "estrangeiro_ue" && (
+                      <div className="mt-3 rounded-xl border border-brand/20 bg-brand-light/10 p-3 dark:bg-brand/5">
+                        <div className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+                          Cidadãos da UE/EEE e da Suíça não precisam de representante fiscal desde 2022, mas devem obter NIF português (presencialmente num serviço de Finanças ou via e-balcão).
+                        </div>
+                      </div>
+                    )}
+
+                    {/* IFICI toggle — estrangeiros elegíveis */}
+                    {perfilFundador !== "residente" && (
+                      <div className="mt-4 rounded-2xl border border-stone-100 bg-white p-4 dark:border-stone-800 dark:bg-stone-900">
+                        <label className="flex items-start gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={aplicarIFICI}
+                            onChange={(e) => setAplicarIFICI(e.target.checked)}
+                            className="mt-1 h-4 w-4 rounded border-stone-300 text-brand focus:ring-brand"
+                          />
+                          <div>
+                            <div className="text-sm font-semibold text-stone-800 dark:text-stone-100">
+                              Regime IFICI (ex-NHR 2.0) — IRS {pct(IFICI_TAXA_FLAT)} flat
+                            </div>
+                            <div className="mt-0.5 text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
+                              Taxa de {pct(IFICI_TAXA_FLAT)} sobre rendimentos elegíveis (vs até 48% nos escalões progressivos), válido por {IFICI_PRAZO_ANOS.value} anos.
+                              Aplicável a investigadores, I&D, startups tecnológicas e atividades de elevado valor acrescentado aprovadas pela AT.
+                              No simulador, aplica-se aos dividendos ({pct(IFICI_TAXA_FLAT)} em vez de {pct(0.28)} de taxa liberatória).
+                              <span className="ml-1"><LeiRef artigo="Art. 58.º-A EBF" url={LEI.art58aEBF} /></span>
+                            </div>
+                          </div>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="mt-6 flex gap-3">
                     <button
                       type="button"
@@ -930,6 +1455,334 @@ export default function ModoGuiadoEmpresa({
                       type="button"
                       onClick={avancar}
                       disabled={!tipoSelecionado}
+                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand py-2.5 text-sm font-bold text-white transition-all hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Seguinte <ArrowRight size={14} />
+                    </button>
+                  </div>
+                </m.div>
+              )}
+
+              {/* ── Passo Localização: onde fica a empresa ─────────────────── */}
+              {passo === "local" && (
+                <m.div
+                  key="passoLocal"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  <h2 className="font-display mb-2 text-2xl font-semibold text-stone-800 dark:text-stone-100">
+                    Onde {jaTemEmpresa === "sim" ? "está" : "pretendes instalar"} a empresa?
+                  </h2>
+                  <p className="mb-5 text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
+                    A localização influencia o IRC (<LeiRef artigo="Art. 41.º-B EBF" url={LEI.art41bEBF} /> 12,5% no interior vs 15% no litoral),
+                    a derrama municipal, o RFAI (<LeiRef artigo="Art. 22.º–26.º CFI" url={LEI.cfi} />) e o custo de contabilista.
+                  </p>
+
+                  {/* Tipo de sede */}
+                  <div className="mb-5">
+                    <div className="mb-2 text-xs font-semibold text-stone-600 dark:text-stone-300">
+                      Tipo de sede
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {([
+                        { id: "fisica" as TipoSede, label: "Física", sub: "Escritório ou loja própria", icon: Building },
+                        { id: "virtual" as TipoSede, label: "Sede virtual", sub: "Morada fiscal sem espaço", icon: Laptop },
+                        { id: "coworking" as TipoSede, label: "Coworking", sub: "Espaço partilhado", icon: Globe },
+                      ]).map((s) => {
+                        const ativo = tipoSede === s.id;
+                        const Icon = s.icon;
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            aria-pressed={ativo}
+                            onClick={() => setTipoSede(s.id)}
+                            className={`rounded-2xl border-2 p-3 text-left transition-all ${
+                              ativo
+                                ? "border-brand bg-brand-light/30 dark:bg-brand/5"
+                                : "border-stone-100 bg-white hover:border-stone-200 dark:border-stone-800 dark:bg-stone-900"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Icon size={14} className={ativo ? "text-brand" : "text-stone-400"} />
+                              <div>
+                                <div className={`text-[11px] font-bold ${ativo ? "text-brand-dark dark:text-brand" : "text-stone-600 dark:text-stone-300"}`}>{s.label}</div>
+                                <div className={`text-[9px] ${ativo ? "text-brand/70" : "text-stone-400"}`}>{s.sub}</div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {tipoSede !== "fisica" && (
+                      <div className="mt-3 space-y-3">
+                        <div className="rounded-xl border border-brand/20 bg-brand-light/10 p-3 dark:bg-brand/5">
+                          <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+                            Toda a sociedade necessita de uma morada fiscal (sede)
+                            registada na Conservatória do Registo Comercial (<LeiRef artigo="Art. 12.º CSC" url={LEI.csc} />),
+                            mesmo que a atividade seja 100% digital.
+                            {tipoSede === "virtual"
+                              ? " A sede virtual fornece apenas uma morada fiscal — sem espaço físico. Aceite pela AT para empresas digitais."
+                              : " O coworking funciona como espaço de trabalho e morada fiscal."}
+                          </p>
+                        </div>
+                        <NumericSlider
+                          label={tipoSede === "virtual" ? "Custo sede virtual (€/mês)" : "Custo coworking (€/mês)"}
+                          value={custoSedeVirtual}
+                          min={CUSTO_SEDE_VIRTUAL_MIN}
+                          max={tipoSede === "coworking" ? 300 : CUSTO_SEDE_VIRTUAL_MAX}
+                          step={10}
+                          onChange={setCustoSedeVirtual}
+                          presets={tipoSede === "virtual" ? [50, 80, 100, 150] : [100, 150, 200, 300]}
+                          tooltip={
+                            tipoSede === "virtual"
+                              ? <>Custo mensal da morada fiscal virtual. Inclui receção de correspondência e uso da morada nos documentos legais.</>
+                              : <>Custo mensal do espaço de coworking, que serve simultaneamente como morada fiscal e local de trabalho.</>
+                          }
+                        />
+                        <div className="flex justify-between text-[11px] text-stone-500 dark:text-stone-400">
+                          <span>Custo anual</span>
+                          <span className="font-semibold tabular-nums">{fmt(custoSedeVirtual * 12)}/ano</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <p className="mb-3 text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
+                    {tipoSede === "fisica"
+                      ? "Pesquisa a tua cidade ou concelho para resultados fiscais precisos."
+                      : "Mesmo com sede virtual, a morada determina a jurisdição fiscal — pesquisa o concelho."}
+                  </p>
+
+                  {/* Pesquisa por cidade/concelho */}
+                  <div ref={geoWrapperRef} className="relative mb-4">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                        <input
+                          type="text"
+                          value={queryLocal}
+                          onChange={(e) => onQueryLocalChange(e.target.value)}
+                          onFocus={() => { if (resultadosGeo.length > 0) setDropdownGeoAberto(true); }}
+                          placeholder="Pesquisar cidade, concelho ou morada…"
+                          className="w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-10 pr-3 text-sm text-stone-800 placeholder:text-stone-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:placeholder:text-stone-500"
+                          aria-label="Pesquisar localização"
+                          autoComplete="off"
+                        />
+                        {aPesquisarGeo && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-stone-300 border-t-brand" />
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={usarGPS}
+                        className="flex h-[42px] w-[42px] flex-shrink-0 items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-500 transition-colors hover:border-brand hover:text-brand dark:border-stone-700 dark:bg-stone-900 dark:text-stone-400"
+                        aria-label="Usar a minha localização GPS"
+                        title="Usar GPS"
+                      >
+                        <Crosshair size={16} />
+                      </button>
+                    </div>
+
+                    {/* Dropdown de resultados */}
+                    {dropdownGeoAberto && (resultadosGeo.length > 0 || erroGeo) && (
+                      <div className="absolute left-0 right-0 z-20 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900">
+                        {erroGeo ? (
+                          <div className="flex items-center gap-2 px-4 py-3 text-xs text-stone-500">
+                            <Warning size={13} className="text-amber-500" />
+                            {erroGeo}
+                          </div>
+                        ) : (
+                          <ul role="listbox" aria-label="Resultados de pesquisa">
+                            {resultadosGeo.map((r, i) => (
+                              <li key={i}>
+                                <button
+                                  type="button"
+                                  onClick={() => escolherResultadoGeo(r)}
+                                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-brand-light/30 dark:hover:bg-brand/10"
+                                  role="option"
+                                  aria-selected={false}
+                                >
+                                  <MapPin size={14} className="flex-shrink-0 text-brand" />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="text-sm font-semibold text-stone-800 dark:text-stone-100 truncate">{r.nome}</div>
+                                    <div className="text-[11px] text-stone-400 truncate">{r.detalhe}</div>
+                                  </div>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Localização selecionada via pesquisa */}
+                  {localizacao && localNome && (
+                    <div className="mb-4 rounded-2xl border-2 border-brand bg-brand-light/20 p-4 dark:bg-brand/5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-white">
+                            <MapPin size={15} />
+                          </span>
+                          <div>
+                            <div className="text-sm font-bold text-brand-dark dark:text-brand">{localNome}</div>
+                            <div className="text-[11px] text-stone-500 dark:text-stone-400">
+                              Região fiscal: {localizacao.nome}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setLocalizacao(null); setLocalNome(""); }}
+                          className="rounded-lg px-2 py-1 text-[10px] font-semibold text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-stone-800"
+                        >
+                          Alterar
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { label: "IRC PME", value: pct(localizacao.ircPME), nota: localizacao.interior ? "até 50.000€ (interior)" : `até ${fmt(IRC_LIMITE)}` },
+                          { label: "IRC geral", value: pct(localizacao.ircGeral), nota: localizacao.interior ? "Art. 41.º-B EBF" : "acima do limite PME" },
+                          { label: "Derrama estimada", value: `~${pct(localizacao.derramaEstimada)}`, nota: "varia por município" },
+                          { label: "RFAI", value: pct(localizacao.rfaiTaxa), nota: localizacao.rfaiTipo === "interior" ? "Art. 23.º CFI (interior)" : "Art. 23.º CFI (litoral)" },
+                        ].map((item) => (
+                          <div key={item.label} className="rounded-xl bg-white/80 p-2.5 dark:bg-stone-900/50">
+                            <div className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">{item.label}</div>
+                            <div className="text-sm font-bold text-stone-800 dark:text-stone-100">{item.value}</div>
+                            <div className="text-[10px] text-stone-400">{item.nota}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-[10px] text-stone-400 leading-relaxed">
+                        {localizacao.interior
+                          ? <>Concelho do interior (<LeiRef artigo="Portaria 208/2017" url={LEI.portaria208} />) — IRC PME 12,5% (<LeiRef artigo="Art. 41.º-B EBF" url={LEI.art41bEBF} />). A derrama municipal varia — confirma a taxa do teu concelho.</>
+                          : <>A derrama municipal varia por município (0%–1,5%) — confirma a taxa do teu concelho. <LeiRef artigo="Art. 87.º CIRC" url={LEI.art87circ} /></>}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Separador "ou escolhe uma região" */}
+                  {!localizacao && (
+                    <>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="h-px flex-1 bg-stone-200 dark:bg-stone-700" />
+                        <span className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">ou escolhe a região</span>
+                        <div className="h-px flex-1 bg-stone-200 dark:bg-stone-700" />
+                      </div>
+
+                      {/* Grid de regiões */}
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {TODAS_LOCALIZACOES.map((loc) => {
+                          const ativa = localizacao !== null && (localizacao as ParametrosFiscaisRegiao).nome === loc.nome && !localNome;
+                          return (
+                            <button
+                              key={loc.nome}
+                              type="button"
+                              aria-pressed={ativa}
+                              onClick={() => {
+                                setLocalizacao(loc);
+                                setLocalNome("");
+                                setRfaiRegiao(loc.rfaiTipo);
+                              }}
+                              className={`group rounded-2xl border-2 p-3.5 text-left transition-all ${
+                                ativa
+                                  ? "border-brand bg-brand-light/30 shadow-card dark:bg-brand/5"
+                                  : "border-stone-100 bg-white hover:border-brand/30 hover:shadow-card dark:border-stone-800 dark:bg-stone-900"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <span
+                                  className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-colors ${
+                                    ativa
+                                      ? "bg-brand text-white"
+                                      : "bg-stone-100 text-stone-500 group-hover:bg-brand-light group-hover:text-brand dark:bg-stone-800"
+                                  }`}
+                                >
+                                  <MapPin size={14} />
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={`text-xs font-bold ${ativa ? "text-brand-dark dark:text-brand" : "text-stone-800 dark:text-stone-100"}`}>
+                                      {loc.nome}
+                                    </span>
+                                    <span className={`rounded-full px-1.5 py-0.5 text-[8px] font-bold leading-none ${
+                                      loc.interior
+                                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                        : "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400"
+                                    }`}>
+                                      {loc.selo}
+                                    </span>
+                                  </div>
+                                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[10px] text-stone-400">
+                                    <span>IRC {pct(loc.ircPME)}</span>
+                                    <span>RFAI {pct(loc.rfaiTaxa)}</span>
+                                  </div>
+                                </div>
+                                {ativa && <Check size={14} className="flex-shrink-0 text-brand" />}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Detalhes da localização selecionada (via grid) */}
+                  {localizacao && !localNome && (
+                    <div className="mt-4 rounded-2xl border border-brand/20 bg-brand-light/20 p-4 dark:bg-brand/5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <MapPin size={14} className="text-brand" />
+                          <span className="text-xs font-bold text-brand-dark dark:text-brand">{localizacao.nome}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setLocalizacao(null)}
+                          className="rounded-lg px-2 py-1 text-[10px] font-semibold text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-stone-800"
+                        >
+                          Alterar
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { label: "IRC PME", value: pct(localizacao.ircPME), nota: localizacao.interior ? "até 50.000€ (interior)" : `até ${fmt(IRC_LIMITE)}` },
+                          { label: "IRC geral", value: pct(localizacao.ircGeral), nota: localizacao.interior ? "Art. 41.º-B EBF" : "acima do limite PME" },
+                          { label: "Derrama estimada", value: `~${pct(localizacao.derramaEstimada)}`, nota: "varia por município" },
+                          { label: "RFAI", value: pct(localizacao.rfaiTaxa), nota: localizacao.rfaiTipo === "interior" ? "Art. 23.º CFI (interior)" : "Art. 23.º CFI (litoral)" },
+                        ].map((item) => (
+                          <div key={item.label} className="rounded-xl bg-white/80 p-2.5 dark:bg-stone-900/50">
+                            <div className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">{item.label}</div>
+                            <div className="text-sm font-bold text-stone-800 dark:text-stone-100">{item.value}</div>
+                            <div className="text-[10px] text-stone-400">{item.nota}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-[10px] text-stone-400 leading-relaxed">
+                        {localizacao.interior
+                          ? <>Concelho do interior (<LeiRef artigo="Portaria 208/2017" url={LEI.portaria208} />) — IRC PME 12,5% (<LeiRef artigo="Art. 41.º-B EBF" url={LEI.art41bEBF} />). A derrama municipal varia — confirma a taxa do teu concelho.</>
+                          : <>A derrama municipal varia por município (0%–1,5%) — confirma a taxa do teu concelho. <LeiRef artigo="Art. 87.º CIRC" url={LEI.art87circ} /></>}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="mt-6 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={recuar}
+                      className="flex items-center gap-1.5 rounded-xl border border-stone-200 px-4 py-2.5 text-xs font-semibold text-stone-500 transition-colors hover:border-stone-300 dark:border-stone-700 dark:text-stone-400"
+                    >
+                      <ArrowLeft size={14} /> Voltar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={avancar}
+                      disabled={!localizacao}
                       className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand py-2.5 text-sm font-bold text-white transition-all hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       Seguinte <ArrowRight size={14} />
@@ -952,7 +1805,8 @@ export default function ModoGuiadoEmpresa({
                   </h2>
                   <p className="mb-6 text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
                     Insere o volume de negócios esperado e os custos da empresa.
-                    Tudo é dedutível ao lucro tributável (paga IRC só sobre o que sobra).
+                    Todos os custos são dedutíveis ao lucro tributável — pagas IRC (<LeiRef artigo="Art. 87.º CIRC" url={LEI.art87circ} />) apenas sobre o que sobra.
+                    {tipoSede !== "fisica" && <> O custo da sede {tipoSede === "virtual" ? "virtual" : "coworking"} ({fmt(custoSedeVirtual)}/mês = {fmt(custoSedeVirtual * 12)}/ano) já está incluído nos custos.</>}
                   </p>
 
                   <div className="space-y-6">
@@ -1003,43 +1857,64 @@ export default function ModoGuiadoEmpresa({
                       }
                     />
 
-                    {/* Custos fixos (informativos) */}
-                    <Collapsible title="Custos fixos obrigatórios" defaultOpen>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-stone-500 dark:text-stone-400">
-                            Contabilidade (TOC inscrito OCC)
-                          </span>
-                          <span className="font-semibold text-stone-700 dark:text-stone-200 tabular-nums">
-                            ~{fmt(CUSTO_CONTABILIDADE_ANUAL)}/ano
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-stone-500 dark:text-stone-400">
-                            Software de faturação
-                          </span>
-                          <span className="font-semibold text-stone-700 dark:text-stone-200 tabular-nums">
-                            ~{fmt(CUSTO_SOFTWARE_ANUAL)}/ano
-                          </span>
+                    <Collapsible title="Custos de estrutura" defaultOpen>
+                      <NumericSlider
+                        label="Contabilidade + software (€/ano)"
+                        value={custosEstrutura}
+                        min={1_000}
+                        max={10_000}
+                        step={200}
+                        onChange={setCustosEstrutura}
+                        presets={[1_500, 2_700, 4_000, 6_000]}
+                        tooltip={<>Contabilista Certificado (OCC) + software de faturação. Obrigatório para sociedades.</>}
+                      />
+                      <div className="mt-4 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={incluirConstituicao}
+                            onClick={() => setIncluirConstituicao(!incluirConstituicao)}
+                            className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${incluirConstituicao ? "bg-brand" : "bg-stone-300 dark:bg-stone-700"}`}
+                          >
+                            <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${incluirConstituicao ? "translate-x-4" : ""}`} />
+                          </button>
+                          <span className="text-xs text-stone-600 dark:text-stone-300">Incluir custos de constituição</span>
                         </div>
                         {incluirConstituicao && (
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-stone-500 dark:text-stone-400">
-                              Constituição (Empresa na Hora)
-                            </span>
-                            <span className="font-semibold text-stone-700 dark:text-stone-200 tabular-nums">
-                              ~{fmt(CUSTO_CONSTITUICAO_DEFAULT)} (amort. 3 anos)
-                            </span>
-                          </div>
+                          <>
+                            <NumericSlider
+                              label="Custo de constituição (€)"
+                              value={custoConstituicao}
+                              min={360}
+                              max={3_000}
+                              step={100}
+                              onChange={setCustoConstituicao}
+                              presets={[360, 800, 1_200, 2_000]}
+                              tooltip={<>Empresa na Hora (~360€). Com marca registada, advogado e capital social pode chegar a 2.000€+.</>}
+                            />
+                            <div>
+                              <div className="mb-1.5 text-[11px] font-semibold text-stone-500 dark:text-stone-400">Amortizar em:</div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {([1, 2, 3, 5] as const).map((a) => (
+                                  <button
+                                    key={a}
+                                    type="button"
+                                    aria-pressed={anosAmortizacao === a}
+                                    onClick={() => setAnosAmortizacao(a)}
+                                    className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                                      anosAmortizacao === a
+                                        ? "bg-brand text-white"
+                                        : "bg-stone-100 text-stone-500 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-400"
+                                    }`}
+                                  >
+                                    {a} ano{a > 1 ? "s" : ""} ({fmt(Math.round(custoConstituicao / a))}/ano)
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </>
                         )}
-                        <div className="border-t border-stone-100 dark:border-stone-800 pt-2 flex items-center justify-between text-xs">
-                          <span className="font-semibold text-stone-600 dark:text-stone-300">
-                            Total estrutura/ano
-                          </span>
-                          <span className="font-bold text-stone-800 dark:text-stone-100 tabular-nums">
-                            {fmt(custosEstrutura + (incluirConstituicao ? Math.round(CUSTO_CONSTITUICAO_DEFAULT / 3) : 0))}
-                          </span>
-                        </div>
                       </div>
                     </Collapsible>
                   </div>
@@ -1077,8 +1952,10 @@ export default function ModoGuiadoEmpresa({
                   </h2>
                   <p className="mb-6 text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
                     O lucro que sobra após o IRC pode ser distribuído como
-                    dividendos — mas há um IRS adicional. Podes escolher entre
-                    taxa liberatória (28%) ou englobamento (50% no rendimento).
+                    dividendos — mas há um IRS adicional.{" "}
+                    {aplicarIFICI
+                      ? <>Com o IFICI (<LeiRef artigo="Art. 58.º-A EBF" url={LEI.art58aEBF} />), os dividendos de fonte portuguesa são tributados a {pct(IFICI_TAXA_FLAT)} flat (em vez de 28%).</>
+                      : <>Podes escolher entre taxa liberatória de 28% (<LeiRef artigo="Art. 71.º CIRS" url={LEI.art71cirs} />) ou englobamento de 50% do valor (<LeiRef artigo="Art. 40.º-A CIRS" url={LEI.art40aCirs} />).</>}
                   </p>
 
                   <div className="space-y-5">
@@ -1133,7 +2010,7 @@ export default function ModoGuiadoEmpresa({
                     </div>
 
                     {/* Tipo de tributação de dividendos */}
-                    {distribuirDividendos && (
+                    {distribuirDividendos && !aplicarIFICI && (
                       <div>
                         <div className="mb-2 flex items-center gap-1.5">
                           <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
@@ -1217,6 +2094,19 @@ export default function ModoGuiadoEmpresa({
                         )}
                       </div>
                     )}
+
+                    {/* IFICI — taxa flat aplicada automaticamente */}
+                    {distribuirDividendos && aplicarIFICI && (
+                      <div className="mt-3 rounded-2xl border border-brand/20 bg-brand-light/20 p-3 dark:bg-brand/5">
+                        <div className="flex items-start gap-2">
+                          <Sparkle size={14} className="mt-0.5 flex-shrink-0 text-brand" />
+                          <div className="text-xs text-brand-dark dark:text-brand leading-relaxed">
+                            <strong>IFICI ativo</strong> (<LeiRef artigo="Art. 58.º-A EBF" url={LEI.art58aEBF} />) — dividendos de fonte portuguesa tributados a {pct(IFICI_TAXA_FLAT)} flat durante {IFICI_PRAZO_ANOS.value} anos.
+                            Poupança face à liberatória de 28%: <strong>{fmt(Math.round(resultado.poupancaIFICI))}/ano</strong>.
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="mt-6 flex gap-3">
@@ -1238,7 +2128,7 @@ export default function ModoGuiadoEmpresa({
                 </m.div>
               )}
 
-              {/* ── Passo 4: Otimização fiscal (TA + RFAI) ─────────────────── */}
+              {/* ── Passo 4: Otimização fiscal ──────────────────────────────── */}
               {passo === 4 && (
                 <m.div
                   key="passo4"
@@ -1251,46 +2141,41 @@ export default function ModoGuiadoEmpresa({
                     Otimização fiscal
                   </h2>
                   <p className="mb-6 text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
-                    Ajusta conforme a tua situação. Se nada se aplica, avança
-                    diretamente — o resultado já está calculado sem estes extras.
+                    Ajusta conforme a tua situação. Tributação autónoma (<LeiRef artigo="Art. 88.º CIRC" url={LEI.art88circ} />),
+                    benefícios ao investimento (<LeiRef artigo="DL 162/2014 (CFI)" url={LEI.cfi} />) e impostos municipais.
+                    Se nada se aplica, avança — o resultado já está calculado.
                   </p>
 
                   <div className="space-y-5">
-                    {/* Viatura da empresa */}
-                    <Collapsible title="Viatura da empresa (Tributação Autónoma)" defaultOpen={tipoViatura !== "nenhuma"}>
+                    {/* ── Tributação Autónoma ─────────────────────────────── */}
+                    <Collapsible title="Tributação Autónoma (Art. 88.º CIRC)" defaultOpen={tipoViatura !== "nenhuma"}>
                       <div className="mb-3">
                         <div className="mb-2 text-xs font-semibold text-stone-600 dark:text-stone-300">
-                          Tipo de viatura
+                          Viatura da empresa
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          {([
-                            { v: "nenhuma" as const, l: "Sem viatura", sub: "0%" },
-                            { v: "eletrica" as const, l: "Elétrica", sub: "Isenta (0%)" },
-                            { v: "phev" as const, l: "Plug-in (PHEV)", sub: "2,5%" },
-                            { v: "combustao" as const, l: "Combustão", sub: "8%" },
-                          ]).map(({ v, l, sub }) => (
-                            <button
-                              key={v}
-                              type="button"
-                              aria-pressed={tipoViatura === v}
-                              onClick={() => {
-                                setTipoViatura(v);
-                                if (v === "nenhuma" || v === "eletrica") setEncargosViatura(0);
-                              }}
-                              className={`rounded-2xl border-2 p-3 text-left transition-all ${
-                                tipoViatura === v
-                                  ? "border-brand bg-brand-light/30 dark:bg-brand/5"
-                                  : "border-stone-100 bg-white hover:border-stone-200 dark:border-stone-800 dark:bg-stone-900"
-                              }`}
-                            >
-                              <div className={`text-xs font-bold ${tipoViatura === v ? "text-brand-dark dark:text-brand" : "text-stone-600 dark:text-stone-300"}`}>
-                                {l}
-                              </div>
-                              <div className={`text-[10px] mt-0.5 ${tipoViatura === v ? "text-brand/70" : "text-stone-400"}`}>
-                                {sub}
-                              </div>
-                            </button>
-                          ))}
+                        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                          {(Object.keys(TIPO_VIATURA_META) as TipoViaturaGuiado[]).map((v) => {
+                            const m = TIPO_VIATURA_META[v];
+                            return (
+                              <button
+                                key={v}
+                                type="button"
+                                aria-pressed={tipoViatura === v}
+                                onClick={() => {
+                                  setTipoViatura(v);
+                                  if (v === "nenhuma" || v === "eletrica") setEncargosViatura(0);
+                                }}
+                                className={`rounded-xl border-2 p-2 text-left transition-all ${
+                                  tipoViatura === v
+                                    ? "border-brand bg-brand-light/30 dark:bg-brand/5"
+                                    : "border-stone-100 bg-white hover:border-stone-200 dark:border-stone-800 dark:bg-stone-900"
+                                }`}
+                              >
+                                <div className={`text-[10px] font-bold leading-tight ${tipoViatura === v ? "text-brand-dark dark:text-brand" : "text-stone-600 dark:text-stone-300"}`}>{m.label}</div>
+                                <div className={`text-[9px] mt-0.5 ${tipoViatura === v ? "text-brand/70" : "text-stone-400"}`}>{m.sub}</div>
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
 
@@ -1318,98 +2203,274 @@ export default function ModoGuiadoEmpresa({
                         tooltip={<>Refeições com clientes, viagens de representação. TA 10% (Art. 88.º n.º 7 CIRC).</>}
                       />
 
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="emPrejuizo"
-                          checked={emPrejuizo}
-                          onChange={(e) => setEmPrejuizo(e.target.checked)}
-                          className="h-4 w-4 rounded border-stone-300 accent-brand"
-                        />
-                        <label htmlFor="emPrejuizo" className="text-xs text-stone-600 dark:text-stone-300">
-                          Empresa em prejuízo fiscal (agravamento +10pp)
-                        </label>
-                        <InfoTip>Art. 88.º n.º 14 CIRC — todas as taxas de TA sobem 10 pontos percentuais quando a empresa apresenta prejuízo fiscal.</InfoTip>
+                      <NumericSlider
+                        label="Ajudas de custo / km em viatura própria (€/ano)"
+                        value={ajudasCusto}
+                        min={0}
+                        max={5_000}
+                        step={100}
+                        onChange={setAjudasCusto}
+                        presets={[0, 500, 1_000, 2_000]}
+                        tooltip={<>Compensação por deslocações em viatura própria do sócio/colaborador. TA 5% (Art. 88.º n.º 9 CIRC).</>}
+                      />
+
+                      <NumericSlider
+                        label="Despesas não documentadas (€/ano)"
+                        value={naoDocumentadas}
+                        min={0}
+                        max={2_000}
+                        step={50}
+                        onChange={setNaoDocumentadas}
+                        presets={[0, 200, 500, 1_000]}
+                        tooltip={<>Despesas sem documento fiscal válido. TA 50% (Art. 88.º n.º 1 CIRC). Evitar ao máximo.</>}
+                      />
+
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <input type="checkbox" id="emPrejuizo" checked={emPrejuizo} onChange={(e) => setEmPrejuizo(e.target.checked)} className="h-4 w-4 rounded border-stone-300 accent-brand" />
+                          <label htmlFor="emPrejuizo" className="text-xs text-stone-600 dark:text-stone-300">
+                            Empresa em prejuízo fiscal (agravamento +10pp)
+                          </label>
+                          <InfoTip>Art. 88.º n.º 14 CIRC — todas as taxas de TA sobem 10 pontos percentuais quando a empresa apresenta prejuízo fiscal.</InfoTip>
+                        </div>
+                        {emPrejuizo && (
+                          <div className="ml-6 flex items-center gap-2">
+                            <input type="checkbox" id="excecaoPrejuizo" checked={excecaoPrejuizo} onChange={(e) => setExcecaoPrejuizo(e.target.checked)} className="h-4 w-4 rounded border-stone-300 accent-brand" />
+                            <label htmlFor="excecaoPrejuizo" className="text-xs text-stone-500 dark:text-stone-400">
+                              Lucro em pelo menos 1 dos 3 anos anteriores OU primeiros 3 anos de atividade
+                            </label>
+                            <InfoTip>Art. 88.º n.º 14 CIRC (OE2026) — exceção ao agravamento. Se aplica, as taxas de TA mantêm-se normais mesmo em prejuízo.</InfoTip>
+                          </div>
+                        )}
                       </div>
 
-                      {resultado.taTotal > 0 && (
-                        <div className="mt-2 flex items-center justify-between rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 dark:bg-amber-900/20 dark:border-amber-800">
-                          <span className="text-[11px] text-amber-700 dark:text-amber-300">Tributação Autónoma estimada</span>
-                          <span className="text-[11px] font-bold tabular-nums text-amber-700 dark:text-amber-300">{fmt(Math.round(resultado.taTotal))}</span>
+                      {resultado.ta.total > 0 && (
+                        <div className="mt-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 dark:bg-amber-900/20 dark:border-amber-800">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">Tributação Autónoma total</span>
+                            <span className="text-[11px] font-bold tabular-nums text-amber-700 dark:text-amber-300">{fmt(Math.round(resultado.ta.total))}</span>
+                          </div>
+                          <div className="space-y-0.5 text-[10px] text-amber-600 dark:text-amber-400">
+                            {resultado.ta.viatura > 0 && <div className="flex justify-between"><span>Viatura ({pct(TA_TAXAS_GUIADO[tipoViatura])})</span><span>{fmt(Math.round(resultado.ta.viatura))}</span></div>}
+                            {resultado.ta.representacao > 0 && <div className="flex justify-between"><span>Representação (10%)</span><span>{fmt(Math.round(resultado.ta.representacao))}</span></div>}
+                            {resultado.ta.ajudasCusto > 0 && <div className="flex justify-between"><span>Ajudas de custo (5%)</span><span>{fmt(Math.round(resultado.ta.ajudasCusto))}</span></div>}
+                            {resultado.ta.naoDocumentadas > 0 && <div className="flex justify-between"><span>Não documentadas (50%)</span><span>{fmt(Math.round(resultado.ta.naoDocumentadas))}</span></div>}
+                          </div>
                         </div>
                       )}
                     </Collapsible>
 
-                    {/* RFAI */}
-                    <Collapsible title="RFAI — Benefício ao investimento" defaultOpen={rfaiInvest > 0}>
+                    {/* ── RFAI ────────────────────────────────────────── */}
+                    <Collapsible title="RFAI — Regime Fiscal de Apoio ao Investimento" defaultOpen={rfaiInvest > 0}>
                       <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed mb-3">
-                        O RFAI (Art. 22.º CFI) permite deduzir ao IRC uma
-                        percentagem do investimento elegível (equipamentos,
-                        ativos intangíveis). Até 50% da coleta (100% nos
-                        primeiros 3 exercícios).
+                        <LeiRef artigo="Art. 22.º–26.º CFI" url={LEI.cfi} /> — deduz ao IRC uma percentagem do investimento
+                        elegível (equipamentos, ativos intangíveis). Interior/Ilhas: 30%
+                        (até 15M) + 10% (excedente). Lisboa/Algarve: 10% flat.
                       </p>
-                      <div className="mb-3">
-                        <div className="mb-2 text-xs font-semibold text-stone-600 dark:text-stone-300">
-                          Região do investimento
+                      {localizacao && (
+                        <div className="mb-3 flex items-center gap-2 rounded-xl bg-brand-light/30 border border-brand/20 px-3 py-2">
+                          <MapPin size={12} className="flex-shrink-0 text-brand" />
+                          <span className="text-[11px] text-brand-dark dark:text-brand">
+                            RFAI ajustado para <strong>{localizacao.nome}</strong>: {pct(localizacao.rfaiTaxa)} ({localizacao.rfaiTipo})
+                          </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          {([
-                            { v: "interior" as const, l: "Interior", sub: "Norte, Centro, Alentejo, Ilhas — 30%" },
-                            { v: "litoral" as const, l: "Litoral", sub: "Lisboa, Algarve — 10%" },
-                          ]).map(({ v, l, sub }) => (
-                            <button
-                              key={v}
-                              type="button"
-                              aria-pressed={rfaiRegiao === v}
-                              onClick={() => setRfaiRegiao(v)}
-                              className={`rounded-2xl border-2 p-3 text-left transition-all ${
-                                rfaiRegiao === v
-                                  ? "border-brand bg-brand-light/30 dark:bg-brand/5"
-                                  : "border-stone-100 bg-white hover:border-stone-200 dark:border-stone-800 dark:bg-stone-900"
-                              }`}
-                            >
-                              <div className={`text-xs font-bold ${rfaiRegiao === v ? "text-brand-dark dark:text-brand" : "text-stone-600 dark:text-stone-300"}`}>{l}</div>
-                              <div className={`text-[10px] mt-0.5 ${rfaiRegiao === v ? "text-brand/70" : "text-stone-400"}`}>{sub}</div>
-                            </button>
-                          ))}
+                      )}
+                      {!localizacao && (
+                        <div className="mb-3">
+                          <div className="mb-2 text-xs font-semibold text-stone-600 dark:text-stone-300">Região do investimento</div>
+                          <div className="grid grid-cols-2 gap-2">
+                            {([
+                              { v: "interior" as const, l: "Interior", sub: "Norte, Centro, Alentejo, Ilhas — 30%" },
+                              { v: "litoral" as const, l: "Litoral", sub: "Lisboa, Algarve — 10%" },
+                            ]).map(({ v, l, sub }) => (
+                              <button key={v} type="button" aria-pressed={rfaiRegiao === v} onClick={() => setRfaiRegiao(v)}
+                                className={`rounded-2xl border-2 p-3 text-left transition-all ${rfaiRegiao === v ? "border-brand bg-brand-light/30 dark:bg-brand/5" : "border-stone-100 bg-white hover:border-stone-200 dark:border-stone-800 dark:bg-stone-900"}`}>
+                                <div className={`text-xs font-bold ${rfaiRegiao === v ? "text-brand-dark dark:text-brand" : "text-stone-600 dark:text-stone-300"}`}>{l}</div>
+                                <div className={`text-[10px] mt-0.5 ${rfaiRegiao === v ? "text-brand/70" : "text-stone-400"}`}>{sub}</div>
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                      <NumericSlider
-                        label="Investimento elegível RFAI (€)"
-                        value={rfaiInvest}
-                        min={0}
-                        max={100_000}
-                        step={1_000}
-                        onChange={setRfaiInvest}
-                        presets={[0, 10_000, 25_000, 50_000]}
+                      )}
+                      <NumericSlider label="Investimento elegível RFAI (€)" value={rfaiInvest} min={0} max={500_000} step={5_000} onChange={setRfaiInvest} presets={[0, 25_000, 50_000, 100_000]}
                         tooltip={<>Equipamentos, ativos intangíveis elegíveis. O benefício abate ao IRC (coleta).</>}
                       />
-                      {rfaiInvest > 0 && resultado.rfaiBeneficio > 0 && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <input type="checkbox" id="primeirosAnos" checked={primeirosAnos} onChange={(e) => setPrimeirosAnos(e.target.checked)} className="h-4 w-4 rounded border-stone-300 accent-brand" />
+                        <label htmlFor="primeirosAnos" className="text-xs text-stone-600 dark:text-stone-300">Primeiros 3 períodos de atividade (limite RFAI sobe de 50% para 100% da coleta)</label>
+                      </div>
+                      {rfaiInvest > 0 && resultado.beneficios.rfai > 0 && (
                         <div className="mt-2 flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 dark:bg-emerald-900/20 dark:border-emerald-800">
-                          <span className="text-[11px] text-emerald-700 dark:text-emerald-300">
-                            Poupança RFAI ({pct(RFAI_TAXA[rfaiRegiao])} de {fmt(rfaiInvest)})
-                          </span>
-                          <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
-                            -{fmt(Math.round(resultado.rfaiBeneficio))}
-                          </span>
+                          <span className="text-[11px] text-emerald-700 dark:text-emerald-300">Poupança RFAI ({pct(RFAI_TAXA[rfaiRegiaoEfetiva])} de {fmt(rfaiInvest)})</span>
+                          <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">-{fmt(Math.round(resultado.beneficios.rfai))}</span>
                         </div>
                       )}
                     </Collapsible>
+
+                    {/* ── DLRR ────────────────────────────────────────── */}
+                    <Collapsible title="DLRR — Lucros Retidos e Reinvestidos" defaultOpen={dlrrLucros > 0}>
+                      <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed mb-3">
+                        <LeiRef artigo="Art. 27.º–34.º CFI" url={LEI.cfi} /> — PME e Small Mid Cap podem deduzir 10% dos
+                        lucros retidos e reinvestidos em ativos elegíveis (máx. 5M€).
+                        Limite: 25% da coleta IRC. Reportável 12 exercícios.
+                      </p>
+                      <NumericSlider label="Lucros retidos reinvestidos (€)" value={dlrrLucros} min={0} max={200_000} step={5_000} onChange={setDlrrLucros} presets={[0, 20_000, 50_000, 100_000]}
+                        tooltip={<>Lucros do exercício anterior retidos e reinvestidos em ativos elegíveis nos 4 anos seguintes.</>}
+                      />
+                      {dlrrLucros > 0 && resultado.beneficios.dlrr > 0 && (
+                        <div className="mt-2 flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 dark:bg-emerald-900/20 dark:border-emerald-800">
+                          <span className="text-[11px] text-emerald-700 dark:text-emerald-300">Poupança DLRR (10% de {fmt(dlrrLucros)}, máx 25% coleta)</span>
+                          <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">-{fmt(Math.round(resultado.beneficios.dlrr))}</span>
+                        </div>
+                      )}
+                    </Collapsible>
+
+                    {/* ── SIFIDE II ───────────────────────────────────── */}
+                    <Collapsible title="SIFIDE II — Incentivos à I&D" defaultOpen={sifideDespesas > 0}>
+                      <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed mb-3">
+                        <LeiRef artigo="Art. 35.º–42.º CFI" url={LEI.cfi} /> — dedução à coleta de IRC de 32,5% a 82,5%
+                        das despesas elegíveis com Investigação e Desenvolvimento.
+                        Certificação ANI necessária. Reportável 12 exercícios.
+                      </p>
+                      <div className="mb-3">
+                        <div className="mb-2 text-xs font-semibold text-stone-600 dark:text-stone-300">Tipo de empresa</div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {(Object.keys(SIFIDE_META) as TipoEmpresaSifide[]).map((t) => {
+                            const meta = SIFIDE_META[t];
+                            return (
+                              <button key={t} type="button" aria-pressed={tipoSifide === t} onClick={() => setTipoSifide(t)}
+                                className={`rounded-xl border-2 p-2 text-left transition-all ${tipoSifide === t ? "border-brand bg-brand-light/30 dark:bg-brand/5" : "border-stone-100 bg-white hover:border-stone-200 dark:border-stone-800 dark:bg-stone-900"}`}>
+                                <div className={`text-[10px] font-bold ${tipoSifide === t ? "text-brand-dark dark:text-brand" : "text-stone-600 dark:text-stone-300"}`}>{meta.label}</div>
+                                <div className={`text-[9px] mt-0.5 ${tipoSifide === t ? "text-brand/70" : "text-stone-400"}`}>{meta.sub}</div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <NumericSlider label="Despesas I&D elegíveis (€/ano)" value={sifideDespesas} min={0} max={200_000} step={5_000} onChange={setSifideDespesas} presets={[0, 10_000, 30_000, 50_000]}
+                        tooltip={<>Pessoal investigador, aquisição de equipamento I&D, patentes, subcontratação. Certificação ANI obrigatória.</>}
+                      />
+                      {sifideDespesas > 0 && resultado.beneficios.sifide > 0 && (
+                        <div className="mt-2 flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 dark:bg-emerald-900/20 dark:border-emerald-800">
+                          <span className="text-[11px] text-emerald-700 dark:text-emerald-300">Poupança SIFIDE ({pct(SIFIDE_META[tipoSifide].taxa)} de {fmt(sifideDespesas)})</span>
+                          <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">-{fmt(Math.round(resultado.beneficios.sifide))}</span>
+                        </div>
+                      )}
+                    </Collapsible>
+
+                    {/* ── RFAI Contratual ─────────────────────────────── */}
+                    <Collapsible title="RFAI Contratual (investimento >= 3M)" defaultOpen={rfaiContratualValor > 0}>
+                      <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed mb-3">
+                        <LeiRef artigo="Art. 8.º–22.º CFI" url={LEI.cfi} /> — para investimentos de grande dimensão,
+                        negociado com IAPMEI/AICEP. Crédito fiscal adicional que
+                        se aplica após RFAI + DLRR + SIFIDE. O valor é acordado caso a caso.
+                      </p>
+                      <NumericSlider label="Crédito fiscal contratual (€/ano)" value={rfaiContratualValor} min={0} max={500_000} step={10_000} onChange={setRfaiContratualValor} presets={[0, 50_000, 100_000, 250_000]}
+                        tooltip={<>Valor anual do benefício negociado. Aplica-se após os restantes benefícios, limitado ao IRC remanescente.</>}
+                      />
+                    </Collapsible>
+
+                    {/* ── Impostos Municipais (IMI/IMT) ───────────────── */}
+                    <Collapsible title="Imóvel da empresa (IMI/IMT)" defaultOpen={temImovelEmpresa}>
+                      {tipoSede !== "fisica" && (
+                        <div className="mb-3 flex items-start gap-2 rounded-xl border border-brand/20 bg-brand-light/10 p-3 dark:bg-brand/5">
+                          <Laptop size={14} className="mt-0.5 flex-shrink-0 text-brand" />
+                          <p className="text-[11px] text-stone-600 dark:text-stone-300 leading-relaxed">
+                            A tua empresa tem sede {tipoSede === "virtual" ? "virtual" : "em coworking"} — IMI e IMT não se aplicam (sem imóvel próprio).
+                            Se adquirires imóvel futuramente, ativa abaixo.
+                          </p>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3 mb-3">
+                        <button type="button" role="switch" aria-checked={temImovelEmpresa} onClick={() => setTemImovelEmpresa(!temImovelEmpresa)}
+                          className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${temImovelEmpresa ? "bg-brand" : "bg-stone-300 dark:bg-stone-700"}`}>
+                          <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${temImovelEmpresa ? "translate-x-4" : ""}`} />
+                        </button>
+                        <span className="text-xs text-stone-600 dark:text-stone-300">A empresa tem ou vai adquirir imóvel próprio</span>
+                      </div>
+                      {temImovelEmpresa && (
+                        <div className="space-y-4">
+                          <NumericSlider label="Valor Patrimonial Tributário — VPT (€)" value={vptImovel} min={0} max={2_000_000} step={10_000} onChange={setVptImovel} presets={[50_000, 150_000, 300_000, 500_000]}
+                            tooltip={<>Consta na caderneta predial. O IMI incide sobre este valor.</>}
+                          />
+                          <div>
+                            <div className="mb-1.5 text-[11px] font-semibold text-stone-500 dark:text-stone-400">Taxa IMI municipal</div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {([0.003, 0.0035, 0.004, 0.0045]).map((t) => (
+                                <button key={t} type="button" aria-pressed={taxaIMI === t} onClick={() => setTaxaIMI(t)}
+                                  className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${taxaIMI === t ? "bg-brand text-white" : "bg-stone-100 text-stone-500 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-400"}`}>
+                                  {pct(t)}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          {vptImovel > 0 && (
+                            <div className="flex justify-between text-xs text-stone-500">
+                              <span>IMI anual estimado</span>
+                              <span className="font-semibold tabular-nums">{fmt(Math.round(vptImovel * taxaIMI))}/ano</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <input type="checkbox" id="isencaoIMI" checked={isencaoIMI_RFAI} onChange={(e) => setIsencaoIMI_RFAI(e.target.checked)} className="h-4 w-4 rounded border-stone-300 accent-emerald-500" />
+                            <label htmlFor="isencaoIMI" className="text-xs text-stone-600 dark:text-stone-300">Isenção IMI via RFAI (até 10 anos, aprovação municipal)</label>
+                          </div>
+
+                          <div className="border-t border-stone-100 dark:border-stone-800 pt-3">
+                            <NumericSlider label="Valor de aquisição do imóvel (€)" value={valorAquisicaoImovel} min={0} max={5_000_000} step={25_000} onChange={setValorAquisicaoImovel} presets={[0, 100_000, 250_000, 500_000]}
+                              tooltip={<>IMT (6,5%) + Imposto de Selo (0,8%) incidem sobre este valor na transmissão.</>}
+                            />
+                            {valorAquisicaoImovel > 0 && (
+                              <div className="mt-1 flex justify-between text-xs text-stone-500">
+                                <span>IMT + IS one-time</span>
+                                <span className="font-semibold tabular-nums">{fmt(Math.round(valorAquisicaoImovel * (IMT_TAXA_COMERCIAL + IS_TAXA_AQUISICAO)))}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                              <input type="checkbox" id="isencaoIMT" checked={isencaoIMT_RFAI} onChange={(e) => setIsencaoIMT_RFAI(e.target.checked)} className="h-4 w-4 rounded border-stone-300 accent-emerald-500" />
+                              <label htmlFor="isencaoIMT" className="text-xs text-stone-600 dark:text-stone-300">Isenção IMT + IS via RFAI (projeto reconhecido)</label>
+                            </div>
+                            {valorAquisicaoImovel > 0 && (
+                              <div className="mt-2">
+                                <div className="mb-1.5 text-[11px] font-semibold text-stone-500 dark:text-stone-400">Amortizar IMT em:</div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {([5, 10, 15, 20]).map((a) => (
+                                    <button key={a} type="button" aria-pressed={anosAmortizacaoIMT === a} onClick={() => setAnosAmortizacaoIMT(a)}
+                                      className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${anosAmortizacaoIMT === a ? "bg-brand text-white" : "bg-stone-100 text-stone-500 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-400"}`}>
+                                      {a} anos
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </Collapsible>
+
+                    {/* Resumo benefícios */}
+                    {resultado.beneficios.total > 0 && (
+                      <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3 dark:bg-emerald-900/20 dark:border-emerald-800">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">Total de benefícios fiscais</span>
+                          <span className="text-xs font-bold tabular-nums text-emerald-700 dark:text-emerald-300">-{fmt(Math.round(resultado.beneficios.total))}</span>
+                        </div>
+                        <div className="space-y-0.5 text-[10px] text-emerald-600 dark:text-emerald-400">
+                          {resultado.beneficios.rfai > 0 && <div className="flex justify-between"><span>RFAI</span><span>-{fmt(Math.round(resultado.beneficios.rfai))}{resultado.beneficios.rfaiBruto > resultado.beneficios.rfai ? ` (bruto ${fmt(Math.round(resultado.beneficios.rfaiBruto))}, limitado à coleta)` : ""}</span></div>}
+                          {resultado.beneficios.dlrr > 0 && <div className="flex justify-between"><span>DLRR</span><span>-{fmt(Math.round(resultado.beneficios.dlrr))}{resultado.beneficios.dlrrBruto > resultado.beneficios.dlrr ? ` (bruto ${fmt(Math.round(resultado.beneficios.dlrrBruto))})` : ""}</span></div>}
+                          {resultado.beneficios.sifide > 0 && <div className="flex justify-between"><span>SIFIDE II</span><span>-{fmt(Math.round(resultado.beneficios.sifide))}{resultado.beneficios.sifideBruto > resultado.beneficios.sifide ? ` (bruto ${fmt(Math.round(resultado.beneficios.sifideBruto))})` : ""}</span></div>}
+                          {resultado.beneficios.rfaiContratual > 0 && <div className="flex justify-between"><span>RFAI Contratual</span><span>-{fmt(Math.round(resultado.beneficios.rfaiContratual))}</span></div>}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="mt-6 flex gap-3">
-                    <button
-                      type="button"
-                      onClick={recuar}
-                      className="flex items-center gap-1.5 rounded-xl border border-stone-200 px-4 py-2.5 text-xs font-semibold text-stone-500 transition-colors hover:border-stone-300 dark:border-stone-700 dark:text-stone-400"
-                    >
+                    <button type="button" onClick={recuar}
+                      className="flex items-center gap-1.5 rounded-xl border border-stone-200 px-4 py-2.5 text-xs font-semibold text-stone-500 transition-colors hover:border-stone-300 dark:border-stone-700 dark:text-stone-400">
                       <ArrowLeft size={14} /> Voltar
                     </button>
-                    <button
-                      type="button"
-                      onClick={avancar}
-                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand py-2.5 text-sm font-bold text-white transition-all hover:bg-brand-dark"
-                    >
+                    <button type="button" onClick={avancar}
+                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand py-2.5 text-sm font-bold text-white transition-all hover:bg-brand-dark">
                       Ver resultado <ArrowRight size={14} />
                     </button>
                   </div>
@@ -1432,8 +2493,14 @@ export default function ModoGuiadoEmpresa({
                     Estimativa anual para{" "}
                     {tipoSociedade === "unipessoal"
                       ? "Sociedade Unipessoal"
-                      : "Sociedade por Quotas"}{" "}
-                    com faturação de {fmt(faturacaoAnual)}/ano.
+                      : "Sociedade por Quotas"}
+                    {localizacao
+                      ? ` em ${localNome ? `${localNome} (${localizacao.nome})` : localizacao.nome}`
+                      : ""}
+                    {tipoSede !== "fisica" && ` (sede ${tipoSede === "virtual" ? "virtual" : "coworking"})`}
+                    {aplicarIFICI && " · IFICI ativo"}
+                    {perfilFundador !== "residente" && ` · ${perfilFundador === "estrangeiro_ue" ? "residente UE" : "residente extra-UE"}`}
+                    {" "}com faturação de {fmt(faturacaoAnual)}/ano.
                   </p>
 
                   {/* Breakdown cascata */}
@@ -1441,25 +2508,47 @@ export default function ModoGuiadoEmpresa({
                     {[
                       { label: "Faturação anual", value: resultado.faturacao, cor: "text-stone-700 dark:text-stone-200" },
                       resultado.despesasOper > 0 ? { label: "Despesas operacionais", value: -resultado.despesasOper, cor: "text-stone-500" } : null,
-                      { label: "Custos estrutura (contabilidade, software)", value: -resultado.custosEstrutura, cor: "text-stone-500" },
-                      resultado.custoConstituicao > 0 ? { label: "Constituição (amortizada 3 anos)", value: -resultado.custoConstituicao, cor: "text-stone-500" } : null,
+                      { label: "Custos estrutura (contabilidade + software)", value: -resultado.custosEstrutura, cor: "text-stone-500" },
+                      resultado.custoConstituicao > 0 ? { label: `Constituição (amortizada ${anosAmortizacao} ano${anosAmortizacao > 1 ? "s" : ""})`, value: -resultado.custoConstituicao, cor: "text-stone-500" } : null,
                       resultado.salGerente > 0 ? { label: `Salário gerente (${fmt(salGerenteMensal)}/mês × 12)`, value: -resultado.salGerente, cor: "text-stone-500" } : null,
                       resultado.ssSalGerente > 0 ? { label: "SS empresa + trabalhador (34,75%)", value: -resultado.ssSalGerente, cor: "text-amber-600 dark:text-amber-400" } : null,
+                      resultado.custoSedeVirtual > 0 ? { label: `Sede ${tipoSede === "virtual" ? "virtual" : "coworking"} (${fmt(custoSedeVirtual)}/mês × 12)`, value: -resultado.custoSedeVirtual, cor: "text-stone-500" } : null,
+                      resultado.custoRepresentanteFiscal > 0 ? { label: "Representante fiscal (Art. 19.º LGT)", value: -resultado.custoRepresentanteFiscal, cor: "text-amber-600 dark:text-amber-400" } : null,
                       { label: "Lucro tributável", value: resultado.lucroTributavel, cor: "text-stone-700 dark:text-stone-200 font-semibold", sep: true },
-                      { label: `IRC coleta (PME ${pct(IRC_PME.taxa1)}/${fmt(IRC_PME.limite)} + ${pct(IRC_PME.taxa2)})`, value: -resultado.coleta, cor: "text-red-500 dark:text-red-400" },
-                      resultado.rfaiBeneficio > 0 ? { label: `RFAI (${pct(RFAI_TAXA[rfaiRegiao])} × ${fmt(rfaiInvest)})`, value: resultado.rfaiBeneficio, cor: "text-emerald-600 dark:text-emerald-400" } : null,
-                      resultado.taTotal > 0 ? { label: "Tributação Autónoma (Art. 88.º CIRC)", value: -resultado.taTotal, cor: "text-amber-600 dark:text-amber-400" } : null,
-                      { label: `Derrama municipal (~${pct(DERRAMA_MUNI)})`, value: -resultado.derrama, cor: "text-red-400" },
+                      { label: `IRC coleta (${pct(localizacao?.ircPME ?? IRC_TAXA_PME.value)}/${fmt(IRC_LIMITE)} + ${pct(localizacao?.ircGeral ?? IRC_TAXA_GERAL.value)}${localizacao?.interior ? " · interior" : ""})`, value: -resultado.coleta, cor: "text-red-500 dark:text-red-400" },
+                      resultado.beneficios.rfai > 0 ? { label: `RFAI (${pct(RFAI_TAXA[rfaiRegiaoEfetiva])} × ${fmt(rfaiInvest)})`, value: resultado.beneficios.rfai, cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
+                      resultado.beneficios.dlrr > 0 ? { label: `DLRR (10% × ${fmt(dlrrLucros)})`, value: resultado.beneficios.dlrr, cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
+                      resultado.beneficios.sifide > 0 ? { label: `SIFIDE II (${pct(SIFIDE_META[tipoSifide].taxa)} × ${fmt(sifideDespesas)})`, value: resultado.beneficios.sifide, cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
+                      resultado.beneficios.rfaiContratual > 0 ? { label: "RFAI Contratual", value: resultado.beneficios.rfaiContratual, cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
+                      resultado.beneficios.total > 0 ? { label: "IRC após benefícios", value: resultado.ircAposBeneficios, cor: "text-stone-600 dark:text-stone-300", sep: true } : null,
+                      resultado.ta.viatura > 0 ? { label: `TA viatura (${pct(TA_TAXAS_GUIADO[tipoViatura])})`, value: -resultado.ta.viatura, cor: "text-amber-600 dark:text-amber-400" } : null,
+                      resultado.ta.representacao > 0 ? { label: "TA representação (10%)", value: -resultado.ta.representacao, cor: "text-amber-600 dark:text-amber-400" } : null,
+                      resultado.ta.ajudasCusto > 0 ? { label: "TA ajudas de custo (5%)", value: -resultado.ta.ajudasCusto, cor: "text-amber-600 dark:text-amber-400" } : null,
+                      resultado.ta.naoDocumentadas > 0 ? { label: "TA não documentadas (50%)", value: -resultado.ta.naoDocumentadas, cor: "text-amber-600 dark:text-amber-400" } : null,
+                      { label: `Derrama municipal (~${pct(localizacao?.derramaEstimada ?? 0.015)}${localizacao ? " · " + localizacao.nome : ""})`, value: -resultado.derrama, cor: "text-red-400" },
+                      resultado.custoMunicipalAnual > 0 ? { label: "IMI + IMT/IS (amortizado)", value: -resultado.custoMunicipalAnual, cor: "text-red-400" } : null,
+                      resultado.poupancaIMI > 0 || resultado.poupancaIMT > 0 ? { label: "Poupança municipal (isenções RFAI)", value: resultado.poupancaIMI + (resultado.poupancaIMT / anosAmortizacaoIMT), cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
                       { label: "Lucro líquido (disponível)", value: resultado.lucroLiquido, cor: "text-stone-700 dark:text-stone-200 font-semibold", sep: true },
-                      distribuirDividendos ? { label: opcaoEnglobamento ? "IRS dividendos (englobamento 50% × taxa marginal)" : "IRS dividendos (28% taxa liberatória)", value: -resultado.irsDividendos, cor: "text-red-500 dark:text-red-400" } : null,
+                      distribuirDividendos ? {
+                        label: aplicarIFICI
+                          ? `IRS dividendos (IFICI ${pct(IFICI_TAXA_FLAT)} flat)`
+                          : opcaoEnglobamento
+                            ? `IRS dividendos (englobamento 50% × ${pct(resultado.taxaMarginalGerente)} marginal)`
+                            : "IRS dividendos (28% taxa liberatória)",
+                        value: -resultado.irsDividendos, cor: "text-red-500 dark:text-red-400",
+                      } : null,
+                      distribuirDividendos && aplicarIFICI && resultado.poupancaIFICI > 0 ? {
+                        label: `Poupança IFICI (vs 28% liberatória)`,
+                        value: resultado.poupancaIFICI, cor: "text-emerald-600 dark:text-emerald-400", plus: true,
+                      } : null,
                     ]
                       .filter(Boolean)
                       .map((item) => {
-                        const i = item!;
+                        const i = item as { label: string; value: number; cor: string; sep?: boolean; plus?: boolean };
                         return (
                           <div key={i.label} className={`flex items-center justify-between px-3 py-2 rounded-xl ${i.sep ? "border-t border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/30 mt-1" : ""}`}>
                             <span className="text-[11px] text-stone-500 dark:text-stone-400">{i.label}</span>
-                            <span className={`text-[11px] tabular-nums ${i.cor}`}>{i.value < 0 ? "−" : i.value > 0 && i.label.startsWith("RFAI") ? "+" : ""}{fmt(Math.abs(i.value))}</span>
+                            <span className={`text-[11px] tabular-nums ${i.cor}`}>{i.value < 0 ? "−" : i.plus ? "+" : ""}{fmt(Math.abs(Math.round(i.value)))}</span>
                           </div>
                         );
                       })}
@@ -1477,13 +2566,29 @@ export default function ModoGuiadoEmpresa({
                         </div>
                       </div>
                     </div>
+
+                    {/* Dica de englobamento */}
+                    {distribuirDividendos && (
+                      <div className={`mt-2 rounded-xl border px-3 py-2 ${englobamentoMelhor ? "border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800" : "border-stone-100 bg-stone-50 dark:border-stone-800 dark:bg-stone-900/50"}`}>
+                        <p className="text-[11px] text-stone-500 dark:text-stone-400">
+                          {englobamentoMelhor
+                            ? `O englobamento pouparia ${fmt(Math.round(poupancaEnglobamento))} face à taxa liberatória (taxa marginal ${pct(resultado.taxaMarginalGerente)}).`
+                            : `A taxa liberatória (28%) é mais vantajosa que o englobamento para o teu perfil (marginal ${pct(resultado.taxaMarginalGerente)}).`}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <p className="mt-3 px-1 text-[10px] leading-relaxed text-stone-400 dark:text-stone-500">
-                    Estimativa anual com as taxas oficiais de 2026. Empresa: IRC
-                    PME, derrama ~1,5%, TA e RFAI conforme configurado. Salário
-                    antes de IRS na fonte. Não substitui aconselhamento de um
-                    contabilista certificado (OCC).
+                    Estimativa anual com as taxas oficiais de 2026
+                    {localizacao ? ` para ${localizacao.nome}` : ""}.
+                    IRC {localizacao ? pct(localizacao.ircPME) : "PME"} (<LeiRef artigo="Art. 87.º CIRC" url={LEI.art87circ} />),
+                    derrama ~{pct(localizacao?.derramaEstimada ?? 0.015)},
+                    TA (<LeiRef artigo="Art. 88.º CIRC" url={LEI.art88circ} />),
+                    benefícios (<LeiRef artigo="CFI" url={LEI.cfi} />) e IMI/IMT conforme configurado.
+                    {aplicarIFICI && <> IFICI (<LeiRef artigo="Art. 58.º-A EBF" url={LEI.art58aEBF} />) aplicado aos dividendos.</>}
+                    {" "}Salário antes de IRS na fonte.
+                    Não substitui aconselhamento de um contabilista certificado (OCC).
                   </p>
 
                   <div className="mt-6 flex gap-3">
@@ -1521,38 +2626,83 @@ export default function ModoGuiadoEmpresa({
                   <h2 className="font-display mb-2 text-2xl font-semibold text-stone-800 dark:text-stone-100">
                     O que fazer a seguir
                   </h2>
-                  <p className="mb-6 text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
-                    Com base na tua simulação de <strong>{fmt(faturacaoAnual)}/ano</strong> e
-                    resultado líquido de <strong>{fmt(Math.round(resultado.liquidoGerente))}</strong>,
-                    aqui estão os passos recomendados.
+                  <p className="mb-5 text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
+                    A tua simulação está pronta. Abaixo tens o plano de ação para
+                    avançar com confiança.
                   </p>
 
+                  {/* ── Resumo da simulação (métricas-chave) ──────────────── */}
+                  <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {[
+                      { label: "Faturação", valor: fmt(faturacaoAnual), sub: "/ano" },
+                      { label: "Líquido", valor: fmt(Math.round(resultado.liquidoGerente)), sub: "/ano" },
+                      { label: "Mensal", valor: `~${fmt(Math.round(resultado.liquidoGerente / 12))}`, sub: "/mês" },
+                      { label: "Taxa efetiva", valor: `${Math.round(resultado.taxaEfetiva * 100)}%`, sub: "carga fiscal" },
+                    ].map((m) => (
+                      <div
+                        key={m.label}
+                        className="rounded-2xl border border-stone-100 bg-stone-50/60 px-3 py-2.5 dark:border-stone-800 dark:bg-stone-900/50"
+                      >
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">{m.label}</div>
+                        <div className="mt-0.5 text-sm font-bold tabular-nums text-stone-800 dark:text-stone-100">{m.valor}</div>
+                        <div className="text-[10px] text-stone-400">{m.sub}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* ── Plano de ação ─────────────────────────────────────── */}
+                  <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                    Plano de ação
+                  </h3>
                   <div className="space-y-3">
-                    {/* Comparar cenários */}
+                    {/* 1. Mapa de onde instalar (só para quem está a avaliar) */}
+                    {jaTemEmpresa === "nao" && (
+                      <a
+                        href="#mapa-regioes-empresa"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          document.getElementById("mapa-regioes-empresa")?.scrollIntoView({ behavior: "smooth" });
+                        }}
+                        className="group flex items-center gap-3 rounded-2xl border-2 border-brand bg-brand-light/30 p-4 text-left transition-all hover:shadow-card dark:bg-brand/5"
+                      >
+                        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand text-white">
+                          <MapPin size={18} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-1.5">
+                            <span className="text-sm font-bold text-brand-dark dark:text-brand">Onde instalar a empresa</span>
+                            <span className="rounded-full bg-brand/10 px-1.5 py-0.5 text-[9px] font-bold text-brand">Mapa</span>
+                          </span>
+                          <span className="mt-0.5 block text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
+                            IRC reduzido no interior, Zona Franca da Madeira, RFAI por
+                            região, derrama e custo de contabilista — tudo no mapa abaixo.
+                          </span>
+                        </span>
+                        <ArrowRight size={16} className="flex-shrink-0 text-brand/50 transition-colors group-hover:text-brand" />
+                      </a>
+                    )}
+
+                    {/* 2. Comparar com recibos verdes */}
                     <Link
                       href="/dashboard/comparar"
-                      className="group flex items-center gap-3 rounded-2xl border-2 border-brand bg-brand-light/30 p-4 text-left transition-all hover:shadow-card dark:bg-brand/5"
+                      className="group flex items-center gap-3 rounded-2xl border-2 border-brand/40 bg-white p-4 text-left transition-all hover:border-brand hover:shadow-card dark:border-brand/20 dark:bg-stone-900"
                     >
-                      <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand text-white transition-colors">
-                        <ChartProjection size={18} />
+                      <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-light text-brand transition-colors group-hover:bg-brand group-hover:text-white">
+                        <Scale size={18} />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-bold text-brand-dark dark:text-brand">
+                        <span className="block text-sm font-bold text-stone-800 dark:text-stone-100">
                           Comparar com recibos verdes
                         </span>
                         <span className="mt-0.5 block text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
-                          Descobre em que ponto a empresa compensa — com
-                          ponto de viragem, mapa por região e custo de
-                          contabilista.
+                          Ponto de viragem, mapa por região, custo de contabilista e
+                          calendário fiscal lado a lado.
                         </span>
                       </span>
-                      <ArrowRight
-                        size={16}
-                        className="flex-shrink-0 text-brand/50 transition-colors group-hover:text-brand"
-                      />
+                      <ArrowRight size={16} className="flex-shrink-0 text-stone-300 transition-colors group-hover:text-brand" />
                     </Link>
 
-                    {/* Simulador completo */}
+                    {/* 3. Simulador completo */}
                     {onIrParaSimuladorCompleto && (
                       <button
                         type="button"
@@ -1560,7 +2710,7 @@ export default function ModoGuiadoEmpresa({
                         className="group flex w-full items-center gap-3 rounded-2xl border-2 border-stone-100 bg-white p-4 text-left transition-all hover:border-stone-200 hover:shadow-card dark:border-stone-800 dark:bg-stone-900"
                       >
                         <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 transition-colors group-hover:bg-brand-light group-hover:text-brand dark:bg-stone-800">
-                          <Briefcase size={18} />
+                          <Target size={18} />
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm font-bold text-stone-800 dark:text-stone-100">
@@ -1571,17 +2721,75 @@ export default function ModoGuiadoEmpresa({
                             detalhada e mais benefícios fiscais.
                           </span>
                         </span>
-                        <ArrowRight
-                          size={16}
-                          className="flex-shrink-0 text-stone-300 transition-colors group-hover:text-brand"
-                        />
+                        <ArrowRight size={16} className="flex-shrink-0 text-stone-300 transition-colors group-hover:text-brand" />
                       </button>
                     )}
+
+                    {/* 4. Encontrar contabilista */}
+                    <Link
+                      href="/ferramentas/mapa-contabilistas"
+                      className="group flex w-full items-center gap-3 rounded-2xl border-2 border-stone-100 bg-white p-4 text-left transition-all hover:border-stone-200 hover:shadow-card dark:border-stone-800 dark:bg-stone-900"
+                    >
+                      <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 transition-colors group-hover:bg-brand-light group-hover:text-brand dark:bg-stone-800">
+                        <Briefcase size={18} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-bold text-stone-800 dark:text-stone-100">
+                          Encontrar contabilista na tua zona
+                        </span>
+                        <span className="mt-0.5 block text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
+                          Toda a empresa precisa de TOC inscrito na OCC.
+                          Vê o mapa de preços por região.
+                        </span>
+                      </span>
+                      <ArrowRight size={16} className="flex-shrink-0 text-stone-300 transition-colors group-hover:text-brand" />
+                    </Link>
                   </div>
 
-                  {/* Calendário fiscal resumo */}
-                  <div className="mt-6 space-y-4">
-                    <Collapsible title="Obrigações fiscais da empresa" defaultOpen={false}>
+                  {/* ── Checklist rápida ──────────────────────────────────── */}
+                  {jaTemEmpresa === "nao" && (
+                    <div className="mt-6">
+                      <Collapsible title="Checklist — como abrir a empresa" defaultOpen>
+                        <div className="space-y-2.5">
+                          {[
+                            ...(perfilFundador !== "residente" ? [
+                              { Icon: Globe, titulo: "Obter NIF português", desc: "Estrangeiros devem obter o Número de Identificação Fiscal (NIF) na AT ou num consulado." },
+                              ...(perfilFundador === "estrangeiro_extra_ue" ? [
+                                { Icon: Plane, titulo: "Nomear representante fiscal", desc: `Obrigatório para residentes fora da UE/EEE (Art. 19.º LGT). Custo estimado: ${fmt(CUSTO_REPRESENTANTE_FISCAL_DEFAULT)}/mês.` },
+                              ] : []),
+                            ] : []),
+                            { Icon: FileSign, titulo: "Escolher firma e CAE", desc: "Reservar o nome online no Portal da Empresa e definir o código CAE da atividade." },
+                            { Icon: Building, titulo: "Empresa na Hora (balcão ou online)", desc: "Constituir a sociedade num balcão do IRN (<1h) ou online (1–2 dias úteis). Custo: ~360–400€." },
+                            { Icon: Shield, titulo: "Abrir conta bancária da empresa", desc: "Depositar o capital social (mínimo 1€ para Unipessoal, 2€ para Quotas) e abrir a conta em nome da sociedade." },
+                            { Icon: Rocket, titulo: "Início de atividade nas Finanças", desc: "Declaração de início de atividade no Portal das Finanças: regime de IVA (geralmente trimestral), CAE e sede." },
+                            { Icon: Calendar, titulo: "Inscrever na Segurança Social", desc: "Inscrever a empresa e o gerente como MOE (membro de órgão estatutário). SS patronal: 23,75%, gerente: 11%." },
+                            { Icon: Briefcase, titulo: "Contratar contabilista certificado (TOC)", desc: "Obrigatório ter um TOC inscrito na OCC. Custo médio: ~200€/mês. Trata da contabilidade organizada, IRC, IES e IVA." },
+                            ...(aplicarIFICI ? [
+                              { Icon: Sparkle, titulo: "Requerer estatuto IFICI na AT", desc: "Inscrição no regime IFICI (Art. 58.º-A EBF) junto da AT. Taxa IRS flat 20% durante 10 anos. Requer atividade elegível." },
+                            ] : []),
+                          ].map((step, i) => (
+                            <div
+                              key={step.titulo}
+                              className="flex items-start gap-3 rounded-2xl border border-stone-100 bg-white p-3.5 dark:border-stone-800 dark:bg-stone-900"
+                            >
+                              <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-brand text-white text-[10px] font-bold">{i + 1}</span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  <step.Icon size={13} className="flex-shrink-0 text-brand" />
+                                  <span className="text-xs font-bold text-stone-700 dark:text-stone-200">{step.titulo}</span>
+                                </div>
+                                <div className="mt-0.5 text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">{step.desc}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </Collapsible>
+                    </div>
+                  )}
+
+                  {/* ── Obrigações fiscais ────────────────────────────────── */}
+                  <div className="mt-4">
+                    <Collapsible title="Calendário de obrigações fiscais" defaultOpen={false}>
                       <div className="space-y-2">
                         {[
                           { quando: "Mensal (até dia 20)", obrigacoes: ["SS gerente + empresa", "Retenção IRS s/ salário", ...(faturacaoAnual >= 650_000 ? ["IVA mensal (Mod. Periódica)"] : [])] },
@@ -1601,30 +2809,71 @@ export default function ModoGuiadoEmpresa({
                         ))}
                       </div>
                     </Collapsible>
+                  </div>
 
-                    {/* Como abrir */}
-                    {jaTemEmpresa === "nao" && (
-                      <Collapsible title="Como abrir a empresa (passo a passo)" defaultOpen={false}>
-                        <div className="space-y-3">
-                          {[
-                            { num: 1, titulo: "Escolher firma e CAE", desc: "Escolhe o nome (firma) e o código CAE que define a atividade. Podes reservar o nome online no Portal da Empresa." },
-                            { num: 2, titulo: "Empresa na Hora (balcão ou online)", desc: "Num balcão do IRN constituis a sociedade em menos de 1 hora: pacto social, registo e NIF empresarial ficam prontos. Online demora 1–2 dias úteis. Custo: ~360€." },
-                            { num: 3, titulo: "Abrir conta bancária da empresa", desc: "Depositar o capital social (mínimo 1€) e abrir a conta bancária em nome da sociedade." },
-                            { num: 4, titulo: "Início de atividade nas Finanças", desc: "Entregar a declaração de início de atividade no Portal das Finanças com o regime de IVA (geralmente trimestral) e o CAE." },
-                            { num: 5, titulo: "Inscrever na Segurança Social", desc: "Inscrever a empresa e o gerente como MOE (membro de órgão estatutário). SS patronal: 23,75%, gerente: 11%." },
-                            { num: 6, titulo: "Contratar contabilista (TOC)", desc: "Obrigatório ter um TOC inscrito na OCC para manter a contabilidade organizada. Custo: ~200€/mês." },
-                          ].map((step) => (
-                            <div key={step.num} className="flex gap-3">
-                              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand text-white text-[10px] font-bold">{step.num}</span>
-                              <div>
-                                <div className="text-xs font-bold text-stone-700 dark:text-stone-200">{step.titulo}</div>
-                                <div className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">{step.desc}</div>
+                  {/* ── Benefícios e vantagens fiscais ────────────────────── */}
+                  <div className="mt-4">
+                    <Collapsible title="Benefícios fiscais disponíveis para empresas" defaultOpen={false}>
+                      <div className="space-y-2">
+                        {[
+                          { titulo: "IRC PME 15% nos primeiros 50.000€", desc: "Taxa reduzida para micro/PME. O restante a 19%.", badge: "Nacional", lei: "Art. 87.º CIRC", url: LEI.art87circ },
+                          { titulo: "IRC 12,5% nos territórios do interior", desc: "PME com direção efetiva em concelho do interior. Acumula com PME.", badge: "Interior", lei: "Art. 41.º-B EBF", url: LEI.art41bEBF },
+                          { titulo: "RFAI — 10% a 30% do investimento", desc: "Crédito de IRC sobre equipamentos e ativos. 30% fora de Lisboa/Algarve, 10% litoral.", badge: "Nacional", lei: "Art. 22.º–26.º CFI", url: LEI.cfi },
+                          { titulo: "DLRR — 10% dos lucros reinvestidos", desc: "Dedução de 10% dos lucros retidos e reinvestidos em ativos elegíveis.", badge: "PME", lei: "Art. 27.º–34.º CFI", url: LEI.cfi },
+                          { titulo: "SIFIDE II — até 82,5% de I&D", desc: "32,5% (base) + 50% incremental das despesas de investigação e desenvolvimento.", badge: "I&D", lei: "Art. 35.º–42.º CFI", url: LEI.cfi },
+                          { titulo: "Zona Franca da Madeira — IRC 5%", desc: "Empresas licenciadas no CINM até 2033. Requer criação de emprego e investimento mínimo de 75.000€.", badge: "Madeira" },
+                          ...(aplicarIFICI ? [{ titulo: `IFICI — IRS ${pct(IFICI_TAXA_FLAT)} flat (${IFICI_PRAZO_ANOS.value} anos)`, desc: "Incentivo fiscal para investigação científica e inovação. Taxa flat de 20% sobre rendimentos e dividendos de fonte portuguesa.", badge: "Estrangeiro", lei: "Art. 58.º-A EBF", url: LEI.art58aEBF }] : []),
+                        ].map((b) => (
+                          <div key={b.titulo} className="flex items-start gap-2.5 rounded-xl border border-stone-100 bg-white p-3 dark:border-stone-800 dark:bg-stone-950">
+                            <Check size={14} className="mt-0.5 flex-shrink-0 text-brand" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="text-xs font-bold text-stone-700 dark:text-stone-200">{b.titulo}</span>
+                                <span className="rounded-full bg-stone-100 px-1.5 py-0.5 text-[9px] font-semibold text-stone-500 dark:bg-stone-800 dark:text-stone-400">{b.badge}</span>
+                                {"lei" in b && b.lei && "url" in b && b.url && <LeiRef artigo={b.lei as string} url={b.url as string} />}
                               </div>
+                              <div className="mt-0.5 text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">{b.desc}</div>
                             </div>
-                          ))}
-                        </div>
-                      </Collapsible>
-                    )}
+                          </div>
+                        ))}
+                      </div>
+                    </Collapsible>
+                  </div>
+
+                  {/* ── Mapa de regiões (só para quem está a avaliar) ─────── */}
+                  {jaTemEmpresa === "nao" && (
+                    <div id="mapa-regioes-empresa" className="mt-8 scroll-mt-6">
+                      <div className="mb-4">
+                        <span className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-brand/20 bg-brand-light/60 px-3 py-1 text-xs font-semibold text-brand-dark">
+                          <MapPin size={12} />
+                          Mapa interativo
+                        </span>
+                        <h3 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">
+                          Onde vale a pena instalar a empresa
+                        </h3>
+                        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
+                          Benefícios fiscais por região: IRC reduzido no interior,
+                          RFAI, derrama municipal, IVA nas ilhas e custo de contabilista.
+                          Toca numa região ou procura a tua zona.
+                        </p>
+                      </div>
+                      <ErrorBoundary etiqueta="o mapa de benefícios por região">
+                        <MapaBeneficiosRegioes />
+                      </ErrorBoundary>
+                    </div>
+                  )}
+
+                  {/* ── Nota final ────────────────────────────────────────── */}
+                  <div className="mt-6 flex items-start gap-2.5 rounded-2xl border border-stone-100 bg-stone-50 px-4 py-3 dark:border-stone-800 dark:bg-stone-900/50">
+                    <Sparkle size={14} className="mt-0.5 flex-shrink-0 text-brand" />
+                    <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                      <strong className="text-stone-600 dark:text-stone-300">Estimativa com taxas oficiais de 2026.</strong>{" "}
+                      Baseada no CIRC (<LeiRef artigo="Art. 87.º–88.º" url={LEI.art87circ} />),
+                      CIRS (<LeiRef artigo="Art. 71.º" url={LEI.art71cirs} />) e
+                      CFI (<LeiRef artigo="DL 162/2014" url={LEI.cfi} />).
+                      Não substitui o aconselhamento de um Contabilista Certificado
+                      (OCC).
+                    </p>
                   </div>
 
                   <div className="mt-6">
@@ -1729,8 +2978,8 @@ function PainelResumoEmpresa({
           {[
             { label: "Custos + SS gerente", val: -(resultado.totalCustos), cor: "text-stone-500" },
             { label: "IRC + derrama", val: -(resultado.ircAposBeneficios + resultado.derrama), cor: "text-red-500 dark:text-red-400" },
-            ...(resultado.taTotal > 0 ? [{ label: "Trib. Autónoma", val: -(resultado.taTotal), cor: "text-amber-500" }] : []),
-            ...(resultado.rfaiBeneficio > 0 ? [{ label: "RFAI", val: resultado.rfaiBeneficio, cor: "text-emerald-500" }] : []),
+            ...(resultado.ta.total > 0 ? [{ label: "Trib. Autónoma", val: -(resultado.ta.total), cor: "text-amber-500" }] : []),
+            ...(resultado.beneficios.total > 0 ? [{ label: "Benefícios fiscais", val: resultado.beneficios.total, cor: "text-emerald-500" }] : []),
             ...(distribuirDividendos && resultado.irsDividendos > 0 ? [{ label: "IRS dividendos", val: -(resultado.irsDividendos), cor: "text-red-400" }] : []),
             { label: "Líquido", val: resultado.liquidoGerente, cor: "text-brand font-bold", sep: true },
           ].map(({ label, val, cor, sep }) => (

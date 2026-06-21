@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { GuiaHero } from "@/components/guias/GuiaHero";
 import { FontesGuia } from "@/components/guias/FontesGuia";
@@ -155,7 +156,9 @@ export default function RetencaoNaFontePage() {
         </div>
       </section>
 
-      <ComparadorCAE />
+      <Suspense>
+        <ComparadorCAE />
+      </Suspense>
       <FontesGuia fontes={FONTES} />
       <NotaDisclaimer />
     </>

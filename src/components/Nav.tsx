@@ -17,28 +17,60 @@ import {
   Sparkle,
   User,
   LayoutGrid,
+  Calculator,
+  Search,
+  MapPin,
+  Trophy,
+  Briefcase,
 } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { EASE } from "@/lib/motion";
 import { useAuth } from "@/lib/supabase/auth";
 import { obterPerfil } from "@/lib/supabase/profile";
 
-const SUBMENU_RECURSOS = [
+const SUBMENU_FERRAMENTAS = [
   {
-    label: "Guias de Atividade",
-    desc: "Aprenda a gerir as suas obrigações fiscais passo a passo.",
+    label: "Simuladores",
+    desc: "IRS, recibos verdes, vencimento e empresa.",
+    href: "/dashboard/simulador",
+    Icon: Calculator,
+  },
+  {
+    label: "Classificar atividade",
+    desc: "Retenção, coeficiente e SS por profissão.",
+    href: "/dashboard/classificar-atividade",
+    Icon: Search,
+  },
+  {
+    label: "Mapa de contabilistas",
+    desc: "Preço médio por região, num mapa.",
+    href: "/dashboard/mapa-contabilistas",
+    Icon: MapPin,
+  },
+  {
+    label: "Todas as ferramentas",
+    desc: "12 simuladores e ferramentas num só sítio.",
+    href: "/ferramentas",
+    Icon: Briefcase,
+  },
+];
+
+const SUBMENU_APRENDER = [
+  {
+    label: "Guias fiscais",
+    desc: "Passo a passo para cada obrigação.",
     href: "/guias",
     Icon: BookOpen,
   },
   {
     label: "Quiz Fiscal",
-    desc: "Teste a sua isenção de IVA e perceba que taxas se aplicam.",
+    desc: "Testa os teus conhecimentos com base legal.",
     href: "/quiz-fiscal",
-    Icon: Sparkle,
+    Icon: Trophy,
   },
   {
-    label: "Alertas de Prazos",
-    desc: "Evite coimas e saiba quando entregar a declaração.",
+    label: "Alertas de prazos",
+    desc: "Nunca mais percas uma data fiscal.",
     href: "/dashboard/prazos",
     Icon: BellAlert,
   },
@@ -47,14 +79,11 @@ const SUBMENU_RECURSOS = [
 export default function Nav() {
   const { abrirModal, disponivel, user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
-  const [visible, setVisible] = useState(true);
   const [open, setOpen] = useState(false);
   const [recursosOpen, setRecursosOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState("");
   const pathname = usePathname();
-  const lastScrollY = useRef(0);
-  const openRef = useRef(false);
   const dropdownTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -63,30 +92,8 @@ export default function Nav() {
   }, [user]);
 
   useEffect(() => {
-    openRef.current = open;
-  }, [open]);
-
-  useEffect(() => {
-    lastScrollY.current = window.scrollY;
     setScrolled(window.scrollY > 8);
-
-    const onScroll = () => {
-      const current = window.scrollY;
-      const delta = current - lastScrollY.current;
-
-      setScrolled(current > 8);
-
-      if (Math.abs(delta) >= 15) {
-        if (delta > 0 && current > 80 && !openRef.current) {
-          setVisible(false);
-          setDropdownOpen(false);
-        } else if (delta < 0) {
-          setVisible(true);
-        }
-        lastScrollY.current = current;
-      }
-    };
-
+    const onScroll = () => setScrolled(window.scrollY > 8);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -99,9 +106,7 @@ export default function Nav() {
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
+    return () => { document.body.style.overflow = ""; };
   }, [open]);
 
   function openDropdown() {
@@ -122,43 +127,36 @@ export default function Nav() {
   const isRecursosActive =
     pathname.startsWith("/guias") ||
     pathname.startsWith("/quiz-fiscal") ||
-    pathname.startsWith("/dashboard/prazos");
+    pathname.startsWith("/ferramentas") ||
+    pathname.startsWith("/dashboard/prazos") ||
+    pathname.startsWith("/dashboard/classificar") ||
+    pathname.startsWith("/dashboard/mapa");
 
   return (
     <>
-      {/* Spacer — compensa o header fixed (desktop; no telemóvel o chrome é inferior) */}
-      <div className="hidden lg:block lg:h-[72px]" aria-hidden />
+      {/* Spacer */}
+      <div className="h-14 sm:h-[72px]" aria-hidden />
 
-      <m.nav
-        initial={{ y: -80, opacity: 0 }}
-        animate={{ y: visible ? 0 : "-100%", opacity: 1 }}
-        transition={{ duration: 0.35, ease: EASE }}
-        className={`fixed inset-x-0 top-0 z-50 hidden px-6 transition-[border-color,background-color,box-shadow] duration-300 lg:block ${
+      <nav
+        className={`fixed inset-x-0 top-0 z-50 transition-[border-color,background-color,box-shadow] duration-300 ${
           scrolled || open
-            ? "border-b border-stone-100 bg-cream/95 shadow-card backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/95"
-            : "border-b border-transparent bg-transparent"
+            ? "border-b border-stone-200/60 bg-white/80 shadow-sm backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/80"
+            : "border-b border-transparent bg-white/60 backdrop-blur-md dark:bg-stone-950/60"
         }`}
       >
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between sm:h-[72px]">
-          {/* Logótipo */}
-          <a href="/" aria-label="ReciboCerto — início">
+        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-5 sm:h-[72px] sm:px-6">
+          {/* Logo */}
+          <Link href="/" aria-label="ReciboCerto — início" className="flex-shrink-0">
             <Logo />
-          </a>
+          </Link>
 
-          {/* Links desktop */}
-          <div className="hidden items-center gap-0.5 sm:flex">
-            <Link
-              href="/#calculadora"
-              className={`rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
-                isActive("/#calculadora")
-                  ? "bg-stone-100 text-stone-900 dark:bg-stone-800 dark:text-stone-100"
-                  : "text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200"
-              }`}
-            >
+          {/* ── Desktop nav links ── */}
+          <div className="hidden items-center gap-0.5 lg:flex">
+            <NavLink href="/#calculadora" active={isActive("/#calculadora")}>
               Simulador
-            </Link>
+            </NavLink>
 
-            {/* Recursos Fiscais com submenu */}
+            {/* Recursos Fiscais mega-dropdown */}
             <div
               className="relative"
               onMouseEnter={openDropdown}
@@ -167,8 +165,8 @@ export default function Nav() {
               <button
                 aria-expanded={dropdownOpen}
                 aria-haspopup="true"
-                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
-                  isRecursosActive
+                className={`flex items-center gap-1 rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
+                  isRecursosActive || dropdownOpen
                     ? "bg-stone-100 text-stone-900 dark:bg-stone-800 dark:text-stone-100"
                     : "text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200"
                 }`}
@@ -179,7 +177,7 @@ export default function Nav() {
                   transition={{ duration: 0.2, ease: EASE }}
                   className="flex"
                 >
-                  <ChevronDown size={14} />
+                  <ChevronDown size={13} />
                 </m.span>
               </button>
 
@@ -191,68 +189,89 @@ export default function Nav() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -6, scale: 0.97 }}
                     transition={{ duration: 0.18, ease: EASE }}
-                    className="absolute left-0 top-full mt-1.5 w-72 rounded-2xl border border-stone-100 bg-white p-1.5 shadow-float dark:border-stone-800 dark:bg-stone-900"
+                    className="absolute -left-4 top-full mt-2 grid w-[480px] grid-cols-2 gap-px overflow-hidden rounded-2xl border border-stone-200/80 bg-stone-100 shadow-float dark:border-stone-800 dark:bg-stone-800"
                   >
-                    {SUBMENU_RECURSOS.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className="flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800"
-                      >
-                        <span className="mt-0.5 shrink-0 text-brand">
-                          <item.Icon size={16} />
-                        </span>
-                        <span>
-                          <span className="block text-sm font-medium text-stone-800 dark:text-stone-100">
-                            {item.label}
+                    {/* Ferramentas */}
+                    <div className="bg-white p-2 dark:bg-stone-900">
+                      <p className="mb-1 px-3 pt-1 text-[10px] font-bold uppercase tracking-widest text-stone-400">
+                        Ferramentas
+                      </p>
+                      {SUBMENU_FERRAMENTAS.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="flex items-start gap-2.5 rounded-xl px-3 py-2 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800"
+                        >
+                          <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-light text-brand">
+                            <item.Icon size={14} />
                           </span>
-                          <span className="mt-0.5 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-                            {item.desc}
+                          <span>
+                            <span className="block text-[13px] font-semibold text-stone-800 dark:text-stone-100">
+                              {item.label}
+                            </span>
+                            <span className="block text-[11px] leading-snug text-stone-400">
+                              {item.desc}
+                            </span>
                           </span>
-                        </span>
-                      </Link>
-                    ))}
+                        </Link>
+                      ))}
+                    </div>
+
+                    {/* Aprender */}
+                    <div className="bg-white p-2 dark:bg-stone-900">
+                      <p className="mb-1 px-3 pt-1 text-[10px] font-bold uppercase tracking-widest text-stone-400">
+                        Aprender
+                      </p>
+                      {SUBMENU_APRENDER.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="flex items-start gap-2.5 rounded-xl px-3 py-2 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800"
+                        >
+                          <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-light text-brand">
+                            <item.Icon size={14} />
+                          </span>
+                          <span>
+                            <span className="block text-[13px] font-semibold text-stone-800 dark:text-stone-100">
+                              {item.label}
+                            </span>
+                            <span className="block text-[11px] leading-snug text-stone-400">
+                              {item.desc}
+                            </span>
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
                   </m.div>
                 )}
               </AnimatePresence>
             </div>
 
-            <Link
-              href="/precos"
-              className={`rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
-                isActive("/precos")
-                  ? "bg-stone-100 text-stone-900 dark:bg-stone-800 dark:text-stone-100"
-                  : "text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200"
-              }`}
-            >
+            <NavLink href="/precos" active={isActive("/precos")}>
               Planos
-            </Link>
+            </NavLink>
           </div>
 
-          {/* CTAs desktop */}
-          <div className="hidden items-center gap-2 sm:flex">
+          {/* ── Desktop CTAs ── */}
+          <div className="hidden items-center gap-2 lg:flex">
             <BuscaTrigger />
-            <ThemeToggle />
 
-            {/* Botão perfil — sempre visível */}
-            <Link
-              href="/dashboard/perfil"
-              aria-label="O meu perfil"
-              className="relative flex h-9 w-9 items-center justify-center rounded-xl transition-colors hover:bg-stone-100 dark:hover:bg-stone-800 overflow-hidden"
-            >
-              {avatarUrl ? (
-                <Image src={avatarUrl} alt="Perfil" fill className="rounded-xl object-cover" sizes="36px" unoptimized />
-              ) : (
-                <User size={18} className="text-stone-400" />
-              )}
-            </Link>
+            <div className="mx-1 h-5 w-px bg-stone-200 dark:bg-stone-700" aria-hidden />
+
+            <ThemeToggle />
 
             {user ? (
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-brand/10 px-3.5 py-2 text-sm font-semibold text-brand transition-colors hover:bg-brand hover:text-white"
+                className="group relative inline-flex items-center gap-2 rounded-xl bg-brand/10 py-1.5 pl-2 pr-3.5 text-sm font-semibold text-brand transition-colors hover:bg-brand hover:text-white"
               >
-                <LayoutGrid size={15} />
+                <span className="relative flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-brand/15 transition-colors group-hover:bg-white/20">
+                  {avatarUrl ? (
+                    <Image src={avatarUrl} alt="" fill className="rounded-lg object-cover" sizes="28px" unoptimized />
+                  ) : (
+                    <User size={14} />
+                  )}
+                </span>
                 Dashboard
               </Link>
             ) : disponivel ? (
@@ -288,15 +307,15 @@ export default function Nav() {
             )}
           </div>
 
-          {/* Mobile: pesquisa + tema + hambúrguer */}
-          <div className="flex items-center gap-1 sm:hidden">
+          {/* ── Mobile: pesquisa + tema + hambúrguer ── */}
+          <div className="flex items-center gap-1 lg:hidden">
             <BuscaTrigger compacto />
             <ThemeToggle />
             <button
               onClick={() => setOpen((o) => !o)}
               aria-label={open ? "Fechar menu" : "Abrir menu"}
               aria-expanded={open}
-              className="flex h-12 w-12 items-center justify-center rounded-xl text-stone-500 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800"
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-stone-500 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800"
             >
               <AnimatePresence mode="wait" initial={false}>
                 {open ? (
@@ -326,9 +345,9 @@ export default function Nav() {
             </button>
           </div>
         </div>
-      </m.nav>
+      </nav>
 
-      {/* Drawer mobile — desliza da direita */}
+      {/* ── Mobile drawer ── */}
       <AnimatePresence>
         {open && (
           <m.div
@@ -337,7 +356,7 @@ export default function Nav() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: "100%" }}
             transition={{ duration: 0.3, ease: EASE }}
-            className="fixed inset-y-0 right-0 z-40 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto border-l border-stone-100 bg-cream/98 pb-8 pt-14 backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/98 sm:hidden"
+            className="fixed inset-y-0 right-0 z-40 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto border-l border-stone-100 bg-white/98 pb-8 pt-14 backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/98 lg:hidden"
           >
             <nav className="flex flex-col gap-1 px-4 pt-4">
               <Link
@@ -383,7 +402,25 @@ export default function Nav() {
                       className="overflow-hidden"
                     >
                       <div className="ml-2 mt-1 flex flex-col gap-0.5">
-                        {SUBMENU_RECURSOS.map((item) => (
+                        <p className="px-4 pt-1 pb-0.5 text-[10px] font-bold uppercase tracking-widest text-stone-400">
+                          Ferramentas
+                        </p>
+                        {SUBMENU_FERRAMENTAS.map((item) => (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            className="flex items-center gap-3 rounded-2xl px-4 py-2.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
+                          >
+                            <span className="shrink-0 text-brand">
+                              <item.Icon size={15} />
+                            </span>
+                            <span className="font-medium">{item.label}</span>
+                          </Link>
+                        ))}
+                        <p className="px-4 pt-2 pb-0.5 text-[10px] font-bold uppercase tracking-widest text-stone-400">
+                          Aprender
+                        </p>
+                        {SUBMENU_APRENDER.map((item) => (
                           <Link
                             key={item.href}
                             href={item.href}
@@ -416,8 +453,9 @@ export default function Nav() {
                 {user ? (
                   <Link
                     href="/dashboard"
-                    className="flex w-full items-center justify-center rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-glow"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-glow"
                   >
+                    <LayoutGrid size={15} />
                     Dashboard
                   </Link>
                 ) : disponivel ? (
@@ -453,5 +491,20 @@ export default function Nav() {
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+function NavLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
+        active
+          ? "bg-stone-100 text-stone-900 dark:bg-stone-800 dark:text-stone-100"
+          : "text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200"
+      }`}
+    >
+      {children}
+    </Link>
   );
 }

@@ -186,7 +186,7 @@ export default function BuscaOverlay() {
     [categoria, itens, debounced, filtro]
   );
   const resultadosAtiv = useMemo(
-    () => (categoria === "atividades" ? pesquisarAtividades(debounced, 80).filter((a) => filtro === "all" || a.tipo === filtro).slice(0, 30) : []),
+    () => (categoria === "atividades" ? pesquisarAtividades(debounced, 120).filter((a) => filtro === "all" || a.tipo === filtro) : []),
     [categoria, debounced, filtro]
   );
 
@@ -251,7 +251,7 @@ export default function BuscaOverlay() {
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      if (categoria === "atividades") navegar("/dashboard/classificar-atividade");
+                      if (categoria === "atividades" && resultadosAtiv[0]) navegar(`/dashboard/classificar-atividade?q=${encodeURIComponent(resultadosAtiv[0].label)}`);
                       else if (resultadosItens[0]) navegar(resultadosItens[0].href);
                     }
                   }}
@@ -460,7 +460,7 @@ export default function BuscaOverlay() {
                       <button
                         key={a.id}
                         type="button"
-                        onClick={() => navegar("/dashboard/classificar-atividade")}
+                        onClick={() => navegar(`/dashboard/classificar-atividade?q=${encodeURIComponent(a.label)}`)}
                         className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-stone-50 dark:hover:bg-stone-800"
                       >
                         <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-stone-100 bg-stone-50 text-brand dark:border-stone-800 dark:bg-stone-800">
@@ -506,7 +506,7 @@ export default function BuscaOverlay() {
                       <button
                         key={a.id}
                         type="button"
-                        onClick={() => navegar("/dashboard/classificar-atividade")}
+                        onClick={() => navegar(`/dashboard/classificar-atividade?q=${encodeURIComponent(a.label)}`)}
                         className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-stone-50 dark:hover:bg-stone-800"
                       >
                         <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-stone-100 bg-stone-50 text-brand dark:border-stone-800 dark:bg-stone-800">

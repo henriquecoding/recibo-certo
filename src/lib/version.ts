@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.30.0";
+export const APP_VERSION = "1.38.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,96 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.38.0",
+    data: "2026-06-21",
+    titulo: "Comparador redesenhado e CTA Pro",
+    itens: [
+      "Slider do Comparador de Cenários redesenhado com bolha flutuante, thumb com grip e dica animada «Arraste para ajustar».",
+      "Marcadores de breakeven visíveis no trilho do slider para recibos verdes e empresa.",
+      "Cartões de resultado com barras de progresso animadas e badge «Mais líquido» destacado.",
+      "Secção de email substituída por CTA de subscrição Pro com lista de benefícios, botão direto para upgrade e link para planos.",
+    ],
+  },
+  {
+    version: "1.37.0",
+    data: "2026-06-21",
+    titulo: "Calendário fiscal corrigido",
+    itens: [
+      "Corrigido overflow visual nos badges de SS e IVA nos cards dos meses — valores já não saem para fora dos limites.",
+      "Meses de IVA trimestral corrigidos de Jan/Abr/Jul/Out para Fev/Mai/Ago/Nov (dia 20, conforme obrigação fiscal real).",
+      "Prazo do acerto de IRS em junho agora mostra «até 31 ago» em vez do genérico «até dia 20».",
+    ],
+  },
+  {
+    version: "1.36.0",
+    data: "2026-06-21",
+    titulo: "Header do desktop reestruturado",
+    itens: [
+      "Header agora fica fixo no topo da página — já não desaparece ao fazer scroll.",
+      "Novo mega-dropdown «Recursos Fiscais» com colunas separadas para Ferramentas e Aprender.",
+      "Botão de avatar e Dashboard combinados num só elemento quando autenticado.",
+      "Efeito de backdrop blur sempre presente no header para melhor legibilidade.",
+    ],
+  },
+  {
+    version: "1.35.0",
+    data: "2026-06-21",
+    titulo: "Referências legais, sede virtual e perfil de estrangeiro no simulador",
+    itens: [
+      "Referências legais clicáveis em todos os passos do simulador de empresa — cada taxa e benefício mostra o artigo de lei com link direto para o Portal das Finanças ou Diário da República.",
+      "Novo seletor de tipo de sede: física, sede virtual (50–150€/mês) ou coworking (50–300€/mês) — com custo anual incluído na simulação e nota sobre obrigatoriedade de sede fiscal (Art. 12.º CSC).",
+      "Perfil do fundador: residente, cidadão UE/EEE ou extra-UE. Representante fiscal obrigatório para extra-UE (Art. 19.º LGT) com custo estimado.",
+      "IFICI (Art. 58.º-A EBF) — toggle para estrangeiros elegíveis: taxa flat de 20% sobre dividendos durante 10 anos, com cálculo de poupança face à liberatória de 28%.",
+      "Resultado e checklist adaptam-se ao perfil: custos de sede virtual e representante fiscal na cascata, passos para obter NIF e estatuto IFICI.",
+    ],
+  },
+  {
+    version: "1.34.0",
+    data: "2026-06-21",
+    titulo: "Sistema de energia corrigido e energia ilimitada",
+    itens: [
+      "Energia agora descontada ao iniciar o quiz (antes só descontava ao finalizar).",
+      "Energia ilimitada desbloqueada automaticamente ao atingir o nível 7 (Especialista IRS, 5500 XP) ou com o plano Pro.",
+      "Removido o benefício «Energia ilimitada» do plano Quiz Master (já incluído no Pro e desbloqueável por nível).",
+      "Painel de configuração do quiz reorganizado: mais compacto, energia e botão unificados, menos espaçamento vertical.",
+      "Tabela de níveis agora indica que o nível 7 desbloqueia energia ilimitada.",
+    ],
+  },
+  {
+    version: "1.33.0",
+    data: "2026-06-21",
+    titulo: "Pesquisa de atividades corrigida e ampliada",
+    itens: [
+      "Clicar numa atividade na pesquisa (Cmd+K) agora redireciona diretamente para o classificador com a atividade já selecionada — sem ter de pesquisar novamente.",
+      "Todas as atividades do catálogo são agora mostradas na pesquisa (antes limitado a 24/30).",
+    ],
+  },
+  {
+    version: "1.32.0",
+    data: "2026-06-21",
+    titulo: "Modo guiado da empresa com paridade total ao simulador completo",
+    itens: [
+      "Tributação Autónoma completa: 8 tipos de viatura (combustão e PHEV com faixas de preço), ajudas de custo (5%), despesas não documentadas (50%) e exceção ao agravamento por prejuízo (OE2026).",
+      "DLRR (10% lucros reinvestidos, máx 5M, 25% coleta), SIFIDE II (32,5%–82,5% despesas I&D com 4 perfis de empresa) e RFAI Contratual (investimento >= 3M, IAPMEI/AICEP) agora disponíveis no modo guiado.",
+      "Imóvel da empresa: IMI (VPT × taxa municipal 0,3–0,45%), IMT + IS na aquisição (7,3%), isenções RFAI e amortização configurável.",
+      "Custos de estrutura e constituição agora ajustáveis (slider + amortização 1/2/3/5 anos), em vez de valores fixos.",
+      "RFAI com toggle «primeiros 3 períodos» (100% coleta) e cálculo excedente (30% até 15M + 10% acima).",
+      "Resultado detalhado: breakdown por categoria de TA, benefícios com bruto vs efetivo, dica automática de englobamento com taxa marginal, custos municipais.",
+    ],
+  },
+  {
+    version: "1.31.0",
+    data: "2026-06-21",
+    titulo: "Localização precisa no simulador de empresa",
+    itens: [
+      "O simulador agora permite pesquisar a cidade ou concelho exato onde a empresa será instalada — os parâmetros fiscais (IRC, derrama, RFAI, custo de contabilista) ajustam-se automaticamente.",
+      "Pesquisa por nome (Nominatim/OSM), localização GPS, ou escolha manual por região — a localização escolhida influencia toda a simulação.",
+      "Ambos os fluxos (já tem empresa / quer abrir) pedem agora a localização, com dados fiscais regionais detalhados (interior 12,5%, ilhas, litoral).",
+      "Novo passo «A seguir» enriquecido: métricas, plano de ação, checklist de constituição, calendário fiscal e mapa de benefícios por região.",
+      "Dados regionais ampliados: DLRR (10% lucros reinvestidos) e SIFIDE II (32,5%+50% I&D) adicionados ao mapa de benefícios fiscais.",
+    ],
+  },
   {
     version: "1.30.0",
     data: "2026-06-21",

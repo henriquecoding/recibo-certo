@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { m } from "motion/react";
 import { EASE } from "@/lib/motion";
 import {
@@ -8,6 +9,7 @@ import {
   META_TIPO,
   RETENCAO,
   COEFICIENTE_POR_TIPO,
+  ATIVIDADES,
 } from "@/lib/fiscal-data";
 import { pct } from "@/lib/format";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
@@ -58,7 +60,18 @@ const COMPARACAO_LINHAS = [
 ];
 
 export function ComparadorCAE() {
+  const searchParams = useSearchParams();
   const [atividade, setAtividade] = useState<Atividade | null>(null);
+
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (!q || atividade) return;
+    const normalizar = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    const qn = normalizar(q);
+    const match = (ATIVIDADES as Atividade[]).find((a) => normalizar(a.label) === qn)
+      ?? (ATIVIDADES as Atividade[]).find((a) => normalizar(a.label).includes(qn));
+    if (match) setAtividade(match);
+  }, [searchParams, atividade]);
 
   const efeito = atividade ? efeitoFiscal(atividade) : null;
   const tipo = atividade?.tipo ?? null;

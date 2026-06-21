@@ -222,6 +222,34 @@ export const SOURCES = {
     label: "IRC 2026 — taxas, prazos e obrigações declarativas (Modelo 22, IES) · OCC",
     url: "https://www.occ.pt/pt-pt/noticias/irc-2026",
   },
+  art87circ_pgdl: {
+    label: "Art. 87.º CIRC — Taxas de IRC (texto legal consolidado) · PGDL",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?nid=524&tabela=leis&so_miolo=",
+  },
+  art88circ_pgdl: {
+    label: "Art. 88.º CIRC — Tributação Autónoma (texto legal consolidado) · PGDL",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?nid=524&tabela=leis&so_miolo=",
+  },
+  art41bEBF: {
+    label: "Art. 41.º-B EBF — IRC do Interior (12,5%) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-41-b.aspx",
+  },
+  art58aEBF: {
+    label: "Art. 58.º-A EBF — IFICI (ex-NHR 2.0): taxa flat 20% para quadros qualificados · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-58-a.aspx",
+  },
+  dl262_86: {
+    label: "DL 262/86 — Código das Sociedades Comerciais (Art. 270.º-A ss. — Soc. Unipessoal por Quotas) · PGDL",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?nid=524&tabela=leis",
+  },
+  representanteFiscal: {
+    label: "Representante fiscal para não residentes — Art. 130.º CIRS / Art. 19.º LGT · Portal das Finanças",
+    url: "https://info.portaldasfinancas.gov.pt/pt/apoio_contribuinte/Servicos_Mais_Utilizados/representacao-fiscal/Pages/default.aspx",
+  },
+  sedeVirtual: {
+    label: "Sede virtual / domicílio fiscal da empresa — Art. 3.º CSC (DL 262/86) · IRN/Gov.pt",
+    url: "https://www2.gov.pt/espaco-empresa/empresa-online",
+  },
 } satisfies Record<string, Source>;
 
 export type SourceKey = keyof typeof SOURCES;

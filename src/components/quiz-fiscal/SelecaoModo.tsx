@@ -21,6 +21,7 @@ interface SelecaoModoProps {
   onComecar: (config: QuizFiscalConfig) => void;
   energiaRestante?: number;
   energiaTotal?: number;
+  energiaIlimitada?: boolean;
   sessoes?: SessaoHistorico[];
 }
 
@@ -53,7 +54,7 @@ const TEXT_HEAD = "#1C3A22";
 const TEXT_MID = "#607757";
 const TEXT_MUTED = "#8a7a6a";
 
-export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTotal = 5 }: SelecaoModoProps) {
+export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTotal = 5, energiaIlimitada = false }: SelecaoModoProps) {
   const { config, updateConfig } = useQuizConfig();
   const [modo, setModo] = useState<QuizModo | null>(null);
   const [tipoQuiz, setTipoQuiz] = useState<QuizTipo>("geral");
@@ -73,7 +74,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
     onComecar(cfg);
   };
 
-  const podeIniciar = !!modo && (tipoQuiz === "geral" || !!atividade) && energiaRestante > 0;
+  const podeIniciar = !!modo && (tipoQuiz === "geral" || !!atividade) && (energiaIlimitada || energiaRestante > 0);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 sm:py-10">
@@ -216,24 +217,34 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
         </div>
 
         {/* ── Coluna direita: Configurações + Energia + Botão ── */}
-        <div className="flex flex-col gap-4 lg:sticky lg:top-6">
+        <div className="flex flex-col gap-3 lg:sticky lg:top-6">
 
           {/* Configurações */}
           <div
-            className="rounded-2xl p-4"
+            className="rounded-2xl p-3.5"
             style={{ backgroundColor: PARCHMENT, border: `1px solid ${BORDER}` }}
           >
-            <div className="flex items-center gap-2 mb-4">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ backgroundColor: ACTIVE_BG, color: QD }}>
-                <Gauge size={14} />
+            <div className="flex items-center gap-2 mb-3">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg" style={{ backgroundColor: ACTIVE_BG, color: QD }}>
+                <Gauge size={13} />
               </span>
-              <span className="text-[13px] font-bold" style={{ color: TEXT_HEAD }}>Configurações</span>
+              <span className="text-[12px] font-bold" style={{ color: TEXT_HEAD }}>Configurações</span>
+              {JSON.stringify(config) !== JSON.stringify(DEFAULT_QUIZ_CONFIG) && (
+                <button
+                  type="button"
+                  onClick={() => updateConfig(DEFAULT_QUIZ_CONFIG)}
+                  className="ml-auto text-[10px] font-medium transition-colors hover:underline"
+                  style={{ color: TEXT_MUTED }}
+                >
+                  Repor
+                </button>
+              )}
             </div>
 
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2.5">
               {/* Dificuldade */}
-              <ConfigRow label="Dificuldade" icon={<Target size={13} />}>
-                <div className="flex gap-1.5">
+              <ConfigRow label="Dificuldade" icon={<Target size={12} />}>
+                <div className="flex gap-1">
                   {(["facil", "normal", "dificil"] as const).map((d) => (
                     <OptionChip
                       key={d}
@@ -246,8 +257,8 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
               </ConfigRow>
 
               {/* Perguntas */}
-              <ConfigRow label="Perguntas" icon={<BookOpen size={13} />}>
-                <div className="flex gap-1.5">
+              <ConfigRow label="Perguntas" icon={<BookOpen size={12} />}>
+                <div className="flex gap-1">
                   {([5, 10, 15, 20] as const).map((n) => (
                     <OptionChip
                       key={n}
@@ -260,8 +271,8 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
               </ConfigRow>
 
               {/* Tempo */}
-              <ConfigRow label="Tempo/pergunta" icon={<Clock size={13} />}>
-                <div className="flex gap-1.5 flex-wrap">
+              <ConfigRow label="Tempo/pergunta" icon={<Clock size={12} />}>
+                <div className="flex gap-1 flex-wrap">
                   {([0, 30, 60, 90] as const).map((t) => (
                     <OptionChip
                       key={t}
@@ -273,8 +284,12 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
                 </div>
               </ConfigRow>
 
-              {/* Preferências rápidas */}
-              <ConfigRow label="Sons" icon={<Sparkle size={13} />}>
+              {/* Sons */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span style={{ color: TEXT_MID }}><Sparkle size={12} /></span>
+                  <span className="text-[11px] font-semibold" style={{ color: TEXT_MUTED }}>Sons</span>
+                </div>
                 <button
                   type="button"
                   onClick={() => updateConfig({ somAtivo: !config.somAtivo })}
@@ -288,77 +303,70 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
                     style={{ left: config.somAtivo ? "calc(100% - 18px)" : "2px" }}
                   />
                 </button>
-              </ConfigRow>
-
-              {/* Reset */}
-              {JSON.stringify(config) !== JSON.stringify(DEFAULT_QUIZ_CONFIG) && (
-                <button
-                  type="button"
-                  onClick={() => updateConfig(DEFAULT_QUIZ_CONFIG)}
-                  className="text-[11px] font-medium transition-colors hover:underline self-start"
-                  style={{ color: TEXT_MUTED }}
-                >
-                  Repor predefinições
-                </button>
-              )}
+              </div>
             </div>
           </div>
 
-          {/* Energia */}
+          {/* Energia + Botão iniciar */}
           <div
-            className="flex items-center gap-3 rounded-xl px-4 py-3"
+            className="rounded-2xl p-3.5"
             style={{ backgroundColor: PARCHMENT, border: `1px solid ${BORDER}` }}
           >
-            <span style={{ color: energiaRestante > 0 ? "#C07828" : "#aaa" }}>
-              <Fire size={18} />
-            </span>
-            <div className="flex-1">
-              <div className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: TEXT_MUTED }}>
-                Energia diária
-              </div>
-              <div className="flex items-center gap-1.5">
-                {Array.from({ length: energiaTotal }).map((_, i) => (
-                  <span
-                    key={i}
-                    className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: i < energiaRestante ? "#C07828" : "#d4c4b0" }}
-                  />
-                ))}
-                <span className="ml-1 text-[11px] font-bold tabular-nums" style={{ color: TEXT_MID }}>
-                  {energiaRestante}/{energiaTotal}
-                </span>
+            <div className="flex items-center gap-3 mb-3">
+              <span style={{ color: energiaIlimitada || energiaRestante > 0 ? "#C07828" : "#aaa" }}>
+                <Fire size={16} />
+              </span>
+              <div className="flex-1">
+                <div className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: TEXT_MUTED }}>
+                  Energia diária
+                </div>
+                {energiaIlimitada ? (
+                  <span className="text-[11px] font-bold" style={{ color: "#C07828" }}>Ilimitada</span>
+                ) : (
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {Array.from({ length: energiaTotal }).map((_, i) => (
+                      <span
+                        key={i}
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: i < energiaRestante ? "#C07828" : "#d4c4b0" }}
+                      />
+                    ))}
+                    <span className="ml-1 text-[11px] font-bold tabular-nums" style={{ color: TEXT_MID }}>
+                      {energiaRestante}/{energiaTotal}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
+
+            <button
+              type="button"
+              disabled={!podeIniciar}
+              onClick={handleComecar}
+              className="flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-[14px] font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+              style={{ backgroundColor: QD }}
+            >
+              Começar Quiz
+              <ArrowRight size={16} />
+            </button>
+
+            {/* Mensagens de ajuda */}
+            {!modo && (energiaIlimitada || energiaRestante > 0) && (
+              <p className="mt-2 text-center text-[11px]" style={{ color: TEXT_MUTED }}>
+                Escolhe um modo para continuar.
+              </p>
+            )}
+            {tipoQuiz === "atividade" && !atividade && modo && (
+              <p className="mt-2 text-center text-[11px]" style={{ color: TEXT_MUTED }}>
+                Seleciona uma atividade para continuar.
+              </p>
+            )}
+            {!energiaIlimitada && energiaRestante <= 0 && (
+              <p className="mt-2 text-center text-[11px] font-semibold" style={{ color: "#C07828" }}>
+                Sem energia hoje. Volta amanhã!
+              </p>
+            )}
           </div>
-
-          {/* Botão iniciar */}
-          <button
-            type="button"
-            disabled={!podeIniciar}
-            onClick={handleComecar}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-[15px] font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-            style={{ backgroundColor: QD }}
-          >
-            Começar Quiz
-            <ArrowRight size={17} />
-          </button>
-
-          {/* Mensagens de ajuda */}
-          {!modo && energiaRestante > 0 && (
-            <p className="text-center text-xs" style={{ color: TEXT_MUTED }}>
-              Escolhe um modo para continuar.
-            </p>
-          )}
-          {tipoQuiz === "atividade" && !atividade && modo && (
-            <p className="text-center text-xs" style={{ color: TEXT_MUTED }}>
-              Seleciona uma atividade para continuar.
-            </p>
-          )}
-          {energiaRestante <= 0 && (
-            <p className="text-center text-xs font-semibold" style={{ color: "#C07828" }}>
-              Sem energia hoje. Volta amanhã!
-            </p>
-          )}
         </div>
       </div>
     </div>
@@ -380,10 +388,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function ConfigRow({ label, icon, children }: { label: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1">
       <div className="flex items-center gap-1.5">
         <span style={{ color: TEXT_MID }}>{icon}</span>
-        <span className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: TEXT_MUTED }}>
+        <span className="text-[11px] font-semibold" style={{ color: TEXT_MUTED }}>
           {label}
         </span>
       </div>

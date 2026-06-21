@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import PaginaFerramenta from "@/components/dashboard/PaginaFerramenta";
 import { ComparadorCAE } from "@/components/guias/ComparadorCAE";
 
@@ -8,7 +9,9 @@ export default function Page() {
       titulo="Classificar atividade fiscal"
       descricao="Pesquisa a tua profissão e descobre a retenção na fonte, o coeficiente e a base de Segurança Social aplicável."
     >
-      <ComparadorCAE />
+      <Suspense>
+        <ComparadorCAE />
+      </Suspense>
     </PaginaFerramenta>
   );
 }

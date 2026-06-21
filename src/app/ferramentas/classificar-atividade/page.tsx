@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ComparadorCAE } from "@/components/guias/ComparadorCAE";
@@ -31,7 +32,9 @@ export default function FerramentaClassificarAtividadePage() {
         </p>
       </div>
 
-      <ComparadorCAE />
+      <Suspense>
+        <ComparadorCAE />
+      </Suspense>
 
       <div className="mt-2 rounded-2xl border border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 p-5 space-y-3">
         <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">Nota importante</p>
