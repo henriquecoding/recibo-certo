@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.28.0";
+export const APP_VERSION = "1.29.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,20 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.29.0",
+    data: "2026-06-21",
+    titulo: "Segurança reforçada, perfil persistente e SEO abrangente",
+    itens: [
+      "Alterar password agora exige a password atual — re-autenticação via Supabase antes de permitir a alteração.",
+      "Requisitos de password reforçados: mínimo 8 caracteres, 1 maiúscula e 1 número, com indicadores visuais em tempo real (aplica-se ao registo e à alteração).",
+      "Foto de perfil agora persiste corretamente na nuvem via Supabase Storage — corrigido problema que fazia o avatar desaparecer ao atualizar a página.",
+      "Drag-and-drop para upload de foto de perfil (utilizadores Pro).",
+      "Correções visuais no perfil: avatar centrado no mobile, stat cards em grid, menu dropdown reposicionado.",
+      "SEO renovado: título, descrição, Open Graph e structured data agora refletem toda a plataforma — calculadora de recibos verdes, salário líquido, simulador de empresa, guias e ferramentas.",
+      "Sitemap atualizado com as ferramentas «Simulador de Empresa» e «Mapa de Contabilistas».",
+    ],
+  },
   {
     version: "1.28.0",
     data: "2026-06-21",
