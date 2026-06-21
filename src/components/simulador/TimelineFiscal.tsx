@@ -4,6 +4,14 @@ import { useMemo } from "react";
 import { fmt } from "@/lib/format";
 import { Calendar, Warning } from "@/components/ui/Icons";
 
+const fmtCompacto = (n: number): string => {
+  const v = Number.isFinite(n) ? n : 0;
+  const s = v % 1 === 0
+    ? new Intl.NumberFormat("pt-PT").format(v)
+    : new Intl.NumberFormat("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
+  return s + " €";
+};
+
 interface TimelineFiscalProps {
   ssAnualMensal: number;
   isencaoSS: boolean;
@@ -15,7 +23,7 @@ interface TimelineFiscalProps {
 }
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-const MESES_IVA = new Set([0, 3, 6, 9]);
+const MESES_IVA = new Set([1, 4, 7, 10]);
 const MES_IRS = 5;
 
 interface Evento {
@@ -133,7 +141,7 @@ export default function TimelineFiscal({
             <div
               key={m.nome}
               aria-current={ehAtual ? "date" : undefined}
-              className={`relative rounded-2xl border p-3 transition-all duration-200 ${
+              className={`relative overflow-hidden rounded-2xl border p-3 transition-all duration-200 ${
                 ehAtual
                   ? "border-brand/50 bg-brand/5 shadow-card ring-1 ring-brand/20 dark:border-brand/40 dark:bg-brand/8"
                   : ehJunhoComIRS && !isPassado
@@ -180,11 +188,11 @@ export default function TimelineFiscal({
                   return (
                     <div
                       key={i}
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-[10px] font-semibold tabular-nums ring-1 ring-inset ${meta.corBadge} ${meta.corBadgeDark} ${isPassado ? "opacity-50" : ""}`}
+                      className={`flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-semibold tabular-nums ring-1 ring-inset ${meta.corBadge} ${meta.corBadgeDark} ${isPassado ? "opacity-50" : ""}`}
                     >
                       <span className={`h-1.5 w-1.5 rounded-full ${meta.corDot} flex-shrink-0`} aria-hidden />
-                      <span>{ev.label}</span>
-                      <span className="opacity-70">−{fmt(ev.valor)}</span>
+                      <span className="flex-shrink-0">{ev.label}</span>
+                      <span className="truncate opacity-70">−{fmtCompacto(ev.valor)}</span>
                     </div>
                   );
                 })}
@@ -195,7 +203,9 @@ export default function TimelineFiscal({
                 <div className={`mt-2 text-[9px] font-medium tabular-nums ${
                   ehAtual ? "text-brand/50" : "text-stone-400 dark:text-stone-600"
                 }`}>
-                  até dia 20
+                  {ehJunhoComIRS && m.eventos.length === 1
+                    ? "até 31 ago"
+                    : "até dia 20"}
                 </div>
               )}
             </div>

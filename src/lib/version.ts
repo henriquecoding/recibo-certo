@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.36.0";
+export const APP_VERSION = "1.37.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.37.0",
+    data: "2026-06-21",
+    titulo: "Calendário fiscal corrigido",
+    itens: [
+      "Corrigido overflow visual nos badges de SS e IVA nos cards dos meses — valores já não saem para fora dos limites.",
+      "Meses de IVA trimestral corrigidos de Jan/Abr/Jul/Out para Fev/Mai/Ago/Nov (dia 20, conforme obrigação fiscal real).",
+      "Prazo do acerto de IRS em junho agora mostra «até 31 ago» em vez do genérico «até dia 20».",
+    ],
+  },
   {
     version: "1.36.0",
     data: "2026-06-21",
