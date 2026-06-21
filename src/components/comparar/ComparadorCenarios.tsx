@@ -110,7 +110,7 @@ export default function ComparadorCenarios() {
   };
   const maxLiquido = Math.max(...Object.values(liquidos), 1);
 
-  const { breakEvenEmpresa, breakEvenRV } = useMemo(() => {
+  const { rvEstavel, rvOscila, empEstavel, empOscila } = useMemo(() => {
     const amostras: { x: number; rvGanha: boolean; empGanha: boolean }[] = [];
     for (let x = 5_000; x <= MAX; x += 2_500) {
       const c = compararCategorias({ brutoAnual: x, dependentes, despesas });
@@ -121,26 +121,34 @@ export default function ComparadorCenarios() {
       });
     }
 
-    let bRV: number | null = null;
-    let bEmp: number | null = null;
+    const analisar = (campo: "rvGanha" | "empGanha") => {
+      let primeira: number | null = null;
+      let ultimaDerrota = -1;
+      for (let i = 0; i < amostras.length; i++) {
+        if (amostras[i][campo]) {
+          if (primeira === null) primeira = amostras[i].x;
+        } else {
+          ultimaDerrota = i;
+        }
+      }
+      let estavel: number | null = null;
+      if (ultimaDerrota < amostras.length - 1) {
+        estavel = ultimaDerrota === -1
+          ? amostras[0]?.x ?? null
+          : amostras[ultimaDerrota + 1]?.x ?? null;
+      }
+      const oscila = primeira !== null && estavel !== null && primeira < estavel;
+      return { estavel, oscila, desde: primeira, ate: estavel };
+    };
 
-    let ultimaDerrota = -1;
-    for (let i = 0; i < amostras.length; i++) {
-      if (!amostras[i].rvGanha) ultimaDerrota = i;
-    }
-    if (ultimaDerrota < amostras.length - 1) {
-      bRV = ultimaDerrota === -1 ? amostras[0]?.x ?? null : amostras[ultimaDerrota + 1]?.x ?? null;
-    }
-
-    ultimaDerrota = -1;
-    for (let i = 0; i < amostras.length; i++) {
-      if (!amostras[i].empGanha) ultimaDerrota = i;
-    }
-    if (ultimaDerrota < amostras.length - 1) {
-      bEmp = ultimaDerrota === -1 ? amostras[0]?.x ?? null : amostras[ultimaDerrota + 1]?.x ?? null;
-    }
-
-    return { breakEvenEmpresa: bEmp, breakEvenRV: bRV };
+    const rv = analisar("rvGanha");
+    const emp = analisar("empGanha");
+    return {
+      rvEstavel: rv.estavel,
+      rvOscila: rv.oscila ? { desde: rv.desde!, ate: rv.estavel! } : null,
+      empEstavel: emp.estavel,
+      empOscila: emp.oscila ? { desde: emp.desde!, ate: emp.estavel! } : null,
+    };
   }, [dependentes, despesas]);
 
   const diffMelhor = (() => {
@@ -304,16 +312,16 @@ export default function ComparadorCenarios() {
           </div>
 
           {/* Marcadores de ponto de viragem */}
-          {breakEvenRV != null && breakEvenRV <= MAX && (
+          {rvEstavel != null && rvEstavel <= MAX && (
             <div
               className="absolute top-1/2 -translate-y-1/2 h-5 w-px rounded-full bg-brand-dark/50 z-10 pointer-events-none"
-              style={{ left: `${pctDe(breakEvenRV)}%` }}
+              style={{ left: `${pctDe(rvEstavel)}%` }}
             />
           )}
-          {breakEvenEmpresa != null && breakEvenEmpresa <= MAX && (
+          {empEstavel != null && empEstavel <= MAX && (
             <div
               className="absolute top-1/2 -translate-y-1/2 h-5 w-px rounded-full bg-amber-500/50 z-10 pointer-events-none"
-              style={{ left: `${pctDe(breakEvenEmpresa)}%` }}
+              style={{ left: `${pctDe(empEstavel)}%` }}
             />
           )}
 
@@ -344,18 +352,22 @@ export default function ComparadorCenarios() {
         </div>
 
         {/* Legenda de pontos de viragem */}
-        {(breakEvenRV != null || breakEvenEmpresa != null) && (
+        {(rvEstavel != null || empEstavel != null) && (
           <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] font-medium">
-            {breakEvenRV != null && (
+            {rvEstavel != null && (
               <span className="flex items-center gap-1.5 text-brand-dark dark:text-brand">
                 <span className="h-1.5 w-1.5 rounded-full bg-brand-dark dark:bg-brand" />
-                RV compensa acima de ~{fmtK(breakEvenRV)}
+                {rvOscila
+                  ? `RV alterna com salário até ~${fmtK(rvOscila.ate)}`
+                  : `RV compensa acima de ~${fmtK(rvEstavel)}`}
               </span>
             )}
-            {breakEvenEmpresa != null && (
+            {empEstavel != null && (
               <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                Empresa compensa acima de ~{fmtK(breakEvenEmpresa)}
+                {empOscila
+                  ? `Empresa alterna com RV até ~${fmtK(empOscila.ate)}`
+                  : `Empresa compensa acima de ~${fmtK(empEstavel)}`}
               </span>
             )}
           </div>
@@ -441,7 +453,7 @@ export default function ComparadorCenarios() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, ease: EASE }}
-              className={`relative overflow-hidden rounded-2xl border p-5 transition-all ${
+              className={`relative rounded-2xl border p-5 transition-all ${
                 melhor
                   ? "border-brand/40 bg-gradient-to-b from-brand/8 to-transparent dark:from-brand/12 dark:to-transparent shadow-glow ring-1 ring-brand/20"
                   : "border-stone-100 dark:border-stone-700 bg-white dark:bg-stone-800"
@@ -495,18 +507,15 @@ export default function ComparadorCenarios() {
               Com {fmt(bruto)}/ano, <strong>{tituloMelhor.toLowerCase()}</strong> deixa-te com mais {fmt(diffMelhor)}/ano.
             </p>
             <p className="mt-1.5 text-xs leading-relaxed text-brand-dark/75 dark:text-brand/65">
-              {breakEvenRV
-                ? `Acima de ~${fmt(breakEvenRV)}/ano, os recibos verdes passam a compensar de forma consistente face ao salário. `
-                : "Para estes parâmetros, o salário por conta de outrem mantém-se competitivo em toda a gama testada. "}
-              {breakEvenEmpresa
-                ? `A empresa torna-se o cenário mais vantajoso acima de ~${fmt(breakEvenEmpresa)}/ano.`
+              {rvOscila
+                ? `Entre ~${fmt(rvOscila.desde)}/ano e ~${fmt(rvOscila.ate)}/ano, recibos verdes e salário alternam consoante o escalão de IRS. Acima de ~${fmt(rvOscila.ate)}/ano, os recibos verdes compensam sempre. `
+                : rvEstavel
+                  ? `Acima de ~${fmt(rvEstavel)}/ano, os recibos verdes compensam face ao salário. `
+                  : "Para estes parâmetros, o salário por conta de outrem mantém-se competitivo em toda a gama testada. "}
+              {empEstavel
+                ? `A empresa torna-se o cenário mais vantajoso acima de ~${fmt(empEstavel)}/ano.`
                 : "A empresa só compensa em rendimentos mais altos do que os testados."}
             </p>
-            {!breakEvenRV && bruto > 0 && r.melhor !== "dependente" && (
-              <p className="mt-1.5 text-xs leading-relaxed text-brand-dark/55 dark:text-brand/45">
-                Nota: a comparação entre salário e recibos verdes varia consoante o escalão — para o teu caso concreto, consulta um contabilista.
-              </p>
-            )}
           </div>
         </div>
       </div>

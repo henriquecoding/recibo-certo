@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.40.0";
+export const APP_VERSION = "1.41.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.41.0",
+    data: "2026-06-21",
+    titulo: "Comparador: oscilação entre regimes explicada",
+    itens: [
+      "Quando recibos verdes e salário alternam consoante o escalão de IRS, o comparador agora explica a faixa de oscilação em vez de indicar um ponto de viragem enganador.",
+      "Badge «Mais líquido» já não fica cortado nos cartões de resultado.",
+    ],
+  },
   {
     version: "1.40.0",
     data: "2026-06-21",
