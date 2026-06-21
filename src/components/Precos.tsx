@@ -71,7 +71,7 @@ function MatrizCelula({ valor }: { valor: boolean | string }) {
 export default function Precos() {
   const [anual, setAnual] = useState(true);
 
-  const precoGrande = anual ? "4,00 €" : "5,99 €";
+  const precoGrande = anual ? "3,99 €" : "5,99 €";
   const subPreco = anual ? "faturado 47,99 € por ano · poupa 33%" : "faturado mensalmente";
 
   return (

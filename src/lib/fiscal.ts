@@ -362,9 +362,11 @@ export interface SimulacaoInput {
   dependentesDetalhe?: DependentesDetalhe;
   /**
    * Acumulação com trabalho dependente que cobre Segurança Social.
-   * Não afecta o IRS (simularIRSAnual), mas é retornado para cálculo de SS no UI.
+   * Não afecta o IRS, mas é considerado para o cálculo de SS no resultado.
    */
   acumulaEmprego?: boolean;
+  /** Isenção de SS nos primeiros 12 meses de atividade (Art. 157.º CC). */
+  isencaoSSPrimeiroAno?: boolean;
 }
 
 export interface SimulacaoIRS {
@@ -575,7 +577,7 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
 
   // ── SS anual estimado (para display; não afecta o IRS) ───────────────────
   const acumulaEmprego = !!input.acumulaEmprego;
-  const isencaoSSEntrada = acumulaEmprego; // 1.º ano é gerido no UI
+  const isencaoSSEntrada = acumulaEmprego || !!input.isencaoSSPrimeiroAno;
   const ssAnual = (() => {
     if (isencaoSSEntrada) return 0;
     const baseSS = SS_COEFICIENTE[BASE_SS_POR_TIPO[tipo]].value;
@@ -786,7 +788,11 @@ export function calcularTributacaoAutonoma(
     sanitize(input.despesasNaoDocumentadas ?? 0) * TA_NAO_DOCUMENTADAS.value;
 
   const subtotal = taViaturas + taRepresentacao + taAjudas + taNaoDocumentadas;
-  const agravamentoTotal = input.comPrejuizo && !agravamentoIsento ? subtotal * 0 : 0;
+  const agravamentoTotal = agravamento > 0
+    ? (input.viaturas ?? []).reduce((s, v) => s + sanitize(v.encargosAnuais), 0) * agravamento
+      + sanitize(input.despesasRepresentacao ?? 0) * agravamento
+      + sanitize(input.ajudasCusto ?? 0) * agravamento
+    : 0;
 
   return {
     taViaturas,

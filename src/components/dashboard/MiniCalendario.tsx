@@ -38,9 +38,9 @@ export default function MiniCalendario() {
   }, [mounted]);
 
   return (
-    <div className="flex h-full flex-col rounded-4xl border border-stone-100 bg-white p-6 shadow-card">
+    <div className="flex h-full flex-col rounded-4xl border border-stone-100 bg-white p-6 shadow-card dark:bg-stone-900 dark:border-stone-800">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold capitalize text-stone-700">{dados?.titulo ?? "Calendário"}</h2>
+        <h2 className="text-sm font-semibold capitalize text-stone-700 dark:text-stone-200">{dados?.titulo ?? "Calendário"}</h2>
         <Link href="/dashboard/prazos" className="flex items-center gap-1 text-xs font-semibold text-brand hover:text-brand-dark">
           Prazos <ArrowRight size={12} />
         </Link>
@@ -48,7 +48,7 @@ export default function MiniCalendario() {
 
       <div className="mb-1 grid grid-cols-7 gap-1">
         {DIAS.map((d, i) => (
-          <div key={i} className="text-center text-[10px] font-semibold uppercase text-stone-300">{d}</div>
+          <div key={i} className="text-center text-[10px] font-semibold uppercase text-stone-300 dark:text-stone-600">{d}</div>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-1">
@@ -60,7 +60,7 @@ export default function MiniCalendario() {
             <div
               key={dia}
               className={`relative flex aspect-square flex-col items-center justify-center rounded-lg text-xs ${
-                ehHoje ? "bg-brand font-semibold text-white" : "text-stone-600"
+                ehHoje ? "bg-brand font-semibold text-white" : "text-stone-600 dark:text-stone-300"
               }`}
             >
               {dia}
@@ -80,7 +80,7 @@ export default function MiniCalendario() {
         })}
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-x-3 gap-y-1 border-t border-stone-100 pt-3">
+      <div className="mt-4 flex flex-wrap gap-x-3 gap-y-1 border-t border-stone-100 dark:border-stone-800 pt-3">
         {Object.values(META_CATEGORIA).map((m) => (
           <span key={m.label} className="flex items-center gap-1 text-[10px] text-stone-400">
             <span className="h-1.5 w-1.5 rounded-full" style={{ background: m.cor }} /> {m.label}

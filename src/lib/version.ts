@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.49.0";
+export const APP_VERSION = "1.50.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,19 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.50.0",
+    data: "2026-06-21",
+    titulo: "Auditoria do dashboard — bugs fiscais, dark mode e acessibilidade",
+    itens: [
+      "Corrigido bug na tributação autónoma de empresa: agravamento por prejuízo agora calcula a sobretaxa correta em vez de zero.",
+      "Isenção de Segurança Social do 1.º ano agora reconhece tanto a flag de primeiro ano como a acumulação com emprego.",
+      "Guardião de Segurança Social: prazo do Q1 corrigido para 20 de julho (antes mostrava outubro, igual ao Q2).",
+      "Dark mode completo em mais de 20 componentes do dashboard: recibos, receitas, calendário, gráficos, donut, onboarding e primitivos UI.",
+      "Acessibilidade: role progressbar no IVA, scope col e caption na tabela de recibos, confirmação ao apagar recibo.",
+      "Tipografia do saldo responsiva e secções críticas protegidas com ErrorBoundary.",
+    ],
+  },
   {
     version: "1.49.0",
     data: "2026-06-21",

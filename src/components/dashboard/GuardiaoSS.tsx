@@ -18,12 +18,16 @@ export function calcularSS(rendimentoTrimestre: number, baseSS: BaseSS = "servic
 }
 
 export function prazoSS(trimestreIndex: number, ano: number): Date {
+  // Declaração trimestral SS: prazo = último dia do mês a seguir ao trimestre.
+  // Pagamento: entre dia 10 e 20 do mês seguinte à declaração.
+  // Q1 (jan-mar) → paga até jul 20; Q2 (abr-jun) → paga até out 20;
+  // Q3 (jul-set) → paga até jan 20 ano+1; Q4 (out-dez) → paga até abr 20 ano+1.
   switch (trimestreIndex) {
-    case 0: return new Date(ano, 9, 20);
+    case 0: return new Date(ano, 6, 20);
     case 1: return new Date(ano, 9, 20);
     case 2: return new Date(ano + 1, 0, 20);
     case 3: return new Date(ano + 1, 3, 20);
-    default: return new Date(ano, 9, 20);
+    default: return new Date(ano, 6, 20);
   }
 }
 

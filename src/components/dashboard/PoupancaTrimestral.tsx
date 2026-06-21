@@ -1,11 +1,11 @@
 "use client";
 
-import { calcularRecibo, type Recibo } from "@/lib/store/recibos";
+import { calcularRecibo, type Recibo, type OpcoesCalcRecibo } from "@/lib/store/recibos";
 import { fmt } from "@/lib/format";
 
 const TRIMESTRES = ["1.º trimestre", "2.º trimestre", "3.º trimestre", "4.º trimestre"];
 
-export default function PoupancaTrimestral({ recibos }: { recibos: Recibo[] }) {
+export default function PoupancaTrimestral({ recibos, opcoes }: { recibos: Recibo[]; opcoes?: OpcoesCalcRecibo }) {
   const agora = new Date();
   const ano = agora.getFullYear();
   const tri = Math.floor(agora.getMonth() / 3);
@@ -17,7 +17,7 @@ export default function PoupancaTrimestral({ recibos }: { recibos: Recibo[] }) {
 
   const reserva = doTrimestre.reduce(
     (acc, r) => {
-      const c = calcularRecibo(r);
+      const c = calcularRecibo(r, opcoes);
       acc.iva += c.iva;
       acc.ss += c.segSocial;
       return acc;
