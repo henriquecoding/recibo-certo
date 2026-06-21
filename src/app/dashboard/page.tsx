@@ -10,6 +10,7 @@ import { fmt } from "@/lib/format";
 import { Receipt, Warning, Check, ArrowRight, History, Calendar } from "@/components/ui/Icons";
 import InfoTip from "@/components/ui/InfoTip";
 import ProHint from "@/components/ui/ProHint";
+import ProGate from "@/components/ui/ProGate";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import IvaProgresso from "@/components/dashboard/IvaProgresso";
 import PoupancaTrimestral from "@/components/dashboard/PoupancaTrimestral";
@@ -231,7 +232,9 @@ export default function VisaoGeral() {
 
           {/* ── Painel lateral: Saúde + Acumulado ───────────────── */}
           <div className="col-span-12 flex flex-col gap-4 lg:col-span-4">
-            <SaudeCard score={saude.score} estado={saude.estado} fatores={saude.fatores} />
+            <ProGate title="Saúde Fiscal" description="Indicador detalhado da tua situação fiscal — diversificação, reservas e organização.">
+              <SaudeCard score={saude.score} estado={saude.estado} fatores={saude.fatores} />
+            </ProGate>
             <div className="flex-1 rounded-4xl border border-stone-100 bg-white p-6 shadow-card">
               <h2 className="mb-4 text-sm font-semibold text-stone-700">Acumulado do ano</h2>
               <Linha label="Faturado" value={ano.bruto} />

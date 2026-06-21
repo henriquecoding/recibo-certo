@@ -185,15 +185,42 @@ export async function obterCupoesUtilizador(userId: string): Promise<CupaoQuiz[]
 
 export async function ativarCupao(cupaoId: string, userId: string): Promise<{ erro?: string }> {
   if (!supabaseConfigurado()) return { erro: "Serviço indisponível." };
-  const { error } = await getSupabase()
+  const sb = getSupabase();
+
+  const { data: cupao, error: errCupao } = await sb
+    .from("quiz_cupoes")
+    .select("meses")
+    .eq("id", cupaoId)
+    .eq("user_id", userId)
+    .eq("estado", "disponivel")
+    .maybeSingle();
+
+  if (errCupao) return { erro: errCupao.message };
+  if (!cupao) return { erro: "Cupão não encontrado ou já utilizado." };
+
+  const { error: errUpdate } = await sb
     .from("quiz_cupoes")
     .update({
       estado: "ativado",
       ativado_em: new Date().toISOString(),
     })
     .eq("id", cupaoId)
-    .eq("user_id", userId)
-    .eq("estado", "disponivel");
+    .eq("user_id", userId);
 
-  return error ? { erro: error.message } : {};
+  if (errUpdate) return { erro: errUpdate.message };
+
+  const agora = new Date();
+  const fimMs = agora.getTime() + cupao.meses * 30 * 24 * 60 * 60 * 1000;
+  await sb.from("subscriptions").upsert(
+    {
+      user_id: userId,
+      status: "active",
+      intervalo: "monthly",
+      inicio: agora.toISOString(),
+      cancelado_em: new Date(fimMs).toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
+
+  return {};
 }

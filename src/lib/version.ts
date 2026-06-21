@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.43.0";
+export const APP_VERSION = "1.44.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,24 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.44.0",
+    data: "2026-06-21",
+    titulo: "Auditoria Pro, gating e limpeza de pagamentos",
+    itens: [
+      "IfThenPay removido — MB WAY e Multibanco via IfThenPay descontinuados (Stripe Payment Elements mantido para MB WAY).",
+      "Exportação CSV/PDF de recibos agora bloqueada para utilizadores gratuitos (ProGate).",
+      "Saúde Fiscal no dashboard agora requer Pro (consistente com a página de perfil).",
+      "ProHint já não aparece para utilizadores Pro — esconde-se automaticamente.",
+      "Recibos na nuvem agora exclusivos do Pro (antes bastava estar autenticado).",
+      "Cupões do Quiz Fiscal agora ativam o Pro efetivamente — criam subscrição ativa de 3 meses.",
+      "Webhook Stripe com fallback por email quando metadata está em falta.",
+      "Grace period: utilizadores com pagamento pendente (past_due) mantêm acesso Pro temporariamente.",
+      "Preferências fiscais (regime, dependentes, deduções) sincronizadas na nuvem para Pro.",
+      "SubscricaoProvider duplicado removido do dashboard layout (menos uma query Supabase por página).",
+      "Check de Pro no quiz unificado — usa useSubscricao em vez de query direta à base de dados.",
+    ],
+  },
   {
     version: "1.43.0",
     data: "2026-06-21",

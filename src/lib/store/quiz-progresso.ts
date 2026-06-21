@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getSupabase, supabaseConfigurado } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/auth";
+import { useSubscricao } from "@/lib/stripe/subscription";
 import {
   nivelParaXP,
   xpProgressoPct,
@@ -117,7 +118,9 @@ function gravarSessoesLocal(sessoes: SessaoHistorico[]) {
 
 export function useQuizProgresso(): QuizProgressoReturn {
   const { user } = useAuth();
+  const { plano } = useSubscricao();
   const naNuvem = !!user && supabaseConfigurado();
+  const isPro = plano === "pro";
 
   const [xp, setXp] = useState(0);
   const [streakRecord, setStreakRecord] = useState(0);
@@ -125,7 +128,6 @@ export function useQuizProgresso(): QuizProgressoReturn {
   const [energiaResetAt, setEnergiaResetAt] = useState<string | null>(null);
   const [sessoes, setSessoes] = useState<SessaoHistorico[]>([]);
   const [carregado, setCarregado] = useState(false);
-  const [isPro, setIsPro] = useState(false);
 
   // ── Carga inicial ──────────────────────────────────────────────────────
 
@@ -159,21 +161,14 @@ export function useQuizProgresso(): QuizProgressoReturn {
     if (!user) return;
     const sb = getSupabase();
 
-    const [{ data: perfil }, { data: historico }, { data: subs }] = await Promise.all([
+    const [{ data: perfil }, { data: historico }] = await Promise.all([
       sb.from("quiz_profiles").select("*").eq("id", user.id).maybeSingle(),
       sb.from("quiz_sessions")
         .select("*")
         .eq("user_id", user.id)
         .order("criado_em", { ascending: false })
         .limit(50),
-      sb.from("subscriptions")
-        .select("status")
-        .eq("user_id", user.id)
-        .in("status", ["active", "trialing"])
-        .limit(1),
     ]);
-
-    setIsPro(!!(subs && subs.length > 0));
 
     if (perfil) {
       const { energia, resetAt } = calcularEnergiaAtual(

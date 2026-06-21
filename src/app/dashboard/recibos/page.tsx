@@ -7,6 +7,7 @@ import { fmt, pct } from "@/lib/format";
 import { Trash, Pencil, Receipt, Check, Export } from "@/components/ui/Icons";
 import InfoTip from "@/components/ui/InfoTip";
 import ProHint from "@/components/ui/ProHint";
+import ProGate from "@/components/ui/ProGate";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
 import type { RegimeIVA } from "@/lib/fiscal";
 import {
@@ -123,22 +124,24 @@ export default function RecibosPage() {
           <p className="mt-1 text-sm text-stone-500">Regista os teus recibos e acompanha o que fica realmente teu.</p>
         </div>
         {recibos.length > 0 && (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => downloadCSV(recibos)}
-              className="inline-flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm font-semibold text-stone-600 transition-colors hover:border-stone-300"
-            >
-              <Export size={16} /> CSV
-            </button>
-            <button
-              type="button"
-              onClick={() => printRecibosPDF(recibos)}
-              className="inline-flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm font-semibold text-stone-600 transition-colors hover:border-stone-300"
-            >
-              <Export size={16} /> PDF
-            </button>
-          </div>
+          <ProGate title="Exportação Pro" description="Exporta os teus recibos em CSV ou PDF para enviar ao contabilista.">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => downloadCSV(recibos)}
+                className="inline-flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm font-semibold text-stone-600 transition-colors hover:border-stone-300"
+              >
+                <Export size={16} /> CSV
+              </button>
+              <button
+                type="button"
+                onClick={() => printRecibosPDF(recibos)}
+                className="inline-flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm font-semibold text-stone-600 transition-colors hover:border-stone-300"
+              >
+                <Export size={16} /> PDF
+              </button>
+            </div>
+          </ProGate>
         )}
       </header>
 

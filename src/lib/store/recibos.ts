@@ -21,6 +21,7 @@ import {
 import { ATIVIDADES, efeitoFiscal } from "@/lib/fiscal-data";
 import { getSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/auth";
+import { useSubscricao } from "@/lib/stripe/subscription";
 
 export interface Recibo {
   id: string;
@@ -197,8 +198,9 @@ export function resumir(recibos: Recibo[], opcoes?: OpcoesCalcRecibo): ResumoRec
 // ─── Hook de acesso (modo duplo) ────────────────────────────────────────
 export function useRecibos() {
   const { user, carregado: authPronto, disponivel } = useAuth();
+  const { plano } = useSubscricao();
   const userId = user?.id ?? null;
-  const naNuvem = disponivel && !!userId;
+  const naNuvem = disponivel && !!userId && plano === "pro";
 
   const [recibos, setRecibos] = useState<Recibo[]>([]);
   const [carregado, setCarregado] = useState(false);

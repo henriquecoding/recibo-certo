@@ -3,9 +3,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight } from "@/components/ui/Icons";
+import { useSubscricao } from "@/lib/stripe/subscription";
 
-// Sugestão de upgrade contextual, calma e dispensável (estratégia não-agressiva).
-// Aparece junto ao momento de valor; ao dispensar, fica guardado e não reaparece.
 const KEY = (id: string) => `recibocerto:prohint:${id}`;
 
 export default function ProHint({
@@ -16,7 +15,6 @@ export default function ProHint({
   href = "/dashboard/upgrade",
   className = "",
 }: {
-  /** Identificador único — guarda a dispensa por gatilho. */
   id: string;
   icon?: ReactNode;
   children: ReactNode;
@@ -24,16 +22,17 @@ export default function ProHint({
   href?: string;
   className?: string;
 }) {
-  // Começa oculto até confirmar que não foi dispensado (evita mostrar o que já foi fechado).
+  const { plano } = useSubscricao();
   const [visivel, setVisivel] = useState(false);
 
   useEffect(() => {
+    if (plano === "pro") return;
     try {
       setVisivel(localStorage.getItem(KEY(id)) !== "1");
     } catch {
       setVisivel(true);
     }
-  }, [id]);
+  }, [id, plano]);
 
   if (!visivel) return null;
 

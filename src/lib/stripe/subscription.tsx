@@ -61,7 +61,7 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
     return () => { ativo = false; };
   }, [user, authCarregado]);
 
-  const plano = status === "active" || status === "trialing" ? "pro" : "free";
+  const plano = status === "active" || status === "trialing" || status === "past_due" ? "pro" : "free";
 
   const abrirCheckout = useCallback(async (int: "monthly" | "annual" = "annual") => {
     const token = await obterToken();

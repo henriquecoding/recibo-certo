@@ -31,7 +31,6 @@ import {
 } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useAuth } from "@/lib/supabase/auth";
-import { SubscricaoProvider } from "@/lib/stripe/subscription";
 import { verificarAdmin } from "@/lib/supabase/admin";
 import { obterPerfil } from "@/lib/supabase/profile";
 import AccountBox from "@/components/dashboard/AccountBox";
@@ -204,7 +203,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, [menuAberto]);
 
   return (
-    <SubscricaoProvider>
       <div className="min-h-screen bg-cream lg:grid lg:grid-cols-[256px_1fr]">
 
         {/* ─── Sidebar (desktop) ─────────────────────────────────── */}
@@ -378,6 +376,5 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         )}
       </div>
-    </SubscricaoProvider>
   );
 }
