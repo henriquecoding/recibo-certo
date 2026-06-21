@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.26.0";
+export const APP_VERSION = "1.27.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.27.0",
+    data: "2026-06-21",
+    titulo: "Simulador de empresa refinado — inputs ricos e próximos passos",
+    itens: [
+      "Inputs do simulador guiado da empresa agora incluem botões +/−, campo editável e slider com thumb animado — mais fáceis de usar no telemóvel.",
+      "Nova secção «O que fazer a seguir» no resultado: link direto para Comparar Cenários (com mapa e contabilista) e para o simulador completo.",
+      "Removida a comparação duplicada RV vs Empresa do resultado — usa agora a página dedicada «Comparar Cenários», que é mais completa.",
+    ],
+  },
   {
     version: "1.26.0",
     data: "2026-06-21",
