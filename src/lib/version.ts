@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.41.0";
+export const APP_VERSION = "1.42.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.42.0",
+    data: "2026-06-21",
+    titulo: "Toggle «Valor inclui IVA» no simulador de empresa",
+    itens: [
+      "Novo toggle «Valor inclui IVA» nos modos Guiado e Completo do simulador de empresa — introduz a faturação com IVA incluído e a base tributável é extraída automaticamente.",
+      "A taxa de IVA ajusta-se à região selecionada (Continente 23%, Madeira 22%, Açores 16%).",
+      "Resultados e breakdown mostram a base sem IVA quando o toggle está ativo, com indicação clara do valor original com IVA.",
+      "Alterações em ambos os modos são totalmente sincronizadas — qualquer mudança propaga-se ao cálculo em tempo real.",
+    ],
+  },
   {
     version: "1.41.0",
     data: "2026-06-21",

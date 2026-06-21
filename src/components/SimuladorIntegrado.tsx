@@ -1888,6 +1888,9 @@ interface EmpresaInputsProps {
   // Faturação anual (modo completo)
   faturacaoAnual: number;
   onFaturacaoChange: (v: number) => void;
+  faturacaoComIva: boolean;
+  onFaturacaoComIvaChange: (v: boolean) => void;
+  taxaIvaEmpresa: number;
   // Sede e perfil
   tipoSede: TipoSede;
   perfilFundador: PerfilFundador;
@@ -1977,6 +1980,9 @@ interface EmpresaInputsProps {
 function EmpresaInputs({
   faturacaoAnual,
   onFaturacaoChange,
+  faturacaoComIva,
+  onFaturacaoComIvaChange,
+  taxaIvaEmpresa,
   tipoSede,
   perfilFundador,
   aplicarIFICI,
@@ -2073,17 +2079,45 @@ function EmpresaInputs({
       </div>
 
       {/* ── Faturação anual ─────────────────────────────────────────────── */}
-      <NumericSlider
-        label="Faturação anual (sem IVA)"
-        value={faturacaoAnual}
-        min={0}
-        max={300_000}
-        step={5_000}
-        onChange={onFaturacaoChange}
-        presets={[30_000, 60_000, 100_000, 150_000]}
-        formatPreset={(v) => fmt(v)}
-        tooltip={<>Volume de negócios anual previsto (sem IVA).</>}
-      />
+      <div>
+        <NumericSlider
+          label={faturacaoComIva ? "Faturação anual (com IVA)" : "Faturação anual (sem IVA)"}
+          value={faturacaoAnual}
+          min={0}
+          max={faturacaoComIva ? 370_000 : 300_000}
+          step={5_000}
+          onChange={onFaturacaoChange}
+          presets={faturacaoComIva ? [36_900, 73_800, 123_000, 184_500] : [30_000, 60_000, 100_000, 150_000]}
+          formatPreset={(v) => fmt(v)}
+          tooltip={
+            faturacaoComIva
+              ? <>Total anual cobrado aos clientes (IVA {pct(taxaIvaEmpresa)} incluído). A base para IRC é extraída automaticamente.</>
+              : <>Volume de negócios anual previsto (sem IVA). O IVA é cobrado ao cliente mas pertence ao Estado.</>
+          }
+        />
+        <div className="mt-2 flex items-center justify-between">
+          <label className="flex cursor-pointer items-center gap-2.5">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={faturacaoComIva}
+                onChange={(e) => onFaturacaoComIvaChange(e.target.checked)}
+                className="peer sr-only"
+              />
+              <div className="h-5 w-9 rounded-full bg-stone-200 transition-colors peer-checked:bg-brand peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40 dark:bg-stone-700" />
+              <div className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-4" />
+            </div>
+            <span className="text-xs font-medium text-stone-600 dark:text-stone-300">
+              Valor inclui IVA ({pct(taxaIvaEmpresa)})
+            </span>
+          </label>
+          {faturacaoComIva && faturacaoAnual > 0 && (
+            <span className="text-xs tabular-nums text-stone-400 dark:text-stone-500">
+              Base sem IVA: <strong className="text-stone-600 dark:text-stone-300">{fmt(Math.round(faturacaoAnual / (1 + taxaIvaEmpresa)))}</strong>
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* ── Tipo de sede ────────────────────────────────────────────────── */}
       <div>
@@ -3293,11 +3327,12 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   const [cenario, setCenario] = useState<CenarioAtivo>(vista === "empresa" ? "empresa" : "rv");
   const [modoEmpresa, setModoEmpresa] = useState<"guiado" | "completo">("guiado");
 
-  // ── Empresa completo — Sede, perfil, IFICI ──────────────────────────────
+  // ── Empresa completo — Sede, perfil, IFICI, IVA ─────────────────────────
   const [tipoSedeCompleto, setTipoSedeCompleto] = useState<TipoSede>("fisica");
   const [perfilFundadorCompleto, setPerfilFundadorCompleto] = useState<PerfilFundador>("residente");
   const [aplicarIFICICompleto, setAplicarIFICICompleto] = useState(false);
   const [custoSedeVirtualCompleto, setCustoSedeVirtualCompleto] = useState(CUSTO_SEDE_VIRTUAL_DEFAULT);
+  const [faturacaoComIvaEmpresa, setFaturacaoComIvaEmpresa] = useState(false);
 
   // ── Valores de entrada ───────────────────────────────────────────────────
   const [bruto, setBruto] = useState(1_500);
@@ -3684,10 +3719,15 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   const custoRepFiscalCompleto = perfilFundadorCompleto === "estrangeiro_extra_ue" ? CUSTO_REPRESENTANTE_FISCAL_DEFAULT : 0;
   const custosExtraEmpresa = custosExtra + custoSedeAnualCompleto + custoRepFiscalCompleto;
 
+  const taxaIvaEmpresaEfetiva = IVA_TAXAS[regiao].value.normal;
+  const faturacaoBaseEmpresa = faturacaoComIvaEmpresa
+    ? Math.round(brutoAnual / (1 + taxaIvaEmpresaEfetiva))
+    : brutoAnual;
+
   const resultEmpresa = useMemo(
     () =>
       simularEmpresa(
-        brutoAnual,
+        faturacaoBaseEmpresa,
         despesasOper,
         custosExtraEmpresa,
         salGerenteMensal,
@@ -3710,7 +3750,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
         rfaiContratualValor,
       ),
     [
-      brutoAnual,
+      faturacaoBaseEmpresa,
       despesasOper,
       custosExtraEmpresa,
       salGerenteMensal,
@@ -6069,6 +6109,9 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                   <EmpresaInputs
                     faturacaoAnual={brutoAnual}
                     onFaturacaoChange={handleBrutoAnualChange}
+                    faturacaoComIva={faturacaoComIvaEmpresa}
+                    onFaturacaoComIvaChange={setFaturacaoComIvaEmpresa}
+                    taxaIvaEmpresa={taxaIvaEmpresaEfetiva}
                     tipoSede={tipoSedeCompleto}
                     perfilFundador={perfilFundadorCompleto}
                     aplicarIFICI={aplicarIFICICompleto}
@@ -6837,8 +6880,8 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                           />
                           <span>
                             Comparação baseada em {fmt(bruto)} × 12 ={" "}
-                            {fmt(brutoAnual)}/ano. Muda para o modo Anual para
-                            valores mais precisos.
+                            {fmt(brutoAnual)}/ano{faturacaoComIvaEmpresa ? ` (base sem IVA: ${fmt(faturacaoBaseEmpresa)})` : ""}.
+                            Muda para o modo Anual para valores mais precisos.
                           </span>
                         </div>
                       )}
@@ -6859,13 +6902,13 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                               <div
                                 className="rounded-full bg-white/70 transition-all duration-500"
                                 style={{
-                                  width: `${Math.round(liquidoEmpresaFinal / Math.max(1, brutoAnual) * 100)}%`,
+                                  width: `${Math.round(liquidoEmpresaFinal / Math.max(1, faturacaoBaseEmpresa) * 100)}%`,
                                 }}
                               />
                             </div>
                             <div className="mt-1 text-[11px] text-green-100/50">
-                              {Math.round(liquidoEmpresaFinal / Math.max(1, brutoAnual) * 100)}% de{" "}
-                              <AnimatedNumber value={brutoAnual} /> faturados/ano
+                              {Math.round(liquidoEmpresaFinal / Math.max(1, faturacaoBaseEmpresa) * 100)}% de{" "}
+                              <AnimatedNumber value={faturacaoBaseEmpresa} /> faturados/ano
                             </div>
                           </div>
                         </div>
@@ -6875,7 +6918,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                       <div className="mb-6">
                         <div className="flex h-3 rounded-full overflow-hidden gap-0.5 mb-3">
                           {(() => {
-                            const total = brutoAnual || 1;
+                            const total = faturacaoBaseEmpresa || 1;
                             const irsDiv = opcaoEnglobamento
                               ? resultEmpresa.irsDividendosEnglobamento
                               : resultEmpresa.irsDividendosLiberatoria;
@@ -6970,10 +7013,10 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                       {/* Breakdown empresa — detalhado */}
                       <div className="space-y-1 flex-1">
                         <DetalheRow
-                          label="Faturação"
-                          value={brutoAnual}
+                          label={faturacaoComIvaEmpresa ? "Faturação (sem IVA)" : "Faturação"}
+                          value={faturacaoBaseEmpresa}
                           type="neutral"
-                          note="Volume de negócios anual"
+                          note={faturacaoComIvaEmpresa ? `Extraído de ${fmt(brutoAnual)} com IVA ${pct(taxaIvaEmpresaEfetiva)}` : "Volume de negócios anual"}
                         />
 
                         {resultEmpresa.despesasOper > 0 && (
@@ -7217,7 +7260,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                                 <AnimatedNumber value={liquidoEmpresaFinal} />
                               </div>
                               <div className="text-xs text-stone-400">
-                                {pct(liquidoEmpresaFinal / (brutoAnual || 1))}{" "}
+                                {pct(liquidoEmpresaFinal / (faturacaoBaseEmpresa || 1))}{" "}
                                 do bruto
                               </div>
                             </div>
@@ -7250,7 +7293,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
               <ComparacaoNarrativa
                 liquidoRV={resultAnualRV.liquido}
                 liquidoEmpresa={liquidoEmpresaFinal}
-                faturacaoAnual={brutoAnual}
+                faturacaoAnual={faturacaoBaseEmpresa}
                 breakEven={breakEven}
                 custoFixoEstimado={custosExtra}
                 onVerDetalhe={() => setCenario("empresa")}
@@ -7364,9 +7407,9 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                 </span>
                 {empresaVence ? (
                   <span>
-                    Com {fmt(brutoAnual)}/ano, a empresa deixa-te com mais{" "}
+                    Com {fmt(faturacaoBaseEmpresa)}/ano, a empresa deixa-te com mais{" "}
                     <strong>{fmt(diferenca)}/ano</strong> (
-                    {pct(diferenca / (brutoAnual || 1))}).
+                    {pct(diferenca / (faturacaoBaseEmpresa || 1))}).
                     {breakEven && ` Ponto de viragem: ${fmt(breakEven)}/ano.`}
                   </span>
                 ) : (

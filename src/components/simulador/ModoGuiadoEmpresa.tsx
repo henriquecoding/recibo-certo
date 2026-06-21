@@ -56,6 +56,7 @@ import {
   DIVIDENDOS_TAXA,
   IFICI_TAXA,
   IFICI_PRAZO_ANOS,
+  IVA_TAXAS,
   SOURCES,
 } from "@/lib/fiscal-data";
 import {
@@ -949,6 +950,7 @@ export default function ModoGuiadoEmpresa({
 
   // Passo 2: faturação e custos
   const [faturacaoAnual, setFaturacaoAnual] = useState(60_000);
+  const [faturacaoComIva, setFaturacaoComIva] = useState(false);
   const [despesasOper, setDespesasOper] = useState(2_000);
   const [salGerenteMensal, setSalGerenteMensal] = useState(SMN_2026);
   const [incluirConstituicao, setIncluirConstituicao] = useState(true);
@@ -995,9 +997,18 @@ export default function ModoGuiadoEmpresa({
   const isEstrangeiro = perfilFundador !== "residente";
   const custoRepFiscalEfetivo = isEstrangeiro ? CUSTO_REPRESENTANTE_FISCAL_DEFAULT : 0;
 
+  // IVA: taxa normal da região derivada da localização
+  const regiaoIva = localizacao?.regiaoId === "acores" ? "acores" as const
+    : localizacao?.regiaoId === "madeira" ? "madeira" as const
+    : "continente" as const;
+  const taxaIvaEmpresa = IVA_TAXAS[regiaoIva].value.normal;
+  const faturacaoBase = faturacaoComIva
+    ? Math.round(faturacaoAnual / (1 + taxaIvaEmpresa))
+    : faturacaoAnual;
+
   // Args comuns para simulação
   const simArgs = [
-    faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
+    faturacaoBase, despesasOper, custosEstrutura, salGerenteMensal,
     distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
     custoConstituicao, anosAmortizacao,
     tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
@@ -1014,7 +1025,7 @@ export default function ModoGuiadoEmpresa({
   const resultado = useMemo(
     () =>
       simularEmpresaGuiado(
-        faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
+        faturacaoBase, despesasOper, custosEstrutura, salGerenteMensal,
         distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
         custoConstituicao, anosAmortizacao,
         tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
@@ -1035,7 +1046,7 @@ export default function ModoGuiadoEmpresa({
   const resultLib = useMemo(
     () =>
       simularEmpresaGuiado(
-        faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
+        faturacaoBase, despesasOper, custosEstrutura, salGerenteMensal,
         true, false, incluirConstituicao,
         custoConstituicao, anosAmortizacao,
         tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
@@ -1054,7 +1065,7 @@ export default function ModoGuiadoEmpresa({
   const resultEng = useMemo(
     () =>
       simularEmpresaGuiado(
-        faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
+        faturacaoBase, despesasOper, custosEstrutura, salGerenteMensal,
         true, true, incluirConstituicao,
         custoConstituicao, anosAmortizacao,
         tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
@@ -1810,18 +1821,44 @@ export default function ModoGuiadoEmpresa({
                   </p>
 
                   <div className="space-y-6">
-                    <NumericSlider
-                      label="Faturação anual (€)"
-                      value={faturacaoAnual}
-                      min={0}
-                      max={300_000}
-                      step={5_000}
-                      onChange={setFaturacaoAnual}
-                      presets={[30_000, 60_000, 100_000, 150_000]}
-                      tooltip={
-                        <>Volume de negócios anual previsto (sem IVA).</>
-                      }
-                    />
+                    <div>
+                      <NumericSlider
+                        label={faturacaoComIva ? "Faturação anual com IVA (€)" : "Faturação anual (€)"}
+                        value={faturacaoAnual}
+                        min={0}
+                        max={faturacaoComIva ? 370_000 : 300_000}
+                        step={5_000}
+                        onChange={setFaturacaoAnual}
+                        presets={faturacaoComIva ? [36_900, 73_800, 123_000, 184_500] : [30_000, 60_000, 100_000, 150_000]}
+                        tooltip={
+                          faturacaoComIva
+                            ? <>Volume de negócios anual incluindo IVA ({pct(taxaIvaEmpresa)}). A base tributável ({fmt(faturacaoBase)}) é calculada automaticamente.</>
+                            : <>Volume de negócios anual previsto (sem IVA).</>
+                        }
+                      />
+                      <div className="mt-2 flex items-center justify-between">
+                        <label className="flex cursor-pointer items-center gap-2.5">
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              checked={faturacaoComIva}
+                              onChange={(e) => setFaturacaoComIva(e.target.checked)}
+                              className="peer sr-only"
+                            />
+                            <div className="h-5 w-9 rounded-full bg-stone-200 transition-colors peer-checked:bg-brand dark:bg-stone-700 peer-checked:dark:bg-brand" />
+                            <div className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-4" />
+                          </div>
+                          <span className="text-xs font-medium text-stone-600 dark:text-stone-300">
+                            Valor inclui IVA ({pct(taxaIvaEmpresa)})
+                          </span>
+                        </label>
+                        {faturacaoComIva && faturacaoAnual > 0 && (
+                          <span className="text-xs tabular-nums text-stone-400 dark:text-stone-500">
+                            Base sem IVA: <strong className="text-stone-600 dark:text-stone-300">{fmt(faturacaoBase)}</strong>
+                          </span>
+                        )}
+                      </div>
+                    </div>
 
                     <NumericSlider
                       label="Despesas operacionais (€/ano)"
@@ -2500,13 +2537,14 @@ export default function ModoGuiadoEmpresa({
                     {tipoSede !== "fisica" && ` (sede ${tipoSede === "virtual" ? "virtual" : "coworking"})`}
                     {aplicarIFICI && " · IFICI ativo"}
                     {perfilFundador !== "residente" && ` · ${perfilFundador === "estrangeiro_ue" ? "residente UE" : "residente extra-UE"}`}
-                    {" "}com faturação de {fmt(faturacaoAnual)}/ano.
+                    {" "}com faturação de {fmt(faturacaoBase)}/ano
+                    {faturacaoComIva && faturacaoAnual > 0 && ` (${fmt(faturacaoAnual)} com IVA)`}.
                   </p>
 
                   {/* Breakdown cascata */}
                   <div className="space-y-1.5">
                     {[
-                      { label: "Faturação anual", value: resultado.faturacao, cor: "text-stone-700 dark:text-stone-200" },
+                      { label: faturacaoComIva ? `Faturação anual (base s/ IVA de ${fmt(faturacaoAnual)})` : "Faturação anual", value: resultado.faturacao, cor: "text-stone-700 dark:text-stone-200" },
                       resultado.despesasOper > 0 ? { label: "Despesas operacionais", value: -resultado.despesasOper, cor: "text-stone-500" } : null,
                       { label: "Custos estrutura (contabilidade + software)", value: -resultado.custosEstrutura, cor: "text-stone-500" },
                       resultado.custoConstituicao > 0 ? { label: `Constituição (amortizada ${anosAmortizacao} ano${anosAmortizacao > 1 ? "s" : ""})`, value: -resultado.custoConstituicao, cor: "text-stone-500" } : null,
@@ -2634,7 +2672,7 @@ export default function ModoGuiadoEmpresa({
                   {/* ── Resumo da simulação (métricas-chave) ──────────────── */}
                   <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {[
-                      { label: "Faturação", valor: fmt(faturacaoAnual), sub: "/ano" },
+                      { label: "Faturação", valor: fmt(faturacaoBase), sub: faturacaoComIva ? `s/ IVA (${fmt(faturacaoAnual)} c/)` : "/ano" },
                       { label: "Líquido", valor: fmt(Math.round(resultado.liquidoGerente)), sub: "/ano" },
                       { label: "Mensal", valor: `~${fmt(Math.round(resultado.liquidoGerente / 12))}`, sub: "/mês" },
                       { label: "Taxa efetiva", valor: `${Math.round(resultado.taxaEfetiva * 100)}%`, sub: "carga fiscal" },
