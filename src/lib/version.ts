@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.29.1";
+export const APP_VERSION = "1.30.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.30.0",
+    data: "2026-06-21",
+    titulo: "Avatar nos headers e pesquisa global redesenhada",
+    itens: [
+      "A foto de perfil aparece agora no botão de perfil da navbar e do dashboard mobile — quando o utilizador tem avatar no Supabase.",
+      "Pesquisa global (Cmd+K) redesenhada: categorias com ícones em card, secção «Mais utilizadas» com acesso rápido, grelha de simuladores, e «Sugestões para si».",
+      "Modal de pesquisa mais largo e filtros contextuais — só aparecem ao pesquisar, sem poluir a vista inicial.",
+    ],
+  },
   {
     version: "1.29.1",
     data: "2026-06-21",
