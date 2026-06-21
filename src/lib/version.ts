@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.27.0";
+export const APP_VERSION = "1.28.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,20 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.28.0",
+    data: "2026-06-21",
+    titulo: "Dashboard inteligente — cálculos reais, estimativa IRS e perfil fiscal",
+    itens: [
+      "Novo card «Estimativa IRS Anual» no dashboard: projeta o reembolso ou acerto a pagar com escalões progressivos, coeficiente do regime simplificado, regra dos 15% e deduções à coleta.",
+      "Cálculos do dashboard agora usam a atividade real de cada recibo: retenção e base de SS derivam do catálogo de atividades (Art. 151.º, vendas, serviços, etc.) em vez de valores fixos.",
+      "Guardião de Retenção na Fonte agora deteta e exibe a taxa correta por atividade e sinaliza taxas mistas quando tens recibos de vários tipos.",
+      "Guardião de Segurança Social agora calcula com a base correta (70% serviços ou 20% bens) e respeita isenção do 1.º ano e acumulação com emprego.",
+      "Botão de perfil agora aparece sempre no header desktop, mesmo sem sessão iniciada.",
+      "Página «Conta e segurança» agora permite alterar a password, ligado ao Supabase Auth, com validação e feedback em português.",
+      "Novo store de preferências fiscais: ano de atividade, regime, dependentes e deduções são usados nos cálculos do dashboard.",
+    ],
+  },
   {
     version: "1.27.0",
     data: "2026-06-21",
