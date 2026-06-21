@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.24.0";
+export const APP_VERSION = "1.25.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,19 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.25.0",
+    data: "2026-06-21",
+    titulo: "Página de perfil completa com foto, cupões e dados pessoais",
+    itens: [
+      "Nova página «O meu perfil» com saudação personalizada, estatísticas do Quiz Fiscal, conquistas e histórico de sessões.",
+      "Podes agora editar o teu nome, telefone e NIF diretamente no perfil — tudo fica guardado na tua conta na nuvem.",
+      "Secção «Meus Cupões» onde podes ver e ativar os cupões Pro ganhos nos desafios do Quiz Fiscal.",
+      "Foto de perfil personalizável (exclusivo Pro): carrega uma foto em JPG, PNG ou WebP e ela aparece no teu avatar.",
+      "A saúde fiscal detalhada e as estatísticas avançadas do quiz passaram a ser exclusivas do plano Pro, com pré-visualização desfocada para contas grátis.",
+      "O botão «Perfil» substituiu o «Comparar cenários» na barra inferior do telemóvel para acesso rápido ao teu perfil.",
+    ],
+  },
   {
     version: "1.24.0",
     data: "2026-06-20",
