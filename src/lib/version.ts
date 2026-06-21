@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.38.0";
+export const APP_VERSION = "1.39.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,18 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.39.0",
+    data: "2026-06-21",
+    titulo: "Simulador completo de empresa redesenhado",
+    itens: [
+      "Seletor Guiado/Completo redesenhado com cards visuais — ícone, título, descrição e badge 'Ativo' para cada modo.",
+      "Modo completo de empresa agora inclui: tipo de sede (física/virtual/coworking), perfil do fundador (residente/UE/extra-UE), IFICI (20% flat) e card de localização com IRC, derrama e RFAI da região.",
+      "Custos de sede virtual/coworking e representante fiscal integrados no cálculo real do IRC — não apenas visuais, afetam o lucro tributável.",
+      "IFICI (Art. 58.º-A EBF) reduz o IRS sobre dividendos de 28% para 20%, com efeito no líquido disponível total.",
+      "Modo completo de empresa é agora independente — inputs de recibos verdes ficam escondidos, com slider de faturação e parâmetros próprios.",
+    ],
+  },
   {
     version: "1.38.0",
     data: "2026-06-21",
