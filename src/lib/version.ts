@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.42.0";
+export const APP_VERSION = "1.43.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.43.0",
+    data: "2026-06-21",
+    titulo: "Dependentes com deficiência e ajustes ao comparador e calendário",
+    itens: [
+      "Recibo de Vencimento: novo contador «Dependentes com deficiência (≥ 60%)» — cada dependente com atestado multiúso confere dedução adicional de 2,5 × IAS à coleta (Art. 87.º CIRS), refletida no acerto anual de IRS.",
+      "Slider do Comparador de Cenários volta a 200k€ de máximo visual, mas o campo de texto aceita valores superiores para cenários de rendimento mais alto.",
+      "Calendário fiscal: corrigido badge «Agora» e texto «até dia 20» que ficavam cortados nos cards de mês.",
+    ],
+  },
   {
     version: "1.42.0",
     data: "2026-06-21",
