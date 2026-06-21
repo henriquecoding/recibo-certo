@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.35.0";
+export const APP_VERSION = "1.36.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.36.0",
+    data: "2026-06-21",
+    titulo: "Header do desktop reestruturado",
+    itens: [
+      "Header agora fica fixo no topo da página — já não desaparece ao fazer scroll.",
+      "Novo mega-dropdown «Recursos Fiscais» com colunas separadas para Ferramentas e Aprender.",
+      "Botão de avatar e Dashboard combinados num só elemento quando autenticado.",
+      "Efeito de backdrop blur sempre presente no header para melhor legibilidade.",
+    ],
+  },
   {
     version: "1.35.0",
     data: "2026-06-21",
