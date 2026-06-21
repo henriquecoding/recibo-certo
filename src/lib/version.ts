@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.48.0";
+export const APP_VERSION = "1.49.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.49.0",
+    data: "2026-06-21",
+    titulo: "Página de preços simplificada",
+    itens: [
+      "Secção verde «Plano Pro» removida da landing e da página de preços (redundante com os cards de planos).",
+      "Texto do plano Quiz Master encurtado para melhor leitura no card.",
+    ],
+  },
   {
     version: "1.48.0",
     data: "2026-06-21",
