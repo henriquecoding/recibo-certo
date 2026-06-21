@@ -14,6 +14,8 @@ import {
   ChevronDown,
   Sparkle,
   Calendar,
+  Receipt,
+  ChartProjection,
 } from "@/components/ui/Icons";
 import { pct, fmt } from "@/lib/format";
 import {
@@ -23,6 +25,7 @@ import {
   IRC_LIMITE_PME,
   DERRAMA_MAX,
   DIVIDENDOS_TAXA,
+  REGIME_SIMPLIFICADO,
 } from "@/lib/fiscal-data";
 
 // ─── Constantes fiscais 2026 ─────────────────────────────────────────────────
@@ -42,7 +45,26 @@ const CUSTO_SOFTWARE_ANUAL = 300;
 const CUSTO_CONSTITUICAO_DEFAULT = 360;
 const SMN_2026 = 870;
 
-type Passo = 0 | 1 | 2 | 3 | "resultado";
+// TA simplificada (Art. 88.º CIRC)
+type TipoViaturaGuiado = "nenhuma" | "eletrica" | "phev" | "combustao";
+const TA_TAXAS_GUIADO: Record<TipoViaturaGuiado, number> = {
+  nenhuma: 0,
+  eletrica: 0,
+  phev: 0.025,
+  combustao: 0.08,
+};
+const TA_TAXA_REPRESENTACAO = 0.1;
+const TA_AGRAVAMENTO = 0.1;
+
+// RFAI simplificado (Art. 22.º CFI)
+type RegiaoRFAIGuiado = "interior" | "litoral";
+const RFAI_TAXA: Record<RegiaoRFAIGuiado, number> = { interior: 0.3, litoral: 0.1 };
+const RFAI_LIMITE_COLETA = 0.5;
+
+// RV simplificado para comparação
+const COEF_SERVICOS = REGIME_SIMPLIFICADO.coefServicos151.value;
+
+type Passo = 0 | 1 | 2 | 3 | 4 | "resultado";
 
 type TipoSociedade = "unipessoal" | "quotas";
 
@@ -76,6 +98,9 @@ interface ResultadoEmpresaGuiado {
   totalCustos: number;
   lucroTributavel: number;
   coleta: number;
+  taTotal: number;
+  rfaiBeneficio: number;
+  ircAposBeneficios: number;
   derrama: number;
   ircTotal: number;
   lucroLiquido: number;
@@ -93,6 +118,12 @@ function simularEmpresaGuiado(
   distribuirDividendos: boolean,
   opcaoEnglobamento: boolean,
   incluirConstituicao: boolean,
+  tipoViatura: TipoViaturaGuiado = "nenhuma",
+  encargosViatura: number = 0,
+  despRepresentacao: number = 0,
+  emPrejuizo: boolean = false,
+  rfaiRegiao: RegiaoRFAIGuiado = "interior",
+  rfaiInvest: number = 0,
 ): ResultadoEmpresaGuiado {
   const salGerente = salGerenteMensal * 12;
   const ssSalGerente = salGerente * (SS_EMP_TAXA + SS_TRAB_TAXA);
@@ -112,8 +143,22 @@ function simularEmpresaGuiado(
       (lucroTributavel - IRC_PME.limite) * IRC_PME.taxa2;
   }
 
+  // TA (Art. 88.º CIRC)
+  const agrav = emPrejuizo ? TA_AGRAVAMENTO : 0;
+  const taViatura =
+    tipoViatura === "eletrica" || tipoViatura === "nenhuma"
+      ? 0
+      : encargosViatura * (TA_TAXAS_GUIADO[tipoViatura] + agrav);
+  const taRepr = despRepresentacao * (TA_TAXA_REPRESENTACAO + agrav);
+  const taTotal = taViatura + taRepr;
+
+  // RFAI (Art. 22.º CFI)
+  const rfaiBruto = rfaiInvest * RFAI_TAXA[rfaiRegiao];
+  const rfaiBeneficio = Math.min(rfaiBruto, Math.max(0, coleta * RFAI_LIMITE_COLETA));
+
+  const ircAposBeneficios = Math.max(0, coleta - rfaiBeneficio);
   const derrama = lucroTributavel * DERRAMA_MUNI;
-  const ircTotal = coleta + derrama;
+  const ircTotal = ircAposBeneficios + taTotal + derrama;
   const lucroLiquido = Math.max(0, lucroTributavel - ircTotal);
 
   let dividendos = 0;
@@ -146,6 +191,9 @@ function simularEmpresaGuiado(
     totalCustos,
     lucroTributavel,
     coleta,
+    taTotal,
+    rfaiBeneficio,
+    ircAposBeneficios,
     derrama,
     ircTotal,
     lucroLiquido,
@@ -154,6 +202,15 @@ function simularEmpresaGuiado(
     liquidoGerente,
     taxaEfetiva: faturacao > 0 ? 1 - liquidoGerente / faturacao : 0,
   };
+}
+
+// ─── RV simplificado (para comparação) ──────────────────────────────────────
+
+function simularRVSimplificado(faturacao: number): number {
+  const rendTrib = faturacao * COEF_SERVICOS;
+  const irs = calcularIRS(rendTrib);
+  const ssAnual = faturacao * COEF_SERVICOS * 0.214;
+  return Math.max(0, faturacao - irs - ssAnual);
 }
 
 // ─── Tipos de sociedade ──────────────────────────────────────────────────────
@@ -322,10 +379,22 @@ export default function ModoGuiadoEmpresa({
   const [distribuirDividendos, setDistribuirDividendos] = useState(true);
   const [opcaoEnglobamento, setOpcaoEnglobamento] = useState(false);
 
+  // Passo 4: otimização fiscal (TA, RFAI)
+  const [tipoViatura, setTipoViatura] = useState<TipoViaturaGuiado>("nenhuma");
+  const [encargosViatura, setEncargosViatura] = useState(0);
+  const [despRepresentacao, setDespRepresentacao] = useState(0);
+  const [emPrejuizo, setEmPrejuizo] = useState(false);
+  const [rfaiRegiao, setRfaiRegiao] = useState<RegiaoRFAIGuiado>("interior");
+  const [rfaiInvest, setRfaiInvest] = useState(0);
+
+  // Passo 5 (resultado): slider comparação
+  const [sliderFat, setSliderFat] = useState(60_000);
+  const [sliderInteragiu, setSliderInteragiu] = useState(false);
+
   // Custos de estrutura calculados
   const custosEstrutura = CUSTO_CONTABILIDADE_ANUAL + CUSTO_SOFTWARE_ANUAL;
 
-  // Simulação
+  // Simulação principal
   const resultado = useMemo(
     () =>
       simularEmpresaGuiado(
@@ -336,15 +405,18 @@ export default function ModoGuiadoEmpresa({
         distribuirDividendos,
         opcaoEnglobamento,
         incluirConstituicao,
+        tipoViatura,
+        encargosViatura,
+        despRepresentacao,
+        emPrejuizo,
+        rfaiRegiao,
+        rfaiInvest,
       ),
     [
-      faturacaoAnual,
-      despesasOper,
-      custosEstrutura,
-      salGerenteMensal,
-      distribuirDividendos,
-      opcaoEnglobamento,
-      incluirConstituicao,
+      faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
+      distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
+      tipoViatura, encargosViatura, despRepresentacao, emPrejuizo,
+      rfaiRegiao, rfaiInvest,
     ],
   );
 
@@ -352,28 +424,26 @@ export default function ModoGuiadoEmpresa({
   const resultLib = useMemo(
     () =>
       simularEmpresaGuiado(
-        faturacaoAnual,
-        despesasOper,
-        custosEstrutura,
-        salGerenteMensal,
-        true,
-        false,
-        incluirConstituicao,
+        faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
+        true, false, incluirConstituicao,
+        tipoViatura, encargosViatura, despRepresentacao, emPrejuizo,
+        rfaiRegiao, rfaiInvest,
       ),
-    [faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal, incluirConstituicao],
+    [faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
+     incluirConstituicao, tipoViatura, encargosViatura, despRepresentacao,
+     emPrejuizo, rfaiRegiao, rfaiInvest],
   );
   const resultEng = useMemo(
     () =>
       simularEmpresaGuiado(
-        faturacaoAnual,
-        despesasOper,
-        custosEstrutura,
-        salGerenteMensal,
-        true,
-        true,
-        incluirConstituicao,
+        faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
+        true, true, incluirConstituicao,
+        tipoViatura, encargosViatura, despRepresentacao, emPrejuizo,
+        rfaiRegiao, rfaiInvest,
       ),
-    [faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal, incluirConstituicao],
+    [faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
+     incluirConstituicao, tipoViatura, encargosViatura, despRepresentacao,
+     emPrejuizo, rfaiRegiao, rfaiInvest],
   );
   const englobamentoMelhor =
     resultEng.liquidoGerente > resultLib.liquidoGerente;
@@ -381,21 +451,61 @@ export default function ModoGuiadoEmpresa({
     resultEng.liquidoGerente - resultLib.liquidoGerente,
   );
 
+  // Comparação slider (passo resultado)
+  const calcEmpSlider = useMemo(
+    () => (fat: number) =>
+      simularEmpresaGuiado(
+        fat, despesasOper, custosEstrutura, salGerenteMensal,
+        distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
+        tipoViatura, encargosViatura, despRepresentacao, emPrejuizo,
+        rfaiRegiao, rfaiInvest,
+      ).liquidoGerente,
+    [despesasOper, custosEstrutura, salGerenteMensal,
+     distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
+     tipoViatura, encargosViatura, despRepresentacao, emPrejuizo,
+     rfaiRegiao, rfaiInvest],
+  );
+
+  const sliderRV = useMemo(() => simularRVSimplificado(sliderFat), [sliderFat]);
+  const sliderEmp = useMemo(() => calcEmpSlider(sliderFat), [calcEmpSlider, sliderFat]);
+  const sliderEmpMelhor = sliderEmp > sliderRV;
+
+  const breakEvenCalc = useMemo(() => {
+    for (let v = 1_000; v <= 200_000; v += 1_000) {
+      const rvPrev = simularRVSimplificado(v - 1_000);
+      const empPrev = calcEmpSlider(v - 1_000);
+      const rvNow = simularRVSimplificado(v);
+      const empNow = calcEmpSlider(v);
+      if (empPrev <= rvPrev && empNow > rvNow) return v;
+    }
+    return null;
+  }, [calcEmpSlider]);
+
+  // RV líquido para a faturação atual (comparação)
+  const liquidoRVAtual = useMemo(() => simularRVSimplificado(faturacaoAnual), [faturacaoAnual]);
+  const empresaMelhorAtual = resultado.liquidoGerente > liquidoRVAtual;
+  const diferencaAtual = Math.abs(resultado.liquidoGerente - liquidoRVAtual);
+
   function avancar() {
     if (passo === 1) setPasso(2);
     else if (passo === 2) setPasso(3);
-    else if (passo === 3) setPasso("resultado");
+    else if (passo === 3) setPasso(4);
+    else if (passo === 4) {
+      setSliderFat(faturacaoAnual);
+      setPasso("resultado");
+    }
   }
 
   function recuar() {
     if (passo === 1) setPasso(0);
     else if (passo === 2) setPasso(1);
     else if (passo === 3) setPasso(2);
-    else if (passo === "resultado") setPasso(3);
+    else if (passo === 4) setPasso(3);
+    else if (passo === "resultado") setPasso(4);
   }
 
-  const progressLabels = ["Empresa", "Receita e custos", "Dividendos", "Resultado"];
-  const passoNum = passo === "resultado" ? 4 : passo;
+  const progressLabels = ["Empresa", "Receita", "Dividendos", "Otimização", "Resultado"];
+  const passoNum = passo === "resultado" ? 5 : passo;
 
   // ─── Passo 0: pergunta inicial ─────────────────────────────────────────────
 
@@ -953,6 +1063,184 @@ export default function ModoGuiadoEmpresa({
                       onClick={avancar}
                       className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand py-2.5 text-sm font-bold text-white transition-all hover:bg-brand-dark"
                     >
+                      Seguinte <ArrowRight size={14} />
+                    </button>
+                  </div>
+                </m.div>
+              )}
+
+              {/* ── Passo 4: Otimização fiscal (TA + RFAI) ─────────────────── */}
+              {passo === 4 && (
+                <m.div
+                  key="passo4"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  <h2 className="font-display mb-2 text-2xl font-semibold text-stone-800 dark:text-stone-100">
+                    Otimização fiscal
+                  </h2>
+                  <p className="mb-6 text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
+                    Ajusta conforme a tua situação. Se nada se aplica, avança
+                    diretamente — o resultado já está calculado sem estes extras.
+                  </p>
+
+                  <div className="space-y-5">
+                    {/* Viatura da empresa */}
+                    <Collapsible title="Viatura da empresa (Tributação Autónoma)" defaultOpen={tipoViatura !== "nenhuma"}>
+                      <div className="mb-3">
+                        <div className="mb-2 text-xs font-semibold text-stone-600 dark:text-stone-300">
+                          Tipo de viatura
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {([
+                            { v: "nenhuma" as const, l: "Sem viatura", sub: "0%" },
+                            { v: "eletrica" as const, l: "Elétrica", sub: "Isenta (0%)" },
+                            { v: "phev" as const, l: "Plug-in (PHEV)", sub: "2,5%" },
+                            { v: "combustao" as const, l: "Combustão", sub: "8%" },
+                          ]).map(({ v, l, sub }) => (
+                            <button
+                              key={v}
+                              type="button"
+                              aria-pressed={tipoViatura === v}
+                              onClick={() => {
+                                setTipoViatura(v);
+                                if (v === "nenhuma" || v === "eletrica") setEncargosViatura(0);
+                              }}
+                              className={`rounded-2xl border-2 p-3 text-left transition-all ${
+                                tipoViatura === v
+                                  ? "border-brand bg-brand-light/30 dark:bg-brand/5"
+                                  : "border-stone-100 bg-white hover:border-stone-200 dark:border-stone-800 dark:bg-stone-900"
+                              }`}
+                            >
+                              <div className={`text-xs font-bold ${tipoViatura === v ? "text-brand-dark dark:text-brand" : "text-stone-600 dark:text-stone-300"}`}>
+                                {l}
+                              </div>
+                              <div className={`text-[10px] mt-0.5 ${tipoViatura === v ? "text-brand/70" : "text-stone-400"}`}>
+                                {sub}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {tipoViatura !== "nenhuma" && tipoViatura !== "eletrica" && (
+                        <SliderInput
+                          label="Encargos anuais viatura (€)"
+                          value={encargosViatura}
+                          min={0}
+                          max={15_000}
+                          step={200}
+                          onChange={setEncargosViatura}
+                          presets={[0, 1_500, 3_000, 6_000]}
+                          tooltip={<>Combustível, manutenção, seguro, portagens, depreciação. Art. 88.º n.º 3 CIRC.</>}
+                        />
+                      )}
+
+                      <SliderInput
+                        label="Despesas de representação (€/ano)"
+                        value={despRepresentacao}
+                        min={0}
+                        max={10_000}
+                        step={100}
+                        onChange={setDespRepresentacao}
+                        presets={[0, 500, 1_000, 2_000]}
+                        tooltip={<>Refeições com clientes, viagens de representação. TA 10% (Art. 88.º n.º 7 CIRC).</>}
+                      />
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="emPrejuizo"
+                          checked={emPrejuizo}
+                          onChange={(e) => setEmPrejuizo(e.target.checked)}
+                          className="h-4 w-4 rounded border-stone-300 accent-brand"
+                        />
+                        <label htmlFor="emPrejuizo" className="text-xs text-stone-600 dark:text-stone-300">
+                          Empresa em prejuízo fiscal (agravamento +10pp)
+                        </label>
+                        <InfoTip>Art. 88.º n.º 14 CIRC — todas as taxas de TA sobem 10 pontos percentuais quando a empresa apresenta prejuízo fiscal.</InfoTip>
+                      </div>
+
+                      {resultado.taTotal > 0 && (
+                        <div className="mt-2 flex items-center justify-between rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 dark:bg-amber-900/20 dark:border-amber-800">
+                          <span className="text-[11px] text-amber-700 dark:text-amber-300">Tributação Autónoma estimada</span>
+                          <span className="text-[11px] font-bold tabular-nums text-amber-700 dark:text-amber-300">{fmt(Math.round(resultado.taTotal))}</span>
+                        </div>
+                      )}
+                    </Collapsible>
+
+                    {/* RFAI */}
+                    <Collapsible title="RFAI — Benefício ao investimento" defaultOpen={rfaiInvest > 0}>
+                      <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed mb-3">
+                        O RFAI (Art. 22.º CFI) permite deduzir ao IRC uma
+                        percentagem do investimento elegível (equipamentos,
+                        ativos intangíveis). Até 50% da coleta (100% nos
+                        primeiros 3 exercícios).
+                      </p>
+                      <div className="mb-3">
+                        <div className="mb-2 text-xs font-semibold text-stone-600 dark:text-stone-300">
+                          Região do investimento
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {([
+                            { v: "interior" as const, l: "Interior", sub: "Norte, Centro, Alentejo, Ilhas — 30%" },
+                            { v: "litoral" as const, l: "Litoral", sub: "Lisboa, Algarve — 10%" },
+                          ]).map(({ v, l, sub }) => (
+                            <button
+                              key={v}
+                              type="button"
+                              aria-pressed={rfaiRegiao === v}
+                              onClick={() => setRfaiRegiao(v)}
+                              className={`rounded-2xl border-2 p-3 text-left transition-all ${
+                                rfaiRegiao === v
+                                  ? "border-brand bg-brand-light/30 dark:bg-brand/5"
+                                  : "border-stone-100 bg-white hover:border-stone-200 dark:border-stone-800 dark:bg-stone-900"
+                              }`}
+                            >
+                              <div className={`text-xs font-bold ${rfaiRegiao === v ? "text-brand-dark dark:text-brand" : "text-stone-600 dark:text-stone-300"}`}>{l}</div>
+                              <div className={`text-[10px] mt-0.5 ${rfaiRegiao === v ? "text-brand/70" : "text-stone-400"}`}>{sub}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <SliderInput
+                        label="Investimento elegível RFAI (€)"
+                        value={rfaiInvest}
+                        min={0}
+                        max={100_000}
+                        step={1_000}
+                        onChange={setRfaiInvest}
+                        presets={[0, 10_000, 25_000, 50_000]}
+                        tooltip={<>Equipamentos, ativos intangíveis elegíveis. O benefício abate ao IRC (coleta).</>}
+                      />
+                      {rfaiInvest > 0 && resultado.rfaiBeneficio > 0 && (
+                        <div className="mt-2 flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 dark:bg-emerald-900/20 dark:border-emerald-800">
+                          <span className="text-[11px] text-emerald-700 dark:text-emerald-300">
+                            Poupança RFAI ({pct(RFAI_TAXA[rfaiRegiao])} de {fmt(rfaiInvest)})
+                          </span>
+                          <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
+                            -{fmt(Math.round(resultado.rfaiBeneficio))}
+                          </span>
+                        </div>
+                      )}
+                    </Collapsible>
+                  </div>
+
+                  <div className="mt-6 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={recuar}
+                      className="flex items-center gap-1.5 rounded-xl border border-stone-200 px-4 py-2.5 text-xs font-semibold text-stone-500 transition-colors hover:border-stone-300 dark:border-stone-700 dark:text-stone-400"
+                    >
+                      <ArrowLeft size={14} /> Voltar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={avancar}
+                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand py-2.5 text-sm font-bold text-white transition-all hover:bg-brand-dark"
+                    >
                       Ver resultado <ArrowRight size={14} />
                     </button>
                   </div>
@@ -982,97 +1270,27 @@ export default function ModoGuiadoEmpresa({
                   {/* Breakdown cascata */}
                   <div className="space-y-1.5">
                     {[
-                      {
-                        label: "Faturação anual",
-                        value: resultado.faturacao,
-                        cor: "text-stone-700 dark:text-stone-200",
-                      },
-                      resultado.despesasOper > 0
-                        ? {
-                            label: "Despesas operacionais",
-                            value: -resultado.despesasOper,
-                            cor: "text-stone-500",
-                          }
-                        : null,
-                      {
-                        label: "Custos estrutura (contabilidade, software)",
-                        value: -resultado.custosEstrutura,
-                        cor: "text-stone-500",
-                      },
-                      resultado.custoConstituicao > 0
-                        ? {
-                            label: "Constituição (amortizada 3 anos)",
-                            value: -resultado.custoConstituicao,
-                            cor: "text-stone-500",
-                          }
-                        : null,
-                      resultado.salGerente > 0
-                        ? {
-                            label: `Salário gerente (${fmt(salGerenteMensal)}/mês × 12)`,
-                            value: -resultado.salGerente,
-                            cor: "text-stone-500",
-                          }
-                        : null,
-                      resultado.ssSalGerente > 0
-                        ? {
-                            label: "SS empresa + trabalhador (34,75%)",
-                            value: -resultado.ssSalGerente,
-                            cor: "text-amber-600 dark:text-amber-400",
-                          }
-                        : null,
-                      {
-                        label: "Lucro tributável",
-                        value: resultado.lucroTributavel,
-                        cor: "text-stone-700 dark:text-stone-200 font-semibold",
-                        sep: true,
-                      },
-                      {
-                        label: `IRC (PME ${pct(IRC_PME.taxa1)}/${fmt(IRC_PME.limite)} + ${pct(IRC_PME.taxa2)})`,
-                        value: -resultado.coleta,
-                        cor: "text-red-500 dark:text-red-400",
-                      },
-                      {
-                        label: `Derrama municipal (~${pct(DERRAMA_MUNI)})`,
-                        value: -resultado.derrama,
-                        cor: "text-red-400",
-                      },
-                      {
-                        label: "Lucro líquido (disponível)",
-                        value: resultado.lucroLiquido,
-                        cor: "text-stone-700 dark:text-stone-200 font-semibold",
-                        sep: true,
-                      },
-                      distribuirDividendos
-                        ? {
-                            label: opcaoEnglobamento
-                              ? `IRS dividendos (englobamento 50% × taxa marginal)`
-                              : "IRS dividendos (28% taxa liberatória)",
-                            value: -resultado.irsDividendos,
-                            cor: "text-red-500 dark:text-red-400",
-                          }
-                        : null,
+                      { label: "Faturação anual", value: resultado.faturacao, cor: "text-stone-700 dark:text-stone-200" },
+                      resultado.despesasOper > 0 ? { label: "Despesas operacionais", value: -resultado.despesasOper, cor: "text-stone-500" } : null,
+                      { label: "Custos estrutura (contabilidade, software)", value: -resultado.custosEstrutura, cor: "text-stone-500" },
+                      resultado.custoConstituicao > 0 ? { label: "Constituição (amortizada 3 anos)", value: -resultado.custoConstituicao, cor: "text-stone-500" } : null,
+                      resultado.salGerente > 0 ? { label: `Salário gerente (${fmt(salGerenteMensal)}/mês × 12)`, value: -resultado.salGerente, cor: "text-stone-500" } : null,
+                      resultado.ssSalGerente > 0 ? { label: "SS empresa + trabalhador (34,75%)", value: -resultado.ssSalGerente, cor: "text-amber-600 dark:text-amber-400" } : null,
+                      { label: "Lucro tributável", value: resultado.lucroTributavel, cor: "text-stone-700 dark:text-stone-200 font-semibold", sep: true },
+                      { label: `IRC coleta (PME ${pct(IRC_PME.taxa1)}/${fmt(IRC_PME.limite)} + ${pct(IRC_PME.taxa2)})`, value: -resultado.coleta, cor: "text-red-500 dark:text-red-400" },
+                      resultado.rfaiBeneficio > 0 ? { label: `RFAI (${pct(RFAI_TAXA[rfaiRegiao])} × ${fmt(rfaiInvest)})`, value: resultado.rfaiBeneficio, cor: "text-emerald-600 dark:text-emerald-400" } : null,
+                      resultado.taTotal > 0 ? { label: "Tributação Autónoma (Art. 88.º CIRC)", value: -resultado.taTotal, cor: "text-amber-600 dark:text-amber-400" } : null,
+                      { label: `Derrama municipal (~${pct(DERRAMA_MUNI)})`, value: -resultado.derrama, cor: "text-red-400" },
+                      { label: "Lucro líquido (disponível)", value: resultado.lucroLiquido, cor: "text-stone-700 dark:text-stone-200 font-semibold", sep: true },
+                      distribuirDividendos ? { label: opcaoEnglobamento ? "IRS dividendos (englobamento 50% × taxa marginal)" : "IRS dividendos (28% taxa liberatória)", value: -resultado.irsDividendos, cor: "text-red-500 dark:text-red-400" } : null,
                     ]
                       .filter(Boolean)
                       .map((item) => {
                         const i = item!;
                         return (
-                          <div
-                            key={i.label}
-                            className={`flex items-center justify-between px-3 py-2 rounded-xl ${
-                              i.sep
-                                ? "border-t border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/30 mt-1"
-                                : ""
-                            }`}
-                          >
-                            <span className="text-[11px] text-stone-500 dark:text-stone-400">
-                              {i.label}
-                            </span>
-                            <span
-                              className={`text-[11px] tabular-nums ${i.cor}`}
-                            >
-                              {i.value < 0 ? "−" : ""}
-                              {fmt(Math.abs(i.value))}
-                            </span>
+                          <div key={i.label} className={`flex items-center justify-between px-3 py-2 rounded-xl ${i.sep ? "border-t border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/30 mt-1" : ""}`}>
+                            <span className="text-[11px] text-stone-500 dark:text-stone-400">{i.label}</span>
+                            <span className={`text-[11px] tabular-nums ${i.cor}`}>{i.value < 0 ? "−" : i.value > 0 && i.label.startsWith("RFAI") ? "+" : ""}{fmt(Math.abs(i.value))}</span>
                           </div>
                         );
                       })}
@@ -1081,98 +1299,177 @@ export default function ModoGuiadoEmpresa({
                     <div className="mt-3 rounded-3xl border-2 border-brand bg-white p-5 shadow-card dark:bg-stone-950">
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="text-sm font-semibold text-stone-700 dark:text-stone-300">
-                            Líquido para o dono
-                          </div>
-                          <div className="text-[11px] text-stone-400 mt-0.5">
-                            {distribuirDividendos
-                              ? "Salário líquido + dividendos líquidos"
-                              : "Apenas salário líquido (lucro retido)"}
-                          </div>
+                          <div className="text-sm font-semibold text-stone-700 dark:text-stone-300">Líquido para o dono</div>
+                          <div className="text-[11px] text-stone-400 mt-0.5">{distribuirDividendos ? "Salário líquido + dividendos líquidos" : "Apenas salário líquido (lucro retido)"}</div>
                         </div>
                         <div className="text-right">
-                          <div className="font-display text-2xl font-semibold text-brand tabular-nums">
-                            <AnimatedNumber value={resultado.liquidoGerente} />
-                          </div>
-                          <div className="text-xs text-stone-400">
-                            ~{fmt(Math.round(resultado.liquidoGerente / 12))}/mês
-                          </div>
+                          <div className="font-display text-2xl font-semibold text-brand tabular-nums"><AnimatedNumber value={resultado.liquidoGerente} /></div>
+                          <div className="text-xs text-stone-400">~{fmt(Math.round(resultado.liquidoGerente / 12))}/mês</div>
                         </div>
                       </div>
                     </div>
                   </div>
 
+                  {/* ── Comparação RV vs Empresa (mapa interativo) ─────────────── */}
+                  <div className="mt-6 rounded-3xl border border-stone-200 bg-stone-50 overflow-hidden dark:border-stone-800 dark:bg-stone-900/50">
+                    <div className="flex items-center gap-2.5 border-b border-stone-100 px-5 py-4 dark:border-stone-800">
+                      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light">
+                        <ChartProjection size={18} className="text-brand-dark" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-stone-800 dark:text-stone-100">Recibos Verdes vs. Empresa</h4>
+                        <p className="text-[11px] text-stone-400">Descobre em que ponto a empresa compensa</p>
+                      </div>
+                    </div>
+
+                    <div className="px-5 pb-5 pt-4">
+                      {/* Cards comparação actuais */}
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className={`rounded-2xl border-2 p-4 transition-all ${!empresaMelhorAtual ? "border-brand bg-brand-light dark:bg-brand/5" : "border-stone-100 bg-white dark:border-stone-700 dark:bg-stone-950"}`}>
+                          <div className="mb-1 flex items-center gap-1.5">
+                            <Receipt size={13} className="text-stone-400" />
+                            <span className="text-[10px] font-bold text-stone-500 dark:text-stone-400">Recibos Verdes</span>
+                          </div>
+                          {!empresaMelhorAtual && <span className="mb-1 inline-flex items-center gap-0.5 rounded-full bg-brand px-2 py-0.5 text-[9px] font-black text-white"><Check size={9} /> Melhor</span>}
+                          <div className={`font-display text-xl font-semibold tabular-nums ${!empresaMelhorAtual ? "text-brand-dark" : "text-stone-800 dark:text-stone-100"}`}>{fmt(Math.round(liquidoRVAtual))}</div>
+                          <p className="mt-0.5 text-[10px] text-stone-400">líquido/ano</p>
+                          <ul className="mt-2 space-y-0.5">
+                            {["Abertura grátis", "Sem contabilista obrigatório", "Zero custos fixos"].map((t) => (
+                              <li key={t} className="flex items-start gap-1 text-[10px] text-stone-500 dark:text-stone-400">
+                                <span className="mt-0.5 h-1 w-1 flex-shrink-0 rounded-full bg-brand" />{t}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className={`rounded-2xl border-2 p-4 transition-all ${empresaMelhorAtual ? "border-brand bg-brand-light dark:bg-brand/5" : "border-stone-100 bg-white dark:border-stone-700 dark:bg-stone-950"}`}>
+                          <div className="mb-1 flex items-center gap-1.5">
+                            <Building size={13} className="text-stone-400" />
+                            <span className="text-[10px] font-bold text-stone-500 dark:text-stone-400">Empresa (Lda)</span>
+                          </div>
+                          {empresaMelhorAtual && <span className="mb-1 inline-flex items-center gap-0.5 rounded-full bg-brand px-2 py-0.5 text-[9px] font-black text-white"><Check size={9} /> Melhor</span>}
+                          <div className={`font-display text-xl font-semibold tabular-nums ${empresaMelhorAtual ? "text-brand-dark" : "text-stone-800 dark:text-stone-100"}`}>{fmt(Math.round(resultado.liquidoGerente))}</div>
+                          <p className="mt-0.5 text-[10px] text-stone-400">líquido/ano</p>
+                          <ul className="mt-2 space-y-0.5">
+                            {[`Constituição ~${fmt(CUSTO_CONSTITUICAO_DEFAULT)}`, `Estrutura: ~${fmt(custosEstrutura)}/ano`, `IRC PME: ${pct(IRC_PME.taxa1)} até ${fmt(IRC_PME.limite)}`].map((t) => (
+                              <li key={t} className="flex items-start gap-1 text-[10px] text-stone-500 dark:text-stone-400">
+                                <span className="mt-0.5 h-1 w-1 flex-shrink-0 rounded-full bg-stone-300" />{t}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+
+                      {/* Veredicto */}
+                      <div className={`flex items-center gap-2 rounded-2xl p-3 text-sm font-semibold ${empresaMelhorAtual ? "bg-brand-light text-brand-dark" : "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-200"}`}>
+                        <Check size={14} className="flex-shrink-0 text-brand" />
+                        <span>
+                          Com {fmt(faturacaoAnual)}/ano, {empresaMelhorAtual ? "a empresa" : "os recibos verdes"} {empresaMelhorAtual ? "dá-te" : "dão-te"} mais <strong>{fmt(Math.round(diferencaAtual))}/ano</strong>.
+                          {breakEvenCalc != null && (empresaMelhorAtual ? "" : ` A empresa compensa acima de ${fmt(breakEvenCalc)}/ano.`)}
+                        </span>
+                      </div>
+
+                      {/* Slider interativo */}
+                      <div className="mt-4">
+                        <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-widest text-stone-400">
+                          Simula com outra faturação
+                        </p>
+                        <div className="flex items-center gap-3 mb-2">
+                          <input
+                            type="range"
+                            min={0}
+                            max={200_000}
+                            step={1_000}
+                            value={sliderFat}
+                            onChange={(e) => { setSliderFat(Number(e.target.value)); setSliderInteragiu(true); }}
+                            className="flex-1 accent-brand"
+                            aria-label="Faturação anual para comparação"
+                          />
+                          <span className="min-w-[80px] text-right text-sm font-bold tabular-nums text-stone-800 dark:text-stone-100">{fmt(sliderFat)}</span>
+                        </div>
+
+                        {/* Presets */}
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          {[15_000, 30_000, 60_000, 80_000, 120_000].map((p) => (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => { setSliderFat(p); setSliderInteragiu(true); }}
+                              className={`rounded-lg border px-2 py-1 text-[10px] font-bold tabular-nums transition-all ${
+                                sliderFat === p
+                                  ? "border-brand bg-brand text-white"
+                                  : "border-stone-200 bg-white text-stone-500 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400"
+                              }`}
+                            >
+                              {p >= 1000 ? `${p / 1000}k` : p}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Break-even marker */}
+                        {breakEvenCalc != null && (
+                          <p className="mb-2 text-center text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                            Ponto de viragem: {fmt(breakEvenCalc)}/ano
+                          </p>
+                        )}
+
+                        {/* Slider result cards */}
+                        {sliderInteragiu && (
+                          <m.div
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <div className="grid grid-cols-2 gap-2 mb-2">
+                              <div className={`rounded-xl border-2 p-3 ${!sliderEmpMelhor ? "border-brand bg-brand-light/50" : "border-stone-100 bg-white dark:border-stone-700 dark:bg-stone-900"}`}>
+                                <div className="text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-1">Recibos Verdes</div>
+                                {!sliderEmpMelhor && <span className="mb-1 inline-block rounded-full bg-brand px-1.5 py-0.5 text-[8px] font-black text-white">Melhor</span>}
+                                <div className={`text-lg font-black tabular-nums ${!sliderEmpMelhor ? "text-brand-dark" : "text-stone-800 dark:text-stone-100"}`}>{fmt(Math.round(sliderRV))}</div>
+                              </div>
+                              <div className={`rounded-xl border-2 p-3 ${sliderEmpMelhor ? "border-brand bg-brand-light/50" : "border-stone-100 bg-white dark:border-stone-700 dark:bg-stone-900"}`}>
+                                <div className="text-[10px] font-bold text-stone-500 dark:text-stone-400 mb-1">Empresa (Lda)</div>
+                                {sliderEmpMelhor && <span className="mb-1 inline-block rounded-full bg-brand px-1.5 py-0.5 text-[8px] font-black text-white">Melhor</span>}
+                                <div className={`text-lg font-black tabular-nums ${sliderEmpMelhor ? "text-brand-dark" : "text-stone-800 dark:text-stone-100"}`}>{fmt(Math.round(sliderEmp))}</div>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-2 rounded-xl bg-brand-light/50 p-2.5">
+                              <Check size={12} className="mt-0.5 flex-shrink-0 text-brand" />
+                              <p className="text-[11px] font-semibold text-brand-dark leading-snug">
+                                {Math.abs(sliderEmp - sliderRV) < 100
+                                  ? "Praticamente idênticos neste cenário."
+                                  : `Com ${fmt(sliderFat)}/ano, ${sliderEmpMelhor ? "a empresa" : "os recibos verdes"} ${sliderEmpMelhor ? "dá-te" : "dão-te"} mais ${fmt(Math.round(Math.abs(sliderEmp - sliderRV)))}/ano.`}
+                              </p>
+                            </div>
+                          </m.div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   <p className="mt-3 px-1 text-[10px] leading-relaxed text-stone-400 dark:text-stone-500">
-                    Estimativa anual com as taxas oficiais de 2026. O salário
-                    líquido está após Segurança Social, mas antes da retenção de
-                    IRS na fonte (que varia com o agregado e situação pessoal). A
-                    derrama municipal usa a taxa máxima (1,5%) — confirma a do teu
-                    concelho. Não substitui aconselhamento de um contabilista.
+                    Estimativa anual com as taxas oficiais de 2026. RV: regime
+                    simplificado com coeficiente {pct(COEF_SERVICOS)} (serviços)
+                    e SS sobre rendimento relevante (21,4%). Empresa: IRC PME,
+                    derrama ~1,5%, TA e RFAI conforme configurado. Salário antes
+                    de IRS na fonte. Não substitui aconselhamento de um
+                    contabilista certificado (OCC).
                   </p>
 
                   {/* Calendário fiscal resumo */}
                   <Collapsible title="Obrigações fiscais da empresa" defaultOpen={false}>
                     <div className="space-y-2">
                       {[
-                        {
-                          quando: "Mensal (até dia 20)",
-                          obrigacoes: [
-                            "SS gerente + empresa",
-                            "Retenção IRS s/ salário",
-                            ...(faturacaoAnual >= 650_000
-                              ? ["IVA mensal (Mod. Periódica)"]
-                              : []),
-                          ],
-                        },
-                        ...(faturacaoAnual < 650_000
-                          ? [
-                              {
-                                quando: "Trimestral (Jan, Abr, Jul, Out)",
-                                obrigacoes: ["IVA trimestral (Mod. Periódica)"],
-                              },
-                            ]
-                          : []),
-                        {
-                          quando: "Jul + Set + Dez (15 de cada mês)",
-                          obrigacoes: [
-                            "Pagamento por conta (PPC) — 3 prestações de IRC adiantado",
-                          ],
-                        },
-                        {
-                          quando: "Maio (até dia 31)",
-                          obrigacoes: ["Modelo 22 (declaração anual de IRC)"],
-                        },
-                        {
-                          quando: "Jun–Jul",
-                          obrigacoes: [
-                            "IES — Informação Empresarial Simplificada",
-                          ],
-                        },
-                        {
-                          quando: "Anual (novembro)",
-                          obrigacoes: ["IMI (se aplicável, em 1-3 prestações)"],
-                        },
+                        { quando: "Mensal (até dia 20)", obrigacoes: ["SS gerente + empresa", "Retenção IRS s/ salário", ...(faturacaoAnual >= 650_000 ? ["IVA mensal (Mod. Periódica)"] : [])] },
+                        ...(faturacaoAnual < 650_000 ? [{ quando: "Trimestral (Jan, Abr, Jul, Out)", obrigacoes: ["IVA trimestral (Mod. Periódica)"] }] : []),
+                        { quando: "Jul + Set + Dez (15 de cada mês)", obrigacoes: ["Pagamento por conta (PPC) — 3 prestações de IRC adiantado"] },
+                        { quando: "Maio (até dia 31)", obrigacoes: ["Modelo 22 (declaração anual de IRC)"] },
+                        { quando: "Jun–Jul", obrigacoes: ["IES — Informação Empresarial Simplificada"] },
+                        { quando: "Anual (novembro)", obrigacoes: ["IMI (se aplicável, em 1-3 prestações)"] },
                       ].map((item) => (
-                        <div
-                          key={item.quando}
-                          className="flex items-start gap-3 py-2"
-                        >
-                          <Calendar
-                            size={14}
-                            className="mt-0.5 flex-shrink-0 text-brand"
-                          />
+                        <div key={item.quando} className="flex items-start gap-3 py-2">
+                          <Calendar size={14} className="mt-0.5 flex-shrink-0 text-brand" />
                           <div>
-                            <div className="text-xs font-bold text-stone-700 dark:text-stone-200">
-                              {item.quando}
-                            </div>
-                            {item.obrigacoes.map((o) => (
-                              <div
-                                key={o}
-                                className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed"
-                              >
-                                {o}
-                              </div>
-                            ))}
+                            <div className="text-xs font-bold text-stone-700 dark:text-stone-200">{item.quando}</div>
+                            {item.obrigacoes.map((o) => (<div key={o} className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">{o}</div>))}
                           </div>
                         </div>
                       ))}
@@ -1184,48 +1481,18 @@ export default function ModoGuiadoEmpresa({
                     <Collapsible title="Como abrir a empresa (passo a passo)" defaultOpen={false}>
                       <div className="space-y-3">
                         {[
-                          {
-                            num: 1,
-                            titulo: "Escolher firma e CAE",
-                            desc: "Escolhe o nome (firma) e o código CAE que define a atividade. Podes reservar o nome online no Portal da Empresa.",
-                          },
-                          {
-                            num: 2,
-                            titulo: "Empresa na Hora (balcão ou online)",
-                            desc: "Num balcão do IRN constituis a sociedade em menos de 1 hora: pacto social, registo e NIF empresarial ficam prontos. Online demora 1–2 dias úteis. Custo: ~360€.",
-                          },
-                          {
-                            num: 3,
-                            titulo: "Abrir conta bancária da empresa",
-                            desc: "Depositar o capital social (mínimo 1€) e abrir a conta bancária em nome da sociedade.",
-                          },
-                          {
-                            num: 4,
-                            titulo: "Início de atividade nas Finanças",
-                            desc: "Entregar a declaração de início de atividade no Portal das Finanças com o regime de IVA (geralmente trimestral) e o CAE.",
-                          },
-                          {
-                            num: 5,
-                            titulo: "Inscrever na Segurança Social",
-                            desc: "Inscrever a empresa e o gerente como MOE (membro de órgão estatutário). SS patronal: 23,75%, gerente: 11%.",
-                          },
-                          {
-                            num: 6,
-                            titulo: "Contratar contabilista (TOC)",
-                            desc: "Obrigatório ter um TOC inscrito na OCC para manter a contabilidade organizada. Custo: ~200€/mês.",
-                          },
+                          { num: 1, titulo: "Escolher firma e CAE", desc: "Escolhe o nome (firma) e o código CAE que define a atividade. Podes reservar o nome online no Portal da Empresa." },
+                          { num: 2, titulo: "Empresa na Hora (balcão ou online)", desc: "Num balcão do IRN constituis a sociedade em menos de 1 hora: pacto social, registo e NIF empresarial ficam prontos. Online demora 1–2 dias úteis. Custo: ~360€." },
+                          { num: 3, titulo: "Abrir conta bancária da empresa", desc: "Depositar o capital social (mínimo 1€) e abrir a conta bancária em nome da sociedade." },
+                          { num: 4, titulo: "Início de atividade nas Finanças", desc: "Entregar a declaração de início de atividade no Portal das Finanças com o regime de IVA (geralmente trimestral) e o CAE." },
+                          { num: 5, titulo: "Inscrever na Segurança Social", desc: "Inscrever a empresa e o gerente como MOE (membro de órgão estatutário). SS patronal: 23,75%, gerente: 11%." },
+                          { num: 6, titulo: "Contratar contabilista (TOC)", desc: "Obrigatório ter um TOC inscrito na OCC para manter a contabilidade organizada. Custo: ~200€/mês." },
                         ].map((step) => (
                           <div key={step.num} className="flex gap-3">
-                            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand text-white text-[10px] font-bold">
-                              {step.num}
-                            </span>
+                            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand text-white text-[10px] font-bold">{step.num}</span>
                             <div>
-                              <div className="text-xs font-bold text-stone-700 dark:text-stone-200">
-                                {step.titulo}
-                              </div>
-                              <div className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">
-                                {step.desc}
-                              </div>
+                              <div className="text-xs font-bold text-stone-700 dark:text-stone-200">{step.titulo}</div>
+                              <div className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">{step.desc}</div>
                             </div>
                           </div>
                         ))}
@@ -1247,7 +1514,7 @@ export default function ModoGuiadoEmpresa({
                         onClick={onIrParaSimuladorCompleto}
                         className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand py-2.5 text-sm font-bold text-white transition-all hover:bg-brand-dark"
                       >
-                        Simulador completo (TA, RFAI, SIFIDE)
+                        Simulador completo (DLRR, SIFIDE, IMI/IMT)
                         <ArrowRight size={14} />
                       </button>
                     )}
@@ -1343,31 +1610,12 @@ function PainelResumoEmpresa({
       <div className="rounded-3xl border border-stone-200 bg-white p-4 shadow-card dark:border-stone-700 dark:bg-stone-900">
         <div className="space-y-1.5">
           {[
-            {
-              label: "Custos + SS gerente",
-              val: -(resultado.totalCustos),
-              cor: "text-stone-500",
-            },
-            {
-              label: "IRC + derrama",
-              val: -(resultado.ircTotal),
-              cor: "text-red-500 dark:text-red-400",
-            },
-            ...(distribuirDividendos && resultado.irsDividendos > 0
-              ? [
-                  {
-                    label: "IRS dividendos",
-                    val: -(resultado.irsDividendos),
-                    cor: "text-red-400",
-                  },
-                ]
-              : []),
-            {
-              label: "Líquido",
-              val: resultado.liquidoGerente,
-              cor: "text-brand font-bold",
-              sep: true,
-            },
+            { label: "Custos + SS gerente", val: -(resultado.totalCustos), cor: "text-stone-500" },
+            { label: "IRC + derrama", val: -(resultado.ircAposBeneficios + resultado.derrama), cor: "text-red-500 dark:text-red-400" },
+            ...(resultado.taTotal > 0 ? [{ label: "Trib. Autónoma", val: -(resultado.taTotal), cor: "text-amber-500" }] : []),
+            ...(resultado.rfaiBeneficio > 0 ? [{ label: "RFAI", val: resultado.rfaiBeneficio, cor: "text-emerald-500" }] : []),
+            ...(distribuirDividendos && resultado.irsDividendos > 0 ? [{ label: "IRS dividendos", val: -(resultado.irsDividendos), cor: "text-red-400" }] : []),
+            { label: "Líquido", val: resultado.liquidoGerente, cor: "text-brand font-bold", sep: true },
           ].map(({ label, val, cor, sep }) => (
             <div
               key={label}

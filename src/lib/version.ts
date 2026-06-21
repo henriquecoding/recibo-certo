@@ -1,4 +1,4 @@
-export const APP_VERSION = "1.3.0";
+export const APP_VERSION = "1.3.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -9,6 +9,19 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.3.1",
+    data: "2026-06-21",
+    titulo: "Simulador de empresa — otimização fiscal e comparação RV",
+    itens: [
+      "Passo 4 (Otimização fiscal): Tributação Autónoma de viaturas (elétrica/PHEV/combustão) e despesas de representação, com agravamento para empresas em prejuízo.",
+      "Passo 4 (RFAI): Benefício ao investimento por região (interior 30%, litoral 10%), deduzido à coleta de IRC com limite de 50%.",
+      "Passo 5 (Resultado): Mapa comparativo RV vs Empresa — cards com preços, bullet points, veredicto e ponto de viragem calculado.",
+      "Slider interativo de faturação (0–200k€) com presets e cálculo ao vivo de ambos os cenários.",
+      "RV simplificado para comparação: regime simplificado (coef. 0,75 serviços) e SS 21,4% sobre rendimento relevante.",
+      "TA e RFAI integrados na cascata de resultados e no painel lateral ao vivo.",
+    ],
+  },
   {
     version: "1.3.0",
     data: "2026-06-21",
