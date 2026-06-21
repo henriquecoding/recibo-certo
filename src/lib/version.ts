@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.46.0";
+export const APP_VERSION = "1.47.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.47.0",
+    data: "2026-06-21",
+    titulo: "Guias alargados a conta de outrem e empresas",
+    itens: [
+      "6 novos guias: recibo de vencimento, subsídios de férias e Natal, trabalho suplementar (conta de outrem), abrir empresa, IRC para PME e tributação autónoma (empresas).",
+      "Página de guias reorganizada por categoria: independentes, conta de outrem, empresas e transversal.",
+      "Sidebar de navegação com secções categorizadas e todos os novos guias acessíveis.",
+      "Guias transversais (escalões IRS, deduções à coleta) alargados para refletir aplicação a todos os regimes.",
+    ],
+  },
   {
     version: "1.46.0",
     data: "2026-06-21",
