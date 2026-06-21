@@ -1,9 +1,15 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Playfair_Display, DM_Sans } from "next/font/google";
 import MotionProvider from "@/components/ui/motion/MotionProvider";
 import { AuthProvider } from "@/lib/supabase/auth";
+import { PerfilProvider } from "@/lib/perfil";
+import { SubscricaoProvider } from "@/lib/stripe/subscription";
 import AuthModal from "@/components/ui/AuthModal";
 import NovidadesModal from "@/components/ui/NovidadesModal";
+import CookieConsent from "@/components/ui/CookieConsent";
+import BuscaOverlay from "@/components/busca/BuscaGlobal";
+import ChromeMobile from "@/components/ChromeMobile";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -20,7 +26,10 @@ const dmSans = DM_Sans({
   display: "swap",
 });
 
-const SITE_URL = "https://recibocerto.pt";
+// Host canónico servido: o apex (recibocerto.pt) faz 307 para o www, por isso
+// a metadata aponta para o www — assim a og:image e o canonical da homepage
+// resolvem direto, sem o salto de redirecionamento.
+const SITE_URL = "https://www.recibocerto.pt";
 
 // Códigos de verificação de propriedade dos motores de busca.
 // O token do Google é PÚBLICO (aparece no <head> para o Search Console
@@ -34,23 +43,23 @@ const BING_SITE_VERIFICATION = process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION;
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Calculadora de Recibos Verdes 2026 | ReciboCerto",
+    default: "ReciboCerto — o teu líquido real: recibos verdes e salário 2026",
     template: "%s | ReciboCerto",
   },
   description:
-    "Calcula ao segundo o que fica teu após IRS, Segurança Social e IVA. Taxas portuguesas de 2026 verificadas com fonte legal. Grátis, sem registo. Experimenta agora.",
+    "Trabalhador independente, por conta de outrem ou futuro empresário? Vê em segundos o impacto do IRS, da Segurança Social e do IVA — e quanto fica realmente teu. Taxas de 2026 verificadas com fonte legal. Grátis, sem registo.",
   keywords: [
     "calculadora recibos verdes",
+    "calcular salário líquido 2026",
+    "recibo de vencimento 2026",
+    "trabalhador por conta de outrem IRS",
     "recibos verdes 2026",
     "IRS trabalhador independente Portugal",
     "segurança social freelancer Portugal",
-    "retenção na fonte recibos verdes",
-    "quanto pago segurança social recibos verdes",
+    "retenção na fonte IRS 2026",
     "isenção IVA artigo 53 2026",
     "IRS jovem 2026",
-    "calculadora freelancer Portugal",
     "recibos verdes vs empresa portugal",
-    "trabalhador independente impostos 2026",
     "simulador IRS portugal",
   ],
   authors: [{ name: "ReciboCerto", url: SITE_URL }],
@@ -69,17 +78,17 @@ export const metadata: Metadata = {
     locale: "pt_PT",
     url: SITE_URL,
     siteName: "ReciboCerto",
-    title: "Calculadora de Recibos Verdes 2026 — ReciboCerto",
+    title: "ReciboCerto — quanto fica realmente teu, do recibo ao salário",
     description:
-      "Sabe exatamente o que fica teu após IRS, SS e IVA. Taxas 2026 verificadas com fonte legal. Grátis e sem registo.",
+      "Para independentes, trabalhadores por conta de outrem e futuros empresários: o impacto do IRS, da Segurança Social e do IVA em segundos. Taxas 2026 verificadas. Grátis e sem registo.",
     // A imagem é gerada por `src/app/opengraph-image.tsx` (convenção do Next) e
     // aplicada automaticamente a todas as páginas que não definam a sua própria.
   },
   twitter: {
     card: "summary_large_image",
-    title: "Calculadora de Recibos Verdes 2026 — ReciboCerto",
+    title: "ReciboCerto — quanto fica realmente teu, do recibo ao salário",
     description:
-      "Quanto fica realmente teu após IRS, SS e IVA. Taxas 2026 verificadas. Grátis.",
+      "Do recibo verde ao salário: vê quanto fica realmente teu após IRS, SS e IVA. Taxas 2026 verificadas. Grátis.",
     // Imagem via `src/app/twitter-image.tsx`.
   },
   robots: {
@@ -122,11 +131,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-sans antialiased">
         <AuthProvider>
-          <MotionProvider>
-            {children}
-            <AuthModal />
-            <NovidadesModal />
-          </MotionProvider>
+          <SubscricaoProvider>
+            <Suspense>
+              <PerfilProvider>
+                <MotionProvider>
+                  {children}
+                  <ChromeMobile />
+                  <BuscaOverlay />
+                  <AuthModal />
+                  <NovidadesModal />
+                  <CookieConsent />
+                </MotionProvider>
+              </PerfilProvider>
+            </Suspense>
+          </SubscricaoProvider>
         </AuthProvider>
       </body>
     </html>

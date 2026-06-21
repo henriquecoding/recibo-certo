@@ -1,16 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Reveal from "@/components/ui/Reveal";
-import { ArrowRight, Calculator, Receipt, Search, Wallet, Sparkle, Building } from "@/components/ui/Icons";
+import { ArrowRight, Calculator, Receipt, Search, Wallet, Sparkle, Building, User, Scale, ShieldCheck, MapPin } from "@/components/ui/Icons";
 
 export const metadata: Metadata = {
-  title: "Ferramentas para trabalhadores independentes 2026 | ReciboCerto",
-  description: "Calculadoras e decisores interativos para recibos verdes: regime simplificado, ato isolado vs atividade, e classificação de atividade fiscal.",
-  alternates: { canonical: "https://recibocerto.pt/ferramentas" },
+  title: "Ferramentas fiscais 2026 — independentes e por conta de outrem | ReciboCerto",
+  description: "Calculadoras e decisores interativos para recibos verdes e para quem trabalha por conta de outrem: salário líquido, regime simplificado, ato isolado vs atividade e classificação de atividade fiscal.",
+  keywords: [
+    "calcular salário líquido 2026",
+    "simulador recibos verdes 2026",
+    "ferramentas fiscais Portugal",
+    "regime simplificado calculadora",
+    "por conta de outrem simulador",
+  ],
+  alternates: { canonical: "https://www.recibocerto.pt/ferramentas" },
   openGraph: {
-    title: "Ferramentas fiscais para independentes 2026 | ReciboCerto",
-    description: "Decisores interativos e calculadoras para simplificar a vida fiscal de trabalhadores independentes.",
-    url: "https://recibocerto.pt/ferramentas",
+    title: "Ferramentas fiscais 2026 — independentes e por conta de outrem | ReciboCerto",
+    description: "Decisores interativos e calculadoras para simplificar a vida fiscal — quer passes recibos verdes, quer recebas salário por conta de outrem.",
+    url: "https://www.recibocerto.pt/ferramentas",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "website",
@@ -18,6 +25,34 @@ export const metadata: Metadata = {
 };
 
 const FERRAMENTAS = [
+  {
+    href: "/ferramentas/recibo-vencimento",
+    titulo: "Simulador de recibo de vencimento",
+    descricao: "Por conta de outrem? Do salário bruto ao líquido — IRS retido, Segurança Social e subsídio de refeição, com as tabelas oficiais de 2026.",
+    icon: User,
+    badge: "Simulador",
+  },
+  {
+    href: "/ferramentas/auditoria-recibo",
+    titulo: "Auditoria do recibo de vencimento",
+    descricao: "Introduz os valores do teu recibo e descobre se a entidade aplicou bem o IRS e a Segurança Social de 2026. Deteta erros a teu favor.",
+    icon: ShieldCheck,
+    badge: "Pro",
+  },
+  {
+    href: "/ferramentas/mapa-contabilistas",
+    titulo: "Mapa de preços de contabilistas",
+    descricao: "Quanto custa um contabilista por região? Vê a média de honorários (avença mensal) de Lisboa aos Açores num mapa interativo. Estimativas de mercado.",
+    icon: MapPin,
+    badge: "Mapa",
+  },
+  {
+    href: "/?modo=comparar",
+    titulo: "Recibos verdes, contrato ou empresa?",
+    descricao: "Para o mesmo rendimento anual, compara o líquido como trabalhador por conta de outrem, em recibos verdes ou através de uma empresa (IRC + dividendos), com o ponto de viragem e o calendário fiscal.",
+    icon: Scale,
+    badge: "Comparador",
+  },
   {
     href: "/ferramentas/ato-isolado",
     titulo: "Ato isolado ou atividade?",
@@ -71,7 +106,8 @@ export default function FerramentasPage() {
           Calculadoras e decisores fiscais
         </h1>
         <p className="text-lg text-stone-500 dark:text-stone-400 leading-relaxed">
-          Ferramentas interativas para clarificar a tua situação fiscal sem precisar de decorar artigos de lei.
+          Ferramentas interativas para clarificar a tua situação fiscal sem precisar de decorar artigos
+          de lei — quer trabalhes por conta própria (recibos verdes), quer por conta de outrem.
         </p>
       </Reveal>
 

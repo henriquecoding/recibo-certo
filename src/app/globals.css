@@ -191,6 +191,13 @@ input[type="number"]::-webkit-outer-spin-button {
 .dark .border-brand {
   border-color: #347460;
 }
+/* Verde profundo da marca usado nos gráficos (segmento Segurança Social /
+   descontos / custos). No claro é #0A4A39 (deep, elegante); no escuro sobe de
+   luminosidade para não desaparecer sobre o fundo, mantendo a distinção do
+   líquido (#5ec6a0) e do mint do IRS (#9FE1CB). Scoped a .dark — claro intacto. */
+.dark .text-brand-deep {
+  color: #37a07c;
+}
 
 /* Bordas */
 .dark .border-stone-100 {

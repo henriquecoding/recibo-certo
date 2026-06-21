@@ -9,11 +9,11 @@ export const metadata: Metadata = {
   title: "Calculadora regime simplificado IRS 2026 | ReciboCerto",
   description: "Calcula o teu IRS como trabalhador independente em regime simplificado: coeficiente, rendimento tributável, imposto estimado e taxa efetiva. Atualizado para 2026.",
   keywords: ["regime simplificado IRS", "coeficiente IRS", "recibos verdes imposto", "calculadora IRS 2026"],
-  alternates: { canonical: "https://recibocerto.pt/ferramentas/regime-simplificado" },
+  alternates: { canonical: "https://www.recibocerto.pt/ferramentas/regime-simplificado" },
   openGraph: {
     title: "Calculadora regime simplificado IRS 2026 | ReciboCerto",
     description: "Insere a tua faturação e atividade. Calcula coeficiente, IRS e taxa efetiva para 2026.",
-    url: "https://recibocerto.pt/ferramentas/regime-simplificado",
+    url: "https://www.recibocerto.pt/ferramentas/regime-simplificado",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "article",

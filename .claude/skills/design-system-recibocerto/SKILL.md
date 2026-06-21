@@ -20,6 +20,7 @@ clareza > esperteza · divulgação progressiva (toggles) · premium é contenç
 - Tipografia: Playfair Display (`.font-display`, títulos) + DM Sans (corpo). Display fluido `.display-1/2`. `.eyebrow` para rótulos. Números com `tabular-nums`.
 
 ## Regras de UI
+- **Mobile-first (inegociável).** Base = telemóvel; `sm:`/`lg:` só ampliam. Testar a ~360px: sem overflow horizontal, grelhas empilham (`grid-cols-1` → `sm:grid-cols-*`), alvos ≥ 36px. Modais = folha inferior no telemóvel (`items-end` + `rounded-t-4xl`), corpo scrollável com **`min-h-0 flex-1 overflow-y-auto`** dentro de `max-h-[90dvh]`, e `env(safe-area-inset-*)`. Mapas/gráficos pesados via `next/dynamic({ ssr:false })` + `ErrorBoundary` (`src/components/ui/ErrorBoundary.tsx`) para nunca deixarem a página em branco.
 - **Sem emojis.** Só ícones SVG de `src/components/ui/Icons.tsx` (adicionar lá novos).
 - Reutilizar primitivas: `Button`, `Badge`, `InfoTip` (tooltip acessível — usar junto de qualquer campo técnico), `ActivityCombobox`, `AnimatedNumber`/`CountUp`, `StatCard`, `FeatureCard`.
 - Cartões: `rounded-4xl border bg-white shadow-card`, hover `shadow-lift`.

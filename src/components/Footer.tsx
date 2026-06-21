@@ -9,6 +9,7 @@ import {
   Warning, Check, Heart,
 } from "@/components/ui/Icons";
 import { FISCAL_YEAR } from "@/lib/fiscal-data";
+import { abrirPreferenciasCookies } from "@/lib/cookie-consent";
 
 // ── Trust bar ─────────────────────────────────────────────────
 
@@ -42,6 +43,7 @@ const NAV = [
     heading: "Ferramenta",
     links: [
       { label: "Calculadora de recibo", href: "/#calculadora" },
+      { label: "Simulador de salário líquido", href: "/ferramentas/recibo-vencimento" },
       { label: "Simulador de IRS", href: "/dashboard/simulador" },
       { label: "Comparador de regimes", href: "/dashboard/comparador" },
       { label: "Prazos fiscais", href: "/dashboard/prazos" },
@@ -166,13 +168,14 @@ export default function Footer() {
 
               {/* Manifesto */}
               <p className="mb-2 max-w-xs text-[13px] font-medium leading-relaxed text-stone-500 dark:text-stone-400">
-                Copiloto financeiro para trabalhadores independentes em Portugal.
-                Sabe exatamente quanto é teu, quanto reservar e quando pagar —
-                sem surpresas no fim do ano.
+                Copiloto financeiro para quem trabalha em Portugal — independente
+                ou por conta de outrem. Sabe quanto é teu, quanto reservar e quando
+                pagar, sem surpresas no fim do ano.
               </p>
               <p className="mb-8 max-w-xs text-[12px] font-medium leading-relaxed text-stone-400 dark:text-stone-500">
-                Calculadora de recibos verdes, simulador de IRS, comparador de
-                regimes e calendário fiscal — tudo com dados oficiais verificados.
+                Calculadora de recibos verdes, simulador de salário líquido,
+                simulador de IRS, comparador de regimes e calendário fiscal — tudo
+                com dados oficiais verificados.
               </p>
 
               {/* Contacto */}
@@ -190,7 +193,7 @@ export default function Footer() {
                   <div className="flex h-6 w-6 items-center justify-center rounded-[7px] bg-stone-100 dark:bg-stone-800">
                     <Receipt size={12} className="text-stone-400 dark:text-stone-500" />
                   </div>
-                  Recibos verdes · Portugal · {FISCAL_YEAR}
+                  Recibos verdes e vencimentos · Portugal · {FISCAL_YEAR}
                 </div>
               </div>
 
@@ -294,7 +297,7 @@ export default function Footer() {
             <div className="flex items-center gap-1.5 text-[11px] font-medium text-stone-400 dark:text-stone-500">
               <span>Feito com</span>
               <Heart size={11} className="fill-brand text-brand" />
-              <span>para independentes portugueses</span>
+              <span>para quem trabalha em Portugal</span>
             </div>
 
             {/* Links legais */}
@@ -312,6 +315,13 @@ export default function Footer() {
                   {l.label}
                 </Link>
               ))}
+              <button
+                type="button"
+                onClick={abrirPreferenciasCookies}
+                className="text-[11px] font-medium text-stone-400 transition-colors hover:text-stone-700 dark:text-stone-500 dark:hover:text-stone-300"
+              >
+                Cookies
+              </button>
             </nav>
           </m.div>
         </div>

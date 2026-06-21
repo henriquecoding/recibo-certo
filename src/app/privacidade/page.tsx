@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     title: "Política de Privacidade — ReciboCerto",
     description:
       "Proteção de dados RGPD. O ReciboCerto não vende dados, não utiliza publicidade e armazena os teus recibos localmente no teu dispositivo.",
-    url: "https://recibocerto.pt/privacidade",
+    url: "https://www.recibocerto.pt/privacidade",
     type: "website",
   },
 };

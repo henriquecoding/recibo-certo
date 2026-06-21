@@ -7,11 +7,11 @@ export const metadata: Metadata = {
   title: "Ato isolado ou abrir atividade? Decisor interativo 2026 | ReciboCerto",
   description: "Responde a 4 perguntas e fica a saber se deves emitir um ato isolado ou abrir atividade nas Finanças. Gratuito e imediato.",
   keywords: ["ato isolado", "abrir atividade", "recibos verdes", "trabalhador independente"],
-  alternates: { canonical: "https://recibocerto.pt/ferramentas/ato-isolado" },
+  alternates: { canonical: "https://www.recibocerto.pt/ferramentas/ato-isolado" },
   openGraph: {
     title: "Ato isolado ou abrir atividade? | ReciboCerto",
     description: "Decisor interativo: 4 perguntas para saber a resposta certa para a tua situação.",
-    url: "https://recibocerto.pt/ferramentas/ato-isolado",
+    url: "https://www.recibocerto.pt/ferramentas/ato-isolado",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "article",

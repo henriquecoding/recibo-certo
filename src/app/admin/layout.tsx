@@ -5,12 +5,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/lib/supabase/auth";
 import { verificarAdmin } from "@/lib/supabase/admin";
-import { CheckTrend, LayoutGrid, Megaphone, ArrowLeft, BellAlert, ShieldCheck } from "@/components/ui/Icons";
+import { CheckTrend, LayoutGrid, Megaphone, ArrowLeft, BellAlert, ShieldCheck, Flag } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 
 const NAV = [
   { href: "/admin", label: "Visão geral", icon: LayoutGrid },
   { href: "/admin/anuncios", label: "Anúncios", icon: Megaphone },
+  { href: "/admin/reportes", label: "Reportes do quiz", icon: Flag },
   { href: "/admin/waitlist", label: "Lista de espera", icon: BellAlert },
   { href: "/admin/auditoria", label: "Auditoria fiscal", icon: ShieldCheck },
 ];

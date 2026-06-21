@@ -1,10 +1,9 @@
 "use client";
 
-import type { OpcaoEstado } from "./QuizBookShell";
+import type { OpcaoEstado } from "./tipos";
 import type { UseQuizFiscalReturn } from "@/hooks/useQuizFiscal";
 import type { QuizProgressoProps } from "./QuizFiscalApp";
-import QuizDesktop from "./QuizDesktop";
-import QuizMobile from "./QuizMobile";
+import Quiz from "./Quiz";
 
 const LETRAS = ["A", "B", "C", "D"];
 
@@ -49,6 +48,9 @@ export default function QuizGuiado({ quiz, progresso, onSair }: QuizGuiadoProps)
 
   const sharedProps = {
     categoriaAtiva: config?.categoria,
+    perguntaId: pergunta.id,
+    perguntaTexto: pergunta.pergunta,
+    categoriaPergunta: pergunta.categoria,
     indice,
     total: sessao.length,
     pergunta: pergunta.pergunta,
@@ -87,14 +89,5 @@ export default function QuizGuiado({ quiz, progresso, onSair }: QuizGuiadoProps)
     progresso,
   };
 
-  return (
-    <>
-      <div className="hidden md:block">
-        <QuizDesktop {...sharedProps} />
-      </div>
-      <div className="block md:hidden">
-        <QuizMobile {...sharedProps} />
-      </div>
-    </>
-  );
+  return <Quiz {...sharedProps} />;
 }

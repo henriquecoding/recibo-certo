@@ -15,11 +15,11 @@ export const metadata: Metadata = {
   title: "IVA nos recibos verdes 2026: a isenção de 15 000 €",
   description: "Como funciona o IVA para trabalhadores independentes. Isenção do Art. 53.º, quando sair da isenção e as taxas por região.",
   keywords: ["IVA recibos verdes 2026", "isenção IVA artigo 53", "limite IVA trabalhador independente"],
-  alternates: { canonical: "https://recibocerto.pt/guias/iva-recibos-verdes" },
+  alternates: { canonical: "https://www.recibocerto.pt/guias/iva-recibos-verdes" },
   openGraph: {
     title: "IVA nos recibos verdes 2026 | ReciboCerto",
     description: `A isenção de ${fmt(IVA_ISENCAO_LIMITE.value)} do Art. 53.º CIVA explicada.`,
-    url: "https://recibocerto.pt/guias/iva-recibos-verdes",
+    url: "https://www.recibocerto.pt/guias/iva-recibos-verdes",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "article",

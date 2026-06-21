@@ -10,11 +10,11 @@ export const metadata: Metadata = {
   title: "Escalões de IRS 2026 explicados para recibos verdes",
   description: "Tabela de escalões de IRS 2026 com taxas marginais e efetivas. Como funciona a tributação progressiva e o mínimo de existência.",
   keywords: ["escalões IRS 2026", "tabela IRS 2026", "taxas IRS recibos verdes"],
-  alternates: { canonical: "https://recibocerto.pt/guias/escaloes-irs" },
+  alternates: { canonical: "https://www.recibocerto.pt/guias/escaloes-irs" },
   openGraph: {
     title: "Escalões de IRS 2026 para recibos verdes | ReciboCerto",
     description: "Tabela atualizada e o mito do 'subir de escalão' desmistificado.",
-    url: "https://recibocerto.pt/guias/escaloes-irs",
+    url: "https://www.recibocerto.pt/guias/escaloes-irs",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "article",

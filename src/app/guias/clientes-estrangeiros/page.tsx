@@ -11,11 +11,11 @@ export const metadata: Metadata = {
   title: "Recibos verdes para clientes estrangeiros 2026",
   description: "IVA, retenção na fonte e declaração recapitulativa quando fatures para empresas ou particulares fora de Portugal.",
   keywords: ["recibos verdes clientes estrangeiros", "IVA clientes UE recibos verdes", "faturar empresa estrangeira portugal"],
-  alternates: { canonical: "https://recibocerto.pt/guias/clientes-estrangeiros" },
+  alternates: { canonical: "https://www.recibocerto.pt/guias/clientes-estrangeiros" },
   openGraph: {
     title: "Recibos verdes para clientes estrangeiros 2026 | ReciboCerto",
     description: "IVA zero, sem retenção e declaração recapitulativa explicados.",
-    url: "https://recibocerto.pt/guias/clientes-estrangeiros",
+    url: "https://www.recibocerto.pt/guias/clientes-estrangeiros",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "article",

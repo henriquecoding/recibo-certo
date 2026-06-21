@@ -3,11 +3,15 @@
 import { type ResumoRecibos } from "@/lib/store/recibos";
 import { fmt, pct } from "@/lib/format";
 
-const SEG = [
-  { key: "liquido", label: "Teu", color: "#1D9E75" },
+// Escala monocromática de verdes da marca (sem cinza nem laranja): líquido =
+// verde da marca, IRS = mint claro, Seg. Social = verde profundo. `cls` →
+// currentColor + classe que adapta ao modo escuro (override em globals.css);
+// `color` → hex fixo (o mint é legível nos dois temas).
+const SEG: { key: "liquido" | "retencao" | "segSocial"; label: string; color?: string; cls?: string }[] = [
+  { key: "liquido", label: "Teu", cls: "text-brand" },
   { key: "retencao", label: "Retenção IRS", color: "#9FE1CB" },
-  { key: "segSocial", label: "Seg. Social", color: "#D3D1C7" },
-] as const;
+  { key: "segSocial", label: "Seg. Social", cls: "text-brand-deep" },
+];
 
 // Donut de distribuição do recibo: para onde vai o que faturaste no mês.
 // O IVA fica de fora (é do Estado, pass-through) — coerente com o resto do produto.
@@ -42,10 +46,11 @@ export default function DistribuicaoDonut({ resumo }: { resumo: ResumoRecibos })
                 cy="66"
                 r={r}
                 fill="none"
-                // O segmento da marca usa currentColor + text-brand para acompanhar
-                // o tom suavizado no modo escuro; os pastéis mantêm o hex.
-                className={a.key === "liquido" ? "text-brand" : undefined}
-                stroke={a.key === "liquido" ? "currentColor" : a.color}
+                // Segmentos temáticos (líquido, Seg. Social) usam currentColor +
+                // classe text-brand* para acompanhar os tons no modo escuro; o
+                // mint do IRS mantém o hex.
+                className={a.cls}
+                stroke={a.cls ? "currentColor" : a.color}
                 strokeWidth="16"
                 strokeLinecap="butt"
                 strokeDasharray={`${a.len} ${C - a.len}`}
@@ -65,8 +70,8 @@ export default function DistribuicaoDonut({ resumo }: { resumo: ResumoRecibos })
           {arcs.map((a) => (
             <li key={a.key} className="flex items-center gap-2">
               <span
-                className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${a.key === "liquido" ? "text-brand" : ""}`}
-                style={{ background: a.key === "liquido" ? "currentColor" : a.color }}
+                className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${a.cls ?? ""}`}
+                style={{ background: a.cls ? "currentColor" : a.color }}
               />
               <span className="min-w-0 flex-1 truncate text-xs text-stone-500">{a.label}</span>
               <span className="flex-shrink-0 text-xs font-semibold tabular-nums text-stone-700">{fmt(a.value)}</span>

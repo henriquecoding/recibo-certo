@@ -4,7 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Merchant of Record para freelancers em Portugal 2026 | ReciboCerto",
   description: "O que é um MoR, como funciona o payout mensal e como emitir o recibo verde ao Paddle ou Lemon Squeezy com zero burocracia fiscal.",
-  alternates: { canonical: "https://recibocerto.pt/guias/merchant-of-record" },
+  alternates: { canonical: "https://www.recibocerto.pt/guias/merchant-of-record" },
 };
 
 export default function GuiaMoRPage() {

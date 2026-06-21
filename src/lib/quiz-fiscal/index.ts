@@ -11,9 +11,13 @@ import { PERGUNTAS_ATIVIDADES } from "./perguntas-atividades";
 import { PERGUNTAS_CATF } from "./perguntas-catf";
 import { PERGUNTAS_PRAZOS } from "./perguntas-prazos";
 import { PERGUNTAS_GERAL } from "./perguntas-geral";
+import { PERGUNTAS_DEPENDENTE } from "./gerador-dependente";
+import { PERGUNTAS_EMPRESA } from "./gerador-empresa";
 import {
   META_CATEGORIA_QUIZ,
+  META_GRUPO_QUIZ,
   type QuizCategoria,
+  type QuizGrupo,
   type QuizFonte,
   type QuizOpcao,
   type QuizPergunta,
@@ -21,7 +25,9 @@ import {
 
 export {
   META_CATEGORIA_QUIZ,
+  META_GRUPO_QUIZ,
   type QuizCategoria,
+  type QuizGrupo,
   type QuizFonte,
   type QuizOpcao,
   type QuizPergunta,
@@ -41,6 +47,8 @@ export const QUIZ_PERGUNTAS: QuizPergunta[] = [
   ...PERGUNTAS_CATF,
   ...PERGUNTAS_PRAZOS,
   ...PERGUNTAS_GERAL,
+  ...PERGUNTAS_DEPENDENTE,
+  ...PERGUNTAS_EMPRESA,
 ];
 
 export function embaralhar<T>(arr: T[]): T[] {
@@ -66,20 +74,32 @@ export interface SelecaoPerguntasOpcoes {
 export function getPerguntasAleatorias(opcoes: SelecaoPerguntasOpcoes = {}): QuizPergunta[] {
   const { quantidade = 10, categoria, dificuldade, excluirIds = [] } = opcoes;
 
-  let pool = QUIZ_PERGUNTAS;
+  // Universo elegível: categoria escolhida (ou todas) menos as já vistas.
+  const naCategoria = (p: QuizPergunta) => !categoria || p.categoria === categoria;
+  const naoExcluido = (p: QuizPergunta) => !excluirIds.includes(p.id);
+  const base = QUIZ_PERGUNTAS.filter((p) => naCategoria(p) && naoExcluido(p));
 
-  if (categoria) pool = pool.filter((p) => p.categoria === categoria);
-  if (dificuldade) pool = pool.filter((p) => p.dificuldade === dificuldade);
-  if (excluirIds.length) pool = pool.filter((p) => !excluirIds.includes(p.id));
+  // Perguntas da dificuldade pedida vêm PRIMEIRO (prioridade).
+  const preferidas = dificuldade ? base.filter((p) => p.dificuldade === dificuldade) : base;
 
-  if (pool.length === 0 && categoria) {
-    pool = QUIZ_PERGUNTAS.filter((p) => p.categoria === categoria);
+  // Se a dificuldade escolhida não chega para a sessão pedida, completa-se com
+  // as restantes perguntas da mesma categoria (outras dificuldades) — assim o
+  // utilizador recebe sempre o número de perguntas que pediu, em vez de menos.
+  let resultado = embaralhar(preferidas);
+  if (dificuldade && resultado.length < quantidade) {
+    const resto = embaralhar(base.filter((p) => p.dificuldade !== dificuldade));
+    resultado = [...resultado, ...resto];
   }
-  if (pool.length === 0) {
-    pool = QUIZ_PERGUNTAS;
+
+  // Último recurso: categoria sem perguntas suficientes → usa todo o banco.
+  if (resultado.length < quantidade) {
+    const extra = embaralhar(
+      QUIZ_PERGUNTAS.filter((p) => naoExcluido(p) && !resultado.includes(p))
+    );
+    resultado = [...resultado, ...extra];
   }
 
-  return embaralhar(pool).slice(0, Math.min(quantidade, pool.length));
+  return resultado.slice(0, Math.min(quantidade, resultado.length));
 }
 
 export function embaralharOpcoes(pergunta: QuizPergunta): {

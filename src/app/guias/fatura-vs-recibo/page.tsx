@@ -20,12 +20,12 @@ export const metadata: Metadata = {
     "recibo verde é fatura-recibo",
     "documentos de faturação Portugal",
   ],
-  alternates: { canonical: `https://recibocerto.pt${PATH}` },
+  alternates: { canonical: `https://www.recibocerto.pt${PATH}` },
   openGraph: {
     title: "Fatura, recibo e fatura-recibo: as diferenças | ReciboCerto",
     description:
       "A confusão mais comum dos independentes, resolvida: o que é cada documento e onde encaixam os recibos verdes.",
-    url: `https://recibocerto.pt${PATH}`,
+    url: `https://www.recibocerto.pt${PATH}`,
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "article",

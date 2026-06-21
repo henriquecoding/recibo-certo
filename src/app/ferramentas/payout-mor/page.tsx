@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: "Recibo verde ao Merchant of Record | ReciboCerto",
   description:
     "Guia passo-a-passo para emitir o recibo mensal ao Paddle ou Lemon Squeezy com IVA em autoliquidação e 100 % do payout líquido.",
-  alternates: { canonical: "https://recibocerto.pt/ferramentas/payout-mor" },
+  alternates: { canonical: "https://www.recibocerto.pt/ferramentas/payout-mor" },
 };
 
 export default function PayoutMorPage() {

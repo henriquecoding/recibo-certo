@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     title: "Termos de Utilização — ReciboCerto",
     description:
       "Condições de utilização da calculadora de recibos verdes ReciboCerto. Serviço gratuito, sem publicidade, dados no teu dispositivo.",
-    url: "https://recibocerto.pt/termos",
+    url: "https://www.recibocerto.pt/termos",
     type: "website",
   },
 };

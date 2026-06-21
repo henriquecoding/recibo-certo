@@ -11,11 +11,11 @@ export const metadata: Metadata = {
   title: "Recibos verdes e emprego ao mesmo tempo 2026",
   description: "Guia completo para quem acumula trabalho dependente com recibos verdes. IRS, Segurança Social, retenção na fonte e caso do cliente único.",
   keywords: ["recibos verdes e emprego ao mesmo tempo", "acumular trabalho dependente recibos verdes", "IRS acumulação"],
-  alternates: { canonical: "https://recibocerto.pt/guias/acumulacao-emprego" },
+  alternates: { canonical: "https://www.recibocerto.pt/guias/acumulacao-emprego" },
   openGraph: {
     title: "Recibos verdes e emprego ao mesmo tempo 2026 | ReciboCerto",
     description: "IRS, SS e retenção quando tens salário e passas recibos verdes.",
-    url: "https://recibocerto.pt/guias/acumulacao-emprego",
+    url: "https://www.recibocerto.pt/guias/acumulacao-emprego",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "article",

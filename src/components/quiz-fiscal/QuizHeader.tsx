@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { m } from "motion/react";
-import { Menu, Settings, LogoMark } from "@/components/ui/Icons";
+import { Settings, LogoMark } from "@/components/ui/Icons";
 
 interface QuizHeaderProps {
   nivel?: number;
@@ -10,8 +10,6 @@ interface QuizHeaderProps {
   xpAtual?: number;
   xpTotal?: number;
   xpPct?: number;
-  menuAberto?: boolean;
-  onMenuToggle?: () => void;
   onConfiguracoes?: () => void;
 }
 
@@ -21,8 +19,6 @@ export default function QuizHeader({
   xpAtual = 0,
   xpTotal = 200,
   xpPct,
-  menuAberto = false,
-  onMenuToggle,
   onConfiguracoes,
 }: QuizHeaderProps) {
   const pct = xpPct != null
@@ -36,19 +32,6 @@ export default function QuizHeader({
       className="flex items-center gap-4 px-5 py-3.5 border-b shrink-0"
       style={{ backgroundColor: "#f0e8d8", borderColor: "#d4b896" }}
     >
-      {/* Hamburger */}
-      <button
-        type="button"
-        onClick={onMenuToggle}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-opacity hover:opacity-70 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#3a5232]"
-        style={{ color: "#6b5240" }}
-        aria-label="Abrir menu de categorias"
-        aria-expanded={menuAberto}
-        aria-haspopup="menu"
-      >
-        <Menu size={24} />
-      </button>
-
       {/* Logo */}
       <Link
         href="/"

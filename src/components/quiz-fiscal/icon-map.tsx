@@ -10,6 +10,9 @@ import {
   Calendar,
   FileSign,
   LayoutGrid,
+  Receipt,
+  Building,
+  Calculator,
 } from "@/components/ui/Icons";
 
 export interface IconProps {
@@ -29,6 +32,9 @@ export const QUIZ_ICON_MAP: Record<string, (props: IconProps) => React.ReactElem
   Calendar,
   FileSign,
   LayoutGrid,
+  Receipt,
+  Building,
+  Calculator,
 };
 
 export function resolveQuizIcon(name: string): (props: IconProps) => React.ReactElement {

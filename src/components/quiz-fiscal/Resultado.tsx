@@ -1,10 +1,11 @@
 "use client";
 
 import Reveal from "@/components/ui/Reveal";
-import { Check, Close, Rocket, LayoutGrid, ChartProjection, Sparkle, ShieldCheck, Star, Zap } from "@/components/ui/Icons";
+import { Check, Close, Rocket, LayoutGrid, ChartProjection, Sparkle, ShieldCheck, Star, Zap, Gift } from "@/components/ui/Icons";
 import { resolveQuizIcon } from "./icon-map";
 import { META_CATEGORIA_QUIZ } from "@/lib/quiz-fiscal";
 import type { UseQuizFiscalReturn, ClassificacaoQuiz } from "@/hooks/useQuizFiscal";
+import type { CupaoQuiz } from "@/lib/supabase/quiz-achievements";
 
 const CLASSIFICACAO_ICON: Record<ClassificacaoQuiz["icone"], (props: { size?: number; className?: string }) => React.ReactElement> = {
   trophy: ShieldCheck,
@@ -18,9 +19,10 @@ interface ResultadoProps {
   xpGanho?: number;
   levelUp?: boolean;
   nivelNovo?: { nivel: number; titulo: string };
+  cupaoGanho?: CupaoQuiz | null;
 }
 
-export default function Resultado({ quiz, xpGanho = 0, levelUp = false, nivelNovo }: ResultadoProps) {
+export default function Resultado({ quiz, xpGanho = 0, levelUp = false, nivelNovo, cupaoGanho }: ResultadoProps) {
   const { resultado, sessao, jogarNovamente, reiniciar } = quiz;
   if (!resultado) return null;
 
@@ -112,6 +114,32 @@ export default function Resultado({ quiz, xpGanho = 0, levelUp = false, nivelNov
                 </div>
               </div>
             )}
+          </div>
+        </Reveal>
+      )}
+
+      {/* Cupão ganho */}
+      {cupaoGanho && (
+        <Reveal delay={0.09}>
+          <div className="mt-4 overflow-hidden rounded-2xl border-2 border-amber-400/60 shadow-md">
+            <div className="flex items-center gap-3 bg-amber-600 px-5 py-3">
+              <Gift size={20} className="text-amber-100" />
+              <p className="text-[14px] font-bold text-white">Desafio concluído!</p>
+            </div>
+            <div className="bg-amber-50 px-5 py-4 dark:bg-amber-900/20">
+              <p className="text-sm text-amber-900 dark:text-amber-100">
+                Parabéns! Conquistaste um cupão de <strong>3 meses de Pro</strong> grátis.
+              </p>
+              <div className="mt-3 flex items-center gap-3 rounded-xl border border-amber-200 bg-white px-4 py-3 dark:border-amber-700 dark:bg-amber-900/40">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600">Código</span>
+                <code className="flex-1 font-mono text-lg font-bold tracking-wider text-amber-800 dark:text-amber-200">
+                  {cupaoGanho.codigo}
+                </code>
+              </div>
+              <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                Ativa o cupão na tua conta para começar os 3 meses de Pro.
+              </p>
+            </div>
           </div>
         </Reveal>
       )}

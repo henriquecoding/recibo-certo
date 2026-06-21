@@ -13,11 +13,11 @@ export const metadata: Metadata = {
   title: "Como abrir atividade nas Finanças 2026",
   description: "Guia passo a passo para abrir atividade nas Finanças em Portugal. Código de atividade, IVA, Segurança Social — em português simples.",
   keywords: ["abrir atividade finanças", "recibos verdes", "trabalhador independente"],
-  alternates: { canonical: "https://recibocerto.pt/guias/abrir-atividade" },
+  alternates: { canonical: "https://www.recibocerto.pt/guias/abrir-atividade" },
   openGraph: {
     title: "Como abrir atividade nas Finanças 2026 | ReciboCerto",
     description: "Guia passo a passo para abrir atividade nas Finanças em Portugal.",
-    url: "https://recibocerto.pt/guias/abrir-atividade",
+    url: "https://www.recibocerto.pt/guias/abrir-atividade",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "article",

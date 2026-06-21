@@ -12,11 +12,11 @@ export const metadata: Metadata = {
   title: "Ato isolado ou recibos verdes: qual escolher? 2026",
   description: "Compara ato isolado e recibos verdes. Decisor interativo para a tua situação: IVA, Segurança Social, retenção na fonte e obrigações fiscais.",
   keywords: ["ato isolado portugal", "ato isolado vs recibos verdes", "ato isolado IVA"],
-  alternates: { canonical: "https://recibocerto.pt/guias/ato-isolado" },
+  alternates: { canonical: "https://www.recibocerto.pt/guias/ato-isolado" },
   openGraph: {
     title: "Ato isolado ou recibos verdes: qual escolher? 2026 | ReciboCerto",
     description: "Decisor interativo para perceber se precisas de abrir atividade ou podes usar o ato isolado.",
-    url: "https://recibocerto.pt/guias/ato-isolado",
+    url: "https://www.recibocerto.pt/guias/ato-isolado",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "article",

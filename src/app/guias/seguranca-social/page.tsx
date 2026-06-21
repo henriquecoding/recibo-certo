@@ -11,11 +11,11 @@ export const metadata: Metadata = {
   title: "Segurança Social trabalhador independente 2026",
   description: "Como calcular as contribuições SS para recibos verdes. Fórmula, prazos, isenção do 1.º ano e direitos sociais.",
   keywords: ["segurança social trabalhador independente", "SS recibos verdes 2026", "contribuições segurança social freelancer"],
-  alternates: { canonical: "https://recibocerto.pt/guias/seguranca-social" },
+  alternates: { canonical: "https://www.recibocerto.pt/guias/seguranca-social" },
   openGraph: {
     title: "Segurança Social trabalhador independente 2026 | ReciboCerto",
     description: "Fórmula, prazos e isenção do 1.º ano explicados.",
-    url: "https://recibocerto.pt/guias/seguranca-social",
+    url: "https://www.recibocerto.pt/guias/seguranca-social",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "article",

@@ -62,7 +62,7 @@ export function emailBoasVindasWaitlist(email: string): { subject: string; html:
         A calculadora, o simulador de IRS e o comparador de regimes estão disponíveis — grátis e sem registo.
         Queres alertas de prazos e histórico na nuvem? O plano Pro já está disponível.
       </p>
-      ${botao("Começar a usar", "https://recibocerto.pt/dashboard")}
+      ${botao("Começar a usar", "https://www.recibocerto.pt/dashboard")}
     `),
   };
 }
@@ -95,7 +95,7 @@ export function emailAlertaPrazo(prazos: { titulo: string; descricao: string; da
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E7E5E4;border-radius:12px;overflow:hidden;">
         ${listaPrazos}
       </table>
-      ${botao("Ver calendário completo", "https://recibocerto.pt/dashboard/prazos")}
+      ${botao("Ver calendário completo", "https://www.recibocerto.pt/dashboard/prazos")}
       <p style="margin:20px 0 0;font-size:12px;color:#A8A29E;text-align:center;">
         Recebes este email porque tens o plano Pro do ReciboCerto.
       </p>
@@ -122,7 +122,7 @@ export function emailSubscricaoAtivada(intervalo: "monthly" | "annual"): { subje
           <td style="padding:4px 0 4px 10px;font-size:14px;color:${MUTED};">${f}</td>
         </tr>`).join("")}
       </table>
-      ${botao("Ir para o painel", "https://recibocerto.pt/dashboard")}
+      ${botao("Ir para o painel", "https://www.recibocerto.pt/dashboard")}
     `),
   };
 }
@@ -181,7 +181,7 @@ export function emailGuardiaoFiscal(input: GuardiaoInput): { subject: string; ht
           <td style="padding:8px 0;text-align:right;font-size:14px;font-weight:700;color:${meta.cor};border-top:1px solid #F5F5F4;">${fmtEur(restante)}</td>
         </tr>
       </table>
-      ${botao("Ver detalhes no painel", "https://recibocerto.pt/dashboard")}
+      ${botao("Ver detalhes no painel", "https://www.recibocerto.pt/dashboard")}
       <p style="margin:20px 0 0;font-size:12px;color:#A8A29E;text-align:center;">
         Recebes este email porque tens alertas ativos no ReciboCerto Pro.
       </p>
@@ -219,7 +219,7 @@ export function emailAlertaIVA(faturado: number, limite: number, nivel: "aviso" 
           <td style="padding:8px 0;text-align:right;font-size:14px;font-weight:600;color:${INK};border-top:1px solid #F5F5F4;">${limite.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })}</td>
         </tr>
       </table>
-      ${botao("Ver detalhes no painel", "https://recibocerto.pt/dashboard")}
+      ${botao("Ver detalhes no painel", "https://www.recibocerto.pt/dashboard")}
       <p style="margin:20px 0 0;font-size:12px;color:#A8A29E;text-align:center;">
         Recebes este email porque tens alertas ativos no ReciboCerto.
       </p>
@@ -240,7 +240,7 @@ export function emailAlertaSS(trimestre: string, valor: number, prazo: string): 
         <p style="margin:0;font-size:28px;font-weight:700;color:${INK};">${valor.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })}</p>
         <p style="margin:8px 0 0;font-size:12px;color:${MUTED};">Prazo: ${prazo}</p>
       </div>
-      ${botao("Ver calculo detalhado", "https://recibocerto.pt/dashboard")}
+      ${botao("Ver calculo detalhado", "https://www.recibocerto.pt/dashboard")}
       <p style="margin:20px 0 0;font-size:11px;color:#A8A29E;text-align:center;">
         Valor estimativo — confirma na Seguranca Social Direta.
       </p>
@@ -262,7 +262,51 @@ export function emailSubscricaoCancelada(): { subject: string; html: string } {
       <p style="margin:0;font-size:14px;line-height:1.7;color:${MUTED};">
         Se mudares de ideias, podes reativar a qualquer momento.
       </p>
-      ${botao("Reativar o Pro", "https://recibocerto.pt/dashboard/upgrade")}
+      ${botao("Reativar o Pro", "https://www.recibocerto.pt/dashboard/upgrade")}
+    `),
+  };
+}
+
+interface AuditoriaEmailInput {
+  salarioBruto: number;
+  ssEsperado: number;
+  irsEsperado: number;
+  ssDeclarado: number;
+  irsDeclarado: number;
+  tudoOk: boolean;
+  alertas: string[];
+}
+
+const eur = (n: number) => `${n.toFixed(2).replace(".", ",")} €`;
+
+export function emailAuditoriaRecibo(input: AuditoriaEmailInput): { subject: string; html: string } {
+  const linha = (l: string, v: string) =>
+    `<tr><td style="padding:8px 0;font-size:13px;color:${MUTED};">${l}</td><td style="padding:8px 0;font-size:13px;font-weight:600;color:${INK};text-align:right;">${v}</td></tr>`;
+  const alertasHtml = input.alertas.length
+    ? `<div style="margin:16px 0;padding:14px 16px;background:#FEFBD0;border:1px solid #F3E59B;border-radius:10px;">${input.alertas
+        .map((a) => `<p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:#7A5C00;">• ${a}</p>`)
+        .join("")}</div>`
+    : `<p style="margin:16px 0;font-size:14px;color:${BRAND_DARK};font-weight:600;">Tudo certo — os valores correspondem às tabelas de 2026.</p>`;
+
+  return {
+    subject: input.tudoOk
+      ? "Auditoria do teu recibo — está tudo certo"
+      : "Auditoria do teu recibo — encontrámos divergências",
+    html: layout(`
+      <h2 style="margin:0 0 16px;font-size:20px;font-weight:700;color:${INK};">Auditoria do recibo de vencimento</h2>
+      <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:${MUTED};">
+        Resultado da auditoria ao recibo de salário bruto ${eur(input.salarioBruto)}, face às tabelas de 2026.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #F5F5F4;">
+        ${linha("Segurança Social esperada", eur(input.ssEsperado))}
+        ${linha("Segurança Social no recibo", eur(input.ssDeclarado))}
+        ${linha("IRS esperado", eur(input.irsEsperado))}
+        ${linha("IRS no recibo", eur(input.irsDeclarado))}
+      </table>
+      ${alertasHtml}
+      <p style="margin:16px 0 0;font-size:12px;line-height:1.6;color:#A8A29E;">
+        Estimativa pela Tabela I (Continente). Pequenas diferenças podem dever-se a arredondamentos.
+      </p>
     `),
   };
 }

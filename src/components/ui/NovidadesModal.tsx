@@ -36,27 +36,30 @@ export default function NovidadesModal() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[9000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-[9000] bg-black/50 backdrop-blur-sm"
             onClick={fechar}
             aria-hidden
-          >
-            {/* Camada clicável separada do modal para não propagar o click */}
-            <div className="absolute inset-0" onClick={fechar} aria-hidden />
-          </m.div>
-          <m.div
-            key="modal"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 420, damping: 38 }}
-            role="dialog"
-            aria-modal
-            aria-labelledby="novidades-titulo"
-            className="fixed inset-0 z-[9001] m-auto w-full max-w-md rounded-4xl bg-white shadow-float dark:bg-stone-900"
-            style={{ maxHeight: "min(90dvh, 680px)", height: "fit-content", display: "flex", flexDirection: "column" }}
-          >
+          />
+          {/* Contentor de posição — folha inferior no telemóvel, centrado no desktop.
+              Centramos por flex (não por transform) para não colidir com a animação. */}
+          <div className="pointer-events-none fixed inset-0 z-[9001] flex items-end justify-center p-0 sm:items-center sm:p-4">
+            <m.div
+              key="modal"
+              initial={{ opacity: 0, scale: 0.97, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 16 }}
+              transition={{ type: "spring", stiffness: 420, damping: 38 }}
+              role="dialog"
+              aria-modal
+              aria-labelledby="novidades-titulo"
+              onClick={(e) => e.stopPropagation()}
+              className="pointer-events-auto flex max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-t-4xl bg-white shadow-float dark:bg-stone-900 sm:max-h-[680px] sm:rounded-4xl"
+            >
+            {/* Puxador (folha inferior, só no telemóvel) */}
+            <div className="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-stone-200 dark:bg-stone-700 sm:hidden" aria-hidden />
+
             {/* Cabeçalho */}
-            <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-stone-100 dark:border-stone-800 shrink-0">
+            <div className="flex items-start justify-between gap-4 px-6 pt-4 pb-4 border-b border-stone-100 dark:border-stone-800 shrink-0 sm:pt-6">
               <div className="flex items-center gap-2.5">
                 <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-light text-brand">
                   <Sparkle size={16} />
@@ -80,8 +83,8 @@ export default function NovidadesModal() {
               </button>
             </div>
 
-            {/* Corpo scrollável */}
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+            {/* Corpo scrollável — min-h-0 é essencial para o overflow funcionar dentro do flex column */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-6 overscroll-contain">
               {CHANGELOG.map((entrada, i) => {
                 const isNova = entrada.version === APP_VERSION;
                 return (
@@ -134,7 +137,7 @@ export default function NovidadesModal() {
             </div>
 
             {/* Rodapé */}
-            <div className="px-6 pb-6 pt-4 border-t border-stone-100 dark:border-stone-800 shrink-0">
+            <div className="px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4 border-t border-stone-100 dark:border-stone-800 shrink-0">
               <button
                 type="button"
                 onClick={fechar}
@@ -143,7 +146,8 @@ export default function NovidadesModal() {
                 Fechar
               </button>
             </div>
-          </m.div>
+            </m.div>
+          </div>
         </>
       )}
     </AnimatePresence>

@@ -19,11 +19,11 @@ export const metadata: Metadata = {
   title: "Deduções à coleta do IRS 2026",
   description: "Todas as deduções à coleta do IRS para trabalhadores independentes: saúde, educação, rendas, dependentes e limite global.",
   keywords: ["deduções coleta IRS 2026", "deduções IRS recibos verdes", "saúde educação rendas IRS"],
-  alternates: { canonical: "https://recibocerto.pt/guias/deducoes-coleta" },
+  alternates: { canonical: "https://www.recibocerto.pt/guias/deducoes-coleta" },
   openGraph: {
     title: "Deduções à coleta do IRS 2026 | ReciboCerto",
     description: "Saúde, educação, rendas e dependentes — tudo o que podes deduzir.",
-    url: "https://recibocerto.pt/guias/deducoes-coleta",
+    url: "https://www.recibocerto.pt/guias/deducoes-coleta",
     siteName: "ReciboCerto",
     locale: "pt_PT",
     type: "article",

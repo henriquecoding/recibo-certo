@@ -13,17 +13,21 @@ Diagnóstico feito contra o projeto Supabase ao vivo e contra produção:
 | Item | Estado |
 |---|---|
 | Projeto Supabase | `sxdditwefdzuqeephqiy` — ativo (`/auth/v1/health` → 200) |
-| Schema (migrations 001–009) | **Aplicado** — as 10 tabelas existem |
+| Schema (migrations 001–010) | **Aplicado** — as 11 tabelas existem |
 | Produção (`www.recibocerto.pt`) | **Ligada** — env definidas na Vercel; deploy `READY` |
 | Auth email/password | **Ativa** (signup aberto, autoconfirm ligado) |
 | Auth Google | **Ativada e verificada** (`/authorize` → 302 → `accounts.google.com`) |
 | Auth LinkedIn (OIDC) | **Ativada e verificada** (`/authorize` → 302 → `api.linkedin.com`) |
 | Site URL + redirect allow-list | **Corrigidos** — ver abaixo |
-| Repositório de dados | `store/recibos.ts` em **modo duplo** (localStorage sem sessão, tabela `recibos` com sessão) |
+| Repositório de dados | `store/recibos.ts` e `store/vencimentos.ts` em **modo duplo** (localStorage sem sessão; tabelas `recibos` / `recibos_vencimento` com sessão) |
 
 Tabelas confirmadas: `profiles`, `recibos`, `subscriptions`, `anuncios`,
 `admin_partners`, `email_waitlist`, `alertas_guardiao`, `quiz_profiles`,
-`quiz_sessions`, `site_settings`.
+`quiz_sessions`, `site_settings`, `recibos_vencimento`.
+
+> **`recibos_vencimento`** (migration 010, aplicada 17/06/2026 via Management API):
+> cenários guardados do simulador de vencimento. RLS own+admin. Tiering: grátis
+> guarda até 3 cenários em localStorage; Pro sincroniza na nuvem (ilimitado).
 
 > **Conclusão:** a app está totalmente ligada ao Supabase (auth e-mail + Google +
 > LinkedIn OIDC, dados, admin, subscrições). Os três provedores de login foram
@@ -32,6 +36,33 @@ Tabelas confirmadas: `profiles`, `recibos`, `subscriptions`, `anuncios`,
 > **Domínio canónico:** `https://www.recibocerto.pt`. O apex `recibocerto.pt`
 > faz 307 para `www` (configurado na Vercel), por isso tudo no Supabase
 > (Site URL, allow-list, callbacks) aponta para o `www`.
+
+### Re-verificação 17/06/2026 (via Supabase MCP)
+
+Confirmado contra a base de dados ao vivo:
+
+- Projeto `sxdditwefdzuqeephqiy` — `ACTIVE_HEALTHY`, PostgreSQL 17.6, eu-west-1.
+- **11 tabelas, todas com RLS ativa**: `profiles`, `recibos`, `recibos_vencimento`,
+  `subscriptions`, `quiz_profiles`, `quiz_sessions`, `anuncios`, `admin_partners`,
+  `email_waitlist`, `alertas_guardiao`, `site_settings`.
+- Wiring do código completo (`client.ts` / `auth.tsx` / `subscription.tsx` + stores
+  em modo duplo). **Não há lacunas de ligação** — só falta env local e hardening.
+
+#### Avisos de segurança (advisors — nível WARN, **não aplicados**)
+
+Nenhum erro crítico (nenhuma tabela exposta sem RLS). Há oportunidades de
+*hardening* a ponderar — exigem DDL em produção, por isso ficam documentadas e
+**não foram aplicadas**:
+
+| Aviso | Objeto | Remediação |
+|---|---|---|
+| `search_path` mutável | funções `handle_new_user`, `set_atualizado_em`, `is_admin`, `criar_quiz_profile` | fixar `search_path` (`SET search_path = ''`) — [lint 0011](https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable) |
+| `SECURITY DEFINER` executável via RPC | `handle_new_user`, `is_admin`, `criar_quiz_profile` (anon + authenticated) | `REVOKE EXECUTE` ou passar a `SECURITY INVOKER` — [lint 0028](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable) |
+| Política RLS sempre verdadeira | `email_waitlist` INSERT (`qualquer_um_insere_waitlist`, `WITH CHECK (true)`) | provavelmente intencional (inscrição pública); confirmar/limitar — [lint 0024](https://supabase.com/docs/guides/database/database-linter?lint=0024_permissive_rls_policy) |
+| Proteção de passwords vazadas desligada | Auth | ativar (HaveIBeenPwned) — [doc](https://supabase.com/docs/guides/auth/password-security) |
+
+> Os advisors de **performance** (índices não usados / FKs sem índice) são, na
+> maioria, informativos e não foram enumerados aqui.
 
 ---
 
@@ -122,7 +153,7 @@ curl -s -H "apikey: <ANON_KEY>" \
 
 ## Migrations
 
-As migrations vivem em `supabase/migrations/` (001–009) e **já estão aplicadas**
+As migrations vivem em `supabase/migrations/` (001–010) e **já estão aplicadas**
 no projeto. Para um projeto novo (ou staging), aplica-as por ordem via:
 
 - **Supabase Studio** → SQL Editor → colar e correr cada ficheiro, **ou**

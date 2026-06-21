@@ -37,20 +37,14 @@ function Toggle({ value, onChange, label }: { value: boolean; onChange: (v: bool
       aria-checked={value}
       aria-label={label}
       onClick={() => onChange(!value)}
-      className="relative flex-shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#3a5232]"
-      style={{
-        width: 48,
-        height: 26,
-        backgroundColor: value ? QD : BORDER,
-        transition: "background-color .2s ease",
-      }}
+      className="relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer items-center overflow-hidden rounded-full px-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#3a5232]"
+      style={{ backgroundColor: value ? QD : BORDER, transition: "background-color .2s ease" }}
     >
+      {/* Puxador — filho flex (não pode sair do trilho) */}
       <span
-        className="absolute top-[3px] rounded-full bg-white shadow-sm"
+        className="h-6 w-6 rounded-full bg-white shadow-sm"
         style={{
-          width: 20,
-          height: 20,
-          transform: value ? "translateX(25px)" : "translateX(3px)",
+          transform: value ? "translateX(20px)" : "translateX(0)",
           transition: "transform .2s cubic-bezier(.34,1.56,.64,1)",
         }}
       />
@@ -77,9 +71,9 @@ const DIFICULDADES: Array<{
   sub: string;
   cor: string;
 }> = [
-  { valor: "facil",   label: "Fácil",   sub: "Mais tempo + dicas",      cor: "#415439" },
-  { valor: "normal",  label: "Normal",  sub: "Equilíbrio padrão",        cor: QD },
-  { valor: "dificil", label: "Difícil", sub: "Sem dicas, tempo reduzido", cor: "#7a3c28" },
+  { valor: "facil",   label: "Fácil",  sub: "Só perguntas fáceis",    cor: "#415439" },
+  { valor: "normal",  label: "Médio",  sub: "Só perguntas médias",    cor: QD },
+  { valor: "dificil", label: "Difícil", sub: "Só perguntas difíceis",  cor: "#7a3c28" },
 ];
 
 // ── Tempo options ──────────────────────────────────────────────────────────
@@ -229,6 +223,33 @@ export default function QuizConfigModal({
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-5 py-5 space-y-7">
 
+              {/* ── Sair do quiz (no topo) ── */}
+              {!confirmSair ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmSair(true)}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border py-3.5 text-[14px] font-semibold transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2745a]"
+                  style={{ color: "#7a3c28", borderColor: "#c2745a", backgroundColor: "#faf6ef", minHeight: 48 }}
+                >
+                  <LogOut size={15} />
+                  Sair do quiz
+                </button>
+              ) : (
+                <div className="rounded-xl border p-3" style={{ backgroundColor: "#fff0eb", borderColor: "#c2745a" }}>
+                  <p className="text-[12px] font-semibold text-center mb-2.5" style={{ color: "#7a3c28" }}>
+                    Confirmar saída? O progresso da sessão será perdido.
+                  </p>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setConfirmSair(false)} className="flex-1 rounded-lg py-2 text-[13px] font-semibold border" style={{ borderColor: BORDER, color: TEXT_MUTED, backgroundColor: PARCHMENT }}>
+                      Cancelar
+                    </button>
+                    <button type="button" onClick={() => { onFechar(); onSair(); }} className="flex-1 rounded-lg py-2 text-[13px] font-bold text-white" style={{ backgroundColor: "#c2745a" }}>
+                      Confirmar saída
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* ── Dificuldade ── */}
               <section>
                 <SectionHeader icon={<Gauge size={13} />} label="Dificuldade" />
@@ -270,7 +291,7 @@ export default function QuizConfigModal({
                 </div>
                 {local.dificuldade === "dificil" && (
                   <p className="mt-2 text-[11px] px-1" style={{ color: "#7a3c28" }}>
-                    Modo difícil desativa as dicas automáticas e reduz o tempo disponível.
+                    O quiz passa a trazer apenas perguntas difíceis. Aplica-se na próxima sessão.
                   </p>
                 )}
                 {local.dificuldade === "facil" && (
@@ -422,50 +443,6 @@ export default function QuizConfigModal({
                     <RotateCcw size={15} />
                     Reiniciar quiz
                   </button>
-
-                  {!confirmSair ? (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmSair(true)}
-                      className="w-full flex items-center justify-center gap-2 rounded-xl border py-3.5 text-[14px] font-semibold transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2745a]"
-                      style={{
-                        color: "#7a3c28",
-                        borderColor: "#c2745a",
-                        backgroundColor: "#faf6ef",
-                        minHeight: 48,
-                      }}
-                    >
-                      <LogOut size={15} />
-                      Sair do quiz
-                    </button>
-                  ) : (
-                    <div
-                      className="rounded-xl border p-3"
-                      style={{ backgroundColor: "#fff0eb", borderColor: "#c2745a" }}
-                    >
-                      <p className="text-[12px] font-semibold text-center mb-2.5" style={{ color: "#7a3c28" }}>
-                        Confirmar saída? O progresso da sessão será perdido.
-                      </p>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setConfirmSair(false)}
-                          className="flex-1 rounded-lg py-2 text-[13px] font-semibold border"
-                          style={{ borderColor: BORDER, color: TEXT_MUTED, backgroundColor: PARCHMENT }}
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { onFechar(); onSair(); }}
-                          className="flex-1 rounded-lg py-2 text-[13px] font-bold text-white"
-                          style={{ backgroundColor: "#c2745a" }}
-                        >
-                          Confirmar saída
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </section>
             </div>

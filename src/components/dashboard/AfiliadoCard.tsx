@@ -16,7 +16,7 @@ export default function AfiliadoCard({
 }: AfiliadoCardProps) {
   const [copiado, setCopiado] = useState(false);
 
-  const linkAfiliado = `https://recibocerto.pt/?ref=${codigoAfiliado}`;
+  const linkAfiliado = `https://www.recibocerto.pt/?ref=${codigoAfiliado}`;
 
   function copiar() {
     navigator.clipboard.writeText(linkAfiliado).then(() => {

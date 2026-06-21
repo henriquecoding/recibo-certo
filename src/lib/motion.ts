@@ -23,5 +23,10 @@ export const staggerItem: Variants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE } },
 };
 
-// Viewport partilhado: anima uma vez, quando ~15% entra no ecrã.
-export const inViewOnce = { once: true, amount: 0.15 } as const;
+// Viewport partilhado: anima UMA vez, assim que qualquer parte entra no ecrã.
+// `amount: "some"` (e não uma fração) é essencial para mobile-first: secções
+// mais altas do que o ecrã (ex.: o comparador, os simuladores) nunca chegariam
+// a ter 15% visíveis num telemóvel — ficariam presas em `opacity:0` (espaço em
+// branco). Com "some", revelam assim que o topo entra. Margem negativa no fundo
+// para não revelar cedo de mais.
+export const inViewOnce = { once: true, amount: "some" } as const;

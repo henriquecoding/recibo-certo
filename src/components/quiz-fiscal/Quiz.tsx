@@ -5,23 +5,29 @@ import { m, AnimatePresence } from "motion/react";
 import { resolveQuizIcon } from "./icon-map";
 import { META_CATEGORIA_QUIZ } from "@/lib/quiz-fiscal";
 import {
-  Check, Close, ArrowRight, ExternalLink, Fire, Star, Target, Zap,
+  Check, Close, ArrowRight, ExternalLink, Fire, Star, Target, Zap, History,
 } from "@/components/ui/Icons";
+import { useQuizProgresso } from "@/lib/store/quiz-progresso";
 import QuizHeader from "./QuizHeader";
 import QuizVantagens from "./QuizVantagens";
-import QuizMenuLateral from "./QuizMenuLateral";
+
 import QuizConfigModal from "./QuizConfigModal";
+import QuizBarraInferior from "./QuizBarraInferior";
+import BotaoReportarErro from "./BotaoReportarErro";
 import { useGameJuice } from "@/hooks/useGameJuice";
 import { useQuizConfig } from "@/hooks/useQuizConfig";
-import type { OpcaoEstado } from "./QuizBookShell";
+import type { OpcaoEstado } from "./tipos";
 import type { VantagensEstado } from "@/hooks/useQuizFiscal";
 import type { QuizOpcao, QuizCategoria } from "@/lib/quiz-fiscal";
 import type { QuizProgressoProps } from "./QuizFiscalApp";
 
 const LETRAS = ["A", "B", "C", "D"];
 
-interface QuizDesktopProps {
+interface QuizProps {
   categoriaAtiva?: QuizCategoria;
+  perguntaId: string;
+  perguntaTexto: string;
+  categoriaPergunta: QuizCategoria;
   indice: number;
   total: number;
   pergunta: string;
@@ -74,8 +80,11 @@ function formatTempo(seg: number | undefined): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-export default function QuizDesktop({
+export default function Quiz({
   categoriaAtiva,
+  perguntaId,
+  perguntaTexto,
+  categoriaPergunta,
   indice,
   total,
   pergunta,
@@ -113,11 +122,11 @@ export default function QuizDesktop({
   pontosAtuais,
   streakAtual,
   progresso,
-}: QuizDesktopProps) {
+}: QuizProps) {
   const { soarAcerto, soarErro, soarToque } = useGameJuice();
   const { config, updateConfig } = useQuizConfig();
+  const { sessoes: histSessoes } = useQuizProgresso();
   const [tremendoTela, setTremendoTela] = useState(false);
-  const [menuAberto, setMenuAberto] = useState(false);
   const [configAberta, setConfigAberta] = useState(false);
   const prevRespondida = useRef(false);
 
@@ -172,23 +181,23 @@ export default function QuizDesktop({
 
   return (
     <div className="flex flex-col min-h-screen" style={{ backgroundColor: "#6b5240" }}>
-      {/* ── Header ── */}
-      <QuizHeader
-        menuAberto={menuAberto}
-        onMenuToggle={() => setMenuAberto(true)}
-        onConfiguracoes={() => setConfigAberta(true)}
-        nivel={progresso.nivel}
-        tituloNivel={progresso.tituloNivel}
-        xpAtual={progresso.xpAtual}
-        xpTotal={progresso.xpProximo}
-        xpPct={xpPct}
-      />
+      {/* ── Header (desktop; no telemóvel vive em baixo — QuizBarraInferior) ── */}
+      <div className="hidden lg:block">
+        <QuizHeader
+          onConfiguracoes={() => setConfigAberta(true)}
+          nivel={progresso.nivel}
+          tituloNivel={progresso.tituloNivel}
+          xpAtual={progresso.xpAtual}
+          xpTotal={progresso.xpProximo}
+          xpPct={xpPct}
+        />
+      </div>
 
-      {/* ── Main 3-column layout ── */}
-      <div className="flex flex-1 items-start gap-4 p-4 mx-auto w-full max-w-screen-xl">
+      {/* ── Layout (responsivo: 3 colunas no desktop, 1 no telemóvel) ── */}
+      <div className="flex flex-1 items-start gap-4 p-3 sm:p-4 mx-auto w-full max-w-screen-xl">
 
-        {/* ── Left sidebar ── */}
-        <aside className="w-60 xl:w-64 shrink-0 flex flex-col gap-3 self-start sticky top-[72px]">
+        {/* ── Left sidebar (desktop; no telemóvel vive no menu lateral) ── */}
+        <aside className="hidden lg:flex w-60 xl:w-64 shrink-0 flex-col gap-3 self-start sticky top-[72px]">
           {/* Sequência card */}
           <div
             className="rounded-2xl p-4 shadow-sm"
@@ -249,6 +258,34 @@ export default function QuizDesktop({
                 />
               ))}
             </div>
+          </div>
+
+          {/* Histórico (abaixo da Energia) */}
+          <div className="rounded-2xl p-4 shadow-sm" style={{ backgroundColor: PARCHMENT_SIDEBAR, border: `1px solid ${BORDER}` }}>
+            <div className="mb-2.5 flex items-center gap-2" style={{ color: "#8a7355" }}>
+              <History size={13} />
+              <span className="text-[12px] font-semibold">Histórico</span>
+            </div>
+            {histSessoes.length === 0 ? (
+              <p className="text-[11px]" style={{ color: "#a0907a" }}>Termina um quiz para o veres aqui.</p>
+            ) : (
+              <ul className="space-y-2">
+                {histSessoes.slice(0, 6).map((s) => {
+                  const pct = s.totalPerguntas > 0 ? Math.round((s.acertos / s.totalPerguntas) * 100) : 0;
+                  const data = new Date(s.criadoEm).toLocaleDateString("pt-PT", { day: "numeric", month: "short" });
+                  const cor = pct >= 70 ? "#2f7d56" : pct >= 40 ? "#8a6d2a" : "#9e5a44";
+                  return (
+                    <li key={s.id} className="flex items-center gap-2.5">
+                      <span className="flex h-7 w-9 flex-shrink-0 items-center justify-center rounded-md text-[12px] font-bold tabular-nums" style={{ backgroundColor: "#fffdf7", color: cor, border: `1px solid ${BORDER}` }}>{pct}%</span>
+                      <div className="min-w-0 flex-1 leading-tight">
+                        <p className="truncate text-[12px] font-semibold" style={{ color: "#1a1a17" }}>{s.acertos}/{s.totalPerguntas} certas</p>
+                        <p className="truncate text-[10px]" style={{ color: "#a0907a" }}>{data} · {s.pontos} pts · +{s.xpGanho} XP</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
         </aside>
 
@@ -362,7 +399,7 @@ export default function QuizDesktop({
                   {opcoes.map((opcao, idx) => {
                     const estado = opcaoEstados[idx];
                     if (!estado) return null;
-                    const { className: btnClass, style: btnStyle } = getDesktopOpcaoProps(estado);
+                    const { className: btnClass, style: btnStyle } = getOpcaoProps(estado);
                     return (
                       <m.button
                         key={idx}
@@ -378,7 +415,7 @@ export default function QuizDesktop({
                       >
                         <span
                           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[13px] font-bold"
-                          style={getDesktopLetraBadgeStyle(estado)}
+                          style={getLetraBadgeStyle(estado)}
                         >
                           {estado === "correta" ? <Check size={14} /> : estado === "errada" ? <Close size={14} /> : LETRAS[idx]}
                         </span>
@@ -417,42 +454,52 @@ export default function QuizDesktop({
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25 }}
-                className="flex items-stretch gap-3"
+                className="flex flex-col gap-2"
               >
-                <div
-                  className="flex flex-1 items-start gap-3 rounded-2xl p-4"
-                  style={{ backgroundColor: PARCHMENT_SIDEBAR, border: `1px solid ${BORDER}` }}
-                >
+                <div className="flex items-stretch gap-3">
                   <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full self-center"
-                    style={{ backgroundColor: "#e8dcc8" }}
+                    className="flex flex-1 items-start gap-3 rounded-2xl p-4"
+                    style={{ backgroundColor: PARCHMENT_SIDEBAR, border: `1px solid ${BORDER}` }}
                   >
-                    <span style={{ color: "#C07828" }}><Star size={18} /></span>
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full self-center"
+                      style={{ backgroundColor: "#e8dcc8" }}
+                    >
+                      <span style={{ color: "#C07828" }}><Star size={18} /></span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[13px] font-bold" style={{ color: "#1a1a17" }}>Base Legal</div>
+                      <p className="text-[12px] leading-snug mt-0.5 line-clamp-2" style={{ color: "#4a4a44" }}>
+                        {legalBasis}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end shrink-0">
+                      <span className="text-[10px] font-semibold" style={{ color: "#8a7355" }}>Vantagens</span>
+                      <span className="text-[16px] font-bold" style={{ color: "#415439" }}>{vantagensUsadas}</span>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-bold" style={{ color: "#1a1a17" }}>Base Legal</div>
-                    <p className="text-[12px] leading-snug mt-0.5 line-clamp-2" style={{ color: "#4a4a44" }}>
-                      {legalBasis}
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end shrink-0">
-                    <span className="text-[10px] font-semibold" style={{ color: "#8a7355" }}>Vantagens</span>
-                    <span className="text-[16px] font-bold" style={{ color: "#415439" }}>{vantagensUsadas}</span>
-                  </div>
+
+                  <m.button
+                    type="button"
+                    onClick={onSeguinte}
+                    className="flex shrink-0 items-center justify-center gap-2 rounded-2xl px-8 text-[16px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#3a5232]"
+                    style={{ backgroundColor: QUIZ_DARK, minWidth: "160px" }}
+                    whileHover={{ scale: 1.02, y: -1 }}
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 26 }}
+                  >
+                    {ultimaPergunta ? "Ver resultado" : "Próxima"}
+                    <ArrowRight size={20} />
+                  </m.button>
                 </div>
 
-                <m.button
-                  type="button"
-                  onClick={onSeguinte}
-                  className="flex shrink-0 items-center justify-center gap-2 rounded-2xl px-8 text-[16px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#3a5232]"
-                  style={{ backgroundColor: QUIZ_DARK, minWidth: "160px" }}
-                  whileHover={{ scale: 1.02, y: -1 }}
-                  whileTap={{ scale: 0.97 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 26 }}
-                >
-                  {ultimaPergunta ? "Ver resultado" : "Próxima"}
-                  <ArrowRight size={20} />
-                </m.button>
+                <div className="flex justify-end">
+                  <BotaoReportarErro
+                    perguntaId={perguntaId}
+                    perguntaTexto={perguntaTexto}
+                    categoria={categoriaPergunta}
+                  />
+                </div>
               </m.div>
             )}
           </AnimatePresence>
@@ -466,7 +513,7 @@ export default function QuizDesktop({
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 16 }}
               transition={{ duration: 0.3 }}
-              className="w-60 xl:w-72 shrink-0 self-start sticky top-[72px]"
+              className="hidden lg:block w-60 xl:w-72 shrink-0 self-start sticky top-[72px]"
             >
               <div
                 className="rounded-2xl shadow-md overflow-hidden"
@@ -541,9 +588,9 @@ export default function QuizDesktop({
         </AnimatePresence>
       </div>
 
-      {/* ── Footer stats bar ── */}
+      {/* ── Footer stats bar (desktop; no telemóvel vive na barra inferior) ── */}
       <div
-        className="flex items-center justify-center gap-6 px-6 py-3 xl:gap-10"
+        className="hidden lg:flex items-center justify-center gap-6 px-6 py-3 xl:gap-10"
         style={{ backgroundColor: "#1d2218" }}
       >
         <FooterStat icon={<Target size={16} className="text-[#ebd4a4]" />} label="Acertos" value={`${acertoPct}%`} />
@@ -555,18 +602,6 @@ export default function QuizDesktop({
         <FooterStat icon={<Close size={16} className="text-[#ebd4a4]" />} label="Erros" value={String(errosAteAgora)} />
       </div>
 
-      <QuizMenuLateral
-        aberto={menuAberto}
-        onFechar={() => setMenuAberto(false)}
-        categoriaAtiva={categoriaAtiva}
-        onSair={onSair}
-        acertosAteAgora={acertosAteAgora}
-        errosAteAgora={errosAteAgora}
-        streakAtual={streakAtual}
-        pontosAtuais={pontosAtuais}
-        indice={indice}
-        total={total}
-      />
       <QuizConfigModal
         aberto={configAberta}
         onFechar={() => setConfigAberta(false)}
@@ -574,6 +609,15 @@ export default function QuizDesktop({
         onSair={onSair}
         config={config}
         onConfigChange={updateConfig}
+      />
+
+      {/* ── Header inferior (telemóvel) — mesmos valores e design da barra do desktop ── */}
+      <QuizBarraInferior
+        acertos={`${acertoPct}%`}
+        tempo={formatTempo(tempoRestante)}
+        pontos={String(pontosAtuais)}
+        erros={String(errosAteAgora)}
+        onConfiguracoes={() => setConfigAberta(true)}
       />
     </div>
   );
@@ -623,7 +667,7 @@ function ParticulasAcerto() {
   );
 }
 
-function getDesktopOpcaoProps(estado: OpcaoEstado): { className: string; style: React.CSSProperties } {
+function getOpcaoProps(estado: OpcaoEstado): { className: string; style: React.CSSProperties } {
   const base = "flex w-full items-center gap-3 rounded-xl border-2 px-4 py-3.5 text-left transition-colors duration-150";
   switch (estado) {
     case "correta":
@@ -641,7 +685,7 @@ function getDesktopOpcaoProps(estado: OpcaoEstado): { className: string; style: 
   }
 }
 
-function getDesktopLetraBadgeStyle(estado: OpcaoEstado): React.CSSProperties {
+function getLetraBadgeStyle(estado: OpcaoEstado): React.CSSProperties {
   switch (estado) {
     case "correta":   return { backgroundColor: "#3a5232", color: "#ffffff" };
     case "errada":    return { backgroundColor: "#c2745a", color: "#ffffff" };
