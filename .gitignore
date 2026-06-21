@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Claude Code — worktrees temporários (criados internamente, não pertencem ao repo)
 .claude/worktrees/
+
+# artefacto binário do pdf.js copiado localmente (1,3 MB, regenerável, não referenciado)
+/public/pdf.worker.min.mjs
