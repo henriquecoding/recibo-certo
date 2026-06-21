@@ -92,7 +92,8 @@ const GRUPOS: NavGroup[] = [
   {
     titulo: "Conta",
     itens: [
-      { href: "/dashboard/conta", label: "A minha conta", short: "Conta", icon: User },
+      { href: "/dashboard/perfil", label: "O meu perfil", short: "Perfil", icon: User },
+      { href: "/dashboard/conta", label: "A minha conta", short: "Conta", icon: ShieldCheck },
       { href: "/dashboard/upgrade", label: "Plano e subscrição", short: "Plano", icon: Star },
     ],
   },
@@ -103,7 +104,7 @@ const PRIMARIOS: NavItem[] = [
   { href: "/dashboard", label: "Visão geral", short: "Início", icon: LayoutGrid },
   { href: "/dashboard/recibos", label: "Recibos", short: "Recibos", icon: Receipt },
   { href: "/dashboard/prazos", label: "Prazos fiscais", short: "Prazos", icon: Calendar },
-  { href: "/dashboard/comparar", label: "Comparar cenários", short: "Comparar", icon: Scale },
+  { href: "/dashboard/perfil", label: "O meu perfil", short: "Perfil", icon: User },
 ];
 
 function AdminLink({ mobile }: { mobile?: boolean }) {
@@ -255,8 +256,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <AdminLink mobile />
             <ThemeToggle />
             <Link
-              href="/dashboard/conta"
-              aria-label="Conta"
+              href="/dashboard/perfil"
+              aria-label="Perfil"
               className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/10 text-brand transition-colors hover:bg-brand hover:text-white"
             >
               <User size={16} />
