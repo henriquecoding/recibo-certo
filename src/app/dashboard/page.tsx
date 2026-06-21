@@ -22,6 +22,7 @@ import MiniCalendario from "@/components/dashboard/MiniCalendario";
 import Onboarding from "@/components/dashboard/Onboarding";
 import PartnerSpot from "@/components/dashboard/PartnerSpot";
 import HubRecursos from "@/components/dashboard/HubRecursos";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 const ReceitaChart = dynamic(() => import("@/components/dashboard/ReceitaChart"), {
   ssr: false,
@@ -191,7 +192,7 @@ export default function VisaoGeral() {
               {/* Métrica principal */}
               <div className="relative mt-4">
                 <div className="text-xs font-medium uppercase tracking-wider text-green-100/60">Disponível para gastar</div>
-                <div className="mt-1 font-display text-6xl font-semibold leading-none tabular-nums sm:text-7xl">
+                <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-5xl lg:text-6xl">
                   <AnimatedNumber value={mes.liquido} />
                 </div>
                 {mes.bruto === 0 && (
@@ -250,21 +251,29 @@ export default function VisaoGeral() {
           {/* ══ ROW 2: Gráfico de receitas + Calendário ══════════ */}
 
           <div className="col-span-12 lg:col-span-7">
-            <ReceitaChart recibos={recibos} />
+            <ErrorBoundary etiqueta="gráfico de receitas">
+              <ReceitaChart recibos={recibos} />
+            </ErrorBoundary>
           </div>
 
           <div className="col-span-12 lg:col-span-5">
-            <MiniCalendario />
+            <ErrorBoundary etiqueta="mini calendário">
+              <MiniCalendario />
+            </ErrorBoundary>
           </div>
 
           {/* ══ ROW 3: Três painéis de análise ═══════════════════ */}
 
           <div className="col-span-12 sm:col-span-6 lg:col-span-4">
-            <DistribuicaoDonut resumo={mes} />
+            <ErrorBoundary etiqueta="distribuição do mês">
+              <DistribuicaoDonut resumo={mes} />
+            </ErrorBoundary>
           </div>
 
           <div className="col-span-12 sm:col-span-6 lg:col-span-4">
-            <IvaProgresso recibos={recibos} />
+            <ErrorBoundary etiqueta="progresso IVA">
+              <IvaProgresso recibos={recibos} />
+            </ErrorBoundary>
           </div>
 
           <div className="col-span-12 lg:col-span-4">
@@ -284,7 +293,9 @@ export default function VisaoGeral() {
           {/* ══ ROW 4: Estimativa IRS + Tabela + Insights ═══════ */}
 
           <div className="col-span-12 lg:col-span-4">
-            <EstimativaIRS recibos={recibos} prefs={prefs} />
+            <ErrorBoundary etiqueta="estimativa IRS">
+              <EstimativaIRS recibos={recibos} prefs={prefs} />
+            </ErrorBoundary>
           </div>
 
           <div className="col-span-12 lg:col-span-8">

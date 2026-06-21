@@ -106,7 +106,7 @@ export default function ReceitasPage() {
                   <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">
                     Líquido para ti · {periodo === "ano" ? new Date().getFullYear() : "todo o período"}
                   </div>
-                  <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-6xl lg:text-7xl">
+                  <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-5xl lg:text-6xl">
                     {fmt(kpis.liquido)}
                   </div>
                   {kpis.bruto > 0 && (
