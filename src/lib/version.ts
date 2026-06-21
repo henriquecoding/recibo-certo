@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.45.0";
+export const APP_VERSION = "1.46.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.46.0",
+    data: "2026-06-21",
+    titulo: "Footer redesenhado",
+    itens: [
+      "Footer reestruturado com layout moderno: trust bar em grelha responsiva (2×2 mobile, 4 colunas desktop), navegação em 4 colunas com ferramentas (com ícones), aprender, empresa e contacto.",
+      "Novo card de dados oficiais com link para fontes, aviso legal compacto e barra inferior simplificada.",
+    ],
+  },
   {
     version: "1.45.0",
     data: "2026-06-21",

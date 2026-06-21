@@ -5,325 +5,271 @@ import { m } from "motion/react";
 import { fadeUp, staggerContainer, staggerItem, inViewOnce } from "@/lib/motion";
 import {
   Logo, ShieldCheck, Lock, Clock, CheckTrend, ArrowRight,
-  Receipt, Calendar, Calculator, Scale, Mail, ExternalLink,
-  Warning, Check, Heart,
+  Receipt, Calendar, Calculator, Scale, Mail,
+  Warning, Heart, BookOpen, MapPin, Zap, Briefcase,
 } from "@/components/ui/Icons";
 import { FISCAL_YEAR } from "@/lib/fiscal-data";
 import { abrirPreferenciasCookies } from "@/lib/cookie-consent";
 
-// ── Trust bar ─────────────────────────────────────────────────
-
 const TRUST = [
-  {
-    icon: CheckTrend,
-    label: "Dados fiscais " + FISCAL_YEAR,
-    sub: "AT · SS · OE — fontes oficiais",
-  },
-  {
-    icon: Lock,
-    label: "Privacidade total",
-    sub: "Sem conta obrigatória",
-  },
-  {
-    icon: ShieldCheck,
-    label: "Cálculos offline",
-    sub: "Os teus dados ficam no teu dispositivo",
-  },
-  {
-    icon: Clock,
-    label: "Sempre atualizado",
-    sub: "Monitorização automática de alterações",
-  },
+  { icon: CheckTrend, label: "Dados " + FISCAL_YEAR, sub: "Fontes oficiais AT · SS · OE" },
+  { icon: Lock, label: "100% privado", sub: "Sem conta obrigatória" },
+  { icon: ShieldCheck, label: "Offline", sub: "Dados no teu dispositivo" },
+  { icon: Clock, label: "Atualizado", sub: "Monitorização automática" },
 ];
 
-// ── Navegação ─────────────────────────────────────────────────
-
-const NAV = [
-  {
-    heading: "Ferramenta",
-    links: [
-      { label: "Calculadora de recibo", href: "/#calculadora" },
-      { label: "Simulador de salário líquido", href: "/ferramentas/recibo-vencimento" },
-      { label: "Simulador de IRS", href: "/dashboard/simulador" },
-      { label: "Comparador de regimes", href: "/dashboard/comparador" },
-      { label: "Prazos fiscais", href: "/dashboard/prazos" },
-      { label: "Arquivo de recibos", href: "/dashboard/recibos" },
-    ],
-  },
-  {
-    heading: "Conteúdo",
-    links: [
-      { label: "Todos os guias", href: "/guias" },
-      { label: "Abrir atividade", href: "/guias/abrir-atividade" },
-      { label: "Regime simplificado", href: "/guias/regime-simplificado" },
-      { label: "Decisor ato isolado", href: "/ferramentas/ato-isolado" },
-      { label: "Classificar atividade", href: "/ferramentas/classificar-atividade" },
-    ],
-  },
-  {
-    heading: "Recursos",
-    links: [
-      { label: "Planos e preços", href: "/precos" },
-      { label: "Perguntas frequentes", href: "/#faq" },
-      { label: "Fontes fiscais", href: "/#fontes" },
-      { label: "Política de privacidade", href: "/privacidade" },
-      { label: "Termos de utilização", href: "/termos" },
-    ],
-  },
+const NAV_FERRAMENTAS = [
+  { label: "Calculadora de recibos verdes", href: "/#calculadora", Icon: Receipt },
+  { label: "Recibo de vencimento", href: "/ferramentas/recibo-vencimento", Icon: Briefcase },
+  { label: "Comparador de regimes", href: "/dashboard/comparar", Icon: Scale },
+  { label: "Simulador de empresa", href: "/dashboard/empresa", Icon: Calculator },
+  { label: "Mapa de contabilistas", href: "/dashboard/mapa-contabilistas", Icon: MapPin },
+  { label: "Prazos fiscais", href: "/dashboard/prazos", Icon: Calendar },
 ];
 
-// ── Sub-componente: TrustBar ──────────────────────────────────
+const NAV_APRENDER = [
+  { label: "Guias fiscais", href: "/guias" },
+  { label: "Quiz Fiscal", href: "/quiz-fiscal" },
+  { label: "Abrir atividade", href: "/guias/abrir-atividade" },
+  { label: "Regime simplificado", href: "/guias/regime-simplificado" },
+  { label: "Escalões de IRS", href: "/guias/escaloes-irs" },
+  { label: "Ato isolado", href: "/guias/ato-isolado" },
+];
 
-function TrustBar() {
-  return (
-    <div className="relative overflow-hidden bg-ink">
-      {/* Linha superior com gradiente de marca */}
-      <div
-        className="absolute inset-x-0 top-0 h-px"
-        style={{
-          background:
-            "linear-gradient(90deg, transparent, rgba(29,158,117,0.55) 30%, rgba(159,225,203,0.7) 50%, rgba(29,158,117,0.55) 70%, transparent)",
-        }}
-      />
-      {/* Brilho ambiente */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 60% 120% at 15% 110%, rgba(29,158,117,0.12) 0%, transparent 65%)",
-        }}
-      />
-
-      <div className="relative z-10 mx-auto max-w-6xl px-5 sm:px-8">
-        <m.div
-          variants={staggerContainer}
-          initial="hidden"
-          whileInView="visible"
-          viewport={inViewOnce}
-          className="flex items-stretch overflow-x-auto"
-          style={{ scrollbarWidth: "none" }}
-        >
-          {TRUST.map((p, i) => {
-            const Icon = p.icon;
-            return (
-              <m.div
-                key={p.label}
-                variants={staggerItem}
-                className="group flex shrink-0 items-center gap-3 px-5 py-5 sm:px-7"
-              >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-brand/10 ring-1 ring-brand/20 transition-all group-hover:bg-brand/18">
-                  <Icon size={15} className="text-brand-mint" />
-                </div>
-                <div>
-                  <p className="text-[11px] font-bold leading-none text-stone-100">
-                    {p.label}
-                  </p>
-                  <p className="mt-0.5 text-[10px] font-medium leading-none text-stone-500">
-                    {p.sub}
-                  </p>
-                </div>
-                {i < TRUST.length - 1 && (
-                  <div className="ml-5 hidden h-6 w-px shrink-0 bg-stone-800 sm:block" />
-                )}
-              </m.div>
-            );
-          })}
-        </m.div>
-      </div>
-    </div>
-  );
-}
-
-// ── Footer principal ──────────────────────────────────────────
+const NAV_EMPRESA = [
+  { label: "Planos e preços", href: "/precos" },
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "Perguntas frequentes", href: "/#faq" },
+  { label: "Fontes fiscais", href: "/#fontes" },
+  { label: "Privacidade", href: "/privacidade" },
+  { label: "Termos de utilização", href: "/termos" },
+];
 
 export default function Footer() {
   return (
     <footer className="mt-auto">
-      {/* 1 — Trust bar */}
-      <TrustBar />
-
-      {/* 2 — Corpo principal */}
-      <div className="relative overflow-hidden bg-cream dark:bg-stone-900">
-        {/* Brilho ambiente quente */}
+      {/* ── Trust bar ── */}
+      <div className="relative overflow-hidden bg-ink">
         <div
-          className="pointer-events-none absolute right-0 top-0 h-[400px] w-[400px] -translate-y-1/3 translate-x-1/3 rounded-full blur-3xl"
+          className="absolute inset-x-0 top-0 h-px"
+          style={{ background: "linear-gradient(90deg, transparent, rgba(29,158,117,0.5) 30%, rgba(159,225,203,0.6) 50%, rgba(29,158,117,0.5) 70%, transparent)" }}
+        />
+        <div className="mx-auto max-w-6xl px-5 sm:px-8">
+          <m.div
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={inViewOnce}
+            className="grid grid-cols-2 sm:grid-cols-4"
+          >
+            {TRUST.map((p) => {
+              const Icon = p.icon;
+              return (
+                <m.div
+                  key={p.label}
+                  variants={staggerItem}
+                  className="flex items-center gap-2.5 px-3 py-4 sm:px-4 sm:py-5"
+                >
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand/10 ring-1 ring-brand/20">
+                    <Icon size={13} className="text-brand-mint" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold leading-tight text-stone-100 truncate">{p.label}</p>
+                    <p className="text-[10px] font-medium leading-tight text-stone-500 truncate">{p.sub}</p>
+                  </div>
+                </m.div>
+              );
+            })}
+          </m.div>
+        </div>
+      </div>
+
+      {/* ── Corpo principal ── */}
+      <div className="relative overflow-hidden bg-cream dark:bg-stone-950">
+        <div
+          className="pointer-events-none absolute -top-20 right-0 h-[500px] w-[500px] translate-x-1/4 rounded-full blur-[100px]"
           style={{ background: "rgba(29,158,117,0.04)" }}
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute bottom-0 left-0 h-[300px] w-[300px] -translate-x-1/4 translate-y-1/4 rounded-full blur-[80px]"
+          style={{ background: "rgba(29,158,117,0.03)" }}
+          aria-hidden
         />
 
-        <div className="relative z-10 mx-auto max-w-6xl px-5 pt-14 sm:px-8 sm:pt-16">
-          <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
-
-            {/* ── Coluna marca ── */}
-            <m.div
-              variants={fadeUp}
-              initial="hidden"
-              whileInView="visible"
-              viewport={inViewOnce}
-              className="lg:col-span-4"
+        <div className="relative z-10 mx-auto max-w-6xl px-5 pt-12 sm:px-8 sm:pt-16">
+          {/* ── Topo: logo + CTA ── */}
+          <m.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={inViewOnce}
+            className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between"
+          >
+            <div>
+              <div className="mb-3"><Logo /></div>
+              <p className="max-w-md text-[13px] leading-relaxed text-stone-500 dark:text-stone-400">
+                Copiloto financeiro para quem trabalha em Portugal — sabe quanto é teu,
+                quanto reservar e quando pagar, sem surpresas.
+              </p>
+            </div>
+            <Link
+              href="/dashboard"
+              className="group inline-flex items-center gap-2 self-start rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-dark hover:shadow-float sm:self-auto"
             >
-              {/* Logo */}
-              <div className="mb-5">
-                <Logo />
-              </div>
+              <Zap size={14} />
+              Abrir o dashboard
+              <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </m.div>
 
-              {/* Manifesto */}
-              <p className="mb-2 max-w-xs text-[13px] font-medium leading-relaxed text-stone-500 dark:text-stone-400">
-                Copiloto financeiro para quem trabalha em Portugal — independente
-                ou por conta de outrem. Sabe quanto é teu, quanto reservar e quando
-                pagar, sem surpresas no fim do ano.
-              </p>
-              <p className="mb-8 max-w-xs text-[12px] font-medium leading-relaxed text-stone-400 dark:text-stone-500">
-                Calculadora de recibos verdes, simulador de salário líquido,
-                simulador de IRS, comparador de regimes e calendário fiscal — tudo
-                com dados oficiais verificados.
-              </p>
-
-              {/* Contacto */}
-              <div className="mb-8 space-y-2.5">
-                <a
-                  href="mailto:recibocerto.pt@gmail.com"
-                  className="group flex items-center gap-2.5 text-[11px] font-medium text-stone-400 transition-colors hover:text-brand dark:text-stone-500 dark:hover:text-brand-mint"
-                >
-                  <div className="flex h-6 w-6 items-center justify-center rounded-[7px] bg-stone-100 transition-colors group-hover:bg-brand-light dark:bg-stone-800 dark:group-hover:bg-brand/20">
-                    <Mail size={12} className="text-stone-400 transition-colors group-hover:text-brand dark:text-stone-500" />
-                  </div>
-                  recibocerto.pt@gmail.com
-                </a>
-                <div className="flex items-center gap-2.5 text-[11px] font-medium text-stone-400 dark:text-stone-500">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-[7px] bg-stone-100 dark:bg-stone-800">
-                    <Receipt size={12} className="text-stone-400 dark:text-stone-500" />
-                  </div>
-                  Recibos verdes e vencimentos · Portugal · {FISCAL_YEAR}
-                </div>
-              </div>
-
-              {/* CTA — entrar no dashboard */}
-              <Link
-                href="/dashboard"
-                className="group inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-dark hover:shadow-float"
-              >
-                <CheckTrend size={14} />
-                Abrir o dashboard
-                <ArrowRight
-                  size={12}
-                  className="transition-transform group-hover:translate-x-0.5"
-                />
-              </Link>
+          {/* ── Grelha de navegação ── */}
+          <m.div
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={inViewOnce}
+            className="grid grid-cols-2 gap-8 border-t border-stone-200/60 pt-10 dark:border-stone-800 sm:grid-cols-3 lg:grid-cols-4"
+          >
+            {/* Ferramentas — com ícones */}
+            <m.div variants={staggerItem} className="col-span-2 sm:col-span-1">
+              <h3 className="mb-4 text-[11px] font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
+                Ferramentas
+              </h3>
+              <ul className="space-y-2">
+                {NAV_FERRAMENTAS.map((l) => (
+                  <li key={l.label}>
+                    <Link
+                      href={l.href}
+                      className="group flex items-center gap-2 text-[12.5px] font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100"
+                    >
+                      <l.Icon size={12} className="shrink-0 text-stone-400 transition-colors group-hover:text-brand dark:text-stone-600" />
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </m.div>
 
-            {/* ── Colunas de navegação ── */}
-            <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:col-span-8">
-              {NAV.map((col, ci) => (
-                <m.div
-                  key={col.heading}
-                  variants={fadeUp}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={inViewOnce}
-                  transition={{ delay: 0.1 + ci * 0.07 }}
-                >
-                  <h3
-                    className="eyebrow mb-4 border-b border-stone-200 pb-2.5 text-brand-dark dark:border-stone-700 dark:text-brand-mint"
-                  >
-                    {col.heading}
-                  </h3>
-                  <ul className="space-y-2.5">
-                    {col.links.map((l) => (
-                      <li key={l.label}>
-                        <Link
-                          href={l.href}
-                          className="group flex items-center gap-1.5 text-[12.5px] font-medium leading-snug text-stone-500 transition-all duration-200 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100"
-                        >
-                          <ArrowRight
-                            size={10}
-                            className="shrink-0 opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100 text-brand"
-                          />
-                          {l.label}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </m.div>
-              ))}
-            </div>
-          </div>
+            {/* Aprender */}
+            <m.div variants={staggerItem}>
+              <h3 className="mb-4 text-[11px] font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
+                Aprender
+              </h3>
+              <ul className="space-y-2">
+                {NAV_APRENDER.map((l) => (
+                  <li key={l.label}>
+                    <Link
+                      href={l.href}
+                      className="text-[12.5px] font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100"
+                    >
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </m.div>
 
-          {/* ── Nota de aviso legal ── */}
+            {/* Empresa */}
+            <m.div variants={staggerItem}>
+              <h3 className="mb-4 text-[11px] font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
+                ReciboCerto
+              </h3>
+              <ul className="space-y-2">
+                {NAV_EMPRESA.map((l) => (
+                  <li key={l.label}>
+                    <Link
+                      href={l.href}
+                      className="text-[12.5px] font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100"
+                    >
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </m.div>
+
+            {/* Contacto + newsletter */}
+            <m.div variants={staggerItem}>
+              <h3 className="mb-4 text-[11px] font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
+                Contacto
+              </h3>
+              <a
+                href="mailto:recibocerto.pt@gmail.com"
+                className="group flex items-center gap-2 text-[12.5px] font-medium text-stone-500 transition-colors hover:text-brand dark:text-stone-400"
+              >
+                <Mail size={13} className="shrink-0 text-stone-400 transition-colors group-hover:text-brand dark:text-stone-600" />
+                recibocerto.pt@gmail.com
+              </a>
+
+              <div className="mt-6 rounded-xl border border-stone-200/60 bg-white/60 p-4 dark:border-stone-800 dark:bg-stone-900/40">
+                <p className="text-[11px] font-semibold text-stone-700 dark:text-stone-200">Dados oficiais {FISCAL_YEAR}</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-stone-400 dark:text-stone-500">
+                  Tabelas AT, taxas SS e limites do Orçamento de Estado — verificados e atualizados automaticamente.
+                </p>
+                <Link
+                  href="/#fontes"
+                  className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-brand transition-colors hover:text-brand-dark"
+                >
+                  Ver fontes <ArrowRight size={10} />
+                </Link>
+              </div>
+            </m.div>
+          </m.div>
+
+          {/* ── Aviso legal ── */}
           <m.div
             variants={fadeUp}
             initial="hidden"
             whileInView="visible"
             viewport={inViewOnce}
-            className="mt-12 rounded-2xl border border-alert-border bg-alert-bg px-5 py-4 dark:border-stone-700 dark:bg-stone-800/60"
+            className="mt-10 flex items-start gap-3 rounded-xl border border-alert-border/60 bg-alert-bg/60 px-4 py-3.5 dark:border-stone-700 dark:bg-stone-800/40"
           >
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-alert-border/50">
-                <Warning size={12} className="text-alert-text dark:text-yellow-400" />
-              </div>
-              <p className="text-[11px] font-medium leading-relaxed text-alert-text dark:text-stone-400">
-                <strong className="font-bold">Informação não vinculativa.</strong>{" "}
-                O ReciboCerto é uma calculadora informativa baseada nas taxas
-                fiscais portuguesas de {FISCAL_YEAR}. Os resultados não substituem
-                o aconselhamento de um contabilista certificado nem constituem
-                declaração fiscal oficial. Verifica sempre com a AT ou com o teu
-                contabilista antes de tomar decisões financeiras.
-              </p>
-            </div>
+            <Warning size={12} className="mt-0.5 shrink-0 text-alert-text dark:text-yellow-500" />
+            <p className="text-[11px] leading-relaxed text-alert-text/90 dark:text-stone-400">
+              <strong className="font-semibold">Não vinculativo.</strong>{" "}
+              Calculadora informativa baseada nas taxas fiscais de {FISCAL_YEAR}. Não substitui
+              aconselhamento de um contabilista certificado. Confirma sempre com a AT.
+            </p>
           </m.div>
-
-          {/* ── Divisor ── */}
-          <div
-            className="my-8 h-px"
-            style={{
-              background:
-                "linear-gradient(90deg, transparent, rgba(29,158,117,0.25) 25%, rgba(29,158,117,0.25) 75%, transparent)",
-            }}
-          />
 
           {/* ── Barra inferior ── */}
-          <m.div
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="visible"
-            viewport={inViewOnce}
-            className="flex flex-col items-center justify-between gap-4 pb-10 sm:flex-row"
-          >
-            {/* Copyright */}
-            <p className="text-[11px] font-medium text-stone-400 dark:text-stone-500">
-              © {FISCAL_YEAR} ReciboCerto · Portugal · Todos os direitos reservados.
-            </p>
+          <div className="mt-8 border-t border-stone-200/50 dark:border-stone-800 pb-8 pt-6">
+            <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+              <p className="text-[11px] font-medium text-stone-400 dark:text-stone-500">
+                © {FISCAL_YEAR} ReciboCerto · Portugal
+              </p>
 
-            {/* Tagline */}
-            <div className="flex items-center gap-1.5 text-[11px] font-medium text-stone-400 dark:text-stone-500">
-              <span>Feito com</span>
-              <Heart size={11} className="fill-brand text-brand" />
-              <span>para quem trabalha em Portugal</span>
-            </div>
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-stone-400 dark:text-stone-500">
+                Feito com
+                <Heart size={10} className="fill-brand/70 text-brand/70" />
+                para quem trabalha em Portugal
+              </div>
 
-            {/* Links legais */}
-            <nav className="flex items-center gap-5" aria-label="Páginas legais">
-              {[
-                { label: "Privacidade", href: "/privacidade" },
-                { label: "Termos", href: "/termos" },
-                { label: "Fontes", href: "/#fontes" },
-              ].map((l) => (
-                <Link
-                  key={l.label}
-                  href={l.href}
+              <nav className="flex flex-wrap items-center justify-center gap-4" aria-label="Páginas legais">
+                {[
+                  { label: "Privacidade", href: "/privacidade" },
+                  { label: "Termos", href: "/termos" },
+                  { label: "Fontes", href: "/#fontes" },
+                ].map((l) => (
+                  <Link
+                    key={l.label}
+                    href={l.href}
+                    className="text-[11px] font-medium text-stone-400 transition-colors hover:text-stone-700 dark:text-stone-500 dark:hover:text-stone-300"
+                  >
+                    {l.label}
+                  </Link>
+                ))}
+                <button
+                  type="button"
+                  onClick={abrirPreferenciasCookies}
                   className="text-[11px] font-medium text-stone-400 transition-colors hover:text-stone-700 dark:text-stone-500 dark:hover:text-stone-300"
                 >
-                  {l.label}
-                </Link>
-              ))}
-              <button
-                type="button"
-                onClick={abrirPreferenciasCookies}
-                className="text-[11px] font-medium text-stone-400 transition-colors hover:text-stone-700 dark:text-stone-500 dark:hover:text-stone-300"
-              >
-                Cookies
-              </button>
-            </nav>
-          </m.div>
+                  Cookies
+                </button>
+              </nav>
+            </div>
+          </div>
         </div>
       </div>
     </footer>
