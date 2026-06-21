@@ -27,8 +27,8 @@ const MapaBeneficiosRegioes = dynamic(() => import("@/components/comparar/MapaBe
 });
 
 const DEPENDENTES = [0, 1, 2, 3, 4];
-const PRESETS = [15_000, 25_000, 40_000, 60_000, 80_000, 120_000];
-const MAX = 200_000;
+const PRESETS = [15_000, 30_000, 50_000, 80_000, 150_000, 300_000];
+const MAX = 500_000;
 const STEP = 1_000;
 
 const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
@@ -208,154 +208,139 @@ export default function ComparadorCenarios() {
         </div>
       </div>
 
-      {/* ── Slider de rendimento ── */}
-      <div className="rounded-3xl border border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 p-5">
+      {/* ── Painel de rendimento ── */}
+      <div className="rounded-3xl border border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 p-5 sm:p-6">
         {/* Valor + label */}
-        <div className="flex items-end justify-between mb-1">
-          <p className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wide">Rendimento anual ilíquido</p>
+        <div className="flex items-end justify-between gap-2 mb-1">
+          <p className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wide">
+            Rendimento anual ilíquido
+          </p>
           <div className="flex items-baseline gap-1">
             <input
               aria-label="Rendimento anual ilíquido"
               value={brutoStr}
+              onBlur={() => setBrutoStr(String(bruto))}
               onChange={(e) => {
                 const s = soDecimal(e.target.value);
                 setBrutoStr(s);
                 setBruto(Math.max(0, Math.min(MAX, num(s))));
                 setHasInteracted(true);
               }}
-              className="w-32 bg-transparent text-right font-display text-3xl font-semibold tabular-nums text-ink dark:text-stone-100 focus:outline-none"
+              className="w-40 bg-transparent text-right font-display text-3xl font-semibold tabular-nums text-ink dark:text-stone-100 focus:outline-none"
             />
             <span className="font-display text-lg font-semibold text-stone-400">€</span>
           </div>
         </div>
-        <p className="text-right text-[11px] text-stone-400 mb-4">/ano · arrasta o slider ou edita o valor</p>
+        <p className="text-right text-[11px] text-stone-400 mb-5">/ano · arrasta o slider ou edita o valor</p>
 
-        {/* Dica flutuante — desaparece após 1.ª interação */}
+        {/* Dica — desaparece após 1.ª interação */}
         <AnimatePresence>
           {!hasInteracted && (
             <m.div
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="flex items-center justify-center gap-1.5 mb-2"
+              exit={{ opacity: 0, y: -4 }}
+              className="flex items-center justify-center mb-3"
             >
-              <m.div
-                animate={{ x: [-4, 4, -4] }}
+              <m.span
+                animate={{ x: [-3, 3, -3] }}
                 transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
-                className="flex items-center gap-1 text-brand/70 dark:text-brand/60 text-xs font-bold"
+                className="flex items-center gap-1 text-brand/60 dark:text-brand/50 text-xs font-semibold"
               >
-                <ChevronLeft size={12} />
-                <span>Arraste para ajustar</span>
-                <ChevronRight size={12} />
-              </m.div>
+                <ChevronLeft size={11} />
+                Arraste para ajustar
+                <ChevronRight size={11} />
+              </m.span>
             </m.div>
           )}
         </AnimatePresence>
 
-        {/* Espaço para a bolha flutuante */}
-        <div className="h-9" />
-
-        {/* Trilho + preenchimento + puxador */}
-        <div className="relative px-1">
-          {/* Bolha flutuante sobre o puxador */}
-          <div
-            className="absolute -translate-x-1/2 bottom-full mb-2 z-30 pointer-events-none"
-            style={{ left: `calc(${sliderPct}% + 4px)` }}
-          >
-            <div className={`relative px-2.5 py-1 rounded-lg text-[11px] font-bold text-white shadow-md whitespace-nowrap transition-all duration-100 ${dragging ? "bg-brand-dark scale-105" : "bg-brand"}`}>
-              {fmtK(bruto)}
-              <div className="absolute top-full left-1/2 -translate-x-1/2">
-                <div className={`w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent transition-colors duration-100 ${dragging ? "border-t-brand-dark" : "border-t-brand"}`} />
-              </div>
-            </div>
-          </div>
-
-          <div
-            ref={trackRef}
-            role="slider"
-            tabIndex={0}
-            aria-label="Rendimento anual ilíquido"
-            aria-valuemin={0}
-            aria-valuemax={MAX}
-            aria-valuenow={bruto}
-            aria-valuetext={`${fmt(bruto)} por ano`}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-            onKeyDown={onKeyDown}
-            className={`relative h-3 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-stone-50 dark:focus-visible:ring-offset-stone-900 select-none ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
-            style={{ touchAction: "none" }}
-          >
-            {/* Fundo do trilho */}
-            <div className="absolute inset-0 rounded-full bg-stone-200 dark:bg-stone-700 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-brand to-brand-dark transition-none"
-                style={{ width: `${sliderPct}%` }}
-              />
-            </div>
-
-            {/* Marcador ponto de viragem — recibos verdes */}
-            {breakEvenRV != null && breakEvenRV <= MAX && (
-              <div
-                className="absolute top-0 bottom-0 w-0.5 bg-brand/60 z-10 pointer-events-none"
-                style={{ left: `${pctDe(breakEvenRV)}%` }}
-              />
-            )}
-
-            {/* Marcador ponto de viragem — empresa */}
-            {breakEvenEmpresa != null && breakEvenEmpresa <= MAX && (
-              <div
-                className="absolute top-0 bottom-0 w-0.5 bg-amber-500/60 z-10 pointer-events-none"
-                style={{ left: `${pctDe(breakEvenEmpresa)}%` }}
-              />
-            )}
-
-            {/* Puxador — wrapper posiciona, inner anima */}
+        {/* Slider — área de clique h-10, barra visual h-2.5 centrada */}
+        <div
+          ref={trackRef}
+          role="slider"
+          tabIndex={0}
+          aria-label="Rendimento anual ilíquido"
+          aria-valuemin={0}
+          aria-valuemax={MAX}
+          aria-valuenow={bruto}
+          aria-valuetext={`${fmt(bruto)} por ano`}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          onKeyDown={onKeyDown}
+          className={`relative h-10 select-none rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-stone-50 dark:focus-visible:ring-offset-stone-900 ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
+          style={{ touchAction: "none" }}
+        >
+          {/* Barra visual */}
+          <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-2.5 rounded-full bg-stone-200 dark:bg-stone-700 overflow-hidden">
             <div
-              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 pointer-events-none"
-              style={{ left: `${sliderPct}%` }}
-            >
-              <m.div
-                animate={{ scale: dragging ? 1.15 : 1 }}
-                transition={{ duration: 0.1 }}
-              >
-                <div className={`flex h-8 w-8 items-center justify-center rounded-full bg-white border-2 transition-all duration-100 ${
-                  dragging
-                    ? "border-brand-dark shadow-[0_0_0_5px_rgba(29,158,117,0.15)]"
-                    : "border-brand shadow-[0_2px_10px_rgba(29,158,117,0.3)]"
-                }`}>
-                  <GripHorizontal size={13} className="text-brand" />
-                </div>
-              </m.div>
-            </div>
+              className="h-full rounded-full bg-gradient-to-r from-brand to-brand-dark transition-none"
+              style={{ width: `${sliderPct}%` }}
+            />
           </div>
 
-          {/* Etiquetas: mínimo / breakevens / máximo */}
-          <div className="relative mt-3 h-4 text-[10px] font-medium text-stone-400">
-            <span className="absolute left-0">0€</span>
-            {breakEvenRV != null && breakEvenRV <= MAX && (
-              <span
-                className="absolute -translate-x-1/2 text-brand font-bold whitespace-nowrap"
-                style={{ left: `${pctDe(breakEvenRV)}%` }}
-              >
-                {fmtK(breakEvenRV)} · recibos verdes
-              </span>
-            )}
-            {breakEvenEmpresa != null && breakEvenEmpresa <= MAX && (
-              <span
-                className="absolute -translate-x-1/2 text-amber-600 dark:text-amber-400 font-bold whitespace-nowrap"
-                style={{ left: `${pctDe(breakEvenEmpresa)}%` }}
-              >
-                {fmtK(breakEvenEmpresa)} · empresa
-              </span>
-            )}
-            <span className="absolute right-0">{fmtK(MAX)}</span>
+          {/* Marcadores de ponto de viragem */}
+          {breakEvenRV != null && breakEvenRV <= MAX && (
+            <div
+              className="absolute top-1/2 -translate-y-1/2 h-5 w-px rounded-full bg-brand-dark/50 z-10 pointer-events-none"
+              style={{ left: `${pctDe(breakEvenRV)}%` }}
+            />
+          )}
+          {breakEvenEmpresa != null && breakEvenEmpresa <= MAX && (
+            <div
+              className="absolute top-1/2 -translate-y-1/2 h-5 w-px rounded-full bg-amber-500/50 z-10 pointer-events-none"
+              style={{ left: `${pctDe(breakEvenEmpresa)}%` }}
+            />
+          )}
+
+          {/* Puxador — wrapper posiciona, inner anima */}
+          <div
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 pointer-events-none"
+            style={{ left: `${sliderPct}%` }}
+          >
+            <m.div
+              animate={{ scale: dragging ? 1.15 : 1 }}
+              transition={{ duration: 0.1 }}
+            >
+              <div className={`flex h-8 w-8 items-center justify-center rounded-full bg-white border-2 transition-all duration-100 ${
+                dragging
+                  ? "border-brand-dark shadow-[0_0_0_5px_rgba(29,158,117,0.15)]"
+                  : "border-brand shadow-[0_2px_10px_rgba(29,158,117,0.3)]"
+              }`}>
+                <GripHorizontal size={13} className="text-brand" />
+              </div>
+            </m.div>
           </div>
         </div>
 
+        {/* Escala */}
+        <div className="flex justify-between text-[10px] font-medium tabular-nums text-stone-400 dark:text-stone-500 mt-1">
+          <span>0€</span>
+          <span>{fmtK(MAX)}</span>
+        </div>
+
+        {/* Legenda de pontos de viragem */}
+        {(breakEvenRV != null || breakEvenEmpresa != null) && (
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] font-medium">
+            {breakEvenRV != null && (
+              <span className="flex items-center gap-1.5 text-brand-dark dark:text-brand">
+                <span className="h-1.5 w-1.5 rounded-full bg-brand-dark dark:bg-brand" />
+                RV a partir de ~{fmtK(breakEvenRV)}
+              </span>
+            )}
+            {breakEvenEmpresa != null && (
+              <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                Empresa a partir de ~{fmtK(breakEvenEmpresa)}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Presets rápidos */}
-        <div className="mt-6 flex flex-wrap justify-center gap-1.5">
+        <div className="mt-5 flex flex-wrap justify-center gap-1.5">
           {PRESETS.map((p) => (
             <button
               key={p}
