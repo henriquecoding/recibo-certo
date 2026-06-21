@@ -35,6 +35,9 @@ import {
   Target,
   Search,
   Crosshair,
+  Globe,
+  Laptop,
+  Plane,
 } from "@/components/ui/Icons";
 
 const MapaCarregar = () => (
@@ -51,6 +54,9 @@ import {
   IRC_TAXA_PME,
   IRC_LIMITE_PME,
   DIVIDENDOS_TAXA,
+  IFICI_TAXA,
+  IFICI_PRAZO_ANOS,
+  SOURCES,
 } from "@/lib/fiscal-data";
 import {
   TODAS_LOCALIZACOES,
@@ -139,9 +145,56 @@ const IMI_TAXA_PADRAO = 0.003;
 const IMT_TAXA_COMERCIAL = 0.065;
 const IS_TAXA_AQUISICAO = 0.008;
 
+// Empresa digital / sede virtual
+const CUSTO_SEDE_VIRTUAL_MIN = 50;
+const CUSTO_SEDE_VIRTUAL_MAX = 150;
+const CUSTO_SEDE_VIRTUAL_DEFAULT = 100;
+
+// Representante fiscal (não residentes)
+const CUSTO_REPRESENTANTE_FISCAL_MIN = 250;
+const CUSTO_REPRESENTANTE_FISCAL_MAX = 500;
+const CUSTO_REPRESENTANTE_FISCAL_DEFAULT = 350;
+
+// IFICI (Art. 58.º-A EBF)
+const IFICI_TAXA_FLAT = IFICI_TAXA.value;
+
+type TipoSede = "fisica" | "virtual" | "coworking";
+type PerfilFundador = "residente" | "estrangeiro_ue" | "estrangeiro_extra_ue";
+
 type Passo = 0 | 1 | "local" | 2 | 3 | 4 | "resultado" | "aseguir";
 
 type TipoSociedade = "unipessoal" | "quotas";
+
+// URLs legais para citação inline
+const LEI = {
+  art87circ: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc87.aspx",
+  art88circ: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc88.aspx",
+  art71cirs: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs71.aspx",
+  art40aCirs: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs40a.aspx",
+  art41bEBF: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-41-b.aspx",
+  art58aEBF: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-58-a.aspx",
+  cfi: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/2014-128418757",
+  csc: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/1986-34443375",
+  empresaOnline: "https://www2.gov.pt/espaco-empresa/empresa-online",
+  representanteFiscal: "https://info.portaldasfinancas.gov.pt/pt/apoio_contribuinte/Servicos_Mais_Utilizados/representacao-fiscal/Pages/default.aspx",
+  portaria208: "https://diariodarepublica.pt/dr/detalhe/portaria/208-2017-107695600",
+  lgt: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/lgt/Pages/default.aspx",
+};
+
+function LeiRef({ artigo, url }: { artigo: string; url: string }) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-0.5 rounded bg-stone-100 px-1 py-0.5 text-[9px] font-semibold text-stone-500 transition-colors hover:bg-brand-light hover:text-brand dark:bg-stone-800 dark:text-stone-400 dark:hover:bg-brand/10 dark:hover:text-brand"
+      title={`Ver legislação: ${artigo}`}
+    >
+      {artigo}
+      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="opacity-50"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" /></svg>
+    </a>
+  );
+}
 
 // ─── IRS progressivo (englobamento dividendos) ──────────────────────────────
 
@@ -210,6 +263,10 @@ interface ResultadoEmpresaGuiado {
   imtOneTime: number;
   poupancaIMT: number;
   custoMunicipalAnual: number;
+  custoRepresentanteFiscal: number;
+  custoSedeVirtual: number;
+  irsDividendosIFICI: number;
+  poupancaIFICI: number;
 }
 
 function calcularTaxaMarginal(coletavel: number): number {
@@ -257,10 +314,18 @@ function simularEmpresaGuiado(
   anosAmortIMT: number,
   // Localização
   paramLocal?: ParametrosFiscaisRegiao,
+  // Novo: sede virtual e estrangeiro
+  sedeVirtualCusto?: number,
+  isEstrangeiro?: boolean,
+  custoRepFiscal?: number,
+  ifici?: boolean,
 ): ResultadoEmpresaGuiado {
   const ircPME = paramLocal?.ircPME ?? IRC_TAXA_PME.value;
   const ircGeral = paramLocal?.ircGeral ?? IRC_TAXA_GERAL.value;
   const derramaTaxa = paramLocal?.derramaEstimada ?? 0.015;
+
+  const custoSedeVirtualAnual = sedeVirtualCusto ? sedeVirtualCusto * 12 : 0;
+  const custoRepresentante = isEstrangeiro && custoRepFiscal ? custoRepFiscal : 0;
 
   const salGerente = salGerenteMensal * 12;
   const ssSalGerente = salGerente * (SS_EMP_TAXA + SS_TRAB_TAXA);
@@ -268,7 +333,8 @@ function simularEmpresaGuiado(
     ? Math.round(custoConstituicaoVal / anosAmortizacao)
     : 0;
   const totalCustos =
-    despesasOper + custosEstrutura + salGerente + ssSalGerente + custoConstituicao;
+    despesasOper + custosEstrutura + salGerente + ssSalGerente + custoConstituicao
+    + custoSedeVirtualAnual + custoRepresentante;
   const lucroTributavel = Math.max(0, faturacao - totalCustos);
 
   // IRC coleta
@@ -341,6 +407,7 @@ function simularEmpresaGuiado(
   let irsDividendosEnglobamento = 0;
   let taxaMarginalGerente = 0;
 
+  let irsDividendosIFICI = 0;
   if (distribuirDividendos && lucroLiquido > 0) {
     dividendos = lucroLiquido;
     irsDividendosLiberatoria = dividendos * IRS_DIVIDENDOS;
@@ -352,14 +419,24 @@ function simularEmpresaGuiado(
     );
     const irsSoSal = calcularIRS(salarioTrib);
     irsDividendosEnglobamento = Math.max(0, irsComDiv - irsSoSal);
+
+    // IFICI (Art. 58.º-A EBF): dividendos de fonte PT tributados a 20% flat
+    if (ifici) {
+      irsDividendosIFICI = dividendos * IFICI_TAXA_FLAT;
+    }
   }
 
-  const irsDividendos = opcaoEnglobamento
-    ? irsDividendosEnglobamento
-    : irsDividendosLiberatoria;
+  const irsDividendos = ifici
+    ? irsDividendosIFICI
+    : opcaoEnglobamento
+      ? irsDividendosEnglobamento
+      : irsDividendosLiberatoria;
 
   const salarioLiq = salGerente * (1 - SS_TRAB_TAXA);
   const liquidoGerente = salarioLiq + (dividendos - irsDividendos);
+  const poupancaIFICI = ifici
+    ? irsDividendosLiberatoria - irsDividendosIFICI
+    : 0;
 
   // Municipal (IMI/IMT)
   const imiAnual = temImovel ? vptImovel * taxaIMI : 0;
@@ -398,6 +475,10 @@ function simularEmpresaGuiado(
     imtOneTime,
     poupancaIMT,
     custoMunicipalAnual,
+    custoRepresentanteFiscal: custoRepresentante,
+    custoSedeVirtual: custoSedeVirtualAnual,
+    irsDividendosIFICI,
+    poupancaIFICI,
   };
 }
 
@@ -765,12 +846,16 @@ export default function ModoGuiadoEmpresa({
   // Passo 0: situação
   const [jaTemEmpresa, setJaTemEmpresa] = useState<null | "sim" | "nao">(null);
 
-  // Passo 1: tipo de empresa
+  // Passo 1: tipo de empresa + perfil do fundador
   const [tipoSociedade, setTipoSociedade] =
     useState<TipoSociedade>("unipessoal");
   const [tipoSelecionado, setTipoSelecionado] = useState(false);
+  const [perfilFundador, setPerfilFundador] = useState<PerfilFundador>("residente");
+  const [aplicarIFICI, setAplicarIFICI] = useState(false);
 
-  // Passo "local": localização da empresa
+  // Passo "local": localização e tipo de sede
+  const [tipoSede, setTipoSede] = useState<TipoSede>("fisica");
+  const [custoSedeVirtual, setCustoSedeVirtual] = useState(CUSTO_SEDE_VIRTUAL_DEFAULT);
   const [localizacao, setLocalizacao] = useState<ParametrosFiscaisRegiao | null>(null);
   const [localNome, setLocalNome] = useState("");
 
@@ -906,6 +991,10 @@ export default function ModoGuiadoEmpresa({
     ? localizacao.rfaiTipo
     : rfaiRegiao;
 
+  const sedeVirtualEfetivo = tipoSede === "virtual" ? custoSedeVirtual : tipoSede === "coworking" ? custoSedeVirtual : 0;
+  const isEstrangeiro = perfilFundador !== "residente";
+  const custoRepFiscalEfetivo = isEstrangeiro ? CUSTO_REPRESENTANTE_FISCAL_DEFAULT : 0;
+
   // Args comuns para simulação
   const simArgs = [
     faturacaoAnual, despesasOper, custosEstrutura, salGerenteMensal,
@@ -918,6 +1007,7 @@ export default function ModoGuiadoEmpresa({
     temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
     valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
     localizacao,
+    sedeVirtualEfetivo, isEstrangeiro, custoRepFiscalEfetivo, aplicarIFICI,
   ] as const;
 
   // Simulação principal (location-aware)
@@ -934,6 +1024,8 @@ export default function ModoGuiadoEmpresa({
         temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
         valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
         localizacao ?? undefined,
+        sedeVirtualEfetivo || undefined, isEstrangeiro || undefined,
+        custoRepFiscalEfetivo || undefined, aplicarIFICI || undefined,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     simArgs,
@@ -953,6 +1045,8 @@ export default function ModoGuiadoEmpresa({
         temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
         valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
         localizacao ?? undefined,
+        sedeVirtualEfetivo || undefined, isEstrangeiro || undefined,
+        custoRepFiscalEfetivo || undefined, aplicarIFICI || undefined,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     simArgs,
@@ -970,6 +1064,8 @@ export default function ModoGuiadoEmpresa({
         temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
         valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
         localizacao ?? undefined,
+        sedeVirtualEfetivo || undefined, isEstrangeiro || undefined,
+        custoRepFiscalEfetivo || undefined, aplicarIFICI || undefined,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     simArgs,
@@ -1087,18 +1183,22 @@ export default function ModoGuiadoEmpresa({
                     {
                       titulo: "Empresa na Hora",
                       desc: "Constituis uma sociedade Lda num balcão do IRN em menos de 1 hora — ou online no Portal da Empresa. Custo: ~360–400€.",
+                      base: { artigo: "Portal da Empresa", url: LEI.empresaOnline },
                     },
                     {
                       titulo: "Capital social mínimo: 1€",
                       desc: "Desde 2011 não é necessário um capital elevado. 1€ para Unipessoal, 2€ para Sociedade por Quotas (1€/sócio).",
+                      base: { artigo: "Art. 270.º-A ss. CSC", url: LEI.csc },
                     },
                     {
                       titulo: "Contabilidade obrigatória",
-                      desc: "Toda a sociedade tem de ter contabilidade organizada com TOC inscrito na OCC. Custo médio: ~200€/mês.",
+                      desc: "Toda a sociedade tem de ter contabilidade organizada com Contabilista Certificado (CC) inscrito na OCC. Custo médio: ~200€/mês.",
+                      base: { artigo: "Art. 123.º CIRC", url: LEI.art87circ },
                     },
                     {
                       titulo: "Responsabilidade limitada",
                       desc: "O teu património pessoal fica separado do empresarial. Dívidas da empresa não recaem sobre bens pessoais (salvo fraude).",
+                      base: { artigo: "Art. 197.º CSC", url: LEI.csc },
                     },
                   ].map((item) => (
                     <div
@@ -1115,6 +1215,7 @@ export default function ModoGuiadoEmpresa({
                         </div>
                         <div className="mt-0.5 text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
                           {item.desc}
+                          {item.base && <span className="ml-1"><LeiRef artigo={item.base.artigo} url={item.base.url} /></span>}
                         </div>
                       </div>
                     </div>
@@ -1244,6 +1345,104 @@ export default function ModoGuiadoEmpresa({
                     ))}
                   </div>
 
+                  {/* ── Perfil do fundador ──────────────────────── */}
+                  <div className="mt-8">
+                    <h3 className="mb-1 text-lg font-semibold text-stone-800 dark:text-stone-100">
+                      Perfil do fundador
+                    </h3>
+                    <p className="mb-4 text-xs text-stone-500 dark:text-stone-400">
+                      A tua residência fiscal influencia obrigações e benefícios disponíveis.
+                    </p>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      {([
+                        { id: "residente" as PerfilFundador, label: "Residente em Portugal", sub: "Regime fiscal geral", icon: Building },
+                        { id: "estrangeiro_ue" as PerfilFundador, label: "Cidadão UE / EEE", sub: "Sem representante fiscal", icon: Globe },
+                        { id: "estrangeiro_extra_ue" as PerfilFundador, label: "Fora da UE", sub: "Precisa de representante fiscal", icon: Plane },
+                      ]).map((p) => {
+                        const ativo = perfilFundador === p.id;
+                        const Icon = p.icon;
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            aria-pressed={ativo}
+                            onClick={() => {
+                              setPerfilFundador(p.id);
+                              if (p.id === "residente") setAplicarIFICI(false);
+                            }}
+                            className={`group rounded-2xl border-2 p-3.5 text-left transition-all ${
+                              ativo
+                                ? "border-brand bg-brand-light/30 shadow-card dark:bg-brand/5"
+                                : "border-stone-100 bg-white hover:border-brand/30 hover:shadow-card dark:border-stone-800 dark:bg-stone-900"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${ativo ? "bg-brand text-white" : "bg-stone-100 text-stone-500 dark:bg-stone-800"}`}>
+                                <Icon size={14} />
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className={`text-xs font-bold ${ativo ? "text-brand-dark dark:text-brand" : "text-stone-800 dark:text-stone-100"}`}>
+                                  {p.label}
+                                </div>
+                                <div className="text-[10px] text-stone-400">{p.sub}</div>
+                              </div>
+                              {ativo && <Check size={12} className="text-brand" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Representante fiscal — obrigatório extra-UE */}
+                    {perfilFundador === "estrangeiro_extra_ue" && (
+                      <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800/30 dark:bg-amber-900/10">
+                        <div className="flex items-start gap-2">
+                          <Warning size={13} className="mt-0.5 flex-shrink-0 text-amber-500" />
+                          <div className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+                            <span className="font-semibold">Representante fiscal obrigatório.</span>{" "}
+                            Não residentes de fora da UE/EEE devem nomear um representante fiscal em Portugal para efeitos de cumprimento das obrigações tributárias.
+                            Custo estimado: {CUSTO_REPRESENTANTE_FISCAL_MIN}–{CUSTO_REPRESENTANTE_FISCAL_MAX}€/ano.
+                            <span className="ml-1"><LeiRef artigo="Art. 130.º CIRS / Art. 19.º LGT" url={LEI.representanteFiscal} /></span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Nota UE — sem representante */}
+                    {perfilFundador === "estrangeiro_ue" && (
+                      <div className="mt-3 rounded-xl border border-brand/20 bg-brand-light/10 p-3 dark:bg-brand/5">
+                        <div className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+                          Cidadãos da UE/EEE e da Suíça não precisam de representante fiscal desde 2022, mas devem obter NIF português (presencialmente num serviço de Finanças ou via e-balcão).
+                        </div>
+                      </div>
+                    )}
+
+                    {/* IFICI toggle — estrangeiros elegíveis */}
+                    {perfilFundador !== "residente" && (
+                      <div className="mt-4 rounded-2xl border border-stone-100 bg-white p-4 dark:border-stone-800 dark:bg-stone-900">
+                        <label className="flex items-start gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={aplicarIFICI}
+                            onChange={(e) => setAplicarIFICI(e.target.checked)}
+                            className="mt-1 h-4 w-4 rounded border-stone-300 text-brand focus:ring-brand"
+                          />
+                          <div>
+                            <div className="text-sm font-semibold text-stone-800 dark:text-stone-100">
+                              Regime IFICI (ex-NHR 2.0) — IRS {pct(IFICI_TAXA_FLAT)} flat
+                            </div>
+                            <div className="mt-0.5 text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
+                              Taxa de {pct(IFICI_TAXA_FLAT)} sobre rendimentos elegíveis (vs até 48% nos escalões progressivos), válido por {IFICI_PRAZO_ANOS.value} anos.
+                              Aplicável a investigadores, I&D, startups tecnológicas e atividades de elevado valor acrescentado aprovadas pela AT.
+                              No simulador, aplica-se aos dividendos ({pct(IFICI_TAXA_FLAT)} em vez de {pct(0.28)} de taxa liberatória).
+                              <span className="ml-1"><LeiRef artigo="Art. 58.º-A EBF" url={LEI.art58aEBF} /></span>
+                            </div>
+                          </div>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="mt-6 flex gap-3">
                     <button
                       type="button"
@@ -1277,9 +1476,85 @@ export default function ModoGuiadoEmpresa({
                     Onde {jaTemEmpresa === "sim" ? "está" : "pretendes instalar"} a empresa?
                   </h2>
                   <p className="mb-5 text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
-                    A localização influencia o IRC (12,5% no interior vs 15% no litoral),
-                    a derrama municipal, o RFAI e o custo de contabilista.
-                    Pesquisa a tua cidade ou concelho para resultados precisos.
+                    A localização influencia o IRC (<LeiRef artigo="Art. 41.º-B EBF" url={LEI.art41bEBF} /> 12,5% no interior vs 15% no litoral),
+                    a derrama municipal, o RFAI (<LeiRef artigo="Art. 22.º–26.º CFI" url={LEI.cfi} />) e o custo de contabilista.
+                  </p>
+
+                  {/* Tipo de sede */}
+                  <div className="mb-5">
+                    <div className="mb-2 text-xs font-semibold text-stone-600 dark:text-stone-300">
+                      Tipo de sede
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {([
+                        { id: "fisica" as TipoSede, label: "Física", sub: "Escritório ou loja própria", icon: Building },
+                        { id: "virtual" as TipoSede, label: "Sede virtual", sub: "Morada fiscal sem espaço", icon: Laptop },
+                        { id: "coworking" as TipoSede, label: "Coworking", sub: "Espaço partilhado", icon: Globe },
+                      ]).map((s) => {
+                        const ativo = tipoSede === s.id;
+                        const Icon = s.icon;
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            aria-pressed={ativo}
+                            onClick={() => setTipoSede(s.id)}
+                            className={`rounded-2xl border-2 p-3 text-left transition-all ${
+                              ativo
+                                ? "border-brand bg-brand-light/30 dark:bg-brand/5"
+                                : "border-stone-100 bg-white hover:border-stone-200 dark:border-stone-800 dark:bg-stone-900"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Icon size={14} className={ativo ? "text-brand" : "text-stone-400"} />
+                              <div>
+                                <div className={`text-[11px] font-bold ${ativo ? "text-brand-dark dark:text-brand" : "text-stone-600 dark:text-stone-300"}`}>{s.label}</div>
+                                <div className={`text-[9px] ${ativo ? "text-brand/70" : "text-stone-400"}`}>{s.sub}</div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {tipoSede !== "fisica" && (
+                      <div className="mt-3 space-y-3">
+                        <div className="rounded-xl border border-brand/20 bg-brand-light/10 p-3 dark:bg-brand/5">
+                          <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+                            Toda a sociedade necessita de uma morada fiscal (sede)
+                            registada na Conservatória do Registo Comercial (<LeiRef artigo="Art. 12.º CSC" url={LEI.csc} />),
+                            mesmo que a atividade seja 100% digital.
+                            {tipoSede === "virtual"
+                              ? " A sede virtual fornece apenas uma morada fiscal — sem espaço físico. Aceite pela AT para empresas digitais."
+                              : " O coworking funciona como espaço de trabalho e morada fiscal."}
+                          </p>
+                        </div>
+                        <NumericSlider
+                          label={tipoSede === "virtual" ? "Custo sede virtual (€/mês)" : "Custo coworking (€/mês)"}
+                          value={custoSedeVirtual}
+                          min={CUSTO_SEDE_VIRTUAL_MIN}
+                          max={tipoSede === "coworking" ? 300 : CUSTO_SEDE_VIRTUAL_MAX}
+                          step={10}
+                          onChange={setCustoSedeVirtual}
+                          presets={tipoSede === "virtual" ? [50, 80, 100, 150] : [100, 150, 200, 300]}
+                          tooltip={
+                            tipoSede === "virtual"
+                              ? <>Custo mensal da morada fiscal virtual. Inclui receção de correspondência e uso da morada nos documentos legais.</>
+                              : <>Custo mensal do espaço de coworking, que serve simultaneamente como morada fiscal e local de trabalho.</>
+                          }
+                        />
+                        <div className="flex justify-between text-[11px] text-stone-500 dark:text-stone-400">
+                          <span>Custo anual</span>
+                          <span className="font-semibold tabular-nums">{fmt(custoSedeVirtual * 12)}/ano</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <p className="mb-3 text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
+                    {tipoSede === "fisica"
+                      ? "Pesquisa a tua cidade ou concelho para resultados fiscais precisos."
+                      : "Mesmo com sede virtual, a morada determina a jurisdição fiscal — pesquisa o concelho."}
                   </p>
 
                   {/* Pesquisa por cidade/concelho */}
@@ -1386,8 +1661,8 @@ export default function ModoGuiadoEmpresa({
                       </div>
                       <p className="mt-2 text-[10px] text-stone-400 leading-relaxed">
                         {localizacao.interior
-                          ? "Concelho do interior (Portaria 208/2017) — IRC PME 12,5%. A derrama municipal varia — confirma a taxa do teu concelho."
-                          : "A derrama municipal varia por município (0%–1,5%) — confirma a taxa do teu concelho."}
+                          ? <>Concelho do interior (<LeiRef artigo="Portaria 208/2017" url={LEI.portaria208} />) — IRC PME 12,5% (<LeiRef artigo="Art. 41.º-B EBF" url={LEI.art41bEBF} />). A derrama municipal varia — confirma a taxa do teu concelho.</>
+                          : <>A derrama municipal varia por município (0%–1,5%) — confirma a taxa do teu concelho. <LeiRef artigo="Art. 87.º CIRC" url={LEI.art87circ} /></>}
                       </p>
                     </div>
                   )}
@@ -1490,8 +1765,8 @@ export default function ModoGuiadoEmpresa({
                       </div>
                       <p className="mt-2 text-[10px] text-stone-400 leading-relaxed">
                         {localizacao.interior
-                          ? "Concelho do interior (Portaria 208/2017) — IRC PME 12,5%. A derrama municipal varia — confirma a taxa do teu concelho."
-                          : "A derrama municipal varia por município (0%–1,5%) — confirma a taxa do teu concelho."}
+                          ? <>Concelho do interior (<LeiRef artigo="Portaria 208/2017" url={LEI.portaria208} />) — IRC PME 12,5% (<LeiRef artigo="Art. 41.º-B EBF" url={LEI.art41bEBF} />). A derrama municipal varia — confirma a taxa do teu concelho.</>
+                          : <>A derrama municipal varia por município (0%–1,5%) — confirma a taxa do teu concelho. <LeiRef artigo="Art. 87.º CIRC" url={LEI.art87circ} /></>}
                       </p>
                     </div>
                   )}
@@ -1530,7 +1805,8 @@ export default function ModoGuiadoEmpresa({
                   </h2>
                   <p className="mb-6 text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
                     Insere o volume de negócios esperado e os custos da empresa.
-                    Tudo é dedutível ao lucro tributável (paga IRC só sobre o que sobra).
+                    Todos os custos são dedutíveis ao lucro tributável — pagas IRC (<LeiRef artigo="Art. 87.º CIRC" url={LEI.art87circ} />) apenas sobre o que sobra.
+                    {tipoSede !== "fisica" && <> O custo da sede {tipoSede === "virtual" ? "virtual" : "coworking"} ({fmt(custoSedeVirtual)}/mês = {fmt(custoSedeVirtual * 12)}/ano) já está incluído nos custos.</>}
                   </p>
 
                   <div className="space-y-6">
@@ -1676,8 +1952,10 @@ export default function ModoGuiadoEmpresa({
                   </h2>
                   <p className="mb-6 text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
                     O lucro que sobra após o IRC pode ser distribuído como
-                    dividendos — mas há um IRS adicional. Podes escolher entre
-                    taxa liberatória (28%) ou englobamento (50% no rendimento).
+                    dividendos — mas há um IRS adicional.{" "}
+                    {aplicarIFICI
+                      ? <>Com o IFICI (<LeiRef artigo="Art. 58.º-A EBF" url={LEI.art58aEBF} />), os dividendos de fonte portuguesa são tributados a {pct(IFICI_TAXA_FLAT)} flat (em vez de 28%).</>
+                      : <>Podes escolher entre taxa liberatória de 28% (<LeiRef artigo="Art. 71.º CIRS" url={LEI.art71cirs} />) ou englobamento de 50% do valor (<LeiRef artigo="Art. 40.º-A CIRS" url={LEI.art40aCirs} />).</>}
                   </p>
 
                   <div className="space-y-5">
@@ -1732,7 +2010,7 @@ export default function ModoGuiadoEmpresa({
                     </div>
 
                     {/* Tipo de tributação de dividendos */}
-                    {distribuirDividendos && (
+                    {distribuirDividendos && !aplicarIFICI && (
                       <div>
                         <div className="mb-2 flex items-center gap-1.5">
                           <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
@@ -1816,6 +2094,19 @@ export default function ModoGuiadoEmpresa({
                         )}
                       </div>
                     )}
+
+                    {/* IFICI — taxa flat aplicada automaticamente */}
+                    {distribuirDividendos && aplicarIFICI && (
+                      <div className="mt-3 rounded-2xl border border-brand/20 bg-brand-light/20 p-3 dark:bg-brand/5">
+                        <div className="flex items-start gap-2">
+                          <Sparkle size={14} className="mt-0.5 flex-shrink-0 text-brand" />
+                          <div className="text-xs text-brand-dark dark:text-brand leading-relaxed">
+                            <strong>IFICI ativo</strong> (<LeiRef artigo="Art. 58.º-A EBF" url={LEI.art58aEBF} />) — dividendos de fonte portuguesa tributados a {pct(IFICI_TAXA_FLAT)} flat durante {IFICI_PRAZO_ANOS.value} anos.
+                            Poupança face à liberatória de 28%: <strong>{fmt(Math.round(resultado.poupancaIFICI))}/ano</strong>.
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="mt-6 flex gap-3">
@@ -1850,8 +2141,9 @@ export default function ModoGuiadoEmpresa({
                     Otimização fiscal
                   </h2>
                   <p className="mb-6 text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
-                    Ajusta conforme a tua situação. Se nada se aplica, avança
-                    diretamente — o resultado já está calculado sem estes extras.
+                    Ajusta conforme a tua situação. Tributação autónoma (<LeiRef artigo="Art. 88.º CIRC" url={LEI.art88circ} />),
+                    benefícios ao investimento (<LeiRef artigo="DL 162/2014 (CFI)" url={LEI.cfi} />) e impostos municipais.
+                    Se nada se aplica, avança — o resultado já está calculado.
                   </p>
 
                   <div className="space-y-5">
@@ -1971,7 +2263,7 @@ export default function ModoGuiadoEmpresa({
                     {/* ── RFAI ────────────────────────────────────────── */}
                     <Collapsible title="RFAI — Regime Fiscal de Apoio ao Investimento" defaultOpen={rfaiInvest > 0}>
                       <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed mb-3">
-                        Art. 22.º–26.º CFI — deduz ao IRC uma percentagem do investimento
+                        <LeiRef artigo="Art. 22.º–26.º CFI" url={LEI.cfi} /> — deduz ao IRC uma percentagem do investimento
                         elegível (equipamentos, ativos intangíveis). Interior/Ilhas: 30%
                         (até 15M) + 10% (excedente). Lisboa/Algarve: 10% flat.
                       </p>
@@ -2018,7 +2310,7 @@ export default function ModoGuiadoEmpresa({
                     {/* ── DLRR ────────────────────────────────────────── */}
                     <Collapsible title="DLRR — Lucros Retidos e Reinvestidos" defaultOpen={dlrrLucros > 0}>
                       <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed mb-3">
-                        Art. 27.º–34.º CFI — PME e Small Mid Cap podem deduzir 10% dos
+                        <LeiRef artigo="Art. 27.º–34.º CFI" url={LEI.cfi} /> — PME e Small Mid Cap podem deduzir 10% dos
                         lucros retidos e reinvestidos em ativos elegíveis (máx. 5M€).
                         Limite: 25% da coleta IRC. Reportável 12 exercícios.
                       </p>
@@ -2036,7 +2328,7 @@ export default function ModoGuiadoEmpresa({
                     {/* ── SIFIDE II ───────────────────────────────────── */}
                     <Collapsible title="SIFIDE II — Incentivos à I&D" defaultOpen={sifideDespesas > 0}>
                       <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed mb-3">
-                        Art. 35.º–42.º CFI — dedução à coleta de IRC de 32,5% a 82,5%
+                        <LeiRef artigo="Art. 35.º–42.º CFI" url={LEI.cfi} /> — dedução à coleta de IRC de 32,5% a 82,5%
                         das despesas elegíveis com Investigação e Desenvolvimento.
                         Certificação ANI necessária. Reportável 12 exercícios.
                       </p>
@@ -2069,7 +2361,7 @@ export default function ModoGuiadoEmpresa({
                     {/* ── RFAI Contratual ─────────────────────────────── */}
                     <Collapsible title="RFAI Contratual (investimento >= 3M)" defaultOpen={rfaiContratualValor > 0}>
                       <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed mb-3">
-                        Art. 8.º–22.º CFI — para investimentos de grande dimensão,
+                        <LeiRef artigo="Art. 8.º–22.º CFI" url={LEI.cfi} /> — para investimentos de grande dimensão,
                         negociado com IAPMEI/AICEP. Crédito fiscal adicional que
                         se aplica após RFAI + DLRR + SIFIDE. O valor é acordado caso a caso.
                       </p>
@@ -2080,6 +2372,15 @@ export default function ModoGuiadoEmpresa({
 
                     {/* ── Impostos Municipais (IMI/IMT) ───────────────── */}
                     <Collapsible title="Imóvel da empresa (IMI/IMT)" defaultOpen={temImovelEmpresa}>
+                      {tipoSede !== "fisica" && (
+                        <div className="mb-3 flex items-start gap-2 rounded-xl border border-brand/20 bg-brand-light/10 p-3 dark:bg-brand/5">
+                          <Laptop size={14} className="mt-0.5 flex-shrink-0 text-brand" />
+                          <p className="text-[11px] text-stone-600 dark:text-stone-300 leading-relaxed">
+                            A tua empresa tem sede {tipoSede === "virtual" ? "virtual" : "em coworking"} — IMI e IMT não se aplicam (sem imóvel próprio).
+                            Se adquirires imóvel futuramente, ativa abaixo.
+                          </p>
+                        </div>
+                      )}
                       <div className="flex items-center gap-3 mb-3">
                         <button type="button" role="switch" aria-checked={temImovelEmpresa} onClick={() => setTemImovelEmpresa(!temImovelEmpresa)}
                           className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${temImovelEmpresa ? "bg-brand" : "bg-stone-300 dark:bg-stone-700"}`}>
@@ -2195,8 +2496,11 @@ export default function ModoGuiadoEmpresa({
                       : "Sociedade por Quotas"}
                     {localizacao
                       ? ` em ${localNome ? `${localNome} (${localizacao.nome})` : localizacao.nome}`
-                      : ""}{" "}
-                    com faturação de {fmt(faturacaoAnual)}/ano.
+                      : ""}
+                    {tipoSede !== "fisica" && ` (sede ${tipoSede === "virtual" ? "virtual" : "coworking"})`}
+                    {aplicarIFICI && " · IFICI ativo"}
+                    {perfilFundador !== "residente" && ` · ${perfilFundador === "estrangeiro_ue" ? "residente UE" : "residente extra-UE"}`}
+                    {" "}com faturação de {fmt(faturacaoAnual)}/ano.
                   </p>
 
                   {/* Breakdown cascata */}
@@ -2208,6 +2512,8 @@ export default function ModoGuiadoEmpresa({
                       resultado.custoConstituicao > 0 ? { label: `Constituição (amortizada ${anosAmortizacao} ano${anosAmortizacao > 1 ? "s" : ""})`, value: -resultado.custoConstituicao, cor: "text-stone-500" } : null,
                       resultado.salGerente > 0 ? { label: `Salário gerente (${fmt(salGerenteMensal)}/mês × 12)`, value: -resultado.salGerente, cor: "text-stone-500" } : null,
                       resultado.ssSalGerente > 0 ? { label: "SS empresa + trabalhador (34,75%)", value: -resultado.ssSalGerente, cor: "text-amber-600 dark:text-amber-400" } : null,
+                      resultado.custoSedeVirtual > 0 ? { label: `Sede ${tipoSede === "virtual" ? "virtual" : "coworking"} (${fmt(custoSedeVirtual)}/mês × 12)`, value: -resultado.custoSedeVirtual, cor: "text-stone-500" } : null,
+                      resultado.custoRepresentanteFiscal > 0 ? { label: "Representante fiscal (Art. 19.º LGT)", value: -resultado.custoRepresentanteFiscal, cor: "text-amber-600 dark:text-amber-400" } : null,
                       { label: "Lucro tributável", value: resultado.lucroTributavel, cor: "text-stone-700 dark:text-stone-200 font-semibold", sep: true },
                       { label: `IRC coleta (${pct(localizacao?.ircPME ?? IRC_TAXA_PME.value)}/${fmt(IRC_LIMITE)} + ${pct(localizacao?.ircGeral ?? IRC_TAXA_GERAL.value)}${localizacao?.interior ? " · interior" : ""})`, value: -resultado.coleta, cor: "text-red-500 dark:text-red-400" },
                       resultado.beneficios.rfai > 0 ? { label: `RFAI (${pct(RFAI_TAXA[rfaiRegiaoEfetiva])} × ${fmt(rfaiInvest)})`, value: resultado.beneficios.rfai, cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
@@ -2224,10 +2530,16 @@ export default function ModoGuiadoEmpresa({
                       resultado.poupancaIMI > 0 || resultado.poupancaIMT > 0 ? { label: "Poupança municipal (isenções RFAI)", value: resultado.poupancaIMI + (resultado.poupancaIMT / anosAmortizacaoIMT), cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
                       { label: "Lucro líquido (disponível)", value: resultado.lucroLiquido, cor: "text-stone-700 dark:text-stone-200 font-semibold", sep: true },
                       distribuirDividendos ? {
-                        label: opcaoEnglobamento
-                          ? `IRS dividendos (englobamento 50% × ${pct(resultado.taxaMarginalGerente)} marginal)`
-                          : "IRS dividendos (28% taxa liberatória)",
+                        label: aplicarIFICI
+                          ? `IRS dividendos (IFICI ${pct(IFICI_TAXA_FLAT)} flat)`
+                          : opcaoEnglobamento
+                            ? `IRS dividendos (englobamento 50% × ${pct(resultado.taxaMarginalGerente)} marginal)`
+                            : "IRS dividendos (28% taxa liberatória)",
                         value: -resultado.irsDividendos, cor: "text-red-500 dark:text-red-400",
+                      } : null,
+                      distribuirDividendos && aplicarIFICI && resultado.poupancaIFICI > 0 ? {
+                        label: `Poupança IFICI (vs 28% liberatória)`,
+                        value: resultado.poupancaIFICI, cor: "text-emerald-600 dark:text-emerald-400", plus: true,
                       } : null,
                     ]
                       .filter(Boolean)
@@ -2270,10 +2582,12 @@ export default function ModoGuiadoEmpresa({
                   <p className="mt-3 px-1 text-[10px] leading-relaxed text-stone-400 dark:text-stone-500">
                     Estimativa anual com as taxas oficiais de 2026
                     {localizacao ? ` para ${localizacao.nome}` : ""}.
-                    IRC {localizacao ? pct(localizacao.ircPME) : "PME"},
+                    IRC {localizacao ? pct(localizacao.ircPME) : "PME"} (<LeiRef artigo="Art. 87.º CIRC" url={LEI.art87circ} />),
                     derrama ~{pct(localizacao?.derramaEstimada ?? 0.015)},
-                    TA, RFAI, DLRR, SIFIDE e IMI/IMT conforme configurado.
-                    Salário antes de IRS na fonte.
+                    TA (<LeiRef artigo="Art. 88.º CIRC" url={LEI.art88circ} />),
+                    benefícios (<LeiRef artigo="CFI" url={LEI.cfi} />) e IMI/IMT conforme configurado.
+                    {aplicarIFICI && <> IFICI (<LeiRef artigo="Art. 58.º-A EBF" url={LEI.art58aEBF} />) aplicado aos dividendos.</>}
+                    {" "}Salário antes de IRS na fonte.
                     Não substitui aconselhamento de um contabilista certificado (OCC).
                   </p>
 
@@ -2438,12 +2752,21 @@ export default function ModoGuiadoEmpresa({
                       <Collapsible title="Checklist — como abrir a empresa" defaultOpen>
                         <div className="space-y-2.5">
                           {[
+                            ...(perfilFundador !== "residente" ? [
+                              { Icon: Globe, titulo: "Obter NIF português", desc: "Estrangeiros devem obter o Número de Identificação Fiscal (NIF) na AT ou num consulado." },
+                              ...(perfilFundador === "estrangeiro_extra_ue" ? [
+                                { Icon: Plane, titulo: "Nomear representante fiscal", desc: `Obrigatório para residentes fora da UE/EEE (Art. 19.º LGT). Custo estimado: ${fmt(CUSTO_REPRESENTANTE_FISCAL_DEFAULT)}/mês.` },
+                              ] : []),
+                            ] : []),
                             { Icon: FileSign, titulo: "Escolher firma e CAE", desc: "Reservar o nome online no Portal da Empresa e definir o código CAE da atividade." },
                             { Icon: Building, titulo: "Empresa na Hora (balcão ou online)", desc: "Constituir a sociedade num balcão do IRN (<1h) ou online (1–2 dias úteis). Custo: ~360–400€." },
                             { Icon: Shield, titulo: "Abrir conta bancária da empresa", desc: "Depositar o capital social (mínimo 1€ para Unipessoal, 2€ para Quotas) e abrir a conta em nome da sociedade." },
                             { Icon: Rocket, titulo: "Início de atividade nas Finanças", desc: "Declaração de início de atividade no Portal das Finanças: regime de IVA (geralmente trimestral), CAE e sede." },
                             { Icon: Calendar, titulo: "Inscrever na Segurança Social", desc: "Inscrever a empresa e o gerente como MOE (membro de órgão estatutário). SS patronal: 23,75%, gerente: 11%." },
                             { Icon: Briefcase, titulo: "Contratar contabilista certificado (TOC)", desc: "Obrigatório ter um TOC inscrito na OCC. Custo médio: ~200€/mês. Trata da contabilidade organizada, IRC, IES e IVA." },
+                            ...(aplicarIFICI ? [
+                              { Icon: Sparkle, titulo: "Requerer estatuto IFICI na AT", desc: "Inscrição no regime IFICI (Art. 58.º-A EBF) junto da AT. Taxa IRS flat 20% durante 10 anos. Requer atividade elegível." },
+                            ] : []),
                           ].map((step, i) => (
                             <div
                               key={step.titulo}
@@ -2493,19 +2816,21 @@ export default function ModoGuiadoEmpresa({
                     <Collapsible title="Benefícios fiscais disponíveis para empresas" defaultOpen={false}>
                       <div className="space-y-2">
                         {[
-                          { titulo: "IRC PME 15% nos primeiros 50.000€", desc: "Taxa reduzida para micro/PME (Art. 87.º CIRC). O restante a 19%.", badge: "Nacional" },
-                          { titulo: "IRC 12,5% nos territórios do interior", desc: "PME com direção efetiva em concelho do interior (Portaria 208/2017). Acumula com PME.", badge: "Interior" },
-                          { titulo: "RFAI — 10% a 30% do investimento", desc: "Crédito de IRC sobre equipamentos e ativos. 30% fora de Lisboa/Algarve, 10% litoral (Art. 22.º CFI).", badge: "Nacional" },
-                          { titulo: "DLRR — 10% dos lucros reinvestidos", desc: "Dedução de 10% dos lucros retidos e reinvestidos em ativos elegíveis (Art. 27.º–34.º CFI).", badge: "PME" },
-                          { titulo: "SIFIDE II — até 82,5% de I&D", desc: "32,5% (base) + 50% incremental das despesas de investigação e desenvolvimento (Art. 35.º–42.º CFI).", badge: "I&D" },
+                          { titulo: "IRC PME 15% nos primeiros 50.000€", desc: "Taxa reduzida para micro/PME. O restante a 19%.", badge: "Nacional", lei: "Art. 87.º CIRC", url: LEI.art87circ },
+                          { titulo: "IRC 12,5% nos territórios do interior", desc: "PME com direção efetiva em concelho do interior. Acumula com PME.", badge: "Interior", lei: "Art. 41.º-B EBF", url: LEI.art41bEBF },
+                          { titulo: "RFAI — 10% a 30% do investimento", desc: "Crédito de IRC sobre equipamentos e ativos. 30% fora de Lisboa/Algarve, 10% litoral.", badge: "Nacional", lei: "Art. 22.º–26.º CFI", url: LEI.cfi },
+                          { titulo: "DLRR — 10% dos lucros reinvestidos", desc: "Dedução de 10% dos lucros retidos e reinvestidos em ativos elegíveis.", badge: "PME", lei: "Art. 27.º–34.º CFI", url: LEI.cfi },
+                          { titulo: "SIFIDE II — até 82,5% de I&D", desc: "32,5% (base) + 50% incremental das despesas de investigação e desenvolvimento.", badge: "I&D", lei: "Art. 35.º–42.º CFI", url: LEI.cfi },
                           { titulo: "Zona Franca da Madeira — IRC 5%", desc: "Empresas licenciadas no CINM até 2033. Requer criação de emprego e investimento mínimo de 75.000€.", badge: "Madeira" },
+                          ...(aplicarIFICI ? [{ titulo: `IFICI — IRS ${pct(IFICI_TAXA_FLAT)} flat (${IFICI_PRAZO_ANOS.value} anos)`, desc: "Incentivo fiscal para investigação científica e inovação. Taxa flat de 20% sobre rendimentos e dividendos de fonte portuguesa.", badge: "Estrangeiro", lei: "Art. 58.º-A EBF", url: LEI.art58aEBF }] : []),
                         ].map((b) => (
                           <div key={b.titulo} className="flex items-start gap-2.5 rounded-xl border border-stone-100 bg-white p-3 dark:border-stone-800 dark:bg-stone-950">
                             <Check size={14} className="mt-0.5 flex-shrink-0 text-brand" />
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex flex-wrap items-center gap-1.5">
                                 <span className="text-xs font-bold text-stone-700 dark:text-stone-200">{b.titulo}</span>
                                 <span className="rounded-full bg-stone-100 px-1.5 py-0.5 text-[9px] font-semibold text-stone-500 dark:bg-stone-800 dark:text-stone-400">{b.badge}</span>
+                                {"lei" in b && b.lei && "url" in b && b.url && <LeiRef artigo={b.lei as string} url={b.url as string} />}
                               </div>
                               <div className="mt-0.5 text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">{b.desc}</div>
                             </div>
@@ -2543,10 +2868,11 @@ export default function ModoGuiadoEmpresa({
                     <Sparkle size={14} className="mt-0.5 flex-shrink-0 text-brand" />
                     <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
                       <strong className="text-stone-600 dark:text-stone-300">Estimativa com taxas oficiais de 2026.</strong>{" "}
+                      Baseada no CIRC (<LeiRef artigo="Art. 87.º–88.º" url={LEI.art87circ} />),
+                      CIRS (<LeiRef artigo="Art. 71.º" url={LEI.art71cirs} />) e
+                      CFI (<LeiRef artigo="DL 162/2014" url={LEI.cfi} />).
                       Não substitui o aconselhamento de um Contabilista Certificado
-                      (OCC). O contabilista ajuda a otimizar o salário do gerente,
-                      escolher o melhor regime de IVA e maximizar os benefícios
-                      fiscais aplicáveis.
+                      (OCC).
                     </p>
                   </div>
 
