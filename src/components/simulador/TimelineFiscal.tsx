@@ -141,7 +141,7 @@ export default function TimelineFiscal({
             <div
               key={m.nome}
               aria-current={ehAtual ? "date" : undefined}
-              className={`relative overflow-hidden rounded-2xl border p-3 transition-all duration-200 ${
+              className={`relative rounded-2xl border p-3 transition-all duration-200 ${
                 ehAtual
                   ? "border-brand/50 bg-brand/5 shadow-card ring-1 ring-brand/20 dark:border-brand/40 dark:bg-brand/8"
                   : ehJunhoComIRS && !isPassado
@@ -152,7 +152,7 @@ export default function TimelineFiscal({
               }`}
             >
               {/* Cabeçalho do mês */}
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1 mb-2">
                 <span
                   className={`text-xs font-bold uppercase tracking-wider leading-none ${
                     ehAtual
@@ -165,7 +165,7 @@ export default function TimelineFiscal({
                   {m.nome}
                 </span>
                 {ehAtual && (
-                  <span className="rounded-md bg-brand px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white leading-none">
+                  <span className="rounded-md bg-brand px-1 py-0.5 text-[7px] font-bold uppercase tracking-wider text-white leading-none flex-shrink-0">
                     Agora
                   </span>
                 )}

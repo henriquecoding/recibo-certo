@@ -27,8 +27,9 @@ const MapaBeneficiosRegioes = dynamic(() => import("@/components/comparar/MapaBe
 });
 
 const DEPENDENTES = [0, 1, 2, 3, 4];
-const PRESETS = [15_000, 30_000, 50_000, 80_000, 150_000, 300_000];
-const MAX = 500_000;
+const PRESETS = [15_000, 30_000, 50_000, 80_000, 150_000, 200_000];
+const SLIDER_MAX = 200_000;
+const INPUT_MAX = 2_000_000;
 const STEP = 1_000;
 
 const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
@@ -55,43 +56,43 @@ export default function ComparadorCenarios() {
   const despesas = num(despesasStr);
   const trackRef = useRef<HTMLDivElement>(null);
 
-  const sincronizar = useCallback((v: number) => {
-    const c = Math.max(0, Math.min(MAX, Math.round(v / STEP) * STEP));
+  const sincronizarSlider = useCallback((v: number) => {
+    const c = Math.max(0, Math.min(SLIDER_MAX, Math.round(v / STEP) * STEP));
     setBruto(c);
     setBrutoStr(String(c));
   }, []);
 
-  const pctDe = useCallback((v: number) => Math.min(100, Math.max(0, (v / MAX) * 100)), []);
+  const pctDe = useCallback((v: number) => Math.min(100, Math.max(0, (v / SLIDER_MAX) * 100)), []);
 
   const valorDoPonteiro = useCallback((clientX: number) => {
     const el = trackRef.current;
     if (!el) return 0;
     const { left, width } = el.getBoundingClientRect();
     const frac = Math.max(0, Math.min(1, (clientX - left) / width));
-    return Math.round((frac * MAX) / STEP) * STEP;
+    return Math.round((frac * SLIDER_MAX) / STEP) * STEP;
   }, []);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     setDragging(true);
     setHasInteracted(true);
-    sincronizar(valorDoPonteiro(e.clientX));
-  }, [valorDoPonteiro, sincronizar]);
+    sincronizarSlider(valorDoPonteiro(e.clientX));
+  }, [valorDoPonteiro, sincronizarSlider]);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
-    if (dragging) sincronizar(valorDoPonteiro(e.clientX));
-  }, [dragging, valorDoPonteiro, sincronizar]);
+    if (dragging) sincronizarSlider(valorDoPonteiro(e.clientX));
+  }, [dragging, valorDoPonteiro, sincronizarSlider]);
 
   const onPointerUp = useCallback(() => setDragging(false), []);
 
   const onKeyDown = useCallback((e: React.KeyboardEvent) => {
     setHasInteracted(true);
     const passo = e.shiftKey ? 10_000 : STEP;
-    if (e.key === "ArrowRight" || e.key === "ArrowUp") { e.preventDefault(); sincronizar(bruto + passo); }
-    else if (e.key === "ArrowLeft" || e.key === "ArrowDown") { e.preventDefault(); sincronizar(bruto - passo); }
-    else if (e.key === "Home") { e.preventDefault(); sincronizar(0); }
-    else if (e.key === "End") { e.preventDefault(); sincronizar(MAX); }
-  }, [bruto, sincronizar]);
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") { e.preventDefault(); sincronizarSlider(bruto + passo); }
+    else if (e.key === "ArrowLeft" || e.key === "ArrowDown") { e.preventDefault(); sincronizarSlider(bruto - passo); }
+    else if (e.key === "Home") { e.preventDefault(); sincronizarSlider(0); }
+    else if (e.key === "End") { e.preventDefault(); sincronizarSlider(SLIDER_MAX); }
+  }, [bruto, sincronizarSlider]);
 
   const r = useMemo(
     () => compararCategorias({ brutoAnual: bruto, dependentes, despesas }),
@@ -112,7 +113,7 @@ export default function ComparadorCenarios() {
 
   const { rvEstavel, rvOscila, empEstavel, empOscila } = useMemo(() => {
     const amostras: { x: number; rvGanha: boolean; empGanha: boolean }[] = [];
-    for (let x = 5_000; x <= MAX; x += 2_500) {
+    for (let x = 5_000; x <= 500_000; x += 2_500) {
       const c = compararCategorias({ brutoAnual: x, dependentes, despesas });
       amostras.push({
         x,
@@ -253,7 +254,7 @@ export default function ComparadorCenarios() {
               onChange={(e) => {
                 const s = soDecimal(e.target.value);
                 setBrutoStr(s);
-                setBruto(Math.max(0, Math.min(MAX, num(s))));
+                setBruto(Math.max(0, Math.min(INPUT_MAX, num(s))));
                 setHasInteracted(true);
               }}
               className="w-40 bg-transparent text-right font-display text-3xl font-semibold tabular-nums text-ink dark:text-stone-100 focus:outline-none"
@@ -292,7 +293,7 @@ export default function ComparadorCenarios() {
           tabIndex={0}
           aria-label="Rendimento anual ilíquido"
           aria-valuemin={0}
-          aria-valuemax={MAX}
+          aria-valuemax={SLIDER_MAX}
           aria-valuenow={bruto}
           aria-valuetext={`${fmt(bruto)} por ano`}
           onPointerDown={onPointerDown}
@@ -312,13 +313,13 @@ export default function ComparadorCenarios() {
           </div>
 
           {/* Marcadores de ponto de viragem */}
-          {rvEstavel != null && rvEstavel <= MAX && (
+          {rvEstavel != null && rvEstavel <= SLIDER_MAX && (
             <div
               className="absolute top-1/2 -translate-y-1/2 h-5 w-px rounded-full bg-brand-dark/50 z-10 pointer-events-none"
               style={{ left: `${pctDe(rvEstavel)}%` }}
             />
           )}
-          {empEstavel != null && empEstavel <= MAX && (
+          {empEstavel != null && empEstavel <= SLIDER_MAX && (
             <div
               className="absolute top-1/2 -translate-y-1/2 h-5 w-px rounded-full bg-amber-500/50 z-10 pointer-events-none"
               style={{ left: `${pctDe(empEstavel)}%` }}
@@ -348,7 +349,7 @@ export default function ComparadorCenarios() {
         {/* Escala */}
         <div className="flex justify-between text-[10px] font-medium tabular-nums text-stone-400 dark:text-stone-500 mt-1">
           <span>0€</span>
-          <span>{fmtK(MAX)}</span>
+          <span>{fmtK(SLIDER_MAX)}</span>
         </div>
 
         {/* Legenda de pontos de viragem */}
@@ -380,7 +381,7 @@ export default function ComparadorCenarios() {
               key={p}
               type="button"
               aria-pressed={bruto === p}
-              onClick={() => { sincronizar(p); setHasInteracted(true); }}
+              onClick={() => { setBruto(p); setBrutoStr(String(p)); setHasInteracted(true); }}
               className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition-all ${
                 bruto === p
                   ? "border-brand bg-brand text-white shadow-glow"
