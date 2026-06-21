@@ -211,7 +211,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
 
           <nav className="flex flex-1 flex-col overflow-y-auto px-3 pt-4 pb-2">
-            {GRUPOS.slice(0, 4).map((grupo) => (
+            {GRUPOS.map((grupo) => (
               <div key={grupo.titulo} className="mb-3">
                 <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-stone-300">
                   {grupo.titulo}
@@ -222,7 +222,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                       <NavLink
                         item={item}
                         active={isActive(pathname, item.href)}
-                        variante={grupo.titulo === "Gestão" ? "menu" : "recurso"}
+                        variante={grupo.titulo === "Gestão" || grupo.titulo === "Conta" ? "menu" : "recurso"}
                       />
                     </li>
                   ))}
