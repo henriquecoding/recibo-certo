@@ -290,7 +290,7 @@ function SimuladorDemo({ config, delayMs }: { config: DemoItem; delayMs: number 
 
   return (
     <m.div
-      className="h-full"
+      className="h-full min-h-[540px] sm:min-h-[560px]"
       whileHover={{ y: -4, transition: { duration: 0.3, ease: EASE } }}
     >
       <div className="flex h-full flex-col overflow-hidden rounded-4xl border border-stone-200/60 bg-white shadow-card transition-shadow hover:shadow-lift dark:border-stone-700 dark:bg-stone-900">
@@ -994,30 +994,30 @@ export default function InvestidoresPage() {
                         <LogoMark size={24} />
                         <span className="text-sm font-semibold">ReciboCerto</span>
                       </div>
-                      <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">
+                      <div className="text-[11px] font-semibold uppercase tracking-widest text-white/80">
                         Oportunidade de mercado
                       </div>
                       <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums">
                         <CountUpOnView target={1.3} suffix=" M" duration={1200} decimals={1} />
                       </div>
-                      <div className="mt-1 text-xs text-green-100/70">
+                      <div className="mt-1 text-xs text-white/80">
                         empresas em Portugal — 97% micro e pequenas
                       </div>
                       <div className="mt-5 grid grid-cols-3 gap-1.5">
                         <div className="rounded-xl bg-white/10 px-2.5 py-2 backdrop-blur-sm">
-                          <div className="text-[10px] leading-tight text-green-100/70">TAM</div>
+                          <div className="text-[10px] leading-tight text-white/80">TAM</div>
                           <div className="mt-0.5 text-xs font-semibold tabular-nums">
                             <CountUpOnView target={1.3} suffix=" M" duration={1000} decimals={1} />
                           </div>
                         </div>
                         <div className="rounded-xl bg-white/10 px-2.5 py-2 backdrop-blur-sm">
-                          <div className="text-[10px] leading-tight text-green-100/70">SAM</div>
+                          <div className="text-[10px] leading-tight text-white/80">SAM</div>
                           <div className="mt-0.5 text-xs font-semibold tabular-nums">
                             ~<CountUpOnView target={400} suffix=" K" duration={1000} />
                           </div>
                         </div>
                         <div className="rounded-xl bg-white/10 px-2.5 py-2 backdrop-blur-sm">
-                          <div className="text-[10px] leading-tight text-green-100/70">SOM</div>
+                          <div className="text-[10px] leading-tight text-white/80">SOM</div>
                           <div className="mt-0.5 text-xs font-semibold tabular-nums">
                             ~<CountUpOnView target={50} suffix=" K" duration={1000} />
                           </div>
@@ -1026,7 +1026,7 @@ export default function InvestidoresPage() {
                       <div className="mt-4">
                         <AnimatedBar widthPct={4} delay={600} />
                       </div>
-                      <div className="mt-1 text-[11px] text-green-100/50">
+                      <div className="mt-1 text-[11px] text-white/70">
                         Penetração atual — espaço massivo de crescimento
                       </div>
                     </div>
@@ -1176,7 +1176,7 @@ export default function InvestidoresPage() {
                         </h3>
                         <p
                           className={`mt-2 flex-1 text-sm leading-relaxed ${
-                            v.ativo ? "text-green-100/80" : "text-stone-400"
+                            v.ativo ? "text-white/90" : "text-stone-400"
                           }`}
                         >
                           {v.desc}
