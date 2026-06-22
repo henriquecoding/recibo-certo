@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { m, useMotionValue, useTransform, useSpring } from "motion/react";
 import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import Nav from "@/components/Nav";
@@ -71,7 +71,12 @@ function Card3D({
   );
 }
 
-/* ── Tipo do demo ─────────────────────────────────────────────── */
+/* ── Tipos ────────────────────────────────────────────────────── */
+
+interface TypingStep {
+  text: string;
+  delay: number;
+}
 
 interface DemoItem {
   titulo: string;
@@ -79,7 +84,8 @@ interface DemoItem {
   icon: ReactNode;
   inputLabel: string;
   inputValor: number;
-  resultados: { label: string; valor: number; destaque?: boolean }[];
+  typingSteps: TypingStep[];
+  resultados: { label: string; valor: number; pct: number; hex: string; destaque?: boolean }[];
 }
 
 /* ── Contagem animada de 0 ao alvo ────────────────────────────── */
@@ -94,7 +100,7 @@ function CountUpValue({ target, delay = 0 }: { target: number; delay?: number })
     }
     let raf = 0;
     const timer = setTimeout(() => {
-      const duration = 900;
+      const duration = 700;
       const start = performance.now();
       function tick() {
         const elapsed = performance.now() - start;
@@ -114,14 +120,155 @@ function CountUpValue({ target, delay = 0 }: { target: number; delay?: number })
   return <>{val.toLocaleString("pt-PT")} €</>;
 }
 
-/* ── Mini simulador com loop automático ──────────────────────── */
+/* ── Contagem animada ao entrar em view (hero) ─────────────── */
+
+function CountUpOnView({ target, suffix = "", duration = 1200, decimals = 0 }: { target: number; suffix?: string; duration?: number; decimals?: number }) {
+  const [val, setVal] = useState(0);
+  const [started, setStarted] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setStarted(true); observer.disconnect(); } },
+      { threshold: 0.3 }
+    );
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!started) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setVal(target);
+      return;
+    }
+    let raf = 0;
+    const factor = Math.pow(10, decimals);
+    const start = performance.now();
+    function tick() {
+      const elapsed = performance.now() - start;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setVal(Math.round(target * eased * factor) / factor);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [started, target, duration, decimals]);
+
+  return <span ref={ref}>{val.toLocaleString("pt-PT", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}{suffix}</span>;
+}
+
+/* ── Barra de progresso animada ao entrar em view ──────────── */
+
+function AnimatedBar({ widthPct, delay = 0 }: { widthPct: number; delay?: number }) {
+  const [inView, setInView] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setInView(true); observer.disconnect(); } },
+      { threshold: 0.3 }
+    );
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className="flex h-1.5 overflow-hidden rounded-full bg-white/15">
+      <div
+        className="rounded-full bg-white/70 transition-all duration-1000 ease-out"
+        style={{
+          width: inView ? `${widthPct}%` : "0%",
+          transitionDelay: `${delay}ms`,
+        }}
+      />
+    </div>
+  );
+}
+
+/* ── Donut chart animado em SVG ──────────────────────────────── */
+
+function DonutChart({
+  segments,
+  show,
+  centerValue,
+  centerLabel,
+}: {
+  segments: { pct: number; hex: string; label: string }[];
+  show: boolean;
+  centerValue: string;
+  centerLabel: string;
+}) {
+  const r = 38;
+
+  let cumPct = 0;
+  const segmentData = segments.map((s) => {
+    const offset = cumPct;
+    cumPct += s.pct;
+    return { ...s, dashLen: s.pct, offset };
+  });
+
+  return (
+    <div className="relative mx-auto h-28 w-28 sm:h-32 sm:w-32">
+      <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" role="img" aria-label="Distribuição percentual">
+        <circle
+          cx="50" cy="50" r={r}
+          fill="none"
+          strokeWidth="10"
+          className="stroke-stone-100 dark:stroke-stone-800"
+        />
+        {segmentData.map((s, i) => (
+          <circle
+            key={s.label}
+            cx="50" cy="50" r={r}
+            fill="none"
+            stroke={s.hex}
+            strokeWidth="10"
+            strokeLinecap="butt"
+            pathLength={100}
+            strokeDasharray={show ? `${s.dashLen} ${100 - s.dashLen}` : "0 100"}
+            strokeDashoffset={-s.offset}
+            style={{
+              transition: show
+                ? `stroke-dasharray 0.8s cubic-bezier(0.16, 1, 0.3, 1) ${i * 0.15}s`
+                : "stroke-dasharray 0.15s ease",
+            }}
+          />
+        ))}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <div
+          className="text-center transition-opacity duration-300"
+          style={{ opacity: show ? 1 : 0, transitionDelay: show ? "0.3s" : "0s" }}
+        >
+          <div className="font-display text-xl font-bold text-brand sm:text-2xl">{centerValue}</div>
+          <div className="text-[9px] font-medium uppercase tracking-wider text-stone-400">{centerLabel}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Mini simulador com digitação realista e donut chart ──────── */
 
 function SimuladorDemo({ config, delayMs }: { config: DemoItem; delayMs: number }) {
   const [phase, setPhase] = useState(0);
+  const [typedText, setTypedText] = useState("");
+  const [cursorVisible, setCursorVisible] = useState(true);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = setInterval(() => setCursorVisible((v) => !v), 530);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setPhase(3);
+      setTypedText(config.typingSteps[config.typingSteps.length - 1].text);
       return;
     }
 
@@ -132,13 +279,31 @@ function SimuladorDemo({ config, delayMs }: { config: DemoItem; delayMs: number 
       timers.push(setTimeout(() => { if (!cancelled) fn(); }, ms));
     }
 
+    const CYCLE = 14000;
+
     function cycle() {
       if (cancelled) return;
       setPhase(0);
-      schedule(() => setPhase(1), 600);
-      schedule(() => setPhase(2), 1800);
-      schedule(() => setPhase(3), 3200);
-      schedule(cycle, 6500);
+      setTypedText("");
+
+      let t = 0;
+
+      t += 900;
+      schedule(() => setPhase(1), t);
+
+      for (const step of config.typingSteps) {
+        t += step.delay;
+        const txt = step.text;
+        schedule(() => setTypedText(txt), t);
+      }
+
+      t += 700;
+      schedule(() => setPhase(2), t);
+
+      t += 900;
+      schedule(() => setPhase(3), t);
+
+      schedule(cycle, CYCLE);
     }
 
     schedule(cycle, delayMs);
@@ -147,66 +312,129 @@ function SimuladorDemo({ config, delayMs }: { config: DemoItem; delayMs: number 
       cancelled = true;
       timers.forEach(clearTimeout);
     };
-  }, [delayMs]);
+  }, [delayMs, config.typingSteps]);
 
-  const inputActive = phase >= 1;
-  const resultsActive = phase >= 2;
+  const showInput = phase >= 1;
+  const showChart = phase >= 2;
+  const showResults = phase >= 3;
+
+  const highlightResult = config.resultados.find((r) => r.destaque);
 
   return (
     <Card3D className="h-full">
-      <div
-        className="flex h-full flex-col rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900"
-        style={{ opacity: phase === 0 ? 0.5 : 1, transition: "opacity 0.4s ease" }}
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-light text-brand">
-            {config.icon}
-          </div>
-          <div>
-            <div className="text-sm font-semibold text-stone-700 dark:text-stone-200">{config.titulo}</div>
-            <div className="text-[10px] text-stone-400">{config.subtitulo}</div>
-          </div>
-        </div>
+      <div className="flex h-full flex-col overflow-hidden rounded-4xl border border-stone-200/60 bg-white shadow-card transition-shadow hover:shadow-lift dark:border-stone-700 dark:bg-stone-900">
+        <div className="h-1 w-full bg-gradient-to-r from-brand via-brand-mint to-brand/40" aria-hidden />
 
-        <div className="mt-4 rounded-xl border border-stone-100 bg-stone-50/80 px-3 py-2.5 dark:border-stone-700 dark:bg-stone-800/50">
-          <div className="text-[10px] font-medium uppercase tracking-wider text-stone-400">
-            {config.inputLabel}
+        <div
+          className="flex flex-1 flex-col p-6 sm:p-7"
+          style={{ opacity: phase === 0 ? 0.35 : 1, transition: "opacity 0.6s ease" }}
+        >
+          {/* Header */}
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-light to-brand/10 text-brand shadow-sm">
+              {config.icon}
+            </div>
+            <div>
+              <div className="font-display text-base font-semibold text-stone-800 dark:text-stone-100">
+                {config.titulo}
+              </div>
+              <div className="text-xs text-stone-400">{config.subtitulo}</div>
+            </div>
           </div>
-          <div className="mt-0.5 font-display text-2xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
-            {inputActive ? (
-              <CountUpValue target={config.inputValor} />
-            ) : (
-              <span className="text-stone-300 dark:text-stone-600">0 €</span>
-            )}
-          </div>
-        </div>
 
-        <div className="mt-3 flex-1 space-y-1.5">
-          {resultsActive &&
-            config.resultados.map((r, i) => (
-              <m.div
-                key={r.label}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.12, duration: 0.35, ease: EASE }}
-                className={`flex items-center justify-between rounded-xl px-3 py-2 ${
-                  r.destaque ? "bg-brand-light/70 dark:bg-brand/10" : "bg-stone-50 dark:bg-stone-800/50"
-                }`}
-              >
-                <span className="text-[11px] text-stone-500 dark:text-stone-400">{r.label}</span>
+          {/* Input com cursor de digitação */}
+          <div
+            className={`mt-6 rounded-2xl border-2 px-4 py-4 transition-all duration-300 ${
+              showInput
+                ? "border-brand/30 bg-brand/[0.02] shadow-[0_0_0_4px_rgba(29,158,117,0.06)] dark:border-brand/20 dark:bg-brand/[0.04]"
+                : "border-stone-100 bg-stone-50/60 dark:border-stone-700 dark:bg-stone-800/40"
+            }`}
+          >
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+              {config.inputLabel}
+            </div>
+            <div className="mt-1.5 flex items-baseline font-display text-[1.75rem] font-semibold tabular-nums leading-tight text-stone-800 dark:text-stone-100 sm:text-3xl">
+              {typedText ? (
+                <span>{typedText}</span>
+              ) : (
+                <span className="text-stone-300 dark:text-stone-600">0 €</span>
+              )}
+              {showInput && !showChart && (
                 <span
-                  className={`text-sm font-semibold tabular-nums ${
-                    r.destaque ? "text-brand" : "text-stone-700 dark:text-stone-200"
+                  className={`ml-0.5 inline-block h-7 w-[2px] translate-y-[1px] rounded-full bg-brand transition-opacity duration-75 sm:h-8 ${
+                    cursorVisible ? "opacity-100" : "opacity-0"
                   }`}
-                >
-                  <CountUpValue target={r.valor} delay={i * 120} />
-                </span>
-              </m.div>
-            ))}
-        </div>
+                  aria-hidden
+                />
+              )}
+            </div>
+          </div>
 
-        <div className="mt-3 text-center text-[9px] text-stone-300 dark:text-stone-600">
-          Exemplo · Taxas 2026
+          {/* Donut chart */}
+          <div className="mt-6 flex-shrink-0">
+            <DonutChart
+              segments={config.resultados.map((r) => ({ pct: r.pct, hex: r.hex, label: r.label }))}
+              show={showChart}
+              centerValue={highlightResult ? `${highlightResult.pct}%` : ""}
+              centerLabel="líquido"
+            />
+          </div>
+
+          {/* Resultados com barras de progresso */}
+          <div className="mt-5 flex-1 space-y-3">
+            {showResults &&
+              config.resultados.map((r, i) => (
+                <m.div
+                  key={r.label}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1, duration: 0.4, ease: EASE }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: r.hex }} />
+                      <span
+                        className={`text-xs ${
+                          r.destaque
+                            ? "font-semibold text-stone-700 dark:text-stone-200"
+                            : "text-stone-500 dark:text-stone-400"
+                        }`}
+                      >
+                        {r.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-sm tabular-nums ${
+                          r.destaque
+                            ? "font-bold text-brand"
+                            : "font-semibold text-stone-700 dark:text-stone-200"
+                        }`}
+                      >
+                        <CountUpValue target={r.valor} delay={i * 100} />
+                      </span>
+                      <span className="w-7 text-right text-[11px] tabular-nums text-stone-400">
+                        {r.pct}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
+                    <m.div
+                      className="h-full rounded-full"
+                      style={{ backgroundColor: r.hex }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${r.pct}%` }}
+                      transition={{ delay: i * 0.1 + 0.15, duration: 0.6, ease: EASE }}
+                    />
+                  </div>
+                </m.div>
+              ))}
+          </div>
+
+          {/* Footer */}
+          <div className="mt-5 border-t border-stone-100 pt-3 text-center text-[10px] text-stone-300 dark:border-stone-800 dark:text-stone-600">
+            Exemplo ilustrativo · Taxas 2026
+          </div>
         </div>
       </div>
     </Card3D>
@@ -219,37 +447,63 @@ const DEMOS: DemoItem[] = [
   {
     titulo: "Recibos Verdes",
     subtitulo: "Cat. B · Serviços",
-    icon: <Calculator size={16} />,
+    icon: <Calculator size={20} />,
     inputLabel: "Faturação mensal",
     inputValor: 2500,
+    typingSteps: [
+      { text: "2", delay: 200 },
+      { text: "25", delay: 140 },
+      { text: "253", delay: 180 },
+      { text: "25", delay: 550 },
+      { text: "250", delay: 160 },
+      { text: "2500", delay: 130 },
+      { text: "2 500 €", delay: 350 },
+    ],
     resultados: [
-      { label: "Líquido estimado", valor: 1857, destaque: true },
-      { label: "IRS (anualizado)", valor: 268 },
-      { label: "Segurança Social", valor: 375 },
+      { label: "Líquido estimado", valor: 1857, pct: 74, hex: "#1D9E75", destaque: true },
+      { label: "IRS (anualizado)", valor: 268, pct: 11, hex: "#0d9488" },
+      { label: "Segurança Social", valor: 375, pct: 15, hex: "#6ee7b7" },
     ],
   },
   {
     titulo: "Recibo de Vencimento",
     subtitulo: "Solteiro · 0 dep.",
-    icon: <Receipt size={16} />,
+    icon: <Receipt size={20} />,
     inputLabel: "Salário bruto",
     inputValor: 1800,
+    typingSteps: [
+      { text: "1", delay: 180 },
+      { text: "18", delay: 130 },
+      { text: "180", delay: 150 },
+      { text: "1800", delay: 140 },
+      { text: "1 800 €", delay: 300 },
+    ],
     resultados: [
-      { label: "Líquido", valor: 1377, destaque: true },
-      { label: "IRS retido", valor: 225 },
-      { label: "Seg. Social (11%)", valor: 198 },
+      { label: "Líquido", valor: 1377, pct: 77, hex: "#1D9E75", destaque: true },
+      { label: "IRS retido", valor: 225, pct: 12, hex: "#0d9488" },
+      { label: "Seg. Social (11%)", valor: 198, pct: 11, hex: "#6ee7b7" },
     ],
   },
   {
     titulo: "Simulador Empresa",
     subtitulo: "Unipessoal Lda · PME",
-    icon: <Building size={16} />,
+    icon: <Building size={20} />,
     inputLabel: "Faturação anual",
     inputValor: 80000,
+    typingSteps: [
+      { text: "8", delay: 160 },
+      { text: "80", delay: 140 },
+      { text: "800", delay: 150 },
+      { text: "8000", delay: 130 },
+      { text: "80009", delay: 170 },
+      { text: "8000", delay: 480 },
+      { text: "80000", delay: 140 },
+      { text: "80 000 €", delay: 400 },
+    ],
     resultados: [
-      { label: "Líquido p/ sócio", valor: 48096, destaque: true },
-      { label: "IRC (15% + 19%)", valor: 13200 },
-      { label: "IRS dividendos", valor: 18704 },
+      { label: "Líquido p/ sócio", valor: 48096, pct: 60, hex: "#1D9E75", destaque: true },
+      { label: "IRC (15% + 19%)", valor: 13200, pct: 17, hex: "#0d9488" },
+      { label: "IRS dividendos", valor: 18704, pct: 23, hex: "#6ee7b7" },
     ],
   },
 ];
@@ -347,26 +601,23 @@ export default function InvestidoresPage() {
                   className="font-display display-1 text-balance font-semibold text-ink"
                 >
                   O copiloto financeiro de{" "}
-                  <span className="text-brand">1,3 milhões</span> de empresas portuguesas.
+                  <span className="text-brand">
+                    <CountUpOnView target={1.3} suffix=" milhões" duration={1500} decimals={1} />
+                  </span>{" "}
+                  de empresas portuguesas.
                 </m.h1>
 
                 <m.p variants={staggerItemVariant} className="mt-6 max-w-md text-lg leading-relaxed text-stone-500">
                   Recibos verdes, vencimentos e empresas — tudo o que o Estado obriga, simplificado numa plataforma que os portugueses já usam.
                 </m.p>
 
-                <m.div variants={staggerItemVariant} className="mt-9 flex flex-wrap gap-3">
+                <m.div variants={staggerItemVariant} className="mt-9">
                   <a
                     href="mailto:investidores@recibocerto.pt?subject=Pedido%20de%20reuni%C3%A3o%20%E2%80%94%20ReciboCerto"
                     className="btn-shine inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3.5 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-float"
                   >
                     Agendar reunião
                     <ArrowRight />
-                  </a>
-                  <a
-                    href="#visao"
-                    className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-6 py-3.5 text-sm font-semibold text-stone-700 transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50"
-                  >
-                    Ver a visão
                   </a>
                 </m.div>
 
@@ -380,7 +631,6 @@ export default function InvestidoresPage() {
                 </m.ul>
               </m.div>
 
-              {/* Cartão 3D flutuante — mostra o produto real */}
               <m.div
                 initial={{ opacity: 0, y: 28 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -391,7 +641,7 @@ export default function InvestidoresPage() {
                     <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
                     <div aria-hidden className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/5 blur-xl" />
                     <div className="relative">
-                      <div className="flex items-center gap-2 mb-4">
+                      <div className="mb-4 flex items-center gap-2">
                         <LogoMark size={24} />
                         <span className="text-sm font-semibold">ReciboCerto</span>
                       </div>
@@ -399,7 +649,7 @@ export default function InvestidoresPage() {
                         Oportunidade de mercado
                       </div>
                       <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums">
-                        1,3 M
+                        <CountUpOnView target={1.3} suffix=" M" duration={1200} decimals={1} />
                       </div>
                       <div className="mt-1 text-xs text-green-100/70">
                         empresas em Portugal — 97% micro e pequenas
@@ -407,19 +657,25 @@ export default function InvestidoresPage() {
                       <div className="mt-5 grid grid-cols-3 gap-1.5">
                         <div className="rounded-xl bg-white/10 px-2.5 py-2 backdrop-blur-sm">
                           <div className="text-[10px] leading-tight text-green-100/70">TAM</div>
-                          <div className="mt-0.5 text-xs font-semibold tabular-nums">1,3 M</div>
+                          <div className="mt-0.5 text-xs font-semibold tabular-nums">
+                            <CountUpOnView target={1.3} suffix=" M" duration={1000} decimals={1} />
+                          </div>
                         </div>
                         <div className="rounded-xl bg-white/10 px-2.5 py-2 backdrop-blur-sm">
                           <div className="text-[10px] leading-tight text-green-100/70">SAM</div>
-                          <div className="mt-0.5 text-xs font-semibold tabular-nums">~400 K</div>
+                          <div className="mt-0.5 text-xs font-semibold tabular-nums">
+                            ~<CountUpOnView target={400} suffix=" K" duration={1000} />
+                          </div>
                         </div>
                         <div className="rounded-xl bg-white/10 px-2.5 py-2 backdrop-blur-sm">
                           <div className="text-[10px] leading-tight text-green-100/70">SOM</div>
-                          <div className="mt-0.5 text-xs font-semibold tabular-nums">~50 K</div>
+                          <div className="mt-0.5 text-xs font-semibold tabular-nums">
+                            ~<CountUpOnView target={50} suffix=" K" duration={1000} />
+                          </div>
                         </div>
                       </div>
-                      <div className="mt-4 flex h-1.5 overflow-hidden rounded-full bg-white/15">
-                        <div className="rounded-full bg-white/70" style={{ width: "4%" }} />
+                      <div className="mt-4">
+                        <AnimatedBar widthPct={4} delay={600} />
                       </div>
                       <div className="mt-1 text-[11px] text-green-100/50">
                         Penetração atual — espaço massivo de crescimento
@@ -435,21 +691,22 @@ export default function InvestidoresPage() {
               O PRODUTO EM AÇÃO — Demos animados dos simuladores
               ═══════════════════════════════════════════════════════ */}
           <section className="border-y border-stone-100 bg-white px-6 py-24 dark:border-stone-800">
-            <div className="mx-auto max-w-5xl">
+            <div className="mx-auto max-w-6xl">
               <Reveal className="mb-14 max-w-2xl">
                 <div className="eyebrow mb-3 text-brand">O produto em ação</div>
                 <h2 className="font-display display-2 text-balance font-semibold text-ink">
                   Vê os simuladores a funcionar.
                 </h2>
                 <p className="mt-3 text-stone-500">
-                  Os mesmos que milhares de portugueses já utilizam — recibos verdes, vencimentos e empresas. Cada cálculo com base legal e taxas de 2026 verificadas.
+                  Os mesmos que milhares de portugueses já utilizam — recibos verdes, vencimentos e empresas.
+                  Cada cálculo com base legal e taxas de 2026 verificadas.
                 </p>
               </Reveal>
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {DEMOS.map((d, i) => (
                   <Reveal key={d.titulo} delay={i * 0.08}>
-                    <SimuladorDemo config={d} delayMs={i * 2200} />
+                    <SimuladorDemo config={d} delayMs={i * 3000} />
                   </Reveal>
                 ))}
               </div>
@@ -486,7 +743,10 @@ export default function InvestidoresPage() {
                   </p>
                   <p className="mt-3 text-stone-500 dark:text-stone-400">
                     As ferramentas existentes limitam-se a gerar faturas. Nenhuma responde à pergunta que importa:
-                    <span className="font-semibold text-stone-700 dark:text-stone-200"> quanto é meu, quanto reservar e quando pagar?</span>
+                    <span className="font-semibold text-stone-700 dark:text-stone-200">
+                      {" "}
+                      quanto é meu, quanto reservar e quando pagar?
+                    </span>
                   </p>
                 </Reveal>
 
@@ -494,7 +754,9 @@ export default function InvestidoresPage() {
                   <Card3D>
                     <div className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
                       <div className="mb-4 flex items-center justify-between">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-stone-400">Custo da omissão</span>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+                          Custo da omissão
+                        </span>
                       </div>
                       <div className="space-y-1.5">
                         {[
@@ -503,7 +765,10 @@ export default function InvestidoresPage() {
                           { l: "Coimas por atraso", v: "Até 7 500 €", icone: <BellAlert size={14} /> },
                           { l: "Tempo perdido/mês", v: "~15 horas", icone: <ChartProjection size={14} /> },
                         ].map((r) => (
-                          <div key={r.l} className="flex items-center gap-3 rounded-xl bg-stone-50 px-3 py-2.5 dark:bg-stone-800/70">
+                          <div
+                            key={r.l}
+                            className="flex items-center gap-3 rounded-xl bg-stone-50 px-3 py-2.5 dark:bg-stone-800/70"
+                          >
                             <span className="text-brand">{r.icone}</span>
                             <span className="flex-1 text-xs text-stone-500 dark:text-stone-400">{r.l}</span>
                             <span className="text-xs font-semibold text-stone-700 dark:text-stone-200">{r.v}</span>
@@ -520,7 +785,10 @@ export default function InvestidoresPage() {
           {/* ═══════════════════════════════════════════════════════
               VISÃO — Roadmap em três fases
               ═══════════════════════════════════════════════════════ */}
-          <section id="visao" className="scroll-mt-20 border-y border-stone-100 bg-white px-6 py-24 dark:border-stone-800">
+          <section
+            id="visao"
+            className="scroll-mt-20 border-y border-stone-100 bg-white px-6 py-24 dark:border-stone-800"
+          >
             <div className="mx-auto max-w-5xl">
               <Reveal className="mb-14 max-w-2xl">
                 <div className="eyebrow mb-3 text-brand">Visão</div>
@@ -543,21 +811,25 @@ export default function InvestidoresPage() {
                             : "border border-stone-100 bg-cream dark:border-stone-800 dark:bg-stone-950"
                         }`}
                       >
-                        <div className={`inline-flex self-start rounded-full px-3 py-1 text-[11px] font-semibold ${
-                          v.ativo
-                            ? "bg-white/20 text-white"
-                            : "bg-brand-light text-brand-dark"
-                        }`}>
+                        <div
+                          className={`inline-flex self-start rounded-full px-3 py-1 text-[11px] font-semibold ${
+                            v.ativo ? "bg-white/20 text-white" : "bg-brand-light text-brand-dark"
+                          }`}
+                        >
                           {v.fase}
                         </div>
-                        <h3 className={`mt-4 font-display text-xl font-semibold ${
-                          v.ativo ? "text-white" : "text-stone-800 dark:text-stone-100"
-                        }`}>
+                        <h3
+                          className={`mt-4 font-display text-xl font-semibold ${
+                            v.ativo ? "text-white" : "text-stone-800 dark:text-stone-100"
+                          }`}
+                        >
                           {v.titulo}
                         </h3>
-                        <p className={`mt-2 flex-1 text-sm leading-relaxed ${
-                          v.ativo ? "text-green-100/80" : "text-stone-400"
-                        }`}>
+                        <p
+                          className={`mt-2 flex-1 text-sm leading-relaxed ${
+                            v.ativo ? "text-green-100/80" : "text-stone-400"
+                          }`}
+                        >
                           {v.desc}
                         </p>
                         {v.ativo && (
@@ -595,13 +867,15 @@ export default function InvestidoresPage() {
               </Reveal>
 
               <StaggerGroup className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {METRICAS_MODELO.map((m) => (
-                  <StaggerItem key={m.label}>
+                {METRICAS_MODELO.map((mt) => (
+                  <StaggerItem key={mt.label}>
                     <Card3D className="h-full">
                       <div className="flex h-full flex-col rounded-4xl border border-stone-100 bg-white p-5 shadow-card transition-shadow hover:shadow-lift dark:border-stone-800 dark:bg-stone-900">
-                        <div className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">{m.label}</div>
-                        <div className="mt-2 font-display text-2xl font-semibold text-brand">{m.valor}</div>
-                        <p className="mt-1 text-xs text-stone-400">{m.sub}</p>
+                        <div className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+                          {mt.label}
+                        </div>
+                        <div className="mt-2 font-display text-2xl font-semibold text-brand">{mt.valor}</div>
+                        <p className="mt-1 text-xs text-stone-400">{mt.sub}</p>
                       </div>
                     </Card3D>
                   </StaggerItem>
@@ -685,7 +959,10 @@ export default function InvestidoresPage() {
                 Capital destinado a integrar pagamentos, expandir a equipa e acelerar a adoção. Projeções e documentação disponíveis sob NDA.
               </m.p>
 
-              <m.div variants={fadeUp} className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+              <m.div
+                variants={fadeUp}
+                className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center"
+              >
                 <a
                   href="mailto:investidores@recibocerto.pt?subject=Pedido%20de%20reuni%C3%A3o%20%E2%80%94%20ReciboCerto"
                   className="btn-shine inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3.5 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-float"
@@ -702,9 +979,15 @@ export default function InvestidoresPage() {
                 </a>
               </m.div>
 
-              <m.div variants={fadeUp} className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+              <m.div
+                variants={fadeUp}
+                className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2"
+              >
                 {CONFIANCA.map((c) => (
-                  <span key={c.texto} className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-500">
+                  <span
+                    key={c.texto}
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-500"
+                  >
                     <span className="text-brand">{c.icon}</span>
                     {c.texto}
                   </span>
