@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.61.0";
+export const APP_VERSION = "1.62.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,14 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.62.0",
+    data: "2026-06-22",
+    titulo: "Foto de perfil no header mobile",
+    itens: [
+      "Utilizadores Pro com foto de perfil agora veem o seu avatar no botão do menu do header mobile, em vez do ícone de hambúrguer — toque para abrir o menu lateral.",
+    ],
+  },
   {
     version: "1.61.0",
     data: "2026-06-22",

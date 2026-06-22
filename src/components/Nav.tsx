@@ -307,7 +307,7 @@ export default function Nav() {
             )}
           </div>
 
-          {/* ── Mobile: pesquisa + tema + hambúrguer ── */}
+          {/* ── Mobile: pesquisa + tema + hambúrguer/avatar ── */}
           <div className="flex items-center gap-1 lg:hidden">
             <BuscaTrigger compacto />
             <ThemeToggle />
@@ -328,6 +328,17 @@ export default function Nav() {
                     className="flex"
                   >
                     <Close size={22} />
+                  </m.span>
+                ) : user && avatarUrl ? (
+                  <m.span
+                    key="avatar"
+                    initial={{ opacity: 0, scale: 0.85 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.85 }}
+                    transition={{ duration: 0.15 }}
+                    className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl ring-2 ring-brand/20"
+                  >
+                    <Image src={avatarUrl} alt="" fill className="object-cover" sizes="32px" unoptimized />
                   </m.span>
                 ) : (
                   <m.span
