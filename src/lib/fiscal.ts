@@ -382,8 +382,11 @@ export interface SimulacaoInput {
   ascendentes?: number;
   /** PPR: valor aplicado no ano + escalão de idade do sujeito passivo (Art. 21.º EBF). */
   ppr?: { valor: number; escalaoIdade: "ate35" | "de35a50" | "mais50" };
-  /** Donativos do ano (Art. 63.º EBF). */
-  donativos?: number;
+  /**
+   * Donativos do ano (Art. 62.º/63.º EBF): valor, fator de majoração
+   * (1,0 / 1,3 / 1,4) e se está isento do limite de 15% da coleta (Estado).
+   */
+  donativos?: { valor: number; fator: number; semLimite: boolean };
 }
 
 export interface SimulacaoIRS {
@@ -582,9 +585,13 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   const deducaoPPR = input.ppr
     ? Math.min(sanitize(input.ppr.valor) * DEDUCAO_PPR.value.taxa, DEDUCAO_PPR.value[input.ppr.escalaoIdade])
     : 0;
-  // Donativos (Art. 63.º EBF): 25% do donativo, limitado a 15% da coleta.
+  // Donativos (Art. 62.º/63.º EBF): 25% do valor majorado, limitado a 15% da
+  // coleta (exceto donativos ao Estado, sem limite).
   const deducaoDonativos = input.donativos
-    ? Math.min(sanitize(input.donativos) * DEDUCAO_DONATIVOS.value.taxa, DEDUCAO_DONATIVOS.value.limiteColeta * coletaBruta)
+    ? (() => {
+        const base = sanitize(input.donativos.valor) * (input.donativos.fator || 1) * DEDUCAO_DONATIVOS.value.taxa;
+        return input.donativos.semLimite ? base : Math.min(base, DEDUCAO_DONATIVOS.value.limiteColeta * coletaBruta);
+      })()
     : 0;
 
   // Limite global (Art. 78.º n.º 7): saúde + educação + gerais + rendas + PPR + donativos.
@@ -1168,8 +1175,8 @@ export interface DeclaracaoInput {
   ascendentes?: number;
   /** PPR aplicado no ano + escalão de idade (Art. 21.º EBF). */
   ppr?: { valor: number; escalaoIdade: "ate35" | "de35a50" | "mais50" };
-  /** Donativos do ano (Art. 63.º EBF). */
-  donativos?: number;
+  /** Donativos do ano (Art. 62.º/63.º EBF): valor + majoração + sem-limite. */
+  donativos?: { valor: number; fator: number; semLimite: boolean };
   deficiencia?: boolean;
   ifici?: boolean;
   pagamentosPorConta?: number;

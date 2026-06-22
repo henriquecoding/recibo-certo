@@ -250,6 +250,10 @@ export const SOURCES = {
     label: "Art. 63.º EBF — Estatuto do Mecenato: donativos, dedução de 25% com limite de 15% da coleta · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-63-ordm-.aspx",
   },
+  art62EBF: {
+    label: "Art. 62.º EBF — Mecenato: majorações dos donativos (130% social/religioso, 140% cultural/ambiental) e donativos ao Estado sem limite · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-62-ordm-.aspx",
+  },
 
   // ── Comissão Europeia ───────────────────────────────────────────────
   viesValidation: {
@@ -1675,10 +1679,31 @@ export interface DeducaoDonativos {
 
 export const DEDUCAO_DONATIVOS = sv<DeducaoDonativos>(
   { taxa: 0.25, limiteColeta: 0.15 },
-  "Art. 63.º EBF — donativos: dedução de 25% (base, sem majorações), limitada a 15% da coleta",
+  "Art. 63.º EBF — donativos: dedução de 25% sobre o valor majorado, limitada a 15% da coleta",
   "art63EBF",
-  REV_BENEFICIOS,
-  "Majorações (130% social, 140% ambiental/desportivo/educacional) não modeladas — usa-se a taxa base."
+  REV_BENEFICIOS
+);
+
+export type TipoDonativo = "geral" | "social" | "ambiental" | "estado";
+
+export interface OpcaoDonativo {
+  label: string;
+  /** Fator de majoração aplicado ao donativo antes da taxa de 25%. */
+  fator: number;
+  /** true = não sujeito ao limite de 15% da coleta (donativos ao Estado). */
+  semLimite: boolean;
+}
+
+export const DONATIVOS_MAJORACOES = sv<Record<TipoDonativo, OpcaoDonativo>>(
+  {
+    geral: { label: "Geral (sem majoração)", fator: 1.0, semLimite: false },
+    social: { label: "Social / religioso (+30%)", fator: 1.3, semLimite: false },
+    ambiental: { label: "Cultural / ambiental / infância (+40%)", fator: 1.4, semLimite: false },
+    estado: { label: "Estado / autarquias (sem limite)", fator: 1.0, semLimite: true },
+  },
+  "Art. 62.º EBF — majorações dos donativos: 130% (social/religioso), 140% (cultural/ambiental/infância); donativos ao Estado sem o limite de 15% da coleta",
+  "art62EBF",
+  REV_BENEFICIOS
 );
 
 /** Dedução à coleta por ascendente em comunhão de habitação (Art. 78.º-A CIRS). */
@@ -2308,6 +2333,9 @@ export function assertFiscalDataIntegrity(): void {
   if (!isRate(DEDUCAO_DONATIVOS.value.taxa) || !isRate(DEDUCAO_DONATIVOS.value.limiteColeta)) {
     erros.push("Parâmetros de dedução de donativos fora de [0,1].");
   }
+  (Object.keys(DONATIVOS_MAJORACOES.value) as TipoDonativo[]).forEach((k) => {
+    if (!(DONATIVOS_MAJORACOES.value[k].fator >= 1)) erros.push(`Fator de majoração de donativo inválido: ${k}.`);
+  });
   if (!(DEDUCAO_ASCENDENTE.value > 0)) erros.push("Dedução por ascendente não positiva.");
   if (!(DEDUCAO_ASCENDENTE_UNICO.value >= DEDUCAO_ASCENDENTE.value)) {
     erros.push("Dedução por ascendente único deveria ser ≥ à dedução por ascendente.");
@@ -2604,6 +2632,7 @@ export function assertFiscalDataIntegrity(): void {
     // Benefícios fiscais à coleta
     DEDUCAO_PPR,
     DEDUCAO_DONATIVOS,
+    DONATIVOS_MAJORACOES,
     DEDUCAO_ASCENDENTE,
     DEDUCAO_ASCENDENTE_UNICO,
     // SMN

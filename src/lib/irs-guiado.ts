@@ -11,13 +11,15 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { DeclaracaoInput } from "./fiscal";
-import type { TipoAtividade, DuracaoArrendamento } from "./fiscal-data";
+import type { TipoAtividade, DuracaoArrendamento, TipoDonativo } from "./fiscal-data";
 import {
   IVA_ISENCAO_EXCESSO,
   REGIME_SIMPLIFICADO,
   MAIS_VALIAS_MOBILIARIAS_TAXA,
   CRIPTO_ISENCAO_DIAS,
+  MAIS_VALIAS_DETENCAO_DIAS,
   MAIS_VALIAS_IMOBILIARIO_INCLUSAO,
+  DONATIVOS_MAJORACOES,
   ESCALOES_IRS,
 } from "./fiscal-data";
 import { fmt, pct } from "./format";
@@ -191,7 +193,7 @@ export interface EstadoDeclaracao {
   estrangeiros: { rendimento: number; impostoPago: number };
   deducoes: { saude: number; educacao: number; gerais: number; rendas: number };
   ppr: { valor: number; escalaoIdade: "ate35" | "de35a50" | "mais50" };
-  donativos: number;
+  donativos: { valor: number; tipo: TipoDonativo };
   pagamentosPorConta: number;
 }
 
@@ -270,9 +272,87 @@ export function construirDeclaracaoInput(e: EstadoDeclaracao): DeclaracaoInput {
     },
     ascendentes: e.ascendentes,
     ppr: e.ppr.valor > 0 ? { valor: e.ppr.valor, escalaoIdade: e.ppr.escalaoIdade } : undefined,
-    donativos: e.donativos > 0 ? e.donativos : undefined,
+    donativos:
+      e.donativos.valor > 0
+        ? {
+            valor: e.donativos.valor,
+            fator: DONATIVOS_MAJORACOES.value[e.donativos.tipo].fator,
+            semLimite: DONATIVOS_MAJORACOES.value[e.donativos.tipo].semLimite,
+          }
+        : undefined,
     pagamentosPorConta: e.pagamentosPorConta,
   };
+}
+
+// ─── Operações de mais-valias (detalhe por ativo) ───────────────────────────
+export interface OperacaoAtivo {
+  id: string;
+  descricao: string;
+  valorAquisicao: number;
+  valorVenda: number;
+  comissoes: number;
+  /** Datas ISO (yyyy-mm-dd); vazias se desconhecidas. */
+  dataAquisicao: string;
+  dataVenda: string;
+}
+
+export function operacaoVazia(): OperacaoAtivo {
+  return { id: Math.random().toString(36).slice(2), descricao: "", valorAquisicao: 0, valorVenda: 0, comissoes: 0, dataAquisicao: "", dataVenda: "" };
+}
+
+/** Dias de detenção entre duas datas ISO (null se incompletas/inválidas). */
+export function diasDetencao(aquisicao: string, venda: string): number | null {
+  if (!aquisicao || !venda) return null;
+  const a = Date.parse(aquisicao);
+  const v = Date.parse(venda);
+  if (Number.isNaN(a) || Number.isNaN(v) || v < a) return null;
+  return Math.floor((v - a) / 86_400_000);
+}
+
+export interface LinhaOperacao {
+  op: OperacaoAtivo;
+  /** Mais-valia (>0) ou menos-valia (<0). */
+  resultado: number;
+  dias: number | null;
+  /** true se detido < 365 dias (curto prazo). null se datas em falta. */
+  curtoPrazo: boolean | null;
+}
+
+function analisarOperacao(op: OperacaoAtivo): LinhaOperacao {
+  const resultado = (op.valorVenda || 0) - (op.valorAquisicao || 0) - (op.comissoes || 0);
+  const dias = diasDetencao(op.dataAquisicao, op.dataVenda);
+  const curtoPrazo = dias === null ? null : dias < MAIS_VALIAS_DETENCAO_DIAS.value;
+  return { op, resultado, dias, curtoPrazo };
+}
+
+/** Resumo de mais-valias mobiliárias a partir das operações. */
+export function resumoMobiliario(ops: OperacaoAtivo[]): {
+  saldo: number;
+  algumCurtoPrazo: boolean;
+  linhas: LinhaOperacao[];
+} {
+  const linhas = ops.map(analisarOperacao);
+  const saldo = linhas.reduce((s, l) => s + l.resultado, 0);
+  // Curto prazo relevante: alguma operação com ganho detida < 365 dias.
+  const algumCurtoPrazo = linhas.some((l) => l.curtoPrazo === true && l.resultado > 0);
+  return { saldo, algumCurtoPrazo, linhas };
+}
+
+/** Resumo de criptoativos: separa ganhos de curto (< 365 d) e longo prazo. */
+export function resumoCripto(ops: OperacaoAtivo[]): {
+  curto: number;
+  longo: number;
+  linhas: LinhaOperacao[];
+} {
+  const linhas = ops.map(analisarOperacao);
+  let curto = 0;
+  let longo = 0;
+  for (const l of linhas) {
+    // Sem datas, trata-se como curto prazo (tributável) por prudência.
+    if (l.curtoPrazo === false) longo += l.resultado;
+    else curto += l.resultado;
+  }
+  return { curto, longo, linhas };
 }
 
 // ─── Motor de completude ────────────────────────────────────────────────────

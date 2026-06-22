@@ -9,8 +9,12 @@ import {
   validarDeclaracao,
   calcularCompletude,
   ganhoImobiliario,
+  resumoMobiliario,
+  resumoCripto,
+  diasDetencao,
   type RendimentoId,
   type EstadoDeclaracao,
+  type OperacaoAtivo,
 } from "@/lib/irs-guiado";
 import {
   ATIVIDADES,
@@ -42,10 +46,13 @@ import ProHint from "@/components/ui/ProHint";
 import PartnerSpot from "@/components/dashboard/PartnerSpot";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { DistribuicaoRendimento, DistribuicaoFiscal } from "@/components/simulador/Graficos";
+import EditorOperacoes from "@/components/simulador/EditorOperacoes";
 import {
   DEDUCAO_PPR,
   DEDUCAO_DONATIVOS,
   DEDUCAO_ASCENDENTE,
+  DONATIVOS_MAJORACOES,
+  type TipoDonativo,
 } from "@/lib/fiscal-data";
 import {
   Briefcase, User, Invoice, Coin, ChartProjection, Globe, Home, Building, Plane,
@@ -106,14 +113,12 @@ export default function SimuladorPage() {
   const [capRet, setCapRet] = useState("");
   const [capEnglobar, setCapEnglobar] = useState(false);
 
-  // Investimentos
-  const [invSaldo, setInvSaldo] = useState("");
-  const [invCurto, setInvCurto] = useState(false);
+  // Investimentos (detalhe por operação)
+  const [opsInv, setOpsInv] = useState<OperacaoAtivo[]>([]);
   const [invEnglobar, setInvEnglobar] = useState(false);
 
-  // Cripto
-  const [criptoCurto, setCriptoCurto] = useState("");
-  const [criptoLongo, setCriptoLongo] = useState("");
+  // Cripto (detalhe por operação)
+  const [opsCripto, setOpsCripto] = useState<OperacaoAtivo[]>([]);
   const [criptoEnglobar, setCriptoEnglobar] = useState(false);
 
   // Imóveis (rendas)
@@ -128,6 +133,8 @@ export default function SimuladorPage() {
   const [vendaRealizacao, setVendaRealizacao] = useState("");
   const [vendaAquisicao, setVendaAquisicao] = useState("");
   const [vendaDespesas, setVendaDespesas] = useState("");
+  const [vendaDataAq, setVendaDataAq] = useState("");
+  const [vendaDataVenda, setVendaDataVenda] = useState("");
   const [vendaReinveste, setVendaReinveste] = useState(false);
   const [vendaReinvestido, setVendaReinvestido] = useState("");
 
@@ -142,7 +149,8 @@ export default function SimuladorPage() {
   const [rendasDed, setRendasDed] = useState("");
   const [pprValor, setPprValor] = useState("");
   const [pprIdade, setPprIdade] = useState<"ate35" | "de35a50" | "mais50">("de35a50");
-  const [donativos, setDonativos] = useState("");
+  const [donativoValor, setDonativoValor] = useState("");
+  const [donativoTipo, setDonativoTipo] = useState<TipoDonativo>("geral");
   const [pagamentosPorConta, setPagamentosPorConta] = useState("");
 
   // Pré-preenchimento com recibos registados (categoria B).
@@ -154,6 +162,8 @@ export default function SimuladorPage() {
   }, [carregado, recibos.length, resumo.bruto, resumo.retencao]);
 
   const ef = efeitoFiscal(atividade);
+  const resInv = useMemo(() => resumoMobiliario(opsInv), [opsInv]);
+  const resCripto = useMemo(() => resumoCripto(opsCripto), [opsCripto]);
 
   // ── Estado normalizado ──────────────────────────────────────────────────────
   const estado: EstadoDeclaracao = useMemo(
@@ -182,8 +192,8 @@ export default function SimuladorPage() {
         irsJovemAno: indJovem,
       },
       capitais: { dividendos: n(dividendos), juros: n(juros), retencoes: n(capRet), englobar: capEnglobar },
-      investimentos: { saldo: n(invSaldo), algumCurtoPrazo: invCurto, englobar: invEnglobar },
-      cripto: { curto: n(criptoCurto), longo: n(criptoLongo), englobar: criptoEnglobar },
+      investimentos: { saldo: Math.max(0, resInv.saldo), algumCurtoPrazo: resInv.algumCurtoPrazo, englobar: invEnglobar },
+      cripto: { curto: Math.max(0, resCripto.curto), longo: resCripto.longo, englobar: criptoEnglobar },
       imoveis: {
         renda: n(renda),
         despesas: n(rendaDespesas),
@@ -202,7 +212,7 @@ export default function SimuladorPage() {
       estrangeiros: { rendimento: n(extRendimento), impostoPago: n(extImposto) },
       deducoes: { saude: n(saude), educacao: n(educacao), gerais: n(gerais), rendas: n(rendasDed) },
       ppr: { valor: n(pprValor), escalaoIdade: pprIdade },
-      donativos: n(donativos),
+      donativos: { valor: n(donativoValor), tipo: donativoTipo },
       pagamentosPorConta: n(pagamentosPorConta),
     }),
     [
@@ -210,12 +220,12 @@ export default function SimuladorPage() {
       salBruto, salRet, pensBruto, pensRet,
       atividade, ef.coef, ef.regra15, indBruto, indRegime, indDespesas, indRet, indAno, indJovem,
       dividendos, juros, capRet, capEnglobar,
-      invSaldo, invCurto, invEnglobar,
-      criptoCurto, criptoLongo, criptoEnglobar,
+      resInv, invEnglobar,
+      resCripto, criptoEnglobar,
       renda, rendaDespesas, rendaHab, rendaDuracao, rendaRet, rendaEnglobar,
       vendaRealizacao, vendaAquisicao, vendaDespesas, vendaReinveste, vendaReinvestido,
       extRendimento, extImposto,
-      saude, educacao, gerais, rendasDed, pprValor, pprIdade, donativos, pagamentosPorConta,
+      saude, educacao, gerais, rendasDed, pprValor, pprIdade, donativoValor, donativoTipo, pagamentosPorConta,
     ]
   );
 
@@ -380,10 +390,16 @@ export default function SimuladorPage() {
 
               {ativo("investimentos") && (
                 <ModuloCard id="investimentos">
-                  <Campo id="inv-saldo" label="Saldo de mais-valias do ano (€)" value={invSaldo} onChange={setInvSaldo} step={100}
-                    tooltip="Soma das mais-valias menos as menos-valias realizadas no ano (ações, ETF, fundos, obrigações). Só o saldo positivo é tributado." />
-                  <Checkbox checked={invCurto} onChange={setInvCurto} label="Algum ativo foi detido menos de 365 dias"
-                    sub="Relevante para o englobamento obrigatório: se o rendimento coletável atingir o último escalão, estas mais-valias passam às taxas progressivas (Art. 72.º n.º 18)." />
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
+                    Regista cada venda. Calculamos o saldo anual (mais-valias menos menos-valias) e o período de detenção de cada operação.
+                  </p>
+                  <EditorOperacoes ops={opsInv} setOps={setOpsInv} tipo="mobiliario" />
+                  {opsInv.length > 0 && (
+                    <ResumoMaisValias
+                      saldo={resInv.saldo}
+                      nota={resInv.algumCurtoPrazo ? "Há operações de curto prazo (< 365 dias): se o teu rendimento atingir o último escalão, o englobamento é obrigatório (Art. 72.º n.º 18)." : undefined}
+                    />
+                  )}
                   <Interruptor on={invEnglobar} onChange={setInvEnglobar} label="Optar pelo englobamento"
                     tooltip={`Por defeito, taxa de ${pct(MAIS_VALIAS_MOBILIARIAS_TAXA.value)}. O englobamento pode compensar quando a tua taxa marginal é inferior.`} />
                 </ModuloCard>
@@ -391,17 +407,15 @@ export default function SimuladorPage() {
 
               {ativo("cripto") && (
                 <ModuloCard id="cripto">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Campo id="cripto-curto" label="Ganhos < 365 dias (€)" value={criptoCurto} onChange={setCriptoCurto} step={100}
-                      tooltip={`Tributados a ${pct(CRIPTO_TAXA_CURTO_PRAZO.value)} (Art. 72.º).`} />
-                    <Campo id="cripto-longo" label="Ganhos ≥ 365 dias (€)" value={criptoLongo} onChange={setCriptoLongo} step={100}
-                      tooltip={`Excluídos de tributação (Art. 10.º n.º 19). Continuam a declarar-se, mas não pagam imposto.`} />
-                  </div>
-                  {n(criptoLongo) > 0 && (
-                    <p className="flex items-start gap-2 rounded-xl bg-brand-light px-3 py-2 text-xs text-brand-dark">
-                      <Check size={13} className="mt-0.5 flex-shrink-0 text-brand" />
-                      {fmt(n(criptoLongo))} em ganhos de longo prazo isentos de IRS ({CRIPTO_ISENCAO_DIAS.value} dias ou mais).
-                    </p>
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
+                    Regista cada venda de criptoativos. Os detidos {CRIPTO_ISENCAO_DIAS.value} dias ou mais ficam automaticamente isentos (Art. 10.º n.º 19).
+                  </p>
+                  <EditorOperacoes ops={opsCripto} setOps={setOpsCripto} tipo="cripto" />
+                  {opsCripto.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <ResumoMini titulo="Curto prazo (tributável)" valor={Math.max(0, resCripto.curto)} sub={`a ${pct(CRIPTO_TAXA_CURTO_PRAZO.value)}`} alerta />
+                      <ResumoMini titulo="Longo prazo (isento)" valor={resCripto.longo} sub={`≥ ${CRIPTO_ISENCAO_DIAS.value} dias`} />
+                    </div>
                   )}
                   <Interruptor on={criptoEnglobar} onChange={setCriptoEnglobar} label="Englobar os ganhos de curto prazo"
                     tooltip="Opção pelas taxas progressivas em vez dos 28%." />
@@ -450,14 +464,37 @@ export default function SimuladorPage() {
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <Campo id="venda-realizacao" label="Valor de venda (€)" value={vendaRealizacao} onChange={setVendaRealizacao} step={1000} />
                     <Campo id="venda-aquisicao" label="Valor de aquisição (€)" value={vendaAquisicao} onChange={setVendaAquisicao} step={1000} />
-                    <Campo id="venda-despesas" label="Despesas e obras (€)" value={vendaDespesas} onChange={setVendaDespesas} step={500}
-                      tooltip="IMT e escritura na compra, comissão da imobiliária na venda, obras de valorização nos últimos 12 anos." />
+                  </div>
+                  <Campo id="venda-despesas" label="Despesas e obras (€)" value={vendaDespesas} onChange={setVendaDespesas} step={500}
+                    tooltip="IMT e escritura na compra, comissão da imobiliária na venda, obras de valorização nos últimos 12 anos." />
+                  <div>
+                    <div className="mb-1.5 flex items-center gap-1.5">
+                      <span className={rotuloCls}>Datas (opcional)</span>
+                      <InfoTip>Servem para saber há quanto tempo detiveste o imóvel. Se for mais de 24 meses, o valor de aquisição é corrigido por um coeficiente de desvalorização monetária oficial (Portaria anual) — aumentando o custo e reduzindo a mais-valia.</InfoTip>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input type="date" aria-label="Data de aquisição" value={vendaDataAq} onChange={(e) => setVendaDataAq(e.target.value)} className={campoCls} />
+                      <input type="date" aria-label="Data de venda" value={vendaDataVenda} onChange={(e) => setVendaDataVenda(e.target.value)} className={campoCls} />
+                    </div>
                   </div>
                   <div className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm dark:border-stone-700 dark:bg-stone-800/40">
                     <span className="text-stone-500 dark:text-stone-400">Mais-valia apurada: </span>
                     <span className="font-semibold text-stone-800 dark:text-stone-100">{fmt(ganhoImobiliario(estado.imoveisVenda))}</span>
                     <span className="text-stone-400"> · só {pct(MAIS_VALIAS_IMOBILIARIO_INCLUSAO.value)} é tributado (Art. 43.º n.º 2)</span>
                   </div>
+                  {(() => {
+                    const dias = diasDetencao(vendaDataAq, vendaDataVenda);
+                    if (dias === null) return null;
+                    const meses = Math.floor(dias / 30);
+                    return (
+                      <p className="rounded-xl bg-stone-100 px-3 py-2 text-xs text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+                        Detido há cerca de {meses} meses.{" "}
+                        {meses >= 24
+                          ? "Como excede 24 meses, o valor de aquisição deve ser corrigido pelo coeficiente de desvalorização monetária oficial — introduz o valor já corrigido para maior precisão."
+                          : "Abaixo de 24 meses não há correção monetária do valor de aquisição."}
+                      </p>
+                    );
+                  })()}
                   <Checkbox checked={vendaReinveste} onChange={setVendaReinveste} label="Era habitação própria e vou reinvestir noutra HPP"
                     sub="O reinvestimento (sem crédito) até 36 meses após a venda exclui a mais-valia da tributação, na proporção do valor reinvestido (Art. 10.º n.º 5)." />
                   {vendaReinveste && (
@@ -488,7 +525,7 @@ export default function SimuladorPage() {
             <PassoDeducoes
               {...{
                 saude, setSaude, educacao, setEducacao, gerais, setGerais, rendasDed, setRendasDed,
-                pprValor, setPprValor, pprIdade, setPprIdade, donativos, setDonativos,
+                pprValor, setPprValor, pprIdade, setPprIdade, donativoValor, setDonativoValor, donativoTipo, setDonativoTipo,
                 pagamentosPorConta, setPagamentosPorConta,
               }}
             />
@@ -598,6 +635,30 @@ function ModuloCard({ id, children }: { id: RendimentoId; children: ReactNode })
       <CabecalhoModulo titulo={meta.titulo} anexo={meta.anexo} anexoNome={meta.anexoNome} explicacao={meta.explicacao} icon={Icon ? <Icon size={18} /> : undefined} />
       {children}
     </section>
+  );
+}
+
+function ResumoMaisValias({ saldo, nota }: { saldo: number; nota?: string }) {
+  const positivo = saldo >= 0;
+  return (
+    <div className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 dark:border-stone-700 dark:bg-stone-800/40">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-stone-500 dark:text-stone-400">{positivo ? "Saldo de mais-valias" : "Saldo (menos-valia)"}</span>
+        <span className={`text-sm font-semibold tabular-nums ${positivo ? "text-brand-dark dark:text-brand" : "text-alert-text"}`}>{fmt(saldo)}</span>
+      </div>
+      {!positivo && <p className="mt-1 text-[11px] text-stone-400">Saldo negativo: não há imposto este ano; a menos-valia pode ser reportada nos 5 anos seguintes (Art. 55.º CIRS).</p>}
+      {nota && <p className="mt-1 text-[11px] text-alert-text">{nota}</p>}
+    </div>
+  );
+}
+
+function ResumoMini({ titulo, valor, sub, alerta = false }: { titulo: string; valor: number; sub?: string; alerta?: boolean }) {
+  return (
+    <div className={`rounded-xl border px-3 py-2.5 ${alerta && valor > 0 ? "border-alert-border bg-alert-bg" : "border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/40"}`}>
+      <div className={`text-[11px] font-medium ${alerta && valor > 0 ? "text-alert-text" : "text-stone-500 dark:text-stone-400"}`}>{titulo}</div>
+      <div className={`text-sm font-semibold tabular-nums ${alerta && valor > 0 ? "text-alert-text" : "text-stone-800 dark:text-stone-100"}`}>{fmt(valor)}</div>
+      {sub && <div className="text-[10px] text-stone-400">{sub}</div>}
+    </div>
   );
 }
 
@@ -733,17 +794,19 @@ function PassoDeducoes(props: {
   rendasDed: string; setRendasDed: (v: string) => void;
   pprValor: string; setPprValor: (v: string) => void;
   pprIdade: "ate35" | "de35a50" | "mais50"; setPprIdade: (v: "ate35" | "de35a50" | "mais50") => void;
-  donativos: string; setDonativos: (v: string) => void;
+  donativoValor: string; setDonativoValor: (v: string) => void;
+  donativoTipo: TipoDonativo; setDonativoTipo: (v: TipoDonativo) => void;
   pagamentosPorConta: string; setPagamentosPorConta: (v: string) => void;
 }) {
   const {
     saude, setSaude, educacao, setEducacao, gerais, setGerais, rendasDed, setRendasDed,
-    pprValor, setPprValor, pprIdade, setPprIdade, donativos, setDonativos,
+    pprValor, setPprValor, pprIdade, setPprIdade, donativoValor, setDonativoValor, donativoTipo, setDonativoTipo,
     pagamentosPorConta, setPagamentosPorConta,
   } = props;
   const pprLimite = DEDUCAO_PPR.value[pprIdade];
   const pprBeneficio = Math.min(n(pprValor) * DEDUCAO_PPR.value.taxa, pprLimite);
-  const donativoBeneficio = n(donativos) * DEDUCAO_DONATIVOS.value.taxa;
+  const opcaoDonativo = DONATIVOS_MAJORACOES.value[donativoTipo];
+  const donativoBeneficio = n(donativoValor) * opcaoDonativo.fator * DEDUCAO_DONATIVOS.value.taxa;
   const campos = [
     { id: "saude", label: "Saúde (€)", v: saude, set: setSaude, nota: `${pct(DEDUCAO_SAUDE.value.taxa)} → máx ${fmt(DEDUCAO_SAUDE.value.limite)}` },
     { id: "educacao", label: "Educação (€)", v: educacao, set: setEducacao, nota: `${pct(DEDUCAO_EDUCACAO.value.taxa)} → máx ${fmt(DEDUCAO_EDUCACAO.value.limite)}` },
@@ -805,11 +868,25 @@ function PassoDeducoes(props: {
         )}
 
         {/* Donativos */}
-        <Campo id="donativos" label="Donativos a entidades elegíveis (€)" value={donativos} onChange={setDonativos} step={50}
-          tooltip="Estatuto do Mecenato (Art. 63.º EBF): deduz 25% do donativo, até 15% da coleta. Majorações por tipo de entidade não estão modeladas." />
-        {n(donativos) > 0 && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Campo id="donativos" label="Donativos (€)" value={donativoValor} onChange={setDonativoValor} step={50}
+            tooltip="Estatuto do Mecenato (Art. 62.º/63.º EBF): deduz 25% sobre o valor majorado, até 15% da coleta (sem limite para donativos ao Estado)." />
+          <div>
+            <div className="mb-1.5 flex items-center gap-1.5">
+              <label htmlFor="donativo-tipo" className={rotuloCls}>Tipo de entidade</label>
+              <InfoTip>A majoração depende do fim do donativo: social/religioso conta a 130%, cultural/ambiental/infância a 140%. Donativos ao Estado não têm o limite de 15% da coleta (Art. 62.º EBF).</InfoTip>
+            </div>
+            <select id="donativo-tipo" value={donativoTipo} onChange={(e) => setDonativoTipo(e.target.value as TipoDonativo)} className={campoCls}>
+              {(Object.keys(DONATIVOS_MAJORACOES.value) as TipoDonativo[]).map((k) => (
+                <option key={k} value={k}>{DONATIVOS_MAJORACOES.value[k].label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        {n(donativoValor) > 0 && (
           <p className="rounded-xl bg-brand-light px-3 py-2 text-xs text-brand-dark">
-            Benefício estimado: {fmt(donativoBeneficio)} ({pct(DEDUCAO_DONATIVOS.value.taxa)}) · limitado a {pct(DEDUCAO_DONATIVOS.value.limiteColeta)} da coleta
+            Benefício estimado: {fmt(donativoBeneficio)} ({pct(DEDUCAO_DONATIVOS.value.taxa)}{opcaoDonativo.fator > 1 ? ` sobre +${pct(opcaoDonativo.fator - 1)} majorado` : ""})
+            {opcaoDonativo.semLimite ? " · sem limite de coleta" : ` · limitado a ${pct(DEDUCAO_DONATIVOS.value.limiteColeta)} da coleta`}
           </p>
         )}
 
