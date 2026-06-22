@@ -111,6 +111,7 @@ import {
   IRS_JOVEM,
   DISPENSA_RETENCAO_LIMITE,
   ESCALOES_IRS,
+  efeitoFiscal,
   type Atividade,
   type Regiao,
   type BaseSS,
@@ -132,9 +133,13 @@ import TimelineFiscal from "@/components/simulador/TimelineFiscal";
 import ComparacaoNarrativa from "@/components/simulador/ComparacaoNarrativa";
 import ModoGuiado, {
   type EstadoGuiadoSaida,
+  type ReciboGuiadoSaida,
 } from "@/components/simulador/ModoGuiado";
 import ModoGuiadoEmpresa from "@/components/simulador/ModoGuiadoEmpresa";
 import { type ParametrosFiscaisRegiao } from "@/lib/incentivos-regioes";
+import { useRecibos, type NovoRecibo } from "@/lib/store/recibos";
+import { useAuth } from "@/lib/supabase/auth";
+import { useSubscricao } from "@/lib/stripe/subscription";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTES FISCAIS 2026
@@ -3315,6 +3320,74 @@ function EmpresaInputs({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// GUARDAR RECIBO NO DASHBOARD (modo completo)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function GuardarReciboPro({ onGuardar }: { onGuardar: (cliente: string) => void }) {
+  const [aberto, setAberto] = useState(false);
+  const [cliente, setCliente] = useState("");
+  const [guardado, setGuardado] = useState(false);
+
+  if (guardado) {
+    return (
+      <div className="flex items-center justify-center gap-2 rounded-2xl border border-brand/30 bg-brand-light px-5 py-3 text-sm font-semibold text-brand-dark dark:bg-brand/10 dark:border-brand/20 dark:text-brand">
+        <Check size={16} />
+        Recibo guardado no painel
+      </div>
+    );
+  }
+
+  if (!aberto) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAberto(true)}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand bg-white px-5 py-3 text-sm font-semibold text-brand transition-all hover:bg-brand-light dark:bg-stone-900 dark:hover:bg-brand/10"
+      >
+        <ArrowRight size={14} />
+        Guardar no painel
+      </button>
+    );
+  }
+
+  return (
+    <div className="space-y-2 rounded-2xl border border-brand/30 bg-brand-light/50 p-4 dark:bg-brand/5 dark:border-brand/20">
+      <label className="block text-xs font-medium text-stone-600 dark:text-stone-300">
+        Nome do cliente
+      </label>
+      <input
+        type="text"
+        value={cliente}
+        onChange={(e) => setCliente(e.target.value)}
+        placeholder="Ex: Empresa X"
+        autoFocus
+        className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-brand dark:bg-stone-800 dark:border-stone-700 dark:text-stone-100"
+      />
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={!cliente.trim()}
+          onClick={() => {
+            onGuardar(cliente.trim());
+            setGuardado(true);
+          }}
+          className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white transition-all hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Guardar
+        </button>
+        <button
+          type="button"
+          onClick={() => { setAberto(false); setCliente(""); }}
+          className="rounded-xl border border-stone-200 px-3 py-2.5 text-sm text-stone-500 transition-all hover:bg-stone-50 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -3472,6 +3545,33 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
       localStorage.removeItem("rc-modo-simulacao");
     }
   }, []);
+
+  // ── Guardar recibo no dashboard ─────────────────────────────────────────
+  const { adicionar: adicionarRecibo, recibos: recibosExistentes } = useRecibos();
+  const { user } = useAuth();
+  const { plano } = useSubscricao();
+
+  const LIMITE_FREE = 1;
+  const podeGuardar = plano === "pro" || (!!user && recibosExistentes.length < LIMITE_FREE);
+
+  const guardarReciboDashboard = useCallback(
+    (dados: ReciboGuiadoSaida, cliente: string) => {
+      if (!podeGuardar) return;
+      const novo: NovoRecibo = {
+        data: new Date().toISOString().slice(0, 10),
+        cliente,
+        valor: dados.valor,
+        tipo: dados.tipo,
+        atividade: dados.atividade,
+        regiao: dados.regiao,
+        regimeIVA: dados.regimeIVA,
+        baseSS: dados.baseSS === "bens" ? "bens" : "servicos",
+        dispensaRetencao: false,
+      };
+      adicionarRecibo(novo);
+    },
+    [podeGuardar, adicionarRecibo],
+  );
 
   // Como interpretar o valor introduzido (paridade com o modo guiado):
   // false → o valor é a base do serviço; o IVA acresce por cima (omissão).
@@ -4499,6 +4599,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
         {/* ── Modo Guiado ──────────────────────────────────────────────────── */}
         {modoSimulacao === "guiado" && (
           <ModoGuiado
+            onGuardarRecibo={podeGuardar ? (dados, cliente) => guardarReciboDashboard(dados, cliente) : undefined}
             onIrParaSimuladorCompleto={(estado: EstadoGuiadoSaida) => {
               setTipoAtiv(estado.tipoAtiv as TipoAtividade);
               if (estado.atividade) setAtividade(estado.atividade);
@@ -6861,6 +6962,20 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                           />
                         </svg>
                       </Link>
+
+                      {/* ── Guardar no painel ── */}
+                      {podeGuardar && cenario === "rv" && (
+                        <GuardarReciboPro
+                          onGuardar={(cliente) => guardarReciboDashboard({
+                            valor: bruto,
+                            tipo: TIPO_LOCAL_PARA_CANONICO[tipoAtiv],
+                            atividade: atividade.label,
+                            regiao,
+                            regimeIVA,
+                            baseSS: efeitoFiscal(atividade).baseSS,
+                          }, cliente)}
+                        />
+                      )}
                     </m.div>
                   ) : modoEmpresa === "completo" ? (
                     /* ── Painel Empresa (modo completo) ── */

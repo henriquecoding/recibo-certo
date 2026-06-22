@@ -87,6 +87,16 @@ export interface EstadoGuiadoSaida {
 
 interface ModoGuiadoProps {
   onIrParaSimuladorCompleto: (estado: EstadoGuiadoSaida) => void;
+  onGuardarRecibo?: (recibo: ReciboGuiadoSaida, cliente: string) => void;
+}
+
+export interface ReciboGuiadoSaida {
+  valor: number;
+  tipo: "art151" | "outros" | "vendas" | "diretosAutor";
+  atividade: string | undefined;
+  regiao: Regiao;
+  regimeIVA: RegimeIVA;
+  baseSS: "bens" | "servicos";
 }
 
 const CARDS_ATIV: CardAtiv[] = [
@@ -236,6 +246,7 @@ const IVA_META = {
 
 export default function ModoGuiado({
   onIrParaSimuladorCompleto,
+  onGuardarRecibo,
 }: ModoGuiadoProps) {
   // Navegação — começa no pré-passo (decisor)
   const [passo, setPasso] = useState<Passo>(0);
@@ -890,6 +901,14 @@ export default function ModoGuiado({
                     }}
                     onVoltar={() => setPasso(3)}
                     onProximosPassos={() => setPasso("contabilista")}
+                    onGuardarRecibo={onGuardarRecibo ? (cliente: string) => onGuardarRecibo({
+                      valor: bruto,
+                      tipo: card.tipoFiscal,
+                      atividade: atividadeEspecifica?.label,
+                      regiao,
+                      regimeIVA: regimeEfetivo,
+                      baseSS: card.baseSS,
+                    }, cliente) : undefined}
                   />
                 </m.div>
               )}
@@ -2463,6 +2482,70 @@ function SeparadorBloco({ label }: { label: string }) {
 
 // ─── ResultadoFinal ───────────────────────────────────────────────────────────
 
+function GuardarReciboBtn({ onGuardar }: { onGuardar: (cliente: string) => void }) {
+  const [aberto, setAberto] = useState(false);
+  const [cliente, setCliente] = useState("");
+  const [guardado, setGuardado] = useState(false);
+
+  if (guardado) {
+    return (
+      <div className="flex items-center justify-center gap-2 rounded-2xl border border-brand/30 bg-brand-light px-5 py-3 text-sm font-semibold text-brand-dark dark:bg-brand/10 dark:border-brand/20 dark:text-brand">
+        <Check size={16} />
+        Recibo guardado no painel
+      </div>
+    );
+  }
+
+  if (!aberto) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAberto(true)}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand bg-white px-5 py-3 text-sm font-semibold text-brand transition-all hover:bg-brand-light dark:bg-stone-900 dark:hover:bg-brand/10"
+      >
+        <ArrowRight size={14} />
+        Guardar no painel
+      </button>
+    );
+  }
+
+  return (
+    <div className="space-y-2 rounded-2xl border border-brand/30 bg-brand-light/50 p-4 dark:bg-brand/5 dark:border-brand/20">
+      <label className="block text-xs font-medium text-stone-600 dark:text-stone-300">
+        Nome do cliente
+      </label>
+      <input
+        type="text"
+        value={cliente}
+        onChange={(e) => setCliente(e.target.value)}
+        placeholder="Ex: Empresa X"
+        autoFocus
+        className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-brand dark:bg-stone-800 dark:border-stone-700 dark:text-stone-100"
+      />
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={!cliente.trim()}
+          onClick={() => {
+            onGuardar(cliente.trim());
+            setGuardado(true);
+          }}
+          className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white transition-all hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Guardar
+        </button>
+        <button
+          type="button"
+          onClick={() => { setAberto(false); setCliente(""); }}
+          className="rounded-xl border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-500 transition-all hover:bg-stone-50 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ResultadoFinal({
   brutoAnual,
   liquidoAnual,
@@ -2493,6 +2576,7 @@ function ResultadoFinal({
   onRecomecar,
   onVoltar,
   onProximosPassos,
+  onGuardarRecibo,
 }: {
   brutoAnual: number;
   liquidoAnual: number;
@@ -2529,6 +2613,7 @@ function ResultadoFinal({
   onRecomecar: () => void;
   onVoltar: () => void;
   onProximosPassos: () => void;
+  onGuardarRecibo?: (cliente: string) => void;
 }) {
   const efAtiv = atividadeEspecifica ? efeitoFiscal(atividadeEspecifica) : null;
   const simAnual = useMemo(
@@ -3165,6 +3250,9 @@ function ResultadoFinal({
         <div className="min-w-0 space-y-4 md:sticky md:top-6">
           {/* ── CTAs ─────────────────────────────────────────────────────── */}
           <div className="flex flex-col gap-2.5">
+            {onGuardarRecibo && (
+              <GuardarReciboBtn onGuardar={onGuardarRecibo} />
+            )}
             <button
               type="button"
               onClick={onProximosPassos}

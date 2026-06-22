@@ -22,7 +22,7 @@ export default function TabelaRecibos({ recibos }: { recibos: Recibo[] }) {
       {recentes.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
           <p className="text-sm text-stone-500 dark:text-stone-400">Ainda sem recibos.</p>
-          <Link href="/dashboard/recibos" className="mt-2 text-sm font-semibold text-brand hover:text-brand-dark">
+          <Link href="/#calculadora" className="mt-2 text-sm font-semibold text-brand hover:text-brand-dark">
             Registar o primeiro →
           </Link>
         </div>
