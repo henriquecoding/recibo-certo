@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.60.0";
+export const APP_VERSION = "1.61.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,18 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.61.0",
+    data: "2026-06-22",
+    titulo: "Novo Simulador de IRS guiado por etapas",
+    itens: [
+      "O Simulador de IRS foi reconstruído de raiz num percurso guiado por etapas: agregado familiar, triagem de rendimentos, módulos e revisão final — sem teres de saber em que anexo cada rendimento entra.",
+      "Cada módulo mostra discretamente a sua correspondência fiscal (Anexo A, B, E, F, G, J) e explica, ao passar o cursor ou clicar, o que é, o que se declara e como é usado.",
+      "Novos módulos com cálculo verificado: mais-valias de ações, ETF e fundos (28% ou englobamento), criptoativos (isenção aos 365 dias), venda de imóveis (50% do ganho, com reinvestimento em habitação) e rendimentos do estrangeiro (crédito por dupla tributação).",
+      "Apuramento global que junta todas as categorias: englobamento às taxas progressivas, tributação autónoma e crédito de imposto internacional, com memória de cálculo a explicar cada valor e a sua base legal.",
+      "Motor de validação (erros, avisos e oportunidades) e indicador de completude para saíres com a certeza de que não te esqueceste de nada.",
+    ],
+  },
   {
     version: "1.60.0",
     data: "2026-06-22",

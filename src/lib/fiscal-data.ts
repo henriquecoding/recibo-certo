@@ -213,6 +213,36 @@ export const SOURCES = {
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs40a.aspx",
   },
 
+  // ── Mais-valias (categoria G), criptoativos e rendimentos estrangeiros ──
+  art10cirs: {
+    label: "Art. 10.º CIRS — Mais-valias (categoria G); criptoativos (al. k) do n.º 1 e n.º 19) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs10.aspx",
+  },
+  art43cirs: {
+    label: "Art. 43.º CIRS — Saldo de mais-valias (redução a 50% nas imobiliárias e em micro/pequenas empresas) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs43.aspx",
+  },
+  art81cirs: {
+    label: "Art. 81.º CIRS — Eliminação da dupla tributação jurídica internacional (crédito de imposto) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs81.aspx",
+  },
+  ativosMaisValias2026: {
+    label: "Mais-Valias IRS 2026: guia para investidores (28%; englobamento obrigatório < 365 dias no último escalão) · Ativos.pt",
+    url: "https://www.ativos.pt/blog/mais-valias-irs-2026-guia-investidores",
+  },
+  faciliteCripto2026: {
+    label: "Criptomoedas no IRS 2026: regra dos 365 dias (isenção ≥ 365 dias; 28% < 365 dias) · Facilite",
+    url: "https://www.facilite.co/pt/criptomoedas-irs-portugal-2026",
+  },
+  cgdImoveisMaisValias: {
+    label: "Venda de imóvel: pagamento de mais-valias (50% do saldo; reinvestimento em HPP) · CGD Saldo Positivo",
+    url: "https://www.cgd.pt/Site/Saldo-Positivo/leis-e-impostos/Pages/vender-imovel-pagamento-mais-valia.aspx",
+  },
+  occAnexoJ: {
+    label: "IRS — Anexo J (rendimentos obtidos no estrangeiro) · Ordem dos Contabilistas Certificados",
+    url: "https://www.occ.pt/pt-pt/noticias/irs-anexo-j-0",
+  },
+
   // ── Comissão Europeia ───────────────────────────────────────────────
   viesValidation: {
     label: "VIES — Validação de número de identificação para efeitos do IVA · Comissão Europeia",
@@ -288,6 +318,10 @@ function sv<T>(
 }
 
 const TODAY = "2026-06-11";
+// Data de verificação dos parâmetros adicionados na revisão de mais-valias
+// (categoria G) e rendimentos estrangeiros — confirmados em fontes oficiais/de
+// referência nesta data.
+const REV_MAIS_VALIAS = "2026-06-22";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  INDEXANTE DOS APOIOS SOCIAIS (IAS) — base de vários limites
@@ -1534,6 +1568,69 @@ export const DIV_INCLUSAO_ENGLOBAMENTO = sv(
 );
 
 // ═══════════════════════════════════════════════════════════════════════
+//  CATEGORIA G — MAIS-VALIAS (valores mobiliários, criptoativos, imóveis)
+//  ---------------------------------------------------------------------
+//  Mais-valias mobiliárias e de criptoativos: taxa autónoma de 28% sobre o
+//  saldo positivo anual (mais-valias − menos-valias), com OPÇÃO de englobamento.
+//  Englobamento OBRIGATÓRIO de valores mobiliários quando, cumulativamente,
+//  os ativos foram detidos < 365 dias E o rendimento coletável do titular é
+//  ≥ ao limite do último escalão de IRS (86 634 € em 2026) — Art. 72.º.
+//  Criptoativos detidos ≥ 365 dias estão EXCLUÍDOS de tributação (Art. 10.º
+//  n.º 19). Mais-valias imobiliárias: só 50% do saldo é tributado, com
+//  englobamento obrigatório às taxas progressivas (Art. 43.º n.º 2).
+// ═══════════════════════════════════════════════════════════════════════
+
+/** Taxa especial (autónoma) sobre o saldo positivo de mais-valias mobiliárias. */
+export const MAIS_VALIAS_MOBILIARIAS_TAXA = sv(
+  0.28,
+  "Art. 72.º, n.º 1 CIRS — taxa especial de 28% sobre o saldo positivo de mais-valias de valores mobiliários",
+  "ativosMaisValias2026",
+  REV_MAIS_VALIAS,
+  "Aplica-se por defeito; o titular pode optar pelo englobamento (taxas progressivas de 12,5% a 48%)."
+);
+
+/** Período de detenção (dias) que separa curto/longo prazo nas mais-valias. */
+export const MAIS_VALIAS_DETENCAO_DIAS = sv(
+  365,
+  "Art. 72.º, n.º 18 CIRS — englobamento obrigatório de mais-valias de valores mobiliários detidos < 365 dias quando o titular está no último escalão",
+  "ativosMaisValias2026",
+  REV_MAIS_VALIAS
+);
+
+/** Taxa autónoma sobre mais-valias de criptoativos detidos menos de 365 dias. */
+export const CRIPTO_TAXA_CURTO_PRAZO = sv(
+  0.28,
+  "Art. 10.º n.º 1 al. k) + Art. 72.º CIRS — criptoativos detidos < 365 dias tributados a 28% (categoria G)",
+  "faciliteCripto2026",
+  REV_MAIS_VALIAS
+);
+
+/** Período de detenção (dias) a partir do qual os criptoativos ficam isentos. */
+export const CRIPTO_ISENCAO_DIAS = sv(
+  365,
+  "Art. 10.º, n.º 19 CIRS — exclusão de tributação dos ganhos de criptoativos detidos ≥ 365 dias",
+  "art10cirs",
+  REV_MAIS_VALIAS,
+  "Não se aplica a criptoativos emitidos por entidades em regime fiscal claramente mais favorável."
+);
+
+/** Fração do saldo de mais-valias imobiliárias sujeita a tributação (residentes). */
+export const MAIS_VALIAS_IMOBILIARIO_INCLUSAO = sv(
+  0.5,
+  "Art. 43.º, n.º 2 CIRS — apenas 50% do saldo de mais-valias imobiliárias é considerado (englobamento obrigatório às taxas progressivas)",
+  "art43cirs",
+  REV_MAIS_VALIAS
+);
+
+/** Prazo de reinvestimento em habitação própria e permanente (exclusão). */
+export const MAIS_VALIAS_REINVESTIMENTO_MESES = sv(
+  36,
+  "Art. 10.º, n.º 5 CIRS — reinvestimento na aquisição de HPP até 36 meses após (ou 24 meses antes) da realização, sem recurso ao crédito",
+  "cgdImoveisMaisValias",
+  REV_MAIS_VALIAS
+);
+
+// ═══════════════════════════════════════════════════════════════════════
 //  SALÁRIO MÍNIMO NACIONAL 2026
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -2127,6 +2224,14 @@ export function assertFiscalDataIntegrity(): void {
   [IRC_TAXA_GERAL, IRC_TAXA_PME, DERRAMA_MAX, DIVIDENDOS_TAXA].forEach((p) => {
     if (!isRate(p.value)) erros.push(`Taxa inválida: ${p.legalBasis}.`);
   });
+
+  // Mais-valias (categoria G): taxas em [0,1]; frações em [0,1]; prazos positivos.
+  [MAIS_VALIAS_MOBILIARIAS_TAXA, CRIPTO_TAXA_CURTO_PRAZO, MAIS_VALIAS_IMOBILIARIO_INCLUSAO].forEach((p) => {
+    if (!isRate(p.value)) erros.push(`Parâmetro de mais-valias inválido: ${p.legalBasis}.`);
+  });
+  if (!(MAIS_VALIAS_DETENCAO_DIAS.value > 0)) erros.push("Período de detenção de mais-valias não positivo.");
+  if (!(CRIPTO_ISENCAO_DIAS.value > 0)) erros.push("Período de isenção de criptoativos não positivo.");
+  if (!(MAIS_VALIAS_REINVESTIMENTO_MESES.value > 0)) erros.push("Prazo de reinvestimento de mais-valias não positivo.");
   if (!(IRC_TAXA_PME.value < IRC_TAXA_GERAL.value)) {
     erros.push("Taxa PME de IRC deveria ser inferior à geral.");
   }
@@ -2409,6 +2514,13 @@ export function assertFiscalDataIntegrity(): void {
     IS_TAXA_AQUISICAO,
     // Englobamento dividendos
     DIV_INCLUSAO_ENGLOBAMENTO,
+    // Mais-valias (categoria G)
+    MAIS_VALIAS_MOBILIARIAS_TAXA,
+    MAIS_VALIAS_DETENCAO_DIAS,
+    CRIPTO_TAXA_CURTO_PRAZO,
+    CRIPTO_ISENCAO_DIAS,
+    MAIS_VALIAS_IMOBILIARIO_INCLUSAO,
+    MAIS_VALIAS_REINVESTIMENTO_MESES,
     // SMN
     SMN,
   ];
