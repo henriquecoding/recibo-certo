@@ -237,25 +237,32 @@ function CountUp({ target, delay = 0, prefix = "" }: { target: number; delay?: n
 }
 
 /* ══════════════════════════════════════════════════════════════
-   Cartão hero com animação de simulação de uso
+   Cartão hero — simulação de uso em loop contínuo
    ─────────────────────────────────────────────────────────────
-   Timeline (~8 s total, uma vez — reinicia ao trocar perfil):
-     0.0 s  Cartão entra (fade + slide via motion)
-     1.2 s  Campo de input ganha foco (brilho verde)
-     1.5 s  Cursor aparece e começa a piscar
-     1.8 s  Digitação começa — ritmo humano, ~300 ms por passo
-            com uma correção deliberada (backspace + redigitar)
-    ~4.5 s  Digitação completa — cursor pisca mais 800 ms
-    ~5.3 s  «Cálculo» — shimmer de 600 ms no campo de input
-    ~5.9 s  Valor muda para o resultado (contagem 900 ms)
-    ~6.2 s  Badge de percentagem entra
-    ~6.4 s  Barra de proporções expande
-    ~6.6 s  Linhas de detalhe cascateiam (200 ms entre cada)
-    ~7.4 s  Caixa de info/alerta entra
-    ~7.8 s  Nota de rodapé entra
+   Fases: idle → focusing → typing → typed → calculating → result
+   Após resultado completo: 4 s estático → fade out → reinício
+
+   Layout reestruturado:
+     «Demo ao vivo» indicador
+     ┌─────────────────────────┐
+     │  Cartão de simulação    │  ← sombra/borda muda por fase
+     └─────────────────────────┘
+     ●── Insere ──●── Calcula ──●── Resultado
+                    indicador de fase
    ══════════════════════════════════════════════════════════════ */
 
 type Phase = "idle" | "focusing" | "typing" | "typed" | "calculating" | "result";
+
+const HOLD_MS = 4000;
+const FADE_MS = 600;
+const STEP_LABELS = ["Insere o valor", "Calcula", "Resultado"];
+
+function phaseToStep(phase: Phase): number {
+  if (phase === "idle") return -1;
+  if (phase === "focusing" || phase === "typing" || phase === "typed") return 0;
+  if (phase === "calculating") return 1;
+  return 2;
+}
 
 function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
   const [phase, setPhase] = useState<Phase>("idle");
@@ -265,16 +272,26 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
   const [linesVisible, setLinesVisible] = useState(false);
   const [boxVisible, setBoxVisible] = useState(false);
   const [noteVisible, setNoteVisible] = useState(false);
+  const [fading, setFading] = useState(false);
+  const [cycle, setCycle] = useState(0);
 
   const pctTeu = Math.round((card.teu / card.bruto) * 100);
-  const reducedMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reducedMotion =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const seg: { v: number; color?: string; cls?: string }[] = [
     { v: card.teu, color: "#1D9E75" },
     { v: card.irs, color: "#9FE1CB" },
     { v: card.ss, cls: "text-brand-deep" },
   ];
-  const total = seg.reduce((s, p) => s + p.v, 0) || 1;
+  const totalSeg = seg.reduce((s, p) => s + p.v, 0) || 1;
+  const stepIndex = phaseToStep(phase);
+
+  const isFocused = phase !== "idle";
+  const showCursor = phase === "typing" || phase === "typed";
+  const isCalculating = phase === "calculating";
+  const isResult = phase === "result";
 
   useEffect(() => {
     if (reducedMotion) return;
@@ -290,6 +307,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
       setLinesVisible(true);
       setBoxVisible(true);
       setNoteVisible(true);
+      setFading(false);
       return;
     }
 
@@ -300,6 +318,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
     setBoxVisible(false);
     setNoteVisible(false);
     setCursorVisible(false);
+    setFading(false);
 
     let cancelled = false;
     const timers: ReturnType<typeof setTimeout>[] = [];
@@ -340,152 +359,247 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
     t += 400;
     at(t, () => setNoteVisible(true));
 
-    return () => { cancelled = true; timers.forEach(clearTimeout); };
-  }, [perfil, card.typingSteps, reducedMotion]);
+    t += HOLD_MS;
+    at(t, () => setFading(true));
 
-  const isFocused = phase !== "idle";
-  const showCursor = phase === "typing" || phase === "typed";
-  const isCalculating = phase === "calculating";
-  const isResult = phase === "result";
+    t += FADE_MS;
+    at(t, () => setCycle((c) => c + 1));
+
+    return () => { cancelled = true; timers.forEach(clearTimeout); };
+  }, [perfil, cycle, card.typingSteps, reducedMotion]);
 
   return (
-    <div className="rounded-4xl border border-stone-200/80 bg-white p-6 shadow-float sm:p-7">
-      {/* Cabeçalho */}
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-stone-400">{card.etiqueta}</span>
-        <span className="rounded-full bg-brand-light px-2.5 py-1 text-[11px] font-semibold text-brand-dark">
-          Exemplo
+    <div>
+      {/* Live demo indicator */}
+      <div className="mb-3 flex items-center gap-2" aria-hidden>
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-60 motion-reduce:animate-none" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-brand" />
+        </span>
+        <span className="text-[11px] font-medium uppercase tracking-wider text-stone-400 dark:text-stone-500">
+          Demo ao vivo
         </span>
       </div>
 
-      {/* Campo de input simulado */}
+      {/* Card — shadow/border transitions per phase */}
       <div
-        className={`mt-4 rounded-2xl border-2 px-4 py-4 transition-all duration-500 ${
-          isFocused
-            ? "border-brand/30 bg-brand/[0.02] shadow-[0_0_0_4px_rgba(29,158,117,0.06)]"
-            : "border-stone-100 bg-stone-50/60"
+        className={`rounded-4xl border bg-white p-6 transition-all duration-700 dark:bg-stone-900 sm:p-7 ${
+          isResult && !fading
+            ? "border-brand/20 shadow-float dark:border-brand/15"
+            : isFocused && !fading
+              ? "border-stone-200/80 shadow-lift dark:border-stone-700"
+              : "border-stone-200/80 shadow-card dark:border-stone-700"
         }`}
       >
-        <div className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
-          {card.heroLabel}
-        </div>
-        <div className="mt-1.5 flex items-baseline font-display text-[2.5rem] font-semibold leading-none tabular-nums sm:text-5xl">
-          {isResult ? (
-            <span className="text-brand">
-              <CountUp target={card.teu} delay={0} />
+        <div
+          style={{
+            opacity: fading ? 0 : 1,
+            transition: `opacity ${FADE_MS}ms ease-out`,
+          }}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-stone-400">{card.etiqueta}</span>
+            <span className="rounded-full bg-brand-light px-2.5 py-1 text-[11px] font-semibold text-brand-dark">
+              Exemplo
             </span>
-          ) : isCalculating ? (
-            <span className="animate-pulse text-brand/50">{typedText}</span>
-          ) : typedText ? (
-            <span className="text-stone-800">{typedText}</span>
-          ) : (
-            <span className="text-stone-200">0 €</span>
-          )}
-          {showCursor && (
-            <span
-              className={`ml-0.5 inline-block h-9 w-[2.5px] translate-y-[2px] rounded-full bg-brand transition-opacity duration-75 sm:h-11 ${
-                cursorVisible ? "opacity-100" : "opacity-0"
-              }`}
-              aria-hidden
-            />
-          )}
-        </div>
-      </div>
+          </div>
 
-      {/* Badge de percentagem */}
-      <div
-        className="mt-3 inline-flex items-center gap-2 rounded-xl bg-cream px-3 py-1.5 text-xs text-stone-500 transition-all duration-500"
-        style={{
-          opacity: resultVisible ? 1 : 0,
-          transform: resultVisible ? "translateY(0)" : "translateY(6px)",
-        }}
-      >
-        <span className="font-semibold text-stone-700 tabular-nums">{pctTeu}% {card.pctSufixo}</span>
-        <span className="text-stone-300">·</span>
-        <span>o resto é do Estado</span>
-      </div>
-
-      {/* Barra de proporções */}
-      <div className="mt-5 flex h-2 gap-0.5 overflow-hidden rounded-full">
-        {seg.map((p, i) => (
+          {/* Simulated input field */}
           <div
-            key={i}
-            className={`transition-all duration-700 ease-out ${i === 0 ? "rounded-l-full" : i === seg.length - 1 ? "rounded-r-full" : ""} ${p.cls ?? ""}`}
-            style={{
-              background: p.cls ? "currentColor" : p.color,
-              width: resultVisible ? `${(p.v / total) * 100}%` : "0%",
-              transitionDelay: resultVisible ? `${200 + i * 150}ms` : "0ms",
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Linhas de detalhe */}
-      <div className="mt-4 space-y-1.5">
-        {card.linhas.map((r, i) => (
-          <div
-            key={r.l}
-            className={`flex items-center justify-between rounded-lg px-3 py-2 transition-all duration-500 ease-out ${
-              r.strong ? "bg-brand-light" : "bg-stone-50"
+            className={`relative mt-4 overflow-hidden rounded-2xl border-2 px-4 py-4 transition-all duration-500 ${
+              isFocused
+                ? "border-brand/30 bg-brand/[0.02] shadow-[0_0_0_4px_rgba(29,158,117,0.06)] dark:border-brand/20 dark:bg-brand/[0.04]"
+                : "border-stone-100 bg-stone-50/60 dark:border-stone-700 dark:bg-stone-800/40"
             }`}
+          >
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+              {card.heroLabel}
+            </div>
+            <div className="mt-1.5 flex items-baseline font-display text-[2.5rem] font-semibold leading-none tabular-nums sm:text-5xl">
+              {isResult ? (
+                <span className="text-brand">
+                  <CountUp target={card.teu} delay={0} />
+                </span>
+              ) : isCalculating ? (
+                <span className="text-stone-300 dark:text-stone-600">{typedText}</span>
+              ) : typedText ? (
+                <span className="text-stone-800 dark:text-stone-100">{typedText}</span>
+              ) : (
+                <span className="text-stone-200 dark:text-stone-700">0 €</span>
+              )}
+              {showCursor && (
+                <span
+                  className={`ml-0.5 inline-block h-9 w-[2.5px] translate-y-[2px] rounded-full bg-brand transition-opacity duration-75 sm:h-11 ${
+                    cursorVisible ? "opacity-100" : "opacity-0"
+                  }`}
+                  aria-hidden
+                />
+              )}
+            </div>
+
+            {/* Calculating — progress sweep at bottom of input */}
+            {isCalculating && (
+              <m.div
+                className="absolute inset-x-0 bottom-0 h-[3px]"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.1 }}
+              >
+                <m.div
+                  className="h-full bg-gradient-to-r from-brand/30 via-brand to-brand/30"
+                  initial={{ width: "0%" }}
+                  animate={{ width: "100%" }}
+                  transition={{ duration: 0.6, ease: EASE }}
+                />
+              </m.div>
+            )}
+          </div>
+
+          {/* Percentage badge */}
+          <div
+            className="mt-3 inline-flex items-center gap-2 rounded-xl bg-cream px-3 py-1.5 text-xs text-stone-500 transition-all duration-500 dark:bg-stone-800 dark:text-stone-400"
             style={{
-              opacity: linesVisible ? 1 : 0,
-              transform: linesVisible ? "translateX(0)" : "translateX(-12px)",
-              transitionDelay: linesVisible ? `${i * 200}ms` : "0ms",
+              opacity: resultVisible ? 1 : 0,
+              transform: resultVisible ? "translateY(0)" : "translateY(6px)",
             }}
           >
-            <span className={`text-xs ${r.strong ? "font-semibold text-brand-dark" : "text-stone-500"}`}>
-              {r.l}
+            <span className="font-semibold tabular-nums text-stone-700 dark:text-stone-200">
+              {pctTeu}% {card.pctSufixo}
             </span>
-            <span className={`text-xs font-semibold tabular-nums ${r.strong ? "text-brand-dark" : "text-stone-700"}`}>
-              {linesVisible ? (
-                r.strong
-                  ? <CountUp target={r.valor} delay={i * 200} />
-                  : <CountUp target={r.valor} delay={i * 200} prefix="− " />
-              ) : "—"}
-            </span>
+            <span className="text-stone-300 dark:text-stone-600">·</span>
+            <span>o resto é do Estado</span>
+          </div>
+
+          {/* Proportion bar */}
+          <div className="mt-5 flex h-2 gap-0.5 overflow-hidden rounded-full">
+            {seg.map((p, i) => (
+              <div
+                key={i}
+                className={`transition-all duration-700 ease-out ${
+                  i === 0 ? "rounded-l-full" : i === seg.length - 1 ? "rounded-r-full" : ""
+                } ${p.cls ?? ""}`}
+                style={{
+                  background: p.cls ? "currentColor" : p.color,
+                  width: resultVisible ? `${(p.v / totalSeg) * 100}%` : "0%",
+                  transitionDelay: resultVisible ? `${200 + i * 150}ms` : "0ms",
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Detail lines */}
+          <div className="mt-4 space-y-1.5">
+            {card.linhas.map((r, i) => (
+              <div
+                key={r.l}
+                className={`flex items-center justify-between rounded-lg px-3 py-2 transition-all duration-500 ease-out ${
+                  r.strong ? "bg-brand-light" : "bg-stone-50 dark:bg-stone-800/50"
+                }`}
+                style={{
+                  opacity: linesVisible ? 1 : 0,
+                  transform: linesVisible ? "translateX(0)" : "translateX(-12px)",
+                  transitionDelay: linesVisible ? `${i * 200}ms` : "0ms",
+                }}
+              >
+                <span className={`text-xs ${r.strong ? "font-semibold text-brand-dark" : "text-stone-500 dark:text-stone-400"}`}>
+                  {r.l}
+                </span>
+                <span className={`text-xs font-semibold tabular-nums ${r.strong ? "text-brand-dark" : "text-stone-700 dark:text-stone-200"}`}>
+                  {linesVisible ? (
+                    r.strong
+                      ? <CountUp target={r.valor} delay={i * 200} />
+                      : <CountUp target={r.valor} delay={i * 200} prefix="− " />
+                  ) : "—"}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Info / alert box */}
+          <div
+            className="transition-all duration-500 ease-out"
+            style={{
+              opacity: boxVisible ? 1 : 0,
+              transform: boxVisible ? "translateY(0)" : "translateY(8px)",
+            }}
+          >
+            {card.box.tom === "alerta" ? (
+              <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-alert-border bg-alert-bg p-3">
+                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-alert text-alert-text">
+                  <Warning size={12} />
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-alert-text">{card.box.titulo}</div>
+                  <div className="text-xs text-alert-text/80">{card.box.sub}</div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-brand/20 bg-brand-light p-3">
+                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand text-white">
+                  <Calendar size={12} />
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-brand-dark">{card.box.titulo}</div>
+                  <div className="text-xs text-brand-dark/80">{card.box.sub}</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer note */}
+          <p
+            className="mt-3 text-[11px] leading-relaxed text-stone-400 transition-opacity duration-500"
+            style={{ opacity: noteVisible ? 1 : 0 }}
+          >
+            {card.nota}
+          </p>
+        </div>
+      </div>
+
+      {/* ── Step indicators ──────────────────────────────────── */}
+      <div
+        className="mt-5 flex items-center justify-center"
+        style={{
+          opacity: fading ? 0 : 1,
+          transition: `opacity ${FADE_MS}ms ease-out`,
+        }}
+        aria-hidden
+      >
+        {STEP_LABELS.map((label, i) => (
+          <div key={label} className="flex items-center">
+            {i > 0 && (
+              <div
+                className={`mx-1.5 h-px w-5 transition-all duration-500 sm:mx-3 sm:w-10 ${
+                  i <= stepIndex ? "bg-brand" : "bg-stone-200 dark:bg-stone-700"
+                }`}
+              />
+            )}
+            <div className="flex items-center gap-1.5">
+              <div
+                className={`h-2 w-2 shrink-0 rounded-full transition-all duration-500 ${
+                  i === stepIndex
+                    ? "bg-brand ring-[3px] ring-brand/20"
+                    : i < stepIndex
+                      ? "bg-brand"
+                      : "bg-stone-200 dark:bg-stone-700"
+                }`}
+              />
+              <span
+                className={`whitespace-nowrap text-[10px] font-medium transition-colors duration-500 sm:text-[11px] ${
+                  i === stepIndex
+                    ? "text-brand"
+                    : i < stepIndex
+                      ? "text-stone-500 dark:text-stone-400"
+                      : "text-stone-300 dark:text-stone-600"
+                }`}
+              >
+                {label}
+              </span>
+            </div>
           </div>
         ))}
       </div>
-
-      {/* Caixa de info/alerta */}
-      <div
-        className="transition-all duration-500 ease-out"
-        style={{
-          opacity: boxVisible ? 1 : 0,
-          transform: boxVisible ? "translateY(0)" : "translateY(8px)",
-        }}
-      >
-        {card.box.tom === "alerta" ? (
-          <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-alert-border bg-alert-bg p-3">
-            <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-alert text-alert-text">
-              <Warning size={12} />
-            </div>
-            <div>
-              <div className="text-xs font-semibold text-alert-text">{card.box.titulo}</div>
-              <div className="text-xs text-alert-text/80">{card.box.sub}</div>
-            </div>
-          </div>
-        ) : (
-          <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-brand/20 bg-brand-light p-3">
-            <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand text-white">
-              <Calendar size={12} />
-            </div>
-            <div>
-              <div className="text-xs font-semibold text-brand-dark">{card.box.titulo}</div>
-              <div className="text-xs text-brand-dark/80">{card.box.sub}</div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Nota de rodapé */}
-      <p
-        className="mt-3 text-[11px] leading-relaxed text-stone-400 transition-opacity duration-500"
-        style={{ opacity: noteVisible ? 1 : 0 }}
-      >
-        {card.nota}
-      </p>
     </div>
   );
 }
@@ -498,7 +612,7 @@ export default function Hero() {
   const c = dados.card;
 
   const btnPrimario = "btn-shine inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3.5 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-float";
-  const btnSecundario = "inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-6 py-3.5 text-sm font-semibold text-stone-700 transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50";
+  const btnSecundario = "inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-6 py-3.5 text-sm font-semibold text-stone-700 transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200";
 
   return (
     <section className="grain relative overflow-hidden px-6 pt-20 pb-16">
@@ -507,7 +621,7 @@ export default function Hero() {
         <div className="absolute top-40 -left-32 h-[24rem] w-[24rem] rounded-full bg-brand-mint/20 blur-3xl" />
       </div>
 
-      <div className="mx-auto grid max-w-5xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
+      <div className="mx-auto grid max-w-5xl items-start gap-12 lg:grid-cols-[1fr_1.1fr]">
         <m.div initial="hidden" animate="visible" variants={staggerContainer}>
           <m.div variants={staggerItem} className="mb-6">
             <SeletorModo />
