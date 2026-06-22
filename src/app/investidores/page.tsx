@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useState, useEffect } from "react";
 import { m, useMotionValue, useTransform, useSpring } from "motion/react";
 import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import Nav from "@/components/Nav";
@@ -25,15 +25,12 @@ import {
   Receipt,
   Zap,
   Target,
-  Rocket,
   ChartProjection,
-  Bank,
   Mail,
   Calculator,
   BellAlert,
-  CheckTrend,
   LogoMark,
-  Check,
+  Export,
 } from "@/components/ui/Icons";
 
 /* ── Cartão 3D com efeito tilt ao hover ────────────────────────── */
@@ -74,39 +71,195 @@ function Card3D({
   );
 }
 
+/* ── Tipo do demo ─────────────────────────────────────────────── */
+
+interface DemoItem {
+  titulo: string;
+  subtitulo: string;
+  icon: ReactNode;
+  inputLabel: string;
+  inputValor: number;
+  resultados: { label: string; valor: number; destaque?: boolean }[];
+}
+
+/* ── Contagem animada de 0 ao alvo ────────────────────────────── */
+
+function CountUpValue({ target, delay = 0 }: { target: number; delay?: number }) {
+  const [val, setVal] = useState(0);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setVal(target);
+      return;
+    }
+    let raf = 0;
+    const timer = setTimeout(() => {
+      const duration = 900;
+      const start = performance.now();
+      function tick() {
+        const elapsed = performance.now() - start;
+        const t = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - t, 3);
+        setVal(Math.round(target * eased));
+        if (t < 1) raf = requestAnimationFrame(tick);
+      }
+      raf = requestAnimationFrame(tick);
+    }, delay);
+    return () => {
+      clearTimeout(timer);
+      cancelAnimationFrame(raf);
+    };
+  }, [target, delay]);
+
+  return <>{val.toLocaleString("pt-PT")} €</>;
+}
+
+/* ── Mini simulador com loop automático ──────────────────────── */
+
+function SimuladorDemo({ config, delayMs }: { config: DemoItem; delayMs: number }) {
+  const [phase, setPhase] = useState(0);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setPhase(3);
+      return;
+    }
+
+    let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    function schedule(fn: () => void, ms: number) {
+      timers.push(setTimeout(() => { if (!cancelled) fn(); }, ms));
+    }
+
+    function cycle() {
+      if (cancelled) return;
+      setPhase(0);
+      schedule(() => setPhase(1), 600);
+      schedule(() => setPhase(2), 1800);
+      schedule(() => setPhase(3), 3200);
+      schedule(cycle, 6500);
+    }
+
+    schedule(cycle, delayMs);
+
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+    };
+  }, [delayMs]);
+
+  const inputActive = phase >= 1;
+  const resultsActive = phase >= 2;
+
+  return (
+    <Card3D className="h-full">
+      <div
+        className="flex h-full flex-col rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900"
+        style={{ opacity: phase === 0 ? 0.5 : 1, transition: "opacity 0.4s ease" }}
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-light text-brand">
+            {config.icon}
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-stone-700 dark:text-stone-200">{config.titulo}</div>
+            <div className="text-[10px] text-stone-400">{config.subtitulo}</div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-stone-100 bg-stone-50/80 px-3 py-2.5 dark:border-stone-700 dark:bg-stone-800/50">
+          <div className="text-[10px] font-medium uppercase tracking-wider text-stone-400">
+            {config.inputLabel}
+          </div>
+          <div className="mt-0.5 font-display text-2xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+            {inputActive ? (
+              <CountUpValue target={config.inputValor} />
+            ) : (
+              <span className="text-stone-300 dark:text-stone-600">0 €</span>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-3 flex-1 space-y-1.5">
+          {resultsActive &&
+            config.resultados.map((r, i) => (
+              <m.div
+                key={r.label}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.12, duration: 0.35, ease: EASE }}
+                className={`flex items-center justify-between rounded-xl px-3 py-2 ${
+                  r.destaque ? "bg-brand-light/70 dark:bg-brand/10" : "bg-stone-50 dark:bg-stone-800/50"
+                }`}
+              >
+                <span className="text-[11px] text-stone-500 dark:text-stone-400">{r.label}</span>
+                <span
+                  className={`text-sm font-semibold tabular-nums ${
+                    r.destaque ? "text-brand" : "text-stone-700 dark:text-stone-200"
+                  }`}
+                >
+                  <CountUpValue target={r.valor} delay={i * 120} />
+                </span>
+              </m.div>
+            ))}
+        </div>
+
+        <div className="mt-3 text-center text-[9px] text-stone-300 dark:text-stone-600">
+          Exemplo · Taxas 2026
+        </div>
+      </div>
+    </Card3D>
+  );
+}
+
 /* ── Dados ─────────────────────────────────────────────────────── */
 
-const PRODUTO = [
+const DEMOS: DemoItem[] = [
   {
-    icon: <Calculator size={20} />,
-    titulo: "Calculadora de recibos verdes",
-    desc: "IRS, Segurança Social e IVA automáticos com as taxas de 2026.",
+    titulo: "Recibos Verdes",
+    subtitulo: "Cat. B · Serviços",
+    icon: <Calculator size={16} />,
+    inputLabel: "Faturação mensal",
+    inputValor: 2500,
+    resultados: [
+      { label: "Líquido estimado", valor: 1857, destaque: true },
+      { label: "IRS (anualizado)", valor: 268 },
+      { label: "Segurança Social", valor: 375 },
+    ],
   },
   {
-    icon: <Receipt size={20} />,
-    titulo: "Simulador de vencimento",
-    desc: "Bruto para líquido com retenção e subsídios de férias e Natal.",
+    titulo: "Recibo de Vencimento",
+    subtitulo: "Solteiro · 0 dep.",
+    icon: <Receipt size={16} />,
+    inputLabel: "Salário bruto",
+    inputValor: 1800,
+    resultados: [
+      { label: "Líquido", valor: 1377, destaque: true },
+      { label: "IRS retido", valor: 225 },
+      { label: "Seg. Social (11%)", valor: 198 },
+    ],
   },
   {
-    icon: <Building size={20} />,
-    titulo: "Simulador de empresa",
-    desc: "IRC PME, derrama, dividendos e tributação autónoma modelados.",
+    titulo: "Simulador Empresa",
+    subtitulo: "Unipessoal Lda · PME",
+    icon: <Building size={16} />,
+    inputLabel: "Faturação anual",
+    inputValor: 80000,
+    resultados: [
+      { label: "Líquido p/ sócio", valor: 48096, destaque: true },
+      { label: "IRC (15% + 19%)", valor: 13200 },
+      { label: "IRS dividendos", valor: 18704 },
+    ],
   },
-  {
-    icon: <ChartProjection size={20} />,
-    titulo: "Comparador de regimes",
-    desc: "Dependente vs. recibos verdes vs. empresa — ponto de viragem incluído.",
-  },
-  {
-    icon: <BellAlert size={20} />,
-    titulo: "Alertas de prazos fiscais",
-    desc: "Notificação antes de cada entrega e prazo de pagamento.",
-  },
-  {
-    icon: <Wallet size={20} />,
-    titulo: "Mealheiro fiscal",
-    desc: "Quanto reservar este mês para impostos, calculado automaticamente.",
-  },
+];
+
+const MAIS_FEATURES = [
+  { icon: <BellAlert size={12} />, label: "Alertas de prazos" },
+  { icon: <Wallet size={12} />, label: "Mealheiro fiscal" },
+  { icon: <ChartProjection size={12} />, label: "Comparador de cenários" },
+  { icon: <Zap size={12} />, label: "Quiz Fiscal" },
+  { icon: <Export size={12} />, label: "Exportação PDF e CSV" },
 ];
 
 const VISAO = [
@@ -279,35 +432,41 @@ export default function InvestidoresPage() {
           </section>
 
           {/* ═══════════════════════════════════════════════════════
-              O QUE JÁ EXISTE — Produto real, não promessas
+              O PRODUTO EM AÇÃO — Demos animados dos simuladores
               ═══════════════════════════════════════════════════════ */}
           <section className="border-y border-stone-100 bg-white px-6 py-24 dark:border-stone-800">
             <div className="mx-auto max-w-5xl">
               <Reveal className="mb-14 max-w-2xl">
-                <div className="eyebrow mb-3 text-brand">O produto</div>
+                <div className="eyebrow mb-3 text-brand">O produto em ação</div>
                 <h2 className="font-display display-2 text-balance font-semibold text-ink">
-                  Já funciona. Já tem utilizadores. Já gera receita.
+                  Vê os simuladores a funcionar.
                 </h2>
                 <p className="mt-3 text-stone-500">
-                  Não é uma ideia — é uma plataforma viva com motor fiscal verificado, base legal em cada cálculo e utilizadores reais em Portugal.
+                  Os mesmos que milhares de portugueses já utilizam — recibos verdes, vencimentos e empresas. Cada cálculo com base legal e taxas de 2026 verificadas.
                 </p>
               </Reveal>
 
-              <StaggerGroup className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {PRODUTO.map((p) => (
-                  <StaggerItem key={p.titulo}>
-                    <Card3D className="h-full">
-                      <div className="flex h-full flex-col rounded-4xl border border-stone-100 bg-cream p-5 shadow-card transition-shadow hover:shadow-lift dark:border-stone-800 dark:bg-stone-950">
-                        <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-light text-brand">
-                          {p.icon}
-                        </div>
-                        <h3 className="text-sm font-semibold text-stone-700 dark:text-stone-300">{p.titulo}</h3>
-                        <p className="mt-1 text-xs leading-relaxed text-stone-400 dark:text-stone-500">{p.desc}</p>
-                      </div>
-                    </Card3D>
-                  </StaggerItem>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {DEMOS.map((d, i) => (
+                  <Reveal key={d.titulo} delay={i * 0.08}>
+                    <SimuladorDemo config={d} delayMs={i * 2200} />
+                  </Reveal>
                 ))}
-              </StaggerGroup>
+              </div>
+
+              <Reveal className="mt-10">
+                <div className="flex flex-wrap items-center justify-center gap-2.5">
+                  {MAIS_FEATURES.map((f) => (
+                    <span
+                      key={f.label}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-stone-100 bg-stone-50 px-3 py-1.5 text-xs font-medium text-stone-600 dark:border-stone-700 dark:bg-stone-800/50 dark:text-stone-400"
+                    >
+                      <span className="text-brand">{f.icon}</span>
+                      {f.label}
+                    </span>
+                  ))}
+                </div>
+              </Reveal>
             </div>
           </section>
 
