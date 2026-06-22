@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.53.0";
+export const APP_VERSION = "1.54.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.54.0",
+    data: "2026-06-22",
+    titulo: "Fonte fiscal única — todos os simuladores alinhados",
+    itens: [
+      "Todos os valores fiscais (taxas, coeficientes, limiares, deduções) passam a derivar exclusivamente do motor fiscal central, eliminando duplicações e risco de desalinhamento.",
+      "Novos parâmetros com base legal verificada: IMI, IMT, Imposto do Selo, englobamento de dividendos e Salário Mínimo Nacional 2026.",
+      "Dispensa de retenção na fonte no modo guiado agora é derivada automaticamente quando a faturação anual é inferior a 15 000 €.",
+      "Simuladores de empresa (completo e guiado), guias IRS Jovem e regime simplificado atualizados para a mesma fonte de verdade.",
+    ],
+  },
   {
     version: "1.53.0",
     data: "2026-06-22",
