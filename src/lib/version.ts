@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.56.0";
+export const APP_VERSION = "1.56.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.56.1",
+    data: "2026-06-22",
+    titulo: "Hero do investidores com CTA para o produto",
+    itens: [
+      "Botão principal do hero agora leva à secção 'O produto em ação' para que o visitante veja o pitch antes de submeter uma proposta.",
+      "Botão secundário 'Submeter proposta' adicionado ao hero para acesso direto ao formulário.",
+    ],
+  },
   {
     version: "1.56.0",
     data: "2026-06-22",
