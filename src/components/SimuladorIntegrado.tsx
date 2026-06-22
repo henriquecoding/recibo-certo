@@ -104,13 +104,64 @@ import { pct, fmt } from "@/lib/format";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
 import InfoTip from "@/components/ui/InfoTip";
 import {
+  IAS,
   IVA_TAXAS,
+  IVA_ISENCAO_LIMITE as IVA_ISENCAO_LIMITE_SRC,
+  IVA_ISENCAO_EXCESSO as IVA_ISENCAO_EXCESSO_SRC,
   ATIVIDADES,
   META_REGIAO,
   META_BASE_SS,
   IRS_JOVEM,
   DISPENSA_RETENCAO_LIMITE,
   ESCALOES_IRS,
+  MINIMO_EXISTENCIA,
+  SS_TAXA,
+  SS_COEFICIENTE,
+  SS_BASE_MAX_MENSAL,
+  SS_MIN_MENSAL,
+  SS_DEPENDENTE,
+  COEFICIENTE_POR_TIPO,
+  RETENCAO,
+  DERRAMA_MAX,
+  DIVIDENDOS_TAXA,
+  DEDUCAO_DEPENDENTE,
+  DEDUCAO_DEPENDENTE_BEBE,
+  DEDUCAO_DEPENDENTE_3MAIS,
+  DEDUCAO_DEPENDENTE_DEFICIENCIA,
+  DEDUCAO_DEFICIENCIA_COLETA,
+  DEDUCAO_DESP_GERAIS,
+  DEDUCAO_SAUDE,
+  DEDUCAO_EDUCACAO,
+  DEDUCAO_RENDAS,
+  DIV_INCLUSAO_ENGLOBAMENTO as DIV_INCLUSAO_ENGLOBAMENTO_SRC,
+  IMI_TAXA_PADRAO as IMI_TAXA_PADRAO_SRC,
+  IMT_TAXA_COMERCIAL as IMT_TAXA_COMERCIAL_SRC,
+  IS_TAXA_AQUISICAO as IS_TAXA_AQUISICAO_SRC,
+  TA_THRESHOLDS,
+  TA_VIATURAS_COMBUSTAO,
+  TA_VIATURAS_PHEV,
+  TA_VIATURAS_ELETRICA,
+  TA_REPRESENTACAO,
+  TA_AJUDAS_CUSTO,
+  TA_NAO_DOCUMENTADAS,
+  TA_AGRAVAMENTO_PREJUIZO,
+  RFAI_TAXA_INTERIOR as RFAI_TAXA_INTERIOR_SRC,
+  RFAI_TAXA_INTERIOR_EXCEDENTE,
+  RFAI_TAXA_LITORAL as RFAI_TAXA_LITORAL_SRC,
+  RFAI_LIMITE_INVESTIMENTO_INTERIOR,
+  RFAI_LIMITE_COLETA as RFAI_LIMITE_COLETA_SRC,
+  DLRR_TAXA as DLRR_TAXA_SRC,
+  DLRR_LIMITE_COLETA as DLRR_LIMITE_COLETA_SRC,
+  DLRR_LIMITE_LUCROS,
+  SIFIDE_TAXA_BASE as SIFIDE_TAXA_BASE_SRC,
+  SIFIDE_TAXA_INCREMENTAL as SIFIDE_TAXA_INCREMENTAL_SRC,
+  SIFIDE_MAJORACAO_PME_JOVEM,
+  SIFIDE_TETO_INCREMENTAL,
+  IFICI_TAXA,
+  IRC_TAXA_GERAL,
+  IRC_TAXA_PME,
+  IRC_LIMITE_PME,
+  SMN as SMN_SRC,
   efeitoFiscal,
   type Atividade,
   type Regiao,
@@ -142,49 +193,38 @@ import { useAuth } from "@/lib/supabase/auth";
 import { useSubscricao } from "@/lib/stripe/subscription";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CONSTANTES FISCAIS 2026
+// CONSTANTES FISCAIS — derivadas de fiscal-data.ts (fonte de verdade única)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const IAS_2026 = 537.13;
-const MINIMO_EXISTENCIA_2026 = 12_880;
-const SS_TAXA_TI = 0.214;
-const SS_BASE_PCT = 0.7;
-const SS_MAX_MENSAL = 12 * IAS_2026 * SS_TAXA_TI;
-const SS_MIN_MENSAL = 20;
-const IVA_ISENCAO_LIMITE = 15_000;
-const IVA_ISENCAO_LIMITE_IMEDIATO = 18_750;
-const IRS_JOVEM_LIMITE_2026 = 55 * IAS_2026;
+const IAS_2026 = IAS.value;
+const MINIMO_EXISTENCIA_2026 = MINIMO_EXISTENCIA.value;
+const SS_TAXA_TI = SS_TAXA.value;
+const SS_BASE_PCT = SS_COEFICIENTE.servicos.value;
+const SS_MAX_MENSAL = SS_BASE_MAX_MENSAL.value;
+const SS_MIN = SS_MIN_MENSAL.value;
+const IVA_ISENCAO_LIMITE = IVA_ISENCAO_LIMITE_SRC.value;
+const IVA_ISENCAO_LIMITE_IMEDIATO = IVA_ISENCAO_EXCESSO_SRC.value;
+const IRS_JOVEM_LIMITE_2026 = IRS_JOVEM.tetoIAS.value * IAS_2026;
 
-const IRS_JOVEM_ISENCAO: Record<number, number> = {
-  1: 1.0,
-  2: 0.75,
-  3: 0.75,
-  4: 0.75,
-  5: 0.5,
-  6: 0.5,
-  7: 0.5,
-  8: 0.25,
-  9: 0.25,
-  10: 0.25,
-};
+const IRS_JOVEM_ISENCAO: Record<number, number> = IRS_JOVEM.isencaoPorAno.value;
 
-const IRS_JOVEM_IDADE_MAX = 35;
+const IRS_JOVEM_IDADE_MAX = IRS_JOVEM.idadeMax.value;
 
 const TIPO_ATIVIDADE_PARAMS = {
   art151: {
-    coef: 0.75,
-    ret: 0.23,
+    coef: COEFICIENTE_POR_TIPO.art151,
+    ret: RETENCAO.art151.value,
     label: "Profissão liberal — Art. 151.º CIRS",
   },
-  vendas: { coef: 0.15, ret: 0.0, label: "Vendas / mercadorias" },
-  hosped: { coef: 0.35, ret: 0.0, label: "Alojamento local / hotelaria" },
-  outras: { coef: 0.35, ret: 0.115, label: "Outras prestações de serviços" },
+  vendas: { coef: COEFICIENTE_POR_TIPO.vendas, ret: 0.0, label: "Vendas / mercadorias" },
+  hosped: { coef: COEFICIENTE_POR_TIPO.outros, ret: 0.0, label: "Alojamento local / hotelaria" },
+  outras: { coef: COEFICIENTE_POR_TIPO.outros, ret: RETENCAO.outros.value, label: "Outras prestações de serviços" },
   prop_int: {
-    coef: 0.95,
-    ret: 0.165,
+    coef: COEFICIENTE_POR_TIPO.diretosAutor,
+    ret: RETENCAO.diretosAutor.value,
     label: "Propriedade intelectual / direitos de autor",
   },
-} as const;
+};
 
 type TipoAtividade = keyof typeof TIPO_ATIVIDADE_PARAMS;
 
@@ -220,10 +260,10 @@ const IVA_ESPERADO_POR_TIPO: Record<
   prop_int: "normal",
 };
 
-const DERRAMA_MUNI = 0.015;
-const IRS_DIVIDENDOS = 0.28;
-const SS_EMP_TAXA = 0.2375;
-const SS_TRAB_TAXA = 0.11;
+const DERRAMA_MUNI = DERRAMA_MAX.value;
+const IRS_DIVIDENDOS = DIVIDENDOS_TAXA.value;
+const SS_EMP_TAXA = SS_DEPENDENTE.entidade.value;
+const SS_TRAB_TAXA = SS_DEPENDENTE.trabalhador.value;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EMPRESA COMPLETO — Sede, perfil e IFICI
@@ -236,7 +276,7 @@ const CUSTO_SEDE_VIRTUAL_MAX = 150;
 const CUSTO_SEDE_VIRTUAL_DEFAULT = 100;
 const CUSTO_COWORKING_MAX = 300;
 const CUSTO_REPRESENTANTE_FISCAL_DEFAULT = 350;
-const IFICI_TAXA_FLAT = 0.20; // Art. 58.º-A EBF
+const IFICI_TAXA_FLAT = IFICI_TAXA.value;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TRIBUTAÇÃO AUTÓNOMA (Art. 88.º CIRC 2026)
@@ -259,13 +299,13 @@ type TipoViatura =
   | "comb_alto"; // Combustão custo aquisição ≥ €45 000 → 32%
 
 const TA_VIATURAS: Record<TipoViatura, number> = {
-  eletrica: 0.0,
-  phev_baixo: 0.025,
-  phev_medio: 0.075,
-  phev_alto: 0.15,
-  comb_baixo: 0.08, // Art. 88.º n.º 3 al. a) — OE2025
-  comb_medio: 0.25, // Art. 88.º n.º 3 al. b) — OE2025
-  comb_alto: 0.32, // Art. 88.º n.º 3 al. c) — OE2025
+  eletrica: TA_VIATURAS_ELETRICA.value,
+  phev_baixo: TA_VIATURAS_PHEV.value.ate37500,
+  phev_medio: TA_VIATURAS_PHEV.value.ate45000,
+  phev_alto: TA_VIATURAS_PHEV.value.acima45000,
+  comb_baixo: TA_VIATURAS_COMBUSTAO.value.ate37500,
+  comb_medio: TA_VIATURAS_COMBUSTAO.value.ate45000,
+  comb_alto: TA_VIATURAS_COMBUSTAO.value.acima45000,
 };
 
 const TIPO_VIATURA_META: Record<TipoViatura, string> = {
@@ -278,10 +318,10 @@ const TIPO_VIATURA_META: Record<TipoViatura, string> = {
   comb_alto: "Combustão ≥ 45 000€ aquisição — 32%",
 };
 
-const TA_TAXA_REPRESENTACAO = 0.1; // Art. 88.º n.º 7 CIRC
-const TA_TAXA_AJUDAS_CUSTO = 0.05; // Art. 88.º n.º 9 CIRC
-const TA_TAXA_NAO_DOC = 0.5; // Art. 88.º n.º 1 CIRC
-const TA_AGRAVAMENTO = 0.1; // Art. 88.º n.º 14 (OE2026 — renovou excl.)
+const TA_TAXA_REPRESENTACAO = TA_REPRESENTACAO.value;
+const TA_TAXA_AJUDAS_CUSTO = TA_AJUDAS_CUSTO.value;
+const TA_TAXA_NAO_DOC = TA_NAO_DOCUMENTADAS.value;
+const TA_AGRAVAMENTO = TA_AGRAVAMENTO_PREJUIZO.value;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RFAI — Regime Fiscal de Apoio ao Investimento (Art. 22.º–26.º CFI)
@@ -295,11 +335,11 @@ const TA_AGRAVAMENTO = 0.1; // Art. 88.º n.º 14 (OE2026 — renovou excl.)
 
 type RegiaoRFAI = "interior" | "litoral";
 
-const RFAI_TAXA_INTERIOR = 0.3; // Norte, Centro, Alentejo, Açores, Madeira
-const RFAI_TAXA_EXCEDENTE = 0.1; // Parcela > €15M
-const RFAI_TAXA_LITORAL = 0.1; // Lisboa, Algarve
-const RFAI_LIMITE_INVEST = 15_000_000; // Limiar entre taxa 30% e 10%
-const RFAI_LIMITE_COLETA = 0.5; // 50% da coleta (100% nos primeiros 3 anos)
+const RFAI_TAXA_INTERIOR = RFAI_TAXA_INTERIOR_SRC.value;
+const RFAI_TAXA_EXCEDENTE = RFAI_TAXA_INTERIOR_EXCEDENTE.value;
+const RFAI_TAXA_LITORAL = RFAI_TAXA_LITORAL_SRC.value;
+const RFAI_LIMITE_INVEST = RFAI_LIMITE_INVESTIMENTO_INTERIOR.value;
+const RFAI_LIMITE_COLETA = RFAI_LIMITE_COLETA_SRC.value;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DLRR — Dedução por Lucros Retidos e Reinvestidos (Art. 27.º-A CFI)
@@ -309,9 +349,9 @@ const RFAI_LIMITE_COLETA = 0.5; // 50% da coleta (100% nos primeiros 3 anos)
 // Lucros elegíveis máximos: €5 000 000
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DLRR_TAXA = 0.1;
-const DLRR_LIMITE_COLETA = 0.25;
-const DLRR_MAX_LUCROS = 5_000_000;
+const DLRR_TAXA = DLRR_TAXA_SRC.value;
+const DLRR_LIMITE_COLETA = DLRR_LIMITE_COLETA_SRC.value;
+const DLRR_MAX_LUCROS = DLRR_LIMITE_LUCROS.value;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SIFIDE II — Sistema de Incentivos Fiscais I&D (Art. 37.º–40.º CFI/EBF)
@@ -327,10 +367,10 @@ const DLRR_MAX_LUCROS = 5_000_000;
 
 type TipoEmpresaSifide = "startup" | "pme_jovem" | "pme_normal" | "grande";
 
-const SIFIDE_TAXA_BASE = 0.325; // 32,5% — base obrigatória
-const SIFIDE_TAXA_INCREMENTAL = 0.5; // 50% sobre acréscimo (max €1,5M)
-const SIFIDE_MAJORACAO_PME = 0.15; // +15% para PME <2 exercícios sem increm.
-const SIFIDE_MAX_INCREMENTAL = 1_500_000;
+const SIFIDE_TAXA_BASE = SIFIDE_TAXA_BASE_SRC.value;
+const SIFIDE_TAXA_INCREMENTAL = SIFIDE_TAXA_INCREMENTAL_SRC.value;
+const SIFIDE_MAJORACAO_PME = SIFIDE_MAJORACAO_PME_JOVEM.value;
+const SIFIDE_MAX_INCREMENTAL = SIFIDE_TETO_INCREMENTAL.value;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ENGLOBAMENTO DE DIVIDENDOS (Art. 40.º-A CIRS)
@@ -338,7 +378,7 @@ const SIFIDE_MAX_INCREMENTAL = 1_500_000;
 // Tributado às taxas progressivas do IRS (vs. 28% liberatória do Art. 71.º)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DIV_INCLUSAO_ENGLOBAMENTO = 0.5;
+const DIV_INCLUSAO_ENGLOBAMENTO = DIV_INCLUSAO_ENGLOBAMENTO_SRC.value;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CUSTOS TÍPICOS (estimativas 2026 para o simulador)
@@ -360,22 +400,21 @@ const CONTAB_ORG_CUSTO_MENSAL = 200; // OCC: €150–300/mês; média conservad
 //   - 600€ / dep. > 3 anos | 726€ / dep. ≤ 3 anos | 900€ / 2.º+ dep. ≤ 6 anos
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DEFICIENCIA_DEDUCAO_COLETA = 4 * IAS_2026; // 4 × IAS 2026 = €2 148,52
+const DEFICIENCIA_DEDUCAO_COLETA = DEDUCAO_DEFICIENCIA_COLETA.value;
 
-const DEPENDENTE_DEDUCAO_3PLUS = 600; // Art. 78.º-A n.º 1 al. a)
-const DEPENDENTE_DEDUCAO_3MINUS = 726; // Art. 78.º-A n.º 1 al. b) ≤ 3 anos
-const DEPENDENTE_DEDUCAO_2_6 = 900; // Art. 78.º-A n.º 1 al. c) 2.º+ ≤ 6 anos
-const DEPENDENTE_DEDUCAO_DEFIC = 2.5 * IAS_2026; // Art. 87.º — 2,5 × IAS 2026
+const DEPENDENTE_DEDUCAO_3PLUS = DEDUCAO_DEPENDENTE.value;
+const DEPENDENTE_DEDUCAO_3MINUS = DEDUCAO_DEPENDENTE_BEBE.value;
+const DEPENDENTE_DEDUCAO_2_6 = DEDUCAO_DEPENDENTE_3MAIS.value;
+const DEPENDENTE_DEDUCAO_DEFIC = DEDUCAO_DEPENDENTE_DEFICIENCIA.value;
 
-// Deduções gerais à coleta IRS (máximos por agregado familiar)
-const DEDUCAO_SAUDE_PCT = 0.15; // Art. 78.º-C — 15% das despesas
-const DEDUCAO_SAUDE_MAX = 1_000; // máx €1 000/agregado
-const DEDUCAO_EDUCACAO_PCT = 0.3; // Art. 78.º-D — 30% das despesas
-const DEDUCAO_EDUCACAO_MAX = 800; // máx €800/agregado
-const DEDUCAO_GERAIS_PCT = 0.35; // Art. 78.º-B — 35% das despesas
-const DEDUCAO_GERAIS_MAX = 250; // máx €250/sujeito passivo
-const DEDUCAO_RENDAS_PCT = 0.15; // Art. 78.º-E — 15% das rendas
-const DEDUCAO_RENDAS_MAX = 900; // máx €900/sujeito passivo (habitação permanente, Lei 36/2024)
+const DEDUCAO_SAUDE_PCT = DEDUCAO_SAUDE.value.taxa;
+const DEDUCAO_SAUDE_MAX = DEDUCAO_SAUDE.value.limite;
+const DEDUCAO_EDUCACAO_PCT = DEDUCAO_EDUCACAO.value.taxa;
+const DEDUCAO_EDUCACAO_MAX = DEDUCAO_EDUCACAO.value.limite;
+const DEDUCAO_GERAIS_PCT = DEDUCAO_DESP_GERAIS.value.taxa;
+const DEDUCAO_GERAIS_MAX = DEDUCAO_DESP_GERAIS.value.limite;
+const DEDUCAO_RENDAS_PCT = DEDUCAO_RENDAS.value.taxa;
+const DEDUCAO_RENDAS_MAX = DEDUCAO_RENDAS.value.limite;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // IMPOSTOS MUNICIPAIS (empresa com imóvel próprio)
@@ -385,14 +424,14 @@ const DEDUCAO_RENDAS_MAX = 900; // máx €900/sujeito passivo (habitação perm
 // Isenção RFAI: Art. 22.º–26.º CFI — até 10 anos, aprovação assembleia mun.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const IMI_TAXA_PADRAO = 0.003; // 0,3% — taxa mínima urbana (Art. 112.º CIMI)
-const IMT_TAXA_COMERCIAL = 0.065; // 6,5% — transmissão imóveis não habitacionais
-const IS_TAXA_AQUISICAO = 0.008; // 0,8% — Verba 1.1 TGIS (aquisição imóvel)
+const IMI_TAXA_PADRAO = IMI_TAXA_PADRAO_SRC.value;
+const IMT_TAXA_COMERCIAL = IMT_TAXA_COMERCIAL_SRC.value;
+const IS_TAXA_AQUISICAO = IS_TAXA_AQUISICAO_SRC.value;
 
 const IRC_PME = {
-  taxa1: 0.15,
-  limite: 50_000,
-  taxa2: 0.19,
+  taxa1: IRC_TAXA_PME.value,
+  limite: IRC_LIMITE_PME.value,
+  taxa2: IRC_TAXA_GERAL.value,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -427,7 +466,7 @@ function calcularSSAnual(faturacaoAnual: number): number {
   const rendRelevMensal = (faturacaoAnual * SS_BASE_PCT) / 12;
   const contribuicaoMensal = Math.min(
     SS_MAX_MENSAL,
-    Math.max(SS_MIN_MENSAL, rendRelevMensal * SS_TAXA_TI),
+    Math.max(SS_MIN, rendRelevMensal * SS_TAXA_TI),
   );
   return contribuicaoMensal * 12;
 }

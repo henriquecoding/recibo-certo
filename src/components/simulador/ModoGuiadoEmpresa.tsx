@@ -58,6 +58,31 @@ import {
   IFICI_PRAZO_ANOS,
   IVA_TAXAS,
   SOURCES,
+  SS_DEPENDENTE,
+  DERRAMA_MAX,
+  DIV_INCLUSAO_ENGLOBAMENTO as DIV_INCLUSAO_ENGLOBAMENTO_SRC,
+  SMN as SMN_SRC,
+  TA_VIATURAS_COMBUSTAO,
+  TA_VIATURAS_PHEV,
+  TA_VIATURAS_ELETRICA,
+  TA_REPRESENTACAO,
+  TA_AJUDAS_CUSTO,
+  TA_NAO_DOCUMENTADAS,
+  TA_AGRAVAMENTO_PREJUIZO,
+  RFAI_TAXA_INTERIOR as RFAI_TAXA_INTERIOR_SRC,
+  RFAI_TAXA_INTERIOR_EXCEDENTE,
+  RFAI_TAXA_LITORAL as RFAI_TAXA_LITORAL_SRC,
+  RFAI_LIMITE_INVESTIMENTO_INTERIOR,
+  RFAI_LIMITE_COLETA as RFAI_LIMITE_COLETA_SRC,
+  DLRR_TAXA as DLRR_TAXA_SRC,
+  DLRR_LIMITE_COLETA as DLRR_LIMITE_COLETA_SRC,
+  DLRR_LIMITE_LUCROS,
+  SIFIDE_TAXA_BASE as SIFIDE_TAXA_BASE_SRC,
+  SIFIDE_TAXA_INCREMENTAL as SIFIDE_TAXA_INCREMENTAL_SRC,
+  SIFIDE_MAJORACAO_PME_JOVEM,
+  IMI_TAXA_PADRAO as IMI_TAXA_PADRAO_SRC,
+  IMT_TAXA_COMERCIAL as IMT_TAXA_COMERCIAL_SRC,
+  IS_TAXA_AQUISICAO as IS_TAXA_AQUISICAO_SRC,
 } from "@/lib/fiscal-data";
 import {
   TODAS_LOCALIZACOES,
@@ -66,17 +91,17 @@ import {
   type ParametrosFiscaisRegiao,
 } from "@/lib/incentivos-regioes";
 
-// ─── Constantes fiscais 2026 ─────────────────────────────────────────────────
+// ─── Constantes fiscais — derivadas de fiscal-data.ts ────────────────────────
 
 const IRC_LIMITE = IRC_LIMITE_PME.value;
 const IRS_DIVIDENDOS = DIVIDENDOS_TAXA.value;
-const DIV_INCLUSAO_ENGLOBAMENTO = 0.5;
-const SS_EMP_TAXA = 0.2375;
-const SS_TRAB_TAXA = 0.11;
+const DIV_INCLUSAO_ENGLOBAMENTO = DIV_INCLUSAO_ENGLOBAMENTO_SRC.value;
+const SS_EMP_TAXA = SS_DEPENDENTE.entidade.value;
+const SS_TRAB_TAXA = SS_DEPENDENTE.trabalhador.value;
 const CUSTO_CONTABILIDADE_DEFAULT = 2_400;
 const CUSTO_SOFTWARE_DEFAULT = 300;
 const CUSTO_CONSTITUICAO_DEFAULT = 360;
-const SMN_2026 = 870;
+const SMN_2026 = SMN_SRC.value;
 
 // TA (Art. 88.º CIRC 2026)
 type TipoViaturaGuiado =
@@ -91,13 +116,13 @@ type TipoViaturaGuiado =
 
 const TA_TAXAS_GUIADO: Record<TipoViaturaGuiado, number> = {
   nenhuma: 0,
-  eletrica: 0,
-  phev_baixo: 0.025,
-  phev_medio: 0.075,
-  phev_alto: 0.15,
-  comb_baixo: 0.08,
-  comb_medio: 0.25,
-  comb_alto: 0.32,
+  eletrica: TA_VIATURAS_ELETRICA.value,
+  phev_baixo: TA_VIATURAS_PHEV.value.ate37500,
+  phev_medio: TA_VIATURAS_PHEV.value.ate45000,
+  phev_alto: TA_VIATURAS_PHEV.value.acima45000,
+  comb_baixo: TA_VIATURAS_COMBUSTAO.value.ate37500,
+  comb_medio: TA_VIATURAS_COMBUSTAO.value.ate45000,
+  comb_alto: TA_VIATURAS_COMBUSTAO.value.acima45000,
 };
 
 const TIPO_VIATURA_META: Record<TipoViaturaGuiado, { label: string; sub: string }> = {
@@ -111,28 +136,28 @@ const TIPO_VIATURA_META: Record<TipoViaturaGuiado, { label: string; sub: string 
   comb_alto: { label: "Combustão ≥ 45.000€", sub: "32%" },
 };
 
-const TA_TAXA_REPRESENTACAO = 0.1;
-const TA_TAXA_AJUDAS_CUSTO = 0.05;
-const TA_TAXA_NAO_DOC = 0.5;
-const TA_AGRAVAMENTO = 0.1;
+const TA_TAXA_REPRESENTACAO = TA_REPRESENTACAO.value;
+const TA_TAXA_AJUDAS_CUSTO = TA_AJUDAS_CUSTO.value;
+const TA_TAXA_NAO_DOC = TA_NAO_DOCUMENTADAS.value;
+const TA_AGRAVAMENTO = TA_AGRAVAMENTO_PREJUIZO.value;
 
 // RFAI (Art. 22.º–26.º CFI)
 type RegiaoRFAIGuiado = "interior" | "litoral";
-const RFAI_TAXA: Record<RegiaoRFAIGuiado, number> = { interior: 0.3, litoral: 0.1 };
-const RFAI_TAXA_EXCEDENTE = 0.1;
-const RFAI_LIMITE_INVEST = 15_000_000;
-const RFAI_LIMITE_COLETA = 0.5;
+const RFAI_TAXA: Record<RegiaoRFAIGuiado, number> = { interior: RFAI_TAXA_INTERIOR_SRC.value, litoral: RFAI_TAXA_LITORAL_SRC.value };
+const RFAI_TAXA_EXCEDENTE = RFAI_TAXA_INTERIOR_EXCEDENTE.value;
+const RFAI_LIMITE_INVEST = RFAI_LIMITE_INVESTIMENTO_INTERIOR.value;
+const RFAI_LIMITE_COLETA = RFAI_LIMITE_COLETA_SRC.value;
 
 // DLRR (Art. 27.º–34.º CFI)
-const DLRR_TAXA = 0.1;
-const DLRR_LIMITE_COLETA = 0.25;
-const DLRR_MAX_LUCROS = 5_000_000;
+const DLRR_TAXA = DLRR_TAXA_SRC.value;
+const DLRR_LIMITE_COLETA = DLRR_LIMITE_COLETA_SRC.value;
+const DLRR_MAX_LUCROS = DLRR_LIMITE_LUCROS.value;
 
 // SIFIDE II (Art. 35.º–42.º CFI)
 type TipoEmpresaSifide = "startup" | "pme_jovem" | "pme_normal" | "grande";
-const SIFIDE_TAXA_BASE = 0.325;
-const SIFIDE_TAXA_INCREMENTAL = 0.5;
-const SIFIDE_MAJORACAO_PME = 0.15;
+const SIFIDE_TAXA_BASE = SIFIDE_TAXA_BASE_SRC.value;
+const SIFIDE_TAXA_INCREMENTAL = SIFIDE_TAXA_INCREMENTAL_SRC.value;
+const SIFIDE_MAJORACAO_PME = SIFIDE_MAJORACAO_PME_JOVEM.value;
 
 const SIFIDE_META: Record<TipoEmpresaSifide, { label: string; taxa: number; sub: string }> = {
   startup: { label: "Startup", taxa: SIFIDE_TAXA_BASE + SIFIDE_TAXA_INCREMENTAL, sub: "82,5% — sem histórico I&D" },
@@ -142,9 +167,9 @@ const SIFIDE_META: Record<TipoEmpresaSifide, { label: string; taxa: number; sub:
 };
 
 // IMI/IMT
-const IMI_TAXA_PADRAO = 0.003;
-const IMT_TAXA_COMERCIAL = 0.065;
-const IS_TAXA_AQUISICAO = 0.008;
+const IMI_TAXA_PADRAO = IMI_TAXA_PADRAO_SRC.value;
+const IMT_TAXA_COMERCIAL = IMT_TAXA_COMERCIAL_SRC.value;
+const IS_TAXA_AQUISICAO = IS_TAXA_AQUISICAO_SRC.value;
 
 // Empresa digital / sede virtual
 const CUSTO_SEDE_VIRTUAL_MIN = 50;
@@ -323,7 +348,7 @@ function simularEmpresaGuiado(
 ): ResultadoEmpresaGuiado {
   const ircPME = paramLocal?.ircPME ?? IRC_TAXA_PME.value;
   const ircGeral = paramLocal?.ircGeral ?? IRC_TAXA_GERAL.value;
-  const derramaTaxa = paramLocal?.derramaEstimada ?? 0.015;
+  const derramaTaxa = paramLocal?.derramaEstimada ?? DERRAMA_MAX.value;
 
   const custoSedeVirtualAnual = sedeVirtualCusto ? sedeVirtualCusto * 12 : 0;
   const custoRepresentante = isEstrangeiro && custoRepFiscal ? custoRepFiscal : 0;
@@ -2563,7 +2588,7 @@ export default function ModoGuiadoEmpresa({
                       resultado.ta.representacao > 0 ? { label: "TA representação (10%)", value: -resultado.ta.representacao, cor: "text-amber-600 dark:text-amber-400" } : null,
                       resultado.ta.ajudasCusto > 0 ? { label: "TA ajudas de custo (5%)", value: -resultado.ta.ajudasCusto, cor: "text-amber-600 dark:text-amber-400" } : null,
                       resultado.ta.naoDocumentadas > 0 ? { label: "TA não documentadas (50%)", value: -resultado.ta.naoDocumentadas, cor: "text-amber-600 dark:text-amber-400" } : null,
-                      { label: `Derrama municipal (~${pct(localizacao?.derramaEstimada ?? 0.015)}${localizacao ? " · " + localizacao.nome : ""})`, value: -resultado.derrama, cor: "text-red-400" },
+                      { label: `Derrama municipal (~${pct(localizacao?.derramaEstimada ?? DERRAMA_MAX.value)}${localizacao ? " · " + localizacao.nome : ""})`, value: -resultado.derrama, cor: "text-red-400" },
                       resultado.custoMunicipalAnual > 0 ? { label: "IMI + IMT/IS (amortizado)", value: -resultado.custoMunicipalAnual, cor: "text-red-400" } : null,
                       resultado.poupancaIMI > 0 || resultado.poupancaIMT > 0 ? { label: "Poupança municipal (isenções RFAI)", value: resultado.poupancaIMI + (resultado.poupancaIMT / anosAmortizacaoIMT), cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
                       { label: "Lucro líquido (disponível)", value: resultado.lucroLiquido, cor: "text-stone-700 dark:text-stone-200 font-semibold", sep: true },
@@ -2621,7 +2646,7 @@ export default function ModoGuiadoEmpresa({
                     Estimativa anual com as taxas oficiais de 2026
                     {localizacao ? ` para ${localizacao.nome}` : ""}.
                     IRC {localizacao ? pct(localizacao.ircPME) : "PME"} (<LeiRef artigo="Art. 87.º CIRC" url={LEI.art87circ} />),
-                    derrama ~{pct(localizacao?.derramaEstimada ?? 0.015)},
+                    derrama ~{pct(localizacao?.derramaEstimada ?? DERRAMA_MAX.value)},
                     TA (<LeiRef artigo="Art. 88.º CIRC" url={LEI.art88circ} />),
                     benefícios (<LeiRef artigo="CFI" url={LEI.cfi} />) e IMI/IMT conforme configurado.
                     {aplicarIFICI && <> IFICI (<LeiRef artigo="Art. 58.º-A EBF" url={LEI.art58aEBF} />) aplicado aos dividendos.</>}

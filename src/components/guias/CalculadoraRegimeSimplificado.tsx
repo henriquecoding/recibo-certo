@@ -6,6 +6,7 @@ import { EASE } from "@/lib/motion";
 import {
   REDUCAO_COEFICIENTE_ANO,
   DEDUCAO_ESPECIFICA_CATB,
+  REGIME_15PCT,
   efeitoFiscal,
   ATIVIDADES,
 } from "@/lib/fiscal-data";
@@ -19,7 +20,7 @@ import ActivityCombobox from "@/components/ui/ActivityCombobox";
 // Limiar abaixo do qual a dedução específica cobre automaticamente a regra dos 15%.
 // = DEDUCAO_ESPECIFICA_CATB / 0,15 (Art. 31.º CIRS). Para 2026 = 4 587,09 / 0,15 ≈ 30 580 €.
 const DEDUCAO_ESPECIFICA = DEDUCAO_ESPECIFICA_CATB.value;
-const LIMIAR_REGRA15 = Math.floor(DEDUCAO_ESPECIFICA / 0.15);
+const LIMIAR_REGRA15 = Math.floor(DEDUCAO_ESPECIFICA / REGIME_15PCT.value);
 
 const ANOS = [
   { valor: 1, label: "1.º ano (-50%)" },
