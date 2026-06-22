@@ -78,6 +78,10 @@ import {
   MAIS_VALIAS_IMOBILIARIO_INCLUSAO,
   DIV_INCLUSAO_ENGLOBAMENTO,
   DEDUCAO_ESPECIFICA_DEPENDENTE,
+  DEDUCAO_PPR,
+  DEDUCAO_DONATIVOS,
+  DEDUCAO_ASCENDENTE,
+  DEDUCAO_ASCENDENTE_UNICO,
   type TipoAtividade,
   type Regiao,
   type EscalaoIVA,
@@ -374,6 +378,12 @@ export interface SimulacaoInput {
   acumulaEmprego?: boolean;
   /** Isenção de SS nos primeiros 12 meses de atividade (Art. 157.º CC). */
   isencaoSSPrimeiroAno?: boolean;
+  /** Número de ascendentes em comunhão de habitação (Art. 78.º-A CIRS). */
+  ascendentes?: number;
+  /** PPR: valor aplicado no ano + escalão de idade do sujeito passivo (Art. 21.º EBF). */
+  ppr?: { valor: number; escalaoIdade: "ate35" | "de35a50" | "mais50" };
+  /** Donativos do ano (Art. 63.º EBF). */
+  donativos?: number;
 }
 
 export interface SimulacaoIRS {
@@ -407,8 +417,14 @@ export interface SimulacaoIRS {
   /** Detalhamento por escalão progressivo (vazio se IFICI aplicado). */
   escaloesAplicados: EscalaoAplicado[];
   deducaoDependentes: number;
-  /** Deduções de despesas (saúde+educação+gerais+rendas) após limite global. */
+  /** Dedução à coleta por ascendentes (Art. 78.º-A). Fora do limite global. */
+  deducaoAscendentes: number;
+  /** Deduções de despesas (saúde+educação+gerais+rendas+PPR+donativos) após limite global. */
   deducaoDespesas: number;
+  /** Dedução à coleta por PPR (Art. 21.º EBF), antes do limite global. */
+  deducaoPPR: number;
+  /** Dedução à coleta por donativos (Art. 63.º EBF), antes do limite global. */
+  deducaoDonativos: number;
   /** Dedução coleta por deficiência do contribuinte (Art. 87.º: 4×IAS). */
   deducaoDeficiencia: number;
   irsEstimado: number;
@@ -561,12 +577,32 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   const dSaude = Math.min(sanitize(ded.saude ?? 0) * DEDUCAO_SAUDE.value.taxa, DEDUCAO_SAUDE.value.limite);
   const dEducacao = Math.min(sanitize(ded.educacao ?? 0) * DEDUCAO_EDUCACAO.value.taxa, DEDUCAO_EDUCACAO.value.limite);
   const dRendas = Math.min(sanitize(ded.rendas ?? 0) * DEDUCAO_RENDAS.value.taxa, DEDUCAO_RENDAS.value.limite);
-  const deducaoDespesas = Math.min(dGerais + dSaude + dEducacao + dRendas, limiteGlobalDeducoes(rendimentoColetavelFinal));
+
+  // PPR (Art. 21.º EBF): 20% do aplicado, com limite por idade do sujeito passivo.
+  const deducaoPPR = input.ppr
+    ? Math.min(sanitize(input.ppr.valor) * DEDUCAO_PPR.value.taxa, DEDUCAO_PPR.value[input.ppr.escalaoIdade])
+    : 0;
+  // Donativos (Art. 63.º EBF): 25% do donativo, limitado a 15% da coleta.
+  const deducaoDonativos = input.donativos
+    ? Math.min(sanitize(input.donativos) * DEDUCAO_DONATIVOS.value.taxa, DEDUCAO_DONATIVOS.value.limiteColeta * coletaBruta)
+    : 0;
+
+  // Limite global (Art. 78.º n.º 7): saúde + educação + gerais + rendas + PPR + donativos.
+  const deducaoDespesas = Math.min(
+    dGerais + dSaude + dEducacao + dRendas + deducaoPPR + deducaoDonativos,
+    limiteGlobalDeducoes(rendimentoColetavelFinal)
+  );
+
+  // Ascendentes (Art. 78.º-A): 525 € por ascendente; 635 € se existir só um.
+  // Fora do limite global, tal como a dedução por dependentes.
+  const numAscendentes = Math.max(0, Math.floor(input.ascendentes ?? 0));
+  const deducaoAscendentes =
+    numAscendentes === 1 ? DEDUCAO_ASCENDENTE_UNICO.value : numAscendentes * DEDUCAO_ASCENDENTE.value;
 
   // Art. 87.º CIRS: dedução à coleta de 4×IAS pelo contribuinte com deficiência
   const deducaoDeficiencia = input.deficiencia ? DEDUCAO_DEFICIENCIA_COLETA.value : 0;
 
-  const deducoesColeta = deducaoDependentes + deducaoDespesas + deducaoDeficiencia;
+  const deducoesColeta = deducaoDependentes + deducaoAscendentes + deducaoDespesas + deducaoDeficiencia;
   let irsEstimado = Math.max(0, coletaBruta - deducoesColeta);
 
   // ── Mínimo de existência (não aplicável com regime de taxa flat) ─────────
@@ -623,7 +659,10 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     coletaBruta,
     escaloesAplicados,
     deducaoDependentes,
+    deducaoAscendentes,
     deducaoDespesas,
+    deducaoPPR,
+    deducaoDonativos,
     deducaoDeficiencia,
     irsEstimado,
     minimoExistenciaAplicado,
@@ -1125,6 +1164,12 @@ export interface DeclaracaoInput {
   /** Deduções à coleta (Anexo H). */
   deducoes?: DeducoesInput;
   dependentesDetalhe?: DependentesDetalhe;
+  /** Ascendentes em comunhão de habitação (Art. 78.º-A). */
+  ascendentes?: number;
+  /** PPR aplicado no ano + escalão de idade (Art. 21.º EBF). */
+  ppr?: { valor: number; escalaoIdade: "ate35" | "de35a50" | "mais50" };
+  /** Donativos do ano (Art. 63.º EBF). */
+  donativos?: number;
   deficiencia?: boolean;
   ifici?: boolean;
   pagamentosPorConta?: number;
@@ -1316,6 +1361,9 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
     conjunta,
     dependentesDetalhe: input.dependentesDetalhe,
     deducoes: input.deducoes,
+    ascendentes: input.ascendentes,
+    ppr: input.ppr,
+    donativos: input.donativos,
     deficiencia: input.deficiencia,
     ifici: input.ifici,
     retencoesPagas: 0,
@@ -1408,7 +1456,17 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
   }
 
   // Deduções à coleta já aplicadas dentro de `simularIRSAnual` (sim.irsEstimado).
-  const deducoesColeta = sim.deducaoDependentes + sim.deducaoDespesas + sim.deducaoDeficiencia;
+  const deducoesColeta =
+    sim.deducaoDependentes + sim.deducaoAscendentes + sim.deducaoDespesas + sim.deducaoDeficiencia;
+  if (sim.deducaoAscendentes > 0) {
+    memoria.push({ anexo: "Anexo H", rotulo: "Dedução por ascendentes", valor: -sim.deducaoAscendentes, baseLegal: "Art. 78.º-A CIRS" });
+  }
+  if (sim.deducaoPPR > 0) {
+    memoria.push({ anexo: "Anexo H", rotulo: "Benefício PPR", formula: `20% do aplicado (limite por idade)`, valor: -sim.deducaoPPR, baseLegal: "Art. 21.º EBF" });
+  }
+  if (sim.deducaoDonativos > 0) {
+    memoria.push({ anexo: "Anexo H", rotulo: "Benefício donativos", formula: `25% do donativo (máx 15% da coleta)`, valor: -sim.deducaoDonativos, baseLegal: "Art. 63.º EBF" });
+  }
 
   // IRS total = imposto do englobamento (após deduções/mínimo) + autónomo − crédito.
   const irsTotal = Math.max(0, sim.irsEstimado + impostoAutonomo - creditoDuplaTributacao);

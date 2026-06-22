@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.61.0";
+export const APP_VERSION = "1.62.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.62.0",
+    data: "2026-06-22",
+    titulo: "Benefícios fiscais e gráficos no Simulador de IRS",
+    itens: [
+      "O Simulador de IRS guiado passa a calcular benefícios fiscais: PPR (20% do aplicado, com limite por idade), donativos (25%, até 15% da coleta) e dedução por ascendentes a cargo (525 €, ou 635 € se for só um).",
+      "Novos gráficos na revisão final: a origem dos teus rendimentos por categoria e uma barra que mostra para onde vai o dinheiro (líquido, IRS e Segurança Social).",
+      "Todos os benefícios respeitam o limite global das deduções à coleta e aparecem na memória de cálculo com a respetiva base legal.",
+    ],
+  },
   {
     version: "1.61.0",
     data: "2026-06-22",

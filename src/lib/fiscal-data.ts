@@ -242,6 +242,14 @@ export const SOURCES = {
     label: "IRS — Anexo J (rendimentos obtidos no estrangeiro) · Ordem dos Contabilistas Certificados",
     url: "https://www.occ.pt/pt-pt/noticias/irs-anexo-j-0",
   },
+  art21EBF: {
+    label: "Art. 21.º EBF — PPR: dedução à coleta de 20% com limites por idade · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-21-ordm-.aspx",
+  },
+  art63EBF: {
+    label: "Art. 63.º EBF — Estatuto do Mecenato: donativos, dedução de 25% com limite de 15% da coleta · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-63-ordm-.aspx",
+  },
 
   // ── Comissão Europeia ───────────────────────────────────────────────
   viesValidation: {
@@ -322,6 +330,8 @@ const TODAY = "2026-06-11";
 // (categoria G) e rendimentos estrangeiros — confirmados em fontes oficiais/de
 // referência nesta data.
 const REV_MAIS_VALIAS = "2026-06-22";
+// Data de verificação dos benefícios fiscais à coleta (PPR, donativos, ascendentes).
+const REV_BENEFICIOS = "2026-06-22";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  INDEXANTE DOS APOIOS SOCIAIS (IAS) — base de vários limites
@@ -1631,6 +1641,63 @@ export const MAIS_VALIAS_REINVESTIMENTO_MESES = sv(
 );
 
 // ═══════════════════════════════════════════════════════════════════════
+//  BENEFÍCIOS FISCAIS À COLETA — PPR, donativos e ascendentes
+//  ---------------------------------------------------------------------
+//  PPR (Art. 21.º EBF): dedução à coleta de 20% dos valores aplicados, com
+//  limite por idade do sujeito passivo a 1 de janeiro. Donativos (Art. 63.º
+//  EBF / Estatuto do Mecenato): 25% do donativo, limitado a 15% da coleta.
+//  Ascendentes (Art. 78.º-A CIRS): 525 € por ascendente em comunhão de
+//  habitação com rendimento ≤ pensão mínima; 635 € se existir só um.
+//  PPR e donativos contam para o limite global das deduções (Art. 78.º n.º 7);
+//  a dedução por ascendentes, tal como a de dependentes, fica fora desse limite.
+// ═══════════════════════════════════════════════════════════════════════
+
+export interface DeducaoPPR {
+  taxa: number;
+  /** Limite anual (€) por escalão de idade a 1 de janeiro. */
+  ate35: number;
+  de35a50: number;
+  mais50: number;
+}
+
+export const DEDUCAO_PPR = sv<DeducaoPPR>(
+  { taxa: 0.2, ate35: 400, de35a50: 350, mais50: 300 },
+  "Art. 21.º EBF — PPR: 20% dos valores aplicados; limite €400 (< 35), €350 (35–50), €300 (> 50)",
+  "art21EBF",
+  REV_BENEFICIOS
+);
+
+export interface DeducaoDonativos {
+  taxa: number;
+  /** Limite da dedução em fração da coleta. */
+  limiteColeta: number;
+}
+
+export const DEDUCAO_DONATIVOS = sv<DeducaoDonativos>(
+  { taxa: 0.25, limiteColeta: 0.15 },
+  "Art. 63.º EBF — donativos: dedução de 25% (base, sem majorações), limitada a 15% da coleta",
+  "art63EBF",
+  REV_BENEFICIOS,
+  "Majorações (130% social, 140% ambiental/desportivo/educacional) não modeladas — usa-se a taxa base."
+);
+
+/** Dedução à coleta por ascendente em comunhão de habitação (Art. 78.º-A CIRS). */
+export const DEDUCAO_ASCENDENTE = sv(
+  525,
+  "Art. 78.º-A CIRS — 525 € por ascendente em comunhão de habitação com rendimento não superior à pensão mínima do regime geral",
+  "art78aCirs",
+  REV_BENEFICIOS
+);
+
+/** Dedução quando exista apenas um ascendente nestas condições. */
+export const DEDUCAO_ASCENDENTE_UNICO = sv(
+  635,
+  "Art. 78.º-A CIRS — 635 € quando exista apenas um ascendente nas condições",
+  "art78aCirs",
+  REV_BENEFICIOS
+);
+
+// ═══════════════════════════════════════════════════════════════════════
 //  SALÁRIO MÍNIMO NACIONAL 2026
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -2232,6 +2299,19 @@ export function assertFiscalDataIntegrity(): void {
   if (!(MAIS_VALIAS_DETENCAO_DIAS.value > 0)) erros.push("Período de detenção de mais-valias não positivo.");
   if (!(CRIPTO_ISENCAO_DIAS.value > 0)) erros.push("Período de isenção de criptoativos não positivo.");
   if (!(MAIS_VALIAS_REINVESTIMENTO_MESES.value > 0)) erros.push("Prazo de reinvestimento de mais-valias não positivo.");
+
+  // Benefícios fiscais à coleta: PPR, donativos e ascendentes.
+  if (!isRate(DEDUCAO_PPR.value.taxa)) erros.push("Taxa de dedução PPR inválida.");
+  if (!(DEDUCAO_PPR.value.ate35 >= DEDUCAO_PPR.value.de35a50 && DEDUCAO_PPR.value.de35a50 >= DEDUCAO_PPR.value.mais50 && DEDUCAO_PPR.value.mais50 > 0)) {
+    erros.push("Limites do PPR por idade inválidos ou não decrescentes.");
+  }
+  if (!isRate(DEDUCAO_DONATIVOS.value.taxa) || !isRate(DEDUCAO_DONATIVOS.value.limiteColeta)) {
+    erros.push("Parâmetros de dedução de donativos fora de [0,1].");
+  }
+  if (!(DEDUCAO_ASCENDENTE.value > 0)) erros.push("Dedução por ascendente não positiva.");
+  if (!(DEDUCAO_ASCENDENTE_UNICO.value >= DEDUCAO_ASCENDENTE.value)) {
+    erros.push("Dedução por ascendente único deveria ser ≥ à dedução por ascendente.");
+  }
   if (!(IRC_TAXA_PME.value < IRC_TAXA_GERAL.value)) {
     erros.push("Taxa PME de IRC deveria ser inferior à geral.");
   }
@@ -2521,6 +2601,11 @@ export function assertFiscalDataIntegrity(): void {
     CRIPTO_ISENCAO_DIAS,
     MAIS_VALIAS_IMOBILIARIO_INCLUSAO,
     MAIS_VALIAS_REINVESTIMENTO_MESES,
+    // Benefícios fiscais à coleta
+    DEDUCAO_PPR,
+    DEDUCAO_DONATIVOS,
+    DEDUCAO_ASCENDENTE,
+    DEDUCAO_ASCENDENTE_UNICO,
     // SMN
     SMN,
   ];

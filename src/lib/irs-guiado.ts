@@ -190,6 +190,8 @@ export interface EstadoDeclaracao {
   };
   estrangeiros: { rendimento: number; impostoPago: number };
   deducoes: { saude: number; educacao: number; gerais: number; rendas: number };
+  ppr: { valor: number; escalaoIdade: "ate35" | "de35a50" | "mais50" };
+  donativos: number;
   pagamentosPorConta: number;
 }
 
@@ -266,6 +268,9 @@ export function construirDeclaracaoInput(e: EstadoDeclaracao): DeclaracaoInput {
       gerais: e.deducoes.gerais,
       rendas: e.deducoes.rendas,
     },
+    ascendentes: e.ascendentes,
+    ppr: e.ppr.valor > 0 ? { valor: e.ppr.valor, escalaoIdade: e.ppr.escalaoIdade } : undefined,
+    donativos: e.donativos > 0 ? e.donativos : undefined,
     pagamentosPorConta: e.pagamentosPorConta,
   };
 }

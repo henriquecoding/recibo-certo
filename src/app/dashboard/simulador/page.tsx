@@ -40,6 +40,13 @@ import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import InfoTip from "@/components/ui/InfoTip";
 import ProHint from "@/components/ui/ProHint";
 import PartnerSpot from "@/components/dashboard/PartnerSpot";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import { DistribuicaoRendimento, DistribuicaoFiscal } from "@/components/simulador/Graficos";
+import {
+  DEDUCAO_PPR,
+  DEDUCAO_DONATIVOS,
+  DEDUCAO_ASCENDENTE,
+} from "@/lib/fiscal-data";
 import {
   Briefcase, User, Invoice, Coin, ChartProjection, Globe, Home, Building, Plane,
   Check, Warning, ArrowRight, ArrowLeft, ChevronDown,
@@ -133,6 +140,9 @@ export default function SimuladorPage() {
   const [educacao, setEducacao] = useState("");
   const [gerais, setGerais] = useState("");
   const [rendasDed, setRendasDed] = useState("");
+  const [pprValor, setPprValor] = useState("");
+  const [pprIdade, setPprIdade] = useState<"ate35" | "de35a50" | "mais50">("de35a50");
+  const [donativos, setDonativos] = useState("");
   const [pagamentosPorConta, setPagamentosPorConta] = useState("");
 
   // Pré-preenchimento com recibos registados (categoria B).
@@ -191,6 +201,8 @@ export default function SimuladorPage() {
       },
       estrangeiros: { rendimento: n(extRendimento), impostoPago: n(extImposto) },
       deducoes: { saude: n(saude), educacao: n(educacao), gerais: n(gerais), rendas: n(rendasDed) },
+      ppr: { valor: n(pprValor), escalaoIdade: pprIdade },
+      donativos: n(donativos),
       pagamentosPorConta: n(pagamentosPorConta),
     }),
     [
@@ -203,7 +215,7 @@ export default function SimuladorPage() {
       renda, rendaDespesas, rendaHab, rendaDuracao, rendaRet, rendaEnglobar,
       vendaRealizacao, vendaAquisicao, vendaDespesas, vendaReinveste, vendaReinvestido,
       extRendimento, extImposto,
-      saude, educacao, gerais, rendasDed, pagamentosPorConta,
+      saude, educacao, gerais, rendasDed, pprValor, pprIdade, donativos, pagamentosPorConta,
     ]
   );
 
@@ -474,7 +486,11 @@ export default function SimuladorPage() {
 
           {passo === 2 && (
             <PassoDeducoes
-              {...{ saude, setSaude, educacao, setEducacao, gerais, setGerais, rendasDed, setRendasDed, pagamentosPorConta, setPagamentosPorConta }}
+              {...{
+                saude, setSaude, educacao, setEducacao, gerais, setGerais, rendasDed, setRendasDed,
+                pprValor, setPprValor, pprIdade, setPprIdade, donativos, setDonativos,
+                pagamentosPorConta, setPagamentosPorConta,
+              }}
             />
           )}
 
@@ -669,7 +685,7 @@ function PassoAgregado(props: {
       <div>
         <div className="mb-2 flex items-center gap-1.5">
           <span className={rotuloCls}>Ascendentes a cargo</span>
-          <InfoTip>Ascendentes que vivam em comunhão de habitação e tenham rendimento inferior à pensão mínima dão direito a dedução (Art. 78.º-D). Registo informativo — o cálculo desta dedução será adicionado numa próxima fase.</InfoTip>
+          <InfoTip>Ascendentes em comunhão de habitação com rendimento não superior à pensão mínima dão direito a dedução à coleta: {fmt(DEDUCAO_ASCENDENTE.value)} por ascendente (ou 635 € se existir só um). Art. 78.º-A CIRS.</InfoTip>
         </div>
         <div className="grid grid-cols-3 gap-3">
           <CampoMini id="ascendentes" label="N.º de ascendentes" value={ascendentes} onChange={setAscendentes} />
@@ -715,9 +731,19 @@ function PassoDeducoes(props: {
   educacao: string; setEducacao: (v: string) => void;
   gerais: string; setGerais: (v: string) => void;
   rendasDed: string; setRendasDed: (v: string) => void;
+  pprValor: string; setPprValor: (v: string) => void;
+  pprIdade: "ate35" | "de35a50" | "mais50"; setPprIdade: (v: "ate35" | "de35a50" | "mais50") => void;
+  donativos: string; setDonativos: (v: string) => void;
   pagamentosPorConta: string; setPagamentosPorConta: (v: string) => void;
 }) {
-  const { saude, setSaude, educacao, setEducacao, gerais, setGerais, rendasDed, setRendasDed, pagamentosPorConta, setPagamentosPorConta } = props;
+  const {
+    saude, setSaude, educacao, setEducacao, gerais, setGerais, rendasDed, setRendasDed,
+    pprValor, setPprValor, pprIdade, setPprIdade, donativos, setDonativos,
+    pagamentosPorConta, setPagamentosPorConta,
+  } = props;
+  const pprLimite = DEDUCAO_PPR.value[pprIdade];
+  const pprBeneficio = Math.min(n(pprValor) * DEDUCAO_PPR.value.taxa, pprLimite);
+  const donativoBeneficio = n(donativos) * DEDUCAO_DONATIVOS.value.taxa;
   const campos = [
     { id: "saude", label: "Saúde (€)", v: saude, set: setSaude, nota: `${pct(DEDUCAO_SAUDE.value.taxa)} → máx ${fmt(DEDUCAO_SAUDE.value.limite)}` },
     { id: "educacao", label: "Educação (€)", v: educacao, set: setEducacao, nota: `${pct(DEDUCAO_EDUCACAO.value.taxa)} → máx ${fmt(DEDUCAO_EDUCACAO.value.limite)}` },
@@ -748,15 +774,49 @@ function PassoDeducoes(props: {
           tooltip="Adiantamentos de IRS pagos ao longo do ano pelos trabalhadores independentes (Art. 102.º CIRS). Abatem ao imposto final, tal como as retenções." />
       </section>
 
-      <section className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
-        <h3 className="font-display text-base font-semibold text-stone-800 dark:text-stone-100">Benefícios fiscais</h3>
-        <div className="mt-3">
-          <Explicador titulo="PPR, donativos e mecenato">
-            Os planos poupança-reforma (PPR) dão direito a uma dedução à coleta (20% do investido, com limites por idade);
-            os donativos a entidades elegíveis também (Art. 63.º EBF). Estes benefícios serão calculados numa próxima fase do
-            simulador — por agora ficam aqui descritos para não os esqueceres ao preencher a declaração oficial.
-          </Explicador>
+      <section className="space-y-4 rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <h3 className="font-display text-base font-semibold text-stone-800 dark:text-stone-100">Benefícios fiscais</h3>
+          <span className="inline-flex items-center gap-1.5 rounded-lg bg-stone-100 px-2.5 py-1 text-[11px] font-medium text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+            <span className="font-semibold text-brand-dark dark:text-brand">Anexo H</span><span aria-hidden>·</span><span>EBF</span>
+          </span>
         </div>
+
+        {/* PPR */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Campo id="ppr-valor" label="PPR aplicado no ano (€)" value={pprValor} onChange={setPprValor} step={100}
+            tooltip="Plano poupança-reforma. Deduz 20% do valor aplicado à coleta, com limite por idade (Art. 21.º EBF)." />
+          <div>
+            <div className="mb-1.5 flex items-center gap-1.5">
+              <label htmlFor="ppr-idade" className={rotuloCls}>Idade a 1 de janeiro</label>
+              <InfoTip>O limite da dedução do PPR depende da idade: {fmt(DEDUCAO_PPR.value.ate35)} (&lt; 35), {fmt(DEDUCAO_PPR.value.de35a50)} (35–50), {fmt(DEDUCAO_PPR.value.mais50)} (&gt; 50).</InfoTip>
+            </div>
+            <select id="ppr-idade" value={pprIdade} onChange={(e) => setPprIdade(e.target.value as "ate35" | "de35a50" | "mais50")} className={campoCls}>
+              <option value="ate35">Menos de 35 anos — máx {fmt(DEDUCAO_PPR.value.ate35)}</option>
+              <option value="de35a50">35 a 50 anos — máx {fmt(DEDUCAO_PPR.value.de35a50)}</option>
+              <option value="mais50">Mais de 50 anos — máx {fmt(DEDUCAO_PPR.value.mais50)}</option>
+            </select>
+          </div>
+        </div>
+        {n(pprValor) > 0 && (
+          <p className="rounded-xl bg-brand-light px-3 py-2 text-xs text-brand-dark">
+            Benefício PPR estimado: {fmt(pprBeneficio)} {n(pprValor) * DEDUCAO_PPR.value.taxa > pprLimite ? `(limitado ao teto de ${fmt(pprLimite)})` : ""}
+          </p>
+        )}
+
+        {/* Donativos */}
+        <Campo id="donativos" label="Donativos a entidades elegíveis (€)" value={donativos} onChange={setDonativos} step={50}
+          tooltip="Estatuto do Mecenato (Art. 63.º EBF): deduz 25% do donativo, até 15% da coleta. Majorações por tipo de entidade não estão modeladas." />
+        {n(donativos) > 0 && (
+          <p className="rounded-xl bg-brand-light px-3 py-2 text-xs text-brand-dark">
+            Benefício estimado: {fmt(donativoBeneficio)} ({pct(DEDUCAO_DONATIVOS.value.taxa)}) · limitado a {pct(DEDUCAO_DONATIVOS.value.limiteColeta)} da coleta
+          </p>
+        )}
+
+        <p className="text-[11px] leading-relaxed text-stone-400">
+          PPR e donativos contam para o limite global das deduções à coleta (Art. 78.º n.º 7). A dedução por ascendentes é
+          definida na etapa do agregado.
+        </p>
       </section>
     </>
   );
@@ -823,6 +883,24 @@ function PassoRevisao({
           ))}
         </div>
       </section>
+
+      {/* Visualizações executivas */}
+      {resultado.rendimentoGlobal > 0 && (
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
+            <h3 className="mb-4 font-display text-base font-semibold text-stone-800 dark:text-stone-100">Origem dos rendimentos</h3>
+            <ErrorBoundary etiqueta="o gráfico de rendimentos">
+              <DistribuicaoRendimento componentes={resultado.componentes} />
+            </ErrorBoundary>
+          </div>
+          <div className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
+            <h3 className="mb-4 font-display text-base font-semibold text-stone-800 dark:text-stone-100">Para onde vai o teu dinheiro</h3>
+            <ErrorBoundary etiqueta="o gráfico fiscal">
+              <DistribuicaoFiscal rendimentoGlobal={resultado.rendimentoGlobal} irsTotal={resultado.irsTotal} ssAnual={resultado.ssAnual} />
+            </ErrorBoundary>
+          </div>
+        </section>
+      )}
 
       {/* Memória de cálculo */}
       <MemoriaCalculo memoria={resultado.memoria} />
