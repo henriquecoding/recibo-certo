@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { m, useMotionValue, useTransform, useSpring } from "motion/react";
 import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import Nav from "@/components/Nav";
@@ -31,6 +31,7 @@ import {
   BellAlert,
   LogoMark,
   Export,
+  BarChart2,
 } from "@/components/ui/Icons";
 
 /* ── Cartão 3D com efeito tilt ao hover ────────────────────────── */
@@ -79,12 +80,12 @@ interface DemoItem {
   icon: ReactNode;
   inputLabel: string;
   inputValor: number;
-  resultados: { label: string; valor: number; destaque?: boolean }[];
+  resultados: { label: string; valor: number; pct: number; cor: string; destaque?: boolean }[];
 }
 
 /* ── Contagem animada de 0 ao alvo ────────────────────────────── */
 
-function CountUpValue({ target, delay = 0 }: { target: number; delay?: number }) {
+function CountUpValue({ target, delay = 0, suffix = " €" }: { target: number; delay?: number; suffix?: string }) {
   const [val, setVal] = useState(0);
 
   useEffect(() => {
@@ -111,10 +112,107 @@ function CountUpValue({ target, delay = 0 }: { target: number; delay?: number })
     };
   }, [target, delay]);
 
-  return <>{val.toLocaleString("pt-PT")} €</>;
+  return <>{val.toLocaleString("pt-PT")}{suffix}</>;
 }
 
-/* ── Mini simulador com loop automático ──────────────────────── */
+/* ── Contagem animada ao entrar em view (para hero) ─────────── */
+
+function CountUpOnView({ target, suffix = "", duration = 1200, decimals = 0 }: { target: number; suffix?: string; duration?: number; decimals?: number }) {
+  const [val, setVal] = useState(0);
+  const [started, setStarted] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setStarted(true); observer.disconnect(); } },
+      { threshold: 0.3 }
+    );
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!started) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setVal(target);
+      return;
+    }
+    let raf = 0;
+    const factor = Math.pow(10, decimals);
+    const start = performance.now();
+    function tick() {
+      const elapsed = performance.now() - start;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setVal(Math.round(target * eased * factor) / factor);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [started, target, duration, decimals]);
+
+  return <span ref={ref}>{val.toLocaleString("pt-PT", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}{suffix}</span>;
+}
+
+/* ── Barra de progresso animada ao entrar em view ──────────── */
+
+function AnimatedBar({ widthPct, delay = 0 }: { widthPct: number; delay?: number }) {
+  const [inView, setInView] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setInView(true); observer.disconnect(); } },
+      { threshold: 0.3 }
+    );
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className="flex h-1.5 overflow-hidden rounded-full bg-white/15">
+      <div
+        className="rounded-full bg-white/70 transition-all duration-1000 ease-out"
+        style={{
+          width: inView ? `${widthPct}%` : "0%",
+          transitionDelay: `${delay}ms`,
+        }}
+      />
+    </div>
+  );
+}
+
+/* ── Barra horizontal empilhada (stacked bar chart) ────────── */
+
+function StackedBar({ segments, animate }: { segments: { pct: number; cor: string; label: string }[]; animate: boolean }) {
+  return (
+    <div className="flex h-5 w-full overflow-hidden rounded-lg" role="img" aria-label="Distribuição percentual">
+      {segments.map((s, i) => (
+        <m.div
+          key={s.label}
+          className={`flex items-center justify-center text-[8px] font-bold text-white ${s.cor}`}
+          initial={{ width: 0 }}
+          animate={animate ? { width: `${s.pct}%` } : { width: 0 }}
+          transition={{ delay: i * 0.15, duration: 0.6, ease: EASE }}
+        >
+          {s.pct >= 12 && animate && (
+            <m.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: i * 0.15 + 0.4, duration: 0.3 }}
+            >
+              {s.pct}%
+            </m.span>
+          )}
+        </m.div>
+      ))}
+    </div>
+  );
+}
+
+/* ── Mini simulador com loop automático — versão expandida ──── */
 
 function SimuladorDemo({ config, delayMs }: { config: DemoItem; delayMs: number }) {
   const [phase, setPhase] = useState(0);
@@ -135,10 +233,10 @@ function SimuladorDemo({ config, delayMs }: { config: DemoItem; delayMs: number 
     function cycle() {
       if (cancelled) return;
       setPhase(0);
-      schedule(() => setPhase(1), 600);
-      schedule(() => setPhase(2), 1800);
-      schedule(() => setPhase(3), 3200);
-      schedule(cycle, 6500);
+      schedule(() => setPhase(1), 800);
+      schedule(() => setPhase(2), 2200);
+      schedule(() => setPhase(3), 3600);
+      schedule(cycle, 12000);
     }
 
     schedule(cycle, delayMs);
@@ -151,28 +249,39 @@ function SimuladorDemo({ config, delayMs }: { config: DemoItem; delayMs: number 
 
   const inputActive = phase >= 1;
   const resultsActive = phase >= 2;
+  const chartActive = phase >= 3;
+
+  const total = config.resultados.reduce((s, r) => s + r.valor, 0);
+
+  const barSegments = config.resultados.map((r) => ({
+    pct: r.pct,
+    cor: r.cor,
+    label: r.label,
+  }));
 
   return (
     <Card3D className="h-full">
       <div
-        className="flex h-full flex-col rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900"
-        style={{ opacity: phase === 0 ? 0.5 : 1, transition: "opacity 0.4s ease" }}
+        className="flex h-full flex-col rounded-4xl border border-stone-100 bg-white p-6 shadow-card transition-all dark:border-stone-800 dark:bg-stone-900 sm:p-7"
+        style={{ opacity: phase === 0 ? 0.4 : 1, transition: "opacity 0.5s ease" }}
       >
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-light text-brand">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-light text-brand">
             {config.icon}
           </div>
           <div>
             <div className="text-sm font-semibold text-stone-700 dark:text-stone-200">{config.titulo}</div>
-            <div className="text-[10px] text-stone-400">{config.subtitulo}</div>
+            <div className="text-[11px] text-stone-400">{config.subtitulo}</div>
           </div>
         </div>
 
-        <div className="mt-4 rounded-xl border border-stone-100 bg-stone-50/80 px-3 py-2.5 dark:border-stone-700 dark:bg-stone-800/50">
-          <div className="text-[10px] font-medium uppercase tracking-wider text-stone-400">
+        {/* Input field */}
+        <div className="mt-5 rounded-2xl border border-stone-100 bg-stone-50/80 px-4 py-3.5 dark:border-stone-700 dark:bg-stone-800/50">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
             {config.inputLabel}
           </div>
-          <div className="mt-0.5 font-display text-2xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+          <div className="mt-1 font-display text-3xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
             {inputActive ? (
               <CountUpValue target={config.inputValor} />
             ) : (
@@ -181,32 +290,85 @@ function SimuladorDemo({ config, delayMs }: { config: DemoItem; delayMs: number 
           </div>
         </div>
 
-        <div className="mt-3 flex-1 space-y-1.5">
-          {resultsActive &&
-            config.resultados.map((r, i) => (
-              <m.div
-                key={r.label}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.12, duration: 0.35, ease: EASE }}
-                className={`flex items-center justify-between rounded-xl px-3 py-2 ${
-                  r.destaque ? "bg-brand-light/70 dark:bg-brand/10" : "bg-stone-50 dark:bg-stone-800/50"
-                }`}
-              >
-                <span className="text-[11px] text-stone-500 dark:text-stone-400">{r.label}</span>
-                <span
-                  className={`text-sm font-semibold tabular-nums ${
-                    r.destaque ? "text-brand" : "text-stone-700 dark:text-stone-200"
-                  }`}
-                >
-                  <CountUpValue target={r.valor} delay={i * 120} />
-                </span>
-              </m.div>
-            ))}
+        {/* Stacked bar chart */}
+        <div className="mt-5">
+          {chartActive && (
+            <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+              <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                <BarChart2 size={12} />
+                Distribuição
+              </div>
+              <StackedBar segments={barSegments} animate={chartActive} />
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                {barSegments.map((s) => (
+                  <div key={s.label} className="flex items-center gap-1">
+                    <div className={`h-2 w-2 rounded-full ${s.cor}`} />
+                    <span className="text-[9px] text-stone-400">{s.label}</span>
+                  </div>
+                ))}
+              </div>
+            </m.div>
+          )}
         </div>
 
-        <div className="mt-3 text-center text-[9px] text-stone-300 dark:text-stone-600">
-          Exemplo · Taxas 2026
+        {/* Results table */}
+        <div className="mt-5 flex-1">
+          {resultsActive && (
+            <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+              <table className="w-full" role="table">
+                <thead>
+                  <tr className="text-[9px] font-semibold uppercase tracking-wider text-stone-400">
+                    <th scope="col" className="pb-2 text-left font-semibold">Componente</th>
+                    <th scope="col" className="pb-2 text-right font-semibold">Valor</th>
+                    <th scope="col" className="pb-2 text-right font-semibold">%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {config.resultados.map((r, i) => (
+                    <m.tr
+                      key={r.label}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.12, duration: 0.35, ease: EASE }}
+                      className={`border-t border-stone-50 dark:border-stone-800 ${
+                        r.destaque ? "bg-brand-light/40 dark:bg-brand/5" : ""
+                      }`}
+                    >
+                      <td className="py-2.5 pr-2">
+                        <div className="flex items-center gap-2">
+                          <div className={`h-2.5 w-2.5 rounded-full ${r.cor}`} />
+                          <span className={`text-xs ${r.destaque ? "font-semibold text-stone-700 dark:text-stone-200" : "text-stone-500 dark:text-stone-400"}`}>
+                            {r.label}
+                          </span>
+                        </div>
+                      </td>
+                      <td className={`py-2.5 text-right text-sm tabular-nums ${
+                        r.destaque ? "font-bold text-brand" : "font-semibold text-stone-700 dark:text-stone-200"
+                      }`}>
+                        <CountUpValue target={r.valor} delay={i * 120} />
+                      </td>
+                      <td className="py-2.5 pl-2 text-right text-[11px] tabular-nums text-stone-400">
+                        {r.pct}%
+                      </td>
+                    </m.tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-stone-200 dark:border-stone-700">
+                    <td className="pt-2 text-xs font-semibold text-stone-500">Total</td>
+                    <td className="pt-2 text-right text-sm font-bold tabular-nums text-stone-700 dark:text-stone-200">
+                      <CountUpValue target={total} delay={400} />
+                    </td>
+                    <td className="pt-2 pl-2 text-right text-[11px] tabular-nums text-stone-400">100%</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </m.div>
+          )}
+        </div>
+
+        <div className="mt-4 text-center text-[10px] text-stone-300 dark:text-stone-600">
+          Exemplo ilustrativo · Taxas 2026
         </div>
       </div>
     </Card3D>
@@ -219,37 +381,37 @@ const DEMOS: DemoItem[] = [
   {
     titulo: "Recibos Verdes",
     subtitulo: "Cat. B · Serviços",
-    icon: <Calculator size={16} />,
+    icon: <Calculator size={18} />,
     inputLabel: "Faturação mensal",
     inputValor: 2500,
     resultados: [
-      { label: "Líquido estimado", valor: 1857, destaque: true },
-      { label: "IRS (anualizado)", valor: 268 },
-      { label: "Segurança Social", valor: 375 },
+      { label: "Líquido estimado", valor: 1857, pct: 74, cor: "bg-brand", destaque: true },
+      { label: "IRS (anualizado)", valor: 268, pct: 11, cor: "bg-emerald-800" },
+      { label: "Segurança Social", valor: 375, pct: 15, cor: "bg-emerald-950" },
     ],
   },
   {
     titulo: "Recibo de Vencimento",
     subtitulo: "Solteiro · 0 dep.",
-    icon: <Receipt size={16} />,
+    icon: <Receipt size={18} />,
     inputLabel: "Salário bruto",
     inputValor: 1800,
     resultados: [
-      { label: "Líquido", valor: 1377, destaque: true },
-      { label: "IRS retido", valor: 225 },
-      { label: "Seg. Social (11%)", valor: 198 },
+      { label: "Líquido", valor: 1377, pct: 77, cor: "bg-brand", destaque: true },
+      { label: "IRS retido", valor: 225, pct: 12, cor: "bg-emerald-800" },
+      { label: "Seg. Social (11%)", valor: 198, pct: 11, cor: "bg-emerald-950" },
     ],
   },
   {
     titulo: "Simulador Empresa",
     subtitulo: "Unipessoal Lda · PME",
-    icon: <Building size={16} />,
+    icon: <Building size={18} />,
     inputLabel: "Faturação anual",
     inputValor: 80000,
     resultados: [
-      { label: "Líquido p/ sócio", valor: 48096, destaque: true },
-      { label: "IRC (15% + 19%)", valor: 13200 },
-      { label: "IRS dividendos", valor: 18704 },
+      { label: "Líquido p/ sócio", valor: 48096, pct: 60, cor: "bg-brand", destaque: true },
+      { label: "IRC (15% + 19%)", valor: 13200, pct: 17, cor: "bg-emerald-800" },
+      { label: "IRS dividendos", valor: 18704, pct: 23, cor: "bg-emerald-950" },
     ],
   },
 ];
@@ -347,26 +509,20 @@ export default function InvestidoresPage() {
                   className="font-display display-1 text-balance font-semibold text-ink"
                 >
                   O copiloto financeiro de{" "}
-                  <span className="text-brand">1,3 milhões</span> de empresas portuguesas.
+                  <span className="text-brand"><CountUpOnView target={1.3} suffix=" milhões" duration={1500} decimals={1} /></span> de empresas portuguesas.
                 </m.h1>
 
                 <m.p variants={staggerItemVariant} className="mt-6 max-w-md text-lg leading-relaxed text-stone-500">
                   Recibos verdes, vencimentos e empresas — tudo o que o Estado obriga, simplificado numa plataforma que os portugueses já usam.
                 </m.p>
 
-                <m.div variants={staggerItemVariant} className="mt-9 flex flex-wrap gap-3">
+                <m.div variants={staggerItemVariant} className="mt-9">
                   <a
                     href="mailto:investidores@recibocerto.pt?subject=Pedido%20de%20reuni%C3%A3o%20%E2%80%94%20ReciboCerto"
                     className="btn-shine inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3.5 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-float"
                   >
                     Agendar reunião
                     <ArrowRight />
-                  </a>
-                  <a
-                    href="#visao"
-                    className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-6 py-3.5 text-sm font-semibold text-stone-700 transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50"
-                  >
-                    Ver a visão
                   </a>
                 </m.div>
 
@@ -399,7 +555,7 @@ export default function InvestidoresPage() {
                         Oportunidade de mercado
                       </div>
                       <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums">
-                        1,3 M
+                        <CountUpOnView target={1.3} suffix=" M" duration={1200} decimals={1} />
                       </div>
                       <div className="mt-1 text-xs text-green-100/70">
                         empresas em Portugal — 97% micro e pequenas
@@ -407,19 +563,25 @@ export default function InvestidoresPage() {
                       <div className="mt-5 grid grid-cols-3 gap-1.5">
                         <div className="rounded-xl bg-white/10 px-2.5 py-2 backdrop-blur-sm">
                           <div className="text-[10px] leading-tight text-green-100/70">TAM</div>
-                          <div className="mt-0.5 text-xs font-semibold tabular-nums">1,3 M</div>
+                          <div className="mt-0.5 text-xs font-semibold tabular-nums">
+                            <CountUpOnView target={1.3} suffix=" M" duration={1000} decimals={1} />
+                          </div>
                         </div>
                         <div className="rounded-xl bg-white/10 px-2.5 py-2 backdrop-blur-sm">
                           <div className="text-[10px] leading-tight text-green-100/70">SAM</div>
-                          <div className="mt-0.5 text-xs font-semibold tabular-nums">~400 K</div>
+                          <div className="mt-0.5 text-xs font-semibold tabular-nums">
+                            ~<CountUpOnView target={400} suffix=" K" duration={1000} />
+                          </div>
                         </div>
                         <div className="rounded-xl bg-white/10 px-2.5 py-2 backdrop-blur-sm">
                           <div className="text-[10px] leading-tight text-green-100/70">SOM</div>
-                          <div className="mt-0.5 text-xs font-semibold tabular-nums">~50 K</div>
+                          <div className="mt-0.5 text-xs font-semibold tabular-nums">
+                            ~<CountUpOnView target={50} suffix=" K" duration={1000} />
+                          </div>
                         </div>
                       </div>
-                      <div className="mt-4 flex h-1.5 overflow-hidden rounded-full bg-white/15">
-                        <div className="rounded-full bg-white/70" style={{ width: "4%" }} />
+                      <div className="mt-4">
+                        <AnimatedBar widthPct={4} delay={600} />
                       </div>
                       <div className="mt-1 text-[11px] text-green-100/50">
                         Penetração atual — espaço massivo de crescimento
@@ -435,7 +597,7 @@ export default function InvestidoresPage() {
               O PRODUTO EM AÇÃO — Demos animados dos simuladores
               ═══════════════════════════════════════════════════════ */}
           <section className="border-y border-stone-100 bg-white px-6 py-24 dark:border-stone-800">
-            <div className="mx-auto max-w-5xl">
+            <div className="mx-auto max-w-6xl">
               <Reveal className="mb-14 max-w-2xl">
                 <div className="eyebrow mb-3 text-brand">O produto em ação</div>
                 <h2 className="font-display display-2 text-balance font-semibold text-ink">
@@ -446,10 +608,10 @@ export default function InvestidoresPage() {
                 </p>
               </Reveal>
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {DEMOS.map((d, i) => (
                   <Reveal key={d.titulo} delay={i * 0.08}>
-                    <SimuladorDemo config={d} delayMs={i * 2200} />
+                    <SimuladorDemo config={d} delayMs={i * 2500} />
                   </Reveal>
                 ))}
               </div>
