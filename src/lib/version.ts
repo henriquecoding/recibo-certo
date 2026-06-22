@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.57.0";
+export const APP_VERSION = "1.58.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.58.0",
+    data: "2026-06-22",
+    titulo: "Animação do hero profissional e correção da página de investidores",
+    itens: [
+      "Animação do cartão hero da homepage completamente reescrita: sequência profissional de 6 fases — foco no campo de input com brilho verde, digitação com ritmo humano e correção deliberada de erro, pausa de cálculo com shimmer, e resultado com contagem animada suave. Cada perfil tem a sua sequência única de digitação.",
+      "Linhas de detalhe no cartão hero agora cascateiam com animação individual (slide + fade), e a barra de proporções, badge de percentagem, caixa de info/alerta e nota de rodapé entram sequencialmente.",
+      "Página de investidores já não salta automaticamente para o formulário ao carregar — removido autoFocus do campo de nome que forçava o scroll.",
+    ],
+  },
   {
     version: "1.57.0",
     data: "2026-06-22",
