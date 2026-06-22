@@ -6,9 +6,10 @@ import {
   listarAnunciosTodos,
   contarUtilizadores,
   contarWaitlist,
+  contarPropostas,
   type AnuncioRow,
 } from "@/lib/supabase/admin";
-import { Megaphone, ArrowRight, Plus, BellAlert, Eye, EyeOff } from "@/components/ui/Icons";
+import { Megaphone, ArrowRight, Plus, BellAlert, Briefcase, Eye, EyeOff } from "@/components/ui/Icons";
 
 const TIPO_COR: Record<string, string> = {
   parceiro: "bg-emerald-500",
@@ -28,14 +29,16 @@ export default function AdminHome() {
   const [anuncios, setAnuncios] = useState<AnuncioRow[]>([]);
   const [nUtilizadores, setNUtilizadores] = useState(0);
   const [nWaitlist, setNWaitlist] = useState(0);
+  const [nPropostas, setNPropostas] = useState(0);
   const [carregado, setCarregado] = useState(false);
 
   useEffect(() => {
-    Promise.all([listarAnunciosTodos(), contarUtilizadores(), contarWaitlist()])
-      .then(([a, u, w]) => {
+    Promise.all([listarAnunciosTodos(), contarUtilizadores(), contarWaitlist(), contarPropostas()])
+      .then(([a, u, w, p]) => {
         setAnuncios(a);
         setNUtilizadores(u);
         setNWaitlist(w);
+        setNPropostas(p);
         setCarregado(true);
       })
       .catch(() => setCarregado(true));
@@ -54,11 +57,12 @@ export default function AdminHome() {
       </header>
 
       {/* Estatísticas */}
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard label="Anúncios ativos" value={carregado ? ativos : "—"} total={carregado ? anuncios.length : undefined} cor="brand" />
         <StatCard label="Total anúncios" value={carregado ? anuncios.length : "—"} cor="stone" />
         <StatCard label="Utilizadores" value={carregado ? nUtilizadores : "—"} cor="stone" />
         <StatCard label="Lista de espera" value={carregado ? nWaitlist : "—"} cor="stone" />
+        <StatCard label="Propostas" value={carregado ? nPropostas : "—"} cor="brand" />
       </div>
 
       {/* Acções rápidas */}
@@ -74,6 +78,12 @@ export default function AdminHome() {
           titulo="Novo anúncio"
           descricao="Criar um anúncio para aparecer nas páginas do dashboard ou landing."
           icon={<Plus size={20} />}
+        />
+        <ActionCard
+          href="/admin/propostas"
+          titulo="Propostas investidores"
+          descricao={`${carregado ? nPropostas : "—"} proposta${nPropostas !== 1 ? "s" : ""} de investimento recebida${nPropostas !== 1 ? "s" : ""}.`}
+          icon={<Briefcase size={20} />}
         />
         <ActionCard
           href="/admin/waitlist"

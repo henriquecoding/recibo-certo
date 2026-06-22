@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.55.0";
+export const APP_VERSION = "1.60.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -18,7 +18,7 @@ export interface EntradaChangelog {
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
-    version: "1.55.0",
+    version: "1.60.0",
     data: "2026-06-22",
     titulo: "Dashboard alinhado com o simulador",
     itens: [
@@ -27,6 +27,75 @@ export const CHANGELOG: EntradaChangelog[] = [
       "Corrigida a perda destes valores nas contas na nuvem (Pro): eram descartados ao recarregar da base de dados e o painel voltava a mostrar a retenção na fonte. Passam a ser preservados de forma fiável.",
       "Sincronização na nuvem (Pro) dos valores do simulador entre dispositivos, com degradação segura enquanto a base de dados não tiver a nova coluna.",
       "Rótulo «Retenção IRS» substituído por «IRS estimado» no painel e na página de recibos, para refletir que o valor corresponde ao IRS real (não à retenção na fonte).",
+    ],
+  },
+  {
+    version: "1.59.0",
+    data: "2026-06-22",
+    titulo: "Hero com animação em loop contínuo e indicador de fase",
+    itens: [
+      "Animação do cartão hero agora corre em loop contínuo: após o resultado aparecer, fica estático 4 segundos e reinicia suavemente com fade-out e fade-in — repete-se indefinidamente enquanto a página está aberta.",
+      "Novo indicador de fase abaixo do cartão — três passos (Insere o valor → Calcula → Resultado) com pontos e linhas que progridem e iluminam a verde conforme a animação avança. Dá contexto visual ao que está a acontecer.",
+      "Indicador «Demo ao vivo» acima do cartão com ponto verde pulsante, enquadrando a simulação como demonstração em tempo real.",
+      "Fase de cálculo melhorada: barra de progresso verde varre a base do campo de input em vez de simples pulsação, transmitindo processamento real.",
+      "Superfície do cartão agora reage à fase da animação: sombra e borda mudam subtilmente entre idle (card), focado (lift) e resultado (float + borda verde).",
+      "Layout reestruturado: grelha ajustada para dar mais espaço ao painel de simulação (1fr / 1.1fr), alinhamento ao topo para composição mais limpa.",
+    ],
+  },
+  {
+    version: "1.58.0",
+    data: "2026-06-22",
+    titulo: "Animação do hero profissional e correção da página de investidores",
+    itens: [
+      "Animação do cartão hero da homepage completamente reescrita: sequência profissional de 6 fases — foco no campo de input com brilho verde, digitação com ritmo humano e correção deliberada de erro, pausa de cálculo com shimmer, e resultado com contagem animada suave. Cada perfil tem a sua sequência única de digitação.",
+      "Linhas de detalhe no cartão hero agora cascateiam com animação individual (slide + fade), e a barra de proporções, badge de percentagem, caixa de info/alerta e nota de rodapé entram sequencialmente.",
+      "Página de investidores já não salta automaticamente para o formulário ao carregar — removido autoFocus do campo de nome que forçava o scroll.",
+    ],
+  },
+  {
+    version: "1.57.0",
+    data: "2026-06-22",
+    titulo: "Hero da homepage animado e correções visuais nos investidores",
+    itens: [
+      "Cartão-resposta do hero da homepage agora tem animação de digitação: os números aparecem como se alguém estivesse a escrever, com cursor a piscar. Ao terminar, os resultados surgem com contagem animada e as barras de detalhe expandem suavemente. A animação reinicia ao trocar de perfil (independente, dependente, empresa, comparar).",
+      "Cartões dos demos de investidores (/investidores) agora têm altura mínima fixa (540px mobile, 560px desktop) — a animação já não faz a página saltar ao alternar fases.",
+      "Texto nos cartões verdes (hero do investidores e visão 'Agora') agora usa branco com opacidade elevada em vez de green-100 — contraste muito mais legível.",
+    ],
+  },
+  {
+    version: "1.56.1",
+    data: "2026-06-22",
+    titulo: "Hero do investidores com CTA para o produto",
+    itens: [
+      "Botão principal do hero agora leva à secção 'O produto em ação' para que o visitante veja o pitch antes de submeter uma proposta.",
+      "Botão secundário 'Submeter proposta' adicionado ao hero para acesso direto ao formulário.",
+    ],
+  },
+  {
+    version: "1.56.0",
+    data: "2026-06-22",
+    titulo: "Formulário de propostas para investidores e painel de administração",
+    itens: [
+      "Novo formulário de proposta de investimento na página /investidores: com separadores (Identificação, Detalhes, Mensagem), barra de progresso e campos opcionais expansíveis — pode ser preenchido rapidamente ou com detalhe completo.",
+      "As propostas são guardadas na base de dados Supabase com RLS: qualquer visitante pode submeter, apenas administradores podem consultar e gerir.",
+      "Novo painel de administração em /admin/propostas: listagem com filtros por estado (pendente, em análise, contactado, aprovado, rejeitado), detalhes expansíveis, notas internas e ações rápidas de estado.",
+      "Contagem de propostas adicionada ao painel principal de administração.",
+      "Animação 3D de tilt ao hover removida de todos os cartões — substituída por elevação suave (translate Y) mais acessível e com melhor desempenho.",
+      "CTA do hero e secção final substituídos de mailto por âncora para o formulário de proposta integrado na página.",
+    ],
+  },
+  {
+    version: "1.55.0",
+    data: "2026-06-22",
+    titulo: "Demos de investidores com digitação realista e gráfico donut",
+    itens: [
+      "Animação de digitação realista nos simuladores: cursor vertical a piscar, dígitos aparecem um a um como se alguém estivesse a escrever, com erros de digitação e correções ocasionais — cada demo tem o seu ritmo.",
+      "Gráfico donut animado em SVG mostra a distribuição líquido/IRS/SS em cada simulador, com segmentos que crescem e percentagem central em destaque.",
+      "Barras de progresso por componente acompanham os resultados, com contagem animada dos valores.",
+      "Cartões de demo redesenhados: barra de gradiente no topo, ícone com fundo degradê, focus ring no campo de input e sombras refinadas.",
+      "Ciclo de animação alargado para 14 segundos com ~9 s de espera antes de reiniciar.",
+      "Dados no hero animados: TAM/SAM/SOM e '1,3 milhões' contam de zero ao alvo ao entrar em ecrã; barra de penetração anima ao scroll.",
+      "Botão 'Ver a visão' removido do hero.",
     ],
   },
   {
