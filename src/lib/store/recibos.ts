@@ -163,9 +163,45 @@ interface ReciboRow {
   regime_iva: string;
   base_ss: string;
   dispensa_retencao: boolean;
+  // Coluna jsonb opcional (migração 016). Ausente se a migração não foi aplicada.
+  computed?: unknown;
+}
+
+// Capacidade da BD: a coluna `computed` (migração 016) pode ainda não existir.
+// Detetamos uma vez por sessão e degradamos sem partir gravações; num
+// recarregamento futuro (após aplicar a migração) volta a ser tentada.
+let colunaComputedDisponivel = true;
+
+/** Erro do PostgREST/Postgres por a coluna `computed` não existir no schema. */
+function ehErroColunaComputed(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { code?: string; message?: string };
+  // PGRST204: coluna não encontrada no schema cache. 42703: undefined_column.
+  if (e.code === "PGRST204" || e.code === "42703") return true;
+  return (
+    typeof e.message === "string" &&
+    /computed/i.test(e.message) &&
+    /(column|coluna|schema cache)/i.test(e.message)
+  );
+}
+
+/** Valida e normaliza o jsonb `computed` vindo da BD. */
+function parseComputed(v: unknown): ReciboComputed | undefined {
+  if (!v || typeof v !== "object") return undefined;
+  const o = v as Record<string, unknown>;
+  const num = (x: unknown) => (typeof x === "number" && Number.isFinite(x) ? x : undefined);
+  const irsEstimado = num(o.irsEstimado);
+  const segSocial = num(o.segSocial);
+  const iva = num(o.iva);
+  const liquido = num(o.liquido);
+  if (irsEstimado === undefined || segSocial === undefined || iva === undefined || liquido === undefined) {
+    return undefined;
+  }
+  return { irsEstimado, segSocial, iva, liquido };
 }
 
 function fromRow(r: ReciboRow): Recibo {
+  const computed = parseComputed(r.computed);
   return {
     id: r.id,
     data: r.data,
@@ -177,11 +213,12 @@ function fromRow(r: ReciboRow): Recibo {
     regimeIVA: r.regime_iva as RegimeIVA,
     baseSS: r.base_ss as BaseSS,
     dispensaRetencao: !!r.dispensa_retencao,
+    ...(computed ? { _computed: computed } : {}),
   };
 }
 
 function toRow(r: Recibo, userId: string) {
-  return {
+  const base = {
     id: r.id,
     user_id: userId,
     data: r.data,
@@ -194,6 +231,9 @@ function toRow(r: Recibo, userId: string) {
     base_ss: r.baseSS,
     dispensa_retencao: r.dispensaRetencao,
   };
+  // Só inclui `computed` enquanto a coluna for tida como disponível — assim, se
+  // a migração 016 ainda não foi aplicada, o insert/update não falha.
+  return colunaComputedDisponivel ? { ...base, computed: r._computed ?? null } : base;
 }
 
 async function cloudList(userId: string): Promise<Recibo[]> {
@@ -204,6 +244,24 @@ async function cloudList(userId: string): Promise<Recibo[]> {
     .order("data", { ascending: false });
   if (error) throw error;
   return (data ?? []).map((r) => fromRow(r as ReciboRow));
+}
+
+/**
+ * Corre uma escrita no Supabase de forma resiliente à coluna `computed`
+ * (migração 016): se falhar por a coluna não existir, marca-a indisponível e
+ * repete a operação — `toRow` deixa então de a incluir. Assim as gravações
+ * nunca partem antes de a migração ser aplicada; o cache local cobre os
+ * valores até lá. Após aplicar a migração, a sessão seguinte volta a usá-la.
+ */
+async function escreverResiliente(op: () => Promise<{ error: unknown }>): Promise<void> {
+  const { error } = await op();
+  if (error && colunaComputedDisponivel && ehErroColunaComputed(error)) {
+    colunaComputedDisponivel = false;
+    const { error: erroRetry } = await op();
+    if (erroRetry) throw erroRetry;
+    return;
+  }
+  if (error) throw error;
 }
 
 // ─── Conversão para o motor de cálculo ──────────────────────────────────
@@ -364,10 +422,12 @@ export function useRecibos() {
     (novo: NovoRecibo) => {
       const recibo: Recibo = { ...novo, id: uid() };
       cacheComputed(recibo.id, recibo._computed);
-      persistir([recibo, ...recibos], async () => {
-        const { error } = await getSupabase().from("recibos").insert(toRow(recibo, userId!));
-        if (error) throw error;
-      });
+      persistir([recibo, ...recibos], () =>
+        escreverResiliente(async () => {
+          const { error } = await getSupabase().from("recibos").insert(toRow(recibo, userId!));
+          return { error };
+        }),
+      );
     },
     [recibos, persistir, userId]
   );
@@ -378,14 +438,15 @@ export function useRecibos() {
       cacheComputed(id, recibo._computed);
       persistir(
         recibos.map((r) => (r.id === id ? recibo : r)),
-        async () => {
-          const { error } = await getSupabase()
-            .from("recibos")
-            .update(toRow(recibo, userId!))
-            .eq("id", id)
-            .eq("user_id", userId!);
-          if (error) throw error;
-        }
+        () =>
+          escreverResiliente(async () => {
+            const { error } = await getSupabase()
+              .from("recibos")
+              .update(toRow(recibo, userId!))
+              .eq("id", id)
+              .eq("user_id", userId!);
+            return { error };
+          }),
       );
     },
     [recibos, persistir, userId]
@@ -421,10 +482,14 @@ export function useRecibos() {
       setLocaisPorImportar(0);
       return;
     }
-    const { error } = await getSupabase()
-      .from("recibos")
-      .upsert(locais.map((r) => toRow(r, userId)), { onConflict: "id" });
-    if (error) {
+    try {
+      await escreverResiliente(async () => {
+        const { error } = await getSupabase()
+          .from("recibos")
+          .upsert(locais.map((r) => toRow(r, userId)), { onConflict: "id" });
+        return { error };
+      });
+    } catch (error) {
       console.error("[recibos] erro ao importar locais:", error);
       return;
     }

@@ -25,6 +25,7 @@ export const CHANGELOG: EntradaChangelog[] = [
       "Os valores exibidos no painel (IRS, Seg. Social, líquido) passam a corresponder exatamente ao que o simulador calculou — usando o IRS real estimado da simulação anual em vez da retenção na fonte.",
       "Recibos guardados no painel carregam agora os resultados pré-calculados do simulador, eliminando recálculos e garantindo consistência entre a calculadora e o dashboard.",
       "Corrigida a perda destes valores nas contas na nuvem (Pro): eram descartados ao recarregar da base de dados e o painel voltava a mostrar a retenção na fonte. Passam a ser preservados de forma fiável.",
+      "Sincronização na nuvem (Pro) dos valores do simulador entre dispositivos, com degradação segura enquanto a base de dados não tiver a nova coluna.",
       "Rótulo «Retenção IRS» substituído por «IRS estimado» no painel e na página de recibos, para refletir que o valor corresponde ao IRS real (não à retenção na fonte).",
     ],
   },
