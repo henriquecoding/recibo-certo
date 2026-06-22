@@ -2604,7 +2604,7 @@ function ResultadoFinal({
   const pcIRS = brutoAnual > 0 ? simAnual.irsEstimado / brutoAnual : 0;
   const pcSS = brutoAnual > 0 ? ssAnual / brutoAnual : 0;
   const pcIVA = (brutoAnual + ivaAnual) > 0 ? ivaAnual / (brutoAnual + ivaAnual) : 0;
-  const liquidoMes = Math.round(liquidoFinal / Math.max(1, recibosAno));
+  const liquidoMes = liquidoFinal / Math.max(1, recibosAno);
 
   // Nomes dos meses para o calendário
   const MESES_PT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -2674,7 +2674,7 @@ function ResultadoFinal({
             <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
               <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">IRS anual</p>
               <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
-                {fmt(Math.round(simAnual.irsEstimado))}
+                {fmt(simAnual.irsEstimado)}
               </p>
               <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{pct(pcIRS)} do faturado</p>
             </div>
@@ -2684,7 +2684,7 @@ function ResultadoFinal({
                 {isencaoCpas ? "SS*" : "Seg. Social"}
               </p>
               <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
-                {isencaoCpas ? "—" : fmt(Math.round(ssAnual))}
+                {isencaoCpas ? "—" : fmt(ssAnual)}
               </p>
               <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">
                 {isencaoCpas ? "CPAS" : `${pct(pcSS)} do faturado`}
@@ -2695,7 +2695,7 @@ function ResultadoFinal({
               <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
                 <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">IVA cobrado</p>
                 <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
-                  {fmt(Math.round(ivaAnual))}
+                  {fmt(ivaAnual)}
                 </p>
                 <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{pct(pcIVA)} do total</p>
               </div>
@@ -2707,7 +2707,7 @@ function ResultadoFinal({
                 {fmt(liquidoMes)}
               </p>
               <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">
-                {fmt(Math.round(brutoAnual / Math.max(1, recibosAno)))} faturado
+                {fmt(brutoAnual / Math.max(1, recibosAno))} faturado
               </p>
             </div>
           </div>
@@ -2869,7 +2869,7 @@ function ResultadoFinal({
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-xs font-semibold tabular-nums text-red-500 dark:text-red-400">{fmt(Math.round(simAnual.irsEstimado))}</span>
+            <span className="text-xs font-semibold tabular-nums text-red-500 dark:text-red-400">{fmt(simAnual.irsEstimado)}</span>
             <ChevronDown size={13} className={`text-stone-400 transition-transform ${mostrarBloco2 ? "rotate-180" : ""}`} />
           </div>
         </button>
@@ -3052,13 +3052,13 @@ function ResultadoFinal({
                                 : `acima de ${fmt(simAnual.escaloesAplicados[i - 1]?.ate ?? 0)}`}
                             </td>
                             <td className="px-3 py-1.5 text-right tabular-nums text-stone-600 dark:text-stone-300">
-                              {fmt(Math.round(e.rendimento))}
+                              {fmt(e.rendimento)}
                             </td>
                             <td className="px-3 py-1.5 text-right tabular-nums font-semibold text-stone-700 dark:text-stone-200">
                               {pct(e.taxa)}
                             </td>
                             <td className="px-3 py-1.5 text-right tabular-nums text-red-500 dark:text-red-400">
-                              {fmt(Math.round(e.imposto))}
+                              {fmt(e.imposto)}
                             </td>
                           </tr>
                         ))}
@@ -3070,7 +3070,7 @@ function ResultadoFinal({
                             Total coleta
                           </td>
                           <td className="px-3 py-1.5 text-right tabular-nums font-bold text-red-500 dark:text-red-400">
-                            {fmt(Math.round(simAnual.coletaBruta))}
+                            {fmt(simAnual.coletaBruta)}
                           </td>
                         </tr>
                       </tbody>
@@ -3373,12 +3373,12 @@ function PainelResultadoVivo({
               <AnimatedNumber
                 value={Math.max(
                   0,
-                  Math.round(liquidoAnual / Math.max(1, recibosAno)),
+                  liquidoAnual / Math.max(1, recibosAno),
                 )}
               />
             </div>
             <div className="mt-0.5 text-[11px] text-green-100/50">
-              {fmt(brutoAnual > 0 ? Math.round(brutoAnual / Math.max(1, recibosAno)) : 0)}{" "}
+              {fmt(brutoAnual > 0 ? brutoAnual / Math.max(1, recibosAno) : 0)}{" "}
               faturado/mês
             </div>
           </div>

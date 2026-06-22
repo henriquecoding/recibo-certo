@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.26.0";
+export const APP_VERSION = "1.26.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.26.1",
+    data: "2026-06-22",
+    titulo: "Valores exatos no simulador guiado de recibos verdes",
+    itens: [
+      "O resultado do simulador guiado passou a mostrar valores ao cêntimo (líquido/mês, Segurança Social, IRS e IVA), alinhados com os recibos guardados no painel — sem arredondamentos ao euro.",
+      "Corrigida a pequena diferença entre o líquido mostrado no simulador e o líquido dos recibos (eram o mesmo cálculo, divergiam só na apresentação).",
+    ],
+  },
   {
     version: "1.26.0",
     data: "2026-06-21",
