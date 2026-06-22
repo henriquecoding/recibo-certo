@@ -1,16 +1,18 @@
 "use client";
 
-import Link from "next/link";
-import { m } from "motion/react";
+import { useState, useEffect } from "react";
+import { m, useMotionValue, useTransform, useSpring } from "motion/react";
+import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import Reveal from "@/components/ui/Reveal";
 import { StaggerGroup, StaggerItem } from "@/components/ui/motion/Stagger";
 import {
   staggerContainer,
-  staggerItem,
+  staggerItem as staggerItemVariant,
   fadeUp,
   inViewOnce,
+  EASE,
 } from "@/lib/motion";
 import {
   ArrowRight,
@@ -19,114 +21,302 @@ import {
   Flag,
   Globe,
   Building,
-  CheckTrend,
   Wallet,
   Receipt,
   Zap,
   Target,
-  Rocket,
   ChartProjection,
-  Bank,
   Mail,
-  Briefcase,
   Calculator,
-  Clock,
   BellAlert,
+  LogoMark,
   Export,
 } from "@/components/ui/Icons";
 
-/* ── Dados das secções ─────────────────────────────────────────── */
+/* ── Cartão 3D com efeito tilt ao hover ────────────────────────── */
 
-const DOR_MERCADO = [
+function Card3D({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [8, -8]), { stiffness: 300, damping: 30 });
+  const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-8, 8]), { stiffness: 300, damping: 30 });
+
+  function handleMouse(e: ReactMouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    x.set((e.clientX - rect.left) / rect.width - 0.5);
+    y.set((e.clientY - rect.top) / rect.height - 0.5);
+  }
+
+  function handleLeave() {
+    x.set(0);
+    y.set(0);
+  }
+
+  return (
+    <m.div
+      className={className}
+      style={{ rotateX, rotateY, transformPerspective: 800, transformStyle: "preserve-3d" }}
+      onMouseMove={handleMouse}
+      onMouseLeave={handleLeave}
+    >
+      {children}
+    </m.div>
+  );
+}
+
+/* ── Tipo do demo ─────────────────────────────────────────────── */
+
+interface DemoItem {
+  titulo: string;
+  subtitulo: string;
+  icon: ReactNode;
+  inputLabel: string;
+  inputValor: number;
+  resultados: { label: string; valor: number; destaque?: boolean }[];
+}
+
+/* ── Contagem animada de 0 ao alvo ────────────────────────────── */
+
+function CountUpValue({ target, delay = 0 }: { target: number; delay?: number }) {
+  const [val, setVal] = useState(0);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setVal(target);
+      return;
+    }
+    let raf = 0;
+    const timer = setTimeout(() => {
+      const duration = 900;
+      const start = performance.now();
+      function tick() {
+        const elapsed = performance.now() - start;
+        const t = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - t, 3);
+        setVal(Math.round(target * eased));
+        if (t < 1) raf = requestAnimationFrame(tick);
+      }
+      raf = requestAnimationFrame(tick);
+    }, delay);
+    return () => {
+      clearTimeout(timer);
+      cancelAnimationFrame(raf);
+    };
+  }, [target, delay]);
+
+  return <>{val.toLocaleString("pt-PT")} €</>;
+}
+
+/* ── Mini simulador com loop automático ──────────────────────── */
+
+function SimuladorDemo({ config, delayMs }: { config: DemoItem; delayMs: number }) {
+  const [phase, setPhase] = useState(0);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setPhase(3);
+      return;
+    }
+
+    let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    function schedule(fn: () => void, ms: number) {
+      timers.push(setTimeout(() => { if (!cancelled) fn(); }, ms));
+    }
+
+    function cycle() {
+      if (cancelled) return;
+      setPhase(0);
+      schedule(() => setPhase(1), 600);
+      schedule(() => setPhase(2), 1800);
+      schedule(() => setPhase(3), 3200);
+      schedule(cycle, 6500);
+    }
+
+    schedule(cycle, delayMs);
+
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+    };
+  }, [delayMs]);
+
+  const inputActive = phase >= 1;
+  const resultsActive = phase >= 2;
+
+  return (
+    <Card3D className="h-full">
+      <div
+        className="flex h-full flex-col rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900"
+        style={{ opacity: phase === 0 ? 0.5 : 1, transition: "opacity 0.4s ease" }}
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-light text-brand">
+            {config.icon}
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-stone-700 dark:text-stone-200">{config.titulo}</div>
+            <div className="text-[10px] text-stone-400">{config.subtitulo}</div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-stone-100 bg-stone-50/80 px-3 py-2.5 dark:border-stone-700 dark:bg-stone-800/50">
+          <div className="text-[10px] font-medium uppercase tracking-wider text-stone-400">
+            {config.inputLabel}
+          </div>
+          <div className="mt-0.5 font-display text-2xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+            {inputActive ? (
+              <CountUpValue target={config.inputValor} />
+            ) : (
+              <span className="text-stone-300 dark:text-stone-600">0 €</span>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-3 flex-1 space-y-1.5">
+          {resultsActive &&
+            config.resultados.map((r, i) => (
+              <m.div
+                key={r.label}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.12, duration: 0.35, ease: EASE }}
+                className={`flex items-center justify-between rounded-xl px-3 py-2 ${
+                  r.destaque ? "bg-brand-light/70 dark:bg-brand/10" : "bg-stone-50 dark:bg-stone-800/50"
+                }`}
+              >
+                <span className="text-[11px] text-stone-500 dark:text-stone-400">{r.label}</span>
+                <span
+                  className={`text-sm font-semibold tabular-nums ${
+                    r.destaque ? "text-brand" : "text-stone-700 dark:text-stone-200"
+                  }`}
+                >
+                  <CountUpValue target={r.valor} delay={i * 120} />
+                </span>
+              </m.div>
+            ))}
+        </div>
+
+        <div className="mt-3 text-center text-[9px] text-stone-300 dark:text-stone-600">
+          Exemplo · Taxas 2026
+        </div>
+      </div>
+    </Card3D>
+  );
+}
+
+/* ── Dados ─────────────────────────────────────────────────────── */
+
+const DEMOS: DemoItem[] = [
   {
-    metric: "1,3 M",
-    label: "empresas em Portugal",
-    sub: "97% são micro e pequenas — o nosso mercado principal.",
+    titulo: "Recibos Verdes",
+    subtitulo: "Cat. B · Serviços",
+    icon: <Calculator size={16} />,
+    inputLabel: "Faturação mensal",
+    inputValor: 2500,
+    resultados: [
+      { label: "Líquido estimado", valor: 1857, destaque: true },
+      { label: "IRS (anualizado)", valor: 268 },
+      { label: "Segurança Social", valor: 375 },
+    ],
   },
   {
-    metric: "15 h/mês",
-    label: "em tarefas administrativas",
-    sub: "Tempo médio perdido por PME com faturação e tesouraria manual.",
+    titulo: "Recibo de Vencimento",
+    subtitulo: "Solteiro · 0 dep.",
+    icon: <Receipt size={16} />,
+    inputLabel: "Salário bruto",
+    inputValor: 1800,
+    resultados: [
+      { label: "Líquido", valor: 1377, destaque: true },
+      { label: "IRS retido", valor: 225 },
+      { label: "Seg. Social (11%)", valor: 198 },
+    ],
   },
   {
-    metric: "25%",
-    label: "de insucesso por iliquidez",
-    sub: "Falhas de cobrança e tesouraria fragmentada afetam 1 em 4 PMEs.",
+    titulo: "Simulador Empresa",
+    subtitulo: "Unipessoal Lda · PME",
+    icon: <Building size={16} />,
+    inputLabel: "Faturação anual",
+    inputValor: 80000,
+    resultados: [
+      { label: "Líquido p/ sócio", valor: 48096, destaque: true },
+      { label: "IRC (15% + 19%)", valor: 13200 },
+      { label: "IRS dividendos", valor: 18704 },
+    ],
   },
 ];
 
-const SOLUCAO = [
+const MAIS_FEATURES = [
+  { icon: <BellAlert size={12} />, label: "Alertas de prazos" },
+  { icon: <Wallet size={12} />, label: "Mealheiro fiscal" },
+  { icon: <ChartProjection size={12} />, label: "Comparador de cenários" },
+  { icon: <Zap size={12} />, label: "Quiz Fiscal" },
+  { icon: <Export size={12} />, label: "Exportação PDF e CSV" },
+];
+
+const VISAO = [
   {
-    icon: <Receipt size={20} />,
-    titulo: "Faturação regulada",
-    desc: "Emissão certificada pela AT com ATCUD, QR Code e SAF-T automático.",
+    fase: "Agora",
+    titulo: "Copiloto fiscal",
+    desc: "Calculadoras, simuladores e alertas para trabalhadores independentes, dependentes e empresas. Plano freemium com Pro.",
+    ativo: true,
   },
   {
-    icon: <Wallet size={20} />,
+    fase: "Próximo",
     titulo: "Pagamentos integrados",
-    desc: "Links de pagamento diretos — Multibanco, MB WAY, cartão e SEPA.",
+    desc: "Links de cobrança diretos nas faturas — Multibanco, MB WAY, cartão e SEPA. Take rate transacional sobre cada pagamento.",
+    ativo: false,
   },
   {
-    icon: <Bank size={20} />,
-    titulo: "Reconciliação bancária",
-    desc: "Ligação em tempo real via Open Banking para conciliar automaticamente.",
-  },
-  {
-    icon: <BellAlert size={20} />,
-    titulo: "Alertas e automação",
-    desc: "Lembretes de prazos fiscais, cobranças inteligentes e mealheiro fiscal.",
+    fase: "Futuro",
+    titulo: "Infraestrutura financeira",
+    desc: "Reconciliação bancária via Open Banking, adiantamento de faturas e crédito integrado. De utilidade fiscal a fintech SaaS.",
+    ativo: false,
   },
 ];
 
-const METRICAS = [
-  { sigla: "ARR", titulo: "Annual Recurring Revenue", desc: "Projeção anual de receita recorrente das subscrições ativas." },
-  { sigla: "LTV:CAC", titulo: "Eficiência de aquisição", desc: "Rácio entre valor de vida do cliente e custo de aquisição ≥ 3:1." },
-  { sigla: "NDR", titulo: "Net Revenue Retention", desc: "Receita retida da base existente, incluindo expansão e upgrades." },
-  { sigla: "MoM", titulo: "Crescimento mensal", desc: "Taxa de crescimento mês a mês da receita recorrente mensal (MRR)." },
+const METRICAS_MODELO = [
+  { label: "Modelo", valor: "Freemium + Pro", sub: "SaaS recorrente" },
+  { label: "Expansão", valor: "Take rate", sub: "Sobre pagamentos processados" },
+  { label: "Retenção", valor: "Alta", sub: "Ferramenta operacional diária" },
+  { label: "Distribuição", valor: "PLG + parcerias", sub: "Cada fatura = marketing" },
 ];
 
-const GTM = [
+const VANTAGENS = [
   {
-    icon: <Calculator size={18} />,
-    titulo: "Parcerias com contabilistas",
-    desc: "Canal de distribuição indireta: gabinetes de contabilidade certificados recomendam a ferramenta aos seus clientes.",
+    icon: <Lock size={18} />,
+    titulo: "Fosso regulatório",
+    desc: "Certificação pela AT e conformidade fiscal portuguesa protegem contra entrantes internacionais.",
+  },
+  {
+    icon: <Globe size={18} />,
+    titulo: "Expansão europeia",
+    desc: "Arquitetura preparada para regimes de faturação eletrónica semelhantes na UE e América Latina.",
   },
   {
     icon: <Zap size={18} />,
     titulo: "Product-Led Growth",
-    desc: "Cada fatura emitida e cada link de pagamento enviado funciona como marketing viral — o recetor conhece a plataforma.",
+    desc: "Cada fatura e link de pagamento emitido é marketing para o recetor — CAC orgânico decrescente.",
   },
   {
-    icon: <Globe size={18} />,
-    titulo: "Integrações e-commerce",
-    desc: "Plugins prontos para plataformas de comércio eletrónico: faturação integrada e pagamentos locais automatizados.",
+    icon: <Target size={18} />,
+    titulo: "1,3M de empresas",
+    desc: "97% do tecido empresarial português são micro e pequenas empresas — o nosso mercado.",
   },
 ];
 
-const CONFORMIDADE = [
-  { icon: <ShieldCheck size={16} />, texto: "Software certificado pela AT" },
-  { icon: <Flag size={16} />, texto: "Conformidade RGPD e PSD2" },
-  { icon: <Lock size={16} />, texto: "Encriptação bancária SSL/TLS" },
-  { icon: <Globe size={16} />, texto: "Dados em servidores na UE" },
-];
-
-const VANTAGENS_COMPETITIVAS = [
-  {
-    titulo: "Barreira regulatória local",
-    desc: "Certificação pela AT e conformidade com o regime fiscal português criam um fosso competitivo difícil de replicar por entrantes internacionais.",
-  },
-  {
-    titulo: "Escalabilidade europeia",
-    desc: "A arquitetura da plataforma está preparada para adaptar-se a regimes de faturação eletrónica semelhantes na Europa e América Latina.",
-  },
-  {
-    titulo: "Modelo de receita híbrido",
-    desc: "Subscrição SaaS de alta margem combinada com take rate transacional — receita cresce com o volume de negócios dos clientes.",
-  },
-  {
-    titulo: "Moat de dados",
-    desc: "Fluxos de caixa em tempo real geram insights proprietários que aumentam a retenção e abrem oportunidades de serviços financeiros.",
-  },
+const CONFIANCA = [
+  { icon: <ShieldCheck size={14} />, texto: "Taxas de 2026 verificadas com fonte AT" },
+  { icon: <Flag size={14} />, texto: "Dados em servidores na UE · RGPD" },
+  { icon: <Lock size={14} />, texto: "Código auditado · sem dados fiscais inventados" },
 ];
 
 /* ── Componente ────────────────────────────────────────────────── */
@@ -137,327 +327,142 @@ export default function InvestidoresPage() {
       <div id="top">
         <Nav />
         <main>
-          {/* ── Hero ──────────────────────────────────────────── */}
-          <section className="grain relative overflow-hidden px-6 py-20 sm:py-28" style={{ background: "linear-gradient(145deg, #0A1A14 0%, #0A4A39 40%, #0F6E56 100%)" }}>
-            <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-white/5 blur-3xl" />
-            <div aria-hidden className="pointer-events-none absolute -left-16 bottom-0 h-72 w-72 rounded-full bg-brand/10 blur-3xl" />
-
-            <m.div
-              className="relative mx-auto max-w-3xl text-center"
-              variants={staggerContainer}
-              initial="hidden"
-              animate="visible"
-            >
-              <m.div variants={fadeUp} className="mb-4 text-sm font-semibold uppercase tracking-[0.15em] text-brand-mint">
-                Oportunidade de investimento
-              </m.div>
-
-              <m.h1 variants={fadeUp} className="font-display mb-5 text-3xl font-semibold leading-tight text-white sm:text-4xl lg:text-5xl" style={{ letterSpacing: "-0.015em" }}>
-                A infraestrutura de automação financeira para PMEs em Portugal
-              </m.h1>
-
-              <m.p variants={fadeUp} className="mx-auto mb-8 max-w-xl text-base leading-relaxed text-green-100/80 sm:text-lg">
-                Transformamos a obrigação legal da faturação numa plataforma de pagamentos integrados e otimização de tesouraria.
-              </m.p>
-
-              <m.div variants={fadeUp} className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-                <a
-                  href="mailto:investidores@recibocerto.pt?subject=Pedido%20de%20reuni%C3%A3o%20%E2%80%94%20ReciboCerto"
-                  className="btn-shine inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-brand-deep shadow-lift transition-colors hover:bg-green-50"
-                >
-                  Agendar reunião
-                  <ArrowRight size={14} />
-                </a>
-                <a
-                  href="#tese"
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-6 py-3.5 text-sm font-semibold text-white transition-colors hover:border-white/40 hover:bg-white/5"
-                >
-                  Ver a tese de investimento
-                </a>
-              </m.div>
-
-              <m.div variants={fadeUp} className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-                {CONFORMIDADE.map((c) => (
-                  <span key={c.texto} className="inline-flex items-center gap-1.5 text-xs font-medium text-green-200/70">
-                    <span className="text-brand-mint">{c.icon}</span>
-                    {c.texto}
-                  </span>
-                ))}
-              </m.div>
-            </m.div>
-          </section>
-
-          {/* ── Dor do mercado ────────────────────────────────── */}
-          <section id="tese" className="scroll-mt-20 px-6 py-20">
-            <div className="mx-auto max-w-5xl">
-              <Reveal className="mb-10 text-center">
-                <div className="eyebrow mb-3 text-brand">O problema</div>
-                <h2 className="font-display display-2 font-semibold text-ink dark:text-stone-100">
-                  A tesouraria das PMEs está fragmentada
-                </h2>
-                <p className="mx-auto mt-3 max-w-lg text-stone-500 dark:text-stone-400">
-                  Sistemas de faturação isolados, cobranças manuais e burocracia fiscal criam um custo oculto que drena liquidez e tempo às pequenas empresas.
-                </p>
-              </Reveal>
-
-              <StaggerGroup className="grid gap-4 sm:grid-cols-3">
-                {DOR_MERCADO.map((d) => (
-                  <StaggerItem key={d.label}>
-                    <div className="h-full rounded-3xl border border-stone-100 bg-white p-6 shadow-card dark:border-stone-800 dark:bg-stone-900">
-                      <div className="font-display text-3xl font-semibold text-brand tabular-nums">{d.metric}</div>
-                      <div className="mt-2 text-sm font-semibold text-stone-700 dark:text-stone-300">{d.label}</div>
-                      <p className="mt-1 text-xs text-stone-400">{d.sub}</p>
-                    </div>
-                  </StaggerItem>
-                ))}
-              </StaggerGroup>
+          {/* ═══════════════════════════════════════════════════════
+              HERO — Impacto imediato com perspetiva 3D
+              ═══════════════════════════════════════════════════════ */}
+          <section className="grain relative overflow-hidden px-6 pt-20 pb-16">
+            <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+              <div className="absolute -top-32 -right-24 h-[28rem] w-[28rem] rounded-full bg-brand/15 blur-3xl" />
+              <div className="absolute top-40 -left-32 h-[24rem] w-[24rem] rounded-full bg-brand-mint/20 blur-3xl" />
             </div>
-          </section>
 
-          {/* ── Solução ───────────────────────────────────────── */}
-          <section className="border-y border-stone-100 bg-white px-6 py-20 dark:border-stone-800 dark:bg-stone-900">
-            <div className="mx-auto max-w-5xl">
-              <Reveal className="mb-10 text-center">
-                <div className="eyebrow mb-3 text-brand">A solução</div>
-                <h2 className="font-display display-2 font-semibold text-ink dark:text-stone-100">
-                  Quote-to-Cash numa única plataforma
-                </h2>
-                <p className="mx-auto mt-3 max-w-lg text-stone-500 dark:text-stone-400">
-                  A ReciboCerto unifica faturação regulada, múltiplos métodos de pagamento locais e conciliação de tesouraria em tempo real.
-                </p>
-              </Reveal>
+            <div className="mx-auto grid max-w-5xl items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
+              <m.div initial="hidden" animate="visible" variants={staggerContainer}>
+                <m.div variants={staggerItemVariant} className="eyebrow mb-4 text-brand">
+                  Para investidores
+                </m.div>
 
-              {/* Fluxo visual */}
-              <Reveal>
-                <div className="mb-10 rounded-3xl border border-brand/20 bg-brand-light/50 p-6 dark:border-brand/10 dark:bg-brand/5 sm:p-8">
-                  <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand text-white">
-                      <Receipt size={22} />
-                    </div>
-                    <ArrowRight size={18} className="hidden text-brand/40 sm:block" />
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-stone-700 dark:text-stone-300">Fatura emitida</p>
-                      <p className="text-xs text-stone-400">Certificada AT, com ATCUD e QR</p>
-                    </div>
-                    <ArrowRight size={18} className="hidden text-brand/40 sm:block" />
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand text-white">
-                      <Wallet size={22} />
-                    </div>
-                    <ArrowRight size={18} className="hidden text-brand/40 sm:block" />
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-stone-700 dark:text-stone-300">Pagamento recebido</p>
-                      <p className="text-xs text-stone-400">Link direto MB WAY, Multibanco, SEPA</p>
-                    </div>
-                    <ArrowRight size={18} className="hidden text-brand/40 sm:block" />
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand text-white">
-                      <Bank size={22} />
-                    </div>
-                    <ArrowRight size={18} className="hidden text-brand/40 sm:block" />
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-stone-700 dark:text-stone-300">Reconciliação automática</p>
-                      <p className="text-xs text-stone-400">Open Banking API em tempo real</p>
+                <m.h1
+                  variants={staggerItemVariant}
+                  className="font-display display-1 text-balance font-semibold text-ink"
+                >
+                  O copiloto financeiro de{" "}
+                  <span className="text-brand">1,3 milhões</span> de empresas portuguesas.
+                </m.h1>
+
+                <m.p variants={staggerItemVariant} className="mt-6 max-w-md text-lg leading-relaxed text-stone-500">
+                  Recibos verdes, vencimentos e empresas — tudo o que o Estado obriga, simplificado numa plataforma que os portugueses já usam.
+                </m.p>
+
+                <m.div variants={staggerItemVariant} className="mt-9 flex flex-wrap gap-3">
+                  <a
+                    href="mailto:investidores@recibocerto.pt?subject=Pedido%20de%20reuni%C3%A3o%20%E2%80%94%20ReciboCerto"
+                    className="btn-shine inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3.5 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-float"
+                  >
+                    Agendar reunião
+                    <ArrowRight />
+                  </a>
+                  <a
+                    href="#visao"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-6 py-3.5 text-sm font-semibold text-stone-700 transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50"
+                  >
+                    Ver a visão
+                  </a>
+                </m.div>
+
+                <m.ul variants={staggerItemVariant} className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3">
+                  {CONFIANCA.map((b) => (
+                    <li key={b.texto} className="flex items-center gap-2">
+                      <span className="text-brand">{b.icon}</span>
+                      <span className="text-xs font-medium text-stone-500">{b.texto}</span>
+                    </li>
+                  ))}
+                </m.ul>
+              </m.div>
+
+              {/* Cartão 3D flutuante — mostra o produto real */}
+              <m.div
+                initial={{ opacity: 0, y: 28 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: EASE, delay: 0.15 }}
+              >
+                <Card3D>
+                  <div className="relative overflow-hidden rounded-4xl border border-brand bg-brand p-6 text-white shadow-glow sm:p-7">
+                    <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+                    <div aria-hidden className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/5 blur-xl" />
+                    <div className="relative">
+                      <div className="flex items-center gap-2 mb-4">
+                        <LogoMark size={24} />
+                        <span className="text-sm font-semibold">ReciboCerto</span>
+                      </div>
+                      <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">
+                        Oportunidade de mercado
+                      </div>
+                      <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums">
+                        1,3 M
+                      </div>
+                      <div className="mt-1 text-xs text-green-100/70">
+                        empresas em Portugal — 97% micro e pequenas
+                      </div>
+                      <div className="mt-5 grid grid-cols-3 gap-1.5">
+                        <div className="rounded-xl bg-white/10 px-2.5 py-2 backdrop-blur-sm">
+                          <div className="text-[10px] leading-tight text-green-100/70">TAM</div>
+                          <div className="mt-0.5 text-xs font-semibold tabular-nums">1,3 M</div>
+                        </div>
+                        <div className="rounded-xl bg-white/10 px-2.5 py-2 backdrop-blur-sm">
+                          <div className="text-[10px] leading-tight text-green-100/70">SAM</div>
+                          <div className="mt-0.5 text-xs font-semibold tabular-nums">~400 K</div>
+                        </div>
+                        <div className="rounded-xl bg-white/10 px-2.5 py-2 backdrop-blur-sm">
+                          <div className="text-[10px] leading-tight text-green-100/70">SOM</div>
+                          <div className="mt-0.5 text-xs font-semibold tabular-nums">~50 K</div>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex h-1.5 overflow-hidden rounded-full bg-white/15">
+                        <div className="rounded-full bg-white/70" style={{ width: "4%" }} />
+                      </div>
+                      <div className="mt-1 text-[11px] text-green-100/50">
+                        Penetração atual — espaço massivo de crescimento
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Reveal>
-
-              <StaggerGroup className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {SOLUCAO.map((s) => (
-                  <StaggerItem key={s.titulo}>
-                    <div className="h-full rounded-3xl border border-stone-100 bg-cream p-5 dark:border-stone-800 dark:bg-stone-950">
-                      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-brand-light text-brand dark:bg-brand/10">
-                        {s.icon}
-                      </div>
-                      <p className="text-sm font-semibold text-stone-700 dark:text-stone-300">{s.titulo}</p>
-                      <p className="mt-1 text-xs text-stone-400">{s.desc}</p>
-                    </div>
-                  </StaggerItem>
-                ))}
-              </StaggerGroup>
+                </Card3D>
+              </m.div>
             </div>
           </section>
 
-          {/* ── Oportunidade de mercado ───────────────────────── */}
-          <section className="px-6 py-20">
+          {/* ═══════════════════════════════════════════════════════
+              O PRODUTO EM AÇÃO — Demos animados dos simuladores
+              ═══════════════════════════════════════════════════════ */}
+          <section className="border-y border-stone-100 bg-white px-6 py-24 dark:border-stone-800">
             <div className="mx-auto max-w-5xl">
-              <Reveal className="mb-10 text-center">
-                <div className="eyebrow mb-3 text-brand">Oportunidade de mercado</div>
-                <h2 className="font-display display-2 font-semibold text-ink dark:text-stone-100">
-                  Regulação como rampa de adoção
+              <Reveal className="mb-14 max-w-2xl">
+                <div className="eyebrow mb-3 text-brand">O produto em ação</div>
+                <h2 className="font-display display-2 text-balance font-semibold text-ink">
+                  Vê os simuladores a funcionar.
                 </h2>
-                <p className="mx-auto mt-3 max-w-lg text-stone-500 dark:text-stone-400">
-                  A digitalização fiscal obrigatória impulsiona a adoção. Capturamos as transações do tecido empresarial mais dinâmico da economia.
+                <p className="mt-3 text-stone-500">
+                  Os mesmos que milhares de portugueses já utilizam — recibos verdes, vencimentos e empresas. Cada cálculo com base legal e taxas de 2026 verificadas.
                 </p>
               </Reveal>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                {VANTAGENS_COMPETITIVAS.map((v) => (
-                  <Reveal key={v.titulo}>
-                    <div className="h-full rounded-3xl border border-stone-100 bg-white p-6 shadow-card dark:border-stone-800 dark:bg-stone-900">
-                      <p className="text-sm font-semibold text-stone-700 dark:text-stone-300">{v.titulo}</p>
-                      <p className="mt-2 text-xs leading-relaxed text-stone-400">{v.desc}</p>
-                    </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {DEMOS.map((d, i) => (
+                  <Reveal key={d.titulo} delay={i * 0.08}>
+                    <SimuladorDemo config={d} delayMs={i * 2200} />
                   </Reveal>
                 ))}
               </div>
-            </div>
-          </section>
 
-          {/* ── Modelo de negócio ─────────────────────────────── */}
-          <section className="border-y border-stone-100 bg-white px-6 py-20 dark:border-stone-800 dark:bg-stone-900">
-            <div className="mx-auto max-w-5xl">
-              <Reveal className="mb-10 text-center">
-                <div className="eyebrow mb-3 text-brand">Modelo de receita</div>
-                <h2 className="font-display display-2 font-semibold text-ink dark:text-stone-100">
-                  Subscrição SaaS + take rate transacional
-                </h2>
-                <p className="mx-auto mt-3 max-w-lg text-stone-500 dark:text-stone-400">
-                  Receita recorrente previsível de subscrições, multiplicada por uma taxa sobre cada transação financeira processada na plataforma.
-                </p>
-              </Reveal>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Reveal>
-                  <div className="h-full rounded-3xl border border-brand/20 bg-brand-light/30 p-6 dark:border-brand/10 dark:bg-brand/5">
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-white">
-                      <Briefcase size={20} />
-                    </div>
-                    <h3 className="text-sm font-semibold text-stone-700 dark:text-stone-300">Subscrição recorrente</h3>
-                    <p className="mt-2 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-                      Planos Grátis, Pro e Quiz Master com funcionalidades progressivas. Margem bruta elevada, previsibilidade de receita e expansão natural com upgrades.
-                    </p>
-                  </div>
-                </Reveal>
-                <Reveal delay={0.08}>
-                  <div className="h-full rounded-3xl border border-brand/20 bg-brand-light/30 p-6 dark:border-brand/10 dark:bg-brand/5">
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-white">
-                      <ChartProjection size={20} />
-                    </div>
-                    <h3 className="text-sm font-semibold text-stone-700 dark:text-stone-300">Take rate transacional</h3>
-                    <p className="mt-2 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-                      Taxa sobre cada pagamento processado (Multibanco, MB WAY, cartão, SEPA). A receita cresce com o volume de negócios dos clientes, sem aumento proporcional do CAC.
-                    </p>
-                  </div>
-                </Reveal>
-              </div>
-            </div>
-          </section>
-
-          {/* ── Métricas SaaS ─────────────────────────────────── */}
-          <section className="px-6 py-20">
-            <div className="mx-auto max-w-5xl">
-              <Reveal className="mb-10 text-center">
-                <div className="eyebrow mb-3 text-brand">Tração e métricas</div>
-                <h2 className="font-display display-2 font-semibold text-ink dark:text-stone-100">
-                  Crescimento eficiente e sustentável
-                </h2>
-                <p className="mx-auto mt-3 max-w-lg text-stone-500 dark:text-stone-400">
-                  Métricas de SaaS de nível institucional que comprovam a eficiência de capital e a velocidade de crescimento.
-                </p>
-              </Reveal>
-
-              <StaggerGroup className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {METRICAS.map((m) => (
-                  <StaggerItem key={m.sigla}>
-                    <div className="h-full rounded-3xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
-                      <div className="font-display text-2xl font-semibold text-brand">{m.sigla}</div>
-                      <p className="mt-2 text-sm font-semibold text-stone-700 dark:text-stone-300">{m.titulo}</p>
-                      <p className="mt-1 text-xs text-stone-400">{m.desc}</p>
-                    </div>
-                  </StaggerItem>
-                ))}
-              </StaggerGroup>
-
-              <Reveal className="mt-6">
-                <div className="rounded-2xl border border-stone-100 bg-cream px-5 py-4 dark:border-stone-800 dark:bg-stone-950">
-                  <p className="text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-                    <span className="font-semibold text-stone-600 dark:text-stone-300">Nota:</span> as métricas detalhadas de tração (ARR, MRR, churn, LTV:CAC e payback) estão disponíveis sob NDA na sala de due diligence para investidores qualificados.
-                  </p>
-                </div>
-              </Reveal>
-            </div>
-          </section>
-
-          {/* ── Go-to-Market ──────────────────────────────────── */}
-          <section className="border-y border-stone-100 bg-white px-6 py-20 dark:border-stone-800 dark:bg-stone-900">
-            <div className="mx-auto max-w-5xl">
-              <Reveal className="mb-10 text-center">
-                <div className="eyebrow mb-3 text-brand">Estratégia</div>
-                <h2 className="font-display display-2 font-semibold text-ink dark:text-stone-100">
-                  Go-to-Market em três pilares
-                </h2>
-              </Reveal>
-
-              <StaggerGroup className="grid gap-4 sm:grid-cols-3">
-                {GTM.map((g) => (
-                  <StaggerItem key={g.titulo}>
-                    <div className="h-full rounded-3xl border border-stone-100 bg-cream p-6 dark:border-stone-800 dark:bg-stone-950">
-                      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-brand-light text-brand dark:bg-brand/10">
-                        {g.icon}
-                      </div>
-                      <p className="text-sm font-semibold text-stone-700 dark:text-stone-300">{g.titulo}</p>
-                      <p className="mt-2 text-xs leading-relaxed text-stone-400">{g.desc}</p>
-                    </div>
-                  </StaggerItem>
-                ))}
-              </StaggerGroup>
-            </div>
-          </section>
-
-          {/* ── Conformidade e segurança ──────────────────────── */}
-          <section className="px-6 py-20">
-            <div className="mx-auto max-w-5xl">
-              <Reveal className="mb-10 text-center">
-                <div className="eyebrow mb-3 text-brand">Conformidade</div>
-                <h2 className="font-display display-2 font-semibold text-ink dark:text-stone-100">
-                  Regulação como ativo competitivo
-                </h2>
-                <p className="mx-auto mt-3 max-w-lg text-stone-500 dark:text-stone-400">
-                  No setor fintech, a conformidade regulatória não é um custo — é o principal fosso competitivo do negócio.
-                </p>
-              </Reveal>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Reveal>
-                  <div className="h-full rounded-3xl border border-stone-100 bg-white p-6 shadow-card dark:border-stone-800 dark:bg-stone-900">
-                    <p className="text-sm font-semibold text-stone-700 dark:text-stone-300">Conformidade fiscal contínua com a AT</p>
-                    <p className="mt-2 text-xs text-stone-400">
-                      Motor de cálculo atualizado em tempo real para acompanhar todas as revisões legais da Autoridade Tributária. Software certificado e em conformidade absoluta.
-                    </p>
-                  </div>
-                </Reveal>
-                <Reveal delay={0.08}>
-                  <div className="h-full rounded-3xl border border-stone-100 bg-white p-6 shadow-card dark:border-stone-800 dark:bg-stone-900">
-                    <p className="text-sm font-semibold text-stone-700 dark:text-stone-300">Arquitetura PSD2 e Open Banking</p>
-                    <p className="mt-2 text-xs text-stone-400">
-                      Gateways de pagamento regulados e parcerias com entidades financeiras autorizadas no espaço europeu. Todo o tráfego monetário respeita a regulação bancária europeia.
-                    </p>
-                  </div>
-                </Reveal>
-                <Reveal delay={0.12}>
-                  <div className="h-full rounded-3xl border border-stone-100 bg-white p-6 shadow-card dark:border-stone-800 dark:bg-stone-900">
-                    <p className="text-sm font-semibold text-stone-700 dark:text-stone-300">Stack KYC/AML</p>
-                    <p className="mt-2 text-xs text-stone-400">
-                      Integração com fornecedores de validação de identidade e monitorização de transações para prevenir fraude e lavagem de capitais.
-                    </p>
-                  </div>
-                </Reveal>
-                <Reveal delay={0.16}>
-                  <div className="h-full rounded-3xl border border-stone-100 bg-white p-6 shadow-card dark:border-stone-800 dark:bg-stone-900">
-                    <p className="text-sm font-semibold text-stone-700 dark:text-stone-300">Canais de pagamento locais e globais</p>
-                    <p className="mt-2 text-xs text-stone-400">
-                      Processadores de cartões globais, referências Multibanco, MB WAY, transferências bancárias instantâneas e débitos diretos SEPA.
-                    </p>
-                  </div>
-                </Reveal>
-              </div>
-
-              <Reveal className="mt-6">
-                <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-                  {CONFORMIDADE.map((c) => (
-                    <span key={c.texto} className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-500 dark:text-stone-400">
-                      <span className="text-brand">{c.icon}</span>
-                      {c.texto}
+              <Reveal className="mt-10">
+                <div className="flex flex-wrap items-center justify-center gap-2.5">
+                  {MAIS_FEATURES.map((f) => (
+                    <span
+                      key={f.label}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-stone-100 bg-stone-50 px-3 py-1.5 text-xs font-medium text-stone-600 dark:border-stone-700 dark:bg-stone-800/50 dark:text-stone-400"
+                    >
+                      <span className="text-brand">{f.icon}</span>
+                      {f.label}
                     </span>
                   ))}
                 </div>
@@ -465,70 +470,246 @@ export default function InvestidoresPage() {
             </div>
           </section>
 
-          {/* ── Equipa ────────────────────────────────────────── */}
-          <section className="border-y border-stone-100 bg-white px-6 py-20 dark:border-stone-800 dark:bg-stone-900">
+          {/* ═══════════════════════════════════════════════════════
+              A DOR — Porquê isto existe
+              ═══════════════════════════════════════════════════════ */}
+          <section className="px-6 py-24">
+            <div className="mx-auto max-w-5xl">
+              <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-14">
+                <Reveal>
+                  <div className="eyebrow mb-3 text-stone-400">O problema</div>
+                  <h2 className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100 sm:text-3xl">
+                    Os portugueses pagam impostos sem perceber o que pagam.
+                  </h2>
+                  <p className="mt-3 text-stone-500 dark:text-stone-400">
+                    Recibos verdes com fórmulas que mudam todos os anos. Recibos de vencimento com linhas que ninguém explica. Prazos que, se esquecidos, custam entre 50 e 7 500 euros em coimas.
+                  </p>
+                  <p className="mt-3 text-stone-500 dark:text-stone-400">
+                    As ferramentas existentes limitam-se a gerar faturas. Nenhuma responde à pergunta que importa:
+                    <span className="font-semibold text-stone-700 dark:text-stone-200"> quanto é meu, quanto reservar e quando pagar?</span>
+                  </p>
+                </Reveal>
+
+                <Reveal delay={0.1}>
+                  <Card3D>
+                    <div className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
+                      <div className="mb-4 flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-stone-400">Custo da omissão</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {[
+                          { l: "Tabelas de retenção", v: "Mudam todos os anos", icone: <Calculator size={14} /> },
+                          { l: "Atividades Art. 151.º", v: "Centenas de coeficientes", icone: <Receipt size={14} /> },
+                          { l: "Coimas por atraso", v: "Até 7 500 €", icone: <BellAlert size={14} /> },
+                          { l: "Tempo perdido/mês", v: "~15 horas", icone: <ChartProjection size={14} /> },
+                        ].map((r) => (
+                          <div key={r.l} className="flex items-center gap-3 rounded-xl bg-stone-50 px-3 py-2.5 dark:bg-stone-800/70">
+                            <span className="text-brand">{r.icone}</span>
+                            <span className="flex-1 text-xs text-stone-500 dark:text-stone-400">{r.l}</span>
+                            <span className="text-xs font-semibold text-stone-700 dark:text-stone-200">{r.v}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </Card3D>
+                </Reveal>
+              </div>
+            </div>
+          </section>
+
+          {/* ═══════════════════════════════════════════════════════
+              VISÃO — Roadmap em três fases
+              ═══════════════════════════════════════════════════════ */}
+          <section id="visao" className="scroll-mt-20 border-y border-stone-100 bg-white px-6 py-24 dark:border-stone-800">
+            <div className="mx-auto max-w-5xl">
+              <Reveal className="mb-14 max-w-2xl">
+                <div className="eyebrow mb-3 text-brand">Visão</div>
+                <h2 className="font-display display-2 text-balance font-semibold text-ink">
+                  De copiloto fiscal a infraestrutura financeira.
+                </h2>
+                <p className="mt-3 text-stone-500">
+                  Três fases. Cada uma constrói sobre a anterior — utilizadores, dados e confiança.
+                </p>
+              </Reveal>
+
+              <div className="grid gap-4 lg:grid-cols-3">
+                {VISAO.map((v, i) => (
+                  <Reveal key={v.fase} delay={i * 0.08}>
+                    <Card3D className="h-full">
+                      <div
+                        className={`flex h-full flex-col rounded-4xl p-6 shadow-card transition-shadow hover:shadow-lift ${
+                          v.ativo
+                            ? "border border-brand bg-brand text-white shadow-glow"
+                            : "border border-stone-100 bg-cream dark:border-stone-800 dark:bg-stone-950"
+                        }`}
+                      >
+                        <div className={`inline-flex self-start rounded-full px-3 py-1 text-[11px] font-semibold ${
+                          v.ativo
+                            ? "bg-white/20 text-white"
+                            : "bg-brand-light text-brand-dark"
+                        }`}>
+                          {v.fase}
+                        </div>
+                        <h3 className={`mt-4 font-display text-xl font-semibold ${
+                          v.ativo ? "text-white" : "text-stone-800 dark:text-stone-100"
+                        }`}>
+                          {v.titulo}
+                        </h3>
+                        <p className={`mt-2 flex-1 text-sm leading-relaxed ${
+                          v.ativo ? "text-green-100/80" : "text-stone-400"
+                        }`}>
+                          {v.desc}
+                        </p>
+                        {v.ativo && (
+                          <div className="mt-4 flex h-1.5 overflow-hidden rounded-full bg-white/15">
+                            <m.div
+                              className="rounded-full bg-white/70"
+                              initial={{ width: 0 }}
+                              whileInView={{ width: "100%" }}
+                              viewport={{ once: true }}
+                              transition={{ duration: 1.2, ease: EASE, delay: 0.3 }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </Card3D>
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ═══════════════════════════════════════════════════════
+              MODELO DE NEGÓCIO — Cards com 3D
+              ═══════════════════════════════════════════════════════ */}
+          <section className="px-6 py-24">
+            <div className="mx-auto max-w-5xl">
+              <Reveal className="mb-14 max-w-2xl">
+                <div className="eyebrow mb-3 text-brand">Modelo de negócio</div>
+                <h2 className="font-display display-2 text-balance font-semibold text-ink">
+                  SaaS recorrente + take rate transacional.
+                </h2>
+                <p className="mt-3 text-stone-500">
+                  Receita previsível de subscrições, multiplicada por uma taxa sobre cada pagamento processado na plataforma.
+                </p>
+              </Reveal>
+
+              <StaggerGroup className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {METRICAS_MODELO.map((m) => (
+                  <StaggerItem key={m.label}>
+                    <Card3D className="h-full">
+                      <div className="flex h-full flex-col rounded-4xl border border-stone-100 bg-white p-5 shadow-card transition-shadow hover:shadow-lift dark:border-stone-800 dark:bg-stone-900">
+                        <div className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">{m.label}</div>
+                        <div className="mt-2 font-display text-2xl font-semibold text-brand">{m.valor}</div>
+                        <p className="mt-1 text-xs text-stone-400">{m.sub}</p>
+                      </div>
+                    </Card3D>
+                  </StaggerItem>
+                ))}
+              </StaggerGroup>
+            </div>
+          </section>
+
+          {/* ═══════════════════════════════════════════════════════
+              VANTAGENS COMPETITIVAS
+              ═══════════════════════════════════════════════════════ */}
+          <section className="border-y border-stone-100 bg-white px-6 py-24 dark:border-stone-800">
+            <div className="mx-auto max-w-5xl">
+              <Reveal className="mb-14 max-w-2xl">
+                <div className="eyebrow mb-3 text-brand">Porquê nós</div>
+                <h2 className="font-display display-2 text-balance font-semibold text-ink">
+                  Regulação como vantagem, não como custo.
+                </h2>
+              </Reveal>
+
+              <div className="grid gap-8 lg:grid-cols-2 lg:gap-14">
+                {VANTAGENS.map((v, i) => (
+                  <Reveal key={v.titulo} delay={i * 0.06}>
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-light text-brand">
+                        {v.icon}
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-stone-700 dark:text-stone-300">{v.titulo}</h3>
+                        <p className="mt-1 text-sm leading-relaxed text-stone-400">{v.desc}</p>
+                      </div>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ═══════════════════════════════════════════════════════
+              EQUIPA — Breve + link para mais
+              ═══════════════════════════════════════════════════════ */}
+          <section className="px-6 py-24">
             <div className="mx-auto max-w-3xl text-center">
               <Reveal>
                 <div className="eyebrow mb-3 text-brand">Equipa</div>
-                <h2 className="font-display display-2 font-semibold text-ink dark:text-stone-100">
-                  Execução comprovada
+                <h2 className="font-display display-2 text-balance font-semibold text-ink">
+                  Execução comprovada.
                 </h2>
-                <p className="mx-auto mt-3 max-w-lg text-stone-500 dark:text-stone-400">
-                  Combinamos experiência em engenharia de software financeiro, gestão de conformidade fiscal e histórico de crescimento em startups tecnológicas.
+                <p className="mx-auto mt-3 max-w-lg text-stone-500">
+                  Experiência em engenharia de software financeiro, conformidade fiscal e crescimento de startups. Perfis completos disponíveis na sala de due diligence.
                 </p>
-                <div className="mt-8 rounded-2xl border border-stone-100 bg-cream px-5 py-4 dark:border-stone-800 dark:bg-stone-950">
-                  <p className="text-xs text-stone-500 dark:text-stone-400">
-                    Perfis detalhados, biografias e histórico profissional dos fundadores e conselheiros estão disponíveis na sala de due diligence.
-                  </p>
-                </div>
               </Reveal>
             </div>
           </section>
 
-          {/* ── CTA Final — O pedido ──────────────────────────── */}
-          <section className="grain relative overflow-hidden px-6 py-20 sm:py-28" style={{ background: "linear-gradient(145deg, #0A1A14 0%, #0A4A39 40%, #0F6E56 100%)" }}>
-            <div aria-hidden className="pointer-events-none absolute -left-16 -top-16 h-80 w-80 rounded-full bg-white/5 blur-3xl" />
-            <div aria-hidden className="pointer-events-none absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-brand/10 blur-3xl" />
+          {/* ═══════════════════════════════════════════════════════
+              CTA FINAL — Mesma linguagem do hero do site
+              ═══════════════════════════════════════════════════════ */}
+          <section className="grain relative overflow-hidden px-6 py-24">
+            <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+              <div className="absolute -top-24 -right-32 h-[24rem] w-[24rem] rounded-full bg-brand/20 blur-3xl" />
+              <div className="absolute -bottom-16 -left-24 h-[20rem] w-[20rem] rounded-full bg-brand-mint/15 blur-3xl" />
+            </div>
 
             <m.div
-              className="relative mx-auto max-w-2xl text-center"
+              className="mx-auto max-w-2xl text-center"
               variants={staggerContainer}
               initial="hidden"
               whileInView="visible"
               viewport={inViewOnce}
             >
-              <m.div variants={fadeUp} className="eyebrow mb-3 text-brand-mint">
-                Ronda de investimento
+              <m.div variants={fadeUp} className="eyebrow mb-3 text-brand">
+                Próximo passo
               </m.div>
 
-              <m.h2 variants={fadeUp} className="font-display mb-4 text-3xl font-semibold text-white sm:text-4xl" style={{ letterSpacing: "-0.015em" }}>
-                Estamos a captar capital para escalar
+              <m.h2 variants={fadeUp} className="font-display display-2 text-balance font-semibold text-ink">
+                Vamos <span className="text-brand">conversar?</span>
               </m.h2>
 
-              <m.p variants={fadeUp} className="mx-auto mb-8 max-w-md text-sm leading-relaxed text-green-100/80">
-                Capital destinado a expandir a equipa comercial, integrar serviços financeiros de adiantamento de faturas e acelerar a adoção no mercado português.
+              <m.p variants={fadeUp} className="mx-auto mt-3 max-w-md text-stone-500">
+                Capital destinado a integrar pagamentos, expandir a equipa e acelerar a adoção. Projeções e documentação disponíveis sob NDA.
               </m.p>
 
-              <m.div variants={fadeUp} className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+              <m.div variants={fadeUp} className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
                 <a
                   href="mailto:investidores@recibocerto.pt?subject=Pedido%20de%20reuni%C3%A3o%20%E2%80%94%20ReciboCerto"
-                  className="btn-shine inline-flex items-center gap-2 rounded-xl bg-white px-7 py-3.5 text-sm font-semibold text-brand-deep shadow-lift transition-colors hover:bg-green-50"
+                  className="btn-shine inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3.5 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-float"
                 >
                   <Mail size={15} />
                   Agendar reunião
                 </a>
                 <a
                   href="mailto:investidores@recibocerto.pt?subject=Pedido%20de%20acesso%20Data%20Room%20%E2%80%94%20ReciboCerto"
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-7 py-3.5 text-sm font-semibold text-white transition-colors hover:border-white/40 hover:bg-white/5"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-6 py-3.5 text-sm font-semibold text-stone-700 transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50"
                 >
                   <Lock size={14} />
-                  Solicitar acesso ao Data Room
+                  Solicitar Data Room
                 </a>
               </m.div>
 
-              <m.p variants={fadeUp} className="mt-6 text-xs text-green-200/60">
-                Projeções financeiras, documentação legal e relatórios técnicos disponíveis sob NDA.
-              </m.p>
+              <m.div variants={fadeUp} className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+                {CONFIANCA.map((c) => (
+                  <span key={c.texto} className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-500">
+                    <span className="text-brand">{c.icon}</span>
+                    {c.texto}
+                  </span>
+                ))}
+              </m.div>
             </m.div>
           </section>
         </main>
