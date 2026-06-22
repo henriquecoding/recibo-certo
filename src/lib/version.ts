@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.54.0";
+export const APP_VERSION = "1.55.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,20 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.55.0",
+    data: "2026-06-22",
+    titulo: "Demos de investidores com digitação realista e gráfico donut",
+    itens: [
+      "Animação de digitação realista nos simuladores: cursor vertical a piscar, dígitos aparecem um a um como se alguém estivesse a escrever, com erros de digitação e correções ocasionais — cada demo tem o seu ritmo.",
+      "Gráfico donut animado em SVG mostra a distribuição líquido/IRS/SS em cada simulador, com segmentos que crescem e percentagem central em destaque.",
+      "Barras de progresso por componente acompanham os resultados, com contagem animada dos valores.",
+      "Cartões de demo redesenhados: barra de gradiente no topo, ícone com fundo degradê, focus ring no campo de input e sombras refinadas.",
+      "Ciclo de animação alargado para 14 segundos com ~9 s de espera antes de reiniciar.",
+      "Dados no hero animados: TAM/SAM/SOM e '1,3 milhões' contam de zero ao alvo ao entrar em ecrã; barra de penetração anima ao scroll.",
+      "Botão 'Ver a visão' removido do hero.",
+    ],
+  },
   {
     version: "1.54.0",
     data: "2026-06-22",
