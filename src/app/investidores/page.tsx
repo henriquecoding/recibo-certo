@@ -954,13 +954,19 @@ export default function InvestidoresPage() {
                   Recibos verdes, vencimentos e empresas — tudo o que o Estado obriga, simplificado numa plataforma que os portugueses já usam.
                 </m.p>
 
-                <m.div variants={staggerItemVariant} className="mt-9">
+                <m.div variants={staggerItemVariant} className="mt-9 flex flex-wrap gap-3">
                   <a
-                    href="#proposta"
+                    href="#produto"
                     className="btn-shine inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3.5 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-float"
                   >
-                    Submeter proposta
+                    Ver o produto
                     <ArrowRight />
+                  </a>
+                  <a
+                    href="#proposta"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-6 py-3.5 text-sm font-semibold text-stone-700 transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200"
+                  >
+                    Submeter proposta
                   </a>
                 </m.div>
 
@@ -1033,7 +1039,7 @@ export default function InvestidoresPage() {
           {/* ═══════════════════════════════════════════════════════
               O PRODUTO EM AÇÃO — Demos animados dos simuladores
               ═══════════════════════════════════════════════════════ */}
-          <section className="border-y border-stone-100 bg-white px-6 py-24 dark:border-stone-800">
+          <section id="produto" className="scroll-mt-20 border-y border-stone-100 bg-white px-6 py-24 dark:border-stone-800">
             <div className="mx-auto max-w-6xl">
               <Reveal className="mb-14 max-w-2xl">
                 <div className="eyebrow mb-3 text-brand">O produto em ação</div>
