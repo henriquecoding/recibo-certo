@@ -29,6 +29,7 @@ import {
   IVA_ISENCAO_LIMITE,
   IVA_ISENCAO_EXCESSO,
   IRS_JOVEM,
+  DISPENSA_RETENCAO_LIMITE,
   efeitoFiscal,
   META_TIPO,
   RETENCAO,
@@ -87,6 +88,23 @@ export interface EstadoGuiadoSaida {
 
 interface ModoGuiadoProps {
   onIrParaSimuladorCompleto: (estado: EstadoGuiadoSaida) => void;
+  onGuardarRecibo?: (recibo: ReciboGuiadoSaida, cliente: string) => void;
+}
+
+export interface ReciboGuiadoSaida {
+  valor: number;
+  tipo: "art151" | "outros" | "vendas" | "diretosAutor";
+  atividade: string | undefined;
+  regiao: Regiao;
+  regimeIVA: RegimeIVA;
+  baseSS: "bens" | "servicos";
+  dispensaRetencao: boolean;
+  _computed?: {
+    irsEstimado: number;
+    segSocial: number;
+    iva: number;
+    liquido: number;
+  };
 }
 
 const CARDS_ATIV: CardAtiv[] = [
@@ -95,8 +113,8 @@ const CARDS_ATIV: CardAtiv[] = [
     titulo: "Profissão liberal",
     sub: "Serviços técnicos e liberais (Art. 151.º CIRS)",
     exemplos: "Dev, designer, arquiteto, advogado, solicitador, médico, psicólogo, nutricionista, enfermeiro, engenheiro, consultor, gestor, contabilista, jornalista, ator, músico, professor…",
-    coef: 0.75,
-    ret: 0.23,
+    coef: COEFICIENTE_POR_TIPO.art151,
+    ret: RETENCAO.art151.value,
     baseSS: "servicos",
     tipoFiscal: "art151",
     Icon: Laptop,
@@ -106,7 +124,7 @@ const CARDS_ATIV: CardAtiv[] = [
     titulo: "Vendo produtos",
     sub: "Comércio, produção e revenda",
     exemplos: "E-commerce, artesanato, manufatura…",
-    coef: 0.15,
+    coef: COEFICIENTE_POR_TIPO.vendas,
     ret: 0,
     baseSS: "bens",
     tipoFiscal: "vendas",
@@ -117,7 +135,7 @@ const CARDS_ATIV: CardAtiv[] = [
     titulo: "Alojamento ou Hostelaria",
     sub: "Alojamento local, hotel, restauração",
     exemplos: "Airbnb, hostel, restaurante, café…",
-    coef: 0.35,
+    coef: COEFICIENTE_POR_TIPO.outros,
     ret: 0,
     baseSS: "bens",
     tipoFiscal: "vendas",
@@ -128,8 +146,8 @@ const CARDS_ATIV: CardAtiv[] = [
     titulo: "Outros serviços",
     sub: "Serviços fora do Art. 151.º",
     exemplos: "Explicações, motorista, jardinagem…",
-    coef: 0.35,
-    ret: 0.115,
+    coef: COEFICIENTE_POR_TIPO.outros,
+    ret: RETENCAO.outros.value,
     baseSS: "servicos",
     tipoFiscal: "outros",
     Icon: Briefcase,
@@ -139,8 +157,8 @@ const CARDS_ATIV: CardAtiv[] = [
     titulo: "Direitos de autor / Royalties",
     sub: "Propriedade intelectual e licenciamento",
     exemplos: "Livros, música, software, patentes…",
-    coef: 0.95,
-    ret: 0.165,
+    coef: COEFICIENTE_POR_TIPO.diretosAutor,
+    ret: RETENCAO.diretosAutor.value,
     baseSS: "servicos",
     tipoFiscal: "diretosAutor",
     Icon: PenLine,
@@ -159,12 +177,13 @@ interface ReciboItem {
   taxaIva: number;
 }
 
+const IVA_CONT = IVA_TAXAS.continente.value;
 const IVA_OPCOES_FAT = [
   { taxa: 0, curto: "Isento", longo: "0%" },
-  { taxa: 0.06, curto: "Reduzida", longo: "6%" },
-  { taxa: 0.13, curto: "Intermédia", longo: "13%" },
-  { taxa: 0.23, curto: "Normal", longo: "23%" },
-] as const;
+  { taxa: IVA_CONT.reduzida, curto: "Reduzida", longo: `${IVA_CONT.reduzida * 100}%` },
+  { taxa: IVA_CONT.intermedia, curto: "Intermédia", longo: `${IVA_CONT.intermedia * 100}%` },
+  { taxa: IVA_CONT.normal, curto: "Normal", longo: `${IVA_CONT.normal * 100}%` },
+];
 
 const MESES_OPCOES_FAT = [1, 2, 3, 4, 6, 8, 10, 12] as const;
 
@@ -236,6 +255,7 @@ const IVA_META = {
 
 export default function ModoGuiado({
   onIrParaSimuladorCompleto,
+  onGuardarRecibo,
 }: ModoGuiadoProps) {
   // Navegação — começa no pré-passo (decisor)
   const [passo, setPasso] = useState<Passo>(0);
@@ -382,7 +402,7 @@ export default function ModoGuiado({
         regiao,
         regimeIVA: regimeEfetivo,
         baseSS: card.baseSS,
-        dispensaRetencao: false,
+        dispensaRetencao: brutoAnual < DISPENSA_RETENCAO_LIMITE.value,
         isencaoSSPrimeiroAno,
         acumulaEmprego,
         irsJovemAno: jovemAno,
@@ -390,6 +410,7 @@ export default function ModoGuiado({
       }),
     [
       bruto,
+      brutoAnual,
       card.tipoFiscal,
       card.baseSS,
       regiao,
@@ -890,6 +911,21 @@ export default function ModoGuiado({
                     }}
                     onVoltar={() => setPasso(3)}
                     onProximosPassos={() => setPasso("contabilista")}
+                    onGuardarRecibo={onGuardarRecibo ? (cliente: string) => onGuardarRecibo({
+                      valor: bruto,
+                      tipo: card.tipoFiscal,
+                      atividade: atividadeEspecifica?.label,
+                      regiao,
+                      regimeIVA: regimeEfetivo,
+                      baseSS: card.baseSS,
+                      dispensaRetencao: brutoAnual < DISPENSA_RETENCAO_LIMITE.value,
+                      _computed: {
+                        irsEstimado: irsAnual / recibosAno,
+                        segSocial: ssAnual / recibosAno,
+                        iva: ivaAnual / recibosAno,
+                        liquido: liquidoAnual / recibosAno,
+                      },
+                    }, cliente) : undefined}
                   />
                 </m.div>
               )}
@@ -2463,6 +2499,70 @@ function SeparadorBloco({ label }: { label: string }) {
 
 // ─── ResultadoFinal ───────────────────────────────────────────────────────────
 
+function GuardarReciboBtn({ onGuardar }: { onGuardar: (cliente: string) => void }) {
+  const [aberto, setAberto] = useState(false);
+  const [cliente, setCliente] = useState("");
+  const [guardado, setGuardado] = useState(false);
+
+  if (guardado) {
+    return (
+      <div className="flex items-center justify-center gap-2 rounded-2xl border border-brand/30 bg-brand-light px-5 py-3 text-sm font-semibold text-brand-dark dark:bg-brand/10 dark:border-brand/20 dark:text-brand">
+        <Check size={16} />
+        Recibo guardado no painel
+      </div>
+    );
+  }
+
+  if (!aberto) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAberto(true)}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand bg-white px-5 py-3 text-sm font-semibold text-brand transition-all hover:bg-brand-light dark:bg-stone-900 dark:hover:bg-brand/10"
+      >
+        <ArrowRight size={14} />
+        Guardar no painel
+      </button>
+    );
+  }
+
+  return (
+    <div className="space-y-2 rounded-2xl border border-brand/30 bg-brand-light/50 p-4 dark:bg-brand/5 dark:border-brand/20">
+      <label className="block text-xs font-medium text-stone-600 dark:text-stone-300">
+        Nome do cliente
+      </label>
+      <input
+        type="text"
+        value={cliente}
+        onChange={(e) => setCliente(e.target.value)}
+        placeholder="Ex: Empresa X"
+        autoFocus
+        className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-brand dark:bg-stone-800 dark:border-stone-700 dark:text-stone-100"
+      />
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={!cliente.trim()}
+          onClick={() => {
+            onGuardar(cliente.trim());
+            setGuardado(true);
+          }}
+          className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white transition-all hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Guardar
+        </button>
+        <button
+          type="button"
+          onClick={() => { setAberto(false); setCliente(""); }}
+          className="rounded-xl border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-500 transition-all hover:bg-stone-50 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ResultadoFinal({
   brutoAnual,
   liquidoAnual,
@@ -2493,6 +2593,7 @@ function ResultadoFinal({
   onRecomecar,
   onVoltar,
   onProximosPassos,
+  onGuardarRecibo,
 }: {
   brutoAnual: number;
   liquidoAnual: number;
@@ -2529,6 +2630,7 @@ function ResultadoFinal({
   onRecomecar: () => void;
   onVoltar: () => void;
   onProximosPassos: () => void;
+  onGuardarRecibo?: (cliente: string) => void;
 }) {
   const efAtiv = atividadeEspecifica ? efeitoFiscal(atividadeEspecifica) : null;
   const simAnual = useMemo(
@@ -3165,6 +3267,9 @@ function ResultadoFinal({
         <div className="min-w-0 space-y-4 md:sticky md:top-6">
           {/* ── CTAs ─────────────────────────────────────────────────────── */}
           <div className="flex flex-col gap-2.5">
+            {onGuardarRecibo && (
+              <GuardarReciboBtn onGuardar={onGuardarRecibo} />
+            )}
             <button
               type="button"
               onClick={onProximosPassos}

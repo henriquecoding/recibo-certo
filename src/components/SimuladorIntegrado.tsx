@@ -94,18 +94,75 @@ import {
   Receipt,
   Building,
   Swap,
+  Globe,
+  Plane,
+  Sparkle,
+  MapPin,
+  ChartProjection,
 } from "@/components/ui/Icons";
 import { pct, fmt } from "@/lib/format";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
 import InfoTip from "@/components/ui/InfoTip";
 import {
+  IAS,
   IVA_TAXAS,
+  IVA_ISENCAO_LIMITE as IVA_ISENCAO_LIMITE_SRC,
+  IVA_ISENCAO_EXCESSO as IVA_ISENCAO_EXCESSO_SRC,
   ATIVIDADES,
   META_REGIAO,
   META_BASE_SS,
   IRS_JOVEM,
   DISPENSA_RETENCAO_LIMITE,
   ESCALOES_IRS,
+  MINIMO_EXISTENCIA,
+  SS_TAXA,
+  SS_COEFICIENTE,
+  SS_BASE_MAX_MENSAL,
+  SS_MIN_MENSAL,
+  SS_DEPENDENTE,
+  COEFICIENTE_POR_TIPO,
+  RETENCAO,
+  DERRAMA_MAX,
+  DIVIDENDOS_TAXA,
+  DEDUCAO_DEPENDENTE,
+  DEDUCAO_DEPENDENTE_BEBE,
+  DEDUCAO_DEPENDENTE_3MAIS,
+  DEDUCAO_DEPENDENTE_DEFICIENCIA,
+  DEDUCAO_DEFICIENCIA_COLETA,
+  DEDUCAO_DESP_GERAIS,
+  DEDUCAO_SAUDE,
+  DEDUCAO_EDUCACAO,
+  DEDUCAO_RENDAS,
+  DIV_INCLUSAO_ENGLOBAMENTO as DIV_INCLUSAO_ENGLOBAMENTO_SRC,
+  IMI_TAXA_PADRAO as IMI_TAXA_PADRAO_SRC,
+  IMT_TAXA_COMERCIAL as IMT_TAXA_COMERCIAL_SRC,
+  IS_TAXA_AQUISICAO as IS_TAXA_AQUISICAO_SRC,
+  TA_THRESHOLDS,
+  TA_VIATURAS_COMBUSTAO,
+  TA_VIATURAS_PHEV,
+  TA_VIATURAS_ELETRICA,
+  TA_REPRESENTACAO,
+  TA_AJUDAS_CUSTO,
+  TA_NAO_DOCUMENTADAS,
+  TA_AGRAVAMENTO_PREJUIZO,
+  RFAI_TAXA_INTERIOR as RFAI_TAXA_INTERIOR_SRC,
+  RFAI_TAXA_INTERIOR_EXCEDENTE,
+  RFAI_TAXA_LITORAL as RFAI_TAXA_LITORAL_SRC,
+  RFAI_LIMITE_INVESTIMENTO_INTERIOR,
+  RFAI_LIMITE_COLETA as RFAI_LIMITE_COLETA_SRC,
+  DLRR_TAXA as DLRR_TAXA_SRC,
+  DLRR_LIMITE_COLETA as DLRR_LIMITE_COLETA_SRC,
+  DLRR_LIMITE_LUCROS,
+  SIFIDE_TAXA_BASE as SIFIDE_TAXA_BASE_SRC,
+  SIFIDE_TAXA_INCREMENTAL as SIFIDE_TAXA_INCREMENTAL_SRC,
+  SIFIDE_MAJORACAO_PME_JOVEM,
+  SIFIDE_TETO_INCREMENTAL,
+  IFICI_TAXA,
+  IRC_TAXA_GERAL,
+  IRC_TAXA_PME,
+  IRC_LIMITE_PME,
+  SMN as SMN_SRC,
+  efeitoFiscal,
   type Atividade,
   type Regiao,
   type BaseSS,
@@ -127,53 +184,47 @@ import TimelineFiscal from "@/components/simulador/TimelineFiscal";
 import ComparacaoNarrativa from "@/components/simulador/ComparacaoNarrativa";
 import ModoGuiado, {
   type EstadoGuiadoSaida,
+  type ReciboGuiadoSaida,
 } from "@/components/simulador/ModoGuiado";
 import ModoGuiadoEmpresa from "@/components/simulador/ModoGuiadoEmpresa";
+import { type ParametrosFiscaisRegiao } from "@/lib/incentivos-regioes";
+import { useRecibos, type NovoRecibo } from "@/lib/store/recibos";
+import { useAuth } from "@/lib/supabase/auth";
+import { useSubscricao } from "@/lib/stripe/subscription";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CONSTANTES FISCAIS 2026
+// CONSTANTES FISCAIS — derivadas de fiscal-data.ts (fonte de verdade única)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const IAS_2026 = 537.13;
-const MINIMO_EXISTENCIA_2026 = 12_880;
-const SS_TAXA_TI = 0.214;
-const SS_BASE_PCT = 0.7;
-const SS_MAX_MENSAL = 12 * IAS_2026 * SS_TAXA_TI;
-const SS_MIN_MENSAL = 20;
-const IVA_ISENCAO_LIMITE = 15_000;
-const IVA_ISENCAO_LIMITE_IMEDIATO = 18_750;
-const IRS_JOVEM_LIMITE_2026 = 55 * IAS_2026;
+const IAS_2026 = IAS.value;
+const MINIMO_EXISTENCIA_2026 = MINIMO_EXISTENCIA.value;
+const SS_TAXA_TI = SS_TAXA.value;
+const SS_BASE_PCT = SS_COEFICIENTE.servicos.value;
+const SS_MAX_MENSAL = SS_BASE_MAX_MENSAL.value;
+const SS_MIN = SS_MIN_MENSAL.value;
+const IVA_ISENCAO_LIMITE = IVA_ISENCAO_LIMITE_SRC.value;
+const IVA_ISENCAO_LIMITE_IMEDIATO = IVA_ISENCAO_EXCESSO_SRC.value;
+const IRS_JOVEM_LIMITE_2026 = IRS_JOVEM.tetoIAS.value * IAS_2026;
 
-const IRS_JOVEM_ISENCAO: Record<number, number> = {
-  1: 1.0,
-  2: 0.75,
-  3: 0.75,
-  4: 0.75,
-  5: 0.5,
-  6: 0.5,
-  7: 0.5,
-  8: 0.25,
-  9: 0.25,
-  10: 0.25,
-};
+const IRS_JOVEM_ISENCAO: Record<number, number> = IRS_JOVEM.isencaoPorAno.value;
 
-const IRS_JOVEM_IDADE_MAX = 35;
+const IRS_JOVEM_IDADE_MAX = IRS_JOVEM.idadeMax.value;
 
 const TIPO_ATIVIDADE_PARAMS = {
   art151: {
-    coef: 0.75,
-    ret: 0.23,
+    coef: COEFICIENTE_POR_TIPO.art151,
+    ret: RETENCAO.art151.value,
     label: "Profissão liberal — Art. 151.º CIRS",
   },
-  vendas: { coef: 0.15, ret: 0.0, label: "Vendas / mercadorias" },
-  hosped: { coef: 0.35, ret: 0.0, label: "Alojamento local / hotelaria" },
-  outras: { coef: 0.35, ret: 0.115, label: "Outras prestações de serviços" },
+  vendas: { coef: COEFICIENTE_POR_TIPO.vendas, ret: 0.0, label: "Vendas / mercadorias" },
+  hosped: { coef: COEFICIENTE_POR_TIPO.outros, ret: 0.0, label: "Alojamento local / hotelaria" },
+  outras: { coef: COEFICIENTE_POR_TIPO.outros, ret: RETENCAO.outros.value, label: "Outras prestações de serviços" },
   prop_int: {
-    coef: 0.95,
-    ret: 0.165,
+    coef: COEFICIENTE_POR_TIPO.diretosAutor,
+    ret: RETENCAO.diretosAutor.value,
     label: "Propriedade intelectual / direitos de autor",
   },
-} as const;
+};
 
 type TipoAtividade = keyof typeof TIPO_ATIVIDADE_PARAMS;
 
@@ -209,10 +260,23 @@ const IVA_ESPERADO_POR_TIPO: Record<
   prop_int: "normal",
 };
 
-const DERRAMA_MUNI = 0.015;
-const IRS_DIVIDENDOS = 0.28;
-const SS_EMP_TAXA = 0.2375;
-const SS_TRAB_TAXA = 0.11;
+const DERRAMA_MUNI = DERRAMA_MAX.value;
+const IRS_DIVIDENDOS = DIVIDENDOS_TAXA.value;
+const SS_EMP_TAXA = SS_DEPENDENTE.entidade.value;
+const SS_TRAB_TAXA = SS_DEPENDENTE.trabalhador.value;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EMPRESA COMPLETO — Sede, perfil e IFICI
+// ─────────────────────────────────────────────────────────────────────────────
+
+type TipoSede = "fisica" | "virtual" | "coworking";
+type PerfilFundador = "residente" | "estrangeiro_ue" | "estrangeiro_extra_ue";
+const CUSTO_SEDE_VIRTUAL_MIN = 50;
+const CUSTO_SEDE_VIRTUAL_MAX = 150;
+const CUSTO_SEDE_VIRTUAL_DEFAULT = 100;
+const CUSTO_COWORKING_MAX = 300;
+const CUSTO_REPRESENTANTE_FISCAL_DEFAULT = 350;
+const IFICI_TAXA_FLAT = IFICI_TAXA.value;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TRIBUTAÇÃO AUTÓNOMA (Art. 88.º CIRC 2026)
@@ -235,13 +299,13 @@ type TipoViatura =
   | "comb_alto"; // Combustão custo aquisição ≥ €45 000 → 32%
 
 const TA_VIATURAS: Record<TipoViatura, number> = {
-  eletrica: 0.0,
-  phev_baixo: 0.025,
-  phev_medio: 0.075,
-  phev_alto: 0.15,
-  comb_baixo: 0.08, // Art. 88.º n.º 3 al. a) — OE2025
-  comb_medio: 0.25, // Art. 88.º n.º 3 al. b) — OE2025
-  comb_alto: 0.32, // Art. 88.º n.º 3 al. c) — OE2025
+  eletrica: TA_VIATURAS_ELETRICA.value,
+  phev_baixo: TA_VIATURAS_PHEV.value.ate37500,
+  phev_medio: TA_VIATURAS_PHEV.value.ate45000,
+  phev_alto: TA_VIATURAS_PHEV.value.acima45000,
+  comb_baixo: TA_VIATURAS_COMBUSTAO.value.ate37500,
+  comb_medio: TA_VIATURAS_COMBUSTAO.value.ate45000,
+  comb_alto: TA_VIATURAS_COMBUSTAO.value.acima45000,
 };
 
 const TIPO_VIATURA_META: Record<TipoViatura, string> = {
@@ -254,10 +318,10 @@ const TIPO_VIATURA_META: Record<TipoViatura, string> = {
   comb_alto: "Combustão ≥ 45 000€ aquisição — 32%",
 };
 
-const TA_TAXA_REPRESENTACAO = 0.1; // Art. 88.º n.º 7 CIRC
-const TA_TAXA_AJUDAS_CUSTO = 0.05; // Art. 88.º n.º 9 CIRC
-const TA_TAXA_NAO_DOC = 0.5; // Art. 88.º n.º 1 CIRC
-const TA_AGRAVAMENTO = 0.1; // Art. 88.º n.º 14 (OE2026 — renovou excl.)
+const TA_TAXA_REPRESENTACAO = TA_REPRESENTACAO.value;
+const TA_TAXA_AJUDAS_CUSTO = TA_AJUDAS_CUSTO.value;
+const TA_TAXA_NAO_DOC = TA_NAO_DOCUMENTADAS.value;
+const TA_AGRAVAMENTO = TA_AGRAVAMENTO_PREJUIZO.value;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RFAI — Regime Fiscal de Apoio ao Investimento (Art. 22.º–26.º CFI)
@@ -271,11 +335,11 @@ const TA_AGRAVAMENTO = 0.1; // Art. 88.º n.º 14 (OE2026 — renovou excl.)
 
 type RegiaoRFAI = "interior" | "litoral";
 
-const RFAI_TAXA_INTERIOR = 0.3; // Norte, Centro, Alentejo, Açores, Madeira
-const RFAI_TAXA_EXCEDENTE = 0.1; // Parcela > €15M
-const RFAI_TAXA_LITORAL = 0.1; // Lisboa, Algarve
-const RFAI_LIMITE_INVEST = 15_000_000; // Limiar entre taxa 30% e 10%
-const RFAI_LIMITE_COLETA = 0.5; // 50% da coleta (100% nos primeiros 3 anos)
+const RFAI_TAXA_INTERIOR = RFAI_TAXA_INTERIOR_SRC.value;
+const RFAI_TAXA_EXCEDENTE = RFAI_TAXA_INTERIOR_EXCEDENTE.value;
+const RFAI_TAXA_LITORAL = RFAI_TAXA_LITORAL_SRC.value;
+const RFAI_LIMITE_INVEST = RFAI_LIMITE_INVESTIMENTO_INTERIOR.value;
+const RFAI_LIMITE_COLETA = RFAI_LIMITE_COLETA_SRC.value;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DLRR — Dedução por Lucros Retidos e Reinvestidos (Art. 27.º-A CFI)
@@ -285,9 +349,9 @@ const RFAI_LIMITE_COLETA = 0.5; // 50% da coleta (100% nos primeiros 3 anos)
 // Lucros elegíveis máximos: €5 000 000
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DLRR_TAXA = 0.1;
-const DLRR_LIMITE_COLETA = 0.25;
-const DLRR_MAX_LUCROS = 5_000_000;
+const DLRR_TAXA = DLRR_TAXA_SRC.value;
+const DLRR_LIMITE_COLETA = DLRR_LIMITE_COLETA_SRC.value;
+const DLRR_MAX_LUCROS = DLRR_LIMITE_LUCROS.value;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SIFIDE II — Sistema de Incentivos Fiscais I&D (Art. 37.º–40.º CFI/EBF)
@@ -303,10 +367,10 @@ const DLRR_MAX_LUCROS = 5_000_000;
 
 type TipoEmpresaSifide = "startup" | "pme_jovem" | "pme_normal" | "grande";
 
-const SIFIDE_TAXA_BASE = 0.325; // 32,5% — base obrigatória
-const SIFIDE_TAXA_INCREMENTAL = 0.5; // 50% sobre acréscimo (max €1,5M)
-const SIFIDE_MAJORACAO_PME = 0.15; // +15% para PME <2 exercícios sem increm.
-const SIFIDE_MAX_INCREMENTAL = 1_500_000;
+const SIFIDE_TAXA_BASE = SIFIDE_TAXA_BASE_SRC.value;
+const SIFIDE_TAXA_INCREMENTAL = SIFIDE_TAXA_INCREMENTAL_SRC.value;
+const SIFIDE_MAJORACAO_PME = SIFIDE_MAJORACAO_PME_JOVEM.value;
+const SIFIDE_MAX_INCREMENTAL = SIFIDE_TETO_INCREMENTAL.value;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ENGLOBAMENTO DE DIVIDENDOS (Art. 40.º-A CIRS)
@@ -314,7 +378,7 @@ const SIFIDE_MAX_INCREMENTAL = 1_500_000;
 // Tributado às taxas progressivas do IRS (vs. 28% liberatória do Art. 71.º)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DIV_INCLUSAO_ENGLOBAMENTO = 0.5;
+const DIV_INCLUSAO_ENGLOBAMENTO = DIV_INCLUSAO_ENGLOBAMENTO_SRC.value;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CUSTOS TÍPICOS (estimativas 2026 para o simulador)
@@ -336,22 +400,21 @@ const CONTAB_ORG_CUSTO_MENSAL = 200; // OCC: €150–300/mês; média conservad
 //   - 600€ / dep. > 3 anos | 726€ / dep. ≤ 3 anos | 900€ / 2.º+ dep. ≤ 6 anos
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DEFICIENCIA_DEDUCAO_COLETA = 4 * IAS_2026; // 4 × IAS 2026 = €2 148,52
+const DEFICIENCIA_DEDUCAO_COLETA = DEDUCAO_DEFICIENCIA_COLETA.value;
 
-const DEPENDENTE_DEDUCAO_3PLUS = 600; // Art. 78.º-A n.º 1 al. a)
-const DEPENDENTE_DEDUCAO_3MINUS = 726; // Art. 78.º-A n.º 1 al. b) ≤ 3 anos
-const DEPENDENTE_DEDUCAO_2_6 = 900; // Art. 78.º-A n.º 1 al. c) 2.º+ ≤ 6 anos
-const DEPENDENTE_DEDUCAO_DEFIC = 2.5 * IAS_2026; // Art. 87.º — 2,5 × IAS 2026
+const DEPENDENTE_DEDUCAO_3PLUS = DEDUCAO_DEPENDENTE.value;
+const DEPENDENTE_DEDUCAO_3MINUS = DEDUCAO_DEPENDENTE_BEBE.value;
+const DEPENDENTE_DEDUCAO_2_6 = DEDUCAO_DEPENDENTE_3MAIS.value;
+const DEPENDENTE_DEDUCAO_DEFIC = DEDUCAO_DEPENDENTE_DEFICIENCIA.value;
 
-// Deduções gerais à coleta IRS (máximos por agregado familiar)
-const DEDUCAO_SAUDE_PCT = 0.15; // Art. 78.º-C — 15% das despesas
-const DEDUCAO_SAUDE_MAX = 1_000; // máx €1 000/agregado
-const DEDUCAO_EDUCACAO_PCT = 0.3; // Art. 78.º-D — 30% das despesas
-const DEDUCAO_EDUCACAO_MAX = 800; // máx €800/agregado
-const DEDUCAO_GERAIS_PCT = 0.35; // Art. 78.º-B — 35% das despesas
-const DEDUCAO_GERAIS_MAX = 250; // máx €250/sujeito passivo
-const DEDUCAO_RENDAS_PCT = 0.15; // Art. 78.º-E — 15% das rendas
-const DEDUCAO_RENDAS_MAX = 900; // máx €900/sujeito passivo (habitação permanente, Lei 36/2024)
+const DEDUCAO_SAUDE_PCT = DEDUCAO_SAUDE.value.taxa;
+const DEDUCAO_SAUDE_MAX = DEDUCAO_SAUDE.value.limite;
+const DEDUCAO_EDUCACAO_PCT = DEDUCAO_EDUCACAO.value.taxa;
+const DEDUCAO_EDUCACAO_MAX = DEDUCAO_EDUCACAO.value.limite;
+const DEDUCAO_GERAIS_PCT = DEDUCAO_DESP_GERAIS.value.taxa;
+const DEDUCAO_GERAIS_MAX = DEDUCAO_DESP_GERAIS.value.limite;
+const DEDUCAO_RENDAS_PCT = DEDUCAO_RENDAS.value.taxa;
+const DEDUCAO_RENDAS_MAX = DEDUCAO_RENDAS.value.limite;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // IMPOSTOS MUNICIPAIS (empresa com imóvel próprio)
@@ -361,14 +424,14 @@ const DEDUCAO_RENDAS_MAX = 900; // máx €900/sujeito passivo (habitação perm
 // Isenção RFAI: Art. 22.º–26.º CFI — até 10 anos, aprovação assembleia mun.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const IMI_TAXA_PADRAO = 0.003; // 0,3% — taxa mínima urbana (Art. 112.º CIMI)
-const IMT_TAXA_COMERCIAL = 0.065; // 6,5% — transmissão imóveis não habitacionais
-const IS_TAXA_AQUISICAO = 0.008; // 0,8% — Verba 1.1 TGIS (aquisição imóvel)
+const IMI_TAXA_PADRAO = IMI_TAXA_PADRAO_SRC.value;
+const IMT_TAXA_COMERCIAL = IMT_TAXA_COMERCIAL_SRC.value;
+const IS_TAXA_AQUISICAO = IS_TAXA_AQUISICAO_SRC.value;
 
 const IRC_PME = {
-  taxa1: 0.15,
-  limite: 50_000,
-  taxa2: 0.19,
+  taxa1: IRC_TAXA_PME.value,
+  limite: IRC_LIMITE_PME.value,
+  taxa2: IRC_TAXA_GERAL.value,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -403,7 +466,7 @@ function calcularSSAnual(faturacaoAnual: number): number {
   const rendRelevMensal = (faturacaoAnual * SS_BASE_PCT) / 12;
   const contribuicaoMensal = Math.min(
     SS_MAX_MENSAL,
-    Math.max(SS_MIN_MENSAL, rendRelevMensal * SS_TAXA_TI),
+    Math.max(SS_MIN, rendRelevMensal * SS_TAXA_TI),
   );
   return contribuicaoMensal * 12;
 }
@@ -1866,6 +1929,25 @@ function CollapsibleSection({
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface EmpresaInputsProps {
+  // Faturação anual (modo completo)
+  faturacaoAnual: number;
+  onFaturacaoChange: (v: number) => void;
+  faturacaoComIva: boolean;
+  onFaturacaoComIvaChange: (v: boolean) => void;
+  taxaIvaEmpresa: number;
+  // Sede e perfil
+  tipoSede: TipoSede;
+  perfilFundador: PerfilFundador;
+  aplicarIFICI: boolean;
+  custoSedeVirtual: number;
+  // Localização
+  localizacao: ParametrosFiscaisRegiao | null;
+  localNome: string;
+  // Callbacks sede/perfil
+  onTipoSedeChange: (v: TipoSede) => void;
+  onPerfilFundadorChange: (v: PerfilFundador) => void;
+  onAplicarIFICIChange: (v: boolean) => void;
+  onCustoSedeVirtualChange: (v: number) => void;
   // Parâmetros base
   despesasOper: number;
   custosExtra: number;
@@ -1940,6 +2022,21 @@ interface EmpresaInputsProps {
 }
 
 function EmpresaInputs({
+  faturacaoAnual,
+  onFaturacaoChange,
+  faturacaoComIva,
+  onFaturacaoComIvaChange,
+  taxaIvaEmpresa,
+  tipoSede,
+  perfilFundador,
+  aplicarIFICI,
+  custoSedeVirtual,
+  localizacao,
+  localNome,
+  onTipoSedeChange,
+  onPerfilFundadorChange,
+  onAplicarIFICIChange,
+  onCustoSedeVirtualChange,
   despesasOper,
   custosExtra,
   salGerenteMensal,
@@ -2016,11 +2113,223 @@ function EmpresaInputs({
     grande: "32,5%",
   };
 
+  const custoSedeAnual = tipoSede !== "fisica" ? custoSedeVirtual * 12 : 0;
+  const custoSedeMax = tipoSede === "coworking" ? CUSTO_COWORKING_MAX : CUSTO_SEDE_VIRTUAL_MAX;
+
   return (
     <div className="mt-5 pt-5 border-t border-stone-100 dark:border-stone-800 space-y-5">
       <div className="text-xs font-semibold uppercase tracking-[0.15em] text-brand">
         Parâmetros da empresa
       </div>
+
+      {/* ── Faturação anual ─────────────────────────────────────────────── */}
+      <div>
+        <NumericSlider
+          label={faturacaoComIva ? "Faturação anual (com IVA)" : "Faturação anual (sem IVA)"}
+          value={faturacaoAnual}
+          min={0}
+          max={faturacaoComIva ? 370_000 : 300_000}
+          step={5_000}
+          onChange={onFaturacaoChange}
+          presets={faturacaoComIva ? [36_900, 73_800, 123_000, 184_500] : [30_000, 60_000, 100_000, 150_000]}
+          formatPreset={(v) => fmt(v)}
+          tooltip={
+            faturacaoComIva
+              ? <>Total anual cobrado aos clientes (IVA {pct(taxaIvaEmpresa)} incluído). A base para IRC é extraída automaticamente.</>
+              : <>Volume de negócios anual previsto (sem IVA). O IVA é cobrado ao cliente mas pertence ao Estado.</>
+          }
+        />
+        <div className="mt-2 flex items-center justify-between">
+          <label className="flex cursor-pointer items-center gap-2.5">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={faturacaoComIva}
+                onChange={(e) => onFaturacaoComIvaChange(e.target.checked)}
+                className="peer sr-only"
+              />
+              <div className="h-5 w-9 rounded-full bg-stone-200 transition-colors peer-checked:bg-brand peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40 dark:bg-stone-700" />
+              <div className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-4" />
+            </div>
+            <span className="text-xs font-medium text-stone-600 dark:text-stone-300">
+              Valor inclui IVA ({pct(taxaIvaEmpresa)})
+            </span>
+          </label>
+          {faturacaoComIva && faturacaoAnual > 0 && (
+            <span className="text-xs tabular-nums text-stone-400 dark:text-stone-500">
+              Base sem IVA: <strong className="text-stone-600 dark:text-stone-300">{fmt(Math.round(faturacaoAnual / (1 + taxaIvaEmpresa)))}</strong>
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* ── Tipo de sede ────────────────────────────────────────────────── */}
+      <div>
+        <div className="mb-2 flex items-center gap-1.5">
+          <span className="text-sm font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
+            Tipo de sede
+          </span>
+          <InfoTip label="Sede da empresa">
+            A sede pode ser um escritório físico, um endereço virtual
+            (a partir de ~50 a 150 euros/mês) ou um espaço coworking.
+            Sedes virtuais e coworking são custos dedutíveis ao IRC.
+          </InfoTip>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            { v: "fisica" as TipoSede, l: "Física", Icon: Building, sub: "Escritório próprio" },
+            { v: "virtual" as TipoSede, l: "Virtual", Icon: Laptop, sub: "Endereço fiscal" },
+            { v: "coworking" as TipoSede, l: "Coworking", Icon: Globe, sub: "Espaço partilhado" },
+          ] as const).map(({ v, l, Icon, sub }) => {
+            const active = tipoSede === v;
+            return (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={active}
+                onClick={() => onTipoSedeChange(v)}
+                className={`rounded-xl border p-2.5 text-center transition-all ${
+                  active
+                    ? "border-brand bg-brand-light dark:bg-brand/10 dark:border-brand/40"
+                    : "border-stone-200 bg-stone-50 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-800/40"
+                }`}
+              >
+                <Icon size={16} className={`mx-auto mb-1 ${active ? "text-brand" : "text-stone-400 dark:text-stone-500"}`} />
+                <div className={`text-sm font-semibold ${active ? "text-brand-dark dark:text-brand" : "text-stone-700 dark:text-stone-200"}`}>
+                  {l}
+                </div>
+                <div className={`text-[11px] ${active ? "text-brand dark:text-brand/80" : "text-stone-400"}`}>
+                  {sub}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        {tipoSede !== "fisica" && (
+          <div className="mt-3">
+            <NumericSlider
+              label={`Custo mensal ${tipoSede === "virtual" ? "sede virtual" : "coworking"} (sem IVA)`}
+              value={custoSedeVirtual}
+              min={CUSTO_SEDE_VIRTUAL_MIN}
+              max={custoSedeMax}
+              step={10}
+              onChange={onCustoSedeVirtualChange}
+              presets={tipoSede === "virtual" ? [50, 75, 100, 150] : [100, 150, 200, 300]}
+              tooltip={
+                tipoSede === "virtual"
+                  ? <>Custo mensal de um endereço virtual para sede da empresa. Dedutível ao IRC.</>
+                  : <>Custo mensal de espaço coworking. Dedutível ao IRC.</>
+              }
+            />
+            <div className="mt-1.5 text-xs text-stone-400 dark:text-stone-500">
+              Total anual: <strong className="tabular-nums text-stone-600 dark:text-stone-300">{fmt(custoSedeAnual)}</strong>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Perfil do fundador ──────────────────────────────────────────── */}
+      <div>
+        <div className="mb-2 flex items-center gap-1.5">
+          <span className="text-sm font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
+            Perfil do fundador
+          </span>
+          <InfoTip label="Perfil fiscal do fundador">
+            Residentes fiscais em Portugal seguem o regime normal.
+            Fundadores UE/EEE ou extra-UE podem aceder ao IFICI
+            (ex-NHR 2.0) com taxa flat 20% nos primeiros 10 anos.
+            Extra-UE precisam de representante fiscal.
+          </InfoTip>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            { v: "residente" as PerfilFundador, l: "Residente", Icon: Briefcase, sub: "Fiscal PT" },
+            { v: "estrangeiro_ue" as PerfilFundador, l: "UE/EEE", Icon: Globe, sub: "Europeu" },
+            { v: "estrangeiro_extra_ue" as PerfilFundador, l: "Extra-UE", Icon: Plane, sub: "Fora da UE" },
+          ] as const).map(({ v, l, Icon, sub }) => {
+            const active = perfilFundador === v;
+            return (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={active}
+                onClick={() => onPerfilFundadorChange(v)}
+                className={`rounded-xl border p-2.5 text-center transition-all ${
+                  active
+                    ? "border-brand bg-brand-light dark:bg-brand/10 dark:border-brand/40"
+                    : "border-stone-200 bg-stone-50 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-800/40"
+                }`}
+              >
+                <Icon size={16} className={`mx-auto mb-1 ${active ? "text-brand" : "text-stone-400 dark:text-stone-500"}`} />
+                <div className={`text-sm font-semibold ${active ? "text-brand-dark dark:text-brand" : "text-stone-700 dark:text-stone-200"}`}>
+                  {l}
+                </div>
+                <div className={`text-[11px] ${active ? "text-brand dark:text-brand/80" : "text-stone-400"}`}>
+                  {sub}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        {perfilFundador === "estrangeiro_extra_ue" && (
+          <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-700/50 dark:bg-amber-900/20">
+            <Warning size={14} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div className="text-xs leading-relaxed text-amber-800 dark:text-amber-200">
+              <strong>Representante fiscal obrigatório.</strong> Cidadãos extra-UE sem residência fiscal em Portugal
+              precisam de representante fiscal (~{fmt(CUSTO_REPRESENTANTE_FISCAL_DEFAULT)}/ano).
+            </div>
+          </div>
+        )}
+        {perfilFundador !== "residente" && (
+          <label className="mt-3 flex cursor-pointer items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 transition-all hover:border-stone-300 dark:border-stone-700 dark:bg-stone-800/40">
+            <input
+              type="checkbox"
+              checked={aplicarIFICI}
+              onChange={(e) => onAplicarIFICIChange(e.target.checked)}
+              className="h-4 w-4 rounded border-stone-300 text-brand focus:ring-brand dark:border-stone-600"
+            />
+            <div>
+              <div className="text-sm font-semibold text-stone-700 dark:text-stone-200">
+                Aplicar IFICI (ex-NHR 2.0)
+              </div>
+              <div className="text-xs text-stone-400 dark:text-stone-500">
+                Taxa flat {pct(IFICI_TAXA_FLAT)} sobre rendimentos elegíveis (Art. 58.º-A EBF)
+              </div>
+            </div>
+          </label>
+        )}
+      </div>
+
+      {/* ── Localização (read-only, definida no separador principal) ────── */}
+      {localizacao && (
+        <div className="rounded-xl border border-stone-200 bg-stone-50 p-3.5 dark:border-stone-700 dark:bg-stone-800/40">
+          <div className="mb-2 flex items-center gap-2">
+            <MapPin size={14} className="text-brand" />
+            <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
+              {localNome || localizacao.nome}
+            </span>
+            {localizacao.selo && (
+              <span className="rounded-full bg-brand-light px-2 py-0.5 text-[10px] font-semibold text-brand dark:bg-brand/10">
+                {localizacao.selo}
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-lg bg-white p-2 dark:bg-stone-900">
+              <div className="text-sm font-bold text-stone-800 tabular-nums dark:text-stone-100">{pct(localizacao.ircPME)}</div>
+              <div className="text-[10px] text-stone-400">IRC PME</div>
+            </div>
+            <div className="rounded-lg bg-white p-2 dark:bg-stone-900">
+              <div className="text-sm font-bold text-stone-800 tabular-nums dark:text-stone-100">{pct(localizacao.derramaEstimada)}</div>
+              <div className="text-[10px] text-stone-400">Derrama</div>
+            </div>
+            <div className="rounded-lg bg-white p-2 dark:bg-stone-900">
+              <div className="text-sm font-bold text-stone-800 tabular-nums dark:text-stone-100">{pct(localizacao.rfaiTaxa)}</div>
+              <div className="text-[10px] text-stone-400">RFAI</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Base ─────────────────────────────────────────────────────────── */}
       <NumericSlider
@@ -3050,6 +3359,74 @@ function EmpresaInputs({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// GUARDAR RECIBO NO DASHBOARD (modo completo)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function GuardarReciboPro({ onGuardar }: { onGuardar: (cliente: string) => void }) {
+  const [aberto, setAberto] = useState(false);
+  const [cliente, setCliente] = useState("");
+  const [guardado, setGuardado] = useState(false);
+
+  if (guardado) {
+    return (
+      <div className="flex items-center justify-center gap-2 rounded-2xl border border-brand/30 bg-brand-light px-5 py-3 text-sm font-semibold text-brand-dark dark:bg-brand/10 dark:border-brand/20 dark:text-brand">
+        <Check size={16} />
+        Recibo guardado no painel
+      </div>
+    );
+  }
+
+  if (!aberto) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAberto(true)}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand bg-white px-5 py-3 text-sm font-semibold text-brand transition-all hover:bg-brand-light dark:bg-stone-900 dark:hover:bg-brand/10"
+      >
+        <ArrowRight size={14} />
+        Guardar no painel
+      </button>
+    );
+  }
+
+  return (
+    <div className="space-y-2 rounded-2xl border border-brand/30 bg-brand-light/50 p-4 dark:bg-brand/5 dark:border-brand/20">
+      <label className="block text-xs font-medium text-stone-600 dark:text-stone-300">
+        Nome do cliente
+      </label>
+      <input
+        type="text"
+        value={cliente}
+        onChange={(e) => setCliente(e.target.value)}
+        placeholder="Ex: Empresa X"
+        autoFocus
+        className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-brand dark:bg-stone-800 dark:border-stone-700 dark:text-stone-100"
+      />
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={!cliente.trim()}
+          onClick={() => {
+            onGuardar(cliente.trim());
+            setGuardado(true);
+          }}
+          className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white transition-all hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Guardar
+        </button>
+        <button
+          type="button"
+          onClick={() => { setAberto(false); setCliente(""); }}
+          className="rounded-xl border border-stone-200 px-3 py-2.5 text-sm text-stone-500 transition-all hover:bg-stone-50 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -3061,6 +3438,13 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   const [modoInput, setModoInput] = useState<ModoInput>("recibo");
   const [cenario, setCenario] = useState<CenarioAtivo>(vista === "empresa" ? "empresa" : "rv");
   const [modoEmpresa, setModoEmpresa] = useState<"guiado" | "completo">("guiado");
+
+  // ── Empresa completo — Sede, perfil, IFICI, IVA ─────────────────────────
+  const [tipoSedeCompleto, setTipoSedeCompleto] = useState<TipoSede>("fisica");
+  const [perfilFundadorCompleto, setPerfilFundadorCompleto] = useState<PerfilFundador>("residente");
+  const [aplicarIFICICompleto, setAplicarIFICICompleto] = useState(false);
+  const [custoSedeVirtualCompleto, setCustoSedeVirtualCompleto] = useState(CUSTO_SEDE_VIRTUAL_DEFAULT);
+  const [faturacaoComIvaEmpresa, setFaturacaoComIvaEmpresa] = useState(false);
 
   // ── Valores de entrada ───────────────────────────────────────────────────
   const [bruto, setBruto] = useState(1_500);
@@ -3200,6 +3584,34 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
       localStorage.removeItem("rc-modo-simulacao");
     }
   }, []);
+
+  // ── Guardar recibo no dashboard ─────────────────────────────────────────
+  const { adicionar: adicionarRecibo, recibos: recibosExistentes } = useRecibos();
+  const { user } = useAuth();
+  const { plano } = useSubscricao();
+
+  const LIMITE_FREE = 1;
+  const podeGuardar = plano === "pro" || (!!user && recibosExistentes.length < LIMITE_FREE);
+
+  const guardarReciboDashboard = useCallback(
+    (dados: ReciboGuiadoSaida, cliente: string) => {
+      if (!podeGuardar) return;
+      const novo: NovoRecibo = {
+        data: new Date().toISOString().slice(0, 10),
+        cliente,
+        valor: dados.valor,
+        tipo: dados.tipo,
+        atividade: dados.atividade,
+        regiao: dados.regiao,
+        regimeIVA: dados.regimeIVA,
+        baseSS: dados.baseSS === "bens" ? "bens" : "servicos",
+        dispensaRetencao: dados.dispensaRetencao,
+        _computed: dados._computed,
+      };
+      adicionarRecibo(novo);
+    },
+    [podeGuardar, adicionarRecibo],
+  );
 
   // Como interpretar o valor introduzido (paridade com o modo guiado):
   // false → o valor é a base do serviço; o IVA acresce por cima (omissão).
@@ -3443,12 +3855,21 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     ? Math.round(custoConstituicao / Math.max(1, anosAmortizacao))
     : 0;
 
+  const custoSedeAnualCompleto = tipoSedeCompleto !== "fisica" ? custoSedeVirtualCompleto * 12 : 0;
+  const custoRepFiscalCompleto = perfilFundadorCompleto === "estrangeiro_extra_ue" ? CUSTO_REPRESENTANTE_FISCAL_DEFAULT : 0;
+  const custosExtraEmpresa = custosExtra + custoSedeAnualCompleto + custoRepFiscalCompleto;
+
+  const taxaIvaEmpresaEfetiva = IVA_TAXAS[regiao].value.normal;
+  const faturacaoBaseEmpresa = faturacaoComIvaEmpresa
+    ? Math.round(brutoAnual / (1 + taxaIvaEmpresaEfetiva))
+    : brutoAnual;
+
   const resultEmpresa = useMemo(
     () =>
       simularEmpresa(
-        brutoAnual,
+        faturacaoBaseEmpresa,
         despesasOper,
-        custosExtra,
+        custosExtraEmpresa,
         salGerenteMensal,
         distribuirDividendos,
         opcaoEnglobamento,
@@ -3469,9 +3890,9 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
         rfaiContratualValor,
       ),
     [
-      brutoAnual,
+      faturacaoBaseEmpresa,
       despesasOper,
-      custosExtra,
+      custosExtraEmpresa,
       salGerenteMensal,
       distribuirDividendos,
       opcaoEnglobamento,
@@ -3543,13 +3964,22 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   // O líquido da empresa é ajustado pela poupança/custo dos impostos municipais
   // IMI que não foi isento = custo adicional para a empresa (já não está em custosExtra)
   const imiCustoAnual = temImovelEmpresa && !isencaoIMI_RFAI ? imiAnual : 0;
+
+  // IFICI: 20% flat sobre dividendos em vez de 28% (ou englobamento)
+  const irsDividendosUsado = opcaoEnglobamento
+    ? resultEmpresa.irsDividendosEnglobamento
+    : resultEmpresa.irsDividendosLiberatoria;
+  const irsDividendosIFICI = resultEmpresa.dividendos * IFICI_TAXA_FLAT;
+  const ajusteIFICI = aplicarIFICICompleto ? (irsDividendosUsado - irsDividendosIFICI) : 0;
+
   const liquidoEmpresaComMunicipal =
     resultEmpresa.liquidoGerente -
     imiCustoAnual + // IMI sem isenção é custo real
     poupancaIMI + // se isento, poupança vs. pagar IMI
-    poupancaIMT; // IMT e IS amortizados (poupança se isento)
+    poupancaIMT + // IMT e IS amortizados (poupança se isento)
+    ajusteIFICI; // IFICI: poupança fiscal sobre dividendos
 
-  const liquidoEmpresaFinal = liquidoEmpresaComMunicipal; // inclui IMI/IMT
+  const liquidoEmpresaFinal = liquidoEmpresaComMunicipal;
   const empresaVence = liquidoEmpresaFinal > resultAnualRV.liquido;
   const diferenca = Math.abs(liquidoEmpresaFinal - resultAnualRV.liquido);
   // ── Break-even ────────────────────────────────────────────────────────────
@@ -4095,9 +4525,9 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
 
           <div className="flex flex-wrap items-center gap-2">
             {/* Segmented control Por recibo / Anual — só modo profissional
-                (no guiado de empresa o input é gerido dentro do wizard) */}
+                (no guiado/completo de empresa o input é gerido dentro do wizard/EmpresaInputs) */}
             {modoSimulacao === "profissional" &&
-              !(cenario === "empresa" && modoEmpresa === "guiado") && (
+              cenario !== "empresa" && (
               <div
                 role="group"
                 aria-label="Modo de cálculo"
@@ -4209,6 +4639,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
         {/* ── Modo Guiado ──────────────────────────────────────────────────── */}
         {modoSimulacao === "guiado" && (
           <ModoGuiado
+            onGuardarRecibo={podeGuardar ? (dados, cliente) => guardarReciboDashboard(dados, cliente) : undefined}
             onIrParaSimuladorCompleto={(estado: EstadoGuiadoSaida) => {
               setTipoAtiv(estado.tipoAtiv as TipoAtividade);
               if (estado.atividade) setAtividade(estado.atividade);
@@ -4242,40 +4673,71 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
         {/* ── Modo Profissional ────────────────────────────────────────────── */}
         {modoSimulacao === "profissional" && (
           <>
-            {/* ── Empresa: alternador Guiado / Completo (full width) ───────────── */}
+            {/* ── Empresa: alternador Guiado / Completo (full width, card-based) ── */}
             {cenario === "empresa" && (
               <div className="border-b border-stone-100 bg-white px-5 py-5 sm:px-8 lg:px-10 dark:border-stone-800 dark:bg-stone-950">
                 <div
                   role="tablist"
                   aria-label="Modo do simulador de empresa"
-                  className="flex flex-wrap items-center gap-2"
+                  className="grid grid-cols-2 gap-3"
                 >
-                  {(
-                    [
-                      { v: "guiado" as const, l: "Guiado" },
-                      { v: "completo" as const, l: "Completo" },
-                    ] as const
-                  ).map(({ v, l }) => (
-                    <button
-                      key={v}
-                      role="tab"
-                      type="button"
-                      aria-selected={modoEmpresa === v}
-                      onClick={() => setModoEmpresa(v)}
-                      className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
-                        modoEmpresa === v
-                          ? "bg-brand text-white shadow-md"
-                          : "text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200"
-                      }`}
-                    >
-                      {l}
-                    </button>
-                  ))}
-                  <span className="ml-1 text-[11px] text-stone-400 dark:text-stone-500">
-                    {modoEmpresa === "guiado"
-                      ? "Passo a passo para abrir e simular uma empresa"
-                      : "Simulação detalhada — TA, RFAI, SIFIDE, IMI/IMT"}
-                  </span>
+                  {([
+                    {
+                      v: "guiado" as const,
+                      l: "Guiado",
+                      desc: "Passo a passo para abrir e simular",
+                      Icon: Sparkle,
+                    },
+                    {
+                      v: "completo" as const,
+                      l: "Completo",
+                      desc: "Simulação detalhada com TA, RFAI, SIFIDE",
+                      Icon: ChartProjection,
+                    },
+                  ] as const).map(({ v, l, desc, Icon }) => {
+                    const active = modoEmpresa === v;
+                    return (
+                      <button
+                        key={v}
+                        role="tab"
+                        type="button"
+                        aria-selected={active}
+                        onClick={() => setModoEmpresa(v)}
+                        className={`relative flex items-start gap-3 rounded-2xl border p-4 text-left transition-all ${
+                          active
+                            ? "border-brand bg-brand-light shadow-md dark:border-brand/40 dark:bg-brand/10"
+                            : "border-stone-200 bg-stone-50 hover:border-stone-300 hover:shadow-sm dark:border-stone-700 dark:bg-stone-800/40 dark:hover:border-stone-600"
+                        }`}
+                      >
+                        <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
+                          active
+                            ? "bg-brand text-white shadow-sm"
+                            : "bg-stone-100 text-stone-400 dark:bg-stone-700 dark:text-stone-500"
+                        }`}>
+                          <Icon size={16} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-sm font-semibold ${
+                              active ? "text-brand-dark dark:text-brand" : "text-stone-700 dark:text-stone-200"
+                            }`}>
+                              {l}
+                            </span>
+                            {active && (
+                              <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold text-white">
+                                Ativo
+                              </span>
+                            )}
+                          </div>
+                          <p className={`mt-0.5 text-xs leading-relaxed ${
+                            active ? "text-brand-dark/70 dark:text-brand/70" : "text-stone-400 dark:text-stone-500"
+                          }`}>
+                            {desc}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -4291,6 +4753,8 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
             <div className="grid grid-cols-1 lg:grid-cols-2">
               {/* ════ Coluna esquerda: Inputs ════ */}
               <div className="bg-white p-5 sm:p-8 lg:p-10 lg:border-r lg:border-stone-100 dark:bg-stone-950 dark:border-stone-800">
+                {/* ── Inputs Recibos Verdes (escondidos em empresa completo) ──── */}
+                {!(cenario === "empresa" && modoEmpresa === "completo") && (<>
                 {/* ── Tipo de atividade (PRIMEIRO — influencia coeficiente,
                      retenção, IVA esperado e base de SS) ──────────────────── */}
                 <div className="mb-6">
@@ -5778,9 +6242,27 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                   </AnimatePresence>
                 </div>
 
+                {/* fim da condição: esconder inputs RV em empresa completo */}
+                </>)}
+
                 {/* ── Inputs Empresa (modo completo; o guiado é full-width) ──── */}
                 {cenario === "empresa" && modoEmpresa === "completo" && (
                   <EmpresaInputs
+                    faturacaoAnual={brutoAnual}
+                    onFaturacaoChange={handleBrutoAnualChange}
+                    faturacaoComIva={faturacaoComIvaEmpresa}
+                    onFaturacaoComIvaChange={setFaturacaoComIvaEmpresa}
+                    taxaIvaEmpresa={taxaIvaEmpresaEfetiva}
+                    tipoSede={tipoSedeCompleto}
+                    perfilFundador={perfilFundadorCompleto}
+                    aplicarIFICI={aplicarIFICICompleto}
+                    custoSedeVirtual={custoSedeVirtualCompleto}
+                    localizacao={null}
+                    localNome=""
+                    onTipoSedeChange={setTipoSedeCompleto}
+                    onPerfilFundadorChange={setPerfilFundadorCompleto}
+                    onAplicarIFICIChange={setAplicarIFICICompleto}
+                    onCustoSedeVirtualChange={setCustoSedeVirtualCompleto}
                     despesasOper={despesasOper}
                     custosExtra={custosExtra}
                     salGerenteMensal={salGerenteMensal}
@@ -6520,6 +7002,27 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                           />
                         </svg>
                       </Link>
+
+                      {/* ── Guardar no painel ── */}
+                      {podeGuardar && cenario === "rv" && (
+                        <GuardarReciboPro
+                          onGuardar={(cliente) => guardarReciboDashboard({
+                            valor: base,
+                            tipo: TIPO_LOCAL_PARA_CANONICO[tipoAtiv],
+                            atividade: atividade.label,
+                            regiao,
+                            regimeIVA,
+                            baseSS: efeitoFiscal(atividade).baseSS,
+                            dispensaRetencao,
+                            _computed: {
+                              irsEstimado: resultAnualRV.irs / 12,
+                              segSocial: resultRecibo.segSocial,
+                              iva: resultRecibo.iva,
+                              liquido: resultAnualRV.liquido / 12,
+                            },
+                          }, cliente)}
+                        />
+                      )}
                     </m.div>
                   ) : modoEmpresa === "completo" ? (
                     /* ── Painel Empresa (modo completo) ── */
@@ -6539,8 +7042,8 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                           />
                           <span>
                             Comparação baseada em {fmt(bruto)} × 12 ={" "}
-                            {fmt(brutoAnual)}/ano. Muda para o modo Anual para
-                            valores mais precisos.
+                            {fmt(brutoAnual)}/ano{faturacaoComIvaEmpresa ? ` (base sem IVA: ${fmt(faturacaoBaseEmpresa)})` : ""}.
+                            Muda para o modo Anual para valores mais precisos.
                           </span>
                         </div>
                       )}
@@ -6561,13 +7064,13 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                               <div
                                 className="rounded-full bg-white/70 transition-all duration-500"
                                 style={{
-                                  width: `${Math.round(liquidoEmpresaFinal / Math.max(1, brutoAnual) * 100)}%`,
+                                  width: `${Math.round(liquidoEmpresaFinal / Math.max(1, faturacaoBaseEmpresa) * 100)}%`,
                                 }}
                               />
                             </div>
                             <div className="mt-1 text-[11px] text-green-100/50">
-                              {Math.round(liquidoEmpresaFinal / Math.max(1, brutoAnual) * 100)}% de{" "}
-                              <AnimatedNumber value={brutoAnual} /> faturados/ano
+                              {Math.round(liquidoEmpresaFinal / Math.max(1, faturacaoBaseEmpresa) * 100)}% de{" "}
+                              <AnimatedNumber value={faturacaoBaseEmpresa} /> faturados/ano
                             </div>
                           </div>
                         </div>
@@ -6577,7 +7080,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                       <div className="mb-6">
                         <div className="flex h-3 rounded-full overflow-hidden gap-0.5 mb-3">
                           {(() => {
-                            const total = brutoAnual || 1;
+                            const total = faturacaoBaseEmpresa || 1;
                             const irsDiv = opcaoEnglobamento
                               ? resultEmpresa.irsDividendosEnglobamento
                               : resultEmpresa.irsDividendosLiberatoria;
@@ -6672,10 +7175,10 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                       {/* Breakdown empresa — detalhado */}
                       <div className="space-y-1 flex-1">
                         <DetalheRow
-                          label="Faturação"
-                          value={brutoAnual}
+                          label={faturacaoComIvaEmpresa ? "Faturação (sem IVA)" : "Faturação"}
+                          value={faturacaoBaseEmpresa}
                           type="neutral"
-                          note="Volume de negócios anual"
+                          note={faturacaoComIvaEmpresa ? `Extraído de ${fmt(brutoAnual)} com IVA ${pct(taxaIvaEmpresaEfetiva)}` : "Volume de negócios anual"}
                         />
 
                         {resultEmpresa.despesasOper > 0 && (
@@ -6692,6 +7195,22 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                             value={-resultEmpresa.custosExtra}
                             type="deducao"
                             note="Contabilidade, software, etc."
+                          />
+                        )}
+                        {tipoSedeCompleto !== "fisica" && custoSedeVirtualCompleto > 0 && (
+                          <DetalheRow
+                            label={`Sede ${tipoSedeCompleto === "virtual" ? "virtual" : "coworking"} (anual)`}
+                            value={-(custoSedeVirtualCompleto * 12)}
+                            type="deducao"
+                            note="Custo dedutível ao IRC"
+                          />
+                        )}
+                        {perfilFundadorCompleto === "estrangeiro_extra_ue" && (
+                          <DetalheRow
+                            label="Representante fiscal"
+                            value={-CUSTO_REPRESENTANTE_FISCAL_DEFAULT}
+                            type="deducao"
+                            note="Obrigatório para cidadãos extra-UE"
                           />
                         )}
                         {resultEmpresa.custoConstituicao > 0 && (
@@ -6852,20 +7371,26 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                             )}
                             <DetalheRow
                               label={
-                                opcaoEnglobamento
-                                  ? `IRS dividendos (englobamento 50% × ${pct(resultEmpresa.taxaMarginalGerente)} marg.)`
-                                  : "IRS dividendos (28% taxa liberatória)"
+                                aplicarIFICICompleto
+                                  ? `IRS dividendos (IFICI ${pct(IFICI_TAXA_FLAT)} flat)`
+                                  : opcaoEnglobamento
+                                    ? `IRS dividendos (englobamento 50% × ${pct(resultEmpresa.taxaMarginalGerente)} marg.)`
+                                    : "IRS dividendos (28% taxa liberatória)"
                               }
                               value={
-                                -(opcaoEnglobamento
-                                  ? resultEmpresa.irsDividendosEnglobamento
-                                  : resultEmpresa.irsDividendosLiberatoria)
+                                aplicarIFICICompleto
+                                  ? -(resultEmpresa.dividendos * IFICI_TAXA_FLAT)
+                                  : -(opcaoEnglobamento
+                                      ? resultEmpresa.irsDividendosEnglobamento
+                                      : resultEmpresa.irsDividendosLiberatoria)
                               }
                               type="warning"
                               note={
-                                opcaoEnglobamento
-                                  ? "Art. 40.º-A CIRS — 50% incluído no rendimento coletável"
-                                  : "Art. 71.º CIRS — taxa liberatória final"
+                                aplicarIFICICompleto
+                                  ? "Art. 58.º-A EBF — taxa flat IFICI sobre dividendos"
+                                  : opcaoEnglobamento
+                                    ? "Art. 40.º-A CIRS — 50% incluído no rendimento coletável"
+                                    : "Art. 71.º CIRS — taxa liberatória final"
                               }
                             />
                           </>
@@ -6897,7 +7422,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                                 <AnimatedNumber value={liquidoEmpresaFinal} />
                               </div>
                               <div className="text-xs text-stone-400">
-                                {pct(liquidoEmpresaFinal / (brutoAnual || 1))}{" "}
+                                {pct(liquidoEmpresaFinal / (faturacaoBaseEmpresa || 1))}{" "}
                                 do bruto
                               </div>
                             </div>
@@ -6930,7 +7455,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
               <ComparacaoNarrativa
                 liquidoRV={resultAnualRV.liquido}
                 liquidoEmpresa={liquidoEmpresaFinal}
-                faturacaoAnual={brutoAnual}
+                faturacaoAnual={faturacaoBaseEmpresa}
                 breakEven={breakEven}
                 custoFixoEstimado={custosExtra}
                 onVerDetalhe={() => setCenario("empresa")}
@@ -7044,9 +7569,9 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                 </span>
                 {empresaVence ? (
                   <span>
-                    Com {fmt(brutoAnual)}/ano, a empresa deixa-te com mais{" "}
+                    Com {fmt(faturacaoBaseEmpresa)}/ano, a empresa deixa-te com mais{" "}
                     <strong>{fmt(diferenca)}/ano</strong> (
-                    {pct(diferenca / (brutoAnual || 1))}).
+                    {pct(diferenca / (faturacaoBaseEmpresa || 1))}).
                     {breakEven && ` Ponto de viragem: ${fmt(breakEven)}/ano.`}
                   </span>
                 ) : (

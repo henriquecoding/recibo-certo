@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { calcularVencimento, calcularVencimentoAnual, mealheiroDependente, calcularReciboMensal, IRS_JOVEM_TETO_MENSAL } from "@/lib/fiscal-dependente";
+import { DEDUCAO_DEPENDENTE_DEFICIENCIA } from "@/lib/fiscal-data";
 import { SS_DEPENDENTE, SUBSIDIO_REFEICAO, TRABALHO_SUPLEMENTAR, AJUDAS_CUSTO, HORARIO_SEMANAL_COMPLETO, type EstadoCivilRet } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
@@ -60,6 +61,7 @@ export function SimuladorVencimento() {
   const [variavelStr, setVariavelStr] = useState("");
   const [estadoCivil, setEstadoCivil] = useState<EstadoCivilRet>("naoCasado");
   const [deficiencia, setDeficiencia] = useState(false);
+  const [depDeficientes, setDepDeficientes] = useState(0);
   const [regiao, setRegiao] = useState<"continente" | "madeira" | "acores">("continente");
   // ── IRS Jovem (Art. 12.º-B CIRS) ──
   const [irsJovem, setIrsJovem] = useState(false);
@@ -123,8 +125,8 @@ export function SimuladorVencimento() {
 
   const variavelAnual = num(variavelStr);
   const meal = useMemo(
-    () => mealheiroDependente({ salarioBruto: bruto, dependentes, variavelAnual, estadoCivil, deficiencia, regiao, irsJovemAno: jovemAno }),
-    [bruto, dependentes, variavelAnual, estadoCivil, deficiencia, regiao, jovemAno]
+    () => mealheiroDependente({ salarioBruto: bruto, dependentes, dependentesDeficientes: depDeficientes, variavelAnual, estadoCivil, deficiencia, regiao, irsJovemAno: jovemAno }),
+    [bruto, dependentes, depDeficientes, variavelAnual, estadoCivil, deficiencia, regiao, jovemAno]
   );
 
   // Input estável para a auditoria embutida (reflete a simulação atual).
@@ -225,6 +227,7 @@ export function SimuladorVencimento() {
     printRelatorioVencimento({
       situacao: SITUACAO_LABEL[estadoCivil],
       dependentes,
+      dependentesDeficientes: depDeficientes,
       deficiencia,
       subsidioDia: temSubsidio ? subsidioDia : 0,
       subsidioForma: temSubsidio ? (cartao ? "Cartão" : "Dinheiro") : "—",
@@ -419,13 +422,44 @@ export function SimuladorVencimento() {
                   key={d}
                   type="button"
                   aria-pressed={dependentes === d}
-                  onClick={() => setDependentes(d)}
+                  onClick={() => { setDependentes(d); if (d < depDeficientes) setDepDeficientes(d); }}
                   className={`flex-1 ${seg(dependentes === d)}`}
                 >
                   {d === 4 ? "4+" : d}
                 </button>
               ))}
             </div>
+            {dependentes > 0 && (
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-4 py-2.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs text-stone-600 dark:text-stone-300">
+                    Com deficiência (≥ 60%)
+                  </span>
+                  <InfoTip label="Art. 87.º CIRS">
+                    Cada dependente com grau de incapacidade permanente ≥ 60% (atestado multiúso) confere uma dedução adicional de {Math.round(DEDUCAO_DEPENDENTE_DEFICIENCIA.value)} € à coleta de IRS (2,5 × IAS). Acumula com a dedução normal por dependente.
+                  </InfoTip>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setDepDeficientes(Math.max(0, depDeficientes - 1))}
+                    disabled={depDeficientes <= 0}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:border-brand hover:text-brand transition-all disabled:opacity-30"
+                  >
+                    <span className="text-sm font-semibold leading-none">−</span>
+                  </button>
+                  <span className="w-6 text-center text-sm font-bold tabular-nums text-stone-800 dark:text-stone-100">{depDeficientes}</span>
+                  <button
+                    type="button"
+                    onClick={() => setDepDeficientes(Math.min(dependentes, depDeficientes + 1))}
+                    disabled={depDeficientes >= dependentes}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:border-brand hover:text-brand transition-all disabled:opacity-30"
+                  >
+                    <span className="text-sm font-semibold leading-none">+</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>

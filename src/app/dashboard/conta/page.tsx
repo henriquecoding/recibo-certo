@@ -4,11 +4,16 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/supabase/auth";
 import { useSubscricao } from "@/lib/stripe/subscription";
-import { Check, Warning, History, BellAlert, ArrowLeft, ArrowRight } from "@/components/ui/Icons";
+import { getSupabase } from "@/lib/supabase/client";
+import { validarPassword, type ErroPassword } from "@/lib/validacao-password";
+import {
+  Check, Warning, History, BellAlert, ArrowLeft, ArrowRight,
+  Lock, Eye, EyeOff,
+} from "@/components/ui/Icons";
 
 const campo =
-  "w-full px-3.5 py-2.5 text-[16px] text-stone-800 bg-stone-50 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all";
-const rotulo = "mb-1.5 block text-xs font-medium uppercase tracking-wider text-stone-500";
+  "w-full px-3.5 py-2.5 text-[16px] text-stone-800 dark:text-stone-100 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all";
+const rotulo = "mb-1.5 block text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400";
 
 export default function ContaPage() {
   const { user, carregado, disponivel, entrar, registar, sair } = useAuth();
@@ -22,6 +27,15 @@ export default function ContaPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setErro("");
+
+    if (modo === "registar") {
+      const errosPassword = validarPassword(password);
+      if (errosPassword.length > 0) {
+        setErro(errosPassword[0].mensagem);
+        return;
+      }
+    }
+
     setAProcessar(true);
     const r = modo === "entrar" ? await entrar(email, password) : await registar(email, password);
     setAProcessar(false);
@@ -34,7 +48,6 @@ export default function ContaPage() {
     }
   };
 
-  // ── Supabase não configurado ──
   if (!disponivel) {
     return (
       <Wrapper>
@@ -52,60 +65,64 @@ export default function ContaPage() {
   if (!carregado) {
     return (
       <Wrapper>
-        <div className="h-40 animate-pulse rounded-4xl border border-stone-100 bg-white shadow-card" />
+        <div className="h-40 animate-pulse rounded-4xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900" />
       </Wrapper>
     );
   }
 
-  // ── Sessão iniciada ──
   if (user) {
     return (
       <Wrapper>
-        <div className="rounded-4xl border border-stone-100 bg-white p-7 shadow-card">
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-light text-brand">
-              <Check size={20} />
-            </span>
-            <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-stone-800">Sessão iniciada</h2>
-              <p className="truncate text-sm text-stone-500">{user.email}</p>
+        <div className="space-y-5">
+          {/* Sessão */}
+          <div className="rounded-4xl border border-stone-100 bg-white p-7 shadow-card dark:border-stone-800 dark:bg-stone-900">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-light text-brand">
+                <Check size={20} />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold text-stone-800 dark:text-stone-100">Sessão iniciada</h2>
+                <p className="truncate text-sm text-stone-500 dark:text-stone-400">{user.email}</p>
+              </div>
             </div>
+
+            <SecaoSubscricao />
+
+            <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5 dark:border-stone-800">
+              <Beneficio icon={<History size={16} />} texto="Os teus recibos vão ficar seguros na nuvem e em todos os dispositivos." />
+              <Beneficio icon={<BellAlert size={16} />} texto="Alertas de prazos por email para nunca falhares um pagamento." />
+            </div>
+
+            <p className="mt-5 rounded-xl bg-cream p-3 text-xs leading-relaxed text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+              A tua conta está criada e pronta. Com o plano Pro, os teus recibos ficam sincronizados na nuvem em todos os dispositivos.
+            </p>
+
+            <button
+              type="button"
+              onClick={sair}
+              className="mt-5 inline-flex justify-center rounded-2xl border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300 dark:border-stone-700 dark:text-stone-300 dark:hover:border-stone-600"
+            >
+              Terminar sessão
+            </button>
           </div>
 
-          <SecaoSubscricao />
-
-          <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5">
-            <Beneficio icon={<History size={16} />} texto="Os teus recibos vão ficar seguros na nuvem e em todos os dispositivos." />
-            <Beneficio icon={<BellAlert size={16} />} texto="Alertas de prazos por email para nunca falhares um pagamento." />
-          </div>
-
-          <p className="mt-5 rounded-xl bg-cream p-3 text-xs leading-relaxed text-stone-500">
-            A tua conta está criada e pronta. Com o plano Pro, os teus recibos ficam sincronizados na nuvem em todos os dispositivos.
-          </p>
-
-          <button
-            type="button"
-            onClick={sair}
-            className="mt-5 inline-flex justify-center rounded-2xl border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300"
-          >
-            Terminar sessão
-          </button>
+          {/* Alterar password */}
+          <SecaoPassword />
         </div>
       </Wrapper>
     );
   }
 
-  // ── Email enviado (confirmação) ──
   if (confirmar) {
     return (
       <Wrapper>
-        <div className="rounded-4xl border border-stone-100 bg-white p-7 shadow-card">
+        <div className="rounded-4xl border border-stone-100 bg-white p-7 shadow-card dark:border-stone-800 dark:bg-stone-900">
           <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-light text-brand">
             <Check size={20} />
           </span>
-          <h2 className="font-display text-xl font-semibold text-stone-800">Confirma o teu email</h2>
-          <p className="mt-2 text-sm leading-relaxed text-stone-500">
-            Enviámos um link de confirmação para <span className="font-semibold text-stone-700">{email}</span>. Abre-o
+          <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100">Confirma o teu email</h2>
+          <p className="mt-2 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
+            Enviámos um link de confirmação para <span className="font-semibold text-stone-700 dark:text-stone-200">{email}</span>. Abre-o
             para ativar a conta e depois volta aqui para entrar.
           </p>
         </div>
@@ -113,11 +130,10 @@ export default function ContaPage() {
     );
   }
 
-  // ── Formulário entrar / registar ──
   return (
     <Wrapper>
-      <div className="rounded-4xl border border-stone-100 bg-white p-7 shadow-card">
-        <div className="mb-5 inline-flex items-center gap-1 rounded-xl border border-stone-200 bg-stone-50 p-1">
+      <div className="rounded-4xl border border-stone-100 bg-white p-7 shadow-card dark:border-stone-800 dark:bg-stone-900">
+        <div className="mb-5 inline-flex items-center gap-1 rounded-xl border border-stone-200 bg-stone-50 p-1 dark:border-stone-700 dark:bg-stone-800">
           {([
             { id: "entrar", label: "Entrar" },
             { id: "registar", label: "Criar conta" },
@@ -132,7 +148,7 @@ export default function ContaPage() {
                   setModo(o.id);
                   setErro("");
                 }}
-                className={`rounded-lg px-4 py-1.5 text-sm font-semibold transition-all ${ativo ? "bg-white text-brand-dark shadow-card" : "text-stone-500 hover:text-stone-700"}`}
+                className={`rounded-lg px-4 py-1.5 text-sm font-semibold transition-all ${ativo ? "bg-white text-brand-dark shadow-card dark:bg-stone-700 dark:text-brand" : "text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200"}`}
               >
                 {o.label}
               </button>
@@ -161,11 +177,11 @@ export default function ContaPage() {
               type="password"
               autoComplete={modo === "entrar" ? "current-password" : "new-password"}
               required
-              minLength={6}
+              minLength={modo === "registar" ? 8 : 1}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={campo}
-              placeholder="Mínimo 6 caracteres"
+              placeholder={modo === "registar" ? "Min. 8 caract., 1 maiúscula, 1 número" : "A tua password"}
             />
           </div>
 
@@ -196,14 +212,14 @@ export default function ContaPage() {
 function Wrapper({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto max-w-md">
-      <Link href="/dashboard" className="mb-5 inline-flex items-center gap-1.5 text-sm text-stone-400 transition-colors hover:text-stone-700">
+      <Link href="/dashboard" className="mb-5 inline-flex items-center gap-1.5 text-sm text-stone-400 transition-colors hover:text-stone-700 dark:hover:text-stone-200">
         <ArrowLeft size={13} />
         Voltar ao painel
       </Link>
       <header className="mb-6">
-        <p className="mb-1 text-xs font-medium uppercase tracking-wider text-stone-400">Conta · Sincronização</p>
-        <h1 className="font-display text-3xl font-semibold text-stone-800">Conta na nuvem</h1>
-        <p className="mt-1 text-sm text-stone-500">Entra para guardares os teus recibos na nuvem e em todos os dispositivos.</p>
+        <p className="mb-1 text-xs font-medium uppercase tracking-wider text-stone-400">Conta · Segurança</p>
+        <h1 className="font-display text-3xl font-semibold text-stone-800 dark:text-stone-100">Conta e segurança</h1>
+        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">Gere a tua sessão e altera a tua password.</p>
       </header>
       {children}
     </div>
@@ -214,7 +230,7 @@ function Beneficio({ icon, texto }: { icon: React.ReactNode; texto: string }) {
   return (
     <div className="flex items-start gap-2.5">
       <span className="mt-0.5 flex-shrink-0 text-brand">{icon}</span>
-      <span className="text-sm leading-relaxed text-stone-600">{texto}</span>
+      <span className="text-sm leading-relaxed text-stone-600 dark:text-stone-300">{texto}</span>
     </div>
   );
 }
@@ -227,17 +243,17 @@ function SecaoSubscricao() {
       <div className="mt-5 flex items-center justify-between rounded-2xl border border-brand/20 bg-brand-light/50 px-4 py-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-stone-800">Plano Pro</span>
+            <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">Plano Pro</span>
             <span className="inline-flex items-center rounded-full bg-brand px-2 py-0.5 text-[9px] font-semibold text-white">
               {status === "active" ? "Ativo" : "A experimentar"}
             </span>
           </div>
-          <p className="mt-0.5 text-xs text-stone-500">Acesso a todas as funcionalidades.</p>
+          <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">Acesso a todas as funcionalidades.</p>
         </div>
         <button
           type="button"
           onClick={abrirPortal}
-          className="flex items-center gap-1 text-xs font-semibold text-brand-dark transition-colors hover:underline"
+          className="flex items-center gap-1 text-xs font-semibold text-brand-dark transition-colors hover:underline dark:text-brand"
         >
           Gerir
           <ArrowRight size={11} />
@@ -247,10 +263,10 @@ function SecaoSubscricao() {
   }
 
   return (
-    <div className="mt-5 flex items-center justify-between rounded-2xl border border-stone-100 bg-stone-50 px-4 py-3">
+    <div className="mt-5 flex items-center justify-between rounded-2xl border border-stone-100 bg-stone-50 px-4 py-3 dark:border-stone-800 dark:bg-stone-800">
       <div>
-        <span className="text-sm font-semibold text-stone-800">Plano Grátis</span>
-        <p className="mt-0.5 text-xs text-stone-500">Passa ao Pro para desbloquear alertas, nuvem e exportação.</p>
+        <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">Plano Grátis</span>
+        <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">Passa ao Pro para desbloquear alertas, nuvem e exportação.</p>
       </div>
       <a
         href="/dashboard/upgrade"
@@ -259,6 +275,210 @@ function SecaoSubscricao() {
         Upgrade
         <ArrowRight size={11} />
       </a>
+    </div>
+  );
+}
+
+function SecaoPassword() {
+  const { user } = useAuth();
+  const [passwordAtual, setPasswordAtual] = useState("");
+  const [novaPassword, setNovaPassword] = useState("");
+  const [confirmarPassword, setConfirmarPassword] = useState("");
+  const [mostrarAtual, setMostrarAtual] = useState(false);
+  const [mostrarNova, setMostrarNova] = useState(false);
+  const [mostrarConfirmar, setMostrarConfirmar] = useState(false);
+  const [aProcessar, setAProcessar] = useState(false);
+  const [msg, setMsg] = useState<{ tipo: "sucesso" | "erro"; texto: string } | null>(null);
+
+  const errosNova = novaPassword.length > 0 ? validarPassword(novaPassword) : [];
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setMsg(null);
+
+    if (!passwordAtual) {
+      setMsg({ tipo: "erro", texto: "Introduz a tua password atual." });
+      return;
+    }
+
+    const erros = validarPassword(novaPassword);
+    if (erros.length > 0) {
+      setMsg({ tipo: "erro", texto: erros[0].mensagem });
+      return;
+    }
+
+    if (novaPassword !== confirmarPassword) {
+      setMsg({ tipo: "erro", texto: "As passwords não coincidem." });
+      return;
+    }
+
+    setAProcessar(true);
+    try {
+      const sb = getSupabase();
+      const { error: loginErr } = await sb.auth.signInWithPassword({
+        email: user?.email ?? "",
+        password: passwordAtual,
+      });
+      if (loginErr) {
+        setMsg({ tipo: "erro", texto: "A password atual está incorreta." });
+        setAProcessar(false);
+        return;
+      }
+
+      const { error } = await sb.auth.updateUser({ password: novaPassword });
+      if (error) {
+        const m = error.message.toLowerCase();
+        let texto = error.message;
+        if (m.includes("same password") || m.includes("different from the old")) {
+          texto = "A nova password tem de ser diferente da atual.";
+        } else if (m.includes("reauthentication") || m.includes("session")) {
+          texto = "Por segurança, inicia sessão novamente antes de alterar a password.";
+        }
+        setMsg({ tipo: "erro", texto });
+      } else {
+        setMsg({ tipo: "sucesso", texto: "Password alterada com sucesso." });
+        setPasswordAtual("");
+        setNovaPassword("");
+        setConfirmarPassword("");
+      }
+    } catch {
+      setMsg({ tipo: "erro", texto: "Ocorreu um erro inesperado. Tenta novamente." });
+    }
+    setAProcessar(false);
+  };
+
+  return (
+    <div className="rounded-4xl border border-stone-100 bg-white p-7 shadow-card dark:border-stone-800 dark:bg-stone-900">
+      <div className="flex items-center gap-3 mb-5">
+        <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-light text-brand">
+          <Lock size={20} />
+        </span>
+        <div>
+          <h2 className="text-sm font-semibold text-stone-800 dark:text-stone-100">Alterar password</h2>
+          <p className="text-xs text-stone-500 dark:text-stone-400">Introduz a tua password atual e define uma nova.</p>
+        </div>
+      </div>
+
+      <form onSubmit={submit} className="space-y-4">
+        {/* Password atual */}
+        <div>
+          <label htmlFor="password-atual" className={rotulo}>Password atual</label>
+          <div className="relative">
+            <input
+              id="password-atual"
+              type={mostrarAtual ? "text" : "password"}
+              autoComplete="current-password"
+              required
+              value={passwordAtual}
+              onChange={(e) => setPasswordAtual(e.target.value)}
+              className={`${campo} pr-11`}
+              placeholder="A tua password atual"
+            />
+            <button
+              type="button"
+              onClick={() => setMostrarAtual((v) => !v)}
+              aria-label={mostrarAtual ? "Esconder password" : "Mostrar password"}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 transition-colors hover:text-stone-600 dark:hover:text-stone-300"
+            >
+              {mostrarAtual ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Nova password */}
+        <div>
+          <label htmlFor="nova-password" className={rotulo}>Nova password</label>
+          <div className="relative">
+            <input
+              id="nova-password"
+              type={mostrarNova ? "text" : "password"}
+              autoComplete="new-password"
+              required
+              minLength={8}
+              value={novaPassword}
+              onChange={(e) => setNovaPassword(e.target.value)}
+              className={`${campo} pr-11`}
+              placeholder="Min. 8 caract., 1 maiúscula, 1 número"
+            />
+            <button
+              type="button"
+              onClick={() => setMostrarNova((v) => !v)}
+              aria-label={mostrarNova ? "Esconder password" : "Mostrar password"}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 transition-colors hover:text-stone-600 dark:hover:text-stone-300"
+            >
+              {mostrarNova ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+          {/* Indicadores de requisitos */}
+          {novaPassword.length > 0 && (
+            <div className="mt-2 space-y-1">
+              <RequisitoPw ok={!errosNova.some((e) => e.tipo === "comprimento")} texto="Mínimo 8 caracteres" />
+              <RequisitoPw ok={!errosNova.some((e) => e.tipo === "maiuscula")} texto="Pelo menos 1 letra maiúscula" />
+              <RequisitoPw ok={!errosNova.some((e) => e.tipo === "numero")} texto="Pelo menos 1 número" />
+            </div>
+          )}
+        </div>
+
+        {/* Confirmar nova password */}
+        <div>
+          <label htmlFor="confirmar-password" className={rotulo}>Confirmar nova password</label>
+          <div className="relative">
+            <input
+              id="confirmar-password"
+              type={mostrarConfirmar ? "text" : "password"}
+              autoComplete="new-password"
+              required
+              minLength={8}
+              value={confirmarPassword}
+              onChange={(e) => setConfirmarPassword(e.target.value)}
+              className={`${campo} pr-11`}
+              placeholder="Repete a nova password"
+            />
+            <button
+              type="button"
+              onClick={() => setMostrarConfirmar((v) => !v)}
+              aria-label={mostrarConfirmar ? "Esconder password" : "Mostrar password"}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 transition-colors hover:text-stone-600 dark:hover:text-stone-300"
+            >
+              {mostrarConfirmar ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+        </div>
+
+        {msg && (
+          <div className={`flex items-start gap-2 rounded-xl border p-3 ${
+            msg.tipo === "sucesso"
+              ? "border-brand/20 bg-brand-light"
+              : "border-alert-border bg-alert-bg"
+          }`}>
+            <span className={`mt-0.5 flex-shrink-0 ${msg.tipo === "sucesso" ? "text-brand" : "text-alert-text"}`}>
+              {msg.tipo === "sucesso" ? <Check size={13} /> : <Warning size={13} />}
+            </span>
+            <span className={`text-xs leading-relaxed ${msg.tipo === "sucesso" ? "text-brand-dark" : "text-alert-text"}`}>
+              {msg.texto}
+            </span>
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={aProcessar}
+          className="inline-flex w-full justify-center rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {aProcessar ? "A alterar…" : "Alterar password"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function RequisitoPw({ ok, texto }: { ok: boolean; texto: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className={`flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-full ${ok ? "bg-brand text-white" : "border border-stone-300 dark:border-stone-600"}`}>
+        {ok && <Check size={8} />}
+      </span>
+      <span className={`text-[11px] ${ok ? "text-brand-dark dark:text-brand" : "text-stone-400"}`}>{texto}</span>
     </div>
   );
 }

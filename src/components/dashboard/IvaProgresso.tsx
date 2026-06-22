@@ -133,7 +133,14 @@ export default function IvaProgresso({ recibos }: { recibos: Recibo[] }) {
 
       {/* Barra de progresso com marcadores de limiar */}
       <div className="relative">
-        <div className="h-2.5 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
+        <div
+          className="h-2.5 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800"
+          role="progressbar"
+          aria-valuenow={Math.round(pctv)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Faturação: ${Math.round(pctv)}% do limite de isenção de IVA`}
+        >
           <m.div
             initial={{ width: "0%" }}
             whileInView={{ width: `${pctv}%` }}
@@ -142,7 +149,6 @@ export default function IvaProgresso({ recibos }: { recibos: Recibo[] }) {
             className={`h-full rounded-full ${barColor}`}
           />
         </div>
-        {/* Marcadores: 80%, 90%, 95% */}
         {[80, 90, 95].map((p) => (
           <div
             key={p}
@@ -152,12 +158,11 @@ export default function IvaProgresso({ recibos }: { recibos: Recibo[] }) {
         ))}
       </div>
 
-      <div className="mt-1 flex justify-between text-[10px] text-stone-400">
-        <span />
-        <span style={{ position: "absolute", left: "calc(80% - 10px)", marginTop: "2px" }}>80%</span>
-        <span style={{ position: "absolute", left: "calc(90% - 10px)", marginTop: "2px" }}>90%</span>
-        <span style={{ position: "absolute", left: "calc(95% - 10px)", marginTop: "2px" }}>95%</span>
-        <span className="ml-auto">{pctv.toFixed(0)}%</span>
+      <div className="relative mt-1 text-[10px] text-stone-400">
+        {[80, 90, 95].map((p) => (
+          <span key={p} className="absolute" style={{ left: `${p}%`, transform: "translateX(-50%)" }}>{p}%</span>
+        ))}
+        <span className="block text-right">{pctv.toFixed(0)}%</span>
       </div>
 
       {nivel !== "ok" && (

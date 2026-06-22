@@ -56,7 +56,7 @@ export default function Onboarding({ onConcluir }: { onConcluir: () => void }) {
 
   return (
     <div className="mx-auto max-w-xl">
-      <div className="relative overflow-hidden rounded-4xl border border-stone-100 bg-white p-8 shadow-card sm:p-10">
+      <div className="relative overflow-hidden rounded-4xl border border-stone-100 bg-white p-8 shadow-card sm:p-10 dark:bg-stone-900 dark:border-stone-800">
         <div className="grain pointer-events-none absolute inset-0 -z-10 opacity-50" aria-hidden />
 
         <AnimatePresence mode="wait" custom={dir}>
@@ -68,20 +68,20 @@ export default function Onboarding({ onConcluir }: { onConcluir: () => void }) {
             exit={{ opacity: 0, x: dir * -32 }}
             transition={{ duration: 0.35, ease: EASE }}
           >
-            <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-light text-brand">
+            <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-light text-brand dark:bg-brand/15">
               {p.icon}
             </div>
-            <h2 className="font-display text-2xl font-semibold text-stone-800">{p.titulo}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-stone-500">{p.descricao}</p>
+            <h2 className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100">{p.titulo}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-stone-500 dark:text-stone-400">{p.descricao}</p>
 
             {p.pontos && (
               <ul className="mt-5 space-y-3">
                 {p.pontos.map((pt) => (
                   <li key={pt.texto} className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand">
+                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand dark:bg-brand/15">
                       {pt.icon}
                     </span>
-                    <span className="text-sm text-stone-600">{pt.texto}</span>
+                    <span className="text-sm text-stone-600 dark:text-stone-300">{pt.texto}</span>
                   </li>
                 ))}
               </ul>
@@ -95,7 +95,7 @@ export default function Onboarding({ onConcluir }: { onConcluir: () => void }) {
             {PASSOS.map((_, i) => (
               <span
                 key={i}
-                className={`h-1.5 rounded-full transition-all ${i === passo ? "w-6 bg-brand" : "w-1.5 bg-stone-200"}`}
+                className={`h-1.5 rounded-full transition-all ${i === passo ? "w-6 bg-brand" : "w-1.5 bg-stone-200 dark:bg-stone-700"}`}
               />
             ))}
           </div>

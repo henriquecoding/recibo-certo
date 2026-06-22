@@ -52,6 +52,8 @@ export const FERRAMENTA_SLUGS = [
   "payout-mor",
   "recibo-vencimento",
   "auditoria-recibo",
+  "simulador-empresa",
+  "mapa-contabilistas",
 ] as const;
 
 export const PUBLIC_ROUTES: PublicRoute[] = [
@@ -86,7 +88,7 @@ export function generateWebSiteSchema() {
     alternateName: "Recibo Certo",
     url: SITE_URL,
     description:
-      "Copiloto financeiro em Portugal para trabalhadores independentes, por conta de outrem e futuros empresários. IRS, Segurança Social e IVA com as taxas de 2026, verificadas com fonte legal.",
+      "Copiloto financeiro em Portugal: calculadora de recibos verdes, simulador de salário líquido, comparador empresa vs. independente, guias fiscais e ferramentas. IRS, Segurança Social e IVA com taxas de 2026 verificadas com fonte legal.",
     inLanguage: "pt-PT",
     potentialAction: {
       "@type": "SearchAction",
@@ -115,7 +117,7 @@ export function generateOrganizationSchema() {
       height: 48,
     },
     description:
-      "Copiloto financeiro em Portugal para trabalhadores independentes, por conta de outrem e futuros empresários. IRS, Segurança Social, IVA e recibo de vencimento com as taxas de 2026 verificadas com fonte legal.",
+      "Copiloto financeiro em Portugal: calculadora de recibos verdes, simulador de salário líquido, comparador empresa vs. independente, guias fiscais e ferramentas. IRS, Segurança Social, IVA e recibo de vencimento com taxas de 2026 verificadas com fonte legal.",
     foundingDate: "2025",
     address: {
       "@type": "PostalAddress",
@@ -130,10 +132,13 @@ export function generateOrganizationSchema() {
       "Trabalhadores independentes Portugal",
       "Trabalho por conta de outrem Portugal",
       "Recibo de vencimento e salário líquido 2026",
+      "Simulador de empresa unipessoal Portugal",
       "IRS Portugal 2026",
       "Segurança Social Portugal",
       "IVA isenção artigo 53.º do CIVA",
       "IRS Jovem Portugal",
+      "Classificação de atividades CIRS",
+      "Regime simplificado vs contabilidade organizada",
     ],
   };
 }
@@ -152,26 +157,32 @@ export function generateSoftwareApplicationSchema() {
     url: SITE_URL,
     inLanguage: "pt-PT",
     description:
-      "Ferramentas gratuitas em Portugal para trabalhadores independentes, por conta de outrem e futuros empresários: recibos verdes, recibo de vencimento, IRS, Segurança Social e IVA com taxas verificadas de 2026. Grátis, sem registo.",
+      "Copiloto financeiro em Portugal com calculadora de recibos verdes, simulador de salário líquido, simulador de empresa, comparador de regimes, guias fiscais, quiz fiscal e ferramentas para trabalhadores independentes, por conta de outrem e futuros empresários. IRS, Segurança Social e IVA com taxas verificadas de 2026. Grátis, sem registo.",
     offers: {
       "@type": "Offer",
       price: "0",
       priceCurrency: "EUR",
-      description: "Calculadoras e simuladores — grátis para sempre",
+      description: "Calculadoras, simuladores, guias e ferramentas — grátis para sempre",
       availability: "https://schema.org/InStock",
     },
     featureList: [
       "Calculadora de recibos verdes (IRS, Segurança Social e IVA)",
-      "Simulador de recibo de vencimento (trabalho por conta de outrem)",
+      "Simulador de recibo de vencimento e salário líquido (trabalho por conta de outrem)",
+      "Simulador de empresa unipessoal vs. trabalhador independente",
       "Comparador: trabalho dependente vs. recibos verdes vs. empresa",
+      "Classificador de atividades CIRS com regime fiscal automático",
       "Auditoria do recibo de vencimento face às tabelas de 2026",
       "IRS Jovem 2026 com isenção crescente por anos",
       "Calendário de prazos fiscais com alertas antecipados",
+      "Quiz Fiscal com gamificação e cupões Pro",
+      "15 guias fiscais detalhados para trabalhadores independentes",
+      "Mapa de contabilistas em Portugal",
+      "Dashboard com guardião de SS, retenção e estimativa de IRS anual",
       "Exportação de dados para o contabilista",
     ],
     softwareVersion: "2026",
     releaseNotes:
-      "Atualizado para o Orçamento do Estado 2025/2026. Taxa de retenção na fonte 23%, limite de isenção de IVA 15.000 €, IRS Jovem revisto.",
+      "Atualizado para o Orçamento do Estado 2025/2026. Simulador de empresa, classificador de atividades, quiz fiscal, guias detalhados, dashboard inteligente, taxas de retenção 23%, limite de isenção de IVA 15.000 €, IRS Jovem revisto.",
   };
 }
 

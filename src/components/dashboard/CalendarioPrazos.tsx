@@ -51,22 +51,22 @@ export default function CalendarioPrazos({ prazos }: { prazos: Prazo[] }) {
   return (
     <div className="grid lg:grid-cols-[1fr_320px] gap-6 items-start">
       {/* Grelha do mês */}
-      <div className="p-5 rounded-2xl bg-white border border-stone-100">
+      <div className="p-5 rounded-2xl bg-white border border-stone-100 dark:bg-stone-900 dark:border-stone-800">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-lg font-semibold text-stone-800 capitalize">{tituloMes}</h2>
+          <h2 className="font-display text-lg font-semibold text-stone-800 capitalize dark:text-stone-100">{tituloMes}</h2>
           <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => navegar(-1)}
               aria-label="Mês anterior"
-              className="w-9 h-9 rounded-lg flex items-center justify-center text-stone-500 hover:bg-stone-100 transition-colors"
+              className="w-9 h-9 rounded-lg flex items-center justify-center text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800 transition-colors"
             >
               <ArrowLeft size={16} />
             </button>
             <button
               type="button"
               onClick={() => { setAno(inicio.getFullYear()); setMes(inicio.getMonth()); setSelecionado(hoje); }}
-              className="px-3 h-9 rounded-lg text-xs font-semibold text-stone-500 hover:bg-stone-100 transition-colors"
+              className="px-3 h-9 rounded-lg text-xs font-semibold text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800 transition-colors"
             >
               Hoje
             </button>
@@ -74,7 +74,7 @@ export default function CalendarioPrazos({ prazos }: { prazos: Prazo[] }) {
               type="button"
               onClick={() => navegar(1)}
               aria-label="Mês seguinte"
-              className="w-9 h-9 rounded-lg flex items-center justify-center text-stone-500 hover:bg-stone-100 transition-colors"
+              className="w-9 h-9 rounded-lg flex items-center justify-center text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800 transition-colors"
             >
               <ArrowRight size={16} />
             </button>
@@ -83,7 +83,7 @@ export default function CalendarioPrazos({ prazos }: { prazos: Prazo[] }) {
 
         <div className="grid grid-cols-7 gap-1 mb-1">
           {DIAS_SEMANA.map((d) => (
-            <div key={d} className="text-center text-[11px] font-semibold uppercase tracking-wide text-stone-400 py-1">
+            <div key={d} className="text-center text-[11px] font-semibold uppercase tracking-wide text-stone-400 dark:text-stone-500 py-1">
               {d}
             </div>
           ))}
@@ -108,8 +108,8 @@ export default function CalendarioPrazos({ prazos }: { prazos: Prazo[] }) {
                   ativo
                     ? "bg-brand text-white"
                     : ehHoje
-                      ? "bg-brand-light text-brand-dark font-semibold"
-                      : "text-stone-600 hover:bg-stone-100"
+                      ? "bg-brand-light text-brand-dark font-semibold dark:bg-brand/15 dark:text-brand"
+                      : "text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
                 }`}
               >
                 <span>{dia}</span>
@@ -130,29 +130,29 @@ export default function CalendarioPrazos({ prazos }: { prazos: Prazo[] }) {
         </div>
 
         {/* Legenda */}
-        <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-stone-100">
+        <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-stone-100 dark:border-stone-800">
           {Object.values(META_CATEGORIA).map((m) => (
             <div key={m.label} className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full" style={{ background: m.cor }} />
-              <span className="text-xs text-stone-500">{m.label}</span>
+              <span className="text-xs text-stone-500 dark:text-stone-400">{m.label}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Detalhe do dia selecionado */}
-      <div className="p-5 rounded-2xl bg-white border border-stone-100 lg:sticky lg:top-6">
+      <div className="p-5 rounded-2xl bg-white border border-stone-100 lg:sticky lg:top-6 dark:bg-stone-900 dark:border-stone-800">
         <div className="text-xs font-medium uppercase tracking-wider text-stone-400 mb-1">
           {new Date(selecionado + "T00:00:00").toLocaleDateString("pt-PT", { weekday: "long", day: "2-digit", month: "long" })}
         </div>
-        <h3 className="font-display text-lg font-semibold text-stone-800 mb-4">
+        <h3 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100 mb-4">
           {prazosSelecionados.length === 0
             ? "Sem prazos"
             : `${prazosSelecionados.length} ${prazosSelecionados.length === 1 ? "prazo" : "prazos"}`}
         </h3>
 
         {prazosSelecionados.length === 0 ? (
-          <p className="text-sm text-stone-400">Dia livre de obrigações fiscais.</p>
+          <p className="text-sm text-stone-400 dark:text-stone-500">Dia livre de obrigações fiscais.</p>
         ) : (
           <ul className="space-y-3">
             {prazosSelecionados.map((p) => {
@@ -161,8 +161,8 @@ export default function CalendarioPrazos({ prazos }: { prazos: Prazo[] }) {
               return (
                 <li key={p.id} className="pl-3 border-l-2" style={{ borderColor: meta.cor }}>
                   <div className="text-xs font-medium" style={{ color: meta.cor }}>{meta.label}</div>
-                  <div className="text-sm font-semibold text-stone-800">{p.titulo}</div>
-                  <div className="text-xs text-stone-500 mt-0.5">{p.descricao}</div>
+                  <div className="text-sm font-semibold text-stone-800 dark:text-stone-100">{p.titulo}</div>
+                  <div className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">{p.descricao}</div>
                   <div className="text-xs text-stone-400 mt-1">
                     {dias === 0 ? "Hoje" : dias > 0 ? `Daqui a ${dias} dias` : `Há ${Math.abs(dias)} dias`}
                   </div>

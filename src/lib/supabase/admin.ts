@@ -218,3 +218,75 @@ export async function eliminarWaitlistEntry(id: string): Promise<{ erro?: string
     .eq("id", id);
   return error ? { erro: error.message } : {};
 }
+
+// ── Propostas de investidores ───────────────────────────────
+
+export type EstadoProposta = "pendente" | "em_analise" | "contactado" | "aprovado" | "rejeitado";
+
+export interface PropostaRow {
+  id: string;
+  nome: string;
+  email: string;
+  empresa: string | null;
+  cargo: string | null;
+  telefone: string | null;
+  interesse: string;
+  montante_minimo: number | null;
+  montante_maximo: number | null;
+  horizonte: string | null;
+  experiencia_investimento: string | null;
+  setores_interesse: string | null;
+  como_conheceu: string | null;
+  website: string | null;
+  linkedin: string | null;
+  mensagem: string | null;
+  estado: EstadoProposta;
+  notas_admin: string | null;
+  submetido_em: string;
+  atualizado_em: string;
+}
+
+export type PropostaInput = Omit<PropostaRow, "id" | "estado" | "notas_admin" | "submetido_em" | "atualizado_em">;
+
+export async function submeterProposta(p: PropostaInput): Promise<{ erro?: string }> {
+  const { error } = await getSupabase().from("propostas_investidores").insert(p);
+  return error ? { erro: error.message } : {};
+}
+
+export async function listarPropostas(): Promise<PropostaRow[]> {
+  const { data, error } = await getSupabase()
+    .from("propostas_investidores")
+    .select("*")
+    .order("submetido_em", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PropostaRow[];
+}
+
+export async function contarPropostas(): Promise<number> {
+  const { count } = await getSupabase()
+    .from("propostas_investidores")
+    .select("*", { count: "exact", head: true });
+  return count ?? 0;
+}
+
+export async function atualizarEstadoProposta(
+  id: string,
+  estado: EstadoProposta,
+  notas_admin?: string
+): Promise<{ erro?: string }> {
+  const dados: Record<string, unknown> = { estado };
+  if (notas_admin !== undefined) dados.notas_admin = notas_admin;
+  const { error } = await getSupabase()
+    .from("propostas_investidores")
+    .update(dados)
+    .eq("id", id);
+  return error ? { erro: error.message } : {};
+}
+
+export async function eliminarProposta(id: string): Promise<{ erro?: string }> {
+  const { error } = await getSupabase()
+    .from("propostas_investidores")
+    .delete()
+    .eq("id", id);
+  return error ? { erro: error.message } : {};
+}

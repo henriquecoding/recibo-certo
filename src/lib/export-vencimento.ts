@@ -14,6 +14,7 @@ export interface RelatorioVencimento {
   // ── Pressupostos da simulação ──
   situacao: string;
   dependentes: number;
+  dependentesDeficientes?: number;
   deficiencia: boolean;
   subsidioDia: number;
   subsidioForma: string; // "Cartão" | "Dinheiro" | "—"
@@ -147,7 +148,8 @@ export function relatorioVencimentoHTML(d: RelatorioVencimento): string {
   <div class="press">
     ${press("Salário bruto mensal", eur(d.bruto))}
     ${press("Situação familiar", esc(d.situacao))}
-    ${press("Dependentes", String(d.dependentes))}
+    ${press("Dependentes", String(d.dependentes))}${d.dependentesDeficientes ? `
+    ${press("Dependentes com deficiência", String(d.dependentesDeficientes))}` : ""}
     ${press("Grau de incapacidade ≥ 60%", d.deficiencia ? "Sim" : "Não")}
     ${press("Subsídio de refeição", temSubsidio ? `${eur(d.subsidioDia)}/dia · ${esc(d.subsidioForma)}` : "Não aplicável")}
     ${press("Dias úteis considerados", temSubsidio ? String(d.diasUteis) : "—")}

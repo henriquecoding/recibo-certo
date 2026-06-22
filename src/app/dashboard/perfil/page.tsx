@@ -498,6 +498,7 @@ export default function PerfilPage() {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [avatarMsg, setAvatarMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [avatarDragOver, setAvatarDragOver] = useState(false);
 
   // ── Load profile from Supabase ──
   useEffect(() => {
@@ -565,12 +566,12 @@ export default function PerfilPage() {
   }, [user]);
 
   // ── Avatar upload ──
-  const handleAvatarFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
+  const processAvatarFile = useCallback(async (file: File) => {
+    if (!user) return;
     setAvatarUploading(true);
     setAvatarMsg(null);
     setAvatarMenuOpen(false);
+    setAvatarDragOver(false);
     const { url, erro } = await uploadAvatar(user.id, file);
     setAvatarUploading(false);
     if (erro) {
@@ -584,6 +585,18 @@ export default function PerfilPage() {
     }
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, [user]);
+
+  const handleAvatarFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processAvatarFile(file);
+  }, [processAvatarFile]);
+
+  const handleAvatarDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setAvatarDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) processAvatarFile(file);
+  }, [processAvatarFile]);
 
   const handleRemoveAvatar = useCallback(async () => {
     if (!user) return;
@@ -646,14 +659,19 @@ export default function PerfilPage() {
         ════════════════════════════════════════════════════════ */}
         <m.section
           variants={fadeUp}
-          className="relative overflow-hidden rounded-4xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900"
+          className="relative rounded-4xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900"
         >
-          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-br from-brand/8 via-brand-light/40 to-transparent dark:from-brand/10 dark:via-brand/5" />
+          <div className="absolute inset-x-0 top-0 h-32 rounded-t-4xl bg-gradient-to-br from-brand/8 via-brand-light/40 to-transparent dark:from-brand/10 dark:via-brand/5" />
 
-          <div className="relative flex flex-col gap-5 px-5 pb-6 pt-7 sm:flex-row sm:items-center sm:gap-6 sm:px-8 sm:pt-8">
+          <div className="relative flex flex-col gap-5 px-5 pb-6 pt-7 sm:flex-row sm:items-start sm:gap-6 sm:px-8 sm:pt-8">
             {/* Avatar */}
-            <div className="relative flex-shrink-0">
-              <div className="relative h-20 w-20 sm:h-24 sm:w-24">
+            <div
+              className="relative flex-shrink-0 self-center sm:self-auto"
+              onDragOver={(e) => { if (user && plano === "pro") { e.preventDefault(); setAvatarDragOver(true); } }}
+              onDragLeave={() => setAvatarDragOver(false)}
+              onDrop={user && plano === "pro" ? handleAvatarDrop : undefined}
+            >
+              <div className={`relative h-24 w-24 rounded-3xl transition-all ${avatarDragOver ? "ring-3 ring-brand ring-offset-2" : ""}`}>
                 {perfil.avatarUrl ? (
                   <Image
                     src={perfil.avatarUrl}
@@ -665,7 +683,7 @@ export default function PerfilPage() {
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center rounded-3xl border-2 border-brand/20 bg-gradient-to-br from-brand to-brand-dark shadow-lift">
-                    <span className="font-display text-3xl font-semibold text-white sm:text-4xl">
+                    <span className="font-display text-4xl font-semibold text-white">
                       {(perfil.nome || user?.email || "U").charAt(0).toUpperCase()}
                     </span>
                   </div>
@@ -677,9 +695,15 @@ export default function PerfilPage() {
                   </div>
                 )}
 
+                {avatarDragOver && !avatarUploading && (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-3xl bg-brand/30 backdrop-blur-sm">
+                    <ImageIcon size={20} className="text-white" />
+                  </div>
+                )}
+
                 {/* Pro-only: photo upload button */}
                 {user && plano === "pro" && !avatarUploading && (
-                  <div className="absolute -bottom-1 -right-1 z-10">
+                  <div className="absolute -bottom-1.5 -right-1.5 z-10">
                     <button
                       type="button"
                       onClick={() => setAvatarMenuOpen((v) => !v)}
@@ -700,7 +724,7 @@ export default function PerfilPage() {
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: -4 }}
                             transition={{ duration: 0.15, ease: EASE }}
-                            className="absolute right-0 top-full z-30 mt-1.5 w-44 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lift dark:border-stone-700 dark:bg-stone-800"
+                            className="absolute left-0 top-full z-30 mt-1.5 w-48 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lift sm:left-auto sm:right-0 dark:border-stone-700 dark:bg-stone-800"
                           >
                             <button
                               type="button"
@@ -732,15 +756,15 @@ export default function PerfilPage() {
                   <Link
                     href="/dashboard/upgrade"
                     aria-label="Fazer upgrade para adicionar foto"
-                    className="absolute -bottom-1 -right-1 z-10 flex h-8 w-8 items-center justify-center rounded-xl border-2 border-white bg-stone-200 text-stone-400 shadow-sm transition-colors hover:bg-stone-300 dark:border-stone-900 dark:bg-stone-700"
+                    className="absolute -bottom-1.5 -right-1.5 z-10 flex h-8 w-8 items-center justify-center rounded-xl border-2 border-white bg-stone-200 text-stone-400 shadow-sm transition-colors hover:bg-stone-300 dark:border-stone-900 dark:bg-stone-700"
                   >
                     <Lock size={12} />
                   </Link>
                 )}
 
-                {/* Guru badge — shifts left when there's a button on the right */}
+                {/* Guru badge */}
                 {isGuru && (
-                  <div className="absolute -bottom-1 -left-1 flex h-7 w-7 items-center justify-center rounded-lg border-2 border-white bg-amber-400 shadow-sm dark:border-stone-900">
+                  <div className="absolute -bottom-1.5 -left-1.5 flex h-7 w-7 items-center justify-center rounded-lg border-2 border-white bg-amber-400 shadow-sm dark:border-stone-900">
                     <Trophy size={12} className="text-amber-900" />
                   </div>
                 )}
@@ -755,6 +779,13 @@ export default function PerfilPage() {
                 className="hidden"
                 aria-label="Selecionar foto de perfil"
               />
+
+              {/* Drag hint */}
+              {user && plano === "pro" && (
+                <p className="mt-2 text-center text-[10px] text-stone-400 dark:text-stone-500 hidden sm:block">
+                  Arrasta uma foto
+                </p>
+              )}
             </div>
 
             {/* Avatar feedback */}
@@ -777,8 +808,8 @@ export default function PerfilPage() {
             </AnimatePresence>
 
             {/* Info */}
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2.5 mb-1">
+            <div className="min-w-0 flex-1 text-center sm:text-left">
+              <div className="flex flex-wrap items-center justify-center gap-2.5 mb-1 sm:justify-start">
                 <h1 className="font-display text-2xl font-semibold text-stone-800 sm:text-3xl dark:text-stone-100">
                   {saudacao()}, {nomeDisplay}
                 </h1>
@@ -811,7 +842,7 @@ export default function PerfilPage() {
               </div>
               <p className="text-sm text-stone-500">{user?.email ?? "Modo local"}</p>
 
-              <div className="mt-4 flex flex-wrap gap-2.5">
+              <div className="mt-4 grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap">
                 <StatCard
                   valor={quiz.carregado ? fmtNum(quiz.xp) : "—"}
                   rotulo="XP Total"

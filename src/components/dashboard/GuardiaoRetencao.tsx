@@ -1,33 +1,59 @@
 "use client";
 
-import { DISPENSA_RETENCAO_LIMITE, RETENCAO } from "@/lib/fiscal-data";
+import { DISPENSA_RETENCAO_LIMITE, RETENCAO, ATIVIDADES, efeitoFiscal, type TipoAtividade } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import { type Recibo } from "@/lib/store/recibos";
 import { ShieldCheck, Warning } from "@/components/ui/Icons";
 
-// Tipo de atividade (simplificado para o widget — utilizador pode configurar no perfil)
-// Por defeito mostramos art151 (23%) como caso mais comum de freelancers técnicos
-const TIPO_ATIVIDADE = "art151" as const;
+function taxaRetencaoDoRecibo(r: Recibo): number {
+  if (r.atividade) {
+    const ativ = ATIVIDADES.find((a) => a.label === r.atividade);
+    if (ativ) return efeitoFiscal(ativ).retencao;
+  }
+  return RETENCAO[r.tipo].value;
+}
+
+function tipoDominante(recibos: Recibo[]): TipoAtividade {
+  if (recibos.length === 0) return "art151";
+  const contagem: Record<string, number> = {};
+  for (const r of recibos) {
+    const t = r.atividade
+      ? (ATIVIDADES.find((a) => a.label === r.atividade)?.tipo ?? r.tipo)
+      : r.tipo;
+    contagem[t] = (contagem[t] ?? 0) + 1;
+  }
+  let max = 0;
+  let tipo: TipoAtividade = "art151";
+  for (const [t, n] of Object.entries(contagem)) {
+    if (n > max) { max = n; tipo = t as TipoAtividade; }
+  }
+  return tipo;
+}
 
 export default function GuardiaoRetencao({
   recibos,
-  tipoAtividade = TIPO_ATIVIDADE,
 }: {
   recibos: Recibo[];
-  tipoAtividade?: "art151" | "outros";
 }) {
-  const ano      = new Date().getFullYear();
-  const limite   = DISPENSA_RETENCAO_LIMITE.value;
-  const taxa     = RETENCAO[tipoAtividade].value;
-  const taxaPct  = pct(taxa);
+  const ano = new Date().getFullYear();
+  const limite = DISPENSA_RETENCAO_LIMITE.value;
 
-  const faturado = recibos
-    .filter((r) => new Date(r.data + "T00:00:00").getFullYear() === ano)
-    .reduce((s, r) => s + r.valor, 0);
+  const doAno = recibos.filter(
+    (r) => new Date(r.data + "T00:00:00").getFullYear() === ano,
+  );
+  const tipo = tipoDominante(doAno);
+  const taxa = RETENCAO[tipo].value;
+  const taxaPct = pct(taxa);
+
+  const faturado = doAno.reduce((s, r) => s + r.valor, 0);
+
+  const temMultiplasTaxas = (() => {
+    const taxas = new Set(doAno.map(taxaRetencaoDoRecibo));
+    return taxas.size > 1;
+  })();
 
   const ratio = faturado / limite;
 
-  // ── 3 estados visuais ───────────────────────────────────────────────────
   const estado: "normal" | "aviso" | "ativo" =
     faturado >= limite   ? "ativo"  :
     ratio    >= 0.85     ? "aviso"  :
@@ -97,6 +123,12 @@ export default function GuardiaoRetencao({
           <span className="text-stone-500">Taxa de retenção aplicável</span>
           <span className="font-semibold text-stone-700 dark:text-stone-300">{taxaPct}</span>
         </div>
+        {temMultiplasTaxas && (
+          <div className="flex justify-between text-xs">
+            <span className="text-stone-500">Taxas mistas</span>
+            <span className="font-medium text-amber-600 dark:text-amber-400">Vários tipos de atividade</span>
+          </div>
+        )}
         <div className="flex justify-between text-xs">
           <span className="text-stone-500">Base legal</span>
           <span className="font-medium text-stone-600 dark:text-stone-400">Art. 101.º-B CIRS</span>
@@ -105,7 +137,6 @@ export default function GuardiaoRetencao({
           <span className="text-stone-500">Exceção: imposto &lt;25 EUR</span>
           <span className="font-medium text-stone-600 dark:text-stone-400">Sempre dispensada</span>
         </div>
-        {/* Nota: clientes estrangeiros e particulares nunca retêm */}
         <p className="pt-1 text-[10px] text-stone-400">
           Clientes estrangeiros e particulares: nunca há retenção, independentemente do volume.
         </p>

@@ -2,7 +2,7 @@
 // registados em avisos acionáveis. Tudo derivado de dados reais (sem métricas
 // inventadas); cada fator do score é transparente.
 
-import { calcularRecibo, resumir, type Recibo } from "@/lib/store/recibos";
+import { calcularRecibo, resumir, type Recibo, type OpcoesCalcRecibo } from "@/lib/store/recibos";
 import { proximosPrazos, diasAte, type Prazo } from "@/lib/prazos";
 import { IVA_ISENCAO_LIMITE } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
@@ -29,7 +29,7 @@ function recibosDoMes(recibos: Recibo[]): Recibo[] {
 }
 
 /** Gera insights ordenados por relevância (alertas primeiro). */
-export function gerarInsights(recibos: Recibo[]): Insight[] {
+export function gerarInsights(recibos: Recibo[], opcoes?: OpcoesCalcRecibo): Insight[] {
   if (recibos.length === 0) {
     return [
       {
@@ -43,7 +43,7 @@ export function gerarInsights(recibos: Recibo[]): Insight[] {
   const insights: Insight[] = [];
   const limiteIVA = IVA_ISENCAO_LIMITE.value;
   const faturado = faturadoNoAno(recibos);
-  const mes = resumir(recibosDoMes(recibos));
+  const mes = resumir(recibosDoMes(recibos), opcoes);
   const prox = proximosPrazos(new Date(), 1)[0] as Prazo | undefined;
 
   // IVA — proximidade do limite de isenção.

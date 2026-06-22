@@ -8,18 +8,11 @@ import { irsProgressivo } from "@/lib/fiscal";
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 
-const ANOS_DADOS = [
-  { ano: 1, isencao: 1.0 },
-  { ano: 2, isencao: 0.75 },
-  { ano: 3, isencao: 0.75 },
-  { ano: 4, isencao: 0.75 },
-  { ano: 5, isencao: 0.5 },
-  { ano: 6, isencao: 0.5 },
-  { ano: 7, isencao: 0.5 },
-  { ano: 8, isencao: 0.25 },
-  { ano: 9, isencao: 0.25 },
-  { ano: 10, isencao: 0.25 },
-];
+const ISENCAO_POR_ANO = IRS_JOVEM.isencaoPorAno.value;
+const ANOS_DADOS = Object.entries(ISENCAO_POR_ANO).map(([k, v]) => ({
+  ano: Number(k),
+  isencao: v,
+}));
 
 export function SimuladorIRSJovem() {
   const [ano, setAno] = useState(1);

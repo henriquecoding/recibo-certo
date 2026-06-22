@@ -72,7 +72,21 @@ export async function POST(req: NextRequest) {
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const sub = event.data.object as Stripe.Subscription;
-        const uid = sub.metadata.supabase_uid;
+        let uid = sub.metadata.supabase_uid;
+        if (!uid) {
+          const email = await obterEmailCliente(sub.customer as string);
+          if (email) {
+            const sb = getSupabaseAdmin();
+            if (sb) {
+              const { data: perfil } = await sb
+                .from("profiles")
+                .select("id")
+                .eq("email", email)
+                .maybeSingle();
+              if (perfil) uid = perfil.id;
+            }
+          }
+        }
         if (uid) await atualizarSubscricao(uid, sub);
 
         if (event.type === "customer.subscription.created" && sub.status === "active") {
@@ -88,7 +102,21 @@ export async function POST(req: NextRequest) {
       }
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
-        const uid = sub.metadata.supabase_uid;
+        let uid = sub.metadata.supabase_uid;
+        if (!uid) {
+          const email = await obterEmailCliente(sub.customer as string);
+          if (email) {
+            const sb = getSupabaseAdmin();
+            if (sb) {
+              const { data: perfil } = await sb
+                .from("profiles")
+                .select("id")
+                .eq("email", email)
+                .maybeSingle();
+              if (perfil) uid = perfil.id;
+            }
+          }
+        }
         if (uid) {
           (sub as Stripe.Subscription).status = "canceled";
           await atualizarSubscricao(uid, sub);

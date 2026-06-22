@@ -19,6 +19,7 @@ import {
   DEDUCAO_ESPECIFICA_DEPENDENTE,
   DEDUCAO_DEPENDENTE,
   DEDUCAO_DEPENDENTE_3MAIS,
+  DEDUCAO_DEPENDENTE_DEFICIENCIA,
   MINIMO_EXISTENCIA,
   HORARIO_SEMANAL_COMPLETO,
   TRABALHO_SUPLEMENTAR,
@@ -697,6 +698,8 @@ export function compararCategorias(input: ComparacaoCategoriasInput): Comparacao
 export interface MealheiroDependenteInput {
   salarioBruto: number;
   dependentes?: number;
+  /** Dependentes com grau de incapacidade ≥ 60% (Art. 87.º CIRS — +2,5×IAS/dep.). */
+  dependentesDeficientes?: number;
   /** Rendimentos variáveis anuais (comissões, prémios, horas extra). */
   variavelAnual?: number;
   estadoCivil?: EstadoCivilRet;
@@ -720,14 +723,20 @@ export interface MealheiroDependenteResult {
   reservaMensal: number;
 }
 
-function deducaoDependentes(dep: number): number {
+function deducaoDependentes(dep: number, depDefic = 0): number {
   const n = Math.max(0, Math.floor(dep));
-  return Math.min(n, 2) * DEDUCAO_DEPENDENTE.value + Math.max(0, n - 2) * DEDUCAO_DEPENDENTE_3MAIS.value;
+  const nDefic = Math.max(0, Math.floor(depDefic));
+  return (
+    Math.min(n, 2) * DEDUCAO_DEPENDENTE.value +
+    Math.max(0, n - 2) * DEDUCAO_DEPENDENTE_3MAIS.value +
+    nDefic * DEDUCAO_DEPENDENTE_DEFICIENCIA.value
+  );
 }
 
 export function mealheiroDependente(input: MealheiroDependenteInput): MealheiroDependenteResult {
   const base = Math.max(0, input.salarioBruto);
   const dep = Math.max(0, Math.floor(input.dependentes ?? 0));
+  const depDefic = Math.max(0, Math.floor(input.dependentesDeficientes ?? 0));
   const variavel = Math.max(0, input.variavelAnual ?? 0);
 
   const brutoAnual = cent(base * 14 + variavel);
@@ -742,7 +751,7 @@ export function mealheiroDependente(input: MealheiroDependenteInput): MealheiroD
   const rendimentoColetavel = cent(Math.max(0, brutoAnual - deducaoEspecifica - rendimentoIsentoJovem));
 
   const irsBruto = irsProgressivo(rendimentoColetavel);
-  const irsAposDeducoes = Math.max(0, irsBruto - deducaoDependentes(dep));
+  const irsAposDeducoes = Math.max(0, irsBruto - deducaoDependentes(dep, depDefic));
   // Mínimo de existência: o rendimento líquido não pode descer abaixo do limiar.
   const irsMaximo = Math.max(0, rendimentoColetavel - MINIMO_EXISTENCIA.value);
   const irsApurado = cent(Math.min(irsAposDeducoes, irsMaximo));

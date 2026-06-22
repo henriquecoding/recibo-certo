@@ -1,6 +1,6 @@
 "use client";
 
-import { calcularRecibo, type Recibo } from "@/lib/store/recibos";
+import { calcularReciboDashboard, type Recibo } from "@/lib/store/recibos";
 import { fmt } from "@/lib/format";
 
 const TRIMESTRES = ["1.º trimestre", "2.º trimestre", "3.º trimestre", "4.º trimestre"];
@@ -17,7 +17,7 @@ export default function PoupancaTrimestral({ recibos }: { recibos: Recibo[] }) {
 
   const reserva = doTrimestre.reduce(
     (acc, r) => {
-      const c = calcularRecibo(r);
+      const c = calcularReciboDashboard(r);
       acc.iva += c.iva;
       acc.ss += c.segSocial;
       return acc;

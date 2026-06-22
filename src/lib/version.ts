@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.26.1";
+export const APP_VERSION = "1.61.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -18,12 +18,416 @@ export interface EntradaChangelog {
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
-    version: "1.26.1",
+    version: "1.61.0",
     data: "2026-06-22",
     titulo: "Valores exatos no simulador guiado de recibos verdes",
     itens: [
       "O resultado do simulador guiado passou a mostrar valores ao cêntimo (líquido/mês, Segurança Social, IRS e IVA), alinhados com os recibos guardados no painel — sem arredondamentos ao euro.",
       "Corrigida a pequena diferença entre o líquido mostrado no simulador e o líquido dos recibos (eram o mesmo cálculo, divergiam só na apresentação).",
+    ],
+  },
+  {
+    version: "1.60.0",
+    data: "2026-06-22",
+    titulo: "Dashboard alinhado com o simulador",
+    itens: [
+      "Os valores exibidos no painel (IRS, Seg. Social, líquido) passam a corresponder exatamente ao que o simulador calculou — usando o IRS real estimado da simulação anual em vez da retenção na fonte.",
+      "Recibos guardados no painel carregam agora os resultados pré-calculados do simulador, eliminando recálculos e garantindo consistência entre a calculadora e o dashboard.",
+      "Corrigida a perda destes valores nas contas na nuvem (Pro): eram descartados ao recarregar da base de dados e o painel voltava a mostrar a retenção na fonte. Passam a ser preservados de forma fiável.",
+      "Sincronização na nuvem (Pro) dos valores do simulador entre dispositivos, com degradação segura enquanto a base de dados não tiver a nova coluna.",
+      "Rótulo «Retenção IRS» substituído por «IRS estimado» no painel e na página de recibos, para refletir que o valor corresponde ao IRS real (não à retenção na fonte).",
+    ],
+  },
+  {
+    version: "1.59.0",
+    data: "2026-06-22",
+    titulo: "Hero com animação em loop contínuo e indicador de fase",
+    itens: [
+      "Animação do cartão hero agora corre em loop contínuo: após o resultado aparecer, fica estático 4 segundos e reinicia suavemente com fade-out e fade-in — repete-se indefinidamente enquanto a página está aberta.",
+      "Novo indicador de fase abaixo do cartão — três passos (Insere o valor → Calcula → Resultado) com pontos e linhas que progridem e iluminam a verde conforme a animação avança. Dá contexto visual ao que está a acontecer.",
+      "Indicador «Demo ao vivo» acima do cartão com ponto verde pulsante, enquadrando a simulação como demonstração em tempo real.",
+      "Fase de cálculo melhorada: barra de progresso verde varre a base do campo de input em vez de simples pulsação, transmitindo processamento real.",
+      "Superfície do cartão agora reage à fase da animação: sombra e borda mudam subtilmente entre idle (card), focado (lift) e resultado (float + borda verde).",
+      "Layout reestruturado: grelha ajustada para dar mais espaço ao painel de simulação (1fr / 1.1fr), alinhamento ao topo para composição mais limpa.",
+    ],
+  },
+  {
+    version: "1.58.0",
+    data: "2026-06-22",
+    titulo: "Animação do hero profissional e correção da página de investidores",
+    itens: [
+      "Animação do cartão hero da homepage completamente reescrita: sequência profissional de 6 fases — foco no campo de input com brilho verde, digitação com ritmo humano e correção deliberada de erro, pausa de cálculo com shimmer, e resultado com contagem animada suave. Cada perfil tem a sua sequência única de digitação.",
+      "Linhas de detalhe no cartão hero agora cascateiam com animação individual (slide + fade), e a barra de proporções, badge de percentagem, caixa de info/alerta e nota de rodapé entram sequencialmente.",
+      "Página de investidores já não salta automaticamente para o formulário ao carregar — removido autoFocus do campo de nome que forçava o scroll.",
+    ],
+  },
+  {
+    version: "1.57.0",
+    data: "2026-06-22",
+    titulo: "Hero da homepage animado e correções visuais nos investidores",
+    itens: [
+      "Cartão-resposta do hero da homepage agora tem animação de digitação: os números aparecem como se alguém estivesse a escrever, com cursor a piscar. Ao terminar, os resultados surgem com contagem animada e as barras de detalhe expandem suavemente. A animação reinicia ao trocar de perfil (independente, dependente, empresa, comparar).",
+      "Cartões dos demos de investidores (/investidores) agora têm altura mínima fixa (540px mobile, 560px desktop) — a animação já não faz a página saltar ao alternar fases.",
+      "Texto nos cartões verdes (hero do investidores e visão 'Agora') agora usa branco com opacidade elevada em vez de green-100 — contraste muito mais legível.",
+    ],
+  },
+  {
+    version: "1.56.1",
+    data: "2026-06-22",
+    titulo: "Hero do investidores com CTA para o produto",
+    itens: [
+      "Botão principal do hero agora leva à secção 'O produto em ação' para que o visitante veja o pitch antes de submeter uma proposta.",
+      "Botão secundário 'Submeter proposta' adicionado ao hero para acesso direto ao formulário.",
+    ],
+  },
+  {
+    version: "1.56.0",
+    data: "2026-06-22",
+    titulo: "Formulário de propostas para investidores e painel de administração",
+    itens: [
+      "Novo formulário de proposta de investimento na página /investidores: com separadores (Identificação, Detalhes, Mensagem), barra de progresso e campos opcionais expansíveis — pode ser preenchido rapidamente ou com detalhe completo.",
+      "As propostas são guardadas na base de dados Supabase com RLS: qualquer visitante pode submeter, apenas administradores podem consultar e gerir.",
+      "Novo painel de administração em /admin/propostas: listagem com filtros por estado (pendente, em análise, contactado, aprovado, rejeitado), detalhes expansíveis, notas internas e ações rápidas de estado.",
+      "Contagem de propostas adicionada ao painel principal de administração.",
+      "Animação 3D de tilt ao hover removida de todos os cartões — substituída por elevação suave (translate Y) mais acessível e com melhor desempenho.",
+      "CTA do hero e secção final substituídos de mailto por âncora para o formulário de proposta integrado na página.",
+    ],
+  },
+  {
+    version: "1.55.0",
+    data: "2026-06-22",
+    titulo: "Demos de investidores com digitação realista e gráfico donut",
+    itens: [
+      "Animação de digitação realista nos simuladores: cursor vertical a piscar, dígitos aparecem um a um como se alguém estivesse a escrever, com erros de digitação e correções ocasionais — cada demo tem o seu ritmo.",
+      "Gráfico donut animado em SVG mostra a distribuição líquido/IRS/SS em cada simulador, com segmentos que crescem e percentagem central em destaque.",
+      "Barras de progresso por componente acompanham os resultados, com contagem animada dos valores.",
+      "Cartões de demo redesenhados: barra de gradiente no topo, ícone com fundo degradê, focus ring no campo de input e sombras refinadas.",
+      "Ciclo de animação alargado para 14 segundos com ~9 s de espera antes de reiniciar.",
+      "Dados no hero animados: TAM/SAM/SOM e '1,3 milhões' contam de zero ao alvo ao entrar em ecrã; barra de penetração anima ao scroll.",
+      "Botão 'Ver a visão' removido do hero.",
+    ],
+  },
+  {
+    version: "1.54.0",
+    data: "2026-06-22",
+    titulo: "Fonte fiscal única — todos os simuladores alinhados",
+    itens: [
+      "Todos os valores fiscais (taxas, coeficientes, limiares, deduções) passam a derivar exclusivamente do motor fiscal central, eliminando duplicações e risco de desalinhamento.",
+      "Novos parâmetros com base legal verificada: IMI, IMT, Imposto do Selo, englobamento de dividendos e Salário Mínimo Nacional 2026.",
+      "Dispensa de retenção na fonte no modo guiado agora é derivada automaticamente quando a faturação anual é inferior a 15 000 €.",
+      "Simuladores de empresa (completo e guiado), guias IRS Jovem e regime simplificado atualizados para a mesma fonte de verdade.",
+    ],
+  },
+  {
+    version: "1.53.0",
+    data: "2026-06-22",
+    titulo: "Página de investidores redesenhada com demos animados",
+    itens: [
+      "Página /investidores completamente redesenhada: design alinhado com a linguagem visual do ReciboCerto (cream, brand green, organic glows, rounded-4xl), animações 3D com tilt interativo nos cartões, e secções de produto, problema, visão, modelo de negócio e vantagens competitivas.",
+      "Novos mini-simuladores animados em loop na secção «O produto em ação»: recibos verdes, vencimento e empresa preenchem-se automaticamente com contagem animada e resultados em cascata — mostrando a plataforma a funcionar em tempo real.",
+    ],
+  },
+  {
+    version: "1.52.0",
+    data: "2026-06-22",
+    titulo: "Recibos no painel — guardar da calculadora e visualização completa",
+    itens: [
+      "Guardar recibos no painel diretamente a partir do modo guiado ou do simulador completo, com nome do cliente associado.",
+      "Funcionalidade Pro: utilizadores com conta gratuita podem experimentar com 1 recibo de amostra.",
+      "Página de recibos redesenhada: gráfico de receita anual, donut de distribuição (líquido, retenção, SS), resumo de impostos acumulados.",
+      "Nova vista de tabela detalhada com bruto, IVA, retenção, Seg. Social e líquido por recibo, com totais.",
+      "Distribuição de faturação por cliente com barra de progresso visual.",
+      "Agrupamento mensal colapsável com mini-resumo de impostos por mês.",
+    ],
+  },
+  {
+    version: "1.51.0",
+    data: "2026-06-21",
+    titulo: "Página de investidores",
+    itens: [
+      "Nova página /investidores: apresentação institucional para potenciais investidores com tese de negócio, solução, mercado, modelo de receita, métricas SaaS, Go-to-Market e conformidade regulatória.",
+    ],
+  },
+  {
+    version: "1.50.0",
+    data: "2026-06-21",
+    titulo: "Auditoria do dashboard — bugs fiscais, dark mode e acessibilidade",
+    itens: [
+      "Corrigido bug na tributação autónoma de empresa: agravamento por prejuízo agora calcula a sobretaxa correta em vez de zero.",
+      "Isenção de Segurança Social do 1.º ano agora reconhece tanto a flag de primeiro ano como a acumulação com emprego.",
+      "Guardião de Segurança Social: prazo do Q1 corrigido para 20 de julho (antes mostrava outubro, igual ao Q2).",
+      "Dark mode completo em mais de 20 componentes do dashboard: recibos, receitas, calendário, gráficos, donut, onboarding e primitivos UI.",
+      "Acessibilidade: role progressbar no IVA, scope col e caption na tabela de recibos, confirmação ao apagar recibo.",
+      "Tipografia do saldo responsiva e secções críticas protegidas com ErrorBoundary.",
+    ],
+  },
+  {
+    version: "1.49.0",
+    data: "2026-06-21",
+    titulo: "Página de investidores e limpeza de preços",
+    itens: [
+      "Nova página /investidores: apresentação institucional para potenciais investidores com tese de negócio, solução, mercado, modelo de receita e conformidade.",
+      "Secção verde «Plano Pro» removida da landing e da página de preços (redundante com os cards de planos).",
+      "Texto do plano Quiz Master encurtado para melhor leitura no card.",
+    ],
+  },
+  {
+    version: "1.48.0",
+    data: "2026-06-21",
+    titulo: "Correções mobile e texto Quiz Master",
+    itens: [
+      "Foto de perfil agora visível no menu mobile do Nav para utilizadores Pro.",
+      "Pesquisa global: input no topo em todas as plataformas, modal ajustado para telemóveis com safe-area e cantos arredondados.",
+      "Botão «Terminar sessão» acessível no menu do dashboard mobile, com perfil e avatar visíveis.",
+      "Plano Quiz Master: novo texto motivacional e dark mode completo no card.",
+    ],
+  },
+  {
+    version: "1.47.0",
+    data: "2026-06-21",
+    titulo: "Guias alargados a conta de outrem e empresas",
+    itens: [
+      "6 novos guias: recibo de vencimento, subsídios de férias e Natal, trabalho suplementar (conta de outrem), abrir empresa, IRC para PME e tributação autónoma (empresas).",
+      "Página de guias reorganizada por categoria: independentes, conta de outrem, empresas e transversal.",
+      "Sidebar de navegação com secções categorizadas e todos os novos guias acessíveis.",
+      "Guias transversais (escalões IRS, deduções à coleta) alargados para refletir aplicação a todos os regimes.",
+    ],
+  },
+  {
+    version: "1.46.0",
+    data: "2026-06-21",
+    titulo: "Footer redesenhado",
+    itens: [
+      "Footer reestruturado com layout moderno: trust bar em grelha responsiva (2×2 mobile, 4 colunas desktop), navegação em 4 colunas com ferramentas (com ícones), aprender, empresa e contacto.",
+      "Novo card de dados oficiais com link para fontes, aviso legal compacto e barra inferior simplificada.",
+    ],
+  },
+  {
+    version: "1.45.0",
+    data: "2026-06-21",
+    titulo: "Secções «Contabilista» e «Mapa de benefícios» redesenhadas",
+    itens: [
+      "Comparar Cenários: as secções «Precisas de um contabilista?» e «Onde instalar a atividade» foram reestruturadas — novo layout em cartão unificado com cabeçalho, escala de regime com indicador visual, honorários em cards em vez de tabela e dicas de contratação numeradas.",
+      "Mapa de benefícios fiscais: região selecionada agora mostra benefícios em grelha de 2 colunas, lista de regiões com tratamento visual mais polido e secção de incentivos nacionais com ícones.",
+    ],
+  },
+  {
+    version: "1.44.0",
+    data: "2026-06-21",
+    titulo: "Auditoria Pro, gating e limpeza de pagamentos",
+    itens: [
+      "IfThenPay removido — MB WAY e Multibanco via IfThenPay descontinuados (Stripe Payment Elements mantido para MB WAY).",
+      "Exportação CSV/PDF de recibos agora bloqueada para utilizadores gratuitos (ProGate).",
+      "Saúde Fiscal no dashboard agora requer Pro (consistente com a página de perfil).",
+      "ProHint já não aparece para utilizadores Pro — esconde-se automaticamente.",
+      "Recibos na nuvem agora exclusivos do Pro (antes bastava estar autenticado).",
+      "Cupões do Quiz Fiscal agora ativam o Pro efetivamente — criam subscrição ativa de 3 meses.",
+      "Webhook Stripe com fallback por email quando metadata está em falta.",
+      "Grace period: utilizadores com pagamento pendente (past_due) mantêm acesso Pro temporariamente.",
+      "Preferências fiscais (regime, dependentes, deduções) sincronizadas na nuvem para Pro.",
+      "SubscricaoProvider duplicado removido do dashboard layout (menos uma query Supabase por página).",
+      "Check de Pro no quiz unificado — usa useSubscricao em vez de query direta à base de dados.",
+    ],
+  },
+  {
+    version: "1.43.0",
+    data: "2026-06-21",
+    titulo: "Dependentes com deficiência e ajustes ao comparador e calendário",
+    itens: [
+      "Recibo de Vencimento: novo contador «Dependentes com deficiência (≥ 60%)» — cada dependente com atestado multiúso confere dedução adicional de 2,5 × IAS à coleta (Art. 87.º CIRS), refletida no acerto anual de IRS.",
+      "Slider do Comparador de Cenários volta a 200k€ de máximo visual, mas o campo de texto aceita valores superiores para cenários de rendimento mais alto.",
+      "Calendário fiscal: corrigido badge «Agora» e texto «até dia 20» que ficavam cortados nos cards de mês.",
+    ],
+  },
+  {
+    version: "1.42.0",
+    data: "2026-06-21",
+    titulo: "Toggle «Valor inclui IVA» no simulador de empresa",
+    itens: [
+      "Novo toggle «Valor inclui IVA» nos modos Guiado e Completo do simulador de empresa — introduz a faturação com IVA incluído e a base tributável é extraída automaticamente.",
+      "A taxa de IVA ajusta-se à região selecionada (Continente 23%, Madeira 22%, Açores 16%).",
+      "Resultados e breakdown mostram a base sem IVA quando o toggle está ativo, com indicação clara do valor original com IVA.",
+      "Alterações em ambos os modos são totalmente sincronizadas — qualquer mudança propaga-se ao cálculo em tempo real.",
+    ],
+  },
+  {
+    version: "1.41.0",
+    data: "2026-06-21",
+    titulo: "Comparador: oscilação entre regimes explicada",
+    itens: [
+      "Quando recibos verdes e salário alternam consoante o escalão de IRS, o comparador agora explica a faixa de oscilação em vez de indicar um ponto de viragem enganador.",
+      "Badge «Mais líquido» já não fica cortado nos cartões de resultado.",
+    ],
+  },
+  {
+    version: "1.40.0",
+    data: "2026-06-21",
+    titulo: "Lógica de breakeven robusta e design refinado",
+    itens: [
+      "Comparador de Cenários: breakeven agora identifica o ponto a partir do qual um regime compensa de forma consistente, eliminando oscilações enganadoras entre escalões.",
+      "Cartões de resultado com gradiente e anel visual no vencedor para distinção imediata.",
+      "Veredicto redesenhado com ícone, bordas e gradiente para maior destaque.",
+      "Secções de gráfico e calendário com ícones em caixas para coerência visual.",
+    ],
+  },
+  {
+    version: "1.39.0",
+    data: "2026-06-21",
+    titulo: "Simulador completo de empresa redesenhado",
+    itens: [
+      "Seletor Guiado/Completo redesenhado com cards visuais — ícone, título, descrição e badge 'Ativo' para cada modo.",
+      "Modo completo de empresa agora inclui: tipo de sede (física/virtual/coworking), perfil do fundador (residente/UE/extra-UE), IFICI (20% flat) e card de localização com IRC, derrama e RFAI da região.",
+      "Custos de sede virtual/coworking e representante fiscal integrados no cálculo real do IRC — não apenas visuais, afetam o lucro tributável.",
+      "IFICI (Art. 58.º-A EBF) reduz o IRS sobre dividendos de 28% para 20%, com efeito no líquido disponível total.",
+      "Modo completo de empresa é agora independente — inputs de recibos verdes ficam escondidos, com slider de faturação e parâmetros próprios.",
+    ],
+  },
+  {
+    version: "1.38.0",
+    data: "2026-06-21",
+    titulo: "Comparador redesenhado e CTA Pro",
+    itens: [
+      "Slider do Comparador de Cenários redesenhado com bolha flutuante, thumb com grip e dica animada «Arraste para ajustar».",
+      "Marcadores de breakeven visíveis no trilho do slider para recibos verdes e empresa.",
+      "Cartões de resultado com barras de progresso animadas e badge «Mais líquido» destacado.",
+      "Secção de email substituída por CTA de subscrição Pro com lista de benefícios, botão direto para upgrade e link para planos.",
+    ],
+  },
+  {
+    version: "1.37.0",
+    data: "2026-06-21",
+    titulo: "Calendário fiscal corrigido",
+    itens: [
+      "Corrigido overflow visual nos badges de SS e IVA nos cards dos meses — valores já não saem para fora dos limites.",
+      "Meses de IVA trimestral corrigidos de Jan/Abr/Jul/Out para Fev/Mai/Ago/Nov (dia 20, conforme obrigação fiscal real).",
+      "Prazo do acerto de IRS em junho agora mostra «até 31 ago» em vez do genérico «até dia 20».",
+    ],
+  },
+  {
+    version: "1.36.0",
+    data: "2026-06-21",
+    titulo: "Header do desktop reestruturado",
+    itens: [
+      "Header agora fica fixo no topo da página — já não desaparece ao fazer scroll.",
+      "Novo mega-dropdown «Recursos Fiscais» com colunas separadas para Ferramentas e Aprender.",
+      "Botão de avatar e Dashboard combinados num só elemento quando autenticado.",
+      "Efeito de backdrop blur sempre presente no header para melhor legibilidade.",
+    ],
+  },
+  {
+    version: "1.35.0",
+    data: "2026-06-21",
+    titulo: "Referências legais, sede virtual e perfil de estrangeiro no simulador",
+    itens: [
+      "Referências legais clicáveis em todos os passos do simulador de empresa — cada taxa e benefício mostra o artigo de lei com link direto para o Portal das Finanças ou Diário da República.",
+      "Novo seletor de tipo de sede: física, sede virtual (50–150€/mês) ou coworking (50–300€/mês) — com custo anual incluído na simulação e nota sobre obrigatoriedade de sede fiscal (Art. 12.º CSC).",
+      "Perfil do fundador: residente, cidadão UE/EEE ou extra-UE. Representante fiscal obrigatório para extra-UE (Art. 19.º LGT) com custo estimado.",
+      "IFICI (Art. 58.º-A EBF) — toggle para estrangeiros elegíveis: taxa flat de 20% sobre dividendos durante 10 anos, com cálculo de poupança face à liberatória de 28%.",
+      "Resultado e checklist adaptam-se ao perfil: custos de sede virtual e representante fiscal na cascata, passos para obter NIF e estatuto IFICI.",
+    ],
+  },
+  {
+    version: "1.34.0",
+    data: "2026-06-21",
+    titulo: "Sistema de energia corrigido e energia ilimitada",
+    itens: [
+      "Energia agora descontada ao iniciar o quiz (antes só descontava ao finalizar).",
+      "Energia ilimitada desbloqueada automaticamente ao atingir o nível 7 (Especialista IRS, 5500 XP) ou com o plano Pro.",
+      "Removido o benefício «Energia ilimitada» do plano Quiz Master (já incluído no Pro e desbloqueável por nível).",
+      "Painel de configuração do quiz reorganizado: mais compacto, energia e botão unificados, menos espaçamento vertical.",
+      "Tabela de níveis agora indica que o nível 7 desbloqueia energia ilimitada.",
+    ],
+  },
+  {
+    version: "1.33.0",
+    data: "2026-06-21",
+    titulo: "Pesquisa de atividades corrigida e ampliada",
+    itens: [
+      "Clicar numa atividade na pesquisa (Cmd+K) agora redireciona diretamente para o classificador com a atividade já selecionada — sem ter de pesquisar novamente.",
+      "Todas as atividades do catálogo são agora mostradas na pesquisa (antes limitado a 24/30).",
+    ],
+  },
+  {
+    version: "1.32.0",
+    data: "2026-06-21",
+    titulo: "Modo guiado da empresa com paridade total ao simulador completo",
+    itens: [
+      "Tributação Autónoma completa: 8 tipos de viatura (combustão e PHEV com faixas de preço), ajudas de custo (5%), despesas não documentadas (50%) e exceção ao agravamento por prejuízo (OE2026).",
+      "DLRR (10% lucros reinvestidos, máx 5M, 25% coleta), SIFIDE II (32,5%–82,5% despesas I&D com 4 perfis de empresa) e RFAI Contratual (investimento >= 3M, IAPMEI/AICEP) agora disponíveis no modo guiado.",
+      "Imóvel da empresa: IMI (VPT × taxa municipal 0,3–0,45%), IMT + IS na aquisição (7,3%), isenções RFAI e amortização configurável.",
+      "Custos de estrutura e constituição agora ajustáveis (slider + amortização 1/2/3/5 anos), em vez de valores fixos.",
+      "RFAI com toggle «primeiros 3 períodos» (100% coleta) e cálculo excedente (30% até 15M + 10% acima).",
+      "Resultado detalhado: breakdown por categoria de TA, benefícios com bruto vs efetivo, dica automática de englobamento com taxa marginal, custos municipais.",
+    ],
+  },
+  {
+    version: "1.31.0",
+    data: "2026-06-21",
+    titulo: "Localização precisa no simulador de empresa",
+    itens: [
+      "O simulador agora permite pesquisar a cidade ou concelho exato onde a empresa será instalada — os parâmetros fiscais (IRC, derrama, RFAI, custo de contabilista) ajustam-se automaticamente.",
+      "Pesquisa por nome (Nominatim/OSM), localização GPS, ou escolha manual por região — a localização escolhida influencia toda a simulação.",
+      "Ambos os fluxos (já tem empresa / quer abrir) pedem agora a localização, com dados fiscais regionais detalhados (interior 12,5%, ilhas, litoral).",
+      "Novo passo «A seguir» enriquecido: métricas, plano de ação, checklist de constituição, calendário fiscal e mapa de benefícios por região.",
+      "Dados regionais ampliados: DLRR (10% lucros reinvestidos) e SIFIDE II (32,5%+50% I&D) adicionados ao mapa de benefícios fiscais.",
+    ],
+  },
+  {
+    version: "1.30.0",
+    data: "2026-06-21",
+    titulo: "Avatar nos headers e pesquisa global redesenhada",
+    itens: [
+      "A foto de perfil aparece agora no botão de perfil da navbar e do dashboard mobile — quando o utilizador tem avatar no Supabase.",
+      "Pesquisa global (Cmd+K) redesenhada: categorias com ícones em card, secção «Mais utilizadas» com acesso rápido, grelha de simuladores, e «Sugestões para si».",
+      "Modal de pesquisa mais largo e filtros contextuais — só aparecem ao pesquisar, sem poluir a vista inicial.",
+    ],
+  },
+  {
+    version: "1.29.1",
+    data: "2026-06-21",
+    titulo: "Correções do perfil e upload de avatar",
+    itens: [
+      "Corrigido texto «Carregar foto» que aparecia cortado no perfil — removido overflow que escondia o menu do avatar.",
+      "Upload de avatar corrigido: revertido para update (compatível com as políticas RLS da tabela profiles).",
+      "Adicionada coluna «nome» em falta na tabela profiles no Supabase — resolvia o erro ao guardar ou carregar o perfil.",
+    ],
+  },
+  {
+    version: "1.29.0",
+    data: "2026-06-21",
+    titulo: "Segurança reforçada, perfil persistente e SEO abrangente",
+    itens: [
+      "Alterar password agora exige a password atual — re-autenticação via Supabase antes de permitir a alteração.",
+      "Requisitos de password reforçados: mínimo 8 caracteres, 1 maiúscula e 1 número, com indicadores visuais em tempo real (aplica-se ao registo e à alteração).",
+      "Foto de perfil agora persiste corretamente na nuvem via Supabase Storage — corrigido problema que fazia o avatar desaparecer ao atualizar a página.",
+      "Drag-and-drop para upload de foto de perfil (utilizadores Pro).",
+      "Correções visuais no perfil: avatar centrado no mobile, stat cards em grid, menu dropdown reposicionado.",
+      "SEO renovado: título, descrição, Open Graph e structured data agora refletem toda a plataforma — calculadora de recibos verdes, salário líquido, simulador de empresa, guias e ferramentas.",
+      "Sitemap atualizado com as ferramentas «Simulador de Empresa» e «Mapa de Contabilistas».",
+    ],
+  },
+  {
+    version: "1.28.0",
+    data: "2026-06-21",
+    titulo: "Dashboard inteligente — cálculos reais, estimativa IRS e perfil fiscal",
+    itens: [
+      "Novo card «Estimativa IRS Anual» no dashboard: projeta o reembolso ou acerto a pagar com escalões progressivos, coeficiente do regime simplificado, regra dos 15% e deduções à coleta.",
+      "Cálculos do dashboard agora usam a atividade real de cada recibo: retenção e base de SS derivam do catálogo de atividades (Art. 151.º, vendas, serviços, etc.) em vez de valores fixos.",
+      "Guardião de Retenção na Fonte agora deteta e exibe a taxa correta por atividade e sinaliza taxas mistas quando tens recibos de vários tipos.",
+      "Guardião de Segurança Social agora calcula com a base correta (70% serviços ou 20% bens) e respeita isenção do 1.º ano e acumulação com emprego.",
+      "Botão de perfil agora aparece sempre no header desktop, mesmo sem sessão iniciada.",
+      "Página «Conta e segurança» agora permite alterar a password, ligado ao Supabase Auth, com validação e feedback em português.",
+      "Novo store de preferências fiscais: ano de atividade, regime, dependentes e deduções são usados nos cálculos do dashboard.",
+    ],
+  },
+  {
+    version: "1.27.0",
+    data: "2026-06-21",
+    titulo: "Simulador de empresa refinado — inputs ricos e próximos passos",
+    itens: [
+      "Inputs do simulador guiado da empresa agora incluem botões +/−, campo editável e slider com thumb animado — mais fáceis de usar no telemóvel.",
+      "Novo 6.º passo «A seguir» no wizard: link direto para Comparar Cenários (com mapa e contabilista) e para o simulador completo.",
+      "Removida a comparação duplicada RV vs Empresa do resultado — usa agora a página dedicada «Comparar Cenários», que é mais completa.",
     ],
   },
   {

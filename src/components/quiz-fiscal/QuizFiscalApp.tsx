@@ -48,7 +48,6 @@ export default function QuizFiscalApp() {
       quiz.resultado.streakMaximo,
       quiz.resultado.tempoTotalSeg
     ).then(setResultadoSessao).catch(() => {/* noop */});
-    progresso.consumirEnergia();
 
     if (user && quiz.config?.dificuldade) {
       registarSessaoDesafio(
@@ -72,6 +71,7 @@ export default function QuizFiscalApp() {
   }, [quiz.status]);
 
   const handleIniciar = (cfg: QuizFiscalConfig) => {
+    progresso.consumirEnergia();
     quiz.iniciar(cfg);
   };
 
@@ -113,6 +113,7 @@ export default function QuizFiscalApp() {
               onComecar={handleIniciar}
               energiaRestante={progresso.energiaRestante}
               energiaTotal={progresso.energiaTotal}
+              energiaIlimitada={progresso.energiaIlimitada}
               sessoes={progresso.sessoes}
             />
             <NiveisDesafio />

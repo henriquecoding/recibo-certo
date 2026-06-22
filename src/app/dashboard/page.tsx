@@ -2,23 +2,27 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
-import { useRecibos, resumir, type Recibo } from "@/lib/store/recibos";
+import { useEffect, useMemo, useState } from "react";
+import { useRecibos, resumirDashboard, type Recibo } from "@/lib/store/recibos";
+import { usePreferenciasFiscais } from "@/lib/store/preferencias-fiscais";
 import { gerarInsights, saudeFiscal, type Insight, type SaudeFiscal } from "@/lib/insights";
 import { fmt } from "@/lib/format";
 import { Receipt, Warning, Check, ArrowRight, History, Calendar } from "@/components/ui/Icons";
 import InfoTip from "@/components/ui/InfoTip";
 import ProHint from "@/components/ui/ProHint";
+import ProGate from "@/components/ui/ProGate";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import IvaProgresso from "@/components/dashboard/IvaProgresso";
 import PoupancaTrimestral from "@/components/dashboard/PoupancaTrimestral";
 import GuardiaoRetencao from "@/components/dashboard/GuardiaoRetencao";
 import GuardiaoSS from "@/components/dashboard/GuardiaoSS";
+import EstimativaIRS from "@/components/dashboard/EstimativaIRS";
 import TabelaRecibos from "@/components/dashboard/TabelaRecibos";
 import MiniCalendario from "@/components/dashboard/MiniCalendario";
 import Onboarding from "@/components/dashboard/Onboarding";
 import PartnerSpot from "@/components/dashboard/PartnerSpot";
 import HubRecursos from "@/components/dashboard/HubRecursos";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 const ReceitaChart = dynamic(() => import("@/components/dashboard/ReceitaChart"), {
   ssr: false,
@@ -45,10 +49,17 @@ function saudacao(): string {
 
 export default function VisaoGeral() {
   const { recibos, carregado, naNuvem, locaisPorImportar, importarLocais, adiarImportacao } = useRecibos();
+  const { prefs } = usePreferenciasFiscais();
   const [insights, setInsights] = useState<Insight[]>([]);
   const [saude, setSaude] = useState<SaudeFiscal>({ score: 0, estado: "Tranquilo", fatores: [] });
   const [onboarded, setOnboarded] = useState(true);
   const [mounted, setMounted] = useState(false);
+
+  const opcoesFiscais = useMemo(() => ({
+    isencaoSSPrimeiroAno: prefs.isencaoSSPrimeiroAno,
+    acumulaEmprego: prefs.acumulaEmprego,
+    irsJovemAno: prefs.irsJovemAno > 0 ? prefs.irsJovemAno : undefined,
+  }), [prefs]);
 
   useEffect(() => {
     setMounted(true);
@@ -70,13 +81,13 @@ export default function VisaoGeral() {
 
   useEffect(() => {
     if (carregado) {
-      setInsights(gerarInsights(recibos));
+      setInsights(gerarInsights(recibos, opcoesFiscais));
       setSaude(saudeFiscal(recibos));
     }
-  }, [carregado, recibos]);
+  }, [carregado, recibos, opcoesFiscais]);
 
-  const mes = resumir(mesAtual(recibos));
-  const ano = resumir(recibos);
+  const mes = resumirDashboard(mesAtual(recibos));
+  const ano = resumirDashboard(recibos);
   const temRecibos = recibos.length > 0;
 
   const dataHoje = mounted
@@ -90,18 +101,18 @@ export default function VisaoGeral() {
       <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
           {mounted && (
-            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-3 py-1 text-xs font-medium text-stone-400 capitalize shadow-card">
+            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-3 py-1 text-xs font-medium text-stone-400 capitalize shadow-card dark:border-stone-700 dark:bg-stone-800">
               <Calendar size={11} />
               {dataHoje}
             </div>
           )}
-          <h1 className="font-display text-3xl font-semibold text-stone-800">
+          <h1 className="font-display text-3xl font-semibold text-stone-800 dark:text-stone-100">
             {mounted ? saudacao() : "Visão geral"}
           </h1>
-          <p className="mt-1 text-sm text-stone-500">O teu copiloto financeiro, sem surpresas.</p>
+          <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">O teu copiloto financeiro, sem surpresas.</p>
         </div>
         <Link
-          href="/dashboard/recibos"
+          href="/#calculadora"
           className="btn-shine inline-flex items-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-float"
         >
           <Receipt size={16} />
@@ -181,7 +192,7 @@ export default function VisaoGeral() {
               {/* Métrica principal */}
               <div className="relative mt-4">
                 <div className="text-xs font-medium uppercase tracking-wider text-green-100/60">Disponível para gastar</div>
-                <div className="mt-1 font-display text-6xl font-semibold leading-none tabular-nums sm:text-7xl">
+                <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-5xl lg:text-6xl">
                   <AnimatedNumber value={mes.liquido} />
                 </div>
                 {mes.bruto === 0 && (
@@ -207,7 +218,7 @@ export default function VisaoGeral() {
               {/* Mini-cards: IRS, SS, IVA */}
               <div className="relative mt-5 grid grid-cols-3 gap-2">
                 {[
-                  { l: "Retenção IRS", v: mes.retencao },
+                  { l: "IRS estimado", v: mes.retencao },
                   { l: "Seg. Social", v: mes.segSocial },
                   { l: "IVA", v: mes.iva },
                 ].map((c) => (
@@ -222,14 +233,16 @@ export default function VisaoGeral() {
 
           {/* ── Painel lateral: Saúde + Acumulado ───────────────── */}
           <div className="col-span-12 flex flex-col gap-4 lg:col-span-4">
-            <SaudeCard score={saude.score} estado={saude.estado} fatores={saude.fatores} />
-            <div className="flex-1 rounded-4xl border border-stone-100 bg-white p-6 shadow-card">
-              <h2 className="mb-4 text-sm font-semibold text-stone-700">Acumulado do ano</h2>
+            <ProGate title="Saúde Fiscal" description="Indicador detalhado da tua situação fiscal — diversificação, reservas e organização.">
+              <SaudeCard score={saude.score} estado={saude.estado} fatores={saude.fatores} />
+            </ProGate>
+            <div className="flex-1 rounded-4xl border border-stone-100 bg-white p-6 shadow-card dark:border-stone-800 dark:bg-stone-900">
+              <h2 className="mb-4 text-sm font-semibold text-stone-700 dark:text-stone-200">Acumulado do ano</h2>
               <Linha label="Faturado" value={ano.bruto} />
-              <Linha label="Retenção de IRS" value={ano.retencao} />
+              <Linha label="IRS estimado" value={ano.retencao} />
               <Linha label="IVA cobrado" value={ano.iva} />
               <Linha label="Segurança Social" value={ano.segSocial} />
-              <div className="mt-3 border-t border-stone-100 pt-3">
+              <div className="mt-3 border-t border-stone-100 pt-3 dark:border-stone-800">
                 <Linha label="Líquido para ti" value={ano.liquido} destaque />
               </div>
             </div>
@@ -238,21 +251,29 @@ export default function VisaoGeral() {
           {/* ══ ROW 2: Gráfico de receitas + Calendário ══════════ */}
 
           <div className="col-span-12 lg:col-span-7">
-            <ReceitaChart recibos={recibos} />
+            <ErrorBoundary etiqueta="gráfico de receitas">
+              <ReceitaChart recibos={recibos} />
+            </ErrorBoundary>
           </div>
 
           <div className="col-span-12 lg:col-span-5">
-            <MiniCalendario />
+            <ErrorBoundary etiqueta="mini calendário">
+              <MiniCalendario />
+            </ErrorBoundary>
           </div>
 
           {/* ══ ROW 3: Três painéis de análise ═══════════════════ */}
 
           <div className="col-span-12 sm:col-span-6 lg:col-span-4">
-            <DistribuicaoDonut resumo={mes} />
+            <ErrorBoundary etiqueta="distribuição do mês">
+              <DistribuicaoDonut resumo={mes} />
+            </ErrorBoundary>
           </div>
 
           <div className="col-span-12 sm:col-span-6 lg:col-span-4">
-            <IvaProgresso recibos={recibos} />
+            <ErrorBoundary etiqueta="progresso IVA">
+              <IvaProgresso recibos={recibos} />
+            </ErrorBoundary>
           </div>
 
           <div className="col-span-12 lg:col-span-4">
@@ -266,10 +287,16 @@ export default function VisaoGeral() {
           </div>
 
           <div className="col-span-12 sm:col-span-6">
-            <GuardiaoSS recibos={recibos} />
+            <GuardiaoSS recibos={recibos} primeiroAno={prefs.isencaoSSPrimeiroAno} acumulaEmprego={prefs.acumulaEmprego} />
           </div>
 
-          {/* ══ ROW 4: Tabela de recibos + Insights ══════════════ */}
+          {/* ══ ROW 4: Estimativa IRS + Tabela + Insights ═══════ */}
+
+          <div className="col-span-12 lg:col-span-4">
+            <ErrorBoundary etiqueta="estimativa IRS">
+              <EstimativaIRS recibos={recibos} prefs={prefs} />
+            </ErrorBoundary>
+          </div>
 
           <div className="col-span-12 lg:col-span-8">
             <TabelaRecibos recibos={recibos} />
@@ -277,8 +304,8 @@ export default function VisaoGeral() {
 
           <div className="col-span-12 lg:col-span-4 flex flex-col gap-4">
             {insights.length > 0 && (
-              <div className="rounded-4xl border border-stone-100 bg-white p-6 shadow-card">
-                <h2 className="mb-4 text-sm font-semibold text-stone-700">O que precisas de saber</h2>
+              <div className="rounded-4xl border border-stone-100 bg-white p-6 shadow-card dark:border-stone-800 dark:bg-stone-900">
+                <h2 className="mb-4 text-sm font-semibold text-stone-700 dark:text-stone-200">O que precisas de saber</h2>
                 <ul className="space-y-2.5">
                   {insights.map((i, idx) => (
                     <InsightRow key={idx} insight={i} />
@@ -301,14 +328,15 @@ export default function VisaoGeral() {
 /* ── Sub-componentes ──────────────────────────────────────────────── */
 
 function SaudeCard({ score, estado, fatores }: { score: number; estado: string; fatores: { label: string; ok: boolean }[] }) {
-  const cor = score >= 80 ? "#1D9E75" : score >= 60 ? "#7A5C00" : "#b91c1c";
+  const corClasse = score >= 80 ? "text-brand" : score >= 60 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400";
+  const corSVG = score >= 80 ? "var(--color-brand, #1D9E75)" : score >= 60 ? "#b45309" : "#b91c1c";
   const r = 34;
   const circ = 2 * Math.PI * r;
   const offset = circ * (1 - score / 100);
   return (
-    <div className="rounded-4xl border border-stone-100 bg-white p-6 shadow-card">
+    <div className="rounded-4xl border border-stone-100 bg-white p-6 shadow-card dark:border-stone-800 dark:bg-stone-900">
       <div className="mb-3 flex items-center gap-1.5">
-        <h2 className="text-sm font-semibold text-stone-700">Saúde fiscal</h2>
+        <h2 className="text-sm font-semibold text-stone-700 dark:text-stone-200">Saúde fiscal</h2>
         <InfoTip>
           Indicador de organização (0–100) a partir da margem até ao limite de IVA, da antecedência do próximo prazo
           e do acompanhamento dos recibos. Não é uma garantia.
@@ -316,14 +344,14 @@ function SaudeCard({ score, estado, fatores }: { score: number; estado: string; 
       </div>
       <div className="flex items-center gap-4">
         <div className="relative flex-shrink-0">
-          <svg width="84" height="84" viewBox="0 0 84 84">
-            <circle cx="42" cy="42" r={r} fill="none" stroke="currentColor" className="text-stone-100" strokeWidth="8" />
+          <svg width="84" height="84" viewBox="0 0 84 84" role="img" aria-label={`Saúde fiscal: ${score} de 100 — ${estado}`}>
+            <circle cx="42" cy="42" r={r} fill="none" stroke="currentColor" className="text-stone-100 dark:text-stone-800" strokeWidth="8" />
             <circle
               cx="42"
               cy="42"
               r={r}
               fill="none"
-              stroke={cor}
+              stroke={corSVG}
               strokeWidth="8"
               strokeLinecap="round"
               strokeDasharray={circ}
@@ -331,17 +359,17 @@ function SaudeCard({ score, estado, fatores }: { score: number; estado: string; 
               transform="rotate(-90 42 42)"
               style={{ transition: "stroke-dashoffset 0.8s cubic-bezier(0.16,1,0.3,1)" }}
             />
-            <text x="42" y="47" textAnchor="middle" className="font-display text-stone-800" fontSize="20" fontWeight="600" fill="currentColor">
+            <text x="42" y="47" textAnchor="middle" className="font-display text-stone-800 dark:text-stone-100" fontSize="20" fontWeight="600" fill="currentColor">
               {score}
             </text>
           </svg>
         </div>
         <div className="min-w-0">
-          <div className="text-sm font-semibold" style={{ color: cor }}>{estado}</div>
+          <div className={`text-sm font-semibold ${corClasse}`}>{estado}</div>
           <ul className="mt-1.5 space-y-1">
             {fatores.map((f) => (
-              <li key={f.label} className="flex items-center gap-1.5 text-xs text-stone-500">
-                <span className={f.ok ? "text-brand" : "text-stone-300"}>
+              <li key={f.label} className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400">
+                <span className={f.ok ? "text-brand" : "text-stone-300 dark:text-stone-600"}>
                   {f.ok ? <Check size={12} /> : <Warning size={12} />}
                 </span>
                 {f.label}
@@ -356,8 +384,8 @@ function SaudeCard({ score, estado, fatores }: { score: number; estado: string; 
 
 function InsightRow({ insight }: { insight: Insight }) {
   const cfg = {
-    ok: { bg: "bg-brand-light", text: "text-brand-dark", icon: <Check size={14} /> },
-    info: { bg: "bg-stone-100", text: "text-stone-600", icon: <ArrowRight size={14} /> },
+    ok: { bg: "bg-brand-light dark:bg-brand/10", text: "text-brand-dark dark:text-brand", icon: <Check size={14} /> },
+    info: { bg: "bg-stone-100 dark:bg-stone-800", text: "text-stone-600 dark:text-stone-300", icon: <ArrowRight size={14} /> },
     alerta: { bg: "bg-alert-bg", text: "text-alert-text", icon: <Warning size={14} /> },
   }[insight.tom];
   return (
@@ -366,8 +394,8 @@ function InsightRow({ insight }: { insight: Insight }) {
         {cfg.icon}
       </span>
       <div className="min-w-0">
-        <div className="text-sm font-semibold text-stone-800">{insight.titulo}</div>
-        <div className="text-xs leading-relaxed text-stone-500">{insight.descricao}</div>
+        <div className="text-sm font-semibold text-stone-800 dark:text-stone-100">{insight.titulo}</div>
+        <div className="text-xs leading-relaxed text-stone-500 dark:text-stone-400">{insight.descricao}</div>
       </div>
     </li>
   );
@@ -376,8 +404,8 @@ function InsightRow({ insight }: { insight: Insight }) {
 function Linha({ label, value, destaque = false }: { label: string; value: number; destaque?: boolean }) {
   return (
     <div className="flex items-center justify-between py-1.5">
-      <span className={`text-sm ${destaque ? "font-semibold text-stone-800" : "text-stone-500"}`}>{label}</span>
-      <span className={`text-sm font-semibold tabular-nums ${destaque ? "text-brand" : "text-stone-700"}`}>
+      <span className={`text-sm ${destaque ? "font-semibold text-stone-800 dark:text-stone-100" : "text-stone-500 dark:text-stone-400"}`}>{label}</span>
+      <span className={`text-sm font-semibold tabular-nums ${destaque ? "text-brand" : "text-stone-700 dark:text-stone-300"}`}>
         <AnimatedNumber value={value} />
       </span>
     </div>
@@ -389,12 +417,12 @@ function Skeleton() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-20 animate-pulse rounded-2xl border border-stone-100 bg-white shadow-card" />
+          <div key={i} className="h-20 animate-pulse rounded-2xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900" />
         ))}
       </div>
       <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
         {[0, 1].map((i) => (
-          <div key={i} className="h-44 animate-pulse rounded-4xl border border-stone-100 bg-white shadow-card" />
+          <div key={i} className="h-44 animate-pulse rounded-4xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900" />
         ))}
       </div>
     </div>

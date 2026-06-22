@@ -16,13 +16,13 @@ import {
 import { fmt, pct } from "@/lib/format";
 
 export const metadata: Metadata = {
-  title: "Deduções à coleta do IRS 2026",
-  description: "Todas as deduções à coleta do IRS para trabalhadores independentes: saúde, educação, rendas, dependentes e limite global.",
-  keywords: ["deduções coleta IRS 2026", "deduções IRS recibos verdes", "saúde educação rendas IRS"],
+  title: "Deduções à coleta do IRS 2026 | ReciboCerto",
+  description: "Todas as deduções à coleta do IRS: saúde, educação, rendas, dependentes e limite global. Aplicável a independentes e conta de outrem.",
+  keywords: ["deduções coleta IRS 2026", "deduções IRS", "saúde educação rendas IRS", "despesas gerais familiares"],
   alternates: { canonical: "https://www.recibocerto.pt/guias/deducoes-coleta" },
   openGraph: {
     title: "Deduções à coleta do IRS 2026 | ReciboCerto",
-    description: "Saúde, educação, rendas e dependentes — tudo o que podes deduzir.",
+    description: "Saúde, educação, rendas e dependentes — tudo o que podes deduzir no IRS.",
     url: "https://www.recibocerto.pt/guias/deducoes-coleta",
     siteName: "ReciboCerto",
     locale: "pt_PT",

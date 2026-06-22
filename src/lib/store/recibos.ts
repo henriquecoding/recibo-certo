@@ -21,6 +21,15 @@ import {
 import { ATIVIDADES, efeitoFiscal } from "@/lib/fiscal-data";
 import { getSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/auth";
+import { useSubscricao } from "@/lib/stripe/subscription";
+
+export interface ReciboComputed {
+  /** IRS real estimado por recibo (da simulação anual, não a retenção na fonte). */
+  irsEstimado: number;
+  segSocial: number;
+  iva: number;
+  liquido: number;
+}
 
 export interface Recibo {
   id: string;
@@ -36,12 +45,20 @@ export interface Recibo {
   regimeIVA: RegimeIVA;
   baseSS: BaseSS;
   dispensaRetencao: boolean;
+  /** Valores pré-calculados pelo simulador (IRS real, não retenção na fonte). Quando presente, o dashboard usa estes valores em vez de recalcular. */
+  _computed?: ReciboComputed;
 }
 
 export type NovoRecibo = Omit<Recibo, "id">;
 
 const STORAGE_KEY = "recibocerto:recibos:v1";
 const IMPORT_ADIADO_KEY = (userId: string) => `recibocerto:import-adiado:${userId}`;
+// Cache local dos valores pré-calculados pelo simulador (IRS real, líquido, etc.),
+// indexado por id do recibo. É a ÚNICA fonte destes valores no dashboard: o
+// Supabase não guarda `_computed` (a tabela `recibos` não tem colunas para isso),
+// por isso sem este cache os valores perdiam-se no round-trip à nuvem e o painel
+// caía no recálculo de retenção na fonte. Cross-device: ausente → recalcula.
+const COMPUTED_KEY = "recibocerto:recibos-computed:v1";
 
 // ─── localStorage ──────────────────────────────────────────────────────
 function readLocal(): Recibo[] {
@@ -64,6 +81,57 @@ function writeLocal(recibos: Recibo[]): void {
 function clearLocal(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(STORAGE_KEY);
+}
+
+// ─── Cache de valores pré-calculados (sobrevive ao round-trip do Supabase) ──
+function readComputedCache(): Record<string, ReciboComputed> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(COMPUTED_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, ReciboComputed>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeComputedCache(cache: Record<string, ReciboComputed>): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(COMPUTED_KEY, JSON.stringify(cache));
+  } catch {
+    /* quota/indisponível — ignora */
+  }
+}
+
+/** Guarda os valores pré-calculados de um recibo (no-op se não houver). */
+function cacheComputed(id: string, computed?: ReciboComputed): void {
+  if (!computed) return;
+  const cache = readComputedCache();
+  cache[id] = computed;
+  writeComputedCache(cache);
+}
+
+/** Remove a entrada de cache de um recibo. */
+function dropComputed(id: string): void {
+  const cache = readComputedCache();
+  if (id in cache) {
+    delete cache[id];
+    writeComputedCache(cache);
+  }
+}
+
+/** Reanexa `_computed` (do cache local) a recibos vindos da nuvem ou do localStorage. */
+function enriquecerComputed(recibos: Recibo[]): Recibo[] {
+  const cache = readComputedCache();
+  return recibos.map((r) => {
+    if (r._computed) {
+      // Garante que o cache fica sincronizado quando o valor já vem embutido (local).
+      if (!cache[r.id]) cacheComputed(r.id, r._computed);
+      return r;
+    }
+    return cache[r.id] ? { ...r, _computed: cache[r.id] } : r;
+  });
 }
 
 function importacaoAdiada(userId: string): boolean {
@@ -95,9 +163,45 @@ interface ReciboRow {
   regime_iva: string;
   base_ss: string;
   dispensa_retencao: boolean;
+  // Coluna jsonb opcional (migração 016). Ausente se a migração não foi aplicada.
+  computed?: unknown;
+}
+
+// Capacidade da BD: a coluna `computed` (migração 016) pode ainda não existir.
+// Detetamos uma vez por sessão e degradamos sem partir gravações; num
+// recarregamento futuro (após aplicar a migração) volta a ser tentada.
+let colunaComputedDisponivel = true;
+
+/** Erro do PostgREST/Postgres por a coluna `computed` não existir no schema. */
+function ehErroColunaComputed(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { code?: string; message?: string };
+  // PGRST204: coluna não encontrada no schema cache. 42703: undefined_column.
+  if (e.code === "PGRST204" || e.code === "42703") return true;
+  return (
+    typeof e.message === "string" &&
+    /computed/i.test(e.message) &&
+    /(column|coluna|schema cache)/i.test(e.message)
+  );
+}
+
+/** Valida e normaliza o jsonb `computed` vindo da BD. */
+function parseComputed(v: unknown): ReciboComputed | undefined {
+  if (!v || typeof v !== "object") return undefined;
+  const o = v as Record<string, unknown>;
+  const num = (x: unknown) => (typeof x === "number" && Number.isFinite(x) ? x : undefined);
+  const irsEstimado = num(o.irsEstimado);
+  const segSocial = num(o.segSocial);
+  const iva = num(o.iva);
+  const liquido = num(o.liquido);
+  if (irsEstimado === undefined || segSocial === undefined || iva === undefined || liquido === undefined) {
+    return undefined;
+  }
+  return { irsEstimado, segSocial, iva, liquido };
 }
 
 function fromRow(r: ReciboRow): Recibo {
+  const computed = parseComputed(r.computed);
   return {
     id: r.id,
     data: r.data,
@@ -109,11 +213,12 @@ function fromRow(r: ReciboRow): Recibo {
     regimeIVA: r.regime_iva as RegimeIVA,
     baseSS: r.base_ss as BaseSS,
     dispensaRetencao: !!r.dispensa_retencao,
+    ...(computed ? { _computed: computed } : {}),
   };
 }
 
 function toRow(r: Recibo, userId: string) {
-  return {
+  const base = {
     id: r.id,
     user_id: userId,
     data: r.data,
@@ -126,6 +231,9 @@ function toRow(r: Recibo, userId: string) {
     base_ss: r.baseSS,
     dispensa_retencao: r.dispensaRetencao,
   };
+  // Só inclui `computed` enquanto a coluna for tida como disponível — assim, se
+  // a migração 016 ainda não foi aplicada, o insert/update não falha.
+  return colunaComputedDisponivel ? { ...base, computed: r._computed ?? null } : base;
 }
 
 async function cloudList(userId: string): Promise<Recibo[]> {
@@ -138,9 +246,34 @@ async function cloudList(userId: string): Promise<Recibo[]> {
   return (data ?? []).map((r) => fromRow(r as ReciboRow));
 }
 
+/**
+ * Corre uma escrita no Supabase de forma resiliente à coluna `computed`
+ * (migração 016): se falhar por a coluna não existir, marca-a indisponível e
+ * repete a operação — `toRow` deixa então de a incluir. Assim as gravações
+ * nunca partem antes de a migração ser aplicada; o cache local cobre os
+ * valores até lá. Após aplicar a migração, a sessão seguinte volta a usá-la.
+ */
+async function escreverResiliente(op: () => Promise<{ error: unknown }>): Promise<void> {
+  const { error } = await op();
+  if (error && colunaComputedDisponivel && ehErroColunaComputed(error)) {
+    colunaComputedDisponivel = false;
+    const { error: erroRetry } = await op();
+    if (erroRetry) throw erroRetry;
+    return;
+  }
+  if (error) throw error;
+}
+
 // ─── Conversão para o motor de cálculo ──────────────────────────────────
+
+export interface OpcoesCalcRecibo {
+  isencaoSSPrimeiroAno?: boolean;
+  acumulaEmprego?: boolean;
+  irsJovemAno?: number;
+}
+
 /** Converte um recibo guardado no input do motor de cálculo. */
-export function reciboParaInput(r: Recibo): CalcInput {
+export function reciboParaInput(r: Recibo, opcoes?: OpcoesCalcRecibo): CalcInput {
   const ativ = r.atividade ? ATIVIDADES.find((a) => a.label === r.atividade) : undefined;
   const ef = ativ ? efeitoFiscal(ativ) : undefined;
   return {
@@ -150,13 +283,35 @@ export function reciboParaInput(r: Recibo): CalcInput {
     regimeIVA: r.regimeIVA,
     baseSS: ef?.baseSS ?? r.baseSS,
     dispensaRetencao: r.dispensaRetencao,
-    isencaoSSPrimeiroAno: false,
-    acumulaEmprego: false,
+    isencaoSSPrimeiroAno: opcoes?.isencaoSSPrimeiroAno ?? false,
+    acumulaEmprego: opcoes?.acumulaEmprego ?? false,
+    irsJovemAno: opcoes?.irsJovemAno,
     retencaoOverride: ef?.retencao,
   };
 }
 
-export function calcularRecibo(r: Recibo): CalcResult {
+export function calcularRecibo(r: Recibo, opcoes?: OpcoesCalcRecibo): CalcResult {
+  return calcular(reciboParaInput(r, opcoes));
+}
+
+/** Valores para exibição no dashboard: usa `_computed` (IRS real da simulação anual)
+ *  quando disponível; caso contrário recalcula (fallback para recibos antigos). */
+export function calcularReciboDashboard(r: Recibo): CalcResult {
+  if (r._computed) {
+    const c = r._computed;
+    return {
+      bruto: r.valor,
+      retencaoIRS: c.irsEstimado,
+      iva: c.iva,
+      segSocial: c.segSocial,
+      liquido: c.liquido,
+      entradaConta: r.valor + c.iva - c.irsEstimado,
+      taxaRetencao: r.valor > 0 ? c.irsEstimado / r.valor : 0,
+      taxaIVA: r.valor > 0 ? c.iva / r.valor : 0,
+      isencaoJovem: 0,
+      avisos: [],
+    };
+  }
   return calcular(reciboParaInput(r));
 }
 
@@ -169,10 +324,28 @@ export interface ResumoRecibos {
   liquido: number;
 }
 
-export function resumir(recibos: Recibo[]): ResumoRecibos {
+export function resumir(recibos: Recibo[], opcoes?: OpcoesCalcRecibo): ResumoRecibos {
   return recibos.reduce<ResumoRecibos>(
     (acc, r) => {
-      const c = calcularRecibo(r);
+      const c = calcularRecibo(r, opcoes);
+      return {
+        total: acc.total + 1,
+        bruto: acc.bruto + c.bruto,
+        iva: acc.iva + c.iva,
+        retencao: acc.retencao + c.retencaoIRS,
+        segSocial: acc.segSocial + c.segSocial,
+        liquido: acc.liquido + c.liquido,
+      };
+    },
+    { total: 0, bruto: 0, iva: 0, retencao: 0, segSocial: 0, liquido: 0 }
+  );
+}
+
+/** Resumo para o dashboard: usa `_computed` (IRS real estimado) quando disponível. */
+export function resumirDashboard(recibos: Recibo[]): ResumoRecibos {
+  return recibos.reduce<ResumoRecibos>(
+    (acc, r) => {
+      const c = calcularReciboDashboard(r);
       return {
         total: acc.total + 1,
         bruto: acc.bruto + c.bruto,
@@ -189,8 +362,9 @@ export function resumir(recibos: Recibo[]): ResumoRecibos {
 // ─── Hook de acesso (modo duplo) ────────────────────────────────────────
 export function useRecibos() {
   const { user, carregado: authPronto, disponivel } = useAuth();
+  const { plano } = useSubscricao();
   const userId = user?.id ?? null;
-  const naNuvem = disponivel && !!userId;
+  const naNuvem = disponivel && !!userId && plano === "pro";
 
   const [recibos, setRecibos] = useState<Recibo[]>([]);
   const [carregado, setCarregado] = useState(false);
@@ -207,7 +381,8 @@ export function useRecibos() {
       cloudList(userId)
         .then((rows) => {
           if (!ativo) return;
-          setRecibos(ordenar(rows));
+          // O Supabase não guarda `_computed`; reanexa-o do cache local.
+          setRecibos(ordenar(enriquecerComputed(rows)));
           const locais = readLocal();
           setLocaisPorImportar(importacaoAdiada(userId) ? 0 : locais.length);
           setCarregado(true);
@@ -219,7 +394,7 @@ export function useRecibos() {
           setCarregado(true);
         });
     } else {
-      setRecibos(ordenar(readLocal()));
+      setRecibos(ordenar(enriquecerComputed(readLocal())));
       setLocaisPorImportar(0);
       setCarregado(true);
     }
@@ -246,10 +421,13 @@ export function useRecibos() {
   const adicionar = useCallback(
     (novo: NovoRecibo) => {
       const recibo: Recibo = { ...novo, id: uid() };
-      persistir([recibo, ...recibos], async () => {
-        const { error } = await getSupabase().from("recibos").insert(toRow(recibo, userId!));
-        if (error) throw error;
-      });
+      cacheComputed(recibo.id, recibo._computed);
+      persistir([recibo, ...recibos], () =>
+        escreverResiliente(async () => {
+          const { error } = await getSupabase().from("recibos").insert(toRow(recibo, userId!));
+          return { error };
+        }),
+      );
     },
     [recibos, persistir, userId]
   );
@@ -257,16 +435,18 @@ export function useRecibos() {
   const atualizar = useCallback(
     (id: string, patch: NovoRecibo) => {
       const recibo: Recibo = { ...patch, id };
+      cacheComputed(id, recibo._computed);
       persistir(
         recibos.map((r) => (r.id === id ? recibo : r)),
-        async () => {
-          const { error } = await getSupabase()
-            .from("recibos")
-            .update(toRow(recibo, userId!))
-            .eq("id", id)
-            .eq("user_id", userId!);
-          if (error) throw error;
-        }
+        () =>
+          escreverResiliente(async () => {
+            const { error } = await getSupabase()
+              .from("recibos")
+              .update(toRow(recibo, userId!))
+              .eq("id", id)
+              .eq("user_id", userId!);
+            return { error };
+          }),
       );
     },
     [recibos, persistir, userId]
@@ -274,6 +454,7 @@ export function useRecibos() {
 
   const remover = useCallback(
     (id: string) => {
+      dropComputed(id);
       persistir(
         recibos.filter((r) => r.id !== id),
         async () => {
@@ -286,6 +467,7 @@ export function useRecibos() {
   );
 
   const limpar = useCallback(() => {
+    writeComputedCache({});
     persistir([], async () => {
       const { error } = await getSupabase().from("recibos").delete().eq("user_id", userId!);
       if (error) throw error;
@@ -300,17 +482,21 @@ export function useRecibos() {
       setLocaisPorImportar(0);
       return;
     }
-    const { error } = await getSupabase()
-      .from("recibos")
-      .upsert(locais.map((r) => toRow(r, userId)), { onConflict: "id" });
-    if (error) {
+    try {
+      await escreverResiliente(async () => {
+        const { error } = await getSupabase()
+          .from("recibos")
+          .upsert(locais.map((r) => toRow(r, userId)), { onConflict: "id" });
+        return { error };
+      });
+    } catch (error) {
       console.error("[recibos] erro ao importar locais:", error);
       return;
     }
     clearLocal();
     setLocaisPorImportar(0);
     try {
-      setRecibos(ordenar(await cloudList(userId)));
+      setRecibos(ordenar(enriquecerComputed(await cloudList(userId))));
     } catch (e) {
       console.error("[recibos] erro ao recarregar após importação:", e);
     }

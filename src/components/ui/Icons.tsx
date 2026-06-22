@@ -407,6 +407,24 @@ export function ShoppingBag({ size = 18, className }: IconProps) {
   );
 }
 
+export function Globe({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.6" />
+      <ellipse cx="12" cy="12" rx="4.5" ry="10" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M2 12h20M3.5 7h17M3.5 17h17" stroke="currentColor" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
+export function Plane({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function Home({ size = 18, className }: IconProps) {
   return (
     <svg {...svgProps(size, className)}>
@@ -493,6 +511,19 @@ export function GripVertical({ size = 18, className }: IconProps) {
   );
 }
 
+export function GripHorizontal({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <circle cx="6" cy="9" r="1.2" fill="currentColor" />
+      <circle cx="12" cy="9" r="1.2" fill="currentColor" />
+      <circle cx="18" cy="9" r="1.2" fill="currentColor" />
+      <circle cx="6" cy="15" r="1.2" fill="currentColor" />
+      <circle cx="12" cy="15" r="1.2" fill="currentColor" />
+      <circle cx="18" cy="15" r="1.2" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function GoogleAds({ size = 18, className }: IconProps) {
   return (
     <svg {...svgProps(size, className)}>
@@ -545,6 +576,14 @@ export function ExternalLink({ size = 14, className }: IconProps) {
     <svg {...svgProps(size, className)}>
       <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M15 3h6v6M10 14L21 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function ChevronLeft({ size = 16, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

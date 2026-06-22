@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getSupabase, supabaseConfigurado } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/auth";
+import { useSubscricao } from "@/lib/stripe/subscription";
 import {
   nivelParaXP,
   xpProgressoPct,
@@ -35,6 +36,9 @@ export interface RegistrarSessaoResult {
   nivelNovo: NivelInfo;
 }
 
+/** Nível a partir do qual a energia é ilimitada (sem necessidade de plano pago). */
+export const NIVEL_ENERGIA_ILIMITADA = 7;
+
 export interface QuizProgressoReturn {
   xp: number;
   nivel: NivelInfo;
@@ -42,9 +46,12 @@ export interface QuizProgressoReturn {
   streakRecord: number;
   energiaRestante: number;
   energiaTotal: number;
+  /** true se o utilizador tem energia ilimitada (nível >= 7 ou Pro). */
+  energiaIlimitada: boolean;
   sessoes: SessaoHistorico[];
   carregado: boolean;
   naNuvem: boolean;
+  isPro: boolean;
 
   registrarSessao: (
     resultado: ResultadoQuiz,
@@ -111,7 +118,9 @@ function gravarSessoesLocal(sessoes: SessaoHistorico[]) {
 
 export function useQuizProgresso(): QuizProgressoReturn {
   const { user } = useAuth();
+  const { plano } = useSubscricao();
   const naNuvem = !!user && supabaseConfigurado();
+  const isPro = plano === "pro";
 
   const [xp, setXp] = useState(0);
   const [streakRecord, setStreakRecord] = useState(0);
@@ -307,7 +316,11 @@ export function useQuizProgresso(): QuizProgressoReturn {
 
   // ── Consumir/refrescar energia ─────────────────────────────────────────
 
+  const nivel = nivelParaXP(xp);
+  const energiaIlimitada = isPro || nivel.nivel >= NIVEL_ENERGIA_ILIMITADA;
+
   const consumirEnergia = useCallback(() => {
+    if (energiaIlimitada) return;
     const nova = Math.max(0, energiaRestante - 1);
     setEnergiaRestante(nova);
 
@@ -322,7 +335,7 @@ export function useQuizProgresso(): QuizProgressoReturn {
       const prog = lerProgressoLocal();
       gravarProgressoLocal({ ...prog, energiaRestante: nova, energiaResetAt });
     }
-  }, [energiaRestante, energiaResetAt, naNuvem, user]);
+  }, [energiaIlimitada, energiaRestante, energiaResetAt, naNuvem, user]);
 
   const refrescarEnergia = useCallback(() => {
     const { energia, resetAt } = calcularEnergiaAtual(energiaRestante, energiaResetAt);
@@ -332,8 +345,6 @@ export function useQuizProgresso(): QuizProgressoReturn {
 
   // ── Return ─────────────────────────────────────────────────────────────
 
-  const nivel = nivelParaXP(xp);
-
   return {
     xp,
     nivel,
@@ -341,9 +352,11 @@ export function useQuizProgresso(): QuizProgressoReturn {
     streakRecord,
     energiaRestante,
     energiaTotal: ENERGIA_DIARIA,
+    energiaIlimitada,
     sessoes,
     carregado,
     naNuvem,
+    isPro,
     registrarSessao,
     adicionarXpBonus,
     consumirEnergia,

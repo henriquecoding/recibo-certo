@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -27,11 +28,12 @@ import {
   Star,
   Menu,
   Close,
+  LogOut,
 } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useAuth } from "@/lib/supabase/auth";
-import { SubscricaoProvider } from "@/lib/stripe/subscription";
 import { verificarAdmin } from "@/lib/supabase/admin";
+import { obterPerfil } from "@/lib/supabase/profile";
 import AccountBox from "@/components/dashboard/AccountBox";
 import { BuscaTrigger } from "@/components/busca/BuscaGlobal";
 import type { ComponentType, ReactNode } from "react";
@@ -173,6 +175,13 @@ function NavLink({
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [menuAberto, setMenuAberto] = useState(false);
+  const { user, sair } = useAuth();
+  const [avatarUrl, setAvatarUrl] = useState("");
+
+  useEffect(() => {
+    if (!user) { setAvatarUrl(""); return; }
+    obterPerfil(user.id).then((p) => setAvatarUrl(p.avatarUrl));
+  }, [user]);
 
   // Fecha o menu ao mudar de rota.
   useEffect(() => {
@@ -195,7 +204,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, [menuAberto]);
 
   return (
-    <SubscricaoProvider>
       <div className="min-h-screen bg-cream lg:grid lg:grid-cols-[256px_1fr]">
 
         {/* ─── Sidebar (desktop) ─────────────────────────────────── */}
@@ -211,7 +219,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
 
           <nav className="flex flex-1 flex-col overflow-y-auto px-3 pt-4 pb-2">
-            {GRUPOS.slice(0, 4).map((grupo) => (
+            {GRUPOS.map((grupo) => (
               <div key={grupo.titulo} className="mb-3">
                 <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-stone-300">
                   {grupo.titulo}
@@ -222,7 +230,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                       <NavLink
                         item={item}
                         active={isActive(pathname, item.href)}
-                        variante={grupo.titulo === "Gestão" ? "menu" : "recurso"}
+                        variante={grupo.titulo === "Gestão" || grupo.titulo === "Conta" ? "menu" : "recurso"}
                       />
                     </li>
                   ))}
@@ -258,9 +266,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <Link
               href="/dashboard/perfil"
               aria-label="Perfil"
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/10 text-brand transition-colors hover:bg-brand hover:text-white"
+              className="relative flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden bg-brand/10 text-brand transition-colors hover:bg-brand hover:text-white"
             >
-              <User size={16} />
+              {avatarUrl ? (
+                <Image src={avatarUrl} alt="Perfil" fill className="rounded-xl object-cover" sizes="36px" unoptimized />
+              ) : (
+                <User size={16} />
+              )}
             </Link>
           </div>
         </header>
@@ -354,6 +366,34 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   </div>
                 ))}
 
+                {user && (
+                  <div className="rounded-2xl border border-stone-100 bg-white p-3">
+                    <div className="flex items-center gap-3 mb-2.5">
+                      <div className="relative h-10 w-10 flex-shrink-0">
+                        {avatarUrl ? (
+                          <Image src={avatarUrl} alt="Perfil" fill className="rounded-xl object-cover" sizes="40px" unoptimized />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-brand to-brand-dark">
+                            <span className="text-sm font-semibold text-white">{(user.email || "U").charAt(0).toUpperCase()}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-stone-700">{user.email?.split("@")[0] || "Utilizador"}</p>
+                        <p className="truncate text-xs text-stone-400">{user.email}</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setMenuAberto(false); sair(); }}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 px-3 py-2.5 text-xs font-semibold text-stone-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <LogOut size={14} />
+                      Terminar sessão
+                    </button>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between rounded-2xl border border-stone-100 bg-white px-4 py-3">
                   <Link href="/" onClick={() => setMenuAberto(false)} className="flex items-center gap-1.5 text-xs font-medium text-stone-500">
                     <ArrowLeft size={13} /> Voltar ao site
@@ -365,6 +405,5 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         )}
       </div>
-    </SubscricaoProvider>
   );
 }

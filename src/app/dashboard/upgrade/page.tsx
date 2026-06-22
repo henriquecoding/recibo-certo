@@ -122,7 +122,7 @@ export default function UpgradePage() {
 
         <div className="flex items-baseline gap-1.5">
           <span className="font-display text-4xl font-semibold text-ink tabular-nums">
-            {anual ? "4,00 €" : "5,99 €"}
+            {anual ? "3,99 €" : "5,99 €"}
           </span>
           <span className="text-sm text-stone-400">por mês</span>
         </div>
