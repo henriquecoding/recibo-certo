@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { m, useMotionValue, useTransform, useSpring } from "motion/react";
-import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
+import { useState, useEffect, useRef, type ReactNode, type FormEvent } from "react";
+import { m } from "motion/react";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import Reveal from "@/components/ui/Reveal";
@@ -31,45 +30,14 @@ import {
   BellAlert,
   LogoMark,
   Export,
+  Check,
+  User,
+  Briefcase,
+  ChevronDown,
+  ChevronUp,
 } from "@/components/ui/Icons";
-
-/* ── Cartão 3D com efeito tilt ao hover ────────────────────────── */
-
-function Card3D({
-  children,
-  className = "",
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-
-  const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [8, -8]), { stiffness: 300, damping: 30 });
-  const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-8, 8]), { stiffness: 300, damping: 30 });
-
-  function handleMouse(e: ReactMouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    x.set((e.clientX - rect.left) / rect.width - 0.5);
-    y.set((e.clientY - rect.top) / rect.height - 0.5);
-  }
-
-  function handleLeave() {
-    x.set(0);
-    y.set(0);
-  }
-
-  return (
-    <m.div
-      className={className}
-      style={{ rotateX, rotateY, transformPerspective: 800, transformStyle: "preserve-3d" }}
-      onMouseMove={handleMouse}
-      onMouseLeave={handleLeave}
-    >
-      {children}
-    </m.div>
-  );
-}
+import { supabaseConfigurado } from "@/lib/supabase/client";
+import { submeterProposta, type PropostaInput } from "@/lib/supabase/admin";
 
 /* ── Tipos ────────────────────────────────────────────────────── */
 
@@ -321,7 +289,10 @@ function SimuladorDemo({ config, delayMs }: { config: DemoItem; delayMs: number 
   const highlightResult = config.resultados.find((r) => r.destaque);
 
   return (
-    <Card3D className="h-full">
+    <m.div
+      className="h-full"
+      whileHover={{ y: -4, transition: { duration: 0.3, ease: EASE } }}
+    >
       <div className="flex h-full flex-col overflow-hidden rounded-4xl border border-stone-200/60 bg-white shadow-card transition-shadow hover:shadow-lift dark:border-stone-700 dark:bg-stone-900">
         <div className="h-1 w-full bg-gradient-to-r from-brand via-brand-mint to-brand/40" aria-hidden />
 
@@ -437,7 +408,379 @@ function SimuladorDemo({ config, delayMs }: { config: DemoItem; delayMs: number 
           </div>
         </div>
       </div>
-    </Card3D>
+    </m.div>
+  );
+}
+
+/* ── Formulário de proposta de investimento ───────────────────── */
+
+type FormTab = "essencial" | "detalhe" | "mensagem";
+
+const INTERESSES = [
+  "Investimento seed",
+  "Investimento série A",
+  "Parceria estratégica",
+  "Mentoria + capital",
+  "Outro",
+];
+
+const HORIZONTES = [
+  "Curto prazo (< 1 ano)",
+  "Médio prazo (1–3 anos)",
+  "Longo prazo (> 3 anos)",
+];
+
+const COMO_CONHECEU = [
+  "LinkedIn",
+  "Recomendação pessoal",
+  "Pesquisa Google",
+  "Evento / conferência",
+  "Imprensa",
+  "Outro",
+];
+
+function PropostaForm() {
+  const [tab, setTab] = useState<FormTab>("essencial");
+  const [enviando, setEnviando] = useState(false);
+  const [enviado, setEnviado] = useState(false);
+  const [erro, setErro] = useState("");
+  const [expandido, setExpandido] = useState(false);
+
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [empresa, setEmpresa] = useState("");
+  const [cargo, setCargo] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [interesse, setInteresse] = useState(INTERESSES[0]);
+
+  const [montanteMin, setMontanteMin] = useState("");
+  const [montanteMax, setMontanteMax] = useState("");
+  const [horizonte, setHorizonte] = useState("");
+  const [experiencia, setExperiencia] = useState("");
+  const [setores, setSetores] = useState("");
+  const [comoConheceu, setComoConheceu] = useState("");
+  const [website, setWebsite] = useState("");
+  const [linkedin, setLinkedin] = useState("");
+
+  const [mensagem, setMensagem] = useState("");
+
+  const camposEssenciais = nome.trim() && email.trim();
+  const preenchidos = [nome, email, empresa, cargo, telefone, montanteMin, horizonte, experiencia, mensagem].filter(Boolean).length;
+  const total = 9;
+  const progressoPct = Math.round((preenchidos / total) * 100);
+
+  const TABS: { key: FormTab; label: string; icon: ReactNode }[] = [
+    { key: "essencial", label: "Identificação", icon: <User size={14} /> },
+    { key: "detalhe", label: "Detalhes", icon: <Briefcase size={14} /> },
+    { key: "mensagem", label: "Mensagem", icon: <Mail size={14} /> },
+  ];
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!camposEssenciais) {
+      setErro("O nome e o email são obrigatórios.");
+      setTab("essencial");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setErro("Endereço de email inválido.");
+      setTab("essencial");
+      return;
+    }
+
+    setErro("");
+    setEnviando(true);
+
+    const dados: PropostaInput = {
+      nome: nome.trim(),
+      email: email.trim(),
+      empresa: empresa.trim() || null,
+      cargo: cargo.trim() || null,
+      telefone: telefone.trim() || null,
+      interesse,
+      montante_minimo: montanteMin ? Number(montanteMin) : null,
+      montante_maximo: montanteMax ? Number(montanteMax) : null,
+      horizonte: horizonte || null,
+      experiencia_investimento: experiencia.trim() || null,
+      setores_interesse: setores.trim() || null,
+      como_conheceu: comoConheceu || null,
+      website: website.trim() || null,
+      linkedin: linkedin.trim() || null,
+      mensagem: mensagem.trim() || null,
+    };
+
+    const { erro: e2 } = await submeterProposta(dados);
+    setEnviando(false);
+
+    if (e2) {
+      setErro("Erro ao submeter. Tente novamente mais tarde.");
+      return;
+    }
+
+    setEnviado(true);
+  }
+
+  if (enviado) {
+    return (
+      <m.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, ease: EASE }}
+        className="rounded-4xl border border-brand/20 bg-brand/[0.03] p-8 text-center sm:p-10"
+      >
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand text-white">
+          <Check size={24} />
+        </div>
+        <h3 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100">
+          Proposta enviada com sucesso
+        </h3>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-stone-500">
+          Obrigado pelo interesse no ReciboCerto. A nossa equipa irá analisar a proposta e entrar em contacto em breve.
+        </p>
+      </m.div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="rounded-4xl border border-stone-200/60 bg-white shadow-card dark:border-stone-700 dark:bg-stone-900">
+      {/* Barra de progresso */}
+      <div className="px-6 pt-5 sm:px-8">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-stone-400">Progresso</span>
+          <span className="text-xs font-bold tabular-nums text-brand">{progressoPct}%</span>
+        </div>
+        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
+          <div
+            className="h-full rounded-full bg-brand transition-all duration-500 ease-out"
+            style={{ width: `${progressoPct}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="mt-4 flex gap-1 border-b border-stone-100 px-6 dark:border-stone-800 sm:px-8">
+        {TABS.map((t) => {
+          const active = tab === t.key;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={`flex items-center gap-1.5 border-b-2 px-3 pb-2.5 pt-1 text-sm font-semibold transition-colors ${
+                active
+                  ? "border-brand text-brand"
+                  : "border-transparent text-stone-400 hover:text-stone-600 dark:hover:text-stone-300"
+              }`}
+            >
+              {t.icon}
+              <span className="hidden sm:inline">{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Conteúdo do form */}
+      <div className="p-6 sm:p-8">
+        {erro && (
+          <div className="mb-4 rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-300">
+            {erro}
+          </div>
+        )}
+
+        {/* Tab: Essencial */}
+        {tab === "essencial" && (
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label="Nome *" value={nome} onChange={setNome} placeholder="Maria Silva" autoFocus />
+              <FormField label="Email *" value={email} onChange={setEmail} placeholder="maria@empresa.pt" type="email" />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label="Empresa" value={empresa} onChange={setEmpresa} placeholder="Empresa, Lda." />
+              <FormField label="Cargo" value={cargo} onChange={setCargo} placeholder="CEO / Partner / …" />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label="Telefone" value={telefone} onChange={setTelefone} placeholder="+351 912 345 678" type="tel" />
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                  Tipo de interesse
+                </label>
+                <select
+                  value={interesse}
+                  onChange={(e) => setInteresse(e.target.value)}
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-700 transition-colors focus:border-brand focus:ring-1 focus:ring-brand dark:border-stone-600 dark:bg-stone-800 dark:text-stone-200"
+                >
+                  {INTERESSES.map((i) => (
+                    <option key={i} value={i}>{i}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab: Detalhe */}
+        {tab === "detalhe" && (
+          <div className="space-y-4">
+            <button
+              type="button"
+              onClick={() => setExpandido(!expandido)}
+              className="flex w-full items-center justify-between rounded-xl bg-stone-50 px-4 py-3 text-left text-sm font-semibold text-stone-600 transition-colors hover:bg-stone-100 dark:bg-stone-800 dark:text-stone-300"
+            >
+              <span>Campos adicionais (opcional)</span>
+              {expandido ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label="Montante mínimo" value={montanteMin} onChange={setMontanteMin} placeholder="50 000" type="number" />
+              <FormField label="Montante máximo" value={montanteMax} onChange={setMontanteMax} placeholder="200 000" type="number" />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                  Horizonte temporal
+                </label>
+                <select
+                  value={horizonte}
+                  onChange={(e) => setHorizonte(e.target.value)}
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-700 transition-colors focus:border-brand focus:ring-1 focus:ring-brand dark:border-stone-600 dark:bg-stone-800 dark:text-stone-200"
+                >
+                  <option value="">Selecionar…</option>
+                  {HORIZONTES.map((h) => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                  Como nos conheceu
+                </label>
+                <select
+                  value={comoConheceu}
+                  onChange={(e) => setComoConheceu(e.target.value)}
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-700 transition-colors focus:border-brand focus:ring-1 focus:ring-brand dark:border-stone-600 dark:bg-stone-800 dark:text-stone-200"
+                >
+                  <option value="">Selecionar…</option>
+                  {COMO_CONHECEU.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {expandido && (
+              <m.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                transition={{ duration: 0.3, ease: EASE }}
+                className="space-y-4 overflow-hidden"
+              >
+                <FormField label="Experiência de investimento" value={experiencia} onChange={setExperiencia} placeholder="Business angel, VC, primeiro investimento…" />
+                <FormField label="Setores de interesse" value={setores} onChange={setSetores} placeholder="Fintech, SaaS, regulação…" />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField label="Website" value={website} onChange={setWebsite} placeholder="https://…" type="url" />
+                  <FormField label="LinkedIn" value={linkedin} onChange={setLinkedin} placeholder="https://linkedin.com/in/…" type="url" />
+                </div>
+              </m.div>
+            )}
+          </div>
+        )}
+
+        {/* Tab: Mensagem */}
+        {tab === "mensagem" && (
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                Mensagem (opcional)
+              </label>
+              <textarea
+                rows={5}
+                value={mensagem}
+                onChange={(e) => setMensagem(e.target.value)}
+                placeholder="Conte-nos sobre o seu interesse no ReciboCerto, questões que tenha, ou informação adicional que considere relevante…"
+                className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700 placeholder:text-stone-300 transition-colors focus:border-brand focus:ring-1 focus:ring-brand dark:border-stone-600 dark:bg-stone-800 dark:text-stone-200 dark:placeholder:text-stone-600"
+              />
+            </div>
+            <p className="text-xs text-stone-400">
+              Todos os dados são tratados de forma confidencial e de acordo com o RGPD. Nunca partilhamos informação com terceiros.
+            </p>
+          </div>
+        )}
+
+        {/* Navegação entre tabs + submit */}
+        <div className="mt-6 flex items-center justify-between gap-3">
+          <div className="flex gap-2">
+            {tab !== "essencial" && (
+              <button
+                type="button"
+                onClick={() => setTab(tab === "mensagem" ? "detalhe" : "essencial")}
+                className="rounded-xl border border-stone-200 px-4 py-2.5 text-sm font-semibold text-stone-600 transition-all hover:border-stone-300 hover:bg-stone-50 dark:border-stone-600 dark:text-stone-300"
+              >
+                Anterior
+              </button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {tab !== "mensagem" && (
+              <button
+                type="button"
+                onClick={() => setTab(tab === "essencial" ? "detalhe" : "mensagem")}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 px-4 py-2.5 text-sm font-semibold text-stone-600 transition-all hover:border-stone-300 hover:bg-stone-50 dark:border-stone-600 dark:text-stone-300"
+              >
+                Seguinte
+                <ArrowRight size={12} />
+              </button>
+            )}
+            <button
+              type="submit"
+              disabled={enviando || !camposEssenciais}
+              className="btn-shine inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-float disabled:pointer-events-none disabled:opacity-50"
+            >
+              {enviando ? (
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              ) : (
+                <ArrowRight size={14} />
+              )}
+              {enviando ? "A enviar…" : "Submeter proposta"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+function FormField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  autoFocus,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  type?: string;
+  autoFocus?: boolean;
+}) {
+  return (
+    <div>
+      <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+        {label}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+        className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-700 placeholder:text-stone-300 transition-colors focus:border-brand focus:ring-1 focus:ring-brand dark:border-stone-600 dark:bg-stone-800 dark:text-stone-200 dark:placeholder:text-stone-600"
+      />
+    </div>
   );
 }
 
@@ -582,7 +925,7 @@ export default function InvestidoresPage() {
         <Nav />
         <main>
           {/* ═══════════════════════════════════════════════════════
-              HERO — Impacto imediato com perspetiva 3D
+              HERO
               ═══════════════════════════════════════════════════════ */}
           <section className="grain relative overflow-hidden px-6 pt-20 pb-16">
             <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
@@ -613,10 +956,10 @@ export default function InvestidoresPage() {
 
                 <m.div variants={staggerItemVariant} className="mt-9">
                   <a
-                    href="mailto:investidores@recibocerto.pt?subject=Pedido%20de%20reuni%C3%A3o%20%E2%80%94%20ReciboCerto"
+                    href="#proposta"
                     className="btn-shine inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3.5 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-float"
                   >
-                    Agendar reunião
+                    Submeter proposta
                     <ArrowRight />
                   </a>
                 </m.div>
@@ -636,7 +979,7 @@ export default function InvestidoresPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, ease: EASE, delay: 0.15 }}
               >
-                <Card3D>
+                <m.div whileHover={{ y: -4, transition: { duration: 0.3, ease: EASE } }}>
                   <div className="relative overflow-hidden rounded-4xl border border-brand bg-brand p-6 text-white shadow-glow sm:p-7">
                     <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
                     <div aria-hidden className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/5 blur-xl" />
@@ -682,7 +1025,7 @@ export default function InvestidoresPage() {
                       </div>
                     </div>
                   </div>
-                </Card3D>
+                </m.div>
               </m.div>
             </div>
           </section>
@@ -751,7 +1094,7 @@ export default function InvestidoresPage() {
                 </Reveal>
 
                 <Reveal delay={0.1}>
-                  <Card3D>
+                  <m.div whileHover={{ y: -4, transition: { duration: 0.3, ease: EASE } }}>
                     <div className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
                       <div className="mb-4 flex items-center justify-between">
                         <span className="text-xs font-semibold uppercase tracking-wider text-stone-400">
@@ -776,7 +1119,7 @@ export default function InvestidoresPage() {
                         ))}
                       </div>
                     </div>
-                  </Card3D>
+                  </m.div>
                 </Reveal>
               </div>
             </div>
@@ -803,7 +1146,7 @@ export default function InvestidoresPage() {
               <div className="grid gap-4 lg:grid-cols-3">
                 {VISAO.map((v, i) => (
                   <Reveal key={v.fase} delay={i * 0.08}>
-                    <Card3D className="h-full">
+                    <m.div className="h-full" whileHover={{ y: -4, transition: { duration: 0.3, ease: EASE } }}>
                       <div
                         className={`flex h-full flex-col rounded-4xl p-6 shadow-card transition-shadow hover:shadow-lift ${
                           v.ativo
@@ -844,7 +1187,7 @@ export default function InvestidoresPage() {
                           </div>
                         )}
                       </div>
-                    </Card3D>
+                    </m.div>
                   </Reveal>
                 ))}
               </div>
@@ -852,7 +1195,7 @@ export default function InvestidoresPage() {
           </section>
 
           {/* ═══════════════════════════════════════════════════════
-              MODELO DE NEGÓCIO — Cards com 3D
+              MODELO DE NEGÓCIO
               ═══════════════════════════════════════════════════════ */}
           <section className="px-6 py-24">
             <div className="mx-auto max-w-5xl">
@@ -869,7 +1212,7 @@ export default function InvestidoresPage() {
               <StaggerGroup className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {METRICAS_MODELO.map((mt) => (
                   <StaggerItem key={mt.label}>
-                    <Card3D className="h-full">
+                    <m.div className="h-full" whileHover={{ y: -4, transition: { duration: 0.3, ease: EASE } }}>
                       <div className="flex h-full flex-col rounded-4xl border border-stone-100 bg-white p-5 shadow-card transition-shadow hover:shadow-lift dark:border-stone-800 dark:bg-stone-900">
                         <div className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">
                           {mt.label}
@@ -877,7 +1220,7 @@ export default function InvestidoresPage() {
                         <div className="mt-2 font-display text-2xl font-semibold text-brand">{mt.valor}</div>
                         <p className="mt-1 text-xs text-stone-400">{mt.sub}</p>
                       </div>
-                    </Card3D>
+                    </m.div>
                   </StaggerItem>
                 ))}
               </StaggerGroup>
@@ -932,68 +1275,46 @@ export default function InvestidoresPage() {
           </section>
 
           {/* ═══════════════════════════════════════════════════════
-              CTA FINAL — Mesma linguagem do hero do site
+              FORMULÁRIO DE PROPOSTA
               ═══════════════════════════════════════════════════════ */}
-          <section className="grain relative overflow-hidden px-6 py-24">
+          <section
+            id="proposta"
+            className="scroll-mt-20 grain relative overflow-hidden px-6 py-24"
+          >
             <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
               <div className="absolute -top-24 -right-32 h-[24rem] w-[24rem] rounded-full bg-brand/20 blur-3xl" />
               <div className="absolute -bottom-16 -left-24 h-[20rem] w-[20rem] rounded-full bg-brand-mint/15 blur-3xl" />
             </div>
 
-            <m.div
-              className="mx-auto max-w-2xl text-center"
-              variants={staggerContainer}
-              initial="hidden"
-              whileInView="visible"
-              viewport={inViewOnce}
-            >
-              <m.div variants={fadeUp} className="eyebrow mb-3 text-brand">
-                Próximo passo
-              </m.div>
+            <div className="mx-auto max-w-3xl">
+              <Reveal className="mb-10 text-center">
+                <div className="eyebrow mb-3 text-brand">Próximo passo</div>
+                <h2 className="font-display display-2 text-balance font-semibold text-ink">
+                  Interessado? <span className="text-brand">Submeta uma proposta.</span>
+                </h2>
+                <p className="mx-auto mt-3 max-w-md text-stone-500">
+                  Preencha apenas o essencial ou adicione detalhes para acelerar o processo. Capital destinado a integrar pagamentos, expandir a equipa e acelerar a adoção.
+                </p>
+              </Reveal>
 
-              <m.h2 variants={fadeUp} className="font-display display-2 text-balance font-semibold text-ink">
-                Vamos <span className="text-brand">conversar?</span>
-              </m.h2>
+              <Reveal delay={0.1}>
+                <PropostaForm />
+              </Reveal>
 
-              <m.p variants={fadeUp} className="mx-auto mt-3 max-w-md text-stone-500">
-                Capital destinado a integrar pagamentos, expandir a equipa e acelerar a adoção. Projeções e documentação disponíveis sob NDA.
-              </m.p>
-
-              <m.div
-                variants={fadeUp}
-                className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center"
-              >
-                <a
-                  href="mailto:investidores@recibocerto.pt?subject=Pedido%20de%20reuni%C3%A3o%20%E2%80%94%20ReciboCerto"
-                  className="btn-shine inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3.5 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-float"
-                >
-                  <Mail size={15} />
-                  Agendar reunião
-                </a>
-                <a
-                  href="mailto:investidores@recibocerto.pt?subject=Pedido%20de%20acesso%20Data%20Room%20%E2%80%94%20ReciboCerto"
-                  className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-6 py-3.5 text-sm font-semibold text-stone-700 transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50"
-                >
-                  <Lock size={14} />
-                  Solicitar Data Room
-                </a>
-              </m.div>
-
-              <m.div
-                variants={fadeUp}
-                className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2"
-              >
-                {CONFIANCA.map((c) => (
-                  <span
-                    key={c.texto}
-                    className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-500"
-                  >
-                    <span className="text-brand">{c.icon}</span>
-                    {c.texto}
-                  </span>
-                ))}
-              </m.div>
-            </m.div>
+              <Reveal delay={0.15} className="mt-8">
+                <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+                  {CONFIANCA.map((c) => (
+                    <span
+                      key={c.texto}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-500"
+                    >
+                      <span className="text-brand">{c.icon}</span>
+                      {c.texto}
+                    </span>
+                  ))}
+                </div>
+              </Reveal>
+            </div>
           </section>
         </main>
         <Footer />

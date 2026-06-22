@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.55.0";
+export const APP_VERSION = "1.56.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,19 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.56.0",
+    data: "2026-06-22",
+    titulo: "Formulário de propostas para investidores e painel de administração",
+    itens: [
+      "Novo formulário de proposta de investimento na página /investidores: com separadores (Identificação, Detalhes, Mensagem), barra de progresso e campos opcionais expansíveis — pode ser preenchido rapidamente ou com detalhe completo.",
+      "As propostas são guardadas na base de dados Supabase com RLS: qualquer visitante pode submeter, apenas administradores podem consultar e gerir.",
+      "Novo painel de administração em /admin/propostas: listagem com filtros por estado (pendente, em análise, contactado, aprovado, rejeitado), detalhes expansíveis, notas internas e ações rápidas de estado.",
+      "Contagem de propostas adicionada ao painel principal de administração.",
+      "Animação 3D de tilt ao hover removida de todos os cartões — substituída por elevação suave (translate Y) mais acessível e com melhor desempenho.",
+      "CTA do hero e secção final substituídos de mailto por âncora para o formulário de proposta integrado na página.",
+    ],
+  },
   {
     version: "1.55.0",
     data: "2026-06-22",

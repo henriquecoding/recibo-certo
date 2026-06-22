@@ -5,11 +5,12 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/lib/supabase/auth";
 import { verificarAdmin } from "@/lib/supabase/admin";
-import { CheckTrend, LayoutGrid, Megaphone, ArrowLeft, BellAlert, ShieldCheck, Flag } from "@/components/ui/Icons";
+import { CheckTrend, LayoutGrid, Megaphone, ArrowLeft, BellAlert, ShieldCheck, Flag, Briefcase } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 
 const NAV = [
   { href: "/admin", label: "Visão geral", icon: LayoutGrid },
+  { href: "/admin/propostas", label: "Propostas", icon: Briefcase },
   { href: "/admin/anuncios", label: "Anúncios", icon: Megaphone },
   { href: "/admin/reportes", label: "Reportes do quiz", icon: Flag },
   { href: "/admin/waitlist", label: "Lista de espera", icon: BellAlert },
@@ -148,7 +149,7 @@ function AdminLayout({ children }: { children: ReactNode }) {
       </header>
 
       {/* Mobile nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-stone-100 bg-white/95 backdrop-blur-xl lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-stone-100 bg-white/95 backdrop-blur-xl lg:hidden">
         {NAV.map(({ href, label, icon: Icon }) => {
           const active = href === "/admin" ? pathname === href : pathname.startsWith(href);
           return (
