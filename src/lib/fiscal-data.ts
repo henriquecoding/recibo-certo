@@ -203,6 +203,16 @@ export const SOURCES = {
     url: "https://files.diariodarepublica.pt/2s/2026/02/023000000/0005100057.pdf",
   },
 
+  // ── PwC / CIMI / CIMT / TGIS — Impostos municipais ─────────────────
+  pwcGuiaFiscal: {
+    label: "PwC — Guia Fiscal 2026 (IMI, IMT, IS) · PwC Portugal",
+    url: "https://www.pwc.pt/pt/pwcinforfisco/guia-fiscal/2026.html",
+  },
+  art40aCirs: {
+    label: "Art. 40.º-A CIRS — Englobamento de lucros e reservas (50% dividendos) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs40a.aspx",
+  },
+
   // ── Comissão Europeia ───────────────────────────────────────────────
   viesValidation: {
     label: "VIES — Validação de número de identificação para efeitos do IVA · Comissão Europeia",
@@ -1487,6 +1497,53 @@ export const SS_MIN_MENSAL = sv(
   TODAY
 );
 
+// ═══════════════════════════════════════════════════════════════════════
+//  IMPOSTOS MUNICIPAIS (IMI, IMT, IS) — empresa com imóvel próprio
+// ═══════════════════════════════════════════════════════════════════════
+
+export const IMI_TAXA_PADRAO = sv(
+  0.003,
+  "Art. 112.º CIMI — taxa mínima IMI urbano (0,3%); municípios podem fixar até 0,45%",
+  "pwcGuiaFiscal",
+  TODAY
+);
+
+export const IMT_TAXA_COMERCIAL = sv(
+  0.065,
+  "Art. 17.º CIMT — taxa IMT para imóveis não habitacionais (serviços/comércio/indústria): 6,5%",
+  "pwcGuiaFiscal",
+  TODAY
+);
+
+export const IS_TAXA_AQUISICAO = sv(
+  0.008,
+  "Verba 1.1 TGIS — Imposto do Selo sobre aquisição onerosa de imóveis: 0,8%",
+  "pwcGuiaFiscal",
+  TODAY
+);
+
+// ═══════════════════════════════════════════════════════════════════════
+//  ENGLOBAMENTO DE DIVIDENDOS (Art. 40.º-A CIRS)
+// ═══════════════════════════════════════════════════════════════════════
+
+export const DIV_INCLUSAO_ENGLOBAMENTO = sv(
+  0.5,
+  "Art. 40.º-A CIRS — englobamento: só 50% dos dividendos de entidades residentes é incluído no rendimento coletável",
+  "art40aCirs",
+  TODAY
+);
+
+// ═══════════════════════════════════════════════════════════════════════
+//  SALÁRIO MÍNIMO NACIONAL 2026
+// ═══════════════════════════════════════════════════════════════════════
+
+export const SMN = sv(
+  870,
+  "Salário Mínimo Nacional 2026 (DL 109/2025 de 30 de dezembro)",
+  "segSocialGov",
+  TODAY
+);
+
 // Valores derivados (calculados, nunca digitados à mão) ──────────────────
 export const IAS_VALUE = IAS.value;
 export const SS_BASE_MAX_MENSAL_CALC = 12 * IAS_VALUE; // deve igualar SS_BASE_MAX_MENSAL.value
@@ -2346,6 +2403,14 @@ export function assertFiscalDataIntegrity(): void {
     // IFICI
     IFICI_TAXA,
     IFICI_PRAZO_ANOS,
+    // Impostos municipais
+    IMI_TAXA_PADRAO,
+    IMT_TAXA_COMERCIAL,
+    IS_TAXA_AQUISICAO,
+    // Englobamento dividendos
+    DIV_INCLUSAO_ENGLOBAMENTO,
+    // SMN
+    SMN,
   ];
   sourced.forEach((p) => {
     if (!(p.source in SOURCES)) erros.push(`Fonte não registada: ${p.legalBasis}.`);

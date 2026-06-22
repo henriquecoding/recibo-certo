@@ -107,8 +107,8 @@ const CARDS_ATIV: CardAtiv[] = [
     titulo: "Profissão liberal",
     sub: "Serviços técnicos e liberais (Art. 151.º CIRS)",
     exemplos: "Dev, designer, arquiteto, advogado, solicitador, médico, psicólogo, nutricionista, enfermeiro, engenheiro, consultor, gestor, contabilista, jornalista, ator, músico, professor…",
-    coef: 0.75,
-    ret: 0.23,
+    coef: COEFICIENTE_POR_TIPO.art151,
+    ret: RETENCAO.art151.value,
     baseSS: "servicos",
     tipoFiscal: "art151",
     Icon: Laptop,
@@ -118,7 +118,7 @@ const CARDS_ATIV: CardAtiv[] = [
     titulo: "Vendo produtos",
     sub: "Comércio, produção e revenda",
     exemplos: "E-commerce, artesanato, manufatura…",
-    coef: 0.15,
+    coef: COEFICIENTE_POR_TIPO.vendas,
     ret: 0,
     baseSS: "bens",
     tipoFiscal: "vendas",
@@ -129,7 +129,7 @@ const CARDS_ATIV: CardAtiv[] = [
     titulo: "Alojamento ou Hostelaria",
     sub: "Alojamento local, hotel, restauração",
     exemplos: "Airbnb, hostel, restaurante, café…",
-    coef: 0.35,
+    coef: COEFICIENTE_POR_TIPO.outros,
     ret: 0,
     baseSS: "bens",
     tipoFiscal: "vendas",
@@ -140,8 +140,8 @@ const CARDS_ATIV: CardAtiv[] = [
     titulo: "Outros serviços",
     sub: "Serviços fora do Art. 151.º",
     exemplos: "Explicações, motorista, jardinagem…",
-    coef: 0.35,
-    ret: 0.115,
+    coef: COEFICIENTE_POR_TIPO.outros,
+    ret: RETENCAO.outros.value,
     baseSS: "servicos",
     tipoFiscal: "outros",
     Icon: Briefcase,
@@ -151,8 +151,8 @@ const CARDS_ATIV: CardAtiv[] = [
     titulo: "Direitos de autor / Royalties",
     sub: "Propriedade intelectual e licenciamento",
     exemplos: "Livros, música, software, patentes…",
-    coef: 0.95,
-    ret: 0.165,
+    coef: COEFICIENTE_POR_TIPO.diretosAutor,
+    ret: RETENCAO.diretosAutor.value,
     baseSS: "servicos",
     tipoFiscal: "diretosAutor",
     Icon: PenLine,
@@ -171,12 +171,13 @@ interface ReciboItem {
   taxaIva: number;
 }
 
+const IVA_CONT = IVA_TAXAS.continente.value;
 const IVA_OPCOES_FAT = [
   { taxa: 0, curto: "Isento", longo: "0%" },
-  { taxa: 0.06, curto: "Reduzida", longo: "6%" },
-  { taxa: 0.13, curto: "Intermédia", longo: "13%" },
-  { taxa: 0.23, curto: "Normal", longo: "23%" },
-] as const;
+  { taxa: IVA_CONT.reduzida, curto: "Reduzida", longo: `${IVA_CONT.reduzida * 100}%` },
+  { taxa: IVA_CONT.intermedia, curto: "Intermédia", longo: `${IVA_CONT.intermedia * 100}%` },
+  { taxa: IVA_CONT.normal, curto: "Normal", longo: `${IVA_CONT.normal * 100}%` },
+];
 
 const MESES_OPCOES_FAT = [1, 2, 3, 4, 6, 8, 10, 12] as const;
 
