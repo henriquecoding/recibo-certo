@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.52.0";
+export const APP_VERSION = "1.53.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.53.0",
+    data: "2026-06-22",
+    titulo: "Página de investidores redesenhada com demos animados",
+    itens: [
+      "Página /investidores completamente redesenhada: design alinhado com a linguagem visual do ReciboCerto (cream, brand green, organic glows, rounded-4xl), animações 3D com tilt interativo nos cartões, e secções de produto, problema, visão, modelo de negócio e vantagens competitivas.",
+      "Novos mini-simuladores animados em loop na secção «O produto em ação»: recibos verdes, vencimento e empresa preenchem-se automaticamente com contagem animada e resultados em cascata — mostrando a plataforma a funcionar em tempo real.",
+    ],
+  },
   {
     version: "1.52.0",
     data: "2026-06-22",
