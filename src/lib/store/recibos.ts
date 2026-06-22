@@ -53,6 +53,12 @@ export type NovoRecibo = Omit<Recibo, "id">;
 
 const STORAGE_KEY = "recibocerto:recibos:v1";
 const IMPORT_ADIADO_KEY = (userId: string) => `recibocerto:import-adiado:${userId}`;
+// Cache local dos valores pré-calculados pelo simulador (IRS real, líquido, etc.),
+// indexado por id do recibo. É a ÚNICA fonte destes valores no dashboard: o
+// Supabase não guarda `_computed` (a tabela `recibos` não tem colunas para isso),
+// por isso sem este cache os valores perdiam-se no round-trip à nuvem e o painel
+// caía no recálculo de retenção na fonte. Cross-device: ausente → recalcula.
+const COMPUTED_KEY = "recibocerto:recibos-computed:v1";
 
 // ─── localStorage ──────────────────────────────────────────────────────
 function readLocal(): Recibo[] {
@@ -75,6 +81,57 @@ function writeLocal(recibos: Recibo[]): void {
 function clearLocal(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(STORAGE_KEY);
+}
+
+// ─── Cache de valores pré-calculados (sobrevive ao round-trip do Supabase) ──
+function readComputedCache(): Record<string, ReciboComputed> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(COMPUTED_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, ReciboComputed>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeComputedCache(cache: Record<string, ReciboComputed>): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(COMPUTED_KEY, JSON.stringify(cache));
+  } catch {
+    /* quota/indisponível — ignora */
+  }
+}
+
+/** Guarda os valores pré-calculados de um recibo (no-op se não houver). */
+function cacheComputed(id: string, computed?: ReciboComputed): void {
+  if (!computed) return;
+  const cache = readComputedCache();
+  cache[id] = computed;
+  writeComputedCache(cache);
+}
+
+/** Remove a entrada de cache de um recibo. */
+function dropComputed(id: string): void {
+  const cache = readComputedCache();
+  if (id in cache) {
+    delete cache[id];
+    writeComputedCache(cache);
+  }
+}
+
+/** Reanexa `_computed` (do cache local) a recibos vindos da nuvem ou do localStorage. */
+function enriquecerComputed(recibos: Recibo[]): Recibo[] {
+  const cache = readComputedCache();
+  return recibos.map((r) => {
+    if (r._computed) {
+      // Garante que o cache fica sincronizado quando o valor já vem embutido (local).
+      if (!cache[r.id]) cacheComputed(r.id, r._computed);
+      return r;
+    }
+    return cache[r.id] ? { ...r, _computed: cache[r.id] } : r;
+  });
 }
 
 function importacaoAdiada(userId: string): boolean {
@@ -266,7 +323,8 @@ export function useRecibos() {
       cloudList(userId)
         .then((rows) => {
           if (!ativo) return;
-          setRecibos(ordenar(rows));
+          // O Supabase não guarda `_computed`; reanexa-o do cache local.
+          setRecibos(ordenar(enriquecerComputed(rows)));
           const locais = readLocal();
           setLocaisPorImportar(importacaoAdiada(userId) ? 0 : locais.length);
           setCarregado(true);
@@ -278,7 +336,7 @@ export function useRecibos() {
           setCarregado(true);
         });
     } else {
-      setRecibos(ordenar(readLocal()));
+      setRecibos(ordenar(enriquecerComputed(readLocal())));
       setLocaisPorImportar(0);
       setCarregado(true);
     }
@@ -305,6 +363,7 @@ export function useRecibos() {
   const adicionar = useCallback(
     (novo: NovoRecibo) => {
       const recibo: Recibo = { ...novo, id: uid() };
+      cacheComputed(recibo.id, recibo._computed);
       persistir([recibo, ...recibos], async () => {
         const { error } = await getSupabase().from("recibos").insert(toRow(recibo, userId!));
         if (error) throw error;
@@ -316,6 +375,7 @@ export function useRecibos() {
   const atualizar = useCallback(
     (id: string, patch: NovoRecibo) => {
       const recibo: Recibo = { ...patch, id };
+      cacheComputed(id, recibo._computed);
       persistir(
         recibos.map((r) => (r.id === id ? recibo : r)),
         async () => {
@@ -333,6 +393,7 @@ export function useRecibos() {
 
   const remover = useCallback(
     (id: string) => {
+      dropComputed(id);
       persistir(
         recibos.filter((r) => r.id !== id),
         async () => {
@@ -345,6 +406,7 @@ export function useRecibos() {
   );
 
   const limpar = useCallback(() => {
+    writeComputedCache({});
     persistir([], async () => {
       const { error } = await getSupabase().from("recibos").delete().eq("user_id", userId!);
       if (error) throw error;
@@ -369,7 +431,7 @@ export function useRecibos() {
     clearLocal();
     setLocaisPorImportar(0);
     try {
-      setRecibos(ordenar(await cloudList(userId)));
+      setRecibos(ordenar(enriquecerComputed(await cloudList(userId))));
     } catch (e) {
       console.error("[recibos] erro ao recarregar após importação:", e);
     }
