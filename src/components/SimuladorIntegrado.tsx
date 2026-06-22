@@ -3566,7 +3566,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
         regiao: dados.regiao,
         regimeIVA: dados.regimeIVA,
         baseSS: dados.baseSS === "bens" ? "bens" : "servicos",
-        dispensaRetencao: false,
+        dispensaRetencao: dados.dispensaRetencao,
       };
       adicionarRecibo(novo);
     },
@@ -6967,12 +6967,13 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                       {podeGuardar && cenario === "rv" && (
                         <GuardarReciboPro
                           onGuardar={(cliente) => guardarReciboDashboard({
-                            valor: bruto,
+                            valor: base,
                             tipo: TIPO_LOCAL_PARA_CANONICO[tipoAtiv],
                             atividade: atividade.label,
                             regiao,
                             regimeIVA,
                             baseSS: efeitoFiscal(atividade).baseSS,
+                            dispensaRetencao,
                           }, cliente)}
                         />
                       )}

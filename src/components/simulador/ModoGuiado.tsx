@@ -97,6 +97,7 @@ export interface ReciboGuiadoSaida {
   regiao: Regiao;
   regimeIVA: RegimeIVA;
   baseSS: "bens" | "servicos";
+  dispensaRetencao: boolean;
 }
 
 const CARDS_ATIV: CardAtiv[] = [
@@ -908,6 +909,7 @@ export default function ModoGuiado({
                       regiao,
                       regimeIVA: regimeEfetivo,
                       baseSS: card.baseSS,
+                      dispensaRetencao: false,
                     }, cliente) : undefined}
                   />
                 </m.div>
