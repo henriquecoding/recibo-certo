@@ -29,6 +29,7 @@ import {
   IVA_ISENCAO_LIMITE,
   IVA_ISENCAO_EXCESSO,
   IRS_JOVEM,
+  DISPENSA_RETENCAO_LIMITE,
   efeitoFiscal,
   META_TIPO,
   RETENCAO,
@@ -394,7 +395,7 @@ export default function ModoGuiado({
         regiao,
         regimeIVA: regimeEfetivo,
         baseSS: card.baseSS,
-        dispensaRetencao: false,
+        dispensaRetencao: brutoAnual < DISPENSA_RETENCAO_LIMITE.value,
         isencaoSSPrimeiroAno,
         acumulaEmprego,
         irsJovemAno: jovemAno,
@@ -402,6 +403,7 @@ export default function ModoGuiado({
       }),
     [
       bruto,
+      brutoAnual,
       card.tipoFiscal,
       card.baseSS,
       regiao,
@@ -909,7 +911,7 @@ export default function ModoGuiado({
                       regiao,
                       regimeIVA: regimeEfetivo,
                       baseSS: card.baseSS,
-                      dispensaRetencao: false,
+                      dispensaRetencao: brutoAnual < DISPENSA_RETENCAO_LIMITE.value,
                     }, cliente) : undefined}
                   />
                 </m.div>
