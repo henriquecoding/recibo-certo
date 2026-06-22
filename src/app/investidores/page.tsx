@@ -593,7 +593,7 @@ function PropostaForm() {
         {tab === "essencial" && (
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="Nome *" value={nome} onChange={setNome} placeholder="Maria Silva" autoFocus />
+              <FormField label="Nome *" value={nome} onChange={setNome} placeholder="Maria Silva" />
               <FormField label="Email *" value={email} onChange={setEmail} placeholder="maria@empresa.pt" type="email" />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -758,14 +758,12 @@ function FormField({
   onChange,
   placeholder,
   type = "text",
-  autoFocus,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   type?: string;
-  autoFocus?: boolean;
 }) {
   return (
     <div>
@@ -777,7 +775,6 @@ function FormField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        autoFocus={autoFocus}
         className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-700 placeholder:text-stone-300 transition-colors focus:border-brand focus:ring-1 focus:ring-brand dark:border-stone-600 dark:bg-stone-800 dark:text-stone-200 dark:placeholder:text-stone-600"
       />
     </div>

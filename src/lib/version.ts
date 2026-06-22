@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.57.0";
+export const APP_VERSION = "1.59.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,29 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.59.0",
+    data: "2026-06-22",
+    titulo: "Hero com animação em loop contínuo e indicador de fase",
+    itens: [
+      "Animação do cartão hero agora corre em loop contínuo: após o resultado aparecer, fica estático 4 segundos e reinicia suavemente com fade-out e fade-in — repete-se indefinidamente enquanto a página está aberta.",
+      "Novo indicador de fase abaixo do cartão — três passos (Insere o valor → Calcula → Resultado) com pontos e linhas que progridem e iluminam a verde conforme a animação avança. Dá contexto visual ao que está a acontecer.",
+      "Indicador «Demo ao vivo» acima do cartão com ponto verde pulsante, enquadrando a simulação como demonstração em tempo real.",
+      "Fase de cálculo melhorada: barra de progresso verde varre a base do campo de input em vez de simples pulsação, transmitindo processamento real.",
+      "Superfície do cartão agora reage à fase da animação: sombra e borda mudam subtilmente entre idle (card), focado (lift) e resultado (float + borda verde).",
+      "Layout reestruturado: grelha ajustada para dar mais espaço ao painel de simulação (1fr / 1.1fr), alinhamento ao topo para composição mais limpa.",
+    ],
+  },
+  {
+    version: "1.58.0",
+    data: "2026-06-22",
+    titulo: "Animação do hero profissional e correção da página de investidores",
+    itens: [
+      "Animação do cartão hero da homepage completamente reescrita: sequência profissional de 6 fases — foco no campo de input com brilho verde, digitação com ritmo humano e correção deliberada de erro, pausa de cálculo com shimmer, e resultado com contagem animada suave. Cada perfil tem a sua sequência única de digitação.",
+      "Linhas de detalhe no cartão hero agora cascateiam com animação individual (slide + fade), e a barra de proporções, badge de percentagem, caixa de info/alerta e nota de rodapé entram sequencialmente.",
+      "Página de investidores já não salta automaticamente para o formulário ao carregar — removido autoFocus do campo de nome que forçava o scroll.",
+    ],
+  },
   {
     version: "1.57.0",
     data: "2026-06-22",
