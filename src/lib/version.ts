@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.56.1";
+export const APP_VERSION = "1.57.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.57.0",
+    data: "2026-06-22",
+    titulo: "Hero da homepage animado e correções visuais nos investidores",
+    itens: [
+      "Cartão-resposta do hero da homepage agora tem animação de digitação: os números aparecem como se alguém estivesse a escrever, com cursor a piscar. Ao terminar, os resultados surgem com contagem animada e as barras de detalhe expandem suavemente. A animação reinicia ao trocar de perfil (independente, dependente, empresa, comparar).",
+      "Cartões dos demos de investidores (/investidores) agora têm altura mínima fixa (540px mobile, 560px desktop) — a animação já não faz a página saltar ao alternar fases.",
+      "Texto nos cartões verdes (hero do investidores e visão 'Agora') agora usa branco com opacidade elevada em vez de green-100 — contraste muito mais legível.",
+    ],
+  },
   {
     version: "1.56.1",
     data: "2026-06-22",
