@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.51.0";
+export const APP_VERSION = "1.52.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,19 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.52.0",
+    data: "2026-06-22",
+    titulo: "Recibos no painel — guardar da calculadora e visualização completa",
+    itens: [
+      "Guardar recibos no painel diretamente a partir do modo guiado ou do simulador completo, com nome do cliente associado.",
+      "Funcionalidade Pro: utilizadores com conta gratuita podem experimentar com 1 recibo de amostra.",
+      "Página de recibos redesenhada: gráfico de receita anual, donut de distribuição (líquido, retenção, SS), resumo de impostos acumulados.",
+      "Nova vista de tabela detalhada com bruto, IVA, retenção, Seg. Social e líquido por recibo, com totais.",
+      "Distribuição de faturação por cliente com barra de progresso visual.",
+      "Agrupamento mensal colapsável com mini-resumo de impostos por mês.",
+    ],
+  },
   {
     version: "1.51.0",
     data: "2026-06-21",

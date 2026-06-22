@@ -112,7 +112,7 @@ export default function VisaoGeral() {
           <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">O teu copiloto financeiro, sem surpresas.</p>
         </div>
         <Link
-          href="/dashboard/recibos"
+          href="/#calculadora"
           className="btn-shine inline-flex items-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-float"
         >
           <Receipt size={16} />
