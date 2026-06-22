@@ -3606,6 +3606,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
         regimeIVA: dados.regimeIVA,
         baseSS: dados.baseSS === "bens" ? "bens" : "servicos",
         dispensaRetencao: dados.dispensaRetencao,
+        _computed: dados._computed,
       };
       adicionarRecibo(novo);
     },
@@ -7013,6 +7014,12 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                             regimeIVA,
                             baseSS: efeitoFiscal(atividade).baseSS,
                             dispensaRetencao,
+                            _computed: {
+                              irsEstimado: resultAnualRV.irs / 12,
+                              segSocial: resultRecibo.segSocial,
+                              iva: resultRecibo.iva,
+                              liquido: resultAnualRV.liquido / 12,
+                            },
                           }, cliente)}
                         />
                       )}

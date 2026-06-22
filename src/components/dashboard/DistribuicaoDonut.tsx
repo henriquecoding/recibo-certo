@@ -9,7 +9,7 @@ import { fmt, pct } from "@/lib/format";
 // `color` → hex fixo (o mint é legível nos dois temas).
 const SEG: { key: "liquido" | "retencao" | "segSocial"; label: string; color?: string; cls?: string }[] = [
   { key: "liquido", label: "Teu", cls: "text-brand" },
-  { key: "retencao", label: "Retenção IRS", color: "#9FE1CB" },
+  { key: "retencao", label: "IRS estimado", color: "#9FE1CB" },
   { key: "segSocial", label: "Seg. Social", cls: "text-brand-deep" },
 ];
 

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useRecibos, calcularRecibo, resumir, type Recibo } from "@/lib/store/recibos";
+import { useRecibos, calcularReciboDashboard, resumirDashboard, type Recibo } from "@/lib/store/recibos";
 import { downloadCSV, printRecibosPDF } from "@/lib/export";
 import { fmt, pct } from "@/lib/format";
 import {
@@ -51,7 +51,7 @@ export default function RecibosPage() {
     return new Date(Number(ano), Number(mes) - 1, 1).toLocaleDateString("pt-PT", { month: "long", year: "numeric" });
   };
 
-  const resumoTotal = useMemo(() => resumir(recibos), [recibos]);
+  const resumoTotal = useMemo(() => resumirDashboard(recibos), [recibos]);
   const mediaRecibo = recibos.length > 0 ? resumoTotal.liquido / recibos.length : 0;
   const taxaEfetiva = resumoTotal.bruto > 0 ? 1 - resumoTotal.liquido / resumoTotal.bruto : 0;
   const clientesUnicos = new Set(recibos.map((r) => r.cliente.trim().toLowerCase())).size;
@@ -61,7 +61,7 @@ export default function RecibosPage() {
     const mapa: Record<string, { nome: string; bruto: number; liquido: number; count: number }> = {};
     recibos.forEach((r) => {
       const chave = r.cliente.trim().toLowerCase() || "(sem nome)";
-      const c = calcularRecibo(r);
+      const c = calcularReciboDashboard(r);
       if (!mapa[chave]) mapa[chave] = { nome: r.cliente.trim() || "Sem nome", bruto: 0, liquido: 0, count: 0 };
       mapa[chave].bruto += c.bruto;
       mapa[chave].liquido += c.liquido;
@@ -175,7 +175,7 @@ export default function RecibosPage() {
               <InfoTip>Valores acumulados de todos os recibos registados. A retenção na fonte e Seg. Social são adiantamentos — o valor final depende da declaração de IRS.</InfoTip>
             </h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <ImpostoMini label="Retenção IRS" valor={resumoTotal.retencao} />
+              <ImpostoMini label="IRS estimado" valor={resumoTotal.retencao} />
               <ImpostoMini label="Seg. Social" valor={resumoTotal.segSocial} />
               <ImpostoMini label="IVA cobrado" valor={resumoTotal.iva} />
               <ImpostoMini label="Média/recibo" valor={mediaRecibo} accent />
@@ -282,7 +282,7 @@ export default function RecibosPage() {
                   </thead>
                   <tbody>
                     {filtrados.map((r) => {
-                      const c = calcularRecibo(r);
+                      const c = calcularReciboDashboard(r);
                       return (
                         <tr key={r.id} className="border-t border-stone-50 transition-colors hover:bg-stone-50/50 dark:border-stone-800 dark:hover:bg-stone-800/40">
                           <td className="px-5 py-3">
@@ -315,11 +315,11 @@ export default function RecibosPage() {
                     <tfoot>
                       <tr className="border-t-2 border-stone-200 dark:border-stone-700">
                         <td colSpan={3} className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-stone-400">Total</td>
-                        <td className="px-3 py-3 text-right text-sm font-semibold tabular-nums text-stone-700 dark:text-stone-200">{fmt(filtrados.reduce((s, r) => s + calcularRecibo(r).bruto, 0))}</td>
-                        <td className="hidden px-3 py-3 text-right text-sm font-semibold tabular-nums text-stone-500 dark:text-stone-400 md:table-cell">{fmt(filtrados.reduce((s, r) => s + calcularRecibo(r).iva, 0))}</td>
-                        <td className="hidden px-3 py-3 text-right text-sm font-semibold tabular-nums text-stone-500 dark:text-stone-400 md:table-cell">{fmt(filtrados.reduce((s, r) => s + calcularRecibo(r).retencaoIRS, 0))}</td>
-                        <td className="hidden px-3 py-3 text-right text-sm font-semibold tabular-nums text-stone-500 dark:text-stone-400 lg:table-cell">{fmt(filtrados.reduce((s, r) => s + calcularRecibo(r).segSocial, 0))}</td>
-                        <td className="px-3 py-3 text-right text-sm font-semibold tabular-nums text-brand">{fmt(filtrados.reduce((s, r) => s + calcularRecibo(r).liquido, 0))}</td>
+                        <td className="px-3 py-3 text-right text-sm font-semibold tabular-nums text-stone-700 dark:text-stone-200">{fmt(filtrados.reduce((s, r) => s + calcularReciboDashboard(r).bruto, 0))}</td>
+                        <td className="hidden px-3 py-3 text-right text-sm font-semibold tabular-nums text-stone-500 dark:text-stone-400 md:table-cell">{fmt(filtrados.reduce((s, r) => s + calcularReciboDashboard(r).iva, 0))}</td>
+                        <td className="hidden px-3 py-3 text-right text-sm font-semibold tabular-nums text-stone-500 dark:text-stone-400 md:table-cell">{fmt(filtrados.reduce((s, r) => s + calcularReciboDashboard(r).retencaoIRS, 0))}</td>
+                        <td className="hidden px-3 py-3 text-right text-sm font-semibold tabular-nums text-stone-500 dark:text-stone-400 lg:table-cell">{fmt(filtrados.reduce((s, r) => s + calcularReciboDashboard(r).segSocial, 0))}</td>
+                        <td className="px-3 py-3 text-right text-sm font-semibold tabular-nums text-brand">{fmt(filtrados.reduce((s, r) => s + calcularReciboDashboard(r).liquido, 0))}</td>
                         <td className="px-3 py-3" />
                       </tr>
                     </tfoot>
@@ -336,7 +336,7 @@ export default function RecibosPage() {
               {meses.length === 0 && <p className="text-sm text-stone-400">Sem recibos para &ldquo;{query}&rdquo;.</p>}
               {meses.map((mesKey) => {
                 const doMes = grupos[mesKey];
-                const resumoMes = resumir(doMes);
+                const resumoMes = resumirDashboard(doMes);
                 const aberto = mesAberto === null || mesAberto === mesKey;
                 return (
                   <div key={mesKey} className="rounded-4xl border border-stone-100 bg-white shadow-card dark:bg-stone-900 dark:border-stone-800">
@@ -366,7 +366,7 @@ export default function RecibosPage() {
                       <div className="border-t border-stone-50 px-5 pb-5 sm:px-6 dark:border-stone-800">
                         {/* Mini resumo mensal */}
                         <div className="grid grid-cols-2 gap-2 py-3 sm:grid-cols-4">
-                          <MesMini label="Retenção IRS" valor={resumoMes.retencao} />
+                          <MesMini label="IRS estimado" valor={resumoMes.retencao} />
                           <MesMini label="Seg. Social" valor={resumoMes.segSocial} />
                           <MesMini label="IVA cobrado" valor={resumoMes.iva} />
                           <MesMini label="Líquido" valor={resumoMes.liquido} accent />
@@ -375,7 +375,7 @@ export default function RecibosPage() {
                         {/* Lista de recibos do mês */}
                         <ul className="space-y-2">
                           {doMes.map((r) => {
-                            const c = calcularRecibo(r);
+                            const c = calcularReciboDashboard(r);
                             return (
                               <li
                                 key={r.id}
@@ -477,7 +477,7 @@ function MesMini({ label, valor, accent }: { label: string; valor: number; accen
 
 const SEG: { key: "liquido" | "retencao" | "segSocial"; label: string; color?: string; cls?: string }[] = [
   { key: "liquido", label: "Para ti", cls: "text-brand" },
-  { key: "retencao", label: "Retenção IRS", color: "#9FE1CB" },
+  { key: "retencao", label: "IRS estimado", color: "#9FE1CB" },
   { key: "segSocial", label: "Seg. Social", cls: "text-brand-deep" },
 ];
 

@@ -23,6 +23,14 @@ import { getSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/auth";
 import { useSubscricao } from "@/lib/stripe/subscription";
 
+export interface ReciboComputed {
+  /** IRS real estimado por recibo (da simulação anual, não a retenção na fonte). */
+  irsEstimado: number;
+  segSocial: number;
+  iva: number;
+  liquido: number;
+}
+
 export interface Recibo {
   id: string;
   /** Data de emissão (ISO yyyy-mm-dd). */
@@ -37,6 +45,8 @@ export interface Recibo {
   regimeIVA: RegimeIVA;
   baseSS: BaseSS;
   dispensaRetencao: boolean;
+  /** Valores pré-calculados pelo simulador (IRS real, não retenção na fonte). Quando presente, o dashboard usa estes valores em vez de recalcular. */
+  _computed?: ReciboComputed;
 }
 
 export type NovoRecibo = Omit<Recibo, "id">;
@@ -169,6 +179,27 @@ export function calcularRecibo(r: Recibo, opcoes?: OpcoesCalcRecibo): CalcResult
   return calcular(reciboParaInput(r, opcoes));
 }
 
+/** Valores para exibição no dashboard: usa `_computed` (IRS real da simulação anual)
+ *  quando disponível; caso contrário recalcula (fallback para recibos antigos). */
+export function calcularReciboDashboard(r: Recibo): CalcResult {
+  if (r._computed) {
+    const c = r._computed;
+    return {
+      bruto: r.valor,
+      retencaoIRS: c.irsEstimado,
+      iva: c.iva,
+      segSocial: c.segSocial,
+      liquido: c.liquido,
+      entradaConta: r.valor + c.iva - c.irsEstimado,
+      taxaRetencao: r.valor > 0 ? c.irsEstimado / r.valor : 0,
+      taxaIVA: r.valor > 0 ? c.iva / r.valor : 0,
+      isencaoJovem: 0,
+      avisos: [],
+    };
+  }
+  return calcular(reciboParaInput(r));
+}
+
 export interface ResumoRecibos {
   total: number;
   bruto: number;
@@ -182,6 +213,24 @@ export function resumir(recibos: Recibo[], opcoes?: OpcoesCalcRecibo): ResumoRec
   return recibos.reduce<ResumoRecibos>(
     (acc, r) => {
       const c = calcularRecibo(r, opcoes);
+      return {
+        total: acc.total + 1,
+        bruto: acc.bruto + c.bruto,
+        iva: acc.iva + c.iva,
+        retencao: acc.retencao + c.retencaoIRS,
+        segSocial: acc.segSocial + c.segSocial,
+        liquido: acc.liquido + c.liquido,
+      };
+    },
+    { total: 0, bruto: 0, iva: 0, retencao: 0, segSocial: 0, liquido: 0 }
+  );
+}
+
+/** Resumo para o dashboard: usa `_computed` (IRS real estimado) quando disponível. */
+export function resumirDashboard(recibos: Recibo[]): ResumoRecibos {
+  return recibos.reduce<ResumoRecibos>(
+    (acc, r) => {
+      const c = calcularReciboDashboard(r);
       return {
         total: acc.total + 1,
         bruto: acc.bruto + c.bruto,

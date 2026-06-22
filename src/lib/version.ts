@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.52.0";
+export const APP_VERSION = "1.55.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,36 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.55.0",
+    data: "2026-06-22",
+    titulo: "Dashboard alinhado com o simulador",
+    itens: [
+      "Os valores exibidos no painel (IRS, Seg. Social, líquido) passam a corresponder exatamente ao que o simulador calculou — usando o IRS real estimado da simulação anual em vez da retenção na fonte.",
+      "Recibos guardados no painel carregam agora os resultados pré-calculados do simulador, eliminando recálculos e garantindo consistência entre a calculadora e o dashboard.",
+      "Rótulo «Retenção IRS» substituído por «IRS estimado» no painel e na página de recibos, para refletir que o valor corresponde ao IRS real (não à retenção na fonte).",
+    ],
+  },
+  {
+    version: "1.54.0",
+    data: "2026-06-22",
+    titulo: "Fonte fiscal única — todos os simuladores alinhados",
+    itens: [
+      "Todos os valores fiscais (taxas, coeficientes, limiares, deduções) passam a derivar exclusivamente do motor fiscal central, eliminando duplicações e risco de desalinhamento.",
+      "Novos parâmetros com base legal verificada: IMI, IMT, Imposto do Selo, englobamento de dividendos e Salário Mínimo Nacional 2026.",
+      "Dispensa de retenção na fonte no modo guiado agora é derivada automaticamente quando a faturação anual é inferior a 15 000 €.",
+      "Simuladores de empresa (completo e guiado), guias IRS Jovem e regime simplificado atualizados para a mesma fonte de verdade.",
+    ],
+  },
+  {
+    version: "1.53.0",
+    data: "2026-06-22",
+    titulo: "Página de investidores redesenhada com demos animados",
+    itens: [
+      "Página /investidores completamente redesenhada: design alinhado com a linguagem visual do ReciboCerto (cream, brand green, organic glows, rounded-4xl), animações 3D com tilt interativo nos cartões, e secções de produto, problema, visão, modelo de negócio e vantagens competitivas.",
+      "Novos mini-simuladores animados em loop na secção «O produto em ação»: recibos verdes, vencimento e empresa preenchem-se automaticamente com contagem animada e resultados em cascata — mostrando a plataforma a funcionar em tempo real.",
+    ],
+  },
   {
     version: "1.52.0",
     data: "2026-06-22",

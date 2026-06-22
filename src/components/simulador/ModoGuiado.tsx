@@ -99,6 +99,12 @@ export interface ReciboGuiadoSaida {
   regimeIVA: RegimeIVA;
   baseSS: "bens" | "servicos";
   dispensaRetencao: boolean;
+  _computed?: {
+    irsEstimado: number;
+    segSocial: number;
+    iva: number;
+    liquido: number;
+  };
 }
 
 const CARDS_ATIV: CardAtiv[] = [
@@ -913,6 +919,12 @@ export default function ModoGuiado({
                       regimeIVA: regimeEfetivo,
                       baseSS: card.baseSS,
                       dispensaRetencao: brutoAnual < DISPENSA_RETENCAO_LIMITE.value,
+                      _computed: {
+                        irsEstimado: irsAnual / recibosAno,
+                        segSocial: ssAnual / recibosAno,
+                        iva: ivaAnual / recibosAno,
+                        liquido: liquidoAnual / recibosAno,
+                      },
                     }, cliente) : undefined}
                   />
                 </m.div>

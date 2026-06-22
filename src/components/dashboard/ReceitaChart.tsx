@@ -1,6 +1,6 @@
 "use client";
 
-import { calcularRecibo, type Recibo } from "@/lib/store/recibos";
+import { calcularReciboDashboard, type Recibo } from "@/lib/store/recibos";
 import { fmt } from "@/lib/format";
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -10,7 +10,7 @@ export default function ReceitaChart({ recibos }: { recibos: Recibo[] }) {
   const porMes = Array.from({ length: 12 }, () => 0);
   recibos.forEach((r) => {
     const d = new Date(r.data + "T00:00:00");
-    if (d.getFullYear() === ano) porMes[d.getMonth()] += calcularRecibo(r).bruto;
+    if (d.getFullYear() === ano) porMes[d.getMonth()] += calcularReciboDashboard(r).bruto;
   });
   const max = Math.max(...porMes, 1);
   const total = porMes.reduce((a, b) => a + b, 0);

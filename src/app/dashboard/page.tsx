@@ -3,7 +3,7 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
-import { useRecibos, resumir, type Recibo } from "@/lib/store/recibos";
+import { useRecibos, resumirDashboard, type Recibo } from "@/lib/store/recibos";
 import { usePreferenciasFiscais } from "@/lib/store/preferencias-fiscais";
 import { gerarInsights, saudeFiscal, type Insight, type SaudeFiscal } from "@/lib/insights";
 import { fmt } from "@/lib/format";
@@ -86,8 +86,8 @@ export default function VisaoGeral() {
     }
   }, [carregado, recibos, opcoesFiscais]);
 
-  const mes = resumir(mesAtual(recibos), opcoesFiscais);
-  const ano = resumir(recibos, opcoesFiscais);
+  const mes = resumirDashboard(mesAtual(recibos));
+  const ano = resumirDashboard(recibos);
   const temRecibos = recibos.length > 0;
 
   const dataHoje = mounted
@@ -218,7 +218,7 @@ export default function VisaoGeral() {
               {/* Mini-cards: IRS, SS, IVA */}
               <div className="relative mt-5 grid grid-cols-3 gap-2">
                 {[
-                  { l: "Retenção IRS", v: mes.retencao },
+                  { l: "IRS estimado", v: mes.retencao },
                   { l: "Seg. Social", v: mes.segSocial },
                   { l: "IVA", v: mes.iva },
                 ].map((c) => (
@@ -239,7 +239,7 @@ export default function VisaoGeral() {
             <div className="flex-1 rounded-4xl border border-stone-100 bg-white p-6 shadow-card dark:border-stone-800 dark:bg-stone-900">
               <h2 className="mb-4 text-sm font-semibold text-stone-700 dark:text-stone-200">Acumulado do ano</h2>
               <Linha label="Faturado" value={ano.bruto} />
-              <Linha label="Retenção de IRS" value={ano.retencao} />
+              <Linha label="IRS estimado" value={ano.retencao} />
               <Linha label="IVA cobrado" value={ano.iva} />
               <Linha label="Segurança Social" value={ano.segSocial} />
               <div className="mt-3 border-t border-stone-100 pt-3 dark:border-stone-800">
@@ -277,7 +277,7 @@ export default function VisaoGeral() {
           </div>
 
           <div className="col-span-12 lg:col-span-4">
-            <PoupancaTrimestral recibos={recibos} opcoes={opcoesFiscais} />
+            <PoupancaTrimestral recibos={recibos} />
           </div>
 
           {/* ══ ROW 3b: Guardiões (Retenção + Seg. Social) ══════ */}
