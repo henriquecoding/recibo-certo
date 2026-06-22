@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { simularDeclaracaoIRS } from "@/lib/fiscal";
 import {
   MODULOS,
@@ -45,6 +45,7 @@ import InfoTip from "@/components/ui/InfoTip";
 import ProHint from "@/components/ui/ProHint";
 import PartnerSpot from "@/components/dashboard/PartnerSpot";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import { exportarDeclaracaoIRS } from "@/lib/export-irs";
 import { DistribuicaoRendimento, DistribuicaoFiscal } from "@/components/simulador/Graficos";
 import EditorOperacoes from "@/components/simulador/EditorOperacoes";
 import {
@@ -56,7 +57,7 @@ import {
 } from "@/lib/fiscal-data";
 import {
   Briefcase, User, Invoice, Coin, ChartProjection, Globe, Home, Building, Plane,
-  Check, Warning, ArrowRight, ArrowLeft, ChevronDown,
+  Check, Warning, ArrowRight, ArrowLeft, ChevronDown, Export, Trash,
 } from "@/components/ui/Icons";
 import {
   Campo, SeletorCartoes, Checkbox, Interruptor, Explicador, Linha,
@@ -73,6 +74,7 @@ const ATIVIDADE_DEFAULT =
   ATIVIDADES.find((a) => a.label.includes("Programador")) ?? ATIVIDADES[0];
 
 const PASSOS = ["Agregado", "Rendimentos", "Deduções", "Revisão"] as const;
+const SNAP_KEY = "recibocerto:sim-irs:v1";
 
 export default function SimuladorPage() {
   const { recibos, carregado, resumo } = useRecibos();
@@ -153,17 +155,89 @@ export default function SimuladorPage() {
   const [donativoTipo, setDonativoTipo] = useState<TipoDonativo>("geral");
   const [pagamentosPorConta, setPagamentosPorConta] = useState("");
 
-  // Pré-preenchimento com recibos registados (categoria B).
+  // ── Persistência (localStorage) ─────────────────────────────────────────────
+  const [hidratado, setHidratado] = useState(false);
+  const tinhaSnapshot = useRef(false);
+
+  const montarSnapshot = () => ({
+    conjunta, depNormais, depBebe, depDefic, ascendentes, deficiencia, ifici, ativos,
+    salBruto, salRet, pensBruto, pensRet,
+    atividade: atividade.label, indBruto, indRegime, indDespesas, indRet, indAno, indJovem,
+    dividendos, juros, capRet, capEnglobar,
+    opsInv, invEnglobar, opsCripto, criptoEnglobar,
+    renda, rendaDespesas, rendaHab, rendaDuracao, rendaRet, rendaEnglobar,
+    vendaRealizacao, vendaAquisicao, vendaDespesas, vendaDataAq, vendaDataVenda, vendaReinveste, vendaReinvestido,
+    extRendimento, extImposto,
+    saude, educacao, gerais, rendasDed, pprValor, pprIdade, donativoValor, donativoTipo, pagamentosPorConta,
+  });
+
+  // String do snapshot — muda sempre que algum campo muda; aciona a gravação.
+  const estadoSerializado = JSON.stringify(montarSnapshot());
+
+  // Carrega o snapshot guardado (uma vez, no cliente).
   useEffect(() => {
-    if (carregado && recibos.length > 0) {
+    try {
+      const raw = localStorage.getItem(SNAP_KEY);
+      if (raw) {
+        const s = JSON.parse(raw) as Partial<ReturnType<typeof montarSnapshot>>;
+        tinhaSnapshot.current = true;
+        const set = <T,>(v: T | undefined, fn: (x: T) => void) => { if (v !== undefined) fn(v); };
+        set(s.conjunta, setConjunta); set(s.depNormais, setDepNormais); set(s.depBebe, setDepBebe);
+        set(s.depDefic, setDepDefic); set(s.ascendentes, setAscendentes); set(s.deficiencia, setDeficiencia);
+        set(s.ifici, setIfici); set(s.ativos, setAtivos);
+        set(s.salBruto, setSalBruto); set(s.salRet, setSalRet); set(s.pensBruto, setPensBruto); set(s.pensRet, setPensRet);
+        if (s.atividade) setAtividade(ATIVIDADES.find((a) => a.label === s.atividade) ?? ATIVIDADE_DEFAULT);
+        set(s.indBruto, setIndBruto); set(s.indRegime, setIndRegime); set(s.indDespesas, setIndDespesas);
+        set(s.indRet, setIndRet); set(s.indAno, setIndAno); set(s.indJovem, setIndJovem);
+        set(s.dividendos, setDividendos); set(s.juros, setJuros); set(s.capRet, setCapRet); set(s.capEnglobar, setCapEnglobar);
+        set(s.opsInv, setOpsInv); set(s.invEnglobar, setInvEnglobar); set(s.opsCripto, setOpsCripto); set(s.criptoEnglobar, setCriptoEnglobar);
+        set(s.renda, setRenda); set(s.rendaDespesas, setRendaDespesas); set(s.rendaHab, setRendaHab);
+        set(s.rendaDuracao, setRendaDuracao); set(s.rendaRet, setRendaRet); set(s.rendaEnglobar, setRendaEnglobar);
+        set(s.vendaRealizacao, setVendaRealizacao); set(s.vendaAquisicao, setVendaAquisicao); set(s.vendaDespesas, setVendaDespesas);
+        set(s.vendaDataAq, setVendaDataAq); set(s.vendaDataVenda, setVendaDataVenda); set(s.vendaReinveste, setVendaReinveste); set(s.vendaReinvestido, setVendaReinvestido);
+        set(s.extRendimento, setExtRendimento); set(s.extImposto, setExtImposto);
+        set(s.saude, setSaude); set(s.educacao, setEducacao); set(s.gerais, setGerais); set(s.rendasDed, setRendasDed);
+        set(s.pprValor, setPprValor); set(s.pprIdade, setPprIdade); set(s.donativoValor, setDonativoValor);
+        set(s.donativoTipo, setDonativoTipo); set(s.pagamentosPorConta, setPagamentosPorConta);
+      }
+    } catch {
+      /* ignora snapshot corrompido */
+    }
+    setHidratado(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Pré-preenchimento com recibos registados (cat. B) — só se não houver snapshot.
+  useEffect(() => {
+    if (hidratado && !tinhaSnapshot.current && carregado && recibos.length > 0) {
       setIndBruto(String(Math.round(resumo.bruto)));
       setIndRet(String(Math.round(resumo.retencao)));
     }
-  }, [carregado, recibos.length, resumo.bruto, resumo.retencao]);
+  }, [hidratado, carregado, recibos.length, resumo.bruto, resumo.retencao]);
 
   const ef = efeitoFiscal(atividade);
   const resInv = useMemo(() => resumoMobiliario(opsInv), [opsInv]);
   const resCripto = useMemo(() => resumoCripto(opsCripto), [opsCripto]);
+
+  // Guarda automaticamente o estado (após hidratação).
+  useEffect(() => {
+    if (!hidratado) return;
+    try {
+      localStorage.setItem(SNAP_KEY, JSON.stringify(montarSnapshot()));
+    } catch {
+      /* localStorage indisponível */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hidratado, estadoSerializado]);
+
+  const limparTudo = () => {
+    try {
+      localStorage.removeItem(SNAP_KEY);
+    } catch {
+      /* ignore */
+    }
+    if (typeof window !== "undefined") window.location.reload();
+  };
 
   // ── Estado normalizado ──────────────────────────────────────────────────────
   const estado: EstadoDeclaracao = useMemo(
@@ -539,6 +613,8 @@ export default function SimuladorPage() {
               avisos={avisos}
               oportunidades={oportunidades}
               completude={completude}
+              onExportar={() => exportarDeclaracaoIRS(resultado)}
+              onLimpar={limparTudo}
             />
           )}
 
@@ -635,6 +711,88 @@ function ModuloCard({ id, children }: { id: RendimentoId; children: ReactNode })
       <CabecalhoModulo titulo={meta.titulo} anexo={meta.anexo} anexoNome={meta.anexoNome} explicacao={meta.explicacao} icon={Icon ? <Icon size={18} /> : undefined} />
       {children}
     </section>
+  );
+}
+
+function ComparadorCenarios({ estado }: { estado: EstadoDeclaracao }) {
+  const base = construirDeclaracaoInput(estado);
+  const temCapital = ["capitais", "investimentos", "cripto", "imoveis"].some((id) => estado.ativos.includes(id as RendimentoId));
+
+  const comEnglobamento = (input: ReturnType<typeof construirDeclaracaoInput>, englobar: boolean) => ({
+    ...input,
+    capitais: input.capitais ? { ...input.capitais, englobar } : undefined,
+    investimentos: input.investimentos ? { ...input.investimentos, englobar } : undefined,
+    cripto: input.cripto ? { ...input.cripto, englobar } : undefined,
+    prediais: input.prediais ? { ...input.prediais, englobar } : undefined,
+  });
+
+  const individual = simularDeclaracaoIRS({ ...base, conjunta: false });
+  const conjunta = simularDeclaracaoIRS({ ...base, conjunta: true });
+  const autonoma = simularDeclaracaoIRS(comEnglobamento(base, false));
+  const englobado = simularDeclaracaoIRS(comEnglobamento(base, true));
+
+  return (
+    <section className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
+      <h2 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">Comparar cenários</h2>
+      <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">A mesma declaração, lado a lado. Indicamos qual paga menos imposto — a opção continua a ser tua.</p>
+
+      <div className="mt-4 space-y-4">
+        <ParCenarios
+          titulo="Tributação"
+          nota="Só aplicável a casados ou unidos de facto."
+          a={{ rotulo: "Individual", irs: individual.irsTotal, saldo: individual.saldo }}
+          b={{ rotulo: "Conjunta", irs: conjunta.irsTotal, saldo: conjunta.saldo }}
+        />
+        {temCapital && (
+          <ParCenarios
+            titulo="Rendimentos de capital e mais-valias"
+            nota="Taxa autónoma (28%) vs. englobamento às taxas progressivas."
+            a={{ rotulo: "Tributação autónoma", irs: autonoma.irsTotal, saldo: autonoma.saldo }}
+            b={{ rotulo: "Englobamento", irs: englobado.irsTotal, saldo: englobado.saldo }}
+          />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ParCenarios({
+  titulo,
+  nota,
+  a,
+  b,
+}: {
+  titulo: string;
+  nota: string;
+  a: { rotulo: string; irs: number; saldo: number };
+  b: { rotulo: string; irs: number; saldo: number };
+}) {
+  const aMelhor = a.irs <= b.irs;
+  const diferenca = Math.abs(a.irs - b.irs);
+  return (
+    <div>
+      <div className="mb-1.5 flex items-baseline justify-between gap-2">
+        <span className="text-sm font-semibold text-stone-700 dark:text-stone-200">{titulo}</span>
+        <span className="text-[11px] text-stone-400">{nota}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {[{ ...a, melhor: aMelhor }, { ...b, melhor: !aMelhor }].map((c, i) => (
+          <div key={i} className={`rounded-xl border p-3 ${c.melhor ? "border-brand bg-brand-light" : "border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/40"}`}>
+            <div className="flex items-center justify-between gap-2">
+              <span className={`text-xs font-medium ${c.melhor ? "text-brand-dark" : "text-stone-500 dark:text-stone-400"}`}>{c.rotulo}</span>
+              {c.melhor && diferenca >= 1 && <span className="rounded bg-brand px-1.5 py-0.5 text-[9px] font-semibold text-white">melhor</span>}
+            </div>
+            <div className={`mt-1 text-base font-semibold tabular-nums ${c.melhor ? "text-brand-dark" : "text-stone-700 dark:text-stone-200"}`}>{fmt(c.irs)}</div>
+            <div className="text-[10px] text-stone-400">IRS · {c.saldo >= 0 ? "reembolso" : "a pagar"} {fmt(Math.abs(c.saldo))}</div>
+          </div>
+        ))}
+      </div>
+      {diferenca >= 1 && (
+        <p className="mt-1.5 text-[11px] text-stone-500 dark:text-stone-400">
+          Diferença de {fmt(diferenca)} a favor de «{aMelhor ? a.rotulo : b.rotulo}».
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -774,7 +932,35 @@ function PassoAgregado(props: {
           </div>
         )}
       </div>
+
+      {/* Visão do agregado */}
+      <div className="rounded-2xl border border-stone-100 bg-stone-50/70 p-4 dark:border-stone-700 dark:bg-stone-800/40">
+        <div className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-stone-400">O teu agregado</div>
+        <div className="flex flex-wrap gap-2">
+          <CartaoAgregado icon={<User size={15} />} titulo={conjunta ? "Casal" : "Titular"} sub={conjunta ? "Tributação conjunta" : "Tributação individual"} destaque />
+          {pNum(depNormais) > 0 && <CartaoAgregado icon={<User size={15} />} titulo={`${pNum(depNormais)} dep.`} sub="> 3 anos" />}
+          {pNum(depBebe) > 0 && <CartaoAgregado icon={<User size={15} />} titulo={`${pNum(depBebe)} bebé(s)`} sub="≤ 3 anos" />}
+          {pNum(depDefic) > 0 && <CartaoAgregado icon={<User size={15} />} titulo={`${pNum(depDefic)} dep.`} sub="com deficiência" />}
+          {pNum(ascendentes) > 0 && <CartaoAgregado icon={<User size={15} />} titulo={`${pNum(ascendentes)} ascend.`} sub="a cargo" />}
+        </div>
+      </div>
     </section>
+  );
+}
+
+function pNum(s: string) {
+  return Math.max(0, Math.floor(parseFloat((s || "").replace(",", ".")) || 0));
+}
+
+function CartaoAgregado({ icon, titulo, sub, destaque = false }: { icon: ReactNode; titulo: string; sub: string; destaque?: boolean }) {
+  return (
+    <div className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 ${destaque ? "border-brand bg-brand-light" : "border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900"}`}>
+      <span className={`flex h-8 w-8 items-center justify-center rounded-full ${destaque ? "bg-brand text-white" : "bg-stone-100 text-stone-400 dark:bg-stone-800"}`}>{icon}</span>
+      <div>
+        <div className={`text-sm font-semibold ${destaque ? "text-brand-dark" : "text-stone-700 dark:text-stone-200"}`}>{titulo}</div>
+        <div className={`text-[11px] ${destaque ? "text-brand" : "text-stone-400"}`}>{sub}</div>
+      </div>
+    </div>
   );
 }
 
@@ -906,6 +1092,8 @@ function PassoRevisao({
   avisos,
   oportunidades,
   completude,
+  onExportar,
+  onLimpar,
 }: {
   estado: EstadoDeclaracao;
   resultado: ReturnType<typeof simularDeclaracaoIRS>;
@@ -913,9 +1101,32 @@ function PassoRevisao({
   avisos: ReturnType<typeof validarDeclaracao>;
   oportunidades: ReturnType<typeof validarDeclaracao>;
   completude: ReturnType<typeof calcularCompletude>;
+  onExportar: () => void;
+  onLimpar: () => void;
 }) {
   return (
     <>
+      {/* Ações */}
+      <div className="flex flex-wrap items-center gap-2.5">
+        <button
+          type="button"
+          onClick={onExportar}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-brand-dark"
+        >
+          <Export size={16} /> Exportar / imprimir
+        </button>
+        <button
+          type="button"
+          onClick={onLimpar}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-500 transition-colors hover:border-red-300 hover:text-red-600 dark:border-stone-700 dark:text-stone-400"
+        >
+          <Trash size={15} /> Recomeçar
+        </button>
+        <span className="inline-flex items-center gap-1.5 text-xs text-stone-400">
+          <Check size={12} className="text-brand" /> Guardado automaticamente neste dispositivo
+        </span>
+      </div>
+
       {/* Completude */}
       <section className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
         <h2 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">Completude da declaração</h2>
@@ -960,6 +1171,9 @@ function PassoRevisao({
           ))}
         </div>
       </section>
+
+      {/* Comparador de cenários */}
+      {resultado.rendimentoGlobal > 0 && <ComparadorCenarios estado={estado} />}
 
       {/* Visualizações executivas */}
       {resultado.rendimentoGlobal > 0 && (

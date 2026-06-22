@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.62.0";
+export const APP_VERSION = "1.63.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,18 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.63.0",
+    data: "2026-06-22",
+    titulo: "Simulador de IRS: detalhe por ativo, comparador, gráficos e exportação",
+    itens: [
+      "Investimentos e criptoativos passam a registar-se operação a operação (compra, venda, comissões e datas): calculamos o saldo do ano e classificamos automaticamente cada operação em curto ou longo prazo — o cripto detido 365 dias ou mais fica isento sozinho.",
+      "Donativos com as majorações do Mecenato (130% social/religioso, 140% cultural/ambiental) e donativos ao Estado sem o limite de 15% da coleta.",
+      "Novo comparador de cenários na revisão: tributação individual vs. conjunta e taxa autónoma vs. englobamento, lado a lado, com indicação de qual paga menos.",
+      "Gráficos da origem dos rendimentos e da distribuição fiscal, e visão do agregado familiar em cartões.",
+      "Exportação da simulação para PDF/impressão e gravação automática no dispositivo — podes fechar e retomar onde ficaste, ou recomeçar do zero.",
+    ],
+  },
   {
     version: "1.62.0",
     data: "2026-06-22",
