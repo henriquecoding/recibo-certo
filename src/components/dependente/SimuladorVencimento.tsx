@@ -15,6 +15,8 @@ import { type ReciboExtraido } from "@/lib/recibo-pdf";
 import { printRelatorioVencimento } from "@/lib/export-vencimento";
 import { gerarCSVCenarios, type CenarioVencimento } from "@/lib/store/vencimentos";
 import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
+import { useExportacaoPro } from "@/lib/store/exportacao-pro";
+import UpsellExportacao from "@/components/ui/UpsellExportacao";
 import { History, Plus, ShieldCheck, Export, FileSign, Wallet, Gauge, Building, Coin, Sparkle, ArrowRight } from "@/components/ui/Icons";
 
 // Espelha o último cenário no formato legado lido pela importação do Simulador
@@ -210,9 +212,11 @@ export function SimuladorVencimento() {
   ];
 
   const { naNuvem, limite, limiteAtingido, guardar } = useCenarios();
+  const exportPro = useExportacaoPro();
   const [avisoGuardar, setAvisoGuardar] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
 
   function exportarCSV() {
+    if (!exportPro.tentarExportar("vencimento")) return;
     // Inclui sempre a simulação atual (mesmo sem cenários guardados) e, a seguir,
     // o histórico guardado — para o CSV ser útil em qualquer situação.
     const cenarioAtual: CenarioVencimento = {
@@ -237,6 +241,7 @@ export function SimuladorVencimento() {
   }
 
   function descarregarRelatorio() {
+    if (!exportPro.tentarExportar("vencimento")) return;
     printRelatorioVencimento({
       situacao: SITUACAO_LABEL[estadoCivil],
       dependentes,
@@ -1186,6 +1191,8 @@ export function SimuladorVencimento() {
         )}
       </div>
       </div>
+
+      <UpsellExportacao aberto={exportPro.upsellAberto} onClose={exportPro.fecharUpsell} />
     </div>
   );
 }

@@ -5,6 +5,8 @@ import {
   ChartProjection, ShieldCheck, BookOpen, Receipt, Building,
 } from "@/components/ui/Icons";
 import { generateFAQSchema } from "@/lib/seo";
+import SimuladorIRS from "@/components/simulador/SimuladorIRS";
+import DemoIRS from "@/components/simulador/DemoIRS";
 
 export const metadata: Metadata = {
   title: "Simulador de IRS 2026 — calcula o teu IRS anual passo a passo | ReciboCerto",
@@ -123,37 +125,58 @@ export default function SimuladorIRSLandingPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
 
       {/* ── Hero ───────────────────────────────────────────────── */}
-      <section className="mb-12">
-        <div className="eyebrow mb-3 text-brand">Simulador de IRS 2026</div>
-        <h1 className="font-display display-2 mb-4 font-semibold text-ink text-balance">
-          O teu IRS anual, do bruto ao reembolso.
-        </h1>
-        <p className="max-w-2xl text-lg leading-relaxed text-stone-500 dark:text-stone-400">
-          Simula o IRS de todas as tuas fontes de rendimento num só lugar — com deduções, tributação
-          conjunta, comparador de cenários e a memória de cálculo passo a passo. Guiado, gratuito e
-          com as taxas oficiais de 2026.
-        </p>
-        <div className="mt-6 flex flex-wrap items-center gap-3">
-          <Link
-            href="/dashboard/simulador"
-            className="btn-shine inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3.5 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-float"
-          >
-            <Calculator size={17} /> Abrir o simulador
-          </Link>
-          <Link
-            href="/guias/escaloes-irs"
-            className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-5 py-3.5 text-sm font-semibold text-stone-600 shadow-card transition-all hover:border-brand hover:text-brand dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
-          >
-            Ver escalões de IRS <ArrowRight size={15} />
-          </Link>
+      <section className="mb-10 grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+        <div>
+          <div className="eyebrow mb-3 text-brand">Simulador de IRS 2026</div>
+          <h1 className="font-display display-2 mb-4 font-semibold text-ink text-balance">
+            O teu IRS anual, do bruto ao reembolso.
+          </h1>
+          <p className="max-w-2xl text-lg leading-relaxed text-stone-500 dark:text-stone-400">
+            Simula o IRS de todas as tuas fontes de rendimento num só lugar — com deduções, tributação
+            conjunta, comparador de cenários e a memória de cálculo passo a passo. Guiado, gratuito e
+            com as taxas oficiais de 2026.
+          </p>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <a
+              href="#simulador"
+              className="btn-shine inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3.5 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-float"
+            >
+              <Calculator size={17} /> Começar a simular
+            </a>
+            <Link
+              href="/guias/escaloes-irs"
+              className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-5 py-3.5 text-sm font-semibold text-stone-600 shadow-card transition-all hover:border-brand hover:text-brand dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
+            >
+              Ver escalões de IRS <ArrowRight size={15} />
+            </Link>
+          </div>
+          <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-stone-500 dark:text-stone-400">
+            {["Sem registo para simular", "Taxas oficiais de 2026", "Memória de cálculo passo a passo"].map((t) => (
+              <li key={t} className="inline-flex items-center gap-1.5">
+                <Check size={15} className="text-brand" /> {t}
+              </li>
+            ))}
+          </ul>
         </div>
-        <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-stone-500 dark:text-stone-400">
-          {["Sem registo para simular", "Taxas oficiais de 2026", "Memória de cálculo passo a passo"].map((t) => (
-            <li key={t} className="inline-flex items-center gap-1.5">
-              <Check size={15} className="text-brand" /> {t}
-            </li>
-          ))}
-        </ul>
+        <div className="flex justify-center lg:justify-end">
+          <DemoIRS />
+        </div>
+      </section>
+
+      {/* ── Simulador real (o mesmo do painel) ─────────────────── */}
+      <section id="simulador" className="mb-14 scroll-mt-24">
+        <div className="mb-5 flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-white">
+            <Calculator size={18} />
+          </span>
+          <div>
+            <h2 className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100">Simula aqui o teu IRS</h2>
+            <p className="text-sm text-stone-500 dark:text-stone-400">O mesmo simulador do teu painel — o que preencheres fica guardado e sincronizado.</p>
+          </div>
+        </div>
+        <div className="rounded-4xl border border-stone-100 bg-white/60 p-3 shadow-card dark:border-stone-800 dark:bg-stone-900/40 sm:p-5">
+          <SimuladorIRS semCabecalho />
+        </div>
       </section>
 
       {/* ── Funcionalidades ────────────────────────────────────── */}
@@ -265,12 +288,12 @@ export default function SimuladorIRSLandingPage() {
           <p className="mt-2 max-w-xl text-green-50/80">
             Simula, compara cenários e percebe exatamente para onde vai cada euro — antes de entregares a declaração.
           </p>
-          <Link
-            href="/dashboard/simulador"
+          <a
+            href="#simulador"
             className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-white px-6 py-3.5 text-sm font-semibold text-brand-dark transition-all hover:bg-green-50"
           >
-            <Calculator size={17} /> Abrir o simulador de IRS
-          </Link>
+            <Calculator size={17} /> Simular agora
+          </a>
         </div>
       </section>
     </>
