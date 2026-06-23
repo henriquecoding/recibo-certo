@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.78.0";
+export const APP_VERSION = "1.79.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.79.0",
+    data: "2026-06-23",
+    titulo: "Simulador abre mais leve e os restantes modos ficam prontos em segundo plano",
+    itens: [
+      "Ao abrir a calculadora, descarrega-se primeiro só o modo que estás a usar; os outros modos (por conta de outrem, empresa, comparar) ficam a carregar em segundo plano, por isso trocar entre eles passa a ser praticamente instantâneo.",
+      "Dentro do simulador, o assistente passo-a-passo deixou de ser descarregado logo: aparece primeiro a escolha «Como queres simular?» e o passo-a-passo prepara-se em segundo plano enquanto decides — abre mais rápido e gasta menos dados.",
+    ],
+  },
   {
     version: "1.78.0",
     data: "2026-06-23",

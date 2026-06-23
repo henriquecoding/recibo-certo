@@ -81,6 +81,7 @@ import {
 } from "react";
 import { m, AnimatePresence } from "motion/react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import {
   Check,
@@ -182,16 +183,55 @@ import EuroBreakdown from "@/components/simulador/EuroBreakdown";
 import DecisionCard from "@/components/simulador/DecisionCard";
 import TimelineFiscal from "@/components/simulador/TimelineFiscal";
 import ComparacaoNarrativa from "@/components/simulador/ComparacaoNarrativa";
-import ModoGuiado, {
-  type EstadoGuiadoSaida,
-  type ReciboGuiadoSaida,
+import type {
+  EstadoGuiadoSaida,
+  ReciboGuiadoSaida,
 } from "@/components/simulador/ModoGuiado";
-import ModoGuiadoEmpresa from "@/components/simulador/ModoGuiadoEmpresa";
 import { haReabertura } from "@/lib/store/cenarios";
 import { type ParametrosFiscaisRegiao } from "@/lib/incentivos-regioes";
 import { useRecibos, type NovoRecibo } from "@/lib/store/recibos";
 import { useAuth } from "@/lib/supabase/auth";
 import { useSubscricao } from "@/lib/stripe/subscription";
+
+// ── Fluxos guiados carregados sob procura ────────────────────────────────────
+// O simulador abre com o seletor "Como queres simular?" (OnboardingGate). Os
+// assistentes passo-a-passo (que são pesados) só são precisos DEPOIS dessa
+// escolha — por isso carregam-se com next/dynamic e são pré-carregados em
+// segundo plano enquanto o seletor está à vista (ver `prefetchGuiados`). Assim o
+// simulador abre mais leve, sem descarregar "tudo de uma vez".
+function GuiadoSkeleton() {
+  return (
+    <div className="animate-pulse space-y-4 rounded-3xl border border-stone-100 bg-white p-6 dark:border-stone-800 dark:bg-stone-900" style={{ minHeight: 380 }} aria-hidden>
+      <div className="h-7 w-48 max-w-full rounded-full bg-stone-100 dark:bg-stone-800" />
+      <div className="h-24 rounded-2xl bg-stone-100 dark:bg-stone-800" />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="h-16 rounded-2xl bg-stone-100 dark:bg-stone-800" />
+        <div className="h-16 rounded-2xl bg-stone-100 dark:bg-stone-800" />
+      </div>
+      <span className="sr-only">A preparar o modo guiado…</span>
+    </div>
+  );
+}
+
+const ModoGuiado = dynamic(() => import("@/components/simulador/ModoGuiado"), {
+  ssr: false,
+  loading: () => <GuiadoSkeleton />,
+});
+const ModoGuiadoEmpresa = dynamic(() => import("@/components/simulador/ModoGuiadoEmpresa"), {
+  ssr: false,
+  loading: () => <GuiadoSkeleton />,
+});
+
+let guiadosPrefetched = false;
+/** Aquece os chunks dos assistentes guiados em segundo plano. */
+function prefetchGuiados() {
+  if (guiadosPrefetched || typeof window === "undefined") return;
+  guiadosPrefetched = true;
+  window.setTimeout(() => {
+    import("@/components/simulador/ModoGuiado");
+    import("@/components/simulador/ModoGuiadoEmpresa");
+  }, 600);
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTES FISCAIS — derivadas de fiscal-data.ts (fonte de verdade única)
@@ -3574,6 +3614,12 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     vendas: "vendas",
     diretosAutor: "prop_int",
   };
+
+  // Aquece os assistentes guiados em segundo plano assim que o simulador abre —
+  // ficam prontos quando o utilizador escolher, sem os carregar logo no arranque.
+  useEffect(() => {
+    prefetchGuiados();
+  }, []);
 
   const handleSelectModo = useCallback((modo: "guiado" | "profissional") => {
     setModoSimulacao(modo);
