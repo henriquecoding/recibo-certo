@@ -23,6 +23,9 @@ const FERRAMENTAS_NAV = [
 export default function FerramentasLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const ferramentaAtiva = FERRAMENTAS_NAV.find((f) => f.href === pathname);
+  // O Simulador de IRS embute o simulador completo (layout largo, como a página
+  // de Simuladores); as restantes ferramentas mantêm a coluna estreita de leitura.
+  const largo = pathname === "/ferramentas/simulador-irs";
 
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Início", url: "/" },
@@ -38,7 +41,7 @@ export default function FerramentasLayout({ children }: { children: ReactNode })
       />
       <Nav />
       <div className="min-h-screen bg-cream dark:bg-stone-950">
-        <div className="mx-auto max-w-3xl px-6 py-8">
+        <div className={`mx-auto px-6 py-8 ${largo ? "max-w-5xl" : "max-w-3xl"}`}>
           {/* Breadcrumb */}
           <nav aria-label="Localização" className="mb-8 flex items-center gap-1.5 text-xs text-stone-400">
             <Link href="/" className="hover:text-stone-600 dark:hover:text-stone-300 transition-colors">Início</Link>

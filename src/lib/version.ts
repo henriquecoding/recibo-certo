@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.75.0";
+export const APP_VERSION = "1.76.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.76.0",
+    data: "2026-06-23",
+    titulo: "Página completa do Simulador de IRS e exportação no Pro",
+    itens: [
+      "A página do Simulador de IRS passa a ter um hero com demonstração ao vivo e o simulador completo logo abaixo — é o mesmo simulador do painel, com tudo sincronizado (sem duplicações).",
+      "Exportar em PDF/CSV passa a ser uma funcionalidade Pro nos simuladores de IRS e de recibo de vencimento: podes experimentar 1 vez neste dispositivo e, a partir daí, é necessário o plano Pro.",
+      "Pequenos retoques de coerência e desempenho.",
+    ],
+  },
   {
     version: "1.75.0",
     data: "2026-06-23",
