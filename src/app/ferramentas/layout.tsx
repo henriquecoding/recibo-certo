@@ -9,6 +9,7 @@ import { ChevronRight } from "@/components/ui/Icons";
 import { generateBreadcrumbSchema } from "@/lib/seo";
 
 const FERRAMENTAS_NAV = [
+  { label: "Simulador de IRS anual", href: "/ferramentas/simulador-irs" },
   { label: "Simulador de recibo de vencimento", href: "/ferramentas/recibo-vencimento" },
   { label: "Auditoria do recibo de vencimento", href: "/ferramentas/auditoria-recibo" },
   { label: "Mapa de preços de contabilistas", href: "/ferramentas/mapa-contabilistas" },

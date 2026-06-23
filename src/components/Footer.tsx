@@ -38,6 +38,7 @@ const NAV_APRENDER = [
 
 const NAV_EMPRESA = [
   { label: "Planos e preços", href: "/precos" },
+  { label: "Investidores", href: "/investidores" },
   { label: "Dashboard", href: "/dashboard" },
   { label: "Perguntas frequentes", href: "/#faq" },
   { label: "Fontes fiscais", href: "/#fontes" },
@@ -98,6 +99,44 @@ export default function Footer() {
         />
 
         <div className="relative z-10 mx-auto max-w-6xl px-5 pt-12 sm:px-8 sm:pt-16">
+          {/* ── Chamada a investidores ── */}
+          <m.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={inViewOnce}
+            className="mb-12"
+          >
+            <Link
+              href="/investidores"
+              className="group relative block overflow-hidden rounded-4xl border border-brand/30 bg-ink p-6 shadow-float transition-all hover:border-brand/50 sm:p-8"
+            >
+              <div aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-brand/15 blur-3xl" />
+              <div aria-hidden className="pointer-events-none absolute -bottom-16 left-10 h-40 w-40 rounded-full bg-brand-mint/10 blur-3xl" />
+              <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-4">
+                  <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-brand/15 text-brand-mint ring-1 ring-brand/30">
+                    <CheckTrend size={22} />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.15em] text-brand-mint">Para investidores</div>
+                    <h3 className="font-display text-xl font-semibold text-white sm:text-2xl">
+                      Investe no copiloto fiscal dos independentes
+                    </h3>
+                    <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-stone-300">
+                      O ReciboCerto transforma a complexidade fiscal portuguesa em tranquilidade para quem trabalha
+                      por conta própria. Conhece a visão de produto, o mercado e a oportunidade de entrar cedo.
+                    </p>
+                  </div>
+                </div>
+                <span className="inline-flex flex-shrink-0 items-center gap-2 self-start rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-all group-hover:bg-brand-dark sm:self-auto">
+                  Conhecer a oportunidade
+                  <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </div>
+            </Link>
+          </m.div>
+
           {/* ── Topo: logo + CTA ── */}
           <m.div
             variants={fadeUp}

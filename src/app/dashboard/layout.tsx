@@ -107,7 +107,7 @@ const PRIMARIOS: NavItem[] = [
   { href: "/dashboard", label: "Visão geral", short: "Início", icon: LayoutGrid },
   { href: "/dashboard/cenarios", label: "Os meus cenários", short: "Cenários", icon: Receipt },
   { href: "/dashboard/prazos", label: "Prazos fiscais", short: "Prazos", icon: Calendar },
-  { href: "/dashboard/perfil", label: "O meu perfil", short: "Perfil", icon: User },
+  { href: "/dashboard/simulador", label: "Simulador de IRS", short: "IRS", icon: Calculator },
 ];
 
 function AdminLink({ mobile }: { mobile?: boolean }) {
@@ -181,7 +181,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user) { setAvatarUrl(""); return; }
-    obterPerfil(user.id).then((p) => setAvatarUrl(p.avatarUrl));
+    // Mostra já a foto do OAuth (Google/etc.), se existir, e depois prefere a
+    // foto configurada no perfil quando ela existir.
+    const meta = (user.user_metadata?.avatar_url || user.user_metadata?.picture || "") as string;
+    if (meta) setAvatarUrl(meta);
+    obterPerfil(user.id).then((p) => { if (p.avatarUrl) setAvatarUrl(p.avatarUrl); });
   }, [user]);
 
   // Fecha o menu ao mudar de rota.
