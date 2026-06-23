@@ -71,6 +71,7 @@ import {
   type TipoAtividade,
 } from "@/lib/fiscal-data";
 import { useRecibos } from "@/lib/store/recibos";
+import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
 import { fmt, pct } from "@/lib/format";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
@@ -125,6 +126,7 @@ const SNAP_KEY = "recibocerto:sim-irs:v1";
 
 export default function SimuladorPage() {
   const { recibos, carregado, resumo } = useRecibos();
+  const cenariosStore = useCenarios();
 
   // ── Navegação ──────────────────────────────────────────────────────────────
   const [passo, setPasso] = useState(0);
@@ -224,6 +226,9 @@ export default function SimuladorPage() {
   const [agora, setAgora] = useState(() => Date.now());
   const tinhaSnapshot = useRef(false);
 
+  // ── Guardar na página de gestão (cenários) ──────────────────────────────────
+  const [cenarioFeedback, setCenarioFeedback] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+
   // Relógio leve para o indicador "guardado há X" (atualiza a cada 30 s).
   useEffect(() => {
     const t = setInterval(() => setAgora(Date.now()), 30000);
@@ -245,10 +250,12 @@ export default function SimuladorPage() {
   // String do snapshot — muda sempre que algum campo muda; aciona a gravação.
   const estadoSerializado = JSON.stringify(montarSnapshot());
 
-  // Carrega o snapshot guardado (uma vez, no cliente).
+  // Carrega o snapshot guardado (uma vez, no cliente). Dá prioridade a um
+  // cenário marcado para reabrir a partir da página de gestão.
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(SNAP_KEY);
+      const reabrir = consumirReabertura("irs");
+      const raw = reabrir ? JSON.stringify(reabrir) : localStorage.getItem(SNAP_KEY);
       if (raw) {
         const s = JSON.parse(raw) as Partial<ReturnType<typeof montarSnapshot>>;
         tinhaSnapshot.current = true;
@@ -425,6 +432,39 @@ export default function SimuladorPage() {
   const oportunidades = validacoes.filter((v) => v.nivel === "oportunidade");
 
   const reembolso = resultado.saldo >= 0;
+
+  // Guarda um instantâneo COMPLETO desta simulação na página de gestão,
+  // para reabrir/comparar mais tarde. Preserva todos os campos (montarSnapshot),
+  // não só o resultado.
+  const guardarCenario = () => {
+    const nomePadrao = `Declaração IRS ${contribuinte.nome ? `· ${contribuinte.nome.trim()}` : ""}`.trim();
+    const nome =
+      typeof window !== "undefined"
+        ? (window.prompt("Nome deste cenário:", nomePadrao) ?? "").trim()
+        : nomePadrao;
+    if (typeof window !== "undefined" && nome === "" ) return; // cancelado
+    const resumoCen: ResumoCenario = {
+      destaque: Math.abs(resultado.saldo),
+      destaqueLabel: reembolso ? "Reembolso estimado" : "Imposto a pagar",
+      destaqueFmt: "eur",
+      linhas: [
+        { label: "Rendimento global", valor: resultado.rendimentoGlobal, fmt: "eur" },
+        { label: "IRS total estimado", valor: resultado.irsTotal, fmt: "eur" },
+        { label: "Taxa efetiva", valor: resultado.taxaEfetiva, fmt: "pct" },
+      ],
+    };
+    const r = cenariosStore.guardar({
+      tipo: "irs",
+      nome: nome || nomePadrao,
+      resumo: resumoCen,
+      dados: montarSnapshot(),
+    });
+    if (r.erro) {
+      setCenarioFeedback({ tipo: "erro", texto: r.erro });
+    } else {
+      setCenarioFeedback({ tipo: "ok", texto: "Cenário guardado na página «Os meus cenários»." });
+    }
+  };
 
   const toggleAtivo = (id: RendimentoId) =>
     setAtivos((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -892,6 +932,8 @@ export default function SimuladorPage() {
               onExportar={() => exportarDeclaracaoIRS(resultado, montarCabecalho())}
               onExportarCSV={() => exportarDeclaracaoCSV(resultado, montarCabecalho())}
               onLimpar={limparTudo}
+              onGuardar={guardarCenario}
+              cenarioFeedback={cenarioFeedback}
               gravadoLabel={ultimaGravacao ? `Guardado ${tempoRelativo(ultimaGravacao, agora)} neste dispositivo` : "Guardado automaticamente neste dispositivo"}
             />
           )}
@@ -1933,6 +1975,8 @@ function PassoRevisao({
   onExportar,
   onExportarCSV,
   onLimpar,
+  onGuardar,
+  cenarioFeedback,
   gravadoLabel,
 }: {
   estado: EstadoDeclaracao;
@@ -1944,6 +1988,8 @@ function PassoRevisao({
   onExportar: () => void;
   onExportarCSV: () => void;
   onLimpar: () => void;
+  onGuardar: () => void;
+  cenarioFeedback: { tipo: "ok" | "erro"; texto: string } | null;
   gravadoLabel: string;
 }) {
   return (
@@ -1952,8 +1998,15 @@ function PassoRevisao({
       <div className="flex flex-wrap items-center gap-2.5">
         <button
           type="button"
-          onClick={onExportar}
+          onClick={onGuardar}
           className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-brand-dark"
+        >
+          <Receipt size={16} /> Guardar cenário
+        </button>
+        <button
+          type="button"
+          onClick={onExportar}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-600 transition-colors hover:border-brand hover:text-brand dark:border-stone-700 dark:text-stone-300"
         >
           <Export size={16} /> Exportar / imprimir
         </button>
@@ -1975,6 +2028,19 @@ function PassoRevisao({
           <Check size={12} className="text-brand" /> {gravadoLabel}
         </span>
       </div>
+
+      {cenarioFeedback && (
+        <div
+          className={`flex items-start gap-2.5 rounded-xl border p-3.5 text-sm ${
+            cenarioFeedback.tipo === "ok"
+              ? "border-brand/30 bg-brand-light text-brand-dark dark:bg-brand/10 dark:text-brand"
+              : "border-alert-border bg-alert-bg text-alert-text"
+          }`}
+        >
+          {cenarioFeedback.tipo === "ok" ? <Check size={15} className="mt-0.5 flex-shrink-0" /> : <Warning size={15} className="mt-0.5 flex-shrink-0" />}
+          <span>{cenarioFeedback.texto}</span>
+        </div>
+      )}
 
       {/* Completude */}
       <section className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">

@@ -187,6 +187,7 @@ import ModoGuiado, {
   type ReciboGuiadoSaida,
 } from "@/components/simulador/ModoGuiado";
 import ModoGuiadoEmpresa from "@/components/simulador/ModoGuiadoEmpresa";
+import { haReabertura } from "@/lib/store/cenarios";
 import { type ParametrosFiscaisRegiao } from "@/lib/incentivos-regioes";
 import { useRecibos, type NovoRecibo } from "@/lib/store/recibos";
 import { useAuth } from "@/lib/supabase/auth";
@@ -3557,6 +3558,9 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     // No modo "Abrir Empresa" entramos direto no simulador profissional
     // (o onboarding guiado é orientado a recibos verdes).
     if (vista === "empresa") return "profissional";
+    // Se houver um cenário de recibos verdes marcado para reabrir, entramos
+    // logo no modo guiado (onde o instantâneo é hidratado).
+    if (haReabertura("recibos")) return "guiado";
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("rc-modo-simulacao");
       if (saved === "guiado" || saved === "profissional") return saved;

@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.71.0";
+export const APP_VERSION = "1.72.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,19 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.72.0",
+    data: "2026-06-23",
+    titulo: "Os meus cenários: guarda tudo de todos os simuladores num só lugar",
+    itens: [
+      "Nova página «Os meus cenários» (substitui a antiga página de recibos no menu): guarda e gere num só sítio os cenários de todos os simuladores — recibos verdes, recibo de vencimento, abrir empresa e IRS.",
+      "Cada cenário guarda agora um instantâneo completo de tudo o que preencheste (não só o resultado), para reabrires e continuares exatamente de onde ficaste.",
+      "Já podes guardar cenários no simulador de empresa (antes não dava) e o do recibo de vencimento passa a guardar também aqui, de forma unificada.",
+      "A Visão Geral adapta-se ao tipo de cenário escolhido — recibos verdes, por conta de outrem ou empresa — mostrando os números e a leitura visual de cada um.",
+      "O simulador de recibos verdes ganhou um lugar próprio no painel, em «Simuladores → Recibos verdes».",
+      "No plano grátis guardas 1 cenário; com o Pro, cenários ilimitados e sincronizados na nuvem entre dispositivos.",
+    ],
+  },
   {
     version: "1.71.0",
     data: "2026-06-23",

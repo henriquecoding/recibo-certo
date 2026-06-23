@@ -5,9 +5,11 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { useRecibos, resumirDashboard, type Recibo } from "@/lib/store/recibos";
 import { usePreferenciasFiscais } from "@/lib/store/preferencias-fiscais";
+import { usePerfil } from "@/lib/perfil";
 import { gerarInsights, saudeFiscal, type Insight, type SaudeFiscal } from "@/lib/insights";
 import { fmt } from "@/lib/format";
-import { Receipt, Warning, Check, ArrowRight, History, Calendar } from "@/components/ui/Icons";
+import { Receipt, Warning, Check, ArrowRight, History, Calendar, Wallet, Building } from "@/components/ui/Icons";
+import PainelCenarioTipo from "@/components/dashboard/PainelCenarioTipo";
 import InfoTip from "@/components/ui/InfoTip";
 import ProHint from "@/components/ui/ProHint";
 import ProGate from "@/components/ui/ProGate";
@@ -47,9 +49,12 @@ function saudacao(): string {
   return "Boa noite";
 }
 
+type Lente = "recibos" | "vencimento" | "empresa";
+
 export default function VisaoGeral() {
   const { recibos, carregado, naNuvem, locaisPorImportar, importarLocais, adiarImportacao } = useRecibos();
   const { prefs } = usePreferenciasFiscais();
+  const { perfil, definir } = usePerfil();
   const [insights, setInsights] = useState<Insight[]>([]);
   const [saude, setSaude] = useState<SaudeFiscal>({ score: 0, estado: "Tranquilo", fatores: [] });
   const [onboarded, setOnboarded] = useState(true);
@@ -90,6 +95,23 @@ export default function VisaoGeral() {
   const ano = resumirDashboard(recibos);
   const temRecibos = recibos.length > 0;
 
+  // ── Lente do dashboard: adapta os dados e gráficos ao tipo de cenário ──────
+  // Deriva do perfil global (partilhado com a homepage); "comparar" cai em
+  // recibos verdes. O seletor abaixo muda o perfil e, com ele, a lente.
+  const lente: Lente = perfil === "dependente" ? "vencimento" : perfil === "empresa" ? "empresa" : "recibos";
+  const LENTES: { chave: Lente; perfil: "independente" | "dependente" | "empresa"; label: string; Icon: typeof Receipt }[] = [
+    { chave: "recibos", perfil: "independente", label: "Recibos verdes", Icon: Receipt },
+    { chave: "vencimento", perfil: "dependente", label: "Por conta de outrem", Icon: Wallet },
+    { chave: "empresa", perfil: "empresa", label: "Empresa", Icon: Building },
+  ];
+
+  const ctaPorLente: Record<Lente, { label: string; href: string }> = {
+    recibos: { label: "Registar recibo", href: "/#calculadora" },
+    vencimento: { label: "Simular vencimento", href: "/dashboard/recibo-vencimento" },
+    empresa: { label: "Simular empresa", href: "/dashboard/empresa" },
+  };
+  const cta = ctaPorLente[lente];
+
   const dataHoje = mounted
     ? new Date().toLocaleDateString("pt-PT", { weekday: "long", day: "numeric", month: "long" })
     : "";
@@ -112,15 +134,41 @@ export default function VisaoGeral() {
           <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">O teu copiloto financeiro, sem surpresas.</p>
         </div>
         <Link
-          href="/#calculadora"
+          href={cta.href}
           className="btn-shine inline-flex items-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-float"
         >
           <Receipt size={16} />
-          Registar recibo
+          {cta.label}
         </Link>
       </header>
 
-      {!carregado ? (
+      {/* ── Seletor de lente: adapta o dashboard ao tipo de cenário ───────── */}
+      <div role="tablist" aria-label="Tipo de cenário" className="mb-6 inline-flex flex-wrap gap-1.5 rounded-2xl border border-stone-200/80 bg-stone-50/80 p-1 shadow-sm dark:border-stone-700 dark:bg-stone-900/60">
+        {LENTES.map((l) => {
+          const ativo = lente === l.chave;
+          return (
+            <button
+              key={l.chave}
+              type="button"
+              role="tab"
+              aria-selected={ativo}
+              onClick={() => definir(l.perfil)}
+              className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-200 ${
+                ativo
+                  ? "bg-brand text-white shadow-glow"
+                  : "text-stone-500 hover:text-brand-dark dark:text-stone-400 dark:hover:text-brand"
+              }`}
+            >
+              <l.Icon size={14} />
+              {l.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {lente !== "recibos" ? (
+        <PainelCenarioTipo tipo={lente} />
+      ) : !carregado ? (
         <Skeleton />
       ) : !onboarded && !temRecibos ? (
         <Onboarding onConcluir={concluirOnboarding} />
