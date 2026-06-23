@@ -12,6 +12,7 @@ import {
   resumoMobiliario,
   resumoCripto,
   diasDetencao,
+  coeficienteDesvalorizacao,
   type RendimentoId,
   type EstadoDeclaracao,
   type OperacaoAtivo,
@@ -53,6 +54,7 @@ import {
   DEDUCAO_DONATIVOS,
   DEDUCAO_ASCENDENTE,
   DONATIVOS_MAJORACOES,
+  COEF_DESVALORIZACAO_MOEDA,
   type TipoDonativo,
 } from "@/lib/fiscal-data";
 import {
@@ -219,6 +221,13 @@ export default function SimuladorPage() {
   const resInv = useMemo(() => resumoMobiliario(opsInv), [opsInv]);
   const resCripto = useMemo(() => resumoCripto(opsCripto), [opsCripto]);
 
+  // Coeficiente de desvalorização da moeda para a venda de imóvel (≥ 24 meses).
+  const diasImovel = diasDetencao(vendaDataAq, vendaDataVenda);
+  const anoAqImovel = vendaDataAq ? Number(vendaDataAq.slice(0, 4)) : 0;
+  const coefImovelRaw = anoAqImovel ? coeficienteDesvalorizacao(anoAqImovel) : null;
+  const coefImovelAplicavel = diasImovel !== null && diasImovel >= 730 && coefImovelRaw !== null && coefImovelRaw > 1;
+  const coefImovel = coefImovelAplicavel ? (coefImovelRaw as number) : 1;
+
   // Guarda automaticamente o estado (após hidratação).
   useEffect(() => {
     if (!hidratado) return;
@@ -280,6 +289,7 @@ export default function SimuladorPage() {
         valorRealizacao: n(vendaRealizacao),
         valorAquisicao: n(vendaAquisicao),
         despesas: n(vendaDespesas),
+        coeficiente: coefImovel,
         reinvesteHPP: vendaReinveste,
         valorReinvestido: n(vendaReinvestido),
       },
@@ -297,7 +307,7 @@ export default function SimuladorPage() {
       resInv, invEnglobar,
       resCripto, criptoEnglobar,
       renda, rendaDespesas, rendaHab, rendaDuracao, rendaRet, rendaEnglobar,
-      vendaRealizacao, vendaAquisicao, vendaDespesas, vendaReinveste, vendaReinvestido,
+      vendaRealizacao, vendaAquisicao, vendaDespesas, coefImovel, vendaReinveste, vendaReinvestido,
       extRendimento, extImposto,
       saude, educacao, gerais, rendasDed, pprValor, pprIdade, donativoValor, donativoTipo, pagamentosPorConta,
     ]
@@ -551,23 +561,27 @@ export default function SimuladorPage() {
                       <input type="date" aria-label="Data de venda" value={vendaDataVenda} onChange={(e) => setVendaDataVenda(e.target.value)} className={campoCls} />
                     </div>
                   </div>
+                  {coefImovel > 1 && (
+                    <div className="rounded-xl border border-brand/20 bg-brand-light/50 px-3 py-2 text-xs text-brand-dark">
+                      Valor de aquisição corrigido: {fmt(n(vendaAquisicao))} × {coefImovel.toLocaleString("pt-PT", { minimumFractionDigits: 2 })} (coef. {anoAqImovel}) ={" "}
+                      <strong>{fmt(n(vendaAquisicao) * coefImovel)}</strong> — coeficiente de desvalorização da moeda (Art. 50.º CIRS).
+                    </div>
+                  )}
                   <div className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm dark:border-stone-700 dark:bg-stone-800/40">
                     <span className="text-stone-500 dark:text-stone-400">Mais-valia apurada: </span>
                     <span className="font-semibold text-stone-800 dark:text-stone-100">{fmt(ganhoImobiliario(estado.imoveisVenda))}</span>
                     <span className="text-stone-400"> · só {pct(MAIS_VALIAS_IMOBILIARIO_INCLUSAO.value)} é tributado (Art. 43.º n.º 2)</span>
                   </div>
                   {(() => {
-                    const dias = diasDetencao(vendaDataAq, vendaDataVenda);
-                    if (dias === null) return null;
-                    const meses = Math.floor(dias / 30);
-                    return (
-                      <p className="rounded-xl bg-stone-100 px-3 py-2 text-xs text-stone-500 dark:bg-stone-800 dark:text-stone-400">
-                        Detido há cerca de {meses} meses.{" "}
-                        {meses >= 24
-                          ? "Como excede 24 meses, o valor de aquisição deve ser corrigido pelo coeficiente de desvalorização monetária oficial — introduz o valor já corrigido para maior precisão."
-                          : "Abaixo de 24 meses não há correção monetária do valor de aquisição."}
-                      </p>
-                    );
+                    if (diasImovel === null) return null;
+                    const meses = Math.floor(diasImovel / 30);
+                    if (meses < 24) {
+                      return <p className="rounded-xl bg-stone-100 px-3 py-2 text-xs text-stone-500 dark:bg-stone-800 dark:text-stone-400">Detido há cerca de {meses} meses — abaixo de 24 meses não há correção monetária do valor de aquisição.</p>;
+                    }
+                    if (coefImovelRaw === null) {
+                      return <p className="rounded-xl border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">Detido há cerca de {meses} meses, mas o coeficiente do ano {anoAqImovel} não está na nossa tabela ({COEF_DESVALORIZACAO_MOEDA.value.anoTabela}). Introduz o valor de aquisição já corrigido para maior precisão.</p>;
+                    }
+                    return <p className="rounded-xl bg-stone-100 px-3 py-2 text-xs text-stone-500 dark:bg-stone-800 dark:text-stone-400">Detido há cerca de {meses} meses. Aplicámos a tabela de coeficientes de {COEF_DESVALORIZACAO_MOEDA.value.anoTabela} (Portaria 382/2025); assim que a tabela de 2026 for publicada, a ReciboCerto atualiza automaticamente.</p>;
                   })()}
                   <Checkbox checked={vendaReinveste} onChange={setVendaReinveste} label="Era habitação própria e vou reinvestir noutra HPP"
                     sub="O reinvestimento (sem crédito) até 36 meses após a venda exclui a mais-valia da tributação, na proporção do valor reinvestido (Art. 10.º n.º 5)." />

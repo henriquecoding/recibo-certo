@@ -20,6 +20,7 @@ import {
   MAIS_VALIAS_DETENCAO_DIAS,
   MAIS_VALIAS_IMOBILIARIO_INCLUSAO,
   DONATIVOS_MAJORACOES,
+  COEF_DESVALORIZACAO_MOEDA,
   ESCALOES_IRS,
 } from "./fiscal-data";
 import { fmt, pct } from "./format";
@@ -187,6 +188,8 @@ export interface EstadoDeclaracao {
     valorRealizacao: number;
     valorAquisicao: number;
     despesas: number;
+    /** Coeficiente de desvalorização da moeda aplicado ao valor de aquisição (1 = nenhum). */
+    coeficiente: number;
     reinvesteHPP: boolean;
     valorReinvestido: number;
   };
@@ -197,9 +200,28 @@ export interface EstadoDeclaracao {
   pagamentosPorConta: number;
 }
 
-/** Mais-valia imobiliária (ganho) a partir dos campos da venda. */
+/**
+ * Mais-valia imobiliária (ganho): valor de venda menos o valor de aquisição
+ * corrigido pelo coeficiente de desvalorização da moeda (Art. 50.º CIRS) e
+ * menos as despesas/obras.
+ */
 export function ganhoImobiliario(v: EstadoDeclaracao["imoveisVenda"]): number {
-  return Math.max(0, v.valorRealizacao - v.valorAquisicao - v.despesas);
+  const coef = v.coeficiente && v.coeficiente > 0 ? v.coeficiente : 1;
+  return Math.max(0, v.valorRealizacao - v.valorAquisicao * coef - v.despesas);
+}
+
+/**
+ * Coeficiente de desvalorização da moeda para um ano de aquisição.
+ * Devolve 1 para anos recentes sem correção e null para anos não tabelados.
+ */
+export function coeficienteDesvalorizacao(anoAquisicao: number): number | null {
+  if (!anoAquisicao || anoAquisicao < 1) return null;
+  const t = COEF_DESVALORIZACAO_MOEDA.value.porAno;
+  if (t[anoAquisicao] !== undefined) return t[anoAquisicao];
+  const anos = Object.keys(t).map(Number);
+  const maisRecente = Math.max(...anos);
+  if (anoAquisicao >= maisRecente) return 1;
+  return null;
 }
 
 /** Mapeia o estado do formulário para o input do motor de cálculo. */

@@ -254,6 +254,10 @@ export const SOURCES = {
     label: "Art. 62.º EBF — Mecenato: majorações dos donativos (130% social/religioso, 140% cultural/ambiental) e donativos ao Estado sem limite · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-62-ordm-.aspx",
   },
+  portaria382_2025: {
+    label: "Portaria n.º 382/2025/1 — Coeficientes de desvalorização da moeda (bens alienados em 2025) · Diário da República",
+    url: "https://diariodarepublica.pt/dr/detalhe/portaria/382-2025-945460818",
+  },
 
   // ── Comissão Europeia ───────────────────────────────────────────────
   viesValidation: {
@@ -336,6 +340,8 @@ const TODAY = "2026-06-11";
 const REV_MAIS_VALIAS = "2026-06-22";
 // Data de verificação dos benefícios fiscais à coleta (PPR, donativos, ascendentes).
 const REV_BENEFICIOS = "2026-06-22";
+// Data de verificação dos coeficientes de desvalorização da moeda (Portaria 382/2025).
+const REV_COEF_MOEDA = "2026-06-23";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  INDEXANTE DOS APOIOS SOCIAIS (IAS) — base de vários limites
@@ -1723,6 +1729,46 @@ export const DEDUCAO_ASCENDENTE_UNICO = sv(
 );
 
 // ═══════════════════════════════════════════════════════════════════════
+//  COEFICIENTES DE DESVALORIZAÇÃO DA MOEDA (mais-valias imobiliárias)
+//  ---------------------------------------------------------------------
+//  Art. 50.º CIRS: o valor de aquisição de imóveis é corrigido por um
+//  coeficiente oficial (Portaria anual) quando, à data da venda, tenham
+//  decorrido pelo menos 24 meses desde a aquisição — aumentando o custo e
+//  reduzindo a mais-valia tributável.
+//
+//  Tabela em vigor: Portaria 382/2025 (bens alienados em 2025). Enquanto a
+//  tabela de 2026 não for publicada (habitualmente em novembro), aplica-se
+//  esta como melhor estimativa — a app atualiza assim que a nova sair.
+//  Anos não tabelados na app (1991–1999) devolvem null (pedir valor corrigido).
+// ═══════════════════════════════════════════════════════════════════════
+
+export interface CoefMoeda {
+  /** Ano da tabela (ano de alienação a que respeita). */
+  anoTabela: number;
+  /** Coeficiente por ano de aquisição. */
+  porAno: Record<number, number>;
+}
+
+export const COEF_DESVALORIZACAO_MOEDA = sv<CoefMoeda>(
+  {
+    anoTabela: 2025,
+    porAno: {
+      1990: 2.69,
+      2000: 1.67, 2001: 1.55, 2002: 1.49, 2003: 1.45, 2004: 1.43, 2005: 1.4,
+      2006: 1.34, 2007: 1.32, 2008: 1.28, 2009: 1.3, 2010: 1.28, 2011: 1.24,
+      2012: 1.2, 2013: 1.2, 2014: 1.2, 2015: 1.2,
+      2016: 1.19, 2017: 1.18,
+      2018: 1.17, 2019: 1.17, 2020: 1.17,
+      2021: 1.16, 2022: 1.06, 2023: 1.02, 2024: 1.0,
+    },
+  },
+  "Portaria 382/2025 — coeficientes de desvalorização da moeda (Art. 50.º CIRS); aplicáveis se decorridos ≥ 24 meses desde a aquisição",
+  "portaria382_2025",
+  REV_COEF_MOEDA,
+  "Tabela de 2025 usada como estimativa para 2026 até à publicação da nova portaria."
+);
+
+// ═══════════════════════════════════════════════════════════════════════
 //  SALÁRIO MÍNIMO NACIONAL 2026
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -2340,6 +2386,22 @@ export function assertFiscalDataIntegrity(): void {
   if (!(DEDUCAO_ASCENDENTE_UNICO.value >= DEDUCAO_ASCENDENTE.value)) {
     erros.push("Dedução por ascendente único deveria ser ≥ à dedução por ascendente.");
   }
+
+  // Coeficientes de desvalorização da moeda: todos ≥ 1 (não são estritamente
+  // monótonos — p. ex. 2009 sobe face a 2008 por deflação). O ano mais recente
+  // tabelado deve aproximar-se de 1 (sem correção relevante).
+  {
+    const t = COEF_DESVALORIZACAO_MOEDA.value.porAno;
+    const anos = Object.keys(t).map(Number).sort((a, b) => a - b);
+    if (anos.length === 0) erros.push("Tabela de coeficientes de desvalorização vazia.");
+    anos.forEach((a) => {
+      if (!(t[a] >= 1)) erros.push(`Coeficiente de desvalorização inválido (< 1) em ${a}.`);
+    });
+    const maisRecente = anos[anos.length - 1];
+    if (anos.length > 0 && Math.abs(t[maisRecente] - 1) > 0.05) {
+      erros.push("Coeficiente do ano mais recente deveria aproximar-se de 1.");
+    }
+  }
   if (!(IRC_TAXA_PME.value < IRC_TAXA_GERAL.value)) {
     erros.push("Taxa PME de IRC deveria ser inferior à geral.");
   }
@@ -2635,6 +2697,7 @@ export function assertFiscalDataIntegrity(): void {
     DONATIVOS_MAJORACOES,
     DEDUCAO_ASCENDENTE,
     DEDUCAO_ASCENDENTE_UNICO,
+    COEF_DESVALORIZACAO_MOEDA,
     // SMN
     SMN,
   ];
