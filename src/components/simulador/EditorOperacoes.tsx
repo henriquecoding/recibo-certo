@@ -10,6 +10,7 @@ import { MAIS_VALIAS_DETENCAO_DIAS } from "@/lib/fiscal-data";
 import { fmt } from "@/lib/format";
 import { Plus, Trash, ArrowRight } from "@/components/ui/Icons";
 import { campoCls } from "@/components/simulador/ui";
+import DatePicker from "@/components/ui/DatePicker";
 
 const LIMITE = MAIS_VALIAS_DETENCAO_DIAS.value;
 
@@ -113,7 +114,7 @@ function CampoData({ label, value, onChange }: { label: string; value: string; o
   return (
     <div>
       <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">{label}</label>
-      <input type="date" value={value} onChange={(e) => onChange(e.target.value)} className={campoCls} />
+      <DatePicker value={value} onChange={onChange} ariaLabel={label} />
     </div>
   );
 }

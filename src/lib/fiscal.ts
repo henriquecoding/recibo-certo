@@ -1236,6 +1236,30 @@ export interface DeclaracaoInput {
   isencaoSSPrimeiroAno?: boolean;
   /** Acumulação com trabalho dependente que cobre a SS (independente). */
   acumulaEmprego?: boolean;
+  /**
+   * Sujeito passivo B (cônjuge / unido de facto). Só relevante em tributação
+   * conjunta: o seu rendimento coletável é apurado por pessoa (dedução
+   * específica cat. A, coeficiente e IRS Jovem cat. B) e agregado ao do SP A
+   * antes do quociente conjugal (Art. 69.º CIRS).
+   */
+  titularB?: {
+    salarios?: { bruto: number; retencoes?: number };
+    pensoes?: { bruto: number; retencoes?: number };
+    independente?: {
+      brutoAnual: number;
+      tipo: TipoAtividade;
+      coefOverride?: number;
+      aplicaRegra15Override?: boolean;
+      anoAtividade?: number;
+      regimeContabilidade?: "simplificado" | "organizada";
+      despesasJustificadas?: number;
+      retencoesPagas?: number;
+      irsJovemAno?: number;
+    };
+    isencaoSSPrimeiroAno?: boolean;
+    acumulaEmprego?: boolean;
+    deficiencia?: boolean;
+  };
   pagamentosPorConta?: number;
 }
 
@@ -1411,6 +1435,75 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
     componentes.push({ id: "estrangeiros", anexo: "Anexo J", rotulo: "Rendimentos estrangeiros", bruto: rendEstrangeiroEnglobado, englobado: rendEstrangeiroEnglobado, impostoAutonomo: 0 });
   }
 
+  // ── Sujeito passivo B (tributação conjunta) ───────────────────────────────
+  // Em declaração conjunta agregam-se os rendimentos coletáveis de ambos e
+  // aplica-se o quociente conjugal (Art. 69.º CIRS). A dedução específica da
+  // categoria A (Art. 25.º) e o coeficiente/IRS Jovem da categoria B
+  // (Art. 31.º/12.º-B) são por pessoa — por isso o coletável do SP B é apurado
+  // de forma independente, reaproveitando o motor verificado, e só depois
+  // somado à base englobável do agregado.
+  const tb = input.titularB;
+  let ssAnualB = 0;
+  let retencoesB = 0;
+  let rendimentoGlobalB = 0;
+  if (conjunta && tb) {
+    let outrosB = 0;
+    const salB = sanitize(tb.salarios?.bruto ?? 0);
+    if (salB > 0) {
+      const { liquido, especifica } = rendimentoLiquidoCatA(salB);
+      outrosB += liquido;
+      rendimentoGlobalB += salB;
+      retencoesB += sanitize(tb.salarios?.retencoes ?? 0);
+      memoria.push({ anexo: "Anexo A", rotulo: "SP B — rendimento líquido de trabalho dependente", formula: `${fmt(salB)} − dedução específica ${fmt(especifica)}`, valor: liquido, baseLegal: "Art. 25.º CIRS" });
+      componentes.push({ id: "salarios-b", anexo: "Anexo A", rotulo: "Trabalho dependente (SP B)", bruto: salB, englobado: liquido, impostoAutonomo: 0 });
+    }
+    const pensB = sanitize(tb.pensoes?.bruto ?? 0);
+    if (pensB > 0) {
+      const { liquido, especifica } = rendimentoLiquidoCatA(pensB);
+      outrosB += liquido;
+      rendimentoGlobalB += pensB;
+      retencoesB += sanitize(tb.pensoes?.retencoes ?? 0);
+      memoria.push({ anexo: "Anexo A", rotulo: "SP B — rendimento líquido de pensões", formula: `${fmt(pensB)} − dedução específica ${fmt(especifica)}`, valor: liquido, baseLegal: "Art. 53.º CIRS" });
+      componentes.push({ id: "pensoes-b", anexo: "Anexo A", rotulo: "Pensões (SP B)", bruto: pensB, englobado: liquido, impostoAutonomo: 0 });
+    }
+    const indepB = tb.independente;
+    const brutoIndepB = sanitize(indepB?.brutoAnual ?? 0);
+    // Coletável e SS do SP B isolados: sem quociente, sem deduções à coleta e
+    // sem IFICI (estes aplicam-se ao agregado na simulação principal).
+    const simB = simularIRSAnual({
+      brutoAnual: brutoIndepB,
+      tipo: indepB?.tipo ?? "art151",
+      coefOverride: indepB?.coefOverride,
+      aplicaRegra15Override: indepB?.aplicaRegra15Override,
+      anoAtividade: indepB?.anoAtividade,
+      regimeContabilidade: indepB?.regimeContabilidade,
+      despesasJustificadas: indepB?.despesasJustificadas,
+      irsJovemAno: indepB?.irsJovemAno,
+      outrosRendimentos: outrosB,
+      conjunta: false,
+      deficiencia: tb.deficiencia,
+      isencaoSSPrimeiroAno: tb.isencaoSSPrimeiroAno,
+      acumulaEmprego: tb.acumulaEmprego,
+      retencoesPagas: 0,
+    });
+    englobaveisBase += simB.rendimentoColetavel;
+    ssAnualB = simB.ssAnual;
+    retencoesB += sanitize(indepB?.retencoesPagas ?? 0);
+    if (brutoIndepB > 0) {
+      rendimentoGlobalB += brutoIndepB;
+      memoria.push({
+        anexo: "Anexo B",
+        rotulo: simB.regimeContabilidade === "organizada" ? "SP B — rendimento tributável (contab. organizada)" : "SP B — rendimento tributável (regime simplificado)",
+        formula: simB.regimeContabilidade === "organizada"
+          ? `${fmt(simB.brutoAnual)} − despesas ${fmt(simB.despesasJustificadas)}`
+          : `${fmt(simB.brutoAnual)} × coef. ${pct(simB.coeficiente)}${simB.acrescimo15 > 0 ? ` + acréscimo 15% ${fmt(simB.acrescimo15)}` : ""}`,
+        valor: simB.rendimentoTributavel,
+        baseLegal: "Art. 31.º CIRS",
+      });
+      componentes.push({ id: "independente-b", anexo: "Anexo B", rotulo: "Trabalho independente (SP B)", bruto: simB.brutoAnual, englobado: simB.rendimentoTributavel, impostoAutonomo: 0 });
+    }
+  }
+
   // ── Pré-passagem: decidir englobamento obrigatório das mais-valias mobiliárias ──
   const baseSimInput = (outros: number): SimulacaoInput => ({
     brutoAnual: sanitize(indep?.brutoAnual ?? 0),
@@ -1567,14 +1660,15 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
     sanitize(input.pensoes?.retencoes ?? 0) +
     sanitize(indep?.retencoesPagas ?? 0) +
     sanitize(cap?.retencoes ?? 0) +
-    sanitize(pred?.retencoes ?? 0);
+    sanitize(pred?.retencoes ?? 0) +
+    retencoesB;
   const pagamentosPorConta = sanitize(input.pagamentosPorConta ?? 0);
 
   // ── Rendimento global (todas as categorias, brutas/líquidas declaradas) ────
   const rendimentoGlobal =
     salBruto + pensBruto + sanitize(indep?.brutoAnual ?? 0) + dividendos + juros +
     sanitize(pred?.rendaAnual ?? 0) + saldoMob + criptoCurto + criptoLongo +
-    sanitize(venda?.ganho ?? 0) + rendEstrangeiroEnglobado;
+    sanitize(venda?.ganho ?? 0) + rendEstrangeiroEnglobado + rendimentoGlobalB;
 
   const saldo = retencoesTotais + pagamentosPorConta - irsTotal;
 
@@ -1597,7 +1691,7 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
     deducoesColeta,
     creditoDuplaTributacao,
     irsTotal,
-    ssAnual: sim.ssAnual,
+    ssAnual: sim.ssAnual + ssAnualB,
     retencoesTotais,
     pagamentosPorConta,
     saldo,

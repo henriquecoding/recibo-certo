@@ -81,6 +81,40 @@ export function ascendenteVazio(): AscendenteDetalhe {
 }
 
 /**
+ * Rendimentos do sujeito passivo B (cônjuge / unido de facto), recolhidos só
+ * em tributação conjunta. Cada categoria é apurada por pessoa antes do
+ * quociente conjugal.
+ */
+export interface RendimentosTitularB {
+  contribuinte: Contribuinte;
+  salBruto: number;
+  salRet: number;
+  pensBruto: number;
+  pensRet: number;
+  indBruto: number;
+  indTipo: TipoAtividade;
+  indCoefOverride?: number;
+  indRegra15Override?: boolean;
+  indRegime: "simplificado" | "organizada";
+  indDespesas: number;
+  indRet: number;
+  indAno: number;
+  indJovem: number;
+  indIsencaoSS: boolean;
+  indAcumula: boolean;
+  deficiencia: boolean;
+}
+
+export function titularBVazio(): RendimentosTitularB {
+  return {
+    contribuinte: { nome: "", nif: "", nascimento: "", residencia: "continente", estadoCivil: "casado" },
+    salBruto: 0, salRet: 0, pensBruto: 0, pensRet: 0,
+    indBruto: 0, indTipo: "art151", indRegime: "simplificado", indDespesas: 0, indRet: 0,
+    indAno: 3, indJovem: 0, indIsencaoSS: false, indAcumula: false, deficiencia: false,
+  };
+}
+
+/**
  * Valida um NIF português (9 dígitos) pelo dígito de controlo (módulo 11).
  * Vazio é considerado válido (campo opcional); só sinaliza NIF preenchido errado.
  */
@@ -306,6 +340,8 @@ export function resumoPrediais(props: PropriedadeArrendada[]): { renda: number; 
 export interface EstadoDeclaracao {
   contribuinte: Contribuinte;
   conjunta: boolean;
+  /** Rendimentos do sujeito passivo B (só usado em tributação conjunta). */
+  titularB?: RendimentosTitularB;
   dependentes: Dependente[];
   ascendentes: AscendenteDetalhe[];
   deficiencia: boolean;
@@ -381,10 +417,34 @@ export function coeficienteDesvalorizacao(anoAquisicao: number): number | null {
 export function construirDeclaracaoInput(e: EstadoDeclaracao): DeclaracaoInput {
   const ativo = (id: RendimentoId) => e.ativos.includes(id);
   const ascendentesQualificados = e.ascendentes.filter((a) => a.comunhao && a.rendimentoBaixo).length;
+  const tb = e.conjunta && e.titularB ? e.titularB : undefined;
   return {
     conjunta: e.conjunta,
     deficiencia: e.deficiencia,
     ifici: e.ifici,
+    titularB: tb
+      ? {
+          salarios: tb.salBruto > 0 ? { bruto: tb.salBruto, retencoes: tb.salRet } : undefined,
+          pensoes: tb.pensBruto > 0 ? { bruto: tb.pensBruto, retencoes: tb.pensRet } : undefined,
+          independente:
+            tb.indBruto > 0
+              ? {
+                  brutoAnual: tb.indBruto,
+                  tipo: tb.indTipo,
+                  coefOverride: tb.indCoefOverride,
+                  aplicaRegra15Override: tb.indRegra15Override,
+                  anoAtividade: tb.indAno,
+                  regimeContabilidade: tb.indRegime,
+                  despesasJustificadas: tb.indDespesas,
+                  retencoesPagas: tb.indRet,
+                  irsJovemAno: tb.indJovem,
+                }
+              : undefined,
+          isencaoSSPrimeiroAno: tb.indIsencaoSS,
+          acumulaEmprego: tb.indAcumula,
+          deficiencia: tb.deficiencia,
+        }
+      : undefined,
     dependentesLista: e.dependentes.map((d) => ({
       ate3: dependenteAte3(d),
       deficiente: d.deficiente,

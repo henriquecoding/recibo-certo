@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { gravarExportRecibosVerdes } from "@/lib/store/importacao-irs";
 import { m, AnimatePresence } from "motion/react";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
@@ -465,6 +466,27 @@ export default function ModoGuiado({
   const ssAnual = isencaoCpas ? 0 : resultRecibo.segSocial * recibosAno;
   const ivaAnual = mensalIva * mesesFat;
   const liquidoAnual = brutoAnual - irsAnual - ssAnual;
+
+  // Instantâneo para o Simulador de IRS poder importar esta simulação.
+  useEffect(() => {
+    if (brutoAnual <= 0) return;
+    gravarExportRecibosVerdes({
+      faturacaoAnual: brutoAnual,
+      tipoAtividade: card.tipoFiscal,
+      anoAtividade,
+      regimeContabilidade: "simplificado",
+      irsJovemAno: jovemAno,
+      acumulaEmprego,
+      isencaoSSPrimeiroAno,
+      ifici,
+      deficiencia,
+      despSaude,
+      despEducacao,
+      despGerais,
+      despRendas,
+      atualizadoEm: Date.now(),
+    });
+  }, [brutoAnual, card.tipoFiscal, anoAtividade, jovemAno, acumulaEmprego, isencaoSSPrimeiroAno, ifici, deficiencia, despSaude, despEducacao, despGerais, despRendas]);
 
   const estadoSaida: EstadoGuiadoSaida = {
     tipoAtiv,
