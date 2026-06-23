@@ -2,6 +2,18 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Tree-shaking dirigido aos barrels mais pesados — evita arrastar o pacote
+  // inteiro do `motion` para o bundle inicial.
+  experimental: {
+    optimizePackageImports: ["motion"],
+  },
+
+  // Remove console.log/info/debug do bundle de produção (mantém error/warn para
+  // diagnóstico). Reduz JS enviado ao cliente sem afetar o desenvolvimento.
+  compiler: {
+    removeConsole: { exclude: ["error", "warn"] },
+  },
+
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.supabase.co" },

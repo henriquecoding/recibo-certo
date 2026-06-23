@@ -12,7 +12,6 @@
 // ─────────────────────────────────────────────────────────────────────
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
 
 export type Perfil = "independente" | "dependente" | "empresa" | "comparar";
 
@@ -33,15 +32,19 @@ const Ctx = createContext<PerfilContexto | null>(null);
 export function PerfilProvider({ children }: { children: ReactNode }) {
   const [perfil, setPerfil] = useState<Perfil>("independente");
   const [carregado, setCarregado] = useState(false);
-  const searchParams = useSearchParams();
 
   useEffect(() => {
+    // Lemos o `?modo=` a partir de `window.location` (no cliente) em vez de
+    // `useSearchParams()`. Esse hook obrigaria toda a árvore abaixo deste
+    // provider a ser renderizada no cliente (o HTML estático sairia vazio),
+    // prejudicando SEO e LCP. Assim, as páginas são pré-renderizadas com o modo
+    // por omissão e o cliente ajusta o modo a partir do URL/localStorage.
     try {
-      const q = searchParams.get("modo");
+      const q = new URLSearchParams(window.location.search).get("modo");
       if (q && (VALIDOS as readonly string[]).includes(q)) {
         setPerfil(q as Perfil);
         window.localStorage.setItem(STORAGE_KEY, q);
-      } else if (!carregado) {
+      } else {
         const guardado = window.localStorage.getItem(STORAGE_KEY);
         if (guardado && (VALIDOS as readonly string[]).includes(guardado)) setPerfil(guardado as Perfil);
       }
@@ -49,8 +52,7 @@ export function PerfilProvider({ children }: { children: ReactNode }) {
       /* ignora */
     }
     setCarregado(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, []);
 
   const definir = useCallback((p: Perfil) => {
     setPerfil(p);

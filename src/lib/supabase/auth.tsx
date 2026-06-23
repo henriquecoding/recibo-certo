@@ -7,7 +7,15 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
-import { getSupabase, supabaseConfigurado } from "./client";
+import { supabaseConfigurado } from "./config";
+
+// Carrega o cliente Supabase sob procura. Mantém o SDK (~200 KB) FORA do
+// bundle inicial de todas as páginas — só é descarregado quando a nuvem está
+// configurada e há mesmo trabalho de auth a fazer.
+async function sb() {
+  const { getSupabase } = await import("./client");
+  return getSupabase();
+}
 
 type ModoModal = "entrar" | "criar";
 
@@ -56,30 +64,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCarregado(true);
       return;
     }
-    const sb = getSupabase();
     let ativo = true;
+    let unsub: (() => void) | undefined;
 
-    sb.auth.getSession().then(({ data }) => {
+    sb().then((cliente) => {
       if (!ativo) return;
-      setUser(data.session?.user ?? null);
-      setCarregado(true);
-    });
 
-    const { data: sub } = sb.auth.onAuthStateChange((_evento, session) => {
-      setUser(session?.user ?? null);
-      // Fecha o modal ao autenticar com sucesso
-      if (session?.user) setModalAberto(false);
+      cliente.auth.getSession().then(({ data }) => {
+        if (!ativo) return;
+        setUser(data.session?.user ?? null);
+        setCarregado(true);
+      });
+
+      const { data: sub } = cliente.auth.onAuthStateChange((_evento, session) => {
+        setUser(session?.user ?? null);
+        // Fecha o modal ao autenticar com sucesso
+        if (session?.user) setModalAberto(false);
+      });
+      unsub = () => sub.subscription.unsubscribe();
     });
 
     return () => {
       ativo = false;
-      sub.subscription.unsubscribe();
+      unsub?.();
     };
   }, [disponivel]);
 
   const entrar = async (email: string, password: string) => {
     try {
-      const { error } = await getSupabase().auth.signInWithPassword({ email: email.trim(), password });
+      const { error } = await (await sb()).auth.signInWithPassword({ email: email.trim(), password });
       return error ? { erro: traduzErro(error.message) } : {};
     } catch (e) {
       return { erro: (e as Error).message };
@@ -88,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registar = async (email: string, password: string) => {
     try {
-      const { data, error } = await getSupabase().auth.signUp({ email: email.trim(), password });
+      const { data, error } = await (await sb()).auth.signUp({ email: email.trim(), password });
       if (error) return { erro: traduzErro(error.message) };
       return { confirmarEmail: !data.session };
     } catch (e) {
@@ -98,12 +111,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const sair = async () => {
     if (!disponivel) return;
-    await getSupabase().auth.signOut();
+    await (await sb()).auth.signOut();
   };
 
   const entrarComGoogle = async () => {
     try {
-      const { error } = await getSupabase().auth.signInWithOAuth({
+      const { error } = await (await sb()).auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: `${window.location.origin}/dashboard` },
       });
@@ -115,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const entrarComLinkedin = async () => {
     try {
-      const { error } = await getSupabase().auth.signInWithOAuth({
+      const { error } = await (await sb()).auth.signInWithOAuth({
         // Provedor "LinkedIn (OIDC)" do Supabase — chave `linkedin_oidc`
         // (o antigo `linkedin` está descontinuado).
         provider: "linkedin_oidc",

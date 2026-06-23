@@ -8,6 +8,9 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+// Reexportado de `./config` (sem SDK) para retrocompatibilidade dos call sites.
+export { supabaseConfigurado } from "./config";
+
 let cliente: SupabaseClient | null = null;
 
 /**
@@ -40,9 +43,4 @@ export function getSupabase(): SupabaseClient {
 
   cliente = createClient(normalizarUrl(url), chave.trim());
   return cliente;
-}
-
-/** True se as variáveis de ambiente do Supabase estão presentes. */
-export function supabaseConfigurado(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }
