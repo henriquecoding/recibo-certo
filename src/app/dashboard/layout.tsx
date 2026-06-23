@@ -58,7 +58,7 @@ const GRUPOS: NavGroup[] = [
     titulo: "Gestão",
     itens: [
       { href: "/dashboard", label: "Visão geral", short: "Início", icon: LayoutGrid },
-      { href: "/dashboard/recibos", label: "Recibos", short: "Recibos", icon: Receipt },
+      { href: "/dashboard/cenarios", label: "Os meus cenários", short: "Cenários", icon: Receipt },
       { href: "/dashboard/receitas", label: "Receitas", short: "Receitas", icon: History },
       { href: "/dashboard/prazos", label: "Prazos fiscais", short: "Prazos", icon: Calendar },
     ],
@@ -66,6 +66,7 @@ const GRUPOS: NavGroup[] = [
   {
     titulo: "Simuladores",
     itens: [
+      { href: "/dashboard/recibos-verdes", label: "Recibos verdes", short: "Recibos verdes", icon: Receipt },
       { href: "/dashboard/simulador", label: "Simulador de IRS", short: "IRS", icon: Calculator },
       { href: "/dashboard/recibo-vencimento", label: "Recibo de vencimento", short: "Vencimento", icon: Wallet },
       { href: "/dashboard/empresa", label: "Abrir empresa", short: "Empresa", icon: Building },
@@ -104,7 +105,7 @@ const GRUPOS: NavGroup[] = [
 // Itens primários da barra inferior (telemóvel). O 5.º slot é o botão "Menu".
 const PRIMARIOS: NavItem[] = [
   { href: "/dashboard", label: "Visão geral", short: "Início", icon: LayoutGrid },
-  { href: "/dashboard/recibos", label: "Recibos", short: "Recibos", icon: Receipt },
+  { href: "/dashboard/cenarios", label: "Os meus cenários", short: "Cenários", icon: Receipt },
   { href: "/dashboard/prazos", label: "Prazos fiscais", short: "Prazos", icon: Calendar },
   { href: "/dashboard/perfil", label: "O meu perfil", short: "Perfil", icon: User },
 ];

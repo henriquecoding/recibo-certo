@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { calcularVencimento, calcularVencimentoAnual, mealheiroDependente, calcularReciboMensal, IRS_JOVEM_TETO_MENSAL } from "@/lib/fiscal-dependente";
 import { DEDUCAO_DEPENDENTE_DEFICIENCIA } from "@/lib/fiscal-data";
@@ -13,8 +13,21 @@ import { ImportarReciboPDF } from "@/components/dependente/ImportarReciboPDF";
 import { Section, StatTile, Donut, SegBar, SegLegend, LinhaRecibo, segClass, cx, type Seg } from "@/components/dependente/ui";
 import { type ReciboExtraido } from "@/lib/recibo-pdf";
 import { printRelatorioVencimento } from "@/lib/export-vencimento";
-import { useVencimentos, gerarCSVCenarios, type CenarioVencimento } from "@/lib/store/vencimentos";
-import { History, Trash, Plus, ShieldCheck, Export, FileSign, Wallet, Gauge, Building, Coin, Sparkle } from "@/components/ui/Icons";
+import { gerarCSVCenarios, type CenarioVencimento } from "@/lib/store/vencimentos";
+import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
+import { History, Plus, ShieldCheck, Export, FileSign, Wallet, Gauge, Building, Coin, Sparkle, ArrowRight } from "@/components/ui/Icons";
+
+// Espelha o último cenário no formato legado lido pela importação do Simulador
+// de IRS («Importar dados → Recibo de vencimento»), para não perder essa ponte.
+const KEY_VENC_LEGADO = "recibocerto:vencimentos:v1";
+function espelharVencimentoLegado(c: { nome: string; salarioBruto: number; dependentes: number; subsidioRefeicaoDia: number; subsidioRefeicaoCartao: boolean; diasUteis: number }) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(KEY_VENC_LEGADO, JSON.stringify([{ ...c, id: "atual", criadoEm: new Date().toISOString() }]));
+  } catch {
+    /* localStorage indisponível */
+  }
+}
 
 const DEPENDENTES = [0, 1, 2, 3, 4];
 
@@ -196,8 +209,8 @@ export function SimuladorVencimento() {
     { label: "IRS + SS", value: descontosAnuais, cls: CLS_SS },
   ];
 
-  const { cenarios, carregado: cenariosProntos, naNuvem, limite, limiteAtingido, guardar, remover } = useVencimentos();
-  const [avisoGuardar, setAvisoGuardar] = useState<string | null>(null);
+  const { naNuvem, limite, limiteAtingido, guardar } = useCenarios();
+  const [avisoGuardar, setAvisoGuardar] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
 
   function exportarCSV() {
     // Inclui sempre a simulação atual (mesmo sem cenários guardados) e, a seguir,
@@ -213,7 +226,7 @@ export function SimuladorVencimento() {
       duodecimos,
       criadoEm: new Date().toISOString(),
     };
-    const csv = gerarCSVCenarios([cenarioAtual, ...cenarios]);
+    const csv = gerarCSVCenarios([cenarioAtual]);
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -262,28 +275,61 @@ export function SimuladorVencimento() {
     });
   }
 
+  // Instantâneo COMPLETO dos campos — para reabrir exatamente como ficou.
+  const montarSnapshot = () => ({
+    brutoStr, dependentes, temSubsidio, subsidioDiaStr, cartao, diasUteisStr, duodecimos,
+    variavelStr, estadoCivil, deficiencia, depDeficientes, regiao, irsJovem, irsJovemAno,
+    mostrarExtras, mes, horasAusenciaStr, diasSemSubsidioStr, horasSupStr, premioStr, premioRegular,
+    subFeriasStr, subNatalStr, outrosSujeitosStr, ajNDiasStr, ajNValStr, ajEDiasStr, ajEValStr,
+  });
+
   function guardarCenario() {
-    const res = guardar({
-      salarioBruto: bruto,
-      dependentes,
-      subsidioRefeicaoDia: temSubsidio ? subsidioDia : 0,
-      subsidioRefeicaoCartao: cartao,
-      diasUteis,
-      duodecimos,
-    });
-    setAvisoGuardar(res.erro ?? null);
+    const nomePadrao = `Vencimento · ${fmt(bruto)}/mês${dependentes > 0 ? ` · ${dependentes} dep.` : ""}`;
+    const nome = typeof window !== "undefined" ? (window.prompt("Nome deste cenário:", nomePadrao) ?? "").trim() : nomePadrao;
+    if (typeof window !== "undefined" && nome === "") return; // cancelado
+    const resumo: ResumoCenario = {
+      destaque: r.liquido,
+      destaqueLabel: "Líquido mensal",
+      destaqueFmt: "eur",
+      linhas: [
+        { label: "Bruto mensal", valor: r.bruto, fmt: "eur" },
+        { label: "IRS + Segurança Social", valor: r.irsRetido + r.ssTrabalhador, fmt: "eur" },
+        { label: "Líquido anual", valor: ra.liquidoAnual, fmt: "eur" },
+        { label: "Taxa efetiva", valor: r.taxaEfetiva, fmt: "pct" },
+      ],
+    };
+    const res = guardar({ tipo: "vencimento", nome: nome || nomePadrao, resumo, dados: montarSnapshot() });
+    if (res.erro) {
+      setAvisoGuardar({ tipo: "erro", texto: res.erro });
+    } else {
+      espelharVencimentoLegado({
+        nome: nome || nomePadrao,
+        salarioBruto: bruto,
+        dependentes,
+        subsidioRefeicaoDia: temSubsidio ? subsidioDia : 0,
+        subsidioRefeicaoCartao: cartao,
+        diasUteis,
+      });
+      setAvisoGuardar({ tipo: "ok", texto: "Cenário guardado em «Os meus cenários»." });
+    }
   }
 
-  function carregarCenario(c: CenarioVencimento) {
-    setBrutoStr(String(c.salarioBruto));
-    setDependentes(c.dependentes);
-    setTemSubsidio(c.subsidioRefeicaoDia > 0);
-    setSubsidioDiaStr(String(c.subsidioRefeicaoDia || 6));
-    setCartao(c.subsidioRefeicaoCartao);
-    setDiasUteisStr(String(c.diasUteis));
-    setDuodecimos(c.duodecimos);
-    setAvisoGuardar(null);
-  }
+  // Reabre um cenário marcado a partir da página de gestão (uma vez, na montagem).
+  useEffect(() => {
+    const d = consumirReabertura("vencimento") as Partial<ReturnType<typeof montarSnapshot>> | null;
+    if (!d) return;
+    const set = <T,>(v: T | undefined, fn: (x: T) => void) => { if (v !== undefined) fn(v); };
+    set(d.brutoStr, setBrutoStr); set(d.dependentes, setDependentes); set(d.temSubsidio, setTemSubsidio);
+    set(d.subsidioDiaStr, setSubsidioDiaStr); set(d.cartao, setCartao); set(d.diasUteisStr, setDiasUteisStr);
+    set(d.duodecimos, setDuodecimos); set(d.variavelStr, setVariavelStr); set(d.estadoCivil, setEstadoCivil);
+    set(d.deficiencia, setDeficiencia); set(d.depDeficientes, setDepDeficientes); set(d.regiao, setRegiao);
+    set(d.irsJovem, setIrsJovem); set(d.irsJovemAno, setIrsJovemAno); set(d.mostrarExtras, setMostrarExtras);
+    set(d.mes, setMes); set(d.horasAusenciaStr, setHorasAusenciaStr); set(d.diasSemSubsidioStr, setDiasSemSubsidioStr);
+    set(d.horasSupStr, setHorasSupStr); set(d.premioStr, setPremioStr); set(d.premioRegular, setPremioRegular);
+    set(d.subFeriasStr, setSubFeriasStr); set(d.subNatalStr, setSubNatalStr); set(d.outrosSujeitosStr, setOutrosSujeitosStr);
+    set(d.ajNDiasStr, setAjNDiasStr); set(d.ajNValStr, setAjNValStr); set(d.ajEDiasStr, setAjEDiasStr); set(d.ajEValStr, setAjEValStr);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Aplica os dados extraídos de um recibo em PDF (Pro) ao simulador, decompondo
   // o recibo nos campos certos para a base de IRS/Segurança Social bater certo.
@@ -1092,13 +1138,13 @@ export function SimuladorVencimento() {
         os subsídios iguais ao salário base. Não substitui o teu recibo oficial nem aconselhamento de um contabilista.
       </p>
 
-      {/* ── Cenários guardados (modo duplo + tiering) ── */}
+      {/* ── Guardar na gestão de cenários (modo duplo + tiering) ── */}
       <div className="mt-5 border-t border-stone-100 dark:border-stone-800 pt-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 text-xs font-semibold text-stone-600 dark:text-stone-400">
-            <History size={14} /> Cenários guardados
+            <History size={14} /> Guardar cenário
             <span className="font-normal text-stone-400">
-              {naNuvem ? "· sincronizados (Pro)" : `· ${cenarios.length}/${limite} grátis`}
+              {naNuvem ? "· sincronizado (Pro)" : `· plano grátis: ${limite} cenário`}
             </span>
           </span>
           <button
@@ -1111,44 +1157,33 @@ export function SimuladorVencimento() {
           </button>
         </div>
 
+        <p className="mt-2 text-xs text-stone-400">
+          Guarda este cálculo (com todos os campos preenchidos) em{" "}
+          <Link href="/dashboard/cenarios" className="font-medium text-brand-dark underline-offset-2 hover:underline dark:text-brand">
+            Os meus cenários
+          </Link>{" "}
+          — para reabrires e continuares mais tarde.
+        </p>
+
         {avisoGuardar && (
-          <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-brand/20 bg-brand-light p-3">
-            <span className="mt-0.5 text-brand-dark">
-              <ShieldCheck size={14} />
+          <div className={`mt-3 flex items-start gap-2.5 rounded-xl border p-3 ${avisoGuardar.tipo === "ok" ? "border-brand/20 bg-brand-light" : "border-alert-border bg-alert-bg"}`}>
+            <span className={`mt-0.5 ${avisoGuardar.tipo === "ok" ? "text-brand-dark" : "text-alert-text"}`}>
+              {avisoGuardar.tipo === "ok" ? <ShieldCheck size={14} /> : <Wallet size={14} />}
             </span>
-            <p className="text-xs text-brand-dark">
-              {avisoGuardar}{" "}
-              <Link href="/precos" className="font-semibold underline underline-offset-2">
-                Ver o plano Pro
-              </Link>
+            <p className={`text-xs ${avisoGuardar.tipo === "ok" ? "text-brand-dark" : "text-alert-text"}`}>
+              {avisoGuardar.texto}{" "}
+              {avisoGuardar.tipo === "ok" ? (
+                <Link href="/dashboard/cenarios" className="inline-flex items-center gap-0.5 font-semibold underline underline-offset-2">
+                  Ver cenários <ArrowRight size={11} />
+                </Link>
+              ) : (
+                <Link href="/dashboard/upgrade" className="font-semibold underline underline-offset-2">
+                  Ver o plano Pro
+                </Link>
+              )}
             </p>
           </div>
         )}
-
-        {cenariosProntos && cenarios.length > 0 && (
-          <ul className="mt-3 space-y-2">
-            {cenarios.map((c) => (
-              <li key={c.id} className="flex items-center justify-between gap-3 rounded-xl border border-stone-100 dark:border-stone-700 bg-white dark:bg-stone-800 px-3 py-2">
-                <button type="button" onClick={() => carregarCenario(c)} className="flex-1 text-left">
-                  <span className="text-sm font-medium text-stone-800 dark:text-stone-100 tabular-nums">{fmt(c.salarioBruto)}/mês</span>
-                  <span className="text-xs text-stone-400">
-                    {" "}
-                    · {c.dependentes} dep.{c.duodecimos ? " · duodécimos" : ""}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => remover(c.id)}
-                  aria-label="Remover cenário"
-                  className="flex-shrink-0 rounded-lg p-1.5 text-stone-400 transition-colors hover:bg-stone-100 dark:hover:bg-stone-700 hover:text-alert-text"
-                >
-                  <Trash size={14} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
       </div>
       </div>
     </div>

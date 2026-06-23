@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
 import { gravarExportRecibosVerdes } from "@/lib/store/importacao-irs";
+import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
 import { m, AnimatePresence } from "motion/react";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
@@ -261,6 +263,10 @@ export default function ModoGuiado({
   // Navegação — começa no pré-passo (decisor)
   const [passo, setPasso] = useState<Passo>(0);
 
+  // Gestão de cenários (guardar instantâneo completo + reabrir)
+  const cenariosStore = useCenarios();
+  const [cenarioFeedback, setCenarioFeedback] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+
   // Passo 0: situação face à atividade
   // anoAtividade controla a redução do coeficiente (1.º −50%, 2.º −25%, 3.º+ integral).
   const [anoAtividade, setAnoAtividade] = useState(3);
@@ -509,6 +515,54 @@ export default function ModoGuiado({
     exResidente,
     deficiencia,
   };
+
+  // ── Instantâneo COMPLETO dos campos (para reabrir/gerir) ──────────────────
+  const montarSnapshot = () => ({
+    anoAtividade, jaTemAtividade, tipoAtiv, atividadeEspecifica, tipoSelecionado,
+    modoFat, totalInput, valorComIva, recibosItems, mesesFat, regiao, regimeIVA,
+    acumulaEmprego, isencaoSSPrimeiroAno, isencaoCpas, irsJovemOn, irsJovemAno,
+    ifici, rnhAntigo, exResidente, deficiencia, mostrarDeducoes,
+    despSaude, despEducacao, despRendas, despGerais,
+  });
+
+  function guardarCenario() {
+    const rotuloAtiv = atividadeEspecifica?.label ?? card.titulo;
+    const nomePadrao = `Recibos verdes · ${fmt(brutoAnual)}/ano`;
+    const nome = typeof window !== "undefined" ? (window.prompt("Nome deste cenário:", nomePadrao) ?? "").trim() : nomePadrao;
+    if (typeof window !== "undefined" && nome === "") return; // cancelado
+    const cargaFiscal = brutoAnual > 0 ? (irsAnual + ssAnual) / brutoAnual : 0;
+    const resumo: ResumoCenario = {
+      destaque: Math.max(0, liquidoAnual),
+      destaqueLabel: "Líquido anual",
+      destaqueFmt: "eur",
+      linhas: [
+        { label: "Faturação anual", valor: brutoAnual, fmt: "eur" },
+        { label: "IRS estimado", valor: irsAnual, fmt: "eur" },
+        { label: "Segurança Social", valor: ssAnual, fmt: "eur" },
+        { label: "Carga fiscal", valor: cargaFiscal, fmt: "pct" },
+      ],
+    };
+    const r = cenariosStore.guardar({ tipo: "recibos", nome: nome || nomePadrao, resumo, dados: { ...montarSnapshot(), _rotulo: rotuloAtiv } });
+    setCenarioFeedback(r.erro ? { tipo: "erro", texto: r.erro } : { tipo: "ok", texto: "Cenário guardado em «Os meus cenários»." });
+  }
+
+  // Reabre um cenário marcado a partir da página de gestão (uma vez, na montagem).
+  useEffect(() => {
+    const d = consumirReabertura("recibos") as Partial<ReturnType<typeof montarSnapshot>> | null;
+    if (!d) return;
+    const set = <T,>(v: T | undefined, fn: (x: T) => void) => { if (v !== undefined) fn(v); };
+    set(d.anoAtividade, setAnoAtividade); set(d.jaTemAtividade, setJaTemAtividade); set(d.tipoAtiv, setTipoAtiv);
+    set(d.atividadeEspecifica, setAtividadeEspecifica); set(d.tipoSelecionado, setTipoSelecionado);
+    set(d.modoFat, setModoFat); set(d.totalInput, setTotalInput); set(d.valorComIva, setValorComIva);
+    set(d.recibosItems, setRecibosItems); set(d.mesesFat, setMesesFat); set(d.regiao, setRegiao); set(d.regimeIVA, setRegimeIVA);
+    set(d.acumulaEmprego, setAcumulaEmprego); set(d.isencaoSSPrimeiroAno, setIsencaoSSPrimeiroAno); set(d.isencaoCpas, setIsencaoCpas);
+    set(d.irsJovemOn, setIrsJovemOn); set(d.irsJovemAno, setIrsJovemAno); set(d.ifici, setIfici);
+    set(d.rnhAntigo, setRnhAntigo); set(d.exResidente, setExResidente); set(d.deficiencia, setDeficiencia);
+    set(d.mostrarDeducoes, setMostrarDeducoes); set(d.despSaude, setDespSaude); set(d.despEducacao, setDespEducacao);
+    set(d.despRendas, setDespRendas); set(d.despGerais, setDespGerais);
+    setPasso("resultado"); // mostra logo o resultado guardado
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function selecionarTipo(id: TipoAtiv) {
     setTipoAtiv(id);
@@ -949,6 +1003,39 @@ export default function ModoGuiado({
                       },
                     }, cliente) : undefined}
                   />
+
+                  {/* ── Guardar este cenário na página de gestão ── */}
+                  <div className="mt-6 rounded-2xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-700 dark:bg-stone-900">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">Guardar este cenário</p>
+                        <p className="text-xs text-stone-400">
+                          Preserva todos os campos em{" "}
+                          <Link href="/dashboard/cenarios" className="font-medium text-brand-dark underline-offset-2 hover:underline dark:text-brand">Os meus cenários</Link>
+                          {" "}— para reabrir mais tarde.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={guardarCenario}
+                        disabled={cenariosStore.limiteAtingido}
+                        className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-xl border border-brand/30 bg-brand-light px-4 py-2.5 text-sm font-semibold text-brand-dark transition-all hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Check size={15} /> Guardar cenário
+                      </button>
+                    </div>
+                    {cenarioFeedback && (
+                      <div className={`mt-3 flex items-start gap-2.5 rounded-xl border p-3 text-xs ${cenarioFeedback.tipo === "ok" ? "border-brand/20 bg-brand-light text-brand-dark" : "border-alert-border bg-alert-bg text-alert-text"}`}>
+                        {cenarioFeedback.tipo === "ok" ? <Check size={13} className="mt-0.5 flex-shrink-0" /> : <Warning size={13} className="mt-0.5 flex-shrink-0" />}
+                        <span>
+                          {cenarioFeedback.texto}{" "}
+                          {cenarioFeedback.tipo === "ok"
+                            ? <Link href="/dashboard/cenarios" className="font-semibold underline underline-offset-2">Ver cenários</Link>
+                            : <Link href="/dashboard/upgrade" className="font-semibold underline underline-offset-2">Ver o plano Pro</Link>}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </m.div>
               )}
 
