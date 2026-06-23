@@ -8,7 +8,18 @@ const eur = (n: number) => new Intl.NumberFormat("pt-PT", { style: "currency", c
 const pctf = (n: number) => `${(n * 100).toLocaleString("pt-PT", { maximumFractionDigits: 1 })}%`;
 const esc = (s: string) => (s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] || c));
 
-export function exportarDeclaracaoIRS(r: DeclaracaoResult): void {
+/** Cabeçalho do relatório: identificação e agregado familiar. */
+export interface CabecalhoDeclaracao {
+  nome: string;
+  nif: string;
+  residencia: string;
+  estadoCivil: string;
+  tributacao: string;
+  dependentes: string[];
+  ascendentes: number;
+}
+
+export function exportarDeclaracaoIRS(r: DeclaracaoResult, cab?: CabecalhoDeclaracao): void {
   if (typeof window === "undefined") return;
 
   const componentes = r.componentes
@@ -47,6 +58,20 @@ export function exportarDeclaracaoIRS(r: DeclaracaoResult): void {
 
   const reembolso = r.saldo >= 0;
 
+  // Secção de identificação e agregado (opcional).
+  const agregado = cab
+    ? `<h2>Identificação e agregado</h2>
+       <table><tbody>
+         ${cab.nome ? `<tr><td>Nome</td><td class="n">${esc(cab.nome)}</td></tr>` : ""}
+         ${cab.nif ? `<tr><td>NIF</td><td class="n">${esc(cab.nif)}</td></tr>` : ""}
+         <tr><td>Residência fiscal</td><td class="n">${esc(cab.residencia)}</td></tr>
+         <tr><td>Estado civil</td><td class="n">${esc(cab.estadoCivil)}</td></tr>
+         <tr><td>Tributação</td><td class="n">${esc(cab.tributacao)}</td></tr>
+         <tr><td>Dependentes</td><td class="n">${cab.dependentes.length ? esc(cab.dependentes.join("; ")) : "—"}</td></tr>
+         <tr><td>Ascendentes a cargo</td><td class="n">${cab.ascendentes}</td></tr>
+       </tbody></table>`
+    : "";
+
   const html = `<!doctype html><html lang="pt-PT"><head><meta charset="utf-8"><title>Simulação de IRS — ReciboCerto</title>
   <style>
     body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a17;padding:32px;max-width:820px;margin:0 auto;}
@@ -72,6 +97,8 @@ export function exportarDeclaracaoIRS(r: DeclaracaoResult): void {
     <div class="lbl">${reembolso ? "Reembolso estimado" : "Imposto a pagar estimado"}</div>
     <div class="v">${eur(Math.abs(r.saldo))}</div>
   </div>
+
+  ${agregado}
 
   <h2>Rendimentos por categoria</h2>
   <table><thead><tr><th>Anexo</th><th>Categoria</th><th class="n">Bruto</th><th class="n">Englobado / imposto</th></tr></thead>

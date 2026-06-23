@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.65.0";
+export const APP_VERSION = "1.66.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.66.0",
+    data: "2026-06-23",
+    titulo: "Relatório de IRS com agregado e «Recomeçar» com confirmação",
+    itens: [
+      "O relatório/PDF da simulação passa a incluir a identificação e o agregado familiar (contribuinte, tributação, dependentes e ascendentes), além dos rendimentos, apuramento e memória de cálculo.",
+      "O botão «Recomeçar» pede confirmação antes de apagar os dados guardados, para evitares perdas acidentais.",
+    ],
+  },
   {
     version: "1.65.0",
     data: "2026-06-23",

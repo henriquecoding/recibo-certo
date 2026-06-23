@@ -280,6 +280,9 @@ export default function SimuladorPage() {
   }, [hidratado, estadoSerializado]);
 
   const limparTudo = () => {
+    if (typeof window !== "undefined" && !window.confirm("Recomeçar apaga todos os dados desta simulação neste dispositivo. Queres continuar?")) {
+      return;
+    }
     try {
       localStorage.removeItem(SNAP_KEY);
     } catch {
@@ -740,7 +743,20 @@ export default function SimuladorPage() {
               avisos={avisos}
               oportunidades={oportunidades}
               completude={completude}
-              onExportar={() => exportarDeclaracaoIRS(resultado)}
+              onExportar={() =>
+                exportarDeclaracaoIRS(resultado, {
+                  nome: contribuinte.nome,
+                  nif: contribuinte.nif,
+                  residencia: META_RESIDENCIA[contribuinte.residencia],
+                  estadoCivil: META_ESTADO_CIVIL[contribuinte.estadoCivil],
+                  tributacao: conjunta ? "Conjunta (quociente conjugal)" : "Individual",
+                  dependentes: dependentes.map((d, i) => {
+                    const idade = idadeNoAnoFiscal(d.nascimento);
+                    return `${d.nome.trim() || `Dependente ${i + 1}`}${idade === null ? "" : ` (${dependenteAte3(d) ? "≤ 3 anos" : `${idade} anos`})`}`;
+                  }),
+                  ascendentes: ascendentes.filter((a) => a.comunhao && a.rendimentoBaixo).length,
+                })
+              }
               onLimpar={limparTudo}
             />
           )}
