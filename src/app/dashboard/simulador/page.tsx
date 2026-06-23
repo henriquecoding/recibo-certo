@@ -116,8 +116,11 @@ export default function SimuladorPage() {
   const [ativos, setAtivos] = useState<RendimentoId[]>(["independente"]);
 
   // Salários / pensões
+  const [salEntidade, setSalEntidade] = useState("");
   const [salBruto, setSalBruto] = useState("");
   const [salRet, setSalRet] = useState("");
+  const [salSS, setSalSS] = useState("");
+  const [pensTipo, setPensTipo] = useState<"velhice" | "invalidez" | "sobrevivencia" | "alimentos">("velhice");
   const [pensBruto, setPensBruto] = useState("");
   const [pensRet, setPensRet] = useState("");
 
@@ -133,6 +136,8 @@ export default function SimuladorPage() {
   // Capitais
   const [dividendos, setDividendos] = useState("");
   const [juros, setJuros] = useState("");
+  const [certificados, setCertificados] = useState("");
+  const [depositos, setDepositos] = useState("");
   const [capRet, setCapRet] = useState("");
   const [capEnglobar, setCapEnglobar] = useState(false);
 
@@ -152,10 +157,13 @@ export default function SimuladorPage() {
   const [rendaRet, setRendaRet] = useState("");
   const [rendaEnglobar, setRendaEnglobar] = useState(false);
 
-  // Venda de imóveis
+  // Venda de imóveis (despesas decompostas)
   const [vendaRealizacao, setVendaRealizacao] = useState("");
   const [vendaAquisicao, setVendaAquisicao] = useState("");
-  const [vendaDespesas, setVendaDespesas] = useState("");
+  const [vendaImt, setVendaImt] = useState("");
+  const [vendaEscritura, setVendaEscritura] = useState("");
+  const [vendaObras, setVendaObras] = useState("");
+  const [vendaComissao, setVendaComissao] = useState("");
   const [vendaDataAq, setVendaDataAq] = useState("");
   const [vendaDataVenda, setVendaDataVenda] = useState("");
   const [vendaReinveste, setVendaReinveste] = useState(false);
@@ -181,12 +189,12 @@ export default function SimuladorPage() {
 
   const montarSnapshot = () => ({
     contribuinte, conjunta, dependentes, ascendentes, deficiencia, ifici, ativos,
-    salBruto, salRet, pensBruto, pensRet,
+    salEntidade, salBruto, salRet, salSS, pensTipo, pensBruto, pensRet,
     atividade: atividade.label, indBruto, indRegime, indDespesas, indRet, indAno, indJovem,
-    dividendos, juros, capRet, capEnglobar,
+    dividendos, juros, certificados, depositos, capRet, capEnglobar,
     opsInv, invEnglobar, opsCripto, criptoEnglobar,
     renda, rendaDespesas, rendaHab, rendaDuracao, rendaRet, rendaEnglobar,
-    vendaRealizacao, vendaAquisicao, vendaDespesas, vendaDataAq, vendaDataVenda, vendaReinveste, vendaReinvestido,
+    vendaRealizacao, vendaAquisicao, vendaImt, vendaEscritura, vendaObras, vendaComissao, vendaDataAq, vendaDataVenda, vendaReinveste, vendaReinvestido,
     estEntradas,
     saude, educacao, gerais, rendasDed, pprValor, pprIdade, donativoValor, donativoTipo, pagamentosPorConta,
   });
@@ -205,15 +213,17 @@ export default function SimuladorPage() {
         set(s.contribuinte, setContribuinte); set(s.conjunta, setConjunta);
         set(s.dependentes, setDependentes); set(s.ascendentes, setAscendentes); set(s.deficiencia, setDeficiencia);
         set(s.ifici, setIfici); set(s.ativos, setAtivos);
-        set(s.salBruto, setSalBruto); set(s.salRet, setSalRet); set(s.pensBruto, setPensBruto); set(s.pensRet, setPensRet);
+        set(s.salEntidade, setSalEntidade); set(s.salBruto, setSalBruto); set(s.salRet, setSalRet); set(s.salSS, setSalSS);
+        set(s.pensTipo, setPensTipo); set(s.pensBruto, setPensBruto); set(s.pensRet, setPensRet);
         if (s.atividade) setAtividade(ATIVIDADES.find((a) => a.label === s.atividade) ?? ATIVIDADE_DEFAULT);
         set(s.indBruto, setIndBruto); set(s.indRegime, setIndRegime); set(s.indDespesas, setIndDespesas);
         set(s.indRet, setIndRet); set(s.indAno, setIndAno); set(s.indJovem, setIndJovem);
-        set(s.dividendos, setDividendos); set(s.juros, setJuros); set(s.capRet, setCapRet); set(s.capEnglobar, setCapEnglobar);
+        set(s.dividendos, setDividendos); set(s.juros, setJuros); set(s.certificados, setCertificados); set(s.depositos, setDepositos); set(s.capRet, setCapRet); set(s.capEnglobar, setCapEnglobar);
         set(s.opsInv, setOpsInv); set(s.invEnglobar, setInvEnglobar); set(s.opsCripto, setOpsCripto); set(s.criptoEnglobar, setCriptoEnglobar);
         set(s.renda, setRenda); set(s.rendaDespesas, setRendaDespesas); set(s.rendaHab, setRendaHab);
         set(s.rendaDuracao, setRendaDuracao); set(s.rendaRet, setRendaRet); set(s.rendaEnglobar, setRendaEnglobar);
-        set(s.vendaRealizacao, setVendaRealizacao); set(s.vendaAquisicao, setVendaAquisicao); set(s.vendaDespesas, setVendaDespesas);
+        set(s.vendaRealizacao, setVendaRealizacao); set(s.vendaAquisicao, setVendaAquisicao);
+        set(s.vendaImt, setVendaImt); set(s.vendaEscritura, setVendaEscritura); set(s.vendaObras, setVendaObras); set(s.vendaComissao, setVendaComissao);
         set(s.vendaDataAq, setVendaDataAq); set(s.vendaDataVenda, setVendaDataVenda); set(s.vendaReinveste, setVendaReinveste); set(s.vendaReinvestido, setVendaReinvestido);
         set(s.estEntradas, setEstEntradas);
         set(s.saude, setSaude); set(s.educacao, setEducacao); set(s.gerais, setGerais); set(s.rendasDed, setRendasDed);
@@ -289,7 +299,7 @@ export default function SimuladorPage() {
         anoAtividade: indAno,
         irsJovemAno: indJovem,
       },
-      capitais: { dividendos: n(dividendos), juros: n(juros), retencoes: n(capRet), englobar: capEnglobar },
+      capitais: { dividendos: n(dividendos), juros: n(juros) + n(certificados) + n(depositos), retencoes: n(capRet), englobar: capEnglobar },
       investimentos: { saldo: Math.max(0, resInv.saldo), algumCurtoPrazo: resInv.algumCurtoPrazo, englobar: invEnglobar },
       cripto: { curto: Math.max(0, resCripto.curto), longo: resCripto.longo, englobar: criptoEnglobar },
       imoveis: {
@@ -303,7 +313,7 @@ export default function SimuladorPage() {
       imoveisVenda: {
         valorRealizacao: n(vendaRealizacao),
         valorAquisicao: n(vendaAquisicao),
-        despesas: n(vendaDespesas),
+        despesas: n(vendaImt) + n(vendaEscritura) + n(vendaObras) + n(vendaComissao),
         coeficiente: coefImovel,
         reinvesteHPP: vendaReinveste,
         valorReinvestido: n(vendaReinvestido),
@@ -318,11 +328,11 @@ export default function SimuladorPage() {
       contribuinte, conjunta, dependentes, ascendentes, deficiencia, ifici, ativos,
       salBruto, salRet, pensBruto, pensRet,
       atividade, ef.coef, ef.regra15, indBruto, indRegime, indDespesas, indRet, indAno, indJovem,
-      dividendos, juros, capRet, capEnglobar,
+      dividendos, juros, certificados, depositos, capRet, capEnglobar,
       resInv, invEnglobar,
       resCripto, criptoEnglobar,
       renda, rendaDespesas, rendaHab, rendaDuracao, rendaRet, rendaEnglobar,
-      vendaRealizacao, vendaAquisicao, vendaDespesas, coefImovel, vendaReinveste, vendaReinvestido,
+      vendaRealizacao, vendaAquisicao, vendaImt, vendaEscritura, vendaObras, vendaComissao, coefImovel, vendaReinveste, vendaReinvestido,
       estEntradas,
       saude, educacao, gerais, rendasDed, pprValor, pprIdade, donativoValor, donativoTipo, pagamentosPorConta,
     ]
@@ -387,24 +397,50 @@ export default function SimuladorPage() {
 
               {ativo("salarios") && (
                 <ModuloCard id="salarios">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Campo id="sal-bruto" label="Rendimento bruto anual (€)" value={salBruto} onChange={setSalBruto} step={500} />
-                    <Campo id="sal-ret" label="Retenções de IRS (€)" value={salRet} onChange={setSalRet} step={100} />
+                  <div>
+                    <label htmlFor="sal-entidade" className={`mb-1.5 block ${rotuloCls}`}>Entidade empregadora (opcional)</label>
+                    <input id="sal-entidade" value={salEntidade} onChange={(e) => setSalEntidade(e.target.value)} placeholder="Nome da entidade" className={campoCls} />
                   </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <Campo id="sal-bruto" label="Rendimento bruto (€)" value={salBruto} onChange={setSalBruto} step={500} />
+                    <Campo id="sal-ret" label="Retenções de IRS (€)" value={salRet} onChange={setSalRet} step={100} />
+                    <Campo id="sal-ss" label="Desconto Seg. Social (€)" value={salSS} onChange={setSalSS} step={100}
+                      tooltip="Contribuição do trabalhador para a Segurança Social (11%), retida pela entidade. Informativa — não altera o IRS." />
+                  </div>
+                  {n(salBruto) > 0 && n(salSS) === 0 && (
+                    <p className="rounded-xl bg-stone-100 px-3 py-2 text-xs text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+                      Estimativa do desconto de Segurança Social a 11%: {fmt(n(salBruto) * 0.11)}.
+                    </p>
+                  )}
                   <Explicador titulo="Como é tributado o trabalho dependente?">
                     Ao rendimento bruto subtrai-se uma dedução específica de {fmt(DEDUCAO_ESPECIFICA_DEPENDENTE.value)} (8,54 × IAS, Art. 25.º CIRS).
                     O valor restante junta-se aos outros rendimentos e é tributado pelas taxas progressivas. As retenções feitas
-                    pela entidade empregadora são adiantamentos: comparam-se no fim com o IRS apurado.
+                    pela entidade empregadora são adiantamentos: comparam-se no fim com o IRS apurado. Se tiveste mais do que uma
+                    entidade, soma os rendimentos e as retenções.
                   </Explicador>
                 </ModuloCard>
               )}
 
               {ativo("pensoes") && (
                 <ModuloCard id="pensoes">
+                  <div>
+                    <label htmlFor="pens-tipo" className={`mb-1.5 block ${rotuloCls}`}>Tipo de pensão</label>
+                    <select id="pens-tipo" value={pensTipo} onChange={(e) => setPensTipo(e.target.value as typeof pensTipo)} className={campoCls}>
+                      <option value="velhice">Velhice / reforma</option>
+                      <option value="invalidez">Invalidez</option>
+                      <option value="sobrevivencia">Sobrevivência</option>
+                      <option value="alimentos">Pensão de alimentos</option>
+                    </select>
+                  </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <Campo id="pens-bruto" label="Pensões brutas anuais (€)" value={pensBruto} onChange={setPensBruto} step={500} />
                     <Campo id="pens-ret" label="Retenções de IRS (€)" value={pensRet} onChange={setPensRet} step={100} />
                   </div>
+                  {pensTipo === "alimentos" && (
+                    <p className="rounded-xl border border-brand/20 bg-brand-light/50 px-3 py-2 text-xs text-brand-dark">
+                      As pensões de alimentos têm tributação autónoma a 20% (Art. 72.º CIRS). Esta simulação engloba-as como pensão — confirma o enquadramento com o teu contabilista.
+                    </p>
+                  )}
                 </ModuloCard>
               )}
 
@@ -473,11 +509,17 @@ export default function SimuladorPage() {
 
               {ativo("capitais") && (
                 <ModuloCard id="capitais">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <Campo id="dividendos" label="Dividendos (€)" value={dividendos} onChange={setDividendos} step={100} />
-                    <Campo id="juros" label="Juros (€)" value={juros} onChange={setJuros} step={100} />
-                    <Campo id="cap-ret" label="Retenções (€)" value={capRet} onChange={setCapRet} step={50} />
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <Campo id="dividendos" label="Dividendos (€)" value={dividendos} onChange={setDividendos} step={100}
+                      tooltip="Lucros distribuídos por ações/participações. No englobamento contam só a 50% (Art. 40.º-A)." />
+                    <Campo id="juros" label="Juros (€)" value={juros} onChange={setJuros} step={100}
+                      tooltip="Juros de obrigações e outros rendimentos de capitais." />
+                    <Campo id="certificados" label="Certificados (€)" value={certificados} onChange={setCertificados} step={100}
+                      tooltip="Juros de Certificados de Aforro e do Tesouro." />
+                    <Campo id="depositos" label="Depósitos (€)" value={depositos} onChange={setDepositos} step={100}
+                      tooltip="Juros de depósitos a prazo." />
                   </div>
+                  <Campo id="cap-ret" label="Retenções na fonte (€)" value={capRet} onChange={setCapRet} step={50} />
                   <Interruptor
                     on={capEnglobar}
                     onChange={setCapEnglobar}
@@ -564,8 +606,18 @@ export default function SimuladorPage() {
                     <Campo id="venda-realizacao" label="Valor de venda (€)" value={vendaRealizacao} onChange={setVendaRealizacao} step={1000} />
                     <Campo id="venda-aquisicao" label="Valor de aquisição (€)" value={vendaAquisicao} onChange={setVendaAquisicao} step={1000} />
                   </div>
-                  <Campo id="venda-despesas" label="Despesas e obras (€)" value={vendaDespesas} onChange={setVendaDespesas} step={500}
-                    tooltip="IMT e escritura na compra, comissão da imobiliária na venda, obras de valorização nos últimos 12 anos." />
+                  <div>
+                    <div className="mb-1.5 flex items-center gap-1.5">
+                      <span className={rotuloCls}>Encargos e despesas dedutíveis</span>
+                      <InfoTip>Acrescem ao custo e reduzem a mais-valia: IMT e Imposto do Selo na compra, escritura e registos, obras de valorização (últimos 12 anos) e a comissão da imobiliária na venda (Art. 51.º CIRS).</InfoTip>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      <Campo id="venda-imt" label="IMT + Selo (€)" value={vendaImt} onChange={setVendaImt} step={100} />
+                      <Campo id="venda-escritura" label="Escritura/registos (€)" value={vendaEscritura} onChange={setVendaEscritura} step={50} />
+                      <Campo id="venda-obras" label="Obras (€)" value={vendaObras} onChange={setVendaObras} step={500} />
+                      <Campo id="venda-comissao" label="Comissão (€)" value={vendaComissao} onChange={setVendaComissao} step={100} />
+                    </div>
+                  </div>
                   <div>
                     <div className="mb-1.5 flex items-center gap-1.5">
                       <span className={rotuloCls}>Datas (opcional)</span>
