@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.63.0";
+export const APP_VERSION = "1.64.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.64.0",
+    data: "2026-06-23",
+    titulo: "Venda de imóveis com correção monetária e rendimentos estrangeiros país a país",
+    itens: [
+      "Venda de imóveis: o valor de aquisição passa a ser corrigido pelo coeficiente de desvalorização da moeda (Art. 50.º CIRS) quando o imóvel é detido há 24 meses ou mais — reduzindo a mais-valia tributável. Usamos a tabela oficial de 2025 (Portaria 382/2025) como estimativa até sair a de 2026, com atualização automática.",
+      "Rendimentos estrangeiros (Anexo J) agora declaram-se país a país, com tipo de rendimento e imposto pago em cada país, e o crédito por dupla tributação é calculado sobre o conjunto.",
+      "Avisos novos: rendimento estrangeiro sem país indicado e sem imposto pago no estrangeiro.",
+    ],
+  },
   {
     version: "1.63.0",
     data: "2026-06-22",

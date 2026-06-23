@@ -152,6 +152,44 @@ export function moduloMeta(id: RendimentoId): ModuloMeta {
   return MODULOS.find((m) => m.id === id) ?? MODULOS[0];
 }
 
+// ─── Rendimentos estrangeiros (Anexo J) ─────────────────────────────────────
+export type TipoRendimentoEstrangeiro = "trabalho" | "pensoes" | "capitais" | "prediais" | "maisvalias" | "outros";
+
+export const TIPOS_RENDIMENTO_ESTRANGEIRO: Record<TipoRendimentoEstrangeiro, string> = {
+  trabalho: "Trabalho",
+  pensoes: "Pensões",
+  capitais: "Dividendos / juros",
+  prediais: "Rendas",
+  maisvalias: "Mais-valias",
+  outros: "Outros",
+};
+
+/** Países frequentes (lista informativa para o campo de país; aceita texto livre). */
+export const PAISES_FREQUENTES = [
+  "Alemanha", "Angola", "Brasil", "Espanha", "Estados Unidos", "França", "Irlanda",
+  "Luxemburgo", "Países Baixos", "Reino Unido", "Suíça",
+];
+
+export interface EntradaEstrangeiro {
+  id: string;
+  pais: string;
+  tipo: TipoRendimentoEstrangeiro;
+  rendimento: number;
+  impostoPago: number;
+}
+
+export function entradaEstrangeiroVazia(): EntradaEstrangeiro {
+  return { id: Math.random().toString(36).slice(2), pais: "", tipo: "trabalho", rendimento: 0, impostoPago: 0 };
+}
+
+/** Agrega as entradas de rendimentos estrangeiros. */
+export function resumoEstrangeiros(entradas: EntradaEstrangeiro[]): { rendimento: number; impostoPago: number } {
+  return entradas.reduce(
+    (s, e) => ({ rendimento: s.rendimento + (e.rendimento || 0), impostoPago: s.impostoPago + (e.impostoPago || 0) }),
+    { rendimento: 0, impostoPago: 0 }
+  );
+}
+
 // ─── Estado normalizado da declaração ───────────────────────────────────────
 export interface EstadoDeclaracao {
   conjunta: boolean;
@@ -193,7 +231,7 @@ export interface EstadoDeclaracao {
     reinvesteHPP: boolean;
     valorReinvestido: number;
   };
-  estrangeiros: { rendimento: number; impostoPago: number };
+  estrangeiros: { entradas: EntradaEstrangeiro[] };
   deducoes: { saude: number; educacao: number; gerais: number; rendas: number };
   ppr: { valor: number; escalaoIdade: "ate35" | "de35a50" | "mais50" };
   donativos: { valor: number; tipo: TipoDonativo };
@@ -284,7 +322,10 @@ export function construirDeclaracaoInput(e: EstadoDeclaracao): DeclaracaoInput {
         }
       : undefined,
     estrangeiros: ativo("estrangeiros")
-      ? { rendimento: e.estrangeiros.rendimento, impostoPago: e.estrangeiros.impostoPago }
+      ? (() => {
+          const r = resumoEstrangeiros(e.estrangeiros.entradas);
+          return r.rendimento > 0 ? { rendimento: r.rendimento, impostoPago: r.impostoPago } : undefined;
+        })()
       : undefined,
     deducoes: {
       saude: e.deducoes.saude,
@@ -403,8 +444,10 @@ export function estadoDoModulo(id: RendimentoId, e: EstadoDeclaracao): EstadoMod
         : e.imoveisVenda.valorRealizacao > 0 || e.imoveisVenda.valorAquisicao > 0
           ? "em-preenchimento"
           : "nao-iniciado";
-    case "estrangeiros":
-      return e.estrangeiros.rendimento > 0 ? "concluido" : "nao-iniciado";
+    case "estrangeiros": {
+      const r = resumoEstrangeiros(e.estrangeiros.entradas);
+      return r.rendimento > 0 ? "concluido" : "nao-iniciado";
+    }
   }
 }
 
@@ -503,14 +546,26 @@ export function validarDeclaracao(e: EstadoDeclaracao, coletavelEstimado: number
       detalhe: "Os dividendos de fonte nacional sofrem normalmente retenção de 28% na fonte. Se não registaste qualquer retenção, confirma se os rendimentos têm origem estrangeira (Anexo J) ou se faltou indicar o valor retido.",
     });
   }
-  if (ativo("estrangeiros") && e.estrangeiros.rendimento > 0 && e.estrangeiros.impostoPago === 0) {
-    r.push({
-      id: "estrangeiro-sem-imposto",
-      nivel: "aviso",
-      anexo: "Anexo J",
-      titulo: "Rendimento estrangeiro sem imposto pago no estrangeiro",
-      detalhe: "Se o país da fonte cobrou imposto, indica-o para aproveitares o crédito por dupla tributação (Art. 81.º CIRS). Sem este valor, o rendimento é tributado integralmente em Portugal.",
-    });
+  if (ativo("estrangeiros")) {
+    const re = resumoEstrangeiros(e.estrangeiros.entradas);
+    if (re.rendimento > 0 && re.impostoPago === 0) {
+      r.push({
+        id: "estrangeiro-sem-imposto",
+        nivel: "aviso",
+        anexo: "Anexo J",
+        titulo: "Rendimento estrangeiro sem imposto pago no estrangeiro",
+        detalhe: "Se o país da fonte cobrou imposto, indica-o para aproveitares o crédito por dupla tributação (Art. 81.º CIRS). Sem este valor, o rendimento é tributado integralmente em Portugal.",
+      });
+    }
+    if (e.estrangeiros.entradas.some((x) => x.rendimento > 0 && !x.pais.trim())) {
+      r.push({
+        id: "estrangeiro-sem-pais",
+        nivel: "aviso",
+        anexo: "Anexo J",
+        titulo: "Rendimento estrangeiro sem país indicado",
+        detalhe: "O Anexo J exige o país da fonte de cada rendimento (código ISO). Indica o país para a declaração ficar completa.",
+      });
+    }
   }
   if (ativo("cripto") && e.cripto.curto > 0) {
     r.push({

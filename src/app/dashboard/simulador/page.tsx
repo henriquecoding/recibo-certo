@@ -13,9 +13,15 @@ import {
   resumoCripto,
   diasDetencao,
   coeficienteDesvalorizacao,
+  resumoEstrangeiros,
+  entradaEstrangeiroVazia,
+  TIPOS_RENDIMENTO_ESTRANGEIRO,
+  PAISES_FREQUENTES,
   type RendimentoId,
   type EstadoDeclaracao,
   type OperacaoAtivo,
+  type EntradaEstrangeiro,
+  type TipoRendimentoEstrangeiro,
 } from "@/lib/irs-guiado";
 import {
   ATIVIDADES,
@@ -59,7 +65,7 @@ import {
 } from "@/lib/fiscal-data";
 import {
   Briefcase, User, Invoice, Coin, ChartProjection, Globe, Home, Building, Plane,
-  Check, Warning, ArrowRight, ArrowLeft, ChevronDown, Export, Trash,
+  Check, Warning, ArrowRight, ArrowLeft, ChevronDown, Export, Trash, Plus,
 } from "@/components/ui/Icons";
 import {
   Campo, SeletorCartoes, Checkbox, Interruptor, Explicador, Linha,
@@ -142,9 +148,8 @@ export default function SimuladorPage() {
   const [vendaReinveste, setVendaReinveste] = useState(false);
   const [vendaReinvestido, setVendaReinvestido] = useState("");
 
-  // Estrangeiros
-  const [extRendimento, setExtRendimento] = useState("");
-  const [extImposto, setExtImposto] = useState("");
+  // Estrangeiros (Anexo J — várias entradas por país)
+  const [estEntradas, setEstEntradas] = useState<EntradaEstrangeiro[]>([]);
 
   // ── Etapa 3 — deduções ──────────────────────────────────────────────────────
   const [saude, setSaude] = useState("");
@@ -169,7 +174,7 @@ export default function SimuladorPage() {
     opsInv, invEnglobar, opsCripto, criptoEnglobar,
     renda, rendaDespesas, rendaHab, rendaDuracao, rendaRet, rendaEnglobar,
     vendaRealizacao, vendaAquisicao, vendaDespesas, vendaDataAq, vendaDataVenda, vendaReinveste, vendaReinvestido,
-    extRendimento, extImposto,
+    estEntradas,
     saude, educacao, gerais, rendasDed, pprValor, pprIdade, donativoValor, donativoTipo, pagamentosPorConta,
   });
 
@@ -197,7 +202,7 @@ export default function SimuladorPage() {
         set(s.rendaDuracao, setRendaDuracao); set(s.rendaRet, setRendaRet); set(s.rendaEnglobar, setRendaEnglobar);
         set(s.vendaRealizacao, setVendaRealizacao); set(s.vendaAquisicao, setVendaAquisicao); set(s.vendaDespesas, setVendaDespesas);
         set(s.vendaDataAq, setVendaDataAq); set(s.vendaDataVenda, setVendaDataVenda); set(s.vendaReinveste, setVendaReinveste); set(s.vendaReinvestido, setVendaReinvestido);
-        set(s.extRendimento, setExtRendimento); set(s.extImposto, setExtImposto);
+        set(s.estEntradas, setEstEntradas);
         set(s.saude, setSaude); set(s.educacao, setEducacao); set(s.gerais, setGerais); set(s.rendasDed, setRendasDed);
         set(s.pprValor, setPprValor); set(s.pprIdade, setPprIdade); set(s.donativoValor, setDonativoValor);
         set(s.donativoTipo, setDonativoTipo); set(s.pagamentosPorConta, setPagamentosPorConta);
@@ -293,7 +298,7 @@ export default function SimuladorPage() {
         reinvesteHPP: vendaReinveste,
         valorReinvestido: n(vendaReinvestido),
       },
-      estrangeiros: { rendimento: n(extRendimento), impostoPago: n(extImposto) },
+      estrangeiros: { entradas: estEntradas },
       deducoes: { saude: n(saude), educacao: n(educacao), gerais: n(gerais), rendas: n(rendasDed) },
       ppr: { valor: n(pprValor), escalaoIdade: pprIdade },
       donativos: { valor: n(donativoValor), tipo: donativoTipo },
@@ -308,7 +313,7 @@ export default function SimuladorPage() {
       resCripto, criptoEnglobar,
       renda, rendaDespesas, rendaHab, rendaDuracao, rendaRet, rendaEnglobar,
       vendaRealizacao, vendaAquisicao, vendaDespesas, coefImovel, vendaReinveste, vendaReinvestido,
-      extRendimento, extImposto,
+      estEntradas,
       saude, educacao, gerais, rendasDed, pprValor, pprIdade, donativoValor, donativoTipo, pagamentosPorConta,
     ]
   );
@@ -593,11 +598,19 @@ export default function SimuladorPage() {
 
               {ativo("estrangeiros") && (
                 <ModuloCard id="estrangeiros">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Campo id="ext-rendimento" label="Rendimento no estrangeiro (€)" value={extRendimento} onChange={setExtRendimento} step={500} />
-                    <Campo id="ext-imposto" label="Imposto pago no estrangeiro (€)" value={extImposto} onChange={setExtImposto} step={100}
-                      tooltip="Dá direito a crédito por dupla tributação (Art. 81.º): deduz-se o menor entre este valor e a fração da coleta portuguesa correspondente." />
-                  </div>
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
+                    Declara cada rendimento por país e tipo. Indica os valores em euros (converte pela taxa de câmbio de referência do dia do recebimento).
+                  </p>
+                  <EditorEstrangeiros entradas={estEntradas} setEntradas={setEstEntradas} />
+                  {estEntradas.length > 0 && (() => {
+                    const r = resumoEstrangeiros(estEntradas);
+                    return (
+                      <div className="grid grid-cols-2 gap-2">
+                        <ResumoMini titulo="Rendimento estrangeiro" valor={r.rendimento} sub="englobado em Portugal" />
+                        <ResumoMini titulo="Imposto pago lá fora" valor={r.impostoPago} sub="dá direito a crédito" />
+                      </div>
+                    );
+                  })()}
                   <Explicador titulo="Como funciona o crédito por dupla tributação?">
                     Como residente fiscal em Portugal, declaras o rendimento mundial. Para não pagares imposto duas vezes
                     sobre o mesmo rendimento, Portugal concede um crédito igual ao menor de dois valores: o imposto que pagaste
@@ -830,6 +843,68 @@ function ResumoMini({ titulo, valor, sub, alerta = false }: { titulo: string; va
       <div className={`text-[11px] font-medium ${alerta && valor > 0 ? "text-alert-text" : "text-stone-500 dark:text-stone-400"}`}>{titulo}</div>
       <div className={`text-sm font-semibold tabular-nums ${alerta && valor > 0 ? "text-alert-text" : "text-stone-800 dark:text-stone-100"}`}>{fmt(valor)}</div>
       {sub && <div className="text-[10px] text-stone-400">{sub}</div>}
+    </div>
+  );
+}
+
+function EditorEstrangeiros({ entradas, setEntradas }: { entradas: EntradaEstrangeiro[]; setEntradas: (e: EntradaEstrangeiro[]) => void }) {
+  const atualizar = (id: string, campo: keyof EntradaEstrangeiro, valor: string) =>
+    setEntradas(
+      entradas.map((e) =>
+        e.id === id
+          ? { ...e, [campo]: campo === "rendimento" || campo === "impostoPago" ? parseFloat(valor.replace(",", ".")) || 0 : valor }
+          : e
+      )
+    );
+  return (
+    <div className="space-y-3">
+      <datalist id="paises-frequentes">
+        {PAISES_FREQUENTES.map((p) => <option key={p} value={p} />)}
+      </datalist>
+      {entradas.length === 0 && (
+        <p className="rounded-xl border border-dashed border-stone-200 bg-stone-50 px-3 py-4 text-center text-xs text-stone-400 dark:border-stone-700 dark:bg-stone-800/40">
+          Sem rendimentos estrangeiros. Adiciona um por cada país/tipo.
+        </p>
+      )}
+      {entradas.map((e, i) => (
+        <div key={e.id} className="rounded-2xl border border-stone-200 bg-stone-50 p-3 dark:border-stone-700 dark:bg-stone-800/40">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Rendimento {i + 1}</span>
+            <button type="button" onClick={() => setEntradas(entradas.filter((x) => x.id !== e.id))} aria-label="Remover" className="flex-shrink-0 text-stone-400 transition-colors hover:text-red-500">
+              <Trash size={15} />
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">País</label>
+              <input list="paises-frequentes" value={e.pais} onChange={(ev) => atualizar(e.id, "pais", ev.target.value)} placeholder="ex.: Alemanha" className={campoCls} />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">Tipo</label>
+              <select value={e.tipo} onChange={(ev) => atualizar(e.id, "tipo", ev.target.value as TipoRendimentoEstrangeiro)} className={campoCls}>
+                {(Object.keys(TIPOS_RENDIMENTO_ESTRANGEIRO) as TipoRendimentoEstrangeiro[]).map((k) => (
+                  <option key={k} value={k}>{TIPOS_RENDIMENTO_ESTRANGEIRO[k]}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">Rendimento (€)</label>
+              <input type="number" inputMode="decimal" min={0} step={100} value={e.rendimento || ""} onChange={(ev) => atualizar(e.id, "rendimento", ev.target.value)} placeholder="0" className={campoCls} />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">Imposto pago (€)</label>
+              <input type="number" inputMode="decimal" min={0} step={50} value={e.impostoPago || ""} onChange={(ev) => atualizar(e.id, "impostoPago", ev.target.value)} placeholder="0" className={campoCls} />
+            </div>
+          </div>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => setEntradas([...entradas, entradaEstrangeiroVazia()])}
+        className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-stone-300 py-2.5 text-sm font-medium text-stone-500 transition-colors hover:border-brand hover:text-brand dark:border-stone-600 dark:text-stone-400"
+      >
+        <Plus size={13} /> Adicionar rendimento estrangeiro
+      </button>
     </div>
   );
 }
