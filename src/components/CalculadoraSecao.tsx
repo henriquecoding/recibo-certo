@@ -125,6 +125,19 @@ export default function CalculadoraSecao() {
     return () => io.disconnect();
   }, [perto]);
 
+  // Com o simulador ativo já a carregar, aquecemos os OUTROS modos em segundo
+  // plano — trocar de modo passa a ser instantâneo, sem os descarregar todos de
+  // uma vez no arranque. O atraso garante que o modo ativo carrega primeiro.
+  useEffect(() => {
+    if (!perto || typeof window === "undefined") return;
+    const id = window.setTimeout(() => {
+      import("@/components/SimuladorIntegrado");
+      import("@/components/dependente/SimuladorVencimento");
+      import("@/components/comparar/ComparadorCenarios");
+    }, 1200);
+    return () => clearTimeout(id);
+  }, [perto]);
+
   return (
     <div className="mx-auto max-w-5xl">
       {/* Seletor de modo — espelha o do hero, para trocar aqui mesmo */}
