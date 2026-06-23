@@ -13,6 +13,7 @@ import {
 import { m, AnimatePresence } from "motion/react";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import InfoTip from "@/components/ui/InfoTip";
+import { gravarExportEmpresa } from "@/lib/store/importacao-irs";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
@@ -1111,6 +1112,18 @@ export default function ModoGuiadoEmpresa({
   const poupancaEnglobamento = Math.abs(
     resultEng.liquidoGerente - resultLib.liquidoGerente,
   );
+
+  // Instantâneo para o Simulador de IRS poder importar este cenário (gerência
+  // como trabalho dependente + dividendos distribuídos).
+  useEffect(() => {
+    if (resultado.salGerente <= 0 && resultado.dividendos <= 0) return;
+    gravarExportEmpresa({
+      faturacao: resultado.faturacao,
+      salarioGerenteAnual: resultado.salGerente,
+      dividendosLiquidos: resultado.dividendos,
+      atualizadoEm: Date.now(),
+    });
+  }, [resultado.salGerente, resultado.dividendos, resultado.faturacao]);
 
   function avancar() {
     if (passo === 1) setPasso("local");

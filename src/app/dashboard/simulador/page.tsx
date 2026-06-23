@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { m, AnimatePresence } from "motion/react";
 import { simularDeclaracaoIRS } from "@/lib/fiscal";
 import {
   MODULOS,
@@ -32,12 +33,20 @@ import {
   type EntradaEstrangeiro,
   type TipoRendimentoEstrangeiro,
   type PropriedadeArrendada,
+  titularBVazio,
   type Contribuinte,
   type Dependente,
   type AscendenteDetalhe,
   type ResidenciaFiscal,
   type EstadoCivil,
+  type RendimentosTitularB,
 } from "@/lib/irs-guiado";
+import {
+  fontesDeArmazenamento,
+  type FonteImportacao,
+  type PatchImportacao,
+} from "@/lib/store/importacao-irs";
+import DatePicker from "@/components/ui/DatePicker";
 import {
   ATIVIDADES,
   efeitoFiscal,
@@ -85,6 +94,7 @@ import {
 import {
   Briefcase, User, Invoice, Coin, ChartProjection, Globe, Home, Building, Plane,
   Check, Warning, ArrowRight, ArrowLeft, ChevronDown, Export, Trash, Plus,
+  Settings, Receipt, Sparkle, Close,
 } from "@/components/ui/Icons";
 import {
   Campo, SeletorCartoes, Checkbox, Interruptor, Explicador, Linha,
@@ -93,6 +103,7 @@ import {
 
 const ICONES: Record<string, (p: { size?: number; className?: string }) => ReactNode> = {
   Briefcase, User, Invoice, Coin, ChartProjection, Globe, Home, Building, Plane,
+  Settings, Receipt,
 };
 
 const n = (s: string) => parseFloat((s || "").replace(",", ".")) || 0;
@@ -123,7 +134,12 @@ export default function SimuladorPage() {
     nome: "", nif: "", nascimento: "", residencia: "continente", estadoCivil: "solteiro",
   });
   const [conjunta, setConjunta] = useState(false);
+  // Sujeito passivo B (cônjuge / unido de facto) — rendimentos próprios.
+  const [spb, setSpb] = useState<RendimentosTitularB>(titularBVazio());
+  const [atividadeB, setAtividadeB] = useState<Atividade>(ATIVIDADE_DEFAULT);
   const [dependentes, setDependentes] = useState<Dependente[]>([]);
+  // Importação de dados de outros simuladores.
+  const [importAberto, setImportAberto] = useState(false);
   const [ascendentes, setAscendentes] = useState<AscendenteDetalhe[]>([]);
   const [deficiencia, setDeficiencia] = useState(false);
   const [ifici, setIfici] = useState(false);
@@ -215,7 +231,7 @@ export default function SimuladorPage() {
   }, []);
 
   const montarSnapshot = () => ({
-    contribuinte, conjunta, dependentes, ascendentes, deficiencia, ifici, ativos,
+    contribuinte, conjunta, spb, atividadeB: atividadeB.label, dependentes, ascendentes, deficiencia, ifici, ativos,
     salEntidade, salBruto, salRet, salSS, pensTipo, pensBruto, pensRet,
     atividade: atividade.label, indBruto, indRegime, indDespesas, indRet, indAno, indJovem, indIsencaoSS, indAcumula,
     dividendos, juros, certificados, depositos, capRet, capEnglobar,
@@ -238,6 +254,8 @@ export default function SimuladorPage() {
         tinhaSnapshot.current = true;
         const set = <T,>(v: T | undefined, fn: (x: T) => void) => { if (v !== undefined) fn(v); };
         set(s.contribuinte, setContribuinte); set(s.conjunta, setConjunta);
+        set(s.spb, setSpb);
+        if (s.atividadeB) setAtividadeB(ATIVIDADES.find((a) => a.label === s.atividadeB) ?? ATIVIDADE_DEFAULT);
         set(s.dependentes, setDependentes); set(s.ascendentes, setAscendentes); set(s.deficiencia, setDeficiencia);
         set(s.ifici, setIfici); set(s.ativos, setAtivos);
         set(s.salEntidade, setSalEntidade); set(s.salBruto, setSalBruto); set(s.salRet, setSalRet); set(s.salSS, setSalSS);
@@ -275,6 +293,7 @@ export default function SimuladorPage() {
   }, [hidratado, carregado, recibos.length, resumo.bruto, resumo.retencao]);
 
   const ef = efeitoFiscal(atividade);
+  const efB = efeitoFiscal(atividadeB);
   const resInv = useMemo(() => resumoMobiliario(opsInv), [opsInv]);
   const resCripto = useMemo(() => resumoCripto(opsCripto), [opsCripto]);
 
@@ -327,6 +346,14 @@ export default function SimuladorPage() {
     () => ({
       contribuinte,
       conjunta,
+      titularB: conjunta
+        ? {
+            ...spb,
+            indTipo: atividadeB.tipo as TipoAtividade,
+            indCoefOverride: efB.coef,
+            indRegra15Override: efB.regra15,
+          }
+        : undefined,
       dependentes,
       ascendentes,
       deficiencia,
@@ -373,7 +400,7 @@ export default function SimuladorPage() {
       pagamentosPorConta: n(pagamentosPorConta),
     }),
     [
-      contribuinte, conjunta, dependentes, ascendentes, deficiencia, ifici, ativos,
+      contribuinte, conjunta, spb, atividadeB, efB.coef, efB.regra15, dependentes, ascendentes, deficiencia, ifici, ativos,
       salBruto, salRet, pensBruto, pensRet,
       atividade, ef.coef, ef.regra15, indBruto, indRegime, indDespesas, indRet, indAno, indJovem, indIsencaoSS, indAcumula,
       dividendos, juros, certificados, depositos, capRet, capEnglobar,
@@ -404,17 +431,86 @@ export default function SimuladorPage() {
 
   const ativo = (id: RendimentoId) => ativos.includes(id);
 
+  // ── Importação de outros simuladores ────────────────────────────────────────
+  const [fontesImport, setFontesImport] = useState<FonteImportacao[]>([]);
+
+  const abrirImport = () => {
+    const lista: FonteImportacao[] = [];
+    if (carregado && recibos.length > 0 && resumo.bruto > 0) {
+      lista.push({
+        id: "recibos",
+        titulo: "Recibos verdes registados",
+        descricao: `${recibos.length} recibo(s) que registaste este ano.`,
+        icone: "Receipt",
+        detalhes: [
+          `Faturação ${fmt(resumo.bruto)}`,
+          ...(resumo.retencao > 0 ? [`Retenções ${fmt(resumo.retencao)}`] : []),
+        ],
+        patch: { ativar: ["independente"], indBruto: Math.round(resumo.bruto), indRet: Math.round(resumo.retencao) },
+      });
+    }
+    lista.push(...fontesDeArmazenamento());
+    setFontesImport(lista);
+    setImportAberto(true);
+  };
+
+  const aplicarPatch = (p: PatchImportacao) => {
+    if (p.ativar) setAtivos((prev) => Array.from(new Set([...prev, ...p.ativar!])));
+    if (p.conjunta !== undefined) setConjunta(p.conjunta);
+    if (p.deficiencia !== undefined) setDeficiencia(p.deficiencia);
+    if (p.ifici !== undefined) setIfici(p.ifici);
+    if (p.atividadeTipo) { const a = ATIVIDADES.find((x) => x.tipo === p.atividadeTipo); if (a) setAtividade(a); }
+    if (p.indBruto !== undefined) setIndBruto(String(p.indBruto));
+    if (p.indRet !== undefined) setIndRet(String(p.indRet));
+    if (p.indRegime) setIndRegime(p.indRegime);
+    if (p.indAno !== undefined) setIndAno(p.indAno);
+    if (p.indJovem !== undefined) setIndJovem(p.indJovem);
+    if (p.indDespesas !== undefined) setIndDespesas(String(p.indDespesas));
+    if (p.indIsencaoSS !== undefined) setIndIsencaoSS(p.indIsencaoSS);
+    if (p.indAcumula !== undefined) setIndAcumula(p.indAcumula);
+    if (p.salBruto !== undefined) setSalBruto(String(p.salBruto));
+    if (p.salRet !== undefined) setSalRet(String(p.salRet));
+    if (p.salEntidade) setSalEntidade(p.salEntidade);
+    if (p.dividendos !== undefined) setDividendos(String(p.dividendos));
+    if (p.saude !== undefined) setSaude(String(p.saude));
+    if (p.educacao !== undefined) setEducacao(String(p.educacao));
+    if (p.gerais !== undefined) setGerais(String(p.gerais));
+    if (p.rendasDed !== undefined) setRendasDed(String(p.rendasDed));
+    if (p.dependentesCount && p.dependentesCount > 0) {
+      setDependentes((prev) =>
+        prev.length >= p.dependentesCount!
+          ? prev
+          : [...prev, ...Array.from({ length: p.dependentesCount! - prev.length }, () => dependenteVazio())]
+      );
+    }
+  };
+
+  const importarFontes = (selecionadas: FonteImportacao[]) => {
+    selecionadas.forEach((f) => aplicarPatch(f.patch));
+    setImportAberto(false);
+  };
+
   return (
     <div className="mx-auto max-w-5xl">
       {/* Cabeçalho */}
-      <header className="mb-5">
-        <div className="eyebrow mb-2 text-brand">Preparação e simulação · IRS 2026</div>
-        <h1 className="font-display text-3xl font-semibold text-stone-800 dark:text-stone-100">Simulador de IRS guiado</h1>
-        <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-stone-500 dark:text-stone-400">
-          Passo a passo pela tua realidade fiscal — sem te perderes em anexos. Cada campo explica-se, cada valor tem
-          memória de cálculo e o sistema avisa-te do que possa faltar. No fim, sais com a tranquilidade de não te
-          teres esquecido de nada.
-        </p>
+      <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="eyebrow mb-2 text-brand">Preparação e simulação · IRS 2026</div>
+          <h1 className="font-display text-3xl font-semibold text-stone-800 dark:text-stone-100">Simulador de IRS guiado</h1>
+          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-stone-500 dark:text-stone-400">
+            Passo a passo pela tua realidade fiscal — sem te perderes em anexos. Cada campo explica-se, cada valor tem
+            memória de cálculo e o sistema avisa-te do que possa faltar. No fim, sais com a tranquilidade de não te
+            teres esquecido de nada.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={abrirImport}
+          className="group inline-flex flex-shrink-0 items-center gap-2 self-start rounded-xl border border-brand/30 bg-brand-light px-4 py-2.5 text-sm font-semibold text-brand-dark shadow-card transition-all hover:border-brand hover:shadow-lift"
+        >
+          <Sparkle size={16} className="transition-transform group-hover:scale-110" />
+          Importar dados
+        </button>
       </header>
 
       {/* Indicador de passos + completude */}
@@ -423,10 +519,18 @@ export default function SimuladorPage() {
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[1fr_340px]">
         {/* Coluna principal */}
         <div className="min-w-0 space-y-5">
+          <m.div
+            key={passo}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="space-y-5"
+          >
           {passo === 0 && (
             <PassoAgregado
               {...{
                 contribuinte, setContribuinte, conjunta, setConjunta,
+                spb, setSpb, atividadeB, setAtividadeB, efB,
                 dependentes, setDependentes, ascendentes, setAscendentes,
                 deficiencia, setDeficiencia, ifici, setIfici, jovemAtivo: indJovem > 0,
               }}
@@ -695,8 +799,8 @@ export default function SimuladorPage() {
                       <InfoTip>Servem para saber há quanto tempo detiveste o imóvel. Se for mais de 24 meses, o valor de aquisição é corrigido por um coeficiente de desvalorização monetária oficial (Portaria anual) — aumentando o custo e reduzindo a mais-valia.</InfoTip>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <input type="date" aria-label="Data de aquisição" value={vendaDataAq} onChange={(e) => setVendaDataAq(e.target.value)} className={campoCls} />
-                      <input type="date" aria-label="Data de venda" value={vendaDataVenda} onChange={(e) => setVendaDataVenda(e.target.value)} className={campoCls} />
+                      <DatePicker ariaLabel="Data de aquisição" value={vendaDataAq} onChange={setVendaDataAq} />
+                      <DatePicker ariaLabel="Data de venda" value={vendaDataVenda} onChange={setVendaDataVenda} />
                     </div>
                   </div>
                   {coefImovel > 1 && (
@@ -780,6 +884,7 @@ export default function SimuladorPage() {
               gravadoLabel={ultimaGravacao ? `Guardado ${tempoRelativo(ultimaGravacao, agora)} neste dispositivo` : "Guardado automaticamente neste dispositivo"}
             />
           )}
+          </m.div>
 
           {/* Navegação */}
           <div className="flex items-center justify-between gap-3 pt-2">
@@ -824,6 +929,13 @@ export default function SimuladorPage() {
           especiais não estão todos modelados. Não substitui aconselhamento de contabilista certificado.
         </p>
       </div>
+
+      <ModalImportacao
+        aberto={importAberto}
+        fontes={fontesImport}
+        onFechar={() => setImportAberto(false)}
+        onImportar={importarFontes}
+      />
     </div>
   );
 }
@@ -1138,6 +1250,9 @@ function Triagem({ ativos, onToggle }: { ativos: RendimentoId[]; onToggle: (id: 
 function PassoAgregado(props: {
   contribuinte: Contribuinte; setContribuinte: (c: Contribuinte) => void;
   conjunta: boolean; setConjunta: (v: boolean) => void;
+  spb: RendimentosTitularB; setSpb: (s: RendimentosTitularB) => void;
+  atividadeB: Atividade; setAtividadeB: (a: Atividade) => void;
+  efB: ReturnType<typeof efeitoFiscal>;
   dependentes: Dependente[]; setDependentes: (d: Dependente[]) => void;
   ascendentes: AscendenteDetalhe[]; setAscendentes: (a: AscendenteDetalhe[]) => void;
   deficiencia: boolean; setDeficiencia: (v: boolean) => void;
@@ -1146,6 +1261,7 @@ function PassoAgregado(props: {
 }) {
   const {
     contribuinte, setContribuinte, conjunta, setConjunta, dependentes, setDependentes,
+    spb, setSpb, atividadeB, setAtividadeB, efB,
     ascendentes, setAscendentes, deficiencia, setDeficiencia, ifici, setIfici, jovemAtivo,
   } = props;
   const c = contribuinte;
@@ -1173,7 +1289,7 @@ function PassoAgregado(props: {
           </div>
           <div>
             <label htmlFor="c-nasc" className={`mb-1.5 block ${rotuloCls}`}>Data de nascimento</label>
-            <input id="c-nasc" type="date" value={c.nascimento} onChange={(e) => upd("nascimento", e.target.value)} className={campoCls} />
+            <DatePicker id="c-nasc" value={c.nascimento} onChange={(v) => upd("nascimento", v)} ariaLabel="Data de nascimento" />
           </div>
           <div>
             <div className="mb-1.5 flex items-center gap-1.5">
@@ -1220,6 +1336,29 @@ function PassoAgregado(props: {
         </div>
       </section>
 
+      {/* Sujeito passivo B (tributação conjunta) */}
+      <AnimatePresence initial={false}>
+        {conjunta && (
+          <m.div
+            key="spb"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden"
+          >
+            <SujeitoPassivoB
+              spb={spb}
+              setSpb={setSpb}
+              atividade={atividadeB}
+              setAtividade={setAtividadeB}
+              ef={efB}
+              estadoCivil={c.estadoCivil}
+            />
+          </m.div>
+        )}
+      </AnimatePresence>
+
       {/* Dependentes */}
       <section className="space-y-3 rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -1240,7 +1379,11 @@ function PassoAgregado(props: {
           >
             <div>
               <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">Data de nascimento</label>
-              <input type="date" value={d.nascimento} onChange={(e) => setDependentes(dependentes.map((x) => (x.id === d.id ? { ...x, nascimento: e.target.value } : x)))} className={campoCls} />
+              <DatePicker
+                value={d.nascimento}
+                ariaLabel={`Data de nascimento do dependente ${i + 1}`}
+                onChange={(v) => setDependentes(dependentes.map((x) => (x.id === d.id ? { ...x, nascimento: v } : x)))}
+              />
             </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">Guarda (%)</label>
@@ -1345,6 +1488,279 @@ function CartaoAgregado({ icon, titulo, sub, destaque = false }: { icon: ReactNo
         <div className={`text-[11px] ${destaque ? "text-brand" : "text-stone-400"}`}>{sub}</div>
       </div>
     </div>
+  );
+}
+
+function SujeitoPassivoB({
+  spb,
+  setSpb,
+  atividade,
+  setAtividade,
+  ef,
+  estadoCivil,
+}: {
+  spb: RendimentosTitularB;
+  setSpb: (s: RendimentosTitularB) => void;
+  atividade: Atividade;
+  setAtividade: (a: Atividade) => void;
+  ef: ReturnType<typeof efeitoFiscal>;
+  estadoCivil: EstadoCivil;
+}) {
+  const upd = (patch: Partial<RendimentosTitularB>) => setSpb({ ...spb, ...patch });
+  const updC = (patch: Partial<Contribuinte>) => setSpb({ ...spb, contribuinte: { ...spb.contribuinte, ...patch } });
+  const nifMau = !validarNIF(spb.contribuinte.nif);
+  const elegivel = estadoCivil === "casado" || estadoCivil === "uniao";
+  const num = (v: number) => (v ? String(v) : "");
+
+  return (
+    <section className="space-y-4 rounded-4xl border border-brand/25 bg-brand-light/40 p-5 shadow-card dark:border-brand/20 dark:bg-brand/5 sm:p-6">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-brand text-white">
+            <User size={18} />
+          </span>
+          <h3 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">Sujeito passivo B</h3>
+        </div>
+        <span className="inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1 text-[11px] font-medium text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+          <span className="font-semibold text-brand-dark dark:text-brand">Cônjuge</span>
+          <InfoTip label="Sujeito passivo B">Na tributação conjunta agregam-se os rendimentos dos dois sujeitos passivos e aplica-se o quociente conjugal (Art. 69.º CIRS). A dedução específica do trabalho e o coeficiente/IRS Jovem da categoria B são apurados por pessoa.</InfoTip>
+        </span>
+      </div>
+
+      {!elegivel && (
+        <div className="rounded-xl border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">
+          A tributação conjunta destina-se a casados ou unidos de facto. Ajusta o estado civil acima se necessário.
+        </div>
+      )}
+
+      <p className="text-sm text-stone-600 dark:text-stone-300">Identificação e rendimentos próprios do cônjuge. Preenche apenas o que se aplica.</p>
+
+      {/* Identificação */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div>
+          <label htmlFor="spb-nome" className={`mb-1.5 block ${rotuloCls}`}>Nome</label>
+          <input id="spb-nome" value={spb.contribuinte.nome} onChange={(e) => updC({ nome: e.target.value })} placeholder="Nome completo" className={campoCls} />
+        </div>
+        <div>
+          <label htmlFor="spb-nif" className={`mb-1.5 block ${rotuloCls}`}>NIF</label>
+          <input id="spb-nif" inputMode="numeric" value={spb.contribuinte.nif} onChange={(e) => updC({ nif: e.target.value })} placeholder="9 dígitos" className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
+          {nifMau && <p className="mt-1 text-[11px] text-red-500">NIF inválido.</p>}
+        </div>
+        <div>
+          <label htmlFor="spb-nasc" className={`mb-1.5 block ${rotuloCls}`}>Data de nascimento</label>
+          <DatePicker id="spb-nasc" value={spb.contribuinte.nascimento} onChange={(v) => updC({ nascimento: v })} ariaLabel="Data de nascimento do sujeito passivo B" />
+        </div>
+      </div>
+
+      {/* Trabalho dependente */}
+      <div className="space-y-3 rounded-2xl border border-stone-100 bg-white/70 p-4 dark:border-stone-700 dark:bg-stone-900/40">
+        <div className="flex items-center gap-1.5">
+          <Briefcase size={15} className="text-stone-400" />
+          <span className={rotuloCls}>Trabalho dependente (Anexo A)</span>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Campo id="spb-sal-bruto" label="Salário bruto anual (€)" value={num(spb.salBruto)} onChange={(v) => upd({ salBruto: n(v) })} step={500} />
+          <Campo id="spb-sal-ret" label="Retenções de IRS (€)" value={num(spb.salRet)} onChange={(v) => upd({ salRet: n(v) })} step={100} />
+        </div>
+      </div>
+
+      {/* Trabalho independente */}
+      <div className="space-y-3 rounded-2xl border border-stone-100 bg-white/70 p-4 dark:border-stone-700 dark:bg-stone-900/40">
+        <div className="flex items-center gap-1.5">
+          <Invoice size={15} className="text-stone-400" />
+          <span className={rotuloCls}>Trabalho independente (Anexo B)</span>
+        </div>
+        <ActivityCombobox value={atividade} onChange={setAtividade} />
+        <div className="flex flex-wrap gap-2 text-xs">
+          <span className="rounded-lg bg-brand-light px-2.5 py-1 font-semibold text-brand-dark">Coef. {pct(ef.coef)}</span>
+          <span className="rounded-lg bg-stone-100 px-2.5 py-1 font-medium text-stone-500 dark:bg-stone-800 dark:text-stone-400">Ret. {pct(ef.retencao)}</span>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Campo id="spb-ind-bruto" label="Faturação anual (€)" value={num(spb.indBruto)} onChange={(v) => upd({ indBruto: n(v) })} step={500} />
+          <Campo id="spb-ind-ret" label="Retenções pagas (€)" value={num(spb.indRet)} onChange={(v) => upd({ indRet: n(v) })} step={100} />
+        </div>
+        <SeletorCartoes
+          label="Regime de contabilidade"
+          opcoes={[
+            { id: "simplificado" as const, label: "Simplificado", sub: `Coef. ${pct(ef.coef)}` },
+            { id: "organizada" as const, label: "Contab. organizada", sub: "Receitas − despesas" },
+          ]}
+          valor={spb.indRegime}
+          onChange={(v) => upd({ indRegime: v })}
+        />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label htmlFor="spb-ind-despesas" className={`mb-1.5 block ${rotuloCls}`}>{spb.indRegime === "organizada" ? "Despesas reais (€)" : "Despesas justificadas (€)"}</label>
+            <input id="spb-ind-despesas" type="number" inputMode="decimal" min={0} step={100} value={num(spb.indDespesas)} onChange={(e) => upd({ indDespesas: n(e.target.value) })} placeholder="0" className={campoCls} />
+          </div>
+          <div>
+            <label htmlFor="spb-ind-ano" className={`mb-1.5 block ${rotuloCls}`}>Ano de atividade</label>
+            <select id="spb-ind-ano" value={spb.indAno} onChange={(e) => upd({ indAno: Number(e.target.value) })} className={campoCls}>
+              <option value={1}>1.º ano (−50%)</option>
+              <option value={2}>2.º ano (−25%)</option>
+              <option value={3}>3.º ano ou seguinte</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label htmlFor="spb-ind-jovem" className={`mb-1.5 block ${rotuloCls}`}>IRS Jovem</label>
+          <select id="spb-ind-jovem" value={spb.indJovem} onChange={(e) => upd({ indJovem: Number(e.target.value) })} className={campoCls}>
+            <option value={0}>Não aplicável</option>
+            {Array.from({ length: 10 }, (_, i) => i + 1).map((ano) => (
+              <option key={ano} value={ano}>{`${ano}.º ano — isenção ${pct(IRS_JOVEM.isencaoPorAno.value[ano])}`}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-2">
+          <Checkbox checked={spb.indIsencaoSS} onChange={(v) => upd({ indIsencaoSS: v })} label="1.º ano de atividade — isenção de SS" />
+          <Checkbox checked={spb.indAcumula} onChange={(v) => upd({ indAcumula: v })} label="Acumulação com trabalho dependente" />
+        </div>
+      </div>
+
+      {/* Pensões */}
+      <div className="space-y-3 rounded-2xl border border-stone-100 bg-white/70 p-4 dark:border-stone-700 dark:bg-stone-900/40">
+        <div className="flex items-center gap-1.5">
+          <User size={15} className="text-stone-400" />
+          <span className={rotuloCls}>Pensões (Anexo A)</span>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Campo id="spb-pens-bruto" label="Pensões brutas anuais (€)" value={num(spb.pensBruto)} onChange={(v) => upd({ pensBruto: n(v) })} step={500} />
+          <Campo id="spb-pens-ret" label="Retenções de IRS (€)" value={num(spb.pensRet)} onChange={(v) => upd({ pensRet: n(v) })} step={100} />
+        </div>
+      </div>
+
+      <Checkbox checked={spb.deficiencia} onChange={(v) => upd({ deficiencia: v })} label="Sujeito passivo B com deficiência ≥ 60%"
+        sub="Exclui 15% dos rendimentos da categoria B (máx €2 500). Exige atestado médico (Art. 56.º-A CIRS)." />
+    </section>
+  );
+}
+
+function ModalImportacao({
+  aberto,
+  fontes,
+  onFechar,
+  onImportar,
+}: {
+  aberto: boolean;
+  fontes: FonteImportacao[];
+  onFechar: () => void;
+  onImportar: (selecionadas: FonteImportacao[]) => void;
+}) {
+  const [selecao, setSelecao] = useState<Record<string, boolean>>({});
+
+  // Por defeito, todas as fontes disponíveis ficam selecionadas ao abrir.
+  useEffect(() => {
+    if (aberto) {
+      const inicial: Record<string, boolean> = {};
+      fontes.forEach((f) => { inicial[f.id] = true; });
+      setSelecao(inicial);
+    }
+  }, [aberto, fontes]);
+
+  const escolhidas = fontes.filter((f) => selecao[f.id]);
+
+  return (
+    <AnimatePresence>
+      {aberto && (
+        <m.div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-stone-900/40 backdrop-blur-sm sm:items-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          onClick={onFechar}
+        >
+          <m.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Importar dados de outros simuladores"
+            initial={{ opacity: 0, y: 24, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 24, scale: 0.98 }}
+            transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
+            onClick={(e) => e.stopPropagation()}
+            className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-4xl border border-stone-200 bg-white shadow-float dark:border-stone-700 dark:bg-stone-900 sm:rounded-4xl"
+            style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-stone-100 p-5 dark:border-stone-800">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand-dark dark:bg-brand/15">
+                  <Sparkle size={18} />
+                </span>
+                <div>
+                  <h2 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">Importar dados</h2>
+                  <p className="text-xs text-stone-500 dark:text-stone-400">Reutiliza o que já preencheste noutros simuladores.</p>
+                </div>
+              </div>
+              <button type="button" onClick={onFechar} aria-label="Fechar" className="flex-shrink-0 rounded-lg p-1.5 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-stone-800">
+                <Close size={16} />
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto p-5">
+              {fontes.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-stone-200 bg-stone-50 px-4 py-8 text-center dark:border-stone-700 dark:bg-stone-800/40">
+                  <Sparkle size={22} className="mx-auto mb-2 text-stone-300" />
+                  <p className="text-sm font-medium text-stone-600 dark:text-stone-300">Ainda não há dados para importar</p>
+                  <p className="mt-1 text-xs text-stone-400">
+                    Usa a calculadora de recibos verdes, o simulador de vencimento ou o de abrir empresa — os teus dados ficam disponíveis aqui.
+                  </p>
+                </div>
+              )}
+              {fontes.map((f) => {
+                const Icon = ICONES[f.icone] ?? Receipt;
+                const sel = !!selecao[f.id];
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    aria-pressed={sel}
+                    onClick={() => setSelecao((s) => ({ ...s, [f.id]: !s[f.id] }))}
+                    className={`flex w-full items-start gap-3 rounded-2xl border p-3.5 text-left transition-all ${
+                      sel ? "border-brand bg-brand-light" : "border-stone-200 bg-stone-50 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-800/40"
+                    }`}
+                  >
+                    <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${sel ? "bg-brand text-white" : "bg-white text-stone-400 dark:bg-stone-800"}`}>
+                      <Icon size={17} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className={`text-sm font-semibold ${sel ? "text-brand-dark" : "text-stone-700 dark:text-stone-200"}`}>{f.titulo}</div>
+                      <div className={`text-[11px] leading-snug ${sel ? "text-brand" : "text-stone-400"}`}>{f.descricao}</div>
+                      {f.detalhes.length > 0 && (
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {f.detalhes.map((d, i) => (
+                            <span key={i} className={`rounded-md px-1.5 py-0.5 text-[10px] font-medium tabular-nums ${sel ? "bg-white/70 text-brand-dark dark:bg-stone-900/40" : "bg-stone-100 text-stone-500 dark:bg-stone-700 dark:text-stone-300"}`}>{d}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <span className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border-2 ${sel ? "border-brand bg-brand text-white" : "border-stone-300 text-transparent dark:border-stone-600"}`}>
+                      <Check size={12} />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {fontes.length > 0 && (
+              <div className="flex items-center justify-between gap-3 border-t border-stone-100 p-5 dark:border-stone-800">
+                <button type="button" onClick={onFechar} className="rounded-xl px-3 py-2.5 text-sm font-medium text-stone-500 transition-colors hover:text-stone-700 dark:text-stone-400">
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={escolhidas.length === 0}
+                  onClick={() => onImportar(escolhidas)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-brand-dark disabled:opacity-40"
+                >
+                  <Sparkle size={15} /> Preencher {escolhidas.length > 0 ? `(${escolhidas.length})` : ""}
+                </button>
+              </div>
+            )}
+          </m.div>
+        </m.div>
+      )}
+    </AnimatePresence>
   );
 }
 

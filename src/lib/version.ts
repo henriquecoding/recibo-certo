@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.68.0";
+export const APP_VERSION = "1.69.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.69.0",
+    data: "2026-06-23",
+    titulo: "Sujeito passivo B, importação entre simuladores e novo calendário",
+    itens: [
+      "Tributação conjunta a sério: na declaração conjunta podes agora preencher os rendimentos próprios do sujeito passivo B (cônjuge ou unido de facto) — salários, trabalho independente e pensões. O rendimento coletável de cada um é apurado por pessoa (dedução específica, coeficiente e IRS Jovem) e agregado antes do quociente conjugal (Art. 69.º CIRS).",
+      "Importar dados de outros simuladores: um só clique traz para o simulador de IRS o que já calculaste na calculadora de recibos verdes, no simulador de recibo de vencimento, no de abrir empresa e nas tuas preferências fiscais — preenchendo automaticamente os campos correspondentes.",
+      "Novo seletor de datas, moderno e rápido: substitui o calendário do navegador por um popover elegante com vistas de dias, meses e anos para saltar instantaneamente até à data de nascimento, com teclado e modo escuro.",
+      "Mais polimento e animações suaves na transição entre etapas do simulador.",
+    ],
+  },
   {
     version: "1.68.0",
     data: "2026-06-23",

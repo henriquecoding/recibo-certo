@@ -7,6 +7,7 @@ import {
   SS_COEFICIENTE,
   DISPENSA_RETENCAO_LIMITE,
 } from "@/lib/fiscal-data";
+import { simularDeclaracaoIRS } from "@/lib/fiscal";
 
 const LIMITE_IVA = IVA_ISENCAO_LIMITE.value; // € 15 000
 
@@ -97,5 +98,54 @@ describe("constantes fiscais 2026", () => {
 
   it("DISPENSA_RETENCAO_LIMITE é €15 000", () => {
     expect(DISPENSA_RETENCAO_LIMITE.value).toBe(15_000);
+  });
+});
+
+// ── Sujeito passivo B (tributação conjunta) ─────────────────────────────────
+describe("simularDeclaracaoIRS — sujeito passivo B", () => {
+  const base = {
+    conjunta: true as const,
+    salarios: { bruto: 30_000, retencoes: 3_000 },
+  };
+
+  it("é retrocompatível: sem titularB o resultado não muda", () => {
+    const semB = simularDeclaracaoIRS(base);
+    const comBVazio = simularDeclaracaoIRS({ ...base, titularB: {} });
+    expect(comBVazio.irsTotal).toBeCloseTo(semB.irsTotal, 2);
+    expect(comBVazio.rendimentoGlobal).toBeCloseTo(semB.rendimentoGlobal, 2);
+  });
+
+  it("agrega o rendimento e as retenções do SP B", () => {
+    const semB = simularDeclaracaoIRS(base);
+    const comB = simularDeclaracaoIRS({
+      ...base,
+      titularB: { salarios: { bruto: 20_000, retencoes: 2_000 } },
+    });
+    // O rendimento global do agregado soma o bruto do SP B.
+    expect(comB.rendimentoGlobal).toBeCloseTo(semB.rendimentoGlobal + 20_000, 2);
+    // As retenções do SP B somam às totais.
+    expect(comB.retencoesTotais).toBeCloseTo(semB.retencoesTotais + 2_000, 2);
+    // Mais rendimento coletável agregado → mais IRS total.
+    expect(comB.irsTotal).toBeGreaterThan(semB.irsTotal);
+  });
+
+  it("ignora o titularB quando a tributação não é conjunta", () => {
+    const individual = simularDeclaracaoIRS({ ...base, conjunta: false });
+    const individualComB = simularDeclaracaoIRS({
+      ...base,
+      conjunta: false,
+      titularB: { salarios: { bruto: 20_000, retencoes: 2_000 } },
+    });
+    expect(individualComB.irsTotal).toBeCloseTo(individual.irsTotal, 2);
+    expect(individualComB.rendimentoGlobal).toBeCloseTo(individual.rendimentoGlobal, 2);
+  });
+
+  it("soma a Segurança Social da categoria B do SP B", () => {
+    const comIndepB = simularDeclaracaoIRS({
+      ...base,
+      titularB: { independente: { brutoAnual: 25_000, tipo: "art151" } },
+    });
+    // O SP B tem atividade independente → SS estimada > 0 no agregado.
+    expect(comIndepB.ssAnual).toBeGreaterThan(0);
   });
 });
