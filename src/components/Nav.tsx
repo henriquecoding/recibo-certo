@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "motion/react";
-import { BuscaTrigger } from "@/components/busca/BuscaGlobal";
+import { BuscaTrigger } from "@/components/busca/BuscaTrigger";
 import {
   Logo,
   Menu,
@@ -26,7 +26,6 @@ import {
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { EASE } from "@/lib/motion";
 import { useAuth } from "@/lib/supabase/auth";
-import { obterPerfil } from "@/lib/supabase/profile";
 
 const SUBMENU_FERRAMENTAS = [
   {
@@ -94,7 +93,13 @@ export default function Nav() {
 
   useEffect(() => {
     if (!user) { setAvatarUrl(""); return; }
-    obterPerfil(user.id).then((p) => setAvatarUrl(p.avatarUrl));
+    let ativo = true;
+    // Carrega o leitor de perfil (que importa o SDK do Supabase) só quando há
+    // sessão — mantém o SDK fora do bundle inicial das páginas públicas.
+    import("@/lib/supabase/profile").then(({ obterPerfil }) =>
+      obterPerfil(user.id).then((p) => { if (ativo) setAvatarUrl(p.avatarUrl); })
+    );
+    return () => { ativo = false; };
   }, [user]);
 
   useEffect(() => {

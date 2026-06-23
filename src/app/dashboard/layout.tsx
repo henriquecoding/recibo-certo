@@ -35,7 +35,7 @@ import { useAuth } from "@/lib/supabase/auth";
 import { verificarAdmin } from "@/lib/supabase/admin";
 import { obterPerfil } from "@/lib/supabase/profile";
 import AccountBox from "@/components/dashboard/AccountBox";
-import { BuscaTrigger } from "@/components/busca/BuscaGlobal";
+import { BuscaTrigger } from "@/components/busca/BuscaTrigger";
 import type { ComponentType, ReactNode } from "react";
 
 interface NavItem {

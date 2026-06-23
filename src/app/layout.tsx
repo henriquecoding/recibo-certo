@@ -5,10 +5,7 @@ import MotionProvider from "@/components/ui/motion/MotionProvider";
 import { AuthProvider } from "@/lib/supabase/auth";
 import { PerfilProvider } from "@/lib/perfil";
 import { SubscricaoProvider } from "@/lib/stripe/subscription";
-import AuthModal from "@/components/ui/AuthModal";
-import NovidadesModal from "@/components/ui/NovidadesModal";
-import CookieConsent from "@/components/ui/CookieConsent";
-import BuscaOverlay from "@/components/busca/BuscaGlobal";
+import DeferredOverlays from "@/components/ui/DeferredOverlays";
 import ChromeMobile from "@/components/ChromeMobile";
 import "./globals.css";
 
@@ -143,10 +140,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <MotionProvider>
                   {children}
                   <ChromeMobile />
-                  <BuscaOverlay />
-                  <AuthModal />
-                  <NovidadesModal />
-                  <CookieConsent />
+                  <DeferredOverlays />
                 </MotionProvider>
               </PerfilProvider>
             </Suspense>

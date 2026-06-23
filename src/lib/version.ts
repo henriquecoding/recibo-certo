@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.77.0";
+export const APP_VERSION = "1.78.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.78.0",
+    data: "2026-06-23",
+    titulo: "Site mais rápido a abrir, sobretudo no telemóvel",
+    itens: [
+      "A página inicial passa a carregar muito menos código de uma vez: o simulador só é descarregado quando te aproximas dele (ou quando clicas em «Calcular»), em vez de pesar logo no arranque.",
+      "A pesquisa, o aviso de cookies e o popup de Novidades passam a carregar em segundo plano, sem atrasar a primeira abertura da página.",
+      "Componentes de conta (nuvem) deixaram de ser descarregados em páginas onde não são precisos — menos dados e arranque mais leve para quem só quer usar as calculadoras.",
+      "Os números de exemplo da página inicial passam a ser preparados no servidor, deixando o telemóvel com menos trabalho ao abrir — sem qualquer mudança nos valores apresentados.",
+    ],
+  },
   {
     version: "1.77.0",
     data: "2026-06-23",

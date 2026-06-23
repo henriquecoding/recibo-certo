@@ -8,7 +8,7 @@ import {
   Receipt, Calendar, Calculator, Scale, Mail,
   Warning, Heart, BookOpen, MapPin, Zap, Briefcase,
 } from "@/components/ui/Icons";
-import { FISCAL_YEAR } from "@/lib/fiscal-data";
+import { FISCAL_YEAR } from "@/lib/fiscal-year";
 import { abrirPreferenciasCookies } from "@/lib/cookie-consent";
 
 const TRUST = [
