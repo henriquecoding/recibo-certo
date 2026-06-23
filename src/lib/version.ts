@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.70.0";
+export const APP_VERSION = "1.71.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.71.0",
+    data: "2026-06-23",
+    titulo: "Coerência de design nas novas funcionalidades do simulador",
+    itens: [
+      "O novo seletor de datas e a secção do sujeito passivo B (tributação conjunta) ficam alinhados com o design renovado do simulador.",
+      "A escolha de regime do cônjuge passa também a mostrar o painel explicativo com pontos-chave.",
+    ],
+  },
   {
     version: "1.70.0",
     data: "2026-06-23",

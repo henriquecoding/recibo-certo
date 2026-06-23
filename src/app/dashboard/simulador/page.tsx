@@ -1606,8 +1606,20 @@ function SujeitoPassivoB({
         <SeletorCartoes
           label="Regime de contabilidade"
           opcoes={[
-            { id: "simplificado" as const, label: "Simplificado", sub: `Coef. ${pct(ef.coef)}` },
-            { id: "organizada" as const, label: "Contab. organizada", sub: "Receitas − despesas" },
+            {
+              id: "simplificado" as const,
+              label: "Simplificado",
+              sub: `Coef. ${pct(ef.coef)}`,
+              descricao: `Aplica um coeficiente de ${pct(ef.coef)} ao rendimento bruto, que já presume as despesas (Art. 31.º CIRS).`,
+              pontos: ["Indicado quando há poucas despesas reais documentadas"],
+            },
+            {
+              id: "organizada" as const,
+              label: "Contab. organizada",
+              sub: "Receitas − despesas",
+              descricao: "Tributa o lucro real (receitas menos despesas documentadas). Exige contabilista certificado.",
+              pontos: ["Compensa com muitas despesas dedutíveis", "Obrigatória acima de €200 000"],
+            },
           ]}
           valor={spb.indRegime}
           onChange={(v) => upd({ indRegime: v })}
