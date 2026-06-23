@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { m } from "motion/react";
 import { ArrowRight, ShieldCheck, Bank, FileSign, Warning, Calendar } from "@/components/ui/Icons";
@@ -8,7 +8,7 @@ import { scrollToId } from "@/lib/scroll";
 import { staggerContainer, staggerItem, EASE } from "@/lib/motion";
 import { usePerfil, type Perfil } from "@/lib/perfil";
 import SeletorModo from "@/components/SeletorModo";
-import { compararCategorias } from "@/lib/fiscal-dependente";
+import type { ComparacaoCategoriasResult } from "@/lib/fiscal-dependente";
 
 const TRUST = [
   { icon: <ShieldCheck size={14} />, text: "Taxas de 2026 verificadas" },
@@ -19,18 +19,6 @@ const TRUST = [
 const eur0 = (n: number) => `${Math.round(n).toLocaleString("pt-PT")} €`;
 
 const HERO_FAT = 30_000;
-const CMP = compararCategorias({ brutoAnual: HERO_FAT, dependentes: 0 });
-const EMP = {
-  liquido: Math.round(CMP.empresa.liquido),
-  impostos: Math.round(CMP.empresa.irc + CMP.empresa.derrama + CMP.empresa.dividendos),
-  custos: Math.round(CMP.empresa.custosEmpresa),
-};
-const CMP_LIQ = {
-  dependente: Math.round(CMP.dependente.liquido),
-  freelancer: Math.round(CMP.freelancer.liquido),
-  empresa: Math.round(CMP.empresa.liquido),
-};
-const CMP_BEST = Math.max(CMP_LIQ.dependente, CMP_LIQ.freelancer, CMP_LIQ.empresa);
 
 interface TypingStep { text: string; delay: number }
 
@@ -48,7 +36,10 @@ interface CardData {
   typingSteps: TypingStep[];
 }
 
-const EXEMPLO: Record<
+// Os números de empresa/comparação vêm do motor verificado, mas são calculados
+// no SERVIDOR (page.tsx) e entram aqui como `CMP` — assim o motor fiscal não é
+// enviado para o bundle inicial do cliente. Valores idênticos, zero flash.
+function criarExemplos(CMP: ComparacaoCategoriasResult): Record<
   Perfil,
   {
     h1: ReactNode;
@@ -57,7 +48,20 @@ const EXEMPLO: Record<
     secondary: { label: string; href?: string; scrollTo?: string; setModo?: Perfil };
     card: CardData;
   }
-> = {
+> {
+  const EMP = {
+    liquido: Math.round(CMP.empresa.liquido),
+    impostos: Math.round(CMP.empresa.irc + CMP.empresa.derrama + CMP.empresa.dividendos),
+    custos: Math.round(CMP.empresa.custosEmpresa),
+  };
+  const CMP_LIQ = {
+    dependente: Math.round(CMP.dependente.liquido),
+    freelancer: Math.round(CMP.freelancer.liquido),
+    empresa: Math.round(CMP.empresa.liquido),
+  };
+  const CMP_BEST = Math.max(CMP_LIQ.dependente, CMP_LIQ.freelancer, CMP_LIQ.empresa);
+
+  return {
   independente: {
     h1: (
       <>
@@ -198,7 +202,8 @@ const EXEMPLO: Record<
       ],
     },
   },
-};
+  };
+}
 
 /* ── Contagem animada suave ──────────────────────────────────── */
 
@@ -606,8 +611,9 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
 
 /* ── Componente principal ────────────────────────────────────── */
 
-export default function Hero() {
+export default function Hero({ cmp }: { cmp: ComparacaoCategoriasResult }) {
   const { perfil, definir } = usePerfil();
+  const EXEMPLO = useMemo(() => criarExemplos(cmp), [cmp]);
   const dados = EXEMPLO[perfil];
   const c = dados.card;
 

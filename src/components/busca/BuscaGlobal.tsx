@@ -73,32 +73,10 @@ const SIMULADORES_RAPIDOS: string[] = [
   "f-irs", "f-rv", "f-simplificado", "f-venc", "f-empresa", "f-comparar",
 ];
 
-/** Botao de pesquisa (leve). Dispara a abertura do overlay global unico. */
-export function BuscaTrigger({ compacto = false }: { compacto?: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={() => window.dispatchEvent(new Event(EVENTO_ABRIR))}
-      aria-label="Pesquisar no ReciboCerto"
-      aria-keyshortcuts="Control+K Meta+K"
-      className={
-        compacto
-          ? "flex h-10 w-10 items-center justify-center rounded-xl text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800"
-          : "group flex items-center gap-2 rounded-xl border border-stone-200 bg-white/70 px-3 py-2 text-sm text-stone-400 transition-colors hover:border-brand/40 hover:text-stone-600 dark:border-stone-700 dark:bg-stone-900/50 dark:hover:border-brand/40"
-      }
-    >
-      <Search size={16} className="flex-shrink-0" />
-      {!compacto && (
-        <>
-          <span className="hidden md:inline">Pesquisar...</span>
-          <span className="ml-2 hidden items-center gap-0.5 rounded-md border border-stone-200 px-1.5 py-0.5 text-[10px] font-semibold text-stone-400 md:inline-flex dark:border-stone-700">
-            <Keyboard size={11} /> K
-          </span>
-        </>
-      )}
-    </button>
-  );
-}
+// O botão de pesquisa vive em `./BuscaTrigger` (ficheiro leve) para não arrastar
+// este overlay nem o índice de pesquisa para o bundle inicial de quem só mostra
+// o botão (Nav, chrome do dashboard). Reexportado aqui por retrocompatibilidade.
+export { BuscaTrigger } from "./BuscaTrigger";
 
 function QuickCard({ item, onClick }: { item: ItemBusca; onClick: (href: string) => void }) {
   return (

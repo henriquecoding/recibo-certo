@@ -6,11 +6,11 @@
 // empresa/comparação vêm do motor verificado (compararCategorias); os
 // exemplos de recibo/salário são ilustrativos, coerentes com o hero.
 
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import Reveal from "@/components/ui/Reveal";
 import { StaggerGroup, StaggerItem } from "@/components/ui/motion/Stagger";
 import { usePerfil, type Perfil } from "@/lib/perfil";
-import { compararCategorias } from "@/lib/fiscal-dependente";
+import type { ComparacaoCategoriasResult } from "@/lib/fiscal-dependente";
 import { fmt } from "@/lib/format";
 import {
   Wallet,
@@ -30,20 +30,14 @@ import {
   Check,
 } from "@/components/ui/Icons";
 
-const CMP = compararCategorias({ brutoAnual: 30_000, dependentes: 0 });
-
 // Pontos de viragem reais (motor verificado): onde os recibos verdes passam a
-// bater o salário, e onde a empresa passa a bater os recibos verdes.
-const BREAKEVEN = (() => {
-  let bRV: number | null = null;
-  let bEmp: number | null = null;
-  for (let x = 5_000; x <= 200_000; x += 2_500) {
-    const c = compararCategorias({ brutoAnual: x, dependentes: 0 });
-    if (bRV === null && c.freelancer.liquido > c.dependente.liquido) bRV = x;
-    if (bEmp === null && c.empresa.liquido > c.freelancer.liquido) bEmp = x;
-  }
-  return { bRV, bEmp };
-})();
+// bater o salário, e onde a empresa passa a bater os recibos verdes. Calculados
+// no SERVIDOR (page.tsx) e recebidos por props — assim o motor fiscal fica fora
+// do bundle inicial do cliente. Valores idênticos.
+export interface Breakeven {
+  bRV: number | null;
+  bEmp: number | null;
+}
 
 /* ── Primitivas de visual reutilizáveis ─────────────────────────────── */
 
@@ -236,7 +230,7 @@ function VisualPrazos() {
 
 /* ── Visual "comparar": três caminhos lado a lado ───────────────────── */
 
-function VisualTresCaminhos() {
+function VisualTresCaminhos({ cmp: CMP }: { cmp: ComparacaoCategoriasResult }) {
   const vias = [
     { l: "Por conta de outrem", v: CMP.dependente.liquido, chave: "dependente" },
     { l: "Recibos verdes", v: CMP.freelancer.liquido, chave: "freelancer" },
@@ -290,7 +284,11 @@ interface Conteudo {
 
 const eur = (n: number) => fmt(Math.round(n));
 
-const CONTEUDO: Record<Perfil, Conteudo> = {
+function criarConteudo(
+  CMP: ComparacaoCategoriasResult,
+  BREAKEVEN: Breakeven
+): Record<Perfil, Conteudo> {
+  return {
   independente: {
     eyebrow: "Porque precisas disto",
     titulo: "Não é uma calculadora. É tranquilidade financeira.",
@@ -469,7 +467,7 @@ const CONTEUDO: Record<Perfil, Conteudo> = {
         eyebrow: "Lado a lado",
         title: "Os três caminhos, mesmo rendimento.",
         desc: "Por conta de outrem, recibos verdes ou empresa — para o mesmo rendimento anual, vês o que fica no bolso em cada um e qual é o mais líquido para ti.",
-        visual: <VisualTresCaminhos />,
+        visual: <VisualTresCaminhos cmp={CMP} />,
       },
       {
         icon: <ChartProjection size={20} />,
@@ -513,10 +511,18 @@ const CONTEUDO: Record<Perfil, Conteudo> = {
       { icon: <Check size={16} />, label: "Decisão informada" },
     ],
   },
-};
+  };
+}
 
-export default function Features() {
+export default function Features({
+  cmp,
+  breakeven,
+}: {
+  cmp: ComparacaoCategoriasResult;
+  breakeven: Breakeven;
+}) {
   const { perfil } = usePerfil();
+  const CONTEUDO = useMemo(() => criarConteudo(cmp, breakeven), [cmp, breakeven]);
   const c = CONTEUDO[perfil] ?? CONTEUDO.independente;
 
   return (

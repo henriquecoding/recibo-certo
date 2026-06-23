@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "motion/react";
-import { BuscaTrigger } from "@/components/busca/BuscaGlobal";
+import { BuscaTrigger } from "@/components/busca/BuscaTrigger";
 import {
   Logo,
   Menu,

@@ -3,9 +3,10 @@ import Nav from "@/components/Nav";
 import Hero from "@/components/Hero";
 import Stats from "@/components/Stats";
 import CalculadoraSecao from "@/components/CalculadoraSecao";
-import Features from "@/components/Features";
+import Features, { type Breakeven } from "@/components/Features";
 import FAQ from "@/components/FAQ";
 import Fontes from "@/components/Fontes";
+import { compararCategorias } from "@/lib/fiscal-dependente";
 
 import CustoOmissao from "@/components/CustoOmissao";
 import Precos from "@/components/Precos";
@@ -30,6 +31,23 @@ const jsonLd = {
   ],
 };
 
+// Números de empresa/comparação da landing — calculados no servidor (build) com
+// o motor fiscal verificado e passados como props ao Hero e às Features. Mantém
+// `fiscal-dependente`/`fiscal`/`fiscal-data` FORA do bundle inicial do cliente,
+// sem mudar nenhum valor (mesma função, mesmos pressupostos).
+const HERO_FAT = 30_000;
+const landingCmp = compararCategorias({ brutoAnual: HERO_FAT, dependentes: 0 });
+const landingBreakeven: Breakeven = (() => {
+  let bRV: number | null = null;
+  let bEmp: number | null = null;
+  for (let x = 5_000; x <= 200_000; x += 2_500) {
+    const c = compararCategorias({ brutoAnual: x, dependentes: 0 });
+    if (bRV === null && c.freelancer.liquido > c.dependente.liquido) bRV = x;
+    if (bEmp === null && c.empresa.liquido > c.freelancer.liquido) bEmp = x;
+  }
+  return { bRV, bEmp };
+})();
+
 export default function Home() {
   return (
     <>
@@ -40,7 +58,7 @@ export default function Home() {
       <div id="top">
         <Nav />
         <main>
-          <Hero />
+          <Hero cmp={landingCmp} />
 
           {/*
            * ── Simulador integrado ──────────────────────────────────────────
@@ -61,7 +79,7 @@ export default function Home() {
 
           <Stats />
 
-          <Features />
+          <Features cmp={landingCmp} breakeven={landingBreakeven} />
 
           <div className="border-y border-stone-100 bg-white">
             <CustoOmissao />
