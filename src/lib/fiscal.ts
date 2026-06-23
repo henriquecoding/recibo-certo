@@ -72,6 +72,18 @@ import {
   SIFIDE_MAJORACAO_PME_JOVEM,
   // IFICI e Deficiência (Art. 56.º-A + 87.º CIRS)
   IFICI_TAXA,
+  // Categoria G — mais-valias (mobiliárias, criptoativos, imóveis) + estrangeiros
+  MAIS_VALIAS_MOBILIARIAS_TAXA,
+  CRIPTO_TAXA_CURTO_PRAZO,
+  MAIS_VALIAS_IMOBILIARIO_INCLUSAO,
+  DIV_INCLUSAO_ENGLOBAMENTO,
+  DEDUCAO_ESPECIFICA_DEPENDENTE,
+  DEDUCAO_PPR,
+  DEDUCAO_DONATIVOS,
+  DEDUCAO_ASCENDENTE,
+  DEDUCAO_ASCENDENTE_UNICO,
+  DEDUCAO_PENSAO_ALIMENTOS,
+  DEDUCAO_LARES,
   type TipoAtividade,
   type Regiao,
   type EscalaoIVA,
@@ -79,6 +91,7 @@ import {
   type DuracaoArrendamento,
   type TAViaturasTaxas,
 } from "./fiscal-data";
+import { fmt, pct } from "./format";
 
 export type { TipoAtividade, Regiao, EscalaoIVA, BaseSS, DuracaoArrendamento };
 
@@ -290,6 +303,8 @@ export interface DeducoesInput {
   gerais?: number;
   /** Rendas de habitação permanente pagas (Art. 78.º-E CIRS): 15% até €900 (Lei 36/2024). */
   rendas?: number;
+  /** Encargos com lares e apoio domiciliário (Art. 84.º CIRS): 25% até €403,75. */
+  lares?: number;
 }
 
 /**
@@ -361,12 +376,29 @@ export interface SimulacaoInput {
    */
   dependentesDetalhe?: DependentesDetalhe;
   /**
+   * Lista detalhada de dependentes (com guarda partilhada). Se fornecida,
+   * tem prioridade sobre `dependentesDetalhe`/`dependentes`: cada dependente
+   * conta com a sua fração de guarda (Art. 78.º-A n.º 4 CIRS).
+   */
+  dependentesLista?: Array<{ ate3: boolean; deficiente: boolean; guarda: number }>;
+  /**
    * Acumulação com trabalho dependente que cobre Segurança Social.
    * Não afecta o IRS, mas é considerado para o cálculo de SS no resultado.
    */
   acumulaEmprego?: boolean;
   /** Isenção de SS nos primeiros 12 meses de atividade (Art. 157.º CC). */
   isencaoSSPrimeiroAno?: boolean;
+  /** Número de ascendentes em comunhão de habitação (Art. 78.º-A CIRS). */
+  ascendentes?: number;
+  /** PPR: valor aplicado no ano + escalão de idade do sujeito passivo (Art. 21.º EBF). */
+  ppr?: { valor: number; escalaoIdade: "ate35" | "de35a50" | "mais50" };
+  /**
+   * Donativos do ano (Art. 62.º/63.º EBF): valor, fator de majoração
+   * (1,0 / 1,3 / 1,4) e se está isento do limite de 15% da coleta (Estado).
+   */
+  donativos?: { valor: number; fator: number; semLimite: boolean };
+  /** Pensões de alimentos pagas (Art. 83.º-A CIRS): 20%, fora do limite global. */
+  pensaoAlimentos?: number;
 }
 
 export interface SimulacaoIRS {
@@ -400,8 +432,16 @@ export interface SimulacaoIRS {
   /** Detalhamento por escalão progressivo (vazio se IFICI aplicado). */
   escaloesAplicados: EscalaoAplicado[];
   deducaoDependentes: number;
-  /** Deduções de despesas (saúde+educação+gerais+rendas) após limite global. */
+  /** Dedução à coleta por ascendentes (Art. 78.º-A). Fora do limite global. */
+  deducaoAscendentes: number;
+  /** Deduções de despesas (saúde+educação+gerais+rendas+PPR+donativos) após limite global. */
   deducaoDespesas: number;
+  /** Dedução à coleta por PPR (Art. 21.º EBF), antes do limite global. */
+  deducaoPPR: number;
+  /** Dedução à coleta por donativos (Art. 63.º EBF), antes do limite global. */
+  deducaoDonativos: number;
+  /** Dedução à coleta por pensões de alimentos (Art. 83.º-A), fora do limite global. */
+  deducaoPensaoAlimentos: number;
   /** Dedução coleta por deficiência do contribuinte (Art. 87.º: 4×IAS). */
   deducaoDeficiencia: number;
   irsEstimado: number;
@@ -533,6 +573,26 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   //  - Normais (> 3 anos): os primeiros max(0, 2−depBebe) ficam no escalão base €600;
   //    a partir do 3.º na contagem global passa a €900
   const deducaoDependentes = (() => {
+    // Caminho detalhado: lista com guarda partilhada (cada dependente conta com
+    // a sua fração). Bebés (≤3 anos) ocupam as primeiras posições; do 3.º
+    // dependente em diante, os de >3 anos passam de 600 € para 900 €.
+    if (input.dependentesLista && input.dependentesLista.length > 0) {
+      const ordenada = [...input.dependentesLista].sort((a, b) => Number(b.ate3) - Number(a.ate3));
+      let pos = 0;
+      let total = 0;
+      for (const d of ordenada) {
+        pos++;
+        const base = d.ate3
+          ? DEDUCAO_DEPENDENTE_BEBE.value
+          : pos <= 2
+            ? DEDUCAO_DEPENDENTE.value
+            : DEDUCAO_DEPENDENTE_3MAIS.value;
+        const extra = d.deficiente ? DEDUCAO_DEPENDENTE_DEFICIENCIA.value : 0;
+        const guarda = d.guarda > 0 ? Math.min(1, d.guarda) : 1;
+        total += (base + extra) * guarda;
+      }
+      return total;
+    }
     // Bebés têm sempre €726 (ocupam as primeiras posições na fila global)
     const dedBebe = depBebe * DEDUCAO_DEPENDENTE_BEBE.value;
     // Normais: quantas posições ainda estão no bloco 1.º/2.º
@@ -554,12 +614,40 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   const dSaude = Math.min(sanitize(ded.saude ?? 0) * DEDUCAO_SAUDE.value.taxa, DEDUCAO_SAUDE.value.limite);
   const dEducacao = Math.min(sanitize(ded.educacao ?? 0) * DEDUCAO_EDUCACAO.value.taxa, DEDUCAO_EDUCACAO.value.limite);
   const dRendas = Math.min(sanitize(ded.rendas ?? 0) * DEDUCAO_RENDAS.value.taxa, DEDUCAO_RENDAS.value.limite);
-  const deducaoDespesas = Math.min(dGerais + dSaude + dEducacao + dRendas, limiteGlobalDeducoes(rendimentoColetavelFinal));
+  const dLares = Math.min(sanitize(ded.lares ?? 0) * DEDUCAO_LARES.value.taxa, DEDUCAO_LARES.value.limite);
+
+  // PPR (Art. 21.º EBF): 20% do aplicado, com limite por idade do sujeito passivo.
+  const deducaoPPR = input.ppr
+    ? Math.min(sanitize(input.ppr.valor) * DEDUCAO_PPR.value.taxa, DEDUCAO_PPR.value[input.ppr.escalaoIdade])
+    : 0;
+  // Donativos (Art. 62.º/63.º EBF): 25% do valor majorado, limitado a 15% da
+  // coleta (exceto donativos ao Estado, sem limite).
+  const deducaoDonativos = input.donativos
+    ? (() => {
+        const base = sanitize(input.donativos.valor) * (input.donativos.fator || 1) * DEDUCAO_DONATIVOS.value.taxa;
+        return input.donativos.semLimite ? base : Math.min(base, DEDUCAO_DONATIVOS.value.limiteColeta * coletaBruta);
+      })()
+    : 0;
+
+  // Limite global (Art. 78.º n.º 7): saúde + educação + gerais + rendas + lares + PPR + donativos.
+  const deducaoDespesas = Math.min(
+    dGerais + dSaude + dEducacao + dRendas + dLares + deducaoPPR + deducaoDonativos,
+    limiteGlobalDeducoes(rendimentoColetavelFinal)
+  );
+
+  // Ascendentes (Art. 78.º-A): 525 € por ascendente; 635 € se existir só um.
+  // Fora do limite global, tal como a dedução por dependentes.
+  const numAscendentes = Math.max(0, Math.floor(input.ascendentes ?? 0));
+  const deducaoAscendentes =
+    numAscendentes === 1 ? DEDUCAO_ASCENDENTE_UNICO.value : numAscendentes * DEDUCAO_ASCENDENTE.value;
+
+  // Pensões de alimentos (Art. 83.º-A): 20% sem limite, fora do limite global.
+  const deducaoPensaoAlimentos = sanitize(input.pensaoAlimentos ?? 0) * DEDUCAO_PENSAO_ALIMENTOS.value;
 
   // Art. 87.º CIRS: dedução à coleta de 4×IAS pelo contribuinte com deficiência
   const deducaoDeficiencia = input.deficiencia ? DEDUCAO_DEFICIENCIA_COLETA.value : 0;
 
-  const deducoesColeta = deducaoDependentes + deducaoDespesas + deducaoDeficiencia;
+  const deducoesColeta = deducaoDependentes + deducaoAscendentes + deducaoDespesas + deducaoDeficiencia + deducaoPensaoAlimentos;
   let irsEstimado = Math.max(0, coletaBruta - deducoesColeta);
 
   // ── Mínimo de existência (não aplicável com regime de taxa flat) ─────────
@@ -616,7 +704,11 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     coletaBruta,
     escaloesAplicados,
     deducaoDependentes,
+    deducaoAscendentes,
     deducaoDespesas,
+    deducaoPPR,
+    deducaoDonativos,
+    deducaoPensaoAlimentos,
     deducaoDeficiencia,
     irsEstimado,
     minimoExistenciaAplicado,
@@ -1037,6 +1129,483 @@ export function calcularCategoriaF(input: CategoriaFInput): CategoriaFResult {
     imposto,
     retencoesPagas,
     saldo: retencoesPagas - imposto,
+    avisos,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  DECLARAÇÃO GUIADA — apuramento global de IRS por categorias
+//
+//  Combina todas as categorias de rendimento numa única simulação anual,
+//  reaproveitando o núcleo verificado `simularIRSAnual` para o englobamento
+//  (escalões progressivos, quociente conjugal, deduções à coleta, mínimo de
+//  existência) e somando a tributação autónoma (mais-valias, dividendos e
+//  rendas não englobadas) e o crédito por dupla tributação internacional.
+//
+//  ESTIMATIVA — não substitui o apuramento oficial. Cada resultado expõe a
+//  sua memória de cálculo (fórmula, valores e base legal).
+// ═══════════════════════════════════════════════════════════════════════
+
+/** Linha da memória de cálculo: o que foi calculado, como e com que base legal. */
+export interface MemoriaLinha {
+  /** Anexo/correspondência fiscal (ex.: "Anexo G"). */
+  anexo?: string;
+  rotulo: string;
+  /** Fórmula textual já formatada (ex.: "1 000 € × 28%"). */
+  formula?: string;
+  valor: number;
+  baseLegal?: string;
+}
+
+/** Componente de rendimento por categoria, para a revisão final. */
+export interface ComponenteCategoria {
+  id: string;
+  anexo: string;
+  rotulo: string;
+  /** Rendimento bruto declarado na categoria. */
+  bruto: number;
+  /** Parte levada a englobamento (taxas progressivas). */
+  englobado: number;
+  /** Imposto autónomo da categoria (se não englobada). */
+  impostoAutonomo: number;
+}
+
+export interface DeclaracaoInput {
+  conjunta?: boolean;
+  /** Categoria A — trabalho dependente (Anexo A). */
+  salarios?: { bruto: number; retencoes?: number };
+  /** Categoria H/A — pensões (Anexo A). */
+  pensoes?: { bruto: number; retencoes?: number };
+  /** Categoria B — trabalho independente (Anexo B/C). */
+  independente?: {
+    brutoAnual: number;
+    tipo: TipoAtividade;
+    coefOverride?: number;
+    aplicaRegra15Override?: boolean;
+    anoAtividade?: number;
+    regimeContabilidade?: "simplificado" | "organizada";
+    despesasJustificadas?: number;
+    retencoesPagas?: number;
+    irsJovemAno?: number;
+  };
+  /** Categoria E — capitais: dividendos e juros (Anexo E). */
+  capitais?: { dividendos?: number; juros?: number; retencoes?: number; englobar?: boolean };
+  /** Categoria F — rendimentos prediais / rendas (Anexo F). */
+  prediais?: {
+    rendaAnual: number;
+    despesas?: number;
+    habitacao: boolean;
+    duracao?: DuracaoArrendamento;
+    retencoes?: number;
+    englobar?: boolean;
+  };
+  /** Categoria G — mais-valias mobiliárias: ações, ETF, fundos, obrigações (Anexo G). */
+  investimentos?: { saldo: number; algumCurtoPrazo?: boolean; englobar?: boolean };
+  /** Categoria G — criptoativos (Anexo G). Longo prazo (≥365 dias) é isento. */
+  cripto?: { ganhoCurtoPrazo?: number; ganhoLongoPrazo?: number; englobar?: boolean };
+  /** Categoria G — venda de imóveis / mais-valias imobiliárias (Anexo G). */
+  imoveisVenda?: { ganho: number; valorRealizacao?: number; valorReinvestido?: number; reinvesteHPP?: boolean };
+  /**
+   * Rendimentos obtidos no estrangeiro (Anexo J). `porPais` permite o crédito
+   * por dupla tributação calculado país a país (Art. 81.º), mais rigoroso que
+   * o agregado.
+   */
+  estrangeiros?: {
+    rendimento: number;
+    impostoPago?: number;
+    porPais?: Array<{ pais?: string; rendimento: number; impostoPago: number }>;
+  };
+  /** Deduções à coleta (Anexo H). */
+  deducoes?: DeducoesInput;
+  dependentesDetalhe?: DependentesDetalhe;
+  /** Lista detalhada de dependentes com guarda partilhada. */
+  dependentesLista?: Array<{ ate3: boolean; deficiente: boolean; guarda: number }>;
+  /** Ascendentes em comunhão de habitação (Art. 78.º-A). */
+  ascendentes?: number;
+  /** PPR aplicado no ano + escalão de idade (Art. 21.º EBF). */
+  ppr?: { valor: number; escalaoIdade: "ate35" | "de35a50" | "mais50" };
+  /** Donativos do ano (Art. 62.º/63.º EBF): valor + majoração + sem-limite. */
+  donativos?: { valor: number; fator: number; semLimite: boolean };
+  /** Pensões de alimentos pagas (Art. 83.º-A CIRS). */
+  pensaoAlimentos?: number;
+  /** Encargos com lares (Art. 84.º CIRS). */
+  lares?: number;
+  deficiencia?: boolean;
+  ifici?: boolean;
+  /** Isenção de SS no 1.º ano de atividade (independente). */
+  isencaoSSPrimeiroAno?: boolean;
+  /** Acumulação com trabalho dependente que cobre a SS (independente). */
+  acumulaEmprego?: boolean;
+  pagamentosPorConta?: number;
+}
+
+export interface DeclaracaoResult {
+  rendimentoGlobal: number;
+  rendimentoColetavel: number;
+  coletaEnglobamento: number;
+  impostoAutonomo: number;
+  deducoesColeta: number;
+  creditoDuplaTributacao: number;
+  irsTotal: number;
+  ssAnual: number;
+  retencoesTotais: number;
+  pagamentosPorConta: number;
+  /** > 0: reembolso estimado. < 0: imposto a pagar. */
+  saldo: number;
+  /** Taxa efetiva (IRS total / rendimento global). */
+  taxaEfetiva: number;
+  componentes: ComponenteCategoria[];
+  memoria: MemoriaLinha[];
+  /** Resultado interno do englobamento (núcleo verificado). */
+  englobamento: SimulacaoIRS;
+  /** true quando o englobamento de mais-valias mobiliárias foi obrigatório. */
+  englobamentoMobObrigatorio: boolean;
+  avisos: string[];
+}
+
+/** Dedução específica anual da categoria A (Art. 25.º CIRS): 8,54 × IAS. */
+function rendimentoLiquidoCatA(bruto: number): { liquido: number; especifica: number } {
+  const especifica = DEDUCAO_ESPECIFICA_DEPENDENTE.value;
+  return { liquido: Math.max(0, sanitize(bruto) - especifica), especifica };
+}
+
+/** Limite do último escalão de IRS (gatilho do englobamento obrigatório). */
+function limiteUltimoEscalao(): number {
+  const e = ESCALOES_IRS.value;
+  return e.length >= 2 ? (e[e.length - 2].ate ?? Infinity) : Infinity;
+}
+
+/**
+ * Apuramento global de IRS a partir das categorias selecionadas no simulador
+ * guiado. Reaproveita `simularIRSAnual` para o englobamento e acrescenta a
+ * tributação autónoma e o crédito por dupla tributação internacional.
+ */
+export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
+  const conjunta = !!input.conjunta;
+  const memoria: MemoriaLinha[] = [];
+  const componentes: ComponenteCategoria[] = [];
+  const avisos: string[] = [];
+
+  const indep = input.independente;
+  const cap = input.capitais;
+  const pred = input.prediais;
+  const inv = input.investimentos;
+  const cripto = input.cripto;
+  const venda = input.imoveisVenda;
+  const ext = input.estrangeiros;
+
+  // ── Rendimentos englobáveis fora da categoria B ───────────────────────────
+  // (a categoria B é processada dentro de `simularIRSAnual` via brutoAnual)
+  let englobaveisBase = 0;
+
+  // Categoria A — salários
+  const salBruto = sanitize(input.salarios?.bruto ?? 0);
+  if (salBruto > 0) {
+    const { liquido, especifica } = rendimentoLiquidoCatA(salBruto);
+    englobaveisBase += liquido;
+    memoria.push({
+      anexo: "Anexo A",
+      rotulo: "Rendimento líquido de trabalho dependente",
+      formula: `${fmt(salBruto)} − dedução específica ${fmt(especifica)}`,
+      valor: liquido,
+      baseLegal: "Art. 25.º CIRS",
+    });
+    componentes.push({ id: "salarios", anexo: "Anexo A", rotulo: "Trabalho dependente", bruto: salBruto, englobado: liquido, impostoAutonomo: 0 });
+  }
+
+  // Categoria A — pensões (dedução específica equiparada)
+  const pensBruto = sanitize(input.pensoes?.bruto ?? 0);
+  if (pensBruto > 0) {
+    const { liquido, especifica } = rendimentoLiquidoCatA(pensBruto);
+    englobaveisBase += liquido;
+    memoria.push({
+      anexo: "Anexo A",
+      rotulo: "Rendimento líquido de pensões",
+      formula: `${fmt(pensBruto)} − dedução específica ${fmt(especifica)}`,
+      valor: liquido,
+      baseLegal: "Art. 53.º CIRS",
+    });
+    componentes.push({ id: "pensoes", anexo: "Anexo A", rotulo: "Pensões", bruto: pensBruto, englobado: liquido, impostoAutonomo: 0 });
+  }
+
+  // Categoria E — capitais (dividendos + juros)
+  const dividendos = sanitize(cap?.dividendos ?? 0);
+  const juros = sanitize(cap?.juros ?? 0);
+  const capEnglobar = !!cap?.englobar;
+  let impostoAutonomoCapitais = 0;
+  if (dividendos > 0 || juros > 0) {
+    if (capEnglobar) {
+      // Dividendos: só 50% incluído (Art. 40.º-A); juros: 100%.
+      const incluido = dividendos * DIV_INCLUSAO_ENGLOBAMENTO.value + juros;
+      englobaveisBase += incluido;
+      memoria.push({
+        anexo: "Anexo E",
+        rotulo: "Capitais englobados",
+        formula: `${fmt(dividendos)} × ${pct(DIV_INCLUSAO_ENGLOBAMENTO.value)} + ${fmt(juros)}`,
+        valor: incluido,
+        baseLegal: "Art. 40.º-A CIRS (opção de englobamento)",
+      });
+      componentes.push({ id: "capitais", anexo: "Anexo E", rotulo: "Dividendos e juros", bruto: dividendos + juros, englobado: incluido, impostoAutonomo: 0 });
+    } else {
+      impostoAutonomoCapitais = (dividendos + juros) * DIVIDENDOS_TAXA.value;
+      memoria.push({
+        anexo: "Anexo E",
+        rotulo: "Capitais — taxa liberatória",
+        formula: `${fmt(dividendos + juros)} × ${pct(DIVIDENDOS_TAXA.value)}`,
+        valor: impostoAutonomoCapitais,
+        baseLegal: "Art. 71.º CIRS",
+      });
+      componentes.push({ id: "capitais", anexo: "Anexo E", rotulo: "Dividendos e juros", bruto: dividendos + juros, englobado: 0, impostoAutonomo: impostoAutonomoCapitais });
+    }
+  }
+
+  // Categoria F — rendas
+  let impostoAutonomoF = 0;
+  if (pred && sanitize(pred.rendaAnual) > 0) {
+    const liquidaF = Math.max(0, sanitize(pred.rendaAnual) - sanitize(pred.despesas ?? 0));
+    if (pred.englobar) {
+      englobaveisBase += liquidaF;
+      memoria.push({ anexo: "Anexo F", rotulo: "Rendas englobadas", formula: `${fmt(pred.rendaAnual)} − despesas ${fmt(pred.despesas ?? 0)}`, valor: liquidaF, baseLegal: "Art. 41.º CIRS (opção de englobamento)" });
+      componentes.push({ id: "prediais", anexo: "Anexo F", rotulo: "Rendimentos prediais", bruto: sanitize(pred.rendaAnual), englobado: liquidaF, impostoAutonomo: 0 });
+    } else {
+      const simF = calcularCategoriaF({ rendaAnual: pred.rendaAnual, despesas: pred.despesas, habitacao: pred.habitacao, duracao: pred.duracao });
+      impostoAutonomoF = simF.imposto;
+      memoria.push({ anexo: "Anexo F", rotulo: "Rendas — taxa autónoma", formula: `${fmt(simF.rendimentoLiquido)} × ${pct(simF.taxa)}`, valor: impostoAutonomoF, baseLegal: "Art. 72.º CIRS" });
+      componentes.push({ id: "prediais", anexo: "Anexo F", rotulo: "Rendimentos prediais", bruto: sanitize(pred.rendaAnual), englobado: 0, impostoAutonomo: impostoAutonomoF });
+    }
+  }
+
+  // Categoria G — mais-valias imobiliárias (venda): só 50% englobado, com
+  // exclusão por reinvestimento em HPP (proporcional ao valor reinvestido).
+  if (venda && sanitize(venda.ganho) > 0) {
+    const ganho = sanitize(venda.ganho);
+    let fracaoExcluida = 0;
+    if (venda.reinvesteHPP && sanitize(venda.valorRealizacao ?? 0) > 0) {
+      fracaoExcluida = Math.min(1, sanitize(venda.valorReinvestido ?? 0) / sanitize(venda.valorRealizacao ?? 0));
+    }
+    const ganhoTributavel = ganho * (1 - fracaoExcluida);
+    const incluido = ganhoTributavel * MAIS_VALIAS_IMOBILIARIO_INCLUSAO.value;
+    englobaveisBase += incluido;
+    memoria.push({
+      anexo: "Anexo G",
+      rotulo: "Mais-valia imobiliária englobada",
+      formula: fracaoExcluida > 0
+        ? `(${fmt(ganho)} × ${pct(1 - fracaoExcluida)} reinvestimento) × ${pct(MAIS_VALIAS_IMOBILIARIO_INCLUSAO.value)}`
+        : `${fmt(ganho)} × ${pct(MAIS_VALIAS_IMOBILIARIO_INCLUSAO.value)}`,
+      valor: incluido,
+      baseLegal: "Art. 43.º n.º 2 + Art. 10.º n.º 5 CIRS",
+    });
+    componentes.push({ id: "imoveisVenda", anexo: "Anexo G", rotulo: "Venda de imóvel", bruto: ganho, englobado: incluido, impostoAutonomo: 0 });
+    if (fracaoExcluida > 0 && fracaoExcluida < 1) {
+      avisos.push("O reinvestimento parcial em habitação própria exclui apenas a fração do ganho proporcional ao valor reinvestido (Art. 10.º n.º 5 CIRS).");
+    }
+  }
+
+  // Rendimentos estrangeiros (Anexo J) — englobados, com crédito de imposto.
+  let rendEstrangeiroEnglobado = 0;
+  const impostoPagoEstrangeiro = sanitize(ext?.impostoPago ?? 0);
+  if (ext && sanitize(ext.rendimento) > 0) {
+    rendEstrangeiroEnglobado = sanitize(ext.rendimento);
+    englobaveisBase += rendEstrangeiroEnglobado;
+    memoria.push({ anexo: "Anexo J", rotulo: "Rendimentos obtidos no estrangeiro", valor: rendEstrangeiroEnglobado, baseLegal: "Art. 15.º + Art. 81.º CIRS" });
+    componentes.push({ id: "estrangeiros", anexo: "Anexo J", rotulo: "Rendimentos estrangeiros", bruto: rendEstrangeiroEnglobado, englobado: rendEstrangeiroEnglobado, impostoAutonomo: 0 });
+  }
+
+  // ── Pré-passagem: decidir englobamento obrigatório das mais-valias mobiliárias ──
+  const baseSimInput = (outros: number): SimulacaoInput => ({
+    brutoAnual: sanitize(indep?.brutoAnual ?? 0),
+    tipo: indep?.tipo ?? "art151",
+    coefOverride: indep?.coefOverride,
+    aplicaRegra15Override: indep?.aplicaRegra15Override,
+    anoAtividade: indep?.anoAtividade,
+    regimeContabilidade: indep?.regimeContabilidade,
+    despesasJustificadas: indep?.despesasJustificadas,
+    irsJovemAno: indep?.irsJovemAno,
+    outrosRendimentos: outros,
+    conjunta,
+    dependentesDetalhe: input.dependentesDetalhe,
+    dependentesLista: input.dependentesLista,
+    deducoes: input.deducoes ? { ...input.deducoes, lares: input.lares } : { lares: input.lares },
+    ascendentes: input.ascendentes,
+    ppr: input.ppr,
+    donativos: input.donativos,
+    pensaoAlimentos: input.pensaoAlimentos,
+    deficiencia: input.deficiencia,
+    ifici: input.ifici,
+    isencaoSSPrimeiroAno: input.isencaoSSPrimeiroAno,
+    acumulaEmprego: input.acumulaEmprego,
+    retencoesPagas: 0,
+  });
+
+  const saldoMob = sanitize(inv?.saldo ?? 0);
+  const criptoCurto = sanitize(cripto?.ganhoCurtoPrazo ?? 0);
+  const criptoLongo = sanitize(cripto?.ganhoLongoPrazo ?? 0);
+
+  // Coletável provisório sem as mais-valias mobiliárias/cripto ainda por decidir.
+  const sim0 = simularIRSAnual(baseSimInput(englobaveisBase));
+  const obrigatorioMob = !!inv?.algumCurtoPrazo && saldoMob > 0 && sim0.rendimentoColetavel >= limiteUltimoEscalao();
+  const englobarMob = !!inv?.englobar || obrigatorioMob;
+  const englobarCripto = !!cripto?.englobar;
+
+  // ── Mais-valias mobiliárias (Anexo G) ─────────────────────────────────────
+  let impostoAutonomoMob = 0;
+  if (saldoMob > 0) {
+    if (englobarMob) {
+      englobaveisBase += saldoMob;
+      memoria.push({
+        anexo: "Anexo G",
+        rotulo: obrigatorioMob ? "Mais-valias mobiliárias (englobamento obrigatório)" : "Mais-valias mobiliárias englobadas",
+        formula: `saldo ${fmt(saldoMob)} às taxas progressivas`,
+        valor: saldoMob,
+        baseLegal: obrigatorioMob ? "Art. 72.º n.º 18 CIRS" : "Art. 72.º n.º 13 CIRS (opção)",
+      });
+      componentes.push({ id: "investimentos", anexo: "Anexo G", rotulo: "Mais-valias mobiliárias", bruto: saldoMob, englobado: saldoMob, impostoAutonomo: 0 });
+      if (obrigatorioMob) avisos.push("Englobamento obrigatório das mais-valias mobiliárias: ativos detidos < 365 dias e rendimento coletável no último escalão (Art. 72.º n.º 18 CIRS).");
+    } else {
+      impostoAutonomoMob = saldoMob * MAIS_VALIAS_MOBILIARIAS_TAXA.value;
+      memoria.push({ anexo: "Anexo G", rotulo: "Mais-valias mobiliárias — taxa especial", formula: `${fmt(saldoMob)} × ${pct(MAIS_VALIAS_MOBILIARIAS_TAXA.value)}`, valor: impostoAutonomoMob, baseLegal: "Art. 72.º n.º 1 CIRS" });
+      componentes.push({ id: "investimentos", anexo: "Anexo G", rotulo: "Mais-valias mobiliárias", bruto: saldoMob, englobado: 0, impostoAutonomo: impostoAutonomoMob });
+    }
+  }
+
+  // ── Criptoativos (Anexo G) ────────────────────────────────────────────────
+  let impostoAutonomoCripto = 0;
+  if (criptoLongo > 0) {
+    memoria.push({ anexo: "Anexo G", rotulo: "Criptoativos detidos ≥ 365 dias (isentos)", valor: 0, baseLegal: "Art. 10.º n.º 19 CIRS" });
+  }
+  if (criptoCurto > 0) {
+    if (englobarCripto) {
+      englobaveisBase += criptoCurto;
+      memoria.push({ anexo: "Anexo G", rotulo: "Criptoativos < 365 dias englobados", valor: criptoCurto, baseLegal: "Art. 72.º CIRS (opção)" });
+      componentes.push({ id: "cripto", anexo: "Anexo G", rotulo: "Criptoativos", bruto: criptoCurto + criptoLongo, englobado: criptoCurto, impostoAutonomo: 0 });
+    } else {
+      impostoAutonomoCripto = criptoCurto * CRIPTO_TAXA_CURTO_PRAZO.value;
+      memoria.push({ anexo: "Anexo G", rotulo: "Criptoativos < 365 dias — taxa especial", formula: `${fmt(criptoCurto)} × ${pct(CRIPTO_TAXA_CURTO_PRAZO.value)}`, valor: impostoAutonomoCripto, baseLegal: "Art. 10.º n.º 1 al. k) + Art. 72.º CIRS" });
+      componentes.push({ id: "cripto", anexo: "Anexo G", rotulo: "Criptoativos", bruto: criptoCurto + criptoLongo, englobado: 0, impostoAutonomo: impostoAutonomoCripto });
+    }
+  } else if (criptoLongo > 0) {
+    componentes.push({ id: "cripto", anexo: "Anexo G", rotulo: "Criptoativos", bruto: criptoLongo, englobado: 0, impostoAutonomo: 0 });
+  }
+
+  // ── Simulação final do englobamento (núcleo verificado) ────────────────────
+  const sim = simularIRSAnual(baseSimInput(englobaveisBase));
+
+  // Categoria B na memória (quando há atividade independente)
+  if (sanitize(indep?.brutoAnual ?? 0) > 0) {
+    memoria.push({
+      anexo: "Anexo B",
+      rotulo: sim.regimeContabilidade === "organizada" ? "Rendimento tributável (contab. organizada)" : "Rendimento tributável (regime simplificado)",
+      formula: sim.regimeContabilidade === "organizada"
+        ? `${fmt(sim.brutoAnual)} − despesas ${fmt(sim.despesasJustificadas)}`
+        : `${fmt(sim.brutoAnual)} × coef. ${pct(sim.coeficiente)}${sim.acrescimo15 > 0 ? ` + acréscimo 15% ${fmt(sim.acrescimo15)}` : ""}`,
+      valor: sim.rendimentoTributavel,
+      baseLegal: "Art. 31.º CIRS",
+    });
+    componentes.push({ id: "independente", anexo: "Anexo B", rotulo: "Trabalho independente", bruto: sim.brutoAnual, englobado: sim.rendimentoTributavel, impostoAutonomo: 0 });
+  }
+
+  const coletaEnglobamento = sim.coletaBruta;
+  const impostoAutonomo = impostoAutonomoCapitais + impostoAutonomoF + impostoAutonomoMob + impostoAutonomoCripto;
+
+  // ── Crédito por dupla tributação internacional (Art. 81.º CIRS) ────────────
+  // Para cada país: menor de (imposto pago nesse país; fração da coleta
+  // proporcional ao rendimento desse país). O limite é por país, por isso o
+  // cálculo país a país é mais rigoroso do que o agregado.
+  let creditoDuplaTributacao = 0;
+  const porPais = ext?.porPais?.filter((p) => sanitize(p.rendimento) > 0) ?? [];
+  if (sim.rendimentoColetavel > 0 && coletaEnglobamento > 0) {
+    if (porPais.length > 0) {
+      for (const p of porPais) {
+        const fracaoColeta = coletaEnglobamento * (sanitize(p.rendimento) / sim.rendimentoColetavel);
+        const credito = Math.min(sanitize(p.impostoPago), fracaoColeta);
+        if (credito > 0) {
+          creditoDuplaTributacao += credito;
+          memoria.push({
+            anexo: "Anexo J",
+            rotulo: `Crédito dupla tributação${p.pais ? ` — ${p.pais}` : ""}`,
+            formula: `mín(imposto pago ${fmt(sanitize(p.impostoPago))}; fração da coleta ${fmt(fracaoColeta)})`,
+            valor: -credito,
+            baseLegal: "Art. 81.º CIRS",
+          });
+        }
+      }
+    } else if (impostoPagoEstrangeiro > 0 && rendEstrangeiroEnglobado > 0) {
+      const fracaoColeta = coletaEnglobamento * (rendEstrangeiroEnglobado / sim.rendimentoColetavel);
+      creditoDuplaTributacao = Math.min(impostoPagoEstrangeiro, fracaoColeta);
+      memoria.push({
+        anexo: "Anexo J",
+        rotulo: "Crédito por dupla tributação internacional",
+        formula: `mín(imposto pago ${fmt(impostoPagoEstrangeiro)}; fração da coleta ${fmt(fracaoColeta)})`,
+        valor: -creditoDuplaTributacao,
+        baseLegal: "Art. 81.º CIRS",
+      });
+    }
+  }
+
+  // Deduções à coleta já aplicadas dentro de `simularIRSAnual` (sim.irsEstimado).
+  const deducoesColeta =
+    sim.deducaoDependentes + sim.deducaoAscendentes + sim.deducaoDespesas + sim.deducaoDeficiencia + sim.deducaoPensaoAlimentos;
+  if (sim.deducaoAscendentes > 0) {
+    memoria.push({ anexo: "Anexo H", rotulo: "Dedução por ascendentes", valor: -sim.deducaoAscendentes, baseLegal: "Art. 78.º-A CIRS" });
+  }
+  if (sim.deducaoPensaoAlimentos > 0) {
+    memoria.push({ anexo: "Anexo H", rotulo: "Dedução de pensões de alimentos", formula: `20% do valor pago`, valor: -sim.deducaoPensaoAlimentos, baseLegal: "Art. 83.º-A CIRS" });
+  }
+  if (sim.deducaoPPR > 0) {
+    memoria.push({ anexo: "Anexo H", rotulo: "Benefício PPR", formula: `20% do aplicado (limite por idade)`, valor: -sim.deducaoPPR, baseLegal: "Art. 21.º EBF" });
+  }
+  if (sim.deducaoDonativos > 0) {
+    memoria.push({ anexo: "Anexo H", rotulo: "Benefício donativos", formula: `25% do donativo (máx 15% da coleta)`, valor: -sim.deducaoDonativos, baseLegal: "Art. 63.º EBF" });
+  }
+
+  // IRS total = imposto do englobamento (após deduções/mínimo) + autónomo − crédito.
+  const irsTotal = Math.max(0, sim.irsEstimado + impostoAutonomo - creditoDuplaTributacao);
+
+  // ── Retenções e pagamentos por conta ──────────────────────────────────────
+  const retencoesTotais =
+    sanitize(input.salarios?.retencoes ?? 0) +
+    sanitize(input.pensoes?.retencoes ?? 0) +
+    sanitize(indep?.retencoesPagas ?? 0) +
+    sanitize(cap?.retencoes ?? 0) +
+    sanitize(pred?.retencoes ?? 0);
+  const pagamentosPorConta = sanitize(input.pagamentosPorConta ?? 0);
+
+  // ── Rendimento global (todas as categorias, brutas/líquidas declaradas) ────
+  const rendimentoGlobal =
+    salBruto + pensBruto + sanitize(indep?.brutoAnual ?? 0) + dividendos + juros +
+    sanitize(pred?.rendaAnual ?? 0) + saldoMob + criptoCurto + criptoLongo +
+    sanitize(venda?.ganho ?? 0) + rendEstrangeiroEnglobado;
+
+  const saldo = retencoesTotais + pagamentosPorConta - irsTotal;
+
+  memoria.push({ rotulo: "Coleta do englobamento", formula: `IRS sobre ${fmt(sim.rendimentoColetavel)} (escalões${conjunta ? " · quociente conjugal" : ""})`, valor: coletaEnglobamento, baseLegal: "Art. 68.º + 69.º CIRS" });
+  if (impostoAutonomo > 0) memoria.push({ rotulo: "Tributação autónoma", valor: impostoAutonomo, baseLegal: "Art. 72.º CIRS" });
+  if (deducoesColeta > 0) memoria.push({ rotulo: "Deduções à coleta", valor: -deducoesColeta, baseLegal: "Art. 78.º CIRS" });
+  memoria.push({ rotulo: "IRS total estimado", valor: irsTotal });
+  memoria.push({ rotulo: retencoesTotais + pagamentosPorConta > 0 ? "Retenções e pagamentos por conta" : "Sem retenções", valor: -(retencoesTotais + pagamentosPorConta) });
+  memoria.push({ rotulo: saldo >= 0 ? "Reembolso estimado" : "Imposto a pagar estimado", valor: Math.abs(saldo) });
+
+  if (input.ifici && (salBruto > 0 || pensBruto > 0 || dividendos > 0 || juros > 0)) {
+    avisos.push("Com IFICI ativo, esta estimativa aplica a taxa única ao rendimento englobado. O IFICI só abrange rendimentos elegíveis — confirma o enquadramento de cada categoria.");
+  }
+
+  return {
+    rendimentoGlobal,
+    rendimentoColetavel: sim.rendimentoColetavel,
+    coletaEnglobamento,
+    impostoAutonomo,
+    deducoesColeta,
+    creditoDuplaTributacao,
+    irsTotal,
+    ssAnual: sim.ssAnual,
+    retencoesTotais,
+    pagamentosPorConta,
+    saldo,
+    taxaEfetiva: rendimentoGlobal > 0 ? irsTotal / rendimentoGlobal : 0,
+    componentes,
+    memoria,
+    englobamento: sim,
+    englobamentoMobObrigatorio: obrigatorioMob,
     avisos,
   };
 }

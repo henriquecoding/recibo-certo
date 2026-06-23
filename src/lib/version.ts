@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.61.0";
+export const APP_VERSION = "1.68.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -18,12 +18,86 @@ export interface EntradaChangelog {
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "1.68.0",
+    data: "2026-06-23",
+    titulo: "Integração: valores ao cêntimo no simulador guiado de recibos",
+    itens: [
+      "O resultado do simulador guiado de recibos verdes passa a mostrar valores ao cêntimo (líquido/mês, Segurança Social, IRS e IVA), alinhados com os recibos guardados — sem arredondamentos ao euro.",
+    ],
+  },
+  {
+    version: "1.67.0",
+    data: "2026-06-23",
+    titulo: "Exportar CSV, indicador de gravação e crédito internacional por país",
+    itens: [
+      "Nova exportação em CSV dos dados da simulação (agregado, rendimentos, apuramento e memória de cálculo), para abrires no Excel ou folha de cálculo.",
+      "Indicador «guardado há X minutos» que mostra quando a simulação foi gravada automaticamente neste dispositivo.",
+      "Crédito por dupla tributação internacional calculado país a país (Art. 81.º CIRS): o limite passa a ser aplicado por país, refletindo melhor a lei do que o cálculo agregado.",
+    ],
+  },
+  {
+    version: "1.66.0",
+    data: "2026-06-23",
+    titulo: "Relatório de IRS com agregado e «Recomeçar» com confirmação",
+    itens: [
+      "O relatório/PDF da simulação passa a incluir a identificação e o agregado familiar (contribuinte, tributação, dependentes e ascendentes), além dos rendimentos, apuramento e memória de cálculo.",
+      "O botão «Recomeçar» pede confirmação antes de apagar os dados guardados, para evitares perdas acidentais.",
+    ],
+  },
+  {
+    version: "1.65.0",
+    data: "2026-06-23",
+    titulo: "Simulador de IRS mais completo: identificação, família e mais deduções",
+    itens: [
+      "Identificação completa do contribuinte (nome, NIF com validação, data de nascimento, residência fiscal e estado civil) e dependentes/ascendentes individuais — com classificação automática de idade, guarda partilhada e validação de NIF.",
+      "Módulos de rendimento mais detalhados: salários com Segurança Social e várias entidades, pensões por tipo, capitais separados (dividendos, juros, certificados, depósitos) e venda de imóveis com despesas decompostas (IMT, escritura, obras, comissão).",
+      "Imóveis arrendados (Anexo F) declarados imóvel a imóvel, com artigo matricial, localização e percentagem de propriedade.",
+      "Segurança Social do trabalho independente (Anexo SS) com isenções do 1.º ano e por acumulação.",
+      "Novas deduções: pensões de alimentos (20%) e lares (25%), além de PPR e donativos com majorações.",
+    ],
+  },
+  {
+    version: "1.64.0",
+    data: "2026-06-23",
+    titulo: "Venda de imóveis com correção monetária e rendimentos estrangeiros país a país",
+    itens: [
+      "Venda de imóveis: o valor de aquisição passa a ser corrigido pelo coeficiente de desvalorização da moeda (Art. 50.º CIRS) quando o imóvel é detido há 24 meses ou mais — reduzindo a mais-valia tributável. Usamos a tabela oficial de 2025 (Portaria 382/2025) como estimativa até sair a de 2026, com atualização automática.",
+      "Rendimentos estrangeiros (Anexo J) agora declaram-se país a país, com tipo de rendimento e imposto pago em cada país, e o crédito por dupla tributação é calculado sobre o conjunto.",
+      "Avisos novos: rendimento estrangeiro sem país indicado e sem imposto pago no estrangeiro.",
+    ],
+  },
+  {
+    version: "1.63.0",
+    data: "2026-06-22",
+    titulo: "Simulador de IRS: detalhe por ativo, comparador, gráficos e exportação",
+    itens: [
+      "Investimentos e criptoativos passam a registar-se operação a operação (compra, venda, comissões e datas): calculamos o saldo do ano e classificamos automaticamente cada operação em curto ou longo prazo — o cripto detido 365 dias ou mais fica isento sozinho.",
+      "Donativos com as majorações do Mecenato (130% social/religioso, 140% cultural/ambiental) e donativos ao Estado sem o limite de 15% da coleta.",
+      "Novo comparador de cenários na revisão: tributação individual vs. conjunta e taxa autónoma vs. englobamento, lado a lado, com indicação de qual paga menos.",
+      "Gráficos da origem dos rendimentos e da distribuição fiscal, e visão do agregado familiar em cartões.",
+      "Exportação da simulação para PDF/impressão e gravação automática no dispositivo — podes fechar e retomar onde ficaste, ou recomeçar do zero.",
+    ],
+  },
+  {
+    version: "1.62.0",
+    data: "2026-06-22",
+    titulo: "Benefícios fiscais e gráficos no Simulador de IRS",
+    itens: [
+      "O Simulador de IRS guiado passa a calcular benefícios fiscais: PPR (20% do aplicado, com limite por idade), donativos (25%, até 15% da coleta) e dedução por ascendentes a cargo (525 €, ou 635 € se for só um).",
+      "Novos gráficos na revisão final: a origem dos teus rendimentos por categoria e uma barra que mostra para onde vai o dinheiro (líquido, IRS e Segurança Social).",
+      "Todos os benefícios respeitam o limite global das deduções à coleta e aparecem na memória de cálculo com a respetiva base legal.",
+    ],
+  },
+  {
     version: "1.61.0",
     data: "2026-06-22",
-    titulo: "Valores exatos no simulador guiado de recibos verdes",
+    titulo: "Novo Simulador de IRS guiado por etapas",
     itens: [
-      "O resultado do simulador guiado passou a mostrar valores ao cêntimo (líquido/mês, Segurança Social, IRS e IVA), alinhados com os recibos guardados no painel — sem arredondamentos ao euro.",
-      "Corrigida a pequena diferença entre o líquido mostrado no simulador e o líquido dos recibos (eram o mesmo cálculo, divergiam só na apresentação).",
+      "O Simulador de IRS foi reconstruído de raiz num percurso guiado por etapas: agregado familiar, triagem de rendimentos, módulos e revisão final — sem teres de saber em que anexo cada rendimento entra.",
+      "Cada módulo mostra discretamente a sua correspondência fiscal (Anexo A, B, E, F, G, J) e explica, ao passar o cursor ou clicar, o que é, o que se declara e como é usado.",
+      "Novos módulos com cálculo verificado: mais-valias de ações, ETF e fundos (28% ou englobamento), criptoativos (isenção aos 365 dias), venda de imóveis (50% do ganho, com reinvestimento em habitação) e rendimentos do estrangeiro (crédito por dupla tributação).",
+      "Apuramento global que junta todas as categorias: englobamento às taxas progressivas, tributação autónoma e crédito de imposto internacional, com memória de cálculo a explicar cada valor e a sua base legal.",
+      "Motor de validação (erros, avisos e oportunidades) e indicador de completude para saíres com a certeza de que não te esqueceste de nada.",
     ],
   },
   {

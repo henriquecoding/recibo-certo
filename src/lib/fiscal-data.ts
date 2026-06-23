@@ -213,6 +213,60 @@ export const SOURCES = {
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs40a.aspx",
   },
 
+  // ── Mais-valias (categoria G), criptoativos e rendimentos estrangeiros ──
+  art10cirs: {
+    label: "Art. 10.º CIRS — Mais-valias (categoria G); criptoativos (al. k) do n.º 1 e n.º 19) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs10.aspx",
+  },
+  art43cirs: {
+    label: "Art. 43.º CIRS — Saldo de mais-valias (redução a 50% nas imobiliárias e em micro/pequenas empresas) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs43.aspx",
+  },
+  art81cirs: {
+    label: "Art. 81.º CIRS — Eliminação da dupla tributação jurídica internacional (crédito de imposto) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs81.aspx",
+  },
+  ativosMaisValias2026: {
+    label: "Mais-Valias IRS 2026: guia para investidores (28%; englobamento obrigatório < 365 dias no último escalão) · Ativos.pt",
+    url: "https://www.ativos.pt/blog/mais-valias-irs-2026-guia-investidores",
+  },
+  faciliteCripto2026: {
+    label: "Criptomoedas no IRS 2026: regra dos 365 dias (isenção ≥ 365 dias; 28% < 365 dias) · Facilite",
+    url: "https://www.facilite.co/pt/criptomoedas-irs-portugal-2026",
+  },
+  cgdImoveisMaisValias: {
+    label: "Venda de imóvel: pagamento de mais-valias (50% do saldo; reinvestimento em HPP) · CGD Saldo Positivo",
+    url: "https://www.cgd.pt/Site/Saldo-Positivo/leis-e-impostos/Pages/vender-imovel-pagamento-mais-valia.aspx",
+  },
+  occAnexoJ: {
+    label: "IRS — Anexo J (rendimentos obtidos no estrangeiro) · Ordem dos Contabilistas Certificados",
+    url: "https://www.occ.pt/pt-pt/noticias/irs-anexo-j-0",
+  },
+  art21EBF: {
+    label: "Art. 21.º EBF — PPR: dedução à coleta de 20% com limites por idade · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-21-ordm-.aspx",
+  },
+  art63EBF: {
+    label: "Art. 63.º EBF — Estatuto do Mecenato: donativos, dedução de 25% com limite de 15% da coleta · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-63-ordm-.aspx",
+  },
+  art62EBF: {
+    label: "Art. 62.º EBF — Mecenato: majorações dos donativos (130% social/religioso, 140% cultural/ambiental) e donativos ao Estado sem limite · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-62-ordm-.aspx",
+  },
+  portaria382_2025: {
+    label: "Portaria n.º 382/2025/1 — Coeficientes de desvalorização da moeda (bens alienados em 2025) · Diário da República",
+    url: "https://diariodarepublica.pt/dr/detalhe/portaria/382-2025-945460818",
+  },
+  art83aCirs: {
+    label: "Art. 83.º-A CIRS — Dedução de pensões de alimentos (20%, sem limite) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs83a.aspx",
+  },
+  art84cirs: {
+    label: "Art. 84.º CIRS — Dedução de encargos com lares (25%, limite 403,75 €) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs84.aspx",
+  },
+
   // ── Comissão Europeia ───────────────────────────────────────────────
   viesValidation: {
     label: "VIES — Validação de número de identificação para efeitos do IVA · Comissão Europeia",
@@ -288,6 +342,14 @@ function sv<T>(
 }
 
 const TODAY = "2026-06-11";
+// Data de verificação dos parâmetros adicionados na revisão de mais-valias
+// (categoria G) e rendimentos estrangeiros — confirmados em fontes oficiais/de
+// referência nesta data.
+const REV_MAIS_VALIAS = "2026-06-22";
+// Data de verificação dos benefícios fiscais à coleta (PPR, donativos, ascendentes).
+const REV_BENEFICIOS = "2026-06-22";
+// Data de verificação dos coeficientes de desvalorização da moeda (Portaria 382/2025).
+const REV_COEF_MOEDA = "2026-06-23";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  INDEXANTE DOS APOIOS SOCIAIS (IAS) — base de vários limites
@@ -1534,6 +1596,203 @@ export const DIV_INCLUSAO_ENGLOBAMENTO = sv(
 );
 
 // ═══════════════════════════════════════════════════════════════════════
+//  CATEGORIA G — MAIS-VALIAS (valores mobiliários, criptoativos, imóveis)
+//  ---------------------------------------------------------------------
+//  Mais-valias mobiliárias e de criptoativos: taxa autónoma de 28% sobre o
+//  saldo positivo anual (mais-valias − menos-valias), com OPÇÃO de englobamento.
+//  Englobamento OBRIGATÓRIO de valores mobiliários quando, cumulativamente,
+//  os ativos foram detidos < 365 dias E o rendimento coletável do titular é
+//  ≥ ao limite do último escalão de IRS (86 634 € em 2026) — Art. 72.º.
+//  Criptoativos detidos ≥ 365 dias estão EXCLUÍDOS de tributação (Art. 10.º
+//  n.º 19). Mais-valias imobiliárias: só 50% do saldo é tributado, com
+//  englobamento obrigatório às taxas progressivas (Art. 43.º n.º 2).
+// ═══════════════════════════════════════════════════════════════════════
+
+/** Taxa especial (autónoma) sobre o saldo positivo de mais-valias mobiliárias. */
+export const MAIS_VALIAS_MOBILIARIAS_TAXA = sv(
+  0.28,
+  "Art. 72.º, n.º 1 CIRS — taxa especial de 28% sobre o saldo positivo de mais-valias de valores mobiliários",
+  "ativosMaisValias2026",
+  REV_MAIS_VALIAS,
+  "Aplica-se por defeito; o titular pode optar pelo englobamento (taxas progressivas de 12,5% a 48%)."
+);
+
+/** Período de detenção (dias) que separa curto/longo prazo nas mais-valias. */
+export const MAIS_VALIAS_DETENCAO_DIAS = sv(
+  365,
+  "Art. 72.º, n.º 18 CIRS — englobamento obrigatório de mais-valias de valores mobiliários detidos < 365 dias quando o titular está no último escalão",
+  "ativosMaisValias2026",
+  REV_MAIS_VALIAS
+);
+
+/** Taxa autónoma sobre mais-valias de criptoativos detidos menos de 365 dias. */
+export const CRIPTO_TAXA_CURTO_PRAZO = sv(
+  0.28,
+  "Art. 10.º n.º 1 al. k) + Art. 72.º CIRS — criptoativos detidos < 365 dias tributados a 28% (categoria G)",
+  "faciliteCripto2026",
+  REV_MAIS_VALIAS
+);
+
+/** Período de detenção (dias) a partir do qual os criptoativos ficam isentos. */
+export const CRIPTO_ISENCAO_DIAS = sv(
+  365,
+  "Art. 10.º, n.º 19 CIRS — exclusão de tributação dos ganhos de criptoativos detidos ≥ 365 dias",
+  "art10cirs",
+  REV_MAIS_VALIAS,
+  "Não se aplica a criptoativos emitidos por entidades em regime fiscal claramente mais favorável."
+);
+
+/** Fração do saldo de mais-valias imobiliárias sujeita a tributação (residentes). */
+export const MAIS_VALIAS_IMOBILIARIO_INCLUSAO = sv(
+  0.5,
+  "Art. 43.º, n.º 2 CIRS — apenas 50% do saldo de mais-valias imobiliárias é considerado (englobamento obrigatório às taxas progressivas)",
+  "art43cirs",
+  REV_MAIS_VALIAS
+);
+
+/** Prazo de reinvestimento em habitação própria e permanente (exclusão). */
+export const MAIS_VALIAS_REINVESTIMENTO_MESES = sv(
+  36,
+  "Art. 10.º, n.º 5 CIRS — reinvestimento na aquisição de HPP até 36 meses após (ou 24 meses antes) da realização, sem recurso ao crédito",
+  "cgdImoveisMaisValias",
+  REV_MAIS_VALIAS
+);
+
+// ═══════════════════════════════════════════════════════════════════════
+//  BENEFÍCIOS FISCAIS À COLETA — PPR, donativos e ascendentes
+//  ---------------------------------------------------------------------
+//  PPR (Art. 21.º EBF): dedução à coleta de 20% dos valores aplicados, com
+//  limite por idade do sujeito passivo a 1 de janeiro. Donativos (Art. 63.º
+//  EBF / Estatuto do Mecenato): 25% do donativo, limitado a 15% da coleta.
+//  Ascendentes (Art. 78.º-A CIRS): 525 € por ascendente em comunhão de
+//  habitação com rendimento ≤ pensão mínima; 635 € se existir só um.
+//  PPR e donativos contam para o limite global das deduções (Art. 78.º n.º 7);
+//  a dedução por ascendentes, tal como a de dependentes, fica fora desse limite.
+// ═══════════════════════════════════════════════════════════════════════
+
+export interface DeducaoPPR {
+  taxa: number;
+  /** Limite anual (€) por escalão de idade a 1 de janeiro. */
+  ate35: number;
+  de35a50: number;
+  mais50: number;
+}
+
+export const DEDUCAO_PPR = sv<DeducaoPPR>(
+  { taxa: 0.2, ate35: 400, de35a50: 350, mais50: 300 },
+  "Art. 21.º EBF — PPR: 20% dos valores aplicados; limite €400 (< 35), €350 (35–50), €300 (> 50)",
+  "art21EBF",
+  REV_BENEFICIOS
+);
+
+export interface DeducaoDonativos {
+  taxa: number;
+  /** Limite da dedução em fração da coleta. */
+  limiteColeta: number;
+}
+
+export const DEDUCAO_DONATIVOS = sv<DeducaoDonativos>(
+  { taxa: 0.25, limiteColeta: 0.15 },
+  "Art. 63.º EBF — donativos: dedução de 25% sobre o valor majorado, limitada a 15% da coleta",
+  "art63EBF",
+  REV_BENEFICIOS
+);
+
+export type TipoDonativo = "geral" | "social" | "ambiental" | "estado";
+
+export interface OpcaoDonativo {
+  label: string;
+  /** Fator de majoração aplicado ao donativo antes da taxa de 25%. */
+  fator: number;
+  /** true = não sujeito ao limite de 15% da coleta (donativos ao Estado). */
+  semLimite: boolean;
+}
+
+export const DONATIVOS_MAJORACOES = sv<Record<TipoDonativo, OpcaoDonativo>>(
+  {
+    geral: { label: "Geral (sem majoração)", fator: 1.0, semLimite: false },
+    social: { label: "Social / religioso (+30%)", fator: 1.3, semLimite: false },
+    ambiental: { label: "Cultural / ambiental / infância (+40%)", fator: 1.4, semLimite: false },
+    estado: { label: "Estado / autarquias (sem limite)", fator: 1.0, semLimite: true },
+  },
+  "Art. 62.º EBF — majorações dos donativos: 130% (social/religioso), 140% (cultural/ambiental/infância); donativos ao Estado sem o limite de 15% da coleta",
+  "art62EBF",
+  REV_BENEFICIOS
+);
+
+/** Dedução de pensões de alimentos pagas (Art. 83.º-A CIRS): 20%, sem limite. */
+export const DEDUCAO_PENSAO_ALIMENTOS = sv(
+  0.2,
+  "Art. 83.º-A CIRS — 20% das importâncias pagas a título de pensão de alimentos (sem limite)",
+  "art83aCirs",
+  REV_BENEFICIOS
+);
+
+/** Dedução de encargos com lares (Art. 84.º CIRS): 25%, limite 403,75 €. */
+export const DEDUCAO_LARES = sv<DeducaoLimitada>(
+  { taxa: 0.25, limite: 403.75 },
+  "Art. 84.º CIRS — 25% dos encargos com lares e apoio domiciliário (limite 403,75 €)",
+  "art84cirs",
+  REV_BENEFICIOS
+);
+
+/** Dedução à coleta por ascendente em comunhão de habitação (Art. 78.º-A CIRS). */
+export const DEDUCAO_ASCENDENTE = sv(
+  525,
+  "Art. 78.º-A CIRS — 525 € por ascendente em comunhão de habitação com rendimento não superior à pensão mínima do regime geral",
+  "art78aCirs",
+  REV_BENEFICIOS
+);
+
+/** Dedução quando exista apenas um ascendente nestas condições. */
+export const DEDUCAO_ASCENDENTE_UNICO = sv(
+  635,
+  "Art. 78.º-A CIRS — 635 € quando exista apenas um ascendente nas condições",
+  "art78aCirs",
+  REV_BENEFICIOS
+);
+
+// ═══════════════════════════════════════════════════════════════════════
+//  COEFICIENTES DE DESVALORIZAÇÃO DA MOEDA (mais-valias imobiliárias)
+//  ---------------------------------------------------------------------
+//  Art. 50.º CIRS: o valor de aquisição de imóveis é corrigido por um
+//  coeficiente oficial (Portaria anual) quando, à data da venda, tenham
+//  decorrido pelo menos 24 meses desde a aquisição — aumentando o custo e
+//  reduzindo a mais-valia tributável.
+//
+//  Tabela em vigor: Portaria 382/2025 (bens alienados em 2025). Enquanto a
+//  tabela de 2026 não for publicada (habitualmente em novembro), aplica-se
+//  esta como melhor estimativa — a app atualiza assim que a nova sair.
+//  Anos não tabelados na app (1991–1999) devolvem null (pedir valor corrigido).
+// ═══════════════════════════════════════════════════════════════════════
+
+export interface CoefMoeda {
+  /** Ano da tabela (ano de alienação a que respeita). */
+  anoTabela: number;
+  /** Coeficiente por ano de aquisição. */
+  porAno: Record<number, number>;
+}
+
+export const COEF_DESVALORIZACAO_MOEDA = sv<CoefMoeda>(
+  {
+    anoTabela: 2025,
+    porAno: {
+      1990: 2.69,
+      2000: 1.67, 2001: 1.55, 2002: 1.49, 2003: 1.45, 2004: 1.43, 2005: 1.4,
+      2006: 1.34, 2007: 1.32, 2008: 1.28, 2009: 1.3, 2010: 1.28, 2011: 1.24,
+      2012: 1.2, 2013: 1.2, 2014: 1.2, 2015: 1.2,
+      2016: 1.19, 2017: 1.18,
+      2018: 1.17, 2019: 1.17, 2020: 1.17,
+      2021: 1.16, 2022: 1.06, 2023: 1.02, 2024: 1.0,
+    },
+  },
+  "Portaria 382/2025 — coeficientes de desvalorização da moeda (Art. 50.º CIRS); aplicáveis se decorridos ≥ 24 meses desde a aquisição",
+  "portaria382_2025",
+  REV_COEF_MOEDA,
+  "Tabela de 2025 usada como estimativa para 2026 até à publicação da nova portaria."
+);
+
+// ═══════════════════════════════════════════════════════════════════════
 //  SALÁRIO MÍNIMO NACIONAL 2026
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -2127,6 +2386,50 @@ export function assertFiscalDataIntegrity(): void {
   [IRC_TAXA_GERAL, IRC_TAXA_PME, DERRAMA_MAX, DIVIDENDOS_TAXA].forEach((p) => {
     if (!isRate(p.value)) erros.push(`Taxa inválida: ${p.legalBasis}.`);
   });
+
+  // Mais-valias (categoria G): taxas em [0,1]; frações em [0,1]; prazos positivos.
+  [MAIS_VALIAS_MOBILIARIAS_TAXA, CRIPTO_TAXA_CURTO_PRAZO, MAIS_VALIAS_IMOBILIARIO_INCLUSAO].forEach((p) => {
+    if (!isRate(p.value)) erros.push(`Parâmetro de mais-valias inválido: ${p.legalBasis}.`);
+  });
+  if (!(MAIS_VALIAS_DETENCAO_DIAS.value > 0)) erros.push("Período de detenção de mais-valias não positivo.");
+  if (!(CRIPTO_ISENCAO_DIAS.value > 0)) erros.push("Período de isenção de criptoativos não positivo.");
+  if (!(MAIS_VALIAS_REINVESTIMENTO_MESES.value > 0)) erros.push("Prazo de reinvestimento de mais-valias não positivo.");
+
+  // Benefícios fiscais à coleta: PPR, donativos e ascendentes.
+  if (!isRate(DEDUCAO_PPR.value.taxa)) erros.push("Taxa de dedução PPR inválida.");
+  if (!(DEDUCAO_PPR.value.ate35 >= DEDUCAO_PPR.value.de35a50 && DEDUCAO_PPR.value.de35a50 >= DEDUCAO_PPR.value.mais50 && DEDUCAO_PPR.value.mais50 > 0)) {
+    erros.push("Limites do PPR por idade inválidos ou não decrescentes.");
+  }
+  if (!isRate(DEDUCAO_DONATIVOS.value.taxa) || !isRate(DEDUCAO_DONATIVOS.value.limiteColeta)) {
+    erros.push("Parâmetros de dedução de donativos fora de [0,1].");
+  }
+  (Object.keys(DONATIVOS_MAJORACOES.value) as TipoDonativo[]).forEach((k) => {
+    if (!(DONATIVOS_MAJORACOES.value[k].fator >= 1)) erros.push(`Fator de majoração de donativo inválido: ${k}.`);
+  });
+  if (!(DEDUCAO_ASCENDENTE.value > 0)) erros.push("Dedução por ascendente não positiva.");
+  if (!(DEDUCAO_ASCENDENTE_UNICO.value >= DEDUCAO_ASCENDENTE.value)) {
+    erros.push("Dedução por ascendente único deveria ser ≥ à dedução por ascendente.");
+  }
+  if (!isRate(DEDUCAO_PENSAO_ALIMENTOS.value)) erros.push("Taxa de dedução de pensão de alimentos inválida.");
+  if (!isRate(DEDUCAO_LARES.value.taxa) || !(DEDUCAO_LARES.value.limite > 0)) {
+    erros.push("Parâmetros de dedução de lares inválidos.");
+  }
+
+  // Coeficientes de desvalorização da moeda: todos ≥ 1 (não são estritamente
+  // monótonos — p. ex. 2009 sobe face a 2008 por deflação). O ano mais recente
+  // tabelado deve aproximar-se de 1 (sem correção relevante).
+  {
+    const t = COEF_DESVALORIZACAO_MOEDA.value.porAno;
+    const anos = Object.keys(t).map(Number).sort((a, b) => a - b);
+    if (anos.length === 0) erros.push("Tabela de coeficientes de desvalorização vazia.");
+    anos.forEach((a) => {
+      if (!(t[a] >= 1)) erros.push(`Coeficiente de desvalorização inválido (< 1) em ${a}.`);
+    });
+    const maisRecente = anos[anos.length - 1];
+    if (anos.length > 0 && Math.abs(t[maisRecente] - 1) > 0.05) {
+      erros.push("Coeficiente do ano mais recente deveria aproximar-se de 1.");
+    }
+  }
   if (!(IRC_TAXA_PME.value < IRC_TAXA_GERAL.value)) {
     erros.push("Taxa PME de IRC deveria ser inferior à geral.");
   }
@@ -2409,6 +2712,22 @@ export function assertFiscalDataIntegrity(): void {
     IS_TAXA_AQUISICAO,
     // Englobamento dividendos
     DIV_INCLUSAO_ENGLOBAMENTO,
+    // Mais-valias (categoria G)
+    MAIS_VALIAS_MOBILIARIAS_TAXA,
+    MAIS_VALIAS_DETENCAO_DIAS,
+    CRIPTO_TAXA_CURTO_PRAZO,
+    CRIPTO_ISENCAO_DIAS,
+    MAIS_VALIAS_IMOBILIARIO_INCLUSAO,
+    MAIS_VALIAS_REINVESTIMENTO_MESES,
+    // Benefícios fiscais à coleta
+    DEDUCAO_PPR,
+    DEDUCAO_DONATIVOS,
+    DONATIVOS_MAJORACOES,
+    DEDUCAO_ASCENDENTE,
+    DEDUCAO_ASCENDENTE_UNICO,
+    DEDUCAO_PENSAO_ALIMENTOS,
+    DEDUCAO_LARES,
+    COEF_DESVALORIZACAO_MOEDA,
     // SMN
     SMN,
   ];
