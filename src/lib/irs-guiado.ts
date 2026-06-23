@@ -275,6 +275,33 @@ export function resumoEstrangeiros(entradas: EntradaEstrangeiro[]): { rendimento
   );
 }
 
+// ─── Imóveis arrendados (Anexo F) ───────────────────────────────────────────
+export interface PropriedadeArrendada {
+  id: string;
+  /** Artigo matricial. */
+  artigo: string;
+  localizacao: string;
+  /** Percentagem de propriedade (0–100). */
+  percentagem: number;
+  renda: number;
+  despesas: number;
+}
+
+export function propriedadeVazia(): PropriedadeArrendada {
+  return { id: Math.random().toString(36).slice(2), artigo: "", localizacao: "", percentagem: 100, renda: 0, despesas: 0 };
+}
+
+/** Agrega rendas e despesas das propriedades, escaladas pela % de propriedade. */
+export function resumoPrediais(props: PropriedadeArrendada[]): { renda: number; despesas: number } {
+  return props.reduce(
+    (s, p) => {
+      const f = Math.min(1, Math.max(0, (p.percentagem || 0) / 100));
+      return { renda: s.renda + (p.renda || 0) * f, despesas: s.despesas + (p.despesas || 0) * f };
+    },
+    { renda: 0, despesas: 0 }
+  );
+}
+
 // ─── Estado normalizado da declaração ───────────────────────────────────────
 export interface EstadoDeclaracao {
   contribuinte: Contribuinte;
@@ -303,8 +330,7 @@ export interface EstadoDeclaracao {
   investimentos: { saldo: number; algumCurtoPrazo: boolean; englobar: boolean };
   cripto: { curto: number; longo: number; englobar: boolean };
   imoveis: {
-    renda: number;
-    despesas: number;
+    propriedades: PropriedadeArrendada[];
     habitacao: boolean;
     duracao: DuracaoArrendamento;
     retencoes: number;
@@ -391,14 +417,19 @@ export function construirDeclaracaoInput(e: EstadoDeclaracao): DeclaracaoInput {
         }
       : undefined,
     prediais: ativo("imoveis")
-      ? {
-          rendaAnual: e.imoveis.renda,
-          despesas: e.imoveis.despesas,
-          habitacao: e.imoveis.habitacao,
-          duracao: e.imoveis.duracao,
-          retencoes: e.imoveis.retencoes,
-          englobar: e.imoveis.englobar,
-        }
+      ? (() => {
+          const r = resumoPrediais(e.imoveis.propriedades);
+          return r.renda > 0
+            ? {
+                rendaAnual: r.renda,
+                despesas: r.despesas,
+                habitacao: e.imoveis.habitacao,
+                duracao: e.imoveis.duracao,
+                retencoes: e.imoveis.retencoes,
+                englobar: e.imoveis.englobar,
+              }
+            : undefined;
+        })()
       : undefined,
     investimentos: ativo("investimentos")
       ? { saldo: e.investimentos.saldo, algumCurtoPrazo: e.investimentos.algumCurtoPrazo, englobar: e.investimentos.englobar }
@@ -531,7 +562,7 @@ export function estadoDoModulo(id: RendimentoId, e: EstadoDeclaracao): EstadoMod
     case "cripto":
       return e.cripto.curto > 0 || e.cripto.longo > 0 ? "concluido" : "nao-iniciado";
     case "imoveis":
-      return e.imoveis.renda > 0 ? "concluido" : "nao-iniciado";
+      return resumoPrediais(e.imoveis.propriedades).renda > 0 ? "concluido" : "nao-iniciado";
     case "imoveisVenda":
       return e.imoveisVenda.valorRealizacao > 0 && e.imoveisVenda.valorAquisicao > 0
         ? "concluido"

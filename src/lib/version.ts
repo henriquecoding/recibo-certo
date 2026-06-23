@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.64.0";
+export const APP_VERSION = "1.65.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,18 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.65.0",
+    data: "2026-06-23",
+    titulo: "Simulador de IRS mais completo: identificação, família e mais deduções",
+    itens: [
+      "Identificação completa do contribuinte (nome, NIF com validação, data de nascimento, residência fiscal e estado civil) e dependentes/ascendentes individuais — com classificação automática de idade, guarda partilhada e validação de NIF.",
+      "Módulos de rendimento mais detalhados: salários com Segurança Social e várias entidades, pensões por tipo, capitais separados (dividendos, juros, certificados, depósitos) e venda de imóveis com despesas decompostas (IMT, escritura, obras, comissão).",
+      "Imóveis arrendados (Anexo F) declarados imóvel a imóvel, com artigo matricial, localização e percentagem de propriedade.",
+      "Segurança Social do trabalho independente (Anexo SS) com isenções do 1.º ano e por acumulação.",
+      "Novas deduções: pensões de alimentos (20%) e lares (25%), além de PPR e donativos com majorações.",
+    ],
+  },
   {
     version: "1.64.0",
     data: "2026-06-23",

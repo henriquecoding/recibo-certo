@@ -15,6 +15,8 @@ import {
   coeficienteDesvalorizacao,
   resumoEstrangeiros,
   entradaEstrangeiroVazia,
+  resumoPrediais,
+  propriedadeVazia,
   dependenteVazio,
   ascendenteVazio,
   validarNIF,
@@ -29,6 +31,7 @@ import {
   type OperacaoAtivo,
   type EntradaEstrangeiro,
   type TipoRendimentoEstrangeiro,
+  type PropriedadeArrendada,
   type Contribuinte,
   type Dependente,
   type AscendenteDetalhe,
@@ -155,9 +158,8 @@ export default function SimuladorPage() {
   const [opsCripto, setOpsCripto] = useState<OperacaoAtivo[]>([]);
   const [criptoEnglobar, setCriptoEnglobar] = useState(false);
 
-  // Imóveis (rendas)
-  const [renda, setRenda] = useState("");
-  const [rendaDespesas, setRendaDespesas] = useState("");
+  // Imóveis (rendas — Anexo F, várias propriedades)
+  const [propriedades, setPropriedades] = useState<PropriedadeArrendada[]>([]);
   const [rendaHab, setRendaHab] = useState(true);
   const [rendaDuracao, setRendaDuracao] = useState<DuracaoArrendamento>("curto");
   const [rendaRet, setRendaRet] = useState("");
@@ -201,7 +203,7 @@ export default function SimuladorPage() {
     atividade: atividade.label, indBruto, indRegime, indDespesas, indRet, indAno, indJovem, indIsencaoSS, indAcumula,
     dividendos, juros, certificados, depositos, capRet, capEnglobar,
     opsInv, invEnglobar, opsCripto, criptoEnglobar,
-    renda, rendaDespesas, rendaHab, rendaDuracao, rendaRet, rendaEnglobar,
+    propriedades, rendaHab, rendaDuracao, rendaRet, rendaEnglobar,
     vendaRealizacao, vendaAquisicao, vendaImt, vendaEscritura, vendaObras, vendaComissao, vendaDataAq, vendaDataVenda, vendaReinveste, vendaReinvestido,
     estEntradas,
     saude, educacao, gerais, rendasDed, lares, pensaoAlimentos, pprValor, pprIdade, donativoValor, donativoTipo, pagamentosPorConta,
@@ -230,7 +232,7 @@ export default function SimuladorPage() {
         set(s.dividendos, setDividendos); set(s.juros, setJuros); set(s.certificados, setCertificados); set(s.depositos, setDepositos); set(s.capRet, setCapRet); set(s.capEnglobar, setCapEnglobar);
         set(s.opsInv, setOpsInv); set(s.invEnglobar, setInvEnglobar); set(s.opsCripto, setOpsCripto); set(s.criptoEnglobar, setCriptoEnglobar);
         set(s.lares, setLares); set(s.pensaoAlimentos, setPensaoAlimentos);
-        set(s.renda, setRenda); set(s.rendaDespesas, setRendaDespesas); set(s.rendaHab, setRendaHab);
+        set(s.propriedades, setPropriedades); set(s.rendaHab, setRendaHab);
         set(s.rendaDuracao, setRendaDuracao); set(s.rendaRet, setRendaRet); set(s.rendaEnglobar, setRendaEnglobar);
         set(s.vendaRealizacao, setVendaRealizacao); set(s.vendaAquisicao, setVendaAquisicao);
         set(s.vendaImt, setVendaImt); set(s.vendaEscritura, setVendaEscritura); set(s.vendaObras, setVendaObras); set(s.vendaComissao, setVendaComissao);
@@ -315,8 +317,7 @@ export default function SimuladorPage() {
       investimentos: { saldo: Math.max(0, resInv.saldo), algumCurtoPrazo: resInv.algumCurtoPrazo, englobar: invEnglobar },
       cripto: { curto: Math.max(0, resCripto.curto), longo: resCripto.longo, englobar: criptoEnglobar },
       imoveis: {
-        renda: n(renda),
-        despesas: n(rendaDespesas),
+        propriedades,
         habitacao: rendaHab,
         duracao: rendaDuracao,
         retencoes: n(rendaRet),
@@ -344,7 +345,7 @@ export default function SimuladorPage() {
       dividendos, juros, certificados, depositos, capRet, capEnglobar,
       resInv, invEnglobar,
       resCripto, criptoEnglobar,
-      renda, rendaDespesas, rendaHab, rendaDuracao, rendaRet, rendaEnglobar,
+      propriedades, rendaHab, rendaDuracao, rendaRet, rendaEnglobar,
       vendaRealizacao, vendaAquisicao, vendaImt, vendaEscritura, vendaObras, vendaComissao, coefImovel, vendaReinveste, vendaReinvestido,
       estEntradas,
       saude, educacao, gerais, rendasDed, lares, pensaoAlimentos, pprValor, pprIdade, donativoValor, donativoTipo, pagamentosPorConta,
@@ -595,11 +596,17 @@ export default function SimuladorPage() {
 
               {ativo("imoveis") && (
                 <ModuloCard id="imoveis">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Campo id="renda" label="Rendas brutas anuais (€)" value={renda} onChange={setRenda} step={500} />
-                    <Campo id="renda-despesas" label="Despesas dedutíveis (€)" value={rendaDespesas} onChange={setRendaDespesas} step={100}
-                      tooltip="Conservação, IMI, imposto do selo, condomínio, seguros (Art. 41.º). Não inclui mobiliário nem juros." />
-                  </div>
+                  <p className="text-sm text-stone-500 dark:text-stone-400">Adiciona cada imóvel arrendado. A renda é considerada na proporção da tua percentagem de propriedade.</p>
+                  <EditorPropriedades propriedades={propriedades} setPropriedades={setPropriedades} />
+                  {propriedades.length > 0 && (() => {
+                    const r = resumoPrediais(propriedades);
+                    return (
+                      <div className="grid grid-cols-2 gap-2">
+                        <ResumoMini titulo="Rendas (tua quota)" valor={r.renda} />
+                        <ResumoMini titulo="Despesas dedutíveis" valor={r.despesas} />
+                      </div>
+                    );
+                  })()}
                   <SeletorCartoes
                     label="Tipo de arrendamento"
                     opcoes={[
@@ -936,6 +943,59 @@ function ResumoMini({ titulo, valor, sub, alerta = false }: { titulo: string; va
       <div className={`text-[11px] font-medium ${alerta && valor > 0 ? "text-alert-text" : "text-stone-500 dark:text-stone-400"}`}>{titulo}</div>
       <div className={`text-sm font-semibold tabular-nums ${alerta && valor > 0 ? "text-alert-text" : "text-stone-800 dark:text-stone-100"}`}>{fmt(valor)}</div>
       {sub && <div className="text-[10px] text-stone-400">{sub}</div>}
+    </div>
+  );
+}
+
+function EditorPropriedades({ propriedades, setPropriedades }: { propriedades: PropriedadeArrendada[]; setPropriedades: (p: PropriedadeArrendada[]) => void }) {
+  const upd = (id: string, campo: keyof PropriedadeArrendada, valor: string) =>
+    setPropriedades(
+      propriedades.map((p) =>
+        p.id === id
+          ? { ...p, [campo]: campo === "artigo" || campo === "localizacao" ? valor : parseFloat(valor.replace(",", ".")) || 0 }
+          : p
+      )
+    );
+  return (
+    <div className="space-y-3">
+      {propriedades.length === 0 && (
+        <p className="rounded-xl border border-dashed border-stone-200 bg-stone-50 px-3 py-4 text-center text-xs text-stone-400 dark:border-stone-700 dark:bg-stone-800/40">
+          Sem imóveis. Adiciona cada imóvel arrendado.
+        </p>
+      )}
+      {propriedades.map((p, i) => (
+        <div key={p.id} className="rounded-2xl border border-stone-200 bg-stone-50 p-3 dark:border-stone-700 dark:bg-stone-800/40">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Imóvel {i + 1}</span>
+            <button type="button" onClick={() => setPropriedades(propriedades.filter((x) => x.id !== p.id))} aria-label="Remover" className="flex-shrink-0 text-stone-400 transition-colors hover:text-red-500"><Trash size={15} /></button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">Artigo matricial</label>
+              <input value={p.artigo} onChange={(e) => upd(p.id, "artigo", e.target.value)} placeholder="ex.: U-1234" className={campoCls} />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">Localização</label>
+              <input value={p.localizacao} onChange={(e) => upd(p.id, "localizacao", e.target.value)} placeholder="Concelho" className={campoCls} />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">% propriedade</label>
+              <input type="number" min={0} max={100} step={5} value={p.percentagem} onChange={(e) => upd(p.id, "percentagem", e.target.value)} className={campoCls} />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">Rendas anuais (€)</label>
+              <input type="number" inputMode="decimal" min={0} step={500} value={p.renda || ""} onChange={(e) => upd(p.id, "renda", e.target.value)} placeholder="0" className={campoCls} />
+            </div>
+            <div className="col-span-2">
+              <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">Despesas dedutíveis (€)</label>
+              <input type="number" inputMode="decimal" min={0} step={100} value={p.despesas || ""} onChange={(e) => upd(p.id, "despesas", e.target.value)} placeholder="0" className={campoCls} />
+            </div>
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={() => setPropriedades([...propriedades, propriedadeVazia()])} className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-stone-300 py-2.5 text-sm font-medium text-stone-500 transition-colors hover:border-brand hover:text-brand dark:border-stone-600 dark:text-stone-400">
+        <Plus size={13} /> Adicionar imóvel
+      </button>
     </div>
   );
 }
