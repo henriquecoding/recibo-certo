@@ -45,8 +45,8 @@ describe("projetarDataLimite", () => {
 // ── prazoSS ──────────────────────────────────────────────────────────────────
 
 describe("prazoSS", () => {
-  it("1.º trimestre → 20 de outubro do mesmo ano", () => {
-    expect(prazoSS(0, 2026).toISOString().slice(0, 10)).toBe("2026-10-20");
+  it("1.º trimestre → 20 de julho do mesmo ano", () => {
+    expect(prazoSS(0, 2026).toISOString().slice(0, 10)).toBe("2026-07-20");
   });
 
   it("2.º trimestre → 20 de outubro do mesmo ano", () => {

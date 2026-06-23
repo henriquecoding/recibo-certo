@@ -44,11 +44,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default:
-      "Calculadora de Recibos Verdes, Salário Líquido e Simulador de Empresa 2026 | ReciboCerto",
+      "Simulador de IRS, Recibos Verdes, Salário e Empresa 2026 | ReciboCerto",
     template: "%s | ReciboCerto",
   },
   description:
-    "Calcula recibos verdes, salário líquido e simula criar empresa em Portugal. IRS, Segurança Social e IVA com taxas de 2026 verificadas com fonte legal. Guias fiscais, ferramentas e quiz. Grátis, sem registo.",
+    "O copiloto fiscal de quem trabalha em Portugal: simula o IRS anual, recibos verdes, salário líquido e abrir empresa. IRS, Segurança Social e IVA com taxas de 2026 verificadas com fonte legal. Guias, ferramentas e quiz. Grátis, sem registo.",
   keywords: [
     "calculadora recibos verdes 2026",
     "calcular salário líquido 2026",
@@ -86,16 +86,16 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: "ReciboCerto",
     title:
-      "ReciboCerto — Calculadora de Recibos Verdes, Salário e Empresa 2026",
+      "ReciboCerto — Simuladores de IRS, Recibos Verdes, Salário e Empresa 2026",
     description:
-      "Calcula recibos verdes, salário líquido e simula criar empresa em Portugal. IRS, Segurança Social e IVA em segundos. Guias, ferramentas e quiz fiscal. Taxas 2026 verificadas. Grátis.",
+      "O copiloto fiscal de quem trabalha em Portugal. Simula IRS, recibos verdes, salário líquido e empresa — Segurança Social e IVA com taxas 2026 verificadas. Grátis.",
   },
   twitter: {
     card: "summary_large_image",
     title:
-      "ReciboCerto — Calculadora de Recibos Verdes, Salário e Empresa 2026",
+      "ReciboCerto — Simuladores de IRS, Recibos Verdes, Salário e Empresa 2026",
     description:
-      "Calcula recibos verdes, salário líquido e simula criar empresa. IRS, SS e IVA com taxas 2026. Guias e ferramentas grátis.",
+      "Copiloto fiscal em Portugal: simula IRS, recibos verdes, salário líquido e empresa. IRS, SS e IVA com taxas 2026. Guias e ferramentas grátis.",
   },
   robots: {
     index: true,

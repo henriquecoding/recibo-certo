@@ -46,19 +46,21 @@ export const GUIA_SLUGS = [
 
 /** Slugs das ferramentas em `src/app/ferramentas/<slug>`. */
 export const FERRAMENTA_SLUGS = [
-  "ato-isolado",
-  "regime-simplificado",
-  "classificar-atividade",
-  "payout-mor",
-  "recibo-vencimento",
-  "auditoria-recibo",
+  "simulador-irs",
   "simulador-empresa",
+  "recibo-vencimento",
+  "regime-simplificado",
+  "ato-isolado",
+  "classificar-atividade",
+  "auditoria-recibo",
   "mapa-contabilistas",
+  "payout-mor",
 ] as const;
 
 export const PUBLIC_ROUTES: PublicRoute[] = [
   { path: "/",            changeFrequency: "weekly",  priority: 1.0 },
   { path: "/precos",      changeFrequency: "monthly", priority: 0.8 },
+  { path: "/investidores", changeFrequency: "monthly", priority: 0.6 },
   { path: "/quiz-fiscal", changeFrequency: "monthly", priority: 0.7 },
   { path: "/guias",       changeFrequency: "monthly", priority: 0.8 },
   ...GUIA_SLUGS.map((slug) => ({

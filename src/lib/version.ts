@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.73.0";
+export const APP_VERSION = "1.74.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.74.0",
+    data: "2026-06-23",
+    titulo: "Mais fácil de encontrar nas pesquisas",
+    itens: [
+      "Melhorámos a forma como o ReciboCerto aparece no Google e no Bing: passa a refletir todos os simuladores — IRS, recibos verdes, salário e empresa — e não apenas a calculadora de recibos verdes.",
+      "A nova página do Simulador de IRS e a página de Investidores entram no mapa do site (sitemap), para serem indexadas pelos motores de busca.",
+      "Correção interna na data-limite de pagamento da Segurança Social do 1.º trimestre nos testes (o painel já apresentava a data correta).",
+    ],
+  },
   {
     version: "1.73.0",
     data: "2026-06-23",
