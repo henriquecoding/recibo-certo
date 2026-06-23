@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.74.0";
+export const APP_VERSION = "1.75.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.75.0",
+    data: "2026-06-23",
+    titulo: "Pesquisa repensada no telemóvel e textos mais claros",
+    itens: [
+      "No telemóvel e tablet, a pesquisa passa a ter o campo de escrita em baixo (na zona do polegar) e os resultados a abrir para cima, sempre acima do teclado — adeus conteúdo escondido pelo teclado.",
+      "Corrigimos a descrição do Simulador de IRS: simular é grátis; exportar em PDF/CSV e guardar cenários na nuvem fazem parte do Pro (no plano grátis podes guardar 1 cenário no dispositivo para experimentar).",
+    ],
+  },
   {
     version: "1.74.0",
     data: "2026-06-23",

@@ -146,6 +146,38 @@ export default function BuscaOverlay() {
   const [filtro, setFiltro] = useState("all");
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // ── Mobile: input na zona do polegar (em baixo) + conteúdo a expandir para
+  // cima, sempre acima do teclado. Acompanha o visualViewport (iOS/Android).
+  const [isMobile, setIsMobile] = useState(false);
+  const [tecladoInset, setTecladoInset] = useState(0);
+  const [viewportH, setViewportH] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 639px)");
+    const sync = () => setIsMobile(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    if (!aberto || typeof window === "undefined") return;
+    const vv = window.visualViewport;
+    const update = () => {
+      if (!vv) { setTecladoInset(0); setViewportH(window.innerHeight); return; }
+      setTecladoInset(Math.max(0, window.innerHeight - vv.height - vv.offsetTop));
+      setViewportH(vv.height);
+    };
+    update();
+    vv?.addEventListener("resize", update);
+    vv?.addEventListener("scroll", update);
+    return () => {
+      vv?.removeEventListener("resize", update);
+      vv?.removeEventListener("scroll", update);
+    };
+  }, [aberto]);
+
   const trocarCategoria = useCallback((c: CategoriaBusca) => { setCategoria(c); setFiltro("all"); }, []);
 
   const abrir = useCallback(() => {
@@ -240,10 +272,11 @@ export default function BuscaOverlay() {
               animate={{ y: 0, scale: 1 }}
               exit={{ y: 24, scale: 0.97 }}
               transition={{ type: "spring", damping: 32, stiffness: 340 }}
+              style={isMobile ? { marginBottom: tecladoInset, maxHeight: viewportH ? viewportH - 12 : undefined, transition: "margin-bottom 0.22s cubic-bezier(0.16,1,0.3,1)" } : undefined}
               className="pointer-events-auto flex max-h-[100dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border border-stone-200/80 bg-white shadow-float ring-1 ring-black/5 dark:border-stone-800 dark:bg-stone-900 dark:ring-white/5 sm:max-h-[82dvh] sm:rounded-2xl"
             >
-              {/* ── Input ── */}
-              <div className="order-1 flex shrink-0 items-center gap-3 border-b border-stone-100 px-5 py-4 dark:border-stone-800">
+              {/* ── Input ── (em baixo no telemóvel: zona do polegar, acima do teclado) */}
+              <div className="order-4 flex shrink-0 items-center gap-3 border-stone-100 px-5 py-4 dark:border-stone-800 sm:order-1 sm:border-b">
                 <Search size={20} className="flex-shrink-0 text-brand" />
                 <input
                   ref={inputRef}
@@ -273,7 +306,7 @@ export default function BuscaOverlay() {
               </div>
 
               {/* ── Category tabs ── */}
-              <div className="order-2 shrink-0 border-b border-stone-100 px-4 py-3 dark:border-stone-800">
+              <div className="order-3 shrink-0 border-b border-stone-100 px-4 py-3 dark:border-stone-800 sm:order-2">
                 <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {CATEGORIAS.map((c) => {
                     const ativo = categoria === c.id;
@@ -305,7 +338,7 @@ export default function BuscaOverlay() {
 
               {/* ── Filter chips (visible when searching or browsing results) ── */}
               {(temQuery || categoria === "atividades") && (
-                <div className="order-2 flex shrink-0 items-center gap-1.5 overflow-x-auto border-b border-stone-100 px-4 py-2 dark:border-stone-800 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
+                <div className="order-2 flex shrink-0 items-center gap-1.5 overflow-x-auto border-b border-stone-100 px-4 py-2 dark:border-stone-800 sm:order-3 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
                   <span className="flex-shrink-0 pr-0.5 text-[10px] font-bold uppercase tracking-wider text-stone-300">Filtrar</span>
                   {FILTROS.map((f) => {
                     const on = filtro === f.id;
@@ -334,8 +367,8 @@ export default function BuscaOverlay() {
                 </div>
               )}
 
-              {/* ── Results / Default state ── */}
-              <div className="order-3 min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              {/* ── Results / Default state ── (em cima no telemóvel; cresce para cima) */}
+              <div className="order-1 min-h-0 flex-1 overflow-y-auto overscroll-contain sm:order-4">
 
                 {/* ── Default state (no query): quick access ── */}
                 {!temQuery && categoria === "ferramentas" && (
@@ -531,11 +564,11 @@ export default function BuscaOverlay() {
                 )}
               </div>
 
-              {/* safe-area mobile spacer */}
-              <div className="order-4 h-[env(safe-area-inset-bottom)] sm:hidden" aria-hidden />
+              {/* safe-area mobile spacer (recolhe quando o teclado está aberto) */}
+              <div className="order-5 shrink-0 sm:hidden" style={{ height: tecladoInset > 0 ? 0 : "env(safe-area-inset-bottom)" }} aria-hidden />
 
               {/* ── Footer ── */}
-              <div className="order-5 hidden shrink-0 items-center justify-between border-t border-stone-100 px-5 py-2.5 text-[11px] text-stone-400 dark:border-stone-800 sm:flex">
+              <div className="order-6 hidden shrink-0 items-center justify-between border-t border-stone-100 px-5 py-2.5 text-[11px] text-stone-400 dark:border-stone-800 sm:order-5 sm:flex">
                 <span>Enter abre o primeiro resultado · Esc fecha</span>
                 {temQuery && <span className="font-semibold text-brand-dark dark:text-brand">{totalResultados} resultado{totalResultados !== 1 ? "s" : ""}</span>}
               </div>
