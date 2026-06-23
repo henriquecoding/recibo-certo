@@ -22,7 +22,92 @@ import {
   DONATIVOS_MAJORACOES,
   COEF_DESVALORIZACAO_MOEDA,
   ESCALOES_IRS,
+  FISCAL_YEAR,
 } from "./fiscal-data";
+
+// ─── Identificação / agregado familiar ──────────────────────────────────────
+export type ResidenciaFiscal = "continente" | "madeira" | "acores" | "estrangeiro";
+export type EstadoCivil = "solteiro" | "casado" | "uniao" | "divorciado" | "viuvo";
+
+export const META_RESIDENCIA: Record<ResidenciaFiscal, string> = {
+  continente: "Continente",
+  madeira: "Madeira",
+  acores: "Açores",
+  estrangeiro: "Não residente",
+};
+
+export const META_ESTADO_CIVIL: Record<EstadoCivil, string> = {
+  solteiro: "Solteiro(a)",
+  casado: "Casado(a)",
+  uniao: "União de facto",
+  divorciado: "Divorciado(a)",
+  viuvo: "Viúvo(a)",
+};
+
+export interface Contribuinte {
+  nome: string;
+  nif: string;
+  nascimento: string;
+  residencia: ResidenciaFiscal;
+  estadoCivil: EstadoCivil;
+}
+
+export interface Dependente {
+  id: string;
+  nome: string;
+  nif: string;
+  nascimento: string;
+  deficiente: boolean;
+  /** Percentagem de guarda (0–100). 100 = guarda exclusiva. */
+  guarda: number;
+}
+
+export interface AscendenteDetalhe {
+  id: string;
+  nome: string;
+  nif: string;
+  /** Vive em comunhão de habitação com o sujeito passivo. */
+  comunhao: boolean;
+  /** Rendimento não superior à pensão mínima do regime geral. */
+  rendimentoBaixo: boolean;
+}
+
+export function dependenteVazio(): Dependente {
+  return { id: Math.random().toString(36).slice(2), nome: "", nif: "", nascimento: "", deficiente: false, guarda: 100 };
+}
+
+export function ascendenteVazio(): AscendenteDetalhe {
+  return { id: Math.random().toString(36).slice(2), nome: "", nif: "", comunhao: true, rendimentoBaixo: true };
+}
+
+/**
+ * Valida um NIF português (9 dígitos) pelo dígito de controlo (módulo 11).
+ * Vazio é considerado válido (campo opcional); só sinaliza NIF preenchido errado.
+ */
+export function validarNIF(nif: string): boolean {
+  const s = (nif || "").replace(/\s/g, "");
+  if (s === "") return true;
+  if (!/^\d{9}$/.test(s)) return false;
+  let soma = 0;
+  for (let i = 0; i < 8; i++) soma += Number(s[i]) * (9 - i);
+  const resto = soma % 11;
+  const controlo = resto < 2 ? 0 : 11 - resto;
+  return controlo === Number(s[8]);
+}
+
+/** Idade (em anos) no fim do ano fiscal a partir da data de nascimento ISO. */
+export function idadeNoAnoFiscal(nascimento: string): number | null {
+  if (!nascimento) return null;
+  const ano = Number(nascimento.slice(0, 4));
+  if (!ano || ano < 1900) return null;
+  return FISCAL_YEAR - ano;
+}
+
+/** Dependente classificado como "até 3 anos" (bebé) para a dedução majorada. */
+export function dependenteAte3(d: Dependente): boolean {
+  const idade = idadeNoAnoFiscal(d.nascimento);
+  return idade !== null && idade <= 3;
+}
 import { fmt, pct } from "./format";
 
 // ─── Categorias de rendimento (triagem) ─────────────────────────────────────
@@ -192,9 +277,10 @@ export function resumoEstrangeiros(entradas: EntradaEstrangeiro[]): { rendimento
 
 // ─── Estado normalizado da declaração ───────────────────────────────────────
 export interface EstadoDeclaracao {
+  contribuinte: Contribuinte;
   conjunta: boolean;
-  dependentes: { normais: number; bebe: number; deficientes: number };
-  ascendentes: number;
+  dependentes: Dependente[];
+  ascendentes: AscendenteDetalhe[];
   deficiencia: boolean;
   ifici: boolean;
   ativos: RendimentoId[];
@@ -265,15 +351,17 @@ export function coeficienteDesvalorizacao(anoAquisicao: number): number | null {
 /** Mapeia o estado do formulário para o input do motor de cálculo. */
 export function construirDeclaracaoInput(e: EstadoDeclaracao): DeclaracaoInput {
   const ativo = (id: RendimentoId) => e.ativos.includes(id);
+  const ascendentesQualificados = e.ascendentes.filter((a) => a.comunhao && a.rendimentoBaixo).length;
   return {
     conjunta: e.conjunta,
     deficiencia: e.deficiencia,
     ifici: e.ifici,
-    dependentesDetalhe: {
-      normais: e.dependentes.normais,
-      bebe: e.dependentes.bebe,
-      deficientes: e.dependentes.deficientes,
-    },
+    dependentesLista: e.dependentes.map((d) => ({
+      ate3: dependenteAte3(d),
+      deficiente: d.deficiente,
+      guarda: Math.min(1, Math.max(0, (d.guarda || 0) / 100)),
+    })),
+    ascendentes: ascendentesQualificados,
     salarios: ativo("salarios") ? { bruto: e.salarios.bruto, retencoes: e.salarios.retencoes } : undefined,
     pensoes: ativo("pensoes") ? { bruto: e.pensoes.bruto, retencoes: e.pensoes.retencoes } : undefined,
     independente: ativo("independente")
@@ -333,7 +421,6 @@ export function construirDeclaracaoInput(e: EstadoDeclaracao): DeclaracaoInput {
       gerais: e.deducoes.gerais,
       rendas: e.deducoes.rendas,
     },
-    ascendentes: e.ascendentes,
     ppr: e.ppr.valor > 0 ? { valor: e.ppr.valor, escalaoIdade: e.ppr.escalaoIdade } : undefined,
     donativos:
       e.donativos.valor > 0
@@ -499,6 +586,20 @@ const LIMITE_ULTIMO_ESCALAO =
 export function validarDeclaracao(e: EstadoDeclaracao, coletavelEstimado: number): Validacao[] {
   const r: Validacao[] = [];
   const ativo = (id: RendimentoId) => e.ativos.includes(id);
+
+  // ── Erros críticos: identificação ──
+  if (!validarNIF(e.contribuinte.nif)) {
+    r.push({ id: "nif-contribuinte", nivel: "erro", titulo: "NIF do contribuinte inválido", detalhe: "O número de identificação fiscal deve ter 9 dígitos e um dígito de controlo válido." });
+  }
+  e.dependentes.forEach((d, i) => {
+    if (!validarNIF(d.nif)) r.push({ id: `nif-dep-${d.id}`, nivel: "erro", titulo: `NIF inválido no dependente ${i + 1}`, detalhe: "Verifica o número de identificação fiscal (9 dígitos)." });
+    if (idadeNoAnoFiscal(d.nascimento) !== null && idadeNoAnoFiscal(d.nascimento)! < 0) {
+      r.push({ id: `data-dep-${d.id}`, nivel: "erro", titulo: `Data de nascimento impossível no dependente ${i + 1}`, detalhe: "A data de nascimento não pode ser futura." });
+    }
+  });
+  e.ascendentes.forEach((a, i) => {
+    if (!validarNIF(a.nif)) r.push({ id: `nif-asc-${a.id}`, nivel: "erro", titulo: `NIF inválido no ascendente ${i + 1}`, detalhe: "Verifica o número de identificação fiscal (9 dígitos)." });
+  });
 
   // ── Erros críticos ──
   if (

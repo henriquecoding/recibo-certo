@@ -15,13 +15,25 @@ import {
   coeficienteDesvalorizacao,
   resumoEstrangeiros,
   entradaEstrangeiroVazia,
+  dependenteVazio,
+  ascendenteVazio,
+  validarNIF,
+  idadeNoAnoFiscal,
+  dependenteAte3,
   TIPOS_RENDIMENTO_ESTRANGEIRO,
   PAISES_FREQUENTES,
+  META_RESIDENCIA,
+  META_ESTADO_CIVIL,
   type RendimentoId,
   type EstadoDeclaracao,
   type OperacaoAtivo,
   type EntradaEstrangeiro,
   type TipoRendimentoEstrangeiro,
+  type Contribuinte,
+  type Dependente,
+  type AscendenteDetalhe,
+  type ResidenciaFiscal,
+  type EstadoCivil,
 } from "@/lib/irs-guiado";
 import {
   ATIVIDADES,
@@ -91,11 +103,12 @@ export default function SimuladorPage() {
   const [passo, setPasso] = useState(0);
 
   // ── Etapa 1 — agregado ──────────────────────────────────────────────────────
+  const [contribuinte, setContribuinte] = useState<Contribuinte>({
+    nome: "", nif: "", nascimento: "", residencia: "continente", estadoCivil: "solteiro",
+  });
   const [conjunta, setConjunta] = useState(false);
-  const [depNormais, setDepNormais] = useState("0");
-  const [depBebe, setDepBebe] = useState("0");
-  const [depDefic, setDepDefic] = useState("0");
-  const [ascendentes, setAscendentes] = useState("0");
+  const [dependentes, setDependentes] = useState<Dependente[]>([]);
+  const [ascendentes, setAscendentes] = useState<AscendenteDetalhe[]>([]);
   const [deficiencia, setDeficiencia] = useState(false);
   const [ifici, setIfici] = useState(false);
 
@@ -167,7 +180,7 @@ export default function SimuladorPage() {
   const tinhaSnapshot = useRef(false);
 
   const montarSnapshot = () => ({
-    conjunta, depNormais, depBebe, depDefic, ascendentes, deficiencia, ifici, ativos,
+    contribuinte, conjunta, dependentes, ascendentes, deficiencia, ifici, ativos,
     salBruto, salRet, pensBruto, pensRet,
     atividade: atividade.label, indBruto, indRegime, indDespesas, indRet, indAno, indJovem,
     dividendos, juros, capRet, capEnglobar,
@@ -189,8 +202,8 @@ export default function SimuladorPage() {
         const s = JSON.parse(raw) as Partial<ReturnType<typeof montarSnapshot>>;
         tinhaSnapshot.current = true;
         const set = <T,>(v: T | undefined, fn: (x: T) => void) => { if (v !== undefined) fn(v); };
-        set(s.conjunta, setConjunta); set(s.depNormais, setDepNormais); set(s.depBebe, setDepBebe);
-        set(s.depDefic, setDepDefic); set(s.ascendentes, setAscendentes); set(s.deficiencia, setDeficiencia);
+        set(s.contribuinte, setContribuinte); set(s.conjunta, setConjunta);
+        set(s.dependentes, setDependentes); set(s.ascendentes, setAscendentes); set(s.deficiencia, setDeficiencia);
         set(s.ifici, setIfici); set(s.ativos, setAtivos);
         set(s.salBruto, setSalBruto); set(s.salRet, setSalRet); set(s.pensBruto, setPensBruto); set(s.pensRet, setPensRet);
         if (s.atividade) setAtividade(ATIVIDADES.find((a) => a.label === s.atividade) ?? ATIVIDADE_DEFAULT);
@@ -256,13 +269,10 @@ export default function SimuladorPage() {
   // ── Estado normalizado ──────────────────────────────────────────────────────
   const estado: EstadoDeclaracao = useMemo(
     () => ({
+      contribuinte,
       conjunta,
-      dependentes: {
-        normais: Math.max(0, Math.floor(n(depNormais))),
-        bebe: Math.max(0, Math.floor(n(depBebe))),
-        deficientes: Math.max(0, Math.floor(n(depDefic))),
-      },
-      ascendentes: Math.max(0, Math.floor(n(ascendentes))),
+      dependentes,
+      ascendentes,
       deficiencia,
       ifici,
       ativos,
@@ -305,7 +315,7 @@ export default function SimuladorPage() {
       pagamentosPorConta: n(pagamentosPorConta),
     }),
     [
-      conjunta, depNormais, depBebe, depDefic, ascendentes, deficiencia, ifici, ativos,
+      contribuinte, conjunta, dependentes, ascendentes, deficiencia, ifici, ativos,
       salBruto, salRet, pensBruto, pensRet,
       atividade, ef.coef, ef.regra15, indBruto, indRegime, indDespesas, indRet, indAno, indJovem,
       dividendos, juros, capRet, capEnglobar,
@@ -358,9 +368,9 @@ export default function SimuladorPage() {
           {passo === 0 && (
             <PassoAgregado
               {...{
-                conjunta, setConjunta, depNormais, setDepNormais, depBebe, setDepBebe,
-                depDefic, setDepDefic, ascendentes, setAscendentes, deficiencia, setDeficiencia,
-                ifici, setIfici, jovemAtivo: indJovem > 0,
+                contribuinte, setContribuinte, conjunta, setConjunta,
+                dependentes, setDependentes, ascendentes, setAscendentes,
+                deficiencia, setDeficiencia, ifici, setIfici, jovemAtivo: indJovem > 0,
               }}
             />
           )}
@@ -947,98 +957,204 @@ function Triagem({ ativos, onToggle }: { ativos: RendimentoId[]; onToggle: (id: 
 }
 
 function PassoAgregado(props: {
+  contribuinte: Contribuinte; setContribuinte: (c: Contribuinte) => void;
   conjunta: boolean; setConjunta: (v: boolean) => void;
-  depNormais: string; setDepNormais: (v: string) => void;
-  depBebe: string; setDepBebe: (v: string) => void;
-  depDefic: string; setDepDefic: (v: string) => void;
-  ascendentes: string; setAscendentes: (v: string) => void;
+  dependentes: Dependente[]; setDependentes: (d: Dependente[]) => void;
+  ascendentes: AscendenteDetalhe[]; setAscendentes: (a: AscendenteDetalhe[]) => void;
   deficiencia: boolean; setDeficiencia: (v: boolean) => void;
   ifici: boolean; setIfici: (v: boolean) => void;
   jovemAtivo: boolean;
 }) {
   const {
-    conjunta, setConjunta, depNormais, setDepNormais, depBebe, setDepBebe,
-    depDefic, setDepDefic, ascendentes, setAscendentes, deficiencia, setDeficiencia, ifici, setIfici, jovemAtivo,
+    contribuinte, setContribuinte, conjunta, setConjunta, dependentes, setDependentes,
+    ascendentes, setAscendentes, deficiencia, setDeficiencia, ifici, setIfici, jovemAtivo,
   } = props;
+  const c = contribuinte;
+  const upd = (campo: keyof Contribuinte, valor: string) => setContribuinte({ ...c, [campo]: valor });
+  const nifMau = !validarNIF(c.nif);
+  const ascQualif = ascendentes.filter((a) => a.comunhao && a.rendimentoBaixo).length;
+
   return (
-    <section className="space-y-5 rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
-      <div>
-        <h2 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">O teu agregado familiar</h2>
-        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">Define a estrutura da declaração. Determina o quociente conjugal e as deduções por dependentes.</p>
-      </div>
-
-      <SeletorCartoes
-        label="Tipo de tributação"
-        tooltip="Conjunta (casado / unido de facto): divide o rendimento coletável por 2, aplica os escalões e multiplica por 2 (quociente conjugal, Art. 69.º). Individual: cada um declara o seu."
-        opcoes={[
-          { id: false, label: "Individual", sub: "Declaração separada" },
-          { id: true, label: "Conjunta", sub: "Quociente conjugal" },
-        ]}
-        valor={conjunta}
-        onChange={setConjunta}
-      />
-
-      <div>
-        <div className="mb-2 flex items-center gap-1.5">
-          <span className={rotuloCls}>Dependentes</span>
-          <InfoTip>Dependentes &gt; 3 anos: €600 (1.º/2.º) / €900 (3.º+). Bebés ≤ 3 anos: €726. Com deficiência: +2,5×IAS. Art. 78.º-A CIRS.</InfoTip>
+    <div className="space-y-5">
+      {/* Identificação */}
+      <section className="space-y-4 rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
+        <div>
+          <h2 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">Identificação</h2>
+          <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">Dados do sujeito passivo. Determinam a estrutura da declaração.</p>
         </div>
-        <div className="grid grid-cols-3 gap-3">
-          <CampoMini id="dep-normais" label="> 3 anos" value={depNormais} onChange={setDepNormais} />
-          <CampoMini id="dep-bebe" label="≤ 3 anos" value={depBebe} onChange={setDepBebe} />
-          <CampoMini id="dep-defic" label="Com deficiência" value={depDefic} onChange={setDepDefic} />
-        </div>
-      </div>
-
-      <div>
-        <div className="mb-2 flex items-center gap-1.5">
-          <span className={rotuloCls}>Ascendentes a cargo</span>
-          <InfoTip>Ascendentes em comunhão de habitação com rendimento não superior à pensão mínima dão direito a dedução à coleta: {fmt(DEDUCAO_ASCENDENTE.value)} por ascendente (ou 635 € se existir só um). Art. 78.º-A CIRS.</InfoTip>
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          <CampoMini id="ascendentes" label="N.º de ascendentes" value={ascendentes} onChange={setAscendentes} />
-        </div>
-      </div>
-
-      <hr className="border-stone-100 dark:border-stone-800" />
-
-      <Checkbox
-        checked={deficiencia}
-        onChange={setDeficiencia}
-        label="Sujeito passivo com deficiência ≥ 60%"
-        sub="Art. 56.º-A: exclui 15% dos rendimentos da categoria B (máx €2 500). Art. 87.º: deduz 4×IAS à coleta. Exige atestado médico."
-      />
-      <div>
-        <Checkbox
-          checked={ifici}
-          onChange={setIfici}
-          label="IFICI / NHR 2.0 — taxa única de 20%"
-          sub="Substitui o NHR. Aplica 20% aos rendimentos elegíveis. Exige estatuto da AT e não ter sido residente nos últimos 5 anos. Incompatível com IRS Jovem."
-        />
-        {ifici && jovemAtivo && (
-          <div className="mt-2 rounded-xl border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">
-            IFICI e IRS Jovem são incompatíveis. Desativa um dos dois (o IRS Jovem está no módulo de trabalho independente).
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label htmlFor="c-nome" className={`mb-1.5 block ${rotuloCls}`}>Nome</label>
+            <input id="c-nome" value={c.nome} onChange={(e) => upd("nome", e.target.value)} placeholder="Nome completo" className={campoCls} />
           </div>
-        )}
-      </div>
+          <div>
+            <label htmlFor="c-nif" className={`mb-1.5 block ${rotuloCls}`}>NIF</label>
+            <input id="c-nif" inputMode="numeric" value={c.nif} onChange={(e) => upd("nif", e.target.value)} placeholder="9 dígitos" className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
+            {nifMau && <p className="mt-1 text-[11px] text-red-500">NIF inválido (9 dígitos com dígito de controlo).</p>}
+          </div>
+          <div>
+            <label htmlFor="c-nasc" className={`mb-1.5 block ${rotuloCls}`}>Data de nascimento</label>
+            <input id="c-nasc" type="date" value={c.nascimento} onChange={(e) => upd("nascimento", e.target.value)} className={campoCls} />
+          </div>
+          <div>
+            <div className="mb-1.5 flex items-center gap-1.5">
+              <label htmlFor="c-res" className={rotuloCls}>Residência fiscal</label>
+              <InfoTip>Residentes nas Regiões Autónomas têm escalões próprios. Esta simulação usa os escalões do Continente; para Madeira/Açores o resultado é aproximado.</InfoTip>
+            </div>
+            <select id="c-res" value={c.residencia} onChange={(e) => upd("residencia", e.target.value as ResidenciaFiscal)} className={campoCls}>
+              {(Object.keys(META_RESIDENCIA) as ResidenciaFiscal[]).map((k) => (
+                <option key={k} value={k}>{META_RESIDENCIA[k]}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="c-civil" className={`mb-1.5 block ${rotuloCls}`}>Estado civil</label>
+            <select id="c-civil" value={c.estadoCivil} onChange={(e) => upd("estadoCivil", e.target.value as EstadoCivil)} className={campoCls}>
+              {(Object.keys(META_ESTADO_CIVIL) as EstadoCivil[]).map((k) => (
+                <option key={k} value={k}>{META_ESTADO_CIVIL[k]}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <SeletorCartoes
+          label="Tipo de tributação"
+          tooltip="Conjunta (casado / unido de facto): divide o rendimento coletável por 2, aplica os escalões e multiplica por 2 (quociente conjugal, Art. 69.º). Individual: cada um declara o seu."
+          opcoes={[
+            { id: false, label: "Individual", sub: "Declaração separada" },
+            { id: true, label: "Conjunta", sub: "Quociente conjugal" },
+          ]}
+          valor={conjunta}
+          onChange={setConjunta}
+        />
+        <div>
+          <Checkbox checked={deficiencia} onChange={setDeficiencia} label="Sujeito passivo com deficiência ≥ 60%"
+            sub="Art. 56.º-A: exclui 15% dos rendimentos da categoria B (máx €2 500). Art. 87.º: deduz 4×IAS à coleta. Exige atestado médico." />
+        </div>
+        <div>
+          <Checkbox checked={ifici} onChange={setIfici} label="IFICI / NHR 2.0 — taxa única de 20%"
+            sub="Substitui o NHR. Aplica 20% aos rendimentos elegíveis. Exige estatuto da AT e não ter sido residente nos últimos 5 anos. Incompatível com IRS Jovem." />
+          {ifici && jovemAtivo && (
+            <div className="mt-2 rounded-xl border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">
+              IFICI e IRS Jovem são incompatíveis. Desativa um dos dois (o IRS Jovem está no módulo de trabalho independente).
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Dependentes */}
+      <section className="space-y-3 rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <h3 className="font-display text-base font-semibold text-stone-800 dark:text-stone-100">Dependentes</h3>
+          <InfoTip>Cada dependente: &gt; 3 anos vale €600 (1.º/2.º) ou €900 (3.º+); ≤ 3 anos vale €726; com deficiência +2,5×IAS. A guarda partilhada reparte a dedução (Art. 78.º-A CIRS). A idade é apurada pela data de nascimento.</InfoTip>
+        </div>
+        {dependentes.length === 0 && <p className="text-xs text-stone-400">Sem dependentes. Adiciona se tiveres filhos ou outros dependentes a cargo.</p>}
+        {dependentes.map((d, i) => (
+          <PessoaEditor
+            key={d.id}
+            titulo={`Dependente ${i + 1}`}
+            nome={d.nome}
+            nif={d.nif}
+            onNome={(v) => setDependentes(dependentes.map((x) => (x.id === d.id ? { ...x, nome: v } : x)))}
+            onNif={(v) => setDependentes(dependentes.map((x) => (x.id === d.id ? { ...x, nif: v } : x)))}
+            onRemover={() => setDependentes(dependentes.filter((x) => x.id !== d.id))}
+            badge={(() => { const idade = idadeNoAnoFiscal(d.nascimento); return idade === null ? undefined : dependenteAte3(d) ? "≤ 3 anos" : `${idade} anos`; })()}
+          >
+            <div>
+              <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">Data de nascimento</label>
+              <input type="date" value={d.nascimento} onChange={(e) => setDependentes(dependentes.map((x) => (x.id === d.id ? { ...x, nascimento: e.target.value } : x)))} className={campoCls} />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">Guarda (%)</label>
+              <input type="number" min={0} max={100} step={50} value={d.guarda} onChange={(e) => setDependentes(dependentes.map((x) => (x.id === d.id ? { ...x, guarda: Math.min(100, Math.max(0, Number(e.target.value) || 0)) } : x)))} className={campoCls} />
+            </div>
+            <div className="col-span-2">
+              <Checkbox checked={d.deficiente} onChange={(v) => setDependentes(dependentes.map((x) => (x.id === d.id ? { ...x, deficiente: v } : x)))} label="Com deficiência ≥ 60%" />
+            </div>
+          </PessoaEditor>
+        ))}
+        <BotaoAdicionar onClick={() => setDependentes([...dependentes, dependenteVazio()])} texto="Adicionar dependente" />
+      </section>
+
+      {/* Ascendentes */}
+      <section className="space-y-3 rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <h3 className="font-display text-base font-semibold text-stone-800 dark:text-stone-100">Ascendentes a cargo</h3>
+          <InfoTip>Ascendentes em comunhão de habitação com rendimento não superior à pensão mínima: {fmt(DEDUCAO_ASCENDENTE.value)} cada (ou 635 € se existir só um). Art. 78.º-A CIRS.</InfoTip>
+        </div>
+        {ascendentes.length === 0 && <p className="text-xs text-stone-400">Sem ascendentes a cargo.</p>}
+        {ascendentes.map((a, i) => (
+          <PessoaEditor
+            key={a.id}
+            titulo={`Ascendente ${i + 1}`}
+            nome={a.nome}
+            nif={a.nif}
+            onNome={(v) => setAscendentes(ascendentes.map((x) => (x.id === a.id ? { ...x, nome: v } : x)))}
+            onNif={(v) => setAscendentes(ascendentes.map((x) => (x.id === a.id ? { ...x, nif: v } : x)))}
+            onRemover={() => setAscendentes(ascendentes.filter((x) => x.id !== a.id))}
+          >
+            <div className="col-span-2 space-y-2">
+              <Checkbox checked={a.comunhao} onChange={(v) => setAscendentes(ascendentes.map((x) => (x.id === a.id ? { ...x, comunhao: v } : x)))} label="Vive em comunhão de habitação" />
+              <Checkbox checked={a.rendimentoBaixo} onChange={(v) => setAscendentes(ascendentes.map((x) => (x.id === a.id ? { ...x, rendimentoBaixo: v } : x)))} label="Rendimento ≤ pensão mínima do regime geral" />
+            </div>
+          </PessoaEditor>
+        ))}
+        <BotaoAdicionar onClick={() => setAscendentes([...ascendentes, ascendenteVazio()])} texto="Adicionar ascendente" />
+      </section>
 
       {/* Visão do agregado */}
       <div className="rounded-2xl border border-stone-100 bg-stone-50/70 p-4 dark:border-stone-700 dark:bg-stone-800/40">
         <div className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-stone-400">O teu agregado</div>
         <div className="flex flex-wrap gap-2">
-          <CartaoAgregado icon={<User size={15} />} titulo={conjunta ? "Casal" : "Titular"} sub={conjunta ? "Tributação conjunta" : "Tributação individual"} destaque />
-          {pNum(depNormais) > 0 && <CartaoAgregado icon={<User size={15} />} titulo={`${pNum(depNormais)} dep.`} sub="> 3 anos" />}
-          {pNum(depBebe) > 0 && <CartaoAgregado icon={<User size={15} />} titulo={`${pNum(depBebe)} bebé(s)`} sub="≤ 3 anos" />}
-          {pNum(depDefic) > 0 && <CartaoAgregado icon={<User size={15} />} titulo={`${pNum(depDefic)} dep.`} sub="com deficiência" />}
-          {pNum(ascendentes) > 0 && <CartaoAgregado icon={<User size={15} />} titulo={`${pNum(ascendentes)} ascend.`} sub="a cargo" />}
+          <CartaoAgregado icon={<User size={15} />} titulo={c.nome.trim() || (conjunta ? "Casal" : "Titular")} sub={conjunta ? "Tributação conjunta" : "Tributação individual"} destaque />
+          {dependentes.map((d, i) => {
+            const idade = idadeNoAnoFiscal(d.nascimento);
+            return <CartaoAgregado key={d.id} icon={<User size={15} />} titulo={d.nome.trim() || `Dep. ${i + 1}`} sub={idade === null ? "dependente" : dependenteAte3(d) ? "≤ 3 anos" : `${idade} anos`} />;
+          })}
+          {ascQualif > 0 && <CartaoAgregado icon={<User size={15} />} titulo={`${ascQualif} ascend.`} sub="com dedução" />}
         </div>
       </div>
-    </section>
+    </div>
   );
 }
 
-function pNum(s: string) {
-  return Math.max(0, Math.floor(parseFloat((s || "").replace(",", ".")) || 0));
+function PessoaEditor({
+  titulo, nome, nif, onNome, onNif, onRemover, badge, children,
+}: {
+  titulo: string; nome: string; nif: string;
+  onNome: (v: string) => void; onNif: (v: string) => void; onRemover: () => void;
+  badge?: string; children: ReactNode;
+}) {
+  const nifMau = !validarNIF(nif);
+  return (
+    <div className="rounded-2xl border border-stone-200 bg-stone-50 p-3 dark:border-stone-700 dark:bg-stone-800/40">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-stone-500 dark:text-stone-400">{titulo}</span>
+          {badge && <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium text-stone-500 dark:bg-stone-700 dark:text-stone-300">{badge}</span>}
+        </div>
+        <button type="button" onClick={onRemover} aria-label="Remover" className="flex-shrink-0 text-stone-400 transition-colors hover:text-red-500"><Trash size={15} /></button>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">Nome</label>
+          <input value={nome} onChange={(e) => onNome(e.target.value)} placeholder="Nome" className={campoCls} />
+        </div>
+        <div>
+          <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">NIF</label>
+          <input inputMode="numeric" value={nif} onChange={(e) => onNif(e.target.value)} placeholder="9 dígitos" className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function BotaoAdicionar({ onClick, texto }: { onClick: () => void; texto: string }) {
+  return (
+    <button type="button" onClick={onClick} className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-stone-300 py-2.5 text-sm font-medium text-stone-500 transition-colors hover:border-brand hover:text-brand dark:border-stone-600 dark:text-stone-400">
+      <Plus size={13} /> {texto}
+    </button>
+  );
 }
 
 function CartaoAgregado({ icon, titulo, sub, destaque = false }: { icon: ReactNode; titulo: string; sub: string; destaque?: boolean }) {
@@ -1049,15 +1165,6 @@ function CartaoAgregado({ icon, titulo, sub, destaque = false }: { icon: ReactNo
         <div className={`text-sm font-semibold ${destaque ? "text-brand-dark" : "text-stone-700 dark:text-stone-200"}`}>{titulo}</div>
         <div className={`text-[11px] ${destaque ? "text-brand" : "text-stone-400"}`}>{sub}</div>
       </div>
-    </div>
-  );
-}
-
-function CampoMini({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <div>
-      <label htmlFor={id} className="mb-1 block text-[11px] font-medium text-stone-500 dark:text-stone-400">{label}</label>
-      <input id={id} type="number" min={0} step={1} value={value} onChange={(e) => onChange(e.target.value)} className={campoCls} />
     </div>
   );
 }

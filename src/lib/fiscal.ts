@@ -372,6 +372,12 @@ export interface SimulacaoInput {
    */
   dependentesDetalhe?: DependentesDetalhe;
   /**
+   * Lista detalhada de dependentes (com guarda partilhada). Se fornecida,
+   * tem prioridade sobre `dependentesDetalhe`/`dependentes`: cada dependente
+   * conta com a sua fração de guarda (Art. 78.º-A n.º 4 CIRS).
+   */
+  dependentesLista?: Array<{ ate3: boolean; deficiente: boolean; guarda: number }>;
+  /**
    * Acumulação com trabalho dependente que cobre Segurança Social.
    * Não afecta o IRS, mas é considerado para o cálculo de SS no resultado.
    */
@@ -559,6 +565,26 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   //  - Normais (> 3 anos): os primeiros max(0, 2−depBebe) ficam no escalão base €600;
   //    a partir do 3.º na contagem global passa a €900
   const deducaoDependentes = (() => {
+    // Caminho detalhado: lista com guarda partilhada (cada dependente conta com
+    // a sua fração). Bebés (≤3 anos) ocupam as primeiras posições; do 3.º
+    // dependente em diante, os de >3 anos passam de 600 € para 900 €.
+    if (input.dependentesLista && input.dependentesLista.length > 0) {
+      const ordenada = [...input.dependentesLista].sort((a, b) => Number(b.ate3) - Number(a.ate3));
+      let pos = 0;
+      let total = 0;
+      for (const d of ordenada) {
+        pos++;
+        const base = d.ate3
+          ? DEDUCAO_DEPENDENTE_BEBE.value
+          : pos <= 2
+            ? DEDUCAO_DEPENDENTE.value
+            : DEDUCAO_DEPENDENTE_3MAIS.value;
+        const extra = d.deficiente ? DEDUCAO_DEPENDENTE_DEFICIENCIA.value : 0;
+        const guarda = d.guarda > 0 ? Math.min(1, d.guarda) : 1;
+        total += (base + extra) * guarda;
+      }
+      return total;
+    }
     // Bebés têm sempre €726 (ocupam as primeiras posições na fila global)
     const dedBebe = depBebe * DEDUCAO_DEPENDENTE_BEBE.value;
     // Normais: quantas posições ainda estão no bloco 1.º/2.º
@@ -1171,6 +1197,8 @@ export interface DeclaracaoInput {
   /** Deduções à coleta (Anexo H). */
   deducoes?: DeducoesInput;
   dependentesDetalhe?: DependentesDetalhe;
+  /** Lista detalhada de dependentes com guarda partilhada. */
+  dependentesLista?: Array<{ ate3: boolean; deficiente: boolean; guarda: number }>;
   /** Ascendentes em comunhão de habitação (Art. 78.º-A). */
   ascendentes?: number;
   /** PPR aplicado no ano + escalão de idade (Art. 21.º EBF). */
@@ -1367,6 +1395,7 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
     outrosRendimentos: outros,
     conjunta,
     dependentesDetalhe: input.dependentesDetalhe,
+    dependentesLista: input.dependentesLista,
     deducoes: input.deducoes,
     ascendentes: input.ascendentes,
     ppr: input.ppr,
