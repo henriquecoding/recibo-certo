@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.76.0";
+export const APP_VERSION = "1.77.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.77.0",
+    data: "2026-06-23",
+    titulo: "Site mais rápido a abrir",
+    itens: [
+      "A página inicial passa a carregar a calculadora só quando te aproximas dela, em vez de tudo de uma vez — abre mais depressa, sobretudo no telemóvel.",
+      "A pesquisa, os avisos e outras janelas passam a carregar depois da primeira pintura, deixando o arranque mais leve.",
+    ],
+  },
   {
     version: "1.76.0",
     data: "2026-06-23",

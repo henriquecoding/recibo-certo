@@ -2,7 +2,7 @@ import Nav from "@/components/Nav";
 
 import Hero from "@/components/Hero";
 import Stats from "@/components/Stats";
-import CalculadoraSecao from "@/components/CalculadoraSecao";
+import CalculadoraSecaoLazy from "@/components/CalculadoraSecaoLazy";
 import Features from "@/components/Features";
 import FAQ from "@/components/FAQ";
 import Fontes from "@/components/Fontes";
@@ -56,7 +56,7 @@ export default function Home() {
             id="calculadora"
             className="grain border-y border-stone-100 bg-white px-6 py-24 scroll-mt-20"
           >
-            <CalculadoraSecao />
+            <CalculadoraSecaoLazy />
           </section>
 
           <Stats />
