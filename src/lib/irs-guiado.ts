@@ -296,6 +296,8 @@ export interface EstadoDeclaracao {
     retencoes: number;
     anoAtividade: number;
     irsJovemAno: number;
+    isencaoSSPrimeiroAno: boolean;
+    acumulaEmprego: boolean;
   };
   capitais: { dividendos: number; juros: number; retencoes: number; englobar: boolean };
   investimentos: { saldo: number; algumCurtoPrazo: boolean; englobar: boolean };
@@ -318,7 +320,8 @@ export interface EstadoDeclaracao {
     valorReinvestido: number;
   };
   estrangeiros: { entradas: EntradaEstrangeiro[] };
-  deducoes: { saude: number; educacao: number; gerais: number; rendas: number };
+  deducoes: { saude: number; educacao: number; gerais: number; rendas: number; lares: number };
+  pensaoAlimentos: number;
   ppr: { valor: number; escalaoIdade: "ate35" | "de35a50" | "mais50" };
   donativos: { valor: number; tipo: TipoDonativo };
   pagamentosPorConta: number;
@@ -377,6 +380,8 @@ export function construirDeclaracaoInput(e: EstadoDeclaracao): DeclaracaoInput {
           irsJovemAno: e.independente.irsJovemAno,
         }
       : undefined,
+    isencaoSSPrimeiroAno: ativo("independente") ? e.independente.isencaoSSPrimeiroAno : undefined,
+    acumulaEmprego: ativo("independente") ? e.independente.acumulaEmprego : undefined,
     capitais: ativo("capitais")
       ? {
           dividendos: e.capitais.dividendos,
@@ -421,6 +426,8 @@ export function construirDeclaracaoInput(e: EstadoDeclaracao): DeclaracaoInput {
       gerais: e.deducoes.gerais,
       rendas: e.deducoes.rendas,
     },
+    lares: e.deducoes.lares,
+    pensaoAlimentos: e.pensaoAlimentos > 0 ? e.pensaoAlimentos : undefined,
     ppr: e.ppr.valor > 0 ? { valor: e.ppr.valor, escalaoIdade: e.ppr.escalaoIdade } : undefined,
     donativos:
       e.donativos.valor > 0

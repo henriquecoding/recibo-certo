@@ -40,6 +40,8 @@ import {
   efeitoFiscal,
   IRS_JOVEM,
   IAS,
+  SS_TAXA,
+  SS_COEFICIENTE,
   DIVIDENDOS_TAXA,
   MAIS_VALIAS_MOBILIARIAS_TAXA,
   CRIPTO_TAXA_CURTO_PRAZO,
@@ -71,6 +73,8 @@ import {
   DEDUCAO_PPR,
   DEDUCAO_DONATIVOS,
   DEDUCAO_ASCENDENTE,
+  DEDUCAO_LARES,
+  DEDUCAO_PENSAO_ALIMENTOS,
   DONATIVOS_MAJORACOES,
   COEF_DESVALORIZACAO_MOEDA,
   type TipoDonativo,
@@ -132,6 +136,8 @@ export default function SimuladorPage() {
   const [indRet, setIndRet] = useState("");
   const [indAno, setIndAno] = useState(3);
   const [indJovem, setIndJovem] = useState(0);
+  const [indIsencaoSS, setIndIsencaoSS] = useState(false);
+  const [indAcumula, setIndAcumula] = useState(false);
 
   // Capitais
   const [dividendos, setDividendos] = useState("");
@@ -177,6 +183,8 @@ export default function SimuladorPage() {
   const [educacao, setEducacao] = useState("");
   const [gerais, setGerais] = useState("");
   const [rendasDed, setRendasDed] = useState("");
+  const [lares, setLares] = useState("");
+  const [pensaoAlimentos, setPensaoAlimentos] = useState("");
   const [pprValor, setPprValor] = useState("");
   const [pprIdade, setPprIdade] = useState<"ate35" | "de35a50" | "mais50">("de35a50");
   const [donativoValor, setDonativoValor] = useState("");
@@ -190,13 +198,13 @@ export default function SimuladorPage() {
   const montarSnapshot = () => ({
     contribuinte, conjunta, dependentes, ascendentes, deficiencia, ifici, ativos,
     salEntidade, salBruto, salRet, salSS, pensTipo, pensBruto, pensRet,
-    atividade: atividade.label, indBruto, indRegime, indDespesas, indRet, indAno, indJovem,
+    atividade: atividade.label, indBruto, indRegime, indDespesas, indRet, indAno, indJovem, indIsencaoSS, indAcumula,
     dividendos, juros, certificados, depositos, capRet, capEnglobar,
     opsInv, invEnglobar, opsCripto, criptoEnglobar,
     renda, rendaDespesas, rendaHab, rendaDuracao, rendaRet, rendaEnglobar,
     vendaRealizacao, vendaAquisicao, vendaImt, vendaEscritura, vendaObras, vendaComissao, vendaDataAq, vendaDataVenda, vendaReinveste, vendaReinvestido,
     estEntradas,
-    saude, educacao, gerais, rendasDed, pprValor, pprIdade, donativoValor, donativoTipo, pagamentosPorConta,
+    saude, educacao, gerais, rendasDed, lares, pensaoAlimentos, pprValor, pprIdade, donativoValor, donativoTipo, pagamentosPorConta,
   });
 
   // String do snapshot — muda sempre que algum campo muda; aciona a gravação.
@@ -218,8 +226,10 @@ export default function SimuladorPage() {
         if (s.atividade) setAtividade(ATIVIDADES.find((a) => a.label === s.atividade) ?? ATIVIDADE_DEFAULT);
         set(s.indBruto, setIndBruto); set(s.indRegime, setIndRegime); set(s.indDespesas, setIndDespesas);
         set(s.indRet, setIndRet); set(s.indAno, setIndAno); set(s.indJovem, setIndJovem);
+        set(s.indIsencaoSS, setIndIsencaoSS); set(s.indAcumula, setIndAcumula);
         set(s.dividendos, setDividendos); set(s.juros, setJuros); set(s.certificados, setCertificados); set(s.depositos, setDepositos); set(s.capRet, setCapRet); set(s.capEnglobar, setCapEnglobar);
         set(s.opsInv, setOpsInv); set(s.invEnglobar, setInvEnglobar); set(s.opsCripto, setOpsCripto); set(s.criptoEnglobar, setCriptoEnglobar);
+        set(s.lares, setLares); set(s.pensaoAlimentos, setPensaoAlimentos);
         set(s.renda, setRenda); set(s.rendaDespesas, setRendaDespesas); set(s.rendaHab, setRendaHab);
         set(s.rendaDuracao, setRendaDuracao); set(s.rendaRet, setRendaRet); set(s.rendaEnglobar, setRendaEnglobar);
         set(s.vendaRealizacao, setVendaRealizacao); set(s.vendaAquisicao, setVendaAquisicao);
@@ -298,6 +308,8 @@ export default function SimuladorPage() {
         retencoes: n(indRet),
         anoAtividade: indAno,
         irsJovemAno: indJovem,
+        isencaoSSPrimeiroAno: indIsencaoSS,
+        acumulaEmprego: indAcumula,
       },
       capitais: { dividendos: n(dividendos), juros: n(juros) + n(certificados) + n(depositos), retencoes: n(capRet), englobar: capEnglobar },
       investimentos: { saldo: Math.max(0, resInv.saldo), algumCurtoPrazo: resInv.algumCurtoPrazo, englobar: invEnglobar },
@@ -319,7 +331,8 @@ export default function SimuladorPage() {
         valorReinvestido: n(vendaReinvestido),
       },
       estrangeiros: { entradas: estEntradas },
-      deducoes: { saude: n(saude), educacao: n(educacao), gerais: n(gerais), rendas: n(rendasDed) },
+      deducoes: { saude: n(saude), educacao: n(educacao), gerais: n(gerais), rendas: n(rendasDed), lares: n(lares) },
+      pensaoAlimentos: n(pensaoAlimentos),
       ppr: { valor: n(pprValor), escalaoIdade: pprIdade },
       donativos: { valor: n(donativoValor), tipo: donativoTipo },
       pagamentosPorConta: n(pagamentosPorConta),
@@ -327,14 +340,14 @@ export default function SimuladorPage() {
     [
       contribuinte, conjunta, dependentes, ascendentes, deficiencia, ifici, ativos,
       salBruto, salRet, pensBruto, pensRet,
-      atividade, ef.coef, ef.regra15, indBruto, indRegime, indDespesas, indRet, indAno, indJovem,
+      atividade, ef.coef, ef.regra15, indBruto, indRegime, indDespesas, indRet, indAno, indJovem, indIsencaoSS, indAcumula,
       dividendos, juros, certificados, depositos, capRet, capEnglobar,
       resInv, invEnglobar,
       resCripto, criptoEnglobar,
       renda, rendaDespesas, rendaHab, rendaDuracao, rendaRet, rendaEnglobar,
       vendaRealizacao, vendaAquisicao, vendaImt, vendaEscritura, vendaObras, vendaComissao, coefImovel, vendaReinveste, vendaReinvestido,
       estEntradas,
-      saude, educacao, gerais, rendasDed, pprValor, pprIdade, donativoValor, donativoTipo, pagamentosPorConta,
+      saude, educacao, gerais, rendasDed, lares, pensaoAlimentos, pprValor, pprIdade, donativoValor, donativoTipo, pagamentosPorConta,
     ]
   );
 
@@ -503,6 +516,23 @@ export default function SimuladorPage() {
                         <option key={ano} value={ano}>{`${ano}.º ano — isenção ${pct(IRS_JOVEM.isencaoPorAno.value[ano])}`}</option>
                       ))}
                     </select>
+                  </div>
+
+                  {/* Segurança Social (Anexo SS) */}
+                  <div className="space-y-2 rounded-2xl border border-stone-100 bg-stone-50/70 p-3 dark:border-stone-700 dark:bg-stone-800/40">
+                    <div className="flex items-center gap-1.5">
+                      <span className={rotuloCls}>Segurança Social</span>
+                      <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-semibold text-brand-dark dark:bg-stone-700 dark:text-brand">Anexo SS</span>
+                      <InfoTip>Contribuição de {pct(SS_TAXA.value)} sobre {pct(SS_COEFICIENTE.servicos.value)} do rendimento relevante (serviços). Há isenções no 1.º ano e por acumulação com trabalho dependente que já cobre a SS.</InfoTip>
+                    </div>
+                    <Checkbox checked={indIsencaoSS} onChange={setIndIsencaoSS} label="1.º ano de atividade — isenção de SS"
+                      sub="Isenção automática nos primeiros 12 meses (Art. 157.º Código Contributivo), se não tiveste atividade independente nos últimos 3 anos." />
+                    <Checkbox checked={indAcumula} onChange={setIndAcumula} label="Acumulação com trabalho dependente"
+                      sub={`Isento de SS se o emprego cobre ≥ 1×IAS (${fmt(IAS.value)}/mês) e o rendimento médio como independente é < 4×IAS.`} />
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 text-xs dark:bg-stone-900">
+                      <span className="text-stone-500 dark:text-stone-400">Contribuição anual estimada</span>
+                      <span className="font-semibold tabular-nums text-stone-700 dark:text-stone-200">{resultado.ssAnual > 0 ? fmt(resultado.ssAnual) : "Isento"}</span>
+                    </div>
                   </div>
                 </ModuloCard>
               )}
@@ -688,6 +718,7 @@ export default function SimuladorPage() {
             <PassoDeducoes
               {...{
                 saude, setSaude, educacao, setEducacao, gerais, setGerais, rendasDed, setRendasDed,
+                lares, setLares, pensaoAlimentos, setPensaoAlimentos,
                 pprValor, setPprValor, pprIdade, setPprIdade, donativoValor, setDonativoValor, donativoTipo, setDonativoTipo,
                 pagamentosPorConta, setPagamentosPorConta,
               }}
@@ -1226,6 +1257,8 @@ function PassoDeducoes(props: {
   educacao: string; setEducacao: (v: string) => void;
   gerais: string; setGerais: (v: string) => void;
   rendasDed: string; setRendasDed: (v: string) => void;
+  lares: string; setLares: (v: string) => void;
+  pensaoAlimentos: string; setPensaoAlimentos: (v: string) => void;
   pprValor: string; setPprValor: (v: string) => void;
   pprIdade: "ate35" | "de35a50" | "mais50"; setPprIdade: (v: "ate35" | "de35a50" | "mais50") => void;
   donativoValor: string; setDonativoValor: (v: string) => void;
@@ -1234,6 +1267,7 @@ function PassoDeducoes(props: {
 }) {
   const {
     saude, setSaude, educacao, setEducacao, gerais, setGerais, rendasDed, setRendasDed,
+    lares, setLares, pensaoAlimentos, setPensaoAlimentos,
     pprValor, setPprValor, pprIdade, setPprIdade, donativoValor, setDonativoValor, donativoTipo, setDonativoTipo,
     pagamentosPorConta, setPagamentosPorConta,
   } = props;
@@ -1246,6 +1280,7 @@ function PassoDeducoes(props: {
     { id: "educacao", label: "Educação (€)", v: educacao, set: setEducacao, nota: `${pct(DEDUCAO_EDUCACAO.value.taxa)} → máx ${fmt(DEDUCAO_EDUCACAO.value.limite)}` },
     { id: "gerais", label: "Despesas gerais (€)", v: gerais, set: setGerais, nota: `${pct(DEDUCAO_DESP_GERAIS.value.taxa)} → máx ${fmt(DEDUCAO_DESP_GERAIS.value.limite)}` },
     { id: "rendas-ded", label: "Rendas habitação (€)", v: rendasDed, set: setRendasDed, nota: `${pct(DEDUCAO_RENDAS.value.taxa)} → máx ${fmt(DEDUCAO_RENDAS.value.limite)}` },
+    { id: "lares", label: "Lares (€)", v: lares, set: setLares, nota: `${pct(DEDUCAO_LARES.value.taxa)} → máx ${fmt(DEDUCAO_LARES.value.limite)}` },
   ];
   return (
     <>
@@ -1267,8 +1302,17 @@ function PassoDeducoes(props: {
             </div>
           ))}
         </div>
-        <Campo id="ppc" label="Pagamentos por conta já feitos (€)" value={pagamentosPorConta} onChange={setPagamentosPorConta} step={100}
-          tooltip="Adiantamentos de IRS pagos ao longo do ano pelos trabalhadores independentes (Art. 102.º CIRS). Abatem ao imposto final, tal como as retenções." />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Campo id="pensao-alimentos" label="Pensões de alimentos pagas (€)" value={pensaoAlimentos} onChange={setPensaoAlimentos} step={100}
+            tooltip={`Importâncias pagas por decisão judicial. Deduz ${pct(DEDUCAO_PENSAO_ALIMENTOS.value)} à coleta, sem limite e fora do limite global (Art. 83.º-A CIRS).`} />
+          <Campo id="ppc" label="Pagamentos por conta já feitos (€)" value={pagamentosPorConta} onChange={setPagamentosPorConta} step={100}
+            tooltip="Adiantamentos de IRS pagos ao longo do ano pelos trabalhadores independentes (Art. 102.º CIRS). Abatem ao imposto final, tal como as retenções." />
+        </div>
+        {n(pensaoAlimentos) > 0 && (
+          <p className="rounded-xl bg-brand-light px-3 py-2 text-xs text-brand-dark">
+            Benefício de pensões de alimentos: {fmt(n(pensaoAlimentos) * DEDUCAO_PENSAO_ALIMENTOS.value)} ({pct(DEDUCAO_PENSAO_ALIMENTOS.value)}, sem limite)
+          </p>
+        )}
       </section>
 
       <section className="space-y-4 rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">

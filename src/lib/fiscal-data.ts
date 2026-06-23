@@ -258,6 +258,14 @@ export const SOURCES = {
     label: "Portaria n.º 382/2025/1 — Coeficientes de desvalorização da moeda (bens alienados em 2025) · Diário da República",
     url: "https://diariodarepublica.pt/dr/detalhe/portaria/382-2025-945460818",
   },
+  art83aCirs: {
+    label: "Art. 83.º-A CIRS — Dedução de pensões de alimentos (20%, sem limite) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs83a.aspx",
+  },
+  art84cirs: {
+    label: "Art. 84.º CIRS — Dedução de encargos com lares (25%, limite 403,75 €) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs84.aspx",
+  },
 
   // ── Comissão Europeia ───────────────────────────────────────────────
   viesValidation: {
@@ -1712,6 +1720,22 @@ export const DONATIVOS_MAJORACOES = sv<Record<TipoDonativo, OpcaoDonativo>>(
   REV_BENEFICIOS
 );
 
+/** Dedução de pensões de alimentos pagas (Art. 83.º-A CIRS): 20%, sem limite. */
+export const DEDUCAO_PENSAO_ALIMENTOS = sv(
+  0.2,
+  "Art. 83.º-A CIRS — 20% das importâncias pagas a título de pensão de alimentos (sem limite)",
+  "art83aCirs",
+  REV_BENEFICIOS
+);
+
+/** Dedução de encargos com lares (Art. 84.º CIRS): 25%, limite 403,75 €. */
+export const DEDUCAO_LARES = sv<DeducaoLimitada>(
+  { taxa: 0.25, limite: 403.75 },
+  "Art. 84.º CIRS — 25% dos encargos com lares e apoio domiciliário (limite 403,75 €)",
+  "art84cirs",
+  REV_BENEFICIOS
+);
+
 /** Dedução à coleta por ascendente em comunhão de habitação (Art. 78.º-A CIRS). */
 export const DEDUCAO_ASCENDENTE = sv(
   525,
@@ -2386,6 +2410,10 @@ export function assertFiscalDataIntegrity(): void {
   if (!(DEDUCAO_ASCENDENTE_UNICO.value >= DEDUCAO_ASCENDENTE.value)) {
     erros.push("Dedução por ascendente único deveria ser ≥ à dedução por ascendente.");
   }
+  if (!isRate(DEDUCAO_PENSAO_ALIMENTOS.value)) erros.push("Taxa de dedução de pensão de alimentos inválida.");
+  if (!isRate(DEDUCAO_LARES.value.taxa) || !(DEDUCAO_LARES.value.limite > 0)) {
+    erros.push("Parâmetros de dedução de lares inválidos.");
+  }
 
   // Coeficientes de desvalorização da moeda: todos ≥ 1 (não são estritamente
   // monótonos — p. ex. 2009 sobe face a 2008 por deflação). O ano mais recente
@@ -2697,6 +2725,8 @@ export function assertFiscalDataIntegrity(): void {
     DONATIVOS_MAJORACOES,
     DEDUCAO_ASCENDENTE,
     DEDUCAO_ASCENDENTE_UNICO,
+    DEDUCAO_PENSAO_ALIMENTOS,
+    DEDUCAO_LARES,
     COEF_DESVALORIZACAO_MOEDA,
     // SMN
     SMN,

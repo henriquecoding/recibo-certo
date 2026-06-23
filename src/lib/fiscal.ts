@@ -82,6 +82,8 @@ import {
   DEDUCAO_DONATIVOS,
   DEDUCAO_ASCENDENTE,
   DEDUCAO_ASCENDENTE_UNICO,
+  DEDUCAO_PENSAO_ALIMENTOS,
+  DEDUCAO_LARES,
   type TipoAtividade,
   type Regiao,
   type EscalaoIVA,
@@ -301,6 +303,8 @@ export interface DeducoesInput {
   gerais?: number;
   /** Rendas de habitação permanente pagas (Art. 78.º-E CIRS): 15% até €900 (Lei 36/2024). */
   rendas?: number;
+  /** Encargos com lares e apoio domiciliário (Art. 84.º CIRS): 25% até €403,75. */
+  lares?: number;
 }
 
 /**
@@ -393,6 +397,8 @@ export interface SimulacaoInput {
    * (1,0 / 1,3 / 1,4) e se está isento do limite de 15% da coleta (Estado).
    */
   donativos?: { valor: number; fator: number; semLimite: boolean };
+  /** Pensões de alimentos pagas (Art. 83.º-A CIRS): 20%, fora do limite global. */
+  pensaoAlimentos?: number;
 }
 
 export interface SimulacaoIRS {
@@ -434,6 +440,8 @@ export interface SimulacaoIRS {
   deducaoPPR: number;
   /** Dedução à coleta por donativos (Art. 63.º EBF), antes do limite global. */
   deducaoDonativos: number;
+  /** Dedução à coleta por pensões de alimentos (Art. 83.º-A), fora do limite global. */
+  deducaoPensaoAlimentos: number;
   /** Dedução coleta por deficiência do contribuinte (Art. 87.º: 4×IAS). */
   deducaoDeficiencia: number;
   irsEstimado: number;
@@ -606,6 +614,7 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   const dSaude = Math.min(sanitize(ded.saude ?? 0) * DEDUCAO_SAUDE.value.taxa, DEDUCAO_SAUDE.value.limite);
   const dEducacao = Math.min(sanitize(ded.educacao ?? 0) * DEDUCAO_EDUCACAO.value.taxa, DEDUCAO_EDUCACAO.value.limite);
   const dRendas = Math.min(sanitize(ded.rendas ?? 0) * DEDUCAO_RENDAS.value.taxa, DEDUCAO_RENDAS.value.limite);
+  const dLares = Math.min(sanitize(ded.lares ?? 0) * DEDUCAO_LARES.value.taxa, DEDUCAO_LARES.value.limite);
 
   // PPR (Art. 21.º EBF): 20% do aplicado, com limite por idade do sujeito passivo.
   const deducaoPPR = input.ppr
@@ -620,9 +629,9 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
       })()
     : 0;
 
-  // Limite global (Art. 78.º n.º 7): saúde + educação + gerais + rendas + PPR + donativos.
+  // Limite global (Art. 78.º n.º 7): saúde + educação + gerais + rendas + lares + PPR + donativos.
   const deducaoDespesas = Math.min(
-    dGerais + dSaude + dEducacao + dRendas + deducaoPPR + deducaoDonativos,
+    dGerais + dSaude + dEducacao + dRendas + dLares + deducaoPPR + deducaoDonativos,
     limiteGlobalDeducoes(rendimentoColetavelFinal)
   );
 
@@ -632,10 +641,13 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   const deducaoAscendentes =
     numAscendentes === 1 ? DEDUCAO_ASCENDENTE_UNICO.value : numAscendentes * DEDUCAO_ASCENDENTE.value;
 
+  // Pensões de alimentos (Art. 83.º-A): 20% sem limite, fora do limite global.
+  const deducaoPensaoAlimentos = sanitize(input.pensaoAlimentos ?? 0) * DEDUCAO_PENSAO_ALIMENTOS.value;
+
   // Art. 87.º CIRS: dedução à coleta de 4×IAS pelo contribuinte com deficiência
   const deducaoDeficiencia = input.deficiencia ? DEDUCAO_DEFICIENCIA_COLETA.value : 0;
 
-  const deducoesColeta = deducaoDependentes + deducaoAscendentes + deducaoDespesas + deducaoDeficiencia;
+  const deducoesColeta = deducaoDependentes + deducaoAscendentes + deducaoDespesas + deducaoDeficiencia + deducaoPensaoAlimentos;
   let irsEstimado = Math.max(0, coletaBruta - deducoesColeta);
 
   // ── Mínimo de existência (não aplicável com regime de taxa flat) ─────────
@@ -696,6 +708,7 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     deducaoDespesas,
     deducaoPPR,
     deducaoDonativos,
+    deducaoPensaoAlimentos,
     deducaoDeficiencia,
     irsEstimado,
     minimoExistenciaAplicado,
@@ -1205,8 +1218,16 @@ export interface DeclaracaoInput {
   ppr?: { valor: number; escalaoIdade: "ate35" | "de35a50" | "mais50" };
   /** Donativos do ano (Art. 62.º/63.º EBF): valor + majoração + sem-limite. */
   donativos?: { valor: number; fator: number; semLimite: boolean };
+  /** Pensões de alimentos pagas (Art. 83.º-A CIRS). */
+  pensaoAlimentos?: number;
+  /** Encargos com lares (Art. 84.º CIRS). */
+  lares?: number;
   deficiencia?: boolean;
   ifici?: boolean;
+  /** Isenção de SS no 1.º ano de atividade (independente). */
+  isencaoSSPrimeiroAno?: boolean;
+  /** Acumulação com trabalho dependente que cobre a SS (independente). */
+  acumulaEmprego?: boolean;
   pagamentosPorConta?: number;
 }
 
@@ -1396,12 +1417,15 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
     conjunta,
     dependentesDetalhe: input.dependentesDetalhe,
     dependentesLista: input.dependentesLista,
-    deducoes: input.deducoes,
+    deducoes: input.deducoes ? { ...input.deducoes, lares: input.lares } : { lares: input.lares },
     ascendentes: input.ascendentes,
     ppr: input.ppr,
     donativos: input.donativos,
+    pensaoAlimentos: input.pensaoAlimentos,
     deficiencia: input.deficiencia,
     ifici: input.ifici,
+    isencaoSSPrimeiroAno: input.isencaoSSPrimeiroAno,
+    acumulaEmprego: input.acumulaEmprego,
     retencoesPagas: 0,
   });
 
@@ -1493,9 +1517,12 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
 
   // Deduções à coleta já aplicadas dentro de `simularIRSAnual` (sim.irsEstimado).
   const deducoesColeta =
-    sim.deducaoDependentes + sim.deducaoAscendentes + sim.deducaoDespesas + sim.deducaoDeficiencia;
+    sim.deducaoDependentes + sim.deducaoAscendentes + sim.deducaoDespesas + sim.deducaoDeficiencia + sim.deducaoPensaoAlimentos;
   if (sim.deducaoAscendentes > 0) {
     memoria.push({ anexo: "Anexo H", rotulo: "Dedução por ascendentes", valor: -sim.deducaoAscendentes, baseLegal: "Art. 78.º-A CIRS" });
+  }
+  if (sim.deducaoPensaoAlimentos > 0) {
+    memoria.push({ anexo: "Anexo H", rotulo: "Dedução de pensões de alimentos", formula: `20% do valor pago`, valor: -sim.deducaoPensaoAlimentos, baseLegal: "Art. 83.º-A CIRS" });
   }
   if (sim.deducaoPPR > 0) {
     memoria.push({ anexo: "Anexo H", rotulo: "Benefício PPR", formula: `20% do aplicado (limite por idade)`, valor: -sim.deducaoPPR, baseLegal: "Art. 21.º EBF" });
