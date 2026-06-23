@@ -69,7 +69,7 @@ import InfoTip from "@/components/ui/InfoTip";
 import ProHint from "@/components/ui/ProHint";
 import PartnerSpot from "@/components/dashboard/PartnerSpot";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
-import { exportarDeclaracaoIRS } from "@/lib/export-irs";
+import { exportarDeclaracaoIRS, exportarDeclaracaoCSV } from "@/lib/export-irs";
 import { DistribuicaoRendimento, DistribuicaoFiscal } from "@/components/simulador/Graficos";
 import EditorOperacoes from "@/components/simulador/EditorOperacoes";
 import {
@@ -96,6 +96,15 @@ const ICONES: Record<string, (p: { size?: number; className?: string }) => React
 };
 
 const n = (s: string) => parseFloat((s || "").replace(",", ".")) || 0;
+
+function tempoRelativo(ts: number, agora: number): string {
+  const s = Math.max(0, Math.floor((agora - ts) / 1000));
+  if (s < 60) return "agora mesmo";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `há ${m} min`;
+  const h = Math.floor(m / 60);
+  return `há ${h} h`;
+}
 
 const ATIVIDADE_DEFAULT =
   ATIVIDADES.find((a) => a.label.includes("Programador")) ?? ATIVIDADES[0];
@@ -195,7 +204,15 @@ export default function SimuladorPage() {
 
   // ── Persistência (localStorage) ─────────────────────────────────────────────
   const [hidratado, setHidratado] = useState(false);
+  const [ultimaGravacao, setUltimaGravacao] = useState<number | null>(null);
+  const [agora, setAgora] = useState(() => Date.now());
   const tinhaSnapshot = useRef(false);
+
+  // Relógio leve para o indicador "guardado há X" (atualiza a cada 30 s).
+  useEffect(() => {
+    const t = setInterval(() => setAgora(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
 
   const montarSnapshot = () => ({
     contribuinte, conjunta, dependentes, ascendentes, deficiencia, ifici, ativos,
@@ -273,6 +290,7 @@ export default function SimuladorPage() {
     if (!hidratado) return;
     try {
       localStorage.setItem(SNAP_KEY, JSON.stringify(montarSnapshot()));
+      setUltimaGravacao(Date.now());
     } catch {
       /* localStorage indisponível */
     }
@@ -290,6 +308,19 @@ export default function SimuladorPage() {
     }
     if (typeof window !== "undefined") window.location.reload();
   };
+
+  const montarCabecalho = () => ({
+    nome: contribuinte.nome,
+    nif: contribuinte.nif,
+    residencia: META_RESIDENCIA[contribuinte.residencia],
+    estadoCivil: META_ESTADO_CIVIL[contribuinte.estadoCivil],
+    tributacao: conjunta ? "Conjunta (quociente conjugal)" : "Individual",
+    dependentes: dependentes.map((d, i) => {
+      const idade = idadeNoAnoFiscal(d.nascimento);
+      return `${d.nome.trim() || `Dependente ${i + 1}`}${idade === null ? "" : ` (${dependenteAte3(d) ? "≤ 3 anos" : `${idade} anos`})`}`;
+    }),
+    ascendentes: ascendentes.filter((a) => a.comunhao && a.rendimentoBaixo).length,
+  });
 
   // ── Estado normalizado ──────────────────────────────────────────────────────
   const estado: EstadoDeclaracao = useMemo(
@@ -743,21 +774,10 @@ export default function SimuladorPage() {
               avisos={avisos}
               oportunidades={oportunidades}
               completude={completude}
-              onExportar={() =>
-                exportarDeclaracaoIRS(resultado, {
-                  nome: contribuinte.nome,
-                  nif: contribuinte.nif,
-                  residencia: META_RESIDENCIA[contribuinte.residencia],
-                  estadoCivil: META_ESTADO_CIVIL[contribuinte.estadoCivil],
-                  tributacao: conjunta ? "Conjunta (quociente conjugal)" : "Individual",
-                  dependentes: dependentes.map((d, i) => {
-                    const idade = idadeNoAnoFiscal(d.nascimento);
-                    return `${d.nome.trim() || `Dependente ${i + 1}`}${idade === null ? "" : ` (${dependenteAte3(d) ? "≤ 3 anos" : `${idade} anos`})`}`;
-                  }),
-                  ascendentes: ascendentes.filter((a) => a.comunhao && a.rendimentoBaixo).length,
-                })
-              }
+              onExportar={() => exportarDeclaracaoIRS(resultado, montarCabecalho())}
+              onExportarCSV={() => exportarDeclaracaoCSV(resultado, montarCabecalho())}
               onLimpar={limparTudo}
+              gravadoLabel={ultimaGravacao ? `Guardado ${tempoRelativo(ultimaGravacao, agora)} neste dispositivo` : "Guardado automaticamente neste dispositivo"}
             />
           )}
 
@@ -1461,7 +1481,9 @@ function PassoRevisao({
   oportunidades,
   completude,
   onExportar,
+  onExportarCSV,
   onLimpar,
+  gravadoLabel,
 }: {
   estado: EstadoDeclaracao;
   resultado: ReturnType<typeof simularDeclaracaoIRS>;
@@ -1470,7 +1492,9 @@ function PassoRevisao({
   oportunidades: ReturnType<typeof validarDeclaracao>;
   completude: ReturnType<typeof calcularCompletude>;
   onExportar: () => void;
+  onExportarCSV: () => void;
   onLimpar: () => void;
+  gravadoLabel: string;
 }) {
   return (
     <>
@@ -1485,13 +1509,20 @@ function PassoRevisao({
         </button>
         <button
           type="button"
+          onClick={onExportarCSV}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-600 transition-colors hover:border-brand hover:text-brand dark:border-stone-700 dark:text-stone-300"
+        >
+          <Export size={15} /> CSV
+        </button>
+        <button
+          type="button"
           onClick={onLimpar}
           className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-500 transition-colors hover:border-red-300 hover:text-red-600 dark:border-stone-700 dark:text-stone-400"
         >
           <Trash size={15} /> Recomeçar
         </button>
         <span className="inline-flex items-center gap-1.5 text-xs text-stone-400">
-          <Check size={12} className="text-brand" /> Guardado automaticamente neste dispositivo
+          <Check size={12} className="text-brand" /> {gravadoLabel}
         </span>
       </div>
 

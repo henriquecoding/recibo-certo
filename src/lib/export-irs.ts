@@ -19,6 +19,61 @@ export interface CabecalhoDeclaracao {
   ascendentes: number;
 }
 
+const num = (n: number) => n.toFixed(2).replace(".", ",");
+const csvCell = (s: string) => `"${(s || "").replace(/"/g, '""')}"`;
+
+/** Exporta a declaração simulada como CSV (download), separador ';' (pt-PT). */
+export function exportarDeclaracaoCSV(r: DeclaracaoResult, cab?: CabecalhoDeclaracao): void {
+  if (typeof window === "undefined") return;
+  const linhas: string[] = [];
+  if (cab) {
+    linhas.push("Identificação e agregado;");
+    if (cab.nome) linhas.push(`Nome;${csvCell(cab.nome)}`);
+    if (cab.nif) linhas.push(`NIF;${csvCell(cab.nif)}`);
+    linhas.push(`Residência fiscal;${csvCell(cab.residencia)}`);
+    linhas.push(`Estado civil;${csvCell(cab.estadoCivil)}`);
+    linhas.push(`Tributação;${csvCell(cab.tributacao)}`);
+    linhas.push(`Dependentes;${csvCell(cab.dependentes.join(" | ") || "—")}`);
+    linhas.push(`Ascendentes a cargo;${cab.ascendentes}`);
+    linhas.push("");
+  }
+  linhas.push("Rendimentos por categoria;;;;");
+  linhas.push("Anexo;Categoria;Bruto;Englobado;Imposto autónomo");
+  for (const c of r.componentes) {
+    linhas.push([csvCell(c.anexo), csvCell(c.rotulo), num(c.bruto), num(c.englobado), num(c.impostoAutonomo)].join(";"));
+  }
+  linhas.push("");
+  linhas.push("Apuramento;");
+  const ap: Array<[string, number]> = [
+    ["Rendimento global", r.rendimentoGlobal],
+    ["Rendimento coletável", r.rendimentoColetavel],
+    ["Coleta (englobamento)", r.coletaEnglobamento],
+    ["Tributação autónoma", r.impostoAutonomo],
+    ["Deduções à coleta", r.deducoesColeta],
+    ["Crédito dupla tributação", r.creditoDuplaTributacao],
+    ["IRS total estimado", r.irsTotal],
+    ["Segurança Social (cat. B)", r.ssAnual],
+    ["Retenções + pag. por conta", r.retencoesTotais + r.pagamentosPorConta],
+    [r.saldo >= 0 ? "Reembolso estimado" : "Imposto a pagar estimado", Math.abs(r.saldo)],
+  ];
+  for (const [k, v] of ap) linhas.push(`${csvCell(k)};${num(v)}`);
+  linhas.push("");
+  linhas.push("Memória de cálculo;;");
+  linhas.push("Anexo;Descrição;Valor");
+  for (const l of r.memoria) {
+    linhas.push([csvCell(l.anexo || ""), csvCell(l.rotulo + (l.baseLegal ? ` (${l.baseLegal})` : "")), num(l.valor)].join(";"));
+  }
+
+  const conteudo = "﻿" + linhas.join("\r\n");
+  const blob = new Blob([conteudo], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "simulacao-irs.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function exportarDeclaracaoIRS(r: DeclaracaoResult, cab?: CabecalhoDeclaracao): void {
   if (typeof window === "undefined") return;
 

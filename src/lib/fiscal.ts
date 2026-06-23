@@ -1205,8 +1205,16 @@ export interface DeclaracaoInput {
   cripto?: { ganhoCurtoPrazo?: number; ganhoLongoPrazo?: number; englobar?: boolean };
   /** Categoria G — venda de imóveis / mais-valias imobiliárias (Anexo G). */
   imoveisVenda?: { ganho: number; valorRealizacao?: number; valorReinvestido?: number; reinvesteHPP?: boolean };
-  /** Rendimentos obtidos no estrangeiro (Anexo J). */
-  estrangeiros?: { rendimento: number; impostoPago?: number };
+  /**
+   * Rendimentos obtidos no estrangeiro (Anexo J). `porPais` permite o crédito
+   * por dupla tributação calculado país a país (Art. 81.º), mais rigoroso que
+   * o agregado.
+   */
+  estrangeiros?: {
+    rendimento: number;
+    impostoPago?: number;
+    porPais?: Array<{ pais?: string; rendimento: number; impostoPago: number }>;
+  };
   /** Deduções à coleta (Anexo H). */
   deducoes?: DeducoesInput;
   dependentesDetalhe?: DependentesDetalhe;
@@ -1500,19 +1508,38 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
   const impostoAutonomo = impostoAutonomoCapitais + impostoAutonomoF + impostoAutonomoMob + impostoAutonomoCripto;
 
   // ── Crédito por dupla tributação internacional (Art. 81.º CIRS) ────────────
-  // Menor de: imposto pago no estrangeiro vs. fração da coleta proporcional
-  // ao rendimento estrangeiro englobado.
+  // Para cada país: menor de (imposto pago nesse país; fração da coleta
+  // proporcional ao rendimento desse país). O limite é por país, por isso o
+  // cálculo país a país é mais rigoroso do que o agregado.
   let creditoDuplaTributacao = 0;
-  if (impostoPagoEstrangeiro > 0 && rendEstrangeiroEnglobado > 0 && sim.rendimentoColetavel > 0) {
-    const fracaoColeta = coletaEnglobamento * (rendEstrangeiroEnglobado / sim.rendimentoColetavel);
-    creditoDuplaTributacao = Math.min(impostoPagoEstrangeiro, fracaoColeta);
-    memoria.push({
-      anexo: "Anexo J",
-      rotulo: "Crédito por dupla tributação internacional",
-      formula: `mín(imposto pago ${fmt(impostoPagoEstrangeiro)}; fração da coleta ${fmt(fracaoColeta)})`,
-      valor: -creditoDuplaTributacao,
-      baseLegal: "Art. 81.º CIRS",
-    });
+  const porPais = ext?.porPais?.filter((p) => sanitize(p.rendimento) > 0) ?? [];
+  if (sim.rendimentoColetavel > 0 && coletaEnglobamento > 0) {
+    if (porPais.length > 0) {
+      for (const p of porPais) {
+        const fracaoColeta = coletaEnglobamento * (sanitize(p.rendimento) / sim.rendimentoColetavel);
+        const credito = Math.min(sanitize(p.impostoPago), fracaoColeta);
+        if (credito > 0) {
+          creditoDuplaTributacao += credito;
+          memoria.push({
+            anexo: "Anexo J",
+            rotulo: `Crédito dupla tributação${p.pais ? ` — ${p.pais}` : ""}`,
+            formula: `mín(imposto pago ${fmt(sanitize(p.impostoPago))}; fração da coleta ${fmt(fracaoColeta)})`,
+            valor: -credito,
+            baseLegal: "Art. 81.º CIRS",
+          });
+        }
+      }
+    } else if (impostoPagoEstrangeiro > 0 && rendEstrangeiroEnglobado > 0) {
+      const fracaoColeta = coletaEnglobamento * (rendEstrangeiroEnglobado / sim.rendimentoColetavel);
+      creditoDuplaTributacao = Math.min(impostoPagoEstrangeiro, fracaoColeta);
+      memoria.push({
+        anexo: "Anexo J",
+        rotulo: "Crédito por dupla tributação internacional",
+        formula: `mín(imposto pago ${fmt(impostoPagoEstrangeiro)}; fração da coleta ${fmt(fracaoColeta)})`,
+        valor: -creditoDuplaTributacao,
+        baseLegal: "Art. 81.º CIRS",
+      });
+    }
   }
 
   // Deduções à coleta já aplicadas dentro de `simularIRSAnual` (sim.irsEstimado).

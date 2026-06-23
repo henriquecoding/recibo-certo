@@ -448,7 +448,14 @@ export function construirDeclaracaoInput(e: EstadoDeclaracao): DeclaracaoInput {
     estrangeiros: ativo("estrangeiros")
       ? (() => {
           const r = resumoEstrangeiros(e.estrangeiros.entradas);
-          return r.rendimento > 0 ? { rendimento: r.rendimento, impostoPago: r.impostoPago } : undefined;
+          if (r.rendimento <= 0) return undefined;
+          return {
+            rendimento: r.rendimento,
+            impostoPago: r.impostoPago,
+            porPais: e.estrangeiros.entradas
+              .filter((x) => x.rendimento > 0)
+              .map((x) => ({ pais: x.pais || undefined, rendimento: x.rendimento, impostoPago: x.impostoPago })),
+          };
         })()
       : undefined,
     deducoes: {

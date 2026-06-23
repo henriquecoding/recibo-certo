@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.66.0";
+export const APP_VERSION = "1.67.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.67.0",
+    data: "2026-06-23",
+    titulo: "Exportar CSV, indicador de gravação e crédito internacional por país",
+    itens: [
+      "Nova exportação em CSV dos dados da simulação (agregado, rendimentos, apuramento e memória de cálculo), para abrires no Excel ou folha de cálculo.",
+      "Indicador «guardado há X minutos» que mostra quando a simulação foi gravada automaticamente neste dispositivo.",
+      "Crédito por dupla tributação internacional calculado país a país (Art. 81.º CIRS): o limite passa a ser aplicado por país, refletindo melhor a lei do que o cálculo agregado.",
+    ],
+  },
   {
     version: "1.66.0",
     data: "2026-06-23",
