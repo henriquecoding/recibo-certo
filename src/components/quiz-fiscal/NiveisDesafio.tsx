@@ -4,13 +4,17 @@ import { NIVEIS } from "@/lib/quiz-fiscal/progresso";
 import { useQuizProgresso, NIVEL_ENERGIA_ILIMITADA } from "@/lib/store/quiz-progresso";
 import { Trophy, Zap, Star, Target, Fire, Gift } from "@/components/ui/Icons";
 
+// Cores via variáveis CSS com fallback claro: respeitam o modo escuro do quiz
+// (globals.css `.dark { --quiz-* }`) sem partir o modo claro.
 const QD = "#3a5232";
-const PARCHMENT = "#F7EDE1";
-const BORDER = "#E8DBCB";
-const ACTIVE_BG = "#e4ede0";
-const TEXT_HEAD = "#1C3A22";
-const TEXT_MID = "#607757";
-const TEXT_MUTED = "#8a7a6a";
+const PARCHMENT = "var(--quiz-card-bg, #F7EDE1)";
+const BORDER = "var(--quiz-card-border, #E8DBCB)";
+const ACTIVE_BG = "var(--quiz-card-active-bg, #e4ede0)";
+const TEXT_HEAD = "var(--quiz-heading, #1C3A22)";
+const TEXT_MID = "var(--quiz-muted, #607757)";
+const TEXT_MUTED = "var(--quiz-muted, #8a7a6a)";
+const ALT_ROW = "var(--quiz-stat-bg, #f3ead9)";
+const DOT_EMPTY = "var(--quiz-dot-empty, #d4c4b0)";
 const VERDE_NIVEL = "#415439";
 const GOLD = "#C07828";
 
@@ -71,7 +75,7 @@ export default function NiveisDesafio() {
               <div className="mt-2 flex items-center gap-2">
                 <div
                   className="h-2 flex-1 overflow-hidden rounded-full"
-                  style={{ backgroundColor: "#d4c4b0" }}
+                  style={{ backgroundColor: DOT_EMPTY }}
                 >
                   <div
                     className="h-full rounded-full transition-all"
@@ -119,7 +123,7 @@ export default function NiveisDesafio() {
                 key={n.nivel}
                 className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 px-5 py-2.5 transition-colors"
                 style={{
-                  backgroundColor: atual ? ACTIVE_BG : i % 2 === 0 ? PARCHMENT : "#f3ead9",
+                  backgroundColor: atual ? ACTIVE_BG : i % 2 === 0 ? PARCHMENT : ALT_ROW,
                   borderBottom: i < NIVEIS.length - 1 ? `1px solid ${BORDER}` : "none",
                 }}
               >

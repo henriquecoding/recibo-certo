@@ -57,6 +57,12 @@ const SUBMENU_FERRAMENTAS = [
 
 const SUBMENU_APRENDER = [
   {
+    label: "Simulador de IRS",
+    desc: "Página dedicada: calcula o teu IRS anual de 2026.",
+    href: "/ferramentas/simulador-irs",
+    Icon: Calculator,
+  },
+  {
     label: "Guias fiscais",
     desc: "Passo a passo para cada obrigação.",
     href: "/guias",
@@ -153,7 +159,7 @@ export default function Nav() {
           {/* ── Desktop nav links ── */}
           <div className="hidden items-center gap-0.5 lg:flex">
             <NavLink href="/#calculadora" active={isActive("/#calculadora")}>
-              Simulador
+              Simuladores
             </NavLink>
 
             {/* Recursos Fiscais mega-dropdown */}
@@ -367,7 +373,7 @@ export default function Nav() {
                     : "text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
                 }`}
               >
-                Simulador
+                Simuladores
               </Link>
 
               {/* Recursos Fiscais expansível */}

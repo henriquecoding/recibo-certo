@@ -1627,7 +1627,14 @@ function SujeitoPassivoB({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Campo id="spb-sal-bruto" label="Salário bruto anual (€)" value={num(spb.salBruto)} onChange={(v) => upd({ salBruto: n(v) })} step={500} />
           <Campo id="spb-sal-ret" label="Retenções de IRS (€)" value={num(spb.salRet)} onChange={(v) => upd({ salRet: n(v) })} step={100} />
+          <Campo id="spb-sal-ss" label="Desconto Seg. Social (€)" value={num(spb.salSS)} onChange={(v) => upd({ salSS: n(v) })} step={100}
+            tooltip="Contribuição do sujeito passivo B para a Segurança Social (11%), retida pela entidade. Informativa — não altera o IRS." />
         </div>
+        {spb.salBruto > 0 && spb.salSS === 0 && (
+          <p className="text-xs text-stone-400">
+            Estimativa do desconto de Segurança Social a 11%: {fmt(spb.salBruto * 0.11)}.
+          </p>
+        )}
       </div>
 
       {/* Trabalho independente */}

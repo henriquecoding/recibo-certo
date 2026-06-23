@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.72.0";
+export const APP_VERSION = "1.73.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,20 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.73.0",
+    data: "2026-06-23",
+    titulo: "Página do Simulador de IRS, correções e mais polimento",
+    itens: [
+      "Nova página dedicada ao Simulador de IRS (com explicações e tudo o que precisas de saber), acessível a partir do menu «Recursos Fiscais → Aprender».",
+      "No telemóvel, a barra inferior do painel passa a ter o Simulador de IRS à mão (o perfil continua no topo).",
+      "O sujeito passivo B (tributação conjunta) já permite indicar o desconto para a Segurança Social do trabalho dependente.",
+      "Correção do «Reportar erro» no Quiz Fiscal: já podes escrever a descrição sem o diálogo fechar sozinho.",
+      "Modo escuro do Quiz Fiscal corrigido na página de configuração — os textos voltam a ler-se bem.",
+      "A foto de perfil configurada passa a aparecer também no cabeçalho do painel em telemóvel.",
+      "Nova chamada para investidores no rodapé e o menu passa a dizer «Simuladores».",
+    ],
+  },
   {
     version: "1.72.0",
     data: "2026-06-23",

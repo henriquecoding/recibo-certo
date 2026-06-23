@@ -89,6 +89,7 @@ export interface RendimentosTitularB {
   contribuinte: Contribuinte;
   salBruto: number;
   salRet: number;
+  salSS: number;
   pensBruto: number;
   pensRet: number;
   indBruto: number;
@@ -108,7 +109,7 @@ export interface RendimentosTitularB {
 export function titularBVazio(): RendimentosTitularB {
   return {
     contribuinte: { nome: "", nif: "", nascimento: "", residencia: "continente", estadoCivil: "casado" },
-    salBruto: 0, salRet: 0, pensBruto: 0, pensRet: 0,
+    salBruto: 0, salRet: 0, salSS: 0, pensBruto: 0, pensRet: 0,
     indBruto: 0, indTipo: "art151", indRegime: "simplificado", indDespesas: 0, indRet: 0,
     indAno: 3, indJovem: 0, indIsencaoSS: false, indAcumula: false, deficiencia: false,
   };

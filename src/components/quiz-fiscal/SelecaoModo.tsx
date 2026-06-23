@@ -45,14 +45,19 @@ const ICON_GRUPO: Record<QuizGrupo, React.ReactNode> = {
   empresa: <Building size={13} />,
 };
 
+// Cores via variáveis CSS com fallback claro: respeitam o modo escuro do quiz
+// (definido em globals.css `.dark { --quiz-* }`) sem partir o modo claro.
 const QD = "#3a5232";
-const PARCHMENT = "#F7EDE1";
-const BORDER = "#E8DBCB";
-const ACTIVE_BG = "#e4ede0";
-const ACTIVE_BORDER = "#4D6243";
-const TEXT_HEAD = "#1C3A22";
-const TEXT_MID = "#607757";
-const TEXT_MUTED = "#8a7a6a";
+const PARCHMENT = "var(--quiz-card-bg, #F7EDE1)";
+const BORDER = "var(--quiz-card-border, #E8DBCB)";
+const ACTIVE_BG = "var(--quiz-card-active-bg, #e4ede0)";
+const ACTIVE_BORDER = "var(--quiz-card-active-border, #4D6243)";
+const TEXT_HEAD = "var(--quiz-heading, #1C3A22)";
+const TEXT_MID = "var(--quiz-muted, #607757)";
+const TEXT_MUTED = "var(--quiz-muted, #8a7a6a)";
+const TAG_BG = "var(--quiz-tag-bg, #ece4d8)";
+const DOT_EMPTY = "var(--quiz-dot-empty, #d4c4b0)";
+const STAT_BG = "var(--quiz-stat-bg, #FAF4EC)";
 
 export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTotal = 5, energiaIlimitada = false }: SelecaoModoProps) {
   const { config, updateConfig } = useQuizConfig();
@@ -177,7 +182,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
                         </div>
                         <span
                           className="ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums"
-                          style={{ backgroundColor: "#ece4d8", color: TEXT_MID }}
+                          style={{ backgroundColor: TAG_BG, color: TEXT_MID }}
                         >
                           {totalGrupo}
                         </span>
@@ -294,7 +299,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
                   type="button"
                   onClick={() => updateConfig({ somAtivo: !config.somAtivo })}
                   className="relative h-5 w-9 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#3a5232]"
-                  style={{ backgroundColor: config.somAtivo ? QD : "#d4c4b0" }}
+                  style={{ backgroundColor: config.somAtivo ? QD : DOT_EMPTY }}
                   role="switch"
                   aria-checked={config.somAtivo}
                 >
@@ -328,7 +333,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
                       <span
                         key={i}
                         className="h-2 w-2 rounded-full"
-                        style={{ backgroundColor: i < energiaRestante ? "#C07828" : "#d4c4b0" }}
+                        style={{ backgroundColor: i < energiaRestante ? "#C07828" : DOT_EMPTY }}
                       />
                     ))}
                     <span className="ml-1 text-[11px] font-bold tabular-nums" style={{ color: TEXT_MID }}>
@@ -407,7 +412,7 @@ function OptionChip({ ativo, onClick, label }: { ativo: boolean; onClick: () => 
       onClick={onClick}
       className="rounded-lg px-2.5 py-1 text-[12px] font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#3a5232]"
       style={{
-        backgroundColor: ativo ? QD : "#ece4d8",
+        backgroundColor: ativo ? QD : TAG_BG,
         color: ativo ? "#fff" : TEXT_MID,
         border: `1px solid ${ativo ? QD : BORDER}`,
       }}
@@ -456,7 +461,7 @@ function ModoCard({
             key={tag}
             className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
             style={{
-              backgroundColor: ativo ? "rgba(58,82,50,0.12)" : "#ece4d8",
+              backgroundColor: ativo ? "rgba(58,82,50,0.12)" : TAG_BG,
               color: ativo ? QD : TEXT_MUTED,
             }}
           >
@@ -553,7 +558,7 @@ function AtividadeResumo({ atividade }: { atividade: Atividade }) {
 
 function ResumoStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg p-2 text-center" style={{ backgroundColor: "#FAF4EC", border: `1px solid ${BORDER}` }}>
+    <div className="rounded-lg p-2 text-center" style={{ backgroundColor: STAT_BG, border: `1px solid ${BORDER}` }}>
       <p className="text-[9px] font-semibold uppercase tracking-wide" style={{ color: TEXT_MUTED }}>{label}</p>
       <p className="mt-0.5 text-[13px] font-bold" style={{ color: TEXT_HEAD }}>{value}</p>
     </div>
