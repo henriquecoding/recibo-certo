@@ -42,6 +42,7 @@ import {
 } from "@/lib/fiscal-data";
 import { calcular, simularIRSAnual, type RegimeIVA } from "@/lib/fiscal";
 import { gerarPrazos, diasAte } from "@/lib/prazos";
+import { useScrollTopOnStep } from "@/lib/scroll";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -262,6 +263,8 @@ export default function ModoGuiado({
 }: ModoGuiadoProps) {
   // Navegação — começa no pré-passo (decisor)
   const [passo, setPasso] = useState<Passo>(0);
+  // Ao mudar de passo, rola até ao topo do simulador.
+  const topoRef = useScrollTopOnStep(passo);
 
   // Gestão de cenários (guardar instantâneo completo + reabrir)
   const cenariosStore = useCenarios();
@@ -768,7 +771,7 @@ export default function ModoGuiado({
   const PASSOS = ["Atividade", "Faturação", "Situação", "Resultado", "A seguir"];
 
   return (
-    <div className="min-h-0 bg-white dark:bg-stone-950">
+    <div ref={topoRef} className="min-h-0 scroll-mt-20 bg-white dark:bg-stone-950 sm:scroll-mt-24">
       {/* ── Faixa verde ────────────────────────────────────────────────────── */}
       <div className="border-b border-brand/10 bg-brand-light/40 px-6 py-2 dark:bg-brand/5 dark:border-brand/10">
         <div className="mx-auto max-w-3xl">

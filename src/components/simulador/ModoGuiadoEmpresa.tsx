@@ -50,6 +50,7 @@ const MapaBeneficiosRegioes = dynamic(
   { ssr: false, loading: MapaCarregar },
 );
 import { pct, fmt } from "@/lib/format";
+import { useScrollTopOnStep } from "@/lib/scroll";
 import {
   ESCALOES_IRS,
   IRC_TAXA_GERAL,
@@ -870,6 +871,8 @@ export default function ModoGuiadoEmpresa({
   onIrParaSimuladorCompleto,
 }: ModoGuiadoEmpresaProps) {
   const [passo, setPasso] = useState<Passo>(0);
+  // Ao mudar de passo, rola até ao topo do simulador.
+  const topoRef = useScrollTopOnStep(passo);
 
   // Gestão de cenários (guardar instantâneo completo + reabrir)
   const cenariosStore = useCenarios();
@@ -1353,7 +1356,7 @@ export default function ModoGuiadoEmpresa({
   // ─── Layout dos passos 1–resultado ─────────────────────────────────────────
 
   return (
-    <div className="min-h-0 bg-white dark:bg-stone-950">
+    <div ref={topoRef} className="min-h-0 scroll-mt-20 bg-white dark:bg-stone-950 sm:scroll-mt-24">
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Barra de progresso */}
         <div className="mb-8">

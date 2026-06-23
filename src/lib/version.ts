@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.77.0";
+export const APP_VERSION = "1.78.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -18,7 +18,7 @@ export interface EntradaChangelog {
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
-    version: "1.77.0",
+    version: "1.78.0",
     data: "2026-06-23",
     titulo: "Site mais rápido a abrir, sobretudo no telemóvel",
     itens: [
@@ -26,6 +26,15 @@ export const CHANGELOG: EntradaChangelog[] = [
       "A pesquisa, o aviso de cookies e o popup de Novidades passam a carregar em segundo plano, sem atrasar a primeira abertura da página.",
       "Componentes de conta (nuvem) deixaram de ser descarregados em páginas onde não são precisos — menos dados e arranque mais leve para quem só quer usar as calculadoras.",
       "Os números de exemplo da página inicial passam a ser preparados no servidor, deixando o telemóvel com menos trabalho ao abrir — sem qualquer mudança nos valores apresentados.",
+    ],
+  },
+  {
+    version: "1.77.0",
+    data: "2026-06-23",
+    titulo: "Demonstração do Simulador de IRS mais rica e simuladores que voltam ao topo",
+    itens: [
+      "A demonstração «ao vivo» do Simulador de IRS está muito mais completa: além do reembolso (ou valor a pagar), mostra agora um anel com a fatia do rendimento que fica contigo, em que escalão de IRS cais (com as taxas oficiais de 2026), uma memória de cálculo resumida e três perfis de exemplo que vais podendo alternar.",
+      "Nos simuladores guiados (IRS, recibos verdes e abrir empresa), ao avançar para o passo seguinte o ecrã volta automaticamente ao topo do simulador — assim, quando o passo seguinte é mais curto, deixas de ficar perdido a meio da página.",
     ],
   },
   {
