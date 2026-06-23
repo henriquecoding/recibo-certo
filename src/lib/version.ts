@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.68.0";
+export const APP_VERSION = "1.69.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.69.0",
+    data: "2026-06-23",
+    titulo: "Simulador de IRS com design renovado e mais explicado",
+    itens: [
+      "Cabeçalhos editoriais (etapa + título + descrição) e um indicador de passos mais claro, com barra de progresso.",
+      "Cada opção importante (tributação, regime) passa a mostrar um painel explicativo com pontos-chave quando a escolhes — percebes logo o que significa.",
+      "Campos com símbolo de euro, cartões e interruptores mais legíveis, e um cartão de resultado renovado com a taxa efetiva em destaque.",
+      "Mais espaço, hierarquia visual e coerência em todo o simulador, mantendo o modo claro e escuro.",
+    ],
+  },
   {
     version: "1.68.0",
     data: "2026-06-23",
