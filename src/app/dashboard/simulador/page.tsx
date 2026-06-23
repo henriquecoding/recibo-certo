@@ -98,7 +98,7 @@ import {
 } from "@/components/ui/Icons";
 import {
   Campo, SeletorCartoes, Checkbox, Interruptor, Explicador, Linha,
-  CartaoValidacao, CabecalhoModulo, campoCls, rotuloCls,
+  CartaoValidacao, CabecalhoModulo, SeccaoTitulo, CartaoSituacao, campoCls, rotuloCls,
 } from "@/components/simulador/ui";
 
 const ICONES: Record<string, (p: { size?: number; className?: string }) => ReactNode> = {
@@ -493,11 +493,11 @@ export default function SimuladorPage() {
   return (
     <div className="mx-auto max-w-5xl">
       {/* Cabeçalho */}
-      <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="eyebrow mb-2 text-brand">Preparação e simulação · IRS 2026</div>
-          <h1 className="font-display text-3xl font-semibold text-stone-800 dark:text-stone-100">Simulador de IRS guiado</h1>
-          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-stone-500 dark:text-stone-400">
+          <h1 className="display-2 font-display font-semibold text-stone-800 dark:text-stone-100">Simulador de IRS guiado</h1>
+          <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-stone-500 dark:text-stone-400">
             Passo a passo pela tua realidade fiscal — sem te perderes em anexos. Cada campo explica-se, cada valor tem
             memória de cálculo e o sistema avisa-te do que possa faltar. No fim, sais com a tranquilidade de não te
             teres esquecido de nada.
@@ -616,10 +616,21 @@ export default function SimuladorPage() {
                   </div>
                   <SeletorCartoes
                     label="Regime de contabilidade"
-                    tooltip="Simplificado: coeficiente sobre o rendimento (presume despesas). Organizada: lucro real (receitas − despesas). Obrigatória acima de €200 000."
                     opcoes={[
-                      { id: "simplificado" as const, label: "Simplificado", sub: `Coef. ${pct(ef.coef)}` },
-                      { id: "organizada" as const, label: "Contab. organizada", sub: "Receitas − despesas" },
+                      {
+                        id: "simplificado" as const,
+                        label: "Simplificado",
+                        sub: `Coef. ${pct(ef.coef)}`,
+                        descricao: `Aplica um coeficiente de ${pct(ef.coef)} ao rendimento bruto, que já presume as despesas (Art. 31.º CIRS). Não exige contabilista certificado.`,
+                        pontos: ["Indicado quando tens poucas despesas reais documentadas", "Apenas uma parte do rendimento é tributada"],
+                      },
+                      {
+                        id: "organizada" as const,
+                        label: "Contab. organizada",
+                        sub: "Receitas − despesas",
+                        descricao: "Tributa o lucro real (receitas menos despesas documentadas). Exige contabilista certificado.",
+                        pontos: ["Compensa quando tens muitas despesas dedutíveis", "Obrigatória acima de €200 000 de faturação"],
+                      },
                     ]}
                     valor={indRegime}
                     onChange={setIndRegime}
@@ -946,8 +957,8 @@ export default function SimuladorPage() {
 
 function Stepper({ passo, onIr, pontuacao }: { passo: number; onIr: (p: number) => void; pontuacao: number }) {
   return (
-    <div className="rounded-2xl border border-stone-100 bg-white p-3 shadow-card dark:border-stone-700 dark:bg-stone-900">
-      <div className="flex items-center gap-1 overflow-x-auto">
+    <div className="rounded-3xl border border-stone-100 bg-white p-2 shadow-card dark:border-stone-700 dark:bg-stone-900">
+      <div className="flex items-stretch gap-1">
         {PASSOS.map((label, i) => {
           const active = i === passo;
           const done = i < passo;
@@ -956,23 +967,30 @@ function Stepper({ passo, onIr, pontuacao }: { passo: number; onIr: (p: number) 
               key={label}
               type="button"
               onClick={() => onIr(i)}
-              className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-colors ${
-                active ? "bg-brand text-white" : done ? "text-brand-dark hover:bg-brand-light dark:text-brand" : "text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800"
+              aria-current={active ? "step" : undefined}
+              className={`group flex flex-1 flex-col items-center gap-1.5 rounded-2xl px-2 py-2.5 transition-colors ${
+                active ? "bg-brand-light" : "hover:bg-stone-50 dark:hover:bg-stone-800/60"
               }`}
             >
-              <span className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${active ? "bg-white/25" : done ? "bg-brand text-white" : "bg-stone-100 dark:bg-stone-800"}`}>
-                {done ? <Check size={10} /> : i + 1}
+              <span
+                className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors ${
+                  active ? "bg-brand text-white" : done ? "bg-brand/15 text-brand-dark dark:text-brand" : "bg-stone-100 text-stone-400 dark:bg-stone-800"
+                }`}
+              >
+                {done ? <Check size={12} /> : i + 1}
               </span>
-              <span className="hidden sm:inline">{label}</span>
+              <span className={`hidden text-[11px] font-semibold sm:block ${active ? "text-brand-dark dark:text-brand" : done ? "text-stone-500 dark:text-stone-300" : "text-stone-400"}`}>
+                {label}
+              </span>
             </button>
           );
         })}
       </div>
-      <div className="mt-2 flex items-center gap-2 px-1">
+      <div className="mt-1 flex items-center gap-2 px-2 pb-1">
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
-          <div className="h-full rounded-full bg-brand transition-all duration-500" style={{ width: `${pontuacao}%` }} />
+          <div className="h-full rounded-full bg-gradient-to-r from-brand to-brand-dark transition-all duration-500" style={{ width: `${pontuacao}%` }} />
         </div>
-        <span className="text-[11px] font-semibold tabular-nums text-stone-500 dark:text-stone-400">{pontuacao}%</span>
+        <span className="text-[11px] font-semibold tabular-nums text-stone-500 dark:text-stone-400">{pontuacao}% completo</span>
       </div>
     </div>
   );
@@ -1008,8 +1026,7 @@ function ComparadorCenarios({ estado }: { estado: EstadoDeclaracao }) {
 
   return (
     <section className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
-      <h2 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">Comparar cenários</h2>
-      <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">A mesma declaração, lado a lado. Indicamos qual paga menos imposto — a opção continua a ser tua.</p>
+      <SeccaoTitulo eyebrow="Otimização" titulo="Comparar cenários" descricao="A mesma declaração, lado a lado. Indicamos qual paga menos imposto — a decisão continua a ser tua." />
 
       <div className="mt-4 space-y-4">
         <ParCenarios
@@ -1213,9 +1230,8 @@ function EditorEstrangeiros({ entradas, setEntradas }: { entradas: EntradaEstran
 function Triagem({ ativos, onToggle }: { ativos: RendimentoId[]; onToggle: (id: RendimentoId) => void }) {
   return (
     <section className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
-      <h2 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">Como obtiveste rendimentos?</h2>
-      <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">Seleciona tudo o que se aplica. Abrimos só os módulos que precisas.</p>
-      <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+      <SeccaoTitulo eyebrow="Etapa 2 · Rendimentos" titulo="Como obtiveste rendimentos?" descricao="Seleciona tudo o que se aplica — abrimos apenas os módulos de que precisas, cada um com a sua correspondência fiscal." />
+      <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
         {MODULOS.map((m) => {
           const active = ativos.includes(m.id);
           const Icon = ICONES[m.icone];
@@ -1273,10 +1289,7 @@ function PassoAgregado(props: {
     <div className="space-y-5">
       {/* Identificação */}
       <section className="space-y-4 rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
-        <div>
-          <h2 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">Identificação</h2>
-          <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">Dados do sujeito passivo. Determinam a estrutura da declaração.</p>
-        </div>
+        <SeccaoTitulo eyebrow="Etapa 1 · Agregado" titulo="Identificação" descricao="Dados do sujeito passivo. Determinam a estrutura da declaração e as deduções pessoais." />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label htmlFor="c-nome" className={`mb-1.5 block ${rotuloCls}`}>Nome</label>
@@ -1313,10 +1326,21 @@ function PassoAgregado(props: {
         </div>
         <SeletorCartoes
           label="Tipo de tributação"
-          tooltip="Conjunta (casado / unido de facto): divide o rendimento coletável por 2, aplica os escalões e multiplica por 2 (quociente conjugal, Art. 69.º). Individual: cada um declara o seu."
           opcoes={[
-            { id: false, label: "Individual", sub: "Declaração separada" },
-            { id: true, label: "Conjunta", sub: "Quociente conjugal" },
+            {
+              id: false,
+              label: "Individual",
+              sub: "Declaração separada",
+              descricao: "Cada sujeito passivo entrega a sua declaração e é tributado apenas sobre o seu próprio rendimento.",
+              pontos: ["Indicada quando ambos têm rendimentos semelhantes", "Cada um aproveita os seus próprios escalões e deduções"],
+            },
+            {
+              id: true,
+              label: "Conjunta",
+              sub: "Quociente conjugal",
+              descricao: "O rendimento coletável do casal é dividido por 2, aplicam-se os escalões e o imposto é multiplicado por 2 (Art. 69.º CIRS).",
+              pontos: ["Disponível a casados e unidos de facto", "Costuma compensar quando há grande diferença de rendimentos entre os dois"],
+            },
           ]}
           valor={conjunta}
           onChange={setConjunta}
@@ -1797,14 +1821,12 @@ function PassoDeducoes(props: {
   return (
     <>
       <section className="space-y-4 rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          <h2 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">Despesas e deduções</h2>
-          <span className="inline-flex items-center gap-1.5 rounded-lg bg-stone-100 px-2.5 py-1 text-[11px] font-medium text-stone-500 dark:bg-stone-800 dark:text-stone-400">
-            <span className="font-semibold text-brand-dark dark:text-brand">Anexo H</span><span aria-hidden>·</span><span>Deduções à coleta</span>
-            <InfoTip label="O que é o Anexo H">As deduções à coleta reduzem o imposto a pagar (não o rendimento). Estão sujeitas a um limite global em função do rendimento (Art. 78.º n.º 7 CIRS). Muitas são pré-preenchidas pela AT a partir do e-fatura.</InfoTip>
-          </span>
-        </div>
-        <p className="text-sm text-stone-500 dark:text-stone-400">Indica os valores anuais. Aplicamos a percentagem dedutível e o respetivo limite legal.</p>
+        <SeccaoTitulo
+          eyebrow="Etapa 3 · Anexo H"
+          titulo="Despesas e deduções"
+          descricao="Indica os valores anuais — aplicamos a percentagem dedutível e o limite legal de cada uma. As deduções à coleta reduzem o imposto, não o rendimento."
+          acao={<InfoTip label="O que é o Anexo H">As deduções à coleta reduzem o imposto a pagar (não o rendimento). Estão sujeitas a um limite global em função do rendimento (Art. 78.º n.º 7 CIRS). Muitas são pré-preenchidas pela AT a partir do e-fatura.</InfoTip>}
+        />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {campos.map((f) => (
             <div key={f.id}>
@@ -1944,8 +1966,8 @@ function PassoRevisao({
 
       {/* Completude */}
       <section className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
-        <h2 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">Completude da declaração</h2>
-        <div className="mt-3 space-y-2">
+        <SeccaoTitulo eyebrow="Etapa 4 · Revisão" titulo="Completude da declaração" descricao="O estado de cada módulo que ativaste — para saíres com a certeza de que não falta nada." />
+        <div className="mt-4 space-y-2">
           <EstadoLinha titulo="Identificação e agregado" estado="concluido" />
           {completude.modulos.map((m) => (
             <EstadoLinha key={m.id} titulo={m.titulo} estado={m.estado} />
@@ -1964,8 +1986,8 @@ function PassoRevisao({
 
       {/* Revisão por categoria */}
       <section className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
-        <h2 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">Revisão dos rendimentos</h2>
-        <div className="mt-3 space-y-1">
+        <SeccaoTitulo eyebrow="Auditoria" titulo="Revisão dos rendimentos" descricao="Confere cada categoria declarada antes de submeteres a tua declaração oficial." />
+        <div className="mt-4 space-y-1">
           <div className="flex items-center justify-between border-b border-stone-200/60 py-2 dark:border-stone-700/60">
             <span className="text-sm font-medium text-stone-700 dark:text-stone-200">Tipo de tributação</span>
             <span className="text-sm text-stone-500 dark:text-stone-400">{estado.conjunta ? "Conjunta (quociente conjugal)" : "Individual"}</span>
@@ -2076,14 +2098,24 @@ function ResumoLateral({
 }) {
   return (
     <div className="space-y-4">
-      <div className="rounded-4xl border border-stone-200 bg-cream p-6 shadow-card dark:border-stone-700 dark:bg-stone-900">
-        <div className="text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
-          {reembolso ? "Reembolso estimado" : "Imposto a pagar estimado"}
+      <div className="overflow-hidden rounded-4xl border border-stone-200 bg-cream shadow-card dark:border-stone-700 dark:bg-stone-900">
+        {/* Número-herói */}
+        <div className={`p-6 ${reembolso ? "bg-gradient-to-br from-brand-light to-cream dark:from-brand/10 dark:to-stone-900" : "bg-gradient-to-br from-alert-bg to-cream dark:from-alert/5 dark:to-stone-900"}`}>
+          <div className="flex items-center gap-1.5">
+            <span className={`h-1.5 w-1.5 rounded-full ${reembolso ? "bg-brand" : "bg-alert-text"}`} />
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+              {reembolso ? "Reembolso estimado" : "Imposto a pagar estimado"}
+            </span>
+          </div>
+          <div className={`mt-1 font-display text-[2.6rem] font-semibold leading-none tabular-nums ${reembolso ? "text-brand" : "text-alert-text"}`}>
+            <AnimatedNumber value={Math.abs(resultado.saldo)} />
+          </div>
+          <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
+            Taxa efetiva de IRS {pct(resultado.taxaEfetiva)} · estimativa para 2026
+          </p>
         </div>
-        <div className={`mb-4 font-display text-4xl font-semibold ${reembolso ? "text-brand" : "text-alert-text"}`}>
-          <AnimatedNumber value={Math.abs(resultado.saldo)} />
-        </div>
-        <div className="space-y-1">
+        <div className="px-6 pb-6 pt-4">
+          <div className="space-y-1">
           <Linha label="Rendimento global" value={resultado.rendimentoGlobal} />
           <Linha label="Rendimento coletável" value={resultado.rendimentoColetavel} note="Base do englobamento" />
           <Linha label="Coleta (englobamento)" value={resultado.coletaEnglobamento} />
@@ -2107,6 +2139,7 @@ function ResumoLateral({
             <span className="font-semibold tabular-nums text-stone-700 dark:text-stone-300">{fmt(resultado.ssAnual)}</span>
           </div>
         )}
+        </div>
       </div>
 
       {nErros > 0 && (

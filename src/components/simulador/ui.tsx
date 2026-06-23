@@ -3,19 +3,43 @@
 import { useState, type ReactNode } from "react";
 import InfoTip from "@/components/ui/InfoTip";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
-import { Check, Warning, ArrowRight, ChevronDown } from "@/components/ui/Icons";
+import { Check, Warning, ArrowRight, ChevronDown, Info } from "@/components/ui/Icons";
 import type { NivelValidacao } from "@/lib/irs-guiado";
 
 // Classes partilhadas (coerentes com o resto do painel).
 export const campoCls =
   "w-full px-3.5 py-2.5 text-[16px] text-stone-800 bg-stone-50 rounded-xl border border-stone-200 " +
-  "focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all " +
+  "focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand transition-all " +
   "dark:bg-stone-800/50 dark:text-stone-100 dark:border-stone-700";
 
 export const rotuloCls =
-  "text-xs font-medium text-stone-500 uppercase tracking-wider dark:text-stone-400";
+  "text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400";
 
-// ─── Campo numérico ─────────────────────────────────────────────────────────
+// ─── Cabeçalho de secção (editorial: eyebrow + título + descrição) ──────────
+export function SeccaoTitulo({
+  eyebrow,
+  titulo,
+  descricao,
+  acao,
+}: {
+  eyebrow?: string;
+  titulo: string;
+  descricao?: string;
+  acao?: ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        {eyebrow && <div className="eyebrow mb-1 text-brand">{eyebrow}</div>}
+        <h2 className="font-display text-xl font-semibold leading-tight text-stone-800 dark:text-stone-100">{titulo}</h2>
+        {descricao && <p className="mt-1 text-sm leading-relaxed text-stone-500 dark:text-stone-400">{descricao}</p>}
+      </div>
+      {acao && <div className="flex-shrink-0">{acao}</div>}
+    </div>
+  );
+}
+
+// ─── Campo numérico (com adorno de moeda) ───────────────────────────────────
 export function Campo({
   id,
   label,
@@ -24,6 +48,7 @@ export function Campo({
   step = 100,
   placeholder = "0",
   tooltip,
+  moeda = true,
 }: {
   id: string;
   label: string;
@@ -32,6 +57,7 @@ export function Campo({
   step?: number;
   placeholder?: string;
   tooltip?: ReactNode;
+  moeda?: boolean;
 }) {
   return (
     <div>
@@ -41,22 +67,39 @@ export function Campo({
         </label>
         {tooltip && <InfoTip>{tooltip}</InfoTip>}
       </div>
-      <input
-        id={id}
-        type="number"
-        inputMode="decimal"
-        min={0}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={campoCls}
-      />
+      <div className="relative">
+        {moeda && (
+          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[15px] font-medium text-stone-400" aria-hidden>
+            €
+          </span>
+        )}
+        <input
+          id={id}
+          type="number"
+          inputMode="decimal"
+          min={0}
+          step={step}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className={`${campoCls} tabular-nums ${moeda ? "pl-8" : ""}`}
+        />
+      </div>
     </div>
   );
 }
 
-// ─── Cartões de opção (seleção única) ───────────────────────────────────────
+// ─── Cartões de opção (seleção única) com painel explicativo reativo ────────
+export interface OpcaoSeletor<T> {
+  id: T;
+  label: string;
+  sub?: string;
+  /** Descrição mostrada no painel quando a opção está selecionada. */
+  descricao?: string;
+  /** Pontos (checklist) mostrados no painel da opção selecionada. */
+  pontos?: string[];
+}
+
 export function SeletorCartoes<T extends string | boolean>({
   label,
   tooltip,
@@ -67,7 +110,7 @@ export function SeletorCartoes<T extends string | boolean>({
 }: {
   label?: string;
   tooltip?: ReactNode;
-  opcoes: { id: T; label: string; sub?: string }[];
+  opcoes: OpcaoSeletor<T>[];
   valor: T;
   onChange: (v: T) => void;
   colunas?: number;
@@ -75,6 +118,7 @@ export function SeletorCartoes<T extends string | boolean>({
   const cols = colunas ?? opcoes.length;
   const gridCls =
     cols === 2 ? "grid-cols-2" : cols === 3 ? "grid-cols-3" : cols === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2";
+  const selecionada = opcoes.find((o) => o.id === valor);
   return (
     <div>
       {label && (
@@ -92,19 +136,82 @@ export function SeletorCartoes<T extends string | boolean>({
               type="button"
               aria-pressed={active}
               onClick={() => onChange(o.id)}
-              className={`rounded-xl border p-3 text-center transition-all ${
+              className={`rounded-2xl border p-3 text-center transition-all ${
                 active
-                  ? "border-brand bg-brand-light"
-                  : "border-stone-200 bg-stone-50 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-800/40"
+                  ? "border-brand bg-brand-light shadow-[0_0_0_1px_rgba(29,158,117,0.25)]"
+                  : "border-stone-200 bg-stone-50 hover:border-stone-300 hover:bg-white dark:border-stone-700 dark:bg-stone-800/40"
               }`}
             >
               <div className={`text-sm font-semibold ${active ? "text-brand-dark" : "text-stone-700 dark:text-stone-200"}`}>
                 {o.label}
               </div>
-              {o.sub && <div className={`text-xs ${active ? "text-brand" : "text-stone-400"}`}>{o.sub}</div>}
+              {o.sub && <div className={`mt-0.5 text-xs ${active ? "text-brand" : "text-stone-400"}`}>{o.sub}</div>}
             </button>
           );
         })}
+      </div>
+      {selecionada && (selecionada.descricao || selecionada.pontos?.length) && (
+        <PainelDetalhe titulo={selecionada.label} descricao={selecionada.descricao} pontos={selecionada.pontos} />
+      )}
+    </div>
+  );
+}
+
+// ─── Painel de detalhe da opção selecionada (estilo "TAXA NORMAL") ──────────
+export function PainelDetalhe({ titulo, descricao, pontos }: { titulo: string; descricao?: string; pontos?: string[] }) {
+  return (
+    <div className="mt-2 rounded-2xl border border-stone-100 bg-stone-50/80 p-4 dark:border-stone-700 dark:bg-stone-800/40">
+      <div className="eyebrow mb-1.5 text-stone-400">{titulo}</div>
+      {descricao && <p className="text-xs leading-relaxed text-stone-600 dark:text-stone-300">{descricao}</p>}
+      {pontos && pontos.length > 0 && (
+        <ul className="mt-2.5 space-y-1.5">
+          {pontos.map((p, i) => (
+            <li key={i} className="flex items-start gap-2 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
+              <Check size={12} className="mt-0.5 flex-shrink-0 text-brand" />
+              <span>{p}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ─── Cartão de situação contextual (estilo "SITUAÇÃO DE IVA") ────────────────
+export function CartaoSituacao({
+  eyebrow,
+  nivel = "info",
+  titulo,
+  info,
+  children,
+}: {
+  eyebrow?: string;
+  nivel?: "info" | "aviso" | "brand";
+  titulo: ReactNode;
+  info?: ReactNode;
+  children?: ReactNode;
+}) {
+  const estilos = {
+    info: { box: "border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/50", icon: <Info size={15} className="text-stone-400" />, titulo: "text-stone-700 dark:text-stone-200" },
+    aviso: { box: "border-alert-border bg-alert-bg", icon: <Warning size={15} className="text-alert-text" />, titulo: "text-alert-text" },
+    brand: { box: "border-brand/25 bg-brand-light/60", icon: <Check size={15} className="text-brand" />, titulo: "text-brand-dark" },
+  }[nivel];
+  return (
+    <div>
+      {eyebrow && (
+        <div className="mb-1.5 flex items-center gap-1.5">
+          <span className={rotuloCls}>{eyebrow}</span>
+          {info && <InfoTip>{info}</InfoTip>}
+        </div>
+      )}
+      <div className={`rounded-2xl border p-4 ${estilos.box}`}>
+        <div className="flex items-start gap-2.5">
+          <span className="mt-0.5 flex-shrink-0">{estilos.icon}</span>
+          <div className="min-w-0 flex-1">
+            <div className={`text-sm font-semibold ${estilos.titulo}`}>{titulo}</div>
+            <div className="mt-1">{children}</div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -128,12 +235,12 @@ export function Checkbox({
       role="checkbox"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-all ${
-        checked ? "border-brand bg-brand-light" : "border-stone-200 bg-stone-50 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-800/40"
+      className={`flex w-full items-start gap-3 rounded-2xl border p-3.5 text-left transition-all ${
+        checked ? "border-brand bg-brand-light" : "border-stone-200 bg-stone-50 hover:border-stone-300 hover:bg-white dark:border-stone-700 dark:bg-stone-800/40"
       }`}
     >
       <span
-        className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border-2 ${
+        className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
           checked ? "border-brand bg-brand text-white" : "border-stone-300 text-transparent dark:border-stone-600"
         }`}
       >
@@ -160,24 +267,25 @@ export function Interruptor({
   tooltip?: ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={on}
-        onClick={() => onChange(!on)}
-        className={`relative h-6 w-10 flex-shrink-0 rounded-full transition-colors ${on ? "bg-brand" : "bg-stone-200 dark:bg-stone-700"}`}
-      >
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => onChange(!on)}
+      className={`flex w-full items-center gap-2.5 rounded-2xl border p-3 text-left transition-all ${
+        on ? "border-brand bg-brand-light" : "border-stone-200 bg-stone-50 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-800/40"
+      }`}
+    >
+      <span className={`relative h-6 w-10 flex-shrink-0 rounded-full transition-colors ${on ? "bg-brand" : "bg-stone-300 dark:bg-stone-600"}`}>
         <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${on ? "left-[1.125rem]" : "left-0.5"}`} />
-      </button>
-      <span className="text-sm font-medium text-stone-700 dark:text-stone-200">{label}</span>
-      {tooltip && <InfoTip>{tooltip}</InfoTip>}
-    </div>
+      </span>
+      <span className={`text-sm font-medium ${on ? "text-brand-dark" : "text-stone-700 dark:text-stone-200"}`}>{label}</span>
+      {tooltip && <span onClick={(e) => e.stopPropagation()}><InfoTip>{tooltip}</InfoTip></span>}
+    </button>
   );
 }
 
 // ─── Chip de correspondência fiscal (anexo) ─────────────────────────────────
-// Discreto; ao clicar/passar o cursor mostra a explicação detalhada.
 export function AnexoChip({ anexo, nome, explicacao }: { anexo: string; nome: string; explicacao: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-lg bg-stone-100 px-2.5 py-1 text-[11px] font-medium text-stone-500 dark:bg-stone-800 dark:text-stone-400">
@@ -193,17 +301,18 @@ export function AnexoChip({ anexo, nome, explicacao }: { anexo: string; nome: st
 export function Explicador({ titulo, children }: { titulo: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-2xl border border-stone-100 bg-stone-50/70 dark:border-stone-700 dark:bg-stone-800/40">
+    <div className="overflow-hidden rounded-2xl border border-stone-100 bg-stone-50/70 dark:border-stone-700 dark:bg-stone-800/40">
       <button
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left"
+        className="flex w-full items-center gap-2 px-4 py-3 text-left"
       >
-        <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">{titulo}</span>
-        <ChevronDown size={14} className={`flex-shrink-0 text-stone-400 transition-transform ${open ? "rotate-180" : ""}`} />
+        <Info size={15} className="flex-shrink-0 text-brand" />
+        <span className="flex-1 text-xs font-semibold text-stone-600 dark:text-stone-300">{titulo}</span>
+        <ChevronDown size={15} className={`flex-shrink-0 text-stone-400 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
-      {open && <div className="px-4 pb-3 text-xs leading-relaxed text-stone-500 dark:text-stone-400">{children}</div>}
+      {open && <div className="px-4 pb-3.5 text-xs leading-relaxed text-stone-500 dark:text-stone-400">{children}</div>}
     </div>
   );
 }
@@ -280,27 +389,32 @@ export function CartaoValidacao({
   );
 }
 
-// ─── Cabeçalho de secção/módulo numerado ────────────────────────────────────
+// ─── Cabeçalho de módulo (ícone + título + anexo + descrição) ───────────────
 export function CabecalhoModulo({
   titulo,
   anexo,
   anexoNome,
   explicacao,
+  descricao,
   icon,
 }: {
   titulo: string;
   anexo: string;
   anexoNome: string;
   explicacao: string;
+  descricao?: string;
   icon?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-      <div className="flex items-center gap-2">
-        {icon && <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand-dark dark:bg-brand/15">{icon}</span>}
-        <h3 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">{titulo}</h3>
+    <div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <div className="flex items-center gap-2.5">
+          {icon && <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand">{icon}</span>}
+          <h3 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">{titulo}</h3>
+        </div>
+        <AnexoChip anexo={anexo} nome={anexoNome} explicacao={explicacao} />
       </div>
-      <AnexoChip anexo={anexo} nome={anexoNome} explicacao={explicacao} />
+      {descricao && <p className="mt-2 text-sm leading-relaxed text-stone-500 dark:text-stone-400">{descricao}</p>}
     </div>
   );
 }
