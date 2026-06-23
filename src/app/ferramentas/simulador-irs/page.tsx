@@ -51,7 +51,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "O simulador é gratuito?",
-    a: "Sim, simular o teu IRS é gratuito. Podes ainda exportar a simulação em PDF ou CSV e guardar cenários para reabrir e comparar mais tarde.",
+    a: "Sim, simular o teu IRS é gratuito e sem registo. Exportar a simulação em PDF/CSV e guardar cenários fazem parte do plano Pro: com sessão iniciada podes guardar 1 cenário neste dispositivo, para experimentares como funciona; sincronizar na nuvem e guardar sem limites, entre dispositivos, é uma funcionalidade Pro.",
   },
 ];
 
@@ -148,7 +148,7 @@ export default function SimuladorIRSLandingPage() {
           </Link>
         </div>
         <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-stone-500 dark:text-stone-400">
-          {["Sem registo para simular", "Taxas oficiais de 2026", "Exportação PDF e CSV"].map((t) => (
+          {["Sem registo para simular", "Taxas oficiais de 2026", "Memória de cálculo passo a passo"].map((t) => (
             <li key={t} className="inline-flex items-center gap-1.5">
               <Check size={15} className="text-brand" /> {t}
             </li>
