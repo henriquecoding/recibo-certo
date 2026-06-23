@@ -82,6 +82,7 @@ import ProHint from "@/components/ui/ProHint";
 import PartnerSpot from "@/components/dashboard/PartnerSpot";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { exportarDeclaracaoIRS, exportarDeclaracaoCSV } from "@/lib/export-irs";
+import { useScrollTopOnStep } from "@/lib/scroll";
 import { DistribuicaoRendimento, DistribuicaoFiscal } from "@/components/simulador/Graficos";
 import EditorOperacoes from "@/components/simulador/EditorOperacoes";
 import {
@@ -133,6 +134,9 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
 
   // ── Navegação ──────────────────────────────────────────────────────────────
   const [passo, setPasso] = useState(0);
+  // Ao mudar de passo, rola até ao topo do simulador (passos curtos não deixam
+  // o utilizador perdido a meio do ecrã).
+  const topoRef = useScrollTopOnStep(passo);
 
   // ── Etapa 1 — agregado ──────────────────────────────────────────────────────
   const [contribuinte, setContribuinte] = useState<Contribuinte>({
@@ -534,7 +538,7 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
   };
 
   return (
-    <div className={semCabecalho ? "" : "mx-auto max-w-5xl"}>
+    <div ref={topoRef} className={`scroll-mt-20 sm:scroll-mt-24 ${semCabecalho ? "" : "mx-auto max-w-5xl"}`}>
       {/* Cabeçalho */}
       <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         {!semCabecalho && (

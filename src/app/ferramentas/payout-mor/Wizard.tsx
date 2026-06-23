@@ -4,6 +4,7 @@ import { useState } from "react";
 import { SS_TAXA, SS_COEFICIENTE, REGIME_SIMPLIFICADO } from "@/lib/fiscal-data";
 import { irsProgressivo } from "@/lib/fiscal";
 import { fmt } from "@/lib/format";
+import { useScrollTopOnStep } from "@/lib/scroll";
 import { Check, Warning, ArrowRight, ChevronDown } from "@/components/ui/Icons";
 
 // ── Barra de progresso ────────────────────────────────────────────────────────
@@ -433,6 +434,7 @@ function Passo5({ valor }: { valor: string }) {
 
 export default function Wizard() {
   const [passo, setPasso]       = useState(0);
+  const topoRef = useScrollTopOnStep(passo); // rola ao topo a cada passo
   const [mor,   setMor]         = useState("");
   const [valor, setValor]       = useState("");
   const [checks2, setChecks2]   = useState([false, false, false]);
@@ -444,7 +446,7 @@ export default function Wizard() {
     setChecks3((c) => c.map((v, j) => (j === i ? !v : v)));
 
   return (
-    <div className="rounded-4xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 p-8 shadow-card">
+    <div ref={topoRef} className="scroll-mt-20 rounded-4xl border border-stone-100 bg-white p-8 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:scroll-mt-24">
       <BarraProgresso passo={passo + 1} total={TOTAL_PASSOS} />
       {passo === 0 && <Passo0 onProximo={() => setPasso(1)} />}
       {passo === 1 && <Passo1 mor={mor} onSelectMor={setMor} onProximo={() => setPasso(2)} />}
