@@ -47,7 +47,9 @@ const ICON_GRUPO: Record<QuizGrupo, React.ReactNode> = {
 
 // Cores via variáveis CSS com fallback claro: respeitam o modo escuro do quiz
 // (definido em globals.css `.dark { --quiz-* }`) sem partir o modo claro.
-const QD = "#3a5232";
+const QD = "#3a5232"; // verde escuro — usado como FUNDO (texto branco por cima)
+const ICON = "var(--quiz-icon, #3a5232)"; // acento para ÍCONES sobre fundo (clareia no escuro)
+const GOLD = "var(--quiz-gold, #C07828)";
 const PARCHMENT = "var(--quiz-card-bg, #F7EDE1)";
 const BORDER = "var(--quiz-card-border, #E8DBCB)";
 const ACTIVE_BG = "var(--quiz-card-active-bg, #e4ede0)";
@@ -168,7 +170,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
                       <div className="mb-2 flex items-center gap-2">
                         <span
                           className="flex h-6 w-6 items-center justify-center rounded-lg"
-                          style={{ backgroundColor: ACTIVE_BG, color: QD }}
+                          style={{ backgroundColor: ACTIVE_BG, color: ICON }}
                         >
                           {ICON_GRUPO[grupo]}
                         </span>
@@ -230,7 +232,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
             style={{ backgroundColor: PARCHMENT, border: `1px solid ${BORDER}` }}
           >
             <div className="flex items-center gap-2 mb-3">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg" style={{ backgroundColor: ACTIVE_BG, color: QD }}>
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg" style={{ backgroundColor: ACTIVE_BG, color: ICON }}>
                 <Gauge size={13} />
               </span>
               <span className="text-[12px] font-bold" style={{ color: TEXT_HEAD }}>Configurações</span>
@@ -326,7 +328,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
                   Energia diária
                 </div>
                 {energiaIlimitada ? (
-                  <span className="text-[11px] font-bold" style={{ color: "#C07828" }}>Ilimitada</span>
+                  <span className="text-[11px] font-bold" style={{ color: GOLD }}>Ilimitada</span>
                 ) : (
                   <div className="flex items-center gap-1.5 mt-0.5">
                     {Array.from({ length: energiaTotal }).map((_, i) => (
@@ -367,7 +369,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
               </p>
             )}
             {!energiaIlimitada && energiaRestante <= 0 && (
-              <p className="mt-2 text-center text-[11px] font-semibold" style={{ color: "#C07828" }}>
+              <p className="mt-2 text-center text-[11px] font-semibold" style={{ color: GOLD }}>
                 Sem energia hoje. Volta amanhã!
               </p>
             )}

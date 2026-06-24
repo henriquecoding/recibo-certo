@@ -122,6 +122,14 @@ input[type="number"]::-webkit-outer-spin-button {
   --quiz-tag-bg: #242820;
   --quiz-stat-bg: #1a1d16;
   --quiz-dot-empty: #2e3327;
+  /* Superfícies internas e acentos que estavam fixos em claro (inline) nos ecrãs
+     temáticos do quiz — agora respeitam o modo escuro. Fallbacks claros ficam
+     nos componentes; o "livro" de jogo (pergaminho) é intencionalmente fixo. */
+  --quiz-card-inner-bg: #232a1c;
+  --quiz-gold-bg: #3a300f;
+  --quiz-icon: #a7d3b4;
+  --quiz-level: #4f6a45;
+  --quiz-gold: #e0a64a;
   color-scheme: dark;
 }
 .dark body {
