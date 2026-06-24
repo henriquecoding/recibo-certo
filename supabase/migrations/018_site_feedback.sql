@@ -129,3 +129,27 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.validar_feedback_xp(uuid, integer) TO authenticated;
+
+-- ── Segurança: trigger anti-código (defesa em profundidade no servidor) ──────
+-- Mesmo que alguém contorne a app e chame a API diretamente, a BD remove tags
+-- HTML/scripts dos campos de texto antes de gravar. A app nunca renderiza isto
+-- como HTML, por isso o conteúdo nunca é executável — mas limpamos à mesma.
+
+CREATE OR REPLACE FUNCTION public.sanitizar_site_feedback()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.mensagem := regexp_replace(COALESCE(NEW.mensagem, ''), '</?[A-Za-z!][^>]*>', '', 'g');
+  IF NEW.assunto IS NOT NULL THEN
+    NEW.assunto := regexp_replace(NEW.assunto, '</?[A-Za-z!][^>]*>', '', 'g');
+  END IF;
+  IF NEW.nome IS NOT NULL THEN
+    NEW.nome := regexp_replace(NEW.nome, '</?[A-Za-z!][^>]*>', '', 'g');
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_sanitizar_site_feedback ON public.site_feedback;
+CREATE TRIGGER trg_sanitizar_site_feedback
+  BEFORE INSERT ON public.site_feedback
+  FOR EACH ROW EXECUTE FUNCTION public.sanitizar_site_feedback();

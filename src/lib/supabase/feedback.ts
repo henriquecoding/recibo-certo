@@ -3,6 +3,7 @@
 // Validar um feedback útil credita XP ao autor (RPC validar_feedback_xp).
 
 import { getSupabase, supabaseConfigurado } from "./client";
+import { contemCodigo, sanitizarTexto, emailValido } from "@/lib/feedback-sanitize";
 
 export type TipoFeedback = "sugestao" | "erro" | "duvida" | "mensagem";
 export type EstadoFeedback = "novo" | "em_analise" | "valido" | "resolvido" | "rejeitado";
@@ -40,16 +41,23 @@ export async function enviarFeedback(input: EnviarFeedbackInput): Promise<{ erro
   if (!supabaseConfigurado()) {
     return { erro: "Envio indisponível: ligação à nuvem não configurada." };
   }
-  const mensagem = input.mensagem.trim();
+  // Bloqueia código/HTML antes de qualquer limpeza (defesa em profundidade).
+  if (contemCodigo(input.mensagem) || contemCodigo(input.assunto ?? "")) {
+    return { erro: "Por segurança, não incluas código, HTML ou scripts na mensagem." };
+  }
+  if (!emailValido(input.email)) {
+    return { erro: "O email indicado não parece válido." };
+  }
+  const mensagem = sanitizarTexto(input.mensagem);
   if (!mensagem) return { erro: "Escreve uma mensagem antes de enviar." };
   if (mensagem.length > 4000) return { erro: "A mensagem é demasiado longa (máx. 4000 caracteres)." };
 
   const { error } = await getSupabase().from("site_feedback").insert({
     tipo: input.tipo,
     mensagem,
-    assunto: limpar(input.assunto),
+    assunto: limpar(input.assunto ? sanitizarTexto(input.assunto) : undefined),
     area: limpar(input.area),
-    nome: limpar(input.nome),
+    nome: limpar(input.nome ? sanitizarTexto(input.nome) : undefined),
     email: limpar(input.email),
     user_id: input.userId ?? null,
   });
