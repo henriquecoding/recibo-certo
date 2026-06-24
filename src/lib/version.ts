@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.80.0";
+export const APP_VERSION = "1.81.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.81.0",
+    data: "2026-06-23",
+    titulo: "Simulador guiado mais coerente e simulador de vencimento mais leve",
+    itens: [
+      "O início do simulador guiado (recibos verdes) ganhou um visual mais calmo e coerente — o ecrã «Como queres simular?», o passo inicial, a barra de progresso e a navegação foram renovados, mantendo exatamente os mesmos cálculos.",
+      "No simulador de recibo de vencimento, a auditoria do recibo, a importação de PDF e a exportação passam a carregar só quando as usas — abre mais leve e gasta menos dados.",
+    ],
+  },
   {
     version: "1.80.0",
     data: "2026-06-23",
