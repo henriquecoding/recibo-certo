@@ -125,18 +125,10 @@ export default function CalculadoraSecao() {
     return () => io.disconnect();
   }, [perto]);
 
-  // Com o simulador ativo já a carregar, aquecemos os OUTROS modos em segundo
-  // plano — trocar de modo passa a ser instantâneo, sem os descarregar todos de
-  // uma vez no arranque. O atraso garante que o modo ativo carrega primeiro.
-  useEffect(() => {
-    if (!perto || typeof window === "undefined") return;
-    const id = window.setTimeout(() => {
-      import("@/components/SimuladorIntegrado");
-      import("@/components/dependente/SimuladorVencimento");
-      import("@/components/comparar/ComparadorCenarios");
-    }, 1200);
-    return () => clearTimeout(id);
-  }, [perto]);
+  // Os OUTROS modos são pré-carregados por intenção (hover/foco/toque no seletor,
+  // ver SeletorModo) em vez de todos no arranque — assim modos pesados (ex.: por
+  // conta de outrem, ~1 MB) não gastam dados a quem nunca os usa, mantendo a
+  // troca de modo praticamente instantânea para quem mostra intenção.
 
   return (
     <div className="mx-auto max-w-5xl">

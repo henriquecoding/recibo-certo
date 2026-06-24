@@ -11,6 +11,7 @@
 import type { ReactNode } from "react";
 import { usePerfil, type Perfil } from "@/lib/perfil";
 import { Receipt, Briefcase, Building, Scale } from "@/components/ui/Icons";
+import { prefetchSimulador } from "@/lib/prefetch-simuladores";
 
 type Opcao = { chave: Perfil; label: string; icon: ReactNode };
 
@@ -55,6 +56,8 @@ function Grupo({
               type="button"
               aria-pressed={ativo}
               onClick={() => definir(o.chave)}
+              onPointerEnter={() => prefetchSimulador(o.chave)}
+              onFocus={() => prefetchSimulador(o.chave)}
               className={`group inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-200 ${
                 ativo
                   ? "bg-brand text-white shadow-glow"
