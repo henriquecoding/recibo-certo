@@ -7,7 +7,6 @@ import {
   type QuizOpcao,
   type QuizPergunta,
 } from "@/lib/quiz-fiscal";
-import { gerarPerguntasAtividade } from "@/lib/quiz-fiscal/gerador-atividade";
 import { calcularPontosPergunta, calcularStreakMaximo } from "@/lib/quiz-fiscal/progresso";
 import type { Atividade } from "@/lib/fiscal-data";
 
@@ -191,7 +190,7 @@ export interface UseQuizFiscalReturn {
   segundaChanceAtiva: boolean;
   escudoAtivo: boolean;
 
-  iniciar: (cfg: QuizFiscalConfig) => void;
+  iniciar: (cfg: QuizFiscalConfig) => Promise<void>;
   responderNormal: (opcaoIdx: number | null) => void;
   selecionarOpcao: (opcaoIdx: number) => void;
   confirmarResposta: () => void;
@@ -235,14 +234,17 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
   const inicioPerguntaRef = useRef<number>(Date.now());
   const inicioSessaoRef = useRef<number>(Date.now());
 
-  const construirSessao = useCallback((cfg: QuizFiscalConfig): SessaoPergunta[] => {
+  const construirSessao = useCallback(async (cfg: QuizFiscalConfig): Promise<SessaoPergunta[]> => {
     const quantidade = cfg.quantidade ?? QUANTIDADE_DEFAULT;
     let perguntas: QuizPergunta[];
 
     if (cfg.atividade) {
+      // Gerador de atividade (pesado) carregado sob procura — só neste modo.
+      const { gerarPerguntasAtividade } = await import("@/lib/quiz-fiscal/gerador-atividade");
       perguntas = gerarPerguntasAtividade(cfg.atividade, quantidade);
     } else {
-      perguntas = getPerguntasAleatorias({
+      // Banco de perguntas carregado sob procura (já pré-aquecido no hover).
+      perguntas = await getPerguntasAleatorias({
         quantidade,
         categoria: cfg.categoria,
         dificuldade: cfg.dificuldade,
@@ -255,8 +257,8 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
     });
   }, []);
 
-  const iniciar = useCallback((cfg: QuizFiscalConfig) => {
-    const novaSessao = construirSessao(cfg);
+  const iniciar = useCallback(async (cfg: QuizFiscalConfig) => {
+    const novaSessao = await construirSessao(cfg);
     const agora = Date.now();
     setConfig(cfg);
     setSessao(novaSessao);

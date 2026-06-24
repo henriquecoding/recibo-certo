@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { calcularVencimento, calcularVencimentoAnual, mealheiroDependente, calcularReciboMensal, IRS_JOVEM_TETO_MENSAL } from "@/lib/fiscal-dependente";
 import { DEDUCAO_DEPENDENTE_DEFICIENCIA } from "@/lib/fiscal-data";
@@ -8,11 +9,26 @@ import { SS_DEPENDENTE, SUBSIDIO_REFEICAO, TRABALHO_SUPLEMENTAR, AJUDAS_CUSTO, H
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import ProGate from "@/components/ui/ProGate";
-import { AuditoriaPainel } from "@/components/dependente/AuditoriaPainel";
-import { ImportarReciboPDF } from "@/components/dependente/ImportarReciboPDF";
 import { Section, StatTile, Donut, SegBar, SegLegend, LinhaRecibo, segClass, cx, type Seg } from "@/components/dependente/ui";
 import { type ReciboExtraido } from "@/lib/recibo-pdf";
-import { printRelatorioVencimento } from "@/lib/export-vencimento";
+
+// Funcionalidades pesadas carregadas sob procura — saem do chunk principal do
+// simulador (que era ~1 MB). A auditoria e o importador de PDF só descem quando
+// o utilizador os alcança; a exportação só quando clica em descarregar.
+const PainelCarregando = () => (
+  <div className="animate-pulse rounded-2xl border border-stone-100 bg-white p-5 dark:border-stone-800 dark:bg-stone-900" style={{ minHeight: 120 }} aria-hidden>
+    <div className="h-5 w-40 max-w-full rounded-full bg-stone-100 dark:bg-stone-800" />
+    <div className="mt-3 h-16 rounded-xl bg-stone-100 dark:bg-stone-800" />
+  </div>
+);
+const AuditoriaPainel = dynamic(
+  () => import("@/components/dependente/AuditoriaPainel").then((m) => m.AuditoriaPainel),
+  { ssr: false, loading: () => <PainelCarregando /> }
+);
+const ImportarReciboPDF = dynamic(
+  () => import("@/components/dependente/ImportarReciboPDF").then((m) => m.ImportarReciboPDF),
+  { ssr: false, loading: () => <PainelCarregando /> }
+);
 import { gerarCSVCenarios, type CenarioVencimento } from "@/lib/store/vencimentos";
 import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
 import { useExportacaoPro } from "@/lib/store/exportacao-pro";
@@ -240,8 +256,9 @@ export function SimuladorVencimento() {
     URL.revokeObjectURL(url);
   }
 
-  function descarregarRelatorio() {
+  async function descarregarRelatorio() {
     if (!exportPro.tentarExportar("vencimento")) return;
+    const { printRelatorioVencimento } = await import("@/lib/export-vencimento");
     printRelatorioVencimento({
       situacao: SITUACAO_LABEL[estadoCivil],
       dependentes,

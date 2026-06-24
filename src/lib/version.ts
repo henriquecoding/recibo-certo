@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.80.0";
+export const APP_VERSION = "1.81.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.81.0",
+    data: "2026-06-23",
+    titulo: "Simulador guiado redesenhado, Quiz Fiscal mais leve e modo escuro corrigido",
+    itens: [
+      "O simulador guiado (recibos verdes) foi redesenhado de ponta a ponta — ecrã «Como queres simular?», passos, barra de progresso, cabeçalhos e navegação mais calmos e coerentes, mantendo exatamente os mesmos cálculos.",
+      "Quiz Fiscal muito mais leve a abrir: as ~900 mil perguntas deixaram de ser todas descarregadas de uma vez. A página de seleção abre logo e o banco de perguntas só é descarregado quando começas (já pré-carregado ao passar o rato/focar), gastando muito menos dados.",
+      "Corrigido o modo escuro do Quiz Fiscal: textos e ícones que ficavam invisíveis sobre fundo escuro (cartões do desafio Pro, níveis e seleção de categorias) voltam a ler-se bem.",
+      "No simulador de recibo de vencimento, a auditoria do recibo, a importação de PDF e a exportação passam a carregar só quando as usas — abre mais leve.",
+    ],
+  },
   {
     version: "1.80.0",
     data: "2026-06-23",

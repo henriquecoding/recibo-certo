@@ -8,6 +8,7 @@ import {
   META_GRUPO_QUIZ,
   TOTAL_PERGUNTAS,
   getEstatisticasBanco,
+  prefetchBancoQuiz,
   type QuizCategoria,
   type QuizGrupo,
 } from "@/lib/quiz-fiscal";
@@ -18,7 +19,7 @@ import type { QuizFiscalConfig, QuizModo } from "@/hooks/useQuizFiscal";
 import type { SessaoHistorico } from "@/lib/store/quiz-progresso";
 
 interface SelecaoModoProps {
-  onComecar: (config: QuizFiscalConfig) => void;
+  onComecar: (config: QuizFiscalConfig) => void | Promise<void>;
   energiaRestante?: number;
   energiaTotal?: number;
   energiaIlimitada?: boolean;
@@ -47,7 +48,9 @@ const ICON_GRUPO: Record<QuizGrupo, React.ReactNode> = {
 
 // Cores via variáveis CSS com fallback claro: respeitam o modo escuro do quiz
 // (definido em globals.css `.dark { --quiz-* }`) sem partir o modo claro.
-const QD = "#3a5232";
+const QD = "#3a5232"; // verde escuro — usado como FUNDO (texto branco por cima)
+const ICON = "var(--quiz-icon, #3a5232)"; // acento para ÍCONES sobre fundo (clareia no escuro)
+const GOLD = "var(--quiz-gold, #C07828)";
 const PARCHMENT = "var(--quiz-card-bg, #F7EDE1)";
 const BORDER = "var(--quiz-card-border, #E8DBCB)";
 const ACTIVE_BG = "var(--quiz-card-active-bg, #e4ede0)";
@@ -66,17 +69,25 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
   const [categoria, setCategoria] = useState<QuizCategoria | "todas">("todas");
   const [atividade, setAtividade] = useState<Atividade | null>(null);
   const estatisticas = getEstatisticasBanco();
+  // Enquanto o banco de perguntas é descarregado (raro — já vem pré-aquecido do
+  // hover), o botão mostra "A preparar…".
+  const [aPreparar, setAPreparar] = useState(false);
 
   // Dificuldade da config (facil/normal/dificil) → nível das perguntas (1/2/3).
   const DIF_NIVEL = { facil: 1, normal: 2, dificil: 3 } as const;
 
-  const handleComecar = () => {
-    if (!modo) return;
+  const handleComecar = async () => {
+    if (!modo || aPreparar) return;
     const dificuldade = DIF_NIVEL[config.dificuldade];
     const cfg: QuizFiscalConfig = tipoQuiz === "atividade" && atividade
       ? { modo, atividade, quantidade: config.perguntasPorSessao, dificuldade }
       : { modo, categoria: categoria === "todas" ? undefined : categoria, quantidade: config.perguntasPorSessao, dificuldade };
-    onComecar(cfg);
+    setAPreparar(true);
+    try {
+      await onComecar(cfg);
+    } finally {
+      setAPreparar(false);
+    }
   };
 
   const podeIniciar = !!modo && (tipoQuiz === "geral" || !!atividade) && (energiaIlimitada || energiaRestante > 0);
@@ -109,7 +120,8 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
             <div className="grid grid-cols-2 gap-2.5">
               <ModoCard
                 ativo={modo === "normal"}
-                onClick={() => setModo("normal")}
+                onClick={() => { setModo("normal"); prefetchBancoQuiz(); }}
+                onPointerEnter={prefetchBancoQuiz}
                 icon={<Clock size={18} />}
                 titulo="Normal"
                 tags={["Cronómetro", "Rápido"]}
@@ -117,7 +129,8 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
               />
               <ModoCard
                 ativo={modo === "guiado"}
-                onClick={() => setModo("guiado")}
+                onClick={() => { setModo("guiado"); prefetchBancoQuiz(); }}
+                onPointerEnter={prefetchBancoQuiz}
                 icon={<Sparkle size={18} />}
                 titulo="Guiado"
                 tags={["Sem tempo", "Explicações"]}
@@ -168,7 +181,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
                       <div className="mb-2 flex items-center gap-2">
                         <span
                           className="flex h-6 w-6 items-center justify-center rounded-lg"
-                          style={{ backgroundColor: ACTIVE_BG, color: QD }}
+                          style={{ backgroundColor: ACTIVE_BG, color: ICON }}
                         >
                           {ICON_GRUPO[grupo]}
                         </span>
@@ -230,7 +243,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
             style={{ backgroundColor: PARCHMENT, border: `1px solid ${BORDER}` }}
           >
             <div className="flex items-center gap-2 mb-3">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg" style={{ backgroundColor: ACTIVE_BG, color: QD }}>
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg" style={{ backgroundColor: ACTIVE_BG, color: ICON }}>
                 <Gauge size={13} />
               </span>
               <span className="text-[12px] font-bold" style={{ color: TEXT_HEAD }}>Configurações</span>
@@ -326,7 +339,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
                   Energia diária
                 </div>
                 {energiaIlimitada ? (
-                  <span className="text-[11px] font-bold" style={{ color: "#C07828" }}>Ilimitada</span>
+                  <span className="text-[11px] font-bold" style={{ color: GOLD }}>Ilimitada</span>
                 ) : (
                   <div className="flex items-center gap-1.5 mt-0.5">
                     {Array.from({ length: energiaTotal }).map((_, i) => (
@@ -346,13 +359,15 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
 
             <button
               type="button"
-              disabled={!podeIniciar}
+              disabled={!podeIniciar || aPreparar}
               onClick={handleComecar}
+              onPointerEnter={() => prefetchBancoQuiz()}
+              onFocus={() => prefetchBancoQuiz()}
               className="flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-[14px] font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
               style={{ backgroundColor: QD }}
             >
-              Começar Quiz
-              <ArrowRight size={16} />
+              {aPreparar ? "A preparar…" : "Começar Quiz"}
+              {!aPreparar && <ArrowRight size={16} />}
             </button>
 
             {/* Mensagens de ajuda */}
@@ -367,7 +382,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
               </p>
             )}
             {!energiaIlimitada && energiaRestante <= 0 && (
-              <p className="mt-2 text-center text-[11px] font-semibold" style={{ color: "#C07828" }}>
+              <p className="mt-2 text-center text-[11px] font-semibold" style={{ color: GOLD }}>
                 Sem energia hoje. Volta amanhã!
               </p>
             )}
@@ -423,15 +438,16 @@ function OptionChip({ ativo, onClick, label }: { ativo: boolean; onClick: () => 
 }
 
 function ModoCard({
-  ativo, onClick, icon, titulo, tags, descricao,
+  ativo, onClick, onPointerEnter, icon, titulo, tags, descricao,
 }: {
-  ativo: boolean; onClick: () => void; icon: React.ReactNode;
+  ativo: boolean; onClick: () => void; onPointerEnter?: () => void; icon: React.ReactNode;
   titulo: string; tags: string[]; descricao: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      onPointerEnter={onPointerEnter}
       className="group relative flex flex-col gap-2 rounded-xl border-2 p-3.5 text-left transition-all"
       style={{
         backgroundColor: ativo ? ACTIVE_BG : PARCHMENT,
