@@ -33,6 +33,7 @@ import { gerarCSVCenarios, type CenarioVencimento } from "@/lib/store/vencimento
 import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
 import { useExportacaoPro } from "@/lib/store/exportacao-pro";
 import UpsellExportacao from "@/components/ui/UpsellExportacao";
+import GuardarCenarioDialog from "@/components/ui/GuardarCenarioDialog";
 import { History, Plus, ShieldCheck, Export, FileSign, Wallet, Gauge, Building, Coin, Sparkle, ArrowRight } from "@/components/ui/Icons";
 
 // Espelha o último cenário no formato legado lido pela importação do Simulador
@@ -213,6 +214,14 @@ export function SimuladorVencimento() {
   const subsidioExcede = temSubsidio && subsidioDia > limiteSubsidio;
   const liquidoMostrado = duodecimos ? ra.liquidoMedioMes : r.liquido;
 
+  // IRS Jovem e dependentes complementam-se: os dependentes reduzem a retenção
+  // mensal pela parcela a abater; o IRS Jovem reduz proporcionalmente o que
+  // sobra. Quando os dependentes já zeram a retenção, a poupança MENSAL do IRS
+  // Jovem é 0 — mas a isenção continua a contar no acerto anual (rendimento
+  // tributável). Distinguimos os dois casos para não parecer que «não atualiza».
+  const poupancaJovemMes = Math.max(0, r.irsSemJovem - r.irsRetido);
+  const retencaoJaZero = irsJovem && r.isencaoJovemPct > 0 && poupancaJovemMes <= 0.005;
+
   // Para onde vai o salário bruto: fica contigo, retenção de IRS, Segurança Social.
   const fica = Math.max(0, r.bruto - r.ssTrabalhador - r.irsRetido);
   const ficaPct = r.bruto > 0 ? fica / r.bruto : 0;
@@ -230,6 +239,7 @@ export function SimuladorVencimento() {
   const { naNuvem, limite, limiteAtingido, guardar } = useCenarios();
   const exportPro = useExportacaoPro();
   const [avisoGuardar, setAvisoGuardar] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [dialogGuardar, setDialogGuardar] = useState(false);
 
   function exportarCSV() {
     if (!exportPro.tentarExportar("vencimento")) return;
@@ -305,10 +315,10 @@ export function SimuladorVencimento() {
     subFeriasStr, subNatalStr, outrosSujeitosStr, ajNDiasStr, ajNValStr, ajEDiasStr, ajEValStr,
   });
 
-  function guardarCenario() {
-    const nomePadrao = `Vencimento · ${fmt(bruto)}/mês${dependentes > 0 ? ` · ${dependentes} dep.` : ""}`;
-    const nome = typeof window !== "undefined" ? (window.prompt("Nome deste cenário:", nomePadrao) ?? "").trim() : nomePadrao;
-    if (typeof window !== "undefined" && nome === "") return; // cancelado
+  const nomePadraoCenario = `Vencimento · ${fmt(bruto)}/mês${dependentes > 0 ? ` · ${dependentes} dep.` : ""}`;
+
+  function guardarCenario(nome: string) {
+    const nomePadrao = nomePadraoCenario;
     const resumo: ResumoCenario = {
       destaque: r.liquido,
       destaqueLabel: "Líquido mensal",
@@ -334,6 +344,7 @@ export function SimuladorVencimento() {
       });
       setAvisoGuardar({ tipo: "ok", texto: "Cenário guardado em «Os meus cenários»." });
     }
+    setDialogGuardar(false);
   }
 
   // Reabre um cenário marcado a partir da página de gestão (uma vez, na montagem).
@@ -619,7 +630,12 @@ export function SimuladorVencimento() {
                 <p className="rounded-lg border border-brand/20 bg-brand-light px-3 py-2 text-[11px] leading-relaxed text-brand-dark">
                   Isenção de {pct(r.isencaoJovemPct)} sobre a remuneração{r.rendimentoIsentoJovem > 0 ? ` — ${fmt(r.rendimentoIsentoJovem)} isentos este mês` : ""}.
                   {r.excedeTetoJovem ? ` Limitada ao teto mensal de ${fmt(IRS_JOVEM_TETO_MENSAL)} (55 × IAS ÷ 14).` : ""}
-                  {" "}Poupas {fmt(Math.max(0, r.irsSemJovem - r.irsRetido))} de IRS por mês face a não ter o regime.
+                  {" "}
+                  {poupancaJovemMes > 0.005
+                    ? `Poupas ${fmt(poupancaJovemMes)} de IRS por mês${dependentes > 0 ? ", já a contar com os teus dependentes" : ""} face a não ter o regime.`
+                    : dependentes > 0
+                      ? `Com ${dependentes} dependente${dependentes > 1 ? "s" : ""}, a retenção mensal já está em 0 € — o IRS Jovem e os dependentes complementam-se. A isenção continua a contar: reduz o rendimento tributável do ano (vê o acerto anual abaixo).`
+                      : "A este salário a retenção mensal já é 0 € — a isenção continua a reduzir o rendimento tributável no acerto anual de IRS."}
                 </p>
               </div>
             )}
@@ -894,14 +910,16 @@ export function SimuladorVencimento() {
                 icon={<Coin size={15} />}
                 label={
                   <>
-                    Poupança IRS Jovem{" "}
+                    {retencaoJaZero ? "Isenção IRS Jovem" : "Poupança IRS Jovem"}{" "}
                     <InfoTip label="Art. 12.º-B CIRS">
-                      Menos retenção de IRS por estares no regime IRS Jovem ({pct(r.isencaoJovemPct)} de isenção este ano).
+                      {retencaoJaZero
+                        ? `Os teus dependentes já levam a retenção mensal a 0 €, por isso não há poupança adicional este mês. A isenção de ${pct(r.isencaoJovemPct)} continua a contar no acerto anual de IRS, reduzindo o rendimento tributável.`
+                        : `Menos retenção de IRS por estares no regime IRS Jovem (${pct(r.isencaoJovemPct)} de isenção este ano).`}
                     </InfoTip>
                   </>
                 }
-                value={fmt(Math.max(0, r.irsSemJovem - r.irsRetido))}
-                sub={`por mês · ${fmt(r.rendimentoIsentoJovem)} isentos`}
+                value={retencaoJaZero ? fmt(r.rendimentoIsentoJovem) : fmt(poupancaJovemMes)}
+                sub={retencaoJaZero ? "isentos/mês · conta no acerto anual" : `por mês · ${fmt(r.rendimentoIsentoJovem)} isentos`}
               />
             )}
           </div>
@@ -1171,7 +1189,7 @@ export function SimuladorVencimento() {
           </span>
           <button
             type="button"
-            onClick={guardarCenario}
+            onClick={() => setDialogGuardar(true)}
             disabled={limiteAtingido}
             className="inline-flex items-center gap-1.5 rounded-xl border border-brand/30 bg-brand-light px-3 py-1.5 text-xs font-semibold text-brand-dark transition-all hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -1210,6 +1228,12 @@ export function SimuladorVencimento() {
       </div>
 
       <UpsellExportacao aberto={exportPro.upsellAberto} onClose={exportPro.fecharUpsell} />
+      <GuardarCenarioDialog
+        aberto={dialogGuardar}
+        nomePadrao={nomePadraoCenario}
+        onGuardar={guardarCenario}
+        onFechar={() => setDialogGuardar(false)}
+      />
     </div>
   );
 }

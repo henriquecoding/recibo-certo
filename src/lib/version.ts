@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.81.0";
+export const APP_VERSION = "1.82.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.82.0",
+    data: "2026-06-24",
+    titulo: "Guardar cenários com um modal bonito, IRS Jovem mais claro e demo do IRS só em verde",
+    itens: [
+      "Guardar um cenário deixou de abrir aquela caixa cinzenta do navegador: passa a ser um modal moderno, com nome sugerido já selecionado, confirmação com Enter e folha inferior no telemóvel.",
+      "No simulador de recibo de vencimento, o IRS Jovem e os dependentes deixam de parecer que «se anulam»: quando os dependentes já levam a retenção mensal a zero, explicamos que a isenção continua a contar no acerto anual de IRS — as duas vantagens complementam-se, não competem.",
+      "A demonstração «ao vivo» do Simulador de IRS passou a usar só a paleta verde da marca (sem laranja), com o anel e os escalões redesenhados sem falhas visuais e com perfis de exemplo mais ricos (agora também um rendimento alto, no escalão de topo).",
+    ],
+  },
   {
     version: "1.81.0",
     data: "2026-06-23",

@@ -18,6 +18,7 @@ import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import GuardarCenarioDialog from "@/components/ui/GuardarCenarioDialog";
 import {
   Check,
   Warning,
@@ -877,6 +878,7 @@ export default function ModoGuiadoEmpresa({
   // Gestão de cenários (guardar instantâneo completo + reabrir)
   const cenariosStore = useCenarios();
   const [cenarioFeedback, setCenarioFeedback] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [dialogGuardar, setDialogGuardar] = useState(false);
 
   // Passo 0: situação
   const [jaTemEmpresa, setJaTemEmpresa] = useState<null | "sim" | "nao">(null);
@@ -1164,10 +1166,10 @@ export default function ModoGuiadoEmpresa({
     temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI, valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
   });
 
-  function guardarCenario() {
-    const nomePadrao = `Empresa · ${fmt(resultado.faturacao)}/ano`;
-    const nome = typeof window !== "undefined" ? (window.prompt("Nome deste cenário:", nomePadrao) ?? "").trim() : nomePadrao;
-    if (typeof window !== "undefined" && nome === "") return; // cancelado
+  const nomePadraoCenario = `Empresa · ${fmt(resultado.faturacao)}/ano`;
+
+  function guardarCenario(nome: string) {
+    const nomePadrao = nomePadraoCenario;
     const resumo: ResumoCenario = {
       destaque: resultado.liquidoGerente,
       destaqueLabel: "Líquido do dono / ano",
@@ -1181,6 +1183,7 @@ export default function ModoGuiadoEmpresa({
     };
     const r = cenariosStore.guardar({ tipo: "empresa", nome: nome || nomePadrao, resumo, dados: montarSnapshot() });
     setCenarioFeedback(r.erro ? { tipo: "erro", texto: r.erro } : { tipo: "ok", texto: "Cenário guardado em «Os meus cenários»." });
+    setDialogGuardar(false);
   }
 
   // Reabre um cenário marcado a partir da página de gestão (uma vez, na montagem).
@@ -2729,7 +2732,7 @@ export default function ModoGuiadoEmpresa({
                       </div>
                       <button
                         type="button"
-                        onClick={guardarCenario}
+                        onClick={() => setDialogGuardar(true)}
                         disabled={cenariosStore.limiteAtingido}
                         className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-xl border border-brand/30 bg-brand-light px-4 py-2.5 text-sm font-semibold text-brand-dark transition-all hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-50"
                       >
@@ -3073,6 +3076,13 @@ export default function ModoGuiadoEmpresa({
           <PainelResumoEmpresa resultado={resultado} distribuirDividendos={distribuirDividendos} />
         </div>
       </div>
+
+      <GuardarCenarioDialog
+        aberto={dialogGuardar}
+        nomePadrao={nomePadraoCenario}
+        onGuardar={guardarCenario}
+        onFechar={() => setDialogGuardar(false)}
+      />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import {
   Scale,
   Laptop,
   Home,
+  Briefcase,
   ArrowRight,
 } from "@/components/ui/Icons";
 
@@ -22,10 +23,15 @@ import {
 // sensação de cálculo em tempo real. Os montantes são ILUSTRATIVOS (rotulados
 // "Exemplo"); só os escalões/taxas marginais vêm da fonte de verdade fiscal
 // (`ESCALOES_IRS`, Art. 68.º CIRS 2026) — nunca dados fiscais inventados.
+//
+// Paleta: exclusivamente verde da marca. O que "fica contigo" usa o verde vivo
+// (`brand`); o que sai para IRS usa um verde profundo/sóbrio (`brand-deep`, com
+// variante clara no modo escuro) — diferenciação por tom, sem laranja/vermelho.
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface Cenario {
   persona: string;
+  detalhe: string; // contexto curto (região / regime) — dá textura ao exemplo
   Icon: React.ComponentType<{ size?: number; className?: string }>;
   rendimento: number; // rendimento global anual
   coletavel: number; // após deduções (determina o escalão)
@@ -33,12 +39,13 @@ interface Cenario {
   retido: number; // retenções na fonte já feitas
 }
 
-// Cada cenário é internamente consistente: o resultado é sempre
-// retido − coleta, e a taxa efetiva é sempre coleta / rendimento.
+// Cada cenário é internamente consistente: as deduções são rendimento − coletável,
+// o resultado é sempre retido − coleta, e a taxa efetiva é sempre coleta / rendimento.
 const CENARIOS: Cenario[] = [
-  { persona: "Freelancer · solteiro", Icon: Laptop, rendimento: 28_500, coletavel: 23_940, irs: 3_120, retido: 4_360 },
-  { persona: "Casal · 2 dependentes", Icon: Home, rendimento: 41_200, coletavel: 35_100, irs: 7_460, retido: 6_600 },
-  { persona: "Recibos verdes · 1.º ano", Icon: Receipt, rendimento: 18_000, coletavel: 9_450, irs: 980, retido: 1_820 },
+  { persona: "Freelancer · solteiro", detalhe: "Lisboa · regime simplificado", Icon: Laptop, rendimento: 28_500, coletavel: 23_940, irs: 3_120, retido: 4_360 },
+  { persona: "Casal · 2 dependentes", detalhe: "Tributação conjunta", Icon: Home, rendimento: 41_200, coletavel: 35_100, irs: 7_460, retido: 6_600 },
+  { persona: "Recibos verdes · 1.º ano", detalhe: "Início de atividade", Icon: Receipt, rendimento: 18_000, coletavel: 9_450, irs: 980, retido: 1_820 },
+  { persona: "Consultor · rendimento alto", detalhe: "Porto · escalão de topo", Icon: Briefcase, rendimento: 62_000, coletavel: 54_200, irs: 14_980, retido: 13_650 },
 ];
 
 const PASSOS = ["Agregado", "Rendimentos", "Deduções", "Resultado"];
@@ -48,6 +55,17 @@ const eur0 = (n: number) =>
   new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
 
 const ESC = ESCALOES_IRS.value;
+
+// Limites reais das taxas marginais — derivados da fonte de verdade, nunca
+// codificados à mão (se os escalões de 2026 mudarem, as barras acompanham).
+const MARGINAL_MIN = Math.min(...ESC.map((e) => e.taxa));
+const MARGINAL_MAX = Math.max(...ESC.map((e) => e.taxa));
+
+// Altura relativa de cada barra (18%–100%) a partir da sua taxa marginal.
+function alturaBarra(taxa: number): number {
+  const span = MARGINAL_MAX - MARGINAL_MIN || 1;
+  return 18 + ((taxa - MARGINAL_MIN) / span) * 82;
+}
 
 // Índice do escalão onde cai um rendimento coletável.
 function escalaoIndex(coletavel: number): number {
@@ -60,6 +78,7 @@ function escalaoIndex(coletavel: number): number {
 // Geometria do anel (donut) — proporção do rendimento que fica contigo vs IRS.
 const R = 42;
 const C = 2 * Math.PI * R;
+const GAP = 0.022; // folga (fração do anel) entre os dois arcos — extremos retos, segmentos limpos
 
 export default function DemoIRS() {
   const [i, setI] = useState(0);
@@ -82,15 +101,19 @@ export default function DemoIRS() {
   const derivado = useMemo(() => {
     const taxa = c.irs / c.rendimento; // taxa efetiva
     const ficaContigo = 1 - taxa;
+    const deducoes = Math.max(0, c.rendimento - c.coletavel);
     const reembolso = c.retido >= c.irs;
     const resultado = Math.abs(c.retido - c.irs);
     const escIdx = escalaoIndex(c.coletavel);
-    return { taxa, ficaContigo, reembolso, resultado, escIdx, marginal: ESC[escIdx].taxa };
+    return { taxa, ficaContigo, deducoes, reembolso, resultado, escIdx, marginal: ESC[escIdx].taxa };
   }, [c]);
 
-  const { taxa, ficaContigo, reembolso, resultado, escIdx, marginal } = derivado;
+  const { taxa, ficaContigo, deducoes, reembolso, resultado, escIdx, marginal } = derivado;
   const pctContigo = Math.round(ficaContigo * 100);
-  const offsetContigo = C * (1 - ficaContigo);
+  // Arcos com folga: cada segmento encolhe meio-gap em cada extremo, para os dois
+  // verdes se lerem como partes distintas do anel (e não um traço contínuo).
+  const contigoLen = Math.max(0, ficaContigo - GAP) * C;
+  const irsLen = Math.max(0, taxa - GAP) * C;
 
   return (
     <div
@@ -139,12 +162,15 @@ export default function DemoIRS() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.3 }}
-              className="flex min-w-0 items-center gap-2"
+              className="flex min-w-0 items-center gap-2.5"
             >
-              <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400">
-                <c.Icon size={14} />
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand">
+                <c.Icon size={16} />
               </span>
-              <span className="truncate text-[13px] font-semibold text-stone-700 dark:text-stone-200">{c.persona}</span>
+              <span className="min-w-0">
+                <span className="block truncate text-[13px] font-semibold text-stone-700 dark:text-stone-200">{c.persona}</span>
+                <span className="block truncate text-[11px] font-medium text-stone-400">{c.detalhe}</span>
+              </span>
             </m.div>
           </AnimatePresence>
           <div className="flex flex-shrink-0 items-center gap-1.5" role="tablist" aria-label="Perfis de exemplo">
@@ -178,7 +204,7 @@ export default function DemoIRS() {
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                 className={`font-display text-4xl font-semibold leading-none tabular-nums sm:text-[2.6rem] ${
-                  reembolso ? "text-brand" : "text-clay-text"
+                  reembolso ? "text-brand" : "text-brand-deep dark:text-brand-mint"
                 }`}
               >
                 <AnimatedNumber value={resultado} format={eur0} />
@@ -194,32 +220,30 @@ export default function DemoIRS() {
           <div className="relative h-[96px] w-[96px] flex-shrink-0" role="img" aria-label={`${pctContigo}% do rendimento fica contigo; ${pct(taxa)} é IRS`}>
             <svg viewBox="0 0 96 96" className="h-full w-full -rotate-90">
               <circle cx="48" cy="48" r={R} fill="none" strokeWidth="11" className="stroke-stone-100 dark:stroke-stone-800" />
-              {/* IRS — arco a seguir ao que fica contigo */}
+              {/* IRS — verde profundo, arco a seguir ao que fica contigo */}
               <circle
                 cx="48"
                 cy="48"
                 r={R}
                 fill="none"
                 strokeWidth="11"
-                strokeLinecap="round"
-                className="stroke-clay"
-                strokeDasharray={`${taxa * C} ${C}`}
+                strokeLinecap="butt"
+                className="stroke-brand-deep dark:stroke-brand-mint"
+                strokeDasharray={`${montado ? irsLen : 0} ${C}`}
                 transform={`rotate(${ficaContigo * 360} 48 48)`}
+                style={{ transition: reduz ? undefined : "stroke-dasharray 0.9s cubic-bezier(0.16,1,0.3,1)" }}
               />
-              {/* Fica contigo — desenho via CSS (robusto, respeita reduced-motion) */}
+              {/* Fica contigo — verde vivo, desenha-se a partir do topo (reduced-motion seguro) */}
               <circle
                 cx="48"
                 cy="48"
                 r={R}
                 fill="none"
                 strokeWidth="11"
-                strokeLinecap="round"
+                strokeLinecap="butt"
                 className="stroke-brand"
-                strokeDasharray={C}
-                style={{
-                  strokeDashoffset: montado ? offsetContigo : C,
-                  transition: reduz ? undefined : "stroke-dashoffset 0.9s cubic-bezier(0.16,1,0.3,1)",
-                }}
+                strokeDasharray={`${montado ? contigoLen : 0} ${C}`}
+                style={{ transition: reduz ? undefined : "stroke-dasharray 0.9s cubic-bezier(0.16,1,0.3,1)" }}
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -237,14 +261,15 @@ export default function DemoIRS() {
               marginal {pct(marginal)}
             </span>
           </div>
+          {/* pt-7 reserva espaço para o tooltip do escalão mais alto (sem cortes) */}
           <div
-            className="relative flex h-16 items-end gap-[3px] pt-5"
+            className="relative flex h-[68px] items-end gap-[3px] pt-7"
             role="img"
             aria-label={`Escalões de IRS 2026, de ${pct(ESC[0].taxa)} a ${pct(ESC[ESC.length - 1].taxa)}. Este perfil cai no ${escIdx + 1}.º escalão, taxa marginal ${pct(marginal)}.`}
           >
             {ESC.map((e, idx) => {
               const ativo = idx === escIdx;
-              const altura = 22 + ((e.taxa - 0.125) / (0.48 - 0.125)) * 78; // 22%–100%
+              const altura = alturaBarra(e.taxa);
               return (
                 <div key={idx} className="relative flex flex-1 items-end justify-center self-stretch">
                   {ativo && (
@@ -253,15 +278,15 @@ export default function DemoIRS() {
                       initial={{ opacity: 0, y: 4, scale: 0.9 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       transition={{ duration: 0.3, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                      style={{ bottom: `calc(${altura}% + 4px)` }}
-                      className="absolute left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg bg-stone-800 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-lift dark:bg-stone-700"
+                      style={{ bottom: `calc(${altura}% + 5px)` }}
+                      className="absolute left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg bg-brand-deep px-1.5 py-0.5 text-[9px] font-bold text-white shadow-lift"
                     >
                       {idx + 1}.º · {pct(e.taxa)}
-                      <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-x-[3px] border-t-[3px] border-x-transparent border-t-stone-800 dark:border-t-stone-700" />
+                      <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-x-[3px] border-t-[3px] border-x-transparent border-t-brand-deep" />
                     </m.span>
                   )}
                   <span
-                    className={`w-full rounded-sm transition-[height,background-color] duration-500 ${ativo ? "bg-brand" : "bg-brand/15 dark:bg-brand/20"}`}
+                    className={`w-full rounded-t-sm transition-[height,background-color] duration-500 ${ativo ? "bg-brand" : "bg-brand/15 dark:bg-brand/25"}`}
                     style={{ height: montado ? `${altura}%` : 0, transitionDelay: reduz ? undefined : `${idx * 0.035}s`, transitionDuration: reduz ? "0ms" : undefined }}
                   />
                 </div>
@@ -270,7 +295,7 @@ export default function DemoIRS() {
           </div>
         </div>
 
-        {/* ── Memória de cálculo (compacta) ──────────────────────────── */}
+        {/* ── Memória de cálculo (compacta, mas com a história completa) ── */}
         <AnimatePresence mode="wait">
           <m.div
             key={`memo-${i}`}
@@ -281,30 +306,32 @@ export default function DemoIRS() {
             className="mt-5 space-y-px overflow-hidden rounded-2xl border border-stone-100 dark:border-stone-800"
           >
             {[
-              { Icon: Wallet, l: "Rendimento global", v: eur0(c.rendimento), tone: "neutro" as const },
-              { Icon: Receipt, l: "Coleta de IRS", v: `− ${eur0(c.irs)}`, tone: "out" as const },
-              { Icon: Check, l: "Retido na fonte", v: `+ ${eur0(c.retido)}`, tone: "in" as const },
+              { Icon: Wallet, l: "Rendimento global", v: eur0(c.rendimento), sub: undefined, tone: "neutro" as const },
+              { Icon: Scale, l: "Rendimento coletável", v: eur0(c.coletavel), sub: `${eur0(deducoes)} em deduções`, tone: "neutro" as const },
+              { Icon: Receipt, l: "Coleta de IRS", v: `− ${eur0(c.irs)}`, sub: `marginal ${pct(marginal)}`, tone: "out" as const },
+              { Icon: Check, l: "Retido na fonte", v: `+ ${eur0(c.retido)}`, sub: undefined, tone: "in" as const },
             ].map((row) => (
               <div key={row.l} className="flex items-center justify-between gap-3 bg-stone-50/70 px-3 py-2 dark:bg-stone-800/40">
                 <span className="flex items-center gap-2 text-[12px] text-stone-500 dark:text-stone-400">
                   <row.Icon size={12} className="text-stone-400" />
                   {row.l}
+                  {row.sub && <span className="hidden text-[10px] text-stone-400 sm:inline">· {row.sub}</span>}
                 </span>
                 <span
                   className={`text-[12px] font-semibold tabular-nums ${
-                    row.tone === "out" ? "text-clay-text" : row.tone === "in" ? "text-brand-dark dark:text-brand" : "text-stone-700 dark:text-stone-200"
+                    row.tone === "out" ? "text-brand-deep dark:text-brand-mint" : row.tone === "in" ? "text-brand-dark dark:text-brand" : "text-stone-700 dark:text-stone-200"
                   }`}
                 >
                   {row.v}
                 </span>
               </div>
             ))}
-            <div className={`flex items-center justify-between gap-3 px-3 py-2.5 ${reembolso ? "bg-brand-light dark:bg-brand/10" : "bg-clay-bg"}`}>
-              <span className={`text-[12px] font-bold ${reembolso ? "text-brand-dark" : "text-clay-text"}`}>
+            <div className={`flex items-center justify-between gap-3 px-3 py-2.5 ${reembolso ? "bg-brand-light dark:bg-brand/10" : "bg-brand-deep/[0.06] dark:bg-brand/[0.08]"}`}>
+              <span className={`text-[12px] font-bold ${reembolso ? "text-brand-dark" : "text-brand-deep dark:text-brand-mint"}`}>
                 = {reembolso ? "Reembolso" : "A pagar"}
               </span>
-              <span className={`text-[13px] font-bold tabular-nums ${reembolso ? "text-brand-dark dark:text-brand" : "text-clay-text"}`}>
-                {reembolso ? "" : "− "}{eur0(resultado)}
+              <span className={`text-[13px] font-bold tabular-nums ${reembolso ? "text-brand-dark dark:text-brand" : "text-brand-deep dark:text-brand-mint"}`}>
+                {reembolso ? "+ " : "− "}{eur0(resultado)}
               </span>
             </div>
           </m.div>
@@ -331,10 +358,10 @@ export default function DemoIRS() {
           <span className="h-2 w-2 rounded-full bg-brand" /> Fica contigo
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-clay" /> IRS
+          <span className="h-2 w-2 rounded-full bg-brand-deep dark:bg-brand-mint" /> IRS
         </span>
         <span className="inline-flex items-center gap-1 text-stone-300 dark:text-stone-600">
-          <ArrowRight size={11} /> 3 perfis
+          <ArrowRight size={11} /> {CENARIOS.length} perfis
         </span>
       </div>
     </div>
