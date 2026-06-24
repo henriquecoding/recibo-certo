@@ -1,18 +1,3 @@
-import { PERGUNTAS_PARTE_1 } from "./perguntas-parte1";
-import { PERGUNTAS_PARTE_2 } from "./perguntas-parte2";
-import { PERGUNTAS_PARTE_3 } from "./perguntas-parte3";
-import { PERGUNTAS_RETENCAO } from "./perguntas-retencao";
-import { PERGUNTAS_IVA } from "./perguntas-iva";
-import { PERGUNTAS_SS } from "./perguntas-ss";
-import { PERGUNTAS_REGIME } from "./perguntas-regime";
-import { PERGUNTAS_IRS_JOVEM } from "./perguntas-irs-jovem";
-import { PERGUNTAS_ESCALOES } from "./perguntas-escaloes";
-import { PERGUNTAS_ATIVIDADES } from "./perguntas-atividades";
-import { PERGUNTAS_CATF } from "./perguntas-catf";
-import { PERGUNTAS_PRAZOS } from "./perguntas-prazos";
-import { PERGUNTAS_GERAL } from "./perguntas-geral";
-import { PERGUNTAS_DEPENDENTE } from "./gerador-dependente";
-import { PERGUNTAS_EMPRESA } from "./gerador-empresa";
 import {
   META_CATEGORIA_QUIZ,
   META_GRUPO_QUIZ,
@@ -22,6 +7,7 @@ import {
   type QuizOpcao,
   type QuizPergunta,
 } from "./types";
+import { ESTATISTICAS_BANCO, TOTAL_PERGUNTAS_META } from "./quiz-meta";
 
 export {
   META_CATEGORIA_QUIZ,
@@ -33,23 +19,69 @@ export {
   type QuizPergunta,
 };
 
-export const QUIZ_PERGUNTAS: QuizPergunta[] = [
-  ...PERGUNTAS_PARTE_1,
-  ...PERGUNTAS_PARTE_2,
-  ...PERGUNTAS_PARTE_3,
-  ...PERGUNTAS_RETENCAO,
-  ...PERGUNTAS_IVA,
-  ...PERGUNTAS_SS,
-  ...PERGUNTAS_REGIME,
-  ...PERGUNTAS_IRS_JOVEM,
-  ...PERGUNTAS_ESCALOES,
-  ...PERGUNTAS_ATIVIDADES,
-  ...PERGUNTAS_CATF,
-  ...PERGUNTAS_PRAZOS,
-  ...PERGUNTAS_GERAL,
-  ...PERGUNTAS_DEPENDENTE,
-  ...PERGUNTAS_EMPRESA,
-];
+// ─────────────────────────────────────────────────────────────────────────────
+// Banco de perguntas carregado SOB PROCURA.
+//
+// Os ~900 KB de perguntas estavam todos a ser importados estaticamente — bastava
+// abrir o ecrã de seleção para os descarregar. Agora os bancos só são pedidos
+// (em paralelo, com cache) quando um quiz vai começar; o ecrã de seleção usa as
+// contagens pré-calculadas em `quiz-meta.ts`. `prefetchBancoQuiz()` aquece tudo
+// ao passar o rato/focar (ver SelecaoModo), para o arranque ser instantâneo.
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _todas: QuizPergunta[] | null = null;
+let _promessa: Promise<QuizPergunta[]> | null = null;
+
+export async function carregarBancoQuiz(): Promise<QuizPergunta[]> {
+  if (_todas) return _todas;
+  if (_promessa) return _promessa;
+  _promessa = (async () => {
+    const [
+      p1, p2, p3, ret, iva, ss, reg, jov, esc, ativ, catf, praz, ger, dep, emp,
+    ] = await Promise.all([
+      import("./perguntas-parte1"),
+      import("./perguntas-parte2"),
+      import("./perguntas-parte3"),
+      import("./perguntas-retencao"),
+      import("./perguntas-iva"),
+      import("./perguntas-ss"),
+      import("./perguntas-regime"),
+      import("./perguntas-irs-jovem"),
+      import("./perguntas-escaloes"),
+      import("./perguntas-atividades"),
+      import("./perguntas-catf"),
+      import("./perguntas-prazos"),
+      import("./perguntas-geral"),
+      import("./gerador-dependente"),
+      import("./gerador-empresa"),
+    ]);
+    _todas = [
+      ...p1.PERGUNTAS_PARTE_1,
+      ...p2.PERGUNTAS_PARTE_2,
+      ...p3.PERGUNTAS_PARTE_3,
+      ...ret.PERGUNTAS_RETENCAO,
+      ...iva.PERGUNTAS_IVA,
+      ...ss.PERGUNTAS_SS,
+      ...reg.PERGUNTAS_REGIME,
+      ...jov.PERGUNTAS_IRS_JOVEM,
+      ...esc.PERGUNTAS_ESCALOES,
+      ...ativ.PERGUNTAS_ATIVIDADES,
+      ...catf.PERGUNTAS_CATF,
+      ...praz.PERGUNTAS_PRAZOS,
+      ...ger.PERGUNTAS_GERAL,
+      ...dep.PERGUNTAS_DEPENDENTE,
+      ...emp.PERGUNTAS_EMPRESA,
+    ];
+    return _todas;
+  })();
+  return _promessa;
+}
+
+/** Aquece o banco de perguntas em segundo plano (hover/foco). */
+export function prefetchBancoQuiz(): void {
+  if (typeof window === "undefined") return;
+  if (!_todas && !_promessa) void carregarBancoQuiz();
+}
 
 export function embaralhar<T>(arr: T[]): T[] {
   const out = [...arr];
@@ -60,10 +92,6 @@ export function embaralhar<T>(arr: T[]): T[] {
   return out;
 }
 
-export function getPerguntasPorCategoria(categoria: QuizCategoria): QuizPergunta[] {
-  return QUIZ_PERGUNTAS.filter((p) => p.categoria === categoria);
-}
-
 export interface SelecaoPerguntasOpcoes {
   quantidade?: number;
   categoria?: QuizCategoria;
@@ -71,35 +99,44 @@ export interface SelecaoPerguntasOpcoes {
   excluirIds?: string[];
 }
 
-export function getPerguntasAleatorias(opcoes: SelecaoPerguntasOpcoes = {}): QuizPergunta[] {
+// Lógica de seleção — pura, opera sobre o banco já carregado (inalterada).
+function selecionar(todas: QuizPergunta[], opcoes: SelecaoPerguntasOpcoes): QuizPergunta[] {
   const { quantidade = 10, categoria, dificuldade, excluirIds = [] } = opcoes;
 
-  // Universo elegível: categoria escolhida (ou todas) menos as já vistas.
   const naCategoria = (p: QuizPergunta) => !categoria || p.categoria === categoria;
   const naoExcluido = (p: QuizPergunta) => !excluirIds.includes(p.id);
-  const base = QUIZ_PERGUNTAS.filter((p) => naCategoria(p) && naoExcluido(p));
+  const base = todas.filter((p) => naCategoria(p) && naoExcluido(p));
 
-  // Perguntas da dificuldade pedida vêm PRIMEIRO (prioridade).
   const preferidas = dificuldade ? base.filter((p) => p.dificuldade === dificuldade) : base;
 
-  // Se a dificuldade escolhida não chega para a sessão pedida, completa-se com
-  // as restantes perguntas da mesma categoria (outras dificuldades) — assim o
-  // utilizador recebe sempre o número de perguntas que pediu, em vez de menos.
   let resultado = embaralhar(preferidas);
   if (dificuldade && resultado.length < quantidade) {
     const resto = embaralhar(base.filter((p) => p.dificuldade !== dificuldade));
     resultado = [...resultado, ...resto];
   }
 
-  // Último recurso: categoria sem perguntas suficientes → usa todo o banco.
   if (resultado.length < quantidade) {
     const extra = embaralhar(
-      QUIZ_PERGUNTAS.filter((p) => naoExcluido(p) && !resultado.includes(p))
+      todas.filter((p) => naoExcluido(p) && !resultado.includes(p))
     );
     resultado = [...resultado, ...extra];
   }
 
   return resultado.slice(0, Math.min(quantidade, resultado.length));
+}
+
+export async function getPerguntasAleatorias(
+  opcoes: SelecaoPerguntasOpcoes = {}
+): Promise<QuizPergunta[]> {
+  const todas = await carregarBancoQuiz();
+  return selecionar(todas, opcoes);
+}
+
+export async function getPerguntasPorCategoria(
+  categoria: QuizCategoria
+): Promise<QuizPergunta[]> {
+  const todas = await carregarBancoQuiz();
+  return todas.filter((p) => p.categoria === categoria);
 }
 
 export function embaralharOpcoes(pergunta: QuizPergunta): {
@@ -112,26 +149,13 @@ export function embaralharOpcoes(pergunta: QuizPergunta): {
   return { opcoes, correta };
 }
 
+// Estatísticas e total agora vêm dos metadados pré-calculados (sem carregar os
+// bancos) — regenerar com `npx vitest run src/lib/quiz-fiscal/__gen_meta.test.ts`.
 export function getEstatisticasBanco(): Record<
   QuizCategoria,
   { total: number; facil: number; medio: number; dificil: number }
 > {
-  const base: Record<QuizCategoria, { total: number; facil: number; medio: number; dificil: number }> =
-    Object.fromEntries(
-      (Object.keys(META_CATEGORIA_QUIZ) as QuizCategoria[]).map((cat) => [
-        cat,
-        { total: 0, facil: 0, medio: 0, dificil: 0 },
-      ])
-    ) as Record<QuizCategoria, { total: number; facil: number; medio: number; dificil: number }>;
-
-  for (const p of QUIZ_PERGUNTAS) {
-    base[p.categoria].total++;
-    if (p.dificuldade === 1) base[p.categoria].facil++;
-    else if (p.dificuldade === 2) base[p.categoria].medio++;
-    else base[p.categoria].dificil++;
-  }
-
-  return base;
+  return ESTATISTICAS_BANCO;
 }
 
-export const TOTAL_PERGUNTAS = QUIZ_PERGUNTAS.length;
+export const TOTAL_PERGUNTAS = TOTAL_PERGUNTAS_META;

@@ -1,9 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { QUIZ_PERGUNTAS } from "../quiz-fiscal";
+import { carregarBancoQuiz } from "../quiz-fiscal";
 import { getEstatisticasBanco } from "../quiz-fiscal/index";
 
 describe("novos bancos do quiz", () => {
-  it("ids únicos e opções válidas", () => {
+  it("ids únicos e opções válidas", async () => {
+    const QUIZ_PERGUNTAS = await carregarBancoQuiz();
     const ids = new Set<string>();
     for (const p of QUIZ_PERGUNTAS) {
       expect(ids.has(p.id), `id duplicado: ${p.id}`).toBe(false);
@@ -34,10 +35,10 @@ describe("novos bancos do quiz", () => {
 
 import { getPerguntasAleatorias } from "../quiz-fiscal";
 describe("seleção robusta de perguntas", () => {
-  it("completa a sessão pedida mesmo com dificuldade escassa", () => {
+  it("completa a sessão pedida mesmo com dificuldade escassa", async () => {
     for (const cat of ["dep_irs","empresa_criacao","empresa_fiscalidade","retencao"] as const) {
       for (const dif of [1,2,3] as const) {
-        const sel = getPerguntasAleatorias({ quantidade: 10, categoria: cat, dificuldade: dif });
+        const sel = await getPerguntasAleatorias({ quantidade: 10, categoria: cat, dificuldade: dif });
         expect(sel.length, `${cat}/${dif} devolveu ${sel.length}`).toBe(10);
       }
     }

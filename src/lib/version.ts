@@ -20,11 +20,12 @@ export const CHANGELOG: EntradaChangelog[] = [
   {
     version: "1.81.0",
     data: "2026-06-23",
-    titulo: "Simulador guiado mais coerente, modo escuro do quiz corrigido e vencimento mais leve",
+    titulo: "Simulador guiado redesenhado, Quiz Fiscal mais leve e modo escuro corrigido",
     itens: [
-      "O início do simulador guiado (recibos verdes) ganhou um visual mais calmo e coerente — o ecrã «Como queres simular?», o passo inicial, a barra de progresso e a navegação foram renovados, mantendo exatamente os mesmos cálculos.",
+      "O simulador guiado (recibos verdes) foi redesenhado de ponta a ponta — ecrã «Como queres simular?», passos, barra de progresso, cabeçalhos e navegação mais calmos e coerentes, mantendo exatamente os mesmos cálculos.",
+      "Quiz Fiscal muito mais leve a abrir: as ~900 mil perguntas deixaram de ser todas descarregadas de uma vez. A página de seleção abre logo e o banco de perguntas só é descarregado quando começas (já pré-carregado ao passar o rato/focar), gastando muito menos dados.",
       "Corrigido o modo escuro do Quiz Fiscal: textos e ícones que ficavam invisíveis sobre fundo escuro (cartões do desafio Pro, níveis e seleção de categorias) voltam a ler-se bem.",
-      "No simulador de recibo de vencimento, a auditoria do recibo, a importação de PDF e a exportação passam a carregar só quando as usas — abre mais leve e gasta menos dados.",
+      "No simulador de recibo de vencimento, a auditoria do recibo, a importação de PDF e a exportação passam a carregar só quando as usas — abre mais leve.",
     ],
   },
   {
