@@ -81,6 +81,7 @@ import InfoTip from "@/components/ui/InfoTip";
 import ProHint from "@/components/ui/ProHint";
 import PartnerSpot from "@/components/dashboard/PartnerSpot";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import GuardarCenarioDialog from "@/components/ui/GuardarCenarioDialog";
 import { exportarDeclaracaoIRS, exportarDeclaracaoCSV } from "@/lib/export-irs";
 import { useScrollTopOnStep } from "@/lib/scroll";
 import { DistribuicaoRendimento, DistribuicaoFiscal } from "@/components/simulador/Graficos";
@@ -235,6 +236,7 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
 
   // ── Guardar na página de gestão (cenários) ──────────────────────────────────
   const [cenarioFeedback, setCenarioFeedback] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [dialogGuardar, setDialogGuardar] = useState(false);
 
   // Relógio leve para o indicador "guardado há X" (atualiza a cada 30 s).
   useEffect(() => {
@@ -443,13 +445,10 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
   // Guarda um instantâneo COMPLETO desta simulação na página de gestão,
   // para reabrir/comparar mais tarde. Preserva todos os campos (montarSnapshot),
   // não só o resultado.
-  const guardarCenario = () => {
-    const nomePadrao = `Declaração IRS ${contribuinte.nome ? `· ${contribuinte.nome.trim()}` : ""}`.trim();
-    const nome =
-      typeof window !== "undefined"
-        ? (window.prompt("Nome deste cenário:", nomePadrao) ?? "").trim()
-        : nomePadrao;
-    if (typeof window !== "undefined" && nome === "" ) return; // cancelado
+  const nomePadraoCenario = `Declaração IRS ${contribuinte.nome ? `· ${contribuinte.nome.trim()}` : ""}`.trim();
+
+  const guardarCenario = (nome: string) => {
+    const nomePadrao = nomePadraoCenario;
     const resumoCen: ResumoCenario = {
       destaque: Math.abs(resultado.saldo),
       destaqueLabel: reembolso ? "Reembolso estimado" : "Imposto a pagar",
@@ -471,6 +470,7 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
     } else {
       setCenarioFeedback({ tipo: "ok", texto: "Cenário guardado na página «Os meus cenários»." });
     }
+    setDialogGuardar(false);
   };
 
   const toggleAtivo = (id: RendimentoId) =>
@@ -941,7 +941,7 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
               onExportar={() => { if (exportPro.tentarExportar("irs")) exportarDeclaracaoIRS(resultado, montarCabecalho()); }}
               onExportarCSV={() => { if (exportPro.tentarExportar("irs")) exportarDeclaracaoCSV(resultado, montarCabecalho()); }}
               onLimpar={limparTudo}
-              onGuardar={guardarCenario}
+              onGuardar={() => setDialogGuardar(true)}
               cenarioFeedback={cenarioFeedback}
               gravadoLabel={ultimaGravacao ? `Guardado ${tempoRelativo(ultimaGravacao, agora)} neste dispositivo` : "Guardado automaticamente neste dispositivo"}
             />
@@ -1000,6 +1000,13 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
       />
 
       <UpsellExportacao aberto={exportPro.upsellAberto} onClose={exportPro.fecharUpsell} />
+
+      <GuardarCenarioDialog
+        aberto={dialogGuardar}
+        nomePadrao={nomePadraoCenario}
+        onGuardar={guardarCenario}
+        onFechar={() => setDialogGuardar(false)}
+      />
     </div>
   );
 }

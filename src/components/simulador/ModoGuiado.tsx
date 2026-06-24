@@ -50,6 +50,7 @@ import {
   GuiadoVoltarLink,
   GuiadoNav,
 } from "@/components/simulador/guiado-ui";
+import GuardarCenarioDialog from "@/components/ui/GuardarCenarioDialog";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -276,6 +277,7 @@ export default function ModoGuiado({
   // Gestão de cenários (guardar instantâneo completo + reabrir)
   const cenariosStore = useCenarios();
   const [cenarioFeedback, setCenarioFeedback] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [dialogGuardar, setDialogGuardar] = useState(false);
 
   // Passo 0: situação face à atividade
   // anoAtividade controla a redução do coeficiente (1.º −50%, 2.º −25%, 3.º+ integral).
@@ -535,11 +537,10 @@ export default function ModoGuiado({
     despSaude, despEducacao, despRendas, despGerais,
   });
 
-  function guardarCenario() {
+  const nomePadraoCenario = `Recibos verdes · ${fmt(brutoAnual)}/ano`;
+
+  function guardarCenario(nome: string) {
     const rotuloAtiv = atividadeEspecifica?.label ?? card.titulo;
-    const nomePadrao = `Recibos verdes · ${fmt(brutoAnual)}/ano`;
-    const nome = typeof window !== "undefined" ? (window.prompt("Nome deste cenário:", nomePadrao) ?? "").trim() : nomePadrao;
-    if (typeof window !== "undefined" && nome === "") return; // cancelado
     const cargaFiscal = brutoAnual > 0 ? (irsAnual + ssAnual) / brutoAnual : 0;
     const resumo: ResumoCenario = {
       destaque: Math.max(0, liquidoAnual),
@@ -552,8 +553,9 @@ export default function ModoGuiado({
         { label: "Carga fiscal", valor: cargaFiscal, fmt: "pct" },
       ],
     };
-    const r = cenariosStore.guardar({ tipo: "recibos", nome: nome || nomePadrao, resumo, dados: { ...montarSnapshot(), _rotulo: rotuloAtiv } });
+    const r = cenariosStore.guardar({ tipo: "recibos", nome: nome || nomePadraoCenario, resumo, dados: { ...montarSnapshot(), _rotulo: rotuloAtiv } });
     setCenarioFeedback(r.erro ? { tipo: "erro", texto: r.erro } : { tipo: "ok", texto: "Cenário guardado em «Os meus cenários»." });
+    setDialogGuardar(false);
   }
 
   // Reabre um cenário marcado a partir da página de gestão (uma vez, na montagem).
@@ -911,7 +913,7 @@ export default function ModoGuiado({
                       </div>
                       <button
                         type="button"
-                        onClick={guardarCenario}
+                        onClick={() => setDialogGuardar(true)}
                         disabled={cenariosStore.limiteAtingido}
                         className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-xl border border-brand/30 bg-brand-light px-4 py-2.5 text-sm font-semibold text-brand-dark transition-all hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-50"
                       >
@@ -981,6 +983,14 @@ export default function ModoGuiado({
           )}
         </div>
       </div>
+
+      <GuardarCenarioDialog
+        aberto={dialogGuardar}
+        nomePadrao={nomePadraoCenario}
+        onGuardar={guardarCenario}
+        onFechar={() => setDialogGuardar(false)}
+        titulo="Guardar cenário"
+      />
     </div>
   );
 }
