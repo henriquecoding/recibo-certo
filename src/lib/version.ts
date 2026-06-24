@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.79.0";
+export const APP_VERSION = "1.80.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,14 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.80.0",
+    data: "2026-06-23",
+    titulo: "Trocar de simulador instantâneo, gastando menos dados",
+    itens: [
+      "Os outros modos de simulação deixaram de ser descarregados todos em segundo plano ao abrir a calculadora — passam a preparar-se apenas quando passas o rato (ou tocas) na opção. Resultado: a troca continua quase instantânea, mas quem só usa um modo deixa de gastar dados com os restantes (o modo «Por conta de outrem» sozinho chegava a pesar cerca de 1 MB).",
+    ],
+  },
   {
     version: "1.79.0",
     data: "2026-06-23",

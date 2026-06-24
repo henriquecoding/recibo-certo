@@ -222,17 +222,6 @@ const ModoGuiadoEmpresa = dynamic(() => import("@/components/simulador/ModoGuiad
   loading: () => <GuiadoSkeleton />,
 });
 
-let guiadosPrefetched = false;
-/** Aquece os chunks dos assistentes guiados em segundo plano. */
-function prefetchGuiados() {
-  if (guiadosPrefetched || typeof window === "undefined") return;
-  guiadosPrefetched = true;
-  window.setTimeout(() => {
-    import("@/components/simulador/ModoGuiado");
-    import("@/components/simulador/ModoGuiadoEmpresa");
-  }, 600);
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTES FISCAIS — derivadas de fiscal-data.ts (fonte de verdade única)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3615,11 +3604,17 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     diretosAutor: "prop_int",
   };
 
-  // Aquece os assistentes guiados em segundo plano assim que o simulador abre —
-  // ficam prontos quando o utilizador escolher, sem os carregar logo no arranque.
+  // Aquece o assistente guiado em segundo plano assim que o simulador abre — fica
+  // pronto quando o utilizador escolher, sem o carregar logo no arranque. Só o do
+  // modo ativo (RV ou empresa), para não gastar dados com o que não se vai usar.
   useEffect(() => {
-    prefetchGuiados();
-  }, []);
+    if (typeof window === "undefined") return;
+    const id = window.setTimeout(() => {
+      if (vista !== "empresa") import("@/components/simulador/ModoGuiado");
+      if (vista !== "rv") import("@/components/simulador/ModoGuiadoEmpresa");
+    }, 600);
+    return () => clearTimeout(id);
+  }, [vista]);
 
   const handleSelectModo = useCallback((modo: "guiado" | "profissional") => {
     setModoSimulacao(modo);
