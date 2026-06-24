@@ -2689,14 +2689,11 @@ function ResultadoFinal({
   return (
     <div>
       {/* ── Título ──────────────────────────────────────────────────────── */}
-      <div className="mb-5">
-        <h3 className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100">
-          O teu resultado
-        </h3>
-        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-          Estimativa para {recibosAno} {recibosAno === 1 ? "mês" : "meses"} de atividade.
-        </p>
-      </div>
+      <GuiadoCabecalho
+        eyebrow="Resultado"
+        titulo="O teu resultado"
+        subtitulo={`Estimativa para ${recibosAno} ${recibosAno === 1 ? "mês" : "meses"} de atividade.`}
+      />
 
       {/* ── Layout 2 colunas ─────────────────────────────────────────────── */}
       <div className="grid gap-5 md:grid-cols-[1fr_280px] md:items-start">
