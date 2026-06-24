@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.83.1";
+export const APP_VERSION = "1.84.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.84.0",
+    data: "2026-06-24",
+    titulo: "Central de Feedback redesenhada e mais segura",
+    itens: [
+      "A janela de feedback ficou mais moderna e fácil de perceber: o destaque de que ganhas XP no Quiz Fiscal aparece logo no topo, e o botão «Enviar» está sempre visível — já não é preciso rolar para encontrar nada.",
+      "Mais segurança: o envio bloqueia automaticamente código, HTML e scripts, e o texto é limpo de caracteres invisíveis tanto na app como na base de dados. Comparações normais (ex.: «lucro < 1000») continuam a passar sem problema.",
+    ],
+  },
   {
     version: "1.83.1",
     data: "2026-06-24",
