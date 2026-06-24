@@ -13,7 +13,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "motion/react";
 import {
-  LogoMark, Search, Menu, Close, Calculator, User, LayoutGrid, ArrowRight, Coin, Megaphone, ChevronRight,
+  LogoMark, Search, Menu, Close, Calculator, LayoutGrid, ArrowRight, Coin, Megaphone, ChevronRight,
 } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useAuth } from "@/lib/supabase/auth";
@@ -104,10 +104,15 @@ export default function ChromeMobile() {
             <LogoMark size={26} />
           </Link>
 
-          {/* Atalho rápido: perfil (com foto, se houver) */}
-          <Link href="/dashboard/perfil" aria-label="O meu perfil" className="flex h-11 w-11 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800">
-            <AvatarConta url={avatarUrl} size={28} fallback={<User size={20} />} />
-          </Link>
+          {/* Sugestões e suporte (Central de Feedback) */}
+          <button
+            type="button"
+            onClick={() => abrirFeedback({ area: pathname })}
+            aria-label="Sugestões e suporte"
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-stone-500 transition-colors hover:bg-stone-100 hover:text-brand dark:text-stone-400 dark:hover:bg-stone-800"
+          >
+            <Megaphone size={20} />
+          </button>
 
           <button type="button" onClick={() => setMenu(true)} aria-haspopup="dialog" aria-expanded={menu} aria-label="Abrir menu" className="flex h-11 w-11 items-center justify-center rounded-lg text-stone-500 transition-colors hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800">
             <Menu size={22} />

@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.83.0";
+export const APP_VERSION = "1.83.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,14 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.83.1",
+    data: "2026-06-24",
+    titulo: "Barra do telemóvel mais clara",
+    itens: [
+      "Na barra inferior do telemóvel, o atalho da esquerda passa a ser «Sugestões e suporte»; a tua foto de perfil fica só no botão da direita, que leva ao painel — sem fotos repetidas.",
+    ],
+  },
   {
     version: "1.83.0",
     data: "2026-06-24",
