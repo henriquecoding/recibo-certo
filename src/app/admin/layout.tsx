@@ -5,14 +5,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/lib/supabase/auth";
 import { verificarAdmin } from "@/lib/supabase/admin";
-import { CheckTrend, LayoutGrid, Megaphone, ArrowLeft, BellAlert, ShieldCheck, Flag, Briefcase } from "@/components/ui/Icons";
+import { LogoMark, LayoutGrid, Megaphone, ArrowLeft, BellAlert, ShieldCheck, Flag, Briefcase } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 
 const NAV = [
   { href: "/admin", label: "Visão geral", icon: LayoutGrid },
   { href: "/admin/propostas", label: "Propostas", icon: Briefcase },
   { href: "/admin/anuncios", label: "Anúncios", icon: Megaphone },
-  { href: "/admin/reportes", label: "Reportes do quiz", icon: Flag },
+  { href: "/admin/reportes", label: "Central de reportes", icon: Flag },
   { href: "/admin/waitlist", label: "Lista de espera", icon: BellAlert },
   { href: "/admin/auditoria", label: "Auditoria fiscal", icon: ShieldCheck },
 ];
@@ -68,10 +68,8 @@ function AdminLayout({ children }: { children: ReactNode }) {
       {/* Sidebar */}
       <aside className="sticky top-0 hidden h-screen flex-col border-r border-stone-200 bg-white lg:flex">
         <div className="border-b border-stone-100 px-5 py-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand">
-              <CheckTrend size={14} className="text-white" />
-            </div>
+          <div className="flex items-center gap-2.5">
+            <LogoMark size={32} />
             <div>
               <div className="font-display text-sm font-semibold text-stone-800">
                 Recibo<span className="text-brand">Certo</span>
@@ -131,10 +129,10 @@ function AdminLayout({ children }: { children: ReactNode }) {
       {/* Top bar (mobile) */}
       <header className="sticky top-0 z-40 flex items-center justify-between border-b border-stone-100 bg-cream/85 px-5 py-3 backdrop-blur-xl lg:hidden">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand">
-            <CheckTrend size={12} className="text-white" />
-          </div>
-          <span className="font-display text-sm font-semibold text-stone-800">Admin</span>
+          <LogoMark size={26} />
+          <span className="font-display text-sm font-semibold text-stone-800">
+            Recibo<span className="text-brand">Certo</span> <span className="text-stone-400">Admin</span>
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />

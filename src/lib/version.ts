@@ -5,8 +5,15 @@
 // `APP_VERSION` muda (guarda a última vista em localStorage). Se esqueceres:
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
+//
+// ⚠️ REGRA IMUTÁVEL do comportamento do popup (NÃO alterar sem autorização):
+// o popup "Novidades" só pode aparecer (1) na PRIMEIRA visita de sempre e
+// (2) quando há uma NOVA versão (este `APP_VERSION` muda). Nunca a cada refresh.
+// A garantia vive em `NovidadesModal.tsx`: a versão é marcada como vista no
+// INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
+// página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.82.1";
+export const APP_VERSION = "1.83.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +24,18 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.83.0",
+    data: "2026-06-24",
+    titulo: "Central de sugestões e reportes, header do telemóvel unificado e mais",
+    itens: [
+      "Nova Central de Feedback: em qualquer página podes mandar uma sugestão, reportar um erro, tirar uma dúvida ou deixar uma mensagem — pelo botão no cabeçalho (ou no menu do telemóvel). A equipa do ReciboCerto valida cada mensagem e, se tiveres sessão iniciada e o contributo for útil, ganhas XP no Quiz Fiscal.",
+      "No telemóvel deixou de haver dois cabeçalhos: passa a existir só a barra de baixo (na zona do polegar), agora com tudo o que há no cabeçalho de computador — simuladores, ferramentas, guias, planos e conta — organizado por secções.",
+      "O botão da conta passa a mostrar a tua foto de perfil também no telemóvel.",
+      "O popup de Novidades volta a comportar-se como deve: aparece na primeira visita e só reaparece quando há uma nova versão — nunca a cada atualização da página.",
+      "Pequenas afinações visuais no painel de administração.",
+    ],
+  },
   {
     version: "1.82.1",
     data: "2026-06-24",

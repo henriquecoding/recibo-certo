@@ -6,86 +6,19 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "motion/react";
 import { BuscaTrigger } from "@/components/busca/BuscaTrigger";
-import {
-  Logo,
-  Menu,
-  Close,
-  ArrowRight,
-  ChevronDown,
-  BookOpen,
-  BellAlert,
-  Sparkle,
-  User,
-  LayoutGrid,
-  Calculator,
-  Search,
-  MapPin,
-  Trophy,
-  Briefcase,
-} from "@/components/ui/Icons";
+import { Logo, ArrowRight, ChevronDown, User, Megaphone } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { EASE } from "@/lib/motion";
 import { useAuth } from "@/lib/supabase/auth";
-
-const SUBMENU_FERRAMENTAS = [
-  {
-    label: "Simuladores",
-    desc: "IRS, recibos verdes, vencimento e empresa.",
-    href: "/dashboard/simulador",
-    Icon: Calculator,
-  },
-  {
-    label: "Classificar atividade",
-    desc: "Retenção, coeficiente e SS por profissão.",
-    href: "/dashboard/classificar-atividade",
-    Icon: Search,
-  },
-  {
-    label: "Mapa de contabilistas",
-    desc: "Preço médio por região, num mapa.",
-    href: "/dashboard/mapa-contabilistas",
-    Icon: MapPin,
-  },
-  {
-    label: "Todas as ferramentas",
-    desc: "12 simuladores e ferramentas num só sítio.",
-    href: "/ferramentas",
-    Icon: Briefcase,
-  },
-];
-
-const SUBMENU_APRENDER = [
-  {
-    label: "Simulador de IRS",
-    desc: "Página dedicada: calcula o teu IRS anual de 2026.",
-    href: "/ferramentas/simulador-irs",
-    Icon: Calculator,
-  },
-  {
-    label: "Guias fiscais",
-    desc: "Passo a passo para cada obrigação.",
-    href: "/guias",
-    Icon: BookOpen,
-  },
-  {
-    label: "Quiz Fiscal",
-    desc: "Testa os teus conhecimentos com base legal.",
-    href: "/quiz-fiscal",
-    Icon: Trophy,
-  },
-  {
-    label: "Alertas de prazos",
-    desc: "Nunca mais percas uma data fiscal.",
-    href: "/dashboard/prazos",
-    Icon: BellAlert,
-  },
-];
+import {
+  NAV_FERRAMENTAS as SUBMENU_FERRAMENTAS,
+  NAV_APRENDER as SUBMENU_APRENDER,
+} from "@/components/nav-config";
+import { abrirFeedback } from "@/components/feedback/abrir";
 
 export default function Nav() {
   const { abrirModal, disponivel, user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [recursosOpen, setRecursosOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState("");
   const pathname = usePathname();
@@ -110,15 +43,8 @@ export default function Nav() {
   }, []);
 
   useEffect(() => {
-    setOpen(false);
-    setRecursosOpen(false);
     setDropdownOpen(false);
   }, [pathname]);
-
-  useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [open]);
 
   function openDropdown() {
     if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
@@ -145,12 +71,14 @@ export default function Nav() {
 
   return (
     <>
-      {/* Spacer */}
-      <div className="h-14 sm:h-[72px]" aria-hidden />
+      {/* Spacer — só no desktop. No telemóvel o cabeçalho vive em baixo
+          (ChromeMobile), por isso aqui não reservamos espaço nem mostramos
+          este header (evita o "duplo header" no telemóvel). */}
+      <div className="hidden h-[72px] lg:block" aria-hidden />
 
       <nav
-        className={`fixed inset-x-0 top-0 z-50 transition-[border-color,background-color,box-shadow] duration-300 ${
-          scrolled || open
+        className={`fixed inset-x-0 top-0 z-50 hidden transition-[border-color,background-color,box-shadow] duration-300 lg:block ${
+          scrolled
             ? "border-b border-stone-200/60 bg-white/80 shadow-sm backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/80"
             : "border-b border-transparent bg-white/60 backdrop-blur-md dark:bg-stone-950/60"
         }`}
@@ -267,6 +195,16 @@ export default function Nav() {
           <div className="hidden items-center gap-2 lg:flex">
             <BuscaTrigger />
 
+            <button
+              type="button"
+              onClick={() => abrirFeedback()}
+              aria-label="Sugestões, erros e dúvidas"
+              title="Sugestões, erros e dúvidas"
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-stone-500 transition-colors hover:bg-stone-100 hover:text-brand dark:text-stone-400 dark:hover:bg-stone-800"
+            >
+              <Megaphone size={17} />
+            </button>
+
             <div className="mx-1 h-5 w-px bg-stone-200 dark:bg-stone-700" aria-hidden />
 
             <ThemeToggle />
@@ -318,195 +256,8 @@ export default function Nav() {
             )}
           </div>
 
-          {/* ── Mobile: pesquisa + tema + hambúrguer ── */}
-          <div className="flex items-center gap-1 lg:hidden">
-            <BuscaTrigger compacto />
-            <ThemeToggle />
-            <button
-              onClick={() => setOpen((o) => !o)}
-              aria-label={open ? "Fechar menu" : "Abrir menu"}
-              aria-expanded={open}
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-stone-500 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800"
-            >
-              <AnimatePresence mode="wait" initial={false}>
-                {open ? (
-                  <m.span
-                    key="close"
-                    initial={{ opacity: 0, rotate: -45 }}
-                    animate={{ opacity: 1, rotate: 0 }}
-                    exit={{ opacity: 0, rotate: 45 }}
-                    transition={{ duration: 0.15 }}
-                    className="flex"
-                  >
-                    <Close size={22} />
-                  </m.span>
-                ) : (
-                  <m.span
-                    key="menu"
-                    initial={{ opacity: 0, rotate: 45 }}
-                    animate={{ opacity: 1, rotate: 0 }}
-                    exit={{ opacity: 0, rotate: -45 }}
-                    transition={{ duration: 0.15 }}
-                    className="flex"
-                  >
-                    <Menu size={22} />
-                  </m.span>
-                )}
-              </AnimatePresence>
-            </button>
-          </div>
         </div>
       </nav>
-
-      {/* ── Mobile drawer ── */}
-      <AnimatePresence>
-        {open && (
-          <m.div
-            key="mobile-menu"
-            initial={{ opacity: 0, x: "100%" }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: "100%" }}
-            transition={{ duration: 0.3, ease: EASE }}
-            className="fixed inset-y-0 right-0 z-40 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto border-l border-stone-100 bg-white/98 pb-8 pt-14 backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/98 lg:hidden"
-          >
-            <nav className="flex flex-col gap-1 px-4 pt-4">
-              <Link
-                href="/#calculadora"
-                className={`rounded-2xl px-4 py-3 text-sm font-medium transition-colors ${
-                  isActive("/#calculadora")
-                    ? "bg-stone-100 font-semibold text-stone-900 dark:bg-stone-800 dark:text-stone-100"
-                    : "text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
-                }`}
-              >
-                Simuladores
-              </Link>
-
-              {/* Recursos Fiscais expansível */}
-              <div>
-                <button
-                  onClick={() => setRecursosOpen((o) => !o)}
-                  aria-expanded={recursosOpen}
-                  className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium transition-colors ${
-                    isRecursosActive
-                      ? "bg-stone-100 font-semibold text-stone-900 dark:bg-stone-800 dark:text-stone-100"
-                      : "text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
-                  }`}
-                >
-                  Recursos Fiscais
-                  <m.span
-                    animate={{ rotate: recursosOpen ? 180 : 0 }}
-                    transition={{ duration: 0.2, ease: EASE }}
-                    className="flex"
-                  >
-                    <ChevronDown size={16} />
-                  </m.span>
-                </button>
-
-                <AnimatePresence>
-                  {recursosOpen && (
-                    <m.div
-                      key="recursos-sub"
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.25, ease: EASE }}
-                      className="overflow-hidden"
-                    >
-                      <div className="ml-2 mt-1 flex flex-col gap-0.5">
-                        <p className="px-4 pt-1 pb-0.5 text-[10px] font-bold uppercase tracking-widest text-stone-400">
-                          Ferramentas
-                        </p>
-                        {SUBMENU_FERRAMENTAS.map((item) => (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            className="flex items-center gap-3 rounded-2xl px-4 py-2.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
-                          >
-                            <span className="shrink-0 text-brand">
-                              <item.Icon size={15} />
-                            </span>
-                            <span className="font-medium">{item.label}</span>
-                          </Link>
-                        ))}
-                        <p className="px-4 pt-2 pb-0.5 text-[10px] font-bold uppercase tracking-widest text-stone-400">
-                          Aprender
-                        </p>
-                        {SUBMENU_APRENDER.map((item) => (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            className="flex items-center gap-3 rounded-2xl px-4 py-2.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
-                          >
-                            <span className="shrink-0 text-brand">
-                              <item.Icon size={15} />
-                            </span>
-                            <span className="font-medium">{item.label}</span>
-                          </Link>
-                        ))}
-                      </div>
-                    </m.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              <Link
-                href="/precos"
-                className={`rounded-2xl px-4 py-3 text-sm font-medium transition-colors ${
-                  isActive("/precos")
-                    ? "bg-stone-100 font-semibold text-stone-900 dark:bg-stone-800 dark:text-stone-100"
-                    : "text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
-                }`}
-              >
-                Planos
-              </Link>
-
-              <div className="mt-4 flex flex-col gap-2.5 border-t border-stone-100 pt-4 dark:border-stone-800">
-                {user ? (
-                  <Link
-                    href="/dashboard"
-                    className="flex w-full items-center gap-3 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-glow"
-                  >
-                    <span className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/20">
-                      {avatarUrl ? (
-                        <Image src={avatarUrl} alt="" fill className="rounded-xl object-cover" sizes="32px" unoptimized />
-                      ) : (
-                        <User size={15} />
-                      )}
-                    </span>
-                    Dashboard
-                  </Link>
-                ) : disponivel ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => { setOpen(false); abrirModal("entrar"); }}
-                      className="flex w-full items-center justify-center rounded-2xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
-                    >
-                      Entrar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setOpen(false); abrirModal("criar"); }}
-                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-glow"
-                    >
-                      Começar Grátis
-                      <ArrowRight size={13} />
-                    </button>
-                  </>
-                ) : (
-                  <Link
-                    href="/dashboard"
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-glow"
-                  >
-                    Começar Grátis
-                    <ArrowRight size={13} />
-                  </Link>
-                )}
-              </div>
-            </nav>
-          </m.div>
-        )}
-      </AnimatePresence>
     </>
   );
 }

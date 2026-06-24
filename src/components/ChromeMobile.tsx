@@ -1,36 +1,52 @@
 "use client";
 
 // Chrome inferior para telemóvel e tablet (< lg): o header vive em baixo (zona do
-// polegar) e a barra de pesquisa fica logo por cima. Logo→home é regra fixa; o
-// resto adapta-se. Não aparece no /dashboard (que tem o seu próprio chrome).
+// polegar) e a barra de pesquisa fica logo por cima. É o ÚNICO header no
+// telemóvel — o Nav.tsx (header de topo) é desktop-only, por isso aqui tem de
+// existir tudo o que há no header normal: simuladores, ferramentas, aprender,
+// planos, conta (com foto) e a Central de Feedback. Logo→home é regra fixa.
+// Não aparece no /dashboard nem no /admin (que têm o seu próprio chrome).
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "motion/react";
 import {
-  LogoMark, Search, Menu, Close, Calculator, User, BookOpen, Trophy, Briefcase, Coin, LayoutGrid, ArrowRight,
+  LogoMark, Search, Menu, Close, Calculator, User, LayoutGrid, ArrowRight, Coin, Megaphone, ChevronRight,
 } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useAuth } from "@/lib/supabase/auth";
+import { NAV_FERRAMENTAS, NAV_APRENDER, type NavItem } from "@/components/nav-config";
+import { abrirFeedback } from "@/components/feedback/abrir";
 
 const EVENTO_ABRIR = "recibocerto:busca:abrir";
 
-const LINKS: { href: string; label: string; desc: string; icon: typeof Calculator }[] = [
-  { href: "/#calculadora", label: "Simulador", desc: "Calcula o teu líquido", icon: Calculator },
-  { href: "/dashboard/perfil", label: "O meu perfil", desc: "Dados pessoais e conquistas", icon: User },
-  { href: "/ferramentas", label: "Ferramentas", desc: "Simuladores e decisores", icon: Briefcase },
-  { href: "/guias", label: "Guias fiscais", desc: "IRS, IVA, Segurança Social", icon: BookOpen },
-  { href: "/quiz-fiscal", label: "Quiz Fiscal", desc: "Testa os teus conhecimentos", icon: Trophy },
-  { href: "/precos", label: "Planos", desc: "Subscrições e benefícios", icon: Coin },
-];
+const PRINCIPAL: NavItem = {
+  href: "/#calculadora", label: "Simuladores", desc: "Calcula o teu líquido real", Icon: Calculator,
+};
+const PLANOS: NavItem = {
+  href: "/precos", label: "Planos", desc: "Subscrições e benefícios", Icon: Coin,
+};
 
 export default function ChromeMobile() {
   const pathname = usePathname();
   const { user, abrirModal, disponivel } = useAuth();
   const [menu, setMenu] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState("");
 
   useEffect(() => { setMenu(false); }, [pathname]);
+
+  // Foto de perfil (só quando há sessão) — mesmo padrão do header de desktop.
+  useEffect(() => {
+    if (!user) { setAvatarUrl(""); return; }
+    let ativo = true;
+    import("@/lib/supabase/profile").then(({ obterPerfil }) =>
+      obterPerfil(user.id).then((p) => { if (ativo) setAvatarUrl(p.avatarUrl); })
+    );
+    return () => { ativo = false; };
+  }, [user]);
+
   useEffect(() => {
     if (!menu) return;
     const prev = document.body.style.overflow;
@@ -88,9 +104,9 @@ export default function ChromeMobile() {
             <LogoMark size={26} />
           </Link>
 
-          {/* Atalho rápido: perfil */}
+          {/* Atalho rápido: perfil (com foto, se houver) */}
           <Link href="/dashboard/perfil" aria-label="O meu perfil" className="flex h-11 w-11 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800">
-            <User size={20} />
+            <AvatarConta url={avatarUrl} size={28} fallback={<User size={20} />} />
           </Link>
 
           <button type="button" onClick={() => setMenu(true)} aria-haspopup="dialog" aria-expanded={menu} aria-label="Abrir menu" className="flex h-11 w-11 items-center justify-center rounded-lg text-stone-500 transition-colors hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800">
@@ -101,7 +117,7 @@ export default function ChromeMobile() {
 
           {user ? (
             <Link href="/dashboard" aria-label="Painel" className="flex h-11 w-11 items-center justify-center rounded-lg bg-brand/10 text-brand transition-colors hover:bg-brand hover:text-white">
-              <LayoutGrid size={20} />
+              <AvatarConta url={avatarUrl} size={28} fallback={<LayoutGrid size={20} />} />
             </Link>
           ) : disponivel ? (
             <button type="button" onClick={() => abrirModal("criar")} className="flex h-11 items-center justify-center rounded-lg bg-brand px-3.5 text-xs font-bold text-white shadow-glow">
@@ -115,36 +131,60 @@ export default function ChromeMobile() {
         </nav>
       </div>
 
-      {/* Menu (folha inferior) */}
+      {/* Menu (folha inferior) — espelha o header de desktop, organizado por secções */}
       <AnimatePresence>
         {menu && (
           <div className="fixed inset-0 z-[80] lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
             <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="absolute inset-0 bg-stone-900/45 backdrop-blur-md" onClick={() => setMenu(false)} aria-hidden />
             <m.div
               initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 32, stiffness: 340 }}
-              className="absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col rounded-t-2xl border-t border-stone-200/80 bg-white shadow-float dark:border-stone-800 dark:bg-stone-900"
+              className="absolute inset-x-0 bottom-0 flex max-h-[88dvh] flex-col rounded-t-2xl border-t border-stone-200/80 bg-white shadow-float dark:border-stone-800 dark:bg-stone-900"
             >
               <div className="flex shrink-0 items-center justify-between border-b border-stone-100 px-5 py-4 dark:border-stone-800">
-                <Link href="/" aria-label="ReciboCerto — início" className="text-brand"><LogoMark size={28} /></Link>
+                <Link href="/" aria-label="ReciboCerto — início" className="flex items-center gap-2 text-brand">
+                  <LogoMark size={26} />
+                  <span className="font-display text-sm font-semibold text-stone-800 dark:text-stone-100">Recibo<span className="text-brand">Certo</span></span>
+                </Link>
                 <button type="button" onClick={() => setMenu(false)} aria-label="Fechar menu" className="flex h-9 w-9 items-center justify-center rounded-xl text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800">
                   <Close size={18} />
                 </button>
               </div>
-              <div className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain p-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-                {LINKS.map((l) => {
-                  const Icon = l.icon;
-                  const at = ativo(l.href);
-                  return (
-                    <Link key={l.href} href={l.href} className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-colors ${at ? "bg-brand-light" : "hover:bg-stone-50 dark:hover:bg-stone-800"}`}>
-                      <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg ${at ? "bg-brand text-white" : "bg-brand-light text-brand"}`}><Icon size={18} /></span>
-                      <span className="min-w-0 flex-1">
-                        <span className={`block text-sm font-semibold ${at ? "text-brand-dark dark:text-brand" : "text-stone-800 dark:text-stone-100"}`}>{l.label}</span>
-                        <span className="block truncate text-xs text-stone-500 dark:text-stone-400">{l.desc}</span>
-                      </span>
-                      <ArrowRight size={14} className="flex-shrink-0 text-stone-300" />
-                    </Link>
-                  );
-                })}
+
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+                {/* Destaque: Simuladores */}
+                <LinhaMenu item={PRINCIPAL} ativo={pathname === "/"} destaque />
+
+                <SeccaoMenu titulo="Ferramentas">
+                  {NAV_FERRAMENTAS.map((l) => (
+                    <LinhaMenu key={l.href} item={l} ativo={ativo(l.href)} />
+                  ))}
+                </SeccaoMenu>
+
+                <SeccaoMenu titulo="Aprender">
+                  {NAV_APRENDER.map((l) => (
+                    <LinhaMenu key={l.href} item={l} ativo={ativo(l.href)} />
+                  ))}
+                </SeccaoMenu>
+
+                <SeccaoMenu titulo="Mais">
+                  <LinhaMenu item={PLANOS} ativo={ativo(PLANOS.href)} />
+                  {/* Central de Feedback */}
+                  <button
+                    type="button"
+                    onClick={() => { setMenu(false); abrirFeedback({ area: pathname }); }}
+                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors hover:bg-stone-50 dark:hover:bg-stone-800"
+                  >
+                    <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-brand-light text-brand">
+                      <Megaphone size={18} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-stone-800 dark:text-stone-100">Sugestões e reportes</span>
+                      <span className="block truncate text-xs text-stone-500 dark:text-stone-400">Ideias, erros, dúvidas ou uma mensagem</span>
+                    </span>
+                    <ChevronRight size={14} className="flex-shrink-0 text-stone-300" />
+                  </button>
+                </SeccaoMenu>
+
                 <div className="border-t border-stone-100 pt-3 dark:border-stone-800">
                   {user ? (
                     <Link href="/dashboard" className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-glow">
@@ -169,5 +209,45 @@ export default function ChromeMobile() {
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+// Avatar redondo da conta — foto de perfil se houver, senão o ícone de origem.
+function AvatarConta({ url, size, fallback }: { url: string; size: number; fallback: React.ReactNode }) {
+  if (!url) return <>{fallback}</>;
+  return (
+    <span className="relative block overflow-hidden rounded-lg" style={{ height: size, width: size }}>
+      <Image src={url} alt="" fill className="object-cover" sizes={`${size}px`} unoptimized />
+    </span>
+  );
+}
+
+function SeccaoMenu({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="px-4 pb-1 text-[10px] font-bold uppercase tracking-widest text-stone-400">{titulo}</p>
+      <div className="space-y-0.5">{children}</div>
+    </div>
+  );
+}
+
+function LinhaMenu({ item, ativo, destaque }: { item: NavItem; ativo: boolean; destaque?: boolean }) {
+  const { Icon } = item;
+  return (
+    <Link
+      href={item.href}
+      className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-colors ${
+        ativo ? "bg-brand-light" : destaque ? "bg-stone-50 dark:bg-stone-800/60" : "hover:bg-stone-50 dark:hover:bg-stone-800"
+      }`}
+    >
+      <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg ${ativo ? "bg-brand text-white" : "bg-brand-light text-brand"}`}>
+        <Icon size={18} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className={`block text-sm font-semibold ${ativo ? "text-brand-dark dark:text-brand" : "text-stone-800 dark:text-stone-100"}`}>{item.label}</span>
+        <span className="block truncate text-xs text-stone-500 dark:text-stone-400">{item.desc}</span>
+      </span>
+      <ChevronRight size={14} className="flex-shrink-0 text-stone-300" />
+    </Link>
   );
 }
