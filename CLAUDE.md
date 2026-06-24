@@ -52,6 +52,11 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
    `src/lib/version.ts` — é o que alimenta o popup "Novidades & Atualizações".
    `assertChangelogIntegrity()` falha o build e o workflow `changelog-check.yml`
    falha o PR se esqueceres.
+10. **Popup "Novidades" — comportamento IMUTÁVEL (não mudar sem autorização).**
+   Só pode aparecer (a) na primeira visita de sempre e (b) quando há uma versão
+   nova (`APP_VERSION` muda). NUNCA a cada refresh. A versão é marcada como vista
+   no instante em que o popup é mostrado (ver `NovidadesModal.tsx`), não só ao
+   fechar — atualizar a página com ele aberto não o pode fazer reaparecer.
 
 ## Mapa rápido
 

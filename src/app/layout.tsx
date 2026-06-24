@@ -7,6 +7,7 @@ import { PerfilProvider } from "@/lib/perfil";
 import { SubscricaoProvider } from "@/lib/stripe/subscription";
 import DeferredOverlays from "@/components/ui/DeferredOverlays";
 import ChromeMobile from "@/components/ChromeMobile";
+import FeedbackModal from "@/components/feedback/FeedbackModal";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -140,6 +141,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <MotionProvider>
                   {children}
                   <ChromeMobile />
+                  <FeedbackModal />
                   <DeferredOverlays />
                 </MotionProvider>
               </PerfilProvider>
