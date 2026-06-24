@@ -275,11 +275,15 @@ export default function DemoIRS() {
                   {ativo && (
                     <m.span
                       key={`tip-${i}`}
-                      initial={{ opacity: 0, y: 4, scale: 0.9 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      // x:"-50%" centra via transform do próprio motion. Não usar a
+                      // classe -translate-x-1/2 do Tailwind: o motion escreve um
+                      // `transform` (de y/scale) que a anularia, deslocando o balão
+                      // para a direita do escalão.
+                      initial={{ opacity: 0, y: 4, scale: 0.9, x: "-50%" }}
+                      animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
                       transition={{ duration: 0.3, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                      style={{ bottom: `calc(${altura}% + 5px)` }}
-                      className="absolute left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg bg-brand-deep px-1.5 py-0.5 text-[9px] font-bold text-white shadow-lift"
+                      style={{ bottom: `calc(${altura}% + 5px)`, transformOrigin: "bottom center" }}
+                      className="absolute left-1/2 z-10 whitespace-nowrap rounded-lg bg-brand-deep px-1.5 py-0.5 text-[9px] font-bold text-white shadow-lift"
                     >
                       {idx + 1}.º · {pct(e.taxa)}
                       <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-x-[3px] border-t-[3px] border-x-transparent border-t-brand-deep" />
