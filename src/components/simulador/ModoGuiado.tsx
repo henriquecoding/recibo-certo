@@ -1008,18 +1008,13 @@ function PassoAtividade({
 }) {
   return (
     <div>
-      <div className="mb-6">
-        <h3 className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100">
-          O que fazes?
-        </h3>
-        <p className="mt-1 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
-          Escolhe a categoria que melhor te representa — determina retenção,
-          coeficiente e SS.
-        </p>
-      </div>
+      <GuiadoCabecalho
+        titulo="O que fazes?"
+        subtitulo="Escolhe a categoria que melhor te representa — determina a retenção, o coeficiente e a Segurança Social."
+      />
 
       {/* Grid de categorias */}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {CARDS_ATIV.map(({ id, titulo, sub, exemplos, coef, ret, Icon }) => {
           const active = tipoAtiv === id && tipoSelecionado;
           return (
@@ -1028,10 +1023,10 @@ function PassoAtividade({
               type="button"
               aria-pressed={active}
               onClick={() => onSelecionarTipo(id)}
-              className={`group relative overflow-hidden rounded-3xl border-2 p-4 text-left transition-all duration-200 ${
+              className={`group relative overflow-hidden rounded-3xl border p-4 text-left shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift ${
                 active
-                  ? "border-brand bg-brand-light shadow-lift"
-                  : "border-stone-200 bg-white hover:border-brand/30 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900/60 dark:hover:border-brand/30"
+                  ? "border-brand bg-brand-light"
+                  : "border-stone-200/80 bg-white hover:border-brand/40 dark:border-stone-800 dark:bg-stone-900"
               }`}
             >
               {active && (
@@ -1369,15 +1364,10 @@ function PassoFaturacao({
 
   return (
     <div>
-      <div className="mb-6">
-        <h3 className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100">
-          Quanto faturaste?
-        </h3>
-        <p className="mt-1 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
-          Indica quanto faturas por mês e em quantos meses do ano. A situação de
-          IVA é tratada mais abaixo.
-        </p>
-      </div>
+      <GuiadoCabecalho
+        titulo="Quanto faturaste?"
+        subtitulo="Indica quanto faturas por mês e em quantos meses do ano. A situação de IVA é tratada mais abaixo."
+      />
 
       {/* Tabs modo */}
       <div className="mb-5 flex gap-1 rounded-3xl bg-stone-100 p-1 dark:bg-stone-800">
@@ -1859,14 +1849,10 @@ function PassoSituacao({
 
   return (
     <div>
-      <div className="mb-6">
-        <h3 className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100">
-          A tua situação
-        </h3>
-        <p className="mt-1 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
-          Responde ao que se aplica — pode poupar centenas de euros por ano.
-        </p>
-      </div>
+      <GuiadoCabecalho
+        titulo="A tua situação"
+        subtitulo="Responde ao que se aplica — pode poupar centenas de euros por ano."
+      />
 
       <div className="space-y-5">
         {/* ── Secção SS ─────────────────────────────────────────────────── */}
