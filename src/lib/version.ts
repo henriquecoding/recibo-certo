@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.82.0";
+export const APP_VERSION = "1.82.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,14 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.82.1",
+    data: "2026-06-24",
+    titulo: "Etiqueta do escalão centrada na demo do IRS",
+    itens: [
+      "Na demonstração «ao vivo» do Simulador de IRS, a etiqueta com o escalão (ex.: «5.º · 31,1%») passa a ficar exatamente por cima da barra correspondente — antes aparecia ligeiramente deslocada para a direita.",
+    ],
+  },
   {
     version: "1.82.0",
     data: "2026-06-24",
