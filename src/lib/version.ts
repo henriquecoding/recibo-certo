@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.85.0";
+export const APP_VERSION = "1.86.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.86.0",
+    data: "2026-06-28",
+    titulo: "Mais guias, com fotografia real do Porto e ligação aos simuladores",
+    itens: [
+      "Nove novos guias, bem elaborados e com base legal: despesas dedutíveis e a regra dos 15%, pagamentos por conta, simplificado vs. contabilidade organizada, calendário fiscal 2026, IFICI (NHR 2.0), mais-valias (ações, cripto e imóveis), tributação conjunta vs. separada, reembolso de IRS e empresa vs. recibos verdes.",
+      "O herói da página de Guias passa a mostrar uma fotografia real da Ponte D. Luís I sobre o Rio Douro, no Porto.",
+      "Cada guia encaminha agora diretamente para os Simuladores e para o Simulador de IRS — da leitura às tuas contas, num clique.",
+    ],
+  },
   {
     version: "1.85.0",
     data: "2026-06-28",

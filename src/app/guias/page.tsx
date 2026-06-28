@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import GuiasIndex from "@/components/guias/GuiasIndex";
-import {
-  Calculator, Receipt, Scale, FileSign, Wallet, Building, ShieldCheck, ChevronRight, ArrowRight,
-} from "@/components/ui/Icons";
+import { Calculator, Briefcase, ChevronRight, ArrowRight } from "@/components/ui/Icons";
 
 export const metadata: Metadata = {
   title: "Guias fiscais e laborais 2026 | ReciboCerto",
@@ -25,13 +23,8 @@ export const metadata: Metadata = {
 };
 
 const FERRAMENTAS = [
-  { label: "Calculadora de recibos verdes", desc: "Líquido real: IRS, SS e IVA.", href: "/ferramentas/regime-simplificado", icon: Calculator },
-  { label: "Simulador de recibo de vencimento", desc: "Do bruto ao líquido em segundos.", href: "/ferramentas/recibo-vencimento", icon: Receipt },
-  { label: "Ato isolado ou abrir atividade?", desc: "Decisor em poucas perguntas.", href: "/ferramentas/ato-isolado", icon: Scale },
-  { label: "Classificar a tua atividade", desc: "Código (Art. 151.º) e coeficiente.", href: "/ferramentas/classificar-atividade", icon: FileSign },
-  { label: "Recibo para Merchant of Record", desc: "Paddle / Lemon Squeezy: 1 recibo/mês.", href: "/ferramentas/payout-mor", icon: Wallet },
-  { label: "Simulador de empresa (IRC)", desc: "Sociedade vs. recibos verdes.", href: "/ferramentas/simulador-empresa", icon: Building },
-  { label: "Auditoria de recibo", desc: "Confere se o teu recibo está certo.", href: "/ferramentas/auditoria-recibo", icon: ShieldCheck },
+  { label: "Simuladores", desc: "Recibos verdes, vencimento e empresa — o teu líquido real, com as taxas oficiais de 2026.", href: "/dashboard/simulador", icon: Briefcase },
+  { label: "Simulador de IRS", desc: "A tua declaração anual, do bruto ao reembolso, com memória de cálculo passo a passo.", href: "/ferramentas/simulador-irs", icon: Calculator },
 ];
 
 export default function GuiasPage() {
@@ -50,12 +43,12 @@ export default function GuiasPage() {
               oficiais de 2026.
             </p>
           </div>
-          <Link href="/ferramentas/regime-simplificado" className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-brand-dark">
-            Abrir calculadora <ArrowRight size={15} />
+          <Link href="/dashboard/simulador" className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-brand-dark">
+            Abrir simuladores <ArrowRight size={15} />
           </Link>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {FERRAMENTAS.map((f) => {
             const Icon = f.icon;
             return (

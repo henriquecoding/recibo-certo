@@ -19,7 +19,10 @@ const INDEPENDENTES_NAV: NavItem[] = [
   { label: "Abrir atividade", href: "/guias/abrir-atividade", icon: Bank },
   { label: "Ato isolado", href: "/guias/ato-isolado", icon: Scale },
   { label: "Regime simplificado", href: "/guias/regime-simplificado", icon: Calculator },
+  { label: "Despesas dedutíveis", href: "/guias/despesas-dedutiveis", icon: Coin },
+  { label: "Contab. organizada", href: "/guias/contabilidade-organizada", icon: Scale },
   { label: "Retenção na fonte", href: "/guias/retencao-na-fonte", icon: ShieldCheck },
+  { label: "Pagamentos por conta", href: "/guias/pagamentos-por-conta", icon: Calculator },
   { label: "IVA", href: "/guias/iva-recibos-verdes", icon: Coin },
   { label: "Segurança Social", href: "/guias/seguranca-social", icon: User },
   { label: "Acumulação c/ emprego", href: "/guias/acumulacao-emprego", icon: Briefcase },
@@ -37,14 +40,20 @@ const CONTA_OUTREM_NAV: NavItem[] = [
 
 const EMPRESAS_NAV: NavItem[] = [
   { label: "Abrir empresa", href: "/guias/abrir-empresa", icon: Building },
+  { label: "Unipessoal vs. ENI", href: "/guias/unipessoal-vs-eni", icon: Building },
   { label: "IRC para PME", href: "/guias/irc", icon: Calculator },
   { label: "Tributação autónoma", href: "/guias/tributacao-autonoma", icon: Scale },
 ];
 
 const TRANSVERSAL_NAV: NavItem[] = [
+  { label: "Calendário fiscal", href: "/guias/calendario-fiscal", icon: Calendar },
   { label: "Escalões IRS", href: "/guias/escaloes-irs", icon: Calculator },
   { label: "IRS Jovem", href: "/guias/irs-jovem", icon: Flag },
+  { label: "IFICI / NHR 2.0", href: "/guias/ifici-nhr", icon: Flag },
   { label: "Deduções à coleta", href: "/guias/deducoes-coleta", icon: Coin },
+  { label: "Mais-valias", href: "/guias/mais-valias", icon: Coin },
+  { label: "Tributação conjunta", href: "/guias/tributacao-conjunta", icon: User },
+  { label: "Reembolso de IRS", href: "/guias/reembolso-irs", icon: Wallet },
 ];
 
 const ALL_GUIAS = [...INDEPENDENTES_NAV, ...CONTA_OUTREM_NAV, ...EMPRESAS_NAV, ...TRANSVERSAL_NAV];
@@ -139,7 +148,7 @@ export default function GuiasLayout({ children }: { children: ReactNode }) {
                     Faz as contas à tua situação com os nossos simuladores gratuitos, com taxas oficiais de 2026.
                   </p>
                   <Link
-                    href="/ferramentas/regime-simplificado"
+                    href="/dashboard/simulador"
                     className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-brand transition-colors hover:text-brand-dark"
                   >
                     <Megaphone size={13} /> Abrir simuladores

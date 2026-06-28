@@ -31,7 +31,10 @@ const GUIAS: Guia[] = [
   { href: "/guias/abrir-atividade", titulo: "Como abrir atividade nas Finanças", descricao: "Passo a passo para abrir atividade como trabalhador independente.", tempo: 5, categoria: "Independentes", icon: Bank },
   { href: "/guias/ato-isolado", titulo: "Ato isolado ou recibos verdes?", descricao: "Descobre quando usar ato isolado e quando emitir recibos verdes.", tempo: 4, categoria: "Independentes", icon: Scale },
   { href: "/guias/regime-simplificado", titulo: "Regime simplificado e coeficientes", descricao: "Entende os coeficientes e o que realmente pagas em IRS.", tempo: 6, categoria: "Independentes", icon: Calculator },
+  { href: "/guias/despesas-dedutiveis", titulo: "Despesas dedutíveis e a regra dos 15%", descricao: "Que despesas contam no regime simplificado — e quanto tens de justificar.", tempo: 6, categoria: "Independentes", icon: Coin },
+  { href: "/guias/contabilidade-organizada", titulo: "Simplificado vs. contabilidade organizada", descricao: "Quando compensa passar ao lucro real e o que muda.", tempo: 6, categoria: "Independentes", icon: Scale },
   { href: "/guias/retencao-na-fonte", titulo: "Retenção na fonte", descricao: "Saiba quando é aplicada e como funciona a retenção na fonte.", tempo: 4, categoria: "Independentes", icon: ShieldCheck },
+  { href: "/guias/pagamentos-por-conta", titulo: "Pagamentos por conta do IRS", descricao: "Os adiantamentos de IRS da categoria B: prazos e cálculo.", tempo: 4, categoria: "Independentes", icon: Calculator },
   { href: "/guias/iva-recibos-verdes", titulo: "IVA nos recibos verdes", descricao: "A isenção de 15 000 € e quando deves liquidar IVA.", tempo: 5, categoria: "Independentes", icon: Coin },
   { href: "/guias/seguranca-social", titulo: "Segurança Social", descricao: "Como funcionam as contribuições, a fórmula e as isenções.", tempo: 5, categoria: "Independentes", icon: User },
   { href: "/guias/acumulacao-emprego", titulo: "Acumulação com emprego", descricao: "Tens emprego e passas recibos verdes? Sabe o que muda.", tempo: 4, categoria: "Independentes", icon: Briefcase },
@@ -43,11 +46,17 @@ const GUIAS: Guia[] = [
   { href: "/guias/subsidios-ferias-natal", titulo: "Subsídio de férias e de Natal", descricao: "Cálculo, descontos e o que muda com os duodécimos.", tempo: 5, categoria: "Conta de outrem", icon: Calendar },
   { href: "/guias/trabalho-suplementar", titulo: "Trabalho suplementar (horas extra)", descricao: "Acréscimos, retenção autónoma e limites legais.", tempo: 5, categoria: "Conta de outrem", icon: Clock },
   { href: "/guias/abrir-empresa", titulo: "Como abrir uma empresa", descricao: "Formas jurídicas, Empresa na Hora e custos reais.", tempo: 7, categoria: "Empresas", icon: Building },
+  { href: "/guias/unipessoal-vs-eni", titulo: "Empresa (unipessoal) vs. recibos verdes", descricao: "IRC ou IRS, responsabilidade e custos — qual a estrutura certa.", tempo: 7, categoria: "Empresas", icon: Building },
   { href: "/guias/irc", titulo: "IRC para PME", descricao: "Taxas, derrama e pagamentos por conta sem complicação.", tempo: 7, categoria: "Empresas", icon: Calculator },
   { href: "/guias/tributacao-autonoma", titulo: "Tributação autónoma", descricao: "Viaturas, despesas de representação e agravamento.", tempo: 7, categoria: "Empresas", icon: Scale },
+  { href: "/guias/calendario-fiscal", titulo: "Calendário fiscal 2026", descricao: "Todos os prazos de IRS, IVA, Segurança Social e IRC num só sítio.", tempo: 5, categoria: "Transversal", icon: Calendar },
   { href: "/guias/escaloes-irs", titulo: "Escalões de IRS 2026", descricao: "A tabela e os mitos sobre subir de escalão.", tempo: 5, categoria: "Transversal", icon: Calculator },
   { href: "/guias/irs-jovem", titulo: "IRS Jovem 2026", descricao: "Isenção por ano, condições e como pedir.", tempo: 4, categoria: "Transversal", icon: Flag },
+  { href: "/guias/ifici-nhr", titulo: "IFICI (NHR 2.0): taxa de 20%", descricao: "O sucessor do Residente Não Habitual — condições e duração.", tempo: 5, categoria: "Transversal", icon: Flag },
   { href: "/guias/deducoes-coleta", titulo: "Deduções à coleta", descricao: "Saúde, educação e despesas gerais no teu IRS.", tempo: 5, categoria: "Transversal", icon: Calculator },
+  { href: "/guias/mais-valias", titulo: "Mais-valias: ações, cripto e imóveis", descricao: "Taxas, isenções e englobamento na categoria G.", tempo: 6, categoria: "Transversal", icon: Coin },
+  { href: "/guias/tributacao-conjunta", titulo: "Tributação conjunta vs. separada", descricao: "O quociente conjugal e quando cada opção compensa.", tempo: 5, categoria: "Transversal", icon: User },
+  { href: "/guias/reembolso-irs", titulo: "Reembolso de IRS: prazos e como acelerar", descricao: "Quando recebes e o que evita atrasos no reembolso.", tempo: 4, categoria: "Transversal", icon: Wallet },
 ];
 
 const CATEGORIAS: Array<"Todos" | Categoria> = ["Todos", "Independentes", "Conta de outrem", "Empresas", "Transversal"];
@@ -143,10 +152,17 @@ export default function GuiasIndex() {
             </div>
           </div>
 
-          {/* Painel decorativo (Portugal, estilizado — sem fotografia de stock) */}
-          <div className="relative hidden min-h-[260px] overflow-hidden bg-gradient-to-br from-brand-deep via-brand-dark to-brand lg:block">
-            <PortugalArt />
-            <span className="absolute right-6 top-6 text-sm font-semibold tracking-widest text-white/80">2026</span>
+          {/* Painel: Rio Douro e Ponte D. Luís I, Porto (fotografia real, Pexels) */}
+          <div className="relative hidden min-h-[280px] overflow-hidden lg:block">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/guias-douro.jpg"
+              alt="Ponte Dom Luís I sobre o Rio Douro, no Porto"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-tr from-brand-deep/75 via-brand-dark/25 to-transparent" />
+            <span className="absolute right-6 top-6 rounded-full bg-black/25 px-2.5 py-1 text-sm font-semibold tracking-widest text-white backdrop-blur-sm">2026</span>
+            <span className="absolute bottom-4 left-6 text-[11px] font-medium tracking-wide text-white/85">Porto · Rio Douro</span>
           </div>
         </div>
       </m.section>
@@ -300,35 +316,3 @@ function CartaoGuia({ g, favorito, onFav, grelha = false }: { g: Guia; favorito:
   );
 }
 
-/** Arte vetorial: arcos sobre o Douro, em tons da marca. Decorativo, leve. */
-function PortugalArt() {
-  return (
-    <svg viewBox="0 0 400 300" className="absolute inset-0 h-full w-full" preserveAspectRatio="xMidYMid slice" aria-hidden>
-      <defs>
-        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <rect width="400" height="300" fill="url(#sky)" />
-      <circle cx="312" cy="78" r="34" fill="#ffffff" opacity="0.16" />
-      {/* Água */}
-      <path d="M0 232 H400 V300 H0 Z" fill="#ffffff" opacity="0.06" />
-      {/* Ponte em arco */}
-      <path d="M20 170 Q200 70 380 170" fill="none" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="3" />
-      <path d="M20 232 Q200 132 380 232" fill="none" stroke="#ffffff" strokeOpacity="0.28" strokeWidth="2" />
-      {[60, 110, 160, 200, 240, 290, 340].map((x, i) => {
-        const top = 170 - Math.round(100 * Math.sin((Math.PI * (x - 20)) / 360));
-        return <line key={i} x1={x} y1={top} x2={x} y2={232} stroke="#ffffff" strokeOpacity="0.32" strokeWidth="1.5" />;
-      })}
-      <line x1="20" y1="170" x2="20" y2="232" stroke="#ffffff" strokeOpacity="0.4" strokeWidth="3" />
-      <line x1="380" y1="170" x2="380" y2="232" stroke="#ffffff" strokeOpacity="0.4" strokeWidth="3" />
-      {/* Casario */}
-      {Array.from({ length: 22 }).map((_, i) => {
-        const x = 12 + i * 17;
-        const h = 18 + ((i * 37) % 40);
-        return <rect key={i} x={x} y={232 - h} width="13" height={h} fill="#ffffff" opacity={0.12 + (i % 3) * 0.04} rx="1.5" />;
-      })}
-    </svg>
-  );
-}
