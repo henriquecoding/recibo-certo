@@ -5,47 +5,46 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
-import { ChevronRight } from "@/components/ui/Icons";
+import {
+  ChevronRight, Bank, Receipt, Calculator, ShieldCheck, Coin, User, Briefcase,
+  Globe, FileSign, Wallet, Calendar, Clock, Building, Scale, Flag, Megaphone,
+} from "@/components/ui/Icons";
 import { generateBreadcrumbSchema } from "@/lib/seo";
+import SimuladoresRelacionados from "@/components/guias/SimuladoresRelacionados";
 
-type NavItem = { label: string; href: string };
+type IconType = React.ComponentType<{ size?: number; className?: string }>;
+type NavItem = { label: string; href: string; icon: IconType };
 
 const INDEPENDENTES_NAV: NavItem[] = [
-  { label: "Abrir atividade", href: "/guias/abrir-atividade" },
-  { label: "Ato isolado", href: "/guias/ato-isolado" },
-  { label: "Regime simplificado", href: "/guias/regime-simplificado" },
-  { label: "Retenção na fonte", href: "/guias/retencao-na-fonte" },
-  { label: "IVA", href: "/guias/iva-recibos-verdes" },
-  { label: "Segurança Social", href: "/guias/seguranca-social" },
-  { label: "Acumulação c/ emprego", href: "/guias/acumulacao-emprego" },
-  { label: "Clientes estrangeiros", href: "/guias/clientes-estrangeiros" },
-  { label: "Cessar atividade", href: "/guias/cessar-atividade" },
-  { label: "Fatura vs recibo", href: "/guias/fatura-vs-recibo" },
-  { label: "Merchant of Record", href: "/guias/merchant-of-record" },
+  { label: "Abrir atividade", href: "/guias/abrir-atividade", icon: Bank },
+  { label: "Ato isolado", href: "/guias/ato-isolado", icon: Scale },
+  { label: "Regime simplificado", href: "/guias/regime-simplificado", icon: Calculator },
+  { label: "Retenção na fonte", href: "/guias/retencao-na-fonte", icon: ShieldCheck },
+  { label: "IVA", href: "/guias/iva-recibos-verdes", icon: Coin },
+  { label: "Segurança Social", href: "/guias/seguranca-social", icon: User },
+  { label: "Acumulação c/ emprego", href: "/guias/acumulacao-emprego", icon: Briefcase },
+  { label: "Clientes estrangeiros", href: "/guias/clientes-estrangeiros", icon: Globe },
+  { label: "Cessar atividade", href: "/guias/cessar-atividade", icon: FileSign },
+  { label: "Fatura vs recibo", href: "/guias/fatura-vs-recibo", icon: Receipt },
+  { label: "Merchant of Record", href: "/guias/merchant-of-record", icon: Wallet },
 ];
 
 const CONTA_OUTREM_NAV: NavItem[] = [
-  { label: "Recibo de vencimento", href: "/guias/recibo-vencimento" },
-  { label: "Subsídios férias/Natal", href: "/guias/subsidios-ferias-natal" },
-  { label: "Trabalho suplementar", href: "/guias/trabalho-suplementar" },
+  { label: "Recibo de vencimento", href: "/guias/recibo-vencimento", icon: Receipt },
+  { label: "Subsídios férias/Natal", href: "/guias/subsidios-ferias-natal", icon: Calendar },
+  { label: "Trabalho suplementar", href: "/guias/trabalho-suplementar", icon: Clock },
 ];
 
 const EMPRESAS_NAV: NavItem[] = [
-  { label: "Abrir empresa", href: "/guias/abrir-empresa" },
-  { label: "IRC para PME", href: "/guias/irc" },
-  { label: "Tributação autónoma", href: "/guias/tributacao-autonoma" },
+  { label: "Abrir empresa", href: "/guias/abrir-empresa", icon: Building },
+  { label: "IRC para PME", href: "/guias/irc", icon: Calculator },
+  { label: "Tributação autónoma", href: "/guias/tributacao-autonoma", icon: Scale },
 ];
 
 const TRANSVERSAL_NAV: NavItem[] = [
-  { label: "Escalões IRS", href: "/guias/escaloes-irs" },
-  { label: "IRS Jovem", href: "/guias/irs-jovem" },
-  { label: "Deduções à coleta", href: "/guias/deducoes-coleta" },
-];
-
-const FERRAMENTAS_NAV: NavItem[] = [
-  { label: "Ato isolado ou atividade?", href: "/ferramentas/ato-isolado" },
-  { label: "Calculadora IRS", href: "/ferramentas/regime-simplificado" },
-  { label: "Classificar atividade", href: "/ferramentas/classificar-atividade" },
+  { label: "Escalões IRS", href: "/guias/escaloes-irs", icon: Calculator },
+  { label: "IRS Jovem", href: "/guias/irs-jovem", icon: Flag },
+  { label: "Deduções à coleta", href: "/guias/deducoes-coleta", icon: Coin },
 ];
 
 const ALL_GUIAS = [...INDEPENDENTES_NAV, ...CONTA_OUTREM_NAV, ...EMPRESAS_NAV, ...TRANSVERSAL_NAV];
@@ -59,22 +58,29 @@ const SIDEBAR_SECTIONS = [
 
 function SidebarSection({ titulo, items, pathname }: { titulo: string; items: NavItem[]; pathname: string }) {
   return (
-    <div className="mb-4">
-      <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1.5 px-3">{titulo}</p>
+    <div className="mb-5">
+      <div className="mb-2 flex items-center gap-2 px-3">
+        <span className="h-px w-4 bg-brand/40" />
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-brand">{titulo}</p>
+      </div>
       <nav className="space-y-0.5">
         {items.map((g) => {
           const active = pathname === g.href;
+          const Icon = g.icon;
           return (
             <Link
               key={g.href}
               href={g.href}
-              className={`block rounded-xl px-3 py-2 text-sm transition-colors ${
+              aria-current={active ? "page" : undefined}
+              className={`group flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors ${
                 active
-                  ? "bg-brand/8 text-brand font-semibold"
-                  : "text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 hover:text-stone-800 dark:hover:text-stone-100"
+                  ? "bg-brand font-semibold text-white shadow-card"
+                  : "text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-100"
               }`}
             >
-              {g.label}
+              <Icon size={15} className={active ? "text-white" : "text-stone-400 group-hover:text-brand"} />
+              <span className="flex-1 truncate">{g.label}</span>
+              {active && <ChevronRight size={14} className="text-white/80" />}
             </Link>
           );
         })}
@@ -87,6 +93,8 @@ export default function GuiasLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   const guiaAtivo = ALL_GUIAS.find((g) => g.href === pathname);
+  const naIndex = pathname === "/guias";
+  const slug = pathname.startsWith("/guias/") ? pathname.slice("/guias/".length) : "";
 
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Início", url: "/" },
@@ -102,12 +110,12 @@ export default function GuiasLayout({ children }: { children: ReactNode }) {
       />
       <Nav />
       <div className="min-h-screen bg-cream dark:bg-stone-950">
-        <div className="mx-auto max-w-5xl px-6 py-8">
+        <div className="mx-auto max-w-6xl px-6 py-8">
           {/* Breadcrumb */}
-          <nav aria-label="Localização" className="mb-8 flex items-center gap-1.5 text-xs text-stone-400">
-            <Link href="/" className="hover:text-stone-600 dark:hover:text-stone-300 transition-colors">Início</Link>
+          <nav aria-label="Localização" className="mb-6 flex items-center gap-1.5 text-xs text-stone-400">
+            <Link href="/" className="transition-colors hover:text-stone-600 dark:hover:text-stone-300">Início</Link>
             <ChevronRight size={12} />
-            <Link href="/guias" className="hover:text-stone-600 dark:hover:text-stone-300 transition-colors">Guias</Link>
+            <Link href="/guias" className="transition-colors hover:text-stone-600 dark:hover:text-stone-300">Guias</Link>
             {guiaAtivo && (
               <>
                 <ChevronRight size={12} />
@@ -116,34 +124,35 @@ export default function GuiasLayout({ children }: { children: ReactNode }) {
             )}
           </nav>
 
-          <div className="flex gap-12">
+          <div className="flex gap-10">
             {/* Sidebar — oculto em mobile */}
-            <aside className="hidden lg:block w-52 flex-shrink-0">
-              {SIDEBAR_SECTIONS.map((s) => (
-                <SidebarSection key={s.titulo} titulo={s.titulo} items={s.items} pathname={pathname} />
-              ))}
+            <aside className="hidden w-60 flex-shrink-0 lg:block">
+              <div className="sticky top-24">
+                {SIDEBAR_SECTIONS.map((s) => (
+                  <SidebarSection key={s.titulo} titulo={s.titulo} items={s.items} pathname={pathname} />
+                ))}
 
-              <div className="mt-4 border-t border-stone-100 dark:border-stone-800 pt-4">
-                <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1.5 px-3">
-                  Ferramentas
-                </p>
-                <nav className="space-y-0.5">
-                  {FERRAMENTAS_NAV.map((g) => (
-                    <Link
-                      key={g.href}
-                      href={g.href}
-                      className="block rounded-xl px-3 py-2 text-sm text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 hover:text-stone-800 dark:hover:text-stone-100 transition-colors"
-                    >
-                      {g.label}
-                    </Link>
-                  ))}
-                </nav>
+                {/* Cartão de ajuda */}
+                <div className="mt-2 rounded-2xl border border-stone-200 bg-white p-4 shadow-card dark:border-stone-700 dark:bg-stone-900">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">Precisa de ajuda?</p>
+                  <p className="mt-1.5 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+                    Faz as contas à tua situação com os nossos simuladores gratuitos, com taxas oficiais de 2026.
+                  </p>
+                  <Link
+                    href="/ferramentas/regime-simplificado"
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-brand transition-colors hover:text-brand-dark"
+                  >
+                    <Megaphone size={13} /> Abrir simuladores
+                    <ChevronRight size={12} />
+                  </Link>
+                </div>
               </div>
             </aside>
 
             {/* Conteúdo principal */}
-            <main className="flex-1 min-w-0">
+            <main className="min-w-0 flex-1">
               {children}
+              {!naIndex && slug && <SimuladoresRelacionados slug={slug} />}
             </main>
           </div>
         </div>

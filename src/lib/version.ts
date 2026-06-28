@@ -6,7 +6,7 @@
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 
-export const APP_VERSION = "1.69.0";
+export const APP_VERSION = "1.70.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -17,6 +17,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.70.0",
+    data: "2026-06-28",
+    titulo: "Página de Guias renovada e Política de Privacidade reforçada",
+    itens: [
+      "Nova página de Guias, agora protagonista: herói dedicado, pesquisa instantânea, filtros por categoria, ordenação, vista de lista/grelha e marcadores para guardares os guias favoritos.",
+      "Cada guia passa a sugerir os simuladores certos para o tema que estás a ler — da teoria diretamente às tuas contas.",
+      "Política de Privacidade totalmente reescrita e mais robusta (RGPD + Lei n.º 58/2019): explica o plano gratuito (dados no teu dispositivo) e o plano Pro (dados guardados em segurança na nuvem, na UE), pagamentos, emails, subprocessadores, transferências internacionais e os teus direitos.",
+    ],
+  },
   {
     version: "1.69.0",
     data: "2026-06-23",
