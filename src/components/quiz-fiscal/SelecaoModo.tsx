@@ -8,6 +8,7 @@ import {
   META_GRUPO_QUIZ,
   TOTAL_PERGUNTAS,
   getEstatisticasBanco,
+  prefetchBancoQuiz,
   type QuizCategoria,
   type QuizGrupo,
 } from "@/lib/quiz-fiscal";
@@ -18,7 +19,7 @@ import type { QuizFiscalConfig, QuizModo } from "@/hooks/useQuizFiscal";
 import type { SessaoHistorico } from "@/lib/store/quiz-progresso";
 
 interface SelecaoModoProps {
-  onComecar: (config: QuizFiscalConfig) => void;
+  onComecar: (config: QuizFiscalConfig) => void | Promise<void>;
   energiaRestante?: number;
   energiaTotal?: number;
   energiaIlimitada?: boolean;
@@ -45,14 +46,21 @@ const ICON_GRUPO: Record<QuizGrupo, React.ReactNode> = {
   empresa: <Building size={13} />,
 };
 
-const QD = "#3a5232";
-const PARCHMENT = "#F7EDE1";
-const BORDER = "#E8DBCB";
-const ACTIVE_BG = "#e4ede0";
-const ACTIVE_BORDER = "#4D6243";
-const TEXT_HEAD = "#1C3A22";
-const TEXT_MID = "#607757";
-const TEXT_MUTED = "#8a7a6a";
+// Cores via variáveis CSS com fallback claro: respeitam o modo escuro do quiz
+// (definido em globals.css `.dark { --quiz-* }`) sem partir o modo claro.
+const QD = "#3a5232"; // verde escuro — usado como FUNDO (texto branco por cima)
+const ICON = "var(--quiz-icon, #3a5232)"; // acento para ÍCONES sobre fundo (clareia no escuro)
+const GOLD = "var(--quiz-gold, #C07828)";
+const PARCHMENT = "var(--quiz-card-bg, #F7EDE1)";
+const BORDER = "var(--quiz-card-border, #E8DBCB)";
+const ACTIVE_BG = "var(--quiz-card-active-bg, #e4ede0)";
+const ACTIVE_BORDER = "var(--quiz-card-active-border, #4D6243)";
+const TEXT_HEAD = "var(--quiz-heading, #1C3A22)";
+const TEXT_MID = "var(--quiz-muted, #607757)";
+const TEXT_MUTED = "var(--quiz-muted, #8a7a6a)";
+const TAG_BG = "var(--quiz-tag-bg, #ece4d8)";
+const DOT_EMPTY = "var(--quiz-dot-empty, #d4c4b0)";
+const STAT_BG = "var(--quiz-stat-bg, #FAF4EC)";
 
 export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTotal = 5, energiaIlimitada = false }: SelecaoModoProps) {
   const { config, updateConfig } = useQuizConfig();
@@ -61,17 +69,25 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
   const [categoria, setCategoria] = useState<QuizCategoria | "todas">("todas");
   const [atividade, setAtividade] = useState<Atividade | null>(null);
   const estatisticas = getEstatisticasBanco();
+  // Enquanto o banco de perguntas é descarregado (raro — já vem pré-aquecido do
+  // hover), o botão mostra "A preparar…".
+  const [aPreparar, setAPreparar] = useState(false);
 
   // Dificuldade da config (facil/normal/dificil) → nível das perguntas (1/2/3).
   const DIF_NIVEL = { facil: 1, normal: 2, dificil: 3 } as const;
 
-  const handleComecar = () => {
-    if (!modo) return;
+  const handleComecar = async () => {
+    if (!modo || aPreparar) return;
     const dificuldade = DIF_NIVEL[config.dificuldade];
     const cfg: QuizFiscalConfig = tipoQuiz === "atividade" && atividade
       ? { modo, atividade, quantidade: config.perguntasPorSessao, dificuldade }
       : { modo, categoria: categoria === "todas" ? undefined : categoria, quantidade: config.perguntasPorSessao, dificuldade };
-    onComecar(cfg);
+    setAPreparar(true);
+    try {
+      await onComecar(cfg);
+    } finally {
+      setAPreparar(false);
+    }
   };
 
   const podeIniciar = !!modo && (tipoQuiz === "geral" || !!atividade) && (energiaIlimitada || energiaRestante > 0);
@@ -104,7 +120,8 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
             <div className="grid grid-cols-2 gap-2.5">
               <ModoCard
                 ativo={modo === "normal"}
-                onClick={() => setModo("normal")}
+                onClick={() => { setModo("normal"); prefetchBancoQuiz(); }}
+                onPointerEnter={prefetchBancoQuiz}
                 icon={<Clock size={18} />}
                 titulo="Normal"
                 tags={["Cronómetro", "Rápido"]}
@@ -112,7 +129,8 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
               />
               <ModoCard
                 ativo={modo === "guiado"}
-                onClick={() => setModo("guiado")}
+                onClick={() => { setModo("guiado"); prefetchBancoQuiz(); }}
+                onPointerEnter={prefetchBancoQuiz}
                 icon={<Sparkle size={18} />}
                 titulo="Guiado"
                 tags={["Sem tempo", "Explicações"]}
@@ -163,7 +181,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
                       <div className="mb-2 flex items-center gap-2">
                         <span
                           className="flex h-6 w-6 items-center justify-center rounded-lg"
-                          style={{ backgroundColor: ACTIVE_BG, color: QD }}
+                          style={{ backgroundColor: ACTIVE_BG, color: ICON }}
                         >
                           {ICON_GRUPO[grupo]}
                         </span>
@@ -177,7 +195,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
                         </div>
                         <span
                           className="ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums"
-                          style={{ backgroundColor: "#ece4d8", color: TEXT_MID }}
+                          style={{ backgroundColor: TAG_BG, color: TEXT_MID }}
                         >
                           {totalGrupo}
                         </span>
@@ -225,7 +243,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
             style={{ backgroundColor: PARCHMENT, border: `1px solid ${BORDER}` }}
           >
             <div className="flex items-center gap-2 mb-3">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg" style={{ backgroundColor: ACTIVE_BG, color: QD }}>
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg" style={{ backgroundColor: ACTIVE_BG, color: ICON }}>
                 <Gauge size={13} />
               </span>
               <span className="text-[12px] font-bold" style={{ color: TEXT_HEAD }}>Configurações</span>
@@ -294,7 +312,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
                   type="button"
                   onClick={() => updateConfig({ somAtivo: !config.somAtivo })}
                   className="relative h-5 w-9 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#3a5232]"
-                  style={{ backgroundColor: config.somAtivo ? QD : "#d4c4b0" }}
+                  style={{ backgroundColor: config.somAtivo ? QD : DOT_EMPTY }}
                   role="switch"
                   aria-checked={config.somAtivo}
                 >
@@ -321,14 +339,14 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
                   Energia diária
                 </div>
                 {energiaIlimitada ? (
-                  <span className="text-[11px] font-bold" style={{ color: "#C07828" }}>Ilimitada</span>
+                  <span className="text-[11px] font-bold" style={{ color: GOLD }}>Ilimitada</span>
                 ) : (
                   <div className="flex items-center gap-1.5 mt-0.5">
                     {Array.from({ length: energiaTotal }).map((_, i) => (
                       <span
                         key={i}
                         className="h-2 w-2 rounded-full"
-                        style={{ backgroundColor: i < energiaRestante ? "#C07828" : "#d4c4b0" }}
+                        style={{ backgroundColor: i < energiaRestante ? "#C07828" : DOT_EMPTY }}
                       />
                     ))}
                     <span className="ml-1 text-[11px] font-bold tabular-nums" style={{ color: TEXT_MID }}>
@@ -341,13 +359,15 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
 
             <button
               type="button"
-              disabled={!podeIniciar}
+              disabled={!podeIniciar || aPreparar}
               onClick={handleComecar}
+              onPointerEnter={() => prefetchBancoQuiz()}
+              onFocus={() => prefetchBancoQuiz()}
               className="flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-[14px] font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
               style={{ backgroundColor: QD }}
             >
-              Começar Quiz
-              <ArrowRight size={16} />
+              {aPreparar ? "A preparar…" : "Começar Quiz"}
+              {!aPreparar && <ArrowRight size={16} />}
             </button>
 
             {/* Mensagens de ajuda */}
@@ -362,7 +382,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
               </p>
             )}
             {!energiaIlimitada && energiaRestante <= 0 && (
-              <p className="mt-2 text-center text-[11px] font-semibold" style={{ color: "#C07828" }}>
+              <p className="mt-2 text-center text-[11px] font-semibold" style={{ color: GOLD }}>
                 Sem energia hoje. Volta amanhã!
               </p>
             )}
@@ -407,7 +427,7 @@ function OptionChip({ ativo, onClick, label }: { ativo: boolean; onClick: () => 
       onClick={onClick}
       className="rounded-lg px-2.5 py-1 text-[12px] font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#3a5232]"
       style={{
-        backgroundColor: ativo ? QD : "#ece4d8",
+        backgroundColor: ativo ? QD : TAG_BG,
         color: ativo ? "#fff" : TEXT_MID,
         border: `1px solid ${ativo ? QD : BORDER}`,
       }}
@@ -418,15 +438,16 @@ function OptionChip({ ativo, onClick, label }: { ativo: boolean; onClick: () => 
 }
 
 function ModoCard({
-  ativo, onClick, icon, titulo, tags, descricao,
+  ativo, onClick, onPointerEnter, icon, titulo, tags, descricao,
 }: {
-  ativo: boolean; onClick: () => void; icon: React.ReactNode;
+  ativo: boolean; onClick: () => void; onPointerEnter?: () => void; icon: React.ReactNode;
   titulo: string; tags: string[]; descricao: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      onPointerEnter={onPointerEnter}
       className="group relative flex flex-col gap-2 rounded-xl border-2 p-3.5 text-left transition-all"
       style={{
         backgroundColor: ativo ? ACTIVE_BG : PARCHMENT,
@@ -456,7 +477,7 @@ function ModoCard({
             key={tag}
             className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
             style={{
-              backgroundColor: ativo ? "rgba(58,82,50,0.12)" : "#ece4d8",
+              backgroundColor: ativo ? "rgba(58,82,50,0.12)" : TAG_BG,
               color: ativo ? QD : TEXT_MUTED,
             }}
           >
@@ -553,7 +574,7 @@ function AtividadeResumo({ atividade }: { atividade: Atividade }) {
 
 function ResumoStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg p-2 text-center" style={{ backgroundColor: "#FAF4EC", border: `1px solid ${BORDER}` }}>
+    <div className="rounded-lg p-2 text-center" style={{ backgroundColor: STAT_BG, border: `1px solid ${BORDER}` }}>
       <p className="text-[9px] font-semibold uppercase tracking-wide" style={{ color: TEXT_MUTED }}>{label}</p>
       <p className="mt-0.5 text-[13px] font-bold" style={{ color: TEXT_HEAD }}>{value}</p>
     </div>

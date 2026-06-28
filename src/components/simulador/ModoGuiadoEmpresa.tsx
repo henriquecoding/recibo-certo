@@ -14,9 +14,11 @@ import { m, AnimatePresence } from "motion/react";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import InfoTip from "@/components/ui/InfoTip";
 import { gravarExportEmpresa } from "@/lib/store/importacao-irs";
+import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import GuardarCenarioDialog from "@/components/ui/GuardarCenarioDialog";
 import {
   Check,
   Warning,
@@ -49,6 +51,7 @@ const MapaBeneficiosRegioes = dynamic(
   { ssr: false, loading: MapaCarregar },
 );
 import { pct, fmt } from "@/lib/format";
+import { useScrollTopOnStep } from "@/lib/scroll";
 import {
   ESCALOES_IRS,
   IRC_TAXA_GERAL,
@@ -869,6 +872,13 @@ export default function ModoGuiadoEmpresa({
   onIrParaSimuladorCompleto,
 }: ModoGuiadoEmpresaProps) {
   const [passo, setPasso] = useState<Passo>(0);
+  // Ao mudar de passo, rola até ao topo do simulador.
+  const topoRef = useScrollTopOnStep(passo);
+
+  // Gestão de cenários (guardar instantâneo completo + reabrir)
+  const cenariosStore = useCenarios();
+  const [cenarioFeedback, setCenarioFeedback] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [dialogGuardar, setDialogGuardar] = useState(false);
 
   // Passo 0: situação
   const [jaTemEmpresa, setJaTemEmpresa] = useState<null | "sim" | "nao">(null);
@@ -1144,6 +1154,60 @@ export default function ModoGuiadoEmpresa({
     else if (passo === "aseguir") setPasso("resultado");
   }
 
+  // ── Instantâneo COMPLETO dos campos (para reabrir/gerir) ──────────────────
+  const montarSnapshot = () => ({
+    jaTemEmpresa, tipoSociedade, tipoSelecionado, perfilFundador, aplicarIFICI,
+    tipoSede, custoSedeVirtual, localizacao, localNome,
+    faturacaoAnual, faturacaoComIva, despesasOper, salGerenteMensal, incluirConstituicao,
+    custoConstituicao, anosAmortizacao, custosEstrutura,
+    distribuirDividendos, opcaoEnglobamento,
+    tipoViatura, encargosViatura, despRepresentacao, ajudasCusto, naoDocumentadas, emPrejuizo, excecaoPrejuizo,
+    rfaiRegiao, rfaiInvest, primeirosAnos, dlrrLucros, sifideDespesas, tipoSifide, rfaiContratualValor,
+    temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI, valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
+  });
+
+  const nomePadraoCenario = `Empresa · ${fmt(resultado.faturacao)}/ano`;
+
+  function guardarCenario(nome: string) {
+    const nomePadrao = nomePadraoCenario;
+    const resumo: ResumoCenario = {
+      destaque: resultado.liquidoGerente,
+      destaqueLabel: "Líquido do dono / ano",
+      destaqueFmt: "eur",
+      linhas: [
+        { label: "Faturação anual", valor: resultado.faturacao, fmt: "eur" },
+        { label: "IRC total", valor: resultado.ircTotal, fmt: "eur" },
+        { label: "Dividendos", valor: resultado.dividendos, fmt: "eur" },
+        { label: "Taxa efetiva", valor: resultado.taxaEfetiva, fmt: "pct" },
+      ],
+    };
+    const r = cenariosStore.guardar({ tipo: "empresa", nome: nome || nomePadrao, resumo, dados: montarSnapshot() });
+    setCenarioFeedback(r.erro ? { tipo: "erro", texto: r.erro } : { tipo: "ok", texto: "Cenário guardado em «Os meus cenários»." });
+    setDialogGuardar(false);
+  }
+
+  // Reabre um cenário marcado a partir da página de gestão (uma vez, na montagem).
+  useEffect(() => {
+    const d = consumirReabertura("empresa") as Partial<ReturnType<typeof montarSnapshot>> | null;
+    if (!d) return;
+    const set = <T,>(v: T | undefined, fn: (x: T) => void) => { if (v !== undefined) fn(v); };
+    set(d.jaTemEmpresa, setJaTemEmpresa); set(d.tipoSociedade, setTipoSociedade); set(d.tipoSelecionado, setTipoSelecionado);
+    set(d.perfilFundador, setPerfilFundador); set(d.aplicarIFICI, setAplicarIFICI);
+    set(d.tipoSede, setTipoSede); set(d.custoSedeVirtual, setCustoSedeVirtual); set(d.localizacao, setLocalizacao); set(d.localNome, setLocalNome);
+    set(d.faturacaoAnual, setFaturacaoAnual); set(d.faturacaoComIva, setFaturacaoComIva); set(d.despesasOper, setDespesasOper);
+    set(d.salGerenteMensal, setSalGerenteMensal); set(d.incluirConstituicao, setIncluirConstituicao);
+    set(d.custoConstituicao, setCustoConstituicao); set(d.anosAmortizacao, setAnosAmortizacao); set(d.custosEstrutura, setCustosEstrutura);
+    set(d.distribuirDividendos, setDistribuirDividendos); set(d.opcaoEnglobamento, setOpcaoEnglobamento);
+    set(d.tipoViatura, setTipoViatura); set(d.encargosViatura, setEncargosViatura); set(d.despRepresentacao, setDespRepresentacao);
+    set(d.ajudasCusto, setAjudasCusto); set(d.naoDocumentadas, setNaoDocumentadas); set(d.emPrejuizo, setEmPrejuizo); set(d.excecaoPrejuizo, setExcecaoPrejuizo);
+    set(d.rfaiRegiao, setRfaiRegiao); set(d.rfaiInvest, setRfaiInvest); set(d.primeirosAnos, setPrimeirosAnos); set(d.dlrrLucros, setDlrrLucros);
+    set(d.sifideDespesas, setSifideDespesas); set(d.tipoSifide, setTipoSifide); set(d.rfaiContratualValor, setRfaiContratualValor);
+    set(d.temImovelEmpresa, setTemImovelEmpresa); set(d.vptImovel, setVptImovel); set(d.taxaIMI, setTaxaIMI); set(d.isencaoIMI_RFAI, setIsencaoIMI_RFAI);
+    set(d.valorAquisicaoImovel, setValorAquisicaoImovel); set(d.isencaoIMT_RFAI, setIsencaoIMT_RFAI); set(d.anosAmortizacaoIMT, setAnosAmortizacaoIMT);
+    setPasso("resultado"); // mostra logo o resultado guardado
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const progressLabels = ["Empresa", "Localização", "Receita", "Dividendos", "Otimização", "Resultado", "A seguir"];
   const passoNum = passo === "local" ? 2 : passo === 2 ? 3 : passo === 3 ? 4 : passo === 4 ? 5 : passo === "resultado" ? 6 : passo === "aseguir" ? 7 : (passo as number);
 
@@ -1295,7 +1359,7 @@ export default function ModoGuiadoEmpresa({
   // ─── Layout dos passos 1–resultado ─────────────────────────────────────────
 
   return (
-    <div className="min-h-0 bg-white dark:bg-stone-950">
+    <div ref={topoRef} className="min-h-0 scroll-mt-20 bg-white dark:bg-stone-950 sm:scroll-mt-24">
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Barra de progresso */}
         <div className="mb-8">
@@ -2655,6 +2719,39 @@ export default function ModoGuiadoEmpresa({
                     )}
                   </div>
 
+                  {/* ── Guardar este cenário na página de gestão ── */}
+                  <div className="mt-5 rounded-2xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-700 dark:bg-stone-900">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">Guardar este cenário</p>
+                        <p className="text-xs text-stone-400">
+                          Preserva todos os campos em{" "}
+                          <Link href="/dashboard/cenarios" className="font-medium text-brand-dark underline-offset-2 hover:underline dark:text-brand">Os meus cenários</Link>
+                          {" "}— para reabrir mais tarde.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDialogGuardar(true)}
+                        disabled={cenariosStore.limiteAtingido}
+                        className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-xl border border-brand/30 bg-brand-light px-4 py-2.5 text-sm font-semibold text-brand-dark transition-all hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Check size={15} /> Guardar cenário
+                      </button>
+                    </div>
+                    {cenarioFeedback && (
+                      <div className={`mt-3 flex items-start gap-2.5 rounded-xl border p-3 text-xs ${cenarioFeedback.tipo === "ok" ? "border-brand/20 bg-brand-light text-brand-dark" : "border-alert-border bg-alert-bg text-alert-text"}`}>
+                        {cenarioFeedback.tipo === "ok" ? <Check size={13} className="mt-0.5 flex-shrink-0" /> : <Warning size={13} className="mt-0.5 flex-shrink-0" />}
+                        <span>
+                          {cenarioFeedback.texto}{" "}
+                          {cenarioFeedback.tipo === "ok"
+                            ? <Link href="/dashboard/cenarios" className="font-semibold underline underline-offset-2">Ver cenários</Link>
+                            : <Link href="/dashboard/upgrade" className="font-semibold underline underline-offset-2">Ver o plano Pro</Link>}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
                   <p className="mt-3 px-1 text-[10px] leading-relaxed text-stone-400 dark:text-stone-500">
                     Estimativa anual com as taxas oficiais de 2026
                     {localizacao ? ` para ${localizacao.nome}` : ""}.
@@ -2979,6 +3076,13 @@ export default function ModoGuiadoEmpresa({
           <PainelResumoEmpresa resultado={resultado} distribuirDividendos={distribuirDividendos} />
         </div>
       </div>
+
+      <GuardarCenarioDialog
+        aberto={dialogGuardar}
+        nomePadrao={nomePadraoCenario}
+        onGuardar={guardarCenario}
+        onFechar={() => setDialogGuardar(false)}
+      />
     </div>
   );
 }

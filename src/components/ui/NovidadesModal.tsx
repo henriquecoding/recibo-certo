@@ -11,13 +11,23 @@ export default function NovidadesModal() {
   useEffect(() => {
     try {
       const visto = localStorage.getItem(VERSAO_STORAGE_KEY);
-      if (visto !== APP_VERSION) setAberto(true);
+      if (visto !== APP_VERSION) {
+        setAberto(true);
+        // ⚠️ REGRA IMUTÁVEL do popup de Novidades (não alterar sem autorização):
+        // o popup só pode aparecer (1) na primeira visita de sempre e (2) quando
+        // surge uma NOVA versão (APP_VERSION muda no changelog). Para isso,
+        // marcamos a versão como vista NO INSTANTE em que é mostrado — não apenas
+        // ao fechar. Assim, se o utilizador atualizar a página com o popup aberto,
+        // nunca reaparece para a mesma versão. Voltar a abrir só com nova versão.
+        localStorage.setItem(VERSAO_STORAGE_KEY, APP_VERSION);
+      }
     } catch {
       // ignore
     }
   }, []);
 
   function fechar() {
+    // Redundante (já marcado ao mostrar), mas mantém a garantia se algo falhar.
     try {
       localStorage.setItem(VERSAO_STORAGE_KEY, APP_VERSION);
     } catch {

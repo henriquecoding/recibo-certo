@@ -5,8 +5,15 @@
 // `APP_VERSION` muda (guarda a última vista em localStorage). Se esqueceres:
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
+//
+// ⚠️ REGRA IMUTÁVEL do comportamento do popup (NÃO alterar sem autorização):
+// o popup "Novidades" só pode aparecer (1) na PRIMEIRA visita de sempre e
+// (2) quando há uma NOVA versão (este `APP_VERSION` muda). Nunca a cada refresh.
+// A garantia vive em `NovidadesModal.tsx`: a versão é marcada como vista no
+// INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
+// página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.70.0";
+export const APP_VERSION = "1.85.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -18,13 +25,184 @@ export interface EntradaChangelog {
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
-    version: "1.70.0",
+    version: "1.85.0",
     data: "2026-06-28",
     titulo: "Página de Guias renovada e Política de Privacidade reforçada",
     itens: [
       "Nova página de Guias, agora protagonista: herói dedicado, pesquisa instantânea, filtros por categoria, ordenação, vista de lista/grelha e marcadores para guardares os guias favoritos.",
       "Cada guia passa a sugerir os simuladores certos para o tema que estás a ler — da teoria diretamente às tuas contas.",
       "Política de Privacidade totalmente reescrita e mais robusta (RGPD + Lei n.º 58/2019): explica o plano gratuito (dados no teu dispositivo) e o plano Pro (dados guardados em segurança na nuvem, na UE), pagamentos, emails, subprocessadores, transferências internacionais e os teus direitos.",
+    ],
+  },
+  {
+    version: "1.84.0",
+    data: "2026-06-24",
+    titulo: "Central de Feedback redesenhada e mais segura",
+    itens: [
+      "A janela de feedback ficou mais moderna e fácil de perceber: o destaque de que ganhas XP no Quiz Fiscal aparece logo no topo, e o botão «Enviar» está sempre visível — já não é preciso rolar para encontrar nada.",
+      "Mais segurança: o envio bloqueia automaticamente código, HTML e scripts, e o texto é limpo de caracteres invisíveis tanto na app como na base de dados. Comparações normais (ex.: «lucro < 1000») continuam a passar sem problema.",
+    ],
+  },
+  {
+    version: "1.83.1",
+    data: "2026-06-24",
+    titulo: "Barra do telemóvel mais clara",
+    itens: [
+      "Na barra inferior do telemóvel, o atalho da esquerda passa a ser «Sugestões e suporte»; a tua foto de perfil fica só no botão da direita, que leva ao painel — sem fotos repetidas.",
+    ],
+  },
+  {
+    version: "1.83.0",
+    data: "2026-06-24",
+    titulo: "Central de sugestões e reportes, header do telemóvel unificado e mais",
+    itens: [
+      "Nova Central de Feedback: em qualquer página podes mandar uma sugestão, reportar um erro, tirar uma dúvida ou deixar uma mensagem — pelo botão no cabeçalho (ou no menu do telemóvel). A equipa do ReciboCerto valida cada mensagem e, se tiveres sessão iniciada e o contributo for útil, ganhas XP no Quiz Fiscal.",
+      "No telemóvel deixou de haver dois cabeçalhos: passa a existir só a barra de baixo (na zona do polegar), agora com tudo o que há no cabeçalho de computador — simuladores, ferramentas, guias, planos e conta — organizado por secções.",
+      "O botão da conta passa a mostrar a tua foto de perfil também no telemóvel.",
+      "O popup de Novidades volta a comportar-se como deve: aparece na primeira visita e só reaparece quando há uma nova versão — nunca a cada atualização da página.",
+      "Pequenas afinações visuais no painel de administração.",
+    ],
+  },
+  {
+    version: "1.82.1",
+    data: "2026-06-24",
+    titulo: "Etiqueta do escalão centrada na demo do IRS",
+    itens: [
+      "Na demonstração «ao vivo» do Simulador de IRS, a etiqueta com o escalão (ex.: «5.º · 31,1%») passa a ficar exatamente por cima da barra correspondente — antes aparecia ligeiramente deslocada para a direita.",
+    ],
+  },
+  {
+    version: "1.82.0",
+    data: "2026-06-24",
+    titulo: "Guardar cenários com um modal bonito, IRS Jovem mais claro e demo do IRS só em verde",
+    itens: [
+      "Guardar um cenário deixou de abrir aquela caixa cinzenta do navegador: passa a ser um modal moderno, com nome sugerido já selecionado, confirmação com Enter e folha inferior no telemóvel.",
+      "No simulador de recibo de vencimento, o IRS Jovem e os dependentes deixam de parecer que «se anulam»: quando os dependentes já levam a retenção mensal a zero, explicamos que a isenção continua a contar no acerto anual de IRS — as duas vantagens complementam-se, não competem.",
+      "A demonstração «ao vivo» do Simulador de IRS passou a usar só a paleta verde da marca (sem laranja), com o anel e os escalões redesenhados sem falhas visuais e com perfis de exemplo mais ricos (agora também um rendimento alto, no escalão de topo).",
+    ],
+  },
+  {
+    version: "1.81.0",
+    data: "2026-06-23",
+    titulo: "Simulador guiado redesenhado, Quiz Fiscal mais leve e modo escuro corrigido",
+    itens: [
+      "O simulador guiado (recibos verdes) foi redesenhado de ponta a ponta — ecrã «Como queres simular?», passos, barra de progresso, cabeçalhos e navegação mais calmos e coerentes, mantendo exatamente os mesmos cálculos.",
+      "Quiz Fiscal muito mais leve a abrir: as ~900 mil perguntas deixaram de ser todas descarregadas de uma vez. A página de seleção abre logo e o banco de perguntas só é descarregado quando começas (já pré-carregado ao passar o rato/focar), gastando muito menos dados.",
+      "Corrigido o modo escuro do Quiz Fiscal: textos e ícones que ficavam invisíveis sobre fundo escuro (cartões do desafio Pro, níveis e seleção de categorias) voltam a ler-se bem.",
+      "No simulador de recibo de vencimento, a auditoria do recibo, a importação de PDF e a exportação passam a carregar só quando as usas — abre mais leve.",
+    ],
+  },
+  {
+    version: "1.80.0",
+    data: "2026-06-23",
+    titulo: "Trocar de simulador instantâneo, gastando menos dados",
+    itens: [
+      "Os outros modos de simulação deixaram de ser descarregados todos em segundo plano ao abrir a calculadora — passam a preparar-se apenas quando passas o rato (ou tocas) na opção. Resultado: a troca continua quase instantânea, mas quem só usa um modo deixa de gastar dados com os restantes (o modo «Por conta de outrem» sozinho chegava a pesar cerca de 1 MB).",
+    ],
+  },
+  {
+    version: "1.79.0",
+    data: "2026-06-23",
+    titulo: "Simulador abre mais leve e os restantes modos ficam prontos em segundo plano",
+    itens: [
+      "Ao abrir a calculadora, descarrega-se primeiro só o modo que estás a usar; os outros modos (por conta de outrem, empresa, comparar) ficam a carregar em segundo plano, por isso trocar entre eles passa a ser praticamente instantâneo.",
+      "Dentro do simulador, o assistente passo-a-passo deixou de ser descarregado logo: aparece primeiro a escolha «Como queres simular?» e o passo-a-passo prepara-se em segundo plano enquanto decides — abre mais rápido e gasta menos dados.",
+    ],
+  },
+  {
+    version: "1.78.0",
+    data: "2026-06-23",
+    titulo: "Site mais rápido a abrir, sobretudo no telemóvel",
+    itens: [
+      "A página inicial passa a carregar muito menos código de uma vez: o simulador só é descarregado quando te aproximas dele (ou quando clicas em «Calcular»), em vez de pesar logo no arranque.",
+      "A pesquisa, o aviso de cookies e o popup de Novidades passam a carregar em segundo plano, sem atrasar a primeira abertura da página.",
+      "Componentes de conta (nuvem) deixaram de ser descarregados em páginas onde não são precisos — menos dados e arranque mais leve para quem só quer usar as calculadoras.",
+      "Os números de exemplo da página inicial passam a ser preparados no servidor, deixando o telemóvel com menos trabalho ao abrir — sem qualquer mudança nos valores apresentados.",
+    ],
+  },
+  {
+    version: "1.77.0",
+    data: "2026-06-23",
+    titulo: "Demonstração do Simulador de IRS mais rica e simuladores que voltam ao topo",
+    itens: [
+      "A demonstração «ao vivo» do Simulador de IRS está muito mais completa: além do reembolso (ou valor a pagar), mostra agora um anel com a fatia do rendimento que fica contigo, em que escalão de IRS cais (com as taxas oficiais de 2026), uma memória de cálculo resumida e três perfis de exemplo que vais podendo alternar.",
+      "Nos simuladores guiados (IRS, recibos verdes e abrir empresa), ao avançar para o passo seguinte o ecrã volta automaticamente ao topo do simulador — assim, quando o passo seguinte é mais curto, deixas de ficar perdido a meio da página.",
+    ],
+  },
+  {
+    version: "1.76.0",
+    data: "2026-06-23",
+    titulo: "Página completa do Simulador de IRS e exportação no Pro",
+    itens: [
+      "A página do Simulador de IRS passa a ter um hero com demonstração ao vivo e o simulador completo logo abaixo — é o mesmo simulador do painel, com tudo sincronizado (sem duplicações).",
+      "Exportar em PDF/CSV passa a ser uma funcionalidade Pro nos simuladores de IRS e de recibo de vencimento: podes experimentar 1 vez neste dispositivo e, a partir daí, é necessário o plano Pro.",
+      "Pequenos retoques de coerência e desempenho.",
+    ],
+  },
+  {
+    version: "1.75.0",
+    data: "2026-06-23",
+    titulo: "Pesquisa repensada no telemóvel e textos mais claros",
+    itens: [
+      "No telemóvel e tablet, a pesquisa passa a ter o campo de escrita em baixo (na zona do polegar) e os resultados a abrir para cima, sempre acima do teclado — adeus conteúdo escondido pelo teclado.",
+      "Corrigimos a descrição do Simulador de IRS: simular é grátis; exportar em PDF/CSV e guardar cenários na nuvem fazem parte do Pro (no plano grátis podes guardar 1 cenário no dispositivo para experimentar).",
+    ],
+  },
+  {
+    version: "1.74.0",
+    data: "2026-06-23",
+    titulo: "Mais fácil de encontrar nas pesquisas",
+    itens: [
+      "Melhorámos a forma como o ReciboCerto aparece no Google e no Bing: passa a refletir todos os simuladores — IRS, recibos verdes, salário e empresa — e não apenas a calculadora de recibos verdes.",
+      "A nova página do Simulador de IRS e a página de Investidores entram no mapa do site (sitemap), para serem indexadas pelos motores de busca.",
+      "Correção interna na data-limite de pagamento da Segurança Social do 1.º trimestre nos testes (o painel já apresentava a data correta).",
+    ],
+  },
+  {
+    version: "1.73.0",
+    data: "2026-06-23",
+    titulo: "Página do Simulador de IRS, correções e mais polimento",
+    itens: [
+      "Nova página dedicada ao Simulador de IRS (com explicações e tudo o que precisas de saber), acessível a partir do menu «Recursos Fiscais → Aprender».",
+      "No telemóvel, a barra inferior do painel passa a ter o Simulador de IRS à mão (o perfil continua no topo).",
+      "O sujeito passivo B (tributação conjunta) já permite indicar o desconto para a Segurança Social do trabalho dependente.",
+      "Correção do «Reportar erro» no Quiz Fiscal: já podes escrever a descrição sem o diálogo fechar sozinho.",
+      "Modo escuro do Quiz Fiscal corrigido na página de configuração — os textos voltam a ler-se bem.",
+      "A foto de perfil configurada passa a aparecer também no cabeçalho do painel em telemóvel.",
+      "Nova chamada para investidores no rodapé e o menu passa a dizer «Simuladores».",
+    ],
+  },
+  {
+    version: "1.72.0",
+    data: "2026-06-23",
+    titulo: "Os meus cenários: guarda tudo de todos os simuladores num só lugar",
+    itens: [
+      "Nova página «Os meus cenários» (substitui a antiga página de recibos no menu): guarda e gere num só sítio os cenários de todos os simuladores — recibos verdes, recibo de vencimento, abrir empresa e IRS.",
+      "Cada cenário guarda agora um instantâneo completo de tudo o que preencheste (não só o resultado), para reabrires e continuares exatamente de onde ficaste.",
+      "Já podes guardar cenários no simulador de empresa (antes não dava) e o do recibo de vencimento passa a guardar também aqui, de forma unificada.",
+      "A Visão Geral adapta-se ao tipo de cenário escolhido — recibos verdes, por conta de outrem ou empresa — mostrando os números e a leitura visual de cada um.",
+      "O simulador de recibos verdes ganhou um lugar próprio no painel, em «Simuladores → Recibos verdes».",
+      "No plano grátis guardas 1 cenário; com o Pro, cenários ilimitados e sincronizados na nuvem entre dispositivos.",
+    ],
+  },
+  {
+    version: "1.71.0",
+    data: "2026-06-23",
+    titulo: "Coerência de design nas novas funcionalidades do simulador",
+    itens: [
+      "O novo seletor de datas e a secção do sujeito passivo B (tributação conjunta) ficam alinhados com o design renovado do simulador.",
+      "A escolha de regime do cônjuge passa também a mostrar o painel explicativo com pontos-chave.",
+    ],
+  },
+  {
+    version: "1.70.0",
+    data: "2026-06-23",
+    titulo: "Simulador de IRS com design renovado e mais explicado",
+    itens: [
+      "Cabeçalhos editoriais (etapa + título + descrição) e um indicador de passos mais claro, com barra de progresso.",
+      "Cada opção importante (tributação, regime) passa a mostrar um painel explicativo com pontos-chave quando a escolhes — percebes logo o que significa.",
+      "Campos com símbolo de euro, cartões e interruptores mais legíveis, e um cartão de resultado renovado com a taxa efetiva em destaque.",
+      "Mais espaço, hierarquia visual e coerência em todo o simulador, mantendo o modo claro e escuro.",
     ],
   },
   {

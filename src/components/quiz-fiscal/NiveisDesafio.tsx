@@ -4,15 +4,20 @@ import { NIVEIS } from "@/lib/quiz-fiscal/progresso";
 import { useQuizProgresso, NIVEL_ENERGIA_ILIMITADA } from "@/lib/store/quiz-progresso";
 import { Trophy, Zap, Star, Target, Fire, Gift } from "@/components/ui/Icons";
 
-const QD = "#3a5232";
-const PARCHMENT = "#F7EDE1";
-const BORDER = "#E8DBCB";
-const ACTIVE_BG = "#e4ede0";
-const TEXT_HEAD = "#1C3A22";
-const TEXT_MID = "#607757";
-const TEXT_MUTED = "#8a7a6a";
-const VERDE_NIVEL = "#415439";
-const GOLD = "#C07828";
+// Cores via variáveis CSS com fallback claro: respeitam o modo escuro do quiz
+// (globals.css `.dark { --quiz-* }`) sem partir o modo claro.
+const QD = "#3a5232"; // verde escuro — usado como FUNDO (texto branco por cima)
+const ICON = "var(--quiz-icon, #3a5232)"; // mesma cor de acento, mas para ÍCONES sobre fundo (clareia no escuro)
+const PARCHMENT = "var(--quiz-card-bg, #F7EDE1)";
+const BORDER = "var(--quiz-card-border, #E8DBCB)";
+const ACTIVE_BG = "var(--quiz-card-active-bg, #e4ede0)";
+const TEXT_HEAD = "var(--quiz-heading, #1C3A22)";
+const TEXT_MID = "var(--quiz-muted, #607757)";
+const TEXT_MUTED = "var(--quiz-muted, #8a7a6a)";
+const ALT_ROW = "var(--quiz-stat-bg, #f3ead9)";
+const DOT_EMPTY = "var(--quiz-dot-empty, #d4c4b0)";
+const VERDE_NIVEL = "var(--quiz-level, #415439)";
+const GOLD = "var(--quiz-gold, #C07828)";
 
 function HexNivel({ n, size = 36, fontSize = 13, alcancado = false }: {
   n: number; size?: number; fontSize?: number; alcancado?: boolean;
@@ -28,7 +33,7 @@ function HexNivel({ n, size = 36, fontSize = 13, alcancado = false }: {
           strokeLinejoin="round"
         />
       </svg>
-      <span className="relative font-bold tabular-nums" style={{ fontSize, color: alcancado ? "#fff" : "#a0907a" }}>{n}</span>
+      <span className="relative font-bold tabular-nums" style={{ fontSize, color: alcancado ? "#fff" : "var(--quiz-muted, #a0907a)" }}>{n}</span>
     </span>
   );
 }
@@ -71,7 +76,7 @@ export default function NiveisDesafio() {
               <div className="mt-2 flex items-center gap-2">
                 <div
                   className="h-2 flex-1 overflow-hidden rounded-full"
-                  style={{ backgroundColor: "#d4c4b0" }}
+                  style={{ backgroundColor: DOT_EMPTY }}
                 >
                   <div
                     className="h-full rounded-full transition-all"
@@ -119,7 +124,7 @@ export default function NiveisDesafio() {
                 key={n.nivel}
                 className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 px-5 py-2.5 transition-colors"
                 style={{
-                  backgroundColor: atual ? ACTIVE_BG : i % 2 === 0 ? PARCHMENT : "#f3ead9",
+                  backgroundColor: atual ? ACTIVE_BG : i % 2 === 0 ? PARCHMENT : ALT_ROW,
                   borderBottom: i < NIVEIS.length - 1 ? `1px solid ${BORDER}` : "none",
                 }}
               >
@@ -142,7 +147,7 @@ export default function NiveisDesafio() {
                   {n.nivel === NIVEL_ENERGIA_ILIMITADA && !atual && (
                     <span
                       className="ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
-                      style={{ backgroundColor: "#fef3c7", color: GOLD }}
+                      style={{ backgroundColor: "var(--quiz-gold-bg, #fef3c7)", color: GOLD }}
                     >
                       <Fire size={8} /> Energia ilimitada
                     </span>
@@ -150,7 +155,7 @@ export default function NiveisDesafio() {
                   {n.nivel === 10 && !atual && (
                     <span
                       className="ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
-                      style={{ backgroundColor: "#fef3c7", color: GOLD }}
+                      style={{ backgroundColor: "var(--quiz-gold-bg, #fef3c7)", color: GOLD }}
                     >
                       <Star size={8} /> Plano exclusivo
                     </span>
@@ -199,12 +204,12 @@ export default function NiveisDesafio() {
             {/* Opção 1: Médio */}
             <div
               className="rounded-xl p-4"
-              style={{ backgroundColor: "#fff", border: `1px solid ${BORDER}` }}
+              style={{ backgroundColor: "var(--quiz-card-inner-bg, #fff)", border: `1px solid ${BORDER}` }}
             >
               <div className="flex items-center gap-2 mb-3">
                 <span
                   className="flex h-8 w-8 items-center justify-center rounded-lg"
-                  style={{ backgroundColor: ACTIVE_BG, color: QD }}
+                  style={{ backgroundColor: ACTIVE_BG, color: ICON }}
                 >
                   <Target size={16} />
                 </span>
@@ -224,12 +229,12 @@ export default function NiveisDesafio() {
             {/* Opção 2: Difícil */}
             <div
               className="rounded-xl p-4"
-              style={{ backgroundColor: "#fff", border: `1px solid ${BORDER}` }}
+              style={{ backgroundColor: "var(--quiz-card-inner-bg, #fff)", border: `1px solid ${BORDER}` }}
             >
               <div className="flex items-center gap-2 mb-3">
                 <span
                   className="flex h-8 w-8 items-center justify-center rounded-lg"
-                  style={{ backgroundColor: "#fef3c7", color: GOLD }}
+                  style={{ backgroundColor: "var(--quiz-gold-bg, #fef3c7)", color: GOLD }}
                 >
                   <Trophy size={16} />
                 </span>
@@ -262,7 +267,7 @@ function RequisitoCupao({ icon, texto }: { icon: React.ReactNode; texto: string 
     <li className="flex items-center gap-2">
       <span
         className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md"
-        style={{ backgroundColor: ACTIVE_BG, color: QD }}
+        style={{ backgroundColor: ACTIVE_BG, color: ICON }}
       >
         {icon}
       </span>

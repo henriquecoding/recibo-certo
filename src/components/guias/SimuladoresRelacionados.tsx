@@ -66,13 +66,13 @@ const SIMULADORES: Record<SimId, Sim> = {
   irs: {
     titulo: "Simulador de IRS guiado",
     desc: "A tua declaração anual, passo a passo e com memória de cálculo.",
-    href: "/dashboard/simulador",
+    href: "/ferramentas/simulador-irs",
     icon: Calculator,
   },
   comparar: {
     titulo: "Comparador de regimes",
     desc: "Independente, empresa ou conta de outrem — lado a lado.",
-    href: "/dashboard/comparar",
+    href: "/ferramentas/simulador-empresa",
     icon: Scale,
   },
 };

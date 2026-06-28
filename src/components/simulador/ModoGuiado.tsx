@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
 import { gravarExportRecibosVerdes } from "@/lib/store/importacao-irs";
+import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
 import { m, AnimatePresence } from "motion/react";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
@@ -40,6 +42,15 @@ import {
 } from "@/lib/fiscal-data";
 import { calcular, simularIRSAnual, type RegimeIVA } from "@/lib/fiscal";
 import { gerarPrazos, diasAte } from "@/lib/prazos";
+import { useScrollTopOnStep } from "@/lib/scroll";
+import {
+  GuiadoStepper,
+  GuiadoCabecalho,
+  GuiadoOpcao,
+  GuiadoVoltarLink,
+  GuiadoNav,
+} from "@/components/simulador/guiado-ui";
+import GuardarCenarioDialog from "@/components/ui/GuardarCenarioDialog";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -260,6 +271,13 @@ export default function ModoGuiado({
 }: ModoGuiadoProps) {
   // Navegação — começa no pré-passo (decisor)
   const [passo, setPasso] = useState<Passo>(0);
+  // Ao mudar de passo, rola até ao topo do simulador.
+  const topoRef = useScrollTopOnStep(passo);
+
+  // Gestão de cenários (guardar instantâneo completo + reabrir)
+  const cenariosStore = useCenarios();
+  const [cenarioFeedback, setCenarioFeedback] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [dialogGuardar, setDialogGuardar] = useState(false);
 
   // Passo 0: situação face à atividade
   // anoAtividade controla a redução do coeficiente (1.º −50%, 2.º −25%, 3.º+ integral).
@@ -510,6 +528,54 @@ export default function ModoGuiado({
     deficiencia,
   };
 
+  // ── Instantâneo COMPLETO dos campos (para reabrir/gerir) ──────────────────
+  const montarSnapshot = () => ({
+    anoAtividade, jaTemAtividade, tipoAtiv, atividadeEspecifica, tipoSelecionado,
+    modoFat, totalInput, valorComIva, recibosItems, mesesFat, regiao, regimeIVA,
+    acumulaEmprego, isencaoSSPrimeiroAno, isencaoCpas, irsJovemOn, irsJovemAno,
+    ifici, rnhAntigo, exResidente, deficiencia, mostrarDeducoes,
+    despSaude, despEducacao, despRendas, despGerais,
+  });
+
+  const nomePadraoCenario = `Recibos verdes · ${fmt(brutoAnual)}/ano`;
+
+  function guardarCenario(nome: string) {
+    const rotuloAtiv = atividadeEspecifica?.label ?? card.titulo;
+    const cargaFiscal = brutoAnual > 0 ? (irsAnual + ssAnual) / brutoAnual : 0;
+    const resumo: ResumoCenario = {
+      destaque: Math.max(0, liquidoAnual),
+      destaqueLabel: "Líquido anual",
+      destaqueFmt: "eur",
+      linhas: [
+        { label: "Faturação anual", valor: brutoAnual, fmt: "eur" },
+        { label: "IRS estimado", valor: irsAnual, fmt: "eur" },
+        { label: "Segurança Social", valor: ssAnual, fmt: "eur" },
+        { label: "Carga fiscal", valor: cargaFiscal, fmt: "pct" },
+      ],
+    };
+    const r = cenariosStore.guardar({ tipo: "recibos", nome: nome || nomePadraoCenario, resumo, dados: { ...montarSnapshot(), _rotulo: rotuloAtiv } });
+    setCenarioFeedback(r.erro ? { tipo: "erro", texto: r.erro } : { tipo: "ok", texto: "Cenário guardado em «Os meus cenários»." });
+    setDialogGuardar(false);
+  }
+
+  // Reabre um cenário marcado a partir da página de gestão (uma vez, na montagem).
+  useEffect(() => {
+    const d = consumirReabertura("recibos") as Partial<ReturnType<typeof montarSnapshot>> | null;
+    if (!d) return;
+    const set = <T,>(v: T | undefined, fn: (x: T) => void) => { if (v !== undefined) fn(v); };
+    set(d.anoAtividade, setAnoAtividade); set(d.jaTemAtividade, setJaTemAtividade); set(d.tipoAtiv, setTipoAtiv);
+    set(d.atividadeEspecifica, setAtividadeEspecifica); set(d.tipoSelecionado, setTipoSelecionado);
+    set(d.modoFat, setModoFat); set(d.totalInput, setTotalInput); set(d.valorComIva, setValorComIva);
+    set(d.recibosItems, setRecibosItems); set(d.mesesFat, setMesesFat); set(d.regiao, setRegiao); set(d.regimeIVA, setRegimeIVA);
+    set(d.acumulaEmprego, setAcumulaEmprego); set(d.isencaoSSPrimeiroAno, setIsencaoSSPrimeiroAno); set(d.isencaoCpas, setIsencaoCpas);
+    set(d.irsJovemOn, setIrsJovemOn); set(d.irsJovemAno, setIrsJovemAno); set(d.ifici, setIfici);
+    set(d.rnhAntigo, setRnhAntigo); set(d.exResidente, setExResidente); set(d.deficiencia, setDeficiencia);
+    set(d.mostrarDeducoes, setMostrarDeducoes); set(d.despSaude, setDespSaude); set(d.despEducacao, setDespEducacao);
+    set(d.despRendas, setDespRendas); set(d.despGerais, setDespGerais);
+    setPasso("resultado"); // mostra logo o resultado guardado
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function selecionarTipo(id: TipoAtiv) {
     setTipoAtiv(id);
     setTipoSelecionado(true);
@@ -533,177 +599,110 @@ export default function ModoGuiado({
   // Passo 0: situação face à atividade (+ decisor para quem ainda não abriu)
   if (passo === 0) {
     return (
-      <div className="min-h-0 bg-white dark:bg-stone-950">
-        <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 py-12 sm:px-8">
-          <div className="w-full max-w-md">
-            <span className="mb-6 inline-flex items-center gap-1.5 rounded-full border border-brand/20 bg-brand-light/60 px-3 py-1 text-xs font-semibold text-brand-dark">
-              <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-              Simulador guiado
-            </span>
+      <div ref={topoRef} className="grain min-h-0 scroll-mt-20 bg-cream dark:bg-stone-950 sm:scroll-mt-24">
+        <div className="mx-auto flex min-h-[58vh] max-w-md flex-col justify-center px-6 py-12 sm:px-8">
+          <span className="mb-7 inline-flex items-center gap-1.5 self-start rounded-full border border-brand/20 bg-brand-light px-3 py-1 text-xs font-semibold text-brand-dark dark:bg-brand/10">
+            <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+            Simulador guiado
+          </span>
 
-            {/* ── Pergunta inicial: já tens atividade? ── */}
-            {jaTemAtividade === null && (
-              <>
-                <h2 className="font-display mb-2 text-3xl font-semibold text-stone-800 sm:text-4xl dark:text-stone-100">
-                  Já tens atividade aberta?
-                </h2>
-                <p className="mb-8 text-sm text-stone-500 dark:text-stone-400">
-                  Ajustamos o cálculo à tua situação — o 1.º e 2.º ano têm
-                  coeficiente reduzido e isenção de Segurança Social.
-                </p>
-                <div className="space-y-3">
-                  <button
-                    type="button"
-                    onClick={() => setJaTemAtividade("sim")}
-                    className="group flex w-full items-center gap-3 rounded-3xl border-2 border-stone-100 bg-white p-4 text-left shadow-card transition-all hover:border-brand hover:shadow-glow focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-800 dark:bg-stone-900"
-                  >
-                    <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-light text-brand transition-colors group-hover:bg-brand group-hover:text-white">
-                      <Check size={18} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold text-stone-800 dark:text-stone-100">
-                        Sim, já trabalho como independente
-                      </span>
-                      <span className="mt-0.5 block text-xs text-stone-500 dark:text-stone-400">
-                        Vou simular os meus impostos
-                      </span>
-                    </span>
-                    <ArrowRight
-                      size={16}
-                      className="flex-shrink-0 text-stone-300 transition-colors group-hover:text-brand"
-                    />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setJaTemAtividade("nao")}
-                    className="group flex w-full items-center gap-3 rounded-3xl border-2 border-stone-100 bg-white p-4 text-left shadow-card transition-all hover:border-brand hover:shadow-glow focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-800 dark:bg-stone-900"
-                  >
-                    <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 transition-colors group-hover:bg-brand group-hover:text-white dark:bg-stone-800">
-                      <Sparkle size={18} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold text-stone-800 dark:text-stone-100">
-                        Ainda não / estou a avaliar
-                      </span>
-                      <span className="mt-0.5 block text-xs text-stone-500 dark:text-stone-400">
-                        Ajuda-me a perceber o que preciso
-                      </span>
-                    </span>
-                    <ArrowRight
-                      size={16}
-                      className="flex-shrink-0 text-stone-300 transition-colors group-hover:text-brand"
-                    />
-                  </button>
-                </div>
-              </>
-            )}
-
-            {/* ── Há quanto tempo? (define ano de atividade) ── */}
-            {jaTemAtividade === "sim" && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setJaTemAtividade(null)}
-                  className="mb-2 inline-flex items-center gap-1.5 py-2 pr-3 text-xs font-medium text-stone-400 transition-colors hover:text-stone-600"
-                >
-                  <ArrowLeft size={12} /> Voltar
-                </button>
-                <h2 className="font-display mb-2 text-3xl font-semibold text-stone-800 sm:text-4xl dark:text-stone-100">
-                  Há quanto tempo tens atividade?
-                </h2>
-                <p className="mb-8 text-sm text-stone-500 dark:text-stone-400">
-                  Determina o coeficiente aplicável e a isenção de Segurança
-                  Social do 1.º ano.
-                </p>
-                <div className="space-y-3">
-                  {[
-                    {
-                      ano: 1,
-                      titulo: "Estou no 1.º ano",
-                      desc: "Coeficiente reduzido 50% · isenção de Segurança Social",
-                    },
-                    {
-                      ano: 2,
-                      titulo: "No 2.º ano",
-                      desc: "Coeficiente reduzido 25% · já descontas para a SS",
-                    },
-                    {
-                      ano: 3,
-                      titulo: "Há 3 anos ou mais",
-                      desc: "Coeficiente integral · Segurança Social normal",
-                    },
-                  ].map((o) => (
-                    <button
-                      key={o.ano}
-                      type="button"
-                      onClick={() => {
-                        setAnoAtividade(o.ano);
-                        setIsencaoSSPrimeiroAno(o.ano === 1);
-                        setPasso(1);
-                      }}
-                      className="group flex w-full items-center gap-3 rounded-3xl border-2 border-stone-100 bg-white p-4 text-left shadow-card transition-all hover:border-brand hover:shadow-glow focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-800 dark:bg-stone-900"
-                    >
-                      <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-light font-display text-base font-bold text-brand-dark transition-colors group-hover:bg-brand group-hover:text-white">
-                        {o.ano === 3 ? "3+" : `${o.ano}.º`}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold text-stone-800 dark:text-stone-100">
-                          {o.titulo}
-                        </span>
-                        <span className="mt-0.5 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-                          {o.desc}
-                        </span>
-                      </span>
-                      <ArrowRight
-                        size={16}
-                        className="flex-shrink-0 text-stone-300 transition-colors group-hover:text-brand"
-                      />
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* ── Decisor: para quem ainda não abriu ── */}
-            {jaTemAtividade === "nao" && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setJaTemAtividade(null)}
-                  className="mb-2 inline-flex items-center gap-1.5 py-2 pr-3 text-xs font-medium text-stone-400 transition-colors hover:text-stone-600"
-                >
-                  <ArrowLeft size={12} /> Voltar
-                </button>
-                <h2 className="font-display mb-2 text-3xl font-semibold text-stone-800 sm:text-4xl dark:text-stone-100">
-                  Precisas de abrir atividade?
-                </h2>
-                <p className="mb-8 text-sm text-stone-500 dark:text-stone-400">
-                  4 perguntas rápidas para perceber o teu caso.
-                </p>
-                <DecisorAtoIsoladoInline
-                  onDecisao={(d) => {
-                    if (d === "RECIBO_VERDE") {
-                      onIrParaSimuladorCompleto(estadoSaida);
-                    } else if (d === "ABRIR_ATIVIDADE" || d === "CONSIDERAR") {
-                      // Quem vai abrir agora está no 1.º ano: coef. reduzido + SS isenta.
-                      setAnoAtividade(1);
-                      setIsencaoSSPrimeiroAno(true);
-                      setPasso(1);
-                    }
-                    // ATO_ISOLADO: fica no componente, mostra guia
-                  }}
+          {/* ── Pergunta inicial: já tens atividade? ── */}
+          {jaTemAtividade === null && (
+            <>
+              <GuiadoCabecalho
+                titulo="Já tens atividade aberta?"
+                subtitulo="Ajustamos o cálculo à tua situação — o 1.º e 2.º ano têm coeficiente reduzido e isenção de Segurança Social."
+              />
+              <div className="space-y-3">
+                <GuiadoOpcao
+                  leading={<Check size={18} />}
+                  titulo="Sim, já trabalho como independente"
+                  descricao="Vou simular os meus impostos"
+                  onClick={() => setJaTemAtividade("sim")}
                 />
-              </>
-            )}
+                <GuiadoOpcao
+                  leading={<Sparkle size={18} />}
+                  titulo="Ainda não / estou a avaliar"
+                  descricao="Ajuda-me a perceber o que preciso"
+                  onClick={() => setJaTemAtividade("nao")}
+                />
+              </div>
+            </>
+          )}
 
-            <button
-              type="button"
-              onClick={() => onIrParaSimuladorCompleto(estadoSaida)}
-              className="mt-3 w-full py-2.5 text-center text-xs text-stone-400 transition-colors hover:text-stone-600"
-            >
-              Saltar — já sei o que preciso →
-            </button>
-          </div>
+          {/* ── Há quanto tempo? (define ano de atividade) ── */}
+          {jaTemAtividade === "sim" && (
+            <>
+              <GuiadoCabecalho
+                acima={<GuiadoVoltarLink onClick={() => setJaTemAtividade(null)} />}
+                titulo="Há quanto tempo tens atividade?"
+                subtitulo="Determina o coeficiente aplicável e a isenção de Segurança Social do 1.º ano."
+              />
+              <div className="space-y-3">
+                {[
+                  {
+                    ano: 1,
+                    titulo: "Estou no 1.º ano",
+                    desc: "Coeficiente reduzido 50% · isenção de Segurança Social",
+                  },
+                  {
+                    ano: 2,
+                    titulo: "No 2.º ano",
+                    desc: "Coeficiente reduzido 25% · já descontas para a SS",
+                  },
+                  {
+                    ano: 3,
+                    titulo: "Há 3 anos ou mais",
+                    desc: "Coeficiente integral · Segurança Social normal",
+                  },
+                ].map((o) => (
+                  <GuiadoOpcao
+                    key={o.ano}
+                    leading={o.ano === 3 ? "3+" : `${o.ano}.º`}
+                    titulo={o.titulo}
+                    descricao={o.desc}
+                    onClick={() => {
+                      setAnoAtividade(o.ano);
+                      setIsencaoSSPrimeiroAno(o.ano === 1);
+                      setPasso(1);
+                    }}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* ── Decisor: para quem ainda não abriu ── */}
+          {jaTemAtividade === "nao" && (
+            <>
+              <GuiadoCabecalho
+                acima={<GuiadoVoltarLink onClick={() => setJaTemAtividade(null)} />}
+                titulo="Precisas de abrir atividade?"
+                subtitulo="4 perguntas rápidas para perceber o teu caso."
+              />
+              <DecisorAtoIsoladoInline
+                onDecisao={(d) => {
+                  if (d === "RECIBO_VERDE") {
+                    onIrParaSimuladorCompleto(estadoSaida);
+                  } else if (d === "ABRIR_ATIVIDADE" || d === "CONSIDERAR") {
+                    // Quem vai abrir agora está no 1.º ano: coef. reduzido + SS isenta.
+                    setAnoAtividade(1);
+                    setIsencaoSSPrimeiroAno(true);
+                    setPasso(1);
+                  }
+                  // ATO_ISOLADO: fica no componente, mostra guia
+                }}
+              />
+            </>
+          )}
+
+          <button
+            type="button"
+            onClick={() => onIrParaSimuladorCompleto(estadoSaida)}
+            className="mt-5 w-full py-2.5 text-center text-xs text-stone-400 transition-colors hover:text-stone-600 dark:hover:text-stone-300"
+          >
+            Saltar — já sei o que preciso →
+          </button>
         </div>
       </div>
     );
@@ -714,61 +713,12 @@ export default function ModoGuiado({
   const PASSOS = ["Atividade", "Faturação", "Situação", "Resultado", "A seguir"];
 
   return (
-    <div className="min-h-0 bg-white dark:bg-stone-950">
-      {/* ── Faixa verde ────────────────────────────────────────────────────── */}
-      <div className="border-b border-brand/10 bg-brand-light/40 px-6 py-2 dark:bg-brand/5 dark:border-brand/10">
+    <div ref={topoRef} className="grain min-h-0 scroll-mt-20 bg-cream dark:bg-stone-950 sm:scroll-mt-24">
+      {/* ── Cabeçalho: rótulo + stepper editorial ──────────────────────────── */}
+      <div className="border-b border-stone-200/70 px-6 py-5 dark:border-stone-800 sm:px-8">
         <div className="mx-auto max-w-3xl">
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-brand-dark/70 dark:text-brand/70">
-            Simulador guiado · 2026
-          </span>
-        </div>
-      </div>
-
-      {/* ── Barra de progresso ─────────────────────────────────────────────── */}
-      <div className="border-b border-stone-100 px-6 py-4 dark:border-stone-800">
-        <div className="mx-auto max-w-3xl">
-          <div className="flex items-center">
-            {PASSOS.map((label, i) => {
-              const n = i + 1;
-              const done = passoNum > n;
-              const active = passoNum === n;
-              return (
-                <div key={label} className="flex flex-1 items-center">
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all ${
-                        done
-                          ? "bg-brand text-white"
-                          : active
-                            ? "bg-brand text-white ring-4 ring-brand/20"
-                            : "bg-stone-100 text-stone-400 dark:bg-stone-800"
-                      }`}
-                    >
-                      {done ? <Check size={12} /> : n}
-                    </div>
-                    <span
-                      className={`mt-1 hidden text-[10px] font-semibold sm:block ${
-                        done || active
-                          ? "text-brand-dark dark:text-brand"
-                          : "text-stone-400"
-                      }`}
-                    >
-                      {label}
-                    </span>
-                  </div>
-                  {i < PASSOS.length - 1 && (
-                    <div
-                      className={`mx-2 mb-4 h-0.5 flex-1 transition-colors ${
-                        passoNum > n
-                          ? "bg-brand"
-                          : "bg-stone-200 dark:bg-stone-700"
-                      }`}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <div className="eyebrow mb-4 text-brand">Simulador guiado · 2026</div>
+          <GuiadoStepper passos={PASSOS} atual={passoNum} />
         </div>
       </div>
 
@@ -949,6 +899,39 @@ export default function ModoGuiado({
                       },
                     }, cliente) : undefined}
                   />
+
+                  {/* ── Guardar este cenário na página de gestão ── */}
+                  <div className="mt-6 rounded-2xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-700 dark:bg-stone-900">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">Guardar este cenário</p>
+                        <p className="text-xs text-stone-400">
+                          Preserva todos os campos em{" "}
+                          <Link href="/dashboard/cenarios" className="font-medium text-brand-dark underline-offset-2 hover:underline dark:text-brand">Os meus cenários</Link>
+                          {" "}— para reabrir mais tarde.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDialogGuardar(true)}
+                        disabled={cenariosStore.limiteAtingido}
+                        className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-xl border border-brand/30 bg-brand-light px-4 py-2.5 text-sm font-semibold text-brand-dark transition-all hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Check size={15} /> Guardar cenário
+                      </button>
+                    </div>
+                    {cenarioFeedback && (
+                      <div className={`mt-3 flex items-start gap-2.5 rounded-xl border p-3 text-xs ${cenarioFeedback.tipo === "ok" ? "border-brand/20 bg-brand-light text-brand-dark" : "border-alert-border bg-alert-bg text-alert-text"}`}>
+                        {cenarioFeedback.tipo === "ok" ? <Check size={13} className="mt-0.5 flex-shrink-0" /> : <Warning size={13} className="mt-0.5 flex-shrink-0" />}
+                        <span>
+                          {cenarioFeedback.texto}{" "}
+                          {cenarioFeedback.tipo === "ok"
+                            ? <Link href="/dashboard/cenarios" className="font-semibold underline underline-offset-2">Ver cenários</Link>
+                            : <Link href="/dashboard/upgrade" className="font-semibold underline underline-offset-2">Ver o plano Pro</Link>}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </m.div>
               )}
 
@@ -970,39 +953,14 @@ export default function ModoGuiado({
 
             {/* ── Navegação ────────────────────────────────────────────── */}
             {passo !== "resultado" && passo !== "contabilista" && (
-              <div className="mt-8 flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={recuar}
-                  className="flex items-center gap-1.5 rounded-2xl border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-500 transition-all hover:bg-stone-50 hover:text-stone-800 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800"
-                >
-                  <ArrowLeft size={14} />
-                  {passo === 1 ? "Recomeçar" : "Voltar"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={avancar}
-                  disabled={passo === 1 && !tipoSelecionado}
-                  className="btn-shine flex items-center gap-2 rounded-2xl bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-glow transition-all hover:bg-brand-dark hover:shadow-float disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {passo === 3 ? "Ver o meu resultado" : "Continuar"}
-                  <ArrowRight size={14} />
-                </button>
-              </div>
-            )}
-
-            {/* ── Link saltar para completo ─────────────────────────── */}
-            {passo !== "resultado" && passo !== "contabilista" && (
-              <div className="mt-4 text-center">
-                <button
-                  type="button"
-                  onClick={() => onIrParaSimuladorCompleto(estadoSaida)}
-                  className="px-3 py-2.5 text-xs text-stone-400 transition-colors hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300"
-                >
-                  Saltar para o simulador completo →
-                </button>
-              </div>
+              <GuiadoNav
+                onVoltar={recuar}
+                voltarLabel={passo === 1 ? "Recomeçar" : "Voltar"}
+                onAvancar={avancar}
+                avancarLabel={passo === 3 ? "Ver o meu resultado" : "Continuar"}
+                avancarDisabled={passo === 1 && !tipoSelecionado}
+                onSaltar={() => onIrParaSimuladorCompleto(estadoSaida)}
+              />
             )}
           </div>
 
@@ -1025,6 +983,14 @@ export default function ModoGuiado({
           )}
         </div>
       </div>
+
+      <GuardarCenarioDialog
+        aberto={dialogGuardar}
+        nomePadrao={nomePadraoCenario}
+        onGuardar={guardarCenario}
+        onFechar={() => setDialogGuardar(false)}
+        titulo="Guardar cenário"
+      />
     </div>
   );
 }
@@ -1052,18 +1018,13 @@ function PassoAtividade({
 }) {
   return (
     <div>
-      <div className="mb-6">
-        <h3 className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100">
-          O que fazes?
-        </h3>
-        <p className="mt-1 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
-          Escolhe a categoria que melhor te representa — determina retenção,
-          coeficiente e SS.
-        </p>
-      </div>
+      <GuiadoCabecalho
+        titulo="O que fazes?"
+        subtitulo="Escolhe a categoria que melhor te representa — determina a retenção, o coeficiente e a Segurança Social."
+      />
 
       {/* Grid de categorias */}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {CARDS_ATIV.map(({ id, titulo, sub, exemplos, coef, ret, Icon }) => {
           const active = tipoAtiv === id && tipoSelecionado;
           return (
@@ -1072,10 +1033,10 @@ function PassoAtividade({
               type="button"
               aria-pressed={active}
               onClick={() => onSelecionarTipo(id)}
-              className={`group relative overflow-hidden rounded-3xl border-2 p-4 text-left transition-all duration-200 ${
+              className={`group relative overflow-hidden rounded-3xl border p-4 text-left shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift ${
                 active
-                  ? "border-brand bg-brand-light shadow-lift"
-                  : "border-stone-200 bg-white hover:border-brand/30 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900/60 dark:hover:border-brand/30"
+                  ? "border-brand bg-brand-light"
+                  : "border-stone-200/80 bg-white hover:border-brand/40 dark:border-stone-800 dark:bg-stone-900"
               }`}
             >
               {active && (
@@ -1413,15 +1374,10 @@ function PassoFaturacao({
 
   return (
     <div>
-      <div className="mb-6">
-        <h3 className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100">
-          Quanto faturaste?
-        </h3>
-        <p className="mt-1 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
-          Indica quanto faturas por mês e em quantos meses do ano. A situação de
-          IVA é tratada mais abaixo.
-        </p>
-      </div>
+      <GuiadoCabecalho
+        titulo="Quanto faturaste?"
+        subtitulo="Indica quanto faturas por mês e em quantos meses do ano. A situação de IVA é tratada mais abaixo."
+      />
 
       {/* Tabs modo */}
       <div className="mb-5 flex gap-1 rounded-3xl bg-stone-100 p-1 dark:bg-stone-800">
@@ -1903,14 +1859,10 @@ function PassoSituacao({
 
   return (
     <div>
-      <div className="mb-6">
-        <h3 className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100">
-          A tua situação
-        </h3>
-        <p className="mt-1 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
-          Responde ao que se aplica — pode poupar centenas de euros por ano.
-        </p>
-      </div>
+      <GuiadoCabecalho
+        titulo="A tua situação"
+        subtitulo="Responde ao que se aplica — pode poupar centenas de euros por ano."
+      />
 
       <div className="space-y-5">
         {/* ── Secção SS ─────────────────────────────────────────────────── */}
@@ -2747,14 +2699,11 @@ function ResultadoFinal({
   return (
     <div>
       {/* ── Título ──────────────────────────────────────────────────────── */}
-      <div className="mb-5">
-        <h3 className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100">
-          O teu resultado
-        </h3>
-        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-          Estimativa para {recibosAno} {recibosAno === 1 ? "mês" : "meses"} de atividade.
-        </p>
-      </div>
+      <GuiadoCabecalho
+        eyebrow="Resultado"
+        titulo="O teu resultado"
+        subtitulo={`Estimativa para ${recibosAno} ${recibosAno === 1 ? "mês" : "meses"} de atividade.`}
+      />
 
       {/* ── Layout 2 colunas ─────────────────────────────────────────────── */}
       <div className="grid gap-5 md:grid-cols-[1fr_280px] md:items-start">

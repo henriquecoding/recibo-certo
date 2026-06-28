@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { calcularVencimento, calcularVencimentoAnual, mealheiroDependente, calcularReciboMensal, IRS_JOVEM_TETO_MENSAL } from "@/lib/fiscal-dependente";
 import { DEDUCAO_DEPENDENTE_DEFICIENCIA } from "@/lib/fiscal-data";
@@ -8,13 +9,44 @@ import { SS_DEPENDENTE, SUBSIDIO_REFEICAO, TRABALHO_SUPLEMENTAR, AJUDAS_CUSTO, H
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import ProGate from "@/components/ui/ProGate";
-import { AuditoriaPainel } from "@/components/dependente/AuditoriaPainel";
-import { ImportarReciboPDF } from "@/components/dependente/ImportarReciboPDF";
 import { Section, StatTile, Donut, SegBar, SegLegend, LinhaRecibo, segClass, cx, type Seg } from "@/components/dependente/ui";
 import { type ReciboExtraido } from "@/lib/recibo-pdf";
-import { printRelatorioVencimento } from "@/lib/export-vencimento";
-import { useVencimentos, gerarCSVCenarios, type CenarioVencimento } from "@/lib/store/vencimentos";
-import { History, Trash, Plus, ShieldCheck, Export, FileSign, Wallet, Gauge, Building, Coin, Sparkle } from "@/components/ui/Icons";
+
+// Funcionalidades pesadas carregadas sob procura — saem do chunk principal do
+// simulador (que era ~1 MB). A auditoria e o importador de PDF só descem quando
+// o utilizador os alcança; a exportação só quando clica em descarregar.
+const PainelCarregando = () => (
+  <div className="animate-pulse rounded-2xl border border-stone-100 bg-white p-5 dark:border-stone-800 dark:bg-stone-900" style={{ minHeight: 120 }} aria-hidden>
+    <div className="h-5 w-40 max-w-full rounded-full bg-stone-100 dark:bg-stone-800" />
+    <div className="mt-3 h-16 rounded-xl bg-stone-100 dark:bg-stone-800" />
+  </div>
+);
+const AuditoriaPainel = dynamic(
+  () => import("@/components/dependente/AuditoriaPainel").then((m) => m.AuditoriaPainel),
+  { ssr: false, loading: () => <PainelCarregando /> }
+);
+const ImportarReciboPDF = dynamic(
+  () => import("@/components/dependente/ImportarReciboPDF").then((m) => m.ImportarReciboPDF),
+  { ssr: false, loading: () => <PainelCarregando /> }
+);
+import { gerarCSVCenarios, type CenarioVencimento } from "@/lib/store/vencimentos";
+import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
+import { useExportacaoPro } from "@/lib/store/exportacao-pro";
+import UpsellExportacao from "@/components/ui/UpsellExportacao";
+import GuardarCenarioDialog from "@/components/ui/GuardarCenarioDialog";
+import { History, Plus, ShieldCheck, Export, FileSign, Wallet, Gauge, Building, Coin, Sparkle, ArrowRight } from "@/components/ui/Icons";
+
+// Espelha o último cenário no formato legado lido pela importação do Simulador
+// de IRS («Importar dados → Recibo de vencimento»), para não perder essa ponte.
+const KEY_VENC_LEGADO = "recibocerto:vencimentos:v1";
+function espelharVencimentoLegado(c: { nome: string; salarioBruto: number; dependentes: number; subsidioRefeicaoDia: number; subsidioRefeicaoCartao: boolean; diasUteis: number }) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(KEY_VENC_LEGADO, JSON.stringify([{ ...c, id: "atual", criadoEm: new Date().toISOString() }]));
+  } catch {
+    /* localStorage indisponível */
+  }
+}
 
 const DEPENDENTES = [0, 1, 2, 3, 4];
 
@@ -182,6 +214,14 @@ export function SimuladorVencimento() {
   const subsidioExcede = temSubsidio && subsidioDia > limiteSubsidio;
   const liquidoMostrado = duodecimos ? ra.liquidoMedioMes : r.liquido;
 
+  // IRS Jovem e dependentes complementam-se: os dependentes reduzem a retenção
+  // mensal pela parcela a abater; o IRS Jovem reduz proporcionalmente o que
+  // sobra. Quando os dependentes já zeram a retenção, a poupança MENSAL do IRS
+  // Jovem é 0 — mas a isenção continua a contar no acerto anual (rendimento
+  // tributável). Distinguimos os dois casos para não parecer que «não atualiza».
+  const poupancaJovemMes = Math.max(0, r.irsSemJovem - r.irsRetido);
+  const retencaoJaZero = irsJovem && r.isencaoJovemPct > 0 && poupancaJovemMes <= 0.005;
+
   // Para onde vai o salário bruto: fica contigo, retenção de IRS, Segurança Social.
   const fica = Math.max(0, r.bruto - r.ssTrabalhador - r.irsRetido);
   const ficaPct = r.bruto > 0 ? fica / r.bruto : 0;
@@ -196,10 +236,13 @@ export function SimuladorVencimento() {
     { label: "IRS + SS", value: descontosAnuais, cls: CLS_SS },
   ];
 
-  const { cenarios, carregado: cenariosProntos, naNuvem, limite, limiteAtingido, guardar, remover } = useVencimentos();
-  const [avisoGuardar, setAvisoGuardar] = useState<string | null>(null);
+  const { naNuvem, limite, limiteAtingido, guardar } = useCenarios();
+  const exportPro = useExportacaoPro();
+  const [avisoGuardar, setAvisoGuardar] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [dialogGuardar, setDialogGuardar] = useState(false);
 
   function exportarCSV() {
+    if (!exportPro.tentarExportar("vencimento")) return;
     // Inclui sempre a simulação atual (mesmo sem cenários guardados) e, a seguir,
     // o histórico guardado — para o CSV ser útil em qualquer situação.
     const cenarioAtual: CenarioVencimento = {
@@ -213,7 +256,7 @@ export function SimuladorVencimento() {
       duodecimos,
       criadoEm: new Date().toISOString(),
     };
-    const csv = gerarCSVCenarios([cenarioAtual, ...cenarios]);
+    const csv = gerarCSVCenarios([cenarioAtual]);
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -223,7 +266,9 @@ export function SimuladorVencimento() {
     URL.revokeObjectURL(url);
   }
 
-  function descarregarRelatorio() {
+  async function descarregarRelatorio() {
+    if (!exportPro.tentarExportar("vencimento")) return;
+    const { printRelatorioVencimento } = await import("@/lib/export-vencimento");
     printRelatorioVencimento({
       situacao: SITUACAO_LABEL[estadoCivil],
       dependentes,
@@ -262,28 +307,62 @@ export function SimuladorVencimento() {
     });
   }
 
-  function guardarCenario() {
-    const res = guardar({
-      salarioBruto: bruto,
-      dependentes,
-      subsidioRefeicaoDia: temSubsidio ? subsidioDia : 0,
-      subsidioRefeicaoCartao: cartao,
-      diasUteis,
-      duodecimos,
-    });
-    setAvisoGuardar(res.erro ?? null);
+  // Instantâneo COMPLETO dos campos — para reabrir exatamente como ficou.
+  const montarSnapshot = () => ({
+    brutoStr, dependentes, temSubsidio, subsidioDiaStr, cartao, diasUteisStr, duodecimos,
+    variavelStr, estadoCivil, deficiencia, depDeficientes, regiao, irsJovem, irsJovemAno,
+    mostrarExtras, mes, horasAusenciaStr, diasSemSubsidioStr, horasSupStr, premioStr, premioRegular,
+    subFeriasStr, subNatalStr, outrosSujeitosStr, ajNDiasStr, ajNValStr, ajEDiasStr, ajEValStr,
+  });
+
+  const nomePadraoCenario = `Vencimento · ${fmt(bruto)}/mês${dependentes > 0 ? ` · ${dependentes} dep.` : ""}`;
+
+  function guardarCenario(nome: string) {
+    const nomePadrao = nomePadraoCenario;
+    const resumo: ResumoCenario = {
+      destaque: r.liquido,
+      destaqueLabel: "Líquido mensal",
+      destaqueFmt: "eur",
+      linhas: [
+        { label: "Bruto mensal", valor: r.bruto, fmt: "eur" },
+        { label: "IRS + Segurança Social", valor: r.irsRetido + r.ssTrabalhador, fmt: "eur" },
+        { label: "Líquido anual", valor: ra.liquidoAnual, fmt: "eur" },
+        { label: "Taxa efetiva", valor: r.taxaEfetiva, fmt: "pct" },
+      ],
+    };
+    const res = guardar({ tipo: "vencimento", nome: nome || nomePadrao, resumo, dados: montarSnapshot() });
+    if (res.erro) {
+      setAvisoGuardar({ tipo: "erro", texto: res.erro });
+    } else {
+      espelharVencimentoLegado({
+        nome: nome || nomePadrao,
+        salarioBruto: bruto,
+        dependentes,
+        subsidioRefeicaoDia: temSubsidio ? subsidioDia : 0,
+        subsidioRefeicaoCartao: cartao,
+        diasUteis,
+      });
+      setAvisoGuardar({ tipo: "ok", texto: "Cenário guardado em «Os meus cenários»." });
+    }
+    setDialogGuardar(false);
   }
 
-  function carregarCenario(c: CenarioVencimento) {
-    setBrutoStr(String(c.salarioBruto));
-    setDependentes(c.dependentes);
-    setTemSubsidio(c.subsidioRefeicaoDia > 0);
-    setSubsidioDiaStr(String(c.subsidioRefeicaoDia || 6));
-    setCartao(c.subsidioRefeicaoCartao);
-    setDiasUteisStr(String(c.diasUteis));
-    setDuodecimos(c.duodecimos);
-    setAvisoGuardar(null);
-  }
+  // Reabre um cenário marcado a partir da página de gestão (uma vez, na montagem).
+  useEffect(() => {
+    const d = consumirReabertura("vencimento") as Partial<ReturnType<typeof montarSnapshot>> | null;
+    if (!d) return;
+    const set = <T,>(v: T | undefined, fn: (x: T) => void) => { if (v !== undefined) fn(v); };
+    set(d.brutoStr, setBrutoStr); set(d.dependentes, setDependentes); set(d.temSubsidio, setTemSubsidio);
+    set(d.subsidioDiaStr, setSubsidioDiaStr); set(d.cartao, setCartao); set(d.diasUteisStr, setDiasUteisStr);
+    set(d.duodecimos, setDuodecimos); set(d.variavelStr, setVariavelStr); set(d.estadoCivil, setEstadoCivil);
+    set(d.deficiencia, setDeficiencia); set(d.depDeficientes, setDepDeficientes); set(d.regiao, setRegiao);
+    set(d.irsJovem, setIrsJovem); set(d.irsJovemAno, setIrsJovemAno); set(d.mostrarExtras, setMostrarExtras);
+    set(d.mes, setMes); set(d.horasAusenciaStr, setHorasAusenciaStr); set(d.diasSemSubsidioStr, setDiasSemSubsidioStr);
+    set(d.horasSupStr, setHorasSupStr); set(d.premioStr, setPremioStr); set(d.premioRegular, setPremioRegular);
+    set(d.subFeriasStr, setSubFeriasStr); set(d.subNatalStr, setSubNatalStr); set(d.outrosSujeitosStr, setOutrosSujeitosStr);
+    set(d.ajNDiasStr, setAjNDiasStr); set(d.ajNValStr, setAjNValStr); set(d.ajEDiasStr, setAjEDiasStr); set(d.ajEValStr, setAjEValStr);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Aplica os dados extraídos de um recibo em PDF (Pro) ao simulador, decompondo
   // o recibo nos campos certos para a base de IRS/Segurança Social bater certo.
@@ -551,7 +630,12 @@ export function SimuladorVencimento() {
                 <p className="rounded-lg border border-brand/20 bg-brand-light px-3 py-2 text-[11px] leading-relaxed text-brand-dark">
                   Isenção de {pct(r.isencaoJovemPct)} sobre a remuneração{r.rendimentoIsentoJovem > 0 ? ` — ${fmt(r.rendimentoIsentoJovem)} isentos este mês` : ""}.
                   {r.excedeTetoJovem ? ` Limitada ao teto mensal de ${fmt(IRS_JOVEM_TETO_MENSAL)} (55 × IAS ÷ 14).` : ""}
-                  {" "}Poupas {fmt(Math.max(0, r.irsSemJovem - r.irsRetido))} de IRS por mês face a não ter o regime.
+                  {" "}
+                  {poupancaJovemMes > 0.005
+                    ? `Poupas ${fmt(poupancaJovemMes)} de IRS por mês${dependentes > 0 ? ", já a contar com os teus dependentes" : ""} face a não ter o regime.`
+                    : dependentes > 0
+                      ? `Com ${dependentes} dependente${dependentes > 1 ? "s" : ""}, a retenção mensal já está em 0 € — o IRS Jovem e os dependentes complementam-se. A isenção continua a contar: reduz o rendimento tributável do ano (vê o acerto anual abaixo).`
+                      : "A este salário a retenção mensal já é 0 € — a isenção continua a reduzir o rendimento tributável no acerto anual de IRS."}
                 </p>
               </div>
             )}
@@ -826,14 +910,16 @@ export function SimuladorVencimento() {
                 icon={<Coin size={15} />}
                 label={
                   <>
-                    Poupança IRS Jovem{" "}
+                    {retencaoJaZero ? "Isenção IRS Jovem" : "Poupança IRS Jovem"}{" "}
                     <InfoTip label="Art. 12.º-B CIRS">
-                      Menos retenção de IRS por estares no regime IRS Jovem ({pct(r.isencaoJovemPct)} de isenção este ano).
+                      {retencaoJaZero
+                        ? `Os teus dependentes já levam a retenção mensal a 0 €, por isso não há poupança adicional este mês. A isenção de ${pct(r.isencaoJovemPct)} continua a contar no acerto anual de IRS, reduzindo o rendimento tributável.`
+                        : `Menos retenção de IRS por estares no regime IRS Jovem (${pct(r.isencaoJovemPct)} de isenção este ano).`}
                     </InfoTip>
                   </>
                 }
-                value={fmt(Math.max(0, r.irsSemJovem - r.irsRetido))}
-                sub={`por mês · ${fmt(r.rendimentoIsentoJovem)} isentos`}
+                value={retencaoJaZero ? fmt(r.rendimentoIsentoJovem) : fmt(poupancaJovemMes)}
+                sub={retencaoJaZero ? "isentos/mês · conta no acerto anual" : `por mês · ${fmt(r.rendimentoIsentoJovem)} isentos`}
               />
             )}
           </div>
@@ -1092,18 +1178,18 @@ export function SimuladorVencimento() {
         os subsídios iguais ao salário base. Não substitui o teu recibo oficial nem aconselhamento de um contabilista.
       </p>
 
-      {/* ── Cenários guardados (modo duplo + tiering) ── */}
+      {/* ── Guardar na gestão de cenários (modo duplo + tiering) ── */}
       <div className="mt-5 border-t border-stone-100 dark:border-stone-800 pt-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 text-xs font-semibold text-stone-600 dark:text-stone-400">
-            <History size={14} /> Cenários guardados
+            <History size={14} /> Guardar cenário
             <span className="font-normal text-stone-400">
-              {naNuvem ? "· sincronizados (Pro)" : `· ${cenarios.length}/${limite} grátis`}
+              {naNuvem ? "· sincronizado (Pro)" : `· plano grátis: ${limite} cenário`}
             </span>
           </span>
           <button
             type="button"
-            onClick={guardarCenario}
+            onClick={() => setDialogGuardar(true)}
             disabled={limiteAtingido}
             className="inline-flex items-center gap-1.5 rounded-xl border border-brand/30 bg-brand-light px-3 py-1.5 text-xs font-semibold text-brand-dark transition-all hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -1111,46 +1197,43 @@ export function SimuladorVencimento() {
           </button>
         </div>
 
+        <p className="mt-2 text-xs text-stone-400">
+          Guarda este cálculo (com todos os campos preenchidos) em{" "}
+          <Link href="/dashboard/cenarios" className="font-medium text-brand-dark underline-offset-2 hover:underline dark:text-brand">
+            Os meus cenários
+          </Link>{" "}
+          — para reabrires e continuares mais tarde.
+        </p>
+
         {avisoGuardar && (
-          <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-brand/20 bg-brand-light p-3">
-            <span className="mt-0.5 text-brand-dark">
-              <ShieldCheck size={14} />
+          <div className={`mt-3 flex items-start gap-2.5 rounded-xl border p-3 ${avisoGuardar.tipo === "ok" ? "border-brand/20 bg-brand-light" : "border-alert-border bg-alert-bg"}`}>
+            <span className={`mt-0.5 ${avisoGuardar.tipo === "ok" ? "text-brand-dark" : "text-alert-text"}`}>
+              {avisoGuardar.tipo === "ok" ? <ShieldCheck size={14} /> : <Wallet size={14} />}
             </span>
-            <p className="text-xs text-brand-dark">
-              {avisoGuardar}{" "}
-              <Link href="/precos" className="font-semibold underline underline-offset-2">
-                Ver o plano Pro
-              </Link>
+            <p className={`text-xs ${avisoGuardar.tipo === "ok" ? "text-brand-dark" : "text-alert-text"}`}>
+              {avisoGuardar.texto}{" "}
+              {avisoGuardar.tipo === "ok" ? (
+                <Link href="/dashboard/cenarios" className="inline-flex items-center gap-0.5 font-semibold underline underline-offset-2">
+                  Ver cenários <ArrowRight size={11} />
+                </Link>
+              ) : (
+                <Link href="/dashboard/upgrade" className="font-semibold underline underline-offset-2">
+                  Ver o plano Pro
+                </Link>
+              )}
             </p>
           </div>
         )}
-
-        {cenariosProntos && cenarios.length > 0 && (
-          <ul className="mt-3 space-y-2">
-            {cenarios.map((c) => (
-              <li key={c.id} className="flex items-center justify-between gap-3 rounded-xl border border-stone-100 dark:border-stone-700 bg-white dark:bg-stone-800 px-3 py-2">
-                <button type="button" onClick={() => carregarCenario(c)} className="flex-1 text-left">
-                  <span className="text-sm font-medium text-stone-800 dark:text-stone-100 tabular-nums">{fmt(c.salarioBruto)}/mês</span>
-                  <span className="text-xs text-stone-400">
-                    {" "}
-                    · {c.dependentes} dep.{c.duodecimos ? " · duodécimos" : ""}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => remover(c.id)}
-                  aria-label="Remover cenário"
-                  className="flex-shrink-0 rounded-lg p-1.5 text-stone-400 transition-colors hover:bg-stone-100 dark:hover:bg-stone-700 hover:text-alert-text"
-                >
-                  <Trash size={14} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
       </div>
       </div>
+
+      <UpsellExportacao aberto={exportPro.upsellAberto} onClose={exportPro.fecharUpsell} />
+      <GuardarCenarioDialog
+        aberto={dialogGuardar}
+        nomePadrao={nomePadraoCenario}
+        onGuardar={guardarCenario}
+        onFechar={() => setDialogGuardar(false)}
+      />
     </div>
   );
 }

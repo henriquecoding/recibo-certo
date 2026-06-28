@@ -15,7 +15,9 @@
 //  `lastVerified` de cada parâmetro tocado e `DATA_LAST_REVIEW`.
 // ═══════════════════════════════════════════════════════════════════════
 
-export const FISCAL_YEAR = 2026 as const;
+// Reexportado de `./fiscal-year` (módulo leve, sem dados nem asserções) para que
+// componentes-cliente o possam importar sem arrastar este ficheiro pesado.
+export { FISCAL_YEAR } from "./fiscal-year";
 
 /** Data da última revisão completa dos dados (ISO 8601). */
 export const DATA_LAST_REVIEW = "2026-06-11" as const;

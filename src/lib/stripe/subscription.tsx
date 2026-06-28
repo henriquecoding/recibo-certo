@@ -2,7 +2,13 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { useAuth } from "@/lib/supabase/auth";
-import { getSupabase, supabaseConfigurado } from "@/lib/supabase/client";
+import { supabaseConfigurado } from "@/lib/supabase/config";
+
+// Cliente Supabase sob procura — mantém o SDK fora do bundle inicial (ver auth.tsx).
+async function sb() {
+  const { getSupabase } = await import("@/lib/supabase/client");
+  return getSupabase();
+}
 
 type StatusSubscricao = "active" | "trialing" | "past_due" | "canceled" | "incomplete" | null;
 
@@ -19,7 +25,7 @@ const Ctx = createContext<SubscricaoContexto | null>(null);
 
 async function obterToken(): Promise<string | null> {
   if (!supabaseConfigurado()) return null;
-  const { data } = await getSupabase().auth.getSession();
+  const { data } = await (await sb()).auth.getSession();
   return data.session?.access_token ?? null;
 }
 
@@ -39,24 +45,26 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
     }
 
     let ativo = true;
-    const sb = getSupabase();
-    sb.from("subscriptions")
-      .select("status, intervalo")
-      .eq("user_id", user.id)
-      .in("status", ["active", "trialing", "past_due"])
-      .order("criado_em", { ascending: false })
-      .limit(1)
-      .then(({ data }) => {
-        if (!ativo) return;
-        if (data && data.length > 0) {
-          setStatus(data[0].status as StatusSubscricao);
-          setIntervalo(data[0].intervalo as "monthly" | "annual");
-        } else {
-          setStatus(null);
-          setIntervalo(null);
-        }
-        setCarregado(true);
-      });
+    sb().then((cliente) => {
+      if (!ativo) return;
+      cliente.from("subscriptions")
+        .select("status, intervalo")
+        .eq("user_id", user.id)
+        .in("status", ["active", "trialing", "past_due"])
+        .order("criado_em", { ascending: false })
+        .limit(1)
+        .then(({ data }) => {
+          if (!ativo) return;
+          if (data && data.length > 0) {
+            setStatus(data[0].status as StatusSubscricao);
+            setIntervalo(data[0].intervalo as "monthly" | "annual");
+          } else {
+            setStatus(null);
+            setIntervalo(null);
+          }
+          setCarregado(true);
+        });
+    });
 
     return () => { ativo = false; };
   }, [user, authCarregado]);

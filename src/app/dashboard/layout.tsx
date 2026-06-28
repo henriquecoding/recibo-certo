@@ -35,7 +35,7 @@ import { useAuth } from "@/lib/supabase/auth";
 import { verificarAdmin } from "@/lib/supabase/admin";
 import { obterPerfil } from "@/lib/supabase/profile";
 import AccountBox from "@/components/dashboard/AccountBox";
-import { BuscaTrigger } from "@/components/busca/BuscaGlobal";
+import { BuscaTrigger } from "@/components/busca/BuscaTrigger";
 import type { ComponentType, ReactNode } from "react";
 
 interface NavItem {
@@ -58,7 +58,7 @@ const GRUPOS: NavGroup[] = [
     titulo: "Gestão",
     itens: [
       { href: "/dashboard", label: "Visão geral", short: "Início", icon: LayoutGrid },
-      { href: "/dashboard/recibos", label: "Recibos", short: "Recibos", icon: Receipt },
+      { href: "/dashboard/cenarios", label: "Os meus cenários", short: "Cenários", icon: Receipt },
       { href: "/dashboard/receitas", label: "Receitas", short: "Receitas", icon: History },
       { href: "/dashboard/prazos", label: "Prazos fiscais", short: "Prazos", icon: Calendar },
     ],
@@ -66,6 +66,7 @@ const GRUPOS: NavGroup[] = [
   {
     titulo: "Simuladores",
     itens: [
+      { href: "/dashboard/recibos-verdes", label: "Recibos verdes", short: "Recibos verdes", icon: Receipt },
       { href: "/dashboard/simulador", label: "Simulador de IRS", short: "IRS", icon: Calculator },
       { href: "/dashboard/recibo-vencimento", label: "Recibo de vencimento", short: "Vencimento", icon: Wallet },
       { href: "/dashboard/empresa", label: "Abrir empresa", short: "Empresa", icon: Building },
@@ -104,9 +105,9 @@ const GRUPOS: NavGroup[] = [
 // Itens primários da barra inferior (telemóvel). O 5.º slot é o botão "Menu".
 const PRIMARIOS: NavItem[] = [
   { href: "/dashboard", label: "Visão geral", short: "Início", icon: LayoutGrid },
-  { href: "/dashboard/recibos", label: "Recibos", short: "Recibos", icon: Receipt },
+  { href: "/dashboard/cenarios", label: "Os meus cenários", short: "Cenários", icon: Receipt },
   { href: "/dashboard/prazos", label: "Prazos fiscais", short: "Prazos", icon: Calendar },
-  { href: "/dashboard/perfil", label: "O meu perfil", short: "Perfil", icon: User },
+  { href: "/dashboard/simulador", label: "Simulador de IRS", short: "IRS", icon: Calculator },
 ];
 
 function AdminLink({ mobile }: { mobile?: boolean }) {
@@ -180,7 +181,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user) { setAvatarUrl(""); return; }
-    obterPerfil(user.id).then((p) => setAvatarUrl(p.avatarUrl));
+    // Mostra já a foto do OAuth (Google/etc.), se existir, e depois prefere a
+    // foto configurada no perfil quando ela existir.
+    const meta = (user.user_metadata?.avatar_url || user.user_metadata?.picture || "") as string;
+    if (meta) setAvatarUrl(meta);
+    obterPerfil(user.id).then((p) => { if (p.avatarUrl) setAvatarUrl(p.avatarUrl); });
   }, [user]);
 
   // Fecha o menu ao mudar de rota.

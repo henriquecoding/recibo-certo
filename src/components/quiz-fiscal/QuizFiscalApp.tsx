@@ -70,9 +70,9 @@ export default function QuizFiscalApp() {
     }
   }, [quiz.status]);
 
-  const handleIniciar = (cfg: QuizFiscalConfig) => {
+  const handleIniciar = async (cfg: QuizFiscalConfig) => {
     progresso.consumirEnergia();
-    quiz.iniciar(cfg);
+    await quiz.iniciar(cfg);
   };
 
   if (quiz.status === "jogando") {

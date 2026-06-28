@@ -150,6 +150,11 @@ export default function Quiz({
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
+      // Ignora os atalhos quando o utilizador está a escrever num campo
+      // (ex.: a descrição do «Reportar erro») — senão as teclas 1-4/A-D/Enter
+      // respondiam à pergunta e fechavam o diálogo.
+      const alvo = e.target as HTMLElement | null;
+      if (alvo && (alvo.tagName === "INPUT" || alvo.tagName === "TEXTAREA" || alvo.isContentEditable)) return;
       const mapa: Record<string, number> = {
         "1": 0, "2": 1, "3": 2, "4": 3,
         "a": 0, "b": 1, "c": 2, "d": 3,
