@@ -23,7 +23,7 @@ export const NAV_FERRAMENTAS: NavItem[] = [
   {
     label: "Simuladores",
     desc: "IRS, recibos verdes, vencimento e empresa.",
-    href: "/dashboard/simulador",
+    href: "/#calculadora",
     Icon: Calculator,
   },
   {

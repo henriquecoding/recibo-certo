@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 const FERRAMENTAS = [
-  { label: "Simuladores", desc: "Recibos verdes, vencimento e empresa — o teu líquido real, com as taxas oficiais de 2026.", href: "/dashboard/simulador", icon: Briefcase },
+  { label: "Simuladores", desc: "Recibos verdes, vencimento e empresa — o teu líquido real, com as taxas oficiais de 2026.", href: "/#calculadora", icon: Briefcase },
   { label: "Simulador de IRS", desc: "A tua declaração anual, do bruto ao reembolso, com memória de cálculo passo a passo.", href: "/ferramentas/simulador-irs", icon: Calculator },
 ];
 
@@ -43,7 +43,7 @@ export default function GuiasPage() {
               oficiais de 2026.
             </p>
           </div>
-          <Link href="/dashboard/simulador" className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-brand-dark">
+          <Link href="/#calculadora" className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-brand-dark">
             Abrir simuladores <ArrowRight size={15} />
           </Link>
         </div>

@@ -11,7 +11,7 @@ const DESTINOS = [
   {
     titulo: "Simuladores",
     desc: "Recibos verdes, vencimento e empresa — o teu líquido real com as taxas oficiais de 2026.",
-    href: "/dashboard/simulador",
+    href: "/#calculadora",
     icon: Briefcase,
   },
   {

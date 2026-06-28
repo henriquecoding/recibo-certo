@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.86.0";
+export const APP_VERSION = "1.86.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,14 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.86.1",
+    data: "2026-06-28",
+    titulo: "Ligação «Simuladores» corrigida",
+    itens: [
+      "Nos guias (e no menu), o atalho «Simuladores» passa a abrir a secção de simuladores na página inicial, em vez do simulador de IRS do painel.",
+    ],
+  },
   {
     version: "1.86.0",
     data: "2026-06-28",
