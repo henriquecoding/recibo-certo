@@ -69,3 +69,34 @@ CREATE TRIGGER propostas_set_atualizado
 
 CREATE INDEX IF NOT EXISTS propostas_submetido_idx ON public.propostas_investidores (submetido_em DESC);
 CREATE INDEX IF NOT EXISTS propostas_estado_idx    ON public.propostas_investidores (estado);
+
+-- ── Endurecimento da tabela EXISTENTE ──────────────────────────
+-- Em produção esta tabela foi criada à mão (migração `create_propostas_investidores`),
+-- por isso o `CREATE TABLE IF NOT EXISTS` acima é no-op e os CHECKs de comprimento
+-- não se aplicam. Aplicamo-los aqui via ALTER idempotente (depois das políticas,
+-- para que a RLS — o mais importante — fique aplicada mesmo que um CHECK falhe por
+-- dados legados). Garantimos também o DEFAULT de `estado` para a política de insert.
+ALTER TABLE public.propostas_investidores ALTER COLUMN estado SET DEFAULT 'pendente';
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'propostas_nome_len') THEN
+    ALTER TABLE public.propostas_investidores
+      ADD CONSTRAINT propostas_nome_len CHECK (char_length(nome) BETWEEN 1 AND 200);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'propostas_email_len') THEN
+    ALTER TABLE public.propostas_investidores
+      ADD CONSTRAINT propostas_email_len CHECK (char_length(email) BETWEEN 3 AND 254);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'propostas_interesse_len') THEN
+    ALTER TABLE public.propostas_investidores
+      ADD CONSTRAINT propostas_interesse_len CHECK (char_length(interesse) BETWEEN 1 AND 2000);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'propostas_mensagem_len') THEN
+    ALTER TABLE public.propostas_investidores
+      ADD CONSTRAINT propostas_mensagem_len CHECK (mensagem IS NULL OR char_length(mensagem) <= 5000);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'propostas_notas_len') THEN
+    ALTER TABLE public.propostas_investidores
+      ADD CONSTRAINT propostas_notas_len CHECK (notas_admin IS NULL OR char_length(notas_admin) <= 5000);
+  END IF;
+END $$;
