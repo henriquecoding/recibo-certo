@@ -3,6 +3,7 @@ import { GuiaHero } from "@/components/guias/GuiaHero";
 import { FontesGuia } from "@/components/guias/FontesGuia";
 import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import Badge from "@/components/ui/Badge";
+import { Close } from "@/components/ui/Icons";
 
 export const metadata: Metadata = {
   title: "Como cessar atividade nos recibos verdes 2026",
@@ -68,7 +69,7 @@ export default function CessarAtividadePage() {
               "Coimas SS: 50 € a 250 € por declaração em falta",
             ].map((item) => (
               <li key={item} className="flex items-start gap-2 text-sm text-stone-700 dark:text-stone-300">
-                <span className="text-clay-text mt-0.5 flex-shrink-0">✗</span>
+                <Close size={14} className="mt-0.5 shrink-0 text-clay-text" />
                 {item}
               </li>
             ))}

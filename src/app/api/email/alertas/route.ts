@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { proximosPrazos, diasAte } from "@/lib/prazos";
 import { enviarEmail } from "@/lib/email/send";
 import { emailAlertaPrazo } from "@/lib/email/templates";
+import { cronAutorizado } from "@/lib/cron-auth";
 
 const DIAS_ALERTA = 7;
 
@@ -14,9 +15,7 @@ function getSupabaseAdmin() {
 }
 
 export async function POST(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  const expected = `Bearer ${process.env.CRON_SECRET ?? process.env.STRIPE_WEBHOOK_SECRET}`;
-  if (authHeader !== expected) {
+  if (!cronAutorizado(req)) {
     return NextResponse.json({ erro: "Não autorizado." }, { status: 401 });
   }
 

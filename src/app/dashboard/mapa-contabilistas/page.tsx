@@ -1,5 +1,5 @@
 import PaginaFerramenta from "@/components/dashboard/PaginaFerramenta";
-import MapaPrecosRegioes from "@/components/contabilista/MapaPrecosRegioes";
+import MapaPrecosRegioes from "@/components/contabilista/MapaPrecosRegioesLazy";
 
 export default function Page() {
   return (

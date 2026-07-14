@@ -11,7 +11,7 @@ import { CheckTrend, ArrowRight } from "@/components/ui/Icons";
 export default function AdminLogin() {
   const router = useRouter();
   const { user, carregado, disponivel, entrar, registar, sair } = useAuth();
-  const [email, setEmail] = useState("admin@recibocerto.pt");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [modo, setModo] = useState<"entrar" | "criar">("entrar");
   const [erro, setErro] = useState("");

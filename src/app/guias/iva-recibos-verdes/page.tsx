@@ -3,6 +3,7 @@ import { GuiaHero } from "@/components/guias/GuiaHero";
 import { FontesGuia } from "@/components/guias/FontesGuia";
 import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import InfoTip from "@/components/ui/InfoTip";
+import { Check, Close } from "@/components/ui/Icons";
 import {
   IVA_ISENCAO_LIMITE,
   IVA_ISENCAO_EXCESSO,
@@ -58,10 +59,10 @@ export default function IvaRecibosVerdesPage() {
             </p>
           </div>
           <ul className="text-sm text-stone-700 dark:text-stone-300 space-y-1.5">
-            <li className="flex items-start gap-2"><span className="text-brand mt-0.5">✓</span> Não cobras IVA nas faturas</li>
-            <li className="flex items-start gap-2"><span className="text-brand mt-0.5">✓</span> Não entregas declarações periódicas de IVA</li>
-            <li className="flex items-start gap-2"><span className="text-brand mt-0.5">✓</span> Menção obrigatória: "IVA — regime de isenção [Art.º 53.º do CIVA]" (código M10)</li>
-            <li className="flex items-start gap-2"><span className="text-stone-400 mt-0.5">✗</span> Não podes recuperar IVA das tuas compras profissionais</li>
+            <li className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-brand" /> Não cobras IVA nas faturas</li>
+            <li className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-brand" /> Não entregas declarações periódicas de IVA</li>
+            <li className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-brand" /> Menção obrigatória: "IVA — regime de isenção [Art.º 53.º do CIVA]" (código M10)</li>
+            <li className="flex items-start gap-2"><Close size={14} className="mt-0.5 shrink-0 text-stone-400" /> Não podes recuperar IVA das tuas compras profissionais</li>
           </ul>
         </div>
 
@@ -73,9 +74,9 @@ export default function IvaRecibosVerdesPage() {
             </p>
           </div>
           <ul className="text-sm text-stone-600 dark:text-stone-400 space-y-1.5">
-            <li className="flex items-start gap-2"><span className="text-brand mt-0.5">✓</span> Cobras IVA: 23% (normal), 13% (intermédia) ou 6% (reduzida)</li>
-            <li className="flex items-start gap-2"><span className="text-brand mt-0.5">✓</span> Declarações periódicas trimestrais: até ao dia 20 de fev/mai/ago/nov</li>
-            <li className="flex items-start gap-2"><span className="text-brand mt-0.5">✓</span> Podes deduzir o IVA das despesas profissionais</li>
+            <li className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-brand" /> Cobras IVA: 23% (normal), 13% (intermédia) ou 6% (reduzida)</li>
+            <li className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-brand" /> Declarações periódicas trimestrais: até ao dia 20 de fev/mai/ago/nov</li>
+            <li className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-brand" /> Podes deduzir o IVA das despesas profissionais</li>
           </ul>
         </div>
 

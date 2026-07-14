@@ -445,7 +445,7 @@ export default function ComparacaoNarrativa({
               </div>
               {!empresaMelhorSlider && (
                 <span className="mb-1.5 inline-flex items-center gap-0.5 rounded-full bg-brand px-2 py-0.5 text-[9px] font-black text-white">
-                  ✓ Melhor
+                  <Check size={10} className="text-white" /> Melhor
                 </span>
               )}
               <p className={`text-lg font-black tabular-nums leading-none ${!empresaMelhorSlider ? "text-brand-dark" : "text-stone-800 dark:text-stone-100"}`}>
@@ -462,7 +462,7 @@ export default function ComparacaoNarrativa({
               </div>
               {empresaMelhorSlider && (
                 <span className="mb-1.5 inline-flex items-center gap-0.5 rounded-full bg-brand px-2 py-0.5 text-[9px] font-black text-white">
-                  ✓ Melhor
+                  <Check size={10} className="text-white" /> Melhor
                 </span>
               )}
               <p className={`text-lg font-black tabular-nums leading-none ${empresaMelhorSlider ? "text-brand-dark" : "text-stone-800 dark:text-stone-100"}`}>

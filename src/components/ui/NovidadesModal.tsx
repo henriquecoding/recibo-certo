@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { m, AnimatePresence } from "motion/react";
 import { Close, Sparkle, Calendar } from "@/components/ui/Icons";
 import { APP_VERSION, VERSAO_STORAGE_KEY, CHANGELOG } from "@/lib/version";
+import { useModalA11y } from "@/hooks/useModalA11y";
 
 export default function NovidadesModal() {
   const [aberto, setAberto] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
@@ -36,6 +38,9 @@ export default function NovidadesModal() {
     setAberto(false);
   }
 
+  // Escape + scroll-lock + focus-trap + restauro de foco.
+  useModalA11y(aberto, fechar, dialogRef);
+
   return (
     <AnimatePresence>
       {aberto && (
@@ -59,11 +64,13 @@ export default function NovidadesModal() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.97, y: 16 }}
               transition={{ type: "spring", stiffness: 420, damping: 38 }}
+              ref={dialogRef}
+              tabIndex={-1}
               role="dialog"
               aria-modal
               aria-labelledby="novidades-titulo"
               onClick={(e) => e.stopPropagation()}
-              className="pointer-events-auto flex max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-t-4xl bg-white shadow-float dark:bg-stone-900 sm:max-h-[680px] sm:rounded-4xl"
+              className="pointer-events-auto flex max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-t-4xl bg-white shadow-float outline-none dark:bg-stone-900 sm:max-h-[680px] sm:rounded-4xl"
             >
             {/* Puxador (folha inferior, só no telemóvel) */}
             <div className="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-stone-200 dark:bg-stone-700 sm:hidden" aria-hidden />
@@ -87,7 +94,7 @@ export default function NovidadesModal() {
                 type="button"
                 onClick={fechar}
                 aria-label="Fechar"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:hover:bg-stone-800 dark:text-stone-500"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:hover:bg-stone-800 dark:text-stone-500"
               >
                 <Close size={16} />
               </button>
@@ -166,7 +173,10 @@ export default function NovidadesModal() {
 
 function formatarData(iso: string): string {
   try {
-    return new Date(iso).toLocaleDateString("pt-PT", {
+    // Datas "YYYY-MM-DD" são parseadas como meia-noite UTC; forçar hora local
+    // evita o off-by-one em fusos UTC-negativos (ex.: Açores).
+    const dataLocal = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T00:00:00` : iso;
+    return new Date(dataLocal).toLocaleDateString("pt-PT", {
       day: "numeric",
       month: "long",
       year: "numeric",

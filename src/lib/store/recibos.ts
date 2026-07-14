@@ -61,13 +61,21 @@ const IMPORT_ADIADO_KEY = (userId: string) => `recibocerto:import-adiado:${userI
 const COMPUTED_KEY = "recibocerto:recibos-computed:v1";
 
 // ─── localStorage ──────────────────────────────────────────────────────
+/** Um recibo mínimo válido: id, data e um valor numérico finito. Descarta
+ *  registos corrompidos para não propagar NaN a jusante (cálculos/insights). */
+function ehReciboValido(r: unknown): r is Recibo {
+  if (!r || typeof r !== "object") return false;
+  const o = r as Record<string, unknown>;
+  return typeof o.id === "string" && typeof o.data === "string" && Number.isFinite(o.valor as number);
+}
+
 function readLocal(): Recibo[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as Recibo[]) : [];
+    return Array.isArray(parsed) ? parsed.filter(ehReciboValido) : [];
   } catch {
     return [];
   }
@@ -75,7 +83,11 @@ function readLocal(): Recibo[] {
 
 function writeLocal(recibos: Recibo[]): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(recibos));
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(recibos));
+  } catch {
+    /* quota excedida / storage indisponível (ex.: modo privado) — ignora */
+  }
 }
 
 function clearLocal(): void {

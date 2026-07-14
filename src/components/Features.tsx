@@ -95,7 +95,7 @@ function CardLista({
 }: {
   titulo: string;
   badge?: string;
-  linhas: { l: string; v: string; strong?: boolean }[];
+  linhas: { l: string; v: string; strong?: boolean; ok?: boolean }[];
   rodape?: { l: string; v: string };
 }) {
   return (
@@ -118,11 +118,12 @@ function CardLista({
               {r.l}
             </span>
             <span
-              className={`text-xs font-semibold tabular-nums ${
+              className={`inline-flex items-center gap-1 text-xs font-semibold tabular-nums ${
                 r.strong ? "text-brand-dark" : "text-stone-700 dark:text-stone-200"
               }`}
             >
               {r.v}
+              {r.ok && <Check size={12} className="text-brand" />}
             </span>
           </div>
         ))}
@@ -374,8 +375,8 @@ function criarConteudo(
             titulo="Recibo vs. esperado"
             badge="Auditoria"
             linhas={[
-              { l: "IRS retido", v: "168 € ✓" },
-              { l: "Segurança Social", v: "165 € ✓" },
+              { l: "IRS retido", v: "168 €", ok: true },
+              { l: "Segurança Social", v: "165 €", ok: true },
               { l: "Líquido", v: "1 167 €", strong: true },
             ]}
           />

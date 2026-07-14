@@ -85,6 +85,7 @@ import dynamic from "next/dynamic";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import {
   Check,
+  Close,
   Warning,
   ArrowRight,
   Laptop,
@@ -6131,9 +6132,11 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                                         className={`text-xs font-semibold ${resultOrganizada.vantagemVsSimplificado >= 0 ? "text-emerald-700" : "text-amber-700"}`}
                                       >
                                         {resultOrganizada.vantagemVsSimplificado >=
-                                        0
-                                          ? `✓ Organizada poupa ${fmt(Math.round(resultOrganizada.vantagemVsSimplificado))}/ano`
-                                          : `✗ Simplificado é melhor por ${fmt(Math.round(Math.abs(resultOrganizada.vantagemVsSimplificado)))}/ano`}
+                                        0 ? (
+                                          <><Check size={12} className="mr-1 inline align-[-1px]" />Organizada poupa {fmt(Math.round(resultOrganizada.vantagemVsSimplificado))}/ano</>
+                                        ) : (
+                                          <><Close size={12} className="mr-1 inline align-[-1px]" />Simplificado é melhor por {fmt(Math.round(Math.abs(resultOrganizada.vantagemVsSimplificado)))}/ano</>
+                                        )}
                                       </span>
                                       <span
                                         className={`text-xs ${resultOrganizada.vantagemVsSimplificado >= 0 ? "text-emerald-600" : "text-amber-600"}`}
@@ -6964,9 +6967,11 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                                     className={`text-xs mt-0.5 ${resultOrganizada.vantagemVsSimplificado >= 0 ? "text-emerald-600" : "text-stone-400"}`}
                                   >
                                     {resultOrganizada.vantagemVsSimplificado >=
-                                    0
-                                      ? `✓ Mais ${fmt(Math.round(resultOrganizada.vantagemVsSimplificado))}/ano que simplificado`
-                                      : `✗ Menos ${fmt(Math.round(Math.abs(resultOrganizada.vantagemVsSimplificado)))}/ano que simplificado`}
+                                    0 ? (
+                                      <><Check size={12} className="mr-1 inline align-[-1px]" />Mais {fmt(Math.round(resultOrganizada.vantagemVsSimplificado))}/ano que simplificado</>
+                                    ) : (
+                                      <><Close size={12} className="mr-1 inline align-[-1px]" />Menos {fmt(Math.round(Math.abs(resultOrganizada.vantagemVsSimplificado)))}/ano que simplificado</>
+                                    )}
                                   </div>
                                 </div>
                                 <div
@@ -7407,9 +7412,11 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                                     ),
                                   )}
                                   /ano vs. taxa liberatória 28%
-                                  {opcaoEnglobamento
-                                    ? " — já aplicado ✓"
-                                    : " — activa acima"}
+                                  {opcaoEnglobamento ? (
+                                    <> — já aplicado <Check size={11} className="inline align-[-1px]" /></>
+                                  ) : (
+                                    " — activa acima"
+                                  )}
                                   .
                                 </span>
                               </div>

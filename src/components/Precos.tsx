@@ -246,7 +246,7 @@ export default function Precos() {
                 <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </summary>
-            <div className="mt-4 overflow-hidden rounded-2xl border border-stone-100">
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-stone-100">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-stone-100 bg-stone-50">

@@ -20,7 +20,7 @@ export default function InfoTip({ children, label = "Mais informação" }: { chi
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-4 w-4 items-center justify-center rounded-full border border-stone-300 text-[10px] font-bold text-stone-400 transition-colors hover:border-brand hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-600 dark:text-stone-500"
+        className="relative flex h-4 w-4 items-center justify-center rounded-full border border-stone-300 text-[10px] font-bold text-stone-400 transition-colors before:absolute before:-inset-2.5 before:content-[''] hover:border-brand hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-600 dark:text-stone-500"
       >
         <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden>
           <path d="M8 7.2v4M8 4.8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />

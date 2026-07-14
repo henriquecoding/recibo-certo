@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { pedidoDeAdmin } from "@/lib/supabase/verify-request-admin";
 import {
   FISCAL_YEAR,
   DATA_LAST_REVIEW,
@@ -1034,6 +1036,21 @@ function auditarMotorCalculo(): ResultadoTeste[] {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export async function GET(req: NextRequest) {
+  // Rate limit por IP: o agente "fontes" faz ~25 fetches externos e os demais
+  // correm loops pesados — sem isto, o endpoint era um vetor de DoS/amplificação.
+  const rl = rateLimit(`admin:auditoria:${clientIp(req)}`, 12, 60_000); // 12/min
+  if (!rl.ok) {
+    return NextResponse.json(
+      { erro: "Demasiados pedidos. Aguarda um momento." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
+  }
+
+  // Só admin autenticado (token Supabase no cabeçalho Authorization).
+  if (!(await pedidoDeAdmin(req))) {
+    return NextResponse.json({ erro: "Não autorizado." }, { status: 401 });
+  }
+
   const agente = req.nextUrl.searchParams.get("agente");
 
   if (agente === "fontes") {

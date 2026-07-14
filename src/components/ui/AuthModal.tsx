@@ -5,6 +5,7 @@ import { m, AnimatePresence } from "motion/react";
 import { Close, ArrowRight, User, Google, Linkedin, Check } from "@/components/ui/Icons";
 import { useAuth } from "@/lib/supabase/auth";
 import { validarPassword } from "@/lib/validacao-password";
+import { useModalA11y } from "@/hooks/useModalA11y";
 
 export default function AuthModal() {
   const {
@@ -21,6 +22,7 @@ export default function AuthModal() {
   const [aEnviar, setAEnviar] = useState(false);
   const [oauthEmCurso, setOauthEmCurso] = useState<"google" | "linkedin" | null>(null);
   const emailRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   // Sincroniza o modo quando o modal abre
   useEffect(() => {
@@ -34,13 +36,8 @@ export default function AuthModal() {
     }
   }, [modalAberto, modoModal]);
 
-  // Fecha com Escape
-  useEffect(() => {
-    if (!modalAberto) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") fecharModal(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [modalAberto, fecharModal]);
+  // Escape + scroll-lock + focus-trap + restauro de foco.
+  useModalA11y(modalAberto, fecharModal, dialogRef);
 
   const errosPw = modo === "criar" && password.length > 0 ? validarPassword(password) : [];
 
@@ -103,20 +100,25 @@ export default function AuthModal() {
             aria-hidden
           />
 
+          {/* Contentor de posição — folha inferior no telemóvel, centrado no desktop. */}
+          <div className="pointer-events-none fixed inset-0 z-[8001] flex items-end justify-center p-0 sm:items-center sm:p-4">
           <m.div
             key="modal"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.97, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.97, y: 16 }}
             transition={{ type: "spring", stiffness: 420, damping: 38 }}
+            ref={dialogRef}
+            tabIndex={-1}
             role="dialog"
             aria-modal
             aria-labelledby="auth-modal-titulo"
-            className="fixed inset-0 z-[8001] m-auto w-full max-w-sm rounded-4xl bg-white shadow-float dark:bg-stone-900"
-            style={{ height: "fit-content", maxHeight: "90dvh", overflowY: "auto" }}
+            className="pointer-events-auto flex max-h-[90dvh] w-full max-w-sm flex-col overflow-hidden rounded-t-4xl bg-white shadow-float outline-none dark:bg-stone-900 sm:rounded-4xl"
           >
+            {/* Puxador (folha inferior, só no telemóvel) */}
+            <div className="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-stone-200 dark:bg-stone-700 sm:hidden" aria-hidden />
             {/* Cabeçalho */}
-            <div className="relative flex flex-col items-center px-8 pt-8 pb-5 border-b border-stone-100 dark:border-stone-800">
+            <div className="relative flex shrink-0 flex-col items-center px-8 pt-5 pb-5 border-b border-stone-100 dark:border-stone-800 sm:pt-8">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand shadow-glow mb-3">
                 <User size={20} className="text-white" />
               </div>
@@ -132,12 +134,14 @@ export default function AuthModal() {
                 type="button"
                 onClick={fecharModal}
                 aria-label="Fechar"
-                className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-xl text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:hover:bg-stone-800"
+                className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-xl text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:hover:bg-stone-800"
               >
                 <Close size={16} />
               </button>
             </div>
 
+            {/* Corpo scrollável — min-h-0 essencial para o overflow dentro do flex column */}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <div className="px-8 py-6 space-y-3">
               {/* Google */}
               <button
@@ -233,7 +237,7 @@ export default function AuthModal() {
             </div>
 
             {/* Rodapé — alternar modo */}
-            <div className="px-8 pb-7 text-center">
+            <div className="px-8 pb-[max(1.75rem,env(safe-area-inset-bottom))] pt-1 text-center">
               <button
                 type="button"
                 onClick={() => { setModo(prev => prev === "entrar" ? "criar" : "entrar"); setErro(""); setInfo(""); }}
@@ -244,7 +248,9 @@ export default function AuthModal() {
                   : "Já tens conta? Entra aqui"}
               </button>
             </div>
+            </div>
           </m.div>
+          </div>
         </>
       )}
     </AnimatePresence>

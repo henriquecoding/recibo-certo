@@ -20,7 +20,7 @@
 export { FISCAL_YEAR } from "./fiscal-year";
 
 /** Data da última revisão completa dos dados (ISO 8601). */
-export const DATA_LAST_REVIEW = "2026-06-11" as const;
+export const DATA_LAST_REVIEW = "2026-07-14" as const;
 
 // ─── Registo de fontes (evita repetir URLs longos) ─────────────────────
 export interface Source {
@@ -352,6 +352,8 @@ const REV_MAIS_VALIAS = "2026-06-22";
 const REV_BENEFICIOS = "2026-06-22";
 // Data de verificação dos coeficientes de desvalorização da moeda (Portaria 382/2025).
 const REV_COEF_MOEDA = "2026-06-23";
+// Data de verificação do Salário Mínimo Nacional 2026 (RMMG 920 €, DL 139/2025).
+const REV_SMN = "2026-07-14";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  INDEXANTE DOS APOIOS SOCIAIS (IAS) — base de vários limites
@@ -1799,10 +1801,10 @@ export const COEF_DESVALORIZACAO_MOEDA = sv<CoefMoeda>(
 // ═══════════════════════════════════════════════════════════════════════
 
 export const SMN = sv(
-  870,
-  "Salário Mínimo Nacional 2026 (DL 109/2025 de 30 de dezembro)",
+  920,
+  "Salário Mínimo Nacional / RMMG 2026 (DL 139/2025, publicado em Diário da República; entrou em vigor a 1 de janeiro de 2026)",
   "segSocialGov",
-  TODAY
+  REV_SMN
 );
 
 // Valores derivados (calculados, nunca digitados à mão) ──────────────────
@@ -2605,10 +2607,30 @@ export function assertFiscalDataIntegrity(): void {
       t.forEach((e, i) => {
         if (!isRate(e.taxa)) erros.push(`Retenção cat. A (${reg}/${nome}) escalão ${i + 1}: taxa fora de [0,1].`);
         if (!(e.ate > ateAnt)) erros.push(`Retenção cat. A (${reg}/${nome}) escalão ${i + 1}: limite não crescente.`);
+        // parcelaAbater: número ≥ 0, ou fórmula { coef>0, base>0 } (mínimo de existência).
+        const pa = e.parcelaAbater;
+        if (typeof pa === "number") {
+          if (!(pa >= 0)) erros.push(`Retenção cat. A (${reg}/${nome}) escalão ${i + 1}: parcelaAbater negativa.`);
+        } else if (!(pa.coef > 0 && pa.base > 0)) {
+          erros.push(`Retenção cat. A (${reg}/${nome}) escalão ${i + 1}: parcelaAbater {coef,base} inválida.`);
+        }
         ateAnt = e.ate;
       });
       if (t[t.length - 1].ate !== Infinity) erros.push(`Retenção cat. A (${reg}/${nome}): último escalão deve ser Infinity.`);
     }
+  }
+
+  // 5b) Coerência do Salário Mínimo Nacional (SMN / RMMG). Estes cross-checks
+  //     teriam bloqueado a contradição "870 vs 920" que existia no ficheiro.
+  if (!(SMN.value > 0)) erros.push("SMN não positivo.");
+  if (MINIMO_EXISTENCIA.value !== SMN.value * 14) {
+    erros.push(`Mínimo de existência (${MINIMO_EXISTENCIA.value}) deve ser SMN × 14 (${SMN.value * 14}).`);
+  }
+  if (RETENCAO_DEP_ISENCAO.value !== SMN.value) {
+    erros.push(`Limiar de isenção de retenção (${RETENCAO_DEP_ISENCAO.value}) deve acompanhar o SMN (${SMN.value}).`);
+  }
+  if (RETENCAO_DEP_CONTINENTE_T1.value[0].ate !== SMN.value) {
+    erros.push(`1.º escalão de retenção Tabela I (${RETENCAO_DEP_CONTINENTE_T1.value[0].ate}) deve igualar o SMN (${SMN.value}).`);
   }
 
   // 6) Proveniência obrigatória: fonte registada + data válida em cada parâmetro.

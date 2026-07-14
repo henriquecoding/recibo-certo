@@ -20,6 +20,7 @@ import {
   type NivelGuardiao,
 } from "@/lib/email/templates";
 import { IVA_ISENCAO_LIMITE } from "@/lib/fiscal-data";
+import { cronAutorizado } from "@/lib/cron-auth";
 
 const LIMITE = IVA_ISENCAO_LIMITE.value; // 15 000 €
 const ANO = new Date().getFullYear();
@@ -41,10 +42,8 @@ function getSupabaseAdmin() {
 }
 
 export async function POST(req: NextRequest) {
-  // Autorização: CRON_SECRET (definido na Vercel como variável de ambiente)
-  const authHeader = req.headers.get("authorization");
-  const expected = `Bearer ${process.env.CRON_SECRET ?? process.env.STRIPE_WEBHOOK_SECRET}`;
-  if (authHeader !== expected) {
+  // Autorização: CRON_SECRET (definido na Vercel como variável de ambiente).
+  if (!cronAutorizado(req)) {
     return NextResponse.json({ erro: "Não autorizado." }, { status: 401 });
   }
 

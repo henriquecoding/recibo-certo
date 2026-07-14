@@ -6,14 +6,24 @@ import { META_TIPO } from "@/lib/fiscal-data";
 
 const num = (n: number) => n.toFixed(2).replace(".", ",");
 
+/**
+ * Célula CSV segura: aspas duplicadas e neutralização de injeção de fórmula
+ * (Excel/Sheets executam células que começam por = + - @ tab/CR). Prefixa `'`.
+ */
+function csvCell(value: string): string {
+  const v = value ?? "";
+  const safe = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
+  return `"${safe.replace(/"/g, '""')}"`;
+}
+
 export function recibosToCSV(recibos: Recibo[]): string {
   const cab = ["Data", "Cliente", "Tipo", "Valor", "IVA", "Retenção IRS", "Segurança Social", "Líquido"];
   const linhas = recibos.map((r) => {
     const c = calcularRecibo(r);
     return [
       r.data,
-      `"${(r.cliente || "").replace(/"/g, '""')}"`,
-      `"${META_TIPO[r.tipo].label}"`,
+      csvCell(r.cliente || ""),
+      csvCell(META_TIPO[r.tipo].label),
       num(c.bruto),
       num(c.iva),
       num(c.retencaoIRS),

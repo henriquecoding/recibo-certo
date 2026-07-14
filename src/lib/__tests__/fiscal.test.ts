@@ -24,17 +24,19 @@ describe("projetarDataLimite", () => {
 
   it("projeta 6 meses à frente se faturou 7500€ em 6 meses (jan-jun)", () => {
     // mesAtual = 5 (junho, 0-indexed) → 6 meses decorridos → média 1250/mês
-    // Restam 7500€ / 1250€ = 6 meses → projeta dezembro
-    const data = projetarDataLimite(7_500, LIMITE_IVA, 5);
+    // Restam 7500€ / 1250€ = 6 meses. Base fixa (junho) → projeta dezembro.
+    const base = new Date(2026, 5, 1); // junho 2026, determinístico
+    const data = projetarDataLimite(7_500, LIMITE_IVA, 5, base);
     expect(data).not.toBeNull();
     expect(data!.getMonth()).toBe(11); // dezembro
   });
 
   it("projeta 1 mês se faturou 14500€ em 10 meses", () => {
     // média 1450/mês; restam 500€ → < 1 mês → Math.ceil = 1
-    const data = projetarDataLimite(14_500, LIMITE_IVA, 9);
+    const base = new Date(2026, 9, 1); // outubro 2026, determinístico
+    const data = projetarDataLimite(14_500, LIMITE_IVA, 9, base);
     expect(data).not.toBeNull();
-    expect(data!.getMonth()).toBeGreaterThanOrEqual(0);
+    expect(data!.getMonth()).toBe(10); // novembro (outubro + 1)
   });
 
   it("retorna null se a média mensal é zero (limite já atingido)", () => {

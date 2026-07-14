@@ -91,10 +91,18 @@ export default function Onboarding({ onConcluir }: { onConcluir: () => void }) {
 
         {/* Stepper + ações */}
         <div className="mt-8 flex items-center justify-between">
-          <div className="flex gap-1.5" role="tablist" aria-label="Progresso">
+          <div
+            className="flex gap-1.5"
+            role="progressbar"
+            aria-label="Progresso"
+            aria-valuenow={passo + 1}
+            aria-valuemin={1}
+            aria-valuemax={PASSOS.length}
+          >
             {PASSOS.map((_, i) => (
               <span
                 key={i}
+                aria-hidden
                 className={`h-1.5 rounded-full transition-all ${i === passo ? "w-6 bg-brand" : "w-1.5 bg-stone-200 dark:bg-stone-700"}`}
               />
             ))}

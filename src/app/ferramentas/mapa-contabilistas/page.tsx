@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import MapaPrecosRegioes from "@/components/contabilista/MapaPrecosRegioes";
+import MapaPrecosRegioes from "@/components/contabilista/MapaPrecosRegioesLazy";
 
 export const metadata: Metadata = {
   title: "Mapa de preços de contabilistas por região 2026 | ReciboCerto",
