@@ -4,6 +4,14 @@ const INK = "#1C1917";
 const MUTED = "#78716C";
 const BG = "#FAFAF9";
 
+/** Escapa texto interpolado em HTML de email (evita injeção de markup). */
+function esc(s: string): string {
+  return (s || "").replace(
+    /[&<>"]/g,
+    (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch] || ch)
+  );
+}
+
 function layout(conteudo: string): string {
   return `<!DOCTYPE html>
 <html lang="pt">
@@ -55,7 +63,7 @@ export function emailBoasVindasWaitlist(email: string): { subject: string; html:
     html: layout(`
       <h2 style="margin:0 0 16px;font-size:20px;font-weight:700;color:${INK};">Bem-vindo ao ReciboCerto!</h2>
       <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:${MUTED};">
-        Obrigado por te registares, <strong style="color:${INK};">${email}</strong>.
+        Obrigado por te registares, <strong style="color:${INK};">${esc(email)}</strong>.
         O teu copiloto financeiro para recibos verdes está pronto a usar.
       </p>
       <p style="margin:0 0 8px;font-size:14px;line-height:1.7;color:${MUTED};">

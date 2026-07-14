@@ -26,6 +26,8 @@ import { dirname, join } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const DATA_FILE = join(ROOT, "src", "lib", "fiscal-data.ts");
+// FISCAL_YEAR vive num módulo leve à parte; fiscal-data.ts apenas o re-exporta.
+const FISCAL_YEAR_FILE = join(ROOT, "src", "lib", "fiscal-year.ts");
 const SKILL_FILE = join(ROOT, ".claude", "skills", "fiscalidade-pt-2026", "SKILL.md");
 
 const START = "<!-- AUTO-GERADO:valores-fiscais — não editar à mão. Atualizado por `npm run skills:sync`. -->";
@@ -61,8 +63,9 @@ function coef(frac) {
 
 async function main() {
   const src = await readFile(DATA_FILE, "utf8");
+  const yearSrc = await readFile(FISCAL_YEAR_FILE, "utf8");
 
-  const fiscalYear = grab(src, /FISCAL_YEAR\s*=\s*(\d{4})/, "FISCAL_YEAR");
+  const fiscalYear = grab(yearSrc, /FISCAL_YEAR\s*=\s*(\d{4})/, "FISCAL_YEAR");
   const lastReview = grab(src, /DATA_LAST_REVIEW\s*=\s*"(\d{4}-\d{2}-\d{2})"/, "DATA_LAST_REVIEW");
 
   const ias = grab(src, /export const IAS = sv\(\s*([\d.]+)/, "IAS");

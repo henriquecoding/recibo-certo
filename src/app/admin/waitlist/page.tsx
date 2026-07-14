@@ -72,7 +72,7 @@ export default function AdminWaitlist() {
           <p className="text-sm text-stone-400">Ainda não há nenhuma inscrição.</p>
         </div>
       ) : (
-        <div className="rounded-4xl border border-stone-100 bg-white shadow-card overflow-hidden">
+        <div className="rounded-4xl border border-stone-100 bg-white shadow-card overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-stone-100 bg-stone-50/50">

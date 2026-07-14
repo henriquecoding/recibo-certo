@@ -767,7 +767,10 @@ export function compararRegimes(input: ComparacaoInput): ComparacaoResult {
 
   // Freelancer (recibos verdes).
   const sim = simularIRSAnual({ brutoAnual: bruto, tipo: input.tipo, irsJovemAno: input.irsJovemAno, despesasJustificadas: despesas });
-  const ss = bruto * SS_COEFICIENTE.servicos.value * SS_TAXA.value;
+  // Base de SS com o teto de 12×IAS (coerente com calcular/simularIRSAnual): sem
+  // este limite, a SS do independente ficava sobrestimada para rendimentos altos.
+  const baseSSAnual = Math.min(bruto * SS_COEFICIENTE.servicos.value, SS_BASE_MAX_MENSAL.value * 12);
+  const ss = baseSSAnual * SS_TAXA.value;
   const freelancerLiquido = bruto - despesas - sim.irsEstimado - ss;
 
   // Empresa (sociedade): IRC progressivo PME + derrama, depois dividendos.

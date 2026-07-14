@@ -486,7 +486,11 @@ export default function AdminAuditoria() {
     setCarregando((p) => ({ ...p, [agenteId]: true }));
     setErros((p) => ({ ...p, [agenteId]: "" }));
     try {
-      const res = await fetch(`/api/admin/auditoria?agente=${agenteId}`);
+      const { getSupabase } = await import("@/lib/supabase/client");
+      const { data: { session } } = await getSupabase().auth.getSession();
+      const res = await fetch(`/api/admin/auditoria?agente=${agenteId}`, {
+        headers: session ? { Authorization: `Bearer ${session.access_token}` } : {},
+      });
       if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
       const data: RespostaAuditoria = await res.json();
       setResultados((p) => ({ ...p, [agenteId]: data }));

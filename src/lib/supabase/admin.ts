@@ -2,6 +2,7 @@
 // Todas as operações de escrita passam pela RLS — só funcionam com sessão admin.
 
 import { getSupabase } from "./client";
+import { emailValido, normalizarEmail } from "@/lib/validacao-email";
 
 // ── Anúncios ─────────────────────────────────────────────────
 
@@ -163,20 +164,15 @@ export async function eliminarParceiro(id: string): Promise<{ erro?: string }> {
 // ── Perfis / utilizadores ────────────────────────────────────
 
 export async function verificarAdmin(userId: string): Promise<boolean> {
-  const sb = getSupabase();
-
-  // 1.ª tentativa: verificar via tabela profiles (caminho normal após migration)
-  const { data } = await sb
+  // Fonte de verdade é o role em profiles (o mesmo que a RLS aplica). Não há
+  // fallback por email: um email conhecido sem role 'admin' na BD NÃO é admin.
+  const { data } = await getSupabase()
     .from("profiles")
     .select("role")
     .eq("id", userId)
     .single();
 
-  if (data?.role === "admin") return true;
-
-  const { data: au } = await sb.auth.getUser();
-  const email = au.user?.email;
-  return email === "admin@recibocerto.pt" || email === "taniasofiadt@gmail.com";
+  return data?.role === "admin";
 }
 
 export async function contarUtilizadores(): Promise<number> {
@@ -249,7 +245,18 @@ export interface PropostaRow {
 export type PropostaInput = Omit<PropostaRow, "id" | "estado" | "notas_admin" | "submetido_em" | "atualizado_em">;
 
 export async function submeterProposta(p: PropostaInput): Promise<{ erro?: string }> {
-  const { error } = await getSupabase().from("propostas_investidores").insert(p);
+  // Validação (primeira linha; a RLS + CHECKs de BD são a defesa a sério).
+  const nome = (p.nome ?? "").trim();
+  const email = (p.email ?? "").trim();
+  const interesse = (p.interesse ?? "").trim();
+  if (!nome || nome.length > 200) return { erro: "Nome inválido." };
+  if (!emailValido(email)) return { erro: "Email inválido." };
+  if (!interesse || interesse.length > 2000) return { erro: "Indica o teu interesse." };
+  if ((p.mensagem ?? "").length > 5000) return { erro: "Mensagem demasiado longa." };
+
+  const { error } = await getSupabase()
+    .from("propostas_investidores")
+    .insert({ ...p, nome, email: normalizarEmail(email), interesse });
   return error ? { erro: error.message } : {};
 }
 

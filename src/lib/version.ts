@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.86.1";
+export const APP_VERSION = "1.87.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,18 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.87.0",
+    data: "2026-07-14",
+    titulo: "Rigor fiscal, robustez e refinamentos de acessibilidade",
+    itens: [
+      "Salário Mínimo Nacional de 2026 atualizado para 920 € em todo o produto — alguns ecrãs (como o simulador de empresa) ainda mostravam 870 €. Os cálculos ficam agora coerentes com o valor oficial (Decreto-Lei 139/2025).",
+      "Os mapas de contabilistas passam a carregar de forma protegida: se algo falhar, mostram um aviso discreto em vez de deixarem a página em branco.",
+      "Janelas como as «Novidades» e o início de sessão ficaram mais acessíveis no telemóvel — fecham com a tecla Escape, bloqueiam o scroll de fundo, mantêm o foco do teclado e abrem como folha inferior, com áreas de toque maiores.",
+      "Nos guias, passas a poder navegar entre todos os temas também no telemóvel, e o guia «Merchant of Record» ganhou o mesmo cuidado visual dos restantes.",
+      "Reforço geral de segurança e de proteção dos teus dados nos bastidores.",
+    ],
+  },
   {
     version: "1.86.1",
     data: "2026-06-28",

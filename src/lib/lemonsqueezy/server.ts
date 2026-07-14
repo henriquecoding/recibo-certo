@@ -101,10 +101,13 @@ export function verificarAssinaturaLS(
     .update(rawBody)
     .digest("hex");
 
-  return crypto.timingSafeEqual(
-    Buffer.from(hash, "utf8"),
-    Buffer.from(signature, "utf8"),
-  );
+  const hashBuf = Buffer.from(hash, "utf8");
+  const sigBuf = Buffer.from(signature, "utf8");
+  // timingSafeEqual atira RangeError se os buffers tiverem tamanhos diferentes;
+  // uma assinatura malformada deve dar 401 limpo, não 500.
+  if (hashBuf.length !== sigBuf.length) return false;
+
+  return crypto.timingSafeEqual(hashBuf, sigBuf);
 }
 
 // ── Estrutura dos eventos de webhook ────────────────────────────────────────

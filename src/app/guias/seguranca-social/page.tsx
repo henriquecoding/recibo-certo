@@ -4,6 +4,7 @@ import { FontesGuia } from "@/components/guias/FontesGuia";
 import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import { CalculadoraSSTrimestral } from "@/components/guias/CalculadoraSSTrimestral";
 import InfoTip from "@/components/ui/InfoTip";
+import { Check } from "@/components/ui/Icons";
 import { SS_TAXA, SS_COEFICIENTE, SS_BASE_MAX_MENSAL, SS_MIN_MENSAL, IAS_VALUE } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 
@@ -86,9 +87,9 @@ export default function SegurancaSocialPage() {
             Estás isento de pagar SS pelos recibos verdes se:
           </p>
           <ul className="mt-3 space-y-2 text-sm text-stone-600 dark:text-stone-400">
-            <li className="flex items-start gap-2"><span className="text-brand mt-0.5 flex-shrink-0">✓</span> As entidades são diferentes (cliente ≠ empregador)</li>
-            <li className="flex items-start gap-2"><span className="text-brand mt-0.5 flex-shrink-0">✓</span> Média mensal dos recibos {"<"} 4 × IAS ({fmt(4 * iasVal)})</li>
-            <li className="flex items-start gap-2"><span className="text-brand mt-0.5 flex-shrink-0">✓</span> Rendimento do emprego ≥ 1 × IAS ({fmt(iasVal)})</li>
+            <li className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-brand" /> As entidades são diferentes (cliente ≠ empregador)</li>
+            <li className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-brand" /> Média mensal dos recibos {"<"} 4 × IAS ({fmt(4 * iasVal)})</li>
+            <li className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-brand" /> Rendimento do emprego ≥ 1 × IAS ({fmt(iasVal)})</li>
           </ul>
         </div>
       </section>

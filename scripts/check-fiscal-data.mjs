@@ -24,6 +24,8 @@ import { dirname, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_FILE = join(__dirname, "..", "src", "lib", "fiscal-data.ts");
+// FISCAL_YEAR vive num módulo leve à parte; fiscal-data.ts apenas o re-exporta.
+const FISCAL_YEAR_FILE = join(__dirname, "..", "src", "lib", "fiscal-year.ts");
 const REPORT_FILE = join(__dirname, "..", "fiscal-check-report.md");
 
 const MAX_AGE_DAYS = 120; // após este período, recomenda-se reverificação.
@@ -43,8 +45,9 @@ function isoLocal(d) {
 
 async function main() {
   const src = await readFile(DATA_FILE, "utf8");
+  const yearSrc = await readFile(FISCAL_YEAR_FILE, "utf8");
 
-  const fiscalYear = Number((src.match(/FISCAL_YEAR\s*=\s*(\d{4})/) || [])[1]);
+  const fiscalYear = Number((yearSrc.match(/FISCAL_YEAR\s*=\s*(\d{4})/) || [])[1]);
   const lastReview = (src.match(/DATA_LAST_REVIEW\s*=\s*"(\d{4}-\d{2}-\d{2})"/) || [])[1];
   const today = (src.match(/const TODAY\s*=\s*"(\d{4}-\d{2}-\d{2})"/) || [])[1];
   const urls = [...src.matchAll(/url:\s*"([^"]+)"/g)].map((m) => m[1]);
@@ -53,7 +56,7 @@ async function main() {
   const warnings = [];
   const info = [];
 
-  if (!fiscalYear) errors.push("Não foi possível ler FISCAL_YEAR de fiscal-data.ts.");
+  if (!fiscalYear) errors.push("Não foi possível ler FISCAL_YEAR de fiscal-year.ts.");
   if (!lastReview) errors.push("Não foi possível ler DATA_LAST_REVIEW de fiscal-data.ts.");
 
   // 1) Ano fiscal vs. ano civil.

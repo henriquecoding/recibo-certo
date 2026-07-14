@@ -55,7 +55,11 @@ function ler(): PreferenciasFiscais {
 
 function gravar(prefs: PreferenciasFiscais): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+  } catch {
+    /* quota excedida / storage indisponível — ignora */
+  }
 }
 
 export function usePreferenciasFiscais() {

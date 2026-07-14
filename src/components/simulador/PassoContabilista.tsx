@@ -17,7 +17,7 @@ import {
 import { fmt } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import { Check, Warning, Building, ShieldCheck, FileSign, Wallet } from "@/components/ui/Icons";
-import MapaPrecosRegioes from "@/components/contabilista/MapaPrecosRegioes";
+import MapaPrecosRegioes from "@/components/contabilista/MapaPrecosRegioesLazy";
 
 const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
 const soDecimal = (s: string) => s.replace(/[^\d.,]/g, "");

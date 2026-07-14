@@ -4,6 +4,7 @@ import { FontesGuia } from "@/components/guias/FontesGuia";
 import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import { SimuladorIRSJovem } from "@/components/guias/SimuladorIRSJovem";
 import InfoTip from "@/components/ui/InfoTip";
+import { Check } from "@/components/ui/Icons";
 import { IRS_JOVEM, IAS_VALUE } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import Badge from "@/components/ui/Badge";
@@ -98,7 +99,7 @@ export default function IRSJovemPage() {
             "Sem requisito de diploma académico (alteração introduzida em 2025)",
           ].map((crit) => (
             <div key={crit} className="flex items-start gap-3 rounded-2xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 px-4 py-3">
-              <span className="mt-0.5 text-brand flex-shrink-0 text-sm">✓</span>
+              <Check size={14} className="mt-0.5 shrink-0 text-brand" />
               <p className="text-sm text-stone-600 dark:text-stone-400">{crit}</p>
             </div>
           ))}

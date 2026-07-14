@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import {
-  ChevronRight, Bank, Receipt, Calculator, ShieldCheck, Coin, User, Briefcase,
+  ChevronRight, ChevronDown, Menu, Bank, Receipt, Calculator, ShieldCheck, Coin, User, Briefcase,
   Globe, FileSign, Wallet, Calendar, Clock, Building, Scale, Flag, Megaphone,
 } from "@/components/ui/Icons";
 import { generateBreadcrumbSchema } from "@/lib/seo";
@@ -132,6 +132,24 @@ export default function GuiasLayout({ children }: { children: ReactNode }) {
               </>
             )}
           </nav>
+
+          {/* Navegação entre guias — mobile (a sidebar é lg:block).
+              Disclosure nativa, acessível por teclado, sem estado/JS. */}
+          {!naIndex && (
+            <details className="group mb-6 rounded-2xl border border-stone-200 bg-white shadow-card lg:hidden dark:border-stone-700 dark:bg-stone-900">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-semibold text-stone-700 dark:text-stone-200 [&::-webkit-details-marker]:hidden">
+                <span className="inline-flex items-center gap-2">
+                  <Menu size={16} className="text-brand" /> Todos os guias
+                </span>
+                <ChevronDown size={16} className="text-stone-400 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="max-h-[60vh] overflow-y-auto border-t border-stone-100 px-3 py-3 dark:border-stone-800">
+                {SIDEBAR_SECTIONS.map((s) => (
+                  <SidebarSection key={s.titulo} titulo={s.titulo} items={s.items} pathname={pathname} />
+                ))}
+              </div>
+            </details>
+          )}
 
           <div className="flex gap-10">
             {/* Sidebar — oculto em mobile */}

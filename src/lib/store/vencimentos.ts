@@ -48,7 +48,11 @@ function readLocal(): CenarioVencimento[] {
 
 function writeLocal(xs: CenarioVencimento[]): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(xs));
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(xs));
+  } catch {
+    /* quota excedida / storage indisponível — ignora */
+  }
 }
 
 function uid(): string {

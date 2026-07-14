@@ -3,6 +3,7 @@ import { GuiaHero } from "@/components/guias/GuiaHero";
 import { FontesGuia } from "@/components/guias/FontesGuia";
 import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import InfoTip from "@/components/ui/InfoTip";
+import { Check } from "@/components/ui/Icons";
 import { IAS_VALUE, DISPENSA_RETENCAO_LIMITE, RETENCAO } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import Badge from "@/components/ui/Badge";
@@ -72,11 +73,11 @@ export default function AcumulacaoEmpregoPage() {
             </div>
             <p className="text-sm text-stone-700 dark:text-stone-300 mb-3">Se cumprires <em>todas</em> estas condições:</p>
             <ul className="space-y-1.5 text-sm text-stone-600 dark:text-stone-400">
-              <li className="flex items-start gap-2"><span className="text-brand mt-0.5">✓</span> Cliente dos recibos <strong>diferente</strong> do empregador</li>
-              <li className="flex items-start gap-2"><span className="text-brand mt-0.5">✓</span> Média mensal dos recibos {"<"} 4 × IAS ({fmt(4 * ias)})
+              <li className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-brand" /> Cliente dos recibos <strong>diferente</strong> do empregador</li>
+              <li className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-brand" /> Média mensal dos recibos {"<"} 4 × IAS ({fmt(4 * ias)})
                 <InfoTip label="Base legal isenção SS">Art. 152.º Código Contributivo</InfoTip>
               </li>
-              <li className="flex items-start gap-2"><span className="text-brand mt-0.5">✓</span> Salário do emprego ≥ 1 × IAS ({fmt(ias)})</li>
+              <li className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-brand" /> Salário do emprego ≥ 1 × IAS ({fmt(ias)})</li>
             </ul>
           </div>
           <div className="rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 p-5">

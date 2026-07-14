@@ -12,6 +12,7 @@ export function projetarDataLimite(
   faturado: number,
   limite: number,
   mesAtual: number, // 0-indexed (Date.getMonth())
+  hoje: Date = new Date(), // injetável para testes determinísticos
 ): Date | null {
   if (faturado >= limite) return null;
   const mesesDecorridos = mesAtual + 1;
@@ -20,7 +21,6 @@ export function projetarDataLimite(
   if (mediaMensal <= 0) return null;
   const mesesRestantes = Math.ceil((limite - faturado) / mediaMensal);
   if (mesesRestantes <= 0) return null;
-  const hoje = new Date();
   return new Date(hoje.getFullYear(), hoje.getMonth() + mesesRestantes, 1);
 }
 
