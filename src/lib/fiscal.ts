@@ -63,9 +63,6 @@ import {
   RFAI_TAXA_LITORAL,
   RFAI_LIMITE_INVESTIMENTO_INTERIOR,
   RFAI_LIMITE_COLETA,
-  DLRR_TAXA,
-  DLRR_LIMITE_LUCROS,
-  DLRR_LIMITE_COLETA,
   SIFIDE_TAXA_BASE,
   SIFIDE_TAXA_INCREMENTAL,
   SIFIDE_TETO_INCREMENTAL,
@@ -956,44 +953,11 @@ export function estimarRFAI(input: RFAIInput): RFAIResult {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-//  DLRR — Dedução por Lucros Retidos e Reinvestidos (Art. 27.º–34.º CFI)
-//  Apenas PME e Small Mid Cap (≤ 3 000 trabalhadores).
+//  DLRR — REVOGADA desde 1 jan 2023 (Art. 281.º da Lei 24-D/2022).
+//  O motor `estimarDLRR` foi removido: simular a DLRR em 2026 produziria
+//  uma poupança fiscal que já não existe. O benefício sucessor é o ICE
+//  (Art. 43.º-D EBF) — ver `DLRR_REVOGADA_NOTA` em fiscal-data.ts.
 // ─────────────────────────────────────────────────────────────────────
-
-export interface DLRRInput {
-  /** Lucros retidos e reinvestidos em ativos elegíveis no período. */
-  lucrosRetidos: number;
-  /** Coleta de IRC do período. */
-  coletaIRC: number;
-  /** Saldo de DLRR reportado de anos anteriores ainda não deduzido. */
-  reporteAnterior?: number;
-}
-
-export interface DLRRResult {
-  deducaoCalculada: number;
-  limiteColeta: number;
-  deducaoAplicavel: number;
-  reporteParaProximo: number;
-}
-
-/**
- * Estima a dedução DLRR à coleta de IRC para PME.
- * Não verifica elegibilidade PME/Small Mid Cap — tarefa do contabilista.
- */
-export function estimarDLRR(input: DLRRInput): DLRRResult {
-  const lucros = Math.min(sanitize(input.lucrosRetidos), DLRR_LIMITE_LUCROS.value);
-  const reporte = sanitize(input.reporteAnterior ?? 0);
-  const deducaoCalculada = lucros * DLRR_TAXA.value;
-  const totalDisponivel = deducaoCalculada + reporte;
-  const limColeta = input.coletaIRC * DLRR_LIMITE_COLETA.value;
-  const deducaoAplicavel = Math.min(totalDisponivel, limColeta);
-  return {
-    deducaoCalculada,
-    limiteColeta: limColeta,
-    deducaoAplicavel,
-    reporteParaProximo: Math.max(0, totalDisponivel - deducaoAplicavel),
-  };
-}
 
 // ─────────────────────────────────────────────────────────────────────
 //  SIFIDE II — Incentivos Fiscais à I&D (Art. 35.º–42.º CFI)

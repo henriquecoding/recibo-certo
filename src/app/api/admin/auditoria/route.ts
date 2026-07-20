@@ -55,10 +55,6 @@ import {
   RFAI_TAXA_LITORAL,
   RFAI_LIMITE_COLETA,
   RFAI_REPORTE_ANOS,
-  DLRR_TAXA,
-  DLRR_LIMITE_LUCROS,
-  DLRR_LIMITE_COLETA,
-  DLRR_REPORTE_ANOS,
   SIFIDE_TAXA_BASE,
   SIFIDE_TAXA_INCREMENTAL,
   SIFIDE_TETO_INCREMENTAL,
@@ -566,21 +562,12 @@ function buildVerificacoes(): VerificacaoDef[] {
     keywords: ["10", "exercícios", "reporte", "RFAI"],
   });
 
-  // ── DLRR ──
-  v.push(defPercent("f-dlrr-taxa", "DLRR", "Taxa de dedução",
-    0.10, ["cfi", "occDLRR"],
-    ["10%", "DLRR", "lucros retidos"]));
-  v.push(defAmount("f-dlrr-limite", "DLRR", "Limite lucros elegíveis",
-    5000000, ["cfi", "occDLRR"],
-    ["5.000.000", "5 000 000", "lucros", "DLRR"]));
-  v.push(defPercent("f-dlrr-coleta", "DLRR", "Limite coleta",
-    0.25, ["cfi", "occDLRR"],
-    ["25%", "coleta", "DLRR"]));
+  // ── DLRR — revogada (Lei 24-D/2022); auditamos apenas que continua revogada ──
   v.push({
-    id: "f-dlrr-reporte", grupo: "DLRR", nome: "Reporte saldo não utilizado",
-    valorLocal: "12 exercícios", fontes: ["cfi", "occDLRR"],
-    pattern: "12\\s*(?:anos|exercícios)",
-    keywords: ["12", "exercícios", "reporte", "DLRR"],
+    id: "f-dlrr-revogada", grupo: "DLRR", nome: "Regime revogado (sem parâmetros ativos)",
+    valorLocal: "revogada desde 2023", fontes: ["occDLRR"],
+    pattern: "revoga",
+    keywords: ["DLRR", "revogada", "24-D/2022", "ICE"],
   });
 
   // ── SIFIDE II ──

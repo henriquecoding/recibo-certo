@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { projetarDataLimite } from "@/components/dashboard/IvaProgresso";
-import { prazoSS, calcularSS } from "@/components/dashboard/GuardiaoSS";
+import { prazoDeclaracaoSS, proximoPagamentoSS, calcularSS } from "@/components/dashboard/GuardiaoSS";
 import {
   IVA_ISENCAO_LIMITE,
   SS_TAXA,
@@ -44,23 +44,41 @@ describe("projetarDataLimite", () => {
   });
 });
 
-// ── prazoSS ──────────────────────────────────────────────────────────────────
+// ── prazoDeclaracaoSS / proximoPagamentoSS ──────────────────────────────────
+// Comparações por componentes locais (getFullYear/getMonth/getDate) — nunca
+// via toISOString(), que desloca o dia consoante o fuso horário do runner.
 
-describe("prazoSS", () => {
-  it("1.º trimestre → 20 de julho do mesmo ano", () => {
-    expect(prazoSS(0, 2026).toISOString().slice(0, 10)).toBe("2026-07-20");
+const ymd = (d: Date) => [d.getFullYear(), d.getMonth(), d.getDate()] as const;
+
+describe("prazoDeclaracaoSS (declaração trimestral — último dia do mês seguinte)", () => {
+  it("1.º trimestre → 30 de abril do mesmo ano", () => {
+    expect(ymd(prazoDeclaracaoSS(0, 2026))).toEqual([2026, 3, 30]);
   });
 
-  it("2.º trimestre → 20 de outubro do mesmo ano", () => {
-    expect(prazoSS(1, 2026).toISOString().slice(0, 10)).toBe("2026-10-20");
+  it("2.º trimestre → 31 de julho do mesmo ano", () => {
+    expect(ymd(prazoDeclaracaoSS(1, 2026))).toEqual([2026, 6, 31]);
   });
 
-  it("3.º trimestre → 20 de janeiro do ano seguinte", () => {
-    expect(prazoSS(2, 2026).toISOString().slice(0, 10)).toBe("2027-01-20");
+  it("3.º trimestre → 31 de outubro do mesmo ano", () => {
+    expect(ymd(prazoDeclaracaoSS(2, 2026))).toEqual([2026, 9, 31]);
   });
 
-  it("4.º trimestre → 20 de abril do ano seguinte", () => {
-    expect(prazoSS(3, 2026).toISOString().slice(0, 10)).toBe("2027-04-20");
+  it("4.º trimestre → 31 de janeiro do ano seguinte", () => {
+    expect(ymd(prazoDeclaracaoSS(3, 2026))).toEqual([2027, 0, 31]);
+  });
+});
+
+describe("proximoPagamentoSS (pagamento mensal — dia 10 a 20 do mês seguinte)", () => {
+  it("antes do dia 20 → dia 20 do próprio mês", () => {
+    expect(ymd(proximoPagamentoSS(new Date(2026, 6, 15)))).toEqual([2026, 6, 20]);
+  });
+
+  it("depois do dia 20 → dia 20 do mês seguinte", () => {
+    expect(ymd(proximoPagamentoSS(new Date(2026, 6, 25)))).toEqual([2026, 7, 20]);
+  });
+
+  it("dezembro depois do dia 20 → 20 de janeiro do ano seguinte", () => {
+    expect(ymd(proximoPagamentoSS(new Date(2026, 11, 28)))).toEqual([2027, 0, 20]);
   });
 });
 

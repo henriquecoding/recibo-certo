@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 };
 
 const FONTES = [
-  { titulo: "EBF — Art. 58.º-A (IFICI)", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf58-a.aspx", tipo: "oficial" as const },
+  { titulo: "EBF — Art. 58.º-A (IFICI)", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/EBF58A.aspx", tipo: "oficial" as const },
   { titulo: "Portal das Finanças", url: "https://www.portaldasfinancas.gov.pt", tipo: "oficial" as const },
 ];
 

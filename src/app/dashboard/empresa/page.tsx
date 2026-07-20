@@ -6,7 +6,7 @@ export default function Page() {
     <PaginaFerramenta
       eyebrow="Simuladores"
       titulo="Abrir empresa"
-      descricao="Faturação, custos e dividendos — estima o líquido via sociedade com IRC PME, derrama, tributação autónoma e benefícios fiscais (RFAI, DLRR, SIFIDE)."
+      descricao="Faturação, custos e dividendos — estima o líquido via sociedade com IRC PME, derrama, tributação autónoma e benefícios fiscais (RFAI, SIFIDE II, ICE)."
     >
       <SimuladorIntegrado vista="empresa" />
     </PaginaFerramenta>

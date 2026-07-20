@@ -79,12 +79,12 @@ cat. B. Dados em `CATEGORIA_F` (`fiscal-data.ts`); motor próprio
 > `npm run skills:sync`. Não editar à mão — alterar os dados na fonte de verdade.
 
 <!-- AUTO-GERADO:valores-fiscais — não editar à mão. Atualizado por `npm run skills:sync`. -->
-<!-- Ano fiscal 2026 · última revisão 2026-07-14 · gerado de src/lib/fiscal-data.ts -->
+<!-- Ano fiscal 2026 · última revisão 2026-07-20 · gerado de src/lib/fiscal-data.ts -->
 
 - **IAS** 537,13 €.
 - **Retenção na fonte** (cat. B): Art. 151.º 23% · outros serviços 11,5% · direitos de autor 16,5% · vendas sem retenção. Dispensa abaixo de 15 000 €/ano.
 - **Coeficientes do regime simplificado**: serviços 151.º 0,75 · outros 0,35 · vendas/hotelaria 0,15 · propriedade intelectual 0,95 · AL moradia 0,35 (contenção 0,50) · transparência 1,0 · **subsídios não destinados à exploração 0,30** · **subsídios à exploração 0,10**.
-- **IVA**: isenção até 15 000 € (excesso 18 750 €). Continente 6/13/23, Madeira 5/12/22, Açores 4/9/16.
+- **IVA**: isenção até 15 000 € (excesso 18 750 €). Continente 6/13/23, Madeira 4/12/22, Açores 4/9/16.
 - **Segurança Social**: taxa 21,4% sobre 70% (serviços) ou 20% (bens/hotelaria).
 - **Categoria F (rendas puras)**: taxa autónoma habitação 25% · não habitacional 28%; reduções por duração do contrato habitacional (5–10 anos −10 p.p.; 10–20 −15 p.p.; ≥20 −20 p.p.). Sem SS, sem IVA. Motor próprio `calcularCategoriaF`.
 - **IRS**: escalões de 12,5% a 48%; mínimo de existência 12 880 €.
@@ -113,7 +113,11 @@ divergências). Assim a skill nunca desalinha da fonte de verdade.
 |---|---|---|---|
 | Combustão (gasóleo/gasolina) | 8% | 25% | 32% |
 | PHEV (Euro 6e-bis, < 80 g CO₂/km) | 2,5% | 7,5% | 15% |
-| Elétrica | 0% | 0% | 0% |
+| Elétrica ≤ €62 500 de custo de aquisição | 0% | 0% | 0% |
+
+**Elétricas NÃO são sempre isentas:** viaturas 100% elétricas com custo de
+aquisição **superior a €62 500** (limite da Portaria 467/2010) pagam TA de
+**10%** sobre os encargos — Art. 88.º, n.º 20 CIRC.
 
 **Atenção (thresholds antigos incorretos):** até 2024 os limites eram €27 500 /
 €35 000 com taxas 10% / 17,5% / 35%. Foram atualizados na Lei do OE2025 — não
@@ -180,18 +184,28 @@ AICEP. Benefícios adicionais além do RFAI regular:
 
 **Fonte:** Art. 8.º-22.º CFI; portaldosincentivos.pt; IAPMEI; OCC Jan 2026.
 
-### DLRR — Dedução por Lucros Retidos e Reinvestidos (Art. 27.º–34.º CFI)
+### DLRR — REVOGADA (não simular em 2026!)
 
-- **Só PME e Small Mid Cap** (≤ 3 000 trabalhadores; confirmar definição CFI).
-- Dedução: 10% dos lucros retidos e reinvestidos em ativos elegíveis.
-- **Limite máximo de lucros elegíveis:** €5 000 000 por período.
-- **Limite à coleta:** dedução ≤ 25% da coleta IRC.
-- Saldo não utilizado: reportável por **12 exercícios** seguintes.
-- Os lucros devem ser reinvestidos nos 3 anos seguintes à sua retenção.
+- Os Art. 27.º–34.º do CFI foram **revogados pelo Art. 281.º da Lei n.º
+  24-D/2022 (OE2023), com efeitos a 1 de janeiro de 2023**. O regime só se
+  aplicou a lucros retidos até ao período de 2022.
+- **NUNCA apresentar a DLRR como poupança em simulações de 2026** — é um
+  benefício que já não existe. O código guarda apenas `DLRR_REVOGADA_NOTA`
+  (fiscal-data.ts) para explicar a revogação ao utilizador.
+- Sucessor: **ICE — Incentivo à Capitalização das Empresas (Art. 43.º-D EBF)**:
+  dedução ao lucro tributável = (Euribor 12M média + spread de 1,5 p.p.; 2 p.p.
+  para PME/Small Mid Cap) × aumentos líquidos dos capitais próprios elegíveis
+  (ano + 6 anteriores), com majoração transitória de 20% em 2026. Depende do
+  balanço — não simular sem dados reais; remeter para contabilista.
 
-**Fonte:** Art. 27.º-34.º CFI; OCC Benefícios Fiscais Jan 2026; Coverflex IRC 2026.
+**Fonte:** Art. 281.º Lei 24-D/2022; Art. 43.º-D EBF; OCC Guia Prático ICE.
 
 ### SIFIDE II — Sistema de Incentivos Fiscais à I&D Empresarial (Art. 35.º–42.º CFI)
+
+**Vigência:** prorrogado até ao período de tributação de **2026** (Lei n.º
+13/2026, de 16 de abril). O OE2026 **eliminou o SIFIDE indireto** (dedução via
+fundos de investimento) — só o investimento direto em I&D conta. Confirmar a
+vigência anualmente antes de simular anos seguintes.
 
 **Taxa base:** 32,5% das despesas com I&D do período.
 
@@ -290,19 +304,20 @@ simuladorneto.pt (Jan/Mar 2026).
 **Fonte:** Art. 87.º CIRS; CGD Benefícios Deficiência; APD Porto; info.portaldasfinancas.gov.pt.
 
 ### IFICI — Incentivo Fiscal à Investigação Científica e Inovação (ex-NHR 2.0)
-- Substitui o NHR clássico desde 2024 (OE2024).
-- **Taxa flat: 20%** sobre rendimentos do trabalho e cat. B de origem portuguesa.
+- Substitui o NHR clássico desde 2024 (OE2024). Base legal: Art. 58.º-A EBF.
+- **Taxa especial de 20% APENAS sobre rendimentos líquidos das categorias A e B**
+  auferidos nas atividades elegíveis (Art. 58.º-A, n.º 2 — texto oficial da AT).
+- **Dividendos de fonte portuguesa (cat. E) FICAM DE FORA** — seguem a taxa
+  liberatória de 28% (Art. 71.º CIRS) ou o englobamento. NUNCA aplicar os 20%
+  do IFICI a dividendos nacionais numa simulação: é inventar um benefício.
 - Elegíveis: investigadores, professores universitários, pessoal de I&D, startups
-  de tecnologia, determinadas atividades de valor acrescentado elevado.
+  certificadas, profissões altamente qualificadas (portaria) e regimes regionais
+  RAA/RAM (al. g).
 - Prazo: 10 anos (não renovável após período esgotado).
-- Dividendos e juros de fonte estrangeira: potencialmente isentos (confirmar caso a caso).
+- Rendimentos de fonte estrangeira: isenção (método de isenção), exceto pensões.
 
-> Para o simulador: aplicar a taxa de 20% flat ao rendimento coletável (em vez
-> dos escalões progressivos) quando o utilizador seleciona IFICI. Notar que a
-> elegibilidade depende da atividade e estatuto aprovado pela AT.
-
-**Fonte:** OE2024 (Lei 82/2023); PwC Guia IRS 2026; getgoldenvisa.com; agencygroup.pt;
-expert-zoom.com (2026).
+**Fonte:** Art. 58.º-A EBF (Portal das Finanças, página EBF58A); Lei 82/2023
+(OE2024); PwC Guia IRS 2026.
 
 ### Agregado Familiar e Dependentes — Deduções à Coleta (Art. 78.º-A CIRS)
 

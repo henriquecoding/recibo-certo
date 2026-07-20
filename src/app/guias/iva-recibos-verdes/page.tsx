@@ -29,8 +29,8 @@ export const metadata: Metadata = {
 
 const FONTES = [
   { titulo: "Art. 53.º CIVA — Portal das Finanças", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-53-o-do-civa.aspx", tipo: "oficial" as const },
-  { titulo: "Art. 9.º CIVA — Portal das Finanças", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-9-do-civa.aspx", tipo: "oficial" as const },
-  { titulo: "Art. 18.º CIVA — taxas", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-18-do-civa.aspx", tipo: "oficial" as const },
+  { titulo: "Art. 9.º CIVA — Portal das Finanças", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva9.aspx", tipo: "oficial" as const },
+  { titulo: "Art. 18.º CIVA — taxas", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva18.aspx", tipo: "oficial" as const },
   { titulo: "OCC — Taxas de IVA em Portugal e Regiões Autónomas", url: "https://www.occ.pt/pt-pt/noticias/iva-taxas-em-portugal-continental-e-acores", tipo: "referencia" as const },
   { titulo: "SimuladorNeto — IVA recibos verdes art. 53.º 2026", url: "https://simuladorneto.pt/blog/iva-recibos-verdes-isencao-artigo-53-2026", tipo: "referencia" as const },
   { titulo: "InvoiceXpress — Alterações regime isenção IVA art. 53.º", url: "https://invoicexpress.com/blog/alteracoes-regime-isencao-iva-artigo-53/", tipo: "referencia" as const },

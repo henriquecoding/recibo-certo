@@ -4,9 +4,11 @@
 //  ---------------------------------------------------------------------
 //  IMPORTANTE: ao contrário das estimativas de preços de contabilistas, estes
 //  são DADOS FISCAIS reais (taxas e benefícios legais). Cada item traz a base
-//  legal. As taxas-chave (IRC PME, RFAI, DLRR, SIFIDE, IFICI, derrama) vivem na
+//  legal. As taxas-chave (IRC PME, RFAI, SIFIDE, IFICI, derrama) vivem na
 //  fonte de verdade `fiscal-data.ts`; aqui acrescentam-se os regimes regionais
 //  verificados em fontes oficiais (ver `INCENTIVOS_FONTES`).
+//  NOTA: a DLRR foi revogada desde 2023 (Lei 24-D/2022) — o benefício
+//  equivalente atual é o ICE (Art. 43.º-D EBF).
 //
 //  CAVEAT DE EXATIDÃO: a "interioridade" (IRC 12,5% — Art. 41.º-B EBF) aplica-se
 //  a CONCELHOS específicos classificados como territórios do interior / baixa
@@ -26,14 +28,22 @@ import {
 import { REGIOES_PRECO, regiaoMaisProxima } from "@/lib/contabilista-regioes";
 
 /** Data da última verificação dos regimes regionais (fontes oficiais). */
-export const INCENTIVOS_VERIFICADO = "2026-06-19";
+export const INCENTIVOS_VERIFICADO = "2026-07-20";
 
-/** Taxa de IRC reduzida para territórios do interior — Art. 41.º-B EBF. */
+/**
+ * Taxa de IRC reduzida para territórios do interior — Art. 41.º-B EBF.
+ * Aplica-se APENAS aos primeiros 50 000 € de matéria coletável; o excedente
+ * segue a taxa geral do Art. 87.º CIRC.
+ */
 export const IRC_INTERIOR = 0.125;
-/** IRC geral nos Açores (redução regional de 30% sobre a taxa nacional). */
+/** IRC geral nos Açores (redução regional de 30% sobre a taxa nacional de 19%). */
 export const IRC_ACORES_GERAL = 0.133;
-/** IRC PME nos Açores (taxa especial regional). */
+/** IRC PME nos Açores — 8,75% nos primeiros 50 000 € (mantida no ORAA 2026). */
 export const IRC_ACORES_PME = 0.0875;
+/** IRC geral na Madeira — 13,3% no ORAM 2026 (antes 14%). */
+export const IRC_MADEIRA_GERAL = 0.133;
+/** IRC PME na Madeira — 10,5% nos primeiros 50 000 € no ORAM 2026 (antes 11,2%). */
+export const IRC_MADEIRA_PME = 0.105;
 /** IRC no Centro Internacional de Negócios da Madeira (Zona Franca). */
 export const IRC_MADEIRA_ZF = 0.05;
 
@@ -85,11 +95,11 @@ const BENEFICIO_DERRAMA_INTERIOR: BeneficioRegiao = {
     "Os municípios do interior e de baixa densidade tendem a fixar a derrama municipal abaixo do máximo legal de 1,5% — muitos a 0% ou a 0,5%. Confirma a taxa do teu município.",
   base: "Art. 18.º Lei das Finanças Locais · Portais municipais",
 };
-const BENEFICIO_DLRR: BeneficioRegiao = {
-  titulo: "DLRR: 10% dos lucros reinvestidos",
+const BENEFICIO_ICE: BeneficioRegiao = {
+  titulo: "ICE: dedução pela capitalização da empresa",
   detalhe:
-    "PME e Small Mid Cap podem deduzir ao IRC 10% dos lucros retidos e reinvestidos em ativos elegíveis, até 25% da coleta. Saldo reportável por 12 exercícios.",
-  base: "Art. 27.º–34.º CFI",
+    "PME e Small Mid Cap deduzem ao lucro tributável uma taxa indexada à Euribor a 12 meses (+2 p.p.) sobre os aumentos líquidos dos capitais próprios elegíveis, com majoração transitória de 20% em 2026. Sucede à DLRR, revogada desde 2023 (Lei 24-D/2022).",
+  base: "Art. 43.º-D EBF (ICE)",
 };
 const BENEFICIO_SIFIDE: BeneficioRegiao = {
   titulo: "SIFIDE II: até 82,5% de despesas de I&D",
@@ -118,13 +128,25 @@ export const REGIOES_INCENTIVO: RegiaoIncentivo[] = [
           "Empresas licenciadas na Zona Franca da Madeira pagam IRC de 5% até 2033, com requisitos de substância (criação de postos de trabalho e investimento mínimo de 75 000 €). Novas licenças até final de 2026.",
         base: "Regime CINM/ZFM (prorrogado pelo OE2026 até 2033)",
       },
+      {
+        titulo: `IRC regional: geral ${(IRC_MADEIRA_GERAL * 100).toLocaleString("pt-PT")}% · PME ${(IRC_MADEIRA_PME * 100).toLocaleString("pt-PT")}%`,
+        detalhe: `Fora da Zona Franca, o ORAM 2026 fixa a taxa geral em ${(IRC_MADEIRA_GERAL * 100).toLocaleString(
+          "pt-PT"
+        )}% e a taxa PME/Small Mid Cap em ${(IRC_MADEIRA_PME * 100).toLocaleString(
+          "pt-PT"
+        )}% nos primeiros ${IRC_LIMITE_PME.value.toLocaleString("pt-PT")} € (vs ${(IRC_TAXA_GERAL.value * 100).toLocaleString(
+          "pt-PT"
+        )}% / ${(IRC_TAXA_PME.value * 100).toLocaleString("pt-PT")}% no Continente).`,
+        base: "Orçamento da RAM 2026 · Lei das Finanças das Regiões Autónomas",
+      },
       BENEFICIO_RFAI_30,
       {
-        titulo: "IVA reduzido (4% / 5% / 12%)",
-        detalhe: "A Madeira aplica taxas de IVA próprias, mais baixas do que no Continente (reduzida de 4% desde out/2024).",
+        titulo: "IVA reduzido (4% / 12% / 22%)",
+        detalhe:
+          "A Madeira aplica taxas de IVA próprias, mais baixas do que no Continente (6% / 13% / 23%): reduzida de 4% desde out/2024, intermédia de 12% e normal de 22%.",
         base: "Art. 18.º CIVA · DLR 6/2024/M",
       },
-      BENEFICIO_DLRR,
+      BENEFICIO_ICE,
     ],
   },
   {
@@ -150,7 +172,7 @@ export const REGIOES_INCENTIVO: RegiaoIncentivo[] = [
         detalhe: "Os Açores aplicam taxas de IVA próprias, inferiores às do Continente.",
         base: "Art. 18.º CIVA",
       },
-      BENEFICIO_DLRR,
+      BENEFICIO_ICE,
     ],
   },
   {
@@ -158,21 +180,21 @@ export const REGIOES_INCENTIVO: RegiaoIncentivo[] = [
     nivel: 0.9,
     selo: "Interior 12,5%",
     headline: "Grande parte é interior: IRC 12,5% + RFAI 30%",
-    beneficios: [BENEFICIO_INTERIOR, BENEFICIO_RFAI_30, BENEFICIO_DERRAMA_INTERIOR, BENEFICIO_DLRR],
+    beneficios: [BENEFICIO_INTERIOR, BENEFICIO_RFAI_30, BENEFICIO_DERRAMA_INTERIOR, BENEFICIO_ICE],
   },
   {
     ...pick(ref("centro")),
     nivel: 0.85,
     selo: "Interior 12,5%",
     headline: "Vasto interior (Beira, Guarda): IRC 12,5% + RFAI 30%",
-    beneficios: [BENEFICIO_INTERIOR, BENEFICIO_RFAI_30, BENEFICIO_DERRAMA_INTERIOR, BENEFICIO_DLRR],
+    beneficios: [BENEFICIO_INTERIOR, BENEFICIO_RFAI_30, BENEFICIO_DERRAMA_INTERIOR, BENEFICIO_ICE],
   },
   {
     ...pick(ref("norte")),
     nivel: 0.8,
     selo: "Interior 12,5%",
     headline: "Interior (Trás-os-Montes, Douro): IRC 12,5% + RFAI 30%",
-    beneficios: [BENEFICIO_INTERIOR, BENEFICIO_RFAI_30, BENEFICIO_DERRAMA_INTERIOR, BENEFICIO_DLRR],
+    beneficios: [BENEFICIO_INTERIOR, BENEFICIO_RFAI_30, BENEFICIO_DERRAMA_INTERIOR, BENEFICIO_ICE],
   },
   {
     ...pick(ref("algarve")),
@@ -187,7 +209,7 @@ export const REGIOES_INCENTIVO: RegiaoIncentivo[] = [
           "A maior parte do Algarve é litoral, mas concelhos de baixa densidade (ex.: Alcoutim, Monchique) podem qualificar-se como território do interior, com IRC de 12,5%.",
         base: "Art. 41.º-B EBF · Portaria n.º 208/2017",
       },
-      BENEFICIO_DLRR,
+      BENEFICIO_ICE,
     ],
   },
   {
@@ -226,14 +248,16 @@ export const INCENTIVOS_NACIONAIS: BeneficioRegiao[] = [
     base: "Art. 87.º CIRC",
   },
   {
-    titulo: "DLRR — 10% dos lucros reinvestidos",
-    detalhe: "Dedução à coleta de 10% dos lucros retidos e reinvestidos em ativos elegíveis (PME).",
-    base: "Art. 27.º–34.º CFI",
+    titulo: "ICE — dedução pela capitalização",
+    detalhe:
+      "Dedução ao lucro tributável indexada à Euribor 12M (+2 p.p. para PME) sobre os aumentos líquidos dos capitais próprios elegíveis; majoração de 20% em 2026. Substitui a DLRR, revogada desde 2023.",
+    base: "Art. 43.º-D EBF",
   },
   {
     titulo: "SIFIDE II — até 82,5% de I&D",
-    detalhe: "Crédito fiscal de 32,5% (base) + 50% incremental das despesas de investigação e desenvolvimento.",
-    base: "Art. 35.º–42.º CFI",
+    detalhe:
+      "Crédito fiscal de 32,5% (base) + 50% incremental das despesas de investigação e desenvolvimento. Prorrogado até 2026 (Lei 13/2026); a dedução via fundos terminou com o OE2026.",
+    base: "Art. 35.º–42.º CFI · Lei 13/2026",
   },
   {
     titulo: "IFICI — 20% para quadros qualificados",
@@ -247,6 +271,8 @@ export const INCENTIVOS_FONTES: { label: string; url: string }[] = [
   { label: "OCC — IRC nas regiões do interior (12,5%)", url: "https://www.occ.pt/pt-pt/noticias/irc-beneficios-fiscais-para-empresas-sediadas-no-interior" },
   { label: "PwC — Guia Fiscal 2026 (IRC)", url: "https://www.pwc.pt/pt/pwcinforfisco/guia-fiscal/2026/irc.html" },
   { label: "PwC — RA Açores, Orçamento 2026", url: "https://www.pwc.pt/pt/pwcinforfisco/flash/outros/regiao-autonoma-acores-orcamento-2026.html" },
+  { label: "PwC — RA Madeira, Orçamento 2026 (IRC 13,3% / 10,5%)", url: "https://www.pwc.pt/pt/pwcinforfisco/flash/outros/regiao-autonoma-madeira-aprovado-orcamento-2026.html" },
+  { label: "OCC — ICE, Incentivo à Capitalização das Empresas", url: "https://www.occ.pt/pt-pt/noticias/irc-beneficios-fiscais-ice-0" },
   { label: "IBC Madeira — Benefícios fiscais (CINM)", url: "https://www.ibc-madeira.com/pt/tax-benefits.html" },
 ];
 
@@ -284,7 +310,7 @@ const contab = (id: string) => {
 const PARAMS_REGIAO: Record<string, ParametrosFiscaisRegiao> = {
   norte: {
     regiaoId: "norte", nome: "Norte (interior)", interior: true,
-    ircPME: IRC_INTERIOR, ircGeral: IRC_INTERIOR,
+    ircPME: IRC_INTERIOR, ircGeral: IRC_TAXA_GERAL.value,
     derramaEstimada: 0.005, rfaiTipo: "interior", rfaiTaxa: RFAI_TAXA_INTERIOR.value,
     ...contab("norte"), selo: "IRC 12,5%",
   },
@@ -296,7 +322,7 @@ const PARAMS_REGIAO: Record<string, ParametrosFiscaisRegiao> = {
   },
   centro: {
     regiaoId: "centro", nome: "Centro (interior)", interior: true,
-    ircPME: IRC_INTERIOR, ircGeral: IRC_INTERIOR,
+    ircPME: IRC_INTERIOR, ircGeral: IRC_TAXA_GERAL.value,
     derramaEstimada: 0.005, rfaiTipo: "interior", rfaiTaxa: RFAI_TAXA_INTERIOR.value,
     ...contab("centro"), selo: "IRC 12,5%",
   },
@@ -308,7 +334,7 @@ const PARAMS_REGIAO: Record<string, ParametrosFiscaisRegiao> = {
   },
   alentejo: {
     regiaoId: "alentejo", nome: "Alentejo", interior: true,
-    ircPME: IRC_INTERIOR, ircGeral: IRC_INTERIOR,
+    ircPME: IRC_INTERIOR, ircGeral: IRC_TAXA_GERAL.value,
     derramaEstimada: 0.005, rfaiTipo: "interior", rfaiTaxa: RFAI_TAXA_INTERIOR.value,
     ...contab("alentejo"), selo: "IRC 12,5%",
   },
@@ -332,9 +358,9 @@ const PARAMS_REGIAO: Record<string, ParametrosFiscaisRegiao> = {
   },
   madeira: {
     regiaoId: "madeira", nome: "Região Autónoma da Madeira", interior: false,
-    ircPME: IRC_TAXA_PME.value, ircGeral: IRC_TAXA_GERAL.value,
+    ircPME: IRC_MADEIRA_PME, ircGeral: IRC_MADEIRA_GERAL,
     derramaEstimada: 0.015, rfaiTipo: "interior", rfaiTaxa: RFAI_TAXA_INTERIOR.value,
-    ...contab("madeira"), selo: "IRC 15%",
+    ...contab("madeira"), selo: "IRC 10,5%",
   },
 };
 

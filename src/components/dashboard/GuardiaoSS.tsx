@@ -17,18 +17,32 @@ export function calcularSS(rendimentoTrimestre: number, baseSS: BaseSS = "servic
   return rendimentoTrimestre * SS_COEFICIENTE[baseSS].value * SS_TAXA.value;
 }
 
-export function prazoSS(trimestreIndex: number, ano: number): Date {
-  // Declaração trimestral SS: prazo = último dia do mês a seguir ao trimestre.
-  // Pagamento: entre dia 10 e 20 do mês seguinte à declaração.
-  // Q1 (jan-mar) → paga até jul 20; Q2 (abr-jun) → paga até out 20;
-  // Q3 (jul-set) → paga até jan 20 ano+1; Q4 (out-dez) → paga até abr 20 ano+1.
+/**
+ * Prazo da DECLARAÇÃO trimestral de rendimentos à Segurança Social:
+ * até ao último dia do mês seguinte ao fim do trimestre.
+ * Q1 (jan–mar) → 30 abr · Q2 → 31 jul · Q3 → 31 out · Q4 → 31 jan (ano+1).
+ * O PAGAMENTO não é trimestral: a contribuição é MENSAL, entre o dia 10 e
+ * o dia 20 do mês seguinte àquele a que respeita (Art. 154.º Código
+ * Contributivo). Ver `pagamentoMensalSS`.
+ */
+export function prazoDeclaracaoSS(trimestreIndex: number, ano: number): Date {
   switch (trimestreIndex) {
-    case 0: return new Date(ano, 6, 20);
-    case 1: return new Date(ano, 9, 20);
-    case 2: return new Date(ano + 1, 0, 20);
-    case 3: return new Date(ano + 1, 3, 20);
-    default: return new Date(ano, 6, 20);
+    case 0: return new Date(ano, 3, 30);
+    case 1: return new Date(ano, 6, 31);
+    case 2: return new Date(ano, 9, 31);
+    case 3: return new Date(ano + 1, 0, 31);
+    default: return new Date(ano, 3, 30);
   }
+}
+
+/**
+ * Data-limite (dia 20) do pagamento mensal seguinte a partir de uma data de
+ * referência: a contribuição do mês M paga-se entre 10 e 20 de M+1.
+ */
+export function proximoPagamentoSS(ref: Date): Date {
+  const alvo = new Date(ref.getFullYear(), ref.getMonth(), 20);
+  if (ref.getDate() > 20) alvo.setMonth(alvo.getMonth() + 1);
+  return alvo;
 }
 
 function trimestreAtual(mes: number): number {
@@ -66,8 +80,9 @@ export default function GuardiaoSS({
   const ano        = hoje.getFullYear();
   const mesAtual   = hoje.getMonth();
   const tri        = trimestreAtual(mesAtual);
-  const prazo      = prazoSS(tri, ano);
-  const dias       = diasEntreHoje(prazo);
+  const prazoDecl  = prazoDeclaracaoSS(tri, ano);
+  const dias       = diasEntreHoje(prazoDecl);
+  const proxPag    = proximoPagamentoSS(hoje);
   const nTri       = nomeTrimestre(tri);
   const isencaoMeses = SS_ISENCAO_PRIMEIRO_ANO_MESES.value;
 
@@ -130,7 +145,7 @@ export default function GuardiaoSS({
             Segurança Social — {nTri} Trimestre
           </h2>
           <p className="text-xs text-stone-400 mt-0.5">
-            Prazo: {prazo.toLocaleDateString("pt-PT", { day: "numeric", month: "long" })}
+            Declarar até {prazoDecl.toLocaleDateString("pt-PT", { day: "numeric", month: "long" })} · pagamento mensal (dia 10–20)
           </p>
         </div>
         {badgePrazo && (
@@ -178,11 +193,17 @@ export default function GuardiaoSS({
           </span>
           <span className="font-bold text-stone-800 dark:text-stone-100">{fmt(valorSS)}</span>
         </div>
+        <div className="flex justify-between text-xs">
+          <span className="text-stone-500">Equivale a ~{fmt(valorSS / 3)}/mês</span>
+          <span className="text-stone-500">próximo pagamento até {proxPag.toLocaleDateString("pt-PT", { day: "numeric", month: "short" })}</span>
+        </div>
       </div>
 
       <p className="mt-3 text-[11px] leading-relaxed text-stone-400">
-        Este valor é estimativo. A base de cálculo oficial usa os rendimentos dos 3 meses anteriores ao
-        trimestre de referência — confirma na Segurança Social Direta.
+        Este valor é estimativo e serve para reservares o trimestre inteiro. Na prática, a declaração é
+        trimestral (jan, abr, jul e out, até ao fim do mês) e a contribuição paga-se TODOS os meses,
+        entre o dia 10 e o dia 20 do mês seguinte, com base nos rendimentos declarados no trimestre
+        anterior — confirma os valores na Segurança Social Direta.
       </p>
     </div>
   );

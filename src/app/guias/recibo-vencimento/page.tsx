@@ -32,8 +32,7 @@ const FONTES = [
   { titulo: "Despacho n.º 233-A/2026 — Tabelas de retenção na fonte IRS 2026", url: "https://www.montepio.org/ei/pessoal/impostos/tabelas-do-irs-conheca-as-taxas-de-retencao-na-fonte/", tipo: "oficial" as const },
   { titulo: "Art. 25.º CIRS — Dedução específica do trabalho dependente", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs25.aspx", tipo: "oficial" as const },
   { titulo: "Seg. Social — Taxas contributivas dos trabalhadores por conta de outrem", url: "https://www.seg-social.pt/trabalhadores-por-conta-de-outrem", tipo: "oficial" as const },
-  { titulo: "Doutor Finanças — Recibo de vencimento: como ler e perceber", url: "https://www.doutorfinancas.pt/carreira-e-rendimentos/rendimentos/recibo-de-vencimento-como-ler-e-perceber/", tipo: "referencia" as const },
-  { titulo: "Coverflex — Subsídio de refeição 2026", url: "https://www.coverflex.com/pt/blog/subsidio-de-refeicao-2026", tipo: "referencia" as const },
+  { titulo: "Coverflex — Subsídio de alimentação 2026", url: "https://www.coverflex.com/pt/blog/subsidio-de-alimentacao", tipo: "referencia" as const },
 ];
 
 const LINHAS = [

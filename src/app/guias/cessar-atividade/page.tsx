@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 const FONTES = [
-  { titulo: "Art. 33.º CIVA — Cessação de atividade", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-33-do-civa.aspx", tipo: "oficial" as const },
+  { titulo: "Art. 33.º CIVA — Cessação de atividade", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva33.aspx", tipo: "oficial" as const },
   { titulo: "DECO — Recibos verdes: fechar atividade nas Finanças", url: "https://www.deco.proteste.pt/dinheiro/impostos/dicas/recibos-verdes-fechar-atividade-financas", tipo: "referencia" as const },
   { titulo: "SimuladorNeto — Cessação de atividade 2026", url: "https://simuladorneto.pt/blog/cessacao-atividade-recibos-verdes-2026", tipo: "referencia" as const },
   { titulo: "Doutor Finanças — Limites para abrir e fechar atividade", url: "https://www.doutorfinancas.pt/carreira-e-rendimentos/trabalhadores-independentes/recibos-verdes-ha-limites-para-abrir-e-fechar-atividade/", tipo: "referencia" as const },

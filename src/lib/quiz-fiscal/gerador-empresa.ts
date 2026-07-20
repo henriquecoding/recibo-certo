@@ -2,7 +2,7 @@
  * Banco de perguntas — EMPRESAS (sociedades, constituição e tributação).
  *
  * Três temas: criar empresa, legislação/sociedades e IRC & tributação.
- * As taxas fiscais (IRC, derrama, dividendos, RFAI/DLRR/SIFIDE) vêm de
+ * As taxas fiscais (IRC, derrama, dividendos, RFAI/SIFIDE) vêm de
  * `fiscal-data.ts` e os cenários de IRC são CALCULADOS, não inventados. Os
  * factos jurídicos (formas de sociedade, capital social, constituição) foram
  * verificados em fontes oficiais (CSC, IRN/gov.pt) e estão referenciados.
@@ -17,8 +17,6 @@ import {
   RFAI_TAXA_INTERIOR,
   RFAI_TAXA_LITORAL,
   RFAI_LIMITE_COLETA,
-  DLRR_TAXA,
-  DLRR_LIMITE_COLETA,
   SIFIDE_TAXA_BASE,
   SIFIDE_TAXA_INCREMENTAL,
   type SourceKey,
@@ -664,7 +662,7 @@ const fisConceptuais: Array<[1 | 2 | 3, string, Opt, Opt[], string, SourceKey]> 
     "A dedução do RFAI à coleta de IRC está, em regra, limitada a que percentagem da coleta?",
     { texto: pct(RFAI_LIMITE_COLETA.value), porque: `Correto. O RFAI deduz-se até ${pct(RFAI_LIMITE_COLETA.value)} da coleta (100% nos primeiros 3 anos).` },
     [
-      { texto: pct(DLRR_LIMITE_COLETA.value), porque: "25% é o limite da DLRR." },
+      { texto: pct(0.25), porque: "25% era o limite da antiga DLRR (revogada em 2023)." },
       { texto: pct(1), porque: "O limite geral é 50% (100% só nos primeiros 3 anos)." },
       { texto: pct(0.1), porque: "Não corresponde ao limite do RFAI." },
     ],
@@ -673,14 +671,14 @@ const fisConceptuais: Array<[1 | 2 | 3, string, Opt, Opt[], string, SourceKey]> 
   ],
   [
     3,
-    "Na DLRR, qual é a percentagem dos lucros retidos e reinvestidos que é dedutível?",
-    { texto: pct(DLRR_TAXA.value), porque: `Correto. A DLRR deduz ${pct(DLRR_TAXA.value)} dos lucros retidos e reinvestidos.` },
+    "A DLRR (Dedução por Lucros Retidos e Reinvestidos) ainda pode ser usada em 2026?",
+    { texto: "Não — foi revogada com efeitos a 1 de janeiro de 2023", porque: "Correto. O OE2023 (Art. 281.º da Lei 24-D/2022) revogou a DLRR; o benefício sucessor é o ICE — Incentivo à Capitalização das Empresas (Art. 43.º-D EBF)." },
     [
-      { texto: pct(DLRR_LIMITE_COLETA.value), porque: "25% é o limite face à coleta, não a percentagem dos lucros." },
-      { texto: pct(RFAI_TAXA_INTERIOR.value), porque: "30% é a taxa do RFAI no interior." },
-      { texto: pct(SIFIDE_TAXA_BASE.value), porque: "32,5% é a taxa base do SIFIDE." },
+      { texto: "Sim — deduz 10% dos lucros reinvestidos", porque: "Era a regra até 2022; a DLRR foi revogada pelo OE2023." },
+      { texto: "Sim, mas só para grandes empresas", porque: "A DLRR era para PME e foi revogada para todos desde 2023." },
+      { texto: "Sim, até 25% da coleta", porque: "25% era o limite antigo; o regime já não vigora." },
     ],
-    "Art. 29.º CFI — DLRR (10% dos lucros)",
+    "Art. 281.º Lei 24-D/2022 — revogação da DLRR (sucedida pelo ICE, Art. 43.º-D EBF)",
     "occDLRR",
   ],
   [
@@ -689,7 +687,7 @@ const fisConceptuais: Array<[1 | 2 | 3, string, Opt, Opt[], string, SourceKey]> 
     { texto: pct(SIFIDE_TAXA_BASE.value), porque: `Correto. O SIFIDE II dá um crédito de ${pct(SIFIDE_TAXA_BASE.value)} das despesas de I&D (taxa base).` },
     [
       { texto: pct(SIFIDE_TAXA_INCREMENTAL.value), porque: "50% é a taxa incremental, não a base." },
-      { texto: pct(DLRR_TAXA.value), porque: "10% é a DLRR." },
+      { texto: pct(0.1), porque: "10% era a taxa da antiga DLRR (revogada em 2023)." },
       { texto: pct(T_GERAL), porque: "19% é a taxa de IRC." },
     ],
     "Art. 36.º CFI — SIFIDE II (taxa base 32,5%)",
@@ -759,7 +757,7 @@ const fisFaceis: Array<[1, string, Opt, Opt[], string, SourceKey]> = [
   ],
   [
     1,
-    "Os benefícios fiscais ao investimento (RFAI, DLRR, SIFIDE) reduzem o quê?",
+    "Os benefícios fiscais ao investimento (RFAI, SIFIDE II) reduzem o quê?",
     { texto: "O IRC a pagar (deduzem-se à coleta)", porque: "Correto. São créditos/deduções à coleta de IRC, reduzindo o imposto a pagar." },
     [
       { texto: "O IVA das vendas", porque: "São benefícios em IRC, não em IVA." },
