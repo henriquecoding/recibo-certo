@@ -34,7 +34,7 @@ const FONTES = [
   { titulo: "Art. 104.º CIRC — Pagamentos por conta", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc104.aspx", tipo: "oficial" as const },
   { titulo: "Art. 120.º CIRC — Declaração periódica de rendimentos (Modelo 22)", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc120.aspx", tipo: "oficial" as const },
   { titulo: "Lei 73-A/2025 — Orçamento do Estado 2026 (alterações IRC)", url: "https://diariodarepublica.pt/dr/detalhe/lei/73-a-2025", tipo: "oficial" as const },
-  { titulo: "OCC — IRC 2026: taxas, prazos e obrigações", url: "https://www.occ.pt/pt-pt/noticias/irc-2026", tipo: "referencia" as const },
+  { titulo: "PwC Guia Fiscal 2026 — IRC (taxas, prazos e obrigações)", url: "https://www.pwc.pt/pt/pwcinforfisco/guia-fiscal/2026/irc.html", tipo: "referencia" as const },
 ];
 
 export default function IRCPage() {

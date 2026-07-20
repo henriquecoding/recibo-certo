@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.87.0";
+export const APP_VERSION = "1.88.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,22 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.88.0",
+    data: "2026-07-20",
+    titulo: "Auditoria fiscal 2026: simulador de empresas corrigido e links legais reparados",
+    itens: [
+      "O simulador de empresas deixou de mostrar a DLRR, um benefício fiscal revogado desde 2023 (Lei 24-D/2022) — em vez disso explica o sucessor, o ICE (Art. 43.º-D EBF), sem inventar poupanças que já não existem.",
+      "O IFICI (ex-NHR 2.0) passa a ser apresentado com o âmbito correto do Art. 58.º-A do EBF: 20% sobre rendimentos do trabalho e da categoria B elegíveis. Os dividendos nunca estiveram abrangidos e o simulador já não lhes aplica a taxa reduzida.",
+      "Taxas de IRC da Madeira corrigidas no simulador e no mapa: 10,5% nos primeiros 50 000 € e 13,3% no restante (Orçamento da RAM 2026) — antes eram usadas as taxas do Continente. O IVA da Madeira no mapa também foi corrigido para 4% / 12% / 22%.",
+      "Nos concelhos do interior, os 12,5% de IRC aplicam-se agora apenas aos primeiros 50 000 € de matéria coletável (Art. 41.º-B EBF); o excedente segue a taxa geral de 19%.",
+      "Viaturas 100% elétricas com custo de aquisição acima de 62 500 € passam a pagar tributação autónoma de 10% no simulador (Art. 88.º, n.º 20 CIRC) — antes apareciam sempre como isentas.",
+      "O custo do gerente na empresa deixou de duplicar a Segurança Social do trabalhador: a empresa suporta o salário bruto mais 23,75% de SS da entidade; os 11% do trabalhador saem do próprio salário.",
+      "O cartão da Segurança Social no painel explica agora o regime real: declaração trimestral até ao fim de janeiro, abril, julho e outubro, e pagamento todos os meses entre o dia 10 e o dia 20 — deixou de sugerir um pagamento único por trimestre.",
+      "SIFIDE II atualizado: prorrogado até 2026 (Lei 13/2026) e com nota de que a dedução via fundos terminou com o OE2026.",
+      "Reparados 20 links para legislação e fontes que davam «página não encontrada» — incluindo os artigos 41.º-B e 58.º-A do EBF, os artigos 6.º, 9.º, 18.º e 33.º do CIVA e a representação fiscal no Portal das Finanças. Todos apontam agora para as páginas oficiais corretas.",
+    ],
+  },
   {
     version: "1.87.0",
     data: "2026-07-14",

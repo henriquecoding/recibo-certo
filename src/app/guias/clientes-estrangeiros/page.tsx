@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 const FONTES = [
-  { titulo: "Art. 6.º CIVA — Localização das operações", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-6-do-civa.aspx", tipo: "oficial" as const },
+  { titulo: "Art. 6.º CIVA — Localização das operações", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva6.aspx", tipo: "oficial" as const },
   { titulo: "Art. 101.º CIRS — Retenção e não residentes", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs101.aspx", tipo: "oficial" as const },
   { titulo: "VIES — Validação NIF europeu", url: "https://ec.europa.eu/taxation_customs/vies", tipo: "oficial" as const },
   { titulo: "Doutor Finanças — Recibos verdes para empresas estrangeiras", url: "https://www.doutorfinancas.pt/carreira-e-rendimentos/trabalhadores-independentes/recibos-verdes-para-empresas-estrangeiras-5-cuidados-a-ter/", tipo: "referencia" as const },

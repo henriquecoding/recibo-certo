@@ -27,7 +27,6 @@ const FONTES = [
   { titulo: "Gov.pt — Ato isolado", url: "https://www.gov.pt/guias/trabalhar-por-conta-propria-guia-para-trabalhadores-independentes/", tipo: "oficial" as const },
   { titulo: "Art. 53.º CIVA — Portal das Finanças", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-53-o-do-civa.aspx", tipo: "oficial" as const },
   { titulo: "CGD — Ato isolado: o que é", url: "https://www.cgd.pt/Site/Saldo-Positivo/leis-e-impostos/Pages/ato-isolado-o-que-e-vantagens-e-obrigacoes.aspx", tipo: "referencia" as const },
-  { titulo: "SimuladorNeto — Ato isolado 2026", url: "https://simuladorneto.pt/blog/ato-isolado-ou-abertura-de-atividade-2026", tipo: "referencia" as const },
 ];
 
 const COMPARATIVO = [

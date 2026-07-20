@@ -20,7 +20,7 @@
 export { FISCAL_YEAR } from "./fiscal-year";
 
 /** Data da última revisão completa dos dados (ISO 8601). */
-export const DATA_LAST_REVIEW = "2026-07-14" as const;
+export const DATA_LAST_REVIEW = "2026-07-20" as const;
 
 // ─── Registo de fontes (evita repetir URLs longos) ─────────────────────
 export interface Source {
@@ -36,15 +36,15 @@ export const SOURCES = {
   },
   art18civa: {
     label: "Art. 18.º CIVA — Taxas do imposto · Portal das Finanças (AT)",
-    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-18-do-civa.aspx",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva18.aspx",
   },
   art33civa: {
     label: "Art. 33.º CIVA — Cessação de atividade · Portal das Finanças (AT)",
-    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-33-do-civa.aspx",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva33.aspx",
   },
   art6civa: {
     label: "Art. 6.º CIVA — Localização das operações intracomunitárias · Portal das Finanças (AT)",
-    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-6-do-civa.aspx",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva6.aspx",
   },
   art31: {
     label: "Art. 31.º CIRS — Coeficientes do regime simplificado · Portal das Finanças (AT)",
@@ -113,7 +113,7 @@ export const SOURCES = {
     url: "https://diariodarepublica.pt/dr/legislacao-consolidada/portaria/2001-177307831",
   },
   cfi: {
-    label: "DL 162/2014 — Código Fiscal do Investimento (CFI: RFAI, DLRR, SIFIDE) · Diário da República",
+    label: "DL 162/2014 — Código Fiscal do Investimento (CFI: RFAI, SIFIDE II; DLRR revogada pela Lei 24-D/2022) · Diário da República",
     url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/2014-128418757",
   },
 
@@ -155,16 +155,20 @@ export const SOURCES = {
     url: "https://www.occ.pt/pt-pt/noticias/beneficios-fiscais-rfai-e-dlrr",
   },
   occDLRR: {
-    label: "DLRR — Dedução por Lucros Retidos e Reinvestidos (Art. 27.º–34.º CFI) · OCC",
+    label: "DLRR — regime REVOGADO desde 1 jan 2023 (Art. 281.º da Lei 24-D/2022; ex-Art. 27.º–34.º CFI) · OCC",
     url: "https://www.occ.pt/pt-pt/noticias/beneficios-fiscais-rfai-e-dlrr",
+  },
+  occICE: {
+    label: "ICE — Incentivo à Capitalização das Empresas (Art. 43.º-D EBF, sucessor da DLRR) · OCC",
+    url: "https://www.occ.pt/pt-pt/noticias/irc-beneficios-fiscais-ice-0",
   },
   occSIFIDE: {
     label: "SIFIDE II — Sistema de Incentivos Fiscais à I&D (Art. 35.º–42.º CFI) · OCC",
     url: "https://www.occ.pt/pt-pt/noticias/irc-beneficios-fiscais-sifide-ii",
   },
   occIFICI: {
-    label: "IFICI — Incentivo Fiscal à Investigação Científica e Inovação (ex-NHR) · OCC",
-    url: "https://www.occ.pt/pt-pt/noticias/irs-ifici-ex-nhr",
+    label: "Art. 58.º-A EBF — IFICI, Incentivo Fiscal à Investigação Científica e Inovação (ex-NHR) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/EBF58A.aspx",
   },
 
   // ── Trabalho dependente (Categoria A) ───────────────────────────────
@@ -285,8 +289,8 @@ export const SOURCES = {
     url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/1986-34443375",
   },
   ircObrigacoes: {
-    label: "IRC 2026 — taxas, prazos e obrigações declarativas (Modelo 22, IES) · OCC",
-    url: "https://www.occ.pt/pt-pt/noticias/irc-2026",
+    label: "IRC — Guia Fiscal 2026 (taxas, prazos e obrigações declarativas) · PwC Portugal",
+    url: "https://www.pwc.pt/pt/pwcinforfisco/guia-fiscal/2026/irc.html",
   },
   art87circ_pgdl: {
     label: "Art. 87.º CIRC — Taxas de IRC (texto legal consolidado) · PGDL",
@@ -297,20 +301,20 @@ export const SOURCES = {
     url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?nid=524&tabela=leis&so_miolo=",
   },
   art41bEBF: {
-    label: "Art. 41.º-B EBF — IRC do Interior (12,5%) · Portal das Finanças (AT)",
-    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-41-b.aspx",
+    label: "Art. 41.º-B EBF — IRC do Interior (12,5% nos primeiros 50 000 €) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-41-o-b.aspx",
   },
   art58aEBF: {
-    label: "Art. 58.º-A EBF — IFICI (ex-NHR 2.0): taxa flat 20% para quadros qualificados · Portal das Finanças (AT)",
-    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-58-a.aspx",
+    label: "Art. 58.º-A EBF — IFICI (ex-NHR 2.0): taxa de 20% sobre rendimentos das categorias A e B elegíveis · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/EBF58A.aspx",
   },
   dl262_86: {
     label: "DL 262/86 — Código das Sociedades Comerciais (Art. 270.º-A ss. — Soc. Unipessoal por Quotas) · PGDL",
     url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?nid=524&tabela=leis",
   },
   representanteFiscal: {
-    label: "Representante fiscal para não residentes — Art. 130.º CIRS / Art. 19.º LGT · Portal das Finanças",
-    url: "https://info.portaldasfinancas.gov.pt/pt/apoio_contribuinte/Servicos_Mais_Utilizados/representacao-fiscal/Pages/default.aspx",
+    label: "Representação fiscal de não residentes — Art. 130.º CIRS / Art. 19.º LGT (FAQ oficial) · Portal das Finanças",
+    url: "https://info.portaldasfinancas.gov.pt/pt/apoio_contribuinte/questoes_frequentes/pages/faqs-00307.aspx",
   },
   sedeVirtual: {
     label: "Sede virtual / domicílio fiscal da empresa — Art. 3.º CSC (DL 262/86) · IRN/Gov.pt",
@@ -1321,9 +1325,26 @@ export const TA_VIATURAS_PHEV = sv<TAViaturasTaxas>(
 
 export const TA_VIATURAS_ELETRICA = sv(
   0,
-  "Art. 88.º CIRC — viaturas 100% elétricas: taxa zero",
+  "Art. 88.º, n.º 20 CIRC — viaturas 100% elétricas com custo de aquisição até 62 500 €: taxa zero",
   "occTA",
-  TODAY
+  "2026-07-20",
+  "A isenção só vale até ao limite da Portaria n.º 467/2010 (62 500 € para elétricos); acima, aplica-se 10%."
+);
+
+/** Custo de aquisição a partir do qual as viaturas elétricas pagam TA. */
+export const TA_ELETRICA_LIMITE_CUSTO = sv(
+  62_500,
+  "Portaria n.º 467/2010, Art. 1.º, n.º 4, al. a) — limite do custo de aquisição para viaturas exclusivamente elétricas",
+  "occTA",
+  "2026-07-20"
+);
+
+/** Taxa de TA das viaturas elétricas cujo custo de aquisição excede o limite. */
+export const TA_VIATURAS_ELETRICA_ACIMA_LIMITE = sv(
+  0.10,
+  "Art. 88.º, n.º 20 CIRC — encargos de viaturas 100% elétricas com custo de aquisição superior a 62 500 €: 10%",
+  "occTA",
+  "2026-07-20"
 );
 
 /** Despesas de representação (n.º 7 do Art. 88.º). */
@@ -1416,47 +1437,37 @@ export const RFAI_REPORTE_ANOS = sv(
 );
 
 // ═══════════════════════════════════════════════════════════════════════
-//  DLRR — Dedução por Lucros Retidos e Reinvestidos (Art. 27.º–34.º CFI)
-//  Apenas para PME e Small Mid Cap (≤ 3 000 trabalhadores).
+//  DLRR — REVOGADA. Os Art. 27.º–34.º do CFI foram revogados pelo
+//  Art. 281.º da Lei n.º 24-D/2022 (OE2023), com efeitos a 1 jan 2023.
+//  O regime só se aplicou a lucros retidos até ao período de 2022 — NÃO
+//  pode ser simulado como poupança em 2026. Sucedido pelo ICE (Incentivo
+//  à Capitalização das Empresas, Art. 43.º-D EBF), cuja dedução depende
+//  da Euribor 12M (+ spread de 2 p.p. para PME/Small Mid Cap) sobre os
+//  aumentos líquidos dos capitais próprios elegíveis — sem taxa fixa
+//  simulável sem dados do balanço, pelo que não há parâmetros numéricos
+//  aqui (ver fonte `occICE`).
 // ═══════════════════════════════════════════════════════════════════════
 
-export const DLRR_TAXA = sv(
-  0.10,
-  "Art. 29.º CFI — dedução de 10% dos lucros retidos e reinvestidos em ativos elegíveis",
-  "occDLRR",
-  TODAY
-);
-
-export const DLRR_LIMITE_LUCROS = sv(
-  5_000_000,
-  "Art. 29.º CFI — lucros elegíveis limitados a €5 000 000 por período de tributação",
-  "occDLRR",
-  TODAY
-);
-
-export const DLRR_LIMITE_COLETA = sv(
-  0.25,
-  "Art. 30.º CFI — dedução limitada a 25% da coleta IRC",
-  "occDLRR",
-  TODAY
-);
-
-export const DLRR_REPORTE_ANOS = sv(
-  12,
-  "Art. 30.º CFI — saldo não utilizado reportável por 12 exercícios seguintes",
-  "occDLRR",
-  TODAY
+/** Nota informativa única sobre a revogação da DLRR e o sucessor ICE. */
+export const DLRR_REVOGADA_NOTA = sv(
+  "A DLRR foi revogada com efeitos a 1 de janeiro de 2023 (Art. 281.º da Lei n.º 24-D/2022 — OE2023). O benefício sucessor é o ICE — Incentivo à Capitalização das Empresas (Art. 43.º-D EBF): dedução ao lucro tributável indexada à Euribor a 12 meses (+2 p.p. para PME e Small Mid Cap) sobre os aumentos líquidos dos capitais próprios elegíveis, com majoração transitória de 20% em 2026. O apuramento exige dados do balanço — fala com um contabilista certificado.",
+  "Art. 281.º Lei 24-D/2022 (revogação) · Art. 43.º-D EBF (ICE)",
+  "occICE",
+  "2026-07-20"
 );
 
 // ═══════════════════════════════════════════════════════════════════════
 //  SIFIDE II — Sistema de Incentivos Fiscais à I&D (Art. 35.º–42.º CFI)
+//  Vigência prorrogada até ao período de tributação de 2026 (Lei n.º
+//  13/2026, de 16 de abril). O OE2026 eliminou a dedução via fundos de
+//  investimento (SIFIDE indireto) — só o investimento direto em I&D conta.
 // ═══════════════════════════════════════════════════════════════════════
 
 export const SIFIDE_TAXA_BASE = sv(
   0.325,
-  "Art. 36.º CFI — taxa base de 32,5% das despesas com I&D do período",
+  "Art. 36.º CFI — taxa base de 32,5% das despesas com I&D do período (regime prorrogado até 2026 pela Lei 13/2026)",
   "occSIFIDE",
-  TODAY
+  "2026-07-20"
 );
 
 export const SIFIDE_TAXA_INCREMENTAL = sv(
@@ -1499,10 +1510,10 @@ export const SIFIDE_REPORTE_ANOS = sv(
 
 export const IFICI_TAXA = sv(
   0.20,
-  "Art. 58.º-A EBF — IFICI: taxa flat de 20% sobre rendimentos elegíveis (Lei 82/2023/OE2024)",
+  "Art. 58.º-A, n.º 2 EBF — IFICI: taxa especial de 20% sobre rendimentos líquidos das categorias A e B auferidos nas atividades elegíveis (Lei 82/2023/OE2024)",
   "occIFICI",
-  TODAY,
-  "Substitui o NHR desde 1 jan 2024. Válido por 10 exercícios consecutivos não renováveis. Elegível: investigadores, professores, I&D, startups tecnológicas e atividades de elevado valor acrescentado aprovadas pela AT."
+  "2026-07-20",
+  "Substitui o NHR desde 1 jan 2024. Válido por 10 exercícios consecutivos não renováveis. Abrange APENAS rendimentos do trabalho (cat. A) e empresariais/profissionais (cat. B) das atividades elegíveis — dividendos de fonte portuguesa (cat. E) ficam de fora e seguem a taxa liberatória de 28% ou o englobamento."
 );
 
 export const IFICI_PRAZO_ANOS = sv(
@@ -2468,12 +2479,14 @@ export function assertFiscalDataIntegrity(): void {
   if (!(RFAI_LIMITE_INVESTIMENTO_INTERIOR.value > 0)) erros.push("Limite de investimento RFAI não positivo.");
   if (!(RFAI_REPORTE_ANOS.value > 0)) erros.push("Anos de reporte RFAI não positivos.");
 
-  // DLRR.
-  [DLRR_TAXA, DLRR_LIMITE_COLETA].forEach((p) => {
-    if (!isRate(p.value)) erros.push(`Parâmetro DLRR inválido: ${p.legalBasis}.`);
-  });
-  if (!(DLRR_LIMITE_LUCROS.value > 0)) erros.push("Limite de lucros DLRR não positivo.");
-  if (!(DLRR_REPORTE_ANOS.value > 0)) erros.push("Anos de reporte DLRR não positivos.");
+  // DLRR (revogada) — garantir que a nota de revogação existe e cita a lei.
+  if (!DLRR_REVOGADA_NOTA.value.includes("24-D/2022")) {
+    erros.push("Nota de revogação da DLRR deve citar a Lei 24-D/2022.");
+  }
+
+  // TA de viaturas elétricas (Art. 88.º, n.º 20).
+  if (!isRate(TA_VIATURAS_ELETRICA_ACIMA_LIMITE.value)) erros.push("Taxa TA elétricas acima do limite inválida.");
+  if (!(TA_ELETRICA_LIMITE_CUSTO.value > 0)) erros.push("Limite de custo TA elétricas não positivo.");
 
   // SIFIDE II.
   [SIFIDE_TAXA_BASE, SIFIDE_TAXA_INCREMENTAL, SIFIDE_MAJORACAO_PME_JOVEM].forEach((p) => {
@@ -2705,6 +2718,8 @@ export function assertFiscalDataIntegrity(): void {
     TA_VIATURAS_COMBUSTAO,
     TA_VIATURAS_PHEV,
     TA_VIATURAS_ELETRICA,
+    TA_ELETRICA_LIMITE_CUSTO,
+    TA_VIATURAS_ELETRICA_ACIMA_LIMITE,
     TA_REPRESENTACAO,
     TA_AJUDAS_CUSTO,
     TA_NAO_DOCUMENTADAS,
@@ -2716,11 +2731,8 @@ export function assertFiscalDataIntegrity(): void {
     RFAI_LIMITE_INVESTIMENTO_INTERIOR,
     RFAI_LIMITE_COLETA,
     RFAI_REPORTE_ANOS,
-    // DLRR
-    DLRR_TAXA,
-    DLRR_LIMITE_LUCROS,
-    DLRR_LIMITE_COLETA,
-    DLRR_REPORTE_ANOS,
+    // DLRR (revogada — só a nota informativa)
+    DLRR_REVOGADA_NOTA,
     // SIFIDE II
     SIFIDE_TAXA_BASE,
     SIFIDE_TAXA_INCREMENTAL,

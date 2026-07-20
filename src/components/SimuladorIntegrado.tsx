@@ -152,9 +152,9 @@ import {
   RFAI_TAXA_LITORAL as RFAI_TAXA_LITORAL_SRC,
   RFAI_LIMITE_INVESTIMENTO_INTERIOR,
   RFAI_LIMITE_COLETA as RFAI_LIMITE_COLETA_SRC,
-  DLRR_TAXA as DLRR_TAXA_SRC,
-  DLRR_LIMITE_COLETA as DLRR_LIMITE_COLETA_SRC,
-  DLRR_LIMITE_LUCROS,
+  DLRR_REVOGADA_NOTA,
+  TA_VIATURAS_ELETRICA_ACIMA_LIMITE,
+  TA_ELETRICA_LIMITE_CUSTO,
   SIFIDE_TAXA_BASE as SIFIDE_TAXA_BASE_SRC,
   SIFIDE_TAXA_INCREMENTAL as SIFIDE_TAXA_INCREMENTAL_SRC,
   SIFIDE_MAJORACAO_PME_JOVEM,
@@ -321,7 +321,8 @@ const IFICI_TAXA_FLAT = IFICI_TAXA.value;
 // ─────────────────────────────────────────────────────────────────────────────
 
 type TipoViatura =
-  | "eletrica" // 0% — excluída do Art. 88.º n.º 3
+  | "eletrica" // 0% até €62 500 de custo de aquisição (Art. 88.º n.º 20)
+  | "eletrica_cara" // 10% — custo de aquisição > €62 500 (Art. 88.º n.º 20)
   | "phev_baixo" // PHEV custo aquisição ≤ €37 500 → 2,5%
   | "phev_medio" // PHEV custo aquisição €37 500–€45 000 → 7,5%
   | "phev_alto" // PHEV custo aquisição > €45 000 → 15%
@@ -331,6 +332,7 @@ type TipoViatura =
 
 const TA_VIATURAS: Record<TipoViatura, number> = {
   eletrica: TA_VIATURAS_ELETRICA.value,
+  eletrica_cara: TA_VIATURAS_ELETRICA_ACIMA_LIMITE.value,
   phev_baixo: TA_VIATURAS_PHEV.value.ate37500,
   phev_medio: TA_VIATURAS_PHEV.value.ate45000,
   phev_alto: TA_VIATURAS_PHEV.value.acima45000,
@@ -340,7 +342,8 @@ const TA_VIATURAS: Record<TipoViatura, number> = {
 };
 
 const TIPO_VIATURA_META: Record<TipoViatura, string> = {
-  eletrica: "Elétrica — isenta (0%)",
+  eletrica: `Elétrica ≤ ${(TA_ELETRICA_LIMITE_CUSTO.value / 1000).toLocaleString("pt-PT")} mil € aquisição — isenta (0%)`,
+  eletrica_cara: `Elétrica > ${(TA_ELETRICA_LIMITE_CUSTO.value / 1000).toLocaleString("pt-PT")} mil € aquisição — 10%`,
   phev_baixo: "PHEV / Plug-in ≤ 37 500€ aquisição — 2,5%",
   phev_medio: "PHEV / Plug-in 37 500–45 000€ aquisição — 7,5%",
   phev_alto: "PHEV / Plug-in > 45 000€ aquisição — 15%",
@@ -373,16 +376,12 @@ const RFAI_LIMITE_INVEST = RFAI_LIMITE_INVESTIMENTO_INTERIOR.value;
 const RFAI_LIMITE_COLETA = RFAI_LIMITE_COLETA_SRC.value;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DLRR — Dedução por Lucros Retidos e Reinvestidos (Art. 27.º-A CFI)
-// Só PME/Small Mid Cap.
-// 10% dos lucros retidos reinvestidos em ativos elegíveis (≤ 4 anos)
-// Limite: 25% da coleta IRC
-// Lucros elegíveis máximos: €5 000 000
+// DLRR — REVOGADA desde 1 jan 2023 (Art. 281.º da Lei 24-D/2022). Não é
+// simulável em 2026; o sucessor é o ICE (Art. 43.º-D EBF), dependente da
+// Euribor e do balanço. Mostramos apenas a nota informativa.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DLRR_TAXA = DLRR_TAXA_SRC.value;
-const DLRR_LIMITE_COLETA = DLRR_LIMITE_COLETA_SRC.value;
-const DLRR_MAX_LUCROS = DLRR_LIMITE_LUCROS.value;
+const ICE_NOTA = DLRR_REVOGADA_NOTA.value;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SIFIDE II — Sistema de Incentivos Fiscais I&D (Art. 37.º–40.º CFI/EBF)
@@ -425,7 +424,8 @@ const CONTAB_ORG_CUSTO_MENSAL = 200; // OCC: €150–300/mês; média conservad
 //   - 15% dos rendimentos Cat. B excluídos de tributação (máx €2 500/cat)
 //   - Dedução à coleta: 4 × IAS 2026 = €2 148,52
 // IFICI/NHR 2.0 (Art. 58.º-A EBF):
-//   - Taxa flat 20% sobre rendimentos líquidos Cat. B de fonte portuguesa
+//   - Taxa de 20% sobre rendimentos líquidos das categorias A e B elegíveis
+//     (dividendos EXCLUÍDOS — seguem o Art. 71.º CIRS)
 //   - 10 anos, não renovável, só elegíveis que não foram residentes nos últimos 5 anos
 // Dependentes (Art. 78.º-A CIRS):
 //   - 600€ / dep. > 3 anos | 726€ / dep. ≤ 3 anos | 900€ / 2.º+ dep. ≤ 6 anos
@@ -538,7 +538,8 @@ function calcularTributacaoAutonoma(
   const agrav = emPrejuizo && !excecaoPrejuizo ? TA_AGRAVAMENTO : 0;
   const taxaViat = TA_VIATURAS[tipoViatura];
 
-  // Elétricas: sempre 0%, sem possibilidade de agravamento
+  // Elétricas ≤ 62 500 €: 0%, sem agravamento. Acima do limite pagam 10%
+  // (Art. 88.º, n.º 20 CIRC + Portaria 467/2010).
   const viatura =
     tipoViatura === "eletrica" ? 0 : encargosViatura * (taxaViat + agrav);
 
@@ -562,8 +563,6 @@ function calcularTributacaoAutonoma(
 interface ResultadoBeneficios {
   rfai: number;
   rfaiBruto: number;
-  dlrr: number;
-  dlrrBruto: number;
   sifide: number;
   sifideBruto: number;
   rfaiContratual: number; // Benefício fiscal contratual (entrada manual)
@@ -574,7 +573,6 @@ function calcularBeneficios(
   coleta: number,
   rfaiInvest: number,
   regiaoRFAI: RegiaoRFAI,
-  dlrrLucros: number,
   sifideDespesas: number,
   tipoSifide: TipoEmpresaSifide,
   primeirosAnos: boolean,
@@ -591,12 +589,6 @@ function calcularBeneficios(
   const maxRFAI = coleta * (primeirosAnos ? 1.0 : RFAI_LIMITE_COLETA);
   const rfai = Math.min(rfaiBruto, Math.max(0, maxRFAI));
 
-  // ── DLRR (só PME) ─────────────────────────────────────────────────────────
-  const dlrrBase = Math.min(dlrrLucros, DLRR_MAX_LUCROS);
-  const dlrrBruto = dlrrBase * DLRR_TAXA;
-  const maxDLRR = Math.max(0, coleta - rfai) * DLRR_LIMITE_COLETA;
-  const dlrr = Math.min(dlrrBruto, maxDLRR);
-
   // ── SIFIDE II ─────────────────────────────────────────────────────────────
   // Simplificação conservadora para o simulador (sem dados de 2 anos anteriores):
   //  startup   → 82,5% (base 32,5% + incremental 50% × tudo, pois média=0)
@@ -611,18 +603,16 @@ function calcularBeneficios(
         : SIFIDE_TAXA_BASE; // 32,5%
 
   const sifideBruto = sifideDespesas * taxaSifide;
-  const maxSifide = Math.max(0, coleta - rfai - dlrr);
+  const maxSifide = Math.max(0, coleta - rfai);
   const sifide = Math.min(sifideBruto, maxSifide);
 
   return {
     rfai,
     rfaiBruto,
-    dlrr,
-    dlrrBruto,
     sifide,
     sifideBruto,
     rfaiContratual: 0, // preenchido separadamente em simularEmpresa
-    total: rfai + dlrr + sifide,
+    total: rfai + sifide,
   };
 }
 
@@ -960,7 +950,6 @@ function simularEmpresa(
   // Benefícios Fiscais
   rfaiInvest: number,
   regiaoRFAI: RegiaoRFAI,
-  dlrrLucros: number,
   sifideDespesas: number,
   tipoSifide: TipoEmpresaSifide,
   primeirosAnos: boolean,
@@ -970,7 +959,9 @@ function simularEmpresa(
   rfaiContratualValor: number,
 ): ResultadoEmpresa {
   const salGerente = salGerenteMensal * 12;
-  const ssSalGerente = salGerente * (SS_EMP_TAXA + SS_TRAB_TAXA);
+  // Custo da empresa = salário bruto + SS da entidade (23,75%). Os 11% do
+  // trabalhador já estão dentro do salário bruto — somá-los duplicava o custo.
+  const ssSalGerente = salGerente * SS_EMP_TAXA;
   const totalCustos =
     despesasOper + custosExtra + salGerente + ssSalGerente + custoConstituicao;
   const lucroTributavel = Math.max(0, faturacao - totalCustos);
@@ -990,7 +981,6 @@ function simularEmpresa(
     coleta,
     rfaiInvest,
     regiaoRFAI,
-    dlrrLucros,
     sifideDespesas,
     tipoSifide,
     primeirosAnos,
@@ -1010,7 +1000,6 @@ function simularEmpresa(
   beneficios.rfaiContratual = rfaiContratualEfetivo;
   beneficios.total =
     beneficios.rfai +
-    beneficios.dlrr +
     beneficios.sifide +
     rfaiContratualEfetivo;
 
@@ -1118,7 +1107,6 @@ function calcularBreakEven(
       true,
       0,
       "interior",
-      0,
       0,
       "pme_normal",
       false,
@@ -1996,7 +1984,6 @@ interface EmpresaInputsProps {
   // Benefícios Fiscais
   rfaiInvest: number;
   regiaoRFAI: RegiaoRFAI;
-  dlrrLucros: number;
   sifideDespesas: number;
   tipoSifide: TipoEmpresaSifide;
   primeirosAnos: boolean;
@@ -2034,7 +2021,6 @@ interface EmpresaInputsProps {
   onExcecaoPrejuizoChange: (v: boolean) => void;
   onRfaiInvestChange: (v: number) => void;
   onRegiaoRFAIChange: (v: RegiaoRFAI) => void;
-  onDlrrLucrosChange: (v: number) => void;
   onSifideDespesasChange: (v: number) => void;
   onTipoSifideChange: (v: TipoEmpresaSifide) => void;
   onPrimeirosAnosChange: (v: boolean) => void;
@@ -2082,7 +2068,6 @@ function EmpresaInputs({
   excecaoPrejuizo,
   rfaiInvest,
   regiaoRFAI,
-  dlrrLucros,
   sifideDespesas,
   tipoSifide,
   primeirosAnos,
@@ -2105,7 +2090,6 @@ function EmpresaInputs({
   onExcecaoPrejuizoChange,
   onRfaiInvestChange,
   onRegiaoRFAIChange,
-  onDlrrLucrosChange,
   onSifideDespesasChange,
   onTipoSifideChange,
   onPrimeirosAnosChange,
@@ -2324,7 +2308,7 @@ function EmpresaInputs({
                 Aplicar IFICI (ex-NHR 2.0)
               </div>
               <div className="text-xs text-stone-400 dark:text-stone-500">
-                Taxa flat {pct(IFICI_TAXA_FLAT)} sobre rendimentos elegíveis (Art. 58.º-A EBF)
+                Taxa de {pct(IFICI_TAXA_FLAT)} sobre rendimentos das categorias A e B elegíveis (Art. 58.º-A EBF) — não abrange dividendos
               </div>
             </div>
           </label>
@@ -2756,7 +2740,7 @@ function EmpresaInputs({
         badge={
           resultBeneficios.total > 0
             ? `−${fmt(Math.round(resultBeneficios.total))}`
-            : "RFAI · DLRR · SIFIDE"
+            : "RFAI · SIFIDE · ICE"
         }
         badgeColor={resultBeneficios.total > 0 ? "emerald" : "stone"}
       >
@@ -2875,39 +2859,23 @@ function EmpresaInputs({
             )}
           </div>
 
-          {/* DLRR */}
+          {/* ICE — a DLRR foi revogada em 2023 (Lei 24-D/2022) */}
           <div className="space-y-3">
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-bold uppercase tracking-wider text-stone-500">
-                DLRR — Lucros Retidos e Reinvestidos
+                ICE — Capitalização (a DLRR acabou)
               </span>
-              <InfoTip label="DLRR 2026">
-                Só PME/Small Mid Cap. 10% dos lucros retidos reinvestidos em
-                ativos elegíveis (prazo ≤4 anos). Limite: 25% da coleta IRC.
-                Máx. €5M de lucros elegíveis. Cumulável com RFAI (em períodos
-                diferentes).
+              <InfoTip label="ICE (Art. 43.º-D EBF)">
+                A DLRR foi revogada com efeitos a 1 jan 2023. O sucessor é o
+                ICE: dedução indexada à Euribor 12M (+2 p.p. para PME) sobre os
+                aumentos líquidos dos capitais próprios elegíveis.
               </InfoTip>
             </div>
-            <NumericSlider
-              label="Lucros a reter e reinvestir (€/ano)"
-              value={dlrrLucros}
-              min={0}
-              max={200_000}
-              step={1_000}
-              onChange={onDlrrLucrosChange}
-              presets={[0, 10000, 25000, 50000, 100000]}
-              formatPreset={fmt}
-            />
-            {resultBeneficios.dlrrBruto > 0 && (
-              <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50 border border-emerald-200">
-                <span className="text-xs text-emerald-700">
-                  DLRR (10% de {fmt(Math.round(dlrrLucros))})
-                </span>
-                <span className="text-xs font-bold text-emerald-800">
-                  −{fmt(Math.round(resultBeneficios.dlrr))}
-                </span>
-              </div>
-            )}
+            <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800/30 dark:bg-amber-900/10">
+              <p className="text-xs leading-relaxed text-stone-600 dark:text-stone-300">
+                {ICE_NOTA}
+              </p>
+            </div>
           </div>
 
           {/* SIFIDE II */}
@@ -3041,7 +3009,7 @@ function EmpresaInputs({
               tooltip={
                 <>
                   Crédito fiscal contratual negociado com IAPMEI/AICEP. Deduzido
-                  à coleta IRC após RFAI, DLRR e SIFIDE. Reportável até 10 anos.
+                  à coleta IRC após RFAI e SIFIDE. Reportável até 10 anos.
                   Consulta o teu contrato de investimento.
                 </>
               }
@@ -3523,7 +3491,6 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   // ── Empresa — Benefícios Fiscais ─────────────────────────────────────────
   const [rfaiInvest, setRfaiInvest] = useState(0);
   const [regiaoRFAI, setRegiaoRFAI] = useState<RegiaoRFAI>("interior");
-  const [dlrrLucros, setDlrrLucros] = useState(0);
   const [sifideDespesas, setSifideDespesas] = useState(0);
   const [tipoSifide, setTipoSifide] = useState<TipoEmpresaSifide>("pme_normal");
   const [primeirosAnos, setPrimeirosAnos] = useState(false);
@@ -3928,7 +3895,6 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
         excecaoPrejuizo,
         rfaiInvest,
         regiaoRFAI,
-        dlrrLucros,
         sifideDespesas,
         tipoSifide,
         primeirosAnos,
@@ -3951,7 +3917,6 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
       excecaoPrejuizo,
       rfaiInvest,
       regiaoRFAI,
-      dlrrLucros,
       sifideDespesas,
       tipoSifide,
       primeirosAnos,
@@ -4011,19 +3976,14 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   // IMI que não foi isento = custo adicional para a empresa (já não está em custosExtra)
   const imiCustoAnual = temImovelEmpresa && !isencaoIMI_RFAI ? imiAnual : 0;
 
-  // IFICI: 20% flat sobre dividendos em vez de 28% (ou englobamento)
-  const irsDividendosUsado = opcaoEnglobamento
-    ? resultEmpresa.irsDividendosEnglobamento
-    : resultEmpresa.irsDividendosLiberatoria;
-  const irsDividendosIFICI = resultEmpresa.dividendos * IFICI_TAXA_FLAT;
-  const ajusteIFICI = aplicarIFICICompleto ? (irsDividendosUsado - irsDividendosIFICI) : 0;
-
+  // NOTA LEGAL: o IFICI (Art. 58.º-A, n.º 2 EBF) abrange apenas rendimentos
+  // das categorias A e B — os dividendos ficam a 28% (ou englobamento), pelo
+  // que o regime não altera o cálculo dos dividendos aqui.
   const liquidoEmpresaComMunicipal =
     resultEmpresa.liquidoGerente -
     imiCustoAnual + // IMI sem isenção é custo real
     poupancaIMI + // se isento, poupança vs. pagar IMI
-    poupancaIMT + // IMT e IS amortizados (poupança se isento)
-    ajusteIFICI; // IFICI: poupança fiscal sobre dividendos
+    poupancaIMT; // IMT e IS amortizados (poupança se isento)
 
   const liquidoEmpresaFinal = liquidoEmpresaComMunicipal;
   const empresaVence = liquidoEmpresaFinal > resultAnualRV.liquido;
@@ -4073,7 +4033,6 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
         true,
         0,
         "interior",
-        0,
         0,
         "pme_normal",
         false,
@@ -6325,7 +6284,6 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                     excecaoPrejuizo={excecaoPrejuizo}
                     rfaiInvest={rfaiInvest}
                     regiaoRFAI={regiaoRFAI}
-                    dlrrLucros={dlrrLucros}
                     sifideDespesas={sifideDespesas}
                     tipoSifide={tipoSifide}
                     primeirosAnos={primeirosAnos}
@@ -6348,7 +6306,6 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                     onExcecaoPrejuizoChange={setExcecaoPrejuizo}
                     onRfaiInvestChange={setRfaiInvest}
                     onRegiaoRFAIChange={setRegiaoRFAI}
-                    onDlrrLucrosChange={setDlrrLucros}
                     onSifideDespesasChange={setSifideDespesas}
                     onTipoSifideChange={setTipoSifide}
                     onPrimeirosAnosChange={setPrimeirosAnos}
@@ -7280,10 +7237,10 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                               note="Custo dedutível da empresa"
                             />
                             <DetalheRow
-                              label="SS empresa + trabalhador"
+                              label="SS da entidade sobre o salário"
                               value={-resultEmpresa.ssSalGerente}
                               type="deducao"
-                              note="23,75% (empresa) + 11% (trabalhador)"
+                              note="23,75% a cargo da empresa; os 11% do trabalhador saem do salário bruto"
                             />
                           </>
                         )}
@@ -7315,14 +7272,6 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                             }
                           />
                         )}
-                        {resultEmpresa.beneficios.dlrr > 0 && (
-                          <DetalheRow
-                            label="DLRR — 10% dos lucros retidos reinvestidos"
-                            value={resultEmpresa.beneficios.dlrr}
-                            type="beneficio"
-                            note="Limite 25% da coleta IRC (Art. 27.º-A CFI)"
-                          />
-                        )}
                         {resultEmpresa.beneficios.sifide > 0 && (
                           <DetalheRow
                             label={`SIFIDE II — I&D (${tipoSifide === "startup" ? "82,5%" : tipoSifide === "pme_jovem" ? "47,5%" : "32,5%"})`}
@@ -7344,7 +7293,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                             label="IRC após benefícios fiscais"
                             value={-resultEmpresa.ircAposBeneficios}
                             type="deducao"
-                            note={`Poupança RFAI+DLRR+SIFIDE: ${fmt(Math.round(resultEmpresa.beneficios.total))}`}
+                            note={`Poupança RFAI+SIFIDE+contratual: ${fmt(Math.round(resultEmpresa.beneficios.total))}`}
                           />
                         )}
 
@@ -7423,28 +7372,28 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                             )}
                             <DetalheRow
                               label={
-                                aplicarIFICICompleto
-                                  ? `IRS dividendos (IFICI ${pct(IFICI_TAXA_FLAT)} flat)`
-                                  : opcaoEnglobamento
-                                    ? `IRS dividendos (englobamento 50% × ${pct(resultEmpresa.taxaMarginalGerente)} marg.)`
-                                    : "IRS dividendos (28% taxa liberatória)"
+                                opcaoEnglobamento
+                                  ? `IRS dividendos (englobamento 50% × ${pct(resultEmpresa.taxaMarginalGerente)} marg.)`
+                                  : "IRS dividendos (28% taxa liberatória)"
                               }
                               value={
-                                aplicarIFICICompleto
-                                  ? -(resultEmpresa.dividendos * IFICI_TAXA_FLAT)
-                                  : -(opcaoEnglobamento
-                                      ? resultEmpresa.irsDividendosEnglobamento
-                                      : resultEmpresa.irsDividendosLiberatoria)
+                                -(opcaoEnglobamento
+                                  ? resultEmpresa.irsDividendosEnglobamento
+                                  : resultEmpresa.irsDividendosLiberatoria)
                               }
                               type="warning"
                               note={
-                                aplicarIFICICompleto
-                                  ? "Art. 58.º-A EBF — taxa flat IFICI sobre dividendos"
-                                  : opcaoEnglobamento
-                                    ? "Art. 40.º-A CIRS — 50% incluído no rendimento coletável"
-                                    : "Art. 71.º CIRS — taxa liberatória final"
+                                opcaoEnglobamento
+                                  ? "Art. 40.º-A CIRS — 50% incluído no rendimento coletável"
+                                  : "Art. 71.º CIRS — taxa liberatória final"
                               }
                             />
+                            {aplicarIFICICompleto && (
+                              <p className="px-4 py-1.5 text-[11px] leading-relaxed text-stone-400">
+                                Nota IFICI (Art. 58.º-A EBF): a taxa de {pct(IFICI_TAXA_FLAT)} abrange apenas
+                                rendimentos das categorias A e B elegíveis — não os dividendos.
+                              </p>
+                            )}
                           </>
                         ) : (
                           <div className="flex items-center justify-between px-4 py-2.5 rounded-xl border bg-white border-stone-100">
@@ -7646,10 +7595,10 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                   <strong>Fontes:</strong> Art. 31.º, 56.º-A, 68.º, 87.º, 101.º,
                   101.º-B, 12.º-B CIRS | Art. 58.º-A EBF (IFICI) | CIVA Art.
                   53.º e 9.º | Art. 88.º CIRC (TA) | CFI Art. 22.º–42.º
-                  (RFAI/DLRR/SIFIDE II) | CRC (SS independentes) | OE2026 (Lei
+                  (RFAI/SIFIDE II; DLRR revogada) | CRC (SS independentes) | OE2026 (Lei
                   n.º 73-A/2025) | IAS 2026: 537,13€. Estimativa de ordem de
                   grandeza. <strong>Inclui:</strong> Tributação Autónoma
-                  viaturas e encargos (Art. 88.º CIRC), RFAI/DLRR/SIFIDE II,
+                  viaturas e encargos (Art. 88.º CIRC), RFAI/SIFIDE II/ICE,
                   RFAI contratual, custos de constituição, benefícios municipais
                   (IMI/IMT via RFAI), contabilidade organizada TI (Art.
                   28.º/73.º CIRS), particularidades individuais (deficiência

@@ -27,8 +27,8 @@ const FONTES = [
   { titulo: "Art. 263.º Código do Trabalho — Subsídio de Natal", url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0263&nid=1047&tabela=leis", tipo: "oficial" as const },
   { titulo: "Art. 264.º Código do Trabalho — Subsídio de férias", url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0264&nid=1047&tabela=leis", tipo: "oficial" as const },
   { titulo: "Art. 264.º-A CT — Pagamento em duodécimos", url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0264A&nid=1047&tabela=leis", tipo: "oficial" as const },
-  { titulo: "Doutor Finanças — Subsídio de Natal: tudo o que precisa saber", url: "https://www.doutorfinancas.pt/carreira-e-rendimentos/rendimentos/subsidio-de-natal-tudo-o-que-precisa-saber/", tipo: "referencia" as const },
-  { titulo: "Montepio — Subsídio de férias: regras e cálculos", url: "https://www.montepio.org/ei/pessoal/impostos/subsidio-de-ferias-regras-e-calculos/", tipo: "referencia" as const },
+  { titulo: "Coverflex — Como calcular o subsídio de Natal", url: "https://www.coverflex.com/pt/blog/como-calcular-o-subsidio-de-natal", tipo: "referencia" as const },
+  { titulo: "Coverflex — Subsídio de férias: regras e cálculo", url: "https://www.coverflex.com/pt/blog/subsidio-de-ferias", tipo: "referencia" as const },
 ];
 
 export default function SubsidiosFeriasNatalPage() {

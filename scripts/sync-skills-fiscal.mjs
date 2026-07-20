@@ -77,6 +77,18 @@ async function main() {
   const ivaExcesso = grab(src, /IVA_ISENCAO_EXCESSO = sv\(\s*([\d.]+)/, "IVA_ISENCAO_EXCESSO");
   const ssTaxa = grab(src, /SS_TAXA = sv\(\s*([\d.]+)/, "SS_TAXA");
 
+  // Taxas de IVA por região — lidas da fonte de verdade, nunca hardcoded.
+  const ivaTrio = (regiao) => {
+    const m = src.match(
+      new RegExp(`${regiao}: sv\\(\\s*\\{ reduzida: ([\\d.]+), intermedia: ([\\d.]+), normal: ([\\d.]+) \\}`)
+    );
+    if (!m) {
+      console.error(`[sync-skills] Não foi possível ler IVA_TAXAS.${regiao}.`);
+      process.exit(2);
+    }
+    return m.slice(1, 4).map((v) => Math.round(Number(v) * 100)).join("/");
+  };
+
   // Coeficientes de subsídios e categoria F (novos regimes).
   const coefSubNao = grab(src, /coefSubsidiosNaoExploracao: sv\(\s*([\d.]+)/, "coefSubsidiosNaoExploracao");
   const coefSubExpl = grab(src, /coefSubsidiosExploracao: sv\(\s*([\d.]+)/, "coefSubsidiosExploracao");
@@ -109,7 +121,7 @@ async function main() {
     `- **IAS** ${eur(ias)}.`,
     `- **Retenção na fonte** (cat. B): Art. 151.º ${pct(ret151)} · outros serviços ${pct(retOutros)} · direitos de autor ${pct(retAutor)} · vendas sem retenção. Dispensa abaixo de ${eur(dispensa)}/ano.`,
     `- **Coeficientes do regime simplificado**: serviços 151.º 0,75 · outros 0,35 · vendas/hotelaria 0,15 · propriedade intelectual 0,95 · AL moradia 0,35 (contenção 0,50) · transparência 1,0 · **subsídios não destinados à exploração ${coef(coefSubNao)}** · **subsídios à exploração ${coef(coefSubExpl)}**.`,
-    `- **IVA**: isenção até ${eur(ivaLimite)} (excesso ${eur(ivaExcesso)}). Continente 6/13/23, Madeira 5/12/22, Açores 4/9/16.`,
+    `- **IVA**: isenção até ${eur(ivaLimite)} (excesso ${eur(ivaExcesso)}). Continente ${ivaTrio("continente")}, Madeira ${ivaTrio("madeira")}, Açores ${ivaTrio("acores")}.`,
     `- **Segurança Social**: taxa ${pct(ssTaxa)} sobre 70% (serviços) ou 20% (bens/hotelaria).`,
     `- **Categoria F (rendas puras)**: taxa autónoma habitação ${pct(catFHab)} · não habitacional ${pct(catFNaoHab)}; reduções por duração do contrato habitacional (5–10 anos −10 p.p.; 10–20 −15 p.p.; ≥20 −20 p.p.). Sem SS, sem IVA. Motor próprio \`calcularCategoriaF\`.`,
     `- **IRS**: escalões de ${escaloesMin} a ${escaloesMax}; mínimo de existência ${eur(minExist)}.`,

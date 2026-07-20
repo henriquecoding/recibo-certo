@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 };
 
 const FONTES = [
-  { titulo: "Portal das Finanças — IRC", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/CIRC_2R/Pages/codigo-do-irc-indice.aspx", tipo: "oficial" as const },
+  { titulo: "Portal das Finanças — IRC", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/default.aspx", tipo: "oficial" as const },
   { titulo: "Empresa na Hora", url: "https://eportugal.gov.pt/servicos/criar-uma-empresa-na-hora", tipo: "oficial" as const },
 ];
 

@@ -34,7 +34,6 @@ const FONTES = [
   { titulo: "Art. 31.º CIRS — Portal das Finanças", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs31.aspx", tipo: "oficial" as const },
   { titulo: "OCC — Regime simplificado (coeficientes e regra dos 15%)", url: "https://www.occ.pt/pt-pt/noticias/irs-regime-simplificado-1", tipo: "referencia" as const },
   { titulo: "PwC Guia Fiscal 2026 — IRS regime simplificado", url: "https://www.pwc.pt/pt/pwcinforfisco/guia-fiscal/2026/irs.html", tipo: "referencia" as const },
-  { titulo: "CRN Contabilidade — Regime simplificado 2026", url: "https://crncontabilidade.pt/blog/regime-simplificado-irs-2026/", tipo: "referencia" as const },
 ];
 
 const COEFICIENTES = [

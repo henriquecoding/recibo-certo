@@ -33,7 +33,6 @@ const FONTES = [
   { titulo: "Art. 271.º CT — Cálculo da retribuição horária", url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0271&nid=1047&tabela=leis", tipo: "oficial" as const },
   { titulo: "Art. 228.º CT — Limites do trabalho suplementar", url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0228&nid=1047&tabela=leis", tipo: "oficial" as const },
   { titulo: "Doutor Finanças — Retenção sobre trabalho suplementar 2026", url: "https://www.doutorfinancas.pt/carreira-e-rendimentos/rendimentos/retencao-na-fonte-sobre-trabalho-suplementar-alteracoes-e-beneficios-fiscais/", tipo: "referencia" as const },
-  { titulo: "CRN Contabilidade — Horas extra 2026", url: "https://crncontabilidade.pt/blog/trabalho-suplementar-como-calcular-em-2026/", tipo: "referencia" as const },
 ];
 
 const acrescimos = TRABALHO_SUPLEMENTAR.acrescimos.value;

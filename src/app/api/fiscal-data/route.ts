@@ -23,6 +23,9 @@ import {
   IRC_LIMITE_PME,
   DERRAMA_MAX,
   DIVIDENDOS_TAXA,
+  TA_ELETRICA_LIMITE_CUSTO,
+  TA_VIATURAS_ELETRICA_ACIMA_LIMITE,
+  DLRR_REVOGADA_NOTA,
   CATEGORIA_F,
   REDUCAO_COEFICIENTE_ANO,
   DEDUCAO_DEPENDENTE,
@@ -112,6 +115,11 @@ export function GET() {
         limitePME: expose(IRC_LIMITE_PME),
         derramaMax: expose(DERRAMA_MAX),
         dividendos: expose(DIVIDENDOS_TAXA),
+        tributacaoAutonomaEletrica: {
+          limiteCustoAquisicao: expose(TA_ELETRICA_LIMITE_CUSTO),
+          taxaAcimaLimite: expose(TA_VIATURAS_ELETRICA_ACIMA_LIMITE),
+        },
+        dlrrRevogada: expose(DLRR_REVOGADA_NOTA),
       },
       deducoesColeta: {
         dependente: expose(DEDUCAO_DEPENDENTE),

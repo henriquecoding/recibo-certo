@@ -11,7 +11,7 @@ export function NotaDisclaimer() {
     <p className="mt-8 text-sm text-stone-400 border-t border-stone-100 dark:border-stone-800 pt-4">
       Este conteúdo é informativo e não substitui aconselhamento de um{" "}
       <a
-        href="https://www.occ.pt/pt-pt/pesquisar-contabilista/"
+        href="https://www.occ.pt/pt-pt/registo-publico-dos-contabilistas-certificados-inscritos"
         target="_blank"
         rel="noopener noreferrer"
         className="underline hover:text-stone-600 dark:hover:text-stone-300"

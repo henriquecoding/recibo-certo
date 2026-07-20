@@ -28,7 +28,7 @@ const FONTES = [
   { titulo: "Código das Sociedades Comerciais (DL 262/86) — Diário da República", url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/1986-34443375", tipo: "oficial" as const },
   { titulo: "Art. 87.º CIRC — Taxas de IRC", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc87.aspx", tipo: "oficial" as const },
   { titulo: "Art. 71.º CIRS — Taxa liberatória sobre dividendos", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs71.aspx", tipo: "oficial" as const },
-  { titulo: "OCC — IRC 2026: taxas, prazos e obrigações", url: "https://www.occ.pt/pt-pt/noticias/irc-2026", tipo: "referencia" as const },
+  { titulo: "PwC Guia Fiscal 2026 — IRC (taxas, prazos e obrigações)", url: "https://www.pwc.pt/pt/pwcinforfisco/guia-fiscal/2026/irc.html", tipo: "referencia" as const },
 ];
 
 const FORMAS_JURIDICAS = [

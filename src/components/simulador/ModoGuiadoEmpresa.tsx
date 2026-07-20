@@ -69,6 +69,8 @@ import {
   TA_VIATURAS_COMBUSTAO,
   TA_VIATURAS_PHEV,
   TA_VIATURAS_ELETRICA,
+  TA_VIATURAS_ELETRICA_ACIMA_LIMITE,
+  TA_ELETRICA_LIMITE_CUSTO,
   TA_REPRESENTACAO,
   TA_AJUDAS_CUSTO,
   TA_NAO_DOCUMENTADAS,
@@ -78,9 +80,7 @@ import {
   RFAI_TAXA_LITORAL as RFAI_TAXA_LITORAL_SRC,
   RFAI_LIMITE_INVESTIMENTO_INTERIOR,
   RFAI_LIMITE_COLETA as RFAI_LIMITE_COLETA_SRC,
-  DLRR_TAXA as DLRR_TAXA_SRC,
-  DLRR_LIMITE_COLETA as DLRR_LIMITE_COLETA_SRC,
-  DLRR_LIMITE_LUCROS,
+  DLRR_REVOGADA_NOTA,
   SIFIDE_TAXA_BASE as SIFIDE_TAXA_BASE_SRC,
   SIFIDE_TAXA_INCREMENTAL as SIFIDE_TAXA_INCREMENTAL_SRC,
   SIFIDE_MAJORACAO_PME_JOVEM,
@@ -111,6 +111,7 @@ const SMN_2026 = SMN_SRC.value;
 type TipoViaturaGuiado =
   | "nenhuma"
   | "eletrica"
+  | "eletrica_cara"
   | "phev_baixo"
   | "phev_medio"
   | "phev_alto"
@@ -121,6 +122,7 @@ type TipoViaturaGuiado =
 const TA_TAXAS_GUIADO: Record<TipoViaturaGuiado, number> = {
   nenhuma: 0,
   eletrica: TA_VIATURAS_ELETRICA.value,
+  eletrica_cara: TA_VIATURAS_ELETRICA_ACIMA_LIMITE.value,
   phev_baixo: TA_VIATURAS_PHEV.value.ate37500,
   phev_medio: TA_VIATURAS_PHEV.value.ate45000,
   phev_alto: TA_VIATURAS_PHEV.value.acima45000,
@@ -129,9 +131,12 @@ const TA_TAXAS_GUIADO: Record<TipoViaturaGuiado, number> = {
   comb_alto: TA_VIATURAS_COMBUSTAO.value.acima45000,
 };
 
+const ELETRICA_LIMITE_FMT = `${(TA_ELETRICA_LIMITE_CUSTO.value / 1000).toLocaleString("pt-PT")} mil €`;
+
 const TIPO_VIATURA_META: Record<TipoViaturaGuiado, { label: string; sub: string }> = {
   nenhuma: { label: "Sem viatura", sub: "0%" },
-  eletrica: { label: "Elétrica", sub: "Isenta (0%)" },
+  eletrica: { label: `Elétrica ≤ ${ELETRICA_LIMITE_FMT}`, sub: "Isenta (0%)" },
+  eletrica_cara: { label: `Elétrica > ${ELETRICA_LIMITE_FMT}`, sub: "10% (Art. 88.º, n.º 20)" },
   phev_baixo: { label: "PHEV ≤ 37.500€", sub: "2,5%" },
   phev_medio: { label: "PHEV 37.500–45.000€", sub: "7,5%" },
   phev_alto: { label: "PHEV > 45.000€", sub: "15%" },
@@ -152,12 +157,11 @@ const RFAI_TAXA_EXCEDENTE = RFAI_TAXA_INTERIOR_EXCEDENTE.value;
 const RFAI_LIMITE_INVEST = RFAI_LIMITE_INVESTIMENTO_INTERIOR.value;
 const RFAI_LIMITE_COLETA = RFAI_LIMITE_COLETA_SRC.value;
 
-// DLRR (Art. 27.º–34.º CFI)
-const DLRR_TAXA = DLRR_TAXA_SRC.value;
-const DLRR_LIMITE_COLETA = DLRR_LIMITE_COLETA_SRC.value;
-const DLRR_MAX_LUCROS = DLRR_LIMITE_LUCROS.value;
+// DLRR — revogada desde 2023 (Lei 24-D/2022); ver nota informativa no passo
+// de otimização. O sucessor é o ICE (Art. 43.º-D EBF), sem taxa simulável.
+const ICE_NOTA = DLRR_REVOGADA_NOTA.value;
 
-// SIFIDE II (Art. 35.º–42.º CFI)
+// SIFIDE II (Art. 35.º–42.º CFI — prorrogado até 2026 pela Lei 13/2026)
 type TipoEmpresaSifide = "startup" | "pme_jovem" | "pme_normal" | "grande";
 const SIFIDE_TAXA_BASE = SIFIDE_TAXA_BASE_SRC.value;
 const SIFIDE_TAXA_INCREMENTAL = SIFIDE_TAXA_INCREMENTAL_SRC.value;
@@ -201,12 +205,12 @@ const LEI = {
   art88circ: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc88.aspx",
   art71cirs: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs71.aspx",
   art40aCirs: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs40a.aspx",
-  art41bEBF: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-41-b.aspx",
-  art58aEBF: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-58-a.aspx",
+  art41bEBF: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-41-o-b.aspx",
+  art58aEBF: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/EBF58A.aspx",
   cfi: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/2014-128418757",
   csc: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/1986-34443375",
   empresaOnline: "https://www2.gov.pt/espaco-empresa/empresa-online",
-  representanteFiscal: "https://info.portaldasfinancas.gov.pt/pt/apoio_contribuinte/Servicos_Mais_Utilizados/representacao-fiscal/Pages/default.aspx",
+  representanteFiscal: "https://info.portaldasfinancas.gov.pt/pt/apoio_contribuinte/questoes_frequentes/pages/faqs-00307.aspx",
   portaria208: "https://diariodarepublica.pt/dr/detalhe/portaria/208-2017-107695600",
   lgt: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/lgt/Pages/default.aspx",
 };
@@ -257,8 +261,6 @@ interface ResultadoTA {
 interface ResultadoBeneficios {
   rfai: number;
   rfaiBruto: number;
-  dlrr: number;
-  dlrrBruto: number;
   sifide: number;
   sifideBruto: number;
   rfaiContratual: number;
@@ -295,8 +297,6 @@ interface ResultadoEmpresaGuiado {
   custoMunicipalAnual: number;
   custoRepresentanteFiscal: number;
   custoSedeVirtual: number;
-  irsDividendosIFICI: number;
-  poupancaIFICI: number;
 }
 
 function calcularTaxaMarginal(coletavel: number): number {
@@ -330,7 +330,6 @@ function simularEmpresaGuiado(
   rfaiRegiao: RegiaoRFAIGuiado,
   rfaiInvest: number,
   primeirosAnos: boolean,
-  dlrrLucros: number,
   sifideDespesas: number,
   tipoSifide: TipoEmpresaSifide,
   rfaiContratualValor: number,
@@ -348,7 +347,6 @@ function simularEmpresaGuiado(
   sedeVirtualCusto?: number,
   isEstrangeiro?: boolean,
   custoRepFiscal?: number,
-  ifici?: boolean,
 ): ResultadoEmpresaGuiado {
   const ircPME = paramLocal?.ircPME ?? IRC_TAXA_PME.value;
   const ircGeral = paramLocal?.ircGeral ?? IRC_TAXA_GERAL.value;
@@ -358,7 +356,9 @@ function simularEmpresaGuiado(
   const custoRepresentante = isEstrangeiro && custoRepFiscal ? custoRepFiscal : 0;
 
   const salGerente = salGerenteMensal * 12;
-  const ssSalGerente = salGerente * (SS_EMP_TAXA + SS_TRAB_TAXA);
+  // Custo da empresa = salário bruto + SS da entidade (23,75%). Os 11% do
+  // trabalhador saem do próprio salário bruto — somá-los aqui duplicava o custo.
+  const ssSalGerente = salGerente * SS_EMP_TAXA;
   const custoConstituicao = incluirConstituicao
     ? Math.round(custoConstituicaoVal / anosAmortizacao)
     : 0;
@@ -389,28 +389,24 @@ function simularEmpresaGuiado(
   const maxRFAI = coleta * (primeirosAnos ? 1.0 : RFAI_LIMITE_COLETA);
   const rfai = Math.min(rfaiBruto, Math.max(0, maxRFAI));
 
-  const dlrrBase = Math.min(dlrrLucros, DLRR_MAX_LUCROS);
-  const dlrrBruto = dlrrBase * DLRR_TAXA;
-  const maxDLRR = Math.max(0, coleta - rfai) * DLRR_LIMITE_COLETA;
-  const dlrr = Math.min(dlrrBruto, maxDLRR);
-
   const taxaSifide = SIFIDE_META[tipoSifide].taxa;
   const sifideBruto = sifideDespesas * taxaSifide;
-  const maxSifide = Math.max(0, coleta - rfai - dlrr);
+  const maxSifide = Math.max(0, coleta - rfai);
   const sifide = Math.min(sifideBruto, maxSifide);
 
-  const benefTotal = rfai + dlrr + sifide;
+  const benefTotal = rfai + sifide;
   const ircAposBase = Math.max(0, coleta - benefTotal);
   const rfaiContratualEfetivo = Math.min(rfaiContratualValor, ircAposBase);
   const ircAposBeneficios = Math.max(0, ircAposBase - rfaiContratualEfetivo);
 
   const beneficios: ResultadoBeneficios = {
-    rfai, rfaiBruto, dlrr, dlrrBruto, sifide, sifideBruto,
+    rfai, rfaiBruto, sifide, sifideBruto,
     rfaiContratual: rfaiContratualEfetivo,
     total: benefTotal + rfaiContratualEfetivo,
   };
 
-  // TA (Art. 88.º CIRC)
+  // TA (Art. 88.º CIRC). Elétricas ≤ 62 500 € são isentas; acima pagam 10%
+  // (n.º 20). O agravamento por prejuízo só incide onde há taxa positiva.
   const agrav = emPrejuizo && !excecaoPrejuizo ? TA_AGRAVAMENTO : 0;
   const taViatura =
     tipoViatura === "eletrica" || tipoViatura === "nenhuma"
@@ -431,13 +427,14 @@ function simularEmpresaGuiado(
   const ircTotal = ircAposBeneficios + ta.total + derrama;
   const lucroLiquido = Math.max(0, lucroTributavel - ircTotal);
 
-  // Dividendos
+  // Dividendos — NOTA LEGAL: o IFICI (Art. 58.º-A, n.º 2 EBF) só abrange
+  // rendimentos das categorias A e B; dividendos de fonte portuguesa (cat. E)
+  // seguem sempre a taxa liberatória de 28% ou o englobamento parcial.
   let dividendos = 0;
   let irsDividendosLiberatoria = 0;
   let irsDividendosEnglobamento = 0;
   let taxaMarginalGerente = 0;
 
-  let irsDividendosIFICI = 0;
   if (distribuirDividendos && lucroLiquido > 0) {
     dividendos = lucroLiquido;
     irsDividendosLiberatoria = dividendos * IRS_DIVIDENDOS;
@@ -449,24 +446,14 @@ function simularEmpresaGuiado(
     );
     const irsSoSal = calcularIRS(salarioTrib);
     irsDividendosEnglobamento = Math.max(0, irsComDiv - irsSoSal);
-
-    // IFICI (Art. 58.º-A EBF): dividendos de fonte PT tributados a 20% flat
-    if (ifici) {
-      irsDividendosIFICI = dividendos * IFICI_TAXA_FLAT;
-    }
   }
 
-  const irsDividendos = ifici
-    ? irsDividendosIFICI
-    : opcaoEnglobamento
-      ? irsDividendosEnglobamento
-      : irsDividendosLiberatoria;
+  const irsDividendos = opcaoEnglobamento
+    ? irsDividendosEnglobamento
+    : irsDividendosLiberatoria;
 
   const salarioLiq = salGerente * (1 - SS_TRAB_TAXA);
   const liquidoGerente = salarioLiq + (dividendos - irsDividendos);
-  const poupancaIFICI = ifici
-    ? irsDividendosLiberatoria - irsDividendosIFICI
-    : 0;
 
   // Municipal (IMI/IMT)
   const imiAnual = temImovel ? vptImovel * taxaIMI : 0;
@@ -507,8 +494,6 @@ function simularEmpresaGuiado(
     custoMunicipalAnual,
     custoRepresentanteFiscal: custoRepresentante,
     custoSedeVirtual: custoSedeVirtualAnual,
-    irsDividendosIFICI,
-    poupancaIFICI,
   };
 }
 
@@ -1011,7 +996,6 @@ export default function ModoGuiadoEmpresa({
   const [rfaiRegiao, setRfaiRegiao] = useState<RegiaoRFAIGuiado>("interior");
   const [rfaiInvest, setRfaiInvest] = useState(0);
   const [primeirosAnos, setPrimeirosAnos] = useState(false);
-  const [dlrrLucros, setDlrrLucros] = useState(0);
   const [sifideDespesas, setSifideDespesas] = useState(0);
   const [tipoSifide, setTipoSifide] = useState<TipoEmpresaSifide>("pme_normal");
   const [rfaiContratualValor, setRfaiContratualValor] = useState(0);
@@ -1050,7 +1034,7 @@ export default function ModoGuiadoEmpresa({
     tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
     naoDocumentadas, emPrejuizo, excecaoPrejuizo,
     rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
-    dlrrLucros, sifideDespesas, tipoSifide, rfaiContratualValor,
+    sifideDespesas, tipoSifide, rfaiContratualValor,
     temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
     valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
     localizacao,
@@ -1067,12 +1051,12 @@ export default function ModoGuiadoEmpresa({
         tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
         naoDocumentadas, emPrejuizo, excecaoPrejuizo,
         rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
-        dlrrLucros, sifideDespesas, tipoSifide, rfaiContratualValor,
+        sifideDespesas, tipoSifide, rfaiContratualValor,
         temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
         valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
         localizacao ?? undefined,
         sedeVirtualEfetivo || undefined, isEstrangeiro || undefined,
-        custoRepFiscalEfetivo || undefined, aplicarIFICI || undefined,
+        custoRepFiscalEfetivo || undefined,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     simArgs,
@@ -1088,12 +1072,12 @@ export default function ModoGuiadoEmpresa({
         tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
         naoDocumentadas, emPrejuizo, excecaoPrejuizo,
         rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
-        dlrrLucros, sifideDespesas, tipoSifide, rfaiContratualValor,
+        sifideDespesas, tipoSifide, rfaiContratualValor,
         temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
         valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
         localizacao ?? undefined,
         sedeVirtualEfetivo || undefined, isEstrangeiro || undefined,
-        custoRepFiscalEfetivo || undefined, aplicarIFICI || undefined,
+        custoRepFiscalEfetivo || undefined,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     simArgs,
@@ -1107,12 +1091,12 @@ export default function ModoGuiadoEmpresa({
         tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
         naoDocumentadas, emPrejuizo, excecaoPrejuizo,
         rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
-        dlrrLucros, sifideDespesas, tipoSifide, rfaiContratualValor,
+        sifideDespesas, tipoSifide, rfaiContratualValor,
         temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
         valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
         localizacao ?? undefined,
         sedeVirtualEfetivo || undefined, isEstrangeiro || undefined,
-        custoRepFiscalEfetivo || undefined, aplicarIFICI || undefined,
+        custoRepFiscalEfetivo || undefined,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     simArgs,
@@ -1162,7 +1146,7 @@ export default function ModoGuiadoEmpresa({
     custoConstituicao, anosAmortizacao, custosEstrutura,
     distribuirDividendos, opcaoEnglobamento,
     tipoViatura, encargosViatura, despRepresentacao, ajudasCusto, naoDocumentadas, emPrejuizo, excecaoPrejuizo,
-    rfaiRegiao, rfaiInvest, primeirosAnos, dlrrLucros, sifideDespesas, tipoSifide, rfaiContratualValor,
+    rfaiRegiao, rfaiInvest, primeirosAnos, sifideDespesas, tipoSifide, rfaiContratualValor,
     temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI, valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
   });
 
@@ -1200,7 +1184,7 @@ export default function ModoGuiadoEmpresa({
     set(d.distribuirDividendos, setDistribuirDividendos); set(d.opcaoEnglobamento, setOpcaoEnglobamento);
     set(d.tipoViatura, setTipoViatura); set(d.encargosViatura, setEncargosViatura); set(d.despRepresentacao, setDespRepresentacao);
     set(d.ajudasCusto, setAjudasCusto); set(d.naoDocumentadas, setNaoDocumentadas); set(d.emPrejuizo, setEmPrejuizo); set(d.excecaoPrejuizo, setExcecaoPrejuizo);
-    set(d.rfaiRegiao, setRfaiRegiao); set(d.rfaiInvest, setRfaiInvest); set(d.primeirosAnos, setPrimeirosAnos); set(d.dlrrLucros, setDlrrLucros);
+    set(d.rfaiRegiao, setRfaiRegiao); set(d.rfaiInvest, setRfaiInvest); set(d.primeirosAnos, setPrimeirosAnos);
     set(d.sifideDespesas, setSifideDespesas); set(d.tipoSifide, setTipoSifide); set(d.rfaiContratualValor, setRfaiContratualValor);
     set(d.temImovelEmpresa, setTemImovelEmpresa); set(d.vptImovel, setVptImovel); set(d.taxaIMI, setTaxaIMI); set(d.isencaoIMI_RFAI, setIsencaoIMI_RFAI);
     set(d.valorAquisicaoImovel, setValorAquisicaoImovel); set(d.isencaoIMT_RFAI, setIsencaoIMT_RFAI); set(d.anosAmortizacaoIMT, setAnosAmortizacaoIMT);
@@ -1542,12 +1526,12 @@ export default function ModoGuiadoEmpresa({
                           />
                           <div>
                             <div className="text-sm font-semibold text-stone-800 dark:text-stone-100">
-                              Regime IFICI (ex-NHR 2.0) — IRS {pct(IFICI_TAXA_FLAT)} flat
+                              Regime IFICI (ex-NHR 2.0) — IRS {pct(IFICI_TAXA_FLAT)} nas categorias A e B
                             </div>
                             <div className="mt-0.5 text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
-                              Taxa de {pct(IFICI_TAXA_FLAT)} sobre rendimentos elegíveis (vs até 48% nos escalões progressivos), válido por {IFICI_PRAZO_ANOS.value} anos.
-                              Aplicável a investigadores, I&D, startups tecnológicas e atividades de elevado valor acrescentado aprovadas pela AT.
-                              No simulador, aplica-se aos dividendos ({pct(IFICI_TAXA_FLAT)} em vez de {pct(0.28)} de taxa liberatória).
+                              Taxa de {pct(IFICI_TAXA_FLAT)} sobre os rendimentos do trabalho (cat. A) e empresariais/profissionais (cat. B) das atividades elegíveis (vs até 48% nos escalões progressivos), válida por {IFICI_PRAZO_ANOS.value} anos.
+                              Aplicável a investigadores, I&D, startups tecnológicas e profissões altamente qualificadas aprovadas pela AT.
+                              Atenção: NÃO abrange dividendos de fonte portuguesa — esses continuam a {pct(0.28)} de taxa liberatória (ou englobamento), e é assim que o simulador os calcula.
                               <span className="ml-1"><LeiRef artigo="Art. 58.º-A EBF" url={LEI.art58aEBF} /></span>
                             </div>
                           </div>
@@ -2092,9 +2076,7 @@ export default function ModoGuiadoEmpresa({
                   <p className="mb-6 text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
                     O lucro que sobra após o IRC pode ser distribuído como
                     dividendos — mas há um IRS adicional.{" "}
-                    {aplicarIFICI
-                      ? <>Com o IFICI (<LeiRef artigo="Art. 58.º-A EBF" url={LEI.art58aEBF} />), os dividendos de fonte portuguesa são tributados a {pct(IFICI_TAXA_FLAT)} flat (em vez de 28%).</>
-                      : <>Podes escolher entre taxa liberatória de 28% (<LeiRef artigo="Art. 71.º CIRS" url={LEI.art71cirs} />) ou englobamento de 50% do valor (<LeiRef artigo="Art. 40.º-A CIRS" url={LEI.art40aCirs} />).</>}
+                    Podes escolher entre taxa liberatória de 28% (<LeiRef artigo="Art. 71.º CIRS" url={LEI.art71cirs} />) ou englobamento de 50% do valor (<LeiRef artigo="Art. 40.º-A CIRS" url={LEI.art40aCirs} />).
                   </p>
 
                   <div className="space-y-5">
@@ -2149,7 +2131,7 @@ export default function ModoGuiadoEmpresa({
                     </div>
 
                     {/* Tipo de tributação de dividendos */}
-                    {distribuirDividendos && !aplicarIFICI && (
+                    {distribuirDividendos && (
                       <div>
                         <div className="mb-2 flex items-center gap-1.5">
                           <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
@@ -2234,14 +2216,14 @@ export default function ModoGuiadoEmpresa({
                       </div>
                     )}
 
-                    {/* IFICI — taxa flat aplicada automaticamente */}
+                    {/* IFICI — nota de âmbito: não abrange dividendos */}
                     {distribuirDividendos && aplicarIFICI && (
-                      <div className="mt-3 rounded-2xl border border-brand/20 bg-brand-light/20 p-3 dark:bg-brand/5">
+                      <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800/30 dark:bg-amber-900/10">
                         <div className="flex items-start gap-2">
-                          <Sparkle size={14} className="mt-0.5 flex-shrink-0 text-brand" />
-                          <div className="text-xs text-brand-dark dark:text-brand leading-relaxed">
-                            <strong>IFICI ativo</strong> (<LeiRef artigo="Art. 58.º-A EBF" url={LEI.art58aEBF} />) — dividendos de fonte portuguesa tributados a {pct(IFICI_TAXA_FLAT)} flat durante {IFICI_PRAZO_ANOS.value} anos.
-                            Poupança face à liberatória de 28%: <strong>{fmt(Math.round(resultado.poupancaIFICI))}/ano</strong>.
+                          <Warning size={14} className="mt-0.5 flex-shrink-0 text-amber-500" />
+                          <div className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+                            <strong>Nota sobre o IFICI</strong> (<LeiRef artigo="Art. 58.º-A EBF" url={LEI.art58aEBF} />) — a taxa de {pct(IFICI_TAXA_FLAT)} abrange apenas rendimentos das categorias A e B das atividades elegíveis, durante {IFICI_PRAZO_ANOS.value} anos.
+                            Os dividendos NÃO estão incluídos: continuam sujeitos à liberatória de 28% ou ao englobamento, como está calculado acima.
                           </div>
                         </div>
                       </div>
@@ -2446,22 +2428,18 @@ export default function ModoGuiadoEmpresa({
                       )}
                     </Collapsible>
 
-                    {/* ── DLRR ────────────────────────────────────────── */}
-                    <Collapsible title="DLRR — Lucros Retidos e Reinvestidos" defaultOpen={dlrrLucros > 0}>
-                      <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed mb-3">
-                        <LeiRef artigo="Art. 27.º–34.º CFI" url={LEI.cfi} /> — PME e Small Mid Cap podem deduzir 10% dos
-                        lucros retidos e reinvestidos em ativos elegíveis (máx. 5M€).
-                        Limite: 25% da coleta IRC. Reportável 12 exercícios.
+                    {/* ── ICE (a DLRR foi revogada em 2023) ───────────── */}
+                    <Collapsible title="ICE — Capitalização (a DLRR acabou)" defaultOpen={false}>
+                      <div className="mb-2 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800/30 dark:bg-amber-900/10">
+                        <Warning size={13} className="mt-0.5 flex-shrink-0 text-amber-500" />
+                        <p className="text-[11px] text-stone-600 dark:text-stone-300 leading-relaxed">
+                          {ICE_NOTA}
+                        </p>
+                      </div>
+                      <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">
+                        Por rigor, este simulador não estima o ICE: a dedução depende da Euribor e
+                        do balanço da empresa (capitais próprios elegíveis), dados que variam caso a caso.
                       </p>
-                      <NumericSlider label="Lucros retidos reinvestidos (€)" value={dlrrLucros} min={0} max={200_000} step={5_000} onChange={setDlrrLucros} presets={[0, 20_000, 50_000, 100_000]}
-                        tooltip={<>Lucros do exercício anterior retidos e reinvestidos em ativos elegíveis nos 4 anos seguintes.</>}
-                      />
-                      {dlrrLucros > 0 && resultado.beneficios.dlrr > 0 && (
-                        <div className="mt-2 flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 dark:bg-emerald-900/20 dark:border-emerald-800">
-                          <span className="text-[11px] text-emerald-700 dark:text-emerald-300">Poupança DLRR (10% de {fmt(dlrrLucros)}, máx 25% coleta)</span>
-                          <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">-{fmt(Math.round(resultado.beneficios.dlrr))}</span>
-                        </div>
-                      )}
                     </Collapsible>
 
                     {/* ── SIFIDE II ───────────────────────────────────── */}
@@ -2470,6 +2448,7 @@ export default function ModoGuiadoEmpresa({
                         <LeiRef artigo="Art. 35.º–42.º CFI" url={LEI.cfi} /> — dedução à coleta de IRC de 32,5% a 82,5%
                         das despesas elegíveis com Investigação e Desenvolvimento.
                         Certificação ANI necessária. Reportável 12 exercícios.
+                        Vigência prorrogada até 2026 (Lei 13/2026); a dedução via fundos de investimento terminou com o OE2026 — só conta o investimento direto em I&D.
                       </p>
                       <div className="mb-3">
                         <div className="mb-2 text-xs font-semibold text-stone-600 dark:text-stone-300">Tipo de empresa</div>
@@ -2502,7 +2481,7 @@ export default function ModoGuiadoEmpresa({
                       <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed mb-3">
                         <LeiRef artigo="Art. 8.º–22.º CFI" url={LEI.cfi} /> — para investimentos de grande dimensão,
                         negociado com IAPMEI/AICEP. Crédito fiscal adicional que
-                        se aplica após RFAI + DLRR + SIFIDE. O valor é acordado caso a caso.
+                        se aplica após RFAI + SIFIDE. O valor é acordado caso a caso.
                       </p>
                       <NumericSlider label="Crédito fiscal contratual (€/ano)" value={rfaiContratualValor} min={0} max={500_000} step={10_000} onChange={setRfaiContratualValor} presets={[0, 50_000, 100_000, 250_000]}
                         tooltip={<>Valor anual do benefício negociado. Aplica-se após os restantes benefícios, limitado ao IRC remanescente.</>}
@@ -2595,7 +2574,6 @@ export default function ModoGuiadoEmpresa({
                         </div>
                         <div className="space-y-0.5 text-[10px] text-emerald-600 dark:text-emerald-400">
                           {resultado.beneficios.rfai > 0 && <div className="flex justify-between"><span>RFAI</span><span>-{fmt(Math.round(resultado.beneficios.rfai))}{resultado.beneficios.rfaiBruto > resultado.beneficios.rfai ? ` (bruto ${fmt(Math.round(resultado.beneficios.rfaiBruto))}, limitado à coleta)` : ""}</span></div>}
-                          {resultado.beneficios.dlrr > 0 && <div className="flex justify-between"><span>DLRR</span><span>-{fmt(Math.round(resultado.beneficios.dlrr))}{resultado.beneficios.dlrrBruto > resultado.beneficios.dlrr ? ` (bruto ${fmt(Math.round(resultado.beneficios.dlrrBruto))})` : ""}</span></div>}
                           {resultado.beneficios.sifide > 0 && <div className="flex justify-between"><span>SIFIDE II</span><span>-{fmt(Math.round(resultado.beneficios.sifide))}{resultado.beneficios.sifideBruto > resultado.beneficios.sifide ? ` (bruto ${fmt(Math.round(resultado.beneficios.sifideBruto))})` : ""}</span></div>}
                           {resultado.beneficios.rfaiContratual > 0 && <div className="flex justify-between"><span>RFAI Contratual</span><span>-{fmt(Math.round(resultado.beneficios.rfaiContratual))}</span></div>}
                         </div>
@@ -2651,13 +2629,12 @@ export default function ModoGuiadoEmpresa({
                       { label: "Custos estrutura (contabilidade + software)", value: -resultado.custosEstrutura, cor: "text-stone-500" },
                       resultado.custoConstituicao > 0 ? { label: `Constituição (amortizada ${anosAmortizacao} ano${anosAmortizacao > 1 ? "s" : ""})`, value: -resultado.custoConstituicao, cor: "text-stone-500" } : null,
                       resultado.salGerente > 0 ? { label: `Salário gerente (${fmt(salGerenteMensal)}/mês × 12)`, value: -resultado.salGerente, cor: "text-stone-500" } : null,
-                      resultado.ssSalGerente > 0 ? { label: "SS empresa + trabalhador (34,75%)", value: -resultado.ssSalGerente, cor: "text-amber-600 dark:text-amber-400" } : null,
+                      resultado.ssSalGerente > 0 ? { label: `SS da entidade sobre o salário (${pct(SS_EMP_TAXA)})`, value: -resultado.ssSalGerente, cor: "text-amber-600 dark:text-amber-400" } : null,
                       resultado.custoSedeVirtual > 0 ? { label: `Sede ${tipoSede === "virtual" ? "virtual" : "coworking"} (${fmt(custoSedeVirtual)}/mês × 12)`, value: -resultado.custoSedeVirtual, cor: "text-stone-500" } : null,
                       resultado.custoRepresentanteFiscal > 0 ? { label: "Representante fiscal (Art. 19.º LGT)", value: -resultado.custoRepresentanteFiscal, cor: "text-amber-600 dark:text-amber-400" } : null,
                       { label: "Lucro tributável", value: resultado.lucroTributavel, cor: "text-stone-700 dark:text-stone-200 font-semibold", sep: true },
                       { label: `IRC coleta (${pct(localizacao?.ircPME ?? IRC_TAXA_PME.value)}/${fmt(IRC_LIMITE)} + ${pct(localizacao?.ircGeral ?? IRC_TAXA_GERAL.value)}${localizacao?.interior ? " · interior" : ""})`, value: -resultado.coleta, cor: "text-red-500 dark:text-red-400" },
                       resultado.beneficios.rfai > 0 ? { label: `RFAI (${pct(RFAI_TAXA[rfaiRegiaoEfetiva])} × ${fmt(rfaiInvest)})`, value: resultado.beneficios.rfai, cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
-                      resultado.beneficios.dlrr > 0 ? { label: `DLRR (10% × ${fmt(dlrrLucros)})`, value: resultado.beneficios.dlrr, cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
                       resultado.beneficios.sifide > 0 ? { label: `SIFIDE II (${pct(SIFIDE_META[tipoSifide].taxa)} × ${fmt(sifideDespesas)})`, value: resultado.beneficios.sifide, cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
                       resultado.beneficios.rfaiContratual > 0 ? { label: "RFAI Contratual", value: resultado.beneficios.rfaiContratual, cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
                       resultado.beneficios.total > 0 ? { label: "IRC após benefícios", value: resultado.ircAposBeneficios, cor: "text-stone-600 dark:text-stone-300", sep: true } : null,
@@ -2670,16 +2647,10 @@ export default function ModoGuiadoEmpresa({
                       resultado.poupancaIMI > 0 || resultado.poupancaIMT > 0 ? { label: "Poupança municipal (isenções RFAI)", value: resultado.poupancaIMI + (resultado.poupancaIMT / anosAmortizacaoIMT), cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
                       { label: "Lucro líquido (disponível)", value: resultado.lucroLiquido, cor: "text-stone-700 dark:text-stone-200 font-semibold", sep: true },
                       distribuirDividendos ? {
-                        label: aplicarIFICI
-                          ? `IRS dividendos (IFICI ${pct(IFICI_TAXA_FLAT)} flat)`
-                          : opcaoEnglobamento
-                            ? `IRS dividendos (englobamento 50% × ${pct(resultado.taxaMarginalGerente)} marginal)`
-                            : "IRS dividendos (28% taxa liberatória)",
+                        label: opcaoEnglobamento
+                          ? `IRS dividendos (englobamento 50% × ${pct(resultado.taxaMarginalGerente)} marginal)`
+                          : "IRS dividendos (28% taxa liberatória)",
                         value: -resultado.irsDividendos, cor: "text-red-500 dark:text-red-400",
-                      } : null,
-                      distribuirDividendos && aplicarIFICI && resultado.poupancaIFICI > 0 ? {
-                        label: `Poupança IFICI (vs 28% liberatória)`,
-                        value: resultado.poupancaIFICI, cor: "text-emerald-600 dark:text-emerald-400", plus: true,
                       } : null,
                     ]
                       .filter(Boolean)
@@ -2759,7 +2730,7 @@ export default function ModoGuiadoEmpresa({
                     derrama ~{pct(localizacao?.derramaEstimada ?? DERRAMA_MAX.value)},
                     TA (<LeiRef artigo="Art. 88.º CIRC" url={LEI.art88circ} />),
                     benefícios (<LeiRef artigo="CFI" url={LEI.cfi} />) e IMI/IMT conforme configurado.
-                    {aplicarIFICI && <> IFICI (<LeiRef artigo="Art. 58.º-A EBF" url={LEI.art58aEBF} />) aplicado aos dividendos.</>}
+                    {aplicarIFICI && <> O IFICI (<LeiRef artigo="Art. 58.º-A EBF" url={LEI.art58aEBF} />) abrange o salário/cat. B elegível a 20% — não os dividendos.</>}
                     {" "}Salário antes de IRS na fonte.
                     Não substitui aconselhamento de um contabilista certificado (OCC).
                   </p>
@@ -2890,7 +2861,7 @@ export default function ModoGuiadoEmpresa({
                             Simulador completo
                           </span>
                           <span className="mt-0.5 block text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
-                            DLRR, SIFIDE, IMI/IMT, tributação autónoma
+                            SIFIDE, RFAI, IMI/IMT, tributação autónoma
                             detalhada e mais benefícios fiscais.
                           </span>
                         </span>
@@ -2990,12 +2961,12 @@ export default function ModoGuiadoEmpresa({
                       <div className="space-y-2">
                         {[
                           { titulo: "IRC PME 15% nos primeiros 50.000€", desc: "Taxa reduzida para micro/PME. O restante a 19%.", badge: "Nacional", lei: "Art. 87.º CIRC", url: LEI.art87circ },
-                          { titulo: "IRC 12,5% nos territórios do interior", desc: "PME com direção efetiva em concelho do interior. Acumula com PME.", badge: "Interior", lei: "Art. 41.º-B EBF", url: LEI.art41bEBF },
+                          { titulo: "IRC 12,5% nos primeiros 50.000€ no interior", desc: "PME com direção efetiva em concelho do interior — só nos primeiros 50.000€ de matéria coletável; o restante à taxa geral.", badge: "Interior", lei: "Art. 41.º-B EBF", url: LEI.art41bEBF },
                           { titulo: "RFAI — 10% a 30% do investimento", desc: "Crédito de IRC sobre equipamentos e ativos. 30% fora de Lisboa/Algarve, 10% litoral.", badge: "Nacional", lei: "Art. 22.º–26.º CFI", url: LEI.cfi },
-                          { titulo: "DLRR — 10% dos lucros reinvestidos", desc: "Dedução de 10% dos lucros retidos e reinvestidos em ativos elegíveis.", badge: "PME", lei: "Art. 27.º–34.º CFI", url: LEI.cfi },
-                          { titulo: "SIFIDE II — até 82,5% de I&D", desc: "32,5% (base) + 50% incremental das despesas de investigação e desenvolvimento.", badge: "I&D", lei: "Art. 35.º–42.º CFI", url: LEI.cfi },
+                          { titulo: "ICE — dedução pela capitalização", desc: "Dedução indexada à Euribor 12M (+2 p.p. para PME) sobre aumentos de capitais próprios elegíveis. Substitui a DLRR, revogada desde 2023.", badge: "PME", lei: "Art. 43.º-D EBF" },
+                          { titulo: "SIFIDE II — até 82,5% de I&D", desc: "32,5% (base) + 50% incremental das despesas de I&D. Prorrogado até 2026 (Lei 13/2026).", badge: "I&D", lei: "Art. 35.º–42.º CFI", url: LEI.cfi },
                           { titulo: "Zona Franca da Madeira — IRC 5%", desc: "Empresas licenciadas no CINM até 2033. Requer criação de emprego e investimento mínimo de 75.000€.", badge: "Madeira" },
-                          ...(aplicarIFICI ? [{ titulo: `IFICI — IRS ${pct(IFICI_TAXA_FLAT)} flat (${IFICI_PRAZO_ANOS.value} anos)`, desc: "Incentivo fiscal para investigação científica e inovação. Taxa flat de 20% sobre rendimentos e dividendos de fonte portuguesa.", badge: "Estrangeiro", lei: "Art. 58.º-A EBF", url: LEI.art58aEBF }] : []),
+                          ...(aplicarIFICI ? [{ titulo: `IFICI — IRS ${pct(IFICI_TAXA_FLAT)} (${IFICI_PRAZO_ANOS.value} anos)`, desc: "Taxa de 20% sobre rendimentos do trabalho (cat. A) e da categoria B das atividades elegíveis. Não abrange dividendos.", badge: "Estrangeiro", lei: "Art. 58.º-A EBF", url: LEI.art58aEBF }] : []),
                         ].map((b) => (
                           <div key={b.titulo} className="flex items-start gap-2.5 rounded-xl border border-stone-100 bg-white p-3 dark:border-stone-800 dark:bg-stone-950">
                             <Check size={14} className="mt-0.5 flex-shrink-0 text-brand" />

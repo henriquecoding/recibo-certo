@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 const FONTES = [
   { titulo: "Art. 88.º CIRC — Taxas de tributação autónoma", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc88.aspx", tipo: "oficial" as const },
   { titulo: "Lei 73-A/2025 — Orçamento do Estado 2026 (alterações TA)", url: "https://diariodarepublica.pt/dr/detalhe/lei/73-a-2025", tipo: "oficial" as const },
-  { titulo: "OCC — Tributação autónoma 2026: novas taxas e limiares", url: "https://www.occ.pt/pt-pt/noticias/tributacao-autonoma-2026", tipo: "referencia" as const },
+  { titulo: "OCC — IRC: tributação autónoma (taxas e limiares)", url: "https://portal.occ.pt/pt-pt/noticias/irc-tributacao-autonoma", tipo: "referencia" as const },
   { titulo: "Santander — Tributação autónoma: o que muda em 2026", url: "https://www.santander.pt/salto/tributacao-autonoma", tipo: "referencia" as const },
 ];
 
