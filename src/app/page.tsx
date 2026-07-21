@@ -3,16 +3,12 @@ import Nav from "@/components/Nav";
 import Hero from "@/components/Hero";
 import Stats from "@/components/Stats";
 import CalculadoraSecao from "@/components/CalculadoraSecao";
-import Features, { type Breakeven } from "@/components/Features";
-import FerramentasSecao from "@/components/FerramentasSecao";
-import SimuladorIRSDestaque from "@/components/SimuladorIRSDestaque";
-import AprenderSecao from "@/components/AprenderSecao";
+import ExplorarSecao from "@/components/ExplorarSecao";
 import FAQ from "@/components/FAQ";
 import Fontes from "@/components/Fontes";
 import { compararCategorias } from "@/lib/fiscal-dependente";
 import { ATIVIDADES } from "@/lib/fiscal-data";
 
-import CustoOmissao from "@/components/CustoOmissao";
 import Precos from "@/components/Precos";
 import Footer from "@/components/Footer";
 import { faqs } from "@/lib/faq";
@@ -36,21 +32,11 @@ const jsonLd = {
 };
 
 // Números de empresa/comparação da landing — calculados no servidor (build) com
-// o motor fiscal verificado e passados como props ao Hero e às Features. Mantém
+// o motor fiscal verificado e passados como props ao Hero. Mantém
 // `fiscal-dependente`/`fiscal`/`fiscal-data` FORA do bundle inicial do cliente,
 // sem mudar nenhum valor (mesma função, mesmos pressupostos).
 const HERO_FAT = 30_000;
 const landingCmp = compararCategorias({ brutoAnual: HERO_FAT, dependentes: 0 });
-const landingBreakeven: Breakeven = (() => {
-  let bRV: number | null = null;
-  let bEmp: number | null = null;
-  for (let x = 5_000; x <= 200_000; x += 2_500) {
-    const c = compararCategorias({ brutoAnual: x, dependentes: 0 });
-    if (bRV === null && c.freelancer.liquido > c.dependente.liquido) bRV = x;
-    if (bEmp === null && c.empresa.liquido > c.freelancer.liquido) bEmp = x;
-  }
-  return { bRV, bEmp };
-})();
 
 export default function Home() {
   return (
@@ -66,59 +52,36 @@ export default function Home() {
 
           {/*
            * ── Simulador integrado ──────────────────────────────────────────
-           * Substitui Calculadora.tsx + SimuladorEmpresa.tsx.
-           * Uma única ferramenta com:
-           *  · slider bidirecional + input manual para todos os campos numéricos
-           *  · ActivityCombobox com catálogo completo Art. 151.º
-           *  · toggle Por recibo / Anual (partilhado entre cenários)
-           *  · toggle Recibos Verdes / Empresa (mesmos inputs, dois painéis)
-           *  · comparação integrada no rodapé com ponto de viragem
+           * Uma única ferramenta interativa, adaptada ao perfil (recibos verdes,
+           * vencimento, empresa ou comparador). É o produto — vive logo a seguir
+           * ao Hero para o utilizador experimentar de imediato.
            */}
           <section
             id="calculadora"
-            className="grain border-y border-stone-100 bg-white px-6 py-24 scroll-mt-20"
+            className="grain border-y border-stone-100 bg-white px-6 py-14 scroll-mt-20 sm:py-20"
           >
             <CalculadoraSecao />
           </section>
 
-          <Stats />
-
-          <Features cmp={landingCmp} breakeven={landingBreakeven} />
-
           {/*
-           * ── Montra do ecossistema ────────────────────────────────────────
-           * Três secções novas que expõem o site inteiro, moldadas ao perfil:
-           *  · Ferramentas — destaque + grelha das landings públicas;
-           *  · Simulador de IRS anual — a joia da coroa, com a DemoIRS ao vivo
-           *    (chunk próprio; fiscal-data nunca entra no arranque);
-           *  · Aprender — guias curados por perfil + Quiz Fiscal (contagens reais).
-           * A contagem de atividades é calculada AQUI (servidor) para o cartão
-           * de destaque nunca inventar números.
+           * ── #explorar — launchpad único, moldado ao perfil ────────────────
+           * Substitui as antigas Features + Ferramentas + Simulador de IRS +
+           * Aprender por UMA secção compacta que mostra só o essencial de cada
+           * perfil: um destaque (a demo do IRS ao vivo onde é protagonista, ou o
+           * cartão-chave), a fila de ferramentas relevantes e a de guias + Quiz.
+           * `nAtividades` é calculado no servidor para o chip nunca inventar.
            */}
-          <section id="ferramentas" className="px-6 py-24 scroll-mt-20">
-            <FerramentasSecao nAtividades={ATIVIDADES.length} />
+          <section id="explorar" className="px-6 py-14 scroll-mt-20 sm:py-20">
+            <ExplorarSecao nAtividades={ATIVIDADES.length} />
           </section>
 
-          <section
-            id="simulador-irs"
-            className="grain border-y border-stone-100 bg-white px-6 py-24 scroll-mt-20"
-          >
-            <SimuladorIRSDestaque />
-          </section>
-
-          <section id="aprender" className="px-6 py-24 scroll-mt-20">
-            <AprenderSecao />
-          </section>
-
-          <div className="border-y border-stone-100 bg-white">
-            <CustoOmissao />
-          </div>
+          <Stats />
 
           <Precos />
 
-          <Fontes />
-
           <FAQ />
+
+          <Fontes />
         </main>
         <Footer />
       </div>

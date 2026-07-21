@@ -75,7 +75,7 @@ export default function Precos() {
   const subPreco = anual ? "faturado 47,99 € por ano · poupa 33%" : "faturado mensalmente";
 
   return (
-    <section id="precos" className="scroll-mt-24 px-6 py-24">
+    <section id="precos" className="scroll-mt-24 px-6 py-14 sm:py-20">
       <div className="mx-auto max-w-5xl">
         <Reveal className="mb-8 text-center">
           <div className="eyebrow mb-3 text-brand">Planos</div>

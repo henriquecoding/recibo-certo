@@ -3,23 +3,20 @@
 import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
 import Link from "next/link";
 import { m, AnimatePresence, useReducedMotion } from "motion/react";
-import { ArrowRight, ShieldCheck, Bank, FileSign, Warning, Calendar, Check, Sparkle, CursorArrow, Calculator } from "@/components/ui/Icons";
+import { ArrowRight, ShieldCheck, FileSign, Warning, Calendar, Check, Sparkle, CursorArrow } from "@/components/ui/Icons";
 import { scrollToId } from "@/lib/scroll";
 import { staggerContainer, staggerItem, EASE } from "@/lib/motion";
 import { usePerfil, type Perfil } from "@/lib/perfil";
-import { FERRAMENTA_SLUGS, GUIA_SLUGS } from "@/lib/seo";
 import { ferramentasPorPerfil } from "@/lib/ferramentas-config";
 import { guiasPorPerfil } from "@/lib/guias-config";
 import SeletorModo from "@/components/SeletorModo";
 import type { ComparacaoCategoriasResult } from "@/lib/fiscal-dependente";
 
-// Selos de confiança — as contagens são derivadas dos registos reais do site
-// (sitemap/configs), nunca escritas à mão. Se o site crescer, isto acompanha.
+// Selos de confiança — enxutos (2). O detalhe das fontes e as contagens do
+// ecossistema vivem, sem repetição, na faixa de números e na secção Fontes.
 const TRUST = [
   { icon: <ShieldCheck size={14} />, text: "Taxas de 2026 verificadas" },
-  { icon: <Bank size={14} />, text: "Fontes oficiais: AT e Segurança Social" },
   { icon: <FileSign size={14} />, text: "Base legal em cada cálculo" },
-  { icon: <Calculator size={14} />, text: `${FERRAMENTA_SLUGS.length} ferramentas · ${GUIA_SLUGS.length} guias` },
 ];
 
 const eur0 = (n: number) => `${Math.round(n).toLocaleString("pt-PT")} €`;

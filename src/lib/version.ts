@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.91.0";
+export const APP_VERSION = "1.92.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,18 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.92.0",
+    data: "2026-07-21",
+    titulo: "Página inicial muito mais curta e focada",
+    itens: [
+      "A página inicial ficou bastante mais leve, sobretudo no telemóvel: as várias secções de ferramentas e guias deram lugar a uma só, que mostra apenas o que interessa ao perfil que escolheres.",
+      "A demonstração ao vivo do Simulador de IRS passou a aparecer só quando faz sentido (trabalhador independente e comparador) — nos outros perfis dá lugar à ferramenta mais útil para ti.",
+      "As perguntas frequentes passam a mostrar só as do teu caso, com um botão para ver todas.",
+      "A longa lista de fontes oficiais ficou recolhida num «ver todas», mantendo a transparência sem alongar a página.",
+      "Menos repetição e menos espaço morto: a entrada do site vai direta ao essencial.",
+    ],
+  },
   {
     version: "1.91.0",
     data: "2026-07-21",
