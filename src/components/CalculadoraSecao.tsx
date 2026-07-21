@@ -80,7 +80,7 @@ const COPY: Record<string, { eyebrow: string; h2: React.ReactNode; sub: string }
         <br className="hidden sm:block" /> Vê o líquido via sociedade.
       </>
     ),
-    sub: "Faturação, custos e distribuição de dividendos — estima o líquido com IRC PME, derrama, tributação autónoma e benefícios fiscais (RFAI, DLRR, SIFIDE). Taxas oficiais de 2026.",
+    sub: "Faturação, custos e distribuição de dividendos — estima o líquido com IRC PME, derrama, tributação autónoma e benefícios fiscais (RFAI, SIFIDE II, ICE). Taxas oficiais de 2026.",
   },
   comparar: {
     eyebrow: "Comparar cenários 2026",

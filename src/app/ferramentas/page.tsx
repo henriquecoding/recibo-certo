@@ -82,6 +82,13 @@ const FERRAMENTAS = [
     badge: "Simulador",
   },
   {
+    href: "/ferramentas/simulador-herancas",
+    titulo: "Simulador de heranças e sucessões",
+    descricao: "Quem herda o quê e quanto se paga de Imposto do Selo — a família direta é isenta. Meação, legítima e quota disponível, partilha e comparação herança vs doação. Guiado e completo.",
+    icon: Scale,
+    badge: "Simulador",
+  },
+  {
     href: "/ferramentas/payout-mor",
     titulo: "Wizard recibo Merchant of Record",
     descricao: "Configura o recibo verde para payout do Paddle ou Lemon Squeezy em 5 passos. IVA, retenção e NIF preenchidos.",

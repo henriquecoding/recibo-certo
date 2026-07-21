@@ -26,6 +26,14 @@ import {
   TA_ELETRICA_LIMITE_CUSTO,
   TA_VIATURAS_ELETRICA_ACIMA_LIMITE,
   DLRR_REVOGADA_NOTA,
+  IS_TRANSMISSAO_GRATUITA,
+  IS_DOACAO_IMOVEL,
+  IS_DOACAO_MINIMO_ISENTO,
+  PRAZO_MODELO1_MESES,
+  MEACAO_FRACAO,
+  CONJUGE_QUOTA_MINIMA,
+  SELO_RELACOES_ISENTAS,
+  LEGITIMA,
   CATEGORIA_F,
   REDUCAO_COEFICIENTE_ANO,
   DEDUCAO_DEPENDENTE,
@@ -120,6 +128,18 @@ export function GET() {
           taxaAcimaLimite: expose(TA_VIATURAS_ELETRICA_ACIMA_LIMITE),
         },
         dlrrRevogada: expose(DLRR_REVOGADA_NOTA),
+      },
+      herancasESucessoes: {
+        // Portugal não tem imposto sucessório — as transmissões gratuitas são
+        // tributadas em Imposto do Selo; a partilha rege-se pelo Código Civil.
+        impostoSeloTransmissaoGratuita: expose(IS_TRANSMISSAO_GRATUITA),
+        impostoSeloDoacaoImovel: expose(IS_DOACAO_IMOVEL),
+        doacaoMinimoIsento: expose(IS_DOACAO_MINIMO_ISENTO),
+        prazoModelo1Meses: expose(PRAZO_MODELO1_MESES),
+        meacaoFracao: expose(MEACAO_FRACAO),
+        conjugeQuotaMinima: expose(CONJUGE_QUOTA_MINIMA),
+        relacoesIsentasSelo: SELO_RELACOES_ISENTAS,
+        legitima: LEGITIMA,
       },
       deducoesColeta: {
         dependente: expose(DEDUCAO_DEPENDENTE),

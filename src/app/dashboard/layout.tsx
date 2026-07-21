@@ -70,6 +70,7 @@ const GRUPOS: NavGroup[] = [
       { href: "/dashboard/simulador", label: "Simulador de IRS", short: "IRS", icon: Calculator },
       { href: "/dashboard/recibo-vencimento", label: "Recibo de vencimento", short: "Vencimento", icon: Wallet },
       { href: "/dashboard/empresa", label: "Abrir empresa", short: "Empresa", icon: Building },
+      { href: "/dashboard/herancas", label: "Heranças e sucessões", short: "Heranças", icon: Scale },
       { href: "/dashboard/comparar", label: "Comparar cenários", short: "Comparar", icon: Scale },
       { href: "/dashboard/regime-simplificado", label: "Regime simplificado", short: "Simplificado", icon: Gauge },
       { href: "/dashboard/ato-isolado", label: "Ato isolado ou atividade", short: "Ato isolado", icon: Swap },

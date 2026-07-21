@@ -19,13 +19,14 @@ import { getSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/auth";
 import { useSubscricao } from "@/lib/stripe/subscription";
 
-export type TipoCenario = "recibos" | "vencimento" | "empresa" | "irs";
+export type TipoCenario = "recibos" | "vencimento" | "empresa" | "irs" | "herancas";
 
 export const META_TIPO_CENARIO: Record<TipoCenario, { label: string; sub: string; rota: string; icone: string }> = {
   recibos: { label: "Recibos verdes", sub: "Trabalho independente", rota: "/dashboard/recibos-verdes", icone: "Invoice" },
   vencimento: { label: "Recibo de vencimento", sub: "Trabalho por conta de outrem", rota: "/dashboard/recibo-vencimento", icone: "Wallet" },
   empresa: { label: "Abrir empresa", sub: "Sociedade / unipessoal", rota: "/dashboard/empresa", icone: "Building" },
   irs: { label: "Simulador de IRS", sub: "Declaração anual", rota: "/dashboard/simulador", icone: "Calculator" },
+  herancas: { label: "Heranças e sucessões", sub: "Partilha e Imposto do Selo", rota: "/dashboard/herancas", icone: "Scale" },
 };
 
 /** Número-chave de um cenário, para os cartões da página de gestão. */
