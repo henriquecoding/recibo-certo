@@ -15,7 +15,17 @@ import {
   GuiadoCabecalho,
   GuiadoOpcao,
   GuiadoNav,
+  Contador,
 } from "@/components/simulador/guiado-ui";
+import {
+  Interruptor,
+  SeletorCartoes,
+  Checkbox,
+  CartaoSituacao,
+  campoCls,
+  rotuloCls,
+  type OpcaoSeletor,
+} from "@/components/simulador/ui";
 import {
   Scale,
   Heart,
@@ -26,8 +36,6 @@ import {
   Calendar,
   Check,
   Warning,
-  Plus,
-  Minus,
   ArrowRight,
   Sparkle,
   Info,
@@ -75,136 +83,61 @@ function LeiRef({ artigo, url }: { artigo: string; url: string }) {
   );
 }
 
-// ── Controlos locais ─────────────────────────────────────────────────────────
+// ── Campo € premium (número), coerente com o resto do site + presets ──────────
+const chipEur = (n: number) => (n >= 1000 ? `${(n / 1000).toLocaleString("pt-PT")} mil €` : `${n} €`);
 
 function CampoEuro({
   label,
   value,
   onChange,
   tooltip,
-  placeholder = "0",
+  presets,
 }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
   tooltip?: ReactNode;
-  placeholder?: string;
+  presets?: number[];
 }) {
   return (
-    <label className="block">
-      <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-stone-600 dark:text-stone-300">
-        {label}
+    <div>
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <span className={rotuloCls}>{label}</span>
         {tooltip && <InfoTip>{tooltip}</InfoTip>}
-      </span>
+      </div>
       <div className="relative">
+        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[15px] font-medium text-stone-400" aria-hidden>€</span>
         <input
           type="number"
           inputMode="decimal"
           min={0}
           value={value === 0 ? "" : value}
-          placeholder={placeholder}
+          placeholder="0"
           onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
-          className="w-full rounded-2xl border border-stone-200 bg-white py-2.5 pl-4 pr-9 text-sm font-semibold text-stone-800 shadow-sm outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+          className={`${campoCls} pl-8 tabular-nums`}
         />
-        <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-stone-400">
-          €
-        </span>
       </div>
-    </label>
-  );
-}
-
-function ContaStepper({
-  label,
-  value,
-  onChange,
-  min = 0,
-  max = 20,
-  tooltip,
-}: {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-  min?: number;
-  max?: number;
-  tooltip?: ReactNode;
-}) {
-  const set = (v: number) => onChange(Math.min(max, Math.max(min, v)));
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-2.5 dark:border-stone-700 dark:bg-stone-900">
-      <span className="flex items-center gap-1.5 text-xs font-semibold text-stone-600 dark:text-stone-300">
-        {label}
-        {tooltip && <InfoTip>{tooltip}</InfoTip>}
-      </span>
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          aria-label={`Diminuir ${label}`}
-          onClick={() => set(value - 1)}
-          disabled={value <= min}
-          className="flex h-8 w-8 items-center justify-center rounded-xl border border-stone-200 text-stone-500 transition-colors hover:border-brand hover:text-brand disabled:opacity-40 dark:border-stone-700"
-        >
-          <Minus size={14} />
-        </button>
-        <span className="w-6 text-center text-sm font-bold tabular-nums text-stone-800 dark:text-stone-100">{value}</span>
-        <button
-          type="button"
-          aria-label={`Aumentar ${label}`}
-          onClick={() => set(value + 1)}
-          disabled={value >= max}
-          className="flex h-8 w-8 items-center justify-center rounded-xl border border-stone-200 text-stone-500 transition-colors hover:border-brand hover:text-brand disabled:opacity-40 dark:border-stone-700"
-        >
-          <Plus size={14} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function OpcaoPill<T extends string>({
-  opcoes,
-  valor,
-  onChange,
-  label,
-  tooltip,
-}: {
-  opcoes: { id: T; label: string; sub?: string }[];
-  valor: T;
-  onChange: (v: T) => void;
-  label?: string;
-  tooltip?: ReactNode;
-}) {
-  return (
-    <div>
-      {label && (
-        <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-stone-600 dark:text-stone-300">
-          {label}
-          {tooltip && <InfoTip>{tooltip}</InfoTip>}
-        </span>
+      {presets && presets.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {presets.map((p) => {
+            const ativo = value === p;
+            return (
+              <button
+                key={p}
+                type="button"
+                onClick={() => onChange(p)}
+                className={`rounded-lg border px-2 py-1 text-[11px] font-semibold transition-colors ${
+                  ativo
+                    ? "border-brand bg-brand-light text-brand-dark dark:bg-brand/10 dark:text-brand"
+                    : "border-stone-200 text-stone-500 hover:border-brand/40 hover:text-brand dark:border-stone-700"
+                }`}
+              >
+                {chipEur(p)}
+              </button>
+            );
+          })}
+        </div>
       )}
-      <div className="grid gap-2 sm:grid-cols-2">
-        {opcoes.map((o) => {
-          const ativo = valor === o.id;
-          return (
-            <button
-              key={o.id}
-              type="button"
-              aria-pressed={ativo}
-              onClick={() => onChange(o.id)}
-              className={`rounded-2xl border-2 p-3 text-left transition-all ${
-                ativo
-                  ? "border-brand bg-brand-light/40 dark:bg-brand/10"
-                  : "border-stone-100 bg-white hover:border-brand/30 dark:border-stone-800 dark:bg-stone-900"
-              }`}
-            >
-              <div className={`text-xs font-bold ${ativo ? "text-brand-dark dark:text-brand" : "text-stone-700 dark:text-stone-200"}`}>
-                {o.label}
-              </div>
-              {o.sub && <div className="mt-0.5 text-[10px] text-stone-400">{o.sub}</div>}
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }
@@ -233,24 +166,48 @@ function Collapsible({ title, children, defaultOpen = false }: { title: ReactNod
   );
 }
 
-// ── Tipos de passo ────────────────────────────────────────────────────────────
+// ── Opções (formato OpcaoSeletor, com painel de detalhe premium) ──────────────
 
-type Passo = 0 | "familia" | "patrimonio" | "testamento" | "resultado" | "aseguir";
-type Perspetiva = "receber" | "planear";
-
-const REGIMES: { id: RegimeBens; label: string; sub: string }[] = [
-  { id: "comunhao_adquiridos", label: "Comunhão de adquiridos", sub: "O mais comum (por defeito)" },
-  { id: "comunhao_geral", label: "Comunhão geral", sub: "Todos os bens são comuns" },
-  { id: "separacao", label: "Separação de bens", sub: "Sem meação" },
+const VINCULO_OPCOES: OpcaoSeletor<"casado" | "unido_facto">[] = [
+  { id: "casado", label: "Casado(a)", sub: "Herdeiro legitimário", descricao: "O cônjuge é herdeiro legitimário e, em comunhão, tem direito a meação (metade dos bens comuns) antes da herança." },
+  { id: "unido_facto", label: "União de facto", sub: "Só herda por testamento", descricao: "O companheiro NÃO é herdeiro legitimário — só herda se houver testamento — mas é isento de Imposto do Selo e pode ter direito de habitação da casa de morada." },
 ];
 
-const RELACOES_BENEFICIARIO: { id: RelacaoSucessoria; label: string }[] = [
+const REGIME_OPCOES: OpcaoSeletor<RegimeBens>[] = [
+  { id: "comunhao_adquiridos", label: "Comunhão de adquiridos", sub: "O mais comum", descricao: "Os bens adquiridos durante o casamento são comuns; o cônjuge retira metade (meação). Os bens anteriores ou herdados são próprios." },
+  { id: "comunhao_geral", label: "Comunhão geral", sub: "Tudo é comum", descricao: "Todos os bens (mesmo anteriores ao casamento) são comuns; o cônjuge retira metade de tudo como meação." },
+  { id: "separacao", label: "Separação de bens", sub: "Sem meação", descricao: "Não há bens comuns nem meação: cada cônjuge é dono dos seus bens. Tudo o que era do falecido entra na herança." },
+];
+
+const ASCENDENTES_OPCOES: OpcaoSeletor<Ascendentes>[] = [
+  { id: "nenhum", label: "Não" },
+  { id: "pais", label: "Pais" },
+  { id: "avos", label: "Avós" },
+];
+
+const TESTAMENTO_OPCOES: OpcaoSeletor<"nao" | "sim">[] = [
+  { id: "nao", label: "Sem testamento", sub: "Sucessão legítima", descricao: "A herança é partilhada segundo as regras do Código Civil, sem intervenção da vontade do falecido." },
+  { id: "sim", label: "Com testamento", sub: "Usa a quota disponível", descricao: "A legítima fica reservada aos herdeiros legitimários; só a quota disponível pode ser deixada livremente a quem o testador quiser." },
+];
+
+const BENEFICIARIO_OPCOES: OpcaoSeletor<RelacaoSucessoria>[] = [
   { id: "filho", label: "Um dos filhos" },
   { id: "conjuge", label: "O cônjuge" },
   { id: "irmao", label: "Um irmão" },
   { id: "sobrinho", label: "Um sobrinho" },
-  { id: "outro", label: "Alguém sem parentesco" },
+  { id: "outro", label: "Sem parentesco" },
 ];
+
+// Cor de cada segmento da barra de distribuição (isento = tons da marca; paga selo = âmbar).
+const CORES_ISENTO = ["#1D9E75", "#3FB98C", "#66C9A5", "#8DD8BE"];
+function corSegmento(isento: boolean, idx: number): string {
+  return isento ? CORES_ISENTO[idx % CORES_ISENTO.length] : "#F59E0B";
+}
+
+// ── Tipos de passo ────────────────────────────────────────────────────────────
+
+type Passo = 0 | "familia" | "patrimonio" | "testamento" | "resultado" | "aseguir";
+type Perspetiva = "receber" | "planear";
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
@@ -289,6 +246,7 @@ export default function ModoGuiadoHeranca() {
   const [cenarioFeedback, setCenarioFeedback] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
 
   const regimeEfetivo: RegimeBens = temConjuge ? regimeBens : "sem_conjuge";
+  const mostraComum = temConjuge && vinculoConjuge === "casado" && regimeBens !== "separacao";
 
   const config: ConfigFamiliar = useMemo(
     () => ({
@@ -305,15 +263,15 @@ export default function ModoGuiadoHeranca() {
 
   const patrimonio: Patrimonio = useMemo(() => {
     const imoveis: ImovelHeranca[] = [];
-    if (imovelPrincipal > 0) imoveis.push({ rotulo: "Habitação", vpt: imovelPrincipal, comum: temConjuge && imovelComum });
+    if (imovelPrincipal > 0) imoveis.push({ rotulo: "Habitação", vpt: imovelPrincipal, comum: mostraComum && imovelComum });
     if (outrosImoveis > 0) imoveis.push({ rotulo: "Outro imóvel", vpt: outrosImoveis, comum: false });
     return {
       imoveis,
-      outrosBensComuns: temConjuge && depositosComuns ? depositos : 0,
-      outrosBensProprios: (temConjuge && depositosComuns ? 0 : depositos) + outros,
+      outrosBensComuns: mostraComum && depositosComuns ? depositos : 0,
+      outrosBensProprios: (mostraComum && depositosComuns ? 0 : depositos) + outros,
       dividas,
     };
-  }, [imovelPrincipal, imovelComum, outrosImoveis, depositos, depositosComuns, outros, dividas, temConjuge]);
+  }, [imovelPrincipal, imovelComum, outrosImoveis, depositos, depositosComuns, outros, dividas, mostraComum]);
 
   const resultado = useMemo(() => simularHeranca(config, patrimonio), [config, patrimonio]);
 
@@ -326,9 +284,6 @@ export default function ModoGuiadoHeranca() {
   }, [imovelPrincipal, outrosImoveis, depositos, outros]);
 
   const comparacao = useMemo(() => compararHerancaVsDoacao(bensDoacao, "filho"), [bensDoacao]);
-  // Sem rendimentoBase: no modo guiado mostramos só o ganho e a base tributável
-  // (50%); a estimativa em euros do IRS — que depende do rendimento — vive no
-  // modo completo, onde há um campo para o rendimento anual.
   const maisValias = useMemo(
     () => maisValiasImovelHerdado({ vptHeranca: imovelPrincipal, valorVenda }),
     [imovelPrincipal, valorVenda],
@@ -387,6 +342,8 @@ export default function ModoGuiadoHeranca() {
 
   const PASSOS_LABEL = ["Família", "Património", "Testamento", "Resultado", "A seguir"];
   const passoNum = passo === 0 ? 0 : ORDEM.indexOf(passo as Passo) + 1;
+
+  const quinhoes = resultado.partilha.quinhoes;
 
   // ── Passo 0: bifurcação ─────────────────────────────────────────────────────
   if (passo === 0) {
@@ -448,57 +405,49 @@ export default function ModoGuiadoHeranca() {
                     titulo={planeamento ? "A tua família" : "A família do falecido"}
                     subtitulo="Quem herda depende de quem fica. Indica o cônjuge, os filhos e — só se não houver filhos nem netos — os pais ou avós."
                   />
-                  <div className="space-y-4">
-                    <div className="rounded-2xl border border-stone-100 bg-white p-4 dark:border-stone-800 dark:bg-stone-900">
-                      <div className="mb-3 flex items-center justify-between">
-                        <span className="flex items-center gap-1.5 text-xs font-semibold text-stone-600 dark:text-stone-300">
-                          <Heart size={14} className="text-brand" /> Existe cônjuge ou companheiro?
-                        </span>
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={temConjuge}
-                          onClick={() => setTemConjuge((v) => !v)}
-                          className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${temConjuge ? "bg-brand" : "bg-stone-300 dark:bg-stone-700"}`}
-                        >
-                          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${temConjuge ? "translate-x-5" : "translate-x-0.5"}`} />
-                        </button>
-                      </div>
-                      {temConjuge && (
-                        <div className="space-y-3">
-                          <OpcaoPill
-                            label="Vínculo"
-                            tooltip="O casamento dá direitos sucessórios e meação. A união de facto NÃO herda automaticamente (só por testamento), mas é isenta de Imposto do Selo."
-                            opcoes={[
-                              { id: "casado" as const, label: "Casado(a)", sub: "Herdeiro legitimário" },
-                              { id: "unido_facto" as const, label: "União de facto", sub: "Só herda por testamento" },
-                            ]}
-                            valor={vinculoConjuge}
-                            onChange={setVinculoConjuge}
+                  <div className="space-y-5">
+                    <Interruptor
+                      on={temConjuge}
+                      onChange={setTemConjuge}
+                      label={<span className="flex items-center gap-1.5"><Heart size={14} className="text-brand" /> Existe cônjuge ou companheiro(a)</span>}
+                    />
+
+                    {temConjuge && (
+                      <div className="space-y-4 rounded-2xl border border-stone-100 bg-stone-50/50 p-4 dark:border-stone-800 dark:bg-stone-900/40">
+                        <SeletorCartoes
+                          label="Vínculo"
+                          tooltip="O casamento dá direitos sucessórios e meação. A união de facto NÃO herda automaticamente (só por testamento), mas é isenta de Imposto do Selo."
+                          opcoes={VINCULO_OPCOES}
+                          valor={vinculoConjuge}
+                          onChange={setVinculoConjuge}
+                          colunas={2}
+                        />
+                        {vinculoConjuge === "casado" && (
+                          <SeletorCartoes
+                            label="Regime de bens"
+                            tooltip="Em comunhão, o cônjuge retira primeiro a meação (metade dos bens comuns), que não é herança."
+                            opcoes={REGIME_OPCOES}
+                            valor={regimeBens}
+                            onChange={setRegimeBens}
+                            colunas={3}
                           />
-                          {vinculoConjuge === "casado" && (
-                            <OpcaoPill label="Regime de bens" opcoes={REGIMES} valor={regimeBens} onChange={setRegimeBens} tooltip="Em comunhão, o cônjuge retira primeiro a meação (metade dos bens comuns), que não é herança." />
-                          )}
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    )}
 
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <ContaStepper label="Filhos vivos" value={nFilhos} onChange={setNFilhos} tooltip="Descendentes de 1.º grau vivos." />
-                      <ContaStepper label="Ramos de netos (representação)" value={nRamosNetos} onChange={setNRamosNetos} tooltip="Netos que representam um filho já falecido. Cada filho pré-falecido com netos conta como 1 ramo." />
+                      <Contador label="Filhos vivos" value={nFilhos} onChange={setNFilhos} tooltip="Descendentes de 1.º grau que estão vivos." />
+                      <Contador label="Netos (representação)" value={nRamosNetos} onChange={setNRamosNetos} tooltip="Netos que representam um filho já falecido. Cada filho pré-falecido com netos conta como 1 ramo." />
                     </div>
 
                     {nFilhos + nRamosNetos === 0 && (
-                      <OpcaoPill
+                      <SeletorCartoes
                         label="Há pais ou avós vivos?"
                         tooltip="Os ascendentes só herdam quando não há descendentes."
-                        opcoes={[
-                          { id: "nenhum" as Ascendentes, label: "Não" },
-                          { id: "pais" as Ascendentes, label: "Pais" },
-                          { id: "avos" as Ascendentes, label: "Avós" },
-                        ]}
+                        opcoes={ASCENDENTES_OPCOES}
                         valor={ascendentes}
                         onChange={setAscendentes}
+                        colunas={3}
                       />
                     )}
                   </div>
@@ -516,32 +465,26 @@ export default function ModoGuiadoHeranca() {
                   />
                   <div className="space-y-4">
                     <div className="rounded-2xl border border-stone-100 bg-white p-4 dark:border-stone-800 dark:bg-stone-900">
-                      <div className="mb-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-stone-500">
+                      <div className="mb-4 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-stone-500">
                         <Home size={14} className="text-brand" /> Imóveis (VPT)
                       </div>
-                      <div className="space-y-3">
-                        <CampoEuro label="Habitação principal" value={imovelPrincipal} onChange={setImovelPrincipal} tooltip="Valor Patrimonial Tributário na caderneta predial." />
-                        {temConjuge && vinculoConjuge === "casado" && regimeBens !== "separacao" && (
-                          <label className="flex items-center gap-2.5 text-xs text-stone-600 dark:text-stone-300">
-                            <input type="checkbox" checked={imovelComum} onChange={(e) => setImovelComum(e.target.checked)} className="h-4 w-4 rounded border-stone-300 accent-brand" />
-                            É um bem comum do casal (metade é meação do cônjuge)
-                          </label>
+                      <div className="space-y-4">
+                        <CampoEuro label="Habitação principal" value={imovelPrincipal} onChange={setImovelPrincipal} tooltip="Valor Patrimonial Tributário na caderneta predial." presets={[100_000, 200_000, 300_000]} />
+                        {mostraComum && (
+                          <Checkbox checked={imovelComum} onChange={setImovelComum} label="É um bem comum do casal" sub="Metade conta como meação do cônjuge, não como herança." />
                         )}
                         <CampoEuro label="Outros imóveis (VPT total)" value={outrosImoveis} onChange={setOutrosImoveis} />
                       </div>
                     </div>
 
                     <div className="rounded-2xl border border-stone-100 bg-white p-4 dark:border-stone-800 dark:bg-stone-900">
-                      <div className="mb-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-stone-500">
+                      <div className="mb-4 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-stone-500">
                         <Coin size={14} className="text-brand" /> Outros bens e dívidas
                       </div>
-                      <div className="space-y-3">
-                        <CampoEuro label="Depósitos, poupanças, veículos" value={depositos} onChange={setDepositos} />
-                        {temConjuge && vinculoConjuge === "casado" && regimeBens !== "separacao" && (
-                          <label className="flex items-center gap-2.5 text-xs text-stone-600 dark:text-stone-300">
-                            <input type="checkbox" checked={depositosComuns} onChange={(e) => setDepositosComuns(e.target.checked)} className="h-4 w-4 rounded border-stone-300 accent-brand" />
-                            São bens comuns do casal
-                          </label>
+                      <div className="space-y-4">
+                        <CampoEuro label="Depósitos, poupanças, veículos" value={depositos} onChange={setDepositos} presets={[10_000, 30_000, 50_000]} />
+                        {mostraComum && (
+                          <Checkbox checked={depositosComuns} onChange={setDepositosComuns} label="São bens comuns do casal" sub="Metade é meação do cônjuge." />
                         )}
                         <CampoEuro label="Outros bens próprios do falecido" value={outros} onChange={setOutros} tooltip="Bens que não são comuns: herdados, anteriores ao casamento, doados só a ele." />
                         <CampoEuro label="Dívidas e encargos da herança" value={dividas} onChange={setDividas} tooltip="Deduzem-se ao acervo antes da partilha." />
@@ -561,23 +504,22 @@ export default function ModoGuiadoHeranca() {
                     subtitulo={<>Mesmo com testamento, a lei reserva a <strong>legítima</strong> aos herdeiros legitimários. Só a <strong>quota disponível</strong> pode ser deixada livremente. <LeiRef artigo="Código Civil" url={LEI.cc} /></>}
                   />
                   <div className="space-y-4">
-                    <OpcaoPill
-                      opcoes={[
-                        { id: "nao", label: "Sem testamento", sub: "Aplica-se a sucessão legítima" },
-                        { id: "sim", label: "Com testamento", sub: "Define a quota disponível" },
-                      ]}
+                    <SeletorCartoes
+                      opcoes={TESTAMENTO_OPCOES}
                       valor={temTestamento ? "sim" : "nao"}
                       onChange={(v) => setTemTestamento(v === "sim")}
+                      colunas={2}
                     />
                     {temTestamento && (
                       <div className="rounded-2xl border border-brand/20 bg-brand-light/20 p-4 dark:bg-brand/5">
                         <div className="mb-3 text-xs font-semibold text-stone-600 dark:text-stone-300">
                           A quota disponível ({resultado.partilha.configLegitima ? pct(resultado.partilha.disponivelFracao) : "toda a herança"}) é deixada a:
                         </div>
-                        <OpcaoPill
-                          opcoes={RELACOES_BENEFICIARIO.map((r) => ({ id: r.id, label: r.label }))}
+                        <SeletorCartoes
+                          opcoes={BENEFICIARIO_OPCOES}
                           valor={beneficiario}
                           onChange={setBeneficiario}
+                          colunas={3}
                         />
                         <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
                           <Info size={12} className="mt-0.5 flex-shrink-0 text-brand" />
@@ -606,23 +548,47 @@ export default function ModoGuiadoHeranca() {
                     <LinhaResumo label="Herança líquida a partilhar" valor={resultado.meacao.herancaLiquida} cor="text-stone-800 dark:text-stone-100 font-semibold" sep />
                   </div>
 
+                  {/* Barra de distribuição */}
+                  {quinhoes.length > 1 && (
+                    <div className="mt-5">
+                      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Como se divide</div>
+                      <div className="flex h-3.5 gap-0.5 overflow-hidden rounded-full">
+                        {quinhoes.map((q, i) => {
+                          const selo = resultado.selo.linhas.find((l) => l.id === q.id);
+                          return (
+                            <div
+                              key={q.id}
+                              style={{ width: `${Math.max(2, q.fracao * 100)}%`, backgroundColor: corSegmento(selo?.isento ?? true, i) }}
+                              title={`${q.rotulo}: ${pct(q.fracao)}`}
+                              className="h-full first:rounded-l-full last:rounded-r-full"
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Quinhões */}
-                  {resultado.partilha.quinhoes.length > 0 && (
-                    <div className="mt-5 space-y-2">
-                      {resultado.partilha.quinhoes.map((q) => {
+                  {quinhoes.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      {quinhoes.map((q, i) => {
                         const selo = resultado.selo.linhas.find((l) => l.id === q.id);
+                        const isento = selo?.isento ?? true;
                         return (
                           <div key={q.id} className="rounded-2xl border border-stone-100 bg-white p-4 dark:border-stone-800 dark:bg-stone-900">
                             <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <div className="text-sm font-bold text-stone-800 dark:text-stone-100">{q.rotulo}</div>
-                                <div className="mt-0.5 text-[11px] text-stone-400">{pct(q.fracao)} da herança · {q.fundamento}</div>
+                              <div className="flex min-w-0 items-center gap-2.5">
+                                <span className="mt-0.5 h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: corSegmento(isento, i) }} />
+                                <div className="min-w-0">
+                                  <div className="text-sm font-bold text-stone-800 dark:text-stone-100">{q.rotulo}</div>
+                                  <div className="mt-0.5 text-[11px] text-stone-400">{pct(q.fracao)} da herança · {q.fundamento}</div>
+                                </div>
                               </div>
-                              <div className="text-right">
+                              <div className="flex-shrink-0 text-right">
                                 <div className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100 tabular-nums">{fmt(q.valor)}</div>
                                 {selo && (
-                                  <div className={`text-[11px] font-semibold ${selo.isento ? "text-brand" : "text-amber-600 dark:text-amber-400"}`}>
-                                    {selo.isento ? "Isento de Imposto do Selo" : `Selo: ${fmt(selo.imposto)} (${pct(selo.taxa)})`}
+                                  <div className={`text-[11px] font-semibold ${isento ? "text-brand" : "text-amber-600 dark:text-amber-400"}`}>
+                                    {isento ? "Isento de Selo" : `Selo ${fmt(selo.imposto)} (${pct(selo.taxa)})`}
                                   </div>
                                 )}
                               </div>
@@ -634,15 +600,15 @@ export default function ModoGuiadoHeranca() {
                   )}
 
                   {/* Total do Selo */}
-                  <div className="mt-4 rounded-3xl border-2 border-brand bg-white p-5 shadow-card dark:bg-stone-950">
-                    <div className="flex items-center justify-between">
-                      <div>
+                  <div className={`mt-4 rounded-3xl border-2 p-5 shadow-card ${resultado.selo.todosIsentos ? "border-brand bg-brand-light/40 dark:bg-brand/5" : "border-amber-300 bg-amber-50/60 dark:border-amber-800/40 dark:bg-amber-900/10"}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
                         <div className="text-sm font-semibold text-stone-700 dark:text-stone-300">Imposto do Selo total</div>
-                        <div className="mt-0.5 text-[11px] text-stone-400">
-                          {resultado.selo.todosIsentos ? "Família direta — nada a pagar" : `Só sobre herdeiros não isentos · Verba 1.2`}
+                        <div className="mt-0.5 text-[11px] text-stone-500 dark:text-stone-400">
+                          {resultado.selo.todosIsentos ? "A família direta é isenta — nada a pagar." : "Só sobre herdeiros não isentos (Verba 1.2)."}
                         </div>
                       </div>
-                      <div className="font-display text-3xl font-semibold text-brand tabular-nums">
+                      <div className={`flex-shrink-0 font-display text-3xl font-semibold tabular-nums ${resultado.selo.todosIsentos ? "text-brand" : "text-amber-600 dark:text-amber-400"}`}>
                         <AnimatedNumber value={resultado.selo.total} />
                       </div>
                     </div>
@@ -652,10 +618,9 @@ export default function ModoGuiadoHeranca() {
                   {resultado.avisos.length > 0 && (
                     <div className="mt-4 space-y-2">
                       {resultado.avisos.map((a, i) => (
-                        <div key={i} className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800/30 dark:bg-amber-900/10">
-                          <Warning size={13} className="mt-0.5 flex-shrink-0 text-amber-500" />
+                        <CartaoSituacao key={i} nivel="aviso" titulo="A confirmar com um profissional">
                           <p className="text-[11px] leading-relaxed text-stone-600 dark:text-stone-300">{a}</p>
-                        </div>
+                        </CartaoSituacao>
                       ))}
                     </div>
                   )}
@@ -673,17 +638,14 @@ export default function ModoGuiadoHeranca() {
                   <GuiadoCabecalho eyebrow="A seguir" titulo="Passos e planeamento" subtitulo="Mesmo isento, é obrigatório declarar a herança. E há decisões de planeamento que podem poupar imposto." />
 
                   {/* Modelo 1 / prazo */}
-                  <div className="rounded-2xl border border-brand/20 bg-brand-light/20 p-4 dark:bg-brand/5">
-                    <div className="flex items-start gap-2.5">
-                      <Calendar size={16} className="mt-0.5 flex-shrink-0 text-brand" />
-                      <div>
-                        <div className="text-sm font-bold text-stone-800 dark:text-stone-100">Participar ao Fisco: Modelo 1 do Imposto do Selo</div>
-                        <p className="mt-1 text-[11px] leading-relaxed text-stone-600 dark:text-stone-300">
-                          O cabeça-de-casal entrega o Modelo 1 (ISTG) até ao fim do <strong>{PRAZO_MODELO1_MESES.value}.º mês</strong> seguinte ao do óbito, mesmo quando a herança é isenta. <LeiRef artigo="Art. 26.º CIS" url={LEI.cisArt26} /> <LeiRef artigo="Modelo 1" url={LEI.modelo1} />
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  <CartaoSituacao
+                    nivel="brand"
+                    titulo="Participar ao Fisco: Modelo 1 do Imposto do Selo"
+                  >
+                    <p className="text-[11px] leading-relaxed text-stone-600 dark:text-stone-300">
+                      O cabeça-de-casal entrega o Modelo 1 (ISTG) até ao fim do <strong>{PRAZO_MODELO1_MESES.value}.º mês</strong> seguinte ao do óbito, mesmo quando a herança é isenta. <LeiRef artigo="Art. 26.º CIS" url={LEI.cisArt26} /> <LeiRef artigo="Modelo 1" url={LEI.modelo1} />
+                    </p>
+                  </CartaoSituacao>
 
                   {/* Comparação herança vs doação */}
                   <div className="mt-4">
@@ -699,7 +661,7 @@ export default function ModoGuiadoHeranca() {
                         <div className="rounded-xl border border-stone-200 bg-white p-3 text-center dark:border-stone-700 dark:bg-stone-900">
                           <div className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Doar em vida</div>
                           <div className="font-display text-xl font-bold text-stone-700 dark:text-stone-200 tabular-nums">{fmt(comparacao.impostoDoacao)}</div>
-                          <div className="text-[9px] text-stone-400">0,8% sobre {fmt(comparacao.detalheDoacao.imoveis)} de imóveis</div>
+                          <div className="text-[9px] text-stone-400">{pct(IS_DOACAO_IMOVEL.value)} sobre {fmt(comparacao.detalheDoacao.imoveis)} de imóveis</div>
                         </div>
                       </div>
                       <p className="mt-3 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">{comparacao.nota}</p>
@@ -718,7 +680,7 @@ export default function ModoGuiadoHeranca() {
                           <LinhaMini label="Ganho (venda − VPT)" valor={maisValias.ganho} />
                           <LinhaMini label="Base tributável (50% do ganho)" valor={maisValias.incluido} forte />
                           <p className="pt-1 text-[10px] leading-relaxed text-stone-400">
-                            Esta base soma-se ao teu rendimento e é tributada à tua taxa marginal de IRS. Vê o valor exato no simulador completo ou no <Link href="/ferramentas/simulador-irs" className="font-medium text-brand-dark underline-offset-2 hover:underline dark:text-brand">Simulador de IRS</Link>.
+                            Esta base soma-se ao teu rendimento e é tributada à tua taxa marginal de IRS. Vê o valor exato no <Link href="/ferramentas/simulador-irs" className="font-medium text-brand-dark underline-offset-2 hover:underline dark:text-brand">Simulador de IRS</Link>.
                           </p>
                         </div>
                       )}
@@ -784,6 +746,15 @@ export default function ModoGuiadoHeranca() {
                       <div className="text-sm font-semibold text-stone-600 dark:text-stone-300 tabular-nums">{fmt(resultado.meacao.meacaoConjuge)}</div>
                     </div>
                   )}
+                  {/* Mini barra de distribuição */}
+                  {quinhoes.length > 1 && (
+                    <div className="flex h-2 gap-0.5 overflow-hidden rounded-full">
+                      {quinhoes.map((q, i) => {
+                        const selo = resultado.selo.linhas.find((l) => l.id === q.id);
+                        return <div key={q.id} style={{ width: `${Math.max(2, q.fracao * 100)}%`, backgroundColor: corSegmento(selo?.isento ?? true, i) }} className="h-full" />;
+                      })}
+                    </div>
+                  )}
                   <div className="border-t border-stone-200 pt-3 dark:border-stone-700">
                     <div className="text-[11px] text-stone-400">Imposto do Selo</div>
                     <div className={`font-display text-2xl font-semibold tabular-nums ${resultado.selo.todosIsentos ? "text-brand" : "text-amber-600 dark:text-amber-400"}`}>
@@ -791,7 +762,7 @@ export default function ModoGuiadoHeranca() {
                     </div>
                     {resultado.selo.todosIsentos && <div className="mt-0.5 text-[10px] font-medium text-brand">Família direta isenta</div>}
                   </div>
-                  <div className="text-[11px] text-stone-400">{resultado.partilha.quinhoes.length} herdeiro(s)</div>
+                  <div className="text-[11px] text-stone-400">{quinhoes.length} herdeiro(s)</div>
                 </div>
               </div>
             </aside>

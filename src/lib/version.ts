@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.89.0";
+export const APP_VERSION = "1.89.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.89.1",
+    data: "2026-07-21",
+    titulo: "Simulador de Heranças mais refinado",
+    itens: [
+      "Corrigidos bugs visuais nos botões do Simulador de Heranças — o interruptor do cônjuge e os contadores de filhos/netos deixaram de aparecer mal desenhados.",
+      "Os controlos passam a usar os mesmos componentes premium dos outros simuladores (interruptores, cartões de opção e contadores), para uma experiência mais polida e coerente.",
+      "O resultado ganhou uma barra de distribuição da herança que mostra, num relance, a fatia de cada herdeiro e quem paga (ou não) Imposto do Selo.",
+    ],
+  },
   {
     version: "1.89.0",
     data: "2026-07-21",

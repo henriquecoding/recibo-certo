@@ -9,9 +9,11 @@ import { fmt, pct } from "@/lib/format";
 import { haReabertura } from "@/lib/store/cenarios";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import InfoTip from "@/components/ui/InfoTip";
+import { Contador } from "@/components/simulador/guiado-ui";
+import { Interruptor, campoCls, rotuloCls } from "@/components/simulador/ui";
 import {
   Scale, Heart, Home, Gift, FileSign, Coin, Sparkle, LayoutGrid, ArrowRight,
-  ShieldCheck, Warning, Info, Building, Plus, Minus,
+  ShieldCheck, Warning, Info, Building,
 } from "@/components/ui/Icons";
 import {
   simularHeranca, impostoSeloDoacao, compararHerancaVsDoacao, maisValiasImovelHerdado,
@@ -43,45 +45,49 @@ function LeiRef({ artigo, url }: { artigo: string; url: string }) {
   );
 }
 
-// ── Controlos compactos ───────────────────────────────────────────────────────
+// ── Controlos (premium, coerentes com os outros simuladores) ──────────────────
+
+const CORES_ISENTO = ["#1D9E75", "#3FB98C", "#66C9A5", "#8DD8BE"];
+const corSegmento = (isento: boolean, idx: number) => (isento ? CORES_ISENTO[idx % CORES_ISENTO.length] : "#F59E0B");
 
 function Campo({ label, value, onChange, tooltip }: { label: string; value: number; onChange: (v: number) => void; tooltip?: ReactNode }) {
   return (
-    <label className="block">
-      <span className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-stone-600 dark:text-stone-300">{label}{tooltip && <InfoTip>{tooltip}</InfoTip>}</span>
+    <div>
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <span className={rotuloCls}>{label}</span>
+        {tooltip && <InfoTip>{tooltip}</InfoTip>}
+      </div>
       <div className="relative">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[15px] font-medium text-stone-400" aria-hidden>€</span>
         <input type="number" inputMode="decimal" min={0} value={value === 0 ? "" : value} placeholder="0"
           onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
-          className="w-full rounded-xl border border-stone-200 bg-white py-2 pl-3 pr-8 text-sm font-semibold text-stone-800 outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100" />
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">€</span>
-      </div>
-    </label>
-  );
-}
-
-function Conta({ label, value, onChange, min = 0, max = 20 }: { label: string; value: number; onChange: (v: number) => void; min?: number; max?: number }) {
-  const set = (v: number) => onChange(Math.min(max, Math.max(min, v)));
-  return (
-    <div className="flex items-center justify-between gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2 dark:border-stone-700 dark:bg-stone-900">
-      <span className="text-[11px] font-semibold text-stone-600 dark:text-stone-300">{label}</span>
-      <div className="flex items-center gap-1.5">
-        <button type="button" aria-label={`− ${label}`} onClick={() => set(value - 1)} disabled={value <= min} className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 text-stone-500 hover:border-brand hover:text-brand disabled:opacity-40 dark:border-stone-700"><Minus size={12} /></button>
-        <span className="w-5 text-center text-sm font-bold tabular-nums text-stone-800 dark:text-stone-100">{value}</span>
-        <button type="button" aria-label={`+ ${label}`} onClick={() => set(value + 1)} disabled={value >= max} className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 text-stone-500 hover:border-brand hover:text-brand disabled:opacity-40 dark:border-stone-700"><Plus size={12} /></button>
+          className={`${campoCls} pl-7 tabular-nums`} />
       </div>
     </div>
   );
 }
 
-function Pills<T extends string>({ opcoes, valor, onChange }: { opcoes: { id: T; label: string }[]; valor: T; onChange: (v: T) => void }) {
+function Pills<T extends string>({ label, tooltip, opcoes, valor, onChange }: { label?: string; tooltip?: ReactNode; opcoes: { id: T; label: string }[]; valor: T; onChange: (v: T) => void }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {opcoes.map((o) => (
-        <button key={o.id} type="button" aria-pressed={valor === o.id} onClick={() => onChange(o.id)}
-          className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${valor === o.id ? "border-brand bg-brand-light text-brand-dark dark:bg-brand/10 dark:text-brand" : "border-stone-200 bg-white text-stone-500 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-900"}`}>
-          {o.label}
-        </button>
-      ))}
+    <div>
+      {label && (
+        <div className="mb-1.5 flex items-center gap-1.5"><span className={rotuloCls}>{label}</span>{tooltip && <InfoTip>{tooltip}</InfoTip>}</div>
+      )}
+      <div className="flex flex-wrap gap-1.5">
+        {opcoes.map((o) => {
+          const ativo = valor === o.id;
+          return (
+            <button key={o.id} type="button" aria-pressed={ativo} onClick={() => onChange(o.id)}
+              className={`rounded-xl border px-3 py-2 text-[11px] font-semibold transition-all ${
+                ativo
+                  ? "border-brand bg-brand-light text-brand-dark shadow-[0_0_0_1px_rgba(29,158,117,0.25)] dark:bg-brand/10 dark:text-brand"
+                  : "border-stone-200 bg-stone-50 text-stone-500 hover:border-brand/40 hover:bg-white dark:border-stone-700 dark:bg-stone-800/40"
+              }`}>
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -89,7 +95,7 @@ function Pills<T extends string>({ opcoes, valor, onChange }: { opcoes: { id: T;
 function Seccao({ titulo, icon, children }: { titulo: string; icon: ReactNode; children: ReactNode }) {
   return (
     <section className="rounded-2xl border border-stone-100 bg-white p-4 dark:border-stone-800 dark:bg-stone-900">
-      <h3 className="mb-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-stone-500">{icon}{titulo}</h3>
+      <h3 className="mb-4 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-stone-500">{icon}{titulo}</h3>
       {children}
     </section>
   );
@@ -258,35 +264,33 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
         {/* Inputs */}
         <div className="space-y-4">
           <Seccao titulo="Família" icon={<Heart size={14} className="text-brand" />}>
-            <div className="space-y-3">
-              <label className="flex items-center justify-between gap-2 text-[11px] font-semibold text-stone-600 dark:text-stone-300">
-                Existe cônjuge/companheiro?
-                <input type="checkbox" checked={temConjuge} onChange={(e) => setTemConjuge(e.target.checked)} className="h-4 w-4 rounded border-stone-300 accent-brand" />
-              </label>
+            <div className="space-y-4">
+              <Interruptor on={temConjuge} onChange={setTemConjuge} label="Existe cônjuge ou companheiro(a)" />
               {temConjuge && (
-                <div className="space-y-2">
-                  <Pills opcoes={[{ id: "casado" as const, label: "Casado(a)" }, { id: "unido_facto" as const, label: "União de facto" }]} valor={vinculoConjuge} onChange={setVinculoConjuge} />
-                  {vinculoConjuge === "casado" && <Pills opcoes={REGIMES} valor={regimeBens} onChange={setRegimeBens} />}
+                <div className="space-y-3">
+                  <Pills label="Vínculo" opcoes={[{ id: "casado" as const, label: "Casado(a)" }, { id: "unido_facto" as const, label: "União de facto" }]} valor={vinculoConjuge} onChange={setVinculoConjuge} />
+                  {vinculoConjuge === "casado" && <Pills label="Regime de bens" opcoes={REGIMES} valor={regimeBens} onChange={setRegimeBens} />}
                 </div>
               )}
-              <div className="grid gap-2 sm:grid-cols-2">
-                <Conta label="Filhos vivos" value={nFilhos} onChange={setNFilhos} />
-                <Conta label="Ramos de netos" value={nRamosNetos} onChange={setNRamosNetos} />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Contador label="Filhos vivos" value={nFilhos} onChange={setNFilhos} tooltip="Descendentes de 1.º grau vivos." />
+                <Contador label="Netos (representação)" value={nRamosNetos} onChange={setNRamosNetos} tooltip="Netos que representam um filho já falecido." />
               </div>
               {nFilhos + nRamosNetos === 0 && (
-                <Pills opcoes={[{ id: "nenhum" as Ascendentes, label: "Sem ascendentes" }, { id: "pais" as Ascendentes, label: "Pais" }, { id: "avos" as Ascendentes, label: "Avós" }]} valor={ascendentes} onChange={setAscendentes} />
+                <Pills label="Há pais ou avós vivos?" opcoes={[{ id: "nenhum" as Ascendentes, label: "Não" }, { id: "pais" as Ascendentes, label: "Pais" }, { id: "avos" as Ascendentes, label: "Avós" }]} valor={ascendentes} onChange={setAscendentes} />
               )}
             </div>
           </Seccao>
 
           <Seccao titulo="Testamento" icon={<FileSign size={14} className="text-brand" />}>
-            <div className="space-y-2">
-              <label className="flex items-center justify-between gap-2 text-[11px] font-semibold text-stone-600 dark:text-stone-300">
-                Há testamento (usa a quota disponível de {r.partilha.configLegitima ? pct(r.partilha.disponivelFracao) : "toda a herança"})?
-                <input type="checkbox" checked={temTestamento} onChange={(e) => setTemTestamento(e.target.checked)} className="h-4 w-4 rounded border-stone-300 accent-brand" />
-              </label>
+            <div className="space-y-3">
+              <Interruptor
+                on={temTestamento}
+                onChange={setTemTestamento}
+                label={<>Há testamento <span className="font-normal text-stone-400">(quota disponível: {r.partilha.configLegitima ? pct(r.partilha.disponivelFracao) : "toda a herança"})</span></>}
+              />
               {temTestamento && (
-                <Pills opcoes={[{ id: "filho" as RelacaoSucessoria, label: "A um filho" }, { id: "conjuge" as RelacaoSucessoria, label: "Ao cônjuge" }, { id: "irmao" as RelacaoSucessoria, label: "A um irmão" }, { id: "outro" as RelacaoSucessoria, label: "A um terceiro" }]} valor={beneficiario} onChange={setBeneficiario} />
+                <Pills label="A quota disponível é deixada a" opcoes={[{ id: "filho" as RelacaoSucessoria, label: "Um filho" }, { id: "conjuge" as RelacaoSucessoria, label: "O cônjuge" }, { id: "irmao" as RelacaoSucessoria, label: "Um irmão" }, { id: "outro" as RelacaoSucessoria, label: "Um terceiro" }]} valor={beneficiario} onChange={setBeneficiario} />
               )}
             </div>
           </Seccao>
@@ -333,12 +337,23 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
               <div className="text-[11px] font-bold uppercase tracking-wide text-stone-400">Partilha</div>
               {r.meacao.meacaoConjuge > 0 && <Linha label="Meação do cônjuge" valor={r.meacao.meacaoConjuge} />}
               <Linha label="Herança líquida" valor={r.meacao.herancaLiquida} forte />
+              {r.partilha.quinhoes.length > 1 && (
+                <div className="mt-3 flex h-2.5 gap-0.5 overflow-hidden rounded-full">
+                  {r.partilha.quinhoes.map((q, i) => {
+                    const s = r.selo.linhas.find((l) => l.id === q.id);
+                    return <div key={q.id} style={{ width: `${Math.max(2, q.fracao * 100)}%`, backgroundColor: corSegmento(s?.isento ?? true, i) }} className="h-full" title={`${q.rotulo}: ${pct(q.fracao)}`} />;
+                  })}
+                </div>
+              )}
               <div className="mt-3 space-y-1.5 border-t border-stone-100 pt-3 dark:border-stone-800">
-                {r.partilha.quinhoes.map((q) => {
+                {r.partilha.quinhoes.map((q, i) => {
                   const s = r.selo.linhas.find((l) => l.id === q.id);
                   return (
                     <div key={q.id} className="flex items-start justify-between gap-2 text-[11px]">
-                      <span className="min-w-0 flex-1 break-words text-stone-500 dark:text-stone-400">{q.rotulo} <span className="text-stone-400">· {pct(q.fracao)}</span></span>
+                      <span className="flex min-w-0 flex-1 items-start gap-1.5 text-stone-500 dark:text-stone-400">
+                        <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full" style={{ backgroundColor: corSegmento(s?.isento ?? true, i) }} />
+                        <span className="break-words">{q.rotulo} <span className="text-stone-400">· {pct(q.fracao)}</span></span>
+                      </span>
                       <span className="flex-shrink-0 text-right tabular-nums font-semibold text-stone-700 dark:text-stone-200">
                         {fmt(q.valor)}
                         {s && !s.isento && <span className="block text-amber-600 dark:text-amber-400">Selo {fmt(s.imposto)}</span>}
