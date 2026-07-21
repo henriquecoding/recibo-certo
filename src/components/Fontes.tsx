@@ -1,4 +1,4 @@
-import { ShieldCheck } from "@/components/ui/Icons";
+import { ShieldCheck, Plus } from "@/components/ui/Icons";
 import Reveal from "@/components/ui/Reveal";
 import { pct } from "@/lib/format";
 import {
@@ -20,6 +20,7 @@ const dataRevisao = new Date(DATA_LAST_REVIEW).toLocaleDateString("pt-PT", {
 });
 
 const cont = IVA_TAXAS.continente.value;
+const nFontes = Object.keys(SOURCES).length;
 
 const PARAMETROS: { label: string; valor: string; base: string }[] = [
   { label: "Retenção Art. 151.º", valor: pct(RETENCAO.art151.value), base: RETENCAO.art151.legalBasis },
@@ -32,9 +33,9 @@ const PARAMETROS: { label: string; valor: string; base: string }[] = [
 
 export default function Fontes() {
   return (
-    <section id="fontes" className="grain scroll-mt-24 bg-sand px-6 py-24">
+    <section id="fontes" className="grain scroll-mt-24 bg-sand px-6 py-14 sm:py-20">
       <div className="max-w-4xl mx-auto">
-        <Reveal className="mb-10 text-center">
+        <Reveal className="mb-8 text-center">
           <div className="eyebrow mb-3 text-brand">Dados verificados</div>
           <h2 className="font-display display-2 font-semibold text-ink">Transparência fiscal total</h2>
           <p className="mx-auto mt-3 max-w-xl text-stone-500">
@@ -44,7 +45,7 @@ export default function Fontes() {
         </Reveal>
 
         {/* Selo de última revisão */}
-        <div className="flex items-center justify-center gap-3 mb-10">
+        <div className="flex items-center justify-center gap-3 mb-8">
           <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full border border-brand bg-brand-light">
             <span className="text-brand">
               <ShieldCheck size={16} />
@@ -56,7 +57,7 @@ export default function Fontes() {
         </div>
 
         {/* Parâmetros principais */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-10">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
           {PARAMETROS.map((p) => (
             <div
               key={p.label}
@@ -71,29 +72,35 @@ export default function Fontes() {
           ))}
         </div>
 
-        {/* Lista de fontes */}
-        <div>
-          <h3 className="text-sm font-semibold text-stone-700 mb-3">Fontes consultadas</h3>
-          <ul className="space-y-2">
+        {/* Lista completa de fontes — fechada por defeito para não alongar a
+            página; abre num clique (o registo SOURCES tem dezenas de entradas). */}
+        <details className="group rounded-3xl border border-stone-100 bg-white/70 shadow-card">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 text-sm font-semibold text-stone-700">
+            <span>Ver as {nFontes} fontes oficiais consultadas</span>
+            <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500 transition-transform group-open:rotate-45 dark:bg-stone-800">
+              <Plus size={12} />
+            </span>
+          </summary>
+          <ul className="grid gap-2 px-5 pb-5 sm:grid-cols-2">
             {Object.entries(SOURCES).map(([sourceKey, s]) => (
               <li key={sourceKey}>
                 <a
                   href={s.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group flex items-start gap-2 text-sm text-stone-500 hover:text-brand-dark transition-colors"
+                  className="group/link flex items-start gap-2 text-sm text-stone-500 hover:text-brand-dark transition-colors"
                 >
                   <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0" />
-                  <span className="underline decoration-stone-200 group-hover:decoration-brand underline-offset-2">
+                  <span className="underline decoration-stone-200 group-hover/link:decoration-brand underline-offset-2">
                     {s.label}
                   </span>
                 </a>
               </li>
             ))}
           </ul>
-        </div>
+        </details>
 
-        <p className="text-xs text-stone-400 mt-8 leading-relaxed">
+        <p className="text-xs text-stone-400 mt-6 leading-relaxed">
           As taxas e os limites fiscais são alterados anualmente pelo Orçamento do Estado e por diplomas regionais. Esta
           ferramenta é informativa e não substitui o aconselhamento de um contabilista certificado. Em caso de dúvida,
           confirma sempre junto da Autoridade Tributária e da Segurança Social.
