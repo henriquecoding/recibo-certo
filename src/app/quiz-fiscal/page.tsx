@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import QuizFiscalApp from "@/components/quiz-fiscal/QuizFiscalApp";
+import { TOTAL_PERGUNTAS_META } from "@/lib/quiz-fiscal/quiz-meta";
 
 export const metadata: Metadata = {
   title: "Quiz Fiscal — ReciboCerto",
@@ -8,8 +9,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://www.recibocerto.pt/quiz-fiscal" },
   openGraph: {
     title: "Quiz Fiscal — ReciboCerto",
-    description:
-      "60 perguntas sobre fiscalidade portuguesa com base legal e fontes oficiais. Dois modos: Normal (com cronometro) e Guiado (com explicacoes).",
+    description: `Banco de ${TOTAL_PERGUNTAS_META.toLocaleString("pt-PT")} perguntas sobre fiscalidade portuguesa com base legal e fontes oficiais, em sessoes de 60. Dois modos: Normal (com cronometro) e Guiado (com explicacoes).`,
     url: "https://www.recibocerto.pt/quiz-fiscal",
     siteName: "ReciboCerto",
     locale: "pt_PT",

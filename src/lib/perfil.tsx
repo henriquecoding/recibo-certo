@@ -61,6 +61,19 @@ export function PerfilProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignora */
     }
+    // Deep-link partilhável: na homepage, a seleção fica refletida no URL
+    // (`/?modo=…`), para que copiar/partilhar o link abra exatamente o mesmo
+    // simulador — e não a homepage genérica. `replaceState` nativo (suportado
+    // pelo App Router) para não poluir o histórico nem re-renderizar a rota.
+    try {
+      if (window.location.pathname === "/") {
+        const url = new URL(window.location.href);
+        url.searchParams.set("modo", p);
+        window.history.replaceState(window.history.state, "", url);
+      }
+    } catch {
+      /* ignora */
+    }
   }, []);
 
   // Alterna entre os dois perfis de "Sou Trabalhador" (atalho do Nav).

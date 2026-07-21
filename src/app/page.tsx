@@ -4,9 +4,13 @@ import Hero from "@/components/Hero";
 import Stats from "@/components/Stats";
 import CalculadoraSecao from "@/components/CalculadoraSecao";
 import Features, { type Breakeven } from "@/components/Features";
+import FerramentasSecao from "@/components/FerramentasSecao";
+import SimuladorIRSDestaque from "@/components/SimuladorIRSDestaque";
+import AprenderSecao from "@/components/AprenderSecao";
 import FAQ from "@/components/FAQ";
 import Fontes from "@/components/Fontes";
 import { compararCategorias } from "@/lib/fiscal-dependente";
+import { ATIVIDADES } from "@/lib/fiscal-data";
 
 import CustoOmissao from "@/components/CustoOmissao";
 import Precos from "@/components/Precos";
@@ -80,6 +84,31 @@ export default function Home() {
           <Stats />
 
           <Features cmp={landingCmp} breakeven={landingBreakeven} />
+
+          {/*
+           * ── Montra do ecossistema ────────────────────────────────────────
+           * Três secções novas que expõem o site inteiro, moldadas ao perfil:
+           *  · Ferramentas — destaque + grelha das landings públicas;
+           *  · Simulador de IRS anual — a joia da coroa, com a DemoIRS ao vivo
+           *    (chunk próprio; fiscal-data nunca entra no arranque);
+           *  · Aprender — guias curados por perfil + Quiz Fiscal (contagens reais).
+           * A contagem de atividades é calculada AQUI (servidor) para o cartão
+           * de destaque nunca inventar números.
+           */}
+          <section id="ferramentas" className="px-6 py-24 scroll-mt-20">
+            <FerramentasSecao nAtividades={ATIVIDADES.length} />
+          </section>
+
+          <section
+            id="simulador-irs"
+            className="grain border-y border-stone-100 bg-white px-6 py-24 scroll-mt-20"
+          >
+            <SimuladorIRSDestaque />
+          </section>
+
+          <section id="aprender" className="px-6 py-24 scroll-mt-20">
+            <AprenderSecao />
+          </section>
 
           <div className="border-y border-stone-100 bg-white">
             <CustoOmissao />

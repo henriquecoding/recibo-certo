@@ -12,6 +12,7 @@ import {
   BellAlert,
   Scale,
 } from "@/components/ui/Icons";
+import { FERRAMENTA_SLUGS } from "@/lib/seo";
 
 export interface NavItem {
   label: string;
@@ -36,18 +37,18 @@ export const NAV_FERRAMENTAS: NavItem[] = [
   {
     label: "Classificar atividade",
     desc: "Retenção, coeficiente e SS por profissão.",
-    href: "/dashboard/classificar-atividade",
+    href: "/ferramentas/classificar-atividade",
     Icon: Search,
   },
   {
     label: "Mapa de contabilistas",
     desc: "Preço médio por região, num mapa.",
-    href: "/dashboard/mapa-contabilistas",
+    href: "/ferramentas/mapa-contabilistas",
     Icon: MapPin,
   },
   {
     label: "Todas as ferramentas",
-    desc: "13 simuladores e ferramentas num só sítio.",
+    desc: `${FERRAMENTA_SLUGS.length} ferramentas e simuladores num só sítio.`,
     href: "/ferramentas",
     Icon: Briefcase,
   },

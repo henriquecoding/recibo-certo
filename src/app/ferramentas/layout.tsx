@@ -7,22 +7,13 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import { ChevronRight } from "@/components/ui/Icons";
 import { generateBreadcrumbSchema } from "@/lib/seo";
-
-const FERRAMENTAS_NAV = [
-  { label: "Simulador de IRS anual", href: "/ferramentas/simulador-irs" },
-  { label: "Simulador de recibo de vencimento", href: "/ferramentas/recibo-vencimento" },
-  { label: "Auditoria do recibo de vencimento", href: "/ferramentas/auditoria-recibo" },
-  { label: "Mapa de preços de contabilistas", href: "/ferramentas/mapa-contabilistas" },
-  { label: "Ato isolado ou atividade?", href: "/ferramentas/ato-isolado" },
-  { label: "Calculadora de regime simplificado", href: "/ferramentas/regime-simplificado" },
-  { label: "Classificar atividade fiscal", href: "/ferramentas/classificar-atividade" },
-  { label: "Simulador de empresa (Lda)", href: "/ferramentas/simulador-empresa" },
-  { label: "Recibo ao Merchant of Record", href: "/ferramentas/payout-mor" },
-];
+import { FERRAMENTAS } from "@/lib/ferramentas-config";
 
 export default function FerramentasLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const ferramentaAtiva = FERRAMENTAS_NAV.find((f) => f.href === pathname);
+  // Derivado da fonte única — o breadcrumb cobre sempre TODAS as ferramentas
+  // (o array local antigo estava incompleto: faltava o simulador de heranças).
+  const ferramentaAtiva = FERRAMENTAS.find((f) => f.href === pathname);
   // O Simulador de IRS embute o simulador completo (layout largo, como a página
   // de Simuladores); as restantes ferramentas mantêm a coluna estreita de leitura.
   const largo = pathname === "/ferramentas/simulador-irs";
@@ -30,7 +21,7 @@ export default function FerramentasLayout({ children }: { children: ReactNode })
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Início", url: "/" },
     { name: "Ferramentas", url: "/ferramentas" },
-    ...(ferramentaAtiva ? [{ name: ferramentaAtiva.label, url: ferramentaAtiva.href }] : []),
+    ...(ferramentaAtiva ? [{ name: ferramentaAtiva.titulo, url: ferramentaAtiva.href }] : []),
   ]);
 
   return (
@@ -50,7 +41,7 @@ export default function FerramentasLayout({ children }: { children: ReactNode })
             {ferramentaAtiva && (
               <>
                 <ChevronRight size={12} />
-                <span className="text-stone-600 dark:text-stone-300">{ferramentaAtiva.label}</span>
+                <span className="text-stone-600 dark:text-stone-300">{ferramentaAtiva.titulo}</span>
               </>
             )}
           </nav>
