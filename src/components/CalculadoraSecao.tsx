@@ -13,9 +13,9 @@
 // bundle inicial nem no arranque da landing. Cada modo é um chunk próprio: só
 // se descarrega o simulador que o utilizador realmente usa.
 
-import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePerfil } from "@/lib/perfil";
+import { usePerto } from "@/lib/use-perto";
 import Reveal from "@/components/ui/Reveal";
 import SeletorModo from "@/components/SeletorModo";
 
@@ -101,29 +101,7 @@ export default function CalculadoraSecao() {
   // Carrega o simulador só quando a secção se aproxima do ecrã. A margem
   // generosa garante que já está pronto quando o utilizador chega (incl. ao
   // clicar no CTA "Calcular" do hero, que rola até aqui).
-  const ref = useRef<HTMLDivElement>(null);
-  const [perto, setPerto] = useState(false);
-
-  useEffect(() => {
-    if (perto) return;
-    const el = ref.current;
-    if (!el) return;
-    if (typeof IntersectionObserver === "undefined") {
-      setPerto(true);
-      return;
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          setPerto(true);
-          io.disconnect();
-        }
-      },
-      { rootMargin: "800px 0px" }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [perto]);
+  const { ref, perto } = usePerto<HTMLDivElement>("800px 0px");
 
   // Os OUTROS modos são pré-carregados por intenção (hover/foco/toque no seletor,
   // ver SeletorModo) em vez de todos no arranque — assim modos pesados (ex.: por

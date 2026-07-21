@@ -4,60 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { m } from "motion/react";
 import {
-  Bank, Receipt, Calculator, ShieldCheck, Coin, User, Briefcase, Globe, FileSign,
-  Wallet, Calendar, Clock, Building, Scale, Flag, BookOpen, Search, Filter,
+  Scale, Clock, BookOpen, Search, Filter,
   LayoutGrid, ChevronRight, Check, Star, ArrowRight,
 } from "@/components/ui/Icons";
+import { GUIAS, type Categoria, type Guia, type IconType } from "@/lib/guias-config";
 
 // ─────────────────────────────────────────────────────────────────────────
 //  Índice de Guias — protagonista: herói, pesquisa, filtros por categoria,
-//  ordenação, vista lista/grelha e marcadores (localStorage). Os dados (tempo
-//  de leitura, descrições) descrevem guias reais; nada é inventado.
+//  ordenação, vista lista/grelha e marcadores (localStorage). Os dados vivem
+//  em `src/lib/guias-config.ts` (fonte única, partilhada com a homepage e
+//  validada contra o sitemap em ecossistema.test.ts); nada é inventado.
 // ─────────────────────────────────────────────────────────────────────────
-
-type IconType = React.ComponentType<{ size?: number; className?: string }>;
-type Categoria = "Independentes" | "Conta de outrem" | "Empresas" | "Transversal";
-
-type Guia = {
-  href: string;
-  titulo: string;
-  descricao: string;
-  tempo: number;
-  categoria: Categoria;
-  icon: IconType;
-};
-
-const GUIAS: Guia[] = [
-  { href: "/guias/abrir-atividade", titulo: "Como abrir atividade nas Finanças", descricao: "Passo a passo para abrir atividade como trabalhador independente.", tempo: 5, categoria: "Independentes", icon: Bank },
-  { href: "/guias/ato-isolado", titulo: "Ato isolado ou recibos verdes?", descricao: "Descobre quando usar ato isolado e quando emitir recibos verdes.", tempo: 4, categoria: "Independentes", icon: Scale },
-  { href: "/guias/regime-simplificado", titulo: "Regime simplificado e coeficientes", descricao: "Entende os coeficientes e o que realmente pagas em IRS.", tempo: 6, categoria: "Independentes", icon: Calculator },
-  { href: "/guias/despesas-dedutiveis", titulo: "Despesas dedutíveis e a regra dos 15%", descricao: "Que despesas contam no regime simplificado — e quanto tens de justificar.", tempo: 6, categoria: "Independentes", icon: Coin },
-  { href: "/guias/contabilidade-organizada", titulo: "Simplificado vs. contabilidade organizada", descricao: "Quando compensa passar ao lucro real e o que muda.", tempo: 6, categoria: "Independentes", icon: Scale },
-  { href: "/guias/retencao-na-fonte", titulo: "Retenção na fonte", descricao: "Saiba quando é aplicada e como funciona a retenção na fonte.", tempo: 4, categoria: "Independentes", icon: ShieldCheck },
-  { href: "/guias/pagamentos-por-conta", titulo: "Pagamentos por conta do IRS", descricao: "Os adiantamentos de IRS da categoria B: prazos e cálculo.", tempo: 4, categoria: "Independentes", icon: Calculator },
-  { href: "/guias/iva-recibos-verdes", titulo: "IVA nos recibos verdes", descricao: "A isenção de 15 000 € e quando deves liquidar IVA.", tempo: 5, categoria: "Independentes", icon: Coin },
-  { href: "/guias/seguranca-social", titulo: "Segurança Social", descricao: "Como funcionam as contribuições, a fórmula e as isenções.", tempo: 5, categoria: "Independentes", icon: User },
-  { href: "/guias/acumulacao-emprego", titulo: "Acumulação com emprego", descricao: "Tens emprego e passas recibos verdes? Sabe o que muda.", tempo: 4, categoria: "Independentes", icon: Briefcase },
-  { href: "/guias/clientes-estrangeiros", titulo: "Clientes estrangeiros", descricao: "IVA e retenção quando faturas para fora de Portugal.", tempo: 5, categoria: "Independentes", icon: Globe },
-  { href: "/guias/cessar-atividade", titulo: "Cessar atividade", descricao: "Como fechar atividade e o que acontece se não fechares.", tempo: 3, categoria: "Independentes", icon: FileSign },
-  { href: "/guias/fatura-vs-recibo", titulo: "Fatura, recibo e fatura-recibo", descricao: "As diferenças e onde entram os recibos verdes.", tempo: 4, categoria: "Independentes", icon: Receipt },
-  { href: "/guias/merchant-of-record", titulo: "Merchant of Record (MoR)", descricao: "Paddle, Lemon Squeezy e como emitir 1 recibo por mês.", tempo: 6, categoria: "Independentes", icon: Wallet },
-  { href: "/guias/recibo-vencimento", titulo: "Como ler o recibo de vencimento", descricao: "Bruto, Segurança Social, IRS e líquido explicados linha a linha.", tempo: 5, categoria: "Conta de outrem", icon: Receipt },
-  { href: "/guias/subsidios-ferias-natal", titulo: "Subsídio de férias e de Natal", descricao: "Cálculo, descontos e o que muda com os duodécimos.", tempo: 5, categoria: "Conta de outrem", icon: Calendar },
-  { href: "/guias/trabalho-suplementar", titulo: "Trabalho suplementar (horas extra)", descricao: "Acréscimos, retenção autónoma e limites legais.", tempo: 5, categoria: "Conta de outrem", icon: Clock },
-  { href: "/guias/abrir-empresa", titulo: "Como abrir uma empresa", descricao: "Formas jurídicas, Empresa na Hora e custos reais.", tempo: 7, categoria: "Empresas", icon: Building },
-  { href: "/guias/unipessoal-vs-eni", titulo: "Empresa (unipessoal) vs. recibos verdes", descricao: "IRC ou IRS, responsabilidade e custos — qual a estrutura certa.", tempo: 7, categoria: "Empresas", icon: Building },
-  { href: "/guias/irc", titulo: "IRC para PME", descricao: "Taxas, derrama e pagamentos por conta sem complicação.", tempo: 7, categoria: "Empresas", icon: Calculator },
-  { href: "/guias/tributacao-autonoma", titulo: "Tributação autónoma", descricao: "Viaturas, despesas de representação e agravamento.", tempo: 7, categoria: "Empresas", icon: Scale },
-  { href: "/guias/calendario-fiscal", titulo: "Calendário fiscal 2026", descricao: "Todos os prazos de IRS, IVA, Segurança Social e IRC num só sítio.", tempo: 5, categoria: "Transversal", icon: Calendar },
-  { href: "/guias/escaloes-irs", titulo: "Escalões de IRS 2026", descricao: "A tabela e os mitos sobre subir de escalão.", tempo: 5, categoria: "Transversal", icon: Calculator },
-  { href: "/guias/irs-jovem", titulo: "IRS Jovem 2026", descricao: "Isenção por ano, condições e como pedir.", tempo: 4, categoria: "Transversal", icon: Flag },
-  { href: "/guias/ifici-nhr", titulo: "IFICI (NHR 2.0): taxa de 20%", descricao: "O sucessor do Residente Não Habitual — condições e duração.", tempo: 5, categoria: "Transversal", icon: Flag },
-  { href: "/guias/deducoes-coleta", titulo: "Deduções à coleta", descricao: "Saúde, educação e despesas gerais no teu IRS.", tempo: 5, categoria: "Transversal", icon: Calculator },
-  { href: "/guias/mais-valias", titulo: "Mais-valias: ações, cripto e imóveis", descricao: "Taxas, isenções e englobamento na categoria G.", tempo: 6, categoria: "Transversal", icon: Coin },
-  { href: "/guias/tributacao-conjunta", titulo: "Tributação conjunta vs. separada", descricao: "O quociente conjugal e quando cada opção compensa.", tempo: 5, categoria: "Transversal", icon: User },
-  { href: "/guias/reembolso-irs", titulo: "Reembolso de IRS: prazos e como acelerar", descricao: "Quando recebes e o que evita atrasos no reembolso.", tempo: 4, categoria: "Transversal", icon: Wallet },
-];
 
 const CATEGORIAS: Array<"Todos" | Categoria> = ["Todos", "Independentes", "Conta de outrem", "Empresas", "Transversal"];
 

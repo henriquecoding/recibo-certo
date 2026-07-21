@@ -11,6 +11,8 @@
  *  • E-E-A-T: fonte legal verificada, atualização anual, grátis
  */
 
+import { TOTAL_PERGUNTAS_META } from "@/lib/quiz-fiscal/quiz-meta";
+
 export const SITE_URL = "https://www.recibocerto.pt";
 export const SITE_NAME = "ReciboCerto";
 
@@ -26,22 +28,39 @@ export interface PublicRoute {
   priority: number;
 }
 
-/** Slugs dos guias em `src/app/guias/<slug>`. */
+/** Slugs dos guias em `src/app/guias/<slug>`.
+    TODOS os guias publicados têm de estar aqui (sitemap + seo-audit);
+    `ecossistema.test.ts` garante o espelho com `GUIAS` (guias-config.ts). */
 export const GUIA_SLUGS = [
   "abrir-atividade",
+  "abrir-empresa",
+  "acumulacao-emprego",
   "ato-isolado",
+  "calendario-fiscal",
+  "cessar-atividade",
+  "clientes-estrangeiros",
+  "contabilidade-organizada",
+  "deducoes-coleta",
+  "despesas-dedutiveis",
+  "escaloes-irs",
+  "fatura-vs-recibo",
+  "ifici-nhr",
+  "irc",
+  "irs-jovem",
+  "iva-recibos-verdes",
+  "mais-valias",
+  "merchant-of-record",
+  "pagamentos-por-conta",
+  "recibo-vencimento",
+  "reembolso-irs",
   "regime-simplificado",
   "retencao-na-fonte",
-  "iva-recibos-verdes",
   "seguranca-social",
-  "irs-jovem",
-  "escaloes-irs",
-  "acumulacao-emprego",
-  "clientes-estrangeiros",
-  "cessar-atividade",
-  "deducoes-coleta",
-  "merchant-of-record",
-  "fatura-vs-recibo",
+  "subsidios-ferias-natal",
+  "trabalho-suplementar",
+  "tributacao-autonoma",
+  "tributacao-conjunta",
+  "unipessoal-vs-eni",
 ] as const;
 
 /** Slugs das ferramentas em `src/app/ferramentas/<slug>`. */
@@ -177,8 +196,8 @@ export function generateSoftwareApplicationSchema() {
       "Auditoria do recibo de vencimento face às tabelas de 2026",
       "IRS Jovem 2026 com isenção crescente por anos",
       "Calendário de prazos fiscais com alertas antecipados",
-      "Quiz Fiscal com gamificação e cupões Pro",
-      "15 guias fiscais detalhados para trabalhadores independentes",
+      `Quiz Fiscal com ${TOTAL_PERGUNTAS_META.toLocaleString("pt-PT")} perguntas, gamificação e cupões Pro`,
+      `${GUIA_SLUGS.length} guias fiscais detalhados para independentes, trabalhadores por conta de outrem e empresas`,
       "Mapa de contabilistas em Portugal",
       "Dashboard com guardião de SS, retenção e estimativa de IRS anual",
       "Exportação de dados para o contabilista",

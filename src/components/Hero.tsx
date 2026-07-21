@@ -2,18 +2,24 @@
 
 import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
 import Link from "next/link";
-import { m, useReducedMotion } from "motion/react";
-import { ArrowRight, ShieldCheck, Bank, FileSign, Warning, Calendar, Check, Sparkle, CursorArrow } from "@/components/ui/Icons";
+import { m, AnimatePresence, useReducedMotion } from "motion/react";
+import { ArrowRight, ShieldCheck, Bank, FileSign, Warning, Calendar, Check, Sparkle, CursorArrow, Calculator } from "@/components/ui/Icons";
 import { scrollToId } from "@/lib/scroll";
 import { staggerContainer, staggerItem, EASE } from "@/lib/motion";
 import { usePerfil, type Perfil } from "@/lib/perfil";
+import { FERRAMENTA_SLUGS, GUIA_SLUGS } from "@/lib/seo";
+import { ferramentasPorPerfil } from "@/lib/ferramentas-config";
+import { guiasPorPerfil } from "@/lib/guias-config";
 import SeletorModo from "@/components/SeletorModo";
 import type { ComparacaoCategoriasResult } from "@/lib/fiscal-dependente";
 
+// Selos de confiança — as contagens são derivadas dos registos reais do site
+// (sitemap/configs), nunca escritas à mão. Se o site crescer, isto acompanha.
 const TRUST = [
   { icon: <ShieldCheck size={14} />, text: "Taxas de 2026 verificadas" },
   { icon: <Bank size={14} />, text: "Fontes oficiais: AT e Segurança Social" },
   { icon: <FileSign size={14} />, text: "Base legal em cada cálculo" },
+  { icon: <Calculator size={14} />, text: `${FERRAMENTA_SLUGS.length} ferramentas · ${GUIA_SLUGS.length} guias` },
 ];
 
 const eur0 = (n: number) => `${Math.round(n).toLocaleString("pt-PT")} €`;
@@ -866,6 +872,10 @@ export default function Hero({ cmp }: { cmp: ComparacaoCategoriasResult }) {
   const dados = EXEMPLO[perfil];
   const c = dados.card;
 
+  // Atalhos do perfil ativo — a mesma curadoria das secções (fonte única).
+  const atalhoFerramenta = ferramentasPorPerfil(perfil).destaque;
+  const atalhoGuia = guiasPorPerfil(perfil)[0];
+
   const btnPrimario = "btn-shine inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3.5 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-float";
   const btnSecundario = "inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-6 py-3.5 text-sm font-semibold text-stone-700 transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200";
 
@@ -936,7 +946,39 @@ export default function Hero({ cmp }: { cmp: ComparacaoCategoriasResult }) {
             )}
           </m.div>
 
-          <m.ul variants={staggerItem} className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3">
+          {/* Atalhos que se moldam ao perfil: a ferramenta certa + o guia certo */}
+          <m.div variants={staggerItem} className="mt-6">
+            <AnimatePresence mode="wait" initial={false}>
+              <m.div
+                key={`atalhos-${perfil}`}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.25, ease: EASE }}
+                className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs"
+              >
+                <span className="font-medium text-stone-400">Para ti:</span>
+                <Link
+                  href={atalhoFerramenta.href}
+                  className="group inline-flex items-center gap-1.5 font-semibold text-stone-500 transition-colors hover:text-brand-dark dark:text-stone-400 dark:hover:text-brand"
+                >
+                  <atalhoFerramenta.Icon size={13} className="text-brand" />
+                  {atalhoFerramenta.titulo}
+                  <ArrowRight size={10} className="transition-transform group-hover:translate-x-0.5" />
+                </Link>
+                <Link
+                  href={atalhoGuia.href}
+                  className="group inline-flex items-center gap-1.5 font-semibold text-stone-500 transition-colors hover:text-brand-dark dark:text-stone-400 dark:hover:text-brand"
+                >
+                  <atalhoGuia.icon size={13} className="text-brand" />
+                  {atalhoGuia.titulo}
+                  <ArrowRight size={10} className="transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              </m.div>
+            </AnimatePresence>
+          </m.div>
+
+          <m.ul variants={staggerItem} className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
             {TRUST.map((b) => (
               <li key={b.text} className="flex items-center gap-2">
                 <span className="text-brand">{b.icon}</span>

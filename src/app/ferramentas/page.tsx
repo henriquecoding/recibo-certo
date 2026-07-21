@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Reveal from "@/components/ui/Reveal";
-import { ArrowRight, Calculator, Receipt, Search, Wallet, Sparkle, Building, User, Scale, ShieldCheck, MapPin } from "@/components/ui/Icons";
+import { ArrowRight } from "@/components/ui/Icons";
+import { FERRAMENTAS } from "@/lib/ferramentas-config";
 
 export const metadata: Metadata = {
   title: "Ferramentas fiscais 2026 — independentes e por conta de outrem | ReciboCerto",
@@ -24,85 +25,9 @@ export const metadata: Metadata = {
   },
 };
 
-const FERRAMENTAS = [
-  {
-    href: "/ferramentas/recibo-vencimento",
-    titulo: "Simulador de recibo de vencimento",
-    descricao: "Por conta de outrem? Do salário bruto ao líquido — IRS retido, Segurança Social e subsídio de refeição, com as tabelas oficiais de 2026.",
-    icon: User,
-    badge: "Simulador",
-  },
-  {
-    href: "/ferramentas/auditoria-recibo",
-    titulo: "Auditoria do recibo de vencimento",
-    descricao: "Introduz os valores do teu recibo e descobre se a entidade aplicou bem o IRS e a Segurança Social de 2026. Deteta erros a teu favor.",
-    icon: ShieldCheck,
-    badge: "Pro",
-  },
-  {
-    href: "/ferramentas/mapa-contabilistas",
-    titulo: "Mapa de preços de contabilistas",
-    descricao: "Quanto custa um contabilista por região? Vê a média de honorários (avença mensal) de Lisboa aos Açores num mapa interativo. Estimativas de mercado.",
-    icon: MapPin,
-    badge: "Mapa",
-  },
-  {
-    href: "/?modo=comparar",
-    titulo: "Recibos verdes, contrato ou empresa?",
-    descricao: "Para o mesmo rendimento anual, compara o líquido como trabalhador por conta de outrem, em recibos verdes ou através de uma empresa (IRC + dividendos), com o ponto de viragem e o calendário fiscal.",
-    icon: Scale,
-    badge: "Comparador",
-  },
-  {
-    href: "/ferramentas/ato-isolado",
-    titulo: "Ato isolado ou atividade?",
-    descricao: "Responde a 4 perguntas simples e fica a saber se deves emitir um ato isolado ou abrir atividade nas Finanças.",
-    icon: Receipt,
-    badge: "Decisor",
-  },
-  {
-    href: "/ferramentas/regime-simplificado",
-    titulo: "Calculadora de regime simplificado",
-    descricao: "Insere a tua faturação e atividade. Calcula coeficiente, rendimento tributável, IRS estimado e taxa efetiva.",
-    icon: Calculator,
-    badge: "Calculadora",
-  },
-  {
-    href: "/ferramentas/classificar-atividade",
-    titulo: "Classificar atividade fiscal",
-    descricao: "Pesquisa a tua profissão e descobre a retenção na fonte, o coeficiente e a base de Segurança Social aplicável.",
-    icon: Search,
-    badge: "Comparador",
-  },
-  {
-    href: "/ferramentas/simulador-empresa",
-    titulo: "Simulador de empresa (Lda)",
-    descricao: "Simula o resultado líquido de abrir uma sociedade: IRC, dividendos, custos de operação e passos para constituição. Guiado e completo.",
-    icon: Building,
-    badge: "Simulador",
-  },
-  {
-    href: "/ferramentas/simulador-herancas",
-    titulo: "Simulador de heranças e sucessões",
-    descricao: "Quem herda o quê e quanto se paga de Imposto do Selo — a família direta é isenta. Meação, legítima e quota disponível, partilha e comparação herança vs doação. Guiado e completo.",
-    icon: Scale,
-    badge: "Simulador",
-  },
-  {
-    href: "/ferramentas/payout-mor",
-    titulo: "Wizard recibo Merchant of Record",
-    descricao: "Configura o recibo verde para payout do Paddle ou Lemon Squeezy em 5 passos. IVA, retenção e NIF preenchidos.",
-    icon: Wallet,
-    badge: "Wizard",
-  },
-  {
-    href: "/quiz-fiscal",
-    titulo: "Quiz Fiscal",
-    descricao: "60 perguntas sobre IRS, IVA, Segurança Social e mais — com base legal e fontes oficiais. Testa os teus conhecimentos.",
-    icon: Sparkle,
-    badge: "Quiz",
-  },
-];
+// Cartões derivados da fonte única (ferramentas-config.ts) — inclui TODAS as
+// ferramentas oficiais (o simulador de IRS anual em primeiro) mais os cartões
+// só-de-hub (comparador da homepage e Quiz Fiscal, com contagem real).
 
 export default function FerramentasPage() {
   return (
@@ -126,7 +51,7 @@ export default function FerramentasPage() {
             className="group flex items-start gap-5 rounded-3xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 p-6 hover:border-brand/40 hover:shadow-float transition-all duration-300"
           >
             <div className="flex-shrink-0 rounded-2xl bg-brand/8 p-3">
-              <f.icon size={22} className="text-brand" />
+              <f.Icon size={22} className="text-brand" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1.5">

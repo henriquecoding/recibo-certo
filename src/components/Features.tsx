@@ -7,9 +7,11 @@
 // exemplos de recibo/salário são ilustrativos, coerentes com o hero.
 
 import { useMemo, type ReactNode } from "react";
+import Link from "next/link";
 import Reveal from "@/components/ui/Reveal";
 import { StaggerGroup, StaggerItem } from "@/components/ui/motion/Stagger";
 import { usePerfil, type Perfil } from "@/lib/perfil";
+import { scrollToId } from "@/lib/scroll";
 import type { ComparacaoCategoriasResult } from "@/lib/fiscal-dependente";
 import { fmt } from "@/lib/format";
 import {
@@ -28,6 +30,7 @@ import {
   Calendar,
   FileSign,
   Check,
+  ArrowRight,
 } from "@/components/ui/Icons";
 
 // Pontos de viragem reais (motor verificado): onde os recibos verdes passam a
@@ -275,12 +278,23 @@ interface Bloco {
   title: string;
   desc: string;
   visual: ReactNode;
+  /** Destino real da funcionalidade (página ou âncora) + rótulo do link. */
+  href?: string;
+  cta?: string;
+}
+interface Extra {
+  icon: ReactNode;
+  label: string;
+  /** Página real da funcionalidade; quando presente, o cartão é um link. */
+  href?: string;
+  /** Alternativa: troca o modo do seletor e rola até à calculadora. */
+  modo?: Perfil;
 }
 interface Conteudo {
   eyebrow: string;
   titulo: string;
   blocos: Bloco[];
-  extras: { icon: ReactNode; label: string }[];
+  extras: Extra[];
 }
 
 const eur = (n: number) => fmt(Math.round(n));
@@ -300,6 +314,8 @@ function criarConteudo(
         title: "Vê o dinheiro, não os impostos.",
         desc: "Separamos automaticamente o que é teu do que é do Estado. O número grande que vês é, simplesmente, o que podes gastar — sem fazer contas, sem culpa.",
         visual: <VisualSaldo />,
+        href: "#calculadora",
+        cta: "Calcular o meu recibo",
       },
       {
         icon: <ChartProjection size={20} />,
@@ -307,6 +323,8 @@ function criarConteudo(
         title: "Pôr de lado deixa de ser um susto.",
         desc: "Em cada recibo dizemos-te quanto reservar para a Segurança Social e para o IVA. Chega o trimestre e o dinheiro já lá está — nada de surpresas de última hora.",
         visual: <VisualReserva />,
+        href: "/dashboard",
+        cta: "Ver no dashboard",
       },
       {
         icon: <BellAlert size={20} />,
@@ -314,12 +332,14 @@ function criarConteudo(
         title: "Nunca mais uma coima por esquecimento.",
         desc: "Declaração trimestral, pagamentos por conta, IRS anual — avisamos com semanas de antecedência. O detalhe que te poupa juros e dores de cabeça.",
         visual: <VisualPrazos />,
+        href: "/guias/calendario-fiscal",
+        cta: "Ver o calendário fiscal de 2026",
       },
     ],
     extras: [
-      { icon: <Calculator size={16} />, label: "Simulador de IRS anual" },
-      { icon: <History size={16} />, label: "Histórico de recibos" },
-      { icon: <Export size={16} />, label: "Exportar para o contabilista" },
+      { icon: <Calculator size={16} />, label: "Simulador de IRS anual", href: "/ferramentas/simulador-irs" },
+      { icon: <History size={16} />, label: "Histórico de recibos", href: "/dashboard/recibos" },
+      { icon: <Export size={16} />, label: "Exportar para o contabilista", href: "/dashboard/recibos" },
     ],
   },
 
@@ -346,6 +366,8 @@ function criarConteudo(
             ]}
           />
         ),
+        href: "/ferramentas/recibo-vencimento",
+        cta: "Simular o meu salário",
       },
       {
         icon: <Calendar size={20} />,
@@ -364,6 +386,8 @@ function criarConteudo(
             ]}
           />
         ),
+        href: "/guias/subsidios-ferias-natal",
+        cta: "Como se calculam os subsídios",
       },
       {
         icon: <ShieldCheck size={20} />,
@@ -381,12 +405,14 @@ function criarConteudo(
             ]}
           />
         ),
+        href: "/ferramentas/auditoria-recibo",
+        cta: "Auditar o meu recibo",
       },
     ],
     extras: [
-      { icon: <FileSign size={16} />, label: "Importar recibo em PDF" },
-      { icon: <ChartProjection size={16} />, label: "Mealheiro para o acerto de IRS" },
-      { icon: <ShieldCheck size={16} />, label: "IRS Jovem aplicado" },
+      { icon: <FileSign size={16} />, label: "Importar recibo em PDF", href: "/ferramentas/auditoria-recibo" },
+      { icon: <ChartProjection size={16} />, label: "Mealheiro para o acerto de IRS", href: "/ferramentas/simulador-irs" },
+      { icon: <ShieldCheck size={16} />, label: "IRS Jovem aplicado", href: "/guias/irs-jovem" },
     ],
   },
 
@@ -413,6 +439,8 @@ function criarConteudo(
             ]}
           />
         ),
+        href: "/ferramentas/simulador-empresa",
+        cta: "Simular a minha empresa",
       },
       {
         icon: <Coin size={20} />,
@@ -432,30 +460,34 @@ function criarConteudo(
             ]}
           />
         ),
+        href: "/ferramentas/simulador-empresa",
+        cta: "Ver a decomposição completa",
       },
       {
         icon: <ShieldCheck size={20} />,
         eyebrow: "Benefícios fiscais",
-        title: "RFAI, DLRR e SIFIDE incluídos.",
-        desc: "O simulador modela tributação autónoma de viaturas, custos de constituição e os principais benefícios (RFAI, DLRR, SIFIDE II, IMI/IMT) — para veres o impacto antes de decidir.",
+        title: "RFAI, SIFIDE II e ICE incluídos.",
+        desc: "O simulador modela tributação autónoma de viaturas, custos de constituição e os principais benefícios em vigor (RFAI, SIFIDE II, ICE, IMI/IMT) — para veres o impacto antes de decidir.",
         visual: (
           <CardLista
             titulo="Modelado pelo simulador"
             badge="2026"
             linhas={[
               { l: "Tributação autónoma (viaturas)", v: "Art. 88.º" },
-              { l: "RFAI · DLRR · SIFIDE II", v: "CFI 22.º–42.º" },
+              { l: "RFAI · SIFIDE II", v: "CFI 22.º–40.º" },
+              { l: "ICE (capitalização)", v: "Art. 43.º-D EBF" },
               { l: "Custos de constituição", v: "Incluído" },
-              { l: "Benefícios IMI/IMT", v: "Via RFAI" },
             ]}
           />
         ),
+        href: "/ferramentas/simulador-empresa",
+        cta: "Explorar os benefícios fiscais",
       },
     ],
     extras: [
-      { icon: <Receipt size={16} />, label: "Tributação autónoma" },
-      { icon: <Building size={16} />, label: "Custos de constituição" },
-      { icon: <Scale size={16} />, label: "Comparar com recibos verdes" },
+      { icon: <Receipt size={16} />, label: "Tributação autónoma", href: "/guias/tributacao-autonoma" },
+      { icon: <Building size={16} />, label: "Custos de constituição", href: "/guias/abrir-empresa" },
+      { icon: <Scale size={16} />, label: "Comparar com recibos verdes", modo: "comparar" },
     ],
   },
 
@@ -469,6 +501,8 @@ function criarConteudo(
         title: "Os três caminhos, mesmo rendimento.",
         desc: "Por conta de outrem, recibos verdes ou empresa — para o mesmo rendimento anual, vês o que fica no bolso em cada um e qual é o mais líquido para ti.",
         visual: <VisualTresCaminhos cmp={CMP} />,
+        href: "#calculadora",
+        cta: "Comparar agora",
       },
       {
         icon: <ChartProjection size={20} />,
@@ -486,6 +520,8 @@ function criarConteudo(
             ]}
           />
         ),
+        href: "#calculadora",
+        cta: "Testar com o meu rendimento",
       },
       {
         icon: <Calendar size={20} />,
@@ -504,6 +540,8 @@ function criarConteudo(
             ]}
           />
         ),
+        href: "/guias/calendario-fiscal",
+        cta: "Ver todos os prazos de 2026",
       },
     ],
     extras: [
@@ -515,6 +553,27 @@ function criarConteudo(
   };
 }
 
+// Link do bloco: âncoras rolam suavemente na própria página; o resto navega.
+function BlocoCta({ href, cta }: { href: string; cta: string }) {
+  const cls =
+    "group/cta mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition-colors hover:text-brand-dark dark:hover:text-brand-mint";
+  const seta = (
+    <ArrowRight size={13} className="transition-transform group-hover/cta:translate-x-0.5" />
+  );
+  if (href.startsWith("#")) {
+    return (
+      <button type="button" onClick={() => scrollToId(href.slice(1))} className={cls}>
+        {cta} {seta}
+      </button>
+    );
+  }
+  return (
+    <Link href={href} className={cls}>
+      {cta} {seta}
+    </Link>
+  );
+}
+
 export default function Features({
   cmp,
   breakeven,
@@ -522,7 +581,7 @@ export default function Features({
   cmp: ComparacaoCategoriasResult;
   breakeven: Breakeven;
 }) {
-  const { perfil } = usePerfil();
+  const { perfil, definir } = usePerfil();
   const CONTEUDO = useMemo(() => criarConteudo(cmp, breakeven), [cmp, breakeven]);
   const c = CONTEUDO[perfil] ?? CONTEUDO.independente;
 
@@ -547,6 +606,7 @@ export default function Features({
                   <div className="eyebrow mt-5 text-stone-400">{b.eyebrow}</div>
                   <h3 className="mt-2 font-display text-2xl font-semibold text-stone-800 dark:text-stone-100 sm:text-3xl">{b.title}</h3>
                   <p className="mt-3 max-w-md text-stone-500 dark:text-stone-400">{b.desc}</p>
+                  {b.href && b.cta && <BlocoCta href={b.href} cta={b.cta} />}
                 </div>
                 <div>{b.visual}</div>
               </div>
@@ -556,15 +616,45 @@ export default function Features({
 
         <Reveal className="mt-20">
           <StaggerGroup className="grid gap-4 sm:grid-cols-3">
-            {c.extras.map((e) => (
-              <StaggerItem
-                key={e.label}
-                className="flex items-center gap-3 rounded-2xl border border-stone-100 bg-white px-5 py-4 shadow-card dark:border-stone-800 dark:bg-stone-900"
-              >
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand">{e.icon}</span>
-                <span className="text-sm font-medium text-stone-700 dark:text-stone-200">{e.label}</span>
-              </StaggerItem>
-            ))}
+            {c.extras.map((e) => {
+              const inner = (
+                <>
+                  <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand">{e.icon}</span>
+                  <span className="min-w-0 flex-1 text-sm font-medium text-stone-700 dark:text-stone-200">{e.label}</span>
+                  {(e.href || e.modo) && (
+                    <ArrowRight
+                      size={13}
+                      className="flex-shrink-0 text-stone-300 transition-all group-hover:translate-x-0.5 group-hover:text-brand dark:text-stone-600"
+                    />
+                  )}
+                </>
+              );
+              const cardCls =
+                "group flex w-full items-center gap-3 rounded-2xl border border-stone-100 bg-white px-5 py-4 shadow-card transition-all duration-300 dark:border-stone-800 dark:bg-stone-900";
+              const hoverCls = " hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift";
+              return (
+                <StaggerItem key={e.label}>
+                  {e.modo ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        definir(e.modo!);
+                        scrollToId("calculadora");
+                      }}
+                      className={`${cardCls}${hoverCls} text-left`}
+                    >
+                      {inner}
+                    </button>
+                  ) : e.href ? (
+                    <Link href={e.href} className={`${cardCls}${hoverCls}`}>
+                      {inner}
+                    </Link>
+                  ) : (
+                    <div className={cardCls}>{inner}</div>
+                  )}
+                </StaggerItem>
+              );
+            })}
           </StaggerGroup>
         </Reveal>
       </div>

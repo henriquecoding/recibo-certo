@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.90.0";
+export const APP_VERSION = "1.91.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,20 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.91.0",
+    data: "2026-07-21",
+    titulo: "Página inicial renovada: todo o site à distância de um clique",
+    itens: [
+      "A página inicial passou a mostrar todo o ecossistema: uma secção de ferramentas que se molda ao teu perfil (independente, por conta de outrem, empresa ou comparar), com uma sugestão em destaque para ti.",
+      "O Simulador de IRS anual — a ferramenta mais completa do site — ganhou palco próprio na página inicial, com a demonstração ao vivo e acesso direto.",
+      "Nova secção «Aprender»: os guias certos para o teu perfil e o Quiz Fiscal com as suas 1 592 perguntas, agora visíveis logo à entrada.",
+      "Os números do ReciboCerto (ferramentas, guias, perguntas do quiz, atividades classificadas e fontes oficiais) passam a ser contados diretamente do site — e cada cartão leva-te lá.",
+      "Cada funcionalidade apresentada na página inicial passou a ter link direto para a página respetiva, e os atalhos do topo adaptam-se ao teu perfil.",
+      "O link da página inicial passa a refletir o simulador selecionado (/?modo=…): ao partilhares, quem abre vê exatamente o mesmo simulador — não a versão genérica.",
+      "Todos os 29 guias ficaram visíveis para os motores de busca e os menus passaram a apontar para as páginas públicas corretas.",
+    ],
+  },
   {
     version: "1.90.0",
     data: "2026-07-21",
