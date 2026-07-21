@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.89.1";
+export const APP_VERSION = "1.90.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.90.0",
+    data: "2026-07-21",
+    titulo: "Demos ao vivo totalmente renovadas",
+    itens: [
+      "A demonstração da página inicial foi reencenada de raiz: um cursor entra em cena, clica no campo, digita o valor (e até corrige uma gralha), carrega em «Calcular» e o resultado revela-se em cascata — com contagem animada, brilho e faísca.",
+      "O cartão da demo nunca mais fica em branco: enquanto o cálculo não chega, as linhas mostram um esqueleto elegante que se transforma nos valores reais.",
+      "A demo do Simulador de IRS passou a recalcular «ao vivo»: os números rolam do perfil anterior para o novo, uma onda de destaque percorre a memória de cálculo e os passos completam-se em cadeia.",
+      "Tudo respeita a preferência de menos movimento do teu dispositivo — nesse caso, vês o resultado final, estático e completo.",
+    ],
+  },
   {
     version: "1.89.1",
     data: "2026-07-21",
