@@ -8,7 +8,8 @@
 
 import type { ReactNode } from "react";
 import { m, AnimatePresence } from "motion/react";
-import { Check, ArrowRight, ArrowLeft } from "@/components/ui/Icons";
+import { Check, ArrowRight, ArrowLeft, Plus, Minus } from "@/components/ui/Icons";
+import InfoTip from "@/components/ui/InfoTip";
 import { EASE } from "@/lib/motion";
 
 /* ── Stepper editorial ──────────────────────────────────────────────────────
@@ -237,5 +238,45 @@ export function GuiadoTransicao({ chave, children }: { chave: string; children: 
         {children}
       </m.div>
     </AnimatePresence>
+  );
+}
+
+/* ── Contador (stepper) premium ──────────────────────────────────────────────
+   Rótulo (com dica opcional) em cima; linha −  valor  + centrada por baixo.
+   Robusto em colunas estreitas: o rótulo nunca encavala os botões. */
+export function Contador({
+  label,
+  value,
+  onChange,
+  min = 0,
+  max = 20,
+  tooltip,
+}: {
+  label: ReactNode;
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+  tooltip?: ReactNode;
+}) {
+  const set = (v: number) => onChange(Math.min(max, Math.max(min, v)));
+  const btn =
+    "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-stone-200 text-stone-500 transition-all hover:border-brand hover:bg-brand-light hover:text-brand active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent dark:border-stone-700";
+  return (
+    <div className="rounded-2xl border border-stone-200 bg-white p-3.5 dark:border-stone-700 dark:bg-stone-900">
+      <div className="mb-2.5 flex items-center gap-1.5">
+        <span className="min-w-0 text-xs font-semibold leading-snug text-stone-600 dark:text-stone-300">{label}</span>
+        {tooltip && <InfoTip>{tooltip}</InfoTip>}
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <button type="button" aria-label="Diminuir" onClick={() => set(value - 1)} disabled={value <= min} className={btn}>
+          <Minus size={15} />
+        </button>
+        <span className="font-display text-2xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">{value}</span>
+        <button type="button" aria-label="Aumentar" onClick={() => set(value + 1)} disabled={value >= max} className={btn}>
+          <Plus size={15} />
+        </button>
+      </div>
+    </div>
   );
 }
