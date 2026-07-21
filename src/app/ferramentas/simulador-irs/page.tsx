@@ -239,11 +239,12 @@ export default function SimuladorIRSLandingPage() {
         <h2 className="font-display mb-5 text-2xl font-semibold text-stone-800 dark:text-stone-100">
           Vê também
         </h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { Icon: Receipt, label: "Recibos verdes", href: "/dashboard/recibos-verdes" },
             { Icon: Calculator, label: "Recibo de vencimento", href: "/ferramentas/recibo-vencimento" },
             { Icon: Building, label: "Abrir empresa (Lda)", href: "/ferramentas/simulador-empresa" },
+            { Icon: Scale, label: "Heranças e sucessões", href: "/ferramentas/simulador-herancas" },
           ].map(({ Icon, label, href }) => (
             <Link
               key={href}

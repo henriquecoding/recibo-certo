@@ -320,6 +320,40 @@ export const SOURCES = {
     label: "Sede virtual / domicílio fiscal da empresa — Art. 3.º CSC (DL 262/86) · IRN/Gov.pt",
     url: "https://www2.gov.pt/espaco-empresa/empresa-online",
   },
+
+  // ── Heranças e Sucessões — Imposto do Selo (CIS/TGIS) e Código Civil ──
+  tgisSelo: {
+    label: "Tabela Geral do Imposto do Selo (Verbas 1.1 e 1.2) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/selo/Pages/ccod-selo-tabgiselo.aspx",
+  },
+  cisArt6: {
+    label: "Art. 6.º CIS — Isenções (al. e): cônjuge/unido de facto, descendentes e ascendentes · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/selo/Pages/selo6.aspx",
+  },
+  cisArt13: {
+    label: "Art. 13.º CIS — Valor tributável das transmissões gratuitas (imóveis pelo VPT) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/selo/Pages/selo13.aspx",
+  },
+  cisArt26: {
+    label: "Art. 26.º CIS — Participação (Modelo 1) até ao fim do 3.º mês seguinte ao óbito · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/selo/Pages/selo26.aspx",
+  },
+  modelo1ISTG: {
+    label: "Participação do Imposto do Selo — Óbito (Modelo 1 ISTG, cabeça-de-casal) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/apoio_contribuinte/Folhetos_informativos/Documents/Folheto_Participacao_Imposto_Selo_Obito.pdf",
+  },
+  ccSucessoes: {
+    label: "Código Civil, Livro V — Direito das Sucessões (Art. 2133.º ss.) · Diário da República",
+    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/1966-34509075",
+  },
+  occHerancas: {
+    label: "Guia Prático de Heranças (partilha, meação, Imposto do Selo) · Ordem dos Contabilistas Certificados",
+    url: "https://www.occ.pt/sites/default/files/public/2024-02/Guia_Pratico_HERANCAS_2.pdf",
+  },
+  art45cirs: {
+    label: "Art. 45.º CIRS — Valor de aquisição a título gratuito (valor para Imposto do Selo/VPT) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs45.aspx",
+  },
 } satisfies Record<string, Source>;
 
 export type SourceKey = keyof typeof SOURCES;
@@ -1600,6 +1634,142 @@ export const IS_TAXA_AQUISICAO = sv(
 );
 
 // ═══════════════════════════════════════════════════════════════════════
+//  HERANÇAS E SUCESSÕES
+//  ---------------------------------------------------------------------
+//  Portugal NÃO tem imposto sucessório (o Imposto sobre Sucessões e Doações
+//  foi abolido em 2004). As transmissões gratuitas são tributadas em Imposto
+//  do Selo, e a partilha rege-se pelo Código Civil (Livro V). Verificado 2026;
+//  o OE2026 (Lei 73-A/2025) não alterou este regime.
+// ═══════════════════════════════════════════════════════════════════════
+
+const SELO_TODAY = "2026-07-21";
+
+/** Verba 1.2 TGIS — aquisição gratuita de bens (heranças, legados, doações). */
+export const IS_TRANSMISSAO_GRATUITA = sv(
+  0.10,
+  "Verba 1.2 TGIS — aquisição gratuita de bens (heranças, legados e doações): 10%",
+  "tgisSelo",
+  SELO_TODAY,
+  "Taxa proporcional (não progressiva). Não confundir com um imposto sucessório — este foi abolido em 2004."
+);
+
+/**
+ * Verba 1.1 TGIS — 0,8% sobre a DOAÇÃO (ou aquisição onerosa) de imóveis.
+ * NÃO se aplica às transmissões por morte (heranças): a redação da verba é
+ * "aquisição onerosa ou por doação", que exclui a sucessão mortis causa.
+ */
+export const IS_DOACAO_IMOVEL = sv(
+  0.008,
+  "Verba 1.1 TGIS — doação (ou aquisição onerosa) do direito de propriedade sobre imóveis: 0,8%",
+  "tgisSelo",
+  SELO_TODAY,
+  "Incide sobre doações e transmissões onerosas de imóveis, mesmo para família isenta da Verba 1.2. A herança (transmissão por morte) NÃO está sujeita à Verba 1.1."
+);
+
+/** Verba 1.2 TGIS — doações de valor até 500 € não são tributadas. */
+export const IS_DOACAO_MINIMO_ISENTO = sv(
+  500,
+  "Verba 1.2 TGIS — doações de valor igual ou inferior a 500 € não são tributadas",
+  "tgisSelo",
+  SELO_TODAY
+);
+
+/** Prazo da participação (Modelo 1 ISTG) — fim do 3.º mês seguinte ao do óbito. */
+export const PRAZO_MODELO1_MESES = sv(
+  3,
+  "Art. 26.º CIS — participação (Modelo 1) apresentada pelo cabeça-de-casal até ao fim do 3.º mês seguinte ao do óbito",
+  "cisArt26",
+  SELO_TODAY
+);
+
+/** Relação de parentesco com o falecido (para partilha e isenção de Imposto do Selo). */
+export type RelacaoSucessoria =
+  | "conjuge"
+  | "unido_facto"
+  | "filho"
+  | "neto"
+  | "bisneto"
+  | "pai"
+  | "avo"
+  | "bisavo"
+  | "irmao"
+  | "sobrinho"
+  | "tio"
+  | "primo"
+  | "outro";
+
+/**
+ * Relações ISENTAS de Imposto do Selo nas transmissões gratuitas — Art. 6.º
+ * al. e) CIS: cônjuge, unido de facto, descendentes e ascendentes.
+ */
+export const SELO_RELACOES_ISENTAS: readonly RelacaoSucessoria[] = [
+  "conjuge",
+  "unido_facto",
+  "filho",
+  "neto",
+  "bisneto",
+  "pai",
+  "avo",
+  "bisavo",
+] as const;
+
+export const SELO_ISENCAO_BASE = "Art. 6.º al. e) CIS" as const;
+
+export function relacaoIsentaSelo(r: RelacaoSucessoria): boolean {
+  return SELO_RELACOES_ISENTAS.includes(r);
+}
+
+/**
+ * Legítima (quota indisponível) por configuração familiar — a fração da
+ * herança reservada por lei aos herdeiros legitimários. A quota disponível
+ * (o que se pode deixar livremente por testamento) é 1 − legítima.
+ */
+export type ConfigLegitima =
+  | "conjuge_so"
+  | "conjuge_descendentes"
+  | "descendentes_1"
+  | "descendentes_2mais"
+  | "conjuge_ascendentes"
+  | "ascendentes_pais"
+  | "ascendentes_avos";
+
+export const LEGITIMA: Record<ConfigLegitima, { fracao: number; base: string }> = {
+  conjuge_so: { fracao: 1 / 2, base: "Art. 2158.º CC" },
+  conjuge_descendentes: { fracao: 2 / 3, base: "Art. 2159.º, n.º 1 CC" },
+  descendentes_1: { fracao: 1 / 2, base: "Art. 2159.º, n.º 2 CC" },
+  descendentes_2mais: { fracao: 2 / 3, base: "Art. 2159.º, n.º 2 CC" },
+  conjuge_ascendentes: { fracao: 2 / 3, base: "Art. 2161.º, n.º 1 CC" },
+  ascendentes_pais: { fracao: 1 / 2, base: "Art. 2161.º, n.º 2 CC" },
+  ascendentes_avos: { fracao: 1 / 3, base: "Art. 2161.º, n.º 2 CC" },
+};
+
+/** Meação: na comunhão, cada cônjuge tem direito a metade dos bens comuns. */
+export const MEACAO_FRACAO = sv(
+  0.5,
+  "Art. 1730.º CC — cada cônjuge tem direito a metade dos bens comuns (meação), que não integra a herança",
+  "ccSucessoes",
+  SELO_TODAY
+);
+
+/**
+ * Sucessão legítima (sem testamento): quando o cônjuge concorre com
+ * descendentes, o seu quinhão não pode ser inferior a 1/4 da herança.
+ */
+export const CONJUGE_QUOTA_MINIMA = sv(
+  0.25,
+  "Art. 2139.º, n.º 1 CC — o cônjuge não recebe menos de 1/4 quando concorre com descendentes",
+  "ccSucessoes",
+  SELO_TODAY
+);
+
+/** Sucessão legítima: cônjuge em concurso com ascendentes (sem descendentes). */
+export const CONJUGE_ASCENDENTES_QUOTAS = {
+  conjuge: 2 / 3,
+  ascendentes: 1 / 3,
+  base: "Art. 2142.º CC",
+} as const;
+
+// ═══════════════════════════════════════════════════════════════════════
 //  ENGLOBAMENTO DE DIVIDENDOS (Art. 40.º-A CIRS)
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -2502,6 +2672,30 @@ export function assertFiscalDataIntegrity(): void {
   if (!isRate(IFICI_TAXA.value)) erros.push("Taxa IFICI inválida.");
   if (!(IFICI_PRAZO_ANOS.value > 0)) erros.push("Prazo IFICI não positivo.");
 
+  // Heranças e Sucessões — Imposto do Selo + Código Civil.
+  [IS_TRANSMISSAO_GRATUITA, IS_DOACAO_IMOVEL, MEACAO_FRACAO, CONJUGE_QUOTA_MINIMA].forEach((p) => {
+    if (!isRate(p.value)) erros.push(`Taxa/fração de heranças inválida: ${p.legalBasis}.`);
+  });
+  if (!(IS_DOACAO_MINIMO_ISENTO.value > 0)) erros.push("Limiar de isenção de doações não positivo.");
+  if (!(PRAZO_MODELO1_MESES.value > 0)) erros.push("Prazo do Modelo 1 não positivo.");
+  if (!IS_DOACAO_IMOVEL.note?.includes("herança")) {
+    erros.push("A nota da Verba 1.1 deve esclarecer que não se aplica a heranças.");
+  }
+  if (SELO_RELACOES_ISENTAS.length === 0) erros.push("Lista de relações isentas de Imposto do Selo vazia.");
+  (Object.keys(LEGITIMA) as ConfigLegitima[]).forEach((k) => {
+    const f = LEGITIMA[k].fracao;
+    if (!(f > 0 && f < 1)) erros.push(`Fração de legítima fora de (0,1): ${k}.`);
+    if (!LEGITIMA[k].base) erros.push(`Legítima sem base legal: ${k}.`);
+  });
+  // Cônjuge com descendentes tem legítima superior à do cônjuge sozinho.
+  if (!(LEGITIMA.conjuge_descendentes.fracao > LEGITIMA.conjuge_so.fracao)) {
+    erros.push("Legítima cônjuge+descendentes deveria exceder a do cônjuge sozinho.");
+  }
+  // Quotas de sucessão legítima cônjuge/ascendentes somam 1.
+  if (Math.abs(CONJUGE_ASCENDENTES_QUOTAS.conjuge + CONJUGE_ASCENDENTES_QUOTAS.ascendentes - 1) > EPS) {
+    erros.push("Quotas cônjuge+ascendentes (Art. 2142.º) não somam 1.");
+  }
+
   // Deficiência (Art. 56.º-A + 87.º CIRS).
   if (!isRate(EXCLUSAO_DEFICIENCIA_TAXA.value)) erros.push("Taxa exclusão deficiência Art. 56.º-A inválida.");
   if (!(EXCLUSAO_DEFICIENCIA_MAX.value > 0)) erros.push("Máx exclusão deficiência Art. 56.º-A não positivo.");
@@ -2746,6 +2940,13 @@ export function assertFiscalDataIntegrity(): void {
     IMI_TAXA_PADRAO,
     IMT_TAXA_COMERCIAL,
     IS_TAXA_AQUISICAO,
+    // Heranças e sucessões (Imposto do Selo + Código Civil)
+    IS_TRANSMISSAO_GRATUITA,
+    IS_DOACAO_IMOVEL,
+    IS_DOACAO_MINIMO_ISENTO,
+    PRAZO_MODELO1_MESES,
+    MEACAO_FRACAO,
+    CONJUGE_QUOTA_MINIMA,
     // Englobamento dividendos
     DIV_INCLUSAO_ENGLOBAMENTO,
     // Mais-valias (categoria G)

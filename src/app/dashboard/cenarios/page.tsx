@@ -12,12 +12,12 @@ import {
 } from "@/lib/store/cenarios";
 import { fmt, pct } from "@/lib/format";
 import {
-  Invoice, Wallet, Building, Calculator, Trash, Export, ArrowRight, Sparkle, Lock,
+  Invoice, Wallet, Building, Calculator, Trash, Export, ArrowRight, Sparkle, Lock, Scale,
 } from "@/components/ui/Icons";
 import type { ReactNode } from "react";
 
 const ICONES: Record<string, (p: { size?: number; className?: string }) => ReactNode> = {
-  Invoice, Wallet, Building, Calculator,
+  Invoice, Wallet, Building, Calculator, Scale,
 };
 
 const SIMULADORES: { tipo: TipoCenario; rota: string }[] = [
@@ -70,7 +70,7 @@ export default function CenariosPage() {
   const { cenarios, carregado, naNuvem, plano, limite, limiteAtingido, remover } = useCenarios();
 
   const porTipo = useMemo(() => {
-    const grupos: Record<TipoCenario, Cenario[]> = { recibos: [], vencimento: [], empresa: [], irs: [] };
+    const grupos: Record<TipoCenario, Cenario[]> = { recibos: [], vencimento: [], empresa: [], irs: [], herancas: [] };
     for (const c of cenarios) grupos[c.tipo]?.push(c);
     return grupos;
   }, [cenarios]);

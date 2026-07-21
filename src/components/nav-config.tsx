@@ -10,6 +10,7 @@ import {
   BookOpen,
   Trophy,
   BellAlert,
+  Scale,
 } from "@/components/ui/Icons";
 
 export interface NavItem {
@@ -27,6 +28,12 @@ export const NAV_FERRAMENTAS: NavItem[] = [
     Icon: Calculator,
   },
   {
+    label: "Heranças e sucessões",
+    desc: "Partilha e Imposto do Selo — a família é isenta.",
+    href: "/ferramentas/simulador-herancas",
+    Icon: Scale,
+  },
+  {
     label: "Classificar atividade",
     desc: "Retenção, coeficiente e SS por profissão.",
     href: "/dashboard/classificar-atividade",
@@ -40,7 +47,7 @@ export const NAV_FERRAMENTAS: NavItem[] = [
   },
   {
     label: "Todas as ferramentas",
-    desc: "12 simuladores e ferramentas num só sítio.",
+    desc: "13 simuladores e ferramentas num só sítio.",
     href: "/ferramentas",
     Icon: Briefcase,
   },

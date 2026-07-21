@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.88.0";
+export const APP_VERSION = "1.89.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,20 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.89.0",
+    data: "2026-07-21",
+    titulo: "Novo Simulador de Heranças e Sucessões",
+    itens: [
+      "Novo simulador de heranças e sucessões, com modo guiado (passo a passo) e modo completo — como os restantes simuladores do site.",
+      "Mostra quem herda o quê: separa a meação do cônjuge, aplica a partilha do Código Civil (legítima, quota disponível e sucessão legítima) e calcula o quinhão de cada herdeiro.",
+      "Calcula o Imposto do Selo por herdeiro: a família direta (cônjuge, unido de facto, filhos, netos, pais e avós) é totalmente isenta; os restantes pagam 10%. Em Portugal não há imposto sucessório.",
+      "Compara herdar com doar em vida: a doação de imóveis à família paga 0,8% de Imposto do Selo, enquanto a herança dos mesmos imóveis é isenta.",
+      "Estima as mais-valias de IRS se vender um imóvel herdado, usando o VPT à data do óbito como valor de aquisição (Art. 45.º CIRS).",
+      "Lembra o prazo do Modelo 1 do Imposto do Selo (até ao fim do 3.º mês após o óbito), mesmo quando a herança é isenta.",
+      "Todos os valores têm base legal e fonte oficial (Código Civil, Código do Imposto do Selo e Tabela Geral), verificados para 2026.",
+    ],
+  },
   {
     version: "1.88.0",
     data: "2026-07-20",

@@ -48,6 +48,7 @@ export const GUIA_SLUGS = [
 export const FERRAMENTA_SLUGS = [
   "simulador-irs",
   "simulador-empresa",
+  "simulador-herancas",
   "recibo-vencimento",
   "regime-simplificado",
   "ato-isolado",

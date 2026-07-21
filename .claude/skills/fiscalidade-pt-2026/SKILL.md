@@ -359,6 +359,51 @@ exibir qual é mais favorável para o perfil indicado.
 
 ---
 
+## Heranças e Sucessões — Imposto do Selo + Código Civil
+
+> Alimenta o Simulador de Heranças (`src/lib/fiscal-heranca.ts` + `fiscal-data.ts`).
+> **Portugal NÃO tem imposto sucessório** (abolido em 2004). Verificado 2026;
+> o OE2026 (Lei 73-A/2025) não alterou este regime.
+
+### Imposto do Selo — transmissões gratuitas (fiscal)
+- **Verba 1.2 TGIS: 10%** sobre o valor dos bens transmitidos gratuitamente
+  (heranças, legados, doações). Proporcional, não progressivo.
+- **Isenção total (Art. 6.º al. e CIS):** **cônjuge, unido de facto, descendentes
+  e ascendentes → 0%.** Mesmo isentos, têm de declarar (Modelo 1).
+- **Não isentos** (irmãos, sobrinhos, tios, sem parentesco): **10%**.
+- **Verba 1.1 TGIS: 0,8%** — redação "aquisição **onerosa ou por doação**" de
+  imóveis. **NÃO se aplica a heranças (transmissão por morte).** Só a doações de
+  imóveis (mesmo entre família isenta da 1.2). É a chave da comparação
+  herança-vs-doação. NUNCA aplicar 0,8% numa herança.
+- **Doações até 500€:** isentas. **Valor tributável:** imóveis pelo **VPT**.
+- **Modelo 1 do Imposto do Selo (ISTG):** pelo cabeça-de-casal, até ao **fim do
+  3.º mês** seguinte ao óbito (Art. 26.º CIS).
+
+### Partilha — Código Civil (civil)
+- **Meação:** em comunhão (adquiridos/geral), o cônjuge retira **1/2 dos bens
+  comuns** ANTES da herança (Art. 1730.º); não é herança nem é tributada. Sem
+  meação em separação de bens ou união de facto.
+- **Legítima (indisponível) vs quota disponível:** só cônjuge 1/2 (2158.º);
+  cônjuge+descendentes 2/3 (2159.º/1); 1 filho 1/2, 2+ filhos 2/3 (2159.º/2);
+  cônjuge+ascendentes 2/3 (2161.º/1); pais 1/2, avós 1/3 (2161.º/2).
+- **Sucessão legítima (sem testamento):** cônjuge+descendentes por cabeça,
+  cônjuge ≥ 1/4 (2139.º); cônjuge+ascendentes 2/3–1/3 (2142.º); só cônjuge tudo
+  (2144.º); representação de netos (2138.º).
+- **União de facto:** NÃO é herdeiro legitimário (só herda por testamento), mas
+  é **isento de Imposto do Selo**.
+
+### Regras para o motor
+- Nunca hardcodar taxas/frações — tudo vem de `fiscal-data.ts` (`IS_TRANSMISSAO_GRATUITA`,
+  `IS_DOACAO_IMOVEL`, `MEACAO_FRACAO`, `CONJUGE_QUOTA_MINIMA`, `LEGITIMA`, `SELO_RELACOES_ISENTAS`).
+- Quando o caso é indeterminável sem mais dados (testamento com deixas específicas,
+  colaterais, avaliações), devolver **aviso** e remeter a notário/advogado — não inventar.
+
+**Fonte:** Tabela Geral do Imposto do Selo e Art. 6.º/13.º/26.º CIS (Portal das
+Finanças); Código Civil, Livro V (Diário da República); OCC Guia Prático Heranças;
+Art. 45.º CIRS (mais-valias de imóvel herdado = valor para Imposto do Selo/VPT).
+
+---
+
 ## Ao concluir
 A API `GET /api/fiscal-data` deve expor qualquer parâmetro novo (com fonte/data).
 Atualizar o FAQ (`src/lib/faq.ts`) e a secção "Fontes" se os números visíveis mudarem.
