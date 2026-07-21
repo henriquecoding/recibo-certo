@@ -903,6 +903,24 @@ export function Linkedin({ size = 18, className }: IconProps) {
   );
 }
 
+// ─── Cursor (ponteiro de rato simulado) ──────────────────────
+// Usado nas demos "ao vivo" para encenar utilização real. Cores fixas de
+// propósito: tal como um cursor verdadeiro do sistema, é escuro com contorno
+// claro em ambos os temas — não é um ícone de superfície.
+export function CursorArrow({ size = 20, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path
+        d="M4.5 4.1a.6.6 0 0 1 .78-.78l15.2 6.18a.6.6 0 0 1-.08 1.14l-6.34 1.63a1.6 1.6 0 0 0-1.15 1.15l-1.63 6.34a.6.6 0 0 1-1.14.08z"
+        fill="#232320"
+        stroke="#FFFFFF"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 // ─── Marca do ícone (V2) ────────────────────────────────────
 export function LogoMark({ size = 28, className }: IconProps) {
   return (

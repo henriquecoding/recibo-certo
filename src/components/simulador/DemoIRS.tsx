@@ -54,6 +54,13 @@ const PASSOS = ["Agregado", "Rendimentos", "Deduções", "Resultado"];
 const eur0 = (n: number) =>
   new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
 
+// Percentagem inteira (para os números que "rolam" entre perfis).
+const pctInteiro = (n: number) => `${Math.round(n)}%`;
+
+// Variantes com sinal — mantêm o sinal enquanto o valor rola.
+const eurNeg = (n: number) => `− ${eur0(n)}`;
+const eurPos = (n: number) => `+ ${eur0(n)}`;
+
 const ESC = ESCALOES_IRS.value;
 
 // Limites reais das taxas marginais — derivados da fonte de verdade, nunca
@@ -164,9 +171,14 @@ export default function DemoIRS() {
               transition={{ duration: 0.3 }}
               className="flex min-w-0 items-center gap-2.5"
             >
-              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand">
+              <m.span
+                initial={reduz ? false : { scale: 0.5, rotate: -12 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", stiffness: 380, damping: 20 }}
+                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand"
+              >
                 <c.Icon size={16} />
-              </span>
+              </m.span>
               <span className="min-w-0">
                 <span className="block truncate text-[13px] font-semibold text-stone-700 dark:text-stone-200">{c.persona}</span>
                 <span className="block truncate text-[11px] font-medium text-stone-400">{c.detalhe}</span>
@@ -190,34 +202,52 @@ export default function DemoIRS() {
           </div>
         </div>
 
-        {/* ── Resultado herói + anel ─────────────────────────────────── */}
+        {/* ── Resultado herói + anel ─────────────────────────────────
+             O número NÃO é remontado a cada troca: rola do valor anterior
+             para o novo (AnimatedNumber), vendendo o "recalculado ao vivo".
+             Só o rótulo (reembolso vs a pagar) faz crossfade. */}
         <div className="flex items-center gap-4">
           <div className="min-w-0 flex-1">
-            <div className="text-xs font-medium uppercase tracking-wider text-stone-400">
-              {reembolso ? "Reembolso estimado" : "Imposto a pagar"}
-            </div>
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="wait" initial={false}>
               <m.div
-                key={`valor-${i}`}
-                initial={{ opacity: 0, y: 8 }}
+                key={reembolso ? "reembolso" : "pagar"}
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                className={`font-display text-4xl font-semibold leading-none tabular-nums sm:text-[2.6rem] ${
-                  reembolso ? "text-brand" : "text-brand-deep dark:text-brand-mint"
-                }`}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.25 }}
+                className="text-xs font-medium uppercase tracking-wider text-stone-400"
               >
-                <AnimatedNumber value={resultado} format={eur0} />
+                {reembolso ? "Reembolso estimado" : "Imposto a pagar"}
               </m.div>
             </AnimatePresence>
+            <div
+              className={`font-display text-4xl font-semibold leading-none tabular-nums transition-colors duration-500 sm:text-[2.6rem] ${
+                reembolso ? "text-brand" : "text-brand-deep dark:text-brand-mint"
+              }`}
+            >
+              <AnimatedNumber value={resultado} format={eur0} />
+            </div>
             <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-semibold text-stone-500 dark:bg-stone-800 dark:text-stone-300">
               <Scale size={11} className="text-brand" />
-              Taxa efetiva <span className="tabular-nums text-stone-700 dark:text-stone-100">{pct(taxa)}</span>
+              Taxa efetiva{" "}
+              <span className="tabular-nums text-stone-700 dark:text-stone-100">
+                <AnimatedNumber value={taxa} format={pct} />
+              </span>
             </div>
           </div>
 
           {/* Anel: quanto de cada euro fica contigo */}
           <div className="relative h-[96px] w-[96px] flex-shrink-0" role="img" aria-label={`${pctContigo}% do rendimento fica contigo; ${pct(taxa)} é IRS`}>
+            {!reduz && (
+              <m.div
+                key={`halo-${i}`}
+                aria-hidden
+                className="pointer-events-none absolute inset-1 rounded-full bg-brand/25 blur-xl"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 0.75, 0] }}
+                transition={{ duration: 1.1, ease: "easeOut" }}
+              />
+            )}
             <svg viewBox="0 0 96 96" className="h-full w-full -rotate-90">
               <circle cx="48" cy="48" r={R} fill="none" strokeWidth="11" className="stroke-stone-100 dark:stroke-stone-800" />
               {/* IRS — verde profundo, arco a seguir ao que fica contigo */}
@@ -247,7 +277,9 @@ export default function DemoIRS() {
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="font-display text-xl font-semibold leading-none tabular-nums text-stone-800 dark:text-stone-100">{pctContigo}%</span>
+              <span className="font-display text-xl font-semibold leading-none tabular-nums text-stone-800 dark:text-stone-100">
+                <AnimatedNumber value={pctContigo} format={pctInteiro} />
+              </span>
               <span className="mt-0.5 text-[9px] font-medium uppercase tracking-wide text-stone-400">contigo</span>
             </div>
           </div>
@@ -299,57 +331,91 @@ export default function DemoIRS() {
           </div>
         </div>
 
-        {/* ── Memória de cálculo (compacta, mas com a história completa) ── */}
-        <AnimatePresence mode="wait">
-          <m.div
-            key={`memo-${i}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="mt-5 space-y-px overflow-hidden rounded-2xl border border-stone-100 dark:border-stone-800"
-          >
-            {[
-              { Icon: Wallet, l: "Rendimento global", v: eur0(c.rendimento), sub: undefined, tone: "neutro" as const },
-              { Icon: Scale, l: "Rendimento coletável", v: eur0(c.coletavel), sub: `${eur0(deducoes)} em deduções`, tone: "neutro" as const },
-              { Icon: Receipt, l: "Coleta de IRS", v: `− ${eur0(c.irs)}`, sub: `marginal ${pct(marginal)}`, tone: "out" as const },
-              { Icon: Check, l: "Retido na fonte", v: `+ ${eur0(c.retido)}`, sub: undefined, tone: "in" as const },
-            ].map((row) => (
-              <div key={row.l} className="flex items-center justify-between gap-3 bg-stone-50/70 px-3 py-2 dark:bg-stone-800/40">
-                <span className="flex items-center gap-2 text-[12px] text-stone-500 dark:text-stone-400">
-                  <row.Icon size={12} className="text-stone-400" />
-                  {row.l}
-                  {row.sub && <span className="hidden text-[10px] text-stone-400 sm:inline">· {row.sub}</span>}
-                </span>
-                <span
-                  className={`text-[12px] font-semibold tabular-nums ${
-                    row.tone === "out" ? "text-brand-deep dark:text-brand-mint" : row.tone === "in" ? "text-brand-dark dark:text-brand" : "text-stone-700 dark:text-stone-200"
-                  }`}
-                >
-                  {row.v}
-                </span>
-              </div>
-            ))}
-            <div className={`flex items-center justify-between gap-3 px-3 py-2.5 ${reembolso ? "bg-brand-light dark:bg-brand/10" : "bg-brand-deep/[0.06] dark:bg-brand/[0.08]"}`}>
-              <span className={`text-[12px] font-bold ${reembolso ? "text-brand-dark" : "text-brand-deep dark:text-brand-mint"}`}>
-                = {reembolso ? "Reembolso" : "A pagar"}
+        {/* ── Memória de cálculo — persistente: os valores ROLAM entre
+             perfis e uma onda de destaque percorre as linhas a cada
+             recálculo, de cima para baixo. ── */}
+        <div className="mt-5 space-y-px overflow-hidden rounded-2xl border border-stone-100 dark:border-stone-800">
+          {[
+            { Icon: Wallet, l: "Rendimento global", n: c.rendimento, f: eur0, sub: undefined, tone: "neutro" as const },
+            { Icon: Scale, l: "Rendimento coletável", n: c.coletavel, f: eur0, sub: `${eur0(deducoes)} em deduções`, tone: "neutro" as const },
+            { Icon: Receipt, l: "Coleta de IRS", n: c.irs, f: eurNeg, sub: `marginal ${pct(marginal)}`, tone: "out" as const },
+            { Icon: Check, l: "Retido na fonte", n: c.retido, f: eurPos, sub: undefined, tone: "in" as const },
+          ].map((row, idx) => (
+            <div key={row.l} className="relative flex items-center justify-between gap-3 bg-stone-50/70 px-3 py-2 dark:bg-stone-800/40">
+              {!reduz && (
+                <m.span
+                  key={`flash-${i}`}
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 bg-brand/10"
+                  initial={{ opacity: 0.7 }}
+                  animate={{ opacity: 0 }}
+                  transition={{ duration: 0.9, delay: idx * 0.09, ease: "easeOut" }}
+                />
+              )}
+              <span className="flex items-center gap-2 text-[12px] text-stone-500 dark:text-stone-400">
+                <row.Icon size={12} className="text-stone-400" />
+                {row.l}
+                {row.sub && <span className="hidden text-[10px] text-stone-400 sm:inline">· {row.sub}</span>}
               </span>
-              <span className={`text-[13px] font-bold tabular-nums ${reembolso ? "text-brand-dark dark:text-brand" : "text-brand-deep dark:text-brand-mint"}`}>
-                {reembolso ? "+ " : "− "}{eur0(resultado)}
+              <span
+                className={`text-[12px] font-semibold tabular-nums ${
+                  row.tone === "out" ? "text-brand-deep dark:text-brand-mint" : row.tone === "in" ? "text-brand-dark dark:text-brand" : "text-stone-700 dark:text-stone-200"
+                }`}
+              >
+                <AnimatedNumber value={row.n} format={row.f} />
               </span>
             </div>
-          </m.div>
-        </AnimatePresence>
+          ))}
+          <div
+            className={`relative flex items-center justify-between gap-3 px-3 py-2.5 transition-colors duration-500 ${
+              reembolso ? "bg-brand-light dark:bg-brand/10" : "bg-brand-deep/[0.06] dark:bg-brand/[0.08]"
+            }`}
+          >
+            {!reduz && (
+              <m.span
+                key={`flash-total-${i}`}
+                aria-hidden
+                className="pointer-events-none absolute inset-0 bg-brand/10"
+                initial={{ opacity: 0.7 }}
+                animate={{ opacity: 0 }}
+                transition={{ duration: 0.9, delay: 0.36, ease: "easeOut" }}
+              />
+            )}
+            <span className={`text-[12px] font-bold ${reembolso ? "text-brand-dark" : "text-brand-deep dark:text-brand-mint"}`}>
+              = {reembolso ? "Reembolso" : "A pagar"}
+            </span>
+            <span className={`text-[13px] font-bold tabular-nums ${reembolso ? "text-brand-dark dark:text-brand" : "text-brand-deep dark:text-brand-mint"}`}>
+              <AnimatedNumber value={resultado} format={reembolso ? eurPos : eurNeg} />
+            </span>
+          </div>
+        </div>
 
-        {/* ── Passos do simulador ────────────────────────────────────── */}
+        {/* ── Passos do simulador — os vistos "repõem-se" em cadeia a
+             cada recálculo, como se o fluxo acabasse de correr ── */}
         <div className="mt-5 flex items-center gap-1.5 border-t border-stone-100 pt-4 dark:border-stone-800">
           {PASSOS.map((p, idx) => (
             <div key={p} className="flex flex-1 items-center gap-1.5">
-              <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-brand text-white">
+              <m.span
+                key={`visto-${i}`}
+                initial={reduz ? false : { scale: 0.3, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 420, damping: 22, delay: 0.2 + idx * 0.12 }}
+                className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-brand text-white"
+              >
                 <Check size={9} />
-              </span>
+              </m.span>
               <span className="hidden truncate text-[10px] font-medium text-stone-500 dark:text-stone-400 sm:block">{p}</span>
-              {idx < PASSOS.length - 1 && <span className="hidden h-px flex-1 bg-brand/30 sm:block" />}
+              {idx < PASSOS.length - 1 && (
+                <span className="hidden h-px flex-1 overflow-hidden bg-brand/15 sm:block">
+                  <m.span
+                    key={`traco-${i}`}
+                    initial={reduz ? false : { scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ duration: 0.45, delay: 0.3 + idx * 0.12, ease: [0.16, 1, 0.3, 1] }}
+                    className="block h-full w-full origin-left bg-brand/40"
+                  />
+                </span>
+              )}
             </div>
           ))}
           <Sparkle size={12} className="ml-1 flex-shrink-0 text-brand" />
