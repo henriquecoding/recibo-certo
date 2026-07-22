@@ -1,22 +1,25 @@
 import type { Metadata } from "next";
-import MapaPrecosRegioes from "@/components/contabilista/MapaPrecosRegioesLazy";
+import MapaRegioesLazy from "@/components/mapa/MapaRegioesLazy";
 
 export const metadata: Metadata = {
-  title: "Mapa de preços de contabilistas por região 2026 | ReciboCerto",
+  title: "Mapa de preços por região 2026: contabilistas, notários e advogados | ReciboCerto",
   description:
-    "Quanto custa um contabilista em Portugal? Vê a média de honorários (avença mensal) por região — Lisboa, Norte, Centro, Alentejo, Algarve, Madeira e Açores — num mapa interativo. Estimativas de mercado.",
+    "Quanto custa um contabilista, um notário ou um advogado em Portugal? Um único mapa interativo com filtros: avenças de contabilistas, atos notariais com preços, consultas de advogados e benefícios fiscais por região.",
   keywords: [
     "preço contabilista Portugal 2026",
     "honorários contabilista por região",
     "quanto custa um contabilista",
-    "avença contabilidade mensal",
-    "contabilista Lisboa Porto preço",
+    "quanto custa um notário",
+    "preço procuração testamento notário",
+    "quanto custa um advogado consulta",
+    "honorários advogado Portugal",
+    "benefícios fiscais por região",
   ],
   alternates: { canonical: "https://www.recibocerto.pt/ferramentas/mapa-contabilistas" },
   openGraph: {
-    title: "Mapa de preços de contabilistas por região 2026 | ReciboCerto",
+    title: "Mapa de preços por região 2026: contabilistas, notários e advogados | ReciboCerto",
     description:
-      "A média de honorários de contabilistas por região de Portugal, num mapa interativo. Estimativas de mercado para trabalhadores independentes.",
+      "Um único mapa interativo de Portugal com filtros: avenças de contabilistas, atos notariais com preços, consultas de advogados e benefícios fiscais por região.",
     url: "https://www.recibocerto.pt/ferramentas/mapa-contabilistas",
     siteName: "ReciboCerto",
     locale: "pt_PT",
@@ -28,18 +31,19 @@ export default function MapaContabilistasPage() {
   return (
     <>
       <div className="mb-8">
-        <div className="eyebrow mb-3 text-brand">Contabilistas</div>
+        <div className="eyebrow mb-3 text-brand">Preços & regiões</div>
         <h1 className="font-display display-2 font-semibold text-ink mb-4 text-balance">
-          Quanto custa um contabilista, por região?
+          Quanto custam os profissionais de que precisas, na tua região?
         </h1>
         <p className="text-lg text-stone-500 dark:text-stone-400 leading-relaxed">
-          Explora a média de honorários (avença mensal) de Contabilistas Certificados pelas regiões de
-          Portugal. Toca numa região no mapa ou na lista para ver os valores. Em breve poderás contactar
-          contabilistas diretamente por aqui.
+          Um único mapa de Portugal com filtros: avenças de <strong>contabilistas</strong>, atos de{" "}
+          <strong>notários</strong> com preços, consultas de <strong>advogados</strong> e os{" "}
+          <strong>benefícios fiscais</strong> de cada região. Toca numa região, procura a tua zona ou
+          muda de filtro quando quiseres.
         </p>
       </div>
 
-      <MapaPrecosRegioes />
+      <MapaRegioesLazy contexto="contabilistas" />
 
       <div className="mt-8 rounded-2xl border border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 p-5 space-y-2">
         <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">

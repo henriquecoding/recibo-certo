@@ -81,7 +81,7 @@ const GRUPOS: NavGroup[] = [
     itens: [
       { href: "/dashboard/auditoria-recibo", label: "Auditoria do recibo", short: "Auditoria", icon: ShieldCheck },
       { href: "/dashboard/classificar-atividade", label: "Classificar atividade", short: "Atividade", icon: Search },
-      { href: "/dashboard/mapa-contabilistas", label: "Mapa de contabilistas", short: "Mapa", icon: MapPin },
+      { href: "/dashboard/mapa-contabilistas", label: "Mapa de preços por região", short: "Mapa", icon: MapPin },
       { href: "/ferramentas/payout-mor", label: "Recibo Merchant of Record", short: "Payout", icon: ShoppingBag, externo: true },
       { href: "/ferramentas", label: "Todas as ferramentas", short: "Tools", icon: Briefcase, externo: true },
     ],

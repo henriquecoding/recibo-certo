@@ -58,9 +58,9 @@ export const FERRAMENTAS: FerramentaMeta[] = [
   {
     slug: "mapa-contabilistas",
     href: "/ferramentas/mapa-contabilistas",
-    titulo: "Mapa de preços de contabilistas",
+    titulo: "Mapa de preços por região",
     descricao:
-      "Quanto custa um contabilista por região? Vê a média de honorários (avença mensal) de Lisboa aos Açores num mapa interativo. Estimativas de mercado.",
+      "Contabilistas, notários e advogados: quanto custam na tua região, num único mapa com filtros — incluindo os benefícios fiscais de cada zona do país.",
     Icon: MapPin,
     badge: "Mapa",
   },

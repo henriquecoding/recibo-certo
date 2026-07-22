@@ -52,7 +52,7 @@ export const FERRAMENTAS: ItemBusca[] = [
   { id: "f-ato", titulo: "Ato isolado ou atividade?", descricao: "Decisor para a tua situação", href: "/dashboard/ato-isolado", icone: "Swap", grupo: "Simuladores", termos: "ato isolado abrir atividade decisor" },
   { id: "f-auditoria", titulo: "Auditoria do recibo de vencimento", descricao: "Confirma se o teu recibo está certo", href: "/dashboard/auditoria-recibo", icone: "ShieldCheck", grupo: "Ferramentas", termos: "auditar recibo erro irs seguranca social" },
   { id: "f-classificar", titulo: "Classificar atividade fiscal", descricao: "Retenção, coeficiente e SS por profissão", href: "/dashboard/classificar-atividade", icone: "Search", grupo: "Ferramentas", termos: "cae profissao retencao coeficiente" },
-  { id: "f-mapa", titulo: "Mapa de contabilistas", descricao: "Preço médio por região, num mapa", href: "/dashboard/mapa-contabilistas", icone: "MapPin", grupo: "Ferramentas", termos: "contabilista avenca preco regiao honorarios" },
+  { id: "f-mapa", titulo: "Mapa de preços por região", descricao: "Contabilistas, notários e advogados, num mapa", href: "/dashboard/mapa-contabilistas", icone: "MapPin", grupo: "Ferramentas", termos: "contabilista notario advogado avenca preco regiao honorarios consulta escritura procuracao beneficios" },
   { id: "f-mor", titulo: "Recibo Merchant of Record", descricao: "Paddle / Lemon Squeezy em 5 passos", href: "/ferramentas/payout-mor", icone: "ShoppingBag", grupo: "Ferramentas", termos: "payout mor paddle lemon squeezy" },
   { id: "f-quiz", titulo: "Quiz Fiscal", descricao: "Testa-te com base legal e fontes", href: "/quiz-fiscal", icone: "Trophy", grupo: "Aprender", termos: "quiz perguntas teste conhecimentos" },
 ];

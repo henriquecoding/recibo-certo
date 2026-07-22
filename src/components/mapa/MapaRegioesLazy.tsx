@@ -1,14 +1,15 @@
 "use client";
 
-// Carregamento diferido do mapa de preços (Leaflet) — `ssr:false` + ErrorBoundary
+// Carregamento diferido do mapa unificado (Leaflet) — `ssr:false` + ErrorBoundary
 // para nunca deixar a página em branco se as tiles/GeoJSON/geocodificação falharem
 // em runtime (regra mobile-first 5b). Wrapper cliente reutilizável para poder ser
 // usado a partir de Server Components (onde `dynamic({ssr:false})` não é permitido).
 
 import dynamic from "next/dynamic";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import type { FiltroMapa } from "@/lib/profissionais-regioes";
 
-const MapaPrecosRegioes = dynamic(() => import("./MapaPrecosRegioes"), {
+const MapaRegioes = dynamic(() => import("./MapaRegioes"), {
   ssr: false,
   loading: () => (
     <div
@@ -18,10 +19,10 @@ const MapaPrecosRegioes = dynamic(() => import("./MapaPrecosRegioes"), {
   ),
 });
 
-export default function MapaPrecosRegioesLazy() {
+export default function MapaRegioesLazy({ contexto }: { contexto?: FiltroMapa }) {
   return (
-    <ErrorBoundary etiqueta="o mapa de preços de contabilistas">
-      <MapaPrecosRegioes />
+    <ErrorBoundary etiqueta="o mapa de preços e regiões">
+      <MapaRegioes contexto={contexto} />
     </ErrorBoundary>
   );
 }
