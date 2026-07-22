@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.93.0";
+export const APP_VERSION = "1.94.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -25,7 +25,7 @@ export interface EntradaChangelog {
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
-    version: "1.93.0",
+    version: "1.94.0",
     data: "2026-07-22",
     titulo: "Um só mapa para tudo: contabilistas, notários, advogados e benefícios fiscais",
     itens: [
@@ -35,6 +35,18 @@ export const CHANGELOG: EntradaChangelog[] = [
       "Nova secção «Contratar bem» em cada filtro: como validar o profissional na respetiva Ordem (OCC, Ordem dos Notários, Ordem dos Advogados) antes de contratar.",
       "No filtro de benefícios fiscais, cada região passou a mostrar também quanto custam os três profissionais nessa zona.",
       "Design renovado: cartão único mais elegante, transições suaves e o mesmo mapa interativo de sempre — pesquisa por cidade ou código postal, GPS e lista de regiões acessível.",
+    ],
+  },
+  {
+    version: "1.93.0",
+    data: "2026-07-21",
+    titulo: "Modo escuro muito mais cuidado",
+    itens: [
+      "Corrigida uma caixa de texto quase ilegível no modo escuro (a lista de fontes oficiais, na página inicial) e outros casos do mesmo tipo espalhados pelo site — avisos, badges e caixas de contexto que ficavam com cores muito claras sobre fundos escuros.",
+      "Os gráficos do simulador de IRS, do comparador de cenários e do simulador de empresa ganharam cores mais distintas no modo escuro — duas categorias que antes pareciam quase iguais (por exemplo, IRS e Segurança Social) agora distinguem-se claramente.",
+      "O calendário de prazos e o indicador de saúde fiscal do painel ficaram mais legíveis no escuro (a cor do IVA, em particular, estava muito escura sobre fundo escuro).",
+      "Os mapas de contabilistas e de benefícios fiscais por região ganharam legendas e informação ao tocar (tooltips) adaptadas ao modo escuro — deixou de aparecer uma caixa branca sobre o mapa escuro.",
+      "Vários botões e ícones que ficavam praticamente invisíveis ao passar o rato em modo escuro (o próprio interruptor de tema, o botão «Voltar» dos simuladores, entre outros) foram corrigidos.",
     ],
   },
   {

@@ -30,7 +30,7 @@ export default function ThemeToggle({ className = "" }: { className?: string }) 
       onClick={alternar}
       aria-label={dark ? "Mudar para tema claro" : "Mudar para tema escuro"}
       aria-pressed={montado ? dark : undefined}
-      className={`flex h-9 w-9 items-center justify-center rounded-xl border border-stone-200 text-stone-500 transition-colors hover:border-stone-300 hover:text-stone-800 ${className}`}
+      className={`flex h-9 w-9 items-center justify-center rounded-xl border border-stone-200 text-stone-500 transition-colors hover:border-stone-300 hover:text-stone-800 dark:hover:border-stone-600 dark:hover:text-stone-200 ${className}`}
     >
       {/* Mostra o ícone do tema-alvo; só após montar para evitar mismatch. */}
       {montado && dark ? (

@@ -130,7 +130,7 @@ export default function Precos() {
 
               <Link
                 href="/dashboard"
-                className="mt-7 inline-flex justify-center rounded-2xl border border-stone-200 px-5 py-3 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300"
+                className="mt-7 inline-flex justify-center rounded-2xl border border-stone-200 px-5 py-3 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300 dark:border-stone-700 dark:text-stone-200 dark:hover:border-stone-600"
               >
                 Começar grátis
               </Link>

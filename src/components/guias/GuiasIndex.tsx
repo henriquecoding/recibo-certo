@@ -165,7 +165,7 @@ export default function GuiasIndex() {
               onClick={() => setVista("lista")}
               aria-pressed={vista === "lista"}
               aria-label="Vista de lista"
-              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${vista === "lista" ? "bg-brand text-white" : "text-stone-400 hover:text-stone-600"}`}
+              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${vista === "lista" ? "bg-brand text-white" : "text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"}`}
             >
               <Filter size={14} className="rotate-90" />
             </button>

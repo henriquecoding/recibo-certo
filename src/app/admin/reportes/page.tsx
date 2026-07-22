@@ -23,25 +23,27 @@ import { Trash, Flag, Check, Close, Zap, Lightbulb, Warning, Info, Heart, User, 
 
 // ── Metadados de apresentação ────────────────────────────────────────────────
 
+// bg-*-50 (quase branco) não é tocado pelo override global — sem `dark:`,
+// os badges de estado ficam pastilhas quase-brancas soltas numa tabela escura.
 const ESTADO_FB: Record<EstadoFeedback, { label: string; cls: string }> = {
-  novo: { label: "Novo", cls: "border-amber-200 bg-amber-50 text-amber-700" },
-  em_analise: { label: "Em análise", cls: "border-blue-200 bg-blue-50 text-blue-700" },
+  novo: { label: "Novo", cls: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800/40 dark:bg-amber-900/30 dark:text-amber-400" },
+  em_analise: { label: "Em análise", cls: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800/40 dark:bg-blue-900/30 dark:text-blue-400" },
   valido: { label: "Validado", cls: "border-brand/30 bg-brand-light text-brand-dark" },
-  resolvido: { label: "Resolvido", cls: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+  resolvido: { label: "Resolvido", cls: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/40 dark:bg-emerald-900/30 dark:text-emerald-400" },
   rejeitado: { label: "Rejeitado", cls: "border-stone-200 bg-stone-100 text-stone-500" },
 };
 
 const TIPO_FB: Record<TipoFeedback, { label: string; Icon: typeof Lightbulb; cls: string }> = {
-  sugestao: { label: "Sugestão", Icon: Lightbulb, cls: "bg-amber-50 text-amber-700" },
-  erro: { label: "Erro", Icon: Warning, cls: "bg-red-50 text-red-600" },
-  duvida: { label: "Dúvida", Icon: Info, cls: "bg-blue-50 text-blue-700" },
-  mensagem: { label: "Mensagem", Icon: Heart, cls: "bg-pink-50 text-pink-600" },
+  sugestao: { label: "Sugestão", Icon: Lightbulb, cls: "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+  erro: { label: "Erro", Icon: Warning, cls: "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400" },
+  duvida: { label: "Dúvida", Icon: Info, cls: "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+  mensagem: { label: "Mensagem", Icon: Heart, cls: "bg-pink-50 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400" },
 };
 
 const ESTADO_QUIZ: Record<EstadoReporte, { label: string; cls: string }> = {
-  novo: { label: "Novo", cls: "border-amber-200 bg-amber-50 text-amber-700" },
-  em_analise: { label: "Em análise", cls: "border-blue-200 bg-blue-50 text-blue-700" },
-  resolvido: { label: "Resolvido", cls: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+  novo: { label: "Novo", cls: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800/40 dark:bg-amber-900/30 dark:text-amber-400" },
+  em_analise: { label: "Em análise", cls: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800/40 dark:bg-blue-900/30 dark:text-blue-400" },
+  resolvido: { label: "Resolvido", cls: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/40 dark:bg-emerald-900/30 dark:text-emerald-400" },
   rejeitado: { label: "Rejeitado", cls: "border-stone-200 bg-stone-100 text-stone-500" },
 };
 

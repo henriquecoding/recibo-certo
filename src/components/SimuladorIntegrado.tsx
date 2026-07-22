@@ -7120,7 +7120,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                                   <div
                                     style={{
                                       width: `${(irsDiv / total) * 100}%`,
-                                      background: "#FBBF24",
+                                      background: "#FB923C",
                                     }}
                                     className="transition-all duration-500"
                                   />
@@ -7151,7 +7151,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                             },
                             {
                               label: `IRS Div. (${opcaoEnglobamento ? "englobamento" : "28%"})`,
-                              color: "#FBBF24",
+                              color: "#FB923C",
                               show: distribuirDividendos,
                             },
                             {
@@ -7167,9 +7167,12 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                                 key={l.label}
                                 className="flex items-center gap-1.5"
                               >
+                                {/* "Custos + salário" usa currentColor (via cls) para a bolinha
+                                    acompanhar o mesmo ajuste de dark mode do segmento da barra —
+                                    sem isto, ficava com o verde-escuro de modo claro, dessincronizada. */}
                                 <div
-                                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                                  style={{ background: l.color }}
+                                  className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${l.cls ?? ""}`}
+                                  style={l.cls ? { background: "currentColor" } : { background: l.color }}
                                 />
                                 <span className="text-xs text-stone-500">
                                   {l.label}

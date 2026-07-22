@@ -4,6 +4,12 @@
 
 :root {
   --background: #f5f4f0;
+  /* Cores de categoria do calendário de prazos (SS/IVA/IRS) — ver
+     src/lib/prazos.ts. Em .dark, o IVA e o IRS ganham override (o
+     castanho-oliva original fica ilegível sobre um cartão escuro). */
+  --cat-ss: #1d9e75;
+  --cat-iva: #7a5c00;
+  --cat-irs: #0f6e56;
 }
 
 * {
@@ -104,185 +110,315 @@ input[type="number"]::-webkit-outer-spin-button {
   }
 }
 
+/* Segmentos do comparador de cenários (ComparadorCenarios.tsx) — classes
+   próprias (fora do Tailwind) para poderem ter um valor diferente no escuro
+   sem depender de bg-brand-dark/bg-brand-deep, que ficam propositadamente
+   inalterados no dark (para os CTAs manterem presença) — o que faria "IRS" e
+   "Segurança Social" ficarem dois verdes quase-pretos lado a lado na mesma
+   barra, quase indistinguíveis entre si e do próprio fundo do cartão. */
+.bg-cmp-imposto {
+  background-color: #0f6e56;
+}
+.bg-cmp-imposto-forte {
+  background-color: #0a4a39;
+}
+.bg-cmp-imposto-leve {
+  background-color: #5dba98;
+}
+
 /* ════════════════════════════════════════════════════════════════════
    DARK MODE CINEMATOGRÁFICO
    Camada de override ativada pela classe .dark no <html>. Remapeia apenas
    os neutros (não toca em text-white, bg-brand ou cores inline da marca),
    garantindo que o modo claro fica intacto. Tons quentes, não frios.
+
+   NOTA: NÃO envolver este bloco em `@layer base` — foi tentado e revertido.
+   Estilos "sem layer" (como `:root{}`/`body{}` acima, e o próprio output de
+   `@tailwind utilities`, que o Next.js despeja sem nenhuma `@layer` no CSS
+   final) têm SEMPRE prioridade absoluta sobre estilos "com layer", seja qual
+   for a especificidade — pôr `.dark{}` numa layer fá-lo perder mesmo contra
+   `:root{}` para as variáveis (ex.: `--background` deixava de mudar no
+   escuro, partindo a página toda). Mantém-se scoped a `.dark` e depois do
+   `@tailwind utilities` (para ganhar o resto dos empates de especificidade
+   por ordem), tal como sempre foi.
    ════════════════════════════════════════════════════════════════════ */
-.dark {
-  --background: #141613;
-  --quiz-page-bg: #181b16;
-  --quiz-heading: #e8e6dc;
-  --quiz-muted: #9a9889;
-  --quiz-card-bg: #1e2219;
-  --quiz-card-border: #2e3327;
-  --quiz-card-active-bg: #252e1f;
-  --quiz-card-active-border: #4D6243;
-  --quiz-tag-bg: #242820;
-  --quiz-stat-bg: #1a1d16;
-  --quiz-dot-empty: #2e3327;
-  /* Superfícies internas e acentos que estavam fixos em claro (inline) nos ecrãs
-     temáticos do quiz — agora respeitam o modo escuro. Fallbacks claros ficam
-     nos componentes; o "livro" de jogo (pergaminho) é intencionalmente fixo. */
-  --quiz-card-inner-bg: #232a1c;
-  --quiz-gold-bg: #3a300f;
-  --quiz-icon: #a7d3b4;
-  --quiz-level: #4f6a45;
-  --quiz-gold: #e0a64a;
-  color-scheme: dark;
-}
-.dark body {
-  color: #e2e0d6;
-}
+  .dark {
+    --background: #141613;
+    --quiz-page-bg: #181b16;
+    --quiz-heading: #e8e6dc;
+    --quiz-muted: #9a9889;
+    --quiz-card-bg: #1e2219;
+    --quiz-card-border: #2e3327;
+    --quiz-card-active-bg: #252e1f;
+    --quiz-card-active-border: #4D6243;
+    --quiz-tag-bg: #242820;
+    --quiz-stat-bg: #1a1d16;
+    --quiz-dot-empty: #2e3327;
+    /* Superfícies internas e acentos que estavam fixos em claro (inline) nos ecrãs
+       temáticos do quiz — agora respeitam o modo escuro. Fallbacks claros ficam
+       nos componentes; o "livro" de jogo (pergaminho) é intencionalmente fixo. */
+    --quiz-card-inner-bg: #232a1c;
+    --quiz-gold-bg: #3a300f;
+    --quiz-icon: #a7d3b4;
+    --quiz-level: #4f6a45;
+    --quiz-gold: #e0a64a;
+    /* Anel de Saúde Fiscal do dashboard (SaudeCard) — os tons de aviso/crítico
+       usados no `stroke` do SVG (hex fixo, escolhido pelo estado do score) são
+       substituídos por estas variáveis para não ficarem escuros de mais sobre
+       o cartão já escuro. Mesmo par de cores já usado no texto ao lado
+       (`text-amber-400`/`text-red-400`), para o anel e o rótulo combinarem. */
+    --color-saude-medio: #fbbf24;
+    --color-saude-mau: #f87171;
+    /* IVA (castanho-oliva) e IRS (verde profundo) ficavam quase invisíveis
+       sobre um cartão já escurecido; SS mantém o verde da marca (já legível
+       nos dois temas). Ver src/lib/prazos.ts. */
+    --cat-iva: #ebd68a;
+    --cat-irs: #37a07c;
+    /* Paleta do donut de rendimentos (Graficos.tsx) — o par mais escuro
+       (#0F6E56/#1D9E75) tinha contraste ~1.8:1 contra um cartão dark:bg-stone-900,
+       quase invisível; sobem de luminosidade mantendo a ordem relativa. */
+    --donut-1: #2fae87;
+    --donut-2: #46c69a;
+    --donut-3: #6ddcb2;
+    --donut-4: #8fe0c4;
+    --donut-5: #b3ecd7;
+    --donut-6: #dcf5ec;
+    /* Barra "para onde vai o teu dinheiro" — o mostarda do IRS e o azul-acinzentado
+       da SS ganham mais luminosidade para não se confundirem com o fundo escuro. */
+    --bar-liquido: #3ecb9c;
+    --bar-irs: #e0b654;
+    --bar-ss: #9fb0c0;
+    color-scheme: dark;
+  }
+  /* Comparador de cenários — "IRS/dividendos" sobe de luminosidade e
+     "Segurança Social/IRC" muda para um azul-esverdeado distinto (em vez de
+     um segundo verde quase-preto), garantindo que os dois segmentos vizinhos
+     na mesma barra se distinguem claramente um do outro. */
+  .dark .bg-cmp-imposto {
+    background-color: #3fae8a;
+  }
+  .dark .bg-cmp-imposto-forte {
+    background-color: #2f7a92;
+  }
+  .dark .bg-cmp-imposto-leve {
+    background-color: #74cfae;
+  }
+  .dark body {
+    color: #e2e0d6;
+  }
 
-/* Superfícies — cartões ligeiramente destacados do fundo (menos plano). */
-.dark .bg-white {
+  /* Superfícies — cartões ligeiramente destacados do fundo (menos plano). */
+  .dark .bg-white {
+    background-color: #1e221b;
+  }
+  .dark .bg-cream {
+    background-color: #161914;
+  }
+  .dark .bg-sand {
+    background-color: #181b15;
+  }
+  .dark .bg-stone-50 {
+    background-color: #1a1d18;
+  }
+  .dark .bg-stone-100 {
+    background-color: #24281f;
+  }
+  .dark .bg-stone-200 {
+    background-color: #2e3329;
+  }
+  .dark .bg-brand-light {
+    background-color: #143329;
+  }
+
+  /* Texto (quente, alto contraste mas suave) */
+  .dark .text-ink,
+  .dark .text-stone-800 {
+    color: #f2f0e8;
+  }
+  .dark .text-stone-700 {
+    color: #e2e0d6;
+  }
+  .dark .text-stone-600 {
+    color: #cfcdc3;
+  }
+  .dark .text-stone-500 {
+    color: #a8a69c;
+  }
+  .dark .text-stone-400 {
+    color: #8a887e;
+  }
+  .dark .text-stone-300 {
+    color: #6a6860;
+  }
+  .dark .text-stone-200 {
+    color: #2e3329;
+  }
+  .dark .text-brand-dark {
+    color: #6fceac;
+  }
+
+  /* ──────────────────────────────────────────────────────────────────
+     Acentos da marca no escuro — verde-menta calmo, menos saturado, para
+     não "gritar" sobre o fundo escuro. Mantém a identidade sem o efeito néon.
+     Tudo scoped a .dark: o modo claro fica intacto.
+     `bg-brand` (preenchimentos de CTA/realce) NÃO é alterado, para o texto
+     branco manter contraste e os botões manterem presença.
+     ────────────────────────────────────────────────────────────────── */
+  .dark .text-brand {
+    color: #5ec6a0;
+  }
+  .dark .border-brand {
+    border-color: #347460;
+  }
+  /* Verde profundo da marca usado nos gráficos (segmento Segurança Social /
+     descontos / custos). No claro é #0A4A39 (deep, elegante); no escuro sobe de
+     luminosidade para não desaparecer sobre o fundo, mantendo a distinção do
+     líquido (#5ec6a0) e do mint do IRS (#9FE1CB). Scoped a .dark — claro intacto. */
+  .dark .text-brand-deep {
+    color: #37a07c;
+  }
+
+  /* Bordas */
+  .dark .border-stone-100 {
+    border-color: #2a2f25;
+  }
+  .dark .border-stone-200 {
+    border-color: #2e3329;
+  }
+  .dark .border-stone-300 {
+    border-color: #3a4034;
+  }
+  .dark .border-transparent {
+    border-color: transparent;
+  }
+
+  /* Variantes com opacidade (text-brand-dark/70, bg-brand-light/40, text-alert-text/80…)
+     compilam para classes próprias que escapam aos overrides exatos acima — sem
+     isto, ficam presas na cor de modo claro sobre fundo escuro (ex.: texto
+     castanho-escuro de aviso sobre um cartão já escurecido, quase ilegível). Os
+     seletores por substring apanham qualquer opacidade com um valor aproximado
+     (o objetivo é nunca ficar sem cobertura nenhuma, não replicar o `/NN` exato).
+     Scoped a .dark: o claro fica intacto. */
+  .dark [class*="text-brand-dark/"] {
+    color: rgb(111 206 172 / 0.88);
+  }
+  .dark [class*="bg-brand-light/"] {
+    background-color: rgb(20 51 41 / 0.55);
+  }
+  .dark [class*="text-alert-text/"] {
+    color: rgb(235 214 138 / 0.85);
+  }
+  .dark [class*="bg-alert-text/"] {
+    background-color: rgb(196 162 78 / 0.35);
+  }
+  .dark [class*="border-alert-text/"] {
+    border-color: rgb(196 162 78 / 0.4);
+  }
+  .dark [class*="border-alert-border/"] {
+    border-color: rgb(85 77 40 / 0.5);
+  }
+  .dark [class*="bg-clay-bg/"] {
+    background-color: rgb(42 29 22 / 0.7);
+  }
+  .dark [class*="border-clay-border/"] {
+    border-color: rgb(74 51 37 / 0.6);
+  }
+  .dark [class*="text-clay-text/"] {
+    color: rgb(224 164 140 / 0.85);
+  }
+  .dark [class*="border-clay-text/"] {
+    border-color: rgb(224 164 140 / 0.4);
+  }
+  .dark [class*="bg-white/"] {
+    background-color: rgb(30 34 27 / 0.88);
+  }
+  .dark [class*="bg-cream/"] {
+    background-color: rgb(22 25 20 / 0.88);
+  }
+  .dark [class*="bg-stone-50/"] {
+    background-color: rgb(26 29 24 / 0.85);
+  }
+
+  /* Alertas — dourado adaptado ao escuro, contraste reforçado */
+  .dark .bg-alert-bg {
+    background-color: #302b12;
+  }
+  .dark .border-alert-border {
+    border-color: #554d28;
+  }
+  .dark .text-alert-text {
+    color: #ebd68a;
+  }
+  .dark .bg-alert-text {
+    background-color: #c4a24e;
+  }
+  /* `bg-alert` (o amarelo mais vivo, distinto de `bg-alert-bg`) não tinha
+     override nenhum: ficava #FFF8A0 fixo mesmo no escuro, e um ícone em
+     `text-alert-text` (remapeado para dourado claro) ficava dourado-sobre-
+     -amarelo, quase sem contraste. Escurece como o resto da família alerta. */
+  .dark .bg-alert {
+    background-color: #302b12;
+  }
+
+  /* Argila/terracota — tom pastel suave para valores que saem, no escuro. */
+  .dark .bg-clay-bg {
+    background-color: #2a1d16;
+  }
+  .dark .border-clay-border {
+    border-color: #4a3325;
+  }
+  .dark .text-clay-text {
+    color: #e0a48c;
+  }
+
+  /* Sombras mais profundas no escuro */
+  .dark .shadow-card {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px -16px rgba(0, 0, 0, 0.6);
+  }
+  .dark .shadow-lift,
+  .dark .shadow-soft {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 24px 48px -20px rgba(0, 0, 0, 0.7);
+  }
+
+  /* Scrollbar discreta no escuro */
+  .dark ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: #2e3329;
+    border-radius: 8px;
+  }
+
+/* Tooltips do Leaflet (mapas de contabilistas/benefícios) — o CSS do próprio
+   Leaflet (`leaflet/dist/leaflet.css`, importado nos componentes do mapa) não
+   tem noção de tema nenhuma: fundo branco fixo, que aparece como uma caixa
+   clara sólida flutuando sobre o mapa escuro. Fora de `@layer base` de
+   propósito — o CSS do Leaflet também não está em nenhuma layer, e estilos
+   sem layer têm sempre prioridade sobre os que estão em layers, seja qual for
+   a especificidade; teria de estar aqui também para conseguir competir. */
+.dark .leaflet-tooltip {
   background-color: #1e221b;
-}
-.dark .bg-cream {
-  background-color: #161914;
-}
-.dark .bg-sand {
-  background-color: #181b15;
-}
-.dark .bg-stone-50 {
-  background-color: #1a1d18;
-}
-.dark .bg-stone-100 {
-  background-color: #24281f;
-}
-.dark .bg-stone-200 {
-  background-color: #2e3329;
-}
-.dark .bg-brand-light {
-  background-color: #143329;
-}
-
-/* Texto (quente, alto contraste mas suave) */
-.dark .text-ink,
-.dark .text-stone-800 {
-  color: #f2f0e8;
-}
-.dark .text-stone-700 {
-  color: #e2e0d6;
-}
-.dark .text-stone-600 {
-  color: #cfcdc3;
-}
-.dark .text-stone-500 {
-  color: #a8a69c;
-}
-.dark .text-stone-400 {
-  color: #8a887e;
-}
-.dark .text-stone-300 {
-  color: #6a6860;
-}
-.dark .text-stone-200 {
-  color: #2e3329;
-}
-.dark .text-brand-dark {
-  color: #6fceac;
-}
-
-/* ──────────────────────────────────────────────────────────────────
-   Acentos da marca no escuro — verde-menta calmo, menos saturado, para
-   não "gritar" sobre o fundo escuro. Mantém a identidade sem o efeito néon.
-   Tudo scoped a .dark: o modo claro fica intacto.
-   `bg-brand` (preenchimentos de CTA/realce) NÃO é alterado, para o texto
-   branco manter contraste e os botões manterem presença.
-   ────────────────────────────────────────────────────────────────── */
-.dark .text-brand {
-  color: #5ec6a0;
-}
-.dark .border-brand {
-  border-color: #347460;
-}
-/* Verde profundo da marca usado nos gráficos (segmento Segurança Social /
-   descontos / custos). No claro é #0A4A39 (deep, elegante); no escuro sobe de
-   luminosidade para não desaparecer sobre o fundo, mantendo a distinção do
-   líquido (#5ec6a0) e do mint do IRS (#9FE1CB). Scoped a .dark — claro intacto. */
-.dark .text-brand-deep {
-  color: #37a07c;
-}
-
-/* Bordas */
-.dark .border-stone-100 {
-  border-color: #2a2f25;
-}
-.dark .border-stone-200 {
-  border-color: #2e3329;
-}
-.dark .border-stone-300 {
   border-color: #3a4034;
+  color: #e2e0d6;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
-.dark .border-transparent {
-  border-color: transparent;
+.dark .leaflet-tooltip-bottom::before {
+  border-bottom-color: #3a4034;
 }
-
-/* Variantes com opacidade (text-brand-dark/70, bg-brand-light/40…) compilam
-   para classes próprias que escapam aos overrides exatos acima — sem isto, o
-   verde-escuro da marca fica invisível sobre o fundo escuro. Os seletores por
-   substring apanham qualquer opacidade. Scoped a .dark: o claro fica intacto. */
-.dark [class*="text-brand-dark/"] {
-  color: rgb(111 206 172 / 0.88);
+.dark .leaflet-tooltip-top::before {
+  border-top-color: #3a4034;
 }
-.dark [class*="bg-brand-light/"] {
-  background-color: rgb(20 51 41 / 0.55);
+.dark .leaflet-tooltip-left::before {
+  border-left-color: #3a4034;
 }
-
-/* Alertas — dourado adaptado ao escuro, contraste reforçado */
-.dark .bg-alert-bg {
-  background-color: #302b12;
+.dark .leaflet-tooltip-right::before {
+  border-right-color: #3a4034;
 }
-.dark .border-alert-border {
-  border-color: #554d28;
-}
-.dark .text-alert-text {
-  color: #ebd68a;
-}
-.dark .bg-alert-text {
-  background-color: #c4a24e;
-}
-
-/* Argila/terracota — tom pastel suave para valores que saem, no escuro. */
-.dark .bg-clay-bg {
-  background-color: #2a1d16;
-}
-.dark .border-clay-border {
-  border-color: #4a3325;
-}
-.dark .text-clay-text {
-  color: #e0a48c;
-}
-
-/* Sombras mais profundas no escuro */
-.dark .shadow-card {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px -16px rgba(0, 0, 0, 0.6);
-}
-.dark .shadow-lift,
-.dark .shadow-soft {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 24px 48px -20px rgba(0, 0, 0, 0.7);
-}
-
-/* Nav/topbar com blur translúcido sobre fundo escuro */
-.dark .bg-cream\/85 {
-  background-color: rgba(20, 22, 19, 0.85);
-}
-.dark .bg-white\/80,
-.dark .bg-white\/95 {
-  background-color: rgba(28, 31, 26, 0.9);
-}
-
-/* Scrollbar discreta no escuro */
-.dark ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-.dark ::-webkit-scrollbar-thumb {
-  background: #2e3329;
-  border-radius: 8px;
+.dark .leaflet-popup-content-wrapper,
+.dark .leaflet-popup-tip {
+  background-color: #1e221b;
+  color: #e2e0d6;
 }
 
 /* Acessibilidade: respeitar preferência de movimento reduzido. */

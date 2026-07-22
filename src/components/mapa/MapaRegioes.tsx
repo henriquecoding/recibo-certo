@@ -103,10 +103,15 @@ const FILTROS: FiltroDef[] = [
 const filtroDef = (f: FiltroMapa): FiltroDef => FILTROS.find((x) => x.id === f) ?? FILTROS[0];
 
 // ── Escala de cor (única para todas as camadas — coerência premium) ─────────
+// O extremo profundo original fica quase invisível na legenda/lista sobre um
+// cartão dark:bg-stone-900 (contraste ~1.8:1) — em dark, usa-se um verde bem
+// mais claro no mesmo extremo, mantendo a escala legível de ponta a ponta.
 const COR_CLARA: [number, number, number] = [0x34, 0xb9, 0x8c];
 const COR_PROFUNDA: [number, number, number] = [0x0b, 0x4d, 0x3b];
-function corPorNivel(t: number): string {
-  const c = COR_CLARA.map((a, i) => Math.round(a + (COR_PROFUNDA[i] - a) * t));
+const COR_PROFUNDA_DARK: [number, number, number] = [0x35, 0x9e, 0x7c];
+function corPorNivel(t: number, dark = false): string {
+  const alvo = dark ? COR_PROFUNDA_DARK : COR_PROFUNDA;
+  const c = COR_CLARA.map((a, i) => Math.round(a + (alvo[i] - a) * t));
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 
@@ -159,7 +164,7 @@ function regiaoDeFeature(f?: Feature): string | undefined {
   return NUTS2_REGIAO[codigoNuts(f)];
 }
 function estiloRegiao(filtro: FiltroMapa, regiaoId: string | undefined, selId: string | null): PathOptions {
-  const cor = regiaoId ? corPorNivel(nivelCamada(filtro, regiaoId)) : "#1D9E75";
+  const cor = regiaoId ? corPorNivel(nivelCamada(filtro, regiaoId), isDark()) : "#1D9E75";
   const sel = !!regiaoId && regiaoId === selId;
   return {
     color: cor,
@@ -212,6 +217,10 @@ export default function MapaRegioes({
 }) {
   const [filtro, setFiltro] = useState<FiltroMapa>(contexto);
   const [selecionada, setSelecionada] = useState<string | null>(null);
+  // Só para a legenda/lista (JSX) recalcularem `corPorNivel` no extremo escuro
+  // quando o tema muda — o mapa em si atualiza-se imperativamente (observer).
+  const [darkMapa, setDarkMapa] = useState(false);
+  useEffect(() => setDarkMapa(isDark()), []);
 
   // Pesquisa (geocodificação)
   const [query, setQuery] = useState("");
@@ -446,7 +455,7 @@ export default function MapaRegioes({
       const PW = 124;
       const PH = 30;
       REGIOES_PRECO.forEach((r) => {
-        const cor = corPorNivel(nivelCamada(f, r.id));
+        const cor = corPorNivel(nivelCamada(f, r.id), isDark());
         const texto = textoPin(f, r);
         const html = `<div style="width:${PW}px;height:${PH}px;display:flex;align-items:center;justify-content:center;pointer-events:none">
           <span style="pointer-events:auto;display:inline-flex;align-items:center;height:26px;padding:0 11px;border-radius:9999px;background:${cor};color:#fff;font:700 12px/1 ui-sans-serif,system-ui,sans-serif;border:2px solid #fff;box-shadow:0 3px 10px rgba(10,74,57,.35);white-space:nowrap;cursor:pointer">${texto}</span></div>`;
@@ -533,6 +542,9 @@ export default function MapaRegioes({
 
       observer = new MutationObserver(() => {
         tileRef.current?.setUrl(isDark() ? TILES_DARK : TILES_LIGHT);
+        // Dispara o efeito de camada, que recria pins e fronteiras (cores
+        // embutidas) para o novo tema sem perder a região selecionada.
+        setDarkMapa(isDark());
       });
       observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 
@@ -562,11 +574,11 @@ export default function MapaRegioes({
     };
   }, [voarPara, renderMarcadores]);
 
-  // Camada ativa → recria pins e restiliza fronteiras.
+  // Camada ativa (ou tema) → recria pins e restiliza fronteiras.
   useEffect(() => {
     renderMarcadores(filtro);
     geoLayerRef.current?.setStyle((f) => estiloRegiao(filtro, regiaoDeFeature(f), selecionada));
-  }, [filtro, selecionada, renderMarcadores]);
+  }, [filtro, selecionada, darkMapa, renderMarcadores]);
 
   const escolherRegiao = (id: string) => {
     setSelecionada(id);
@@ -747,7 +759,7 @@ export default function MapaRegioes({
                 <span className="text-[10px] text-stone-400">menos</span>
                 <span
                   className="h-2 flex-1 rounded-full"
-                  style={{ background: `linear-gradient(90deg, ${corPorNivel(0)}, ${corPorNivel(1)})` }}
+                  style={{ background: `linear-gradient(90deg, ${corPorNivel(0, darkMapa)}, ${corPorNivel(1, darkMapa)})` }}
                   aria-hidden
                 />
                 <span className="text-[10px] text-stone-400">mais</span>
@@ -767,7 +779,7 @@ export default function MapaRegioes({
                 <span className="text-[10px] text-stone-400">menor</span>
                 <span
                   className="h-2 flex-1 rounded-full"
-                  style={{ background: `linear-gradient(90deg, ${corPorNivel(0)}, ${corPorNivel(1)})` }}
+                  style={{ background: `linear-gradient(90deg, ${corPorNivel(0, darkMapa)}, ${corPorNivel(1, darkMapa)})` }}
                   aria-hidden
                 />
                 <span className="text-[10px] text-stone-400">maior</span>
@@ -899,7 +911,7 @@ export default function MapaRegioes({
                 >
                   <span
                     className="h-3 w-3 flex-shrink-0 rounded-full shadow-sm"
-                    style={{ background: corPorNivel(nivelCamada(filtro, id)) }}
+                    style={{ background: corPorNivel(nivelCamada(filtro, id), darkMapa) }}
                     aria-hidden
                   />
                   <span className="min-w-0 flex-1">
