@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.98.0";
+export const APP_VERSION = "1.99.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.99.0",
+    data: "2026-07-22",
+    titulo: "Direitos de autor: divide obra própria e royalties",
+    itens: [
+      "No simulador guiado de recibos verdes, quem faz direitos de autor pode agora dividir a faturação em duas parcelas — obra própria (livros, música, arte), isenta de IVA sem limite de faturação (Art. 9.º, n.º 16 CIVA), e royalties/licenciamento (software, marca, patente), à taxa normal (23%). Podes ter as duas ao mesmo tempo.",
+      "O cálculo passa a refletir a mistura: o IVA incide só sobre a parte de royalties, enquanto o IRS e a Segurança Social continuam a incidir sobre o total. Deixou de ser só uma nota informativa — agora é mesmo personalizável.",
+    ],
+  },
   {
     version: "1.98.0",
     data: "2026-07-22",
