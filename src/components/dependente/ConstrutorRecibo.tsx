@@ -96,7 +96,7 @@ function RubricEditor({ rubric, onChange, onRemove }: {
     || (meta.editor === "award" && (rubric.amount <= 0 || rubric.regularity === "unknown"));
 
   return (
-    <article className={`group rounded-2xl border bg-white p-4 transition dark:bg-stone-900 ${incomplete ? "border-amber-200 dark:border-amber-900/60" : "border-stone-200 hover:border-stone-300 dark:border-stone-800 dark:hover:border-stone-700"}`}>
+    <article className={`group rounded-2xl border bg-white p-4 transition dark:bg-stone-900 ${incomplete ? "border-alert-border" : "border-stone-200 hover:border-stone-300 dark:border-stone-800 dark:hover:border-stone-700"}`}>
       <div className="flex items-start gap-3">
         <span className="mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-xl bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-300">
           <Receipt size={15} />
@@ -111,7 +111,7 @@ function RubricEditor({ rubric, onChange, onRemove }: {
               type="button"
               onClick={onRemove}
               aria-label={`Remover ${meta.label}`}
-              className="flex h-8 w-8 flex-none items-center justify-center rounded-lg text-stone-300 transition hover:bg-red-50 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-200 dark:hover:bg-red-950/30"
+              className="flex h-9 w-9 flex-none items-center justify-center rounded-lg text-stone-300 transition hover:bg-clay-bg hover:text-clay-text focus:outline-none focus:ring-2 focus:ring-clay-border dark:hover:bg-clay/20"
             >
               <Trash size={15} />
             </button>
@@ -157,7 +157,7 @@ function RubricEditor({ rubric, onChange, onRemove }: {
           <div className="mt-3 flex items-center justify-between gap-3 border-t border-stone-100 pt-2.5 text-[10px] dark:border-stone-800">
             <span className="text-stone-400">{meta.source}</span>
             {incomplete ? (
-              <span className="inline-flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400"><Warning size={11} /> Falta confirmar</span>
+              <span className="inline-flex items-center gap-1 font-semibold text-alert-text"><Warning size={11} /> Falta confirmar</span>
             ) : (
               <span className="font-semibold text-brand">Pronta</span>
             )}
@@ -244,7 +244,7 @@ export function ConstrutorRecibo({ rubrics, onChange, onPendingBenefit }: {
             <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-stone-400">Benefícios — validação factual necessária</p>
             <div className="grid gap-1.5 sm:grid-cols-2">
               {BENEFITS_PENDING.map(([label, description]) => (
-                <button key={label} type="button" onClick={() => onPendingBenefit(label)} className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-left opacity-80 transition hover:border-amber-300 dark:border-stone-700 dark:bg-stone-900">
+                <button key={label} type="button" onClick={() => onPendingBenefit(label)} className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-left opacity-80 transition hover:border-alert-border dark:border-stone-700 dark:bg-stone-900">
                   <span className="block text-[11px] font-semibold text-stone-600 dark:text-stone-300">{label}</span>
                   <span className="mt-0.5 block text-[9px] leading-relaxed text-stone-400">{description}</span>
                 </button>
