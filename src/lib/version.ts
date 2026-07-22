@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.99.0";
+export const APP_VERSION = "2.0.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "2.0.0",
+    data: "2026-07-22",
+    titulo: "Direitos de autor no simulador completo + barras visíveis no modo escuro",
+    itens: [
+      "O simulador completo de recibos verdes passou a tratar direitos de autor tal como o guiado, mas de forma aditiva: mantém a tua faturação total e indicas apenas que parte é royalties/licenciamento (à taxa normal, 23%) — o resto conta como obra própria, isenta de IVA sem limite de faturação (Art. 9.º, n.º 16 CIVA). O IVA é acrescentado só sobre a parte de royalties; o teu líquido (IRS e Segurança Social) não muda, porque incidem sobre o total.",
+      "No modo escuro, a barra de percentagem dos cartões de resultado dos simuladores tinha ficado invisível — escura sobre o fundo verde. Corrigido: as barras, brilhos e detalhes claros dos cartões verdes voltam a ver-se bem nos dois temas.",
+    ],
+  },
   {
     version: "1.99.0",
     data: "2026-07-22",

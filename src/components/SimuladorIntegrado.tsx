@@ -3468,6 +3468,12 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   const [regiao, setRegiao] = useState<Regiao>("continente");
   const [regimeIVA, setRegimeIVA] = useState<RegimeIVA>("isento");
 
+  // Direitos de autor: a faturação total (input normal) pode incluir uma parte
+  // de royalties/licenciamento à taxa normal — o resto é obra própria, isenta de
+  // IVA (Art. 9.º/16 CIVA). Guarda-se APENAS a parte de royalties; não se altera
+  // o input de faturação — só se ACRESCENTA o IVA correspondente por cima.
+  const [autorRoyaltiesInput, setAutorRoyaltiesInput] = useState("0");
+
   // [BUG2 FIX] Removido estado ivaIncluido — o input é sempre a base pré-IVA.
   // O toggle "Com IVA incluído / IVA à parte" entrava em conflito com o
   // seletor de regime IVA já existente. Agora o fluxo é simples:
@@ -3669,28 +3675,67 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
         ? IVA_TAXAS[regiao].value[ivaEsperadoTipo]
         : IVA_TAXAS[regiao].value.normal;
 
+  // ── Direitos de autor: desdobramento obra própria (isento) + royalties (23%) ─
+  // Modelo ADITIVO — não sobrepõe o input de faturação. O valor faturado (base)
+  // é o TOTAL; o utilizador indica só QUE PARTE desse total é royalties/
+  // licenciamento (taxa normal). O resto é obra própria, ISENTA de IVA sem limiar
+  // (Art. 9.º/16 CIVA). Só a parcela de royalties acresce IVA por cima, e só se
+  // ultrapassar o limiar do Art. 53.º sobre a sua própria faturação anual.
+  const ehDireitosAutor = tipoAtiv === "prop_int";
+  const desdobramentoAutor = useMemo(() => {
+    if (!ehDireitosAutor) return null;
+    const total = Math.max(0, bruto);
+    const royalties = Math.min(total, Math.max(0, parseMontanteRV(autorRoyaltiesInput)));
+    const obra = total - royalties;
+    const cobraIvaRoyalties = royalties > 0 && royalties * 12 > IVA_ISENCAO_LIMITE;
+    const ivaRoyalties = cobraIvaRoyalties ? royalties * IVA_TAXAS[regiao].value.normal : 0;
+    return { obra, royalties, total, ivaRoyalties, cobraIvaRoyalties };
+  }, [ehDireitosAutor, bruto, autorRoyaltiesInput, regiao]);
+
   // Proxy da faturação anual base: no modo "Anual" é o próprio brutoAnual; no
   // modo "Por recibo" é o valor mensal introduzido × 12.
   const faturacaoAnualProxy = modoInput === "anual" ? brutoAnual : bruto * 12;
   const acimaLimiteIva = faturacaoAnualProxy > IVA_ISENCAO_LIMITE;
   const cobraIva = valorComIva || acimaLimiteIva;
-  const isentoEfetivo = !cobraIva;
-  const taxaIva = cobraIva ? taxaPotencial : 0;
+  // Valores efetivos de IVA. Para direitos de autor vêm do desdobramento (taxa
+  // efetiva = IVA dos royalties ÷ faturação total); o motor corre depois com
+  // regime ISENTO e o IVA dos royalties é acrescentado por cima (ver mais baixo),
+  // porque `calcular` aplica uma taxa única a toda a base.
+  const isentoEfetivo = desdobramentoAutor
+    ? desdobramentoAutor.ivaRoyalties === 0
+    : !cobraIva;
+  const taxaIva = desdobramentoAutor
+    ? desdobramentoAutor.total > 0
+      ? desdobramentoAutor.ivaRoyalties / desdobramentoAutor.total
+      : 0
+    : cobraIva
+      ? taxaPotencial
+      : 0;
   const temIva = taxaIva > 0;
-  const regimeEfetivo: RegimeIVA = isentoEfetivo
+  const regimeEfetivo: RegimeIVA = desdobramentoAutor
     ? "isento"
-    : regimeIVA !== "isento"
-      ? regimeIVA
-      : (ivaEsperadoTipo as RegimeIVA);
+    : isentoEfetivo
+      ? "isento"
+      : regimeIVA !== "isento"
+        ? regimeIVA
+        : (ivaEsperadoTipo as RegimeIVA);
 
-  // Base (sem IVA): só extraímos IVA do valor quando ele inclui IVA.
-  const base = temIva && valorComIva ? bruto / (1 + taxaIva) : bruto;
+  // Base (sem IVA): para direitos de autor a base É o valor faturado (o IVA dos
+  // royalties é acrescentado por cima, nunca incluído no input); senão só
+  // extraímos IVA do valor quando ele inclui IVA.
+  const base = desdobramentoAutor
+    ? bruto
+    : temIva && valorComIva
+      ? bruto / (1 + taxaIva)
+      : bruto;
 
-  const labelValor = temIva
-    ? valorComIva
-      ? `Total a cobrar ao cliente (€) — IVA ${pct(taxaIva)} incluído`
-      : `Valor base do serviço (€) — IVA ${pct(taxaIva)} acresce`
-    : "Valor do recibo (€)";
+  const labelValor = desdobramentoAutor
+    ? "A tua faturação total (€)"
+    : temIva
+      ? valorComIva
+        ? `Total a cobrar ao cliente (€) — IVA ${pct(taxaIva)} incluído`
+        : `Valor base do serviço (€) — IVA ${pct(taxaIva)} acresce`
+      : "Valor do recibo (€)";
 
   // ── Sincronização bruto ↔ brutoAnual (usa a taxa EFETIVA) ───────────────
   const handleBrutoChange = useCallback(
@@ -3798,6 +3843,19 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
       tipoAtiv,
     ],
   );
+
+  // Para direitos de autor o motor corre com regime isento (IVA interno = 0); o
+  // IVA dos royalties é acrescentado por cima aqui, para o desdobramento, os
+  // rótulos e a "entrada na conta" refletirem a mistura. Para tudo o resto, é o
+  // próprio resultado do motor.
+  const resultReciboFinal = desdobramentoAutor
+    ? {
+        ...resultRecibo,
+        iva: desdobramentoAutor.ivaRoyalties,
+        taxaIVA: taxaIva,
+        entradaConta: resultRecibo.entradaConta + desdobramentoAutor.ivaRoyalties,
+      }
+    : resultRecibo;
 
   // ── Objeto de particularidades (passado às simulações RV) ─────────────────
   const particularidades: InputsParticularidades = {
@@ -4064,7 +4122,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   // ── Barra visual RV ───────────────────────────────────────────────────────
   const barsTotal =
     resultRecibo.retencaoIRS +
-      resultRecibo.iva +
+      resultReciboFinal.iva +
       resultRecibo.segSocial +
       resultRecibo.liquido || 1;
   const barW = (v: number) =>
@@ -4514,6 +4572,86 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
       )}
     </div>
   );
+
+  // ── Direitos de autor: controlo ADITIVO da parcela de royalties ────────────
+  // Não sobrepõe o input de faturação — esse continua a ser o TOTAL. Aqui o
+  // utilizador indica só QUE PARTE desse total é royalties/licenciamento (taxa
+  // normal). O resto é obra própria, isenta de IVA (Art. 9.º/16 CIVA). O IVA dos
+  // royalties é ACRESCENTADO por cima; o líquido (IRS/SS) não muda.
+  const desdobramentoAutorControl = desdobramentoAutor ? (
+    <div className="mt-3 space-y-3 rounded-2xl border border-brand/20 bg-brand-light/30 p-4 dark:border-brand/25 dark:bg-brand/10">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-brand-dark dark:text-brand">
+          Direitos de autor — que parte é royalties?
+        </p>
+        <p className="mt-1 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+          A obra própria (livros, música, arte) é isenta de IVA sem limite de
+          faturação (Art. 9.º, n.º 16 CIVA). Royalties e licenciamento (software,
+          marca, patente) são à taxa normal ({pct(IVA_TAXAS[regiao].value.normal)}).
+          Indica quanto da tua faturação é royalties — o resto conta como obra
+          própria, isenta. O teu líquido não muda: só se acrescenta o IVA por cima.
+        </p>
+      </div>
+
+      <label className="block">
+        <span className="mb-1 flex items-center justify-between gap-2 text-xs font-medium text-stone-600 dark:text-stone-300">
+          <span>Parte que é royalties / licenciamento</span>
+          <span className="font-normal text-stone-400">
+            de {fmt(desdobramentoAutor.total)}/mês
+          </span>
+        </span>
+        <div className="relative">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400">
+            €
+          </span>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={autorRoyaltiesInput}
+            onChange={(e) => setAutorRoyaltiesInput(e.target.value)}
+            placeholder="0,00"
+            aria-label="Parte da faturação mensal que é royalties ou licenciamento"
+            className="w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-8 pr-3 text-sm font-semibold text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 dark:border-stone-700 dark:bg-stone-800 dark:text-white"
+          />
+        </div>
+      </label>
+
+      {desdobramentoAutor.total > 0 && (
+        <div className="space-y-1.5 rounded-xl bg-white/70 px-4 py-3 dark:bg-stone-800/60">
+          <div className="flex justify-between text-xs">
+            <span className="text-stone-500 dark:text-stone-400">
+              Obra própria — isento (Art. 9.º/16)
+            </span>
+            <span className="font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+              {fmt(desdobramentoAutor.obra)}/mês
+            </span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-stone-500 dark:text-stone-400">
+              Royalties
+              {desdobramentoAutor.royalties > 0
+                ? desdobramentoAutor.cobraIvaRoyalties
+                  ? ` — IVA ${pct(IVA_TAXAS[regiao].value.normal)}`
+                  : " — isento (Art. 53.º)"
+                : ""}
+            </span>
+            <span className="font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+              {fmt(desdobramentoAutor.royalties)}/mês
+            </span>
+          </div>
+          <div className="flex justify-between border-t border-stone-200 pt-1.5 text-xs dark:border-stone-700">
+            <span className="text-stone-500 dark:text-stone-400">
+              IVA a acrescentar
+            </span>
+            <span className="font-semibold tabular-nums text-brand-dark dark:text-brand">
+              {desdobramentoAutor.ivaRoyalties > 0 ? "+" : ""}
+              {fmt(desdobramentoAutor.ivaRoyalties)}/mês
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  ) : null;
 
   // ── Situação de IVA (sempre visível) — 3 zonas + seletor + coerência ───────
   const situacaoIVA = (
@@ -5236,11 +5374,17 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                       </m.div>
                     )}
                   </AnimatePresence>
-                  {/* Toggle com/sem IVA + desdobramento ao vivo — só no modo
-                      "Um valor total"/anual (no "Recibo a recibo" o IVA é por
-                      linha). */}
-                  {!(modoInput === "recibo" && fatModo === "individual") &&
-                    ivaToggleEDesdobramento}
+                  {/* Direitos de autor: controlo aditivo da parcela de royalties
+                      (o resto é obra própria, isenta). Substitui o toggle
+                      genérico de IVA, que não se aplica (o IVA acresce sempre por
+                      cima, dividido por tipo). */}
+                  {ehDireitosAutor
+                    ? desdobramentoAutorControl
+                    : /* Toggle com/sem IVA + desdobramento ao vivo — só no modo
+                         "Um valor total"/anual (no "Recibo a recibo" o IVA é por
+                         linha). */
+                      !(modoInput === "recibo" && fatModo === "individual") &&
+                      ivaToggleEDesdobramento}
 
                   {/* Aviso: cenário de ato isolado (serviço único no ano) */}
                   {modoInput === "recibo" &&
@@ -5270,7 +5414,28 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                     )}
                 </div>
 
-                {/* ── Situação de IVA (sempre visível) ─────────────────────── */}
+                {/* ── Situação de IVA ────────────────────────────────────────
+                    Para direitos de autor, a divisão obra/royalties (controlo
+                    acima) já determina o IVA por tipo; o seletor de regime geral
+                    (Art. 53.º) não se aplica ao todo e escondê-lo evita a
+                    contradição de mostrar "isento Art. 53.º" ao lado de royalties
+                    a 23%. */}
+                {ehDireitosAutor ? (
+                  <div className="mb-6 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 dark:border-stone-700 dark:bg-stone-800/40">
+                    <p className="text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+                      A situação de IVA está no controlo acima: a{" "}
+                      <strong className="text-stone-700 dark:text-stone-200">
+                        obra própria
+                      </strong>{" "}
+                      é isenta sem limite de faturação (Art. 9.º, n.º 16 CIVA) e os{" "}
+                      <strong className="text-stone-700 dark:text-stone-200">
+                        royalties / licenciamento
+                      </strong>{" "}
+                      seguem a taxa normal ({pct(IVA_TAXAS[regiao].value.normal)}),
+                      sujeitos ao limiar do Art. 53.º sobre a sua própria faturação.
+                    </p>
+                  </div>
+                ) : (
                 <div className="mb-6">
                   <div className="mb-2 flex items-center gap-1.5">
                     <span className="text-sm font-medium uppercase tracking-wider text-stone-500">
@@ -5385,6 +5550,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                     )}
                   </AnimatePresence>
                 </div>
+                )}
 
                 {/* ── Ano de atividade ─────────────────────────────────────── */}
                 <div className="mb-5">
@@ -6449,7 +6615,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                         // IRS e SS reais (apuramento anual); no modo recibo são /12.
                         const irsVal = isRecibo ? resultAnualRV.irs / 12 : resultAnualRV.irs;
                         const ssVal = isRecibo ? resultAnualRV.ssAnual / 12 : resultAnualRV.ssAnual;
-                        const ivaVal = isRecibo ? resultRecibo.iva : Math.round(brutoAnual * taxaIva);
+                        const ivaVal = isRecibo ? resultReciboFinal.iva : Math.round(brutoAnual * taxaIva);
                         const liquidoMes = isRecibo
                           ? Math.round(resultAnualRV.liquido / 12)
                           : Math.round(resultAnualRV.liquido / 12);
@@ -6499,43 +6665,43 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                               líquido REAL (não pela retenção). */}
                           <div className="mb-6">
                             <EuroBreakdown
-                              faturacao={fatMes + resultRecibo.iva}
+                              faturacao={fatMes + resultReciboFinal.iva}
                               liquido={liquidoRealMes}
                               irs={irsRealMes}
                               ss={ssRealMes}
-                              iva={resultRecibo.iva}
+                              iva={resultReciboFinal.iva}
                             />
                           </div>
 
                           {/* ── Apuramento real (alinhado com o guiado) ───────── */}
                           <div className="space-y-1">
-                            {resultRecibo.taxaIVA > 0 && (
+                            {resultReciboFinal.taxaIVA > 0 && (
                               <DetalheRow
                                 label="Faturado (com IVA)"
-                                value={fatMes + resultRecibo.iva}
+                                value={fatMes + resultReciboFinal.iva}
                                 type="neutral"
                                 note="O que o cliente paga"
                               />
                             )}
-                            {resultRecibo.taxaIVA > 0 && (
+                            {resultReciboFinal.taxaIVA > 0 && (
                               <DetalheRow
-                                label={`IVA (${pct(resultRecibo.taxaIVA)}) — não é teu`}
-                                value={-resultRecibo.iva}
+                                label={`IVA (${pct(resultReciboFinal.taxaIVA)}) — não é teu`}
+                                value={-resultReciboFinal.iva}
                                 type="warning"
                                 note="Pertence ao Estado — reservar para entrega trimestral"
                               />
                             )}
                             <DetalheRow
                               label={
-                                resultRecibo.taxaIVA > 0
+                                resultReciboFinal.taxaIVA > 0
                                   ? "A tua faturação"
                                   : "Valor do recibo"
                               }
                               value={fatMes}
                               type="subtotal"
                               note={
-                                resultRecibo.taxaIVA > 0
-                                  ? `Faturado ÷ (1 + ${pct(resultRecibo.taxaIVA)})`
+                                resultReciboFinal.taxaIVA > 0
+                                  ? `Faturado ÷ (1 + ${pct(resultReciboFinal.taxaIVA)})`
                                   : "O que faturaste"
                               }
                             />
@@ -6596,7 +6762,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                             </p>
                             <DetalheRow
                               label={
-                                resultRecibo.taxaIVA > 0
+                                resultReciboFinal.taxaIVA > 0
                                   ? "A tua faturação"
                                   : "Valor do recibo"
                               }
@@ -6613,18 +6779,18 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                             )}
                             <DetalheRow
                               label="Entra na tua conta"
-                              value={resultRecibo.entradaConta}
+                              value={resultReciboFinal.entradaConta}
                               type="subtotal"
                               note={
-                                resultRecibo.taxaIVA > 0
+                                resultReciboFinal.taxaIVA > 0
                                   ? "Faturado + IVA − retenção"
                                   : "Após retenção"
                               }
                             />
-                            {resultRecibo.taxaIVA > 0 && (
+                            {resultReciboFinal.taxaIVA > 0 && (
                               <DetalheRow
                                 label="Reservar para IVA (entrega trimestral)"
-                                value={-resultRecibo.iva}
+                                value={-resultReciboFinal.iva}
                                 type="warning"
                               />
                             )}
@@ -7016,7 +7182,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                         isencaoSS={isencaoSS}
                         acertoIRS={resultAnualRV.acertoIRS}
                         temIva={temIva}
-                        ivaTotal={temIva ? resultRecibo.iva * 12 : 0}
+                        ivaTotal={temIva ? resultReciboFinal.iva * 12 : 0}
                         faturacaoAnual={brutoAnual}
                         className="mb-5"
                       />
@@ -7063,7 +7229,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                             _computed: {
                               irsEstimado: resultAnualRV.irs / 12,
                               segSocial: resultRecibo.segSocial,
-                              iva: resultRecibo.iva,
+                              iva: resultReciboFinal.iva,
                               liquido: resultAnualRV.liquido / 12,
                             },
                           }, cliente)}

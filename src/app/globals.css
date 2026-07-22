@@ -339,6 +339,41 @@ input[type="number"]::-webkit-outer-spin-button {
     background-color: rgb(26 29 24 / 0.85);
   }
 
+  /* ─────────────────────────────────────────────────────────────────────────
+     Superfícies de MARCA (verde FIXO em ambos os temas — `bg-brand` e
+     `bg-brand-dark` não são remapeadas). Nelas, o branco translúcido (barras de
+     progresso, brilhos decorativos, pontos) é INTENCIONAL e deve manter-se claro
+     nos dois temas. O wildcard `[class*="bg-white/"]` acima remapeia-o para
+     escuro — correto para cartões sobre o fundo da página, mas aqui fazia a barra
+     de percentagem DESAPARECER no modo escuro. Restaura-se a opacidade real,
+     scoped aos cartões de marca. Match por TOKEN exato (`~=`, não `*=`) para não
+     haver colisões (ex.: `/5` vs `/50`). Especificidade 0,0,3 > 0,0,2 do wildcard
+     e ordem posterior → ganha sem `!important`. */
+  .dark .bg-brand [class~="bg-white/5"],
+  .dark .bg-brand-dark [class~="bg-white/5"] { background-color: rgb(255 255 255 / 0.05); }
+  .dark .bg-brand [class~="bg-white/10"],
+  .dark .bg-brand-dark [class~="bg-white/10"] { background-color: rgb(255 255 255 / 0.1); }
+  .dark .bg-brand [class~="bg-white/15"],
+  .dark .bg-brand-dark [class~="bg-white/15"] { background-color: rgb(255 255 255 / 0.15); }
+  .dark .bg-brand [class~="bg-white/20"],
+  .dark .bg-brand-dark [class~="bg-white/20"] { background-color: rgb(255 255 255 / 0.2); }
+  .dark .bg-brand [class~="bg-white/25"],
+  .dark .bg-brand-dark [class~="bg-white/25"] { background-color: rgb(255 255 255 / 0.25); }
+  .dark .bg-brand [class~="bg-white/40"],
+  .dark .bg-brand-dark [class~="bg-white/40"] { background-color: rgb(255 255 255 / 0.4); }
+  .dark .bg-brand [class~="bg-white/55"],
+  .dark .bg-brand-dark [class~="bg-white/55"] { background-color: rgb(255 255 255 / 0.55); }
+  .dark .bg-brand [class~="bg-white/60"],
+  .dark .bg-brand-dark [class~="bg-white/60"] { background-color: rgb(255 255 255 / 0.6); }
+  .dark .bg-brand [class~="bg-white/70"],
+  .dark .bg-brand-dark [class~="bg-white/70"] { background-color: rgb(255 255 255 / 0.7); }
+  .dark .bg-brand [class~="bg-white/80"],
+  .dark .bg-brand-dark [class~="bg-white/80"] { background-color: rgb(255 255 255 / 0.8); }
+  .dark .bg-brand [class~="bg-white/90"],
+  .dark .bg-brand-dark [class~="bg-white/90"] { background-color: rgb(255 255 255 / 0.9); }
+  .dark .bg-brand [class~="bg-white/95"],
+  .dark .bg-brand-dark [class~="bg-white/95"] { background-color: rgb(255 255 255 / 0.95); }
+
   /* Alertas — dourado adaptado ao escuro, contraste reforçado */
   .dark .bg-alert-bg {
     background-color: #302b12;
