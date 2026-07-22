@@ -196,6 +196,20 @@ interface ReciboItem {
   taxaIva: number;
 }
 
+/** Desdobramento da faturação de direitos de autor por regime de IVA. */
+interface DesdobramentoAutor {
+  /** Parcela mensal de obra própria (isenta de IVA — Art. 9.º/16 CIVA). */
+  obra: number;
+  /** Parcela mensal de royalties / licenciamento (taxa normal de IVA). */
+  royalties: number;
+  /** Faturação mensal total (obra + royalties). */
+  total: number;
+  /** IVA mensal (só a parte de royalties, se acima do limiar do Art. 53.º). */
+  ivaRoyalties: number;
+  /** Se a parte de royalties ultrapassa o limiar e cobra IVA. */
+  cobraIvaRoyalties: boolean;
+}
+
 /**
  * Opções de taxa de IVA para o seletor "recibo a recibo", derivadas das taxas
  * reais da região (`IVA_TAXAS`) — nunca fixas ao continente, para Madeira/Açores
@@ -336,6 +350,14 @@ export default function ModoGuiado({
   const [regiao, setRegiao] = useState<Regiao>("continente");
   const [regimeIVA, setRegimeIVA] = useState<RegimeIVA>("isento");
 
+  // Direitos de autor: a faturação pode misturar obra própria (isenta de IVA,
+  // Art. 9.º/16 CIVA) e royalties/licenciamento (taxa normal). Guardam-se as
+  // duas parcelas mensais em separado; o IVA é a soma ponderada (só a parte de
+  // royalties é tributada). O IRS/SS incidem sobre o total (coef. 0,95).
+  const [autorObraInput, setAutorObraInput] = useState("1500");
+  const [autorRoyaltiesInput, setAutorRoyaltiesInput] = useState("0");
+  const ehDireitosAutor = tipoAtiv === "prop_int";
+
   // Taxa de IVA derivada do regime — única fonte de verdade para extracção do IVA
   // ── IVA: regime EFETIVO, derivado reativamente ──────────────────────
   // Princípio único: abaixo de 15 000 €/ano de faturação → ISENTO (Art. 53.º
@@ -355,7 +377,22 @@ export default function ModoGuiado({
         ? taxasRegiao[ivaEsperadoAtiv]
         : taxasRegiao.normal;
 
-  const { mensalSemIva, mensalComIva, mensalIva, isentoEfetivo, taxaIvaEfetiva } = useMemo(() => {
+  // Desdobramento de direitos de autor por regime de IVA (só quando aplicável).
+  // Obra própria → isento (Art. 9.º/16 CIVA), sem limiar de faturação; royalties/
+  // licenciamento → taxa normal, sujeita ao limiar do Art. 53.º (como qualquer
+  // atividade tributada). Nada fixo: taxa e limiar vêm de fiscal-data.
+  const desdobramentoAutor = useMemo(() => {
+    if (!ehDireitosAutor) return null;
+    const obra = Math.max(0, parseMontante(autorObraInput));
+    const royalties = Math.max(0, parseMontante(autorRoyaltiesInput));
+    const total = obra + royalties;
+    const royaltiesAnual = royalties * mesesFat;
+    const cobraIvaRoyalties = royalties > 0 && royaltiesAnual > IVA_LIMITE;
+    const ivaRoyalties = cobraIvaRoyalties ? royalties * taxasRegiao.normal : 0;
+    return { obra, royalties, total, ivaRoyalties, cobraIvaRoyalties };
+  }, [ehDireitosAutor, autorObraInput, autorRoyaltiesInput, mesesFat, taxasRegiao.normal]);
+
+  const derivadoBase = useMemo(() => {
     // Princípio coerente: ISENTO ⟺ NÃO está a cobrar IVA. Cobra IVA quando o
     // utilizador escolhe "com IVA" (afirma que cobra) OU quando a faturação base
     // ultrapassa o limite de isenção. Assim a situação de IVA, o desdobramento e
@@ -404,6 +441,23 @@ export default function ModoGuiado({
       taxaIvaEfetiva: cobraIva ? taxaPotencial : 0,
     };
   }, [modoFat, totalInput, valorComIva, recibosItems, taxaPotencial, mesesFat]);
+
+  // Para direitos de autor, o IVA é a mistura obra própria (isento) + royalties
+  // (taxa normal); a taxa efetiva é o IVA total ÷ faturação. Para tudo o resto,
+  // usa-se a derivação normal acima.
+  const { mensalSemIva, mensalComIva, mensalIva, isentoEfetivo, taxaIvaEfetiva } =
+    desdobramentoAutor
+      ? {
+          mensalSemIva: desdobramentoAutor.total,
+          mensalComIva: desdobramentoAutor.total + desdobramentoAutor.ivaRoyalties,
+          mensalIva: desdobramentoAutor.ivaRoyalties,
+          isentoEfetivo: desdobramentoAutor.ivaRoyalties === 0,
+          taxaIvaEfetiva:
+            desdobramentoAutor.total > 0
+              ? desdobramentoAutor.ivaRoyalties / desdobramentoAutor.total
+              : 0,
+        }
+      : derivadoBase;
 
   // Regime efetivo, para o cálculo, a situação de IVA e o resultado.
   const regimeEfetivo: RegimeIVA = isentoEfetivo
@@ -815,6 +869,9 @@ export default function ModoGuiado({
                     taxaIvaEfetiva={taxaIvaEfetiva}
                     tipoAtiv={tipoAtiv}
                     atividadeEspecifica={atividadeEspecifica}
+                    autorObraInput={autorObraInput}
+                    autorRoyaltiesInput={autorRoyaltiesInput}
+                    desdobramentoAutor={desdobramentoAutor}
                     onModoFat={setModoFat}
                     onTotalInput={setTotalInput}
                     onValorComIva={setValorComIva}
@@ -822,6 +879,8 @@ export default function ModoGuiado({
                     onMesesFat={setMesesFat}
                     onRegiaoChange={setRegiao}
                     onRegimeIVAChange={setRegimeIVA}
+                    onAutorObra={setAutorObraInput}
+                    onAutorRoyalties={setAutorRoyaltiesInput}
                   />
                 </m.div>
               )}
@@ -1313,6 +1372,9 @@ function PassoFaturacao({
   taxaIvaEfetiva,
   tipoAtiv,
   atividadeEspecifica,
+  autorObraInput,
+  autorRoyaltiesInput,
+  desdobramentoAutor,
   onModoFat,
   onTotalInput,
   onValorComIva,
@@ -1320,6 +1382,8 @@ function PassoFaturacao({
   onMesesFat,
   onRegiaoChange,
   onRegimeIVAChange,
+  onAutorObra,
+  onAutorRoyalties,
 }: {
   modoFat: "total" | "individual";
   totalInput: string;
@@ -1335,6 +1399,9 @@ function PassoFaturacao({
   taxaIvaEfetiva: number;
   tipoAtiv: TipoAtiv;
   atividadeEspecifica: Atividade | null;
+  autorObraInput: string;
+  autorRoyaltiesInput: string;
+  desdobramentoAutor: DesdobramentoAutor | null;
   onModoFat: (m: "total" | "individual") => void;
   onTotalInput: (v: string) => void;
   onValorComIva: (v: boolean) => void;
@@ -1342,6 +1409,8 @@ function PassoFaturacao({
   onMesesFat: (m: number) => void;
   onRegiaoChange: (v: Regiao) => void;
   onRegimeIVAChange: (v: RegimeIVA) => void;
+  onAutorObra: (v: string) => void;
+  onAutorRoyalties: (v: string) => void;
 }) {
   const taxasIVA = IVA_TAXAS[regiao].value;
   // Taxa efetiva de IVA = a do componente-pai (regime EFETIVO: 0 quando isento
@@ -1407,7 +1476,78 @@ function PassoFaturacao({
         subtitulo="Indica quanto faturas por mês e em quantos meses do ano. A situação de IVA é tratada mais abaixo."
       />
 
+      {/* Direitos de autor: desdobramento obra própria (isento) + royalties (23%) */}
+      {desdobramentoAutor && (
+        <div className="mb-5 space-y-3 rounded-3xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+              Divide a tua faturação por tipo
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-stone-400 dark:text-stone-500">
+              A obra própria é isenta de IVA (Art. 9.º, n.º 16 CIVA); royalties e
+              licenciamento são à taxa normal ({pct(taxasIVA.normal)}). Preenche o que
+              tiveres de cada — podes ter os dois.
+            </p>
+          </div>
+
+          {/* Obra própria */}
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-stone-600 dark:text-stone-300">
+              Obra própria <span className="font-normal text-stone-400">— livros, música, arte (isento)</span>
+            </span>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400">€</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={autorObraInput}
+                onChange={(e) => onAutorObra(e.target.value)}
+                placeholder="0,00"
+                aria-label="Faturação mensal de obra própria (isento)"
+                className="w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-8 pr-3 text-sm font-semibold text-stone-800 focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-white"
+              />
+            </div>
+          </label>
+
+          {/* Royalties / licenciamento */}
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-stone-600 dark:text-stone-300">
+              Royalties / licenciamento <span className="font-normal text-stone-400">— software, marca, patente ({pct(taxasIVA.normal)})</span>
+            </span>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400">€</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={autorRoyaltiesInput}
+                onChange={(e) => onAutorRoyalties(e.target.value)}
+                placeholder="0,00"
+                aria-label="Faturação mensal de royalties ou licenciamento"
+                className="w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-8 pr-3 text-sm font-semibold text-stone-800 focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-white"
+              />
+            </div>
+          </label>
+
+          {/* Resumo do desdobramento */}
+          {desdobramentoAutor.total > 0 && (
+            <div className="space-y-1.5 rounded-xl bg-stone-50 px-4 py-3 dark:bg-stone-800/60">
+              <div className="flex justify-between text-xs">
+                <span className="text-stone-500 dark:text-stone-400">Faturação total/mês</span>
+                <span className="font-semibold tabular-nums text-stone-800 dark:text-stone-100">{fmt(desdobramentoAutor.total)}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-stone-400">
+                  IVA a cobrar (só royalties{desdobramentoAutor.royalties > 0 && !desdobramentoAutor.cobraIvaRoyalties ? " — isento pelo Art. 53.º" : ""})
+                </span>
+                <span className="font-semibold tabular-nums text-stone-400">{fmt(desdobramentoAutor.ivaRoyalties)}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Tabs modo */}
+      {!desdobramentoAutor && (
       <div className="mb-5 flex gap-1 rounded-3xl bg-stone-100 p-1 dark:bg-stone-800">
         {(["total", "individual"] as const).map((m) => (
           <button
@@ -1426,9 +1566,10 @@ function PassoFaturacao({
           </button>
         ))}
       </div>
+      )}
 
       {/* Modo: total do mês */}
-      {modoFat === "total" && (
+      {!desdobramentoAutor && modoFat === "total" && (
         <div className="mb-5 rounded-3xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
           {/* Campo valor */}
           <div className="mb-4">
@@ -1514,7 +1655,7 @@ function PassoFaturacao({
       )}
 
       {/* Modo: recibo a recibo */}
-      {modoFat === "individual" && (
+      {!desdobramentoAutor && modoFat === "individual" && (
         <div className="mb-5">
           {recibosItems.map((r, i) => {
             const v = parseMontante(r.valorComIva);
@@ -1673,15 +1814,49 @@ function PassoFaturacao({
             IVA ao cliente.
           </InfoTip>
         </div>
-        <ZonaIVA
-          brutoAnual={brutoAnual}
-          isentoEfetivo={isentoEfetivo}
-          regimeIVA={regimeIVA}
-          regiao={regiao}
-          tipoAtiv={tipoAtiv}
-          atividadeEspecifica={atividadeEspecifica}
-          onRegimeIVAChange={onRegimeIVAChange}
-        />
+        {desdobramentoAutor ? (
+          <div className="space-y-2 rounded-xl border border-stone-200 bg-stone-50 p-3.5 dark:border-stone-700 dark:bg-stone-900/60">
+            <p className="text-xs leading-relaxed text-stone-600 dark:text-stone-300">
+              O IVA segue a divisão que fizeste em cima:
+            </p>
+            <div className="space-y-1.5">
+              <div className="flex items-start justify-between gap-3">
+                <span className="flex items-start gap-1.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                  <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
+                  <span>Obra própria — {fmt(desdobramentoAutor.obra)}/mês · <strong className="text-stone-700 dark:text-stone-200">isento</strong> (Art. 9.º, n.º 16 CIVA), sem limite de faturação</span>
+                </span>
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <span className="flex items-start gap-1.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                  <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
+                  <span>
+                    Royalties / licenciamento — {fmt(desdobramentoAutor.royalties)}/mês ·{" "}
+                    {desdobramentoAutor.royalties <= 0 ? (
+                      <strong className="text-stone-700 dark:text-stone-200">sem valor</strong>
+                    ) : desdobramentoAutor.cobraIvaRoyalties ? (
+                      <><strong className="text-stone-700 dark:text-stone-200">{pct(IVA_TAXAS[regiao].value.normal)}</strong> → {fmt(desdobramentoAutor.ivaRoyalties)}/mês de IVA</>
+                    ) : (
+                      <><strong className="text-stone-700 dark:text-stone-200">isento</strong> por ficar abaixo de {fmt(IVA_LIMITE)}/ano (Art. 53.º CIVA)</>
+                    )}
+                  </span>
+                </span>
+              </div>
+            </div>
+            <p className="pl-[18px] text-[11px] leading-relaxed text-stone-400 dark:text-stone-500">
+              O IRS e a Segurança Social incidem sobre o total ({fmt(desdobramentoAutor.total)}/mês); só o IVA distingue os dois tipos. Confirma o teu enquadramento com o contabilista.
+            </p>
+          </div>
+        ) : (
+          <ZonaIVA
+            brutoAnual={brutoAnual}
+            isentoEfetivo={isentoEfetivo}
+            regimeIVA={regimeIVA}
+            regiao={regiao}
+            tipoAtiv={tipoAtiv}
+            atividadeEspecifica={atividadeEspecifica}
+            onRegimeIVAChange={onRegimeIVAChange}
+          />
+        )}
       </div>
 
       {/* Região */}
