@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.95.0";
+export const APP_VERSION = "1.98.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,36 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.98.0",
+    data: "2026-07-22",
+    titulo: "«Como funciona» que funciona + motores mais rigorosos",
+    itens: [
+      "O botão «Como funciona» na página inicial não fazia nada — apontava para uma secção que tinha sido removida. Agora abre uma janela clara, em três passos, a explicar como o ReciboCerto trabalha por ti: escolhes o que fazes, dizes só o valor, e mostramos-te quanto é mesmo teu, quanto reservar e quando pagar.",
+      "Continuámos a auditar os motores de cálculo para garantir que nenhum número fiscal está «escrito à mão» solto no código: a redução de retenção na fonte para famílias com 3 ou mais dependentes, a taxa dos dividendos e a taxa do regime IFICI passaram a vir sempre da mesma fonte fiscal usada nos cálculos — assim o que se mostra nunca pode divergir do que se calcula.",
+    ],
+  },
+  {
+    version: "1.97.0",
+    data: "2026-07-22",
+    titulo: "Direitos de autor: IVA deixa de dar aviso indevido",
+    itens: [
+      "Nos simuladores de recibos verdes, ao escolher «Direitos de autor / Royalties», qualquer taxa de IVA que selecionasses aparecia com um aviso de «não é a habitual» — mesmo a correta. Corrigido: esta atividade tem dois enquadramentos legítimos e o simulador passa a reconhecer ambos — obra própria (livros, música, arte) é isenta de IVA sem limite de faturação (Art. 9.º, n.º 16 CIVA); royalties e licenciamento (software, marca, patente) são à taxa normal (23%). Só as taxas reduzida e intermédia, que nunca se aplicam a direitos de autor, é que avisam agora.",
+      "Adicionámos uma nota clara nos dois simuladores a explicar estes dois casos, para saberes qual é o teu.",
+      "Corrigimos ainda uma referência legal: o benefício de excluir 50% dos rendimentos da obra própria em IRS é do Art. 58.º do EBF (até 10 000 €, em vigor até 2026), e não do artigo que estava citado.",
+    ],
+  },
+  {
+    version: "1.96.0",
+    data: "2026-07-22",
+    titulo: "Alojamento local e hotelaria: coeficiente corrigido",
+    itens: [
+      "A categoria «Alojamento local / hotelaria» dos simuladores de recibos verdes mostrava um coeficiente (35%) diferente do que era realmente usado no cálculo (15%, o correto para restauração e hotelaria — Art. 31.º, n.º 1, al. a) CIRS). Corrigido: o valor mostrado passa a ser sempre o mesmo que entra na conta. Alojamento local em moradia/apartamento continua com o seu coeficiente próprio (35%), disponível ao escolheres a atividade específica.",
+      "O seletor de taxa de IVA no modo «recibo a recibo» dos simuladores mostrava sempre as taxas do Continente, mesmo para quem estava na Madeira ou nos Açores — corrigido para seguir a região escolhida.",
+      "Vários textos informativos dos simuladores (taxa da Segurança Social, taxa de IVA típica do alojamento local) deixaram de ter números fixos no texto e passam a vir sempre da mesma fonte fiscal usada no cálculo — nunca mais podem ficar desatualizados um em relação ao outro.",
+      "Continuámos a afinar o modo escuro: o botão «Quero o simulador completo» e os valores de líquido nos cartões de resultado (simuladores e painel do dashboard) ganharam ainda mais contraste — o texto de apoio sobre o fundo verde estava, em alguns casos, quase impossível de ler mesmo depois da correção anterior.",
+    ],
+  },
   {
     version: "1.95.0",
     data: "2026-07-22",

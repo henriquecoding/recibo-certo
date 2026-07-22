@@ -214,7 +214,7 @@ export default function VisaoGeral() {
 
           {/* ── Saldo hero — cartão principal ────────────────────── */}
           <div className="col-span-12 lg:col-span-8">
-            <div className="relative overflow-hidden rounded-4xl border border-brand bg-brand p-7 text-white shadow-glow sm:p-8">
+            <div className="relative overflow-hidden rounded-4xl border border-brand-dark bg-brand-dark p-7 text-white shadow-glow sm:p-8">
               {/* Orbs decorativos */}
               <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
               <div aria-hidden className="pointer-events-none absolute -bottom-10 -left-10 h-44 w-44 rounded-full bg-white/5 blur-2xl" />
@@ -223,9 +223,9 @@ export default function VisaoGeral() {
               {/* Top row: mês + faturado */}
               <div className="relative flex items-start justify-between">
                 <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-widest text-white/70">Este mês</div>
+                  <div className="text-[11px] font-semibold uppercase tracking-widest text-white/90">Este mês</div>
                   {mes.bruto > 0 && (
-                    <div className="mt-0.5 text-sm font-medium text-green-100/80">
+                    <div className="mt-0.5 text-sm font-medium text-green-100/90">
                       {fmt(mes.bruto)} faturados
                     </div>
                   )}
@@ -239,12 +239,12 @@ export default function VisaoGeral() {
 
               {/* Métrica principal */}
               <div className="relative mt-4">
-                <div className="text-xs font-medium uppercase tracking-wider text-white/70">Disponível para gastar</div>
+                <div className="text-xs font-medium uppercase tracking-wider text-white/90">Disponível para gastar</div>
                 <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-5xl lg:text-6xl">
                   <AnimatedNumber value={mes.liquido} />
                 </div>
                 {mes.bruto === 0 && (
-                  <div className="mt-2 text-sm text-green-100/70">Regista o primeiro recibo para começar.</div>
+                  <div className="mt-2 text-sm text-green-100/90">Regista o primeiro recibo para começar.</div>
                 )}
               </div>
 
@@ -257,7 +257,7 @@ export default function VisaoGeral() {
                       style={{ width: `${Math.round((mes.liquido / mes.bruto) * 100)}%` }}
                     />
                   </div>
-                  <div className="mt-1.5 text-[11px] text-white/60">
+                  <div className="mt-1.5 text-[11px] text-white/85">
                     {Math.round((mes.liquido / mes.bruto) * 100)}% do faturado é mesmo teu
                   </div>
                 </div>

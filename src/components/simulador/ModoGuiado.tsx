@@ -37,6 +37,8 @@ import {
   META_TIPO,
   RETENCAO,
   COEFICIENTE_POR_TIPO,
+  SS_TAXA,
+  SS_COEFICIENTE,
   type Atividade,
   type Regiao,
 } from "@/lib/fiscal-data";
@@ -137,7 +139,7 @@ const CARDS_ATIV: CardAtiv[] = [
     sub: "Comércio, produção e revenda",
     exemplos: "E-commerce, artesanato, manufatura…",
     coef: COEFICIENTE_POR_TIPO.vendas,
-    ret: 0,
+    ret: RETENCAO.vendas.value,
     baseSS: "bens",
     tipoFiscal: "vendas",
     Icon: ShoppingBag,
@@ -147,8 +149,13 @@ const CARDS_ATIV: CardAtiv[] = [
     titulo: "Alojamento ou Hostelaria",
     sub: "Alojamento local, hotel, restauração",
     exemplos: "Airbnb, hostel, restaurante, café…",
-    coef: COEFICIENTE_POR_TIPO.outros,
-    ret: 0,
+    // Resolve para o tipo fiscal canónico "vendas" (Art. 31.º, n.º 1, al. a)
+    // CIRS — restauração e atividades hoteleiras — coef. 0,15), que é o que o
+    // motor usa por omissão sem um coefOverride específico. Alojamento local em
+    // moradia/apartamento (0,35) ou zona de contenção (0,50) exige escolher a
+    // atividade específica no ActivityCombobox — ver `ATIV_META.hosped`.
+    coef: COEFICIENTE_POR_TIPO.vendas,
+    ret: RETENCAO.vendas.value,
     baseSS: "bens",
     tipoFiscal: "vendas",
     Icon: Home,
@@ -189,13 +196,20 @@ interface ReciboItem {
   taxaIva: number;
 }
 
-const IVA_CONT = IVA_TAXAS.continente.value;
-const IVA_OPCOES_FAT = [
-  { taxa: 0, curto: "Isento", longo: "0%" },
-  { taxa: IVA_CONT.reduzida, curto: "Reduzida", longo: `${IVA_CONT.reduzida * 100}%` },
-  { taxa: IVA_CONT.intermedia, curto: "Intermédia", longo: `${IVA_CONT.intermedia * 100}%` },
-  { taxa: IVA_CONT.normal, curto: "Normal", longo: `${IVA_CONT.normal * 100}%` },
-];
+/**
+ * Opções de taxa de IVA para o seletor "recibo a recibo", derivadas das taxas
+ * reais da região (`IVA_TAXAS`) — nunca fixas ao continente, para Madeira/Açores
+ * mostrarem as suas próprias taxas (Art. 18.º CIVA).
+ */
+function ivaOpcoesFat(regiao: Regiao) {
+  const taxas = IVA_TAXAS[regiao].value;
+  return [
+    { taxa: 0, curto: "Isento", longo: "0%" },
+    { taxa: taxas.reduzida, curto: "Reduzida", longo: pct(taxas.reduzida) },
+    { taxa: taxas.intermedia, curto: "Intermédia", longo: pct(taxas.intermedia) },
+    { taxa: taxas.normal, curto: "Normal", longo: pct(taxas.normal) },
+  ];
+}
 
 const MESES_OPCOES_FAT = [1, 2, 3, 4, 6, 8, 10, 12] as const;
 
@@ -209,6 +223,13 @@ const ATIV_META: Record<
     descricao: string;
     ivaEsperado: "isento" | "reduzida" | "intermedia" | "normal";
     nota: string | null;
+    /**
+     * Nota específica de IVA, mostrada no painel de situação de IVA quando a
+     * atividade tem um enquadramento particular (ex.: direitos de autor, cujo
+     * IVA depende de ser obra própria — isenta — ou royalties/licenciamento —
+     * taxa normal). Neutra, não é um aviso de erro.
+     */
+    notaIVA?: string;
   }
 > = {
   art151: {
@@ -225,8 +246,8 @@ const ATIV_META: Record<
   },
   hosped: {
     descricao:
-      "Alojamento local em moradia/apartamento. Coef. 0,35. Sem retenção. SS sobre 20%.",
-    ivaEsperado: "reduzida",
+      "Restauração e atividades hoteleiras. Coef. 0,15 · sem retenção · SS sobre 20%. Alojamento local em moradia/apartamento tem coeficiente próprio (0,35) — escolhe a atividade específica para o aplicar.",
+    ivaEsperado: "intermedia",
     nota: null,
   },
   outras: {
@@ -238,8 +259,15 @@ const ATIV_META: Record<
   prop_int: {
     descricao:
       "Direitos de autor e royalties. Coef. 0,95 · Ret. 16,5% · SS sobre 70%.",
-    ivaEsperado: "isento",
-    nota: "Podem beneficiar de 50% de exclusão (Art. 50.º-A CIRS) se obra original.",
+    // O IVA aqui NÃO tem um único valor "habitual": a obra própria é isenta e o
+    // licenciamento/royalties é à taxa normal (ver `notaIVA`). Marca-se "normal"
+    // porque é o caso tributável; a isenção é tratada no ramo próprio do painel,
+    // pelo que tanto "isento" como "normal" ficam coerentes e só as taxas
+    // reduzida/intermédia (que nunca se aplicam a direitos de autor) avisam.
+    ivaEsperado: "normal",
+    nota: "A obra própria (titular originário, residente) pode ser englobada em IRS por apenas 50% do valor, até 10 000 € excluídos (Art. 58.º EBF, em vigor até 2026).",
+    notaIVA:
+      "Direitos de autor da obra própria (livros, música, arte) são ISENTOS de IVA, sem limite de faturação (Art. 9.º, n.º 16 CIVA). Royalties e licenciamento (software, marca, patente) são tributados à taxa normal (23%). Confirma o teu caso com o contabilista.",
   },
 };
 
@@ -1323,7 +1351,7 @@ function PassoFaturacao({
 
   function adicionarRecibo() {
     onRecibosItems((prev) => {
-      const ultimaIva = prev[prev.length - 1]?.taxaIva ?? 0.23;
+      const ultimaIva = prev[prev.length - 1]?.taxaIva ?? taxasIVA.normal;
       const newId = Date.now();
       return [
         ...prev,
@@ -1575,7 +1603,7 @@ function PassoFaturacao({
                       }
                       className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-700 focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200"
                     >
-                      {IVA_OPCOES_FAT.map((o) => (
+                      {ivaOpcoesFat(regiao).map((o) => (
                         <option key={o.taxa} value={o.taxa}>
                           {o.curto} ({o.longo})
                         </option>
@@ -2712,11 +2740,11 @@ function ResultadoFinal({
         <div className="space-y-4">
 
           {/* ── Hero: Líquido anual ──────────────────────────────────────── */}
-          <div className="relative overflow-hidden rounded-4xl border border-brand bg-brand p-5 text-white shadow-glow">
+          <div className="relative overflow-hidden rounded-4xl border border-brand-dark bg-brand-dark p-5 text-white shadow-glow">
             <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
             <div aria-hidden className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/5 blur-xl" />
             <div className="relative">
-              <div className="text-[11px] font-semibold uppercase tracking-widest text-white/70">
+              <div className="text-[11px] font-semibold uppercase tracking-widest text-white/90">
                 Líquido anual estimado
               </div>
               <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-5xl">
@@ -2729,7 +2757,7 @@ function ResultadoFinal({
                     style={{ width: `${Math.round(Math.max(0, liquidoFinal) / Math.max(1, brutoAnual) * 100)}%` }}
                   />
                 </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/60">
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/85">
                   <span>de {fmt(brutoAnual)} faturados</span>
                   <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/80">
                     {fmt(liquidoMes)}/mês
@@ -2873,10 +2901,10 @@ function ResultadoFinal({
                       label={isencaoCpas ? "Segurança Social (CPAS/CGA)" : "Segurança Social"}
                       valor={-ssAnual}
                       corValor={isencaoCpas ? "text-stone-400 dark:text-stone-500" : "text-amber-600 dark:text-amber-400"}
-                      nota={isencaoCpas ? "Não descontas para o Regime Geral" : `${pct(0.214)} × base SS`}
+                      nota={isencaoCpas ? "Não descontas para o Regime Geral" : `${pct(SS_TAXA.value)} × base SS`}
                       explicacao={isencaoCpas
                         ? "Advogados e solicitadores pagam para a CPAS em vez do Regime Geral. As contribuições CPAS têm regras próprias — consulta o teu painel CPAS."
-                        : `Como trabalhador independente pagas 21,4% de SS sobre ${card.baseSS === "bens" ? "20%" : "70%"} do que faturaste.`}
+                        : `Como trabalhador independente pagas ${pct(SS_TAXA.value)} de SS sobre ${pct(SS_COEFICIENTE[card.baseSS].value)} do que faturaste.`}
                     />
                     {isencaoCpas && (
                       <div className="mx-3 mb-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2.5 dark:border-stone-700 dark:bg-stone-800/60">
@@ -3434,15 +3462,15 @@ function PainelResultadoVivo({
 
   return (
     <div className="space-y-3">
-      <div className="relative overflow-hidden rounded-4xl border border-brand bg-brand p-5 text-white shadow-glow">
+      <div className="relative overflow-hidden rounded-4xl border border-brand-dark bg-brand-dark p-5 text-white shadow-glow">
         <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
         <div className="relative">
-          <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-white/70">
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-white/90">
             Resultado ao vivo
           </p>
 
           <div className="mb-1">
-            <div className="text-[11px] text-white/70">
+            <div className="text-[11px] text-white/90">
               {recibosAno >= 12 ? "Líquido mensal" : "Líquido por mês faturado"}
             </div>
             <div className="font-display text-3xl font-semibold leading-none tabular-nums">
@@ -3453,7 +3481,7 @@ function PainelResultadoVivo({
                 )}
               />
             </div>
-            <div className="mt-0.5 text-[11px] text-white/60">
+            <div className="mt-0.5 text-[11px] text-white/85">
               {fmt(brutoAnual > 0 ? brutoAnual / Math.max(1, recibosAno) : 0)}{" "}
               faturado/mês
             </div>
@@ -3466,7 +3494,7 @@ function PainelResultadoVivo({
                   style={{ width: `${Math.round(Math.max(0, liquidoAnual) / Math.max(1, brutoAnual) * 100)}%` }}
                 />
               </div>
-              <div className="mt-1 text-[10px] text-white/50">
+              <div className="mt-1 text-[10px] text-white/85">
                 {Math.round(Math.max(0, liquidoAnual) / Math.max(1, brutoAnual) * 100)}% de {fmt(brutoAnual)}
               </div>
             </div>
@@ -3599,6 +3627,7 @@ function ZonaIVA({
 }) {
   const taxasIVA = IVA_TAXAS[regiao].value;
   const ivaEsperado = ATIV_META[tipoAtiv].ivaEsperado;
+  const notaIVAAtiv = ATIV_META[tipoAtiv].notaIVA;
   const ivaIncoerente = regimeIVA !== "isento" && regimeIVA !== ivaEsperado;
 
   // Nome da atividade do utilizador: específica se escolhida, senão a categoria.
@@ -3676,9 +3705,32 @@ function ZonaIVA({
               <strong className="text-stone-700 dark:text-stone-200">
                 A tua atividade:
               </strong>{" "}
-              {nomeAtividade} — IVA habitual: {ESPERADO_LABEL[ivaEsperado]}.
+              {nomeAtividade} — IVA habitual:{" "}
+              {notaIVAAtiv ? "isento ou taxa normal, conforme o caso" : ESPERADO_LABEL[ivaEsperado]}.
             </p>
           </div>
+
+          {/* Nota específica de IVA (ex.: direitos de autor — obra própria vs
+              royalties). Neutra: explica os dois enquadramentos possíveis em vez
+              de tratar qualquer taxa legítima como "errada". */}
+          {notaIVAAtiv && (
+            <div className="flex items-start gap-1.5 rounded-lg border border-stone-200 bg-white/70 px-2.5 py-2 dark:border-stone-700 dark:bg-stone-900/40">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden
+                className="mt-0.5 flex-shrink-0 text-stone-400 dark:text-stone-500"
+              >
+                <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M8 7.2v4M8 4.8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                {notaIVAAtiv}
+              </p>
+            </div>
+          )}
 
           {/* Estado consoante o regime efetivo */}
           {regime === "isento" ? (

@@ -10,6 +10,7 @@ import { usePerfil, type Perfil } from "@/lib/perfil";
 import { ferramentasPorPerfil } from "@/lib/ferramentas-config";
 import { guiasPorPerfil } from "@/lib/guias-config";
 import SeletorModo from "@/components/SeletorModo";
+import ComoFuncionaModal from "@/components/ComoFuncionaModal";
 import type { ComparacaoCategoriasResult } from "@/lib/fiscal-dependente";
 
 // Selos de confiança — enxutos (2). O detalhe das fontes e as contagens do
@@ -48,7 +49,15 @@ function criarExemplos(CMP: ComparacaoCategoriasResult): Record<
     h1: ReactNode;
     sub: string;
     primary: { label: string; href?: string; scrollTo?: string; setModo?: Perfil };
-    secondary: { label: string; href?: string; scrollTo?: string; setModo?: Perfil };
+    secondary: {
+      label: string;
+      href?: string;
+      scrollTo?: string;
+      setModo?: Perfil;
+      /** Abre o modal "Como funciona" (substitui o antigo scroll para a secção
+       *  #features, removida na Homepage 3.0 — o botão tinha ficado morto). */
+      modal?: boolean;
+    };
     card: CardData;
   }
 > {
@@ -73,7 +82,7 @@ function criarExemplos(CMP: ComparacaoCategoriasResult): Record<
     ),
     sub: "O copiloto financeiro para trabalhadores independentes em Portugal — sem surpresas no fim do ano.",
     primary: { label: "Calcular o meu recibo", scrollTo: "calculadora" },
-    secondary: { label: "Como funciona", scrollTo: "features" },
+    secondary: { label: "Como funciona", modal: true },
     card: {
       etiqueta: "Recibo de 2 000 € · Art. 151.º",
       heroLabel: "O que é mesmo teu",
@@ -179,7 +188,7 @@ function criarExemplos(CMP: ComparacaoCategoriasResult): Record<
     ),
     sub: "Para o mesmo rendimento anual, compara o líquido como por conta de outrem, recibos verdes ou empresa — com o ponto de viragem e o calendário fiscal de cada cenário.",
     primary: { label: "Comparar cenários", scrollTo: "calculadora" },
-    secondary: { label: "Como funciona", scrollTo: "features" },
+    secondary: { label: "Como funciona", modal: true },
     card: {
       etiqueta: "Mesmo rendimento · 30 000 €/ano",
       heroLabel: "Mais líquido",
@@ -874,6 +883,7 @@ export default function Hero({ cmp }: { cmp: ComparacaoCategoriasResult }) {
   const EXEMPLO = useMemo(() => criarExemplos(cmp), [cmp]);
   const dados = EXEMPLO[perfil];
   const c = dados.card;
+  const [comoFuncionaAberto, setComoFuncionaAberto] = useState(false);
 
   // Atalhos do perfil ativo — a mesma curadoria das secções (fonte única).
   const atalhoFerramenta = ferramentasPorPerfil(perfil).destaque;
@@ -927,7 +937,16 @@ export default function Hero({ cmp }: { cmp: ComparacaoCategoriasResult }) {
                 <ArrowRight />
               </button>
             )}
-            {dados.secondary.setModo ? (
+            {dados.secondary.modal ? (
+              <button
+                type="button"
+                onClick={() => setComoFuncionaAberto(true)}
+                aria-haspopup="dialog"
+                className={btnSecundario}
+              >
+                {dados.secondary.label}
+              </button>
+            ) : dados.secondary.setModo ? (
               <button
                 type="button"
                 onClick={() => {
@@ -1001,6 +1020,11 @@ export default function Hero({ cmp }: { cmp: ComparacaoCategoriasResult }) {
           <HeroCard perfil={perfil} card={c} />
         </m.div>
       </div>
+
+      <ComoFuncionaModal
+        aberto={comoFuncionaAberto}
+        onFechar={() => setComoFuncionaAberto(false)}
+      />
     </section>
   );
 }

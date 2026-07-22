@@ -2131,6 +2131,18 @@ export const RETENCAO_DEP_POR_DEPENDENTE = sv(
 );
 
 /**
+ * Redução da taxa marginal máxima da retenção na fonte para trabalhadores com
+ * 3 ou mais dependentes: menos 1 ponto percentual (Despacho 233-A/2026, n.º 5,
+ * al. h). A parcela a abater mantém-se inalterada.
+ */
+export const RETENCAO_DEP_REDUCAO_3MAIS = sv(
+  0.01,
+  "Despacho n.º 233-A/2026, n.º 5, al. h) — redução de 1 p.p. na taxa marginal com 3+ dependentes",
+  "despachoRetencao2026",
+  DEP_TODAY
+);
+
+/**
  * Escalão de uma tabela de retenção na fonte. A `parcelaAbater`:
  *  · `number` → valor fixo em euros;
  *  · `{ coef, base }` → fórmula do mínimo de existência: `taxa × coef × (base − R)`.

@@ -96,14 +96,14 @@ export default function PainelCenarioTipo({ tipo }: { tipo: "vencimento" | "empr
     <div className="grid grid-cols-12 items-start gap-4">
       {/* Hero do cenário escolhido */}
       <div className="col-span-12 lg:col-span-8">
-        <div className="relative overflow-hidden rounded-4xl border border-brand bg-brand p-7 text-white shadow-glow sm:p-8">
+        <div className="relative overflow-hidden rounded-4xl border border-brand-dark bg-brand-dark p-7 text-white shadow-glow sm:p-8">
           <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
           <div aria-hidden className="pointer-events-none absolute -bottom-10 -left-10 h-44 w-44 rounded-full bg-white/5 blur-2xl" />
 
           <div className="relative flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-[11px] font-semibold uppercase tracking-widest text-white/70">{meta.label}</div>
-              <div className="mt-0.5 truncate text-sm font-medium text-green-100/80">{atual.nome || "Cenário guardado"}</div>
+              <div className="text-[11px] font-semibold uppercase tracking-widest text-white/90">{meta.label}</div>
+              <div className="mt-0.5 truncate text-sm font-medium text-green-100/90">{atual.nome || "Cenário guardado"}</div>
             </div>
             <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-green-100 backdrop-blur">
               {naNuvem ? "Na nuvem" : "Neste dispositivo"}
@@ -111,7 +111,7 @@ export default function PainelCenarioTipo({ tipo }: { tipo: "vencimento" | "empr
           </div>
 
           <div className="relative mt-4">
-            <div className="text-xs font-medium uppercase tracking-wider text-white/70">{copy.heroLabel}</div>
+            <div className="text-xs font-medium uppercase tracking-wider text-white/90">{copy.heroLabel}</div>
             <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-5xl lg:text-6xl">
               <AnimatedNumber value={resumo.destaque} />
             </div>
@@ -122,7 +122,7 @@ export default function PainelCenarioTipo({ tipo }: { tipo: "vencimento" | "empr
               <div className="flex h-1.5 overflow-hidden rounded-full bg-white/15">
                 <div className="rounded-full bg-white/70 transition-all duration-700" style={{ width: `${proporcao}%` }} />
               </div>
-              <div className="mt-1.5 text-[11px] text-white/60">{proporcao}% do total fica para ti</div>
+              <div className="mt-1.5 text-[11px] text-white/85">{proporcao}% do total fica para ti</div>
             </div>
           )}
 
