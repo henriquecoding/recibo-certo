@@ -572,7 +572,13 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
                 ) : typedText ? (
                   <span className="text-stone-800 dark:text-stone-100">{typedText}</span>
                 ) : (
-                  <span className="text-stone-200 dark:text-stone-700">0 €</span>
+                  // Valores arbitrários (não `text-stone-200 dark:text-stone-700`): a
+                  // classe base `text-stone-200` é remapeada às cegas pelo `.dark`
+                  // global (para #2e3329, quase invisível) e ganha sempre o empate de
+                  // especificidade contra um `dark:` explícito — o placeholder ficava
+                  // invisível na 1.ª imagem da demo. Escrever a cor final diretamente
+                  // evita a colisão por completo.
+                  <span className="text-[#e7e5e4] dark:text-[#57534e]">0 €</span>
                 )}
                 {showCursor && (
                   <span
@@ -874,7 +880,7 @@ export default function Hero({ cmp }: { cmp: ComparacaoCategoriasResult }) {
   const atalhoGuia = guiasPorPerfil(perfil)[0];
 
   const btnPrimario = "btn-shine inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3.5 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-float";
-  const btnSecundario = "inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-6 py-3.5 text-sm font-semibold text-stone-700 transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200";
+  const btnSecundario = "inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-6 py-3.5 text-sm font-semibold text-stone-700 transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:hover:border-stone-600 dark:hover:bg-stone-700";
 
   return (
     <section className="grain relative overflow-hidden px-6 pt-20 pb-16">

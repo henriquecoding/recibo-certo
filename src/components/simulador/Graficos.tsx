@@ -7,8 +7,18 @@
 import { fmt, pct } from "@/lib/format";
 import type { ComponenteCategoria } from "@/lib/fiscal";
 
-// Tons da marca (do mais escuro ao mais claro) para segmentar categorias.
-const PALETA = ["#0F6E56", "#1D9E75", "#3FBF92", "#6FD2AE", "#9CE0C8", "#C7EEDF"];
+// Tons da marca (do mais escuro ao mais claro) para segmentar categorias, via
+// `var(--donut-N, fallback)` (definidas em globals.css) — o par mais escuro
+// (#0F6E56/#1D9E75) tem contraste muito baixo contra um cartão já escurecido
+// (dark:bg-stone-900); as variáveis sobem de luminosidade só em .dark.
+const PALETA = [
+  "var(--donut-1, #0F6E56)",
+  "var(--donut-2, #1D9E75)",
+  "var(--donut-3, #3FBF92)",
+  "var(--donut-4, #6FD2AE)",
+  "var(--donut-5, #9CE0C8)",
+  "var(--donut-6, #C7EEDF)",
+];
 
 function arco(cx: number, cy: number, r: number, ini: number, fim: number): string {
   const p0 = [cx + r * Math.cos(ini), cy + r * Math.sin(ini)];
@@ -77,9 +87,9 @@ export function DistribuicaoFiscal({
   if (rendimentoGlobal <= 0) return null;
   const liquido = Math.max(0, rendimentoGlobal - irsTotal - ssAnual);
   const partes = [
-    { rotulo: "Líquido para ti", valor: liquido, cor: "#1D9E75" },
-    { rotulo: "IRS", valor: irsTotal, cor: "#C99A2E" },
-    { rotulo: "Segurança Social", valor: ssAnual, cor: "#7A8A99" },
+    { rotulo: "Líquido para ti", valor: liquido, cor: "var(--bar-liquido, #1D9E75)" },
+    { rotulo: "IRS", valor: irsTotal, cor: "var(--bar-irs, #C99A2E)" },
+    { rotulo: "Segurança Social", valor: ssAnual, cor: "var(--bar-ss, #7A8A99)" },
   ].filter((p) => p.valor > 0);
   const total = partes.reduce((s, p) => s + p.valor, 0) || 1;
 

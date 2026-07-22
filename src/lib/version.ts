@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.92.0";
+export const APP_VERSION = "1.93.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,18 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.93.0",
+    data: "2026-07-21",
+    titulo: "Modo escuro muito mais cuidado",
+    itens: [
+      "Corrigida uma caixa de texto quase ilegível no modo escuro (a lista de fontes oficiais, na página inicial) e outros casos do mesmo tipo espalhados pelo site — avisos, badges e caixas de contexto que ficavam com cores muito claras sobre fundos escuros.",
+      "Os gráficos do simulador de IRS, do comparador de cenários e do simulador de empresa ganharam cores mais distintas no modo escuro — duas categorias que antes pareciam quase iguais (por exemplo, IRS e Segurança Social) agora distinguem-se claramente.",
+      "O calendário de prazos e o indicador de saúde fiscal do painel ficaram mais legíveis no escuro (a cor do IVA, em particular, estava muito escura sobre fundo escuro).",
+      "Os mapas de contabilistas e de benefícios fiscais por região ganharam legendas e informação ao tocar (tooltips) adaptadas ao modo escuro — deixou de aparecer uma caixa branca sobre o mapa escuro.",
+      "Vários botões e ícones que ficavam praticamente invisíveis ao passar o rato em modo escuro (o próprio interruptor de tema, o botão «Voltar» dos simuladores, entre outros) foram corrigidos.",
+    ],
+  },
   {
     version: "1.92.0",
     data: "2026-07-21",

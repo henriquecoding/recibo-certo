@@ -91,17 +91,20 @@ function formatDate(iso: string): string {
 
 // ── Level styles ─────────────────────────────────────────────────────────
 
+// Os badges "amarelo/azul/roxo" (bg-*-50, quase branco) não são tocados pelo
+// override global (só bg-white/cream/sand/stone-* são remapeados) — sem
+// `dark:`, ficavam pastilhas quase-brancas soltas num dashboard escuro.
 const LEVEL_STYLES: Record<number, { bg: string; text: string; border: string }> = {
   1:  { bg: "bg-stone-100",     text: "text-stone-600",    border: "border-stone-200" },
   2:  { bg: "bg-stone-100",     text: "text-stone-600",    border: "border-stone-200" },
-  3:  { bg: "bg-amber-50",      text: "text-amber-700",    border: "border-amber-200" },
-  4:  { bg: "bg-amber-50",      text: "text-amber-700",    border: "border-amber-200" },
+  3:  { bg: "bg-amber-50 dark:bg-amber-900/30",   text: "text-amber-700 dark:text-amber-400",   border: "border-amber-200 dark:border-amber-800/40" },
+  4:  { bg: "bg-amber-50 dark:bg-amber-900/30",   text: "text-amber-700 dark:text-amber-400",   border: "border-amber-200 dark:border-amber-800/40" },
   5:  { bg: "bg-brand-light",   text: "text-brand-dark",   border: "border-brand/20" },
   6:  { bg: "bg-brand-light",   text: "text-brand-dark",   border: "border-brand/20" },
-  7:  { bg: "bg-blue-50",       text: "text-blue-700",     border: "border-blue-200" },
-  8:  { bg: "bg-blue-50",       text: "text-blue-700",     border: "border-blue-200" },
-  9:  { bg: "bg-purple-50",     text: "text-purple-700",   border: "border-purple-200" },
-  10: { bg: "bg-amber-50",      text: "text-amber-800",    border: "border-amber-300" },
+  7:  { bg: "bg-blue-50 dark:bg-blue-900/30",     text: "text-blue-700 dark:text-blue-400",     border: "border-blue-200 dark:border-blue-800/40" },
+  8:  { bg: "bg-blue-50 dark:bg-blue-900/30",     text: "text-blue-700 dark:text-blue-400",     border: "border-blue-200 dark:border-blue-800/40" },
+  9:  { bg: "bg-purple-50 dark:bg-purple-900/30", text: "text-purple-700 dark:text-purple-400", border: "border-purple-200 dark:border-purple-800/40" },
+  10: { bg: "bg-amber-50 dark:bg-amber-900/30",   text: "text-amber-800 dark:text-amber-300",   border: "border-amber-300 dark:border-amber-700/40" },
 };
 
 function levelStyle(nivel: number) {

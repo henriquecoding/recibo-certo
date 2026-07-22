@@ -15,10 +15,15 @@ export interface Prazo {
   data: string;
 }
 
+// As cores usam `var(--cat-x, fallback)` (definidas em globals.css) em vez de
+// hex fixo: são aplicadas via `style={{ color/background: meta.cor }}` no
+// calendário e por isso escapam ao override `.dark` (que só reescreve classes
+// Tailwind). O castanho-oliva do IVA em particular ficava ilegível sobre um
+// cartão já escurecido — a variável troca automaticamente com o tema.
 export const META_CATEGORIA: Record<CategoriaPrazo, { label: string; cor: string }> = {
-  ss: { label: "Segurança Social", cor: "#1D9E75" },
-  iva: { label: "IVA", cor: "#7A5C00" },
-  irs: { label: "IRS", cor: "#0F6E56" },
+  ss: { label: "Segurança Social", cor: "var(--cat-ss, #1D9E75)" },
+  iva: { label: "IVA", cor: "var(--cat-iva, #7A5C00)" },
+  irs: { label: "IRS", cor: "var(--cat-irs, #0F6E56)" },
 };
 
 const iso = (ano: number, mes: number, dia: number) =>

@@ -33,11 +33,16 @@ import InfoTip from "@/components/ui/InfoTip";
 const eur0 = (n: number) =>
   new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
 
-// Escala de cor verde: mais barato (claro) → mais caro (verde profundo).
+// Escala de cor verde: mais barato (claro) → mais caro (verde profundo). O
+// extremo "caro" original fica quase invisível na legenda/lista sobre um
+// cartão dark:bg-stone-900 (contraste ~1.8:1) — em dark, usa-se um verde bem
+// mais claro no mesmo extremo, para a escala continuar legível de ponta a ponta.
 const COR_BARATO: [number, number, number] = [0x34, 0xb9, 0x8c];
 const COR_CARO: [number, number, number] = [0x0b, 0x4d, 0x3b];
-function corPorNivel(t: number): string {
-  const c = COR_BARATO.map((a, i) => Math.round(a + (COR_CARO[i] - a) * t));
+const COR_CARO_DARK: [number, number, number] = [0x35, 0x9e, 0x7c];
+function corPorNivel(t: number, dark = false): string {
+  const alvo = dark ? COR_CARO_DARK : COR_CARO;
+  const c = COR_BARATO.map((a, i) => Math.round(a + (alvo[i] - a) * t));
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 
@@ -66,7 +71,7 @@ function regiaoDeFeature(f?: Feature): string | undefined {
 /** Estilo pastel da região (cor da paleta a baixa opacidade; realça a selecionada). */
 function estiloRegiao(regiaoId: string | undefined, selId: string | null): PathOptions {
   const reg = REGIOES_PRECO.find((x) => x.id === regiaoId);
-  const cor = reg ? corPorNivel(nivelPreco(reg)) : "#1D9E75";
+  const cor = reg ? corPorNivel(nivelPreco(reg), isDark()) : "#1D9E75";
   const sel = !!regiaoId && regiaoId === selId;
   return {
     color: cor,
@@ -108,6 +113,10 @@ const NOTIF_ESTILO: Record<NotifTipo, string> = {
 };
 
 export default function MapaPrecosRegioes() {
+  // Só para a legenda/lista (JSX) recalcularem `corPorNivel` no extremo
+  // escuro quando o tema muda — o mapa em si atualiza-se imperativamente.
+  const [darkMapa, setDarkMapa] = useState(false);
+  useEffect(() => setDarkMapa(isDark()), []);
   const [selecionada, setSelecionada] = useState<string | null>(null);
 
   // Pesquisa (geocodificação)
@@ -343,7 +352,7 @@ export default function MapaPrecosRegioes() {
       const PW = 118;
       const PH = 30;
       REGIOES_PRECO.forEach((r) => {
-        const cor = corPorNivel(nivelPreco(r));
+        const cor = corPorNivel(nivelPreco(r), isDark());
         // Caixa transparente (PW×PH) centrada na coordenada; pill visível centrado dentro.
         const html = `<div style="width:${PW}px;height:${PH}px;display:flex;align-items:center;justify-content:center;pointer-events:none">
           <span style="pointer-events:auto;display:inline-flex;align-items:center;height:26px;padding:0 11px;border-radius:9999px;background:${cor};color:#fff;font:700 12.5px/1 ui-sans-serif,system-ui,sans-serif;border:2px solid #fff;box-shadow:0 3px 10px rgba(10,74,57,.35);white-space:nowrap;cursor:pointer">${eur0(
@@ -396,6 +405,7 @@ export default function MapaPrecosRegioes() {
 
       observer = new MutationObserver(() => {
         tileRef.current?.setUrl(isDark() ? TILES_DARK : TILES_LIGHT);
+        setDarkMapa(isDark());
       });
       observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 
@@ -566,7 +576,7 @@ export default function MapaPrecosRegioes() {
             <span className="text-[10px] text-stone-400">menor</span>
             <span
               className="h-2 flex-1 rounded-full"
-              style={{ background: `linear-gradient(90deg, ${corPorNivel(0)}, ${corPorNivel(1)})` }}
+              style={{ background: `linear-gradient(90deg, ${corPorNivel(0, darkMapa)}, ${corPorNivel(1, darkMapa)})` }}
               aria-hidden
             />
             <span className="text-[10px] text-stone-400">maior</span>
@@ -622,7 +632,7 @@ export default function MapaPrecosRegioes() {
                 >
                   <span
                     className="h-3 w-3 flex-shrink-0 rounded-full"
-                    style={{ background: corPorNivel(nivelPreco(r)) }}
+                    style={{ background: corPorNivel(nivelPreco(r), darkMapa) }}
                     aria-hidden
                   />
                   <span className="min-w-0 flex-1">

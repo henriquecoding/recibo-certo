@@ -33,9 +33,11 @@ function ItemFAQ({ faq, isOpen, onToggle }: { faq: FaqItem; isOpen: boolean; onT
       >
         <span className={`text-sm font-semibold ${isOpen ? "text-brand-dark" : "text-stone-700"}`}>{faq.q}</span>
         <m.div
-          animate={{ rotate: isOpen ? 45 : 0, backgroundColor: isOpen ? "#1D9E75" : "#F5F5F4" }}
+          animate={{ rotate: isOpen ? 45 : 0 }}
           transition={{ duration: 0.25, ease: EASE }}
-          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full"
+          className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full transition-colors duration-300 ${
+            isOpen ? "bg-brand" : "bg-stone-100 dark:bg-stone-800"
+          }`}
         >
           <Plus size={12} className={isOpen ? "text-white" : "text-stone-500"} />
         </m.div>
