@@ -3082,19 +3082,23 @@ function PainelResumoEmpresa({
   return (
     <div className="space-y-4">
       {/* Hero card */}
-      <div className="relative overflow-hidden rounded-3xl border border-brand bg-brand p-5 text-white shadow-glow">
+      <div className="relative overflow-hidden rounded-3xl border border-brand-dark bg-brand-dark p-5 text-white shadow-glow">
         <div
           aria-hidden
           className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl"
         />
         <div className="relative">
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-white/70">
+          {/* bg-brand-dark (não bg-brand) + opacidades ≥85: sobre o verde mais
+              claro, texto branco translúcido nunca chega a 4.5:1 de contraste
+              (o máximo teórico com branco a 100% é ~3,4:1) — o fundo tem de ser
+              mais escuro para o texto ficar legível. */}
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-white/90">
             Líquido para o dono · {distribuirDividendos ? "com dividendos" : "só salário"}
           </div>
           <div className="mt-1 font-display text-3xl font-semibold leading-none tabular-nums">
             <AnimatedNumber value={resultado.liquidoGerente} />
           </div>
-          <div className="mt-0.5 text-[11px] text-white/60">
+          <div className="mt-0.5 text-[11px] text-white/85">
             ~<AnimatedNumber value={Math.round(resultado.liquidoGerente / 12)} />/mês
           </div>
           {resultado.faturacao > 0 && (
@@ -3111,7 +3115,7 @@ function PainelResumoEmpresa({
                   }}
                 />
               </div>
-              <div className="mt-1 text-[10px] text-white/50">
+              <div className="mt-1 text-[10px] text-white/85">
                 {Math.round(
                   (resultado.liquidoGerente /
                     Math.max(1, resultado.faturacao)) *

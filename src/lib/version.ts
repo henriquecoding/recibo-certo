@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.95.0";
+export const APP_VERSION = "1.96.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,17 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.96.0",
+    data: "2026-07-22",
+    titulo: "Alojamento local e hotelaria: coeficiente corrigido",
+    itens: [
+      "A categoria «Alojamento local / hotelaria» dos simuladores de recibos verdes mostrava um coeficiente (35%) diferente do que era realmente usado no cálculo (15%, o correto para restauração e hotelaria — Art. 31.º, n.º 1, al. a) CIRS). Corrigido: o valor mostrado passa a ser sempre o mesmo que entra na conta. Alojamento local em moradia/apartamento continua com o seu coeficiente próprio (35%), disponível ao escolheres a atividade específica.",
+      "O seletor de taxa de IVA no modo «recibo a recibo» dos simuladores mostrava sempre as taxas do Continente, mesmo para quem estava na Madeira ou nos Açores — corrigido para seguir a região escolhida.",
+      "Vários textos informativos dos simuladores (taxa da Segurança Social, taxa de IVA típica do alojamento local) deixaram de ter números fixos no texto e passam a vir sempre da mesma fonte fiscal usada no cálculo — nunca mais podem ficar desatualizados um em relação ao outro.",
+      "Continuámos a afinar o modo escuro: o botão «Quero o simulador completo» e os valores de líquido nos cartões de resultado (simuladores e painel do dashboard) ganharam ainda mais contraste — o texto de apoio sobre o fundo verde estava, em alguns casos, quase impossível de ler mesmo depois da correção anterior.",
+    ],
+  },
   {
     version: "1.95.0",
     data: "2026-07-22",

@@ -247,8 +247,15 @@ const TIPO_ATIVIDADE_PARAMS = {
     ret: RETENCAO.art151.value,
     label: "Profissão liberal — Art. 151.º CIRS",
   },
-  vendas: { coef: COEFICIENTE_POR_TIPO.vendas, ret: 0.0, label: "Vendas / mercadorias" },
-  hosped: { coef: COEFICIENTE_POR_TIPO.outros, ret: 0.0, label: "Alojamento local / hotelaria" },
+  vendas: { coef: COEFICIENTE_POR_TIPO.vendas, ret: RETENCAO.vendas.value, label: "Vendas / mercadorias" },
+  // "Alojamento local / hotelaria" resolve para o tipo fiscal canónico "vendas"
+  // (Art. 31.º, n.º 1, al. a) CIRS — restauração e atividades hoteleiras — 0,15),
+  // exceto quando o utilizador escolhe uma atividade específica de AL em
+  // moradia/apartamento (0,35) ou zona de contenção (0,50) via ActivityCombobox,
+  // que passam coefOverride próprio. O coeficiente aqui TEM de ser o mesmo que o
+  // motor usa por omissão (COEFICIENTE_POR_TIPO.vendas), senão o cartão mostra um
+  // valor diferente do que é realmente calculado.
+  hosped: { coef: COEFICIENTE_POR_TIPO.vendas, ret: RETENCAO.vendas.value, label: "Alojamento local / hotelaria" },
   outras: { coef: COEFICIENTE_POR_TIPO.outros, ret: RETENCAO.outros.value, label: "Outras prestações de serviços" },
   prop_int: {
     coef: COEFICIENTE_POR_TIPO.diretosAutor,
@@ -1139,12 +1146,20 @@ interface ReciboItemRV {
   taxaIva: number;
 }
 
-const IVA_OPCOES_FAT_RV = [
-  { taxa: 0, curto: "Isento", longo: "0%" },
-  { taxa: 0.06, curto: "Reduzida", longo: "6%" },
-  { taxa: 0.13, curto: "Intermédia", longo: "13%" },
-  { taxa: 0.23, curto: "Normal", longo: "23%" },
-] as const;
+/**
+ * Opções de taxa de IVA para o seletor "recibo a recibo", derivadas das taxas
+ * reais da região (`IVA_TAXAS`) — nunca fixas ao continente, para Madeira/Açores
+ * mostrarem as suas próprias taxas (Art. 18.º CIVA).
+ */
+function ivaOpcoesFatRV(regiao: Regiao) {
+  const taxas = IVA_TAXAS[regiao].value;
+  return [
+    { taxa: 0, curto: "Isento", longo: "0%" },
+    { taxa: taxas.reduzida, curto: "Reduzida", longo: `${pct(taxas.reduzida)}` },
+    { taxa: taxas.intermedia, curto: "Intermédia", longo: `${pct(taxas.intermedia)}` },
+    { taxa: taxas.normal, curto: "Normal", longo: `${pct(taxas.normal)}` },
+  ] as const;
+}
 
 function parseMontanteRV(s: string): number {
   return parseFloat(String(s).replace(",", ".").replace(/\s/g, "")) || 0;
@@ -3716,6 +3731,10 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     return { baseSemIva, iva, comValor: recibosItems.filter((r) => parseMontanteRV(r.valorComIva) > 0).length };
   }, [recibosItems]);
 
+  // Opções de taxa de IVA do seletor "recibo a recibo" — seguem a região ativa
+  // (antes fixas ao continente, o que mostrava taxas erradas na Madeira/Açores).
+  const opcoesIvaFatRV = useMemo(() => ivaOpcoesFatRV(regiao), [regiao]);
+
   // Quando o modo de faturação é "recibo a recibo" (só faz sentido em "Por
   // recibo"), o somatório das bases alimenta bruto/brutoAnual. O resto do motor
   // trata-o como base sem IVA (o IVA já foi separado por linha).
@@ -3729,13 +3748,13 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   // Handlers da lista de recibos.
   const adicionarReciboRV = useCallback(() => {
     setRecibosItems((prev) => {
-      const ultimaIva = prev[prev.length - 1]?.taxaIva ?? 0.23;
+      const ultimaIva = prev[prev.length - 1]?.taxaIva ?? IVA_TAXAS[regiao].value.normal;
       return [
         ...prev,
         { id: Date.now(), descricao: "", valorComIva: "", taxaIva: ultimaIva },
       ];
     });
-  }, []);
+  }, [regiao]);
   const removerReciboRV = useCallback((id: number) => {
     setRecibosItems((prev) => (prev.length > 1 ? prev.filter((r) => r.id !== id) : prev));
   }, []);
@@ -5084,7 +5103,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                                       aria-label={`Taxa de IVA do recibo ${i + 1}`}
                                       className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200"
                                     >
-                                      {IVA_OPCOES_FAT_RV.map((o) => (
+                                      {opcoesIvaFatRV.map((o) => (
                                         <option key={o.taxa} value={o.taxa}>
                                           {o.curto} ({o.longo})
                                         </option>
@@ -6350,7 +6369,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                       className="flex flex-col flex-1"
                     >
                       {/* Hero metric card */}
-                      <div className="relative mb-6 overflow-hidden rounded-4xl border border-brand bg-brand p-6 text-white shadow-glow">
+                      <div className="relative mb-6 overflow-hidden rounded-4xl border border-brand-dark bg-brand-dark p-6 text-white shadow-glow">
                         <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
                         <div aria-hidden className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/5 blur-xl" />
                         <div className="relative">
@@ -6359,10 +6378,10 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                               mostra a média mensal (líquido anual ÷ 12); no modo
                               "Anual" mostra o líquido anual. A retenção de 23% é
                               só um adiantamento e NÃO é a dedução do hero. */}
-                          {/* text-white/70 em vez de text-white/70: verde pálido
-                              sobre o próprio cartão verde (bg-brand) dava contraste
-                              muito baixo — quase invisível, em qualquer tema. */}
-                          <div className="text-[11px] font-semibold uppercase tracking-widest text-white/70">
+                          {/* bg-brand-dark (não bg-brand) + opacidades ≥85: sobre
+                              o verde mais claro, branco translúcido nunca chega a
+                              4.5:1 de contraste — o fundo tem de ser mais escuro. */}
+                          <div className="text-[11px] font-semibold uppercase tracking-widest text-white/90">
                             {modoInput === "recibo"
                               ? "Líquido real estimado · por mês"
                               : "Líquido real estimado · anual"}
@@ -6387,7 +6406,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                                 }}
                               />
                             </div>
-                            <div className="mt-1 text-[11px] text-white/60">
+                            <div className="mt-1 text-[11px] text-white/85">
                               {Math.round(
                                 (resultAnualRV.liquido / Math.max(1, brutoAnual)) * 100
                               )}% de{" "}
@@ -7059,11 +7078,11 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                       )}
 
                       {/* Hero metric card — Empresa */}
-                      <div className="relative mb-6 overflow-hidden rounded-4xl border border-brand bg-brand p-6 text-white shadow-glow">
+                      <div className="relative mb-6 overflow-hidden rounded-4xl border border-brand-dark bg-brand-dark p-6 text-white shadow-glow">
                         <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
                         <div aria-hidden className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/5 blur-xl" />
                         <div className="relative">
-                          <div className="text-[11px] font-semibold uppercase tracking-widest text-white/70">
+                          <div className="text-[11px] font-semibold uppercase tracking-widest text-white/90">
                             Líquido estimado · empresa (Lda)
                           </div>
                           <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-6xl">
@@ -7078,7 +7097,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                                 }}
                               />
                             </div>
-                            <div className="mt-1 text-[11px] text-white/60">
+                            <div className="mt-1 text-[11px] text-white/85">
                               {Math.round(liquidoEmpresaFinal / Math.max(1, faturacaoBaseEmpresa) * 100)}% de{" "}
                               <AnimatedNumber value={faturacaoBaseEmpresa} /> faturados/ano
                             </div>
