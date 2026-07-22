@@ -223,6 +223,13 @@ const ATIV_META: Record<
     descricao: string;
     ivaEsperado: "isento" | "reduzida" | "intermedia" | "normal";
     nota: string | null;
+    /**
+     * Nota específica de IVA, mostrada no painel de situação de IVA quando a
+     * atividade tem um enquadramento particular (ex.: direitos de autor, cujo
+     * IVA depende de ser obra própria — isenta — ou royalties/licenciamento —
+     * taxa normal). Neutra, não é um aviso de erro.
+     */
+    notaIVA?: string;
   }
 > = {
   art151: {
@@ -252,8 +259,15 @@ const ATIV_META: Record<
   prop_int: {
     descricao:
       "Direitos de autor e royalties. Coef. 0,95 · Ret. 16,5% · SS sobre 70%.",
-    ivaEsperado: "isento",
-    nota: "Podem beneficiar de 50% de exclusão (Art. 50.º-A CIRS) se obra original.",
+    // O IVA aqui NÃO tem um único valor "habitual": a obra própria é isenta e o
+    // licenciamento/royalties é à taxa normal (ver `notaIVA`). Marca-se "normal"
+    // porque é o caso tributável; a isenção é tratada no ramo próprio do painel,
+    // pelo que tanto "isento" como "normal" ficam coerentes e só as taxas
+    // reduzida/intermédia (que nunca se aplicam a direitos de autor) avisam.
+    ivaEsperado: "normal",
+    nota: "A obra própria (titular originário, residente) pode ser englobada em IRS por apenas 50% do valor, até 10 000 € excluídos (Art. 58.º EBF, em vigor até 2026).",
+    notaIVA:
+      "Direitos de autor da obra própria (livros, música, arte) são ISENTOS de IVA, sem limite de faturação (Art. 9.º, n.º 16 CIVA). Royalties e licenciamento (software, marca, patente) são tributados à taxa normal (23%). Confirma o teu caso com o contabilista.",
   },
 };
 
@@ -3613,6 +3627,7 @@ function ZonaIVA({
 }) {
   const taxasIVA = IVA_TAXAS[regiao].value;
   const ivaEsperado = ATIV_META[tipoAtiv].ivaEsperado;
+  const notaIVAAtiv = ATIV_META[tipoAtiv].notaIVA;
   const ivaIncoerente = regimeIVA !== "isento" && regimeIVA !== ivaEsperado;
 
   // Nome da atividade do utilizador: específica se escolhida, senão a categoria.
@@ -3690,9 +3705,32 @@ function ZonaIVA({
               <strong className="text-stone-700 dark:text-stone-200">
                 A tua atividade:
               </strong>{" "}
-              {nomeAtividade} — IVA habitual: {ESPERADO_LABEL[ivaEsperado]}.
+              {nomeAtividade} — IVA habitual:{" "}
+              {notaIVAAtiv ? "isento ou taxa normal, conforme o caso" : ESPERADO_LABEL[ivaEsperado]}.
             </p>
           </div>
+
+          {/* Nota específica de IVA (ex.: direitos de autor — obra própria vs
+              royalties). Neutra: explica os dois enquadramentos possíveis em vez
+              de tratar qualquer taxa legítima como "errada". */}
+          {notaIVAAtiv && (
+            <div className="flex items-start gap-1.5 rounded-lg border border-stone-200 bg-white/70 px-2.5 py-2 dark:border-stone-700 dark:bg-stone-900/40">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden
+                className="mt-0.5 flex-shrink-0 text-stone-400 dark:text-stone-500"
+              >
+                <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M8 7.2v4M8 4.8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                {notaIVAAtiv}
+              </p>
+            </div>
+          )}
 
           {/* Estado consoante o regime efetivo */}
           {regime === "isento" ? (

@@ -4370,6 +4370,10 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
       descricao: string;
       ivaEsperado: string;
       nota: string | null;
+      /** Nota específica de IVA quando o enquadramento não tem um único valor
+       *  habitual (ex.: direitos de autor — obra própria isenta vs royalties
+       *  à taxa normal). Neutra, não é um aviso de erro. */
+      notaIVA?: string;
     }
   > = {
     art151: {
@@ -4406,6 +4410,8 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
         "Royalties, licenciamento de software, obra própria (livros, música, arte). Coef. 0,95 · Ret. 16,5% · SS sobre 70%.",
       ivaEsperado: "normal",
       nota: "Direitos de autor / propriedade intelectual: coeficiente 0,95, retenção na fonte de 16,5% e Segurança Social sobre 70% do rendimento. Só para titulares da obra original — verificar enquadramento com contabilista.",
+      notaIVA:
+        "Direitos de autor da obra própria (livros, música, arte) são isentos de IVA, sem limite de faturação (Art. 9.º, n.º 16 CIVA). Royalties e licenciamento (software, marca, patente) são tributados à taxa normal (23%). Confirma o teu caso com o contabilista.",
     },
   };
 
@@ -4948,11 +4954,13 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                             <strong className="text-stone-600 dark:text-stone-200">
                               IVA típico:
                             </strong>{" "}
-                            {atividadeAtual.ivaEsperado === "normal"
-                              ? `Taxa normal (${pct(IVA_TAXAS[regiao].value.normal)}) ou isenção Art. 53.º se faturação < €15 000`
-                              : atividadeAtual.ivaEsperado === "intermedia"
-                                ? `Taxa intermédia (${pct(IVA_TAXAS[regiao].value.intermedia)}) — restauração e alojamento`
-                                : "Isento"}
+                            {atividadeAtual.notaIVA
+                              ? `Isento (obra própria) ou taxa normal (${pct(IVA_TAXAS[regiao].value.normal)}) — ver nota`
+                              : atividadeAtual.ivaEsperado === "normal"
+                                ? `Taxa normal (${pct(IVA_TAXAS[regiao].value.normal)}) ou isenção Art. 53.º se faturação < €15 000`
+                                : atividadeAtual.ivaEsperado === "intermedia"
+                                  ? `Taxa intermédia (${pct(IVA_TAXAS[regiao].value.intermedia)}) — restauração e alojamento`
+                                  : "Isento"}
                           </span>
                         </div>
                         {!atividadeIVACoerente && (
@@ -4967,6 +4975,15 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                                 )}
                             ) pode não ser o habitual para esta atividade.
                             Verifica com o teu contabilista.
+                          </div>
+                        )}
+                        {atividadeAtual.notaIVA && (
+                          <div className="mt-1 flex items-start gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-xs leading-relaxed text-stone-500 dark:border-stone-700 dark:bg-stone-800/60 dark:text-stone-400">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden className="mt-0.5 flex-shrink-0 text-stone-400 dark:text-stone-500">
+                              <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+                              <path d="M8 7.2v4M8 4.8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                            </svg>
+                            <span>{atividadeAtual.notaIVA}</span>
                           </div>
                         )}
                         {atividadeAtual.nota && (

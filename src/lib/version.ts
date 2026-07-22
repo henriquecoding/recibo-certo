@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.96.0";
+export const APP_VERSION = "1.97.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.97.0",
+    data: "2026-07-22",
+    titulo: "Direitos de autor: IVA deixa de dar aviso indevido",
+    itens: [
+      "Nos simuladores de recibos verdes, ao escolher «Direitos de autor / Royalties», qualquer taxa de IVA que selecionasses aparecia com um aviso de «não é a habitual» — mesmo a correta. Corrigido: esta atividade tem dois enquadramentos legítimos e o simulador passa a reconhecer ambos — obra própria (livros, música, arte) é isenta de IVA sem limite de faturação (Art. 9.º, n.º 16 CIVA); royalties e licenciamento (software, marca, patente) são à taxa normal (23%). Só as taxas reduzida e intermédia, que nunca se aplicam a direitos de autor, é que avisam agora.",
+      "Adicionámos uma nota clara nos dois simuladores a explicar estes dois casos, para saberes qual é o teu.",
+      "Corrigimos ainda uma referência legal: o benefício de excluir 50% dos rendimentos da obra própria em IRS é do Art. 58.º do EBF (até 10 000 €, em vigor até 2026), e não do artigo que estava citado.",
+    ],
+  },
   {
     version: "1.96.0",
     data: "2026-07-22",
