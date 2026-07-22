@@ -127,14 +127,27 @@ export default async function OpengraphImage() {
             style={{
               display: "flex",
               fontFamily: display,
-              fontSize: "86px",
+              fontSize: "82px",
               fontWeight: 700,
-              lineHeight: 1.02,
+              lineHeight: 1.04,
               letterSpacing: "-2px",
+              color: "#1A1A17",
             }}
           >
-            <span style={{ color: "#1A1A17" }}>Sabe quanto é&nbsp;</span>
-            <span style={{ color: "#0F6E56" }}>teu.</span>
+            Faz as contas
+          </div>
+          <div
+            style={{
+              display: "flex",
+              fontFamily: display,
+              fontSize: "82px",
+              fontWeight: 700,
+              lineHeight: 1.04,
+              letterSpacing: "-2px",
+              color: "#0F6E56",
+            }}
+          >
+            antes do Fisco.
           </div>
           <div
             style={{
