@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Building, Calculator, Check, Heart, Receipt, ShieldCheck, Warning, Wallet } from "@/components/ui/Icons";
-import { Donut, SegBar, SegLegend, type Seg } from "@/components/dependente/ui";
+import { SegBar, SegLegend, type Seg } from "@/components/dependente/ui";
 import { fmt, pct } from "@/lib/format";
 import { SS_DEPENDENTE, SUBSIDIO_REFEICAO, DEDUCAO_DEPENDENTE_DEFICIENCIA } from "@/lib/fiscal-data";
 import type { ReciboMensalResult, VencimentoAnualResult } from "@/lib/fiscal-dependente";
@@ -217,12 +217,16 @@ export function ResultadoMotorRecibo({ result, lines, annual, employerCost, hasM
                 <Wallet size={11} /> Bruto necessário: {fmt(targetGross)}
               </p>
             )}
-            {/* Donut centrado — assinatura visual da marca, sem risco de sobreposição na coluna estreita */}
-            <div className="mt-5 flex justify-center">
-              <Donut segs={distribution} centro={pct(ratio)} centroSub="fica contigo" />
+            {/* Repartição: a percentagem que fica contigo passa a rotular a
+                própria barra segmentada — sem gráfico circular. */}
+            <div className="mt-6">
+              <div className="mb-2.5 flex items-baseline gap-2">
+                <span className="font-display text-2xl font-semibold leading-none tabular-nums text-brand-dark dark:text-brand-light">{pct(ratio)}</span>
+                <span className="text-xs font-medium text-stone-500 dark:text-stone-400">fica contigo</span>
+              </div>
+              <SegBar segs={distribution} />
+              <div className="mt-3.5"><SegLegend segs={distribution} format={fmt} /></div>
             </div>
-            <div className="mt-5"><SegBar segs={distribution} /></div>
-            <div className="mt-3.5"><SegLegend segs={distribution} format={fmt} /></div>
           </div>
         </div>
 
