@@ -147,7 +147,7 @@ export default async function OpengraphImage() {
               color: "#0F6E56",
             }}
           >
-            Todas as respostas.
+            Zero contas.
           </div>
           <div
             style={{
