@@ -134,7 +134,7 @@ export default async function OpengraphImage() {
               color: "#1A1A17",
             }}
           >
-            Faz as contas
+            Poucos dados.
           </div>
           <div
             style={{
@@ -147,7 +147,7 @@ export default async function OpengraphImage() {
               color: "#0F6E56",
             }}
           >
-            antes do Fisco.
+            Todas as respostas.
           </div>
           <div
             style={{

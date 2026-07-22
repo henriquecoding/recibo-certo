@@ -30,7 +30,7 @@ export const CHANGELOG: EntradaChangelog[] = [
     titulo: "Pré-visualização dos links com a marca real",
     itens: [
       "Quando partilhas uma ligação do ReciboCerto (WhatsApp, redes sociais, mensagens), a pré-visualização passou a mostrar o logótipo real do site num cartão limpo e profissional — deixou de aparecer aquele símbolo genérico.",
-      "O cartão de partilha usa agora a tipografia e as cores da casa, com a mensagem «Faz as contas antes do Fisco» e o essencial: IRS, recibos verdes, salário e empresa, com taxas de 2026.",
+      "O cartão de partilha usa agora a tipografia e as cores da casa, com a mensagem «Poucos dados. Todas as respostas.» e o essencial: IRS, recibos verdes, salário e empresa, com taxas de 2026.",
     ],
   },
   {
