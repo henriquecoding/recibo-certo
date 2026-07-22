@@ -1,14 +1,14 @@
 import PaginaFerramenta from "@/components/dashboard/PaginaFerramenta";
-import { SimuladorVencimento } from "@/components/dependente/SimuladorVencimento";
+import { MotorReciboVencimento } from "@/components/dependente/MotorReciboVencimento";
 
 export default function Page() {
   return (
     <PaginaFerramenta
       eyebrow="Simuladores"
       titulo="Recibo de vencimento"
-      descricao="Por conta de outrem? Do salário bruto ao líquido — IRS retido, Segurança Social e subsídio de refeição, com as tabelas oficiais de 2026."
+      descricao="Constrói o recibo rubrica a rubrica e confirma IRS, Segurança Social, líquido e custo da empresa com as regras de 2026."
     >
-      <SimuladorVencimento />
+      <MotorReciboVencimento />
     </PaginaFerramenta>
   );
 }

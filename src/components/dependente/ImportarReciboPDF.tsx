@@ -15,13 +15,14 @@ import { useSubscricao } from "@/lib/stripe/subscription";
 import { extrairReciboPDF, type ReciboExtraido } from "@/lib/recibo-pdf";
 import { FileSign, Lock, Sparkle, Check, Spinner, Warning, ShieldCheck } from "@/components/ui/Icons";
 import { cx } from "@/components/dependente/ui";
+import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
 
 const MESES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
-const soDecimal = (s: string) => s.replace(/[^\d.,]/g, "");
-const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
+const soDecimal = (s: string) => sanitizeNumericDraft(s);
+const num = (s: string) => Math.max(0, parseNumericDraft(s) ?? 0);
 
 type Estado = "idle" | "a-ler" | "lido" | "erro" | "aplicado";
 
@@ -280,7 +281,7 @@ export function ImportarReciboPDF({ onAplicar }: { onAplicar: (e: ReciboExtraido
               </div>
               <div className="col-span-2 sm:col-span-1">
                 <label className={lbl}>NIF da empresa</label>
-                <input value={empresaNif} onChange={(e) => setEmpresaNif(e.target.value)} className={campo} />
+                <input inputMode="numeric" value={empresaNif} onChange={(e) => setEmpresaNif(e.target.value.replace(/\D/g, "").slice(0, 9))} className={campo} />
               </div>
               <div className="col-span-2 sm:col-span-1">
                 <label className={lbl}>Função / categoria</label>

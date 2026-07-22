@@ -20,7 +20,11 @@ export interface RelatorioVencimento {
   subsidioForma: string; // "Cartão" | "Dinheiro" | "—"
   diasUteis: number;
   duodecimos: boolean;
-  // ── Mês normal ──
+  regiao?: string;
+  // ── Mês simulado ──
+  /** Remuneração base, antes das restantes rubricas. Por omissão coincide com `bruto`. */
+  salarioBase?: number;
+  /** Total de remunerações/abonos e deduções que formam a caixa do mês. */
   bruto: number;
   ssTrabalhador: number;
   irsRetido: number;
@@ -50,6 +54,19 @@ export interface RelatorioVencimento {
   ssAnual: number;
   liquidoAnual: number;
   liquidoMedioMes: number;
+  /** Decomposição opcional do novo builder; ausente nos relatórios legados. */
+  linhas?: readonly RelatorioVencimentoLinha[];
+}
+
+export interface RelatorioVencimentoLinha {
+  rubrica: string;
+  detalhe?: string;
+  valor: number;
+  baseIRS: number;
+  baseSS: number;
+  irs: number;
+  ss: number;
+  liquido: number;
 }
 
 export function printRelatorioVencimento(d: RelatorioVencimento): void {
@@ -62,7 +79,7 @@ export function printRelatorioVencimento(d: RelatorioVencimento): void {
 
 /** Constrói o HTML do relatório (puro — testável sem `window`). */
 export function relatorioVencimentoHTML(d: RelatorioVencimento): string {
-  const fica = Math.max(0, d.bruto - d.ssTrabalhador - d.irsRetido);
+  const fica = Math.max(0, d.liquido);
   const base = d.bruto || 1;
   const wFica = (fica / base) * 100;
   const wIrs = (d.irsRetido / base) * 100;
@@ -71,6 +88,8 @@ export function relatorioVencimentoHTML(d: RelatorioVencimento): string {
 
   const dataGeracao = new Date().toLocaleDateString("pt-PT", { day: "numeric", month: "long", year: "numeric" });
   const temSubsidio = d.subsidioRefeicaoTotal > 0;
+  const salarioBase = d.salarioBase ?? d.bruto;
+  const regiao = d.regiao || "Continente";
 
   // Linha de tabela com rubrica · explicação · valor.
   const lin = (rubrica: string, explica: string, valor: string, forte = false) =>
@@ -118,6 +137,11 @@ export function relatorioVencimentoHTML(d: RelatorioVencimento): string {
     td.rub { font-weight: 600; width: 32%; }
     td.exp { color: #777; font-size: 11px; }
     td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; width: 18%; }
+    th { padding: 7px 6px; border-bottom: 1px solid #ddd; color: #777; font-size: 9px; text-align: right; text-transform: uppercase; letter-spacing: .03em; }
+    th:first-child { text-align: left; }
+    .detail td { padding: 7px 6px; font-size: 10px; }
+    .detail td:first-child { font-weight: 600; }
+    .detail small { display: block; margin-top: 2px; color: #888; font-size: 8px; font-weight: 400; }
     tr.b td { font-weight: 800; color: #0F6E56; border-top: 2px solid #1D9E75; border-bottom: none; background: #f4fbf8; }
     .explica { margin-top: 18px; padding: 14px 16px; background: #faf9f6; border: 1px solid #ececE6; border-radius: 12px; font-size: 11px; color: #555; }
     .explica h3 { margin: 0 0 6px; font-size: 11px; color: #1A1A17; }
@@ -135,7 +159,7 @@ export function relatorioVencimentoHTML(d: RelatorioVencimento): string {
     <div>
       <div class="lbl">Vencimento líquido mensal estimado</div>
       <div class="big">${eur(d.liquidoMostrado)}</div>
-      <div class="note">${d.duodecimos ? "Média mensal com subsídios de férias e Natal em duodécimos." : "Mês normal, sem os subsídios de férias e de Natal."}</div>
+      <div class="note">${d.duodecimos ? "Mês com parcelas de férias e Natal pagas em duodécimos." : "Mês conforme as rubricas selecionadas."}</div>
     </div>
     <div class="chips">
       ${chip("Taxa efetiva", pctf(d.taxaEfetiva))}
@@ -146,7 +170,7 @@ export function relatorioVencimentoHTML(d: RelatorioVencimento): string {
 
   <h2>Pressupostos da simulação</h2>
   <div class="press">
-    ${press("Salário bruto mensal", eur(d.bruto))}
+    ${press("Salário-base mensal", eur(salarioBase))}
     ${press("Situação familiar", esc(d.situacao))}
     ${press("Dependentes", String(d.dependentes))}${d.dependentesDeficientes ? `
     ${press("Dependentes com deficiência", String(d.dependentesDeficientes))}` : ""}
@@ -154,7 +178,7 @@ export function relatorioVencimentoHTML(d: RelatorioVencimento): string {
     ${press("Subsídio de refeição", temSubsidio ? `${eur(d.subsidioDia)}/dia · ${esc(d.subsidioForma)}` : "Não aplicável")}
     ${press("Dias úteis considerados", temSubsidio ? String(d.diasUteis) : "—")}
     ${press("Subsídios de férias/Natal", d.duodecimos ? "Em duodécimos" : "Por inteiro")}
-    ${press("Região", "Continente")}
+    ${press("Região", esc(regiao))}
     ${press("IRS Jovem", d.irsJovemAtivo ? `${pctf(d.irsJovemPct ?? 0)} · ${d.irsJovemAno ?? 1}.º ano` : "Não aplicável")}
   </div>
 
@@ -170,9 +194,12 @@ export function relatorioVencimentoHTML(d: RelatorioVencimento): string {
     <span><i class="dot" style="background:#0A4A39"></i> Segurança Social · ${eur(d.ssTrabalhador)}</span>
   </div>
 
-  <h2>Mês normal — decomposição</h2>
-  <table><tbody>
-    ${lin("Salário bruto", "Remuneração base mensal", eur(d.bruto))}
+  <h2>Mês simulado — decomposição</h2>
+  ${d.linhas?.length ? `<table class="detail"><thead><tr><th>Rubrica</th><th>Valor</th><th>Base IRS</th><th>Base SS</th><th>IRS</th><th>SS</th><th>Líquido</th></tr></thead><tbody>
+    ${d.linhas.map((linha) => `<tr><td>${esc(linha.rubrica)}${linha.detalhe ? `<small>${esc(linha.detalhe)}</small>` : ""}</td><td class="n">${eur(linha.valor)}</td><td class="n">${eur(linha.baseIRS)}</td><td class="n">${eur(linha.baseSS)}</td><td class="n">${linha.irs ? `− ${eur(linha.irs)}` : "—"}</td><td class="n">${linha.ss ? `− ${eur(linha.ss)}` : "—"}</td><td class="n">${eur(linha.liquido)}</td></tr>`).join("")}
+    ${`<tr class="b"><td>Total</td><td class="n">${eur(d.bruto)}</td><td></td><td></td><td class="n">− ${eur(d.irsRetido)}</td><td class="n">− ${eur(d.ssTrabalhador)}</td><td class="n">${eur(d.liquido)}</td></tr>`}
+  </tbody></table>` : `<table><tbody>
+    ${lin("Salário bruto", "Remuneração base mensal", eur(salarioBase))}
     ${lin("Segurança Social", `Contribuição do trabalhador (${pctf(d.ssTaxaTrab)} do bruto)`, "− " + eur(d.ssTrabalhador))}
     ${lin("Retenção na fonte de IRS", "Adiantamento mensal segundo a tabela da situação familiar (Despacho 233-A/2026)", "− " + eur(d.irsRetido))}
     ${
@@ -196,7 +223,7 @@ export function relatorioVencimentoHTML(d: RelatorioVencimento): string {
     ${lin("Vencimento líquido", "O que recebes na conta num mês normal", eur(d.liquido), true)}
     ${lin("Taxa efetiva", "IRS + Segurança Social a dividir pelo bruto", pctf(d.taxaEfetiva))}
     ${lin("Custo total para a empresa", `Bruto + Taxa Social Única da entidade (${pctf(d.tsuTaxa)})`, eur(d.custoEmpresa))}
-  </tbody></table>
+  </tbody></table>`}
 
   <h2>Ao ano — 14 meses</h2>
   <table><tbody>
@@ -219,8 +246,8 @@ export function relatorioVencimentoHTML(d: RelatorioVencimento): string {
   </div>
 
   <div class="foot">
-    <b>Fonte:</b> tabelas de retenção na fonte do Despacho n.º 233-A/2026 (Tabelas I a VII, Continente), conforme a situação familiar e a deficiência.
-    Estimativa para ano completo de trabalho; não cobre as Regiões Autónomas (Açores/Madeira).
+    <b>Fonte:</b> tabelas de retenção na fonte de 2026 aplicáveis a ${esc(regiao)}, conforme a situação familiar e a deficiência; CIRS, Código Contributivo e Código do Trabalho nas rubricas identificadas.
+    Estimativa para um ano completo de trabalho; rubricas mensais não são repetidas no ano sem periodicidade confirmada.
     Não substitui o recibo de vencimento oficial nem aconselhamento de um contabilista certificado.
     Gerado por ReciboCerto · recibocerto.pt
   </div>

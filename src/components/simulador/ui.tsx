@@ -5,6 +5,7 @@ import InfoTip from "@/components/ui/InfoTip";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import { Check, Warning, ArrowRight, ChevronDown, Info } from "@/components/ui/Icons";
 import type { NivelValidacao } from "@/lib/irs-guiado";
+import { sanitizeNumericDraft } from "@/lib/numeric-input";
 
 // Classes partilhadas (coerentes com o resto do painel).
 export const campoCls =
@@ -75,12 +76,10 @@ export function Campo({
         )}
         <input
           id={id}
-          type="number"
+          type="text"
           inputMode="decimal"
-          min={0}
-          step={step}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => onChange(sanitizeNumericDraft(e.target.value))}
           placeholder={placeholder}
           className={`${campoCls} tabular-nums ${moeda ? "pl-8" : ""}`}
         />

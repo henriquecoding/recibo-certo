@@ -41,7 +41,7 @@ function simularSoSalario(salGerenteMensal: number) {
   );
 }
 
-// ── Líquido do gerente deve descontar IRS, não só SS — P0-05 da auditoria 2026 ──
+// ── A superfície guiada reexporta o mesmo motor canónico da versão completa ──
 describe("simularEmpresaGuiado — líquido do gerente desconta IRS do salário", () => {
   it("o líquido é estritamente menor que o salário após SS (o bug anterior tornava-os iguais)", () => {
     const r = simularSoSalario(3_000);

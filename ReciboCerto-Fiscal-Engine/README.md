@@ -4,7 +4,7 @@ Fundação executável para o próximo motor fiscal do ReciboCerto, centrado no 
 
 ## Estado
 
-**Draft técnico, não apto para produção.** O dataset de 2026 (`src/datasets/2026.ts`) está deliberadamente marcado como `draft`. Em modo normal, o motor recusa produzir decisões `ok` com um dataset não aprovado — o teste `tests/core.test.ts` prova isto. Os domínios fiscais estão registados com os respetivos dados mínimos (ver `src/domains/coverage.ts`), mas as fórmulas existentes no motor legado (`src/lib/fiscal.ts`, `src/lib/fiscal-data.ts`) ainda não foram migradas nem validadas por profissional habilitado.
+**Draft técnico, não apto para substituir integralmente o motor em produção.** O dataset de 2026 (`src/datasets/2026.ts`) está deliberadamente marcado como `draft`. Em modo normal, o motor recusa produzir decisões `ok` com um dataset não aprovado — o teste `tests/core.test.ts` prova isto. O domínio de payroll já é um `functional_draft`; os restantes domínios continuam `contract_only`. A aplicação usa uma camada de compatibilidade revista em `src/lib/payroll-simulator-legacy-adapter.ts`, e não ativa silenciosamente o dataset draft.
 
 Isto é intencional: `0 €` nunca significa "não foi possível determinar". Os resultados possíveis são:
 
@@ -51,7 +51,8 @@ npx vitest run ReciboCerto-Fiscal-Engine/tests
 - `src/core/dataset.ts` — o manifesto de dataset (estado de aprovação, período efetivo, revisores).
 - `src/core/engine.ts` — o executor: recusa `ok` com dataset não aprovado (exceto `allowUnapprovedDataset`, só para dev/testes), falta de campos obrigatórios devolve `needs_input`.
 - `src/legal/source.ts` + `src/legal/validate.ts` — modelo de fonte legal com validação semântica (título esperado, expressões proibidas como "versão até 2013", estado `active`/`superseded`/`pending`/`conflict`/`withdrawn`) — não só o `HTTP 200` que o monitor atual usa.
-- `src/domains/coverage.ts` — a matriz de cobertura dos 10 domínios mínimos, como dados (não prosa), com o mesmo estado `contract_only` para todos, refletindo que nenhuma regra foi migrada ainda.
+- `src/domains/coverage.ts` — a matriz dos 10 domínios mínimos, como dados (não prosa): payroll está em `functional_draft`; os outros nove permanecem `contract_only`.
+- `src/domains/payroll/` — contratos e cálculo mensal por rubrica, com bases de IRS/SS, custo patronal, penhora, inverso e estados seguros para factos insuficientes.
 - `src/datasets/2026.ts` — manifesto do dataset 2026, `status: "draft"`, com um punhado de parâmetros reais (mínimo de existência, limite de isenção de IVA) referenciados a partir do motor legado para provar o padrão ponta-a-ponta — não é uma réplica de `fiscal-data.ts`.
 
 ## Próximos passos obrigatórios
@@ -63,7 +64,7 @@ npx vitest run ReciboCerto-Fiscal-Engine/tests
 5. Obter revisão fiscal independente do dataset.
 6. Só alterar `status` para `approved` depois de todos os gates documentados.
 
-## Estado dos P0 do relatório de auditoria (nesta sessão)
+## Estado dos P0 após a remediação
 
 Corrigidos no motor legado (`src/lib/`), com testes de reprodução:
 
@@ -75,11 +76,21 @@ Corrigidos no motor legado (`src/lib/`), com testes de reprodução:
 - P1-06 — Removida a afirmação "todos os custos são dedutíveis".
 - P0-09 — Avisos reforçados no RFAI/SIFIDE ("poupança potencial", elegibilidade não verificada).
 - P0-04 — Avisos reforçados no IRS Jovem (condições de idade, dependência e regularidade fiscal não verificadas).
+- P0-01 — Mínimo de existência: a aproximação foi substituída pela decisão por troços do Art. 70.º, incluindo coeficientes 2,60/1,35, limite do primeiro escalão, despesas gerais e condições factuais; dados necessários em falta produzem estado explícito, não uma falsa precisão.
+- P0-10 — O cálculo empresarial comum, a tributação autónoma, os benefícios condicionais e o payroll do gerente foram extraídos para `src/lib/fiscal-empresa.ts`; as superfícies completa e guiada consomem agora a mesma implementação e têm testes de paridade.
 
-Não corrigidos nesta sessão (âmbito explicitamente fora, ver `MIGRATION.md`):
+Os benefícios RFAI/SIFIDE são apresentados como potencial e **não reduzem o IRC** sem confirmação profissional de elegibilidade. A migração total M1–M6 e a aprovação fiscal independente continuam pendentes; corrigir os P0 no motor em uso não equivale a aprovar o dataset novo.
 
-- P0-01 — Mínimo de existência: mantém-se a aproximação (limite sobre o rendimento após imposto), não a fórmula exata do Art. 70.º (coeficientes de redução progressiva 2,60/1,35). Os coeficientes exatos não puderam ser verificados com confiança suficiente numa única sessão sem revisão fiscal profissional — implementar mal esta fórmula seria pior do que a aproximação atual. Adicionado um aviso explícito no motor e na UI.
-- P0-10 — Duplicação arquitetural (TA e cálculo de empresa em `fiscal.ts`, `SimuladorIntegrado.tsx` e `ModoGuiadoEmpresa.tsx`): identificada e documentada, não resolvida — resolver isto em segurança exige a migração de fatia vertical descrita em `MIGRATION.md`, com testes cross-surface, não uma refatoração isolada.
-- Todos os P1 restantes e a migração completa (M1–M6 em `MIGRATION.md`): fora do âmbito de uma sessão — exigem revisão fiscal e jurídica assinada antes de "produção", como este próprio relatório exige.
+## Robustez dos inputs dos simuladores
+
+Os campos monetários e decimais dos simuladores usam a política comum de `src/lib/numeric-input.ts` e, nos componentes controlados reutilizáveis, `src/components/ui/LocalizedNumberInput.tsx`. A política:
+
+- aceita vírgula decimal portuguesa e colagem de valores formatados;
+- remove símbolos de moeda e separadores de milhares sem alterar o valor;
+- elimina zeros indevidos à esquerda (`0442` passa imediatamente a `442`);
+- preserva estados de edição legítimos como `0,` até o utilizador concluir o decimal;
+- impede `NaN`, infinito, mais casas decimais do que o contrato e valores fora dos limites.
+
+Os testes de regressão cobrem estes casos. Campos de identificação, como NIF, permanecem texto de dígitos e não são tratados como montantes.
 
 Ver também `../RELATORIO_AUDITORIA_RECIBO_CERTO_2026.md`, `ARCHITECTURE.md`, `COVERAGE.md` e `MIGRATION.md` (mantidos como o utilizador os forneceu).

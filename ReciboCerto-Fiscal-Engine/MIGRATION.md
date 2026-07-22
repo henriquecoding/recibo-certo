@@ -24,7 +24,7 @@ Cada fatia começa num teste que reproduz o comportamento atual, acrescenta o co
 
 Corrigir com testes: mínimo de existência, adicional de solidariedade, âmbito IFICI, elegibilidade IRS Jovem, líquido do gerente, TA elétrica e ligações legais. Desativar benefícios automáticos sem elegibilidade.
 
-**Nota desta sessão:** M0 foi parcialmente executado diretamente no legado (ver `README.md`, secção "Estado dos P0"), com testes de reprodução para cada correção numérica. O mínimo de existência ficou por corrigir na fórmula exata — manteve-se a aproximação existente com um aviso explícito, por não ser possível verificar os coeficientes legais (2,60/1,35 do Art. 70.º) com confiança suficiente sem revisão fiscal profissional numa única sessão.
+**Estado:** concluído no motor em uso, com testes de reprodução. O mínimo de existência usa agora a decisão por troços do Art. 70.º; benefícios não confirmados não reduzem o imposto; a lógica empresarial comum foi extraída dos componentes React. Isto não aprova o dataset do núcleo novo.
 
 ### M1 — Recibo, IVA e SS
 
@@ -33,6 +33,8 @@ Primeira integração end-to-end: formulário → pedido normalizado → decisã
 ### M2 — Payroll
 
 Migrar retenção mensal e remunerações. O simulador de empresa passa a consumir o resultado payroll do gerente, eliminando a omissão do IRS.
+
+**Estado transitório:** o domínio dedicado de payroll está implementado como `functional_draft`, e o simulador reformulado usa `src/lib/payroll-simulator-legacy-adapter.ts` sobre as tabelas aprovadas atualmente pela aplicação. O simulador de empresa consome o mesmo cálculo salarial do gerente. Férias e Natal fracionados retêm proporcionalmente o imposto calculado sobre o direito total, nos termos do Art. 99.º-C, e não são somados ao salário para escolher uma taxa.
 
 ### M3 — IRS anual
 
@@ -49,6 +51,8 @@ Benefícios exigem dossiê de elegibilidade. Sucessões mantêm uma fronteira co
 ### M6 — Integração controlada
 
 Execução paralela silenciosa do motor antigo e novo; comparação por cenário e telemetria sem dados pessoais; revisão das diferenças; ativação por feature flag e domínio; rollback imediato por dataset/versão.
+
+As etapas M1 e M3–M6 permanecem pendentes. O estado transitório de M2 não autoriza ativar o dataset draft nem eliminar o adaptador antes dos testes cruzados e da aprovação independente.
 
 ## Compatibilidade
 

@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "2.1.0";
+export const APP_VERSION = "2.2.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,19 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "2.2.0",
+    data: "2026-07-22",
+    titulo: "Recibos de vencimento reconstruídos e simuladores mais seguros",
+    itens: [
+      "O simulador de recibos de vencimento foi reconstruído: agora podes compor o mês por rubricas, ver o impacto de cada linha no IRS, na Segurança Social e no líquido, calcular do bruto para o líquido ou partir do valor que pretendes receber.",
+      "Horas extra, prémios, faltas, subsídios, ajudas de custo e duodécimos ganharam tratamento próprio e memória de cálculo. Nos duodécimos, a retenção passa a repartir corretamente o imposto calculado sobre o subsídio completo.",
+      "O resultado detalhado, a auditoria e a exportação passaram a usar a mesma decomposição do recibo, incluindo a região escolhida e as rubricas adicionais.",
+      "Os simuladores de empresa guiado e completo passaram a consumir o mesmo motor, evitando que duas fórmulas para o mesmo cenário produzam resultados diferentes.",
+      "Os campos numéricos dos simuladores foram uniformizados: zeros à esquerda como «0442», vírgulas e pontos, valores colados e campos vazios deixaram de criar estados visuais diferentes do número realmente calculado.",
+      "Casos fiscais que dependem de informação adicional deixam de assumir uma resposta silenciosamente; o simulador pede os dados necessários ou apresenta o resultado como potencial até existir validação suficiente.",
+    ],
+  },
   {
     version: "2.1.0",
     data: "2026-07-22",

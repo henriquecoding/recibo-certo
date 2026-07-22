@@ -702,12 +702,24 @@ export const MINIMO_EXISTENCIA = sv(
   "Art. 70.º CIRS — mínimo de existência 2026 (RMMG 920 € × 14)",
   "art70cirs",
   TODAY,
-  "SIMPLIFICAÇÃO: este simulador aplica um limite (o rendimento coletável após " +
-    "imposto nunca desce abaixo deste valor), e não a fórmula legal exata do " +
-    "Art. 70.º (abatimento com coeficientes de redução progressiva 2,60/1,35 " +
-    "sobre o rendimento bruto, com um patamar L calculado a partir do limite do " +
-    "1.º escalão). Perto do limiar, confirma o valor exato com um contabilista."
+  "Valor de referência. O abatimento é calculado pela fórmula por troços do artigo 70.º."
 );
+
+/**
+ * Parâmetros estruturais do abatimento por mínimo de existência.
+ *
+ * O patamar L é `VR − limiteDespesasGerais/(taxa1×3,60) + limiteEscalao1/3,60`.
+ * Os valores 2,60, 1,35 e 3,60 resultam diretamente dos n.os 2 e 3 do
+ * artigo 70.º do CIRS; 2,2 é o multiplicador da exclusão do n.º 4, al. a).
+ */
+export const MINIMO_EXISTENCIA_FORMULA = {
+  coeficienteTrocoIntermedio: sv(2.6, "Art. 70.º, n.º 2, al. b) CIRS", "art70cirs", TODAY),
+  coeficienteTrocoSuperior: sv(1.35, "Art. 70.º, n.º 2, al. c) CIRS", "art70cirs", TODAY),
+  divisorPatamarL: sv(3.6, "Art. 70.º, n.º 3 CIRS", "art70cirs", TODAY),
+  limiteDespesasGeraisPorTitular: sv(250, "Art. 70.º, n.º 5, al. c) e Art. 78.º-B, n.º 1 CIRS", "art70cirs", TODAY),
+  multiplicadorExclusaoRendimentoAgregado: sv(2.2, "Art. 70.º, n.º 4, al. a) CIRS", "art70cirs", TODAY),
+  multiplicadorIASExclusao: sv(14, "Art. 70.º, n.º 4 CIRS", "art70cirs", TODAY),
+} as const;
 
 /**
  * Adicional de solidariedade (Art. 68.º-A CIRS): acresce às taxas gerais do
@@ -2085,12 +2097,12 @@ export const HORARIO_SEMANAL_COMPLETO = sv(
  * (Art. 268.º CT, redação da Lei 13/2023 «Agenda do Trabalho Digno»).
  * Até 100h/ano: 25% (1.ª hora, dia útil), 37,5% (horas seguintes, dia útil),
  * 50% (dia de descanso/feriado). Acima de 100h/ano os acréscimos sobem para
- * 50% / 75% / 100%. Modelamos os 4 acréscimos mais comuns — o trabalhador
- * escolhe o que consta no recibo (o de 75% corresponde a dia útil >100h).
+ * 50% / 75% / 100%. Os seis segmentos permanecem separados para não aplicar
+ * 50% onde é devido 75% depois do limiar anual.
  */
 export const TRABALHO_SUPLEMENTAR = {
   acrescimos: sv(
-    [0.25, 0.375, 0.5, 1.0] as number[],
+    [0.25, 0.375, 0.5, 0.5, 0.75, 1.0] as number[],
     "Art. 268.º CT — acréscimos do trabalho suplementar (Lei 7/2009, alt. Lei 13/2023)",
     "ct268",
     DEP_TODAY,
@@ -2601,6 +2613,15 @@ export function assertFiscalDataIntegrity(): void {
   }
   if (!isRate(REGIME_15PCT.value)) erros.push("Limiar dos 15% inválido.");
   if (!(MINIMO_EXISTENCIA.value > 0)) erros.push("Mínimo de existência não positivo.");
+  if (!(MINIMO_EXISTENCIA_FORMULA.coeficienteTrocoIntermedio.value > 0)) {
+    erros.push("Coeficiente intermédio do mínimo de existência inválido.");
+  }
+  if (!(MINIMO_EXISTENCIA_FORMULA.coeficienteTrocoSuperior.value > 0)) {
+    erros.push("Coeficiente superior do mínimo de existência inválido.");
+  }
+  if (!(MINIMO_EXISTENCIA_FORMULA.divisorPatamarL.value > 0)) {
+    erros.push("Divisor do patamar L do mínimo de existência inválido.");
+  }
 
   // IRC e dividendos.
   [IRC_TAXA_GERAL, IRC_TAXA_PME, DERRAMA_MAX, DIVIDENDOS_TAXA].forEach((p) => {
@@ -2920,6 +2941,7 @@ export function assertFiscalDataIntegrity(): void {
     DEDUCAO_ESPECIFICA_CATB,
     REGIME_15PCT,
     MINIMO_EXISTENCIA,
+    ...Object.values(MINIMO_EXISTENCIA_FORMULA),
     ADICIONAL_SOLIDARIEDADE.limiar1,
     ADICIONAL_SOLIDARIEDADE.limiar2,
     ADICIONAL_SOLIDARIEDADE.taxa1,

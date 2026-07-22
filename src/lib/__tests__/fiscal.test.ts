@@ -7,12 +7,94 @@ import {
   SS_COEFICIENTE,
   DISPENSA_RETENCAO_LIMITE,
 } from "@/lib/fiscal-data";
-import { simularDeclaracaoIRS, simularIRSAnual, calcularTributacaoAutonoma } from "@/lib/fiscal";
+import {
+  calcularAbatimentoMinimoExistencia,
+  calcularTributacaoAutonoma,
+  simularDeclaracaoIRS,
+  simularIRSAnual,
+} from "@/lib/fiscal";
 import { ADICIONAL_SOLIDARIEDADE, IFICI_TAXA, TA_ELETRICA_LIMITE_CUSTO, TA_VIATURAS_ELETRICA_ACIMA_LIMITE } from "@/lib/fiscal-data";
 
 const IFICI_TAXA_ESPERADA = IFICI_TAXA.value;
 
 const LIMITE_IVA = IVA_ISENCAO_LIMITE.value; // € 15 000
+
+// ── Mínimo de existência exato (Art. 70.º CIRS) — P0-01 ────────────────────
+describe("mínimo de existência — fórmula por troços do artigo 70.º", () => {
+  const baseFacts = {
+    eligibleIncome: true,
+    dependentTaxpayer: false,
+    specificDeductions: 3_500,
+    householdNonEnglobedIncome: 0,
+    householdTaxpayers: 1,
+  } as const;
+
+  it("calcula o patamar L de 2026 a partir do primeiro escalão e do divisor 3,60", () => {
+    const result = calcularAbatimentoMinimoExistencia({
+      ...baseFacts,
+      grossIncome: 14_000,
+      householdGrossIncome: 14_000,
+    });
+    // 12 880 − 250/(12,5%×3,60) + 8 342/3,60
+    expect(result.thresholdL).toBeCloseTo(14_641.666_666, 5);
+  });
+
+  it("aplica o troço intermédio com coeficiente 2,60", () => {
+    const result = calcularAbatimentoMinimoExistencia({
+      ...baseFacts,
+      grossIncome: 14_000,
+      householdGrossIncome: 14_000,
+    });
+    // 12 880 − 2,60×(14 000−12 880) − (3 500 + 250/12,5%)
+    expect(result.status).toBe("applied");
+    expect(result.abatement).toBeCloseTo(4_468, 6);
+  });
+
+  it("aplica o troço superior com coeficiente 1,35", () => {
+    const result = calcularAbatimentoMinimoExistencia({
+      ...baseFacts,
+      specificDeductions: 3_750,
+      grossIncome: 15_000,
+      householdGrossIncome: 15_000,
+    });
+    expect(result.status).toBe("applied");
+    expect(result.abatement).toBeCloseTo(2_065.916_666, 5);
+  });
+
+  it("aplica a exclusão do n.º 4 quando o rendimento agregado excede 2,2×14×IAS", () => {
+    const result = calcularAbatimentoMinimoExistencia({
+      ...baseFacts,
+      grossIncome: 17_000,
+      householdGrossIncome: 17_000,
+    });
+    expect(result.status).toBe("excluded");
+    expect(result.abatement).toBe(0);
+  });
+
+  it("integra o abatimento antes dos escalões, sem o antigo clamp pós-imposto", () => {
+    const result = simularIRSAnual({ brutoAnual: 14_000, tipo: "art151" });
+    expect(result.rendimentoColetavelAntesMinimo).toBeCloseTo(10_500, 2);
+    expect(result.abatimentoMinimoExistencia).toBeCloseTo(4_468, 2);
+    expect(result.rendimentoColetavel).toBeCloseTo(6_032, 2);
+    expect(result.minimoExistenciaDecision.status).toBe("applied");
+  });
+
+  it("não inventa factos quando há rendimento agregado sem decomposição", () => {
+    const result = simularIRSAnual({
+      brutoAnual: 14_000,
+      tipo: "art151",
+      outrosRendimentos: 1_000,
+    });
+    expect(result.minimoExistenciaDecision.status).toBe("needs_input");
+    expect(result.abatimentoMinimoExistencia).toBe(0);
+  });
+
+  it("não aplica a atividades fora do âmbito material do n.º 2", () => {
+    const result = simularIRSAnual({ brutoAnual: 14_000, tipo: "vendas" });
+    expect(result.minimoExistenciaDecision.status).toBe("not_applicable");
+    expect(result.abatimentoMinimoExistencia).toBe(0);
+  });
+});
 
 // ── projetarDataLimite ────────────────────────────────────────────────────────
 

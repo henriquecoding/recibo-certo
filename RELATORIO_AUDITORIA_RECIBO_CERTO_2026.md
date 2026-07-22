@@ -1,11 +1,31 @@
 # Auditoria técnica e fiscal do ReciboCerto — Portugal 2026
 
 **Versão auditada:** `704503a331952c0a1e74c411ded5e121fdf2d7c9` (`main`)
+**Remediação revista:** ramo de conclusão de 22 de julho de 2026, posterior à versão auditada
 **Data de corte:** 22 de julho de 2026
 **Jurisdição normativa:** República Portuguesa — Continente, Região Autónoma da Madeira e Região Autónoma dos Açores
 **Âmbito:** código, dados fiscais, motores de cálculo, simuladores, fontes legais, testes, segurança, SEO, manutenção anual e desenho do `ReciboCerto-Fiscal-Engine`
 
 > Este relatório avalia software informativo. Não certifica liquidações, não substitui a Autoridade Tributária e Aduaneira, a Segurança Social, um contabilista certificado, um advogado ou um notário.
+
+## 0. Atualização após a remediação
+
+As secções 1 a 16 preservam o diagnóstico do corte auditado, para manter a evidência e a rastreabilidade dos defeitos encontrados. Desde esse corte, foi concluída uma remediação adicional. Portanto, expressões abaixo como «o código atual» descrevem a **versão auditada**, não o estado posterior resumido nesta secção.
+
+| Item | Estado posterior | Evidência implementada |
+|---|---|---|
+| P0-01 — mínimo de existência | Corrigido | Decisão por troços do Art. 70.º, coeficientes 2,60/1,35, limite do primeiro escalão, despesas gerais, exclusões e dados factuais explícitos; testes de fronteira |
+| P0-02/P0-03 — solidariedade e IFICI | Corrigidos | Adicional progressivo e separação do rendimento A/B elegível dos restantes rendimentos |
+| P0-04 — IRS Jovem | Protegido | O benefício deixa de ser inferido apenas pela idade/ano e a interface exige confirmação de invocação; a elegibilidade completa continua a exigir factos e revisão |
+| P0-05/P0-10 — empresa e gerente | Corrigidos | Implementação comum em `src/lib/fiscal-empresa.ts`, payroll do gerente com IRS e SS e testes de paridade entre simuladores |
+| P0-06 — TA de elétricos | Corrigido | Taxa de 10% acima do limiar legal, com teste de regressão |
+| P0-07/P0-08 — fontes | Corrigidos | Ligações oficiais semanticamente verificadas, sem aceitar apenas resposta HTTP 200 |
+| P0-09 — RFAI/SIFIDE | Falha segura | O potencial é informado separadamente e não reduz IRC sem elegibilidade confirmada |
+| Recibo de vencimento | Reformulado | Builder por rubricas, cálculo bruto/líquido e inverso, bases IRS/SS, custo patronal, auditoria, importação/exportação e cenários |
+| Duodécimos | Corrigidos | Cada parcela retém proporcionalmente o imposto calculado sobre o subsídio completo, sem somar a parcela ao salário para escolher a taxa |
+| Inputs de simuladores | Uniformizados | Política `pt-PT` comum, prevenção de `NaN`/infinito, limites e correção imediata de zeros indevidos à esquerda (`0442` → `442`) |
+
+O novo `ReciboCerto-Fiscal-Engine` mantém o dataset 2026 em `draft`. Payroll é um `functional_draft`; os outros nove domínios permanecem `contract_only`. As correções no motor em uso não dispensam testes dourados oficiais nem revisão fiscal/laboral independente antes de promover o dataset novo.
 
 ---
 

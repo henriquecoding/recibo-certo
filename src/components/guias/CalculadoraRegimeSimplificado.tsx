@@ -16,6 +16,7 @@ import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import Badge from "@/components/ui/Badge";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
+import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 
 // Limiar abaixo do qual a dedução específica cobre automaticamente a regra dos 15%.
 // = DEDUCAO_ESPECIFICA_CATB / 0,15 (Art. 31.º CIRS). Para 2026 = 4 587,09 / 0,15 ≈ 30 580 €.
@@ -70,13 +71,11 @@ export function CalculadoraRegimeSimplificado() {
             Faturação bruta anual
           </label>
           <div className="relative">
-            <input
-              type="number"
+            <LocalizedNumberInput
+              value={bruto}
+              onValueChange={setBruto}
               min={0}
               max={200000}
-              step={500}
-              value={bruto}
-              onChange={(e) => setBruto(Number(e.target.value))}
               className="w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-4 py-2.5 text-sm font-medium text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">€</span>

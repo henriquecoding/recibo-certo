@@ -105,13 +105,15 @@ import {
   Campo, SeletorCartoes, Checkbox, Interruptor, Explicador, Linha,
   CartaoValidacao, CabecalhoModulo, SeccaoTitulo, CartaoSituacao, campoCls, rotuloCls,
 } from "@/components/simulador/ui";
+import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
+import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
 
 const ICONES: Record<string, (p: { size?: number; className?: string }) => ReactNode> = {
   Briefcase, User, Invoice, Coin, ChartProjection, Globe, Home, Building, Plane,
   Settings, Receipt,
 };
 
-const n = (s: string) => parseFloat((s || "").replace(",", ".")) || 0;
+const n = (s: string) => Math.max(0, parseNumericDraft(s || "") ?? 0);
 
 function tempoRelativo(ts: number, agora: number): string {
   const s = Math.max(0, Math.floor((agora - ts) / 1000));
@@ -690,7 +692,7 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
                         <label htmlFor="ind-despesas" className={rotuloCls}>{indRegime === "organizada" ? "Despesas reais (€)" : "Despesas justificadas (€)"}</label>
                         <InfoTip>{indRegime === "organizada" ? "Despesas documentadas que reduzem diretamente o lucro tributável." : "Faturas com NIF. Reduzem o acréscimo da regra dos 15% do regime simplificado."}</InfoTip>
                       </div>
-                      <input id="ind-despesas" type="number" inputMode="decimal" min={0} step={100} value={indDespesas} onChange={(e) => setIndDespesas(e.target.value)} placeholder="0" className={campoCls} />
+                      <input id="ind-despesas" type="text" inputMode="decimal" value={indDespesas} onChange={(e) => setIndDespesas(sanitizeNumericDraft(e.target.value))} placeholder="0" className={campoCls} />
                     </div>
                     <div>
                       <div className="mb-1.5 flex items-center gap-1.5">
@@ -1173,11 +1175,11 @@ function ResumoMini({ titulo, valor, sub, alerta = false }: { titulo: string; va
 }
 
 function EditorPropriedades({ propriedades, setPropriedades }: { propriedades: PropriedadeArrendada[]; setPropriedades: (p: PropriedadeArrendada[]) => void }) {
-  const upd = (id: string, campo: keyof PropriedadeArrendada, valor: string) =>
+  const upd = (id: string, campo: keyof PropriedadeArrendada, valor: string | number) =>
     setPropriedades(
       propriedades.map((p) =>
         p.id === id
-          ? { ...p, [campo]: campo === "artigo" || campo === "localizacao" ? valor : parseFloat(valor.replace(",", ".")) || 0 }
+          ? { ...p, [campo]: campo === "artigo" || campo === "localizacao" ? valor : typeof valor === "number" ? valor : 0 }
           : p
       )
     );
@@ -1205,15 +1207,15 @@ function EditorPropriedades({ propriedades, setPropriedades }: { propriedades: P
             </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">% propriedade</label>
-              <input type="number" min={0} max={100} step={5} value={p.percentagem} onChange={(e) => upd(p.id, "percentagem", e.target.value)} className={campoCls} />
+              <LocalizedNumberInput value={p.percentagem} min={0} max={100} maxDecimals={0} onValueChange={(value) => upd(p.id, "percentagem", value)} className={campoCls} />
             </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">Rendas anuais (€)</label>
-              <input type="number" inputMode="decimal" min={0} step={500} value={p.renda || ""} onChange={(e) => upd(p.id, "renda", e.target.value)} placeholder="0" className={campoCls} />
+              <LocalizedNumberInput value={p.renda} min={0} onValueChange={(value) => upd(p.id, "renda", value)} placeholder="0" className={campoCls} />
             </div>
             <div className="col-span-2">
               <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">Despesas dedutíveis (€)</label>
-              <input type="number" inputMode="decimal" min={0} step={100} value={p.despesas || ""} onChange={(e) => upd(p.id, "despesas", e.target.value)} placeholder="0" className={campoCls} />
+              <LocalizedNumberInput value={p.despesas} min={0} onValueChange={(value) => upd(p.id, "despesas", value)} placeholder="0" className={campoCls} />
             </div>
           </div>
         </div>
@@ -1226,11 +1228,11 @@ function EditorPropriedades({ propriedades, setPropriedades }: { propriedades: P
 }
 
 function EditorEstrangeiros({ entradas, setEntradas }: { entradas: EntradaEstrangeiro[]; setEntradas: (e: EntradaEstrangeiro[]) => void }) {
-  const atualizar = (id: string, campo: keyof EntradaEstrangeiro, valor: string) =>
+  const atualizar = (id: string, campo: keyof EntradaEstrangeiro, valor: string | number) =>
     setEntradas(
       entradas.map((e) =>
         e.id === id
-          ? { ...e, [campo]: campo === "rendimento" || campo === "impostoPago" ? parseFloat(valor.replace(",", ".")) || 0 : valor }
+          ? { ...e, [campo]: campo === "rendimento" || campo === "impostoPago" ? typeof valor === "number" ? valor : 0 : valor }
           : e
       )
     );
@@ -1267,11 +1269,11 @@ function EditorEstrangeiros({ entradas, setEntradas }: { entradas: EntradaEstran
             </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">Rendimento (€)</label>
-              <input type="number" inputMode="decimal" min={0} step={100} value={e.rendimento || ""} onChange={(ev) => atualizar(e.id, "rendimento", ev.target.value)} placeholder="0" className={campoCls} />
+              <LocalizedNumberInput value={e.rendimento} min={0} onValueChange={(value) => atualizar(e.id, "rendimento", value)} placeholder="0" className={campoCls} />
             </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">Imposto pago (€)</label>
-              <input type="number" inputMode="decimal" min={0} step={50} value={e.impostoPago || ""} onChange={(ev) => atualizar(e.id, "impostoPago", ev.target.value)} placeholder="0" className={campoCls} />
+              <LocalizedNumberInput value={e.impostoPago} min={0} onValueChange={(value) => atualizar(e.id, "impostoPago", value)} placeholder="0" className={campoCls} />
             </div>
           </div>
         </div>
@@ -1357,7 +1359,7 @@ function PassoAgregado(props: {
           </div>
           <div>
             <label htmlFor="c-nif" className={`mb-1.5 block ${rotuloCls}`}>NIF</label>
-            <input id="c-nif" inputMode="numeric" value={c.nif} onChange={(e) => upd("nif", e.target.value)} placeholder="9 dígitos" className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
+            <input id="c-nif" inputMode="numeric" value={c.nif} onChange={(e) => upd("nif", e.target.value.replace(/\D/g, "").slice(0, 9))} placeholder="9 dígitos" className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
             {nifMau && <p className="mt-1 text-[11px] text-red-500">NIF inválido (9 dígitos com dígito de controlo).</p>}
           </div>
           <div>
@@ -1471,7 +1473,7 @@ function PassoAgregado(props: {
             </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">Guarda (%)</label>
-              <input type="number" min={0} max={100} step={50} value={d.guarda} onChange={(e) => setDependentes(dependentes.map((x) => (x.id === d.id ? { ...x, guarda: Math.min(100, Math.max(0, Number(e.target.value) || 0)) } : x)))} className={campoCls} />
+              <LocalizedNumberInput value={d.guarda} min={0} max={100} maxDecimals={0} onValueChange={(value) => setDependentes(dependentes.map((x) => (x.id === d.id ? { ...x, guarda: value } : x)))} className={campoCls} />
             </div>
             <div className="col-span-2">
               <Checkbox checked={d.deficiente} onChange={(v) => setDependentes(dependentes.map((x) => (x.id === d.id ? { ...x, deficiente: v } : x)))} label="Com deficiência ≥ 60%" />
@@ -1547,7 +1549,7 @@ function PessoaEditor({
         </div>
         <div>
           <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">NIF</label>
-          <input inputMode="numeric" value={nif} onChange={(e) => onNif(e.target.value)} placeholder="9 dígitos" className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
+          <input inputMode="numeric" value={nif} onChange={(e) => onNif(e.target.value.replace(/\D/g, "").slice(0, 9))} placeholder="9 dígitos" className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
         </div>
         {children}
       </div>
@@ -1627,7 +1629,7 @@ function SujeitoPassivoB({
         </div>
         <div>
           <label htmlFor="spb-nif" className={`mb-1.5 block ${rotuloCls}`}>NIF</label>
-          <input id="spb-nif" inputMode="numeric" value={spb.contribuinte.nif} onChange={(e) => updC({ nif: e.target.value })} placeholder="9 dígitos" className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
+          <input id="spb-nif" inputMode="numeric" value={spb.contribuinte.nif} onChange={(e) => updC({ nif: e.target.value.replace(/\D/g, "").slice(0, 9) })} placeholder="9 dígitos" className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
           {nifMau && <p className="mt-1 text-[11px] text-red-500">NIF inválido.</p>}
         </div>
         <div>
@@ -1694,7 +1696,7 @@ function SujeitoPassivoB({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label htmlFor="spb-ind-despesas" className={`mb-1.5 block ${rotuloCls}`}>{spb.indRegime === "organizada" ? "Despesas reais (€)" : "Despesas justificadas (€)"}</label>
-            <input id="spb-ind-despesas" type="number" inputMode="decimal" min={0} step={100} value={num(spb.indDespesas)} onChange={(e) => upd({ indDespesas: n(e.target.value) })} placeholder="0" className={campoCls} />
+            <LocalizedNumberInput id="spb-ind-despesas" min={0} value={spb.indDespesas} onValueChange={(value) => upd({ indDespesas: value })} placeholder="0" className={campoCls} />
           </div>
           <div>
             <label htmlFor="spb-ind-ano" className={`mb-1.5 block ${rotuloCls}`}>Ano de atividade</label>
@@ -1911,7 +1913,7 @@ function PassoDeducoes(props: {
             <div key={f.id}>
               <label htmlFor={f.id} className={`mb-1 block ${rotuloCls}`}>{f.label}</label>
               <div className="mb-1 text-[10px] text-stone-400">{f.nota}</div>
-              <input id={f.id} type="number" inputMode="decimal" min={0} step={50} value={f.v} onChange={(e) => f.set(e.target.value)} placeholder="0" className={campoCls} />
+              <input id={f.id} type="text" inputMode="decimal" value={f.v} onChange={(e) => f.set(sanitizeNumericDraft(e.target.value))} placeholder="0" className={campoCls} />
             </div>
           ))}
         </div>

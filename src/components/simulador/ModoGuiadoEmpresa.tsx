@@ -95,6 +95,17 @@ import {
   parametrosPorCoords,
   type ParametrosFiscaisRegiao,
 } from "@/lib/incentivos-regioes";
+import {
+  simularEmpresaGuiado,
+  type ResultadoEmpresaGuiado,
+} from "@/lib/fiscal-empresa";
+export { simularEmpresaGuiado } from "@/lib/fiscal-empresa";
+import {
+  numericDraftOnBlur,
+  numericValueToDraft,
+  parseNumericDraft,
+  sanitizeNumericDraft,
+} from "@/lib/numeric-input";
 
 // ─── Constantes fiscais — derivadas de fiscal-data.ts ────────────────────────
 
@@ -234,283 +245,6 @@ function LeiRef({ artigo, url }: { artigo: string; url: string }) {
   );
 }
 
-// ─── IRS progressivo (englobamento dividendos) ──────────────────────────────
-
-function calcularIRS(coletavel: number): number {
-  const escaloes = ESCALOES_IRS.value;
-  let imposto = 0;
-  let restante = Math.max(0, coletavel);
-  for (let i = 0; i < escaloes.length; i++) {
-    const lim = escaloes[i].ate ?? Infinity;
-    const piso = i === 0 ? 0 : (escaloes[i - 1].ate ?? 0);
-    const faixa = lim - piso;
-    const nesta = Math.min(restante, faixa);
-    imposto += nesta * escaloes[i].taxa;
-    restante -= nesta;
-    if (restante <= 0) break;
-  }
-  return imposto;
-}
-
-// ─── Simulação empresa simplificada ──────────────────────────────────────────
-
-interface ResultadoTA {
-  viatura: number;
-  representacao: number;
-  ajudasCusto: number;
-  naoDocumentadas: number;
-  total: number;
-}
-
-interface ResultadoBeneficios {
-  rfai: number;
-  rfaiBruto: number;
-  sifide: number;
-  sifideBruto: number;
-  rfaiContratual: number;
-  total: number;
-}
-
-interface ResultadoEmpresaGuiado {
-  faturacao: number;
-  despesasOper: number;
-  custosEstrutura: number;
-  salGerente: number;
-  ssSalGerente: number;
-  custoConstituicao: number;
-  totalCustos: number;
-  lucroTributavel: number;
-  coleta: number;
-  ta: ResultadoTA;
-  beneficios: ResultadoBeneficios;
-  ircAposBeneficios: number;
-  derrama: number;
-  ircTotal: number;
-  lucroLiquido: number;
-  dividendos: number;
-  irsDividendosLiberatoria: number;
-  irsDividendosEnglobamento: number;
-  irsDividendos: number;
-  /** IRS sobre o salário do gerente (Cat. A), sempre devido. */
-  irsSalarioGerente: number;
-  taxaMarginalGerente: number;
-  liquidoGerente: number;
-  taxaEfetiva: number;
-  imiAnual: number;
-  poupancaIMI: number;
-  imtOneTime: number;
-  poupancaIMT: number;
-  custoMunicipalAnual: number;
-  custoRepresentanteFiscal: number;
-  custoSedeVirtual: number;
-}
-
-function calcularTaxaMarginal(coletavel: number): number {
-  const escaloes = ESCALOES_IRS.value;
-  for (let i = escaloes.length - 1; i >= 0; i--) {
-    const piso = i === 0 ? 0 : (escaloes[i - 1].ate ?? 0);
-    if (coletavel > piso) return escaloes[i].taxa;
-  }
-  return escaloes[0].taxa;
-}
-
-export function simularEmpresaGuiado(
-  faturacao: number,
-  despesasOper: number,
-  custosEstrutura: number,
-  salGerenteMensal: number,
-  distribuirDividendos: boolean,
-  opcaoEnglobamento: boolean,
-  incluirConstituicao: boolean,
-  custoConstituicaoVal: number,
-  anosAmortizacao: number,
-  // TA
-  tipoViatura: TipoViaturaGuiado,
-  encargosViatura: number,
-  despRepresentacao: number,
-  ajudasCusto: number,
-  naoDocumentadas: number,
-  emPrejuizo: boolean,
-  excecaoPrejuizo: boolean,
-  // Benefícios
-  rfaiRegiao: RegiaoRFAIGuiado,
-  rfaiInvest: number,
-  primeirosAnos: boolean,
-  sifideDespesas: number,
-  tipoSifide: TipoEmpresaSifide,
-  rfaiContratualValor: number,
-  // Municipal
-  temImovel: boolean,
-  vptImovel: number,
-  taxaIMI: number,
-  isencaoIMI: boolean,
-  valorAquisicao: number,
-  isencaoIMT: boolean,
-  anosAmortIMT: number,
-  // Localização
-  paramLocal?: ParametrosFiscaisRegiao,
-  // Novo: sede virtual e estrangeiro
-  sedeVirtualCusto?: number,
-  isEstrangeiro?: boolean,
-  custoRepFiscal?: number,
-): ResultadoEmpresaGuiado {
-  const ircPME = paramLocal?.ircPME ?? IRC_TAXA_PME.value;
-  const ircGeral = paramLocal?.ircGeral ?? IRC_TAXA_GERAL.value;
-  const derramaTaxa = paramLocal?.derramaEstimada ?? DERRAMA_MAX.value;
-
-  const custoSedeVirtualAnual = sedeVirtualCusto ? sedeVirtualCusto * 12 : 0;
-  const custoRepresentante = isEstrangeiro && custoRepFiscal ? custoRepFiscal : 0;
-
-  const salGerente = salGerenteMensal * 12;
-  // Custo da empresa = salário bruto + SS da entidade (23,75%). Os 11% do
-  // trabalhador saem do próprio salário bruto — somá-los aqui duplicava o custo.
-  const ssSalGerente = salGerente * SS_EMP_TAXA;
-  const custoConstituicao = incluirConstituicao
-    ? Math.round(custoConstituicaoVal / anosAmortizacao)
-    : 0;
-  const totalCustos =
-    despesasOper + custosEstrutura + salGerente + ssSalGerente + custoConstituicao
-    + custoSedeVirtualAnual + custoRepresentante;
-  const lucroTributavel = Math.max(0, faturacao - totalCustos);
-
-  // IRC coleta
-  let coleta = 0;
-  if (lucroTributavel <= IRC_LIMITE) {
-    coleta = lucroTributavel * ircPME;
-  } else {
-    coleta =
-      IRC_LIMITE * ircPME +
-      (lucroTributavel - IRC_LIMITE) * ircGeral;
-  }
-
-  // Benefícios fiscais (cascading coleta caps)
-  let rfaiBruto: number;
-  if (rfaiRegiao === "interior") {
-    const base = Math.min(rfaiInvest, RFAI_LIMITE_INVEST);
-    const excedente = Math.max(0, rfaiInvest - RFAI_LIMITE_INVEST);
-    rfaiBruto = base * RFAI_TAXA.interior + excedente * RFAI_TAXA_EXCEDENTE;
-  } else {
-    rfaiBruto = rfaiInvest * RFAI_TAXA.litoral;
-  }
-  const maxRFAI = coleta * (primeirosAnos ? 1.0 : RFAI_LIMITE_COLETA);
-  const rfai = Math.min(rfaiBruto, Math.max(0, maxRFAI));
-
-  const taxaSifide = SIFIDE_META[tipoSifide].taxa;
-  const sifideBruto = sifideDespesas * taxaSifide;
-  const maxSifide = Math.max(0, coleta - rfai);
-  const sifide = Math.min(sifideBruto, maxSifide);
-
-  const benefTotal = rfai + sifide;
-  const ircAposBase = Math.max(0, coleta - benefTotal);
-  const rfaiContratualEfetivo = Math.min(rfaiContratualValor, ircAposBase);
-  const ircAposBeneficios = Math.max(0, ircAposBase - rfaiContratualEfetivo);
-
-  const beneficios: ResultadoBeneficios = {
-    rfai, rfaiBruto, sifide, sifideBruto,
-    rfaiContratual: rfaiContratualEfetivo,
-    total: benefTotal + rfaiContratualEfetivo,
-  };
-
-  // TA (Art. 88.º CIRC). Elétricas ≤ 62 500 € são isentas; acima pagam 10%
-  // (n.º 20). O agravamento por prejuízo só incide onde há taxa positiva.
-  const agrav = emPrejuizo && !excecaoPrejuizo ? TA_AGRAVAMENTO : 0;
-  const taViatura =
-    tipoViatura === "eletrica" || tipoViatura === "nenhuma"
-      ? 0
-      : encargosViatura * (TA_TAXAS_GUIADO[tipoViatura] + agrav);
-  const taRepr = despRepresentacao * (TA_TAXA_REPRESENTACAO + agrav);
-  const taAjudas = ajudasCusto * (TA_TAXA_AJUDAS_CUSTO + agrav);
-  const taNaoDoc = naoDocumentadas * (TA_TAXA_NAO_DOC + agrav);
-  const ta: ResultadoTA = {
-    viatura: taViatura,
-    representacao: taRepr,
-    ajudasCusto: taAjudas,
-    naoDocumentadas: taNaoDoc,
-    total: taViatura + taRepr + taAjudas + taNaoDoc,
-  };
-
-  const derrama = lucroTributavel * derramaTaxa;
-  const ircTotal = ircAposBeneficios + ta.total + derrama;
-  const lucroLiquido = Math.max(0, lucroTributavel - ircTotal);
-
-  // Dividendos — NOTA LEGAL: o IFICI (Art. 58.º-A, n.º 2 EBF) só abrange
-  // rendimentos das categorias A e B; dividendos de fonte portuguesa (cat. E)
-  // seguem sempre a taxa liberatória de 28% ou o englobamento parcial.
-  let dividendos = 0;
-  let irsDividendosLiberatoria = 0;
-  let irsDividendosEnglobamento = 0;
-
-  // IRS do salário do gerente (Cat. A): sempre devido, com ou sem dividendos.
-  // Desconta a SS do trabalhador (11%) e a dedução específica do trabalho
-  // dependente (Art. 25.º CIRS) antes dos escalões gerais (Art. 68.º).
-  // SIMPLIFICAÇÃO: não modela dependentes nem o mínimo de existência
-  // (Art. 70.º) — pode sobrestimar ligeiramente o IRS em salários baixos.
-  const salarioTrib = salGerente * (1 - SS_TRAB_TAXA);
-  const baseIRSGerente = Math.max(0, salarioTrib - DEDUCAO_ESPECIFICA_DEPENDENTE.value);
-  const irsSalarioGerente = calcularIRS(baseIRSGerente);
-  const taxaMarginalGerente = calcularTaxaMarginal(baseIRSGerente);
-
-  if (distribuirDividendos && lucroLiquido > 0) {
-    dividendos = lucroLiquido;
-    irsDividendosLiberatoria = dividendos * IRS_DIVIDENDOS;
-
-    const irsComDiv = calcularIRS(
-      baseIRSGerente + dividendos * DIV_INCLUSAO_ENGLOBAMENTO,
-    );
-    irsDividendosEnglobamento = Math.max(0, irsComDiv - irsSalarioGerente);
-  }
-
-  const irsDividendos = opcaoEnglobamento
-    ? irsDividendosEnglobamento
-    : irsDividendosLiberatoria;
-
-  // Líquido do gerente = salário (após SS E IRS) + dividendos líquidos.
-  const salarioLiq = salarioTrib - irsSalarioGerente;
-  const liquidoGerente = salarioLiq + (dividendos - irsDividendos);
-
-  // Municipal (IMI/IMT)
-  const imiAnual = temImovel ? vptImovel * taxaIMI : 0;
-  const poupancaIMI = temImovel && isencaoIMI ? imiAnual : 0;
-  const imtOneTime = temImovel ? valorAquisicao * (IMT_TAXA_COMERCIAL + IS_TAXA_AQUISICAO) : 0;
-  const poupancaIMT = temImovel && isencaoIMT ? imtOneTime : 0;
-  const custoMunicipalAnual = temImovel
-    ? (imiAnual - poupancaIMI) + ((imtOneTime - poupancaIMT) / anosAmortIMT)
-    : 0;
-
-  return {
-    faturacao,
-    despesasOper,
-    custosEstrutura,
-    salGerente,
-    ssSalGerente,
-    custoConstituicao,
-    totalCustos,
-    lucroTributavel,
-    coleta,
-    ta,
-    beneficios,
-    ircAposBeneficios,
-    derrama,
-    ircTotal,
-    lucroLiquido,
-    dividendos,
-    irsDividendosLiberatoria,
-    irsDividendosEnglobamento,
-    irsDividendos,
-    irsSalarioGerente,
-    taxaMarginalGerente,
-    liquidoGerente,
-    taxaEfetiva: faturacao > 0 ? 1 - liquidoGerente / faturacao : 0,
-    imiAnual,
-    poupancaIMI,
-    imtOneTime,
-    poupancaIMT,
-    custoMunicipalAnual,
-    custoRepresentanteFiscal: custoRepresentante,
-    custoSedeVirtual: custoSedeVirtualAnual,
-  };
-}
-
 // ─── Tipos de sociedade ──────────────────────────────────────────────────────
 
 const TIPOS_SOCIEDADE: {
@@ -565,13 +299,13 @@ function NumericSlider({
   formatPreset,
   tooltip,
 }: NumericSliderProps) {
-  const [inputStr, setInputStr] = useState(String(value));
+  const [inputStr, setInputStr] = useState(() => numericValueToDraft(value));
   const [focused, setFocused] = useState(false);
   const [dragging, setDragging] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!focused) setInputStr(String(value));
+    if (!focused) setInputStr(numericValueToDraft(value));
   }, [value, focused]);
 
   const clamp = useCallback(
@@ -635,18 +369,18 @@ function NumericSlider({
   );
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/[^\d,\.]/g, "");
+    const raw = sanitizeNumericDraft(e.target.value);
     setInputStr(raw);
-    const n = parseFloat(raw.replace(",", "."));
-    if (!isNaN(n)) onChange(clampFree(n));
+    const n = parseNumericDraft(raw);
+    if (n !== null) onChange(clampFree(n));
   };
 
   const handleInputBlur = () => {
     setFocused(false);
-    const n = parseFloat(inputStr.replace(",", "."));
-    const v = isNaN(n) ? value : clampFree(n);
+    const normalized = numericDraftOnBlur(inputStr, value, { min });
+    const v = clampFree(normalized.value);
     onChange(v);
-    setInputStr(String(v));
+    setInputStr(normalized.draft);
   };
 
   return (
@@ -687,7 +421,7 @@ function NumericSlider({
               value={focused ? inputStr : value.toLocaleString("pt-PT")}
               onFocus={() => {
                 setFocused(true);
-                setInputStr(String(value));
+                setInputStr(numericValueToDraft(value));
               }}
               onChange={handleInputChange}
               onBlur={handleInputBlur}
@@ -1989,7 +1723,9 @@ export default function ModoGuiadoEmpresa({
                         <>
                           Salário bruto mensal do gerente-sócio. A empresa paga
                           SS patronal (23,75%) e o trabalhador desconta 11%.
-                          Custo dedutível ao IRC (12 meses).
+                          Custo dedutível ao IRC. A estimativa de IRS assume
+                          Continente, não casado, sem dependentes, 12 meses e
+                          sem subsídios; confirma o enquadramento pessoal/MOE.
                         </>
                       }
                     />
@@ -2437,11 +2173,11 @@ export default function ModoGuiadoEmpresa({
                       {rfaiInvest > 0 && resultado.beneficios.rfai > 0 && (
                         <div className="mt-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 dark:bg-emerald-900/20 dark:border-emerald-800">
                           <div className="flex items-center justify-between">
-                            <span className="text-[11px] text-emerald-700 dark:text-emerald-300">Poupança potencial RFAI ({pct(RFAI_TAXA[rfaiRegiaoEfetiva])} de {fmt(rfaiInvest)})</span>
-                            <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">-{fmt(Math.round(resultado.beneficios.rfai))}</span>
+                            <span className="text-[11px] text-emerald-700 dark:text-emerald-300">Crédito potencial RFAI ({pct(RFAI_TAXA[rfaiRegiaoEfetiva])} de {fmt(rfaiInvest)})</span>
+                            <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">até {fmt(Math.round(resultado.beneficios.rfai))}</span>
                           </div>
                           <p className="mt-1 text-[10px] leading-relaxed text-emerald-700/70 dark:text-emerald-300/60">
-                            Assume que o investimento cumpre todos os requisitos de elegibilidade do RFAI (CAE, tipo e novidade do ativo, criação/manutenção de emprego, dossier documental). O simulador não verifica elegibilidade — confirma com o teu contabilista antes de contar com este valor.
+                            Não aplicado ao IRC desta simulação. CAE, região legal, ativos, emprego, auxílios de Estado e dossier documental têm de ser validados por um profissional.
                           </p>
                         </div>
                       )}
@@ -2490,11 +2226,11 @@ export default function ModoGuiadoEmpresa({
                       {sifideDespesas > 0 && resultado.beneficios.sifide > 0 && (
                         <div className="mt-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 dark:bg-emerald-900/20 dark:border-emerald-800">
                           <div className="flex items-center justify-between">
-                            <span className="text-[11px] text-emerald-700 dark:text-emerald-300">Poupança potencial SIFIDE ({pct(SIFIDE_META[tipoSifide].taxa)} de {fmt(sifideDespesas)})</span>
-                            <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">-{fmt(Math.round(resultado.beneficios.sifide))}</span>
+                            <span className="text-[11px] text-emerald-700 dark:text-emerald-300">Crédito potencial SIFIDE ({pct(SIFIDE_META[tipoSifide].taxa)} de {fmt(sifideDespesas)})</span>
+                            <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">até {fmt(Math.round(resultado.beneficios.sifide))}</span>
                           </div>
                           <p className="mt-1 text-[10px] leading-relaxed text-emerald-700/70 dark:text-emerald-300/60">
-                            Assume certificação ANI aprovada e despesas de I&D elegíveis confirmadas. O simulador não verifica elegibilidade — confirma com o teu contabilista antes de contar com este valor.
+                            Não aplicado ao IRC desta simulação. A certificação ANI, as despesas elegíveis e os elementos históricos têm de ser confirmados.
                           </p>
                         </div>
                       )}
@@ -2590,16 +2326,17 @@ export default function ModoGuiadoEmpresa({
                     </Collapsible>
 
                     {/* Resumo benefícios */}
-                    {resultado.beneficios.total > 0 && (
-                      <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3 dark:bg-emerald-900/20 dark:border-emerald-800">
+                    {resultado.beneficios.potencialTotal > 0 && (
+                      <div className="rounded-2xl bg-amber-50 border border-amber-200 p-3 dark:bg-amber-900/20 dark:border-amber-800">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">Total de benefícios fiscais</span>
-                          <span className="text-xs font-bold tabular-nums text-emerald-700 dark:text-emerald-300">-{fmt(Math.round(resultado.beneficios.total))}</span>
+                          <span className="text-xs font-bold text-amber-800 dark:text-amber-300">Potencial sujeito a validação</span>
+                          <span className="text-xs font-bold tabular-nums text-amber-800 dark:text-amber-300">até {fmt(Math.round(resultado.beneficios.potencialTotal))}</span>
                         </div>
-                        <div className="space-y-0.5 text-[10px] text-emerald-600 dark:text-emerald-400">
-                          {resultado.beneficios.rfai > 0 && <div className="flex justify-between"><span>RFAI</span><span>-{fmt(Math.round(resultado.beneficios.rfai))}{resultado.beneficios.rfaiBruto > resultado.beneficios.rfai ? ` (bruto ${fmt(Math.round(resultado.beneficios.rfaiBruto))}, limitado à coleta)` : ""}</span></div>}
-                          {resultado.beneficios.sifide > 0 && <div className="flex justify-between"><span>SIFIDE II</span><span>-{fmt(Math.round(resultado.beneficios.sifide))}{resultado.beneficios.sifideBruto > resultado.beneficios.sifide ? ` (bruto ${fmt(Math.round(resultado.beneficios.sifideBruto))})` : ""}</span></div>}
-                          {resultado.beneficios.rfaiContratual > 0 && <div className="flex justify-between"><span>RFAI Contratual</span><span>-{fmt(Math.round(resultado.beneficios.rfaiContratual))}</span></div>}
+                        <div className="space-y-0.5 text-[10px] text-amber-700 dark:text-amber-400">
+                          {resultado.beneficios.rfai > 0 && <div className="flex justify-between"><span>RFAI potencial</span><span>{fmt(Math.round(resultado.beneficios.rfai))}</span></div>}
+                          {resultado.beneficios.sifide > 0 && <div className="flex justify-between"><span>SIFIDE II potencial</span><span>{fmt(Math.round(resultado.beneficios.sifide))}</span></div>}
+                          {resultado.beneficios.rfaiContratual > 0 && <div className="flex justify-between"><span>RFAI Contratual indicado</span><span>{fmt(Math.round(resultado.beneficios.rfaiContratual))}</span></div>}
+                          <p className="pt-1 leading-relaxed">Nenhum destes valores reduz o IRC até a elegibilidade e a documentação serem confirmadas.</p>
                         </div>
                       </div>
                     )}
@@ -2658,10 +2395,6 @@ export default function ModoGuiadoEmpresa({
                       resultado.custoRepresentanteFiscal > 0 ? { label: "Representante fiscal (Art. 19.º LGT)", value: -resultado.custoRepresentanteFiscal, cor: "text-amber-600 dark:text-amber-400" } : null,
                       { label: "Lucro tributável", value: resultado.lucroTributavel, cor: "text-stone-700 dark:text-stone-200 font-semibold", sep: true },
                       { label: `IRC coleta (${pct(localizacao?.ircPME ?? IRC_TAXA_PME.value)}/${fmt(IRC_LIMITE)} + ${pct(localizacao?.ircGeral ?? IRC_TAXA_GERAL.value)}${localizacao?.interior ? " · interior" : ""})`, value: -resultado.coleta, cor: "text-red-500 dark:text-red-400" },
-                      resultado.beneficios.rfai > 0 ? { label: `RFAI (${pct(RFAI_TAXA[rfaiRegiaoEfetiva])} × ${fmt(rfaiInvest)})`, value: resultado.beneficios.rfai, cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
-                      resultado.beneficios.sifide > 0 ? { label: `SIFIDE II (${pct(SIFIDE_META[tipoSifide].taxa)} × ${fmt(sifideDespesas)})`, value: resultado.beneficios.sifide, cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
-                      resultado.beneficios.rfaiContratual > 0 ? { label: "RFAI Contratual", value: resultado.beneficios.rfaiContratual, cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
-                      resultado.beneficios.total > 0 ? { label: "IRC após benefícios", value: resultado.ircAposBeneficios, cor: "text-stone-600 dark:text-stone-300", sep: true } : null,
                       resultado.ta.viatura > 0 ? { label: `TA viatura (${pct(TA_TAXAS_GUIADO[tipoViatura])})`, value: -resultado.ta.viatura, cor: "text-amber-600 dark:text-amber-400" } : null,
                       resultado.ta.representacao > 0 ? { label: "TA representação (10%)", value: -resultado.ta.representacao, cor: "text-amber-600 dark:text-amber-400" } : null,
                       resultado.ta.ajudasCusto > 0 ? { label: "TA ajudas de custo (5%)", value: -resultado.ta.ajudasCusto, cor: "text-amber-600 dark:text-amber-400" } : null,

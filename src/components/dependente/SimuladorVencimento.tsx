@@ -35,6 +35,7 @@ import { useExportacaoPro } from "@/lib/store/exportacao-pro";
 import UpsellExportacao from "@/components/ui/UpsellExportacao";
 import GuardarCenarioDialog from "@/components/ui/GuardarCenarioDialog";
 import { History, Plus, ShieldCheck, Export, FileSign, Wallet, Gauge, Building, Coin, Sparkle, ArrowRight } from "@/components/ui/Icons";
+import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
 
 // Espelha o último cenário no formato legado lido pela importação do Simulador
 // de IRS («Importar dados → Recibo de vencimento»), para não perder essa ponte.
@@ -61,6 +62,8 @@ const SUPLEMENTAR_LABELS = [
   "1.ª hora, dia útil",
   "Horas seguintes, dia útil",
   "Descanso ou feriado",
+  "1.ª hora, dia útil > 100h/ano",
+  "Horas seguintes, dia útil > 100h/ano",
   "Descanso/feriado > 100h/ano",
 ];
 
@@ -71,9 +74,9 @@ const SITUACAO_LABEL: Record<EstadoCivilRet, string> = {
 };
 
 // Aceita vírgula ou ponto como separador decimal (pt-PT); nunca devolve NaN.
-const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
-const soDecimal = (s: string) => s.replace(/[^\d.,]/g, "");
-const soInteiro = (s: string) => s.replace(/\D/g, "").slice(0, 2);
+const num = (s: string) => Math.max(0, parseNumericDraft(s) ?? 0);
+const soDecimal = (s: string) => sanitizeNumericDraft(s);
+const soInteiro = (s: string) => sanitizeNumericDraft(s, { maxDecimals: 0 }).slice(0, 2);
 
 // Escala monocromática de verdes da marca: líquido = verde da marca (brand),
 // IRS = mint claro, Seg. Social / descontos = verde profundo. Os gráficos
@@ -109,7 +112,7 @@ export function SimuladorVencimento() {
   const [mes, setMes] = useState(() => new Date().getMonth());
   const [horasAusenciaStr, setHorasAusenciaStr] = useState("");
   const [diasSemSubsidioStr, setDiasSemSubsidioStr] = useState("");
-  const [horasSupStr, setHorasSupStr] = useState<string[]>(["", "", "", ""]);
+  const [horasSupStr, setHorasSupStr] = useState<string[]>(["", "", "", "", "", ""]);
   const [premioStr, setPremioStr] = useState("");
   const [premioRegular, setPremioRegular] = useState(true);
   const [subFeriasStr, setSubFeriasStr] = useState("");
@@ -278,6 +281,8 @@ export function SimuladorVencimento() {
       subsidioForma: temSubsidio ? (cartao ? "Cartão" : "Dinheiro") : "—",
       diasUteis,
       duodecimos,
+      regiao: regiao === "madeira" ? "Madeira" : regiao === "acores" ? "Açores" : "Continente",
+      salarioBase: bruto,
       bruto: r.bruto,
       ssTrabalhador: r.ssTrabalhador,
       irsRetido: r.irsRetido,

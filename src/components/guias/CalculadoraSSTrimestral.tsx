@@ -13,6 +13,7 @@ import {
 import { gerarPrazos } from "@/lib/prazos";
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
+import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 
 export function CalculadoraSSTrimestral() {
   const [mes1, setMes1] = useState(2000);
@@ -85,13 +86,11 @@ export function CalculadoraSSTrimestral() {
               {label}
             </label>
             <div className="relative">
-              <input
-                type="number"
+              <LocalizedNumberInput
+                value={value}
+                onValueChange={set}
                 min={0}
                 max={20000}
-                step={100}
-                value={value}
-                onChange={(e) => set(Number(e.target.value))}
                 className="w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-3 py-2 text-sm font-medium text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand"
               />
               <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-stone-400">€</span>

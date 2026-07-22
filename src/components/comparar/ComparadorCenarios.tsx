@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/Icons";
 import ComparadorFAQ from "@/components/comparar/ComparadorFAQ";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
 
 const SeccaoCarregar = () => (
   <div className="h-64 w-full animate-pulse rounded-3xl border border-stone-100 bg-stone-50 dark:border-stone-800 dark:bg-stone-900/50" />
@@ -32,8 +33,8 @@ const SLIDER_MAX = 200_000;
 const INPUT_MAX = 2_000_000;
 const STEP = 1_000;
 
-const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
-const soDecimal = (s: string) => s.replace(/[^\d.,]/g, "");
+const num = (s: string) => Math.max(0, parseNumericDraft(s) ?? 0);
+const soDecimal = (s: string) => sanitizeNumericDraft(s);
 
 type Chave = "dependente" | "freelancer" | "empresa";
 

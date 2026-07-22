@@ -54,6 +54,8 @@ import {
   GuiadoNav,
 } from "@/components/simulador/guiado-ui";
 import GuardarCenarioDialog from "@/components/ui/GuardarCenarioDialog";
+import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
+import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -229,7 +231,7 @@ function ivaOpcoesFat(regiao: Regiao) {
 const MESES_OPCOES_FAT = [1, 2, 3, 4, 6, 8, 10, 12] as const;
 
 function parseMontante(s: string): number {
-  return parseFloat(String(s).replace(",", ".").replace(/\s/g, "")) || 0;
+  return Math.max(0, parseNumericDraft(String(s)) ?? 0);
 }
 
 const ATIV_META: Record<
@@ -615,6 +617,7 @@ export default function ModoGuiado({
   const montarSnapshot = () => ({
     anoAtividade, jaTemAtividade, tipoAtiv, atividadeEspecifica, tipoSelecionado,
     modoFat, totalInput, valorComIva, recibosItems, mesesFat, regiao, regimeIVA,
+    autorObraInput, autorRoyaltiesInput,
     acumulaEmprego, isencaoSSPrimeiroAno, isencaoCpas, irsJovemOn, irsJovemAno,
     ifici, rnhAntigo, exResidente, deficiencia, mostrarDeducoes,
     despSaude, despEducacao, despRendas, despGerais,
@@ -648,8 +651,18 @@ export default function ModoGuiado({
     const set = <T,>(v: T | undefined, fn: (x: T) => void) => { if (v !== undefined) fn(v); };
     set(d.anoAtividade, setAnoAtividade); set(d.jaTemAtividade, setJaTemAtividade); set(d.tipoAtiv, setTipoAtiv);
     set(d.atividadeEspecifica, setAtividadeEspecifica); set(d.tipoSelecionado, setTipoSelecionado);
-    set(d.modoFat, setModoFat); set(d.totalInput, setTotalInput); set(d.valorComIva, setValorComIva);
-    set(d.recibosItems, setRecibosItems); set(d.mesesFat, setMesesFat); set(d.regiao, setRegiao); set(d.regimeIVA, setRegimeIVA);
+    set(d.modoFat, setModoFat);
+    if (d.totalInput !== undefined) setTotalInput(sanitizeNumericDraft(d.totalInput));
+    set(d.valorComIva, setValorComIva);
+    if (d.recibosItems !== undefined) {
+      setRecibosItems(d.recibosItems.map((item) => ({
+        ...item,
+        valorComIva: sanitizeNumericDraft(item.valorComIva),
+      })));
+    }
+    if (d.autorObraInput !== undefined) setAutorObraInput(sanitizeNumericDraft(d.autorObraInput));
+    if (d.autorRoyaltiesInput !== undefined) setAutorRoyaltiesInput(sanitizeNumericDraft(d.autorRoyaltiesInput));
+    set(d.mesesFat, setMesesFat); set(d.regiao, setRegiao); set(d.regimeIVA, setRegimeIVA);
     set(d.acumulaEmprego, setAcumulaEmprego); set(d.isencaoSSPrimeiroAno, setIsencaoSSPrimeiroAno); set(d.isencaoCpas, setIsencaoCpas);
     set(d.irsJovemOn, setIrsJovemOn); set(d.irsJovemAno, setIrsJovemAno); set(d.ifici, setIfici);
     set(d.rnhAntigo, setRnhAntigo); set(d.exResidente, setExResidente); set(d.deficiencia, setDeficiencia);
@@ -874,14 +887,14 @@ export default function ModoGuiado({
                     autorRoyaltiesInput={autorRoyaltiesInput}
                     desdobramentoAutor={desdobramentoAutor}
                     onModoFat={setModoFat}
-                    onTotalInput={setTotalInput}
+                    onTotalInput={(value) => setTotalInput(sanitizeNumericDraft(value))}
                     onValorComIva={setValorComIva}
                     onRecibosItems={setRecibosItems}
                     onMesesFat={setMesesFat}
                     onRegiaoChange={setRegiao}
                     onRegimeIVAChange={setRegimeIVA}
-                    onAutorObra={setAutorObraInput}
-                    onAutorRoyalties={setAutorRoyaltiesInput}
+                    onAutorObra={(value) => setAutorObraInput(sanitizeNumericDraft(value))}
+                    onAutorRoyalties={(value) => setAutorRoyaltiesInput(sanitizeNumericDraft(value))}
                   />
                 </m.div>
               )}
@@ -1441,8 +1454,11 @@ function PassoFaturacao({
     campo: keyof ReciboItem,
     valor: string | number,
   ) {
+    const normalized = campo === "valorComIva" && typeof valor === "string"
+      ? sanitizeNumericDraft(valor)
+      : valor;
     onRecibosItems((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, [campo]: valor } : r)),
+      prev.map((r) => (r.id === id ? { ...r, [campo]: normalized } : r)),
     );
   }
 
@@ -2340,14 +2356,11 @@ function PassoSituacao({
                       </label>
                       <div className="flex items-center gap-1 rounded-xl border border-stone-200 bg-white px-2.5 dark:border-stone-700 dark:bg-stone-900">
                         <span className="text-xs text-stone-400">€</span>
-                        <input
-                          type="number"
-                          inputMode="decimal"
+                        <LocalizedNumberInput
+                          value={val}
+                          onValueChange={set}
                           min={0}
                           max={max}
-                          step={50}
-                          value={val || ""}
-                          onChange={(e) => set(parseFloat(e.target.value) || 0)}
                           placeholder="0"
                           className="w-full bg-transparent py-2 text-sm font-semibold text-stone-700 outline-none dark:text-stone-200"
                         />
@@ -3390,13 +3403,29 @@ function ResultadoFinal({
                   Mínimo de existência aplicado (Art. 70.º CIRS)
                 </p>
                 <p className="mt-0.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-                  O teu rendimento coletável ({fmt(simAnual.rendimentoColetavel)}
-                  ) está perto ou abaixo de {fmt(MINIMO_EXISTENCIA.value)} — o
-                  Estado protege este montante de IRS. O imposto foi reduzido ou
-                  anulado. Este simulador aplica uma aproximação simplificada
-                  desta regra (não a fórmula legal exata com redução
-                  progressiva) — perto do limiar, confirma o valor com um
-                  contabilista.
+                  Abatimento de {fmt(simAnual.abatimentoMinimoExistencia)} ao
+                  rendimento coletável, calculado pela fórmula por troços do
+                  artigo 70.º: de {fmt(simAnual.rendimentoColetavelAntesMinimo)}
+                  para {fmt(simAnual.rendimentoColetavel)} antes dos escalões.
+                </p>
+              </div>
+            </div>
+          </>
+        )}
+
+        {simAnual.minimoExistenciaDecision.status === "needs_input" && (
+          <>
+            <div className="border-t border-stone-100 dark:border-stone-800" />
+            <div className="flex items-start gap-2.5 px-4 py-2.5">
+              <Warning size={12} className="mt-0.5 flex-shrink-0 text-alert-text" />
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-alert-text">
+                  Mínimo de existência por confirmar
+                </p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                  {simAnual.minimoExistenciaDecision.reason} O simulador não
+                  aplicou um valor aproximado nem tratou dados desconhecidos
+                  como zero.
                 </p>
               </div>
             </div>

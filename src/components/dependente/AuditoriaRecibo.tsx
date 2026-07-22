@@ -9,10 +9,11 @@ import { useAuth } from "@/lib/supabase/auth";
 import { getSupabase } from "@/lib/supabase/client";
 import { ResultadoAuditoria } from "@/components/dependente/ResultadoAuditoria";
 import { ShieldCheck, Mail } from "@/components/ui/Icons";
+import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
 
 const DEPENDENTES = [0, 1, 2, 3, 4];
-const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
-const soDecimal = (s: string) => s.replace(/[^\d.,]/g, "");
+const num = (s: string) => Math.max(0, parseNumericDraft(s) ?? 0);
+const soDecimal = (s: string) => sanitizeNumericDraft(s);
 
 export function AuditoriaRecibo() {
   const { user } = useAuth();
