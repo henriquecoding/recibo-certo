@@ -195,7 +195,7 @@ export function GuiadoNav({
         <button
           type="button"
           onClick={onVoltar}
-          className="inline-flex items-center gap-1.5 rounded-2xl border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-500 transition-all hover:border-stone-300 hover:bg-stone-50 hover:text-stone-800 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800"
+          className="inline-flex items-center gap-1.5 rounded-2xl border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-500 transition-all hover:border-stone-300 hover:bg-stone-50 hover:text-stone-800 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200"
         >
           <ArrowLeft size={14} /> {voltarLabel}
         </button>

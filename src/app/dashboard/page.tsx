@@ -377,7 +377,12 @@ export default function VisaoGeral() {
 
 function SaudeCard({ score, estado, fatores }: { score: number; estado: string; fatores: { label: string; ok: boolean }[] }) {
   const corClasse = score >= 80 ? "text-brand" : score >= 60 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400";
-  const corSVG = score >= 80 ? "var(--color-brand, #1D9E75)" : score >= 60 ? "#b45309" : "#b91c1c";
+  const corSVG =
+    score >= 80
+      ? "var(--color-brand, #1D9E75)"
+      : score >= 60
+        ? "var(--color-saude-medio, #b45309)"
+        : "var(--color-saude-mau, #b91c1c)";
   const r = 34;
   const circ = 2 * Math.PI * r;
   const offset = circ * (1 - score / 100);

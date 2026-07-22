@@ -149,7 +149,7 @@ export function DecisorAtoVsAtividade() {
             </Link>
             <button
               onClick={reiniciar}
-              className="inline-flex items-center gap-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-4 py-2.5 text-sm font-semibold text-stone-600 dark:text-stone-300 hover:border-stone-300 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-4 py-2.5 text-sm font-semibold text-stone-600 dark:text-stone-300 hover:border-stone-300 dark:hover:border-stone-600 transition-colors"
             >
               Recomeçar
             </button>
@@ -183,7 +183,7 @@ export function DecisorAtoVsAtividade() {
           {historico.length > 0 && (
             <button
               onClick={voltar}
-              className="mt-4 text-xs text-stone-400 hover:text-stone-600 transition-colors"
+              className="mt-4 text-xs text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 transition-colors"
             >
               ← Voltar
             </button>

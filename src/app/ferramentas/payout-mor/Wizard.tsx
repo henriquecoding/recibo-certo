@@ -200,7 +200,7 @@ function Passo1({ mor, onSelectMor, onProximo }: {
             className={`rounded-3xl border p-5 text-left transition-all ${
               mor === m.id
                 ? "border-brand bg-brand-light dark:bg-brand/10"
-                : "border-stone-100 dark:border-stone-800 hover:border-stone-300"
+                : "border-stone-100 dark:border-stone-800 hover:border-stone-300 dark:hover:border-stone-600"
             }`}
           >
             <p className="font-semibold text-stone-800 dark:text-stone-100">{m.label}</p>
@@ -458,7 +458,7 @@ export default function Wizard() {
         <button
           type="button"
           onClick={() => setPasso((p) => p - 1)}
-          className="mt-6 text-xs text-stone-400 hover:text-stone-600"
+          className="mt-6 text-xs text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"
         >
           ← Voltar
         </button>

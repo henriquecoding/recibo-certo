@@ -34,10 +34,15 @@ const precoPorId: Record<string, { min: number; max: number }> = Object.fromEntr
 );
 
 // Escala de cor verde: menos incentivos (claro) → mais incentivos (verde profundo).
+// O extremo "mais incentivos" original fica quase invisível na legenda/lista
+// sobre um cartão dark:bg-stone-900 (contraste ~1.8:1) — em dark, usa-se um
+// verde bem mais claro no mesmo extremo, mantendo a escala legível.
 const COR_MENOS: [number, number, number] = [0x9f, 0xe1, 0xcb];
 const COR_MAIS: [number, number, number] = [0x0a, 0x4a, 0x39];
-function corPorNivel(t: number): string {
-  const c = COR_MENOS.map((a, i) => Math.round(a + (COR_MAIS[i] - a) * t));
+const COR_MAIS_DARK: [number, number, number] = [0x35, 0x9e, 0x7c];
+function corPorNivel(t: number, dark = false): string {
+  const alvo = dark ? COR_MAIS_DARK : COR_MAIS;
+  const c = COR_MENOS.map((a, i) => Math.round(a + (alvo[i] - a) * t));
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 
@@ -63,7 +68,7 @@ function regiaoDeFeature(f?: Feature): string | undefined {
 }
 function estiloRegiao(regiaoId: string | undefined, selId: string | null): PathOptions {
   const reg = REGIOES_INCENTIVO.find((x) => x.id === regiaoId);
-  const cor = reg ? corPorNivel(reg.nivel) : "#1D9E75";
+  const cor = reg ? corPorNivel(reg.nivel, isDark()) : "#1D9E75";
   const sel = !!regiaoId && regiaoId === selId;
   return {
     color: cor,
@@ -105,6 +110,10 @@ const NOTIF_ESTILO: Record<NotifTipo, string> = {
 };
 
 export default function MapaBeneficiosRegioes() {
+  // Só para a legenda/lista (JSX) recalcularem `corPorNivel` no extremo
+  // escuro quando o tema muda — o mapa em si atualiza-se imperativamente.
+  const [darkMapa, setDarkMapa] = useState(false);
+  useEffect(() => setDarkMapa(isDark()), []);
   const [selecionada, setSelecionada] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
@@ -332,7 +341,7 @@ export default function MapaBeneficiosRegioes() {
       const PW = 124;
       const PH = 30;
       REGIOES_INCENTIVO.forEach((r) => {
-        const cor = corPorNivel(r.nivel);
+        const cor = corPorNivel(r.nivel, isDark());
         const html = `<div style="width:${PW}px;height:${PH}px;display:flex;align-items:center;justify-content:center;pointer-events:none">
           <span style="pointer-events:auto;display:inline-flex;align-items:center;height:26px;padding:0 11px;border-radius:9999px;background:${cor};color:#fff;font:700 12px/1 ui-sans-serif,system-ui,sans-serif;border:2px solid #fff;box-shadow:0 3px 10px rgba(10,74,57,.35);white-space:nowrap;cursor:pointer">${r.selo}</span></div>`;
         const icon = L.divIcon({ className: "", html, iconSize: [PW, PH], iconAnchor: [PW / 2, PH / 2] });
@@ -381,6 +390,7 @@ export default function MapaBeneficiosRegioes() {
 
       observer = new MutationObserver(() => {
         tileRef.current?.setUrl(isDark() ? TILES_DARK : TILES_LIGHT);
+        setDarkMapa(isDark());
       });
       observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 
@@ -550,7 +560,7 @@ export default function MapaBeneficiosRegioes() {
           <span className="text-[11px] font-semibold text-stone-500 dark:text-stone-400">Nível de incentivo</span>
           <div className="flex flex-1 items-center gap-2">
             <span className="text-[10px] text-stone-400">menos</span>
-            <span className="h-2 flex-1 rounded-full" style={{ background: `linear-gradient(90deg, ${corPorNivel(0)}, ${corPorNivel(1)})` }} aria-hidden />
+            <span className="h-2 flex-1 rounded-full" style={{ background: `linear-gradient(90deg, ${corPorNivel(0, darkMapa)}, ${corPorNivel(1, darkMapa)})` }} aria-hidden />
             <span className="text-[10px] text-stone-400">mais</span>
           </div>
         </div>
@@ -627,7 +637,7 @@ export default function MapaBeneficiosRegioes() {
                       : "border-stone-200/70 bg-stone-50 hover:border-brand/40 hover:bg-white dark:border-stone-700 dark:bg-stone-900/50 dark:hover:bg-stone-800"
                   }`}
                 >
-                  <span className="h-3 w-3 flex-shrink-0 rounded-full shadow-sm" style={{ background: corPorNivel(r.nivel) }} aria-hidden />
+                  <span className="h-3 w-3 flex-shrink-0 rounded-full shadow-sm" style={{ background: corPorNivel(r.nivel, darkMapa) }} aria-hidden />
                   <span className="min-w-0 flex-1">
                     <span className={`block truncate text-sm font-semibold ${ativa ? "text-brand-dark dark:text-brand" : "text-stone-800 dark:text-stone-100"}`}>
                       {r.nome}

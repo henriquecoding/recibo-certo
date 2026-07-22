@@ -61,9 +61,13 @@ export default function Stats() {
                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-light text-brand">
                   {p.icon}
                 </div>
+                {/* Cor final em vez de `text-stone-200 dark:text-stone-700`: a base
+                    `text-stone-200` é remapeada às cegas pelo `.dark` global (para
+                    #2e3329, quase invisível) e ganha sempre ao `dark:` explícito —
+                    a seta desaparecia em repouso. Evita a colisão por completo. */}
                 <ArrowRight
                   size={13}
-                  className="text-stone-200 transition-all group-hover:translate-x-0.5 group-hover:text-brand dark:text-stone-700"
+                  className="text-[#e7e5e4] transition-all group-hover:translate-x-0.5 group-hover:text-brand dark:text-[#57534e]"
                 />
               </div>
               <div className="font-display text-3xl font-semibold tabular-nums leading-none text-ink">

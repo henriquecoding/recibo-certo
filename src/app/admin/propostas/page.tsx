@@ -25,23 +25,23 @@ const ESTADO_META: Record<
 > = {
   pendente: {
     label: "Pendente",
-    cor: "bg-amber-100 border-amber-200",
-    texto: "text-amber-700",
+    cor: "bg-amber-100 border-amber-200 dark:bg-amber-900/30 dark:border-amber-800/40",
+    texto: "text-amber-700 dark:text-amber-400",
   },
   em_analise: {
     label: "Em análise",
-    cor: "bg-blue-100 border-blue-200",
-    texto: "text-blue-700",
+    cor: "bg-blue-100 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800/40",
+    texto: "text-blue-700 dark:text-blue-400",
   },
   contactado: {
     label: "Contactado",
-    cor: "bg-violet-100 border-violet-200",
-    texto: "text-violet-700",
+    cor: "bg-violet-100 border-violet-200 dark:bg-violet-900/30 dark:border-violet-800/40",
+    texto: "text-violet-700 dark:text-violet-400",
   },
   aprovado: {
     label: "Aprovado",
-    cor: "bg-emerald-100 border-emerald-200",
-    texto: "text-emerald-700",
+    cor: "bg-emerald-100 border-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-800/40",
+    texto: "text-emerald-700 dark:text-emerald-400",
   },
   rejeitado: {
     label: "Rejeitado",

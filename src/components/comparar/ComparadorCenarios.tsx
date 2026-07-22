@@ -158,11 +158,16 @@ export default function ComparadorCenarios() {
   })();
   const tituloMelhor = CARTOES.find((c) => c.chave === r.melhor)?.titulo ?? "";
 
+  // impostoForte/imposto/impostoLeve usam classes próprias (não bg-brand-dark/
+  // bg-brand-deep) para poderem ganhar tons distintos no escuro sem depender
+  // dos tokens de marca, que ficam deliberadamente inalterados no dark (ver
+  // globals.css) — caso contrário "IRS" e "Segurança Social" seriam dois
+  // verdes quase-pretos lado a lado, praticamente indistinguíveis.
   const COR = {
     liquido: "bg-brand",
-    impostoForte: "bg-brand-deep",
-    imposto: "bg-brand-dark",
-    impostoLeve: "bg-[#5DBA98]",
+    impostoForte: "bg-cmp-imposto-forte",
+    imposto: "bg-cmp-imposto",
+    impostoLeve: "bg-cmp-imposto-leve",
     custo: "bg-brand-mint",
   };
   type Seg = { label: string; valor: number; cls: string };
@@ -551,7 +556,7 @@ export default function ComparadorCenarios() {
                     {segs.map((s, i) => (
                       <div
                         key={s.label}
-                        className={`${s.cls} relative w-full ${i > 0 ? "border-t border-white/50 dark:border-stone-900/40" : ""}`}
+                        className={`${s.cls} relative w-full ${i > 0 ? "border-t border-white/50 dark:border-black/50" : ""}`}
                         style={{ height: `${bruto > 0 ? (Math.max(0, s.valor) / bruto) * 100 : 0}%` }}
                         title={`${s.label}: ${fmt(s.valor)}`}
                       >
@@ -572,9 +577,9 @@ export default function ComparadorCenarios() {
           {/* Legenda */}
           <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 border-t border-stone-100 dark:border-stone-700 pt-3 text-[11px] text-stone-500 dark:text-stone-400">
             <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand" /> Líquido (fica contigo)</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand-dark" /> IRS / dividendos</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand-deep" /> Segurança Social / IRC</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: "#5DBA98" }} /> Derrama</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-cmp-imposto" /> IRS / dividendos</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-cmp-imposto-forte" /> Segurança Social / IRC</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-cmp-imposto-leve" /> Derrama</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand-mint" /> Despesas / estrutura</span>
           </div>
 
