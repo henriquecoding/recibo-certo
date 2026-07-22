@@ -164,6 +164,7 @@ import {
   IRC_TAXA_PME,
   IRC_LIMITE_PME,
   SMN as SMN_SRC,
+  DEDUCAO_ESPECIFICA_DEPENDENTE,
   efeitoFiscal,
   type Atividade,
   type Regiao,
@@ -932,6 +933,8 @@ interface ResultadoEmpresa {
   dividendos: number;
   irsDividendosLiberatoria: number; // 28%
   irsDividendosEnglobamento: number; // 50% inclusão × taxa marginal
+  /** IRS sobre o salário do gerente (Cat. A), sempre devido. */
+  irsSalarioGerente: number;
   taxaMarginalGerente: number;
   liquidoGerenteLiberatoria: number;
   liquidoGerenteEnglobamento: number;
@@ -939,7 +942,7 @@ interface ResultadoEmpresa {
   taxaEfetiva: number;
 }
 
-function simularEmpresa(
+export function simularEmpresa(
   faturacao: number,
   despesasOper: number,
   custosExtra: number,
@@ -1034,7 +1037,16 @@ function simularEmpresa(
   let dividendos = 0;
   let irsDividendosLiberatoria = 0;
   let irsDividendosEnglobamento = 0;
-  let taxaMarginalGerente = 0;
+
+  // IRS do salário do gerente (Cat. A): sempre devido, com ou sem dividendos.
+  // Desconta a SS do trabalhador (11%) e a dedução específica do trabalho
+  // dependente (Art. 25.º CIRS) antes dos escalões gerais (Art. 68.º).
+  // SIMPLIFICAÇÃO: não modela dependentes nem o mínimo de existência
+  // (Art. 70.º) — pode sobrestimar ligeiramente o IRS em salários baixos.
+  const salarioTributavel = salGerente * (1 - SS_TRAB_TAXA);
+  const baseIRSGerente = Math.max(0, salarioTributavel - DEDUCAO_ESPECIFICA_DEPENDENTE.value);
+  const irsSalarioGerente = calcularIRS(baseIRSGerente);
+  const taxaMarginalGerente = calcularTaxaMarginal(baseIRSGerente);
 
   if (distribuirDividendos) {
     dividendos = lucroLiquido;
@@ -1044,16 +1056,14 @@ function simularEmpresa(
 
     // Opção B — englobamento (Art. 40.º-A CIRS)
     // Apenas 50% dos dividendos de entidades nacionais incluído no rendimento
-    const salarioTributavel = salGerente * (1 - SS_TRAB_TAXA);
-    taxaMarginalGerente = calcularTaxaMarginal(salarioTributavel);
     const irsComDividendos = calcularIRS(
-      salarioTributavel + dividendos * DIV_INCLUSAO_ENGLOBAMENTO,
+      baseIRSGerente + dividendos * DIV_INCLUSAO_ENGLOBAMENTO,
     );
-    const irsSoSalario = calcularIRS(salarioTributavel);
-    irsDividendosEnglobamento = Math.max(0, irsComDividendos - irsSoSalario);
+    irsDividendosEnglobamento = Math.max(0, irsComDividendos - irsSalarioGerente);
   }
 
-  const salarioLiqGerente = salGerente * (1 - SS_TRAB_TAXA);
+  // Líquido do gerente = salário (após SS E IRS) + dividendos líquidos.
+  const salarioLiqGerente = salarioTributavel - irsSalarioGerente;
   const liquidoGerenteLiberatoria =
     salarioLiqGerente + (dividendos - irsDividendosLiberatoria);
   const liquidoGerenteEnglobamento =
@@ -1081,6 +1091,7 @@ function simularEmpresa(
     dividendos,
     irsDividendosLiberatoria,
     irsDividendosEnglobamento,
+    irsSalarioGerente,
     taxaMarginalGerente,
     liquidoGerenteLiberatoria,
     liquidoGerenteEnglobamento,
@@ -5837,7 +5848,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                             <p className="mt-1.5 text-xs text-stone-400">
                               {ifici || rnhAntigo
                                 ? "Incompatível com IFICI / RNH antigo (Art. 12.º-B n.º 2 CIRS) — desativa primeiro."
-                                : `Limite de isenção: ${IRS_JOVEM_LIMITE_2026.toLocaleString("pt-PT")}€/ano (55×IAS 2026). Aplica-se ao rendimento coletável, não ao bruto.`}
+                                : `Limite de isenção: ${IRS_JOVEM_LIMITE_2026.toLocaleString("pt-PT")}€/ano (55×IAS 2026). Aplica-se ao rendimento coletável, não ao bruto. Exige ainda idade ≤ ${IRS_JOVEM_IDADE_MAX} anos a 31 de dezembro, não seres dependente e ter a situação fiscal e contributiva regularizada — o simulador não verifica estas condições.`}
                             </p>
                           </div>
 

@@ -39,6 +39,7 @@ import {
   COEFICIENTE_POR_TIPO,
   SS_TAXA,
   SS_COEFICIENTE,
+  MINIMO_EXISTENCIA,
   type Atividade,
   type Regiao,
 } from "@/lib/fiscal-data";
@@ -2184,6 +2185,9 @@ function PassoSituacao({
                   <p className="mt-2 text-[11px] text-stone-400">
                     1.º: 100% · 2–4: 75% · 5–7: 50% · 8–10: 25%
                   </p>
+                  <p className="mt-2 rounded-lg bg-stone-50 px-2.5 py-2 text-[10px] leading-relaxed text-stone-500 dark:bg-stone-800/60 dark:text-stone-400">
+                    Além da idade (≤ 35 anos a 31 de dezembro), o Art. 12.º-B CIRS exige não seres considerado dependente, ter a situação fiscal e contributiva regularizada, e não teres beneficiado de IFICI/RNH no mesmo ano. O simulador não verifica estas condições — confirma o teu enquadramento antes de contar com esta isenção.
+                  </p>
                 </div>
               )}
             </ToggleCard>
@@ -3386,10 +3390,13 @@ function ResultadoFinal({
                   Mínimo de existência aplicado (Art. 70.º CIRS)
                 </p>
                 <p className="mt-0.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-                  O teu rendimento coletável (
-                  {fmt(simAnual.rendimentoColetavel)}) é igual ou inferior a{" "}
-                  €12.880 — o Estado protege este montante de IRS. O imposto foi
-                  reduzido ou anulado. Muda anualmente com o IAS.
+                  O teu rendimento coletável ({fmt(simAnual.rendimentoColetavel)}
+                  ) está perto ou abaixo de {fmt(MINIMO_EXISTENCIA.value)} — o
+                  Estado protege este montante de IRS. O imposto foi reduzido ou
+                  anulado. Este simulador aplica uma aproximação simplificada
+                  desta regra (não a fórmula legal exata com redução
+                  progressiva) — perto do limiar, confirma o valor com um
+                  contabilista.
                 </p>
               </div>
             </div>

@@ -87,6 +87,7 @@ import {
   IMI_TAXA_PADRAO as IMI_TAXA_PADRAO_SRC,
   IMT_TAXA_COMERCIAL as IMT_TAXA_COMERCIAL_SRC,
   IS_TAXA_AQUISICAO as IS_TAXA_AQUISICAO_SRC,
+  DEDUCAO_ESPECIFICA_DEPENDENTE,
 } from "@/lib/fiscal-data";
 import {
   TODAS_LOCALIZACOES,
@@ -200,18 +201,21 @@ type Passo = 0 | 1 | "local" | 2 | 3 | 4 | "resultado" | "aseguir";
 type TipoSociedade = "unipessoal" | "quotas";
 
 // URLs legais para citação inline
+// NOTA: URLs mantidas em sincronia manual com `SOURCES` em fiscal-data.ts —
+// duplicação arquitetural conhecida (ver auditoria 2026, P0-10), a resolver
+// numa migração futura que centralize as referências legais.
 const LEI = {
-  art87circ: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc87.aspx",
-  art88circ: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc88.aspx",
+  art87circ: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/CIRC_2R/Pages/irc87.aspx",
+  art88circ: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/CIRC_2R/Pages/irc88.aspx",
   art71cirs: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs71.aspx",
   art40aCirs: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs40a.aspx",
   art41bEBF: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-41-o-b.aspx",
   art58aEBF: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/EBF58A.aspx",
-  cfi: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/2014-128418757",
-  csc: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/1986-34443375",
+  cfi: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/2014-59423292",
+  csc: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/1986-34443975",
   empresaOnline: "https://www2.gov.pt/espaco-empresa/empresa-online",
   representanteFiscal: "https://info.portaldasfinancas.gov.pt/pt/apoio_contribuinte/questoes_frequentes/pages/faqs-00307.aspx",
-  portaria208: "https://diariodarepublica.pt/dr/detalhe/portaria/208-2017-107695600",
+  portaria208: "https://diariodarepublica.pt/dr/detalhe/portaria/208-2017-107684448",
   lgt: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/lgt/Pages/default.aspx",
 };
 
@@ -287,6 +291,8 @@ interface ResultadoEmpresaGuiado {
   irsDividendosLiberatoria: number;
   irsDividendosEnglobamento: number;
   irsDividendos: number;
+  /** IRS sobre o salário do gerente (Cat. A), sempre devido. */
+  irsSalarioGerente: number;
   taxaMarginalGerente: number;
   liquidoGerente: number;
   taxaEfetiva: number;
@@ -308,7 +314,7 @@ function calcularTaxaMarginal(coletavel: number): number {
   return escaloes[0].taxa;
 }
 
-function simularEmpresaGuiado(
+export function simularEmpresaGuiado(
   faturacao: number,
   despesasOper: number,
   custosEstrutura: number,
@@ -433,26 +439,33 @@ function simularEmpresaGuiado(
   let dividendos = 0;
   let irsDividendosLiberatoria = 0;
   let irsDividendosEnglobamento = 0;
-  let taxaMarginalGerente = 0;
+
+  // IRS do salário do gerente (Cat. A): sempre devido, com ou sem dividendos.
+  // Desconta a SS do trabalhador (11%) e a dedução específica do trabalho
+  // dependente (Art. 25.º CIRS) antes dos escalões gerais (Art. 68.º).
+  // SIMPLIFICAÇÃO: não modela dependentes nem o mínimo de existência
+  // (Art. 70.º) — pode sobrestimar ligeiramente o IRS em salários baixos.
+  const salarioTrib = salGerente * (1 - SS_TRAB_TAXA);
+  const baseIRSGerente = Math.max(0, salarioTrib - DEDUCAO_ESPECIFICA_DEPENDENTE.value);
+  const irsSalarioGerente = calcularIRS(baseIRSGerente);
+  const taxaMarginalGerente = calcularTaxaMarginal(baseIRSGerente);
 
   if (distribuirDividendos && lucroLiquido > 0) {
     dividendos = lucroLiquido;
     irsDividendosLiberatoria = dividendos * IRS_DIVIDENDOS;
 
-    const salarioTrib = salGerente * (1 - SS_TRAB_TAXA);
-    taxaMarginalGerente = calcularTaxaMarginal(salarioTrib);
     const irsComDiv = calcularIRS(
-      salarioTrib + dividendos * DIV_INCLUSAO_ENGLOBAMENTO,
+      baseIRSGerente + dividendos * DIV_INCLUSAO_ENGLOBAMENTO,
     );
-    const irsSoSal = calcularIRS(salarioTrib);
-    irsDividendosEnglobamento = Math.max(0, irsComDiv - irsSoSal);
+    irsDividendosEnglobamento = Math.max(0, irsComDiv - irsSalarioGerente);
   }
 
   const irsDividendos = opcaoEnglobamento
     ? irsDividendosEnglobamento
     : irsDividendosLiberatoria;
 
-  const salarioLiq = salGerente * (1 - SS_TRAB_TAXA);
+  // Líquido do gerente = salário (após SS E IRS) + dividendos líquidos.
+  const salarioLiq = salarioTrib - irsSalarioGerente;
   const liquidoGerente = salarioLiq + (dividendos - irsDividendos);
 
   // Municipal (IMI/IMT)
@@ -484,6 +497,7 @@ function simularEmpresaGuiado(
     irsDividendosLiberatoria,
     irsDividendosEnglobamento,
     irsDividendos,
+    irsSalarioGerente,
     taxaMarginalGerente,
     liquidoGerente,
     taxaEfetiva: faturacao > 0 ? 1 - liquidoGerente / faturacao : 0,
@@ -1902,7 +1916,7 @@ export default function ModoGuiadoEmpresa({
                   </h2>
                   <p className="mb-6 text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
                     Insere o volume de negócios esperado e os custos da empresa.
-                    Todos os custos são dedutíveis ao lucro tributável — pagas IRC (<LeiRef artigo="Art. 87.º CIRC" url={LEI.art87circ} />) apenas sobre o que sobra.
+                    Os custos com ligação à atividade e devidamente documentados reduzem o lucro tributável — pagas IRC (<LeiRef artigo="Art. 87.º CIRC" url={LEI.art87circ} />) sobre o que sobra. Nem todos os custos são aceites (há exceções e limites específicos) — confirma com o teu contabilista.
                     {tipoSede !== "fisica" && <> O custo da sede {tipoSede === "virtual" ? "virtual" : "coworking"} ({fmt(custoSedeVirtual)}/mês = {fmt(custoSedeVirtual * 12)}/ano) já está incluído nos custos.</>}
                   </p>
 
@@ -2421,9 +2435,14 @@ export default function ModoGuiadoEmpresa({
                         <label htmlFor="primeirosAnos" className="text-xs text-stone-600 dark:text-stone-300">Primeiros 3 períodos de atividade (limite RFAI sobe de 50% para 100% da coleta)</label>
                       </div>
                       {rfaiInvest > 0 && resultado.beneficios.rfai > 0 && (
-                        <div className="mt-2 flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 dark:bg-emerald-900/20 dark:border-emerald-800">
-                          <span className="text-[11px] text-emerald-700 dark:text-emerald-300">Poupança RFAI ({pct(RFAI_TAXA[rfaiRegiaoEfetiva])} de {fmt(rfaiInvest)})</span>
-                          <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">-{fmt(Math.round(resultado.beneficios.rfai))}</span>
+                        <div className="mt-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 dark:bg-emerald-900/20 dark:border-emerald-800">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] text-emerald-700 dark:text-emerald-300">Poupança potencial RFAI ({pct(RFAI_TAXA[rfaiRegiaoEfetiva])} de {fmt(rfaiInvest)})</span>
+                            <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">-{fmt(Math.round(resultado.beneficios.rfai))}</span>
+                          </div>
+                          <p className="mt-1 text-[10px] leading-relaxed text-emerald-700/70 dark:text-emerald-300/60">
+                            Assume que o investimento cumpre todos os requisitos de elegibilidade do RFAI (CAE, tipo e novidade do ativo, criação/manutenção de emprego, dossier documental). O simulador não verifica elegibilidade — confirma com o teu contabilista antes de contar com este valor.
+                          </p>
                         </div>
                       )}
                     </Collapsible>
@@ -2469,9 +2488,14 @@ export default function ModoGuiadoEmpresa({
                         tooltip={<>Pessoal investigador, aquisição de equipamento I&D, patentes, subcontratação. Certificação ANI obrigatória.</>}
                       />
                       {sifideDespesas > 0 && resultado.beneficios.sifide > 0 && (
-                        <div className="mt-2 flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 dark:bg-emerald-900/20 dark:border-emerald-800">
-                          <span className="text-[11px] text-emerald-700 dark:text-emerald-300">Poupança SIFIDE ({pct(SIFIDE_META[tipoSifide].taxa)} de {fmt(sifideDespesas)})</span>
-                          <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">-{fmt(Math.round(resultado.beneficios.sifide))}</span>
+                        <div className="mt-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 dark:bg-emerald-900/20 dark:border-emerald-800">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] text-emerald-700 dark:text-emerald-300">Poupança potencial SIFIDE ({pct(SIFIDE_META[tipoSifide].taxa)} de {fmt(sifideDespesas)})</span>
+                            <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">-{fmt(Math.round(resultado.beneficios.sifide))}</span>
+                          </div>
+                          <p className="mt-1 text-[10px] leading-relaxed text-emerald-700/70 dark:text-emerald-300/60">
+                            Assume certificação ANI aprovada e despesas de I&D elegíveis confirmadas. O simulador não verifica elegibilidade — confirma com o teu contabilista antes de contar com este valor.
+                          </p>
                         </div>
                       )}
                     </Collapsible>

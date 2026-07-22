@@ -23,6 +23,7 @@ import {
   DEDUCAO_ESPECIFICA_CATB,
   REGIME_15PCT,
   MINIMO_EXISTENCIA,
+  ADICIONAL_SOLIDARIEDADE,
   IRC_TAXA_GERAL,
   IRC_TAXA_PME,
   IRC_LIMITE_PME,
@@ -45,6 +46,8 @@ import {
   TA_VIATURAS_COMBUSTAO,
   TA_VIATURAS_PHEV,
   TA_VIATURAS_ELETRICA,
+  TA_VIATURAS_ELETRICA_ACIMA_LIMITE,
+  TA_ELETRICA_LIMITE_CUSTO,
   TA_REPRESENTACAO,
   TA_AJUDAS_CUSTO,
   TA_NAO_DOCUMENTADAS,
@@ -424,9 +427,11 @@ export interface SimulacaoIRS {
   exclusaoProgramaRegressar: number;
   /** Montante excluído do rendimento tributável por deficiência (Art. 56.º-A). */
   exclusaoDeficiencia: number;
-  /** Coleta antes das deduções à coleta. */
+  /** Coleta antes das deduções à coleta (já inclui `adicionalSolidariedade`). */
   coletaBruta: number;
-  /** Detalhamento por escalão progressivo (vazio se IFICI aplicado). */
+  /** Adicional de solidariedade (Art. 68.º-A CIRS): 2,5%/5% acima de 80 000 €/250 000 €. 0 se não aplicável ou regime de taxa fixa. */
+  adicionalSolidariedade: number;
+  /** Detalhamento por escalão progressivo (vazio quando IFICI/RNH aplicado). */
   escaloesAplicados: EscalaoAplicado[];
   deducaoDependentes: number;
   /** Dedução à coleta por ascendentes (Art. 78.º-A). Fora do limite global. */
@@ -528,22 +533,41 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   // Regime de taxa flat: IFICI (20%) ou RNH antigo (20%) — sem escalões
   const regimeFlatRate = ificiAplicado || rnhAntigoAplicado;
   const outrosRendimentos = sanitize(input.outrosRendimentos ?? 0);
-  const rendimentoColetavel = Math.max(
+  // Base elegível para a taxa fixa do IFICI/RNH (só rendimento da atividade,
+  // Cat. A/B — Art. 58.º-A, n.º 2 EBF). `outrosRendimentos` (outras
+  // categorias, sem detalhe de elegibilidade) NUNCA entra na taxa fixa —
+  // segue sempre os escalões gerais do Art. 68.º, mesmo com IFICI/RNH ativo.
+  const rendimentoElegivel = Math.max(
     0,
     rendimentoTributavel - exclusaoDeficiencia - rendimentoIsentoJovem
-  ) + outrosRendimentos;
+  );
 
-  // Programa Regressar (Art. 12.º-A CIRS): 50% do rendimento coletável base excluído
-  const exclusaoProgramaRegressar = programaRegressarAplicado ? rendimentoColetavel * 0.5 : 0;
-  // Rendimento efetivamente sujeito a IRS (após todas as exclusões)
-  const rendimentoColetavelFinal = Math.max(0, rendimentoColetavel - exclusaoProgramaRegressar);
+  // Programa Regressar (Art. 12.º-A CIRS): 50% do rendimento elegível excluído
+  const exclusaoProgramaRegressar = programaRegressarAplicado ? rendimentoElegivel * 0.5 : 0;
+  const rendimentoElegivelFinal = Math.max(0, rendimentoElegivel - exclusaoProgramaRegressar);
+  // Rendimento total sujeito a IRS (elegível + outras categorias) — usado
+  // para apresentação, mínimo de existência e deduções à coleta.
+  const rendimentoColetavelFinal = rendimentoElegivelFinal + outrosRendimentos;
 
-  // ── Coleta: flat 20% (IFICI / RNH antigo) ou escalões progressivos ────────
+  // ── Coleta: flat 20% (IFICI / RNH antigo, só na parte elegível) + escalões
+  //    progressivos (outrosRendimentos sempre; toda a base sem regime flat) ──
   const divisor = conjunta ? QUOCIENTE_CONJUGAL.value : 1;
   let coletaBruta: number;
   let escaloesAplicados: EscalaoAplicado[];
   if (regimeFlatRate) {
-    coletaBruta = rendimentoColetavelFinal * IFICI_TAXA.value;
+    const coletaFlat = rendimentoElegivelFinal * IFICI_TAXA.value;
+    // outrosRendimentos é tributado aos escalões progressivos, empilhado por
+    // cima do rendimento elegível (que já "ocupa" os escalões mais baixos,
+    // mesmo sendo tributado à parte, à taxa fixa) — não do zero. A diferença
+    // entre a coleta progressiva do total e a do elegível isola o imposto
+    // marginal da parte de outrosRendimentos, nos escalões certos.
+    const detalhadoTotal = irsProgressivoDetalhado(rendimentoColetavelFinal / divisor);
+    const detalhadoElegivel = irsProgressivoDetalhado(rendimentoElegivelFinal / divisor);
+    const coletaOutros = detalhadoTotal.imposto - detalhadoElegivel.imposto;
+    coletaBruta = coletaFlat + coletaOutros * divisor;
+    // Sem detalhe por escalão aqui: misturaria a taxa fixa (elegível) com os
+    // escalões gerais (outrosRendimentos), confundindo a leitura. A UI não
+    // mostra este detalhe quando o regime de taxa fixa está ativo.
     escaloesAplicados = [];
   } else {
     const detalhado = irsProgressivoDetalhado(rendimentoColetavelFinal / divisor);
@@ -557,6 +581,29 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
         }))
       : detalhado.escaloes;
   }
+
+  // ── Adicional de solidariedade (Art. 68.º-A CIRS) ─────────────────────────
+  // Acresce às taxas gerais do Art. 68.º — 2,5% na parte do coletável entre
+  // 80 000 € e 250 000 €, 5% acima de 250 000 €. Não se aplica aos regimes de
+  // taxa fixa (IFICI/RNH), que substituem — em vez de acrescer a — as taxas
+  // gerais. Em tributação conjunta, aplica-se por titular (metade do
+  // coletável) e duplica-se o resultado, tal como os escalões gerais.
+  const baseColetavelPorTitular = rendimentoColetavelFinal / divisor;
+  const parteEntre80e250 = regimeFlatRate
+    ? 0
+    : Math.max(
+        0,
+        Math.min(baseColetavelPorTitular, ADICIONAL_SOLIDARIEDADE.limiar2.value) -
+          ADICIONAL_SOLIDARIEDADE.limiar1.value
+      );
+  const parteAcima250 = regimeFlatRate
+    ? 0
+    : Math.max(0, baseColetavelPorTitular - ADICIONAL_SOLIDARIEDADE.limiar2.value);
+  const adicionalSolidariedade =
+    (parteEntre80e250 * ADICIONAL_SOLIDARIEDADE.taxa1.value +
+      parteAcima250 * ADICIONAL_SOLIDARIEDADE.taxa2.value) *
+    divisor;
+  coletaBruta += adicionalSolidariedade;
 
   // ── Deduções à coleta ─────────────────────────────────────────────────────
   // Dependentes: suporta detalhe (bebe, deficientes) ou contagem simples
@@ -699,6 +746,7 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     programaRegressarAplicado,
     exclusaoProgramaRegressar,
     coletaBruta,
+    adicionalSolidariedade,
     escaloesAplicados,
     deducaoDependentes,
     deducaoAscendentes,
@@ -840,7 +888,12 @@ export interface TributacaoAutonomaResult {
 
 /** Devolve a taxa de TA para uma viatura dado o tipo e custo de aquisição. */
 function taxaTA(tipo: TipoViatura, custoAquisicao: number): number {
-  if (tipo === "eletrica") return TA_VIATURAS_ELETRICA.value;
+  if (tipo === "eletrica") {
+    // Elétricas ≤ limite: isentas (0%). Acima do limite: 10% (Art. 88.º, n.º 20 CIRC).
+    return custoAquisicao > TA_ELETRICA_LIMITE_CUSTO.value
+      ? TA_VIATURAS_ELETRICA_ACIMA_LIMITE.value
+      : TA_VIATURAS_ELETRICA.value;
+  }
   const tabela: TAViaturasTaxas = tipo === "phev" ? TA_VIATURAS_PHEV.value : TA_VIATURAS_COMBUSTAO.value;
   const { t1, t2 } = TA_THRESHOLDS.value;
   if (custoAquisicao <= t1) return tabela.ate37500;
