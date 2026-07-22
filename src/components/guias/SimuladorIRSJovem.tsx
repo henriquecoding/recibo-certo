@@ -7,6 +7,7 @@ import { IRS_JOVEM, IAS_VALUE } from "@/lib/fiscal-data";
 import { irsProgressivo } from "@/lib/fiscal";
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
+import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 
 const ISENCAO_POR_ANO = IRS_JOVEM.isencaoPorAno.value;
 const ANOS_DADOS = Object.entries(ISENCAO_POR_ANO).map(([k, v]) => ({
@@ -65,13 +66,11 @@ export function SimuladorIRSJovem() {
             Rendimento coletável anual (Cat. B)
           </label>
           <div className="relative">
-            <input
-              type="number"
+            <LocalizedNumberInput
+              value={rendimento}
+              onValueChange={setRendimento}
               min={0}
               max={80000}
-              step={500}
-              value={rendimento}
-              onChange={(e) => setRendimento(Number(e.target.value))}
               className="w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-4 py-2.5 text-sm font-medium text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">€</span>

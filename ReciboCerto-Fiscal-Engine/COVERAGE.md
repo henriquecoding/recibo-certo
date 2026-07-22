@@ -2,18 +2,18 @@
 
 Esta matriz é um contrato de honestidade. `contract_only` significa que os inputs e bloqueios estão definidos, mas o domínio ainda não calcula imposto.
 
-| Domínio | Estado | Primeiro resultado entregável | Bloqueio principal |
+| Domínio | Estado no núcleo novo | Estado da remediação em `src/lib/` | Bloqueio principal |
 |---|---|---|---|
-| Tesouraria por recibo | `contract_only` | Caixa, IVA, retenção e reserva SS separados | Migrar regras sem chamar obrigação à reserva |
-| IRS anual | `contract_only` | Lotes de rendimento + coleta progressiva | Mínimo de existência, solidariedade, IFICI e IRS Jovem |
-| IVA | `contract_only` | Enquadramento e territorialidade | Matriz art. 6.º e regimes transfronteiriços |
-| SS independente | `contract_only` | Apuramento trimestral e contribuição mensal | Opção, limites e isenções condicionais |
-| Retenção salarial | `contract_only` | Retenção por linha de remuneração | Elegibilidade IRS Jovem e casos laborais |
-| IRC | `contract_only` | Ponte do resultado contabilístico à coleta | Ajustamentos fiscais e dados contabilísticos |
-| Tributação autónoma | `contract_only` | Rubricas do art. 88.º com gates | Corrigir elétricos e agravamento no legado |
-| Benefícios | `contract_only` | Checklist de elegibilidade | Evidência, auxílios de Estado e aprovação |
-| Heranças/doações | `contract_only` | Casos simples, explicitamente limitados | Complexidade civil e avaliação |
-| Rendimento internacional | `contract_only` | Encaminhamento português por país/categoria | Artigos de cada CDT e limite do crédito |
+| Tesouraria por recibo | `contract_only` | Inputs monetários normalizados | Migrar regras sem chamar obrigação à reserva |
+| IRS anual | `contract_only` | P0 do mínimo, solidariedade e âmbito IFICI corrigidos | Migrar por lotes; aprovar gates completos de regimes especiais |
+| IVA | `contract_only` | Sem alteração estrutural | Matriz art. 6.º e regimes transfronteiriços |
+| SS independente | `contract_only` | Sem alteração estrutural | Opção, limites e isenções condicionais |
+| Retenção salarial | `functional_draft` | Simulador por rubrica integrado por adaptador revisto | Testes dourados oficiais, benefícios complexos, cessação e dataset aprovado |
+| IRC | `contract_only` | Empresa centralizada, mas continua estimativa simplificada | Ponte do resultado contabilístico, ajustamentos e dados contabilísticos |
+| Tributação autónoma | `contract_only` | Elétricos e paridade entre superfícies corrigidos | Migrar matriz integral do art. 88.º para o núcleo novo |
+| Benefícios | `contract_only` | RFAI/SIFIDE falham de forma segura; potencial não reduz imposto | Evidência, auxílios de Estado e aprovação |
+| Heranças/doações | `contract_only` | Inputs monetários normalizados | Complexidade civil e avaliação |
+| Rendimento internacional | `contract_only` | Sem alteração estrutural | Artigos de cada CDT e limite do crédito |
 
 ## Definição de cobertura de uma regra
 
@@ -30,6 +30,6 @@ Uma regra só muda para `reviewed` quando contém:
 
 `production` exige ainda aprovação do dataset, testes cruzados com a aplicação e rollback ensaiado.
 
-## Nota desta sessão
+## Leitura correta da matriz
 
-Alguns bloqueios do motor legado listados acima já foram corrigidos em `src/lib/` (ver `README.md`, secção "Estado dos P0"): adicional de solidariedade e âmbito do IFICI (bloqueio de "IRS anual"), correção do `taxaTA` das elétricas (bloqueio de "Tributação autónoma", parcial — o líquido do gerente também foi corrigido, mas a duplicação arquitetural entre `fiscal.ts`/`SimuladorIntegrado.tsx`/`ModoGuiadoEmpresa.tsx` mantém-se). Isto não muda o estado `contract_only` destes domínios nesta matriz — corrigir um bug no motor legado não substitui a migração para o novo núcleo, com proveniência, testes dourados e aprovação por domínio.
+`functional_draft` significa que existe implementação e cobertura automatizada, mas não aprovação para o dataset novo substituir todos os cálculos em produção. As correções no motor em uso reduzem risco imediato; não mudam por si só o estado dos nove domínios `contract_only`. A passagem a `reviewed`/`production` continua a exigir proveniência, testes dourados e aprovação por domínio.

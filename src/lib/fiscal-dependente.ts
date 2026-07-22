@@ -21,7 +21,6 @@ import {
   DEDUCAO_DEPENDENTE,
   DEDUCAO_DEPENDENTE_3MAIS,
   DEDUCAO_DEPENDENTE_DEFICIENCIA,
-  MINIMO_EXISTENCIA,
   HORARIO_SEMANAL_COMPLETO,
   TRABALHO_SUPLEMENTAR,
   RETENCAO_SUPLEMENTAR_FATOR,
@@ -33,7 +32,13 @@ import {
   type TipoAtividade,
   type Regiao,
 } from "./fiscal-data";
-import { compararRegimes, irsProgressivo, isencaoIRSJovem, type ComparacaoResult } from "./fiscal";
+import {
+  calcularAbatimentoMinimoExistencia,
+  compararRegimes,
+  irsProgressivo,
+  isencaoIRSJovem,
+  type ComparacaoResult,
+} from "./fiscal";
 
 const cent = (n: number) => Math.round(n * 100) / 100;
 
@@ -286,8 +291,12 @@ export interface ReciboMensalInput {
   premioRegular?: boolean;
   /** Subsídio de férias pago neste mês. */
   subsidioFerias?: number;
+  /** Direito total usado para calcular a retenção quando o pagamento é fracionado. */
+  subsidioFeriasDireitoTotal?: number;
   /** Subsídio de Natal pago neste mês. */
   subsidioNatal?: number;
+  /** Direito total usado para calcular a retenção quando o pagamento é fracionado. */
+  subsidioNatalDireitoTotal?: number;
   /** Outros rendimentos sujeitos a IRS/SS (feriados, diuturnidades, etc.). */
   outrosRendimentosSujeitos?: number;
   // Ajudas de custo (deslocações)
@@ -313,6 +322,8 @@ export interface ReciboMensalResult {
   // Subsídios de férias/Natal pagos no mês
   subsidioFerias: number;
   subsidioNatal: number;
+  irsFerias: number;
+  irsNatal: number;
   irsSubsidios: number;
   /** Outros rendimentos sujeitos a IRS/SS. */
   outrosSujeitos: number;
@@ -376,6 +387,14 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
   // Subsídios de férias/Natal pagos no mês.
   const subsidioFerias = Math.max(0, input.subsidioFerias ?? 0);
   const subsidioNatal = Math.max(0, input.subsidioNatal ?? 0);
+  const subsidioFeriasDireitoTotal = Math.max(
+    subsidioFerias,
+    input.subsidioFeriasDireitoTotal ?? subsidioFerias,
+  );
+  const subsidioNatalDireitoTotal = Math.max(
+    subsidioNatal,
+    input.subsidioNatalDireitoTotal ?? subsidioNatal,
+  );
 
   // Outros rendimentos sujeitos a IRS/SS (ex.: feriados, diuturnidades, prémios
   // não regulares já incluídos noutro campo) — captura o que um recibo real tem
@@ -427,21 +446,44 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
   const suplementarIRS = cent(suplementarTotal * taxaEfetivaMes * RETENCAO_SUPLEMENTAR_FATOR.value);
   // Subsídios de férias/Natal: retenção autónoma (cada um pela tabela, em separado),
   // também com a isenção do IRS Jovem aplicada à sua base.
-  const irsSubsidios = cent(
-    retencaoJovem(subsidioFerias, dependentes, ec, def, reg, ano) +
-      retencaoJovem(subsidioNatal, dependentes, ec, def, reg, ano)
-  );
+  // Art. 99.º-C, n.º 6: se o subsídio for fracionado, cada pagamento retém a
+  // parte proporcional do imposto calculado sobre o direito total.
+  const irsFerias = subsidioFeriasDireitoTotal > 0
+    ? cent(
+        retencaoJovem(subsidioFeriasDireitoTotal, dependentes, ec, def, reg, ano)
+          * subsidioFerias / subsidioFeriasDireitoTotal,
+      )
+    : 0;
+  const irsNatal = subsidioNatalDireitoTotal > 0
+    ? cent(
+        retencaoJovem(subsidioNatalDireitoTotal, dependentes, ec, def, reg, ano)
+          * subsidioNatal / subsidioNatalDireitoTotal,
+      )
+    : 0;
+  const irsSubsidios = cent(irsFerias + irsNatal);
   const irsTotal = cent(irsBaseMensal + suplementarIRS + irsSubsidios);
 
   // Decomposição do IRS Jovem (para a UI mostrar a poupança e o isento).
-  const isentoFerias = isencaoJovemRemuneracao(subsidioFerias, ano).isentoEur;
-  const isentoNatal = isencaoJovemRemuneracao(subsidioNatal, ano).isentoEur;
+  const isentoFerias = subsidioFeriasDireitoTotal > 0
+    ? isencaoJovemRemuneracao(subsidioFeriasDireitoTotal, ano).isentoEur
+      * subsidioFerias / subsidioFeriasDireitoTotal
+    : 0;
+  const isentoNatal = subsidioNatalDireitoTotal > 0
+    ? isencaoJovemRemuneracao(subsidioNatalDireitoTotal, ano).isentoEur
+      * subsidioNatal / subsidioNatalDireitoTotal
+    : 0;
   const rendimentoIsentoJovem = cent(jovemMes.isentoEur + isentoFerias + isentoNatal);
   const irsSemJovem = cent(
     retencaoPorSituacao(remMensal, dependentes, ec, def, reg) +
       cent(suplementarTotal * (remMensal > 0 ? retencaoPorSituacao(remMensal, dependentes, ec, def, reg) / remMensal : 0) * RETENCAO_SUPLEMENTAR_FATOR.value) +
-      retencaoPorSituacao(subsidioFerias, dependentes, ec, def, reg) +
-      retencaoPorSituacao(subsidioNatal, dependentes, ec, def, reg)
+      (subsidioFeriasDireitoTotal > 0
+        ? retencaoPorSituacao(subsidioFeriasDireitoTotal, dependentes, ec, def, reg)
+          * subsidioFerias / subsidioFeriasDireitoTotal
+        : 0) +
+      (subsidioNatalDireitoTotal > 0
+        ? retencaoPorSituacao(subsidioNatalDireitoTotal, dependentes, ec, def, reg)
+          * subsidioNatal / subsidioNatalDireitoTotal
+        : 0)
   );
 
   // Totais.
@@ -475,6 +517,8 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
     premioRegular,
     subsidioFerias,
     subsidioNatal,
+    irsFerias,
+    irsNatal,
     irsSubsidios,
     outrosSujeitos,
     ajudasTotal,
@@ -749,13 +793,21 @@ export function mealheiroDependente(input: MealheiroDependenteInput): MealheiroD
   const ano = input.irsJovemAno;
   const pctJovem = isencaoIRSJovem(ano);
   const rendimentoIsentoJovem = cent(Math.min(brutoAnual * pctJovem, IRS_JOVEM_TETO_CALC));
-  const rendimentoColetavel = cent(Math.max(0, brutoAnual - deducaoEspecifica - rendimentoIsentoJovem));
+  const rendimentoColetavelAntesMinimo = cent(Math.max(0, brutoAnual - deducaoEspecifica - rendimentoIsentoJovem));
+  const minimo = calcularAbatimentoMinimoExistencia({
+    eligibleIncome: true,
+    dependentTaxpayer: false,
+    grossIncome: brutoAnual,
+    specificDeductions: deducaoEspecifica,
+    householdGrossIncome: brutoAnual,
+    householdNonEnglobedIncome: 0,
+    householdTaxpayers: 1,
+  });
+  const rendimentoColetavel = cent(Math.max(0, rendimentoColetavelAntesMinimo - minimo.abatement));
 
   const irsBruto = irsProgressivo(rendimentoColetavel);
   const irsAposDeducoes = Math.max(0, irsBruto - deducaoDependentes(dep, depDefic));
-  // Mínimo de existência: o rendimento líquido não pode descer abaixo do limiar.
-  const irsMaximo = Math.max(0, rendimentoColetavel - MINIMO_EXISTENCIA.value);
-  const irsApurado = cent(Math.min(irsAposDeducoes, irsMaximo));
+  const irsApurado = cent(irsAposDeducoes);
 
   // Retido na fonte estimado: salário (14 meses) + variável à taxa efetiva do mês.
   const ec = input.estadoCivil ?? "naoCasado";

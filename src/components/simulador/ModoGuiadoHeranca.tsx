@@ -10,6 +10,7 @@ import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store
 import GuardarCenarioDialog from "@/components/ui/GuardarCenarioDialog";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import InfoTip from "@/components/ui/InfoTip";
+import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 import {
   GuiadoStepper,
   GuiadoCabecalho,
@@ -107,13 +108,11 @@ function CampoEuro({
       </div>
       <div className="relative">
         <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[15px] font-medium text-stone-400" aria-hidden>€</span>
-        <input
-          type="number"
-          inputMode="decimal"
+        <LocalizedNumberInput
+          value={value}
           min={0}
-          value={value === 0 ? "" : value}
           placeholder="0"
-          onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
+          onValueChange={onChange}
           className={`${campoCls} pl-8 tabular-nums`}
         />
       </div>

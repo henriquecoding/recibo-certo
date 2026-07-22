@@ -183,10 +183,12 @@ describe("domains/personal-income-tax — adicional de solidariedade (regra de d
 });
 
 // ── Invariante #5: domínio não migrado falha fechado ────────────────────────
-describe("domains — falhar fechado quando o domínio ainda não foi migrado", () => {
-  it("todos os domínios mínimos estão registados como contract_only", () => {
-    expect(allDomainsAreContractOnly()).toBe(true);
+describe("domains — cobertura explícita e falha fechada", () => {
+  it("regista o payroll funcional como draft e mantém os restantes contratos fechados", () => {
+    expect(allDomainsAreContractOnly()).toBe(false);
     expect(Object.keys(COVERAGE)).toHaveLength(10);
+    expect(COVERAGE["payroll-withholding"].status).toBe("functional_draft");
+    expect(Object.values(COVERAGE).filter((domain) => domain.status === "contract_only")).toHaveLength(9);
   });
 
   it("route() devolve sempre unsupported (nenhum domínio foi migrado)", () => {

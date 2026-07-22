@@ -23,6 +23,7 @@ import {
   DEDUCAO_ESPECIFICA_CATB,
   REGIME_15PCT,
   MINIMO_EXISTENCIA,
+  MINIMO_EXISTENCIA_FORMULA,
   ADICIONAL_SOLIDARIEDADE,
   IRC_TAXA_GERAL,
   IRC_TAXA_PME,
@@ -294,6 +295,170 @@ export function irsProgressivoDetalhado(coletavel: number): {
   return { imposto, escaloes };
 }
 
+export interface MinimoExistenciaFacts {
+  /** A origem predominante está abrangida pelo art. 70.º, n.º 2. */
+  eligibleIncome: boolean;
+  /** O titular é dependente fiscal; nesse caso o limite de despesas gerais é zero. */
+  dependentTaxpayer: boolean;
+  /** Rendimentos brutos de todas as categorias deste titular. */
+  grossIncome: number;
+  /** Deduções específicas do titular na aceção do art. 70.º, n.º 5, al. b). */
+  specificDeductions: number;
+  /** Soma dos rendimentos brutos de todos os titulares do agregado. */
+  householdGrossIncome: number;
+  /** Rendimentos não englobados/liberatórios de sujeitos passivos e dependentes. */
+  householdNonEnglobedIncome: number;
+  /** Número de sujeitos passivos do agregado (1 ou 2). */
+  householdTaxpayers: number;
+}
+
+export type MinimoExistenciaDecision = {
+  status: "applied" | "no_effect" | "not_applicable" | "excluded" | "needs_input";
+  abatement: number;
+  thresholdL: number;
+  reason: string;
+  missingFields?: readonly (keyof MinimoExistenciaFacts)[];
+};
+
+/**
+ * Abatimento por mínimo de existência — fórmula integral do artigo 70.º CIRS.
+ *
+ * Esta função trabalha sobre rendimentos brutos e deduções específicas. Não é
+ * um teto ao imposto nem um clamp ao rendimento líquido. O resultado deve ser
+ * subtraído ao rendimento coletável antes dos escalões do artigo 68.º.
+ */
+export function calcularAbatimentoMinimoExistencia(
+  facts: Partial<MinimoExistenciaFacts>,
+): MinimoExistenciaDecision {
+  const required: readonly (keyof MinimoExistenciaFacts)[] = [
+    "eligibleIncome",
+    "dependentTaxpayer",
+    "grossIncome",
+    "specificDeductions",
+    "householdGrossIncome",
+    "householdNonEnglobedIncome",
+    "householdTaxpayers",
+  ];
+  const missing = required.filter((field) => facts[field] === undefined || facts[field] === null);
+  if (missing.length > 0) {
+    return {
+      status: "needs_input",
+      abatement: 0,
+      thresholdL: 0,
+      reason: "Faltam factos exigidos pelo artigo 70.º para calcular o abatimento sem pressupostos.",
+      missingFields: missing,
+    };
+  }
+
+  const complete = facts as MinimoExistenciaFacts;
+  const numeric = [
+    complete.grossIncome,
+    complete.specificDeductions,
+    complete.householdGrossIncome,
+    complete.householdNonEnglobedIncome,
+    complete.householdTaxpayers,
+  ];
+  if (
+    numeric.some((value) => !Number.isFinite(value) || value < 0)
+    || !Number.isInteger(complete.householdTaxpayers)
+    || complete.householdTaxpayers < 1
+    || complete.householdTaxpayers > 2
+    || complete.grossIncome > complete.householdGrossIncome
+    || complete.specificDeductions > complete.grossIncome
+  ) {
+    return {
+      status: "needs_input",
+      abatement: 0,
+      thresholdL: 0,
+      reason: "Os factos do mínimo de existência são incoerentes ou inválidos.",
+    };
+  }
+
+  const reference = MINIMO_EXISTENCIA.value;
+  const firstBracket = ESCALOES_IRS.value[0];
+  if (!firstBracket || firstBracket.ate === null || firstBracket.taxa <= 0) {
+    return {
+      status: "needs_input",
+      abatement: 0,
+      thresholdL: 0,
+      reason: "O dataset não contém taxa e limite válidos para o primeiro escalão.",
+    };
+  }
+
+  const generalExpenseLimit = complete.dependentTaxpayer
+    ? 0
+    : MINIMO_EXISTENCIA_FORMULA.limiteDespesasGeraisPorTitular.value;
+  const divisorL = MINIMO_EXISTENCIA_FORMULA.divisorPatamarL.value;
+  const thresholdL =
+    reference
+    - generalExpenseLimit / (firstBracket.taxa * divisorL)
+    + firstBracket.ate / divisorL;
+
+  if (!complete.eligibleIncome) {
+    return {
+      status: "not_applicable",
+      abatement: 0,
+      thresholdL,
+      reason: "A origem predominante do rendimento não está abrangida pelo artigo 70.º, n.º 2.",
+    };
+  }
+
+  const exclusionGross =
+    MINIMO_EXISTENCIA_FORMULA.multiplicadorExclusaoRendimentoAgregado.value
+    * MINIMO_EXISTENCIA_FORMULA.multiplicadorIASExclusao.value
+    * IAS_VALUE
+    * complete.householdTaxpayers;
+  const exclusionNonEnglobed =
+    MINIMO_EXISTENCIA_FORMULA.multiplicadorIASExclusao.value
+    * IAS_VALUE
+    * complete.householdTaxpayers;
+  if (complete.householdGrossIncome > exclusionGross) {
+    return {
+      status: "excluded",
+      abatement: 0,
+      thresholdL,
+      reason: "O rendimento bruto do agregado excede o limite do artigo 70.º, n.º 4, al. a).",
+    };
+  }
+  if (complete.householdNonEnglobedIncome > exclusionNonEnglobed) {
+    return {
+      status: "excluded",
+      abatement: 0,
+      thresholdL,
+      reason: "Os rendimentos não englobados excedem o limite do artigo 70.º, n.º 4, al. b).",
+    };
+  }
+
+  const gross = complete.grossIncome;
+  const specific = complete.specificDeductions;
+  const generalExpenseEquivalent = generalExpenseLimit / firstBracket.taxa;
+  let rawAbatement: number;
+  if (gross <= reference) {
+    rawAbatement = reference - (specific + generalExpenseEquivalent);
+  } else if (gross <= thresholdL) {
+    rawAbatement =
+      reference
+      - MINIMO_EXISTENCIA_FORMULA.coeficienteTrocoIntermedio.value * (gross - reference)
+      - (specific + generalExpenseEquivalent);
+  } else {
+    rawAbatement =
+      thresholdL
+      - firstBracket.ate
+      - MINIMO_EXISTENCIA_FORMULA.coeficienteTrocoSuperior.value * (gross - thresholdL)
+      - specific;
+  }
+
+  const abatement = Math.min(Math.max(0, rawAbatement), Math.max(0, gross - specific));
+  return {
+    status: abatement > 0 ? "applied" : "no_effect",
+    abatement,
+    thresholdL,
+    reason: abatement > 0
+      ? "Abatimento calculado pela fórmula por troços do artigo 70.º."
+      : "A fórmula por troços resulta num abatimento nulo.",
+  };
+}
+
 export interface DeducoesInput {
   /** Valor gasto em saúde no ano. */
   saude?: number;
@@ -399,6 +564,13 @@ export interface SimulacaoInput {
   donativos?: { valor: number; fator: number; semLimite: boolean };
   /** Pensões de alimentos pagas (Art. 83.º-A CIRS): 20%, fora do limite global. */
   pensaoAlimentos?: number;
+  /**
+   * Factos completos para o mínimo de existência. Necessários quando há
+   * tributação conjunta ou rendimentos agregados sem decomposição. Nos casos
+   * simples de um titular com apenas Cat. B Art. 151.º, o motor deriva estes
+   * valores do próprio pedido.
+   */
+  minimoExistenciaFacts?: Partial<MinimoExistenciaFacts>;
 }
 
 export interface SimulacaoIRS {
@@ -448,6 +620,12 @@ export interface SimulacaoIRS {
   deducaoDeficiencia: number;
   irsEstimado: number;
   minimoExistenciaAplicado: boolean;
+  /** Estado auditável da regra do artigo 70.º. */
+  minimoExistenciaDecision: MinimoExistenciaDecision;
+  /** Rendimento coletável antes do abatimento do artigo 70.º. */
+  rendimentoColetavelAntesMinimo: number;
+  /** Abatimento efetivamente subtraído ao coletável. */
+  abatimentoMinimoExistencia: number;
   taxaMediaEfetiva: number;
   retencoesPagas: number;
   /** Estimativa de SS anual (21,4% sobre base de SS). 0 se isento. */
@@ -545,9 +723,45 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   // Programa Regressar (Art. 12.º-A CIRS): 50% do rendimento elegível excluído
   const exclusaoProgramaRegressar = programaRegressarAplicado ? rendimentoElegivel * 0.5 : 0;
   const rendimentoElegivelFinal = Math.max(0, rendimentoElegivel - exclusaoProgramaRegressar);
-  // Rendimento total sujeito a IRS (elegível + outras categorias) — usado
-  // para apresentação, mínimo de existência e deduções à coleta.
-  const rendimentoColetavelFinal = rendimentoElegivelFinal + outrosRendimentos;
+  // Rendimento total antes do abatimento por mínimo de existência.
+  const rendimentoColetavelAntesMinimo = rendimentoElegivelFinal + outrosRendimentos;
+
+  // ── Mínimo de existência (Art. 70.º) ──────────────────────────────────────
+  // A regra é um abatimento ao coletável calculado por troços a partir do
+  // rendimento bruto e das deduções específicas. Nunca é um clamp pós-imposto.
+  const inferredMinimumFacts: Partial<MinimoExistenciaFacts> =
+    !conjunta && outrosRendimentos === 0
+      ? {
+          eligibleIncome: tipo === "art151",
+          dependentTaxpayer: false,
+          grossIncome: brutoAnual,
+          specificDeductions: Math.max(0, brutoAnual - rendimentoTributavel),
+          householdGrossIncome: brutoAnual,
+          householdNonEnglobedIncome: 0,
+          householdTaxpayers: 1,
+        }
+      : {
+          // Estes dois factos continuam seguros; os restantes têm de ser
+          // fornecidos por titular quando a entrada agregada não os preserva.
+          eligibleIncome: tipo === "art151",
+          dependentTaxpayer: false,
+        };
+  const minimoExistenciaDecision: MinimoExistenciaDecision = regimeFlatRate
+    ? {
+        status: "not_applicable",
+        abatement: 0,
+        thresholdL: 0,
+        reason: "O regime de taxa fixa selecionado não usa o abatimento dos escalões gerais.",
+      }
+    : calcularAbatimentoMinimoExistencia({
+        ...inferredMinimumFacts,
+        ...(input.minimoExistenciaFacts ?? {}),
+      });
+  const abatimentoMinimoExistencia = minimoExistenciaDecision.abatement;
+  const rendimentoColetavelFinal = Math.max(
+    0,
+    rendimentoColetavelAntesMinimo - abatimentoMinimoExistencia,
+  );
 
   // ── Coleta: flat 20% (IFICI / RNH antigo, só na parte elegível) + escalões
   //    progressivos (outrosRendimentos sempre; toda a base sem regime flat) ──
@@ -692,20 +906,8 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   const deducaoDeficiencia = input.deficiencia ? DEDUCAO_DEFICIENCIA_COLETA.value : 0;
 
   const deducoesColeta = deducaoDependentes + deducaoAscendentes + deducaoDespesas + deducaoDeficiencia + deducaoPensaoAlimentos;
-  let irsEstimado = Math.max(0, coletaBruta - deducoesColeta);
-
-  // ── Mínimo de existência (não aplicável com regime de taxa flat) ─────────
-  const minimo = MINIMO_EXISTENCIA.value;
-  let minimoExistenciaAplicado = false;
-  if (!regimeFlatRate) {
-    if (rendimentoColetavelFinal > 0 && rendimentoColetavelFinal <= minimo) {
-      irsEstimado = 0;
-      minimoExistenciaAplicado = true;
-    } else if (rendimentoColetavelFinal > minimo && rendimentoColetavelFinal - irsEstimado < minimo) {
-      irsEstimado = Math.max(0, rendimentoColetavelFinal - minimo);
-      minimoExistenciaAplicado = true;
-    }
-  }
+  const irsEstimado = Math.max(0, coletaBruta - deducoesColeta);
+  const minimoExistenciaAplicado = minimoExistenciaDecision.status === "applied";
 
   // ── SS anual estimado (para display; não afecta o IRS) ───────────────────
   const acumulaEmprego = !!input.acumulaEmprego;
@@ -757,6 +959,9 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     deducaoDeficiencia,
     irsEstimado,
     minimoExistenciaAplicado,
+    minimoExistenciaDecision,
+    rendimentoColetavelAntesMinimo,
+    abatimentoMinimoExistencia,
     taxaMediaEfetiva,
     retencoesPagas,
     ssAnual,

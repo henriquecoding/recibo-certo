@@ -9,6 +9,7 @@ import { fmt, pct } from "@/lib/format";
 import { haReabertura } from "@/lib/store/cenarios";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import InfoTip from "@/components/ui/InfoTip";
+import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 import { Contador } from "@/components/simulador/guiado-ui";
 import { Interruptor, campoCls, rotuloCls } from "@/components/simulador/ui";
 import {
@@ -59,8 +60,8 @@ function Campo({ label, value, onChange, tooltip }: { label: string; value: numb
       </div>
       <div className="relative">
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[15px] font-medium text-stone-400" aria-hidden>€</span>
-        <input type="number" inputMode="decimal" min={0} value={value === 0 ? "" : value} placeholder="0"
-          onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
+        <LocalizedNumberInput value={value} min={0} placeholder="0"
+          onValueChange={onChange}
           className={`${campoCls} pl-7 tabular-nums`} />
       </div>
     </div>

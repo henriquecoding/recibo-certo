@@ -14,29 +14,66 @@ import { ResultadoAuditoria } from "@/components/dependente/ResultadoAuditoria";
 import { fmt } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import { ShieldCheck } from "@/components/ui/Icons";
+import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
 
-const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
-const soDecimal = (s: string) => s.replace(/[^\d.,]/g, "");
+const num = (s: string) => Math.max(0, parseNumericDraft(s) ?? 0);
+const soDecimal = (s: string) => sanitizeNumericDraft(s);
 
 export function AuditoriaPainel({
   input,
   irsInicial = "",
   ssInicial = "",
   remuneracaoSujeita,
+  esperado,
 }: {
   input: VencimentoInput;
   irsInicial?: string;
   ssInicial?: string;
   remuneracaoSujeita?: number;
+  esperado?: {
+    irs: number;
+    ss: number;
+    irsBase: number;
+    brutoCaixa: number;
+    liquido: number;
+    custoEmpresa: number;
+  };
 }) {
   const [irsStr, setIrsStr] = useState(irsInicial);
   const [ssStr, setSsStr] = useState(ssInicial);
   const [submetido, setSubmetido] = useState(!!(irsInicial && ssInicial));
 
-  const resultado = useMemo(
-    () => auditarRecibo({ ...input, irsDeclarado: num(irsStr), ssDeclarado: num(ssStr), remuneracaoSujeita }),
-    [input, irsStr, ssStr, remuneracaoSujeita]
-  );
+  const resultado = useMemo(() => {
+    const irsDeclarado = num(irsStr);
+    const ssDeclarado = num(ssStr);
+    const base = auditarRecibo({ ...input, irsDeclarado, ssDeclarado, remuneracaoSujeita });
+    if (!esperado) return base;
+    const irsDiferenca = Math.round((irsDeclarado - esperado.irs) * 100) / 100;
+    const ssDiferenca = Math.round((ssDeclarado - esperado.ss) * 100) / 100;
+    const irsOk = Math.abs(irsDiferenca) <= 2;
+    const ssOk = Math.abs(ssDiferenca) <= 2;
+    const alertas = [
+      !irsOk && `Retenção de IRS: diferença de ${fmt(Math.abs(irsDiferenca))} face à reconstrução rubrica a rubrica.`,
+      !ssOk && `Segurança Social: diferença de ${fmt(Math.abs(ssDiferenca))} face à base contributiva reconstruída.`,
+      ...base.alertas.filter((alerta) => alerta.startsWith("IRS Jovem")),
+    ].filter(Boolean) as string[];
+    return {
+      ...base,
+      baseIncidencia: esperado.irsBase,
+      irsEsperado: esperado.irs,
+      ssEsperado: esperado.ss,
+      irsDiferenca,
+      ssDiferenca,
+      irsOk,
+      ssOk,
+      custoEmpresa: esperado.custoEmpresa,
+      taxaEfetiva: esperado.irsBase > 0 ? (esperado.irs + esperado.ss) / esperado.irsBase : 0,
+      liquidoEsperado: esperado.liquido,
+      liquidoDeclarado: Math.round((esperado.brutoCaixa - irsDeclarado - ssDeclarado) * 100) / 100,
+      alertas,
+      tudoOk: irsOk && ssOk,
+    };
+  }, [input, irsStr, ssStr, remuneracaoSujeita, esperado]);
 
   const campo =
     "w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-4 py-2.5 text-sm font-medium text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-brand";
@@ -54,13 +91,17 @@ export function AuditoriaPainel({
             <span className="rounded-full bg-brand-light px-2 py-0.5 text-[10px] font-semibold text-brand-dark">Grátis</span>
             <InfoTip label="Como funciona">
               Compara o IRS retido e a Segurança Social do teu recibo com o que as tabelas oficiais de 2026 determinam.
-              {remuneracaoSujeita
+              {esperado
+                ? ` Reconstrução atual: ${fmt(esperado.irsBase)} de base IRS.`
+                : remuneracaoSujeita
                 ? ` Base do recibo: ${fmt(remuneracaoSujeita)} (remuneração sujeita).`
                 : ` Base desta simulação: ${fmt(input.salarioBruto)} · ${input.dependentes ?? 0} dep.`}
             </InfoTip>
           </div>
           <p className="mt-1 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-            {remuneracaoSujeita
+            {esperado
+              ? "Introduz os descontos do recibo — comparamos com todas as rubricas construídas acima."
+              : remuneracaoSujeita
               ? `Confirma os valores do teu recibo (remuneração sujeita de ${fmt(remuneracaoSujeita)}) — comparamos com o esperado para 2026.`
               : "Introduz o IRS e a Segurança Social que constam no teu recibo e confrontamos com esta simulação."}
           </p>
@@ -100,7 +141,7 @@ export function AuditoriaPainel({
 
         {submetido && (
           <div className="mt-4">
-            <ResultadoAuditoria resultado={resultado} />
+            <ResultadoAuditoria resultado={resultado} detalhado={!!esperado} />
           </div>
         )}
       </div>

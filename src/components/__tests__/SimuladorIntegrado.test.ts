@@ -33,8 +33,8 @@ function simularSoSalario(salGerenteMensal: number) {
 }
 
 // ── Líquido do gerente deve descontar IRS, não só SS — P0-05 da auditoria 2026 ──
-// (Mesma correção que ModoGuiadoEmpresa.tsx — a duplicação arquitetural entre
-// os dois motores de empresa, P0-10, significa que o bug existia duas vezes.)
+// O componente reexporta o motor canónico; este teste protege o contrato da
+// superfície completa, além dos testes diretos de `fiscal-empresa.ts`.
 describe("simularEmpresa (completo) — líquido do gerente desconta IRS do salário", () => {
   it("o líquido é estritamente menor que o salário após SS (o bug anterior tornava-os iguais)", () => {
     const r = simularSoSalario(3_000);

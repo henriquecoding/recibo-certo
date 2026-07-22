@@ -70,7 +70,7 @@ function LinhaComparacao({
 // Apresentação do resultado de uma auditoria de recibo (partilhada entre a
 // página dedicada e o painel dentro do simulador). Não contém lógica fiscal —
 // recebe o resultado já calculado pelo motor verificado `auditarRecibo`.
-export function ResultadoAuditoria({ resultado }: { resultado: AuditoriaResult }) {
+export function ResultadoAuditoria({ resultado, detalhado = false }: { resultado: AuditoriaResult; detalhado?: boolean }) {
   const divergencias = [
     !resultado.irsOk && fraseDiv("IRS", resultado.irsDiferenca),
     !resultado.ssOk && fraseDiv("Segurança Social", resultado.ssDiferenca),
@@ -155,8 +155,8 @@ export function ResultadoAuditoria({ resultado }: { resultado: AuditoriaResult }
 
       {/* Métricas adicionais — base, custo da entidade, taxa efetiva e líquido. */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="Base de incidência" value={fmt(resultado.baseIncidencia)} sub="remuneração sujeita" />
-        <StatTile label="Custo p/ empresa" value={fmt(resultado.custoEmpresa)} sub="base + TSU 23,75%" />
+        <StatTile label={detalhado ? "Base de IRS" : "Base de incidência"} value={fmt(resultado.baseIncidencia)} sub="remuneração sujeita" />
+        <StatTile label="Custo p/ empresa" value={fmt(resultado.custoEmpresa)} sub={detalhado ? "caixa + contribuição patronal" : "base + TSU 23,75%"} />
         <StatTile label="Taxa efetiva" value={pct(resultado.taxaEfetiva)} sub="IRS + SS / base" />
         <StatTile
           tone={Math.abs(difLiquido) > 2 ? "alert" : "brand"}
@@ -178,8 +178,8 @@ export function ResultadoAuditoria({ resultado }: { resultado: AuditoriaResult }
       )}
 
       <p className="text-xs leading-relaxed text-stone-400">
-        Estimativa pelas tabelas do Despacho 233-A/2026 (Continente), conforme a situação familiar. Pequenas diferenças
-        podem resultar de arredondamentos ou de acertos a meio do ano.
+        Estimativa pelas tabelas de retenção de 2026 aplicáveis à região e situação familiar selecionadas. Pequenas
+        diferenças podem resultar de arredondamentos ou de acertos a meio do ano.
       </p>
     </m.div>
   );

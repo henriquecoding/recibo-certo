@@ -6,6 +6,7 @@ import { irsProgressivo } from "@/lib/fiscal";
 import { fmt } from "@/lib/format";
 import { useScrollTopOnStep } from "@/lib/scroll";
 import { Check, Warning, ArrowRight, ChevronDown } from "@/components/ui/Icons";
+import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
 
 // ── Barra de progresso ────────────────────────────────────────────────────────
 
@@ -318,7 +319,7 @@ function Passo4({ valor, setValor, onProximo }: {
   setValor: (v: string) => void;
   onProximo: () => void;
 }) {
-  const num = parseFloat(valor.replace(",", ".")) || 0;
+  const num = Math.max(0, parseNumericDraft(valor) ?? 0);
   return (
     <div className="space-y-5">
       <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100">
@@ -329,9 +330,10 @@ function Passo4({ valor, setValor, onProximo }: {
           Valor do payout recebido (€)
         </label>
         <input
-          type="number"
+          type="text"
+          inputMode="decimal"
           value={valor}
-          onChange={(e) => setValor(e.target.value)}
+          onChange={(e) => setValor(sanitizeNumericDraft(e.target.value))}
           placeholder="0,00"
           className="w-full rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
         />
@@ -372,7 +374,7 @@ function Passo4({ valor, setValor, onProximo }: {
 }
 
 function Passo5({ valor }: { valor: string }) {
-  const num    = parseFloat(valor.replace(",", ".")) || 0;
+  const num    = Math.max(0, parseNumericDraft(valor) ?? 0);
   const ss     = num * SS_COEFICIENTE.servicos.value * SS_TAXA.value;
   // IRS estimado via escalões progressivos sobre o rendimento coletável anualizado
   // Regime simplificado: rendimento coletável = payout anual × coeficiente Art. 151.º (0,75)

@@ -25,7 +25,7 @@ function umaVez(chave: string, carregar: () => Promise<unknown>) {
 export function prefetchSimulador(perfil: Perfil): void {
   if (typeof window === "undefined") return;
   if (perfil === "dependente") {
-    umaVez("dependente", () => import("@/components/dependente/SimuladorVencimento"));
+    umaVez("dependente", () => import("@/components/dependente/MotorReciboVencimento"));
   } else if (perfil === "comparar") {
     umaVez("comparar", () => import("@/components/comparar/ComparadorCenarios"));
   } else {

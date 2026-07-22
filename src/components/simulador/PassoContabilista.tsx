@@ -18,9 +18,10 @@ import { fmt } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import { Check, Warning, Building, ShieldCheck, FileSign, Wallet } from "@/components/ui/Icons";
 import MapaRegioesLazy from "@/components/mapa/MapaRegioesLazy";
+import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
 
-const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
-const soDecimal = (s: string) => s.replace(/[^\d.,]/g, "");
+const num = (s: string) => Math.max(0, parseNumericDraft(s) ?? 0);
+const soDecimal = (s: string) => sanitizeNumericDraft(s);
 
 const NIVEL_ESTILO: Record<NivelContabilista, { card: string; badge: string; barra: string; passos: number }> = {
   obrigatorio: { card: "border-clay-border bg-clay-bg", badge: "bg-clay text-white", barra: "bg-clay", passos: 5 },

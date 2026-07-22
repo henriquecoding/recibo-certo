@@ -11,6 +11,7 @@ import { fmt } from "@/lib/format";
 import { Plus, Trash, ArrowRight } from "@/components/ui/Icons";
 import { campoCls } from "@/components/simulador/ui";
 import DatePicker from "@/components/ui/DatePicker";
+import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 
 const LIMITE = MAIS_VALIAS_DETENCAO_DIAS.value;
 
@@ -23,11 +24,11 @@ export default function EditorOperacoes({
   setOps: (ops: OperacaoAtivo[]) => void;
   tipo: "mobiliario" | "cripto";
 }) {
-  const atualizar = (id: string, campo: keyof OperacaoAtivo, valor: string) =>
+  const atualizar = (id: string, campo: keyof OperacaoAtivo, valor: string | number) =>
     setOps(
       ops.map((o) =>
         o.id === id
-          ? { ...o, [campo]: campo === "descricao" || campo === "dataAquisicao" || campo === "dataVenda" ? valor : parseFloat(valor.replace(",", ".")) || 0 }
+          ? { ...o, [campo]: campo === "descricao" || campo === "dataAquisicao" || campo === "dataVenda" ? valor : typeof valor === "number" ? valor : 0 }
           : o
       )
     );
@@ -101,11 +102,11 @@ export default function EditorOperacoes({
   );
 }
 
-function CampoOp({ label, value, onChange }: { label: string; value: number; onChange: (v: string) => void }) {
+function CampoOp({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <div>
       <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">{label}</label>
-      <input type="number" inputMode="decimal" min={0} step={50} value={value || ""} onChange={(e) => onChange(e.target.value)} placeholder="0" className={campoCls} />
+      <LocalizedNumberInput value={value} min={0} onValueChange={onChange} placeholder="0" className={campoCls} />
     </div>
   );
 }

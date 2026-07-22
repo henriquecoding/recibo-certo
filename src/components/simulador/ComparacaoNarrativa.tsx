@@ -10,6 +10,7 @@ import {
 import { m, AnimatePresence } from "motion/react";
 import { fmt } from "@/lib/format";
 import { ArrowRight, Building, Receipt, Check, ChartProjection } from "@/components/ui/Icons";
+import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
 
 interface ComparacaoNarrativaProps {
   liquidoRV: number;
@@ -138,10 +139,10 @@ export default function ComparacaoNarrativa({
   );
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/[^\d]/g, "");
+    const raw = sanitizeNumericDraft(e.target.value, { maxDecimals: 0 });
     setInputStr(raw);
-    const n = parseInt(raw, 10);
-    if (!isNaN(n) && n >= 0) {
+    const n = parseNumericDraft(raw, { maxDecimals: 0 });
+    if (n !== null && n >= 0) {
       // Aceita qualquer valor, mesmo fora do MAX — ajusta apenas ao MIN
       setSlider(Math.max(MIN, Math.round(n / STEP) * STEP));
     }
@@ -149,8 +150,8 @@ export default function ComparacaoNarrativa({
 
   const handleInputBlur = () => {
     setInputFocused(false);
-    const n = parseInt(inputStr, 10);
-    if (isNaN(n) || n < 0) setSlider(slider);
+    const n = parseNumericDraft(inputStr, { maxDecimals: 0 });
+    if (n === null || n < 0) setSlider(slider);
     else setSlider(Math.max(MIN, Math.round(n / STEP) * STEP));
   };
 

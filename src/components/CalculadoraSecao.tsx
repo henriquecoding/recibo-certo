@@ -43,7 +43,7 @@ const SimuladorIntegrado = dynamic(() => import("@/components/SimuladorIntegrado
   loading: () => <SimuladorSkeleton />,
 });
 const SimuladorVencimento = dynamic(
-  () => import("@/components/dependente/SimuladorVencimento").then((m) => m.SimuladorVencimento),
+  () => import("@/components/dependente/MotorReciboVencimento").then((m) => m.MotorReciboVencimento),
   { ssr: false, loading: () => <SimuladorSkeleton /> }
 );
 const ComparadorCenarios = dynamic(() => import("@/components/comparar/ComparadorCenarios"), {

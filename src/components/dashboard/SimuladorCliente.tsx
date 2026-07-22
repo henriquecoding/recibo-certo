@@ -47,6 +47,7 @@ import {
   type Regiao,
   type EscalaoIVA,
 } from "@/lib/fiscal-data";
+import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
 
 // ─── Tipos locais ─────────────────────────────────────────────────────────────
 type RegimeIVA = "isento" | EscalaoIVA;
@@ -63,7 +64,7 @@ interface RegraFiscal {
 const ATIVIDADE_DEFAULT =
   ATIVIDADES.find((a) => a.label.includes("Programador")) ?? ATIVIDADES[0];
 
-const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
+const num = (s: string) => Math.max(0, parseNumericDraft(s) ?? 0);
 
 const campo =
   "w-full px-3.5 py-2.5 text-[16px] text-stone-800 bg-stone-50 rounded-xl border border-stone-200 " +
@@ -474,7 +475,7 @@ export default function SimuladorCliente() {
                 <label htmlFor="despesasF" className={rotulo}>Despesas dedutíveis (€)</label>
                 <InfoTip>Conservação, IMI, imposto do selo, condomínio, seguros (Art. 41.º CIRS). Não incluem mobiliário, eletrodomésticos nem juros.</InfoTip>
               </div>
-              <input id="despesasF" type="number" inputMode="decimal" min={0} step={100} value={despesasFStr} onChange={(e) => setDespesasFStr(e.target.value)} placeholder="0" className={campo} />
+              <input id="despesasF" type="text" inputMode="decimal" value={despesasFStr} onChange={(e) => setDespesasFStr(sanitizeNumericDraft(e.target.value))} placeholder="0" className={campo} />
             </div>
             <SeletorDuplo
               label="Tipo de arrendamento"
@@ -594,7 +595,7 @@ export default function SimuladorCliente() {
                         : `Faturas com NIF (e-fatura, rendas, pessoal). Reduzem o acréscimo da regra dos 15%. A dedução específica de ${fmt(DEDUCAO_ESPECIFICA_CATB.value)} já é considerada automaticamente.`}
                     </InfoTip>
                   </div>
-                  <input id="despesas" type="number" inputMode="decimal" min={0} step={100} value={despesasStr} onChange={(e) => setDespesasStr(e.target.value)} placeholder="0" className={campo} />
+                  <input id="despesas" type="text" inputMode="decimal" value={despesasStr} onChange={(e) => setDespesasStr(sanitizeNumericDraft(e.target.value))} placeholder="0" className={campo} />
                 </div>
               </div>
             </div>
@@ -755,17 +756,17 @@ export default function SimuladorCliente() {
                   <div>
                     <label htmlFor="dep-normais" className={`mb-1 block ${rotulo}`}>Dep. &gt; 3 anos</label>
                     <div className="mb-0.5 text-[10px] text-stone-400">{fmt(DEDUCAO_DEPENDENTE.value)}/€{DEDUCAO_DEPENDENTE_3MAIS.value} (3.º+)</div>
-                    <input id="dep-normais" type="number" min={0} step={1} value={depNormaisStr} onChange={(e) => setDepNormaisStr(e.target.value)} className={campo} />
+                    <input id="dep-normais" type="text" inputMode="numeric" value={depNormaisStr} onChange={(e) => setDepNormaisStr(sanitizeNumericDraft(e.target.value, { maxDecimals: 0 }))} className={campo} />
                   </div>
                   <div>
                     <label htmlFor="dep-bebe" className={`mb-1 block ${rotulo}`}>Bebés ≤ 3 anos</label>
                     <div className="mb-0.5 text-[10px] text-stone-400">{fmt(DEDUCAO_DEPENDENTE_BEBE.value)}/dep.</div>
-                    <input id="dep-bebe" type="number" min={0} step={1} value={depBebeStr} onChange={(e) => setDepBebeStr(e.target.value)} className={campo} />
+                    <input id="dep-bebe" type="text" inputMode="numeric" value={depBebeStr} onChange={(e) => setDepBebeStr(sanitizeNumericDraft(e.target.value, { maxDecimals: 0 }))} className={campo} />
                   </div>
                   <div>
                     <label htmlFor="dep-defic" className={`mb-1 block ${rotulo}`}>Dep. deficientes</label>
                     <div className="mb-0.5 text-[10px] text-stone-400">+{fmt(Math.round(DEDUCAO_DEPENDENTE_DEFICIENCIA.value))}/dep.</div>
-                    <input id="dep-defic" type="number" min={0} step={1} value={depDeficStr} onChange={(e) => setDepDeficStr(e.target.value)} className={campo} />
+                    <input id="dep-defic" type="text" inputMode="numeric" value={depDeficStr} onChange={(e) => setDepDeficStr(sanitizeNumericDraft(e.target.value, { maxDecimals: 0 }))} className={campo} />
                   </div>
                 </div>
                 {totalDependentes > 0 && (
@@ -788,7 +789,7 @@ export default function SimuladorCliente() {
                   <div key={f.id}>
                     <label htmlFor={f.id} className={`mb-1 block ${rotulo}`}>{f.label}</label>
                     <div className="mb-1 text-[10px] text-stone-400">{f.nota}</div>
-                    <input id={f.id} type="number" inputMode="decimal" min={0} step={50} value={f.v} onChange={(e) => f.set(e.target.value)} placeholder="0" className={campo} />
+                    <input id={f.id} type="text" inputMode="decimal" value={f.v} onChange={(e) => f.set(sanitizeNumericDraft(e.target.value))} placeholder="0" className={campo} />
                   </div>
                 ))}
               </div>
@@ -797,7 +798,7 @@ export default function SimuladorCliente() {
             {/* Outros rendimentos */}
             <Modulo titulo="Outros rendimentos (cat. A / pensões)" info="Rendimentos de trabalho dependente, pensões ou outros, somados ao rendimento Cat. B para o cálculo do IRS anual." on={outrosOn} setOn={setOutrosOn}>
               <label htmlFor="outros" className={`mb-1.5 block ${rotulo}`}>Outros rendimentos líquidos anuais (€)</label>
-              <input id="outros" type="number" inputMode="decimal" min={0} step={500} value={outrosStr} onChange={(e) => setOutrosStr(e.target.value)} placeholder="0" className={campo} />
+              <input id="outros" type="text" inputMode="decimal" value={outrosStr} onChange={(e) => setOutrosStr(sanitizeNumericDraft(e.target.value))} placeholder="0" className={campo} />
             </Modulo>
 
             {/* Motor de regras */}
@@ -868,7 +869,8 @@ export default function SimuladorCliente() {
                 <div className="mt-3 flex items-start gap-2 rounded-xl bg-brand-light p-3">
                   <Check size={14} className="mt-0.5 flex-shrink-0 text-brand" />
                   <span className="text-xs leading-relaxed text-brand-dark">
-                    Protegido pelo mínimo de existência ({fmt(MINIMO_EXISTENCIA.value)}). O IRS não pode deixar-te abaixo deste rendimento.
+                    Abatimento de {fmt(sim.abatimentoMinimoExistencia)} aplicado
+                    ao rendimento coletável pela fórmula do artigo 70.º CIRS.
                   </span>
                 </div>
               )}
@@ -951,7 +953,7 @@ function Campo({ id, label, value, onChange, step = 100, placeholder = "0", tool
         <label htmlFor={id} className={rotulo}>{label}</label>
         {tooltip && <InfoTip>{tooltip}</InfoTip>}
       </div>
-      <input id={id} type="number" inputMode="decimal" min={0} step={step} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={campo} />
+      <input id={id} type="text" inputMode="decimal" value={value} onChange={(e) => onChange(sanitizeNumericDraft(e.target.value))} placeholder={placeholder} className={campo} />
     </div>
   );
 }
