@@ -21,7 +21,7 @@ const PassoContabilista = dynamic(
   () => import("@/components/simulador/PassoContabilista").then((m) => m.PassoContabilista),
   { ssr: false, loading: SeccaoCarregar }
 );
-const MapaBeneficiosRegioes = dynamic(() => import("@/components/comparar/MapaBeneficiosRegioes"), {
+const MapaRegioes = dynamic(() => import("@/components/mapa/MapaRegioes"), {
   ssr: false,
   loading: SeccaoCarregar,
 });
@@ -662,9 +662,9 @@ export default function ComparadorCenarios() {
       <PassoContabilista faturacaoAnual={bruto} despesasEstimadas={despesas} mostrarMapa={false} />
     </ErrorBoundary>
 
-    {/* ── Onde vale a pena instalar-te: benefícios fiscais por região ── */}
-    <ErrorBoundary etiqueta="o mapa de benefícios por região">
-      <MapaBeneficiosRegioes />
+    {/* ── Mapa unificado: benefícios fiscais por região (+ preços de contabilistas, notários e advogados) ── */}
+    <ErrorBoundary etiqueta="o mapa de preços e regiões">
+      <MapaRegioes contexto="beneficios" />
     </ErrorBoundary>
 
     {/* Dúvidas separadas por cenário */}

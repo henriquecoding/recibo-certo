@@ -198,7 +198,7 @@ export function generateSoftwareApplicationSchema() {
       "Calendário de prazos fiscais com alertas antecipados",
       `Quiz Fiscal com ${TOTAL_PERGUNTAS_META.toLocaleString("pt-PT")} perguntas, gamificação e cupões Pro`,
       `${GUIA_SLUGS.length} guias fiscais detalhados para independentes, trabalhadores por conta de outrem e empresas`,
-      "Mapa de contabilistas em Portugal",
+      "Mapa de preços por região: contabilistas, notários e advogados",
       "Dashboard com guardião de SS, retenção e estimativa de IRS anual",
       "Exportação de dados para o contabilista",
     ],

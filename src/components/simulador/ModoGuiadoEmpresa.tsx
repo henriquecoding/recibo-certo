@@ -46,8 +46,8 @@ import {
 const MapaCarregar = () => (
   <div className="h-64 w-full animate-pulse rounded-3xl border border-stone-100 bg-stone-50 dark:border-stone-800 dark:bg-stone-900/50" />
 );
-const MapaBeneficiosRegioes = dynamic(
-  () => import("@/components/comparar/MapaBeneficiosRegioes"),
+const MapaRegioes = dynamic(
+  () => import("@/components/mapa/MapaRegioes"),
   { ssr: false, loading: MapaCarregar },
 );
 import { pct, fmt } from "@/lib/format";
@@ -2997,12 +2997,13 @@ export default function ModoGuiadoEmpresa({
                         </h3>
                         <p className="mt-1 text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
                           Benefícios fiscais por região: IRC reduzido no interior,
-                          RFAI, derrama municipal, IVA nas ilhas e custo de contabilista.
+                          RFAI, derrama municipal e IVA nas ilhas. Com os filtros
+                          vês também os preços de contabilistas, notários e advogados.
                           Toca numa região ou procura a tua zona.
                         </p>
                       </div>
-                      <ErrorBoundary etiqueta="o mapa de benefícios por região">
-                        <MapaBeneficiosRegioes />
+                      <ErrorBoundary etiqueta="o mapa de preços e regiões">
+                        <MapaRegioes contexto="beneficios" />
                       </ErrorBoundary>
                     </div>
                   )}

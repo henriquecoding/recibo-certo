@@ -17,7 +17,7 @@ import {
 import { fmt } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import { Check, Warning, Building, ShieldCheck, FileSign, Wallet } from "@/components/ui/Icons";
-import MapaPrecosRegioes from "@/components/contabilista/MapaPrecosRegioesLazy";
+import MapaRegioesLazy from "@/components/mapa/MapaRegioesLazy";
 
 const num = (s: string) => parseFloat(s.replace(",", ".")) || 0;
 const soDecimal = (s: string) => s.replace(/[^\d.,]/g, "");
@@ -260,16 +260,17 @@ export function PassoContabilista({
         </div>
       </div>
 
-      {/* ── Preços médios por região (oculto quando há um mapa unificado por fora) ── */}
+      {/* ── Mapa unificado de preços (oculto quando já há um mapa por fora) ── */}
       {mostrarMapa && (
         <div>
           <div className="mb-4">
             <h3 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100">Preços médios por região</h3>
             <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-              Quanto custa, em média, um contabilista na tua zona. Procura a tua cidade ou toca numa região.
+              Quanto custa, em média, um contabilista na tua zona — e, se precisares, notários e advogados também.
+              Procura a tua cidade ou toca numa região.
             </p>
           </div>
-          <MapaPrecosRegioes />
+          <MapaRegioesLazy contexto="contabilistas" />
         </div>
       )}
 

@@ -24,7 +24,7 @@ const NAV_FERRAMENTAS = [
   { label: "Recibo de vencimento", href: "/ferramentas/recibo-vencimento", Icon: Briefcase },
   { label: "Comparador de regimes", href: "/?modo=comparar", Icon: Scale },
   { label: "Simulador de empresa", href: "/ferramentas/simulador-empresa", Icon: Calculator },
-  { label: "Mapa de contabilistas", href: "/ferramentas/mapa-contabilistas", Icon: MapPin },
+  { label: "Mapa de preços por região", href: "/ferramentas/mapa-contabilistas", Icon: MapPin },
   { label: "Prazos fiscais", href: "/dashboard/prazos", Icon: Calendar },
   { label: "Todas as ferramentas", href: "/ferramentas", Icon: Briefcase },
 ];

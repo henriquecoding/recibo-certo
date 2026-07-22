@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.93.0";
+export const APP_VERSION = "1.94.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,19 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.94.0",
+    data: "2026-07-22",
+    titulo: "Um só mapa para tudo: contabilistas, notários, advogados e benefícios fiscais",
+    itens: [
+      "Os vários mapas do site deram lugar a um único mapa de Portugal com filtros: escolhe entre contabilistas, notários, advogados ou benefícios fiscais — e muda quando quiseres. Cada página abre o mapa já no filtro certo para o contexto.",
+      "Novidade: preços de notários (procuração, testamento público, habilitação de herdeiros e escrituras, com os valores de tabela e dos balcões públicos) e de advogados (consulta, hora, parecer e avença mensal), por região.",
+      "Cada camada mostra os serviços frequentes com preços, distinguindo claramente valores de tabela oficial de estimativas de mercado, com fontes e data de verificação.",
+      "Nova secção «Contratar bem» em cada filtro: como validar o profissional na respetiva Ordem (OCC, Ordem dos Notários, Ordem dos Advogados) antes de contratar.",
+      "No filtro de benefícios fiscais, cada região passou a mostrar também quanto custam os três profissionais nessa zona.",
+      "Design renovado: cartão único mais elegante, transições suaves e o mesmo mapa interativo de sempre — pesquisa por cidade ou código postal, GPS e lista de regiões acessível.",
+    ],
+  },
   {
     version: "1.93.0",
     data: "2026-07-21",

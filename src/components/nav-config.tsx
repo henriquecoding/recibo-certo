@@ -41,8 +41,8 @@ export const NAV_FERRAMENTAS: NavItem[] = [
     Icon: Search,
   },
   {
-    label: "Mapa de contabilistas",
-    desc: "Preço médio por região, num mapa.",
+    label: "Mapa de preços por região",
+    desc: "Contabilistas, notários e advogados.",
     href: "/ferramentas/mapa-contabilistas",
     Icon: MapPin,
   },

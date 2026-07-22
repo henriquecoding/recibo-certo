@@ -46,7 +46,7 @@ const BLOCOS: Bloco[] = [
     recursos: [
       { href: "/dashboard/auditoria-recibo", titulo: "Auditoria do recibo", desc: "Confirma se o teu recibo está certo", icon: ShieldCheck },
       { href: "/dashboard/classificar-atividade", titulo: "Classificar atividade", desc: "Retenção, coeficiente e SS por profissão", icon: Search },
-      { href: "/dashboard/mapa-contabilistas", titulo: "Mapa de contabilistas", desc: "Preço médio por região, num mapa", icon: MapPin },
+      { href: "/dashboard/mapa-contabilistas", titulo: "Mapa de preços por região", desc: "Contabilistas, notários e advogados, num mapa", icon: MapPin },
       { href: "/ferramentas/payout-mor", titulo: "Recibo Merchant of Record", desc: "Paddle / Lemon Squeezy em 5 passos", icon: ShoppingBag },
     ],
   },
