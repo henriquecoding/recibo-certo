@@ -3088,13 +3088,13 @@ function PainelResumoEmpresa({
           className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl"
         />
         <div className="relative">
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-green-100/60">
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-white/70">
             Líquido para o dono · {distribuirDividendos ? "com dividendos" : "só salário"}
           </div>
           <div className="mt-1 font-display text-3xl font-semibold leading-none tabular-nums">
             <AnimatedNumber value={resultado.liquidoGerente} />
           </div>
-          <div className="mt-0.5 text-[11px] text-green-100/50">
+          <div className="mt-0.5 text-[11px] text-white/60">
             ~<AnimatedNumber value={Math.round(resultado.liquidoGerente / 12)} />/mês
           </div>
           {resultado.faturacao > 0 && (
@@ -3111,7 +3111,7 @@ function PainelResumoEmpresa({
                   }}
                 />
               </div>
-              <div className="mt-1 text-[10px] text-green-100/40">
+              <div className="mt-1 text-[10px] text-white/50">
                 {Math.round(
                   (resultado.liquidoGerente /
                     Math.max(1, resultado.faturacao)) *

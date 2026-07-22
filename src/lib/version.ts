@@ -47,6 +47,7 @@ export const CHANGELOG: EntradaChangelog[] = [
       "O calendário de prazos e o indicador de saúde fiscal do painel ficaram mais legíveis no escuro (a cor do IVA, em particular, estava muito escura sobre fundo escuro).",
       "Os mapas de contabilistas e de benefícios fiscais por região ganharam legendas e informação ao tocar (tooltips) adaptadas ao modo escuro — deixou de aparecer uma caixa branca sobre o mapa escuro.",
       "Vários botões e ícones que ficavam praticamente invisíveis ao passar o rato em modo escuro (o próprio interruptor de tema, o botão «Voltar» dos simuladores, entre outros) foram corrigidos.",
+      "No arranque dos simuladores, o botão «Quero o simulador completo» ficava com um fundo branco quase ilegível ao passar o rato em modo escuro — corrigido. O valor líquido em destaque nos cartões de resultado (simulador de IRS, comparador e painel do dashboard) também ganhou mais contraste no texto de apoio, que estava muito esbatido sobre o verde.",
     ],
   },
   {

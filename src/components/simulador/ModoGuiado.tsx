@@ -2716,7 +2716,7 @@ function ResultadoFinal({
             <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
             <div aria-hidden className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/5 blur-xl" />
             <div className="relative">
-              <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">
+              <div className="text-[11px] font-semibold uppercase tracking-widest text-white/70">
                 Líquido anual estimado
               </div>
               <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-5xl">
@@ -2729,7 +2729,7 @@ function ResultadoFinal({
                     style={{ width: `${Math.round(Math.max(0, liquidoFinal) / Math.max(1, brutoAnual) * 100)}%` }}
                   />
                 </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-green-100/50">
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/60">
                   <span>de {fmt(brutoAnual)} faturados</span>
                   <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/80">
                     {fmt(liquidoMes)}/mês
@@ -3437,12 +3437,12 @@ function PainelResultadoVivo({
       <div className="relative overflow-hidden rounded-4xl border border-brand bg-brand p-5 text-white shadow-glow">
         <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
         <div className="relative">
-          <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-green-100/60">
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-white/70">
             Resultado ao vivo
           </p>
 
           <div className="mb-1">
-            <div className="text-[11px] text-green-100/60">
+            <div className="text-[11px] text-white/70">
               {recibosAno >= 12 ? "Líquido mensal" : "Líquido por mês faturado"}
             </div>
             <div className="font-display text-3xl font-semibold leading-none tabular-nums">
@@ -3453,7 +3453,7 @@ function PainelResultadoVivo({
                 )}
               />
             </div>
-            <div className="mt-0.5 text-[11px] text-green-100/50">
+            <div className="mt-0.5 text-[11px] text-white/60">
               {fmt(brutoAnual > 0 ? brutoAnual / Math.max(1, recibosAno) : 0)}{" "}
               faturado/mês
             </div>
@@ -3466,7 +3466,7 @@ function PainelResultadoVivo({
                   style={{ width: `${Math.round(Math.max(0, liquidoAnual) / Math.max(1, brutoAnual) * 100)}%` }}
                 />
               </div>
-              <div className="mt-1 text-[10px] text-green-100/40">
+              <div className="mt-1 text-[10px] text-white/50">
                 {Math.round(Math.max(0, liquidoAnual) / Math.max(1, brutoAnual) * 100)}% de {fmt(brutoAnual)}
               </div>
             </div>
