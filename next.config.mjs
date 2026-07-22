@@ -14,6 +14,15 @@ const nextConfig = {
     removeConsole: { exclude: ["error", "warn"] },
   },
 
+  // Garante que os ficheiros de fonte da imagem social (_og/*.ttf) viajam com
+  // as funções das rotas Open Graph / Twitter. A imagem é estática (gerada no
+  // build), mas isto mantém o `fs.readFile` robusto se alguma vez for renderizada
+  // em runtime — sem isto, a fonte da casa cairia no fallback por omissão.
+  outputFileTracingIncludes: {
+    "/opengraph-image": ["./src/app/_og/**"],
+    "/twitter-image": ["./src/app/_og/**"],
+  },
+
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.supabase.co" },

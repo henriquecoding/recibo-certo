@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.94.0";
+export const APP_VERSION = "1.95.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.95.0",
+    data: "2026-07-22",
+    titulo: "Pré-visualização dos links com a marca real",
+    itens: [
+      "Quando partilhas uma ligação do ReciboCerto (WhatsApp, redes sociais, mensagens), a pré-visualização passou a mostrar o logótipo real do site num cartão limpo e profissional — deixou de aparecer aquele símbolo genérico.",
+      "O cartão de partilha usa agora a tipografia e as cores da casa, com a mensagem «Sabe quanto é teu» e o essencial: IRS, recibos verdes, salário e empresa, com taxas de 2026.",
+    ],
+  },
   {
     version: "1.94.0",
     data: "2026-07-22",
