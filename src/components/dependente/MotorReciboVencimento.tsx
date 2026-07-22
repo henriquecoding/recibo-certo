@@ -17,7 +17,7 @@ import {
 import { calcularVencimento, calcularVencimentoAnual } from "@/lib/fiscal-dependente";
 import type { ReciboExtraido } from "@/lib/recibo-pdf";
 import type { EstadoCivilRet, Regiao } from "@/lib/fiscal-data";
-import { SS_DEPENDENTE } from "@/lib/fiscal-data";
+import { SS_DEPENDENTE, DEDUCAO_DEPENDENTE_DEFICIENCIA } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
 import { useExportacaoPro } from "@/lib/store/exportacao-pro";
@@ -34,6 +34,7 @@ import {
   Check,
   Export,
   FileSign,
+  Heart,
   History,
   LayoutGrid,
   Plus,
@@ -129,6 +130,7 @@ interface SavedSnapshotV2 extends Record<string, unknown> {
   target: string;
   month: number;
   dependants: number;
+  dependantsWithDisability: number;
   maritalStatus: EstadoCivilRet;
   disability: boolean;
   region: Regiao;
@@ -154,6 +156,7 @@ interface LegacySavedSnapshot extends Record<string, unknown> {
   duodecimos?: boolean;
   estadoCivil?: EstadoCivilRet;
   deficiencia?: boolean;
+  depDeficientes?: number;
   regiao?: Regiao;
   irsJovem?: boolean;
   irsJovemAno?: number;
@@ -245,6 +248,7 @@ export function MotorReciboVencimento() {
   const [target, setTarget] = useState("1200");
   const [month, setMonth] = useState(() => new Date().getMonth());
   const [dependants, setDependants] = useState(0);
+  const [dependantsWithDisability, setDependantsWithDisability] = useState(0);
   const [maritalStatus, setMaritalStatus] = useState<EstadoCivilRet>("naoCasado");
   const [disability, setDisability] = useState(false);
   const [region, setRegion] = useState<Regiao>("continente");
@@ -321,6 +325,7 @@ export function MotorReciboVencimento() {
     target,
     month,
     dependants,
+    dependantsWithDisability,
     maritalStatus,
     disability,
     region,
@@ -345,6 +350,7 @@ export function MotorReciboVencimento() {
       if (current.target !== undefined) setTarget(sanitizeNumericDraft(current.target));
       if (current.month !== undefined) setMonth(current.month);
       if (current.dependants !== undefined) setDependants(current.dependants);
+      if (current.dependantsWithDisability !== undefined) setDependantsWithDisability(current.dependantsWithDisability);
       if (current.maritalStatus) setMaritalStatus(current.maritalStatus);
       if (current.disability !== undefined) setDisability(current.disability);
       if (current.region) setRegion(current.region);
@@ -365,6 +371,7 @@ export function MotorReciboVencimento() {
     const legacy = saved as LegacySavedSnapshot;
     if (legacy.brutoStr !== undefined) setGross(sanitizeNumericDraft(legacy.brutoStr));
     if (legacy.dependentes !== undefined) setDependants(legacy.dependentes);
+    if (legacy.depDeficientes !== undefined) setDependantsWithDisability(legacy.depDeficientes);
     if (legacy.estadoCivil) setMaritalStatus(legacy.estadoCivil);
     if (legacy.deficiencia !== undefined) setDisability(legacy.deficiencia);
     if (legacy.regiao) setRegion(legacy.regiao);
@@ -472,7 +479,7 @@ export function MotorReciboVencimento() {
     printRelatorioVencimento({
       situacao: FAMILY_OPTIONS.find(([value]) => value === maritalStatus)?.[1] ?? "—",
       dependentes: dependants,
-      dependentesDeficientes: 0,
+      dependentesDeficientes: dependantsWithDisability,
       deficiencia: disability,
       subsidioDia: mealEnabled ? parseNumber(mealDaily) : 0,
       subsidioForma: mealEnabled ? (mealCard ? "Cartão" : "Dinheiro") : "—",
@@ -575,9 +582,26 @@ export function MotorReciboVencimento() {
             </div>
 
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Dependentes</span><div className="grid grid-cols-5 gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800">{[0, 1, 2, 3, 4].map((value) => <button key={value} type="button" aria-pressed={dependants === value} onClick={() => setDependants(value)} className={segmentClass(dependants === value)}>{value === 4 ? "4+" : value}</button>)}</div></div>
+              <div><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Dependentes</span><div className="grid grid-cols-5 gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800">{[0, 1, 2, 3, 4].map((value) => <button key={value} type="button" aria-pressed={dependants === value} onClick={() => { setDependants(value); if (value < dependantsWithDisability) setDependantsWithDisability(value); }} className={segmentClass(dependants === value)}>{value === 4 ? "4+" : value}</button>)}</div></div>
               <div><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Região fiscal</span><div className="grid grid-cols-3 gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800">{REGION_OPTIONS.map(([value, label]) => <button key={value} type="button" aria-pressed={region === value} onClick={() => setRegion(value)} className={segmentClass(region === value)}>{label}</button>)}</div></div>
             </div>
+
+            {dependants > 0 && (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-3 dark:border-stone-700 dark:bg-stone-900">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Heart size={15} className="flex-none text-brand" />
+                  <span className="text-xs font-medium text-stone-600 dark:text-stone-300">Com incapacidade ≥ 60%</span>
+                  <InfoTip label="Art. 87.º CIRS">
+                    Cada dependente com grau de incapacidade permanente ≥ 60% (atestado multiúso) dá direito a mais {fmt(DEDUCAO_DEPENDENTE_DEFICIENCIA.value)} de dedução à coleta de IRS no acerto anual (2,5 × IAS). Acumula com a dedução normal por dependente e não altera a retenção mensal.
+                  </InfoTip>
+                </div>
+                <div className="flex flex-none items-center gap-2">
+                  <button type="button" aria-label="Menos dependentes com incapacidade" onClick={() => setDependantsWithDisability(Math.max(0, dependantsWithDisability - 1))} disabled={dependantsWithDisability <= 0} className="flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-lg font-semibold leading-none text-stone-600 transition hover:border-brand hover:text-brand disabled:opacity-30 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400">−</button>
+                  <span className="w-6 text-center text-sm font-bold tabular-nums text-stone-800 dark:text-stone-100">{dependantsWithDisability}</span>
+                  <button type="button" aria-label="Mais dependentes com incapacidade" onClick={() => setDependantsWithDisability(Math.min(dependants, dependantsWithDisability + 1))} disabled={dependantsWithDisability >= dependants} className="flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-lg font-semibold leading-none text-stone-600 transition hover:border-brand hover:text-brand disabled:opacity-30 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400">+</button>
+                </div>
+              </div>
+            )}
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition ${disability ? "border-brand/30 bg-brand-light/40 dark:bg-brand/10" : "border-stone-200 dark:border-stone-700"}`}><input type="checkbox" checked={disability} onChange={(event) => setDisability(event.target.checked)} className="mt-0.5 h-4 w-4 accent-brand" /><span><span className="block text-xs font-semibold text-stone-700 dark:text-stone-200">Incapacidade ≥ 60%</span><span className="mt-0.5 block text-[10px] leading-relaxed text-stone-400">Seleciona as tabelas próprias do titular.</span></span></label>
@@ -599,17 +623,17 @@ export function MotorReciboVencimento() {
                 {mode === "gross" ? <MoneyField id="gross-salary" label="Salário bruto" value={gross} onChange={setGross} /> : <MoneyField id="target-net" label="Líquido que queres receber" value={target} onChange={setTarget} hint="objetivo" />}
                 <div><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Modo</span><div className="grid grid-cols-2 gap-1 rounded-xl bg-white p-1 dark:bg-stone-800"><button type="button" onClick={() => setMode("gross")} className={segmentClass(mode === "gross")}>Bruto → líquido</button><button type="button" onClick={() => setMode("target")} className={segmentClass(mode === "target")}>Quero receber</button></div></div>
               </div>
-              {mode === "target" && <p className={`mt-2 text-[10px] ${targetSolution?.reached ? "text-brand-dark dark:text-brand-light" : "text-amber-700 dark:text-amber-300"}`}>{targetSolution?.reached ? `Para chegar a ${fmt(parseNumber(target))}, o salário-base estimado é ${fmt(targetGross ?? 0)}.` : "O objetivo indicado excede o intervalo suportado por esta simulação."}</p>}
+              {mode === "target" && <p className={`mt-2 text-[11px] ${targetSolution?.reached ? "text-brand-dark dark:text-brand-light" : "text-alert-text"}`}>{targetSolution?.reached ? `Para chegar a ${fmt(parseNumber(target))}, o salário-base estimado é ${fmt(targetGross ?? 0)}.` : "O objetivo indicado excede o intervalo suportado por esta simulação."}</p>}
             </div>
 
             <div className="mt-3 rounded-2xl border border-stone-200 p-4 dark:border-stone-800">
               <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-stone-100 text-stone-500 dark:bg-stone-800"><Wallet size={15} /></span><div><h4 className="text-sm font-semibold text-stone-800 dark:text-stone-100">Subsídio de refeição</h4><p className="text-[10px] text-stone-400">O limite é aplicado por dia, não ao total do mês.</p></div></div><label className="inline-flex cursor-pointer items-center gap-2 text-[10px] font-semibold text-stone-500"><input type="checkbox" checked={mealEnabled} onChange={(event) => setMealEnabled(event.target.checked)} className="h-4 w-4 accent-brand" /> Incluir</label></div>
               {mealEnabled && <div className="mt-3 grid gap-3 sm:grid-cols-3"><MoneyField id="meal-daily" label="Valor por dia" value={mealDaily} onChange={setMealDaily} hint={`limite ${fmt(mealLimit(mealCard))}`} /><label><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Dias pagos</span><input type="text" inputMode="numeric" value={mealDays} onChange={(event) => setMealDays(dayDraft(event.target.value))} className={inputClass} /></label><div><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Forma</span><div className="grid grid-cols-2 gap-1 rounded-xl bg-stone-100 p-1 dark:bg-stone-800"><button type="button" onClick={() => setMealCard(false)} className={segmentClass(!mealCard)}>Dinheiro</button><button type="button" onClick={() => setMealCard(true)} className={segmentClass(mealCard)}>Cartão</button></div></div></div>}
-              {mealExceeds && <p className="mt-2 flex items-start gap-1.5 text-[10px] leading-relaxed text-amber-700 dark:text-amber-300"><Warning size={12} className="mt-0.5 flex-none" /> O excesso diário de {fmt(parseNumber(mealDaily) - mealLimit(mealCard))} integra as bases de IRS e Segurança Social.</p>}
+              {mealExceeds && <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-alert-text"><Warning size={12} className="mt-0.5 flex-none" /> O excesso diário de {fmt(parseNumber(mealDaily) - mealLimit(mealCard))} integra as bases de IRS e Segurança Social.</p>}
             </div>
 
             <div className="mt-3"><ConstrutorRecibo rubrics={rubrics} onChange={setRubrics} onPendingBenefit={(label) => setPendingNotice(label)} /></div>
-            {pendingNotice && <div className="mt-3 flex items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3.5 dark:border-amber-900/60 dark:bg-amber-950/20"><div className="flex gap-2"><Warning size={14} className="mt-0.5 flex-none text-amber-600" /><div><p className="text-xs font-semibold text-amber-800 dark:text-amber-300">{pendingNotice}: precisamos de mais factos</p><p className="mt-1 text-[10px] leading-relaxed text-amber-700 dark:text-amber-400">Este benefício só será adicionado quando a matriz fiscal conseguir explicar IRS e SS sem presumir o enquadramento.</p></div></div><button type="button" onClick={() => setPendingNotice(null)} className="text-[10px] font-semibold text-amber-700">Fechar</button></div>}
+            {pendingNotice && <div className="mt-3 flex items-start justify-between gap-3 rounded-2xl border border-alert-border bg-alert-bg p-3.5"><div className="flex gap-2"><Warning size={14} className="mt-0.5 flex-none text-alert-text" /><div><p className="text-xs font-semibold text-alert-text">{pendingNotice}: precisamos de mais factos</p><p className="mt-1 text-[11px] leading-relaxed text-alert-text/80">Este benefício só será adicionado quando a matriz fiscal conseguir explicar IRS e SS sem presumir o enquadramento.</p></div></div><button type="button" onClick={() => setPendingNotice(null)} className="flex-none text-[11px] font-semibold text-alert-text underline">Fechar</button></div>}
           </section>
         </div>
 
@@ -623,6 +647,7 @@ export function MotorReciboVencimento() {
             duodecimos={duodecimos}
             issues={issues}
             targetGross={mode === "target" ? targetGross : undefined}
+            dependentesDeficientes={dependantsWithDisability}
           />
         </div>
       </div>
@@ -650,7 +675,7 @@ export function MotorReciboVencimento() {
           <ProGate title="Exportar recibo detalhado" description="Leva a decomposição por rubrica para PDF ou CSV."><div className="rounded-2xl border border-stone-100 p-4 dark:border-stone-800"><div className="flex items-center gap-2"><Export size={15} className="text-brand" /><p className="text-xs font-semibold text-stone-700 dark:text-stone-200">Relatório e dados</p></div><p className="mt-1 text-[10px] leading-relaxed text-stone-400">Exporta totais, incidências e impacto líquido de cada linha.</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={exportPdf} className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3 py-2 text-[11px] font-semibold text-white"><FileSign size={13} /> PDF</button><button type="button" onClick={exportCsv} className="inline-flex items-center gap-1.5 rounded-xl border border-brand/25 bg-brand-light px-3 py-2 text-[11px] font-semibold text-brand-dark"><Export size={13} /> CSV</button></div></div></ProGate>
         </div>
 
-        {saveNotice && <div className={`mt-3 flex items-start gap-2 rounded-2xl border p-3 text-xs ${saveNotice.type === "ok" ? "border-brand/20 bg-brand-light text-brand-dark" : "border-red-200 bg-red-50 text-red-700"}`}><ShieldCheck size={14} className="mt-0.5 flex-none" /><span>{saveNotice.text} {saveNotice.type === "ok" && <Link href="/dashboard/cenarios" className="ml-1 inline-flex items-center gap-0.5 font-semibold underline">Ver cenários <ArrowRight size={11} /></Link>}</span></div>}
+        {saveNotice && <div className={`mt-3 flex items-start gap-2 rounded-2xl border p-3 text-xs ${saveNotice.type === "ok" ? "border-brand/20 bg-brand-light text-brand-dark" : "border-clay-border bg-clay-bg text-clay-text"}`}><ShieldCheck size={14} className="mt-0.5 flex-none" /><span>{saveNotice.text} {saveNotice.type === "ok" && <Link href="/dashboard/cenarios" className="ml-1 inline-flex items-center gap-0.5 font-semibold underline">Ver cenários <ArrowRight size={11} /></Link>}</span></div>}
       </section>
 
       <div className="grid gap-3 sm:grid-cols-3">

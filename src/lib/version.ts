@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "2.2.0";
+export const APP_VERSION = "2.3.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "2.3.0",
+    data: "2026-07-22",
+    titulo: "Recibo de vencimento: cartão de resultado redesenhado e melhor no telemóvel",
+    itens: [
+      "O cartão de resultado do simulador de recibo de vencimento foi redesenhado com um aspeto premium e coerente com o resto da app: leitura imediata do líquido, do que fica contigo e da repartição por IRS e Segurança Social, sem o visual carregado anterior.",
+      "O simulador ficou totalmente responsivo no telemóvel — sem cortes horizontais, texto legível, alvos maiores e o donut de repartição visível também em ecrãs estreitos.",
+      "Voltaste a poder indicar, ao escolher o número de dependentes, quantos têm incapacidade permanente ≥ 60%. O efeito — mais 2,5 × IAS de dedução à coleta por dependente no acerto anual de IRS (Art. 87.º CIRS) — é explicado na vista anual e passa a constar da exportação.",
+    ],
+  },
   {
     version: "2.2.0",
     data: "2026-07-22",
