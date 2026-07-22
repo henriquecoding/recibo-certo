@@ -58,7 +58,10 @@ export default function OnboardingGate({ onSelect }: OnboardingGateProps) {
           onClick={() => onSelect("profissional")}
           className="group flex flex-col rounded-4xl border border-stone-200/80 bg-white p-6 text-left shadow-card transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:shadow-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-stone-800 dark:bg-stone-900 sm:p-7"
         >
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 transition-colors group-hover:bg-brand-light group-hover:text-brand dark:bg-stone-800 dark:text-stone-300">
+          {/* `dark:group-hover:` explícitos: `group-hover:bg-brand-light` sozinho
+              escapa ao remap do dark mode (é uma classe própria, diferente de
+              `bg-brand-light`) e aplicava-se sempre, sem olhar ao tema. */}
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 transition-colors group-hover:bg-brand-light group-hover:text-brand dark:bg-stone-800 dark:text-stone-300 dark:group-hover:bg-brand/15 dark:group-hover:text-brand">
             <LayoutGrid size={22} />
           </span>
           <h3 className="mt-5 font-display text-xl font-semibold text-ink">
@@ -67,7 +70,7 @@ export default function OnboardingGate({ onSelect }: OnboardingGateProps) {
           <p className="mt-2 flex-1 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
             Acesso imediato a todos os campos e opções do simulador completo.
           </p>
-          <span className="mt-6 inline-flex items-center gap-1.5 self-start rounded-2xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-sm font-semibold text-stone-700 transition-colors group-hover:border-stone-300 group-hover:bg-white dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200">
+          <span className="mt-6 inline-flex items-center gap-1.5 self-start rounded-2xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-sm font-semibold text-stone-700 transition-colors group-hover:border-stone-300 group-hover:bg-white dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:group-hover:border-stone-600 dark:group-hover:bg-stone-700">
             Quero o simulador completo <ArrowRight size={14} />
           </span>
         </button>

@@ -6359,7 +6359,10 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                               mostra a média mensal (líquido anual ÷ 12); no modo
                               "Anual" mostra o líquido anual. A retenção de 23% é
                               só um adiantamento e NÃO é a dedução do hero. */}
-                          <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">
+                          {/* text-white/70 em vez de text-white/70: verde pálido
+                              sobre o próprio cartão verde (bg-brand) dava contraste
+                              muito baixo — quase invisível, em qualquer tema. */}
+                          <div className="text-[11px] font-semibold uppercase tracking-widest text-white/70">
                             {modoInput === "recibo"
                               ? "Líquido real estimado · por mês"
                               : "Líquido real estimado · anual"}
@@ -6384,7 +6387,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                                 }}
                               />
                             </div>
-                            <div className="mt-1 text-[11px] text-green-100/50">
+                            <div className="mt-1 text-[11px] text-white/60">
                               {Math.round(
                                 (resultAnualRV.liquido / Math.max(1, brutoAnual)) * 100
                               )}% de{" "}
@@ -7060,7 +7063,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                         <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
                         <div aria-hidden className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/5 blur-xl" />
                         <div className="relative">
-                          <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">
+                          <div className="text-[11px] font-semibold uppercase tracking-widest text-white/70">
                             Líquido estimado · empresa (Lda)
                           </div>
                           <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-6xl">
@@ -7075,7 +7078,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                                 }}
                               />
                             </div>
-                            <div className="mt-1 text-[11px] text-green-100/50">
+                            <div className="mt-1 text-[11px] text-white/60">
                               {Math.round(liquidoEmpresaFinal / Math.max(1, faturacaoBaseEmpresa) * 100)}% de{" "}
                               <AnimatedNumber value={faturacaoBaseEmpresa} /> faturados/ano
                             </div>

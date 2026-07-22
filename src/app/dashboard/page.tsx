@@ -223,7 +223,7 @@ export default function VisaoGeral() {
               {/* Top row: mês + faturado */}
               <div className="relative flex items-start justify-between">
                 <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">Este mês</div>
+                  <div className="text-[11px] font-semibold uppercase tracking-widest text-white/70">Este mês</div>
                   {mes.bruto > 0 && (
                     <div className="mt-0.5 text-sm font-medium text-green-100/80">
                       {fmt(mes.bruto)} faturados
@@ -239,7 +239,7 @@ export default function VisaoGeral() {
 
               {/* Métrica principal */}
               <div className="relative mt-4">
-                <div className="text-xs font-medium uppercase tracking-wider text-green-100/60">Disponível para gastar</div>
+                <div className="text-xs font-medium uppercase tracking-wider text-white/70">Disponível para gastar</div>
                 <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-5xl lg:text-6xl">
                   <AnimatedNumber value={mes.liquido} />
                 </div>
@@ -257,7 +257,7 @@ export default function VisaoGeral() {
                       style={{ width: `${Math.round((mes.liquido / mes.bruto) * 100)}%` }}
                     />
                   </div>
-                  <div className="mt-1.5 text-[11px] text-green-100/50">
+                  <div className="mt-1.5 text-[11px] text-white/60">
                     {Math.round((mes.liquido / mes.bruto) * 100)}% do faturado é mesmo teu
                   </div>
                 </div>

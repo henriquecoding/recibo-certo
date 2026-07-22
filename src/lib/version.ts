@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.94.0";
+export const APP_VERSION = "1.95.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.95.0",
+    data: "2026-07-22",
+    titulo: "Pré-visualização dos links com a marca real",
+    itens: [
+      "Quando partilhas uma ligação do ReciboCerto (WhatsApp, redes sociais, mensagens), a pré-visualização passou a mostrar o logótipo real do site num cartão limpo e profissional — deixou de aparecer aquele símbolo genérico.",
+      "O cartão de partilha usa agora a tipografia e as cores da casa, com a mensagem «Poucos dados. Zero contas.» e o essencial: IRS, recibos verdes, salário e empresa, com taxas de 2026.",
+    ],
+  },
   {
     version: "1.94.0",
     data: "2026-07-22",
@@ -47,6 +56,7 @@ export const CHANGELOG: EntradaChangelog[] = [
       "O calendário de prazos e o indicador de saúde fiscal do painel ficaram mais legíveis no escuro (a cor do IVA, em particular, estava muito escura sobre fundo escuro).",
       "Os mapas de contabilistas e de benefícios fiscais por região ganharam legendas e informação ao tocar (tooltips) adaptadas ao modo escuro — deixou de aparecer uma caixa branca sobre o mapa escuro.",
       "Vários botões e ícones que ficavam praticamente invisíveis ao passar o rato em modo escuro (o próprio interruptor de tema, o botão «Voltar» dos simuladores, entre outros) foram corrigidos.",
+      "No arranque dos simuladores, o botão «Quero o simulador completo» ficava com um fundo branco quase ilegível ao passar o rato em modo escuro — corrigido. O valor líquido em destaque nos cartões de resultado (simulador de IRS, comparador e painel do dashboard) também ganhou mais contraste no texto de apoio, que estava muito esbatido sobre o verde.",
     ],
   },
   {

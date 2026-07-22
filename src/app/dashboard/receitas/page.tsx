@@ -103,7 +103,7 @@ export default function ReceitasPage() {
                 <div aria-hidden className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
                 <div aria-hidden className="pointer-events-none absolute -bottom-8 -left-8 h-36 w-36 rounded-full bg-white/5 blur-2xl" />
                 <div className="relative">
-                  <div className="text-[11px] font-semibold uppercase tracking-widest text-green-100/60">
+                  <div className="text-[11px] font-semibold uppercase tracking-widest text-white/70">
                     Líquido para ti · {periodo === "ano" ? new Date().getFullYear() : "todo o período"}
                   </div>
                   <div className="mt-1 font-display text-4xl font-semibold leading-none tabular-nums sm:text-5xl lg:text-6xl">
@@ -117,7 +117,7 @@ export default function ReceitasPage() {
                           style={{ width: `${Math.round((kpis.liquido / kpis.bruto) * 100)}%` }}
                         />
                       </div>
-                      <div className="mt-1.5 text-[11px] text-green-100/50">
+                      <div className="mt-1.5 text-[11px] text-white/60">
                         {Math.round((kpis.liquido / kpis.bruto) * 100)}% do faturado fica para ti
                       </div>
                     </div>
