@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "1.97.0";
+export const APP_VERSION = "1.98.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "1.98.0",
+    data: "2026-07-22",
+    titulo: "«Como funciona» que funciona + motores mais rigorosos",
+    itens: [
+      "O botão «Como funciona» na página inicial não fazia nada — apontava para uma secção que tinha sido removida. Agora abre uma janela clara, em três passos, a explicar como o ReciboCerto trabalha por ti: escolhes o que fazes, dizes só o valor, e mostramos-te quanto é mesmo teu, quanto reservar e quando pagar.",
+      "Continuámos a auditar os motores de cálculo para garantir que nenhum número fiscal está «escrito à mão» solto no código: a redução de retenção na fonte para famílias com 3 ou mais dependentes, a taxa dos dividendos e a taxa do regime IFICI passaram a vir sempre da mesma fonte fiscal usada nos cálculos — assim o que se mostra nunca pode divergir do que se calcula.",
+    ],
+  },
   {
     version: "1.97.0",
     data: "2026-07-22",

@@ -17,6 +17,7 @@ import {
   RETENCAO_DEP_POR_DEPENDENTE,
   RETENCAO_DEP_CONTINENTE_T1,
   DEDUCAO_ESPECIFICA_DEPENDENTE,
+  RETENCAO_DEP_REDUCAO_3MAIS,
   DEDUCAO_DEPENDENTE,
   DEDUCAO_DEPENDENTE_3MAIS,
   DEDUCAO_DEPENDENTE_DEFICIENCIA,
@@ -101,7 +102,7 @@ export function retencaoIRSDependente(
   const esc = tabela.find((e) => R <= e.ate) ?? tabela[tabela.length - 1];
   if (esc.taxa === 0) return 0;
   // n.º 5 al. h): 3+ dependentes → −1 p.p. na taxa marginal (parcela inalterada).
-  const taxa = dep >= 3 ? Math.max(0, esc.taxa - 0.01) : esc.taxa;
+  const taxa = dep >= 3 ? Math.max(0, esc.taxa - RETENCAO_DEP_REDUCAO_3MAIS.value) : esc.taxa;
   const ret = R * taxa - parcelaAbater(esc, R) - parcelaDependente * dep;
   return Math.max(0, cent(ret));
 }

@@ -1531,7 +1531,7 @@ export default function ModoGuiadoEmpresa({
                             <div className="mt-0.5 text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
                               Taxa de {pct(IFICI_TAXA_FLAT)} sobre os rendimentos do trabalho (cat. A) e empresariais/profissionais (cat. B) das atividades elegíveis (vs até 48% nos escalões progressivos), válida por {IFICI_PRAZO_ANOS.value} anos.
                               Aplicável a investigadores, I&D, startups tecnológicas e profissões altamente qualificadas aprovadas pela AT.
-                              Atenção: NÃO abrange dividendos de fonte portuguesa — esses continuam a {pct(0.28)} de taxa liberatória (ou englobamento), e é assim que o simulador os calcula.
+                              Atenção: NÃO abrange dividendos de fonte portuguesa — esses continuam a {pct(IRS_DIVIDENDOS)} de taxa liberatória (ou englobamento), e é assim que o simulador os calcula.
                               <span className="ml-1"><LeiRef artigo="Art. 58.º-A EBF" url={LEI.art58aEBF} /></span>
                             </div>
                           </div>
@@ -2966,7 +2966,7 @@ export default function ModoGuiadoEmpresa({
                           { titulo: "ICE — dedução pela capitalização", desc: "Dedução indexada à Euribor 12M (+2 p.p. para PME) sobre aumentos de capitais próprios elegíveis. Substitui a DLRR, revogada desde 2023.", badge: "PME", lei: "Art. 43.º-D EBF" },
                           { titulo: "SIFIDE II — até 82,5% de I&D", desc: "32,5% (base) + 50% incremental das despesas de I&D. Prorrogado até 2026 (Lei 13/2026).", badge: "I&D", lei: "Art. 35.º–42.º CFI", url: LEI.cfi },
                           { titulo: "Zona Franca da Madeira — IRC 5%", desc: "Empresas licenciadas no CINM até 2033. Requer criação de emprego e investimento mínimo de 75.000€.", badge: "Madeira" },
-                          ...(aplicarIFICI ? [{ titulo: `IFICI — IRS ${pct(IFICI_TAXA_FLAT)} (${IFICI_PRAZO_ANOS.value} anos)`, desc: "Taxa de 20% sobre rendimentos do trabalho (cat. A) e da categoria B das atividades elegíveis. Não abrange dividendos.", badge: "Estrangeiro", lei: "Art. 58.º-A EBF", url: LEI.art58aEBF }] : []),
+                          ...(aplicarIFICI ? [{ titulo: `IFICI — IRS ${pct(IFICI_TAXA_FLAT)} (${IFICI_PRAZO_ANOS.value} anos)`, desc: `Taxa de ${pct(IFICI_TAXA_FLAT)} sobre rendimentos do trabalho (cat. A) e da categoria B das atividades elegíveis. Não abrange dividendos.`, badge: "Estrangeiro", lei: "Art. 58.º-A EBF", url: LEI.art58aEBF }] : []),
                         ].map((b) => (
                           <div key={b.titulo} className="flex items-start gap-2.5 rounded-xl border border-stone-100 bg-white p-3 dark:border-stone-800 dark:bg-stone-950">
                             <Check size={14} className="mt-0.5 flex-shrink-0 text-brand" />
