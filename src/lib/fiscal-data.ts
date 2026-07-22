@@ -54,6 +54,10 @@ export const SOURCES = {
     label: "Art. 68.º CIRS — Taxas gerais (escalões IRS) · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs68.aspx",
   },
+  art68aCirs: {
+    label: "Art. 68.º-A CIRS — Taxa adicional de solidariedade · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs68a.aspx",
+  },
   art25cirs: {
     label: "Art. 25.º CIRS — Dedução específica do trabalho dependente · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs25.aspx",
@@ -100,11 +104,11 @@ export const SOURCES = {
   },
   art87circ: {
     label: "Art. 87.º CIRC — Taxas de IRC · Portal das Finanças (AT)",
-    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc87.aspx",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/CIRC_2R/Pages/irc87.aspx",
   },
   art88circ: {
     label: "Art. 88.º CIRC — Tributação autónoma · Portal das Finanças (AT)",
-    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc88.aspx",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/CIRC_2R/Pages/irc88.aspx",
   },
 
   // ── Diário da República (DRE) — Legislação consolidada ──────────────
@@ -114,7 +118,7 @@ export const SOURCES = {
   },
   cfi: {
     label: "DL 162/2014 — Código Fiscal do Investimento (CFI: RFAI, SIFIDE II; DLRR revogada pela Lei 24-D/2022) · Diário da República",
-    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/2014-128418757",
+    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/2014-59423292",
   },
 
   // ── Segurança Social — Portal oficial ───────────────────────────────
@@ -286,7 +290,7 @@ export const SOURCES = {
   },
   csc: {
     label: "Código das Sociedades Comerciais (DL 262/86) — tipos de sociedade, capital e órgãos sociais · Diário da República",
-    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/1986-34443375",
+    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/1986-34443975",
   },
   ircObrigacoes: {
     label: "IRC — Guia Fiscal 2026 (taxas, prazos e obrigações declarativas) · PwC Portugal",
@@ -697,8 +701,27 @@ export const MINIMO_EXISTENCIA = sv(
   12880,
   "Art. 70.º CIRS — mínimo de existência 2026 (RMMG 920 € × 14)",
   "art70cirs",
-  TODAY
+  TODAY,
+  "SIMPLIFICAÇÃO: este simulador aplica um limite (o rendimento coletável após " +
+    "imposto nunca desce abaixo deste valor), e não a fórmula legal exata do " +
+    "Art. 70.º (abatimento com coeficientes de redução progressiva 2,60/1,35 " +
+    "sobre o rendimento bruto, com um patamar L calculado a partir do limite do " +
+    "1.º escalão). Perto do limiar, confirma o valor exato com um contabilista."
 );
+
+/**
+ * Adicional de solidariedade (Art. 68.º-A CIRS): acresce às taxas gerais do
+ * Art. 68.º — 2,5% na parte do rendimento coletável entre 80 000 € e
+ * 250 000 €; 5% na parte que exceda 250 000 €. Não se aplica aos regimes de
+ * taxa fixa (IFICI/RNH antigo), que substituem — em vez de acrescer a — as
+ * taxas gerais do Art. 68.º.
+ */
+export const ADICIONAL_SOLIDARIEDADE = {
+  limiar1: sv(80000, "Art. 68.º-A, n.º 1, al. a) CIRS — 1.º limiar do adicional de solidariedade", "art68aCirs", TODAY),
+  limiar2: sv(250000, "Art. 68.º-A, n.º 1, al. b) CIRS — 2.º limiar do adicional de solidariedade", "art68aCirs", TODAY),
+  taxa1: sv(0.025, "Art. 68.º-A, n.º 1, al. a) CIRS — taxa de 2,5% entre 80 000 € e 250 000 €", "art68aCirs", TODAY),
+  taxa2: sv(0.05, "Art. 68.º-A, n.º 1, al. b) CIRS — taxa de 5% acima de 250 000 €", "art68aCirs", TODAY),
+};
 
 // ═══════════════════════════════════════════════════════════════════════
 //  IRC — para o comparador "recibos verdes vs empresa" (sociedade)
@@ -2848,6 +2871,17 @@ export function assertFiscalDataIntegrity(): void {
   if (RETENCAO_DEP_ISENCAO.value !== SMN.value) {
     erros.push(`Limiar de isenção de retenção (${RETENCAO_DEP_ISENCAO.value}) deve acompanhar o SMN (${SMN.value}).`);
   }
+
+  // 5c) Adicional de solidariedade (Art. 68.º-A CIRS): limiares e taxas crescentes.
+  if (!(ADICIONAL_SOLIDARIEDADE.limiar1.value < ADICIONAL_SOLIDARIEDADE.limiar2.value)) {
+    erros.push("Adicional de solidariedade: 1.º limiar deve ser menor que o 2.º.");
+  }
+  if (!(ADICIONAL_SOLIDARIEDADE.taxa1.value < ADICIONAL_SOLIDARIEDADE.taxa2.value)) {
+    erros.push("Adicional de solidariedade: 1.ª taxa deve ser menor que a 2.ª.");
+  }
+  if (!isRate(ADICIONAL_SOLIDARIEDADE.taxa1.value) || !isRate(ADICIONAL_SOLIDARIEDADE.taxa2.value)) {
+    erros.push("Adicional de solidariedade: taxa inválida.");
+  }
   if (RETENCAO_DEP_CONTINENTE_T1.value[0].ate !== SMN.value) {
     erros.push(`1.º escalão de retenção Tabela I (${RETENCAO_DEP_CONTINENTE_T1.value[0].ate}) deve igualar o SMN (${SMN.value}).`);
   }
@@ -2886,6 +2920,10 @@ export function assertFiscalDataIntegrity(): void {
     DEDUCAO_ESPECIFICA_CATB,
     REGIME_15PCT,
     MINIMO_EXISTENCIA,
+    ADICIONAL_SOLIDARIEDADE.limiar1,
+    ADICIONAL_SOLIDARIEDADE.limiar2,
+    ADICIONAL_SOLIDARIEDADE.taxa1,
+    ADICIONAL_SOLIDARIEDADE.taxa2,
     IRC_TAXA_GERAL,
     IRC_TAXA_PME,
     IRC_LIMITE_PME,

@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "2.0.0";
+export const APP_VERSION = "2.1.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,20 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "2.1.0",
+    data: "2026-07-22",
+    titulo: "Correções fiscais de uma auditoria externa (IRS, IRC, TA e ligações legais)",
+    itens: [
+      "O simulador anual de IRS passou a calcular o adicional de solidariedade (Art. 68.º-A CIRS): 2,5% sobre o rendimento coletável entre 80 000 € e 250 000 €, e 5% acima disso. Não entrava em conta antes.",
+      "O regime IFICI / RNH (taxa fixa de 20%) estava a aplicar-se a todo o rendimento, incluindo rendimentos de outras categorias que introduzas à parte — passou a aplicar-se só ao rendimento elegível da atividade (Cat. A/B), com o resto sempre pelos escalões normais.",
+      "No simulador de empresa (guiado e completo), o «líquido do gerente» só descontava a Segurança Social do salário — esquecia o IRS. Corrigido nos dois simuladores: o líquido do gerente reflete agora salário após SS e IRS, mais dividendos líquidos.",
+      "Corrigidas cinco ligações legais que apontavam para versões desatualizadas ou diplomas errados (Art. 87.º e 88.º do CIRC, Código Fiscal do Investimento, Código das Sociedades Comerciais, Portaria 208/2017) — verificadas uma a uma pelo conteúdo real da página, não só pela resposta do servidor.",
+      "Reforçados os avisos do IRS Jovem (idade, dependência e situação fiscal regularizada) e dos benefícios RFAI/SIFIDE (elegibilidade não verificada pelo simulador) — para nunca apresentares um valor como garantido sem confirmares com o teu contabilista.",
+      "Removida a afirmação incorreta «todos os custos são dedutíveis» no simulador de empresa.",
+      "Começámos a desenhar, num diretório à parte (ainda não ligado ao site), a próxima geração do motor fiscal — com datas de vigência, jurisdição explícita e a garantia de nunca inventar um número quando faltam dados.",
+    ],
+  },
   {
     version: "2.0.0",
     data: "2026-07-22",

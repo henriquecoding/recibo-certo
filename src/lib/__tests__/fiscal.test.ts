@@ -7,7 +7,10 @@ import {
   SS_COEFICIENTE,
   DISPENSA_RETENCAO_LIMITE,
 } from "@/lib/fiscal-data";
-import { simularDeclaracaoIRS } from "@/lib/fiscal";
+import { simularDeclaracaoIRS, simularIRSAnual, calcularTributacaoAutonoma } from "@/lib/fiscal";
+import { ADICIONAL_SOLIDARIEDADE, IFICI_TAXA, TA_ELETRICA_LIMITE_CUSTO, TA_VIATURAS_ELETRICA_ACIMA_LIMITE } from "@/lib/fiscal-data";
+
+const IFICI_TAXA_ESPERADA = IFICI_TAXA.value;
 
 const LIMITE_IVA = IVA_ISENCAO_LIMITE.value; // € 15 000
 
@@ -167,5 +170,126 @@ describe("simularDeclaracaoIRS — sujeito passivo B", () => {
     });
     // O SP B tem atividade independente → SS estimada > 0 no agregado.
     expect(comIndepB.ssAnual).toBeGreaterThan(0);
+  });
+});
+
+// ── Adicional de solidariedade (Art. 68.º-A CIRS) — P0-02 da auditoria 2026 ──
+describe("simularIRSAnual — adicional de solidariedade (Art. 68.º-A)", () => {
+  it("não se aplica abaixo de 80 000 € de coletável", () => {
+    // 60 000 € × coef. 0,75 (art151) = 45 000 € de coletável, bem abaixo de 80 000 €.
+    const r = simularIRSAnual({ brutoAnual: 60_000, tipo: "art151" });
+    expect(r.adicionalSolidariedade).toBe(0);
+  });
+
+  it("aplica 2,5% só na parte entre 80 000 € e 250 000 €", () => {
+    // Usa contabilidade organizada para controlar o coletável exatamente.
+    const r = simularIRSAnual({
+      brutoAnual: 100_000,
+      tipo: "art151",
+      regimeContabilidade: "organizada",
+      despesasJustificadas: 0,
+    });
+    expect(r.rendimentoColetavel).toBeCloseTo(100_000, 2);
+    // (100 000 − 80 000) × 2,5% = 500 €
+    expect(r.adicionalSolidariedade).toBeCloseTo(500, 2);
+  });
+
+  it("aplica 5% na parte acima de 250 000 €, e 2,5% nos 170 000 € intermédios", () => {
+    const r = simularIRSAnual({
+      brutoAnual: 300_000,
+      tipo: "art151",
+      regimeContabilidade: "organizada",
+      despesasJustificadas: 0,
+    });
+    // (250 000 − 80 000) × 2,5% + (300 000 − 250 000) × 5% = 4 250 + 2 500 = 6 750 €
+    expect(r.adicionalSolidariedade).toBeCloseTo(6_750, 2);
+  });
+
+  it("em tributação conjunta, aplica-se por titular (metade do coletável)", () => {
+    // 160 000 € coletável conjunto ÷ 2 titulares = 80 000 € cada → ainda no limiar, sem adicional.
+    const semAdicional = simularIRSAnual({
+      brutoAnual: 160_000,
+      tipo: "art151",
+      regimeContabilidade: "organizada",
+      despesasJustificadas: 0,
+      conjunta: true,
+    });
+    expect(semAdicional.adicionalSolidariedade).toBeCloseTo(0, 2);
+
+    // 200 000 € coletável conjunto ÷ 2 = 100 000 € cada → (100 000-80 000)×2,5%×2 titulares = 1 000 €
+    const comAdicional = simularIRSAnual({
+      brutoAnual: 200_000,
+      tipo: "art151",
+      regimeContabilidade: "organizada",
+      despesasJustificadas: 0,
+      conjunta: true,
+    });
+    expect(comAdicional.adicionalSolidariedade).toBeCloseTo(1_000, 2);
+  });
+
+  it("não se aplica sob regime de taxa fixa (IFICI)", () => {
+    const r = simularIRSAnual({
+      brutoAnual: 300_000,
+      tipo: "art151",
+      regimeContabilidade: "organizada",
+      despesasJustificadas: 0,
+      ifici: true,
+    });
+    expect(r.adicionalSolidariedade).toBe(0);
+  });
+
+  it("os limiares/taxas vêm de fiscal-data.ts (nada hardcoded no motor)", () => {
+    expect(ADICIONAL_SOLIDARIEDADE.limiar1.value).toBe(80_000);
+    expect(ADICIONAL_SOLIDARIEDADE.limiar2.value).toBe(250_000);
+    expect(ADICIONAL_SOLIDARIEDADE.taxa1.value).toBeCloseTo(0.025, 3);
+    expect(ADICIONAL_SOLIDARIEDADE.taxa2.value).toBeCloseTo(0.05, 3);
+  });
+});
+
+// ── IFICI: âmbito do rendimento elegível — P0-03 da auditoria 2026 ──────────
+describe("simularIRSAnual — IFICI aplica-se só ao rendimento elegível (Art. 58.º-A EBF)", () => {
+  const baseIFICI = {
+    brutoAnual: 50_000,
+    tipo: "art151" as const,
+    regimeContabilidade: "organizada" as const,
+    despesasJustificadas: 0,
+    ifici: true,
+  };
+
+  it("outrosRendimentos NÃO entra na taxa fixa de 20% — segue os escalões gerais, empilhado por cima do elegível", () => {
+    const comOutros = simularIRSAnual({ ...baseIFICI, outrosRendimentos: 20_000 });
+    const semOutros = simularIRSAnual(baseIFICI);
+    // A diferença de coleta pelos 20 000 € de outrosRendimentos reflete os
+    // escalões progressivos, empilhados por cima dos 50 000 € elegíveis — bem
+    // acima da taxa fixa de 20% (marginal no topo dos escalões 2026).
+    const coletaDosOutros = comOutros.coletaBruta - semOutros.coletaBruta;
+    expect(coletaDosOutros).toBeGreaterThan(20_000 * IFICI_TAXA_ESPERADA);
+  });
+
+  it("o rendimento elegível (atividade) continua à taxa fixa de 20% com IFICI", () => {
+    const r = simularIRSAnual(baseIFICI);
+    // Contabilidade organizada, sem despesas: coletável elegível = 50 000 €.
+    // Coleta = 50 000 × 20% = 10 000 € (sem outrosRendimentos, sem adicional — abaixo de 80 000 €).
+    expect(r.rendimentoColetavel).toBeCloseTo(50_000, 2);
+    expect(r.coletaBruta).toBeCloseTo(50_000 * IFICI_TAXA_ESPERADA, 2);
+  });
+});
+
+// ── TA de viaturas elétricas acima do limite — P0-06 da auditoria 2026 ──────
+describe("calcularTributacaoAutonoma — elétrica acima do limite de custo (Art. 88.º, n.º 20 CIRC)", () => {
+  it("isenta (0%) uma elétrica com custo de aquisição igual ao limite", () => {
+    const r = calcularTributacaoAutonoma({
+      viaturas: [{ tipo: "eletrica", custoAquisicao: TA_ELETRICA_LIMITE_CUSTO.value, encargosAnuais: 10_000 }],
+    });
+    expect(r.taViaturas).toBe(0);
+  });
+
+  it("já NÃO isenta (10%) uma elétrica com custo de aquisição acima do limite", () => {
+    const r = calcularTributacaoAutonoma({
+      viaturas: [
+        { tipo: "eletrica", custoAquisicao: TA_ELETRICA_LIMITE_CUSTO.value + 1, encargosAnuais: 10_000 },
+      ],
+    });
+    expect(r.taViaturas).toBeCloseTo(10_000 * TA_VIATURAS_ELETRICA_ACIMA_LIMITE.value, 2);
   });
 });
