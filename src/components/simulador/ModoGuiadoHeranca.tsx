@@ -197,10 +197,13 @@ const BENEFICIARIO_OPCOES: OpcaoSeletor<RelacaoSucessoria>[] = [
   { id: "outro", label: "Sem parentesco" },
 ];
 
-// Cor de cada segmento da barra de distribuição (isento = tons da marca; paga selo = âmbar).
+// Cor de cada segmento da barra de distribuição. Isento = escala de verdes da
+// marca; quem paga selo = clay/terracota (o token do design system para «valor
+// que sai»), não um âmbar fora da paleta.
 const CORES_ISENTO = ["#1D9E75", "#3FB98C", "#66C9A5", "#8DD8BE"];
+const COR_PAGA_SELO = "#C2745A"; // clay DEFAULT
 function corSegmento(isento: boolean, idx: number): string {
-  return isento ? CORES_ISENTO[idx % CORES_ISENTO.length] : "#F59E0B";
+  return isento ? CORES_ISENTO[idx % CORES_ISENTO.length] : COR_PAGA_SELO;
 }
 
 // ── Tipos de passo ────────────────────────────────────────────────────────────
@@ -222,6 +225,7 @@ export default function ModoGuiadoHeranca() {
   const [nFilhos, setNFilhos] = useState(2);
   const [nRamosNetos, setNRamosNetos] = useState(0);
   const [ascendentes, setAscendentes] = useState<Ascendentes>("nenhum");
+  const [nAscendentes, setNAscendentes] = useState(2);
 
   // Património
   const [imovelPrincipal, setImovelPrincipal] = useState(200_000);
@@ -255,9 +259,10 @@ export default function ModoGuiadoHeranca() {
       nFilhos,
       nRamosNetos,
       ascendentes: nFilhos + nRamosNetos > 0 ? "nenhum" : ascendentes,
+      nAscendentes,
       testamento: temTestamento ? { usaQuotaDisponivel: true, beneficiario } : undefined,
     }),
-    [temConjuge, vinculoConjuge, regimeEfetivo, nFilhos, nRamosNetos, ascendentes, temTestamento, beneficiario],
+    [temConjuge, vinculoConjuge, regimeEfetivo, nFilhos, nRamosNetos, ascendentes, nAscendentes, temTestamento, beneficiario],
   );
 
   const patrimonio: Patrimonio = useMemo(() => {
@@ -295,6 +300,7 @@ export default function ModoGuiadoHeranca() {
     const set = <T,>(v: unknown, fn: (x: T) => void) => { if (v !== undefined) fn(v as T); };
     set(d.temConjuge, setTemConjuge); set(d.vinculoConjuge, setVinculoConjuge); set(d.regimeBens, setRegimeBens);
     set(d.nFilhos, setNFilhos); set(d.nRamosNetos, setNRamosNetos); set(d.ascendentes, setAscendentes);
+    set(d.nAscendentes, setNAscendentes);
     set(d.imovelPrincipal, setImovelPrincipal); set(d.imovelComum, setImovelComum); set(d.outrosImoveis, setOutrosImoveis);
     set(d.depositos, setDepositos); set(d.depositosComuns, setDepositosComuns); set(d.outros, setOutros); set(d.dividas, setDividas);
     set(d.temTestamento, setTemTestamento); set(d.beneficiario, setBeneficiario);
@@ -304,7 +310,7 @@ export default function ModoGuiadoHeranca() {
 
   function montarSnapshot() {
     return {
-      temConjuge, vinculoConjuge, regimeBens, nFilhos, nRamosNetos, ascendentes,
+      temConjuge, vinculoConjuge, regimeBens, nFilhos, nRamosNetos, ascendentes, nAscendentes,
       imovelPrincipal, imovelComum, outrosImoveis, depositos, depositosComuns, outros, dividas,
       temTestamento, beneficiario,
     };
@@ -440,14 +446,30 @@ export default function ModoGuiadoHeranca() {
                     </div>
 
                     {nFilhos + nRamosNetos === 0 && (
-                      <SeletorCartoes
-                        label="Há pais ou avós vivos?"
-                        tooltip="Os ascendentes só herdam quando não há descendentes."
-                        opcoes={ASCENDENTES_OPCOES}
-                        valor={ascendentes}
-                        onChange={setAscendentes}
-                        colunas={3}
-                      />
+                      <div className="space-y-4">
+                        <SeletorCartoes
+                          label="Há pais ou avós vivos?"
+                          tooltip="Os ascendentes só herdam quando não há descendentes. Cada progenitor/avô vivo é herdeiro autónomo e reparte em partes iguais (Art. 2142.º CC) — o casamento entre eles é irrelevante."
+                          opcoes={ASCENDENTES_OPCOES}
+                          valor={ascendentes}
+                          onChange={(v) => { setAscendentes(v); if (v === "pais" && nAscendentes > 2) setNAscendentes(2); }}
+                          colunas={3}
+                        />
+                        {ascendentes !== "nenhum" && (
+                          <Contador
+                            label={ascendentes === "pais" ? "Progenitores vivos" : "Avós vivos"}
+                            value={nAscendentes}
+                            onChange={setNAscendentes}
+                            min={1}
+                            max={ascendentes === "pais" ? 2 : 4}
+                            tooltip={
+                              ascendentes === "pais"
+                                ? "Quantos progenitores estão vivos (1 ou 2). Se ambos, herdam em partes iguais; se só um, herda tudo. O casamento entre eles não interfere."
+                                : "Quantos avós estão vivos (1 a 4). A herança divide-se por linhas (paterna/materna) e depois por cabeça."
+                            }
+                          />
+                        )}
+                      </div>
                     )}
                   </div>
                   <GuiadoNav onVoltar={recuar} onAvancar={avancar} />
@@ -536,62 +558,77 @@ export default function ModoGuiadoHeranca() {
                 <m.div key="resultado" initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -18 }} transition={{ duration: 0.28, ease: EASE }}>
                   <GuiadoCabecalho eyebrow="Resultado" titulo="Quem herda o quê" subtitulo="Primeiro separa-se a meação do cônjuge; o que resta é a herança, partilhada pelos herdeiros." />
 
-                  {/* Cascata meação → herança */}
-                  <div className="space-y-1.5">
-                    {resultado.meacao.meacaoConjuge > 0 && (
-                      <LinhaResumo label="Meação do cônjuge (não é herança)" valor={resultado.meacao.meacaoConjuge} cor="text-stone-500" />
-                    )}
-                    {resultado.meacao.dividas > 0 && (
-                      <LinhaResumo label="Dívidas e encargos" valor={-resultado.meacao.dividas} cor="text-red-500 dark:text-red-400" />
-                    )}
-                    <LinhaResumo label="Herança líquida a partilhar" valor={resultado.meacao.herancaLiquida} cor="text-stone-800 dark:text-stone-100 font-semibold" sep />
+                  {/* Hero premium — herança líquida + distribuição */}
+                  <div className="relative overflow-hidden rounded-3xl border border-brand/15 bg-gradient-to-br from-brand-light via-brand-light/60 to-white p-5 shadow-card dark:border-brand/20 dark:from-brand/15 dark:via-brand/8 dark:to-stone-900 sm:p-6">
+                    <div className="pointer-events-none absolute -right-20 -top-24 h-52 w-52 rounded-full bg-brand/10 blur-3xl dark:bg-brand/25" aria-hidden />
+                    <div className="pointer-events-none absolute -bottom-24 -left-16 h-44 w-44 rounded-full bg-brand-mint/20 blur-3xl dark:bg-brand/10" aria-hidden />
+                    <div className="relative">
+                      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-dark dark:text-brand-light">
+                        <Scale size={13} /> Herança líquida a partilhar
+                      </p>
+                      <p className="mt-2 font-display text-[2.6rem] font-semibold leading-none tabular-nums text-brand-dark dark:text-brand-light sm:text-5xl">
+                        <AnimatedNumber value={resultado.meacao.herancaLiquida} />
+                      </p>
+                      <p className="mt-2.5 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+                        {resultado.meacao.meacaoConjuge > 0
+                          ? `Já retirada a meação do cônjuge (${fmt(resultado.meacao.meacaoConjuge)})`
+                          : "Sem meação a separar"}
+                        {resultado.meacao.dividas > 0 ? ` e as dívidas (${fmt(resultado.meacao.dividas)})` : ""}
+                        {quinhoes.length > 0 ? ` · ${quinhoes.length} herdeiro${quinhoes.length > 1 ? "s" : ""}` : ""}
+                      </p>
+
+                      {quinhoes.length > 1 && (
+                        <div className="mt-5">
+                          <div className="flex h-3 gap-0.5 overflow-hidden rounded-full">
+                            {quinhoes.map((q, i) => {
+                              const selo = resultado.selo.linhas.find((l) => l.id === q.id);
+                              return (
+                                <div
+                                  key={q.id}
+                                  style={{ width: `${Math.max(2, q.fracao * 100)}%`, backgroundColor: corSegmento(selo?.isento ?? true, i) }}
+                                  title={`${q.rotulo}: ${pct(q.fracao)}`}
+                                  className="h-full first:rounded-l-full last:rounded-r-full"
+                                />
+                              );
+                            })}
+                          </div>
+                          <ul className="mt-3.5 space-y-2">
+                            {quinhoes.map((q, i) => {
+                              const selo = resultado.selo.linhas.find((l) => l.id === q.id);
+                              return (
+                                <li key={q.id} className="flex items-center gap-2.5">
+                                  <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: corSegmento(selo?.isento ?? true, i) }} />
+                                  <span className="flex-1 truncate text-sm text-stone-600 dark:text-stone-300">{q.rotulo}</span>
+                                  <span className="text-xs tabular-nums text-stone-400">{pct(q.fracao)}</span>
+                                  <span className="w-24 text-right text-sm font-semibold tabular-nums text-stone-800 dark:text-stone-100">{fmt(q.valor)}</span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Barra de distribuição */}
-                  {quinhoes.length > 1 && (
-                    <div className="mt-5">
-                      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Como se divide</div>
-                      <div className="flex h-3.5 gap-0.5 overflow-hidden rounded-full">
-                        {quinhoes.map((q, i) => {
-                          const selo = resultado.selo.linhas.find((l) => l.id === q.id);
-                          return (
-                            <div
-                              key={q.id}
-                              style={{ width: `${Math.max(2, q.fracao * 100)}%`, backgroundColor: corSegmento(selo?.isento ?? true, i) }}
-                              title={`${q.rotulo}: ${pct(q.fracao)}`}
-                              className="h-full first:rounded-l-full last:rounded-r-full"
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Quinhões */}
+                  {/* Quinhões — detalhe por herdeiro (fundamento legal + selo) */}
                   {quinhoes.length > 0 && (
-                    <div className="mt-4 space-y-2">
+                    <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
                       {quinhoes.map((q, i) => {
                         const selo = resultado.selo.linhas.find((l) => l.id === q.id);
                         const isento = selo?.isento ?? true;
                         return (
-                          <div key={q.id} className="rounded-2xl border border-stone-100 bg-white p-4 dark:border-stone-800 dark:bg-stone-900">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex min-w-0 items-center gap-2.5">
-                                <span className="mt-0.5 h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: corSegmento(isento, i) }} />
-                                <div className="min-w-0">
-                                  <div className="text-sm font-bold text-stone-800 dark:text-stone-100">{q.rotulo}</div>
-                                  <div className="mt-0.5 text-[11px] text-stone-400">{pct(q.fracao)} da herança · {q.fundamento}</div>
-                                </div>
-                              </div>
-                              <div className="flex-shrink-0 text-right">
-                                <div className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100 tabular-nums">{fmt(q.valor)}</div>
-                                {selo && (
-                                  <div className={`text-[11px] font-semibold ${isento ? "text-brand" : "text-amber-600 dark:text-amber-400"}`}>
-                                    {isento ? "Isento de Selo" : `Selo ${fmt(selo.imposto)} (${pct(selo.taxa)})`}
-                                  </div>
-                                )}
-                              </div>
+                          <div key={q.id} className="rounded-2xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+                            <div className="flex items-center gap-2">
+                              <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: corSegmento(isento, i) }} />
+                              <div className="min-w-0 text-sm font-bold text-stone-800 dark:text-stone-100">{q.rotulo}</div>
                             </div>
+                            <div className="mt-2 font-display text-2xl font-semibold text-stone-800 dark:text-stone-100 tabular-nums">{fmt(q.valor)}</div>
+                            <div className="mt-1 text-[11px] text-stone-400">{pct(q.fracao)} da herança · {q.fundamento}</div>
+                            {selo && (
+                              <div className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${isento ? "bg-brand-light text-brand-dark dark:bg-brand/10 dark:text-brand-light" : "bg-clay-bg text-clay-text"}`}>
+                                {isento ? "Isento de Imposto do Selo" : `Selo ${fmt(selo.imposto)} · ${pct(selo.taxa)}`}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -599,15 +636,15 @@ export default function ModoGuiadoHeranca() {
                   )}
 
                   {/* Total do Selo */}
-                  <div className={`mt-4 rounded-3xl border-2 p-5 shadow-card ${resultado.selo.todosIsentos ? "border-brand bg-brand-light/40 dark:bg-brand/5" : "border-amber-300 bg-amber-50/60 dark:border-amber-800/40 dark:bg-amber-900/10"}`}>
+                  <div className={`mt-4 rounded-3xl border p-5 shadow-card ${resultado.selo.todosIsentos ? "border-brand/30 bg-brand-light/50 dark:bg-brand/10" : "border-clay-border bg-clay-bg/60"}`}>
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="text-sm font-semibold text-stone-700 dark:text-stone-300">Imposto do Selo total</div>
+                        <div className={`text-sm font-semibold ${resultado.selo.todosIsentos ? "text-brand-dark dark:text-brand-light" : "text-clay-text"}`}>Imposto do Selo total</div>
                         <div className="mt-0.5 text-[11px] text-stone-500 dark:text-stone-400">
                           {resultado.selo.todosIsentos ? "A família direta é isenta — nada a pagar." : "Só sobre herdeiros não isentos (Verba 1.2)."}
                         </div>
                       </div>
-                      <div className={`flex-shrink-0 font-display text-3xl font-semibold tabular-nums ${resultado.selo.todosIsentos ? "text-brand" : "text-amber-600 dark:text-amber-400"}`}>
+                      <div className={`flex-shrink-0 font-display text-3xl font-semibold tabular-nums ${resultado.selo.todosIsentos ? "text-brand" : "text-clay-text"}`}>
                         <AnimatedNumber value={resultado.selo.total} />
                       </div>
                     </div>
@@ -732,36 +769,42 @@ export default function ModoGuiadoHeranca() {
           {/* Painel lateral vivo */}
           {passo !== "resultado" && passo !== "aseguir" && (
             <aside className="hidden lg:block">
-              <div className="sticky top-24 rounded-3xl border border-stone-100 bg-stone-50/60 p-5 dark:border-stone-800 dark:bg-stone-900/40">
-                <div className="text-[11px] font-bold uppercase tracking-wide text-stone-400">Em tempo real</div>
-                <div className="mt-3 space-y-3">
-                  <div>
-                    <div className="text-[11px] text-stone-400">Herança líquida</div>
-                    <div className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100 tabular-nums"><AnimatedNumber value={resultado.meacao.herancaLiquida} /></div>
+              <div className="sticky top-24 overflow-hidden rounded-3xl border border-brand/15 bg-gradient-to-br from-brand-light via-brand-light/50 to-white shadow-card dark:border-brand/20 dark:from-brand/12 dark:via-brand/6 dark:to-stone-900">
+                <div className="relative overflow-hidden p-5">
+                  <div className="pointer-events-none absolute -right-16 -top-20 h-40 w-40 rounded-full bg-brand/10 blur-3xl dark:bg-brand/25" aria-hidden />
+                  <div className="relative">
+                    <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-brand-dark dark:text-brand-light"><Scale size={12} /> Em tempo real</div>
+                    <div className="mt-3">
+                      <div className="text-[11px] text-stone-500 dark:text-stone-400">Herança líquida</div>
+                      <div className="font-display text-3xl font-semibold text-brand-dark dark:text-brand-light tabular-nums"><AnimatedNumber value={resultado.meacao.herancaLiquida} /></div>
+                    </div>
+                    {resultado.meacao.meacaoConjuge > 0 && (
+                      <div className="mt-3">
+                        <div className="text-[11px] text-stone-500 dark:text-stone-400">Meação do cônjuge</div>
+                        <div className="text-sm font-semibold text-stone-600 dark:text-stone-300 tabular-nums">{fmt(resultado.meacao.meacaoConjuge)}</div>
+                      </div>
+                    )}
+                    {quinhoes.length > 1 && (
+                      <div className="mt-3 flex h-2 gap-0.5 overflow-hidden rounded-full">
+                        {quinhoes.map((q, i) => {
+                          const selo = resultado.selo.linhas.find((l) => l.id === q.id);
+                          return <div key={q.id} style={{ width: `${Math.max(2, q.fracao * 100)}%`, backgroundColor: corSegmento(selo?.isento ?? true, i) }} className="h-full" />;
+                        })}
+                      </div>
+                    )}
                   </div>
-                  {resultado.meacao.meacaoConjuge > 0 && (
-                    <div>
-                      <div className="text-[11px] text-stone-400">Meação do cônjuge</div>
-                      <div className="text-sm font-semibold text-stone-600 dark:text-stone-300 tabular-nums">{fmt(resultado.meacao.meacaoConjuge)}</div>
-                    </div>
-                  )}
-                  {/* Mini barra de distribuição */}
-                  {quinhoes.length > 1 && (
-                    <div className="flex h-2 gap-0.5 overflow-hidden rounded-full">
-                      {quinhoes.map((q, i) => {
-                        const selo = resultado.selo.linhas.find((l) => l.id === q.id);
-                        return <div key={q.id} style={{ width: `${Math.max(2, q.fracao * 100)}%`, backgroundColor: corSegmento(selo?.isento ?? true, i) }} className="h-full" />;
-                      })}
-                    </div>
-                  )}
-                  <div className="border-t border-stone-200 pt-3 dark:border-stone-700">
-                    <div className="text-[11px] text-stone-400">Imposto do Selo</div>
-                    <div className={`font-display text-2xl font-semibold tabular-nums ${resultado.selo.todosIsentos ? "text-brand" : "text-amber-600 dark:text-amber-400"}`}>
-                      <AnimatedNumber value={resultado.selo.total} />
-                    </div>
-                    {resultado.selo.todosIsentos && <div className="mt-0.5 text-[10px] font-medium text-brand">Família direta isenta</div>}
+                </div>
+                <div className="border-t border-brand/10 bg-white/60 p-5 dark:border-brand/15 dark:bg-stone-900/50">
+                  <div className="text-[11px] text-stone-500 dark:text-stone-400">Imposto do Selo</div>
+                  <div className={`font-display text-2xl font-semibold tabular-nums ${resultado.selo.todosIsentos ? "text-brand" : "text-clay-text"}`}>
+                    <AnimatedNumber value={resultado.selo.total} />
                   </div>
-                  <div className="text-[11px] text-stone-400">{quinhoes.length} herdeiro(s)</div>
+                  {resultado.selo.todosIsentos ? (
+                    <div className="mt-0.5 text-[10px] font-medium text-brand">Família direta isenta</div>
+                  ) : (
+                    <div className="mt-0.5 text-[10px] font-medium text-clay-text">Sobre herdeiros não isentos</div>
+                  )}
+                  <div className="mt-2 text-[11px] text-stone-400">{quinhoes.length} herdeiro{quinhoes.length === 1 ? "" : "s"}</div>
                 </div>
               </div>
             </aside>
@@ -780,15 +823,6 @@ export default function ModoGuiadoHeranca() {
 }
 
 // ── Sub-componentes de linha ──────────────────────────────────────────────────
-
-function LinhaResumo({ label, valor, cor, sep }: { label: string; valor: number; cor: string; sep?: boolean }) {
-  return (
-    <div className={`flex items-center justify-between rounded-xl px-3 py-2 ${sep ? "mt-1 border-t border-stone-100 bg-stone-50/50 dark:border-stone-800 dark:bg-stone-900/30" : ""}`}>
-      <span className="text-[11px] text-stone-500 dark:text-stone-400">{label}</span>
-      <span className={`text-[11px] tabular-nums ${cor}`}>{valor < 0 ? "−" : ""}{fmt(Math.abs(valor))}</span>
-    </div>
-  );
-}
 
 function LinhaMini({ label, valor, forte }: { label: string; valor: number; forte?: boolean }) {
   return (

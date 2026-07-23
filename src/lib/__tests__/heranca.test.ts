@@ -113,6 +113,49 @@ describe("calcularPartilha — sucessão legítima", () => {
     expect(pais.fracao).toBeCloseTo(1 / 3, 5);
   });
 
+  it("dois progenitores vivos (sem cônjuge): 2 herdeiros, 1/2 cada", () => {
+    const r = calcularPartilha(config({ ascendentes: "pais", nAscendentes: 2 }), 200_000);
+    const pais = r.quinhoes.filter((q) => q.relacao === "pai");
+    expect(pais).toHaveLength(2);
+    pais.forEach((p) => expect(p.fracao).toBeCloseTo(1 / 2, 5));
+    expect(soma(r.quinhoes.map((q) => q.valor))).toBeCloseTo(200_000, 0);
+  });
+
+  it("um só progenitor vivo: é 1 herdeiro e recebe tudo", () => {
+    const r = calcularPartilha(config({ ascendentes: "pais", nAscendentes: 1 }), 200_000);
+    expect(r.quinhoes.filter((q) => q.relacao === "pai")).toHaveLength(1);
+    expect(r.quinhoes[0].fracao).toBeCloseTo(1, 5);
+    expect(r.quinhoes[0].valor).toBe(200_000);
+  });
+
+  it("cônjuge + dois progenitores: cônjuge 2/3, cada progenitor 1/6", () => {
+    const r = calcularPartilha(config({ temConjuge: true, ascendentes: "pais", nAscendentes: 2 }), 300_000);
+    const conjuge = r.quinhoes.find((q) => q.relacao === "conjuge")!;
+    const pais = r.quinhoes.filter((q) => q.relacao === "pai");
+    expect(conjuge.fracao).toBeCloseTo(2 / 3, 5);
+    expect(pais).toHaveLength(2);
+    pais.forEach((p) => expect(p.fracao).toBeCloseTo(1 / 6, 5));
+    expect(soma(r.quinhoes.map((q) => q.fracao))).toBeCloseTo(1, 5);
+  });
+
+  it("três avós vivos: reparte 1/3 cada e avisa da divisão por linhas", () => {
+    const r = calcularPartilha(config({ ascendentes: "avos", nAscendentes: 3 }), 300_000);
+    const avos = r.quinhoes.filter((q) => q.relacao === "avo");
+    expect(avos).toHaveLength(3);
+    avos.forEach((a) => expect(a.fracao).toBeCloseTo(1 / 3, 5));
+    expect(r.avisos.join(" ")).toMatch(/linha paterna|por linhas|linha materna/i);
+  });
+
+  it("ascendentes são isentos de Imposto do Selo mesmo sendo vários", () => {
+    const { partilha, selo } = simularHeranca(
+      config({ ascendentes: "pais", nAscendentes: 2 }),
+      patrimonio({ outrosBensProprios: 200_000 }),
+    );
+    expect(partilha.quinhoes).toHaveLength(2);
+    expect(selo.total).toBe(0);
+    expect(selo.todosIsentos).toBe(true);
+  });
+
   it("só cônjuge: recebe toda a herança", () => {
     const r = calcularPartilha(config({ temConjuge: true }), 150_000);
     expect(r.quinhoes).toHaveLength(1);

@@ -83,7 +83,25 @@ export interface ConfigFamiliar {
   nRamosNetos: number;
   /** Ascendentes vivos (só relevam se não houver descendentes). */
   ascendentes: Ascendentes;
+  /**
+   * Quantos ascendentes do grau indicado estão vivos — cada um é herdeiro
+   * autónomo e reparte a quota dos ascendentes em partes iguais (Art. 2142.º/
+   * 2136.º CC). Pais: 1 ou 2. Avós: 1 a 4. Defeito: 1 (retrocompatível).
+   */
+  nAscendentes?: number;
   testamento?: Testamento;
+}
+
+/** Máximo de ascendentes vivos do grau (2 pais; 4 avós). */
+function maxAscendentes(grau: Ascendentes): number {
+  return grau === "avos" ? 4 : grau === "pais" ? 2 : 0;
+}
+
+/** Nº de ascendentes vivos, limitado ao máximo do grau (mínimo 1 se houver grau). */
+function nAscendentesVivos(config: ConfigFamiliar): number {
+  if (config.ascendentes === "nenhum") return 0;
+  const max = maxAscendentes(config.ascendentes);
+  return Math.min(max, Math.max(1, Math.floor(config.nAscendentes ?? 1)));
 }
 
 // ─── Camada 1: Meação ───────────────────────────────────────────────────
@@ -220,6 +238,31 @@ function quotasSucessaoLegitima(config: ConfigFamiliar): { quotas: QuotaBase[]; 
     }
   };
 
+  // Ascendentes: cada progenitor/avô vivo é herdeiro autónomo e reparte a quota
+  // dos ascendentes em partes iguais por cabeça (Art. 2136.º/2142.º CC). O
+  // casamento entre os progenitores é irrelevante — conta a filiação.
+  const grauPais = config.ascendentes === "pais";
+  const nAsc = nAscendentesVivos(config);
+  const rotuloAscendente = (i: number) => {
+    if (nAsc <= 1) return grauPais ? "Progenitor(a)" : "Avô/avó";
+    return grauPais ? `Progenitor(a) ${i + 1}` : `Avô/avó ${i + 1}`;
+  };
+  const distribuirAscendentes = (fracaoTotal: number, fundamento: string) => {
+    for (let i = 0; i < nAsc; i++) {
+      quotas.push({
+        rotulo: rotuloAscendente(i),
+        relacao: grauPais ? "pai" : "avo",
+        fracao: fracaoTotal / nAsc,
+        fundamento,
+      });
+    }
+    if (!grauPais && nAsc > 1) {
+      avisos.push(
+        "Com avós, a herança divide-se primeiro em duas metades — linha paterna e linha materna — e só depois por cabeça dentro de cada linha (Art. 2142.º CC). Se os dois lados não tiverem o mesmo número de avós vivos, a partilha exata difere da divisão por cabeça mostrada aqui — confirma com um notário.",
+      );
+    }
+  };
+
   if (conj && nDesc > 0) {
     // Cônjuge + descendentes: por cabeça, cônjuge nunca < 1/4 (Art. 2139.º).
     const cabecas = 1 + nDesc;
@@ -235,12 +278,7 @@ function quotasSucessaoLegitima(config: ConfigFamiliar): { quotas: QuotaBase[]; 
       fracao: CONJUGE_ASCENDENTES_QUOTAS.conjuge,
       fundamento: CONJUGE_ASCENDENTES_QUOTAS.base,
     });
-    quotas.push({
-      rotulo: config.ascendentes === "pais" ? "Pais" : "Avós",
-      relacao: config.ascendentes === "pais" ? "pai" : "avo",
-      fracao: CONJUGE_ASCENDENTES_QUOTAS.ascendentes,
-      fundamento: CONJUGE_ASCENDENTES_QUOTAS.base,
-    });
+    distribuirAscendentes(CONJUGE_ASCENDENTES_QUOTAS.ascendentes, CONJUGE_ASCENDENTES_QUOTAS.base);
   } else if (conj) {
     // Só cônjuge (Art. 2144.º).
     quotas.push({ rotulo: "Cônjuge", relacao: "conjuge", fracao: 1, fundamento: "Art. 2144.º CC" });
@@ -248,13 +286,8 @@ function quotasSucessaoLegitima(config: ConfigFamiliar): { quotas: QuotaBase[]; 
     // Só descendentes, por cabeça (Art. 2136.º–2138.º).
     distribuirDescendentes(1, "Art. 2136.º–2138.º CC");
   } else if (config.ascendentes !== "nenhum") {
-    // Só ascendentes (Art. 2133.º/2142.º).
-    quotas.push({
-      rotulo: config.ascendentes === "pais" ? "Pais" : "Avós",
-      relacao: config.ascendentes === "pais" ? "pai" : "avo",
-      fracao: 1,
-      fundamento: "Art. 2133.º/2142.º CC",
-    });
+    // Só ascendentes (Art. 2133.º/2142.º) — repartidos por cabeça.
+    distribuirAscendentes(1, "Art. 2133.º/2142.º CC");
   } else {
     // Sem cônjuge e sem legitimários: irmãos/colaterais e, na falta, o Estado.
     avisos.push(

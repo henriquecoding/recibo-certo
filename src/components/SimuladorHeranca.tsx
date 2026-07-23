@@ -49,7 +49,8 @@ function LeiRef({ artigo, url }: { artigo: string; url: string }) {
 // ── Controlos (premium, coerentes com os outros simuladores) ──────────────────
 
 const CORES_ISENTO = ["#1D9E75", "#3FB98C", "#66C9A5", "#8DD8BE"];
-const corSegmento = (isento: boolean, idx: number) => (isento ? CORES_ISENTO[idx % CORES_ISENTO.length] : "#F59E0B");
+// Quem paga selo = clay/terracota (token do design system), não âmbar.
+const corSegmento = (isento: boolean, idx: number) => (isento ? CORES_ISENTO[idx % CORES_ISENTO.length] : "#C2745A");
 
 function Campo({ label, value, onChange, tooltip }: { label: string; value: number; onChange: (v: number) => void; tooltip?: ReactNode }) {
   return (
@@ -93,10 +94,16 @@ function Pills<T extends string>({ label, tooltip, opcoes, valor, onChange }: { 
   );
 }
 
-function Seccao({ titulo, icon, children }: { titulo: string; icon: ReactNode; children: ReactNode }) {
+function Seccao({ titulo, icon, hint, children }: { titulo: string; icon: ReactNode; hint?: string; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-stone-100 bg-white p-4 dark:border-stone-800 dark:bg-stone-900">
-      <h3 className="mb-4 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-stone-500">{icon}{titulo}</h3>
+    <section className="rounded-3xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
+      <div className="mb-4 flex items-start gap-3">
+        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-brand-light text-brand dark:bg-brand/10">{icon}</span>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-semibold text-stone-800 dark:text-stone-100">{titulo}</h3>
+          {hint && <p className="mt-0.5 text-[11px] leading-relaxed text-stone-400">{hint}</p>}
+        </div>
+      </div>
       {children}
     </section>
   );
@@ -195,6 +202,7 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
   const [nFilhos, setNFilhos] = useState(2);
   const [nRamosNetos, setNRamosNetos] = useState(0);
   const [ascendentes, setAscendentes] = useState<Ascendentes>("nenhum");
+  const [nAscendentes, setNAscendentes] = useState(2);
   // Testamento
   const [temTestamento, setTemTestamento] = useState(false);
   const [beneficiario, setBeneficiario] = useState<RelacaoSucessoria>("filho");
@@ -218,8 +226,9 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
   const config: ConfigFamiliar = useMemo(() => ({
     temConjuge, vinculoConjuge, regimeBens: regimeEfetivo, nFilhos, nRamosNetos,
     ascendentes: nFilhos + nRamosNetos > 0 ? "nenhum" : ascendentes,
+    nAscendentes,
     testamento: temTestamento ? { usaQuotaDisponivel: true, beneficiario } : undefined,
-  }), [temConjuge, vinculoConjuge, regimeEfetivo, nFilhos, nRamosNetos, ascendentes, temTestamento, beneficiario]);
+  }), [temConjuge, vinculoConjuge, regimeEfetivo, nFilhos, nRamosNetos, ascendentes, nAscendentes, temTestamento, beneficiario]);
 
   const patrimonio: Patrimonio = useMemo(() => {
     const imoveis: ImovelHeranca[] = [];
@@ -264,7 +273,7 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         {/* Inputs */}
         <div className="space-y-4">
-          <Seccao titulo="Família" icon={<Heart size={14} className="text-brand" />}>
+          <Seccao titulo="Família do falecido" hint="Quem herda depende de quem fica: cônjuge, filhos/netos e — só na sua falta — pais ou avós." icon={<Heart size={17} />}>
             <div className="space-y-4">
               <Interruptor on={temConjuge} onChange={setTemConjuge} label="Existe cônjuge ou companheiro(a)" />
               {temConjuge && (
@@ -278,12 +287,24 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
                 <Contador label="Netos (representação)" value={nRamosNetos} onChange={setNRamosNetos} tooltip="Netos que representam um filho já falecido." />
               </div>
               {nFilhos + nRamosNetos === 0 && (
-                <Pills label="Há pais ou avós vivos?" opcoes={[{ id: "nenhum" as Ascendentes, label: "Não" }, { id: "pais" as Ascendentes, label: "Pais" }, { id: "avos" as Ascendentes, label: "Avós" }]} valor={ascendentes} onChange={setAscendentes} />
+                <div className="space-y-3">
+                  <Pills label="Há pais ou avós vivos?" tooltip="Cada progenitor/avô vivo é herdeiro autónomo e reparte em partes iguais (Art. 2142.º CC). O casamento entre os progenitores é irrelevante." opcoes={[{ id: "nenhum" as Ascendentes, label: "Não" }, { id: "pais" as Ascendentes, label: "Pais" }, { id: "avos" as Ascendentes, label: "Avós" }]} valor={ascendentes} onChange={(v) => { setAscendentes(v); if (v === "pais" && nAscendentes > 2) setNAscendentes(2); }} />
+                  {ascendentes !== "nenhum" && (
+                    <Contador
+                      label={ascendentes === "pais" ? "Progenitores vivos" : "Avós vivos"}
+                      value={nAscendentes}
+                      onChange={setNAscendentes}
+                      min={1}
+                      max={ascendentes === "pais" ? 2 : 4}
+                      tooltip={ascendentes === "pais" ? "1 ou 2 progenitores vivos. Ambos herdam em partes iguais; se só um, herda tudo." : "1 a 4 avós vivos. A herança divide-se por linhas (paterna/materna) e depois por cabeça."}
+                    />
+                  )}
+                </div>
               )}
             </div>
           </Seccao>
 
-          <Seccao titulo="Testamento" icon={<FileSign size={14} className="text-brand" />}>
+          <Seccao titulo="Testamento" hint="A legítima fica reservada aos herdeiros legitimários; só a quota disponível se deixa livremente." icon={<FileSign size={17} />}>
             <div className="space-y-3">
               <Interruptor
                 on={temTestamento}
@@ -296,7 +317,7 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
             </div>
           </Seccao>
 
-          <Seccao titulo="Património (VPT dos imóveis)" icon={<Home size={14} className="text-brand" />}>
+          <Seccao titulo="Património" hint="Os imóveis contam pelo VPT da caderneta predial, não pelo valor de mercado." icon={<Home size={17} />}>
             <div className="grid gap-3 sm:grid-cols-2">
               <Campo label="Habitação (VPT)" value={imovelPrincipal} onChange={setImovelPrincipal} tooltip="Valor Patrimonial Tributário da caderneta predial." />
               <Campo label="Outros imóveis (VPT)" value={outrosImoveis} onChange={setOutrosImoveis} />
@@ -312,7 +333,7 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
             )}
           </Seccao>
 
-          <Seccao titulo="Doação em vida (comparação)" icon={<Gift size={14} className="text-brand" />}>
+          <Seccao titulo="Doação em vida" hint="Comparar deixar por herança vs doar os mesmos bens em vida." icon={<Gift size={17} />}>
             <p className="mb-3 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
               Doar os mesmos bens em vida em vez de os deixar por herança. A doação de imóveis paga {pct(IS_DOACAO_IMOVEL.value)} (Verba 1.1) mesmo entre família; a herança é isenta. Doações até {fmt(IS_DOACAO_MINIMO_ISENTO.value)} não são tributadas.
             </p>
@@ -320,7 +341,7 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
             <Pills opcoes={[{ id: "filho" as RelacaoSucessoria, label: "Filho/neto" }, { id: "conjuge" as RelacaoSucessoria, label: "Cônjuge" }, { id: "pai" as RelacaoSucessoria, label: "Pai/avô" }, { id: "irmao" as RelacaoSucessoria, label: "Irmão" }, { id: "sobrinho" as RelacaoSucessoria, label: "Sobrinho" }, { id: "outro" as RelacaoSucessoria, label: "Sem parentesco" }]} valor={doacaoRelacao} onChange={setDoacaoRelacao} />
           </Seccao>
 
-          <Seccao titulo="Vender um imóvel herdado (mais-valias IRS)" icon={<Building size={14} className="text-brand" />}>
+          <Seccao titulo="Vender um imóvel herdado" hint="Mais-valias de IRS se vender o imóvel recebido." icon={<Building size={17} />}>
             <p className="mb-3 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
               Valor de aquisição = VPT à data do óbito ({fmt(imovelPrincipal)}) — Art. 45.º CIRS. Só 50% do ganho entra no IRS, à tua taxa marginal.
             </p>
@@ -334,19 +355,26 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
         {/* Painel de resultados */}
         <aside>
           <div className="sticky top-24 space-y-4">
-            <div className="rounded-3xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
-              <div className="text-[11px] font-bold uppercase tracking-wide text-stone-400">Partilha</div>
-              {r.meacao.meacaoConjuge > 0 && <Linha label="Meação do cônjuge" valor={r.meacao.meacaoConjuge} />}
-              <Linha label="Herança líquida" valor={r.meacao.herancaLiquida} forte />
-              {r.partilha.quinhoes.length > 1 && (
-                <div className="mt-3 flex h-2.5 gap-0.5 overflow-hidden rounded-full">
-                  {r.partilha.quinhoes.map((q, i) => {
-                    const s = r.selo.linhas.find((l) => l.id === q.id);
-                    return <div key={q.id} style={{ width: `${Math.max(2, q.fracao * 100)}%`, backgroundColor: corSegmento(s?.isento ?? true, i) }} className="h-full" title={`${q.rotulo}: ${pct(q.fracao)}`} />;
-                  })}
+            <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900">
+              {/* Hero premium — herança líquida */}
+              <div className="relative overflow-hidden border-b border-brand/15 bg-gradient-to-br from-brand-light via-brand-light/50 to-white p-5 dark:border-brand/20 dark:from-brand/12 dark:via-brand/6 dark:to-stone-900">
+                <div className="pointer-events-none absolute -right-16 -top-20 h-40 w-40 rounded-full bg-brand/10 blur-3xl dark:bg-brand/25" aria-hidden />
+                <div className="relative">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-brand-dark dark:text-brand-light"><Scale size={12} /> Herança líquida a partilhar</div>
+                  <div className="mt-1 font-display text-3xl font-semibold text-brand-dark dark:text-brand-light tabular-nums"><AnimatedNumber value={r.meacao.herancaLiquida} /></div>
+                  {r.meacao.meacaoConjuge > 0 && <div className="mt-1 text-[11px] text-stone-500 dark:text-stone-400">Já retirada a meação do cônjuge ({fmt(r.meacao.meacaoConjuge)})</div>}
+                  {r.partilha.quinhoes.length > 1 && (
+                    <div className="mt-3 flex h-2.5 gap-0.5 overflow-hidden rounded-full">
+                      {r.partilha.quinhoes.map((q, i) => {
+                        const s = r.selo.linhas.find((l) => l.id === q.id);
+                        return <div key={q.id} style={{ width: `${Math.max(2, q.fracao * 100)}%`, backgroundColor: corSegmento(s?.isento ?? true, i) }} className="h-full" title={`${q.rotulo}: ${pct(q.fracao)}`} />;
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
-              <div className="mt-3 space-y-1.5 border-t border-stone-100 pt-3 dark:border-stone-800">
+              </div>
+              <div className="p-5">
+              <div className="space-y-1.5">
                 {r.partilha.quinhoes.map((q, i) => {
                   const s = r.selo.linhas.find((l) => l.id === q.id);
                   return (
@@ -357,7 +385,7 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
                       </span>
                       <span className="flex-shrink-0 text-right tabular-nums font-semibold text-stone-700 dark:text-stone-200">
                         {fmt(q.valor)}
-                        {s && !s.isento && <span className="block text-amber-600 dark:text-amber-400">Selo {fmt(s.imposto)}</span>}
+                        {s && !s.isento && <span className="block text-clay-text">Selo {fmt(s.imposto)}</span>}
                       </span>
                     </div>
                   );
@@ -366,9 +394,10 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
               </div>
               <div className="mt-3 flex items-center justify-between border-t border-stone-100 pt-3 dark:border-stone-800">
                 <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">Imposto do Selo <LeiRef artigo="Art. 6.º CIS" url={LEI.cisArt6} /></span>
-                <span className={`font-display text-xl font-semibold tabular-nums ${r.selo.todosIsentos ? "text-brand" : "text-amber-600 dark:text-amber-400"}`}><AnimatedNumber value={r.selo.total} /></span>
+                <span className={`font-display text-xl font-semibold tabular-nums ${r.selo.todosIsentos ? "text-brand" : "text-clay-text"}`}><AnimatedNumber value={r.selo.total} /></span>
               </div>
               {r.selo.todosIsentos && <p className="mt-1 text-[10px] font-medium text-brand">Família direta — nada a pagar.</p>}
+              </div>
             </div>
 
             {/* Comparação */}
@@ -404,8 +433,8 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
       {r.avisos.length > 0 && (
         <div className="mt-6 space-y-2">
           {r.avisos.map((a, i) => (
-            <div key={i} className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800/30 dark:bg-amber-900/10">
-              <Warning size={13} className="mt-0.5 flex-shrink-0 text-amber-500" />
+            <div key={i} className="flex items-start gap-2 rounded-xl border border-alert-border bg-alert-bg p-3">
+              <Warning size={13} className="mt-0.5 flex-shrink-0 text-alert-text" />
               <p className="text-[11px] leading-relaxed text-stone-600 dark:text-stone-300">{a}</p>
             </div>
           ))}
