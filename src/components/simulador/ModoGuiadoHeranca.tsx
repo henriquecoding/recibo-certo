@@ -239,6 +239,8 @@ export default function ModoGuiadoHeranca() {
   // Testamento
   const [temTestamento, setTemTestamento] = useState(false);
   const [beneficiario, setBeneficiario] = useState<RelacaoSucessoria>("filho");
+  // Fração da quota disponível que o testador deixa ao beneficiário (0–1).
+  const [fracaoDisponivel, setFracaoDisponivel] = useState(1);
 
   // Mais-valias (passo a seguir)
   const [valorVenda, setValorVenda] = useState(0);
@@ -260,9 +262,9 @@ export default function ModoGuiadoHeranca() {
       nRamosNetos,
       ascendentes: nFilhos + nRamosNetos > 0 ? "nenhum" : ascendentes,
       nAscendentes,
-      testamento: temTestamento ? { usaQuotaDisponivel: true, beneficiario } : undefined,
+      testamento: temTestamento ? { usaQuotaDisponivel: true, beneficiario, fracao: fracaoDisponivel } : undefined,
     }),
-    [temConjuge, vinculoConjuge, regimeEfetivo, nFilhos, nRamosNetos, ascendentes, nAscendentes, temTestamento, beneficiario],
+    [temConjuge, vinculoConjuge, regimeEfetivo, nFilhos, nRamosNetos, ascendentes, nAscendentes, temTestamento, beneficiario, fracaoDisponivel],
   );
 
   const patrimonio: Patrimonio = useMemo(() => {
@@ -303,7 +305,7 @@ export default function ModoGuiadoHeranca() {
     set(d.nAscendentes, setNAscendentes);
     set(d.imovelPrincipal, setImovelPrincipal); set(d.imovelComum, setImovelComum); set(d.outrosImoveis, setOutrosImoveis);
     set(d.depositos, setDepositos); set(d.depositosComuns, setDepositosComuns); set(d.outros, setOutros); set(d.dividas, setDividas);
-    set(d.temTestamento, setTemTestamento); set(d.beneficiario, setBeneficiario);
+    set(d.temTestamento, setTemTestamento); set(d.beneficiario, setBeneficiario); set(d.fracaoDisponivel, setFracaoDisponivel);
     setPasso("resultado");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -312,7 +314,7 @@ export default function ModoGuiadoHeranca() {
     return {
       temConjuge, vinculoConjuge, regimeBens, nFilhos, nRamosNetos, ascendentes, nAscendentes,
       imovelPrincipal, imovelComum, outrosImoveis, depositos, depositosComuns, outros, dividas,
-      temTestamento, beneficiario,
+      temTestamento, beneficiario, fracaoDisponivel,
     };
   }
 
@@ -542,6 +544,31 @@ export default function ModoGuiadoHeranca() {
                           onChange={setBeneficiario}
                           colunas={3}
                         />
+
+                        {/* Quanto da quota disponível é efetivamente deixado (o testador decide) */}
+                        {resultado.partilha.configLegitima && (
+                          <div className="mt-4 rounded-xl border border-stone-200 bg-white/70 p-3.5 dark:border-stone-700 dark:bg-stone-900/50">
+                            <div className="mb-1.5 flex items-center justify-between gap-2">
+                              <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">Parte da quota disponível deixada</span>
+                              <span className="font-display text-sm font-semibold tabular-nums text-brand-dark dark:text-brand">{pct(fracaoDisponivel)}</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              step={5}
+                              value={Math.round(fracaoDisponivel * 100)}
+                              onChange={(e) => setFracaoDisponivel(Number(e.target.value) / 100)}
+                              aria-label="Parte da quota disponível deixada ao beneficiário"
+                              className="w-full accent-brand"
+                            />
+                            <p className="mt-1.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                              O testador não é obrigado a deixar toda a quota disponível. Deixa {fmt(resultado.meacao.herancaLiquida * resultado.partilha.disponivelFracao * fracaoDisponivel)} ao beneficiário
+                              {fracaoDisponivel < 1 ? `; o restante volta aos herdeiros legitimários.` : "."}
+                            </p>
+                          </div>
+                        )}
+
                         <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
                           <Info size={12} className="mt-0.5 flex-shrink-0 text-brand" />
                           Se deixares a quota disponível a quem não é família direta (ex.: um amigo), essa parte paga {pct(IS_TRANSMISSAO_GRATUITA.value)} de Imposto do Selo.
