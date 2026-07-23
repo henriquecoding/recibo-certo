@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "2.3.1";
+export const APP_VERSION = "2.3.2";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,16 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "2.3.2",
+    data: "2026-07-23",
+    titulo: "Heranças e sucessões: partilha por ascendentes corrigida e novo visual",
+    itens: [
+      "Sem descendentes, ao indicar «Pais» ou «Avós» podes agora dizer quantos estão vivos. Cada progenitor (ou avô) vivo passa a aparecer como herdeiro autónomo e reparte a herança em partes iguais — antes surgia sempre um único herdeiro. Se estiverem vivos o pai e a mãe, cada um herda metade; o casamento entre eles é irrelevante (Art. 2142.º CC).",
+      "Com avós de ambos os lados, a estimativa lembra que a herança se divide primeiro por linha (paterna/materna) e só depois por cabeça — para não sugerir uma divisão exata quando os lados têm números diferentes.",
+      "O simulador de heranças (guiado e completo) foi reformulado ao nível do recibo de vencimento: resultado com cartão principal destacado, herdeiros em cartões próprios e um painel «em tempo real» mais claro, coerente nos temas claro e escuro.",
+    ],
+  },
   {
     version: "2.3.1",
     data: "2026-07-23",
