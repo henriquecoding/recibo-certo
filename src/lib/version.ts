@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "2.3.3";
+export const APP_VERSION = "2.3.4";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,14 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "2.3.4",
+    data: "2026-07-23",
+    titulo: "Heranças: controlo da quota disponível agora bem visível",
+    itens: [
+      "O controlo para escolher que parte da quota disponível é deixada ao beneficiário deixou de ser um slider quase invisível e passou a ter botões claros (0%, 25%, 50%, 75%, 100%) mais um ajuste fino — para se ver e usar sem dúvidas.",
+    ],
+  },
   {
     version: "2.3.3",
     data: "2026-07-23",
