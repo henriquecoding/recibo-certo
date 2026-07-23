@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "2.3.0";
+export const APP_VERSION = "2.3.1";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,14 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "2.3.1",
+    data: "2026-07-23",
+    titulo: "Tema claro mais elegante: cartões mais destacados do fundo",
+    itens: [
+      "No tema claro, os cartões passaram a ter uma separação mais nítida do fundo — uma aresta subtil e uma elevação mais definida — para a interface ficar tão elegante como já era no tema escuro. O tema escuro mantém-se igual.",
+    ],
+  },
   {
     version: "2.3.0",
     data: "2026-07-22",
