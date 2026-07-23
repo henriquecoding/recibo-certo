@@ -213,6 +213,33 @@ describe("calcularPartilha — testamento", () => {
     expect(r.temTestamento).toBe(true);
   });
 
+  it("deixa metade da quota disponível a um irmão: irmão fica com 1/6", () => {
+    const r = calcularPartilha(
+      config({
+        temConjuge: true,
+        nFilhos: 2,
+        testamento: { usaQuotaDisponivel: true, beneficiario: "irmao", fracao: 0.5 },
+      }),
+      360_000,
+    );
+    const irmao = r.quinhoes.find((q) => q.relacao === "irmao")!;
+    // disponível = 1/3; deixa metade => 1/6 da herança
+    expect(irmao.fracao).toBeCloseTo(1 / 6, 5);
+    expect(soma(r.quinhoes.map((q) => q.fracao))).toBeCloseTo(1, 5);
+    // os legitimários repartem os restantes 5/6
+    const legit = r.quinhoes.filter((q) => q.relacao !== "irmao");
+    expect(soma(legit.map((q) => q.fracao))).toBeCloseTo(5 / 6, 5);
+  });
+
+  it("deixa 0% da quota disponível: nada vai para o beneficiário", () => {
+    const r = calcularPartilha(
+      config({ temConjuge: true, nFilhos: 2, testamento: { usaQuotaDisponivel: true, beneficiario: "irmao", fracao: 0 } }),
+      300_000,
+    );
+    expect(r.quinhoes.find((q) => q.relacao === "irmao")).toBeUndefined();
+    expect(soma(r.quinhoes.map((q) => q.fracao))).toBeCloseTo(1, 5);
+  });
+
   it("só 1 filho: disponível 1/2 (Art. 2159.º n.º 2)", () => {
     expect(LEGITIMA.descendentes_1.fracao).toBeCloseTo(1 / 2, 5);
     const r = calcularPartilha(

@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "2.3.2";
+export const APP_VERSION = "2.3.3";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,14 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "2.3.3",
+    data: "2026-07-23",
+    titulo: "Heranças: escolhe quanto da quota disponível o testamento deixa",
+    itens: [
+      "No simulador de heranças com testamento, passas a poder definir que parte da quota disponível é efetivamente deixada ao beneficiário (0% a 100%) — antes assumia-se sempre 100%. O que não for deixado volta aos herdeiros legitimários, e a partilha e o Imposto do Selo atualizam-se em conformidade. A dimensão da quota disponível continua a vir da lei (1/3 com cônjuge e descendentes; Art. 2159.º/2161.º CC), não é inventada.",
+    ],
+  },
   {
     version: "2.3.2",
     data: "2026-07-23",

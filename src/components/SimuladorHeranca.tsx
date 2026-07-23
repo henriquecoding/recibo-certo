@@ -206,6 +206,7 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
   // Testamento
   const [temTestamento, setTemTestamento] = useState(false);
   const [beneficiario, setBeneficiario] = useState<RelacaoSucessoria>("filho");
+  const [fracaoDisponivel, setFracaoDisponivel] = useState(1);
   // Património
   const [imovelPrincipal, setImovelPrincipal] = useState(200_000);
   const [imovelComum, setImovelComum] = useState(true);
@@ -227,8 +228,8 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
     temConjuge, vinculoConjuge, regimeBens: regimeEfetivo, nFilhos, nRamosNetos,
     ascendentes: nFilhos + nRamosNetos > 0 ? "nenhum" : ascendentes,
     nAscendentes,
-    testamento: temTestamento ? { usaQuotaDisponivel: true, beneficiario } : undefined,
-  }), [temConjuge, vinculoConjuge, regimeEfetivo, nFilhos, nRamosNetos, ascendentes, nAscendentes, temTestamento, beneficiario]);
+    testamento: temTestamento ? { usaQuotaDisponivel: true, beneficiario, fracao: fracaoDisponivel } : undefined,
+  }), [temConjuge, vinculoConjuge, regimeEfetivo, nFilhos, nRamosNetos, ascendentes, nAscendentes, temTestamento, beneficiario, fracaoDisponivel]);
 
   const patrimonio: Patrimonio = useMemo(() => {
     const imoveis: ImovelHeranca[] = [];
@@ -312,7 +313,21 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
                 label={<>Há testamento <span className="font-normal text-stone-400">(quota disponível: {r.partilha.configLegitima ? pct(r.partilha.disponivelFracao) : "toda a herança"})</span></>}
               />
               {temTestamento && (
-                <Pills label="A quota disponível é deixada a" opcoes={[{ id: "filho" as RelacaoSucessoria, label: "Um filho" }, { id: "conjuge" as RelacaoSucessoria, label: "O cônjuge" }, { id: "irmao" as RelacaoSucessoria, label: "Um irmão" }, { id: "outro" as RelacaoSucessoria, label: "Um terceiro" }]} valor={beneficiario} onChange={setBeneficiario} />
+                <>
+                  <Pills label="A quota disponível é deixada a" opcoes={[{ id: "filho" as RelacaoSucessoria, label: "Um filho" }, { id: "conjuge" as RelacaoSucessoria, label: "O cônjuge" }, { id: "irmao" as RelacaoSucessoria, label: "Um irmão" }, { id: "outro" as RelacaoSucessoria, label: "Um terceiro" }]} valor={beneficiario} onChange={setBeneficiario} />
+                  {r.partilha.configLegitima && (
+                    <div>
+                      <div className="mb-1.5 flex items-center justify-between gap-2">
+                        <span className={rotuloCls}>Parte da quota disponível deixada</span>
+                        <span className="font-display text-sm font-semibold tabular-nums text-brand-dark dark:text-brand">{pct(fracaoDisponivel)}</span>
+                      </div>
+                      <input type="range" min={0} max={100} step={5} value={Math.round(fracaoDisponivel * 100)} onChange={(e) => setFracaoDisponivel(Number(e.target.value) / 100)} aria-label="Parte da quota disponível deixada ao beneficiário" className="w-full accent-brand" />
+                      <p className="mt-1.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                        O testador não é obrigado a deixar toda a quota disponível. Deixa {fmt(r.meacao.herancaLiquida * r.partilha.disponivelFracao * fracaoDisponivel)} ao beneficiário{fracaoDisponivel < 1 ? "; o restante volta aos herdeiros legitimários." : "."}
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </Seccao>
