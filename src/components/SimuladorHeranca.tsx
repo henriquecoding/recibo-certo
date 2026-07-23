@@ -316,13 +316,24 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
                 <>
                   <Pills label="A quota disponível é deixada a" opcoes={[{ id: "filho" as RelacaoSucessoria, label: "Um filho" }, { id: "conjuge" as RelacaoSucessoria, label: "O cônjuge" }, { id: "irmao" as RelacaoSucessoria, label: "Um irmão" }, { id: "outro" as RelacaoSucessoria, label: "Um terceiro" }]} valor={beneficiario} onChange={setBeneficiario} />
                   {r.partilha.configLegitima && (
-                    <div>
-                      <div className="mb-1.5 flex items-center justify-between gap-2">
-                        <span className={rotuloCls}>Parte da quota disponível deixada</span>
-                        <span className="font-display text-sm font-semibold tabular-nums text-brand-dark dark:text-brand">{pct(fracaoDisponivel)}</span>
+                    <div className="rounded-xl border border-brand/20 bg-brand-light/25 p-3.5 dark:border-brand/20 dark:bg-brand/5">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-stone-700 dark:text-stone-200">Personaliza: parte da quota disponível deixada</span>
+                        <span className="font-display text-base font-semibold tabular-nums text-brand-dark dark:text-brand">{pct(fracaoDisponivel)}</span>
                       </div>
-                      <input type="range" min={0} max={100} step={5} value={Math.round(fracaoDisponivel * 100)} onChange={(e) => setFracaoDisponivel(Number(e.target.value) / 100)} aria-label="Parte da quota disponível deixada ao beneficiário" className="w-full accent-brand" />
-                      <p className="mt-1.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                      <div className="grid grid-cols-5 gap-1.5" role="group" aria-label="Parte da quota disponível deixada ao beneficiário">
+                        {[0, 25, 50, 75, 100].map((p) => {
+                          const ativo = Math.round(fracaoDisponivel * 100) === p;
+                          return (
+                            <button key={p} type="button" aria-pressed={ativo} onClick={() => setFracaoDisponivel(p / 100)}
+                              className={`rounded-lg border px-1 py-2 text-xs font-semibold transition-all ${ativo ? "border-brand bg-brand text-white shadow-glow" : "border-stone-200 bg-white text-stone-600 hover:border-brand/50 hover:text-brand dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"}`}>
+                              {p}%
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <input type="range" min={0} max={100} step={1} value={Math.round(fracaoDisponivel * 100)} onChange={(e) => setFracaoDisponivel(Number(e.target.value) / 100)} aria-label="Ajuste fino da parte da quota disponível deixada" className="mt-3 h-1.5 w-full cursor-pointer accent-brand" />
+                      <p className="mt-2 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
                         O testador não é obrigado a deixar toda a quota disponível. Deixa {fmt(r.meacao.herancaLiquida * r.partilha.disponivelFracao * fracaoDisponivel)} ao beneficiário{fracaoDisponivel < 1 ? "; o restante volta aos herdeiros legitimários." : "."}
                       </p>
                     </div>
