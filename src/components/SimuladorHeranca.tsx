@@ -94,10 +94,16 @@ function Pills<T extends string>({ label, tooltip, opcoes, valor, onChange }: { 
   );
 }
 
-function Seccao({ titulo, icon, children }: { titulo: string; icon: ReactNode; children: ReactNode }) {
+function Seccao({ titulo, icon, hint, children }: { titulo: string; icon: ReactNode; hint?: string; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-stone-100 bg-white p-4 dark:border-stone-800 dark:bg-stone-900">
-      <h3 className="mb-4 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-stone-500">{icon}{titulo}</h3>
+    <section className="rounded-3xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
+      <div className="mb-4 flex items-start gap-3">
+        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-brand-light text-brand dark:bg-brand/10">{icon}</span>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-semibold text-stone-800 dark:text-stone-100">{titulo}</h3>
+          {hint && <p className="mt-0.5 text-[11px] leading-relaxed text-stone-400">{hint}</p>}
+        </div>
+      </div>
       {children}
     </section>
   );
@@ -267,7 +273,7 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         {/* Inputs */}
         <div className="space-y-4">
-          <Seccao titulo="Família" icon={<Heart size={14} className="text-brand" />}>
+          <Seccao titulo="Família do falecido" hint="Quem herda depende de quem fica: cônjuge, filhos/netos e — só na sua falta — pais ou avós." icon={<Heart size={17} />}>
             <div className="space-y-4">
               <Interruptor on={temConjuge} onChange={setTemConjuge} label="Existe cônjuge ou companheiro(a)" />
               {temConjuge && (
@@ -298,7 +304,7 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
             </div>
           </Seccao>
 
-          <Seccao titulo="Testamento" icon={<FileSign size={14} className="text-brand" />}>
+          <Seccao titulo="Testamento" hint="A legítima fica reservada aos herdeiros legitimários; só a quota disponível se deixa livremente." icon={<FileSign size={17} />}>
             <div className="space-y-3">
               <Interruptor
                 on={temTestamento}
@@ -311,7 +317,7 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
             </div>
           </Seccao>
 
-          <Seccao titulo="Património (VPT dos imóveis)" icon={<Home size={14} className="text-brand" />}>
+          <Seccao titulo="Património" hint="Os imóveis contam pelo VPT da caderneta predial, não pelo valor de mercado." icon={<Home size={17} />}>
             <div className="grid gap-3 sm:grid-cols-2">
               <Campo label="Habitação (VPT)" value={imovelPrincipal} onChange={setImovelPrincipal} tooltip="Valor Patrimonial Tributário da caderneta predial." />
               <Campo label="Outros imóveis (VPT)" value={outrosImoveis} onChange={setOutrosImoveis} />
@@ -327,7 +333,7 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
             )}
           </Seccao>
 
-          <Seccao titulo="Doação em vida (comparação)" icon={<Gift size={14} className="text-brand" />}>
+          <Seccao titulo="Doação em vida" hint="Comparar deixar por herança vs doar os mesmos bens em vida." icon={<Gift size={17} />}>
             <p className="mb-3 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
               Doar os mesmos bens em vida em vez de os deixar por herança. A doação de imóveis paga {pct(IS_DOACAO_IMOVEL.value)} (Verba 1.1) mesmo entre família; a herança é isenta. Doações até {fmt(IS_DOACAO_MINIMO_ISENTO.value)} não são tributadas.
             </p>
@@ -335,7 +341,7 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
             <Pills opcoes={[{ id: "filho" as RelacaoSucessoria, label: "Filho/neto" }, { id: "conjuge" as RelacaoSucessoria, label: "Cônjuge" }, { id: "pai" as RelacaoSucessoria, label: "Pai/avô" }, { id: "irmao" as RelacaoSucessoria, label: "Irmão" }, { id: "sobrinho" as RelacaoSucessoria, label: "Sobrinho" }, { id: "outro" as RelacaoSucessoria, label: "Sem parentesco" }]} valor={doacaoRelacao} onChange={setDoacaoRelacao} />
           </Seccao>
 
-          <Seccao titulo="Vender um imóvel herdado (mais-valias IRS)" icon={<Building size={14} className="text-brand" />}>
+          <Seccao titulo="Vender um imóvel herdado" hint="Mais-valias de IRS se vender o imóvel recebido." icon={<Building size={17} />}>
             <p className="mb-3 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
               Valor de aquisição = VPT à data do óbito ({fmt(imovelPrincipal)}) — Art. 45.º CIRS. Só 50% do ganho entra no IRS, à tua taxa marginal.
             </p>
