@@ -67,9 +67,14 @@ const config: Config = {
       },
       boxShadow: {
         // Escala de elevação coerente (sombras quentes, não cinzentas frias).
+        // O primeiro layer é um hairline ring (`0 0 0 1px`) que dá aos cartões
+        // brancos uma aresta nítida sobre o fundo cream no modo claro — a borda
+        // `stone-100` quase iguala o cream e não chega para separar. É quente
+        // (rgba(28,25,23)), por isso fica invisível no dark, que já separa pela
+        // superfície mais clara + border próprio.
         soft: "0 10px 40px -12px rgba(28, 25, 23, 0.12)",
-        card: "0 1px 2px rgba(28,25,23,0.04), 0 8px 24px -12px rgba(28,25,23,0.10)",
-        lift: "0 2px 4px rgba(28,25,23,0.05), 0 18px 40px -16px rgba(28,25,23,0.18)",
+        card: "0 0 0 1px rgba(28,25,23,0.05), 0 1px 2px rgba(28,25,23,0.05), 0 14px 32px -16px rgba(28,25,23,0.14)",
+        lift: "0 0 0 1px rgba(28,25,23,0.06), 0 2px 6px rgba(28,25,23,0.06), 0 24px 46px -18px rgba(28,25,23,0.20)",
         float: "0 30px 60px -24px rgba(15,110,86,0.28)",
         glow: "0 0 0 1px rgba(29,158,117,0.12), 0 20px 50px -20px rgba(29,158,117,0.30)",
       },
