@@ -109,8 +109,10 @@ import {
   IAS,
   IVA_TAXAS,
   IVA_ESPERADO_POR_CATEGORIA,
+  remapTaxaIvaEntreRegioes,
   IVA_ISENCAO_LIMITE as IVA_ISENCAO_LIMITE_SRC,
   IVA_ISENCAO_EXCESSO as IVA_ISENCAO_EXCESSO_SRC,
+  ADICIONAL_SOLIDARIEDADE,
   ATIVIDADES,
   META_REGIAO,
   META_BASE_SS,
@@ -138,6 +140,7 @@ import {
   DEDUCAO_RENDAS,
   DIV_INCLUSAO_ENGLOBAMENTO as DIV_INCLUSAO_ENGLOBAMENTO_SRC,
   IMI_TAXA_PADRAO as IMI_TAXA_PADRAO_SRC,
+  IMI_TAXA_URBANO_OPCOES,
   IMT_TAXA_COMERCIAL as IMT_TAXA_COMERCIAL_SRC,
   IS_TAXA_AQUISICAO as IS_TAXA_AQUISICAO_SRC,
   TA_THRESHOLDS,
@@ -363,15 +366,18 @@ const TA_VIATURAS: Record<TipoViatura, number> = {
   comb_alto: TA_VIATURAS_COMBUSTAO.value.acima45000,
 };
 
+// Limiares de custo de aquisição (Art. 88.º CIRC) da fonte fiscal — nunca à mão.
+const TA_T1_FMT = `${Math.round(TA_THRESHOLDS.value.t1).toLocaleString("pt-PT")}€`;
+const TA_T2_FMT = `${Math.round(TA_THRESHOLDS.value.t2).toLocaleString("pt-PT")}€`;
 const TIPO_VIATURA_META: Record<TipoViatura, string> = {
   eletrica: `Elétrica ≤ ${(TA_ELETRICA_LIMITE_CUSTO.value / 1000).toLocaleString("pt-PT")} mil € aquisição — isenta (0%)`,
-  eletrica_cara: `Elétrica > ${(TA_ELETRICA_LIMITE_CUSTO.value / 1000).toLocaleString("pt-PT")} mil € aquisição — 10%`,
-  phev_baixo: "PHEV / Plug-in ≤ 37 500€ aquisição — 2,5%",
-  phev_medio: "PHEV / Plug-in 37 500–45 000€ aquisição — 7,5%",
-  phev_alto: "PHEV / Plug-in > 45 000€ aquisição — 15%",
-  comb_baixo: "Combustão < 37 500€ aquisição — 8%",
-  comb_medio: "Combustão 37 500–45 000€ aquisição — 25%",
-  comb_alto: "Combustão ≥ 45 000€ aquisição — 32%",
+  eletrica_cara: `Elétrica > ${(TA_ELETRICA_LIMITE_CUSTO.value / 1000).toLocaleString("pt-PT")} mil € aquisição — ${pct(TA_VIATURAS_ELETRICA_ACIMA_LIMITE.value)}`,
+  phev_baixo: `PHEV / Plug-in ≤ ${TA_T1_FMT} aquisição — ${pct(TA_VIATURAS_PHEV.value.ate37500)}`,
+  phev_medio: `PHEV / Plug-in ${TA_T1_FMT}–${TA_T2_FMT} aquisição — ${pct(TA_VIATURAS_PHEV.value.ate45000)}`,
+  phev_alto: `PHEV / Plug-in > ${TA_T2_FMT} aquisição — ${pct(TA_VIATURAS_PHEV.value.acima45000)}`,
+  comb_baixo: `Combustão < ${TA_T1_FMT} aquisição — ${pct(TA_VIATURAS_COMBUSTAO.value.ate37500)}`,
+  comb_medio: `Combustão ${TA_T1_FMT}–${TA_T2_FMT} aquisição — ${pct(TA_VIATURAS_COMBUSTAO.value.ate45000)}`,
+  comb_alto: `Combustão ≥ ${TA_T2_FMT} aquisição — ${pct(TA_VIATURAS_COMBUSTAO.value.acima45000)}`,
 };
 
 const TA_TAXA_REPRESENTACAO = TA_REPRESENTACAO.value;
@@ -2142,8 +2148,9 @@ function EmpresaInputs({
             Opção A — Liberatória 28% (Art. 71.º CIRS): direto e simples. Opção
             B — Englobamento (Art. 40.º-A CIRS): só 50% dos dividendos nacionais
             entra no rendimento coletável, tributado à taxa marginal
-            progressiva. Quase sempre mais favorável para rendimentos abaixo de
-            €80 000.
+            progressiva. Quase sempre mais favorável para rendimentos abaixo de{" "}
+            {fmt(ADICIONAL_SOLIDARIEDADE.limiar1.value)} (onde entra o adicional
+            de solidariedade).
           </InfoTip>
         </div>
         <div className="flex gap-2">
@@ -2872,7 +2879,7 @@ function EmpresaInputs({
                     Taxa IMI
                   </span>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {([0.003, 0.0035, 0.004, 0.0045] as const).map((t) => (
+                    {IMI_TAXA_URBANO_OPCOES.value.map((t, i, arr) => (
                       <button
                         key={t}
                         type="button"
@@ -2888,7 +2895,7 @@ function EmpresaInputs({
                         <div
                           className={`text-[10px] mt-0.5 ${taxaIMI === t ? "text-brand" : "text-stone-400"}`}
                         >
-                          {t === 0.003 ? "Mín." : t === 0.0045 ? "Máx." : ""}
+                          {i === 0 ? "Mín." : i === arr.length - 1 ? "Máx." : ""}
                         </div>
                       </button>
                     ))}
@@ -3376,7 +3383,8 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   // Tabs "Um valor total / Recibo a recibo" — paridade com o Modo Guiado.
   const [fatModo, setFatModo] = useState<FatModo>("total");
   const [recibosItems, setRecibosItems] = useState<ReciboItemRV[]>([
-    { id: 1, descricao: "", valorComIva: "", taxaIva: 0.23 },
+    // Taxa por omissão = normal do Continente (região inicial), da fonte fiscal.
+    { id: 1, descricao: "", valorComIva: "", taxaIva: IVA_TAXAS.continente.value.normal },
   ]);
 
   // ── IVA: regime EFETIVO, derivado reativamente ──────────────────────────
@@ -3499,6 +3507,20 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   // Opções de taxa de IVA do seletor "recibo a recibo" — seguem a região ativa
   // (antes fixas ao continente, o que mostrava taxas erradas na Madeira/Açores).
   const opcoesIvaFatRV = useMemo(() => ivaOpcoesFatRV(regiao), [regiao]);
+
+  // Ao mudar de região, remapeia a taxa de IVA de cada recibo para o mesmo
+  // escalão na nova região (normal 23% Continente → 22% Madeira → 16% Açores),
+  // preservando a escolha do utilizador. Sem isto, uma linha ficava com a taxa
+  // de outra região (ex.: 23% na Madeira) e o seletor mostrava-a "sem seleção".
+  const regiaoAnteriorRV = useRef(regiao);
+  useEffect(() => {
+    const anterior = regiaoAnteriorRV.current;
+    if (anterior === regiao) return;
+    setRecibosItems((items) =>
+      items.map((it) => ({ ...it, taxaIva: remapTaxaIvaEntreRegioes(it.taxaIva, anterior, regiao) })),
+    );
+    regiaoAnteriorRV.current = regiao;
+  }, [regiao]);
 
   // Quando o modo de faturação é "recibo a recibo" (só faz sentido em "Por
   // recibo"), o somatório das bases alimenta bruto/brutoAnual. O resto do motor
@@ -3978,7 +4000,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
         id: "iva-limite",
         prioridade: "aviso",
         mensagem: "Estás na zona de transição do limiar de IVA",
-        detalhe: `Com ${fmt(brutoAnual)}/ano ultrapassas os €15 000 do Art. 53.º CIVA. Perdes a isenção no ano seguinte; se ultrapassares €18 750, a mudança é imediata.`,
+        detalhe: `Com ${fmt(brutoAnual)}/ano ultrapassas os ${fmt(IVA_ISENCAO_LIMITE)} do Art. 53.º CIVA. Perdes a isenção no ano seguinte; se ultrapassares ${fmt(IVA_ISENCAO_LIMITE_IMEDIATO)}, a mudança é imediata.`,
       });
     }
 
@@ -4824,7 +4846,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                             {atividadeAtual.notaIVA
                               ? `Isento (obra própria) ou taxa normal (${pct(IVA_TAXAS[regiao].value.normal)}) — ver nota`
                               : atividadeAtual.ivaEsperado === "normal"
-                                ? `Taxa normal (${pct(IVA_TAXAS[regiao].value.normal)}) ou isenção Art. 53.º se faturação < €15 000`
+                                ? `Taxa normal (${pct(IVA_TAXAS[regiao].value.normal)}) ou isenção Art. 53.º se faturação < ${fmt(IVA_ISENCAO_LIMITE)}`
                                 : atividadeAtual.ivaEsperado === "intermedia"
                                   ? `Taxa intermédia (${pct(IVA_TAXAS[regiao].value.intermedia)}) — restauração e alojamento`
                                   : "Isento"}

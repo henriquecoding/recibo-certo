@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { gravarExportRecibosVerdes } from "@/lib/store/importacao-irs";
 import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
@@ -30,6 +30,7 @@ import { pct, fmt } from "@/lib/format";
 import {
   IVA_TAXAS,
   IVA_ESPERADO_POR_CATEGORIA,
+  remapTaxaIvaEntreRegioes,
   IVA_ISENCAO_LIMITE,
   IVA_ISENCAO_EXCESSO,
   IRS_JOVEM,
@@ -355,11 +356,25 @@ export default function ModoGuiado({
   // p.ex., 1500/mês corresponda a 18 000/ano de faturação.
   const [valorComIva, setValorComIva] = useState(false);
   const [recibosItems, setRecibosItems] = useState<ReciboItem[]>([
-    { id: 1, descricao: "", valorComIva: "", taxaIva: 0.23 },
+    // Taxa por omissão = normal do Continente (região inicial), da fonte fiscal.
+    { id: 1, descricao: "", valorComIva: "", taxaIva: IVA_TAXAS.continente.value.normal },
   ]);
   const [mesesFat, setMesesFat] = useState(12);
   const [regiao, setRegiao] = useState<Regiao>("continente");
   const [regimeIVA, setRegimeIVA] = useState<RegimeIVA>("isento");
+
+  // Ao mudar de região, remapeia a taxa de IVA de cada recibo para o mesmo
+  // escalão na nova região (preserva a escolha do utilizador; o valor numérico
+  // passa a ser o da região — normal 23% Continente → 22% Madeira → 16% Açores).
+  const regiaoAnteriorFat = useRef(regiao);
+  useEffect(() => {
+    const anterior = regiaoAnteriorFat.current;
+    if (anterior === regiao) return;
+    setRecibosItems((items) =>
+      items.map((it) => ({ ...it, taxaIva: remapTaxaIvaEntreRegioes(it.taxaIva, anterior, regiao) })),
+    );
+    regiaoAnteriorFat.current = regiao;
+  }, [regiao]);
 
   // Direitos de autor: a faturação pode misturar obra própria (isenta de IVA,
   // Art. 9.º/16 CIVA) e royalties/licenciamento (taxa normal). Guardam-se as
