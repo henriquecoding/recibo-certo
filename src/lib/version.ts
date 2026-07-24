@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "2.3.5";
+export const APP_VERSION = "2.3.6";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "2.3.6",
+    data: "2026-07-24",
+    titulo: "Menos valores «à mão»: taxas e limiares vêm todos da base fiscal",
+    itens: [
+      "A taxa de IVA por omissão de cada recibo (no modo «recibo a recibo») deixou de estar fixa em 23% e passa a seguir a região — quando mudas para a Madeira ou os Açores, a taxa de cada recibo ajusta-se sozinha ao escalão correto dessa região (mantendo a tua escolha: normal, intermédia ou reduzida).",
+      "Os limiares e taxas que apareciam escritos nos textos dos simuladores (o limite de isenção de IVA, o limiar do adicional de solidariedade, os escalões de custo das viaturas para tributação autónoma e as taxas de IMI) passaram a ser lidos diretamente da base de dados fiscal — se um valor mudar num ano, o texto acompanha automaticamente.",
+    ],
+  },
   {
     version: "2.3.5",
     data: "2026-07-24",

@@ -566,6 +566,23 @@ export const IVA_ESPERADO_POR_CATEGORIA: Sourced<Record<CategoriaSimuladorRV, At
   "Taxa HABITUAL da categoria, não uma garantia. «outras» reúne serviços diversos — a maioria é normal (23%), mas alguns (ex.: explicações/ensino, Art. 9.º) podem ser isentos; por isso o simulador só assinala «confirma com o contabilista» quando a taxa escolhida difere da habitual."
 );
 
+/**
+ * Remapeia uma taxa de IVA de uma região para outra, preservando o ESCALÃO
+ * (reduzida/intermédia/normal); "isento" (0) e valores não-padrão mantêm-se.
+ * Usado para sincronizar as taxas dos recibos "recibo a recibo" quando o
+ * utilizador muda de região — o escalão escolhido é preservado, mas o valor
+ * numérico passa a ser o da nova região (ex.: normal 23% no Continente → 22%
+ * na Madeira → 16% nos Açores). Evita o hardcoded de uma taxa fixa por omissão.
+ */
+export function remapTaxaIvaEntreRegioes(taxa: number, de: Regiao, para: Regiao): number {
+  const a = IVA_TAXAS[de].value;
+  const b = IVA_TAXAS[para].value;
+  if (taxa === a.reduzida) return b.reduzida;
+  if (taxa === a.intermedia) return b.intermedia;
+  if (taxa === a.normal) return b.normal;
+  return taxa;
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 //  SEGURANÇA SOCIAL — trabalhadores independentes
 // ═══════════════════════════════════════════════════════════════════════
@@ -1693,6 +1710,15 @@ export const SS_MIN_MENSAL = sv(
 export const IMI_TAXA_PADRAO = sv(
   0.003,
   "Art. 112.º CIMI — taxa mínima IMI urbano (0,3%); municípios podem fixar até 0,45%",
+  "pwcGuiaFiscal",
+  TODAY
+);
+
+/** Opções de taxa de IMI urbano dentro do intervalo legal (0,3%–0,45%). Cada
+ *  município fixa a sua; o simulador oferece o mín., o máx. e dois passos. */
+export const IMI_TAXA_URBANO_OPCOES = sv(
+  [0.003, 0.0035, 0.004, 0.0045],
+  "Art. 112.º, n.º 1, al. c) CIMI — intervalo legal da taxa de IMI para prédios urbanos (0,3% a 0,45%)",
   "pwcGuiaFiscal",
   TODAY
 );

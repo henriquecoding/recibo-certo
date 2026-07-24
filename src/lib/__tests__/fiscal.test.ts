@@ -7,6 +7,9 @@ import {
   SS_COEFICIENTE,
   DISPENSA_RETENCAO_LIMITE,
   IVA_ESPERADO_POR_CATEGORIA,
+  IVA_TAXAS,
+  remapTaxaIvaEntreRegioes,
+  IMI_TAXA_URBANO_OPCOES,
 } from "@/lib/fiscal-data";
 import {
   calcularAbatimentoMinimoExistencia,
@@ -234,6 +237,45 @@ describe("IVA_ESPERADO_POR_CATEGORIA (fonte única dos dois modos de simulação
   it("direitos de autor levam a nota de dupla situação (obra própria isenta vs royalties)", () => {
     expect(cat.prop_int.esperado).toBe("normal");
     expect(cat.prop_int.notaIVA).toContain("Art. 9.º, n.º 16 CIVA");
+  });
+});
+
+// ── remapTaxaIvaEntreRegioes — sincroniza a taxa dos recibos ao mudar de região ─
+describe("remapTaxaIvaEntreRegioes (sem taxas de IVA hardcoded por omissão)", () => {
+  it("mantém o escalão normal ao mudar Continente → Madeira (23% → 22%)", () => {
+    const madeira = remapTaxaIvaEntreRegioes(
+      IVA_TAXAS.continente.value.normal,
+      "continente",
+      "madeira",
+    );
+    expect(madeira).toBe(IVA_TAXAS.madeira.value.normal);
+  });
+
+  it("mantém o escalão intermédio ao mudar Continente → Açores", () => {
+    const acores = remapTaxaIvaEntreRegioes(
+      IVA_TAXAS.continente.value.intermedia,
+      "continente",
+      "acores",
+    );
+    expect(acores).toBe(IVA_TAXAS.acores.value.intermedia);
+  });
+
+  it("isento (0) mantém-se em qualquer região", () => {
+    expect(remapTaxaIvaEntreRegioes(0, "continente", "madeira")).toBe(0);
+  });
+
+  it("é idempotente para a mesma região", () => {
+    const t = IVA_TAXAS.acores.value.reduzida;
+    expect(remapTaxaIvaEntreRegioes(t, "acores", "acores")).toBe(t);
+  });
+});
+
+// ── IMI: presets da fonte fiscal (Art. 112.º CIMI), não hardcoded no componente ─
+describe("IMI_TAXA_URBANO_OPCOES (intervalo legal 0,3%–0,45%)", () => {
+  it("primeiro valor é a taxa mínima (0,3%) e o último a máxima (0,45%)", () => {
+    const opcoes = IMI_TAXA_URBANO_OPCOES.value;
+    expect(opcoes[0]).toBeCloseTo(0.003, 4);
+    expect(opcoes[opcoes.length - 1]).toBeCloseTo(0.0045, 4);
   });
 });
 

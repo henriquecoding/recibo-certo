@@ -71,6 +71,7 @@ import {
   TA_VIATURAS_ELETRICA,
   TA_VIATURAS_ELETRICA_ACIMA_LIMITE,
   TA_ELETRICA_LIMITE_CUSTO,
+  TA_THRESHOLDS,
   TA_REPRESENTACAO,
   TA_AJUDAS_CUSTO,
   TA_NAO_DOCUMENTADAS,
@@ -85,6 +86,7 @@ import {
   SIFIDE_TAXA_INCREMENTAL as SIFIDE_TAXA_INCREMENTAL_SRC,
   SIFIDE_MAJORACAO_PME_JOVEM,
   IMI_TAXA_PADRAO as IMI_TAXA_PADRAO_SRC,
+  IMI_TAXA_URBANO_OPCOES,
   IMT_TAXA_COMERCIAL as IMT_TAXA_COMERCIAL_SRC,
   IS_TAXA_AQUISICAO as IS_TAXA_AQUISICAO_SRC,
   DEDUCAO_ESPECIFICA_DEPENDENTE,
@@ -145,16 +147,19 @@ const TA_TAXAS_GUIADO: Record<TipoViaturaGuiado, number> = {
 
 const ELETRICA_LIMITE_FMT = `${(TA_ELETRICA_LIMITE_CUSTO.value / 1000).toLocaleString("pt-PT")} mil €`;
 
+// Limiares de custo de aquisição (Art. 88.º CIRC) da fonte fiscal.
+const TA_T1_FMT = `${Math.round(TA_THRESHOLDS.value.t1).toLocaleString("pt-PT")}€`;
+const TA_T2_FMT = `${Math.round(TA_THRESHOLDS.value.t2).toLocaleString("pt-PT")}€`;
 const TIPO_VIATURA_META: Record<TipoViaturaGuiado, { label: string; sub: string }> = {
   nenhuma: { label: "Sem viatura", sub: "0%" },
   eletrica: { label: `Elétrica ≤ ${ELETRICA_LIMITE_FMT}`, sub: "Isenta (0%)" },
-  eletrica_cara: { label: `Elétrica > ${ELETRICA_LIMITE_FMT}`, sub: "10% (Art. 88.º, n.º 20)" },
-  phev_baixo: { label: "PHEV ≤ 37.500€", sub: "2,5%" },
-  phev_medio: { label: "PHEV 37.500–45.000€", sub: "7,5%" },
-  phev_alto: { label: "PHEV > 45.000€", sub: "15%" },
-  comb_baixo: { label: "Combustão < 37.500€", sub: "8%" },
-  comb_medio: { label: "Combustão 37.500–45.000€", sub: "25%" },
-  comb_alto: { label: "Combustão ≥ 45.000€", sub: "32%" },
+  eletrica_cara: { label: `Elétrica > ${ELETRICA_LIMITE_FMT}`, sub: `${pct(TA_VIATURAS_ELETRICA_ACIMA_LIMITE.value)} (Art. 88.º, n.º 20)` },
+  phev_baixo: { label: `PHEV ≤ ${TA_T1_FMT}`, sub: pct(TA_VIATURAS_PHEV.value.ate37500) },
+  phev_medio: { label: `PHEV ${TA_T1_FMT}–${TA_T2_FMT}`, sub: pct(TA_VIATURAS_PHEV.value.ate45000) },
+  phev_alto: { label: `PHEV > ${TA_T2_FMT}`, sub: pct(TA_VIATURAS_PHEV.value.acima45000) },
+  comb_baixo: { label: `Combustão < ${TA_T1_FMT}`, sub: pct(TA_VIATURAS_COMBUSTAO.value.ate37500) },
+  comb_medio: { label: `Combustão ${TA_T1_FMT}–${TA_T2_FMT}`, sub: pct(TA_VIATURAS_COMBUSTAO.value.ate45000) },
+  comb_alto: { label: `Combustão ≥ ${TA_T2_FMT}`, sub: pct(TA_VIATURAS_COMBUSTAO.value.acima45000) },
 };
 
 const TA_TAXA_REPRESENTACAO = TA_REPRESENTACAO.value;
@@ -2274,7 +2279,7 @@ export default function ModoGuiadoEmpresa({
                           <div>
                             <div className="mb-1.5 text-[11px] font-semibold text-stone-500 dark:text-stone-400">Taxa IMI municipal</div>
                             <div className="flex flex-wrap gap-1.5">
-                              {([0.003, 0.0035, 0.004, 0.0045]).map((t) => (
+                              {IMI_TAXA_URBANO_OPCOES.value.map((t) => (
                                 <button key={t} type="button" aria-pressed={taxaIMI === t} onClick={() => setTaxaIMI(t)}
                                   className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${taxaIMI === t ? "bg-brand text-white" : "bg-stone-100 text-stone-500 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-400"}`}>
                                   {pct(t)}
