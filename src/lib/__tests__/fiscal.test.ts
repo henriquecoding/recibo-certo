@@ -6,6 +6,7 @@ import {
   SS_TAXA,
   SS_COEFICIENTE,
   DISPENSA_RETENCAO_LIMITE,
+  IVA_ESPERADO_POR_CATEGORIA,
 } from "@/lib/fiscal-data";
 import {
   calcularAbatimentoMinimoExistencia,
@@ -203,6 +204,36 @@ describe("constantes fiscais 2026", () => {
 
   it("DISPENSA_RETENCAO_LIMITE é €15 000", () => {
     expect(DISPENSA_RETENCAO_LIMITE.value).toBe(15_000);
+  });
+});
+
+// ── IVA esperado por categoria — fonte única partilhada guiado + completo ────
+describe("IVA_ESPERADO_POR_CATEGORIA (fonte única dos dois modos de simulação)", () => {
+  const cat = IVA_ESPERADO_POR_CATEGORIA.value;
+
+  it("cobre exatamente as 5 categorias dos simuladores de recibos verdes", () => {
+    expect(Object.keys(cat).sort()).toEqual(
+      ["art151", "hosped", "outras", "prop_int", "vendas"],
+    );
+  });
+
+  it("serviços (art151 e outros serviços) têm IVA habitual normal — independente da retenção", () => {
+    // Retenção difere (23% vs 11,5%), mas a taxa de IVA habitual é a mesma (normal).
+    expect(cat.art151.esperado).toBe("normal");
+    expect(cat.outras.esperado).toBe("normal");
+  });
+
+  it("alojamento/restauração (hosped) tem IVA intermédio — Verba 3.1 Lista II CIVA", () => {
+    expect(cat.hosped.esperado).toBe("intermedia");
+  });
+
+  it("vendas de bens têm IVA habitual normal", () => {
+    expect(cat.vendas.esperado).toBe("normal");
+  });
+
+  it("direitos de autor levam a nota de dupla situação (obra própria isenta vs royalties)", () => {
+    expect(cat.prop_int.esperado).toBe("normal");
+    expect(cat.prop_int.notaIVA).toContain("Art. 9.º, n.º 16 CIVA");
   });
 });
 

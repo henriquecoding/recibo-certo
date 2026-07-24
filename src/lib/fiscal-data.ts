@@ -523,6 +523,49 @@ export const META_REGIAO: Record<Regiao, string> = {
   acores: "Açores",
 };
 
+// ───────────────────────────────────────────────────────────────────────
+//  IVA ESPERADO POR CATEGORIA DE ATIVIDADE (fonte única guiado + completo)
+// ───────────────────────────────────────────────────────────────────────
+// As categorias dos simuladores de recibos verdes agrupam os tipos fiscais
+// canónicos numa forma amigável. Nota importante: "hosped" (alojamento local /
+// restauração) resolve fiscalmente para "vendas" no coeficiente e na retenção,
+// MAS tem taxa de IVA própria (intermédia — Verba 3.1 da Lista II do CIVA). Por
+// isso a taxa de IVA habitual é mapeada por CATEGORIA de UI, não pelo tipo
+// canónico. Esta é a ÚNICA definição — o modo guiado e o modo completo leem
+// daqui, para nunca divergirem (antes estava hardcoded em 3 sítios).
+
+/** Categorias de atividade dos simuladores de recibos verdes (guiado + completo). */
+export type CategoriaSimuladorRV = "art151" | "vendas" | "hosped" | "outras" | "prop_int";
+
+/** Taxa de IVA habitual de uma categoria (inclui "isento" para casos do Art. 9.º). */
+export type IvaEsperado = EscalaoIVA | "isento";
+
+export interface AtividadeIvaMeta {
+  /** Taxa de IVA habitual/por omissão — deriva o regime efetivo e assinala
+   *  taxas fora do comum. NÃO substitui a análise da operação concreta. */
+  esperado: IvaEsperado;
+  /** Nota quando o enquadramento de IVA não tem um único valor habitual (ex.:
+   *  direitos de autor — obra própria isenta vs royalties à taxa normal). */
+  notaIVA?: string;
+}
+
+const NOTA_IVA_DIREITOS_AUTOR =
+  "Direitos de autor da obra própria (livros, música, arte) são isentos de IVA, sem limite de faturação (Art. 9.º, n.º 16 CIVA). Royalties e licenciamento (software, marca, patente) são tributados à taxa normal (23%). Confirma o teu caso com o contabilista.";
+
+export const IVA_ESPERADO_POR_CATEGORIA: Sourced<Record<CategoriaSimuladorRV, AtividadeIvaMeta>> = sv(
+  {
+    art151: { esperado: "normal" },
+    vendas: { esperado: "normal" },
+    hosped: { esperado: "intermedia" },
+    outras: { esperado: "normal" },
+    prop_int: { esperado: "normal", notaIVA: NOTA_IVA_DIREITOS_AUTOR },
+  },
+  "Art. 18.º CIVA — taxa aplicável por natureza da operação (Listas I e II anexas ao CIVA): serviços não listados à taxa normal; restauração/alojamento à taxa intermédia (Verba 3.1 da Lista II); direitos de autor de obra própria isentos (Art. 9.º, n.º 16 CIVA).",
+  "art18civa",
+  TODAY,
+  "Taxa HABITUAL da categoria, não uma garantia. «outras» reúne serviços diversos — a maioria é normal (23%), mas alguns (ex.: explicações/ensino, Art. 9.º) podem ser isentos; por isso o simulador só assinala «confirma com o contabilista» quando a taxa escolhida difere da habitual."
+);
+
 // ═══════════════════════════════════════════════════════════════════════
 //  SEGURANÇA SOCIAL — trabalhadores independentes
 // ═══════════════════════════════════════════════════════════════════════

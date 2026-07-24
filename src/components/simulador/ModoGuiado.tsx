@@ -29,6 +29,7 @@ import { PassoContabilista } from "@/components/simulador/PassoContabilista";
 import { pct, fmt } from "@/lib/format";
 import {
   IVA_TAXAS,
+  IVA_ESPERADO_POR_CATEGORIA,
   IVA_ISENCAO_LIMITE,
   IVA_ISENCAO_EXCESSO,
   IRS_JOVEM,
@@ -249,42 +250,49 @@ const ATIV_META: Record<
     notaIVA?: string;
   }
 > = {
+  // `ivaEsperado` e `notaIVA` vêm da fonte única `IVA_ESPERADO_POR_CATEGORIA`
+  // (fiscal-data.ts) — a mesma que o modo completo consome, para os dois modos
+  // nunca divergirem. `descricao`/`nota` são copy da UI deste modo.
+  //
+  // Nota fiscal (direitos de autor): o IVA não tem um único valor "habitual" —
+  // a obra própria é isenta (Art. 9.º/16) e o licenciamento/royalties é à taxa
+  // normal. Marca-se "normal" (o caso tributável); a isenção é tratada no ramo
+  // próprio do painel, pelo que tanto "isento" como "normal" ficam coerentes e
+  // só as taxas reduzida/intermédia (que nunca se aplicam) avisam.
   art151: {
     descricao:
       "Profissões da tabela da Portaria 1011/2001. Coef. 0,75 · Ret. 23% · SS sobre 70%.",
-    ivaEsperado: "normal",
+    ivaEsperado: IVA_ESPERADO_POR_CATEGORIA.value.art151.esperado,
     nota: "15% do rendimento bruto deve ser justificado com despesas (regra dos 15%).",
+    notaIVA: IVA_ESPERADO_POR_CATEGORIA.value.art151.notaIVA,
   },
   vendas: {
     descricao:
       "Comércio, produção e revenda. Coef. 0,15 porque as margens brutas são reduzidas. SS sobre 20%.",
-    ivaEsperado: "normal",
+    ivaEsperado: IVA_ESPERADO_POR_CATEGORIA.value.vendas.esperado,
     nota: null,
+    notaIVA: IVA_ESPERADO_POR_CATEGORIA.value.vendas.notaIVA,
   },
   hosped: {
     descricao:
       "Restauração e atividades hoteleiras. Coef. 0,15 · sem retenção · SS sobre 20%. Alojamento local em moradia/apartamento tem coeficiente próprio (0,35) — escolhe a atividade específica para o aplicar.",
-    ivaEsperado: "intermedia",
+    ivaEsperado: IVA_ESPERADO_POR_CATEGORIA.value.hosped.esperado,
     nota: null,
+    notaIVA: IVA_ESPERADO_POR_CATEGORIA.value.hosped.notaIVA,
   },
   outras: {
     descricao:
       "Serviços Cat. B não listados no Art. 151.º. Coef. 0,35 · Ret. 11,5% · SS sobre 70%.",
-    ivaEsperado: "normal",
+    ivaEsperado: IVA_ESPERADO_POR_CATEGORIA.value.outras.esperado,
     nota: null,
+    notaIVA: IVA_ESPERADO_POR_CATEGORIA.value.outras.notaIVA,
   },
   prop_int: {
     descricao:
       "Direitos de autor e royalties. Coef. 0,95 · Ret. 16,5% · SS sobre 70%.",
-    // O IVA aqui NÃO tem um único valor "habitual": a obra própria é isenta e o
-    // licenciamento/royalties é à taxa normal (ver `notaIVA`). Marca-se "normal"
-    // porque é o caso tributável; a isenção é tratada no ramo próprio do painel,
-    // pelo que tanto "isento" como "normal" ficam coerentes e só as taxas
-    // reduzida/intermédia (que nunca se aplicam a direitos de autor) avisam.
-    ivaEsperado: "normal",
+    ivaEsperado: IVA_ESPERADO_POR_CATEGORIA.value.prop_int.esperado,
     nota: "A obra própria (titular originário, residente) pode ser englobada em IRS por apenas 50% do valor, até 10 000 € excluídos (Art. 58.º EBF, em vigor até 2026).",
-    notaIVA:
-      "Direitos de autor da obra própria (livros, música, arte) são ISENTOS de IVA, sem limite de faturação (Art. 9.º, n.º 16 CIVA). Royalties e licenciamento (software, marca, patente) são tributados à taxa normal (23%). Confirma o teu caso com o contabilista.",
+    notaIVA: IVA_ESPERADO_POR_CATEGORIA.value.prop_int.notaIVA,
   },
 };
 
