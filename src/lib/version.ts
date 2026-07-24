@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "2.3.4";
+export const APP_VERSION = "2.3.5";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,15 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "2.3.5",
+    data: "2026-07-24",
+    titulo: "Taxa de IVA por atividade: uma só fonte para os dois simuladores",
+    itens: [
+      "A taxa de IVA habitual de cada tipo de atividade (normal para serviços e vendas, intermédia para alojamento/restauração, e a nota de dupla situação dos direitos de autor) passou a viver num único sítio, partilhado pelo simulador guiado e pelo completo. Antes estava escrita em três lugares diferentes — agora nunca podem divergir.",
+      "Nota para «Outros serviços»: a retenção na fonte (11,5%) e o IVA (normal, 23%) são coisas independentes — o IVA não muda por causa da retenção. Ambos passam a ser mostrados de forma consistente e a partir da mesma base fiscal nos dois modos de simulação.",
+    ],
+  },
   {
     version: "2.3.4",
     data: "2026-07-23",

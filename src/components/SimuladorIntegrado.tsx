@@ -108,6 +108,7 @@ import InfoTip from "@/components/ui/InfoTip";
 import {
   IAS,
   IVA_TAXAS,
+  IVA_ESPERADO_POR_CATEGORIA,
   IVA_ISENCAO_LIMITE as IVA_ISENCAO_LIMITE_SRC,
   IVA_ISENCAO_EXCESSO as IVA_ISENCAO_EXCESSO_SRC,
   ATIVIDADES,
@@ -299,19 +300,17 @@ const TIPO_LOCAL_PARA_CANONICO: Record<TipoAtividade, TipoFiscalCanonico> = {
 /**
  * Taxa de IVA habitual por tipo de atividade. Usada para derivar o regime
  * EFETIVO de IVA quando o utilizador ultrapassa o limite de isenção mas ainda
- * não escolheu uma taxa — espelha o `ivaEsperado` do Modo Guiado. Definido ao
- * nível do módulo para poder ser usado ANTES de `atividadePainelMeta` (que vive
- * dentro do componente, mais abaixo) sem cair em TDZ.
+ * não escolheu uma taxa. DERIVADA da fonte única `IVA_ESPERADO_POR_CATEGORIA`
+ * (fiscal-data.ts) — a mesma que o Modo Guiado consome, para os dois modos
+ * nunca divergirem. As chaves de `TipoAtividade` (local) coincidem com as de
+ * `CategoriaSimuladorRV`.
  */
-const IVA_ESPERADO_POR_TIPO: Record<
-  TipoAtividade,
-  "normal" | "intermedia" | "reduzida" | "isento"
-> = {
-  art151: "normal",
-  vendas: "normal",
-  hosped: "intermedia",
-  outras: "normal",
-  prop_int: "normal",
+const IVA_ESPERADO_POR_TIPO: Record<TipoAtividade, "normal" | "intermedia" | "reduzida" | "isento"> = {
+  art151: IVA_ESPERADO_POR_CATEGORIA.value.art151.esperado,
+  vendas: IVA_ESPERADO_POR_CATEGORIA.value.vendas.esperado,
+  hosped: IVA_ESPERADO_POR_CATEGORIA.value.hosped.esperado,
+  outras: IVA_ESPERADO_POR_CATEGORIA.value.outras.esperado,
+  prop_int: IVA_ESPERADO_POR_CATEGORIA.value.prop_int.esperado,
 };
 
 const DERRAMA_MUNI = DERRAMA_MAX.value;
@@ -4158,42 +4157,48 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
       notaIVA?: string;
     }
   > = {
+    // `ivaEsperado` e `notaIVA` vêm da fonte única `IVA_ESPERADO_POR_CATEGORIA`
+    // (fiscal-data.ts) — a mesma que o Modo Guiado consome. `titulo`/`descricao`/
+    // `nota` são copy da UI do modo completo e ficam locais.
     art151: {
       titulo: "Profissão liberal — Art. 151.º CIRS",
       descricao:
         "Profissões da tabela da Portaria 1011/2001 (engenheiros, advogados, médicos, programadores, designers, contabilistas, etc.). Coef. 0,75 · Ret. 23% · SS sobre 70%.",
-      ivaEsperado: "normal",
+      ivaEsperado: IVA_ESPERADO_POR_CATEGORIA.value.art151.esperado,
       nota: "15% do rendimento bruto deve ser justificado com despesas (regra dos 15%). O excesso não justificado é acrescido ao tributável.",
+      notaIVA: IVA_ESPERADO_POR_CATEGORIA.value.art151.notaIVA,
     },
     vendas: {
       titulo: "Venda de bens / mercadorias",
       descricao:
         "Comércio, produção e revenda. Coeficiente muito baixo (0,15) porque as margens brutas são reduzidas. Sem retenção na fonte. SS sobre 20%.",
-      ivaEsperado: "normal",
+      ivaEsperado: IVA_ESPERADO_POR_CATEGORIA.value.vendas.esperado,
       nota: "A Segurança Social incide sobre apenas 20% do rendimento (base reduzida para vendas e restauração).",
+      notaIVA: IVA_ESPERADO_POR_CATEGORIA.value.vendas.notaIVA,
     },
     hosped: {
       titulo: "Alojamento local / hotelaria",
       descricao:
         "Alojamento local em estabelecimento (coef. 0,15), moradia/apartamento (coef. 0,35) ou zona de contenção (coef. 0,50). Sem retenção. SS sobre 20%.",
-      ivaEsperado: "intermedia",
+      ivaEsperado: IVA_ESPERADO_POR_CATEGORIA.value.hosped.esperado,
       nota: "Em zona de pressão urbanística o coeficiente sobe para 0,50 (exige Anexo 13F na Mod. 3). A isenção de SS em AL exclusivo é condicional — confirmar com contabilista.",
+      notaIVA: IVA_ESPERADO_POR_CATEGORIA.value.hosped.notaIVA,
     },
     outras: {
       titulo: "Outras prestações de serviços",
       descricao:
         "Código 1519 — serviços não enquadrados no Art. 151.º. Retenção de 11,5% (inferior à das profissões liberais). Coef. 0,35. SS sobre 70%.",
-      ivaEsperado: "normal",
+      ivaEsperado: IVA_ESPERADO_POR_CATEGORIA.value.outras.esperado,
       nota: null,
+      notaIVA: IVA_ESPERADO_POR_CATEGORIA.value.outras.notaIVA,
     },
     prop_int: {
       titulo: "Propriedade intelectual / direitos de autor",
       descricao:
         "Royalties, licenciamento de software, obra própria (livros, música, arte). Coef. 0,95 · Ret. 16,5% · SS sobre 70%.",
-      ivaEsperado: "normal",
+      ivaEsperado: IVA_ESPERADO_POR_CATEGORIA.value.prop_int.esperado,
       nota: "Direitos de autor / propriedade intelectual: coeficiente 0,95, retenção na fonte de 16,5% e Segurança Social sobre 70% do rendimento. Só para titulares da obra original — verificar enquadramento com contabilista.",
-      notaIVA:
-        "Direitos de autor da obra própria (livros, música, arte) são isentos de IVA, sem limite de faturação (Art. 9.º, n.º 16 CIVA). Royalties e licenciamento (software, marca, patente) são tributados à taxa normal (23%). Confirma o teu caso com o contabilista.",
+      notaIVA: IVA_ESPERADO_POR_CATEGORIA.value.prop_int.notaIVA,
     },
   };
 
