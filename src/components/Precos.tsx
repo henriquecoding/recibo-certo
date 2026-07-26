@@ -6,7 +6,7 @@ import { Check, Lock, ShieldCheck, Flag, Sparkle } from "@/components/ui/Icons";
 import Reveal from "@/components/ui/Reveal";
 import { PLUS } from "@/lib/entitlements";
 import { fizAtiva } from "@/lib/fiz/flag";
-import FizLogo from "@/components/fiz/FizLogo";
+import FizParceriaCard from "@/components/fiz/FizParceriaCard";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  Preços — reestruturado segundo o ponto 11 da arquitetura da parceria.
@@ -43,13 +43,6 @@ const PLUS_FEATURES = [
   "Mealheiro fiscal: quanto reservar este mês, automático",
   "Energia ilimitada e estatísticas avançadas no Quiz Fiscal",
   "Acesso antecipado a novas funcionalidades",
-];
-
-const FIZ_FEATURES = [
-  "Faturação certificada e comunicação à AT",
-  "IVA, Segurança Social e IRS tratados por quem executa",
-  "Lembretes operacionais das tuas obrigações reais",
-  "Revisão por contabilistas",
 ];
 
 const MATRIZ: { f: string; gratis: boolean | string; plus: boolean | string }[] = [
@@ -177,50 +170,14 @@ export default function Precos() {
             </m.div>
           </Reveal>
 
-          {/* ── FIZ ──
-              Não é um plano nosso. É um contrato do utilizador com a FIZ,
-              apresentado aqui para que a fronteira fique explícita. */}
+          {/* ── Parceria FIZ ──
+              Não é um plano nosso: é a fronteira entre o que fazemos e o
+              que a FIZ executa, ao abrigo de um contrato do utilizador com
+              ela. Aparece à direita do Plus, para que a comparação seja
+              imediata — e nunca finge ser uma terceira subscrição. */}
           {mostrarFiz && (
             <Reveal delay={0.16}>
-              <div className="flex h-full flex-col rounded-4xl border border-fiz-200 bg-fiz-50 p-6 shadow-card sm:p-7">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="inline-flex items-center gap-2 text-sm font-semibold text-stone-500">
-                    <FizLogo size={18} className="rounded-md" decorativo />
-                    Execução com a FIZ
-                  </h3>
-                </div>
-                <div className="mt-2">
-                  <span className="font-display text-2xl font-semibold text-ink">
-                    Contratado com a FIZ
-                  </span>
-                </div>
-                <p className="mt-3 text-sm leading-relaxed text-stone-600 dark:text-stone-400">
-                  O ReciboCerto explica e prepara. Quando é preciso executar — emitir, declarar,
-                  submeter — quem o faz é a FIZ, ao abrigo de um contrato teu com ela.
-                </p>
-
-                <ul className="mt-5 flex-1 space-y-2.5">
-                  {FIZ_FEATURES.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5">
-                      <span className="mt-0.5 flex-shrink-0 text-fiz-700"><Check size={16} /></span>
-                      <span className="text-sm text-stone-600 dark:text-stone-400">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="mt-5 rounded-2xl border border-fiz-200 bg-white p-3 dark:bg-stone-900">
-                  <p className="text-xs font-semibold text-stone-700 dark:text-stone-200">
-                    O que o Plus não é
-                  </p>
-                  <ul className="mt-1.5 space-y-1">
-                    {PLUS.naoInclui.map((n) => (
-                      <li key={n} className="text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-                        {n}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+              <FizParceriaCard />
             </Reveal>
           )}
         </div>

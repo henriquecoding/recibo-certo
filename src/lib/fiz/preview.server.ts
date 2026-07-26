@@ -10,7 +10,8 @@
 //  discutida. Nada sai para a rede.
 //
 //  Salvaguardas, porque um modo assim não pode ser confundido com o real:
-//    · só liga com NEXT_PUBLIC_FIZ_PREVIEW="true", explicitamente;
+//    · liga em deploys de ramo e em desenvolvimento; em produção só com
+//      NEXT_PUBLIC_FIZ_PREVIEW="true", explicitamente;
 //    · desliga-se sozinho se houver credenciais reais configuradas — a
 //      partir daí manda sempre a FIZ verdadeira;
 //    · tudo o que devolve vem marcado com `preview: true`, e a interface
@@ -19,14 +20,15 @@
 //      para a FIZ: em pré-visualização ninguém é enviado para lado nenhum.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { fizAtiva } from "./flag";
+import { fizAtiva, previewPermitidoNoCliente } from "./flag";
 import { fizServerConfig } from "./config";
 import type { CapabilityCatalog, GuideRoute } from "./contracts";
 
 export function previewAtivo(): boolean {
-  if (process.env.NEXT_PUBLIC_FIZ_PREVIEW !== "true") return false;
   if (!fizAtiva()) return false;
-  // Se há credenciais reais, a pré-visualização sai de cena.
+  if (!previewPermitidoNoCliente()) return false;
+  // Se há credenciais reais, a pré-visualização sai de cena — a FIZ
+  // verdadeira manda sempre.
   const c = fizServerConfig();
   return !(c.clientId && c.clientSecret);
 }

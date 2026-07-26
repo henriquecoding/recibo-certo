@@ -15,6 +15,8 @@
 //  Nenhum segredo tem prefixo NEXT_PUBLIC_ — só a bandeira é pública.
 // ═══════════════════════════════════════════════════════════════════════
 
+import { fizAtiva as bandeiraAtiva } from "./flag";
+
 export type EstadoIntegracao = "desligada" | "sem_credenciais" | "pronta";
 
 const AMBIENTES = {
@@ -30,10 +32,10 @@ const AMBIENTES = {
 
 export type AmbienteFiz = keyof typeof AMBIENTES;
 
-/** Bandeira pública — pode ser lida no cliente. */
-export function fizAtiva(): boolean {
-  return process.env.NEXT_PUBLIC_FIZ_ENABLED === "true";
-}
+// A bandeira vive em `flag.ts` (isomórfico) e é reexportada aqui para que
+// exista UMA só regra de ativação. Ter uma cópia local foi um erro: o
+// servidor dizia "desligada" enquanto a interface já mostrava a integração.
+export { fizAtiva } from "./flag";
 
 function ambiente(): AmbienteFiz {
   return process.env.FIZ_ENVIRONMENT === "production" ? "production" : "sandbox";
@@ -65,7 +67,7 @@ export function fizServerConfig() {
 }
 
 export function estadoIntegracao(): EstadoIntegracao {
-  if (!fizAtiva()) return "desligada";
+  if (!bandeiraAtiva()) return "desligada";
   const c = fizServerConfig();
   const completa = Boolean(c.clientId && c.clientSecret && c.tokenEncryptionKey);
   return completa ? "pronta" : "sem_credenciais";

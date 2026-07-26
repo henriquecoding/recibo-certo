@@ -1,10 +1,56 @@
-// Bandeira pública da integração FIZ, isolada num módulo próprio.
+// ═══════════════════════════════════════════════════════════════════════
+//  Bandeira pública da integração FIZ, isolada num módulo próprio.
 //
-// Os componentes-cliente importam DAQUI e nunca de `config.ts`: assim não
-// arrastam para o bundle o módulo que lê segredos do servidor. (Variáveis
-// sem prefixo NEXT_PUBLIC_ nunca chegariam ao browser, mas manter a
-// separação torna a fronteira óbvia em vez de implícita.)
+//  Os componentes-cliente importam DAQUI e nunca de `config.ts`: assim não
+//  arrastam para o bundle o módulo que lê segredos do servidor. (Variáveis
+//  sem prefixo NEXT_PUBLIC_ nunca chegariam ao browser, mas manter a
+//  separação torna a fronteira óbvia em vez de implícita.)
+//
+//  Regra de ativação, por ordem:
+//    1. NEXT_PUBLIC_FIZ_ENABLED="true"  → ligada, onde quer que seja.
+//    2. NEXT_PUBLIC_FIZ_ENABLED="false" → desligada, sem exceções.
+//    3. Sem decisão explícita → LIGADA em deploys de pré-visualização
+//       (branches) e DESLIGADA em produção.
+//
+//  A regra 3 existe por uma razão prática: a parceria está em negociação e
+//  precisa de ser revista em deploys de ramo, sem obrigar a configurar
+//  variáveis na Vercel de cada vez. Produção nunca liga por omissão.
+// ═══════════════════════════════════════════════════════════════════════
+
+/** "production" | "preview" | "development" — definido pela Vercel. */
+export function ambienteDeploy(): string {
+  return process.env.NEXT_PUBLIC_VERCEL_ENV ?? "";
+}
+
+export function ehProducao(): boolean {
+  return ambienteDeploy() === "production";
+}
+
+/** Deploy de ramo na Vercel — o sítio certo para rever antes de decidir. */
+export function ehPreVisualizacaoDeploy(): boolean {
+  return ambienteDeploy() === "preview";
+}
 
 export function fizAtiva(): boolean {
-  return process.env.NEXT_PUBLIC_FIZ_ENABLED === "true";
+  const bandeira = process.env.NEXT_PUBLIC_FIZ_ENABLED;
+  if (bandeira === "true") return true;
+  if (bandeira === "false") return false;
+  return ehPreVisualizacaoDeploy();
+}
+
+/**
+ * Modo de pré-visualização: catálogo local, sem rede, nada executado.
+ *
+ * Liga-se sozinho quando a integração está ativa mas ainda não há
+ * credenciais — que é exatamente o estado atual da parceria. Desliga-se
+ * sozinho assim que houver credenciais reais.
+ *
+ * Em produção só liga se for pedido explicitamente, para que um erro de
+ * configuração nunca mostre um catálogo simulado a utilizadores reais.
+ */
+export function previewPermitidoNoCliente(): boolean {
+  const explicito = process.env.NEXT_PUBLIC_FIZ_PREVIEW;
+  if (explicito === "false") return false;
+  if (explicito === "true") return true;
+  return !ehProducao();
 }
