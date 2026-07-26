@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "2.3.6";
+export const APP_VERSION = "2.3.7";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,18 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "2.3.7",
+    data: "2026-07-26",
+    titulo: "Simulador de recibo de vencimento: corrigido no telemóvel",
+    itens: [
+      "No telemóvel, tocar em «Adicionar rubrica» deixava a página inteira mais larga do que o ecrã: os cartões ficavam cortados à direita e era preciso arrastar para o lado para voltar a ver tudo. A lista de rubricas já cabe no ecrã e nada é cortado.",
+      "Os filtros de rubricas (Todas, Fixos, Variáveis, Tempo de trabalho, Subsídios, Faltas, Deslocações) passam a estar todos visíveis, em várias linhas, em vez de escondidos numa faixa que era preciso arrastar.",
+      "Os cartões de cada rubrica usam agora toda a largura disponível: em ecrãs pequenos, o montante e o carácter para a Segurança Social deixam de ficar espremidos.",
+      "Botões e opções do simulador têm alvos de toque maiores e o texto quebra em vez de sair do ecrã — verificado entre 320 px e 1280 px de largura, em modo claro e escuro.",
+      "Corrigido um erro que fazia o navegador reconstruir a página do simulador logo a seguir a abri-la, por o cartão de exportação não coincidir com o que tinha sido enviado pelo servidor.",
+    ],
+  },
   {
     version: "2.3.6",
     data: "2026-07-24",
