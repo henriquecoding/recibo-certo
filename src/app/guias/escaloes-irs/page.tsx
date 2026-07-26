@@ -1,33 +1,11 @@
 import type { Metadata } from "next";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import InfoTip from "@/components/ui/InfoTip";
 import { ESCALOES_IRS, MINIMO_EXISTENCIA } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 
-export const metadata: Metadata = {
-  title: "Escalões de IRS 2026 explicados | ReciboCerto",
-  description: "Tabela de escalões de IRS 2026 com taxas marginais e efetivas. Como funciona a tributação progressiva e o mínimo de existência — para independentes e conta de outrem.",
-  keywords: ["escalões IRS 2026", "tabela IRS 2026", "taxas IRS 2026", "tributação progressiva"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/escaloes-irs" },
-  openGraph: {
-    title: "Escalões de IRS 2026 | ReciboCerto",
-    description: "Tabela atualizada e o mito do 'subir de escalão' desmistificado.",
-    url: "https://www.recibocerto.pt/guias/escaloes-irs",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "Art. 68.º CIRS — Escalões e taxas gerais de IRS", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs68.aspx", tipo: "oficial" as const },
-  { titulo: "Art. 70.º CIRS — Mínimo de existência", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs70.aspx", tipo: "oficial" as const },
-  { titulo: "Lei 73-A/2025 — Orçamento do Estado 2026", url: "https://diariodarepublica.pt/dr/detalhe/lei/73-a-2025", tipo: "oficial" as const },
-  { titulo: "Especialista do IRS — Escalões IRS 2026 tabela atualizada", url: "https://www.especialistadoirs.pt/blog/escaloes-irs-2026-tabela-atualizada", tipo: "referencia" as const },
-  { titulo: "PwC Guia Fiscal 2026 — IRS", url: "https://www.pwc.pt/pt/pwcinforfisco/guia-fiscal/2026/irs.html", tipo: "referencia" as const },
-];
+export const metadata: Metadata = metadataDoGuia("escaloes-irs");
 
 // Calcula parcela abater para cada escalão (para apresentação)
 function calcParcelaAbater(escaloes: typeof ESCALOES_IRS.value) {
@@ -51,12 +29,7 @@ const parcelasAbater = calcParcelaAbater(escaloes);
 
 export default function EscaloesIRSPage() {
   return (
-    <>
-      <GuiaHero
-        titulo="Escalões de IRS 2026 explicados para recibos verdes"
-        descricao="O rendimento coletável não é a tua faturação — e subir de escalão não significa pagar mais em tudo."
-        tempoLeitura={5}
-      />
+    <GuiaLayout slug="escaloes-irs">
 
       <section className="mb-10">
         <div className="rounded-3xl border border-brand bg-brand-light dark:bg-brand/10 p-5 mb-6">
@@ -165,8 +138,6 @@ export default function EscaloesIRSPage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

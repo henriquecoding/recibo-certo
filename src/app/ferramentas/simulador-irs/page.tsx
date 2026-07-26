@@ -53,7 +53,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "O simulador é gratuito?",
-    a: "Sim, simular o teu IRS é gratuito e sem registo. Exportar a simulação em PDF/CSV e guardar cenários fazem parte do plano Pro: com sessão iniciada podes guardar 1 cenário neste dispositivo, para experimentares como funciona; sincronizar na nuvem e guardar sem limites, entre dispositivos, é uma funcionalidade Pro.",
+    a: "Sim, simular o teu IRS é gratuito e sem registo. Exportar a simulação em PDF/CSV e guardar cenários fazem parte do plano Plus: com sessão iniciada podes guardar 1 cenário neste dispositivo, para experimentares como funciona; sincronizar na nuvem e guardar sem limites, entre dispositivos, é uma funcionalidade Plus.",
   },
 ];
 

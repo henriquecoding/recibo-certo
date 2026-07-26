@@ -208,7 +208,7 @@ export function useVencimentos() {
   const { user, carregado: authPronto, disponivel } = useAuth();
   const { plano } = useSubscricao();
   const userId = user?.id ?? null;
-  const naNuvem = disponivel && !!userId && plano === "pro";
+  const naNuvem = disponivel && !!userId && plano === "plus";
 
   const [cenarios, setCenarios] = useState<CenarioVencimento[]>([]);
   const [carregado, setCarregado] = useState(false);

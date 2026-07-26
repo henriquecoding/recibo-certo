@@ -1,36 +1,14 @@
 import type { Metadata } from "next";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import Link from "next/link";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import { DecisorAtoVsAtividade } from "@/components/guias/DecisorAtoVsAtividade";
 import InfoTip from "@/components/ui/InfoTip";
 import { IVA_ISENCAO_LIMITE, REGIME_SIMPLIFICADO } from "@/lib/fiscal-data";
 import { fmt } from "@/lib/format";
 import { ArrowRight, Check } from "@/components/ui/Icons";
 
-export const metadata: Metadata = {
-  title: "Como abrir atividade nas Finanças 2026",
-  description: "Guia passo a passo para abrir atividade nas Finanças em Portugal. Código de atividade, IVA, Segurança Social — em português simples.",
-  keywords: ["abrir atividade finanças", "recibos verdes", "trabalhador independente"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/abrir-atividade" },
-  openGraph: {
-    title: "Como abrir atividade nas Finanças 2026 | ReciboCerto",
-    description: "Guia passo a passo para abrir atividade nas Finanças em Portugal.",
-    url: "https://www.recibocerto.pt/guias/abrir-atividade",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "Gov.pt — Trabalhador Independente", url: "https://www.gov.pt/guias/trabalhar-por-conta-propria-guia-para-trabalhadores-independentes/", tipo: "oficial" as const },
-  { titulo: "Portal das Finanças — Início de Atividade", url: "https://www.portaldasfinancas.gov.pt", tipo: "oficial" as const },
-  { titulo: "Doutor Finanças — Como abrir atividade", url: "https://www.doutorfinancas.pt/carreira-e-rendimentos/trabalhadores-independentes/como-abrir-atividade-nas-financas-2/", tipo: "referencia" as const },
-  { titulo: "Montepio — Guia completo abertura de atividade", url: "https://www.montepio.org/ei/pessoal/impostos/abrir-atividade-no-portal-das-financas-saiba-tudo-neste-guia-completo/", tipo: "referencia" as const },
-  { titulo: "Santander — Abrir atividade nas Finanças", url: "https://www.santander.pt/salto/abrir-atividade-nas-financas", tipo: "referencia" as const },
-];
+export const metadata: Metadata = metadataDoGuia("abrir-atividade");
 
 const PASSOS = [
   "Abre portaldasfinancas.gov.pt e inicia sessão",
@@ -41,13 +19,7 @@ const PASSOS = [
 
 export default function AbrirAtividadePage() {
   return (
-    <>
-      <GuiaHero
-        titulo="Como abrir atividade nas Finanças em 2026"
-        descricao="Gratuito, online e imediato. Precisas do NIF, acesso ao Portal e do código de atividade certo."
-        tempoLeitura={5}
-        badge="Passo a passo"
-      />
+    <GuiaLayout slug="abrir-atividade">
 
       <section className="prose-like mb-10">
         <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 mb-4">
@@ -148,8 +120,6 @@ export default function AbrirAtividadePage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

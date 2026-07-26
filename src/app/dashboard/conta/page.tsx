@@ -10,6 +10,7 @@ import {
   Check, Warning, History, BellAlert, ArrowLeft, ArrowRight,
   Lock, Eye, EyeOff,
 } from "@/components/ui/Icons";
+import FizConnectionCard from "@/components/fiz/FizConnectionCard";
 
 const campo =
   "w-full px-3.5 py-2.5 text-[16px] text-stone-800 dark:text-stone-100 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all";
@@ -94,7 +95,7 @@ export default function ContaPage() {
             </div>
 
             <p className="mt-5 rounded-xl bg-cream p-3 text-xs leading-relaxed text-stone-500 dark:bg-stone-800 dark:text-stone-400">
-              A tua conta está criada e pronta. Com o plano Pro, os teus recibos ficam sincronizados na nuvem em todos os dispositivos.
+              A tua conta está criada e pronta. Com o Plus, os teus recibos ficam sincronizados na nuvem em todos os dispositivos.
             </p>
 
             <button
@@ -105,6 +106,10 @@ export default function ContaPage() {
               Terminar sessão
             </button>
           </div>
+
+          {/* Ligação ao parceiro de execução fiscal. Só aparece quando a
+              integração está ativa — e nunca depende do plano Plus. */}
+          <FizConnectionCard />
 
           {/* Alterar password */}
           <SecaoPassword />
@@ -238,12 +243,12 @@ function Beneficio({ icon, texto }: { icon: React.ReactNode; texto: string }) {
 function SecaoSubscricao() {
   const { plano, status, abrirPortal } = useSubscricao();
 
-  if (plano === "pro") {
+  if (plano === "plus") {
     return (
       <div className="mt-5 flex items-center justify-between rounded-2xl border border-brand/20 bg-brand-light/50 px-4 py-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">Plano Pro</span>
+            <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">Plano Plus</span>
             <span className="inline-flex items-center rounded-full bg-brand px-2 py-0.5 text-[9px] font-semibold text-white">
               {status === "active" ? "Ativo" : "A experimentar"}
             </span>

@@ -4,6 +4,7 @@ import { type ReactNode } from "react";
 import Link from "next/link";
 import { Lock, Sparkle } from "@/components/ui/Icons";
 import { useSubscricao } from "@/lib/stripe/subscription";
+import type { Entitlement } from "@/lib/entitlements";
 
 // Bloqueio Pro contextual (abordagem mista): o conteúdo avançado continua
 // presente, mas desfocado e inerte para quem não tem Pro, com uma camada de
@@ -14,9 +15,10 @@ export default function ProGate({
   title,
   description,
   children,
-  cta = "Desbloquear com Pro",
+  cta = "Desbloquear com o Plus",
   href = "/precos",
   className = "",
+  requer = "export.bundle",
 }: {
   title: string;
   description: string;
@@ -24,11 +26,14 @@ export default function ProGate({
   cta?: string;
   href?: string;
   className?: string;
+  /** Permissão exigida. O valor por omissão cobre as exportações, que são
+      o caso mais comum; funcionalidades específicas passam a sua. */
+  requer?: Entitlement;
 }) {
-  const { plano, carregado } = useSubscricao();
+  const { pode, carregado } = useSubscricao();
 
-  // Enquanto o estado não carrega (ou já é Pro), mostra o conteúdo real.
-  if (!carregado || plano === "pro") return <>{children}</>;
+  // Enquanto o estado não carrega (ou a permissão existe), mostra o conteúdo real.
+  if (!carregado || pode(requer)) return <>{children}</>;
 
   return (
     <div className={`relative overflow-hidden rounded-2xl border border-stone-100 dark:border-stone-800 ${className}`}>

@@ -27,8 +27,8 @@ const num = (s: string) => Math.max(0, parseNumericDraft(s) ?? 0);
 type Estado = "idle" | "a-ler" | "lido" | "erro" | "aplicado";
 
 export function ImportarReciboPDF({ onAplicar }: { onAplicar: (e: ReciboExtraido) => void }) {
-  const { plano, carregado } = useSubscricao();
-  const ehPro = plano === "pro";
+  const { pode, carregado } = useSubscricao();
+  const ehPro = pode("audit.payslip");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [estado, setEstado] = useState<Estado>("idle");

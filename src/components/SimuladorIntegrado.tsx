@@ -3349,10 +3349,10 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   // ── Guardar recibo no dashboard ─────────────────────────────────────────
   const { adicionar: adicionarRecibo, recibos: recibosExistentes } = useRecibos();
   const { user } = useAuth();
-  const { plano } = useSubscricao();
+  const { pode } = useSubscricao();
 
   const LIMITE_FREE = 1;
-  const podeGuardar = plano === "pro" || (!!user && recibosExistentes.length < LIMITE_FREE);
+  const podeGuardar = pode("scenarios.unlimited") || (!!user && recibosExistentes.length < LIMITE_FREE);
 
   const guardarReciboDashboard = useCallback(
     (dados: ReciboGuiadoSaida, cliente: string) => {

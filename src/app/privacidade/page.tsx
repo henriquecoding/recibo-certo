@@ -6,13 +6,13 @@ import LegalPage, {
 export const metadata: Metadata = {
   title: "Política de Privacidade — Proteção de Dados RGPD",
   description:
-    "Como o ReciboCerto recolhe, trata e protege os teus dados pessoais. Conformidade com o RGPD (Regulamento (UE) 2016/679) e a Lei n.º 58/2019 — Portugal. Inclui o tratamento de dados do plano Pro guardados na nuvem.",
+    "Como o ReciboCerto recolhe, trata e protege os teus dados pessoais. Conformidade com o RGPD (Regulamento (UE) 2016/679) e a Lei n.º 58/2019 — Portugal. Inclui o tratamento de dados do plano Plus guardados na nuvem.",
   alternates: { canonical: "/privacidade" },
   robots: { index: true, follow: true },
   openGraph: {
     title: "Política de Privacidade — ReciboCerto",
     description:
-      "Proteção de dados RGPD. No plano gratuito os dados ficam no teu dispositivo; no plano Pro são guardados de forma segura na nuvem (UE), nunca vendidos nem usados para publicidade.",
+      "Proteção de dados RGPD. No plano gratuito os dados ficam no teu dispositivo; no plano Plus são guardados de forma segura na nuvem (UE), nunca vendidos nem usados para publicidade.",
     url: "https://www.recibocerto.pt/privacidade",
     type: "website",
   },
@@ -24,7 +24,7 @@ const TOC = [
   { id: "dados-recolhidos", label: "Dados que recolhemos" },
   { id: "finalidade", label: "Finalidades e base legal" },
   { id: "armazenamento-local", label: "Plano gratuito: dados locais" },
-  { id: "nuvem-pro", label: "Plano Pro: dados na nuvem" },
+  { id: "nuvem-pro", label: "Plano Plus: dados na nuvem" },
   { id: "pagamentos", label: "Pagamentos (Stripe)" },
   { id: "comunicacoes", label: "Comunicações por email" },
   { id: "cookies", label: "Cookies e tecnologias" },
@@ -44,7 +44,7 @@ export default function PrivacidadePage() {
   return (
     <LegalPage
       title="Política de Privacidade"
-      subtitle="O ReciboCerto trata a privacidade como princípio central. No plano gratuito, os teus dados ficam no teu dispositivo. No plano Pro, são guardados de forma segura na nuvem (servidores na União Europeia) para sincronização entre dispositivos. Em nenhum caso vendemos dados ou exibimos publicidade."
+      subtitle="O ReciboCerto trata a privacidade como princípio central. No plano gratuito, os teus dados ficam no teu dispositivo. No plano Plus, são guardados de forma segura na nuvem (servidores na União Europeia) para sincronização entre dispositivos. Em nenhum caso vendemos dados ou exibimos publicidade."
       lastUpdated="Junho de 2026"
       toc={TOC}
     >
@@ -53,7 +53,7 @@ export default function PrivacidadePage() {
         <ListaCheck
           items={[
             "Plano gratuito: não precisas de conta e os dados ficam só no teu browser (localStorage).",
-            "Plano Pro: crias conta e os teus dados (recibos, simulações, preferências) são guardados na nuvem, em servidores na UE, para sincronizar entre dispositivos.",
+            "Plano Plus: crias conta e os teus dados (recibos, simulações, preferências) são guardados na nuvem, em servidores na UE, para sincronizar entre dispositivos.",
             "Nunca vendemos os teus dados nem usamos publicidade comportamental ou rastreamento entre sites.",
             "Os pagamentos são processados pela Stripe — nunca vemos nem guardamos o número do teu cartão.",
             "Podes exportar ou eliminar os teus dados a qualquer momento, e exercer todos os direitos do RGPD.",
@@ -83,7 +83,7 @@ export default function PrivacidadePage() {
           calculadora de recibos verdes, simulador de IRS, simulador de recibo de vencimento,
           simulador de empresa, comparador de regimes, guias fiscais e área de cliente (Dashboard) —
           independentemente do dispositivo ou browser utilizado, e tanto no plano gratuito como no
-          plano Pro.
+          plano Plus.
         </p>
         <p>
           O tratamento rege-se pelo Regulamento (UE) 2016/679 (RGPD) e pela Lei n.º 58/2019, de 8 de
@@ -95,7 +95,7 @@ export default function PrivacidadePage() {
       <Section id="dados-recolhidos" title="Dados que recolhemos">
         <Nota tipo="info">
           Recolhemos o mínimo de dados necessário para o serviço funcionar. Aquilo que recolhemos
-          depende de usares o plano gratuito (sem conta) ou o plano Pro (com conta).
+          depende de usares o plano gratuito (sem conta) ou o plano Plus (com conta).
         </Nota>
 
         <Sub title="Plano gratuito — sem conta">
@@ -113,9 +113,9 @@ export default function PrivacidadePage() {
           />
         </Sub>
 
-        <Sub title="Conta e plano Pro">
+        <Sub title="Conta e plano Plus">
           <p>
-            Para usar o plano Pro crias uma conta. Recolhemos e tratamos, conforme aplicável:
+            Para usar o plano Plus crias uma conta. Recolhemos e tratamos, conforme aplicável:
           </p>
           <Lista
             items={[
@@ -207,9 +207,9 @@ export default function PrivacidadePage() {
       </Section>
 
       {/* 5 — Nuvem Pro */}
-      <Section id="nuvem-pro" title="Plano Pro: dados guardados na nuvem">
+      <Section id="nuvem-pro" title="Plano Plus: dados guardados na nuvem">
         <p>
-          No plano Pro, para permitir o acesso a partir de vários dispositivos e a salvaguarda dos
+          No plano Plus, para permitir o acesso a partir de vários dispositivos e a salvaguarda dos
           teus dados, guardamos as tuas informações numa base de dados gerida pela{" "}
           <strong className="text-stone-700 dark:text-stone-200">Supabase</strong>, alojada em
           servidores na União Europeia. Concretamente, podem ser guardados:
@@ -231,7 +231,7 @@ export default function PrivacidadePage() {
           ]}
         />
         <Nota tipo="info">
-          Mesmo no plano Pro, continuas a poder usar e exportar os dados localmente. A sincronização
+          Mesmo no plano Plus, continuas a poder usar e exportar os dados localmente. A sincronização
           na nuvem existe para tua conveniência e segurança, não para exploração comercial dos dados.
         </Nota>
       </Section>
@@ -281,7 +281,7 @@ export default function PrivacidadePage() {
         </p>
         <Lista
           items={[
-            "Cookies estritamente necessários: sessão e autenticação (plano Pro), preferências essenciais e segurança. Não exigem consentimento.",
+            "Cookies estritamente necessários: sessão e autenticação (plano Plus), preferências essenciais e segurança. Não exigem consentimento.",
             "localStorage: preferências e dados do plano gratuito guardados no teu dispositivo.",
             "Não utilizamos Google Analytics, Meta Pixel, heatmaps nem publicidade comportamental.",
           ]}
@@ -304,7 +304,7 @@ export default function PrivacidadePage() {
         <Tabela
           colunas={["Fornecedor", "Finalidade", "Localização", "Garantias"]}
           linhas={[
-            ["Supabase", "Base de dados e autenticação do plano Pro", "União Europeia", "Acordo de tratamento + cláusulas contratuais-tipo"],
+            ["Supabase", "Base de dados e autenticação do plano Plus", "União Europeia", "Acordo de tratamento + cláusulas contratuais-tipo"],
             ["Vercel Inc.", "Alojamento do site e funções serverless", "União Europeia (Frankfurt)", "Acordo de tratamento de dados"],
             ["Stripe", "Processamento de pagamentos da subscrição", "UE / EUA", "PCI-DSS nível 1 + cláusulas contratuais-tipo"],
             ["Resend", "Envio de emails transacionais e alertas", "EUA", "Acordo de tratamento + cláusulas contratuais-tipo"],
@@ -321,7 +321,7 @@ export default function PrivacidadePage() {
       <Section id="transferencias" title="Transferências internacionais de dados">
         <p>
           Sempre que possível, os dados são tratados e armazenados dentro do Espaço Económico Europeu.
-          A base de dados do plano Pro (Supabase) e o alojamento (Vercel) estão na União Europeia.
+          A base de dados do plano Plus (Supabase) e o alojamento (Vercel) estão na União Europeia.
         </p>
         <p>
           Alguns subprocessadores (como a Stripe e a Resend) podem tratar dados fora do EEE,

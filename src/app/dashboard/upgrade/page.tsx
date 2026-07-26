@@ -48,7 +48,7 @@ export default function UpgradePage() {
     }
   };
 
-  if (plano === "pro") {
+  if (plano === "plus") {
     return (
       <div className="mx-auto max-w-lg text-center">
         <div className="rounded-4xl border border-brand bg-white p-10 shadow-glow">
@@ -137,7 +137,7 @@ export default function UpgradePage() {
             disabled={loading}
             className="btn-shine mt-5 inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float disabled:opacity-50"
           >
-            {loading ? "A preparar..." : "Subscrever o Pro"}
+            {loading ? "A preparar..." : "Subscrever o Plus"}
             {!loading && <ArrowRight size={14} />}
           </button>
         ) : (

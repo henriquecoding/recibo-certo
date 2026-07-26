@@ -1,36 +1,14 @@
 import type { Metadata } from "next";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import Link from "next/link";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import { IVA_ISENCAO_LIMITE } from "@/lib/fiscal-data";
 import { generateArticleSchema, generateFAQSchema } from "@/lib/seo";
 
 const PATH = "/guias/fatura-vs-recibo";
 const LIMITE_IVA = `${IVA_ISENCAO_LIMITE.value.toLocaleString("pt-PT")} €`;
 
-export const metadata: Metadata = {
-  title: "Fatura, recibo e fatura-recibo: as diferenças (2026)",
-  description:
-    "Qual a diferença entre fatura, recibo e fatura-recibo? E onde entram os recibos verdes? Explicado em português simples, com base legal e exemplos.",
-  keywords: [
-    "diferença fatura recibo",
-    "fatura-recibo o que é",
-    "fatura simplificada",
-    "recibo verde é fatura-recibo",
-    "documentos de faturação Portugal",
-  ],
-  alternates: { canonical: `https://www.recibocerto.pt${PATH}` },
-  openGraph: {
-    title: "Fatura, recibo e fatura-recibo: as diferenças | ReciboCerto",
-    description:
-      "A confusão mais comum dos independentes, resolvida: o que é cada documento e onde encaixam os recibos verdes.",
-    url: `https://www.recibocerto.pt${PATH}`,
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
+export const metadata: Metadata = metadataDoGuia("fatura-vs-recibo");
 
 const FAQS = [
   {
@@ -59,29 +37,6 @@ const articleSchema = generateArticleSchema({
   datePublished: "2026-06-16",
 });
 
-const FONTES = [
-  {
-    titulo: "Art. 29.º CIVA — obrigação de faturação (Portal das Finanças)",
-    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva29.aspx",
-    tipo: "oficial" as const,
-  },
-  {
-    titulo: "Art. 53.º CIVA — regime especial de isenção (Portal das Finanças)",
-    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-53-o-do-civa.aspx",
-    tipo: "oficial" as const,
-  },
-  {
-    titulo: "Fatura vs. recibo — Cegid Vendus",
-    url: "https://www.vendus.pt/blog/fatura-vs-recibo/",
-    tipo: "referencia" as const,
-  },
-  {
-    titulo: "Fatura, fatura-recibo e fatura simplificada: diferenças — iziBizi",
-    url: "https://www.izibizi.pt/blog/fatura-fatura-recibo-fatura-simplificada-diferencas/",
-    tipo: "referencia" as const,
-  },
-];
-
 const TIPOS = [
   {
     doc: "Fatura",
@@ -105,7 +60,7 @@ const TIPOS = [
 
 export default function FaturaVsReciboPage() {
   return (
-    <>
+    <GuiaLayout slug="fatura-vs-recibo">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
@@ -113,12 +68,6 @@ export default function FaturaVsReciboPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(generateFAQSchema(FAQS)) }}
-      />
-
-      <GuiaHero
-        titulo="Fatura, recibo e fatura-recibo: as diferenças"
-        descricao="Três documentos parecidos, funções diferentes. Percebe qual usas, quando, e onde encaixam os recibos verdes."
-        tempoLeitura={4}
       />
 
       <section className="mb-10">
@@ -226,8 +175,6 @@ export default function FaturaVsReciboPage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

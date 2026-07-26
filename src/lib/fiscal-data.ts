@@ -176,9 +176,13 @@ export const SOURCES = {
   },
 
   // ── Trabalho dependente (Categoria A) ───────────────────────────────
+  // Corrigido em 26/07/2026 (auditoria P0 3.3): apontava para um artigo do
+  // Montepio apresentado como se fosse o despacho. O texto oficial é
+  // publicado pela AT; o artigo bancário passou a leitura complementar em
+  // `src/lib/guias/legal-sources.ts`.
   despachoRetencao2026: {
-    label: "Despacho n.º 233-A/2026 — Tabelas de retenção na fonte de IRS 2026 (Continente) · AT (ref. Montepio)",
-    url: "https://www.montepio.org/ei/pessoal/impostos/tabelas-do-irs-conheca-as-taxas-de-retencao-na-fonte/",
+    label: "Despacho n.º 233-A/2026 — Tabelas de retenção na fonte de IRS 2026 (Continente) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/legislacao/diplomas_legislativos/Documents/Despacho-233-A-2026.pdf",
   },
   subsidioRefeicao2026: {
     label: "Subsídio de refeição — limites de isenção 2026 (Art. 2.º, n.º 3 CIRS) · ref. Edenred/idealista",

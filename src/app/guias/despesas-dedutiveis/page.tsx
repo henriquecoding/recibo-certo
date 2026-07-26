@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import Link from "next/link";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import InfoTip from "@/components/ui/InfoTip";
 import { fmt, pct } from "@/lib/format";
 import {
@@ -10,27 +9,7 @@ import {
 } from "@/lib/fiscal-data";
 import { ArrowRight, Check } from "@/components/ui/Icons";
 
-export const metadata: Metadata = {
-  title: "Despesas dedutíveis e a regra dos 15% (recibos verdes) 2026",
-  description:
-    "No regime simplificado, que despesas contam para o IRS? A dedução específica, o e-fatura e a regra dos 15% explicadas com exemplos — Portugal 2026.",
-  keywords: ["despesas dedutíveis recibos verdes", "regra dos 15%", "regime simplificado despesas", "e-fatura"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/despesas-dedutiveis" },
-  openGraph: {
-    title: "Despesas dedutíveis e a regra dos 15% | ReciboCerto",
-    description: "Que despesas reduzem o IRS no regime simplificado, e como funciona a regra dos 15%.",
-    url: "https://www.recibocerto.pt/guias/despesas-dedutiveis",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "CIRS — Art. 31.º (regime simplificado)", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs31.aspx", tipo: "oficial" as const },
-  { titulo: "Portal das Finanças — e-Fatura", url: "https://faturas.portaldasfinancas.gov.pt", tipo: "oficial" as const },
-  { titulo: "Segurança Social — Trabalhadores Independentes", url: "https://www.seg-social.pt/trabalhadores-independentes", tipo: "oficial" as const },
-];
+export const metadata: Metadata = metadataDoGuia("despesas-dedutiveis");
 
 const DESPESAS = [
   "Contribuições obrigatórias para a Segurança Social",
@@ -41,13 +20,7 @@ const DESPESAS = [
 
 export default function DespesasDedutiveisPage() {
   return (
-    <>
-      <GuiaHero
-        titulo="Despesas dedutíveis e a regra dos 15%"
-        descricao="No regime simplificado não declaras despesa a despesa — o Estado presume uma parte. Mas há uma fração que tens mesmo de justificar com faturas. Eis como funciona."
-        tempoLeitura={6}
-        badge="Regime simplificado"
-      />
+    <GuiaLayout slug="despesas-dedutiveis">
 
       <section className="mb-10">
         <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 mb-4">
@@ -120,8 +93,6 @@ export default function DespesasDedutiveisPage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

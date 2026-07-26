@@ -68,7 +68,7 @@ export function emailBoasVindasWaitlist(email: string): { subject: string; html:
       </p>
       <p style="margin:0 0 8px;font-size:14px;line-height:1.7;color:${MUTED};">
         A calculadora, o simulador de IRS e o comparador de regimes estão disponíveis — grátis e sem registo.
-        Queres alertas de prazos e histórico na nuvem? O plano Pro já está disponível.
+        Queres alertas de prazos e histórico na nuvem? O plano Plus já está disponível.
       </p>
       ${botao("Começar a usar", "https://www.recibocerto.pt/dashboard")}
     `),
@@ -105,7 +105,7 @@ export function emailAlertaPrazo(prazos: { titulo: string; descricao: string; da
       </table>
       ${botao("Ver calendário completo", "https://www.recibocerto.pt/dashboard/prazos")}
       <p style="margin:20px 0 0;font-size:12px;color:#A8A29E;text-align:center;">
-        Recebes este email porque tens o plano Pro do ReciboCerto.
+        Recebes este email porque tens o plano Plus do ReciboCerto.
       </p>
     `),
   };

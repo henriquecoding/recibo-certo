@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import { SimuladorIRSJovem } from "@/components/guias/SimuladorIRSJovem";
 import InfoTip from "@/components/ui/InfoTip";
 import { Check } from "@/components/ui/Icons";
@@ -9,28 +8,7 @@ import { IRS_JOVEM, IAS_VALUE } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import Badge from "@/components/ui/Badge";
 
-export const metadata: Metadata = {
-  title: "IRS Jovem 2026: isenção, anos e como pedir",
-  description: "Tudo sobre o IRS Jovem em 2026. Percentagens de isenção por ano de carreira, quem tem direito e como pedir na declaração de IRS.",
-  keywords: ["IRS jovem 2026", "isenção IRS jovem", "IRS jovem recibos verdes"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/irs-jovem" },
-  openGraph: {
-    title: "IRS Jovem 2026: isenção, anos e como pedir | ReciboCerto",
-    description: "Nos primeiros 10 anos de carreira, pagas menos IRS ou zero sobre parte do rendimento.",
-    url: "https://www.recibocerto.pt/guias/irs-jovem",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "Art. 12.º-B CIRS — Portal das Finanças", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs12b.aspx", tipo: "oficial" as const },
-  { titulo: "DECO — IRS Jovem: o que é e como funciona em 2026", url: "https://www.deco.proteste.pt/dinheiro/impostos/dicas/irs-jovem-como-funciona", tipo: "referencia" as const },
-  { titulo: "Coverflex — IRS Jovem 2026", url: "https://www.coverflex.com/pt/blog/irs-jovem", tipo: "referencia" as const },
-  { titulo: "Santander — IRS Jovem", url: "https://www.santander.pt/salto/irs-jovem", tipo: "referencia" as const },
-  { titulo: "FedFinance — IRS Jovem 2026: regras e isenções", url: "https://www.fedfinance.pt/noticias-conselhos/irs-jovem-2026-regras-isencoes-e-como-pedir-o-seu-beneficio-fiscal", tipo: "referencia" as const },
-];
+export const metadata: Metadata = metadataDoGuia("irs-jovem");
 
 const ias = IAS_VALUE;
 // Art. 12.º-B n.º 3 CIRS: o teto dos rendimentos excluídos é 55 × IAS em todos os anos.
@@ -45,13 +23,7 @@ const ISENCOES = [
 
 export default function IRSJovemPage() {
   return (
-    <>
-      <GuiaHero
-        titulo="IRS Jovem 2026: isenção, anos e como pedir"
-        descricao="Nos primeiros 10 anos de carreira, pagas menos IRS (ou zero) sobre parte do rendimento. Aplica-se a trabalho dependente e recibos verdes."
-        tempoLeitura={4}
-        badge="Até 35 anos"
-      />
+    <GuiaLayout slug="irs-jovem">
 
       <section className="mb-6">
         <SimuladorIRSJovem />
@@ -138,8 +110,6 @@ export default function IRSJovemPage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

@@ -31,6 +31,27 @@ const config: Config = {
           border: "#E6C5B7",
           text: "#97553C",
         },
+        // ── Paleta FIZ (parceiro de execução fiscal) ────────────────────
+        // Escala do amarelo pastel até ao amarelo da marca FIZ (#FAC72B,
+        // o fundo da logo). Usada EXCLUSIVAMENTE em superfícies FIZ, para
+        // que o utilizador distinga sempre o que é ReciboCerto (verde) do
+        // que é operado pela FIZ (amarelo). Os tons 700–900 existem para
+        // garantir contraste AA de texto sobre as superfícies claras — o
+        // amarelo da marca nunca é usado como cor de texto.
+        fiz: {
+          50: "#FEFCF2",
+          100: "#FEF7DE",
+          200: "#FDEFBC",
+          300: "#FCE28B",
+          400: "#FBD65C",
+          DEFAULT: "#FAC72B",
+          500: "#FAC72B",
+          600: "#D9A50F",
+          700: "#A87F0B",
+          800: "#6E5307",
+          900: "#3D2E04",
+          ink: "#1A1A17",
+        },
         quiz: {
           leather: "#C4A076",
           "leather-dark": "#B28A60",

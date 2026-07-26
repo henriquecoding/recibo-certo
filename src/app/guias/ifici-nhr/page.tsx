@@ -1,33 +1,13 @@
 import type { Metadata } from "next";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import Link from "next/link";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import InfoTip from "@/components/ui/InfoTip";
 import { pct } from "@/lib/format";
 import { IFICI_TAXA, IFICI_PRAZO_ANOS } from "@/lib/fiscal-data";
 import { ArrowRight, Check } from "@/components/ui/Icons";
 
-export const metadata: Metadata = {
-  title: "IFICI (NHR 2.0) 2026 — taxa de IRS de 20%",
-  description:
-    "O IFICI, sucessor do Residente Não Habitual, aplica uma taxa de IRS de 20% a rendimentos elegíveis. Condições, duração e quem pode beneficiar — Portugal 2026.",
-  keywords: ["IFICI", "NHR 2.0", "residente não habitual", "taxa 20% IRS", "Art. 58.º-A EBF"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/ifici-nhr" },
-  openGraph: {
-    title: "IFICI (NHR 2.0): taxa de IRS de 20% | ReciboCerto",
-    description: "O incentivo fiscal à investigação e inovação que substituiu o NHR — condições e duração.",
-    url: "https://www.recibocerto.pt/guias/ifici-nhr",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "EBF — Art. 58.º-A (IFICI)", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/EBF58A.aspx", tipo: "oficial" as const },
-  { titulo: "Portal das Finanças", url: "https://www.portaldasfinancas.gov.pt", tipo: "oficial" as const },
-];
+export const metadata: Metadata = metadataDoGuia("ifici-nhr");
 
 const CONDICOES = [
   "Tornar-te residente fiscal em Portugal no ano em causa",
@@ -38,13 +18,7 @@ const CONDICOES = [
 
 export default function IficiNhrPage() {
   return (
-    <>
-      <GuiaHero
-        titulo="IFICI (NHR 2.0): taxa de IRS de 20%"
-        descricao="O Incentivo Fiscal à Investigação Científica e Inovação substituiu o Residente Não Habitual. Para quem reúne as condições, aplica uma taxa especial de IRS aos rendimentos elegíveis."
-        tempoLeitura={5}
-        badge="Benefício fiscal"
-      />
+    <GuiaLayout slug="ifici-nhr">
 
       <section className="mb-10">
         <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 mb-4">
@@ -102,8 +76,6 @@ export default function IficiNhrPage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

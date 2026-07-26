@@ -39,7 +39,7 @@ export default function UpsellExportacao({ aberto, onClose }: { aberto: boolean;
                 <Sparkle size={12} /> Funcionalidade Pro
               </div>
               <h2 className="mt-3 font-display text-xl font-semibold text-stone-800 dark:text-stone-100">
-                Exportar é uma funcionalidade Pro
+                Exportar é uma funcionalidade Plus
               </h2>
               <p className="mt-1.5 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
                 Já usaste a tua exportação de experimentação neste dispositivo. Passa a Pro para

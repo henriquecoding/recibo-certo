@@ -120,7 +120,7 @@ export function useQuizProgresso(): QuizProgressoReturn {
   const { user } = useAuth();
   const { plano } = useSubscricao();
   const naNuvem = !!user && supabaseConfigurado();
-  const isPro = plano === "pro";
+  const isPro = plano === "plus";
 
   const [xp, setXp] = useState(0);
   const [streakRecord, setStreakRecord] = useState(0);

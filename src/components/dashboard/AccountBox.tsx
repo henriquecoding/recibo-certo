@@ -11,7 +11,7 @@ import { obterPerfil, type DadosPerfil } from "@/lib/supabase/profile";
 
 function PlanoBadge() {
   const { plano } = useSubscricao();
-  if (plano === "pro") {
+  if (plano === "plus") {
     return (
       <span className="inline-flex items-center rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-semibold text-white">
         Pro

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import InfoTip from "@/components/ui/InfoTip";
 import { Check, Close } from "@/components/ui/Icons";
 import {
@@ -12,29 +11,7 @@ import {
 import { fmt, pct } from "@/lib/format";
 import Badge from "@/components/ui/Badge";
 
-export const metadata: Metadata = {
-  title: "IVA nos recibos verdes 2026: a isenção de 15 000 €",
-  description: "Como funciona o IVA para trabalhadores independentes. Isenção do Art. 53.º, quando sair da isenção e as taxas por região.",
-  keywords: ["IVA recibos verdes 2026", "isenção IVA artigo 53", "limite IVA trabalhador independente"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/iva-recibos-verdes" },
-  openGraph: {
-    title: "IVA nos recibos verdes 2026 | ReciboCerto",
-    description: `A isenção de ${fmt(IVA_ISENCAO_LIMITE.value)} do Art. 53.º CIVA explicada.`,
-    url: "https://www.recibocerto.pt/guias/iva-recibos-verdes",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "Art. 53.º CIVA — Portal das Finanças", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-53-o-do-civa.aspx", tipo: "oficial" as const },
-  { titulo: "Art. 9.º CIVA — Portal das Finanças", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva9.aspx", tipo: "oficial" as const },
-  { titulo: "Art. 18.º CIVA — taxas", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva18.aspx", tipo: "oficial" as const },
-  { titulo: "OCC — Taxas de IVA em Portugal e Regiões Autónomas", url: "https://www.occ.pt/pt-pt/noticias/iva-taxas-em-portugal-continental-e-acores", tipo: "referencia" as const },
-  { titulo: "SimuladorNeto — IVA recibos verdes art. 53.º 2026", url: "https://simuladorneto.pt/blog/iva-recibos-verdes-isencao-artigo-53-2026", tipo: "referencia" as const },
-  { titulo: "InvoiceXpress — Alterações regime isenção IVA art. 53.º", url: "https://invoicexpress.com/blog/alteracoes-regime-isencao-iva-artigo-53/", tipo: "referencia" as const },
-];
+export const metadata: Metadata = metadataDoGuia("iva-recibos-verdes");
 
 const cont = IVA_TAXAS.continente.value;
 const mad = IVA_TAXAS.madeira.value;
@@ -42,12 +19,7 @@ const aço = IVA_TAXAS.acores.value;
 
 export default function IvaRecibosVerdesPage() {
   return (
-    <>
-      <GuiaHero
-        titulo="IVA nos recibos verdes: a isenção de 15 000 €"
-        descricao="Se faturares menos de 15 000 € por ano, podes estar isento de cobrar IVA. Saber quando e como."
-        tempoLeitura={5}
-      />
+    <GuiaLayout slug="iva-recibos-verdes">
 
       <section className="mb-10 space-y-4">
         <div className="rounded-3xl border border-brand bg-brand-light dark:bg-brand/10 p-5">
@@ -152,8 +124,6 @@ export default function IvaRecibosVerdesPage() {
         </p>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

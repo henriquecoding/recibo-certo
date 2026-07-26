@@ -8,6 +8,8 @@ import {
   LayoutGrid, ChevronRight, Check, Star, ArrowRight,
 } from "@/components/ui/Icons";
 import { GUIAS, type Categoria, type Guia, type IconType } from "@/lib/guias-config";
+import { pesquisarGuias } from "@/lib/guias";
+import { HUB_GRUPOS, GUIDE_MANIFESTS } from "@/lib/guias/manifests";
 
 // ─────────────────────────────────────────────────────────────────────────
 //  Índice de Guias — protagonista: herói, pesquisa, filtros por categoria,
@@ -18,11 +20,15 @@ import { GUIAS, type Categoria, type Guia, type IconType } from "@/lib/guias-con
 
 const CATEGORIAS: Array<"Todos" | Categoria> = ["Todos", "Independentes", "Conta de outrem", "Empresas", "Transversal"];
 
+// Ponto 4.8 da auditoria: a promessa pública era mais ampla do que a
+// validação existente ("Sempre atualizado", "Monitorização automática").
+// Estas quatro afirmações são as que o sistema consegue mesmo garantir —
+// e cada Guia mostra o seu estado de revisão individual no topo.
 const FEATURES: Array<{ icon: IconType; titulo: string; sub: string }> = [
-  { icon: BookOpen, titulo: "Conteúdo verificado", sub: "Dados atualizados e base legal." },
-  { icon: Check, titulo: "Simples e prático", sub: "Explicações claras e diretas." },
-  { icon: Scale, titulo: "100% Portugal", sub: "Leis e regras fiscais portuguesas." },
-  { icon: Clock, titulo: "Sempre atualizado", sub: "Acompanhamos as mudanças por ti." },
+  { icon: Scale, titulo: "Fonte por afirmação", sub: "Cada regra liga ao artigo que a sustenta." },
+  { icon: BookOpen, titulo: "Revisão datada", sub: "Cada guia diz quando foi revisto." },
+  { icon: Check, titulo: "Só fontes oficiais", sub: "AT, Diário da República e Segurança Social." },
+  { icon: Clock, titulo: "Alterações visíveis", sub: "O que mudou fica registado no guia." },
 ];
 
 const FAVORITOS_KEY = "recibocerto:guias:favoritos";
@@ -51,12 +57,24 @@ export default function GuiasIndex() {
   };
 
   const filtrados = useMemo(() => {
-    const q = pesquisa.trim().toLowerCase();
-    let lista = GUIAS.filter((g) => {
-      const okCat = categoria === "Todos" || g.categoria === categoria;
-      const okQ = q === "" || g.titulo.toLowerCase().includes(q) || g.descricao.toLowerCase().includes(q);
-      return okCat && okQ;
-    });
+    const q = pesquisa.trim();
+
+    // Ponto 9.2 da auditoria: a pesquisa deixou de comparar texto literal do
+    // título. Passa pelo índice dos manifestos, que inclui sinónimos,
+    // linguagem comum, artigos legais e as próprias afirmações — e ignora
+    // acentos, para que "acao isolada" encontre "Ato isolado".
+    let lista: Guia[];
+    if (q === "") {
+      lista = GUIAS;
+    } else {
+      const ordenadosPorRelevancia = pesquisarGuias(q, GUIAS.length).map((r) => `/guias/${r.manifesto.slug}`);
+      lista = ordenadosPorRelevancia
+        .map((href) => GUIAS.find((g) => g.href === href))
+        .filter((g): g is Guia => Boolean(g));
+    }
+
+    lista = lista.filter((g) => categoria === "Todos" || g.categoria === categoria);
+
     if (ordem === "alfabetica") lista = [...lista].sort((a, b) => a.titulo.localeCompare(b.titulo, "pt"));
     else if (ordem === "tempo") lista = [...lista].sort((a, b) => a.tempo - b.tempo);
     return lista;
@@ -123,6 +141,50 @@ export default function GuiasIndex() {
           </div>
         </div>
       </m.section>
+
+      {/* ── Hub por intenção ───────────────────────────────────────────────
+          Ponto 9.1 da auditoria: organizar por tarefa, não apenas por tipo
+          de contribuinte. O filtro por categoria continua logo abaixo, mas
+          deixa de ser a única porta de entrada. */}
+      <section aria-labelledby="hub-intencao" className="mb-10">
+        <h2 id="hub-intencao" className="font-display text-xl font-semibold text-ink">
+          O que precisas de fazer?
+        </h2>
+        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+          Escolhe pela tarefa. Se preferires filtrar por tipo de contribuinte, usa os separadores
+          mais abaixo.
+        </p>
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {HUB_GRUPOS.map((grupo) => {
+            const doGrupo = GUIDE_MANIFESTS.filter((g) => g.hub === grupo.id && g.status !== "archived");
+            if (doGrupo.length === 0) return null;
+            return (
+              <div
+                key={grupo.id}
+                className="rounded-3xl border border-stone-200/70 bg-white p-4 dark:border-stone-700 dark:bg-stone-900"
+              >
+                <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">{grupo.titulo}</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+                  {grupo.descricao}
+                </p>
+                <ul className="mt-2.5 space-y-1">
+                  {doGrupo.map((g) => (
+                    <li key={g.slug}>
+                      <Link
+                        href={`/guias/${g.slug}`}
+                        className="flex min-h-[32px] items-center gap-1.5 py-0.5 text-xs text-stone-600 transition-colors hover:text-brand dark:text-stone-400"
+                      >
+                        <ChevronRight size={11} className="flex-shrink-0 text-stone-300" />
+                        <span className="truncate">{g.navLabel}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       {/* ── Controlo ───────────────────────────────────────────────────────── */}
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">

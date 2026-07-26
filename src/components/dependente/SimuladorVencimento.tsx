@@ -1141,7 +1141,7 @@ export function SimuladorVencimento() {
       <div className="mt-4">
         <ProGate
           title="Relatório em PDF e exportação CSV"
-          description="Descarrega esta simulação como relatório PDF — estrutura de custos e visão anual — e exporta os dados em CSV para Excel. Tudo incluído no plano Pro."
+          description="Descarrega esta simulação como relatório PDF — estrutura de custos e visão anual — e exporta os dados em CSV para Excel. Tudo incluído no plano Plus."
         >
           <div className={subCard}>
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1223,7 +1223,7 @@ export function SimuladorVencimento() {
                 </Link>
               ) : (
                 <Link href="/dashboard/upgrade" className="font-semibold underline underline-offset-2">
-                  Ver o plano Pro
+                  Ver o plano Plus
                 </Link>
               )}
             </p>

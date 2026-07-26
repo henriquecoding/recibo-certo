@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   const user = userData.user;
   if (!user?.email) return NextResponse.json({ erro: "Autenticação necessária." }, { status: 401 });
 
-  // Verificar plano Pro (RLS limita a subscrição ao próprio utilizador).
+  // Verificar plano Plus (RLS limita a subscrição ao próprio utilizador).
   const { data: subs } = await sb
     .from("subscriptions")
     .select("status")

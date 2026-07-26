@@ -88,7 +88,7 @@ export default function AdminHome() {
         <ActionCard
           href="/admin/waitlist"
           titulo="Lista de espera"
-          descricao={`${carregado ? nWaitlist : "—"} emails inscritos para o plano Pro.`}
+          descricao={`${carregado ? nWaitlist : "—"} emails inscritos para o plano Plus.`}
           icon={<BellAlert size={20} />}
         />
       </div>

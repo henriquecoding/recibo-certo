@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight } from "@/components/ui/Icons";
 import { useSubscricao } from "@/lib/stripe/subscription";
+import type { Entitlement } from "@/lib/entitlements";
 
 const KEY = (id: string) => `recibocerto:prohint:${id}`;
 
@@ -11,9 +12,10 @@ export default function ProHint({
   id,
   icon,
   children,
-  cta = "Conhecer o Pro",
+  cta = "Conhecer o Plus",
   href = "/dashboard/upgrade",
   className = "",
+  requer = "export.bundle",
 }: {
   id: string;
   icon?: ReactNode;
@@ -21,18 +23,20 @@ export default function ProHint({
   cta?: string;
   href?: string;
   className?: string;
+  /** Permissão que, quando existe, dispensa a dica. */
+  requer?: Entitlement;
 }) {
-  const { plano } = useSubscricao();
+  const { pode } = useSubscricao();
   const [visivel, setVisivel] = useState(false);
 
   useEffect(() => {
-    if (plano === "pro") return;
+    if (pode(requer)) return;
     try {
       setVisivel(localStorage.getItem(KEY(id)) !== "1");
     } catch {
       setVisivel(true);
     }
-  }, [id, plano]);
+  }, [id, pode, requer]);
 
   if (!visivel) return null;
 

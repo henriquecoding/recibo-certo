@@ -1,30 +1,10 @@
 import type { Metadata } from "next";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import Link from "next/link";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import { ArrowRight } from "@/components/ui/Icons";
 
-export const metadata: Metadata = {
-  title: "Calendário fiscal 2026 — prazos de IRS, IVA, SS e IRC",
-  description:
-    "As principais datas fiscais de 2026 em Portugal: entrega do IRS, IVA trimestral, declaração da Segurança Social e obrigações de IRC, num só calendário.",
-  keywords: ["calendário fiscal 2026", "prazos IRS", "prazos IVA", "prazos segurança social"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/calendario-fiscal" },
-  openGraph: {
-    title: "Calendário fiscal 2026 | ReciboCerto",
-    description: "Todas as datas que interessam — IRS, IVA, Segurança Social e IRC — sem surpresas.",
-    url: "https://www.recibocerto.pt/guias/calendario-fiscal",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "Portal das Finanças — Agenda Fiscal", url: "https://www.portaldasfinancas.gov.pt", tipo: "oficial" as const },
-  { titulo: "Segurança Social Direta", url: "https://www.seg-social.pt", tipo: "oficial" as const },
-];
+export const metadata: Metadata = metadataDoGuia("calendario-fiscal");
 
 const BLOCOS = [
   {
@@ -66,13 +46,7 @@ const BLOCOS = [
 
 export default function CalendarioFiscalPage() {
   return (
-    <>
-      <GuiaHero
-        titulo="Calendário fiscal 2026"
-        descricao="As datas que não podes falhar, organizadas por imposto. Confirma sempre a agenda oficial — alguns prazos deslizam para o dia útil seguinte quando caem em fim de semana ou feriado."
-        tempoLeitura={5}
-        badge="Prazos"
-      />
+    <GuiaLayout slug="calendario-fiscal">
 
       <div className="space-y-6">
         {BLOCOS.map((b) => (
@@ -103,8 +77,6 @@ export default function CalendarioFiscalPage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

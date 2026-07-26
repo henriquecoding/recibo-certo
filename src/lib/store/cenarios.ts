@@ -139,7 +139,7 @@ export function useCenarios() {
   const { user, carregado: authPronto, disponivel } = useAuth();
   const { plano } = useSubscricao();
   const userId = user?.id ?? null;
-  const naNuvem = disponivel && !!userId && plano === "pro";
+  const naNuvem = disponivel && !!userId && plano === "plus";
 
   const [cenarios, setCenarios] = useState<Cenario[]>([]);
   const [carregado, setCarregado] = useState(false);
@@ -179,7 +179,7 @@ export function useCenarios() {
       if (!naNuvem && cenarios.length >= LIMITE_FREE) {
         return {
           erro:
-            plano === "pro"
+            plano === "plus"
               ? "Inicia sessão para sincronizar os teus cenários na nuvem."
               : `O plano grátis guarda ${LIMITE_FREE} cenário. Passa a Pro para guardares todos os cenários, sincronizados na nuvem.`,
         };

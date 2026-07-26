@@ -4,7 +4,7 @@
 //
 // NOTA: o ReciboCerto ainda usa localStorage como fonte de dados. Este cliente
 // é a fundação para a migração do repositório (`src/lib/store/recibos.ts`) e
-// para a autenticação (conta na nuvem do plano Pro). Ainda não é usado nas páginas.
+// para a autenticação (conta na nuvem do plano Plus). Ainda não é usado nas páginas.
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 

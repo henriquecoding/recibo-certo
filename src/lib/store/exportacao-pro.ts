@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 //  Restrição Pro para EXPORTAÇÕES (PDF/CSV) dos simuladores.
 //
-//  Modelo: simular é grátis. Exportar/descarregar é uma funcionalidade Pro —
+//  Modelo: simular é grátis. Exportar/descarregar é uma funcionalidade Plus —
 //  mas um utilizador grátis pode experimentar UMA vez por simulador, neste
 //  dispositivo, "para ver como funciona". A partir daí, mostra-se o upsell.
 //  Pro → ilimitado. Lógica partilhada por todos os simuladores (sem duplicar).
@@ -55,7 +55,7 @@ export interface ExportacaoPro {
 
 export function useExportacaoPro(): ExportacaoPro {
   const { plano } = useSubscricao();
-  const ehPro = plano === "pro";
+  const ehPro = plano === "plus";
   const [upsellAberto, setUpsellAberto] = useState(false);
 
   const tentarExportar = useCallback(

@@ -40,7 +40,7 @@ export default function EmailCapture({ fonte = "landing" }: { fonte?: string }) 
           variants={fadeUp}
           className="mb-3 text-sm font-semibold uppercase tracking-[0.15em] text-green-200"
         >
-          Plano Pro
+          Plano Plus
         </m.div>
 
         {/* Heading */}
@@ -92,7 +92,7 @@ export default function EmailCapture({ fonte = "landing" }: { fonte?: string }) 
               whileTap={{ scale: 0.97 }}
               className="btn-shine inline-flex items-center gap-2 rounded-xl bg-white px-8 py-3.5 text-sm font-semibold text-brand-dark shadow-lift transition-colors hover:bg-green-50"
             >
-              Subscrever o Pro
+              Subscrever o Plus
               <ArrowRight size={14} />
             </m.span>
           </Link>

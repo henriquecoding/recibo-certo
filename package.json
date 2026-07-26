@@ -12,7 +12,19 @@
     "fiscal:check:sources": "node scripts/check-fiscal-data.mjs --check-sources",
     "seo:audit": "node scripts/seo-audit.mjs",
     "skills:sync": "node scripts/sync-skills-fiscal.mjs",
-    "skills:check": "node scripts/sync-skills-fiscal.mjs --check"
+    "skills:check": "node scripts/sync-skills-fiscal.mjs --check",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "guias:lint": "vitest run src/lib/__tests__/guias.test.ts -t \"guias:lint\"",
+    "guias:sources": "vitest run src/lib/__tests__/guias.test.ts -t \"guias:sources\"",
+    "guias:claims": "vitest run src/lib/__tests__/guias.test.ts -t \"guias:claims\"",
+    "guias:routes": "vitest run src/lib/__tests__/guias.test.ts -t \"guias:routes\"",
+    "guias:fiz-contract": "vitest run src/lib/__tests__/guias.test.ts -t \"guias:fiz-contract\"",
+    "guias:seo": "vitest run src/lib/__tests__/guias.test.ts -t \"guias:seo\"",
+    "guias:year-rollover": "vitest run src/lib/__tests__/guias.test.ts -t \"guias:year-rollover\"",
+    "guias:links": "node scripts/check-guias.mjs",
+    "guias:semantics": "node scripts/check-guias.mjs",
+    "guias:check": "vitest run src/lib/__tests__/guias.test.ts src/lib/__tests__/fiz.test.ts && node scripts/check-guias.mjs"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.6.0",
@@ -33,13 +45,13 @@
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.20",
-    "postcss": "^8.5.15",
+    "postcss": "^8.5.18",
     "tailwindcss": "^3.4.15",
     "typescript": "^5.5.3",
     "vitest": "^4.1.9"
   },
   "overrides": {
-    "postcss": "^8.5.15",
+    "postcss": "^8.5.18",
     "sharp": "^0.35.3"
   },
   "browserslist": [

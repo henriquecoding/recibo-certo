@@ -2479,7 +2479,7 @@ export default function ModoGuiadoEmpresa({
                           {cenarioFeedback.texto}{" "}
                           {cenarioFeedback.tipo === "ok"
                             ? <Link href="/dashboard/cenarios" className="font-semibold underline underline-offset-2">Ver cenários</Link>
-                            : <Link href="/dashboard/upgrade" className="font-semibold underline underline-offset-2">Ver o plano Pro</Link>}
+                            : <Link href="/dashboard/upgrade" className="font-semibold underline underline-offset-2">Ver o plano Plus</Link>}
                         </span>
                       </div>
                     )}
