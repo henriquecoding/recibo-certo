@@ -33,6 +33,7 @@ export const CHANGELOG: EntradaChangelog[] = [
       "Os filtros de rubricas (Todas, Fixos, Variáveis, Tempo de trabalho, Subsídios, Faltas, Deslocações) passam a estar todos visíveis, em várias linhas, em vez de escondidos numa faixa que era preciso arrastar.",
       "Os cartões de cada rubrica usam agora toda a largura disponível: em ecrãs pequenos, o montante e o carácter para a Segurança Social deixam de ficar espremidos.",
       "Botões e opções do simulador têm alvos de toque maiores e o texto quebra em vez de sair do ecrã — verificado entre 320 px e 1280 px de largura, em modo claro e escuro.",
+      "Corrigido um erro que fazia o navegador reconstruir a página do simulador logo a seguir a abri-la, por o cartão de exportação não coincidir com o que tinha sido enviado pelo servidor.",
     ],
   },
   {
