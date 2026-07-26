@@ -25,6 +25,7 @@ const TOC = [
   { id: "finalidade", label: "Finalidades e base legal" },
   { id: "armazenamento-local", label: "Plano gratuito: dados locais" },
   { id: "nuvem-pro", label: "Plano Plus: dados na nuvem" },
+  { id: "fiz", label: "Partilha com a FIZ (opcional)" },
   { id: "pagamentos", label: "Pagamentos (Stripe)" },
   { id: "comunicacoes", label: "Comunicações por email" },
   { id: "cookies", label: "Cookies e tecnologias" },
@@ -308,6 +309,7 @@ export default function PrivacidadePage() {
             ["Vercel Inc.", "Alojamento do site e funções serverless", "União Europeia (Frankfurt)", "Acordo de tratamento de dados"],
             ["Stripe", "Processamento de pagamentos da subscrição", "UE / EUA", "PCI-DSS nível 1 + cláusulas contratuais-tipo"],
             ["Resend", "Envio de emails transacionais e alertas", "EUA", "Acordo de tratamento + cláusulas contratuais-tipo"],
+            ["FIZ", "Execução fiscal — só com consentimento explícito ou conta ligada (ver secção própria). Ainda não ativo.", "União Europeia (Portugal)", "Acordo de partilha de dados + acordo de tratamento"],
           ]}
         />
         <Nota tipo="aviso">
@@ -315,6 +317,58 @@ export default function PrivacidadePage() {
           browser. Os subprocessadores de pagamento e email só tratam dados quando crias conta,
           subscreves ou ativas alertas/emails.
         </Nota>
+      </Section>
+
+      {/* Partilha com a FIZ — parceiro de execução fiscal */}
+      <Section id="fiz" title="Partilha com a FIZ (opcional e sob o teu controlo)">
+        <Nota tipo="aviso">
+          Esta secção descreve uma funcionalidade que <strong>ainda não está ativa</strong>. Fica
+          aqui documentada com antecedência para que saibas exatamente o que aconteceria se
+          decidires usá-la. Enquanto não estiver disponível, nenhum dado teu é partilhado com a FIZ.
+        </Nota>
+        <p>
+          A FIZ é um parceiro que executa operações fiscais (faturação certificada, declarações e
+          lembretes de obrigações). O ReciboCerto explica, calcula e prepara; a execução acontece na
+          FIZ. É uma relação comercial remunerada, e nada disto depende do ReciboCerto Plus.
+        </p>
+        <p>
+          <strong>Só há partilha se tu a iniciares.</strong> Existem duas formas, ambas
+          voluntárias e reversíveis:
+        </p>
+        <Tabela
+          colunas={["Situação", "O que é partilhado", "Base legal", "Como reverter"]}
+          linhas={[
+            [
+              "Ler guias e usar simuladores",
+              "Nada. A FIZ não recebe qualquer dado.",
+              "Não se aplica",
+              "Não se aplica",
+            ],
+            [
+              "Enviar uma simulação para continuar na FIZ",
+              "Apenas os campos que vês e assinalas no ecrã de consentimento — tipo de entidade, categoria de atividade, território de IVA e valores estimados. Nunca o NIF, o nome, a morada, o email, o IBAN nem dados dos teus clientes.",
+              "Consentimento (Art. 6.º, n.º 1, al. a) do RGPD)",
+              "Recusar não te faz perder a simulação. Um envio pendente expira automaticamente e pode ser eliminado.",
+            ],
+            [
+              "Ligar a tua conta FIZ",
+              "Um identificador de ligação. Passamos a receber da FIZ o estado das tuas obrigações e declarações para os mostrar aqui.",
+              "Consentimento, através de autorização dada na própria FIZ",
+              "Podes desligar a qualquer momento no teu perfil, ou revogar diretamente na FIZ.",
+            ],
+          ]}
+        />
+        <p>
+          Nunca pedimos nem guardamos as tuas credenciais da FIZ, do Portal das Finanças ou da
+          Segurança Social. A autorização é dada na FIZ e o que guardamos é uma credencial técnica
+          de acesso, cifrada em repouso. Guardamos também um registo do teu consentimento — que
+          campos autorizaste, quando e ao abrigo de que versão desta política — porque é isso que
+          nos permite demonstrar que a partilha foi legítima.
+        </p>
+        <p>
+          A partir do momento em que os dados chegam à FIZ, é a FIZ a responsável pelo tratamento
+          que deles faz, ao abrigo da política de privacidade e do contrato que tiveres com ela.
+        </p>
       </Section>
 
       {/* 10 — Transferências internacionais */}
