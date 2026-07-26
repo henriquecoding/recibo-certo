@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/Icons";
 import EuroBreakdown from "@/components/simulador/EuroBreakdown";
 import { PassoContabilista } from "@/components/simulador/PassoContabilista";
+import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
 import { pct, fmt } from "@/lib/format";
 import {
   IVA_TAXAS,
@@ -1070,6 +1071,32 @@ export default function ModoGuiado({
                   <PassoContabilista
                     faturacaoAnual={brutoAnual}
                     onVoltar={() => setPasso("resultado")}
+                  />
+
+                  {/* Ponto 12.3 da arquitetura: o simulador mantém o resultado
+                      e a memória de cálculo, e ganha um plano de ação com
+                      handoff escolhido pelo utilizador. Não aparece nada
+                      enquanto a integração estiver desligada. */}
+                  <FizPlanoAcao
+                    className="mt-6"
+                    simulador="recibos-verdes"
+                    valores={{
+                      entityType: "INDIVIDUAL",
+                      activityCategory: atividadeEspecifica?.label,
+                      vatTerritory:
+                        regiao === "madeira" ? "MADEIRA" : regiao === "acores" ? "AZORES" : "CONTINENTAL",
+                      vatRegimeEstimate: regimeIVA === "isento" ? "EXEMPT_ART_53" : "NORMAL",
+                      period: "ANNUAL",
+                      grossEstimate: Math.round(brutoAnual),
+                      vatEstimate: Math.round(ivaAnual),
+                      socialSecurityEstimate: Math.round(ssAnual),
+                      irsEstimate: Math.round(irsAnual),
+                    }}
+                    passosPreparacao={[
+                      "Atividade classificada e coeficiente confirmado.",
+                      "Regime de IVA e retenção na fonte determinados.",
+                      "Estimativa anual de IRS e Segurança Social calculada.",
+                    ]}
                   />
                 </m.div>
               )}

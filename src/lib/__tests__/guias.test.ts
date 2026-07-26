@@ -12,6 +12,8 @@ import { APLICABILIDADE, assertAplicabilidadeIntegrity } from "@/lib/guias/aplic
 import { HISTORICO_GUIAS, assertHistoricoIntegrity } from "@/lib/guias/historico";
 import { pesquisarGuias, normalizar, fontesDoGuia, confiancaDoGuia } from "@/lib/guias";
 import { FIZ_GUIDE_ROUTES, GUIAS_SEM_ACAO_FIZ, MANIFESTO_ROTAS_META } from "@/content/fiz-guide-routes";
+import { FIZ_SIMULATOR_ROUTES, SIMULADORES_SEM_ACAO_FIZ, META_ROTAS_SIMULADORES, rotaDoSimulador } from "@/content/fiz-simulator-routes";
+import { CAMPOS_VALIDOS, ROTULO_CAMPO, CAMPOS_NUNCA_ENVIADOS } from "@/lib/fiz/handoff-fields";
 import { destinoFizValido, urlSemDadosSensiveis, PARTNER_SCOPES, USER_SCOPES, SCOPES_LIGACAO_BASICA } from "@/lib/fiz/contracts";
 import { GUIA_SLUGS } from "@/lib/seo";
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
@@ -355,5 +357,65 @@ describe("apresentação derivada — fontes, confiança e pesquisa", () => {
 
   it("uma pesquisa sem correspondência devolve vazio em vez de tudo", () => {
     expect(pesquisarGuias("xpto qwerty zzz")).toEqual([]);
+  });
+});
+
+describe("guias:fiz-contract — simuladores (ponto 12.3 da arquitetura)", () => {
+  it("nenhuma rota de simulador contém URLs", () => {
+    for (const r of FIZ_SIMULATOR_ROUTES) {
+      expect(r.requiredCapability, r.simulador).toMatch(/^[a-z0-9][a-z0-9._-]{2,127}$/);
+      expect(r.fallbackLabel).not.toContain("http");
+      expect(r.promessa).not.toContain("http");
+    }
+  });
+
+  it("todas as rotas de simulador nascem desativadas", () => {
+    expect(META_ROTAS_SIMULADORES.ativas).toBe(0);
+  });
+
+  it("cada simulador ou tem ação ou tem razão documentada", () => {
+    for (const s of SIMULADORES_SEM_ACAO_FIZ) expect(s.razao.length, s.simulador).toBeGreaterThan(30);
+    // Trabalho dependente e heranças nunca encaminham para execução fiscal.
+    const semAcao = SIMULADORES_SEM_ACAO_FIZ.map((s) => s.simulador);
+    expect(semAcao).toContain("recibo-vencimento");
+    expect(semAcao).toContain("simulador-herancas");
+  });
+
+  it("só propõe campos que existem na lista de rótulos", () => {
+    for (const r of FIZ_SIMULATOR_ROUTES) {
+      for (const c of r.camposPropostos) expect(CAMPOS_VALIDOS, `${r.simulador} → ${c}`).toContain(c);
+    }
+  });
+
+  it("nenhum campo proposto é um dado que nunca deve sair", () => {
+    const proibidos = CAMPOS_NUNCA_ENVIADOS.map((c) => c.toLowerCase());
+    for (const campo of CAMPOS_VALIDOS) {
+      const rotulo = ROTULO_CAMPO[campo].toLowerCase();
+      // "NIF", "IBAN", "email" e afins não podem aparecer como campo enviável.
+      for (const p of ["nif", "niss", "iban"]) {
+        expect(proibidos, p).toContain(p === "nif" ? "nif" : p === "niss" ? "niss" : "iban");
+        expect(rotulo.split(/\W+/), `${campo} propõe ${p}`).not.toContain(p);
+      }
+    }
+  });
+
+  it("um simulador com handoff propõe sempre pelo menos um campo", () => {
+    for (const r of FIZ_SIMULATOR_ROUTES) {
+      if (r.dataMode !== "CONSENTED_HANDOFF") continue;
+      expect(r.camposPropostos.length, r.simulador).toBeGreaterThan(0);
+    }
+  });
+
+  it("um simulador sem dados não propõe campos nenhuns", () => {
+    for (const r of FIZ_SIMULATOR_ROUTES) {
+      if (r.dataMode !== "NO_DATA") continue;
+      expect(r.camposPropostos, r.simulador).toEqual([]);
+    }
+  });
+
+  it("o Merchant of Record exige revisão humana e não envia dados", () => {
+    const r = rotaDoSimulador("payout-mor");
+    expect(r?.exigeRevisaoHumana).toBe(true);
+    expect(r?.dataMode).toBe("NO_DATA");
   });
 });

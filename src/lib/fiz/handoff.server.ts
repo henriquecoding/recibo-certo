@@ -30,37 +30,16 @@ import {
   type GuideSourceContext,
 } from "./contracts";
 import { APP_VERSION } from "@/lib/version";
+import { ROTULO_CAMPO, CAMPOS_NUNCA_ENVIADOS, CAMPOS_VALIDOS, type CampoHandoff } from "./handoff-fields";
 
 // ─── Campos apresentáveis ao utilizador ────────────────────────────────
+//  Definidos em `handoff-fields.ts` (isomórfico) e reexportados aqui para
+//  que o servidor e o diálogo de consentimento partilhem exatamente a
+//  mesma lista — divergirem seria abrir a porta a enviar um campo que o
+//  utilizador nunca viu.
 
-export type CampoHandoff =
-  | "entityType" | "activityCategory" | "vatTerritory" | "vatRegimeEstimate" | "socialSecuritySituation"
-  | "grossEstimate" | "vatEstimate" | "withholdingEstimate" | "socialSecurityEstimate" | "irsEstimate"
-  | "period" | "intent" | "sourceGuide";
-
-/** Rótulos em pt-PT — é isto que o utilizador lê no diálogo de consentimento.
-    Se um campo não estiver aqui, não pode ser enviado. */
-export const ROTULO_CAMPO: Record<CampoHandoff, string> = {
-  entityType: "Tipo de entidade (particular, empresário em nome individual ou sociedade)",
-  activityCategory: "Categoria da atividade",
-  vatTerritory: "Território para efeitos de IVA (continente, Madeira ou Açores)",
-  vatRegimeEstimate: "Regime de IVA estimado",
-  socialSecuritySituation: "Situação perante a Segurança Social",
-  grossEstimate: "Valor bruto estimado",
-  vatEstimate: "IVA estimado",
-  withholdingEstimate: "Retenção na fonte estimada",
-  socialSecurityEstimate: "Contribuição estimada para a Segurança Social",
-  irsEstimate: "IRS estimado",
-  period: "Periodicidade da estimativa",
-  intent: "O que pretendes fazer a seguir",
-  sourceGuide: "Guia de onde vieste",
-};
-
-/** Nunca sai daqui, em nenhuma circunstância (ponto 8.2 da arquitetura). */
-export const CAMPOS_NUNCA_ENVIADOS = [
-  "NIF", "NISS", "nome", "morada", "email", "telefone", "IBAN",
-  "dados de clientes", "documentos emitidos", "anexos", "credenciais",
-] as const;
+export { ROTULO_CAMPO, CAMPOS_NUNCA_ENVIADOS, CAMPOS_VALIDOS };
+export type { CampoHandoff };
 
 export interface PropostaHandoff {
   intent: Intent;

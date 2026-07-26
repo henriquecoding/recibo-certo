@@ -6,7 +6,9 @@ import { respostaErro, semCache } from "@/lib/fiz/route-helpers.server";
 import { POLITICA_CONSENTIMENTO_VERSAO, fizServerConfig } from "@/lib/fiz/config";
 import { manifesto } from "@/lib/guias/manifests";
 import { versaoDoGuia } from "@/lib/fiz/guide-routing.server";
-import type { Intent } from "@/lib/fiz/contracts";
+import type { Intent, ProfilePrefill, SimulationSummary } from "@/lib/fiz/contracts";
+import { previewAtivo, destinoDePreview } from "@/lib/fiz/preview.server";
+import { rotaDoSimulador, type SimuladorId } from "@/content/fiz-simulator-routes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,16 +27,33 @@ export async function POST(req: NextRequest) {
   try {
     const corpo = (await req.json().catch(() => null)) as {
       slug?: string;
+      simulador?: SimuladorId;
       intent?: Intent;
       campos?: string[];
       camposAutorizados?: string[];
       profile?: PropostaHandoff["profile"];
       simulationSummary?: PropostaHandoff["simulationSummary"];
+      /** Forma crua vinda dos simuladores, convertida abaixo. */
+      valores?: {
+        entityType?: string; activityCategory?: string; vatTerritory?: string;
+        vatRegimeEstimate?: string; period?: SimulationSummary["period"];
+        grossEstimate?: number; vatEstimate?: number; withholdingEstimate?: number;
+        socialSecurityEstimate?: number; irsEstimate?: number;
+      };
       sourceType?: "guia" | "simulador" | "dashboard";
     } | null;
 
-    if (!corpo?.intent) {
+    // A intenção vem do manifesto/rota, nunca do cliente quando há um
+    // simulador identificado — assim ninguém pode pedir uma intenção que a
+    // superfície de origem não autoriza.
+    const rotaSim = corpo?.simulador ? rotaDoSimulador(corpo.simulador) : undefined;
+    const intent: Intent | undefined = rotaSim?.intent ?? corpo?.intent;
+
+    if (!corpo || !intent) {
       return NextResponse.json({ erro: "Falta a intenção do handoff.", codigo: "invalido" }, { status: 400, headers: semCache });
+    }
+    if (corpo.simulador && !rotaSim) {
+      return NextResponse.json({ erro: "Simulador desconhecido.", codigo: "nao_encontrado" }, { status: 404, headers: semCache });
     }
 
     const m = corpo.slug ? manifesto(corpo.slug) : undefined;
@@ -54,22 +73,59 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Converte os valores crus do simulador para as formas do contrato.
+    const perfilDeValores: ProfilePrefill | undefined = corpo.valores
+      ? {
+          ...(corpo.valores.entityType ? { entityType: corpo.valores.entityType as ProfilePrefill["entityType"] } : {}),
+          ...(corpo.valores.activityCategory ? { activityCategory: corpo.valores.activityCategory } : {}),
+          ...(corpo.valores.vatTerritory ? { vatTerritory: corpo.valores.vatTerritory as ProfilePrefill["vatTerritory"] } : {}),
+          ...(corpo.valores.vatRegimeEstimate ? { vatRegimeEstimate: corpo.valores.vatRegimeEstimate as ProfilePrefill["vatRegimeEstimate"] } : {}),
+        }
+      : undefined;
+
+    const resumoDeValores: SimulationSummary | undefined =
+      corpo.valores?.grossEstimate !== undefined
+        ? {
+            currency: "EUR",
+            period: corpo.valores.period ?? "ANNUAL",
+            grossEstimate: corpo.valores.grossEstimate,
+            ...(corpo.valores.vatEstimate !== undefined ? { vatEstimate: corpo.valores.vatEstimate } : {}),
+            ...(corpo.valores.withholdingEstimate !== undefined ? { withholdingEstimate: corpo.valores.withholdingEstimate } : {}),
+            ...(corpo.valores.socialSecurityEstimate !== undefined ? { socialSecurityEstimate: corpo.valores.socialSecurityEstimate } : {}),
+            ...(corpo.valores.irsEstimate !== undefined ? { irsEstimate: corpo.valores.irsEstimate } : {}),
+          }
+        : undefined;
+
     const proposta: PropostaHandoff = {
-      intent: corpo.intent,
+      intent,
       campos,
-      profile: corpo.profile,
-      simulationSummary: corpo.simulationSummary,
+      profile: corpo.profile ?? perfilDeValores,
+      simulationSummary: corpo.simulationSummary ?? resumoDeValores,
       sourceContext: m
         ? {
             guideSlug: m.slug,
             guideVersion: versaoDoGuia(m.slug),
             topic: m.fizAction?.topic ?? "OTHER",
-            intent: corpo.intent,
+            intent,
             audience: m.audiences[0] ?? "MIXED",
             placement: "NEXT_STEP",
           }
         : undefined,
     };
+
+    // Pré-visualização: mostra-se o percurso completo, incluindo o ecrã de
+    // consentimento, mas nada sai daqui. O destino é uma página nossa.
+    if (previewAtivo()) {
+      return NextResponse.json(
+        {
+          url: destinoDePreview(),
+          preview: true,
+          camposQueSeriamEnviados: autorizados,
+          aviso: "Pré-visualização: nenhum dado foi enviado para a FIZ.",
+        },
+        { headers: semCache },
+      );
+    }
 
     const { handoff, url, consentReceiptId } = await criarHandoff(proposta, autorizados);
 
@@ -87,7 +143,7 @@ export async function POST(req: NextRequest) {
         partner_handoff_id: handoff.id,
         source_type: corpo.sourceType ?? (m ? "guia" : "simulador"),
         source_id: m?.slug ?? null,
-        intent: corpo.intent,
+        intent,
         consent_receipt_id: consentReceiptId,
         consent_policy_version: POLITICA_CONSENTIMENTO_VERSAO,
         consent_fields: autorizados,
