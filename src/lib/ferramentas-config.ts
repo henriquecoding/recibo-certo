@@ -53,7 +53,7 @@ export const FERRAMENTAS: FerramentaMeta[] = [
     descricao:
       "Introduz os valores do teu recibo e descobre se a entidade aplicou bem o IRS e a Segurança Social de 2026. Deteta erros a teu favor.",
     Icon: ShieldCheck,
-    badge: "Pro",
+    badge: "Plus",
   },
   {
     slug: "mapa-contabilistas",

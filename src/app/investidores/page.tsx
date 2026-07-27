@@ -860,7 +860,7 @@ const VISAO = [
   {
     fase: "Agora",
     titulo: "Copiloto fiscal",
-    desc: "Calculadoras, simuladores e alertas para trabalhadores independentes, dependentes e empresas. Plano freemium com Pro.",
+    desc: "Calculadoras, simuladores e alertas para trabalhadores independentes, dependentes e empresas. Plano freemium com Plus.",
     ativo: true,
   },
   {
@@ -878,7 +878,7 @@ const VISAO = [
 ];
 
 const METRICAS_MODELO = [
-  { label: "Modelo", valor: "Freemium + Pro", sub: "SaaS recorrente" },
+  { label: "Modelo", valor: "Freemium + Plus", sub: "SaaS recorrente" },
   { label: "Expansão", valor: "Take rate", sub: "Sobre pagamentos processados" },
   { label: "Retenção", valor: "Alta", sub: "Ferramenta operacional diária" },
   { label: "Distribuição", valor: "PLG + parcerias", sub: "Cada fatura = marketing" },

@@ -8,7 +8,7 @@ import { generateBreadcrumbSchema } from "@/lib/seo";
 import { faqs } from "@/lib/faq";
 
 export const metadata: Metadata = {
-  title: "Planos e Preços — Calculadora Grátis ou Pro",
+  title: "Planos e Preços — Calculadora Grátis ou Plus",
   description:
     "Calculadora de recibos verdes grátis para sempre. O plano Plus traz alertas de prazos, conta na nuvem e exportação para o contabilista. Começa grátis, sem cartão.",
   keywords: [
@@ -21,17 +21,17 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/precos" },
   openGraph: {
-    title: "Planos ReciboCerto — Calculadora Grátis + Pro",
+    title: "Planos ReciboCerto — Calculadora Grátis + Plus",
     description:
-      "Calculadora grátis para sempre. Pro com alertas de prazos, conta na nuvem e exportação. Começa grátis.",
+      "Calculadora grátis para sempre. Plus com alertas de prazos, conta na nuvem e exportação. Começa grátis.",
     url: "https://www.recibocerto.pt/precos",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Planos ReciboCerto — Calculadora Grátis + Pro",
+    title: "Planos ReciboCerto — Calculadora Grátis + Plus",
     description:
-      "Calculadora de recibos verdes grátis. Pro com alertas e nuvem.",
+      "Calculadora de recibos verdes grátis. Plus com alertas e nuvem.",
   },
 };
 

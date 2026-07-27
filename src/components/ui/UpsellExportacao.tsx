@@ -10,7 +10,7 @@ export default function UpsellExportacao({ aberto, onClose }: { aberto: boolean;
   return (
     <AnimatePresence>
       {aberto && (
-        <div className="fixed inset-0 z-[130] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label="Exportar com o Pro">
+        <div className="fixed inset-0 z-[130] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label="Exportar com o Plus">
           <m.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
             className="absolute inset-0 bg-stone-900/45 backdrop-blur-md" onClick={onClose} aria-hidden
@@ -36,13 +36,13 @@ export default function UpsellExportacao({ aberto, onClose }: { aberto: boolean;
                 <Export size={22} />
               </span>
               <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-brand/30 bg-brand-light px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-brand-dark dark:bg-brand/10 dark:text-brand">
-                <Sparkle size={12} /> Funcionalidade Pro
+                <Sparkle size={12} /> Funcionalidade Plus
               </div>
               <h2 className="mt-3 font-display text-xl font-semibold text-stone-800 dark:text-stone-100">
                 Exportar é uma funcionalidade Plus
               </h2>
               <p className="mt-1.5 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
-                Já usaste a tua exportação de experimentação neste dispositivo. Passa a Pro para
+                Já usaste a tua exportação de experimentação neste dispositivo. Passa ao Plus para
                 exportares e guardares sem limites — em PDF e CSV, sincronizado na nuvem.
               </p>
 
@@ -64,7 +64,7 @@ export default function UpsellExportacao({ aberto, onClose }: { aberto: boolean;
                   onClick={onClose}
                   className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:bg-brand-dark"
                 >
-                  <Sparkle size={16} /> Conhecer o Pro
+                  <Sparkle size={16} /> Conhecer o Plus
                 </Link>
                 <button
                   type="button"

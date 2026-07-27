@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import LegalPage, {
   Section, Sub, Nota, Lista, ListaCheck, Tabela,
 } from "@/components/LegalPage";
+import { precoPlusFormatado } from "@/lib/entitlements";
 
 export const metadata: Metadata = {
   title: "Termos de Utilização — ReciboCerto",
@@ -87,7 +88,7 @@ export default function TermosPage() {
           </p>
         </Sub>
 
-        <Sub title="Conta Pro (quando disponível)">
+        <Sub title="Conta Plus">
           <p>
             Quando o plano Plus for lançado, poderás criar uma conta com endereço de email e
             palavra-passe. Ao criares conta, comprometeste a:
@@ -126,8 +127,8 @@ export default function TermosPage() {
               "Calculadora, simulador, comparador, prazos, arquivo local (localStorage)",
             ],
             [
-              "Pro",
-              "5,99 €/mês ou 47,99 €/ano",
+              "Plus",
+              `${precoPlusFormatado()}/mês`,
               "Sincronização na nuvem, exportação avançada, alertas por email, multi-dispositivo",
             ],
           ]}
@@ -151,7 +152,7 @@ export default function TermosPage() {
           <p>
             As subscrições do plano Plus renovam-se automaticamente no período acordado (mensal
             ou anual). Podes cancelar a qualquer momento a partir da área de conta; o acesso
-            Pro mantém-se até ao final do período já pago.
+            Plus mantém-se até ao final do período já pago.
           </p>
         </Sub>
       </Section>
@@ -297,7 +298,7 @@ export default function TermosPage() {
         <Sub title="Alterações ao serviço">
           <p>
             Podemos adicionar, modificar ou remover funcionalidades a qualquer momento.
-            Para alterações significativas que afetem negativamente utilizadores Pro,
+            Para alterações significativas que afetem negativamente utilizadores Plus,
             daremos aviso prévio de 30 dias.
           </p>
         </Sub>
@@ -308,7 +309,7 @@ export default function TermosPage() {
           <Lista
             items={[
               "Atualizaremos a data \"Última atualização\" no topo desta página",
-              "Notificaremos utilizadores Pro por email com 15 dias de antecedência para alterações materiais",
+              "Notificaremos utilizadores Plus por email com 15 dias de antecedência para alterações materiais",
               "A utilização continuada do serviço após a data de entrada em vigor constitui aceitação dos novos termos",
             ]}
           />
@@ -319,7 +320,7 @@ export default function TermosPage() {
       <Section id="rescisao" title="Rescisão">
         <Sub title="Rescisão pelo utilizador">
           <p>
-            Podes deixar de utilizar o ReciboCerto a qualquer momento. Para contas Pro, podes
+            Podes deixar de utilizar o ReciboCerto a qualquer momento. Para contas Plus, podes
             cancelar a subscrição e solicitar a eliminação da conta enviando um email para{" "}
             <a
               href="mailto:recibocerto.pt@gmail.com"
@@ -338,12 +339,12 @@ export default function TermosPage() {
             items={[
               "Violares estes Termos de Utilização de forma grave ou reiterada",
               "Utilizares a plataforma para atividades ilegais",
-              "O serviço for encerrado (com aviso prévio de 90 dias para utilizadores Pro)",
+              "O serviço for encerrado (com aviso prévio de 90 dias para utilizadores Plus)",
             ]}
           />
         </Sub>
         <p className="mt-3">
-          Em caso de encerramento do serviço Pro, reembolsaremos o valor proporcional do
+          Em caso de encerramento do serviço Plus, reembolsaremos o valor proporcional do
           período pago não utilizado.
         </p>
       </Section>

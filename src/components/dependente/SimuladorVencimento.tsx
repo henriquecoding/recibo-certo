@@ -441,7 +441,7 @@ export function SimuladorVencimento() {
 
   return (
     <div className="my-8 space-y-5">
-      {/* Entrada principal: importar recibo em PDF (Pro) — preenche o simulador e a auditoria */}
+      {/* Entrada principal: importar recibo em PDF (Plus) — preenche o simulador e a auditoria */}
       <div>
         <ImportarReciboPDF onAplicar={aplicarReciboPdf} />
         {reciboPdf && (reciboPdf.empresaNome || reciboPdf.funcao || reciboPdf.mes !== undefined) && (
@@ -1137,7 +1137,7 @@ export function SimuladorVencimento() {
         />
       </div>
 
-      {/* Relatório PDF + exportação CSV — extra Pro (bloqueio misto desbloqueia ambos) */}
+      {/* Relatório PDF + exportação CSV — extra Plus (bloqueio misto desbloqueia ambos) */}
       <div className="mt-4">
         <ProGate
           title="Relatório em PDF e exportação CSV"
@@ -1189,7 +1189,7 @@ export function SimuladorVencimento() {
           <span className="flex items-center gap-1.5 text-xs font-semibold text-stone-600 dark:text-stone-400">
             <History size={14} /> Guardar cenário
             <span className="font-normal text-stone-400">
-              {naNuvem ? "· sincronizado (Pro)" : `· plano grátis: ${limite} cenário`}
+              {naNuvem ? "· sincronizado (Plus)" : `· plano grátis: ${limite} cenário`}
             </span>
           </span>
           <button

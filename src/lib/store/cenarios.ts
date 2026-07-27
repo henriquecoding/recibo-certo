@@ -181,7 +181,7 @@ export function useCenarios() {
           erro:
             plano === "plus"
               ? "Inicia sessão para sincronizar os teus cenários na nuvem."
-              : `O plano grátis guarda ${LIMITE_FREE} cenário. Passa a Pro para guardares todos os cenários, sincronizados na nuvem.`,
+              : `O plano grátis guarda ${LIMITE_FREE} cenário. Passa ao Plus para guardares todos os cenários, sincronizados na nuvem.`,
         };
       }
       const cenario: Cenario = { ...novo, id: uid(), criadoEm: new Date().toISOString() };

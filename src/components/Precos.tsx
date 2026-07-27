@@ -101,7 +101,9 @@ export default function Precos() {
           </p>
         </Reveal>
 
-        <div className={`grid items-start gap-4 ${mostrarFiz ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        {/* Dois planos, duas colunas. A FIZ saiu daqui de propósito: estar na
+            mesma grelha fazia-a ler-se como um terceiro escalão a pagar. */}
+        <div className="mx-auto grid max-w-3xl items-start gap-4 sm:grid-cols-2">
           {/* ── Grátis ── */}
           <Reveal>
             <div className="flex h-full flex-col rounded-4xl border border-stone-100 bg-white p-6 shadow-card sm:p-7">
@@ -148,7 +150,7 @@ export default function Precos() {
                 <span className="font-display text-4xl font-semibold text-ink tabular-nums">{precoFormatado}</span>
                 <span className="text-xs text-stone-400">por mês</span>
               </div>
-              <p className="mt-1 text-xs text-stone-400">Inclui tudo o que pertencia ao Pro e ao Quiz Master.</p>
+              <p className="mt-1 text-xs text-stone-400">Inclui tudo o que antes se pagava à parte.</p>
 
               <p className="mt-4 text-sm font-semibold text-stone-700">Tudo do Grátis, mais:</p>
               <ul className="mt-3 flex-1 space-y-2.5">
@@ -170,16 +172,6 @@ export default function Precos() {
             </m.div>
           </Reveal>
 
-          {/* ── Parceria FIZ ──
-              Não é um plano nosso: é a fronteira entre o que fazemos e o
-              que a FIZ executa, ao abrigo de um contrato do utilizador com
-              ela. Aparece à direita do Plus, para que a comparação seja
-              imediata — e nunca finge ser uma terceira subscrição. */}
-          {mostrarFiz && (
-            <Reveal delay={0.16}>
-              <FizParceriaCard />
-            </Reveal>
-          )}
         </div>
 
         {/* Garantias */}
@@ -223,6 +215,25 @@ export default function Precos() {
             </div>
           </details>
         </Reveal>
+
+        {/* ── Parceria FIZ ─────────────────────────────────────────────
+            Fora da grelha e depois da comparação de planos, com um
+            separador explícito. A ordem é a mensagem: primeiro decides o
+            que pagas ao ReciboCerto (0 € ou 1,99 €); só depois se explica
+            quem executa o que nós não executamos. Sem preço e sem botão de
+            subscrição — nada aqui compete com o "Subscrever o Plus". */}
+        {mostrarFiz && (
+          <Reveal className="mt-14">
+            <div className="mb-6 flex items-center gap-4" aria-hidden>
+              <span className="h-px flex-1 bg-stone-200 dark:bg-stone-700" />
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+                E depois dos planos
+              </span>
+              <span className="h-px flex-1 bg-stone-200 dark:bg-stone-700" />
+            </div>
+            <FizParceriaCard />
+          </Reveal>
+        )}
       </div>
     </section>
   );

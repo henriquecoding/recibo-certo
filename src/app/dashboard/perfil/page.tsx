@@ -341,7 +341,7 @@ function CupaoCard({
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">
-              {cupao.meses} meses Pro grátis
+              {cupao.meses} meses Plus grátis
             </p>
             <p className="text-[11px] text-stone-500">
               Caminho {cupao.caminho === "medio" ? "médio" : "difícil"}
@@ -704,7 +704,7 @@ export default function PerfilPage() {
                   </div>
                 )}
 
-                {/* Pro-only: photo upload button */}
+                {/* Só com Plus: carregar fotografia */}
                 {user && plano === "plus" && !avatarUploading && (
                   <div className="absolute -bottom-1.5 -right-1.5 z-10">
                     <button
@@ -818,7 +818,7 @@ export default function PerfilPage() {
                 </h1>
                 {plano === "plus" ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-semibold text-white">
-                    <Star size={10} /> Pro
+                    <Star size={10} /> Plus
                   </span>
                 ) : (
                   <Link
@@ -1189,7 +1189,7 @@ export default function PerfilPage() {
                     </div>
                   </div>
 
-                  {/* Quiz Stats — Pro gets detailed view, Free gets summary */}
+                  {/* Estatísticas do Quiz — vista detalhada no Plus, resumo no grátis */}
                   <ProGate
                     title="Estatísticas detalhadas"
                     description="Acede a estatísticas avançadas do teu desempenho no Quiz Fiscal com o plano Plus."
@@ -1371,7 +1371,7 @@ export default function PerfilPage() {
                   <Trophy size={18} className="mb-2 text-stone-300" />
                   <p className="text-xs font-medium text-stone-500">Sem cupões ainda</p>
                   <p className="mt-1 max-w-[200px] text-[11px] text-stone-400">
-                    Completa desafios no Quiz Fiscal para ganhar meses Pro grátis
+                    Completa desafios no Quiz Fiscal para ganhar meses Plus grátis
                   </p>
                 </div>
               ) : (
@@ -1388,7 +1388,7 @@ export default function PerfilPage() {
               )}
             </div>
 
-            {/* Saúde Fiscal — Pro feature */}
+            {/* Saúde Fiscal — funcionalidade Plus */}
             <ProGate
               title="Saúde Fiscal"
               description="Analisa a saúde da tua situação fiscal com indicadores detalhados. Disponível no plano Plus."

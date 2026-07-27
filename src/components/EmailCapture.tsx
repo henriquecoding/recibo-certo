@@ -56,7 +56,7 @@ export default function EmailCapture({ fonte = "landing" }: { fonte?: string }) 
           variants={fadeUp}
           className="mb-8 text-sm leading-relaxed text-green-100"
         >
-          Com o Pro tens alertas automáticos antes de cada entrega, histórico na
+          Com o Plus tens alertas automáticos antes de cada entrega, histórico na
           nuvem e exportação para contabilista — tudo o que precisas para nunca
           falhares um prazo.
         </m.p>

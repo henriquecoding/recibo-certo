@@ -913,8 +913,8 @@ export default function SimuladorCliente() {
         </div>
       )}
 
-      <ProHint id="guardar-cenario" icon={<ChartProjection size={18} />} cta="Conhecer o Pro" className="mt-6">
-        Gostavas de guardar esta simulação e compará-la com outros cenários ao longo do ano? Isso faz parte do Pro.
+      <ProHint id="guardar-cenario" icon={<ChartProjection size={18} />} cta="Conhecer o Plus" className="mt-6">
+        Gostavas de guardar esta simulação e compará-la com outros cenários ao longo do ano? Isso faz parte do Plus.
       </ProHint>
       <div className="mt-4"><PartnerSpot context="simulador" /></div>
 

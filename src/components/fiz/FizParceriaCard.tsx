@@ -4,23 +4,25 @@ import FizLogo from "./FizLogo";
 import { PLUS } from "@/lib/entitlements";
 
 // ═══════════════════════════════════════════════════════════════════════
-//  PAINEL DA PARCERIA — ao lado dos planos
+//  FAIXA DA PARCERIA — depois dos planos, fora da grelha
 //  ---------------------------------------------------------------------
-//  Não é um terceiro plano. É a explicação da fronteira: onde acaba o
-//  ReciboCerto e onde começa a FIZ.
+//  A primeira versão era a terceira coluna da grelha de planos. O comentário
+//  dizia "nunca finge ser uma terceira subscrição" e o layout dizia o
+//  contrário: três cartões lado a lado, com listas de itens iguais às dos
+//  planos, lidos de uma vez como "Grátis · Plus · FIZ". Quem olha de relance
+//  conclui que há um terceiro escalão a pagar.
 //
-//  Duas decisões de desenho:
+//  Agora é uma FAIXA, e a diferença é estrutural, não decorativa:
 //
-//  1. A jornada em quatro passos é o coração do painel. É ela que responde
-//     à pergunta que o utilizador realmente faz — "então e depois de eu
-//     saber quanto pago, quem é que faz?" — e mostra visualmente que os
-//     três primeiros passos são verdes (nossos) e só o último é amarelo
-//     (da FIZ). A cor faz o trabalho que um parágrafo não faria.
-//
-//  2. O bloco "O que o Plus não é" fica no fim, e não escondido. A confusão
-//     mais provável de quem lê esta página é achar que 1,99 € compra
-//     faturação certificada. Dizê-lo de forma explícita vale mais do que
-//     qualquer benefício adicional que pudéssemos listar.
+//  1. Está fora da grelha e depois dela. Sai da comparação de preços porque
+//     não é um preço — é o que acontece a seguir a escolheres.
+//  2. Não tem preço nem botão de subscrição. O único destino é explicativo.
+//     Nada aqui compete com o "Subscrever o Plus".
+//  3. A primeira frase diz o que isto NÃO é. É a dúvida mais provável de
+//     quem vem de uma página de planos, por isso é respondida antes de
+//     qualquer benefício.
+//  4. A cor faz o resto: os passos que são nossos ficam verdes, o da FIZ
+//     fica amarelo. A fronteira vê-se sem se ler.
 // ═══════════════════════════════════════════════════════════════════════
 
 const JORNADA = [
@@ -41,123 +43,125 @@ export default function FizParceriaCard({ className = "" }: { className?: string
   return (
     <section
       aria-labelledby="fiz-parceria"
-      className={`flex h-full flex-col overflow-hidden rounded-4xl border border-fiz-200 bg-fiz-50 shadow-card ${className}`}
+      className={`overflow-hidden rounded-4xl border border-fiz-200 bg-fiz-50 ${className}`}
     >
-      {/* Cabeçalho: a marca da FIZ com o espaço que uma marca de parceiro
-          merece, sem competir com o cartão do Plus ao lado. */}
-      <div className="border-b border-fiz-200 px-6 pb-5 pt-6">
-        <div className="flex items-center gap-3">
-          <FizLogo size={44} className="flex-shrink-0 rounded-xl shadow-card" />
+      {/* ── Cabeçalho: o que isto não é, antes do que é ────────────── */}
+      <div className="border-b border-fiz-200 px-6 py-6 sm:px-8 sm:py-7">
+        <div className="flex flex-wrap items-center gap-3">
+          <FizLogo size={40} className="flex-shrink-0 rounded-xl shadow-card" />
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-fiz-700">
-              Parceria
+              Parceria · não é um plano
             </p>
-            <h3 id="fiz-parceria" className="font-display text-lg font-semibold leading-tight text-ink">
-              Execução fiscal com a FIZ
+            <h3 id="fiz-parceria" className="font-display text-xl font-semibold leading-tight text-ink">
+              Depois de decidires, quem executa
             </h3>
           </div>
         </div>
 
-        <p className="mt-3 text-sm leading-relaxed text-stone-600 dark:text-stone-400">
-          O ReciboCerto nunca vai emitir faturas nem submeter declarações por ti — não é o que
-          fazemos bem. Fazemos-te <strong className="text-stone-800 dark:text-stone-200">perceber</strong>{" "}
-          e <strong className="text-stone-800 dark:text-stone-200">preparar</strong>. A execução
-          fica com quem está certificado para a fazer.
+        {/* A frase que evita a confusão desta página, dita primeiro. */}
+        <p className="mt-4 max-w-3xl rounded-2xl bg-white px-4 py-3 text-sm leading-relaxed text-stone-700 dark:bg-stone-900 dark:text-stone-300">
+          <strong className="text-stone-900 dark:text-stone-100">Não tens de subscrever nada disto aqui.</strong>{" "}
+          A FIZ é um parceiro independente, com preços e contrato próprios — não faz parte dos
+          planos do ReciboCerto nem do Plus. Isto está nesta página só para saberes onde
+          acabamos nós e onde começa quem emite e declara.
         </p>
       </div>
 
-      {/* Jornada — onde acaba um e começa o outro */}
-      <div className="border-b border-fiz-200 px-6 py-5">
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
-          Do que precisas de saber ao que fica feito
-        </p>
-        <ol className="space-y-2.5">
-          {JORNADA.map((passo, i) => (
-            <li key={passo.rotulo} className="flex items-start gap-3">
-              <span
-                aria-hidden
-                className={`mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg text-[11px] font-semibold tabular-nums ${
-                  passo.nosso
-                    ? "bg-brand-light text-brand-dark"
-                    : "bg-fiz text-fiz-ink shadow-card"
-                }`}
-              >
-                {i + 1}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">
-                    {passo.rotulo}
+      {/* ── Corpo: duas colunas em ecrã largo, empilhadas no telemóvel ── */}
+      <div className="grid gap-6 px-6 py-6 sm:px-8 sm:py-7 lg:grid-cols-2 lg:gap-10">
+        {/* Jornada — onde acaba um e começa o outro */}
+        <div>
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+            Do que precisas de saber ao que fica feito
+          </p>
+          <ol className="space-y-2.5">
+            {JORNADA.map((passo, i) => (
+              <li key={passo.rotulo} className="flex items-start gap-3">
+                <span
+                  aria-hidden
+                  className={`mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg text-[11px] font-semibold tabular-nums ${
+                    passo.nosso ? "bg-brand-light text-brand-dark" : "bg-fiz text-fiz-ink shadow-card"
+                  }`}
+                >
+                  {i + 1}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">
+                      {passo.rotulo}
+                    </span>
+                    <span
+                      className={`text-[10px] font-semibold uppercase tracking-wide ${
+                        passo.nosso ? "text-brand-dark" : "text-fiz-700"
+                      }`}
+                    >
+                      {passo.nosso ? "ReciboCerto" : "FIZ"}
+                    </span>
                   </span>
-                  <span
-                    className={`text-[10px] font-semibold uppercase tracking-wide ${
-                      passo.nosso ? "text-brand-dark" : "text-fiz-700"
-                    }`}
-                  >
-                    {passo.nosso ? "ReciboCerto" : "FIZ"}
+                  <span className="mt-0.5 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+                    {passo.desc}
                   </span>
                 </span>
-                <span className="mt-0.5 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-                  {passo.desc}
+              </li>
+            ))}
+          </ol>
+
+          <p className="mt-4 flex items-start gap-2 rounded-2xl bg-white px-3 py-2.5 text-xs leading-relaxed text-stone-600 dark:bg-stone-900 dark:text-stone-400">
+            <ShieldCheck size={14} className="mt-0.5 flex-shrink-0 text-brand" />
+            <span>
+              Ligar a conta e enviar uma simulação é <strong>gratuito</strong> e não exige o Plus.
+              Vês sempre os campos exatos antes de autorizar, e podes desligar quando quiseres.
+            </span>
+          </p>
+        </div>
+
+        {/* O que a FIZ trata + a fronteira comercial */}
+        <div>
+          <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+            O que a FIZ trata, se e quando quiseres
+          </p>
+          <ul className="space-y-2">
+            {O_QUE_A_FIZ_FAZ.map((item) => (
+              <li key={item} className="flex items-start gap-2.5">
+                <span className="mt-0.5 flex-shrink-0 text-fiz-700">
+                  <Check size={15} />
                 </span>
-              </span>
-            </li>
-          ))}
-        </ol>
+                <span className="text-sm leading-relaxed text-stone-600 dark:text-stone-400">{item}</span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-5 rounded-2xl border border-fiz-200 bg-white/70 px-4 py-3.5 dark:bg-stone-900/40">
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-stone-700 dark:text-stone-200">
+              <Lock size={13} className="text-fiz-700" />
+              Sobre o Plus, para não haver dúvidas
+            </p>
+            <ul className="space-y-1.5">
+              {PLUS.naoInclui.map((n) => (
+                <li key={n} className="flex items-start gap-2 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+                  <span aria-hidden className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-fiz-400" />
+                  {n}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </div>
 
-      {/* O que a FIZ trata */}
-      <div className="flex-1 px-6 py-5">
-        <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
-          O que a FIZ trata
+      {/* ── Rodapé: um só destino, e é explicativo ─────────────────── */}
+      <div className="flex flex-col gap-3 border-t border-fiz-200 bg-white/60 px-6 py-5 dark:bg-stone-900/40 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <p className="max-w-xl text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+          A FIZ é um parceiro independente. A parceria é remunerada e o ReciboCerto mantém
+          liberdade editorial sobre o que escreve.
         </p>
-        <ul className="space-y-2">
-          {O_QUE_A_FIZ_FAZ.map((item) => (
-            <li key={item} className="flex items-start gap-2.5">
-              <span className="mt-0.5 flex-shrink-0 text-fiz-700">
-                <Check size={15} />
-              </span>
-              <span className="text-sm leading-relaxed text-stone-600 dark:text-stone-400">{item}</span>
-            </li>
-          ))}
-        </ul>
-
-        <p className="mt-4 flex items-start gap-2 rounded-2xl bg-white px-3 py-2.5 text-xs leading-relaxed text-stone-600 dark:bg-stone-900 dark:text-stone-400">
-          <ShieldCheck size={14} className="mt-0.5 flex-shrink-0 text-brand" />
-          <span>
-            Ligar a conta e enviar uma simulação é <strong>gratuito</strong> e não exige o Plus.
-            Vês sempre os campos exatos antes de autorizar, e podes desligar quando quiseres.
-          </span>
-        </p>
-      </div>
-
-      {/* A fronteira comercial, dita sem rodeios */}
-      <div className="border-t border-fiz-200 bg-white/60 px-6 py-5 dark:bg-stone-900/40">
-        <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-stone-700 dark:text-stone-200">
-          <Lock size={13} className="text-fiz-700" />
-          Para que não haja dúvidas
-        </p>
-        <ul className="space-y-1.5">
-          {PLUS.naoInclui.map((n) => (
-            <li key={n} className="flex items-start gap-2 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-              <span aria-hidden className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-fiz-400" />
-              {n}
-            </li>
-          ))}
-        </ul>
-
         <Link
           href="/integracoes/fiz"
-          className="mt-4 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl border border-fiz-300 bg-white px-4 py-2.5 text-sm font-semibold text-fiz-900 transition-colors hover:bg-fiz-50 dark:bg-stone-900"
+          className="inline-flex min-h-[44px] flex-shrink-0 items-center justify-center gap-2 rounded-2xl border border-fiz-300 bg-white px-5 py-2.5 text-sm font-semibold text-fiz-900 transition-colors hover:bg-fiz-50 dark:bg-stone-900"
         >
           Como funciona a parceria
           <ArrowRight size={15} />
         </Link>
-
-        <p className="mt-2.5 text-center text-[11px] leading-relaxed text-stone-400">
-          A FIZ é um parceiro independente. A parceria é remunerada e o ReciboCerto mantém
-          liberdade editorial sobre o que escreve.
-        </p>
       </div>
     </section>
   );

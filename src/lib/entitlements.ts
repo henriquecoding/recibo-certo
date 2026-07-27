@@ -64,6 +64,17 @@ export const PLUS = {
   nome: "Recibo Certo Plus",
   precoMensal: 1.99,
   moeda: "EUR",
+  /**
+   * Não há plano anual. É uma decisão de produto, não um esquecimento: a
+   * página de planos promete "um plano só, sem escadaria", e um seletor
+   * mensal/anual é uma escadaria.
+   *
+   * Este valor é a ÚNICA origem do preço. Estava escrito à mão em quatro
+   * sítios — página pública (1,99 €), checkout (5,99 €), Termos (5,99 €) e
+   * emails (5,99 €) — e a página pública anunciava um preço diferente
+   * daquele que era cobrado.
+   */
+  temAnual: false,
   /** O que o Plus NÃO é — a confusão mais provável, por isso está aqui. */
   naoInclui: [
     "Não inclui nenhum plano nem serviço pago da FIZ.",
@@ -71,6 +82,14 @@ export const PLUS = {
     "Não emite documentos fiscais nem submete declarações.",
   ],
 } as const;
+
+/** "1,99 €" — a forma que aparece em toda a interface e nos emails. */
+export const precoPlusFormatado = (): string =>
+  PLUS.precoMensal.toLocaleString("pt-PT", {
+    style: "currency",
+    currency: PLUS.moeda,
+    minimumFractionDigits: 2,
+  });
 
 /**
  * O Quiz Master deixou de existir como subscrição separada (ponto 11.4):

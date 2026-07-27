@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     .in("status", ["active", "trialing"])
     .limit(1);
   if (!subs || subs.length === 0) {
-    return NextResponse.json({ erro: "Funcionalidade Pro." }, { status: 403 });
+    return NextResponse.json({ erro: "Funcionalidade Plus." }, { status: 403 });
   }
 
   const body = (await req.json()) as {

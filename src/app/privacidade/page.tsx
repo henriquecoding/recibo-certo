@@ -166,8 +166,8 @@ export default function PrivacidadePage() {
           colunas={["Finalidade", "Dados utilizados", "Base legal"]}
           linhas={[
             ["Prestar as calculadoras e simuladores", "Dados introduzidos (locais)", "Execução de contrato / interesse legítimo (art.º 6.º/1 b) e f)"],
-            ["Criar e gerir a conta Pro", "Email, autenticação", "Execução de contrato (art.º 6.º/1 b)"],
-            ["Guardar e sincronizar os teus dados na nuvem (Pro)", "Recibos, simulações, preferências", "Execução de contrato (art.º 6.º/1 b)"],
+            ["Criar e gerir a conta Plus", "Email, autenticação", "Execução de contrato (art.º 6.º/1 b)"],
+            ["Guardar e sincronizar os teus dados na nuvem (Plus)", "Recibos, simulações, preferências", "Execução de contrato (art.º 6.º/1 b)"],
             ["Processar pagamentos da subscrição", "Email, estado da subscrição", "Execução de contrato (art.º 6.º/1 b)"],
             ["Enviar alertas e emails essenciais do serviço", "Email, preferências de alerta", "Execução de contrato / consentimento (art.º 6.º/1 b) e a)"],
             ["Segurança e prevenção de fraude", "Logs de infraestrutura, IP", "Interesse legítimo (art.º 6.º/1 f)"],
@@ -207,7 +207,7 @@ export default function PrivacidadePage() {
         </p>
       </Section>
 
-      {/* 5 — Nuvem Pro */}
+      {/* 5 — Nuvem Plus */}
       <Section id="nuvem-pro" title="Plano Plus: dados guardados na nuvem">
         <p>
           No plano Plus, para permitir o acesso a partir de vários dispositivos e a salvaguarda dos
@@ -240,7 +240,7 @@ export default function PrivacidadePage() {
       {/* 6 — Pagamentos */}
       <Section id="pagamentos" title="Pagamentos (Stripe)">
         <p>
-          Os pagamentos da subscrição Pro são processados pela{" "}
+          Os pagamentos da subscrição Plus são processados pela{" "}
           <strong className="text-stone-700 dark:text-stone-200">Stripe</strong>, um processador de
           pagamentos certificado PCI-DSS de nível 1. Ao subscreveres:
         </p>
@@ -393,7 +393,7 @@ export default function PrivacidadePage() {
           colunas={["Tipo de dado", "Período de conservação", "Motivo"]}
           linhas={[
             ["Dados do plano gratuito (localStorage)", "Indefinido — sob o teu controlo", "Armazenados localmente no teu browser"],
-            ["Dados da conta e da nuvem (Pro)", "Enquanto a conta estiver ativa", "Prestação do serviço"],
+            ["Dados da conta e da nuvem (Plus)", "Enquanto a conta estiver ativa", "Prestação do serviço"],
             ["Após eliminação da conta", "Até 30 dias", "Período de recuperação contra eliminação acidental"],
             ["Dados de faturação/subscrição", "Até 10 anos", "Obrigações legais e fiscais (faturação)"],
             ["Email de comunicações opcionais", "Até cancelares a subscrição", "Consentimento"],

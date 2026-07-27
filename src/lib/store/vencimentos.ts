@@ -247,7 +247,7 @@ export function useVencimentos() {
   const guardar = useCallback(
     (novo: NovoCenario): { erro?: string } => {
       if (!naNuvem && cenarios.length >= LIMITE_FREE) {
-        return { erro: `Plano grátis guarda até ${LIMITE_FREE} cenários. Passa a Pro para histórico ilimitado na nuvem.` };
+        return { erro: `Plano grátis guarda até ${LIMITE_FREE} cenários. Passa ao Plus para histórico ilimitado na nuvem.` };
       }
       const cenario: CenarioVencimento = { ...novo, id: uid(), criadoEm: new Date().toISOString() };
       const proximos = ordenar([cenario, ...cenarios]);

@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     .in("status", ["active", "trialing"]);
 
   if (subErr || !subs || subs.length === 0) {
-    return NextResponse.json({ msg: "Sem subscritores Pro ativos.", enviados: 0 });
+    return NextResponse.json({ msg: "Sem subscritores Plus ativos.", enviados: 0 });
   }
 
   const userIds = subs.map((s: { user_id: string }) => s.user_id);

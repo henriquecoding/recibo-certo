@@ -1,3 +1,5 @@
+import { precoPlusFormatado } from "@/lib/entitlements";
+
 const BRAND = "#1D9E75";
 const BRAND_DARK = "#0F6E56";
 const INK = "#1C1917";
@@ -112,12 +114,15 @@ export function emailAlertaPrazo(prazos: { titulo: string; descricao: string; da
 }
 
 export function emailSubscricaoAtivada(intervalo: "monthly" | "annual"): { subject: string; html: string } {
-  const periodo = intervalo === "annual" ? "anual (47,99 €/ano)" : "mensal (5,99 €/mês)";
+  // O preço vem de `PLUS`. Escrito à mão, este email já anunciou 5,99 €
+  // enquanto a página de planos dizia 1,99 €.
+  const periodo =
+    intervalo === "annual" ? "anual" : `mensal (${precoPlusFormatado()}/mês)`;
 
   return {
-    subject: "ReciboCerto Pro ativado!",
+    subject: "Recibo Certo Plus ativado!",
     html: layout(`
-      <h2 style="margin:0 0 16px;font-size:20px;font-weight:700;color:${INK};">O teu Pro está ativo!</h2>
+      <h2 style="margin:0 0 16px;font-size:20px;font-weight:700;color:${INK};">O teu Plus está ativo!</h2>
       <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:${MUTED};">
         A tua subscrição <strong style="color:${INK};">${periodo}</strong> foi ativada com sucesso. Agora tens acesso a:
       </p>
@@ -191,7 +196,7 @@ export function emailGuardiaoFiscal(input: GuardiaoInput): { subject: string; ht
       </table>
       ${botao("Ver detalhes no painel", "https://www.recibocerto.pt/dashboard")}
       <p style="margin:20px 0 0;font-size:12px;color:#A8A29E;text-align:center;">
-        Recebes este email porque tens alertas ativos no ReciboCerto Pro.
+        Recebes este email porque tens alertas ativos no Recibo Certo Plus.
       </p>
     `),
   };
@@ -258,11 +263,11 @@ export function emailAlertaSS(trimestre: string, valor: number, prazo: string): 
 
 export function emailSubscricaoCancelada(): { subject: string; html: string } {
   return {
-    subject: "Subscrição Pro cancelada — vamos sentir a tua falta",
+    subject: "Subscrição Plus cancelada — vamos sentir a tua falta",
     html: layout(`
       <h2 style="margin:0 0 16px;font-size:20px;font-weight:700;color:${INK};">Subscrição cancelada</h2>
       <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:${MUTED};">
-        A tua subscrição Pro foi cancelada. O acesso às funcionalidades Pro mantém-se até ao fim do período atual.
+        A tua subscrição Plus foi cancelada. O acesso às funcionalidades Plus mantém-se até ao fim do período atual.
       </p>
       <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:${MUTED};">
         A calculadora, o simulador de IRS e o comparador continuam grátis para sempre.
@@ -270,7 +275,7 @@ export function emailSubscricaoCancelada(): { subject: string; html: string } {
       <p style="margin:0;font-size:14px;line-height:1.7;color:${MUTED};">
         Se mudares de ideias, podes reativar a qualquer momento.
       </p>
-      ${botao("Reativar o Pro", "https://www.recibocerto.pt/dashboard/upgrade")}
+      ${botao("Reativar o Plus", "https://www.recibocerto.pt/dashboard/upgrade")}
     `),
   };
 }

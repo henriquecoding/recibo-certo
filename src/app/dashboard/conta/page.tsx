@@ -271,7 +271,7 @@ function SecaoSubscricao() {
     <div className="mt-5 flex items-center justify-between rounded-2xl border border-stone-100 bg-stone-50 px-4 py-3 dark:border-stone-800 dark:bg-stone-800">
       <div>
         <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">Plano Grátis</span>
-        <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">Passa ao Pro para desbloquear alertas, nuvem e exportação.</p>
+        <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">Passa ao Plus para desbloquear alertas, nuvem e exportação.</p>
       </div>
       <a
         href="/dashboard/upgrade"

@@ -35,7 +35,7 @@ const PASSOS: Passo[] = [
     icon: <Receipt size={26} />,
     titulo: "Começa pelo teu primeiro recibo",
     descricao:
-      "Regista um recibo e vê na hora quanto fica disponível para gastar. Os teus dados ficam só neste dispositivo — mais tarde, com o Pro, podes guardá-los na nuvem e receber alertas dos prazos por email.",
+      "Regista um recibo e vê na hora quanto fica disponível para gastar. Os teus dados ficam só neste dispositivo — mais tarde, com o Plus, podes guardá-los na nuvem e receber alertas dos prazos por email.",
   },
 ];
 

@@ -156,7 +156,7 @@ export function ImportarReciboPDF({ onAplicar }: { onAplicar: (e: ReciboExtraido
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">Preencher a partir do recibo</h2>
-          <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-semibold text-white">Pro</span>
+          <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-semibold text-white">Plus</span>
         </div>
         <p className="mt-1 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
           Arrasta o teu recibo em PDF e preenchemos o simulador <span className="font-medium text-stone-600 dark:text-stone-300">e a auditoria</span> por
@@ -174,14 +174,14 @@ export function ImportarReciboPDF({ onAplicar }: { onAplicar: (e: ReciboExtraido
         <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-brand/30 bg-white/60 dark:bg-stone-900/30 px-4 py-8 text-center">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-light text-brand"><Lock size={20} /></span>
           <p className="max-w-md text-sm leading-relaxed text-stone-600 dark:text-stone-300">
-            Com o plano <span className="font-semibold">Pro</span> carregas o recibo e preenchemos tudo automaticamente — poupas tempo e
+            Com o plano <span className="font-semibold">Plus</span> carregas o recibo e preenchemos tudo automaticamente — poupas tempo e
             confirmas se os descontos estão certos num instante.
           </p>
           <Link
             href="/precos"
             className="btn-shine mt-1 inline-flex items-center gap-1.5 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5"
           >
-            <Sparkle size={14} /> Desbloquear com Pro
+            <Sparkle size={14} /> Desbloquear com Plus
           </Link>
         </div>
       </div>

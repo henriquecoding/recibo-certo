@@ -81,7 +81,7 @@ export default function PrazosPage() {
         ))}
       </div>
 
-      <ProHint id="alertas-prazos" icon={<BellAlert size={18} />} cta="Ativar alertas (Pro)" className="mb-6">
+      <ProHint id="alertas-prazos" icon={<BellAlert size={18} />} cta="Ativar alertas (Plus)" className="mb-6">
         Vês os prazos aqui, mas é fácil esquecer. Queres que te avisemos por email alguns dias antes de cada um?
       </ProHint>
 

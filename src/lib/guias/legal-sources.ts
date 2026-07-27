@@ -131,12 +131,32 @@ const ANO = `${FISCAL_YEAR}-01-01`;
 
 // ─── Fontes oficiais ───────────────────────────────────────────────────
 
+/**
+ * Caminhos dos códigos no Portal das Finanças.
+ *
+ * Só o CIRC tem duas coleções. Isto NÃO é uma convenção do portal — é uma
+ * particularidade daquele código, e a auditoria enganou-se ao generalizá-la
+ * recomendando `CIRS_2R/`. Verificado contra o portal em 2026-07-27:
+ *
+ *   · `CIRC_2R/irc87` → 200, "taxa do IRC é de 17 %" (Lei 64/2025) — VIGENTE
+ *   · `circ_rep/irc87` → 200, "taxa do IRC é de 25 %" (Lei 64-B/2011) — histórica
+ *   · `cirs_rep/irs68` → 200, escalões de 2026 (Lei 73-A/2025) — VIGENTE
+ *   · `CIRS_2R/irs68`  → 404. Não existe.
+ *
+ * Ou seja: para o CIRS, `cirs_rep` É a versão consolidada em vigor; para o
+ * CIRC, `circ_rep` é a redação anterior a 2014. Trocar um pelo outro por
+ * simetria seria trocar fontes corretas por fontes inexistentes.
+ *
+ * O tipo abaixo é a barreira: nenhum outro caminho é sequer exprimível.
+ */
+type CodigoAT = "cirs_rep" | "civa_rep" | "CIRC_2R" | "bf_rep";
+
 function at(
   id: string,
   artigo: string,
   titulo: string,
   slug: string,
-  codigo: "cirs_rep" | "civa_rep" | "CIRC_2R" | "bf_rep",
+  codigo: CodigoAT,
 ): LegalSource {
   return {
     id,
@@ -665,6 +685,15 @@ export function assertLegalSourcesIntegrity(): void {
     // Falha 3.1 da auditoria: o caminho /circ_rep/ serve a redação até 2013.
     if (s.url.includes("/circ_rep/")) {
       erros.push(`Fonte "${chave}": /circ_rep/ é a versão histórica do CIRC. Usar /CIRC_2R/.`);
+    }
+    // O inverso, para o CIRS: `CIRS_2R` não existe (404 no portal). A
+    // auditoria recomendou-o por simetria com o CIRC; seguir a recomendação
+    // partia 24 fontes de uma vez. Ver a nota no topo de `at()`.
+    if (/\/CIRS_2R\//i.test(s.url) || /\/CIVA_2R\//i.test(s.url)) {
+      erros.push(
+        `Fonte "${chave}": só o CIRC tem coleção "_2R". Para o CIRS e o CIVA, ` +
+          `"cirs_rep"/"civa_rep" SÃO as versões consolidadas em vigor.`,
+      );
     }
   }
 

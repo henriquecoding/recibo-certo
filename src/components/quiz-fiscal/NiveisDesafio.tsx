@@ -179,7 +179,7 @@ export default function NiveisDesafio() {
         </div>
       </div>
 
-      {/* ── Desafio de Cupão Pro ── */}
+      {/* ── Desafio de Cupão Plus ── */}
       <div
         className="mt-6 overflow-hidden rounded-2xl"
         style={{ border: `1px solid ${BORDER}` }}
@@ -190,14 +190,14 @@ export default function NiveisDesafio() {
         >
           <Gift size={20} className="text-amber-300" />
           <div>
-            <h2 className="text-[15px] font-bold text-white">Desafio Pro</h2>
-            <p className="text-[11px] text-amber-200/70">Ganha 3 meses de Pro gratuitamente</p>
+            <h2 className="text-[15px] font-bold text-white">Desafio Plus</h2>
+            <p className="text-[11px] text-amber-200/70">Ganha 3 meses de Plus gratuitamente</p>
           </div>
         </div>
 
         <div className="p-5" style={{ backgroundColor: PARCHMENT }}>
           <p className="text-[13px] leading-relaxed" style={{ color: TEXT_HEAD }}>
-            Prova que dominas a fiscalidade portuguesa e ganha um cupão de <strong>3 meses de Pro</strong> totalmente grátis!
+            Prova que dominas a fiscalidade portuguesa e ganha um cupão de <strong>3 meses de Plus</strong> totalmente grátis!
           </p>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">

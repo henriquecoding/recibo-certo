@@ -111,13 +111,13 @@ export default function CenariosPage() {
         <div className="min-w-0 flex-1 text-sm">
           {naNuvem ? (
             <p className="text-stone-600 dark:text-stone-300">
-              <span className="font-semibold text-brand-dark dark:text-brand">Pro</span> — cenários ilimitados, sincronizados na nuvem entre dispositivos.
+              <span className="font-semibold text-brand-dark dark:text-brand">Plus</span> — cenários ilimitados, sincronizados na nuvem entre dispositivos.
             </p>
           ) : (
             <p className={limiteAtingido ? "text-alert-text" : "text-stone-600 dark:text-stone-300"}>
               {cenarios.length}/{limite} cenário guardado no plano grátis.{" "}
               <Link href="/dashboard/upgrade" className="font-semibold text-brand-dark underline-offset-2 hover:underline dark:text-brand">
-                Passa a Pro
+                Passa ao Plus
               </Link>{" "}
               para guardares todos e sincronizares na nuvem.
             </p>

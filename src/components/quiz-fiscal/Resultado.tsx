@@ -128,7 +128,7 @@ export default function Resultado({ quiz, xpGanho = 0, levelUp = false, nivelNov
             </div>
             <div className="bg-amber-50 px-5 py-4 dark:bg-amber-900/20">
               <p className="text-sm text-amber-900 dark:text-amber-100">
-                Parabéns! Conquistaste um cupão de <strong>3 meses de Pro</strong> grátis.
+                Parabéns! Conquistaste um cupão de <strong>3 meses de Plus</strong> grátis.
               </p>
               <div className="mt-3 flex items-center gap-3 rounded-xl border border-amber-200 bg-white px-4 py-3 dark:border-amber-700 dark:bg-amber-900/40">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600">Código</span>
@@ -137,7 +137,7 @@ export default function Resultado({ quiz, xpGanho = 0, levelUp = false, nivelNov
                 </code>
               </div>
               <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-                Ativa o cupão na tua conta para começar os 3 meses de Pro.
+                Ativa o cupão na tua conta para começar os 3 meses de Plus.
               </p>
             </div>
           </div>

@@ -85,7 +85,7 @@ export default function RecibosPage() {
           </p>
         </div>
         {recibos.length > 0 && (
-          <ProGate title="Exportação Pro" description="Exporta os teus recibos em CSV ou PDF para enviar ao contabilista.">
+          <ProGate title="Exportação Plus" description="Exporta os teus recibos em CSV ou PDF para enviar ao contabilista.">
             <div className="flex gap-2">
               <button
                 type="button"
@@ -107,8 +107,8 @@ export default function RecibosPage() {
       </header>
 
       {recibos.length > 0 && (
-        <ProHint id="export-contabilista" icon={<Export size={18} />} cta="Ver o que o Pro faz" className="mb-6">
-          Vais entregar isto ao teu contabilista? No Pro, a exportação vira um relatório anual completo, pronto a
+        <ProHint id="export-contabilista" icon={<Export size={18} />} cta="Ver o que o Plus faz" className="mb-6">
+          Vais entregar isto ao teu contabilista? No Plus, a exportação vira um relatório anual completo, pronto a
           enviar num clique.
         </ProHint>
       )}

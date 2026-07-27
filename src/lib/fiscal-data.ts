@@ -802,15 +802,23 @@ export const ADICIONAL_SOLIDARIEDADE = {
 // ═══════════════════════════════════════════════════════════════════════
 //  IRC — para o comparador "recibos verdes vs empresa" (sociedade)
 // ═══════════════════════════════════════════════════════════════════════
+// ATENÇÃO a quem vier verificar isto contra a fonte: o CORPO do Art. 87.º,
+// n.º 1 diz "17 %". Não é a taxa de 2026. A norma transitória (Art. 3.º da
+// Lei n.º 64/2025, de 7 de novembro), publicada na mesma página logo abaixo
+// do articulado, escalona a descida:
+//     · períodos iniciados em 2026 → 19 %
+//     · períodos iniciados em 2027 → 18 %
+//     · períodos iniciados em ou após 1/1/2028 → 17 % (o texto do artigo)
+// Ler só o articulado dá 17 % e está errado para o ano fiscal em curso.
 export const IRC_TAXA_GERAL = sv(
   0.19,
-  "Art. 87.º CIRC — taxa geral 2026 (reduzida de 20% para 19% pelo OE2026)",
+  "Art. 87.º, n.º 1 CIRC conjugado com a norma transitória do Art. 3.º, n.º 2 da Lei n.º 64/2025, de 7 de novembro — 19% nos períodos de tributação iniciados em 2026 (o corpo do artigo prevê 17%, mas só a partir de 2028)",
   "art87circ",
   TODAY
 );
 export const IRC_TAXA_PME = sv(
   0.15,
-  "Art. 87.º CIRC — taxa reduzida PME nos primeiros 50.000 € de matéria coletável",
+  "Art. 87.º, n.º 2 CIRC (redação da Lei n.º 64/2025, de 7 de novembro) — taxa reduzida PME nos primeiros 50 000 € de matéria coletável, aplicável aos períodos iniciados em ou após 1/1/2026 (Art. 3.º, n.º 4 da mesma lei)",
   "art87circ",
   TODAY
 );

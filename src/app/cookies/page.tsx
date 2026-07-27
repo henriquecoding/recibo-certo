@@ -91,7 +91,7 @@ export default function CookiesPage() {
             linhas={[
               [
                 "Cookies de autenticação",
-                "Sim (apenas Pro)",
+                "Sim (apenas Plus)",
                 "Cookie de sessão seguro para manter login — eliminado ao sair",
               ],
               [
@@ -216,7 +216,7 @@ export default function CookiesPage() {
             [
               "sb-auth-token",
               "Sessão (eliminado ao sair)",
-              "Token de autenticação Supabase — necessário para manter sessão Pro",
+              "Token de autenticação Supabase — necessário para manter sessão Plus",
             ],
             [
               "sb-refresh-token",
