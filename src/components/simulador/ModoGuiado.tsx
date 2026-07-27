@@ -59,6 +59,8 @@ import {
 import GuardarCenarioDialog from "@/components/ui/GuardarCenarioDialog";
 import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
+import { situacaoIVA } from "@/lib/fiscal-iva";
+import SituacaoIVAPainel from "@/components/simulador/SituacaoIVA";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -1937,14 +1939,18 @@ function PassoFaturacao({
             </p>
           </div>
         ) : (
-          <ZonaIVA
-            brutoAnual={brutoAnual}
-            isentoEfetivo={isentoEfetivo}
-            regimeIVA={regimeIVA}
+          <SituacaoIVAPainel
+            situacao={situacaoIVA({
+              faturacaoAnual: brutoAnual,
+              regiao,
+              regimeEscolhido: regimeIVA,
+              categoria: tipoAtiv,
+              entidade: "ti",
+              isentoEfetivo,
+            })}
             regiao={regiao}
-            tipoAtiv={tipoAtiv}
-            atividadeEspecifica={atividadeEspecifica}
-            onRegimeIVAChange={onRegimeIVAChange}
+            regimeEscolhido={regimeIVA}
+            onRegimeChange={onRegimeIVAChange}
           />
         )}
       </div>
@@ -3892,254 +3898,13 @@ function PainelResultadoVivo({
 
 // ─── Zona IVA inline ──────────────────────────────────────────────────────────
 
-function ZonaIVA({
-  brutoAnual,
-  isentoEfetivo,
-  regimeIVA,
-  regiao,
-  tipoAtiv,
-  atividadeEspecifica,
-  onRegimeIVAChange,
-}: {
-  brutoAnual: number;
-  isentoEfetivo: boolean;
-  regimeIVA: RegimeIVA;
-  regiao: Regiao;
-  tipoAtiv: TipoAtiv;
-  atividadeEspecifica: Atividade | null;
-  onRegimeIVAChange: (r: RegimeIVA) => void;
-}) {
-  const taxasIVA = IVA_TAXAS[regiao].value;
-  const ivaEsperado = ATIV_META[tipoAtiv].ivaEsperado;
-  const notaIVAAtiv = ATIV_META[tipoAtiv].notaIVA;
-  const ivaIncoerente = regimeIVA !== "isento" && regimeIVA !== ivaEsperado;
+// O `ZonaIVA` vivia aqui: uma segunda leitura das mesmas regras de IVA,
+// mais pobre do que a do modo completo. Para os mesmos números, a mesma
+// pessoa era tratada de maneira diferente consoante o modo.
+//
+// A decisão está agora em `src/lib/fiscal-iva.ts` e o desenho em
+// `src/components/simulador/SituacaoIVA.tsx`, partilhados pelos dois modos.
 
-  // Nome da atividade do utilizador: específica se escolhida, senão a categoria.
-  const cardAtiv = CARDS_ATIV.find((c) => c.id === tipoAtiv)!;
-  const nomeAtividade = atividadeEspecifica?.label ?? cardAtiv.titulo;
-
-  // Rótulo legível da taxa de IVA habitual para a atividade.
-  const ESPERADO_LABEL: Record<typeof ivaEsperado, string> = {
-    isento: "isento",
-    reduzida: `taxa reduzida (${pct(taxasIVA.reduzida)})`,
-    intermedia: `taxa intermédia (${pct(taxasIVA.intermedia)})`,
-    normal: `taxa normal (${pct(taxasIVA.normal)})`,
-  };
-
-  // Exemplos de bens/serviços que tipicamente usam cada taxa (Listas I e II do CIVA).
-  const IVA_EXEMPLOS: Record<RegimeIVA, string> = {
-    isento: "",
-    reduzida:
-      "alimentos essenciais, livros, medicamentos, alojamento e transporte de passageiros",
-    intermedia:
-      "restauração (refeições), vinhos comuns e alguns produtos agrícolas",
-    normal: "consultoria, advocacia, design, programação e a maioria dos serviços",
-  };
-
-  function BotoesIVA({ cor }: { cor: "amber" | "red" }) {
-    const base =
-      cor === "amber"
-        ? {
-            sel: "border-amber-600 bg-amber-100 text-amber-800 dark:border-amber-500 dark:bg-amber-900/40 dark:text-amber-200",
-            def: "border-amber-300 bg-white/60 text-alert-text hover:border-amber-500 dark:border-amber-700 dark:bg-amber-950/30 dark:hover:border-amber-500",
-          }
-        : {
-            sel: "border-red-600 bg-red-100 text-red-800 dark:border-red-500 dark:bg-red-900/40 dark:text-red-200",
-            def: "border-red-300 bg-white/60 text-red-700 hover:border-red-500 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300 dark:hover:border-red-500",
-          };
-    return (
-      <div className="mt-1.5 grid grid-cols-3 gap-1.5">
-        {(["reduzida", "intermedia", "normal"] as const).map((e) => (
-          <button
-            key={e}
-            type="button"
-            aria-pressed={regimeIVA === e}
-            onClick={() => onRegimeIVAChange(e)}
-            className={`rounded-lg border p-2 text-center text-[10px] font-bold transition-all ${regimeIVA === e ? base.sel : base.def}`}
-          >
-            {e === "reduzida"
-              ? "Reduzida"
-              : e === "intermedia"
-                ? "Intermédia"
-                : "Normal"}
-            <br />
-            {pct(taxasIVA[e])}
-          </button>
-        ))}
-      </div>
-    );
-  }
-
-  function PainelCompatibilidade({ regime }: { regime: RegimeIVA }) {
-    const meta = IVA_META[regime as keyof typeof IVA_META] ?? IVA_META.normal;
-    const coerente = regime === ivaEsperado;
-    return (
-      <div className="mt-3 rounded-xl border border-stone-200 bg-stone-50 p-3.5 dark:border-stone-700 dark:bg-stone-900/60">
-        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-stone-400">
-          {meta.titulo}
-        </p>
-        <p className="mb-2 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
-          {meta.quando}
-        </p>
-        <div className="space-y-1.5">
-          {/* Atividade do utilizador */}
-          <div className="flex items-start gap-1.5">
-            <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
-            <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-              <strong className="text-stone-700 dark:text-stone-200">
-                A tua atividade:
-              </strong>{" "}
-              {nomeAtividade} — IVA habitual:{" "}
-              {notaIVAAtiv ? "isento ou taxa normal, conforme o caso" : ESPERADO_LABEL[ivaEsperado]}.
-            </p>
-          </div>
-
-          {/* Nota específica de IVA (ex.: direitos de autor — obra própria vs
-              royalties). Neutra: explica os dois enquadramentos possíveis em vez
-              de tratar qualquer taxa legítima como "errada". */}
-          {notaIVAAtiv && (
-            <div className="flex items-start gap-1.5 rounded-lg border border-stone-200 bg-white/70 px-2.5 py-2 dark:border-stone-700 dark:bg-stone-900/40">
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 16 16"
-                fill="none"
-                aria-hidden
-                className="mt-0.5 flex-shrink-0 text-stone-400 dark:text-stone-500"
-              >
-                <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
-                <path d="M8 7.2v4M8 4.8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-                {notaIVAAtiv}
-              </p>
-            </div>
-          )}
-
-          {/* Estado consoante o regime efetivo */}
-          {regime === "isento" ? (
-            <>
-              <div className="flex items-start gap-1.5">
-                <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
-                <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-                  A isenção mantém-se em <strong>cada ano</strong> em que ficares
-                  abaixo de {fmt(IVA_LIMITE)} — não é só no 1.º ano.
-                </p>
-              </div>
-              <p className="pl-[18px] text-[11px] leading-relaxed text-stone-400 dark:text-stone-500">
-                No 1.º ano conta o volume de negócios estimado até ao fim do
-                ano (sem anualização — DL 35/2025); nos anos seguintes conta a
-                faturação do ano civil anterior.
-              </p>
-            </>
-          ) : coerente ? (
-            <div className="flex items-start gap-1.5">
-              <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
-              <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-                A taxa selecionada é a habitual para a tua atividade.
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-lg border border-alert-border bg-alert-bg px-2.5 py-2">
-              <div className="flex items-start gap-1.5">
-                <Warning
-                  size={11}
-                  className="mt-0.5 flex-shrink-0 text-alert-text"
-                />
-                <p className="text-[11px] leading-relaxed text-alert-text">
-                  Esta taxa não é a habitual para {nomeAtividade}. Confirma com o
-                  teu contabilista.
-                </p>
-              </div>
-              {IVA_EXEMPLOS[regime] && (
-                <p className="mt-1 pl-[18px] text-[11px] leading-relaxed text-alert-text/80">
-                  A {meta.titulo.toLowerCase()} costuma aplicar-se a:{" "}
-                  {IVA_EXEMPLOS[regime]}.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (isentoEfetivo) {
-    return (
-      <div className="space-y-0">
-        <div className="flex items-start gap-2.5 rounded-xl border border-brand/30 bg-brand-light/60 p-3.5">
-          <Check size={14} className="mt-0.5 flex-shrink-0 text-brand" />
-          <div>
-            <span className="text-sm font-bold text-brand-dark">
-              Estás isento de IVA
-            </span>
-            <p className="mt-0.5 text-xs leading-relaxed text-brand-dark/70">
-              Com {fmt(brutoAnual)}/ano estás abaixo de {fmt(IVA_LIMITE)} — Art.
-              53.º CIVA.
-            </p>
-          </div>
-        </div>
-        <PainelCompatibilidade regime="isento" />
-      </div>
-    );
-  }
-
-  if (brutoAnual <= IVA_LIMITE_IMEDIATO) {
-    return (
-      <div className="space-y-0">
-        <div className="rounded-xl border border-alert-border bg-alert-bg p-3.5">
-          <div className="flex items-start gap-2.5">
-            <Warning
-              size={14}
-              className="mt-0.5 flex-shrink-0 text-alert-text"
-            />
-            <div className="flex-1">
-              <span className="text-sm font-bold text-alert-text">
-                Vais perder a isenção em janeiro
-              </span>
-              <p className="mt-0.5 text-xs leading-relaxed text-alert-text">
-                Entre {fmt(IVA_LIMITE)} e {fmt(IVA_LIMITE_IMEDIATO)}, perdes a
-                isenção no 1 de janeiro seguinte.
-              </p>
-              <p className="mt-2 text-xs font-semibold text-alert-text">
-                Que taxa de IVA vais cobrar?
-              </p>
-              <BotoesIVA cor="amber" />
-            </div>
-          </div>
-        </div>
-        {regimeIVA !== "isento" && <PainelCompatibilidade regime={regimeIVA} />}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-0">
-      <div className="rounded-xl border border-red-300 bg-red-50 p-3.5 dark:border-red-900/50 dark:bg-red-950/20">
-        <div className="flex items-start gap-2.5">
-          <Warning
-            size={14}
-            className="mt-0.5 flex-shrink-0 text-red-600 dark:text-red-400"
-          />
-          <div className="flex-1">
-            <span className="text-sm font-bold text-red-700 dark:text-red-300">
-              Perdes a isenção imediatamente
-            </span>
-            <p className="mt-0.5 text-xs leading-relaxed text-red-700 dark:text-red-300">
-              Ultrapassaste {fmt(IVA_LIMITE_IMEDIATO)}. Contacta o teu
-              contabilista.
-            </p>
-            <p className="mt-2 text-xs font-semibold text-red-700 dark:text-red-300">
-              Que taxa de IVA cobras?
-            </p>
-            <BotoesIVA cor="red" />
-          </div>
-        </div>
-      </div>
-      {regimeIVA !== "isento" && <PainelCompatibilidade regime={regimeIVA} />}
-    </div>
-  );
-}
 
 // ─── Toggle card ──────────────────────────────────────────────────────────────
 
