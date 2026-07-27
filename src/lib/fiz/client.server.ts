@@ -20,18 +20,28 @@ interface TokenParceiro {
   expiraEm: number;
 }
 
-let tokenCache: TokenParceiro | null = null;
+// Um token por CONJUNTO DE SCOPES, não um só para tudo.
+//
+// Com uma cache única, o primeiro pedido fixava o token e todos os seguintes
+// reutilizavam-no — incluindo os que precisavam de scopes que esse token não
+// tinha. Resultado: 403 da FIZ em metade das operações, e só depois de
+// existirem credenciais reais é que se veria. Nove chamadas neste módulo
+// pedem nove conjuntos diferentes.
+const tokensPorScope = new Map<string, TokenParceiro>();
 
 /** Só para testes. */
 export function limparTokenParceiro(): void {
-  tokenCache = null;
+  tokensPorScope.clear();
 }
 
 async function obterTokenParceiro(scopes: string[]): Promise<string> {
   const cfg = fizServerConfig();
   const agora = Date.now();
-  if (tokenCache && tokenCache.expiraEm > agora + cfg.margemExpiracaoSegundos * 1000) {
-    return tokenCache.accessToken;
+  const chaveCache = [...scopes].sort().join(" ");
+
+  const guardado = tokensPorScope.get(chaveCache);
+  if (guardado && guardado.expiraEm > agora + cfg.margemExpiracaoSegundos * 1000) {
+    return guardado.accessToken;
   }
 
   const corpo = new URLSearchParams({
@@ -48,17 +58,22 @@ async function obterTokenParceiro(scopes: string[]): Promise<string> {
   });
 
   if (!resposta.ok) {
+    // Falhar a autenticação do parceiro é um sintoma de FIZ indisponível
+    // tanto quanto qualquer 5xx — conta para o circuito, senão continuamos a
+    // bater à porta a cada pedido.
+    if (resposta.status >= 500) registarFalha(CIRCUITO);
     throw new FizError(codigoDeStatus(resposta.status), "Não foi possível autenticar o parceiro na FIZ.", {
       status: resposta.status,
     });
   }
 
   const dados = (await resposta.json()) as { access_token: string; expires_in: number };
-  tokenCache = {
+  const token: TokenParceiro = {
     accessToken: dados.access_token,
     expiraEm: agora + (dados.expires_in ?? 300) * 1000,
   };
-  return tokenCache.accessToken;
+  tokensPorScope.set(chaveCache, token);
+  return token.accessToken;
 }
 
 async function fetchComTimeout(url: string, init: RequestInit): Promise<Response> {
@@ -115,6 +130,20 @@ export async function pedirFiz<T>(pedido: PedidoFiz): Promise<RespostaFiz<T>> {
   const requestId = randomUUID();
 
   const url = new URL(`${cfg.apiBaseUrl}${pedido.caminho}`);
+
+  // Este pedido leva credenciais — o token de parceiro ou o token delegado do
+  // utilizador. Se alguma vez um caminho for construído de forma a mudar o
+  // anfitrião, essas credenciais saem para fora da FIZ. Hoje todos os caminhos
+  // são literais com `encodeURIComponent` nas partes dinâmicas; esta guarda
+  // existe para que continue a ser verdade sem depender de vigilância.
+  //
+  // A comparação é com a ORIGEM CONFIGURADA e não com a lista de domínios da
+  // FIZ: é mais apertada (uma origem exata, não um domínio inteiro) e não
+  // impede apontar `FIZ_API_BASE_URL` a um servidor de simulação local.
+  if (url.origin !== new URL(cfg.apiBaseUrl).origin) {
+    throw new FizError("destino_recusado", "O pedido saía da origem configurada para a API da FIZ.");
+  }
+
   for (const [chave, valor] of Object.entries(pedido.query ?? {})) {
     if (valor !== undefined) url.searchParams.set(chave, String(valor));
   }

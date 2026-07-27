@@ -1,6 +1,22 @@
-// Sistema de parceiros — recomendações nativas contextuais.
-// O catálogo vem do Supabase (gerido pelo admin); fallback para dados estáticos
-// se o Supabase não estiver disponível.
+// ═══════════════════════════════════════════════════════════════════════
+//  SISTEMA DE PARCEIROS — recomendações nativas contextuais
+//  ---------------------------------------------------------------------
+//  O catálogo vem do Supabase (`admin_partners`, gerido no admin). É a ÚNICA
+//  origem: se não houver parceiros lá, não aparece cartão nenhum.
+//
+//  Havia aqui um "catálogo estático de fallback" com cinco parceiros
+//  inventados — nomes, descrições e URLs em `parceiros.recibocerto.pt` que
+//  nunca existiram — e o cartão mostrava-os com o selo "Parceiro verificado".
+//  Ou seja: sempre que o Supabase não respondesse (ou não tivesse parceiros),
+//  o site anunciava relações comerciais que não existem, marcadas como
+//  verificadas, com links para lado nenhum.
+//
+//  Isso é o oposto da regra 8 do projeto ("não inventar testemunhos nem
+//  métricas") e da promessa do produto. O catálogo passou a ser SEMENTE DE
+//  DESENVOLVIMENTO: só é usado com NEXT_PUBLIC_PARTNERS_DEMO="true", para
+//  poder desenhar e rever o componente. Em produção, sem parceiros reais,
+//  não há cartão.
+// ═══════════════════════════════════════════════════════════════════════
 
 export interface Partner {
   id: string;
@@ -12,8 +28,11 @@ export interface Partner {
   icone: "bank" | "building" | "file-sign" | "heart" | "invoice";
 }
 
-// Catálogo estático de fallback (usado quando Supabase não responde)
-export const STATIC_CATALOG: Partner[] = [
+/**
+ * Semente de desenvolvimento. NÃO é um catálogo de parceiros reais e nunca
+ * pode ser servido como tal — ver `catalogoDeDemonstracao()`.
+ */
+export const SEMENTE_DEMO: Partner[] = [
   {
     id: "conta-pj",
     nome: "Conta profissional online",
@@ -109,13 +128,27 @@ export function dismissPartner(id: string): void {
 }
 
 /**
+ * Semente de demonstração, só quando explicitamente pedida.
+ *
+ * Fica atrás de uma bandeira porque a alternativa — devolvê-la por omissão —
+ * significa que um erro de rede transforma o site num anunciante de parceiros
+ * que não existem. Preferimos não mostrar nada.
+ */
+export function catalogoDeDemonstracao(): Partner[] {
+  return process.env.NEXT_PUBLIC_PARTNERS_DEMO === "true" ? SEMENTE_DEMO : [];
+}
+
+/**
  * Devolve o parceiro a mostrar para o `context` dado.
- * Aceita um `catalog` externo (vindo do Supabase); se omitido usa STATIC_CATALOG.
+ *
+ * `catalog` vem do Supabase. Sem catálogo não há cartão: nunca se inventa um
+ * parceiro para preencher o espaço.
  */
 export function getPartnerForContext(context: string, catalog?: Partner[]): Partner | null {
   if (typeof window === "undefined") return null;
 
-  const src = catalog ?? STATIC_CATALOG;
+  const src = catalog ?? catalogoDeDemonstracao();
+  if (src.length === 0) return null;
   const map = getContextMap();
 
   // Já mostrado neste contexto nesta sessão → devolver o mesmo

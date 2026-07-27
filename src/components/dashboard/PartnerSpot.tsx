@@ -26,13 +26,17 @@ export default function PartnerSpot({ context }: { context: string }) {
       if (supabaseConfigurado()) {
         try {
           const rows = await listarParceirosAtivos();
-          const catalog = rows.map(rowToPartner);
-          setPartner(getPartnerForContext(context, catalog));
+          setPartner(getPartnerForContext(context, rows.map(rowToPartner)));
           return;
         } catch {
-          // Supabase falhou → fallback estático
+          // Uma falha de rede não pode virar publicidade: sem catálogo real,
+          // não se mostra parceiro nenhum.
+          setPartner(null);
+          return;
         }
       }
+      // Sem Supabase configurado só resta a semente de demonstração, que está
+      // atrás de bandeira e devolve [] em produção.
       setPartner(getPartnerForContext(context));
     }
     init();

@@ -17,8 +17,25 @@ export const dynamic = "force-dynamic";
  * A assinatura é verificada sobre os BYTES BRUTOS — daí ler `req.text()` e
  * nunca `req.json()`.
  */
+/** Nenhum evento legítimo da FIZ se aproxima disto. */
+const TAMANHO_MAXIMO_BYTES = 256 * 1024;
+
 export async function POST(req: NextRequest) {
+  // A assinatura só pode ser verificada sobre os bytes brutos, o que obriga a
+  // ter o corpo inteiro em memória ANTES de saber se é legítimo. Este ponto é
+  // público e não autenticado, por isso o tamanho é travado à entrada — senão
+  // qualquer pessoa consegue fazer-nos alocar e assinar megabytes por pedido.
+  const declarado = Number(req.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declarado) && declarado > TAMANHO_MAXIMO_BYTES) {
+    return NextResponse.json({ recebido: false }, { status: 413 });
+  }
+
   const corpoBruto = await req.text();
+  if (corpoBruto.length > TAMANHO_MAXIMO_BYTES) {
+    // O `content-length` pode faltar ou mentir (por exemplo em chunked).
+    return NextResponse.json({ recebido: false }, { status: 413 });
+  }
+
   const verificacao = verificarEvento(req.headers, corpoBruto);
 
   if (!verificacao.valido) {

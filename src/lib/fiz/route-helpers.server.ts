@@ -22,6 +22,11 @@ const STATUS_HTTP: Record<CodigoErroFiz, number> = {
   destino_recusado: 502,
 };
 
+/** Estas rotas leem estado por utilizador — nunca podem ser cacheadas.
+    Vale para os erros tanto como para os sucessos: um 401 guardado num
+    intermediário deixa o utilizador trancado fora depois de se autenticar. */
+export const semCache = { "cache-control": "no-store, max-age=0" } as const;
+
 export interface CorpoErro {
   erro: string;
   codigo: CodigoErroFiz;
@@ -42,19 +47,19 @@ export function respostaErro(erro: unknown): NextResponse<CorpoErro> {
         silencioso: erro.silencioso,
         requestId: erro.requestId,
       },
-      { status: STATUS_HTTP[erro.codigo] },
+      { status: STATUS_HTTP[erro.codigo], headers: semCache },
     );
   }
 
   console.error("[fiz] erro inesperado", erro instanceof Error ? erro.message : "desconhecido");
   return NextResponse.json(
     { erro: MENSAGEM_UTILIZADOR.indisponivel, codigo: "indisponivel" as const, silencioso: false },
-    { status: 503 },
+    { status: 503, headers: semCache },
   );
 }
 
 export const naoAutenticado = () =>
-  NextResponse.json({ erro: "Autenticação necessária.", codigo: "nao_autorizado" as const, silencioso: false }, { status: 401 });
-
-/** Estas rotas leem estado por utilizador — nunca podem ser cacheadas. */
-export const semCache = { "cache-control": "no-store, max-age=0" } as const;
+  NextResponse.json(
+    { erro: "Autenticação necessária.", codigo: "nao_autorizado" as const, silencioso: false },
+    { status: 401, headers: semCache },
+  );

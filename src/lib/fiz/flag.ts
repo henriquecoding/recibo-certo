@@ -22,8 +22,25 @@ export function ambienteDeploy(): string {
   return process.env.NEXT_PUBLIC_VERCEL_ENV ?? "";
 }
 
+/**
+ * Estamos em produção?
+ *
+ * Não basta olhar para `NEXT_PUBLIC_VERCEL_ENV`: essa variável só existe na
+ * Vercel. Num servidor próprio, num contentor ou em qualquer outro alojamento
+ * ela vem vazia — e a versão anterior concluía daí "não é produção", abrindo
+ * a porta a servir o catálogo SIMULADO a utilizadores reais, com um aviso de
+ * "pré-visualização" que não corresponderia a nada.
+ *
+ * Quando a variável da Vercel EXISTE, é ela que manda — e só ela: num deploy
+ * de ramo `NODE_ENV` também é "production" (é uma build de produção), pelo que
+ * juntar as duas condições com "ou" desligaria a pré-visualização
+ * precisamente onde ela serve. O `NODE_ENV` é o recurso para quando não há
+ * sinal nenhum da Vercel.
+ */
 export function ehProducao(): boolean {
-  return ambienteDeploy() === "production";
+  const vercel = ambienteDeploy();
+  if (vercel) return vercel === "production";
+  return process.env.NODE_ENV === "production";
 }
 
 /** Deploy de ramo na Vercel — o sítio certo para rever antes de decidir. */

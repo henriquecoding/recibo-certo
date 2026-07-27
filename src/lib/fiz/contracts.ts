@@ -478,13 +478,30 @@ export function destinoFizValido(url: string): boolean {
   }
 }
 
-/** Verifica que nenhum dado pessoal ou fiscal viaja na query string. */
+/**
+ * Verifica que nenhum dado pessoal ou fiscal viaja no URL.
+ *
+ * Inclui o FRAGMENTO e não só a query string. O fragmento nunca chega ao
+ * servidor, o que o faz parecer mais seguro — mas fica no histórico do
+ * browser, é legível por qualquer script da página e viaja em partilhas de
+ * link. Para o que aqui se protege, é tão mau como a query.
+ */
 export function urlSemDadosSensiveis(url: string): boolean {
+  const proibido = (chave: string) => {
+    const k = chave.toLowerCase();
+    return CAMPOS_PROIBIDOS_EM_URL.some((p) => k.includes(p));
+  };
   try {
     const u = new URL(url);
-    for (const chave of u.searchParams.keys()) {
-      const k = chave.toLowerCase();
-      if (CAMPOS_PROIBIDOS_EM_URL.some((p) => k.includes(p))) return false;
+    for (const chave of u.searchParams.keys()) if (proibido(chave)) return false;
+
+    // O fragmento pode vir como `a=1&b=2` ou como caminho — analisam-se as
+    // duas formas, porque um `#nif=123456789` não é menos exposto do que
+    // um `?nif=123456789`.
+    const fragmento = u.hash.replace(/^#/, "");
+    if (fragmento) {
+      for (const chave of new URLSearchParams(fragmento).keys()) if (proibido(chave)) return false;
+      for (const parte of fragmento.split(/[/?&=]/)) if (parte && proibido(parte)) return false;
     }
     return true;
   } catch {

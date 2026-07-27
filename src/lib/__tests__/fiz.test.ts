@@ -305,6 +305,78 @@ describe("estado da integração e circuito de proteção", () => {
   });
 });
 
+describe("bandeira e pré-visualização", () => {
+  it("fora da Vercel, NODE_ENV=production continua a ser produção", async () => {
+    // `NEXT_PUBLIC_VERCEL_ENV` só existe na Vercel. Num servidor próprio vinha
+    // vazia e a pré-visualização — catálogo simulado — ficava permitida em
+    // produção real.
+    delete process.env.NEXT_PUBLIC_VERCEL_ENV;
+    const anterior = process.env.NODE_ENV;
+    Object.defineProperty(process.env, "NODE_ENV", { value: "production", configurable: true });
+    try {
+      const { ehProducao, previewPermitidoNoCliente } = await import("@/lib/fiz/flag");
+      expect(ehProducao()).toBe(true);
+      expect(previewPermitidoNoCliente()).toBe(false);
+    } finally {
+      Object.defineProperty(process.env, "NODE_ENV", { value: anterior, configurable: true });
+    }
+  });
+
+  it("num deploy de ramo da Vercel a pré-visualização continua a funcionar", async () => {
+    // Numa build de ramo o NODE_ENV também é "production" — se as duas
+    // condições fossem somadas, desligava-se exatamente onde faz falta.
+    process.env.NEXT_PUBLIC_VERCEL_ENV = "preview";
+    const anterior = process.env.NODE_ENV;
+    Object.defineProperty(process.env, "NODE_ENV", { value: "production", configurable: true });
+    try {
+      const { ehProducao, previewPermitidoNoCliente, fizAtiva } = await import("@/lib/fiz/flag");
+      expect(ehProducao()).toBe(false);
+      expect(previewPermitidoNoCliente()).toBe(true);
+      delete process.env.NEXT_PUBLIC_FIZ_ENABLED;
+      expect(fizAtiva()).toBe(true);
+    } finally {
+      Object.defineProperty(process.env, "NODE_ENV", { value: anterior, configurable: true });
+    }
+  });
+
+  it("em produção na Vercel nada liga por omissão", async () => {
+    process.env.NEXT_PUBLIC_VERCEL_ENV = "production";
+    delete process.env.NEXT_PUBLIC_FIZ_ENABLED;
+    const { fizAtiva, previewPermitidoNoCliente } = await import("@/lib/fiz/flag");
+    expect(fizAtiva()).toBe(false);
+    expect(previewPermitidoNoCliente()).toBe(false);
+  });
+});
+
+describe("destinos devolvidos pela FIZ", () => {
+  it("recusa qualquer domínio que não seja da FIZ", async () => {
+    const { destinoFizValido } = await import("@/lib/fiz/contracts");
+    for (const mau of [
+      "https://fiz.co.malicioso.example/x",
+      "https://malicioso.example/fiz.co",
+      "https://notfiz.co/x",
+      "http://app.fiz.co/x",
+      "javascript:alert(1)",
+      "//app.fiz.co/x",
+    ]) {
+      expect(destinoFizValido(mau), mau).toBe(false);
+    }
+    for (const bom of ["https://app.fiz.co/onboarding", "https://fiz.co/x", "https://sub.app.fiz.co/y"]) {
+      expect(destinoFizValido(bom), bom).toBe(true);
+    }
+  });
+
+  it("dados pessoais também não podem ir no fragmento", async () => {
+    const { urlSemDadosSensiveis } = await import("@/lib/fiz/contracts");
+    expect(urlSemDadosSensiveis("https://app.fiz.co/x?ref=abc")).toBe(true);
+    expect(urlSemDadosSensiveis("https://app.fiz.co/x?nif=123456789")).toBe(false);
+    // O fragmento nunca chega ao servidor — mas fica no histórico e é legível
+    // por qualquer script da página.
+    expect(urlSemDadosSensiveis("https://app.fiz.co/x#nif=123456789")).toBe(false);
+    expect(urlSemDadosSensiveis("https://app.fiz.co/x#email=a@b.pt")).toBe(false);
+  });
+});
+
 describe("estado de autorização OAuth", () => {
   it("um estado selado é reaberto intacto", async () => {
     const { selarEstado, abrirEstado } = await import("@/lib/fiz/oauth.server");
@@ -315,7 +387,58 @@ describe("estado de autorização OAuth", () => {
       userId: "user-1",
       regressoInterno: "/dashboard/conta",
     };
-    expect(abrirEstado(selarEstado(estado))).toEqual(estado);
+    // `emitidoEm` é acrescentado ao selar — é o prazo, e vive dentro da carga
+    // assinada para não poder ser alterado.
+    expect(abrirEstado(selarEstado(estado))).toMatchObject(estado);
+  });
+
+  it("um estado antigo é recusado mesmo com assinatura válida", async () => {
+    const { selarEstado, abrirEstado, DURACAO_COOKIE_SEGUNDOS } = await import("@/lib/fiz/oauth.server");
+    const selado = selarEstado({
+      state: "abc",
+      nonce: "def",
+      codeVerifier: "ghi",
+      userId: "user-1",
+      regressoInterno: "/dashboard",
+    });
+
+    // O Max-Age do cookie é uma instrução ao browser, não uma verificação
+    // nossa: quem guarde o valor pode reapresentá-lo mais tarde. O prazo tem
+    // de ser imposto aqui.
+    const agora = Date.now;
+    Date.now = () => agora() + (DURACAO_COOKIE_SEGUNDOS + 60) * 1000;
+    try {
+      expect(() => abrirEstado(selado)).toThrow(/expirou/i);
+    } finally {
+      Date.now = agora;
+    }
+  });
+
+  it("um estado sem prazo — de uma versão anterior — é recusado", async () => {
+    const { abrirEstado } = await import("@/lib/fiz/oauth.server");
+    const { createHmac } = await import("node:crypto");
+    const carga = Buffer.from(
+      JSON.stringify({ state: "a", nonce: "b", codeVerifier: "c", userId: "u", regressoInterno: "/" }),
+      "utf8",
+    ).toString("base64url");
+    const assinatura = createHmac("sha256", process.env.FIZ_CLIENT_SECRET as string)
+      .update(carga)
+      .digest("base64url");
+    expect(() => abrirEstado(`${carga}.${assinatura}`)).toThrow(/expirou/i);
+  });
+
+  it("o destino é revalidado à saída, não só à entrada", async () => {
+    const { selarEstado, abrirEstado } = await import("@/lib/fiz/oauth.server");
+    // Estado assinado por nós mas com um destino externo — cenário de uma
+    // versão anterior do filtro, ou de um erro futuro na criação.
+    const selado = selarEstado({
+      state: "abc",
+      nonce: "def",
+      codeVerifier: "ghi",
+      userId: "user-1",
+      regressoInterno: "https://malicioso.example",
+    });
+    expect(abrirEstado(selado).regressoInterno).toBe("/dashboard");
   });
 
   it("um estado adulterado é rejeitado", async () => {
@@ -334,8 +457,38 @@ describe("estado de autorização OAuth", () => {
   it("recusa redirecionamentos para fora do site", async () => {
     const { regressoSeguro } = await import("@/lib/fiz/oauth.server");
     expect(regressoSeguro("/dashboard/prazos")).toBe("/dashboard/prazos");
+    expect(regressoSeguro("/dashboard/prazos?a=1#b")).toBe("/dashboard/prazos?a=1#b");
     expect(regressoSeguro("https://malicioso.example")).toBe("/dashboard");
     expect(regressoSeguro("//malicioso.example")).toBe("/dashboard");
     expect(regressoSeguro(null)).toBe("/dashboard");
+  });
+
+  it("a barra invertida não é uma forma de sair do site", async () => {
+    const { regressoSeguro } = await import("@/lib/fiz/oauth.server");
+    // O WHATWG URL normaliza `\` para `/` em esquemas especiais: `/\evil.com`
+    // resolvia para `https://evil.com/` e passava num teste de `startsWith`.
+    for (const tentativa of [
+      "/\\malicioso.example",
+      "/\\/malicioso.example",
+      "/\\\\malicioso.example",
+      "\\\\malicioso.example",
+    ]) {
+      const seguro = regressoSeguro(tentativa);
+      expect(seguro, tentativa).toBe("/dashboard");
+    }
+  });
+
+  it("todo o destino aceite resolve dentro do nosso site", async () => {
+    const { regressoSeguro } = await import("@/lib/fiz/oauth.server");
+    const NOSSA = "https://www.recibocerto.pt";
+    const tentativas = [
+      "/dashboard", "//evil.com", "/\\evil.com", "/\\/evil.com", "https://evil.com",
+      "/..//evil.com", "/dashboard?next=https://evil.com", "javascript:alert(1)",
+      "/dashboard\u0009/evil", "  /dashboard", "/",
+    ];
+    for (const t of tentativas) {
+      const destino = new URL(regressoSeguro(t), NOSSA);
+      expect(destino.origin, `${t} escapou`).toBe(NOSSA);
+    }
   });
 });

@@ -46,8 +46,14 @@ export function DistribuicaoRendimento({ componentes }: { componentes: Component
     return { c, cor: PALETA[i % PALETA.length], ini, fim, fracao };
   });
 
+  // `flex-wrap` em vez de `sm:flex-row`: estes cartões vivem numa grelha de
+  // duas colunas, por isso a LARGURA DO CARTÃO (≈277 px no desktop) não tem
+  // relação nenhuma com a largura do ecrã. Com `sm:` o layout mudava para
+  // lado-a-lado a 640 px de viewport e a legenda saía fora do cartão. Assim,
+  // é o espaço real que decide: se o donut e uma legenda de 11rem não cabem
+  // lado a lado, a legenda desce.
   return (
-    <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
+    <div className="flex flex-wrap items-center justify-center gap-4">
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Distribuição dos rendimentos por categoria" className="flex-shrink-0">
         {segmentos.map((s, i) =>
           s.fracao >= 0.999 ? (
@@ -59,7 +65,7 @@ export function DistribuicaoRendimento({ componentes }: { componentes: Component
         <text x={cx} y={cy - 4} textAnchor="middle" className="fill-stone-400 text-[9px]">Total</text>
         <text x={cx} y={cy + 10} textAnchor="middle" className="fill-stone-700 text-[11px] font-semibold dark:fill-stone-200">{fmt(total)}</text>
       </svg>
-      <ul className="w-full space-y-1.5">
+      <ul className="w-full min-w-[11rem] flex-1 space-y-1.5">
         {segmentos.map((s, i) => (
           <li key={i} className="flex items-center justify-between gap-2 text-xs">
             <span className="flex min-w-0 items-center gap-2">
@@ -100,12 +106,16 @@ export function DistribuicaoFiscal({
           <div key={i} style={{ width: `${(p.valor / total) * 100}%`, backgroundColor: p.cor }} className="h-full" />
         ))}
       </div>
-      <ul className="mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+      {/* `auto-fit`+`minmax` em vez de `sm:grid-cols-3`: são as colunas que se
+          ajustam à largura REAL do cartão. Com três colunas fixas a partir de
+          640 px de viewport, cada célula ficava com ~85 px num cartão de
+          277 px e o valor saía por cima da legenda seguinte. */}
+      <ul className="mt-3 grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-x-4 gap-y-1.5">
         {partes.map((p, i) => (
-          <li key={i} className="flex items-center gap-2 text-xs">
+          <li key={i} className="flex min-w-0 items-center gap-2 text-xs">
             <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: p.cor }} />
-            <span className="text-stone-600 dark:text-stone-300">{p.rotulo}</span>
-            <span className="ml-auto font-semibold tabular-nums text-stone-700 dark:text-stone-200">{fmt(p.valor)}</span>
+            <span className="truncate text-stone-600 dark:text-stone-300">{p.rotulo}</span>
+            <span className="ml-auto flex-shrink-0 font-semibold tabular-nums text-stone-700 dark:text-stone-200">{fmt(p.valor)}</span>
           </li>
         ))}
       </ul>
