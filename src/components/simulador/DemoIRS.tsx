@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/Icons";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Demo "ao vivo" do resultado do Simulador de IRS — pré-visualização rica e
+// Demo "em direto" do resultado do Simulador de IRS — pré-visualização rica e
 // animada para o hero da página. Alterna entre perfis de exemplo para dar a
 // sensação de cálculo em tempo real. Os montantes são ILUSTRATIVOS (rotulados
 // "Exemplo"); só os escalões/taxas marginais vêm da fonte de verdade fiscal
@@ -137,7 +137,7 @@ export default function DemoIRS() {
       </div>
 
       <div className="grain relative rounded-4xl border border-stone-100 bg-white/95 p-5 shadow-float backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/95 sm:p-6">
-        {/* Faixa "a recalcular" — varre a cada troca de perfil, vendendo o "ao vivo" */}
+        {/* Faixa "a recalcular" — varre a cada troca de perfil, vendendo o "em direto" */}
         <div aria-hidden className="absolute inset-x-0 top-0 h-0.5 overflow-hidden rounded-t-4xl">
           <m.div
             key={`sweep-${i}`}
@@ -155,7 +155,7 @@ export default function DemoIRS() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-70" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand" />
             </span>
-            Demo ao vivo
+            Demo em direto
           </span>
           <span className="text-[11px] font-medium text-stone-400">IRS 2026 · Exemplo</span>
         </div>
@@ -204,7 +204,7 @@ export default function DemoIRS() {
 
         {/* ── Resultado herói + anel ─────────────────────────────────
              O número NÃO é remontado a cada troca: rola do valor anterior
-             para o novo (AnimatedNumber), vendendo o "recalculado ao vivo".
+             para o novo (AnimatedNumber), vendendo o "recalculado em direto".
              Só o rótulo (reembolso vs a pagar) faz crossfade. */}
         <div className="flex items-center gap-4">
           <div className="min-w-0 flex-1">

@@ -67,7 +67,7 @@ export default function Home() {
            * ── #explorar — launchpad único, moldado ao perfil ────────────────
            * Substitui as antigas Features + Ferramentas + Simulador de IRS +
            * Aprender por UMA secção compacta que mostra só o essencial de cada
-           * perfil: um destaque (a demo do IRS ao vivo onde é protagonista, ou o
+           * perfil: um destaque (a demo do IRS em direto onde é protagonista, ou o
            * cartão-chave), a fila de ferramentas relevantes e a de guias + Quiz.
            * `nAtividades` é calculado no servidor para o chip nunca inventar.
            */}

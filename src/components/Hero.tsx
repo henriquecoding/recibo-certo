@@ -271,7 +271,7 @@ function CountUp({ target, delay = 0, prefix = "" }: { target: number; delay?: n
 }
 
 /* ══════════════════════════════════════════════════════════════
-   Cartão hero — demo «ao vivo»: encenação de utilização real
+   Cartão hero — demo «em direto»: encenação de utilização real
    ─────────────────────────────────────────────────────────────
    Coreografia por ciclo (~11 s):
      1. o cartão acorda com ESQUELETO a respirar — nunca fica em
@@ -500,14 +500,14 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
 
   return (
     <div>
-      {/* Indicador «Demo ao vivo» — pilha premium, coerente com o DemoIRS */}
+      {/* Indicador «Demo em direto» — pilha premium, coerente com o DemoIRS */}
       <div className="mb-3 flex items-center justify-between gap-3" aria-hidden>
         <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/25 bg-brand-light px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-brand-dark dark:bg-brand/10 dark:text-brand">
           <span className="relative flex h-1.5 w-1.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-70 motion-reduce:animate-none" />
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand" />
           </span>
-          Demo ao vivo
+          Demo em direto
         </span>
         <span className="text-[11px] font-medium text-stone-400 dark:text-stone-500">Simulação automática</span>
       </div>

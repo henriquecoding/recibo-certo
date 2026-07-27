@@ -109,6 +109,8 @@ import {
   sanitizeNumericDraft,
 } from "@/lib/numeric-input";
 import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
+import { situacaoIVA } from "@/lib/fiscal-iva";
+import SituacaoIVAPainel from "@/components/simulador/SituacaoIVA";
 
 // ─── Constantes fiscais — derivadas de fiscal-data.ts ────────────────────────
 
@@ -2388,6 +2390,25 @@ export default function ModoGuiadoEmpresa({
                     {faturacaoComIva && faturacaoAnual > 0 && ` (${fmt(faturacaoAnual)} com IVA)`}.
                   </p>
 
+                  {/* ── Situação de IVA ──────────────────────────────────
+                      O simulador de empresa não tinha secção nenhuma de IVA,
+                      apesar de uma sociedade lidar com ele todos os meses ou
+                      trimestres. O motor sabe a regra do Art. 41.º: a
+                      periodicidade da declaração depende do volume de
+                      negócios do ano anterior. Aqui é informativo — o regime
+                      de uma sociedade não é uma escolha do simulador. */}
+                  <SituacaoIVAPainel
+                    className="mb-6"
+                    situacao={situacaoIVA({
+                      faturacaoAnual: faturacaoBase,
+                      regiao: regiaoIva,
+                      regimeEscolhido: "normal",
+                      entidade: "sociedade",
+                    })}
+                    regiao={regiaoIva}
+                    regimeEscolhido="normal"
+                  />
+
                   {/* Breakdown cascata */}
                   <div className="space-y-1.5">
                     {[
@@ -2842,7 +2863,7 @@ export default function ModoGuiadoEmpresa({
   );
 }
 
-// ─── Painel de resumo ao vivo ────────────────────────────────────────────────
+// ─── Painel de resumo em direto ────────────────────────────────────────────────
 
 function PainelResumoEmpresa({
   resultado,

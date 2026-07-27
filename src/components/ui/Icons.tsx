@@ -904,7 +904,7 @@ export function Linkedin({ size = 18, className }: IconProps) {
 }
 
 // ─── Cursor (ponteiro de rato simulado) ──────────────────────
-// Usado nas demos "ao vivo" para encenar utilização real. Cores fixas de
+// Usado nas demos "em direto" para encenar utilização real. Cores fixas de
 // propósito: tal como um cursor verdadeiro do sistema, é escuro com contorno
 // claro em ambos os temas — não é um ícone de superfície.
 export function CursorArrow({ size = 20, className }: IconProps) {

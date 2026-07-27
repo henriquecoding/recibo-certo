@@ -3938,7 +3938,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
       regimeIVA === "isento" &&
       brutoAnual <= IVA_ISENCAO_LIMITE);
 
-  // ── Toggle "com/sem IVA" + desdobramento ao vivo (paridade Modo Guiado) ────
+  // ── Toggle "com/sem IVA" + desdobramento em direto (paridade Modo Guiado) ────
   // Funciona nos dois modos (Por recibo / Anual). O valor de referência é o que
   // o utilizador escreveu (bruto/mês ou brutoAnual). Quando isento, mostra a
   // nota — o valor introduzido é a faturação, sem IVA a separar.
@@ -4836,7 +4836,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                       cima, dividido por tipo). */}
                   {ehDireitosAutor
                     ? desdobramentoAutorControl
-                    : /* Toggle com/sem IVA + desdobramento ao vivo — só no modo
+                    : /* Toggle com/sem IVA + desdobramento em direto — só no modo
                          "Um valor total"/anual (no "Recibo a recibo" o IVA é por
                          linha). */
                       !(modoInput === "recibo" && fatModo === "individual") &&
@@ -5905,6 +5905,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
 
                 {/* ── Inputs Empresa (modo completo; o guiado é full-width) ──── */}
                 {cenario === "empresa" && modoEmpresa === "completo" && (
+                  <>
                   <EmpresaInputs
                     faturacaoAnual={brutoAnual}
                     onFaturacaoChange={handleBrutoAnualChange}
@@ -5984,6 +5985,21 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                     onIsencaoIMTChange={setIsencaoIMT_RFAI}
                     onAnosAmortizacaoIMTChange={setAnosAmortizacaoIMT}
                   />
+
+                  {/* ── Situação de IVA da sociedade ─────────────────────
+                      Faltava aqui, e o motivo é estrutural: o painel de IVA
+                      vivia no bloco dos inputs de recibos verdes — que é
+                      exatamente o que se esconde quando o cenário é empresa.
+                      O motor já sabia a regra do Art. 41.º; só ninguém a
+                      mostrava. Informativo: o regime de uma sociedade não é
+                      uma escolha do simulador. */}
+                  <SituacaoIVAPainel
+                    className="mt-4"
+                    situacao={situacaoIva}
+                    regiao={regiao}
+                    regimeEscolhido="normal"
+                  />
+                  </>
                 )}
               </div>
 

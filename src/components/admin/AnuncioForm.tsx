@@ -727,7 +727,7 @@ export default function AnuncioForm({ inicial, modoEdicao = false, onGravar }: A
             Posicionamento no site
           </h3>
           <p className="mb-4 text-xs text-stone-400">
-            Seleciona onde este anúncio aparece. O preview atualiza ao vivo.
+            Seleciona onde este anúncio aparece. A pré-visualização atualiza em direto.
           </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {POSICOES.map(({ id, label, desc }) => {

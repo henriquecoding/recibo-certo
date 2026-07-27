@@ -1140,7 +1140,7 @@ export default function ModoGuiado({
             )}
           </div>
 
-          {/* ── Painel ao vivo ───────────────────────────────────────── */}
+          {/* ── Painel em direto ───────────────────────────────────────── */}
           {passo !== "resultado" && passo !== "contabilista" && (
             <div className="hidden lg:block">
               <div className="sticky top-24">
@@ -3691,7 +3691,7 @@ function ResultadoFinal({
   );
 }
 
-// ─── Painel lateral ao vivo ───────────────────────────────────────────────────
+// ─── Painel lateral em direto ───────────────────────────────────────────────────
 
 const PASSO_DICA: Record<1 | 2 | 3, { titulo: string; desc: string }> = {
   1: {
@@ -3734,7 +3734,7 @@ function PainelResultadoVivo({
       <div className="space-y-3">
         <div className="rounded-3xl border border-dashed border-stone-200 bg-stone-50 p-5 text-center dark:border-stone-700 dark:bg-stone-900/60">
           <p className="text-xs text-stone-400">
-            Seleciona a tua atividade para ver o resultado ao vivo
+            Seleciona a tua atividade para ver o resultado em direto
           </p>
         </div>
         <div className="rounded-3xl border border-brand/15 bg-brand-light/20 p-4">
@@ -3756,7 +3756,7 @@ function PainelResultadoVivo({
         <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
         <div className="relative">
           <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-white/90">
-            Resultado ao vivo
+            Resultado em direto
           </p>
 
           <div className="mb-1">
