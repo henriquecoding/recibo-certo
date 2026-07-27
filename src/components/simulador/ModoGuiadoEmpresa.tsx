@@ -108,6 +108,7 @@ import {
   parseNumericDraft,
   sanitizeNumericDraft,
 } from "@/lib/numeric-input";
+import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
 
 // ─── Constantes fiscais — derivadas de fiscal-data.ts ────────────────────────
 
@@ -2555,6 +2556,26 @@ export default function ModoGuiadoEmpresa({
                       </div>
                     ))}
                   </div>
+
+                  {/* Ponto 12.3 da arquitetura. Fica ANTES do plano de ação e
+                      do mapa de regiões: a constituição e a contabilidade da
+                      sociedade são o passo executável imediato. Nada aparece
+                      com a integração desligada. */}
+                  <FizPlanoAcao
+                    className="mb-6"
+                    simulador="simulador-empresa"
+                    valores={{
+                      entityType: "COMPANY",
+                      period: "ANNUAL",
+                      grossEstimate: Math.round(faturacaoBase),
+                      irsEstimate: Math.round(resultado.irsSalarioGerente + resultado.irsDividendos),
+                    }}
+                    passosPreparacao={[
+                      "Estrutura simulada: salário do gerente, dividendos e custos.",
+                      "IRC, derrama e tributações autónomas estimados.",
+                      "Carga fiscal efetiva calculada para o ano.",
+                    ]}
+                  />
 
                   {/* ── Plano de ação ─────────────────────────────────────── */}
                   <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">

@@ -53,9 +53,18 @@ export interface FizSimulatorRoute {
 /** Enquanto a parceria estiver em negociação, nada é ativado. */
 const ATIVAS: readonly SimuladorId[] = [];
 
+/**
+ * Identificação. Nunca é enviada por omissão e o utilizador escolhe campo a
+ * campo — mas tem de constar da proposta do simulador, senão o servidor
+ * recusa-a mesmo com consentimento. É o que evita que uma superfície
+ * qualquer possa pedir o NIF só por o pôr no corpo do pedido.
+ */
+const IDENTIFICACAO: CampoHandoff[] = ["fullName", "taxpayerNumber", "email", "phone"];
+
 const RESUMO_TI: CampoHandoff[] = [
   "entityType", "activityCategory", "vatTerritory", "vatRegimeEstimate",
   "period", "grossEstimate", "vatEstimate", "withholdingEstimate", "socialSecurityEstimate",
+  "irsEstimate",
 ];
 
 export const FIZ_SIMULATOR_ROUTES: FizSimulatorRoute[] = [
@@ -68,7 +77,7 @@ export const FIZ_SIMULATOR_ROUTES: FizSimulatorRoute[] = [
     dataMode: "CONSENTED_HANDOFF",
     fallbackLabel: "Continuar com a FIZ sem repetir dados",
     promessa: "Leva esta configuração — atividade, regime de IVA e retenção — para não a voltares a introduzir.",
-    camposPropostos: RESUMO_TI,
+    camposPropostos: [...RESUMO_TI, ...IDENTIFICACAO],
     enabled: ATIVAS.includes("recibos-verdes"),
   },
   {
@@ -80,7 +89,7 @@ export const FIZ_SIMULATOR_ROUTES: FizSimulatorRoute[] = [
     dataMode: "CONSENTED_HANDOFF",
     fallbackLabel: "Continuar a preparação do IRS na FIZ",
     promessa: "Envia os valores estimados para começares a declaração já com o contexto certo.",
-    camposPropostos: ["entityType", "period", "grossEstimate", "irsEstimate", "withholdingEstimate"],
+    camposPropostos: ["entityType", "period", "grossEstimate", "irsEstimate", "withholdingEstimate", ...IDENTIFICACAO],
     enabled: ATIVAS.includes("simulador-irs"),
   },
   {
@@ -92,7 +101,7 @@ export const FIZ_SIMULATOR_ROUTES: FizSimulatorRoute[] = [
     dataMode: "CONSENTED_HANDOFF",
     fallbackLabel: "Preparar a constituição na FIZ",
     promessa: "Leva a estrutura simulada para quem trata da constituição e da contabilidade.",
-    camposPropostos: ["entityType", "activityCategory", "period", "grossEstimate", "irsEstimate"],
+    camposPropostos: ["entityType", "activityCategory", "period", "grossEstimate", "irsEstimate", ...IDENTIFICACAO],
     enabled: ATIVAS.includes("simulador-empresa"),
   },
   {
@@ -104,7 +113,7 @@ export const FIZ_SIMULATOR_ROUTES: FizSimulatorRoute[] = [
     dataMode: "CONSENTED_HANDOFF",
     fallbackLabel: "Rever a configuração fiscal na FIZ",
     promessa: "Confirma com quem executa se o coeficiente e o regime estão corretos no teu caso.",
-    camposPropostos: ["entityType", "activityCategory", "period", "grossEstimate"],
+    camposPropostos: ["entityType", "activityCategory", "period", "grossEstimate", "irsEstimate", ...IDENTIFICACAO],
     enabled: ATIVAS.includes("regime-simplificado"),
   },
   {
@@ -116,7 +125,7 @@ export const FIZ_SIMULATOR_ROUTES: FizSimulatorRoute[] = [
     dataMode: "CONSENTED_HANDOFF",
     fallbackLabel: "Rever o enquadramento na FIZ",
     promessa: "Se a decisão for abrir atividade, continua sem recomeçar do zero.",
-    camposPropostos: ["entityType", "activityCategory", "period", "grossEstimate"],
+    camposPropostos: ["entityType", "activityCategory", "period", "grossEstimate", ...IDENTIFICACAO],
     enabled: ATIVAS.includes("ato-isolado"),
   },
   {
@@ -128,7 +137,7 @@ export const FIZ_SIMULATOR_ROUTES: FizSimulatorRoute[] = [
     dataMode: "CONSENTED_HANDOFF",
     fallbackLabel: "Abrir atividade com esta classificação na FIZ",
     promessa: "Leva o código de atividade escolhido para a abertura.",
-    camposPropostos: ["entityType", "activityCategory", "vatRegimeEstimate"],
+    camposPropostos: ["entityType", "activityCategory", "vatRegimeEstimate", ...IDENTIFICACAO],
     enabled: ATIVAS.includes("classificar-atividade"),
   },
   {
@@ -140,7 +149,7 @@ export const FIZ_SIMULATOR_ROUTES: FizSimulatorRoute[] = [
     dataMode: "CONSENTED_HANDOFF",
     fallbackLabel: "Validar a escolha com um contabilista na FIZ",
     promessa: "A comparação é uma estimativa. Confirma a decisão com quem a vai executar.",
-    camposPropostos: ["entityType", "period", "grossEstimate", "irsEstimate"],
+    camposPropostos: ["entityType", "period", "grossEstimate", "irsEstimate", ...IDENTIFICACAO],
     exigeRevisaoHumana: true,
     enabled: ATIVAS.includes("comparador"),
   },

@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { fizAtiva } from "@/lib/fiz/flag";
 import { ROTULO_CAMPO, CAMPOS_NUNCA_ENVIADOS, type CampoHandoff } from "@/lib/fiz/handoff-fields";
+import { useIdentidadeFiz, type IdentidadeDisponivel } from "@/lib/fiz/use-identidade";
+import { supabaseConfigurado } from "@/lib/supabase/client";
 import { Warning, Check, Info } from "@/components/ui/Icons";
 import FizActionButton from "./FizActionButton";
 import FizConsentDialog, { type CampoConsentimento } from "./FizConsentDialog";
@@ -73,18 +75,49 @@ const PERIODO: Record<NonNullable<ValoresSimulacao["period"]>, string> = {
   ONE_OFF: "pontual",
 };
 
-function paraCampos(v: ValoresSimulacao): CampoConsentimento[] {
+/** Regime de IVA no vocabulário do contrato → português legível. */
+const REGIME_IVA: Record<string, string> = {
+  EXEMPT_ART_53: "Isento — Art. 53.º CIVA",
+  EXEMPT_ART_9: "Isento — Art. 9.º CIVA",
+  NORMAL: "Regime normal de IVA",
+  UNKNOWN: "A confirmar",
+};
+
+const TERRITORIO: Record<string, string> = {
+  CONTINENTAL: "Continente",
+  MADEIRA: "Madeira",
+  AZORES: "Açores",
+};
+
+const ENTIDADE: Record<string, string> = {
+  INDIVIDUAL: "Trabalhador independente",
+  SOLE_TRADER: "Empresário em nome individual",
+  COMPANY: "Sociedade",
+};
+
+/**
+ * Constrói a lista que o diálogo mostra.
+ *
+ * Os valores de identificação servem só para o utilizador ver o que está a
+ * autorizar. Não são enviados no pedido: o servidor relê-os do perfil
+ * autenticado (ver `use-identidade.ts`).
+ */
+function paraCampos(v: ValoresSimulacao, identidade: IdentidadeDisponivel): CampoConsentimento[] {
   const bruto: [CampoHandoff, string | undefined][] = [
-    ["entityType", v.entityType],
+    ["entityType", v.entityType ? (ENTIDADE[v.entityType] ?? v.entityType) : undefined],
     ["activityCategory", v.activityCategory],
-    ["vatTerritory", v.vatTerritory],
-    ["vatRegimeEstimate", v.vatRegimeEstimate],
+    ["vatTerritory", v.vatTerritory ? (TERRITORIO[v.vatTerritory] ?? v.vatTerritory) : undefined],
+    ["vatRegimeEstimate", v.vatRegimeEstimate ? (REGIME_IVA[v.vatRegimeEstimate] ?? v.vatRegimeEstimate) : undefined],
     ["period", v.period ? PERIODO[v.period] : undefined],
     ["grossEstimate", v.grossEstimate !== undefined ? euros(v.grossEstimate) : undefined],
     ["vatEstimate", v.vatEstimate !== undefined ? euros(v.vatEstimate) : undefined],
     ["withholdingEstimate", v.withholdingEstimate !== undefined ? euros(v.withholdingEstimate) : undefined],
     ["socialSecurityEstimate", v.socialSecurityEstimate !== undefined ? euros(v.socialSecurityEstimate) : undefined],
     ["irsEstimate", v.irsEstimate !== undefined ? euros(v.irsEstimate) : undefined],
+    ["fullName", identidade.fullName],
+    ["taxpayerNumber", identidade.taxpayerNumber],
+    ["email", identidade.email],
+    ["phone", identidade.phone],
   ];
   return bruto
     .filter(([, valor]) => valor !== undefined && valor !== "")
@@ -98,13 +131,22 @@ export default function FizPlanoAcao({
   className = "",
 }: FizPlanoAcaoProps) {
   const [acao, setAcao] = useState<AcaoResolvida | null>(null);
+  /** O que ESTE simulador pode propor. `null` = ainda não sabemos. */
+  const [propostos, setPropostos] = useState<CampoHandoff[] | null>(null);
   const [carregado, setCarregado] = useState(false);
   const [dialogoAberto, setDialogoAberto] = useState(false);
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
 
-  const campos = paraCampos(valores);
+  const { identidade } = useIdentidadeFiz();
+  const campos = useMemo(() => {
+    const todos = paraCampos(valores, identidade);
+    // Nunca oferecer o que o servidor vai recusar: o utilizador escolheria um
+    // campo, carregaria em autorizar e levaria com um erro sem perceber
+    // porquê.
+    return propostos ? todos.filter((c) => propostos.includes(c.campo as CampoHandoff)) : todos;
+  }, [valores, identidade, propostos]);
 
   useEffect(() => {
     if (!fizAtiva()) {
@@ -118,8 +160,10 @@ export default function FizPlanoAcao({
       body: JSON.stringify({ simulador }),
     })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: { acao: AcaoResolvida | null } | null) => {
-        if (ativo) setAcao(d?.acao ?? null);
+      .then((d: { acao: AcaoResolvida | null; camposPropostos?: CampoHandoff[] } | null) => {
+        if (!ativo) return;
+        setAcao(d?.acao ?? null);
+        setPropostos(d?.camposPropostos ?? []);
       })
       .catch(() => {
         /* silêncio: uma falha de rede não pode partir o resultado do simulador */
@@ -137,13 +181,28 @@ export default function FizPlanoAcao({
       setAEnviar(true);
       setErro(null);
       try {
+        // O token só serve para o servidor saber QUEM está a autorizar — é
+        // assim que ele consegue reler a identificação do perfil em vez de
+        // confiar em valores vindos do browser.
+        let autorizacao: string | null = null;
+        if (supabaseConfigurado()) {
+          const { getSupabase } = await import("@/lib/supabase/client");
+          const { data } = await getSupabase().auth.getSession();
+          autorizacao = data.session?.access_token ?? null;
+        }
+
         const resposta = await fetch("/api/integrations/fiz/handoff", {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: {
+            "content-type": "application/json",
+            ...(autorizacao ? { authorization: `Bearer ${autorizacao}` } : {}),
+          },
           body: JSON.stringify({
             simulador,
             campos: campos.map((c) => c.campo),
             camposAutorizados,
+            // Repara no que NÃO vai aqui: nome, NIF, email e telefone. O
+            // cliente só diz que campos foram autorizados.
             valores,
             sourceType: "simulador",
           }),

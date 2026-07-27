@@ -14,6 +14,7 @@ import {
 import ComparadorFAQ from "@/components/comparar/ComparadorFAQ";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
+import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
 
 const SeccaoCarregar = () => (
   <div className="h-64 w-full animate-pulse rounded-3xl border border-stone-100 bg-stone-50 dark:border-stone-800 dark:bg-stone-900/50" />
@@ -657,6 +658,25 @@ export default function ComparadorCenarios() {
         certificado (OCC).
       </p>
     </div>
+
+    {/* ── Passar da comparação à execução ──────────────────────────
+        Fica ANTES do diagnóstico de contabilista e do mapa: quem já viu os
+        três cenários lado a lado quer saber como executar o que escolheu.
+        `exigeRevisaoHumana` está ligado nesta rota — a comparação é uma
+        estimativa e a escolha de enquadramento nunca é automática. */}
+    <FizPlanoAcao
+      simulador="comparador"
+      valores={{
+        entityType: r.melhor === "empresa" ? "COMPANY" : "INDIVIDUAL",
+        period: "ANNUAL",
+        grossEstimate: Math.round(bruto),
+        irsEstimate: Math.round(r.melhor === "dependente" ? r.dependente.irs : r.freelancer.irs),
+      }}
+      passosPreparacao={[
+        `Cenários comparados para ${fmt(bruto)} €/ano: dependente, recibos verdes e empresa.`,
+        `Cenário com maior líquido identificado: ${tituloMelhor}.`,
+      ]}
+    />
 
     {/* ── Próximos passos: precisas de um contabilista? ── */}
     <ErrorBoundary etiqueta="o diagnóstico de contabilista">

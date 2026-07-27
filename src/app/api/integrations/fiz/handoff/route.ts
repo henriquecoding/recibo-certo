@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { criarHandoff, previsualizarHandoff, type CampoHandoff, type PropostaHandoff, ROTULO_CAMPO } from "@/lib/fiz/handoff.server";
-import { utilizadorDoPedido, servicoSupabase } from "@/lib/fiz/session.server";
+import { utilizadorDoPedido, servicoSupabase, identidadeDoUtilizador } from "@/lib/fiz/session.server";
+import { CAMPOS_IDENTIFICAVEIS } from "@/lib/fiz/handoff-fields";
 import { respostaErro, semCache } from "@/lib/fiz/route-helpers.server";
 import { POLITICA_CONSENTIMENTO_VERSAO, fizServerConfig } from "@/lib/fiz/config";
 import { manifesto } from "@/lib/guias/manifests";
@@ -61,9 +62,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ erro: "Guia desconhecido.", codigo: "nao_encontrado" }, { status: 404, headers: semCache });
     }
 
-    const campos = (corpo.campos ?? []).filter((c): c is CampoHandoff => CAMPOS_VALIDOS.includes(c as CampoHandoff));
-    const autorizados = (corpo.camposAutorizados ?? []).filter((c): c is CampoHandoff =>
-      CAMPOS_VALIDOS.includes(c as CampoHandoff),
+    // Duas fronteiras, não uma. A primeira é o vocabulário global (o campo
+    // existe?); a segunda é o que ESTE simulador declarou propor. Sem a
+    // segunda, bastaria pôr um campo extra no corpo do pedido para o pedir
+    // numa superfície que nunca foi desenhada para o oferecer.
+    const permitidos = rotaSim
+      ? (c: CampoHandoff) => rotaSim.camposPropostos.includes(c)
+      : () => true;
+
+    const campos = (corpo.campos ?? []).filter(
+      (c): c is CampoHandoff => CAMPOS_VALIDOS.includes(c as CampoHandoff) && permitidos(c as CampoHandoff),
+    );
+    const autorizados = (corpo.camposAutorizados ?? []).filter(
+      (c): c is CampoHandoff => CAMPOS_VALIDOS.includes(c as CampoHandoff) && permitidos(c as CampoHandoff),
     );
 
     if (autorizados.length === 0) {
@@ -96,10 +107,42 @@ export async function POST(req: NextRequest) {
           }
         : undefined;
 
+    // ── Identificação ────────────────────────────────────────────────
+    // Os valores NUNCA vêm do corpo do pedido. O cliente diz que campos o
+    // utilizador autorizou; o servidor relê nome, NIF, email e telefone do
+    // perfil autenticado. Sem sessão não há identificação a enviar — e o
+    // handoff continua válido com o resto.
+    const utilizador = await utilizadorDoPedido(req);
+    const pediuIdentificacao = autorizados.some((c) => CAMPOS_IDENTIFICAVEIS.includes(c));
+    const identidade = pediuIdentificacao && utilizador
+      ? await identidadeDoUtilizador(utilizador)
+      : undefined;
+
+    // Um campo autorizado para o qual não temos valor é descartado em
+    // silêncio: pedir ao utilizador que volte atrás para desmarcar algo que
+    // não existe seria só atrito.
+    const identificaveisResolvidos = identidade
+      ? CAMPOS_IDENTIFICAVEIS.filter((c) => identidade[c as keyof typeof identidade])
+      : [];
+    const autorizadosFinal = autorizados.filter(
+      (c) => !CAMPOS_IDENTIFICAVEIS.includes(c) || identificaveisResolvidos.includes(c),
+    );
+
+    if (autorizadosFinal.length === 0) {
+      return NextResponse.json(
+        {
+          erro: "Não conseguimos confirmar os teus dados de identificação. Escolhe outro campo ou completa o perfil.",
+          codigo: "invalido",
+        },
+        { status: 422, headers: semCache },
+      );
+    }
+
     const proposta: PropostaHandoff = {
       intent,
       campos,
       profile: corpo.profile ?? perfilDeValores,
+      identity: identidade,
       simulationSummary: corpo.simulationSummary ?? resumoDeValores,
       sourceContext: m
         ? {
@@ -120,22 +163,21 @@ export async function POST(req: NextRequest) {
         {
           url: destinoDePreview(),
           preview: true,
-          camposQueSeriamEnviados: autorizados,
+          camposQueSeriamEnviados: autorizadosFinal,
           aviso: "Pré-visualização: nenhum dado foi enviado para a FIZ.",
         },
         { headers: semCache },
       );
     }
 
-    const { handoff, url, consentReceiptId } = await criarHandoff(proposta, autorizados);
+    const { handoff, url, consentReceiptId } = await criarHandoff(proposta, autorizadosFinal);
 
     // Registo de auditoria: guardamos a prova do que foi enviado (hash),
     // nunca os valores. Se o Supabase não estiver disponível, o handoff
     // continua válido — o registo é best-effort e não bloqueia o utilizador.
-    const utilizador = await utilizadorDoPedido(req);
     const sb = servicoSupabase();
     if (sb) {
-      const previsualizado = previsualizarHandoff(proposta).filter((p) => autorizados.includes(p.campo));
+      const previsualizado = previsualizarHandoff(proposta).filter((p) => autorizadosFinal.includes(p.campo));
       const hash = createHash("sha256").update(JSON.stringify(previsualizado)).digest("hex");
       const { error } = await sb.from("partner_handoffs").insert({
         user_id: utilizador?.id ?? null,
@@ -146,7 +188,7 @@ export async function POST(req: NextRequest) {
         intent,
         consent_receipt_id: consentReceiptId,
         consent_policy_version: POLITICA_CONSENTIMENTO_VERSAO,
-        consent_fields: autorizados,
+        consent_fields: autorizadosFinal,
         payload_hash: hash,
         status: "pending",
         expires_at: handoff.expiresAt ?? new Date(Date.now() + fizServerConfig().handoffTtlSegundos * 1000).toISOString(),
@@ -155,7 +197,15 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { url, handoffId: handoff.id, expiraEm: handoff.expiresAt, consentReceiptId },
+      {
+        url,
+        handoffId: handoff.id,
+        expiraEm: handoff.expiresAt,
+        consentReceiptId,
+        // O que saiu de facto. Pode ser menos do que o autorizado se algum
+        // campo de identificação não tinha valor no perfil.
+        camposEnviados: autorizadosFinal,
+      },
       { headers: semCache },
     );
   } catch (erro) {

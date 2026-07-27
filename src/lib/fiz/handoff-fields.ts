@@ -8,34 +8,160 @@
 //  estiver aqui, não pode ser proposto nem autorizado. O servidor valida
 //  contra esta mesma lista, por isso um cliente adulterado não consegue
 //  alargar o consentimento.
+//
+//  ── Porque existem três grupos ────────────────────────────────────────
+//
+//  A primeira versão só permitia enquadramento e estimativas. Estava certa
+//  no espírito e errada na conclusão: o ponto 8.2 da arquitetura proíbe
+//  "NIF em query string" e "email em query string" — proíbe o CANAL, não o
+//  dado. Com consentimento explícito e no corpo de um pedido cifrado, a
+//  identificação é lícita (Art. 6.º, n.º 1, al. a do RGPD) e é o que evita
+//  ao utilizador reescrever tudo do outro lado.
+//
+//  O que continua proibido não é proibido por cautela — é proibido porque
+//  o utilizador NÃO PODE consentir por ele:
+//    · credenciais: não são dados, são chaves de acesso;
+//    · dados de clientes: pertencem a terceiros que nunca foram ouvidos;
+//    · documentos e anexos: contêm invariavelmente dados de terceiros.
 // ═══════════════════════════════════════════════════════════════════════
 
 export type CampoHandoff =
+  // Enquadramento — o que determina as regras aplicáveis
   | "entityType" | "activityCategory" | "vatTerritory" | "vatRegimeEstimate" | "socialSecuritySituation"
+  // Estimativas — resultado dos nossos motores
   | "grossEstimate" | "vatEstimate" | "withholdingEstimate" | "socialSecurityEstimate" | "irsEstimate"
-  | "period" | "intent" | "sourceGuide";
+  | "period"
+  // Identificação — só com consentimento próprio e destacado
+  | "fullName" | "taxpayerNumber" | "email" | "phone"
+  // Origem
+  | "intent" | "sourceGuide";
 
-/** Rótulos em pt-PT — é isto que o utilizador lê antes de autorizar. */
-export const ROTULO_CAMPO: Record<CampoHandoff, string> = {
-  entityType: "Tipo de entidade (particular, empresário em nome individual ou sociedade)",
-  activityCategory: "Categoria da atividade",
-  vatTerritory: "Território para efeitos de IVA (continente, Madeira ou Açores)",
-  vatRegimeEstimate: "Regime de IVA estimado",
-  socialSecuritySituation: "Situação perante a Segurança Social",
-  grossEstimate: "Valor bruto estimado",
-  vatEstimate: "IVA estimado",
-  withholdingEstimate: "Retenção na fonte estimada",
-  socialSecurityEstimate: "Contribuição estimada para a Segurança Social",
-  irsEstimate: "IRS estimado",
-  period: "Periodicidade da estimativa",
-  intent: "O que pretendes fazer a seguir",
-  sourceGuide: "Guia ou simulador de onde vieste",
+export type GrupoCampo = "enquadramento" | "estimativas" | "identificacao" | "origem";
+
+export interface DefinicaoCampo {
+  grupo: GrupoCampo;
+  rotulo: string;
+  /** Porque é que vale a pena enviar. Aparece por baixo do rótulo. */
+  porque?: string;
+  /** Dado pessoal identificável — exige um aviso mais forte no diálogo. */
+  identificavel?: boolean;
+}
+
+export const CAMPOS: Record<CampoHandoff, DefinicaoCampo> = {
+  // ── Enquadramento ───────────────────────────────────────────────────
+  entityType: {
+    grupo: "enquadramento",
+    rotulo: "Tipo de entidade",
+    porque: "Particular, empresário em nome individual ou sociedade.",
+  },
+  activityCategory: {
+    grupo: "enquadramento",
+    rotulo: "Categoria da atividade",
+    porque: "Determina o coeficiente e a retenção aplicáveis.",
+  },
+  vatTerritory: {
+    grupo: "enquadramento",
+    rotulo: "Território para efeitos de IVA",
+    porque: "Continente, Madeira ou Açores — as taxas diferem.",
+  },
+  vatRegimeEstimate: {
+    grupo: "enquadramento",
+    rotulo: "Regime de IVA estimado",
+    porque: "Isenção do Art. 53.º, isenção do Art. 9.º ou regime normal.",
+  },
+  socialSecuritySituation: {
+    grupo: "enquadramento",
+    rotulo: "Situação perante a Segurança Social",
+  },
+
+  // ── Estimativas ─────────────────────────────────────────────────────
+  period: { grupo: "estimativas", rotulo: "Periodicidade da estimativa" },
+  grossEstimate: { grupo: "estimativas", rotulo: "Valor bruto estimado" },
+  vatEstimate: { grupo: "estimativas", rotulo: "IVA estimado" },
+  withholdingEstimate: { grupo: "estimativas", rotulo: "Retenção na fonte estimada" },
+  socialSecurityEstimate: { grupo: "estimativas", rotulo: "Contribuição estimada para a Segurança Social" },
+  irsEstimate: { grupo: "estimativas", rotulo: "IRS estimado" },
+
+  // ── Identificação ───────────────────────────────────────────────────
+  fullName: {
+    grupo: "identificacao",
+    rotulo: "Nome",
+    porque: "Evita ter de o escrever outra vez na FIZ.",
+    identificavel: true,
+  },
+  taxpayerNumber: {
+    grupo: "identificacao",
+    rotulo: "NIF",
+    porque: "Necessário para abrir atividade ou emitir documentos na FIZ.",
+    identificavel: true,
+  },
+  email: {
+    grupo: "identificacao",
+    rotulo: "Email",
+    porque: "Para a FIZ associar a continuação à tua conta.",
+    identificavel: true,
+  },
+  phone: {
+    grupo: "identificacao",
+    rotulo: "Telefone",
+    porque: "Só se quiseres ser contactado por essa via.",
+    identificavel: true,
+  },
+
+  // ── Origem ──────────────────────────────────────────────────────────
+  intent: { grupo: "origem", rotulo: "O que pretendes fazer a seguir" },
+  sourceGuide: { grupo: "origem", rotulo: "Guia ou simulador de onde vieste" },
 };
 
-export const CAMPOS_VALIDOS = Object.keys(ROTULO_CAMPO) as CampoHandoff[];
+/** Compatibilidade: o mapa simples de rótulos continua disponível. */
+export const ROTULO_CAMPO: Record<CampoHandoff, string> = Object.fromEntries(
+  Object.entries(CAMPOS).map(([k, v]) => [k, v.rotulo]),
+) as Record<CampoHandoff, string>;
 
-/** Nunca sai daqui, em nenhuma circunstância (ponto 8.2 da arquitetura). */
+export const CAMPOS_VALIDOS = Object.keys(CAMPOS) as CampoHandoff[];
+
+export const CAMPOS_IDENTIFICAVEIS: CampoHandoff[] = CAMPOS_VALIDOS.filter(
+  (c) => CAMPOS[c].identificavel,
+);
+
+export const GRUPOS: { id: GrupoCampo; titulo: string; descricao: string }[] = [
+  {
+    id: "enquadramento",
+    titulo: "Enquadramento fiscal",
+    descricao: "O que determina as regras que se aplicam ao teu caso.",
+  },
+  {
+    id: "estimativas",
+    titulo: "Valores estimados",
+    descricao: "Resultado dos nossos cálculos. São estimativas, não valores oficiais.",
+  },
+  {
+    id: "identificacao",
+    titulo: "Identificação",
+    descricao: "Dados que te identificam. Só faz sentido enviar se quiseres continuar já na FIZ.",
+  },
+  { id: "origem", titulo: "Origem", descricao: "De onde veio esta continuação." },
+];
+
+/**
+ * Nunca sai daqui, aconteça o que acontecer — e não por excesso de cautela.
+ *
+ * Credenciais não são dados pessoais, são chaves de acesso: partilhá-las
+ * seria dar acesso, não informação. Dados de clientes e documentos
+ * pertencem a terceiros que nunca foram ouvidos — o utilizador não tem
+ * legitimidade para consentir em nome deles.
+ */
 export const CAMPOS_NUNCA_ENVIADOS = [
-  "NIF", "NISS", "nome", "morada", "email", "telefone", "IBAN",
-  "dados de clientes", "documentos emitidos", "anexos", "credenciais",
+  "palavras-passe ou credenciais da FIZ, das Finanças ou da Segurança Social",
+  "dados dos teus clientes",
+  "documentos emitidos e anexos",
+  "IBAN e dados bancários",
 ] as const;
+
+/** Nenhum destes campos pode viajar em query string, em circunstância alguma. */
+export const NUNCA_EM_URL: CampoHandoff[] = [
+  ...CAMPOS_IDENTIFICAVEIS,
+  "grossEstimate",
+  "irsEstimate",
+  "socialSecurityEstimate",
+];

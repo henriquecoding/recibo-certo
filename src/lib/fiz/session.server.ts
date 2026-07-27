@@ -41,6 +41,38 @@ export async function utilizadorDoPedido(req: Request): Promise<UtilizadorSessao
   return data.user ? { id: data.user.id, email: data.user.email ?? undefined } : null;
 }
 
+/**
+ * Identidade do utilizador, lida do perfil autenticado.
+ *
+ * É a ÚNICA origem admissível para os campos de identificação de um handoff.
+ * O cliente diz que campos o utilizador autorizou; os valores vêm daqui. Se
+ * viessem no corpo do pedido, um cliente adulterado podia colar o NIF de
+ * outra pessoa a um consentimento legítimo — e o recibo de consentimento
+ * ficaria a atestar algo que nunca aconteceu.
+ */
+export async function identidadeDoUtilizador(
+  utilizador: UtilizadorSessao,
+): Promise<{ fullName?: string; taxpayerNumber?: string; email?: string; phone?: string }> {
+  const identidade: { fullName?: string; taxpayerNumber?: string; email?: string; phone?: string } = {};
+  if (utilizador.email) identidade.email = utilizador.email;
+
+  const sb = servicoSupabase();
+  if (!sb) return identidade;
+
+  const { data } = await sb
+    .from("profiles")
+    .select("nome, nif, telefone")
+    .eq("id", utilizador.id)
+    .maybeSingle();
+
+  if (!data) return identidade;
+  const perfil = data as { nome: string | null; nif: string | null; telefone: string | null };
+  if (perfil.nome) identidade.fullName = perfil.nome;
+  if (perfil.nif) identidade.taxpayerNumber = perfil.nif;
+  if (perfil.telefone) identidade.phone = perfil.telefone;
+  return identidade;
+}
+
 interface LigacaoRow {
   user_id: string;
   partner_user_id: string;

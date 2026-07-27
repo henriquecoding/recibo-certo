@@ -388,13 +388,31 @@ describe("guias:fiz-contract — simuladores (ponto 12.3 da arquitetura)", () =>
   });
 
   it("nenhum campo proposto é um dado que nunca deve sair", () => {
-    const proibidos = CAMPOS_NUNCA_ENVIADOS.map((c) => c.toLowerCase());
+    // O que está fora do vocabulário está fora por não ser consentível pelo
+    // utilizador: chaves de acesso e dados de terceiros. O NIF e o email
+    // saíram desta lista porque são do próprio e ele pode autorizá-los —
+    // continuam, isso sim, proibidos em query string (ver fiz.test.ts).
+    const texto = CAMPOS_NUNCA_ENVIADOS.join(" | ").toLowerCase();
+    for (const p of ["credenciais", "clientes", "documentos", "iban"]) {
+      expect(texto, p).toContain(p);
+    }
     for (const campo of CAMPOS_VALIDOS) {
-      const rotulo = ROTULO_CAMPO[campo].toLowerCase();
-      // "NIF", "IBAN", "email" e afins não podem aparecer como campo enviável.
-      for (const p of ["nif", "niss", "iban"]) {
-        expect(proibidos, p).toContain(p === "nif" ? "nif" : p === "niss" ? "niss" : "iban");
-        expect(rotulo.split(/\W+/), `${campo} propõe ${p}`).not.toContain(p);
+      const palavras = ROTULO_CAMPO[campo].toLowerCase().split(/\W+/);
+      for (const p of ["niss", "iban", "password"]) {
+        expect(palavras, `${campo} propõe ${p}`).not.toContain(p);
+      }
+    }
+  });
+
+  it("a identificação é proposta apenas onde há execução a continuar", () => {
+    const IDENT = ["fullName", "taxpayerNumber", "email", "phone"];
+    for (const r of FIZ_SIMULATOR_ROUTES) {
+      const propoeIdent = r.camposPropostos.some((c) => IDENT.includes(c));
+      // NO_DATA não transporta nada — muito menos identificação.
+      if (r.dataMode === "NO_DATA") {
+        expect(propoeIdent, `${r.simulador} não pode propor identificação`).toBe(false);
+      } else {
+        expect(propoeIdent, `${r.simulador} devia poder pré-preencher`).toBe(true);
       }
     }
   });

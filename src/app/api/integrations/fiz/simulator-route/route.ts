@@ -20,8 +20,9 @@ export async function POST(req: NextRequest) {
   try {
     const corpo = (await req.json().catch(() => ({}))) as { simulador?: string };
     const id = corpo.simulador as SimuladorId | undefined;
+    const rota = id ? rotaDoSimulador(id) : undefined;
 
-    if (!id || !rotaDoSimulador(id)) {
+    if (!id || !rota) {
       // `null` e não 404: há simuladores sem ação por decisão de produto, e
       // o cliente trata os dois casos da mesma maneira — não mostra nada.
       return NextResponse.json({ acao: null }, { headers: semCache });
@@ -35,7 +36,14 @@ export async function POST(req: NextRequest) {
       connectionState: ligacao?.estado ?? "NOT_CONNECTED",
     });
 
-    return NextResponse.json({ acao }, { headers: semCache });
+    // `camposPropostos` vai para o cliente para que o diálogo só ofereça o
+    // que este simulador pode mesmo transferir. É conveniência, não
+    // segurança: a rota do handoff volta a filtrar pela mesma lista, porque
+    // um cliente adulterado não fica preso a esta resposta.
+    return NextResponse.json(
+      { acao, camposPropostos: rota.camposPropostos },
+      { headers: semCache },
+    );
   } catch (erro) {
     return respostaErro(erro);
   }

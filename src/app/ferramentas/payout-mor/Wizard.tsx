@@ -7,6 +7,7 @@ import { fmt } from "@/lib/format";
 import { useScrollTopOnStep } from "@/lib/scroll";
 import { Check, Warning, ArrowRight, ChevronDown } from "@/components/ui/Icons";
 import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
+import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
 
 // ── Barra de progresso ────────────────────────────────────────────────────────
 
@@ -428,6 +429,17 @@ function Passo5({ valor }: { valor: string }) {
       <Callout tipo="ok">
         Concluído! O teu recibo ao MoR está configurado corretamente para 100 % de payout líquido.
       </Callout>
+
+      {/* NO_DATA por decisão: o tratamento correto depende do contrato com o
+          MoR, que não temos. Não há resumo a transportar — só o encontro com
+          quem consegue ler o contrato. */}
+      <FizPlanoAcao
+        simulador="payout-mor"
+        valores={{}}
+        passosPreparacao={[
+          "Recibo ao MoR configurado e reserva estimada.",
+        ]}
+      />
     </div>
   );
 }

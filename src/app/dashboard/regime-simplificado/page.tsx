@@ -8,7 +8,7 @@ export default function Page() {
       titulo="Regime simplificado"
       descricao="Insere a tua faturação e atividade. Calcula coeficiente, rendimento tributável, IRS estimado e taxa efetiva."
     >
-      <CalculadoraRegimeSimplificado />
+      <CalculadoraRegimeSimplificado comPlanoFiz />
     </PaginaFerramenta>
   );
 }

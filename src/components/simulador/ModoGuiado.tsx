@@ -495,6 +495,24 @@ export default function ModoGuiado({
         ? ivaEsperadoAtiv
         : "normal";
 
+  // Regime de IVA no vocabulário do contrato da FIZ. Tem de derivar do regime
+  // EFETIVO — usar a escolha crua do utilizador produzia a contradição de
+  // anunciar "isento do Art. 53.º" ao mesmo tempo que se enviava IVA estimado.
+  // A isenção também não é uma só: a do Art. 53.º vem do limiar de faturação,
+  // a do Art. 9.º da natureza da operação (obra própria de autor, n.º 16).
+  // Quando as duas coexistem — obra própria mais royalties abaixo do limiar —
+  // não há resposta única e "UNKNOWN" é mais honesto do que escolher uma.
+  const vatRegimeEstimateFiz: "EXEMPT_ART_53" | "EXEMPT_ART_9" | "NORMAL" | "UNKNOWN" =
+    regimeEfetivo !== "isento"
+      ? "NORMAL"
+      : desdobramentoAutor && desdobramentoAutor.obra > 0
+        ? desdobramentoAutor.royalties > 0
+          ? "UNKNOWN"
+          : "EXEMPT_ART_9"
+        : ivaEsperadoAtiv === "isento"
+          ? "EXEMPT_ART_9"
+          : "EXEMPT_ART_53";
+
   // bruto (sem IVA) e recibosAno mantidos para compatibilidade com o resto do componente
   const bruto = mensalSemIva;
   const recibosAno = mesesFat;
@@ -1068,24 +1086,24 @@ export default function ModoGuiado({
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <PassoContabilista
-                    faturacaoAnual={brutoAnual}
-                    onVoltar={() => setPasso("resultado")}
-                  />
-
                   {/* Ponto 12.3 da arquitetura: o simulador mantém o resultado
                       e a memória de cálculo, e ganha um plano de ação com
                       handoff escolhido pelo utilizador. Não aparece nada
-                      enquanto a integração estiver desligada. */}
+                      enquanto a integração estiver desligada.
+
+                      Fica ANTES do mapa de contabilistas: quem chega aqui já
+                      tem a conta feita e quer saber o que fazer a seguir — a
+                      execução é o passo imediato, procurar contabilista é a
+                      alternativa para quem prefere delegar tudo. */}
                   <FizPlanoAcao
-                    className="mt-6"
+                    className="mb-6"
                     simulador="recibos-verdes"
                     valores={{
                       entityType: "INDIVIDUAL",
                       activityCategory: atividadeEspecifica?.label,
                       vatTerritory:
                         regiao === "madeira" ? "MADEIRA" : regiao === "acores" ? "AZORES" : "CONTINENTAL",
-                      vatRegimeEstimate: regimeIVA === "isento" ? "EXEMPT_ART_53" : "NORMAL",
+                      vatRegimeEstimate: vatRegimeEstimateFiz,
                       period: "ANNUAL",
                       grossEstimate: Math.round(brutoAnual),
                       vatEstimate: Math.round(ivaAnual),
@@ -1097,6 +1115,11 @@ export default function ModoGuiado({
                       "Regime de IVA e retenção na fonte determinados.",
                       "Estimativa anual de IRS e Segurança Social calculada.",
                     ]}
+                  />
+
+                  <PassoContabilista
+                    faturacaoAnual={brutoAnual}
+                    onVoltar={() => setPasso("resultado")}
                   />
                 </m.div>
               )}

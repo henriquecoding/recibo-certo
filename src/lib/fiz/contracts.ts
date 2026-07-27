@@ -171,6 +171,24 @@ export interface ProfilePrefill {
   socialSecuritySituation?: string;
 }
 
+/**
+ * Identificação do titular. Extensão nossa ao esquema `ProfilePrefill` do
+ * contrato, a propor à FIZ na próxima revisão do OpenAPI.
+ *
+ * Viaja SEMPRE no corpo de um POST sobre TLS, nunca em query string — é
+ * essa a proibição do ponto 8.2 da arquitetura, e é ela que `NUNCA_EM_URL`
+ * e `urlSemDadosSensiveis()` fazem cumprir.
+ *
+ * Só segue com consentimento explícito e por campo. Sem isso, o objeto nem
+ * chega a ser construído.
+ */
+export interface IdentityPrefill {
+  fullName?: string;
+  taxpayerNumber?: string;
+  email?: string;
+  phone?: string;
+}
+
 export interface SimulationSummary {
   currency: "EUR";
   period: "MONTHLY" | "QUARTERLY" | "ANNUAL" | "ONE_OFF";
@@ -194,6 +212,7 @@ export interface CreateHandoffRequest {
   locale: string;
   consent: ConsentEvidence;
   profile?: ProfilePrefill;
+  identity?: IdentityPrefill;
   simulationSummary?: SimulationSummary;
   provenance: Provenance;
   sourceContext?: GuideSourceContext;
@@ -435,7 +454,8 @@ export interface FiscalOperationsPartner {
 /** Ponto 8.2 da arquitetura + 8.5 da auditoria: nunca em query string. */
 export const CAMPOS_PROIBIDOS_EM_URL = [
   "nif", "niss", "taxpayernumber", "email", "password", "token",
-  "rendimento", "salario", "iban", "morada", "telefone",
+  "rendimento", "salario", "iban", "morada", "telefone", "phone",
+  "nome", "fullname", "grossestimate", "irsestimate",
 ] as const;
 
 /** O Recibo Certo nunca aceita um destino arbitrário devolvido pela FIZ:

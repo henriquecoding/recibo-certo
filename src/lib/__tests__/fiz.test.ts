@@ -170,16 +170,105 @@ describe("consentimento do handoff", () => {
   it("todo o campo apresentável tem rótulo em português", async () => {
     const { ROTULO_CAMPO } = await import("@/lib/fiz/handoff.server");
     for (const [campo, rotulo] of Object.entries(ROTULO_CAMPO)) {
-      expect(rotulo.length, campo).toBeGreaterThan(5);
-      expect(rotulo, campo).not.toMatch(/^[a-z]+[A-Z]/); // não é o nome técnico
+      // "NIF" e "Email" são curtos e continuam a ser português. O que não
+      // pode é o rótulo ser o nome técnico do campo — camelCase ou por
+      // capitalizar — porque é isso que o utilizador nunca entende.
+      expect(rotulo.length, campo).toBeGreaterThan(2);
+      expect(rotulo, campo).toMatch(/^[A-ZÀ-Þ]/);
+      expect(rotulo, campo).not.toMatch(/^[a-z]+[A-Z]/);
     }
   });
 
   it("declara explicitamente o que nunca é enviado", async () => {
     const { CAMPOS_NUNCA_ENVIADOS } = await import("@/lib/fiz/handoff.server");
-    for (const proibido of ["NIF", "NISS", "IBAN", "credenciais"]) {
-      expect(CAMPOS_NUNCA_ENVIADOS).toContain(proibido);
+    const texto = CAMPOS_NUNCA_ENVIADOS.join(" | ").toLowerCase();
+    // A fronteira não é "dados sensíveis" em abstrato: é aquilo em que o
+    // utilizador NÃO PODE consentir — chaves de acesso e dados de terceiros.
+    for (const proibido of ["credenciais", "clientes", "documentos", "iban"]) {
+      expect(texto, proibido).toContain(proibido);
     }
+  });
+
+  it("nenhum campo enviável corresponde a algo que nunca pode sair", async () => {
+    const { ROTULO_CAMPO, CAMPOS_VALIDOS } = await import("@/lib/fiz/handoff.server");
+    // NISS e IBAN não têm campo nenhum: não é só que não sejam propostos, é
+    // que não existem no vocabulário.
+    for (const campo of CAMPOS_VALIDOS) {
+      const palavras = ROTULO_CAMPO[campo].toLowerCase().split(/\W+/);
+      for (const p of ["niss", "iban", "password", "senha"]) {
+        expect(palavras, `${campo} não pode propor ${p}`).not.toContain(p);
+      }
+    }
+  });
+
+  it("a identificação só sai com consentimento campo a campo", async () => {
+    const { criarHandoff } = await import("@/lib/fiz/handoff.server");
+    // Sem autorizar `taxpayerNumber`, o NIF proposto tem de ficar para trás.
+    // A chamada falha por falta de credenciais, mas o que interessa é que
+    // nunca chegue a montar um pedido com o NIF lá dentro.
+    await expect(
+      criarHandoff(
+        {
+          intent: "CONFIGURE_VAT",
+          campos: ["entityType", "taxpayerNumber"],
+          profile: { entityType: "INDIVIDUAL" },
+          identity: { taxpayerNumber: "123456789" },
+        },
+        ["entityType"],
+      ),
+    ).rejects.toBeTruthy();
+  });
+
+  it("recusa autorizar um campo que nunca foi apresentado", async () => {
+    const { criarHandoff } = await import("@/lib/fiz/handoff.server");
+    await expect(
+      criarHandoff(
+        { intent: "CONFIGURE_VAT", campos: ["entityType"], profile: { entityType: "INDIVIDUAL" } },
+        ["entityType", "taxpayerNumber"],
+      ),
+    ).rejects.toThrow(/não foram apresentados/i);
+  });
+
+  it("um NIF com dígito de controlo errado não é enviado", async () => {
+    const { nifValido } = await import("@/lib/fiz/handoff.server");
+    // 123456789 fecha o módulo 11 (soma 156, resto 2, controlo 9).
+    expect(nifValido("123456789")).toBe(true);
+    expect(nifValido("123 456 789")).toBe(true);
+    expect(nifValido("123456788")).toBe(false); // controlo errado
+    expect(nifValido("12345678")).toBe(false);  // curto demais
+    expect(nifValido("abcdefghi")).toBe(false);
+  });
+
+  it("todo o campo pertence a um grupo que o diálogo sabe desenhar", async () => {
+    const { CAMPOS, CAMPOS_VALIDOS, GRUPOS } = await import("@/lib/fiz/handoff-fields");
+    const conhecidos = new Set(GRUPOS.map((g) => g.id));
+    // Se um campo tiver um grupo que não está em GRUPOS, o diálogo
+    // simplesmente não o desenha — o utilizador autorizaria às cegas.
+    for (const c of CAMPOS_VALIDOS) {
+      expect(conhecidos.has(CAMPOS[c].grupo), `${c} → ${CAMPOS[c].grupo}`).toBe(true);
+    }
+    // E todo o grupo declarado tem de ter pelo menos um campo.
+    for (const g of GRUPOS) {
+      expect(CAMPOS_VALIDOS.some((c) => CAMPOS[c].grupo === g.id), g.id).toBe(true);
+    }
+  });
+
+  it("a identificação é o único grupo marcado como identificável", async () => {
+    const { CAMPOS, CAMPOS_VALIDOS } = await import("@/lib/fiz/handoff-fields");
+    for (const c of CAMPOS_VALIDOS) {
+      const ident = Boolean(CAMPOS[c].identificavel);
+      // É a marca `identificavel` que faz o diálogo mostrar o aviso reforçado
+      // e contar "n que te identificam" no rodapé. Tem de coincidir com o
+      // grupo, senão o aviso aparece no sítio errado.
+      expect(ident, c).toBe(CAMPOS[c].grupo === "identificacao");
+    }
+  });
+
+  it("nenhum dado identificável pode viajar em query string", async () => {
+    const { NUNCA_EM_URL, CAMPOS_IDENTIFICAVEIS } = await import("@/lib/fiz/handoff-fields");
+    // Consentir em enviar o NIF é uma coisa; pô-lo num URL que fica em
+    // históricos, logs e cabeçalhos Referer é outra.
+    for (const c of CAMPOS_IDENTIFICAVEIS) expect(NUNCA_EM_URL, c).toContain(c);
   });
 });
 

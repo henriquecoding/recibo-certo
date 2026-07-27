@@ -107,6 +107,7 @@ import {
 } from "@/components/simulador/ui";
 import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
+import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
 
 const ICONES: Record<string, (p: { size?: number; className?: string }) => ReactNode> = {
   Briefcase, User, Invoice, Coin, ChartProjection, Globe, Home, Building, Plane,
@@ -2055,6 +2056,28 @@ function PassoRevisao({
           <Check size={12} className="text-brand" /> {gravadoLabel}
         </span>
       </div>
+
+      {/* Ponto 12.3 da arquitetura. Fica logo a seguir às ações e antes da
+          revisão detalhada: quem chega à etapa 4 já tem a conta feita e o
+          que quer saber é como submeter. Nada aparece com a integração
+          desligada. */}
+      {resultado.rendimentoGlobal > 0 && (
+        <FizPlanoAcao
+          simulador="simulador-irs"
+          valores={{
+            entityType: "INDIVIDUAL",
+            period: "ANNUAL",
+            grossEstimate: Math.round(resultado.rendimentoGlobal),
+            irsEstimate: Math.round(resultado.irsTotal),
+            withholdingEstimate: Math.round(resultado.retencoesTotais),
+          }}
+          passosPreparacao={[
+            "Rendimentos por categoria organizados e anexos identificados.",
+            "Deduções à coleta e retenções já contabilizadas.",
+            "Memória de cálculo disponível para conferência.",
+          ]}
+        />
+      )}
 
       {cenarioFeedback && (
         <div

@@ -8,7 +8,7 @@ export default function Page() {
       titulo="Ato isolado ou atividade?"
       descricao="Responde a 4 perguntas simples e fica a saber se deves emitir um ato isolado ou abrir atividade nas Finanças."
     >
-      <DecisorAtoVsAtividade />
+      <DecisorAtoVsAtividade comPlanoFiz />
     </PaginaFerramenta>
   );
 }

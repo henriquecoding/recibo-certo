@@ -26,6 +26,7 @@ import {
   type Handoff,
   type Intent,
   type ProfilePrefill,
+  type IdentityPrefill,
   type SimulationSummary,
   type GuideSourceContext,
 } from "./contracts";
@@ -45,8 +46,22 @@ export interface PropostaHandoff {
   intent: Intent;
   campos: CampoHandoff[];
   profile?: ProfilePrefill;
+  identity?: IdentityPrefill;
   simulationSummary?: SimulationSummary;
   sourceContext?: GuideSourceContext;
+}
+
+/** NIF português: 9 dígitos com dígito de controlo módulo 11.
+    Validar aqui evita enviar à FIZ um número que ela vai recusar — e
+    apanha erros de digitação antes de o utilizador sair do ReciboCerto. */
+export function nifValido(nif: string): boolean {
+  const limpo = nif.replace(/\s/g, "");
+  if (!/^\d{9}$/.test(limpo)) return false;
+  let soma = 0;
+  for (let i = 0; i < 8; i++) soma += Number(limpo[i]) * (9 - i);
+  const resto = soma % 11;
+  const controlo = resto < 2 ? 0 : 11 - resto;
+  return controlo === Number(limpo[8]);
 }
 
 /** O que o diálogo de consentimento mostra antes de qualquer envio. */
@@ -64,6 +79,10 @@ export function previsualizarHandoff(proposta: PropostaHandoff): { campo: CampoH
     irsEstimate: proposta.simulationSummary?.irsEstimate,
     period: proposta.simulationSummary?.period,
     intent: proposta.intent,
+    fullName: proposta.identity?.fullName,
+    taxpayerNumber: proposta.identity?.taxpayerNumber,
+    email: proposta.identity?.email,
+    phone: proposta.identity?.phone,
     sourceGuide: proposta.sourceContext?.guideSlug,
   };
 
@@ -106,6 +125,19 @@ export async function criarHandoff(
   if (autorizados.has("vatRegimeEstimate")) perfil.vatRegimeEstimate = proposta.profile?.vatRegimeEstimate;
   if (autorizados.has("socialSecuritySituation")) perfil.socialSecuritySituation = proposta.profile?.socialSecuritySituation;
 
+  // Identificação: só os campos explicitamente autorizados, um a um.
+  const identidade: IdentityPrefill = {};
+  if (autorizados.has("fullName") && proposta.identity?.fullName) identidade.fullName = proposta.identity.fullName;
+  if (autorizados.has("email") && proposta.identity?.email) identidade.email = proposta.identity.email;
+  if (autorizados.has("phone") && proposta.identity?.phone) identidade.phone = proposta.identity.phone;
+  if (autorizados.has("taxpayerNumber") && proposta.identity?.taxpayerNumber) {
+    const nif = proposta.identity.taxpayerNumber.replace(/\s/g, "");
+    // Enviar um NIF inválido seria pior do que não enviar nenhum: a FIZ
+    // recusaria e o utilizador não saberia porquê.
+    if (!nifValido(nif)) throw new FizError("invalido", "O NIF indicado não é válido.");
+    identidade.taxpayerNumber = nif;
+  }
+
   let resumo: SimulationSummary | undefined;
   if (proposta.simulationSummary && autorizados.has("grossEstimate")) {
     resumo = {
@@ -133,6 +165,7 @@ export async function criarHandoff(
     locale: "pt-PT",
     consent,
     ...(Object.keys(perfil).length > 0 ? { profile: perfil } : {}),
+    ...(Object.keys(identidade).length > 0 ? { identity: identidade } : {}),
     ...(resumo ? { simulationSummary: resumo } : {}),
     provenance: {
       engine: "recibo-certo",
