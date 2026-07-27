@@ -6,7 +6,8 @@ import CalculadoraSecao from "@/components/CalculadoraSecao";
 import ExplorarSecao from "@/components/ExplorarSecao";
 import FAQ from "@/components/FAQ";
 import Fontes from "@/components/Fontes";
-import { compararCategorias } from "@/lib/fiscal-dependente";
+import { compararCategorias, calcularVencimento } from "@/lib/fiscal-dependente";
+import { calcular } from "@/lib/fiscal";
 import { ATIVIDADES } from "@/lib/fiscal-data";
 
 import Precos from "@/components/Precos";
@@ -31,12 +32,40 @@ const jsonLd = {
   ],
 };
 
-// Números de empresa/comparação da landing — calculados no servidor (build) com
-// o motor fiscal verificado e passados como props ao Hero. Mantém
-// `fiscal-dependente`/`fiscal`/`fiscal-data` FORA do bundle inicial do cliente,
-// sem mudar nenhum valor (mesma função, mesmos pressupostos).
+// ── Números do Hero — todos calculados no servidor (build) ────────────────
+// Com o motor fiscal verificado, passados como props. Mantém
+// `fiscal-dependente`/`fiscal`/`fiscal-data` FORA do bundle inicial do cliente.
+//
+// Os quatro perfis do Hero vêm agora daqui. Os de empresa/comparação já vinham;
+// os de recibo verde e de vencimento estavam escritos à mão dentro do Hero e
+// tinham começado a divergir — a Segurança Social do recibo de 2 000 € estava
+// em 299 € por se ter truncado 299,60 em vez de arredondar. Um valor a menos
+// não é grave; o mecanismo que o deixou envelhecer sozinho é que era.
 const HERO_FAT = 30_000;
+const HERO_RECIBO = 2_000;
+const HERO_SALARIO = 1_500;
+
 const landingCmp = compararCategorias({ brutoAnual: HERO_FAT, dependentes: 0 });
+
+/** Recibo verde de 2 000 €, Art. 151.º, atividade estabelecida (2.º ano ou
+ *  seguinte) — o exemplo do perfil "independente". */
+const landingRecibo = calcular({
+  bruto: HERO_RECIBO,
+  tipo: "art151",
+  regiao: "continente",
+  regimeIVA: "isento",
+  baseSS: "servicos",
+  dispensaRetencao: false,
+  isencaoSSPrimeiroAno: false,
+  acumulaEmprego: false,
+});
+
+/** Vencimento de 1 500 €, não casado, sem dependentes, Continente, sem
+ *  subsídio de refeição — o exemplo do perfil "dependente". */
+const landingVencimento = calcularVencimento({
+  salarioBruto: HERO_SALARIO,
+  dependentes: 0,
+});
 
 export default function Home() {
   return (
@@ -48,7 +77,7 @@ export default function Home() {
       <div id="top">
         <Nav />
         <main>
-          <Hero cmp={landingCmp} />
+          <Hero cmp={landingCmp} recibo={landingRecibo} vencimento={landingVencimento} />
 
           {/*
            * ── Simulador integrado ──────────────────────────────────────────

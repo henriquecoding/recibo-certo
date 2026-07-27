@@ -9,6 +9,20 @@ import { simularIRSAnual, type SimulacaoInput, type SimulacaoIRS } from "@/lib/f
 import FizLogo from "@/components/fiz/FizLogo";
 import { fizAtiva } from "@/lib/fiz/flag";
 import {
+  BotaoPausa,
+  ReguaDeAtos,
+  TituloAto,
+  eur0,
+  eurNeg,
+  eurPos,
+  linha,
+  num,
+  palco,
+  pctInteiro,
+  useRelogioDePalco,
+  type AtoDaRegua,
+} from "@/components/simulador/palco";
+import {
   ArrowRight,
   Briefcase,
   Calendar,
@@ -16,8 +30,6 @@ import {
   FileSign,
   Home,
   Laptop,
-  Pause,
-  Play,
   Receipt,
   Scale,
   ShieldCheck,
@@ -60,20 +72,8 @@ import {
 //  FIZ — é a fronteira entre o que é nosso e o que é do parceiro.
 // ═════════════════════════════════════════════════════════════════════════
 
-// ── Formatação ───────────────────────────────────────────────────────────
-
-const eur0 = (n: number) =>
-  new Intl.NumberFormat("pt-PT", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(Number.isFinite(n) ? n : 0);
-
-const eurNeg = (n: number) => `− ${eur0(Math.abs(n))}`;
-const eurPos = (n: number) => `+ ${eur0(Math.abs(n))}`;
-const pctInteiro = (n: number) => `${Math.round(n)}%`;
-const num = (n: number, casas = 2) =>
-  n.toLocaleString("pt-PT", { minimumFractionDigits: casas, maximumFractionDigits: casas });
+// Formatação, variantes de animação, régua, botão de pausa e relógio vivem em
+// `palco.tsx` — partilhados com o Hero e com a página de investidores.
 
 // ── Perfis de exemplo ────────────────────────────────────────────────────
 //  São ENTRADAS, não resultados. Escolhidos para que os quatro percorram
@@ -211,26 +211,6 @@ function alturaBarra(taxa: number): number {
 const R = 40;
 const C = 2 * Math.PI * R;
 const GAP = 0.024;
-
-// Variantes partilhadas: cada ato entra com as suas linhas em cascata.
-const palco = {
-  entra: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
-};
-const linha = {
-  oculto: { opacity: 0, y: 8 },
-  entra: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const } },
-};
-
-// ── Peças reutilizadas pelos atos ────────────────────────────────────────
-
-function TituloAto({ children, nota }: { children: React.ReactNode; nota?: string }) {
-  return (
-    <m.div variants={linha} className="mb-2.5 flex items-baseline justify-between gap-2">
-      <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400">{children}</span>
-      {nota && <span className="flex-shrink-0 text-[10px] font-medium text-stone-400">{nota}</span>}
-    </m.div>
-  );
-}
 
 // ── Ato 1 · O caso ───────────────────────────────────────────────────────
 
@@ -810,41 +790,17 @@ export default function DemoIRS() {
       return 0;
     });
   }, [atos.length]);
-  const avancarRef = useRef(avancar);
-  avancarRef.current = avancar;
+  const barraRef = useRelogioDePalco({
+    duracaoMs: DURACAO[ato],
+    chave: `${idxPerfil}-${idxAto}`,
+    parado: reduz || emPausa,
+    aoTerminar: avancar,
+  });
 
-  // ── Relógio do palco ───────────────────────────────────────────────────
-  //  Uma única fonte de tempo: o mesmo rAF que enche a barra é o que decide
-  //  quando o ato acaba. Se fossem dois (um `setTimeout` e uma animação CSS),
-  //  a barra e o corte dessincronizavam assim que houvesse uma pausa.
-  //  O progresso vive num ref e é escrito direto no DOM — pô-lo em estado
-  //  seriam 60 renderizações por segundo de todo o cartão.
-  const barraRef = useRef<HTMLSpanElement>(null);
-  const progresso = useRef(0);
-
-  useEffect(() => {
-    progresso.current = 0;
-    if (barraRef.current) barraRef.current.style.transform = "scaleX(0)";
-  }, [idxAto, idxPerfil]);
-
-  useEffect(() => {
-    if (reduz || emPausa) return;
-    const total = DURACAO[ato];
-    let raf = 0;
-    let ultimo = performance.now();
-    const passo = (agora: number) => {
-      progresso.current = Math.min(1, progresso.current + (agora - ultimo) / total);
-      ultimo = agora;
-      if (barraRef.current) barraRef.current.style.transform = `scaleX(${progresso.current})`;
-      if (progresso.current >= 1) {
-        avancarRef.current();
-        return;
-      }
-      raf = requestAnimationFrame(passo);
-    };
-    raf = requestAnimationFrame(passo);
-    return () => cancelAnimationFrame(raf);
-  }, [reduz, emPausa, ato, idxAto, idxPerfil]);
+  const atosDaRegua = useMemo<AtoDaRegua[]>(
+    () => atos.map((a) => ({ id: a, ...ATO_META[a] })),
+    [atos],
+  );
 
   const irParaAto = (idx: number) => {
     setIdxAto(idx);
@@ -907,16 +863,7 @@ export default function DemoIRS() {
           </span>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-medium text-stone-400">IRS 2026</span>
-            {!reduz && (
-              <button
-                type="button"
-                onClick={() => setParado((p) => !p)}
-                aria-label={parado ? "Retomar a demonstração" : "Pausar a demonstração"}
-                className="flex h-7 w-7 items-center justify-center rounded-full border border-stone-200 text-stone-500 transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 dark:border-stone-700 dark:text-stone-400"
-              >
-                {parado ? <Play size={11} /> : <Pause size={11} />}
-              </button>
-            )}
+            {!reduz && <BotaoPausa parado={parado} onAlternar={() => setParado((p) => !p)} />}
           </div>
         </div>
 
@@ -964,37 +911,14 @@ export default function DemoIRS() {
           </div>
         </div>
 
-        {/* ── Régua dos atos ────────────────────────────────────────── */}
-        <ol className="mb-3 flex gap-1">
-          {atos.map((a, idx) => (
-            <li key={a} className="flex-1">
-              <button
-                type="button"
-                onClick={() => irParaAto(idx)}
-                aria-current={idx === idxAto ? "step" : undefined}
-                aria-label={`Passo ${idx + 1} de ${atos.length}: ${ATO_META[a].legenda}`}
-                className="group block w-full py-1 focus-visible:outline-none"
-              >
-                <span className="block h-1 w-full overflow-hidden rounded-full bg-stone-200 group-focus-visible:ring-2 group-focus-visible:ring-brand group-focus-visible:ring-offset-2 dark:bg-stone-700">
-                  <span
-                    ref={idx === idxAto ? barraRef : undefined}
-                    className="block h-full w-full origin-left rounded-full bg-brand"
-                    style={{
-                      transform: `scaleX(${idx < idxAto || (idx === idxAto && reduz) ? 1 : 0})`,
-                    }}
-                  />
-                </span>
-                <span
-                  className={`mt-1 block truncate text-[9px] font-semibold uppercase tracking-wide transition-colors ${
-                    idx === idxAto ? "text-brand-dark dark:text-brand" : "text-stone-300 dark:text-stone-600"
-                  }`}
-                >
-                  {ATO_META[a].rotulo}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ol>
+        <ReguaDeAtos
+          className="mb-3"
+          atos={atosDaRegua}
+          indiceAtivo={idxAto}
+          barraRef={barraRef}
+          estatico={reduz}
+          onIr={irParaAto}
+        />
 
         {/* ── Palco ───────────────────────────────────────────────────
              Altura mínima igual ao ato mais alto medido a 360px (o do
