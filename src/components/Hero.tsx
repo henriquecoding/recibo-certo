@@ -944,7 +944,13 @@ export default function Hero({ cmp }: { cmp: ComparacaoCategoriasResult }) {
   const btnSecundario = "inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-6 py-3.5 text-sm font-semibold text-stone-700 transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:hover:border-stone-600 dark:hover:bg-stone-700";
 
   return (
-    <section className="grain relative overflow-hidden px-6 pt-20 pb-16">
+    // O `pt` contava duas vezes o mesmo espaço: o `Nav` já reserva 72px com
+    // um espaçador próprio em ecrã largo, e o `pt-20` somava mais 80 por cima
+    // — 152px até ao conteúdo, dos quais ~79 completamente vazios por baixo
+    // da barra. No telemóvel não há espaçador nem barra no topo, e os mesmos
+    // 80px ficavam a olhar para o nada. Agora: 32px no telemóvel, e 40px no
+    // desktop SOMADOS ao espaçador do Nav.
+    <section className="grain relative overflow-hidden px-6 pt-8 pb-16 lg:pt-10">
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute -top-32 -right-24 h-[28rem] w-[28rem] rounded-full bg-brand/15 blur-3xl" />
         <div className="absolute top-40 -left-32 h-[24rem] w-[24rem] rounded-full bg-brand-mint/20 blur-3xl" />
