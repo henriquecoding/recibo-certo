@@ -213,6 +213,9 @@ import {
   sanitizeNumericDraft,
 } from "@/lib/numeric-input";
 import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
+import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
+import { situacaoIVA as calcularSituacaoIVA } from "@/lib/fiscal-iva";
+import type { CategoriaSimuladorRV } from "@/lib/fiscal-data";
 
 // ── Fluxos guiados carregados sob procura ────────────────────────────────────
 // O simulador abre com o seletor "Como queres simular?" (OnboardingGate). Os
@@ -3651,6 +3654,24 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   );
 
   // ── Resultado anual RV ────────────────────────────────────────────────────
+  // ── Situação de IVA: uma só origem ──────────────────────────────────
+  // Antes, o painel decidia as zonas por si (`IvaZonas`), o handoff da FIZ
+  // usava a escolha crua do utilizador e os avisos tinham uma terceira
+  // leitura. Agora as três coisas leem o mesmo objeto.
+  const situacaoIva = useMemo(
+    () =>
+      calcularSituacaoIVA({
+        faturacaoAnual: faturacaoAnualProxy,
+        regiao,
+        regimeEscolhido: regimeIVA,
+        categoria: tipoAtiv as CategoriaSimuladorRV,
+        entidade: cenario === "empresa" ? "sociedade" : "ti",
+        isentoEfetivo,
+      }),
+    [faturacaoAnualProxy, regiao, regimeIVA, tipoAtiv, cenario, isentoEfetivo],
+  );
+  const vatRegimeEstimateFiz = situacaoIva.regimeParaFiz;
+
   const resultAnualRV = useMemo(
     () =>
       simularAnualRV(
@@ -7388,6 +7409,56 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                   ) : null}
                 </AnimatePresence>
               </div>
+            </div>
+
+            {/* ── Ponto 12.3: o passo seguinte, também no modo completo ────
+                O guiado já o tinha; o completo — que é onde estão os
+                utilizadores que sabem o que fazem — não. Fica DEPOIS do
+                resultado e ANTES da comparação, e segue o cenário ativo:
+                quem está em recibos verdes continua como TI, quem está em
+                empresa continua como sociedade. Nada aparece com a
+                integração desligada. */}
+            <div className="border-t border-stone-100 px-4 py-5 dark:border-stone-800 sm:px-8 sm:py-6">
+              <FizPlanoAcao
+                simulador={cenario === "empresa" ? "simulador-empresa" : "recibos-verdes"}
+                valores={
+                  cenario === "empresa"
+                    ? {
+                        entityType: "COMPANY",
+                        period: "ANNUAL",
+                        grossEstimate: Math.round(faturacaoBaseEmpresa),
+                        irsEstimate: Math.round(
+                          resultEmpresa.irsSalarioGerente + resultEmpresa.irsDividendosLiberatoria,
+                        ),
+                      }
+                    : {
+                        entityType: "INDIVIDUAL",
+                        activityCategory: atividade.label,
+                        vatTerritory:
+                          regiao === "madeira" ? "MADEIRA" : regiao === "acores" ? "AZORES" : "CONTINENTAL",
+                        vatRegimeEstimate: vatRegimeEstimateFiz,
+                        period: "ANNUAL",
+                        grossEstimate: Math.round(resultAnualRV.faturacao),
+                        // O modelo é mensal × 12 (ver `faturacaoAnualProxy`), não um número
+                        // variável de recibos.
+                        vatEstimate: Math.round(resultReciboFinal.iva * 12),
+                        socialSecurityEstimate: Math.round(resultAnualRV.ssAnual),
+                        irsEstimate: Math.round(resultAnualRV.irs),
+                      }
+                }
+                passosPreparacao={
+                  cenario === "empresa"
+                    ? [
+                        "Estrutura simulada: salário do gerente, dividendos e custos.",
+                        "IRC, derrama e tributações autónomas estimados.",
+                      ]
+                    : [
+                        "Atividade classificada e coeficiente confirmado.",
+                        "Regime de IVA e retenção na fonte determinados.",
+                        "Estimativa anual de IRS e Segurança Social calculada.",
+                      ]
+                }
+              />
             </div>
 
             {/* Comparação integrada — só na vista combinada; no homepage vive
