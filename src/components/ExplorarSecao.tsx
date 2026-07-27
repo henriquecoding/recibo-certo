@@ -32,7 +32,9 @@ function DemoSkeleton() {
   return (
     <div
       className="w-full max-w-md animate-pulse rounded-4xl border border-stone-100 bg-white p-6 shadow-card dark:border-stone-800 dark:bg-stone-900"
-      style={{ minHeight: 520 }}
+      // Altura medida da DemoIRS já montada (473px a 1280, 484px a 360). O
+      // esqueleto tem de a igualar, senão a página salta quando o chunk chega.
+      style={{ minHeight: 478 }}
       aria-hidden
     >
       <div className="h-6 w-32 rounded-full bg-stone-100 dark:bg-stone-800" />
