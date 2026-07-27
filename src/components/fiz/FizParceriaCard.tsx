@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, ArrowRight, Lock, ShieldCheck } from "@/components/ui/Icons";
+import { Check, ArrowRight, Lock } from "@/components/ui/Icons";
 import FizLogo from "./FizLogo";
 import { PLUS } from "@/lib/entitlements";
 
@@ -18,11 +18,21 @@ import { PLUS } from "@/lib/entitlements";
 //     não é um preço — é o que acontece a seguir a escolheres.
 //  2. Não tem preço nem botão de subscrição. O único destino é explicativo.
 //     Nada aqui compete com o "Subscrever o Plus".
-//  3. A primeira frase diz o que isto NÃO é. É a dúvida mais provável de
-//     quem vem de uma página de planos, por isso é respondida antes de
-//     qualquer benefício.
-//  4. A cor faz o resto: os passos que são nossos ficam verdes, o da FIZ
+//  3. A cor faz o resto: os passos que são nossos ficam verdes, o da FIZ
 //     fica amarelo. A fronteira vê-se sem se ler.
+//
+//  ── Correção de rumo: as ressalvas vão para o fim ────────────────────
+//  A primeira tentativa de dizer "isto não é um plano" abriu com sete
+//  negações seguidas — "não é um plano", "não tens de subscrever nada",
+//  "não faz parte dos planos nem do Plus", e a seguir um bloco inteiro de
+//  "não inclui / não é preciso / não emite". Lia-se como se estivéssemos a
+//  afastar-nos de um parceiro em quem não confiamos, que é o contrário do
+//  que a parceria é e do que queremos que se sinta.
+//
+//  A ordem passa a ser: quem é a FIZ e o que faz por ti → onde acaba um e
+//  começa o outro → e só no fim, num só sítio calmo, as ressalvas
+//  comerciais. A informação é exatamente a mesma. Muda quando aparece, e
+//  isso muda tudo.
 // ═══════════════════════════════════════════════════════════════════════
 
 const JORNADA = [
@@ -45,26 +55,25 @@ export default function FizParceriaCard({ className = "" }: { className?: string
       aria-labelledby="fiz-parceria"
       className={`overflow-hidden rounded-4xl border border-fiz-200 bg-fiz-50 ${className}`}
     >
-      {/* ── Cabeçalho: o que isto não é, antes do que é ────────────── */}
+      {/* ── Cabeçalho: quem é a FIZ e o que faz por ti ─────────────── */}
       <div className="border-b border-fiz-200 px-6 py-6 sm:px-8 sm:py-7">
         <div className="flex flex-wrap items-center gap-3">
           <FizLogo size={40} className="flex-shrink-0 rounded-xl shadow-card" />
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-fiz-700">
-              Parceria · não é um plano
+              O nosso parceiro
             </p>
             <h3 id="fiz-parceria" className="font-display text-xl font-semibold leading-tight text-ink">
-              Depois de decidires, quem executa
+              Preparamos nós, executa a FIZ
             </h3>
           </div>
         </div>
 
-        {/* A frase que evita a confusão desta página, dita primeiro. */}
-        <p className="mt-4 max-w-3xl rounded-2xl bg-white px-4 py-3 text-sm leading-relaxed text-stone-700 dark:bg-stone-900 dark:text-stone-300">
-          <strong className="text-stone-900 dark:text-stone-100">Não tens de subscrever nada disto aqui.</strong>{" "}
-          A FIZ é um parceiro independente, com preços e contrato próprios — não faz parte dos
-          planos do ReciboCerto nem do Plus. Isto está nesta página só para saberes onde
-          acabamos nós e onde começa quem emite e declara.
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+          A FIZ é um operador fiscal certificado: emite faturas, entrega declarações e trata das
+          obrigações de quem trabalha por conta própria. Trabalhamos com eles porque é o que
+          fazem bem — e porque o teu trabalho não devia parar no momento em que já sabes o
+          número.
         </p>
       </div>
 
@@ -107,19 +116,12 @@ export default function FizParceriaCard({ className = "" }: { className?: string
             ))}
           </ol>
 
-          <p className="mt-4 flex items-start gap-2 rounded-2xl bg-white px-3 py-2.5 text-xs leading-relaxed text-stone-600 dark:bg-stone-900 dark:text-stone-400">
-            <ShieldCheck size={14} className="mt-0.5 flex-shrink-0 text-brand" />
-            <span>
-              Ligar a conta e enviar uma simulação é <strong>gratuito</strong> e não exige o Plus.
-              Vês sempre os campos exatos antes de autorizar, e podes desligar quando quiseres.
-            </span>
-          </p>
         </div>
 
         {/* O que a FIZ trata + a fronteira comercial */}
         <div>
           <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
-            O que a FIZ trata, se e quando quiseres
+            O que a FIZ trata por ti
           </p>
           <ul className="space-y-2">
             {O_QUE_A_FIZ_FAZ.map((item) => (
@@ -132,21 +134,40 @@ export default function FizParceriaCard({ className = "" }: { className?: string
             ))}
           </ul>
 
-          <div className="mt-5 rounded-2xl border border-fiz-200 bg-white/70 px-4 py-3.5 dark:bg-stone-900/40">
-            <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-stone-700 dark:text-stone-200">
-              <Lock size={13} className="text-fiz-700" />
-              Sobre o Plus, para não haver dúvidas
-            </p>
-            <ul className="space-y-1.5">
-              {PLUS.naoInclui.map((n) => (
-                <li key={n} className="flex items-start gap-2 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-                  <span aria-hidden className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-fiz-400" />
-                  {n}
-                </li>
-              ))}
-            </ul>
-          </div>
         </div>
+      </div>
+
+      {/* ── As ressalvas, todas juntas e no fim ─────────────────────
+          Estiveram no topo e o painel inteiro passou a soar a aviso legal.
+          A informação é a mesma; aqui já vem depois de se saber quem é a
+          FIZ e o que faz, que é a ordem em que uma pessoa a quer ler. */}
+      <div className="border-t border-fiz-200 px-6 py-5 sm:px-8">
+        <p className="mb-2.5 flex items-center gap-1.5 text-xs font-semibold text-stone-700 dark:text-stone-200">
+          <Lock size={13} className="text-fiz-700" />
+          Em termos práticos
+        </p>
+        <ul className="grid gap-1.5 sm:grid-cols-2 sm:gap-x-6">
+          {/* O texto vai dentro de UM <span>. Num contentor flex cada nó de
+              texto e cada elemento viram itens separados: com o <strong>
+              solto, a frase era desenhada em colunas e lia-se baralhada. */}
+          <li className="flex items-start gap-2 text-xs leading-relaxed text-stone-600 dark:text-stone-400">
+            <span aria-hidden className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-brand" />
+            <span>
+              Ligar a conta e enviar uma simulação é <strong>gratuito</strong> — vês sempre os
+              campos exatos antes de autorizar e podes desligar quando quiseres.
+            </span>
+          </li>
+          <li className="flex items-start gap-2 text-xs leading-relaxed text-stone-600 dark:text-stone-400">
+            <span aria-hidden className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-fiz-400" />
+            <span>A FIZ tem preços e contrato próprios, contratados diretamente com ela.</span>
+          </li>
+          {PLUS.naoInclui.map((n) => (
+            <li key={n} className="flex items-start gap-2 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+              <span aria-hidden className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-stone-300 dark:bg-stone-600" />
+              <span>{n}</span>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {/* ── Rodapé: um só destino, e é explicativo ─────────────────── */}

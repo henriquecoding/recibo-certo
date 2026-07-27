@@ -113,9 +113,10 @@ export default function IntegracaoFizPage() {
               Compreender aqui. Executar lá.
             </h1>
             <p className="mt-3 max-w-2xl text-base leading-relaxed text-stone-500 dark:text-stone-400">
-              O ReciboCerto não emite faturas nem submete declarações — e não vai passar a fazê-lo.
               Aquilo em que somos bons é explicar-te a regra, mostrar-te o número e deixar tudo
-              preparado. Para o passo seguinte, trabalhamos com a FIZ.
+              preparado. A partir daí é preciso alguém certificado para emitir, declarar e
+              acompanhar as obrigações — e é isso que a FIZ faz. Cada um no que faz melhor,
+              sem repetires nada pelo caminho.
             </p>
 
             {!ativa && (
