@@ -124,23 +124,56 @@ export const CAMPOS_IDENTIFICAVEIS: CampoHandoff[] = CAMPOS_VALIDOS.filter(
   (c) => CAMPOS[c].identificavel,
 );
 
-export const GRUPOS: { id: GrupoCampo; titulo: string; descricao: string }[] = [
+export interface DefinicaoGrupo {
+  id: GrupoCampo;
+  titulo: string;
+  descricao: string;
+  /** Resumo de uma linha, para quando o grupo está fechado. */
+  resumo: string;
+  /**
+   * O diálogo abre este grupo por omissão?
+   *
+   * O atrito deve ser PROPORCIONAL À SENSIBILIDADE, não uniforme. Hoje custa
+   * exatamente o mesmo autorizar "Periodicidade" e "NIF", o que é errado nas
+   * duas direções: fatiga quem só quer continuar, e banaliza o campo que
+   * merecia uma pausa.
+   *
+   * Por isso o enquadramento e os valores — que são o que o utilizador
+   * acabou de ver no simulador — abrem; a identificação abre FECHADA, com o
+   * aviso à vista, para que abri-la seja um gesto próprio.
+   */
+  abertoPorOmissao: boolean;
+}
+
+export const GRUPOS: DefinicaoGrupo[] = [
   {
     id: "enquadramento",
     titulo: "Enquadramento fiscal",
     descricao: "O que determina as regras que se aplicam ao teu caso.",
+    resumo: "Atividade, território e regime de IVA.",
+    abertoPorOmissao: true,
   },
   {
     id: "estimativas",
     titulo: "Valores estimados",
     descricao: "Resultado dos nossos cálculos. São estimativas, não valores oficiais.",
+    resumo: "Os números que acabaste de ver.",
+    abertoPorOmissao: true,
   },
   {
     id: "identificacao",
     titulo: "Identificação",
     descricao: "Dados que te identificam. Só faz sentido enviar se quiseres continuar já na FIZ.",
+    resumo: "Nome, NIF, email e telefone — opcional.",
+    abertoPorOmissao: false,
   },
-  { id: "origem", titulo: "Origem", descricao: "De onde veio esta continuação." },
+  {
+    id: "origem",
+    titulo: "Origem",
+    descricao: "De onde veio esta continuação.",
+    resumo: "Que simulador ou guia deu origem a isto.",
+    abertoPorOmissao: false,
+  },
 ];
 
 /**

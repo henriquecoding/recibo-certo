@@ -124,7 +124,7 @@ export default function PrivacidadePage() {
               "Recibos e cálculos sincronizados na nuvem (valores, datas, atividade, retenções)",
               "Cenários de recibo de vencimento e preferências fiscais (regime, agregado, deduções)",
               "Estado da subscrição (plano, início/fim, identificador de cliente de pagamento)",
-              "Alertas e lembretes que configuras (ex.: prazos de Segurança Social)",
+              "Preferências de aviso sobre a tua faturação (limiar de isenção de IVA)",
               "Data e hora de criação da conta e de última atividade relevante",
             ]}
           />
@@ -169,7 +169,7 @@ export default function PrivacidadePage() {
             ["Criar e gerir a conta Plus", "Email, autenticação", "Execução de contrato (art.º 6.º/1 b)"],
             ["Guardar e sincronizar os teus dados na nuvem (Plus)", "Recibos, simulações, preferências", "Execução de contrato (art.º 6.º/1 b)"],
             ["Processar pagamentos da subscrição", "Email, estado da subscrição", "Execução de contrato (art.º 6.º/1 b)"],
-            ["Enviar alertas e emails essenciais do serviço", "Email, preferências de alerta", "Execução de contrato / consentimento (art.º 6.º/1 b) e a)"],
+            ["Enviar emails essenciais do serviço e o aviso de limiar de faturação", "Email, preferências de aviso", "Execução de contrato / consentimento (art.º 6.º/1 b) e a)"],
             ["Segurança e prevenção de fraude", "Logs de infraestrutura, IP", "Interesse legítimo (art.º 6.º/1 f)"],
             ["Cumprir obrigações legais e fiscais", "Conforme exigido por lei", "Obrigação legal (art.º 6.º/1 c)"],
           ]}
@@ -221,7 +221,7 @@ export default function PrivacidadePage() {
             "Recibos verdes e respetivos cálculos",
             "Cenários de recibo de vencimento",
             "Estado da subscrição (plano e validade)",
-            "Alertas configurados (ex.: prazos de Segurança Social)",
+            "Preferências de aviso sobre a tua faturação",
           ]}
         />
         <ListaCheck
@@ -265,7 +265,7 @@ export default function PrivacidadePage() {
         </p>
         <Lista
           items={[
-            "Emails essenciais (transacionais): confirmação de conta, recuperação de palavra-passe, recibos de pagamento e alertas que configuraste (ex.: prazos). Baseiam-se na execução do contrato.",
+            "Emails essenciais (transacionais): confirmação de conta, recuperação de palavra-passe, recibos de pagamento e o aviso quando a tua faturação se aproxima do limiar de isenção de IVA. Baseiam-se na execução do contrato.",
             "Emails opcionais (novidades/marketing): só os enviamos com o teu consentimento e podes cancelar a subscrição a qualquer momento, através da ligação no rodapé do email.",
           ]}
         />

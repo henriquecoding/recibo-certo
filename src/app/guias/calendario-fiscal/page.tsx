@@ -65,11 +65,11 @@ export default function CalendarioFiscalPage() {
 
       <section className="mt-10 mb-4">
         <div className="rounded-2xl border border-brand/20 bg-brand-light/50 px-4 py-3 text-sm text-brand-dark">
-          Configura alertas para nunca mais perderes uma data — recebes o aviso antes de cada prazo.
+          Vê todas as datas do ano num só sítio, com o que é preciso entregar em cada uma.
         </div>
         <div className="mt-4 flex flex-col sm:flex-row gap-3">
           <Link href="/dashboard/prazos" className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-4 py-3 text-sm font-medium text-stone-700 dark:text-stone-300 hover:border-brand hover:text-brand transition-all">
-            Configurar alertas de prazos <ArrowRight size={13} />
+            Ver o calendário fiscal <ArrowRight size={13} />
           </Link>
           <Link href="/guias/pagamentos-por-conta" className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-4 py-3 text-sm font-medium text-stone-700 dark:text-stone-300 hover:border-brand hover:text-brand transition-all">
             Pagamentos por conta <ArrowRight size={13} />

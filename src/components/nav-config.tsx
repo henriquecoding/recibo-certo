@@ -74,8 +74,8 @@ export const NAV_APRENDER: NavItem[] = [
     Icon: Trophy,
   },
   {
-    label: "Alertas de prazos",
-    desc: "Nunca mais percas uma data fiscal.",
+    label: "Calendário fiscal",
+    desc: "Todas as datas de entrega, num só sítio.",
     href: "/dashboard/prazos",
     Icon: BellAlert,
   },

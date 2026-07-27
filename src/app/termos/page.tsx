@@ -67,7 +67,7 @@ export default function TermosPage() {
             "Calculadora de recibos verdes — estimativa de tesouraria e deduções",
             "Simulador de IRS anual — projeção de liquidação",
             "Comparador de regimes — recibos verdes vs. empresa (IRC)",
-            "Calendário de prazos fiscais — alertas e datas de entrega",
+            "Calendário de prazos fiscais — datas de entrega",
             "Arquivo de recibos — histórico local no teu dispositivo",
           ]}
         />
@@ -129,7 +129,7 @@ export default function TermosPage() {
             [
               "Plus",
               `${precoPlusFormatado()}/mês`,
-              "Sincronização na nuvem, exportação avançada, alertas por email, multi-dispositivo",
+              "Sincronização na nuvem, exportação avançada, multi-dispositivo",
             ],
           ]}
         />

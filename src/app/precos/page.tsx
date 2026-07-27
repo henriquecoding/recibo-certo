@@ -10,7 +10,7 @@ import { faqs } from "@/lib/faq";
 export const metadata: Metadata = {
   title: "Planos e Preços — Calculadora Grátis ou Plus",
   description:
-    "Calculadora de recibos verdes grátis para sempre. O plano Plus traz alertas de prazos, conta na nuvem e exportação para o contabilista. Começa grátis, sem cartão.",
+    "Calculadora de recibos verdes grátis para sempre. O plano Plus traz conta na nuvem, cenários guardados e exportação para o contabilista. Começa grátis, sem cartão.",
   keywords: [
     "ReciboCerto preços",
     "calculadora recibos verdes grátis",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Planos ReciboCerto — Calculadora Grátis + Plus",
     description:
-      "Calculadora grátis para sempre. Plus com alertas de prazos, conta na nuvem e exportação. Começa grátis.",
+      "Calculadora grátis para sempre. Plus com conta na nuvem, cenários guardados e exportação. Começa grátis.",
     url: "https://www.recibocerto.pt/precos",
     type: "website",
   },

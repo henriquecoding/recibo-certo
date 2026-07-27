@@ -6,10 +6,7 @@ import { useAuth } from "@/lib/supabase/auth";
 import { useSubscricao } from "@/lib/stripe/subscription";
 import { getSupabase } from "@/lib/supabase/client";
 import { validarPassword, type ErroPassword } from "@/lib/validacao-password";
-import {
-  Check, Warning, History, BellAlert, ArrowLeft, ArrowRight,
-  Lock, Eye, EyeOff,
-} from "@/components/ui/Icons";
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, History, Lock, Warning } from "@/components/ui/Icons";
 import FizConnectionCard from "@/components/fiz/FizConnectionCard";
 
 const campo =
@@ -91,7 +88,7 @@ export default function ContaPage() {
 
             <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5 dark:border-stone-800">
               <Beneficio icon={<History size={16} />} texto="Os teus recibos vão ficar seguros na nuvem e em todos os dispositivos." />
-              <Beneficio icon={<BellAlert size={16} />} texto="Alertas de prazos por email para nunca falhares um pagamento." />
+              <Beneficio icon={<History size={16} />} texto="Histórico na nuvem, sincronizado em todos os dispositivos." />
             </div>
 
             <p className="mt-5 rounded-xl bg-cream p-3 text-xs leading-relaxed text-stone-500 dark:bg-stone-800 dark:text-stone-400">

@@ -12,6 +12,8 @@ import { guiasPorPerfil } from "@/lib/guias-config";
 import SeletorModo from "@/components/SeletorModo";
 import ComoFuncionaModal from "@/components/ComoFuncionaModal";
 import type { ComparacaoCategoriasResult } from "@/lib/fiscal-dependente";
+import FizLogo from "@/components/fiz/FizLogo";
+import { fizAtiva } from "@/lib/fiz/flag";
 
 // Selos de confiança — enxutos (2). O detalhe das fontes e as contagens do
 // ecossistema vivem, sem repetição, na faixa de números e na secção Fontes.
@@ -36,6 +38,18 @@ interface CardData {
   pctSufixo: string;
   linhas: { l: string; v: string; valor: number; strong?: boolean }[];
   box: { tom: "alerta" | "info"; titulo: string; sub: string };
+  /**
+   * O passo que fecha a demo: o que acontece DEPOIS de saber o número.
+   *
+   * O ReciboCerto explica, calcula e prepara; quem emite, declara e vigia as
+   * obrigações reais é a FIZ. Sem este quarto tempo a demo termina no
+   * resultado e deixa por responder a pergunta que toda a gente faz a
+   * seguir — "e agora, quem trata disto?".
+   *
+   * Só aparece com a integração ligada (`fizAtiva()`); com ela desligada a
+   * demo continua a fazer sentido sem alterações.
+   */
+  fiz?: { titulo: string; sub: string };
   nota: string;
   typingSteps: TypingStep[];
 }
@@ -96,7 +110,8 @@ function criarExemplos(CMP: ComparacaoCategoriasResult): Record<
         { l: "Segurança Social", v: "− 299 €", valor: 299 },
         { l: "Disponível para gastar", v: "1 241 €", valor: 1241, strong: true },
       ],
-      box: { tom: "alerta", titulo: "Prazo SS — 20 julho", sub: "Reserva 299 € · avisamos a tempo" },
+      box: { tom: "alerta", titulo: "Prazo SS — 20 julho", sub: "Reserva 299 € para não seres apanhado" },
+      fiz: { titulo: "Emitir e declarar com a FIZ", sub: "As tuas obrigações reais, tratadas por quem está certificado" },
       nota: "Atividade estabelecida (2.º ano ou seguinte). No 1.º ano de atividade, a Segurança Social é isenta e a retenção na fonte pode ser dispensada.",
       typingSteps: [
         { text: "2", delay: 320 },
@@ -167,6 +182,7 @@ function criarExemplos(CMP: ComparacaoCategoriasResult): Record<
         { l: "Líquido anual estimado", v: eur0(EMP.liquido), valor: EMP.liquido, strong: true },
       ],
       box: { tom: "info", titulo: "IRC PME a 15%", sub: "Sobre os primeiros 50 000 € de lucro tributável" },
+      fiz: { titulo: "Constituir e manter com a FIZ", sub: "Contabilidade organizada e obrigações da sociedade" },
       nota: "Estimativa para 30 000 €/ano de faturação. Modela IRC PME, derrama e dividendos a 28% — não substitui um contabilista certificado.",
       typingSteps: [
         { text: "3", delay: 280 },
@@ -203,6 +219,7 @@ function criarExemplos(CMP: ComparacaoCategoriasResult): Record<
         { l: "Empresa (Lda)", v: eur0(CMP_LIQ.empresa), valor: CMP_LIQ.empresa, strong: CMP.melhor === "empresa" },
       ],
       box: { tom: "info", titulo: "Uma base, três caminhos", sub: "Vê o ponto de viragem e o calendário fiscal" },
+      fiz: { titulo: "Confirmar a escolha com a FIZ", sub: "Um contabilista certificado valida antes de mudares" },
       nota: "Estimativa para 30 000 €/ano. Ajusta o rendimento e os pressupostos na ferramenta de comparação.",
       typingSteps: [
         { text: "3", delay: 280 },
@@ -300,6 +317,8 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
   const [linesVisible, setLinesVisible] = useState(false);
   const [boxVisible, setBoxVisible] = useState(false);
   const [noteVisible, setNoteVisible] = useState(false);
+  const [fizVisible, setFizVisible] = useState(false);
+  const mostrarFiz = fizAtiva();
   const [fading, setFading] = useState(false);
   const [cycle, setCycle] = useState(0);
 
@@ -354,6 +373,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
     setLinesVisible(false);
     setBoxVisible(false);
     setNoteVisible(false);
+    setFizVisible(false);
     setCursorVisible(false);
     setFading(false);
     setPonteiro(null);
@@ -447,6 +467,9 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
     at(t, () => setBoxVisible(true));
     t += 380;
     at(t, () => setNoteVisible(true));
+    // 6 · o passo seguinte: quem executa
+    t += 620;
+    at(t, () => setFizVisible(true));
 
     t += HOLD_MS;
     at(t, () => setFading(true));
@@ -787,6 +810,34 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
               <span className={`h-2 w-2/3 ${ghost}`} />
             </span>
           </div>
+
+          {/* ── Quem executa ────────────────────────────────────────
+              O quarto tempo da demo. Sem ele o cartão termina no número e
+              deixa por responder o que toda a gente pergunta a seguir —
+              "e agora, quem trata disto?". A cor da FIZ marca a fronteira:
+              o verde acima é nosso, esta faixa é do parceiro. */}
+          {mostrarFiz && card.fiz && (
+            <div
+              className="mt-3 flex items-center gap-2.5 rounded-xl border border-fiz-200 bg-fiz-50 p-2.5 transition-all duration-500 ease-out"
+              style={{
+                opacity: fizVisible ? 1 : 0,
+                transform: fizVisible ? "translateY(0)" : "translateY(6px)",
+              }}
+            >
+              <FizLogo size={22} className="flex-shrink-0 rounded-lg" decorativo />
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-stone-800 dark:text-stone-100">
+                  {card.fiz.titulo}
+                </div>
+                <div className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                  {card.fiz.sub}
+                </div>
+              </div>
+              <span className="ml-auto flex-shrink-0 rounded-full bg-fiz px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-fiz-ink">
+                Parceiro
+              </span>
+            </div>
+          )}
         </div>
 
         {/* ── Cursor encenado + ripple de clique ─────────────────── */}

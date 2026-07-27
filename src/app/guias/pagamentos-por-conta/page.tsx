@@ -62,7 +62,7 @@ export default function PagamentosPorContaPage() {
             Retenção na fonte <ArrowRight size={13} />
           </Link>
           <Link href="/dashboard/prazos" className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-4 py-3 text-sm font-medium text-stone-700 dark:text-stone-300 hover:border-brand hover:text-brand transition-all">
-            Configurar alertas de prazos <ArrowRight size={13} />
+            Ver o calendário fiscal <ArrowRight size={13} />
           </Link>
         </div>
       </section>

@@ -11,11 +11,6 @@ import FizLogo from "@/components/fiz/FizLogo";
 
 const BENEFICIOS = [
   {
-    icon: <BellAlert size={22} />,
-    titulo: "Alertas antes de cada prazo",
-    texto: "Avisamos-te por email com antecedência. Nunca mais uma coima por esquecimento.",
-  },
-  {
     icon: <History size={22} />,
     titulo: "Histórico na nuvem",
     texto: "Os teus recibos seguros e sincronizados — do telemóvel ao portátil.",
@@ -81,7 +76,7 @@ export default function UpgradePage() {
         <div className="eyebrow mb-3 text-brand">{PLUS.nome}</div>
         <h1 className="font-display text-3xl font-semibold text-stone-800">Deixa de te preocupar com prazos.</h1>
         <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-stone-500">
-          Continuas a calcular e a simular de graça. O Plus trata da parte chata: avisa-te a tempo, guarda o teu
+          Continuas a calcular e a simular de graça. O Plus trata da parte chata: guarda-te a tempo, guarda o teu
           histórico na nuvem e prepara tudo para o teu contabilista.
         </p>
       </header>

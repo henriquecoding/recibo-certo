@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, m } from "motion/react";
-import { Wallet, BellAlert, Receipt, Check, ArrowRight, ArrowLeft } from "@/components/ui/Icons";
+import { ArrowLeft, ArrowRight, BellAlert, Calendar, Check, Receipt, Wallet } from "@/components/ui/Icons";
 import Button from "@/components/ui/Button";
 import { EASE } from "@/lib/motion";
 
@@ -28,14 +28,14 @@ const PASSOS: Passo[] = [
     pontos: [
       { icon: <Wallet size={16} />, texto: "Separamos o que é teu do que é do Estado" },
       { icon: <Check size={16} />, texto: "Dizemos-te quanto reservar para IRS, SS e IVA" },
-      { icon: <BellAlert size={16} />, texto: "Avisamos-te dos prazos antes que sejam multa" },
+      { icon: <Calendar size={16} />, texto: "Vê todos os prazos fiscais antes que sejam multa" },
     ],
   },
   {
     icon: <Receipt size={26} />,
     titulo: "Começa pelo teu primeiro recibo",
     descricao:
-      "Regista um recibo e vê na hora quanto fica disponível para gastar. Os teus dados ficam só neste dispositivo — mais tarde, com o Plus, podes guardá-los na nuvem e receber alertas dos prazos por email.",
+      "Regista um recibo e vê na hora quanto fica disponível para gastar. Os teus dados ficam só neste dispositivo — mais tarde, com o Plus, podes guardá-los na nuvem e usá-los em qualquer dispositivo.",
   },
 ];
 

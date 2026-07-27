@@ -13,29 +13,7 @@ import {
   inViewOnce,
   EASE,
 } from "@/lib/motion";
-import {
-  ArrowRight,
-  ShieldCheck,
-  Lock,
-  Flag,
-  Globe,
-  Building,
-  Wallet,
-  Receipt,
-  Zap,
-  Target,
-  ChartProjection,
-  Mail,
-  Calculator,
-  BellAlert,
-  LogoMark,
-  Export,
-  Check,
-  User,
-  Briefcase,
-  ChevronDown,
-  ChevronUp,
-} from "@/components/ui/Icons";
+import { ArrowRight, BellAlert, Briefcase, Building, Calculator, Calendar, ChartProjection, Check, ChevronDown, ChevronUp, Export, Flag, Globe, Lock, LogoMark, Mail, Receipt, ShieldCheck, Target, User, Wallet, Zap } from "@/components/ui/Icons";
 import { supabaseConfigurado } from "@/lib/supabase/client";
 import { submeterProposta, type PropostaInput } from "@/lib/supabase/admin";
 
@@ -849,7 +827,7 @@ const DEMOS: DemoItem[] = [
 ];
 
 const MAIS_FEATURES = [
-  { icon: <BellAlert size={12} />, label: "Alertas de prazos" },
+  { icon: <Calendar size={12} />, label: "Calendário fiscal" },
   { icon: <Wallet size={12} />, label: "Mealheiro fiscal" },
   { icon: <ChartProjection size={12} />, label: "Comparador de cenários" },
   { icon: <Zap size={12} />, label: "Quiz Fiscal" },

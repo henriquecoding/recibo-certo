@@ -253,6 +253,32 @@ describe("consentimento do handoff", () => {
     }
   });
 
+  it("todo o grupo declara se abre por omissão, e a identificação não abre", async () => {
+    const { GRUPOS } = await import("@/lib/fiz/handoff-fields");
+    for (const g of GRUPOS) {
+      expect(typeof g.abertoPorOmissao, g.id).toBe("boolean");
+      expect(g.resumo.length, g.id).toBeGreaterThan(10);
+    }
+    // O atrito tem de ser proporcional à sensibilidade: abrir a secção da
+    // identificação é um gesto próprio, não o estado de chegada.
+    expect(GRUPOS.find((g) => g.id === "identificacao")?.abertoPorOmissao).toBe(false);
+    // E o essencial tem de estar à vista, senão volta a haver um beco.
+    expect(GRUPOS.find((g) => g.id === "enquadramento")?.abertoPorOmissao).toBe(true);
+  });
+
+  it("o conjunto recomendado nunca arrasta um campo que te identifica", async () => {
+    const { CAMPOS, CAMPOS_VALIDOS, CAMPOS_IDENTIFICAVEIS } = await import("@/lib/fiz/handoff-fields");
+    // O diálogo constrói a recomendação como "tudo o que não é do grupo
+    // identificacao". Esta é a invariante de que essa regra depende: se um
+    // campo identificável alguma vez mudasse de grupo, o botão de atalho
+    // passaria a marcar o NIF sem o utilizador reparar.
+    const recomendados = CAMPOS_VALIDOS.filter((c) => CAMPOS[c].grupo !== "identificacao");
+    for (const c of recomendados) {
+      expect(CAMPOS_IDENTIFICAVEIS, `${c} entrou na recomendação`).not.toContain(c);
+    }
+    expect(recomendados.length).toBeGreaterThan(0);
+  });
+
   it("a identificação é o único grupo marcado como identificável", async () => {
     const { CAMPOS, CAMPOS_VALIDOS } = await import("@/lib/fiz/handoff-fields");
     for (const c of CAMPOS_VALIDOS) {
