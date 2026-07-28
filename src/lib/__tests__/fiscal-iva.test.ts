@@ -103,6 +103,96 @@ describe("situação de IVA — casos que os simuladores não sabiam", () => {
   });
 });
 
+describe("situação de IVA — direitos de autor (Art. 9.º n.º 16 + Art. 53.º)", () => {
+  const autor = (obraAnual: number, royaltiesAnual: number) =>
+    situacaoIVA({
+      faturacaoAnual: obraAnual + royaltiesAnual,
+      regiao: "continente",
+      regimeEscolhido: "isento",
+      categoria: "prop_int",
+      entidade: "ti",
+      direitosAutor: { obraAnual, royaltiesAnual },
+    });
+
+  it("a obra própria é isenta sem limiar nenhum", () => {
+    // 100 000 € só de obra — muito acima do limiar — e continua sem IVA.
+    const s = autor(100_000, 0);
+    expect(s.zona).toBe("autor_misto");
+    expect(s.taxaEfetiva).toBe(0);
+    expect(s.regimeParaFiz).toBe("EXEMPT_ART_9");
+    expect(s.baseLegal.join(" ")).toContain("Art. 9.º, n.º 16");
+  });
+
+  it("o limiar dos royalties conta só a faturação DELES, não o total", () => {
+    // 30 000 € de obra + 2 000 € de royalties: o total passa o limiar, os
+    // royalties não. Somar tudo daria IVA onde a lei não o exige.
+    const s = autor(30_000, 2_000);
+    expect(s.desdobramentoAutor?.royaltiesTributados).toBe(false);
+    expect(s.desdobramentoAutor?.ivaRoyaltiesAnual).toBe(0);
+    expect(s.taxaEfetiva).toBe(0);
+  });
+
+  it("royalties acima do limiar levam a taxa normal, só eles", () => {
+    const s = autor(10_000, 25_000);
+    const d = s.desdobramentoAutor!;
+    expect(d.royaltiesTributados).toBe(true);
+    expect(d.taxaRoyalties).toBe(IVA_TAXAS.continente.value.normal);
+    expect(d.ivaRoyaltiesAnual).toBeCloseTo(25_000 * IVA_TAXAS.continente.value.normal, 2);
+    // A taxa efetiva é sobre o TOTAL, não sobre os royalties.
+    expect(s.taxaEfetiva).toBeCloseTo(d.ivaRoyaltiesAnual / 35_000, 6);
+    expect(s.regimeEfetivo).toBe("normal");
+  });
+
+  it("os royalties também têm zona de transição (Art. 58.º n.º 2)", () => {
+    // Entre 15 000 € e 18 750 € de royalties: mantêm-se isentos até janeiro.
+    const s = autor(5_000, LIMIAR + 1);
+    expect(s.desdobramentoAutor?.royaltiesTributados).toBe(false);
+    expect(s.taxaEfetiva).toBe(0);
+    expect(s.quandoAcontece).toMatch(/1 de janeiro/i);
+  });
+
+  it("acima de +25% nos royalties, o IVA é imediato", () => {
+    const s = autor(5_000, IMEDIATO + 1);
+    expect(s.desdobramentoAutor?.royaltiesTributados).toBe(true);
+    expect(s.taxaEfetiva).toBeGreaterThan(0);
+  });
+
+  it("sem royalties não há IVA nenhum a cobrar", () => {
+    const s = autor(40_000, 0);
+    expect(s.desdobramentoAutor?.ivaRoyaltiesAnual).toBe(0);
+    expect(s.regimeEfetivo).toBe("isento");
+  });
+
+  it("em transição, a taxa dos royalties é 0 e a explicação não os diz abaixo do limiar", () => {
+    // O erro que os componentes cometiam quando tinham a regra escrita à mão:
+    // liam um booleano ("cobra IVA?") e, com ele a falso, escreviam sempre
+    // "isento por ficar abaixo de 15 000 €" — dito a quem já passou o limiar e
+    // só mantém a isenção até janeiro. A interface lê `taxaRoyalties`; se
+    // deixasse de ser 0 aqui, o simulador reservaria IVA que ainda não é devido.
+    const s = autor(5_000, LIMIAR + 1);
+    expect(s.desdobramentoAutor?.taxaRoyalties).toBe(0);
+    expect(s.oQueAcontece).toContain("já passaram");
+    expect(s.oQueAcontece).not.toMatch(/ficam abaixo/);
+  });
+
+  it("escolher «23%» na interface não torna a obra própria tributada", () => {
+    // A isenção do Art. 9.º não é opção do contribuinte. O painel deixou de
+    // oferecer seletor nesta zona; o motor tem de o garantir na mesma, para o
+    // resultado não depender de um estado antigo da interface.
+    const escolhido = situacaoIVA({
+      faturacaoAnual: 32_000,
+      regiao: "continente",
+      regimeEscolhido: "normal",
+      categoria: "prop_int",
+      entidade: "ti",
+      direitosAutor: { obraAnual: 30_000, royaltiesAnual: 2_000 },
+    });
+    expect(escolhido.zona).toBe("autor_misto");
+    expect(escolhido.taxaEfetiva).toBe(0);
+    expect(escolhido.desdobramentoAutor?.ivaRoyaltiesAnual).toBe(0);
+  });
+});
+
 describe("situação de IVA — região e coerência", () => {
   it("a taxa segue a região, não um valor fixo", () => {
     for (const regiao of ["continente", "madeira", "acores"] as const) {

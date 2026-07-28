@@ -67,7 +67,13 @@ export type ZonaIVA =
   /** Abaixo do limiar mas escolheu cobrar IVA. */
   | "tributado_por_opcao"
   /** Uma só operação tributável: nunca isento (Art. 53.º n.º 6 a). */
-  | "ato_isolado";
+  | "ato_isolado"
+  /**
+   * Direitos de autor com duas naturezas na mesma atividade: obra própria
+   * isenta pelo Art. 9.º e royalties/licenciamento à taxa normal. Não há um
+   * regime único — há uma mistura, e é preciso dizê-lo.
+   */
+  | "autor_misto";
 
 export type EntidadeIVA = "ti" | "ato_isolado" | "sociedade";
 
@@ -95,6 +101,19 @@ export interface EntradaSituacaoIVA {
    * sobre a dedução por limiar.
    */
   isentoEfetivo?: boolean;
+  /**
+   * Direitos de autor: a atividade parte-se em duas operações com
+   * tratamentos diferentes e o IVA não se resolve com um regime só.
+   *
+   *   · obra própria — isenta pelo Art. 9.º, n.º 16 CIVA, SEM limiar;
+   *   · royalties / licenciamento — taxa normal, sujeitos ao limiar do
+   *     Art. 53.º calculado sobre a SUA própria faturação, não sobre o total.
+   *
+   * Estava resolvido à mão em dois componentes, cada um com a sua cópia da
+   * regra. Passa a ser o motor a fazê-lo, para haver uma só resposta.
+   * Ambos os valores são ANUAIS.
+   */
+  direitosAutor?: { obraAnual: number; royaltiesAnual: number };
 }
 
 export interface OpcaoTaxaIVA {
@@ -128,6 +147,20 @@ export interface SituacaoIVA {
   periodicidade: "mensal" | "trimestral" | null;
   /** Vocabulário do contrato da FIZ, derivado da zona — não da escolha crua. */
   regimeParaFiz: "EXEMPT_ART_53" | "EXEMPT_ART_9" | "NORMAL" | "UNKNOWN";
+  /**
+   * Detalhe do desdobramento de direitos de autor. `null` em tudo o resto.
+   * Os simuladores leem daqui os montantes — não os recalculam.
+   */
+  desdobramentoAutor: {
+    obraAnual: number;
+    royaltiesAnual: number;
+    /** Os royalties, por si sós, já ultrapassaram o limiar do Art. 53.º? */
+    royaltiesTributados: boolean;
+    /** Taxa aplicada aos royalties (0 quando ainda isentos). */
+    taxaRoyalties: number;
+    /** IVA anual devido, só sobre a parcela de royalties. */
+    ivaRoyaltiesAnual: number;
+  } | null;
 }
 
 /** Art. 41.º n.º 1 a): a partir daqui a declaração é mensal. */
@@ -181,6 +214,7 @@ export function situacaoIVA(entrada: EntradaSituacaoIVA): SituacaoIVA {
     primeiroAno = false,
     isentoPorNatureza = false,
     isentoEfetivo,
+    direitosAutor,
   } = entrada;
 
   const limiar = IVA_ISENCAO_LIMITE.value;
@@ -211,7 +245,91 @@ export function situacaoIVA(entrada: EntradaSituacaoIVA): SituacaoIVA {
     opcoes,
     incoerencia,
     periodicidade: null as SituacaoIVA["periodicidade"],
+    desdobramentoAutor: null as SituacaoIVA["desdobramentoAutor"],
   };
+
+  // ── Direitos de autor: duas naturezas na mesma atividade ────────────
+  //  Vem antes de tudo o resto porque não se resolve com um regime só. A
+  //  obra própria é isenta pelo Art. 9.º, n.º 16 — sem limiar nenhum. Os
+  //  royalties seguem a taxa normal e têm o limiar do Art. 53.º aplicado à
+  //  SUA própria faturação, não ao total: quem fatura 30 000 € de obra e
+  //  2 000 € de royalties continua isento na parte dos royalties.
+  if (direitosAutor) {
+    const obraAnual = Math.max(0, direitosAutor.obraAnual);
+    const royaltiesAnual = Math.max(0, direitosAutor.royaltiesAnual);
+    const totalAnual = obraAnual + royaltiesAnual;
+
+    // A zona dos royalties é decidida pelas mesmas regras de toda a gente —
+    // incluindo a transição do Art. 58.º, n.º 2, que antes era ignorada.
+    const zonaRoyalties = situacaoIVA({
+      faturacaoAnual: royaltiesAnual,
+      regiao,
+      regimeEscolhido: "isento",
+      // Art. 151.º: o que se quer daqui é a taxa NORMAL dos royalties, e não
+      // a isenção por natureza que caracteriza a obra própria.
+      categoria: "art151",
+      entidade: "ti",
+      primeiroAno,
+    });
+    const royaltiesTributados = royaltiesAnual > 0 && zonaRoyalties.regimeEfetivo !== "isento";
+    const taxaRoyalties = royaltiesTributados ? zonaRoyalties.taxaEfetiva : 0;
+    const ivaRoyaltiesAnual = royaltiesAnual * taxaRoyalties;
+    // Taxa efetiva sobre o TOTAL faturado: é a que o simulador precisa para
+    // dizer quanto do que faturas é IVA.
+    const taxaEfetiva = totalAnual > 0 ? ivaRoyaltiesAnual / totalAnual : 0;
+
+    const desdobramento = {
+      obraAnual,
+      royaltiesAnual,
+      royaltiesTributados,
+      taxaRoyalties,
+      ivaRoyaltiesAnual,
+    };
+
+    return {
+      ...base,
+      margemAteLimiar: limiar - royaltiesAnual,
+      zona: "autor_misto",
+      regimeEfetivo: royaltiesTributados ? "normal" : "isento",
+      taxaEfetiva,
+      nivel: royaltiesTributados || zonaRoyalties.zona === "transicao" ? "aviso" : "brand",
+      titulo: royaltiesTributados
+        ? "Obra isenta, royalties com IVA"
+        : zonaRoyalties.zona === "transicao"
+          ? "Os royalties vão deixar de ser isentos"
+          : "Direitos de autor sem IVA a cobrar",
+      oQueAcontece: (() => {
+        const obra = `A obra própria (${eur(Math.round(obraAnual))}/ano) é isenta pelo Art. 9.º, n.º 16 — sem limiar.`;
+        if (royaltiesTributados) {
+          return `${obra} Os royalties (${eur(Math.round(royaltiesAnual))}/ano) passaram os ${eur(limiar)} do Art. 53.º e levam a taxa normal.`;
+        }
+        if (zonaRoyalties.zona === "transicao") {
+          return `${obra} Os royalties (${eur(Math.round(royaltiesAnual))}/ano) já passaram os ${eur(limiar)} do Art. 53.º, mas a isenção só se perde no futuro — não já.`;
+        }
+        return `${obra} Os royalties (${eur(Math.round(royaltiesAnual))}/ano) ficam abaixo dos ${eur(limiar)} do Art. 53.º, por isso também não levam IVA.`;
+      })(),
+      // Três situações, não duas: abaixo do limiar, em transição (já passou
+      // mas mantém a isenção até janeiro) e tributado. Ler só o booleano
+      // dizia a quem está em transição que continua "abaixo de 15 000 €" —
+      // precisamente quando já não está.
+      quandoAcontece:
+        zonaRoyalties.zona === "transicao" || royaltiesTributados
+          ? zonaRoyalties.quandoAcontece
+          : `Enquanto os royalties ficarem abaixo de ${eur(limiar)} por ano. O que faturares de obra própria não conta para esse limiar.`,
+      oQueTensDeFazer: royaltiesTributados
+        ? "Separa as duas coisas na faturação: a obra própria sai isenta, os royalties levam IVA à taxa normal. O IRS e a Segurança Social incidem sobre o total — só o IVA distingue."
+        : zonaRoyalties.zona === "transicao"
+          ? "Continua a faturar sem IVA até janeiro, mas prepara-te: a partir daí os royalties passam a levar taxa normal. A obra própria mantém-se isenta, aconteça o que acontecer."
+          : "Podes faturar tudo sem IVA, mas mantém as duas parcelas identificadas: se os royalties crescerem, é a faturação deles — e só dela — que faz disparar o limiar.",
+      baseLegal: [
+        "Art. 9.º, n.º 16 CIVA",
+        "Art. 53.º, n.º 1 CIVA",
+        ...zonaRoyalties.baseLegal.filter((b) => b.includes("58.º")),
+      ],
+      regimeParaFiz: royaltiesTributados ? "NORMAL" : "EXEMPT_ART_9",
+      desdobramentoAutor: desdobramento,
+    };
+  }
 
   // ── Art. 9.º: isenção pela natureza da operação ─────────────────────
   // Vem primeiro porque não depende de limiar nenhum.

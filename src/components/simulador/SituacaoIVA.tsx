@@ -1,6 +1,6 @@
 "use client";
 
-import { pct } from "@/lib/format";
+import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import { Check, Warning, Info } from "@/components/ui/Icons";
 import type { SituacaoIVA as Situacao } from "@/lib/fiscal-iva";
@@ -71,9 +71,15 @@ export default function SituacaoIVA({
   className?: string;
 }) {
   const estilo = NIVEL[situacao.nivel];
+  const autor = situacao.desdobramentoAutor;
   // A isenção do Art. 9.º não é uma escolha do utilizador: é a natureza da
-  // operação. Oferecer um seletor aí seria sugerir que se pode optar.
-  const podeEscolher = Boolean(onRegimeChange) && situacao.zona !== "isento_natureza";
+  // operação. Oferecer um seletor aí seria sugerir que se pode optar. O mesmo
+  // vale para os direitos de autor: a taxa de cada parcela decorre da lei e da
+  // faturação de royalties, não de um botão.
+  const podeEscolher =
+    Boolean(onRegimeChange) &&
+    situacao.zona !== "isento_natureza" &&
+    situacao.zona !== "autor_misto";
   const isentoDisponivel = situacao.zona !== "ato_isolado";
 
   return (
@@ -154,6 +160,48 @@ export default function SituacaoIVA({
                 <dd className="inline">{situacao.oQueTensDeFazer}</dd>
               </div>
             </dl>
+
+            {/* Direitos de autor: as duas parcelas lado a lado. Os montantes
+                são ANUAIS de propósito — é ao ano que se mede o limiar do
+                Art. 53.º, e é por não se ver isso que se confunde "a minha
+                faturação" com "a faturação que conta para o limiar". */}
+            {autor && (
+              <div className="mt-3 space-y-1.5 rounded-xl border border-stone-200/70 bg-white/70 px-3.5 py-3 dark:border-stone-700/70 dark:bg-stone-900/50">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+                  Como se parte a tua faturação, ao ano
+                </p>
+                <div className="flex items-baseline justify-between gap-3 text-xs">
+                  <span className="text-stone-500 dark:text-stone-400">
+                    Obra própria <span className="text-stone-400">— isenta, Art. 9.º/16</span>
+                  </span>
+                  <span className="flex-shrink-0 font-semibold tabular-nums text-stone-700 dark:text-stone-200">
+                    {fmt(autor.obraAnual)}
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between gap-3 text-xs">
+                  <span className="text-stone-500 dark:text-stone-400">
+                    Royalties / licenciamento{" "}
+                    <span className="text-stone-400">
+                      {autor.royaltiesTributados ? `— IVA ${pct(autor.taxaRoyalties)}` : "— sem IVA"}
+                    </span>
+                  </span>
+                  <span className="flex-shrink-0 font-semibold tabular-nums text-stone-700 dark:text-stone-200">
+                    {fmt(autor.royaltiesAnual)}
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between gap-3 border-t border-stone-200/80 pt-1.5 text-xs dark:border-stone-700/80">
+                  <span className="text-stone-500 dark:text-stone-400">IVA a cobrar</span>
+                  <span className={`flex-shrink-0 font-semibold tabular-nums ${estilo.titulo}`}>
+                    {fmt(autor.ivaRoyaltiesAnual)}
+                  </span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-stone-400">
+                  O IRS e a Segurança Social incidem sobre o total —{" "}
+                  {fmt(autor.obraAnual + autor.royaltiesAnual)}. Só o IVA distingue as duas
+                  parcelas.
+                </p>
+              </div>
+            )}
 
             {/* Cartões de taxa com exemplos: escolher sem ter de conhecer as
                 Listas I e II anexas ao CIVA. */}

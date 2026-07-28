@@ -3084,28 +3084,18 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   // (Art. 9.º/16 CIVA). Só a parcela de royalties acresce IVA por cima, e só se
   // ultrapassar o limiar do Art. 53.º sobre a sua própria faturação anual.
   const ehDireitosAutor = tipoAtiv === "prop_int";
-  const desdobramentoAutor = useMemo(() => {
+
+  // Modelo ADITIVO — não sobrepõe o input de faturação. O valor faturado é o
+  // TOTAL; o utilizador indica só QUE PARTE é royalties/licenciamento. Toda a
+  // regra (isenção do Art. 9.º na obra, limiar do Art. 53.º só sobre os
+  // royalties, zona de transição do Art. 58.º) vive agora no motor — aqui só
+  // se prepara a entrada.
+  const entradaAutor = useMemo(() => {
     if (!ehDireitosAutor) return null;
     const total = Math.max(0, bruto);
     const royalties = Math.min(total, Math.max(0, parseMontanteRV(autorRoyaltiesInput)));
-    const obra = total - royalties;
-    // O limiar dos royalties também passa pelo motor, e não por uma
-    // comparação direta com os 15 000 €: a zona de transição do Art. 58.º, n.º 2
-    // vale aqui exatamente como vale para a faturação geral — quem passa o
-    // limiar mantém a isenção até 1 de janeiro. A categoria usada é a do
-    // Art. 151.º porque o que se quer do motor é a taxa NORMAL aplicada aos
-    // royalties, não a isenção por natureza da obra própria (Art. 9.º).
-    const zonaRoyalties = calcularSituacaoIVA({
-      faturacaoAnual: royalties * 12,
-      regiao,
-      regimeEscolhido: "isento",
-      categoria: "art151",
-      entidade: "ti",
-    });
-    const cobraIvaRoyalties = royalties > 0 && zonaRoyalties.regimeEfetivo !== "isento";
-    const ivaRoyalties = cobraIvaRoyalties ? royalties * zonaRoyalties.taxaEfetiva : 0;
-    return { obra, royalties, total, ivaRoyalties, cobraIvaRoyalties };
-  }, [ehDireitosAutor, bruto, autorRoyaltiesInput, regiao]);
+    return { obraAnual: (total - royalties) * 12, royaltiesAnual: royalties * 12 };
+  }, [ehDireitosAutor, bruto, autorRoyaltiesInput]);
 
   // Proxy da faturação anual base: no modo "Anual" é o próprio brutoAnual; no
   // modo "Por recibo" é o valor mensal introduzido × 12.
@@ -3133,27 +3123,41 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
         regimeEscolhido: regimeIVA,
         categoria: tipoAtiv as CategoriaSimuladorRV,
         entidade: cenario === "empresa" ? "sociedade" : "ti",
-        // Só nos direitos de autor a isenção vem de fora: aí quem decide é o
-        // desdobramento obra própria / royalties, não o seletor de regime.
-        isentoEfetivo: desdobramentoAutor ? desdobramentoAutor.ivaRoyalties === 0 : undefined,
+        // Direitos de autor: o motor parte a operação em obra própria
+        // (isenta, Art. 9.º) e royalties (limiar próprio) e devolve o
+        // desdobramento já resolvido.
+        direitosAutor: entradaAutor ?? undefined,
       }),
-    [faturacaoAnualProxy, regiao, regimeIVA, tipoAtiv, cenario, desdobramentoAutor],
+    [faturacaoAnualProxy, regiao, regimeIVA, tipoAtiv, cenario, entradaAutor],
   );
+
+  // Desdobramento em valores MENSAIS, que é como o simulador trabalha.
+  const desdobramentoAutor = useMemo(() => {
+    const d = situacaoIva.desdobramentoAutor;
+    if (!d) return null;
+    return {
+      obra: d.obraAnual / 12,
+      royalties: d.royaltiesAnual / 12,
+      total: (d.obraAnual + d.royaltiesAnual) / 12,
+      ivaRoyalties: d.ivaRoyaltiesAnual / 12,
+      cobraIvaRoyalties: d.royaltiesTributados,
+      taxaRoyalties: d.taxaRoyalties,
+    };
+  }, [situacaoIva]);
   const vatRegimeEstimateFiz = situacaoIva.regimeParaFiz;
 
   // Para direitos de autor a taxa efetiva vem do desdobramento (IVA dos
   // royalties ÷ faturação total); o motor corre com regime ISENTO e o IVA dos
   // royalties é acrescentado por cima, porque `calcular` aplica uma taxa única
   // a toda a base.
-  const isentoEfetivo = desdobramentoAutor
-    ? desdobramentoAutor.ivaRoyalties === 0
-    : situacaoIva.regimeEfetivo === "isento";
-  const taxaIva = desdobramentoAutor
-    ? desdobramentoAutor.total > 0
-      ? desdobramentoAutor.ivaRoyalties / desdobramentoAutor.total
-      : 0
-    : situacaoIva.taxaEfetiva;
+  // Tudo — regime, taxa e isenção — sai do motor, incluindo o caso dos
+  // direitos de autor. A `taxaEfetiva` já vem misturada sobre o total.
+  const isentoEfetivo = situacaoIva.taxaEfetiva === 0;
+  const taxaIva = situacaoIva.taxaEfetiva;
   const temIva = taxaIva > 0;
+  // Nos direitos de autor o motor de recibo corre ISENTO e o IVA dos
+  // royalties é acrescentado por cima, porque `calcular` aplica uma taxa
+  // única a toda a base e aqui as duas parcelas têm tratamentos diferentes.
   const regimeEfetivo: RegimeIVA = desdobramentoAutor ? "isento" : situacaoIva.regimeEfetivo;
 
   // Base (sem IVA): para direitos de autor a base É o valor faturado (o IVA dos
@@ -3804,11 +3808,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     }
 
     // IVA isento + atividade vendas (congruente — oportunidade)
-    if (
-      regimeIVA === "isento" &&
-      tipoAtiv === "vendas" &&
-      brutoAnual <= IVA_ISENCAO_LIMITE
-    ) {
+    if (regimeIVA === "isento" && tipoAtiv === "vendas" && situacaoIva.zona === "isento_limiar") {
       r.push({
         id: "isento-vendas-ok",
         prioridade: "oportunidade",
@@ -3936,11 +3936,14 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   };
 
   const atividadeAtual = atividadePainelMeta[tipoAtiv];
+  // "Isento" só é coerente com uma atividade de taxa normal quando a isenção
+  // do limiar está mesmo a valer — quem decide isso é o motor, não uma
+  // comparação repetida aqui.
   const atividadeIVACoerente =
     atividadeAtual.ivaEsperado === regimeIVA ||
     (atividadeAtual.ivaEsperado === "normal" &&
       regimeIVA === "isento" &&
-      brutoAnual <= IVA_ISENCAO_LIMITE);
+      situacaoIva.zona === "isento_limiar");
 
   // ── Toggle "com/sem IVA" + desdobramento em direto (paridade Modo Guiado) ────
   // Funciona nos dois modos (Por recibo / Anual). O valor de referência é o que
@@ -4089,12 +4092,16 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
             </span>
           </div>
           <div className="flex justify-between text-xs">
+            {/* A taxa vem do motor, não da tabela: nos royalties ela é 0
+                enquanto a isenção do Art. 53.º se mantiver — incluindo a
+                transição do Art. 58.º, em que já se passou o limiar mas
+                ainda não se cobra. O porquê fica para o painel de situação. */}
             <span className="text-stone-500 dark:text-stone-400">
               Royalties
               {desdobramentoAutor.royalties > 0
                 ? desdobramentoAutor.cobraIvaRoyalties
-                  ? ` — IVA ${pct(IVA_TAXAS[regiao].value.normal)}`
-                  : " — isento (Art. 53.º)"
+                  ? ` — IVA ${pct(desdobramentoAutor.taxaRoyalties)}`
+                  : " — sem IVA"
                 : ""}
             </span>
             <span className="font-semibold tabular-nums text-stone-800 dark:text-stone-100">
@@ -4875,27 +4882,16 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                 </div>
 
                 {/* ── Situação de IVA ────────────────────────────────────────
-                    Para direitos de autor, a divisão obra/royalties (controlo
-                    acima) já determina o IVA por tipo; o seletor de regime geral
-                    (Art. 53.º) não se aplica ao todo e escondê-lo evita a
-                    contradição de mostrar "isento Art. 53.º" ao lado de royalties
-                    a 23%. */}
-                {ehDireitosAutor ? (
-                  <div className="mb-6 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 dark:border-stone-700 dark:bg-stone-800/40">
-                    <p className="text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-                      A situação de IVA está no controlo acima: a{" "}
-                      <strong className="text-stone-700 dark:text-stone-200">
-                        obra própria
-                      </strong>{" "}
-                      é isenta sem limite de faturação (Art. 9.º, n.º 16 CIVA) e os{" "}
-                      <strong className="text-stone-700 dark:text-stone-200">
-                        royalties / licenciamento
-                      </strong>{" "}
-                      seguem a taxa normal ({pct(IVA_TAXAS[regiao].value.normal)}),
-                      sujeitos ao limiar do Art. 53.º sobre a sua própria faturação.
-                    </p>
-                  </div>
-                ) : (
+                    Os direitos de autor tinham aqui um parágrafo fixo em vez do
+                    painel, e o parágrafo dizia sempre a mesma coisa: "os
+                    royalties seguem a taxa normal, sujeitos ao limiar do
+                    Art. 53.º". Verdadeiro como regra, inútil como resposta —
+                    não dizia de que lado do limiar a pessoa estava, nem que
+                    entre 15 000 € e 18 750 € a isenção se mantém até janeiro.
+                    Agora é o mesmo painel de toda a gente, com a zona
+                    `autor_misto` resolvida pelo motor: o seletor de taxa
+                    desaparece sozinho (não é escolha) e o desdobramento
+                    obra/royalties aparece com os montantes ao ano. */}
                 <div className="mb-6">
                   {/* Um só painel de IVA.
                       Havia dois, um por cima do outro: este bloco tinha o seu
@@ -4906,9 +4902,11 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                       Fica o partilhado, que é o único ligado ao motor. */}
                   {situacaoIVA}
 
-                  {/* Painel contextual IVA (detalhe da taxa escolhida) */}
+                  {/* Painel contextual IVA (detalhe da taxa escolhida). Não se
+                      aplica aos direitos de autor: ali não há uma taxa
+                      escolhida, há duas parcelas com tratamentos diferentes. */}
                   <AnimatePresence>
-                    {painelIVA && (
+                    {painelIVA && !ehDireitosAutor && (
                       <m.div
                         key="painel-iva"
                         initial={{ opacity: 0, height: 0 }}
@@ -4967,7 +4965,6 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                     )}
                   </AnimatePresence>
                 </div>
-                )}
 
                 {/* ── Ano de atividade ─────────────────────────────────────── */}
                 <div className="mb-5">

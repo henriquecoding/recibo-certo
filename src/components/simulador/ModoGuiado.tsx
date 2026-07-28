@@ -59,7 +59,7 @@ import {
 import GuardarCenarioDialog from "@/components/ui/GuardarCenarioDialog";
 import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
-import { situacaoIVA } from "@/lib/fiscal-iva";
+import { situacaoIVA, type SituacaoIVA as SituacaoIVAResultado } from "@/lib/fiscal-iva";
 import SituacaoIVAPainel from "@/components/simulador/SituacaoIVA";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -410,27 +410,42 @@ export default function ModoGuiado({
   // Obra própria → isento (Art. 9.º/16 CIVA), sem limiar de faturação; royalties/
   // licenciamento → taxa normal, sujeita ao limiar do Art. 53.º (como qualquer
   // atividade tributada). Nada fixo: taxa e limiar vêm de fiscal-data.
-  const desdobramentoAutor = useMemo(() => {
+  // Entrada do desdobramento. A regra — obra isenta pelo Art. 9.º, limiar do
+  // Art. 53.º só sobre os royalties, transição do Art. 58.º — vive no motor.
+  const entradaAutor = useMemo(() => {
     if (!ehDireitosAutor) return null;
     const obra = Math.max(0, parseMontante(autorObraInput));
     const royalties = Math.max(0, parseMontante(autorRoyaltiesInput));
-    const total = obra + royalties;
-    const royaltiesAnual = royalties * mesesFat;
-    // Também aqui é o motor que decide, não uma comparação direta com o
-    // limiar: a zona de transição do Art. 58.º, n.º 2 vale para os royalties
-    // como vale para o resto. Categoria do Art. 151.º porque o que se quer é
-    // a taxa NORMAL dos royalties, não a isenção por natureza da obra própria.
-    const zonaRoyalties = situacaoIVA({
-      faturacaoAnual: royaltiesAnual,
-      regiao,
-      regimeEscolhido: "isento",
-      categoria: "art151",
-      entidade: "ti",
-    });
-    const cobraIvaRoyalties = royalties > 0 && zonaRoyalties.regimeEfetivo !== "isento";
-    const ivaRoyalties = cobraIvaRoyalties ? royalties * zonaRoyalties.taxaEfetiva : 0;
-    return { obra, royalties, total, ivaRoyalties, cobraIvaRoyalties };
-  }, [ehDireitosAutor, autorObraInput, autorRoyaltiesInput, mesesFat, regiao]);
+    return { obraAnual: obra * mesesFat, royaltiesAnual: royalties * mesesFat };
+  }, [ehDireitosAutor, autorObraInput, autorRoyaltiesInput, mesesFat]);
+
+  const situacaoIvaAutor = useMemo(
+    () =>
+      entradaAutor
+        ? situacaoIVA({
+            faturacaoAnual: entradaAutor.obraAnual + entradaAutor.royaltiesAnual,
+            regiao,
+            regimeEscolhido: "isento",
+            categoria: tipoAtiv,
+            entidade: "ti",
+            direitosAutor: entradaAutor,
+          })
+        : null,
+    [entradaAutor, regiao, tipoAtiv],
+  );
+
+  const desdobramentoAutor = useMemo(() => {
+    const d = situacaoIvaAutor?.desdobramentoAutor;
+    if (!d || !entradaAutor) return null;
+    const m = mesesFat || 1;
+    return {
+      obra: d.obraAnual / m,
+      royalties: d.royaltiesAnual / m,
+      total: (d.obraAnual + d.royaltiesAnual) / m,
+      ivaRoyalties: d.ivaRoyaltiesAnual / m,
+      cobraIvaRoyalties: d.royaltiesTributados,
+    };
+  }, [situacaoIvaAutor, entradaAutor, mesesFat]);
 
   const derivadoBase = useMemo(() => {
     // Quem decide se há IVA é o motor (`fiscal-iva.ts`), não uma comparação
@@ -964,6 +979,7 @@ export default function ModoGuiado({
                     autorObraInput={autorObraInput}
                     autorRoyaltiesInput={autorRoyaltiesInput}
                     desdobramentoAutor={desdobramentoAutor}
+                    situacaoIvaAutor={situacaoIvaAutor}
                     onModoFat={setModoFat}
                     onTotalInput={(value) => setTotalInput(sanitizeNumericDraft(value))}
                     onValorComIva={setValorComIva}
@@ -1498,6 +1514,7 @@ function PassoFaturacao({
   autorObraInput,
   autorRoyaltiesInput,
   desdobramentoAutor,
+  situacaoIvaAutor,
   onModoFat,
   onTotalInput,
   onValorComIva,
@@ -1525,6 +1542,8 @@ function PassoFaturacao({
   autorObraInput: string;
   autorRoyaltiesInput: string;
   desdobramentoAutor: DesdobramentoAutor | null;
+  /** Situação já resolvida pelo motor para o ramo dos direitos de autor. */
+  situacaoIvaAutor: SituacaoIVAResultado | null;
   onModoFat: (m: "total" | "individual") => void;
   onTotalInput: (v: string) => void;
   onValorComIva: (v: boolean) => void;
@@ -1662,9 +1681,11 @@ function PassoFaturacao({
                 <span className="font-semibold tabular-nums text-stone-800 dark:text-stone-100">{fmt(desdobramentoAutor.total)}</span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-stone-400">
-                  IVA a cobrar (só royalties{desdobramentoAutor.royalties > 0 && !desdobramentoAutor.cobraIvaRoyalties ? " — isento pelo Art. 53.º" : ""})
-                </span>
+                {/* Só o montante. O porquê — obra isenta pelo Art. 9.º,
+                    limiar do Art. 53.º só sobre os royalties, transição do
+                    Art. 58.º — está no painel de situação de IVA, escrito
+                    pelo motor. Repeti-lo aqui era escrevê-lo a menos. */}
+                <span className="text-stone-400">IVA a cobrar (só royalties)</span>
                 <span className="font-semibold tabular-nums text-stone-400">{fmt(desdobramentoAutor.ivaRoyalties)}</span>
               </div>
             </div>
@@ -1932,67 +1953,33 @@ function PassoFaturacao({
       {/* IVA.
           Sem rótulo próprio: o painel partilhado já traz o seu, com a região
           e a base legal. Haver os dois mostrava "Situação de IVA" duas vezes
-          seguidas, uma sem região e outra com. O ramo dos direitos de autor
-          não usa o painel, por isso mantém cabeçalho. */}
+          seguidas, uma sem região e outra com.
+
+          Os direitos de autor deixaram de ter bloco à parte. Tinham-no porque
+          a regra estava escrita aqui à mão — e escrita a menos: dizia
+          "isento por ficar abaixo de 15 000 €/ano" a quem já tinha passado o
+          limiar e só mantém a isenção até janeiro (Art. 58.º, n.º 2, al. a).
+          A zona `autor_misto` do motor resolve os três estados e escreve a
+          explicação; o painel desenha-a como desenha as outras. */}
       <div className="mb-6">
-        {desdobramentoAutor ? (
-          <>
-        <div className="mb-2.5 flex items-center gap-1.5">
-          <span className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-            Situação de IVA
-          </span>
-          <InfoTip>
-            O IVA dos direitos de autor segue a divisão entre obra própria
-            (isenta pelo Art. 9.º, n.º 16 CIVA) e royalties.
-          </InfoTip>
-        </div>
-          <div className="space-y-2 rounded-xl border border-stone-200 bg-stone-50 p-3.5 dark:border-stone-700 dark:bg-stone-900/60">
-            <p className="text-xs leading-relaxed text-stone-600 dark:text-stone-300">
-              O IVA segue a divisão que fizeste em cima:
-            </p>
-            <div className="space-y-1.5">
-              <div className="flex items-start justify-between gap-3">
-                <span className="flex items-start gap-1.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-                  <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
-                  <span>Obra própria — {fmt(desdobramentoAutor.obra)}/mês · <strong className="text-stone-700 dark:text-stone-200">isento</strong> (Art. 9.º, n.º 16 CIVA), sem limite de faturação</span>
-                </span>
-              </div>
-              <div className="flex items-start justify-between gap-3">
-                <span className="flex items-start gap-1.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-                  <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
-                  <span>
-                    Royalties / licenciamento — {fmt(desdobramentoAutor.royalties)}/mês ·{" "}
-                    {desdobramentoAutor.royalties <= 0 ? (
-                      <strong className="text-stone-700 dark:text-stone-200">sem valor</strong>
-                    ) : desdobramentoAutor.cobraIvaRoyalties ? (
-                      <><strong className="text-stone-700 dark:text-stone-200">{pct(IVA_TAXAS[regiao].value.normal)}</strong> → {fmt(desdobramentoAutor.ivaRoyalties)}/mês de IVA</>
-                    ) : (
-                      <><strong className="text-stone-700 dark:text-stone-200">isento</strong> por ficar abaixo de {fmt(IVA_LIMITE)}/ano (Art. 53.º CIVA)</>
-                    )}
-                  </span>
-                </span>
-              </div>
-            </div>
-            <p className="pl-[18px] text-[11px] leading-relaxed text-stone-400 dark:text-stone-500">
-              O IRS e a Segurança Social incidem sobre o total ({fmt(desdobramentoAutor.total)}/mês); só o IVA distingue os dois tipos. Confirma o teu enquadramento com o contabilista.
-            </p>
-          </div>
-          </>
-        ) : (
-          <SituacaoIVAPainel
-            situacao={situacaoIVA({
+        <SituacaoIVAPainel
+          situacao={
+            situacaoIvaAutor ??
+            situacaoIVA({
               faturacaoAnual: brutoAnual,
               regiao,
               regimeEscolhido: regimeIVA,
               categoria: tipoAtiv,
               entidade: "ti",
               isentoEfetivo,
-            })}
-            regiao={regiao}
-            regimeEscolhido={regimeIVA}
-            onRegimeChange={onRegimeIVAChange}
-          />
-        )}
+            })
+          }
+          regiao={regiao}
+          regimeEscolhido={regimeIVA}
+          // Nos direitos de autor a taxa não é uma escolha: decorre da divisão
+          // entre obra e royalties feita em cima.
+          onRegimeChange={situacaoIvaAutor ? undefined : onRegimeIVAChange}
+        />
       </div>
 
       {/* Região */}
