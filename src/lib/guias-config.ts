@@ -13,27 +13,34 @@ import {
   href as hrefDoManifesto,
   type GuideManifest,
   type Categoria,
+  type HubGroup,
   type IconType,
 } from "@/lib/guias/manifests";
 import type { Perfil } from "@/lib/perfil";
 
-export type { IconType, Categoria };
+export type { IconType, Categoria, HubGroup };
 
 export interface Guia {
   href: string;
+  slug: string;
   titulo: string;
   descricao: string;
   tempo: number;
   categoria: Categoria;
+  /** Grupo por INTENÇÃO. O índice filtra por este eixo além da categoria:
+      "o que preciso de fazer" e "quem sou" são perguntas diferentes. */
+  hub: HubGroup;
   icon: IconType;
 }
 
 const daManifesto = (m: GuideManifest): Guia => ({
   href: hrefDoManifesto(m),
+  slug: m.slug,
   titulo: m.title,
   descricao: m.descricao,
   tempo: m.tempo,
   categoria: m.categoria,
+  hub: m.hub,
   icon: m.icon,
 });
 

@@ -115,8 +115,13 @@ export default function GuiasLayout({ children }: { children: ReactNode }) {
           )}
 
           <div className="flex gap-10">
-            {/* Sidebar — oculta em mobile */}
-            <aside className="hidden w-60 flex-shrink-0 lg:block">
+            {/* Sidebar — oculta em móvel E no próprio índice.
+                No índice era a terceira cópia do mesmo catálogo (barra
+                lateral + bloco "O que precisas de fazer?" + lista), e roubava
+                240 px de largura àquilo que a página existe para mostrar.
+                Nas páginas de guia continua a ser o que deve ser: navegação
+                entre guias. */}
+            <aside className={`w-60 flex-shrink-0 ${naIndex ? "hidden" : "hidden lg:block"}`}>
               <div className="sticky top-24 max-h-[calc(100dvh-8rem)] overflow-y-auto pr-1">
                 {SECCOES.map((s) => (
                   <SidebarSection key={s.id} titulo={s.titulo} items={s.items} pathname={pathname} />
