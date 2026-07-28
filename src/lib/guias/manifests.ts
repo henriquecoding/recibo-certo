@@ -16,7 +16,7 @@
 
 import {
   Bank, Receipt, Calculator, ShieldCheck, Coin, User, Briefcase, Globe, FileSign,
-  Wallet, Calendar, Clock, Building, Scale, Flag,
+  Wallet, Calendar, Clock, Building, Scale, Flag, Warning,
 } from "@/components/ui/Icons";
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
 import { claimsDoGuia, type GuideAudience } from "./claims";
@@ -40,7 +40,8 @@ export const ARQUETIPOS: Record<Archetype, { rotulo: string; objetivo: string }>
 /** Agrupamento por intenção do novo hub (ponto 9.1). Substitui a entrada
     única por tipo de contribuinte, que continua disponível como filtro. */
 export type HubGroup =
-  | "comecar" | "faturar" | "contribuir" | "irs" | "empresa" | "conta-outrem" | "prazos" | "encerrar";
+  | "comecar" | "faturar" | "contribuir" | "irs" | "empresa" | "conta-outrem"
+  | "prazos" | "direitos" | "encerrar";
 
 export const HUB_GRUPOS: { id: HubGroup; titulo: string; descricao: string }[] = [
   { id: "comecar", titulo: "Começar", descricao: "Abrir atividade, escolher o regime e perceber o que vais pagar." },
@@ -50,6 +51,12 @@ export const HUB_GRUPOS: { id: HubGroup; titulo: string; descricao: string }[] =
   { id: "empresa", titulo: "Gerir uma empresa", descricao: "Constituir, tributar e cumprir as obrigações da sociedade." },
   { id: "conta-outrem", titulo: "Trabalho por conta de outrem", descricao: "Recibo de vencimento, subsídios e horas extra." },
   { id: "prazos", titulo: "Cumprir prazos", descricao: "O calendário das obrigações fiscais e contributivas." },
+  // Secção nova. O catálogo respondia a "o que tenho de pagar" e a "quando",
+  // mas não a "e quando é o outro lado que falha?" — o cliente que não paga,
+  // a liquidação que não faz sentido, a dívida antiga que reaparece. É a
+  // pergunta que mais aflige quem trabalha por conta própria e a única para
+  // a qual não havia uma única linha no site.
+  { id: "direitos", titulo: "Direitos e cobranças", descricao: "Quando o cliente não paga, quando o imposto não bate certo e o que podes exigir." },
   { id: "encerrar", titulo: "Encerrar", descricao: "Fechar atividade sem deixar pontas soltas." },
 ];
 
@@ -552,6 +559,108 @@ export const GUIDE_MANIFESTS: GuideManifest[] = [
     fizAction: { topic: "OTHER", intent: "CONFIGURE_FREELANCER", requiredCapability: "obligations.overview", dataPolicy: "CONNECTED_ACCOUNT", fallbackLabel: "Ver as minhas obrigações reais na FIZ" },
     seo: { description: `Calendário fiscal ${FISCAL_YEAR}: prazos legais de IRS, IVA, Segurança Social e IRC, com o que se entrega e quem está sujeito.`, aliases: ["calendário fiscal", "prazos fiscais", "datas irs", "quando entregar o iva", "agenda fiscal"], schema: ["Article"] },
     owner: EQUIPA, reviewer: EQUIPA, lastReviewedAt: REVISTO, status: "published",
+  },
+
+  // ══ Direitos e cobranças ════════════════════════════════════════════
+  //   Secção nova. Todo o catálogo respondia a "quanto pago" e "quando";
+  //   nenhum guia respondia a "e se for o outro lado a falhar?".
+  {
+    id: "fatura-nao-paga", slug: "fatura-nao-paga",
+    title: "Emiti a fatura e o cliente não pagou",
+    navLabel: "Fatura não paga",
+    descricao: "Porque é que já deves imposto de dinheiro que não recebeste — e como recuperá-lo.",
+    categoria: "Independentes", hub: "direitos", archetype: "procedure", icon: Warning, tempo: 7,
+    audiences: ["TI", "ENI", "COMPANY"], effectiveFrom: DE,
+    engineBindings: [],
+    relatedGuideIds: ["juros-de-mora", "cobrar-divida", "recuperar-iva-incobravel", "iva-de-caixa"],
+    relatedToolIds: ["auditoria-recibo", "calculadora"],
+    fizAction: { topic: "INVOICING", intent: "FIND_ACCOUNTANT", requiredCapability: "receivables.assessment", dataPolicy: "CONSENTED_HANDOFF", fallbackLabel: "Rever a situação da fatura com a FIZ", exigeRevisaoHumana: true },
+    seo: { description: "O IRS da categoria B vence-se com a emissão da fatura, não com o recebimento. O que fazer quando o cliente não paga: juros, recuperação do IVA e cobrança.", aliases: ["cliente não pagou", "fatura por pagar", "não me pagaram o recibo verde", "emiti recibo e não recebi", "pagar irs sem receber"], schema: ["Article", "HowTo"] },
+    owner: EQUIPA, reviewer: REVISOR_PENDENTE, lastReviewedAt: REVISTO, status: "published",
+  },
+  {
+    id: "juros-de-mora", slug: "juros-de-mora",
+    title: "Prazos de pagamento e juros de mora",
+    navLabel: "Juros de mora",
+    descricao: "Quando a fatura se vence, que juros podes exigir e os 40 € que quase ninguém cobra.",
+    categoria: "Transversal", hub: "direitos", archetype: "reference", icon: Clock, tempo: 5,
+    audiences: ["TI", "ENI", "COMPANY"], effectiveFrom: DE,
+    engineBindings: [],
+    relatedGuideIds: ["fatura-nao-paga", "cobrar-divida", "fatura-vs-recibo"],
+    relatedToolIds: ["calculadora", "quiz-fiscal"],
+    fizAction: { topic: "INVOICING", intent: "FIND_ACCOUNTANT", requiredCapability: "receivables.interest", dataPolicy: "CONSENTED_HANDOFF", fallbackLabel: "Apurar juros e encargos com a FIZ" },
+    seo: { description: "Prazos legais de pagamento entre empresas e com entidades públicas, juros de mora sem interpelação e a indemnização mínima de 40 € por custos de cobrança.", aliases: ["juros de mora", "prazo de pagamento fatura", "atraso no pagamento", "40 euros indemnização cobrança", "quando posso cobrar juros"], schema: ["Article"] },
+    owner: EQUIPA, reviewer: REVISOR_PENDENTE, lastReviewedAt: REVISTO, status: "published",
+  },
+  {
+    id: "cobrar-divida", slug: "cobrar-divida",
+    title: "Como cobrar uma dívida: da carta à injunção",
+    navLabel: "Cobrar uma dívida",
+    descricao: "A escada da cobrança, degrau a degrau, e quanto custa cada um.",
+    categoria: "Transversal", hub: "direitos", archetype: "procedure", icon: Scale, tempo: 6,
+    audiences: ["TI", "ENI", "COMPANY"], effectiveFrom: DE,
+    engineBindings: [],
+    relatedGuideIds: ["fatura-nao-paga", "juros-de-mora", "recuperar-iva-incobravel"],
+    relatedToolIds: ["mapa-contabilistas", "auditoria-recibo"],
+    fizAction: { topic: "OTHER", intent: "FIND_ACCOUNTANT", requiredCapability: "debt-recovery.injunction", dataPolicy: "CONSENTED_HANDOFF", fallbackLabel: "Preparar a cobrança com a FIZ", exigeRevisaoHumana: true },
+    seo: { description: "Interpelação, injunção e execução: os passos para cobrar uma fatura em atraso, os limites de valor e o que muda nas transações comerciais.", aliases: ["injunção", "como cobrar uma dívida", "cliente não paga o que fazer", "balcão nacional de injunções", "título executivo fatura"], schema: ["Article", "HowTo"] },
+    owner: EQUIPA, reviewer: REVISOR_PENDENTE, lastReviewedAt: REVISTO, status: "published",
+  },
+  {
+    id: "recuperar-iva-incobravel", slug: "recuperar-iva-incobravel",
+    title: "Recuperar o IVA de faturas que não vais receber",
+    navLabel: "Recuperar IVA",
+    descricao: "Entregaste IVA de dinheiro que nunca entrou. Em que condições o Estado o devolve.",
+    categoria: "Independentes", hub: "direitos", archetype: "procedure", icon: Receipt, tempo: 6,
+    audiences: ["TI", "ENI", "COMPANY"], effectiveFrom: DE,
+    engineBindings: [],
+    relatedGuideIds: ["fatura-nao-paga", "iva-de-caixa", "iva-recibos-verdes", "cobrar-divida"],
+    relatedToolIds: ["regime-simplificado", "mapa-contabilistas"],
+    fizAction: { topic: "VAT", intent: "CONFIGURE_VAT", requiredCapability: "vat.bad-debt-relief", dataPolicy: "CONSENTED_HANDOFF", fallbackLabel: "Preparar a regularização de IVA com a FIZ", exigeRevisaoHumana: true },
+    seo: { description: "Créditos de cobrança duvidosa e incobráveis no IVA: prazos de mora, limites por devedor, pedido de autorização prévia e prova exigida.", aliases: ["recuperar iva", "crédito incobrável", "cobrança duvidosa iva", "regularização de iva a favor do sujeito passivo", "artigo 78 a civa"], schema: ["Article", "HowTo"] },
+    owner: EQUIPA, reviewer: REVISOR_PENDENTE, lastReviewedAt: REVISTO, status: "published",
+  },
+  {
+    id: "iva-de-caixa", slug: "iva-de-caixa",
+    title: "Regime de IVA de caixa: pagar só depois de receber",
+    navLabel: "IVA de caixa",
+    descricao: "O regime que alinha a entrega do IVA com o recebimento — e o que se perde em troca.",
+    categoria: "Independentes", hub: "direitos", archetype: "decision", icon: Wallet, tempo: 6,
+    audiences: ["TI", "ENI", "COMPANY"], effectiveFrom: DE,
+    engineBindings: [],
+    relatedGuideIds: ["iva-recibos-verdes", "fatura-nao-paga", "recuperar-iva-incobravel", "contabilidade-organizada"],
+    relatedToolIds: ["simulador-empresa", "regime-simplificado"],
+    fizAction: { topic: "VAT", intent: "CONFIGURE_VAT", requiredCapability: "vat.cash-accounting", dataPolicy: "CONSENTED_HANDOFF", fallbackLabel: "Avaliar o IVA de caixa com a FIZ" },
+    seo: { description: "Como funciona o regime de IVA de caixa, quem pode optar, quando se exerce a opção e porque é que nem sempre compensa.", aliases: ["iva de caixa", "regime de caixa iva", "pagar iva só quando recebo", "contabilidade de caixa iva"], schema: ["Article"] },
+    owner: EQUIPA, reviewer: REVISOR_PENDENTE, lastReviewedAt: REVISTO, status: "published",
+  },
+  {
+    id: "contestar-liquidacao", slug: "contestar-liquidacao",
+    title: "Não concordo com a nota de liquidação",
+    navLabel: "Contestar liquidação",
+    descricao: "Reclamação graciosa, recurso e impugnação — com os prazos que não se recuperam.",
+    categoria: "Transversal", hub: "direitos", archetype: "procedure", icon: ShieldCheck, tempo: 6,
+    audiences: ["TI", "ENI", "COMPANY", "EMPLOYEE"], effectiveFrom: DE,
+    engineBindings: [],
+    relatedGuideIds: ["prazos-fiscais-divida", "reembolso-irs", "calendario-fiscal"],
+    relatedToolIds: ["simulador-irs", "mapa-contabilistas"],
+    fizAction: { topic: "OTHER", intent: "FIND_ACCOUNTANT", requiredCapability: "tax-dispute.assessment", dataPolicy: "CONSENTED_HANDOFF", fallbackLabel: "Rever a liquidação com a FIZ", exigeRevisaoHumana: true },
+    seo: { description: "Como contestar uma liquidação de imposto: prazo de 120 dias da reclamação graciosa, três meses da impugnação judicial e o efeito do pagamento.", aliases: ["reclamação graciosa", "contestar irs", "não concordo com a liquidação", "impugnação judicial", "recurso hierárquico finanças"], schema: ["Article", "HowTo"] },
+    owner: EQUIPA, reviewer: REVISOR_PENDENTE, lastReviewedAt: REVISTO, status: "published",
+  },
+  {
+    id: "prazos-fiscais-divida", slug: "prazos-fiscais-divida",
+    title: "Até quando é que a AT pode cobrar-me?",
+    navLabel: "Caducidade e prescrição",
+    descricao: "Caducidade da liquidação e prescrição da dívida — dois prazos diferentes que se confundem sempre.",
+    categoria: "Transversal", hub: "direitos", archetype: "reference", icon: Calendar, tempo: 5,
+    audiences: ["TI", "ENI", "COMPANY", "EMPLOYEE"], effectiveFrom: DE,
+    engineBindings: [],
+    relatedGuideIds: ["contestar-liquidacao", "calendario-fiscal", "cessar-atividade"],
+    relatedToolIds: ["quiz-fiscal", "mapa-contabilistas"],
+    fizAction: { topic: "OTHER", intent: "FIND_ACCOUNTANT", requiredCapability: "tax-debt.review", dataPolicy: "CONSENTED_HANDOFF", fallbackLabel: "Analisar a dívida com a FIZ" },
+    seo: { description: "Quatro anos para liquidar, oito para cobrar: a diferença entre caducidade e prescrição, quando cada prazo se suspende e o que fazer com uma dívida antiga.", aliases: ["prescrição dívidas fiscais", "caducidade liquidação", "dívida antiga finanças", "quantos anos pode a at cobrar", "prescrição irs"], schema: ["Article"] },
+    owner: EQUIPA, reviewer: REVISOR_PENDENTE, lastReviewedAt: REVISTO, status: "published",
   },
 
   // ══ Encerrar ════════════════════════════════════════════════════════

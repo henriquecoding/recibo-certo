@@ -37,6 +37,15 @@ export const ROTULO_ALTERACAO: Record<TipoAlteracao, string> = {
 const AUDITORIA = "Auditoria editorial de 26 de julho de 2026";
 
 export const HISTORICO_GUIAS: AlteracaoGuia[] = [
+  // ── Secção nova: Direitos e cobranças ───────────────────────────────
+  { guideId: "fatura-nao-paga", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo. O catálogo explicava o que pagar e quando, mas não dizia uma palavra sobre o caso mais frequente de todos: emitir a fatura e o cliente não pagar. Fica claro que o IRS da categoria B se vence com a emissão, não com o recebimento." },
+  { guideId: "juros-de-mora", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo sobre prazos legais de pagamento, juros de mora automáticos e a indemnização mínima de 40 € por custos de cobrança." },
+  { guideId: "cobrar-divida", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo com a escada da cobrança — interpelação, injunção e execução — e os limites de valor de cada via." },
+  { guideId: "recuperar-iva-incobravel", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo sobre a recuperação do IVA entregue sobre faturas que não foram pagas, com os prazos de mora e a prova exigida." },
+  { guideId: "iva-de-caixa", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo sobre o regime de IVA de caixa, incluindo a contrapartida que costuma ser omitida: a dedução do IVA das compras também passa a depender do pagamento." },
+  { guideId: "contestar-liquidacao", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo com os meios de defesa contra uma liquidação e os respetivos prazos — 120 dias na reclamação graciosa, três meses na impugnação judicial." },
+  { guideId: "prazos-fiscais-divida", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo a separar caducidade da liquidação (quatro anos) de prescrição da dívida (oito anos), que são sistematicamente confundidas." },
+
   // ── P0 3.1 — CIRC histórico ─────────────────────────────────────────
   { guideId: "irc", data: "2026-07-26", tipo: "correcao_fonte", descricao: "As ligações para o Código do IRC apontavam para a redação em vigor até 2013, que ainda mostra a taxa de 25 %. Passaram a apontar para os artigos em vigor.", origem: AUDITORIA },
   { guideId: "tributacao-autonoma", data: "2026-07-26", tipo: "correcao_fonte", descricao: "A ligação para o Art. 88.º do CIRC apontava para a redação em vigor até 2011. Passou a apontar para o artigo em vigor.", origem: AUDITORIA },

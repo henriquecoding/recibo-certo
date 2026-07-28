@@ -25,6 +25,134 @@ export interface AplicabilidadeGuia {
 }
 
 export const APLICABILIDADE: Record<string, AplicabilidadeGuia> = {
+  // ── Direitos e cobranças ────────────────────────────────────────────
+  "fatura-nao-paga": {
+    respostaCurta: "Já deves o imposto. Na categoria B, o IRS conta-se desde o momento em que era obrigatório emitir a fatura, não desde o dia em que o dinheiro entra — e o IVA segue a mesma lógica. A boa notícia é que há três coisas a fazer, e nenhuma delas é esperar.",
+    aplicaSe: [
+      "Emitiste fatura ou fatura-recibo e o prazo de pagamento já passou.",
+      "O cliente reconhece a dívida mas vai adiando.",
+      "Vais ter de declarar rendimento que ainda não recebeste.",
+    ],
+    naoAplicaSe: [
+      "Ainda não emitiste o documento — nesse caso vê primeiro o guia de fatura, recibo e fatura-recibo, porque o prazo de emissão também é legal.",
+      "És trabalhador por conta de outrem e o que está em falta é salário — isso é matéria laboral, não fiscal.",
+    ],
+    checklist: [
+      "A fatura, com a data de emissão e a data de vencimento acordada.",
+      "O contrato, proposta ou email onde o prazo de pagamento foi combinado.",
+      "Prova de que interpelaste o cliente (emails, cartas, registos de entrega).",
+      "A data em que o crédito entrou em mora — é a partir dela que tudo conta.",
+      "O valor com e sem IVA, separados: seguem caminhos diferentes.",
+    ],
+  },
+  "juros-de-mora": {
+    respostaCurta: "Se nada foi combinado, a fatura vence-se 30 dias depois de o cliente a receber. A partir daí há juros automáticos, sem precisares de avisar ninguém, e ainda 40 € fixos de indemnização por custos de cobrança.",
+    aplicaSe: [
+      "Prestas serviços ou vendes a empresas ou a entidades públicas.",
+      "A fatura está por pagar para lá do prazo acordado.",
+      "Queres saber o que podes exigir além do valor da fatura.",
+    ],
+    naoAplicaSe: [
+      "O devedor é um consumidor particular — o regime das transações comerciais não se aplica e as regras dos juros são outras.",
+    ],
+    checklist: [
+      "Data em que o cliente recebeu a fatura.",
+      "Prazo de pagamento acordado por escrito, se existir.",
+      "Data de vencimento e número de dias de atraso.",
+      "Registo de despesas de cobrança acima dos 40 €, se as tiveres.",
+    ],
+  },
+  "cobrar-divida": {
+    respostaCurta: "A cobrança é uma escada: interpelação escrita, injunção e, se preciso, execução. A injunção cobre contratos até 15 000 € — mas nas transações comerciais entre empresas não tem limite de valor.",
+    aplicaSe: [
+      "Já interpelaste o cliente e continua sem pagar.",
+      "Tens documento que titula a dívida (fatura, contrato, proposta aceite).",
+      "Queres um título executivo sem passar por uma ação judicial completa.",
+    ],
+    naoAplicaSe: [
+      "A dívida é contestada quanto à sua própria existência ou ao trabalho prestado — aí a injunção tende a converter-se em ação e convém aconselhamento antes.",
+      "O devedor já está insolvente — o caminho é a reclamação de créditos no processo.",
+    ],
+    checklist: [
+      "Fatura e prova de entrega do serviço ou do bem.",
+      "Prova de interpelação e da ausência de resposta.",
+      "Identificação completa do devedor, incluindo NIF e sede.",
+      "Cálculo do capital, juros e dos 40 € de indemnização.",
+      "Decisão sobre representação: a injunção pode ser feita sem advogado, a execução raramente se aconselha sem.",
+    ],
+  },
+  "recuperar-iva-incobravel": {
+    respostaCurta: "O IVA que entregaste ao Estado sobre uma fatura que nunca foi paga pode ser recuperado — mas só depois de a mora atingir os prazos legais e com prova de que tentaste cobrar. Não é automático nem imediato.",
+    aplicaSe: [
+      "Entregaste IVA de uma fatura que o cliente não pagou.",
+      "O crédito está em mora há mais de 12 meses — ou mais de 6 meses, se não passar de 750 € com IVA e o devedor for particular.",
+      "Consegues documentar as diligências de cobrança.",
+    ],
+    naoAplicaSe: [
+      "Estás no regime de isenção do Art. 53.º — não entregaste IVA, logo não há IVA a recuperar.",
+      "A fatura ainda não atingiu os prazos de mora exigidos.",
+    ],
+    checklist: [
+      "Data de vencimento do crédito e cálculo exato dos meses de mora.",
+      "Prova documental das diligências de cobrança.",
+      "Valor do crédito com IVA incluído e enquadramento do devedor.",
+      "Apoio de contabilista certificado: há pedido de autorização prévia em vários casos.",
+    ],
+  },
+  "iva-de-caixa": {
+    respostaCurta: "É um regime opcional em que só entregas o IVA depois de receberes do cliente. A contrapartida raramente é dita: também só deduzes o IVA das tuas compras depois de as teres pago.",
+    aplicaSe: [
+      "Faturas com prazos longos e sofres com o IVA a sair antes de o dinheiro entrar.",
+      "Estás no regime normal de IVA e o teu volume de negócios está dentro do limiar.",
+      "Tens contabilidade organizada ou apoio contabilístico para seguir os recebimentos um a um.",
+    ],
+    naoAplicaSe: [
+      "Estás isento pelo Art. 53.º — não entregas IVA, logo o regime não te traz nada.",
+      "Recebes quase tudo a pronto pagamento: o ganho de tesouraria seria residual e o custo administrativo não.",
+    ],
+    checklist: [
+      "Volume de negócios do ano civil anterior.",
+      "Perfil de recebimentos: quanto tempo medeia entre faturar e receber.",
+      "Capacidade de rastrear recebimento a recebimento — é o que o regime exige.",
+      "Confirmação das datas de opção junto do Portal das Finanças ou do contabilista.",
+    ],
+  },
+  "contestar-liquidacao": {
+    respostaCurta: "Tens 120 dias para reclamação graciosa e três meses para impugnação judicial. São prazos de caducidade: passam e não se recuperam, mesmo que tenhas razão.",
+    aplicaSe: [
+      "Recebeste uma liquidação com valores que não reconheces.",
+      "A AT corrigiu a tua declaração e discordas da correção.",
+      "Queres contestar sem pagar primeiro — ou pagar e contestar à mesma.",
+    ],
+    naoAplicaSe: [
+      "O que queres é apenas corrigir um lapso teu na declaração — nesse caso o caminho é a declaração de substituição.",
+      "Já passaram os prazos: aí resta ver se há fundamento para revisão oficiosa, o que é mais restrito.",
+    ],
+    checklist: [
+      "A nota de liquidação e a data em que foste notificado.",
+      "Data do termo do prazo de pagamento voluntário — é dela que contam vários prazos.",
+      "Os documentos que sustentam a tua versão dos factos.",
+      "Decisão sobre garantia, se quiseres suspender a execução.",
+      "Aconselhamento profissional: os fundamentos têm de ser invocados logo, não se acrescentam depois.",
+    ],
+  },
+  "prazos-fiscais-divida": {
+    respostaCurta: "São dois prazos diferentes e confundem-se sempre: quatro anos para a AT liquidar o imposto (caducidade) e oito anos para cobrar a dívida já liquidada (prescrição). Ambos podem parar e recomeçar.",
+    aplicaSe: [
+      "Recebeste uma cobrança relativa a um ano já distante.",
+      "Queres perceber até quando podes ser liquidado ou executado.",
+      "Tens uma dívida antiga em execução fiscal.",
+    ],
+    naoAplicaSe: [
+      "Estás a discutir se o imposto é devido, e não o tempo decorrido — nesse caso vê o guia de contestação da liquidação.",
+    ],
+    checklist: [
+      "Ano a que respeita o imposto e tipo de tributo.",
+      "Data da notificação da liquidação.",
+      "Histórico de citações, pagamentos por conta, planos prestacionais ou reclamações — todos podem interromper ou suspender prazos.",
+      "Confirmação profissional: uma contagem de anos, sozinha, quase nunca conclui a prescrição.",
+    ],
+  },
   "abrir-atividade": {
     respostaCurta: "Abrir atividade é uma declaração gratuita nas Finanças. O que decides nesse formulário — atividade, regime e IVA — determina quanto vais pagar durante todo o ano.",
     aplicaSe: [

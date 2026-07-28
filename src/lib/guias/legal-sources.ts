@@ -149,7 +149,10 @@ const ANO = `${FISCAL_YEAR}-01-01`;
  *
  * O tipo abaixo é a barreira: nenhum outro caminho é sequer exprimível.
  */
-type CodigoAT = "cirs_rep" | "civa_rep" | "CIRC_2R" | "bf_rep";
+// `cppt` e `lgt` não têm sufixo de redação: ao contrário do CIRS/CIVA/CIRC,
+// a AT serve destes códigos uma única versão, a vigente. Confirmado a
+// 2026-07-27 em cppt70/cppt102 e lgt45/lgt48.
+type CodigoAT = "cirs_rep" | "civa_rep" | "CIRC_2R" | "bf_rep" | "cppt" | "lgt";
 
 function at(
   id: string,
@@ -177,6 +180,10 @@ function at(
 
 export const LEGAL_SOURCES = {
   // ── CIRS ─────────────────────────────────────────────────────────────
+  // O n.º 6 fixa o MOMENTO da tributação da categoria B e é a norma que
+  // explica porque é que se paga IRS de uma fatura que ainda não foi paga.
+  // Nota de caminho: o artigo serve-se em `irs3`, não `irs03` (404).
+  cirs3: at("cirs3", "3.º", "Art. 3.º CIRS — Rendimentos da categoria B (momento da tributação)", "irs3", "cirs_rep"),
   cirs10: at("cirs10", "10.º", "Art. 10.º CIRS — Mais-valias", "irs10", "cirs_rep"),
   cirs12b: at("cirs12b", "12.º-B", "Art. 12.º-B CIRS — IRS Jovem", "irs12b", "cirs_rep"),
   cirs13: at("cirs13", "13.º", "Art. 13.º CIRS — Sujeito passivo", "irs13", "cirs_rep"),
@@ -208,10 +215,38 @@ export const LEGAL_SOURCES = {
   civa9: at("civa9", "9.º", "Art. 9.º CIVA — Isenções nas operações internas", "iva9", "civa_rep"),
   civa18: at("civa18", "18.º", "Art. 18.º CIVA — Taxas do imposto", "iva18", "civa_rep"),
   civa33: at("civa33", "33.º", "Art. 33.º CIVA — Cessação de atividade", "iva33", "civa_rep"),
+  civa36: at("civa36", "36.º", "Art. 36.º CIVA — Prazo de emissão e formalidades das faturas", "iva36", "civa_rep"),
   civa53: {
     ...at("civa53", "53.º", "Art. 53.º CIVA — Regime de isenção", "artigo-53-o-do-civa", "civa_rep"),
     expectedAnchors: ["Artigo 53.º"],
   },
+  // Recuperação do IVA já entregue ao Estado sobre faturas que o cliente
+  // não pagou. É o remédio, no IVA, do problema que o Art. 3.º n.º 6 do
+  // CIRS cria no IRS.
+  //
+  // Âncora com espaço antes do hífen — "Artigo 78.º -A" — e não "78.º-A".
+  // Não é gralha nossa: é como o portal serve estes três artigos do CIVA,
+  // ao contrário dos homólogos do CIRS ("Artigo 78.º-A", sem espaço).
+  // Verificado a 2026-07-27. Sem esta distinção o monitor de ligações
+  // acusaria as três fontes como inválidas estando elas certas.
+  civa78a: {
+    ...at("civa78a", "78.º-A", "Art. 78.º-A CIVA — Créditos de cobrança duvidosa e incobráveis", "iva78a", "civa_rep"),
+    expectedAnchors: ["Artigo 78.º -A"],
+  },
+  civa78b: {
+    ...at("civa78b", "78.º-B", "Art. 78.º-B CIVA — Procedimento de regularização (pedido de autorização prévia)", "iva78b", "civa_rep"),
+    expectedAnchors: ["Artigo 78.º -B"],
+  },
+  civa78d: {
+    ...at("civa78d", "78.º-D", "Art. 78.º-D CIVA — Documentação de suporte da regularização", "iva78d", "civa_rep"),
+    expectedAnchors: ["Artigo 78.º -D"],
+  },
+
+  // ── LGT e CPPT — prazos e meios de defesa ────────────────────────────
+  lgt45: at("lgt45", "45.º", "Art. 45.º LGT — Caducidade do direito à liquidação", "lgt45", "lgt"),
+  lgt48: at("lgt48", "48.º", "Art. 48.º LGT — Prescrição das dívidas tributárias", "lgt48", "lgt"),
+  cppt70: at("cppt70", "70.º", "Art. 70.º CPPT — Prazo e fundamentos da reclamação graciosa", "cppt70", "cppt"),
+  cppt102: at("cppt102", "102.º", "Art. 102.º CPPT — Prazo da impugnação judicial", "cppt102", "cppt"),
 
   // ── CIRC — versões VIGENTES (CIRC_2R). Ver falha 3.1 da auditoria:
   //    o caminho antigo /circ_rep/ serve a redação até 2013 (taxa de 25 %).
@@ -534,6 +569,63 @@ export const LEGAL_SOURCES = {
     jurisdiction: "EU",
     sourceType: "service",
     effectiveFrom: ANO,
+    renderMode: "spa",
+    expectedAnchors: [],
+    lastCheckedAt: VERIFICADO,
+    status: "active",
+  },
+  // ── Direitos do credor e cobrança ────────────────────────────────────
+  //    O Diário da República serve estas páginas por aplicação OutSystems:
+  //    HTTP 200 com shell vazio, daí `renderMode: "spa"` — o monitor valida
+  //    a disponibilidade mas nunca âncoras de corpo.
+  dl62_2013: {
+    id: "dl62_2013",
+    authority: "DR",
+    title: "Decreto-Lei n.º 62/2013 — Atrasos de pagamento em transações comerciais",
+    url: "https://diariodarepublica.pt/dr/detalhe/decreto-lei/62-2013-261160",
+    jurisdiction: "PT",
+    sourceType: "law",
+    effectiveFrom: ANO,
+    renderMode: "spa",
+    expectedAnchors: [],
+    lastCheckedAt: VERIFICADO,
+    status: "active",
+  },
+  dl269_98: {
+    id: "dl269_98",
+    authority: "DR",
+    title: "Decreto-Lei n.º 269/98 — Regime dos procedimentos para cumprimento de obrigações pecuniárias (injunção)",
+    url: "https://diariodarepublica.pt/dr/detalhe/decreto-lei/269-1998-207468",
+    jurisdiction: "PT",
+    sourceType: "law",
+    effectiveFrom: ANO,
+    renderMode: "spa",
+    expectedAnchors: [],
+    lastCheckedAt: VERIFICADO,
+    status: "active",
+  },
+  dl71_2013: {
+    id: "dl71_2013",
+    authority: "DR",
+    title: "Decreto-Lei n.º 71/2013 — Regime de contabilidade de caixa em sede de IVA (versão consolidada)",
+    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/2013-56895610",
+    jurisdiction: "PT",
+    sourceType: "law",
+    effectiveFrom: ANO,
+    consolidada: true,
+    renderMode: "spa",
+    expectedAnchors: [],
+    lastCheckedAt: VERIFICADO,
+    status: "active",
+  },
+  dl34_2025: {
+    id: "dl34_2025",
+    authority: "DR",
+    title: "Decreto-Lei n.º 34/2025 — Altera o limiar de acesso ao regime de IVA de caixa",
+    url: "https://diariodarepublica.pt/dr/detalhe/decreto-lei/34-2025-912066243",
+    jurisdiction: "PT",
+    sourceType: "law",
+    effectiveFrom: "2025-07-01",
     renderMode: "spa",
     expectedAnchors: [],
     lastCheckedAt: VERIFICADO,

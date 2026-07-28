@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   GUIDE_MANIFESTS, manifesto, TOOL_HREFS, ARQUETIPOS, HUB_GRUPOS,
   assertManifestsIntegrity, type GuideManifest,
@@ -35,8 +37,11 @@ describe("guias:lint — manifesto, proprietário, revisão e campos obrigatóri
     expect(() => assertHistoricoIntegrity()).not.toThrow();
   });
 
-  it("os 29 guias publicados têm manifesto, proprietário e revisor", () => {
-    expect(GUIDE_MANIFESTS).toHaveLength(29);
+  it("os 36 guias publicados têm manifesto, proprietário e revisor", () => {
+    // Contagem fixa de propósito: é a rede que apanha um guia a desaparecer
+    // do catálogo sem ninguém dar por isso. Subiu de 29 para 36 com a
+    // secção «Direitos e cobranças».
+    expect(GUIDE_MANIFESTS).toHaveLength(36);
     for (const m of GUIDE_MANIFESTS) {
       expect(m.owner, m.slug).toBeTruthy();
       expect(m.reviewer, m.slug).toBeTruthy();
@@ -192,6 +197,34 @@ describe("guias:routes — guias, relações, ferramentas e ações apontam para
   it("o sitemap espelha exatamente os manifestos", () => {
     // Falha 4.5: a navegação e o índice duplicavam o catálogo à mão.
     expect([...GUIA_SLUGS].sort()).toEqual([...slugs].sort());
+  });
+
+  it("toda a ligação interna escrita à mão no corpo de um guia aponta para uma rota que existe", () => {
+    // As relações do manifesto já eram validadas. Os `href` escritos
+    // diretamente no JSX de cada página não eram — e são a maioria das
+    // ligações que o leitor vê. Um guia podia apontar para
+    // `/guias/nao-existe` e só se descobria em produção, com um 404.
+    const dirGuias = join(process.cwd(), "src/app/guias");
+    const paginas = readdirSync(dirGuias, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name);
+
+    const rotaExiste = (rota: string): boolean => {
+      const semQuery = rota.split(/[?#]/)[0].replace(/\/$/, "");
+      if (semQuery === "") return true; // "/" — a homepage
+      return existsSync(join(process.cwd(), "src/app", semQuery, "page.tsx"));
+    };
+
+    const partidas: string[] = [];
+    for (const slug of paginas) {
+      const ficheiro = join(dirGuias, slug, "page.tsx");
+      if (!existsSync(ficheiro)) continue;
+      const fonte = readFileSync(ficheiro, "utf8");
+      for (const m of fonte.matchAll(/href="(\/[^"]*)"/g)) {
+        if (!rotaExiste(m[1])) partidas.push(`${slug} → ${m[1]}`);
+      }
+    }
+    expect(partidas).toEqual([]);
   });
 });
 
