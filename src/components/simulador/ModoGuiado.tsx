@@ -416,22 +416,46 @@ export default function ModoGuiado({
     const royalties = Math.max(0, parseMontante(autorRoyaltiesInput));
     const total = obra + royalties;
     const royaltiesAnual = royalties * mesesFat;
-    const cobraIvaRoyalties = royalties > 0 && royaltiesAnual > IVA_LIMITE;
-    const ivaRoyalties = cobraIvaRoyalties ? royalties * taxasRegiao.normal : 0;
+    // Também aqui é o motor que decide, não uma comparação direta com o
+    // limiar: a zona de transição do Art. 58.º, n.º 2 vale para os royalties
+    // como vale para o resto. Categoria do Art. 151.º porque o que se quer é
+    // a taxa NORMAL dos royalties, não a isenção por natureza da obra própria.
+    const zonaRoyalties = situacaoIVA({
+      faturacaoAnual: royaltiesAnual,
+      regiao,
+      regimeEscolhido: "isento",
+      categoria: "art151",
+      entidade: "ti",
+    });
+    const cobraIvaRoyalties = royalties > 0 && zonaRoyalties.regimeEfetivo !== "isento";
+    const ivaRoyalties = cobraIvaRoyalties ? royalties * zonaRoyalties.taxaEfetiva : 0;
     return { obra, royalties, total, ivaRoyalties, cobraIvaRoyalties };
-  }, [ehDireitosAutor, autorObraInput, autorRoyaltiesInput, mesesFat, taxasRegiao.normal]);
+  }, [ehDireitosAutor, autorObraInput, autorRoyaltiesInput, mesesFat, regiao]);
 
   const derivadoBase = useMemo(() => {
-    // Princípio coerente: ISENTO ⟺ NÃO está a cobrar IVA. Cobra IVA quando o
-    // utilizador escolhe "com IVA" (afirma que cobra) OU quando a faturação base
-    // ultrapassa o limite de isenção. Assim a situação de IVA, o desdobramento e
-    // o resultado usam sempre a mesma verdade — nunca "isento" e a cobrar IVA.
+    // Quem decide se há IVA é o motor (`fiscal-iva.ts`), não uma comparação
+    // solta com o limiar. A regra anterior — "acima de 15 000 € cobra IVA" —
+    // ignorava o regime escolhido e ignorava o Art. 58.º, n.º 2, al. a): entre
+    // 15 000 € e 18 750 € a isenção MANTÉM-SE até 1 de janeiro. O resultado era
+    // escolher «Isento» e ver o simulador reservar IVA na mesma, ao lado de um
+    // painel que dizia "continuas isento até lá".
     if (modoFat === "total") {
       const v = parseMontante(totalInput);
-      const baseComoFaturacao = v; // valor tratado como faturação (sem IVA)
-      const acimaLimite = baseComoFaturacao * mesesFat > IVA_LIMITE;
-      const cobraIva = valorComIva || acimaLimite;
-      const taxaEf = cobraIva ? taxaPotencial : 0;
+      // Dizer "o valor já inclui IVA" é afirmar que se cobra; aí é preciso a
+      // taxa escolhida para chegar à base. Nos restantes casos o valor
+      // introduzido é a própria base.
+      const baseComoFaturacao =
+        valorComIva && taxaPotencial > 0 ? v / (1 + taxaPotencial) : v;
+      const sit = situacaoIVA({
+        faturacaoAnual: baseComoFaturacao * mesesFat,
+        regiao,
+        regimeEscolhido: regimeIVA,
+        categoria: tipoAtiv,
+        entidade: "ti",
+        isentoEfetivo: valorComIva ? false : undefined,
+      });
+      const cobraIva = sit.regimeEfetivo !== "isento";
+      const taxaEf = sit.taxaEfetiva;
       let semIva: number;
       let comIva: number;
       if (!cobraIva) {
@@ -461,15 +485,25 @@ export default function ModoGuiado({
         comIva += v;
       }
     }
-    const cobraIva = algumIva || semIva * mesesFat > IVA_LIMITE;
+    // Recibo a recibo: se algum tem taxa > 0, está a cobrar. Caso contrário
+    // é o motor que decide, a partir da faturação e do regime escolhido.
+    const sit = situacaoIVA({
+      faturacaoAnual: semIva * mesesFat,
+      regiao,
+      regimeEscolhido: regimeIVA,
+      categoria: tipoAtiv,
+      entidade: "ti",
+      isentoEfetivo: algumIva ? false : undefined,
+    });
+    const cobraIva = algumIva || sit.regimeEfetivo !== "isento";
     return {
       mensalSemIva: semIva,
       mensalComIva: comIva,
       mensalIva: cobraIva ? comIva - semIva : 0,
       isentoEfetivo: !cobraIva,
-      taxaIvaEfetiva: cobraIva ? taxaPotencial : 0,
+      taxaIvaEfetiva: cobraIva ? (algumIva ? taxaPotencial : sit.taxaEfetiva) : 0,
     };
-  }, [modoFat, totalInput, valorComIva, recibosItems, taxaPotencial, mesesFat]);
+  }, [modoFat, totalInput, valorComIva, recibosItems, taxaPotencial, mesesFat, regiao, regimeIVA, tipoAtiv]);
 
   // Para direitos de autor, o IVA é a mistura obra própria (isento) + royalties
   // (taxa normal); a taxa efetiva é o IVA total ÷ faturação. Para tudo o resto,
@@ -1895,18 +1929,23 @@ function PassoFaturacao({
         </div>
       )}
 
-      {/* IVA */}
+      {/* IVA.
+          Sem rótulo próprio: o painel partilhado já traz o seu, com a região
+          e a base legal. Haver os dois mostrava "Situação de IVA" duas vezes
+          seguidas, uma sem região e outra com. O ramo dos direitos de autor
+          não usa o painel, por isso mantém cabeçalho. */}
       <div className="mb-6">
+        {desdobramentoAutor ? (
+          <>
         <div className="mb-2.5 flex items-center gap-1.5">
           <span className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
             Situação de IVA
           </span>
           <InfoTip>
-            Abaixo de €15.000/ano estás isento (Art. 53.º CIVA). Acima, cobras
-            IVA ao cliente.
+            O IVA dos direitos de autor segue a divisão entre obra própria
+            (isenta pelo Art. 9.º, n.º 16 CIVA) e royalties.
           </InfoTip>
         </div>
-        {desdobramentoAutor ? (
           <div className="space-y-2 rounded-xl border border-stone-200 bg-stone-50 p-3.5 dark:border-stone-700 dark:bg-stone-900/60">
             <p className="text-xs leading-relaxed text-stone-600 dark:text-stone-300">
               O IVA segue a divisão que fizeste em cima:
@@ -1938,6 +1977,7 @@ function PassoFaturacao({
               O IRS e a Segurança Social incidem sobre o total ({fmt(desdobramentoAutor.total)}/mês); só o IVA distingue os dois tipos. Confirma o teu enquadramento com o contabilista.
             </p>
           </div>
+          </>
         ) : (
           <SituacaoIVAPainel
             situacao={situacaoIVA({

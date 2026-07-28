@@ -3077,21 +3077,6 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   ]);
 
   // ── IVA: regime EFETIVO, derivado reativamente ──────────────────────────
-  // Princípio único (paridade com o Modo Guiado): ISENTO ⟺ NÃO cobra IVA.
-  // Abaixo de 15 000 €/ano de faturação base → isento (taxa 0). Acima, cobra à
-  // taxa do regime escolhido, ou — se ainda estiver "isento" — à taxa habitual
-  // da atividade. Tudo o resto (desdobramento, situação de IVA, resultado e
-  // motor) usa isto, para o simulador estar sempre sincronizado.
-  // Taxa "potencial" se ultrapassar o limite: o regime escolhido, ou a taxa
-  // habitual da atividade quando o utilizador ainda não escolheu uma taxa.
-  const ivaEsperadoTipo = IVA_ESPERADO_POR_TIPO[tipoAtiv];
-  const taxaPotencial =
-    regimeIVA !== "isento"
-      ? taxaIVAEfetiva(regiao, regimeIVA)
-      : ivaEsperadoTipo !== "isento"
-        ? IVA_TAXAS[regiao].value[ivaEsperadoTipo]
-        : IVA_TAXAS[regiao].value.normal;
-
   // ── Direitos de autor: desdobramento obra própria (isento) + royalties (23%) ─
   // Modelo ADITIVO — não sobrepõe o input de faturação. O valor faturado (base)
   // é o TOTAL; o utilizador indica só QUE PARTE desse total é royalties/
@@ -3104,38 +3089,72 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     const total = Math.max(0, bruto);
     const royalties = Math.min(total, Math.max(0, parseMontanteRV(autorRoyaltiesInput)));
     const obra = total - royalties;
-    const cobraIvaRoyalties = royalties > 0 && royalties * 12 > IVA_ISENCAO_LIMITE;
-    const ivaRoyalties = cobraIvaRoyalties ? royalties * IVA_TAXAS[regiao].value.normal : 0;
+    // O limiar dos royalties também passa pelo motor, e não por uma
+    // comparação direta com os 15 000 €: a zona de transição do Art. 58.º, n.º 2
+    // vale aqui exatamente como vale para a faturação geral — quem passa o
+    // limiar mantém a isenção até 1 de janeiro. A categoria usada é a do
+    // Art. 151.º porque o que se quer do motor é a taxa NORMAL aplicada aos
+    // royalties, não a isenção por natureza da obra própria (Art. 9.º).
+    const zonaRoyalties = calcularSituacaoIVA({
+      faturacaoAnual: royalties * 12,
+      regiao,
+      regimeEscolhido: "isento",
+      categoria: "art151",
+      entidade: "ti",
+    });
+    const cobraIvaRoyalties = royalties > 0 && zonaRoyalties.regimeEfetivo !== "isento";
+    const ivaRoyalties = cobraIvaRoyalties ? royalties * zonaRoyalties.taxaEfetiva : 0;
     return { obra, royalties, total, ivaRoyalties, cobraIvaRoyalties };
   }, [ehDireitosAutor, bruto, autorRoyaltiesInput, regiao]);
 
   // Proxy da faturação anual base: no modo "Anual" é o próprio brutoAnual; no
   // modo "Por recibo" é o valor mensal introduzido × 12.
   const faturacaoAnualProxy = modoInput === "anual" ? brutoAnual : bruto * 12;
-  const acimaLimiteIva = faturacaoAnualProxy > IVA_ISENCAO_LIMITE;
-  const cobraIva = valorComIva || acimaLimiteIva;
-  // Valores efetivos de IVA. Para direitos de autor vêm do desdobramento (taxa
-  // efetiva = IVA dos royalties ÷ faturação total); o motor corre depois com
-  // regime ISENTO e o IVA dos royalties é acrescentado por cima (ver mais baixo),
-  // porque `calcular` aplica uma taxa única a toda a base.
+  // ── Situação de IVA: uma só origem, e agora a sério ───────────────────
+  //
+  //  O cálculo decidia o IVA por conta própria: "faturação acima de 15 000 €
+  //  → cobra IVA", ignorando o regime escolhido. Duas consequências, ambas
+  //  visíveis ao lado uma da outra no mesmo ecrã:
+  //
+  //    · escolher «Isento» ou «23 %» dava exatamente o mesmo fluxo de caixa,
+  //      porque em ambos os casos se acabava a cobrar 23 %;
+  //    · o painel explicava «vais perder a isenção em janeiro — continuas
+  //      isento até lá» enquanto a coluna do lado já reservava IVA.
+  //
+  //  A segunda é um erro fiscal, não de interface: entre 15 000 € e 18 750 €
+  //  a isenção MANTÉM-SE até 1 de janeiro (Art. 58.º, n.º 2, al. a) CIVA). O
+  //  motor `fiscal-iva.ts` já modelava isto corretamente — só não era ele a
+  //  mandar. Passa a ser: o regime, a taxa e a isenção saem todos daqui.
+  const situacaoIva = useMemo(
+    () =>
+      calcularSituacaoIVA({
+        faturacaoAnual: faturacaoAnualProxy,
+        regiao,
+        regimeEscolhido: regimeIVA,
+        categoria: tipoAtiv as CategoriaSimuladorRV,
+        entidade: cenario === "empresa" ? "sociedade" : "ti",
+        // Só nos direitos de autor a isenção vem de fora: aí quem decide é o
+        // desdobramento obra própria / royalties, não o seletor de regime.
+        isentoEfetivo: desdobramentoAutor ? desdobramentoAutor.ivaRoyalties === 0 : undefined,
+      }),
+    [faturacaoAnualProxy, regiao, regimeIVA, tipoAtiv, cenario, desdobramentoAutor],
+  );
+  const vatRegimeEstimateFiz = situacaoIva.regimeParaFiz;
+
+  // Para direitos de autor a taxa efetiva vem do desdobramento (IVA dos
+  // royalties ÷ faturação total); o motor corre com regime ISENTO e o IVA dos
+  // royalties é acrescentado por cima, porque `calcular` aplica uma taxa única
+  // a toda a base.
   const isentoEfetivo = desdobramentoAutor
     ? desdobramentoAutor.ivaRoyalties === 0
-    : !cobraIva;
+    : situacaoIva.regimeEfetivo === "isento";
   const taxaIva = desdobramentoAutor
     ? desdobramentoAutor.total > 0
       ? desdobramentoAutor.ivaRoyalties / desdobramentoAutor.total
       : 0
-    : cobraIva
-      ? taxaPotencial
-      : 0;
+    : situacaoIva.taxaEfetiva;
   const temIva = taxaIva > 0;
-  const regimeEfetivo: RegimeIVA = desdobramentoAutor
-    ? "isento"
-    : isentoEfetivo
-      ? "isento"
-      : regimeIVA !== "isento"
-        ? regimeIVA
-        : (ivaEsperadoTipo as RegimeIVA);
+  const regimeEfetivo: RegimeIVA = desdobramentoAutor ? "isento" : situacaoIva.regimeEfetivo;
 
   // Base (sem IVA): para direitos de autor a base É o valor faturado (o IVA dos
   // royalties é acrescentado por cima, nunca incluído no input); senão só
@@ -3340,24 +3359,6 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   );
 
   // ── Resultado anual RV ────────────────────────────────────────────────────
-  // ── Situação de IVA: uma só origem ──────────────────────────────────
-  // Antes, o painel decidia as zonas por si (`IvaZonas`), o handoff da FIZ
-  // usava a escolha crua do utilizador e os avisos tinham uma terceira
-  // leitura. Agora as três coisas leem o mesmo objeto.
-  const situacaoIva = useMemo(
-    () =>
-      calcularSituacaoIVA({
-        faturacaoAnual: faturacaoAnualProxy,
-        regiao,
-        regimeEscolhido: regimeIVA,
-        categoria: tipoAtiv as CategoriaSimuladorRV,
-        entidade: cenario === "empresa" ? "sociedade" : "ti",
-        isentoEfetivo,
-      }),
-    [faturacaoAnualProxy, regiao, regimeIVA, tipoAtiv, cenario, isentoEfetivo],
-  );
-  const vatRegimeEstimateFiz = situacaoIva.regimeParaFiz;
-
   const resultAnualRV = useMemo(
     () =>
       simularAnualRV(
@@ -3694,15 +3695,17 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   const regras: RegraFiscal[] = useMemo(() => {
     const r: RegraFiscal[] = [];
 
-    // IVA: isenção acima do limite imediato
-    if (regimeIVA === "isento" && brutoAnual > IVA_ISENCAO_LIMITE_IMEDIATO) {
+    // IVA: as zonas vêm do motor, não de uma segunda contagem dos limiares.
+    // Tê-las escritas aqui outra vez era ter duas fontes para a mesma regra —
+    // e a certeza de que um dia divergiriam do painel logo ao lado.
+    if (regimeIVA === "isento" && situacaoIva.zona === "tributado") {
       r.push({
         id: "iva-excesso",
         prioridade: "erro",
         mensagem: "Isenção de IVA incompatível com esta faturação",
         detalhe: `Com ${fmt(brutoAnual)}/ano ultrapassas o limite de ${IVA_ISENCAO_LIMITE_IMEDIATO.toLocaleString("pt-PT")}€ — a transição para IVA normal é imediata (Art. 53.º / Art. 58.º CIVA).`,
       });
-    } else if (regimeIVA === "isento" && brutoAnual > IVA_ISENCAO_LIMITE) {
+    } else if (regimeIVA === "isento" && situacaoIva.zona === "transicao") {
       r.push({
         id: "iva-limite",
         prioridade: "aviso",
@@ -3818,6 +3821,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     return r;
   }, [
     regimeIVA,
+    situacaoIva.zona,
     brutoAnual,
     tipoAtiv,
     regiao,
@@ -4893,56 +4897,13 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                   </div>
                 ) : (
                 <div className="mb-6">
-                  <div className="mb-2 flex items-center gap-1.5">
-                    <span className="text-sm font-medium uppercase tracking-wider text-stone-500">
-                      Situação de IVA · {META_REGIAO[regiao]}
-                    </span>
-                    <InfoTip label="IVA 2026">
-                      Isento Art. 53.º até{" "}
-                      {IVA_ISENCAO_LIMITE.toLocaleString("pt-PT")}€/ano. Se
-                      ultrapassares{" "}
-                      {IVA_ISENCAO_LIMITE_IMEDIATO.toLocaleString("pt-PT")}€
-                      durante o ano, passas de imediato para o regime normal.
-                      Certas profissões (médicos, professores...) têm isenção
-                      Art. 9.º sem limite de faturação.
-                    </InfoTip>
-                  </div>
-
-                  {/* Seletor de regime IVA (compacto) */}
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {ivaOptions.map((op) => {
-                      const active = regimeIVA === op.id;
-                      return (
-                        <button
-                          key={op.id}
-                          type="button"
-                          aria-pressed={active}
-                          onClick={() => {
-                            setRegimeIVA(op.id);
-                            setPainelIVA(true);
-                          }}
-                          className={`rounded-xl border p-2.5 text-center transition-all ${
-                            active
-                              ? "border-brand bg-brand-light"
-                              : "border-stone-200 hover:border-stone-300 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/40"
-                          }`}
-                        >
-                          <div
-                            className={`text-sm font-semibold ${active ? "text-brand-dark" : "text-stone-700 dark:text-stone-200"}`}
-                          >
-                            {op.label}
-                          </div>
-                          <div
-                            className={`text-xs ${active ? "text-brand" : "text-stone-400"}`}
-                          >
-                            {op.sub}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* 3 zonas (isento / transição / imediata) + seletor + coerência */}
+                  {/* Um só painel de IVA.
+                      Havia dois, um por cima do outro: este bloco tinha o seu
+                      próprio rótulo e a sua própria grelha de quatro botões, e
+                      renderizava por dentro o painel partilhado — que traz
+                      rótulo e seletor próprios. O utilizador via "Situação de
+                      IVA" duas vezes seguidas, com dois seletores idênticos.
+                      Fica o partilhado, que é o único ligado ao motor. */}
                   {situacaoIVA}
 
                   {/* Painel contextual IVA (detalhe da taxa escolhida) */}
