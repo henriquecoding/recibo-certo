@@ -243,10 +243,54 @@ export const LEGAL_SOURCES = {
   },
 
   // ── LGT e CPPT — prazos e meios de defesa ────────────────────────────
+  lgt24: at("lgt24", "24.º", "Art. 24.º LGT — Responsabilidade subsidiária dos membros de corpos sociais", "lgt24", "lgt"),
+  // O Art. 43.º NÃO é servido em `lgt43` no Portal das Finanças (404,
+  // verificado a 2026-07-27), ao contrário dos 24.º, 45.º, 48.º e 100.º.
+  // Cita-se a versão consolidada do Diário da República.
+  lgt43: {
+    id: "lgt43",
+    authority: "DR",
+    title: "Art. 43.º LGT — Juros indemnizatórios devidos ao contribuinte",
+    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/1998-34438775-118879628",
+    jurisdiction: "PT",
+    sourceType: "code_article",
+    article: "43.º",
+    effectiveFrom: ANO,
+    consolidada: true,
+    renderMode: "spa",
+    expectedAnchors: [],
+    lastCheckedAt: VERIFICADO,
+    status: "active",
+  },
   lgt45: at("lgt45", "45.º", "Art. 45.º LGT — Caducidade do direito à liquidação", "lgt45", "lgt"),
   lgt48: at("lgt48", "48.º", "Art. 48.º LGT — Prescrição das dívidas tributárias", "lgt48", "lgt"),
   cppt70: at("cppt70", "70.º", "Art. 70.º CPPT — Prazo e fundamentos da reclamação graciosa", "cppt70", "cppt"),
   cppt102: at("cppt102", "102.º", "Art. 102.º CPPT — Prazo da impugnação judicial", "cppt102", "cppt"),
+  cppt169: at("cppt169", "169.º", "Art. 169.º CPPT — Suspensão da execução fiscal", "cppt169", "cppt"),
+  cppt196: at("cppt196", "196.º", "Art. 196.º CPPT — Pagamento em prestações", "cppt196", "cppt"),
+  cppt199: at("cppt199", "199.º", "Art. 199.º CPPT — Garantias", "cppt199", "cppt"),
+  // O CPC não vive no Portal das Finanças. A primeira escolha foi a PGDL,
+  // que serve o articulado — mas o servidor devolve intermitentemente uma
+  // página de erro com HTTP 200 ("A query falhou"): medido a 2026-07-27,
+  // uma em cada três respostas no mesmo URL. Uma fonte que falha ao acaso
+  // põe o CI vermelho sem nada ter mudado, por isso cita-se a versão
+  // consolidada do Diário da República, como já se faz com o Código do
+  // Trabalho. Sendo aplicação OutSystems, é `spa` e sem âncoras.
+  cpc738: {
+    id: "cpc738",
+    authority: "DR",
+    title: "Art. 738.º CPC — Bens parcialmente penhoráveis (Código de Processo Civil, versão consolidada)",
+    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2013-34580575",
+    jurisdiction: "PT",
+    sourceType: "code_article",
+    article: "738.º",
+    effectiveFrom: ANO,
+    consolidada: true,
+    renderMode: "spa",
+    expectedAnchors: [],
+    lastCheckedAt: VERIFICADO,
+    status: "active",
+  },
 
   // ── CIRC — versões VIGENTES (CIRC_2R). Ver falha 3.1 da auditoria:
   //    o caminho antigo /circ_rep/ serve a redação até 2013 (taxa de 25 %).

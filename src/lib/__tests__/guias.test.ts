@@ -37,11 +37,11 @@ describe("guias:lint — manifesto, proprietário, revisão e campos obrigatóri
     expect(() => assertHistoricoIntegrity()).not.toThrow();
   });
 
-  it("os 36 guias publicados têm manifesto, proprietário e revisor", () => {
+  it("os 43 guias publicados têm manifesto, proprietário e revisor", () => {
     // Contagem fixa de propósito: é a rede que apanha um guia a desaparecer
-    // do catálogo sem ninguém dar por isso. Subiu de 29 para 36 com a
+    // do catálogo sem ninguém dar por isso. Subiu de 29 para 43 com a
     // secção «Direitos e cobranças».
-    expect(GUIDE_MANIFESTS).toHaveLength(36);
+    expect(GUIDE_MANIFESTS).toHaveLength(43);
     for (const m of GUIDE_MANIFESTS) {
       expect(m.owner, m.slug).toBeTruthy();
       expect(m.reviewer, m.slug).toBeTruthy();
@@ -380,7 +380,10 @@ describe("apresentação derivada — fontes, confiança e pesquisa", () => {
     // Ponto 9.2: "passar recibo", "IVA UE" e "VIES" têm de chegar ao sítio certo.
     expect(pesquisarGuias("passar recibo")[0]?.manifesto.slug).toBe("fatura-vs-recibo");
     expect(pesquisarGuias("vies").map((r) => r.manifesto.slug)).toContain("clientes-estrangeiros");
-    expect(pesquisarGuias("falso recibo verde")[0]?.manifesto.slug).toBe("acumulacao-emprego");
+    // Passou a existir guia dedicado. Antes esta pesquisa caía em
+    // `acumulacao-emprego`, que era o mais próximo que havia — a expectativa
+    // codificava a falta, não o comportamento desejado.
+    expect(pesquisarGuias("falso recibo verde")[0]?.manifesto.slug).toBe("falsos-recibos-verdes");
     expect(pesquisarGuias("quando recebo o irs")[0]?.manifesto.slug).toBe("reembolso-irs");
   });
 

@@ -38,6 +38,13 @@ const AUDITORIA = "Auditoria editorial de 26 de julho de 2026";
 
 export const HISTORICO_GUIAS: AlteracaoGuia[] = [
   // ── Secção nova: Direitos e cobranças ───────────────────────────────
+  { guideId: "juros-indemnizatorios", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo sobre os juros que a Autoridade Tributária deve ao contribuinte quando o erro é dos serviços — o espelho dos juros de mora, e raramente pedido." },
+  { guideId: "execucao-fiscal", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo sobre o que acontece depois da citação em execução fiscal e sobre as saídas que continuam abertas." },
+  { guideId: "plano-prestacoes", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo sobre o pagamento de dívidas fiscais a prestações, com o limite geral e o alargamento em dificuldade notória." },
+  { guideId: "suspender-execucao", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo a esclarecer que contestar não trava a cobrança por si só: a suspensão depende de garantia, penhora suficiente ou dispensa." },
+  { guideId: "penhora-limites", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo com os limites legais da penhora de vencimentos e pensões — dois terços impenhoráveis, com piso e teto." },
+  { guideId: "reversao-gerentes", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo sobre a reversão de dívidas fiscais para gerentes, separando as duas alíneas do Art. 24.º da LGT pelo ónus da prova." },
+  { guideId: "falsos-recibos-verdes", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo sobre a presunção de contrato de trabalho e os indícios que a fazem operar, sem automatizar a conclusão." },
   { guideId: "fatura-nao-paga", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo. O catálogo explicava o que pagar e quando, mas não dizia uma palavra sobre o caso mais frequente de todos: emitir a fatura e o cliente não pagar. Fica claro que o IRS da categoria B se vence com a emissão, não com o recebimento." },
   { guideId: "juros-de-mora", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo sobre prazos legais de pagamento, juros de mora automáticos e a indemnização mínima de 40 € por custos de cobrança." },
   { guideId: "cobrar-divida", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo com a escada da cobrança — interpelação, injunção e execução — e os limites de valor de cada via." },

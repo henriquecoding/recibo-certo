@@ -26,6 +26,127 @@ export interface AplicabilidadeGuia {
 
 export const APLICABILIDADE: Record<string, AplicabilidadeGuia> = {
   // ── Direitos e cobranças ────────────────────────────────────────────
+  "juros-indemnizatorios": {
+    respostaCurta: "Se pagaste imposto a mais por erro dos serviços e isso for reconhecido em reclamação ou impugnação, o Estado deve-te juros — não só o capital. É o espelho exato dos juros de mora, e quase ninguém os pede.",
+    aplicaSe: [
+      "Pagaste uma liquidação que veio a ser anulada ou corrigida a teu favor.",
+      "O erro é imputável aos serviços e não a uma omissão tua.",
+      "Seguiste orientações genéricas da administração devidamente publicadas e ainda assim foste liquidado a mais.",
+    ],
+    naoAplicaSe: [
+      "O erro foi teu na declaração e corrigiste-o por substituição.",
+      "Ainda não houve decisão que reconheça o erro — os juros dependem dessa determinação.",
+    ],
+    checklist: [
+      "A liquidação original e o valor efetivamente pago.",
+      "A decisão que reconhece o erro (reclamação, recurso ou sentença).",
+      "As datas de pagamento e de reembolso, para o cálculo do período.",
+      "Pedido expresso: convém não presumir que são atribuídos automaticamente.",
+    ],
+  },
+  "execucao-fiscal": {
+    respostaCurta: "A citação abre um prazo curto e é o momento em que ainda tens três saídas: pagar, prestar garantia para suspender enquanto discutes, ou pedir prestações. Ignorar é a única opção sem retorno.",
+    aplicaSe: [
+      "Recebeste citação de um processo de execução fiscal.",
+      "Tens dívida em cobrança coerciva na Autoridade Tributária.",
+      "Queres saber o que ainda podes travar e em que prazo.",
+    ],
+    naoAplicaSe: [
+      "A dívida ainda está em pagamento voluntário — aí o caminho é outro, e mais barato.",
+      "Discordas do imposto em si e ainda estás em prazo — vê primeiro o guia de contestação.",
+    ],
+    checklist: [
+      "A citação, com a data em que foi recebida.",
+      "O número do processo e o valor da quantia exequenda e do acrescido.",
+      "Situação fiscal no Portal das Finanças, para confirmar o que está em cobrança.",
+      "Decisão sobre a via: pagar, garantir, pedir prestações ou opor-se.",
+    ],
+  },
+  "plano-prestacoes": {
+    respostaCurta: "Em regra até 36 prestações mensais, mediante prova de que não consegues pagar de uma vez. Em dificuldade notória e com dívida acima de 500 unidades de conta, pode ir até cinco anos.",
+    aplicaSe: [
+      "Tens dívida fiscal que não consegues liquidar de uma só vez.",
+      "Queres evitar ou travar atos de penhora.",
+      "Consegues demonstrar a tua situação económica.",
+    ],
+    naoAplicaSe: [
+      "Consegues pagar a pronto: as prestações têm encargos associados.",
+      "O que discutes é a legalidade da dívida — pedir prestações não é o meio de a contestar.",
+    ],
+    checklist: [
+      "Valor total da dívida, incluindo juros e custas.",
+      "Elementos sobre a tua situação económica.",
+      "Simulação do número de prestações e do valor de cada uma.",
+      "Consciência do efeito do incumprimento: falhar prestações faz cair o plano.",
+    ],
+  },
+  "suspender-execucao": {
+    respostaCurta: "Contestar não trava a cobrança. A execução só se suspende com garantia constituída ou prestada, ou quando a penhora já garante a totalidade da dívida e do acrescido. Há dispensa de garantia, mas tem de ser pedida e provada.",
+    aplicaSe: [
+      "Estás a discutir a legalidade da dívida e não queres ser penhorado entretanto.",
+      "Foste citado e queres ganhar tempo de forma legítima.",
+    ],
+    naoAplicaSe: [
+      "Não estás a contestar nada — sem discussão da legalidade não há fundamento para suspender por esta via.",
+    ],
+    checklist: [
+      "O meio de defesa já apresentado, ou a apresentar dentro do prazo.",
+      "Avaliação do custo da garantia face ao valor em causa.",
+      "Fundamentos para pedir a dispensa, se for esse o caminho.",
+      "Prazos: a garantia tem momento próprio e não se recupera depois.",
+    ],
+  },
+  "penhora-limites": {
+    respostaCurta: "Dois terços da parte líquida do teu rendimento são impenhoráveis. Essa proteção tem um teto — três salários mínimos — e um piso de um salário mínimo quando não tens outro rendimento.",
+    aplicaSe: [
+      "Recebeste notificação de penhora de vencimento, pensão ou conta.",
+      "Queres saber quanto te pode ser retido por lei.",
+    ],
+    naoAplicaSe: [
+      "O que está em causa são bens móveis ou imóveis — as regras são outras.",
+    ],
+    checklist: [
+      "Valor líquido do rendimento, contando apenas descontos legalmente obrigatórios.",
+      "Confirmação de se tens ou não outro rendimento — muda o piso protegido.",
+      "A notificação de penhora e o valor que está a ser retido.",
+      "Reclamação, se a retenção exceder o limite legal.",
+    ],
+  },
+  "reversao-gerentes": {
+    respostaCurta: "Não é automático, mas também não é remoto. Tudo depende de qual das duas alíneas do Art. 24.º da LGT se aplica — porque numa é a AT que tem de provar a culpa e na outra és tu que tens de provar que não a tiveste.",
+    aplicaSe: [
+      "És ou foste gerente, administrador ou diretor de uma sociedade com dívidas fiscais.",
+      "Recebeste projeto de reversão ou citação como responsável subsidiário.",
+    ],
+    naoAplicaSe: [
+      "Nunca exerceste funções de gerência de facto nem de direito no período relevante.",
+      "És sócio sem funções de gerência — a norma visa quem administra.",
+    ],
+    checklist: [
+      "Datas exatas de início e fim de funções, de direito e de facto.",
+      "Prazo legal de pagamento de cada dívida em causa.",
+      "Elementos sobre a situação patrimonial da sociedade no período.",
+      "Apoio profissional: a distinção entre as duas alíneas decide quem tem de provar o quê.",
+    ],
+  },
+  "falsos-recibos-verdes": {
+    respostaCurta: "Se trabalhas em local e horário definidos por quem te paga, com equipamento dele e recebendo com periodicidade, a lei pode presumir contrato de trabalho — independentemente do que diga o papel que assinaste.",
+    aplicaSe: [
+      "Passas recibos verdes a uma entidade só, ou quase só.",
+      "Cumpres horário, estás integrado na estrutura e usas meios que não são teus.",
+      "Queres perceber se a relação está corretamente qualificada.",
+    ],
+    naoAplicaSe: [
+      "Trabalhas para vários clientes, com autonomia de organização e meios próprios.",
+      "O que procuras é otimização fiscal — esta é uma questão de qualificação da relação, não de escolha.",
+    ],
+    checklist: [
+      "Contrato ou acordo escrito, se existir.",
+      "Registos de horário, local de trabalho e instruções recebidas.",
+      "Faturação: quantos clientes, com que regularidade e com que peso relativo.",
+      "Aconselhamento antes de agir: a presunção é ilidível e a decisão tem consequências dos dois lados.",
+    ],
+  },
   "fatura-nao-paga": {
     respostaCurta: "Já deves o imposto. Na categoria B, o IRS conta-se desde o momento em que era obrigatório emitir a fatura, não desde o dia em que o dinheiro entra — e o IVA segue a mesma lógica. A boa notícia é que há três coisas a fazer, e nenhuma delas é esperar.",
     aplicaSe: [
