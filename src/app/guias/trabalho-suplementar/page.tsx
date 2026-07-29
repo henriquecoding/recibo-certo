@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import Link from "next/link";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import InfoTip from "@/components/ui/InfoTip";
 import {
   TRABALHO_SUPLEMENTAR,
@@ -13,27 +12,7 @@ import {
 import { pct, fmt } from "@/lib/format";
 import { ArrowRight } from "@/components/ui/Icons";
 
-export const metadata: Metadata = {
-  title: "Trabalho suplementar (horas extra) 2026 | ReciboCerto",
-  description: "Acréscimos do trabalho suplementar em 2026: dia útil, descanso e feriado. Retenção na fonte autónoma e limites legais.",
-  keywords: ["trabalho suplementar 2026", "horas extra 2026", "acréscimos horas extra", "retenção horas extra"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/trabalho-suplementar" },
-  openGraph: {
-    title: "Trabalho suplementar (horas extra) 2026 | ReciboCerto",
-    description: "Acréscimos, retenção e limites do trabalho suplementar explicados.",
-    url: "https://www.recibocerto.pt/guias/trabalho-suplementar",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "Art. 268.º Código do Trabalho — Pagamento de trabalho suplementar", url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0268&nid=1047&tabela=leis", tipo: "oficial" as const },
-  { titulo: "Art. 271.º CT — Cálculo da retribuição horária", url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0271&nid=1047&tabela=leis", tipo: "oficial" as const },
-  { titulo: "Art. 228.º CT — Limites do trabalho suplementar", url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0228&nid=1047&tabela=leis", tipo: "oficial" as const },
-  { titulo: "Doutor Finanças — Retenção sobre trabalho suplementar 2026", url: "https://www.doutorfinancas.pt/carreira-e-rendimentos/rendimentos/retencao-na-fonte-sobre-trabalho-suplementar-alteracoes-e-beneficios-fiscais/", tipo: "referencia" as const },
-];
+export const metadata: Metadata = metadataDoGuia("trabalho-suplementar");
 
 const acrescimos = TRABALHO_SUPLEMENTAR.acrescimos.value;
 
@@ -46,13 +25,7 @@ const TABELA_ACRESCIMOS = [
 
 export default function TrabalhoSuplementarPage() {
   return (
-    <>
-      <GuiaHero
-        eyebrow="Guia · Conta de outrem"
-        titulo="Trabalho suplementar: acréscimos e retenção em 2026"
-        descricao="As horas extra são pagas com acréscimo sobre a retribuição horária. Desde 2026, a retenção na fonte é calculada de forma autónoma."
-        tempoLeitura={5}
-      />
+    <GuiaLayout slug="trabalho-suplementar">
 
       <section className="mb-10">
         <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 mb-4">
@@ -179,8 +152,6 @@ export default function TrabalhoSuplementarPage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

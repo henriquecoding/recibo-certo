@@ -60,107 +60,40 @@ export async function obterProgressoDesafio(userId: string): Promise<ProgressoDe
   return resultado;
 }
 
+/**
+ * Regista uma sessão de desafio.
+ *
+ * Passa pelo servidor (`/api/quiz/sessao`), que RECALCULA os acertos a partir
+ * do banco de perguntas antes de mexer no progresso ou emitir um cupão. A
+ * versão anterior era chamada do cliente com valores do cliente — bastava
+ * enviar `acertos: 10` — e escrevia diretamente nas tabelas, que estavam
+ * abertas a `authenticated`.
+ *
+ * O cliente envia o que ESCOLHEU; a resposta certa é do servidor.
+ */
 export async function registarSessaoDesafio(
-  userId: string,
+  respostas: { perguntaId: string; opcaoSelecionada: number | null }[],
   dificuldade: number,
-  totalPerguntas: number,
-  acertos: number,
-): Promise<{ cupaoGerado?: CupaoQuiz }> {
+): Promise<{ cupaoGerado?: CupaoQuiz; erro?: string }> {
   if (!supabaseConfigurado()) return {};
+  if (respostas.length === 0) return {};
 
-  const perfeito = acertos === totalPerguntas && totalPerguntas === 10;
-  const caminho: CaminhoCupao | null =
-    dificuldade === 2 ? "medio" : dificuldade === 3 ? "dificil" : null;
+  const { data: sessao } = await getSupabase().auth.getSession();
+  const token = sessao.session?.access_token;
+  if (!token) return { erro: "Sessão expirada." };
 
-  if (!caminho) return {};
-
-  const sb = getSupabase();
-  const outrosCaminhos: CaminhoCupao[] = caminho === "medio" ? ["dificil"] : ["medio"];
-
-  if (perfeito) {
-    const { data: row } = await sb
-      .from("quiz_achievement_progress")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("caminho", caminho)
-      .maybeSingle();
-
-    const novaSeq = (row?.sequencia_atual ?? 0) + 1;
-    const meta = META_DESAFIO[caminho].meta;
-
-    await sb.from("quiz_achievement_progress").upsert(
-      {
-        user_id: userId,
-        caminho,
-        sequencia_atual: novaSeq,
-        sequencia_meta: meta,
-        atualizado_em: new Date().toISOString(),
-      },
-      { onConflict: "user_id,caminho" },
-    );
-
-    if (novaSeq >= meta) {
-      const codigo = gerarCodigoCupao();
-      const { data: cupao } = await sb
-        .from("quiz_cupoes")
-        .insert({
-          user_id: userId,
-          codigo,
-          caminho,
-          meses: 3,
-          estado: "disponivel",
-          expira_em: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
-        })
-        .select()
-        .single();
-
-      await sb.from("quiz_achievement_progress").update({
-        sequencia_atual: 0,
-        atualizado_em: new Date().toISOString(),
-      }).eq("user_id", userId).eq("caminho", caminho);
-
-      if (cupao) {
-        return {
-          cupaoGerado: {
-            id: cupao.id,
-            codigo: cupao.codigo,
-            caminho: cupao.caminho,
-            meses: cupao.meses,
-            estado: cupao.estado,
-            criadoEm: cupao.criado_em,
-            ativadoEm: cupao.ativado_em,
-            expiraEm: cupao.expira_em,
-          },
-        };
-      }
-    }
-  } else {
-    await sb.from("quiz_achievement_progress").upsert(
-      {
-        user_id: userId,
-        caminho,
-        sequencia_atual: 0,
-        sequencia_meta: META_DESAFIO[caminho].meta,
-        atualizado_em: new Date().toISOString(),
-      },
-      { onConflict: "user_id,caminho" },
-    );
+  try {
+    const r = await fetch("/api/quiz/sessao", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      body: JSON.stringify({ dificuldade, respostas }),
+    });
+    const corpo = await r.json().catch(() => ({}));
+    if (!r.ok) return { erro: corpo?.erro ?? "Não foi possível registar a sessão." };
+    return { cupaoGerado: corpo?.cupaoGerado ?? undefined };
+  } catch {
+    return { erro: "Sem ligação ao servidor." };
   }
-
-  for (const outro of outrosCaminhos) {
-    await sb.from("quiz_achievement_progress").upsert(
-      {
-        user_id: userId,
-        caminho: outro,
-        sequencia_atual: 0,
-        sequencia_meta: META_DESAFIO[outro].meta,
-        atualizado_em: new Date().toISOString(),
-      },
-      { onConflict: "user_id,caminho" },
-    );
-  }
-
-  return {};
 }
 
 export async function obterCupoesUtilizador(userId: string): Promise<CupaoQuiz[]> {
@@ -183,44 +116,32 @@ export async function obterCupoesUtilizador(userId: string): Promise<CupaoQuiz[]
   }));
 }
 
-export async function ativarCupao(cupaoId: string, userId: string): Promise<{ erro?: string }> {
+/**
+ * Ativa um cupão e entrega efetivamente os meses de Pro.
+ *
+ * A versão anterior marcava o cupão como «ativado», tentava escrever em
+ * `subscriptions` — escrita que a RLS rejeita — e devolvia `{}` sem sequer
+ * ler o erro: o utilizador via sucesso, perdia o cupão e não recebia nada.
+ * Agora as duas escritas são do servidor, pela ordem certa, e o erro é
+ * devolvido em vez de engolido.
+ */
+export async function ativarCupao(cupaoId: string): Promise<{ erro?: string }> {
   if (!supabaseConfigurado()) return { erro: "Serviço indisponível." };
-  const sb = getSupabase();
 
-  const { data: cupao, error: errCupao } = await sb
-    .from("quiz_cupoes")
-    .select("meses")
-    .eq("id", cupaoId)
-    .eq("user_id", userId)
-    .eq("estado", "disponivel")
-    .maybeSingle();
+  const { data: sessao } = await getSupabase().auth.getSession();
+  const token = sessao.session?.access_token;
+  if (!token) return { erro: "Sessão expirada. Inicia sessão outra vez." };
 
-  if (errCupao) return { erro: errCupao.message };
-  if (!cupao) return { erro: "Cupão não encontrado ou já utilizado." };
-
-  const { error: errUpdate } = await sb
-    .from("quiz_cupoes")
-    .update({
-      estado: "ativado",
-      ativado_em: new Date().toISOString(),
-    })
-    .eq("id", cupaoId)
-    .eq("user_id", userId);
-
-  if (errUpdate) return { erro: errUpdate.message };
-
-  const agora = new Date();
-  const fimMs = agora.getTime() + cupao.meses * 30 * 24 * 60 * 60 * 1000;
-  await sb.from("subscriptions").upsert(
-    {
-      user_id: userId,
-      status: "active",
-      intervalo: "monthly",
-      inicio: agora.toISOString(),
-      cancelado_em: new Date(fimMs).toISOString(),
-    },
-    { onConflict: "user_id" },
-  );
-
-  return {};
+  try {
+    const r = await fetch("/api/quiz/cupao", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      body: JSON.stringify({ cupaoId }),
+    });
+    const corpo = await r.json().catch(() => ({}));
+    if (!r.ok) return { erro: corpo?.erro ?? "Não foi possível ativar o cupão." };
+    return {};
+  } catch {
+    return { erro: "Sem ligação ao servidor." };
+  }
 }

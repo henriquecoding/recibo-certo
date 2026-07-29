@@ -278,6 +278,33 @@ input[type="number"]::-webkit-outer-spin-button {
     color: #37a07c;
   }
 
+  /* ──────────────────────────────────────────────────────────────────
+     Paleta FIZ no escuro. As superfícies FIZ são amarelo pastel no claro
+     (fiz-50/100/200); sobre fundo escuro isso queimaria a vista, por isso
+     passam a castanho-âmbar profundo, e o texto sobe para os tons claros
+     da escala. O amarelo da marca (#FAC72B) mantém-se apenas como acento
+     (logo, ponto de estado) — nunca como cor de texto corrido.
+     Tudo scoped a .dark: o modo claro fica intacto.
+     ────────────────────────────────────────────────────────────────── */
+  .dark .bg-fiz-50 {
+    background-color: #241d0a;
+  }
+  .dark .bg-fiz-100 {
+    background-color: #2c2309;
+  }
+  .dark .bg-fiz-200 {
+    background-color: #382c0a;
+  }
+  .dark .text-fiz-700,
+  .dark .text-fiz-800,
+  .dark .text-fiz-900 {
+    color: #fbd65c;
+  }
+  .dark .border-fiz-200,
+  .dark .border-fiz-300 {
+    border-color: #5c4708;
+  }
+
   /* Bordas */
   .dark .border-stone-100 {
     border-color: #2a2f25;

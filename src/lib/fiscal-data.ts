@@ -19,8 +19,14 @@
 // componentes-cliente o possam importar sem arrastar este ficheiro pesado.
 export { FISCAL_YEAR } from "./fiscal-year";
 
-/** Data da última revisão completa dos dados (ISO 8601). */
-export const DATA_LAST_REVIEW = "2026-07-20" as const;
+/**
+ * Data da última revisão dos dados (ISO 8601). É a data que a secção «Fontes»
+ * mostra ao utilizador, por isso não pode ser anterior a nenhum `lastVerified`
+ * registado abaixo: dizer «revisto a 20/07» com um parâmetro verificado a 21/07
+ * descreve mal o que aconteceu. `assertFiscalDataIntegrity()` faz o build falhar
+ * se algum parâmetro for mais recente do que esta data.
+ */
+export const DATA_LAST_REVIEW = "2026-07-29" as const;
 
 // ─── Registo de fontes (evita repetir URLs longos) ─────────────────────
 export interface Source {
@@ -61,6 +67,10 @@ export const SOURCES = {
   art25cirs: {
     label: "Art. 25.º CIRS — Dedução específica do trabalho dependente · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs25.aspx",
+  },
+  art12aCirs: {
+    label: "Art. 12.º-A CIRS — Regime fiscal aplicável a ex-residentes (Programa Regressar) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs12a.aspx",
   },
   art70cirs: {
     label: "Art. 70.º CIRS — Mínimo de existência · Portal das Finanças (AT)",
@@ -176,9 +186,13 @@ export const SOURCES = {
   },
 
   // ── Trabalho dependente (Categoria A) ───────────────────────────────
+  // Corrigido em 26/07/2026 (auditoria P0 3.3): apontava para um artigo do
+  // Montepio apresentado como se fosse o despacho. O texto oficial é
+  // publicado pela AT; o artigo bancário passou a leitura complementar em
+  // `src/lib/guias/legal-sources.ts`.
   despachoRetencao2026: {
-    label: "Despacho n.º 233-A/2026 — Tabelas de retenção na fonte de IRS 2026 (Continente) · AT (ref. Montepio)",
-    url: "https://www.montepio.org/ei/pessoal/impostos/tabelas-do-irs-conheca-as-taxas-de-retencao-na-fonte/",
+    label: "Despacho n.º 233-A/2026 — Tabelas de retenção na fonte de IRS 2026 (Continente) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/legislacao/diplomas_legislativos/Documents/Despacho-233-A-2026.pdf",
   },
   subsidioRefeicao2026: {
     label: "Subsídio de refeição — limites de isenção 2026 (Art. 2.º, n.º 3 CIRS) · ref. Edenred/idealista",
@@ -295,6 +309,50 @@ export const SOURCES = {
   ircObrigacoes: {
     label: "IRC — Guia Fiscal 2026 (taxas, prazos e obrigações declarativas) · PwC Portugal",
     url: "https://www.pwc.pt/pt/pwcinforfisco/guia-fiscal/2026/irc.html",
+  },
+  // ── Direitos, cobranças e execução (Parte «Direitos» dos Guias) ──────
+  avisoJuros2026: {
+    label:
+      "Aviso n.º 822/2026/2 (DR n.º 11, 16-01-2026) — taxas supletivas de juros moratórios comerciais, 1.º semestre de 2026 · Entidade do Tesouro e Finanças",
+    url: "https://diariodarepublica.pt/dr/detalhe/aviso/822-2026-2",
+  },
+  portaria291_2003: {
+    label: "Portaria n.º 291/2003 — taxa de juros legais e de juros de mora de obrigações civis (4%) · Diário da República",
+    url: "https://diariodarepublica.pt/dr/detalhe/portaria/291-2003-632924",
+  },
+  unidadeContaOE: {
+    label:
+      "Art. 242.º da Lei n.º 73-A/2025 (OE 2026) — suspensão da atualização da unidade de conta processual (mantém-se em 102 €) · Diário da República",
+    url: "https://diariodarepublica.pt/dr/detalhe/lei/73-a-2025",
+  },
+  cppt198a: {
+    label: "Art. 198.º-A CPPT — plano oficioso de pagamento em prestações · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cppt/Pages/cppt198a.aspx",
+  },
+  cpc738dr: {
+    label: "Art. 738.º CPC — bens parcialmente penhoráveis (versão consolidada) · Diário da República",
+    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2013-34580575",
+  },
+  // ── Trabalho por conta de outrem e proteção social ───────────────────
+  ct: {
+    label: "Código do Trabalho (Lei 7/2009, versão consolidada) — férias, faltas, noturno e cessação · Diário da República",
+    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2009-34546475",
+  },
+  ssDoenca: {
+    label: "Subsídio de doença — montante, prazo de garantia e período de espera · Segurança Social",
+    url: "https://www.seg-social.pt/subsidio-de-doenca",
+  },
+  ssDesemprego: {
+    label: "Subsídio de desemprego — prazo de garantia, montante e duração · Segurança Social",
+    url: "https://www.seg-social.pt/subsidio-de-desemprego",
+  },
+  ssParentalidade: {
+    label: "Subsídio parental — modalidades, percentagens e licença exclusiva do pai · Segurança Social",
+    url: "https://www.seg-social.pt/subsidio-parental",
+  },
+  seguroAcidentesTrabalho: {
+    label: "Seguro de acidentes de trabalho — obrigatoriedade (Lei 98/2009, Art. 79.º) · Diário da República",
+    url: "https://diariodarepublica.pt/dr/detalhe/lei/98-2009-490009",
   },
   art87circ_pgdl: {
     label: "Art. 87.º CIRC — Taxas de IRC (texto legal consolidado) · PGDL",
@@ -626,6 +684,37 @@ export const SS_ISENCAO_PRIMEIRO_ANO_MESES = sv(
   "Aplica-se a quem não teve atividade independente nos 3 anos anteriores."
 );
 
+/**
+ * Art. 157.º n.º 1 al. a) do Código Contributivo — quem acumula atividade
+ * independente com trabalho por conta de outrem só está dispensado de
+ * contribuir enquanto o rendimento relevante mensal médio for **inferior a
+ * 4 × IAS**. Acima disso contribui sobre o EXCEDENTE (e sem o mínimo de 20 €).
+ *
+ * Não é, portanto, uma isenção total: era assim que o motor a tratava, e a
+ * partir de ~36 800 €/ano de faturação de serviços isso apagava contribuições
+ * na ordem dos milhares de euros.
+ *
+ * A dispensa exige ainda condições cumulativas que o simulador não consegue
+ * verificar (entidades sem relação de domínio entre si, o outro regime cobrir
+ * as mesmas eventualidades e a remuneração desse regime ser ≥ 1 × IAS) — daí
+ * a nota, para o resultado não passar por certificado.
+ */
+export const SS_ACUMULACAO_LIMITE_IAS = sv(
+  4,
+  "Art. 157.º n.º 1 al. a) Código Contributivo — dispensa até 4 × IAS de rendimento relevante mensal médio",
+  "segSocialGov",
+  TODAY,
+  "Acima do limite contribui-se sobre o excedente, sem contribuição mínima. Depende ainda de a remuneração do trabalho dependente ser ≥ 1 × IAS."
+);
+
+/** Valor do limite de acumulação em euros por mês (4 × IAS). */
+export const SS_ACUMULACAO_LIMITE_MENSAL = sv(
+  Math.round(SS_ACUMULACAO_LIMITE_IAS.value * IAS.value * 100) / 100,
+  "Art. 157.º n.º 1 al. a) Código Contributivo — 4 × IAS",
+  "segSocialGov",
+  TODAY
+);
+
 // ═══════════════════════════════════════════════════════════════════════
 //  REGIME SIMPLIFICADO (IRS) — coeficientes para o rendimento tributável
 // ═══════════════════════════════════════════════════════════════════════
@@ -701,6 +790,29 @@ export const IRS_JOVEM = {
   ),
 };
 
+/**
+ * Programa Regressar / ex-residentes (Art. 12.º-A CIRS).
+ *
+ * O texto do n.º 1 é curto e diz tudo: «São excluídos de tributação 50 % dos
+ * rendimentos do trabalho dependente e dos rendimentos empresariais e
+ * profissionais dos sujeitos passivos, até ao montante do limite superior do
+ * primeiro escalão previsto no n.º 1 do artigo 68.º-A».
+ *
+ * Duas consequências que o motor tem de respeitar:
+ *
+ *  · **São as categorias A e B**, não só a B. Um ex-residente com salário tem
+ *    direito à mesma exclusão de quem passa recibos.
+ *  · **O teto morde no montante EXCLUÍDO**, não no rendimento — é a leitura da
+ *    letra («são excluídos … até ao montante de») e é a que o Guia Fiscal 2026
+ *    da PwC explicita: «a exclusão acima referida está limitada a 250 000 €/ano».
+ *    O limite é derivado do 2.º limiar do Art. 68.º-A, que é onde a lei o foi
+ *    buscar — se esse valor mudar, este acompanha sozinho.
+ */
+export const PROGRAMA_REGRESSAR = {
+  exclusao: sv(0.5, "Art. 12.º-A, n.º 1 CIRS — exclusão de 50% dos rendimentos das categorias A e B", "art12aCirs", DATA_LAST_REVIEW),
+  anos: sv(5, "Art. 12.º-A, n.º 1 CIRS — cinco anos, incluindo o do regresso", "art12aCirs", DATA_LAST_REVIEW),
+};
+
 // ═══════════════════════════════════════════════════════════════════════
 //  IRS — ESCALÕES PROGRESSIVOS (Art. 68.º CIRS) e dedução específica.
 //  Aplicam-se ao RENDIMENTO COLETÁVEL (após coeficiente e deduções).
@@ -737,8 +849,13 @@ export const DEDUCAO_ESPECIFICA_IAS_MULT = 8.54;
 /**
  * Dedução específica da categoria B. No regime simplificado NÃO é uma subtração
  * direta ao coletável (o coeficiente já presume as despesas): conta como despesa
- * automaticamente justificada para a regra dos 15%. Em alternativa, contam as
- * contribuições à SS que excedam 10% do rendimento bruto, se superiores.
+ * automaticamente justificada para a regra dos 15%.
+ *
+ * Em alternativa contam as contribuições obrigatórias para a Segurança Social —
+ * as TOTAIS, a maior das duas (Art. 31.º n.º 13 al. a). Este comentário dizia
+ * «que excedam 10% do rendimento bruto», o que é outra coisa: a dedução autónoma
+ * do n.º 2. O código sempre esteve certo; era o comentário que convidava alguém
+ * a «arranjá-lo».
  */
 export const DEDUCAO_ESPECIFICA_CATB = sv(
   Math.round(Math.max(DEDUCAO_ESPECIFICA_FLOOR, DEDUCAO_ESPECIFICA_IAS_MULT * IAS.value) * 100) / 100,
@@ -756,10 +873,34 @@ export const REGIME_15PCT = sv(
   "Parte de 15% do bruto não justificada com despesas é acrescida ao rendimento tributável."
 );
 
-/** Mínimo de existência (rendimento protegido de IRS). 2026 = RMMG 920 € × 14. */
+/**
+ * Piso fixo do valor de referência do mínimo de existência (Art. 70.º, n.º 1).
+ * Em 2026 coincide com a RMMG × 14 (920 € × 14), mas a lei fixa-o como valor
+ * absoluto — não como uma função do salário mínimo.
+ */
+export const MINIMO_EXISTENCIA_PISO = 12880;
+/** Multiplicadores do braço indexado ao IAS: 1,5 × 14 × IAS (Art. 70.º, n.º 1). */
+export const MINIMO_EXISTENCIA_IAS_MULT = 1.5;
+export const MINIMO_EXISTENCIA_IAS_MESES = 14;
+
+/**
+ * Valor de referência do mínimo de existência (rendimento protegido de IRS).
+ *
+ * O Art. 70.º, n.º 1 manda usar o MAIOR de dois braços: o valor fixo de
+ * 12 880 € e 1,5 × 14 × IAS. Não é «RMMG × 14»: em 2026 os dois coincidem por
+ * acaso (920 × 14 = 12 880 e 1,5 × 14 × 537,13 = 11 279,73, logo prevalece o
+ * fixo), mas fundamentar o parâmetro na RMMG parte assim que o IAS passar de
+ * ~613,33 € — a partir daí é o braço indexado que manda e a fórmula da RMMG
+ * daria um valor a menos.
+ */
 export const MINIMO_EXISTENCIA = sv(
-  12880,
-  "Art. 70.º CIRS — mínimo de existência 2026 (RMMG 920 € × 14)",
+  Math.round(
+    Math.max(
+      MINIMO_EXISTENCIA_PISO,
+      MINIMO_EXISTENCIA_IAS_MULT * MINIMO_EXISTENCIA_IAS_MESES * IAS.value
+    ) * 100
+  ) / 100,
+  "Art. 70.º, n.º 1 CIRS — máx(12 880 €; 1,5 × 14 × IAS)",
   "art70cirs",
   TODAY,
   "Valor de referência. O abatimento é calculado pela fórmula por troços do artigo 70.º."
@@ -795,18 +936,34 @@ export const ADICIONAL_SOLIDARIEDADE = {
   taxa2: sv(0.05, "Art. 68.º-A, n.º 1, al. b) CIRS — taxa de 5% acima de 250 000 €", "art68aCirs", TODAY),
 };
 
+/**
+ * Teto anual da exclusão do Art. 12.º-A: «o limite superior do primeiro escalão
+ * previsto no n.º 1 do artigo 68.º-A» — ou seja, o 2.º limiar do adicional de
+ * solidariedade (250 000 €). Derivado, e não escrito à mão, porque a lei o
+ * define por remissão: a única forma de os dois não divergirem é este vir dali.
+ */
+export const PROGRAMA_REGRESSAR_TETO_CALC = ADICIONAL_SOLIDARIEDADE.limiar2.value;
+
 // ═══════════════════════════════════════════════════════════════════════
 //  IRC — para o comparador "recibos verdes vs empresa" (sociedade)
 // ═══════════════════════════════════════════════════════════════════════
+// ATENÇÃO a quem vier verificar isto contra a fonte: o CORPO do Art. 87.º,
+// n.º 1 diz "17 %". Não é a taxa de 2026. A norma transitória (Art. 3.º da
+// Lei n.º 64/2025, de 7 de novembro), publicada na mesma página logo abaixo
+// do articulado, escalona a descida:
+//     · períodos iniciados em 2026 → 19 %
+//     · períodos iniciados em 2027 → 18 %
+//     · períodos iniciados em ou após 1/1/2028 → 17 % (o texto do artigo)
+// Ler só o articulado dá 17 % e está errado para o ano fiscal em curso.
 export const IRC_TAXA_GERAL = sv(
   0.19,
-  "Art. 87.º CIRC — taxa geral 2026 (reduzida de 20% para 19% pelo OE2026)",
+  "Art. 87.º, n.º 1 CIRC conjugado com a norma transitória do Art. 3.º, n.º 2 da Lei n.º 64/2025, de 7 de novembro — 19% nos períodos de tributação iniciados em 2026 (o corpo do artigo prevê 17%, mas só a partir de 2028)",
   "art87circ",
   TODAY
 );
 export const IRC_TAXA_PME = sv(
   0.15,
-  "Art. 87.º CIRC — taxa reduzida PME nos primeiros 50.000 € de matéria coletável",
+  "Art. 87.º, n.º 2 CIRC (redação da Lei n.º 64/2025, de 7 de novembro) — taxa reduzida PME nos primeiros 50 000 € de matéria coletável, aplicável aos períodos iniciados em ou após 1/1/2026 (Art. 3.º, n.º 4 da mesma lei)",
   "art87circ",
   TODAY
 );
@@ -1408,6 +1565,19 @@ export const LIMITE_GLOBAL_DEDUCOES = sv(
   "semLimiteAte = 1.º escalão Art. 68.º (8.342 € em 2026); escalaoSuperior = 1.º escalão Art. 68.º-A (80.000 €, fixo)."
 );
 
+/**
+ * Majoração do limite global das deduções à coleta em agregados numerosos
+ * (Art. 78.º, n.º 8): a partir do 3.º dependente, o limite do n.º 7 sobe 5% por
+ * cada dependente. A majoração conta TODOS os dependentes, não só os que
+ * excedem dois — com 4 dependentes o limite sobe 20%, não 10%.
+ */
+export const LIMITE_GLOBAL_MAJORACAO_DEPENDENTES = sv(
+  { minDependentes: 3, porDependente: 0.05 },
+  "Art. 78.º, n.º 8 CIRS — limites do n.º 7 majorados em 5% por dependente nos agregados com três ou mais",
+  "art78aCirs",
+  TODAY
+);
+
 // ═══════════════════════════════════════════════════════════════════════
 //  TRIBUTAÇÃO AUTÓNOMA — IRC (Art. 88.º CIRC)
 //  ---------------------------------------------------------------------
@@ -1693,6 +1863,24 @@ export const DEDUCAO_DEFICIENCIA_GRAU_MINIMO = sv(
   "Art. 56.º-A / 87.º CIRS — grau mínimo de incapacidade permanente de 60%",
   "portalFinancasArt87",
   TODAY
+);
+
+/**
+ * Art. 55.º do Código Contributivo — base de incidência dos membros de órgãos
+ * estatutários (gerentes, administradores): a remuneração efetivamente
+ * auferida, com o **mínimo de 1 × IAS**.
+ *
+ * Um gerente sem salário não fica sem Segurança Social: paga sobre 1 IAS. O
+ * mínimo cai se o MOE acumular com outra atividade remunerada cuja base
+ * contributiva já seja ≥ 1 IAS, ou se for pensionista de invalidez/velhice —
+ * casos que o simulador não consegue verificar.
+ */
+export const MOE_BASE_MINIMA_MENSAL = sv(
+  IAS.value,
+  "Art. 55.º Código Contributivo — base de incidência mínima dos MOE = 1 × IAS",
+  "segSocialGov",
+  TODAY,
+  "Não se aplica em acumulação com outra atividade com base contributiva ≥ 1 IAS, nem a pensionistas."
 );
 
 /** Contribuição mínima mensal de SS para trabalhadores independentes. */
@@ -2218,6 +2406,32 @@ export const DEDUCAO_ESPECIFICA_DEPENDENTE = sv(
   DEP_TODAY
 );
 
+/**
+ * Tecto da dedução específica da categoria A quando elevada por quotizações
+ * para ordens profissionais (Art. 25.º, n.º 4): 75% de 12 × IAS. Só a diferença
+ * face à alínea a) pode vir das quotizações, e só quando a atividade é exercida
+ * exclusivamente por conta de outrem — daí ser um tecto, não um acréscimo livre.
+ */
+export const DEDUCAO_ESPECIFICA_DEP_MAX_ORDENS = sv(
+  Math.round(0.75 * 12 * IAS.value * 100) / 100,
+  "Art. 25.º, n.º 4 CIRS — elevação da dedução específica até 75% de 12 × IAS por quotizações para ordens profissionais",
+  "art25cirs",
+  DEP_TODAY
+);
+
+/**
+ * Quotizações sindicais (Art. 25.º, n.º 1, al. c): dedutíveis até 1% do
+ * rendimento bruto da categoria e acrescidas de 100% — ou seja, 1% do bruto
+ * suportado vale 2% de dedução. Acrescem à dedução da alínea a), não a
+ * substituem.
+ */
+export const QUOTIZACOES_SINDICAIS = sv(
+  { limiteFracaoBruto: 0.01, majoracao: 1 },
+  "Art. 25.º, n.º 1, al. c) CIRS — quotizações sindicais até 1% do rendimento bruto, acrescidas de 100%",
+  "art25cirs",
+  DEP_TODAY
+);
+
 /** Remuneração mensal até este valor: isenta de retenção na fonte (acompanha o SMN). */
 export const RETENCAO_DEP_ISENCAO = sv(
   920,
@@ -2600,6 +2814,547 @@ export function tabelaRetencaoDependente(
   return temDeps ? t.v : t.iv; // não casado
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+//  DIREITOS, COBRANÇAS E EXECUÇÃO FISCAL
+//  ---------------------------------------------------------------------
+//  Números citados pelos Guias da secção «Direitos e cobranças». Estavam
+//  escritos à mão no texto de cada guia, contra a regra 1 do projeto: as
+//  taxas de juro comerciais mudam TODOS OS SEMESTRES (fixadas por Aviso da
+//  Entidade do Tesouro e Finanças em janeiro e julho) e a unidade de conta
+//  pode ser atualizada em cada Orçamento do Estado. Escritos no corpo do
+//  guia, ficariam desatualizados em silêncio.
+// ═══════════════════════════════════════════════════════════════════════
+
+const REV_DIREITOS = "2026-07-29";
+
+/**
+ * Unidade de conta processual (UC). Base de vários limiares do CPPT e do
+ * Regulamento das Custas Processuais. Mantém-se em 102 € em 2026: o
+ * Art. 242.º da Lei 73-A/2025 (OE 2026) suspendeu de novo a atualização.
+ */
+export const UNIDADE_CONTA = sv(
+  102,
+  "Unidade de conta processual — Art. 242.º da Lei n.º 73-A/2025 (OE 2026), que manteve o valor de 2025",
+  "unidadeContaOE",
+  REV_DIREITOS,
+  "Usada para traduzir em euros os limiares expressos em UC (ex.: 500 UC do Art. 196.º, n.º 5 CPPT)."
+);
+
+/**
+ * Taxas supletivas de juros moratórios. As duas primeiras são COMERCIAIS e
+ * fixadas semestralmente por Aviso — daí o `effectiveTo`: passado 30 de
+ * junho de 2026 o valor deixa de estar em vigor e tem de ser reconfirmado.
+ * A distinção entre as duas é subtil e cara: quem cobra uma fatura B2B ao
+ * abrigo do DL 62/2013 tem direito à taxa mais alta e aplica quase sempre a
+ * mais baixa.
+ */
+export const JUROS_MORA = {
+  transacoesComerciais: sv(
+    0.1015,
+    "Taxa supletiva de juros moratórios de créditos do § 5.º do Art. 102.º do Código Comercial e do DL 62/2013 (atrasos de pagamento em transações comerciais) — 1.º semestre de 2026",
+    "avisoJuros2026",
+    REV_DIREITOS,
+    "Aviso n.º 822/2026/2, DR n.º 11, de 16-01-2026. Fixada por semestre: reconfirmar em julho de 2026."
+  ),
+  outrosCreditosComerciais: sv(
+    0.0915,
+    "Taxa supletiva de juros moratórios de créditos comerciais do § 3.º do Art. 102.º do Código Comercial — 1.º semestre de 2026",
+    "avisoJuros2026",
+    REV_DIREITOS,
+    "Mesmo Aviso. Aplica-se aos créditos comerciais fora do âmbito do DL 62/2013."
+  ),
+  civis: sv(
+    0.04,
+    "Taxa de juros legais e de juros de mora de obrigações civis — Portaria n.º 291/2003",
+    "portaria291_2003",
+    REV_DIREITOS,
+    "Também é a taxa dos juros indemnizatórios devidos pela AT ao contribuinte (Art. 43.º LGT)."
+  ),
+  /** Semestre a que as taxas comerciais acima dizem respeito. */
+  vigenciaComercialAte: "2026-06-30",
+};
+
+/** Indemnização mínima por custos de cobrança (Art. 8.º, n.º 1 DL 62/2013). */
+export const INDEMNIZACAO_CUSTOS_COBRANCA = sv(
+  40,
+  "Art. 8.º, n.º 1 do DL 62/2013 — montante mínimo de indemnização pelos custos de cobrança, sem necessidade de interpelação",
+  "avisoJuros2026",
+  REV_DIREITOS,
+  "Valor fixo no diploma, não indexado."
+);
+
+/** Prazo supletivo de pagamento nas transações comerciais (Art. 4.º, n.º 3 DL 62/2013). */
+export const PRAZO_PAGAMENTO_SUPLETIVO_DIAS = sv(
+  30,
+  "Art. 4.º, n.º 3 do DL 62/2013 — prazo supletivo de pagamento na falta de estipulação contratual",
+  "avisoJuros2026",
+  REV_DIREITOS,
+  "O Art. 5.º fixa o mesmo prazo com entidades públicas; o que muda é a margem de estipulação, não a duração."
+);
+
+/** Pagamento em prestações de dívidas fiscais (Art. 196.º e 198.º-A CPPT). */
+export const PLANO_PRESTACOES = {
+  maximoGeral: sv(
+    36,
+    "Art. 196.º, n.º 5 CPPT — limite geral de prestações mensais mediante demonstração da situação económica",
+    "cppt198a",
+    REV_DIREITOS
+  ),
+  alargamentoAnos: sv(
+    5,
+    "Art. 196.º, n.º 6 CPPT — alargamento até cinco anos em caso de notória dificuldade financeira",
+    "cppt198a",
+    REV_DIREITOS
+  ),
+  alargamentoLimiarUC: sv(
+    500,
+    "Art. 196.º, n.º 6 CPPT — o alargamento exige dívida superior a 500 unidades de conta",
+    "cppt198a",
+    REV_DIREITOS
+  ),
+  /** Limiares do plano OFICIOSO (automático, sem garantia) do Art. 198.º-A. */
+  automaticoSingulares: sv(
+    5000,
+    "Art. 198.º-A CPPT — plano oficioso de pagamento em prestações para dívidas até 5 000 € de pessoas singulares",
+    "cppt198a",
+    REV_DIREITOS,
+    "Criado pela AT sem pedido nem garantia, e disponibilizado na área reservada do Portal das Finanças."
+  ),
+  automaticoColetivas: sv(
+    10000,
+    "Art. 198.º-A CPPT — plano oficioso de pagamento em prestações para dívidas até 10 000 € de pessoas coletivas",
+    "cppt198a",
+    REV_DIREITOS
+  ),
+};
+
+/** Limites da penhora de rendimentos do trabalho (Art. 738.º CPC). */
+export const PENHORA = {
+  fracaoImpenhoravel: sv(
+    2 / 3,
+    "Art. 738.º, n.º 1 CPC — são impenhoráveis dois terços da parte líquida dos vencimentos, salários e pensões",
+    "cpc738dr",
+    REV_DIREITOS
+  ),
+  tetoSalariosMinimos: sv(
+    3,
+    "Art. 738.º, n.º 3 CPC — a impenhorabilidade tem como limite máximo o equivalente a três salários mínimos nacionais",
+    "cpc738dr",
+    REV_DIREITOS
+  ),
+  pisoSalariosMinimos: sv(
+    1,
+    "Art. 738.º, n.º 3 CPC — não tendo o executado outro rendimento, o limite mínimo é um salário mínimo nacional",
+    "cpc738dr",
+    REV_DIREITOS
+  ),
+  contaBancariaSalariosMinimos: sv(
+    1,
+    "Art. 738.º, n.º 6 CPC — é impenhorável o saldo bancário correspondente a um salário mínimo nacional",
+    "cpc738dr",
+    REV_DIREITOS,
+    "É a penhora mais frequente na execução fiscal e a que acontece sem aviso prévio."
+  ),
+};
+
+// Valores derivados dos limites da penhora (nunca digitados) ─────────────
+export const PENHORA_TETO_CALC = PENHORA.tetoSalariosMinimos.value * SMN.value; // 2 760 €
+export const PENHORA_PISO_CALC = PENHORA.pisoSalariosMinimos.value * SMN.value; // 920 €
+export const PRESTACOES_ALARGAMENTO_LIMIAR_EUR =
+  PLANO_PRESTACOES.alargamentoLimiarUC.value * UNIDADE_CONTA.value; // 51 000 €
+
+// ═══════════════════════════════════════════════════════════════════════
+//  PROTEÇÃO SOCIAL E CESSAÇÃO DO CONTRATO (Categoria A)
+//  ---------------------------------------------------------------------
+//  Baixa médica, parentalidade, desemprego e contas finais do contrato.
+//  Alimentam os guias novos de «Trabalho por conta de outrem» e os motores
+//  de `fiscal-dependente.ts`.
+// ═══════════════════════════════════════════════════════════════════════
+
+const REV_PROTECAO = "2026-07-29";
+
+/** Subsídio de doença (DL 28/2004). */
+export const SUBSIDIO_DOENCA = {
+  periodoEsperaDias: sv(
+    3,
+    "DL 28/2004 — período de espera de 3 dias para trabalhadores por conta de outrem (não aplicável em internamento hospitalar, tuberculose ou doença profissional)",
+    "ssDoenca",
+    REV_PROTECAO
+  ),
+  prazoGarantiaMeses: sv(
+    6,
+    "DL 28/2004 — prazo de garantia de seis meses com registo de remunerações, seguidos ou interpolados",
+    "ssDoenca",
+    REV_PROTECAO
+  ),
+  /** Percentagem da remuneração de referência, por duração da incapacidade. */
+  escaloes: sv(
+    [
+      { ateDias: 30, taxa: 0.55 },
+      { ateDias: 90, taxa: 0.6 },
+      { ateDias: 365, taxa: 0.7 },
+      { ateDias: Infinity, taxa: 0.75 },
+    ] as { ateDias: number; taxa: number }[],
+    "DL 28/2004 — 55% até 30 dias, 60% de 31 a 90, 70% de 91 a 365 e 75% acima de 365 dias da remuneração de referência",
+    "ssDoenca",
+    REV_PROTECAO,
+    "Há uma majoração de 5 p.p. sobre os escalões de 55% e 60% quando a remuneração de referência não excede 500 € ou o agregado tem três ou mais descendentes — modelada em `MAJORACAO_DOENCA`."
+  ),
+  majoracao: sv(
+    0.05,
+    "DL 28/2004 — majoração de 5 pontos percentuais nos escalões de 55% e 60% para remunerações de referência baixas ou agregados com três ou mais descendentes",
+    "ssDoenca",
+    REV_PROTECAO
+  ),
+  majoracaoRemuneracaoLimite: sv(
+    500,
+    "DL 28/2004 — limite da remuneração de referência para a majoração de 5 p.p.",
+    "ssDoenca",
+    REV_PROTECAO
+  ),
+};
+
+/** Licença parental inicial e licença exclusiva do pai (Código do Trabalho + DL 91/2009). */
+export const LICENCA_PARENTAL = {
+  modalidades: sv(
+    [
+      { dias: 120, taxa: 1.0, partilhada: false },
+      { dias: 150, taxa: 0.8, partilhada: false },
+      { dias: 150, taxa: 1.0, partilhada: true },
+      { dias: 180, taxa: 0.83, partilhada: true },
+    ] as { dias: number; taxa: number; partilhada: boolean }[],
+    "Licença parental inicial — 120 dias a 100%, 150 dias a 80% sem partilha, 120+30 partilhados a 100% e 180 dias (150+30) a 83% com partilha",
+    "ssParentalidade",
+    REV_PROTECAO,
+    "A partilha exige que cada progenitor goze em exclusivo pelo menos 30 dias seguidos ou dois períodos de 15."
+  ),
+  partilhaDiasExclusivos: sv(
+    30,
+    "Condição da partilha — cada progenitor goza em exclusivo pelo menos 30 dias seguidos, ou dois períodos de 15 dias",
+    "ssParentalidade",
+    REV_PROTECAO
+  ),
+  paiObrigatoriaDias: sv(
+    28,
+    "Licença parental exclusiva do pai — 28 dias obrigatórios, gozados nos 42 dias seguintes ao nascimento",
+    "ssParentalidade",
+    REV_PROTECAO
+  ),
+  paiOpcionaisDias: sv(
+    7,
+    "Licença parental exclusiva do pai — 7 dias opcionais, gozáveis durante a licença parental inicial da mãe",
+    "ssParentalidade",
+    REV_PROTECAO
+  ),
+  paiTaxa: sv(
+    1.0,
+    "A licença exclusiva do pai é paga a 100% da remuneração de referência, qualquer que seja a modalidade escolhida para a licença inicial",
+    "ssParentalidade",
+    REV_PROTECAO
+  ),
+};
+
+/** Subsídio de desemprego (DL 220/2006). */
+export const SUBSIDIO_DESEMPREGO = {
+  prazoGarantiaDias: sv(
+    360,
+    "DL 220/2006 — prazo de garantia de 360 dias com registo de remunerações nos 24 meses anteriores à data do desemprego",
+    "ssDesemprego",
+    REV_PROTECAO
+  ),
+  taxa: sv(
+    0.65,
+    "DL 220/2006 — o montante diário corresponde a 65% da remuneração de referência",
+    "ssDesemprego",
+    REV_PROTECAO
+  ),
+  minimoIAS: sv(
+    1,
+    "DL 220/2006 — limite mínimo do montante mensal: 1 × IAS (salvo se a remuneração de referência for inferior, caso em que o montante é igual a esta)",
+    "ssDesemprego",
+    REV_PROTECAO,
+    "Fontes secundárias divergem sobre a leitura deste limite mínimo; sinalizado para revisão fiscal humana."
+  ),
+  minimoMajoradoIAS: sv(
+    1.15,
+    "DL 220/2006 — limite mínimo majorado de 1,15 × IAS quando as remunerações registadas não foram inferiores à retribuição mínima mensal garantida",
+    "ssDesemprego",
+    REV_PROTECAO,
+    "Sinalizado para revisão fiscal humana (ver nota de `minimoIAS`)."
+  ),
+  maximoIAS: sv(
+    2.5,
+    "DL 220/2006 — limite máximo do montante mensal: 2,5 × IAS",
+    "ssDesemprego",
+    REV_PROTECAO
+  ),
+  tetoReferenciaLiquida: sv(
+    0.75,
+    "DL 220/2006 — o montante mensal não pode exceder 75% da remuneração de referência líquida de contribuições e IRS",
+    "ssDesemprego",
+    REV_PROTECAO
+  ),
+  duracaoMinimaDias: sv(
+    150,
+    "DL 220/2006 — duração mínima do período de concessão",
+    "ssDesemprego",
+    REV_PROTECAO
+  ),
+  duracaoMaximaDias: sv(
+    540,
+    "DL 220/2006 — duração máxima do período de concessão, conforme a idade e a carreira contributiva",
+    "ssDesemprego",
+    REV_PROTECAO
+  ),
+};
+
+/** Compensação por cessação do contrato de trabalho (Art. 366.º CT). */
+export const COMPENSACAO_CESSACAO = {
+  diasPorAno: sv(
+    12,
+    "Art. 366.º, n.º 1 CT — 12 dias de retribuição base e diuturnidades por cada ano completo de antiguidade (contratos celebrados a partir de 01-10-2013)",
+    "ct",
+    REV_PROTECAO
+  ),
+  tetoBaseRMMG: sv(
+    20,
+    "Art. 366.º, n.º 2, al. a) CT — a retribuição base e diuturnidades a considerar não pode exceder 20 × RMMG",
+    "ct",
+    REV_PROTECAO
+  ),
+  tetoTotalMeses: sv(
+    12,
+    "Art. 366.º, n.º 2, al. b) CT — o montante global da compensação não pode exceder 12 meses de retribuição base e diuturnidades",
+    "ct",
+    REV_PROTECAO
+  ),
+  tetoTotalRMMG: sv(
+    240,
+    "Art. 366.º, n.º 2, al. b) CT — nem exceder 240 × RMMG",
+    "ct",
+    REV_PROTECAO
+  ),
+  /** Tranches dos regimes transitórios, por data de admissão. */
+  transitorios: sv(
+    [
+      { ate: "2012-10-31", diasPorAno: 30, rotulo: "um mês por ano até 31-10-2012" },
+      { ate: "2013-09-30", diasPorAno: 20, rotulo: "20 dias por ano até 30-09-2013" },
+      { ate: null, diasPorAno: 12, rotulo: "12 dias por ano a partir de 01-10-2013" },
+    ] as { ate: string | null; diasPorAno: number; rotulo: string }[],
+    "Regimes transitórios da compensação (Lei 23/2012 e Lei 69/2013) — quem foi admitido antes de 01-11-2011 acumula tranches com contagens diferentes",
+    "ct",
+    REV_PROTECAO,
+    "É a razão pela qual dois colegas com a mesma antiguidade recebem valores muito diferentes."
+  ),
+};
+
+/** Férias (Art. 238.º e seguintes do Código do Trabalho). */
+export const FERIAS = {
+  diasUteisAno: sv(
+    22,
+    "Art. 238.º, n.º 1 CT — o período anual de férias tem a duração mínima de 22 dias úteis",
+    "ct",
+    REV_PROTECAO
+  ),
+  anoAdmissaoDiasPorMes: sv(
+    2,
+    "Art. 239.º, n.º 1 CT — no ano de admissão, dois dias úteis de férias por cada mês de duração do contrato",
+    "ct",
+    REV_PROTECAO
+  ),
+  anoAdmissaoMaximo: sv(
+    20,
+    "Art. 239.º, n.º 1 CT — no ano de admissão as férias têm o máximo de 20 dias úteis, gozáveis após seis meses completos de execução do contrato",
+    "ct",
+    REV_PROTECAO
+  ),
+  indemnizacaoNaoGozadasFator: sv(
+    3,
+    "Art. 246.º, n.º 1 CT — as férias não gozadas por culpa do empregador dão direito ao triplo da retribuição correspondente",
+    "ct",
+    REV_PROTECAO,
+    "Direito real, frequentemente violado e raramente reclamado — mesmo perfil dos 40 € do DL 62/2013."
+  ),
+};
+
+/** Trabalho noturno (Art. 223.º e 266.º CT). */
+export const TRABALHO_NOTURNO = {
+  horaInicio: sv(
+    22,
+    "Art. 223.º, n.º 1 CT — o período de trabalho noturno compreende, em regra, o intervalo entre as 22 horas e as 7 horas do dia seguinte",
+    "ct",
+    REV_PROTECAO,
+    "O IRCT pode fixar outro intervalo, dentro dos limites legais."
+  ),
+  horaFim: sv(
+    7,
+    "Art. 223.º, n.º 1 CT — fim do período de trabalho noturno",
+    "ct",
+    REV_PROTECAO
+  ),
+  acrescimo: sv(
+    0.25,
+    "Art. 266.º, n.º 1 CT — o trabalho noturno é pago com acréscimo de 25% relativamente ao pagamento de trabalho equivalente prestado durante o dia",
+    "ct",
+    REV_PROTECAO
+  ),
+};
+
+/**
+ * Seguro de acidentes de trabalho — obrigatório desde o primeiro dia, sem
+ * exceção (Art. 79.º da Lei 98/2009). O prémio depende da atividade e da
+ * seguradora; guarda-se uma ESTIMATIVA de ordem de grandeza para o custo
+ * total do posto de trabalho, sempre rotulada como tal na interface.
+ */
+export const SEGURO_ACIDENTES_TRABALHO_ESTIMATIVA = sv(
+  0.01,
+  "Seguro de acidentes de trabalho — obrigatório (Art. 79.º da Lei 98/2009). Estimativa de 1% da massa salarial para efeitos de custo total do posto de trabalho",
+  "seguroAcidentesTrabalho",
+  REV_PROTECAO,
+  "ESTIMATIVA, não um parâmetro legal: o prémio real varia com a atividade, a sinistralidade e a seguradora."
+);
+
+/**
+ * Membros de órgãos estatutários (MOE) que exercem gerência. A base de
+ * incidência tem por limite mínimo o valor do IAS mesmo com remuneração
+ * declarada de zero — é o custo que quase toda a gente esquece ao dizer
+ * «não me pago nada».
+ */
+export const SS_MOE = {
+  trabalhador: sv(
+    0.11,
+    "Código Contributivo — taxa contributiva do membro de órgão estatutário que exerce funções de gerência",
+    "codContributivo",
+    REV_PROTECAO
+  ),
+  entidade: sv(
+    0.2375,
+    "Código Contributivo — taxa contributiva da entidade sobre a remuneração do membro de órgão estatutário com funções de gerência",
+    "codContributivo",
+    REV_PROTECAO
+  ),
+  /**
+   * Base de incidência mínima dos MOE, em múltiplos do IAS.
+   *
+   * O valor em euros vive em `MOE_BASE_MINIMA_MENSAL` (= 1 × IAS), que já
+   * existia e traz a ressalva importante: não se aplica em acumulação com
+   * outra atividade com base contributiva ≥ 1 IAS, nem a pensionistas. Aqui
+   * guarda-se só o múltiplo, para os guias poderem citar a regra sem
+   * duplicarem o valor.
+   */
+  baseMinimaIAS: sv(
+    MOE_BASE_MINIMA_MENSAL.value / IAS.value,
+    "Art. 55.º Código Contributivo — a base de incidência dos membros de órgãos estatutários tem por limite mínimo o valor do IAS",
+    "codContributivo",
+    REV_PROTECAO
+  ),
+};
+
+// ═══════════════════════════════════════════════════════════════════════
+//  OBRIGAÇÕES ANUAIS DA SOCIEDADE (IRC)
+// ═══════════════════════════════════════════════════════════════════════
+
+/** Pagamentos por conta de IRC (Art. 104.º, 105.º e 107.º CIRC). */
+export const PAGAMENTOS_CONTA_IRC = {
+  numero: sv(3, "Art. 104.º CIRC — três pagamentos por conta", "ircObrigacoes", REV_PROTECAO),
+  meses: sv(
+    [7, 9, 12] as number[],
+    "Art. 104.º CIRC — vencimento em julho, setembro e até 15 de dezembro do próprio período de tributação",
+    "ircObrigacoes",
+    REV_PROTECAO
+  ),
+  taxaAte500k: sv(
+    0.8,
+    "Art. 105.º CIRC — 80% da coleta do período anterior líquida de retenções, quando o volume de negócios não excedeu 500 000 €",
+    "ircObrigacoes",
+    REV_PROTECAO
+  ),
+  taxaAcima500k: sv(
+    0.95,
+    "Art. 105.º CIRC — 95% da coleta do período anterior líquida de retenções, quando o volume de negócios excedeu 500 000 €",
+    "ircObrigacoes",
+    REV_PROTECAO
+  ),
+  limiteVolumeNegocios: sv(
+    500000,
+    "Art. 105.º CIRC — limiar de volume de negócios que separa os 80% dos 95%",
+    "ircObrigacoes",
+    REV_PROTECAO
+  ),
+  dispensaColeta: sv(
+    200,
+    "Art. 105.º CIRC — não há lugar a pagamentos por conta quando a coleta do período anterior, líquida de retenções, é igual ou inferior a 200 €",
+    "ircObrigacoes",
+    REV_PROTECAO
+  ),
+  margemErroTerceiro: sv(
+    0.2,
+    "Art. 107.º CIRC — o terceiro pagamento pode ser limitado ou suspenso; se a estimativa errar por mais de 20%, são devidos juros compensatórios",
+    "ircObrigacoes",
+    REV_PROTECAO
+  ),
+};
+
+/** Reporte de prejuízos fiscais (Art. 52.º CIRC, redação desde 2023). */
+export const PREJUIZOS_FISCAIS = {
+  limitePercentagemLucro: sv(
+    0.65,
+    "Art. 52.º, n.º 2 CIRC — a dedução de prejuízos em cada período não pode exceder 65% do respetivo lucro tributável",
+    "ircObrigacoes",
+    REV_PROTECAO
+  ),
+  semLimiteTemporal: sv(
+    true,
+    "Art. 52.º, n.º 1 CIRC — os prejuízos fiscais são dedutíveis aos lucros tributáveis de períodos seguintes sem limite temporal (regime em vigor desde 2023; antes eram 12 anos e 70%)",
+    "ircObrigacoes",
+    REV_PROTECAO
+  ),
+  alteracaoTitularidadeLimite: sv(
+    0.5,
+    "Art. 52.º, n.º 8 CIRC — a dedução pode cessar quando se verifique alteração da titularidade de mais de 50% do capital social, salvo exceções e mediante autorização",
+    "ircObrigacoes",
+    REV_PROTECAO
+  ),
+};
+
+/** Reserva legal obrigatória antes de distribuir lucros (Art. 218.º CSC). */
+export const RESERVA_LEGAL = {
+  percentagemLucro: sv(
+    0.05,
+    "Art. 218.º CSC — pelo menos 5% do lucro do exercício é destinado à constituição da reserva legal",
+    "csc",
+    REV_PROTECAO
+  ),
+  limiteCapital: sv(
+    0.2,
+    "Art. 218.º CSC — a reserva legal constitui-se até atingir 20% do capital social (com o mínimo legal de 2 500 €)",
+    "csc",
+    REV_PROTECAO
+  ),
+};
+
+/** Prazos das entregas anuais da sociedade. */
+export const PRAZOS_ANUAIS_EMPRESA = {
+  modelo22: sv(
+    "05-31",
+    "Art. 120.º CIRC — a declaração Modelo 22 é entregue até 31 de maio do ano seguinte",
+    "ircObrigacoes",
+    REV_PROTECAO
+  ),
+  ies: sv(
+    "07-15",
+    "IES / declaração anual — entrega até 15 de julho do ano seguinte",
+    "ircObrigacoes",
+    REV_PROTECAO
+  ),
+  aprovacaoContas: sv(
+    "03-31",
+    "Art. 65.º CSC — as contas do exercício são aprovadas até 31 de março do ano seguinte",
+    "csc",
+    REV_PROTECAO
+  ),
+};
+
 export function assertFiscalDataIntegrity(): void {
   const erros: string[] = [];
   const EPS = 0.01;
@@ -2615,6 +3370,16 @@ export function assertFiscalDataIntegrity(): void {
   }
   if (Math.abs(IRS_JOVEM_TETO_CALC - IRS_JOVEM.tetoIAS.value * IAS_VALUE) > EPS) {
     erros.push("Teto do IRS Jovem inconsistente com 55×IAS.");
+  }
+  if (
+    Math.abs(SS_ACUMULACAO_LIMITE_IAS.value * IAS_VALUE - SS_ACUMULACAO_LIMITE_MENSAL.value) > EPS
+  ) {
+    erros.push("Limite de acumulação da SS inconsistente com 4×IAS.");
+  }
+  // O limite de acumulação tem de ficar abaixo do teto: acima dele a dispensa
+  // do Art. 157.º deixaria de ter qualquer efeito prático.
+  if (!(SS_ACUMULACAO_LIMITE_MENSAL.value < SS_BASE_MAX_MENSAL.value)) {
+    erros.push("Limite de acumulação da SS (4×IAS) não é inferior ao teto (12×IAS).");
   }
 
   // 2) Excesso de IVA = 125% do limite de isenção.
@@ -2928,6 +3693,29 @@ export function assertFiscalDataIntegrity(): void {
   if (Math.abs(DEDUCAO_ESPECIFICA_DEPENDENTE.value - Math.round(8.54 * IAS.value * 100) / 100) > EPS) {
     erros.push("Dedução específica (cat. A) deve ser 8,54 × IAS.");
   }
+  if (
+    Math.abs(DEDUCAO_ESPECIFICA_DEP_MAX_ORDENS.value - Math.round(0.75 * 12 * IAS.value * 100) / 100) > EPS
+  ) {
+    erros.push("Tecto do Art. 25.º n.º 4 (cat. A) deve ser 75% de 12 × IAS.");
+  }
+  // O n.º 4 ELEVA a dedução da alínea a) — um tecto inferior a ela tornaria a
+  // norma inaplicável e cortaria silenciosamente a dedução de quem paga ordem.
+  if (!(DEDUCAO_ESPECIFICA_DEP_MAX_ORDENS.value > DEDUCAO_ESPECIFICA_DEPENDENTE.value)) {
+    erros.push("Tecto do Art. 25.º n.º 4 não é superior à dedução específica da alínea a).");
+  }
+  if (!isRate(QUOTIZACOES_SINDICAIS.value.limiteFracaoBruto)) {
+    erros.push("Limite das quotizações sindicais (fração do bruto) inválido.");
+  }
+  if (!(QUOTIZACOES_SINDICAIS.value.majoracao >= 0)) {
+    erros.push("Majoração das quotizações sindicais negativa.");
+  }
+  const majDep = LIMITE_GLOBAL_MAJORACAO_DEPENDENTES.value;
+  if (!(Number.isInteger(majDep.minDependentes) && majDep.minDependentes >= 1)) {
+    erros.push("Majoração do limite global: número mínimo de dependentes inválido.");
+  }
+  if (!isRate(majDep.porDependente)) {
+    erros.push("Majoração do limite global por dependente inválida.");
+  }
   // Valida as tabelas de retenção das três regiões. Nota: a taxa marginal NÃO é
   // necessariamente crescente entre escalões (ex.: Tabela I da Madeira desce de
   // 30,28% para 28,02%), por isso só se valida o domínio [0,1] e o limite crescente.
@@ -2955,8 +3743,20 @@ export function assertFiscalDataIntegrity(): void {
   // 5b) Coerência do Salário Mínimo Nacional (SMN / RMMG). Estes cross-checks
   //     teriam bloqueado a contradição "870 vs 920" que existia no ficheiro.
   if (!(SMN.value > 0)) erros.push("SMN não positivo.");
-  if (MINIMO_EXISTENCIA.value !== SMN.value * 14) {
-    erros.push(`Mínimo de existência (${MINIMO_EXISTENCIA.value}) deve ser SMN × 14 (${SMN.value * 14}).`);
+  // Art. 70.º, n.º 1: o valor de referência é o MAIOR de (piso fixo; 1,5×14×IAS).
+  // A invariante segue a lei, não a coincidência de 2026 com a RMMG × 14 — assim
+  // continua a valer quando o braço indexado ao IAS ultrapassar o piso.
+  const minimoExistenciaEsperado =
+    Math.round(
+      Math.max(
+        MINIMO_EXISTENCIA_PISO,
+        MINIMO_EXISTENCIA_IAS_MULT * MINIMO_EXISTENCIA_IAS_MESES * IAS.value
+      ) * 100
+    ) / 100;
+  if (Math.abs(MINIMO_EXISTENCIA.value - minimoExistenciaEsperado) > EPS) {
+    erros.push(
+      `Mínimo de existência (${MINIMO_EXISTENCIA.value}) deve ser máx(${MINIMO_EXISTENCIA_PISO}; 1,5 × 14 × IAS) = ${minimoExistenciaEsperado}.`
+    );
   }
   if (RETENCAO_DEP_ISENCAO.value !== SMN.value) {
     erros.push(`Limiar de isenção de retenção (${RETENCAO_DEP_ISENCAO.value}) deve acompanhar o SMN (${SMN.value}).`);
@@ -2974,6 +3774,115 @@ export function assertFiscalDataIntegrity(): void {
   }
   if (RETENCAO_DEP_CONTINENTE_T1.value[0].ate !== SMN.value) {
     erros.push(`1.º escalão de retenção Tabela I (${RETENCAO_DEP_CONTINENTE_T1.value[0].ate}) deve igualar o SMN (${SMN.value}).`);
+  }
+
+  // 5c-bis) Programa Regressar (Art. 12.º-A CIRS). O teto é definido POR
+  // REMISSÃO para o Art. 68.º-A — se alguém o escrever à mão e o adicional de
+  // solidariedade mudar, ficam dois números a dizer coisas diferentes sobre a
+  // mesma norma. A invariante prende-os um ao outro.
+  if (!isRate(PROGRAMA_REGRESSAR.exclusao.value) || PROGRAMA_REGRESSAR.exclusao.value <= 0) {
+    erros.push("Programa Regressar: percentagem de exclusão inválida.");
+  }
+  if (PROGRAMA_REGRESSAR_TETO_CALC !== ADICIONAL_SOLIDARIEDADE.limiar2.value) {
+    erros.push(
+      `Teto do Art. 12.º-A (${PROGRAMA_REGRESSAR_TETO_CALC}) deve ser o limite superior do 1.º escalão do Art. 68.º-A (${ADICIONAL_SOLIDARIEDADE.limiar2.value}).`
+    );
+  }
+  if (!(PROGRAMA_REGRESSAR.anos.value > 0)) {
+    erros.push("Programa Regressar: duração em anos não positiva.");
+  }
+
+  // 5b) Direitos, cobranças e proteção social — invariantes dos parâmetros novos.
+  //     Estes números alimentam os Guias; se algum ficar incoerente, é melhor
+  //     falhar o build do que publicar um guia que engana quem o lê.
+  if (!(JUROS_MORA.outrosCreditosComerciais.value < JUROS_MORA.transacoesComerciais.value)) {
+    erros.push(
+      "Juros de mora: a taxa das transações comerciais (DL 62/2013) tem de ser superior à dos restantes créditos comerciais."
+    );
+  }
+  if (![JUROS_MORA.transacoesComerciais, JUROS_MORA.outrosCreditosComerciais, JUROS_MORA.civis].every((j) => isRate(j.value))) {
+    erros.push("Juros de mora: taxa fora do intervalo [0,1].");
+  }
+  if (!isIsoDate(JUROS_MORA.vigenciaComercialAte)) {
+    erros.push("Juros de mora: `vigenciaComercialAte` não é uma data ISO — as taxas comerciais são semestrais e a vigência é obrigatória.");
+  }
+  if (Math.abs(PENHORA_TETO_CALC - PENHORA.tetoSalariosMinimos.value * SMN.value) > EPS) {
+    erros.push("Penhora: o teto derivado não bate com três salários mínimos.");
+  }
+  if (!(PENHORA_PISO_CALC < PENHORA_TETO_CALC)) {
+    erros.push("Penhora: o piso de impenhorabilidade tem de ser inferior ao teto.");
+  }
+  if (Math.abs(PRESTACOES_ALARGAMENTO_LIMIAR_EUR - PLANO_PRESTACOES.alargamentoLimiarUC.value * UNIDADE_CONTA.value) > EPS) {
+    erros.push("Prestações: o limiar em euros não bate com 500 × unidade de conta.");
+  }
+  if (!(PLANO_PRESTACOES.automaticoSingulares.value < PLANO_PRESTACOES.automaticoColetivas.value)) {
+    erros.push("Plano oficioso (Art. 198.º-A CPPT): o limiar das pessoas singulares tem de ser inferior ao das coletivas.");
+  }
+  {
+    const esc = SUBSIDIO_DOENCA.escaloes.value;
+    if (esc.at(-1)?.ateDias !== Infinity) {
+      erros.push("Subsídio de doença: o último escalão tem de ser aberto (Infinity).");
+    }
+    for (let i = 1; i < esc.length; i++) {
+      if (!(esc[i].ateDias > esc[i - 1].ateDias) || !(esc[i].taxa > esc[i - 1].taxa)) {
+        erros.push("Subsídio de doença: escalões têm de ser crescentes em dias e em taxa.");
+        break;
+      }
+    }
+    if (!esc.every((e) => isRate(e.taxa))) erros.push("Subsídio de doença: taxa fora do intervalo [0,1].");
+  }
+  if (!LICENCA_PARENTAL.modalidades.value.every((mod) => isRate(mod.taxa) && mod.dias > 0)) {
+    erros.push("Licença parental: modalidade com taxa fora de [0,1] ou duração não positiva.");
+  }
+  if (!(SUBSIDIO_DESEMPREGO.minimoIAS.value < SUBSIDIO_DESEMPREGO.maximoIAS.value)) {
+    erros.push("Subsídio de desemprego: o mínimo em IAS tem de ser inferior ao máximo.");
+  }
+  if (!(SUBSIDIO_DESEMPREGO.duracaoMinimaDias.value < SUBSIDIO_DESEMPREGO.duracaoMaximaDias.value)) {
+    erros.push("Subsídio de desemprego: duração mínima tem de ser inferior à máxima.");
+  }
+  {
+    const t = COMPENSACAO_CESSACAO.transitorios.value;
+    if (t.at(-1)?.ate !== null) {
+      erros.push("Compensação por cessação: a última tranche transitória tem de ser aberta (`ate: null`).");
+    }
+    if (t.at(-1)?.diasPorAno !== COMPENSACAO_CESSACAO.diasPorAno.value) {
+      erros.push("Compensação por cessação: a tranche em vigor tem de coincidir com `diasPorAno`.");
+    }
+  }
+  if (!(TRABALHO_NOTURNO.horaInicio.value > TRABALHO_NOTURNO.horaFim.value)) {
+    erros.push("Trabalho noturno: o período tem de atravessar a meia-noite (início > fim).");
+  }
+  if (!isRate(TRABALHO_NOTURNO.acrescimo.value)) {
+    erros.push("Trabalho noturno: acréscimo fora do intervalo [0,1].");
+  }
+  if (Math.abs(SS_MOE.baseMinimaIAS.value * IAS.value - MOE_BASE_MINIMA_MENSAL.value) > EPS) {
+    erros.push("Base mínima dos MOE: o múltiplo do IAS e o valor em euros divergiram.");
+  }
+  if (Math.abs(SS_MOE.trabalhador.value - SS_DEPENDENTE.trabalhador.value) > EPS
+    || Math.abs(SS_MOE.entidade.value - SS_DEPENDENTE.entidade.value) > EPS) {
+    erros.push("SS de membros de órgãos estatutários: as taxas divergiram das do regime geral sem justificação registada.");
+  }
+  if (!(PAGAMENTOS_CONTA_IRC.taxaAte500k.value < PAGAMENTOS_CONTA_IRC.taxaAcima500k.value)) {
+    erros.push("Pagamentos por conta de IRC: a taxa até 500 000 € tem de ser inferior à taxa acima.");
+  }
+  if (PAGAMENTOS_CONTA_IRC.meses.value.length !== PAGAMENTOS_CONTA_IRC.numero.value) {
+    erros.push("Pagamentos por conta de IRC: o número de meses não coincide com o número de pagamentos.");
+  }
+  if (!isRate(PREJUIZOS_FISCAIS.limitePercentagemLucro.value)) {
+    erros.push("Prejuízos fiscais: limite fora do intervalo [0,1].");
+  }
+  if (!isRate(RESERVA_LEGAL.percentagemLucro.value) || !isRate(RESERVA_LEGAL.limiteCapital.value)) {
+    erros.push("Reserva legal: percentagem fora do intervalo [0,1].");
+  }
+  {
+    const mmdd = /^\d{2}-\d{2}$/;
+    for (const [k, p] of Object.entries(PRAZOS_ANUAIS_EMPRESA)) {
+      if (!mmdd.test(p.value)) erros.push(`Prazos anuais da empresa: \`${k}\` não está no formato MM-DD.`);
+    }
+    if (!(PRAZOS_ANUAIS_EMPRESA.aprovacaoContas.value < PRAZOS_ANUAIS_EMPRESA.modelo22.value
+      && PRAZOS_ANUAIS_EMPRESA.modelo22.value < PRAZOS_ANUAIS_EMPRESA.ies.value)) {
+      erros.push("Prazos anuais da empresa: a ordem aprovação de contas → Modelo 22 → IES está trocada.");
+    }
   }
 
   // 6) Proveniência obrigatória: fonte registada + data válida em cada parâmetro.
@@ -3000,12 +3909,16 @@ export function assertFiscalDataIntegrity(): void {
     ...Object.values(SS_COEFICIENTE),
     SS_BASE_MAX_MENSAL,
     SS_ISENCAO_PRIMEIRO_ANO_MESES,
+    SS_ACUMULACAO_LIMITE_IAS,
+    SS_ACUMULACAO_LIMITE_MENSAL,
+    MOE_BASE_MINIMA_MENSAL,
     REGIME_SIMPLIFICADO.limite,
     REGIME_SIMPLIFICADO.coefServicos151,
     REGIME_SIMPLIFICADO.coefOutrosServicos,
     IRS_JOVEM.idadeMax,
     IRS_JOVEM.tetoIAS,
     IRS_JOVEM.isencaoPorAno,
+    ...Object.values(PROGRAMA_REGRESSAR),
     ESCALOES_IRS,
     DEDUCAO_ESPECIFICA_CATB,
     REGIME_15PCT,
@@ -3106,12 +4019,61 @@ export function assertFiscalDataIntegrity(): void {
     DEDUCAO_PENSAO_ALIMENTOS,
     DEDUCAO_LARES,
     COEF_DESVALORIZACAO_MOEDA,
+    // Categoria A — Art. 25.º n.os 1 al. c) e 4
+    DEDUCAO_ESPECIFICA_DEP_MAX_ORDENS,
+    QUOTIZACOES_SINDICAIS,
+    // Limite global das deduções à coleta — Art. 78.º n.º 8
+    LIMITE_GLOBAL_MAJORACAO_DEPENDENTES,
     // SMN
     SMN,
+    // Direitos, cobranças e execução fiscal
+    UNIDADE_CONTA,
+    JUROS_MORA.transacoesComerciais, JUROS_MORA.outrosCreditosComerciais, JUROS_MORA.civis,
+    INDEMNIZACAO_CUSTOS_COBRANCA, PRAZO_PAGAMENTO_SUPLETIVO_DIAS,
+    PLANO_PRESTACOES.maximoGeral, PLANO_PRESTACOES.alargamentoAnos,
+    PLANO_PRESTACOES.alargamentoLimiarUC, PLANO_PRESTACOES.automaticoSingulares,
+    PLANO_PRESTACOES.automaticoColetivas,
+    PENHORA.fracaoImpenhoravel, PENHORA.tetoSalariosMinimos, PENHORA.pisoSalariosMinimos,
+    PENHORA.contaBancariaSalariosMinimos,
+    // Proteção social e cessação do contrato
+    SUBSIDIO_DOENCA.periodoEsperaDias, SUBSIDIO_DOENCA.prazoGarantiaMeses,
+    SUBSIDIO_DOENCA.escaloes, SUBSIDIO_DOENCA.majoracao, SUBSIDIO_DOENCA.majoracaoRemuneracaoLimite,
+    LICENCA_PARENTAL.modalidades, LICENCA_PARENTAL.partilhaDiasExclusivos,
+    LICENCA_PARENTAL.paiObrigatoriaDias, LICENCA_PARENTAL.paiOpcionaisDias, LICENCA_PARENTAL.paiTaxa,
+    SUBSIDIO_DESEMPREGO.prazoGarantiaDias, SUBSIDIO_DESEMPREGO.taxa, SUBSIDIO_DESEMPREGO.minimoIAS,
+    SUBSIDIO_DESEMPREGO.minimoMajoradoIAS, SUBSIDIO_DESEMPREGO.maximoIAS,
+    SUBSIDIO_DESEMPREGO.tetoReferenciaLiquida, SUBSIDIO_DESEMPREGO.duracaoMinimaDias,
+    SUBSIDIO_DESEMPREGO.duracaoMaximaDias,
+    COMPENSACAO_CESSACAO.diasPorAno, COMPENSACAO_CESSACAO.tetoBaseRMMG,
+    COMPENSACAO_CESSACAO.tetoTotalMeses, COMPENSACAO_CESSACAO.tetoTotalRMMG,
+    COMPENSACAO_CESSACAO.transitorios,
+    FERIAS.diasUteisAno, FERIAS.anoAdmissaoDiasPorMes, FERIAS.anoAdmissaoMaximo,
+    FERIAS.indemnizacaoNaoGozadasFator,
+    TRABALHO_NOTURNO.horaInicio, TRABALHO_NOTURNO.horaFim, TRABALHO_NOTURNO.acrescimo,
+    SEGURO_ACIDENTES_TRABALHO_ESTIMATIVA,
+    SS_MOE.trabalhador, SS_MOE.entidade, SS_MOE.baseMinimaIAS,
+    // Obrigações anuais da sociedade
+    PAGAMENTOS_CONTA_IRC.numero, PAGAMENTOS_CONTA_IRC.meses,
+    PAGAMENTOS_CONTA_IRC.taxaAte500k, PAGAMENTOS_CONTA_IRC.taxaAcima500k,
+    PAGAMENTOS_CONTA_IRC.limiteVolumeNegocios, PAGAMENTOS_CONTA_IRC.dispensaColeta,
+    PAGAMENTOS_CONTA_IRC.margemErroTerceiro,
+    PREJUIZOS_FISCAIS.limitePercentagemLucro, PREJUIZOS_FISCAIS.semLimiteTemporal,
+    PREJUIZOS_FISCAIS.alteracaoTitularidadeLimite,
+    RESERVA_LEGAL.percentagemLucro, RESERVA_LEGAL.limiteCapital,
+    PRAZOS_ANUAIS_EMPRESA.modelo22, PRAZOS_ANUAIS_EMPRESA.ies, PRAZOS_ANUAIS_EMPRESA.aprovacaoContas,
   ];
   sourced.forEach((p) => {
     if (!(p.source in SOURCES)) erros.push(`Fonte não registada: ${p.legalBasis}.`);
     if (!isIsoDate(p.lastVerified)) erros.push(`Data de verificação inválida: ${p.legalBasis}.`);
+    // A data global de revisão é a que a UI mostra na secção «Fontes». Se um
+    // parâmetro foi verificado depois dela, a data mostrada está a subestimar o
+    // trabalho feito — e, pior, sinaliza que alguém atualizou um valor sem
+    // atualizar a revisão. Só se compara quando ambas as datas são válidas.
+    else if (isIsoDate(DATA_LAST_REVIEW) && p.lastVerified > DATA_LAST_REVIEW) {
+      erros.push(
+        `Parâmetro verificado (${p.lastVerified}) depois da última revisão (${DATA_LAST_REVIEW}): ${p.legalBasis}. Atualizar DATA_LAST_REVIEW.`
+      );
+    }
   });
 
   if (erros.length > 0) {

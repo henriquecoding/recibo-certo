@@ -1,40 +1,14 @@
 import type { Metadata } from "next";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import Link from "next/link";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import { ArrowRight } from "@/components/ui/Icons";
 
-export const metadata: Metadata = {
-  title: "Tributação conjunta vs. separada no IRS 2026",
-  description:
-    "Casados e unidos de facto podem escolher tributação conjunta ou separada no IRS. Como funciona o quociente conjugal e quando cada opção compensa — Portugal 2026.",
-  keywords: ["tributação conjunta", "tributação separada", "quociente conjugal", "IRS casados", "Art. 69 CIRS"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/tributacao-conjunta" },
-  openGraph: {
-    title: "Tributação conjunta vs. separada | ReciboCerto",
-    description: "Quociente conjugal explicado e quando vale a pena juntar (ou separar) a declaração.",
-    url: "https://www.recibocerto.pt/guias/tributacao-conjunta",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "CIRS — Art. 13.º (sujeito passivo)", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs13.aspx", tipo: "oficial" as const },
-  { titulo: "CIRS — Art. 69.º (quociente conjugal)", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs69.aspx", tipo: "oficial" as const },
-];
+export const metadata: Metadata = metadataDoGuia("tributacao-conjunta");
 
 export default function TributacaoConjuntaPage() {
   return (
-    <>
-      <GuiaHero
-        titulo="Tributação conjunta vs. separada"
-        descricao="Se és casado ou unido de facto, podes escolher como entregas o IRS. A opção certa pode valer centenas de euros — depende da diferença de rendimentos do casal."
-        tempoLeitura={5}
-        badge="Agregado familiar"
-      />
+    <GuiaLayout slug="tributacao-conjunta">
 
       <section className="mb-10">
         <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 mb-4">
@@ -92,8 +66,6 @@ export default function TributacaoConjuntaPage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

@@ -1,32 +1,10 @@
 import type { Metadata } from "next";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import Badge from "@/components/ui/Badge";
 import { Close } from "@/components/ui/Icons";
 
-export const metadata: Metadata = {
-  title: "Como cessar atividade nos recibos verdes 2026",
-  description: "Guia passo a passo para fechar a atividade nas Finanças. Consequências de não fechar, impacto na SS e IRS.",
-  keywords: ["cessar atividade recibos verdes", "fechar atividade finanças", "cessação atividade freelancer portugal"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/cessar-atividade" },
-  openGraph: {
-    title: "Como cessar atividade nos recibos verdes 2026 | ReciboCerto",
-    description: "O que acontece se não fechares e como fechar corretamente.",
-    url: "https://www.recibocerto.pt/guias/cessar-atividade",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "Art. 33.º CIVA — Cessação de atividade", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva33.aspx", tipo: "oficial" as const },
-  { titulo: "DECO — Recibos verdes: fechar atividade nas Finanças", url: "https://www.deco.proteste.pt/dinheiro/impostos/dicas/recibos-verdes-fechar-atividade-financas", tipo: "referencia" as const },
-  { titulo: "SimuladorNeto — Cessação de atividade 2026", url: "https://simuladorneto.pt/blog/cessacao-atividade-recibos-verdes-2026", tipo: "referencia" as const },
-  { titulo: "Doutor Finanças — Limites para abrir e fechar atividade", url: "https://www.doutorfinancas.pt/carreira-e-rendimentos/trabalhadores-independentes/recibos-verdes-ha-limites-para-abrir-e-fechar-atividade/", tipo: "referencia" as const },
-  { titulo: "CRN — Cessação de atividade nas Finanças", url: "https://crncontabilidade.pt/blog/cessacao-de-actividade-nas-financas-quando-fazer-e-como/", tipo: "referencia" as const },
-];
+export const metadata: Metadata = metadataDoGuia("cessar-atividade");
 
 const PASSOS = [
   "Acede a portaldasfinancas.gov.pt e inicia sessão",
@@ -38,12 +16,7 @@ const PASSOS = [
 
 export default function CessarAtividadePage() {
   return (
-    <>
-      <GuiaHero
-        titulo="Como fechar a atividade: guia passo a passo"
-        descricao="Quando deixas definitivamente de passar recibos verdes, tens 30 dias para cessar a atividade nas Finanças. Não o fazer tem consequências."
-        tempoLeitura={3}
-      />
+    <GuiaLayout slug="cessar-atividade">
 
       <section className="mb-10">
         <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 mb-4">
@@ -124,8 +97,6 @@ export default function CessarAtividadePage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

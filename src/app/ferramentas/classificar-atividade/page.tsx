@@ -33,7 +33,7 @@ export default function FerramentaClassificarAtividadePage() {
       </div>
 
       <Suspense>
-        <ComparadorCAE />
+        <ComparadorCAE comPlanoFiz />
       </Suspense>
 
       <div className="mt-2 rounded-2xl border border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 p-5 space-y-3">

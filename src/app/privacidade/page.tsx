@@ -6,13 +6,13 @@ import LegalPage, {
 export const metadata: Metadata = {
   title: "Política de Privacidade — Proteção de Dados RGPD",
   description:
-    "Como o ReciboCerto recolhe, trata e protege os teus dados pessoais. Conformidade com o RGPD (Regulamento (UE) 2016/679) e a Lei n.º 58/2019 — Portugal. Inclui o tratamento de dados do plano Pro guardados na nuvem.",
+    "Como o ReciboCerto recolhe, trata e protege os teus dados pessoais. Conformidade com o RGPD (Regulamento (UE) 2016/679) e a Lei n.º 58/2019 — Portugal. Inclui o tratamento de dados do plano Plus guardados na nuvem.",
   alternates: { canonical: "/privacidade" },
   robots: { index: true, follow: true },
   openGraph: {
     title: "Política de Privacidade — ReciboCerto",
     description:
-      "Proteção de dados RGPD. No plano gratuito os dados ficam no teu dispositivo; no plano Pro são guardados de forma segura na nuvem (UE), nunca vendidos nem usados para publicidade.",
+      "Proteção de dados RGPD. No plano gratuito os dados ficam no teu dispositivo; no plano Plus são guardados de forma segura na nuvem (UE), nunca vendidos nem usados para publicidade.",
     url: "https://www.recibocerto.pt/privacidade",
     type: "website",
   },
@@ -24,7 +24,8 @@ const TOC = [
   { id: "dados-recolhidos", label: "Dados que recolhemos" },
   { id: "finalidade", label: "Finalidades e base legal" },
   { id: "armazenamento-local", label: "Plano gratuito: dados locais" },
-  { id: "nuvem-pro", label: "Plano Pro: dados na nuvem" },
+  { id: "nuvem-pro", label: "Plano Plus: dados na nuvem" },
+  { id: "fiz", label: "FIZ: partilha e ligações de afiliado" },
   { id: "pagamentos", label: "Pagamentos (Stripe)" },
   { id: "comunicacoes", label: "Comunicações por email" },
   { id: "cookies", label: "Cookies e tecnologias" },
@@ -44,7 +45,7 @@ export default function PrivacidadePage() {
   return (
     <LegalPage
       title="Política de Privacidade"
-      subtitle="O ReciboCerto trata a privacidade como princípio central. No plano gratuito, os teus dados ficam no teu dispositivo. No plano Pro, são guardados de forma segura na nuvem (servidores na União Europeia) para sincronização entre dispositivos. Em nenhum caso vendemos dados ou exibimos publicidade."
+      subtitle="O ReciboCerto trata a privacidade como princípio central. No plano gratuito, os teus dados ficam no teu dispositivo. No plano Plus, são guardados de forma segura na nuvem (servidores na União Europeia) para sincronização entre dispositivos. Em nenhum caso vendemos dados ou exibimos publicidade."
       lastUpdated="Junho de 2026"
       toc={TOC}
     >
@@ -53,7 +54,7 @@ export default function PrivacidadePage() {
         <ListaCheck
           items={[
             "Plano gratuito: não precisas de conta e os dados ficam só no teu browser (localStorage).",
-            "Plano Pro: crias conta e os teus dados (recibos, simulações, preferências) são guardados na nuvem, em servidores na UE, para sincronizar entre dispositivos.",
+            "Plano Plus: crias conta e os teus dados (recibos, simulações, preferências) são guardados na nuvem, em servidores na UE, para sincronizar entre dispositivos.",
             "Nunca vendemos os teus dados nem usamos publicidade comportamental ou rastreamento entre sites.",
             "Os pagamentos são processados pela Stripe — nunca vemos nem guardamos o número do teu cartão.",
             "Podes exportar ou eliminar os teus dados a qualquer momento, e exercer todos os direitos do RGPD.",
@@ -83,7 +84,7 @@ export default function PrivacidadePage() {
           calculadora de recibos verdes, simulador de IRS, simulador de recibo de vencimento,
           simulador de empresa, comparador de regimes, guias fiscais e área de cliente (Dashboard) —
           independentemente do dispositivo ou browser utilizado, e tanto no plano gratuito como no
-          plano Pro.
+          plano Plus.
         </p>
         <p>
           O tratamento rege-se pelo Regulamento (UE) 2016/679 (RGPD) e pela Lei n.º 58/2019, de 8 de
@@ -95,7 +96,7 @@ export default function PrivacidadePage() {
       <Section id="dados-recolhidos" title="Dados que recolhemos">
         <Nota tipo="info">
           Recolhemos o mínimo de dados necessário para o serviço funcionar. Aquilo que recolhemos
-          depende de usares o plano gratuito (sem conta) ou o plano Pro (com conta).
+          depende de usares o plano gratuito (sem conta) ou o plano Plus (com conta).
         </Nota>
 
         <Sub title="Plano gratuito — sem conta">
@@ -113,9 +114,9 @@ export default function PrivacidadePage() {
           />
         </Sub>
 
-        <Sub title="Conta e plano Pro">
+        <Sub title="Conta e plano Plus">
           <p>
-            Para usar o plano Pro crias uma conta. Recolhemos e tratamos, conforme aplicável:
+            Para usar o plano Plus crias uma conta. Recolhemos e tratamos, conforme aplicável:
           </p>
           <Lista
             items={[
@@ -123,7 +124,7 @@ export default function PrivacidadePage() {
               "Recibos e cálculos sincronizados na nuvem (valores, datas, atividade, retenções)",
               "Cenários de recibo de vencimento e preferências fiscais (regime, agregado, deduções)",
               "Estado da subscrição (plano, início/fim, identificador de cliente de pagamento)",
-              "Alertas e lembretes que configuras (ex.: prazos de Segurança Social)",
+              "Preferências de aviso sobre a tua faturação (limiar de isenção de IVA)",
               "Data e hora de criação da conta e de última atividade relevante",
             ]}
           />
@@ -165,10 +166,10 @@ export default function PrivacidadePage() {
           colunas={["Finalidade", "Dados utilizados", "Base legal"]}
           linhas={[
             ["Prestar as calculadoras e simuladores", "Dados introduzidos (locais)", "Execução de contrato / interesse legítimo (art.º 6.º/1 b) e f)"],
-            ["Criar e gerir a conta Pro", "Email, autenticação", "Execução de contrato (art.º 6.º/1 b)"],
-            ["Guardar e sincronizar os teus dados na nuvem (Pro)", "Recibos, simulações, preferências", "Execução de contrato (art.º 6.º/1 b)"],
+            ["Criar e gerir a conta Plus", "Email, autenticação", "Execução de contrato (art.º 6.º/1 b)"],
+            ["Guardar e sincronizar os teus dados na nuvem (Plus)", "Recibos, simulações, preferências", "Execução de contrato (art.º 6.º/1 b)"],
             ["Processar pagamentos da subscrição", "Email, estado da subscrição", "Execução de contrato (art.º 6.º/1 b)"],
-            ["Enviar alertas e emails essenciais do serviço", "Email, preferências de alerta", "Execução de contrato / consentimento (art.º 6.º/1 b) e a)"],
+            ["Enviar emails essenciais do serviço e o aviso de limiar de faturação", "Email, preferências de aviso", "Execução de contrato / consentimento (art.º 6.º/1 b) e a)"],
             ["Segurança e prevenção de fraude", "Logs de infraestrutura, IP", "Interesse legítimo (art.º 6.º/1 f)"],
             ["Cumprir obrigações legais e fiscais", "Conforme exigido por lei", "Obrigação legal (art.º 6.º/1 c)"],
           ]}
@@ -206,10 +207,10 @@ export default function PrivacidadePage() {
         </p>
       </Section>
 
-      {/* 5 — Nuvem Pro */}
-      <Section id="nuvem-pro" title="Plano Pro: dados guardados na nuvem">
+      {/* 5 — Nuvem Plus */}
+      <Section id="nuvem-pro" title="Plano Plus: dados guardados na nuvem">
         <p>
-          No plano Pro, para permitir o acesso a partir de vários dispositivos e a salvaguarda dos
+          No plano Plus, para permitir o acesso a partir de vários dispositivos e a salvaguarda dos
           teus dados, guardamos as tuas informações numa base de dados gerida pela{" "}
           <strong className="text-stone-700 dark:text-stone-200">Supabase</strong>, alojada em
           servidores na União Europeia. Concretamente, podem ser guardados:
@@ -220,7 +221,7 @@ export default function PrivacidadePage() {
             "Recibos verdes e respetivos cálculos",
             "Cenários de recibo de vencimento",
             "Estado da subscrição (plano e validade)",
-            "Alertas configurados (ex.: prazos de Segurança Social)",
+            "Preferências de aviso sobre a tua faturação",
           ]}
         />
         <ListaCheck
@@ -231,7 +232,7 @@ export default function PrivacidadePage() {
           ]}
         />
         <Nota tipo="info">
-          Mesmo no plano Pro, continuas a poder usar e exportar os dados localmente. A sincronização
+          Mesmo no plano Plus, continuas a poder usar e exportar os dados localmente. A sincronização
           na nuvem existe para tua conveniência e segurança, não para exploração comercial dos dados.
         </Nota>
       </Section>
@@ -239,7 +240,7 @@ export default function PrivacidadePage() {
       {/* 6 — Pagamentos */}
       <Section id="pagamentos" title="Pagamentos (Stripe)">
         <p>
-          Os pagamentos da subscrição Pro são processados pela{" "}
+          Os pagamentos da subscrição Plus são processados pela{" "}
           <strong className="text-stone-700 dark:text-stone-200">Stripe</strong>, um processador de
           pagamentos certificado PCI-DSS de nível 1. Ao subscreveres:
         </p>
@@ -264,7 +265,7 @@ export default function PrivacidadePage() {
         </p>
         <Lista
           items={[
-            "Emails essenciais (transacionais): confirmação de conta, recuperação de palavra-passe, recibos de pagamento e alertas que configuraste (ex.: prazos). Baseiam-se na execução do contrato.",
+            "Emails essenciais (transacionais): confirmação de conta, recuperação de palavra-passe, recibos de pagamento e o aviso quando a tua faturação se aproxima do limiar de isenção de IVA. Baseiam-se na execução do contrato.",
             "Emails opcionais (novidades/marketing): só os enviamos com o teu consentimento e podes cancelar a subscrição a qualquer momento, através da ligação no rodapé do email.",
           ]}
         />
@@ -281,7 +282,7 @@ export default function PrivacidadePage() {
         </p>
         <Lista
           items={[
-            "Cookies estritamente necessários: sessão e autenticação (plano Pro), preferências essenciais e segurança. Não exigem consentimento.",
+            "Cookies estritamente necessários: sessão e autenticação (plano Plus), preferências essenciais e segurança. Não exigem consentimento.",
             "localStorage: preferências e dados do plano gratuito guardados no teu dispositivo.",
             "Não utilizamos Google Analytics, Meta Pixel, heatmaps nem publicidade comportamental.",
           ]}
@@ -304,10 +305,11 @@ export default function PrivacidadePage() {
         <Tabela
           colunas={["Fornecedor", "Finalidade", "Localização", "Garantias"]}
           linhas={[
-            ["Supabase", "Base de dados e autenticação do plano Pro", "União Europeia", "Acordo de tratamento + cláusulas contratuais-tipo"],
+            ["Supabase", "Base de dados e autenticação do plano Plus", "União Europeia", "Acordo de tratamento + cláusulas contratuais-tipo"],
             ["Vercel Inc.", "Alojamento do site e funções serverless", "União Europeia (Frankfurt)", "Acordo de tratamento de dados"],
             ["Stripe", "Processamento de pagamentos da subscrição", "UE / EUA", "PCI-DSS nível 1 + cláusulas contratuais-tipo"],
             ["Resend", "Envio de emails transacionais e alertas", "EUA", "Acordo de tratamento + cláusulas contratuais-tipo"],
+            ["FIZ", "Execução fiscal — só com consentimento explícito ou conta ligada (ver secção própria). Ainda não ativo.", "União Europeia (Portugal)", "Acordo de partilha de dados + acordo de tratamento"],
           ]}
         />
         <Nota tipo="aviso">
@@ -317,11 +319,114 @@ export default function PrivacidadePage() {
         </Nota>
       </Section>
 
+      {/* Partilha com a FIZ — parceiro de execução fiscal */}
+      <Section id="fiz" title="Partilha com a FIZ (opcional e sob o teu controlo)">
+        <Nota tipo="aviso">
+          Esta secção descreve uma funcionalidade que <strong>ainda não está ativa</strong>. Fica
+          aqui documentada com antecedência para que saibas exatamente o que aconteceria se
+          decidires usá-la. Enquanto não estiver disponível, nenhum dado teu é partilhado com a FIZ.
+        </Nota>
+        <p>
+          A FIZ é um parceiro que executa operações fiscais (faturação certificada, declarações e
+          lembretes de obrigações). O ReciboCerto explica, calcula e prepara; a execução acontece na
+          FIZ. É uma relação comercial remunerada, e nada disto depende do ReciboCerto Plus.
+        </p>
+        <p>
+          <strong>Só há partilha se tu a iniciares.</strong> Existem duas formas, ambas
+          voluntárias e reversíveis:
+        </p>
+        <Tabela
+          colunas={["Situação", "O que é partilhado", "Base legal", "Como reverter"]}
+          linhas={[
+            [
+              "Ler guias e usar simuladores",
+              "Nada. A FIZ não recebe qualquer dado.",
+              "Não se aplica",
+              "Não se aplica",
+            ],
+            [
+              "Enviar uma simulação para continuar na FIZ",
+              "Apenas os campos que vês e assinalas no ecrã de consentimento — tipo de entidade, categoria de atividade, território de IVA e valores estimados. Nunca o NIF, o nome, a morada, o email, o IBAN nem dados dos teus clientes.",
+              "Consentimento (Art. 6.º, n.º 1, al. a) do RGPD)",
+              "Recusar não te faz perder a simulação. Um envio pendente expira automaticamente e pode ser eliminado.",
+            ],
+            [
+              "Ligar a tua conta FIZ",
+              "Um identificador de ligação. Passamos a receber da FIZ o estado das tuas obrigações e declarações para os mostrar aqui.",
+              "Consentimento, através de autorização dada na própria FIZ",
+              "Podes desligar a qualquer momento no teu perfil, ou revogar diretamente na FIZ.",
+            ],
+          ]}
+        />
+        <p>
+          Nunca pedimos nem guardamos as tuas credenciais da FIZ, do Portal das Finanças ou da
+          Segurança Social. A autorização é dada na FIZ e o que guardamos é uma credencial técnica
+          de acesso, cifrada em repouso. Guardamos também um registo do teu consentimento — que
+          campos autorizaste, quando e ao abrigo de que versão desta política — porque é isso que
+          nos permite demonstrar que a partilha foi legítima.
+        </p>
+        <p>
+          A partir do momento em que os dados chegam à FIZ, é a FIZ a responsável pelo tratamento
+          que deles faz, ao abrigo da política de privacidade e do contrato que tiveres com ela.
+        </p>
+
+        <h3 className="mt-6 font-display text-base font-semibold text-stone-800 dark:text-stone-100">
+          Ligações de afiliado
+        </h3>
+        <p>
+          Além da partilha descrita acima, que ainda não está ativa, existe hoje uma coisa mais
+          simples: <strong>ligações para o site da FIZ que nos pagam comissão</strong> se
+          subscreveres através delas. Estão identificadas como publicidade em todos os sítios onde
+          aparecem, e o preço que pagas é o mesmo — a comissão sai do lado deles.
+        </p>
+        <p>
+          <strong>Estas ligações não transportam dados teus.</strong> Nenhum dado pessoal viaja no
+          endereço: o que segue é apenas de que página do nosso site vieste (por exemplo,
+          «fim do Guia do IVA») e um identificador aleatório desse clique, gerado no momento e que
+          não fica guardado no teu equipamento nem liga dois cliques teus.
+        </p>
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>Não pomos cookies</strong> nem qualquer identificador no teu browser para
+            contar cliques. Registamos o clique no nosso servidor, sem o teu IP e sem o teu
+            user-agent em bruto — só uma classificação grosseira de telemóvel, tablet ou
+            computador.
+          </li>
+          <li>
+            Se seguires a ligação, <strong>a FIZ pode pôr um cookie no domínio dela</strong> para
+            reconhecer que vieste daqui. Esse cookie é responsabilidade da FIZ e rege-se pela
+            política de privacidade dela, não por esta.
+          </li>
+          <li>
+            Não usamos estas ligações para te seguir entre sites, nem juntamos os cliques ao teu
+            perfil ou à tua conta.
+          </li>
+        </ul>
+        <p>
+          As ligações de afiliado não mudam o que escrevemos: os Guias continuam a poder explicar
+          alternativas à FIZ, as fontes legais continuam visíveis, e nenhum conteúdo é reescrito
+          para aumentar conversão.
+        </p>
+
+        <h3 className="mt-6 font-display text-base font-semibold text-stone-800 dark:text-stone-100">
+          Cartões de parceiro: o que fica guardado no teu equipamento
+        </h3>
+        <p>
+          Quando dispensas um cartão de parceiro, essa escolha é guardada no{" "}
+          <strong className="text-stone-700 dark:text-stone-200">localStorage</strong> do teu
+          browser para não te voltarmos a mostrar o mesmo cartão; e a rotação entre cartões usa o{" "}
+          <strong className="text-stone-700 dark:text-stone-200">sessionStorage</strong>, que
+          desaparece quando fechas o separador. São dados estritamente necessários para a
+          funcionalidade que pediste — dispensar um cartão —, ficam no teu dispositivo, não são
+          enviados para os nossos servidores, e apagam-se quando limpas os dados do site.
+        </p>
+      </Section>
+
       {/* 10 — Transferências internacionais */}
       <Section id="transferencias" title="Transferências internacionais de dados">
         <p>
           Sempre que possível, os dados são tratados e armazenados dentro do Espaço Económico Europeu.
-          A base de dados do plano Pro (Supabase) e o alojamento (Vercel) estão na União Europeia.
+          A base de dados do plano Plus (Supabase) e o alojamento (Vercel) estão na União Europeia.
         </p>
         <p>
           Alguns subprocessadores (como a Stripe e a Resend) podem tratar dados fora do EEE,
@@ -339,7 +444,7 @@ export default function PrivacidadePage() {
           colunas={["Tipo de dado", "Período de conservação", "Motivo"]}
           linhas={[
             ["Dados do plano gratuito (localStorage)", "Indefinido — sob o teu controlo", "Armazenados localmente no teu browser"],
-            ["Dados da conta e da nuvem (Pro)", "Enquanto a conta estiver ativa", "Prestação do serviço"],
+            ["Dados da conta e da nuvem (Plus)", "Enquanto a conta estiver ativa", "Prestação do serviço"],
             ["Após eliminação da conta", "Até 30 dias", "Período de recuperação contra eliminação acidental"],
             ["Dados de faturação/subscrição", "Até 10 anos", "Obrigações legais e fiscais (faturação)"],
             ["Email de comunicações opcionais", "Até cancelares a subscrição", "Consentimento"],

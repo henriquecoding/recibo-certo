@@ -341,7 +341,7 @@ function CupaoCard({
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">
-              {cupao.meses} meses Pro grátis
+              {cupao.meses} meses Plus grátis
             </p>
             <p className="text-[11px] text-stone-500">
               Caminho {cupao.caminho === "medio" ? "médio" : "difícil"}
@@ -477,7 +477,7 @@ function CompletenessWidget({
 
 export default function PerfilPage() {
   const { user, carregado: authCarregado } = useAuth();
-  const { plano } = useSubscricao();
+  const { plano, pode } = useSubscricao();
   const { recibos, carregado: recibosCarregado } = useRecibos();
   const quiz = useQuizProgresso();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -555,7 +555,7 @@ export default function PerfilPage() {
   const handleAtivarCupao = useCallback(async (cupaoId: string) => {
     if (!user) return;
     setCupaoAtivando(cupaoId);
-    const { erro } = await ativarCupao(cupaoId, user.id);
+    const { erro } = await ativarCupao(cupaoId);
     setCupaoAtivando(null);
     if (!erro) {
       setCupoes((prev) =>
@@ -670,9 +670,9 @@ export default function PerfilPage() {
             {/* Avatar */}
             <div
               className="relative flex-shrink-0 self-center sm:self-auto"
-              onDragOver={(e) => { if (user && plano === "pro") { e.preventDefault(); setAvatarDragOver(true); } }}
+              onDragOver={(e) => { if (user && pode("profile.avatar")) { e.preventDefault(); setAvatarDragOver(true); } }}
               onDragLeave={() => setAvatarDragOver(false)}
-              onDrop={user && plano === "pro" ? handleAvatarDrop : undefined}
+              onDrop={user && pode("profile.avatar") ? handleAvatarDrop : undefined}
             >
               <div className={`relative h-24 w-24 rounded-3xl transition-all ${avatarDragOver ? "ring-3 ring-brand ring-offset-2" : ""}`}>
                 {perfil.avatarUrl ? (
@@ -704,8 +704,8 @@ export default function PerfilPage() {
                   </div>
                 )}
 
-                {/* Pro-only: photo upload button */}
-                {user && plano === "pro" && !avatarUploading && (
+                {/* Só com Plus: carregar fotografia */}
+                {user && plano === "plus" && !avatarUploading && (
                   <div className="absolute -bottom-1.5 -right-1.5 z-10">
                     <button
                       type="button"
@@ -754,8 +754,8 @@ export default function PerfilPage() {
                   </div>
                 )}
 
-                {/* Pro badge overlay for free users */}
-                {user && plano !== "pro" && (
+                {/* Distintivo de upgrade para quem está no plano gratuito */}
+                {user && plano !== "plus" && (
                   <Link
                     href="/dashboard/upgrade"
                     aria-label="Fazer upgrade para adicionar foto"
@@ -784,7 +784,7 @@ export default function PerfilPage() {
               />
 
               {/* Drag hint */}
-              {user && plano === "pro" && (
+              {user && plano === "plus" && (
                 <p className="mt-2 text-center text-[10px] text-stone-400 dark:text-stone-500 hidden sm:block">
                   Arrasta uma foto
                 </p>
@@ -816,9 +816,9 @@ export default function PerfilPage() {
                 <h1 className="font-display text-2xl font-semibold text-stone-800 sm:text-3xl dark:text-stone-100">
                   {saudacao()}, {nomeDisplay}
                 </h1>
-                {plano === "pro" ? (
+                {plano === "plus" ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-semibold text-white">
-                    <Star size={10} /> Pro
+                    <Star size={10} /> Plus
                   </span>
                 ) : (
                   <Link
@@ -1062,7 +1062,7 @@ export default function PerfilPage() {
               <div>
                 <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">Plano e subscrição</p>
                 <p className="text-[11px] text-stone-500">
-                  {plano === "pro" ? "Plano Pro ativo" : "Fazer upgrade"}
+                  {plano === "plus" ? "Plano Plus ativo" : "Fazer upgrade"}
                 </p>
               </div>
             </div>
@@ -1189,10 +1189,10 @@ export default function PerfilPage() {
                     </div>
                   </div>
 
-                  {/* Quiz Stats — Pro gets detailed view, Free gets summary */}
+                  {/* Estatísticas do Quiz — vista detalhada no Plus, resumo no grátis */}
                   <ProGate
                     title="Estatísticas detalhadas"
-                    description="Acede a estatísticas avançadas do teu desempenho no Quiz Fiscal com o plano Pro."
+                    description="Acede a estatísticas avançadas do teu desempenho no Quiz Fiscal com o plano Plus."
                     className="rounded-4xl"
                   >
                     <div className="rounded-4xl border border-stone-100 bg-white p-6 shadow-card dark:border-stone-800 dark:bg-stone-900">
@@ -1371,7 +1371,7 @@ export default function PerfilPage() {
                   <Trophy size={18} className="mb-2 text-stone-300" />
                   <p className="text-xs font-medium text-stone-500">Sem cupões ainda</p>
                   <p className="mt-1 max-w-[200px] text-[11px] text-stone-400">
-                    Completa desafios no Quiz Fiscal para ganhar meses Pro grátis
+                    Completa desafios no Quiz Fiscal para ganhar meses Plus grátis
                   </p>
                 </div>
               ) : (
@@ -1388,10 +1388,10 @@ export default function PerfilPage() {
               )}
             </div>
 
-            {/* Saúde Fiscal — Pro feature */}
+            {/* Saúde Fiscal — funcionalidade Plus */}
             <ProGate
               title="Saúde Fiscal"
-              description="Analisa a saúde da tua situação fiscal com indicadores detalhados. Disponível no plano Pro."
+              description="Analisa a saúde da tua situação fiscal com indicadores detalhados. Disponível no plano Plus."
               className="rounded-4xl"
             >
               <div className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">

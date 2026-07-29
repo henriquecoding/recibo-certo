@@ -20,6 +20,19 @@ export const LIMITE_ISENCAO_IVA = IVA_ISENCAO_LIMITE.value; // 15 000 €
 /** Coeficiente de despesas presumidas no regime simplificado (Art. 151.º): 25%. */
 export const COEF_DESPESAS_PRESUMIDAS = 0.25;
 
+/**
+ * Avença mensal de um Contabilista Certificado para uma sociedade com
+ * contabilidade organizada. ESTIMATIVA DE MERCADO, não parâmetro fiscal.
+ *
+ * Exportada porque o comparador de cenários precisa dela: o cenário «empresa»
+ * mostrava «Contabilista (OCC) · mensal, obrigatório · 0 €/ano» — afirmava
+ * que o custo era obrigatório e punha-o a zero no mesmo cartão.
+ */
+export const AVENCA_SOCIEDADE = { min: 120, max: 200 } as const;
+
+/** Ponto médio da avença anual de uma sociedade — default do comparador. */
+export const AVENCA_SOCIEDADE_ANUAL_MEDIA = ((AVENCA_SOCIEDADE.min + AVENCA_SOCIEDADE.max) / 2) * 12;
+
 export type FormaJuridica = "independente" | "sociedade";
 export type ClientesAmbito = "nacional" | "internacional";
 
@@ -88,8 +101,8 @@ export function diagnosticoContabilista(input: DiagnosticoInput): DiagnosticoCon
       titulo: "Necessidade legal imediata",
       mensagem:
         "A constituição de uma sociedade comercial exige a nomeação de um Contabilista Certificado logo no início de atividade. Formaliza um contrato de prestação de serviços (com seguro de responsabilidade civil ativo) antes de submeter a declaração de início.",
-      avencaMin: 120,
-      avencaMax: 200,
+      avencaMin: AVENCA_SOCIEDADE.min,
+      avencaMax: AVENCA_SOCIEDADE.max,
       pontual: false,
       modelo: "Avença mensal (contabilidade organizada)",
       motivos: ["Sociedade comercial — contabilidade organizada obrigatória", "Necessário CC inscrito na OCC para assinar as declarações"],

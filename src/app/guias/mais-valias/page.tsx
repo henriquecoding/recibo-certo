@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import Link from "next/link";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import InfoTip from "@/components/ui/InfoTip";
 import { pct } from "@/lib/format";
 import {
@@ -10,37 +9,11 @@ import {
 } from "@/lib/fiscal-data";
 import { ArrowRight } from "@/components/ui/Icons";
 
-export const metadata: Metadata = {
-  title: "Mais-valias 2026 — ações, criptoativos e imóveis (IRS)",
-  description:
-    "Como são tributadas as mais-valias em Portugal: ações e ETF, criptoativos e venda de imóveis. Taxas, isenções e englobamento — categoria G do IRS, 2026.",
-  keywords: ["mais-valias", "ações IRS", "criptoativos IRS", "venda de imóvel mais-valia", "categoria G"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/mais-valias" },
-  openGraph: {
-    title: "Mais-valias: ações, cripto e imóveis | ReciboCerto",
-    description: "Taxas, isenções e quando vale a pena englobar — a categoria G explicada.",
-    url: "https://www.recibocerto.pt/guias/mais-valias",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "CIRS — Art. 10.º (mais-valias)", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs10.aspx", tipo: "oficial" as const },
-  { titulo: "CIRS — Art. 43.º (saldo de mais-valias)", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs43.aspx", tipo: "oficial" as const },
-  { titulo: "CIRS — Art. 72.º (taxas especiais)", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs72.aspx", tipo: "oficial" as const },
-];
+export const metadata: Metadata = metadataDoGuia("mais-valias");
 
 export default function MaisValiasPage() {
   return (
-    <>
-      <GuiaHero
-        titulo="Mais-valias: ações, cripto e imóveis"
-        descricao="Vendeste ações, criptoativos ou um imóvel com lucro? Esse ganho é mais-valia (categoria G). As regras mudam consoante o ativo — eis o essencial."
-        tempoLeitura={6}
-        badge="Categoria G"
-      />
+    <GuiaLayout slug="mais-valias">
 
       <section className="mb-10">
         <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 mb-4">
@@ -98,8 +71,6 @@ export default function MaisValiasPage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

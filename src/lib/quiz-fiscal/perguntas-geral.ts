@@ -1,4 +1,11 @@
 import { fonte, type QuizPergunta } from "./types";
+import { DEDUCAO_ESPECIFICA_DEPENDENTE } from "../fiscal-data";
+
+/** Dedução específica da categoria A, lida do motor (8,54 × IAS em 2026). */
+const DED_ESPECIFICA_CAT_A = DEDUCAO_ESPECIFICA_DEPENDENTE.value.toLocaleString("pt-PT", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
 export const PERGUNTAS_GERAL: QuizPergunta[] = [
   // ──────────────────────────────────────────────────────────────────────
@@ -242,7 +249,7 @@ export const PERGUNTAS_GERAL: QuizPergunta[] = [
       { texto: "Rendimento bruto multiplicado por um coeficiente fixo.", porque: "Isso e o metodo do regime simplificado. Na contabilidade organizada, deduzem-se as despesas reais." },
       { texto: "Rendimento bruto menos as despesas reais comprovadas da atividade.", porque: "Na contabilidade organizada, o rendimento tributável e o lucro real: rendimento bruto menos as despesas efetivamente suportadas e documentadas." },
       { texto: "Rendimento bruto sem qualquer dedução.", porque: "A contabilidade organizada permite deduzir despesas reais, o que é uma das suas vantagens face ao regime simplificado." },
-      { texto: "Rendimento bruto menos uma dedução fixa de 4.104 €.", porque: "A dedução específica de 4.104 € aplica-se a rendimentos da categoria A (trabalho dependente), não a contabilidade organizada da categoria B." },
+      { texto: `Rendimento bruto menos a dedução específica de ${DED_ESPECIFICA_CAT_A} €.`, porque: `A dedução específica de ${DED_ESPECIFICA_CAT_A} € (8,54 × IAS) aplica-se aos rendimentos da categoria A — trabalho dependente —, não à contabilidade organizada da categoria B. O piso fixo de 4.104 € que vigorou até 2024 foi eliminado pela Lei n.º 45-A/2024.` },
     ],
     correta: 1,
     legalBasis: "Art. 32.º CIRS — determinação do rendimento na contabilidade organizada",
@@ -908,16 +915,21 @@ export const PERGUNTAS_GERAL: QuizPergunta[] = [
     id: "ger-61",
     categoria: "geral",
     dificuldade: 2,
+    // Reescrita: o enunciado anterior era palavra por palavra igual ao de
+    // `iva-3`, e `selecionar()` deduplica por identidade de objeto — as duas
+    // podiam sair na mesma sessão de 10. Mantém-se o Art. 18.º, mas a
+    // pergunta passa a testar a diferença entre regiões, que é onde as
+    // pessoas se enganam.
     pergunta:
-      "Qual é a taxa normal de IVA em Portugal continental?",
+      "As taxas de IVA são iguais em todo o território nacional?",
     opcoes: [
-      { texto: "18%.", porque: "18% não é a taxa normal de IVA em Portugal continental — e 23%." },
-      { texto: "21%.", porque: "21% é a taxa normal de IVA em Espanha, não em Portugal continental." },
-      { texto: "23%.", porque: "A taxa normal de IVA em Portugal continental é de 23% (Art. 18.º CIVA)." },
-      { texto: "25%.", porque: "25% não é a taxa de IVA em vigor em Portugal." },
+      { texto: "Sim, são iguais em todo o país.", porque: "Não são: os Açores e a Madeira têm taxas próprias, mais baixas do que as do continente." },
+      { texto: "Não — os Açores e a Madeira têm taxas próprias, mais baixas.", porque: "Correto. O Art. 18.º CIVA fixa taxas distintas para o continente e para cada região autónoma." },
+      { texto: "Não, mas só a Madeira tem taxas próprias.", porque: "As duas regiões autónomas têm taxas próprias, não apenas a Madeira." },
+      { texto: "Só diferem na taxa reduzida.", porque: "Diferem nas três taxas — reduzida, intermédia e normal." },
     ],
-    correta: 2,
-    legalBasis: "Art. 18.º CIVA — taxa normal de IVA = 23% (continente)",
+    correta: 1,
+    legalBasis: "Art. 18.º CIVA — taxas por região (continente, Açores e Madeira)",
     fonte: fonte("portalFinancasIVA"),
   },
   {

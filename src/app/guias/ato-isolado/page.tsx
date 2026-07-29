@@ -1,33 +1,13 @@
 import type { Metadata } from "next";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import { DecisorAtoVsAtividade } from "@/components/guias/DecisorAtoVsAtividade";
 import InfoTip from "@/components/ui/InfoTip";
 import { IVA_ISENCAO_LIMITE, RETENCAO, DISPENSA_RETENCAO_LIMITE } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import Badge from "@/components/ui/Badge";
 
-export const metadata: Metadata = {
-  title: "Ato isolado ou recibos verdes: qual escolher? 2026",
-  description: "Compara ato isolado e recibos verdes. Decisor interativo para a tua situação: IVA, Segurança Social, retenção na fonte e obrigações fiscais.",
-  keywords: ["ato isolado portugal", "ato isolado vs recibos verdes", "ato isolado IVA"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/ato-isolado" },
-  openGraph: {
-    title: "Ato isolado ou recibos verdes: qual escolher? 2026 | ReciboCerto",
-    description: "Decisor interativo para perceber se precisas de abrir atividade ou podes usar o ato isolado.",
-    url: "https://www.recibocerto.pt/guias/ato-isolado",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "Gov.pt — Ato isolado", url: "https://www.gov.pt/guias/trabalhar-por-conta-propria-guia-para-trabalhadores-independentes/", tipo: "oficial" as const },
-  { titulo: "Art. 53.º CIVA — Portal das Finanças", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-53-o-do-civa.aspx", tipo: "oficial" as const },
-  { titulo: "CGD — Ato isolado: o que é", url: "https://www.cgd.pt/Site/Saldo-Positivo/leis-e-impostos/Pages/ato-isolado-o-que-e-vantagens-e-obrigacoes.aspx", tipo: "referencia" as const },
-];
+export const metadata: Metadata = metadataDoGuia("ato-isolado");
 
 const COMPARATIVO = [
   { label: "Abertura de atividade", atoIsolado: "Não necessária", recibosVerdes: "Obrigatória" },
@@ -39,12 +19,7 @@ const COMPARATIVO = [
 
 export default function AtoIsoladoPage() {
   return (
-    <>
-      <GuiaHero
-        titulo="Ato isolado ou recibos verdes: qual escolher?"
-        descricao="Ato isolado é para um único serviço pontual e não repetido. Recibos verdes são para quem fatura regularmente."
-        tempoLeitura={4}
-      />
+    <GuiaLayout slug="ato-isolado">
 
       <section className="mb-10">
         <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-400 mb-6">
@@ -130,8 +105,6 @@ export default function AtoIsoladoPage() {
         </p>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { m, AnimatePresence } from "motion/react";
-import { simularDeclaracaoIRS } from "@/lib/fiscal";
+import Link from "next/link";
+import { simularDeclaracaoIRS, type DeclaracaoInput } from "@/lib/fiscal";
 import {
   MODULOS,
   moduloMeta,
@@ -23,6 +24,7 @@ import {
   validarNIF,
   idadeNoAnoFiscal,
   dependenteAte3,
+  permiteConjunta,
   TIPOS_RENDIMENTO_ESTRANGEIRO,
   PAISES_FREQUENTES,
   META_RESIDENCIA,
@@ -94,8 +96,16 @@ import {
   DEDUCAO_PENSAO_ALIMENTOS,
   DONATIVOS_MAJORACOES,
   COEF_DESVALORIZACAO_MOEDA,
+  SS_DEPENDENTE,
+  EXCLUSAO_DEFICIENCIA_TAXA,
+  EXCLUSAO_DEFICIENCIA_MAX,
+  DEDUCAO_ESPECIFICA_DEP_MAX_ORDENS,
+  QUOTIZACOES_SINDICAIS,
   type TipoDonativo,
+  type EstadoCivilRet,
+  type Regiao,
 } from "@/lib/fiscal-data";
+import { estimarRetencaoAnualCatA } from "@/lib/fiscal-dependente";
 import {
   Briefcase, User, Invoice, Coin, ChartProjection, Globe, Home, Building, Plane,
   Check, Warning, ArrowRight, ArrowLeft, ChevronDown, Export, Trash, Plus,
@@ -107,6 +117,7 @@ import {
 } from "@/components/simulador/ui";
 import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
+import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
 
 const ICONES: Record<string, (p: { size?: number; className?: string }) => ReactNode> = {
   Briefcase, User, Invoice, Coin, ChartProjection, Globe, Home, Building, Plane,
@@ -114,6 +125,25 @@ const ICONES: Record<string, (p: { size?: number; className?: string }) => React
 };
 
 const n = (s: string) => Math.max(0, parseNumericDraft(s || "") ?? 0);
+
+/** Taxa contributiva do trabalhador por conta de outrem (Art. 25.º n.º 2). */
+const TSU_TRABALHADOR = SS_DEPENDENTE.trabalhador.value;
+
+/**
+ * Traduz o estado civil da declaração para a situação familiar das tabelas de
+ * retenção. As tabelas distinguem casado com um ou dois titulares — a
+ * tributação conjunta com rendimentos de ambos corresponde a «casado, dois
+ * titulares»; sem SP B com rendimento, a «casado, único titular».
+ */
+function estadoCivilRetencao(estadoCivil: EstadoCivil, conjunta: boolean): EstadoCivilRet {
+  if (estadoCivil !== "casado" && estadoCivil !== "uniao") return "naoCasado";
+  return conjunta ? "casadoDois" : "casadoUnico";
+}
+
+/** As Regiões Autónomas têm tabelas de retenção próprias. */
+function regiaoRetencao(residencia: ResidenciaFiscal): Regiao {
+  return residencia === "madeira" || residencia === "acores" ? residencia : "continente";
+}
 
 function tempoRelativo(ts: number, agora: number): string {
   const s = Math.max(0, Math.floor((agora - ts) / 1000));
@@ -140,6 +170,17 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
   // Ao mudar de passo, rola até ao topo do simulador (passos curtos não deixam
   // o utilizador perdido a meio do ecrã).
   const topoRef = useScrollTopOnStep(passo);
+  // Mover o foco para a etapa nova. `primeiroRender` evita roubar o foco ao
+  // carregar a página — só se move quando o utilizador de facto navega.
+  const passoRef = useRef<HTMLDivElement>(null);
+  const primeiroRender = useRef(true);
+  useEffect(() => {
+    if (primeiroRender.current) {
+      primeiroRender.current = false;
+      return;
+    }
+    passoRef.current?.focus({ preventScroll: true });
+  }, [passo]);
 
   // ── Etapa 1 — agregado ──────────────────────────────────────────────────────
   const [contribuinte, setContribuinte] = useState<Contribuinte>({
@@ -164,6 +205,8 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
   const [salBruto, setSalBruto] = useState("");
   const [salRet, setSalRet] = useState("");
   const [salSS, setSalSS] = useState("");
+  const [salSindicais, setSalSindicais] = useState("");
+  const [salOrdem, setSalOrdem] = useState("");
   const [pensTipo, setPensTipo] = useState<"velhice" | "invalidez" | "sobrevivencia" | "alimentos">("velhice");
   const [pensBruto, setPensBruto] = useState("");
   const [pensRet, setPensRet] = useState("");
@@ -175,7 +218,11 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
   const [indDespesas, setIndDespesas] = useState("");
   const [indRet, setIndRet] = useState("");
   const [indAno, setIndAno] = useState(3);
-  const [indJovem, setIndJovem] = useState(0);
+  // IRS Jovem: vive no agregado, não no módulo de trabalho independente. A
+  // isenção do Art. 12.º-B abrange as categorias A e B com um teto único por
+  // titular — enquanto o campo esteve dentro do módulo B, um jovem assalariado
+  // simplesmente não tinha onde o declarar.
+  const [jovemAno, setJovemAno] = useState(0);
   const [indIsencaoSS, setIndIsencaoSS] = useState(false);
   const [indAcumula, setIndAcumula] = useState(false);
 
@@ -186,6 +233,9 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
   const [depositos, setDepositos] = useState("");
   const [capRet, setCapRet] = useState("");
   const [capEnglobar, setCapEnglobar] = useState(false);
+  // Origem dos rendimentos de capitais: só os nacionais sofrem a retenção
+  // liberatória de 28% na fonte. Os estrangeiros declaram-se no Anexo J.
+  const [capOrigem, setCapOrigem] = useState<"nacional" | "estrangeiro">("nacional");
 
   // Investimentos (detalhe por operação)
   const [opsInv, setOpsInv] = useState<OperacaoAtivo[]>([]);
@@ -213,6 +263,7 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
   const [vendaDataVenda, setVendaDataVenda] = useState("");
   const [vendaReinveste, setVendaReinveste] = useState(false);
   const [vendaReinvestido, setVendaReinvestido] = useState("");
+  const [vendaAmortizacao, setVendaAmortizacao] = useState("");
 
   // Estrangeiros (Anexo J — várias entradas por país)
   const [estEntradas, setEstEntradas] = useState<EntradaEstrangeiro[]>([]);
@@ -248,12 +299,13 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
 
   const montarSnapshot = () => ({
     contribuinte, conjunta, spb, atividadeB: atividadeB.label, dependentes, ascendentes, deficiencia, ifici, ativos,
-    salEntidade, salBruto, salRet, salSS, pensTipo, pensBruto, pensRet,
-    atividade: atividade.label, indBruto, indRegime, indDespesas, indRet, indAno, indJovem, indIsencaoSS, indAcumula,
+    salEntidade, salBruto, salRet, salSS, salSindicais, salOrdem, pensTipo, pensBruto, pensRet,
+    jovemAno,
+    atividade: atividade.label, indBruto, indRegime, indDespesas, indRet, indAno, indIsencaoSS, indAcumula,
     dividendos, juros, certificados, depositos, capRet, capEnglobar,
     opsInv, invEnglobar, opsCripto, criptoEnglobar,
     propriedades, rendaHab, rendaDuracao, rendaRet, rendaEnglobar,
-    vendaRealizacao, vendaAquisicao, vendaImt, vendaEscritura, vendaObras, vendaComissao, vendaDataAq, vendaDataVenda, vendaReinveste, vendaReinvestido,
+    vendaRealizacao, vendaAquisicao, vendaImt, vendaEscritura, vendaObras, vendaComissao, vendaDataAq, vendaDataVenda, vendaReinveste, vendaReinvestido, vendaAmortizacao,
     estEntradas,
     saude, educacao, gerais, rendasDed, lares, pensaoAlimentos, pprValor, pprIdade, donativoValor, donativoTipo, pagamentosPorConta,
   });
@@ -277,10 +329,14 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
         set(s.dependentes, setDependentes); set(s.ascendentes, setAscendentes); set(s.deficiencia, setDeficiencia);
         set(s.ifici, setIfici); set(s.ativos, setAtivos);
         set(s.salEntidade, setSalEntidade); set(s.salBruto, setSalBruto); set(s.salRet, setSalRet); set(s.salSS, setSalSS);
+        set(s.salSindicais, setSalSindicais); set(s.salOrdem, setSalOrdem);
         set(s.pensTipo, setPensTipo); set(s.pensBruto, setPensBruto); set(s.pensRet, setPensRet);
         if (s.atividade) setAtividade(ATIVIDADES.find((a) => a.label === s.atividade) ?? ATIVIDADE_DEFAULT);
         set(s.indBruto, setIndBruto); set(s.indRegime, setIndRegime); set(s.indDespesas, setIndDespesas);
-        set(s.indRet, setIndRet); set(s.indAno, setIndAno); set(s.indJovem, setIndJovem);
+        set(s.indRet, setIndRet); set(s.indAno, setIndAno);
+        // `indJovem` é a chave antiga (o campo vivia dentro do módulo B). Ler as
+        // duas mantém os cenários já guardados a funcionar depois da mudança.
+        set(s.jovemAno ?? (s as { indJovem?: number }).indJovem, setJovemAno);
         set(s.indIsencaoSS, setIndIsencaoSS); set(s.indAcumula, setIndAcumula);
         set(s.dividendos, setDividendos); set(s.juros, setJuros); set(s.certificados, setCertificados); set(s.depositos, setDepositos); set(s.capRet, setCapRet); set(s.capEnglobar, setCapEnglobar);
         set(s.opsInv, setOpsInv); set(s.invEnglobar, setInvEnglobar); set(s.opsCripto, setOpsCripto); set(s.criptoEnglobar, setCriptoEnglobar);
@@ -290,6 +346,7 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
         set(s.vendaRealizacao, setVendaRealizacao); set(s.vendaAquisicao, setVendaAquisicao);
         set(s.vendaImt, setVendaImt); set(s.vendaEscritura, setVendaEscritura); set(s.vendaObras, setVendaObras); set(s.vendaComissao, setVendaComissao);
         set(s.vendaDataAq, setVendaDataAq); set(s.vendaDataVenda, setVendaDataVenda); set(s.vendaReinveste, setVendaReinveste); set(s.vendaReinvestido, setVendaReinvestido);
+        set(s.vendaAmortizacao, setVendaAmortizacao);
         set(s.estEntradas, setEstEntradas);
         set(s.saude, setSaude); set(s.educacao, setEducacao); set(s.gerais, setGerais); set(s.rendasDed, setRendasDed);
         set(s.pprValor, setPprValor); set(s.pprIdade, setPprIdade); set(s.donativoValor, setDonativoValor);
@@ -312,6 +369,28 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
 
   const ef = efeitoFiscal(atividade);
   const efB = efeitoFiscal(atividadeB);
+
+  // ── Estimativas que evitam pedir de cor valores que já se sabem calcular ──
+  // A retenção da categoria A sai das tabelas oficiais de 2026 a partir do
+  // bruto, do estado civil e dos dependentes; a dos capitais é a taxa
+  // liberatória do Art. 71.º, que já foi retida na fonte. Ambas são apenas o
+  // valor por omissão: assim que o utilizador escreve no campo, manda ele.
+  const retencaoSalarioEstimada = useMemo(
+    () =>
+      estimarRetencaoAnualCatA({
+        brutoAnual: n(salBruto),
+        dependentes: dependentes.length,
+        estadoCivil: estadoCivilRetencao(contribuinte.estadoCivil, conjunta),
+        deficiencia,
+        regiao: regiaoRetencao(contribuinte.residencia),
+        irsJovemAno: jovemAno,
+      }),
+    [salBruto, dependentes.length, contribuinte.estadoCivil, contribuinte.residencia, conjunta, deficiencia, jovemAno]
+  );
+  const capitaisNacionais = capOrigem === "nacional";
+  const retencaoCapitaisEstimada = capitaisNacionais
+    ? (n(dividendos) + n(juros) + n(certificados) + n(depositos)) * DIVIDENDOS_TAXA.value
+    : 0;
   const resInv = useMemo(() => resumoMobiliario(opsInv), [opsInv]);
   const resCripto = useMemo(() => resumoCripto(opsCripto), [opsCripto]);
 
@@ -377,7 +456,20 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
       deficiencia,
       ifici,
       ativos,
-      salarios: { bruto: n(salBruto), retencoes: n(salRet) },
+      irsJovemAno: jovemAno,
+      salarios: {
+        bruto: n(salBruto),
+        // Sem retenção declarada, usa-se a estimativa pelas tabelas oficiais de
+        // 2026: pedir o valor de cor e assumir zero fazia o saldo dizer quase
+        // sempre «a pagar», contra a promessa de mostrar o reembolso.
+        retencoes: salRet.trim() !== "" ? n(salRet) : retencaoSalarioEstimada,
+        // A dedução específica do Art. 25.º é a MAIOR entre 8,54 × IAS e as
+        // contribuições para a SS. Sem valor declarado, a estimativa a 11%
+        // aproxima o que a entidade descontou.
+        ss: salSS.trim() !== "" ? n(salSS) : n(salBruto) * TSU_TRABALHADOR,
+        sindicais: n(salSindicais),
+        ordem: n(salOrdem),
+      },
       pensoes: { bruto: n(pensBruto), retencoes: n(pensRet) },
       independente: {
         bruto: n(indBruto),
@@ -388,11 +480,20 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
         despesas: n(indDespesas),
         retencoes: n(indRet),
         anoAtividade: indAno,
-        irsJovemAno: indJovem,
+        irsJovemAno: jovemAno,
         isencaoSSPrimeiroAno: indIsencaoSS,
         acumulaEmprego: indAcumula,
       },
-      capitais: { dividendos: n(dividendos), juros: n(juros) + n(certificados) + n(depositos), retencoes: n(capRet), englobar: capEnglobar },
+      capitais: {
+        dividendos: n(dividendos),
+        juros: n(juros) + n(certificados) + n(depositos),
+        // Os 28% do Art. 71.º são taxa LIBERATÓRIA — já foram retidos na fonte.
+        // Assumir zero fazia o painel anunciar 2 800 € «a pagar» a quem, na
+        // verdade, tinha o imposto todo liquidado. Só se aplica a rendimentos
+        // de origem nacional; os estrangeiros declaram-se no Anexo J.
+        retencoes: capRet.trim() !== "" ? n(capRet) : retencaoCapitaisEstimada,
+        englobar: capEnglobar,
+      },
       investimentos: { saldo: Math.max(0, resInv.saldo), algumCurtoPrazo: resInv.algumCurtoPrazo, englobar: invEnglobar },
       cripto: { curto: Math.max(0, resCripto.curto), longo: resCripto.longo, englobar: criptoEnglobar },
       imoveis: {
@@ -409,6 +510,7 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
         coeficiente: coefImovel,
         reinvesteHPP: vendaReinveste,
         valorReinvestido: n(vendaReinvestido),
+        amortizacaoEmprestimo: n(vendaAmortizacao),
       },
       estrangeiros: { entradas: estEntradas },
       deducoes: { saude: n(saude), educacao: n(educacao), gerais: n(gerais), rendas: n(rendasDed), lares: n(lares) },
@@ -419,9 +521,9 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
     }),
     [
       contribuinte, conjunta, spb, atividadeB, efB.coef, efB.regra15, dependentes, ascendentes, deficiencia, ifici, ativos,
-      salBruto, salRet, pensBruto, pensRet,
-      atividade, ef.coef, ef.regra15, indBruto, indRegime, indDespesas, indRet, indAno, indJovem, indIsencaoSS, indAcumula,
-      dividendos, juros, certificados, depositos, capRet, capEnglobar,
+      salBruto, salRet, salSS, salSindicais, salOrdem, retencaoSalarioEstimada, pensBruto, pensRet, jovemAno,
+      atividade, ef.coef, ef.regra15, indBruto, indRegime, indDespesas, indRet, indAno, indIsencaoSS, indAcumula,
+      dividendos, juros, certificados, depositos, capRet, capEnglobar, retencaoCapitaisEstimada,
       resInv, invEnglobar,
       resCripto, criptoEnglobar,
       propriedades, rendaHab, rendaDuracao, rendaRet, rendaEnglobar,
@@ -431,12 +533,19 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
     ]
   );
 
-  const resultado = useMemo(() => simularDeclaracaoIRS(construirDeclaracaoInput(estado)), [estado]);
-  const validacoes = useMemo(
-    () => validarDeclaracao(estado, resultado.rendimentoColetavel),
-    [estado, resultado.rendimentoColetavel]
+  // O painel de resultado não precisa de acompanhar cada tecla premida: o que
+  // interessa é o utilizador continuar a escrever sem engasgos. `useDeferredValue`
+  // deixa a escrita ter prioridade e recalcula o painel logo a seguir.
+  const estadoDiferido = useDeferredValue(estado);
+  const resultado = useMemo(
+    () => simularDeclaracaoIRS(construirDeclaracaoInput(estadoDiferido)),
+    [estadoDiferido]
   );
-  const completude = useMemo(() => calcularCompletude(estado), [estado]);
+  const validacoes = useMemo(
+    () => validarDeclaracao(estadoDiferido, resultado.rendimentoColetavel),
+    [estadoDiferido, resultado.rendimentoColetavel]
+  );
+  const completude = useMemo(() => calcularCompletude(estadoDiferido), [estadoDiferido]);
 
   const erros = validacoes.filter((v) => v.nivel === "erro");
   const avisos = validacoes.filter((v) => v.nivel === "aviso");
@@ -513,7 +622,7 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
     if (p.indRet !== undefined) setIndRet(String(p.indRet));
     if (p.indRegime) setIndRegime(p.indRegime);
     if (p.indAno !== undefined) setIndAno(p.indAno);
-    if (p.indJovem !== undefined) setIndJovem(p.indJovem);
+    if (p.indJovem !== undefined) setJovemAno(p.indJovem);
     if (p.indDespesas !== undefined) setIndDespesas(String(p.indDespesas));
     if (p.indIsencaoSS !== undefined) setIndIsencaoSS(p.indIsencaoSS);
     if (p.indAcumula !== undefined) setIndAcumula(p.indAcumula);
@@ -570,12 +679,23 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[1fr_340px]">
         {/* Coluna principal */}
         <div className="min-w-0 space-y-5">
+          {/*
+            Ao mudar de etapa, o foco tem de acompanhar: sem isto, quem navega
+            por teclado continuava com o foco no botão «Seguinte» e tinha de
+            percorrer a página inteira para chegar aos campos novos. O contentor
+            é focável por programa (`tabIndex={-1}`, fora da ordem de tabulação)
+            e anuncia-se como região com o nome da etapa.
+          */}
           <m.div
             key={passo}
+            ref={passoRef}
+            tabIndex={-1}
+            role="group"
+            aria-label={`Etapa ${passo + 1} de ${PASSOS.length}: ${PASSOS[passo]}`}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="space-y-5"
+            className="space-y-5 outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 focus-visible:ring-offset-cream dark:focus-visible:ring-offset-stone-950"
           >
           {passo === 0 && (
             <PassoAgregado
@@ -583,7 +703,7 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
                 contribuinte, setContribuinte, conjunta, setConjunta,
                 spb, setSpb, atividadeB, setAtividadeB, efB,
                 dependentes, setDependentes, ascendentes, setAscendentes,
-                deficiencia, setDeficiencia, ifici, setIfici, jovemAtivo: indJovem > 0,
+                deficiencia, setDeficiencia, ifici, setIfici, jovemAno, setJovemAno,
               }}
             />
           )}
@@ -606,20 +726,41 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
                   </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <Campo id="sal-bruto" label="Rendimento bruto (€)" value={salBruto} onChange={setSalBruto} step={500} />
-                    <Campo id="sal-ret" label="Retenções de IRS (€)" value={salRet} onChange={setSalRet} step={100} />
+                    <Campo id="sal-ret" label="Retenções de IRS (€)" value={salRet} onChange={setSalRet} step={100}
+                      tooltip="Total retido pela entidade ao longo do ano. Se deixares vazio, usamos a estimativa pelas tabelas oficiais de 2026." />
                     <Campo id="sal-ss" label="Desconto Seg. Social (€)" value={salSS} onChange={setSalSS} step={100}
-                      tooltip="Contribuição do trabalhador para a Segurança Social (11%), retida pela entidade. Informativa — não altera o IRS." />
+                      tooltip={`Contribuição do trabalhador (${pct(TSU_TRABALHADOR)}), retida pela entidade. Acima de cerca de ${fmt(Math.round(DEDUCAO_ESPECIFICA_DEPENDENTE.value / TSU_TRABALHADOR))} de bruto, é ELA que passa a ser a dedução específica (Art. 25.º n.º 2).`} />
                   </div>
-                  {n(salBruto) > 0 && n(salSS) === 0 && (
-                    <p className="rounded-xl bg-stone-100 px-3 py-2 text-xs text-stone-500 dark:bg-stone-800 dark:text-stone-400">
-                      Estimativa do desconto de Segurança Social a 11%: {fmt(n(salBruto) * 0.11)}.
+                  {n(salBruto) > 0 && salRet.trim() === "" && retencaoSalarioEstimada > 0 && (
+                    <p className="rounded-xl border border-brand/20 bg-brand-light/50 px-3 py-2 text-xs text-brand-dark">
+                      Retenção estimada em {fmt(retencaoSalarioEstimada)}, pelas tabelas de 2026 para a tua situação familiar
+                      ({dependentes.length} dependente{dependentes.length === 1 ? "" : "s"}). Escreve o valor do teu recibo se souberes — o campo manda sobre a estimativa.
                     </p>
                   )}
+                  {n(salBruto) > 0 && salSS.trim() === "" && (
+                    <p className="rounded-xl bg-stone-100 px-3 py-2 text-xs text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+                      Desconto de Segurança Social estimado a {pct(TSU_TRABALHADOR)}: {fmt(n(salBruto) * TSU_TRABALHADOR)}.
+                    </p>
+                  )}
+                  <details className="rounded-2xl border border-stone-100 bg-stone-50/70 p-3 dark:border-stone-700 dark:bg-stone-800/40">
+                    <summary className="cursor-pointer text-xs font-semibold text-stone-600 dark:text-stone-300">
+                      Quotizações sindicais e de ordens profissionais
+                    </summary>
+                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <Campo id="sal-sindicais" label="Quotizações sindicais (€)" value={salSindicais} onChange={setSalSindicais} step={25}
+                        tooltip={`Dedutíveis até ${pct(QUOTIZACOES_SINDICAIS.value.limiteFracaoBruto)} do rendimento bruto e acrescidas de 100% (Art. 25.º n.º 1 al. c).`} />
+                      <Campo id="sal-ordem" label="Quotizações para ordem profissional (€)" value={salOrdem} onChange={setSalOrdem} step={25}
+                        tooltip={`Elevam a dedução específica até ${fmt(DEDUCAO_ESPECIFICA_DEP_MAX_ORDENS.value)} (75% de 12 × IAS), se a atividade for exercida exclusivamente por conta de outrem (Art. 25.º n.º 4).`} />
+                    </div>
+                  </details>
                   <Explicador titulo="Como é tributado o trabalho dependente?">
-                    Ao rendimento bruto subtrai-se uma dedução específica de {fmt(DEDUCAO_ESPECIFICA_DEPENDENTE.value)} (8,54 × IAS, Art. 25.º CIRS).
-                    O valor restante junta-se aos outros rendimentos e é tributado pelas taxas progressivas. As retenções feitas
-                    pela entidade empregadora são adiantamentos: comparam-se no fim com o IRS apurado. Se tiveste mais do que uma
-                    entidade, soma os rendimentos e as retenções.
+                    Ao rendimento bruto subtrai-se uma dedução específica: {fmt(DEDUCAO_ESPECIFICA_DEPENDENTE.value)} (8,54 × IAS,
+                    Art. 25.º n.º 1) ou, se for maior, o TOTAL das contribuições para a Segurança Social (n.º 2) — o que acontece
+                    a partir de cerca de {fmt(Math.round(DEDUCAO_ESPECIFICA_DEPENDENTE.value / TSU_TRABALHADOR))} de rendimento bruto.
+                    Quotizações para ordens profissionais elevam-na até {fmt(DEDUCAO_ESPECIFICA_DEP_MAX_ORDENS.value)} (n.º 4) e as
+                    sindicais somam-se por cima, majoradas em 100% (n.º 1 al. c). O valor restante junta-se aos outros rendimentos
+                    e é tributado pelas taxas progressivas. As retenções feitas pela entidade são adiantamentos: comparam-se no fim
+                    com o IRS apurado. Se tiveste mais do que uma entidade, soma os rendimentos e as retenções.
                   </Explicador>
                 </ModuloCard>
               )}
@@ -706,18 +847,13 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
                       </select>
                     </div>
                   </div>
-                  <div>
-                    <div className="mb-1.5 flex items-center gap-1.5">
-                      <label htmlFor="ind-jovem" className={rotuloCls}>IRS Jovem</label>
-                      <InfoTip>Até {IRS_JOVEM.idadeMax.value} anos. Isenção 100% (1.º), 75% (2.º–4.º), 50% (5.º–7.º), 25% (8.º–10.º). Teto 55×IAS = {fmt(Math.round(55 * IAS.value))}. Art. 12.º-B CIRS.</InfoTip>
-                    </div>
-                    <select id="ind-jovem" value={indJovem} onChange={(e) => setIndJovem(Number(e.target.value))} className={campoCls}>
-                      <option value={0}>Não aplicável</option>
-                      {Array.from({ length: 10 }, (_, i) => i + 1).map((ano) => (
-                        <option key={ano} value={ano}>{`${ano}.º ano — isenção ${pct(IRS_JOVEM.isencaoPorAno.value[ano])}`}</option>
-                      ))}
-                    </select>
-                  </div>
+                  {jovemAno > 0 && (
+                    <p className="rounded-xl border border-brand/20 bg-brand-light/50 px-3 py-2 text-xs text-brand-dark">
+                      IRS Jovem ativo ({jovemAno}.º ano, isenção {pct(IRS_JOVEM.isencaoPorAno.value[jovemAno])}). A isenção
+                      abrange as categorias A e B com um teto único de {fmt(Math.round(55 * IAS.value))} por titular —
+                      configura-a na etapa «Agregado».
+                    </p>
+                  )}
 
                   {/* Segurança Social (Anexo SS) */}
                   <div className="space-y-2 rounded-2xl border border-stone-100 bg-stone-50/70 p-3 dark:border-stone-700 dark:bg-stone-800/40">
@@ -750,7 +886,40 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
                     <Campo id="depositos" label="Depósitos (€)" value={depositos} onChange={setDepositos} step={100}
                       tooltip="Juros de depósitos a prazo." />
                   </div>
-                  <Campo id="cap-ret" label="Retenções na fonte (€)" value={capRet} onChange={setCapRet} step={50} />
+                  <SeletorCartoes
+                    label="Origem dos rendimentos"
+                    tooltip="Só os rendimentos de fonte nacional sofrem a retenção liberatória na fonte. Os de fonte estrangeira declaram-se no Anexo J, com o imposto pago lá fora."
+                    opcoes={[
+                      {
+                        id: "nacional" as const,
+                        label: "Portugal",
+                        sub: `Retenção de ${pct(DIVIDENDOS_TAXA.value)}`,
+                        descricao: `A entidade pagadora retém ${pct(DIVIDENDOS_TAXA.value)} na fonte a título definitivo (Art. 71.º CIRS). O imposto já está pago — a retenção entra no acerto final.`,
+                      },
+                      {
+                        id: "estrangeiro" as const,
+                        label: "Estrangeiro",
+                        sub: "Sem retenção em Portugal",
+                        descricao: "Não há retenção portuguesa na fonte. Declara o rendimento e o imposto pago no país da fonte no módulo de rendimentos do estrangeiro (Anexo J), para aproveitares o crédito por dupla tributação.",
+                      },
+                    ]}
+                    valor={capOrigem}
+                    onChange={setCapOrigem}
+                  />
+                  <Campo id="cap-ret" label="Retenções na fonte (€)" value={capRet} onChange={setCapRet} step={50}
+                    tooltip="Deixa vazio para usarmos a retenção legal de origem nacional. Escreve o valor se o teu extrato indicar outro." />
+                  {capitaisNacionais && capRet.trim() === "" && retencaoCapitaisEstimada > 0 && (
+                    <p className="rounded-xl border border-brand/20 bg-brand-light/50 px-3 py-2 text-xs text-brand-dark">
+                      Retenção assumida: {fmt(retencaoCapitaisEstimada)} — os {pct(DIVIDENDOS_TAXA.value)} do Art. 71.º já foram
+                      retidos pela entidade pagadora. Não é imposto por pagar; é imposto já pago. Corrige o campo se o teu
+                      extrato indicar outro valor.
+                    </p>
+                  )}
+                  {!capitaisNacionais && (
+                    <p className="rounded-xl bg-stone-100 px-3 py-2 text-xs text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+                      Sem retenção portuguesa a assumir. Declara o imposto pago lá fora no módulo de rendimentos do estrangeiro.
+                    </p>
+                  )}
                   <Interruptor
                     on={capEnglobar}
                     onChange={setCapEnglobar}
@@ -890,7 +1059,19 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
                   <Checkbox checked={vendaReinveste} onChange={setVendaReinveste} label="Era habitação própria e vou reinvestir noutra HPP"
                     sub="O reinvestimento (sem crédito) até 36 meses após a venda exclui a mais-valia da tributação, na proporção do valor reinvestido (Art. 10.º n.º 5)." />
                   {vendaReinveste && (
-                    <Campo id="venda-reinvestido" label="Valor a reinvestir (€)" value={vendaReinvestido} onChange={setVendaReinvestido} step={1000} />
+                    <>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <Campo id="venda-reinvestido" label="Valor a reinvestir (€)" value={vendaReinvestido} onChange={setVendaReinvestido} step={1000} />
+                        <Campo id="venda-amortizacao" label="Empréstimo amortizado na venda (€)" value={vendaAmortizacao} onChange={setVendaAmortizacao} step={1000}
+                          tooltip="Capital em dívida do crédito contraído para comprar o imóvel vendido, liquidado com o produto da venda. O Art. 10.º n.º 5 manda deduzi-lo ao valor de realização antes de medir a fração reinvestida." />
+                      </div>
+                      {n(vendaAmortizacao) > 0 && n(vendaRealizacao) > 0 && (
+                        <p className="rounded-xl bg-stone-100 px-3 py-2 text-xs text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+                          Valor de realização relevante para o reinvestimento: {fmt(Math.max(0, n(vendaRealizacao) - n(vendaAmortizacao)))}
+                          {" "}({fmt(n(vendaRealizacao))} menos o empréstimo amortizado). É sobre este valor que se mede a fração reinvestida.
+                        </p>
+                      )}
+                    </>
                   )}
                 </ModuloCard>
               )}
@@ -980,8 +1161,8 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
         </div>
       </div>
 
-      <ProHint id="guardar-cenario-irs" icon={<ChartProjection size={18} />} cta="Conhecer o Pro" className="mt-6">
-        Gostavas de guardar esta declaração simulada e compará-la com outros cenários ao longo do ano? Isso faz parte do Pro.
+      <ProHint id="guardar-cenario-irs" icon={<ChartProjection size={18} />} cta="Conhecer o Plus" className="mt-6">
+        Gostavas de guardar esta declaração simulada e compará-la com outros cenários ao longo do ano? Isso faz parte do Plus.
       </ProHint>
       <div className="mt-4"><PartnerSpot context="simulador" /></div>
 
@@ -1070,37 +1251,53 @@ function ModuloCard({ id, children }: { id: RendimentoId; children: ReactNode })
 }
 
 function ComparadorCenarios({ estado }: { estado: EstadoDeclaracao }) {
-  const base = construirDeclaracaoInput(estado);
   const temCapital = ["capitais", "investimentos", "cripto", "imoveis"].some((id) => estado.ativos.includes(id as RendimentoId));
+  const podeConjunta = permiteConjunta(estado.contribuinte.estadoCivil);
 
-  const comEnglobamento = (input: ReturnType<typeof construirDeclaracaoInput>, englobar: boolean) => ({
-    ...input,
-    capitais: input.capitais ? { ...input.capitais, englobar } : undefined,
-    investimentos: input.investimentos ? { ...input.investimentos, englobar } : undefined,
-    cripto: input.cripto ? { ...input.cripto, englobar } : undefined,
-    prediais: input.prediais ? { ...input.prediais, englobar } : undefined,
-  });
-
-  const individual = simularDeclaracaoIRS({ ...base, conjunta: false });
-  const conjunta = simularDeclaracaoIRS({ ...base, conjunta: true });
-  const autonoma = simularDeclaracaoIRS(comEnglobamento(base, false));
-  const englobado = simularDeclaracaoIRS(comEnglobamento(base, true));
+  // Quatro declarações completas por render era o que isto custava — e cada
+  // `simularDeclaracaoIRS` corre o motor 2 a 3 vezes. Sem memo, uma tecla
+  // premida num campo qualquer disparava tudo outra vez.
+  const { individual, conjunta, autonoma, englobado } = useMemo(() => {
+    const base = construirDeclaracaoInput(estado);
+    const comEnglobamento = (input: DeclaracaoInput, englobar: boolean): DeclaracaoInput => ({
+      ...input,
+      capitais: input.capitais ? { ...input.capitais, englobar } : undefined,
+      investimentos: input.investimentos ? { ...input.investimentos, englobar } : undefined,
+      cripto: input.cripto ? { ...input.cripto, englobar } : undefined,
+      prediais: input.prediais ? { ...input.prediais, englobar } : undefined,
+    });
+    return {
+      individual: simularDeclaracaoIRS({ ...base, conjunta: false }),
+      // Comparar com a conjunta só faz sentido a quem lhe tem direito; a quem
+      // não tem, mostrar um «melhor» inatingível é uma sugestão errada.
+      conjunta: podeConjunta ? simularDeclaracaoIRS({ ...base, conjunta: true }) : null,
+      autonoma: temCapital ? simularDeclaracaoIRS(comEnglobamento(base, false)) : null,
+      englobado: temCapital ? simularDeclaracaoIRS(comEnglobamento(base, true)) : null,
+    };
+  }, [estado, podeConjunta, temCapital]);
 
   return (
     <section className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
       <SeccaoTitulo eyebrow="Otimização" titulo="Comparar cenários" descricao="A mesma declaração, lado a lado. Indicamos qual paga menos imposto — a decisão continua a ser tua." />
 
       <div className="mt-4 space-y-4">
-        <ParCenarios
-          titulo="Tributação"
-          nota="Só aplicável a casados ou unidos de facto."
-          a={{ rotulo: "Individual", irs: individual.irsTotal, saldo: individual.saldo }}
-          b={{ rotulo: "Conjunta", irs: conjunta.irsTotal, saldo: conjunta.saldo }}
-        />
-        {temCapital && (
+        {conjunta ? (
+          <ParCenarios
+            titulo="Tributação"
+            nota="Disponível a casados e unidos de facto."
+            a={{ rotulo: "Individual", irs: individual.irsTotal, saldo: individual.saldo }}
+            b={{ rotulo: "Conjunta", irs: conjunta.irsTotal, saldo: conjunta.saldo }}
+          />
+        ) : (
+          <p className="rounded-xl bg-stone-100 px-3 py-2 text-xs text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+            A comparação entre tributação individual e conjunta só se aplica a casados e unidos de facto
+            (Art. 13.º n.º 2 CIRS). Com o estado civil indicado, a declaração é sempre individual.
+          </p>
+        )}
+        {autonoma && englobado && (
           <ParCenarios
             titulo="Rendimentos de capital e mais-valias"
-            nota="Taxa autónoma (28%) vs. englobamento às taxas progressivas."
+            nota={`Taxa autónoma (${pct(DIVIDENDOS_TAXA.value)}) vs. englobamento às taxas progressivas.`}
             a={{ rotulo: "Tributação autónoma", irs: autonoma.irsTotal, saldo: autonoma.saldo }}
             b={{ rotulo: "Englobamento", irs: englobado.irsTotal, saldo: englobado.saldo }}
           />
@@ -1236,6 +1433,8 @@ function EditorEstrangeiros({ entradas, setEntradas }: { entradas: EntradaEstran
           : e
       )
     );
+  const atualizarBooleano = (id: string, campo: "isencaoComProgressividade", valor: boolean) =>
+    setEntradas(entradas.map((e) => (e.id === id ? { ...e, [campo]: valor } : e)));
   return (
     <div className="space-y-3">
       <datalist id="paises-frequentes">
@@ -1275,7 +1474,21 @@ function EditorEstrangeiros({ entradas, setEntradas }: { entradas: EntradaEstran
               <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">Imposto pago (€)</label>
               <LocalizedNumberInput value={e.impostoPago} min={0} onValueChange={(value) => atualizar(e.id, "impostoPago", value)} placeholder="0" className={campoCls} />
             </div>
+            <div className="col-span-2">
+              <Checkbox
+                checked={!!e.isencaoComProgressividade}
+                onChange={(v) => atualizarBooleano(e.id, "isencaoComProgressividade", v)}
+                label="A convenção isenta este rendimento em Portugal"
+                sub="Método da isenção com progressividade: o rendimento não é tributado cá, mas conta para determinar a taxa aplicada ao resto (Art. 81.º n.º 8 CIRS). Confirma o método na convenção com este país."
+              />
+            </div>
           </div>
+          {(e.tipo === "trabalho" || e.tipo === "pensoes") && e.rendimento > 0 && (
+            <p className="mt-2 text-[11px] leading-relaxed text-stone-400">
+              Como rendimento de {e.tipo === "trabalho" ? "trabalho" : "pensões"}, aplica-se a mesma dedução específica de
+              {" "}{fmt(DEDUCAO_ESPECIFICA_DEPENDENTE.value)} que teria em Portugal (Art. 15.º + Art. {e.tipo === "trabalho" ? "25.º" : "53.º"} CIRS).
+            </p>
+          )}
         </div>
       ))}
       <button
@@ -1293,7 +1506,14 @@ function Triagem({ ativos, onToggle }: { ativos: RendimentoId[]; onToggle: (id: 
   return (
     <section className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-stone-900 sm:p-6">
       <SeccaoTitulo eyebrow="Etapa 2 · Rendimentos" titulo="Como obtiveste rendimentos?" descricao="Seleciona tudo o que se aplica — abrimos apenas os módulos de que precisas, cada um com a sua correspondência fiscal." />
-      <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+      {/*
+        Grupo de opções múltiplas: precisa de `fieldset`/`legend` para um leitor
+        de ecrã anunciar o contexto antes de cada botão. Sem isso, ouvia-se
+        «Trabalho dependente, botão» sem saber a que pergunta responde.
+      */}
+      <fieldset className="mt-5 min-w-0 border-0 p-0">
+        <legend className="sr-only">Origens dos teus rendimentos — seleciona todas as que se aplicam</legend>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
         {MODULOS.map((m) => {
           const active = ativos.includes(m.id);
           const Icon = ICONES[m.icone];
@@ -1320,7 +1540,8 @@ function Triagem({ ativos, onToggle }: { ativos: RendimentoId[]; onToggle: (id: 
             </button>
           );
         })}
-      </div>
+        </div>
+      </fieldset>
     </section>
   );
 }
@@ -1335,17 +1556,28 @@ function PassoAgregado(props: {
   ascendentes: AscendenteDetalhe[]; setAscendentes: (a: AscendenteDetalhe[]) => void;
   deficiencia: boolean; setDeficiencia: (v: boolean) => void;
   ifici: boolean; setIfici: (v: boolean) => void;
-  jovemAtivo: boolean;
+  jovemAno: number; setJovemAno: (v: number) => void;
 }) {
   const {
     contribuinte, setContribuinte, conjunta, setConjunta, dependentes, setDependentes,
     spb, setSpb, atividadeB, setAtividadeB, efB,
-    ascendentes, setAscendentes, deficiencia, setDeficiencia, ifici, setIfici, jovemAtivo,
+    ascendentes, setAscendentes, deficiencia, setDeficiencia, ifici, setIfici, jovemAno, setJovemAno,
   } = props;
   const c = contribuinte;
   const upd = (campo: keyof Contribuinte, valor: string) => setContribuinte({ ...c, [campo]: valor });
   const nifMau = !validarNIF(c.nif);
   const ascQualif = ascendentes.filter((a) => a.comunhao && a.rendimentoBaixo).length;
+  const jovemAtivo = jovemAno > 0;
+  const conjuntaDisponivel = permiteConjunta(c.estadoCivil);
+  const idadeTitular = idadeNoAnoFiscal(c.nascimento);
+  const jovemForaDeIdade = idadeTitular !== null && idadeTitular > IRS_JOVEM.idadeMax.value;
+
+  // Mudar o estado civil para um que não permita a tributação conjunta tem de
+  // desligá-la: caso contrário fica um estado impossível — «Solteiro» com
+  // «Conjunta» — que corta cerca de 21% do imposto sem que a lei o permita.
+  useEffect(() => {
+    if (conjunta && !conjuntaDisponivel) setConjunta(false);
+  }, [conjunta, conjuntaDisponivel, setConjunta]);
 
   return (
     <div className="space-y-5">
@@ -1359,8 +1591,11 @@ function PassoAgregado(props: {
           </div>
           <div>
             <label htmlFor="c-nif" className={`mb-1.5 block ${rotuloCls}`}>NIF</label>
-            <input id="c-nif" inputMode="numeric" value={c.nif} onChange={(e) => upd("nif", e.target.value.replace(/\D/g, "").slice(0, 9))} placeholder="9 dígitos" className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
-            {nifMau && <p className="mt-1 text-[11px] text-red-500">NIF inválido (9 dígitos com dígito de controlo).</p>}
+            {/* A borda vermelha só existe para quem a vê. `aria-invalid` diz o
+                mesmo a quem ouve, e `aria-describedby` liga o campo à razão —
+                sem isso, um leitor de ecrã anuncia «NIF, editar» e mais nada. */}
+            <input id="c-nif" inputMode="numeric" value={c.nif} onChange={(e) => upd("nif", e.target.value.replace(/\D/g, "").slice(0, 9))} placeholder="9 dígitos" aria-invalid={nifMau || undefined} aria-describedby={nifMau ? "c-nif-erro" : undefined} className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
+            {nifMau && <p id="c-nif-erro" className="mt-1 text-[11px] text-red-500">NIF inválido (9 dígitos com dígito de controlo).</p>}
           </div>
           <div>
             <label htmlFor="c-nasc" className={`mb-1.5 block ${rotuloCls}`}>Data de nascimento</label>
@@ -1402,21 +1637,53 @@ function PassoAgregado(props: {
               sub: "Quociente conjugal",
               descricao: "O rendimento coletável do casal é dividido por 2, aplicam-se os escalões e o imposto é multiplicado por 2 (Art. 69.º CIRS).",
               pontos: ["Disponível a casados e unidos de facto", "Costuma compensar quando há grande diferença de rendimentos entre os dois"],
+              desativada: !conjuntaDisponivel,
+              motivoDesativada: `A tributação conjunta só está disponível a casados e unidos de facto (Art. 13.º n.º 2 CIRS). O estado civil indicado é «${META_ESTADO_CIVIL[c.estadoCivil]}».`,
             },
           ]}
           valor={conjunta}
           onChange={setConjunta}
         />
         <div>
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <label htmlFor="c-jovem" className={rotuloCls}>IRS Jovem</label>
+            <InfoTip>
+              Até {IRS_JOVEM.idadeMax.value} anos no último dia do ano. Isenção 100% (1.º), 75% (2.º–4.º), 50% (5.º–7.º),
+              25% (8.º–10.º). Abrange as categorias A e B, com um teto único de {fmt(Math.round(55 * IAS.value))} por titular
+              (55 × IAS). Art. 12.º-B CIRS.
+            </InfoTip>
+          </div>
+          <select id="c-jovem" value={jovemAno} onChange={(e) => setJovemAno(Number(e.target.value))} className={campoCls}>
+            <option value={0}>Não aplicável</option>
+            {Array.from({ length: 10 }, (_, i) => i + 1).map((ano) => (
+              <option key={ano} value={ano}>{`${ano}.º ano — isenção ${pct(IRS_JOVEM.isencaoPorAno.value[ano])}`}</option>
+            ))}
+          </select>
+          <p className="mt-1.5 text-[11px] text-stone-400">
+            Aplica-se ao salário e aos recibos verdes do mesmo titular — o teto é partilhado entre as duas categorias.
+          </p>
+          {jovemAtivo && jovemForaDeIdade && (
+            <div className="mt-2 rounded-xl border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">
+              Com {idadeTitular} anos, o limite de {IRS_JOVEM.idadeMax.value} anos do Art. 12.º-B já foi ultrapassado. Corrige a
+              data de nascimento ou desativa o IRS Jovem.
+            </div>
+          )}
+          {jovemAtivo && !c.nascimento && (
+            <div className="mt-2 rounded-xl bg-stone-100 px-3 py-2 text-xs text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+              Preenche a data de nascimento acima para confirmarmos o limite de idade do regime.
+            </div>
+          )}
+        </div>
+        <div>
           <Checkbox checked={deficiencia} onChange={setDeficiencia} label="Sujeito passivo com deficiência ≥ 60%"
-            sub="Art. 56.º-A: exclui 15% dos rendimentos da categoria B (máx €2 500). Art. 87.º: deduz 4×IAS à coleta. Exige atestado médico." />
+            sub={`Art. 56.º-A: exclui ${pct(EXCLUSAO_DEFICIENCIA_TAXA.value)} dos rendimentos brutos das categorias A, B e H, até ${fmt(EXCLUSAO_DEFICIENCIA_MAX.value)} por categoria. Art. 87.º: deduz 4×IAS à coleta. Exige atestado médico.`} />
         </div>
         <div>
           <Checkbox checked={ifici} onChange={setIfici} label="IFICI / NHR 2.0 — taxa única de 20%"
             sub="Substitui o NHR. Aplica 20% aos rendimentos elegíveis. Exige estatuto da AT e não ter sido residente nos últimos 5 anos. Incompatível com IRS Jovem." />
           {ifici && jovemAtivo && (
             <div className="mt-2 rounded-xl border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">
-              IFICI e IRS Jovem são incompatíveis. Desativa um dos dois (o IRS Jovem está no módulo de trabalho independente).
+              IFICI e IRS Jovem são incompatíveis. Desativa um dos dois.
             </div>
           )}
         </div>
@@ -1549,7 +1816,7 @@ function PessoaEditor({
         </div>
         <div>
           <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">NIF</label>
-          <input inputMode="numeric" value={nif} onChange={(e) => onNif(e.target.value.replace(/\D/g, "").slice(0, 9))} placeholder="9 dígitos" className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
+          <input inputMode="numeric" value={nif} onChange={(e) => onNif(e.target.value.replace(/\D/g, "").slice(0, 9))} placeholder="9 dígitos" aria-invalid={nifMau || undefined} aria-label="NIF do dependente" className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
         </div>
         {children}
       </div>
@@ -1629,8 +1896,8 @@ function SujeitoPassivoB({
         </div>
         <div>
           <label htmlFor="spb-nif" className={`mb-1.5 block ${rotuloCls}`}>NIF</label>
-          <input id="spb-nif" inputMode="numeric" value={spb.contribuinte.nif} onChange={(e) => updC({ nif: e.target.value.replace(/\D/g, "").slice(0, 9) })} placeholder="9 dígitos" className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
-          {nifMau && <p className="mt-1 text-[11px] text-red-500">NIF inválido.</p>}
+          <input id="spb-nif" inputMode="numeric" value={spb.contribuinte.nif} onChange={(e) => updC({ nif: e.target.value.replace(/\D/g, "").slice(0, 9) })} placeholder="9 dígitos" aria-invalid={nifMau || undefined} aria-describedby={nifMau ? "spb-nif-erro" : undefined} className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
+          {nifMau && <p id="spb-nif-erro" className="mt-1 text-[11px] text-red-500">NIF inválido.</p>}
         </div>
         <div>
           <label htmlFor="spb-nasc" className={`mb-1.5 block ${rotuloCls}`}>Data de nascimento</label>
@@ -2056,6 +2323,28 @@ function PassoRevisao({
         </span>
       </div>
 
+      {/* Ponto 12.3 da arquitetura. Fica logo a seguir às ações e antes da
+          revisão detalhada: quem chega à etapa 4 já tem a conta feita e o
+          que quer saber é como submeter. Nada aparece com a integração
+          desligada. */}
+      {resultado.rendimentoGlobal > 0 && (
+        <FizPlanoAcao
+          simulador="simulador-irs"
+          valores={{
+            entityType: "INDIVIDUAL",
+            period: "ANNUAL",
+            grossEstimate: Math.round(resultado.rendimentoGlobal),
+            irsEstimate: Math.round(resultado.irsTotal),
+            withholdingEstimate: Math.round(resultado.retencoesTotais),
+          }}
+          passosPreparacao={[
+            "Rendimentos por categoria organizados e anexos identificados.",
+            "Deduções à coleta e retenções já contabilizadas.",
+            "Memória de cálculo disponível para conferência.",
+          ]}
+        />
+      )}
+
       {cenarioFeedback && (
         <div
           className={`flex items-start gap-2.5 rounded-xl border p-3.5 text-sm ${
@@ -2190,6 +2479,93 @@ function MemoriaCalculo({ memoria }: { memoria: ReturnType<typeof simularDeclara
   );
 }
 
+/**
+ * O que fazer a seguir ao número.
+ *
+ * Depois de descobrir que tem 2 400 € a pagar, o utilizador ficava sem caminho
+ * nenhum — e todas as ferramentas que respondem a essa pergunta já existem no
+ * produto. As sugestões mudam com o resultado: quem paga muito precisa de
+ * comparar regimes, quem tem atividade independente precisa dos prazos, e
+ * qualquer um pode querer falar com um contabilista.
+ */
+function ProximosPassos({
+  resultado,
+  reembolso,
+}: {
+  resultado: ReturnType<typeof simularDeclaracaoIRS>;
+  reembolso: boolean;
+}) {
+  const temCatB = resultado.componentes.some((c) => c.id === "independente" || c.id === "independente-b");
+  const temCatA = resultado.componentes.some((c) => c.id === "salarios" || c.id === "salarios-b");
+  const taxaAlta = resultado.taxaEfetiva >= 0.2;
+
+  const acoes: Array<{ href: string; titulo: string; sub: string }> = [];
+
+  // Quem só tem salário ficava sem caminho nenhum: as duas primeiras ações
+  // dependiam de haver categoria B, e sobrava a do contabilista. É metade dos
+  // casos possíveis desta ferramenta.
+  if (temCatA && !temCatB) {
+    acoes.push({
+      href: "/ferramentas/recibo-vencimento",
+      titulo: reembolso ? "Ver o recibo mês a mês" : "Rever a retenção mensal",
+      sub: reembolso
+        ? "O reembolso vem de teres pago a mais durante o ano. O simulador de vencimento mostra quanto te retêm por mês e porquê."
+        : "Um valor a pagar em junho costuma vir de uma tabela de retenção abaixo do imposto real. Podes pedir à entidade patronal uma taxa mais alta.",
+    });
+  }
+
+  if (temCatB) {
+    acoes.push({
+      href: "/dashboard/comparar",
+      titulo: "Recibos verdes ou empresa?",
+      sub: taxaAlta
+        ? `Com uma taxa efetiva de ${pct(resultado.taxaEfetiva)}, vale a pena ver o que mudaria com uma sociedade.`
+        : "Compara o que pagarias como trabalhador independente e através de uma sociedade.",
+    });
+    acoes.push({
+      href: "/dashboard/prazos",
+      titulo: "Não falhar os próximos prazos",
+      sub: "Entrega do IRS, pagamentos por conta e declarações da Segurança Social, com aviso antes de cada um.",
+    });
+  }
+  if (!reembolso && resultado.irsTotal > 0) {
+    acoes.push({
+      href: "/guias/plano-prestacoes",
+      titulo: "Pagar em prestações",
+      sub: "Se o valor apurado apertar a tesouraria, há um plano de prestações previsto na lei. O guia explica como e quando.",
+    });
+  }
+  acoes.push({
+    href: "/ferramentas/mapa-contabilistas",
+    titulo: "Confirmar com um contabilista",
+    sub: "Esta é uma estimativa. Um contabilista certificado valida o enquadramento antes da entrega.",
+  });
+
+  return (
+    <section className="rounded-2xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-700 dark:bg-stone-900">
+      <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-stone-400">
+        {reembolso ? "E no próximo ano?" : "O que fazer a seguir"}
+      </h3>
+      <ul className="space-y-2">
+        {acoes.slice(0, 3).map((a) => (
+          <li key={a.href}>
+            <Link
+              href={a.href}
+              className="group flex items-start gap-2 rounded-xl border border-stone-200 p-2.5 transition-colors hover:border-brand hover:bg-brand-light/40 dark:border-stone-700 dark:hover:bg-brand/10"
+            >
+              <ArrowRight size={13} className="mt-0.5 flex-shrink-0 text-stone-400 transition-colors group-hover:text-brand" />
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-stone-700 dark:text-stone-200">{a.titulo}</span>
+                <span className="mt-0.5 block text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">{a.sub}</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function ResumoLateral({
   resultado,
   reembolso,
@@ -2201,6 +2577,7 @@ function ResumoLateral({
   completude: ReturnType<typeof calcularCompletude>;
   nErros: number;
 }) {
+  const rotuloSaldo = reembolso ? "Reembolso estimado" : "Imposto a pagar estimado";
   return (
     <div className="space-y-4">
       <div className="overflow-hidden rounded-4xl border border-stone-200 bg-cream shadow-card dark:border-stone-700 dark:bg-stone-900">
@@ -2209,7 +2586,7 @@ function ResumoLateral({
           <div className="flex items-center gap-1.5">
             <span className={`h-1.5 w-1.5 rounded-full ${reembolso ? "bg-brand" : "bg-alert-text"}`} />
             <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-              {reembolso ? "Reembolso estimado" : "Imposto a pagar estimado"}
+              {rotuloSaldo}
             </span>
           </div>
           <div className={`mt-1 font-display text-[2.6rem] font-semibold leading-none tabular-nums ${reembolso ? "text-brand" : "text-alert-text"}`}>
@@ -2217,6 +2594,15 @@ function ResumoLateral({
           </div>
           <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
             Taxa efetiva de IRS {pct(resultado.taxaEfetiva)} · estimativa para 2026
+          </p>
+          {/*
+            O painel recalcula a cada tecla e, sem isto, nunca era anunciado a
+            quem usa leitor de ecrã — falha o critério 4.1.3 (Status Messages)
+            da WCAG 2.2 AA. Anuncia-se só o valor final e o seu rótulo: ler a
+            tabela inteira a cada dígito seria pior do que o silêncio.
+          */}
+          <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+            {rotuloSaldo}: {fmt(Math.abs(resultado.saldo))}. Taxa efetiva {pct(resultado.taxaEfetiva)}.
           </p>
         </div>
         <div className="px-6 pb-6 pt-4">
@@ -2253,6 +2639,8 @@ function ResumoLateral({
           <span>{nErros} {nErros === 1 ? "erro crítico" : "erros críticos"} a corrigir — vê a etapa de revisão.</span>
         </div>
       )}
+
+      <ProximosPassos resultado={resultado} reembolso={reembolso} />
 
       <div className="rounded-2xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-700 dark:bg-stone-900">
         <div className="mb-1 flex items-center justify-between">

@@ -68,6 +68,12 @@ export interface ExportRecibosVerdes {
   regimeContabilidade: "simplificado" | "organizada";
   irsJovemAno: number;
   acumulaEmprego: boolean;
+  /**
+   * Rendimento anual da Cat. A a englobar. Opcional para não invalidar os
+   * instantâneos já gravados no `localStorage` de quem usou o simulador antes
+   * de o campo existir.
+   */
+  outrosRendimentos?: number;
   isencaoSSPrimeiroAno: boolean;
   ifici: boolean;
   deficiencia: boolean;
@@ -141,6 +147,10 @@ export function fontesDeArmazenamento(): FonteImportacao[] {
     detalhes.push(rv.regimeContabilidade === "organizada" ? "Contabilidade organizada" : "Regime simplificado");
     const ded = rv.despSaude + rv.despEducacao + rv.despGerais + rv.despRendas;
     if (ded > 0) detalhes.push(`Deduções de despesas ${euros(ded)}`);
+    // O salário da acumulação faz parte do cenário: sem ele, o Simulador de IRS
+    // recebia a Categoria B sozinha e voltava a tributá-la desde o 1.º escalão.
+    const salarioCatA = rv.acumulaEmprego ? (rv.outrosRendimentos ?? 0) : 0;
+    if (salarioCatA > 0) detalhes.push(`Salário anual (Cat. A) ${euros(salarioCatA)}`);
     fontes.push({
       id: "recibos-verdes-guiado",
       titulo: "Calculadora de recibos verdes",
@@ -148,7 +158,8 @@ export function fontesDeArmazenamento(): FonteImportacao[] {
       icone: "Invoice",
       detalhes,
       patch: {
-        ativar: ["independente"],
+        ativar: salarioCatA > 0 ? ["independente", "salarios"] : ["independente"],
+        salBruto: salarioCatA || undefined,
         atividadeTipo: rv.tipoAtividade,
         indBruto: Math.round(rv.faturacaoAnual),
         indRegime: rv.regimeContabilidade,

@@ -4,13 +4,14 @@ import Precos from "@/components/Precos";
 import FAQ from "@/components/FAQ";
 
 import Footer from "@/components/Footer";
+import AnuncioSlot from "@/components/parcerias/AnuncioSlot";
 import { generateBreadcrumbSchema } from "@/lib/seo";
 import { faqs } from "@/lib/faq";
 
 export const metadata: Metadata = {
-  title: "Planos e Preços — Calculadora Grátis ou Pro",
+  title: "Planos e Preços — Calculadora Grátis ou Plus",
   description:
-    "Calculadora de recibos verdes grátis para sempre. O plano Pro traz alertas de prazos, conta na nuvem e exportação para o contabilista. Começa grátis, sem cartão.",
+    "Calculadora de recibos verdes grátis para sempre. O plano Plus traz conta na nuvem, cenários guardados e exportação para o contabilista. Começa grátis, sem cartão.",
   keywords: [
     "ReciboCerto preços",
     "calculadora recibos verdes grátis",
@@ -21,17 +22,17 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/precos" },
   openGraph: {
-    title: "Planos ReciboCerto — Calculadora Grátis + Pro",
+    title: "Planos ReciboCerto — Calculadora Grátis + Plus",
     description:
-      "Calculadora grátis para sempre. Pro com alertas de prazos, conta na nuvem e exportação. Começa grátis.",
+      "Calculadora grátis para sempre. Plus com conta na nuvem, cenários guardados e exportação. Começa grátis.",
     url: "https://www.recibocerto.pt/precos",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Planos ReciboCerto — Calculadora Grátis + Pro",
+    title: "Planos ReciboCerto — Calculadora Grátis + Plus",
     description:
-      "Calculadora de recibos verdes grátis. Pro com alertas e nuvem.",
+      "Calculadora de recibos verdes grátis. Plus com alertas e nuvem.",
   },
 };
 
@@ -45,7 +46,7 @@ const jsonLd = {
       url: "https://www.recibocerto.pt/precos",
       name: "Planos e Preços — ReciboCerto",
       description:
-        "Calculadora de recibos verdes grátis para sempre. Plano Pro com alertas, conta na nuvem e exportação para o contabilista.",
+        "Calculadora de recibos verdes grátis para sempre. Plano Plus com alertas, conta na nuvem e exportação para o contabilista.",
       inLanguage: "pt-PT",
       isPartOf: { "@id": "https://www.recibocerto.pt/#website" },
     },
@@ -76,6 +77,12 @@ export default function PrecosPage() {
         <Nav />
         <main className="pt-8">
           <Precos />
+          {/* O slot público que faltava: a tabela `anuncios` tinha CRUD e
+              pré-visualização no admin desde a migração 004 e NADA no site a
+              consumia. Os anúncios existiam e não apareciam. */}
+          <div className="mx-auto max-w-4xl px-6 py-4">
+            <AnuncioSlot superficie="anuncio.landing_pricing" />
+          </div>
           <FAQ />
         </main>
         <Footer />

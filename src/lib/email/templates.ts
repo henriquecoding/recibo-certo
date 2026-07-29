@@ -1,3 +1,5 @@
+import { precoPlusFormatado } from "@/lib/entitlements";
+
 const BRAND = "#1D9E75";
 const BRAND_DARK = "#0F6E56";
 const INK = "#1C1917";
@@ -68,61 +70,27 @@ export function emailBoasVindasWaitlist(email: string): { subject: string; html:
       </p>
       <p style="margin:0 0 8px;font-size:14px;line-height:1.7;color:${MUTED};">
         A calculadora, o simulador de IRS e o comparador de regimes estão disponíveis — grátis e sem registo.
-        Queres alertas de prazos e histórico na nuvem? O plano Pro já está disponível.
+        Queres o teu histórico na nuvem e cenários guardados? O plano Plus já está disponível.
       </p>
       ${botao("Começar a usar", "https://www.recibocerto.pt/dashboard")}
     `),
   };
 }
-
-export function emailAlertaPrazo(prazos: { titulo: string; descricao: string; data: string; diasAte: number }[]): { subject: string; html: string } {
-  const primeiro = prazos[0];
-  const subject = prazos.length === 1
-    ? `${primeiro.titulo} — ${primeiro.diasAte} dias`
-    : `${prazos.length} prazos fiscais nos próximos dias`;
-
-  const listaPrazos = prazos.map((p) => `
-    <tr>
-      <td style="padding:12px 16px;border-bottom:1px solid #F5F5F4;">
-        <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:${INK};">${p.titulo}</p>
-        <p style="margin:0;font-size:13px;color:${MUTED};">${p.descricao}</p>
-      </td>
-      <td style="padding:12px 16px;border-bottom:1px solid #F5F5F4;text-align:right;white-space:nowrap;">
-        <span style="display:inline-block;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:600;color:${p.diasAte <= 3 ? "#DC2626" : p.diasAte <= 7 ? "#D97706" : BRAND_DARK};background:${p.diasAte <= 3 ? "#FEF2F2" : p.diasAte <= 7 ? "#FFFBEB" : "#E1F5EE"};">
-          ${p.diasAte === 0 ? "Hoje" : p.diasAte === 1 ? "Amanhã" : `${p.diasAte} dias`}
-        </span>
-      </td>
-    </tr>
-  `).join("");
-
-  return {
-    subject,
-    html: layout(`
-      <h2 style="margin:0 0 8px;font-size:20px;font-weight:700;color:${INK};">Prazos fiscais a aproximar-se</h2>
-      <p style="margin:0 0 20px;font-size:14px;color:${MUTED};">Não te esqueças destas obrigações:</p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E7E5E4;border-radius:12px;overflow:hidden;">
-        ${listaPrazos}
-      </table>
-      ${botao("Ver calendário completo", "https://www.recibocerto.pt/dashboard/prazos")}
-      <p style="margin:20px 0 0;font-size:12px;color:#A8A29E;text-align:center;">
-        Recebes este email porque tens o plano Pro do ReciboCerto.
-      </p>
-    `),
-  };
-}
-
 export function emailSubscricaoAtivada(intervalo: "monthly" | "annual"): { subject: string; html: string } {
-  const periodo = intervalo === "annual" ? "anual (47,99 €/ano)" : "mensal (5,99 €/mês)";
+  // O preço vem de `PLUS`. Escrito à mão, este email já anunciou 5,99 €
+  // enquanto a página de planos dizia 1,99 €.
+  const periodo =
+    intervalo === "annual" ? "anual" : `mensal (${precoPlusFormatado()}/mês)`;
 
   return {
-    subject: "ReciboCerto Pro ativado!",
+    subject: "Recibo Certo Plus ativado!",
     html: layout(`
-      <h2 style="margin:0 0 16px;font-size:20px;font-weight:700;color:${INK};">O teu Pro está ativo!</h2>
+      <h2 style="margin:0 0 16px;font-size:20px;font-weight:700;color:${INK};">O teu Plus está ativo!</h2>
       <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:${MUTED};">
         A tua subscrição <strong style="color:${INK};">${periodo}</strong> foi ativada com sucesso. Agora tens acesso a:
       </p>
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">
-        ${["Alertas de prazos por email", "Histórico na nuvem", "Exportação CSV e PDF", "Mealheiro fiscal automático", "Cenários do simulador guardados"].map((f) => `
+        ${["Histórico na nuvem", "Exportação CSV e PDF", "Mealheiro fiscal automático", "Cenários do simulador guardados", "Auditoria do recibo de vencimento"].map((f) => `
         <tr>
           <td style="padding:4px 0;vertical-align:top;">
             <span style="display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:50%;background:#E1F5EE;color:${BRAND};font-size:12px;font-weight:700;">&#10003;</span>
@@ -191,7 +159,7 @@ export function emailGuardiaoFiscal(input: GuardiaoInput): { subject: string; ht
       </table>
       ${botao("Ver detalhes no painel", "https://www.recibocerto.pt/dashboard")}
       <p style="margin:20px 0 0;font-size:12px;color:#A8A29E;text-align:center;">
-        Recebes este email porque tens alertas ativos no ReciboCerto Pro.
+        Recebes este email porque tens alertas ativos no Recibo Certo Plus.
       </p>
     `),
   };
@@ -258,11 +226,11 @@ export function emailAlertaSS(trimestre: string, valor: number, prazo: string): 
 
 export function emailSubscricaoCancelada(): { subject: string; html: string } {
   return {
-    subject: "Subscrição Pro cancelada — vamos sentir a tua falta",
+    subject: "Subscrição Plus cancelada — vamos sentir a tua falta",
     html: layout(`
       <h2 style="margin:0 0 16px;font-size:20px;font-weight:700;color:${INK};">Subscrição cancelada</h2>
       <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:${MUTED};">
-        A tua subscrição Pro foi cancelada. O acesso às funcionalidades Pro mantém-se até ao fim do período atual.
+        A tua subscrição Plus foi cancelada. O acesso às funcionalidades Plus mantém-se até ao fim do período atual.
       </p>
       <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:${MUTED};">
         A calculadora, o simulador de IRS e o comparador continuam grátis para sempre.
@@ -270,7 +238,7 @@ export function emailSubscricaoCancelada(): { subject: string; html: string } {
       <p style="margin:0;font-size:14px;line-height:1.7;color:${MUTED};">
         Se mudares de ideias, podes reativar a qualquer momento.
       </p>
-      ${botao("Reativar o Pro", "https://www.recibocerto.pt/dashboard/upgrade")}
+      ${botao("Reativar o Plus", "https://www.recibocerto.pt/dashboard/upgrade")}
     `),
   };
 }

@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     .in("status", ["active", "trialing"]);
 
   if (subErr || !subs || subs.length === 0) {
-    return NextResponse.json({ msg: "Sem subscritores Pro ativos.", enviados: 0 });
+    return NextResponse.json({ msg: "Sem subscritores Plus ativos.", enviados: 0 });
   }
 
   const userIds = subs.map((s: { user_id: string }) => s.user_id);
@@ -144,7 +144,16 @@ export async function POST(req: NextRequest) {
 
   // 6. Registar alertas enviados (evitar duplicados)
   if (registosNovos.length > 0) {
-    await sb.from("alertas_guardiao").insert(registosNovos);
+    // Se este registo falhar, os mesmos alertas voltam a ser enviados na
+    // próxima execução. Não é motivo para falhar o pedido — os emails já
+    // saíram —, mas tem de ficar no log em vez de desaparecer.
+    const { error } = await sb.from("alertas_guardiao").insert(registosNovos);
+    if (error) {
+      console.error(
+        "[email/guardiao] Alertas enviados mas NÃO registados — risco de duplicação no próximo envio:",
+        error.message,
+      );
+    }
   }
 
   return NextResponse.json({

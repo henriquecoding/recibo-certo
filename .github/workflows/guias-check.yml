@@ -1,0 +1,109 @@
+name: Guias — integridade editorial e contrato FIZ
+
+# Ponto 7.3 da auditoria: as verificações dos Guias correm em CI, não à mão.
+#
+# Dois trabalhos separados de propósito:
+#   · `estatico` bloqueia o PR — falha significa que há um erro no código.
+#   · `fontes` toca na rede e NÃO bloqueia o PR: um portal público em baixo
+#     não pode impedir que se faça merge de uma correção de CSS. Corre
+#     também em agenda, que é quando interessa apanhar uma fonte que mudou.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "src/lib/guias/**"
+      - "src/content/fiz-guide-routes.ts"
+      - "src/lib/fiz/**"
+      - "src/app/guias/**"
+      - "src/components/guias/**"
+      - "src/components/fiz/**"
+      - "src/lib/seo.ts"
+      - "scripts/check-guias.mjs"
+      - ".github/workflows/guias-check.yml"
+  schedule:
+    # Segundas às 06:00 UTC — cedo o suficiente para haver tempo de reagir.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  estatico:
+    name: Verificações estáticas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: guias:lint
+        run: npm run guias:lint
+      - name: guias:sources
+        run: npm run guias:sources
+      - name: guias:claims
+        run: npm run guias:claims
+      - name: guias:routes
+        run: npm run guias:routes
+      - name: guias:fiz-contract
+        run: npm run guias:fiz-contract
+      - name: guias:seo
+        run: npm run guias:seo
+      - name: guias:year-rollover
+        run: npm run guias:year-rollover
+      - name: Segurança da integração FIZ
+        run: npx vitest run src/lib/__tests__/fiz.test.ts
+
+  fontes:
+    name: Fontes oficiais (rede)
+    runs-on: ubuntu-latest
+    # Não bloqueia: distingue-se indisponibilidade de erro editorial, mas
+    # nenhuma delas deve travar o desenvolvimento — o sinal vai por issue.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: guias:links + guias:semantics
+        id: monitor
+        run: node scripts/check-guias.mjs | tee relatorio-guias.txt
+      - name: Guardar relatório
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-fontes-guias
+          path: relatorio-guias.txt
+          retention-days: 30
+      - name: Abrir issue quando uma fonte deixa de bater certo
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let corpo = 'O monitor de fontes falhou sem produzir relatório.';
+            try { corpo = fs.readFileSync('relatorio-guias.txt', 'utf8'); } catch {}
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Fontes dos Guias: verificação humana necessária',
+              labels: ['fontes', 'guias'],
+              body: [
+                'O monitor semanal detetou fontes que deixaram de corresponder ao que os Guias afirmam.',
+                '',
+                'Lembrete: **HTTP 200 não chega**. Confirmar se a página mudou de versão, se passou a',
+                'servir uma redação histórica ou se o artigo foi renumerado — e só depois atualizar',
+                '`src/lib/guias/legal-sources.ts`.',
+                '',
+                '```',
+                corpo.slice(0, 60000),
+                '```',
+              ].join('\n'),
+            });

@@ -14,6 +14,8 @@ import {
   SS_BASE_MAX_MENSAL,
   REGIME_SIMPLIFICADO,
   IRS_JOVEM,
+  PROGRAMA_REGRESSAR,
+  PROGRAMA_REGRESSAR_TETO_CALC,
   ESCALOES_IRS,
   DEDUCAO_ESPECIFICA_CATB,
   REGIME_15PCT,
@@ -112,6 +114,12 @@ export function GET() {
         idadeMax: expose(IRS_JOVEM.idadeMax),
         tetoIAS: expose(IRS_JOVEM.tetoIAS),
         isencaoPorAno: expose(IRS_JOVEM.isencaoPorAno),
+      },
+      programaRegressar: {
+        exclusao: expose(PROGRAMA_REGRESSAR.exclusao),
+        anos: expose(PROGRAMA_REGRESSAR.anos),
+        // Derivado do 2.º limiar do Art. 68.º-A, para onde a norma remete.
+        tetoAnual: PROGRAMA_REGRESSAR_TETO_CALC,
       },
       escaloesIRS: expose(ESCALOES_IRS),
       deducaoEspecificaCatB: expose(DEDUCAO_ESPECIFICA_CATB),

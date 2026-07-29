@@ -12,6 +12,8 @@
  */
 
 import { TOTAL_PERGUNTAS_META } from "@/lib/quiz-fiscal/quiz-meta";
+import { META_CATEGORIA_QUIZ } from "@/lib/quiz-fiscal/types";
+import { GUIDE_MANIFESTS } from "@/lib/guias/manifests";
 
 export const SITE_URL = "https://www.recibocerto.pt";
 export const SITE_NAME = "ReciboCerto";
@@ -28,40 +30,18 @@ export interface PublicRoute {
   priority: number;
 }
 
-/** Slugs dos guias em `src/app/guias/<slug>`.
-    TODOS os guias publicados têm de estar aqui (sitemap + seo-audit);
-    `ecossistema.test.ts` garante o espelho com `GUIAS` (guias-config.ts). */
-export const GUIA_SLUGS = [
-  "abrir-atividade",
-  "abrir-empresa",
-  "acumulacao-emprego",
-  "ato-isolado",
-  "calendario-fiscal",
-  "cessar-atividade",
-  "clientes-estrangeiros",
-  "contabilidade-organizada",
-  "deducoes-coleta",
-  "despesas-dedutiveis",
-  "escaloes-irs",
-  "fatura-vs-recibo",
-  "ifici-nhr",
-  "irc",
-  "irs-jovem",
-  "iva-recibos-verdes",
-  "mais-valias",
-  "merchant-of-record",
-  "pagamentos-por-conta",
-  "recibo-vencimento",
-  "reembolso-irs",
-  "regime-simplificado",
-  "retencao-na-fonte",
-  "seguranca-social",
-  "subsidios-ferias-natal",
-  "trabalho-suplementar",
-  "tributacao-autonoma",
-  "tributacao-conjunta",
-  "unipessoal-vs-eni",
-] as const;
+/** Slugs dos guias em `src/app/guias/<slug>`, DERIVADOS dos manifestos
+    (`src/lib/guias/manifests.ts`) — que são a fonte única. Registar um
+    manifesto novo passa a chegar ao sitemap, ao índice, à navegação e ao
+    seo-audit de uma só vez; era esta duplicação manual que a auditoria
+    identificou no ponto 4.5. Ordenado para o sitemap ser estável. */
+/** Categorias do Quiz Fiscal com página própria. */
+export const QUIZ_CATEGORIA_SLUGS: readonly string[] = Object.keys(META_CATEGORIA_QUIZ).sort();
+
+export const GUIA_SLUGS: readonly string[] = GUIDE_MANIFESTS
+  .filter((m) => m.status !== "archived")
+  .map((m) => m.slug)
+  .sort();
 
 /** Slugs das ferramentas em `src/app/ferramentas/<slug>`. */
 export const FERRAMENTA_SLUGS = [
@@ -82,6 +62,14 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
   { path: "/precos",      changeFrequency: "monthly", priority: 0.8 },
   { path: "/investidores", changeFrequency: "monthly", priority: 0.6 },
   { path: "/quiz-fiscal", changeFrequency: "monthly", priority: 0.7 },
+  // As 16 categorias do quiz são rotas estáticas com conteúdo real e JSON-LD
+  // (ver `app/quiz-fiscal/[categoria]`). Derivam do catálogo para nunca
+  // divergirem dele.
+  ...QUIZ_CATEGORIA_SLUGS.map((slug) => ({
+    path: `/quiz-fiscal/${slug}`,
+    changeFrequency: "monthly" as const,
+    priority: 0.6,
+  })),
   { path: "/guias",       changeFrequency: "monthly", priority: 0.8 },
   ...GUIA_SLUGS.map((slug) => ({
     path: `/guias/${slug}`,
@@ -196,7 +184,7 @@ export function generateSoftwareApplicationSchema() {
       "Auditoria do recibo de vencimento face às tabelas de 2026",
       "IRS Jovem 2026 com isenção crescente por anos",
       "Calendário de prazos fiscais com alertas antecipados",
-      `Quiz Fiscal com ${TOTAL_PERGUNTAS_META.toLocaleString("pt-PT")} perguntas, gamificação e cupões Pro`,
+      `Quiz Fiscal com ${TOTAL_PERGUNTAS_META.toLocaleString("pt-PT")} perguntas, gamificação e cupões Plus`,
       `${GUIA_SLUGS.length} guias fiscais detalhados para independentes, trabalhadores por conta de outrem e empresas`,
       "Mapa de preços por região: contabilistas, notários e advogados",
       "Dashboard com guardião de SS, retenção e estimativa de IRS anual",
@@ -225,6 +213,38 @@ export function generateBreadcrumbSchema(
   };
 }
 
+// ─── Schema: HowTo ───────────────────────────────────────────────────────────
+
+/**
+ * Passos de uma ferramenta guiada, para rich results de instruções.
+ * `totalTime` em duração ISO 8601 (ex.: "PT5M").
+ */
+export function generateHowToSchema(args: {
+  name: string;
+  description: string;
+  url: string;
+  totalTime?: string;
+  steps: { name: string; text: string }[];
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name: args.name,
+    description: args.description,
+    inLanguage: "pt-PT",
+    url: `${SITE_URL}${args.url}`,
+    ...(args.totalTime ? { totalTime: args.totalTime } : {}),
+    estimatedCost: { "@type": "MonetaryAmount", currency: "EUR", value: "0" },
+    step: args.steps.map((s, i) => ({
+      "@type": "HowToStep",
+      position: i + 1,
+      name: s.name,
+      text: s.text,
+      url: `${SITE_URL}${args.url}#simulador`,
+    })),
+  };
+}
+
 // ─── Schema: FAQPage ─────────────────────────────────────────────────────────
 
 export function generateFAQSchema(faqs: { q: string; a: string }[]) {
@@ -238,6 +258,53 @@ export function generateFAQSchema(faqs: { q: string; a: string }[]) {
         "@type": "Answer",
         text: f.a,
       },
+    })),
+  };
+}
+
+// ─── Schema: Quiz (schema.org/Quiz + Question + Answer) ──────────────────────
+
+/**
+ * Schema de um conjunto de perguntas com resposta e explicação.
+ *
+ * O quiz é a maior peça de conteúdo do site — 1.614 perguntas, cada uma com
+ * base legal e ligação à fonte oficial — e não tinha uma linha de JSON-LD.
+ * `Quiz`, `Question` e `Answer` são tipos reconhecidos e elegíveis para
+ * resultados enriquecidos.
+ */
+export function generateQuizSchema(opts: {
+  nome: string;
+  descricao: string;
+  url: string;
+  perguntas: {
+    pergunta: string;
+    respostaCerta: string;
+    explicacao: string;
+    respostasErradas: string[];
+  }[];
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Quiz",
+    name: opts.nome,
+    description: opts.descricao,
+    url: `${SITE_URL}${opts.url}`,
+    inLanguage: "pt-PT",
+    educationalLevel: "beginner",
+    about: { "@type": "Thing", name: "Fiscalidade portuguesa" },
+    hasPart: opts.perguntas.map((p) => ({
+      "@type": "Question",
+      eduQuestionType: "Multiple choice",
+      name: p.pergunta,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: p.respostaCerta,
+        explanation: p.explicacao,
+      },
+      suggestedAnswer: p.respostasErradas.map((t) => ({
+        "@type": "Answer",
+        text: t,
+      })),
     })),
   };
 }

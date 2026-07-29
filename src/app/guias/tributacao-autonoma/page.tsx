@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import Link from "next/link";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import InfoTip from "@/components/ui/InfoTip";
 import {
   TA_VIATURAS_COMBUSTAO,
@@ -17,27 +16,7 @@ import {
 import { pct, fmt } from "@/lib/format";
 import { ArrowRight } from "@/components/ui/Icons";
 
-export const metadata: Metadata = {
-  title: "Tributação autónoma em 2026: viaturas, representação e despesas | ReciboCerto",
-  description: "Guia de tributação autónoma (Art. 88.º CIRC) para empresas em 2026: taxas sobre viaturas, despesas de representação, ajudas de custo e agravamento por prejuízo.",
-  keywords: ["tributação autónoma 2026", "Art. 88 CIRC", "viaturas empresa", "despesas representação"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/tributacao-autonoma" },
-  openGraph: {
-    title: "Tributação autónoma em 2026 | ReciboCerto",
-    description: "Taxas sobre viaturas, representação, ajudas de custo e agravamento por prejuízo.",
-    url: "https://www.recibocerto.pt/guias/tributacao-autonoma",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "Art. 88.º CIRC — Taxas de tributação autónoma", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc88.aspx", tipo: "oficial" as const },
-  { titulo: "Lei 73-A/2025 — Orçamento do Estado 2026 (alterações TA)", url: "https://diariodarepublica.pt/dr/detalhe/lei/73-a-2025", tipo: "oficial" as const },
-  { titulo: "OCC — IRC: tributação autónoma (taxas e limiares)", url: "https://portal.occ.pt/pt-pt/noticias/irc-tributacao-autonoma", tipo: "referencia" as const },
-  { titulo: "Santander — Tributação autónoma: o que muda em 2026", url: "https://www.santander.pt/salto/tributacao-autonoma", tipo: "referencia" as const },
-];
+export const metadata: Metadata = metadataDoGuia("tributacao-autonoma");
 
 const TABELA_VIATURAS = [
   {
@@ -60,13 +39,7 @@ const TABELA_VIATURAS = [
 
 export default function TributacaoAutonomaPage() {
   return (
-    <>
-      <GuiaHero
-        eyebrow="Guia · Empresas"
-        titulo="Tributação autónoma: o custo oculto das despesas"
-        descricao="A tributação autónoma (Art. 88.º CIRC) incide sobre certas despesas da empresa, independentemente de haver lucro ou prejuízo. Percebe as taxas e como minimizar o impacto."
-        tempoLeitura={7}
-      />
+    <GuiaLayout slug="tributacao-autonoma">
 
       <section className="mb-10">
         <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 mb-4">
@@ -230,8 +203,6 @@ export default function TributacaoAutonomaPage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

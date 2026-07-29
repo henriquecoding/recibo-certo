@@ -1,44 +1,16 @@
 import type { Metadata } from "next";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import InfoTip from "@/components/ui/InfoTip";
 import { IVA_ISENCAO_LIMITE } from "@/lib/fiscal-data";
 import { fmt } from "@/lib/format";
 import Badge from "@/components/ui/Badge";
 
-export const metadata: Metadata = {
-  title: "Recibos verdes para clientes estrangeiros 2026",
-  description: "IVA, retenção na fonte e declaração recapitulativa quando fatures para empresas ou particulares fora de Portugal.",
-  keywords: ["recibos verdes clientes estrangeiros", "IVA clientes UE recibos verdes", "faturar empresa estrangeira portugal"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/clientes-estrangeiros" },
-  openGraph: {
-    title: "Recibos verdes para clientes estrangeiros 2026 | ReciboCerto",
-    description: "IVA zero, sem retenção e declaração recapitulativa explicados.",
-    url: "https://www.recibocerto.pt/guias/clientes-estrangeiros",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "Art. 6.º CIVA — Localização das operações", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva6.aspx", tipo: "oficial" as const },
-  { titulo: "Art. 101.º CIRS — Retenção e não residentes", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs101.aspx", tipo: "oficial" as const },
-  { titulo: "VIES — Validação NIF europeu", url: "https://ec.europa.eu/taxation_customs/vies", tipo: "oficial" as const },
-  { titulo: "Doutor Finanças — Recibos verdes para empresas estrangeiras", url: "https://www.doutorfinancas.pt/carreira-e-rendimentos/trabalhadores-independentes/recibos-verdes-para-empresas-estrangeiras-5-cuidados-a-ter/", tipo: "referencia" as const },
-  { titulo: "SimuladorNeto — Recibos verdes e empresas estrangeiras 2026", url: "https://simuladorneto.pt/blog/recibos-verdes-empresas-estrangeiras-2026", tipo: "referencia" as const },
-  { titulo: "Comparaja — Recibos verdes para empresas estrangeiras", url: "https://www.comparaja.pt/mercado-trabalho/artigos/recibos-verdes-para-empresas-estrangeiras", tipo: "referencia" as const },
-];
+export const metadata: Metadata = metadataDoGuia("clientes-estrangeiros");
 
 export default function ClientesEstrangeirosPage() {
   return (
-    <>
-      <GuiaHero
-        titulo="Trabalhas para clientes fora de Portugal? Guia completo 2026"
-        descricao="As tuas obrigações fiscais portuguesas mantêm-se. Mas as regras de IVA e retenção são diferentes."
-        tempoLeitura={5}
-      />
+    <GuiaLayout slug="clientes-estrangeiros">
 
       <section className="mb-10">
         <div className="grid sm:grid-cols-2 gap-3 mb-6">
@@ -146,8 +118,6 @@ export default function ClientesEstrangeirosPage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

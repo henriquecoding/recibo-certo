@@ -376,7 +376,7 @@ export function useRecibos() {
   const { user, carregado: authPronto, disponivel } = useAuth();
   const { plano } = useSubscricao();
   const userId = user?.id ?? null;
-  const naNuvem = disponivel && !!userId && plano === "pro";
+  const naNuvem = disponivel && !!userId && plano === "plus";
 
   const [recibos, setRecibos] = useState<Recibo[]>([]);
   const [carregado, setCarregado] = useState(false);

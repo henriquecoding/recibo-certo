@@ -1,54 +1,67 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { m } from "motion/react";
-import { Check, Lock, ShieldCheck, Flag, Trophy } from "@/components/ui/Icons";
+import { Check, Lock, ShieldCheck, Flag, Sparkle } from "@/components/ui/Icons";
 import Reveal from "@/components/ui/Reveal";
+import { PLUS } from "@/lib/entitlements";
+import { fizAtiva } from "@/lib/fiz/flag";
+import FizParceriaCard from "@/components/fiz/FizParceriaCard";
+
+// ═══════════════════════════════════════════════════════════════════════
+//  Preços — reestruturado segundo o ponto 11 da arquitetura da parceria.
+//
+//  Antes existiam três subscrições (Grátis, Pro, Quiz Master). Passa a
+//  existir uma só: o Recibo Certo Plus, a 1,99 €/mês, que inclui tudo o que
+//  pertencia ao Pro E ao Quiz Master.
+//
+//  O Quiz Master deixa de ser uma compra: XP, níveis e a conquista "Guru do
+//  IRS" continuam a ganhar-se por mérito, e o nível 10 deixa de ser
+//  requisito de compra (ponto 11.4).
+//
+//  A FIZ aparece como uma TERCEIRA COLUNA, não como um plano nosso: é um
+//  contrato do utilizador com a FIZ, e nada no Plus depende dela nem ela
+//  depende do Plus (ponto 8.4 da auditoria).
+// ═══════════════════════════════════════════════════════════════════════
 
 const GRATIS = [
   "Calculadora de recibos verdes (Cat. B)",
   "Simulador de recibo de vencimento (Cat. A)",
   "Simulador de IRS anual",
   "Comparador: dependente vs. recibos verdes vs. empresa",
+  "Todos os guias, com fontes oficiais",
   "Calendário de prazos fiscais",
+  "Quiz Fiscal",
   "Histórico neste dispositivo",
 ];
 
-const PRO = [
-  "Avisamos-te antes de cada prazo — nunca mais uma coima",
-  "Auditoria do teu recibo de vencimento — deteta erros de IRS e SS",
+const PLUS_FEATURES = [
   "O teu histórico seguro e em todos os dispositivos",
-  "Um clique e fica pronto para o teu contabilista (CSV e PDF)",
+  "Cenários ilimitados, guardados e comparáveis",
+  "Um clique e fica pronto para o contabilista (CSV e PDF)",
+  "Auditoria do teu recibo de vencimento — deteta erros de IRS e SS",
   "Mealheiro fiscal: quanto reservar este mês, automático",
-  "Cenários guardados e comparáveis (recibos verdes e vencimento)",
-  "Energia ilimitada no Quiz Fiscal",
-];
-
-const QUIZ_MASTER = [
-  "Tudo do plano Pro incluído",
-  "Badge exclusivo de Guru do IRS no perfil",
-  "Estatísticas avançadas de desempenho",
+  "Energia ilimitada e estatísticas avançadas no Quiz Fiscal",
   "Acesso antecipado a novas funcionalidades",
 ];
 
-const QUIZ_MASTER_DESC = "Para quem decidiu dominar as regras do jogo fiscal. Quanto mais souberes, menos dinheiro deixas em cima da mesa.";
-
-const MATRIZ: { f: string; gratis: boolean | string; pro: boolean | string; master: boolean | string }[] = [
-  { f: "Calculadora de recibos verdes (Cat. B)", gratis: true, pro: true, master: true },
-  { f: "Simulador de recibo de vencimento (Cat. A)", gratis: true, pro: true, master: true },
-  { f: "Simulador de IRS anual", gratis: true, pro: true, master: true },
-  { f: "Comparador A vs B vs empresa", gratis: true, pro: true, master: true },
-  { f: "Calendário de prazos fiscais", gratis: true, pro: true, master: true },
-  { f: "Histórico", gratis: "Neste dispositivo", pro: "Na nuvem, em todos", master: "Na nuvem, em todos" },
-  { f: "Cenários guardados", gratis: "Até 3", pro: "Ilimitados", master: "Ilimitados" },
-  { f: "Auditoria de recibo de vencimento", gratis: false, pro: true, master: true },
-  { f: "Alertas de prazos e de erros por email", gratis: false, pro: true, master: true },
-  { f: "Exportação CSV e PDF", gratis: false, pro: true, master: true },
-  { f: "Mealheiro fiscal automático", gratis: false, pro: true, master: true },
-  { f: "Energia ilimitada no Quiz", gratis: false, pro: true, master: true },
-  { f: "Badge exclusivo e estatísticas avançadas", gratis: false, pro: false, master: true },
-  { f: "Suporte", gratis: "—", pro: "Por email", master: "Por email" },
+const MATRIZ: { f: string; gratis: boolean | string; plus: boolean | string }[] = [
+  { f: "Calculadora de recibos verdes (Cat. B)", gratis: true, plus: true },
+  { f: "Simulador de recibo de vencimento (Cat. A)", gratis: true, plus: true },
+  { f: "Simulador de IRS anual", gratis: true, plus: true },
+  { f: "Comparador A vs B vs empresa", gratis: true, plus: true },
+  { f: "Guias com fontes oficiais", gratis: true, plus: true },
+  { f: "Calendário de prazos fiscais", gratis: true, plus: true },
+  { f: "Histórico", gratis: "Neste dispositivo", plus: "Na nuvem, em todos" },
+  { f: "Cenários guardados", gratis: "Até 3", plus: "Ilimitados" },
+  { f: "Auditoria de recibo de vencimento", gratis: false, plus: true },
+  { f: "Exportação CSV e PDF", gratis: false, plus: true },
+  { f: "Dossiê para o contabilista", gratis: false, plus: true },
+  { f: "Mealheiro fiscal automático", gratis: false, plus: true },
+  { f: "Energia ilimitada no Quiz", gratis: false, plus: true },
+  { f: "Estatísticas avançadas do Quiz", gratis: false, plus: true },
+  { f: "Distintivo «Guru do IRS»", gratis: "Por mérito", plus: "Por mérito" },
+  { f: "Suporte", gratis: "—", plus: "Por email" },
 ];
 
 const GARANTIAS = [
@@ -56,6 +69,11 @@ const GARANTIAS = [
   { icon: <ShieldCheck size={14} />, texto: "Cancela quando quiseres" },
   { icon: <Flag size={14} />, texto: "Dados em servidores na UE" },
 ];
+
+const precoFormatado = PLUS.precoMensal.toLocaleString("pt-PT", {
+  style: "currency",
+  currency: PLUS.moeda,
+});
 
 function MatrizCelula({ valor }: { valor: boolean | string }) {
   if (valor === true) return <span className="inline-flex text-brand"><Check size={16} /></span>;
@@ -69,55 +87,32 @@ function MatrizCelula({ valor }: { valor: boolean | string }) {
 }
 
 export default function Precos() {
-  const [anual, setAnual] = useState(true);
-
-  const precoGrande = anual ? "3,99 €" : "5,99 €";
-  const subPreco = anual ? "faturado 47,99 € por ano · poupa 33%" : "faturado mensalmente";
+  const mostrarFiz = fizAtiva();
 
   return (
-    <section id="precos" className="scroll-mt-24 px-6 py-14 sm:py-20">
+    <section id="precos" className="scroll-mt-24 px-4 py-14 sm:px-6 sm:py-20">
       <div className="mx-auto max-w-5xl">
         <Reveal className="mb-8 text-center">
           <div className="eyebrow mb-3 text-brand">Planos</div>
-          <h2 className="font-display display-2 font-semibold text-ink">Começa grátis. Cresce quando precisares.</h2>
+          <h2 className="font-display display-2 font-semibold text-ink">Um plano só. Sem escadaria.</h2>
           <p className="mx-auto mt-3 max-w-md text-stone-500">
-            Calcular e simular é grátis para sempre. Pagas só quando quiseres deixar de te preocupar com prazos.
+            Calcular, simular e ler os guias é grátis para sempre. O Plus é para quem quer guardar,
+            comparar e exportar.
           </p>
         </Reveal>
 
-        {/* Toggle mensal/anual */}
-        <Reveal className="mb-8 flex justify-center">
-          <div role="group" aria-label="Período de faturação" className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 p-1">
-            <button
-              type="button"
-              aria-pressed={!anual}
-              onClick={() => setAnual(false)}
-              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-all ${!anual ? "bg-white text-brand-dark shadow-card" : "text-stone-500 hover:text-stone-700"}`}
-            >
-              Mensal
-            </button>
-            <button
-              type="button"
-              aria-pressed={anual}
-              onClick={() => setAnual(true)}
-              className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-all ${anual ? "bg-white text-brand-dark shadow-card" : "text-stone-500 hover:text-stone-700"}`}
-            >
-              Anual
-              <span className="rounded-full bg-brand-light px-2 py-0.5 text-[11px] font-semibold text-brand-dark">−33%</span>
-            </button>
-          </div>
-        </Reveal>
-
-        <div className="grid items-start gap-4 sm:grid-cols-3">
+        {/* Dois planos, duas colunas. A FIZ saiu daqui de propósito: estar na
+            mesma grelha fazia-a ler-se como um terceiro escalão a pagar. */}
+        <div className="mx-auto grid max-w-3xl items-start gap-4 sm:grid-cols-2">
           {/* ── Grátis ── */}
           <Reveal>
-            <div className="flex h-full flex-col rounded-4xl border border-stone-100 bg-white p-7 shadow-card">
+            <div className="flex h-full flex-col rounded-4xl border border-stone-100 bg-white p-6 shadow-card sm:p-7">
               <h3 className="text-sm font-semibold text-stone-500">Grátis</h3>
               <div className="mt-2 flex items-baseline gap-1.5">
                 <span className="font-display text-4xl font-semibold text-ink tabular-nums">0 €</span>
                 <span className="text-xs text-stone-400">para sempre</span>
               </div>
-              <p className="mt-3 text-sm text-stone-500">Tudo o que precisas para saber o que é teu.</p>
+              <p className="mt-3 text-sm text-stone-500">Compreender, calcular e decidir.</p>
 
               <ul className="mt-6 flex-1 space-y-2.5">
                 {GRATIS.map((f) => (
@@ -130,35 +125,36 @@ export default function Precos() {
 
               <Link
                 href="/dashboard"
-                className="mt-7 inline-flex justify-center rounded-2xl border border-stone-200 px-5 py-3 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300 dark:border-stone-700 dark:text-stone-200 dark:hover:border-stone-600"
+                className="mt-7 inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-stone-200 px-5 py-3 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300 dark:border-stone-700 dark:text-stone-200 dark:hover:border-stone-600"
               >
                 Começar grátis
               </Link>
             </div>
           </Reveal>
 
-          {/* ── Pro ── */}
+          {/* ── Plus ── */}
           <Reveal delay={0.08}>
             <m.div
               whileHover={{ y: -4 }}
               transition={{ type: "spring", stiffness: 300, damping: 24 }}
-              className="flex h-full flex-col rounded-4xl border border-brand bg-white p-7 shadow-glow sm:-mt-3 sm:pb-9"
+              className="flex h-full flex-col rounded-4xl border border-brand bg-white p-6 shadow-glow sm:-mt-3 sm:p-7 sm:pb-9"
             >
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-stone-500">Pro</h3>
-                <span className="inline-flex items-center rounded-full bg-brand px-3 py-1 text-xs font-semibold text-white">
-                  Recomendado
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-stone-500">{PLUS.nome}</h3>
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand px-3 py-1 text-xs font-semibold text-white">
+                  <Sparkle size={12} />
+                  Tudo incluído
                 </span>
               </div>
               <div className="mt-2 flex items-baseline gap-1.5">
-                <span className="font-display text-4xl font-semibold text-ink tabular-nums">{precoGrande}</span>
+                <span className="font-display text-4xl font-semibold text-ink tabular-nums">{precoFormatado}</span>
                 <span className="text-xs text-stone-400">por mês</span>
               </div>
-              <p className="mt-1 text-xs text-stone-400">{subPreco}</p>
+              <p className="mt-1 text-xs text-stone-400">Inclui tudo o que antes se pagava à parte.</p>
 
               <p className="mt-4 text-sm font-semibold text-stone-700">Tudo do Grátis, mais:</p>
               <ul className="mt-3 flex-1 space-y-2.5">
-                {PRO.map((f) => (
+                {PLUS_FEATURES.map((f) => (
                   <li key={f} className="flex items-start gap-2.5">
                     <span className="mt-0.5 flex-shrink-0 text-brand"><Check size={16} /></span>
                     <span className="text-sm text-stone-600">{f}</span>
@@ -168,63 +164,14 @@ export default function Precos() {
 
               <Link
                 href="/dashboard/upgrade"
-                className="btn-shine mt-7 inline-flex justify-center rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
+                className="btn-shine mt-7 inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
               >
-                Subscrever o Pro
+                Subscrever o Plus
               </Link>
               <p className="mt-2 text-center text-xs text-stone-400">Cancela quando quiseres · sem compromisso</p>
             </m.div>
           </Reveal>
 
-          {/* ── Quiz Master ── */}
-          <Reveal delay={0.16}>
-            <m.div
-              whileHover={{ y: -4 }}
-              transition={{ type: "spring", stiffness: 300, damping: 24 }}
-              className="flex h-full flex-col rounded-4xl border border-amber-400/60 bg-white p-7 shadow-card dark:border-amber-600/40 dark:bg-stone-900"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-stone-500">Quiz Master</h3>
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
-                  <Trophy size={12} />
-                  Exclusivo
-                </span>
-              </div>
-              <div className="mt-2 flex items-baseline gap-1.5">
-                <span className="font-display text-4xl font-semibold text-ink tabular-nums">1,99 €</span>
-                <span className="text-xs text-stone-400">por mês</span>
-              </div>
-              <p className="mt-1 text-xs text-stone-400">faturado mensalmente</p>
-
-              <p className="mt-4 text-sm leading-relaxed text-stone-500 dark:text-stone-400">{QUIZ_MASTER_DESC}</p>
-
-              <div className="mt-4 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-700/40 dark:bg-amber-900/20">
-                <Lock size={13} className="flex-shrink-0 text-amber-700 dark:text-amber-400" />
-                <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
-                  Disponível apenas para quem atingir o nível máximo no Quiz Fiscal (Guru do IRS — 20.000 XP).
-                </p>
-              </div>
-
-              <p className="mt-4 text-sm font-semibold text-stone-700 dark:text-stone-200">Tudo do Pro, mais:</p>
-              <ul className="mt-3 flex-1 space-y-2.5">
-                {QUIZ_MASTER.slice(1).map((f) => (
-                  <li key={f} className="flex items-start gap-2.5">
-                    <span className="mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400"><Check size={16} /></span>
-                    <span className="text-sm text-stone-600 dark:text-stone-400">{f}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <Link
-                href="/quiz-fiscal"
-                className="mt-7 inline-flex justify-center gap-2 rounded-2xl border border-amber-400 bg-amber-50 px-5 py-3 text-sm font-semibold text-amber-800 transition-colors hover:bg-amber-100 dark:border-amber-600/50 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
-              >
-                <Trophy size={15} />
-                Ir para o Quiz Fiscal
-              </Link>
-              <p className="mt-2 text-center text-xs text-stone-400">Atinge o nível 10 para desbloquear</p>
-            </m.div>
-          </Reveal>
         </div>
 
         {/* Garantias */}
@@ -240,7 +187,7 @@ export default function Precos() {
         {/* Comparação completa (acordeão) */}
         <Reveal className="mt-8">
           <details className="group mx-auto max-w-2xl rounded-3xl border border-stone-100 bg-white px-5 py-4 shadow-card">
-            <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-stone-700">
+            <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between text-sm font-semibold text-stone-700">
               Ver comparação completa de funcionalidades
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden className="text-stone-400 transition-transform group-open:rotate-180">
                 <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -252,8 +199,7 @@ export default function Precos() {
                   <tr className="border-b border-stone-100 bg-stone-50">
                     <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-stone-400">Funcionalidade</th>
                     <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wider text-stone-400">Grátis</th>
-                    <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wider text-brand-dark">Pro</th>
-                    <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wider text-amber-700">Master</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wider text-brand-dark">Plus</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -261,8 +207,7 @@ export default function Precos() {
                     <tr key={r.f} className="border-b border-stone-100 last:border-0">
                       <td className="px-4 py-2.5 text-sm text-stone-600">{r.f}</td>
                       <td className="px-3 py-2.5 text-center"><MatrizCelula valor={r.gratis} /></td>
-                      <td className="px-3 py-2.5 text-center"><MatrizCelula valor={r.pro} /></td>
-                      <td className="px-3 py-2.5 text-center"><MatrizCelula valor={r.master} /></td>
+                      <td className="px-3 py-2.5 text-center"><MatrizCelula valor={r.plus} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -270,6 +215,25 @@ export default function Precos() {
             </div>
           </details>
         </Reveal>
+
+        {/* ── Parceria FIZ ─────────────────────────────────────────────
+            Fora da grelha e depois da comparação de planos, com um
+            separador explícito. A ordem é a mensagem: primeiro decides o
+            que pagas ao ReciboCerto (0 € ou 1,99 €); só depois se explica
+            quem executa o que nós não executamos. Sem preço e sem botão de
+            subscrição — nada aqui compete com o "Subscrever o Plus". */}
+        {mostrarFiz && (
+          <Reveal className="mt-14">
+            <div className="mb-6 flex items-center gap-4" aria-hidden>
+              <span className="h-px flex-1 bg-stone-200 dark:bg-stone-700" />
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+                E depois dos planos
+              </span>
+              <span className="h-px flex-1 bg-stone-200 dark:bg-stone-700" />
+            </div>
+            <FizParceriaCard />
+          </Reveal>
+        )}
       </div>
     </section>
   );

@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import Link from "next/link";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import InfoTip from "@/components/ui/InfoTip";
 import {
   IRC_TAXA_GERAL,
@@ -14,38 +13,11 @@ import {
 import { fmt, pct } from "@/lib/format";
 import { ArrowRight } from "@/components/ui/Icons";
 
-export const metadata: Metadata = {
-  title: "IRC para PME em 2026: taxas, obrigações e prazos | ReciboCerto",
-  description: "Guia completo de IRC 2026 para PME: taxa reduzida de 15%, taxa geral de 19%, derrama municipal, pagamentos por conta e obrigações declarativas.",
-  keywords: ["IRC 2026", "taxa IRC PME", "imposto sobre rendimento coletivo", "Modelo 22 IRC"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/irc" },
-  openGraph: {
-    title: "IRC para PME em 2026 | ReciboCerto",
-    description: "Taxas, derrama, pagamentos por conta e obrigações declarativas do IRC.",
-    url: "https://www.recibocerto.pt/guias/irc",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "Art. 87.º CIRC — Taxas de IRC", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc87.aspx", tipo: "oficial" as const },
-  { titulo: "Art. 104.º CIRC — Pagamentos por conta", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc104.aspx", tipo: "oficial" as const },
-  { titulo: "Art. 120.º CIRC — Declaração periódica de rendimentos (Modelo 22)", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc120.aspx", tipo: "oficial" as const },
-  { titulo: "Lei 73-A/2025 — Orçamento do Estado 2026 (alterações IRC)", url: "https://diariodarepublica.pt/dr/detalhe/lei/73-a-2025", tipo: "oficial" as const },
-  { titulo: "PwC Guia Fiscal 2026 — IRC (taxas, prazos e obrigações)", url: "https://www.pwc.pt/pt/pwcinforfisco/guia-fiscal/2026/irc.html", tipo: "referencia" as const },
-];
+export const metadata: Metadata = metadataDoGuia("irc");
 
 export default function IRCPage() {
   return (
-    <>
-      <GuiaHero
-        eyebrow="Guia · Empresas"
-        titulo="IRC para PME: taxas e obrigações em 2026"
-        descricao="O Imposto sobre o Rendimento das Pessoas Coletivas incide sobre o lucro tributável das empresas. Percebe as taxas, a derrama, os pagamentos por conta e os prazos."
-        tempoLeitura={7}
-      />
+    <GuiaLayout slug="irc">
 
       <section className="mb-10">
         <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 mb-4">
@@ -241,8 +213,6 @@ export default function IRCPage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

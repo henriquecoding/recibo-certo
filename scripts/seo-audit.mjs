@@ -102,8 +102,16 @@ if (missingAssets.length) {
 // ── 2. Sitemap vs. ficheiros reais ───────────────────────────────────────────
 
 const seoSrc = readFileSync(join(SRC, "lib", "seo.ts"), "utf8");
-const guiaRegistry = parseArray(seoSrc, "GUIA_SLUGS");
+// GUIA_SLUGS deixou de ser uma lista literal: passou a derivar dos manifestos
+// (src/lib/guias/manifests.ts), que são a fonte única desde a reestruturação
+// dos Guias. É de lá que o registo é lido agora.
+const manifestosSrc = readFileSync(join(SRC, "lib", "guias", "manifests.ts"), "utf8");
+const guiaRegistry = [...manifestosSrc.matchAll(/^\s{4}id: "([a-z0-9-]+)", slug: "([a-z0-9-]+)",/gm)].map((m) => m[2]);
 const ferramentaRegistry = parseArray(seoSrc, "FERRAMENTA_SLUGS");
+
+if (guiaRegistry.length === 0) {
+  fails.push("Não foi possível ler os slugs dos manifestos de Guias — o seo-audit ficaria cego.");
+}
 
 const guiaReal = routeSlugs(join(APP, "guias"));
 const ferramentaReal = routeSlugs(join(APP, "ferramentas"));
@@ -128,8 +136,11 @@ for (const file of pages) {
   const rel = file.replace(APP + "/", "");
   if (PRIVATE.some((p) => rel.startsWith(p + "/") || rel === p + "/page.tsx")) continue;
   const txt = readFileSync(file, "utf8");
-  const temTitle = /\btitle\s*:/.test(txt);
-  const temDesc = /\bdescription\s*:/.test(txt);
+  // Os Guias derivam os metadados do manifesto via `metadataDoGuia(slug)` —
+  // continuam a ter title e description próprios, apenas não escritos à mão.
+  const derivaDoManifesto = /metadataDoGuia\("([a-z0-9-]+)"\)/.test(txt);
+  const temTitle = derivaDoManifesto || /\btitle\s*:/.test(txt);
+  const temDesc = derivaDoManifesto || /\bdescription\s*:/.test(txt);
   const route = "/" + rel.replace(/\/?page\.tsx$/, "");
   // A raiz é coberta pelos metadados completos do layout raiz (por design).
   if (route === "/") continue;

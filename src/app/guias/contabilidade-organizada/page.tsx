@@ -1,44 +1,17 @@
 import type { Metadata } from "next";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import Link from "next/link";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import InfoTip from "@/components/ui/InfoTip";
 import { fmt } from "@/lib/format";
 import { REGIME_SIMPLIFICADO } from "@/lib/fiscal-data";
 import { ArrowRight } from "@/components/ui/Icons";
 
-export const metadata: Metadata = {
-  title: "Regime simplificado vs. contabilidade organizada 2026",
-  description:
-    "Quando compensa passar à contabilidade organizada? Limites, obrigações e como decidir entre o regime simplificado e o lucro real — Portugal 2026.",
-  keywords: ["contabilidade organizada", "regime simplificado", "Art. 28 CIRS", "lucro real"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/contabilidade-organizada" },
-  openGraph: {
-    title: "Regime simplificado vs. contabilidade organizada | ReciboCerto",
-    description: "Limites, obrigações e quando muda a conta — escolhe o regime certo para a tua atividade.",
-    url: "https://www.recibocerto.pt/guias/contabilidade-organizada",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "CIRS — Art. 28.º (formas de determinação)", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs28.aspx", tipo: "oficial" as const },
-  { titulo: "CIRS — Art. 31.º (regime simplificado)", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs31.aspx", tipo: "oficial" as const },
-  { titulo: "Ordem dos Contabilistas Certificados", url: "https://www.occ.pt", tipo: "referencia" as const },
-];
+export const metadata: Metadata = metadataDoGuia("contabilidade-organizada");
 
 export default function ContabilidadeOrganizadaPage() {
   return (
-    <>
-      <GuiaHero
-        titulo="Regime simplificado vs. contabilidade organizada"
-        descricao="Dois caminhos para apurar o teu rendimento da categoria B. Um presume as despesas; o outro tributa o lucro real. Eis quando cada um compensa."
-        tempoLeitura={6}
-        badge="Decisão de regime"
-      />
+    <GuiaLayout slug="contabilidade-organizada">
 
       <section className="mb-10">
         <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 mb-4">
@@ -106,8 +79,6 @@ export default function ContabilidadeOrganizadaPage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

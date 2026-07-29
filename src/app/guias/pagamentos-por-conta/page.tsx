@@ -1,30 +1,10 @@
 import type { Metadata } from "next";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import Link from "next/link";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import { ArrowRight } from "@/components/ui/Icons";
 
-export const metadata: Metadata = {
-  title: "Pagamentos por conta do IRS (recibos verdes) 2026",
-  description:
-    "O que são os pagamentos por conta do IRS para trabalhadores independentes, quando se pagam (julho, setembro, dezembro) e como funcionam — Portugal 2026.",
-  keywords: ["pagamentos por conta", "IRS independentes", "categoria B", "Art. 102 CIRS"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/pagamentos-por-conta" },
-  openGraph: {
-    title: "Pagamentos por conta do IRS | ReciboCerto",
-    description: "Adiantamentos de IRS da categoria B: prazos, cálculo e o que acontece no acerto final.",
-    url: "https://www.recibocerto.pt/guias/pagamentos-por-conta",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "CIRS — Art. 102.º (pagamentos por conta)", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs102.aspx", tipo: "oficial" as const },
-  { titulo: "Portal das Finanças", url: "https://www.portaldasfinancas.gov.pt", tipo: "oficial" as const },
-];
+export const metadata: Metadata = metadataDoGuia("pagamentos-por-conta");
 
 const PRAZOS = [
   { mes: "Julho", txt: "1.ª prestação — até 20 de julho" },
@@ -34,13 +14,7 @@ const PRAZOS = [
 
 export default function PagamentosPorContaPage() {
   return (
-    <>
-      <GuiaHero
-        titulo="Pagamentos por conta do IRS"
-        descricao="Se tens rendimentos da categoria B com retenção, podes ter de adiantar IRS três vezes ao ano. Não é um imposto extra — é um adiantamento que abate ao acerto final."
-        tempoLeitura={4}
-        badge="Categoria B"
-      />
+    <GuiaLayout slug="pagamentos-por-conta">
 
       <section className="mb-10">
         <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 mb-4">
@@ -88,13 +62,11 @@ export default function PagamentosPorContaPage() {
             Retenção na fonte <ArrowRight size={13} />
           </Link>
           <Link href="/dashboard/prazos" className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-4 py-3 text-sm font-medium text-stone-700 dark:text-stone-300 hover:border-brand hover:text-brand transition-all">
-            Configurar alertas de prazos <ArrowRight size={13} />
+            Ver o calendário fiscal <ArrowRight size={13} />
           </Link>
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

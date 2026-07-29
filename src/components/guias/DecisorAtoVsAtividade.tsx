@@ -6,6 +6,7 @@ import { EASE } from "@/lib/motion";
 import Link from "next/link";
 import { ArrowRight, Check, ChevronRight } from "@/components/ui/Icons";
 import Badge from "@/components/ui/Badge";
+import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
 
 type ResultadoId = "ATO_ISOLADO" | "ABRIR_ATIVIDADE" | "RECIBO_VERDE" | "CONSIDERAR_ATIVIDADE";
 
@@ -88,7 +89,11 @@ const RESULTADOS: Record<ResultadoId, { titulo: string; descricao: string; cta: 
   },
 };
 
-export function DecisorAtoVsAtividade() {
+/**
+ * `comPlanoFiz`: ver a nota em `CalculadoraRegimeSimplificado`. Dentro de um
+ * guia o convite à execução já existe; aqui evita-se a duplicação.
+ */
+export function DecisorAtoVsAtividade({ comPlanoFiz = false }: { comPlanoFiz?: boolean } = {}) {
   const [perguntaAtual, setPerguntaAtual] = useState<string>("q1");
   const [resultado, setResultado] = useState<ResultadoId | null>(null);
   const [historico, setHistorico] = useState<string[]>([]);
@@ -154,6 +159,19 @@ export function DecisorAtoVsAtividade() {
               Recomeçar
             </button>
           </div>
+
+          {/* Só quando a decisão implica um ato a executar. Se já há
+              atividade aberta (RECIBO_VERDE), não há nada a continuar. */}
+          {comPlanoFiz && resultado !== "RECIBO_VERDE" && (
+            <FizPlanoAcao
+              className="mt-5"
+              simulador="ato-isolado"
+              valores={{ entityType: "INDIVIDUAL" }}
+              passosPreparacao={[
+                "Enquadramento decidido: ato isolado ou abertura de atividade.",
+              ]}
+            />
+          )}
         </m.div>
       ) : pergunta ? (
         <m.div

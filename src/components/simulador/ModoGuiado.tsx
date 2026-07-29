@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/Icons";
 import EuroBreakdown from "@/components/simulador/EuroBreakdown";
 import { PassoContabilista } from "@/components/simulador/PassoContabilista";
+import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
 import { pct, fmt } from "@/lib/format";
 import {
   IVA_TAXAS,
@@ -41,11 +42,20 @@ import {
   COEFICIENTE_POR_TIPO,
   SS_TAXA,
   SS_COEFICIENTE,
+  SS_ACUMULACAO_LIMITE_MENSAL,
+  IAS,
   MINIMO_EXISTENCIA,
   type Atividade,
   type Regiao,
 } from "@/lib/fiscal-data";
-import { calcular, simularIRSAnual, type RegimeIVA } from "@/lib/fiscal";
+import {
+  calcular,
+  simularDeclaracaoIRS,
+  contribuicoesSSAnuais,
+  type RegimeIVA,
+  type DeclaracaoResult,
+  type SimulacaoIRS,
+} from "@/lib/fiscal";
 import { gerarPrazos, diasAte } from "@/lib/prazos";
 import { useScrollTopOnStep } from "@/lib/scroll";
 import {
@@ -58,6 +68,8 @@ import {
 import GuardarCenarioDialog from "@/components/ui/GuardarCenarioDialog";
 import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
+import { situacaoIVA, type SituacaoIVA as SituacaoIVAResultado } from "@/lib/fiscal-iva";
+import SituacaoIVAPainel from "@/components/simulador/SituacaoIVA";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -91,6 +103,8 @@ export interface EstadoGuiadoSaida {
   regiao: Regiao;
   regimeIVA: RegimeIVA;
   acumulaEmprego: boolean;
+  /** Rendimento anual da Cat. A a englobar (0 quando não há acumulação). */
+  outrosRendimentos: number;
   isencaoSSPrimeiroAno: boolean;
   isencaoCpas: boolean;
   anoAtividade: number;
@@ -407,28 +421,67 @@ export default function ModoGuiado({
   // Obra própria → isento (Art. 9.º/16 CIVA), sem limiar de faturação; royalties/
   // licenciamento → taxa normal, sujeita ao limiar do Art. 53.º (como qualquer
   // atividade tributada). Nada fixo: taxa e limiar vêm de fiscal-data.
-  const desdobramentoAutor = useMemo(() => {
+  // Entrada do desdobramento. A regra — obra isenta pelo Art. 9.º, limiar do
+  // Art. 53.º só sobre os royalties, transição do Art. 58.º — vive no motor.
+  const entradaAutor = useMemo(() => {
     if (!ehDireitosAutor) return null;
     const obra = Math.max(0, parseMontante(autorObraInput));
     const royalties = Math.max(0, parseMontante(autorRoyaltiesInput));
-    const total = obra + royalties;
-    const royaltiesAnual = royalties * mesesFat;
-    const cobraIvaRoyalties = royalties > 0 && royaltiesAnual > IVA_LIMITE;
-    const ivaRoyalties = cobraIvaRoyalties ? royalties * taxasRegiao.normal : 0;
-    return { obra, royalties, total, ivaRoyalties, cobraIvaRoyalties };
-  }, [ehDireitosAutor, autorObraInput, autorRoyaltiesInput, mesesFat, taxasRegiao.normal]);
+    return { obraAnual: obra * mesesFat, royaltiesAnual: royalties * mesesFat };
+  }, [ehDireitosAutor, autorObraInput, autorRoyaltiesInput, mesesFat]);
+
+  const situacaoIvaAutor = useMemo(
+    () =>
+      entradaAutor
+        ? situacaoIVA({
+            faturacaoAnual: entradaAutor.obraAnual + entradaAutor.royaltiesAnual,
+            regiao,
+            regimeEscolhido: "isento",
+            categoria: tipoAtiv,
+            entidade: "ti",
+            direitosAutor: entradaAutor,
+          })
+        : null,
+    [entradaAutor, regiao, tipoAtiv],
+  );
+
+  const desdobramentoAutor = useMemo(() => {
+    const d = situacaoIvaAutor?.desdobramentoAutor;
+    if (!d || !entradaAutor) return null;
+    const m = mesesFat || 1;
+    return {
+      obra: d.obraAnual / m,
+      royalties: d.royaltiesAnual / m,
+      total: (d.obraAnual + d.royaltiesAnual) / m,
+      ivaRoyalties: d.ivaRoyaltiesAnual / m,
+      cobraIvaRoyalties: d.royaltiesTributados,
+    };
+  }, [situacaoIvaAutor, entradaAutor, mesesFat]);
 
   const derivadoBase = useMemo(() => {
-    // Princípio coerente: ISENTO ⟺ NÃO está a cobrar IVA. Cobra IVA quando o
-    // utilizador escolhe "com IVA" (afirma que cobra) OU quando a faturação base
-    // ultrapassa o limite de isenção. Assim a situação de IVA, o desdobramento e
-    // o resultado usam sempre a mesma verdade — nunca "isento" e a cobrar IVA.
+    // Quem decide se há IVA é o motor (`fiscal-iva.ts`), não uma comparação
+    // solta com o limiar. A regra anterior — "acima de 15 000 € cobra IVA" —
+    // ignorava o regime escolhido e ignorava o Art. 58.º, n.º 2, al. a): entre
+    // 15 000 € e 18 750 € a isenção MANTÉM-SE até 1 de janeiro. O resultado era
+    // escolher «Isento» e ver o simulador reservar IVA na mesma, ao lado de um
+    // painel que dizia "continuas isento até lá".
     if (modoFat === "total") {
       const v = parseMontante(totalInput);
-      const baseComoFaturacao = v; // valor tratado como faturação (sem IVA)
-      const acimaLimite = baseComoFaturacao * mesesFat > IVA_LIMITE;
-      const cobraIva = valorComIva || acimaLimite;
-      const taxaEf = cobraIva ? taxaPotencial : 0;
+      // Dizer "o valor já inclui IVA" é afirmar que se cobra; aí é preciso a
+      // taxa escolhida para chegar à base. Nos restantes casos o valor
+      // introduzido é a própria base.
+      const baseComoFaturacao =
+        valorComIva && taxaPotencial > 0 ? v / (1 + taxaPotencial) : v;
+      const sit = situacaoIVA({
+        faturacaoAnual: baseComoFaturacao * mesesFat,
+        regiao,
+        regimeEscolhido: regimeIVA,
+        categoria: tipoAtiv,
+        entidade: "ti",
+        isentoEfetivo: valorComIva ? false : undefined,
+      });
+      const cobraIva = sit.regimeEfetivo !== "isento";
+      const taxaEf = sit.taxaEfetiva;
       let semIva: number;
       let comIva: number;
       if (!cobraIva) {
@@ -458,15 +511,25 @@ export default function ModoGuiado({
         comIva += v;
       }
     }
-    const cobraIva = algumIva || semIva * mesesFat > IVA_LIMITE;
+    // Recibo a recibo: se algum tem taxa > 0, está a cobrar. Caso contrário
+    // é o motor que decide, a partir da faturação e do regime escolhido.
+    const sit = situacaoIVA({
+      faturacaoAnual: semIva * mesesFat,
+      regiao,
+      regimeEscolhido: regimeIVA,
+      categoria: tipoAtiv,
+      entidade: "ti",
+      isentoEfetivo: algumIva ? false : undefined,
+    });
+    const cobraIva = algumIva || sit.regimeEfetivo !== "isento";
     return {
       mensalSemIva: semIva,
       mensalComIva: comIva,
       mensalIva: cobraIva ? comIva - semIva : 0,
       isentoEfetivo: !cobraIva,
-      taxaIvaEfetiva: cobraIva ? taxaPotencial : 0,
+      taxaIvaEfetiva: cobraIva ? (algumIva ? taxaPotencial : sit.taxaEfetiva) : 0,
     };
-  }, [modoFat, totalInput, valorComIva, recibosItems, taxaPotencial, mesesFat]);
+  }, [modoFat, totalInput, valorComIva, recibosItems, taxaPotencial, mesesFat, regiao, regimeIVA, tipoAtiv]);
 
   // Para direitos de autor, o IVA é a mistura obra própria (isento) + royalties
   // (taxa normal); a taxa efetiva é o IVA total ÷ faturação. Para tudo o resto,
@@ -494,6 +557,24 @@ export default function ModoGuiado({
         ? ivaEsperadoAtiv
         : "normal";
 
+  // Regime de IVA no vocabulário do contrato da FIZ. Tem de derivar do regime
+  // EFETIVO — usar a escolha crua do utilizador produzia a contradição de
+  // anunciar "isento do Art. 53.º" ao mesmo tempo que se enviava IVA estimado.
+  // A isenção também não é uma só: a do Art. 53.º vem do limiar de faturação,
+  // a do Art. 9.º da natureza da operação (obra própria de autor, n.º 16).
+  // Quando as duas coexistem — obra própria mais royalties abaixo do limiar —
+  // não há resposta única e "UNKNOWN" é mais honesto do que escolher uma.
+  const vatRegimeEstimateFiz: "EXEMPT_ART_53" | "EXEMPT_ART_9" | "NORMAL" | "UNKNOWN" =
+    regimeEfetivo !== "isento"
+      ? "NORMAL"
+      : desdobramentoAutor && desdobramentoAutor.obra > 0
+        ? desdobramentoAutor.royalties > 0
+          ? "UNKNOWN"
+          : "EXEMPT_ART_9"
+        : ivaEsperadoAtiv === "isento"
+          ? "EXEMPT_ART_9"
+          : "EXEMPT_ART_53";
+
   // bruto (sem IVA) e recibosAno mantidos para compatibilidade com o resto do componente
   const bruto = mensalSemIva;
   const recibosAno = mesesFat;
@@ -513,6 +594,8 @@ export default function ModoGuiado({
   const [despEducacao, setDespEducacao] = useState(0);
   const [despRendas, setDespRendas] = useState(0);
   const [despGerais, setDespGerais] = useState(0);
+  /** Rendimento anual da Cat. A a englobar — só relevante com acumulação. */
+  const [outrosRendimentos, setOutrosRendimentos] = useState(0);
 
   // Dados derivados
   const card = CARDS_ATIV.find((c) => c.id === tipoAtiv)!;
@@ -520,6 +603,23 @@ export default function ModoGuiado({
   const jovemAno = irsJovemOn ? irsJovemAno : 0;
   const brutoAnual = bruto * recibosAno;
   const efAtiv = atividadeEspecifica ? efeitoFiscal(atividadeEspecifica) : null;
+
+  // Poupança de SS = o que se pagaria sem isenção MENOS o que se paga com ela.
+  // Estava a passar-se a contribuição efetiva como se fosse a poupança: com a
+  // isenção total dava 0 (e o badge nunca aparecia) e, agora que a acumulação
+  // acima de 4 × IAS deixa contribuição a pagar, daria o número ao contrário —
+  // anunciar como poupança aquilo que a pessoa desembolsa.
+  const ssAnualPoupanca = useMemo(() => {
+    if (!isencaoSS) return 0;
+    const semIsencao = contribuicoesSSAnuais(brutoAnual, card.baseSS);
+    const comIsencao = isencaoCpas
+      ? 0 // CPAS/CGA: sai do Regime Geral por inteiro; a caixa própria tem taxas suas.
+      : contribuicoesSSAnuais(brutoAnual, card.baseSS, {
+          primeiroAno: isencaoSSPrimeiroAno,
+          acumulaEmprego,
+        });
+    return Math.max(0, semIsencao - comIsencao);
+  }, [isencaoSS, isencaoCpas, isencaoSSPrimeiroAno, acumulaEmprego, brutoAnual, card.baseSS]);
 
   const resultRecibo = useMemo(
     () =>
@@ -549,19 +649,36 @@ export default function ModoGuiado({
     ],
   );
 
-  const simPreview = useMemo(
+  // O salário do emprego é DECLARADO COMO SALÁRIO, não somado como um número
+  // anónimo. Ia cru para `outrosRendimentos`, que o núcleo trata como
+  // rendimento já líquido: perdia a dedução específica do Art. 25.º, o mínimo
+  // de existência do Art. 70.º, o IRS Jovem da categoria A e a exclusão do
+  // Art. 56.º-A. Para 30 000 € de salário e 15 000 € de recibos verdes eram
+  // 1 600,89 € de IRS a mais do que o simulador de IRS mostrava para o mesmo
+  // caso — dois números diferentes, no mesmo site, para a mesma pessoa.
+  const declPreview = useMemo(
     () =>
-      simularIRSAnual({
-        brutoAnual,
-        tipo: card.tipoFiscal,
-        anoAtividade,
+      simularDeclaracaoIRS({
+        independente: {
+          brutoAnual,
+          tipo: card.tipoFiscal,
+          anoAtividade,
+          irsJovemAno: jovemAno > 0 ? jovemAno : undefined,
+          coefOverride: efAtiv?.coef,
+          aplicaRegra15Override: efAtiv?.regra15,
+        },
+        // Englobamento (Art. 22.º CIRS): o IRS é único e incide sobre a soma.
+        salarios: acumulaEmprego && outrosRendimentos > 0 ? { bruto: outrosRendimentos } : undefined,
         irsJovemAno: jovemAno > 0 ? jovemAno : undefined,
         ifici,
         rnhAntigo,
         programaRegressar: exResidente,
         deficiencia,
-        coefOverride: efAtiv?.coef,
-        aplicaRegra15Override: efAtiv?.regra15,
+        // As isenções de SS entram no cálculo do IRS através da regra dos 15%
+        // (Art. 31.º n.º 13): sem elas, o motor credita contribuições que a
+        // pessoa não paga.
+        acumulaEmprego,
+        isencaoSSPrimeiroAno,
         deducoes: {
           saude: despSaude,
           educacao: despEducacao,
@@ -580,13 +697,21 @@ export default function ModoGuiado({
       deficiencia,
       efAtiv?.coef,
       efAtiv?.regra15,
+      acumulaEmprego,
+      isencaoSSPrimeiroAno,
+      outrosRendimentos,
       despSaude,
       despEducacao,
       despGerais,
       despRendas,
     ],
   );
-  const irsAnual = simPreview.irsEstimado;
+  // Com englobamento, `irsEstimado` é o imposto do agregado todo — salário
+  // incluído. O que se subtrai à faturação da atividade é só a parte marginal
+  // que ela acrescenta; senão o "líquido dos recibos verdes" pagaria também o
+  // imposto do emprego.
+  const simPreview = declPreview.englobamento;
+  const irsAnual = simPreview.irsImputavelCatB;
   // Usa segSocial do calcular() que já aplica o coeficiente correto (bens=0,2 / serviços=0,7).
   // CPAS/CGA: quando isencaoCpas=true não há desconto para o Regime Geral → 0 para o simulador.
   const ssAnual = isencaoCpas ? 0 : resultRecibo.segSocial * recibosAno;
@@ -603,6 +728,7 @@ export default function ModoGuiado({
       regimeContabilidade: "simplificado",
       irsJovemAno: jovemAno,
       acumulaEmprego,
+      outrosRendimentos: acumulaEmprego ? outrosRendimentos : 0,
       isencaoSSPrimeiroAno,
       ifici,
       deficiencia,
@@ -612,7 +738,7 @@ export default function ModoGuiado({
       despRendas,
       atualizadoEm: Date.now(),
     });
-  }, [brutoAnual, card.tipoFiscal, anoAtividade, jovemAno, acumulaEmprego, isencaoSSPrimeiroAno, ifici, deficiencia, despSaude, despEducacao, despGerais, despRendas]);
+  }, [brutoAnual, card.tipoFiscal, anoAtividade, jovemAno, acumulaEmprego, outrosRendimentos, isencaoSSPrimeiroAno, ifici, deficiencia, despSaude, despEducacao, despGerais, despRendas]);
 
   const estadoSaida: EstadoGuiadoSaida = {
     tipoAtiv,
@@ -622,6 +748,7 @@ export default function ModoGuiado({
     regiao,
     regimeIVA: regimeEfetivo,
     acumulaEmprego,
+    outrosRendimentos: acumulaEmprego ? outrosRendimentos : 0,
     isencaoSSPrimeiroAno,
     isencaoCpas,
     anoAtividade,
@@ -641,7 +768,7 @@ export default function ModoGuiado({
     anoAtividade, jaTemAtividade, tipoAtiv, atividadeEspecifica, tipoSelecionado,
     modoFat, totalInput, valorComIva, recibosItems, mesesFat, regiao, regimeIVA,
     autorObraInput, autorRoyaltiesInput,
-    acumulaEmprego, isencaoSSPrimeiroAno, isencaoCpas, irsJovemOn, irsJovemAno,
+    acumulaEmprego, outrosRendimentos, isencaoSSPrimeiroAno, isencaoCpas, irsJovemOn, irsJovemAno,
     ifici, rnhAntigo, exResidente, deficiencia, mostrarDeducoes,
     despSaude, despEducacao, despRendas, despGerais,
   });
@@ -686,7 +813,7 @@ export default function ModoGuiado({
     if (d.autorObraInput !== undefined) setAutorObraInput(sanitizeNumericDraft(d.autorObraInput));
     if (d.autorRoyaltiesInput !== undefined) setAutorRoyaltiesInput(sanitizeNumericDraft(d.autorRoyaltiesInput));
     set(d.mesesFat, setMesesFat); set(d.regiao, setRegiao); set(d.regimeIVA, setRegimeIVA);
-    set(d.acumulaEmprego, setAcumulaEmprego); set(d.isencaoSSPrimeiroAno, setIsencaoSSPrimeiroAno); set(d.isencaoCpas, setIsencaoCpas);
+    set(d.acumulaEmprego, setAcumulaEmprego); set(d.outrosRendimentos, setOutrosRendimentos); set(d.isencaoSSPrimeiroAno, setIsencaoSSPrimeiroAno); set(d.isencaoCpas, setIsencaoCpas);
     set(d.irsJovemOn, setIrsJovemOn); set(d.irsJovemAno, setIrsJovemAno); set(d.ifici, setIfici);
     set(d.rnhAntigo, setRnhAntigo); set(d.exResidente, setExResidente); set(d.deficiencia, setDeficiencia);
     set(d.mostrarDeducoes, setMostrarDeducoes); set(d.despSaude, setDespSaude); set(d.despEducacao, setDespEducacao);
@@ -909,6 +1036,7 @@ export default function ModoGuiado({
                     autorObraInput={autorObraInput}
                     autorRoyaltiesInput={autorRoyaltiesInput}
                     desdobramentoAutor={desdobramentoAutor}
+                    situacaoIvaAutor={situacaoIvaAutor}
                     onModoFat={setModoFat}
                     onTotalInput={(value) => setTotalInput(sanitizeNumericDraft(value))}
                     onValorComIva={setValorComIva}
@@ -959,7 +1087,9 @@ export default function ModoGuiado({
                     setDespRendas={setDespRendas}
                     despGerais={despGerais}
                     setDespGerais={setDespGerais}
-                    ssAnualPoupanca={resultRecibo.segSocial * recibosAno}
+                    ssAnualPoupanca={ssAnualPoupanca}
+                    outrosRendimentos={outrosRendimentos}
+                    setOutrosRendimentos={setOutrosRendimentos}
                   />
                 </m.div>
               )}
@@ -973,6 +1103,9 @@ export default function ModoGuiado({
                   transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
                 >
                   <ResultadoFinal
+                    simAnual={simPreview}
+                    decl={declPreview}
+                    salarioBruto={acumulaEmprego ? outrosRendimentos : 0}
                     brutoAnual={brutoAnual}
                     liquidoAnual={liquidoAnual}
                     irsAnual={irsAnual}
@@ -1051,7 +1184,7 @@ export default function ModoGuiado({
                           {cenarioFeedback.texto}{" "}
                           {cenarioFeedback.tipo === "ok"
                             ? <Link href="/dashboard/cenarios" className="font-semibold underline underline-offset-2">Ver cenários</Link>
-                            : <Link href="/dashboard/upgrade" className="font-semibold underline underline-offset-2">Ver o plano Pro</Link>}
+                            : <Link href="/dashboard/upgrade" className="font-semibold underline underline-offset-2">Ver o plano Plus</Link>}
                         </span>
                       </div>
                     )}
@@ -1067,6 +1200,37 @@ export default function ModoGuiado({
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
                 >
+                  {/* Ponto 12.3 da arquitetura: o simulador mantém o resultado
+                      e a memória de cálculo, e ganha um plano de ação com
+                      handoff escolhido pelo utilizador. Não aparece nada
+                      enquanto a integração estiver desligada.
+
+                      Fica ANTES do mapa de contabilistas: quem chega aqui já
+                      tem a conta feita e quer saber o que fazer a seguir — a
+                      execução é o passo imediato, procurar contabilista é a
+                      alternativa para quem prefere delegar tudo. */}
+                  <FizPlanoAcao
+                    className="mb-6"
+                    simulador="recibos-verdes"
+                    valores={{
+                      entityType: "INDIVIDUAL",
+                      activityCategory: atividadeEspecifica?.label,
+                      vatTerritory:
+                        regiao === "madeira" ? "MADEIRA" : regiao === "acores" ? "AZORES" : "CONTINENTAL",
+                      vatRegimeEstimate: vatRegimeEstimateFiz,
+                      period: "ANNUAL",
+                      grossEstimate: Math.round(brutoAnual),
+                      vatEstimate: Math.round(ivaAnual),
+                      socialSecurityEstimate: Math.round(ssAnual),
+                      irsEstimate: Math.round(irsAnual),
+                    }}
+                    passosPreparacao={[
+                      "Atividade classificada e coeficiente confirmado.",
+                      "Regime de IVA e retenção na fonte determinados.",
+                      "Estimativa anual de IRS e Segurança Social calculada.",
+                    ]}
+                  />
+
                   <PassoContabilista
                     faturacaoAnual={brutoAnual}
                     onVoltar={() => setPasso("resultado")}
@@ -1088,7 +1252,7 @@ export default function ModoGuiado({
             )}
           </div>
 
-          {/* ── Painel ao vivo ───────────────────────────────────────── */}
+          {/* ── Painel em direto ───────────────────────────────────────── */}
           {passo !== "resultado" && passo !== "contabilista" && (
             <div className="hidden lg:block">
               <div className="sticky top-24">
@@ -1412,6 +1576,7 @@ function PassoFaturacao({
   autorObraInput,
   autorRoyaltiesInput,
   desdobramentoAutor,
+  situacaoIvaAutor,
   onModoFat,
   onTotalInput,
   onValorComIva,
@@ -1439,6 +1604,8 @@ function PassoFaturacao({
   autorObraInput: string;
   autorRoyaltiesInput: string;
   desdobramentoAutor: DesdobramentoAutor | null;
+  /** Situação já resolvida pelo motor para o ramo dos direitos de autor. */
+  situacaoIvaAutor: SituacaoIVAResultado | null;
   onModoFat: (m: "total" | "individual") => void;
   onTotalInput: (v: string) => void;
   onValorComIva: (v: boolean) => void;
@@ -1576,9 +1743,11 @@ function PassoFaturacao({
                 <span className="font-semibold tabular-nums text-stone-800 dark:text-stone-100">{fmt(desdobramentoAutor.total)}</span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-stone-400">
-                  IVA a cobrar (só royalties{desdobramentoAutor.royalties > 0 && !desdobramentoAutor.cobraIvaRoyalties ? " — isento pelo Art. 53.º" : ""})
-                </span>
+                {/* Só o montante. O porquê — obra isenta pelo Art. 9.º,
+                    limiar do Art. 53.º só sobre os royalties, transição do
+                    Art. 58.º — está no painel de situação de IVA, escrito
+                    pelo motor. Repeti-lo aqui era escrevê-lo a menos. */}
+                <span className="text-stone-400">IVA a cobrar (só royalties)</span>
                 <span className="font-semibold tabular-nums text-stone-400">{fmt(desdobramentoAutor.ivaRoyalties)}</span>
               </div>
             </div>
@@ -1843,60 +2012,36 @@ function PassoFaturacao({
         </div>
       )}
 
-      {/* IVA */}
+      {/* IVA.
+          Sem rótulo próprio: o painel partilhado já traz o seu, com a região
+          e a base legal. Haver os dois mostrava "Situação de IVA" duas vezes
+          seguidas, uma sem região e outra com.
+
+          Os direitos de autor deixaram de ter bloco à parte. Tinham-no porque
+          a regra estava escrita aqui à mão — e escrita a menos: dizia
+          "isento por ficar abaixo de 15 000 €/ano" a quem já tinha passado o
+          limiar e só mantém a isenção até janeiro (Art. 58.º, n.º 2, al. a).
+          A zona `autor_misto` do motor resolve os três estados e escreve a
+          explicação; o painel desenha-a como desenha as outras. */}
       <div className="mb-6">
-        <div className="mb-2.5 flex items-center gap-1.5">
-          <span className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-            Situação de IVA
-          </span>
-          <InfoTip>
-            Abaixo de €15.000/ano estás isento (Art. 53.º CIVA). Acima, cobras
-            IVA ao cliente.
-          </InfoTip>
-        </div>
-        {desdobramentoAutor ? (
-          <div className="space-y-2 rounded-xl border border-stone-200 bg-stone-50 p-3.5 dark:border-stone-700 dark:bg-stone-900/60">
-            <p className="text-xs leading-relaxed text-stone-600 dark:text-stone-300">
-              O IVA segue a divisão que fizeste em cima:
-            </p>
-            <div className="space-y-1.5">
-              <div className="flex items-start justify-between gap-3">
-                <span className="flex items-start gap-1.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-                  <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
-                  <span>Obra própria — {fmt(desdobramentoAutor.obra)}/mês · <strong className="text-stone-700 dark:text-stone-200">isento</strong> (Art. 9.º, n.º 16 CIVA), sem limite de faturação</span>
-                </span>
-              </div>
-              <div className="flex items-start justify-between gap-3">
-                <span className="flex items-start gap-1.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-                  <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
-                  <span>
-                    Royalties / licenciamento — {fmt(desdobramentoAutor.royalties)}/mês ·{" "}
-                    {desdobramentoAutor.royalties <= 0 ? (
-                      <strong className="text-stone-700 dark:text-stone-200">sem valor</strong>
-                    ) : desdobramentoAutor.cobraIvaRoyalties ? (
-                      <><strong className="text-stone-700 dark:text-stone-200">{pct(IVA_TAXAS[regiao].value.normal)}</strong> → {fmt(desdobramentoAutor.ivaRoyalties)}/mês de IVA</>
-                    ) : (
-                      <><strong className="text-stone-700 dark:text-stone-200">isento</strong> por ficar abaixo de {fmt(IVA_LIMITE)}/ano (Art. 53.º CIVA)</>
-                    )}
-                  </span>
-                </span>
-              </div>
-            </div>
-            <p className="pl-[18px] text-[11px] leading-relaxed text-stone-400 dark:text-stone-500">
-              O IRS e a Segurança Social incidem sobre o total ({fmt(desdobramentoAutor.total)}/mês); só o IVA distingue os dois tipos. Confirma o teu enquadramento com o contabilista.
-            </p>
-          </div>
-        ) : (
-          <ZonaIVA
-            brutoAnual={brutoAnual}
-            isentoEfetivo={isentoEfetivo}
-            regimeIVA={regimeIVA}
-            regiao={regiao}
-            tipoAtiv={tipoAtiv}
-            atividadeEspecifica={atividadeEspecifica}
-            onRegimeIVAChange={onRegimeIVAChange}
-          />
-        )}
+        <SituacaoIVAPainel
+          situacao={
+            situacaoIvaAutor ??
+            situacaoIVA({
+              faturacaoAnual: brutoAnual,
+              regiao,
+              regimeEscolhido: regimeIVA,
+              categoria: tipoAtiv,
+              entidade: "ti",
+              isentoEfetivo,
+            })
+          }
+          regiao={regiao}
+          regimeEscolhido={regimeIVA}
+          // Nos direitos de autor a taxa não é uma escolha: decorre da divisão
+          // entre obra e royalties feita em cima.
+          onRegimeChange={situacaoIvaAutor ? undefined : onRegimeIVAChange}
+        />
       </div>
 
       {/* Região */}
@@ -2062,6 +2207,8 @@ function PassoSituacao({
   despGerais,
   setDespGerais,
   ssAnualPoupanca,
+  outrosRendimentos,
+  setOutrosRendimentos,
 }: {
   acumulaEmprego: boolean;
   setAcumulaEmprego: (v: boolean) => void;
@@ -2092,6 +2239,9 @@ function PassoSituacao({
   despGerais: number;
   setDespGerais: (v: number) => void;
   ssAnualPoupanca: number;
+  /** Rendimento anual bruto da Categoria A, para englobamento. */
+  outrosRendimentos: number;
+  setOutrosRendimentos: (v: number) => void;
 }) {
   const isencaoSS = isencaoSSPrimeiroAno || acumulaEmprego || isencaoCpas;
   const deducoesTotal =
@@ -2133,7 +2283,7 @@ function PassoSituacao({
             />
             <ToggleCard
               titulo="Acumulas com emprego por conta de outrem?"
-              descricao="Se o teu empregador paga SS ≥ €537/mês, podes ficar isento como independente."
+              descricao={`Se o teu empregador paga SS ≥ ${fmt(IAS.value)}/mês ficas dispensado como independente — mas só até ${fmt(SS_ACUMULACAO_LIMITE_MENSAL.value)}/mês de rendimento relevante. Acima disso contribuis sobre o excedente (Art. 157.º).`}
               ativo={acumulaEmprego}
               onToggle={() => {
                 if (!acumulaEmprego) setIsencaoSSPrimeiroAno(false);
@@ -2147,7 +2297,44 @@ function PassoSituacao({
                   : undefined
               }
               badgeTipo="positivo"
-            />
+            >
+              {/* O salário TEM de ser perguntado aqui.
+                  Este toggle desligava a Segurança Social e mais nada: o IRS
+                  continuava a ser calculado como se a pessoa só tivesse os
+                  recibos verdes, a começar no primeiro escalão. Para 30 000 €
+                  de salário e 15 000 € de recibos verdes, o simulador dizia
+                  1 175 € de IRS quando o englobamento (Art. 22.º CIRS) dá
+                  3 926 € — quase 2 800 € a menos, e sempre no sentido em que a
+                  pessoa reserva a menos e é apanhada na liquidação. */}
+              {acumulaEmprego && (
+                <div className="mt-3 rounded-xl border border-stone-200 bg-stone-50 p-3.5 dark:border-stone-700 dark:bg-stone-800/60">
+                  <label htmlFor="guiado-cat-a" className="block">
+                    <span className="mb-1 block text-xs font-medium text-stone-600 dark:text-stone-300">
+                      Quanto ganhas por ano nesse emprego?{" "}
+                      <span className="font-normal text-stone-400">— bruto anual, Cat. A</span>
+                    </span>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400">
+                        €
+                      </span>
+                      <LocalizedNumberInput
+                        id="guiado-cat-a"
+                        min={0}
+                        value={outrosRendimentos}
+                        onValueChange={setOutrosRendimentos}
+                        placeholder="0"
+                        className="w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-8 pr-3 text-sm font-semibold text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 dark:border-stone-700 dark:bg-stone-800 dark:text-white"
+                      />
+                    </div>
+                  </label>
+                  <p className="mt-2 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                    O IRS é único e incide sobre a soma dos rendimentos (Art. 22.º CIRS). Sem
+                    este valor, a atividade independente seria tributada a começar no primeiro
+                    escalão — e o imposto sairia bastante abaixo do real.
+                  </p>
+                </div>
+              )}
+            </ToggleCard>
             <ToggleCard
               titulo="Advogado, solicitador ou funcionário público pré-2006?"
               descricao="Advogados e solicitadores descontam para a CPAS; funcionários públicos com vínculo anterior a jan/2006 descontam para a CGA — não para a Segurança Social geral."
@@ -2806,12 +2993,22 @@ function ResultadoFinal({
   despEducacao,
   despGerais,
   despRendas,
+  simAnual,
+  decl,
+  salarioBruto,
   onIrParaSimuladorCompleto,
   onRecomecar,
   onVoltar,
   onProximosPassos,
   onGuardarRecibo,
 }: {
+  /** Núcleo do englobamento (detalhe da categoria B), calculado pelo pai. */
+  simAnual: SimulacaoIRS;
+  /** Declaração completa: é dela que vem o IRS do agregado e a taxa efetiva. */
+  decl: DeclaracaoResult;
+  /** Salário BRUTO declarado, para a linha do englobamento. O núcleo só conhece
+   *  o líquido de deduções específicas, que não é o número que a pessoa reconhece. */
+  salarioBruto: number;
   brutoAnual: number;
   liquidoAnual: number;
   irsAnual: number;
@@ -2849,49 +3046,17 @@ function ResultadoFinal({
   onProximosPassos: () => void;
   onGuardarRecibo?: (cliente: string) => void;
 }) {
-  const efAtiv = atividadeEspecifica ? efeitoFiscal(atividadeEspecifica) : null;
-  const simAnual = useMemo(
-    () =>
-      simularIRSAnual({
-        brutoAnual,
-        tipo: card.tipoFiscal,
-        anoAtividade,
-        irsJovemAno: irsJovemAno > 0 ? irsJovemAno : undefined,
-        ifici,
-        rnhAntigo,
-        programaRegressar: exResidente,
-        deficiencia,
-        coefOverride: efAtiv?.coef,
-        aplicaRegra15Override: efAtiv?.regra15,
-        deducoes: {
-          saude: despSaude,
-          educacao: despEducacao,
-          gerais: despGerais,
-          rendas: despRendas,
-        },
-      }),
-    [
-      brutoAnual,
-      card.tipoFiscal,
-      anoAtividade,
-      irsJovemAno,
-      isencaoSS,
-      ifici,
-      rnhAntigo,
-      exResidente,
-      deficiencia,
-      efAtiv?.coef,
-      efAtiv?.regra15,
-      despSaude,
-      despEducacao,
-      despGerais,
-      despRendas,
-    ],
-  );
-
+  // `simAnual` chega calculado do componente-pai.
+  //
+  // Havia aqui uma segunda chamada a `simularIRSAnual` com a sua própria lista
+  // de inputs — e a lista divergia: tinha `isencaoSS` nas dependências sem o
+  // usar no cálculo, e não recebia o englobamento nem as isenções de SS que
+  // entram na regra dos 15%. Duas execuções do mesmo motor com entradas
+  // diferentes é uma divergência à espera de acontecer; o ecrã de resultado é
+  // precisamente onde ela seria mais cara.
   const taxaEfetiva =
-    brutoAnual > 0 ? (simAnual.irsEstimado + ssAnual) / brutoAnual : 0;
-  const liquidoFinal = brutoAnual - simAnual.irsEstimado - ssAnual;
+    brutoAnual > 0 ? (simAnual.irsImputavelCatB + ssAnual) / brutoAnual : 0;
+  const liquidoFinal = brutoAnual - simAnual.irsImputavelCatB - ssAnual;
 
   // Deduções à coleta detalhadas (para mostrar no bloco IRS)
   const deducoesColeta = simAnual.deducaoDespesas + simAnual.deducaoDeficiencia;
@@ -2920,7 +3085,7 @@ function ResultadoFinal({
   }, [regimeIVA]);
 
   // ── Breakdowns para os stat cards ──
-  const pcIRS = brutoAnual > 0 ? simAnual.irsEstimado / brutoAnual : 0;
+  const pcIRS = brutoAnual > 0 ? decl.irsTotal / brutoAnual : 0;
   const pcSS = brutoAnual > 0 ? ssAnual / brutoAnual : 0;
   const pcIVA = (brutoAnual + ivaAnual) > 0 ? ivaAnual / (brutoAnual + ivaAnual) : 0;
   const liquidoMes = liquidoFinal / Math.max(1, recibosAno);
@@ -2990,7 +3155,7 @@ function ResultadoFinal({
             <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
               <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">IRS anual</p>
               <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
-                {fmt(simAnual.irsEstimado)}
+                {fmt(decl.irsTotal)}
               </p>
               <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{pct(pcIRS)} do faturado</p>
             </div>
@@ -3036,7 +3201,7 @@ function ResultadoFinal({
             <EuroBreakdown
               faturacao={brutoAnual}
               liquido={Math.max(0, liquidoFinal)}
-              irs={simAnual.irsEstimado}
+              irs={decl.irsTotal}
               ss={ssAnual}
               iva={ivaAnual}
             />
@@ -3138,7 +3303,7 @@ function ResultadoFinal({
                           : simAnual.programaRegressarAplicado ? "IRS (escalões sobre 50% — Programa Regressar)"
                           : "IRS (após deduções)"
                       }
-                      valor={-simAnual.irsEstimado}
+                      valor={-decl.irsTotal}
                       corValor="text-red-500 dark:text-red-400"
                       nota="ver cálculo detalhado abaixo"
                       explicacao={
@@ -3156,7 +3321,7 @@ function ResultadoFinal({
                       corValor="text-brand"
                       isTotal
                       nota={`Taxa efectiva ${pct(taxaEfetiva)}`}
-                      explicacao={`Faturação (${fmt(brutoAnual)}) − SS (${fmt(ssAnual)}) − IRS (${fmt(simAnual.irsEstimado)}) = ${fmt(Math.max(0, liquidoFinal))}.`}
+                      explicacao={`Faturação (${fmt(brutoAnual)}) − SS (${fmt(ssAnual)}) − IRS (${fmt(decl.irsTotal)}) = ${fmt(Math.max(0, liquidoFinal))}.`}
                     />
                   </div>
                 </m.div>
@@ -3185,7 +3350,7 @@ function ResultadoFinal({
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-xs font-semibold tabular-nums text-red-500 dark:text-red-400">{fmt(simAnual.irsEstimado)}</span>
+            <span className="text-xs font-semibold tabular-nums text-red-500 dark:text-red-400">{fmt(decl.irsTotal)}</span>
             <ChevronDown size={13} className={`text-stone-400 transition-transform ${mostrarBloco2 ? "rotate-180" : ""}`} />
           </div>
         </button>
@@ -3259,6 +3424,23 @@ function ResultadoFinal({
               corValor="text-brand"
               nota="Art. 12.º-A CIRS"
               explicacao="O Programa Regressar (Art. 12.º-A CIRS) exclui 50% dos rendimentos Cat. A e B de tributação durante 5 anos a contar do regresso. Os escalões progressivos aplicam-se apenas à metade restante."
+            />
+            <div className="border-t border-stone-100 dark:border-stone-800" />
+          </>
+        )}
+
+        {/* Englobamento da Cat. A — o passo que faltava.
+            Sem esta linha o utilizador via o coletável saltar sem explicação;
+            e antes desta versão nem sequer saltava: o salário não entrava no
+            cálculo, e a atividade era tributada a começar no 1.º escalão. */}
+        {salarioBruto > 0 && (
+          <>
+            <LinhaCalculo
+              label="Salário anual (Categoria A)"
+              valor={salarioBruto}
+              corValor="text-stone-700 dark:text-stone-200"
+              nota="englobamento — Art. 22.º CIRS"
+              explicacao={`O IRS é um imposto único sobre a soma dos rendimentos. O teu salário (${fmt(salarioBruto)}) ocupa os escalões mais baixos, e a atividade independente é tributada por cima — a uma taxa marginal mais alta. É por isso que os mesmos recibos verdes pagam mais IRS a quem também tem emprego.`}
             />
             <div className="border-t border-stone-100 dark:border-stone-800" />
           </>
@@ -3465,7 +3647,7 @@ function ResultadoFinal({
                 ? "IRS a pagar (mínimo de existência)"
                 : "IRS a pagar"
           }
-          valor={-simAnual.irsEstimado}
+          valor={-decl.irsTotal}
           corValor="text-red-500 dark:text-red-400"
           isTotal
           nota={
@@ -3475,10 +3657,26 @@ function ResultadoFinal({
           }
           explicacao={
             temDeducoes
-              ? `IRS final = coleta bruta (${fmt(simAnual.coletaBruta)}) − deduções à coleta (${fmt(deducoesColeta)}) = ${fmt(simAnual.irsEstimado)}. Este é o valor que aparece no Bloco 1.`
+              ? `IRS final = coleta bruta (${fmt(simAnual.coletaBruta)}) − deduções à coleta (${fmt(deducoesColeta)}) = ${fmt(decl.irsTotal)}.${salarioBruto > 0 ? " Inclui o imposto do salário." : " Este é o valor que aparece no Bloco 1."}`
               : `IRS final = coleta bruta calculada pelos escalões progressivos sobre o rendimento tributável de ${fmt(simAnual.rendimentoTributavel)}.`
           }
         />
+
+        {/* Com englobamento há dois números de IRS e ambos são verdadeiros: o
+            do agregado (acima) e a parte que os recibos verdes acrescentam.
+            É esta segunda que se compara com a faturação e com as retenções —
+            e é a única que faz sentido subtrair para chegar a um líquido da
+            atividade. Mostrar só uma delas deixava o outro número por
+            explicar no ecrã ao lado. */}
+        {salarioBruto > 0 && (
+          <LinhaCalculo
+            label="Parte imputável aos recibos verdes"
+            valor={-simAnual.irsImputavelCatB}
+            corValor="text-red-500 dark:text-red-400"
+            nota={`${fmt(decl.irsTotal)} − o que pagarias só com o salário`}
+            explicacao={`Do IRS total do agregado (${fmt(decl.irsTotal)}), esta é a parte que a atividade independente acrescenta: a diferença entre o imposto com e sem ela. É marginal, não proporcional — o salário já ocupa os escalões de baixo, por isso os recibos verdes são tributados por cima. É este o valor a comparar com as retenções que já fizeste.`}
+          />
+        )}
               </div>
             </m.div>
           )}
@@ -3519,6 +3717,27 @@ function ResultadoFinal({
             >
               Simulador completo <ArrowRight size={14} />
             </button>
+
+            {/* O que este modo assumiu.
+                O guiado e o completo partilham o motor mas não o conjunto de
+                perguntas: aqui não se pergunta dependentes nem tributação
+                conjunta, e para uma família com dois filhos a declarar em
+                conjunto a diferença são milhares de euros. O botão acima
+                transporta o estado, o que dá a entender continuidade — e
+                depois o número muda, sem nada no ecrã a explicar porquê.
+
+                Manter o guiado curto é a razão de ser do modo. Dizer o que
+                ficou de fora custa três linhas e transforma a limitação num
+                convite ao passo seguinte. */}
+            <p className="rounded-xl border border-stone-200 bg-white px-3.5 py-3 text-[11px] leading-relaxed text-stone-500 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-400">
+              <strong className="font-semibold text-stone-600 dark:text-stone-300">
+                O que assumimos:
+              </strong>{" "}
+              que não tens dependentes e que declaras sozinho. Se tiveres filhos,
+              ascendentes a teu cargo ou declarares em conjunto, o imposto é
+              menor — o simulador completo pergunta tudo isso e dá-te um número
+              mais próximo do real.
+            </p>
             <button
               type="button"
               onClick={onVoltar}
@@ -3635,7 +3854,7 @@ function ResultadoFinal({
   );
 }
 
-// ─── Painel lateral ao vivo ───────────────────────────────────────────────────
+// ─── Painel lateral em direto ───────────────────────────────────────────────────
 
 const PASSO_DICA: Record<1 | 2 | 3, { titulo: string; desc: string }> = {
   1: {
@@ -3678,7 +3897,7 @@ function PainelResultadoVivo({
       <div className="space-y-3">
         <div className="rounded-3xl border border-dashed border-stone-200 bg-stone-50 p-5 text-center dark:border-stone-700 dark:bg-stone-900/60">
           <p className="text-xs text-stone-400">
-            Seleciona a tua atividade para ver o resultado ao vivo
+            Seleciona a tua atividade para ver o resultado em direto
           </p>
         </div>
         <div className="rounded-3xl border border-brand/15 bg-brand-light/20 p-4">
@@ -3700,7 +3919,7 @@ function PainelResultadoVivo({
         <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
         <div className="relative">
           <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-white/90">
-            Resultado ao vivo
+            Resultado em direto
           </p>
 
           <div className="mb-1">
@@ -3842,254 +4061,13 @@ function PainelResultadoVivo({
 
 // ─── Zona IVA inline ──────────────────────────────────────────────────────────
 
-function ZonaIVA({
-  brutoAnual,
-  isentoEfetivo,
-  regimeIVA,
-  regiao,
-  tipoAtiv,
-  atividadeEspecifica,
-  onRegimeIVAChange,
-}: {
-  brutoAnual: number;
-  isentoEfetivo: boolean;
-  regimeIVA: RegimeIVA;
-  regiao: Regiao;
-  tipoAtiv: TipoAtiv;
-  atividadeEspecifica: Atividade | null;
-  onRegimeIVAChange: (r: RegimeIVA) => void;
-}) {
-  const taxasIVA = IVA_TAXAS[regiao].value;
-  const ivaEsperado = ATIV_META[tipoAtiv].ivaEsperado;
-  const notaIVAAtiv = ATIV_META[tipoAtiv].notaIVA;
-  const ivaIncoerente = regimeIVA !== "isento" && regimeIVA !== ivaEsperado;
+// O `ZonaIVA` vivia aqui: uma segunda leitura das mesmas regras de IVA,
+// mais pobre do que a do modo completo. Para os mesmos números, a mesma
+// pessoa era tratada de maneira diferente consoante o modo.
+//
+// A decisão está agora em `src/lib/fiscal-iva.ts` e o desenho em
+// `src/components/simulador/SituacaoIVA.tsx`, partilhados pelos dois modos.
 
-  // Nome da atividade do utilizador: específica se escolhida, senão a categoria.
-  const cardAtiv = CARDS_ATIV.find((c) => c.id === tipoAtiv)!;
-  const nomeAtividade = atividadeEspecifica?.label ?? cardAtiv.titulo;
-
-  // Rótulo legível da taxa de IVA habitual para a atividade.
-  const ESPERADO_LABEL: Record<typeof ivaEsperado, string> = {
-    isento: "isento",
-    reduzida: `taxa reduzida (${pct(taxasIVA.reduzida)})`,
-    intermedia: `taxa intermédia (${pct(taxasIVA.intermedia)})`,
-    normal: `taxa normal (${pct(taxasIVA.normal)})`,
-  };
-
-  // Exemplos de bens/serviços que tipicamente usam cada taxa (Listas I e II do CIVA).
-  const IVA_EXEMPLOS: Record<RegimeIVA, string> = {
-    isento: "",
-    reduzida:
-      "alimentos essenciais, livros, medicamentos, alojamento e transporte de passageiros",
-    intermedia:
-      "restauração (refeições), vinhos comuns e alguns produtos agrícolas",
-    normal: "consultoria, advocacia, design, programação e a maioria dos serviços",
-  };
-
-  function BotoesIVA({ cor }: { cor: "amber" | "red" }) {
-    const base =
-      cor === "amber"
-        ? {
-            sel: "border-amber-600 bg-amber-100 text-amber-800 dark:border-amber-500 dark:bg-amber-900/40 dark:text-amber-200",
-            def: "border-amber-300 bg-white/60 text-alert-text hover:border-amber-500 dark:border-amber-700 dark:bg-amber-950/30 dark:hover:border-amber-500",
-          }
-        : {
-            sel: "border-red-600 bg-red-100 text-red-800 dark:border-red-500 dark:bg-red-900/40 dark:text-red-200",
-            def: "border-red-300 bg-white/60 text-red-700 hover:border-red-500 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300 dark:hover:border-red-500",
-          };
-    return (
-      <div className="mt-1.5 grid grid-cols-3 gap-1.5">
-        {(["reduzida", "intermedia", "normal"] as const).map((e) => (
-          <button
-            key={e}
-            type="button"
-            aria-pressed={regimeIVA === e}
-            onClick={() => onRegimeIVAChange(e)}
-            className={`rounded-lg border p-2 text-center text-[10px] font-bold transition-all ${regimeIVA === e ? base.sel : base.def}`}
-          >
-            {e === "reduzida"
-              ? "Reduzida"
-              : e === "intermedia"
-                ? "Intermédia"
-                : "Normal"}
-            <br />
-            {pct(taxasIVA[e])}
-          </button>
-        ))}
-      </div>
-    );
-  }
-
-  function PainelCompatibilidade({ regime }: { regime: RegimeIVA }) {
-    const meta = IVA_META[regime as keyof typeof IVA_META] ?? IVA_META.normal;
-    const coerente = regime === ivaEsperado;
-    return (
-      <div className="mt-3 rounded-xl border border-stone-200 bg-stone-50 p-3.5 dark:border-stone-700 dark:bg-stone-900/60">
-        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-stone-400">
-          {meta.titulo}
-        </p>
-        <p className="mb-2 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
-          {meta.quando}
-        </p>
-        <div className="space-y-1.5">
-          {/* Atividade do utilizador */}
-          <div className="flex items-start gap-1.5">
-            <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
-            <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-              <strong className="text-stone-700 dark:text-stone-200">
-                A tua atividade:
-              </strong>{" "}
-              {nomeAtividade} — IVA habitual:{" "}
-              {notaIVAAtiv ? "isento ou taxa normal, conforme o caso" : ESPERADO_LABEL[ivaEsperado]}.
-            </p>
-          </div>
-
-          {/* Nota específica de IVA (ex.: direitos de autor — obra própria vs
-              royalties). Neutra: explica os dois enquadramentos possíveis em vez
-              de tratar qualquer taxa legítima como "errada". */}
-          {notaIVAAtiv && (
-            <div className="flex items-start gap-1.5 rounded-lg border border-stone-200 bg-white/70 px-2.5 py-2 dark:border-stone-700 dark:bg-stone-900/40">
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 16 16"
-                fill="none"
-                aria-hidden
-                className="mt-0.5 flex-shrink-0 text-stone-400 dark:text-stone-500"
-              >
-                <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
-                <path d="M8 7.2v4M8 4.8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-                {notaIVAAtiv}
-              </p>
-            </div>
-          )}
-
-          {/* Estado consoante o regime efetivo */}
-          {regime === "isento" ? (
-            <>
-              <div className="flex items-start gap-1.5">
-                <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
-                <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-                  A isenção mantém-se em <strong>cada ano</strong> em que ficares
-                  abaixo de {fmt(IVA_LIMITE)} — não é só no 1.º ano.
-                </p>
-              </div>
-              <p className="pl-[18px] text-[11px] leading-relaxed text-stone-400 dark:text-stone-500">
-                No 1.º ano conta o volume de negócios estimado até ao fim do
-                ano (sem anualização — DL 35/2025); nos anos seguintes conta a
-                faturação do ano civil anterior.
-              </p>
-            </>
-          ) : coerente ? (
-            <div className="flex items-start gap-1.5">
-              <Check size={11} className="mt-0.5 flex-shrink-0 text-brand" />
-              <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-                A taxa selecionada é a habitual para a tua atividade.
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-lg border border-alert-border bg-alert-bg px-2.5 py-2">
-              <div className="flex items-start gap-1.5">
-                <Warning
-                  size={11}
-                  className="mt-0.5 flex-shrink-0 text-alert-text"
-                />
-                <p className="text-[11px] leading-relaxed text-alert-text">
-                  Esta taxa não é a habitual para {nomeAtividade}. Confirma com o
-                  teu contabilista.
-                </p>
-              </div>
-              {IVA_EXEMPLOS[regime] && (
-                <p className="mt-1 pl-[18px] text-[11px] leading-relaxed text-alert-text/80">
-                  A {meta.titulo.toLowerCase()} costuma aplicar-se a:{" "}
-                  {IVA_EXEMPLOS[regime]}.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (isentoEfetivo) {
-    return (
-      <div className="space-y-0">
-        <div className="flex items-start gap-2.5 rounded-xl border border-brand/30 bg-brand-light/60 p-3.5">
-          <Check size={14} className="mt-0.5 flex-shrink-0 text-brand" />
-          <div>
-            <span className="text-sm font-bold text-brand-dark">
-              Estás isento de IVA
-            </span>
-            <p className="mt-0.5 text-xs leading-relaxed text-brand-dark/70">
-              Com {fmt(brutoAnual)}/ano estás abaixo de {fmt(IVA_LIMITE)} — Art.
-              53.º CIVA.
-            </p>
-          </div>
-        </div>
-        <PainelCompatibilidade regime="isento" />
-      </div>
-    );
-  }
-
-  if (brutoAnual <= IVA_LIMITE_IMEDIATO) {
-    return (
-      <div className="space-y-0">
-        <div className="rounded-xl border border-alert-border bg-alert-bg p-3.5">
-          <div className="flex items-start gap-2.5">
-            <Warning
-              size={14}
-              className="mt-0.5 flex-shrink-0 text-alert-text"
-            />
-            <div className="flex-1">
-              <span className="text-sm font-bold text-alert-text">
-                Vais perder a isenção em janeiro
-              </span>
-              <p className="mt-0.5 text-xs leading-relaxed text-alert-text">
-                Entre {fmt(IVA_LIMITE)} e {fmt(IVA_LIMITE_IMEDIATO)}, perdes a
-                isenção no 1 de janeiro seguinte.
-              </p>
-              <p className="mt-2 text-xs font-semibold text-alert-text">
-                Que taxa de IVA vais cobrar?
-              </p>
-              <BotoesIVA cor="amber" />
-            </div>
-          </div>
-        </div>
-        {regimeIVA !== "isento" && <PainelCompatibilidade regime={regimeIVA} />}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-0">
-      <div className="rounded-xl border border-red-300 bg-red-50 p-3.5 dark:border-red-900/50 dark:bg-red-950/20">
-        <div className="flex items-start gap-2.5">
-          <Warning
-            size={14}
-            className="mt-0.5 flex-shrink-0 text-red-600 dark:text-red-400"
-          />
-          <div className="flex-1">
-            <span className="text-sm font-bold text-red-700 dark:text-red-300">
-              Perdes a isenção imediatamente
-            </span>
-            <p className="mt-0.5 text-xs leading-relaxed text-red-700 dark:text-red-300">
-              Ultrapassaste {fmt(IVA_LIMITE_IMEDIATO)}. Contacta o teu
-              contabilista.
-            </p>
-            <p className="mt-2 text-xs font-semibold text-red-700 dark:text-red-300">
-              Que taxa de IVA cobras?
-            </p>
-            <BotoesIVA cor="red" />
-          </div>
-        </div>
-      </div>
-      {regimeIVA !== "isento" && <PainelCompatibilidade regime={regimeIVA} />}
-    </div>
-  );
-}
 
 // ─── Toggle card ──────────────────────────────────────────────────────────────
 

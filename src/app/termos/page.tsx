@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import LegalPage, {
   Section, Sub, Nota, Lista, ListaCheck, Tabela,
 } from "@/components/LegalPage";
+import { precoPlusFormatado } from "@/lib/entitlements";
 
 export const metadata: Metadata = {
   title: "Termos de Utilização — ReciboCerto",
@@ -66,7 +67,7 @@ export default function TermosPage() {
             "Calculadora de recibos verdes — estimativa de tesouraria e deduções",
             "Simulador de IRS anual — projeção de liquidação",
             "Comparador de regimes — recibos verdes vs. empresa (IRC)",
-            "Calendário de prazos fiscais — alertas e datas de entrega",
+            "Calendário de prazos fiscais — datas de entrega",
             "Arquivo de recibos — histórico local no teu dispositivo",
           ]}
         />
@@ -87,9 +88,9 @@ export default function TermosPage() {
           </p>
         </Sub>
 
-        <Sub title="Conta Pro (quando disponível)">
+        <Sub title="Conta Plus">
           <p>
-            Quando o plano Pro for lançado, poderás criar uma conta com endereço de email e
+            Quando o plano Plus for lançado, poderás criar uma conta com endereço de email e
             palavra-passe. Ao criares conta, comprometeste a:
           </p>
           <Lista
@@ -126,15 +127,15 @@ export default function TermosPage() {
               "Calculadora, simulador, comparador, prazos, arquivo local (localStorage)",
             ],
             [
-              "Pro",
-              "5,99 €/mês ou 47,99 €/ano",
-              "Sincronização na nuvem, exportação avançada, alertas por email, multi-dispositivo",
+              "Plus",
+              `${precoPlusFormatado()}/mês`,
+              "Sincronização na nuvem, exportação avançada, multi-dispositivo",
             ],
           ]}
         />
         <Sub title="Política de reembolso">
           <p>
-            Para o plano Pro, oferecemos um período de reembolso de 14 dias a contar da data
+            Para o plano Plus, oferecemos um período de reembolso de 14 dias a contar da data
             de subscrição, sem necessidade de justificação, conforme o direito de arrependimento
             previsto no Decreto-Lei n.º 24/2014, de 14 de fevereiro (contratos celebrados à
             distância). Para solicitar reembolso, envia um email para{" "}
@@ -149,9 +150,9 @@ export default function TermosPage() {
         </Sub>
         <Sub title="Renovação e cancelamento">
           <p>
-            As subscrições do plano Pro renovam-se automaticamente no período acordado (mensal
+            As subscrições do plano Plus renovam-se automaticamente no período acordado (mensal
             ou anual). Podes cancelar a qualquer momento a partir da área de conta; o acesso
-            Pro mantém-se até ao final do período já pago.
+            Plus mantém-se até ao final do período já pago.
           </p>
         </Sub>
       </Section>
@@ -236,7 +237,7 @@ export default function TermosPage() {
         />
         <Sub title="Responsabilidade máxima">
           <p>
-            Em caso de responsabilidade contratual demonstrável (plano Pro), a nossa
+            Em caso de responsabilidade contratual demonstrável (plano Plus), a nossa
             responsabilidade máxima limita-se ao valor pago nos 12 meses anteriores ao
             facto gerador da responsabilidade.
           </p>
@@ -281,7 +282,7 @@ export default function TermosPage() {
         </p>
         <Lista
           items={[
-            "Manutenção programada: anunciada com pelo menos 24 horas de antecedência (plano Pro)",
+            "Manutenção programada: anunciada com pelo menos 24 horas de antecedência (plano Plus)",
             "Manutenção de emergência: pode ocorrer sem aviso prévio para resolver problemas críticos",
             "Dados locais (plano gratuito): acessíveis mesmo sem ligação à internet (após carregamento inicial)",
           ]}
@@ -297,7 +298,7 @@ export default function TermosPage() {
         <Sub title="Alterações ao serviço">
           <p>
             Podemos adicionar, modificar ou remover funcionalidades a qualquer momento.
-            Para alterações significativas que afetem negativamente utilizadores Pro,
+            Para alterações significativas que afetem negativamente utilizadores Plus,
             daremos aviso prévio de 30 dias.
           </p>
         </Sub>
@@ -308,7 +309,7 @@ export default function TermosPage() {
           <Lista
             items={[
               "Atualizaremos a data \"Última atualização\" no topo desta página",
-              "Notificaremos utilizadores Pro por email com 15 dias de antecedência para alterações materiais",
+              "Notificaremos utilizadores Plus por email com 15 dias de antecedência para alterações materiais",
               "A utilização continuada do serviço após a data de entrada em vigor constitui aceitação dos novos termos",
             ]}
           />
@@ -319,7 +320,7 @@ export default function TermosPage() {
       <Section id="rescisao" title="Rescisão">
         <Sub title="Rescisão pelo utilizador">
           <p>
-            Podes deixar de utilizar o ReciboCerto a qualquer momento. Para contas Pro, podes
+            Podes deixar de utilizar o ReciboCerto a qualquer momento. Para contas Plus, podes
             cancelar a subscrição e solicitar a eliminação da conta enviando um email para{" "}
             <a
               href="mailto:recibocerto.pt@gmail.com"
@@ -338,12 +339,12 @@ export default function TermosPage() {
             items={[
               "Violares estes Termos de Utilização de forma grave ou reiterada",
               "Utilizares a plataforma para atividades ilegais",
-              "O serviço for encerrado (com aviso prévio de 90 dias para utilizadores Pro)",
+              "O serviço for encerrado (com aviso prévio de 90 dias para utilizadores Plus)",
             ]}
           />
         </Sub>
         <p className="mt-3">
-          Em caso de encerramento do serviço Pro, reembolsaremos o valor proporcional do
+          Em caso de encerramento do serviço Plus, reembolsaremos o valor proporcional do
           período pago não utilizado.
         </p>
       </Section>

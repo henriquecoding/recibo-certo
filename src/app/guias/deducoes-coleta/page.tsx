@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import InfoTip from "@/components/ui/InfoTip";
 import {
   DEDUCAO_SAUDE,
@@ -15,26 +14,7 @@ import {
 } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 
-export const metadata: Metadata = {
-  title: "Deduções à coleta do IRS 2026 | ReciboCerto",
-  description: "Todas as deduções à coleta do IRS: saúde, educação, rendas, dependentes e limite global. Aplicável a independentes e conta de outrem.",
-  keywords: ["deduções coleta IRS 2026", "deduções IRS", "saúde educação rendas IRS", "despesas gerais familiares"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/deducoes-coleta" },
-  openGraph: {
-    title: "Deduções à coleta do IRS 2026 | ReciboCerto",
-    description: "Saúde, educação, rendas e dependentes — tudo o que podes deduzir no IRS.",
-    url: "https://www.recibocerto.pt/guias/deducoes-coleta",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "Art. 78.º-A a 78.º-E CIRS — Portal das Finanças", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs87.aspx", tipo: "oficial" as const },
-  { titulo: "Montepio — Deduções à coleta: quanto podes descontar", url: "https://www.montepio.org/ei/pessoal/impostos/deducoes-a-coleta-saiba-quanto-pode-descontar-no-irs/", tipo: "referencia" as const },
-  { titulo: "PwC Guia Fiscal 2026 — IRS deduções", url: "https://www.pwc.pt/pt/pwcinforfisco/guia-fiscal/2026/irs.html", tipo: "referencia" as const },
-];
+export const metadata: Metadata = metadataDoGuia("deducoes-coleta");
 
 const DEDUCOES = [
   {
@@ -69,12 +49,7 @@ const DEDUCOES = [
 
 export default function DeducoesColetaPage() {
   return (
-    <>
-      <GuiaHero
-        titulo="Deduções à coleta do IRS 2026"
-        descricao="As deduções à coleta reduzem diretamente o imposto a pagar — não o rendimento tributável. Cada euro de dedução poupa um euro de IRS."
-        tempoLeitura={5}
-      />
+    <GuiaLayout slug="deducoes-coleta">
 
       <section className="mb-10">
         <div className="rounded-3xl border border-brand bg-brand-light dark:bg-brand/10 p-5 mb-6">
@@ -176,8 +151,6 @@ export default function DeducoesColetaPage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

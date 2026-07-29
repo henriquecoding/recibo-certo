@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import InfoTip from "@/components/ui/InfoTip";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import { Check, Warning, ArrowRight, ChevronDown, Info } from "@/components/ui/Icons";
@@ -97,6 +97,10 @@ export interface OpcaoSeletor<T> {
   descricao?: string;
   /** Pontos (checklist) mostrados no painel da opção selecionada. */
   pontos?: string[];
+  /** A opção não está disponível neste contexto (regra legal, pré-requisito). */
+  desativada?: boolean;
+  /** Porquê — mostrado por baixo dos cartões e lido por leitores de ecrã. */
+  motivoDesativada?: string;
 }
 
 export function SeletorCartoes<T extends string | boolean>({
@@ -118,41 +122,131 @@ export function SeletorCartoes<T extends string | boolean>({
   const gridCls =
     cols === 2 ? "grid-cols-2" : cols === 3 ? "grid-cols-3" : cols === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2";
   const selecionada = opcoes.find((o) => o.id === valor);
+  const bloqueadas = opcoes.filter((o) => o.desativada && o.motivoDesativada);
+  const legendaId = label ? `seletor-${label.replace(/\s+/g, "-").toLowerCase()}` : undefined;
+
+  // ── Teclado do `radiogroup` ────────────────────────────────────────────
+  // Declarar `role="radiogroup"` com filhos `role="radio"` é uma PROMESSA:
+  // quem usa leitor de ecrã espera um único ponto de tabulação e as setas a
+  // percorrer as opções. Sem isso, o grupo anuncia-se como «1 de 3» e as
+  // setas não fazem nada — pior do que não ter papel nenhum, porque a
+  // expectativa foi criada. Faltavam as duas metades: o «tabindex» rotativo
+  // e o `onKeyDown`.
+  const refs = useRef<Array<HTMLButtonElement | null>>([]);
+  const indiceAtivo = (() => {
+    const i = opcoes.findIndex((o) => o.id === valor && !o.desativada);
+    if (i >= 0) return i;
+    return opcoes.findIndex((o) => !o.desativada);
+  })();
+
+  const irPara = useCallback(
+    (passo: number, apartirDe: number) => {
+      const n = opcoes.length;
+      for (let k = 1; k <= n; k++) {
+        const i = (((apartirDe + passo * k) % n) + n) % n;
+        if (!opcoes[i].desativada) {
+          onChange(opcoes[i].id);
+          refs.current[i]?.focus();
+          return;
+        }
+      }
+    },
+    [opcoes, onChange],
+  );
+
+  const aoTeclar = (e: React.KeyboardEvent, indice: number) => {
+    switch (e.key) {
+      case "ArrowRight":
+      case "ArrowDown":
+        e.preventDefault();
+        irPara(1, indice);
+        break;
+      case "ArrowLeft":
+      case "ArrowUp":
+        e.preventDefault();
+        irPara(-1, indice);
+        break;
+      case "Home":
+        e.preventDefault();
+        irPara(1, opcoes.length - 1);
+        break;
+      case "End":
+        e.preventDefault();
+        irPara(-1, 0);
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
-    <div>
+    <fieldset className="min-w-0 border-0 p-0">
       {label && (
-        <div className="mb-1.5 flex items-center gap-1.5">
-          <span className={rotuloCls}>{label}</span>
+        <legend className="mb-1.5 flex items-center gap-1.5 p-0">
+          <span className={rotuloCls} id={legendaId}>{label}</span>
           {tooltip && <InfoTip>{tooltip}</InfoTip>}
-        </div>
+        </legend>
       )}
-      <div className={`grid gap-2 ${gridCls}`}>
-        {opcoes.map((o) => {
+      <div className={`grid gap-2 ${gridCls}`} role="radiogroup" aria-labelledby={legendaId}>
+        {opcoes.map((o, indice) => {
           const active = valor === o.id;
+          const desativada = !!o.desativada;
+          const motivoId = desativada && o.motivoDesativada ? `${String(o.id)}-motivo` : undefined;
           return (
             <button
               key={String(o.id)}
+              ref={(el) => { refs.current[indice] = el; }}
               type="button"
-              aria-pressed={active}
-              onClick={() => onChange(o.id)}
+              role="radio"
+              aria-checked={active}
+              aria-disabled={desativada}
+              disabled={desativada}
+              aria-describedby={motivoId}
+              // Um só ponto de tabulação no grupo; as setas fazem o resto.
+              tabIndex={indice === indiceAtivo ? 0 : -1}
+              onKeyDown={(e) => { if (!desativada) aoTeclar(e, indice); }}
+              // O `title` dá a explicação ao rato; o `aria-describedby` dá-a a
+              // quem usa leitor de ecrã. Um botão desativado sem razão visível
+              // é uma porta fechada sem placa.
+              title={desativada ? o.motivoDesativada : undefined}
+              onClick={() => { if (!desativada) onChange(o.id); }}
               className={`rounded-2xl border p-3 text-center transition-all ${
-                active
-                  ? "border-brand bg-brand-light shadow-[0_0_0_1px_rgba(29,158,117,0.25)]"
-                  : "border-stone-200 bg-stone-50 hover:border-stone-300 hover:bg-white dark:border-stone-700 dark:bg-stone-800/40"
+                desativada
+                  ? "cursor-not-allowed border-stone-200 bg-stone-100 opacity-60 dark:border-stone-700 dark:bg-stone-800/60"
+                  : active
+                    ? "border-brand bg-brand-light shadow-[0_0_0_1px_rgba(29,158,117,0.25)]"
+                    : "border-stone-200 bg-stone-50 hover:border-stone-300 hover:bg-white dark:border-stone-700 dark:bg-stone-800/40"
               }`}
             >
-              <div className={`text-sm font-semibold ${active ? "text-brand-dark" : "text-stone-700 dark:text-stone-200"}`}>
+              <div
+                className={`text-sm font-semibold ${
+                  desativada
+                    ? "text-stone-400 dark:text-stone-500"
+                    : active
+                      ? "text-brand-dark"
+                      : "text-stone-700 dark:text-stone-200"
+                }`}
+              >
                 {o.label}
               </div>
-              {o.sub && <div className={`mt-0.5 text-xs ${active ? "text-brand" : "text-stone-400"}`}>{o.sub}</div>}
+              {o.sub && (
+                <div className={`mt-0.5 text-xs ${desativada ? "text-stone-400 dark:text-stone-500" : active ? "text-brand" : "text-stone-400"}`}>
+                  {o.sub}
+                </div>
+              )}
             </button>
           );
         })}
       </div>
+      {bloqueadas.map((o) => (
+        <p key={`${String(o.id)}-motivo`} id={`${String(o.id)}-motivo`} className="mt-1.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+          {o.motivoDesativada}
+        </p>
+      ))}
       {selecionada && (selecionada.descricao || selecionada.pontos?.length) && (
         <PainelDetalhe titulo={selecionada.label} descricao={selecionada.descricao} pontos={selecionada.pontos} />
       )}
-    </div>
+    </fieldset>
   );
 }
 

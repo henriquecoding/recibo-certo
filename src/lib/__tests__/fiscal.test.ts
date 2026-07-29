@@ -13,7 +13,6 @@ import {
 } from "@/lib/fiscal-data";
 import {
   calcularAbatimentoMinimoExistencia,
-  calcularTributacaoAutonoma,
   simularDeclaracaoIRS,
   simularIRSAnual,
 } from "@/lib/fiscal";
@@ -83,7 +82,10 @@ describe("mínimo de existência — fórmula por troços do artigo 70.º", () =
     expect(result.minimoExistenciaDecision.status).toBe("applied");
   });
 
-  it("não inventa factos quando há rendimento agregado sem decomposição", () => {
+  it("não inventa factos quando recebe um agregado anónimo", () => {
+    // `simularIRSAnual` sozinha continua a recusar-se a adivinhar: um número
+    // em `outrosRendimentos` não diz de que categoria vem nem que deduções
+    // específicas já sofreu. Recusar é o comportamento certo AQUI.
     const result = simularIRSAnual({
       brutoAnual: 14_000,
       tipo: "art151",
@@ -91,6 +93,29 @@ describe("mínimo de existência — fórmula por troços do artigo 70.º", () =
     });
     expect(result.minimoExistenciaDecision.status).toBe("needs_input");
     expect(result.abatimentoMinimoExistencia).toBe(0);
+  });
+
+  it("mas a declaração fornece-lhe os factos por titular — e o abatimento aplica-se", () => {
+    // Este é o contrato que faltava: o wizard decompõe as categorias, por isso
+    // consegue montar os sete factos do artigo 70.º. Enquanto não os montava,
+    // um salário de 10 000 € produzia 676,61 € de imposto onde a lei manda zero
+    // — e sem um único aviso.
+    const r = simularDeclaracaoIRS({
+      independente: { brutoAnual: 14_000, tipo: "art151" },
+      salarios: { bruto: 1_000 },
+    });
+    expect(r.englobamento.minimoExistenciaDecision.status).toBe("applied");
+    expect(r.englobamento.abatimentoMinimoExistencia).toBeGreaterThan(0);
+  });
+
+  it("uma declaração que não consiga apurar o artigo 70.º avisa em vez de calar", () => {
+    const r = simularDeclaracaoIRS({ salarios: { bruto: 10_000 } });
+    const decisao = r.englobamento.minimoExistenciaDecision;
+    expect(decisao.status).not.toBe("needs_input");
+    // Contrato explícito: `needs_input` implica sempre aviso ao utilizador.
+    if (decisao.status === "needs_input") {
+      expect(r.avisos.some((a) => a.includes("Art. 70.º"))).toBe(true);
+    }
   });
 
   it("não aplica a atividades fora do âmbito material do n.º 2", () => {
@@ -431,20 +456,7 @@ describe("simularIRSAnual — IFICI aplica-se só ao rendimento elegível (Art. 
 });
 
 // ── TA de viaturas elétricas acima do limite — P0-06 da auditoria 2026 ──────
-describe("calcularTributacaoAutonoma — elétrica acima do limite de custo (Art. 88.º, n.º 20 CIRC)", () => {
-  it("isenta (0%) uma elétrica com custo de aquisição igual ao limite", () => {
-    const r = calcularTributacaoAutonoma({
-      viaturas: [{ tipo: "eletrica", custoAquisicao: TA_ELETRICA_LIMITE_CUSTO.value, encargosAnuais: 10_000 }],
-    });
-    expect(r.taViaturas).toBe(0);
-  });
-
-  it("já NÃO isenta (10%) uma elétrica com custo de aquisição acima do limite", () => {
-    const r = calcularTributacaoAutonoma({
-      viaturas: [
-        { tipo: "eletrica", custoAquisicao: TA_ELETRICA_LIMITE_CUSTO.value + 1, encargosAnuais: 10_000 },
-      ],
-    });
-    expect(r.taViaturas).toBeCloseTo(10_000 * TA_VIATURAS_ELETRICA_ACIMA_LIMITE.value, 2);
-  });
-});
+// O motor de TA duplicado que vivia em `fiscal.ts` foi eliminado (não era
+// usado por componente nenhum e discordava do de `fiscal-empresa.ts` sobre o
+// agravamento do Art. 88.º n.º 14). A regra do n.º 20 continua coberta, agora
+// contra `taxaTAViatura` — ver `fiscal-empresa-correcoes.test.ts`.

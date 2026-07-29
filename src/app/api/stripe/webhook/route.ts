@@ -47,7 +47,17 @@ async function atualizarSubscricao(
       : null,
   };
 
-  await sb.from("subscriptions").upsert(dados, { onConflict: "stripe_subscription_id" });
+  // O erro TEM de ser lido. Sem isto, uma escrita rejeitada devolvia 200 à
+  // Stripe, que nunca voltava a tentar — e um cliente que pagou ficava sem
+  // subscrição registada, em silêncio. Lançar faz o handler responder 500 e
+  // a Stripe reenviar o evento.
+  const { error } = await sb
+    .from("subscriptions")
+    .upsert(dados, { onConflict: "stripe_subscription_id" });
+  if (error) {
+    console.error("[stripe/webhook] Falha ao persistir a subscrição:", error.message);
+    throw new Error(`Falha ao persistir a subscrição: ${error.message}`);
+  }
 }
 
 export async function POST(req: NextRequest) {

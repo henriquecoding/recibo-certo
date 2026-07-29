@@ -17,8 +17,11 @@ import {
   SS_TAXA,
   SS_COEFICIENTE,
   SS_BASE_MAX_MENSAL,
+  SS_ACUMULACAO_LIMITE_MENSAL,
   REGIME_SIMPLIFICADO,
   IRS_JOVEM,
+  PROGRAMA_REGRESSAR,
+  PROGRAMA_REGRESSAR_TETO_CALC,
   ESCALOES_IRS,
   DEDUCAO_ESPECIFICA_CATB,
   REGIME_15PCT,
@@ -40,19 +43,12 @@ import {
   DEDUCAO_EDUCACAO,
   QUOCIENTE_CONJUGAL,
   LIMITE_GLOBAL_DEDUCOES,
+  LIMITE_GLOBAL_MAJORACAO_DEPENDENTES,
+  DEDUCAO_ESPECIFICA_DEP_MAX_ORDENS,
+  QUOTIZACOES_SINDICAIS,
   IAS_VALUE,
   CATEGORIA_F,
   // Tributação Autónoma
-  TA_THRESHOLDS,
-  TA_VIATURAS_COMBUSTAO,
-  TA_VIATURAS_PHEV,
-  TA_VIATURAS_ELETRICA,
-  TA_VIATURAS_ELETRICA_ACIMA_LIMITE,
-  TA_ELETRICA_LIMITE_CUSTO,
-  TA_REPRESENTACAO,
-  TA_AJUDAS_CUSTO,
-  TA_NAO_DOCUMENTADAS,
-  TA_AGRAVAMENTO_PREJUIZO,
   // Deficiência e extras
   EXCLUSAO_DEFICIENCIA_TAXA,
   EXCLUSAO_DEFICIENCIA_MAX,
@@ -149,29 +145,165 @@ export function isencaoIRSJovem(ano?: number): number {
   return IRS_JOVEM.isencaoPorAno.value[ano] ?? 0;
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+//  SEGURANÇA SOCIAL DO TRABALHADOR INDEPENDENTE — um só cálculo
+//  ---------------------------------------------------------------------
+//  Havia três versões disto no motor e as três discordavam:
+//
+//    · `calcular()` aplicava o teto mas não o mínimo mensal;
+//    · o `ssAnual` de `simularIRSAnual` aplicava teto e mínimo, mas tratava
+//      a acumulação com emprego como isenção TOTAL;
+//    · a regra dos 15% (Art. 31.º n.º 13) usava sempre o coeficiente de
+//      serviços, sem teto e sem olhar a isenções — a 200 000 € de faturação
+//      creditava 29 960 € de contribuições contra uns reais de 16 552 €.
+//
+//  As três decidem a mesma coisa: quanto se paga de Segurança Social. Passa a
+//  ser esta função a decidi-lo, e cada chamador escolhe apenas o período.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface IsencoesSS {
+  /**
+   * Art. 157.º n.º 1 al. b): primeiros 12 meses de atividade. Isenção total —
+   * esta é mesmo uma isenção.
+   */
+  primeiroAno?: boolean;
+  /**
+   * Art. 157.º n.º 1 al. a): acumulação com trabalho por conta de outrem.
+   * Dispensa **condicionada** — só vale enquanto o rendimento relevante
+   * mensal médio ficar abaixo de 4 × IAS. Acima, contribui-se sobre o
+   * excedente e sem contribuição mínima.
+   */
+  acumulaEmprego?: boolean;
+}
+
+export interface ContribuicoesSS {
+  /** Rendimento relevante mensal médio, já com o teto de 12 × IAS aplicado. */
+  baseMensal: number;
+  /** Rendimento relevante mensal médio antes do teto (para explicar o corte). */
+  baseMensalSemTeto: number;
+  contribuicaoMensal: number;
+  contribuicaoAnual: number;
+  /** O teto de 12 × IAS mordeu? */
+  limitadoPeloTeto: boolean;
+  /** A dispensa por acumulação está a ser aplicada, total ou parcialmente? */
+  dispensaAcumulacao: "total" | "parcial" | "nenhuma";
+}
+
+/**
+ * Contribuições anuais de um trabalhador independente, com teto (12 × IAS),
+ * contribuição mínima (20 €/mês), coeficiente por natureza da atividade e as
+ * isenções do Art. 157.º.
+ */
+export function contribuicoesSS(
+  brutoAnual: number,
+  baseSS: BaseSS,
+  isencoes: IsencoesSS = {},
+): ContribuicoesSS {
+  const bruto = sanitize(brutoAnual);
+  const coeficiente = SS_COEFICIENTE[baseSS].value;
+  const baseMensalSemTeto = (bruto * coeficiente) / 12;
+  const baseMensal = Math.min(baseMensalSemTeto, SS_BASE_MAX_MENSAL.value);
+  const limitadoPeloTeto = baseMensalSemTeto > SS_BASE_MAX_MENSAL.value;
+
+  const vazio = (dispensa: ContribuicoesSS["dispensaAcumulacao"]): ContribuicoesSS => ({
+    baseMensal,
+    baseMensalSemTeto,
+    contribuicaoMensal: 0,
+    contribuicaoAnual: 0,
+    limitadoPeloTeto,
+    dispensaAcumulacao: dispensa,
+  });
+
+  // Sem faturação não há nada a mostrar. A contribuição mínima de 20 €/mês é
+  // real — paga-se mesmo declarando zero — mas é uma obrigação de quem TEM
+  // atividade aberta, não o resultado de uma simulação por preencher. Dizê-la
+  // é trabalho da copy; aqui devolvê-la faria a interface anunciar 240 €/ano
+  // de encargo a quem ainda não escreveu um número.
+  if (bruto <= 0) return vazio("nenhuma");
+
+  if (isencoes.primeiroAno) return vazio("nenhuma");
+
+  if (isencoes.acumulaEmprego) {
+    // Art. 157.º n.º 1 al. a): contribui-se sobre o EXCEDENTE a 4 × IAS. Abaixo
+    // disso não há contribuição nenhuma — e acima não há mínimo de 20 €, porque
+    // o mínimo é do regime geral, não desta dispensa.
+    const excedente = Math.max(0, baseMensal - SS_ACUMULACAO_LIMITE_MENSAL.value);
+    if (excedente <= 0) return vazio("total");
+    const contribuicaoMensal = excedente * SS_TAXA.value;
+    return {
+      baseMensal,
+      baseMensalSemTeto,
+      contribuicaoMensal,
+      contribuicaoAnual: contribuicaoMensal * 12,
+      limitadoPeloTeto,
+      dispensaAcumulacao: "parcial",
+    };
+  }
+
+  const contribuicaoMensal = Math.max(SS_MIN_MENSAL.value, baseMensal * SS_TAXA.value);
+  return {
+    baseMensal,
+    baseMensalSemTeto,
+    contribuicaoMensal,
+    contribuicaoAnual: contribuicaoMensal * 12,
+    limitadoPeloTeto,
+    dispensaAcumulacao: "nenhuma",
+  };
+}
+
+/** Atalho para quem só quer o total anual. */
+export const contribuicoesSSAnuais = (
+  brutoAnual: number,
+  baseSS: BaseSS,
+  isencoes: IsencoesSS = {},
+): number => contribuicoesSS(brutoAnual, baseSS, isencoes).contribuicaoAnual;
+
+/**
+ * Retenção na fonte sobre um valor faturado.
+ *
+ * Duas condições que se esquecem com facilidade quando a conta é escrita à
+ * mão — e foram esquecidas: a dispensa do Art. 101.º-B zera a retenção, e o
+ * IRS Jovem reduz a base, porque só se retém sobre a parte tributável.
+ * Escrever `faturado × taxa` no acerto anual produzia um «reembolso» de
+ * retenções que nunca tinham sido feitas.
+ */
+export function retencaoNaFonte(
+  base: number,
+  taxa: number,
+  opcoes: { dispensa?: boolean; irsJovemAno?: number } = {},
+): number {
+  if (opcoes.dispensa) return 0;
+  return sanitize(base) * (1 - isencaoIRSJovem(opcoes.irsJovemAno)) * taxa;
+}
+
 export function calcular(input: CalcInput): CalcResult {
   const bruto = sanitize(input.bruto);
   const avisos: string[] = [];
 
   // ── Retenção na fonte (adiantamento de IRS) ──
+  // O IRS Jovem isenta parte do rendimento, logo a retenção incide apenas
+  // sobre a parte tributável (estimativa — a tabela oficial da AT é progressiva).
   const isencaoJovem = isencaoIRSJovem(input.irsJovemAno);
   const retencaoBase = input.retencaoOverride ?? RETENCAO[input.tipo].value;
   const taxaRetencao = input.dispensaRetencao ? 0 : retencaoBase;
-  // O IRS Jovem isenta parte do rendimento, logo a retenção incide apenas
-  // sobre a parte tributável (estimativa — a tabela oficial da AT é progressiva).
-  const baseRetencao = bruto * (1 - isencaoJovem);
-  const retencaoIRS = baseRetencao * taxaRetencao;
+  const retencaoIRS = retencaoNaFonte(bruto, retencaoBase, {
+    dispensa: input.dispensaRetencao,
+    irsJovemAno: input.irsJovemAno,
+  });
 
   // ── IVA ──
   const taxaIVA = taxaIVAEfetiva(input.regiao, input.regimeIVA);
   const iva = bruto * taxaIVA;
 
   // ── Segurança Social (estimativa proporcional ao recibo) ──
-  let segSocial = 0;
-  if (!input.isencaoSSPrimeiroAno && !input.acumulaEmprego) {
-    const baseSS = Math.min(bruto * SS_COEFICIENTE[input.baseSS].value, SS_BASE_MAX_MENSAL.value);
-    segSocial = baseSS * SS_TAXA.value;
-  }
+  // Mesmo cálculo do apuramento anual, anualizado e dividido de volta: assim a
+  // tesouraria por recibo e o acerto do ano não podem divergir. Traz para aqui
+  // o mínimo mensal de 20 € (que faltava) e a dispensa por acumulação passa a
+  // ser condicionada aos 4 × IAS em vez de zerar tudo.
+  const segSocial = contribuicoesSS(bruto * 12, input.baseSS, {
+    primeiroAno: input.isencaoSSPrimeiroAno,
+    acumulaEmprego: input.acumulaEmprego,
+  }).contribuicaoMensal;
 
   const entradaConta = bruto + iva - retencaoIRS;
   const liquido = bruto - retencaoIRS - segSocial;
@@ -219,15 +351,30 @@ export function rendimentoTributavelSimplificado(
   return valor * COEFICIENTE_POR_TIPO[tipo];
 }
 
-/** Limite global das deduções à coleta para um dado rendimento coletável. */
-export function limiteGlobalDeducoes(coletavel: number): number {
+/**
+ * Limite global das deduções à coleta (Art. 78.º, n.º 7 e n.º 8).
+ *
+ * O `coletavel` a passar é o do AGREGADO JÁ DIVIDIDO pelo quociente do
+ * Art. 69.º quando a tributação é conjunta — o n.º 7 diz «após aplicação do
+ * divisor previsto no artigo 69.º», e passar o coletável inteiro empurra o
+ * casal para o patamar dos 1 000 € muito antes do que a lei manda.
+ *
+ * `dependentes` é a contagem total de dependentes do agregado: a partir do
+ * terceiro, o n.º 8 majora o limite em 5% por cada um (todos, não só os que
+ * excedem dois).
+ */
+export function limiteGlobalDeducoes(coletavel: number, dependentes = 0): number {
   const g = LIMITE_GLOBAL_DEDUCOES.value;
+  const maj = LIMITE_GLOBAL_MAJORACAO_DEPENDENTES.value;
+  const n = Math.max(0, Math.floor(dependentes));
+  const majoracao = n >= maj.minDependentes ? 1 + maj.porDependente * n : 1;
   if (coletavel <= g.semLimiteAte) return Infinity;
-  if (coletavel >= g.escalaoSuperior) return g.limiteBaixo;
-  return (
-    g.limiteBaixo +
-    (g.limiteAlto - g.limiteBaixo) * ((g.escalaoSuperior - coletavel) / (g.escalaoSuperior - g.semLimiteAte))
-  );
+  const base =
+    coletavel >= g.escalaoSuperior
+      ? g.limiteBaixo
+      : g.limiteBaixo +
+        (g.limiteAlto - g.limiteBaixo) * ((g.escalaoSuperior - coletavel) / (g.escalaoSuperior - g.semLimiteAte));
+  return base * majoracao;
 }
 
 /** Escalão aplicado no cálculo progressivo do IRS. */
@@ -293,6 +440,289 @@ export function irsProgressivoDetalhado(coletavel: number): {
     if (restante <= 0) break;
   }
   return { imposto, escaloes };
+}
+
+/**
+ * Adicional de solidariedade (Art. 68.º-A CIRS): 2,5% na parte do coletável
+ * entre 80 000 € e 250 000 €, 5% acima de 250 000 €.
+ *
+ * IMPLEMENTAÇÃO ÚNICA. Existiam três cópias da mesma regra no projeto —
+ * uma escrita à mão dentro de `simularIRSAnual`, uma `solidarity()` em
+ * `fiscal-empresa.ts` e, na Categoria A, nenhuma (o adicional simplesmente
+ * não era cobrado). Três sítios, duas implementações e uma lacuna. Agora os
+ * três motores chamam esta função.
+ *
+ * Em tributação conjunta aplica-se por titular: passar o coletável já
+ * dividido pelo `divisor` e o próprio `divisor`, como nos escalões gerais.
+ */
+export function adicionalSolidariedade(coletavelPorTitular: number, divisor = 1): number {
+  const base = sanitize(coletavelPorTitular);
+  const entre = Math.max(
+    0,
+    Math.min(base, ADICIONAL_SOLIDARIEDADE.limiar2.value) - ADICIONAL_SOLIDARIEDADE.limiar1.value
+  );
+  const acima = Math.max(0, base - ADICIONAL_SOLIDARIEDADE.limiar2.value);
+  return (entre * ADICIONAL_SOLIDARIEDADE.taxa1.value + acima * ADICIONAL_SOLIDARIEDADE.taxa2.value) * divisor;
+}
+
+/**
+ * Dedução à coleta por dependentes (Art. 78.º-A CIRS). IMPLEMENTAÇÃO ÚNICA
+ * partilhada pelas categorias A e B — antes havia duas, e a da Categoria A
+ * não conhecia bebés (≤ 3 anos, 726 €) nem guarda partilhada. Mesmo artigo,
+ * duas respostas, consoante o simulador em que se entrava.
+ *
+ * Ordem de contagem: os bebés ocupam as primeiras posições da fila global;
+ * do 3.º dependente em diante, os de mais de 3 anos passam de 600 € para
+ * 900 €. Com `lista`, cada dependente conta com a sua fração de guarda
+ * (Art. 78.º-A, n.º 4).
+ */
+export function deducaoDependentesColeta(input: {
+  normais?: number;
+  bebe?: number;
+  deficientes?: number;
+  lista?: Array<{ ate3: boolean; deficiente: boolean; guarda: number }>;
+}): number {
+  if (input.lista && input.lista.length > 0) {
+    const ordenada = [...input.lista].sort((a, b) => Number(b.ate3) - Number(a.ate3));
+    let pos = 0;
+    let total = 0;
+    for (const d of ordenada) {
+      pos++;
+      const base = d.ate3
+        ? DEDUCAO_DEPENDENTE_BEBE.value
+        : pos <= 2
+          ? DEDUCAO_DEPENDENTE.value
+          : DEDUCAO_DEPENDENTE_3MAIS.value;
+      const extra = d.deficiente ? DEDUCAO_DEPENDENTE_DEFICIENCIA.value : 0;
+      const guarda = d.guarda > 0 ? Math.min(1, d.guarda) : 1;
+      total += (base + extra) * guarda;
+    }
+    return total;
+  }
+
+  const depNormais = Math.max(0, Math.floor(input.normais ?? 0));
+  const depBebe = Math.max(0, Math.floor(input.bebe ?? 0));
+  const depDefic = Math.max(0, Math.floor(input.deficientes ?? 0));
+
+  const dedBebe = depBebe * DEDUCAO_DEPENDENTE_BEBE.value;
+  const normaisBase = Math.max(0, Math.min(depNormais, 2 - depBebe));
+  const normaisMajor = Math.max(0, depNormais - normaisBase);
+  const dedNormais = normaisBase * DEDUCAO_DEPENDENTE.value + normaisMajor * DEDUCAO_DEPENDENTE_3MAIS.value;
+  const dedDefic = depDefic * DEDUCAO_DEPENDENTE_DEFICIENCIA.value;
+  return dedBebe + dedNormais + dedDefic;
+}
+
+/** Entrada das deduções à coleta que não dependem de dependentes. */
+/**
+ * Coleta de IRC pela escala progressiva PME (Art. 87.º CIRC): a taxa
+ * reduzida até ao limite do escalão PME e a taxa geral acima dele.
+ *
+ * IMPLEMENTAÇÃO ÚNICA. A mesma escala estava escrita duas vezes — dentro de
+ * `compararRegimes` e em `calculateCompany` (fiscal-empresa.ts). Hoje não
+ * divergem; divergiriam na primeira alteração de taxa que só tocasse num dos
+ * ficheiros. As taxas são parâmetros porque o simulador de empresa aplica
+ * taxas regionais (Madeira e Açores) em vez das do Continente.
+ */
+export function coletaIRC(
+  lucroTributavel: number,
+  taxaPME: number = IRC_TAXA_PME.value,
+  taxaGeral: number = IRC_TAXA_GERAL.value
+): number {
+  const lucro = Math.max(0, lucroTributavel);
+  return (
+    taxaPME * Math.min(lucro, IRC_LIMITE_PME.value) +
+    taxaGeral * Math.max(0, lucro - IRC_LIMITE_PME.value)
+  );
+}
+
+export interface DeducoesColetaInput {
+  deducoes?: DeducoesInput;
+  ppr?: { valor: number; escalaoIdade: "ate35" | "de35a50" | "mais50" };
+  donativos?: { valor: number; fator: number; semLimite: boolean };
+  ascendentes?: number;
+  pensaoAlimentos?: number;
+  deficiencia?: boolean;
+  conjunta?: boolean;
+  /**
+   * Total de dependentes do agregado. A partir do terceiro, o Art. 78.º n.º 8
+   * majora o limite global em 5% por cada um (todos, não só os que excedem
+   * dois).
+   */
+  totalDependentes?: number;
+}
+
+/**
+ * Detalhe parcela a parcela das despesas dedutíveis, para quem quiser abrir
+ * o detalhe na interface. Antes a UI do modo completo montava este objeto à
+ * mão com zeros em todas as linhas e o total certo — qualquer detalhe aberto
+ * a partir dali mostrava números que não somavam.
+ */
+export interface DeducoesDespesasDetalhe {
+  saude: number;
+  educacao: number;
+  gerais: number;
+  rendas: number;
+  lares: number;
+  ppr: number;
+  donativos: number;
+  pensaoAlimentos: number;
+  /** As despesas gerais familiares (alínea b) não contam para o teto do n.º 7. */
+  geraisForaDoLimite: boolean;
+  /**
+   * Total das rubricas SUJEITAS ao limite global do Art. 78.º n.º 7 (alíneas
+   * c) a h), k) e m) — inclui a pensão de alimentos e exclui as despesas
+   * gerais familiares).
+   */
+  somaBruta: number;
+  limiteGlobal: number;
+  /** O limite do Art. 78.º n.º 7 cortou alguma coisa? */
+  limitado: boolean;
+  /** Parte sujeita ao teto, já cortada por ele. */
+  dentroDoLimite: number;
+  aplicado: number;
+}
+
+export interface DeducoesColetaResult {
+  /**
+   * Total das despesas que abatem à coleta: a soma sujeita ao teto do
+   * Art. 78.º n.º 7 (já cortada) mais as despesas gerais familiares, que a lei
+   * deixa de fora desse teto.
+   */
+  despesas: number;
+  ppr: number;
+  donativos: number;
+  ascendentes: number;
+  pensaoAlimentos: number;
+  deficiencia: number;
+  /**
+   * Soma do que efetivamente abate à coleta (NÃO inclui a dedução por
+   * dependentes). A pensão de alimentos e as despesas gerais já estão dentro
+   * de `despesas` — somá-las de novo a partir dos campos individuais duplica.
+   */
+  total: number;
+  /** Composição das despesas, linha a linha. */
+  detalhe: DeducoesDespesasDetalhe;
+}
+
+/**
+ * Deduções à coleta comuns às categorias A e B. IMPLEMENTAÇÃO ÚNICA.
+ *
+ * Antes, só o motor da Categoria B as aplicava: o acerto anual de quem
+ * recebe salário ignorava saúde, educação, despesas gerais, rendas, lares,
+ * ascendentes, PPR, donativos e pensões de alimentos. Consequência prática:
+ * para uma família com despesas normais, o «mealheiro» mandava reservar
+ * dinheiro que não era devido.
+ *
+ * `coletaBruta` é necessária porque o limite dos donativos é 15% da coleta;
+ * `rendimentoColetavel` porque o limite global do Art. 78.º, n.º 7 é
+ * escalonado pelo coletável.
+ */
+export function calcularDeducoesColeta(
+  input: DeducoesColetaInput,
+  ctx: { coletaBruta: number; rendimentoColetavel: number }
+): DeducoesColetaResult {
+  const ded = input.deducoes ?? {};
+  const conjunta = !!input.conjunta;
+
+  const dGerais = Math.min(
+    sanitize(ded.gerais ?? 0) * DEDUCAO_DESP_GERAIS.value.taxa,
+    DEDUCAO_DESP_GERAIS.value.limite * (conjunta ? 2 : 1)
+  );
+  const dSaude = Math.min(sanitize(ded.saude ?? 0) * DEDUCAO_SAUDE.value.taxa, DEDUCAO_SAUDE.value.limite);
+  const dEducacao = Math.min(sanitize(ded.educacao ?? 0) * DEDUCAO_EDUCACAO.value.taxa, DEDUCAO_EDUCACAO.value.limite);
+  const dRendas = Math.min(sanitize(ded.rendas ?? 0) * DEDUCAO_RENDAS.value.taxa, DEDUCAO_RENDAS.value.limite);
+  const dLares = Math.min(sanitize(ded.lares ?? 0) * DEDUCAO_LARES.value.taxa, DEDUCAO_LARES.value.limite);
+
+  // PPR (Art. 21.º EBF): 20% do aplicado, com limite por idade do sujeito passivo.
+  const ppr = input.ppr
+    ? Math.min(sanitize(input.ppr.valor) * DEDUCAO_PPR.value.taxa, DEDUCAO_PPR.value[input.ppr.escalaoIdade])
+    : 0;
+  // Donativos (Art. 62.º/63.º EBF): 25% do valor majorado, limitado a 15% da
+  // coleta (exceto donativos ao Estado, sem limite).
+  const donativos = input.donativos
+    ? (() => {
+        const base = sanitize(input.donativos.valor) * (input.donativos.fator || 1) * DEDUCAO_DONATIVOS.value.taxa;
+        return input.donativos.semLimite
+          ? base
+          : Math.min(base, DEDUCAO_DONATIVOS.value.limiteColeta * sanitize(ctx.coletaBruta));
+      })()
+    : 0;
+
+  // Pensões de alimentos (Art. 83.º-A): 20% do valor pago. A alínea f) do
+  // Art. 78.º n.º 1 está expressamente DENTRO do intervalo «c) a h)» do n.º 7,
+  // por isso conta para o limite global — estava fora, e 12 000 € de pensão
+  // davam 2 400 € de dedução por cima de um teto já esgotado.
+  const pensaoAlimentos = sanitize(input.pensaoAlimentos ?? 0) * DEDUCAO_PENSAO_ALIMENTOS.value;
+
+  // ── Perímetro do limite global (Art. 78.º n.º 7) ──────────────────────────
+  // O n.º 7 limita as alíneas «c) a h), k) e m)» do n.º 1. As despesas gerais
+  // familiares são a alínea b) — ficam FORA do teto, e mantê-las lá dentro
+  // gastava até 250 €/sujeito passivo de teto que não lhes pertence.
+  const somaBruta = dSaude + dEducacao + dRendas + dLares + ppr + donativos + pensaoAlimentos;
+  // n.º 7: em tributação conjunta o limite mede-se sobre o coletável já
+  // dividido pelo quociente do Art. 69.º. n.º 8: sobe 5% por dependente nos
+  // agregados com três ou mais.
+  const divisorLimite = conjunta ? QUOCIENTE_CONJUGAL.value : 1;
+  const limiteGlobal = limiteGlobalDeducoes(
+    sanitize(ctx.rendimentoColetavel) / divisorLimite,
+    input.totalDependentes ?? 0
+  );
+  const dentroDoLimite = Math.min(somaBruta, limiteGlobal);
+  const despesas = dentroDoLimite + dGerais;
+
+  // Ascendentes (Art. 78.º-A): 525 € por ascendente; 635 € se existir só um.
+  // Fora do limite global, tal como a dedução por dependentes.
+  const numAscendentes = Math.max(0, Math.floor(input.ascendentes ?? 0));
+  const ascendentes =
+    numAscendentes === 1 ? DEDUCAO_ASCENDENTE_UNICO.value : numAscendentes * DEDUCAO_ASCENDENTE.value;
+
+  // Art. 87.º CIRS: dedução à coleta de 4×IAS pelo contribuinte com deficiência.
+  const deficiencia = input.deficiencia ? DEDUCAO_DEFICIENCIA_COLETA.value : 0;
+
+  return {
+    despesas,
+    ppr,
+    donativos,
+    ascendentes,
+    pensaoAlimentos,
+    deficiencia,
+    // `despesas` já agrega a pensão de alimentos (dentro do teto) e as despesas
+    // gerais (fora dele) — somá-las outra vez aqui duplicava a dedução.
+    total: despesas + ascendentes + deficiencia,
+    detalhe: {
+      saude: dSaude,
+      educacao: dEducacao,
+      gerais: dGerais,
+      rendas: dRendas,
+      lares: dLares,
+      ppr,
+      donativos,
+      pensaoAlimentos,
+      /** As despesas gerais (alínea b) não contam para o teto do n.º 7. */
+      geraisForaDoLimite: true,
+      somaBruta,
+      limiteGlobal,
+      limitado: somaBruta > limiteGlobal,
+      /** Parte sujeita ao teto, já cortada. */
+      dentroDoLimite,
+      aplicado: despesas,
+    },
+  };
+}
+
+/**
+ * Exclusão do Art. 56.º-A CIRS para sujeito passivo com deficiência ≥ 60%:
+ * 15% dos rendimentos brutos, com o limite de 2 500 € POR CATEGORIA. O
+ * artigo abrange expressamente a categoria A, não só a B — e era essa a
+ * lacuna: o mesmo contribuinte, com a mesma incapacidade, recebia
+ * tratamento diferente consoante fosse assalariado ou freelancer.
+ */
+export function calcularExclusaoDeficiencia(rendimentoCategoria: number, temDeficiencia: boolean): number {
+  if (!temDeficiencia) return 0;
+  return Math.min(
+    sanitize(rendimentoCategoria) * EXCLUSAO_DEFICIENCIA_TAXA.value,
+    EXCLUSAO_DEFICIENCIA_MAX.value
+  );
 }
 
 export interface MinimoExistenciaFacts {
@@ -459,6 +889,47 @@ export function calcularAbatimentoMinimoExistencia(
   };
 }
 
+/**
+ * Junta as decisões do artigo 70.º de cada titular numa só.
+ *
+ * O abatimento é pessoal: soma-se. O estado é o do caso mais grave, e
+ * `needs_input` ganha sempre — uma ferramenta financeira não pode devolver um
+ * abatimento parcial como se fosse o total sem dizer que lhe faltam factos.
+ */
+function combinarDecisoesMinimoExistencia(
+  decisoes: MinimoExistenciaDecision[]
+): MinimoExistenciaDecision {
+  if (decisoes.length === 1) return decisoes[0];
+  const faltam = decisoes.find((d) => d.status === "needs_input");
+  const abatement = decisoes.reduce((s, d) => s + d.abatement, 0);
+  const thresholdL = decisoes.reduce((m, d) => Math.max(m, d.thresholdL), 0);
+  if (faltam) {
+    return {
+      status: "needs_input",
+      abatement: 0,
+      thresholdL,
+      reason: faltam.reason,
+      missingFields: faltam.missingFields,
+    };
+  }
+  const status: MinimoExistenciaDecision["status"] = decisoes.some((d) => d.status === "applied")
+    ? "applied"
+    : decisoes.every((d) => d.status === "excluded")
+      ? "excluded"
+      : decisoes.every((d) => d.status === "not_applicable")
+        ? "not_applicable"
+        : "no_effect";
+  return {
+    status,
+    abatement,
+    thresholdL,
+    reason:
+      status === "applied"
+        ? "Abatimento do artigo 70.º apurado por titular e somado."
+        : decisoes[0]?.reason ?? "Sem abatimento pelo artigo 70.º.",
+  };
+}
+
 export interface DeducoesInput {
   /** Valor gasto em saúde no ano. */
   saude?: number;
@@ -491,6 +962,19 @@ export interface SimulacaoInput {
   /** Ano de atividade (1.º e 2.º reduzem o coeficiente); 3+ sem redução. */
   anoAtividade?: number;
   irsJovemAno?: number;
+  /**
+   * Parte do teto do IRS Jovem (55 × IAS) já consumida por outras categorias
+   * do MESMO titular — tipicamente a categoria A. O Art. 12.º-B tem um teto por
+   * titular, não um por categoria: sem isto, quem tem salário e recibos verdes
+   * usaria o teto duas vezes.
+   */
+  irsJovemTetoConsumido?: number;
+  /**
+   * Parte do teto do Art. 12.º-A (250 000 €) já consumida pela categoria A do
+   * MESMO titular. Tal como o do IRS Jovem, o teto do Programa Regressar é por
+   * pessoa e não por categoria.
+   */
+  programaRegressarTetoConsumido?: number;
   /** Despesas de atividade documentadas (e-fatura, rendas, pessoal…). */
   despesasJustificadas?: number;
   /** Total de retenções na fonte já pagas no ano. */
@@ -500,8 +984,26 @@ export interface SimulacaoInput {
   conjunta?: boolean;
   /** Número de dependentes (>3 anos, simplificação). */
   dependentes?: number;
-  /** Outros rendimentos líquidos (cat. A) para englobamento. */
+  /**
+   * Rendimento de OUTRAS categorias já LÍQUIDO, pronto a englobar.
+   *
+   * ⚠️ Não é o bruto. É o que sobra depois da dedução específica do
+   * Art. 25.º/53.º, da exclusão do Art. 56.º-A, do IRS Jovem e do Art. 12.º-A —
+   * e quem o sabe calcular é `simularDeclaracaoIRS`, porque o número sozinho
+   * não diz de que categoria veio. Alimentar isto com um salário bruto é o
+   * erro que este campo já causou em três ecrãs: entre 940 € e 2 050 € de IRS
+   * a mais, e o imposto inteiro a quem tinha direito ao IRS Jovem.
+   *
+   * Por isso NENHUM componente da aplicação o preenche. `verificacao-irs.test.ts`
+   * falha se algum voltar a fazê-lo; usa `simularDeclaracaoIRS` com
+   * `salarios` / `pensoes` / `prediais` e deixa a decomposição ao motor.
+   */
   outrosRendimentos?: number;
+  /**
+   * Uso interno: corta o cálculo de `irsImputavelCatB`, que corre o motor uma
+   * segunda vez sem a Categoria B. Sem isto a chamada seria recursiva.
+   */
+  semDecomposicao?: boolean;
   /** Despesas dedutíveis à coleta. */
   deducoes?: DeducoesInput;
   /** Regime de tributação da categoria B. Por defeito "simplificado". */
@@ -571,6 +1073,25 @@ export interface SimulacaoInput {
    * valores do próprio pedido.
    */
   minimoExistenciaFacts?: Partial<MinimoExistenciaFacts>;
+  /**
+   * Factos do artigo 70.º POR TITULAR. O abatimento é uma regra pessoal — em
+   * tributação conjunta cada sujeito passivo tem o seu, calculado sobre o seu
+   * rendimento bruto e as suas deduções específicas, e os dois somam-se. Quando
+   * preenchido, sobrepõe-se a `minimoExistenciaFacts`.
+   */
+  minimoExistenciaFactsTitulares?: Array<Partial<MinimoExistenciaFacts>>;
+  /**
+   * Desliga o abatimento do artigo 70.º nesta passagem. Usado quando o
+   * chamador apura o abatimento de todo o agregado noutro sítio (é o caso do
+   * sujeito passivo B, cujo coletável é calculado à parte e depois somado):
+   * sem isto o abatimento seria aplicado duas vezes à mesma pessoa.
+   */
+  semMinimoExistencia?: boolean;
+  /**
+   * Rendimento isento com progressividade (Art. 81.º n.º 8): não é tributado,
+   * mas conta para determinar a taxa aplicável ao restante rendimento.
+   */
+  rendimentoIsentoComProgressividade?: number;
 }
 
 export interface SimulacaoIRS {
@@ -608,17 +1129,68 @@ export interface SimulacaoIRS {
   deducaoDependentes: number;
   /** Dedução à coleta por ascendentes (Art. 78.º-A). Fora do limite global. */
   deducaoAscendentes: number;
-  /** Deduções de despesas (saúde+educação+gerais+rendas+PPR+donativos) após limite global. */
+  /**
+   * Total das deduções de despesas que abate à coleta: a soma sujeita ao teto
+   * do Art. 78.º n.º 7 (já cortada) mais as despesas gerais familiares, que a
+   * lei deixa de fora desse teto.
+   */
   deducaoDespesas: number;
+  /**
+   * As parcelas por trás de `deducaoDespesas`, já com os limites individuais
+   * de cada rubrica aplicados. `somaBruta` é o total das rubricas SUJEITAS ao
+   * limite global do Art. 78.º n.º 7 (alíneas c) a h), k) e m) — inclui a
+   * pensão de alimentos e exclui as despesas gerais); `dentroDoLimite` é essa
+   * soma já cortada pelo teto; `aplicado` é o que efetivamente abate à coleta.
+   */
+  deducoesDespesasDetalhe: {
+    saude: number;
+    educacao: number;
+    gerais: number;
+    rendas: number;
+    lares: number;
+    ppr: number;
+    donativos: number;
+    pensaoAlimentos: number;
+    /** As despesas gerais familiares (alínea b) não contam para o teto do n.º 7. */
+    geraisForaDoLimite: boolean;
+    somaBruta: number;
+    limiteGlobal: number;
+    limitado: boolean;
+    dentroDoLimite: number;
+    aplicado: number;
+  };
   /** Dedução à coleta por PPR (Art. 21.º EBF), antes do limite global. */
   deducaoPPR: number;
   /** Dedução à coleta por donativos (Art. 63.º EBF), antes do limite global. */
   deducaoDonativos: number;
-  /** Dedução à coleta por pensões de alimentos (Art. 83.º-A), fora do limite global. */
+  /**
+   * Dedução à coleta por pensões de alimentos (Art. 83.º-A): 20% do pago.
+   * Valor bruto da rubrica — já contabilizado dentro de `deducaoDespesas`
+   * (a alínea f) está no perímetro do limite global do Art. 78.º n.º 7).
+   */
   deducaoPensaoAlimentos: number;
   /** Dedução coleta por deficiência do contribuinte (Art. 87.º: 4×IAS). */
   deducaoDeficiencia: number;
+  /**
+   * Total das deduções à coleta efetivamente abatidas (dependentes +
+   * ascendentes + despesas + deficiência). É o número a usar para mostrar
+   * «deduções à coleta»: somar as parcelas à mão duplica rubricas que já estão
+   * agregadas dentro de `deducaoDespesas` (pensão de alimentos, despesas
+   * gerais).
+   */
+  deducoesColetaTotal: number;
+  /** IRS de TODO o rendimento englobado (Cat. B + `outrosRendimentos`). */
   irsEstimado: number;
+  /**
+   * Parte do `irsEstimado` imputável à Categoria B — o imposto marginal que a
+   * atividade independente acrescenta por cima dos outros rendimentos. Igual a
+   * `irsEstimado` quando não há englobamento.
+   *
+   * É este o número que se compara com a faturação e com as retenções; usar o
+   * `irsEstimado` aí faria a atividade parecer responsável pelo imposto do
+   * salário.
+   */
+  irsImputavelCatB: number;
   minimoExistenciaAplicado: boolean;
   /** Estado auditável da regra do artigo 70.º. */
   minimoExistenciaDecision: MinimoExistenciaDecision;
@@ -636,12 +1208,28 @@ export interface SimulacaoIRS {
 }
 
 /**
- * Estimativa do IRS anual no regime simplificado, com módulos opcionais.
+ * NÚCLEO do apuramento anual. Estimativa do IRS no regime simplificado, com
+ * módulos opcionais.
+ *
+ * ⚠️ ENTRADA PREFERIDA: `simularDeclaracaoIRS`. Esta função continua exportada
+ * porque há ecrãs (a demo da landing, o modo guiado, o simulador integrado) que
+ * só têm um rendimento de categoria B e não precisam da declaração inteira —
+ * mas ela trata as outras categorias como um número anónimo em
+ * `outrosRendimentos`, e é dessa cegueira que nascem os enganos: sem saber que
+ * o rendimento é um salário, não sabe a dedução específica que ele sofreu nem
+ * se está abrangido pelo artigo 70.º. Por isso recusa-se a inferir os factos do
+ * mínimo de existência num agregado que não decomponha — devolve `needs_input`,
+ * que o chamador TEM de tratar.
+ *
+ * Quem tiver mais do que categoria B deve usar `simularDeclaracaoIRS`, que
+ * decompõe por titular e por categoria e alimenta este núcleo com os factos
+ * certos. O teste `fiscal-declaracao-referencia.test.ts` exige que os dois
+ * caminhos deem o mesmo resultado ao cêntimo no caso comum a ambos.
  *
  * Modela: coeficiente por atividade (Art. 31.º) com redução do 1.º/2.º ano,
- * regra dos 15% (só coef. 0,75 e 0,35), IRS Jovem, englobamento de outros
- * rendimentos, tributação conjunta (quociente), deduções à coleta (dependentes,
- * saúde, educação, despesas gerais) com limite global, escalões e mínimo de
+ * regra dos 15% (só coef. 0,75 e 0,35), IRS Jovem, exclusão por deficiência
+ * (Art. 56.º-A), englobamento de outros rendimentos, tributação conjunta
+ * (quociente), deduções à coleta com limite global, escalões e mínimo de
  * existência.
  *
  * ESTIMATIVA: não cobre todas as deduções/benefícios nem casos especiais;
@@ -652,6 +1240,14 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   const tipo = input.tipo;
   const regimeContabilidade = input.regimeContabilidade ?? "simplificado";
   const despesasJustificadas = sanitize(input.despesasJustificadas ?? 0);
+
+  // ── Art. 56.º-A CIRS: exclusão por deficiência ────────────────────────────
+  // A norma incide sobre o rendimento BRUTO da categoria («considerados apenas
+  // por 85%»), não sobre o tributável. Aplicá-la depois do coeficiente excluía
+  // mais do que a lei permite: 2 500 € de exclusão a coef. 0,75 valem 1 875 €
+  // de matéria coletável, não 2 500 €.
+  const exclusaoDeficiencia = calcularExclusaoDeficiencia(brutoAnual, !!input.deficiencia);
+  const brutoConsiderado = Math.max(0, brutoAnual - exclusaoDeficiencia);
 
   let coeficienteBase: number;
   let reducaoAno: number;
@@ -669,14 +1265,14 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     coeficiente = 1;
     despesasAutomaticas = 0;
     acrescimo15 = 0;
-    rendimentoCoeficiente = Math.max(0, brutoAnual - despesasJustificadas);
+    rendimentoCoeficiente = Math.max(0, brutoConsiderado - despesasJustificadas);
     rendimentoTributavel = rendimentoCoeficiente;
   } else {
     // Regime simplificado: coeficiente por atividade + redução do 1.º/2.º ano.
     coeficienteBase = input.coefOverride ?? COEFICIENTE_POR_TIPO[tipo];
     reducaoAno = REDUCAO_COEFICIENTE_ANO.value[input.anoAtividade ?? 3] ?? 0;
     coeficiente = coeficienteBase * (1 - reducaoAno);
-    rendimentoCoeficiente = brutoAnual * coeficiente;
+    rendimentoCoeficiente = brutoConsiderado * coeficiente;
 
     // Regra dos 15% — só para coeficientes 0,75 (art151) e 0,35 (outros serviços).
     const aplicaRegra15 = input.aplicaRegra15Override ?? (tipo === "art151" || tipo === "outros");
@@ -684,24 +1280,35 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     // bruto, a componente automática é a dedução específica (4 104 €/8,54×IAS)
     // OU as contribuições obrigatórias TOTAIS para a Segurança Social, a maior.
     // (Não é a parte que excede 10% — isso é a dedução autónoma do n.º 2.)
-    const ssContribuicoes = brutoAnual * SS_COEFICIENTE.servicos.value * SS_TAXA.value;
+    //
+    // «Contribuições obrigatórias» são as que a pessoa PAGA. A linha anterior
+    // multiplicava a faturação por 0,7 × 21,4% sem teto, sem coeficiente por
+    // tipo e sem olhar às isenções: a 200 000 € creditava 29 960 € contra
+    // 16 552 € reais (≈ 6 400 € de IRS a menos), a quem vende bens creditava
+    // 7 490 € em vez de 4 587 €, e a quem estava isento no 1.º ano creditava
+    // contribuições que nunca pagou.
+    const ssContribuicoes = contribuicoesSSAnuais(brutoAnual, BASE_SS_POR_TIPO[tipo], {
+      primeiroAno: input.isencaoSSPrimeiroAno,
+      acumulaEmprego: input.acumulaEmprego,
+    });
     despesasAutomaticas = Math.max(DEDUCAO_ESPECIFICA_CATB.value, ssContribuicoes);
     acrescimo15 = aplicaRegra15
-      ? Math.max(0, REGIME_15PCT.value * brutoAnual - (despesasAutomaticas + despesasJustificadas))
+      ? Math.max(0, REGIME_15PCT.value * brutoConsiderado - (despesasAutomaticas + despesasJustificadas))
       : 0;
     rendimentoTributavel = rendimentoCoeficiente + acrescimo15;
   }
 
-  // IRS Jovem (sobre o rendimento da categoria B), até 55 × IAS.
+  // ── IRS Jovem (Art. 12.º-B) sobre o rendimento da categoria B ─────────────
+  // O teto de 55 × IAS é POR TITULAR e partilhado entre as categorias A e B.
+  // `irsJovemTetoConsumido` traz o que a categoria A do mesmo titular já gastou
+  // do teto, para as duas categorias não o usarem cada uma por inteiro.
   const isencaoJovem = isencaoIRSJovem(input.irsJovemAno);
   const tetoIsencao = IRS_JOVEM.tetoIAS.value * IAS_VALUE;
-  const rendimentoIsentoJovem = Math.min(rendimentoTributavel * isencaoJovem, tetoIsencao);
-
-  // ── Art. 56.º-A CIRS: exclusão de 15% dos rendimentos Cat. B do coletável ──
-  // Aplicada ANTES do cálculo da coleta (reduz rendimento tributável).
-  const exclusaoDeficiencia = input.deficiencia
-    ? Math.min(rendimentoTributavel * EXCLUSAO_DEFICIENCIA_TAXA.value, EXCLUSAO_DEFICIENCIA_MAX.value)
-    : 0;
+  const tetoDisponivelJovem = Math.max(0, tetoIsencao - sanitize(input.irsJovemTetoConsumido ?? 0));
+  const rendimentoIsentoJovem = Math.min(rendimentoTributavel * isencaoJovem, tetoDisponivelJovem);
+  // A exclusão do Art. 56.º-A já foi aplicada ao BRUTO, no topo da função —
+  // ver `brutoConsiderado`. Fica aqui a nota porque era neste ponto que ela
+  // era calculada antes, sobre o rendimento já depois do coeficiente.
 
   // Rendimento coletável base (após IRS Jovem, exclusão deficiência, outros)
   const conjunta = !!input.conjunta;
@@ -715,13 +1322,26 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   // Cat. A/B — Art. 58.º-A, n.º 2 EBF). `outrosRendimentos` (outras
   // categorias, sem detalhe de elegibilidade) NUNCA entra na taxa fixa —
   // segue sempre os escalões gerais do Art. 68.º, mesmo com IFICI/RNH ativo.
-  const rendimentoElegivel = Math.max(
-    0,
-    rendimentoTributavel - exclusaoDeficiencia - rendimentoIsentoJovem
-  );
+  // A exclusão do Art. 56.º-A já saiu do bruto (antes do coeficiente), por isso
+  // não volta a ser subtraída aqui.
+  const rendimentoElegivel = Math.max(0, rendimentoTributavel - rendimentoIsentoJovem);
 
-  // Programa Regressar (Art. 12.º-A CIRS): 50% do rendimento elegível excluído
-  const exclusaoProgramaRegressar = programaRegressarAplicado ? rendimentoElegivel * 0.5 : 0;
+  // ── Programa Regressar (Art. 12.º-A CIRS) ────────────────────────────────
+  // «São excluídos de tributação 50 % dos rendimentos do trabalho dependente e
+  // dos rendimentos empresariais e profissionais […] até ao montante do limite
+  // superior do primeiro escalão previsto no n.º 1 do artigo 68.º-A.»
+  //
+  // O teto morde no montante EXCLUÍDO e é POR TITULAR, partilhado entre as
+  // categorias A e B — como o do IRS Jovem. Quando a categoria A já gastou
+  // parte dele (apurada em `simularDeclaracaoIRS`), chega aqui em
+  // `programaRegressarTetoConsumido` e só sobra o resto para a categoria B.
+  const tetoRegressarDisponivel = Math.max(
+    0,
+    PROGRAMA_REGRESSAR_TETO_CALC - sanitize(input.programaRegressarTetoConsumido ?? 0),
+  );
+  const exclusaoProgramaRegressar = programaRegressarAplicado
+    ? Math.min(rendimentoElegivel * PROGRAMA_REGRESSAR.exclusao.value, tetoRegressarDisponivel)
+    : 0;
   const rendimentoElegivelFinal = Math.max(0, rendimentoElegivel - exclusaoProgramaRegressar);
   // Rendimento total antes do abatimento por mínimo de existência.
   const rendimentoColetavelAntesMinimo = rendimentoElegivelFinal + outrosRendimentos;
@@ -746,6 +1366,15 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
           eligibleIncome: tipo === "art151",
           dependentTaxpayer: false,
         };
+  // Os factos são POR TITULAR. Quando o chamador os fornece por pessoa
+  // (`minimoExistenciaFactsTitulares`), cada abatimento é calculado à parte e
+  // somado — é assim que a regra funciona num agregado com dois sujeitos
+  // passivos. Sem essa decomposição, mantém-se o caso de um só titular.
+  const factsPorTitular: Array<Partial<MinimoExistenciaFacts>> =
+    input.minimoExistenciaFactsTitulares && input.minimoExistenciaFactsTitulares.length > 0
+      ? input.minimoExistenciaFactsTitulares
+      : [{ ...inferredMinimumFacts, ...(input.minimoExistenciaFacts ?? {}) }];
+
   const minimoExistenciaDecision: MinimoExistenciaDecision = regimeFlatRate
     ? {
         status: "not_applicable",
@@ -753,10 +1382,14 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
         thresholdL: 0,
         reason: "O regime de taxa fixa selecionado não usa o abatimento dos escalões gerais.",
       }
-    : calcularAbatimentoMinimoExistencia({
-        ...inferredMinimumFacts,
-        ...(input.minimoExistenciaFacts ?? {}),
-      });
+    : input.semMinimoExistencia
+      ? {
+          status: "not_applicable",
+          abatement: 0,
+          thresholdL: 0,
+          reason: "O abatimento do artigo 70.º é apurado ao nível do agregado, fora desta passagem.",
+        }
+      : combinarDecisoesMinimoExistencia(factsPorTitular.map(calcularAbatimentoMinimoExistencia));
   const abatimentoMinimoExistencia = minimoExistenciaDecision.abatement;
   const rendimentoColetavelFinal = Math.max(
     0,
@@ -766,6 +1399,7 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   // ── Coleta: flat 20% (IFICI / RNH antigo, só na parte elegível) + escalões
   //    progressivos (outrosRendimentos sempre; toda a base sem regime flat) ──
   const divisor = conjunta ? QUOCIENTE_CONJUGAL.value : 1;
+  const rendimentoIsentoProgressividade = sanitize(input.rendimentoIsentoComProgressividade ?? 0);
   let coletaBruta: number;
   let escaloesAplicados: EscalaoAplicado[];
   if (regimeFlatRate) {
@@ -783,6 +1417,25 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     // escalões gerais (outrosRendimentos), confundindo a leitura. A UI não
     // mostra este detalhe quando o regime de taxa fixa está ativo.
     escaloesAplicados = [];
+  } else if (rendimentoIsentoProgressividade > 0) {
+    // ── Isenção com progressividade (Art. 81.º n.º 8 CIRS) ───────────────────
+    // O rendimento isento não é tributado, mas conta para determinar a TAXA
+    // aplicável ao restante. Calcula-se a taxa média sobre o total (isento
+    // incluído) e aplica-se essa taxa só à parte tributável.
+    const baseComIsento = (rendimentoColetavelFinal + rendimentoIsentoProgressividade) / divisor;
+    const detalhado = irsProgressivoDetalhado(baseComIsento);
+    const taxaMediaProgressividade = baseComIsento > 0 ? detalhado.imposto / baseComIsento : 0;
+    coletaBruta = rendimentoColetavelFinal * taxaMediaProgressividade;
+    // O detalhe por escalão é o da base COM o rendimento isento — é essa a
+    // repartição que determinou a taxa, e escondê-la deixaria o utilizador sem
+    // perceber porque paga uma taxa acima da que o coletável isolado daria.
+    escaloesAplicados = divisor !== 1
+      ? detalhado.escaloes.map((e) => ({
+          ...e,
+          rendimento: e.rendimento * divisor,
+          imposto: e.imposto * divisor,
+        }))
+      : detalhado.escaloes;
   } else {
     const detalhado = irsProgressivoDetalhado(rendimentoColetavelFinal / divisor);
     coletaBruta = detalhado.imposto * divisor;
@@ -803,21 +1456,10 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   // gerais. Em tributação conjunta, aplica-se por titular (metade do
   // coletável) e duplica-se o resultado, tal como os escalões gerais.
   const baseColetavelPorTitular = rendimentoColetavelFinal / divisor;
-  const parteEntre80e250 = regimeFlatRate
+  const adicionalSolidariedadeValor = regimeFlatRate
     ? 0
-    : Math.max(
-        0,
-        Math.min(baseColetavelPorTitular, ADICIONAL_SOLIDARIEDADE.limiar2.value) -
-          ADICIONAL_SOLIDARIEDADE.limiar1.value
-      );
-  const parteAcima250 = regimeFlatRate
-    ? 0
-    : Math.max(0, baseColetavelPorTitular - ADICIONAL_SOLIDARIEDADE.limiar2.value);
-  const adicionalSolidariedade =
-    (parteEntre80e250 * ADICIONAL_SOLIDARIEDADE.taxa1.value +
-      parteAcima250 * ADICIONAL_SOLIDARIEDADE.taxa2.value) *
-    divisor;
-  coletaBruta += adicionalSolidariedade;
+    : adicionalSolidariedade(baseColetavelPorTitular, divisor);
+  coletaBruta += adicionalSolidariedadeValor;
 
   // ── Deduções à coleta ─────────────────────────────────────────────────────
   // Dependentes: suporta detalhe (bebe, deficientes) ou contagem simples
@@ -826,108 +1468,89 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   const depBebe = Math.max(0, Math.floor(det?.bebe ?? 0));
   const depDefic = Math.max(0, Math.floor(det?.deficientes ?? 0));
 
-  // Regra do 3.º dependente (Art. 78.º-A):
-  //  - Bebés (≤ 3 anos): €726 cada
-  //  - Normais (> 3 anos): os primeiros max(0, 2−depBebe) ficam no escalão base €600;
-  //    a partir do 3.º na contagem global passa a €900
-  const deducaoDependentes = (() => {
-    // Caminho detalhado: lista com guarda partilhada (cada dependente conta com
-    // a sua fração). Bebés (≤3 anos) ocupam as primeiras posições; do 3.º
-    // dependente em diante, os de >3 anos passam de 600 € para 900 €.
-    if (input.dependentesLista && input.dependentesLista.length > 0) {
-      const ordenada = [...input.dependentesLista].sort((a, b) => Number(b.ate3) - Number(a.ate3));
-      let pos = 0;
-      let total = 0;
-      for (const d of ordenada) {
-        pos++;
-        const base = d.ate3
-          ? DEDUCAO_DEPENDENTE_BEBE.value
-          : pos <= 2
-            ? DEDUCAO_DEPENDENTE.value
-            : DEDUCAO_DEPENDENTE_3MAIS.value;
-        const extra = d.deficiente ? DEDUCAO_DEPENDENTE_DEFICIENCIA.value : 0;
-        const guarda = d.guarda > 0 ? Math.min(1, d.guarda) : 1;
-        total += (base + extra) * guarda;
-      }
-      return total;
-    }
-    // Bebés têm sempre €726 (ocupam as primeiras posições na fila global)
-    const dedBebe = depBebe * DEDUCAO_DEPENDENTE_BEBE.value;
-    // Normais: quantas posições ainda estão no bloco 1.º/2.º
-    const normaisBase = Math.max(0, Math.min(depNormais, 2 - depBebe));
-    const normaisMajor = Math.max(0, depNormais - normaisBase);
-    const dedNormais =
-      normaisBase * DEDUCAO_DEPENDENTE.value +
-      normaisMajor * DEDUCAO_DEPENDENTE_3MAIS.value;
-    // Dependentes com deficiência → +2,5×IAS adicional por cada um
-    const dedDefic = depDefic * DEDUCAO_DEPENDENTE_DEFICIENCIA.value;
-    return dedBebe + dedNormais + dedDefic;
-  })();
+  // Regra do 3.º dependente (Art. 78.º-A) — implementação única partilhada
+  // com a Categoria A, ver `deducaoDependentesColeta`.
+  const deducaoDependentes = deducaoDependentesColeta({
+    normais: depNormais,
+    bebe: depBebe,
+    deficientes: depDefic,
+    lista: input.dependentesLista,
+  });
 
-  const ded = input.deducoes ?? {};
-  const dGerais = Math.min(
-    sanitize(ded.gerais ?? 0) * DEDUCAO_DESP_GERAIS.value.taxa,
-    DEDUCAO_DESP_GERAIS.value.limite * (conjunta ? 2 : 1)
+  // Despesas, ascendentes, pensões e deficiência — implementação única
+  // partilhada com a Categoria A (`calcularDeducoesColeta`).
+  const outrasDeducoes = calcularDeducoesColeta(
+    {
+      deducoes: input.deducoes,
+      ppr: input.ppr,
+      donativos: input.donativos,
+      ascendentes: input.ascendentes,
+      pensaoAlimentos: input.pensaoAlimentos,
+      deficiencia: input.deficiencia,
+      conjunta,
+      // Art. 78.º n.º 8. Na contagem simples, `deficientes` é uma parcela
+      // adicional sobre dependentes já contados em `normais`/`bebe` — somá-la
+      // duplicaria pessoas.
+      totalDependentes:
+        input.dependentesLista && input.dependentesLista.length > 0
+          ? input.dependentesLista.length
+          : depNormais + depBebe,
+    },
+    { coletaBruta, rendimentoColetavel: rendimentoColetavelFinal }
   );
-  const dSaude = Math.min(sanitize(ded.saude ?? 0) * DEDUCAO_SAUDE.value.taxa, DEDUCAO_SAUDE.value.limite);
-  const dEducacao = Math.min(sanitize(ded.educacao ?? 0) * DEDUCAO_EDUCACAO.value.taxa, DEDUCAO_EDUCACAO.value.limite);
-  const dRendas = Math.min(sanitize(ded.rendas ?? 0) * DEDUCAO_RENDAS.value.taxa, DEDUCAO_RENDAS.value.limite);
-  const dLares = Math.min(sanitize(ded.lares ?? 0) * DEDUCAO_LARES.value.taxa, DEDUCAO_LARES.value.limite);
+  const {
+    despesas: deducaoDespesas,
+    ppr: deducaoPPR,
+    donativos: deducaoDonativos,
+    ascendentes: deducaoAscendentes,
+    pensaoAlimentos: deducaoPensaoAlimentos,
+    deficiencia: deducaoDeficiencia,
+  } = outrasDeducoes;
 
-  // PPR (Art. 21.º EBF): 20% do aplicado, com limite por idade do sujeito passivo.
-  const deducaoPPR = input.ppr
-    ? Math.min(sanitize(input.ppr.valor) * DEDUCAO_PPR.value.taxa, DEDUCAO_PPR.value[input.ppr.escalaoIdade])
-    : 0;
-  // Donativos (Art. 62.º/63.º EBF): 25% do valor majorado, limitado a 15% da
-  // coleta (exceto donativos ao Estado, sem limite).
-  const deducaoDonativos = input.donativos
-    ? (() => {
-        const base = sanitize(input.donativos.valor) * (input.donativos.fator || 1) * DEDUCAO_DONATIVOS.value.taxa;
-        return input.donativos.semLimite ? base : Math.min(base, DEDUCAO_DONATIVOS.value.limiteColeta * coletaBruta);
-      })()
-    : 0;
-
-  // Limite global (Art. 78.º n.º 7): saúde + educação + gerais + rendas + lares + PPR + donativos.
-  const deducaoDespesas = Math.min(
-    dGerais + dSaude + dEducacao + dRendas + dLares + deducaoPPR + deducaoDonativos,
-    limiteGlobalDeducoes(rendimentoColetavelFinal)
-  );
-
-  // Ascendentes (Art. 78.º-A): 525 € por ascendente; 635 € se existir só um.
-  // Fora do limite global, tal como a dedução por dependentes.
-  const numAscendentes = Math.max(0, Math.floor(input.ascendentes ?? 0));
-  const deducaoAscendentes =
-    numAscendentes === 1 ? DEDUCAO_ASCENDENTE_UNICO.value : numAscendentes * DEDUCAO_ASCENDENTE.value;
-
-  // Pensões de alimentos (Art. 83.º-A): 20% sem limite, fora do limite global.
-  const deducaoPensaoAlimentos = sanitize(input.pensaoAlimentos ?? 0) * DEDUCAO_PENSAO_ALIMENTOS.value;
-
-  // Art. 87.º CIRS: dedução à coleta de 4×IAS pelo contribuinte com deficiência
-  const deducaoDeficiencia = input.deficiencia ? DEDUCAO_DEFICIENCIA_COLETA.value : 0;
-
-  const deducoesColeta = deducaoDependentes + deducaoAscendentes + deducaoDespesas + deducaoDeficiencia + deducaoPensaoAlimentos;
+  const deducoesColeta = deducaoDependentes + outrasDeducoes.total;
+  const deducoesDespesasDetalhe = outrasDeducoes.detalhe;
   const irsEstimado = Math.max(0, coletaBruta - deducoesColeta);
   const minimoExistenciaAplicado = minimoExistenciaDecision.status === "applied";
 
   // ── SS anual estimado (para display; não afecta o IRS) ───────────────────
+  // A acumulação com emprego NÃO é isenção total (Art. 157.º n.º 1 al. a): é
+  // dispensa até 4 × IAS de rendimento relevante mensal médio, com contribuição
+  // sobre o excedente acima disso. Zerar incondicionalmente escondia perto de
+  // 9 000 €/ano a quem faturasse acima de ~36 800 €.
   const acumulaEmprego = !!input.acumulaEmprego;
-  const isencaoSSEntrada = acumulaEmprego || !!input.isencaoSSPrimeiroAno;
-  const ssAnual = (() => {
-    if (isencaoSSEntrada) return 0;
-    const baseSS = SS_COEFICIENTE[BASE_SS_POR_TIPO[tipo]].value;
-    const rendMensalMedio = (brutoAnual * baseSS) / 12;
-    const mensal = Math.min(
-      Math.max(SS_MIN_MENSAL.value, rendMensalMedio * SS_TAXA.value),
-      SS_BASE_MAX_MENSAL.value * SS_TAXA.value
-    );
-    return mensal * 12;
-  })();
+  const ss = contribuicoesSS(brutoAnual, BASE_SS_POR_TIPO[tipo], {
+    primeiroAno: input.isencaoSSPrimeiroAno,
+    acumulaEmprego,
+  });
+  const ssAnual = ss.contribuicaoAnual;
 
-  const taxaMediaEfetiva = brutoAnual > 0 ? irsEstimado / brutoAnual : 0;
+  // ── Quanto deste IRS é dos recibos verdes? ──────────────────────────────
+  //
+  //  Com englobamento, `irsEstimado` é o imposto do agregado TODO — salário
+  //  incluído. Mostrar esse número ao lado da faturação da Cat. B, ou subtraí-lo
+  //  a ela para chegar a um "líquido", dá um resultado sem sentido.
+  //
+  //  A parte imputável à Cat. B é marginal, não proporcional: o salário ocupa
+  //  os escalões de baixo e a atividade independente é tributada por cima. Por
+  //  isso é a diferença entre o imposto com e sem ela — a mesma lógica que o
+  //  regime de taxa fixa já usava acima para isolar `outrosRendimentos`.
+  //
+  //  Sem outros rendimentos as duas coisas coincidem e não se corre nada.
+  const irsImputavelCatB =
+    outrosRendimentos > 0 && !input.semDecomposicao
+      ? Math.max(
+          0,
+          irsEstimado -
+            simularIRSAnual({ ...input, brutoAnual: 0, semDecomposicao: true }).irsEstimado,
+        )
+      : irsEstimado;
+
+  const taxaMediaEfetiva = brutoAnual > 0 ? irsImputavelCatB / brutoAnual : 0;
   const retencoesPagas = sanitize(input.retencoesPagas ?? 0);
 
   return {
     brutoAnual,
+    irsImputavelCatB,
     regimeContabilidade,
     coeficienteBase,
     reducaoAno,
@@ -948,15 +1571,17 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     programaRegressarAplicado,
     exclusaoProgramaRegressar,
     coletaBruta,
-    adicionalSolidariedade,
+    adicionalSolidariedade: adicionalSolidariedadeValor,
     escaloesAplicados,
     deducaoDependentes,
     deducaoAscendentes,
     deducaoDespesas,
+    deducoesDespesasDetalhe,
     deducaoPPR,
     deducaoDonativos,
     deducaoPensaoAlimentos,
     deducaoDeficiencia,
+    deducoesColetaTotal: deducoesColeta,
     irsEstimado,
     minimoExistenciaAplicado,
     minimoExistenciaDecision,
@@ -983,6 +1608,17 @@ export interface ComparacaoInput {
   /** Taxa de derrama municipal (0 a 0,015). */
   derrama?: number;
   irsJovemAno?: number;
+  /**
+   * Situação pessoal aplicada ao cenário de recibos verdes. Existia no motor
+   * anual e não chegava aqui: o comparador aplicava dependentes só à
+   * Categoria A, o que chegava a INVERTER o veredicto (ver relatório 2.1).
+   */
+  dependentes?: number;
+  dependentesDetalhe?: DependentesDetalhe;
+  conjunta?: boolean;
+  deducoes?: DeducoesInput;
+  deficiencia?: boolean;
+  anoAtividade?: number;
 }
 
 export interface ComparacaoResult {
@@ -1015,8 +1651,22 @@ export function compararRegimes(input: ComparacaoInput): ComparacaoResult {
   const custosEmpresa = sanitize(input.custosEmpresa ?? 0);
   const derramaTaxa = Math.min(Math.max(input.derrama ?? DERRAMA_MAX.value, 0), DERRAMA_MAX.value);
 
-  // Freelancer (recibos verdes).
-  const sim = simularIRSAnual({ brutoAnual: bruto, tipo: input.tipo, irsJovemAno: input.irsJovemAno, despesasJustificadas: despesas });
+  // Freelancer (recibos verdes) — com a MESMA situação pessoal que se aplica
+  // aos outros cenários. Antes, `dependentes` parava aqui: o líquido dos
+  // recibos verdes não se movia um cêntimo entre 0 e 4 dependentes, e o botão
+  // que o utilizador carregava decidia a resposta que o produto dava.
+  const sim = simularIRSAnual({
+    brutoAnual: bruto,
+    tipo: input.tipo,
+    irsJovemAno: input.irsJovemAno,
+    despesasJustificadas: despesas,
+    dependentes: input.dependentes,
+    dependentesDetalhe: input.dependentesDetalhe,
+    conjunta: input.conjunta,
+    deducoes: input.deducoes,
+    deficiencia: input.deficiencia,
+    anoAtividade: input.anoAtividade,
+  });
   // Base de SS com o teto de 12×IAS (coerente com calcular/simularIRSAnual): sem
   // este limite, a SS do independente ficava sobrestimada para rendimentos altos.
   const baseSSAnual = Math.min(bruto * SS_COEFICIENTE.servicos.value, SS_BASE_MAX_MENSAL.value * 12);
@@ -1025,9 +1675,7 @@ export function compararRegimes(input: ComparacaoInput): ComparacaoResult {
 
   // Empresa (sociedade): IRC progressivo PME + derrama, depois dividendos.
   const lucroTributavel = Math.max(0, bruto - despesas - custosEmpresa);
-  const irc =
-    IRC_TAXA_PME.value * Math.min(lucroTributavel, IRC_LIMITE_PME.value) +
-    IRC_TAXA_GERAL.value * Math.max(0, lucroTributavel - IRC_LIMITE_PME.value);
+  const irc = coletaIRC(lucroTributavel);
   const derrama = derramaTaxa * lucroTributavel;
   const aposIRC = Math.max(0, lucroTributavel - irc - derrama);
   const dividendos = DIVIDENDOS_TAXA.value * aposIRC;
@@ -1041,121 +1689,23 @@ export function compararRegimes(input: ComparacaoInput): ComparacaoResult {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-//  TRIBUTAÇÃO AUTÓNOMA — IRC (Art. 88.º CIRC)
+//  TRIBUTAÇÃO AUTÓNOMA — vive em `fiscal-empresa.ts`
 //
-//  Aplica-se sobre encargos específicos de empresas (encargos anuais de
-//  viaturas, representação, ajudas de custo, despesas não documentadas),
-//  independentemente do IRC regular. O custo de aquisição da viatura
-//  determina o escalão; a base tributável são os encargos anuais.
+//  Havia aqui um segundo motor de TA, e os dois discordavam: este não
+//  aplicava o agravamento do Art. 88.º n.º 14 às despesas não documentadas,
+//  quando a norma manda agravar «as taxas de tributação autónoma previstas
+//  no presente artigo» sem excluir o n.º 1. Além disso não era usado por
+//  componente nenhum — só pelo seu próprio teste.
+//
+//  Duas implementações da mesma regra é exatamente o problema que o
+//  `fiscal-iva.ts` foi criado para resolver. Fica uma:
+//  `calcularTributacaoAutonomaEmpresa` em `fiscal-empresa.ts`.
+//
+//  A única peça que só existia aqui — derivar a taxa do CUSTO DE AQUISIÇÃO
+//  da viatura, incluindo o limite do Art. 88.º n.º 20 para as elétricas —
+//  passou para `taxaTAViatura()` em `fiscal-empresa.ts`, para a capacidade
+//  não se perder com a duplicação.
 // ─────────────────────────────────────────────────────────────────────
-
-export type TipoViatura = "combustao" | "phev" | "eletrica";
-
-export interface TAViaturaInput {
-  tipo: TipoViatura;
-  /** Custo de aquisição (determina o escalão/taxa). */
-  custoAquisicao: number;
-  /** Encargos anuais suportados (base tributável da TA). */
-  encargosAnuais: number;
-}
-
-export interface TributacaoAutonomaInput {
-  /** Lista de viaturas ligeiras de passageiros da empresa. */
-  viaturas?: TAViaturaInput[];
-  /** Despesas de representação do período (Art. 88.º, n.º 7). */
-  despesasRepresentacao?: number;
-  /** Ajudas de custo + km em viatura própria (Art. 88.º, n.º 9). */
-  ajudasCusto?: number;
-  /** Despesas não documentadas (Art. 88.º, n.º 1). */
-  despesasNaoDocumentadas?: number;
-  /**
-   * true se a empresa tem prejuízo fiscal no período — agrava a TA em +10 p.p.
-   * Exceção: ignorar o agravamento se primeirosTresAnos=true ou lucroRecente=true.
-   */
-  comPrejuizo?: boolean;
-  /** true nos primeiros 3 anos de atividade — isenta do agravamento de prejuízo. */
-  primeirosTresAnos?: boolean;
-  /** true se teve lucro em ≥ 1 dos 3 exercícios anteriores — isenta do agravamento. */
-  lucroRecente?: boolean;
-}
-
-export interface TributacaoAutonomaResult {
-  taViaturas: number;
-  taRepresentacao: number;
-  taAjudas: number;
-  taNaoDocumentadas: number;
-  subtotal: number;
-  agravamentoAplicado: boolean;
-  agravamento: number;
-  totalTA: number;
-  detalheViaturas: Array<{ tipo: TipoViatura; taxa: number; encargos: number; ta: number }>;
-}
-
-/** Devolve a taxa de TA para uma viatura dado o tipo e custo de aquisição. */
-function taxaTA(tipo: TipoViatura, custoAquisicao: number): number {
-  if (tipo === "eletrica") {
-    // Elétricas ≤ limite: isentas (0%). Acima do limite: 10% (Art. 88.º, n.º 20 CIRC).
-    return custoAquisicao > TA_ELETRICA_LIMITE_CUSTO.value
-      ? TA_VIATURAS_ELETRICA_ACIMA_LIMITE.value
-      : TA_VIATURAS_ELETRICA.value;
-  }
-  const tabela: TAViaturasTaxas = tipo === "phev" ? TA_VIATURAS_PHEV.value : TA_VIATURAS_COMBUSTAO.value;
-  const { t1, t2 } = TA_THRESHOLDS.value;
-  if (custoAquisicao <= t1) return tabela.ate37500;
-  if (custoAquisicao <= t2) return tabela.ate45000;
-  return tabela.acima45000;
-}
-
-/**
- * Calcula a Tributação Autónoma (Art. 88.º CIRC) de uma empresa.
- * Inclui viaturas (combustão, PHEV e elétrica), representação, ajudas de
- * custo e despesas não documentadas. Modela o agravamento por prejuízo fiscal.
- *
- * ESTIMATIVA — não cobre todas as situações (ex.: viaturas de mercadorias,
- * taxas especiais de setores regulados). Não substitui apuramento oficial.
- */
-export function calcularTributacaoAutonoma(
-  input: TributacaoAutonomaInput
-): TributacaoAutonomaResult {
-  const agravamentoIsento = !!input.primeirosTresAnos || !!input.lucroRecente;
-  const agravamento = input.comPrejuizo && !agravamentoIsento ? TA_AGRAVAMENTO_PREJUIZO.value : 0;
-
-  // Viaturas
-  const detalheViaturas: TributacaoAutonomaResult["detalheViaturas"] = [];
-  let taViaturas = 0;
-  for (const v of input.viaturas ?? []) {
-    const encargos = sanitize(v.encargosAnuais);
-    const taxa = taxaTA(v.tipo, sanitize(v.custoAquisicao));
-    const ta = encargos * (taxa + agravamento);
-    taViaturas += ta;
-    detalheViaturas.push({ tipo: v.tipo, taxa, encargos, ta });
-  }
-
-  const taRepresentacao =
-    sanitize(input.despesasRepresentacao ?? 0) * (TA_REPRESENTACAO.value + agravamento);
-  const taAjudas = sanitize(input.ajudasCusto ?? 0) * (TA_AJUDAS_CUSTO.value + agravamento);
-  const taNaoDocumentadas =
-    sanitize(input.despesasNaoDocumentadas ?? 0) * TA_NAO_DOCUMENTADAS.value;
-
-  const subtotal = taViaturas + taRepresentacao + taAjudas + taNaoDocumentadas;
-  const agravamentoTotal = agravamento > 0
-    ? (input.viaturas ?? []).reduce((s, v) => s + sanitize(v.encargosAnuais), 0) * agravamento
-      + sanitize(input.despesasRepresentacao ?? 0) * agravamento
-      + sanitize(input.ajudasCusto ?? 0) * agravamento
-    : 0;
-
-  return {
-    taViaturas,
-    taRepresentacao,
-    taAjudas,
-    taNaoDocumentadas,
-    subtotal,
-    agravamentoAplicado: agravamento > 0,
-    agravamento: agravamentoTotal,
-    totalTA: subtotal,
-    detalheViaturas,
-  };
-}
 
 // ─────────────────────────────────────────────────────────────────────
 //  RFAI — Regime Fiscal de Apoio ao Investimento (Art. 22.º–26.º CFI)
@@ -1372,6 +1922,18 @@ export function calcularCategoriaF(input: CategoriaFInput): CategoriaFResult {
 // ═══════════════════════════════════════════════════════════════════════
 
 /** Linha da memória de cálculo: o que foi calculado, como e com que base legal. */
+/**
+ * Categoria de um rendimento obtido no estrangeiro (Anexo J). Determina a
+ * dedução específica aplicável antes do englobamento.
+ */
+export type CategoriaEstrangeiro =
+  | "trabalho"
+  | "pensoes"
+  | "capitais"
+  | "prediais"
+  | "maisvalias"
+  | "outros";
+
 export interface MemoriaLinha {
   /** Anexo/correspondência fiscal (ex.: "Anexo G"). */
   anexo?: string;
@@ -1395,12 +1957,53 @@ export interface ComponenteCategoria {
   impostoAutonomo: number;
 }
 
+/** Categoria A — trabalho dependente (Anexo A), com os encargos do Art. 25.º. */
+export interface RendimentoCatAInput extends EncargosCatA {
+  bruto: number;
+  retencoes?: number;
+}
+
+/** Categoria H — pensões (Anexo A). A dedução do Art. 53.º não tem encargos. */
+export interface RendimentoPensoesInput {
+  bruto: number;
+  retencoes?: number;
+}
+
+/** Entrada do Anexo J, com a categoria a que o rendimento pertence. */
+export interface EntradaEstrangeiroInput {
+  pais?: string;
+  rendimento: number;
+  impostoPago: number;
+  /**
+   * Categoria de origem. Determina a dedução específica aplicável antes do
+   * englobamento (Art. 25.º/53.º) e, com ela, o numerador do crédito do
+   * Art. 81.º. Sem categoria, o rendimento entra bruto e o crédito fica
+   * inflacionado.
+   */
+  categoria?: CategoriaEstrangeiro;
+  /**
+   * A convenção para evitar a dupla tributação manda isentar este rendimento
+   * com progressividade: não é tributado em Portugal, mas conta para determinar
+   * a taxa aplicável ao resto (Art. 81.º n.º 8 CIRS e cláusula 23.º das CDT).
+   */
+  isencaoComProgressividade?: boolean;
+}
+
 export interface DeclaracaoInput {
   conjunta?: boolean;
   /** Categoria A — trabalho dependente (Anexo A). */
-  salarios?: { bruto: number; retencoes?: number };
+  salarios?: RendimentoCatAInput;
   /** Categoria H/A — pensões (Anexo A). */
-  pensoes?: { bruto: number; retencoes?: number };
+  pensoes?: RendimentoPensoesInput;
+  /**
+   * Ano de obtenção de rendimentos para o IRS Jovem (Art. 12.º-B), ao nível do
+   * TITULAR: a isenção abrange as categorias A e B, com um teto de 55 × IAS
+   * partilhado entre as duas. Sobrepõe-se ao `independente.irsJovemAno`, que
+   * só cobria a categoria B.
+   */
+  irsJovemAno?: number;
+  /** Data de nascimento ISO do titular, para validar o limite de idade do Art. 12.º-B. */
+  nascimento?: string;
   /** Categoria B — trabalho independente (Anexo B/C). */
   independente?: {
     brutoAnual: number;
@@ -1429,7 +2032,19 @@ export interface DeclaracaoInput {
   /** Categoria G — criptoativos (Anexo G). Longo prazo (≥365 dias) é isento. */
   cripto?: { ganhoCurtoPrazo?: number; ganhoLongoPrazo?: number; englobar?: boolean };
   /** Categoria G — venda de imóveis / mais-valias imobiliárias (Anexo G). */
-  imoveisVenda?: { ganho: number; valorRealizacao?: number; valorReinvestido?: number; reinvesteHPP?: boolean };
+  imoveisVenda?: {
+    ganho: number;
+    valorRealizacao?: number;
+    valorReinvestido?: number;
+    reinvesteHPP?: boolean;
+    /**
+     * Amortização do empréstimo contraído para a aquisição do imóvel vendido.
+     * O Art. 10.º n.º 5 manda deduzi-la ao valor de realização antes de medir a
+     * fração reinvestida — sem isto o denominador vem grande demais e a
+     * exclusão fica menor do que a lei concede.
+     */
+    amortizacaoEmprestimo?: number;
+  };
   /**
    * Rendimentos obtidos no estrangeiro (Anexo J). `porPais` permite o crédito
    * por dupla tributação calculado país a país (Art. 81.º), mais rigoroso que
@@ -1438,7 +2053,7 @@ export interface DeclaracaoInput {
   estrangeiros?: {
     rendimento: number;
     impostoPago?: number;
-    porPais?: Array<{ pais?: string; rendimento: number; impostoPago: number }>;
+    porPais?: EntradaEstrangeiroInput[];
   };
   /** Deduções à coleta (Anexo H). */
   deducoes?: DeducoesInput;
@@ -1457,6 +2072,21 @@ export interface DeclaracaoInput {
   lares?: number;
   deficiencia?: boolean;
   ifici?: boolean;
+  /**
+   * RNH antigo (pré-2024), ainda dentro dos 10 anos: taxa fixa de 20% sobre a
+   * parte elegível, como o IFICI. Art. 16.º n.º 1 CIRS (transitório OE2024).
+   */
+  rnhAntigo?: boolean;
+  /**
+   * Programa Regressar / Ex-Residentes (Art. 12.º-A CIRS): exclui 50% dos
+   * rendimentos das categorias A e B durante 5 anos.
+   */
+  programaRegressar?: boolean;
+  /**
+   * Número de dependentes, quando não há detalhe por idade/deficiência.
+   * Equivale a `dependentesDetalhe: { normais: n }`.
+   */
+  dependentes?: number;
   /** Isenção de SS no 1.º ano de atividade (independente). */
   isencaoSSPrimeiroAno?: boolean;
   /** Acumulação com trabalho dependente que cobre a SS (independente). */
@@ -1468,8 +2098,11 @@ export interface DeclaracaoInput {
    * antes do quociente conjugal (Art. 69.º CIRS).
    */
   titularB?: {
-    salarios?: { bruto: number; retencoes?: number };
-    pensoes?: { bruto: number; retencoes?: number };
+    salarios?: RendimentoCatAInput;
+    pensoes?: RendimentoPensoesInput;
+    /** IRS Jovem do SP B (Art. 12.º-B), com teto próprio de 55 × IAS. */
+    irsJovemAno?: number;
+    nascimento?: string;
     independente?: {
       brutoAnual: number;
       tipo: TipoAtividade;
@@ -1484,6 +2117,11 @@ export interface DeclaracaoInput {
     isencaoSSPrimeiroAno?: boolean;
     acumulaEmprego?: boolean;
     deficiencia?: boolean;
+    /**
+     * Programa Regressar do SP B (Art. 12.º-A). É um estatuto pessoal: não se
+     * herda do cônjuge, e cada titular tem o seu teto de 250 000 €.
+     */
+    programaRegressar?: boolean;
   };
   pagamentosPorConta?: number;
 }
@@ -1512,10 +2150,210 @@ export interface DeclaracaoResult {
   avisos: string[];
 }
 
-/** Dedução específica anual da categoria A (Art. 25.º CIRS): 8,54 × IAS. */
-function rendimentoLiquidoCatA(bruto: number): { liquido: number; especifica: number } {
-  const especifica = DEDUCAO_ESPECIFICA_DEPENDENTE.value;
-  return { liquido: Math.max(0, sanitize(bruto) - especifica), especifica };
+/** Encargos do titular que entram na dedução específica da categoria A. */
+export interface EncargosCatA {
+  /** Contribuições obrigatórias para regimes de proteção social (TSU de 11%). */
+  contribuicoesSS?: number;
+  /** Quotizações sindicais suportadas pelo titular. */
+  quotizacoesSindicais?: number;
+  /** Quotizações para ordens profissionais indispensáveis à atividade. */
+  quotizacoesOrdem?: number;
+}
+
+/** Decomposição da dedução específica da categoria A, para a memória de cálculo. */
+export interface DeducaoEspecificaCatA {
+  liquido: number;
+  especifica: number;
+  /** Parcela da alínea a) do n.º 1, já com o n.º 2 e o n.º 4 aplicados. */
+  base: number;
+  /** Parcela das quotizações sindicais, já majorada em 100%. */
+  sindicais: number;
+  /** A dedução foi determinada pelas contribuições para a SS (n.º 2)? */
+  porContribuicoes: boolean;
+  /** A dedução foi elevada por quotizações para ordens profissionais (n.º 4)? */
+  elevadaPorOrdem: boolean;
+}
+
+/**
+ * Dedução específica anual da categoria A (Art. 25.º CIRS).
+ *
+ * Não é um valor fixo. A alínea a) do n.º 1 dá o piso de 8,54 × IAS, mas:
+ *  · n.º 2 — se as contribuições obrigatórias para a proteção social excederem
+ *    esse piso, a dedução é o TOTAL dessas contribuições. Acima de ~41 701 €
+ *    de salário a TSU de 11% já ultrapassa o piso, e ignorar isto cobrava
+ *    imposto sobre rendimento que a lei manda deduzir;
+ *  · n.º 4 — quotizações para ordens profissionais elevam a dedução até 75% de
+ *    12 × IAS (relevante para advogados, médicos, engenheiros, contabilistas);
+ *  · n.º 1 al. c) — quotizações sindicais até 1% do bruto, acrescidas de 100%,
+ *    somam-se por cima.
+ *
+ * A categoria B já fazia `max(dedução específica; contribuições SS)` — isto é
+ * o mesmo padrão do lado da categoria A.
+ */
+function rendimentoLiquidoCatA(bruto: number, encargos?: EncargosCatA): DeducaoEspecificaCatA {
+  const brutoSan = sanitize(bruto);
+  const piso = DEDUCAO_ESPECIFICA_DEPENDENTE.value;
+  const ss = sanitize(encargos?.contribuicoesSS ?? 0);
+  const ordem = sanitize(encargos?.quotizacoesOrdem ?? 0);
+  const sindicaisPagas = sanitize(encargos?.quotizacoesSindicais ?? 0);
+
+  // n.º 4: só a DIFERENÇA face à alínea a) pode vir das quotizações de ordem,
+  // e o resultado nunca passa de 75% × 12 × IAS.
+  const comOrdem = Math.min(DEDUCAO_ESPECIFICA_DEP_MAX_ORDENS.value, piso + ordem);
+  const base = Math.max(piso, ss, comOrdem);
+
+  // n.º 1 al. c): limite de 1% do bruto, depois acrescidas de 100%.
+  const q = QUOTIZACOES_SINDICAIS.value;
+  const sindicais =
+    Math.min(sindicaisPagas, brutoSan * q.limiteFracaoBruto) * (1 + q.majoracao);
+
+  // «Até à sua concorrência» (n.º 1): a dedução nunca ultrapassa o rendimento.
+  const especifica = Math.min(brutoSan, base + sindicais);
+  return {
+    liquido: Math.max(0, brutoSan - especifica),
+    especifica,
+    base,
+    sindicais,
+    porContribuicoes: ss > piso && ss >= comOrdem,
+    elevadaPorOrdem: comOrdem > Math.max(piso, ss),
+  };
+}
+
+/** Apuramento de uma categoria de rendimento com dedução específica (A ou H). */
+interface CategoriaDependenteApurada {
+  bruto: number;
+  /** Exclusão do Art. 56.º-A desta categoria (teto próprio de 2 500 €). */
+  exclusaoDeficiencia: number;
+  /** Dedução específica aplicada (Art. 25.º ou 53.º). */
+  especifica: number;
+  /** Decomposição do Art. 25.º; ausente nas pensões. */
+  detalheEspecifica?: DeducaoEspecificaCatA;
+  /** Isenção do IRS Jovem imputada a esta categoria. */
+  isentoJovem: number;
+  /** Percentagem de isenção do ano (0 se não aplicável). */
+  percentagemJovem: number;
+  /** Exclusão do Art. 12.º-A imputada a esta categoria (Programa Regressar). */
+  exclusaoRegressar: number;
+  /** Rendimento que vai a englobamento, já líquido de tudo. */
+  liquido: number;
+}
+
+/**
+ * Apura uma categoria com dedução específica (A — trabalho dependente; H —
+ * pensões), pela ordem que a lei impõe: exclusão do Art. 56.º-A sobre o bruto,
+ * dedução específica sobre o que resta e, por fim, a isenção do Art. 12.º-B.
+ */
+function apurarCategoriaDependente(args: {
+  bruto?: number;
+  encargos?: EncargosCatA;
+  deficiencia?: boolean;
+  irsJovemAno?: number;
+  /** Teto do IRS Jovem ainda disponível para o titular. */
+  tetoJovemDisponivel: number;
+  /**
+   * Programa Regressar (Art. 12.º-A) ativo para este titular. A norma abrange
+   * as categorias A e B — não só a B —, por isso tem de ser aplicada aqui.
+   */
+  programaRegressar?: boolean;
+  /** Teto do Art. 12.º-A ainda disponível para o titular. */
+  tetoRegressarDisponivel?: number;
+}): CategoriaDependenteApurada {
+  const bruto = sanitize(args.bruto ?? 0);
+  if (bruto <= 0) {
+    return { bruto: 0, exclusaoDeficiencia: 0, especifica: 0, isentoJovem: 0, percentagemJovem: 0, exclusaoRegressar: 0, liquido: 0 };
+  }
+  const exclusaoDeficiencia = calcularExclusaoDeficiencia(bruto, !!args.deficiencia);
+  const considerado = Math.max(0, bruto - exclusaoDeficiencia);
+  const detalhe = rendimentoLiquidoCatA(considerado, args.encargos);
+  const percentagemJovem = isencaoIRSJovem(args.irsJovemAno);
+  const isentoJovem = Math.min(detalhe.liquido * percentagemJovem, Math.max(0, args.tetoJovemDisponivel));
+  const aposJovem = Math.max(0, detalhe.liquido - isentoJovem);
+  // O Art. 12.º-A é incompatível com o RNH/IFICI (n.º 2) — a exclusividade é
+  // resolvida no núcleo; aqui só se aplica quando o chamador a assinala.
+  const exclusaoRegressar = args.programaRegressar
+    ? Math.min(
+        aposJovem * PROGRAMA_REGRESSAR.exclusao.value,
+        Math.max(0, args.tetoRegressarDisponivel ?? PROGRAMA_REGRESSAR_TETO_CALC),
+      )
+    : 0;
+  return {
+    bruto,
+    exclusaoDeficiencia,
+    especifica: detalhe.especifica,
+    detalheEspecifica: detalhe,
+    isentoJovem,
+    percentagemJovem,
+    exclusaoRegressar,
+    liquido: Math.max(0, aposJovem - exclusaoRegressar),
+  };
+}
+
+/** Texto da fórmula da dedução específica da categoria A, para a memória. */
+function descreverDeducaoCatA(c: CategoriaDependenteApurada): string {
+  const d = c.detalheEspecifica;
+  const partes = [fmt(c.bruto)];
+  if (c.exclusaoDeficiencia > 0) partes.push(`− exclusão ${fmt(c.exclusaoDeficiencia)}`);
+  if (d?.porContribuicoes) {
+    partes.push(`− contribuições para a SS ${fmt(d.base)} (Art. 25.º n.º 2)`);
+  } else if (d?.elevadaPorOrdem) {
+    partes.push(`− dedução específica elevada ${fmt(d.base)} (Art. 25.º n.º 4)`);
+  } else {
+    partes.push(`− dedução específica ${fmt(d?.base ?? c.especifica)}`);
+  }
+  if (d && d.sindicais > 0) partes.push(`− quotizações sindicais majoradas ${fmt(d.sindicais)}`);
+  if (c.isentoJovem > 0) partes.push(`− IRS Jovem ${fmt(c.isentoJovem)}`);
+  return partes.join(" ");
+}
+
+/**
+ * Normaliza o Anexo J numa lista de entradas. Quando só existe o agregado
+ * (`rendimento`/`impostoPago`, sem `porPais`), devolve uma entrada única sem
+ * categoria — o rendimento entra bruto, como entrava antes, mas o caminho
+ * detalhado passa a estar disponível a quem o preencha.
+ */
+function normalizarEntradasEstrangeiro(
+  ext: DeclaracaoInput["estrangeiros"]
+): EntradaEstrangeiroInput[] {
+  if (!ext) return [];
+  const porPais = ext.porPais?.filter((p) => sanitize(p.rendimento) > 0) ?? [];
+  if (porPais.length > 0) return porPais;
+  const total = sanitize(ext.rendimento);
+  if (total <= 0) return [];
+  return [{ rendimento: total, impostoPago: sanitize(ext.impostoPago ?? 0) }];
+}
+
+/**
+ * Rendimento estrangeiro líquido da dedução específica da sua categoria.
+ *
+ * O Art. 15.º manda tributar o rendimento mundial pelas regras da categoria
+ * correspondente — um salário pago no estrangeiro tem a mesma dedução
+ * específica do Art. 25.º que um salário nacional. As categorias E, F e G não
+ * têm dedução específica no Anexo J (as despesas do Art. 41.º declaram-se à
+ * parte), por isso entram pelo valor declarado.
+ */
+function liquidoEstrangeiroPorCategoria(
+  bruto: number,
+  categoria?: CategoriaEstrangeiro
+): { liquido: number; especifica: number; rotulo: string } {
+  const b = sanitize(bruto);
+  switch (categoria) {
+    case "trabalho": {
+      const d = rendimentoLiquidoCatA(b);
+      return { liquido: d.liquido, especifica: d.especifica, rotulo: "trabalho" };
+    }
+    case "pensoes": {
+      const d = rendimentoLiquidoCatA(b);
+      return { liquido: d.liquido, especifica: d.especifica, rotulo: "pensões" };
+    }
+    case "capitais":
+      return { liquido: b, especifica: 0, rotulo: "capitais" };
+    case "prediais":
+      return { liquido: b, especifica: 0, rotulo: "rendas" };
+    case "maisvalias":
+      return { liquido: b, especifica: 0, rotulo: "mais-valias" };
+    default:
+      return { liquido: b, especifica: 0, rotulo: "sem categoria indicada" };
+  }
 }
 
 /** Limite do último escalão de IRS (gatilho do englobamento obrigatório). */
@@ -1525,9 +2363,18 @@ function limiteUltimoEscalao(): number {
 }
 
 /**
- * Apuramento global de IRS a partir das categorias selecionadas no simulador
- * guiado. Reaproveita `simularIRSAnual` para o englobamento e acrescenta a
- * tributação autónoma e o crédito por dupla tributação internacional.
+ * ENTRADA PÚBLICA do apuramento de IRS.
+ *
+ * Apura a declaração inteira a partir das categorias declaradas: decompõe cada
+ * uma (deduções específicas do Art. 25.º/53.º, exclusão do Art. 56.º-A, IRS
+ * Jovem do Art. 12.º-B), monta os factos do artigo 70.º POR TITULAR, delega o
+ * englobamento em `simularIRSAnual` e acrescenta a tributação autónoma e o
+ * crédito por dupla tributação internacional.
+ *
+ * É esta a função a usar sempre que exista mais do que categoria B. Chamar o
+ * núcleo diretamente com um agregado em `outrosRendimentos` perde a informação
+ * de categoria — e com ela o mínimo de existência, a isenção do IRS Jovem da
+ * categoria A e a exclusão por deficiência das categorias A e H.
  */
 export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
   const conjunta = !!input.conjunta;
@@ -1547,34 +2394,107 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
   // (a categoria B é processada dentro de `simularIRSAnual` via brutoAnual)
   let englobaveisBase = 0;
 
-  // Categoria A — salários
-  const salBruto = sanitize(input.salarios?.bruto ?? 0);
+  const tetoJovem = IRS_JOVEM.tetoIAS.value * IAS_VALUE;
+  // Teto do IRS Jovem já gasto pela categoria A de cada titular. É por titular:
+  // o Art. 12.º-B dá 55 × IAS a cada pessoa, para repartir entre as categorias
+  // A e B — não 55 × IAS a cada categoria.
+  let jovemConsumidoA = 0;
+  let jovemConsumidoB = 0;
+  // Idem para o teto do Art. 12.º-A (250 000 € por titular, categorias A + B).
+  // O n.º 2 do artigo exclui quem pediu inscrição como residente não habitual,
+  // por isso o Programa Regressar cede ao IFICI e ao RNH antigo.
+  const regressarAtivo =
+    !!input.programaRegressar && !input.ifici && !input.rnhAntigo;
+  const regressarB =
+    !!input.titularB?.programaRegressar && !input.ifici && !input.rnhAntigo;
+  let regressarConsumidoA = 0;
+  let regressarConsumidoB = 0;
+
+  // ── Categorias A e H do sujeito passivo A ─────────────────────────────────
+  // Cada categoria é apurada por inteiro aqui: exclusão do Art. 56.º-A sobre o
+  // bruto, dedução específica do Art. 25.º/53.º e isenção do IRS Jovem sobre o
+  // líquido. Antes, tudo isto era exclusivo da categoria B e a categoria A
+  // entrava como um número anónimo — o que desligava as três regras a quem
+  // tivesse salário ou pensão.
+  const catA = apurarCategoriaDependente({
+    bruto: input.salarios?.bruto,
+    encargos: input.salarios,
+    deficiencia: input.deficiencia,
+    irsJovemAno: input.irsJovemAno,
+    tetoJovemDisponivel: tetoJovem,
+    programaRegressar: regressarAtivo,
+    tetoRegressarDisponivel: PROGRAMA_REGRESSAR_TETO_CALC,
+  });
+  const salBruto = catA.bruto;
   if (salBruto > 0) {
-    const { liquido, especifica } = rendimentoLiquidoCatA(salBruto);
-    englobaveisBase += liquido;
+    jovemConsumidoA += catA.isentoJovem;
+    regressarConsumidoA += catA.exclusaoRegressar;
+    englobaveisBase += catA.liquido;
     memoria.push({
       anexo: "Anexo A",
       rotulo: "Rendimento líquido de trabalho dependente",
-      formula: `${fmt(salBruto)} − dedução específica ${fmt(especifica)}`,
-      valor: liquido,
+      formula: descreverDeducaoCatA(catA),
+      valor: catA.liquido,
       baseLegal: "Art. 25.º CIRS",
     });
-    componentes.push({ id: "salarios", anexo: "Anexo A", rotulo: "Trabalho dependente", bruto: salBruto, englobado: liquido, impostoAutonomo: 0 });
+    if (catA.exclusaoDeficiencia > 0) {
+      memoria.push({
+        anexo: "Anexo A",
+        rotulo: "Exclusão por deficiência — trabalho dependente",
+        formula: `${fmt(salBruto)} × ${pct(EXCLUSAO_DEFICIENCIA_TAXA.value)} (máx. ${fmt(EXCLUSAO_DEFICIENCIA_MAX.value)})`,
+        valor: -catA.exclusaoDeficiencia,
+        baseLegal: "Art. 56.º-A CIRS",
+      });
+    }
+    if (catA.isentoJovem > 0) {
+      memoria.push({
+        anexo: "Anexo A",
+        rotulo: "IRS Jovem — trabalho dependente",
+        formula: `${pct(catA.percentagemJovem)} do rendimento líquido (teto ${fmt(tetoJovem)} por titular)`,
+        valor: -catA.isentoJovem,
+        baseLegal: "Art. 12.º-B CIRS",
+      });
+    }
+    if (catA.exclusaoRegressar > 0) {
+      memoria.push({
+        anexo: "Anexo A",
+        rotulo: "Programa Regressar — trabalho dependente",
+        formula: `${pct(PROGRAMA_REGRESSAR.exclusao.value)} do rendimento líquido (teto ${fmt(PROGRAMA_REGRESSAR_TETO_CALC)} por titular)`,
+        valor: -catA.exclusaoRegressar,
+        baseLegal: "Art. 12.º-A CIRS",
+      });
+    }
+    componentes.push({ id: "salarios", anexo: "Anexo A", rotulo: "Trabalho dependente", bruto: salBruto, englobado: catA.liquido, impostoAutonomo: 0 });
   }
 
-  // Categoria A — pensões (dedução específica equiparada)
-  const pensBruto = sanitize(input.pensoes?.bruto ?? 0);
+  // Categoria H — pensões. Dedução específica própria (Art. 53.º), sem os
+  // encargos do Art. 25.º, mas com exclusão por deficiência própria: o teto de
+  // 2 500 € do Art. 56.º-A é POR CATEGORIA, não por pessoa.
+  const catH = apurarCategoriaDependente({
+    bruto: input.pensoes?.bruto,
+    deficiencia: input.deficiencia,
+    tetoJovemDisponivel: 0,
+  });
+  const pensBruto = catH.bruto;
   if (pensBruto > 0) {
-    const { liquido, especifica } = rendimentoLiquidoCatA(pensBruto);
-    englobaveisBase += liquido;
+    englobaveisBase += catH.liquido;
     memoria.push({
       anexo: "Anexo A",
       rotulo: "Rendimento líquido de pensões",
-      formula: `${fmt(pensBruto)} − dedução específica ${fmt(especifica)}`,
-      valor: liquido,
+      formula: `${fmt(pensBruto)}${catH.exclusaoDeficiencia > 0 ? ` − exclusão ${fmt(catH.exclusaoDeficiencia)}` : ""} − dedução específica ${fmt(catH.especifica)}`,
+      valor: catH.liquido,
       baseLegal: "Art. 53.º CIRS",
     });
-    componentes.push({ id: "pensoes", anexo: "Anexo A", rotulo: "Pensões", bruto: pensBruto, englobado: liquido, impostoAutonomo: 0 });
+    if (catH.exclusaoDeficiencia > 0) {
+      memoria.push({
+        anexo: "Anexo A",
+        rotulo: "Exclusão por deficiência — pensões",
+        formula: `${fmt(pensBruto)} × ${pct(EXCLUSAO_DEFICIENCIA_TAXA.value)} (máx. ${fmt(EXCLUSAO_DEFICIENCIA_MAX.value)})`,
+        valor: -catH.exclusaoDeficiencia,
+        baseLegal: "Art. 56.º-A CIRS",
+      });
+    }
+    componentes.push({ id: "pensoes", anexo: "Anexo A", rotulo: "Pensões", bruto: pensBruto, englobado: catH.liquido, impostoAutonomo: 0 });
   }
 
   // Categoria E — capitais (dividendos + juros)
@@ -1629,8 +2549,14 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
   if (venda && sanitize(venda.ganho) > 0) {
     const ganho = sanitize(venda.ganho);
     let fracaoExcluida = 0;
-    if (venda.reinvesteHPP && sanitize(venda.valorRealizacao ?? 0) > 0) {
-      fracaoExcluida = Math.min(1, sanitize(venda.valorReinvestido ?? 0) / sanitize(venda.valorRealizacao ?? 0));
+    // Art. 10.º n.º 5: o denominador é o valor de realização DEDUZIDO da
+    // amortização de eventual empréstimo contraído para adquirir o imóvel
+    // vendido. Sem essa dedução o denominador vem inflacionado e a fração
+    // reinvestida — logo, a exclusão — fica menor do que a lei concede.
+    const amortizacao = sanitize(venda.amortizacaoEmprestimo ?? 0);
+    const realizacaoRelevante = Math.max(0, sanitize(venda.valorRealizacao ?? 0) - amortizacao);
+    if (venda.reinvesteHPP && realizacaoRelevante > 0) {
+      fracaoExcluida = Math.min(1, sanitize(venda.valorReinvestido ?? 0) / realizacaoRelevante);
     }
     const ganhoTributavel = ganho * (1 - fracaoExcluida);
     const incluido = ganhoTributavel * MAIS_VALIAS_IMOBILIARIO_INCLUSAO.value;
@@ -1648,16 +2574,71 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
     if (fracaoExcluida > 0 && fracaoExcluida < 1) {
       avisos.push("O reinvestimento parcial em habitação própria exclui apenas a fração do ganho proporcional ao valor reinvestido (Art. 10.º n.º 5 CIRS).");
     }
+    if (amortizacao > 0) {
+      memoria.push({
+        anexo: "Anexo G",
+        rotulo: "Amortização do empréstimo do imóvel vendido",
+        formula: `valor de realização ${fmt(sanitize(venda.valorRealizacao ?? 0))} − ${fmt(amortizacao)}`,
+        valor: -amortizacao,
+        baseLegal: "Art. 10.º n.º 5 CIRS",
+      });
+    }
   }
 
-  // Rendimentos estrangeiros (Anexo J) — englobados, com crédito de imposto.
+  // ── Rendimentos estrangeiros (Anexo J) ────────────────────────────────────
+  // Entravam brutos no englobamento: um salário de 30 000 € ganho lá fora
+  // pagava imposto sobre 30 000 € enquanto o mesmo salário nacional pagava
+  // sobre 25 412,91 €. A categoria de cada entrada determina a dedução
+  // específica a aplicar antes do englobamento — e é o rendimento LÍQUIDO
+  // dessa dedução que serve de numerador ao crédito do Art. 81.º n.º 1 al. b).
+  const entradasExt = normalizarEntradasEstrangeiro(ext);
   let rendEstrangeiroEnglobado = 0;
-  const impostoPagoEstrangeiro = sanitize(ext?.impostoPago ?? 0);
-  if (ext && sanitize(ext.rendimento) > 0) {
-    rendEstrangeiroEnglobado = sanitize(ext.rendimento);
+  let rendEstrangeiroBruto = 0;
+  let rendEstrangeiroIsentoProgressividade = 0;
+  const creditoPorEntrada: Array<{ pais?: string; impostoPago: number; liquido: number }> = [];
+  for (const e of entradasExt) {
+    const bruto = sanitize(e.rendimento);
+    if (bruto <= 0) continue;
+    rendEstrangeiroBruto += bruto;
+    const { liquido, especifica, rotulo } = liquidoEstrangeiroPorCategoria(bruto, e.categoria);
+    if (e.isencaoComProgressividade) {
+      // Método da isenção com progressividade: não é tributado em Portugal,
+      // mas conta para determinar a taxa aplicável ao resto (Art. 81.º n.º 8).
+      rendEstrangeiroIsentoProgressividade += liquido;
+      memoria.push({
+        anexo: "Anexo J",
+        rotulo: `Isento com progressividade${e.pais ? ` — ${e.pais}` : ""} (${rotulo})`,
+        formula: `${fmt(bruto)}${especifica > 0 ? ` − dedução específica ${fmt(especifica)}` : ""} · conta só para a taxa`,
+        valor: liquido,
+        baseLegal: "Art. 81.º n.º 8 CIRS + CDT",
+      });
+      continue;
+    }
+    rendEstrangeiroEnglobado += liquido;
+    creditoPorEntrada.push({ pais: e.pais, impostoPago: sanitize(e.impostoPago), liquido });
+    memoria.push({
+      anexo: "Anexo J",
+      rotulo: `Rendimento obtido no estrangeiro${e.pais ? ` — ${e.pais}` : ""} (${rotulo})`,
+      formula: especifica > 0 ? `${fmt(bruto)} − dedução específica ${fmt(especifica)}` : undefined,
+      valor: liquido,
+      baseLegal: "Art. 15.º + Art. 81.º CIRS",
+    });
+  }
+  if (rendEstrangeiroBruto > 0) {
     englobaveisBase += rendEstrangeiroEnglobado;
-    memoria.push({ anexo: "Anexo J", rotulo: "Rendimentos obtidos no estrangeiro", valor: rendEstrangeiroEnglobado, baseLegal: "Art. 15.º + Art. 81.º CIRS" });
-    componentes.push({ id: "estrangeiros", anexo: "Anexo J", rotulo: "Rendimentos estrangeiros", bruto: rendEstrangeiroEnglobado, englobado: rendEstrangeiroEnglobado, impostoAutonomo: 0 });
+    componentes.push({
+      id: "estrangeiros",
+      anexo: "Anexo J",
+      rotulo: "Rendimentos estrangeiros",
+      bruto: rendEstrangeiroBruto,
+      englobado: rendEstrangeiroEnglobado,
+      impostoAutonomo: 0,
+    });
+  }
+  if (rendEstrangeiroIsentoProgressividade > 0) {
+    avisos.push(
+      "Há rendimento estrangeiro isento com progressividade: não é tributado em Portugal, mas eleva a taxa aplicada ao restante rendimento (Art. 81.º n.º 8 CIRS)."
+    );
   }
 
   // ── Sujeito passivo B (tributação conjunta) ───────────────────────────────
@@ -1671,25 +2652,47 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
   let ssAnualB = 0;
   let retencoesB = 0;
   let rendimentoGlobalB = 0;
+  // Factos do artigo 70.º do SP B, montados aqui porque é aqui que se conhece
+  // o bruto e as deduções específicas dele.
+  let brutoTitularB = 0;
+  let especificasTitularB = 0;
+  let tributavelCatB_B = 0;
+  let catBElegivelB = false;
   if (conjunta && tb) {
     let outrosB = 0;
-    const salB = sanitize(tb.salarios?.bruto ?? 0);
+    const catAB = apurarCategoriaDependente({
+      bruto: tb.salarios?.bruto,
+      encargos: tb.salarios,
+      deficiencia: tb.deficiencia,
+      irsJovemAno: tb.irsJovemAno,
+      tetoJovemDisponivel: tetoJovem,
+      // O Art. 12.º-A é pessoal: o SP B só beneficia se ele próprio for
+      // ex-residente. Não se herda do cônjuge.
+      programaRegressar: regressarB,
+      tetoRegressarDisponivel: PROGRAMA_REGRESSAR_TETO_CALC,
+    });
+    const salB = catAB.bruto;
     if (salB > 0) {
-      const { liquido, especifica } = rendimentoLiquidoCatA(salB);
-      outrosB += liquido;
+      jovemConsumidoB += catAB.isentoJovem;
+      regressarConsumidoB += catAB.exclusaoRegressar;
+      outrosB += catAB.liquido;
       rendimentoGlobalB += salB;
       retencoesB += sanitize(tb.salarios?.retencoes ?? 0);
-      memoria.push({ anexo: "Anexo A", rotulo: "SP B — rendimento líquido de trabalho dependente", formula: `${fmt(salB)} − dedução específica ${fmt(especifica)}`, valor: liquido, baseLegal: "Art. 25.º CIRS" });
-      componentes.push({ id: "salarios-b", anexo: "Anexo A", rotulo: "Trabalho dependente (SP B)", bruto: salB, englobado: liquido, impostoAutonomo: 0 });
+      memoria.push({ anexo: "Anexo A", rotulo: "SP B — rendimento líquido de trabalho dependente", formula: descreverDeducaoCatA(catAB), valor: catAB.liquido, baseLegal: "Art. 25.º CIRS" });
+      componentes.push({ id: "salarios-b", anexo: "Anexo A", rotulo: "Trabalho dependente (SP B)", bruto: salB, englobado: catAB.liquido, impostoAutonomo: 0 });
     }
-    const pensB = sanitize(tb.pensoes?.bruto ?? 0);
+    const catHB = apurarCategoriaDependente({
+      bruto: tb.pensoes?.bruto,
+      deficiencia: tb.deficiencia,
+      tetoJovemDisponivel: 0,
+    });
+    const pensB = catHB.bruto;
     if (pensB > 0) {
-      const { liquido, especifica } = rendimentoLiquidoCatA(pensB);
-      outrosB += liquido;
+      outrosB += catHB.liquido;
       rendimentoGlobalB += pensB;
       retencoesB += sanitize(tb.pensoes?.retencoes ?? 0);
-      memoria.push({ anexo: "Anexo A", rotulo: "SP B — rendimento líquido de pensões", formula: `${fmt(pensB)} − dedução específica ${fmt(especifica)}`, valor: liquido, baseLegal: "Art. 53.º CIRS" });
-      componentes.push({ id: "pensoes-b", anexo: "Anexo A", rotulo: "Pensões (SP B)", bruto: pensB, englobado: liquido, impostoAutonomo: 0 });
+      memoria.push({ anexo: "Anexo A", rotulo: "SP B — rendimento líquido de pensões", formula: `${fmt(pensB)}${catHB.exclusaoDeficiencia > 0 ? ` − exclusão ${fmt(catHB.exclusaoDeficiencia)}` : ""} − dedução específica ${fmt(catHB.especifica)}`, valor: catHB.liquido, baseLegal: "Art. 53.º CIRS" });
+      componentes.push({ id: "pensoes-b", anexo: "Anexo A", rotulo: "Pensões (SP B)", bruto: pensB, englobado: catHB.liquido, impostoAutonomo: 0 });
     }
     const indepB = tb.independente;
     const brutoIndepB = sanitize(indepB?.brutoAnual ?? 0);
@@ -1703,14 +2706,21 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
       anoAtividade: indepB?.anoAtividade,
       regimeContabilidade: indepB?.regimeContabilidade,
       despesasJustificadas: indepB?.despesasJustificadas,
-      irsJovemAno: indepB?.irsJovemAno,
+      irsJovemAno: indepB?.irsJovemAno ?? tb.irsJovemAno,
+      irsJovemTetoConsumido: jovemConsumidoB,
+      programaRegressar: regressarB,
+      programaRegressarTetoConsumido: regressarConsumidoB,
       outrosRendimentos: outrosB,
       conjunta: false,
       deficiencia: tb.deficiencia,
       isencaoSSPrimeiroAno: tb.isencaoSSPrimeiroAno,
       acumulaEmprego: tb.acumulaEmprego,
       retencoesPagas: 0,
+      // O artigo 70.º é apurado por titular na simulação do agregado, mais
+      // abaixo: aplicá-lo aqui também abateria duas vezes ao mesmo rendimento.
+      semMinimoExistencia: true,
     });
+    tributavelCatB_B = simB.rendimentoTributavel;
     englobaveisBase += simB.rendimentoColetavel;
     ssAnualB = simB.ssAnual;
     retencoesB += sanitize(indepB?.retencoesPagas ?? 0);
@@ -1727,10 +2737,17 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
       });
       componentes.push({ id: "independente-b", anexo: "Anexo B", rotulo: "Trabalho independente (SP B)", bruto: simB.brutoAnual, englobado: simB.rendimentoTributavel, impostoAutonomo: 0 });
     }
+    brutoTitularB = salB + pensB + brutoIndepB;
+    especificasTitularB =
+      catAB.especifica + catHB.especifica + Math.max(0, brutoIndepB - tributavelCatB_B);
+    catBElegivelB = (indepB?.tipo ?? "art151") === "art151";
   }
 
   // ── Pré-passagem: decidir englobamento obrigatório das mais-valias mobiliárias ──
-  const baseSimInput = (outros: number): SimulacaoInput => ({
+  const baseSimInput = (
+    outros: number,
+    factsTitulares?: Array<Partial<MinimoExistenciaFacts>>
+  ): SimulacaoInput => ({
     brutoAnual: sanitize(indep?.brutoAnual ?? 0),
     tipo: indep?.tipo ?? "art151",
     coefOverride: indep?.coefOverride,
@@ -1738,9 +2755,12 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
     anoAtividade: indep?.anoAtividade,
     regimeContabilidade: indep?.regimeContabilidade,
     despesasJustificadas: indep?.despesasJustificadas,
-    irsJovemAno: indep?.irsJovemAno,
+    irsJovemAno: indep?.irsJovemAno ?? input.irsJovemAno,
+    irsJovemTetoConsumido: jovemConsumidoA,
+    programaRegressarTetoConsumido: regressarConsumidoA,
     outrosRendimentos: outros,
     conjunta,
+    dependentes: input.dependentes,
     dependentesDetalhe: input.dependentesDetalhe,
     dependentesLista: input.dependentesLista,
     deducoes: input.deducoes ? { ...input.deducoes, lares: input.lares } : { lares: input.lares },
@@ -1750,9 +2770,17 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
     pensaoAlimentos: input.pensaoAlimentos,
     deficiencia: input.deficiencia,
     ifici: input.ifici,
+    rnhAntigo: input.rnhAntigo,
+    programaRegressar: input.programaRegressar,
     isencaoSSPrimeiroAno: input.isencaoSSPrimeiroAno,
     acumulaEmprego: input.acumulaEmprego,
     retencoesPagas: 0,
+    rendimentoIsentoComProgressividade: rendEstrangeiroIsentoProgressividade,
+    // Na pré-passagem ainda não há factos do artigo 70.º (dependem do
+    // tributável da categoria B que ela própria produz): fica desligado, e a
+    // passagem final é que aplica o abatimento.
+    minimoExistenciaFactsTitulares: factsTitulares,
+    semMinimoExistencia: !factsTitulares,
   });
 
   const saldoMob = sanitize(inv?.saldo ?? 0);
@@ -1805,8 +2833,97 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
     componentes.push({ id: "cripto", anexo: "Anexo G", rotulo: "Criptoativos", bruto: criptoLongo, englobado: 0, impostoAutonomo: 0 });
   }
 
+  // ── Factos do artigo 70.º, por titular ────────────────────────────────────
+  // O abatimento do mínimo de existência só se calcula com sete factos por
+  // pessoa. `simularIRSAnual` sabe inferi-los no caso puro de categoria B sem
+  // mais nada; aqui, onde as categorias estão decompostas, montam-se de facto.
+  // Sem isto, quem tinha salário ou pensão caía em `needs_input`, ficava com
+  // abatimento zero e — pior — sem aviso nenhum: alguém ao salário mínimo via
+  // «IRS a pagar 676,61 €» onde a lei manda zero.
+  const brutoIndepA = sanitize(indep?.brutoAnual ?? 0);
+  const brutoTitularA =
+    salBruto + pensBruto + brutoIndepA + dividendos + juros +
+    sanitize(pred?.rendaAnual ?? 0) + saldoMob + criptoCurto + criptoLongo +
+    sanitize(venda?.ganho ?? 0) + rendEstrangeiroBruto;
+  const especificasTitularA =
+    catA.especifica + catH.especifica + Math.max(0, brutoIndepA - sim0.rendimentoTributavel);
+  // Rendimentos não englobados do agregado (Art. 70.º n.º 4 al. b): os que
+  // ficaram sujeitos a taxa liberatória ou especial em vez das taxas gerais.
+  const naoEnglobados =
+    (capEnglobar ? 0 : dividendos + juros) +
+    (pred?.englobar ? 0 : sanitize(pred?.rendaAnual ?? 0)) +
+    (englobarMob ? 0 : saldoMob) +
+    (englobarCripto ? 0 : criptoCurto);
+  const householdGross = brutoTitularA + brutoTitularB;
+  const householdTaxpayers = conjunta && tb ? 2 : 1;
+
+  // Art. 70.º n.º 2: a regra cobre trabalho dependente, pensões e as atividades
+  // da tabela do Art. 151.º (exceto o código 15, «outros prestadores de
+  // serviços»). O que conta é a categoria PREDOMINANTE do titular — não o tipo
+  // de atividade isolado, como o motor assumia.
+  const elegivelPredominante = (
+    catARendimento: number,
+    catHRendimento: number,
+    catBRendimento: number,
+    catBElegivel: boolean,
+    outrosNaoElegiveis: number
+  ): boolean => {
+    const candidatos = [
+      { valor: catARendimento, elegivel: true },
+      { valor: catHRendimento, elegivel: true },
+      { valor: catBRendimento, elegivel: catBElegivel },
+      { valor: outrosNaoElegiveis, elegivel: false },
+    ];
+    const maior = candidatos.reduce((a, b) => (b.valor > a.valor ? b : a));
+    return maior.valor > 0 && maior.elegivel;
+  };
+
+  const outrosTitularA = brutoTitularA - salBruto - pensBruto - brutoIndepA;
+  const factsTitularA: Partial<MinimoExistenciaFacts> = {
+    eligibleIncome: elegivelPredominante(
+      salBruto,
+      pensBruto,
+      brutoIndepA,
+      (indep?.tipo ?? "art151") === "art151",
+      outrosTitularA
+    ),
+    dependentTaxpayer: false,
+    grossIncome: brutoTitularA,
+    specificDeductions: Math.min(brutoTitularA, especificasTitularA),
+    householdGrossIncome: householdGross,
+    householdNonEnglobedIncome: naoEnglobados,
+    householdTaxpayers,
+  };
+  const factsTitulares: Array<Partial<MinimoExistenciaFacts>> = [factsTitularA];
+  if (conjunta && tb) {
+    factsTitulares.push({
+      eligibleIncome: elegivelPredominante(
+        sanitize(tb.salarios?.bruto ?? 0),
+        sanitize(tb.pensoes?.bruto ?? 0),
+        sanitize(tb.independente?.brutoAnual ?? 0),
+        catBElegivelB,
+        0
+      ),
+      dependentTaxpayer: false,
+      grossIncome: brutoTitularB,
+      specificDeductions: Math.min(brutoTitularB, especificasTitularB),
+      householdGrossIncome: householdGross,
+      householdNonEnglobedIncome: naoEnglobados,
+      householdTaxpayers,
+    });
+  }
+
   // ── Simulação final do englobamento (núcleo verificado) ────────────────────
-  const sim = simularIRSAnual(baseSimInput(englobaveisBase));
+  const sim = simularIRSAnual(baseSimInput(englobaveisBase, factsTitulares));
+
+  // Nunca falhar em silêncio: se o artigo 70.º ficou por apurar, o utilizador
+  // tem de o saber — é uma regra que pode valer o imposto todo.
+  if (sim.minimoExistenciaDecision.status === "needs_input") {
+    avisos.push(
+      "Não foi possível apurar o mínimo de existência (Art. 70.º CIRS) com os dados introduzidos: " +
+        `${sim.minimoExistenciaDecision.reason} O imposto mostrado pode estar sobreavaliado.`
+    );
+  }
 
   // Categoria B na memória (quando há atividade independente)
   if (sanitize(indep?.brutoAnual ?? 0) > 0) {
@@ -1829,40 +2946,36 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
   // Para cada país: menor de (imposto pago nesse país; fração da coleta
   // proporcional ao rendimento desse país). O limite é por país, por isso o
   // cálculo país a país é mais rigoroso do que o agregado.
+  //
+  // O numerador é o rendimento do país LÍQUIDO das deduções específicas —
+  // Art. 81.º n.º 1 al. b) — para bater com o denominador, que é o rendimento
+  // coletável (também líquido). Usar o bruto contra o líquido inflacionava a
+  // fração e tornava o limite do crédito mais generoso do que a lei permite.
+  // Os rendimentos isentos com progressividade não entram: não geraram coleta
+  // portuguesa, logo não há dupla tributação a eliminar.
   let creditoDuplaTributacao = 0;
-  const porPais = ext?.porPais?.filter((p) => sanitize(p.rendimento) > 0) ?? [];
   if (sim.rendimentoColetavel > 0 && coletaEnglobamento > 0) {
-    if (porPais.length > 0) {
-      for (const p of porPais) {
-        const fracaoColeta = coletaEnglobamento * (sanitize(p.rendimento) / sim.rendimentoColetavel);
-        const credito = Math.min(sanitize(p.impostoPago), fracaoColeta);
-        if (credito > 0) {
-          creditoDuplaTributacao += credito;
-          memoria.push({
-            anexo: "Anexo J",
-            rotulo: `Crédito dupla tributação${p.pais ? ` — ${p.pais}` : ""}`,
-            formula: `mín(imposto pago ${fmt(sanitize(p.impostoPago))}; fração da coleta ${fmt(fracaoColeta)})`,
-            valor: -credito,
-            baseLegal: "Art. 81.º CIRS",
-          });
-        }
+    for (const p of creditoPorEntrada) {
+      if (p.impostoPago <= 0) continue;
+      const fracaoColeta = coletaEnglobamento * (p.liquido / sim.rendimentoColetavel);
+      const credito = Math.min(p.impostoPago, fracaoColeta);
+      if (credito > 0) {
+        creditoDuplaTributacao += credito;
+        memoria.push({
+          anexo: "Anexo J",
+          rotulo: `Crédito dupla tributação${p.pais ? ` — ${p.pais}` : ""}`,
+          formula: `mín(imposto pago ${fmt(p.impostoPago)}; fração da coleta ${fmt(fracaoColeta)})`,
+          valor: -credito,
+          baseLegal: "Art. 81.º CIRS",
+        });
       }
-    } else if (impostoPagoEstrangeiro > 0 && rendEstrangeiroEnglobado > 0) {
-      const fracaoColeta = coletaEnglobamento * (rendEstrangeiroEnglobado / sim.rendimentoColetavel);
-      creditoDuplaTributacao = Math.min(impostoPagoEstrangeiro, fracaoColeta);
-      memoria.push({
-        anexo: "Anexo J",
-        rotulo: "Crédito por dupla tributação internacional",
-        formula: `mín(imposto pago ${fmt(impostoPagoEstrangeiro)}; fração da coleta ${fmt(fracaoColeta)})`,
-        valor: -creditoDuplaTributacao,
-        baseLegal: "Art. 81.º CIRS",
-      });
     }
   }
 
   // Deduções à coleta já aplicadas dentro de `simularIRSAnual` (sim.irsEstimado).
-  const deducoesColeta =
-    sim.deducaoDependentes + sim.deducaoAscendentes + sim.deducaoDespesas + sim.deducaoDeficiencia + sim.deducaoPensaoAlimentos;
+  // O total vem do motor: as parcelas somadas à mão duplicavam a pensão de
+  // alimentos, que passou a estar agregada dentro de `deducaoDespesas`.
+  const deducoesColeta = sim.deducoesColetaTotal;
   if (sim.deducaoAscendentes > 0) {
     memoria.push({ anexo: "Anexo H", rotulo: "Dedução por ascendentes", valor: -sim.deducaoAscendentes, baseLegal: "Art. 78.º-A CIRS" });
   }
@@ -1893,7 +3006,7 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
   const rendimentoGlobal =
     salBruto + pensBruto + sanitize(indep?.brutoAnual ?? 0) + dividendos + juros +
     sanitize(pred?.rendaAnual ?? 0) + saldoMob + criptoCurto + criptoLongo +
-    sanitize(venda?.ganho ?? 0) + rendEstrangeiroEnglobado + rendimentoGlobalB;
+    sanitize(venda?.ganho ?? 0) + rendEstrangeiroBruto + rendimentoGlobalB;
 
   const saldo = retencoesTotais + pagamentosPorConta - irsTotal;
 

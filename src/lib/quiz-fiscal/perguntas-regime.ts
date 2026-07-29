@@ -1,4 +1,11 @@
 import { fonte, type QuizPergunta } from "./types";
+import { DEDUCAO_ESPECIFICA_DEPENDENTE } from "../fiscal-data";
+
+/** Dedução específica da categoria A, lida do motor (8,54 × IAS em 2026). */
+const DED_ESPECIFICA_CAT_A = DEDUCAO_ESPECIFICA_DEPENDENTE.value.toLocaleString("pt-PT", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
 export const PERGUNTAS_REGIME: QuizPergunta[] = [
   // ── rs-8 a rs-20: Coeficientes — cenários práticos ──────────────────
@@ -1496,9 +1503,9 @@ export const PERGUNTAS_REGIME: QuizPergunta[] = [
           "Na contabilidade organizada, deduzem-se as despesas reais comprovadas, resultando no lucro tributável. Correto.",
       },
       {
-        texto: "Rendimento bruto − 4.104 € (dedução específica)",
+        texto: `Rendimento bruto − ${DED_ESPECIFICA_CAT_A} € (dedução específica)`,
         porque:
-          "A dedução específica de 4.104 € aplica-se a rendimentos do trabalho dependente (categoria A), não à categoria B com contabilidade organizada.",
+          `A dedução específica de ${DED_ESPECIFICA_CAT_A} € (8,54 × IAS) aplica-se aos rendimentos do trabalho dependente — categoria A —, não à categoria B com contabilidade organizada. O piso fixo de 4.104 € foi eliminado pela Lei n.º 45-A/2024.`,
       },
       {
         texto: "Rendimento bruto × 0,50 (metade)",
@@ -2901,27 +2908,27 @@ export const PERGUNTAS_REGIME: QuizPergunta[] = [
       "Um advogado (Art. 151.º) no 2.º ano de atividade fatura 60.000 € e justifica 6.000 € em despesas. Qual o rendimento tributável final, considerando regra dos 15% e redução de 2.º ano?",
     opcoes: [
       {
-        texto: "36.000 €",
-        porque:
-          "Seria (60.000 × 0,75 + 3.000) × 0,75, mas o cálculo correto dá um valor diferente.",
-      },
-      {
         texto: "33.750 €",
         porque:
-          "Base: 60.000 × 0,75 = 45.000 €. 15% de 60.000 = 9.000 €; justificou 6.000 €; faltam 3.000 €. Subtotal: 48.000 €. Redução 25% (2.º ano): 48.000 × 0,75 = 36.000 €. Não dá 33.750 €.",
+          "Seria aplicar a redução de 25% só à base de 45.000 €, esquecendo o acréscimo da regra dos 15%. A redução incide sobre o subtotal já acrescido.",
       },
       {
         texto: "36.000 €",
         porque:
-          "Base: 45.000 €. Regra 15%: +3.000 €. Subtotal: 48.000 €. Redução 25% (2.º ano): 48.000 × 0,75 = 36.000 €. Correto.",
+          "Correto. Base: 60.000 × 0,75 = 45.000 €. Regra dos 15%: 15% de 60.000 = 9.000 €, justificou 6.000 €, faltam 3.000 € que acrescem. Subtotal: 48.000 €. Redução de 25% do 2.º ano: 48.000 × 0,75 = 36.000 €.",
+      },
+      {
+        texto: "48.000 €",
+        porque:
+          "É o subtotal antes da redução do 2.º ano. Falta aplicar os 25% de redução previstos no Art. 31.º, n.º 10.",
       },
       {
         texto: "45.000 €",
         porque:
-          "Seria apenas 60.000 × 0,75, sem regra dos 15% nem redução de 2.º ano.",
+          "Seria apenas 60.000 × 0,75, sem a regra dos 15% nem a redução de 2.º ano.",
       },
     ],
-    correta: 2,
+    correta: 1,
     legalBasis: "Art. 31.º, n.º 2 e n.º 10 CIRS",
     fonte: fonte("occRegimeSimplificado"),
   },

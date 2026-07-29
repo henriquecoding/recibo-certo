@@ -98,7 +98,8 @@ import {
   type ParametrosFiscaisRegiao,
 } from "@/lib/incentivos-regioes";
 import {
-  simularEmpresaGuiado,
+  simularEmpresaGuiadoOpcoes,
+  type OpcoesEmpresaGuiado,
   type ResultadoEmpresaGuiado,
 } from "@/lib/fiscal-empresa";
 export { simularEmpresaGuiado } from "@/lib/fiscal-empresa";
@@ -108,6 +109,9 @@ import {
   parseNumericDraft,
   sanitizeNumericDraft,
 } from "@/lib/numeric-input";
+import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
+import { situacaoIVA } from "@/lib/fiscal-iva";
+import SituacaoIVAPainel from "@/components/simulador/SituacaoIVA";
 
 // ─── Constantes fiscais — derivadas de fiscal-data.ts ────────────────────────
 
@@ -779,80 +783,98 @@ export default function ModoGuiadoEmpresa({
     ? Math.round(faturacaoAnual / (1 + taxaIvaEmpresa))
     : faturacaoAnual;
 
-  // Args comuns para simulação
-  const simArgs = [
-    faturacaoBase, despesasOper, custosEstrutura, salGerenteMensal,
-    distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
-    custoConstituicao, anosAmortizacao,
-    tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
-    naoDocumentadas, emPrejuizo, excecaoPrejuizo,
-    rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
-    sifideDespesas, tipoSifide, rfaiContratualValor,
-    temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
-    valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
-    localizacao,
-    sedeVirtualEfetivo, isEstrangeiro, custoRepFiscalEfetivo, aplicarIFICI,
-  ] as const;
-
-  // Simulação principal (location-aware)
-  const resultado = useMemo(
-    () =>
-      simularEmpresaGuiado(
-        faturacaoBase, despesasOper, custosEstrutura, salGerenteMensal,
-        distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
-        custoConstituicao, anosAmortizacao,
-        tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
-        naoDocumentadas, emPrejuizo, excecaoPrejuizo,
-        rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
-        sifideDespesas, tipoSifide, rfaiContratualValor,
-        temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
-        valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
-        localizacao ?? undefined,
-        sedeVirtualEfetivo || undefined, isEstrangeiro || undefined,
-        custoRepFiscalEfetivo || undefined,
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    simArgs,
+  // Simulação principal (location-aware).
+  //
+  // Eram três chamadas com 30 argumentos posicionais cada, e três
+  // `eslint-disable react-hooks/exhaustive-deps` a esconder que a lista de
+  // dependências era mantida à mão. Foi assim que o IFICI ficou por ligar: a
+  // flag estava no array `simArgs` e nunca chegava ao motor, porque a
+  // assinatura posicional não a aceitava — enquanto a interface mostrava o
+  // badge «IFICI ativo» e um passo do plano de ação a pedir o estatuto à AT.
+  //
+  // Com um objeto de opções a dependência é uma só, o `exhaustive-deps` volta
+  // a poder fazer o seu trabalho, e trocar dois booleanos deixa de passar
+  // silenciosamente pelo TypeScript.
+  const opcoesEmpresa = useMemo<OpcoesEmpresaGuiado>(
+    () => ({
+      faturacao: faturacaoBase,
+      despesasOper,
+      custosExtra: custosEstrutura,
+      salarioGerenteMensal: salGerenteMensal,
+      distribuirDividendos,
+      opcaoEnglobamento,
+      incluirConstituicao,
+      custoConstituicao,
+      anosAmortizacao,
+      tipoViatura,
+      encargosViatura,
+      despRepresentacao,
+      ajudasCusto,
+      naoDocumentadas,
+      emPrejuizo,
+      excecaoPrejuizo,
+      rfaiRegiao: rfaiRegiaoEfetiva,
+      rfaiInvest,
+      primeirosAnos,
+      sifideDespesas,
+      tipoSifide,
+      rfaiContratualValor,
+      temImovel: temImovelEmpresa,
+      vptImovel,
+      taxaIMI,
+      isencaoIMI: isencaoIMI_RFAI,
+      valorAquisicao: valorAquisicaoImovel,
+      isencaoIMT: isencaoIMT_RFAI,
+      anosAmortIMT: anosAmortizacaoIMT,
+      paramLocal: localizacao ?? undefined,
+      sedeVirtualCustoMensal: sedeVirtualEfetivo,
+      isEstrangeiro,
+      custoRepFiscal: custoRepFiscalEfetivo,
+      perfil: {
+        dependentes: 0,
+        conjunta: false,
+        regiao: "continente",
+        ifici: aplicarIFICI,
+      },
+    }),
+    [
+      faturacaoBase, despesasOper, custosEstrutura, salGerenteMensal,
+      distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
+      custoConstituicao, anosAmortizacao,
+      tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
+      naoDocumentadas, emPrejuizo, excecaoPrejuizo,
+      rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
+      sifideDespesas, tipoSifide, rfaiContratualValor,
+      temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
+      valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
+      localizacao, sedeVirtualEfetivo, isEstrangeiro, custoRepFiscalEfetivo,
+      aplicarIFICI,
+    ],
   );
 
-  // Englobamento mais favorável?
+  const resultado = useMemo(
+    () => simularEmpresaGuiadoOpcoes(opcoesEmpresa),
+    [opcoesEmpresa],
+  );
+
+  // Englobamento mais favorável? As duas variantes diferem só nesse par.
   const resultLib = useMemo(
     () =>
-      simularEmpresaGuiado(
-        faturacaoBase, despesasOper, custosEstrutura, salGerenteMensal,
-        true, false, incluirConstituicao,
-        custoConstituicao, anosAmortizacao,
-        tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
-        naoDocumentadas, emPrejuizo, excecaoPrejuizo,
-        rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
-        sifideDespesas, tipoSifide, rfaiContratualValor,
-        temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
-        valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
-        localizacao ?? undefined,
-        sedeVirtualEfetivo || undefined, isEstrangeiro || undefined,
-        custoRepFiscalEfetivo || undefined,
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    simArgs,
+      simularEmpresaGuiadoOpcoes({
+        ...opcoesEmpresa,
+        distribuirDividendos: true,
+        opcaoEnglobamento: false,
+      }),
+    [opcoesEmpresa],
   );
   const resultEng = useMemo(
     () =>
-      simularEmpresaGuiado(
-        faturacaoBase, despesasOper, custosEstrutura, salGerenteMensal,
-        true, true, incluirConstituicao,
-        custoConstituicao, anosAmortizacao,
-        tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
-        naoDocumentadas, emPrejuizo, excecaoPrejuizo,
-        rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
-        sifideDespesas, tipoSifide, rfaiContratualValor,
-        temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
-        valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
-        localizacao ?? undefined,
-        sedeVirtualEfetivo || undefined, isEstrangeiro || undefined,
-        custoRepFiscalEfetivo || undefined,
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    simArgs,
+      simularEmpresaGuiadoOpcoes({
+        ...opcoesEmpresa,
+        distribuirDividendos: true,
+        opcaoEnglobamento: true,
+      }),
+    [opcoesEmpresa],
   );
   const englobamentoMelhor =
     resultEng.liquidoGerente > resultLib.liquidoGerente;
@@ -2387,6 +2409,25 @@ export default function ModoGuiadoEmpresa({
                     {faturacaoComIva && faturacaoAnual > 0 && ` (${fmt(faturacaoAnual)} com IVA)`}.
                   </p>
 
+                  {/* ── Situação de IVA ──────────────────────────────────
+                      O simulador de empresa não tinha secção nenhuma de IVA,
+                      apesar de uma sociedade lidar com ele todos os meses ou
+                      trimestres. O motor sabe a regra do Art. 41.º: a
+                      periodicidade da declaração depende do volume de
+                      negócios do ano anterior. Aqui é informativo — o regime
+                      de uma sociedade não é uma escolha do simulador. */}
+                  <SituacaoIVAPainel
+                    className="mb-6"
+                    situacao={situacaoIVA({
+                      faturacaoAnual: faturacaoBase,
+                      regiao: regiaoIva,
+                      regimeEscolhido: "normal",
+                      entidade: "sociedade",
+                    })}
+                    regiao={regiaoIva}
+                    regimeEscolhido="normal"
+                  />
+
                   {/* Breakdown cascata */}
                   <div className="space-y-1.5">
                     {[
@@ -2479,7 +2520,7 @@ export default function ModoGuiadoEmpresa({
                           {cenarioFeedback.texto}{" "}
                           {cenarioFeedback.tipo === "ok"
                             ? <Link href="/dashboard/cenarios" className="font-semibold underline underline-offset-2">Ver cenários</Link>
-                            : <Link href="/dashboard/upgrade" className="font-semibold underline underline-offset-2">Ver o plano Pro</Link>}
+                            : <Link href="/dashboard/upgrade" className="font-semibold underline underline-offset-2">Ver o plano Plus</Link>}
                         </span>
                       </div>
                     )}
@@ -2555,6 +2596,26 @@ export default function ModoGuiadoEmpresa({
                       </div>
                     ))}
                   </div>
+
+                  {/* Ponto 12.3 da arquitetura. Fica ANTES do plano de ação e
+                      do mapa de regiões: a constituição e a contabilidade da
+                      sociedade são o passo executável imediato. Nada aparece
+                      com a integração desligada. */}
+                  <FizPlanoAcao
+                    className="mb-6"
+                    simulador="simulador-empresa"
+                    valores={{
+                      entityType: "COMPANY",
+                      period: "ANNUAL",
+                      grossEstimate: Math.round(faturacaoBase),
+                      irsEstimate: Math.round(resultado.irsSalarioGerente + resultado.irsDividendos),
+                    }}
+                    passosPreparacao={[
+                      "Estrutura simulada: salário do gerente, dividendos e custos.",
+                      "IRC, derrama e tributações autónomas estimados.",
+                      "Carga fiscal efetiva calculada para o ano.",
+                    ]}
+                  />
 
                   {/* ── Plano de ação ─────────────────────────────────────── */}
                   <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
@@ -2821,7 +2882,7 @@ export default function ModoGuiadoEmpresa({
   );
 }
 
-// ─── Painel de resumo ao vivo ────────────────────────────────────────────────
+// ─── Painel de resumo em direto ────────────────────────────────────────────────
 
 function PainelResumoEmpresa({
   resultado,

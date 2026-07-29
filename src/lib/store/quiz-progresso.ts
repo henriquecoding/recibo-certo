@@ -120,7 +120,7 @@ export function useQuizProgresso(): QuizProgressoReturn {
   const { user } = useAuth();
   const { plano } = useSubscricao();
   const naNuvem = !!user && supabaseConfigurado();
-  const isPro = plano === "pro";
+  const isPro = plano === "plus";
 
   const [xp, setXp] = useState(0);
   const [streakRecord, setStreakRecord] = useState(0);
@@ -182,11 +182,12 @@ export function useQuizProgresso(): QuizProgressoReturn {
 
       // Persiste reset de energia
       if (energia !== perfil.energia_restante || resetAt !== perfil.energia_reset_at) {
-        await sb.from("quiz_profiles").update({
+        const { error: errAtualiza } = await sb.from("quiz_profiles").update({
           energia_restante: energia,
           energia_reset_at: resetAt,
           atualizado_em: new Date().toISOString(),
         }).eq("id", user.id);
+        if (errAtualiza) console.error("[quiz] Energia não sincronizada:", errAtualiza.message);
       }
     }
 
@@ -250,7 +251,7 @@ export function useQuizProgresso(): QuizProgressoReturn {
       const sb = getSupabase();
 
       // Upsert quiz_profile
-      await sb.from("quiz_profiles").upsert({
+      const { error: errPerfil } = await sb.from("quiz_profiles").upsert({
         id: user.id,
         xp: novoXP,
         streak_record: novoRecord,
@@ -258,9 +259,10 @@ export function useQuizProgresso(): QuizProgressoReturn {
         energia_reset_at: energiaResetAt,
         atualizado_em: new Date().toISOString(),
       }, { onConflict: "id" });
+      if (errPerfil) console.error("[quiz] Perfil não sincronizado:", errPerfil.message);
 
       // Inserir sessão
-      await sb.from("quiz_sessions").insert({
+      const { error: errSessao } = await sb.from("quiz_sessions").insert({
         user_id: user.id,
         modo: novaSessao.modo,
         categoria: novaSessao.categoria ?? null,
@@ -271,6 +273,7 @@ export function useQuizProgresso(): QuizProgressoReturn {
         streak_maximo: novaSessao.streakMaximo,
         tempo_total_seg: novaSessao.tempoTotalSeg,
       });
+      if (errSessao) console.error("[quiz] Sessão não sincronizada:", errSessao.message);
     } else {
       // Persiste em localStorage
       const prog = lerProgressoLocal();
@@ -297,7 +300,7 @@ export function useQuizProgresso(): QuizProgressoReturn {
     if (xpGanho > 0) {
       if (naNuvem && user) {
         const sb = getSupabase();
-        await sb.from("quiz_profiles").upsert({
+        const { error: errXp } = await sb.from("quiz_profiles").upsert({
           id: user.id,
           xp: novoXP,
           streak_record: streakRecord,
@@ -305,6 +308,7 @@ export function useQuizProgresso(): QuizProgressoReturn {
           energia_reset_at: energiaResetAt,
           atualizado_em: new Date().toISOString(),
         }, { onConflict: "id" });
+        if (errXp) console.error("[quiz] XP não sincronizado:", errXp.message);
       } else {
         const prog = lerProgressoLocal();
         gravarProgressoLocal({ ...prog, xp: novoXP });

@@ -17,6 +17,7 @@ import InfoTip from "@/components/ui/InfoTip";
 import Badge from "@/components/ui/Badge";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
 import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
+import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
 
 // Limiar abaixo do qual a dedução específica cobre automaticamente a regra dos 15%.
 // = DEDUCAO_ESPECIFICA_CATB / 0,15 (Art. 31.º CIRS). Para 2026 = 4 587,09 / 0,15 ≈ 30 580 €.
@@ -29,7 +30,13 @@ const ANOS = [
   { valor: 3, label: "3.º ano +" },
 ];
 
-export function CalculadoraRegimeSimplificado() {
+/**
+ * `comPlanoFiz` é opt-in por superfície: nas páginas de ferramenta a
+ * continuação faz sentido logo a seguir ao resultado; dentro de um guia o
+ * passo seguinte já é dado pelo `FizNextStep` do próprio guia, e ter os dois
+ * seria repetir o mesmo convite duas vezes na mesma página.
+ */
+export function CalculadoraRegimeSimplificado({ comPlanoFiz = false }: { comPlanoFiz?: boolean } = {}) {
   const [atividade, setAtividade] = useState<(typeof ATIVIDADES)[0] | null>(null);
   const [bruto, setBruto] = useState(24000);
   const [anoAtiv, setAnoAtiv] = useState(3);
@@ -164,6 +171,24 @@ export function CalculadoraRegimeSimplificado() {
               Para coeficientes 0,75 e 0,35, é obrigatório justificar 15% da faturação em despesas de atividade.
               {bruto <= LIMIAR_REGRA15 && ` Para faturação até ${fmt(LIMIAR_REGRA15)} €, a dedução automática de ${fmt(DEDUCAO_ESPECIFICA)} € cobre este requisito.`}
             </div>
+          )}
+
+          {comPlanoFiz && atividade && (
+            <FizPlanoAcao
+              className="mt-4"
+              simulador="regime-simplificado"
+              valores={{
+                entityType: "INDIVIDUAL",
+                activityCategory: atividade.label,
+                period: "ANNUAL",
+                grossEstimate: Math.round(bruto),
+                irsEstimate: Math.round(resultado.irsEstimado),
+              }}
+              passosPreparacao={[
+                "Coeficiente da atividade determinado e reduções por ano aplicadas.",
+                "Rendimento tributável e IRS estimado calculados.",
+              ]}
+            />
           )}
         </m.div>
       ) : (

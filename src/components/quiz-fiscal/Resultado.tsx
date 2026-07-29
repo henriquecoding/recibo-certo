@@ -20,10 +20,17 @@ interface ResultadoProps {
   levelUp?: boolean;
   nivelNovo?: { nivel: number; titulo: string };
   cupaoGanho?: CupaoQuiz | null;
+  /**
+   * Reinício da sessão. Vem de fora porque tem de consumir energia — usar
+   * `quiz.jogarNovamente` diretamente permitia sessões ilimitadas sem
+   * gastar nada (basta nunca voltar ao menu).
+   */
+  onJogarNovamente?: () => void;
 }
 
-export default function Resultado({ quiz, xpGanho = 0, levelUp = false, nivelNovo, cupaoGanho }: ResultadoProps) {
+export default function Resultado({ quiz, xpGanho = 0, levelUp = false, nivelNovo, cupaoGanho, onJogarNovamente }: ResultadoProps) {
   const { resultado, sessao, jogarNovamente, reiniciar } = quiz;
+  const repetir = onJogarNovamente ?? jogarNovamente;
   if (!resultado) return null;
 
   const { acertos, totalPerguntas, percentagem, porCategoria, classificacao, respostas, modo } = resultado;
@@ -128,7 +135,7 @@ export default function Resultado({ quiz, xpGanho = 0, levelUp = false, nivelNov
             </div>
             <div className="bg-amber-50 px-5 py-4 dark:bg-amber-900/20">
               <p className="text-sm text-amber-900 dark:text-amber-100">
-                Parabéns! Conquistaste um cupão de <strong>3 meses de Pro</strong> grátis.
+                Parabéns! Conquistaste um cupão de <strong>3 meses de Plus</strong> grátis.
               </p>
               <div className="mt-3 flex items-center gap-3 rounded-xl border border-amber-200 bg-white px-4 py-3 dark:border-amber-700 dark:bg-amber-900/40">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600">Código</span>
@@ -137,7 +144,7 @@ export default function Resultado({ quiz, xpGanho = 0, levelUp = false, nivelNov
                 </code>
               </div>
               <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-                Ativa o cupão na tua conta para começar os 3 meses de Pro.
+                Ativa o cupão na tua conta para começar os 3 meses de Plus.
               </p>
             </div>
           </div>
@@ -239,7 +246,7 @@ export default function Resultado({ quiz, xpGanho = 0, levelUp = false, nivelNov
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
-            onClick={jogarNovamente}
+            onClick={repetir}
             className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-quiz-forest px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-quiz-forest-deep active:scale-[0.98] dark:bg-quiz-olive dark:hover:bg-quiz-sage-dark"
           >
             <Rocket size={16} />

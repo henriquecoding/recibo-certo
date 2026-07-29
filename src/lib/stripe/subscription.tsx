@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { useAuth } from "@/lib/supabase/auth";
 import { supabaseConfigurado } from "@/lib/supabase/config";
+import { planoTem, type Entitlement, type Plano } from "@/lib/entitlements";
 
 // Cliente Supabase sob procura — mantém o SDK fora do bundle inicial (ver auth.tsx).
 async function sb() {
@@ -13,10 +14,15 @@ async function sb() {
 type StatusSubscricao = "active" | "trialing" | "past_due" | "canceled" | "incomplete" | null;
 
 interface SubscricaoContexto {
-  plano: "free" | "pro";
+  /** "plus" substituiu "pro": o Plus unifica o antigo Pro e o Quiz Master. */
+  plano: Plano;
   status: StatusSubscricao;
   intervalo: "monthly" | "annual" | null;
   carregado: boolean;
+  /** Verificar SEMPRE a permissão, nunca o nome do plano (ponto 11.5).
+      Enquanto o estado carrega, `pode` devolve false — os gates tratam o
+      carregamento em separado para não piscar conteúdo bloqueado. */
+  pode: (permissao: Entitlement) => boolean;
   abrirCheckout: (intervalo?: "monthly" | "annual") => Promise<void>;
   abrirPortal: () => Promise<void>;
 }
@@ -69,7 +75,9 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
     return () => { ativo = false; };
   }, [user, authCarregado]);
 
-  const plano = status === "active" || status === "trialing" || status === "past_due" ? "pro" : "free";
+  const plano: Plano = status === "active" || status === "trialing" || status === "past_due" ? "plus" : "free";
+
+  const pode = useCallback((permissao: Entitlement) => planoTem(plano, permissao), [plano]);
 
   const abrirCheckout = useCallback(async (int: "monthly" | "annual" = "annual") => {
     const token = await obterToken();
@@ -105,7 +113,7 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <Ctx.Provider value={{ plano, status, intervalo, carregado, abrirCheckout, abrirPortal }}>
+    <Ctx.Provider value={{ plano, status, intervalo, carregado, pode, abrirCheckout, abrirPortal }}>
       {children}
     </Ctx.Provider>
   );

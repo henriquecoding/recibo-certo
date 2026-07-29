@@ -1,30 +1,10 @@
 import type { Metadata } from "next";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import Link from "next/link";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import { ArrowRight, Check } from "@/components/ui/Icons";
 
-export const metadata: Metadata = {
-  title: "Reembolso de IRS 2026 — prazos e como acelerar",
-  description:
-    "Quando recebes o reembolso de IRS, o que o atrasa e como aumentar a probabilidade de o receber depressa. Guia prático para Portugal, 2026.",
-  keywords: ["reembolso IRS", "quando recebo o IRS", "IRS automático", "prazo reembolso IRS"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/reembolso-irs" },
-  openGraph: {
-    title: "Reembolso de IRS: prazos e como acelerar | ReciboCerto",
-    description: "O que define a rapidez do reembolso e o que podes fazer para o receber mais cedo.",
-    url: "https://www.recibocerto.pt/guias/reembolso-irs",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "Portal das Finanças — IRS", url: "https://www.portaldasfinancas.gov.pt", tipo: "oficial" as const },
-  { titulo: "CIRS — Art. 97.º (pagamento e reembolso)", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs97.aspx", tipo: "oficial" as const },
-];
+export const metadata: Metadata = metadataDoGuia("reembolso-irs");
 
 const ACELERAR = [
   "Entrega cedo, logo no início do período (1 de abril a 30 de junho)",
@@ -36,13 +16,7 @@ const ACELERAR = [
 
 export default function ReembolsoIrsPage() {
   return (
-    <>
-      <GuiaHero
-        titulo="Reembolso de IRS: prazos e como acelerar"
-        descricao="Pagaste IRS a mais durante o ano (retenções e pagamentos por conta)? O acerto devolve-te a diferença. Eis quando chega e como evitar atrasos."
-        tempoLeitura={4}
-        badge="IRS anual"
-      />
+    <GuiaLayout slug="reembolso-irs">
 
       <section className="mb-10">
         <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 mb-4">
@@ -92,8 +66,6 @@ export default function ReembolsoIrsPage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

@@ -91,7 +91,7 @@ export default function CookiesPage() {
             linhas={[
               [
                 "Cookies de autenticação",
-                "Sim (apenas Pro)",
+                "Sim (apenas Plus)",
                 "Cookie de sessão seguro para manter login — eliminado ao sair",
               ],
               [
@@ -205,9 +205,9 @@ export default function CookiesPage() {
       </Section>
 
       {/* 5 */}
-      <Section id="cookies-essenciais" title="Cookies essenciais (plano Pro)">
+      <Section id="cookies-essenciais" title="Cookies essenciais (plano Plus)">
         <p>
-          Quando o plano Pro for lançado, utilizaremos um número mínimo de cookies
+          Quando o plano Plus for lançado, utilizaremos um número mínimo de cookies
           estritamente necessários para a autenticação:
         </p>
         <Tabela
@@ -216,7 +216,7 @@ export default function CookiesPage() {
             [
               "sb-auth-token",
               "Sessão (eliminado ao sair)",
-              "Token de autenticação Supabase — necessário para manter sessão Pro",
+              "Token de autenticação Supabase — necessário para manter sessão Plus",
             ],
             [
               "sb-refresh-token",
@@ -266,7 +266,7 @@ export default function CookiesPage() {
           <Lista
             items={[
               "Plano gratuito: funciona completamente sem cookies (usamos localStorage, não cookies)",
-              "Plano Pro: o login ficará indisponível sem cookies de autenticação",
+              "Plano Plus: o login ficará indisponível sem cookies de autenticação",
             ]}
           />
         </Sub>

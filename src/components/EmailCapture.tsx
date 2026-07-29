@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { m } from "motion/react";
-import { Check, ArrowRight, BellAlert, ShieldCheck, Export } from "@/components/ui/Icons";
+import { ArrowRight, Calendar, Check, Export, ShieldCheck } from "@/components/ui/Icons";
 import { fadeUp, staggerContainer, staggerItem, inViewOnce } from "@/lib/motion";
 
 const beneficios = [
-  { icon: BellAlert, texto: "Alertas de prazos antes de cada entrega fiscal" },
+  { icon: Calendar, texto: "Calendário com todas as datas de entrega fiscal" },
   { icon: ShieldCheck, texto: "Histórico seguro na nuvem, acessível em qualquer dispositivo" },
   { icon: Export, texto: "Exportação direta para o teu contabilista" },
 ];
@@ -40,7 +40,7 @@ export default function EmailCapture({ fonte = "landing" }: { fonte?: string }) 
           variants={fadeUp}
           className="mb-3 text-sm font-semibold uppercase tracking-[0.15em] text-green-200"
         >
-          Plano Pro
+          Plano Plus
         </m.div>
 
         {/* Heading */}
@@ -56,7 +56,7 @@ export default function EmailCapture({ fonte = "landing" }: { fonte?: string }) 
           variants={fadeUp}
           className="mb-8 text-sm leading-relaxed text-green-100"
         >
-          Com o Pro tens alertas automáticos antes de cada entrega, histórico na
+          Com o Plus tens o teu histórico na
           nuvem e exportação para contabilista — tudo o que precisas para nunca
           falhares um prazo.
         </m.p>
@@ -92,7 +92,7 @@ export default function EmailCapture({ fonte = "landing" }: { fonte?: string }) 
               whileTap={{ scale: 0.97 }}
               className="btn-shine inline-flex items-center gap-2 rounded-xl bg-white px-8 py-3.5 text-sm font-semibold text-brand-dark shadow-lift transition-colors hover:bg-green-50"
             >
-              Subscrever o Pro
+              Subscrever o Plus
               <ArrowRight size={14} />
             </m.span>
           </Link>

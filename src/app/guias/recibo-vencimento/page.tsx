@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import Link from "next/link";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import InfoTip from "@/components/ui/InfoTip";
 import {
   SS_DEPENDENTE,
@@ -13,27 +12,7 @@ import {
 import { fmt, pct } from "@/lib/format";
 import { ArrowRight } from "@/components/ui/Icons";
 
-export const metadata: Metadata = {
-  title: "Como ler o recibo de vencimento 2026 | ReciboCerto",
-  description: "Guia completo para perceber o teu recibo de vencimento: salário bruto, descontos de IRS e Segurança Social, subsídio de refeição e líquido a receber.",
-  keywords: ["recibo de vencimento", "perceber recibo de vencimento", "descontos salário 2026", "IRS trabalho dependente"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/recibo-vencimento" },
-  openGraph: {
-    title: "Como ler o recibo de vencimento 2026 | ReciboCerto",
-    description: "Percebe cada linha do teu recibo: bruto, SS, IRS e líquido.",
-    url: "https://www.recibocerto.pt/guias/recibo-vencimento",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "Despacho n.º 233-A/2026 — Tabelas de retenção na fonte IRS 2026", url: "https://www.montepio.org/ei/pessoal/impostos/tabelas-do-irs-conheca-as-taxas-de-retencao-na-fonte/", tipo: "oficial" as const },
-  { titulo: "Art. 25.º CIRS — Dedução específica do trabalho dependente", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs25.aspx", tipo: "oficial" as const },
-  { titulo: "Seg. Social — Taxas contributivas dos trabalhadores por conta de outrem", url: "https://www.seg-social.pt/trabalhadores-por-conta-de-outrem", tipo: "oficial" as const },
-  { titulo: "Coverflex — Subsídio de alimentação 2026", url: "https://www.coverflex.com/pt/blog/subsidio-de-alimentacao", tipo: "referencia" as const },
-];
+export const metadata: Metadata = metadataDoGuia("recibo-vencimento");
 
 const LINHAS = [
   {
@@ -65,13 +44,7 @@ const LINHAS = [
 
 export default function ReciboVencimentoPage() {
   return (
-    <>
-      <GuiaHero
-        eyebrow="Guia · Conta de outrem"
-        titulo="Como ler o teu recibo de vencimento"
-        descricao="Cada linha do recibo tem um significado. Percebe de onde vem cada desconto e quanto realmente é teu."
-        tempoLeitura={5}
-      />
+    <GuiaLayout slug="recibo-vencimento">
 
       <section className="mb-10">
         <div className="rounded-3xl border border-brand bg-brand-light dark:bg-brand/10 p-5 mb-6">
@@ -199,8 +172,6 @@ export default function ReciboVencimentoPage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

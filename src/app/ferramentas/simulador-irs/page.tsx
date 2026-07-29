@@ -4,9 +4,13 @@ import {
   Calculator, Scale, FileSign, Export, Sparkle, Check, ArrowRight,
   ChartProjection, ShieldCheck, BookOpen, Receipt, Building,
 } from "@/components/ui/Icons";
-import { generateFAQSchema } from "@/lib/seo";
-import SimuladorIRS from "@/components/simulador/SimuladorIRS";
-import DemoIRS from "@/components/simulador/DemoIRS";
+import {
+  generateFAQSchema,
+  generateHowToSchema,
+  generateSoftwareApplicationSchema,
+} from "@/lib/seo";
+import { SimuladorIRSLazy, DemoIRSLazy } from "./lazy";
+import FizFaixaDemo from "@/components/fiz/FizFaixaDemo";
 
 export const metadata: Metadata = {
   title: "Simulador de IRS 2026 — calcula o teu IRS anual passo a passo | ReciboCerto",
@@ -53,7 +57,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "O simulador é gratuito?",
-    a: "Sim, simular o teu IRS é gratuito e sem registo. Exportar a simulação em PDF/CSV e guardar cenários fazem parte do plano Pro: com sessão iniciada podes guardar 1 cenário neste dispositivo, para experimentares como funciona; sincronizar na nuvem e guardar sem limites, entre dispositivos, é uma funcionalidade Pro.",
+    a: "Sim, simular o teu IRS é gratuito e sem registo. Exportar a simulação em PDF/CSV e guardar cenários fazem parte do plano Plus: com sessão iniciada podes guardar 1 cenário neste dispositivo, para experimentares como funciona; sincronizar na nuvem e guardar sem limites, entre dispositivos, é uma funcionalidade Plus.",
   },
 ];
 
@@ -108,6 +112,14 @@ const PASSOS: { n: string; titulo: string; desc: string }[] = [
   },
 ];
 
+/** As quatro etapas do wizard, tal como aparecem na ferramenta (schema HowTo). */
+const PASSOS_WIZARD = [
+  "Indica o estado civil, os dependentes e os ascendentes a cargo. Se fores casado ou unido de facto, podes optar pela tributação conjunta e preencher os rendimentos do sujeito passivo B.",
+  "Escolhe as origens dos teus rendimentos — salário, recibos verdes, pensões, capitais, rendas, mais-valias ou estrangeiro — e preenche os valores de cada uma.",
+  "Preenche as despesas dedutíveis: saúde, educação, despesas gerais familiares, rendas, lares, PPR, donativos e pensões de alimentos. Os limites legais de cada rubrica são aplicados automaticamente.",
+  "Vê o reembolso ou o valor a pagar, a taxa efetiva e a memória de cálculo passo a passo, com os avisos e as oportunidades detetadas na tua declaração.",
+] as const;
+
 const ANEXOS = [
   { cod: "A", label: "Trabalho dependente e pensões" },
   { cod: "B", label: "Trabalho independente (recibos verdes)" },
@@ -120,16 +132,41 @@ const ANEXOS = [
 
 export default function SimuladorIRSLandingPage() {
   const faqSchema = generateFAQSchema(FAQS);
+  // A ferramenta qualifica-se como SoftwareApplication (gratuita, sem registo)
+  // e o wizard tem passos numerados — dois rich results que o `seo.ts` já sabia
+  // gerar e que esta página não reclamava. O BreadcrumbList vem do layout.
+  const appSchema = generateSoftwareApplicationSchema();
+  const howToSchema = generateHowToSchema({
+    name: "Como simular o IRS de 2026",
+    description:
+      "Passos para calcular o IRS anual em Portugal: identificar o agregado, adicionar as categorias de rendimento, preencher as deduções e ler o resultado com a memória de cálculo.",
+    url: "/ferramentas/simulador-irs",
+    totalTime: "PT5M",
+    steps: [
+      { name: "Identifica o agregado", text: PASSOS_WIZARD[0] },
+      { name: "Adiciona os rendimentos", text: PASSOS_WIZARD[1] },
+      { name: "Preenche as deduções", text: PASSOS_WIZARD[2] },
+      { name: "Revê o resultado", text: PASSOS_WIZARD[3] },
+    ],
+  });
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }} />
 
       {/* ── Hero ───────────────────────────────────────────────── */}
       <section className="mb-10 grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
         <div>
-          <div className="eyebrow mb-3 text-brand">Simulador de IRS 2026</div>
+          <div className="eyebrow mb-3 text-brand">Grátis e sem registo</div>
+          {/*
+            A query principal («simulador de IRS 2026») estava numa div de
+            eyebrow, que não é heading nenhum — o H1 tinha só a promessa
+            emocional. Agora tem as duas coisas: a âncora que se procura e a
+            promessa que faz clicar.
+          */}
           <h1 className="font-display display-2 mb-4 font-semibold text-ink text-balance">
-            O teu IRS anual, do bruto ao reembolso.
+            Simulador de IRS 2026 — do bruto ao reembolso.
           </h1>
           <p className="max-w-2xl text-lg leading-relaxed text-stone-500 dark:text-stone-400">
             Simula o IRS de todas as tuas fontes de rendimento num só lugar — com deduções, tributação
@@ -158,10 +195,17 @@ export default function SimuladorIRSLandingPage() {
             ))}
           </ul>
         </div>
-        <div className="flex justify-center lg:justify-end">
-          <DemoIRS />
+        <div className="flex flex-col items-center gap-3 lg:items-end">
+          <DemoIRSLazy />
         </div>
       </section>
+
+      {/* Fora do palco e no HTML inicial: o botão dentro do ato só existe
+          durante uma fração do ciclo e nunca aparece a quem pediu menos
+          movimento. Esta faixa é o piso — e está fora da grelha de duas
+          colunas porque o cartaz é 1,91:1 e numa coluna de 420px ficava
+          apertado. */}
+      <FizFaixaDemo superficie="demo.irs.faixa" className="mb-14" />
 
       {/* ── Simulador real (o mesmo do painel) ─────────────────── */}
       <section id="simulador" className="mb-14 scroll-mt-24">
@@ -175,7 +219,7 @@ export default function SimuladorIRSLandingPage() {
           </div>
         </div>
         <div className="rounded-4xl border border-stone-100 bg-white/60 p-3 shadow-card dark:border-stone-800 dark:bg-stone-900/40 sm:p-5">
-          <SimuladorIRS semCabecalho />
+          <SimuladorIRSLazy />
         </div>
       </section>
 

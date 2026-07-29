@@ -10,7 +10,7 @@ export default function Page() {
       descricao="Pesquisa a tua profissão e descobre a retenção na fonte, o coeficiente e a base de Segurança Social aplicável."
     >
       <Suspense>
-        <ComparadorCAE />
+        <ComparadorCAE comPlanoFiz />
       </Suspense>
     </PaginaFerramenta>
   );

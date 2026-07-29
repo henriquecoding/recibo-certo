@@ -1,8 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import { CalculadoraRegimeSimplificado } from "@/components/guias/CalculadoraRegimeSimplificado";
 import { ComparadorCAE } from "@/components/guias/ComparadorCAE";
 import InfoTip from "@/components/ui/InfoTip";
@@ -15,26 +14,7 @@ import {
 } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 
-export const metadata: Metadata = {
-  title: "Regime simplificado e coeficientes IRS 2026",
-  description: "Percebe como funcionam os coeficientes do regime simplificado e quanto pagas realmente em IRS. Calculadora interativa com todos os coeficientes 2026.",
-  keywords: ["regime simplificado IRS 2026", "coeficientes regime simplificado", "IRS recibos verdes"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/regime-simplificado" },
-  openGraph: {
-    title: "Regime simplificado e coeficientes IRS 2026 | ReciboCerto",
-    description: "Como funcionam os coeficientes e quanto pagas realmente em IRS no regime simplificado.",
-    url: "https://www.recibocerto.pt/guias/regime-simplificado",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "Art. 31.º CIRS — Portal das Finanças", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs31.aspx", tipo: "oficial" as const },
-  { titulo: "OCC — Regime simplificado (coeficientes e regra dos 15%)", url: "https://www.occ.pt/pt-pt/noticias/irs-regime-simplificado-1", tipo: "referencia" as const },
-  { titulo: "PwC Guia Fiscal 2026 — IRS regime simplificado", url: "https://www.pwc.pt/pt/pwcinforfisco/guia-fiscal/2026/irs.html", tipo: "referencia" as const },
-];
+export const metadata: Metadata = metadataDoGuia("regime-simplificado");
 
 const COEFICIENTES = [
   { tipo: "Art. 151.º (médico, advogado, engenheiro…)", coef: COEFICIENTE_POR_TIPO.art151, retencao: RETENCAO.art151.value, base: "Art. 31.º, n.º 1, al. b) CIRS" },
@@ -45,12 +25,7 @@ const COEFICIENTES = [
 
 export default function RegimeSimplificadoPage() {
   return (
-    <>
-      <GuiaHero
-        titulo="Regime simplificado e coeficientes: o que realmente pagas em IRS"
-        descricao="Não pagas IRS sobre toda a tua faturação. O regime simplificado aplica um coeficiente que determina qual a parte tributável."
-        tempoLeitura={6}
-      />
+    <GuiaLayout slug="regime-simplificado">
 
       <section className="mb-6">
         <div className="rounded-3xl border border-brand bg-brand-light dark:bg-brand/10 p-5 mb-8">
@@ -154,8 +129,6 @@ export default function RegimeSimplificadoPage() {
       <Suspense>
         <ComparadorCAE />
       </Suspense>
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

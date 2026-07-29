@@ -4,7 +4,7 @@
 // #explorar — launchpad ÚNICO da homepage, moldado ao perfil. Funde num só sítio
 // (compacto, mobile-first) o que antes eram quatro secções altas (Features +
 // Ferramentas + Simulador de IRS + Aprender). Por perfil mostra SÓ o essencial:
-//   · um DESTAQUE — a demo do IRS ao vivo onde o IRS anual é protagonista
+//   · um DESTAQUE — a demo do IRS em direto onde o IRS anual é protagonista
 //     (independente/comparar), ou o cartão da ferramenta-chave (dependente/empresa);
 //   · uma fila compacta de ferramentas relevantes;
 //   · uma fila compacta de guias + o Quiz.
@@ -32,7 +32,9 @@ function DemoSkeleton() {
   return (
     <div
       className="w-full max-w-md animate-pulse rounded-4xl border border-stone-100 bg-white p-6 shadow-card dark:border-stone-800 dark:bg-stone-900"
-      style={{ minHeight: 520 }}
+      // Altura medida da DemoIRS já montada (473px a 1280, 484px a 360). O
+      // esqueleto tem de a igualar, senão a página salta quando o chunk chega.
+      style={{ minHeight: 478 }}
       aria-hidden
     >
       <div className="h-6 w-32 rounded-full bg-stone-100 dark:bg-stone-800" />
@@ -48,7 +50,7 @@ const DemoIRS = dynamic(() => import("@/components/simulador/DemoIRS"), {
   loading: () => <DemoSkeleton />,
 });
 
-// Perfis onde o IRS anual é a maior ansiedade → merece a demo ao vivo.
+// Perfis onde o IRS anual é a maior ansiedade → merece a demo em direto.
 const PERFIL_COM_DEMO_IRS: Perfil[] = ["independente", "comparar"];
 
 const COPY: Record<Perfil, { eyebrow: string; h2: string }> = {
@@ -160,7 +162,7 @@ function DestaqueCartao({ f, chip }: { f: FerramentaMeta; chip: string }) {
   );
 }
 
-// ── Destaque com a DemoIRS ao vivo (independente/comparar) ───────────────────
+// ── Destaque com a DemoIRS em direto (independente/comparar) ───────────────────
 function DestaqueDemo({ perfil, perto }: { perfil: Perfil; perto: boolean }) {
   return (
     <div className="grid items-center gap-8 rounded-4xl border border-brand/20 bg-white p-6 shadow-card dark:border-brand/15 dark:bg-stone-900 sm:p-7 lg:grid-cols-2">
@@ -270,7 +272,7 @@ export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) 
             exit: { opacity: 0, y: -8, transition: { duration: 0.2, ease: EASE } },
           }}
         >
-          {/* Destaque: demo ao vivo onde o IRS é protagonista, senão cartão-chave */}
+          {/* Destaque: demo em direto onde o IRS é protagonista, senão cartão-chave */}
           <m.div variants={entrada}>
             {comDemo ? (
               <DestaqueDemo perfil={perfil} perto={perto} />

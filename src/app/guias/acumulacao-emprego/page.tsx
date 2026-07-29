@@ -1,45 +1,19 @@
 import type { Metadata } from "next";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import InfoTip from "@/components/ui/InfoTip";
 import { Check } from "@/components/ui/Icons";
 import { IAS_VALUE, DISPENSA_RETENCAO_LIMITE, RETENCAO } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import Badge from "@/components/ui/Badge";
 
-export const metadata: Metadata = {
-  title: "Recibos verdes e emprego ao mesmo tempo 2026",
-  description: "Guia completo para quem acumula trabalho dependente com recibos verdes. IRS, Segurança Social, retenção na fonte e caso do cliente único.",
-  keywords: ["recibos verdes e emprego ao mesmo tempo", "acumular trabalho dependente recibos verdes", "IRS acumulação"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/acumulacao-emprego" },
-  openGraph: {
-    title: "Recibos verdes e emprego ao mesmo tempo 2026 | ReciboCerto",
-    description: "IRS, SS e retenção quando tens salário e passas recibos verdes.",
-    url: "https://www.recibocerto.pt/guias/acumulacao-emprego",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "SimuladorNeto — Acumular trabalho dependente e recibos verdes 2026", url: "https://simuladorneto.pt/blog/acumular-trabalho-dependente-recibos-verdes-2026", tipo: "referencia" as const },
-  { titulo: "Doutor Finanças — Acúmulo trabalho por conta de outrem e recibos verdes", url: "https://www.doutorfinancas.pt/impostos/irs/acumulo-trabalho-por-conta-de-outrem-e-recibos-verdes-como-preencher-o-irs/", tipo: "referencia" as const },
-  { titulo: "CGD — Trabalhador dependente acumula recibos verdes", url: "https://www.cgd.pt/Site/Saldo-Positivo/leis-e-impostos/Pages/trabalhador-dependente-acumula-recibos-verdes.aspx", tipo: "referencia" as const },
-  { titulo: "Numericas — Acumular trabalho dependente e independente", url: "https://numericas.pt/acumular-trabalho-dependente-e-recibos-verdes/", tipo: "referencia" as const },
-];
+export const metadata: Metadata = metadataDoGuia("acumulacao-emprego");
 
 const ias = IAS_VALUE;
 
 export default function AcumulacaoEmpregoPage() {
   return (
-    <>
-      <GuiaHero
-        titulo="Tens emprego e passas recibos verdes? Guia completo"
-        descricao="Os dois rendimentos somam-se no IRS. A Segurança Social pode ficar isenta. Aqui está o que precisas de saber."
-        tempoLeitura={4}
-      />
+    <GuiaLayout slug="acumulacao-emprego">
 
       <section className="mb-10">
         <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 mb-4">
@@ -107,19 +81,91 @@ export default function AcumulacaoEmpregoPage() {
         </div>
       </section>
 
+      {/* Três conceitos separados — reestruturado na sequência da auditoria
+          de 26/07/2026. A versão anterior tinha uma única secção que tratava
+          "entidade contratante", "dependência económica" e "falso recibo
+          verde" como se fossem a mesma coisa. Não são: têm testes
+          diferentes, entidades decisoras diferentes e consequências
+          diferentes. Juntá-los levava o leitor a concluir sozinho que tinha
+          um vínculo laboral encoberto a partir de uma percentagem. */}
       <section className="mb-10">
-        <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 mb-4">
-          Caso especial: recibos verdes a um único cliente
+        <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 mb-2">
+          Concentrar faturação num só cliente: três coisas diferentes
         </h2>
-        <div className="rounded-2xl border border-clay-text/30 bg-clay-bg dark:bg-red-950/30 px-5 py-4">
-          <p className="text-sm text-stone-700 dark:text-stone-300">
-            Se mais de 80% da tua faturação de recibos verdes for para um único cliente, a AT pode questionar se é trabalho dependente disfarçado (Categoria A). Esta situação é sinalizada no Anexo SS da declaração de IRS e pode originar pedidos de esclarecimento.
-          </p>
+        <p className="mb-5 text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+          Quando a maior parte do que faturas vem de uma só entidade, entram em jogo três regimes
+          distintos. Confundi-los é o erro mais comum — e o mais caro.
+        </p>
+
+        <div className="space-y-3">
+          <div className="rounded-3xl border border-stone-200 bg-white p-5 dark:border-stone-700 dark:bg-stone-900">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <Badge tone="neutral">1</Badge>
+              <p className="font-semibold text-stone-800 dark:text-stone-100">Entidade contratante</p>
+              <span className="text-xs text-stone-400">Segurança Social</span>
+            </div>
+            <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+              É uma obrigação <strong>do teu cliente</strong>, não tua. A entidade é qualificada
+              como contratante quando beneficia de pelo menos <strong>50 %</strong> do valor total
+              da tua atividade como trabalhador independente. A taxa que essa entidade passa a
+              pagar à Segurança Social varia consoante a concentração se situe entre 50 % e 80 % ou
+              acima de 80 %.
+              <InfoTip label="Base legal">
+                Código dos Regimes Contributivos — regime das entidades contratantes de
+                trabalhadores independentes.
+              </InfoTip>
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+              Não muda o teu enquadramento nem transforma o vínculo em contrato de trabalho: é uma
+              contribuição adicional a cargo de quem te contrata.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-stone-200 bg-white p-5 dark:border-stone-700 dark:bg-stone-900">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <Badge tone="neutral">2</Badge>
+              <p className="font-semibold text-stone-800 dark:text-stone-100">Dependência económica</p>
+              <span className="text-xs text-stone-400">Proteção social</span>
+            </div>
+            <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+              É uma <strong>qualificação tua</strong>, e é ela que abre a porta ao subsídio por
+              cessação de atividade. Depende da concentração da tua faturação numa entidade
+              contratante, apurada por ano civil — e o direito à prestação exige ainda outras
+              condições cumulativas, incluindo o prazo de garantia.
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+              Ou seja: ser economicamente dependente é, para efeitos de proteção social, sobretudo
+              uma vantagem — não um problema.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-clay-text/30 bg-clay-bg p-5 dark:bg-red-950/30">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <Badge tone="danger">3</Badge>
+              <p className="font-semibold text-stone-800 dark:text-stone-100">
+                Contrato de trabalho encoberto
+              </p>
+              <span className="text-xs text-stone-500">Direito do trabalho</span>
+            </div>
+            <p className="text-sm leading-relaxed text-stone-700 dark:text-stone-300">
+              Aqui a pergunta é outra: existe <strong>subordinação jurídica</strong>? Avalia-se por
+              indícios previstos no Código do Trabalho — horário imposto, local determinado pela
+              entidade, instrumentos de trabalho pertencentes a ela, integração na estrutura
+              organizativa, retribuição periódica fixa. Quem decide é a Autoridade para as Condições
+              do Trabalho ou um tribunal, caso a caso.
+            </p>
+            <p className="mt-2 text-sm font-semibold leading-relaxed text-stone-800 dark:text-stone-100">
+              Uma percentagem de faturação, por si só, não prova nada.
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-stone-600 dark:text-stone-400">
+              É possível faturar 100 % a um cliente sem qualquer subordinação, e é possível haver
+              subordinação com vários clientes. Se suspeitas que o teu caso é este, fala com um
+              advogado ou com a ACT — não tires a conclusão a partir de um número.
+            </p>
+          </div>
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

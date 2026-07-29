@@ -65,7 +65,7 @@ function gravar(prefs: PreferenciasFiscais): void {
 export function usePreferenciasFiscais() {
   const { user } = useAuth();
   const { plano } = useSubscricao();
-  const naNuvem = supabaseConfigurado() && !!user && plano === "pro";
+  const naNuvem = supabaseConfigurado() && !!user && plano === "plus";
   const [prefs, setPrefs] = useState<PreferenciasFiscais>(DEFAULTS);
   const [carregado, setCarregado] = useState(false);
   const carregouNuvem = useRef(false);

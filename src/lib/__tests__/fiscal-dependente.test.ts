@@ -146,11 +146,27 @@ describe("mealheiroDependente", () => {
     expect(DEDUCAO_ESPECIFICA_DEPENDENTE.value).toBeCloseTo(8.54 * IAS.value, 2);
   });
 
-  it("rendimentos variáveis aumentam o IRS apurado e o acerto", () => {
+  it("rendimentos variáveis aumentam o IRS apurado e a retenção", () => {
     const sem = mealheiroDependente({ salarioBruto: 2000 });
     const com = mealheiroDependente({ salarioBruto: 2000, variavelAnual: 6000 });
     expect(com.irsApurado).toBeGreaterThan(sem.irsApurado);
-    expect(com.acerto).toBeGreaterThan(sem.acerto);
+    expect(com.irsRetido).toBeGreaterThan(sem.irsRetido);
+  });
+
+  it("o variável é retido pela linha da tabela, não pela taxa efetiva do salário base", () => {
+    // O modelo anterior retinha o variável à taxa efetiva do salário BASE, o
+    // que subestimava a retenção e sobrestimava o acerto — mandava reservar
+    // dinheiro que não era devido. Na prática o variável soma-se à
+    // remuneração do mês e é retido pela linha correspondente da tabela, que
+    // é mais alta. A retenção sobre o variável tem, por isso, de exceder a
+    // taxa efetiva do salário base.
+    const base = 2000;
+    const variavel = 6000;
+    const sem = mealheiroDependente({ salarioBruto: base });
+    const com = mealheiroDependente({ salarioBruto: base, variavelAnual: variavel });
+    const retencaoDoVariavel = com.irsRetido - sem.irsRetido;
+    const taxaEfetivaBase = sem.irsRetido / (base * 14);
+    expect(retencaoDoVariavel).toBeGreaterThan(variavel * taxaEfetivaBase);
   });
 
   it("a reserva mensal é o acerto / 12 quando há acerto a pagar", () => {

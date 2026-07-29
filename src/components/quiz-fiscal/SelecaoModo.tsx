@@ -66,7 +66,14 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
   const { config, updateConfig } = useQuizConfig();
   const [modo, setModo] = useState<QuizModo | null>(null);
   const [tipoQuiz, setTipoQuiz] = useState<QuizTipo>("geral");
-  const [categoria, setCategoria] = useState<QuizCategoria | "todas">("todas");
+  // As páginas estáticas por categoria (`/quiz-fiscal/[categoria]`) ligam
+  // para cá com `?categoria=`; sem isto, o utilizador chegava ao menu e tinha
+  // de escolher outra vez o tema que já tinha escolhido.
+  const [categoria, setCategoria] = useState<QuizCategoria | "todas">(() => {
+    if (typeof window === "undefined") return "todas";
+    const pedida = new URLSearchParams(window.location.search).get("categoria");
+    return pedida && pedida in META_CATEGORIA_QUIZ ? (pedida as QuizCategoria) : "todas";
+  });
   const [atividade, setAtividade] = useState<Atividade | null>(null);
   const estatisticas = getEstatisticasBanco();
   // Enquanto o banco de perguntas é descarregado (raro — já vem pré-aquecido do
@@ -79,9 +86,18 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
   const handleComecar = async () => {
     if (!modo || aPreparar) return;
     const dificuldade = DIF_NIVEL[config.dificuldade];
+    // `tempoPorPergunta` era o que faltava: o painel guardava a escolha em
+    // localStorage e ela nunca chegava ao jogo, que dava sempre 20 segundos.
+    const base = {
+      modo,
+      quantidade: config.perguntasPorSessao,
+      dificuldade,
+      tempoPorPergunta: config.tempoPorPergunta,
+      explicacoesAutomaticas: config.explicacoesAutomaticas,
+    };
     const cfg: QuizFiscalConfig = tipoQuiz === "atividade" && atividade
-      ? { modo, atividade, quantidade: config.perguntasPorSessao, dificuldade }
-      : { modo, categoria: categoria === "todas" ? undefined : categoria, quantidade: config.perguntasPorSessao, dificuldade };
+      ? { ...base, atividade }
+      : { ...base, categoria: categoria === "todas" ? undefined : categoria };
     setAPreparar(true);
     try {
       await onComecar(cfg);

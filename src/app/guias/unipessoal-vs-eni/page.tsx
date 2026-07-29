@@ -1,43 +1,17 @@
 import type { Metadata } from "next";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import Link from "next/link";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import InfoTip from "@/components/ui/InfoTip";
 import { fmt, pct } from "@/lib/format";
 import { IRC_TAXA_PME, IRC_LIMITE_PME } from "@/lib/fiscal-data";
 import { ArrowRight } from "@/components/ui/Icons";
 
-export const metadata: Metadata = {
-  title: "Empresa (unipessoal) vs. recibos verdes (ENI) 2026",
-  description:
-    "Sociedade unipessoal por quotas ou empresário em nome individual (recibos verdes)? Diferenças de IRS/IRC, responsabilidade e custos — guia de decisão 2026.",
-  keywords: ["unipessoal por quotas", "ENI", "empresário em nome individual", "abrir empresa", "IRC vs IRS"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/unipessoal-vs-eni" },
-  openGraph: {
-    title: "Empresa (unipessoal) vs. recibos verdes (ENI) | ReciboCerto",
-    description: "Responsabilidade, impostos e custos — qual a estrutura certa para a tua atividade.",
-    url: "https://www.recibocerto.pt/guias/unipessoal-vs-eni",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "Portal das Finanças — IRC", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/default.aspx", tipo: "oficial" as const },
-  { titulo: "Empresa na Hora", url: "https://eportugal.gov.pt/servicos/criar-uma-empresa-na-hora", tipo: "oficial" as const },
-];
+export const metadata: Metadata = metadataDoGuia("unipessoal-vs-eni");
 
 export default function UnipessoalVsEniPage() {
   return (
-    <>
-      <GuiaHero
-        titulo="Empresa (unipessoal) vs. recibos verdes (ENI)"
-        descricao="Crescer como empresário em nome individual ou criar uma sociedade unipessoal por quotas? A escolha afeta os impostos que pagas, a tua responsabilidade e os custos fixos."
-        tempoLeitura={7}
-        badge="Empresas"
-      />
+    <GuiaLayout slug="unipessoal-vs-eni">
 
       <section className="mb-10">
         <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 mb-4">
@@ -100,8 +74,6 @@ export default function UnipessoalVsEniPage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

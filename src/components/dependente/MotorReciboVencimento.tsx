@@ -14,7 +14,8 @@ import {
   type PayrollRubricDraft,
   type PayrollSimulatorContext,
 } from "@/lib/payroll-simulator-legacy-adapter";
-import { calcularVencimento, calcularVencimentoAnual } from "@/lib/fiscal-dependente";
+import { calcularVencimentoAnual } from "@/lib/fiscal-dependente";
+import { solveNetToGross } from "@/lib/payroll-inverse";
 import type { ReciboExtraido } from "@/lib/recibo-pdf";
 import type { EstadoCivilRet, Regiao } from "@/lib/fiscal-data";
 import { SS_DEPENDENTE, DEDUCAO_DEPENDENTE_DEFICIENCIA } from "@/lib/fiscal-data";
@@ -109,20 +110,22 @@ function SectionHeader({ step, icon, title, hint }: { step: string; icon: React.
   );
 }
 
+/**
+ * Salário-base que produz um dado líquido. Delega em
+ * `solveNetToGross` (`src/lib/payroll-inverse.ts`), que é a bissecção do
+ * motor `ReciboCerto-Fiscal-Engine` adaptada às rubricas desta superfície —
+ * tolerância configurável e casos insolúveis tratados, em vez de uma
+ * bissecção escrita dentro do componente com teto fixo.
+ *
+ * O invariante que a torna correta (o líquido é estritamente crescente no
+ * bruto) está preso em teste — ver `payroll-inverse.test.ts`.
+ */
 function solveTargetGross(target: number, makeContext: (base: number) => PayrollSimulatorContext, rubrics: readonly PayrollRubricDraft[], duodecimos: boolean): { gross: number; reached: boolean } {
-  if (target <= 0) return { gross: 0, reached: true };
-  let low = 0;
-  let high = 50_000;
-  if (calculateLegacyPayroll(makeContext(high), includeMonthlyDuodecimos(rubrics, high, duodecimos)).result.liquido < target) {
-    return { gross: high, reached: false };
-  }
-  for (let iteration = 0; iteration < 32; iteration += 1) {
-    const mid = Math.round(((low + high) / 2) * 100) / 100;
-    const net = calculateLegacyPayroll(makeContext(mid), includeMonthlyDuodecimos(rubrics, mid, duodecimos)).result.liquido;
-    if (net >= target) high = mid;
-    else low = mid + 0.01;
-  }
-  return { gross: Math.round(high * 100) / 100, reached: true };
+  return solveNetToGross({
+    target,
+    liquidoDe: (base) =>
+      calculateLegacyPayroll(makeContext(base), includeMonthlyDuodecimos(rubrics, base, duodecimos)).result.liquido,
+  });
 }
 
 interface SavedSnapshotV2 extends Record<string, unknown> {
@@ -466,17 +469,12 @@ export function MotorReciboVencimento() {
 
   async function exportPdf() {
     if (!exportAccess.tentarExportar("vencimento")) return;
-    const basic = calcularVencimento({
-      salarioBruto: baseSalary,
-      dependentes: dependants,
-      subsidioRefeicaoDia: mealEnabled ? parseNumber(mealDaily) : 0,
-      subsidioRefeicaoCartao: mealCard,
-      diasUteis: parseNumber(mealDays),
-      estadoCivil: maritalStatus,
-      deficiencia: disability,
-      regiao: region,
-      irsJovemAno: youthIrs ? youthYear : undefined,
-    });
+    // As três linhas do IRS Jovem vêm do MESMO cálculo que o resto do
+    // relatório (`calculation.result`), e não de um recibo simplificado só
+    // com o salário base. Num recibo com horas extra, prémios ou subsídios, a
+    // linha «poupança do IRS Jovem» deixava de corresponder ao documento onde
+    // estava impressa — e o PDF é justamente o que a pessoa leva aos recursos
+    // humanos.
     const { printRelatorioVencimento } = await import("@/lib/export-vencimento");
     printRelatorioVencimento({
       situacao: FAMILY_OPTIONS.find(([value]) => value === maritalStatus)?.[1] ?? "—",
@@ -500,10 +498,10 @@ export function MotorReciboVencimento() {
       taxaEfetiva: calculation.result.taxaEfetiva,
       custoEmpresa: companyCost,
       irsJovemAtivo: youthIrs,
-      irsJovemPct: basic.isencaoJovemPct,
+      irsJovemPct: calculation.result.isencaoJovemPct,
       irsJovemAno: youthYear,
-      rendimentoIsentoJovem: basic.rendimentoIsentoJovem,
-      irsSemJovem: basic.irsSemJovem,
+      rendimentoIsentoJovem: calculation.result.rendimentoIsentoJovem,
+      irsSemJovem: calculation.result.irsSemJovem,
       ssTaxaTrab: SS_DEPENDENTE.trabalhador.value,
       tsuTaxa: SS_DEPENDENTE.entidade.value,
       brutoAnual: annual.brutoAnual,

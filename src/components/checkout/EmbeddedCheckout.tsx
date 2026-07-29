@@ -177,7 +177,7 @@ export default function EmbeddedCheckout({ onSucesso }: EmbeddedCheckoutProps) {
     return (
       <div className="rounded-3xl border border-brand/20 bg-brand-light p-6 text-center dark:bg-brand/10">
         <p className="text-sm font-semibold text-brand-dark dark:text-brand-mint">
-          Pagamento confirmado! Bem-vindo ao Pro.
+          Pagamento confirmado! Bem-vindo ao Plus.
         </p>
         <p className="mt-1 text-xs text-stone-500">
           A actualizar o teu acesso…

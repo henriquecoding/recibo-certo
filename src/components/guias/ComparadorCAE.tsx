@@ -17,6 +17,7 @@ import InfoTip from "@/components/ui/InfoTip";
 import Badge from "@/components/ui/Badge";
 import { Check, ArrowRight } from "@/components/ui/Icons";
 import type { Atividade } from "@/lib/fiscal-data";
+import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
 import Link from "next/link";
 
 const TIPO_BADGE: Record<string, { label: string; tone: "brand" | "neutral" | "alert" | "danger" }> = {
@@ -59,7 +60,12 @@ const COMPARACAO_LINHAS = [
   { label: "Base Segurança Social", campo: "baseSS" as const },
 ];
 
-export function ComparadorCAE() {
+/**
+ * `comPlanoFiz`: ver a nota em `CalculadoraRegimeSimplificado`. Nas páginas
+ * de ferramenta o passo seguinte é abrir atividade com esta classificação;
+ * dentro de um guia esse convite já existe uma vez.
+ */
+export function ComparadorCAE({ comPlanoFiz = false }: { comPlanoFiz?: boolean } = {}) {
   const searchParams = useSearchParams();
   const [atividade, setAtividade] = useState<Atividade | null>(null);
 
@@ -182,6 +188,16 @@ export function ComparadorCAE() {
               <ArrowRight size={14} />
             </Link>
           </div>
+
+          {comPlanoFiz && (
+            <FizPlanoAcao
+              simulador="classificar-atividade"
+              valores={{ entityType: "INDIVIDUAL", activityCategory: atividade.label }}
+              passosPreparacao={[
+                "Atividade classificada, com retenção e coeficiente identificados.",
+              ]}
+            />
+          )}
         </m.div>
       ) : (
         <div className="rounded-2xl border border-dashed border-stone-200 dark:border-stone-700 p-8 text-center">

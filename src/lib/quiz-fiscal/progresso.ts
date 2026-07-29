@@ -22,6 +22,8 @@ export const NIVEIS: NivelInfo[] = [
 ];
 
 export const ENERGIA_DIARIA = 5;
+/** Tempo por pergunta assumido quando a sessão não declara outro. */
+export const TIMER_PADRAO_SEGUNDOS = 20;
 const PONTOS_POR_XP = 10;
 const BONUS_CONCLUSAO = 20;
 const BONUS_PERFEITO = 50;
@@ -32,14 +34,24 @@ export function calcularPontosPergunta(params: {
   streakAntes: number;    // acertos consecutivos antes desta resposta
   modo: "normal" | "guiado";
   tempoGastoSeg: number;  // segundos gastos na pergunta
+  /**
+   * Tempo limite da pergunta, em segundos. `0` = modo livre (sem cronómetro).
+   * TEM de acompanhar o tempo escolhido no painel: com o limite cravado em
+   * 20s, passar a sessão para 60s zerava o bónus de velocidade para
+   * praticamente toda a gente, porque quase ninguém responde em menos de 20
+   * segundos quando tem 60 disponíveis.
+   */
+  tempoLimiteSeg?: number;
 }): number {
   const { dificuldade, streakAntes, modo, tempoGastoSeg } = params;
+  const limite = params.tempoLimiteSeg ?? TIMER_PADRAO_SEGUNDOS;
 
   const BASE = dificuldade === 3 ? 80 : dificuldade === 2 ? 50 : 30;
 
-  // Bónus de velocidade apenas no modo normal (timer = 20s)
-  const speedBonus = modo === "normal"
-    ? Math.max(0, Math.round((1 - Math.min(tempoGastoSeg, 20) / 20) * 20))
+  // Bónus de velocidade: proporcional ao tempo poupado FACE AO LIMITE da
+  // sessão. Sem cronómetro (modo livre) não há velocidade a premiar.
+  const speedBonus = modo === "normal" && limite > 0
+    ? Math.max(0, Math.round((1 - Math.min(tempoGastoSeg, limite) / limite) * 20))
     : 0;
 
   // Multiplicador de streak (caps em 10)
@@ -54,7 +66,19 @@ export function calcularPontosPergunta(params: {
   return Math.round((BASE + speedBonus) * mult);
 }
 
-// XP ganho na sessão completa.
+/**
+ * XP ganho na sessão completa.
+ *
+ * O bónus de conclusão era atribuído incondicionalmente: 20 XP por sessão,
+ * mesmo com ZERO acertos. Com o nível 7 a dar energia ilimitada aos 5.500
+ * XP, bastavam ~275 sessões vazias para a energia deixar de existir para
+ * sempre — sem responder corretamente a uma única pergunta.
+ *
+ * Passa a exigir que a sessão tenha valor: o bónus só entra a partir de um
+ * acerto, e é proporcional à percentagem obtida. Quem faz metade certa leva
+ * metade do bónus; quem não acerta nada leva os pontos que ganhou — que são
+ * zero — e mais nada.
+ */
 export function calcularXPSessao(params: {
   pontos: number;
   acertos: number;
@@ -62,11 +86,21 @@ export function calcularXPSessao(params: {
 }): number {
   const { pontos, acertos, total } = params;
   const base = Math.floor(pontos / PONTOS_POR_XP);
-  const perfeito = acertos === total ? BONUS_PERFEITO : 0;
-  return base + BONUS_CONCLUSAO + perfeito;
+  const proporcao = total > 0 ? acertos / total : 0;
+  const conclusao = acertos > 0 ? Math.round(BONUS_CONCLUSAO * proporcao) : 0;
+  const perfeito = total > 0 && acertos === total ? BONUS_PERFEITO : 0;
+  return base + conclusao + perfeito;
 }
 
-// Streak máximo de uma sessão (sequência mais longa de acertos consecutivos).
+/**
+ * Sequência mais longa a partir de uma lista de acertos.
+ *
+ * NOTA: o quiz não usa esta função para o resultado da sessão, porque ela
+ * ignora o power-up «Escudo» — um erro protegido não deve partir a
+ * sequência. O cálculo do jogo vive em `useQuizFiscal` (`streakMaximoDe`),
+ * que lê `streakAoResponder`. Fica exportada por ser útil para análises
+ * simples sobre histórico, onde o escudo não é conhecido.
+ */
 export function calcularStreakMaximo(acertaram: boolean[]): number {
   let max = 0;
   let atual = 0;
@@ -99,9 +133,16 @@ export function xpProgressoPct(xp: number): number {
 // Verifica/repõe energia diária (reset à meia-noite local).
 export function calcularEnergiaAtual(
   energiaRestante: number,
-  resetAt: string | null
+  resetAt: string | null,
+  /**
+   * Instante de referência. Existe para o servidor poder passar o SEU
+   * relógio: com `new Date()` do cliente, mudar a data do sistema repunha a
+   * energia à vontade. O default mantém o comportamento local para quem joga
+   * sem sessão iniciada, onde não há nada a proteger.
+   */
+  agoraRef?: Date,
 ): { energia: number; resetAt: string } {
-  const agora = new Date();
+  const agora = agoraRef ?? new Date();
   if (resetAt && agora < new Date(resetAt)) {
     return { energia: Math.max(0, energiaRestante), resetAt };
   }

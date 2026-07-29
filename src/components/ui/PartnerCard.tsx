@@ -34,9 +34,19 @@ export default function PartnerCard({
           </span>
           <div>
             <div className="text-sm font-semibold text-stone-800 dark:text-stone-100">{partner.nome}</div>
-            <div className="mt-0.5 flex items-center gap-1">
-              <ShieldCheck size={11} className="text-brand" />
-              <span className="text-[11px] text-stone-400">Parceiro verificado</span>
+            {/* «Parceiro verificado» é uma afirmação de confiança. Sozinha,
+                num contexto de afiliação, diz metade da verdade: anunciar
+                «verificado» e omitir «pago» é a única coisa desta camada que
+                mexeria com a confiança do produto. Os dois rótulos andam
+                juntos. */}
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <span className="flex items-center gap-1">
+                <ShieldCheck size={11} className="text-brand" />
+                <span className="text-[11px] text-stone-400">Parceiro verificado</span>
+              </span>
+              <span className="rounded-full bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+                Ligação comercial
+              </span>
             </div>
           </div>
         </div>
@@ -63,7 +73,11 @@ export default function PartnerCard({
       <a
         href={partner.url}
         target="_blank"
-        rel="noopener noreferrer nofollow"
+        // `sponsored` faltava. Sem ele, o Google trata a ligação como um
+        // simples "não sigas" em vez de "isto é publicidade paga" — e a
+        // distinção é a diferença entre cumprir a política de links pagos e
+        // não cumprir.
+        rel="noopener noreferrer nofollow sponsored"
         className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-stone-600 transition-all hover:gap-1.5 hover:text-stone-800 dark:text-stone-300 dark:hover:text-stone-100"
       >
         {partner.cta}

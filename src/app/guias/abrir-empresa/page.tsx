@@ -1,35 +1,13 @@
 import type { Metadata } from "next";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import Link from "next/link";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
 import InfoTip from "@/components/ui/InfoTip";
 import { IRC_TAXA_GERAL, IRC_TAXA_PME, IRC_LIMITE_PME, DIVIDENDOS_TAXA } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import { ArrowRight, Check } from "@/components/ui/Icons";
 
-export const metadata: Metadata = {
-  title: "Como abrir uma empresa em Portugal 2026 | ReciboCerto",
-  description: "Guia para constituir empresa em Portugal: formas jurídicas, Empresa na Hora, capital social, IRC e obrigações fiscais. Com dados verificados.",
-  keywords: ["abrir empresa portugal 2026", "constituir sociedade", "empresa na hora", "unipessoal por quotas"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/abrir-empresa" },
-  openGraph: {
-    title: "Como abrir uma empresa em Portugal 2026 | ReciboCerto",
-    description: "Formas jurídicas, custos e obrigações para constituir empresa em Portugal.",
-    url: "https://www.recibocerto.pt/guias/abrir-empresa",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "Empresa na Hora / Empresa Online — Gov.pt (IRN)", url: "https://www2.gov.pt/espaco-empresa/empresa-online", tipo: "oficial" as const },
-  { titulo: "Código das Sociedades Comerciais (DL 262/86) — Diário da República", url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/1986-34443375", tipo: "oficial" as const },
-  { titulo: "Art. 87.º CIRC — Taxas de IRC", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/circ_rep/Pages/irc87.aspx", tipo: "oficial" as const },
-  { titulo: "Art. 71.º CIRS — Taxa liberatória sobre dividendos", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs71.aspx", tipo: "oficial" as const },
-  { titulo: "PwC Guia Fiscal 2026 — IRC (taxas, prazos e obrigações)", url: "https://www.pwc.pt/pt/pwcinforfisco/guia-fiscal/2026/irc.html", tipo: "referencia" as const },
-];
+export const metadata: Metadata = metadataDoGuia("abrir-empresa");
 
 const FORMAS_JURIDICAS = [
   {
@@ -57,13 +35,7 @@ const FORMAS_JURIDICAS = [
 
 export default function AbrirEmpresaPage() {
   return (
-    <>
-      <GuiaHero
-        eyebrow="Guia · Empresas"
-        titulo="Como abrir uma empresa em Portugal"
-        descricao="Constituir sociedade: formas jurídicas, custos, Empresa na Hora e o que muda na tua fiscalidade ao passar de recibos verdes para empresa."
-        tempoLeitura={7}
-      />
+    <GuiaLayout slug="abrir-empresa">
 
       <section className="mb-10">
         <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 mb-4">
@@ -213,8 +185,6 @@ export default function AbrirEmpresaPage() {
         </div>
       </section>
 
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }

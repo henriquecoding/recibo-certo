@@ -11,7 +11,22 @@ import { ferramentasPorPerfil } from "@/lib/ferramentas-config";
 import { guiasPorPerfil } from "@/lib/guias-config";
 import SeletorModo from "@/components/SeletorModo";
 import ComoFuncionaModal from "@/components/ComoFuncionaModal";
-import type { ComparacaoCategoriasResult } from "@/lib/fiscal-dependente";
+import type { ComparacaoCategoriasResult, VencimentoResult } from "@/lib/fiscal-dependente";
+import type { CalcResult } from "@/lib/fiscal";
+import FizLogo from "@/components/fiz/FizLogo";
+import FizActionButton from "@/components/fiz/FizActionButton";
+import { fizAtiva } from "@/lib/fiz/flag";
+import { NOTA_LIGACAO } from "@/content/parcerias-copy";
+import type { FizIntent } from "@/lib/guias/manifests";
+import {
+  BotaoPausa,
+  ReguaDeAtos,
+  TituloAto,
+  linha as linhaVar,
+  palco as palcoVars,
+  useRelogioDePalco,
+  type AtoDaRegua,
+} from "@/components/simulador/palco";
 
 // Selos de confiança — enxutos (2). O detalhe das fontes e as contagens do
 // ecossistema vivem, sem repetição, na faixa de números e na secção Fontes.
@@ -21,8 +36,6 @@ const TRUST = [
 ];
 
 const eur0 = (n: number) => `${Math.round(n).toLocaleString("pt-PT")} €`;
-
-const HERO_FAT = 30_000;
 
 interface TypingStep { text: string; delay: number }
 
@@ -35,15 +48,59 @@ interface CardData {
   ss: number;
   pctSufixo: string;
   linhas: { l: string; v: string; valor: number; strong?: boolean }[];
+  /**
+   * Como se leem as `linhas` — e não é um detalhe de estilo.
+   *
+   * `deducoes`: cada linha não-final é algo que SAI do bruto, e leva sinal de
+   * menos. `cenarios`: cada linha é um líquido alternativo, lado a lado.
+   *
+   * A distinção faltava e o desenho inferia o sinal a partir de `strong`, que
+   * quer dizer outra coisa (é o total / o vencedor). Resultado: o cartão de
+   * comparação anunciava «− 21 560 €» e «− 18 036 €» para os caminhos
+   * perdedores, como se fossem despesas em vez de rendimentos líquidos.
+   */
+  modoLinhas: "deducoes" | "cenarios";
   box: { tom: "alerta" | "info"; titulo: string; sub: string };
+  /**
+   * O passo que fecha a demo: o que acontece DEPOIS de saber o número.
+   *
+   * O ReciboCerto explica, calcula e prepara; quem emite, declara e vigia as
+   * obrigações reais é a FIZ. Sem este quarto tempo a demo termina no
+   * resultado e deixa por responder a pergunta que toda a gente faz a
+   * seguir — "e agora, quem trata disto?".
+   *
+   * Só aparece com a integração ligada (`fizAtiva()`); com ela desligada a
+   * demo continua a fazer sentido sem alterações.
+   */
+  fiz?: {
+    titulo: string;
+    sub: string;
+    /** Rótulo do botão. Em modo LIGACAO abre o site do parceiro. */
+    cta: string;
+    /** Intenção, para o destino por caminho quando a FIZ o confirmar. */
+    intent: FizIntent;
+  };
   nota: string;
   typingSteps: TypingStep[];
 }
 
-// Os números de empresa/comparação vêm do motor verificado, mas são calculados
-// no SERVIDOR (page.tsx) e entram aqui como `CMP` — assim o motor fiscal não é
-// enviado para o bundle inicial do cliente. Valores idênticos, zero flash.
-function criarExemplos(CMP: ComparacaoCategoriasResult): Record<
+/**
+ * Números dos quatro cartões do Hero.
+ *
+ * TODOS vêm do motor fiscal verificado, calculados no SERVIDOR (`page.tsx`) e
+ * entregues aqui já resolvidos — assim o motor não entra no bundle inicial do
+ * cliente e não há flash de valores. Nenhum montante fiscal é escrito à mão
+ * neste ficheiro: é a regra 1 do CLAUDE.md aplicada também à montra.
+ */
+function criarExemplos({
+  CMP,
+  REC,
+  VENC,
+}: {
+  CMP: ComparacaoCategoriasResult;
+  REC: CalcResult;
+  VENC: VencimentoResult;
+}): Record<
   Perfil,
   {
     h1: ReactNode;
@@ -63,6 +120,9 @@ function criarExemplos(CMP: ComparacaoCategoriasResult): Record<
 > {
   const EMP = {
     liquido: Math.round(CMP.empresa.liquido),
+    irc: Math.round(CMP.empresa.irc),
+    derrama: Math.round(CMP.empresa.derrama),
+    dividendos: Math.round(CMP.empresa.dividendos),
     impostos: Math.round(CMP.empresa.irc + CMP.empresa.derrama + CMP.empresa.dividendos),
     custos: Math.round(CMP.empresa.custosEmpresa),
   };
@@ -72,6 +132,16 @@ function criarExemplos(CMP: ComparacaoCategoriasResult): Record<
     empresa: Math.round(CMP.empresa.liquido),
   };
   const CMP_BEST = Math.max(CMP_LIQ.dependente, CMP_LIQ.freelancer, CMP_LIQ.empresa);
+
+  // A faturação comparada não é uma constante deste ficheiro: é a que o motor
+  // recebeu no servidor. Tê-la nos dois sítios era garantir que um dia
+  // divergiam e o cartão anunciava um bruto diferente daquele que calculou.
+  const FAT = CMP.dependente.bruto;
+
+  // Percentagens derivadas do próprio resultado, não escritas ao lado dele:
+  // se a taxa mudar em `fiscal-data.ts`, o rótulo acompanha.
+  const pctRet = Math.round(REC.taxaRetencao * 100);
+  const pctSS = VENC.bruto > 0 ? Math.round((VENC.ssTrabalhador / VENC.bruto) * 100) : 0;
 
   return {
   independente: {
@@ -84,19 +154,33 @@ function criarExemplos(CMP: ComparacaoCategoriasResult): Record<
     primary: { label: "Calcular o meu recibo", scrollTo: "calculadora" },
     secondary: { label: "Como funciona", modal: true },
     card: {
-      etiqueta: "Recibo de 2 000 € · Art. 151.º",
+      etiqueta: `Recibo de ${eur0(REC.bruto)} · Art. 151.º`,
       heroLabel: "O que é mesmo teu",
-      bruto: 2000,
-      teu: 1241,
-      irs: 460,
-      ss: 299,
+      bruto: REC.bruto,
+      teu: REC.liquido,
+      irs: REC.retencaoIRS,
+      ss: REC.segSocial,
       pctSufixo: "deste recibo é mesmo teu",
       linhas: [
-        { l: "Retenção IRS (23%)", v: "− 460 €", valor: 460 },
-        { l: "Segurança Social", v: "− 299 €", valor: 299 },
-        { l: "Disponível para gastar", v: "1 241 €", valor: 1241, strong: true },
+        { l: `Retenção IRS (${pctRet}%)`, v: `− ${eur0(REC.retencaoIRS)}`, valor: REC.retencaoIRS },
+        { l: "Segurança Social", v: `− ${eur0(REC.segSocial)}`, valor: REC.segSocial },
+        { l: "Disponível para gastar", v: eur0(REC.liquido), valor: REC.liquido, strong: true },
       ],
-      box: { tom: "alerta", titulo: "Prazo SS — 20 julho", sub: "Reserva 299 € · avisamos a tempo" },
+      modoLinhas: "deducoes",
+      box: {
+        tom: "alerta",
+        titulo: "Prazo SS — 20 julho",
+        sub: `Reserva ${eur0(REC.segSocial)} para não seres apanhado`,
+      },
+      // Em modo LIGACAO nada é transportado — a copy tem de o refletir. A
+      // frase antiga («as tuas obrigações reais, tratadas por…») descrevia o
+      // handoff da Fase 2.
+      fiz: {
+        titulo: "Emitir e declarar com a FIZ",
+        sub: "Faturação certificada, IVA e Segurança Social tratados por quem executa",
+        cta: "Conhecer a FIZ",
+        intent: "CONFIGURE_FREELANCER",
+      },
       nota: "Atividade estabelecida (2.º ano ou seguinte). No 1.º ano de atividade, a Segurança Social é isenta e a retenção na fonte pode ser dispensada.",
       typingSteps: [
         { text: "2", delay: 320 },
@@ -105,7 +189,7 @@ function criarExemplos(CMP: ComparacaoCategoriasResult): Record<
         { text: "2003", delay: 300 },
         { text: "200", delay: 600 },
         { text: "2000", delay: 280 },
-        { text: "2 000 €", delay: 500 },
+        { text: eur0(REC.bruto), delay: 500 },
       ],
     },
   },
@@ -121,18 +205,19 @@ function criarExemplos(CMP: ComparacaoCategoriasResult): Record<
     primary: { label: "Simular o meu salário", scrollTo: "calculadora" },
     secondary: { label: "Comparar caminhos", setModo: "comparar" },
     card: {
-      etiqueta: "Salário de 1 500 € · Continente",
+      etiqueta: `Salário de ${eur0(VENC.bruto)} · Continente`,
       heroLabel: "O teu líquido",
-      bruto: 1500,
-      teu: 1167,
-      irs: 168,
-      ss: 165,
+      bruto: VENC.bruto,
+      teu: VENC.liquido,
+      irs: VENC.irsRetido,
+      ss: VENC.ssTrabalhador,
       pctSufixo: "do bruto chega ao bolso",
       linhas: [
-        { l: "Retenção IRS", v: "− 168 €", valor: 168 },
-        { l: "Segurança Social (11%)", v: "− 165 €", valor: 165 },
-        { l: "Vencimento líquido", v: "1 167 €", valor: 1167, strong: true },
+        { l: "Retenção IRS", v: `− ${eur0(VENC.irsRetido)}`, valor: VENC.irsRetido },
+        { l: `Segurança Social (${pctSS}%)`, v: `− ${eur0(VENC.ssTrabalhador)}`, valor: VENC.ssTrabalhador },
+        { l: "Vencimento líquido", v: eur0(VENC.liquido), valor: VENC.liquido, strong: true },
       ],
+      modoLinhas: "deducoes",
       box: { tom: "info", titulo: "14 meses por ano", sub: "Subsídios de férias e de Natal incluídos" },
       nota: "Líquido de um mês normal, sem subsídio de refeição. Tabela I (não casado, sem dependentes), Continente.",
       typingSteps: [
@@ -140,7 +225,7 @@ function criarExemplos(CMP: ComparacaoCategoriasResult): Record<
         { text: "15", delay: 280 },
         { text: "150", delay: 260 },
         { text: "1500", delay: 240 },
-        { text: "1 500 €", delay: 500 },
+        { text: eur0(VENC.bruto), delay: 500 },
       ],
     },
   },
@@ -154,20 +239,32 @@ function criarExemplos(CMP: ComparacaoCategoriasResult): Record<
     primary: { label: "Simular a minha empresa", scrollTo: "calculadora" },
     secondary: { label: "Comparar caminhos", setModo: "comparar" },
     card: {
-      etiqueta: "Faturação 30 000 €/ano · via empresa",
+      etiqueta: `Faturação ${eur0(FAT)}/ano · via empresa`,
       heroLabel: "Líquido pela empresa",
-      bruto: HERO_FAT,
+      bruto: FAT,
       teu: EMP.liquido,
       irs: EMP.impostos,
       ss: EMP.custos,
       pctSufixo: "fica contigo via empresa",
+      // Os três impostos separados, não somados numa linha só: é a diferença
+      // entre dizer «saem 11 964 €» e mostrar de onde vem cada euro. O motor
+      // já devolve a decomposição — era só não a deitar fora.
       linhas: [
-        { l: "IRC, derrama e dividendos", v: `− ${eur0(EMP.impostos)}`, valor: EMP.impostos },
+        { l: "IRC (PME + taxa geral)", v: `− ${eur0(EMP.irc)}`, valor: EMP.irc },
+        { l: "Derrama municipal", v: `− ${eur0(EMP.derrama)}`, valor: EMP.derrama },
+        { l: "IRS sobre dividendos", v: `− ${eur0(EMP.dividendos)}`, valor: EMP.dividendos },
         { l: "Custos de estrutura", v: `− ${eur0(EMP.custos)}`, valor: EMP.custos },
         { l: "Líquido anual estimado", v: eur0(EMP.liquido), valor: EMP.liquido, strong: true },
       ],
+      modoLinhas: "deducoes",
       box: { tom: "info", titulo: "IRC PME a 15%", sub: "Sobre os primeiros 50 000 € de lucro tributável" },
-      nota: "Estimativa para 30 000 €/ano de faturação. Modela IRC PME, derrama e dividendos a 28% — não substitui um contabilista certificado.",
+      fiz: {
+        titulo: "Constituir e manter com a FIZ",
+        sub: "Contabilidade organizada e obrigações da sociedade",
+        cta: "Ver a FIZ para empresas",
+        intent: "START_COMPANY",
+      },
+      nota: `Estimativa para ${eur0(FAT)}/ano de faturação. Modela IRC PME, derrama e dividendos a 28% — não substitui um contabilista certificado.`,
       typingSteps: [
         { text: "3", delay: 280 },
         { text: "30", delay: 240 },
@@ -176,7 +273,7 @@ function criarExemplos(CMP: ComparacaoCategoriasResult): Record<
         { text: "30009", delay: 300 },
         { text: "3000", delay: 620 },
         { text: "30000", delay: 260 },
-        { text: "30 000 €", delay: 550 },
+        { text: eur0(FAT), delay: 550 },
       ],
     },
   },
@@ -190,9 +287,9 @@ function criarExemplos(CMP: ComparacaoCategoriasResult): Record<
     primary: { label: "Comparar cenários", scrollTo: "calculadora" },
     secondary: { label: "Como funciona", modal: true },
     card: {
-      etiqueta: "Mesmo rendimento · 30 000 €/ano",
+      etiqueta: `Mesmo rendimento · ${eur0(FAT)}/ano`,
       heroLabel: "Mais líquido",
-      bruto: HERO_FAT,
+      bruto: FAT,
       teu: CMP_BEST,
       irs: CMP_LIQ.freelancer,
       ss: CMP_LIQ.dependente,
@@ -202,15 +299,22 @@ function criarExemplos(CMP: ComparacaoCategoriasResult): Record<
         { l: "Recibos verdes", v: eur0(CMP_LIQ.freelancer), valor: CMP_LIQ.freelancer, strong: CMP.melhor === "freelancer" },
         { l: "Empresa (Lda)", v: eur0(CMP_LIQ.empresa), valor: CMP_LIQ.empresa, strong: CMP.melhor === "empresa" },
       ],
+      modoLinhas: "cenarios",
       box: { tom: "info", titulo: "Uma base, três caminhos", sub: "Vê o ponto de viragem e o calendário fiscal" },
-      nota: "Estimativa para 30 000 €/ano. Ajusta o rendimento e os pressupostos na ferramenta de comparação.",
+      fiz: {
+        titulo: "Confirmar a escolha com a FIZ",
+        sub: "Um contabilista certificado valida antes de mudares",
+        cta: "Falar com um contabilista",
+        intent: "FIND_ACCOUNTANT",
+      },
+      nota: `Estimativa para ${eur0(FAT)}/ano. Ajusta o rendimento e os pressupostos na ferramenta de comparação.`,
       typingSteps: [
         { text: "3", delay: 280 },
         { text: "30", delay: 240 },
         { text: "300", delay: 220 },
         { text: "3000", delay: 240 },
         { text: "30000", delay: 280 },
-        { text: "30 000 €", delay: 550 },
+        { text: eur0(FAT), delay: 550 },
       ],
     },
   },
@@ -233,7 +337,12 @@ function CountUp({ target, delay = 0, prefix = "" }: { target: number; delay?: n
   useEffect(() => {
     if (!started) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setVal(target);
+      // Arredondar aqui também: o caminho animado faz `Math.round` a cada
+      // fotograma, este não fazia, e quem tem movimento reduzido via
+      // «1240,4 €» onde os outros viam «1240 €». Só se notou quando os
+      // valores deixaram de ser inteiros escritos à mão e passaram a vir do
+      // motor.
+      setVal(Math.round(target));
       return;
     }
     let raf = 0;
@@ -253,8 +362,33 @@ function CountUp({ target, delay = 0, prefix = "" }: { target: number; delay?: n
   return <>{prefix}{val.toLocaleString("pt-PT")} €</>;
 }
 
+/** Linha de detalhe do cartão, com o valor a contar de zero. */
+function LinhaCartao({
+  rotulo,
+  valor,
+  prefixo,
+  delay,
+}: {
+  rotulo: string;
+  valor: number;
+  prefixo: string;
+  delay: number;
+}) {
+  return (
+    <m.div
+      variants={linhaVar}
+      className="flex min-h-[32px] items-center justify-between gap-3 rounded-lg bg-stone-50 px-3 py-2 dark:bg-stone-800/50"
+    >
+      <span className="min-w-0 truncate text-xs text-stone-500 dark:text-stone-400">{rotulo}</span>
+      <span className="flex-shrink-0 text-xs font-semibold tabular-nums text-stone-700 dark:text-stone-200">
+        <CountUp target={valor} delay={delay} prefix={prefixo} />
+      </span>
+    </m.div>
+  );
+}
+
 /* ══════════════════════════════════════════════════════════════
-   Cartão hero — demo «ao vivo»: encenação de utilização real
+   Cartão hero — demo «em direto»: encenação de utilização real
    ─────────────────────────────────────────────────────────────
    Coreografia por ciclo (~11 s):
      1. o cartão acorda com ESQUELETO a respirar — nunca fica em
@@ -281,27 +415,82 @@ interface Ponteiro {
   premido: boolean; // "afunda" no clique
 }
 
-const HOLD_MS = 4000;
 const FADE_MS = 600;
-const STEP_LABELS = ["Insere o valor", "Calcula", "Resultado"];
 
-function phaseToStep(phase: Phase): number {
-  if (phase === "idle") return -1;
-  if (phase === "focusing" || phase === "typing" || phase === "typed") return 0;
-  if (phase === "calculating") return 1;
-  return 2;
+/**
+ * Compasso da encenação de entrada, em milissegundos.
+ *
+ * Vive num objeto e não espalhado por `t += 260` porque tem DOIS leitores: o
+ * agendador dos passos e o relógio da régua, que precisa de saber quanto dura
+ * o primeiro ato antes de ele começar. Com os números soltos, mexer num deles
+ * dessincronizava a barra da encenação sem nada falhar visivelmente — o pior
+ * tipo de avaria.
+ */
+const COMPASSO = {
+  entradaCursor: 650,
+  aparece: 60,
+  deslizaAteCampo: 260,
+  ateClicar: 880,
+  solta: 170,
+  ateEscrever: 260,
+  depoisDeEscrever: 500,
+  ateBotao: 300,
+  deslizaAteBotao: 760,
+  soltaBotao: 170,
+  desvanece: 230,
+  calcula: 480,
+} as const;
+
+const SOMA_COMPASSO = Object.values(COMPASSO).reduce((a, b) => a + b, 0);
+
+/** Duração total do ato de entrada, digitação incluída. */
+function duracaoEntrada(steps: TypingStep[]): number {
+  return SOMA_COMPASSO + steps.reduce((s, p) => s + p.delay, 0);
 }
+
+// ── Atos ─────────────────────────────────────────────────────────────────
+//  O cartão deixou de despejar o resultado inteiro de uma vez. Agora
+//  desenrola-o: de onde vem, o que fica, o que aí vem, e quem trata disso.
+//  A encenação (cursor + digitação) é o primeiro ato, não um preâmbulo — daí
+//  aparecer na régua como qualquer outro.
+
+type AtoHero = "entrada" | "decomposicao" | "resultado" | "contexto" | "fiz";
+
+const META_ATO: Record<AtoHero, { rotulo: string; legenda: string }> = {
+  entrada: { rotulo: "Valor", legenda: "Inserir o valor e calcular" },
+  decomposicao: { rotulo: "Onde vai", legenda: "Para onde vai o dinheiro" },
+  resultado: { rotulo: "O que fica", legenda: "Quanto fica contigo" },
+  contexto: { rotulo: "A reter", legenda: "O que convém não esqueceres" },
+  // A régua é o caminho declarado. Um leitor de ecrã anuncia «Passo N de M:
+  // …» — e deve dizer que este passo leva para fora antes de lá chegar.
+  fiz: { rotulo: "Parceiro", legenda: "Quem trata das obrigações — ligação para a FIZ" },
+};
+
+const DUR_ATO: Record<Exclude<AtoHero, "entrada">, number> = {
+  decomposicao: 2800,
+  resultado: 2600,
+  contexto: 2800,
+  fiz: 3000,
+};
 
 function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [typedText, setTypedText] = useState("");
   const [cursorVisible, setCursorVisible] = useState(false);
-  const [resultVisible, setResultVisible] = useState(false);
-  const [linesVisible, setLinesVisible] = useState(false);
-  const [boxVisible, setBoxVisible] = useState(false);
-  const [noteVisible, setNoteVisible] = useState(false);
+  const mostrarFiz = fizAtiva();
   const [fading, setFading] = useState(false);
   const [cycle, setCycle] = useState(0);
+
+  // Atos deste perfil. O da FIZ só entra se a integração estiver ligada E o
+  // cartão tiver conteúdo de parceiro (o de vencimento não tem).
+  const atos = useMemo<AtoHero[]>(() => {
+    const base: AtoHero[] = ["entrada", "decomposicao", "resultado", "contexto"];
+    return mostrarFiz && card.fiz ? [...base, "fiz"] : base;
+  }, [mostrarFiz, card.fiz]);
+
+  const [idxAto, setIdxAto] = useState(0);
+  const [parado, setParado] = useState(false);
+  const [sobrevoo, setSobrevoo] = useState(false);
 
   // Cursor de rato encenado + ripple do clique — medidos por ciclo em relação
   // ao cartão. A altura do cartão é estável durante o ciclo (o esqueleto ocupa
@@ -314,6 +503,21 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
 
   const reduz = useReducedMotion();
 
+  /**
+   * `useReducedMotion` devolve `null` no servidor e o valor real no cliente.
+   * Ao contrário da `DemoIRS`, que é `ssr: false` e nunca é renderizada no
+   * servidor, este cartão vem no HTML — por isso deixar a preferência decidir
+   * o que se DESENHA (montar ou não o botão de pausa, encher ou não a barra do
+   * ato) fazia o HTML do servidor e o do cliente divergirem, e a hidratação
+   * falhava com a árvore inteira a ser refeita.
+   *
+   * Para efeitos, `reduz` serve — correm depois da montagem. Para desenhar,
+   * usa-se este, que só passa a `true` depois do primeiro render.
+   */
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
+  const reduzNoDesenho = montado && Boolean(reduz);
+
   const pctTeu = Math.round((card.teu / card.bruto) * 100);
 
   const seg: { v: number; color?: string; cls?: string }[] = [
@@ -322,12 +526,56 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
     { v: card.ss, cls: "text-brand-deep" },
   ];
   const totalSeg = seg.reduce((s, p) => s + p.v, 0) || 1;
-  const stepIndex = phaseToStep(phase);
+
+  const ato = atos[Math.min(idxAto, atos.length - 1)];
+  const emPausa = sobrevoo || parado;
+  // Linhas que SAEM do bruto, sem as de valor nulo: quando o motor devolve
+  // zero (o caso dos custos de estrutura, que ninguém arbitrou), a linha
+  // dizia «− 0 €» e parecia avariada.
+  const linhasSaida = card.linhas.filter((r) => !r.strong && r.valor > 0);
+  const linhaTotal = card.linhas.find((r) => r.strong) ?? card.linhas[card.linhas.length - 1];
 
   const isFocused = phase !== "idle";
   const showCursor = phase === "typing" || phase === "typed";
   const isCalculating = phase === "calculating";
   const isResult = phase === "result";
+
+  // O relógio é um só para os dois tempos da demo: durante a encenação mede-a
+  // (daí a duração vir do mesmo COMPASSO que a agenda), e depois mede cada
+  // ato. No fim do último, recomeça o ciclo.
+  const barraRef = useRelogioDePalco({
+    duracaoMs: ato === "entrada" ? duracaoEntrada(card.typingSteps) : DUR_ATO[ato],
+    chave: `${perfil}-${cycle}-${idxAto}`,
+    parado: reduz || emPausa,
+    aoTerminar: () => {
+      if (idxAto < atos.length - 1) {
+        setIdxAto(idxAto + 1);
+        return;
+      }
+      // Último ato: desvanece e volta ao princípio.
+      setFading(true);
+      setTimeout(() => setCycle((c) => c + 1), FADE_MS);
+    },
+  });
+
+  const atosDaRegua = useMemo<AtoDaRegua[]>(
+    () => atos.map((a) => ({ id: a, ...META_ATO[a] })),
+    [atos],
+  );
+
+  // Saltar para um ato assume o comando: se o utilizador está a navegar, a
+  // rotação automática por cima disso seria uma luta.
+  const irParaAto = (idx: number) => {
+    setParado(true);
+    setIdxAto(idx);
+    if (idx > 0 && phase !== "result") {
+      // Saltar à frente durante a encenação: mostra já o resultado, senão o
+      // palco ficava a explicar um número que ainda não apareceu.
+      setPhase("result");
+      setTypedText(card.typingSteps[card.typingSteps.length - 1].text);
+      setPonteiro(null);
+    }
+  };
 
   useEffect(() => {
     if (reduz) return;
@@ -337,12 +585,11 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
 
   useEffect(() => {
     if (reduz) {
+      // Sem movimento: o cartão abre já calculado, no ato do resultado, e
+      // navega-se pela régua. Nada arranca sozinho.
       setPhase("result");
       setTypedText(card.typingSteps[card.typingSteps.length - 1].text);
-      setResultVisible(true);
-      setLinesVisible(true);
-      setBoxVisible(true);
-      setNoteVisible(true);
+      setIdxAto(atos.indexOf("resultado"));
       setFading(false);
       setPonteiro(null);
       return;
@@ -350,10 +597,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
 
     setPhase("idle");
     setTypedText("");
-    setResultVisible(false);
-    setLinesVisible(false);
-    setBoxVisible(false);
-    setNoteVisible(false);
+    setIdxAto(0);
     setCursorVisible(false);
     setFading(false);
     setPonteiro(null);
@@ -376,34 +620,34 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
     const alvoCampo = () => rel(inputRef.current, 0.34, 0.7);
     const alvoBotao = () => rel(btnRef.current, 0.5, 0.62);
 
-    let t = 650;
+    let t = COMPASSO.entradaCursor;
     // 1 · cursor entra em cena (aparece parado, depois desliza até ao campo)
     at(t, () => {
       const base = cardRef.current;
       if (!base) return;
       setPonteiro({ x: base.offsetWidth * 0.78, y: base.offsetHeight * 0.5, op: 0, dur: 0, premido: false });
     });
-    t += 60;
+    t += COMPASSO.aparece;
     at(t, () => setPonteiro((p) => (p ? { ...p, op: 1, dur: 0.25 } : p)));
-    t += 260;
+    t += COMPASSO.deslizaAteCampo;
     at(t, () => {
       const a = alvoCampo();
       if (a) setPonteiro((p) => (p ? { ...p, ...a, dur: 0.8 } : p));
     });
 
     // 2 · clique no campo → foco + ripple
-    t += 880;
+    t += COMPASSO.ateClicar;
     at(t, () => {
       setPhase("focusing");
       setPonteiro((p) => (p ? { ...p, premido: true } : p));
       const a = alvoCampo();
       if (a) setRipple({ ...a, id: t });
     });
-    t += 170;
+    t += COMPASSO.solta;
     at(t, () => setPonteiro((p) => (p ? { ...p, premido: false } : p)));
 
     // 3 · o rato "estaciona" (esbate-se) e a escrita começa
-    t += 260;
+    t += COMPASSO.ateEscrever;
     at(t, () => {
       setPhase("typing");
       setCursorVisible(true);
@@ -414,44 +658,32 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
       const txt = step.text;
       at(t, () => setTypedText(txt));
     }
-    t += 500;
+    t += COMPASSO.depoisDeEscrever;
     at(t, () => setPhase("typed"));
 
     // 4 · cursor regressa e desliza até «Calcular»
-    t += 300;
+    t += COMPASSO.ateBotao;
     at(t, () => {
       const a = alvoBotao();
       if (a) setPonteiro((p) => (p ? { ...p, ...a, op: 1, dur: 0.65 } : p));
     });
-    t += 760;
+    t += COMPASSO.deslizaAteBotao;
     at(t, () => {
       setPonteiro((p) => (p ? { ...p, premido: true } : p));
       const a = alvoBotao();
       if (a) setRipple({ ...a, id: t });
       setPhase("calculating");
     });
-    t += 170;
+    t += COMPASSO.soltaBotao;
     at(t, () => setPonteiro((p) => (p ? { ...p, premido: false } : p)));
-    t += 230;
+    t += COMPASSO.desvanece;
     at(t, () => setPonteiro((p) => (p ? { ...p, op: 0, dur: 0.4 } : p)));
 
-    // 5 · resultado em cascata
-    t += 480;
-    at(t, () => {
-      setPhase("result");
-      setResultVisible(true);
-    });
-    t += 420;
-    at(t, () => setLinesVisible(true));
-    t += 750;
-    at(t, () => setBoxVisible(true));
-    t += 380;
-    at(t, () => setNoteVisible(true));
-
-    t += HOLD_MS;
-    at(t, () => setFading(true));
-    t += FADE_MS;
-    at(t, () => setCycle((c) => c + 1));
+    // 5 · o número aparece — e a partir daqui quem manda é o relógio dos
+    //     atos. A cascata de revelações que existia aqui despejava tudo em
+    //     dois segundos; agora cada tempo tem o palco só para si.
+    t += COMPASSO.calcula;
+    at(t, () => setPhase("result"));
 
     return () => { cancelled = true; timers.forEach(clearTimeout); };
   }, [perfil, cycle, card.typingSteps, reduz]);
@@ -476,17 +708,29 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
   const ghost = "rounded-full bg-stone-200/80 animate-pulse motion-reduce:animate-none dark:bg-stone-700";
 
   return (
-    <div>
-      {/* Indicador «Demo ao vivo» — pilha premium, coerente com o DemoIRS */}
-      <div className="mb-3 flex items-center justify-between gap-3" aria-hidden>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/25 bg-brand-light px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-brand-dark dark:bg-brand/10 dark:text-brand">
+    <div
+      onMouseEnter={() => setSobrevoo(true)}
+      onMouseLeave={() => setSobrevoo(false)}
+      onFocusCapture={() => setSobrevoo(true)}
+      onBlurCapture={() => setSobrevoo(false)}
+    >
+      {/* Indicador «Demo em direto» — pilha premium, coerente com o DemoIRS */}
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <span
+          aria-hidden
+          className="inline-flex items-center gap-1.5 rounded-full border border-brand/25 bg-brand-light px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-brand-dark dark:bg-brand/10 dark:text-brand"
+        >
           <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-70 motion-reduce:animate-none" />
+            {!reduzNoDesenho && !emPausa && (
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-70 motion-reduce:animate-none" />
+            )}
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand" />
           </span>
-          Demo ao vivo
+          Demo em direto
         </span>
-        <span className="text-[11px] font-medium text-stone-400 dark:text-stone-500">Simulação automática</span>
+        {/* Sem isto, a única forma de parar era passar o rato — que não existe
+            em ecrã tátil nem para quem navega por teclado (WCAG 2.2.2). */}
+        {!reduzNoDesenho && <BotaoPausa parado={parado} onAlternar={() => setParado((p) => !p)} />}
       </div>
 
       {/* Cartão — sombra/borda acompanham a fase; palco do cursor encenado */}
@@ -516,7 +760,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
 
           {/* Campo simulado + clarão no resultado */}
           <div className="relative mt-4">
-            {isResult && !reduz && (
+            {isResult && !reduzNoDesenho && (
               <m.div
                 aria-hidden
                 className="pointer-events-none absolute -inset-3 rounded-3xl bg-brand/25 blur-2xl"
@@ -570,7 +814,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
                 {isResult ? (
                   <m.span
                     className="inline-flex items-baseline text-brand"
-                    initial={reduz ? false : { opacity: 0, y: 10, scale: 0.92 }}
+                    initial={reduzNoDesenho ? false : { opacity: 0, y: 10, scale: 0.92 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ type: "spring", stiffness: 260, damping: 20 }}
                   >
@@ -597,7 +841,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
                     aria-hidden
                   />
                 )}
-                {isResult && !reduz && (
+                {isResult && !reduzNoDesenho && (
                   <m.span
                     aria-hidden
                     className="ml-2 self-start text-brand"
@@ -629,34 +873,12 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
             </div>
           </div>
 
-          {/* Selo de percentagem (esqueleto → real) */}
-          <div className="relative mt-3">
-            <div
-              className="inline-flex items-center gap-2 rounded-xl bg-cream px-3 py-1.5 text-xs text-stone-500 transition-all duration-500 dark:bg-stone-800 dark:text-stone-400"
-              style={{
-                opacity: resultVisible ? 1 : 0,
-                transform: resultVisible ? "translateY(0)" : "translateY(6px)",
-              }}
-            >
-              <span className="font-semibold tabular-nums text-stone-700 dark:text-stone-200">
-                {pctTeu}% {card.pctSufixo}
-              </span>
-              <span className="text-stone-300 dark:text-stone-600">·</span>
-              <span>o resto é do Estado</span>
-            </div>
-            <div
-              aria-hidden
-              className="absolute inset-y-0 left-0 flex items-center transition-opacity duration-300"
-              style={{ opacity: resultVisible ? 0 : 1 }}
-            >
-              <span className={`h-3 w-44 ${ghost}`} />
-            </div>
-          </div>
-
-          {/* Barra de proporção — a pista fica visível desde o início */}
+          {/* Barra de proporção — âncora visual: aparece com o número e
+              fica, enquanto os atos passam por cima dela. */}
           <div
+            aria-hidden
             className={`mt-5 flex h-2 gap-0.5 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800 ${
-              resultVisible ? "" : "animate-pulse motion-reduce:animate-none"
+              isResult ? "" : "animate-pulse motion-reduce:animate-none"
             }`}
           >
             {seg.map((p, i) => (
@@ -667,130 +889,188 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
                 } ${p.cls ?? ""}`}
                 style={{
                   background: p.cls ? "currentColor" : p.color,
-                  width: resultVisible ? `${(p.v / totalSeg) * 100}%` : "0%",
-                  transitionDelay: resultVisible ? `${200 + i * 150}ms` : "0ms",
+                  width: isResult ? `${(p.v / totalSeg) * 100}%` : "0%",
+                  transitionDelay: isResult ? `${200 + i * 150}ms` : "0ms",
                 }}
               />
             ))}
           </div>
 
-          {/* Linhas de detalhe — cada esqueleto transforma-se na linha real */}
-          <div className="mt-4 space-y-1.5">
-            {card.linhas.map((r, i) => (
-              <div
-                key={r.l}
-                className={`relative flex min-h-[32px] items-center justify-between rounded-lg px-3 py-2 transition-colors duration-500 ${
-                  r.strong && linesVisible ? "bg-brand-light" : "bg-stone-50 dark:bg-stone-800/50"
-                }`}
-              >
-                <span
-                  className={`text-xs transition-all duration-500 ease-out ${
-                    r.strong ? "font-semibold text-brand-dark" : "text-stone-500 dark:text-stone-400"
-                  }`}
-                  style={{
-                    opacity: linesVisible ? 1 : 0,
-                    transform: linesVisible ? "translateX(0)" : "translateX(-10px)",
-                    transitionDelay: linesVisible ? `${i * 180}ms` : "0ms",
-                  }}
-                >
-                  {r.l}
-                </span>
-                <span
-                  className={`text-xs font-semibold tabular-nums transition-all duration-500 ease-out ${
-                    r.strong ? "text-brand-dark" : "text-stone-700 dark:text-stone-200"
-                  }`}
-                  style={{
-                    opacity: linesVisible ? 1 : 0,
-                    transitionDelay: linesVisible ? `${i * 180}ms` : "0ms",
-                  }}
-                >
-                  {linesVisible ? (
-                    r.strong
-                      ? <CountUp target={r.valor} delay={i * 180} />
-                      : <CountUp target={r.valor} delay={i * 180} prefix="− " />
-                  ) : "—"}
-                </span>
-                {/* Esqueleto da linha */}
-                <span
-                  aria-hidden
-                  className="absolute inset-0 flex items-center justify-between px-3 transition-opacity duration-300"
-                  style={{ opacity: linesVisible ? 0 : 1, transitionDelay: linesVisible ? `${i * 180}ms` : "0ms" }}
-                >
-                  <span className={`h-2.5 ${i === 0 ? "w-28" : i === 1 ? "w-24" : "w-32"} ${ghost}`} />
-                  <span className={`h-2.5 w-12 ${ghost}`} />
-                </span>
-              </div>
-            ))}
-          </div>
+          {/* ── Palco dos atos ──────────────────────────────────────
+              Antes, tudo isto era revelado de uma vez em cascata: as linhas,
+              a caixa, a nota e a faixa do parceiro caíam em dois segundos e
+              o cartão ficava quieto quatro. Agora cada tempo tem o palco só
+              para si e o cartão conta o cálculo em vez de o despejar.
 
-          {/* Caixa de alerta/info — nasce neutra e ganha a cor ao revelar */}
-          <div
-            className={`relative mt-4 flex items-center gap-2.5 rounded-xl border p-3 transition-colors duration-500 ${
-              !boxVisible
-                ? "border-stone-100 bg-stone-50/60 dark:border-stone-700/60 dark:bg-stone-800/40"
-                : card.box.tom === "alerta"
-                  ? "border-alert-border bg-alert-bg"
-                  : "border-brand/20 bg-brand-light"
-            }`}
-          >
-            <div
-              className="flex w-full items-center gap-2.5 transition-all duration-500 ease-out"
-              style={{
-                opacity: boxVisible ? 1 : 0,
-                transform: boxVisible ? "translateY(0)" : "translateY(6px)",
-              }}
-            >
-              <div
-                className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full ${
-                  card.box.tom === "alerta" ? "bg-alert text-alert-text" : "bg-brand text-white"
-                }`}
-              >
-                {card.box.tom === "alerta" ? <Warning size={12} /> : <Calendar size={12} />}
-              </div>
-              <div>
-                <div className={`text-xs font-semibold ${card.box.tom === "alerta" ? "text-alert-text" : "text-brand-dark"}`}>
-                  {card.box.titulo}
-                </div>
-                <div className={`text-xs ${card.box.tom === "alerta" ? "text-alert-text/80" : "text-brand-dark/80"}`}>
-                  {card.box.sub}
+              Altura mínima fixa, medida no ato mais alto: sem ela o cartão
+              cresce e encolhe a cada mudança e a página estremece por baixo. */}
+          <div className="mt-4 min-h-[10.5rem]">
+            {!isResult ? (
+              <div className="space-y-1.5" aria-hidden>
+                {card.linhas.map((_, i) => (
+                  <div key={i} className="flex min-h-[32px] items-center justify-between rounded-lg bg-stone-50 px-3 py-2 dark:bg-stone-800/50">
+                    <span className={`h-2.5 ${i === 0 ? "w-28" : i === 1 ? "w-24" : "w-32"} ${ghost}`} />
+                    <span className={`h-2.5 w-12 ${ghost}`} />
+                  </div>
+                ))}
+                <div className="flex items-center gap-2.5 rounded-xl border border-stone-100 bg-stone-50/60 p-3 dark:border-stone-700/60 dark:bg-stone-800/40">
+                  <span className="h-6 w-6 flex-shrink-0 animate-pulse rounded-full bg-stone-200/80 motion-reduce:animate-none dark:bg-stone-700" />
+                  <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <span className={`h-2.5 w-36 max-w-full ${ghost}`} />
+                    <span className={`h-2 w-48 max-w-full ${ghost}`} />
+                  </span>
                 </div>
               </div>
-            </div>
-            {/* Esqueleto da caixa */}
-            <span
-              aria-hidden
-              className="absolute inset-0 flex items-center gap-2.5 p-3 transition-opacity duration-300"
-              style={{ opacity: boxVisible ? 0 : 1 }}
-            >
-              <span className="h-6 w-6 flex-shrink-0 animate-pulse rounded-full bg-stone-200/80 motion-reduce:animate-none dark:bg-stone-700" />
-              <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <span className={`h-2.5 w-36 max-w-full ${ghost}`} />
-                <span className={`h-2 w-48 max-w-full ${ghost}`} />
-              </span>
-            </span>
-          </div>
+            ) : (
+              <AnimatePresence mode="wait" initial={false}>
+                {/* Dois níveis, de propósito: o de fora faz o cruzamento entre
+                    atos (opacidade explícita), o de dentro escalona a entrada
+                    das linhas (rótulos de variante). Juntar os dois num só
+                    elemento deixava-o preso a `opacity: 0` — o `initial` era um
+                    objeto e o `animate` um rótulo que não define opacidade, por
+                    isso nunca havia para onde animar de volta. */}
+                <m.div
+                  key={ato}
+                  initial={reduzNoDesenho ? false : { opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={reduzNoDesenho ? undefined : { opacity: 0, transition: { duration: 0.15 } }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <m.div variants={palcoVars} initial={reduzNoDesenho ? false : "oculto"} animate="entra">
+                  {ato === "decomposicao" && (
+                    <>
+                      <TituloAto nota={card.modoLinhas === "cenarios" ? "lado a lado" : "sai do bruto"}>
+                        {card.modoLinhas === "cenarios" ? "Os caminhos possíveis" : "Para onde vai"}
+                      </TituloAto>
+                      <div className="space-y-1.5">
+                        {(card.modoLinhas === "cenarios" ? card.linhas : linhasSaida).map((r, i) => (
+                          <LinhaCartao
+                            key={r.l}
+                            rotulo={r.l}
+                            valor={r.valor}
+                            // Só um desconto leva sinal de menos. Um cenário
+                            // alternativo é um líquido, não uma dedução.
+                            prefixo={card.modoLinhas === "deducoes" ? "− " : ""}
+                            delay={i * 180}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
 
-          {/* Nota de rodapé (esqueleto → real) */}
-          <div className="relative mt-3">
-            <p
-              className="text-[11px] leading-relaxed text-stone-400 transition-opacity duration-500"
-              style={{ opacity: noteVisible ? 1 : 0 }}
-            >
-              {card.nota}
-            </p>
-            <span
-              aria-hidden
-              className="absolute inset-0 flex flex-col justify-center gap-1.5 transition-opacity duration-300"
-              style={{ opacity: noteVisible ? 0 : 1 }}
-            >
-              <span className={`h-2 w-full ${ghost}`} />
-              <span className={`h-2 w-2/3 ${ghost}`} />
-            </span>
+                  {ato === "resultado" && (
+                    <>
+                      <TituloAto nota={`${pctTeu}%`}>
+                        {card.modoLinhas === "cenarios" ? "O melhor caminho" : "O que fica contigo"}
+                      </TituloAto>
+                      <m.div variants={linhaVar} className="rounded-xl bg-brand-light px-3 py-2.5 dark:bg-brand/10">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="min-w-0 truncate text-xs font-semibold text-brand-dark dark:text-brand">
+                            {linhaTotal.l}
+                          </span>
+                          <span className="flex-shrink-0 text-sm font-bold tabular-nums text-brand-dark dark:text-brand">
+                            <CountUp target={linhaTotal.valor} delay={0} />
+                          </span>
+                        </div>
+                      </m.div>
+                      {/* Duas linhas, não uma frase com separador: a 360px o
+                          texto quebra e o «·» ficava órfão no fim da linha. */}
+                      <m.div
+                        variants={linhaVar}
+                        className="mt-2 rounded-xl bg-cream px-3 py-2 text-xs text-stone-500 dark:bg-stone-800 dark:text-stone-400"
+                      >
+                        <span className="block font-semibold tabular-nums text-stone-700 dark:text-stone-200">
+                          {pctTeu}% {card.pctSufixo}
+                        </span>
+                        <span className="mt-0.5 block text-[11px]">o resto é do Estado</span>
+                      </m.div>
+                    </>
+                  )}
+
+                  {ato === "contexto" && (
+                    <>
+                      <TituloAto>O que convém não esqueceres</TituloAto>
+                      <m.div
+                        variants={linhaVar}
+                        className={`flex items-center gap-2.5 rounded-xl border p-3 ${
+                          card.box.tom === "alerta"
+                            ? "border-alert-border bg-alert-bg"
+                            : "border-brand/20 bg-brand-light"
+                        }`}
+                      >
+                        <div
+                          className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full ${
+                            card.box.tom === "alerta" ? "bg-alert text-alert-text" : "bg-brand text-white"
+                          }`}
+                        >
+                          {card.box.tom === "alerta" ? <Warning size={12} /> : <Calendar size={12} />}
+                        </div>
+                        <div className="min-w-0">
+                          <div className={`text-xs font-semibold ${card.box.tom === "alerta" ? "text-alert-text" : "text-brand-dark"}`}>
+                            {card.box.titulo}
+                          </div>
+                          <div className={`text-xs ${card.box.tom === "alerta" ? "text-alert-text/80" : "text-brand-dark/80"}`}>
+                            {card.box.sub}
+                          </div>
+                        </div>
+                      </m.div>
+                      <m.p variants={linhaVar} className="mt-2.5 text-[11px] leading-relaxed text-stone-400">
+                        {card.nota}
+                      </m.p>
+                    </>
+                  )}
+
+                  {/* A cor da FIZ marca a fronteira: o verde acima é nosso,
+                      esta faixa é do parceiro. */}
+                  {ato === "fiz" && card.fiz && (
+                    <>
+                      <TituloAto nota="Parceiro">E depois do número</TituloAto>
+                      <m.div
+                        variants={linhaVar}
+                        className="rounded-xl border border-fiz-200 bg-fiz-50 p-2.5 dark:border-stone-700 dark:bg-stone-800/60"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <FizLogo size={22} className="flex-shrink-0 rounded-lg" decorativo />
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-stone-800 dark:text-stone-100">
+                              {card.fiz.titulo}
+                            </div>
+                            <div className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                              {card.fiz.sub}
+                            </div>
+                          </div>
+                        </div>
+                        {/* As trancas: quem chegou ao botão — com o rato, com
+                            o dedo ou com o teclado — escolheu parar. `sobrevoo`
+                            pausa mas é reversível ao sair; aqui usa-se
+                            `parado`, que é uma tranca, para que um movimento
+                            acidental não faça o alvo saltar debaixo do cursor.
+                            Retoma-se no BotaoPausa, que já existe e já é
+                            acessível. */}
+                        <FizActionButton
+                          href={`/ir/fiz?s=demo.hero&v=compacta&i=${card.fiz.intent}`}
+                          className="mt-2.5"
+                          onPointerEnter={() => setParado(true)}
+                          onFocus={() => setParado(true)}
+                          onTouchStart={() => setParado(true)}
+                        >
+                          {card.fiz.cta}
+                        </FizActionButton>
+                      </m.div>
+                      <m.p variants={linhaVar} className="mt-2 text-[11px] leading-relaxed text-stone-400">
+                        {NOTA_LIGACAO}
+                      </m.p>
+                    </>
+                  )}
+                  </m.div>
+                </m.div>
+              </AnimatePresence>
+            )}
           </div>
         </div>
 
         {/* ── Cursor encenado + ripple de clique ─────────────────── */}
-        {ripple && !reduz && (
+        {ripple && !reduzNoDesenho && !sobrevoo && (
           <m.span
             key={ripple.id}
             aria-hidden
@@ -801,7 +1081,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
             transition={{ duration: 0.6, ease: "easeOut" }}
           />
         )}
-        {ponteiro && !reduz && (
+        {ponteiro && !reduzNoDesenho && !sobrevoo && (
           <m.div
             aria-hidden
             className="pointer-events-none absolute z-30"
@@ -824,53 +1104,21 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
         )}
       </div>
 
-      {/* ── Indicadores de passo — linha que se preenche + vistos ── */}
+      {/* ── Régua dos atos ────────────────────────────────────────
+          Substitui o antigo rodapé "Insere o valor / Calcula / Resultado",
+          que era `aria-hidden`, não se podia clicar e só descrevia a
+          encenação — deixava de fora tudo o que vem depois do número. */}
       <div
-        className="mt-5 flex items-center justify-center"
-        style={{
-          opacity: fading ? 0 : 1,
-          transition: `opacity ${FADE_MS}ms ease-out`,
-        }}
-        aria-hidden
+        className="mt-4"
+        style={{ opacity: fading ? 0 : 1, transition: `opacity ${FADE_MS}ms ease-out` }}
       >
-        {STEP_LABELS.map((label, i) => (
-          <div key={label} className="flex items-center">
-            {i > 0 && (
-              <div className="mx-1.5 h-px w-5 overflow-hidden rounded-full bg-stone-200 dark:bg-stone-700 sm:mx-3 sm:w-10">
-                <div
-                  className="h-full origin-left bg-brand transition-transform duration-700 ease-out"
-                  style={{ transform: `scaleX(${i <= stepIndex ? 1 : 0})` }}
-                />
-              </div>
-            )}
-            <div className="flex items-center gap-1.5">
-              <div className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
-                <div
-                  className={`flex items-center justify-center rounded-full transition-all duration-500 ${
-                    i < stepIndex
-                      ? "h-3.5 w-3.5 bg-brand text-white"
-                      : i === stepIndex
-                        ? "h-2.5 w-2.5 bg-brand ring-[3px] ring-brand/20"
-                        : "h-2 w-2 bg-stone-200 dark:bg-stone-700"
-                  }`}
-                >
-                  {i < stepIndex && <Check size={8} />}
-                </div>
-              </div>
-              <span
-                className={`whitespace-nowrap text-[10px] font-medium transition-colors duration-500 sm:text-[11px] ${
-                  i === stepIndex
-                    ? "text-brand"
-                    : i < stepIndex
-                      ? "text-stone-500 dark:text-stone-400"
-                      : "text-stone-300 dark:text-stone-600"
-                }`}
-              >
-                {label}
-              </span>
-            </div>
-          </div>
-        ))}
+        <ReguaDeAtos
+          atos={atosDaRegua}
+          indiceAtivo={idxAto}
+          barraRef={barraRef}
+          estatico={reduzNoDesenho}
+          onIr={irParaAto}
+        />
       </div>
     </div>
   );
@@ -878,9 +1126,20 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
 
 /* ── Componente principal ────────────────────────────────────── */
 
-export default function Hero({ cmp }: { cmp: ComparacaoCategoriasResult }) {
+export default function Hero({
+  cmp,
+  recibo,
+  vencimento,
+}: {
+  cmp: ComparacaoCategoriasResult;
+  recibo: CalcResult;
+  vencimento: VencimentoResult;
+}) {
   const { perfil, definir } = usePerfil();
-  const EXEMPLO = useMemo(() => criarExemplos(cmp), [cmp]);
+  const EXEMPLO = useMemo(
+    () => criarExemplos({ CMP: cmp, REC: recibo, VENC: vencimento }),
+    [cmp, recibo, vencimento],
+  );
   const dados = EXEMPLO[perfil];
   const c = dados.card;
   const [comoFuncionaAberto, setComoFuncionaAberto] = useState(false);
@@ -893,7 +1152,13 @@ export default function Hero({ cmp }: { cmp: ComparacaoCategoriasResult }) {
   const btnSecundario = "inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-6 py-3.5 text-sm font-semibold text-stone-700 transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:hover:border-stone-600 dark:hover:bg-stone-700";
 
   return (
-    <section className="grain relative overflow-hidden px-6 pt-20 pb-16">
+    // O `pt` contava duas vezes o mesmo espaço: o `Nav` já reserva 72px com
+    // um espaçador próprio em ecrã largo, e o `pt-20` somava mais 80 por cima
+    // — 152px até ao conteúdo, dos quais ~79 completamente vazios por baixo
+    // da barra. No telemóvel não há espaçador nem barra no topo, e os mesmos
+    // 80px ficavam a olhar para o nada. Agora: 32px no telemóvel, e 40px no
+    // desktop SOMADOS ao espaçador do Nav.
+    <section className="grain relative overflow-hidden px-6 pt-8 pb-16 lg:pt-10">
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute -top-32 -right-24 h-[28rem] w-[28rem] rounded-full bg-brand/15 blur-3xl" />
         <div className="absolute top-40 -left-32 h-[24rem] w-[24rem] rounded-full bg-brand-mint/20 blur-3xl" />

@@ -81,10 +81,6 @@ export default function PrazosPage() {
         ))}
       </div>
 
-      <ProHint id="alertas-prazos" icon={<BellAlert size={18} />} cta="Ativar alertas (Pro)" className="mb-6">
-        Vês os prazos aqui, mas é fácil esquecer. Queres que te avisemos por email alguns dias antes de cada um?
-      </ProHint>
-
       {!mounted ? (
         <div className="p-10 text-center text-sm text-stone-400">A carregar…</div>
       ) : vista === "calendario" ? (

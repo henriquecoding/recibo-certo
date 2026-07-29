@@ -771,6 +771,23 @@ export function BookOpen({ size = 18, className }: IconProps) {
   );
 }
 
+export function Play({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M7 4.5l12 7.5-12 7.5z" fill="currentColor" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Pause({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <rect x="6.5" y="4.5" width="4" height="15" rx="1.2" fill="currentColor" />
+      <rect x="13.5" y="4.5" width="4" height="15" rx="1.2" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function SkipForward({ size = 18, className }: IconProps) {
   return (
     <svg {...svgProps(size, className)}>
@@ -904,7 +921,7 @@ export function Linkedin({ size = 18, className }: IconProps) {
 }
 
 // ─── Cursor (ponteiro de rato simulado) ──────────────────────
-// Usado nas demos "ao vivo" para encenar utilização real. Cores fixas de
+// Usado nas demos "em direto" para encenar utilização real. Cores fixas de
 // propósito: tal como um cursor verdadeiro do sistema, é escuro com contorno
 // claro em ambos os temas — não é um ícone de superfície.
 export function CursorArrow({ size = 20, className }: IconProps) {

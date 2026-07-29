@@ -18,6 +18,7 @@ export {
   type QuizOpcao,
   type QuizPergunta,
 };
+export { lerVistas, registarVistas, limparVistas, JANELA_VISTAS } from "./vistas";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Banco de perguntas carregado SOB PROCURA.
@@ -96,33 +97,102 @@ export interface SelecaoPerguntasOpcoes {
   quantidade?: number;
   categoria?: QuizCategoria;
   dificuldade?: 1 | 2 | 3;
+  /** IDs a evitar — normalmente as perguntas já vistas em sessões recentes. */
   excluirIds?: string[];
 }
 
-// Lógica de seleção — pura, opera sobre o banco já carregado (inalterada).
-function selecionar(todas: QuizPergunta[], opcoes: SelecaoPerguntasOpcoes): QuizPergunta[] {
+/** Como a sessão foi construída, para a interface poder ser honesta sobre isso. */
+export interface SelecaoDiagnostico {
+  /** Quantas vieram com a dificuldade pedida. */
+  naDificuldade: number;
+  /** Quantas vieram de outra dificuldade da mesma categoria. */
+  outraDificuldade: number;
+  /** Quantas tiveram de vir de OUTRAS categorias. */
+  foraDaCategoria: number;
+  /** Quantas já tinham sido vistas (a lista de exclusão teve de ser ignorada). */
+  repetidas: number;
+}
+
+export interface SelecaoComDiagnostico {
+  perguntas: QuizPergunta[];
+  diagnostico: SelecaoDiagnostico;
+}
+
+/**
+ * Seleção de perguntas para uma sessão.
+ *
+ * Três correções face à versão anterior:
+ *
+ *  · O segundo fallback saía da CATEGORIA sem aviso. O primeiro (dificuldade)
+ *    mantinha-se dentro dela; o segundo apanhava o banco inteiro. Pedir
+ *    «Prazos» e receber perguntas de IVA é um erro que o utilizador nota.
+ *    Agora a ordem de cedência é explícita — primeiro cede-se a dificuldade,
+ *    depois a lista de exclusão, e só por último a categoria — e cada cedência
+ *    fica registada no diagnóstico para a interface a poder comunicar.
+ *
+ *  · As pesquisas de pertença passaram a `Set`. Com 1.614 perguntas e uma
+ *    lista de exclusão a crescer a cada sessão, `Array.includes` dentro de um
+ *    filtro era quadrático.
+ *
+ *  · A deduplicação passa a ser por ID, não por identidade de objeto.
+ */
+function selecionarComDiagnostico(
+  todas: QuizPergunta[],
+  opcoes: SelecaoPerguntasOpcoes,
+): SelecaoComDiagnostico {
   const { quantidade = 10, categoria, dificuldade, excluirIds = [] } = opcoes;
+  const excluidos = new Set(excluirIds);
 
-  const naCategoria = (p: QuizPergunta) => !categoria || p.categoria === categoria;
-  const naoExcluido = (p: QuizPergunta) => !excluirIds.includes(p.id);
-  const base = todas.filter((p) => naCategoria(p) && naoExcluido(p));
+  const escolhidas: QuizPergunta[] = [];
+  const jaEscolhido = new Set<string>();
+  const diagnostico: SelecaoDiagnostico = {
+    naDificuldade: 0,
+    outraDificuldade: 0,
+    foraDaCategoria: 0,
+    repetidas: 0,
+  };
 
-  const preferidas = dificuldade ? base.filter((p) => p.dificuldade === dificuldade) : base;
+  /** Acrescenta ao resultado, sem repetir, até encher a sessão. */
+  const juntar = (candidatas: QuizPergunta[], contador: keyof SelecaoDiagnostico) => {
+    for (const p of embaralhar(candidatas)) {
+      if (escolhidas.length >= quantidade) return;
+      if (jaEscolhido.has(p.id)) continue;
+      escolhidas.push(p);
+      jaEscolhido.add(p.id);
+      diagnostico[contador] += 1;
+    }
+  };
 
-  let resultado = embaralhar(preferidas);
-  if (dificuldade && resultado.length < quantidade) {
-    const resto = embaralhar(base.filter((p) => p.dificuldade !== dificuldade));
-    resultado = [...resultado, ...resto];
+  const daCategoria = todas.filter((p) => !categoria || p.categoria === categoria);
+  const inedito = (p: QuizPergunta) => !excluidos.has(p.id);
+
+  // 1) O que foi pedido: categoria certa, dificuldade certa, ainda não vista.
+  juntar(
+    daCategoria.filter((p) => inedito(p) && (!dificuldade || p.dificuldade === dificuldade)),
+    "naDificuldade",
+  );
+  // 2) Cede-se a DIFICULDADE, mantendo a categoria.
+  if (escolhidas.length < quantidade && dificuldade) {
+    juntar(daCategoria.filter((p) => inedito(p) && p.dificuldade !== dificuldade), "outraDificuldade");
+  }
+  // 3) Cede-se a lista de EXCLUSÃO, mantendo a categoria — repetir uma
+  //    pergunta da categoria certa é melhor do que sair dela.
+  if (escolhidas.length < quantidade) {
+    juntar(daCategoria, "repetidas");
+  }
+  // 4) Só em último caso se cede a CATEGORIA.
+  if (escolhidas.length < quantidade) {
+    juntar(todas.filter(inedito), "foraDaCategoria");
+  }
+  if (escolhidas.length < quantidade) {
+    juntar(todas, "foraDaCategoria");
   }
 
-  if (resultado.length < quantidade) {
-    const extra = embaralhar(
-      todas.filter((p) => naoExcluido(p) && !resultado.includes(p))
-    );
-    resultado = [...resultado, ...extra];
-  }
+  return { perguntas: escolhidas, diagnostico };
+}
 
-  return resultado.slice(0, Math.min(quantidade, resultado.length));
+function selecionar(todas: QuizPergunta[], opcoes: SelecaoPerguntasOpcoes): QuizPergunta[] {
+  return selecionarComDiagnostico(todas, opcoes).perguntas;
 }
 
 export async function getPerguntasAleatorias(
@@ -130,6 +200,14 @@ export async function getPerguntasAleatorias(
 ): Promise<QuizPergunta[]> {
   const todas = await carregarBancoQuiz();
   return selecionar(todas, opcoes);
+}
+
+/** Como `getPerguntasAleatorias`, mas dizendo o que teve de ceder. */
+export async function getPerguntasComDiagnostico(
+  opcoes: SelecaoPerguntasOpcoes = {}
+): Promise<SelecaoComDiagnostico> {
+  const todas = await carregarBancoQuiz();
+  return selecionarComDiagnostico(todas, opcoes);
 }
 
 export async function getPerguntasPorCategoria(
@@ -142,15 +220,21 @@ export async function getPerguntasPorCategoria(
 export function embaralharOpcoes(pergunta: QuizPergunta): {
   opcoes: QuizOpcao[];
   correta: number;
+  /**
+   * Para cada posição embaralhada, o índice ORIGINAL no banco. Necessário
+   * para o servidor poder verificar a resposta: ele conhece a ordem do banco,
+   * não a que foi mostrada neste ecrã.
+   */
+  indicesOriginais: number[];
 } {
   const indices = embaralhar(pergunta.opcoes.map((_, i) => i));
   const opcoes = indices.map((i) => pergunta.opcoes[i]);
   const correta = indices.indexOf(pergunta.correta);
-  return { opcoes, correta };
+  return { opcoes, correta, indicesOriginais: indices };
 }
 
 // Estatísticas e total agora vêm dos metadados pré-calculados (sem carregar os
-// bancos) — regenerar com `npx vitest run src/lib/quiz-fiscal/__gen_meta.test.ts`.
+// bancos) — regenerar com `npm run quiz:meta`.
 export function getEstatisticasBanco(): Record<
   QuizCategoria,
   { total: number; facil: number; medio: number; dificil: number }

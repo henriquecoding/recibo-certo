@@ -1,36 +1,14 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { GuiaHero } from "@/components/guias/GuiaHero";
-import { FontesGuia } from "@/components/guias/FontesGuia";
-import { NotaDisclaimer } from "@/components/guias/NotaDisclaimer";
+import GuiaLayout from "@/components/guias/GuiaLayout";
+import { metadataDoGuia } from "@/lib/guias/metadata";
 import { ComparadorCAE } from "@/components/guias/ComparadorCAE";
 import InfoTip from "@/components/ui/InfoTip";
 import { RETENCAO, DISPENSA_RETENCAO_LIMITE } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import Badge from "@/components/ui/Badge";
 
-export const metadata: Metadata = {
-  title: "Retenção na fonte recibos verdes 2026",
-  description: "Quando aplicar retenção na fonte, quando dispensar e quais as taxas. Clientes particulares, empresas e estrangeiros.",
-  keywords: ["retenção na fonte recibos verdes", "dispensa retenção", "art 101 CIRS"],
-  alternates: { canonical: "https://www.recibocerto.pt/guias/retencao-na-fonte" },
-  openGraph: {
-    title: "Retenção na fonte recibos verdes 2026 | ReciboCerto",
-    description: "Quando aplicar e quando dispensar a retenção na fonte.",
-    url: "https://www.recibocerto.pt/guias/retencao-na-fonte",
-    siteName: "ReciboCerto",
-    locale: "pt_PT",
-    type: "article",
-  },
-};
-
-const FONTES = [
-  { titulo: "Art. 101.º CIRS — Portal das Finanças", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs101.aspx", tipo: "oficial" as const },
-  { titulo: "Art. 101.º-B CIRS — Portal das Finanças", url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs101b.aspx", tipo: "oficial" as const },
-  { titulo: "DECO — Retenção na fonte para recibos verdes", url: "https://www.deco.proteste.pt/dinheiro/impostos/dicas/retencao-fonte-recibos-verdes", tipo: "referencia" as const },
-  { titulo: "Doutor Finanças — Dispensa de retenção (Art. 101.º-B)", url: "https://www.doutorfinancas.pt/carreira-e-rendimentos/trabalhadores-independentes/2-artigos-de-isencao-irs-para-recibos-verdes/", tipo: "referencia" as const },
-  { titulo: "CRN Contabilidade — Retenção na fonte 2026", url: "https://crncontabilidade.pt/blog/retencao-na-fonte-nos-recibos-verdes-quando-aplicar-taxas-mais-comuns-e-como-evitar-pagar-a-mais-2026/", tipo: "referencia" as const },
-];
+export const metadata: Metadata = metadataDoGuia("retencao-na-fonte");
 
 const TAXAS = [
   { tipo: "Art. 151.º (médico, advogado, engenheiro, programador cód. 1332…)", taxa: RETENCAO.art151.value, base: RETENCAO.art151.legalBasis },
@@ -41,12 +19,7 @@ const TAXAS = [
 
 export default function RetencaoNaFontePage() {
   return (
-    <>
-      <GuiaHero
-        titulo="Retenção na fonte: quando aplicar e quando dispensar"
-        descricao="É o adiantamento de IRS que o cliente retém e entrega à AT. No fim do ano, esse valor desconta no imposto que deves."
-        tempoLeitura={4}
-      />
+    <GuiaLayout slug="retencao-na-fonte">
 
       <section className="mb-10">
         <h2 className="font-display text-xl font-semibold text-stone-800 dark:text-stone-100 mb-4">
@@ -159,8 +132,6 @@ export default function RetencaoNaFontePage() {
       <Suspense>
         <ComparadorCAE />
       </Suspense>
-      <FontesGuia fontes={FONTES} />
-      <NotaDisclaimer />
-    </>
+    </GuiaLayout>
   );
 }
