@@ -721,6 +721,93 @@ export function simularEmpresaOpcoes(opcoes: OpcoesEmpresa): ResultadoEmpresa {
   });
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+//  OTIMIZADOR SALÁRIO vs DIVIDENDOS
+//  ---------------------------------------------------------------------
+//  É a pergunta número um de quem abre uma Lda., e o simulador dava um
+//  slider e nenhuma pista. É calculável por varrimento: o motor é puro e
+//  barato de correr, e o eixo tem uma só dimensão.
+//
+//  As duas vias são tributadas de maneiras diferentes: o salário é custo da
+//  empresa (abate ao IRC) mas paga TSU 23,75% + 11% e escalões progressivos
+//  de IRS; os dividendos não abatem nada (saem do lucro depois do IRC) mas
+//  pagam 28% liberatórios e nenhuma Segurança Social. Qual ganha depende da
+//  faturação, dos custos e do perfil pessoal — não há regra de bolso.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface PontoOtimizacao {
+  salarioMensal: number;
+  /** O que sobra para o sócio: líquido pessoal + lucro retido. */
+  riquezaTotal: number;
+  liquidoGerente: number;
+  ircTotal: number;
+  irsGerente: number;
+  ssTotal: number;
+}
+
+export interface ResultadoOtimizacao {
+  /** O ponto que maximiza a riqueza total. */
+  otimo: PontoOtimizacao;
+  /** O ponto correspondente ao salário atualmente escolhido. */
+  atual: PontoOtimizacao;
+  /** Quanto se ganha por ano ao mudar para o ótimo (0 se já lá está). */
+  ganhoAnual: number;
+  /** A curva completa, para desenhar. */
+  curva: PontoOtimizacao[];
+}
+
+/**
+ * Varre salários de gerência e devolve o que maximiza a riqueza total.
+ *
+ * Maximiza a RIQUEZA, não o líquido pessoal: com salário baixo e sem
+ * distribuir, o líquido pessoal é quase nulo e o dinheiro está na empresa —
+ * otimizar o líquido escolheria sempre distribuir tudo, que é uma decisão do
+ * utilizador e não do otimizador.
+ */
+export function otimizarSalarioDividendos(
+  opcoes: OpcoesEmpresa,
+  passo = 100,
+): ResultadoOtimizacao {
+  const salarioAtual = opcoes.salarioGerenteMensal ?? 0;
+  // Não vale a pena procurar acima do que a empresa consegue pagar: a partir
+  // daí o lucro é negativo e o resultado deixa de fazer sentido.
+  const mesesSalario = opcoes.mesesSalarioGerente ?? 12;
+  const disponivelAnual = Math.max(
+    0,
+    amount(opcoes.faturacao) - amount(opcoes.despesasOper ?? 0) - amount(opcoes.custosExtra ?? 0),
+  );
+  // O custo real de um euro de salário inclui a TSU da entidade.
+  const tetoMensal = disponivelAnual / (mesesSalario * (1 + SS_DEPENDENTE.entidade.value));
+
+  const avaliar = (salarioMensal: number): PontoOtimizacao => {
+    const r = simularEmpresaOpcoes({ ...opcoes, salarioGerenteMensal: salarioMensal });
+    return {
+      salarioMensal,
+      riquezaTotal: r.riquezaTotal,
+      liquidoGerente: r.liquidoGerente,
+      ircTotal: r.ircTotal,
+      irsGerente: r.irsSalarioGerente,
+      ssTotal: cent(r.ssSalGerente + r.payrollGerente.ssTrabalhadorMensal * mesesSalario),
+    };
+  };
+
+  const curva: PontoOtimizacao[] = [];
+  let otimo = avaliar(0);
+  for (let s = 0; s <= tetoMensal; s += passo) {
+    const ponto = avaliar(s);
+    curva.push(ponto);
+    if (ponto.riquezaTotal > otimo.riquezaTotal) otimo = ponto;
+  }
+
+  const atual = avaliar(salarioAtual);
+  return {
+    otimo,
+    atual,
+    ganhoAnual: cent(Math.max(0, otimo.riquezaTotal - atual.riquezaTotal)),
+    curva,
+  };
+}
+
 export interface OpcoesEmpresaGuiado extends OpcoesEmpresa {
   /** Custo de constituição a amortizar (bruto) e por quantos anos. */
   incluirConstituicao?: boolean;

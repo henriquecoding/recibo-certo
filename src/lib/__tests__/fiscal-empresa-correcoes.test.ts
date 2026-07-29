@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   simularEmpresaOpcoes,
   taxaTAViatura,
+  otimizarSalarioDividendos,
   PERFIL_GERENTE_PADRAO,
 } from "@/lib/fiscal-empresa";
 import {
@@ -206,6 +207,42 @@ describe("agravamento por prejuízo (Art. 88.º n.º 14)", () => {
       excecaoPrejuizo: true,
     });
     expect(r.ta.naoDocumentadas).toBeCloseTo(10_000 * 0.5, 2);
+  });
+});
+
+describe("otimizador salário vs dividendos", () => {
+  const cenario = {
+    faturacao: 100_000,
+    despesasOper: 5_000,
+    custosExtra: 2_000,
+    distribuirDividendos: true,
+  } as const;
+
+  it("encontra um ponto pelo menos tão bom como o atual", () => {
+    const r = otimizarSalarioDividendos({ ...cenario, salarioGerenteMensal: 1_000 }, 200);
+    expect(r.otimo.riquezaTotal).toBeGreaterThanOrEqual(r.atual.riquezaTotal);
+    expect(r.ganhoAnual).toBeGreaterThanOrEqual(0);
+  });
+
+  it("o ótimo é mesmo o máximo da curva varrida", () => {
+    const r = otimizarSalarioDividendos({ ...cenario, salarioGerenteMensal: 0 }, 500);
+    const maximo = Math.max(...r.curva.map((p) => p.riquezaTotal));
+    expect(r.otimo.riquezaTotal).toBeCloseTo(maximo, 2);
+  });
+
+  it("não sugere um salário que a empresa não consegue pagar", () => {
+    const r = otimizarSalarioDividendos({ ...cenario, faturacao: 30_000 }, 500);
+    const custoAnualDoOtimo = r.otimo.salarioMensal * 12 * 1.2375;
+    expect(custoAnualDoOtimo).toBeLessThanOrEqual(30_000 - 5_000 - 2_000 + 1);
+  });
+
+  it("já no ótimo, não promete ganho nenhum", () => {
+    const primeira = otimizarSalarioDividendos({ ...cenario, salarioGerenteMensal: 0 }, 100);
+    const segunda = otimizarSalarioDividendos(
+      { ...cenario, salarioGerenteMensal: primeira.otimo.salarioMensal },
+      100,
+    );
+    expect(segunda.ganhoAnual).toBeCloseTo(0, 2);
   });
 });
 

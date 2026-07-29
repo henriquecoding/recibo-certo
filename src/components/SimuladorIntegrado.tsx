@@ -188,7 +188,9 @@ import {
   calcularTributacaoAutonomaEmpresa as calcularTributacaoAutonoma,
   simularEmpresa,
   simularEmpresaOpcoes,
+  otimizarSalarioDividendos,
   type PerfilGerente,
+  type ResultadoOtimizacao,
   type ResultadoBeneficios,
   type ResultadoTA,
 } from "@/lib/fiscal-empresa";
@@ -1459,6 +1461,7 @@ interface EmpresaInputsProps {
   custosExtra: number;
   salGerenteMensal: number;
   mesesSalarioGerente: 12 | 14;
+  otimizacaoSalario: ResultadoOtimizacao;
   onMesesSalarioChange: (m: 12 | 14) => void;
   distribuirDividendos: boolean;
   opcaoEnglobamento: boolean;
@@ -1547,6 +1550,7 @@ function EmpresaInputs({
   custosExtra,
   salGerenteMensal,
   mesesSalarioGerente,
+  otimizacaoSalario,
   onMesesSalarioChange,
   distribuirDividendos,
   opcaoEnglobamento,
@@ -1889,6 +1893,33 @@ function EmpresaInputs({
           </>
         }
       />
+
+      {/* Sugestão do otimizador. O salário e os dividendos são tributados de
+          maneiras diferentes — o salário abate ao IRC mas paga TSU e escalões;
+          os dividendos não abatem nada mas pagam 28% e nenhuma SS — e qual
+          ganha depende da faturação, dos custos e do perfil. Não há regra de
+          bolso, mas há varrimento. */}
+      {otimizacaoSalario.ganhoAnual > 0 && (
+        <div className="rounded-2xl border border-brand/25 bg-brand-light/50 p-3.5 dark:border-brand/25 dark:bg-brand/10">
+          <p className="text-xs font-semibold text-brand-dark dark:text-brand">
+            Mistura mais eficiente: {fmt(otimizacaoSalario.otimo.salarioMensal)}/mês de salário
+          </p>
+          <p className="mt-1 text-[11px] leading-relaxed text-stone-600 dark:text-stone-300">
+            Com este cenário, pôr o salário nesse valor deixa-te com{" "}
+            <strong>{fmt(otimizacaoSalario.ganhoAnual)}/ano</strong> a mais entre o teu
+            bolso e a empresa. O salário abate ao IRC mas paga TSU e escalões de IRS;
+            os dividendos não abatem, mas pagam {pct(DIVIDENDOS_TAXA.value)} e nenhuma
+            Segurança Social.
+          </p>
+          <button
+            type="button"
+            onClick={() => onSalChange(otimizacaoSalario.otimo.salarioMensal)}
+            className="mt-2.5 inline-flex min-h-[36px] items-center gap-1.5 rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-brand-dark"
+          >
+            Aplicar {fmt(otimizacaoSalario.otimo.salarioMensal)}/mês
+          </button>
+        </div>
+      )}
 
       {/* Subsídios de férias e Natal. O motor multiplicava sempre por 12,
           assumindo que o gerente não os recebe — recebe, salvo opção. */}
@@ -3569,6 +3600,13 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
 
   const resultEmpresa = useMemo(
     () => simularEmpresaOpcoes(opcoesEmpresa),
+    [opcoesEmpresa],
+  );
+
+  // Otimizador salário/dividendos. A pergunta número um de quem abre uma
+  // Lda., e até agora havia um slider e nenhuma pista sobre onde o pôr.
+  const otimizacaoSalario = useMemo(
+    () => otimizarSalarioDividendos(opcoesEmpresa, 100),
     [opcoesEmpresa],
   );
 
@@ -6013,6 +6051,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                     custosExtra={custosExtra}
                     salGerenteMensal={salGerenteMensal}
                     mesesSalarioGerente={mesesSalarioGerente}
+                    otimizacaoSalario={otimizacaoSalario}
                     onMesesSalarioChange={setMesesSalarioGerente}
                     distribuirDividendos={distribuirDividendos}
                     opcaoEnglobamento={opcaoEnglobamento}
