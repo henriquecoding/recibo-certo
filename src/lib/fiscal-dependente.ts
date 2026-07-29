@@ -118,6 +118,44 @@ export function retencaoIRSDependente(
   return Math.max(0, cent(ret));
 }
 
+export interface RetencaoAnualCatAInput {
+  /** Rendimento bruto ANUAL da categoria A. */
+  brutoAnual: number;
+  dependentes?: number;
+  estadoCivil?: EstadoCivilRet;
+  deficiencia?: boolean;
+  regiao?: Regiao;
+  /** Ano de benefício do IRS Jovem (1 a 10); 0/undefined se não aplicável. */
+  irsJovemAno?: number;
+}
+
+/**
+ * Estimativa da retenção na fonte ANUAL de um trabalhador dependente, a partir
+ * do bruto anual e da situação familiar, pelas tabelas oficiais de 2026.
+ *
+ * Serve o simulador anual: pedir a retenção do ano ao utilizador e assumir zero
+ * quando ele não a sabe de cor fazia o saldo dizer quase sempre «a pagar»,
+ * mesmo a quem tinha o imposto todo adiantado. É uma ESTIMATIVA — o valor real
+ * está no recibo de vencimento e o campo continua editável.
+ *
+ * O bruto anual é repartido pelas 14 prestações (12 meses + férias e Natal),
+ * porque é sobre cada prestação que a tabela mensal incide.
+ */
+export function estimarRetencaoAnualCatA(input: RetencaoAnualCatAInput): number {
+  const bruto = Math.max(0, input.brutoAnual);
+  if (bruto <= 0) return 0;
+  const mensal = bruto / MESES_RETRIBUICAO;
+  const dependentes = Math.max(0, Math.floor(input.dependentes ?? 0));
+  const estadoCivil = input.estadoCivil ?? "naoCasado";
+  const deficiencia = !!input.deficiencia;
+  const regiao = input.regiao ?? "continente";
+  const mensalRetido =
+    input.irsJovemAno && input.irsJovemAno > 0
+      ? retencaoJovem(mensal, dependentes, estadoCivil, deficiencia, regiao, input.irsJovemAno)
+      : retencaoPorSituacao(mensal, dependentes, estadoCivil, deficiencia, regiao);
+  return cent(mensalRetido * MESES_RETRIBUICAO);
+}
+
 /** Retenção mensal resolvendo a tabela pela situação familiar (estado civil + deficiência). */
 function retencaoPorSituacao(
   salarioBruto: number,

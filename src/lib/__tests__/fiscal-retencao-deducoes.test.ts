@@ -76,9 +76,14 @@ describe("detalhe das deduções de despesas", () => {
     expect(d.gerais).toBeGreaterThan(0);
     expect(d.rendas).toBeGreaterThan(0);
 
-    const soma = d.saude + d.educacao + d.gerais + d.rendas + d.lares + d.ppr + d.donativos;
-    expect(soma).toBeCloseTo(d.somaBruta, 2);
-    expect(d.aplicado).toBeCloseTo(Math.min(d.somaBruta, d.limiteGlobal), 2);
+    // `somaBruta` cobre só as rubricas SUJEITAS ao teto do Art. 78.º n.º 7
+    // (alíneas c) a h), k) e m). As despesas gerais familiares são a alínea b)
+    // e ficam de fora — por isso não entram nesta soma, mas entram no aplicado.
+    const sujeitasAoTeto = d.saude + d.educacao + d.rendas + d.lares + d.ppr + d.donativos + d.pensaoAlimentos;
+    expect(sujeitasAoTeto).toBeCloseTo(d.somaBruta, 2);
+    expect(d.geraisForaDoLimite).toBe(true);
+    expect(d.dentroDoLimite).toBeCloseTo(Math.min(d.somaBruta, d.limiteGlobal), 2);
+    expect(d.aplicado).toBeCloseTo(Math.min(d.somaBruta, d.limiteGlobal) + d.gerais, 2);
   });
 
   it("o aplicado é o que o resultado usa", () => {
@@ -96,8 +101,24 @@ describe("detalhe das deduções de despesas", () => {
     });
     const d = r.deducoesDespesasDetalhe;
     expect(d.limitado).toBe(true);
-    expect(d.aplicado).toBeLessThan(d.somaBruta);
-    expect(d.aplicado).toBeCloseTo(d.limiteGlobal, 2);
+    expect(d.dentroDoLimite).toBeLessThan(d.somaBruta);
+    expect(d.dentroDoLimite).toBeCloseTo(d.limiteGlobal, 2);
+    // As despesas gerais sobrevivem ao corte: estão fora do perímetro do n.º 7.
+    expect(d.aplicado).toBeCloseTo(d.limiteGlobal + d.gerais, 2);
+  });
+
+  it("majora o limite global em 5% por dependente a partir do terceiro (n.º 8)", () => {
+    const base = {
+      brutoAnual: 150_000,
+      tipo: "art151" as const,
+      anoAtividade: 3,
+      deducoes: { saude: 10_000, educacao: 8_000, rendas: 12_000 },
+    };
+    const semDeps = simularIRSAnual(base).deducoesDespesasDetalhe.limiteGlobal;
+    const doisDeps = simularIRSAnual({ ...base, dependentes: 2 }).deducoesDespesasDetalhe.limiteGlobal;
+    const quatroDeps = simularIRSAnual({ ...base, dependentes: 4 }).deducoesDespesasDetalhe.limiteGlobal;
+    expect(doisDeps).toBeCloseTo(semDeps, 2);
+    expect(quatroDeps).toBeCloseTo(semDeps * 1.2, 2);
   });
 
   it("sem despesas, tudo a zero e nada limitado", () => {

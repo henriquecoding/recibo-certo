@@ -80,8 +80,24 @@ async function main() {
       errors.push(`A última revisão tem ${idade} dias (limite: ${MAX_AGE_DAYS}). Recomenda-se reverificar as fontes.`);
     }
   }
-  if (today && lastReview && today !== lastReview) {
-    warnings.push(`TODAY (${today}) difere de DATA_LAST_REVIEW (${lastReview}). Confirmar coerência das datas.`);
+  // O ficheiro tem várias datas de verificação (TODAY e os vários REV_*/`*_TODAY`),
+  // porque os parâmetros foram confirmados em alturas diferentes. Exigir que TODAY
+  // fosse igual a DATA_LAST_REVIEW dava um aviso permanente e sem significado. O
+  // que tem de ser verdade é outra coisa: DATA_LAST_REVIEW é a data mostrada ao
+  // utilizador e não pode ficar atrás da verificação mais recente.
+  const datasVerificacao = [...src.matchAll(/^const [A-Z_]+ = "(\d{4}-\d{2}-\d{2})";/gm)].map((m) => m[1]);
+  if (lastReview && datasVerificacao.length > 0) {
+    const maisRecente = datasVerificacao.reduce((a, b) => (a > b ? a : b));
+    if (maisRecente > lastReview) {
+      warnings.push(
+        `DATA_LAST_REVIEW (${lastReview}) é anterior à verificação mais recente do ficheiro (${maisRecente}). Atualizar DATA_LAST_REVIEW.`
+      );
+    } else {
+      info.push(`Datas de verificação coerentes (mais recente: ${maisRecente} ≤ revisão ${lastReview}).`);
+    }
+  }
+  if (today && lastReview && today > lastReview) {
+    warnings.push(`TODAY (${today}) é posterior a DATA_LAST_REVIEW (${lastReview}). Confirmar coerência das datas.`);
   }
 
   // 3) Acessibilidade das fontes (opcional).

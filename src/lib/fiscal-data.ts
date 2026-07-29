@@ -19,8 +19,14 @@
 // componentes-cliente o possam importar sem arrastar este ficheiro pesado.
 export { FISCAL_YEAR } from "./fiscal-year";
 
-/** Data da última revisão completa dos dados (ISO 8601). */
-export const DATA_LAST_REVIEW = "2026-07-20" as const;
+/**
+ * Data da última revisão dos dados (ISO 8601). É a data que a secção «Fontes»
+ * mostra ao utilizador, por isso não pode ser anterior a nenhum `lastVerified`
+ * registado abaixo: dizer «revisto a 20/07» com um parâmetro verificado a 21/07
+ * descreve mal o que aconteceu. `assertFiscalDataIntegrity()` faz o build falhar
+ * se algum parâmetro for mais recente do que esta data.
+ */
+export const DATA_LAST_REVIEW = "2026-07-29" as const;
 
 // ─── Registo de fontes (evita repetir URLs longos) ─────────────────────
 export interface Source {
@@ -840,10 +846,34 @@ export const REGIME_15PCT = sv(
   "Parte de 15% do bruto não justificada com despesas é acrescida ao rendimento tributável."
 );
 
-/** Mínimo de existência (rendimento protegido de IRS). 2026 = RMMG 920 € × 14. */
+/**
+ * Piso fixo do valor de referência do mínimo de existência (Art. 70.º, n.º 1).
+ * Em 2026 coincide com a RMMG × 14 (920 € × 14), mas a lei fixa-o como valor
+ * absoluto — não como uma função do salário mínimo.
+ */
+export const MINIMO_EXISTENCIA_PISO = 12880;
+/** Multiplicadores do braço indexado ao IAS: 1,5 × 14 × IAS (Art. 70.º, n.º 1). */
+export const MINIMO_EXISTENCIA_IAS_MULT = 1.5;
+export const MINIMO_EXISTENCIA_IAS_MESES = 14;
+
+/**
+ * Valor de referência do mínimo de existência (rendimento protegido de IRS).
+ *
+ * O Art. 70.º, n.º 1 manda usar o MAIOR de dois braços: o valor fixo de
+ * 12 880 € e 1,5 × 14 × IAS. Não é «RMMG × 14»: em 2026 os dois coincidem por
+ * acaso (920 × 14 = 12 880 e 1,5 × 14 × 537,13 = 11 279,73, logo prevalece o
+ * fixo), mas fundamentar o parâmetro na RMMG parte assim que o IAS passar de
+ * ~613,33 € — a partir daí é o braço indexado que manda e a fórmula da RMMG
+ * daria um valor a menos.
+ */
 export const MINIMO_EXISTENCIA = sv(
-  12880,
-  "Art. 70.º CIRS — mínimo de existência 2026 (RMMG 920 € × 14)",
+  Math.round(
+    Math.max(
+      MINIMO_EXISTENCIA_PISO,
+      MINIMO_EXISTENCIA_IAS_MULT * MINIMO_EXISTENCIA_IAS_MESES * IAS.value
+    ) * 100
+  ) / 100,
+  "Art. 70.º, n.º 1 CIRS — máx(12 880 €; 1,5 × 14 × IAS)",
   "art70cirs",
   TODAY,
   "Valor de referência. O abatimento é calculado pela fórmula por troços do artigo 70.º."
@@ -1498,6 +1528,19 @@ export const LIMITE_GLOBAL_DEDUCOES = sv(
   "art78aCirs",
   TODAY,
   "semLimiteAte = 1.º escalão Art. 68.º (8.342 € em 2026); escalaoSuperior = 1.º escalão Art. 68.º-A (80.000 €, fixo)."
+);
+
+/**
+ * Majoração do limite global das deduções à coleta em agregados numerosos
+ * (Art. 78.º, n.º 8): a partir do 3.º dependente, o limite do n.º 7 sobe 5% por
+ * cada dependente. A majoração conta TODOS os dependentes, não só os que
+ * excedem dois — com 4 dependentes o limite sobe 20%, não 10%.
+ */
+export const LIMITE_GLOBAL_MAJORACAO_DEPENDENTES = sv(
+  { minDependentes: 3, porDependente: 0.05 },
+  "Art. 78.º, n.º 8 CIRS — limites do n.º 7 majorados em 5% por dependente nos agregados com três ou mais",
+  "art78aCirs",
+  TODAY
 );
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -2324,6 +2367,32 @@ export const AJUDAS_CUSTO = {
 export const DEDUCAO_ESPECIFICA_DEPENDENTE = sv(
   Math.round(8.54 * IAS.value * 100) / 100,
   "Art. 25.º CIRS — dedução específica = 8,54 × IAS (ou contribuições SS, se superiores)",
+  "art25cirs",
+  DEP_TODAY
+);
+
+/**
+ * Tecto da dedução específica da categoria A quando elevada por quotizações
+ * para ordens profissionais (Art. 25.º, n.º 4): 75% de 12 × IAS. Só a diferença
+ * face à alínea a) pode vir das quotizações, e só quando a atividade é exercida
+ * exclusivamente por conta de outrem — daí ser um tecto, não um acréscimo livre.
+ */
+export const DEDUCAO_ESPECIFICA_DEP_MAX_ORDENS = sv(
+  Math.round(0.75 * 12 * IAS.value * 100) / 100,
+  "Art. 25.º, n.º 4 CIRS — elevação da dedução específica até 75% de 12 × IAS por quotizações para ordens profissionais",
+  "art25cirs",
+  DEP_TODAY
+);
+
+/**
+ * Quotizações sindicais (Art. 25.º, n.º 1, al. c): dedutíveis até 1% do
+ * rendimento bruto da categoria e acrescidas de 100% — ou seja, 1% do bruto
+ * suportado vale 2% de dedução. Acrescem à dedução da alínea a), não a
+ * substituem.
+ */
+export const QUOTIZACOES_SINDICAIS = sv(
+  { limiteFracaoBruto: 0.01, majoracao: 1 },
+  "Art. 25.º, n.º 1, al. c) CIRS — quotizações sindicais até 1% do rendimento bruto, acrescidas de 100%",
   "art25cirs",
   DEP_TODAY
 );
@@ -3589,6 +3658,29 @@ export function assertFiscalDataIntegrity(): void {
   if (Math.abs(DEDUCAO_ESPECIFICA_DEPENDENTE.value - Math.round(8.54 * IAS.value * 100) / 100) > EPS) {
     erros.push("Dedução específica (cat. A) deve ser 8,54 × IAS.");
   }
+  if (
+    Math.abs(DEDUCAO_ESPECIFICA_DEP_MAX_ORDENS.value - Math.round(0.75 * 12 * IAS.value * 100) / 100) > EPS
+  ) {
+    erros.push("Tecto do Art. 25.º n.º 4 (cat. A) deve ser 75% de 12 × IAS.");
+  }
+  // O n.º 4 ELEVA a dedução da alínea a) — um tecto inferior a ela tornaria a
+  // norma inaplicável e cortaria silenciosamente a dedução de quem paga ordem.
+  if (!(DEDUCAO_ESPECIFICA_DEP_MAX_ORDENS.value > DEDUCAO_ESPECIFICA_DEPENDENTE.value)) {
+    erros.push("Tecto do Art. 25.º n.º 4 não é superior à dedução específica da alínea a).");
+  }
+  if (!isRate(QUOTIZACOES_SINDICAIS.value.limiteFracaoBruto)) {
+    erros.push("Limite das quotizações sindicais (fração do bruto) inválido.");
+  }
+  if (!(QUOTIZACOES_SINDICAIS.value.majoracao >= 0)) {
+    erros.push("Majoração das quotizações sindicais negativa.");
+  }
+  const majDep = LIMITE_GLOBAL_MAJORACAO_DEPENDENTES.value;
+  if (!(Number.isInteger(majDep.minDependentes) && majDep.minDependentes >= 1)) {
+    erros.push("Majoração do limite global: número mínimo de dependentes inválido.");
+  }
+  if (!isRate(majDep.porDependente)) {
+    erros.push("Majoração do limite global por dependente inválida.");
+  }
   // Valida as tabelas de retenção das três regiões. Nota: a taxa marginal NÃO é
   // necessariamente crescente entre escalões (ex.: Tabela I da Madeira desce de
   // 30,28% para 28,02%), por isso só se valida o domínio [0,1] e o limite crescente.
@@ -3616,8 +3708,20 @@ export function assertFiscalDataIntegrity(): void {
   // 5b) Coerência do Salário Mínimo Nacional (SMN / RMMG). Estes cross-checks
   //     teriam bloqueado a contradição "870 vs 920" que existia no ficheiro.
   if (!(SMN.value > 0)) erros.push("SMN não positivo.");
-  if (MINIMO_EXISTENCIA.value !== SMN.value * 14) {
-    erros.push(`Mínimo de existência (${MINIMO_EXISTENCIA.value}) deve ser SMN × 14 (${SMN.value * 14}).`);
+  // Art. 70.º, n.º 1: o valor de referência é o MAIOR de (piso fixo; 1,5×14×IAS).
+  // A invariante segue a lei, não a coincidência de 2026 com a RMMG × 14 — assim
+  // continua a valer quando o braço indexado ao IAS ultrapassar o piso.
+  const minimoExistenciaEsperado =
+    Math.round(
+      Math.max(
+        MINIMO_EXISTENCIA_PISO,
+        MINIMO_EXISTENCIA_IAS_MULT * MINIMO_EXISTENCIA_IAS_MESES * IAS.value
+      ) * 100
+    ) / 100;
+  if (Math.abs(MINIMO_EXISTENCIA.value - minimoExistenciaEsperado) > EPS) {
+    erros.push(
+      `Mínimo de existência (${MINIMO_EXISTENCIA.value}) deve ser máx(${MINIMO_EXISTENCIA_PISO}; 1,5 × 14 × IAS) = ${minimoExistenciaEsperado}.`
+    );
   }
   if (RETENCAO_DEP_ISENCAO.value !== SMN.value) {
     erros.push(`Limiar de isenção de retenção (${RETENCAO_DEP_ISENCAO.value}) deve acompanhar o SMN (${SMN.value}).`);
@@ -3863,6 +3967,11 @@ export function assertFiscalDataIntegrity(): void {
     DEDUCAO_PENSAO_ALIMENTOS,
     DEDUCAO_LARES,
     COEF_DESVALORIZACAO_MOEDA,
+    // Categoria A — Art. 25.º n.os 1 al. c) e 4
+    DEDUCAO_ESPECIFICA_DEP_MAX_ORDENS,
+    QUOTIZACOES_SINDICAIS,
+    // Limite global das deduções à coleta — Art. 78.º n.º 8
+    LIMITE_GLOBAL_MAJORACAO_DEPENDENTES,
     // SMN
     SMN,
     // Direitos, cobranças e execução fiscal
@@ -3904,6 +4013,15 @@ export function assertFiscalDataIntegrity(): void {
   sourced.forEach((p) => {
     if (!(p.source in SOURCES)) erros.push(`Fonte não registada: ${p.legalBasis}.`);
     if (!isIsoDate(p.lastVerified)) erros.push(`Data de verificação inválida: ${p.legalBasis}.`);
+    // A data global de revisão é a que a UI mostra na secção «Fontes». Se um
+    // parâmetro foi verificado depois dela, a data mostrada está a subestimar o
+    // trabalho feito — e, pior, sinaliza que alguém atualizou um valor sem
+    // atualizar a revisão. Só se compara quando ambas as datas são válidas.
+    else if (isIsoDate(DATA_LAST_REVIEW) && p.lastVerified > DATA_LAST_REVIEW) {
+      erros.push(
+        `Parâmetro verificado (${p.lastVerified}) depois da última revisão (${DATA_LAST_REVIEW}): ${p.legalBasis}. Atualizar DATA_LAST_REVIEW.`
+      );
+    }
   });
 
   if (erros.length > 0) {

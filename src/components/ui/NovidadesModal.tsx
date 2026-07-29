@@ -3,11 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import { m, AnimatePresence } from "motion/react";
 import { Close, Sparkle, Calendar } from "@/components/ui/Icons";
-import { APP_VERSION, VERSAO_STORAGE_KEY, CHANGELOG } from "@/lib/version";
+import { APP_VERSION, VERSAO_STORAGE_KEY, type EntradaChangelog } from "@/lib/version";
 import { useModalA11y } from "@/hooks/useModalA11y";
 
 export default function NovidadesModal() {
   const [aberto, setAberto] = useState(false);
+  // O texto do changelog são mais de 100 KB e só é preciso quando o popup abre
+  // de facto — que é, no máximo, uma vez por versão. Importá-lo estaticamente
+  // mandava-o para o browser em todas as páginas do site. `null` = ainda a
+  // carregar. A DECISÃO de abrir não depende disto: é tomada e persistida no
+  // efeito abaixo, com a versão que vem do módulo leve.
+  const [entradas, setEntradas] = useState<EntradaChangelog[] | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,6 +33,18 @@ export default function NovidadesModal() {
       // ignore
     }
   }, []);
+
+  // Carrega o conteúdo só depois de a decisão de abrir estar tomada. Se a
+  // importação falhar, o popup fecha-se em silêncio — nunca fica um diálogo
+  // vazio a bloquear a página.
+  useEffect(() => {
+    if (!aberto || entradas) return;
+    let vivo = true;
+    import("@/lib/changelog")
+      .then((mod) => { if (vivo) setEntradas(mod.CHANGELOG); })
+      .catch(() => { if (vivo) setAberto(false); });
+    return () => { vivo = false; };
+  }, [aberto, entradas]);
 
   function fechar() {
     // Redundante (já marcado ao mostrar), mas mantém a garantia se algo falhar.
@@ -102,7 +120,22 @@ export default function NovidadesModal() {
 
             {/* Corpo scrollável — min-h-0 é essencial para o overflow funcionar dentro do flex column */}
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-6 overscroll-contain">
-              {CHANGELOG.map((entrada, i) => {
+              {entradas === null && (
+                <div className="space-y-4" aria-hidden>
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="flex gap-4">
+                      <div className="mt-1 h-3 w-3 shrink-0 animate-pulse rounded-full bg-stone-200 dark:bg-stone-700" />
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="h-3 w-24 animate-pulse rounded bg-stone-200 dark:bg-stone-700" />
+                        <div className="h-3 w-full animate-pulse rounded bg-stone-100 dark:bg-stone-800" />
+                        <div className="h-3 w-4/5 animate-pulse rounded bg-stone-100 dark:bg-stone-800" />
+                      </div>
+                    </div>
+                  ))}
+                  <p className="sr-only">A carregar as novidades…</p>
+                </div>
+              )}
+              {(entradas ?? []).map((entrada, i) => {
                 const isNova = entrada.version === APP_VERSION;
                 return (
                   <div key={entrada.version} className="flex gap-4">
@@ -115,7 +148,7 @@ export default function NovidadesModal() {
                         }}
                         aria-hidden
                       />
-                      {i < CHANGELOG.length - 1 && (
+                      {i < (entradas?.length ?? 0) - 1 && (
                         <div className="mt-1 flex-1 w-px bg-stone-100 dark:bg-stone-800" aria-hidden />
                       )}
                     </div>

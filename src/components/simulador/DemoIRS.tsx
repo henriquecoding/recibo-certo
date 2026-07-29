@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { m, AnimatePresence, useReducedMotion } from "motion/react";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import { pct } from "@/lib/format";
-import { ESCALOES_IRS, COEFICIENTE_POR_TIPO } from "@/lib/fiscal-data";
+import { ESCALOES_IRS, COEFICIENTE_POR_TIPO, DEDUCAO_ESPECIFICA_DEPENDENTE } from "@/lib/fiscal-data";
 import { simularIRSAnual, type SimulacaoInput, type SimulacaoIRS } from "@/lib/fiscal";
 import FizLogo from "@/components/fiz/FizLogo";
 import { fizAtiva } from "@/lib/fiz/flag";
@@ -124,11 +124,15 @@ const PERFIS: PerfilDemo[] = [
       // Com tributação conjunta e rendimentos de outra categoria, o motor não
       // consegue inferir os factos do Art. 70.º a partir do pedido — têm de
       // ser dados, senão a decisão fica em `needs_input`.
+      //
+      // A dedução específica vem da fonte de verdade fiscal, não escrita à mão:
+      // estava aqui 4 104 € — o piso legado, anterior à indexação ao IAS — e a
+      // demo mostrava um abatimento calculado sobre um valor que já não existe.
       minimoExistenciaFacts: {
         eligibleIncome: true,
         dependentTaxpayer: false,
         grossIncome: 34_000,
-        specificDeductions: 4_104,
+        specificDeductions: DEDUCAO_ESPECIFICA_DEPENDENTE.value,
         householdGrossIncome: 55_000,
         householdNonEnglobedIncome: 0,
         householdTaxpayers: 2,
@@ -586,12 +590,7 @@ function AtoSaldo({ sim, reduz }: { sim: SimulacaoIRS; reduz: boolean }) {
   const contigoLen = Math.max(0, ficaContigo - GAP) * C;
   const irsLen = Math.max(0, fracaoIRS - GAP) * C;
 
-  const deducoesColeta =
-    sim.deducaoDependentes +
-    sim.deducaoAscendentes +
-    sim.deducaoDespesas +
-    sim.deducaoDeficiencia +
-    sim.deducaoPensaoAlimentos;
+  const deducoesColeta = sim.deducoesColetaTotal;
 
   return (
     <m.div variants={palco} initial="oculto" animate="entra">

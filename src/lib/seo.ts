@@ -213,6 +213,38 @@ export function generateBreadcrumbSchema(
   };
 }
 
+// ─── Schema: HowTo ───────────────────────────────────────────────────────────
+
+/**
+ * Passos de uma ferramenta guiada, para rich results de instruções.
+ * `totalTime` em duração ISO 8601 (ex.: "PT5M").
+ */
+export function generateHowToSchema(args: {
+  name: string;
+  description: string;
+  url: string;
+  totalTime?: string;
+  steps: { name: string; text: string }[];
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name: args.name,
+    description: args.description,
+    inLanguage: "pt-PT",
+    url: `${SITE_URL}${args.url}`,
+    ...(args.totalTime ? { totalTime: args.totalTime } : {}),
+    estimatedCost: { "@type": "MonetaryAmount", currency: "EUR", value: "0" },
+    step: args.steps.map((s, i) => ({
+      "@type": "HowToStep",
+      position: i + 1,
+      name: s.name,
+      text: s.text,
+      url: `${SITE_URL}${args.url}#simulador`,
+    })),
+  };
+}
+
 // ─── Schema: FAQPage ─────────────────────────────────────────────────────────
 
 export function generateFAQSchema(faqs: { q: string; a: string }[]) {
