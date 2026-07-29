@@ -10,7 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { describe, it, expect } from "vitest";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { modoEfetivo, modoDaRota, modoValido, transportaDados } from "@/lib/parcerias/modos";
 import { hostPermitido, construirLinkAfiliado } from "@/lib/parcerias/link.server";
@@ -777,20 +777,61 @@ describe("parcerias:copy-visivel — o que se escreve chega ao ecrã", () => {
     expect(resolucao).toMatch(/rotulo: rota\.fallbackLabelLigacao,/);
   });
 
-  it("a imagem do kit é usada onde não se reproduz em código", () => {
-    const card = readFileSync(join(RAIZ, "components", "fiz", "FizParceriaCard.tsx"), "utf8");
-    expect(card).toMatch(/fiz-300x600-pt/);
-    expect(card).toMatch(/width=\{300\}/);
-    expect(card).toMatch(/height=\{600\}/);
-    // Dimensões explícitas e `lazy`: um criativo não pode custar a página.
-    expect(card).toMatch(/loading="lazy"/);
-    // E não pode ser recortado — cl. 15.1. Só o código; o comentário ao lado
-    // explica precisamente porque é que `object-cover` não está lá.
-    const codigo = card
+  it("o cartaz é responsivo por FORMA, não por tamanho", () => {
+    // As três variantes do kit são composições diferentes, não a mesma
+    // imagem em três tamanhos: no 1,91:1 o texto fica ao lado do telemóvel;
+    // no 9:16 desce tudo para uma coluna. Encolher a larga num ecrã de 360px
+    // dá uma tira onde o título fica ilegível.
+    const c = readFileSync(join(RAIZ, "components", "parcerias", "FizCriativoImagem.tsx"), "utf8");
+    expect(c).toMatch(/fiz-1200x628-pt/);   // computador
+    expect(c).toMatch(/fiz-1080x1080-pt/);  // tablet
+    expect(c).toMatch(/fiz-1080x1920-pt/);  // telemóvel
+    expect(c).toMatch(/media="\(min-width: 1024px\)"/);
+    expect(c).toMatch(/media="\(min-width: 640px\)"/);
+    // AVIF primeiro, WebP a seguir, PNG de recurso no `<img>`.
+    expect(c).toMatch(/type="image\/avif"/);
+    expect(c).toMatch(/type="image\/webp"/);
+    // Dimensões explícitas em todas as fontes: sem elas é CLS garantido.
+    const semDimensoes = [...c.matchAll(/<source\b[\s\S]*?\/>/g)].filter(
+      (m) => !/width=\{\d+\}/.test(m[0]) || !/height=\{\d+\}/.test(m[0]),
+    );
+    expect(semDimensoes).toEqual([]);
+    // E não pode ser recortado — cl. 15.1 permite converter, não recompor.
+    const codigo = c
       .split("\n")
       .filter((l) => !l.trim().startsWith("//") && !l.trim().startsWith("*"))
       .join("\n");
     expect(codigo).not.toMatch(/object-cover/);
+  });
+
+  it("os três ficheiros do cartaz existem em AVIF e WebP", () => {
+    const dir = join(RAIZ, "..", "public", "parceiros", "fiz");
+    for (const base of ["fiz-1200x628-pt", "fiz-1080x1080-pt", "fiz-1080x1920-pt"]) {
+      for (const ext of ["avif", "webp"]) {
+        expect(existsSync(join(dir, `${base}.${ext}`)), `${base}.${ext}`).toBe(true);
+      }
+    }
+  });
+
+  it("o cartaz não vive dentro do bloco que o explica", () => {
+    // O criativo é um anúncio completo — o que a FIZ faz, a que preço, com
+    // que certificação, e com o seu próprio botão. Dentro do cartão da página
+    // de Planos, que É a explicação da parceria, seria a mesma mensagem duas
+    // vezes. Vive nas faixas das demonstrações, onde é a única presença deles.
+    const card = readFileSync(join(RAIZ, "components", "fiz", "FizParceriaCard.tsx"), "utf8");
+    expect(card).not.toMatch(/FizCriativoImagem/);
+    expect(card).not.toMatch(/fiz-1200x628|fiz-1080x/);
+    const faixa = readFileSync(join(RAIZ, "components", "fiz", "FizFaixaDemo.tsx"), "utf8");
+    expect(faixa).toMatch(/FizCriativoImagem/);
+  });
+
+  it("o cartaz e o botão são distinguíveis na medição", () => {
+    // Saber qual dos dois faz o trabalho é o argumento para a fase seguinte.
+    const faixa = readFileSync(join(RAIZ, "components", "fiz", "FizFaixaDemo.tsx"), "utf8");
+    expect(faixa).toMatch(/v=banner/);
+    expect(faixa).toMatch(/v=faixa/);
+    // E o `v` não pode aparecer duas vezes no mesmo URL.
+    expect(faixa).not.toMatch(/&v=[a-z]+`?\}?&v=/);
   });
 
   it("o cartão de preços tem um caminho real para a FIZ", () => {
@@ -798,5 +839,30 @@ describe("parcerias:copy-visivel — o que se escreve chega ao ecrã", () => {
     const card = readFileSync(join(RAIZ, "components", "fiz", "FizParceriaCard.tsx"), "utf8");
     expect(card).toMatch(/\/ir\/fiz\?s=precos\.faixa/);
     expect(card).toMatch(/FizDisclosure/);
+  });
+
+  it("o cartão não oferece explicar o que acabou de explicar", () => {
+    // O cartão É a explicação da parceria: quem somos, o que faz a FIZ, onde
+    // acaba um e começa o outro, e as ressalvas comerciais. Ao lado do único
+    // botão que acrescenta alguma coisa estava um segundo, «Como funciona a
+    // parceria», a apontar para uma página cujo título é literalmente isso.
+    // Acabava de se explicar e oferecia-se explicar outra vez.
+    const card = readFileSync(join(RAIZ, "components", "fiz", "FizParceriaCard.tsx"), "utf8");
+    const codigo = card
+      .split("\n")
+      .filter((l) => !l.trim().startsWith("//") && !l.trim().startsWith("*"))
+      .join("\n");
+    expect(codigo).not.toMatch(/href="\/integracoes\/fiz"/);
+  });
+
+  it("a copy do cartão não fala de simulações — não há nenhuma nesta página", () => {
+    // «A tua simulação fica onde está» veio do contexto dos simuladores. Na
+    // página de Planos não há simulação nenhuma para ficar onde quer que seja.
+    const card = readFileSync(join(RAIZ, "components", "fiz", "FizParceriaCard.tsx"), "utf8");
+    const codigo = card
+      .split("\n")
+      .filter((l) => !l.trim().startsWith("//") && !l.trim().startsWith("*"))
+      .join("\n");
+    expect(codigo).not.toMatch(/a tua simula[çc][ãa]o fica onde est[áa]/i);
   });
 });

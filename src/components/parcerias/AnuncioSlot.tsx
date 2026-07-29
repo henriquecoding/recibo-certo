@@ -43,8 +43,16 @@ import type { Superficie } from "@/content/parcerias-destinos";
 const IMAGEM_POR_VARIANTE: Partial<
   Record<string, { src: string; largura: number; altura: number; alt: string }>
 > = {
+  // Faixa larga (1,91:1) — a forma da maior parte dos slots do site.
   banner: {
-    // O ficheiro é 2× retina (600×1200) para um slot de 300×600.
+    src: "/parceiros/fiz/fiz-1200x628-pt.avif",
+    largura: 1200,
+    altura: 628,
+    alt: "FIZ — faturação e impostos em piloto automático, para freelancers em Portugal",
+  },
+  // Coluna estreita e alta. Só serve onde o slot tem essa forma; numa faixa
+  // larga deixa uma coluna de vazio ao lado.
+  texto: {
     src: "/parceiros/fiz/fiz-300x600-pt.avif",
     largura: 300,
     altura: 600,

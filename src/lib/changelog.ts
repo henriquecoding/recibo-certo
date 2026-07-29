@@ -30,6 +30,7 @@ export const CHANGELOG: EntradaChangelog[] = [
       "Duas frases desapareceram do site porque prometiam uma coisa que não acontece: diziam que escolherias «campo a campo» o que seguia para a FIZ, e uma delas chegava a citar o teu IRS estimado. Nesta fase não segue nada — a ligação abre o site deles e a tua simulação fica onde está.",
       "O cartão de parceiro dizia «Parceiro verificado» e mais nada. Passa a dizer também «Ligação comercial»: anunciar «verificado» e omitir «pago» era meia verdade.",
       "Na página de Planos, o cartão da FIZ explicava a parceria e não tinha um único caminho para lá ir — o único botão levava a uma página nossa. Passa a ter o botão a sério, com a divulgação ao lado.",
+      "O cartaz da FIZ, por baixo das demonstrações, adapta-se ao teu ecrã: no computador vem na versão larga, no tablet na quadrada e no telemóvel na vertical. São composições diferentes, não a mesma imagem esticada — no telemóvel o título fica legível em vez de virar uma tira.",
     ],
   },
   {

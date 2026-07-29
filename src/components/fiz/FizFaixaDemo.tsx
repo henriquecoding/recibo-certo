@@ -18,11 +18,23 @@
 //  transmitir autoridade.
 //
 //  O botão dentro do ato é o extra. Isto é o piso.
+//
+//  ── Porque é aqui que vive o cartaz ──────────────────────────────────
+//  O criativo da FIZ é um anúncio completo: diz o que fazem, a que preço e
+//  com que certificação, e traz o seu próprio botão. Dentro do cartão da
+//  página de Planos seria a mesma mensagem duas vezes, porque esse cartão é
+//  precisamente a explicação da parceria. Aqui não há explicação nenhuma da
+//  FIZ — a página é sobre o nosso simulador —, por isso o cartaz é a única
+//  presença deles e não repete nada.
+//
+//  Acompanha-o um botão de texto a sério. O «Experimentar» que se vê no
+//  cartaz são pixels: quem navega por teclado, tem imagens bloqueadas ou usa
+//  leitor de ecrã precisa de um alvo que exista no DOM.
 // ═══════════════════════════════════════════════════════════════════════
 
-import FizLogo from "./FizLogo";
 import FizActionButton from "./FizActionButton";
 import FizDisclosure from "./FizDisclosure";
+import FizCriativoImagem from "@/components/parcerias/FizCriativoImagem";
 import { copyDaSuperficie, DIVULGACAO_LIGACAO } from "@/content/parcerias-copy";
 import {
   parceriaAtiva,
@@ -56,20 +68,25 @@ export default async function FizFaixaDemo({
     placement.divulgacao?.trim() || parceria.divulgacao.trim() || DIVULGACAO_LIGACAO;
 
   // Destino de alta intenção: quem chega ao fim de uma demonstração já viu o
-  // número e a conclusão.
-  const href = `/ir/fiz?s=${encodeURIComponent(superficie)}&v=faixa&d=registo`;
+  // número e a conclusão. A variante entra por cima, para conseguirmos
+  // distinguir quem clicou no cartaz de quem clicou no botão — é a única
+  // forma de saber qual dos dois faz o trabalho.
+  const base = `/ir/fiz?s=${encodeURIComponent(superficie)}&d=registo`;
 
   return (
-    <div className={className}>
-      <aside className="flex flex-wrap items-center gap-3 rounded-2xl border border-fiz-200 bg-fiz-50 px-4 py-3 dark:border-stone-700 dark:bg-stone-900">
-        <FizLogo size={24} className="flex-shrink-0 rounded-lg" decorativo />
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-stone-800 dark:text-stone-100">{titulo}</p>
-          <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">{sub}</p>
-        </div>
-        <FizActionButton href={href}>{cta}</FizActionButton>
-      </aside>
-      <FizDisclosure texto={divulgacao} className="mt-1.5" />
-    </div>
+    <aside className={className} aria-label="Publicidade de parceiro">
+      {/* A nossa linha primeiro: é ela que nomeia a fronteira — o que é
+          estimativa nossa e o que é execução deles. O cartaz do parceiro vem
+          a seguir, e é dele a mensagem comercial. */}
+      <p className="text-xs font-semibold text-stone-800 dark:text-stone-100">{titulo}</p>
+      <p className="mt-0.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">{sub}</p>
+
+      <FizCriativoImagem href={`${base}&v=banner`} className="mt-2.5" />
+
+      <div className="mt-3">
+        <FizActionButton href={`${base}&v=faixa`}>{cta}</FizActionButton>
+      </div>
+      <FizDisclosure texto={divulgacao} className="mt-2" />
+    </aside>
   );
 }

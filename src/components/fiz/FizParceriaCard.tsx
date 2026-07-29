@@ -1,6 +1,4 @@
-import Link from "next/link";
-import Image from "next/image";
-import { Check, ArrowRight, Lock } from "@/components/ui/Icons";
+import { Check, Lock } from "@/components/ui/Icons";
 import FizLogo from "./FizLogo";
 import FizActionButton from "./FizActionButton";
 import FizDisclosure from "./FizDisclosure";
@@ -174,68 +172,34 @@ export default function FizParceriaCard({ className = "" }: { className?: string
         </ul>
       </div>
 
-      {/* ── Ver a FIZ a sério ───────────────────────────────────────
-          Este cartão descrevia a parceria e não tinha um único caminho para
-          a FIZ: o único destino era uma página nossa. Faltava-lhe a coisa
-          mais simples — poder ir ver.
+      {/* ── Um só destino, e é a FIZ ────────────────────────────────
+          Este cartão descrevia a parceria inteira e o único botão levava a
+          `/integracoes/fiz` — uma página cujo título é, literalmente, «como
+          funciona a parceria». Acabava de se explicar a parceria e oferecia-se
+          explicá-la outra vez. Ficou uma ação só.
 
-          A imagem é o criativo do kit deles, com uma captura do produto. É o
-          formato que NÃO se reproduz em CSS (os de texto e botão são gerados
-          em código, em `FizCriativoTexto`), e é aqui que ela serve: numa
-          coluna estreita, ao lado da explicação, com dimensões explícitas
-          para não haver salto de layout. */}
-      <div className="grid gap-6 border-t border-fiz-200 px-6 py-6 sm:px-8 sm:py-7 lg:grid-cols-[1fr_240px] lg:items-start lg:gap-10">
-        <div>
-          <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">
-            Queres ver como funciona do lado deles?
-          </p>
-          <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-stone-600 dark:text-stone-400">
-            Abre num separador novo. Não sais daqui e a tua simulação fica onde está.
-          </p>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-            {/* O destino é uma rota NOSSA. O link do parceiro é resolvido no
-                servidor, a cada clique — não viaja no bundle do browser. */}
-            <FizActionButton href="/ir/fiz?s=precos.faixa&v=faixa&d=registo">
-              Conhecer a FIZ
-            </FizActionButton>
-            <Link
-              href="/integracoes/fiz"
-              className="inline-flex min-h-[44px] flex-shrink-0 items-center justify-center gap-2 rounded-2xl border border-fiz-300 bg-white px-5 py-2.5 text-sm font-semibold text-fiz-900 transition-colors hover:bg-fiz-50 dark:bg-stone-900"
-            >
-              Como funciona a parceria
-              <ArrowRight size={15} />
-            </Link>
-          </div>
-          <FizDisclosure texto={DIVULGACAO_LIGACAO} className="mt-3 max-w-xl" />
+          E não leva cartaz. O criativo da FIZ é um anúncio completo — diz o
+          que a FIZ faz, com que preço e com que certificação, e traz o seu
+          próprio botão. Dentro de um bloco que acabou de explicar exatamente
+          isso, é a mesma mensagem duas vezes. O cartaz vive onde é a ÚNICA
+          presença da FIZ: nas faixas por baixo das demonstrações. */}
+      <div className="border-t border-fiz-200 px-6 py-6 sm:px-8 sm:py-7">
+        <p className="max-w-2xl text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+          Já sabes o que fazemos nós e o que faz a FIZ. O passo seguinte é vê-los por dentro —
+          abre num separador novo, ficas aqui.
+        </p>
+        <div className="mt-4">
+          <FizActionButton href="/ir/fiz?s=precos.faixa&v=faixa&d=registo">
+            Conhecer a FIZ
+          </FizActionButton>
         </div>
-
-        <a
-          href="/ir/fiz?s=precos.faixa&v=banner&d=registo"
-          target="_blank"
-          rel="noopener noreferrer nofollow sponsored"
-          // Sem `object-cover`: recortar o criativo é modificação da marca, e a
-          // cl. 15.1 permite converter e comprimir, não recompor. Reduz-se a
-          // largura e a altura acompanha.
-          className="mx-auto block w-full max-w-[200px] overflow-hidden rounded-2xl border border-fiz-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-fiz-600 focus-visible:ring-offset-2 sm:max-w-[240px]"
-        >
-          <Image
-            src="/parceiros/fiz/fiz-300x600-pt.avif"
-            width={300}
-            height={600}
-            alt="FIZ — impostos no automático, para freelancers em Portugal"
-            loading="lazy"
-            className="h-auto w-full"
-          />
-        </a>
-      </div>
-
-      {/* ── Rodapé ─────────────────────────────────────────────────── */}
-      <div className="border-t border-fiz-200 bg-white/60 px-6 py-5 dark:bg-stone-900/40 sm:px-8">
-        <p className="max-w-xl text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-          A FIZ é um parceiro independente. A parceria é remunerada e o ReciboCerto mantém
-          liberdade editorial sobre o que escreve.
+        <FizDisclosure texto={DIVULGACAO_LIGACAO} className="mt-3 max-w-2xl" />
+        <p className="mt-2 max-w-2xl text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+          A FIZ é um parceiro independente. O ReciboCerto mantém liberdade editorial sobre o que
+          escreve.
         </p>
       </div>
+
     </section>
   );
 }

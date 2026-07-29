@@ -197,12 +197,15 @@ export default function SimuladorIRSLandingPage() {
         </div>
         <div className="flex flex-col items-center gap-3 lg:items-end">
           <DemoIRSLazy />
-          {/* Fora do palco e no HTML inicial: o botão dentro do ato só existe
-              durante uma fração do ciclo e nunca aparece a quem pediu menos
-              movimento. Esta faixa é o piso. */}
-          <FizFaixaDemo superficie="demo.irs.faixa" className="w-full max-w-[420px]" />
         </div>
       </section>
+
+      {/* Fora do palco e no HTML inicial: o botão dentro do ato só existe
+          durante uma fração do ciclo e nunca aparece a quem pediu menos
+          movimento. Esta faixa é o piso — e está fora da grelha de duas
+          colunas porque o cartaz é 1,91:1 e numa coluna de 420px ficava
+          apertado. */}
+      <FizFaixaDemo superficie="demo.irs.faixa" className="mb-14" />
 
       {/* ── Simulador real (o mesmo do painel) ─────────────────── */}
       <section id="simulador" className="mb-14 scroll-mt-24">
