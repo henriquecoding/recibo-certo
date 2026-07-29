@@ -187,6 +187,8 @@ import {
 import {
   calcularTributacaoAutonomaEmpresa as calcularTributacaoAutonoma,
   simularEmpresa,
+  simularEmpresaOpcoes,
+  type PerfilGerente,
   type ResultadoBeneficios,
   type ResultadoTA,
 } from "@/lib/fiscal-empresa";
@@ -843,40 +845,71 @@ function simularAnualRV(
   };
 }
 
+/**
+ * Veredicto do break-even entre recibos verdes e empresa.
+ *
+ * Devolvia `number | null` — e devolvia `null` sempre. Varrendo de 1 000 € a
+ * 200 000 €, com os pressupostos que o comparador injetava (salário zero,
+ * dividendos distribuídos), a empresa nunca ultrapassava os recibos verdes,
+ * porque o coeficiente de 0,75 do regime simplificado é uma dedução presumida
+ * muito generosa e a empresa paga IRC e depois 28% sobre os dividendos.
+ *
+ * Toda a narrativa «vale a pena abrir empresa?» assentava nesse `null`, e um
+ * `null` não diz nada. «Com estes pressupostos não compensa até aos 200 000 €,
+ * e eis a distância» é uma resposta tão legítima como um cruzamento aos
+ * 80 000 € — desde que seja dita.
+ */
+interface VeredictoBreakEven {
+  /** Faturação a partir da qual a empresa passa à frente. `null` se nunca. */
+  faturacao: number | null;
+  /** Melhor diferença (empresa − recibos verdes) encontrada no varrimento. */
+  melhorDiferenca: number;
+  /** Faturação onde essa melhor diferença acontece. */
+  faturacaoMelhor: number;
+  /** Até onde se procurou. */
+  limiteVarrido: number;
+}
+
 function calcularBreakEven(
   tipo: TipoAtividade,
   custosExtra: number,
   despesasOper: number,
   salGerenteMensal: number,
   custoConstAnual: number,
-): number | null {
-  for (let v = 0; v <= 200_000; v += 2_000) {
+  perfil: PerfilGerente,
+  mesesSalarioGerente: 12 | 14 = 14,
+): VeredictoBreakEven {
+  const LIMITE = 200_000;
+  let melhorDiferenca = -Infinity;
+  let faturacaoMelhor = 0;
+  let faturacao: number | null = null;
+
+  for (let v = 2_000; v <= LIMITE; v += 2_000) {
     const rv = simularAnualRV(v, tipo, 0, { primeiroAno: false, acumulaEmprego: false, cpas: false });
-    const em = simularEmpresa(
-      v,
+    const em = simularEmpresaOpcoes({
+      faturacao: v,
       despesasOper,
       custosExtra,
-      salGerenteMensal,
-      true,
-      false,
-      0,
-      "comb_baixo",
-      0,
-      0,
-      0,
-      false,
-      true,
-      0,
-      "interior",
-      0,
-      "pme_normal",
-      false,
-      custoConstAnual,
-      0,
-    );
-    if (em.liquidoGerente > rv.liquido) return v;
+      salarioGerenteMensal: salGerenteMensal,
+      mesesSalarioGerente,
+      distribuirDividendos: true,
+      custoConstituicaoAnual: custoConstAnual,
+      perfil,
+    });
+    const diferenca = em.liquidoGerente - rv.liquido;
+    if (diferenca > melhorDiferenca) {
+      melhorDiferenca = diferenca;
+      faturacaoMelhor = v;
+    }
+    if (faturacao === null && diferenca > 0) faturacao = v;
   }
-  return null;
+
+  return {
+    faturacao,
+    melhorDiferenca: melhorDiferenca === -Infinity ? 0 : melhorDiferenca,
+    faturacaoMelhor,
+    limiteVarrido: LIMITE,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1425,6 +1458,8 @@ interface EmpresaInputsProps {
   despesasOper: number;
   custosExtra: number;
   salGerenteMensal: number;
+  mesesSalarioGerente: 12 | 14;
+  onMesesSalarioChange: (m: 12 | 14) => void;
   distribuirDividendos: boolean;
   opcaoEnglobamento: boolean;
   // Tributação Autónoma
@@ -1511,6 +1546,8 @@ function EmpresaInputs({
   despesasOper,
   custosExtra,
   salGerenteMensal,
+  mesesSalarioGerente,
+  onMesesSalarioChange,
   distribuirDividendos,
   opcaoEnglobamento,
   encargosViatura,
@@ -1844,12 +1881,49 @@ function EmpresaInputs({
         tooltip={
           <>
             Salário bruto mensal do gerente-sócio. SS patronal 23,75% e SS
-            trabalhador 11%. Custo dedutível ao IRC. A estimativa de IRS usa
-            o cenário prudente disponível neste comparador: Continente, não
-            casado e sem dependentes, por 12 meses e sem subsídios.
+            trabalhador 11%. Custo dedutível ao IRC. O IRS do gerente segue o
+            perfil que indicaste em cima (dependentes, tributação conjunta e
+            região) — o mesmo dos recibos verdes, para a comparação ser entre
+            a mesma pessoa. Mesmo sem salário há Segurança Social a pagar
+            sobre 1 × IAS (Art. 55.º do Código Contributivo).
           </>
         }
       />
+
+      {/* Subsídios de férias e Natal. O motor multiplicava sempre por 12,
+          assumindo que o gerente não os recebe — recebe, salvo opção. */}
+      <div>
+        <div className="mb-2 flex items-center gap-1.5">
+          <span className="text-sm font-medium uppercase tracking-wider text-stone-500">
+            Meses de salário
+          </span>
+          <InfoTip label="Subsídios de férias e Natal">
+            Os subsídios de férias e de Natal são devidos ao gerente como a
+            qualquer trabalhador. São custo dedutível da empresa e rendimento
+            da Categoria A dele. Escolhe 12 se optaram por não os pagar.
+          </InfoTip>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {([14, 12] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              aria-pressed={mesesSalarioGerente === m}
+              onClick={() => onMesesSalarioChange(m)}
+              className={`min-h-[44px] rounded-xl border px-3 py-2 text-sm font-semibold transition-all ${
+                mesesSalarioGerente === m
+                  ? "border-brand bg-brand-light text-brand-dark shadow-sm"
+                  : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
+              }`}
+            >
+              {m} meses
+              <span className="mt-0.5 block text-[10px] font-normal text-stone-400">
+                {m === 14 ? "com subsídios" : "sem subsídios"}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* ── Dividendos + Englobamento ─────────────────────────────────────── */}
       <div>
@@ -2935,6 +3009,8 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   const [despesasOper, setDespesasOper] = useState(0);
   const [custosExtra, setCustosExtra] = useState(2_000);
   const [salGerenteMensal, setSalGerenteMensal] = useState(0);
+  /** Gerente pago em 12 ou 14 meses (subsídios de férias e Natal). */
+  const [mesesSalarioGerente, setMesesSalarioGerente] = useState<12 | 14>(14);
   const [distribuirDividendos, setDistribuirDividendos] = useState(true);
 
   // ── Englobamento ──────────────────────────────────────────────────────────
@@ -3443,35 +3519,18 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     ? Math.round(brutoAnual / (1 + taxaIvaEmpresaEfetiva))
     : brutoAnual;
 
-  const resultEmpresa = useMemo(
-    () =>
-      simularEmpresa(
-        faturacaoBaseEmpresa,
-        despesasOper,
-        custosExtraEmpresa,
-        salGerenteMensal,
-        distribuirDividendos,
-        opcaoEnglobamento,
-        encargosViatura,
-        tipoViatura,
-        despRepresentacao,
-        ajudasCusto,
-        naoDocumentadas,
-        emPrejuizo,
-        excecaoPrejuizo,
-        rfaiInvest,
-        regiaoRFAI,
-        sifideDespesas,
-        tipoSifide,
-        primeirosAnos,
-        custoConstituicaoAnual,
-        rfaiContratualValor,
-      ),
-    [
-      faturacaoBaseEmpresa,
+  // Objeto de opções em vez de 20 argumentos posicionais.
+  //
+  // Aqui a lista de dependências estava completa — mas a assinatura posicional
+  // é a mesma que deixou o IFICI por ligar no modo guiado, e continuava a
+  // permitir trocar dois booleanos adjacentes sem o TypeScript dizer nada.
+  const opcoesEmpresa = useMemo(
+    () => ({
+      faturacao: faturacaoBaseEmpresa,
       despesasOper,
-      custosExtraEmpresa,
-      salGerenteMensal,
+      custosExtra: custosExtraEmpresa,
+      salarioGerenteMensal: salGerenteMensal,
+      mesesSalarioGerente: mesesSalarioGerente,
       distribuirDividendos,
       opcaoEnglobamento,
       encargosViatura,
@@ -3482,13 +3541,35 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
       emPrejuizo,
       excecaoPrejuizo,
       rfaiInvest,
-      regiaoRFAI,
+      rfaiRegiao: regiaoRFAI,
       sifideDespesas,
       tipoSifide,
       primeirosAnos,
       custoConstituicaoAnual,
       rfaiContratualValor,
+      // O gerente é a mesma pessoa que está do outro lado da comparação:
+      // dependentes, tributação conjunta e região vêm do perfil dela.
+      perfil: {
+        dependentes: numDep3plus + numDep3minus + numDep2_6 + numDepDefic,
+        conjunta,
+        regiao,
+        ifici,
+      },
+    }),
+    [
+      faturacaoBaseEmpresa, despesasOper, custosExtraEmpresa, salGerenteMensal,
+      mesesSalarioGerente, distribuirDividendos, opcaoEnglobamento,
+      encargosViatura, tipoViatura, despRepresentacao, ajudasCusto,
+      naoDocumentadas, emPrejuizo, excecaoPrejuizo, rfaiInvest, regiaoRFAI,
+      sifideDespesas, tipoSifide, primeirosAnos, custoConstituicaoAnual,
+      rfaiContratualValor,
+      numDep3plus, numDep3minus, numDep2_6, numDepDefic, conjunta, regiao, ifici,
     ],
+  );
+
+  const resultEmpresa = useMemo(
+    () => simularEmpresaOpcoes(opcoesEmpresa),
+    [opcoesEmpresa],
   );
 
   // ── Resultado Contabilidade Organizada TI ─────────────────────────────────
@@ -3555,7 +3636,10 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   const empresaVence = liquidoEmpresaFinal > resultAnualRV.liquido;
   const diferenca = Math.abs(liquidoEmpresaFinal - resultAnualRV.liquido);
   // ── Break-even ────────────────────────────────────────────────────────────
-  const breakEven = useMemo(
+  // O break-even usa agora os valores REAIS do utilizador — incluindo o
+  // salário de gerência e o perfil pessoal. Antes fixava salário zero, o que
+  // era o pior cenário possível para a empresa e garantia que nunca vencia.
+  const veredictoBreakEven = useMemo(
     () =>
       calcularBreakEven(
         tipoAtiv,
@@ -3563,6 +3647,8 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
         despesasOper,
         salGerenteMensal,
         custoConstituicaoAnual,
+        opcoesEmpresa.perfil,
+        mesesSalarioGerente,
       ),
     [
       tipoAtiv,
@@ -3570,8 +3656,11 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
       despesasOper,
       salGerenteMensal,
       custoConstituicaoAnual,
+      opcoesEmpresa.perfil,
+      mesesSalarioGerente,
     ],
   );
+  const breakEven = veredictoBreakEven.faturacao;
 
   // ── Funções de cálculo para a calculadora interactiva de break-even ───────
   // Injectadas no ComparacaoNarrativa, que não tem acesso às funções de
@@ -5923,6 +6012,8 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                     despesasOper={despesasOper}
                     custosExtra={custosExtra}
                     salGerenteMensal={salGerenteMensal}
+                    mesesSalarioGerente={mesesSalarioGerente}
+                    onMesesSalarioChange={setMesesSalarioGerente}
                     distribuirDividendos={distribuirDividendos}
                     opcaoEnglobamento={opcaoEnglobamento}
                     encargosViatura={encargosViatura}
@@ -7289,11 +7380,32 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                     Com {fmt(brutoAnual)}/ano, recibos verdes deixam-te com mais{" "}
                     <strong>{fmt(diferenca)}/ano</strong> (
                     {pct(diferenca / (brutoAnual || 1))}).
-                    {breakEven &&
-                      ` A empresa compensa acima de ${fmt(breakEven)}/ano.`}
+                    {breakEven
+                      ? ` A empresa compensa acima de ${fmt(breakEven)}/ano.`
+                      : /* «Não compensa» é uma resposta, e é a que este
+                           varrimento dá quase sempre: o coeficiente de 0,75 do
+                           regime simplificado é uma dedução presumida muito
+                           generosa, e a empresa paga IRC e depois 28% sobre os
+                           dividendos. Antes ficava um vazio no lugar da
+                           conclusão — o `breakEven` era `null` e a frase
+                           simplesmente acabava. */
+                        ` Com estes pressupostos não compensa até aos ${fmt(veredictoBreakEven.limiteVarrido)}/ano: no ponto mais favorável (${fmt(veredictoBreakEven.faturacaoMelhor)}/ano) a empresa fica ${fmt(Math.abs(veredictoBreakEven.melhorDiferenca))}/ano atrás.`}
                   </span>
                 )}
               </div>
+
+              {/* O que esta comparação ainda não conta. Dizê-lo é o que separa
+                  «não compensa» de «não compensa, e eis o que falta pesar». */}
+              {!empresaVence && !breakEven && (
+                <p className="mt-2 rounded-xl border border-stone-200 bg-white px-3.5 py-3 text-[11px] leading-relaxed text-stone-500 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-400">
+                  A conta ainda não inclui três coisas que jogam a favor da
+                  empresa: o IVA dedutível nas compras, o reporte de prejuízos
+                  fiscais a 12 anos (Art. 52.º CIRC) e a otimização da mistura
+                  salário/dividendos. Nem uma que joga contra: um gerente não
+                  tem subsídio de desemprego. Fala com um contabilista antes de
+                  decidir.
+                </p>
+              )}
 
               {/* Nota legal */}
               <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-alert-border bg-alert-bg p-4">

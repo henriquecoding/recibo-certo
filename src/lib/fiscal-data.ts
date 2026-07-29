@@ -1738,6 +1738,24 @@ export const DEDUCAO_DEFICIENCIA_GRAU_MINIMO = sv(
   TODAY
 );
 
+/**
+ * Art. 55.º do Código Contributivo — base de incidência dos membros de órgãos
+ * estatutários (gerentes, administradores): a remuneração efetivamente
+ * auferida, com o **mínimo de 1 × IAS**.
+ *
+ * Um gerente sem salário não fica sem Segurança Social: paga sobre 1 IAS. O
+ * mínimo cai se o MOE acumular com outra atividade remunerada cuja base
+ * contributiva já seja ≥ 1 IAS, ou se for pensionista de invalidez/velhice —
+ * casos que o simulador não consegue verificar.
+ */
+export const MOE_BASE_MINIMA_MENSAL = sv(
+  IAS.value,
+  "Art. 55.º Código Contributivo — base de incidência mínima dos MOE = 1 × IAS",
+  "segSocialGov",
+  TODAY,
+  "Não se aplica em acumulação com outra atividade com base contributiva ≥ 1 IAS, nem a pensionistas."
+);
+
 /** Contribuição mínima mensal de SS para trabalhadores independentes. */
 export const SS_MIN_MENSAL = sv(
   20,
@@ -3055,6 +3073,7 @@ export function assertFiscalDataIntegrity(): void {
     SS_ISENCAO_PRIMEIRO_ANO_MESES,
     SS_ACUMULACAO_LIMITE_IAS,
     SS_ACUMULACAO_LIMITE_MENSAL,
+    MOE_BASE_MINIMA_MENSAL,
     REGIME_SIMPLIFICADO.limite,
     REGIME_SIMPLIFICADO.coefServicos151,
     REGIME_SIMPLIFICADO.coefOutrosServicos,
