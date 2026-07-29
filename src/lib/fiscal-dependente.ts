@@ -26,6 +26,7 @@ import {
   RETENCAO_SUPLEMENTAR_FATOR,
   AJUDAS_CUSTO,
   IRS_JOVEM_TETO_CALC,
+  SEGURO_ACIDENTES_TRABALHO_ESTIMATIVA,
   tabelaRetencaoDependente,
   type EscalaoRetencao,
   type EstadoCivilRet,
@@ -33,11 +34,16 @@ import {
   type Regiao,
 } from "./fiscal-data";
 import {
+  adicionalSolidariedade,
   calcularAbatimentoMinimoExistencia,
+  calcularDeducoesColeta,
+  calcularExclusaoDeficiencia,
   compararRegimes,
+  deducaoDependentesColeta,
   irsProgressivo,
   isencaoIRSJovem,
   type ComparacaoResult,
+  type DeducoesInput,
 } from "./fiscal";
 
 const cent = (n: number) => Math.round(n * 100) / 100;
@@ -230,58 +236,60 @@ export interface VencimentoResult {
   subsidioRefeicaoTributado: number;
   /** Vencimento líquido a receber (inclui subsídio de refeição). */
   liquido: number;
-  /** Peso de IRS + SS sobre o bruto (0–1). */
+  /**
+   * Peso de IRS + SS sobre a REMUNERAÇÃO SUJEITA (exclui o subsídio de
+   * refeição isento e as ajudas de custo isentas). Mesma definição em
+   * `calcularReciboMensal` — ver a nota em `ReciboMensalResult.taxaEfetiva`.
+   */
   taxaEfetiva: number;
-  /** Custo total para a entidade empregadora (bruto + TSU). */
+  /** Custo total para a entidade empregadora — ver `ReciboMensalResult.custoEmpresa`. */
   custoEmpresa: number;
+  /** Seguro de acidentes de trabalho estimado (obrigatório, ~1% da massa salarial). */
+  seguroAcidentesEstimado: number;
+  /** `custoEmpresa` + seguro de acidentes estimado. */
+  custoEmpresaComSeguro: number;
 }
 
 /**
- * Decompõe um vencimento mensal. Estimativa — a parte do subsídio de refeição
- * acima do limite é entregue na íntegra mas a tributação extra do excesso
- * ainda não é descontada (refinamento na Etapa 2).
+ * Decompõe um vencimento mensal simples (sem horas extra, prémios nem
+ * subsídios de férias/Natal).
+ *
+ * É um CASO PARTICULAR de `calcularReciboMensal` com todos os extras a zero
+ * — e delega nele, em vez de repetir as regras. Antes eram dois motores com
+ * respostas diferentes para a mesma pergunta: este não tributava a parte do
+ * subsídio de refeição acima do limite e o outro sim, o que dava uma
+ * diferença de ~11,90 €/mês (142,80 €/ano) sempre no sentido agradável — e
+ * era este, o incompleto, que a interface mostrava.
  */
 export function calcularVencimento(input: VencimentoInput): VencimentoResult {
-  const bruto = Math.max(0, input.salarioBruto);
-  const dependentes = Math.max(0, Math.floor(input.dependentes ?? 0));
-
-  const ec = input.estadoCivil ?? "naoCasado";
-  const def = input.deficiencia ?? false;
-  const reg = input.regiao ?? "continente";
-
-  const ssTrabalhador = cent(bruto * SS_DEPENDENTE.trabalhador.value);
-  const jovem = isencaoJovemRemuneracao(bruto, input.irsJovemAno);
-  const irsRetido = retencaoJovem(bruto, dependentes, ec, def, reg, input.irsJovemAno);
-  const irsSemJovem = retencaoPorSituacao(bruto, dependentes, ec, def, reg);
-
-  const dias = Math.max(0, input.diasUteis ?? 22);
-  const valorDia = Math.max(0, input.subsidioRefeicaoDia ?? 0);
-  const limiteDia = input.subsidioRefeicaoCartao
-    ? SUBSIDIO_REFEICAO.cartao.value
-    : SUBSIDIO_REFEICAO.dinheiro.value;
-
-  const subsidioRefeicaoTotal = cent(valorDia * dias);
-  const subsidioRefeicaoIsento = cent(Math.min(valorDia, limiteDia) * dias);
-  const subsidioRefeicaoTributado = cent(subsidioRefeicaoTotal - subsidioRefeicaoIsento);
-
-  const liquido = cent(bruto - ssTrabalhador - irsRetido + subsidioRefeicaoTotal);
-  const taxaEfetiva = bruto > 0 ? (ssTrabalhador + irsRetido) / bruto : 0;
-  const custoEmpresa = cent(bruto * (1 + SS_DEPENDENTE.entidade.value));
+  const r = calcularReciboMensal({
+    salarioBruto: input.salarioBruto,
+    dependentes: input.dependentes,
+    estadoCivil: input.estadoCivil,
+    deficiencia: input.deficiencia,
+    regiao: input.regiao,
+    irsJovemAno: input.irsJovemAno,
+    subsidioRefeicaoDia: input.subsidioRefeicaoDia,
+    subsidioRefeicaoCartao: input.subsidioRefeicaoCartao,
+    diasSubsidio: input.diasUteis,
+  });
 
   return {
-    bruto,
-    ssTrabalhador,
-    irsRetido,
-    irsSemJovem,
-    isencaoJovemPct: jovem.pct,
-    rendimentoIsentoJovem: jovem.isentoEur,
-    excedeTetoJovem: jovem.excedeTeto,
-    subsidioRefeicaoTotal,
-    subsidioRefeicaoIsento,
-    subsidioRefeicaoTributado,
-    liquido,
-    taxaEfetiva,
-    custoEmpresa,
+    bruto: r.salarioBase,
+    ssTrabalhador: r.ssTrabalhador,
+    irsRetido: r.irsTotal,
+    irsSemJovem: r.irsSemJovem,
+    isencaoJovemPct: r.isencaoJovemPct,
+    rendimentoIsentoJovem: r.rendimentoIsentoJovem,
+    excedeTetoJovem: r.excedeTetoJovem,
+    subsidioRefeicaoTotal: r.subsidioRefeicaoTotal,
+    subsidioRefeicaoIsento: r.subsidioRefeicaoIsento,
+    subsidioRefeicaoTributado: r.subsidioRefeicaoTributado,
+    liquido: r.liquido,
+    taxaEfetiva: r.taxaEfetiva,
+    custoEmpresa: r.custoEmpresa,
+    seguroAcidentesEstimado: r.seguroAcidentesEstimado,
+    custoEmpresaComSeguro: r.custoEmpresaComSeguro,
   };
 }
 
@@ -387,8 +395,24 @@ export interface ReciboMensalResult {
   // Totais
   brutoTotal: number;
   liquido: number;
+  /**
+   * Peso de IRS + SS sobre a REMUNERAÇÃO SUJEITA — isto é, o bruto total
+   * menos o subsídio de refeição isento e as ajudas de custo isentas.
+   * Definição ÚNICA, partilhada com `calcularVencimento`: antes o mesmo nome
+   * de campo media duas coisas diferentes nos dois motores, e os dois valores
+   * apareciam no mesmo ecrã.
+   */
   taxaEfetiva: number;
+  /**
+   * Custo total para a entidade empregadora: tudo o que a empresa paga
+   * (incluindo subsídios isentos) mais a TSU sobre a base contributiva.
+   * NÃO inclui o seguro de acidentes de trabalho — ver `custoEmpresaComSeguro`.
+   */
   custoEmpresa: number;
+  /** Seguro de acidentes de trabalho estimado (obrigatório; ~1% da massa salarial). */
+  seguroAcidentesEstimado: number;
+  /** `custoEmpresa` + seguro de acidentes estimado. */
+  custoEmpresaComSeguro: number;
   /** True se há algum rendimento adicional ou falta (para a UI decidir mostrar). */
   temExtras: boolean;
 }
@@ -531,7 +555,26 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
   const liquido = cent(brutoTotal - ssTrabalhador - irsTotal);
   const rendimentoSujeito = cent(brutoTotal - ajudasIsentas - subsidioRefeicaoIsento);
   const taxaEfetiva = rendimentoSujeito > 0 ? (ssTrabalhador + irsTotal) / rendimentoSujeito : 0;
-  const custoEmpresa = cent(baseSS * (1 + SS_DEPENDENTE.entidade.value));
+
+  // Custo para a entidade empregadora = TUDO o que sai da empresa por este
+  // trabalhador, não só a parte que entra na base contributiva.
+  //
+  // Antes era `baseSS × 1,2375`, o que deixava de fora o subsídio de refeição
+  // isento e as ajudas de custo isentas — dinheiro que a empresa paga todos os
+  // meses. Num salário de 1 000 € com cartão de 10,46 €/dia × 22 dias, o número
+  // saía 1 237,50 € quando o custo real é 1 467,62 €: 19% abaixo, num valor que
+  // é precisamente o argumento de quem negoceia um aumento.
+  const custoEmpresa = cent(brutoTotal + baseSS * SS_DEPENDENTE.entidade.value);
+  // Seguro de acidentes de trabalho: obrigatório desde o primeiro dia
+  // (Art. 79.º da Lei 98/2009), mas o prémio depende da atividade e da
+  // seguradora — fica como ESTIMATIVA separada, para não misturar um valor
+  // incerto com um número que é exato.
+  //
+  // Fundo de Compensação do Trabalho: não modelado. As contribuições para o
+  // FCT/FGCT deixaram de ser exigidas a novos contratos e o regime está em
+  // transição — inventar aqui uma taxa seria pior do que a omissão declarada.
+  const seguroAcidentesEstimado = cent(baseSS * SEGURO_ACIDENTES_TRABALHO_ESTIMATIVA.value);
+  const custoEmpresaComSeguro = cent(custoEmpresa + seguroAcidentesEstimado);
 
   const temExtras =
     descontoFaltas > 0 ||
@@ -577,6 +620,8 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
     liquido,
     taxaEfetiva,
     custoEmpresa,
+    seguroAcidentesEstimado,
+    custoEmpresaComSeguro,
     temExtras,
   };
 }
@@ -709,7 +754,7 @@ export interface ComparacaoCategoriasInput {
   brutoAnual: number;
   /** Tipo de atividade para o cenário de recibos verdes (default art151). */
   tipo?: TipoAtividade;
-  /** Dependentes (afeta a retenção na Categoria A). */
+  /** Dependentes — aplicados aos TRÊS cenários, não só à Categoria A. */
   dependentes?: number;
   /** Despesas de atividade (recibos verdes e empresa). */
   despesas?: number;
@@ -717,20 +762,62 @@ export interface ComparacaoCategoriasInput {
   custosEmpresa?: number;
   derrama?: number;
   irsJovemAno?: number;
+  // ── Situação pessoal, aplicada a todos os cenários ────────────────────
+  estadoCivil?: EstadoCivilRet;
+  /** Tributação conjunta (casado / unido de facto). */
+  conjunta?: boolean;
+  regiao?: Regiao;
+  deficiencia?: boolean;
+  /** Deduções à coleta comuns (saúde, educação, gerais, rendas, lares). */
+  deducoes?: DeducoesInput;
+  /** Ano de atividade do cenário de recibos verdes (1.º/2.º reduzem o coeficiente). */
+  anoAtividade?: number;
 }
 
 export interface ComparacaoCategoriasResult {
-  dependente: { bruto: number; ss: number; irs: number; liquido: number; taxaEfetiva: number };
+  dependente: {
+    bruto: number;
+    ss: number;
+    /** IRS EFETIVAMENTE DEVIDO no ano (apuramento), não a retenção. */
+    irs: number;
+    /** Retenção na fonte estimada no ano — para mostrar o acerto. */
+    irsRetido: number;
+    /** Positivo → falta pagar no acerto; negativo → reembolso. */
+    acerto: number;
+    liquido: number;
+    taxaEfetiva: number;
+    /** Custo total para a entidade empregadora (bruto + TSU) — ver `modo`. */
+    custoEmpregador: number;
+  };
   freelancer: ComparacaoResult["freelancer"];
   empresa: ComparacaoResult["empresa"];
   /** Categoria com maior líquido disponível. */
   melhor: "dependente" | "freelancer" | "empresa";
 }
 
+/**
+ * Compara Categoria A, recibos verdes e sociedade para o mesmo rendimento
+ * anual ilíquido.
+ *
+ * DUAS CORREÇÕES DE FUNDO face à versão anterior:
+ *
+ *  1. A situação pessoal (dependentes, estado civil, deduções, IRS Jovem)
+ *     aplica-se aos TRÊS cenários. Antes só chegava à Categoria A, e o
+ *     líquido dos recibos verdes não se movia um cêntimo entre 0 e 4
+ *     dependentes — o que chegava a inverter o veredicto e a deslocar o
+ *     ponto de viragem em dez mil euros.
+ *
+ *  2. A Categoria A é medida pelo IRS APURADO, como as outras duas, e não
+ *     pela retenção na fonte. A retenção é um adiantamento mensal; medir uma
+ *     coluna pelo adiantamento e as outras pelo imposto penalizava
+ *     sistematicamente o salário nos rendimentos médios e altos.
+ */
 export function compararCategorias(input: ComparacaoCategoriasInput): ComparacaoCategoriasResult {
   const bruto = Math.max(0, input.brutoAnual);
+  const dependentes = Math.max(0, Math.floor(input.dependentes ?? 0));
 
-  // Cat. B (recibos verdes) + empresa — motor existente.
+  // Cat. B (recibos verdes) + empresa — motor existente, agora com a mesma
+  // situação pessoal.
   const base = compararRegimes({
     brutoAnual: bruto,
     tipo: input.tipo ?? "art151",
@@ -738,21 +825,51 @@ export function compararCategorias(input: ComparacaoCategoriasInput): Comparacao
     custosEmpresa: input.custosEmpresa,
     derrama: input.derrama,
     irsJovemAno: input.irsJovemAno,
+    dependentes,
+    conjunta: input.conjunta,
+    deducoes: input.deducoes,
+    deficiencia: input.deficiencia,
+    anoAtividade: input.anoAtividade,
   });
 
   // Cat. A (trabalho dependente): o mesmo bruto como salário de 14 meses,
-  // sem subsídio de refeição para uma comparação limpa.
+  // sem subsídio de refeição para uma comparação limpa do bruto.
+  const salarioMensal = bruto / 14;
   const anual = calcularVencimentoAnual({
-    salarioBruto: bruto / 14,
-    dependentes: input.dependentes,
+    salarioBruto: salarioMensal,
+    dependentes,
     subsidioRefeicaoDia: 0,
+    estadoCivil: input.estadoCivil,
+    deficiencia: input.deficiencia,
+    regiao: input.regiao,
+    irsJovemAno: input.irsJovemAno,
   });
+  // O imposto do ano — a mesma régua das outras duas colunas.
+  const apuramento = mealheiroDependente({
+    salarioBruto: salarioMensal,
+    dependentes,
+    estadoCivil: input.estadoCivil,
+    deficiencia: input.deficiencia,
+    regiao: input.regiao,
+    irsJovemAno: input.irsJovemAno,
+    conjunta: input.conjunta,
+    deducoes: input.deducoes,
+  });
+
+  const liquidoDependente = cent(anual.brutoAnual - anual.ssAnual - apuramento.irsApurado);
   const dependente = {
     bruto: anual.brutoAnual,
     ss: anual.ssAnual,
-    irs: anual.irsAnual,
-    liquido: anual.liquidoAnual,
-    taxaEfetiva: anual.taxaEfetiva,
+    irs: apuramento.irsApurado,
+    irsRetido: apuramento.irsRetido,
+    acerto: apuramento.acerto,
+    liquido: liquidoDependente,
+    taxaEfetiva: anual.brutoAnual > 0 ? (anual.ssAnual + apuramento.irsApurado) / anual.brutoAnual : 0,
+    // O que a empresa paga por este salário. 40 000 € de salário custam ao
+    // empregador ~49 500 € (TSU 23,75%); 40 000 € de faturação custam ao
+    // cliente 40 000 €. São grandezas diferentes — a interface deixa escolher
+    // qual se compara (ver o seletor «comparar por»).
+    custoEmpregador: cent(anual.brutoAnual * (1 + SS_DEPENDENTE.entidade.value)),
   };
 
   const liquidos = {
@@ -781,8 +898,15 @@ export function compararCategorias(input: ComparacaoCategoriasInput): Comparacao
 export interface MealheiroDependenteInput {
   salarioBruto: number;
   dependentes?: number;
-  /** Dependentes com grau de incapacidade ≥ 60% (Art. 87.º CIRS — +2,5×IAS/dep.). */
+  /** Dependentes com grau de incapacidade ≥ 60% (Art. 78.º-A — +2,5×IAS/dep.). */
   dependentesDeficientes?: number;
+  /** Dependentes com 3 anos ou menos (Art. 78.º-A — 726 € cada). */
+  dependentesBebe?: number;
+  /**
+   * Lista detalhada de dependentes com guarda partilhada. Se fornecida, tem
+   * prioridade sobre as contagens acima (Art. 78.º-A, n.º 4).
+   */
+  dependentesLista?: Array<{ ate3: boolean; deficiente: boolean; guarda: number }>;
   /** Rendimentos variáveis anuais (comissões, prémios, horas extra). */
   variavelAnual?: number;
   estadoCivil?: EstadoCivilRet;
@@ -790,6 +914,21 @@ export interface MealheiroDependenteInput {
   regiao?: Regiao;
   /** Ano de benefício do IRS Jovem (1 a 10); 0/undefined se não aplicável. */
   irsJovemAno?: number;
+  // ── Situação familiar e deduções à coleta (paridade com a Categoria B) ──
+  /** Tributação conjunta (casado / unido de facto): aplica o quociente 2. */
+  conjunta?: boolean;
+  /** Despesas dedutíveis à coleta (saúde, educação, gerais, rendas, lares). */
+  deducoes?: DeducoesInput;
+  /** Ascendentes em comunhão de habitação (Art. 78.º-A). */
+  ascendentes?: number;
+  /** PPR aplicado no ano + escalão de idade (Art. 21.º EBF). */
+  ppr?: { valor: number; escalaoIdade: "ate35" | "de35a50" | "mais50" };
+  /** Donativos do ano (Art. 62.º/63.º EBF). */
+  donativos?: { valor: number; fator: number; semLimite: boolean };
+  /** Pensões de alimentos pagas (Art. 83.º-A). */
+  pensaoAlimentos?: number;
+  /** Outros rendimentos englobados (ex.: categoria B em acumulação). */
+  outrosRendimentos?: number;
 }
 
 export interface MealheiroDependenteResult {
@@ -797,7 +936,19 @@ export interface MealheiroDependenteResult {
   deducaoEspecifica: number;
   /** Rendimento isento de IRS no ano pelo IRS Jovem (€). */
   rendimentoIsentoJovem: number;
+  /** Exclusão do Art. 56.º-A por deficiência do titular (15%, máx. 2 500 €). */
+  exclusaoDeficiencia: number;
   rendimentoColetavel: number;
+  /** Coleta antes das deduções, já com o adicional de solidariedade. */
+  coletaBruta: number;
+  /** Adicional de solidariedade (Art. 68.º-A): 2,5%/5% acima de 80 k€/250 k€. */
+  adicionalSolidariedade: number;
+  deducaoDependentes: number;
+  deducaoAscendentes: number;
+  deducaoDespesas: number;
+  deducaoPensaoAlimentos: number;
+  /** Dedução à coleta por deficiência do titular (Art. 87.º: 4×IAS). */
+  deducaoDeficiencia: number;
   irsApurado: number;
   irsRetido: number;
   /** Positivo → falta pagar (reservar); negativo → reembolso esperado. */
@@ -806,21 +957,45 @@ export interface MealheiroDependenteResult {
   reservaMensal: number;
 }
 
-function deducaoDependentes(dep: number, depDefic = 0): number {
-  const n = Math.max(0, Math.floor(dep));
-  const nDefic = Math.max(0, Math.floor(depDefic));
-  return (
-    Math.min(n, 2) * DEDUCAO_DEPENDENTE.value +
-    Math.max(0, n - 2) * DEDUCAO_DEPENDENTE_3MAIS.value +
-    nDefic * DEDUCAO_DEPENDENTE_DEFICIENCIA.value
-  );
+/**
+ * Retenção estimada sobre rendimentos variáveis pagos no ano (comissões,
+ * prémios não regulares).
+ *
+ * O modelo anterior retinha o variável à taxa efetiva do SALÁRIO BASE. Na
+ * prática o prémio soma-se à remuneração do mês e é retido pela taxa da
+ * linha mais alta da tabela — o modelo antigo subestimava a retenção e, por
+ * isso, SOBRESTIMAVA o acerto: mandava reservar a mais. Aqui aplica-se a
+ * diferença de retenção que o variável provoca quando somado à remuneração
+ * mensal, que é como a entidade empregadora efetivamente retém.
+ */
+function retencaoVariavelAnual(
+  salarioBase: number,
+  variavelAnual: number,
+  dependentes: number,
+  ec: EstadoCivilRet,
+  def: boolean,
+  reg: Regiao,
+  irsJovemAno?: number
+): number {
+  const V = Math.max(0, variavelAnual);
+  if (V <= 0) return 0;
+  // O variável distribui-se pelos 12 meses de salário: em cada mês a base
+  // sobe de `salarioBase` para `salarioBase + V/12` e a retenção é a da
+  // linha correspondente da tabela.
+  const acrescimoMes = V / 12;
+  const comVariavel = retencaoJovem(salarioBase + acrescimoMes, dependentes, ec, def, reg, irsJovemAno);
+  const semVariavel = retencaoJovem(salarioBase, dependentes, ec, def, reg, irsJovemAno);
+  return cent(Math.max(0, comVariavel - semVariavel) * 12);
 }
 
 export function mealheiroDependente(input: MealheiroDependenteInput): MealheiroDependenteResult {
   const base = Math.max(0, input.salarioBruto);
   const dep = Math.max(0, Math.floor(input.dependentes ?? 0));
   const depDefic = Math.max(0, Math.floor(input.dependentesDeficientes ?? 0));
+  const depBebe = Math.max(0, Math.floor(input.dependentesBebe ?? 0));
   const variavel = Math.max(0, input.variavelAnual ?? 0);
+  const outros = Math.max(0, input.outrosRendimentos ?? 0);
+  const temDeficiencia = input.deficiencia ?? false;
 
   const brutoAnual = cent(base * 14 + variavel);
   const ssAnual = cent(brutoAnual * SS_DEPENDENTE.trabalhador.value);
@@ -831,34 +1006,92 @@ export function mealheiroDependente(input: MealheiroDependenteInput): MealheiroD
   const ano = input.irsJovemAno;
   const pctJovem = isencaoIRSJovem(ano);
   const rendimentoIsentoJovem = cent(Math.min(brutoAnual * pctJovem, IRS_JOVEM_TETO_CALC));
-  const rendimentoColetavelAntesMinimo = cent(Math.max(0, brutoAnual - deducaoEspecifica - rendimentoIsentoJovem));
+  // Art. 56.º-A: exclusão de 15% dos rendimentos, até 2 500 € por categoria.
+  // O artigo abrange expressamente a categoria A — antes só a B a aplicava.
+  const exclusaoDeficiencia = cent(calcularExclusaoDeficiencia(brutoAnual, temDeficiencia));
+
+  const rendimentoColetavelAntesMinimo = cent(
+    Math.max(0, brutoAnual - deducaoEspecifica - rendimentoIsentoJovem - exclusaoDeficiencia + outros)
+  );
   const minimo = calcularAbatimentoMinimoExistencia({
     eligibleIncome: true,
     dependentTaxpayer: false,
-    grossIncome: brutoAnual,
+    grossIncome: brutoAnual + outros,
     specificDeductions: deducaoEspecifica,
-    householdGrossIncome: brutoAnual,
+    householdGrossIncome: brutoAnual + outros,
     householdNonEnglobedIncome: 0,
-    householdTaxpayers: 1,
+    householdTaxpayers: input.conjunta ? 2 : 1,
   });
   const rendimentoColetavel = cent(Math.max(0, rendimentoColetavelAntesMinimo - minimo.abatement));
 
-  const irsBruto = irsProgressivo(rendimentoColetavel);
-  const irsAposDeducoes = Math.max(0, irsBruto - deducaoDependentes(dep, depDefic));
-  const irsApurado = cent(irsAposDeducoes);
+  // Escalões progressivos + adicional de solidariedade (Art. 68.º-A), que a
+  // Categoria A simplesmente não cobrava. Em tributação conjunta aplica-se o
+  // quociente 2, tal como no motor da Categoria B.
+  const divisor = input.conjunta ? 2 : 1;
+  const coletavelPorTitular = rendimentoColetavel / divisor;
+  const impostoEscaloes = irsProgressivo(coletavelPorTitular) * divisor;
+  const adicional = adicionalSolidariedade(coletavelPorTitular, divisor);
+  const coletaBruta = cent(impostoEscaloes + adicional);
 
-  // Retido na fonte estimado: salário (14 meses) + variável à taxa efetiva do mês.
+  // Deduções à coleta — as mesmas da Categoria B.
+  const deducaoDependentes = deducaoDependentesColeta({
+    normais: dep,
+    bebe: depBebe,
+    deficientes: depDefic,
+    lista: input.dependentesLista,
+  });
+  const outrasDeducoes = calcularDeducoesColeta(
+    {
+      deducoes: input.deducoes,
+      ppr: input.ppr,
+      donativos: input.donativos,
+      ascendentes: input.ascendentes,
+      pensaoAlimentos: input.pensaoAlimentos,
+      deficiencia: temDeficiencia,
+      conjunta: input.conjunta,
+    },
+    { coletaBruta, rendimentoColetavel }
+  );
+
+  const irsApurado = cent(Math.max(0, coletaBruta - deducaoDependentes - outrasDeducoes.total));
+
+  // Retido na fonte estimado: salário (14 meses) + variável pela linha da tabela.
   const ec = input.estadoCivil ?? "naoCasado";
-  const def = input.deficiencia ?? false;
   const reg = input.regiao ?? "continente";
-  const irsRetidoBase = calcularVencimentoAnual({ salarioBruto: base, dependentes: dep, subsidioRefeicaoDia: 0, estadoCivil: ec, deficiencia: def, regiao: reg, irsJovemAno: ano }).irsAnual;
-  const taxaEfetivaMes = base > 0 ? retencaoJovem(base, dep, ec, def, reg, ano) / base : 0;
-  const irsRetido = cent(irsRetidoBase + variavel * taxaEfetivaMes);
+  const irsRetidoBase = calcularVencimentoAnual({
+    salarioBruto: base,
+    dependentes: dep,
+    subsidioRefeicaoDia: 0,
+    estadoCivil: ec,
+    deficiencia: temDeficiencia,
+    regiao: reg,
+    irsJovemAno: ano,
+  }).irsAnual;
+  const irsRetido = cent(
+    irsRetidoBase + retencaoVariavelAnual(base, variavel, dep, ec, temDeficiencia, reg, ano)
+  );
 
   const acerto = cent(irsApurado - irsRetido);
   const reservaMensal = acerto > 0 ? cent(acerto / 12) : 0;
 
-  return { brutoAnual, deducaoEspecifica, rendimentoIsentoJovem, rendimentoColetavel, irsApurado, irsRetido, acerto, reservaMensal };
+  return {
+    brutoAnual,
+    deducaoEspecifica,
+    rendimentoIsentoJovem,
+    exclusaoDeficiencia,
+    rendimentoColetavel,
+    coletaBruta,
+    adicionalSolidariedade: adicional,
+    deducaoDependentes,
+    deducaoAscendentes: outrasDeducoes.ascendentes,
+    deducaoDespesas: outrasDeducoes.despesas,
+    deducaoPensaoAlimentos: outrasDeducoes.pensaoAlimentos,
+    deducaoDeficiencia: outrasDeducoes.deficiencia,
+    irsApurado,
+    irsRetido,
+    acerto,
+    reservaMensal,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────

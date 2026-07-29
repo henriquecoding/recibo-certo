@@ -47,6 +47,28 @@ const AGENTE =
 
 const ANCORAS_PROIBIDAS_GLOBAIS = ["A query falhou", "versão até 2013", "versão até 2011"];
 
+/**
+ * Domínios que sabidamente bloqueiam agentes automáticos. Lido do catálogo
+ * (`DOMINIOS_QUE_BLOQUEIAM`) para não haver duas listas a divergir.
+ */
+function extrairDominiosQueBloqueiam(src) {
+  const bloco = (src.match(/DOMINIOS_QUE_BLOQUEIAM[^=]*=\s*\[([\s\S]*?)\]/) || [])[1] ?? "";
+  return [...bloco.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+}
+
+let DOMINIOS_QUE_BLOQUEIAM = [];
+
+/** Bloqueio esperado: `expectedBlock` explícito da fonte, ou o domínio. */
+function bloqueioEsperado(fonte) {
+  if (fonte.expectedBlock === true) return true;
+  if (fonte.expectedBlock === false) return false;
+  try {
+    return DOMINIOS_QUE_BLOQUEIAM.includes(new URL(fonte.url).host);
+  } catch {
+    return false;
+  }
+}
+
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
@@ -71,7 +93,11 @@ function extrairFontes(src) {
       .filter((a) => a && !a.includes("${"));
     const brutoProibidas = (bloco.match(/forbiddenAnchors:\s*\[([^\]]*)\]/) || [])[1] ?? "";
     const forbiddenAnchors = [...brutoProibidas.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-    fontes.push({ id, titulo, url, renderMode, status, expectedAnchors, forbiddenAnchors });
+    const eb = (bloco.match(/expectedBlock:\s*(true|false)/) || [])[1];
+    fontes.push({
+      id, titulo, url, renderMode, status, expectedAnchors, forbiddenAnchors,
+      expectedBlock: eb === undefined ? undefined : eb === "true",
+    });
   }
 
   // O construtor `at(...)` gera as fontes do Portal das Finanças; as suas
@@ -154,11 +180,29 @@ async function verificar(fonte) {
     return { fonte, nivel: "aviso", diagnostico: `sem resposta (${r.erro}) após ${TENTATIVAS} tentativas` };
   }
 
+  // Um 404 é sempre erro, mesmo em fontes que bloqueiam: um servidor que
+  // responde «não existe» está a responder, não a bloquear.
   if (r.estado === 404 || r.estado === 410) {
     return { fonte, nivel: "erro", diagnostico: `fonte retirada (HTTP ${r.estado})` };
   }
   if (r.estado === 403 || r.estado === 429) {
-    return { fonte, nivel: "aviso", diagnostico: `bloqueio anti-automação (HTTP ${r.estado}) — verificar à mão` };
+    // Bloqueio DECLARADO: é o comportamento conhecido daquele domínio. Não
+    // conta como problema — se contasse, o relatório encher-se-ia de ruído e
+    // deixaria de ser lido.
+    if (bloqueioEsperado(fonte)) {
+      return {
+        fonte,
+        nivel: "esperado",
+        diagnostico: `bloqueio anti-automação declarado (HTTP ${r.estado}) — verificação manual na revisão editorial`,
+      };
+    }
+    // Bloqueio NOVO: o domínio não estava marcado como bloqueador. Ou mudou
+    // de política, ou a URL saiu do sítio onde estava. Falha.
+    return {
+      fonte,
+      nivel: "erro",
+      diagnostico: `bloqueio anti-automação NÃO declarado (HTTP ${r.estado}) — marcar \`expectedBlock\` ou corrigir a URL`,
+    };
   }
   if (r.estado >= 500) {
     return { fonte, nivel: "aviso", diagnostico: `indisponibilidade temporária (HTTP ${r.estado})` };
@@ -211,6 +255,14 @@ async function verificar(fonte) {
 
 async function main() {
   const src = await readFile(FICHEIRO, "utf8");
+  DOMINIOS_QUE_BLOQUEIAM = extrairDominiosQueBloqueiam(src);
+  if (DOMINIOS_QUE_BLOQUEIAM.length === 0) {
+    console.error(
+      "Não foi possível ler `DOMINIOS_QUE_BLOQUEIAM` do catálogo legal. Sem essa lista, todo o 403 seria\n" +
+        "classificado como erro novo e o relatório perderia sentido — a corrigir antes de continuar.",
+    );
+    process.exit(1);
+  }
   const fontes = extrairFontes(src);
 
   if (fontes.length === 0) {
@@ -227,16 +279,34 @@ async function main() {
 
   const erros = resultados.filter((r) => r.nivel === "erro");
   const avisos = resultados.filter((r) => r.nivel === "aviso");
+  const esperados = resultados.filter((r) => r.nivel === "esperado");
   const ok = resultados.filter((r) => r.nivel === "ok");
 
   if (saidaJson) {
-    console.log(JSON.stringify({ total: fontes.length, erros, avisos, ok: ok.length }, null, 2));
+    console.log(
+      JSON.stringify(
+        { total: fontes.length, erros, avisos, bloqueioEsperado: esperados.length, ok: ok.length },
+        null,
+        2,
+      ),
+    );
   } else {
     console.log(`\nFontes verificadas: ${fontes.length}\n`);
     for (const r of erros) console.log(`  ERRO   ${r.fonte.id} — ${r.diagnostico}\n         ${r.fonte.url}`);
     for (const r of avisos) console.log(`  AVISO  ${r.fonte.id} — ${r.diagnostico}\n         ${r.fonte.url}`);
-    console.log(`\n  ${ok.length} sem problemas · ${avisos.length} avisos · ${erros.length} erros\n`);
-    if (erros.length === 0 && avisos.length === 0) console.log("Catálogo legal íntegro.\n");
+    console.log(
+      `\n  ${ok.length} validadas · ${esperados.length} com bloqueio declarado · ${avisos.length} avisos · ${erros.length} erros\n`,
+    );
+    // Dizer quantas foram efetivamente validadas, e não só que não houve
+    // erros. «0 erros» com 0 validadas não é aprovação — é ausência de
+    // verificação, e é isso que tem de ficar visível.
+    if (ok.length === 0 && esperados.length > 0) {
+      console.log(
+        "  Nota: nenhuma fonte pôde ser validada no corpo — todas as respostas vieram de domínios que\n" +
+          "  bloqueiam agentes automáticos. A verificação destas fontes é MANUAL, na revisão editorial.\n",
+      );
+    }
+    if (erros.length === 0 && avisos.length === 0) console.log("Catálogo legal sem desvios declarados.\n");
   }
 
   process.exit(erros.length > 0 ? 1 : 0);

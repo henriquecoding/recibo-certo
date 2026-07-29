@@ -41,7 +41,13 @@ import {
   TA_VIATURAS_ELETRICA_ACIMA_LIMITE,
   TA_VIATURAS_PHEV,
 } from "./fiscal-data";
-import { calcularAbatimentoMinimoExistencia, irsProgressivo } from "./fiscal";
+import {
+  adicionalSolidariedade,
+  calcularAbatimentoMinimoExistencia,
+  coletaIRC,
+  deducaoDependentesColeta,
+  irsProgressivo,
+} from "./fiscal";
 import type { ParametrosFiscaisRegiao } from "./incentivos-regioes";
 import { calculateLegacyPayroll } from "./payroll-simulator-legacy-adapter";
 
@@ -371,17 +377,6 @@ function marginalRate(taxableIncome: number): number {
   return ESCALOES_IRS.value.at(-1)?.taxa ?? 0;
 }
 
-function solidarity(taxableIncome: number): number {
-  const middle = Math.max(
-    0,
-    Math.min(taxableIncome, ADICIONAL_SOLIDARIEDADE.limiar2.value)
-      - ADICIONAL_SOLIDARIEDADE.limiar1.value,
-  );
-  const upper = Math.max(0, taxableIncome - ADICIONAL_SOLIDARIEDADE.limiar2.value);
-  return middle * ADICIONAL_SOLIDARIEDADE.taxa1.value
-    + upper * ADICIONAL_SOLIDARIEDADE.taxa2.value;
-}
-
 function annualManagerTax(
   salaryGross: number,
   dividends: number,
@@ -436,16 +431,13 @@ function annualManagerTax(
   // Deduções à coleta que o gerente também tem. Sem elas, a comparação com os
   // recibos verdes punha a mesma pessoa com filhos de um lado e sem filhos do
   // outro.
-  const deducaoDependentes = deducaoPorDependentes(perfil.dependentes);
-  const coleta = irsProgressivo(taxable) + solidarity(taxable);
+  //
+  // A dedução por dependentes e o adicional de solidariedade vêm das
+  // implementações ÚNICAS de `fiscal.ts`: a cópia local que aqui existia era
+  // a quarta do projeto, e não conhecia bebés nem guarda partilhada.
+  const deducaoDependentes = deducaoDependentesColeta({ normais: perfil.dependentes });
+  const coleta = irsProgressivo(taxable) + adicionalSolidariedade(taxable);
   return cent(Math.max(0, coleta - deducaoDependentes));
-}
-
-/** Art. 78.º-A: 600 € pelos dois primeiros dependentes, 900 € do 3.º em diante. */
-function deducaoPorDependentes(dependentes: number): number {
-  const n = Math.max(0, Math.floor(dependentes));
-  const primeiros = Math.min(n, 2);
-  return primeiros * DEDUCAO_DEPENDENTE.value + Math.max(0, n - 2) * DEDUCAO_DEPENDENTE_3MAIS.value;
 }
 
 function calculateCompany(input: CompanySimulationInput): ResultadoEmpresa {
@@ -483,12 +475,8 @@ function calculateCompany(input: CompanySimulationInput): ResultadoEmpresa {
       + amount(input.custoRepresentanteFiscal),
   );
   const lucroTributavel = Math.max(0, amount(input.faturacao) - totalCustos);
-  const coleta = cent(
-    lucroTributavel <= IRC_LIMITE_PME.value
-      ? lucroTributavel * input.ircPME
-      : IRC_LIMITE_PME.value * input.ircPME
-        + (lucroTributavel - IRC_LIMITE_PME.value) * input.ircGeral,
-  );
+  // Escala progressiva PME partilhada com `compararRegimes` — ver `coletaIRC`.
+  const coleta = cent(coletaIRC(lucroTributavel, input.ircPME, input.ircGeral));
 
   const beneficios = calculatePotentialBenefits(
     coleta,

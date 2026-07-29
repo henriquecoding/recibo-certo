@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { calcularVencimento, calcularVencimentoAnual, mealheiroDependente, calcularReciboMensal, IRS_JOVEM_TETO_MENSAL } from "@/lib/fiscal-dependente";
+import { calcularPenhora } from "@/lib/fiscal-laboral";
 import { DEDUCAO_DEPENDENTE_DEFICIENCIA } from "@/lib/fiscal-data";
 import { SS_DEPENDENTE, SUBSIDIO_REFEICAO, TRABALHO_SUPLEMENTAR, AJUDAS_CUSTO, HORARIO_SEMANAL_COMPLETO, type EstadoCivilRet } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
@@ -93,6 +94,7 @@ export function SimuladorVencimento() {
   const [cartao, setCartao] = useState(true);
   const [diasUteisStr, setDiasUteisStr] = useState("22");
   const [duodecimos, setDuodecimos] = useState(false);
+  const [outroRendimento, setOutroRendimento] = useState(false);
   const [variavelStr, setVariavelStr] = useState("");
   const [estadoCivil, setEstadoCivil] = useState<EstadoCivilRet>("naoCasado");
   const [deficiencia, setDeficiencia] = useState(false);
@@ -215,7 +217,12 @@ export function SimuladorVencimento() {
 
   const limiteSubsidio = cartao ? SUBSIDIO_REFEICAO.cartao.value : SUBSIDIO_REFEICAO.dinheiro.value;
   const subsidioExcede = temSubsidio && subsidioDia > limiteSubsidio;
-  const liquidoMostrado = duodecimos ? ra.liquidoMedioMes : r.liquido;
+  // O número principal vem do recibo DETALHADO (`det`), não do simples: é o
+  // único que conhece horas extra, prémios, subsídios pagos no mês e faltas.
+  // `r` é hoje um caso particular de `det` com os extras a zero, por isso os
+  // dois coincidem quando não há extras — mas quando há, era `det` que estava
+  // certo e `r` que aparecia no ecrã.
+  const liquidoMostrado = duodecimos ? ra.liquidoMedioMes : det.liquido;
 
   // IRS Jovem e dependentes complementam-se: os dependentes reduzem a retenção
   // mensal pela parcela a abater; o IRS Jovem reduz proporcionalmente o que
@@ -234,6 +241,14 @@ export function SimuladorVencimento() {
     { label: "Segurança Social", value: r.ssTrabalhador, cls: CLS_SS },
   ];
   const descontosAnuais = ra.irsAnual + ra.ssAnual;
+  // Penhora: a «parte líquida» do Art. 738.º, n.º 2 conta apenas os descontos
+  // legalmente obrigatórios — Segurança Social e retenção de IRS —, e não o
+  // subsídio de refeição isento.
+  const liquidoPenhoravel = Math.max(0, det.baseRemunerada + det.suplementarTotal - det.ssTrabalhador - det.irsTotal);
+  const penhora = calcularPenhora({ liquidoMensal: liquidoPenhoravel, temOutroRendimento: outroRendimento });
+  // Taxa efetiva medida pelo imposto realmente devido, para pôr ao lado da que
+  // resulta da retenção — ver o bloco «Retenção vs. imposto devido».
+  const taxaEfetivaApurada = ra.brutoAnual > 0 ? (meal.irsApurado + ra.ssAnual) / ra.brutoAnual : 0;
   const segAno: Seg[] = [
     { label: "Líquido", value: ra.liquidoAnual, color: "", brand: true },
     { label: "IRS + SS", value: descontosAnuais, cls: CLS_SS },
@@ -985,6 +1000,102 @@ export function SimuladorVencimento() {
               </dd>
             </div>
           </dl>
+
+          {/* Retenção vs. imposto apurado.
+              A retenção na fonte é uma aproximação mensal; o imposto é o
+              apuramento anual. Mostrar só a retenção — e chamar-lhe «taxa
+              efetiva» — dizia ao utilizador que aquele era o imposto dele,
+              quando pode faltar pagar ou haver reembolso. O sinal inverte-se
+              perto dos 2 000 €/mês: abaixo disso há sub-retenção, acima há
+              sobre-retenção. É esta a informação com valor. */}
+          <div className="mt-4 rounded-xl border border-stone-100 dark:border-stone-800 bg-white/60 dark:bg-stone-900/40 p-3">
+            <p className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+              Retenção vs. imposto devido
+              <InfoTip label="Não são a mesma coisa">
+                O que te retêm todos os meses é um adiantamento calculado por tabela. O imposto do ano só se apura na
+                declaração, com os escalões, as deduções e a tua situação familiar. A diferença é o acerto — a pagar ou
+                a receber.
+              </InfoTip>
+            </p>
+            <dl className="space-y-1.5 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-xs text-stone-500 dark:text-stone-400">Vais reter no ano</dt>
+                <dd className="font-medium tabular-nums text-stone-800 dark:text-stone-100">{fmt(meal.irsRetido)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-xs text-stone-500 dark:text-stone-400">Vais dever no ano</dt>
+                <dd className="font-medium tabular-nums text-stone-800 dark:text-stone-100">{fmt(meal.irsApurado)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t border-stone-100 dark:border-stone-800 pt-1.5">
+                <dt className="text-xs font-semibold text-stone-600 dark:text-stone-300">
+                  {meal.acerto > 0.5
+                    ? "Falta pagar no acerto"
+                    : meal.acerto < -0.5
+                      ? "Reembolso estimado"
+                      : "Retenção alinhada com o imposto"}
+                </dt>
+                <dd
+                  className={`font-semibold tabular-nums ${
+                    meal.acerto > 0.5 ? "text-alert-text dark:text-amber-400" : "text-brand"
+                  }`}
+                >
+                  {Math.abs(meal.acerto) <= 0.5 ? "—" : fmt(Math.abs(meal.acerto))}
+                </dd>
+              </div>
+            </dl>
+            <p className="mt-2 text-[11px] leading-relaxed text-stone-400">
+              Taxa sobre o bruto: {pct(ra.taxaEfetiva)} pelo que é retido, {pct(taxaEfetivaApurada)} pelo imposto
+              efetivamente devido. Estimativa — não substitui a declaração.
+            </p>
+          </div>
+        </div>
+
+        {/* Limites da penhora (Art. 738.º CPC).
+            A regra estava escrita e testada no motor e era inalcançável a
+            partir da aplicação. É uma das perguntas mais angustiantes de
+            quem tem um recibo de vencimento — e uma das poucas com resposta
+            aritmética exata. */}
+        <div className={subCard}>
+          <div className="mb-3 flex items-center gap-1.5">
+            <Wallet size={14} className="text-brand" />
+            <p className={eyebrow}>Se te penhorarem o salário</p>
+            <InfoTip label="Art. 738.º CPC">
+              São impenhoráveis dois terços da parte líquida do vencimento, com o teto de três salários mínimos e, não
+              tendo outro rendimento, o piso de um. Na parte líquida só contam os descontos legalmente obrigatórios.
+            </InfoTip>
+          </div>
+          <label className="mb-3 flex items-start gap-2.5 text-xs text-stone-600 dark:text-stone-400">
+            <input
+              type="checkbox"
+              checked={outroRendimento}
+              onChange={(e) => setOutroRendimento(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-stone-300 text-brand focus:ring-brand dark:border-stone-600"
+            />
+            <span>Tenho outro rendimento além deste salário</span>
+          </label>
+          <dl className="space-y-1.5 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-xs text-stone-400">Líquido de base (só descontos obrigatórios)</dt>
+              <dd className="font-medium tabular-nums text-stone-800 dark:text-stone-100">{fmt(liquidoPenhoravel)}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-xs text-stone-400">Protegido por lei</dt>
+              <dd className="font-medium tabular-nums text-brand">{fmt(penhora.impenhoravel)}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-stone-100 pt-1.5 dark:border-stone-800">
+              <dt className="text-xs font-semibold text-stone-500 dark:text-stone-300">Máximo penhorável</dt>
+              <dd className="font-semibold tabular-nums text-alert-text dark:text-amber-400">{fmt(penhora.penhoravel)}</dd>
+            </div>
+          </dl>
+          <p className="mt-2 text-[11px] leading-relaxed text-stone-400">
+            {penhora.regra === "piso"
+              ? `Aqui manda o piso: sem outro rendimento, fica sempre protegido pelo menos um salário mínimo (${fmt(penhora.piso)}).`
+              : penhora.regra === "teto"
+                ? `Aqui manda o teto: a proteção não passa de três salários mínimos (${fmt(penhora.teto)}).`
+                : "Aqui manda a regra geral dos dois terços."}{" "}
+            Nas dívidas de alimentos o regime é outro, e o saldo bancário tem proteção própria. Estimativa — confirma no
+            processo.
+          </p>
         </div>
 
         {/* Mealheiro fiscal — acerto anual de IRS */}

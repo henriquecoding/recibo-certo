@@ -37,11 +37,13 @@ describe("guias:lint — manifesto, proprietário, revisão e campos obrigatóri
     expect(() => assertHistoricoIntegrity()).not.toThrow();
   });
 
-  it("os 43 guias publicados têm manifesto, proprietário e revisor", () => {
+  it("os 57 guias do catálogo têm manifesto, proprietário e revisor", () => {
     // Contagem fixa de propósito: é a rede que apanha um guia a desaparecer
     // do catálogo sem ninguém dar por isso. Subiu de 29 para 43 com a
-    // secção «Direitos e cobranças».
-    expect(GUIDE_MANIFESTS).toHaveLength(43);
+    // secção «Direitos e cobranças», e de 43 para 57 com os sete guias de
+    // Empresas e os sete de Conta de outrem. A categoria «Conta de outrem»
+    // passou de 7% para 18% do catálogo.
+    expect(GUIDE_MANIFESTS).toHaveLength(57);
     for (const m of GUIDE_MANIFESTS) {
       expect(m.owner, m.slug).toBeTruthy();
       expect(m.reviewer, m.slug).toBeTruthy();
@@ -65,6 +67,41 @@ describe("guias:lint — manifesto, proprietário, revisão e campos obrigatóri
     for (const m of GUIDE_MANIFESTS.filter((g) => g.status === "published")) {
       expect(HISTORICO_GUIAS.some((h) => h.guideId === m.id), m.slug).toBe(true);
     }
+  });
+
+  it("nenhum guia publicado é uma ilha: todos têm ligação de entrada", () => {
+    // A secção «Direitos e cobranças» fazia 24 ligações para o catálogo antigo
+    // e recebia ZERO de volta. Nenhum dos 29 guias anteriores mencionava
+    // nenhum dos 14 novos: quem lia `iva-recibos-verdes` nunca descobria que
+    // existia `recuperar-iva-incobravel`, e do ponto de vista de SEO catorze
+    // páginas sem uma única ligação interna de entrada recebem autoridade
+    // praticamente nula.
+    //
+    // É uma linha de código que teria apanhado isto sozinho — o relatório
+    // pediu-a expressamente.
+    const entradas = new Map<string, number>();
+    for (const m of GUIDE_MANIFESTS) entradas.set(m.id, 0);
+    for (const m of GUIDE_MANIFESTS) {
+      for (const alvo of m.relatedGuideIds) {
+        if (alvo === m.id) continue;
+        entradas.set(alvo, (entradas.get(alvo) ?? 0) + 1);
+      }
+    }
+    const orfaos = GUIDE_MANIFESTS.filter(
+      (m) => m.status === "published" && (entradas.get(m.id) ?? 0) === 0,
+    ).map((m) => m.slug);
+    expect(orfaos).toEqual([]);
+  });
+
+  it("as ligações relacionadas apontam sempre para guias existentes", () => {
+    const ids = new Set(GUIDE_MANIFESTS.map((m) => m.id));
+    const quebradas: string[] = [];
+    for (const m of GUIDE_MANIFESTS) {
+      for (const alvo of m.relatedGuideIds) {
+        if (!ids.has(alvo)) quebradas.push(`${m.slug} → ${alvo}`);
+      }
+    }
+    expect(quebradas).toEqual([]);
   });
 });
 

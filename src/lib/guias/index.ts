@@ -49,6 +49,43 @@ export const LEITURAS_POR_GUIA: Record<string, ComplementaryReadingId[]> = {
   "mais-valias": ["pwcIrs"],
   "tributacao-conjunta": ["pwcIrs"],
   "reembolso-irs": ["pwcIrs"],
+
+  // ── Direitos e cobranças ────────────────────────────────────────────
+  //    `LEITURAS_POR_GUIA` tinha entrada para 30 guias e para nenhum dos 14
+  //    desta secção: o bloco de leitura complementar aparecia vazio nas
+  //    páginas novas e cheio nas antigas, sem nada explicar a diferença.
+  "fatura-nao-paga": ["occCobranca", "oaJurosMoratorios"],
+  "juros-de-mora": ["oaJurosMoratorios", "occCobranca"],
+  "cobrar-divida": ["occCobranca", "oaJurosMoratorios"],
+  "recuperar-iva-incobravel": ["occIva", "pwcIrs"],
+  "iva-de-caixa": ["occIva", "pwcIrs"],
+  "contestar-liquidacao": ["decoDividasFiscais", "pwcIrs"],
+  "prazos-fiscais-divida": ["decoDividasFiscais"],
+  "juros-indemnizatorios": ["decoDividasFiscais", "oaJurosMoratorios"],
+  "execucao-fiscal": ["decoDividasFiscais", "occPagamentoImpostos"],
+  "plano-prestacoes": ["occPagamentoImpostos", "decoDividasFiscais"],
+  "suspender-execucao": ["occPagamentoImpostos", "decoDividasFiscais"],
+  "penhora-limites": ["decoDividasFiscais", "oaJurosMoratorios"],
+  "reversao-gerentes": ["pwcIrc", "occPagamentoImpostos"],
+  "falsos-recibos-verdes": ["actCondicoesTrabalho", "dgertRelacoesLaborais"],
+
+  // ── Empresas (guias novos) ──────────────────────────────────────────
+  "salario-gerente-ou-dividendos": ["pwcIrc", "pwcIrs", "pwcSs"],
+  "distribuir-lucros": ["pwcIrc", "pwcIrs"],
+  "pagamentos-por-conta-irc": ["pwcIrc"],
+  "prejuizos-fiscais": ["pwcIrc"],
+  "contratar-primeiro-trabalhador": ["pwcSs", "dgertRelacoesLaborais", "actCondicoesTrabalho"],
+  "modelo-22-e-ies": ["pwcIrc", "occRegisto"],
+  "fechar-empresa": ["pwcIrc", "occRegisto"],
+
+  // ── Conta de outrem (guias novos) ───────────────────────────────────
+  "baixa-medica": ["decoBaixaMedica", "montepioDoenca"],
+  "licenca-parental": ["montepioParental", "dgertRelacoesLaborais"],
+  "subsidio-desemprego": ["decoDesemprego", "pwcSs"],
+  "fim-do-contrato": ["dgertRelacoesLaborais", "actCondicoesTrabalho"],
+  "ferias-direitos": ["dgertRelacoesLaborais", "actCondicoesTrabalho"],
+  "trabalho-noturno-e-turnos": ["dgertRelacoesLaborais", "dfSuplementar"],
+  "faltas-ao-trabalho": ["dgertRelacoesLaborais", "actCondicoesTrabalho"],
 };
 
 export function fontesDoGuia(slug: string): FontesDoGuia {

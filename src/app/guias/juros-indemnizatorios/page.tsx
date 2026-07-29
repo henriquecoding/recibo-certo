@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import GuiaLayout from "@/components/guias/GuiaLayout";
 import { metadataDoGuia } from "@/lib/guias/metadata";
 import { Seccao, Paragrafo, Nota, VaiPara } from "@/components/guias/BlocosDireitos";
+// A taxa vem do motor: é a mesma dos juros legais civis (Portaria 291/2003).
+import { JUROS_MORA } from "@/lib/fiscal-data";
+import { pctExato } from "@/lib/format";
 
 export const metadata: Metadata = metadataDoGuia("juros-indemnizatorios");
 
@@ -33,6 +36,25 @@ export default function JurosIndemnizatoriosPage() {
           assentar na tua declaração, seguiste orientações genéricas da administração tributária
           devidamente publicadas. Ou seja: se fizeste o que a AT dizia para fazer e ainda assim
           pagaste a mais, o erro não é teu.
+        </Nota>
+      </Seccao>
+
+      {/* O caso mais provável na vida do leitor deste site — muito mais do
+          que ganhar uma impugnação — e o único que não exige litígio nenhum. */}
+      <Seccao titulo="O caso que te vai acontecer mesmo: o reembolso atrasado">
+        <Paragrafo>
+          Além do erro apurado em reclamação ou impugnação, a lei prevê outros casos. O mais
+          relevante para quem entrega IRS todos os anos é este:{" "}
+          <strong>o reembolso de IRS pago para lá do prazo legal gera juros indemnizatórios</strong>.
+        </Paragrafo>
+        <Paragrafo>
+          Não é preciso reclamar, não é preciso impugnar, não é preciso provar erro de ninguém. Se o
+          reembolso chegou atrasado, os juros são devidos — e contam-se à taxa dos juros legais,{" "}
+          {pctExato(JUROS_MORA.civis.value)}.
+        </Paragrafo>
+        <Nota titulo="Porque é que isto quase nunca é reclamado">
+          Porque ninguém sabe. O próprio texto deste guia diz que é um direito «sistematicamente
+          esquecido por quem tem direito a ele» — e esta é a alínea mais esquecida de todas.
         </Nota>
       </Seccao>
 

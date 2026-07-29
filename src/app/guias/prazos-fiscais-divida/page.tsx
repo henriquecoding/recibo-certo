@@ -23,11 +23,22 @@ export default function PrazosFiscaisDividaPage() {
             ["Prazo", "4 anos", "8 anos"],
             [
               "Conta-se de",
-              "Regra geral, sem prejuízo de a lei fixar outro prazo",
               "Nos impostos periódicos, do termo do ano do facto tributário; no IVA e nas retenções a título definitivo, do início do ano civil seguinte",
+              "Exatamente da mesma maneira",
+            ],
+            [
+              "O que os trava",
+              "Suspende-se com a inspeção e com os meios de defesa",
+              "Interrompe-se com a citação, a reclamação, o recurso e a impugnação",
             ],
           ]}
         />
+        <Nota titulo="Contam-se igual; o que difere é a duração e o que os trava">
+          É a parte que se retém melhor: a fórmula de contagem é a mesma nos dois prazos. Quatro
+          anos para liquidar, oito para cobrar, a contar do mesmo momento — e depois cada um tem as
+          suas causas de suspensão e de interrupção, que são a razão pela qual quase nunca se pode
+          concluir a prescrição só com uma conta de anos.
+        </Nota>
       </Seccao>
 
       <Seccao titulo="Caducidade da liquidação">
