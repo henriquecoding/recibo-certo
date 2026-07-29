@@ -6,6 +6,9 @@
  * adaptadores exportados no fim deste ficheiro, mas partilham esta execução.
  */
 import {
+  ADICIONAL_SOLIDARIEDADE,
+  DEDUCAO_DEPENDENTE,
+  DEDUCAO_DEPENDENTE_3MAIS,
   DEDUCAO_ESPECIFICA_DEPENDENTE,
   DERRAMA_MAX,
   DIVIDENDOS_TAXA,
@@ -14,7 +17,9 @@ import {
   IRC_LIMITE_PME,
   IRC_TAXA_GERAL,
   IRC_TAXA_PME,
+  IFICI_TAXA,
   IS_TAXA_AQUISICAO,
+  MOE_BASE_MINIMA_MENSAL,
   IMT_TAXA_COMERCIAL,
   RFAI_LIMITE_COLETA,
   RFAI_LIMITE_INVESTIMENTO_INTERIOR,
@@ -26,6 +31,8 @@ import {
   SIFIDE_TAXA_INCREMENTAL,
   SS_DEPENDENTE,
   TA_AGRAVAMENTO_PREJUIZO,
+  TA_ELETRICA_LIMITE_CUSTO,
+  TA_THRESHOLDS,
   TA_AJUDAS_CUSTO,
   TA_NAO_DOCUMENTADAS,
   TA_REPRESENTACAO,
@@ -34,7 +41,13 @@ import {
   TA_VIATURAS_ELETRICA_ACIMA_LIMITE,
   TA_VIATURAS_PHEV,
 } from "./fiscal-data";
-import { adicionalSolidariedade, calcularAbatimentoMinimoExistencia, coletaIRC, irsProgressivo } from "./fiscal";
+import {
+  adicionalSolidariedade,
+  calcularAbatimentoMinimoExistencia,
+  coletaIRC,
+  deducaoDependentesColeta,
+  irsProgressivo,
+} from "./fiscal";
 import type { ParametrosFiscaisRegiao } from "./incentivos-regioes";
 import { calculateLegacyPayroll } from "./payroll-simulator-legacy-adapter";
 
@@ -112,7 +125,18 @@ export interface ResultadoEmpresa {
   liquidoGerenteLiberatoria: number;
   liquidoGerenteEnglobamento: number;
   liquidoGerente: number;
+  /** Carga sobre a faturação medindo só o que chegou ao sócio. */
   taxaEfetiva: number;
+  /** Lucro que ficou na empresa por não ter sido distribuído. */
+  lucroRetido: number;
+  /** Líquido pessoal + lucro retido — o que sobrou no conjunto. */
+  riquezaTotal: number;
+  /** Carga sobre a faturação medindo a riqueza total. */
+  taxaEfetivaRiqueza: number;
+  /** Viatura + representação + ajudas de custo: com TA, mas dedutíveis. */
+  encargosDedutiveis: number;
+  mesesSalarioGerente: 12 | 14;
+  perfil: PerfilGerente;
   payrollGerente: ResultadoPayrollGerente;
 }
 
@@ -129,11 +153,39 @@ export interface ResultadoEmpresaGuiado extends ResultadoEmpresa {
   custoSedeVirtual: number;
 }
 
+/**
+ * Perfil pessoal do gerente. Sem isto, a comparação com os recibos verdes
+ * estava enviesada: do lado da Cat. B o simulador aceita dependentes,
+ * tributação conjunta, região e deduções, e do lado da empresa o gerente era
+ * sempre solteiro, sem filhos e no continente. A mesma pessoa era comparada
+ * consigo própria sem filhos.
+ */
+export interface PerfilGerente {
+  dependentes: number;
+  conjunta: boolean;
+  regiao: "continente" | "madeira" | "acores";
+  /**
+   * IFICI (Art. 58.º-A EBF): taxa de 20% sobre os rendimentos das categorias
+   * A e B das atividades elegíveis. Os dividendos de fonte portuguesa ficam
+   * de fora — seguem a taxa liberatória.
+   */
+  ifici: boolean;
+}
+
+export const PERFIL_GERENTE_PADRAO: PerfilGerente = {
+  dependentes: 0,
+  conjunta: false,
+  regiao: "continente",
+  ifici: false,
+};
+
 interface CompanySimulationInput {
   faturacao: number;
   despesasOper: number;
   custosExtra: number;
   salarioGerenteMensal: number;
+  /** Salário pago em 12 ou 14 meses (subsídios de férias e Natal). */
+  mesesSalarioGerente?: 12 | 14;
   distribuirDividendos: boolean;
   opcaoEnglobamento: boolean;
   custoConstituicaoAnual: number;
@@ -155,6 +207,7 @@ interface CompanySimulationInput {
   derramaTaxa: number;
   custoSedeVirtualAnual: number;
   custoRepresentanteFiscal: number;
+  perfil?: PerfilGerente;
 }
 
 const cent = (value: number): number => Math.round(value * 100) / 100;
@@ -171,6 +224,36 @@ const TA_RATE: Record<TipoViaturaEmpresa, number> = {
   comb_medio: TA_VIATURAS_COMBUSTAO.value.ate45000,
   comb_alto: TA_VIATURAS_COMBUSTAO.value.acima45000,
 };
+
+/**
+ * Taxa de tributação autónoma de uma viatura a partir do seu CUSTO DE
+ * AQUISIÇÃO (Art. 88.º n.ºs 3 e 20 CIRC).
+ *
+ * O simulador pede o escalão ao utilizador (`TipoViaturaEmpresa`), o que
+ * obriga a saber de cor os limites de 37 500 € e 45 000 €. Esta função
+ * deriva-o do preço da viatura — incluindo a regra que apanha muita gente
+ * de surpresa: elétricas acima de 62 500 € de custo de aquisição NÃO são
+ * isentas, pagam 10% (n.º 20).
+ *
+ * Veio do motor de TA duplicado que vivia em `fiscal.ts`, para a capacidade
+ * não desaparecer com a duplicação.
+ */
+export function taxaTAViatura(
+  tipo: "combustao" | "phev" | "eletrica",
+  custoAquisicao: number,
+): number {
+  if (tipo === "eletrica") {
+    return custoAquisicao > TA_ELETRICA_LIMITE_CUSTO.value
+      ? TA_VIATURAS_ELETRICA_ACIMA_LIMITE.value
+      : TA_VIATURAS_ELETRICA.value;
+  }
+  const tabela = tipo === "phev" ? TA_VIATURAS_PHEV.value : TA_VIATURAS_COMBUSTAO.value;
+  const { t1, t2 } = TA_THRESHOLDS.value;
+  const custo = amount(custoAquisicao);
+  if (custo <= t1) return tabela.ate37500;
+  if (custo <= t2) return tabela.ate45000;
+  return tabela.acima45000;
+}
 
 export function calcularTributacaoAutonomaEmpresa(
   encargosViatura: number,
@@ -245,22 +328,42 @@ function calculatePotentialBenefits(
   };
 }
 
-function managerPayroll(monthlySalary: number): ResultadoPayrollGerente {
+function managerPayroll(
+  monthlySalary: number,
+  perfil: PerfilGerente = PERFIL_GERENTE_PADRAO,
+): ResultadoPayrollGerente {
   const salary = amount(monthlySalary);
   const { result } = calculateLegacyPayroll({
     baseSalary: salary,
     weeklyHours: 40,
-    dependants: 0,
-    maritalStatus: "naoCasado",
+    dependants: Math.max(0, Math.floor(perfil.dependentes)),
+    // Casado com um único titular: é a tabela que corresponde ao cenário
+    // típico de quem abre a empresa sozinho e declara em conjunto.
+    maritalStatus: perfil.conjunta ? "casadoUnico" : "naoCasado",
     disability: false,
-    region: "continente",
+    region: perfil.regiao,
     meal: { enabled: false, days: 0, dailyAmount: 0, card: false },
   }, []);
-  const employerContribution = result.baseSS * SS_DEPENDENTE.entidade.value;
+
+  // Art. 55.º do Código Contributivo: a base de incidência dos membros de
+  // órgãos estatutários é a remuneração efetivamente auferida, COM O MÍNIMO
+  // DE 1 IAS. `managerPayroll(0)` devolvia tudo a zero — e, como o comparador
+  // assume salário zero, o erro entrava direto na resposta a «vale a pena
+  // abrir empresa?».
+  //
+  // O mínimo não se aplica se o MOE acumular com outra atividade remunerada
+  // cuja base contributiva já seja ≥ 1 IAS; isso o simulador não sabe, por
+  // isso aplica o caso geral e a interface remete para o contabilista.
+  const baseSSMinima = Math.max(result.baseSS, MOE_BASE_MINIMA_MENSAL.value);
+  const employerContribution = baseSSMinima * SS_DEPENDENTE.entidade.value;
+  const ssTrabalhador = salary > 0
+    ? result.ssTrabalhador
+    : cent(baseSSMinima * SS_DEPENDENTE.trabalhador.value);
+
   return {
     salarioBrutoMensal: salary,
     retencaoIRSMensal: result.irsTotal,
-    ssTrabalhadorMensal: result.ssTrabalhador,
+    ssTrabalhadorMensal: cent(Math.max(result.ssTrabalhador, ssTrabalhador)),
     ssEntidadeMensal: cent(employerContribution),
     liquidoMensal: result.liquido,
     custoEmpresaMensal: cent(result.brutoTotal + employerContribution),
@@ -278,6 +381,7 @@ function annualManagerTax(
   salaryGross: number,
   dividends: number,
   englobed: boolean,
+  perfil: PerfilGerente = PERFIL_GERENTE_PADRAO,
 ): number {
   const employeeSS = salaryGross * SS_DEPENDENTE.trabalhador.value;
   const specific = Math.min(
@@ -299,18 +403,73 @@ function annualManagerTax(
     householdTaxpayers: 1,
   });
   const taxable = Math.max(0, taxableBeforeMinimum - minimum.abatement);
-  return cent(irsProgressivo(taxable) + adicionalSolidariedade(taxable));
+
+  // IFICI (Art. 58.º-A EBF): 20% sobre os rendimentos das categorias A e B.
+  //
+  // A interface mostrava o badge «IFICI ativo», uma nota sobre o âmbito do
+  // regime e um passo do plano de ação a dizer «Requerer estatuto IFICI na
+  // AT» — e o motor nunca recebia a flag, porque a assinatura não a aceitava.
+  // A copy prometia o benefício e os números continuavam nos escalões
+  // progressivos.
+  //
+  // Os dividendos de fonte portuguesa (Cat. E) NÃO entram na taxa de 20%:
+  // seguem a liberatória do Art. 71.º ou o englobamento. Aplicar-lhes os 20%
+  // seria inventar um benefício que a lei não dá.
+  if (perfil.ifici) {
+    const salarioTributavel = Math.max(0, salaryGross - specific - minimum.abatement);
+    const coletaSalario = salarioTributavel * IFICI_TAXA.value;
+    if (!englobed) return cent(coletaSalario);
+    // Com englobamento os dividendos são tributados pelos escalões, empilhados
+    // por cima do rendimento que já ocupa os primeiros — a mesma lógica que o
+    // motor de IRS usa para `outrosRendimentos`.
+    const parteDividendos = dividends * DIV_INCLUSAO_ENGLOBAMENTO.value;
+    const coletaDividendos =
+      irsProgressivo(salarioTributavel + parteDividendos) - irsProgressivo(salarioTributavel);
+    return cent(coletaSalario + Math.max(0, coletaDividendos));
+  }
+
+  // Deduções à coleta que o gerente também tem. Sem elas, a comparação com os
+  // recibos verdes punha a mesma pessoa com filhos de um lado e sem filhos do
+  // outro.
+  //
+  // A dedução por dependentes e o adicional de solidariedade vêm das
+  // implementações ÚNICAS de `fiscal.ts`: a cópia local que aqui existia era
+  // a quarta do projeto, e não conhecia bebés nem guarda partilhada.
+  const deducaoDependentes = deducaoDependentesColeta({ normais: perfil.dependentes });
+  const coleta = irsProgressivo(taxable) + adicionalSolidariedade(taxable);
+  return cent(Math.max(0, coleta - deducaoDependentes));
 }
 
 function calculateCompany(input: CompanySimulationInput): ResultadoEmpresa {
-  const payroll = managerPayroll(input.salarioGerenteMensal);
-  const salGerente = cent(payroll.salarioBrutoMensal * 12);
-  const ssSalGerente = cent(payroll.ssEntidadeMensal * 12);
+  const perfil = input.perfil ?? PERFIL_GERENTE_PADRAO;
+  const payroll = managerPayroll(input.salarioGerenteMensal, perfil);
+  // Subsídios de férias e Natal: `mensal × 12` assumia que o gerente não os
+  // recebe. Recebe, salvo opção em contrário — daí a escolha 12/14.
+  const mesesSalario = input.mesesSalarioGerente ?? 12;
+  const salGerente = cent(payroll.salarioBrutoMensal * mesesSalario);
+  const ssSalGerente = cent(payroll.ssEntidadeMensal * mesesSalario);
+
+  // Encargos que a tributação autónoma atinge — e que, ao contrário do que
+  // este cálculo fazia, TAMBÉM são custos fiscais dedutíveis.
+  //
+  // A TA era cobrada sobre eles em `ircTotal`, mas eles não abatiam ao lucro
+  // tributável: a empresa pagava IRC sobre lucro que não teve, mais TA sobre o
+  // encargo. Ou o utilizador introduzia o valor duas vezes (aqui e em despesas
+  // operacionais), o que nada na interface dizia, ou o resultado estava
+  // errado.
+  //
+  // As despesas NÃO DOCUMENTADAS são a exceção legítima: o Art. 23.º-A n.º 1
+  // al. b) exclui-as da dedutibilidade — pagam TA de 50% e não abatem nada.
+  const encargosDedutiveis = cent(
+    amount(input.encargosViatura) + amount(input.despRepresentacao) + amount(input.ajudasCusto),
+  );
+
   const totalCustos = cent(
     amount(input.despesasOper)
       + amount(input.custosExtra)
       + salGerente
       + ssSalGerente
+      + encargosDedutiveis
       + amount(input.custoConstituicaoAnual)
       + amount(input.custoSedeVirtualAnual)
       + amount(input.custoRepresentanteFiscal),
@@ -344,14 +503,14 @@ function calculateCompany(input: CompanySimulationInput): ResultadoEmpresa {
   const lucroLiquido = cent(Math.max(0, lucroTributavel - ircTotal));
   const dividendos = input.distribuirDividendos ? lucroLiquido : 0;
 
-  const irsSalarioSemDividendos = annualManagerTax(salGerente, 0, false);
-  const irsSalarioLiberatoria = annualManagerTax(salGerente, dividendos, false);
-  const irsTotalEnglobamento = annualManagerTax(salGerente, dividendos, true);
+  const irsSalarioSemDividendos = annualManagerTax(salGerente, 0, false, perfil);
+  const irsSalarioLiberatoria = annualManagerTax(salGerente, dividendos, false, perfil);
+  const irsTotalEnglobamento = annualManagerTax(salGerente, dividendos, true, perfil);
   const irsDividendosLiberatoria = cent(dividendos * DIVIDENDOS_TAXA.value);
   const irsDividendosEnglobamento = cent(
     Math.max(0, irsTotalEnglobamento - irsSalarioSemDividendos),
   );
-  const trabalhadorSSAnual = cent(payroll.ssTrabalhadorMensal * 12);
+  const trabalhadorSSAnual = cent(payroll.ssTrabalhadorMensal * mesesSalario);
   const liquidoGerenteLiberatoria = cent(
     salGerente - trabalhadorSSAnual - irsSalarioLiberatoria
       + dividendos - irsDividendosLiberatoria,
@@ -398,6 +557,25 @@ function calculateCompany(input: CompanySimulationInput): ResultadoEmpresa {
     liquidoGerenteEnglobamento,
     liquidoGerente,
     taxaEfetiva: input.faturacao > 0 ? 1 - liquidoGerente / input.faturacao : 0,
+    // ── Riqueza total: o lucro retido não desapareceu ──────────────────────
+    //
+    //  Com 100 000 € de faturação e sem distribuir dividendos, a "taxa
+    //  efetiva" dava 85,9% — e 47 891 € estavam na conta da empresa. A
+    //  interface tratava como catástrofe uma estratégia legítima e frequente.
+    //
+    //  Ficam as duas taxas, porque as duas leituras são verdadeiras: quanto
+    //  chegou ao bolso do sócio este ano, e quanto sobrou no conjunto
+    //  pessoa + empresa. Não distribuir adia o IRS dos dividendos; não o
+    //  elimina — daí o nome ser «riqueza», não «líquido».
+    lucroRetido: cent(Math.max(0, lucroLiquido - dividendos)),
+    riquezaTotal: cent(liquidoGerente + Math.max(0, lucroLiquido - dividendos)),
+    taxaEfetivaRiqueza:
+      input.faturacao > 0
+        ? 1 - (liquidoGerente + Math.max(0, lucroLiquido - dividendos)) / input.faturacao
+        : 0,
+    encargosDedutiveis,
+    mesesSalarioGerente: mesesSalario,
+    perfil,
     payrollGerente: payroll,
   };
 }
@@ -454,6 +632,231 @@ export function simularEmpresa(
   });
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+//  ENTRADA POR OBJETO — a assinatura a usar daqui para a frente
+//  ---------------------------------------------------------------------
+//  As duas assinaturas históricas têm 20 e 30 argumentos posicionais, vários
+//  deles booleanos adjacentes (`distribuirDividendos, opcaoEnglobamento,
+//  incluirConstituicao`, depois `emPrejuizo, excecaoPrejuizo`, depois
+//  `temImovel, …, isencaoIMI, …, isencaoIMT`). Trocar dois passa silenciosamente
+//  pelo TypeScript — e foi assim que o IFICI ficou por ligar durante meses: a
+//  flag estava no array de dependências do `useMemo` e nunca chegava ao motor,
+//  porque a assinatura não a aceitava.
+//
+//  Ficam as duas antigas, para não obrigar a reescrever tudo de uma vez, mas
+//  os chamadores novos usam estas.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface OpcoesEmpresa {
+  faturacao: number;
+  despesasOper?: number;
+  custosExtra?: number;
+  salarioGerenteMensal?: number;
+  mesesSalarioGerente?: 12 | 14;
+  distribuirDividendos?: boolean;
+  opcaoEnglobamento?: boolean;
+  custoConstituicaoAnual?: number;
+  tipoViatura?: TipoViaturaEmpresa;
+  encargosViatura?: number;
+  despRepresentacao?: number;
+  ajudasCusto?: number;
+  naoDocumentadas?: number;
+  emPrejuizo?: boolean;
+  excecaoPrejuizo?: boolean;
+  rfaiRegiao?: RegiaoRFAIEmpresa;
+  rfaiInvest?: number;
+  primeirosAnos?: boolean;
+  sifideDespesas?: number;
+  tipoSifide?: TipoEmpresaSifide;
+  rfaiContratualValor?: number;
+  custoSedeVirtualAnual?: number;
+  custoRepresentanteFiscal?: number;
+  /** Taxas locais (regiões autónomas / interior). */
+  paramLocal?: ParametrosFiscaisRegiao;
+  perfil?: PerfilGerente;
+}
+
+/** Ponto de entrada canónico do motor de empresa. */
+export function simularEmpresaOpcoes(opcoes: OpcoesEmpresa): ResultadoEmpresa {
+  return calculateCompany({
+    faturacao: opcoes.faturacao,
+    despesasOper: opcoes.despesasOper ?? 0,
+    custosExtra: opcoes.custosExtra ?? 0,
+    salarioGerenteMensal: opcoes.salarioGerenteMensal ?? 0,
+    mesesSalarioGerente: opcoes.mesesSalarioGerente ?? 12,
+    distribuirDividendos: opcoes.distribuirDividendos ?? false,
+    opcaoEnglobamento: opcoes.opcaoEnglobamento ?? false,
+    custoConstituicaoAnual: opcoes.custoConstituicaoAnual ?? 0,
+    tipoViatura: opcoes.tipoViatura ?? "nenhuma",
+    encargosViatura: opcoes.encargosViatura ?? 0,
+    despRepresentacao: opcoes.despRepresentacao ?? 0,
+    ajudasCusto: opcoes.ajudasCusto ?? 0,
+    naoDocumentadas: opcoes.naoDocumentadas ?? 0,
+    emPrejuizo: opcoes.emPrejuizo ?? false,
+    excecaoPrejuizo: opcoes.excecaoPrejuizo ?? false,
+    rfaiRegiao: opcoes.rfaiRegiao ?? "litoral",
+    rfaiInvest: opcoes.rfaiInvest ?? 0,
+    primeirosAnos: opcoes.primeirosAnos ?? false,
+    sifideDespesas: opcoes.sifideDespesas ?? 0,
+    tipoSifide: opcoes.tipoSifide ?? "pme_normal",
+    rfaiContratualValor: opcoes.rfaiContratualValor ?? 0,
+    ircPME: opcoes.paramLocal?.ircPME ?? IRC_TAXA_PME.value,
+    ircGeral: opcoes.paramLocal?.ircGeral ?? IRC_TAXA_GERAL.value,
+    derramaTaxa: opcoes.paramLocal?.derramaEstimada ?? DERRAMA_MAX.value,
+    custoSedeVirtualAnual: opcoes.custoSedeVirtualAnual ?? 0,
+    custoRepresentanteFiscal: opcoes.custoRepresentanteFiscal ?? 0,
+    perfil: opcoes.perfil,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  OTIMIZADOR SALÁRIO vs DIVIDENDOS
+//  ---------------------------------------------------------------------
+//  É a pergunta número um de quem abre uma Lda., e o simulador dava um
+//  slider e nenhuma pista. É calculável por varrimento: o motor é puro e
+//  barato de correr, e o eixo tem uma só dimensão.
+//
+//  As duas vias são tributadas de maneiras diferentes: o salário é custo da
+//  empresa (abate ao IRC) mas paga TSU 23,75% + 11% e escalões progressivos
+//  de IRS; os dividendos não abatem nada (saem do lucro depois do IRC) mas
+//  pagam 28% liberatórios e nenhuma Segurança Social. Qual ganha depende da
+//  faturação, dos custos e do perfil pessoal — não há regra de bolso.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface PontoOtimizacao {
+  salarioMensal: number;
+  /** O que sobra para o sócio: líquido pessoal + lucro retido. */
+  riquezaTotal: number;
+  liquidoGerente: number;
+  ircTotal: number;
+  irsGerente: number;
+  ssTotal: number;
+}
+
+export interface ResultadoOtimizacao {
+  /** O ponto que maximiza a riqueza total. */
+  otimo: PontoOtimizacao;
+  /** O ponto correspondente ao salário atualmente escolhido. */
+  atual: PontoOtimizacao;
+  /** Quanto se ganha por ano ao mudar para o ótimo (0 se já lá está). */
+  ganhoAnual: number;
+  /** A curva completa, para desenhar. */
+  curva: PontoOtimizacao[];
+}
+
+/**
+ * Varre salários de gerência e devolve o que maximiza a riqueza total.
+ *
+ * Maximiza a RIQUEZA, não o líquido pessoal: com salário baixo e sem
+ * distribuir, o líquido pessoal é quase nulo e o dinheiro está na empresa —
+ * otimizar o líquido escolheria sempre distribuir tudo, que é uma decisão do
+ * utilizador e não do otimizador.
+ */
+export function otimizarSalarioDividendos(
+  opcoes: OpcoesEmpresa,
+  passo = 100,
+): ResultadoOtimizacao {
+  const salarioAtual = opcoes.salarioGerenteMensal ?? 0;
+  // Não vale a pena procurar acima do que a empresa consegue pagar: a partir
+  // daí o lucro é negativo e o resultado deixa de fazer sentido.
+  const mesesSalario = opcoes.mesesSalarioGerente ?? 12;
+  const disponivelAnual = Math.max(
+    0,
+    amount(opcoes.faturacao) - amount(opcoes.despesasOper ?? 0) - amount(opcoes.custosExtra ?? 0),
+  );
+  // O custo real de um euro de salário inclui a TSU da entidade.
+  const tetoMensal = disponivelAnual / (mesesSalario * (1 + SS_DEPENDENTE.entidade.value));
+
+  const avaliar = (salarioMensal: number): PontoOtimizacao => {
+    const r = simularEmpresaOpcoes({ ...opcoes, salarioGerenteMensal: salarioMensal });
+    return {
+      salarioMensal,
+      riquezaTotal: r.riquezaTotal,
+      liquidoGerente: r.liquidoGerente,
+      ircTotal: r.ircTotal,
+      irsGerente: r.irsSalarioGerente,
+      ssTotal: cent(r.ssSalGerente + r.payrollGerente.ssTrabalhadorMensal * mesesSalario),
+    };
+  };
+
+  const curva: PontoOtimizacao[] = [];
+  let otimo = avaliar(0);
+  for (let s = 0; s <= tetoMensal; s += passo) {
+    const ponto = avaliar(s);
+    curva.push(ponto);
+    if (ponto.riquezaTotal > otimo.riquezaTotal) otimo = ponto;
+  }
+
+  const atual = avaliar(salarioAtual);
+  return {
+    otimo,
+    atual,
+    ganhoAnual: cent(Math.max(0, otimo.riquezaTotal - atual.riquezaTotal)),
+    curva,
+  };
+}
+
+export interface OpcoesEmpresaGuiado extends OpcoesEmpresa {
+  /** Custo de constituição a amortizar (bruto) e por quantos anos. */
+  incluirConstituicao?: boolean;
+  custoConstituicao?: number;
+  anosAmortizacao?: number;
+  /** Sede virtual: valor MENSAL (anualizado internamente). */
+  sedeVirtualCustoMensal?: number;
+  isEstrangeiro?: boolean;
+  custoRepFiscal?: number;
+  temImovel?: boolean;
+  vptImovel?: number;
+  taxaIMI?: number;
+  isencaoIMI?: boolean;
+  valorAquisicao?: number;
+  isencaoIMT?: boolean;
+  anosAmortIMT?: number;
+}
+
+/** Ponto de entrada canónico do modo guiado de empresa. */
+export function simularEmpresaGuiadoOpcoes(
+  o: OpcoesEmpresaGuiado,
+): ResultadoEmpresaGuiado {
+  return simularEmpresaGuiado(
+    o.faturacao,
+    o.despesasOper ?? 0,
+    o.custosExtra ?? 0,
+    o.salarioGerenteMensal ?? 0,
+    o.distribuirDividendos ?? false,
+    o.opcaoEnglobamento ?? false,
+    o.incluirConstituicao ?? false,
+    o.custoConstituicao ?? 0,
+    o.anosAmortizacao ?? 1,
+    o.tipoViatura ?? "nenhuma",
+    o.encargosViatura ?? 0,
+    o.despRepresentacao ?? 0,
+    o.ajudasCusto ?? 0,
+    o.naoDocumentadas ?? 0,
+    o.emPrejuizo ?? false,
+    o.excecaoPrejuizo ?? false,
+    o.rfaiRegiao ?? "litoral",
+    o.rfaiInvest ?? 0,
+    o.primeirosAnos ?? false,
+    o.sifideDespesas ?? 0,
+    o.tipoSifide ?? "pme_normal",
+    o.rfaiContratualValor ?? 0,
+    o.temImovel ?? false,
+    o.vptImovel ?? 0,
+    o.taxaIMI ?? 0,
+    o.isencaoIMI ?? false,
+    o.valorAquisicao ?? 0,
+    o.isencaoIMT ?? false,
+    o.anosAmortIMT ?? 1,
+    o.paramLocal,
+    o.sedeVirtualCustoMensal ?? 0,
+    o.isEstrangeiro ?? false,
+    o.custoRepFiscal ?? 0,
+    o.perfil ?? PERFIL_GERENTE_PADRAO,
+    o.mesesSalarioGerente ?? 12,
+  );
+}
+
 /** Assinatura histórica do modo guiado. */
 export function simularEmpresaGuiado(
   faturacao: number,
@@ -489,6 +892,8 @@ export function simularEmpresaGuiado(
   sedeVirtualCusto = 0,
   isEstrangeiro = false,
   custoRepFiscal = 0,
+  perfil: PerfilGerente = PERFIL_GERENTE_PADRAO,
+  mesesSalarioGerente: 12 | 14 = 12,
 ): ResultadoEmpresaGuiado {
   const safeYears = Math.max(1, Math.floor(anosAmortizacao));
   const custoConstituicao = incluirConstituicao ? amount(custoConstituicaoVal) / safeYears : 0;
@@ -520,6 +925,8 @@ export function simularEmpresaGuiado(
     derramaTaxa: paramLocal?.derramaEstimada ?? DERRAMA_MAX.value,
     custoSedeVirtualAnual: custoSedeVirtual,
     custoRepresentanteFiscal,
+    perfil,
+    mesesSalarioGerente,
   });
   const imiAnual = temImovel ? amount(vptImovel) * Math.max(0, taxaIMI) : 0;
   const poupancaIMI = temImovel && isencaoIMI ? imiAnual : 0;

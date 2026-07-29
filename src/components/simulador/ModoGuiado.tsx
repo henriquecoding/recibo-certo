@@ -42,11 +42,13 @@ import {
   COEFICIENTE_POR_TIPO,
   SS_TAXA,
   SS_COEFICIENTE,
+  SS_ACUMULACAO_LIMITE_MENSAL,
+  IAS,
   MINIMO_EXISTENCIA,
   type Atividade,
   type Regiao,
 } from "@/lib/fiscal-data";
-import { calcular, simularIRSAnual, type RegimeIVA } from "@/lib/fiscal";
+import { calcular, simularIRSAnual, contribuicoesSSAnuais, type RegimeIVA, type SimulacaoIRS } from "@/lib/fiscal";
 import { gerarPrazos, diasAte } from "@/lib/prazos";
 import { useScrollTopOnStep } from "@/lib/scroll";
 import {
@@ -94,6 +96,8 @@ export interface EstadoGuiadoSaida {
   regiao: Regiao;
   regimeIVA: RegimeIVA;
   acumulaEmprego: boolean;
+  /** Rendimento anual da Cat. A a englobar (0 quando não há acumulação). */
+  outrosRendimentos: number;
   isencaoSSPrimeiroAno: boolean;
   isencaoCpas: boolean;
   anoAtividade: number;
@@ -583,6 +587,8 @@ export default function ModoGuiado({
   const [despEducacao, setDespEducacao] = useState(0);
   const [despRendas, setDespRendas] = useState(0);
   const [despGerais, setDespGerais] = useState(0);
+  /** Rendimento anual da Cat. A a englobar — só relevante com acumulação. */
+  const [outrosRendimentos, setOutrosRendimentos] = useState(0);
 
   // Dados derivados
   const card = CARDS_ATIV.find((c) => c.id === tipoAtiv)!;
@@ -590,6 +596,23 @@ export default function ModoGuiado({
   const jovemAno = irsJovemOn ? irsJovemAno : 0;
   const brutoAnual = bruto * recibosAno;
   const efAtiv = atividadeEspecifica ? efeitoFiscal(atividadeEspecifica) : null;
+
+  // Poupança de SS = o que se pagaria sem isenção MENOS o que se paga com ela.
+  // Estava a passar-se a contribuição efetiva como se fosse a poupança: com a
+  // isenção total dava 0 (e o badge nunca aparecia) e, agora que a acumulação
+  // acima de 4 × IAS deixa contribuição a pagar, daria o número ao contrário —
+  // anunciar como poupança aquilo que a pessoa desembolsa.
+  const ssAnualPoupanca = useMemo(() => {
+    if (!isencaoSS) return 0;
+    const semIsencao = contribuicoesSSAnuais(brutoAnual, card.baseSS);
+    const comIsencao = isencaoCpas
+      ? 0 // CPAS/CGA: sai do Regime Geral por inteiro; a caixa própria tem taxas suas.
+      : contribuicoesSSAnuais(brutoAnual, card.baseSS, {
+          primeiroAno: isencaoSSPrimeiroAno,
+          acumulaEmprego,
+        });
+    return Math.max(0, semIsencao - comIsencao);
+  }, [isencaoSS, isencaoCpas, isencaoSSPrimeiroAno, acumulaEmprego, brutoAnual, card.baseSS]);
 
   const resultRecibo = useMemo(
     () =>
@@ -632,6 +655,15 @@ export default function ModoGuiado({
         deficiencia,
         coefOverride: efAtiv?.coef,
         aplicaRegra15Override: efAtiv?.regra15,
+        // Englobamento (Art. 22.º CIRS): o IRS é único e incide sobre a soma.
+        // Faltava aqui — o guiado desligava a SS pela acumulação e calculava o
+        // imposto como se a pessoa só tivesse os recibos verdes.
+        outrosRendimentos: acumulaEmprego ? outrosRendimentos : 0,
+        // As isenções de SS entram no cálculo do IRS através da regra dos 15%
+        // (Art. 31.º n.º 13): sem elas, o motor credita contribuições que a
+        // pessoa não paga.
+        acumulaEmprego,
+        isencaoSSPrimeiroAno,
         deducoes: {
           saude: despSaude,
           educacao: despEducacao,
@@ -650,13 +682,20 @@ export default function ModoGuiado({
       deficiencia,
       efAtiv?.coef,
       efAtiv?.regra15,
+      acumulaEmprego,
+      isencaoSSPrimeiroAno,
+      outrosRendimentos,
       despSaude,
       despEducacao,
       despGerais,
       despRendas,
     ],
   );
-  const irsAnual = simPreview.irsEstimado;
+  // Com englobamento, `irsEstimado` é o imposto do agregado todo — salário
+  // incluído. O que se subtrai à faturação da atividade é só a parte marginal
+  // que ela acrescenta; senão o "líquido dos recibos verdes" pagaria também o
+  // imposto do emprego.
+  const irsAnual = simPreview.irsImputavelCatB;
   // Usa segSocial do calcular() que já aplica o coeficiente correto (bens=0,2 / serviços=0,7).
   // CPAS/CGA: quando isencaoCpas=true não há desconto para o Regime Geral → 0 para o simulador.
   const ssAnual = isencaoCpas ? 0 : resultRecibo.segSocial * recibosAno;
@@ -673,6 +712,7 @@ export default function ModoGuiado({
       regimeContabilidade: "simplificado",
       irsJovemAno: jovemAno,
       acumulaEmprego,
+      outrosRendimentos: acumulaEmprego ? outrosRendimentos : 0,
       isencaoSSPrimeiroAno,
       ifici,
       deficiencia,
@@ -682,7 +722,7 @@ export default function ModoGuiado({
       despRendas,
       atualizadoEm: Date.now(),
     });
-  }, [brutoAnual, card.tipoFiscal, anoAtividade, jovemAno, acumulaEmprego, isencaoSSPrimeiroAno, ifici, deficiencia, despSaude, despEducacao, despGerais, despRendas]);
+  }, [brutoAnual, card.tipoFiscal, anoAtividade, jovemAno, acumulaEmprego, outrosRendimentos, isencaoSSPrimeiroAno, ifici, deficiencia, despSaude, despEducacao, despGerais, despRendas]);
 
   const estadoSaida: EstadoGuiadoSaida = {
     tipoAtiv,
@@ -692,6 +732,7 @@ export default function ModoGuiado({
     regiao,
     regimeIVA: regimeEfetivo,
     acumulaEmprego,
+    outrosRendimentos: acumulaEmprego ? outrosRendimentos : 0,
     isencaoSSPrimeiroAno,
     isencaoCpas,
     anoAtividade,
@@ -711,7 +752,7 @@ export default function ModoGuiado({
     anoAtividade, jaTemAtividade, tipoAtiv, atividadeEspecifica, tipoSelecionado,
     modoFat, totalInput, valorComIva, recibosItems, mesesFat, regiao, regimeIVA,
     autorObraInput, autorRoyaltiesInput,
-    acumulaEmprego, isencaoSSPrimeiroAno, isencaoCpas, irsJovemOn, irsJovemAno,
+    acumulaEmprego, outrosRendimentos, isencaoSSPrimeiroAno, isencaoCpas, irsJovemOn, irsJovemAno,
     ifici, rnhAntigo, exResidente, deficiencia, mostrarDeducoes,
     despSaude, despEducacao, despRendas, despGerais,
   });
@@ -756,7 +797,7 @@ export default function ModoGuiado({
     if (d.autorObraInput !== undefined) setAutorObraInput(sanitizeNumericDraft(d.autorObraInput));
     if (d.autorRoyaltiesInput !== undefined) setAutorRoyaltiesInput(sanitizeNumericDraft(d.autorRoyaltiesInput));
     set(d.mesesFat, setMesesFat); set(d.regiao, setRegiao); set(d.regimeIVA, setRegimeIVA);
-    set(d.acumulaEmprego, setAcumulaEmprego); set(d.isencaoSSPrimeiroAno, setIsencaoSSPrimeiroAno); set(d.isencaoCpas, setIsencaoCpas);
+    set(d.acumulaEmprego, setAcumulaEmprego); set(d.outrosRendimentos, setOutrosRendimentos); set(d.isencaoSSPrimeiroAno, setIsencaoSSPrimeiroAno); set(d.isencaoCpas, setIsencaoCpas);
     set(d.irsJovemOn, setIrsJovemOn); set(d.irsJovemAno, setIrsJovemAno); set(d.ifici, setIfici);
     set(d.rnhAntigo, setRnhAntigo); set(d.exResidente, setExResidente); set(d.deficiencia, setDeficiencia);
     set(d.mostrarDeducoes, setMostrarDeducoes); set(d.despSaude, setDespSaude); set(d.despEducacao, setDespEducacao);
@@ -1030,7 +1071,9 @@ export default function ModoGuiado({
                     setDespRendas={setDespRendas}
                     despGerais={despGerais}
                     setDespGerais={setDespGerais}
-                    ssAnualPoupanca={resultRecibo.segSocial * recibosAno}
+                    ssAnualPoupanca={ssAnualPoupanca}
+                    outrosRendimentos={outrosRendimentos}
+                    setOutrosRendimentos={setOutrosRendimentos}
                   />
                 </m.div>
               )}
@@ -1044,6 +1087,7 @@ export default function ModoGuiado({
                   transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
                 >
                   <ResultadoFinal
+                    simAnual={simPreview}
                     brutoAnual={brutoAnual}
                     liquidoAnual={liquidoAnual}
                     irsAnual={irsAnual}
@@ -2145,6 +2189,8 @@ function PassoSituacao({
   despGerais,
   setDespGerais,
   ssAnualPoupanca,
+  outrosRendimentos,
+  setOutrosRendimentos,
 }: {
   acumulaEmprego: boolean;
   setAcumulaEmprego: (v: boolean) => void;
@@ -2175,6 +2221,9 @@ function PassoSituacao({
   despGerais: number;
   setDespGerais: (v: number) => void;
   ssAnualPoupanca: number;
+  /** Rendimento anual bruto da Categoria A, para englobamento. */
+  outrosRendimentos: number;
+  setOutrosRendimentos: (v: number) => void;
 }) {
   const isencaoSS = isencaoSSPrimeiroAno || acumulaEmprego || isencaoCpas;
   const deducoesTotal =
@@ -2216,7 +2265,7 @@ function PassoSituacao({
             />
             <ToggleCard
               titulo="Acumulas com emprego por conta de outrem?"
-              descricao="Se o teu empregador paga SS ≥ €537/mês, podes ficar isento como independente."
+              descricao={`Se o teu empregador paga SS ≥ ${fmt(IAS.value)}/mês ficas dispensado como independente — mas só até ${fmt(SS_ACUMULACAO_LIMITE_MENSAL.value)}/mês de rendimento relevante. Acima disso contribuis sobre o excedente (Art. 157.º).`}
               ativo={acumulaEmprego}
               onToggle={() => {
                 if (!acumulaEmprego) setIsencaoSSPrimeiroAno(false);
@@ -2230,7 +2279,44 @@ function PassoSituacao({
                   : undefined
               }
               badgeTipo="positivo"
-            />
+            >
+              {/* O salário TEM de ser perguntado aqui.
+                  Este toggle desligava a Segurança Social e mais nada: o IRS
+                  continuava a ser calculado como se a pessoa só tivesse os
+                  recibos verdes, a começar no primeiro escalão. Para 30 000 €
+                  de salário e 15 000 € de recibos verdes, o simulador dizia
+                  1 175 € de IRS quando o englobamento (Art. 22.º CIRS) dá
+                  3 926 € — quase 2 800 € a menos, e sempre no sentido em que a
+                  pessoa reserva a menos e é apanhada na liquidação. */}
+              {acumulaEmprego && (
+                <div className="mt-3 rounded-xl border border-stone-200 bg-stone-50 p-3.5 dark:border-stone-700 dark:bg-stone-800/60">
+                  <label htmlFor="guiado-cat-a" className="block">
+                    <span className="mb-1 block text-xs font-medium text-stone-600 dark:text-stone-300">
+                      Quanto ganhas por ano nesse emprego?{" "}
+                      <span className="font-normal text-stone-400">— bruto anual, Cat. A</span>
+                    </span>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400">
+                        €
+                      </span>
+                      <LocalizedNumberInput
+                        id="guiado-cat-a"
+                        min={0}
+                        value={outrosRendimentos}
+                        onValueChange={setOutrosRendimentos}
+                        placeholder="0"
+                        className="w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-8 pr-3 text-sm font-semibold text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 dark:border-stone-700 dark:bg-stone-800 dark:text-white"
+                      />
+                    </div>
+                  </label>
+                  <p className="mt-2 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                    O IRS é único e incide sobre a soma dos rendimentos (Art. 22.º CIRS). Sem
+                    este valor, a atividade independente seria tributada a começar no primeiro
+                    escalão — e o imposto sairia bastante abaixo do real.
+                  </p>
+                </div>
+              )}
+            </ToggleCard>
             <ToggleCard
               titulo="Advogado, solicitador ou funcionário público pré-2006?"
               descricao="Advogados e solicitadores descontam para a CPAS; funcionários públicos com vínculo anterior a jan/2006 descontam para a CGA — não para a Segurança Social geral."
@@ -2889,12 +2975,15 @@ function ResultadoFinal({
   despEducacao,
   despGerais,
   despRendas,
+  simAnual,
   onIrParaSimuladorCompleto,
   onRecomecar,
   onVoltar,
   onProximosPassos,
   onGuardarRecibo,
 }: {
+  /** Apuramento anual já calculado pelo pai — não recalcular aqui. */
+  simAnual: SimulacaoIRS;
   brutoAnual: number;
   liquidoAnual: number;
   irsAnual: number;
@@ -2932,49 +3021,17 @@ function ResultadoFinal({
   onProximosPassos: () => void;
   onGuardarRecibo?: (cliente: string) => void;
 }) {
-  const efAtiv = atividadeEspecifica ? efeitoFiscal(atividadeEspecifica) : null;
-  const simAnual = useMemo(
-    () =>
-      simularIRSAnual({
-        brutoAnual,
-        tipo: card.tipoFiscal,
-        anoAtividade,
-        irsJovemAno: irsJovemAno > 0 ? irsJovemAno : undefined,
-        ifici,
-        rnhAntigo,
-        programaRegressar: exResidente,
-        deficiencia,
-        coefOverride: efAtiv?.coef,
-        aplicaRegra15Override: efAtiv?.regra15,
-        deducoes: {
-          saude: despSaude,
-          educacao: despEducacao,
-          gerais: despGerais,
-          rendas: despRendas,
-        },
-      }),
-    [
-      brutoAnual,
-      card.tipoFiscal,
-      anoAtividade,
-      irsJovemAno,
-      isencaoSS,
-      ifici,
-      rnhAntigo,
-      exResidente,
-      deficiencia,
-      efAtiv?.coef,
-      efAtiv?.regra15,
-      despSaude,
-      despEducacao,
-      despGerais,
-      despRendas,
-    ],
-  );
-
+  // `simAnual` chega calculado do componente-pai.
+  //
+  // Havia aqui uma segunda chamada a `simularIRSAnual` com a sua própria lista
+  // de inputs — e a lista divergia: tinha `isencaoSS` nas dependências sem o
+  // usar no cálculo, e não recebia o englobamento nem as isenções de SS que
+  // entram na regra dos 15%. Duas execuções do mesmo motor com entradas
+  // diferentes é uma divergência à espera de acontecer; o ecrã de resultado é
+  // precisamente onde ela seria mais cara.
   const taxaEfetiva =
-    brutoAnual > 0 ? (simAnual.irsEstimado + ssAnual) / brutoAnual : 0;
-  const liquidoFinal = brutoAnual - simAnual.irsEstimado - ssAnual;
+    brutoAnual > 0 ? (simAnual.irsImputavelCatB + ssAnual) / brutoAnual : 0;
+  const liquidoFinal = brutoAnual - simAnual.irsImputavelCatB - ssAnual;
 
   // Deduções à coleta detalhadas (para mostrar no bloco IRS)
   const deducoesColeta = simAnual.deducaoDespesas + simAnual.deducaoDeficiencia;
@@ -3347,6 +3404,23 @@ function ResultadoFinal({
           </>
         )}
 
+        {/* Englobamento da Cat. A — o passo que faltava.
+            Sem esta linha o utilizador via o coletável saltar sem explicação;
+            e antes desta versão nem sequer saltava: o salário não entrava no
+            cálculo, e a atividade era tributada a começar no 1.º escalão. */}
+        {simAnual.outrosRendimentos > 0 && (
+          <>
+            <LinhaCalculo
+              label="Salário anual (Categoria A)"
+              valor={simAnual.outrosRendimentos}
+              corValor="text-stone-700 dark:text-stone-200"
+              nota="englobamento — Art. 22.º CIRS"
+              explicacao={`O IRS é um imposto único sobre a soma dos rendimentos. O teu salário (${fmt(simAnual.outrosRendimentos)}) ocupa os escalões mais baixos, e a atividade independente é tributada por cima — a uma taxa marginal mais alta. É por isso que os mesmos recibos verdes pagam mais IRS a quem também tem emprego.`}
+            />
+            <div className="border-t border-stone-100 dark:border-stone-800" />
+          </>
+        )}
+
         {/* Rendimento coletável — resultado intercalar */}
         <LinhaCalculo
           label={
@@ -3558,10 +3632,26 @@ function ResultadoFinal({
           }
           explicacao={
             temDeducoes
-              ? `IRS final = coleta bruta (${fmt(simAnual.coletaBruta)}) − deduções à coleta (${fmt(deducoesColeta)}) = ${fmt(simAnual.irsEstimado)}. Este é o valor que aparece no Bloco 1.`
+              ? `IRS final = coleta bruta (${fmt(simAnual.coletaBruta)}) − deduções à coleta (${fmt(deducoesColeta)}) = ${fmt(simAnual.irsEstimado)}.${simAnual.outrosRendimentos > 0 ? " Inclui o imposto do salário." : " Este é o valor que aparece no Bloco 1."}`
               : `IRS final = coleta bruta calculada pelos escalões progressivos sobre o rendimento tributável de ${fmt(simAnual.rendimentoTributavel)}.`
           }
         />
+
+        {/* Com englobamento há dois números de IRS e ambos são verdadeiros: o
+            do agregado (acima) e a parte que os recibos verdes acrescentam.
+            É esta segunda que se compara com a faturação e com as retenções —
+            e é a única que faz sentido subtrair para chegar a um líquido da
+            atividade. Mostrar só uma delas deixava o outro número por
+            explicar no ecrã ao lado. */}
+        {simAnual.outrosRendimentos > 0 && (
+          <LinhaCalculo
+            label="Parte imputável aos recibos verdes"
+            valor={-simAnual.irsImputavelCatB}
+            corValor="text-red-500 dark:text-red-400"
+            nota={`${fmt(simAnual.irsEstimado)} − o que pagarias só com o salário`}
+            explicacao={`Do IRS total do agregado (${fmt(simAnual.irsEstimado)}), esta é a parte que a atividade independente acrescenta: a diferença entre o imposto com e sem ela. É marginal, não proporcional — o salário já ocupa os escalões de baixo, por isso os recibos verdes são tributados por cima. É este o valor a comparar com as retenções que já fizeste.`}
+          />
+        )}
               </div>
             </m.div>
           )}
@@ -3602,6 +3692,27 @@ function ResultadoFinal({
             >
               Simulador completo <ArrowRight size={14} />
             </button>
+
+            {/* O que este modo assumiu.
+                O guiado e o completo partilham o motor mas não o conjunto de
+                perguntas: aqui não se pergunta dependentes nem tributação
+                conjunta, e para uma família com dois filhos a declarar em
+                conjunto a diferença são milhares de euros. O botão acima
+                transporta o estado, o que dá a entender continuidade — e
+                depois o número muda, sem nada no ecrã a explicar porquê.
+
+                Manter o guiado curto é a razão de ser do modo. Dizer o que
+                ficou de fora custa três linhas e transforma a limitação num
+                convite ao passo seguinte. */}
+            <p className="rounded-xl border border-stone-200 bg-white px-3.5 py-3 text-[11px] leading-relaxed text-stone-500 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-400">
+              <strong className="font-semibold text-stone-600 dark:text-stone-300">
+                O que assumimos:
+              </strong>{" "}
+              que não tens dependentes e que declaras sozinho. Se tiveres filhos,
+              ascendentes a teu cargo ou declarares em conjunto, o imposto é
+              menor — o simulador completo pergunta tudo isso e dá-te um número
+              mais próximo do real.
+            </p>
             <button
               type="button"
               onClick={onVoltar}

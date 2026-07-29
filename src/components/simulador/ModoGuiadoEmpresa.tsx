@@ -98,7 +98,8 @@ import {
   type ParametrosFiscaisRegiao,
 } from "@/lib/incentivos-regioes";
 import {
-  simularEmpresaGuiado,
+  simularEmpresaGuiadoOpcoes,
+  type OpcoesEmpresaGuiado,
   type ResultadoEmpresaGuiado,
 } from "@/lib/fiscal-empresa";
 export { simularEmpresaGuiado } from "@/lib/fiscal-empresa";
@@ -782,80 +783,98 @@ export default function ModoGuiadoEmpresa({
     ? Math.round(faturacaoAnual / (1 + taxaIvaEmpresa))
     : faturacaoAnual;
 
-  // Args comuns para simulação
-  const simArgs = [
-    faturacaoBase, despesasOper, custosEstrutura, salGerenteMensal,
-    distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
-    custoConstituicao, anosAmortizacao,
-    tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
-    naoDocumentadas, emPrejuizo, excecaoPrejuizo,
-    rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
-    sifideDespesas, tipoSifide, rfaiContratualValor,
-    temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
-    valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
-    localizacao,
-    sedeVirtualEfetivo, isEstrangeiro, custoRepFiscalEfetivo, aplicarIFICI,
-  ] as const;
-
-  // Simulação principal (location-aware)
-  const resultado = useMemo(
-    () =>
-      simularEmpresaGuiado(
-        faturacaoBase, despesasOper, custosEstrutura, salGerenteMensal,
-        distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
-        custoConstituicao, anosAmortizacao,
-        tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
-        naoDocumentadas, emPrejuizo, excecaoPrejuizo,
-        rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
-        sifideDespesas, tipoSifide, rfaiContratualValor,
-        temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
-        valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
-        localizacao ?? undefined,
-        sedeVirtualEfetivo || undefined, isEstrangeiro || undefined,
-        custoRepFiscalEfetivo || undefined,
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    simArgs,
+  // Simulação principal (location-aware).
+  //
+  // Eram três chamadas com 30 argumentos posicionais cada, e três
+  // `eslint-disable react-hooks/exhaustive-deps` a esconder que a lista de
+  // dependências era mantida à mão. Foi assim que o IFICI ficou por ligar: a
+  // flag estava no array `simArgs` e nunca chegava ao motor, porque a
+  // assinatura posicional não a aceitava — enquanto a interface mostrava o
+  // badge «IFICI ativo» e um passo do plano de ação a pedir o estatuto à AT.
+  //
+  // Com um objeto de opções a dependência é uma só, o `exhaustive-deps` volta
+  // a poder fazer o seu trabalho, e trocar dois booleanos deixa de passar
+  // silenciosamente pelo TypeScript.
+  const opcoesEmpresa = useMemo<OpcoesEmpresaGuiado>(
+    () => ({
+      faturacao: faturacaoBase,
+      despesasOper,
+      custosExtra: custosEstrutura,
+      salarioGerenteMensal: salGerenteMensal,
+      distribuirDividendos,
+      opcaoEnglobamento,
+      incluirConstituicao,
+      custoConstituicao,
+      anosAmortizacao,
+      tipoViatura,
+      encargosViatura,
+      despRepresentacao,
+      ajudasCusto,
+      naoDocumentadas,
+      emPrejuizo,
+      excecaoPrejuizo,
+      rfaiRegiao: rfaiRegiaoEfetiva,
+      rfaiInvest,
+      primeirosAnos,
+      sifideDespesas,
+      tipoSifide,
+      rfaiContratualValor,
+      temImovel: temImovelEmpresa,
+      vptImovel,
+      taxaIMI,
+      isencaoIMI: isencaoIMI_RFAI,
+      valorAquisicao: valorAquisicaoImovel,
+      isencaoIMT: isencaoIMT_RFAI,
+      anosAmortIMT: anosAmortizacaoIMT,
+      paramLocal: localizacao ?? undefined,
+      sedeVirtualCustoMensal: sedeVirtualEfetivo,
+      isEstrangeiro,
+      custoRepFiscal: custoRepFiscalEfetivo,
+      perfil: {
+        dependentes: 0,
+        conjunta: false,
+        regiao: "continente",
+        ifici: aplicarIFICI,
+      },
+    }),
+    [
+      faturacaoBase, despesasOper, custosEstrutura, salGerenteMensal,
+      distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
+      custoConstituicao, anosAmortizacao,
+      tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
+      naoDocumentadas, emPrejuizo, excecaoPrejuizo,
+      rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
+      sifideDespesas, tipoSifide, rfaiContratualValor,
+      temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
+      valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
+      localizacao, sedeVirtualEfetivo, isEstrangeiro, custoRepFiscalEfetivo,
+      aplicarIFICI,
+    ],
   );
 
-  // Englobamento mais favorável?
+  const resultado = useMemo(
+    () => simularEmpresaGuiadoOpcoes(opcoesEmpresa),
+    [opcoesEmpresa],
+  );
+
+  // Englobamento mais favorável? As duas variantes diferem só nesse par.
   const resultLib = useMemo(
     () =>
-      simularEmpresaGuiado(
-        faturacaoBase, despesasOper, custosEstrutura, salGerenteMensal,
-        true, false, incluirConstituicao,
-        custoConstituicao, anosAmortizacao,
-        tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
-        naoDocumentadas, emPrejuizo, excecaoPrejuizo,
-        rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
-        sifideDespesas, tipoSifide, rfaiContratualValor,
-        temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
-        valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
-        localizacao ?? undefined,
-        sedeVirtualEfetivo || undefined, isEstrangeiro || undefined,
-        custoRepFiscalEfetivo || undefined,
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    simArgs,
+      simularEmpresaGuiadoOpcoes({
+        ...opcoesEmpresa,
+        distribuirDividendos: true,
+        opcaoEnglobamento: false,
+      }),
+    [opcoesEmpresa],
   );
   const resultEng = useMemo(
     () =>
-      simularEmpresaGuiado(
-        faturacaoBase, despesasOper, custosEstrutura, salGerenteMensal,
-        true, true, incluirConstituicao,
-        custoConstituicao, anosAmortizacao,
-        tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
-        naoDocumentadas, emPrejuizo, excecaoPrejuizo,
-        rfaiRegiaoEfetiva, rfaiInvest, primeirosAnos,
-        sifideDespesas, tipoSifide, rfaiContratualValor,
-        temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
-        valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
-        localizacao ?? undefined,
-        sedeVirtualEfetivo || undefined, isEstrangeiro || undefined,
-        custoRepFiscalEfetivo || undefined,
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    simArgs,
+      simularEmpresaGuiadoOpcoes({
+        ...opcoesEmpresa,
+        distribuirDividendos: true,
+        opcaoEnglobamento: true,
+      }),
+    [opcoesEmpresa],
   );
   const englobamentoMelhor =
     resultEng.liquidoGerente > resultLib.liquidoGerente;

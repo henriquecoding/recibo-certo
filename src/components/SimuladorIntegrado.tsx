@@ -120,10 +120,6 @@ import {
   DISPENSA_RETENCAO_LIMITE,
   ESCALOES_IRS,
   MINIMO_EXISTENCIA,
-  SS_TAXA,
-  SS_COEFICIENTE,
-  SS_BASE_MAX_MENSAL,
-  SS_MIN_MENSAL,
   SS_DEPENDENTE,
   COEFICIENTE_POR_TIPO,
   RETENCAO,
@@ -172,6 +168,7 @@ import {
   efeitoFiscal,
   type Atividade,
   type Regiao,
+  BASE_SS_POR_TIPO,
   type BaseSS,
   type EscalaoIVA,
   type TipoAtividade as TipoFiscalCanonico,
@@ -181,6 +178,8 @@ import {
   taxaIVAEfetiva,
   simularIRSAnual,
   irsProgressivo,
+  retencaoNaFonte,
+  contribuicoesSSAnuais,
   calcularAbatimentoMinimoExistencia,
   type RegimeIVA,
   type SimulacaoIRS,
@@ -188,6 +187,10 @@ import {
 import {
   calcularTributacaoAutonomaEmpresa as calcularTributacaoAutonoma,
   simularEmpresa,
+  simularEmpresaOpcoes,
+  otimizarSalarioDividendos,
+  type PerfilGerente,
+  type ResultadoOtimizacao,
   type ResultadoBeneficios,
   type ResultadoTA,
 } from "@/lib/fiscal-empresa";
@@ -253,10 +256,6 @@ const ModoGuiadoEmpresa = dynamic(() => import("@/components/simulador/ModoGuiad
 
 const IAS_2026 = IAS.value;
 const MINIMO_EXISTENCIA_2026 = MINIMO_EXISTENCIA.value;
-const SS_TAXA_TI = SS_TAXA.value;
-const SS_BASE_PCT = SS_COEFICIENTE.servicos.value;
-const SS_MAX_MENSAL = SS_BASE_MAX_MENSAL.value;
-const SS_MIN = SS_MIN_MENSAL.value;
 const IVA_ISENCAO_LIMITE = IVA_ISENCAO_LIMITE_SRC.value;
 const IVA_ISENCAO_LIMITE_IMEDIATO = IVA_ISENCAO_EXCESSO_SRC.value;
 const IRS_JOVEM_LIMITE_2026 = IRS_JOVEM.tetoIAS.value * IAS_2026;
@@ -501,14 +500,10 @@ const IRC_PME = {
 // FUNÇÕES DE CÁLCULO FISCAL
 // ─────────────────────────────────────────────────────────────────────────────
 
-function calcularSSAnual(faturacaoAnual: number): number {
-  const rendRelevMensal = (faturacaoAnual * SS_BASE_PCT) / 12;
-  const contribuicaoMensal = Math.min(
-    SS_MAX_MENSAL,
-    Math.max(SS_MIN, rendRelevMensal * SS_TAXA_TI),
-  );
-  return contribuicaoMensal * 12;
-}
+// A Segurança Social é decidida em `fiscal.ts` — `contribuicoesSSAnuais()`.
+// Havia aqui uma quarta cópia do cálculo, com o coeficiente de serviços
+// cravado e sem distinguir as isenções entre si.
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TRIBUTAÇÃO AUTÓNOMA
@@ -564,7 +559,7 @@ function simularContabOrganizada(
     0,
     faturacao - despesasReais - custoContabilista,
   );
-  const ssAnual = isencaoSS ? 0 : calcularSSAnual(faturacao);
+  const ssAnual = isencaoSS ? 0 : contribuicoesSSAnuais(faturacao, BASE_SS_POR_TIPO[TIPO_LOCAL_PARA_CANONICO[tipoAtiv]]);
 
   // IRS Jovem aplica-se à Contabilidade Organizada (Categoria B)
   const isencaoPct =
@@ -655,6 +650,7 @@ interface InputsParticularidades {
   conjunta?: boolean; // tributação conjunta (quociente conjugal)
   outrosRendimentos?: number; // outros rendimentos (Cat. A / pensões) a englobar
   anoAtividade?: number; // 1.º/2.º ano → redução do coeficiente
+  dispensaRetencao?: boolean; // Art. 101.º-B: sem retenção na fonte
   numDep3plus: number; // dependentes > 3 anos
   numDep3minus: number; // dependentes ≤ 3 anos
   numDep2_6: number; // 2.º+ dependentes ≤ 6 anos
@@ -736,11 +732,26 @@ interface ResultadoAnualRV extends SimulacaoIRS {
  * Adaptador fino sobre `simularIRSAnual` (motor canónico verificado).
  * Mantém a assinatura histórica para não partir os consumidores da UI.
  */
+/**
+ * Isenções de Segurança Social. Deixou de ser um booleano só.
+ *
+ * Enquanto «isento» significava «SS = 0», dava para passar um OR das três
+ * situações. Já não dá: a isenção do 1.º ano é total, a acumulação com emprego
+ * é uma dispensa até 4 × IAS (com contribuição sobre o excedente) e a CPAS/CGA
+ * é uma caixa própria, fora do Regime Geral. Colapsá-las tratava quem está no
+ * 1.º ano como quem acumula — e passava a cobrar-lhe contribuições.
+ */
+interface IsencoesSSInput {
+  primeiroAno: boolean;
+  acumulaEmprego: boolean;
+  cpas: boolean;
+}
+
 function simularAnualRV(
   faturacao: number,
   tipo: TipoAtividade,
   irsJovemAno: number,
-  isencaoSS: boolean,
+  isencoesSS: IsencoesSSInput,
   partic: InputsParticularidades = {
     deficiencia: false,
     ifici: false,
@@ -780,23 +791,40 @@ function simularAnualRV(
       gerais: partic.despGerais,
       rendas: partic.despRendas,
     },
-    // A isenção de SS (1.º ano OU acumulação) é resolvida no UI; força SS=0.
-    acumulaEmprego: isencaoSS,
+    // Cada isenção segue a sua regra no motor. A CPAS/CGA não é isenção do
+    // Art. 157.º — é sair do Regime Geral — mas para efeitos deste simulador
+    // (que não modela as taxas da caixa própria) o resultado é o mesmo: nada
+    // a descontar para a Segurança Social.
+    isencaoSSPrimeiroAno: isencoesSS.primeiroAno || isencoesSS.cpas,
+    acumulaEmprego: isencoesSS.acumulaEmprego,
   });
 
-  const retencaoAnual = faturacao * ret;
-  const irs = sim.irsEstimado;
+  // Retenção na fonte: a mesma fórmula de `calcular()`, não a taxa nua.
+  //
+  // Estava `faturacao * ret`, sem condições. Quem marca a dispensa do
+  // Art. 101.º-B via na mesma um «reembolso de X (retiveste Y)» com um Y que
+  // nunca existiu; e no IRS Jovem a base da retenção também é reduzida pela
+  // parte isenta, o que aqui era ignorado — tornando o reembolso fantasma
+  // ainda maior justamente para quem está no 1.º ano.
+  const retencaoAnual = retencaoNaFonte(faturacao, ret, {
+    dispensa: partic.dispensaRetencao,
+    irsJovemAno: irsJovemAno > 0 ? irsJovemAno : undefined,
+  });
+  const irs = sim.irsImputavelCatB;
   const ssAnual = sim.ssAnual;
   const liquido = faturacao - irs - ssAnual;
 
+  // Parcelas reais, vindas do motor. Antes eram zeros com um total certo por
+  // cima — qualquer detalhe aberto a partir daqui não somava.
+  const det = sim.deducoesDespesasDetalhe;
   const deducoesColeta: DeducoesColeta = {
     dependentes: sim.deducaoDependentes,
     deficienciaContrib: sim.deducaoDeficiencia,
     deficienciaDepend: 0,
-    saude: 0,
-    educacao: 0,
-    gerais: 0,
-    rendas: 0,
+    saude: det.saude,
+    educacao: det.educacao,
+    gerais: det.gerais,
+    rendas: det.rendas,
     total: sim.deducaoDependentes + sim.deducaoDespesas + sim.deducaoDeficiencia,
   };
 
@@ -819,40 +847,71 @@ function simularAnualRV(
   };
 }
 
+/**
+ * Veredicto do break-even entre recibos verdes e empresa.
+ *
+ * Devolvia `number | null` — e devolvia `null` sempre. Varrendo de 1 000 € a
+ * 200 000 €, com os pressupostos que o comparador injetava (salário zero,
+ * dividendos distribuídos), a empresa nunca ultrapassava os recibos verdes,
+ * porque o coeficiente de 0,75 do regime simplificado é uma dedução presumida
+ * muito generosa e a empresa paga IRC e depois 28% sobre os dividendos.
+ *
+ * Toda a narrativa «vale a pena abrir empresa?» assentava nesse `null`, e um
+ * `null` não diz nada. «Com estes pressupostos não compensa até aos 200 000 €,
+ * e eis a distância» é uma resposta tão legítima como um cruzamento aos
+ * 80 000 € — desde que seja dita.
+ */
+interface VeredictoBreakEven {
+  /** Faturação a partir da qual a empresa passa à frente. `null` se nunca. */
+  faturacao: number | null;
+  /** Melhor diferença (empresa − recibos verdes) encontrada no varrimento. */
+  melhorDiferenca: number;
+  /** Faturação onde essa melhor diferença acontece. */
+  faturacaoMelhor: number;
+  /** Até onde se procurou. */
+  limiteVarrido: number;
+}
+
 function calcularBreakEven(
   tipo: TipoAtividade,
   custosExtra: number,
   despesasOper: number,
   salGerenteMensal: number,
   custoConstAnual: number,
-): number | null {
-  for (let v = 0; v <= 200_000; v += 2_000) {
-    const rv = simularAnualRV(v, tipo, 0, false);
-    const em = simularEmpresa(
-      v,
+  perfil: PerfilGerente,
+  mesesSalarioGerente: 12 | 14 = 14,
+): VeredictoBreakEven {
+  const LIMITE = 200_000;
+  let melhorDiferenca = -Infinity;
+  let faturacaoMelhor = 0;
+  let faturacao: number | null = null;
+
+  for (let v = 2_000; v <= LIMITE; v += 2_000) {
+    const rv = simularAnualRV(v, tipo, 0, { primeiroAno: false, acumulaEmprego: false, cpas: false });
+    const em = simularEmpresaOpcoes({
+      faturacao: v,
       despesasOper,
       custosExtra,
-      salGerenteMensal,
-      true,
-      false,
-      0,
-      "comb_baixo",
-      0,
-      0,
-      0,
-      false,
-      true,
-      0,
-      "interior",
-      0,
-      "pme_normal",
-      false,
-      custoConstAnual,
-      0,
-    );
-    if (em.liquidoGerente > rv.liquido) return v;
+      salarioGerenteMensal: salGerenteMensal,
+      mesesSalarioGerente,
+      distribuirDividendos: true,
+      custoConstituicaoAnual: custoConstAnual,
+      perfil,
+    });
+    const diferenca = em.liquidoGerente - rv.liquido;
+    if (diferenca > melhorDiferenca) {
+      melhorDiferenca = diferenca;
+      faturacaoMelhor = v;
+    }
+    if (faturacao === null && diferenca > 0) faturacao = v;
   }
-  return null;
+
+  return {
+    faturacao,
+    melhorDiferenca: melhorDiferenca === -Infinity ? 0 : melhorDiferenca,
+    faturacaoMelhor,
+    limiteVarrido: LIMITE,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1401,6 +1460,9 @@ interface EmpresaInputsProps {
   despesasOper: number;
   custosExtra: number;
   salGerenteMensal: number;
+  mesesSalarioGerente: 12 | 14;
+  otimizacaoSalario: ResultadoOtimizacao;
+  onMesesSalarioChange: (m: 12 | 14) => void;
   distribuirDividendos: boolean;
   opcaoEnglobamento: boolean;
   // Tributação Autónoma
@@ -1487,6 +1549,9 @@ function EmpresaInputs({
   despesasOper,
   custosExtra,
   salGerenteMensal,
+  mesesSalarioGerente,
+  otimizacaoSalario,
+  onMesesSalarioChange,
   distribuirDividendos,
   opcaoEnglobamento,
   encargosViatura,
@@ -1820,12 +1885,76 @@ function EmpresaInputs({
         tooltip={
           <>
             Salário bruto mensal do gerente-sócio. SS patronal 23,75% e SS
-            trabalhador 11%. Custo dedutível ao IRC. A estimativa de IRS usa
-            o cenário prudente disponível neste comparador: Continente, não
-            casado e sem dependentes, por 12 meses e sem subsídios.
+            trabalhador 11%. Custo dedutível ao IRC. O IRS do gerente segue o
+            perfil que indicaste em cima (dependentes, tributação conjunta e
+            região) — o mesmo dos recibos verdes, para a comparação ser entre
+            a mesma pessoa. Mesmo sem salário há Segurança Social a pagar
+            sobre 1 × IAS (Art. 55.º do Código Contributivo).
           </>
         }
       />
+
+      {/* Sugestão do otimizador. O salário e os dividendos são tributados de
+          maneiras diferentes — o salário abate ao IRC mas paga TSU e escalões;
+          os dividendos não abatem nada mas pagam 28% e nenhuma SS — e qual
+          ganha depende da faturação, dos custos e do perfil. Não há regra de
+          bolso, mas há varrimento. */}
+      {otimizacaoSalario.ganhoAnual > 0 && (
+        <div className="rounded-2xl border border-brand/25 bg-brand-light/50 p-3.5 dark:border-brand/25 dark:bg-brand/10">
+          <p className="text-xs font-semibold text-brand-dark dark:text-brand">
+            Mistura mais eficiente: {fmt(otimizacaoSalario.otimo.salarioMensal)}/mês de salário
+          </p>
+          <p className="mt-1 text-[11px] leading-relaxed text-stone-600 dark:text-stone-300">
+            Com este cenário, pôr o salário nesse valor deixa-te com{" "}
+            <strong>{fmt(otimizacaoSalario.ganhoAnual)}/ano</strong> a mais entre o teu
+            bolso e a empresa. O salário abate ao IRC mas paga TSU e escalões de IRS;
+            os dividendos não abatem, mas pagam {pct(DIVIDENDOS_TAXA.value)} e nenhuma
+            Segurança Social.
+          </p>
+          <button
+            type="button"
+            onClick={() => onSalChange(otimizacaoSalario.otimo.salarioMensal)}
+            className="mt-2.5 inline-flex min-h-[36px] items-center gap-1.5 rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-brand-dark"
+          >
+            Aplicar {fmt(otimizacaoSalario.otimo.salarioMensal)}/mês
+          </button>
+        </div>
+      )}
+
+      {/* Subsídios de férias e Natal. O motor multiplicava sempre por 12,
+          assumindo que o gerente não os recebe — recebe, salvo opção. */}
+      <div>
+        <div className="mb-2 flex items-center gap-1.5">
+          <span className="text-sm font-medium uppercase tracking-wider text-stone-500">
+            Meses de salário
+          </span>
+          <InfoTip label="Subsídios de férias e Natal">
+            Os subsídios de férias e de Natal são devidos ao gerente como a
+            qualquer trabalhador. São custo dedutível da empresa e rendimento
+            da Categoria A dele. Escolhe 12 se optaram por não os pagar.
+          </InfoTip>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {([14, 12] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              aria-pressed={mesesSalarioGerente === m}
+              onClick={() => onMesesSalarioChange(m)}
+              className={`min-h-[44px] rounded-xl border px-3 py-2 text-sm font-semibold transition-all ${
+                mesesSalarioGerente === m
+                  ? "border-brand bg-brand-light text-brand-dark shadow-sm"
+                  : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
+              }`}
+            >
+              {m} meses
+              <span className="mt-0.5 block text-[10px] font-normal text-stone-400">
+                {m === 14 ? "com subsídios" : "sem subsídios"}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* ── Dividendos + Englobamento ─────────────────────────────────────── */}
       <div>
@@ -2911,6 +3040,8 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   const [despesasOper, setDespesasOper] = useState(0);
   const [custosExtra, setCustosExtra] = useState(2_000);
   const [salGerenteMensal, setSalGerenteMensal] = useState(0);
+  /** Gerente pago em 12 ou 14 meses (subsídios de férias e Natal). */
+  const [mesesSalarioGerente, setMesesSalarioGerente] = useState<12 | 14>(14);
   const [distribuirDividendos, setDistribuirDividendos] = useState(true);
 
   // ── Englobamento ──────────────────────────────────────────────────────────
@@ -3323,6 +3454,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     conjunta,
     outrosRendimentos,
     anoAtividade,
+    dispensaRetencao,
     numDep3plus,
     numDep3minus,
     numDep2_6,
@@ -3369,7 +3501,11 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
         brutoAnual,
         tipoAtiv,
         irsJovemAno,
-        isencaoSS,
+        {
+          primeiroAno: isencaoSSPrimeiroAno,
+          acumulaEmprego,
+          cpas: isencaoCpas,
+        },
         particularidades,
         atividade.coef,
       ),
@@ -3378,7 +3514,10 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
       tipoAtiv,
       irsJovemAno,
       atividade.coef,
-      isencaoSS,
+      isencaoSSPrimeiroAno,
+      acumulaEmprego,
+      isencaoCpas,
+      dispensaRetencao,
       deficiencia,
       ifici,
       rnhAntigo,
@@ -3411,35 +3550,18 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     ? Math.round(brutoAnual / (1 + taxaIvaEmpresaEfetiva))
     : brutoAnual;
 
-  const resultEmpresa = useMemo(
-    () =>
-      simularEmpresa(
-        faturacaoBaseEmpresa,
-        despesasOper,
-        custosExtraEmpresa,
-        salGerenteMensal,
-        distribuirDividendos,
-        opcaoEnglobamento,
-        encargosViatura,
-        tipoViatura,
-        despRepresentacao,
-        ajudasCusto,
-        naoDocumentadas,
-        emPrejuizo,
-        excecaoPrejuizo,
-        rfaiInvest,
-        regiaoRFAI,
-        sifideDespesas,
-        tipoSifide,
-        primeirosAnos,
-        custoConstituicaoAnual,
-        rfaiContratualValor,
-      ),
-    [
-      faturacaoBaseEmpresa,
+  // Objeto de opções em vez de 20 argumentos posicionais.
+  //
+  // Aqui a lista de dependências estava completa — mas a assinatura posicional
+  // é a mesma que deixou o IFICI por ligar no modo guiado, e continuava a
+  // permitir trocar dois booleanos adjacentes sem o TypeScript dizer nada.
+  const opcoesEmpresa = useMemo(
+    () => ({
+      faturacao: faturacaoBaseEmpresa,
       despesasOper,
-      custosExtraEmpresa,
-      salGerenteMensal,
+      custosExtra: custosExtraEmpresa,
+      salarioGerenteMensal: salGerenteMensal,
+      mesesSalarioGerente: mesesSalarioGerente,
       distribuirDividendos,
       opcaoEnglobamento,
       encargosViatura,
@@ -3450,13 +3572,42 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
       emPrejuizo,
       excecaoPrejuizo,
       rfaiInvest,
-      regiaoRFAI,
+      rfaiRegiao: regiaoRFAI,
       sifideDespesas,
       tipoSifide,
       primeirosAnos,
       custoConstituicaoAnual,
       rfaiContratualValor,
+      // O gerente é a mesma pessoa que está do outro lado da comparação:
+      // dependentes, tributação conjunta e região vêm do perfil dela.
+      perfil: {
+        dependentes: numDep3plus + numDep3minus + numDep2_6 + numDepDefic,
+        conjunta,
+        regiao,
+        ifici,
+      },
+    }),
+    [
+      faturacaoBaseEmpresa, despesasOper, custosExtraEmpresa, salGerenteMensal,
+      mesesSalarioGerente, distribuirDividendos, opcaoEnglobamento,
+      encargosViatura, tipoViatura, despRepresentacao, ajudasCusto,
+      naoDocumentadas, emPrejuizo, excecaoPrejuizo, rfaiInvest, regiaoRFAI,
+      sifideDespesas, tipoSifide, primeirosAnos, custoConstituicaoAnual,
+      rfaiContratualValor,
+      numDep3plus, numDep3minus, numDep2_6, numDepDefic, conjunta, regiao, ifici,
     ],
+  );
+
+  const resultEmpresa = useMemo(
+    () => simularEmpresaOpcoes(opcoesEmpresa),
+    [opcoesEmpresa],
+  );
+
+  // Otimizador salário/dividendos. A pergunta número um de quem abre uma
+  // Lda., e até agora havia um slider e nenhuma pista sobre onde o pôr.
+  const otimizacaoSalario = useMemo(
+    () => otimizarSalarioDividendos(opcoesEmpresa, 100),
+    [opcoesEmpresa],
   );
 
   // ── Resultado Contabilidade Organizada TI ─────────────────────────────────
@@ -3523,7 +3674,10 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   const empresaVence = liquidoEmpresaFinal > resultAnualRV.liquido;
   const diferenca = Math.abs(liquidoEmpresaFinal - resultAnualRV.liquido);
   // ── Break-even ────────────────────────────────────────────────────────────
-  const breakEven = useMemo(
+  // O break-even usa agora os valores REAIS do utilizador — incluindo o
+  // salário de gerência e o perfil pessoal. Antes fixava salário zero, o que
+  // era o pior cenário possível para a empresa e garantia que nunca vencia.
+  const veredictoBreakEven = useMemo(
     () =>
       calcularBreakEven(
         tipoAtiv,
@@ -3531,6 +3685,8 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
         despesasOper,
         salGerenteMensal,
         custoConstituicaoAnual,
+        opcoesEmpresa.perfil,
+        mesesSalarioGerente,
       ),
     [
       tipoAtiv,
@@ -3538,15 +3694,18 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
       despesasOper,
       salGerenteMensal,
       custoConstituicaoAnual,
+      opcoesEmpresa.perfil,
+      mesesSalarioGerente,
     ],
   );
+  const breakEven = veredictoBreakEven.faturacao;
 
   // ── Funções de cálculo para a calculadora interactiva de break-even ───────
   // Injectadas no ComparacaoNarrativa, que não tem acesso às funções de
   // simulação (vivem neste módulo). Mantêm o tipo de atividade actual e
   // ignoram particularidades individuais para uma comparação "limpa".
   const calcularLiquidoRVFat = useCallback(
-    (fat: number) => simularAnualRV(fat, tipoAtiv, 0, false).liquido,
+    (fat: number) => simularAnualRV(fat, tipoAtiv, 0, { primeiroAno: false, acumulaEmprego: false, cpas: false }).liquido,
     [tipoAtiv],
   );
   const calcularLiquidoEmpresaFat = useCallback(
@@ -3621,7 +3780,11 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     {
       id: "acumula",
       label: "Acumulo com trabalho dependente",
-      sub: `Isento SS se emprego ≥ ${IAS_2026}€/mês e RR independente < ${(4 * IAS_2026).toLocaleString("pt-PT", { maximumFractionDigits: 0 })}€/mês`,
+      // A regra dos 4 × IAS estava escrita aqui e não era aplicada em lado
+      // nenhum: o motor zerava a SS fosse qual fosse a faturação. Agora é
+      // aplicada, e o rótulo diz o que acontece acima do limite — «isento» era
+      // meia verdade, porque acima de 4 × IAS contribui-se sobre o excedente.
+      sub: `Dispensa de SS se o emprego pagar ≥ ${IAS_2026}€/mês; acima de ${(4 * IAS_2026).toLocaleString("pt-PT", { maximumFractionDigits: 0 })}€/mês de rendimento relevante contribuis sobre o excedente`,
       val: acumulaEmprego,
       set: (v: boolean) => {
         if (v) setIsencaoSSPrimeiroAno(false);
@@ -4285,6 +4448,10 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
               setRegiao(estado.regiao);
               setRegimeIVA(estado.regimeIVA);
               setAcumulaEmprego(estado.acumulaEmprego);
+              // Sem isto, passar do guiado para o completo com acumulação
+              // perdia o salário e o IRS caía outra vez para o valor irreal —
+              // exatamente no botão que promete continuidade.
+              setOutrosRendimentos(estado.outrosRendimentos);
               setIsencaoSSPrimeiroAno(estado.isencaoSSPrimeiroAno);
               setIsencaoCpas(estado.isencaoCpas);
               setAnoAtividade(estado.anoAtividade);
@@ -5883,6 +6050,9 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                     despesasOper={despesasOper}
                     custosExtra={custosExtra}
                     salGerenteMensal={salGerenteMensal}
+                    mesesSalarioGerente={mesesSalarioGerente}
+                    otimizacaoSalario={otimizacaoSalario}
+                    onMesesSalarioChange={setMesesSalarioGerente}
                     distribuirDividendos={distribuirDividendos}
                     opcaoEnglobamento={opcaoEnglobamento}
                     encargosViatura={encargosViatura}
@@ -6263,15 +6433,12 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                                     €/ano. Sendo isento, não cobras IVA e o teu
                                     disponível sobe para{" "}
                                     <strong>
-                                      {fmt(
-                                        Math.round(
-                                          bruto -
-                                            bruto *
-                                              TIPO_ATIVIDADE_PARAMS[tipoAtiv]
-                                                .ret -
-                                            base * 0.7 * SS_TAXA_TI,
-                                        ),
-                                      )}
+                                      {/* Sem IVA, o disponível é o líquido que o
+                                          motor já calcula. Estava aqui uma conta
+                                          à mão com o coeficiente de serviços
+                                          cravado a 0,7 — errada para quem vende
+                                          bens, e cega às isenções de SS. */}
+                                      {fmt(Math.round(resultRecibo.liquido))}
                                     </strong>
                                     .
                                   </span>
@@ -6591,7 +6758,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                       {/* Calendário fiscal */}
                       <TimelineFiscal
                         ssAnualMensal={
-                          isencaoSS ? 0 : calcularSSAnual(brutoAnual) / 12
+                          isencaoSS ? 0 : resultAnualRV.ssAnual / 12
                         }
                         isencaoSS={isencaoSS}
                         acertoIRS={resultAnualRV.acertoIRS}
@@ -7252,11 +7419,32 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                     Com {fmt(brutoAnual)}/ano, recibos verdes deixam-te com mais{" "}
                     <strong>{fmt(diferenca)}/ano</strong> (
                     {pct(diferenca / (brutoAnual || 1))}).
-                    {breakEven &&
-                      ` A empresa compensa acima de ${fmt(breakEven)}/ano.`}
+                    {breakEven
+                      ? ` A empresa compensa acima de ${fmt(breakEven)}/ano.`
+                      : /* «Não compensa» é uma resposta, e é a que este
+                           varrimento dá quase sempre: o coeficiente de 0,75 do
+                           regime simplificado é uma dedução presumida muito
+                           generosa, e a empresa paga IRC e depois 28% sobre os
+                           dividendos. Antes ficava um vazio no lugar da
+                           conclusão — o `breakEven` era `null` e a frase
+                           simplesmente acabava. */
+                        ` Com estes pressupostos não compensa até aos ${fmt(veredictoBreakEven.limiteVarrido)}/ano: no ponto mais favorável (${fmt(veredictoBreakEven.faturacaoMelhor)}/ano) a empresa fica ${fmt(Math.abs(veredictoBreakEven.melhorDiferenca))}/ano atrás.`}
                   </span>
                 )}
               </div>
+
+              {/* O que esta comparação ainda não conta. Dizê-lo é o que separa
+                  «não compensa» de «não compensa, e eis o que falta pesar». */}
+              {!empresaVence && !breakEven && (
+                <p className="mt-2 rounded-xl border border-stone-200 bg-white px-3.5 py-3 text-[11px] leading-relaxed text-stone-500 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-400">
+                  A conta ainda não inclui três coisas que jogam a favor da
+                  empresa: o IVA dedutível nas compras, o reporte de prejuízos
+                  fiscais a 12 anos (Art. 52.º CIRC) e a otimização da mistura
+                  salário/dividendos. Nem uma que joga contra: um gerente não
+                  tem subsídio de desemprego. Fala com um contabilista antes de
+                  decidir.
+                </p>
+              )}
 
               {/* Nota legal */}
               <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-alert-border bg-alert-bg p-4">

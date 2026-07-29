@@ -674,6 +674,37 @@ export const SS_ISENCAO_PRIMEIRO_ANO_MESES = sv(
   "Aplica-se a quem não teve atividade independente nos 3 anos anteriores."
 );
 
+/**
+ * Art. 157.º n.º 1 al. a) do Código Contributivo — quem acumula atividade
+ * independente com trabalho por conta de outrem só está dispensado de
+ * contribuir enquanto o rendimento relevante mensal médio for **inferior a
+ * 4 × IAS**. Acima disso contribui sobre o EXCEDENTE (e sem o mínimo de 20 €).
+ *
+ * Não é, portanto, uma isenção total: era assim que o motor a tratava, e a
+ * partir de ~36 800 €/ano de faturação de serviços isso apagava contribuições
+ * na ordem dos milhares de euros.
+ *
+ * A dispensa exige ainda condições cumulativas que o simulador não consegue
+ * verificar (entidades sem relação de domínio entre si, o outro regime cobrir
+ * as mesmas eventualidades e a remuneração desse regime ser ≥ 1 × IAS) — daí
+ * a nota, para o resultado não passar por certificado.
+ */
+export const SS_ACUMULACAO_LIMITE_IAS = sv(
+  4,
+  "Art. 157.º n.º 1 al. a) Código Contributivo — dispensa até 4 × IAS de rendimento relevante mensal médio",
+  "segSocialGov",
+  TODAY,
+  "Acima do limite contribui-se sobre o excedente, sem contribuição mínima. Depende ainda de a remuneração do trabalho dependente ser ≥ 1 × IAS."
+);
+
+/** Valor do limite de acumulação em euros por mês (4 × IAS). */
+export const SS_ACUMULACAO_LIMITE_MENSAL = sv(
+  Math.round(SS_ACUMULACAO_LIMITE_IAS.value * IAS.value * 100) / 100,
+  "Art. 157.º n.º 1 al. a) Código Contributivo — 4 × IAS",
+  "segSocialGov",
+  TODAY
+);
+
 // ═══════════════════════════════════════════════════════════════════════
 //  REGIME SIMPLIFICADO (IRS) — coeficientes para o rendimento tributável
 // ═══════════════════════════════════════════════════════════════════════
@@ -785,8 +816,13 @@ export const DEDUCAO_ESPECIFICA_IAS_MULT = 8.54;
 /**
  * Dedução específica da categoria B. No regime simplificado NÃO é uma subtração
  * direta ao coletável (o coeficiente já presume as despesas): conta como despesa
- * automaticamente justificada para a regra dos 15%. Em alternativa, contam as
- * contribuições à SS que excedam 10% do rendimento bruto, se superiores.
+ * automaticamente justificada para a regra dos 15%.
+ *
+ * Em alternativa contam as contribuições obrigatórias para a Segurança Social —
+ * as TOTAIS, a maior das duas (Art. 31.º n.º 13 al. a). Este comentário dizia
+ * «que excedam 10% do rendimento bruto», o que é outra coisa: a dedução autónoma
+ * do n.º 2. O código sempre esteve certo; era o comentário que convidava alguém
+ * a «arranjá-lo».
  */
 export const DEDUCAO_ESPECIFICA_CATB = sv(
   Math.round(Math.max(DEDUCAO_ESPECIFICA_FLOOR, DEDUCAO_ESPECIFICA_IAS_MULT * IAS.value) * 100) / 100,
@@ -1749,6 +1785,24 @@ export const DEDUCAO_DEFICIENCIA_GRAU_MINIMO = sv(
   "Art. 56.º-A / 87.º CIRS — grau mínimo de incapacidade permanente de 60%",
   "portalFinancasArt87",
   TODAY
+);
+
+/**
+ * Art. 55.º do Código Contributivo — base de incidência dos membros de órgãos
+ * estatutários (gerentes, administradores): a remuneração efetivamente
+ * auferida, com o **mínimo de 1 × IAS**.
+ *
+ * Um gerente sem salário não fica sem Segurança Social: paga sobre 1 IAS. O
+ * mínimo cai se o MOE acumular com outra atividade remunerada cuja base
+ * contributiva já seja ≥ 1 IAS, ou se for pensionista de invalidez/velhice —
+ * casos que o simulador não consegue verificar.
+ */
+export const MOE_BASE_MINIMA_MENSAL = sv(
+  IAS.value,
+  "Art. 55.º Código Contributivo — base de incidência mínima dos MOE = 1 × IAS",
+  "segSocialGov",
+  TODAY,
+  "Não se aplica em acumulação com outra atividade com base contributiva ≥ 1 IAS, nem a pensionistas."
 );
 
 /** Contribuição mínima mensal de SS para trabalhadores independentes. */
@@ -3075,9 +3129,18 @@ export const SS_MOE = {
     "codContributivo",
     REV_PROTECAO
   ),
+  /**
+   * Base de incidência mínima dos MOE, em múltiplos do IAS.
+   *
+   * O valor em euros vive em `MOE_BASE_MINIMA_MENSAL` (= 1 × IAS), que já
+   * existia e traz a ressalva importante: não se aplica em acumulação com
+   * outra atividade com base contributiva ≥ 1 IAS, nem a pensionistas. Aqui
+   * guarda-se só o múltiplo, para os guias poderem citar a regra sem
+   * duplicarem o valor.
+   */
   baseMinimaIAS: sv(
-    1,
-    "Código Contributivo — a base de incidência dos membros de órgãos estatutários tem por limite mínimo o valor do IAS",
+    MOE_BASE_MINIMA_MENSAL.value / IAS.value,
+    "Art. 55.º Código Contributivo — a base de incidência dos membros de órgãos estatutários tem por limite mínimo o valor do IAS",
     "codContributivo",
     REV_PROTECAO
   ),
@@ -3203,6 +3266,16 @@ export function assertFiscalDataIntegrity(): void {
   }
   if (Math.abs(IRS_JOVEM_TETO_CALC - IRS_JOVEM.tetoIAS.value * IAS_VALUE) > EPS) {
     erros.push("Teto do IRS Jovem inconsistente com 55×IAS.");
+  }
+  if (
+    Math.abs(SS_ACUMULACAO_LIMITE_IAS.value * IAS_VALUE - SS_ACUMULACAO_LIMITE_MENSAL.value) > EPS
+  ) {
+    erros.push("Limite de acumulação da SS inconsistente com 4×IAS.");
+  }
+  // O limite de acumulação tem de ficar abaixo do teto: acima dele a dispensa
+  // do Art. 157.º deixaria de ter qualquer efeito prático.
+  if (!(SS_ACUMULACAO_LIMITE_MENSAL.value < SS_BASE_MAX_MENSAL.value)) {
+    erros.push("Limite de acumulação da SS (4×IAS) não é inferior ao teto (12×IAS).");
   }
 
   // 2) Excesso de IVA = 125% do limite de isenção.
@@ -3627,6 +3700,9 @@ export function assertFiscalDataIntegrity(): void {
   if (!isRate(TRABALHO_NOTURNO.acrescimo.value)) {
     erros.push("Trabalho noturno: acréscimo fora do intervalo [0,1].");
   }
+  if (Math.abs(SS_MOE.baseMinimaIAS.value * IAS.value - MOE_BASE_MINIMA_MENSAL.value) > EPS) {
+    erros.push("Base mínima dos MOE: o múltiplo do IAS e o valor em euros divergiram.");
+  }
   if (Math.abs(SS_MOE.trabalhador.value - SS_DEPENDENTE.trabalhador.value) > EPS
     || Math.abs(SS_MOE.entidade.value - SS_DEPENDENTE.entidade.value) > EPS) {
     erros.push("SS de membros de órgãos estatutários: as taxas divergiram das do regime geral sem justificação registada.");
@@ -3678,6 +3754,9 @@ export function assertFiscalDataIntegrity(): void {
     ...Object.values(SS_COEFICIENTE),
     SS_BASE_MAX_MENSAL,
     SS_ISENCAO_PRIMEIRO_ANO_MESES,
+    SS_ACUMULACAO_LIMITE_IAS,
+    SS_ACUMULACAO_LIMITE_MENSAL,
+    MOE_BASE_MINIMA_MENSAL,
     REGIME_SIMPLIFICADO.limite,
     REGIME_SIMPLIFICADO.coefServicos151,
     REGIME_SIMPLIFICADO.coefOutrosServicos,

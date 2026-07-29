@@ -17,6 +17,7 @@ import {
   SS_TAXA,
   SS_COEFICIENTE,
   SS_BASE_MAX_MENSAL,
+  SS_ACUMULACAO_LIMITE_MENSAL,
   REGIME_SIMPLIFICADO,
   IRS_JOVEM,
   ESCALOES_IRS,
@@ -43,16 +44,6 @@ import {
   IAS_VALUE,
   CATEGORIA_F,
   // Tributação Autónoma
-  TA_THRESHOLDS,
-  TA_VIATURAS_COMBUSTAO,
-  TA_VIATURAS_PHEV,
-  TA_VIATURAS_ELETRICA,
-  TA_VIATURAS_ELETRICA_ACIMA_LIMITE,
-  TA_ELETRICA_LIMITE_CUSTO,
-  TA_REPRESENTACAO,
-  TA_AJUDAS_CUSTO,
-  TA_NAO_DOCUMENTADAS,
-  TA_AGRAVAMENTO_PREJUIZO,
   // Deficiência e extras
   EXCLUSAO_DEFICIENCIA_TAXA,
   EXCLUSAO_DEFICIENCIA_MAX,
@@ -149,29 +140,165 @@ export function isencaoIRSJovem(ano?: number): number {
   return IRS_JOVEM.isencaoPorAno.value[ano] ?? 0;
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+//  SEGURANÇA SOCIAL DO TRABALHADOR INDEPENDENTE — um só cálculo
+//  ---------------------------------------------------------------------
+//  Havia três versões disto no motor e as três discordavam:
+//
+//    · `calcular()` aplicava o teto mas não o mínimo mensal;
+//    · o `ssAnual` de `simularIRSAnual` aplicava teto e mínimo, mas tratava
+//      a acumulação com emprego como isenção TOTAL;
+//    · a regra dos 15% (Art. 31.º n.º 13) usava sempre o coeficiente de
+//      serviços, sem teto e sem olhar a isenções — a 200 000 € de faturação
+//      creditava 29 960 € de contribuições contra uns reais de 16 552 €.
+//
+//  As três decidem a mesma coisa: quanto se paga de Segurança Social. Passa a
+//  ser esta função a decidi-lo, e cada chamador escolhe apenas o período.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface IsencoesSS {
+  /**
+   * Art. 157.º n.º 1 al. b): primeiros 12 meses de atividade. Isenção total —
+   * esta é mesmo uma isenção.
+   */
+  primeiroAno?: boolean;
+  /**
+   * Art. 157.º n.º 1 al. a): acumulação com trabalho por conta de outrem.
+   * Dispensa **condicionada** — só vale enquanto o rendimento relevante
+   * mensal médio ficar abaixo de 4 × IAS. Acima, contribui-se sobre o
+   * excedente e sem contribuição mínima.
+   */
+  acumulaEmprego?: boolean;
+}
+
+export interface ContribuicoesSS {
+  /** Rendimento relevante mensal médio, já com o teto de 12 × IAS aplicado. */
+  baseMensal: number;
+  /** Rendimento relevante mensal médio antes do teto (para explicar o corte). */
+  baseMensalSemTeto: number;
+  contribuicaoMensal: number;
+  contribuicaoAnual: number;
+  /** O teto de 12 × IAS mordeu? */
+  limitadoPeloTeto: boolean;
+  /** A dispensa por acumulação está a ser aplicada, total ou parcialmente? */
+  dispensaAcumulacao: "total" | "parcial" | "nenhuma";
+}
+
+/**
+ * Contribuições anuais de um trabalhador independente, com teto (12 × IAS),
+ * contribuição mínima (20 €/mês), coeficiente por natureza da atividade e as
+ * isenções do Art. 157.º.
+ */
+export function contribuicoesSS(
+  brutoAnual: number,
+  baseSS: BaseSS,
+  isencoes: IsencoesSS = {},
+): ContribuicoesSS {
+  const bruto = sanitize(brutoAnual);
+  const coeficiente = SS_COEFICIENTE[baseSS].value;
+  const baseMensalSemTeto = (bruto * coeficiente) / 12;
+  const baseMensal = Math.min(baseMensalSemTeto, SS_BASE_MAX_MENSAL.value);
+  const limitadoPeloTeto = baseMensalSemTeto > SS_BASE_MAX_MENSAL.value;
+
+  const vazio = (dispensa: ContribuicoesSS["dispensaAcumulacao"]): ContribuicoesSS => ({
+    baseMensal,
+    baseMensalSemTeto,
+    contribuicaoMensal: 0,
+    contribuicaoAnual: 0,
+    limitadoPeloTeto,
+    dispensaAcumulacao: dispensa,
+  });
+
+  // Sem faturação não há nada a mostrar. A contribuição mínima de 20 €/mês é
+  // real — paga-se mesmo declarando zero — mas é uma obrigação de quem TEM
+  // atividade aberta, não o resultado de uma simulação por preencher. Dizê-la
+  // é trabalho da copy; aqui devolvê-la faria a interface anunciar 240 €/ano
+  // de encargo a quem ainda não escreveu um número.
+  if (bruto <= 0) return vazio("nenhuma");
+
+  if (isencoes.primeiroAno) return vazio("nenhuma");
+
+  if (isencoes.acumulaEmprego) {
+    // Art. 157.º n.º 1 al. a): contribui-se sobre o EXCEDENTE a 4 × IAS. Abaixo
+    // disso não há contribuição nenhuma — e acima não há mínimo de 20 €, porque
+    // o mínimo é do regime geral, não desta dispensa.
+    const excedente = Math.max(0, baseMensal - SS_ACUMULACAO_LIMITE_MENSAL.value);
+    if (excedente <= 0) return vazio("total");
+    const contribuicaoMensal = excedente * SS_TAXA.value;
+    return {
+      baseMensal,
+      baseMensalSemTeto,
+      contribuicaoMensal,
+      contribuicaoAnual: contribuicaoMensal * 12,
+      limitadoPeloTeto,
+      dispensaAcumulacao: "parcial",
+    };
+  }
+
+  const contribuicaoMensal = Math.max(SS_MIN_MENSAL.value, baseMensal * SS_TAXA.value);
+  return {
+    baseMensal,
+    baseMensalSemTeto,
+    contribuicaoMensal,
+    contribuicaoAnual: contribuicaoMensal * 12,
+    limitadoPeloTeto,
+    dispensaAcumulacao: "nenhuma",
+  };
+}
+
+/** Atalho para quem só quer o total anual. */
+export const contribuicoesSSAnuais = (
+  brutoAnual: number,
+  baseSS: BaseSS,
+  isencoes: IsencoesSS = {},
+): number => contribuicoesSS(brutoAnual, baseSS, isencoes).contribuicaoAnual;
+
+/**
+ * Retenção na fonte sobre um valor faturado.
+ *
+ * Duas condições que se esquecem com facilidade quando a conta é escrita à
+ * mão — e foram esquecidas: a dispensa do Art. 101.º-B zera a retenção, e o
+ * IRS Jovem reduz a base, porque só se retém sobre a parte tributável.
+ * Escrever `faturado × taxa` no acerto anual produzia um «reembolso» de
+ * retenções que nunca tinham sido feitas.
+ */
+export function retencaoNaFonte(
+  base: number,
+  taxa: number,
+  opcoes: { dispensa?: boolean; irsJovemAno?: number } = {},
+): number {
+  if (opcoes.dispensa) return 0;
+  return sanitize(base) * (1 - isencaoIRSJovem(opcoes.irsJovemAno)) * taxa;
+}
+
 export function calcular(input: CalcInput): CalcResult {
   const bruto = sanitize(input.bruto);
   const avisos: string[] = [];
 
   // ── Retenção na fonte (adiantamento de IRS) ──
+  // O IRS Jovem isenta parte do rendimento, logo a retenção incide apenas
+  // sobre a parte tributável (estimativa — a tabela oficial da AT é progressiva).
   const isencaoJovem = isencaoIRSJovem(input.irsJovemAno);
   const retencaoBase = input.retencaoOverride ?? RETENCAO[input.tipo].value;
   const taxaRetencao = input.dispensaRetencao ? 0 : retencaoBase;
-  // O IRS Jovem isenta parte do rendimento, logo a retenção incide apenas
-  // sobre a parte tributável (estimativa — a tabela oficial da AT é progressiva).
-  const baseRetencao = bruto * (1 - isencaoJovem);
-  const retencaoIRS = baseRetencao * taxaRetencao;
+  const retencaoIRS = retencaoNaFonte(bruto, retencaoBase, {
+    dispensa: input.dispensaRetencao,
+    irsJovemAno: input.irsJovemAno,
+  });
 
   // ── IVA ──
   const taxaIVA = taxaIVAEfetiva(input.regiao, input.regimeIVA);
   const iva = bruto * taxaIVA;
 
   // ── Segurança Social (estimativa proporcional ao recibo) ──
-  let segSocial = 0;
-  if (!input.isencaoSSPrimeiroAno && !input.acumulaEmprego) {
-    const baseSS = Math.min(bruto * SS_COEFICIENTE[input.baseSS].value, SS_BASE_MAX_MENSAL.value);
-    segSocial = baseSS * SS_TAXA.value;
-  }
+  // Mesmo cálculo do apuramento anual, anualizado e dividido de volta: assim a
+  // tesouraria por recibo e o acerto do ano não podem divergir. Traz para aqui
+  // o mínimo mensal de 20 € (que faltava) e a dispensa por acumulação passa a
+  // ser condicionada aos 4 × IAS em vez de zerar tudo.
+  const segSocial = contribuicoesSS(bruto * 12, input.baseSS, {
+    primeiroAno: input.isencaoSSPrimeiroAno,
+    acumulaEmprego: input.acumulaEmprego,
+  }).contribuicaoMensal;
 
   const entradaConta = bruto + iva - retencaoIRS;
   const liquido = bruto - retencaoIRS - segSocial;
@@ -398,6 +525,27 @@ export interface DeducoesColetaInput {
   conjunta?: boolean;
 }
 
+/**
+ * Detalhe parcela a parcela das despesas dedutíveis, para quem quiser abrir
+ * o detalhe na interface. Antes a UI do modo completo montava este objeto à
+ * mão com zeros em todas as linhas e o total certo — qualquer detalhe aberto
+ * a partir dali mostrava números que não somavam.
+ */
+export interface DeducoesDespesasDetalhe {
+  saude: number;
+  educacao: number;
+  gerais: number;
+  rendas: number;
+  lares: number;
+  ppr: number;
+  donativos: number;
+  somaBruta: number;
+  limiteGlobal: number;
+  /** O limite do Art. 78.º n.º 7 cortou alguma coisa? */
+  limitado: boolean;
+  aplicado: number;
+}
+
 export interface DeducoesColetaResult {
   /** Saúde + educação + gerais + rendas + lares + PPR + donativos, após o limite global. */
   despesas: number;
@@ -408,6 +556,8 @@ export interface DeducoesColetaResult {
   deficiencia: number;
   /** Soma de tudo o que está aqui (NÃO inclui a dedução por dependentes). */
   total: number;
+  /** Composição das despesas, linha a linha. */
+  detalhe: DeducoesDespesasDetalhe;
 }
 
 /**
@@ -455,10 +605,9 @@ export function calcularDeducoesColeta(
     : 0;
 
   // Limite global (Art. 78.º n.º 7): saúde + educação + gerais + rendas + lares + PPR + donativos.
-  const despesas = Math.min(
-    dGerais + dSaude + dEducacao + dRendas + dLares + ppr + donativos,
-    limiteGlobalDeducoes(ctx.rendimentoColetavel)
-  );
+  const somaBruta = dGerais + dSaude + dEducacao + dRendas + dLares + ppr + donativos;
+  const limiteGlobal = limiteGlobalDeducoes(ctx.rendimentoColetavel);
+  const despesas = Math.min(somaBruta, limiteGlobal);
 
   // Ascendentes (Art. 78.º-A): 525 € por ascendente; 635 € se existir só um.
   // Fora do limite global, tal como a dedução por dependentes.
@@ -480,6 +629,19 @@ export function calcularDeducoesColeta(
     pensaoAlimentos,
     deficiencia,
     total: despesas + ascendentes + pensaoAlimentos + deficiencia,
+    detalhe: {
+      saude: dSaude,
+      educacao: dEducacao,
+      gerais: dGerais,
+      rendas: dRendas,
+      lares: dLares,
+      ppr,
+      donativos,
+      somaBruta,
+      limiteGlobal,
+      limitado: somaBruta > limiteGlobal,
+      aplicado: despesas,
+    },
   };
 }
 
@@ -705,6 +867,11 @@ export interface SimulacaoInput {
   dependentes?: number;
   /** Outros rendimentos líquidos (cat. A) para englobamento. */
   outrosRendimentos?: number;
+  /**
+   * Uso interno: corta o cálculo de `irsImputavelCatB`, que corre o motor uma
+   * segunda vez sem a Categoria B. Sem isto a chamada seria recursiva.
+   */
+  semDecomposicao?: boolean;
   /** Despesas dedutíveis à coleta. */
   deducoes?: DeducoesInput;
   /** Regime de tributação da categoria B. Por defeito "simplificado". */
@@ -813,6 +980,24 @@ export interface SimulacaoIRS {
   deducaoAscendentes: number;
   /** Deduções de despesas (saúde+educação+gerais+rendas+PPR+donativos) após limite global. */
   deducaoDespesas: number;
+  /**
+   * As parcelas por trás de `deducaoDespesas`, já com os limites individuais
+   * de cada rubrica aplicados. `somaBruta` é o total antes do limite global do
+   * Art. 78.º n.º 7; `aplicado` é o que efetivamente abate à coleta.
+   */
+  deducoesDespesasDetalhe: {
+    saude: number;
+    educacao: number;
+    gerais: number;
+    rendas: number;
+    lares: number;
+    ppr: number;
+    donativos: number;
+    somaBruta: number;
+    limiteGlobal: number;
+    limitado: boolean;
+    aplicado: number;
+  };
   /** Dedução à coleta por PPR (Art. 21.º EBF), antes do limite global. */
   deducaoPPR: number;
   /** Dedução à coleta por donativos (Art. 63.º EBF), antes do limite global. */
@@ -821,7 +1006,18 @@ export interface SimulacaoIRS {
   deducaoPensaoAlimentos: number;
   /** Dedução coleta por deficiência do contribuinte (Art. 87.º: 4×IAS). */
   deducaoDeficiencia: number;
+  /** IRS de TODO o rendimento englobado (Cat. B + `outrosRendimentos`). */
   irsEstimado: number;
+  /**
+   * Parte do `irsEstimado` imputável à Categoria B — o imposto marginal que a
+   * atividade independente acrescenta por cima dos outros rendimentos. Igual a
+   * `irsEstimado` quando não há englobamento.
+   *
+   * É este o número que se compara com a faturação e com as retenções; usar o
+   * `irsEstimado` aí faria a atividade parecer responsável pelo imposto do
+   * salário.
+   */
+  irsImputavelCatB: number;
   minimoExistenciaAplicado: boolean;
   /** Estado auditável da regra do artigo 70.º. */
   minimoExistenciaDecision: MinimoExistenciaDecision;
@@ -887,7 +1083,17 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     // bruto, a componente automática é a dedução específica (4 104 €/8,54×IAS)
     // OU as contribuições obrigatórias TOTAIS para a Segurança Social, a maior.
     // (Não é a parte que excede 10% — isso é a dedução autónoma do n.º 2.)
-    const ssContribuicoes = brutoAnual * SS_COEFICIENTE.servicos.value * SS_TAXA.value;
+    //
+    // «Contribuições obrigatórias» são as que a pessoa PAGA. A linha anterior
+    // multiplicava a faturação por 0,7 × 21,4% sem teto, sem coeficiente por
+    // tipo e sem olhar às isenções: a 200 000 € creditava 29 960 € contra
+    // 16 552 € reais (≈ 6 400 € de IRS a menos), a quem vende bens creditava
+    // 7 490 € em vez de 4 587 €, e a quem estava isento no 1.º ano creditava
+    // contribuições que nunca pagou.
+    const ssContribuicoes = contribuicoesSSAnuais(brutoAnual, BASE_SS_POR_TIPO[tipo], {
+      primeiroAno: input.isencaoSSPrimeiroAno,
+      acumulaEmprego: input.acumulaEmprego,
+    });
     despesasAutomaticas = Math.max(DEDUCAO_ESPECIFICA_CATB.value, ssContribuicoes);
     acrescimo15 = aplicaRegra15
       ? Math.max(0, REGIME_15PCT.value * brutoAnual - (despesasAutomaticas + despesasJustificadas))
@@ -1049,28 +1255,49 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   } = outrasDeducoes;
 
   const deducoesColeta = deducaoDependentes + outrasDeducoes.total;
+  const deducoesDespesasDetalhe = outrasDeducoes.detalhe;
   const irsEstimado = Math.max(0, coletaBruta - deducoesColeta);
   const minimoExistenciaAplicado = minimoExistenciaDecision.status === "applied";
 
   // ── SS anual estimado (para display; não afecta o IRS) ───────────────────
+  // A acumulação com emprego NÃO é isenção total (Art. 157.º n.º 1 al. a): é
+  // dispensa até 4 × IAS de rendimento relevante mensal médio, com contribuição
+  // sobre o excedente acima disso. Zerar incondicionalmente escondia perto de
+  // 9 000 €/ano a quem faturasse acima de ~36 800 €.
   const acumulaEmprego = !!input.acumulaEmprego;
-  const isencaoSSEntrada = acumulaEmprego || !!input.isencaoSSPrimeiroAno;
-  const ssAnual = (() => {
-    if (isencaoSSEntrada) return 0;
-    const baseSS = SS_COEFICIENTE[BASE_SS_POR_TIPO[tipo]].value;
-    const rendMensalMedio = (brutoAnual * baseSS) / 12;
-    const mensal = Math.min(
-      Math.max(SS_MIN_MENSAL.value, rendMensalMedio * SS_TAXA.value),
-      SS_BASE_MAX_MENSAL.value * SS_TAXA.value
-    );
-    return mensal * 12;
-  })();
+  const ss = contribuicoesSS(brutoAnual, BASE_SS_POR_TIPO[tipo], {
+    primeiroAno: input.isencaoSSPrimeiroAno,
+    acumulaEmprego,
+  });
+  const ssAnual = ss.contribuicaoAnual;
 
-  const taxaMediaEfetiva = brutoAnual > 0 ? irsEstimado / brutoAnual : 0;
+  // ── Quanto deste IRS é dos recibos verdes? ──────────────────────────────
+  //
+  //  Com englobamento, `irsEstimado` é o imposto do agregado TODO — salário
+  //  incluído. Mostrar esse número ao lado da faturação da Cat. B, ou subtraí-lo
+  //  a ela para chegar a um "líquido", dá um resultado sem sentido.
+  //
+  //  A parte imputável à Cat. B é marginal, não proporcional: o salário ocupa
+  //  os escalões de baixo e a atividade independente é tributada por cima. Por
+  //  isso é a diferença entre o imposto com e sem ela — a mesma lógica que o
+  //  regime de taxa fixa já usava acima para isolar `outrosRendimentos`.
+  //
+  //  Sem outros rendimentos as duas coisas coincidem e não se corre nada.
+  const irsImputavelCatB =
+    outrosRendimentos > 0 && !input.semDecomposicao
+      ? Math.max(
+          0,
+          irsEstimado -
+            simularIRSAnual({ ...input, brutoAnual: 0, semDecomposicao: true }).irsEstimado,
+        )
+      : irsEstimado;
+
+  const taxaMediaEfetiva = brutoAnual > 0 ? irsImputavelCatB / brutoAnual : 0;
   const retencoesPagas = sanitize(input.retencoesPagas ?? 0);
 
   return {
     brutoAnual,
+    irsImputavelCatB,
     regimeContabilidade,
     coeficienteBase,
     reducaoAno,
@@ -1096,6 +1323,7 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     deducaoDependentes,
     deducaoAscendentes,
     deducaoDespesas,
+    deducoesDespesasDetalhe,
     deducaoPPR,
     deducaoDonativos,
     deducaoPensaoAlimentos,
@@ -1207,121 +1435,23 @@ export function compararRegimes(input: ComparacaoInput): ComparacaoResult {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-//  TRIBUTAÇÃO AUTÓNOMA — IRC (Art. 88.º CIRC)
+//  TRIBUTAÇÃO AUTÓNOMA — vive em `fiscal-empresa.ts`
 //
-//  Aplica-se sobre encargos específicos de empresas (encargos anuais de
-//  viaturas, representação, ajudas de custo, despesas não documentadas),
-//  independentemente do IRC regular. O custo de aquisição da viatura
-//  determina o escalão; a base tributável são os encargos anuais.
+//  Havia aqui um segundo motor de TA, e os dois discordavam: este não
+//  aplicava o agravamento do Art. 88.º n.º 14 às despesas não documentadas,
+//  quando a norma manda agravar «as taxas de tributação autónoma previstas
+//  no presente artigo» sem excluir o n.º 1. Além disso não era usado por
+//  componente nenhum — só pelo seu próprio teste.
+//
+//  Duas implementações da mesma regra é exatamente o problema que o
+//  `fiscal-iva.ts` foi criado para resolver. Fica uma:
+//  `calcularTributacaoAutonomaEmpresa` em `fiscal-empresa.ts`.
+//
+//  A única peça que só existia aqui — derivar a taxa do CUSTO DE AQUISIÇÃO
+//  da viatura, incluindo o limite do Art. 88.º n.º 20 para as elétricas —
+//  passou para `taxaTAViatura()` em `fiscal-empresa.ts`, para a capacidade
+//  não se perder com a duplicação.
 // ─────────────────────────────────────────────────────────────────────
-
-export type TipoViatura = "combustao" | "phev" | "eletrica";
-
-export interface TAViaturaInput {
-  tipo: TipoViatura;
-  /** Custo de aquisição (determina o escalão/taxa). */
-  custoAquisicao: number;
-  /** Encargos anuais suportados (base tributável da TA). */
-  encargosAnuais: number;
-}
-
-export interface TributacaoAutonomaInput {
-  /** Lista de viaturas ligeiras de passageiros da empresa. */
-  viaturas?: TAViaturaInput[];
-  /** Despesas de representação do período (Art. 88.º, n.º 7). */
-  despesasRepresentacao?: number;
-  /** Ajudas de custo + km em viatura própria (Art. 88.º, n.º 9). */
-  ajudasCusto?: number;
-  /** Despesas não documentadas (Art. 88.º, n.º 1). */
-  despesasNaoDocumentadas?: number;
-  /**
-   * true se a empresa tem prejuízo fiscal no período — agrava a TA em +10 p.p.
-   * Exceção: ignorar o agravamento se primeirosTresAnos=true ou lucroRecente=true.
-   */
-  comPrejuizo?: boolean;
-  /** true nos primeiros 3 anos de atividade — isenta do agravamento de prejuízo. */
-  primeirosTresAnos?: boolean;
-  /** true se teve lucro em ≥ 1 dos 3 exercícios anteriores — isenta do agravamento. */
-  lucroRecente?: boolean;
-}
-
-export interface TributacaoAutonomaResult {
-  taViaturas: number;
-  taRepresentacao: number;
-  taAjudas: number;
-  taNaoDocumentadas: number;
-  subtotal: number;
-  agravamentoAplicado: boolean;
-  agravamento: number;
-  totalTA: number;
-  detalheViaturas: Array<{ tipo: TipoViatura; taxa: number; encargos: number; ta: number }>;
-}
-
-/** Devolve a taxa de TA para uma viatura dado o tipo e custo de aquisição. */
-function taxaTA(tipo: TipoViatura, custoAquisicao: number): number {
-  if (tipo === "eletrica") {
-    // Elétricas ≤ limite: isentas (0%). Acima do limite: 10% (Art. 88.º, n.º 20 CIRC).
-    return custoAquisicao > TA_ELETRICA_LIMITE_CUSTO.value
-      ? TA_VIATURAS_ELETRICA_ACIMA_LIMITE.value
-      : TA_VIATURAS_ELETRICA.value;
-  }
-  const tabela: TAViaturasTaxas = tipo === "phev" ? TA_VIATURAS_PHEV.value : TA_VIATURAS_COMBUSTAO.value;
-  const { t1, t2 } = TA_THRESHOLDS.value;
-  if (custoAquisicao <= t1) return tabela.ate37500;
-  if (custoAquisicao <= t2) return tabela.ate45000;
-  return tabela.acima45000;
-}
-
-/**
- * Calcula a Tributação Autónoma (Art. 88.º CIRC) de uma empresa.
- * Inclui viaturas (combustão, PHEV e elétrica), representação, ajudas de
- * custo e despesas não documentadas. Modela o agravamento por prejuízo fiscal.
- *
- * ESTIMATIVA — não cobre todas as situações (ex.: viaturas de mercadorias,
- * taxas especiais de setores regulados). Não substitui apuramento oficial.
- */
-export function calcularTributacaoAutonoma(
-  input: TributacaoAutonomaInput
-): TributacaoAutonomaResult {
-  const agravamentoIsento = !!input.primeirosTresAnos || !!input.lucroRecente;
-  const agravamento = input.comPrejuizo && !agravamentoIsento ? TA_AGRAVAMENTO_PREJUIZO.value : 0;
-
-  // Viaturas
-  const detalheViaturas: TributacaoAutonomaResult["detalheViaturas"] = [];
-  let taViaturas = 0;
-  for (const v of input.viaturas ?? []) {
-    const encargos = sanitize(v.encargosAnuais);
-    const taxa = taxaTA(v.tipo, sanitize(v.custoAquisicao));
-    const ta = encargos * (taxa + agravamento);
-    taViaturas += ta;
-    detalheViaturas.push({ tipo: v.tipo, taxa, encargos, ta });
-  }
-
-  const taRepresentacao =
-    sanitize(input.despesasRepresentacao ?? 0) * (TA_REPRESENTACAO.value + agravamento);
-  const taAjudas = sanitize(input.ajudasCusto ?? 0) * (TA_AJUDAS_CUSTO.value + agravamento);
-  const taNaoDocumentadas =
-    sanitize(input.despesasNaoDocumentadas ?? 0) * TA_NAO_DOCUMENTADAS.value;
-
-  const subtotal = taViaturas + taRepresentacao + taAjudas + taNaoDocumentadas;
-  const agravamentoTotal = agravamento > 0
-    ? (input.viaturas ?? []).reduce((s, v) => s + sanitize(v.encargosAnuais), 0) * agravamento
-      + sanitize(input.despesasRepresentacao ?? 0) * agravamento
-      + sanitize(input.ajudasCusto ?? 0) * agravamento
-    : 0;
-
-  return {
-    taViaturas,
-    taRepresentacao,
-    taAjudas,
-    taNaoDocumentadas,
-    subtotal,
-    agravamentoAplicado: agravamento > 0,
-    agravamento: agravamentoTotal,
-    totalTA: subtotal,
-    detalheViaturas,
-  };
-}
 
 // ─────────────────────────────────────────────────────────────────────
 //  RFAI — Regime Fiscal de Apoio ao Investimento (Art. 22.º–26.º CFI)
