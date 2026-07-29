@@ -8,6 +8,14 @@ import { SubscricaoProvider } from "@/lib/stripe/subscription";
 import DeferredOverlays from "@/components/ui/DeferredOverlays";
 import ChromeMobile from "@/components/ChromeMobile";
 import FeedbackModal from "@/components/feedback/FeedbackModal";
+// Importado pelo efeito colateral: `assertChangelogIntegrity()` corre ao
+// carregar o módulo e faz o build falhar se `APP_VERSION` e a entrada mais
+// recente do CHANGELOG divergirem. Antes essa garantia vinha de graça, porque
+// o `NovidadesModal` importava o changelog estaticamente; agora que o carrega
+// sob demanda (para não o mandar para o bundle do cliente), a verificação
+// precisa desta âncora no servidor — o layout da raiz é avaliado em todos os
+// builds e o conteúdo NÃO segue para o browser a partir daqui.
+import "@/lib/changelog";
 import "./globals.css";
 
 const playfair = Playfair_Display({

@@ -20,7 +20,11 @@ const RAIZ = join(process.cwd(), "src");
 
 /** Ficheiros onde "Pro" continua legítimo. */
 const EXCECOES = [
-  join("lib", "version.ts"), // changelog: registo do que foi lançado
+  // O changelog é o registo histórico do que foi lançado: as entradas antigas
+  // falam de planos que já não existem e não podem ser reescritas. Mudou de
+  // `version.ts` para `changelog.ts` quando foi separado para sair do bundle
+  // do cliente — a exceção seguiu o conteúdo.
+  join("lib", "changelog.ts"),
 ];
 
 function ficheirosDeCodigo(dir: string, acc: string[] = []): string[] {

@@ -10,7 +10,8 @@
 //  Os valores fiscais vêm sempre de `fiscal-data.ts` (fonte de verdade).
 // ═══════════════════════════════════════════════════════════════════════
 
-import type { DeclaracaoInput } from "./fiscal";
+import type { CategoriaEstrangeiro, DeclaracaoInput } from "./fiscal";
+import { IRS_JOVEM } from "./fiscal-data";
 import type { TipoAtividade, DuracaoArrendamento, TipoDonativo } from "./fiscal-data";
 import {
   IVA_ISENCAO_EXCESSO,
@@ -273,7 +274,12 @@ export function moduloMeta(id: RendimentoId): ModuloMeta {
 }
 
 // ─── Rendimentos estrangeiros (Anexo J) ─────────────────────────────────────
-export type TipoRendimentoEstrangeiro = "trabalho" | "pensoes" | "capitais" | "prediais" | "maisvalias" | "outros";
+/**
+ * Categoria de um rendimento do Anexo J. É o mesmo tipo que o motor usa para
+ * decidir a dedução específica — mantê-los sincronizados por alias evita que a
+ * UI recolha uma categoria que o motor não sabe interpretar.
+ */
+export type TipoRendimentoEstrangeiro = CategoriaEstrangeiro;
 
 export const TIPOS_RENDIMENTO_ESTRANGEIRO: Record<TipoRendimentoEstrangeiro, string> = {
   trabalho: "Trabalho",
@@ -296,10 +302,22 @@ export interface EntradaEstrangeiro {
   tipo: TipoRendimentoEstrangeiro;
   rendimento: number;
   impostoPago: number;
+  /**
+   * A convenção com este país isenta o rendimento em Portugal, contando-o
+   * apenas para determinar a taxa (Art. 81.º n.º 8 CIRS).
+   */
+  isencaoComProgressividade?: boolean;
 }
 
 export function entradaEstrangeiroVazia(): EntradaEstrangeiro {
-  return { id: Math.random().toString(36).slice(2), pais: "", tipo: "trabalho", rendimento: 0, impostoPago: 0 };
+  return {
+    id: Math.random().toString(36).slice(2),
+    pais: "",
+    tipo: "trabalho",
+    rendimento: 0,
+    impostoPago: 0,
+    isencaoComProgressividade: false,
+  };
 }
 
 /** Agrega as entradas de rendimentos estrangeiros. */
@@ -348,7 +366,22 @@ export interface EstadoDeclaracao {
   deficiencia: boolean;
   ifici: boolean;
   ativos: RendimentoId[];
-  salarios: { bruto: number; retencoes: number };
+  /**
+   * IRS Jovem (Art. 12.º-B) do sujeito passivo A. Vive no agregado, não no
+   * módulo de trabalho independente: a isenção abrange as categorias A e B, e
+   * um jovem assalariado não tinha onde a declarar.
+   */
+  irsJovemAno: number;
+  salarios: {
+    bruto: number;
+    retencoes: number;
+    /** Contribuições para a Segurança Social (Art. 25.º n.º 2). */
+    ss: number;
+    /** Quotizações sindicais (Art. 25.º n.º 1 al. c). */
+    sindicais: number;
+    /** Quotizações para ordens profissionais (Art. 25.º n.º 4). */
+    ordem: number;
+  };
   pensoes: { bruto: number; retencoes: number };
   independente: {
     bruto: number;
@@ -381,6 +414,8 @@ export interface EstadoDeclaracao {
     coeficiente: number;
     reinvesteHPP: boolean;
     valorReinvestido: number;
+    /** Amortização do empréstimo do imóvel vendido (Art. 10.º n.º 5). */
+    amortizacaoEmprestimo: number;
   };
   estrangeiros: { entradas: EntradaEstrangeiro[] };
   deducoes: { saude: number; educacao: number; gerais: number; rendas: number; lares: number };
@@ -425,7 +460,14 @@ export function construirDeclaracaoInput(e: EstadoDeclaracao): DeclaracaoInput {
     ifici: e.ifici,
     titularB: tb
       ? {
-          salarios: tb.salBruto > 0 ? { bruto: tb.salBruto, retencoes: tb.salRet } : undefined,
+          // O IRS Jovem do SP B é dele, com teto próprio de 55 × IAS, e
+          // abrange tanto o salário como os recibos verdes desse titular.
+          irsJovemAno: tb.indJovem > 0 ? tb.indJovem : undefined,
+          nascimento: tb.contribuinte?.nascimento || undefined,
+          salarios:
+            tb.salBruto > 0
+              ? { bruto: tb.salBruto, retencoes: tb.salRet, contribuicoesSS: tb.salSS }
+              : undefined,
           pensoes: tb.pensBruto > 0 ? { bruto: tb.pensBruto, retencoes: tb.pensRet } : undefined,
           independente:
             tb.indBruto > 0
@@ -452,7 +494,17 @@ export function construirDeclaracaoInput(e: EstadoDeclaracao): DeclaracaoInput {
       guarda: Math.min(1, Math.max(0, (d.guarda || 0) / 100)),
     })),
     ascendentes: ascendentesQualificados,
-    salarios: ativo("salarios") ? { bruto: e.salarios.bruto, retencoes: e.salarios.retencoes } : undefined,
+    irsJovemAno: e.irsJovemAno > 0 ? e.irsJovemAno : undefined,
+    nascimento: e.contribuinte.nascimento || undefined,
+    salarios: ativo("salarios")
+      ? {
+          bruto: e.salarios.bruto,
+          retencoes: e.salarios.retencoes,
+          contribuicoesSS: e.salarios.ss,
+          quotizacoesSindicais: e.salarios.sindicais,
+          quotizacoesOrdem: e.salarios.ordem,
+        }
+      : undefined,
     pensoes: ativo("pensoes") ? { bruto: e.pensoes.bruto, retencoes: e.pensoes.retencoes } : undefined,
     independente: ativo("independente")
       ? {
@@ -504,6 +556,7 @@ export function construirDeclaracaoInput(e: EstadoDeclaracao): DeclaracaoInput {
           valorRealizacao: e.imoveisVenda.valorRealizacao,
           valorReinvestido: e.imoveisVenda.valorReinvestido,
           reinvesteHPP: e.imoveisVenda.reinvesteHPP,
+          amortizacaoEmprestimo: e.imoveisVenda.amortizacaoEmprestimo,
         }
       : undefined,
     estrangeiros: ativo("estrangeiros")
@@ -513,9 +566,18 @@ export function construirDeclaracaoInput(e: EstadoDeclaracao): DeclaracaoInput {
           return {
             rendimento: r.rendimento,
             impostoPago: r.impostoPago,
+            // A categoria vai por entrada: é ela que determina a dedução
+            // específica aplicável antes do englobamento (Art. 15.º + 25.º/53.º)
+            // e, por consequência, o numerador do crédito do Art. 81.º.
             porPais: e.estrangeiros.entradas
               .filter((x) => x.rendimento > 0)
-              .map((x) => ({ pais: x.pais || undefined, rendimento: x.rendimento, impostoPago: x.impostoPago })),
+              .map((x) => ({
+                pais: x.pais || undefined,
+                rendimento: x.rendimento,
+                impostoPago: x.impostoPago,
+                categoria: x.tipo,
+                isencaoComProgressividade: x.isencaoComProgressividade,
+              })),
           };
         })()
       : undefined,
@@ -678,6 +740,18 @@ export interface Validacao {
   anexo?: string;
 }
 
+/**
+ * Estados civis que dão acesso à tributação conjunta (Art. 13.º n.º 2 CIRS).
+ * A união de facto conta a partir de dois anos, condição que o simulador não
+ * recolhe — fica dito na explicação da opção.
+ */
+export const ESTADO_CIVIL_CONJUNTA: readonly EstadoCivil[] = ["casado", "uniao"];
+
+/** A tributação conjunta está disponível para este estado civil? */
+export function permiteConjunta(estadoCivil: EstadoCivil): boolean {
+  return ESTADO_CIVIL_CONJUNTA.includes(estadoCivil);
+}
+
 const LIMITE_ULTIMO_ESCALAO =
   ESCALOES_IRS.value.length >= 2
     ? ESCALOES_IRS.value[ESCALOES_IRS.value.length - 2].ate ?? Infinity
@@ -706,6 +780,35 @@ export function validarDeclaracao(e: EstadoDeclaracao, coletavelEstimado: number
   e.ascendentes.forEach((a, i) => {
     if (!validarNIF(a.nif)) r.push({ id: `nif-asc-${a.id}`, nivel: "erro", titulo: `NIF inválido no ascendente ${i + 1}`, detalhe: "Verifica o número de identificação fiscal (9 dígitos)." });
   });
+
+  // ── Erros críticos: elegibilidade da tributação conjunta ──
+  // O quociente conjugal divide o coletável por 2 e multiplica o imposto por 2.
+  // Num solteiro com um só rendimento, isso ocupa dois lotes de escalões baixos
+  // e corta cerca de 21% do imposto — um resultado que a lei não permite e que
+  // o simulador deixava montar. A opção é vedada na UI, mas a regra tem de
+  // existir aqui também: um estado inconsistente pode chegar por importação ou
+  // por um snapshot antigo do localStorage.
+  if (e.conjunta && !ESTADO_CIVIL_CONJUNTA.includes(e.contribuinte.estadoCivil)) {
+    r.push({
+      id: "conjunta-estado-civil",
+      nivel: "erro",
+      titulo: "Tributação conjunta indisponível para este estado civil",
+      detalhe: `A tributação conjunta só está disponível a casados e unidos de facto (Art. 13.º n.º 2 e Art. 69.º CIRS). Com «${META_ESTADO_CIVIL[e.contribuinte.estadoCivil]}», a declaração é individual — o resultado apresentado está a subavaliar o imposto.`,
+    });
+  }
+  if (e.conjunta && ESTADO_CIVIL_CONJUNTA.includes(e.contribuinte.estadoCivil)) {
+    const semRendimentoB =
+      !e.titularB ||
+      (e.titularB.salBruto <= 0 && e.titularB.pensBruto <= 0 && e.titularB.indBruto <= 0);
+    if (semRendimentoB) {
+      r.push({
+        id: "conjunta-sem-sp-b",
+        nivel: "aviso",
+        titulo: "Tributação conjunta sem rendimentos do sujeito passivo B",
+        detalhe: "Escolheste a tributação conjunta mas não indicaste rendimentos do cônjuge. O quociente conjugal está a dividir um rendimento único por dois, o que reduz artificialmente o imposto. Preenche os rendimentos do SP B ou muda para tributação individual.",
+      });
+    }
+  }
 
   // ── Erros críticos ──
   if (
@@ -774,6 +877,59 @@ export function validarDeclaracao(e: EstadoDeclaracao, coletavelEstimado: number
       });
     }
   }
+  // ── IRS Jovem: limite de idade e incompatibilidade com o IFICI ──
+  if (e.irsJovemAno > 0) {
+    const idade = idadeNoAnoFiscal(e.contribuinte.nascimento);
+    if (idade !== null && idade > IRS_JOVEM.idadeMax.value) {
+      r.push({
+        id: "jovem-idade",
+        nivel: "erro",
+        titulo: "IRS Jovem acima do limite de idade",
+        detalhe: `O regime do Art. 12.º-B CIRS aplica-se até aos ${IRS_JOVEM.idadeMax.value} anos no último dia do ano fiscal. Pela data de nascimento indicada, tens ${idade} anos — desativa o IRS Jovem ou corrige a data.`,
+      });
+    }
+    if (e.ifici) {
+      r.push({
+        id: "jovem-ifici",
+        nivel: "erro",
+        titulo: "IRS Jovem e IFICI são incompatíveis",
+        detalhe: "Não é possível acumular o regime do Art. 12.º-B (IRS Jovem) com o IFICI/NHR 2.0. Escolhe um dos dois na etapa do agregado.",
+      });
+    }
+    if (!e.contribuinte.nascimento) {
+      r.push({
+        id: "jovem-sem-data",
+        nivel: "aviso",
+        titulo: "IRS Jovem sem data de nascimento",
+        detalhe: `Sem a data de nascimento não é possível confirmar o limite de ${IRS_JOVEM.idadeMax.value} anos do Art. 12.º-B. Preenche-a na etapa do agregado para a simulação ficar fiável.`,
+      });
+    }
+  }
+
+  // ── Categoria A: encargos que alteram a dedução específica ──
+  if (ativo("salarios") && e.salarios.bruto > 0 && e.salarios.ss === 0) {
+    r.push({
+      id: "salario-sem-ss",
+      nivel: "aviso",
+      anexo: "Anexo A",
+      titulo: "Salário sem contribuições para a Segurança Social",
+      detalhe: "Acima de cerca de 41 700 € de rendimento bruto, as contribuições para a Segurança Social passam a valer mais do que a dedução específica de 8,54 × IAS e substituem-na (Art. 25.º n.º 2 CIRS). Sem este valor, a simulação usa a dedução mínima e pode estar a sobreavaliar o imposto.",
+    });
+  }
+
+  if (ativo("estrangeiros")) {
+    const semCategoria = e.estrangeiros.entradas.filter((x) => x.rendimento > 0 && !x.tipo);
+    if (semCategoria.length > 0) {
+      r.push({
+        id: "estrangeiro-sem-categoria",
+        nivel: "aviso",
+        anexo: "Anexo J",
+        titulo: "Rendimento estrangeiro sem categoria",
+        detalhe: "Sem a categoria, o rendimento entra bruto no englobamento — sem a dedução específica que teria em Portugal. Indica se é trabalho, pensão, capitais, rendas ou mais-valias.",
+      });
+    }
+  }
+
   if (ativo("cripto") && e.cripto.curto > 0) {
     r.push({
       id: "cripto-curto-prazo",
@@ -808,12 +964,18 @@ export function validarDeclaracao(e: EstadoDeclaracao, coletavelEstimado: number
       detalhe: `Com um rendimento coletável baixo, a tua taxa marginal pode ser inferior a ${pct(MAIS_VALIAS_MOBILIARIAS_TAXA.value)}. Experimenta ativar o englobamento no módulo de dividendos e juros para comparar.`,
     });
   }
-  if (!e.conjunta && (ativo("salarios") || ativo("independente"))) {
+  // Só faz sentido sugerir a conjunta a quem lhe tem direito — sugeri-la a um
+  // solteiro é convidá-lo a montar exatamente o estado inválido acima.
+  if (
+    !e.conjunta &&
+    permiteConjunta(e.contribuinte.estadoCivil) &&
+    (ativo("salarios") || ativo("independente"))
+  ) {
     r.push({
       id: "conjunta",
       nivel: "oportunidade",
       titulo: "Compara tributação conjunta vs. separada",
-      detalhe: "Se és casado ou unido de facto, podes optar pela tributação conjunta (quociente conjugal, Art. 69.º CIRS). Quando há grande diferença de rendimentos entre os cônjuges, costuma ser vantajosa. Ativa-a na etapa do agregado.",
+      detalhe: "Como és casado ou unido de facto, podes optar pela tributação conjunta (quociente conjugal, Art. 69.º CIRS). Quando há grande diferença de rendimentos entre os cônjuges, costuma ser vantajosa. Ativa-a na etapa do agregado.",
     });
   }
   if (ativo("imoveisVenda") && ganhoImobiliario(e.imoveisVenda) > 0 && !e.imoveisVenda.reinvesteHPP) {

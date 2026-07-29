@@ -82,7 +82,10 @@ describe("mínimo de existência — fórmula por troços do artigo 70.º", () =
     expect(result.minimoExistenciaDecision.status).toBe("applied");
   });
 
-  it("não inventa factos quando há rendimento agregado sem decomposição", () => {
+  it("não inventa factos quando recebe um agregado anónimo", () => {
+    // `simularIRSAnual` sozinha continua a recusar-se a adivinhar: um número
+    // em `outrosRendimentos` não diz de que categoria vem nem que deduções
+    // específicas já sofreu. Recusar é o comportamento certo AQUI.
     const result = simularIRSAnual({
       brutoAnual: 14_000,
       tipo: "art151",
@@ -90,6 +93,29 @@ describe("mínimo de existência — fórmula por troços do artigo 70.º", () =
     });
     expect(result.minimoExistenciaDecision.status).toBe("needs_input");
     expect(result.abatimentoMinimoExistencia).toBe(0);
+  });
+
+  it("mas a declaração fornece-lhe os factos por titular — e o abatimento aplica-se", () => {
+    // Este é o contrato que faltava: o wizard decompõe as categorias, por isso
+    // consegue montar os sete factos do artigo 70.º. Enquanto não os montava,
+    // um salário de 10 000 € produzia 676,61 € de imposto onde a lei manda zero
+    // — e sem um único aviso.
+    const r = simularDeclaracaoIRS({
+      independente: { brutoAnual: 14_000, tipo: "art151" },
+      salarios: { bruto: 1_000 },
+    });
+    expect(r.englobamento.minimoExistenciaDecision.status).toBe("applied");
+    expect(r.englobamento.abatimentoMinimoExistencia).toBeGreaterThan(0);
+  });
+
+  it("uma declaração que não consiga apurar o artigo 70.º avisa em vez de calar", () => {
+    const r = simularDeclaracaoIRS({ salarios: { bruto: 10_000 } });
+    const decisao = r.englobamento.minimoExistenciaDecision;
+    expect(decisao.status).not.toBe("needs_input");
+    // Contrato explícito: `needs_input` implica sempre aviso ao utilizador.
+    if (decisao.status === "needs_input") {
+      expect(r.avisos.some((a) => a.includes("Art. 70.º"))).toBe(true);
+    }
   });
 
   it("não aplica a atividades fora do âmbito material do n.º 2", () => {

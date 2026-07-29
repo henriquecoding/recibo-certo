@@ -95,7 +95,17 @@ async function main() {
   const catFHab = grab(src, /taxaHabitacao: sv\(\s*([\d.]+)/, "CATEGORIA_F.taxaHabitacao");
   const catFNaoHab = grab(src, /taxaNaoHabitacao: sv\(\s*([\d.]+)/, "CATEGORIA_F.taxaNaoHabitacao");
 
-  const minExist = grab(src, /MINIMO_EXISTENCIA = sv\(\s*([\d.]+)/, "MINIMO_EXISTENCIA");
+  // O mínimo de existência deixou de ser um literal: o Art. 70.º n.º 1 manda
+  // usar o MAIOR entre um piso fixo e 1,5 × 14 × IAS. Extraímos as três peças e
+  // repetimos a conta — assim o bloco gerado acompanha automaticamente uma
+  // subida do IAS, em vez de ficar preso ao valor de um ano.
+  const minExistPiso = grab(src, /MINIMO_EXISTENCIA_PISO = ([\d.]+)/, "MINIMO_EXISTENCIA_PISO");
+  const minExistMult = grab(src, /MINIMO_EXISTENCIA_IAS_MULT = ([\d.]+)/, "MINIMO_EXISTENCIA_IAS_MULT");
+  const minExistMeses = grab(src, /MINIMO_EXISTENCIA_IAS_MESES = ([\d.]+)/, "MINIMO_EXISTENCIA_IAS_MESES");
+  const minExist =
+    Math.round(
+      Math.max(Number(minExistPiso), Number(minExistMult) * Number(minExistMeses) * Number(ias)) * 100
+    ) / 100;
   const ircGeral = grab(src, /IRC_TAXA_GERAL = sv\(\s*([\d.]+)/, "IRC_TAXA_GERAL");
   const ircPme = grab(src, /IRC_TAXA_PME = sv\(\s*([\d.]+)/, "IRC_TAXA_PME");
   const ircLimite = grab(src, /IRC_LIMITE_PME = sv\(\s*([\d.]+)/, "IRC_LIMITE_PME");
