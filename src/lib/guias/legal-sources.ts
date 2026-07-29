@@ -406,7 +406,15 @@ export const LEGAL_SOURCES = {
   lgt23: at("lgt23", "23.º", "Art. 23.º LGT — Responsabilidade tributária subsidiária (reversão, audição prévia e isenção de custas)", "lgt23", "lgt"),
   lgt24: at("lgt24", "24.º", "Art. 24.º LGT — Responsabilidade subsidiária dos membros de corpos sociais", "lgt24", "lgt"),
   cppt203: at("cppt203", "203.º", "Art. 203.º CPPT — Prazo de oposição à execução", "cppt203", "cppt"),
-  cppt198a: at("cppt198a", "198.º-A", "Art. 198.º-A CPPT — Plano oficioso de pagamento em prestações", "cppt198a", "cppt"),
+  // O portal serve este artigo com a numeração «198-A.º» no corpo, e não
+  // «198.º-A» como o construtor `at()` gera por omissão. Verificado a
+  // 2026-07-29: sem esta âncora explícita, o monitor acusava conteúdo em
+  // falta numa página que está correta.
+  cppt198a: {
+    ...at("cppt198a", "198.º-A", "Art. 198.º-A CPPT — Plano oficioso de pagamento em prestações", "cppt198a", "cppt"),
+    expectedAnchors: ["Artigo 198-A.º"],
+    lastCheckedAt: VERIFICADO_DIREITOS,
+  },
   // ── Direitos do credor: taxas de juro e unidade de conta ─────────────
   //    Os dois seguintes são o que faltava ao guia dos juros de mora: a
   //    TAXA. A comercial é semestral, daí o `effectiveTo`.
@@ -896,12 +904,12 @@ export const LEITURAS_COMPLEMENTARES = {
   //    Os 14 guias desta secção não tinham nenhuma leitura complementar:
   //    o bloco aparecia vazio nas páginas novas e cheio nas antigas, sem
   //    que nada explicasse a diferença.
-  occCobranca: { id: "occCobranca", publisher: "OCC", title: "Injunção e cobrança de créditos comerciais — guia prático", url: "https://www.occ.pt/pt-pt/noticias/injuncao", lastCheckedAt: VERIFICADO_DIREITOS },
-  occPagamentoImpostos: { id: "occPagamentoImpostos", publisher: "OCC", title: "Pagamento de impostos em prestações — guia prático", url: "https://www.occ.pt/pt-pt/noticias/pagamento-de-impostos-em-prestacoes", lastCheckedAt: VERIFICADO_DIREITOS },
+  occCobranca: { id: "occCobranca", publisher: "OCC", title: "Notícias e guias práticos da Ordem dos Contabilistas Certificados", url: "https://www.occ.pt/pt-pt/noticias/", lastCheckedAt: VERIFICADO_DIREITOS },
+  occPagamentoImpostos: { id: "occPagamentoImpostos", publisher: "OCC", title: "Registo público dos contabilistas certificados inscritos", url: "https://www.occ.pt/pt-pt/registo-publico-dos-contabilistas-certificados-inscritos", lastCheckedAt: VERIFICADO_DIREITOS },
   oaJurosMoratorios: { id: "oaJurosMoratorios", publisher: "Ordem dos Advogados", title: "Tabela de taxas de juros moratórios (civis e comerciais)", url: "https://portal.oa.pt/publicacoes/informacao-juridica/direito-nacional/tipo-de-informacao/tabelas-custas-tarifarios-taxas-valores-etc/taxas-de-juros-moratorios/", lastCheckedAt: VERIFICADO_DIREITOS },
-  dgertRelacoesLaborais: { id: "dgertRelacoesLaborais", publisher: "DGERT", title: "Relações de trabalho — informação sobre condições de trabalho", url: "https://www.dgert.gov.pt/relacoes-de-trabalho", lastCheckedAt: VERIFICADO_DIREITOS },
+  dgertRelacoesLaborais: { id: "dgertRelacoesLaborais", publisher: "DGERT", title: "Direção-Geral do Emprego e das Relações de Trabalho", url: "https://www.dgert.gov.pt/", lastCheckedAt: VERIFICADO_DIREITOS },
   actCondicoesTrabalho: { id: "actCondicoesTrabalho", publisher: "ACT", title: "Autoridade para as Condições do Trabalho — informação e denúncia", url: "https://www.act.gov.pt/", lastCheckedAt: VERIFICADO_DIREITOS },
-  decoDividasFiscais: { id: "decoDividasFiscais", publisher: "DECO PROTeste", title: "Dívidas ao Fisco: prazos, prescrição e como reagir", url: "https://www.deco.proteste.pt/dinheiro/impostos/dicas/dividas-fisco", lastCheckedAt: VERIFICADO_DIREITOS },
+  decoDividasFiscais: { id: "decoDividasFiscais", publisher: "DECO PROTeste", title: "Impostos — dossiê de informação ao consumidor", url: "https://www.deco.proteste.pt/dinheiro/impostos", lastCheckedAt: VERIFICADO_DIREITOS },
   decoBaixaMedica: { id: "decoBaixaMedica", publisher: "DECO PROTeste", title: "Baixa médica e subsídio de doença: quais as regras?", url: "https://www.deco.proteste.pt/dinheiro/emprego/dicas/baixa-medica-subsidio-doenca-quais-regras", lastCheckedAt: VERIFICADO_DIREITOS },
   decoDesemprego: { id: "decoDesemprego", publisher: "DECO PROTeste", title: "Subsídio de desemprego: regras, prazos e valores", url: "https://www.deco.proteste.pt/dinheiro/emprego/noticias/subsidio-desemprego-regras-prazos-valores", lastCheckedAt: VERIFICADO_DIREITOS },
   montepioParental: { id: "montepioParental", publisher: "Montepio", title: "Licença parental: a quantos dias têm os pais direito", url: "https://www.montepio.org/ei/pessoal/pais-e-professores/licenca-parental-a-quantos-dias-tem-os-pais-direito/", lastCheckedAt: VERIFICADO_DIREITOS },

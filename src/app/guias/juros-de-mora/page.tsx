@@ -5,7 +5,7 @@ import { Seccao, Paragrafo, Nota, TabelaPrazos, VaiPara } from "@/components/gui
 // Regra 1: as taxas comerciais são SEMESTRAIS e os 40 € vêm do diploma —
 // escritos no corpo do guia, ficariam desatualizados em silêncio.
 import { INDEMNIZACAO_CUSTOS_COBRANCA, JUROS_MORA, PRAZO_PAGAMENTO_SUPLETIVO_DIAS } from "@/lib/fiscal-data";
-import { fmt, pct } from "@/lib/format";
+import { fmt, pctExato } from "@/lib/format";
 
 export const metadata: Metadata = metadataDoGuia("juros-de-mora");
 
@@ -50,17 +50,17 @@ export default function JurosDeMoraPage() {
           linhas={[
             [
               "Transações comerciais (DL 62/2013)",
-              pct(JUROS_MORA.transacoesComerciais.value),
+              pctExato(JUROS_MORA.transacoesComerciais.value),
               "§ 5.º do Art. 102.º do Código Comercial · Aviso n.º 822/2026/2",
             ],
             [
               "Outros créditos comerciais",
-              pct(JUROS_MORA.outrosCreditosComerciais.value),
+              pctExato(JUROS_MORA.outrosCreditosComerciais.value),
               "§ 3.º do Art. 102.º do Código Comercial · mesmo Aviso",
             ],
             [
               "Obrigações civis",
-              pct(JUROS_MORA.civis.value),
+              pctExato(JUROS_MORA.civis.value),
               "Portaria n.º 291/2003",
             ],
           ]}

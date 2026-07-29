@@ -4,7 +4,7 @@ import { metadataDoGuia } from "@/lib/guias/metadata";
 import { Seccao, Paragrafo, Nota, VaiPara } from "@/components/guias/BlocosDireitos";
 // A taxa vem do motor: é a mesma dos juros legais civis (Portaria 291/2003).
 import { JUROS_MORA } from "@/lib/fiscal-data";
-import { pct } from "@/lib/format";
+import { pctExato } from "@/lib/format";
 
 export const metadata: Metadata = metadataDoGuia("juros-indemnizatorios");
 
@@ -50,7 +50,7 @@ export default function JurosIndemnizatoriosPage() {
         <Paragrafo>
           Não é preciso reclamar, não é preciso impugnar, não é preciso provar erro de ninguém. Se o
           reembolso chegou atrasado, os juros são devidos — e contam-se à taxa dos juros legais,{" "}
-          {pct(JUROS_MORA.civis.value)}.
+          {pctExato(JUROS_MORA.civis.value)}.
         </Paragrafo>
         <Nota titulo="Porque é que isto quase nunca é reclamado">
           Porque ninguém sabe. O próprio texto deste guia diz que é um direito «sistematicamente

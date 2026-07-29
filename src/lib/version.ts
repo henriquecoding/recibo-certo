@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "2.3.6";
+export const APP_VERSION = "2.4.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,25 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "2.4.0",
+    data: "2026-07-29",
+    titulo: "Salário e comparador: números corrigidos, e catorze guias novos",
+    itens: [
+      "O simulador por conta de outrem passou a mostrar um só líquido. Havia dois cálculos a responder à mesma pergunta e o que aparecia no ecrã ignorava a tributação da parte do subsídio de refeição acima do limite — cerca de 12 € por mês a mais, sempre no sentido agradável. Agora o número mostrado é o completo.",
+      "O «custo para a empresa» passou a incluir o subsídio de refeição, que a empresa paga todos os meses. Num salário de 1 000 € com cartão, o valor estava 19% abaixo do real — e é precisamente o número que se usa para negociar um aumento. O seguro de acidentes de trabalho aparece à parte, como estimativa.",
+      "Na vista anual passas a ver as duas coisas lado a lado: o que te vão reter ao longo do ano e o imposto que vais realmente dever, com a diferença nomeada. Abaixo dos ~2 000 €/mês há normalmente acerto a pagar; acima, reembolso.",
+      "O acerto anual passou a contar com a tua situação completa — deficiência, tributação conjunta, saúde, educação, despesas gerais, rendas, lares, ascendentes, PPR, donativos e pensões de alimentos. Antes só o simulador de recibos verdes as considerava, e o «mealheiro» mandava reservar dinheiro que não era devido.",
+      "No comparador de cenários, os dependentes passaram a contar nos três cenários. Antes só mexiam na coluna do salário: o líquido dos recibos verdes não mudava um cêntimo entre 0 e 4 dependentes, e isso chegava a inverter a recomendação.",
+      "Ainda no comparador, os três cenários passaram a ser medidos da mesma maneira — pelo imposto do ano, e não pela retenção mensal na coluna do salário. A coluna do salário estava sistematicamente penalizada nos rendimentos médios e altos.",
+      "O comparador ganhou o que faltava: custo do contabilista e derrama ajustáveis (a linha do contabilista dizia «obrigatório» e mostrava 0 €), IRS Jovem, situação familiar, região, deduções à coleta, e a opção de comparar pelo custo do empregador em vez do ilíquido.",
+      "Novo no simulador de vencimento: se te penhorarem o salário, passas a ver quanto está protegido por lei e quanto é penhorável, com a regra que decide o teu caso.",
+      "O trabalho noturno deixou de ser um valor que tinhas de trazer já calculado: indicas as horas e o acréscimo de 25% é apurado a partir da tua retribuição horária.",
+      "Catorze guias novos, ainda por revisão fiscal: sete sobre o ano de vida de uma empresa (salário ou dividendos, distribuir lucros, pagamentos por conta de IRC, prejuízos fiscais, contratar a primeira pessoa, Modelo 22 e IES, fechar a empresa) e sete sobre trabalho por conta de outrem (baixa médica, licença parental, subsídio de desemprego, fim do contrato, férias, noturno e turnos, faltas).",
+      "O guia de pagamento a prestações deixou de enganar: passa a dizer que dívidas de IVA e de retenções na fonte ficam fora do regime geral, e que para dívidas até 5 000 € a AT cria o plano sozinha, sem pedido e sem garantia.",
+      "O guia dos juros de mora passou a dizer a taxa — 10,15% nas transações comerciais e 9,15% nos restantes créditos comerciais —, uma distinção que vale um ponto percentual por cada ano de atraso a quem cobra faturas entre empresas.",
+    ],
+  },
   {
     version: "2.3.6",
     data: "2026-07-24",
