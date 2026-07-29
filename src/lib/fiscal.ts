@@ -619,6 +619,11 @@ export interface SimulacaoInput {
   dependentes?: number;
   /** Outros rendimentos líquidos (cat. A) para englobamento. */
   outrosRendimentos?: number;
+  /**
+   * Uso interno: corta o cálculo de `irsImputavelCatB`, que corre o motor uma
+   * segunda vez sem a Categoria B. Sem isto a chamada seria recursiva.
+   */
+  semDecomposicao?: boolean;
   /** Despesas dedutíveis à coleta. */
   deducoes?: DeducoesInput;
   /** Regime de tributação da categoria B. Por defeito "simplificado". */
@@ -735,7 +740,18 @@ export interface SimulacaoIRS {
   deducaoPensaoAlimentos: number;
   /** Dedução coleta por deficiência do contribuinte (Art. 87.º: 4×IAS). */
   deducaoDeficiencia: number;
+  /** IRS de TODO o rendimento englobado (Cat. B + `outrosRendimentos`). */
   irsEstimado: number;
+  /**
+   * Parte do `irsEstimado` imputável à Categoria B — o imposto marginal que a
+   * atividade independente acrescenta por cima dos outros rendimentos. Igual a
+   * `irsEstimado` quando não há englobamento.
+   *
+   * É este o número que se compara com a faturação e com as retenções; usar o
+   * `irsEstimado` aí faria a atividade parecer responsável pelo imposto do
+   * salário.
+   */
+  irsImputavelCatB: number;
   minimoExistenciaAplicado: boolean;
   /** Estado auditável da regra do artigo 70.º. */
   minimoExistenciaDecision: MinimoExistenciaDecision;
@@ -1048,11 +1064,33 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   });
   const ssAnual = ss.contribuicaoAnual;
 
-  const taxaMediaEfetiva = brutoAnual > 0 ? irsEstimado / brutoAnual : 0;
+  // ── Quanto deste IRS é dos recibos verdes? ──────────────────────────────
+  //
+  //  Com englobamento, `irsEstimado` é o imposto do agregado TODO — salário
+  //  incluído. Mostrar esse número ao lado da faturação da Cat. B, ou subtraí-lo
+  //  a ela para chegar a um "líquido", dá um resultado sem sentido.
+  //
+  //  A parte imputável à Cat. B é marginal, não proporcional: o salário ocupa
+  //  os escalões de baixo e a atividade independente é tributada por cima. Por
+  //  isso é a diferença entre o imposto com e sem ela — a mesma lógica que o
+  //  regime de taxa fixa já usava acima para isolar `outrosRendimentos`.
+  //
+  //  Sem outros rendimentos as duas coisas coincidem e não se corre nada.
+  const irsImputavelCatB =
+    outrosRendimentos > 0 && !input.semDecomposicao
+      ? Math.max(
+          0,
+          irsEstimado -
+            simularIRSAnual({ ...input, brutoAnual: 0, semDecomposicao: true }).irsEstimado,
+        )
+      : irsEstimado;
+
+  const taxaMediaEfetiva = brutoAnual > 0 ? irsImputavelCatB / brutoAnual : 0;
   const retencoesPagas = sanitize(input.retencoesPagas ?? 0);
 
   return {
     brutoAnual,
+    irsImputavelCatB,
     regimeContabilidade,
     coeficienteBase,
     reducaoAno,

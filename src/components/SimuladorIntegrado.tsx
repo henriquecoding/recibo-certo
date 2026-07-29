@@ -4289,6 +4289,10 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
               setRegiao(estado.regiao);
               setRegimeIVA(estado.regimeIVA);
               setAcumulaEmprego(estado.acumulaEmprego);
+              // Sem isto, passar do guiado para o completo com acumulação
+              // perdia o salário e o IRS caía outra vez para o valor irreal —
+              // exatamente no botão que promete continuidade.
+              setOutrosRendimentos(estado.outrosRendimentos);
               setIsencaoSSPrimeiroAno(estado.isencaoSSPrimeiroAno);
               setIsencaoCpas(estado.isencaoCpas);
               setAnoAtividade(estado.anoAtividade);
