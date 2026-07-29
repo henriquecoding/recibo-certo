@@ -27,12 +27,18 @@
 //  FIZ — a página é sobre o nosso simulador —, por isso o cartaz é a única
 //  presença deles e não repete nada.
 //
-//  Acompanha-o um botão de texto a sério. O «Experimentar» que se vê no
-//  cartaz são pixels: quem navega por teclado, tem imagens bloqueadas ou usa
-//  leitor de ecrã precisa de um alvo que exista no DOM.
+//  ── Um alvo só ──────────────────────────────────────────────────────
+//  Esteve aqui um botão «Conhecer a FIZ» por baixo do cartaz, com a
+//  justificação de que o «Experimentar» do criativo são pixels e quem usa
+//  teclado ou leitor de ecrã precisa de um alvo a sério.
+//
+//  A justificação não se sustentava: o cartaz JÁ é um `<a>` com `aria-label`
+//  e a imagem tem `alt`. O foco chega lá por Tab, o leitor de ecrã anuncia-o,
+//  e com imagens desligadas o `alt` é o texto da ligação. Estava tudo
+//  coberto — o botão era um segundo CTA para a mesma ação, colado ao
+//  primeiro.
 // ═══════════════════════════════════════════════════════════════════════
 
-import FizActionButton from "./FizActionButton";
 import FizDisclosure from "./FizDisclosure";
 import FizCriativoImagem from "@/components/parcerias/FizCriativoImagem";
 import { copyDaSuperficie, DIVULGACAO_LIGACAO } from "@/content/parcerias-copy";
@@ -63,15 +69,12 @@ export default async function FizFaixaDemo({
   const recurso = copyDaSuperficie(superficie);
   const titulo = placement.copyTitulo?.trim() || recurso.titulo;
   const sub = placement.copySub?.trim() || recurso.sub;
-  const cta = placement.copyCta?.trim() || recurso.cta;
   const divulgacao =
     placement.divulgacao?.trim() || parceria.divulgacao.trim() || DIVULGACAO_LIGACAO;
 
   // Destino de alta intenção: quem chega ao fim de uma demonstração já viu o
-  // número e a conclusão. A variante entra por cima, para conseguirmos
-  // distinguir quem clicou no cartaz de quem clicou no botão — é a única
-  // forma de saber qual dos dois faz o trabalho.
-  const base = `/ir/fiz?s=${encodeURIComponent(superficie)}&d=registo`;
+  // número e a conclusão.
+  const href = `/ir/fiz?s=${encodeURIComponent(superficie)}&v=banner&d=registo`;
 
   return (
     <aside className={className} aria-label="Publicidade de parceiro">
@@ -81,11 +84,8 @@ export default async function FizFaixaDemo({
       <p className="text-xs font-semibold text-stone-800 dark:text-stone-100">{titulo}</p>
       <p className="mt-0.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">{sub}</p>
 
-      <FizCriativoImagem href={`${base}&v=banner`} className="mt-2.5" />
+      <FizCriativoImagem href={href} className="mt-2.5" />
 
-      <div className="mt-3">
-        <FizActionButton href={`${base}&v=faixa`}>{cta}</FizActionButton>
-      </div>
       <FizDisclosure texto={divulgacao} className="mt-2" />
     </aside>
   );

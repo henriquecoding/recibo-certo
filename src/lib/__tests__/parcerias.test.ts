@@ -825,13 +825,26 @@ describe("parcerias:copy-visivel — o que se escreve chega ao ecrã", () => {
     expect(faixa).toMatch(/FizCriativoImagem/);
   });
 
-  it("o cartaz e o botão são distinguíveis na medição", () => {
-    // Saber qual dos dois faz o trabalho é o argumento para a fase seguinte.
+  it("a faixa tem UM alvo, não dois para a mesma ação", () => {
+    // Esteve aqui um botão «Conhecer a FIZ» por baixo do cartaz. A
+    // justificação era acessibilidade — o «Experimentar» do criativo são
+    // pixels —, mas o cartaz já é um `<a>` com `aria-label` e a imagem tem
+    // `alt`: teclado, leitor de ecrã e imagens desligadas estavam cobertos.
+    // Restava um segundo CTA colado ao primeiro.
     const faixa = readFileSync(join(RAIZ, "components", "fiz", "FizFaixaDemo.tsx"), "utf8");
+    expect(faixa).not.toMatch(/FizActionButton/);
     expect(faixa).toMatch(/v=banner/);
-    expect(faixa).toMatch(/v=faixa/);
     // E o `v` não pode aparecer duas vezes no mesmo URL.
     expect(faixa).not.toMatch(/&v=[a-z]+`?\}?&v=/);
+  });
+
+  it("o cartaz é um alvo acessível por si só", () => {
+    // É o que torna o botão dispensável, por isso tem de ficar garantido.
+    const c = readFileSync(join(RAIZ, "components", "parcerias", "FizCriativoImagem.tsx"), "utf8");
+    expect(c).toMatch(/<a\b/);
+    expect(c).toMatch(/aria-label=/);
+    expect(c).toMatch(/alt=\{ALT\}/);
+    expect(c).toMatch(/focus-visible:ring/);
   });
 
   it("o cartão de preços tem um caminho real para a FIZ", () => {
