@@ -45,6 +45,46 @@ export default function ReversaoGerentesPage() {
         </AvisoPrazo>
       </Seccao>
 
+      {/* O guia explicava bem a diferença entre as alíneas e não dizia ao
+          gerente citado o que fazer nos 30 dias seguintes. Faltava o direito
+          com valor imediato — que é dinheiro e depende de um prazo. */}
+      <Seccao titulo="Fui citado. O que fazer nos próximos 30 dias">
+        <AvisoPrazo titulo="Pagar dentro do prazo de oposição isenta de custas e de juros">
+          O responsável subsidiário que, citado, pague a dívida <strong>dentro do prazo de
+          oposição</strong> fica isento de custas e dos juros de mora liquidados no processo. É
+          dinheiro, é imediato, e perde-se com o prazo. O prazo de oposição é de{" "}
+          <strong>30 dias</strong> a contar da citação.
+        </AvisoPrazo>
+        <Paragrafo>
+          Isto não significa que pagar seja a decisão certa — significa que a decisão tem de ser
+          tomada dentro daquele prazo, com a conta feita. Pagar depois custa custas e juros; pagar
+          dentro do prazo, não.
+        </Paragrafo>
+        <TabelaPrazos
+          colunas={["Fundamento de defesa", "O que se verifica"]}
+          linhas={[
+            [
+              "Falta de audição prévia",
+              "A reversão exige audição prévia do responsável subsidiário antes de ser decidida.",
+            ],
+            [
+              "Bens da sociedade não estão esgotados",
+              "A reversão depende da fundada insuficiência dos bens penhoráveis da sociedade — não basta a dívida existir.",
+            ],
+            [
+              "Prescrição já corrida",
+              "A interrupção da prescrição contra a sociedade só aproveita contra o responsável subsidiário se a citação deste ocorrer dentro do prazo previsto na lei.",
+            ],
+          ]}
+        />
+        <Nota titulo="O argumento de prescrição perde-se por desconhecimento">
+          É frequente o processo contra a sociedade ter interrompido a prescrição há muito, e a
+          citação do gerente chegar bastante depois. Nessa situação, o efeito interruptivo pode não
+          se estender a quem é citado tarde — e é uma defesa que ninguém levanta se não souber que
+          existe.
+        </Nota>
+      </Seccao>
+
       <Seccao titulo="Não é só quem consta do registo">
         <Nota titulo="Gerência de facto">
           A qualificação não depende apenas do que está registado. Quem exerceu funções de

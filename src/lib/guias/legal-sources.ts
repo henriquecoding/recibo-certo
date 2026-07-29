@@ -102,6 +102,22 @@ export interface LegalSource {
   expectedAnchors: string[];
   /** Texto que NÃO pode aparecer — apanha versões históricas e erros servidos com HTTP 200. */
   forbiddenAnchors?: string[];
+  /**
+   * A fonte bloqueia agentes automáticos e responde 403/429 ao monitor.
+   *
+   * Sem esta marca, `guias:check` terminava com «0 sem problemas · 116
+   * avisos · 0 erros»: nenhuma das 116 fontes tinha sido validada, todas
+   * tinham devolvido 403, e o zero de erros lia-se como aprovação. Um
+   * verificador que nunca falha deixa de ser lido — e o dia em que uma URL
+   * passasse a 404 a mensagem seria indistinguível das outras 115.
+   *
+   * Com a marca, o monitor separa os dois casos e volta a poder falhar:
+   *   · fonte SEM a marca que devolve 403  → erro (o bloqueio é novo);
+   *   · fonte COM a marca que devolve 403  → esperado, não conta como aviso;
+   *   · fonte COM a marca que devolve 404  → erro (o servidor responde, e
+   *     responde que o recurso não existe — isso não é bloqueio).
+   */
+  expectedBlock?: boolean;
   lastCheckedAt: string;
   status: SourceStatus;
   /** Só para `status: "historical"`: porque é que continua no catálogo. */
@@ -126,7 +142,54 @@ export const ANCORAS_PROIBIDAS_GLOBAIS = [
   "versão até 2011",
 ] as const;
 
+/**
+ * Domínios que sabidamente respondem 403/429 a agentes automáticos.
+ *
+ * Medido a 2026-07-29: das 116 fontes do catálogo, ZERO puderam ser
+ * validadas — todas devolveram 403. O monitor classificava-as como aviso e
+ * terminava com «0 erros», o que se lia como aprovação quando na verdade
+ * significava que nada tinha sido verificado.
+ *
+ * Declarar o bloqueio esperado devolve significado ao zero: um 403 vindo
+ * daqui é o esperado e não polui o relatório; um 403 de qualquer outro
+ * domínio é um bloqueio NOVO e falha; e um 404 vindo daqui falha na mesma,
+ * porque um servidor que responde «não existe» não está a bloquear.
+ *
+ * Uma fonte individual pode divergir desta lista com `expectedBlock`.
+ */
+export const DOMINIOS_QUE_BLOQUEIAM: readonly string[] = [
+  "info.portaldasfinancas.gov.pt",
+  "www.portaldasfinancas.gov.pt",
+  "faturas.portaldasfinancas.gov.pt",
+  "sitfiscal.portaldasfinancas.gov.pt",
+  "diariodarepublica.pt",
+  "files.diariodarepublica.pt",
+  "www.seg-social.pt",
+  "app.seg-social.pt",
+  "sisscontent.seg-social.pt",
+  "www.gov.pt",
+  "www2.gov.pt",
+  "eportugal.gov.pt",
+  // Leituras complementares que também bloqueiam. Não fundamentam regras,
+  // mas o monitor visita-as na mesma e um 403 aqui é o esperado, não um
+  // link partido.
+  "www.pwc.pt",
+];
+
+/** Bloqueio esperado desta fonte: `expectedBlock` explícito, ou o domínio. */
+export function bloqueioEsperado(fonte: Pick<LegalSource, "url" | "expectedBlock">): boolean {
+  if (typeof fonte.expectedBlock === "boolean") return fonte.expectedBlock;
+  try {
+    return DOMINIOS_QUE_BLOQUEIAM.includes(new URL(fonte.url).host);
+  } catch {
+    return false;
+  }
+}
+
 const VERIFICADO = "2026-07-26";
+// Data de verificação das fontes e leituras acrescentadas na revisão dos
+// guias de «Direitos e cobranças» e dos catorze guias novos.
+const VERIFICADO_DIREITOS = "2026-07-29";
 const ANO = `${FISCAL_YEAR}-01-01`;
 
 // ─── Fontes oficiais ───────────────────────────────────────────────────
@@ -242,8 +305,138 @@ export const LEGAL_SOURCES = {
     expectedAnchors: ["Artigo 78.º -D"],
   },
 
+  civa78c: {
+    ...at("civa78c", "78.º-C", "Art. 78.º-C CIVA — Regularização a favor do Estado quando o crédito é recuperado", "iva78c", "civa_rep"),
+    expectedAnchors: ["Artigo 78.º -C"],
+  },
+
+
+  // ── Empresas: o ano de vida da sociedade (guias novos) ───────────────
+  circ23: at("circ23", "23.º", "Art. 23.º CIRC — Gastos e perdas dedutíveis", "irc23", "CIRC_2R"),
+  circ52: at("circ52", "52.º", "Art. 52.º CIRC — Dedução de prejuízos fiscais", "irc52", "CIRC_2R"),
+  circ105: at("circ105", "105.º", "Art. 105.º CIRC — Cálculo dos pagamentos por conta", "irc105", "CIRC_2R"),
+  circ107: at("circ107", "107.º", "Art. 107.º CIRC — Limitação aos pagamentos por conta", "irc107", "CIRC_2R"),
+  cirs40a: at("cirs40a", "40.º-A", "Art. 40.º-A CIRS — Dupla tributação económica (englobamento de lucros a 50%)", "irs40a", "cirs_rep"),
+  // ── Trabalho por conta de outrem e proteção social (guias novos) ─────
+  //    O Código do Trabalho e os diplomas da Segurança Social são servidos
+  //    por aplicação OutSystems no Diário da República: `spa`, sem âncoras.
+  dl28_2004: {
+    id: "dl28_2004",
+    authority: "DR",
+    title: "Decreto-Lei n.º 28/2004 — Regime de proteção na doença (versão consolidada)",
+    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/2004-34506475",
+    jurisdiction: "PT",
+    sourceType: "law",
+    effectiveFrom: ANO,
+    consolidada: true,
+    renderMode: "spa",
+    expectedAnchors: [],
+    lastCheckedAt: VERIFICADO_DIREITOS,
+    status: "active",
+  },
+  dl220_2006: {
+    id: "dl220_2006",
+    authority: "DR",
+    title: "Decreto-Lei n.º 220/2006 — Regime de proteção no desemprego (versão consolidada)",
+    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/2006-34509975",
+    jurisdiction: "PT",
+    sourceType: "law",
+    effectiveFrom: ANO,
+    consolidada: true,
+    renderMode: "spa",
+    expectedAnchors: [],
+    lastCheckedAt: VERIFICADO_DIREITOS,
+    status: "active",
+  },
+  dl91_2009: {
+    id: "dl91_2009",
+    authority: "DR",
+    title: "Decreto-Lei n.º 91/2009 — Proteção na parentalidade (versão consolidada)",
+    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/2009-34518375",
+    jurisdiction: "PT",
+    sourceType: "law",
+    effectiveFrom: ANO,
+    consolidada: true,
+    renderMode: "spa",
+    expectedAnchors: [],
+    lastCheckedAt: VERIFICADO_DIREITOS,
+    status: "active",
+  },
+  lei98_2009: {
+    id: "lei98_2009",
+    authority: "DR",
+    title: "Lei n.º 98/2009 — Reparação de acidentes de trabalho (seguro obrigatório)",
+    url: "https://diariodarepublica.pt/dr/detalhe/lei/98-2009-490009",
+    jurisdiction: "PT",
+    sourceType: "law",
+    effectiveFrom: ANO,
+    renderMode: "spa",
+    expectedAnchors: [],
+    lastCheckedAt: VERIFICADO_DIREITOS,
+    status: "active",
+  },
+  ssDoenca: {
+    id: "ssDoenca",
+    authority: "SS",
+    title: "Subsídio de doença — montante, prazo de garantia e período de espera",
+    url: "https://www.seg-social.pt/subsidio-de-doenca",
+    jurisdiction: "PT",
+    sourceType: "official_guide",
+    effectiveFrom: ANO,
+    renderMode: "spa",
+    expectedAnchors: [],
+    lastCheckedAt: VERIFICADO_DIREITOS,
+    status: "active",
+  },
+  ssDesemprego: {
+    id: "ssDesemprego",
+    authority: "SS",
+    title: "Subsídio de desemprego — prazo de garantia, montante e duração",
+    url: "https://www.seg-social.pt/subsidio-de-desemprego",
+    jurisdiction: "PT",
+    sourceType: "official_guide",
+    effectiveFrom: ANO,
+    renderMode: "spa",
+    expectedAnchors: [],
+    lastCheckedAt: VERIFICADO_DIREITOS,
+    status: "active",
+  },
+
   // ── LGT e CPPT — prazos e meios de defesa ────────────────────────────
+  lgt23: at("lgt23", "23.º", "Art. 23.º LGT — Responsabilidade tributária subsidiária (reversão, audição prévia e isenção de custas)", "lgt23", "lgt"),
   lgt24: at("lgt24", "24.º", "Art. 24.º LGT — Responsabilidade subsidiária dos membros de corpos sociais", "lgt24", "lgt"),
+  cppt203: at("cppt203", "203.º", "Art. 203.º CPPT — Prazo de oposição à execução", "cppt203", "cppt"),
+  cppt198a: at("cppt198a", "198.º-A", "Art. 198.º-A CPPT — Plano oficioso de pagamento em prestações", "cppt198a", "cppt"),
+  // ── Direitos do credor: taxas de juro e unidade de conta ─────────────
+  //    Os dois seguintes são o que faltava ao guia dos juros de mora: a
+  //    TAXA. A comercial é semestral, daí o `effectiveTo`.
+  avisoJuros2026: {
+    id: "avisoJuros2026",
+    authority: "DR",
+    title: "Aviso n.º 822/2026/2 — Taxas supletivas de juros moratórios comerciais, 1.º semestre de 2026",
+    url: "https://diariodarepublica.pt/dr/detalhe/aviso/822-2026-2",
+    jurisdiction: "PT",
+    sourceType: "order",
+    effectiveFrom: "2026-01-01",
+    effectiveTo: "2026-06-30",
+    renderMode: "spa",
+    expectedAnchors: [],
+    lastCheckedAt: VERIFICADO_DIREITOS,
+    status: "active",
+  },
+  portaria291_2003: {
+    id: "portaria291_2003",
+    authority: "DR",
+    title: "Portaria n.º 291/2003 — Taxa de juros legais e de juros de mora de obrigações civis (4%)",
+    url: "https://diariodarepublica.pt/dr/detalhe/portaria/291-2003-632924",
+    jurisdiction: "PT",
+    sourceType: "order",
+    effectiveFrom: ANO,
+    renderMode: "spa",
+    expectedAnchors: [],
+    lastCheckedAt: VERIFICADO_DIREITOS,
+    status: "active",
+  },
   // O Art. 43.º NÃO é servido em `lgt43` no Portal das Finanças (404,
   // verificado a 2026-07-27), ao contrário dos 24.º, 45.º, 48.º e 100.º.
   // Cita-se a versão consolidada do Diário da República.
@@ -699,6 +892,21 @@ export type LegalSourceId = keyof typeof LEGAL_SOURCES;
 // ─── Leitura complementar (nunca fundamenta uma regra) ─────────────────
 
 export const LEITURAS_COMPLEMENTARES = {
+  // ── Direitos e cobranças ───────────────────────────────────────────
+  //    Os 14 guias desta secção não tinham nenhuma leitura complementar:
+  //    o bloco aparecia vazio nas páginas novas e cheio nas antigas, sem
+  //    que nada explicasse a diferença.
+  occCobranca: { id: "occCobranca", publisher: "OCC", title: "Injunção e cobrança de créditos comerciais — guia prático", url: "https://www.occ.pt/pt-pt/noticias/injuncao", lastCheckedAt: VERIFICADO_DIREITOS },
+  occPagamentoImpostos: { id: "occPagamentoImpostos", publisher: "OCC", title: "Pagamento de impostos em prestações — guia prático", url: "https://www.occ.pt/pt-pt/noticias/pagamento-de-impostos-em-prestacoes", lastCheckedAt: VERIFICADO_DIREITOS },
+  oaJurosMoratorios: { id: "oaJurosMoratorios", publisher: "Ordem dos Advogados", title: "Tabela de taxas de juros moratórios (civis e comerciais)", url: "https://portal.oa.pt/publicacoes/informacao-juridica/direito-nacional/tipo-de-informacao/tabelas-custas-tarifarios-taxas-valores-etc/taxas-de-juros-moratorios/", lastCheckedAt: VERIFICADO_DIREITOS },
+  dgertRelacoesLaborais: { id: "dgertRelacoesLaborais", publisher: "DGERT", title: "Relações de trabalho — informação sobre condições de trabalho", url: "https://www.dgert.gov.pt/relacoes-de-trabalho", lastCheckedAt: VERIFICADO_DIREITOS },
+  actCondicoesTrabalho: { id: "actCondicoesTrabalho", publisher: "ACT", title: "Autoridade para as Condições do Trabalho — informação e denúncia", url: "https://www.act.gov.pt/", lastCheckedAt: VERIFICADO_DIREITOS },
+  decoDividasFiscais: { id: "decoDividasFiscais", publisher: "DECO PROTeste", title: "Dívidas ao Fisco: prazos, prescrição e como reagir", url: "https://www.deco.proteste.pt/dinheiro/impostos/dicas/dividas-fisco", lastCheckedAt: VERIFICADO_DIREITOS },
+  decoBaixaMedica: { id: "decoBaixaMedica", publisher: "DECO PROTeste", title: "Baixa médica e subsídio de doença: quais as regras?", url: "https://www.deco.proteste.pt/dinheiro/emprego/dicas/baixa-medica-subsidio-doenca-quais-regras", lastCheckedAt: VERIFICADO_DIREITOS },
+  decoDesemprego: { id: "decoDesemprego", publisher: "DECO PROTeste", title: "Subsídio de desemprego: regras, prazos e valores", url: "https://www.deco.proteste.pt/dinheiro/emprego/noticias/subsidio-desemprego-regras-prazos-valores", lastCheckedAt: VERIFICADO_DIREITOS },
+  montepioParental: { id: "montepioParental", publisher: "Montepio", title: "Licença parental: a quantos dias têm os pais direito", url: "https://www.montepio.org/ei/pessoal/pais-e-professores/licenca-parental-a-quantos-dias-tem-os-pais-direito/", lastCheckedAt: VERIFICADO_DIREITOS },
+  montepioDoenca: { id: "montepioDoenca", publisher: "Montepio", title: "Subsídio de doença: regras, valores e prazos", url: "https://www.montepio.org/ei/pessoal/emprego-e-formacao/subsidio-de-doenca-regras-valores-e-prazos/", lastCheckedAt: VERIFICADO_DIREITOS },
+
   occIva: { id: "occIva", publisher: "OCC", title: "Taxas de IVA em Portugal continental e regiões autónomas", url: "https://www.occ.pt/pt-pt/noticias/iva-taxas-em-portugal-continental-e-acores", lastCheckedAt: VERIFICADO },
   occRegimeSimplificado: { id: "occRegimeSimplificado", publisher: "OCC", title: "IRS — regime simplificado (coeficientes e regra dos 15 %)", url: "https://www.occ.pt/pt-pt/noticias/irs-regime-simplificado-1", lastCheckedAt: VERIFICADO },
   occTa: { id: "occTa", publisher: "OCC", title: "IRC — tributação autónoma (taxas e limiares)", url: "https://portal.occ.pt/pt-pt/noticias/irc-tributacao-autonoma", lastCheckedAt: VERIFICADO },

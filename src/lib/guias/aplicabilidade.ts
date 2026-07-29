@@ -739,6 +739,264 @@ export const APLICABILIDADE: Record<string, AplicabilidadeGuia> = {
       "Acompanhar o estado da declaração nos serviços oficiais.",
     ],
   },
+  // ══ Empresas — o ano de vida da sociedade ═══════════════════════════
+  "salario-gerente-ou-dividendos": {
+    respostaCurta: "O salário é custo da empresa e reduz o IRC; o dividendo sai de lucro já tributado e leva mais 28% em cima. Quase nunca a resposta é «só uma das duas» — é uma mistura, e o ponto certo muda com o lucro.",
+    aplicaSe: [
+      "És sócio-gerente de uma sociedade e decides quanto te pagas a ti próprio.",
+      "A empresa deu lucro e queres perceber qual a via mais eficiente de o levantar.",
+      "Estás a pensar não te pagar nada para poupar contribuições.",
+    ],
+    naoAplicaSe: [
+      "És trabalhador independente sem sociedade — aí não há dividendos, e o guia certo é o do regime simplificado.",
+      "A empresa não teve lucro: sem lucro não há dividendos a distribuir.",
+    ],
+    checklist: [
+      "Lucro tributável estimado do exercício, antes da tua remuneração.",
+      "A tua taxa marginal de IRS considerando todos os rendimentos do agregado.",
+      "A contribuição da empresa e a tua, sobre a remuneração de gerência.",
+      "Se precisas de carreira contributiva — proteção na doença e na parentalidade não vêm com o dividendo.",
+    ],
+  },
+  "distribuir-lucros": {
+    respostaCurta: "Há três destinos para o lucro: pagar 28% de taxa liberatória, englobar com exclusão de metade, ou deixá-lo na empresa. Antes de qualquer um deles, a reserva legal não é opcional.",
+    aplicaSe: [
+      "A sociedade teve lucro e as contas do exercício vão ser aprovadas.",
+      "Queres comparar a taxa liberatória com o englobamento na tua situação.",
+      "Estás a decidir se distribuis ou se reforças os capitais próprios.",
+    ],
+    naoAplicaSe: [
+      "O exercício deu prejuízo — vê primeiro o guia do reporte de prejuízos.",
+      "A reserva legal ainda não está constituída no mínimo exigido: essa parte não é distribuível.",
+    ],
+    checklist: [
+      "Lucro do exercício e reserva legal já constituída.",
+      "Ata de aprovação de contas e deliberação de distribuição.",
+      "A tua taxa marginal de IRS, para comparar com os 28%.",
+      "Todos os rendimentos da mesma categoria — o englobamento obriga a englobar tudo.",
+    ],
+  },
+  "pagamentos-por-conta-irc": {
+    respostaCurta: "São três pagamentos, em julho, setembro e até 15 de dezembro, calculados sobre a coleta do ano PASSADO. É a surpresa de tesouraria do segundo ano de vida de qualquer empresa que teve lucro no primeiro.",
+    aplicaSe: [
+      "A empresa teve coleta no período anterior, líquida de retenções, superior a 200 €.",
+      "Estás a planear a tesouraria do segundo semestre.",
+      "Queres limitar ou suspender o terceiro pagamento e saber o risco.",
+    ],
+    naoAplicaSe: [
+      "A coleta do período anterior, líquida de retenções, foi igual ou inferior a 200 €.",
+      "É o primeiro exercício da empresa — não há período anterior sobre o qual calcular.",
+    ],
+    checklist: [
+      "Coleta do período anterior e retenções que sobre ela incidiram.",
+      "Volume de negócios do período anterior — decide entre 80% e 95%.",
+      "Estimativa realista do imposto do ano corrente, se pensas travar o terceiro.",
+      "Margem de segurança: errar a estimativa por mais de 20% custa juros compensatórios.",
+    ],
+  },
+  "prejuizos-fiscais": {
+    respostaCurta: "O prejuízo de um ano abate ao lucro dos anos seguintes, sem limite de tempo — mas só até 65% do lucro tributável de cada ano. É o principal argumento a favor da sociedade nos primeiros anos.",
+    aplicaSe: [
+      "A empresa apurou prejuízo fiscal num ou mais exercícios.",
+      "Vais ter lucro e queres saber quanto podes abater.",
+      "Está prevista uma alteração da titularidade do capital.",
+    ],
+    naoAplicaSe: [
+      "És trabalhador independente no regime simplificado — o coeficiente não dá lugar a prejuízo reportável desta forma.",
+      "O que procuras é o tratamento do prejuízo na contabilidade, não no apuramento fiscal.",
+    ],
+    checklist: [
+      "Prejuízos fiscais apurados por exercício, e o que já foi deduzido.",
+      "Lucro tributável do ano corrente, para aplicar o teto de 65%.",
+      "Alterações na estrutura acionista desde o exercício do prejuízo.",
+      "Atenção: a tributação autónoma paga-se mesmo com prejuízo — e agravada.",
+    ],
+  },
+  "contratar-primeiro-trabalhador": {
+    respostaCurta: "O salário não é o custo. Contar 14 meses, mais 23,75% de contribuição da empresa, mais subsídio de refeição, mais seguro de acidentes de trabalho — e comunicar a admissão à Segurança Social nas 24 horas anteriores ao início.",
+    aplicaSe: [
+      "Vais contratar a primeira pessoa para a empresa ou para a tua atividade.",
+      "Queres saber o custo total anual antes de decidir o salário.",
+      "Precisas de saber o que comunicar, a quem e em que prazo.",
+    ],
+    naoAplicaSe: [
+      "O que queres é contratar um prestador de serviços — mas confirma primeiro se não é trabalho subordinado disfarçado.",
+      "Já tens trabalhadores e o que procuras é o processamento mensal.",
+    ],
+    checklist: [
+      "Salário base pretendido e o custo total que ele implica.",
+      "Seguro de acidentes de trabalho contratado ANTES do primeiro dia.",
+      "Comunicação de admissão à Segurança Social nas 24 horas anteriores ao início.",
+      "Tipo de contrato e forma escrita, quando exigida.",
+      "Período experimental aplicável ao caso.",
+    ],
+  },
+  "modelo-22-e-ies": {
+    respostaCurta: "São duas entregas anuais diferentes: a Modelo 22 apura o IRC até 31 de maio, a IES presta contas até 15 de julho. Falhar não custa só a coima — custa a certidão de não dívida e os benefícios fiscais.",
+    aplicaSe: [
+      "Tens uma sociedade e é a primeira vez que passas por um encerramento de contas.",
+      "Queres saber o que consta de cada declaração e quem tem de assinar.",
+      "Estás atrasado numa das entregas e queres perceber as consequências.",
+    ],
+    naoAplicaSe: [
+      "És trabalhador independente sem sociedade — a tua entrega anual é a Modelo 3 do IRS.",
+      "A sociedade já cessou atividade e as contas finais já foram entregues.",
+    ],
+    checklist: [
+      "Contabilista Certificado inscrito e com contrato em vigor — é ele que assina.",
+      "Contas do exercício aprovadas até 31 de março.",
+      "Modelo 22 até 31 de maio; IES até 15 de julho.",
+      "Depósito da prestação de contas, que a IES cumpre.",
+    ],
+  },
+  "fechar-empresa": {
+    respostaCurta: "Fechar não é deixar de faturar. Uma sociedade dissolve-se, liquida-se e regista-se — e a responsabilidade dos gerentes por dívidas fiscais sobrevive ao encerramento.",
+    aplicaSe: [
+      "Decidiste encerrar a sociedade e queres saber a ordem dos passos.",
+      "A empresa já não tem atividade mas continua a acumular obrigações.",
+      "Queres saber o que continua a ser teu depois de fechar.",
+    ],
+    naoAplicaSe: [
+      "És trabalhador independente — a cessação de atividade é outro processo, mais simples.",
+      "A empresa tem passivo que não consegue pagar: aí o caminho é a insolvência, não a dissolução.",
+    ],
+    checklist: [
+      "Deliberação de dissolução e nomeação de liquidatários.",
+      "Passivo pago ou acautelado, antes de partilhar o que resta.",
+      "Declaração de cessação nas Finanças e na Segurança Social.",
+      "Registo comercial do encerramento da liquidação.",
+      "Arquivo dos documentos pelo prazo legal — a AT pode continuar a pedi-los.",
+    ],
+  },
+
+  // ══ Conta de outrem — e quando as coisas correm mal ═════════════════
+  "baixa-medica": {
+    respostaCurta: "Os três primeiros dias não são pagos por ninguém. A partir do quarto, a Segurança Social paga entre 55% e 75% da remuneração de referência, consoante a duração da baixa.",
+    aplicaSe: [
+      "És trabalhador por conta de outrem e ficaste de baixa.",
+      "Queres saber quanto vais receber e quando o dinheiro chega.",
+      "Estás a decidir se compensa uma baixa curta.",
+    ],
+    naoAplicaSe: [
+      "A baixa é por acidente de trabalho ou doença profissional — o regime é outro, e mais favorável.",
+      "És trabalhador independente: o período de espera e as condições são diferentes.",
+    ],
+    checklist: [
+      "Certificado de incapacidade temporária emitido pelo médico.",
+      "Seis meses de registo de remunerações — o prazo de garantia.",
+      "Remuneração de referência: o total dos primeiros seis dos últimos oito meses, a dividir por 180.",
+      "Confirmar se o teu IRCT ou a empresa pagam os três dias de espera — alguns pagam.",
+    ],
+  },
+  "licenca-parental": {
+    respostaCurta: "120 dias a 100%, 150 a 80%, ou 180 a 83% se for partilhada. A escolha faz-se no requerimento, condiciona os dois progenitores, e é a decisão financeira mais consequente do primeiro ano de vida de uma criança.",
+    aplicaSe: [
+      "Vais ser mãe ou pai e tens de escolher a modalidade da licença.",
+      "Queres comparar o total recebido em cada combinação.",
+      "Queres saber o que muda se partilharem a licença.",
+    ],
+    naoAplicaSe: [
+      "Já requereste e a licença está em curso — a modalidade não se altera a meio.",
+      "Procuras as licenças complementares ou a licença parental alargada, que têm regras próprias.",
+    ],
+    checklist: [
+      "Remuneração de referência de cada progenitor.",
+      "Decisão sobre partilha: exige 30 dias seguidos em exclusivo, ou dois períodos de 15.",
+      "Requerimento na Segurança Social Direta, com a modalidade escolhida.",
+      "Os 28 dias obrigatórios do pai são pagos a 100%, seja qual for a modalidade escolhida.",
+    ],
+  },
+  "subsidio-desemprego": {
+    respostaCurta: "São precisos 360 dias de descontos nos últimos 24 meses. O subsídio é 65% da remuneração de referência, com um mínimo e um teto indexados ao IAS — e quem se despede sem justa causa não tem direito.",
+    aplicaSe: [
+      "Ficaste desempregado por facto que não te é imputável.",
+      "Queres saber quanto vais receber e por quanto tempo.",
+      "Estás a avaliar uma revogação por acordo.",
+    ],
+    naoAplicaSe: [
+      "Despediste-te por iniciativa própria sem justa causa — é a razão n.º 1 de indeferimento.",
+      "És trabalhador independente: existe subsídio por cessação de atividade, com regras próprias.",
+    ],
+    checklist: [
+      "Declaração de situação de desemprego emitida pela entidade empregadora.",
+      "360 dias com registo de remunerações nos 24 meses anteriores.",
+      "Inscrição no centro de emprego dentro do prazo.",
+      "Remuneração média dos 12 meses anteriores aos dois que precedem o desemprego.",
+    ],
+  },
+  "fim-do-contrato": {
+    respostaCurta: "São três contas que se somam: compensação por antiguidade, aviso prévio e créditos finais. A compensação são 12 dias por ano — mas quem foi admitido antes de 2013 acumula tranches com contagens diferentes, e é aí que quase todas as contas dão errado.",
+    aplicaSe: [
+      "O teu contrato vai cessar, ou já cessou, e queres conferir as contas.",
+      "Recebeste uma proposta de revogação por acordo e queres saber se é justa.",
+      "Foste admitido antes de outubro de 2013 e a conta parece baixa.",
+    ],
+    naoAplicaSe: [
+      "O despedimento é por facto imputável ao trabalhador — aí não há compensação.",
+      "O que discutes é a licitude do despedimento, não o valor: isso é matéria de advogado e tem prazo próprio.",
+    ],
+    checklist: [
+      "Data de admissão e data de cessação — determinam as tranches aplicáveis.",
+      "Retribuição base e diuturnidades à data da cessação.",
+      "Dias de férias vencidos e não gozados.",
+      "Meses completos trabalhados no ano da cessação, para os proporcionais.",
+      "Formação contínua não ministrada, que também é crédito.",
+    ],
+  },
+  "ferias-direitos": {
+    respostaCurta: "22 dias úteis por ano, marcados por acordo e, na falta dele, pelo empregador dentro de limites. Se ficaram por gozar por culpa da entidade, há direito ao triplo da retribuição correspondente — e quase ninguém o reclama.",
+    aplicaSe: [
+      "Queres saber a quantos dias tens direito este ano.",
+      "A empresa marcou férias sem acordo e queres saber se podia.",
+      "Ficaste com dias por gozar no fim do ano.",
+    ],
+    naoAplicaSe: [
+      "És trabalhador independente — não há direito a férias pagas, e é uma das diferenças que o comparador não mostra em euros.",
+      "O que procuras é o subsídio de férias e não o direito ao gozo.",
+    ],
+    checklist: [
+      "Data de admissão — no ano de admissão a regra é outra.",
+      "Dias já gozados e dias marcados.",
+      "Mapa de férias afixado pela empresa.",
+      "Se ficaram dias por gozar: de quem foi a culpa, porque disso depende o triplo.",
+    ],
+  },
+  "trabalho-noturno-e-turnos": {
+    respostaCurta: "O trabalho noturno é o prestado entre as 22h e as 7h e paga-se com acréscimo de 25% sobre a hora equivalente diurna. O subsídio de turno e a isenção de horário não têm valor legal fixo: vêm do IRCT ou do contrato.",
+    aplicaSe: [
+      "Trabalhas de noite, por turnos, ou tens isenção de horário.",
+      "Queres confirmar se o acréscimo do recibo está certo.",
+      "Não sabes onde procurar o valor do subsídio de turno.",
+    ],
+    naoAplicaSe: [
+      "As horas em causa são trabalho suplementar — os acréscimos são outros e cumulam-se.",
+      "O teu IRCT define um período noturno diferente: aí é esse que vale.",
+    ],
+    checklist: [
+      "Retribuição base mensal e período normal de trabalho semanal.",
+      "Horas efetivamente prestadas em período noturno.",
+      "O IRCT aplicável ao teu setor — é lá que está o subsídio de turno.",
+      "A cláusula do contrato sobre isenção de horário e a modalidade acordada.",
+    ],
+  },
+  "faltas-ao-trabalho": {
+    respostaCurta: "«Justificada» e «paga» são dois eixos independentes: há faltas justificadas que não dão direito a retribuição. A maioria das pessoas assume que justificar é o mesmo que não perder, e só descobre o contrário no recibo.",
+    aplicaSe: [
+      "Faltaste e queres saber o que te vão descontar.",
+      "A falta foi justificada e mesmo assim apareceu desconto no recibo.",
+      "Queres saber o que a falta arrasta além do dia — subsídio de refeição, férias, subsídios.",
+    ],
+    naoAplicaSe: [
+      "A ausência é baixa médica — aí o regime é o do subsídio de doença.",
+      "A ausência é licença parental ou outra licença específica, com regras próprias.",
+    ],
+    checklist: [
+      "Motivo da falta e comunicação feita à entidade empregadora.",
+      "Prova do motivo, quando exigida.",
+      "Retribuição base e período normal de trabalho, para calcular o desconto.",
+      "Confirmar no recibo: além do dia, o subsídio de refeição desse dia perde-se.",
+    ],
+  },
 };
 
 export function aplicabilidade(slug: string): AplicabilidadeGuia | undefined {
