@@ -295,6 +295,209 @@ export function irsProgressivoDetalhado(coletavel: number): {
   return { imposto, escaloes };
 }
 
+/**
+ * Adicional de solidariedade (Art. 68.º-A CIRS): 2,5% na parte do coletável
+ * entre 80 000 € e 250 000 €, 5% acima de 250 000 €.
+ *
+ * IMPLEMENTAÇÃO ÚNICA. Existiam três cópias da mesma regra no projeto —
+ * uma escrita à mão dentro de `simularIRSAnual`, uma `solidarity()` em
+ * `fiscal-empresa.ts` e, na Categoria A, nenhuma (o adicional simplesmente
+ * não era cobrado). Três sítios, duas implementações e uma lacuna. Agora os
+ * três motores chamam esta função.
+ *
+ * Em tributação conjunta aplica-se por titular: passar o coletável já
+ * dividido pelo `divisor` e o próprio `divisor`, como nos escalões gerais.
+ */
+export function adicionalSolidariedade(coletavelPorTitular: number, divisor = 1): number {
+  const base = sanitize(coletavelPorTitular);
+  const entre = Math.max(
+    0,
+    Math.min(base, ADICIONAL_SOLIDARIEDADE.limiar2.value) - ADICIONAL_SOLIDARIEDADE.limiar1.value
+  );
+  const acima = Math.max(0, base - ADICIONAL_SOLIDARIEDADE.limiar2.value);
+  return (entre * ADICIONAL_SOLIDARIEDADE.taxa1.value + acima * ADICIONAL_SOLIDARIEDADE.taxa2.value) * divisor;
+}
+
+/**
+ * Dedução à coleta por dependentes (Art. 78.º-A CIRS). IMPLEMENTAÇÃO ÚNICA
+ * partilhada pelas categorias A e B — antes havia duas, e a da Categoria A
+ * não conhecia bebés (≤ 3 anos, 726 €) nem guarda partilhada. Mesmo artigo,
+ * duas respostas, consoante o simulador em que se entrava.
+ *
+ * Ordem de contagem: os bebés ocupam as primeiras posições da fila global;
+ * do 3.º dependente em diante, os de mais de 3 anos passam de 600 € para
+ * 900 €. Com `lista`, cada dependente conta com a sua fração de guarda
+ * (Art. 78.º-A, n.º 4).
+ */
+export function deducaoDependentesColeta(input: {
+  normais?: number;
+  bebe?: number;
+  deficientes?: number;
+  lista?: Array<{ ate3: boolean; deficiente: boolean; guarda: number }>;
+}): number {
+  if (input.lista && input.lista.length > 0) {
+    const ordenada = [...input.lista].sort((a, b) => Number(b.ate3) - Number(a.ate3));
+    let pos = 0;
+    let total = 0;
+    for (const d of ordenada) {
+      pos++;
+      const base = d.ate3
+        ? DEDUCAO_DEPENDENTE_BEBE.value
+        : pos <= 2
+          ? DEDUCAO_DEPENDENTE.value
+          : DEDUCAO_DEPENDENTE_3MAIS.value;
+      const extra = d.deficiente ? DEDUCAO_DEPENDENTE_DEFICIENCIA.value : 0;
+      const guarda = d.guarda > 0 ? Math.min(1, d.guarda) : 1;
+      total += (base + extra) * guarda;
+    }
+    return total;
+  }
+
+  const depNormais = Math.max(0, Math.floor(input.normais ?? 0));
+  const depBebe = Math.max(0, Math.floor(input.bebe ?? 0));
+  const depDefic = Math.max(0, Math.floor(input.deficientes ?? 0));
+
+  const dedBebe = depBebe * DEDUCAO_DEPENDENTE_BEBE.value;
+  const normaisBase = Math.max(0, Math.min(depNormais, 2 - depBebe));
+  const normaisMajor = Math.max(0, depNormais - normaisBase);
+  const dedNormais = normaisBase * DEDUCAO_DEPENDENTE.value + normaisMajor * DEDUCAO_DEPENDENTE_3MAIS.value;
+  const dedDefic = depDefic * DEDUCAO_DEPENDENTE_DEFICIENCIA.value;
+  return dedBebe + dedNormais + dedDefic;
+}
+
+/** Entrada das deduções à coleta que não dependem de dependentes. */
+/**
+ * Coleta de IRC pela escala progressiva PME (Art. 87.º CIRC): a taxa
+ * reduzida até ao limite do escalão PME e a taxa geral acima dele.
+ *
+ * IMPLEMENTAÇÃO ÚNICA. A mesma escala estava escrita duas vezes — dentro de
+ * `compararRegimes` e em `calculateCompany` (fiscal-empresa.ts). Hoje não
+ * divergem; divergiriam na primeira alteração de taxa que só tocasse num dos
+ * ficheiros. As taxas são parâmetros porque o simulador de empresa aplica
+ * taxas regionais (Madeira e Açores) em vez das do Continente.
+ */
+export function coletaIRC(
+  lucroTributavel: number,
+  taxaPME: number = IRC_TAXA_PME.value,
+  taxaGeral: number = IRC_TAXA_GERAL.value
+): number {
+  const lucro = Math.max(0, lucroTributavel);
+  return (
+    taxaPME * Math.min(lucro, IRC_LIMITE_PME.value) +
+    taxaGeral * Math.max(0, lucro - IRC_LIMITE_PME.value)
+  );
+}
+
+export interface DeducoesColetaInput {
+  deducoes?: DeducoesInput;
+  ppr?: { valor: number; escalaoIdade: "ate35" | "de35a50" | "mais50" };
+  donativos?: { valor: number; fator: number; semLimite: boolean };
+  ascendentes?: number;
+  pensaoAlimentos?: number;
+  deficiencia?: boolean;
+  conjunta?: boolean;
+}
+
+export interface DeducoesColetaResult {
+  /** Saúde + educação + gerais + rendas + lares + PPR + donativos, após o limite global. */
+  despesas: number;
+  ppr: number;
+  donativos: number;
+  ascendentes: number;
+  pensaoAlimentos: number;
+  deficiencia: number;
+  /** Soma de tudo o que está aqui (NÃO inclui a dedução por dependentes). */
+  total: number;
+}
+
+/**
+ * Deduções à coleta comuns às categorias A e B. IMPLEMENTAÇÃO ÚNICA.
+ *
+ * Antes, só o motor da Categoria B as aplicava: o acerto anual de quem
+ * recebe salário ignorava saúde, educação, despesas gerais, rendas, lares,
+ * ascendentes, PPR, donativos e pensões de alimentos. Consequência prática:
+ * para uma família com despesas normais, o «mealheiro» mandava reservar
+ * dinheiro que não era devido.
+ *
+ * `coletaBruta` é necessária porque o limite dos donativos é 15% da coleta;
+ * `rendimentoColetavel` porque o limite global do Art. 78.º, n.º 7 é
+ * escalonado pelo coletável.
+ */
+export function calcularDeducoesColeta(
+  input: DeducoesColetaInput,
+  ctx: { coletaBruta: number; rendimentoColetavel: number }
+): DeducoesColetaResult {
+  const ded = input.deducoes ?? {};
+  const conjunta = !!input.conjunta;
+
+  const dGerais = Math.min(
+    sanitize(ded.gerais ?? 0) * DEDUCAO_DESP_GERAIS.value.taxa,
+    DEDUCAO_DESP_GERAIS.value.limite * (conjunta ? 2 : 1)
+  );
+  const dSaude = Math.min(sanitize(ded.saude ?? 0) * DEDUCAO_SAUDE.value.taxa, DEDUCAO_SAUDE.value.limite);
+  const dEducacao = Math.min(sanitize(ded.educacao ?? 0) * DEDUCAO_EDUCACAO.value.taxa, DEDUCAO_EDUCACAO.value.limite);
+  const dRendas = Math.min(sanitize(ded.rendas ?? 0) * DEDUCAO_RENDAS.value.taxa, DEDUCAO_RENDAS.value.limite);
+  const dLares = Math.min(sanitize(ded.lares ?? 0) * DEDUCAO_LARES.value.taxa, DEDUCAO_LARES.value.limite);
+
+  // PPR (Art. 21.º EBF): 20% do aplicado, com limite por idade do sujeito passivo.
+  const ppr = input.ppr
+    ? Math.min(sanitize(input.ppr.valor) * DEDUCAO_PPR.value.taxa, DEDUCAO_PPR.value[input.ppr.escalaoIdade])
+    : 0;
+  // Donativos (Art. 62.º/63.º EBF): 25% do valor majorado, limitado a 15% da
+  // coleta (exceto donativos ao Estado, sem limite).
+  const donativos = input.donativos
+    ? (() => {
+        const base = sanitize(input.donativos.valor) * (input.donativos.fator || 1) * DEDUCAO_DONATIVOS.value.taxa;
+        return input.donativos.semLimite
+          ? base
+          : Math.min(base, DEDUCAO_DONATIVOS.value.limiteColeta * sanitize(ctx.coletaBruta));
+      })()
+    : 0;
+
+  // Limite global (Art. 78.º n.º 7): saúde + educação + gerais + rendas + lares + PPR + donativos.
+  const despesas = Math.min(
+    dGerais + dSaude + dEducacao + dRendas + dLares + ppr + donativos,
+    limiteGlobalDeducoes(ctx.rendimentoColetavel)
+  );
+
+  // Ascendentes (Art. 78.º-A): 525 € por ascendente; 635 € se existir só um.
+  // Fora do limite global, tal como a dedução por dependentes.
+  const numAscendentes = Math.max(0, Math.floor(input.ascendentes ?? 0));
+  const ascendentes =
+    numAscendentes === 1 ? DEDUCAO_ASCENDENTE_UNICO.value : numAscendentes * DEDUCAO_ASCENDENTE.value;
+
+  // Pensões de alimentos (Art. 83.º-A): 20% sem limite, fora do limite global.
+  const pensaoAlimentos = sanitize(input.pensaoAlimentos ?? 0) * DEDUCAO_PENSAO_ALIMENTOS.value;
+
+  // Art. 87.º CIRS: dedução à coleta de 4×IAS pelo contribuinte com deficiência.
+  const deficiencia = input.deficiencia ? DEDUCAO_DEFICIENCIA_COLETA.value : 0;
+
+  return {
+    despesas,
+    ppr,
+    donativos,
+    ascendentes,
+    pensaoAlimentos,
+    deficiencia,
+    total: despesas + ascendentes + pensaoAlimentos + deficiencia,
+  };
+}
+
+/**
+ * Exclusão do Art. 56.º-A CIRS para sujeito passivo com deficiência ≥ 60%:
+ * 15% dos rendimentos brutos, com o limite de 2 500 € POR CATEGORIA. O
+ * artigo abrange expressamente a categoria A, não só a B — e era essa a
+ * lacuna: o mesmo contribuinte, com a mesma incapacidade, recebia
+ * tratamento diferente consoante fosse assalariado ou freelancer.
+ */
+export function calcularExclusaoDeficiencia(rendimentoCategoria: number, temDeficiencia: boolean): number {
+  if (!temDeficiencia) return 0;
+  return Math.min(
+    sanitize(rendimentoCategoria) * EXCLUSAO_DEFICIENCIA_TAXA.value,
+    EXCLUSAO_DEFICIENCIA_MAX.value
+  );
+}
+
 export interface MinimoExistenciaFacts {
   /** A origem predominante está abrangida pelo art. 70.º, n.º 2. */
   eligibleIncome: boolean;
@@ -699,9 +902,7 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
 
   // ── Art. 56.º-A CIRS: exclusão de 15% dos rendimentos Cat. B do coletável ──
   // Aplicada ANTES do cálculo da coleta (reduz rendimento tributável).
-  const exclusaoDeficiencia = input.deficiencia
-    ? Math.min(rendimentoTributavel * EXCLUSAO_DEFICIENCIA_TAXA.value, EXCLUSAO_DEFICIENCIA_MAX.value)
-    : 0;
+  const exclusaoDeficiencia = calcularExclusaoDeficiencia(rendimentoTributavel, !!input.deficiencia);
 
   // Rendimento coletável base (após IRS Jovem, exclusão deficiência, outros)
   const conjunta = !!input.conjunta;
@@ -803,21 +1004,10 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   // gerais. Em tributação conjunta, aplica-se por titular (metade do
   // coletável) e duplica-se o resultado, tal como os escalões gerais.
   const baseColetavelPorTitular = rendimentoColetavelFinal / divisor;
-  const parteEntre80e250 = regimeFlatRate
+  const adicionalSolidariedadeValor = regimeFlatRate
     ? 0
-    : Math.max(
-        0,
-        Math.min(baseColetavelPorTitular, ADICIONAL_SOLIDARIEDADE.limiar2.value) -
-          ADICIONAL_SOLIDARIEDADE.limiar1.value
-      );
-  const parteAcima250 = regimeFlatRate
-    ? 0
-    : Math.max(0, baseColetavelPorTitular - ADICIONAL_SOLIDARIEDADE.limiar2.value);
-  const adicionalSolidariedade =
-    (parteEntre80e250 * ADICIONAL_SOLIDARIEDADE.taxa1.value +
-      parteAcima250 * ADICIONAL_SOLIDARIEDADE.taxa2.value) *
-    divisor;
-  coletaBruta += adicionalSolidariedade;
+    : adicionalSolidariedade(baseColetavelPorTitular, divisor);
+  coletaBruta += adicionalSolidariedadeValor;
 
   // ── Deduções à coleta ─────────────────────────────────────────────────────
   // Dependentes: suporta detalhe (bebe, deficientes) ou contagem simples
@@ -826,86 +1016,39 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   const depBebe = Math.max(0, Math.floor(det?.bebe ?? 0));
   const depDefic = Math.max(0, Math.floor(det?.deficientes ?? 0));
 
-  // Regra do 3.º dependente (Art. 78.º-A):
-  //  - Bebés (≤ 3 anos): €726 cada
-  //  - Normais (> 3 anos): os primeiros max(0, 2−depBebe) ficam no escalão base €600;
-  //    a partir do 3.º na contagem global passa a €900
-  const deducaoDependentes = (() => {
-    // Caminho detalhado: lista com guarda partilhada (cada dependente conta com
-    // a sua fração). Bebés (≤3 anos) ocupam as primeiras posições; do 3.º
-    // dependente em diante, os de >3 anos passam de 600 € para 900 €.
-    if (input.dependentesLista && input.dependentesLista.length > 0) {
-      const ordenada = [...input.dependentesLista].sort((a, b) => Number(b.ate3) - Number(a.ate3));
-      let pos = 0;
-      let total = 0;
-      for (const d of ordenada) {
-        pos++;
-        const base = d.ate3
-          ? DEDUCAO_DEPENDENTE_BEBE.value
-          : pos <= 2
-            ? DEDUCAO_DEPENDENTE.value
-            : DEDUCAO_DEPENDENTE_3MAIS.value;
-        const extra = d.deficiente ? DEDUCAO_DEPENDENTE_DEFICIENCIA.value : 0;
-        const guarda = d.guarda > 0 ? Math.min(1, d.guarda) : 1;
-        total += (base + extra) * guarda;
-      }
-      return total;
-    }
-    // Bebés têm sempre €726 (ocupam as primeiras posições na fila global)
-    const dedBebe = depBebe * DEDUCAO_DEPENDENTE_BEBE.value;
-    // Normais: quantas posições ainda estão no bloco 1.º/2.º
-    const normaisBase = Math.max(0, Math.min(depNormais, 2 - depBebe));
-    const normaisMajor = Math.max(0, depNormais - normaisBase);
-    const dedNormais =
-      normaisBase * DEDUCAO_DEPENDENTE.value +
-      normaisMajor * DEDUCAO_DEPENDENTE_3MAIS.value;
-    // Dependentes com deficiência → +2,5×IAS adicional por cada um
-    const dedDefic = depDefic * DEDUCAO_DEPENDENTE_DEFICIENCIA.value;
-    return dedBebe + dedNormais + dedDefic;
-  })();
+  // Regra do 3.º dependente (Art. 78.º-A) — implementação única partilhada
+  // com a Categoria A, ver `deducaoDependentesColeta`.
+  const deducaoDependentes = deducaoDependentesColeta({
+    normais: depNormais,
+    bebe: depBebe,
+    deficientes: depDefic,
+    lista: input.dependentesLista,
+  });
 
-  const ded = input.deducoes ?? {};
-  const dGerais = Math.min(
-    sanitize(ded.gerais ?? 0) * DEDUCAO_DESP_GERAIS.value.taxa,
-    DEDUCAO_DESP_GERAIS.value.limite * (conjunta ? 2 : 1)
+  // Despesas, ascendentes, pensões e deficiência — implementação única
+  // partilhada com a Categoria A (`calcularDeducoesColeta`).
+  const outrasDeducoes = calcularDeducoesColeta(
+    {
+      deducoes: input.deducoes,
+      ppr: input.ppr,
+      donativos: input.donativos,
+      ascendentes: input.ascendentes,
+      pensaoAlimentos: input.pensaoAlimentos,
+      deficiencia: input.deficiencia,
+      conjunta,
+    },
+    { coletaBruta, rendimentoColetavel: rendimentoColetavelFinal }
   );
-  const dSaude = Math.min(sanitize(ded.saude ?? 0) * DEDUCAO_SAUDE.value.taxa, DEDUCAO_SAUDE.value.limite);
-  const dEducacao = Math.min(sanitize(ded.educacao ?? 0) * DEDUCAO_EDUCACAO.value.taxa, DEDUCAO_EDUCACAO.value.limite);
-  const dRendas = Math.min(sanitize(ded.rendas ?? 0) * DEDUCAO_RENDAS.value.taxa, DEDUCAO_RENDAS.value.limite);
-  const dLares = Math.min(sanitize(ded.lares ?? 0) * DEDUCAO_LARES.value.taxa, DEDUCAO_LARES.value.limite);
+  const {
+    despesas: deducaoDespesas,
+    ppr: deducaoPPR,
+    donativos: deducaoDonativos,
+    ascendentes: deducaoAscendentes,
+    pensaoAlimentos: deducaoPensaoAlimentos,
+    deficiencia: deducaoDeficiencia,
+  } = outrasDeducoes;
 
-  // PPR (Art. 21.º EBF): 20% do aplicado, com limite por idade do sujeito passivo.
-  const deducaoPPR = input.ppr
-    ? Math.min(sanitize(input.ppr.valor) * DEDUCAO_PPR.value.taxa, DEDUCAO_PPR.value[input.ppr.escalaoIdade])
-    : 0;
-  // Donativos (Art. 62.º/63.º EBF): 25% do valor majorado, limitado a 15% da
-  // coleta (exceto donativos ao Estado, sem limite).
-  const deducaoDonativos = input.donativos
-    ? (() => {
-        const base = sanitize(input.donativos.valor) * (input.donativos.fator || 1) * DEDUCAO_DONATIVOS.value.taxa;
-        return input.donativos.semLimite ? base : Math.min(base, DEDUCAO_DONATIVOS.value.limiteColeta * coletaBruta);
-      })()
-    : 0;
-
-  // Limite global (Art. 78.º n.º 7): saúde + educação + gerais + rendas + lares + PPR + donativos.
-  const deducaoDespesas = Math.min(
-    dGerais + dSaude + dEducacao + dRendas + dLares + deducaoPPR + deducaoDonativos,
-    limiteGlobalDeducoes(rendimentoColetavelFinal)
-  );
-
-  // Ascendentes (Art. 78.º-A): 525 € por ascendente; 635 € se existir só um.
-  // Fora do limite global, tal como a dedução por dependentes.
-  const numAscendentes = Math.max(0, Math.floor(input.ascendentes ?? 0));
-  const deducaoAscendentes =
-    numAscendentes === 1 ? DEDUCAO_ASCENDENTE_UNICO.value : numAscendentes * DEDUCAO_ASCENDENTE.value;
-
-  // Pensões de alimentos (Art. 83.º-A): 20% sem limite, fora do limite global.
-  const deducaoPensaoAlimentos = sanitize(input.pensaoAlimentos ?? 0) * DEDUCAO_PENSAO_ALIMENTOS.value;
-
-  // Art. 87.º CIRS: dedução à coleta de 4×IAS pelo contribuinte com deficiência
-  const deducaoDeficiencia = input.deficiencia ? DEDUCAO_DEFICIENCIA_COLETA.value : 0;
-
-  const deducoesColeta = deducaoDependentes + deducaoAscendentes + deducaoDespesas + deducaoDeficiencia + deducaoPensaoAlimentos;
+  const deducoesColeta = deducaoDependentes + outrasDeducoes.total;
   const irsEstimado = Math.max(0, coletaBruta - deducoesColeta);
   const minimoExistenciaAplicado = minimoExistenciaDecision.status === "applied";
 
@@ -948,7 +1091,7 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     programaRegressarAplicado,
     exclusaoProgramaRegressar,
     coletaBruta,
-    adicionalSolidariedade,
+    adicionalSolidariedade: adicionalSolidariedadeValor,
     escaloesAplicados,
     deducaoDependentes,
     deducaoAscendentes,
@@ -983,6 +1126,17 @@ export interface ComparacaoInput {
   /** Taxa de derrama municipal (0 a 0,015). */
   derrama?: number;
   irsJovemAno?: number;
+  /**
+   * Situação pessoal aplicada ao cenário de recibos verdes. Existia no motor
+   * anual e não chegava aqui: o comparador aplicava dependentes só à
+   * Categoria A, o que chegava a INVERTER o veredicto (ver relatório 2.1).
+   */
+  dependentes?: number;
+  dependentesDetalhe?: DependentesDetalhe;
+  conjunta?: boolean;
+  deducoes?: DeducoesInput;
+  deficiencia?: boolean;
+  anoAtividade?: number;
 }
 
 export interface ComparacaoResult {
@@ -1015,8 +1169,22 @@ export function compararRegimes(input: ComparacaoInput): ComparacaoResult {
   const custosEmpresa = sanitize(input.custosEmpresa ?? 0);
   const derramaTaxa = Math.min(Math.max(input.derrama ?? DERRAMA_MAX.value, 0), DERRAMA_MAX.value);
 
-  // Freelancer (recibos verdes).
-  const sim = simularIRSAnual({ brutoAnual: bruto, tipo: input.tipo, irsJovemAno: input.irsJovemAno, despesasJustificadas: despesas });
+  // Freelancer (recibos verdes) — com a MESMA situação pessoal que se aplica
+  // aos outros cenários. Antes, `dependentes` parava aqui: o líquido dos
+  // recibos verdes não se movia um cêntimo entre 0 e 4 dependentes, e o botão
+  // que o utilizador carregava decidia a resposta que o produto dava.
+  const sim = simularIRSAnual({
+    brutoAnual: bruto,
+    tipo: input.tipo,
+    irsJovemAno: input.irsJovemAno,
+    despesasJustificadas: despesas,
+    dependentes: input.dependentes,
+    dependentesDetalhe: input.dependentesDetalhe,
+    conjunta: input.conjunta,
+    deducoes: input.deducoes,
+    deficiencia: input.deficiencia,
+    anoAtividade: input.anoAtividade,
+  });
   // Base de SS com o teto de 12×IAS (coerente com calcular/simularIRSAnual): sem
   // este limite, a SS do independente ficava sobrestimada para rendimentos altos.
   const baseSSAnual = Math.min(bruto * SS_COEFICIENTE.servicos.value, SS_BASE_MAX_MENSAL.value * 12);
@@ -1025,9 +1193,7 @@ export function compararRegimes(input: ComparacaoInput): ComparacaoResult {
 
   // Empresa (sociedade): IRC progressivo PME + derrama, depois dividendos.
   const lucroTributavel = Math.max(0, bruto - despesas - custosEmpresa);
-  const irc =
-    IRC_TAXA_PME.value * Math.min(lucroTributavel, IRC_LIMITE_PME.value) +
-    IRC_TAXA_GERAL.value * Math.max(0, lucroTributavel - IRC_LIMITE_PME.value);
+  const irc = coletaIRC(lucroTributavel);
   const derrama = derramaTaxa * lucroTributavel;
   const aposIRC = Math.max(0, lucroTributavel - irc - derrama);
   const dividendos = DIVIDENDOS_TAXA.value * aposIRC;

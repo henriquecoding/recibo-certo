@@ -6,7 +6,6 @@
  * adaptadores exportados no fim deste ficheiro, mas partilham esta execução.
  */
 import {
-  ADICIONAL_SOLIDARIEDADE,
   DEDUCAO_ESPECIFICA_DEPENDENTE,
   DERRAMA_MAX,
   DIVIDENDOS_TAXA,
@@ -35,7 +34,7 @@ import {
   TA_VIATURAS_ELETRICA_ACIMA_LIMITE,
   TA_VIATURAS_PHEV,
 } from "./fiscal-data";
-import { calcularAbatimentoMinimoExistencia, irsProgressivo } from "./fiscal";
+import { adicionalSolidariedade, calcularAbatimentoMinimoExistencia, coletaIRC, irsProgressivo } from "./fiscal";
 import type { ParametrosFiscaisRegiao } from "./incentivos-regioes";
 import { calculateLegacyPayroll } from "./payroll-simulator-legacy-adapter";
 
@@ -275,17 +274,6 @@ function marginalRate(taxableIncome: number): number {
   return ESCALOES_IRS.value.at(-1)?.taxa ?? 0;
 }
 
-function solidarity(taxableIncome: number): number {
-  const middle = Math.max(
-    0,
-    Math.min(taxableIncome, ADICIONAL_SOLIDARIEDADE.limiar2.value)
-      - ADICIONAL_SOLIDARIEDADE.limiar1.value,
-  );
-  const upper = Math.max(0, taxableIncome - ADICIONAL_SOLIDARIEDADE.limiar2.value);
-  return middle * ADICIONAL_SOLIDARIEDADE.taxa1.value
-    + upper * ADICIONAL_SOLIDARIEDADE.taxa2.value;
-}
-
 function annualManagerTax(
   salaryGross: number,
   dividends: number,
@@ -311,7 +299,7 @@ function annualManagerTax(
     householdTaxpayers: 1,
   });
   const taxable = Math.max(0, taxableBeforeMinimum - minimum.abatement);
-  return cent(irsProgressivo(taxable) + solidarity(taxable));
+  return cent(irsProgressivo(taxable) + adicionalSolidariedade(taxable));
 }
 
 function calculateCompany(input: CompanySimulationInput): ResultadoEmpresa {
@@ -328,12 +316,8 @@ function calculateCompany(input: CompanySimulationInput): ResultadoEmpresa {
       + amount(input.custoRepresentanteFiscal),
   );
   const lucroTributavel = Math.max(0, amount(input.faturacao) - totalCustos);
-  const coleta = cent(
-    lucroTributavel <= IRC_LIMITE_PME.value
-      ? lucroTributavel * input.ircPME
-      : IRC_LIMITE_PME.value * input.ircPME
-        + (lucroTributavel - IRC_LIMITE_PME.value) * input.ircGeral,
-  );
+  // Escala progressiva PME partilhada com `compararRegimes` — ver `coletaIRC`.
+  const coleta = cent(coletaIRC(lucroTributavel, input.ircPME, input.ircGeral));
 
   const beneficios = calculatePotentialBenefits(
     coleta,

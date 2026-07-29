@@ -15,6 +15,7 @@ import {
   type EstadoCivilRet,
   type Regiao,
 } from "./fiscal-data";
+import { calcularTrabalhoNoturno } from "./fiscal-laboral";
 
 export type PayrollRubricType =
   | "seniority"
@@ -74,7 +75,7 @@ export const PAYROLL_RUBRIC_CATALOGUE: readonly PayrollRubricMeta[] = [
   { type: "schedule_exemption", label: "Isenção de horário", shortLabel: "Isenção de horário", description: "Compensação prevista no contrato ou IRCT.", category: "fixed", editor: "amount", source: "CT art. 265.º" },
   { type: "shift_allowance", label: "Subsídio de turno", shortLabel: "Turno", description: "Complemento remuneratório por trabalho por turnos.", category: "fixed", editor: "amount", source: "CIRS art. 2.º · CRC art. 46.º" },
   { type: "commission", label: "Comissões", shortLabel: "Comissões", description: "Remuneração variável por objetivos ou vendas.", category: "variable", editor: "amount", source: "CIRS art. 2.º · CRC art. 46.º" },
-  { type: "night_work", label: "Trabalho noturno", shortLabel: "Trabalho noturno", description: "Insere o acréscimo já apurado pelo contrato ou IRCT.", category: "time", editor: "amount", source: "CT art. 266.º" },
+  { type: "night_work", label: "Trabalho noturno", shortLabel: "Trabalho noturno", description: "Horas prestadas entre as 22h e as 7h — o acréscimo de 25% é calculado a partir da retribuição horária.", category: "time", editor: "hours", source: "CT arts. 223.º, 266.º e 271.º" },
   { type: "performance_award", label: "Prémio de desempenho", shortLabel: "Prémio", description: "A incidência de SS depende da regularidade objetiva.", category: "variable", editor: "award", source: "CRC arts. 46.º–47.º" },
   { type: "overtime_workday_first", label: "Hora extra · 1.ª em dia útil", shortLabel: "Extra 25%", description: "Até 100 horas anuais, acréscimo de 25%.", category: "time", editor: "hours", source: "CT arts. 268.º e 271.º" },
   { type: "overtime_workday_following", label: "Hora extra · seguintes em dia útil", shortLabel: "Extra 37,5%", description: "Até 100 horas anuais, acréscimo de 37,5%.", category: "time", editor: "hours", source: "CT arts. 268.º e 271.º" },
@@ -109,7 +110,6 @@ const FIXED_SUBJECT_TYPES = new Set<PayrollRubricType>([
   "schedule_exemption",
   "shift_allowance",
   "commission",
-  "night_work",
   "other_taxable",
 ]);
 
@@ -146,6 +146,7 @@ export function buildLegacyPayrollInput(
   let regularAwards = 0;
   let nonRegularAwards = 0;
   let otherSubject = 0;
+  let nightWork = 0;
   let holiday = 0;
   let christmas = 0;
   let absenceHours = 0;
@@ -169,6 +170,18 @@ export function buildLegacyPayrollInput(
     } else if (rubric.type === "travel_foreign") {
       foreignDays += positive(rubric.days);
       foreignDaily += positive(rubric.dailyAmount) * positive(rubric.days);
+    } else if (rubric.type === "night_work") {
+      // O acréscimo do Art. 266.º CALCULA-SE a partir das horas noturnas e da
+      // retribuição horária — deixou de ser um valor que o utilizador tem de
+      // trazer já apurado de fora. Um `amount` continua a ser aceite para quem
+      // só conhece o total do recibo (ex.: importação de PDF).
+      nightWork += positive(rubric.amount) > 0
+        ? positive(rubric.amount)
+        : calcularTrabalhoNoturno({
+            retribuicaoMensal: context.baseSalary,
+            horasNoturnas: positive(rubric.hours),
+            horasSemanais: context.weeklyHours,
+          }).valorAcrescimo;
     } else {
       const index = OVERTIME_INDEX[rubric.type];
       if (index !== undefined) overtime[index] += positive(rubric.hours);
@@ -200,7 +213,7 @@ export function buildLegacyPayrollInput(
     subsidioNatalDireitoTotal: rubrics.some((rubric) => rubric.id === "auto-christmas-duodecimo")
       ? positive(context.baseSalary)
       : christmas,
-    outrosRendimentosSujeitos: otherSubject + regularAwards,
+    outrosRendimentosSujeitos: otherSubject + regularAwards + nightWork,
     ajudasNacionalDias: nationalDays,
     ajudasNacionalValorDia: nationalDays > 0 ? nationalDaily / nationalDays : 0,
     ajudasEstrangeiroDias: foreignDays,
