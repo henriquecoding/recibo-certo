@@ -75,7 +75,9 @@ const REGION_OPTIONS: readonly [Regiao, string][] = [
 ];
 
 const inputClass = "w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm font-medium tabular-nums text-stone-800 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100";
-const segmentClass = (active: boolean) => `rounded-xl px-3 py-2 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-brand/20 ${active ? "bg-white text-brand shadow-sm dark:bg-stone-700 dark:text-brand-light" : "text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200"}`;
+// Alvo de toque ≥ 36px e texto centrado que pode quebrar: em ~360px estes
+// controlos segmentados chegam a ter 3–5 colunas dentro da mesma linha.
+const segmentClass = (active: boolean) => `flex min-h-[36px] items-center justify-center rounded-xl px-2 py-2 text-center text-xs font-semibold leading-tight transition focus:outline-none focus:ring-2 focus:ring-brand/20 sm:px-3 ${active ? "bg-white text-brand shadow-sm dark:bg-stone-700 dark:text-brand-light" : "text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200"}`;
 
 function parseNumber(value: string): number {
   return Math.max(0, parseNumericDraft(value) ?? 0);
@@ -542,7 +544,7 @@ export function MotorReciboVencimento() {
     <div className="my-8 space-y-5">
       <div className="overflow-hidden rounded-3xl border border-brand/15 bg-gradient-to-br from-white to-brand-light/50 shadow-card dark:from-stone-900 dark:to-brand/5">
         <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[1fr_auto] lg:items-center">
-          <div>
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-brand px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white"><Sparkle size={11} /> Novo motor de recibo</span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/15 bg-white px-2.5 py-1 text-[10px] font-semibold text-brand-dark dark:bg-stone-900 dark:text-brand-light"><ShieldCheck size={11} /> Explicado por rubrica</span>
@@ -565,7 +567,10 @@ export function MotorReciboVencimento() {
       )}
 
       <div className="grid items-start gap-5 lg:grid-cols-12">
-        <div className="space-y-5 lg:col-span-7">
+        {/* min-w-0: sem isto, o conteúdo de largura mínima intrínseca (ex.: a
+            barra de filtros do construtor) alarga a coluna da grelha e provoca
+            scroll horizontal em toda a página no telemóvel. */}
+        <div className="min-w-0 space-y-5 lg:col-span-7">
           <section className="rounded-3xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-6">
             <SectionHeader step="Passo 01" icon={<LayoutGrid size={17} />} title="Contexto do recibo" hint="Só pedimos dados que mudam a retenção ou o cálculo das rubricas." />
 
@@ -607,7 +612,10 @@ export function MotorReciboVencimento() {
             </div>
 
             <div className={`mt-4 rounded-2xl border p-4 ${youthIrs ? "border-brand/30 bg-brand-light/40 dark:bg-brand/10" : "border-stone-200 dark:border-stone-700"}`}>
-              <label className="flex cursor-pointer items-center gap-2.5"><input type="checkbox" checked={youthIrs} onChange={(event) => setYouthIrs(event.target.checked)} className="h-4 w-4 accent-brand" /><Sparkle size={14} className="text-brand" /><span className="text-xs font-semibold text-stone-700 dark:text-stone-200">Pedi à entidade empregadora para aplicar IRS Jovem</span><InfoTip label="Confirmação necessária">O regime não é ativado apenas pela idade. Esta opção confirma que o benefício foi invocado perante a entidade empregadora.</InfoTip></label>
+              <div className="flex items-start gap-2.5">
+                <label className="flex min-w-0 shrink cursor-pointer items-start gap-2.5"><input type="checkbox" checked={youthIrs} onChange={(event) => setYouthIrs(event.target.checked)} className="mt-0.5 h-4 w-4 flex-none accent-brand" /><Sparkle size={14} className="mt-0.5 flex-none text-brand" /><span className="min-w-0 text-xs font-semibold leading-snug text-stone-700 dark:text-stone-200">Pedi à entidade empregadora para aplicar IRS Jovem</span></label>
+                <span className="mt-0.5 flex-none"><InfoTip label="Confirmação necessária">O regime não é ativado apenas pela idade. Esta opção confirma que o benefício foi invocado perante a entidade empregadora.</InfoTip></span>
+              </div>
               {youthIrs && <div className="mt-3"><span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-stone-400">Ano do benefício</span><div className="grid grid-cols-5 gap-1 rounded-xl bg-white/70 p-1 dark:bg-stone-800">{Array.from({ length: 10 }, (_, index) => index + 1).map((value) => <button key={value} type="button" onClick={() => setYouthYear(value)} className={segmentClass(youthYear === value)}>{value}.º</button>)}</div></div>}
             </div>
           </section>
@@ -618,8 +626,10 @@ export function MotorReciboVencimento() {
             <div className="rounded-2xl border border-brand/20 bg-brand-light/35 p-4 dark:bg-brand/5">
               <div className="mb-3 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-brand shadow-sm dark:bg-stone-800"><Wallet size={15} /></span><div><h4 className="text-sm font-semibold text-stone-800 dark:text-stone-100">Vencimento base</h4><p className="text-[10px] text-stone-400">Remuneração mensal contratada</p></div></div><span className="rounded-full bg-brand px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-white">Principal</span></div>
               <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-                {mode === "gross" ? <MoneyField id="gross-salary" label="Salário bruto" value={gross} onChange={setGross} /> : <MoneyField id="target-net" label="Líquido que queres receber" value={target} onChange={setTarget} hint="objetivo" />}
-                <div><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Modo</span><div className="grid grid-cols-2 gap-1 rounded-xl bg-white p-1 dark:bg-stone-800"><button type="button" onClick={() => setMode("gross")} className={segmentClass(mode === "gross")}>Bruto → líquido</button><button type="button" onClick={() => setMode("target")} className={segmentClass(mode === "target")}>Quero receber</button></div></div>
+                <div className="min-w-0">
+                  {mode === "gross" ? <MoneyField id="gross-salary" label="Salário bruto" value={gross} onChange={setGross} /> : <MoneyField id="target-net" label="Líquido que queres receber" value={target} onChange={setTarget} hint="objetivo" />}
+                </div>
+                <div className="min-w-0"><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Modo</span><div className="grid grid-cols-2 gap-1 rounded-xl bg-white p-1 dark:bg-stone-800"><button type="button" onClick={() => setMode("gross")} className={segmentClass(mode === "gross")}>Bruto → líquido</button><button type="button" onClick={() => setMode("target")} className={segmentClass(mode === "target")}>Quero receber</button></div></div>
               </div>
               {mode === "target" && <p className={`mt-2 text-[11px] ${targetSolution?.reached ? "text-brand-dark dark:text-brand-light" : "text-alert-text"}`}>{targetSolution?.reached ? `Para chegar a ${fmt(parseNumber(target))}, o salário-base estimado é ${fmt(targetGross ?? 0)}.` : "O objetivo indicado excede o intervalo suportado por esta simulação."}</p>}
             </div>
@@ -635,7 +645,7 @@ export function MotorReciboVencimento() {
           </section>
         </div>
 
-        <div className="lg:col-span-5">
+        <div className="min-w-0 lg:col-span-5">
           <ResultadoMotorRecibo
             result={calculation.result}
             lines={calculation.lines}

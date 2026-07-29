@@ -97,72 +97,71 @@ function RubricEditor({ rubric, onChange, onRemove }: {
 
   return (
     <article className={`group rounded-2xl border bg-white p-4 transition dark:bg-stone-900 ${incomplete ? "border-alert-border" : "border-stone-200 hover:border-stone-300 dark:border-stone-800 dark:hover:border-stone-700"}`}>
+      {/* Cabeçalho numa linha e campos a toda a largura do cartão: manter o
+          ícone como coluna à esquerda dos campos deixava-os com ~200px em
+          ecrãs de 320px e partia os controlos segmentados. */}
       <div className="flex items-start gap-3">
         <span className="mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-xl bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-300">
           <Receipt size={15} />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h4 className="text-sm font-semibold text-stone-800 dark:text-stone-100">{meta.label}</h4>
-              <p className="mt-0.5 text-[11px] leading-relaxed text-stone-400">{meta.description}</p>
-            </div>
-            <button
-              type="button"
-              onClick={onRemove}
-              aria-label={`Remover ${meta.label}`}
-              className="flex h-9 w-9 flex-none items-center justify-center rounded-lg text-stone-300 transition hover:bg-clay-bg hover:text-clay-text focus:outline-none focus:ring-2 focus:ring-clay-border dark:hover:bg-clay/20"
-            >
-              <Trash size={15} />
-            </button>
-          </div>
-
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            {(meta.editor === "amount" || meta.editor === "award") && (
-              <Field label="Montante" suffix="€" value={rubric.amount} onChange={(amount) => onChange({ ...rubric, amount })} />
-            )}
-            {meta.editor === "hours" && (
-              <Field label="Horas" suffix="h" value={rubric.hours} onChange={(hours) => onChange({ ...rubric, hours })} />
-            )}
-            {meta.editor === "travel" && (
-              <>
-                <Field label="Dias" suffix="dias" value={rubric.days} inputMode="numeric" onChange={(days) => onChange({ ...rubric, days: Math.floor(days) })} />
-                <Field label="Valor por dia" suffix="€" value={rubric.dailyAmount} onChange={(dailyAmount) => onChange({ ...rubric, dailyAmount })} />
-              </>
-            )}
-            {meta.editor === "award" && (
-              <fieldset className="sm:col-span-2">
-                <legend className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Caráter para Segurança Social</legend>
-                <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-stone-100 p-1 dark:bg-stone-800">
-                  {([
-                    ["regular", "Regular"],
-                    ["not_regular", "Não regular"],
-                    ["unknown", "Não sei"],
-                  ] as const).map(([value, label]) => (
-                    <button
-                      key={value}
-                      type="button"
-                      aria-pressed={rubric.regularity === value}
-                      onClick={() => onChange({ ...rubric, regularity: value })}
-                      className={`rounded-lg px-2 py-2 text-[11px] font-semibold transition ${rubric.regularity === value ? "bg-white text-brand shadow-sm dark:bg-stone-700 dark:text-brand-light" : "text-stone-500 hover:text-stone-700 dark:text-stone-400"}`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </fieldset>
-            )}
-          </div>
-
-          <div className="mt-3 flex items-center justify-between gap-3 border-t border-stone-100 pt-2.5 text-[10px] dark:border-stone-800">
-            <span className="text-stone-400">{meta.source}</span>
-            {incomplete ? (
-              <span className="inline-flex items-center gap-1 font-semibold text-alert-text"><Warning size={11} /> Falta confirmar</span>
-            ) : (
-              <span className="font-semibold text-brand">Pronta</span>
-            )}
-          </div>
+          <h4 className="text-sm font-semibold text-stone-800 dark:text-stone-100">{meta.label}</h4>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-stone-400">{meta.description}</p>
         </div>
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Remover ${meta.label}`}
+          className="-mr-1 -mt-1 flex h-9 w-9 flex-none items-center justify-center rounded-lg text-stone-300 transition hover:bg-clay-bg hover:text-clay-text focus:outline-none focus:ring-2 focus:ring-clay-border dark:hover:bg-clay/20"
+        >
+          <Trash size={15} />
+        </button>
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        {(meta.editor === "amount" || meta.editor === "award") && (
+          <Field label="Montante" suffix="€" value={rubric.amount} onChange={(amount) => onChange({ ...rubric, amount })} />
+        )}
+        {meta.editor === "hours" && (
+          <Field label="Horas" suffix="h" value={rubric.hours} onChange={(hours) => onChange({ ...rubric, hours })} />
+        )}
+        {meta.editor === "travel" && (
+          <>
+            <Field label="Dias" suffix="dias" value={rubric.days} inputMode="numeric" onChange={(days) => onChange({ ...rubric, days: Math.floor(days) })} />
+            <Field label="Valor por dia" suffix="€" value={rubric.dailyAmount} onChange={(dailyAmount) => onChange({ ...rubric, dailyAmount })} />
+          </>
+        )}
+        {meta.editor === "award" && (
+          <fieldset className="min-w-0 sm:col-span-2">
+            <legend className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Caráter para Segurança Social</legend>
+            <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-stone-100 p-1 dark:bg-stone-800">
+              {([
+                ["regular", "Regular"],
+                ["not_regular", "Não regular"],
+                ["unknown", "Não sei"],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={rubric.regularity === value}
+                  onClick={() => onChange({ ...rubric, regularity: value })}
+                  className={`flex min-h-[36px] items-center justify-center rounded-lg px-1.5 py-2 text-center text-[11px] font-semibold leading-tight transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${rubric.regularity === value ? "bg-white text-brand shadow-sm dark:bg-stone-700 dark:text-brand-light" : "text-stone-500 hover:text-stone-700 dark:text-stone-400"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-stone-100 pt-2.5 text-[10px] dark:border-stone-800">
+        <span className="text-stone-400">{meta.source}</span>
+        {incomplete ? (
+          <span className="inline-flex items-center gap-1 font-semibold text-alert-text"><Warning size={11} /> Falta confirmar</span>
+        ) : (
+          <span className="font-semibold text-brand">Pronta</span>
+        )}
       </div>
     </article>
   );
@@ -207,23 +206,27 @@ export function ConstrutorRecibo({ rubrics, onChange, onPendingBenefit }: {
           <Plus size={15} /> Adicionar rubrica
         </button>
       ) : (
-        <div className="mt-3 overflow-hidden rounded-3xl border border-brand/25 bg-white shadow-float dark:bg-stone-900">
+        <div className="mt-3 min-w-0 overflow-hidden rounded-3xl border border-brand/25 bg-white shadow-float dark:bg-stone-900">
           <div className="border-b border-stone-100 p-4 dark:border-stone-800">
-            <div className="flex items-center justify-between gap-3">
-              <div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
                 <h4 className="text-sm font-semibold text-stone-800 dark:text-stone-100">Que rubrica aparece no recibo?</h4>
-                <p className="mt-0.5 text-[11px] text-stone-400">Escolhe o nome mais próximo. Pedimos os factos necessários a seguir.</p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-stone-400">Escolhe o nome mais próximo. Pedimos os factos necessários a seguir.</p>
               </div>
-              <button type="button" onClick={() => setAdding(false)} className="rounded-lg px-2 py-1 text-xs font-semibold text-stone-400 hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800">Fechar</button>
+              <button type="button" onClick={() => setAdding(false)} className="-mr-1 -mt-1 flex h-9 min-w-[36px] flex-none items-center justify-center rounded-lg px-2 text-xs font-semibold text-stone-400 transition hover:bg-stone-100 hover:text-stone-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 dark:hover:bg-stone-800">Fechar</button>
             </div>
-            <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1" role="tablist" aria-label="Filtrar rubricas">
-              <button type="button" onClick={() => setFilter("all")} className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold ${filter === "all" ? "bg-brand text-white" : "bg-stone-100 text-stone-500 dark:bg-stone-800"}`}>Todas</button>
+            {/* Os filtros quebram para várias linhas em vez de scroll horizontal:
+                num ecrã de ~360px a fila inteira mede ~560px e, em scroll, a
+                largura mínima intrínseca alargava a coluna da grelha e empurrava
+                a página toda para fora do ecrã. */}
+            <div className="mt-3 flex flex-wrap gap-1.5" role="group" aria-label="Filtrar rubricas">
+              <button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")} className={`inline-flex min-h-[32px] items-center rounded-full px-3 py-1.5 text-[11px] font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${filter === "all" ? "bg-brand text-white" : "bg-stone-100 text-stone-500 dark:bg-stone-800"}`}>Todas</button>
               {categories.map((category) => (
-                <button key={category} type="button" onClick={() => setFilter(category)} className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold ${filter === category ? "bg-brand text-white" : "bg-stone-100 text-stone-500 dark:bg-stone-800"}`}>{CATEGORY_LABEL[category]}</button>
+                <button key={category} type="button" aria-pressed={filter === category} onClick={() => setFilter(category)} className={`inline-flex min-h-[32px] items-center rounded-full px-3 py-1.5 text-[11px] font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${filter === category ? "bg-brand text-white" : "bg-stone-100 text-stone-500 dark:bg-stone-800"}`}>{CATEGORY_LABEL[category]}</button>
               ))}
             </div>
           </div>
-          <div className="grid max-h-[26rem] gap-2 overflow-y-auto p-3 sm:grid-cols-2">
+          <div className="grid max-h-[min(26rem,60dvh)] gap-2 overflow-y-auto overscroll-contain p-3 sm:grid-cols-2">
             {visible.map((item) => {
               const alreadyAdded = SINGLETON_TYPES.has(item.type) && rubrics.some((rubric) => rubric.type === item.type);
               return (
@@ -232,9 +235,9 @@ export function ConstrutorRecibo({ rubrics, onChange, onPendingBenefit }: {
                   type="button"
                   disabled={alreadyAdded}
                   onClick={() => add(item.type)}
-                  className="rounded-2xl border border-stone-100 p-3 text-left transition hover:border-brand/40 hover:bg-brand-light/40 focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:cursor-not-allowed disabled:opacity-45 dark:border-stone-800 dark:hover:bg-brand/5"
+                  className="min-w-0 rounded-2xl border border-stone-100 p-3 text-left transition hover:border-brand/40 hover:bg-brand-light/40 focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:cursor-not-allowed disabled:opacity-45 dark:border-stone-800 dark:hover:bg-brand/5"
                 >
-                  <span className="flex items-center justify-between gap-2 text-xs font-semibold text-stone-700 dark:text-stone-200"><span>{item.label}</span>{alreadyAdded && <span className="text-[9px] font-semibold text-brand">Adicionada</span>}</span>
+                  <span className="flex items-start justify-between gap-2 text-xs font-semibold text-stone-700 dark:text-stone-200"><span className="min-w-0">{item.label}</span>{alreadyAdded && <span className="flex-none text-[9px] font-semibold text-brand">Adicionada</span>}</span>
                   <span className="mt-1 block text-[10px] leading-relaxed text-stone-400">{item.description}</span>
                 </button>
               );

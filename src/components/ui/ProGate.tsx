@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Lock, Sparkle } from "@/components/ui/Icons";
 import { useSubscricao } from "@/lib/stripe/subscription";
@@ -32,8 +32,18 @@ export default function ProGate({
 }) {
   const { pode, carregado } = useSubscricao();
 
+  // O estado da subscrição vive num provider acima e é preenchido de forma
+  // assíncrona. Como esta página tem ilhas `next/dynamic({ ssr:false })`, o
+  // React pode hidratar esta subárvore DEPOIS de o provider já ter carregado —
+  // e então o primeiro render do cliente (gate fechado) não coincidia com o
+  // HTML do servidor (gate aberto), partindo a hidratação da página inteira.
+  // Este `montado` é local: o seu efeito só corre depois de este componente
+  // hidratar, pelo que o primeiro render é sempre igual ao do servidor.
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
+
   // Enquanto o estado não carrega (ou a permissão existe), mostra o conteúdo real.
-  if (!carregado || pode(requer)) return <>{children}</>;
+  if (!montado || !carregado || pode(requer)) return <>{children}</>;
 
   return (
     <div className={`relative overflow-hidden rounded-2xl border border-stone-100 dark:border-stone-800 ${className}`}>
