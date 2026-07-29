@@ -31,6 +31,8 @@ import {
   SIFIDE_TAXA_INCREMENTAL,
   SS_DEPENDENTE,
   TA_AGRAVAMENTO_PREJUIZO,
+  TA_ELETRICA_LIMITE_CUSTO,
+  TA_THRESHOLDS,
   TA_AJUDAS_CUSTO,
   TA_NAO_DOCUMENTADAS,
   TA_REPRESENTACAO,
@@ -216,6 +218,36 @@ const TA_RATE: Record<TipoViaturaEmpresa, number> = {
   comb_medio: TA_VIATURAS_COMBUSTAO.value.ate45000,
   comb_alto: TA_VIATURAS_COMBUSTAO.value.acima45000,
 };
+
+/**
+ * Taxa de tributação autónoma de uma viatura a partir do seu CUSTO DE
+ * AQUISIÇÃO (Art. 88.º n.ºs 3 e 20 CIRC).
+ *
+ * O simulador pede o escalão ao utilizador (`TipoViaturaEmpresa`), o que
+ * obriga a saber de cor os limites de 37 500 € e 45 000 €. Esta função
+ * deriva-o do preço da viatura — incluindo a regra que apanha muita gente
+ * de surpresa: elétricas acima de 62 500 € de custo de aquisição NÃO são
+ * isentas, pagam 10% (n.º 20).
+ *
+ * Veio do motor de TA duplicado que vivia em `fiscal.ts`, para a capacidade
+ * não desaparecer com a duplicação.
+ */
+export function taxaTAViatura(
+  tipo: "combustao" | "phev" | "eletrica",
+  custoAquisicao: number,
+): number {
+  if (tipo === "eletrica") {
+    return custoAquisicao > TA_ELETRICA_LIMITE_CUSTO.value
+      ? TA_VIATURAS_ELETRICA_ACIMA_LIMITE.value
+      : TA_VIATURAS_ELETRICA.value;
+  }
+  const tabela = tipo === "phev" ? TA_VIATURAS_PHEV.value : TA_VIATURAS_COMBUSTAO.value;
+  const { t1, t2 } = TA_THRESHOLDS.value;
+  const custo = amount(custoAquisicao);
+  if (custo <= t1) return tabela.ate37500;
+  if (custo <= t2) return tabela.ate45000;
+  return tabela.acima45000;
+}
 
 export function calcularTributacaoAutonomaEmpresa(
   encargosViatura: number,

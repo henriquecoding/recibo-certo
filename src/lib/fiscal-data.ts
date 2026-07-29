@@ -772,8 +772,13 @@ export const DEDUCAO_ESPECIFICA_IAS_MULT = 8.54;
 /**
  * Dedução específica da categoria B. No regime simplificado NÃO é uma subtração
  * direta ao coletável (o coeficiente já presume as despesas): conta como despesa
- * automaticamente justificada para a regra dos 15%. Em alternativa, contam as
- * contribuições à SS que excedam 10% do rendimento bruto, se superiores.
+ * automaticamente justificada para a regra dos 15%.
+ *
+ * Em alternativa contam as contribuições obrigatórias para a Segurança Social —
+ * as TOTAIS, a maior das duas (Art. 31.º n.º 13 al. a). Este comentário dizia
+ * «que excedam 10% do rendimento bruto», o que é outra coisa: a dedução autónoma
+ * do n.º 2. O código sempre esteve certo; era o comentário que convidava alguém
+ * a «arranjá-lo».
  */
 export const DEDUCAO_ESPECIFICA_CATB = sv(
   Math.round(Math.max(DEDUCAO_ESPECIFICA_FLOOR, DEDUCAO_ESPECIFICA_IAS_MULT * IAS.value) * 100) / 100,

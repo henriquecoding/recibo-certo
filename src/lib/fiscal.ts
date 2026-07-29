@@ -44,16 +44,6 @@ import {
   IAS_VALUE,
   CATEGORIA_F,
   // Tributação Autónoma
-  TA_THRESHOLDS,
-  TA_VIATURAS_COMBUSTAO,
-  TA_VIATURAS_PHEV,
-  TA_VIATURAS_ELETRICA,
-  TA_VIATURAS_ELETRICA_ACIMA_LIMITE,
-  TA_ELETRICA_LIMITE_CUSTO,
-  TA_REPRESENTACAO,
-  TA_AJUDAS_CUSTO,
-  TA_NAO_DOCUMENTADAS,
-  TA_AGRAVAMENTO_PREJUIZO,
   // Deficiência e extras
   EXCLUSAO_DEFICIENCIA_TAXA,
   EXCLUSAO_DEFICIENCIA_MAX,
@@ -1260,121 +1250,23 @@ export function compararRegimes(input: ComparacaoInput): ComparacaoResult {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-//  TRIBUTAÇÃO AUTÓNOMA — IRC (Art. 88.º CIRC)
+//  TRIBUTAÇÃO AUTÓNOMA — vive em `fiscal-empresa.ts`
 //
-//  Aplica-se sobre encargos específicos de empresas (encargos anuais de
-//  viaturas, representação, ajudas de custo, despesas não documentadas),
-//  independentemente do IRC regular. O custo de aquisição da viatura
-//  determina o escalão; a base tributável são os encargos anuais.
+//  Havia aqui um segundo motor de TA, e os dois discordavam: este não
+//  aplicava o agravamento do Art. 88.º n.º 14 às despesas não documentadas,
+//  quando a norma manda agravar «as taxas de tributação autónoma previstas
+//  no presente artigo» sem excluir o n.º 1. Além disso não era usado por
+//  componente nenhum — só pelo seu próprio teste.
+//
+//  Duas implementações da mesma regra é exatamente o problema que o
+//  `fiscal-iva.ts` foi criado para resolver. Fica uma:
+//  `calcularTributacaoAutonomaEmpresa` em `fiscal-empresa.ts`.
+//
+//  A única peça que só existia aqui — derivar a taxa do CUSTO DE AQUISIÇÃO
+//  da viatura, incluindo o limite do Art. 88.º n.º 20 para as elétricas —
+//  passou para `taxaTAViatura()` em `fiscal-empresa.ts`, para a capacidade
+//  não se perder com a duplicação.
 // ─────────────────────────────────────────────────────────────────────
-
-export type TipoViatura = "combustao" | "phev" | "eletrica";
-
-export interface TAViaturaInput {
-  tipo: TipoViatura;
-  /** Custo de aquisição (determina o escalão/taxa). */
-  custoAquisicao: number;
-  /** Encargos anuais suportados (base tributável da TA). */
-  encargosAnuais: number;
-}
-
-export interface TributacaoAutonomaInput {
-  /** Lista de viaturas ligeiras de passageiros da empresa. */
-  viaturas?: TAViaturaInput[];
-  /** Despesas de representação do período (Art. 88.º, n.º 7). */
-  despesasRepresentacao?: number;
-  /** Ajudas de custo + km em viatura própria (Art. 88.º, n.º 9). */
-  ajudasCusto?: number;
-  /** Despesas não documentadas (Art. 88.º, n.º 1). */
-  despesasNaoDocumentadas?: number;
-  /**
-   * true se a empresa tem prejuízo fiscal no período — agrava a TA em +10 p.p.
-   * Exceção: ignorar o agravamento se primeirosTresAnos=true ou lucroRecente=true.
-   */
-  comPrejuizo?: boolean;
-  /** true nos primeiros 3 anos de atividade — isenta do agravamento de prejuízo. */
-  primeirosTresAnos?: boolean;
-  /** true se teve lucro em ≥ 1 dos 3 exercícios anteriores — isenta do agravamento. */
-  lucroRecente?: boolean;
-}
-
-export interface TributacaoAutonomaResult {
-  taViaturas: number;
-  taRepresentacao: number;
-  taAjudas: number;
-  taNaoDocumentadas: number;
-  subtotal: number;
-  agravamentoAplicado: boolean;
-  agravamento: number;
-  totalTA: number;
-  detalheViaturas: Array<{ tipo: TipoViatura; taxa: number; encargos: number; ta: number }>;
-}
-
-/** Devolve a taxa de TA para uma viatura dado o tipo e custo de aquisição. */
-function taxaTA(tipo: TipoViatura, custoAquisicao: number): number {
-  if (tipo === "eletrica") {
-    // Elétricas ≤ limite: isentas (0%). Acima do limite: 10% (Art. 88.º, n.º 20 CIRC).
-    return custoAquisicao > TA_ELETRICA_LIMITE_CUSTO.value
-      ? TA_VIATURAS_ELETRICA_ACIMA_LIMITE.value
-      : TA_VIATURAS_ELETRICA.value;
-  }
-  const tabela: TAViaturasTaxas = tipo === "phev" ? TA_VIATURAS_PHEV.value : TA_VIATURAS_COMBUSTAO.value;
-  const { t1, t2 } = TA_THRESHOLDS.value;
-  if (custoAquisicao <= t1) return tabela.ate37500;
-  if (custoAquisicao <= t2) return tabela.ate45000;
-  return tabela.acima45000;
-}
-
-/**
- * Calcula a Tributação Autónoma (Art. 88.º CIRC) de uma empresa.
- * Inclui viaturas (combustão, PHEV e elétrica), representação, ajudas de
- * custo e despesas não documentadas. Modela o agravamento por prejuízo fiscal.
- *
- * ESTIMATIVA — não cobre todas as situações (ex.: viaturas de mercadorias,
- * taxas especiais de setores regulados). Não substitui apuramento oficial.
- */
-export function calcularTributacaoAutonoma(
-  input: TributacaoAutonomaInput
-): TributacaoAutonomaResult {
-  const agravamentoIsento = !!input.primeirosTresAnos || !!input.lucroRecente;
-  const agravamento = input.comPrejuizo && !agravamentoIsento ? TA_AGRAVAMENTO_PREJUIZO.value : 0;
-
-  // Viaturas
-  const detalheViaturas: TributacaoAutonomaResult["detalheViaturas"] = [];
-  let taViaturas = 0;
-  for (const v of input.viaturas ?? []) {
-    const encargos = sanitize(v.encargosAnuais);
-    const taxa = taxaTA(v.tipo, sanitize(v.custoAquisicao));
-    const ta = encargos * (taxa + agravamento);
-    taViaturas += ta;
-    detalheViaturas.push({ tipo: v.tipo, taxa, encargos, ta });
-  }
-
-  const taRepresentacao =
-    sanitize(input.despesasRepresentacao ?? 0) * (TA_REPRESENTACAO.value + agravamento);
-  const taAjudas = sanitize(input.ajudasCusto ?? 0) * (TA_AJUDAS_CUSTO.value + agravamento);
-  const taNaoDocumentadas =
-    sanitize(input.despesasNaoDocumentadas ?? 0) * TA_NAO_DOCUMENTADAS.value;
-
-  const subtotal = taViaturas + taRepresentacao + taAjudas + taNaoDocumentadas;
-  const agravamentoTotal = agravamento > 0
-    ? (input.viaturas ?? []).reduce((s, v) => s + sanitize(v.encargosAnuais), 0) * agravamento
-      + sanitize(input.despesasRepresentacao ?? 0) * agravamento
-      + sanitize(input.ajudasCusto ?? 0) * agravamento
-    : 0;
-
-  return {
-    taViaturas,
-    taRepresentacao,
-    taAjudas,
-    taNaoDocumentadas,
-    subtotal,
-    agravamentoAplicado: agravamento > 0,
-    agravamento: agravamentoTotal,
-    totalTA: subtotal,
-    detalheViaturas,
-  };
-}
 
 // ─────────────────────────────────────────────────────────────────────
 //  RFAI — Regime Fiscal de Apoio ao Investimento (Art. 22.º–26.º CFI)

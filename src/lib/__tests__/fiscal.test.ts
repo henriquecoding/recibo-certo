@@ -13,7 +13,6 @@ import {
 } from "@/lib/fiscal-data";
 import {
   calcularAbatimentoMinimoExistencia,
-  calcularTributacaoAutonoma,
   simularDeclaracaoIRS,
   simularIRSAnual,
 } from "@/lib/fiscal";
@@ -431,20 +430,7 @@ describe("simularIRSAnual — IFICI aplica-se só ao rendimento elegível (Art. 
 });
 
 // ── TA de viaturas elétricas acima do limite — P0-06 da auditoria 2026 ──────
-describe("calcularTributacaoAutonoma — elétrica acima do limite de custo (Art. 88.º, n.º 20 CIRC)", () => {
-  it("isenta (0%) uma elétrica com custo de aquisição igual ao limite", () => {
-    const r = calcularTributacaoAutonoma({
-      viaturas: [{ tipo: "eletrica", custoAquisicao: TA_ELETRICA_LIMITE_CUSTO.value, encargosAnuais: 10_000 }],
-    });
-    expect(r.taViaturas).toBe(0);
-  });
-
-  it("já NÃO isenta (10%) uma elétrica com custo de aquisição acima do limite", () => {
-    const r = calcularTributacaoAutonoma({
-      viaturas: [
-        { tipo: "eletrica", custoAquisicao: TA_ELETRICA_LIMITE_CUSTO.value + 1, encargosAnuais: 10_000 },
-      ],
-    });
-    expect(r.taViaturas).toBeCloseTo(10_000 * TA_VIATURAS_ELETRICA_ACIMA_LIMITE.value, 2);
-  });
-});
+// O motor de TA duplicado que vivia em `fiscal.ts` foi eliminado (não era
+// usado por componente nenhum e discordava do de `fiscal-empresa.ts` sobre o
+// agravamento do Art. 88.º n.º 14). A regra do n.º 20 continua coberta, agora
+// contra `taxaTAViatura` — ver `fiscal-empresa-correcoes.test.ts`.

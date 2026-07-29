@@ -1,11 +1,19 @@
 import { describe, it, expect } from "vitest";
-import { simularEmpresaOpcoes, PERFIL_GERENTE_PADRAO } from "@/lib/fiscal-empresa";
+import {
+  simularEmpresaOpcoes,
+  taxaTAViatura,
+  PERFIL_GERENTE_PADRAO,
+} from "@/lib/fiscal-empresa";
 import {
   IAS,
   MOE_BASE_MINIMA_MENSAL,
   SS_DEPENDENTE,
   DEDUCAO_DEPENDENTE,
   IFICI_TAXA,
+  TA_ELETRICA_LIMITE_CUSTO,
+  TA_VIATURAS_ELETRICA_ACIMA_LIMITE,
+  TA_VIATURAS_COMBUSTAO,
+  TA_THRESHOLDS,
 } from "@/lib/fiscal-data";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -153,6 +161,51 @@ describe("subsídios de férias e Natal", () => {
     expect(m14.salGerente).toBeCloseTo((m12.salGerente / 12) * 14, 2);
     expect(m14.totalCustos).toBeGreaterThan(m12.totalCustos);
     expect(m14.mesesSalarioGerente).toBe(14);
+  });
+});
+
+describe("taxaTAViatura — a taxa deriva do custo de aquisição (Art. 88.º)", () => {
+  it("elétrica no limite é isenta; um euro acima paga 10% (n.º 20)", () => {
+    // A regra que apanha muita gente de surpresa: elétricas não são sempre
+    // isentas. Coberta antes pelo motor de TA duplicado, que foi eliminado.
+    expect(taxaTAViatura("eletrica", TA_ELETRICA_LIMITE_CUSTO.value)).toBe(0);
+    expect(taxaTAViatura("eletrica", TA_ELETRICA_LIMITE_CUSTO.value + 1)).toBe(
+      TA_VIATURAS_ELETRICA_ACIMA_LIMITE.value,
+    );
+  });
+
+  it("combustão sobe de escalão nos limites do Art. 88.º n.º 3", () => {
+    const { t1, t2 } = TA_THRESHOLDS.value;
+    expect(taxaTAViatura("combustao", t1)).toBe(TA_VIATURAS_COMBUSTAO.value.ate37500);
+    expect(taxaTAViatura("combustao", t1 + 1)).toBe(TA_VIATURAS_COMBUSTAO.value.ate45000);
+    expect(taxaTAViatura("combustao", t2 + 1)).toBe(TA_VIATURAS_COMBUSTAO.value.acima45000);
+  });
+});
+
+describe("agravamento por prejuízo (Art. 88.º n.º 14)", () => {
+  it("aplica-se também às despesas não documentadas", () => {
+    // A implementação duplicada em `fiscal.ts` não o fazia. A norma agrava
+    // «as taxas de tributação autónoma previstas no presente artigo», sem
+    // excluir o n.º 1.
+    const semPrejuizo = simularEmpresaOpcoes({ ...BASE, naoDocumentadas: 10_000 });
+    const comPrejuizo = simularEmpresaOpcoes({
+      ...BASE,
+      naoDocumentadas: 10_000,
+      emPrejuizo: true,
+      excecaoPrejuizo: false,
+    });
+    expect(comPrejuizo.ta.naoDocumentadas).toBeGreaterThan(semPrejuizo.ta.naoDocumentadas);
+    expect(comPrejuizo.ta.naoDocumentadas).toBeCloseTo(10_000 * 0.6, 2);
+  });
+
+  it("a exceção dos 3 primeiros anos / lucro recente desliga o agravamento", () => {
+    const r = simularEmpresaOpcoes({
+      ...BASE,
+      naoDocumentadas: 10_000,
+      emPrejuizo: true,
+      excecaoPrejuizo: true,
+    });
+    expect(r.ta.naoDocumentadas).toBeCloseTo(10_000 * 0.5, 2);
   });
 });
 
