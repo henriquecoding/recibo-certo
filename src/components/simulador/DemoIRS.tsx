@@ -4,8 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { m, AnimatePresence, useReducedMotion } from "motion/react";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import { pct } from "@/lib/format";
-import { ESCALOES_IRS, COEFICIENTE_POR_TIPO, DEDUCAO_ESPECIFICA_DEPENDENTE } from "@/lib/fiscal-data";
-import { simularIRSAnual, type SimulacaoInput, type SimulacaoIRS } from "@/lib/fiscal";
+import { ESCALOES_IRS, COEFICIENTE_POR_TIPO } from "@/lib/fiscal-data";
+import {
+  simularDeclaracaoIRS,
+  type DeclaracaoInput,
+  type DeclaracaoResult,
+  type SimulacaoIRS,
+} from "@/lib/fiscal";
 import FizLogo from "@/components/fiz/FizLogo";
 import { fizAtiva } from "@/lib/fiz/flag";
 import {
@@ -51,9 +56,17 @@ import {
 //  1. NÚMEROS REAIS. Cada perfil é um conjunto de ENTRADAS ilustrativas
 //     (rotuladas «Exemplo»); tudo o resto — coeficiente, regra dos 15%,
 //     escalões, deduções, mínimo de existência, saldo — sai de
-//     `simularIRSAnual`, o mesmo motor da ferramenta. Não há um único
+//     `simularDeclaracaoIRS`, o mesmo motor da ferramenta. Não há um único
 //     montante fiscal escrito à mão neste ficheiro. Se a lei mudar em
 //     `fiscal-data.ts`, a demonstração muda com ela.
+//
+//     A demo chamava o NÚCLEO (`simularIRSAnual`) e não a declaração. Como o
+//     núcleo trata as outras categorias como um número anónimo, o salário do
+//     perfil «casal» tinha de vir acompanhado dos factos do artigo 70.º
+//     escritos à mão aqui — e escritos à mão ficam desatualizados: estava lá
+//     uma dedução específica de 4 104 €, o piso legado anterior à indexação ao
+//     IAS. Agora o salário é declarado como salário e é a declaração que monta
+//     os factos, com a dedução do Art. 25.º e o artigo 70.º incluídos.
 //
 //  2. UMA NARRATIVA EM CINCO ATOS. O cálculo desenrola-se por tempos —
 //     quem é o caso, como o bruto vira coletável, como os escalões mordem,
@@ -88,7 +101,7 @@ interface PerfilDemo {
   Icon: React.ComponentType<{ size?: number; className?: string }>;
   /** A pergunta a que este perfil responde — abre o primeiro ato. */
   pergunta: string;
-  entrada: SimulacaoInput;
+  entrada: DeclaracaoInput;
 }
 
 const PERFIS: PerfilDemo[] = [
@@ -99,10 +112,12 @@ const PERFIS: PerfilDemo[] = [
     Icon: Laptop,
     pergunta: "Recebi por recibos verdes o ano todo. Sobra ou falta?",
     entrada: {
-      brutoAnual: 28_500,
-      tipo: "art151",
-      anoAtividade: 3,
-      retencoesPagas: 4_360,
+      independente: {
+        brutoAnual: 28_500,
+        tipo: "art151",
+        anoAtividade: 3,
+        retencoesPagas: 4_360,
+      },
       deducoes: { saude: 900, gerais: 1_400 },
     },
   },
@@ -113,30 +128,20 @@ const PERFIS: PerfilDemo[] = [
     Icon: Home,
     pergunta: "Somos dois, com filhos. Entregar em conjunto compensa?",
     entrada: {
-      brutoAnual: 34_000,
-      tipo: "art151",
-      anoAtividade: 5,
       conjunta: true,
       dependentes: 2,
-      outrosRendimentos: 21_000,
-      retencoesPagas: 9_800,
-      deducoes: { saude: 1_600, educacao: 2_200, gerais: 3_000 },
-      // Com tributação conjunta e rendimentos de outra categoria, o motor não
-      // consegue inferir os factos do Art. 70.º a partir do pedido — têm de
-      // ser dados, senão a decisão fica em `needs_input`.
-      //
-      // A dedução específica vem da fonte de verdade fiscal, não escrita à mão:
-      // estava aqui 4 104 € — o piso legado, anterior à indexação ao IAS — e a
-      // demo mostrava um abatimento calculado sobre um valor que já não existe.
-      minimoExistenciaFacts: {
-        eligibleIncome: true,
-        dependentTaxpayer: false,
-        grossIncome: 34_000,
-        specificDeductions: DEDUCAO_ESPECIFICA_DEPENDENTE.value,
-        householdGrossIncome: 55_000,
-        householdNonEnglobedIncome: 0,
-        householdTaxpayers: 2,
+      independente: {
+        brutoAnual: 34_000,
+        tipo: "art151",
+        anoAtividade: 5,
+        retencoesPagas: 9_800,
       },
+      // O segundo rendimento é o do cônjuge, e é um SALÁRIO. Declarado como
+      // tal, recebe a dedução específica do Art. 25.º e entra nos factos do
+      // artigo 70.º do próprio titular — coisas que se perdiam quando vinha
+      // como um número anónimo em `outrosRendimentos`.
+      titularB: { salarios: { bruto: 21_000 } },
+      deducoes: { saude: 1_600, educacao: 2_200, gerais: 3_000 },
     },
   },
   {
@@ -146,11 +151,13 @@ const PERFIS: PerfilDemo[] = [
     Icon: Receipt,
     pergunta: "Estou no início e com IRS Jovem. Quanto é que isso muda?",
     entrada: {
-      brutoAnual: 45_000,
-      tipo: "art151",
-      anoAtividade: 2,
-      irsJovemAno: 5,
-      retencoesPagas: 6_100,
+      independente: {
+        brutoAnual: 45_000,
+        tipo: "art151",
+        anoAtividade: 2,
+        irsJovemAno: 5,
+        retencoesPagas: 6_100,
+      },
       deducoes: { saude: 500, gerais: 1_100 },
     },
   },
@@ -164,13 +171,15 @@ const PERFIS: PerfilDemo[] = [
     // Uma demonstração em que todos os perfis dão reembolso mentiria.
     pergunta: "Quase não me retêm nada. O que é que me espera em junho?",
     entrada: {
-      brutoAnual: 96_000,
-      tipo: "art151",
-      anoAtividade: 6,
-      regimeContabilidade: "organizada",
-      despesasJustificadas: 34_000,
       dependentes: 1,
-      retencoesPagas: 6_000,
+      independente: {
+        brutoAnual: 96_000,
+        tipo: "art151",
+        anoAtividade: 6,
+        regimeContabilidade: "organizada",
+        despesasJustificadas: 34_000,
+        retencoesPagas: 6_000,
+      },
       deducoes: { saude: 1_500, gerais: 2_500 },
       ppr: { valor: 2_000, escalaoIdade: "de35a50" },
     },
@@ -226,8 +235,9 @@ function rotuloAnoAtividade(ano: number | undefined, reducao: number): string {
   return "3.º ou seguinte";
 }
 
-function AtoPerfil({ perfil, sim }: { perfil: PerfilDemo; sim: SimulacaoIRS }) {
+function AtoPerfil({ perfil, decl }: { perfil: PerfilDemo; decl: DeclaracaoResult }) {
   const e = perfil.entrada;
+  const sim = decl.englobamento;
   const organizada = sim.regimeContabilidade === "organizada";
 
   const factos: { Icon: typeof Wallet; rotulo: string; valor: string }[] = [
@@ -241,9 +251,13 @@ function AtoPerfil({ perfil, sim }: { perfil: PerfilDemo; sim: SimulacaoIRS }) {
       : {
           Icon: Scale,
           rotulo: "Coeficiente da atividade",
-          valor: `${num(COEFICIENTE_POR_TIPO[e.tipo], 2)} · Art. 31.º`,
+          valor: `${num(COEFICIENTE_POR_TIPO[e.independente?.tipo ?? "art151"], 2)} · Art. 31.º`,
         },
-    { Icon: Calendar, rotulo: "Ano de atividade", valor: rotuloAnoAtividade(e.anoAtividade, sim.reducaoAno) },
+    {
+      Icon: Calendar,
+      rotulo: "Ano de atividade",
+      valor: rotuloAnoAtividade(e.independente?.anoAtividade, sim.reducaoAno),
+    },
   ];
   if (sim.conjunta || (e.dependentes ?? 0) > 0) {
     factos.push({
@@ -257,10 +271,16 @@ function AtoPerfil({ perfil, sim }: { perfil: PerfilDemo; sim: SimulacaoIRS }) {
         .join(" · "),
     });
   }
-  if (sim.outrosRendimentos > 0) {
-    factos.push({ Icon: Briefcase, rotulo: "Outros rendimentos", valor: eur0(sim.outrosRendimentos) });
+  // O bruto de cada categoria vem dos componentes da declaração — é o número
+  // que a pessoa reconhece («ganho 21 000 € nesse emprego»), não o líquido de
+  // deduções específicas que segue para o englobamento.
+  const salarios = decl.componentes
+    .filter((c) => c.anexo === "Anexo A")
+    .reduce((s, c) => s + c.bruto, 0);
+  if (salarios > 0) {
+    factos.push({ Icon: Briefcase, rotulo: "Outros rendimentos", valor: eur0(salarios) });
   }
-  factos.push({ Icon: Check, rotulo: "Retido na fonte", valor: eur0(sim.retencoesPagas) });
+  factos.push({ Icon: Check, rotulo: "Retido na fonte", valor: eur0(decl.retencoesTotais) });
 
   return (
     <m.div variants={palco} initial="oculto" animate="entra">
@@ -574,7 +594,8 @@ function AtoEscaloes({ sim, reduz }: { sim: SimulacaoIRS; reduz: boolean }) {
 
 // ── Ato 4 · O acerto ─────────────────────────────────────────────────────
 
-function AtoSaldo({ sim, reduz }: { sim: SimulacaoIRS; reduz: boolean }) {
+function AtoSaldo({ decl, reduz }: { decl: DeclaracaoResult; reduz: boolean }) {
+  const sim = decl.englobamento;
   const [desenhado, setDesenhado] = useState(reduz);
   useEffect(() => {
     if (reduz) return setDesenhado(true);
@@ -582,9 +603,12 @@ function AtoSaldo({ sim, reduz }: { sim: SimulacaoIRS; reduz: boolean }) {
     return () => cancelAnimationFrame(id);
   }, [reduz]);
 
-  const reembolso = sim.saldo >= 0;
-  const resultado = Math.abs(sim.saldo);
-  const fracaoIRS = sim.brutoAnual > 0 ? Math.min(1, sim.irsEstimado / sim.brutoAnual) : 0;
+  // O saldo e as retenções são da DECLARAÇÃO: o núcleo é chamado com as
+  // retenções a zero, porque quem as soma (todas as categorias) é a camada de
+  // cima. Ler `sim.saldo` aqui daria sempre «a pagar».
+  const reembolso = decl.saldo >= 0;
+  const resultado = Math.abs(decl.saldo);
+  const fracaoIRS = decl.rendimentoGlobal > 0 ? Math.min(1, decl.irsTotal / decl.rendimentoGlobal) : 0;
   const ficaContigo = 1 - fracaoIRS;
   const pctContigo = Math.round(ficaContigo * 100);
   const contigoLen = Math.max(0, ficaContigo - GAP) * C;
@@ -609,7 +633,7 @@ function AtoSaldo({ sim, reduz }: { sim: SimulacaoIRS; reduz: boolean }) {
           <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-2.5 py-1 text-[10px] font-semibold text-stone-500 dark:bg-stone-800 dark:text-stone-300">
             <Scale size={11} className="text-brand" />
             Taxa efetiva
-            <span className="tabular-nums text-stone-700 dark:text-stone-100">{pct(sim.taxaMediaEfetiva)}</span>
+            <span className="tabular-nums text-stone-700 dark:text-stone-100">{pct(decl.taxaEfetiva)}</span>
           </div>
         </m.div>
 
@@ -658,8 +682,8 @@ function AtoSaldo({ sim, reduz }: { sim: SimulacaoIRS; reduz: boolean }) {
         {[
           { rotulo: "Coleta", valor: sim.coletaBruta, fmt: eur0, tom: "neutro" as const },
           { rotulo: "Deduções à coleta", valor: deducoesColeta, fmt: eurNeg, tom: "in" as const },
-          { rotulo: "IRS estimado do ano", valor: sim.irsEstimado, fmt: eur0, tom: "out" as const },
-          { rotulo: "Retido na fonte", valor: sim.retencoesPagas, fmt: eurPos, tom: "in" as const },
+          { rotulo: "IRS estimado do ano", valor: decl.irsTotal, fmt: eur0, tom: "out" as const },
+          { rotulo: "Retido na fonte", valor: decl.retencoesTotais, fmt: eurPos, tom: "in" as const },
         ].map((r) => (
           <m.div
             key={r.rotulo}
@@ -710,7 +734,7 @@ const PASSOS_FIZ = [
   { Icon: ShieldCheck, texto: "Acompanhar as obrigações que se seguem" },
 ];
 
-function AtoFiz({ sim }: { sim: SimulacaoIRS }) {
+function AtoFiz({ decl }: { decl: DeclaracaoResult }) {
   return (
     <m.div variants={palco} initial="oculto" animate="entra">
       <TituloAto nota="Parceiro">E depois do número</TituloAto>
@@ -745,7 +769,7 @@ function AtoFiz({ sim }: { sim: SimulacaoIRS }) {
 
       <m.p variants={linha} className="mt-2 text-[10px] leading-relaxed text-stone-400">
         Escolhes campo a campo o que segue contigo — a começar pelo IRS estimado de{" "}
-        {eur0(sim.irsEstimado)}.
+        {eur0(decl.irsTotal)}.
       </m.p>
     </m.div>
   );
@@ -768,7 +792,8 @@ export default function DemoIRS() {
   const perfil = PERFIS[idxPerfil];
   // O motor corre uma vez por perfil. Não há aqui um único montante fiscal
   // escrito à mão: tudo o que se vê saiu de `simularIRSAnual`.
-  const sim = useMemo(() => simularIRSAnual(perfil.entrada), [perfil]);
+  const decl = useMemo(() => simularDeclaracaoIRS(perfil.entrada), [perfil]);
+  const sim = decl.englobamento;
 
   const ato = atos[Math.min(idxAto, atos.length - 1)];
   const emPausa = sobrevoo || parado;
@@ -811,15 +836,15 @@ export default function DemoIRS() {
     setIdxAto(0);
   };
 
-  const reembolso = sim.saldo >= 0;
+  const reembolso = decl.saldo >= 0;
 
   // Resumo do que está em cena, para leitores de ecrã. Não é uma região
   // "live": anunciar cada ato seria ruído. É conteúdo legível a pedido.
-  const resumoSR = `Exemplo: ${perfil.persona}. Rendimento bruto de ${eur0(sim.brutoAnual)}, rendimento coletável de ${eur0(
-    sim.rendimentoColetavel,
-  )}, IRS estimado de ${eur0(sim.irsEstimado)} e ${eur0(sim.retencoesPagas)} retidos na fonte — ${
+  const resumoSR = `Exemplo: ${perfil.persona}. Rendimento bruto de ${eur0(decl.rendimentoGlobal)}, rendimento coletável de ${eur0(
+    decl.rendimentoColetavel,
+  )}, IRS estimado de ${eur0(decl.irsTotal)} e ${eur0(decl.retencoesTotais)} retidos na fonte — ${
     reembolso ? "reembolso" : "imposto a pagar"
-  } de ${eur0(Math.abs(sim.saldo))}. Valores calculados pelo simulador a partir de entradas de exemplo.`;
+  } de ${eur0(Math.abs(decl.saldo))}. Valores calculados pelo simulador a partir de entradas de exemplo.`;
 
   return (
     <div
@@ -932,11 +957,11 @@ export default function DemoIRS() {
               exit={reduz ? undefined : { opacity: 0, transition: { duration: 0.15 } }}
               transition={{ duration: 0.2 }}
             >
-              {ato === "perfil" && <AtoPerfil perfil={perfil} sim={sim} />}
+              {ato === "perfil" && <AtoPerfil perfil={perfil} decl={decl} />}
               {ato === "coletavel" && <AtoColetavel sim={sim} reduz={reduz} />}
               {ato === "escaloes" && <AtoEscaloes sim={sim} reduz={reduz} />}
-              {ato === "saldo" && <AtoSaldo sim={sim} reduz={reduz} />}
-              {ato === "fiz" && <AtoFiz sim={sim} />}
+              {ato === "saldo" && <AtoSaldo decl={decl} reduz={reduz} />}
+              {ato === "fiz" && <AtoFiz decl={decl} />}
             </m.div>
           </AnimatePresence>
         </div>

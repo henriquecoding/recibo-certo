@@ -48,7 +48,14 @@ import {
   type Atividade,
   type Regiao,
 } from "@/lib/fiscal-data";
-import { calcular, simularIRSAnual, contribuicoesSSAnuais, type RegimeIVA, type SimulacaoIRS } from "@/lib/fiscal";
+import {
+  calcular,
+  simularDeclaracaoIRS,
+  contribuicoesSSAnuais,
+  type RegimeIVA,
+  type DeclaracaoResult,
+  type SimulacaoIRS,
+} from "@/lib/fiscal";
 import { gerarPrazos, diasAte } from "@/lib/prazos";
 import { useScrollTopOnStep } from "@/lib/scroll";
 import {
@@ -642,23 +649,31 @@ export default function ModoGuiado({
     ],
   );
 
-  const simPreview = useMemo(
+  // O salário do emprego é DECLARADO COMO SALÁRIO, não somado como um número
+  // anónimo. Ia cru para `outrosRendimentos`, que o núcleo trata como
+  // rendimento já líquido: perdia a dedução específica do Art. 25.º, o mínimo
+  // de existência do Art. 70.º, o IRS Jovem da categoria A e a exclusão do
+  // Art. 56.º-A. Para 30 000 € de salário e 15 000 € de recibos verdes eram
+  // 1 600,89 € de IRS a mais do que o simulador de IRS mostrava para o mesmo
+  // caso — dois números diferentes, no mesmo site, para a mesma pessoa.
+  const declPreview = useMemo(
     () =>
-      simularIRSAnual({
-        brutoAnual,
-        tipo: card.tipoFiscal,
-        anoAtividade,
+      simularDeclaracaoIRS({
+        independente: {
+          brutoAnual,
+          tipo: card.tipoFiscal,
+          anoAtividade,
+          irsJovemAno: jovemAno > 0 ? jovemAno : undefined,
+          coefOverride: efAtiv?.coef,
+          aplicaRegra15Override: efAtiv?.regra15,
+        },
+        // Englobamento (Art. 22.º CIRS): o IRS é único e incide sobre a soma.
+        salarios: acumulaEmprego && outrosRendimentos > 0 ? { bruto: outrosRendimentos } : undefined,
         irsJovemAno: jovemAno > 0 ? jovemAno : undefined,
         ifici,
         rnhAntigo,
         programaRegressar: exResidente,
         deficiencia,
-        coefOverride: efAtiv?.coef,
-        aplicaRegra15Override: efAtiv?.regra15,
-        // Englobamento (Art. 22.º CIRS): o IRS é único e incide sobre a soma.
-        // Faltava aqui — o guiado desligava a SS pela acumulação e calculava o
-        // imposto como se a pessoa só tivesse os recibos verdes.
-        outrosRendimentos: acumulaEmprego ? outrosRendimentos : 0,
         // As isenções de SS entram no cálculo do IRS através da regra dos 15%
         // (Art. 31.º n.º 13): sem elas, o motor credita contribuições que a
         // pessoa não paga.
@@ -695,6 +710,7 @@ export default function ModoGuiado({
   // incluído. O que se subtrai à faturação da atividade é só a parte marginal
   // que ela acrescenta; senão o "líquido dos recibos verdes" pagaria também o
   // imposto do emprego.
+  const simPreview = declPreview.englobamento;
   const irsAnual = simPreview.irsImputavelCatB;
   // Usa segSocial do calcular() que já aplica o coeficiente correto (bens=0,2 / serviços=0,7).
   // CPAS/CGA: quando isencaoCpas=true não há desconto para o Regime Geral → 0 para o simulador.
@@ -1088,6 +1104,8 @@ export default function ModoGuiado({
                 >
                   <ResultadoFinal
                     simAnual={simPreview}
+                    decl={declPreview}
+                    salarioBruto={acumulaEmprego ? outrosRendimentos : 0}
                     brutoAnual={brutoAnual}
                     liquidoAnual={liquidoAnual}
                     irsAnual={irsAnual}
@@ -2976,14 +2994,21 @@ function ResultadoFinal({
   despGerais,
   despRendas,
   simAnual,
+  decl,
+  salarioBruto,
   onIrParaSimuladorCompleto,
   onRecomecar,
   onVoltar,
   onProximosPassos,
   onGuardarRecibo,
 }: {
-  /** Apuramento anual já calculado pelo pai — não recalcular aqui. */
+  /** Núcleo do englobamento (detalhe da categoria B), calculado pelo pai. */
   simAnual: SimulacaoIRS;
+  /** Declaração completa: é dela que vem o IRS do agregado e a taxa efetiva. */
+  decl: DeclaracaoResult;
+  /** Salário BRUTO declarado, para a linha do englobamento. O núcleo só conhece
+   *  o líquido de deduções específicas, que não é o número que a pessoa reconhece. */
+  salarioBruto: number;
   brutoAnual: number;
   liquidoAnual: number;
   irsAnual: number;
@@ -3060,7 +3085,7 @@ function ResultadoFinal({
   }, [regimeIVA]);
 
   // ── Breakdowns para os stat cards ──
-  const pcIRS = brutoAnual > 0 ? simAnual.irsEstimado / brutoAnual : 0;
+  const pcIRS = brutoAnual > 0 ? decl.irsTotal / brutoAnual : 0;
   const pcSS = brutoAnual > 0 ? ssAnual / brutoAnual : 0;
   const pcIVA = (brutoAnual + ivaAnual) > 0 ? ivaAnual / (brutoAnual + ivaAnual) : 0;
   const liquidoMes = liquidoFinal / Math.max(1, recibosAno);
@@ -3130,7 +3155,7 @@ function ResultadoFinal({
             <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
               <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400">IRS anual</p>
               <p className="mt-1 font-display text-xl font-semibold tabular-nums text-stone-800 dark:text-stone-100">
-                {fmt(simAnual.irsEstimado)}
+                {fmt(decl.irsTotal)}
               </p>
               <p className="mt-0.5 text-[11px] tabular-nums text-stone-400">{pct(pcIRS)} do faturado</p>
             </div>
@@ -3176,7 +3201,7 @@ function ResultadoFinal({
             <EuroBreakdown
               faturacao={brutoAnual}
               liquido={Math.max(0, liquidoFinal)}
-              irs={simAnual.irsEstimado}
+              irs={decl.irsTotal}
               ss={ssAnual}
               iva={ivaAnual}
             />
@@ -3278,7 +3303,7 @@ function ResultadoFinal({
                           : simAnual.programaRegressarAplicado ? "IRS (escalões sobre 50% — Programa Regressar)"
                           : "IRS (após deduções)"
                       }
-                      valor={-simAnual.irsEstimado}
+                      valor={-decl.irsTotal}
                       corValor="text-red-500 dark:text-red-400"
                       nota="ver cálculo detalhado abaixo"
                       explicacao={
@@ -3296,7 +3321,7 @@ function ResultadoFinal({
                       corValor="text-brand"
                       isTotal
                       nota={`Taxa efectiva ${pct(taxaEfetiva)}`}
-                      explicacao={`Faturação (${fmt(brutoAnual)}) − SS (${fmt(ssAnual)}) − IRS (${fmt(simAnual.irsEstimado)}) = ${fmt(Math.max(0, liquidoFinal))}.`}
+                      explicacao={`Faturação (${fmt(brutoAnual)}) − SS (${fmt(ssAnual)}) − IRS (${fmt(decl.irsTotal)}) = ${fmt(Math.max(0, liquidoFinal))}.`}
                     />
                   </div>
                 </m.div>
@@ -3325,7 +3350,7 @@ function ResultadoFinal({
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-xs font-semibold tabular-nums text-red-500 dark:text-red-400">{fmt(simAnual.irsEstimado)}</span>
+            <span className="text-xs font-semibold tabular-nums text-red-500 dark:text-red-400">{fmt(decl.irsTotal)}</span>
             <ChevronDown size={13} className={`text-stone-400 transition-transform ${mostrarBloco2 ? "rotate-180" : ""}`} />
           </div>
         </button>
@@ -3408,14 +3433,14 @@ function ResultadoFinal({
             Sem esta linha o utilizador via o coletável saltar sem explicação;
             e antes desta versão nem sequer saltava: o salário não entrava no
             cálculo, e a atividade era tributada a começar no 1.º escalão. */}
-        {simAnual.outrosRendimentos > 0 && (
+        {salarioBruto > 0 && (
           <>
             <LinhaCalculo
               label="Salário anual (Categoria A)"
-              valor={simAnual.outrosRendimentos}
+              valor={salarioBruto}
               corValor="text-stone-700 dark:text-stone-200"
               nota="englobamento — Art. 22.º CIRS"
-              explicacao={`O IRS é um imposto único sobre a soma dos rendimentos. O teu salário (${fmt(simAnual.outrosRendimentos)}) ocupa os escalões mais baixos, e a atividade independente é tributada por cima — a uma taxa marginal mais alta. É por isso que os mesmos recibos verdes pagam mais IRS a quem também tem emprego.`}
+              explicacao={`O IRS é um imposto único sobre a soma dos rendimentos. O teu salário (${fmt(salarioBruto)}) ocupa os escalões mais baixos, e a atividade independente é tributada por cima — a uma taxa marginal mais alta. É por isso que os mesmos recibos verdes pagam mais IRS a quem também tem emprego.`}
             />
             <div className="border-t border-stone-100 dark:border-stone-800" />
           </>
@@ -3622,7 +3647,7 @@ function ResultadoFinal({
                 ? "IRS a pagar (mínimo de existência)"
                 : "IRS a pagar"
           }
-          valor={-simAnual.irsEstimado}
+          valor={-decl.irsTotal}
           corValor="text-red-500 dark:text-red-400"
           isTotal
           nota={
@@ -3632,7 +3657,7 @@ function ResultadoFinal({
           }
           explicacao={
             temDeducoes
-              ? `IRS final = coleta bruta (${fmt(simAnual.coletaBruta)}) − deduções à coleta (${fmt(deducoesColeta)}) = ${fmt(simAnual.irsEstimado)}.${simAnual.outrosRendimentos > 0 ? " Inclui o imposto do salário." : " Este é o valor que aparece no Bloco 1."}`
+              ? `IRS final = coleta bruta (${fmt(simAnual.coletaBruta)}) − deduções à coleta (${fmt(deducoesColeta)}) = ${fmt(decl.irsTotal)}.${salarioBruto > 0 ? " Inclui o imposto do salário." : " Este é o valor que aparece no Bloco 1."}`
               : `IRS final = coleta bruta calculada pelos escalões progressivos sobre o rendimento tributável de ${fmt(simAnual.rendimentoTributavel)}.`
           }
         />
@@ -3643,13 +3668,13 @@ function ResultadoFinal({
             e é a única que faz sentido subtrair para chegar a um líquido da
             atividade. Mostrar só uma delas deixava o outro número por
             explicar no ecrã ao lado. */}
-        {simAnual.outrosRendimentos > 0 && (
+        {salarioBruto > 0 && (
           <LinhaCalculo
             label="Parte imputável aos recibos verdes"
             valor={-simAnual.irsImputavelCatB}
             corValor="text-red-500 dark:text-red-400"
-            nota={`${fmt(simAnual.irsEstimado)} − o que pagarias só com o salário`}
-            explicacao={`Do IRS total do agregado (${fmt(simAnual.irsEstimado)}), esta é a parte que a atividade independente acrescenta: a diferença entre o imposto com e sem ela. É marginal, não proporcional — o salário já ocupa os escalões de baixo, por isso os recibos verdes são tributados por cima. É este o valor a comparar com as retenções que já fizeste.`}
+            nota={`${fmt(decl.irsTotal)} − o que pagarias só com o salário`}
+            explicacao={`Do IRS total do agregado (${fmt(decl.irsTotal)}), esta é a parte que a atividade independente acrescenta: a diferença entre o imposto com e sem ela. É marginal, não proporcional — o salário já ocupa os escalões de baixo, por isso os recibos verdes são tributados por cima. É este o valor a comparar com as retenções que já fizeste.`}
           />
         )}
               </div>

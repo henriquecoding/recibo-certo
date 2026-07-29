@@ -68,6 +68,10 @@ export const SOURCES = {
     label: "Art. 25.º CIRS — Dedução específica do trabalho dependente · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs25.aspx",
   },
+  art12aCirs: {
+    label: "Art. 12.º-A CIRS — Regime fiscal aplicável a ex-residentes (Programa Regressar) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs12a.aspx",
+  },
   art70cirs: {
     label: "Art. 70.º CIRS — Mínimo de existência · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs70.aspx",
@@ -786,6 +790,29 @@ export const IRS_JOVEM = {
   ),
 };
 
+/**
+ * Programa Regressar / ex-residentes (Art. 12.º-A CIRS).
+ *
+ * O texto do n.º 1 é curto e diz tudo: «São excluídos de tributação 50 % dos
+ * rendimentos do trabalho dependente e dos rendimentos empresariais e
+ * profissionais dos sujeitos passivos, até ao montante do limite superior do
+ * primeiro escalão previsto no n.º 1 do artigo 68.º-A».
+ *
+ * Duas consequências que o motor tem de respeitar:
+ *
+ *  · **São as categorias A e B**, não só a B. Um ex-residente com salário tem
+ *    direito à mesma exclusão de quem passa recibos.
+ *  · **O teto morde no montante EXCLUÍDO**, não no rendimento — é a leitura da
+ *    letra («são excluídos … até ao montante de») e é a que o Guia Fiscal 2026
+ *    da PwC explicita: «a exclusão acima referida está limitada a 250 000 €/ano».
+ *    O limite é derivado do 2.º limiar do Art. 68.º-A, que é onde a lei o foi
+ *    buscar — se esse valor mudar, este acompanha sozinho.
+ */
+export const PROGRAMA_REGRESSAR = {
+  exclusao: sv(0.5, "Art. 12.º-A, n.º 1 CIRS — exclusão de 50% dos rendimentos das categorias A e B", "art12aCirs", DATA_LAST_REVIEW),
+  anos: sv(5, "Art. 12.º-A, n.º 1 CIRS — cinco anos, incluindo o do regresso", "art12aCirs", DATA_LAST_REVIEW),
+};
+
 // ═══════════════════════════════════════════════════════════════════════
 //  IRS — ESCALÕES PROGRESSIVOS (Art. 68.º CIRS) e dedução específica.
 //  Aplicam-se ao RENDIMENTO COLETÁVEL (após coeficiente e deduções).
@@ -908,6 +935,14 @@ export const ADICIONAL_SOLIDARIEDADE = {
   taxa1: sv(0.025, "Art. 68.º-A, n.º 1, al. a) CIRS — taxa de 2,5% entre 80 000 € e 250 000 €", "art68aCirs", TODAY),
   taxa2: sv(0.05, "Art. 68.º-A, n.º 1, al. b) CIRS — taxa de 5% acima de 250 000 €", "art68aCirs", TODAY),
 };
+
+/**
+ * Teto anual da exclusão do Art. 12.º-A: «o limite superior do primeiro escalão
+ * previsto no n.º 1 do artigo 68.º-A» — ou seja, o 2.º limiar do adicional de
+ * solidariedade (250 000 €). Derivado, e não escrito à mão, porque a lei o
+ * define por remissão: a única forma de os dois não divergirem é este vir dali.
+ */
+export const PROGRAMA_REGRESSAR_TETO_CALC = ADICIONAL_SOLIDARIEDADE.limiar2.value;
 
 // ═══════════════════════════════════════════════════════════════════════
 //  IRC — para o comparador "recibos verdes vs empresa" (sociedade)
@@ -3741,6 +3776,22 @@ export function assertFiscalDataIntegrity(): void {
     erros.push(`1.º escalão de retenção Tabela I (${RETENCAO_DEP_CONTINENTE_T1.value[0].ate}) deve igualar o SMN (${SMN.value}).`);
   }
 
+  // 5c-bis) Programa Regressar (Art. 12.º-A CIRS). O teto é definido POR
+  // REMISSÃO para o Art. 68.º-A — se alguém o escrever à mão e o adicional de
+  // solidariedade mudar, ficam dois números a dizer coisas diferentes sobre a
+  // mesma norma. A invariante prende-os um ao outro.
+  if (!isRate(PROGRAMA_REGRESSAR.exclusao.value) || PROGRAMA_REGRESSAR.exclusao.value <= 0) {
+    erros.push("Programa Regressar: percentagem de exclusão inválida.");
+  }
+  if (PROGRAMA_REGRESSAR_TETO_CALC !== ADICIONAL_SOLIDARIEDADE.limiar2.value) {
+    erros.push(
+      `Teto do Art. 12.º-A (${PROGRAMA_REGRESSAR_TETO_CALC}) deve ser o limite superior do 1.º escalão do Art. 68.º-A (${ADICIONAL_SOLIDARIEDADE.limiar2.value}).`
+    );
+  }
+  if (!(PROGRAMA_REGRESSAR.anos.value > 0)) {
+    erros.push("Programa Regressar: duração em anos não positiva.");
+  }
+
   // 5b) Direitos, cobranças e proteção social — invariantes dos parâmetros novos.
   //     Estes números alimentam os Guias; se algum ficar incoerente, é melhor
   //     falhar o build do que publicar um guia que engana quem o lê.
@@ -3867,6 +3918,7 @@ export function assertFiscalDataIntegrity(): void {
     IRS_JOVEM.idadeMax,
     IRS_JOVEM.tetoIAS,
     IRS_JOVEM.isencaoPorAno,
+    ...Object.values(PROGRAMA_REGRESSAR),
     ESCALOES_IRS,
     DEDUCAO_ESPECIFICA_CATB,
     REGIME_15PCT,

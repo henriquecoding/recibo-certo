@@ -176,7 +176,7 @@ import {
 import {
   calcular,
   taxaIVAEfetiva,
-  simularIRSAnual,
+  simularDeclaracaoIRS,
   irsProgressivo,
   retencaoNaFonte,
   contribuicoesSSAnuais,
@@ -713,6 +713,13 @@ function calcularDeducoesColeta(p: InputsParticularidades): DeducoesColeta {
  */
 interface ResultadoAnualRV extends SimulacaoIRS {
   faturacao: number;
+  /**
+   * Rendimento BRUTO de outras categorias (salário / pensão) tal como o
+   * utilizador o escreveu. `outrosRendimentos`, herdado de `SimulacaoIRS`, é o
+   * LÍQUIDO de deduções específicas — o número certo para o englobamento e o
+   * número errado para mostrar a quem o declarou.
+   */
+  salarioBruto: number;
   rendColetavel: number; // = rendimentoCoeficiente (rendimento após coeficiente)
   rendColetavelAjustado: number; // rendimento coletável final (após exclusões)
   isencaoJovemValor: number; // = rendimentoIsentoJovem
@@ -729,8 +736,14 @@ interface ResultadoAnualRV extends SimulacaoIRS {
 }
 
 /**
- * Adaptador fino sobre `simularIRSAnual` (motor canónico verificado).
+ * Adaptador fino sobre `simularDeclaracaoIRS` (entrada pública do apuramento).
  * Mantém a assinatura histórica para não partir os consumidores da UI.
+ *
+ * Chamava o NÚCLEO e metia o salário em `outrosRendimentos`, que o núcleo lê
+ * como rendimento JÁ LÍQUIDO. O salário chegava, portanto, sem a dedução
+ * específica do Art. 25.º, sem entrar nos factos do artigo 70.º, sem o IRS
+ * Jovem da categoria A e sem a exclusão do Art. 56.º-A — o mesmo caso dava
+ * aqui um imposto maior do que no Simulador de IRS.
  */
 /**
  * Isenções de Segurança Social. Deixou de ser um booleano só.
@@ -768,18 +781,24 @@ function simularAnualRV(
 ): ResultadoAnualRV {
   const { ret } = TIPO_ATIVIDADE_PARAMS[tipo];
 
-  const sim = simularIRSAnual({
-    brutoAnual: faturacao,
-    tipo: TIPO_LOCAL_PARA_CANONICO[tipo],
-    coefOverride,
-    anoAtividade: partic.anoAtividade ?? 3,
+  const salarioBruto = Math.max(0, partic.outrosRendimentos ?? 0);
+  const decl = simularDeclaracaoIRS({
+    independente: {
+      brutoAnual: faturacao,
+      tipo: TIPO_LOCAL_PARA_CANONICO[tipo],
+      coefOverride,
+      anoAtividade: partic.anoAtividade ?? 3,
+      irsJovemAno: irsJovemAno > 0 ? irsJovemAno : undefined,
+    },
+    // Declarado como salário, não somado como número: é isto que devolve ao
+    // rendimento a dedução específica, o artigo 70.º e o Art. 12.º-B.
+    salarios: salarioBruto > 0 ? { bruto: salarioBruto } : undefined,
     irsJovemAno: irsJovemAno > 0 ? irsJovemAno : undefined,
     ifici: partic.ifici,
     rnhAntigo: partic.rnhAntigo,
     programaRegressar: partic.programaRegressar,
     deficiencia: partic.deficiencia,
     conjunta: partic.conjunta,
-    outrosRendimentos: partic.outrosRendimentos,
     dependentesDetalhe: {
       normais: partic.numDep3plus + partic.numDep2_6,
       bebe: partic.numDep3minus,
@@ -798,6 +817,7 @@ function simularAnualRV(
     isencaoSSPrimeiroAno: isencoesSS.primeiroAno || isencoesSS.cpas,
     acumulaEmprego: isencoesSS.acumulaEmprego,
   });
+  const sim = decl.englobamento;
 
   // Retenção na fonte: a mesma fórmula de `calcular()`, não a taxa nua.
   //
@@ -831,6 +851,7 @@ function simularAnualRV(
   return {
     ...sim,
     faturacao,
+    salarioBruto,
     rendColetavel: sim.rendimentoCoeficiente,
     rendColetavelAjustado: Math.max(0, sim.rendimentoColetavel),
     isencaoJovemValor: sim.rendimentoIsentoJovem,
@@ -5431,11 +5452,15 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                               >
                                 Outros rendimentos anuais (€)
                               </label>
-                              <InfoTip label="Englobamento de outros rendimentos">
-                                Rendimentos de trabalho dependente (Cat. A),
-                                pensões ou outros, somados ao rendimento da Cat. B
-                                para o cálculo do IRS anual. Empurram o teu
-                                rendimento para escalões mais altos.
+                              <InfoTip label="Englobamento de salário ou pensão">
+                                Valor BRUTO de trabalho dependente (Cat. A) ou de
+                                pensões (Cat. H), somado ao rendimento da Cat. B
+                                para o cálculo do IRS anual. Empurra o teu
+                                rendimento para escalões mais altos, mas traz
+                                consigo a dedução específica do Art. 25.º — as duas
+                                categorias têm a mesma (o Art. 53.º remete para
+                                ela). Para rendas ou capitais usa o Simulador de
+                                IRS, que os trata pela regra de cada categoria.
                               </InfoTip>
                             </div>
                             <LocalizedNumberInput
@@ -6536,10 +6561,10 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                               note={`Limite ${IRS_JOVEM_LIMITE_2026.toLocaleString("pt-PT")}€ (55×IAS)`}
                             />
                           )}
-                          {resultAnualRV.outrosRendimentos > 0 && (
+                          {resultAnualRV.salarioBruto > 0 && (
                             <DetalheRow
                               label="Outros rendimentos (englobamento)"
-                              value={resultAnualRV.outrosRendimentos}
+                              value={resultAnualRV.salarioBruto}
                               type="warning"
                               note="Cat. A / pensões somados ao rendimento"
                             />

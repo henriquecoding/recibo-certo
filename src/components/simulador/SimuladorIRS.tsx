@@ -1591,8 +1591,11 @@ function PassoAgregado(props: {
           </div>
           <div>
             <label htmlFor="c-nif" className={`mb-1.5 block ${rotuloCls}`}>NIF</label>
-            <input id="c-nif" inputMode="numeric" value={c.nif} onChange={(e) => upd("nif", e.target.value.replace(/\D/g, "").slice(0, 9))} placeholder="9 dígitos" className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
-            {nifMau && <p className="mt-1 text-[11px] text-red-500">NIF inválido (9 dígitos com dígito de controlo).</p>}
+            {/* A borda vermelha só existe para quem a vê. `aria-invalid` diz o
+                mesmo a quem ouve, e `aria-describedby` liga o campo à razão —
+                sem isso, um leitor de ecrã anuncia «NIF, editar» e mais nada. */}
+            <input id="c-nif" inputMode="numeric" value={c.nif} onChange={(e) => upd("nif", e.target.value.replace(/\D/g, "").slice(0, 9))} placeholder="9 dígitos" aria-invalid={nifMau || undefined} aria-describedby={nifMau ? "c-nif-erro" : undefined} className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
+            {nifMau && <p id="c-nif-erro" className="mt-1 text-[11px] text-red-500">NIF inválido (9 dígitos com dígito de controlo).</p>}
           </div>
           <div>
             <label htmlFor="c-nasc" className={`mb-1.5 block ${rotuloCls}`}>Data de nascimento</label>
@@ -1813,7 +1816,7 @@ function PessoaEditor({
         </div>
         <div>
           <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-400">NIF</label>
-          <input inputMode="numeric" value={nif} onChange={(e) => onNif(e.target.value.replace(/\D/g, "").slice(0, 9))} placeholder="9 dígitos" className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
+          <input inputMode="numeric" value={nif} onChange={(e) => onNif(e.target.value.replace(/\D/g, "").slice(0, 9))} placeholder="9 dígitos" aria-invalid={nifMau || undefined} aria-label="NIF do dependente" className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
         </div>
         {children}
       </div>
@@ -1893,8 +1896,8 @@ function SujeitoPassivoB({
         </div>
         <div>
           <label htmlFor="spb-nif" className={`mb-1.5 block ${rotuloCls}`}>NIF</label>
-          <input id="spb-nif" inputMode="numeric" value={spb.contribuinte.nif} onChange={(e) => updC({ nif: e.target.value.replace(/\D/g, "").slice(0, 9) })} placeholder="9 dígitos" className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
-          {nifMau && <p className="mt-1 text-[11px] text-red-500">NIF inválido.</p>}
+          <input id="spb-nif" inputMode="numeric" value={spb.contribuinte.nif} onChange={(e) => updC({ nif: e.target.value.replace(/\D/g, "").slice(0, 9) })} placeholder="9 dígitos" aria-invalid={nifMau || undefined} aria-describedby={nifMau ? "spb-nif-erro" : undefined} className={`${campoCls} ${nifMau ? "border-red-400 focus:ring-red-400" : ""}`} />
+          {nifMau && <p id="spb-nif-erro" className="mt-1 text-[11px] text-red-500">NIF inválido.</p>}
         </div>
         <div>
           <label htmlFor="spb-nasc" className={`mb-1.5 block ${rotuloCls}`}>Data de nascimento</label>
@@ -2493,9 +2496,24 @@ function ProximosPassos({
   reembolso: boolean;
 }) {
   const temCatB = resultado.componentes.some((c) => c.id === "independente" || c.id === "independente-b");
+  const temCatA = resultado.componentes.some((c) => c.id === "salarios" || c.id === "salarios-b");
   const taxaAlta = resultado.taxaEfetiva >= 0.2;
 
   const acoes: Array<{ href: string; titulo: string; sub: string }> = [];
+
+  // Quem só tem salário ficava sem caminho nenhum: as duas primeiras ações
+  // dependiam de haver categoria B, e sobrava a do contabilista. É metade dos
+  // casos possíveis desta ferramenta.
+  if (temCatA && !temCatB) {
+    acoes.push({
+      href: "/ferramentas/recibo-vencimento",
+      titulo: reembolso ? "Ver o recibo mês a mês" : "Rever a retenção mensal",
+      sub: reembolso
+        ? "O reembolso vem de teres pago a mais durante o ano. O simulador de vencimento mostra quanto te retêm por mês e porquê."
+        : "Um valor a pagar em junho costuma vir de uma tabela de retenção abaixo do imposto real. Podes pedir à entidade patronal uma taxa mais alta.",
+    });
+  }
+
   if (temCatB) {
     acoes.push({
       href: "/dashboard/comparar",

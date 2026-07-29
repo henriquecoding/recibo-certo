@@ -19,6 +19,20 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.7.0",
+    data: "2026-07-29",
+    titulo: "Quem tem salário e recibos verdes deixa de ver dois números diferentes",
+    itens: [
+      "Se tens emprego e passas recibos verdes, o modo guiado e o simulador de recibos verdes cobravam-te IRS a mais — entre 940 € e 2 050 €, conforme o caso. O salário era somado ao rendimento sem a dedução que a lei lhe dá (4 587,09 €, Art. 25.º), e o Simulador de IRS, que fazia a conta bem, dava outro valor para a mesma situação. Passa a haver um só cálculo, o certo.",
+      "No mesmo problema ia o IRS Jovem: um jovem com salário e atividade independente via imposto a pagar quando tinha direito a zero no primeiro ano. A isenção passa a aplicar-se ao salário em todos os ecrãs, com o mesmo limite partilhado entre as duas categorias.",
+      "E a exclusão por deficiência (Art. 56.º-A) também: já valia nos recibos verdes, agora vale no salário em todo o lado.",
+      "Programa Regressar: a exclusão de 50% passa a abranger o salário, e não só os recibos verdes — é o que o Art. 12.º-A diz. Fica com o teto de 250 000 € por ano que a lei manda, partilhado entre as duas categorias e pessoal de cada um (não se herda do cônjuge).",
+      "A demonstração da página inicial deixou de ter valores fiscais escritos à mão: o exemplo do casal trazia uma dedução de 4 104 €, um valor que já não existe.",
+      "No Simulador de IRS, os grupos de opções passam a navegar-se com as setas do teclado, como um leitor de ecrã anuncia que fazem, e um NIF inválido passa a ser assinalado a quem não vê a borda vermelha.",
+      "Depois do resultado, quem só tem salário passa a ter um caminho a seguir — antes só aparecia sugestão a quem tinha atividade independente.",
+    ],
+  },
+  {
     version: "2.6.0",
     data: "2026-07-29",
     titulo: "Quiz Fiscal: prémios que chegam mesmo, definições que funcionam",

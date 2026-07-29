@@ -20,6 +20,8 @@ import {
   SS_ACUMULACAO_LIMITE_MENSAL,
   REGIME_SIMPLIFICADO,
   IRS_JOVEM,
+  PROGRAMA_REGRESSAR,
+  PROGRAMA_REGRESSAR_TETO_CALC,
   ESCALOES_IRS,
   DEDUCAO_ESPECIFICA_CATB,
   REGIME_15PCT,
@@ -967,6 +969,12 @@ export interface SimulacaoInput {
    * usaria o teto duas vezes.
    */
   irsJovemTetoConsumido?: number;
+  /**
+   * Parte do teto do Art. 12.º-A (250 000 €) já consumida pela categoria A do
+   * MESMO titular. Tal como o do IRS Jovem, o teto do Programa Regressar é por
+   * pessoa e não por categoria.
+   */
+  programaRegressarTetoConsumido?: number;
   /** Despesas de atividade documentadas (e-fatura, rendas, pessoal…). */
   despesasJustificadas?: number;
   /** Total de retenções na fonte já pagas no ano. */
@@ -976,7 +984,20 @@ export interface SimulacaoInput {
   conjunta?: boolean;
   /** Número de dependentes (>3 anos, simplificação). */
   dependentes?: number;
-  /** Outros rendimentos líquidos (cat. A) para englobamento. */
+  /**
+   * Rendimento de OUTRAS categorias já LÍQUIDO, pronto a englobar.
+   *
+   * ⚠️ Não é o bruto. É o que sobra depois da dedução específica do
+   * Art. 25.º/53.º, da exclusão do Art. 56.º-A, do IRS Jovem e do Art. 12.º-A —
+   * e quem o sabe calcular é `simularDeclaracaoIRS`, porque o número sozinho
+   * não diz de que categoria veio. Alimentar isto com um salário bruto é o
+   * erro que este campo já causou em três ecrãs: entre 940 € e 2 050 € de IRS
+   * a mais, e o imposto inteiro a quem tinha direito ao IRS Jovem.
+   *
+   * Por isso NENHUM componente da aplicação o preenche. `verificacao-irs.test.ts`
+   * falha se algum voltar a fazê-lo; usa `simularDeclaracaoIRS` com
+   * `salarios` / `pensoes` / `prediais` e deixa a decomposição ao motor.
+   */
   outrosRendimentos?: number;
   /**
    * Uso interno: corta o cálculo de `irsImputavelCatB`, que corre o motor uma
@@ -1305,8 +1326,22 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   // não volta a ser subtraída aqui.
   const rendimentoElegivel = Math.max(0, rendimentoTributavel - rendimentoIsentoJovem);
 
-  // Programa Regressar (Art. 12.º-A CIRS): 50% do rendimento elegível excluído
-  const exclusaoProgramaRegressar = programaRegressarAplicado ? rendimentoElegivel * 0.5 : 0;
+  // ── Programa Regressar (Art. 12.º-A CIRS) ────────────────────────────────
+  // «São excluídos de tributação 50 % dos rendimentos do trabalho dependente e
+  // dos rendimentos empresariais e profissionais […] até ao montante do limite
+  // superior do primeiro escalão previsto no n.º 1 do artigo 68.º-A.»
+  //
+  // O teto morde no montante EXCLUÍDO e é POR TITULAR, partilhado entre as
+  // categorias A e B — como o do IRS Jovem. Quando a categoria A já gastou
+  // parte dele (apurada em `simularDeclaracaoIRS`), chega aqui em
+  // `programaRegressarTetoConsumido` e só sobra o resto para a categoria B.
+  const tetoRegressarDisponivel = Math.max(
+    0,
+    PROGRAMA_REGRESSAR_TETO_CALC - sanitize(input.programaRegressarTetoConsumido ?? 0),
+  );
+  const exclusaoProgramaRegressar = programaRegressarAplicado
+    ? Math.min(rendimentoElegivel * PROGRAMA_REGRESSAR.exclusao.value, tetoRegressarDisponivel)
+    : 0;
   const rendimentoElegivelFinal = Math.max(0, rendimentoElegivel - exclusaoProgramaRegressar);
   // Rendimento total antes do abatimento por mínimo de existência.
   const rendimentoColetavelAntesMinimo = rendimentoElegivelFinal + outrosRendimentos;
@@ -2037,6 +2072,21 @@ export interface DeclaracaoInput {
   lares?: number;
   deficiencia?: boolean;
   ifici?: boolean;
+  /**
+   * RNH antigo (pré-2024), ainda dentro dos 10 anos: taxa fixa de 20% sobre a
+   * parte elegível, como o IFICI. Art. 16.º n.º 1 CIRS (transitório OE2024).
+   */
+  rnhAntigo?: boolean;
+  /**
+   * Programa Regressar / Ex-Residentes (Art. 12.º-A CIRS): exclui 50% dos
+   * rendimentos das categorias A e B durante 5 anos.
+   */
+  programaRegressar?: boolean;
+  /**
+   * Número de dependentes, quando não há detalhe por idade/deficiência.
+   * Equivale a `dependentesDetalhe: { normais: n }`.
+   */
+  dependentes?: number;
   /** Isenção de SS no 1.º ano de atividade (independente). */
   isencaoSSPrimeiroAno?: boolean;
   /** Acumulação com trabalho dependente que cobre a SS (independente). */
@@ -2067,6 +2117,11 @@ export interface DeclaracaoInput {
     isencaoSSPrimeiroAno?: boolean;
     acumulaEmprego?: boolean;
     deficiencia?: boolean;
+    /**
+     * Programa Regressar do SP B (Art. 12.º-A). É um estatuto pessoal: não se
+     * herda do cônjuge, e cada titular tem o seu teto de 250 000 €.
+     */
+    programaRegressar?: boolean;
   };
   pagamentosPorConta?: number;
 }
@@ -2177,6 +2232,8 @@ interface CategoriaDependenteApurada {
   isentoJovem: number;
   /** Percentagem de isenção do ano (0 se não aplicável). */
   percentagemJovem: number;
+  /** Exclusão do Art. 12.º-A imputada a esta categoria (Programa Regressar). */
+  exclusaoRegressar: number;
   /** Rendimento que vai a englobamento, já líquido de tudo. */
   liquido: number;
 }
@@ -2193,16 +2250,32 @@ function apurarCategoriaDependente(args: {
   irsJovemAno?: number;
   /** Teto do IRS Jovem ainda disponível para o titular. */
   tetoJovemDisponivel: number;
+  /**
+   * Programa Regressar (Art. 12.º-A) ativo para este titular. A norma abrange
+   * as categorias A e B — não só a B —, por isso tem de ser aplicada aqui.
+   */
+  programaRegressar?: boolean;
+  /** Teto do Art. 12.º-A ainda disponível para o titular. */
+  tetoRegressarDisponivel?: number;
 }): CategoriaDependenteApurada {
   const bruto = sanitize(args.bruto ?? 0);
   if (bruto <= 0) {
-    return { bruto: 0, exclusaoDeficiencia: 0, especifica: 0, isentoJovem: 0, percentagemJovem: 0, liquido: 0 };
+    return { bruto: 0, exclusaoDeficiencia: 0, especifica: 0, isentoJovem: 0, percentagemJovem: 0, exclusaoRegressar: 0, liquido: 0 };
   }
   const exclusaoDeficiencia = calcularExclusaoDeficiencia(bruto, !!args.deficiencia);
   const considerado = Math.max(0, bruto - exclusaoDeficiencia);
   const detalhe = rendimentoLiquidoCatA(considerado, args.encargos);
   const percentagemJovem = isencaoIRSJovem(args.irsJovemAno);
   const isentoJovem = Math.min(detalhe.liquido * percentagemJovem, Math.max(0, args.tetoJovemDisponivel));
+  const aposJovem = Math.max(0, detalhe.liquido - isentoJovem);
+  // O Art. 12.º-A é incompatível com o RNH/IFICI (n.º 2) — a exclusividade é
+  // resolvida no núcleo; aqui só se aplica quando o chamador a assinala.
+  const exclusaoRegressar = args.programaRegressar
+    ? Math.min(
+        aposJovem * PROGRAMA_REGRESSAR.exclusao.value,
+        Math.max(0, args.tetoRegressarDisponivel ?? PROGRAMA_REGRESSAR_TETO_CALC),
+      )
+    : 0;
   return {
     bruto,
     exclusaoDeficiencia,
@@ -2210,7 +2283,8 @@ function apurarCategoriaDependente(args: {
     detalheEspecifica: detalhe,
     isentoJovem,
     percentagemJovem,
-    liquido: Math.max(0, detalhe.liquido - isentoJovem),
+    exclusaoRegressar,
+    liquido: Math.max(0, aposJovem - exclusaoRegressar),
   };
 }
 
@@ -2326,6 +2400,15 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
   // A e B — não 55 × IAS a cada categoria.
   let jovemConsumidoA = 0;
   let jovemConsumidoB = 0;
+  // Idem para o teto do Art. 12.º-A (250 000 € por titular, categorias A + B).
+  // O n.º 2 do artigo exclui quem pediu inscrição como residente não habitual,
+  // por isso o Programa Regressar cede ao IFICI e ao RNH antigo.
+  const regressarAtivo =
+    !!input.programaRegressar && !input.ifici && !input.rnhAntigo;
+  const regressarB =
+    !!input.titularB?.programaRegressar && !input.ifici && !input.rnhAntigo;
+  let regressarConsumidoA = 0;
+  let regressarConsumidoB = 0;
 
   // ── Categorias A e H do sujeito passivo A ─────────────────────────────────
   // Cada categoria é apurada por inteiro aqui: exclusão do Art. 56.º-A sobre o
@@ -2339,10 +2422,13 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
     deficiencia: input.deficiencia,
     irsJovemAno: input.irsJovemAno,
     tetoJovemDisponivel: tetoJovem,
+    programaRegressar: regressarAtivo,
+    tetoRegressarDisponivel: PROGRAMA_REGRESSAR_TETO_CALC,
   });
   const salBruto = catA.bruto;
   if (salBruto > 0) {
     jovemConsumidoA += catA.isentoJovem;
+    regressarConsumidoA += catA.exclusaoRegressar;
     englobaveisBase += catA.liquido;
     memoria.push({
       anexo: "Anexo A",
@@ -2367,6 +2453,15 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
         formula: `${pct(catA.percentagemJovem)} do rendimento líquido (teto ${fmt(tetoJovem)} por titular)`,
         valor: -catA.isentoJovem,
         baseLegal: "Art. 12.º-B CIRS",
+      });
+    }
+    if (catA.exclusaoRegressar > 0) {
+      memoria.push({
+        anexo: "Anexo A",
+        rotulo: "Programa Regressar — trabalho dependente",
+        formula: `${pct(PROGRAMA_REGRESSAR.exclusao.value)} do rendimento líquido (teto ${fmt(PROGRAMA_REGRESSAR_TETO_CALC)} por titular)`,
+        valor: -catA.exclusaoRegressar,
+        baseLegal: "Art. 12.º-A CIRS",
       });
     }
     componentes.push({ id: "salarios", anexo: "Anexo A", rotulo: "Trabalho dependente", bruto: salBruto, englobado: catA.liquido, impostoAutonomo: 0 });
@@ -2571,10 +2666,15 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
       deficiencia: tb.deficiencia,
       irsJovemAno: tb.irsJovemAno,
       tetoJovemDisponivel: tetoJovem,
+      // O Art. 12.º-A é pessoal: o SP B só beneficia se ele próprio for
+      // ex-residente. Não se herda do cônjuge.
+      programaRegressar: regressarB,
+      tetoRegressarDisponivel: PROGRAMA_REGRESSAR_TETO_CALC,
     });
     const salB = catAB.bruto;
     if (salB > 0) {
       jovemConsumidoB += catAB.isentoJovem;
+      regressarConsumidoB += catAB.exclusaoRegressar;
       outrosB += catAB.liquido;
       rendimentoGlobalB += salB;
       retencoesB += sanitize(tb.salarios?.retencoes ?? 0);
@@ -2608,6 +2708,8 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
       despesasJustificadas: indepB?.despesasJustificadas,
       irsJovemAno: indepB?.irsJovemAno ?? tb.irsJovemAno,
       irsJovemTetoConsumido: jovemConsumidoB,
+      programaRegressar: regressarB,
+      programaRegressarTetoConsumido: regressarConsumidoB,
       outrosRendimentos: outrosB,
       conjunta: false,
       deficiencia: tb.deficiencia,
@@ -2655,8 +2757,10 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
     despesasJustificadas: indep?.despesasJustificadas,
     irsJovemAno: indep?.irsJovemAno ?? input.irsJovemAno,
     irsJovemTetoConsumido: jovemConsumidoA,
+    programaRegressarTetoConsumido: regressarConsumidoA,
     outrosRendimentos: outros,
     conjunta,
+    dependentes: input.dependentes,
     dependentesDetalhe: input.dependentesDetalhe,
     dependentesLista: input.dependentesLista,
     deducoes: input.deducoes ? { ...input.deducoes, lares: input.lares } : { lares: input.lares },
@@ -2666,6 +2770,8 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
     pensaoAlimentos: input.pensaoAlimentos,
     deficiencia: input.deficiencia,
     ifici: input.ifici,
+    rnhAntigo: input.rnhAntigo,
+    programaRegressar: input.programaRegressar,
     isencaoSSPrimeiroAno: input.isencaoSSPrimeiroAno,
     acumulaEmprego: input.acumulaEmprego,
     retencoesPagas: 0,
