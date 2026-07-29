@@ -43,6 +43,17 @@ export interface FizSimulatorRoute {
   fallbackLabel: string;
   /** O que o utilizador ganha ao continuar — aparece antes do botão. */
   promessa: string;
+  /**
+   * Par de textos do modo LIGACAO (Fase 1 — link de afiliado).
+   *
+   * `promessa` diz «leva esta configuração para não a voltares a introduzir».
+   * Em modo LIGACAO isso é FALSO: nada é transportado. Por isso cada rota tem
+   * de trazer o seu par próprio — e obrigatório, ao contrário dos Guias, que
+   * têm um recurso por intenção. Aqui a promessa é específica do simulador e
+   * não há default honesto possível.
+   */
+  fallbackLabelLigacao: string;
+  promessaLigacao: string;
   /** Campos que este simulador PROPÕE transferir. O utilizador escolhe
       quais autoriza; nada é enviado por omissão. */
   camposPropostos: CampoHandoff[];
@@ -50,8 +61,16 @@ export interface FizSimulatorRoute {
   enabled: boolean;
 }
 
-/** Enquanto a parceria estiver em negociação, nada é ativado. */
-const ATIVAS: readonly SimuladorId[] = [];
+/**
+ * Simuladores ativados, por lotes — a mesma lógica de `ROTAS_ATIVAS` nos
+ * Guias. Ativar aqui não põe nada no ar sozinho: `PARCERIAS_ATIVAS` e a linha
+ * da parceria no Supabase continuam a ser condições necessárias.
+ */
+const ATIVAS: readonly SimuladorId[] = [
+  "recibos-verdes",
+  "simulador-irs",
+  "regime-simplificado",
+];
 
 /**
  * Identificação. Nunca é enviada por omissão e o utilizador escolhe campo a
@@ -77,6 +96,8 @@ export const FIZ_SIMULATOR_ROUTES: FizSimulatorRoute[] = [
     dataMode: "CONSENTED_HANDOFF",
     fallbackLabel: "Continuar com a FIZ sem repetir dados",
     promessa: "Leva esta configuração — atividade, regime de IVA e retenção — para não a voltares a introduzir.",
+    fallbackLabelLigacao: "Abrir atividade e faturar com a FIZ",
+    promessaLigacao: "A FIZ é software de faturação para quem passa recibos verdes: emite as faturas, trata do IVA e das obrigações da Segurança Social.",
     camposPropostos: [...RESUMO_TI, ...IDENTIFICACAO],
     enabled: ATIVAS.includes("recibos-verdes"),
   },
@@ -89,6 +110,8 @@ export const FIZ_SIMULATOR_ROUTES: FizSimulatorRoute[] = [
     dataMode: "CONSENTED_HANDOFF",
     fallbackLabel: "Continuar a preparação do IRS na FIZ",
     promessa: "Envia os valores estimados para começares a declaração já com o contexto certo.",
+    fallbackLabelLigacao: "Entregar o IRS com a FIZ",
+    promessaLigacao: "A estimativa é nossa; a entrega é de quem está certificado para a fazer.",
     camposPropostos: ["entityType", "period", "grossEstimate", "irsEstimate", "withholdingEstimate", ...IDENTIFICACAO],
     enabled: ATIVAS.includes("simulador-irs"),
   },
@@ -101,6 +124,8 @@ export const FIZ_SIMULATOR_ROUTES: FizSimulatorRoute[] = [
     dataMode: "CONSENTED_HANDOFF",
     fallbackLabel: "Preparar a constituição na FIZ",
     promessa: "Leva a estrutura simulada para quem trata da constituição e da contabilidade.",
+    fallbackLabelLigacao: "Ver a FIZ para empresas",
+    promessaLigacao: "Constituição, contabilidade organizada e as obrigações anuais da sociedade, tratadas por contabilistas certificados.",
     camposPropostos: ["entityType", "activityCategory", "period", "grossEstimate", "irsEstimate", ...IDENTIFICACAO],
     enabled: ATIVAS.includes("simulador-empresa"),
   },
@@ -113,6 +138,8 @@ export const FIZ_SIMULATOR_ROUTES: FizSimulatorRoute[] = [
     dataMode: "CONSENTED_HANDOFF",
     fallbackLabel: "Rever a configuração fiscal na FIZ",
     promessa: "Confirma com quem executa se o coeficiente e o regime estão corretos no teu caso.",
+    fallbackLabelLigacao: "Confirmar o enquadramento com a FIZ",
+    promessaLigacao: "O coeficiente e o regime dependem da atividade concreta. Um contabilista confirma o teu caso antes de haver consequências.",
     camposPropostos: ["entityType", "activityCategory", "period", "grossEstimate", "irsEstimate", ...IDENTIFICACAO],
     enabled: ATIVAS.includes("regime-simplificado"),
   },
@@ -125,6 +152,8 @@ export const FIZ_SIMULATOR_ROUTES: FizSimulatorRoute[] = [
     dataMode: "CONSENTED_HANDOFF",
     fallbackLabel: "Rever o enquadramento na FIZ",
     promessa: "Se a decisão for abrir atividade, continua sem recomeçar do zero.",
+    fallbackLabelLigacao: "Falar com um contabilista certificado",
+    promessaLigacao: "Se a decisão for abrir atividade, é a FIZ que trata do passo seguinte.",
     camposPropostos: ["entityType", "activityCategory", "period", "grossEstimate", ...IDENTIFICACAO],
     enabled: ATIVAS.includes("ato-isolado"),
   },
@@ -137,6 +166,8 @@ export const FIZ_SIMULATOR_ROUTES: FizSimulatorRoute[] = [
     dataMode: "CONSENTED_HANDOFF",
     fallbackLabel: "Abrir atividade com esta classificação na FIZ",
     promessa: "Leva o código de atividade escolhido para a abertura.",
+    fallbackLabelLigacao: "Abrir atividade com a FIZ",
+    promessaLigacao: "A classificação decide o coeficiente, a retenção e a base de Segurança Social do resto da tua vida fiscal — vale a pena confirmá-la com quem a vai registar.",
     camposPropostos: ["entityType", "activityCategory", "vatRegimeEstimate", ...IDENTIFICACAO],
     enabled: ATIVAS.includes("classificar-atividade"),
   },
@@ -149,6 +180,8 @@ export const FIZ_SIMULATOR_ROUTES: FizSimulatorRoute[] = [
     dataMode: "CONSENTED_HANDOFF",
     fallbackLabel: "Validar a escolha com um contabilista na FIZ",
     promessa: "A comparação é uma estimativa. Confirma a decisão com quem a vai executar.",
+    fallbackLabelLigacao: "Validar a escolha com um contabilista",
+    promessaLigacao: "A comparação é uma estimativa nossa. Quem a executa é quem a deve confirmar.",
     camposPropostos: ["entityType", "period", "grossEstimate", "irsEstimate", ...IDENTIFICACAO],
     exigeRevisaoHumana: true,
     enabled: ATIVAS.includes("comparador"),
@@ -162,6 +195,8 @@ export const FIZ_SIMULATOR_ROUTES: FizSimulatorRoute[] = [
     dataMode: "NO_DATA",
     fallbackLabel: "Falar com um contabilista na FIZ",
     promessa: "O tratamento correto depende do teu contrato — não há resposta única para levar daqui.",
+    fallbackLabelLigacao: "Falar com um contabilista certificado",
+    promessaLigacao: "O tratamento correto depende do contrato concreto e não há resposta única — é uma conversa, não um formulário.",
     camposPropostos: [],
     exigeRevisaoHumana: true,
     enabled: ATIVAS.includes("payout-mor"),

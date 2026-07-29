@@ -46,11 +46,26 @@ const SCOPES_POR_MODO: Record<GuideDataMode, string[]> = {
 };
 
 /**
- * Enquanto a parceria estiver em negociação, TODAS as rotas nascem
- * desativadas. Ativar exige: catálogo de capacidades publicado pela FIZ,
- * sandbox validada e critérios de go-live cumpridos dos dois lados.
+ * Rotas ativadas, POR LOTES.
+ *
+ * A regra anterior era «nada ativo até à validação bilateral», e estava
+ * certa enquanto o único modo possível era o handoff. Com um modo de ligação
+ * contratado, a regra real é outra: uma rota nunca corre em modo mais
+ * permissivo do que o que a parceria tem contratado — e isso é garantido por
+ * `modoEfetivo()`, não por uma lista vazia.
+ *
+ * Começa-se pelos Guias de maior tráfego e com a intenção mais bem servida
+ * pelo destino da FIZ. Os restantes entram depois de haver números destes.
+ * Ativar uma rota AINDA NÃO A PÕE NO AR: é preciso `PARCERIAS_ATIVAS=true` no
+ * ambiente e a linha da parceria ativa no Supabase.
  */
-const ROTAS_ATIVAS: readonly string[] = [];
+const ROTAS_ATIVAS: readonly string[] = [
+  "abrir-atividade",
+  "regime-simplificado",
+  "iva-recibos-verdes",
+  "seguranca-social",
+  "retencao-na-fonte",
+];
 
 export const FIZ_GUIDE_ROUTES: FizGuideRoute[] = GUIDE_MANIFESTS.flatMap((m) => {
   if (!m.fizAction) return [];
@@ -97,3 +112,17 @@ export const MANIFESTO_ROTAS_META = {
 export function rotaDoGuia(slug: string): FizGuideRoute | undefined {
   return FIZ_GUIDE_ROUTES.find((r) => r.guideSlug === slug);
 }
+
+/** true quando este Guia tem rota FIZ E ela está ativada. */
+export function rotaDoGuiaAtiva(slug: string): boolean {
+  return rotaDoGuia(slug)?.enabled ?? false;
+}
+
+/**
+ * Slugs listados em `ROTAS_ATIVAS` que não correspondem a nenhum Guia com
+ * `fizAction`. Um erro de escrita aqui é silencioso — a rota simplesmente
+ * nunca ativa —, por isso fica exposto para o teste o apanhar.
+ */
+export const ROTAS_ATIVAS_ORFAS: readonly string[] = ROTAS_ATIVAS.filter(
+  (slug) => !FIZ_GUIDE_ROUTES.some((r) => r.guideSlug === slug),
+);

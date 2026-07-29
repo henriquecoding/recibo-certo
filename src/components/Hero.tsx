@@ -14,7 +14,10 @@ import ComoFuncionaModal from "@/components/ComoFuncionaModal";
 import type { ComparacaoCategoriasResult, VencimentoResult } from "@/lib/fiscal-dependente";
 import type { CalcResult } from "@/lib/fiscal";
 import FizLogo from "@/components/fiz/FizLogo";
+import FizActionButton from "@/components/fiz/FizActionButton";
 import { fizAtiva } from "@/lib/fiz/flag";
+import { NOTA_LIGACAO } from "@/content/parcerias-copy";
+import type { FizIntent } from "@/lib/guias/manifests";
 import {
   BotaoPausa,
   ReguaDeAtos,
@@ -69,7 +72,14 @@ interface CardData {
    * Só aparece com a integração ligada (`fizAtiva()`); com ela desligada a
    * demo continua a fazer sentido sem alterações.
    */
-  fiz?: { titulo: string; sub: string };
+  fiz?: {
+    titulo: string;
+    sub: string;
+    /** Rótulo do botão. Em modo LIGACAO abre o site do parceiro. */
+    cta: string;
+    /** Intenção, para o destino por caminho quando a FIZ o confirmar. */
+    intent: FizIntent;
+  };
   nota: string;
   typingSteps: TypingStep[];
 }
@@ -162,7 +172,15 @@ function criarExemplos({
         titulo: "Prazo SS — 20 julho",
         sub: `Reserva ${eur0(REC.segSocial)} para não seres apanhado`,
       },
-      fiz: { titulo: "Emitir e declarar com a FIZ", sub: "As tuas obrigações reais, tratadas por quem está certificado" },
+      // Em modo LIGACAO nada é transportado — a copy tem de o refletir. A
+      // frase antiga («as tuas obrigações reais, tratadas por…») descrevia o
+      // handoff da Fase 2.
+      fiz: {
+        titulo: "Emitir e declarar com a FIZ",
+        sub: "Faturação certificada, IVA e Segurança Social tratados por quem executa",
+        cta: "Conhecer a FIZ",
+        intent: "CONFIGURE_FREELANCER",
+      },
       nota: "Atividade estabelecida (2.º ano ou seguinte). No 1.º ano de atividade, a Segurança Social é isenta e a retenção na fonte pode ser dispensada.",
       typingSteps: [
         { text: "2", delay: 320 },
@@ -240,7 +258,12 @@ function criarExemplos({
       ],
       modoLinhas: "deducoes",
       box: { tom: "info", titulo: "IRC PME a 15%", sub: "Sobre os primeiros 50 000 € de lucro tributável" },
-      fiz: { titulo: "Constituir e manter com a FIZ", sub: "Contabilidade organizada e obrigações da sociedade" },
+      fiz: {
+        titulo: "Constituir e manter com a FIZ",
+        sub: "Contabilidade organizada e obrigações da sociedade",
+        cta: "Ver a FIZ para empresas",
+        intent: "START_COMPANY",
+      },
       nota: `Estimativa para ${eur0(FAT)}/ano de faturação. Modela IRC PME, derrama e dividendos a 28% — não substitui um contabilista certificado.`,
       typingSteps: [
         { text: "3", delay: 280 },
@@ -278,7 +301,12 @@ function criarExemplos({
       ],
       modoLinhas: "cenarios",
       box: { tom: "info", titulo: "Uma base, três caminhos", sub: "Vê o ponto de viragem e o calendário fiscal" },
-      fiz: { titulo: "Confirmar a escolha com a FIZ", sub: "Um contabilista certificado valida antes de mudares" },
+      fiz: {
+        titulo: "Confirmar a escolha com a FIZ",
+        sub: "Um contabilista certificado valida antes de mudares",
+        cta: "Falar com um contabilista",
+        intent: "FIND_ACCOUNTANT",
+      },
       nota: `Estimativa para ${eur0(FAT)}/ano. Ajusta o rendimento e os pressupostos na ferramenta de comparação.`,
       typingSteps: [
         { text: "3", delay: 280 },
@@ -433,7 +461,9 @@ const META_ATO: Record<AtoHero, { rotulo: string; legenda: string }> = {
   decomposicao: { rotulo: "Onde vai", legenda: "Para onde vai o dinheiro" },
   resultado: { rotulo: "O que fica", legenda: "Quanto fica contigo" },
   contexto: { rotulo: "A reter", legenda: "O que convém não esqueceres" },
-  fiz: { rotulo: "Entrega", legenda: "Quem trata das obrigações" },
+  // A régua é o caminho declarado. Um leitor de ecrã anuncia «Passo N de M:
+  // …» — e deve dizer que este passo leva para fora antes de lá chegar.
+  fiz: { rotulo: "Parceiro", legenda: "Quem trata das obrigações — ligação para a FIZ" },
 };
 
 const DUR_ATO: Record<Exclude<AtoHero, "entrada">, number> = {
@@ -997,20 +1027,38 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
                       <TituloAto nota="Parceiro">E depois do número</TituloAto>
                       <m.div
                         variants={linhaVar}
-                        className="flex items-center gap-2.5 rounded-xl border border-fiz-200 bg-fiz-50 p-2.5"
+                        className="rounded-xl border border-fiz-200 bg-fiz-50 p-2.5 dark:border-stone-700 dark:bg-stone-800/60"
                       >
-                        <FizLogo size={22} className="flex-shrink-0 rounded-lg" decorativo />
-                        <div className="min-w-0">
-                          <div className="text-xs font-semibold text-stone-800 dark:text-stone-100">
-                            {card.fiz.titulo}
-                          </div>
-                          <div className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-                            {card.fiz.sub}
+                        <div className="flex items-center gap-2.5">
+                          <FizLogo size={22} className="flex-shrink-0 rounded-lg" decorativo />
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-stone-800 dark:text-stone-100">
+                              {card.fiz.titulo}
+                            </div>
+                            <div className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                              {card.fiz.sub}
+                            </div>
                           </div>
                         </div>
+                        {/* As trancas: quem chegou ao botão — com o rato, com
+                            o dedo ou com o teclado — escolheu parar. `sobrevoo`
+                            pausa mas é reversível ao sair; aqui usa-se
+                            `parado`, que é uma tranca, para que um movimento
+                            acidental não faça o alvo saltar debaixo do cursor.
+                            Retoma-se no BotaoPausa, que já existe e já é
+                            acessível. */}
+                        <FizActionButton
+                          href={`/ir/fiz?s=demo.hero&v=compacta&i=${card.fiz.intent}`}
+                          className="mt-2.5"
+                          onPointerEnter={() => setParado(true)}
+                          onFocus={() => setParado(true)}
+                          onTouchStart={() => setParado(true)}
+                        >
+                          {card.fiz.cta}
+                        </FizActionButton>
                       </m.div>
                       <m.p variants={linhaVar} className="mt-2 text-[11px] leading-relaxed text-stone-400">
-                        Escolhes campo a campo o que segue contigo. Recusar não faz perder a simulação.
+                        {NOTA_LIGACAO}
                       </m.p>
                     </>
                   )}
@@ -1022,7 +1070,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
         </div>
 
         {/* ── Cursor encenado + ripple de clique ─────────────────── */}
-        {ripple && !reduzNoDesenho && (
+        {ripple && !reduzNoDesenho && !sobrevoo && (
           <m.span
             key={ripple.id}
             aria-hidden
@@ -1033,7 +1081,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
             transition={{ duration: 0.6, ease: "easeOut" }}
           />
         )}
-        {ponteiro && !reduzNoDesenho && (
+        {ponteiro && !reduzNoDesenho && !sobrevoo && (
           <m.div
             aria-hidden
             className="pointer-events-none absolute z-30"

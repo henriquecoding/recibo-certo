@@ -12,6 +12,7 @@ import { ATIVIDADES } from "@/lib/fiscal-data";
 
 import Precos from "@/components/Precos";
 import Footer from "@/components/Footer";
+import FizFaixaDemo from "@/components/fiz/FizFaixaDemo";
 import { faqs } from "@/lib/faq";
 import {
   generateWebSiteSchema,
@@ -78,6 +79,13 @@ export default function Home() {
         <Nav />
         <main>
           <Hero cmp={landingCmp} recibo={landingRecibo} vencimento={landingVencimento} />
+          {/* Ver a nota em `FizFaixaDemo`: o ato da demo é o extra, isto é o
+              piso — renderizado no servidor, imóvel, e o único caminho para
+              quem tem movimento reduzido, JavaScript desligado ou um ecrã
+              tátil onde o alvo desaparece por baixo do dedo. */}
+          <div className="mx-auto max-w-5xl px-6">
+            <FizFaixaDemo superficie="demo.hero.faixa" />
+          </div>
 
           {/*
            * ── Simulador integrado ──────────────────────────────────────────

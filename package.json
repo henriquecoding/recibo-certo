@@ -28,7 +28,12 @@
     "quiz:meta": "node scripts/gen-quiz-meta.mjs",
     "quiz:meta:check": "node scripts/gen-quiz-meta.mjs --check",
     "quiz:fiscal-check": "vitest run src/lib/__tests__/quiz-fiscal-check.test.ts",
-    "quiz:check": "vitest run src/lib/__tests__/quiz-banco-integridade.test.ts src/lib/__tests__/quiz-fiscal-check.test.ts src/lib/__tests__/quiz-novos-bancos.test.ts && node scripts/gen-quiz-meta.mjs --check"
+    "quiz:check": "vitest run src/lib/__tests__/quiz-banco-integridade.test.ts src/lib/__tests__/quiz-fiscal-check.test.ts src/lib/__tests__/quiz-novos-bancos.test.ts && node scripts/gen-quiz-meta.mjs --check",
+    "parcerias:check": "vitest run src/lib/__tests__/parcerias.test.ts",
+    "parcerias:copy": "vitest run src/lib/__tests__/parcerias.test.ts -t \"parcerias:copy\"",
+    "parcerias:links": "vitest run src/lib/__tests__/parcerias.test.ts -t \"parcerias:links\"",
+    "parcerias:sem-estado": "vitest run src/lib/__tests__/parcerias.test.ts -t \"parcerias:sem-estado\"",
+    "parcerias:demo": "vitest run src/lib/__tests__/parcerias.test.ts -t \"parcerias:demo\""
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.6.0",

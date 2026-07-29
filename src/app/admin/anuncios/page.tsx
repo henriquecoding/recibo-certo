@@ -20,6 +20,7 @@ const TIPO_META: Record<TipoAnuncio, { label: string; cor: string }> = {
   google_ads: { label: "Google Ads", cor: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
   banner: { label: "Banner", cor: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400" },
   nativo: { label: "Nativo", cor: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+  criativo_parceiro: { label: "Criativo de parceiro", cor: "bg-fiz-100 text-stone-700 dark:bg-amber-900/20 dark:text-amber-300" },
 };
 
 const POSICAO_LABELS: Record<string, string> = {
@@ -89,6 +90,7 @@ export default function AnunciosPage() {
     google_ads: anuncios.filter((a) => a.tipo === "google_ads").length,
     banner: anuncios.filter((a) => a.tipo === "banner").length,
     nativo: anuncios.filter((a) => a.tipo === "nativo").length,
+    criativo_parceiro: anuncios.filter((a) => a.tipo === "criativo_parceiro").length,
   };
 
   return (

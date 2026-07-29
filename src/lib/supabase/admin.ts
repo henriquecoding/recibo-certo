@@ -3,10 +3,16 @@
 
 import { getSupabase } from "./client";
 import { emailValido, normalizarEmail } from "@/lib/validacao-email";
+import type { ModoParceria } from "@/lib/parcerias/modos";
 
 // ── Anúncios ─────────────────────────────────────────────────
 
-export type TipoAnuncio = "parceiro" | "google_ads" | "banner" | "nativo";
+export type TipoAnuncio =
+  | "parceiro"
+  | "google_ads"
+  | "banner"
+  | "nativo"
+  | "criativo_parceiro";
 
 export interface AnuncioRow {
   id: string;
@@ -103,9 +109,207 @@ export interface PartnerRow {
   ordem: number;
   criado_em: string;
   atualizado_em: string;
+  // ── Camada de parcerias configuráveis (migração 025) ────────────────────
+  // O modo é uma propriedade da PARCERIA, não da rota: a rota diz o que
+  // poderia fazer, esta coluna diz o que está contratado hoje.
+  parceiro_key: string | null;
+  modo: ModoParceria;
+  link_afiliado: string | null;
+  /** Destino de alta intenção: o formulário de registo do parceiro. */
+  link_afiliado_registo: string | null;
+  dominios_permitidos: string[];
+  subid_param: string | null;
+  caminho_suportado: boolean;
+  divulgacao: string;
+  logo_url: string | null;
+  cor_marca: string | null;
+  comissao_descricao: string | null;
+  atribuicao_janela_dias: number | null;
+  validacao_dias: number | null;
+  atribuicao_nota: string | null;
+  inicio_em: string | null;
+  fim_em: string | null;
 }
 
 export type PartnerInput = Omit<PartnerRow, "criado_em" | "atualizado_em">;
+
+// ── Superfícies, criativos, cliques e comissões (migração 025) ───────────
+
+export interface PartnerPlacementRow {
+  id: string;
+  parceiro_id: string;
+  superficie: string;
+  variante: "padrao" | "compacta" | "faixa" | "banner" | "texto";
+  criativo_id: string | null;
+  copy_titulo: string | null;
+  copy_sub: string | null;
+  copy_cta: string | null;
+  copy_nota: string | null;
+  divulgacao: string | null;
+  ativo: boolean;
+  ordem: number;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export type PartnerPlacementInput = Omit<
+  PartnerPlacementRow,
+  "criado_em" | "atualizado_em"
+>;
+
+export interface PartnerCreativeRow {
+  id: string;
+  parceiro_id: string;
+  tipo: "banner" | "logo" | "texto";
+  idioma: "pt" | "en";
+  largura: number | null;
+  altura: number | null;
+  /** Sempre no NOSSO domínio: `/parceiros/<key>/…`. Nunca o do parceiro. */
+  url: string;
+  alt: string;
+  nota: string | null;
+  ativo: boolean;
+  criado_em: string;
+}
+
+export type PartnerCreativeInput = Omit<PartnerCreativeRow, "criado_em">;
+
+export interface PartnerLinkClickRow {
+  id: string;
+  parceiro_id: string;
+  click_id: string;
+  superficie: string;
+  variante: string | null;
+  origem_slug: string | null;
+  intent: string | null;
+  destino_host: string;
+  destino_caminho: string | null;
+  dispositivo: "desktop" | "mobile" | "tablet" | "desconhecido" | null;
+  criado_em: string;
+}
+
+export type EstadoComissao = "pendente" | "confirmada" | "anulada" | "paga";
+
+export interface PartnerCommissionRow {
+  id: string;
+  parceiro_id: string;
+  referencia: string | null;
+  estado: EstadoComissao;
+  /** Base sem IVA — é sobre este valor que a comissão incide. */
+  valor_liquido: number;
+  valor_comissao: number;
+  plano: string | null;
+  ocorrido_em: string;
+  confirmavel_em: string | null;
+  origem: "csv" | "api";
+  importado_em: string;
+}
+
+export type PartnerCommissionInput = Omit<PartnerCommissionRow, "importado_em">;
+
+// ── Superfícies ──────────────────────────────────────────────
+
+export async function listarPlacements(parceiroId: string): Promise<PartnerPlacementRow[]> {
+  const { data, error } = await getSupabase()
+    .from("partner_placements")
+    .select("*")
+    .eq("parceiro_id", parceiroId)
+    .order("ordem", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PartnerPlacementRow[];
+}
+
+export async function guardarPlacement(p: PartnerPlacementInput): Promise<{ erro?: string }> {
+  const { error } = await getSupabase()
+    .from("partner_placements")
+    .upsert({ ...p, atualizado_em: new Date().toISOString() }, { onConflict: "id" });
+  return error ? { erro: error.message } : {};
+}
+
+export async function eliminarPlacement(id: string): Promise<{ erro?: string }> {
+  const { error } = await getSupabase().from("partner_placements").delete().eq("id", id);
+  return error ? { erro: error.message } : {};
+}
+
+// ── Criativos ────────────────────────────────────────────────
+
+export async function listarCriativos(parceiroId: string): Promise<PartnerCreativeRow[]> {
+  const { data, error } = await getSupabase()
+    .from("partner_creatives")
+    .select("*")
+    .eq("parceiro_id", parceiroId)
+    .order("criado_em", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PartnerCreativeRow[];
+}
+
+export async function listarCriativosAtivos(): Promise<PartnerCreativeRow[]> {
+  const { data, error } = await getSupabase()
+    .from("partner_creatives")
+    .select("*")
+    .eq("ativo", true);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PartnerCreativeRow[];
+}
+
+export async function guardarCriativo(c: PartnerCreativeInput): Promise<{ erro?: string }> {
+  const { error } = await getSupabase()
+    .from("partner_creatives")
+    .upsert(c, { onConflict: "id" });
+  return error ? { erro: error.message } : {};
+}
+
+/**
+ * A licença de marca é «limitada, revogável, não exclusiva e intransmissível».
+ * Se for revogada, todos os criativos de um parceiro saem do ar num só UPDATE.
+ */
+export async function desativarCriativosDoParceiro(parceiroId: string): Promise<{ erro?: string }> {
+  const { error } = await getSupabase()
+    .from("partner_creatives")
+    .update({ ativo: false })
+    .eq("parceiro_id", parceiroId);
+  return error ? { erro: error.message } : {};
+}
+
+// ── Cliques e comissões ──────────────────────────────────────
+
+export async function listarCliques(
+  parceiroId: string,
+  desde?: string,
+): Promise<PartnerLinkClickRow[]> {
+  let q = getSupabase()
+    .from("partner_link_clicks")
+    .select("*")
+    .eq("parceiro_id", parceiroId)
+    .order("criado_em", { ascending: false })
+    .limit(5000);
+  if (desde) q = q.gte("criado_em", desde);
+  const { data, error } = await q;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PartnerLinkClickRow[];
+}
+
+export async function listarComissoesGuardadas(
+  parceiroId: string,
+): Promise<PartnerCommissionRow[]> {
+  const { data, error } = await getSupabase()
+    .from("partner_commissions")
+    .select("*")
+    .eq("parceiro_id", parceiroId)
+    .order("ocorrido_em", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PartnerCommissionRow[];
+}
+
+export async function importarComissoes(
+  linhas: PartnerCommissionInput[],
+): Promise<{ erro?: string; inseridas: number }> {
+  if (linhas.length === 0) return { inseridas: 0 };
+  const { error } = await getSupabase()
+    .from("partner_commissions")
+    .upsert(linhas, { onConflict: "id" });
+  return error ? { erro: error.message, inseridas: 0 } : { inseridas: linhas.length };
+}
 
 // ── Parceiros ────────────────────────────────────────────────
 

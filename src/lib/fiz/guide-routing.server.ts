@@ -21,13 +21,31 @@ import {
   type GuideAudience,
   type Placement,
 } from "./contracts";
-import { manifesto } from "@/lib/guias/manifests";
+import { manifesto, rotuloLigacao } from "@/lib/guias/manifests";
 import { APP_VERSION } from "@/lib/version";
 import { previewAtivo, catalogoDePreview, rotaDePreview } from "./preview.server";
 import { rotaDoSimulador, type SimuladorId } from "@/content/fiz-simulator-routes";
+import { rotaDoGuiaAtiva } from "@/content/fiz-guide-routes";
+import {
+  parceriaAtiva,
+  parceriasAtivas,
+  parceriaUtilizavel,
+} from "@/lib/parcerias/catalogo.server";
+import { modoEfetivo, type ModoParceria } from "@/lib/parcerias/modos";
+import { DIVULGACAO_LIGACAO } from "@/content/parcerias-copy";
+import type { FizIntent } from "@/lib/guias/manifests";
 
-/** Os seis estados obrigatórios da interface (ponto 8.3 da auditoria). */
+/**
+ * Os estados da interface. Eram seis (ponto 8.3 da auditoria); são sete desde
+ * que existe um modo de parceria.
+ *
+ * `disponivel_ligacao` é o da Fase 1: um link externo, sem conta e sem
+ * consentimento. Não é um sétimo caso do mesmo problema — é o modo mais
+ * simples dos três que já estavam declarados em `GuideDataMode` e que nunca
+ * tinha sido exercitado porque não havia destino.
+ */
 export type EstadoAcaoFiz =
+  | "disponivel_ligacao" // NOVO — link externo de afiliado; sem conta, sem consentimento
   | "disponivel_ligado" // capacidade suportada e conta ligada
   | "disponivel_por_ligar" // suportada, mas a conta ainda não está ligada
   | "disponivel_criar_conta" // exige criar conta na FIZ
@@ -54,10 +72,83 @@ export interface AcaoFizResolvida {
   /** true quando a resposta vem do catálogo local de pré-visualização.
       A interface TEM de o dizer ao utilizador — ver FizAvisoPreVisualizacao. */
   preview: boolean;
+  /**
+   * Destino externo, preenchido APENAS em `disponivel_ligacao`. É sempre uma
+   * rota nossa (`/ir/<parceiro>?…`), nunca o link do parceiro: o código de
+   * afiliado não fica em HTML estático, e o destino é validado a cada clique.
+   */
+  destinoLigacao?: string;
+  /** Modo efetivo desta superfície — o mínimo entre a parceria e a rota. */
+  modo?: ModoParceria;
 }
 
+/**
+ * Divulgação da Fase 2 (handoff / conta ligada).
+ *
+ * «A parceria é remunerada» descreve um acordo comercial genérico. Não diz
+ * que ESTE link paga comissão POR ESTA subscrição, que é o que a cl. 11.2 do
+ * Contrato de Afiliado exige — a par da identificação como publicidade. Para
+ * o modo LIGACAO existe `DIVULGACAO_LIGACAO`, que o diz.
+ */
 export const DIVULGACAO_PADRAO =
   "A FIZ é um parceiro de execução fiscal. O ReciboCerto explica e prepara; a FIZ executa. A parceria é remunerada.";
+
+/** Chave da parceria FIZ em `admin_partners.parceiro_key`. */
+const CHAVE_FIZ = "fiz";
+
+/**
+ * Passo de LIGAÇÃO — o primeiro a ser tentado depois da bandeira.
+ *
+ * Guardado por `PARCERIAS_ATIVAS`, e é isso que resolve o problema da base de
+ * dados partilhada entre produção e deploys de ramo: em produção a variável é
+ * "true" e a ligação de afiliado ganha ao catálogo simulado; nos deploys de
+ * ramo fica por definir e este passo não corre, pelo que a Fase 2 continua a
+ * poder ser revista em pré-visualização com a mesma linha ativa no Supabase.
+ *
+ * Devolve `null` quando não há parceria em modo LIGACAO — e aí a resolução
+ * segue exatamente como seguia antes.
+ */
+async function passoDeLigacao(entrada: {
+  dataMode: GuideRoute["dataMode"];
+  capabilityKey: string;
+  rotulo: string;
+  superficie: string;
+  slug?: string;
+  intent?: FizIntent;
+  exigeRevisaoHumana: boolean;
+}): Promise<AcaoFizResolvida | null> {
+  if (!parceriasAtivas()) return null;
+
+  const parceria = await parceriaAtiva(CHAVE_FIZ);
+  if (!parceriaUtilizavel(parceria)) return null;
+
+  const modo = modoEfetivo(parceria.modo, entrada.dataMode);
+  if (modo !== "LIGACAO") return null;
+
+  const destino = new URL(`/ir/${CHAVE_FIZ}`, "https://placeholder.local");
+  destino.searchParams.set("s", entrada.superficie);
+  if (entrada.slug) destino.searchParams.set("g", entrada.slug);
+  if (entrada.intent) destino.searchParams.set("i", entrada.intent);
+
+  return {
+    estado: "disponivel_ligacao",
+    rotulo: entrada.rotulo,
+    // O texto vem da base de dados para poder ser corrigido sem deploy; o
+    // valor de recurso é o de afiliado, nunca o genérico da Fase 2.
+    divulgacao: parceria.divulgacao.trim() || DIVULGACAO_LIGACAO,
+    capabilityKey: entrada.capabilityKey,
+    // Em LIGACAO nada é transportado — o modo de dados É `NO_DATA`, seja qual
+    // for o que a rota gostaria de fazer.
+    dataMode: "NO_DATA",
+    requiresConsent: false,
+    requiredScopes: [],
+    degradado: false,
+    exigeRevisaoHumana: entrada.exigeRevisaoHumana,
+    preview: false,
+    destinoLigacao: `${destino.pathname}${destino.search}`,
+    modo,
+  };
+}
 
 /** Versão do Guia enviada à FIZ: identifica o conteúdo que gerou a ação. */
 export function versaoDoGuia(slug: string): string {
@@ -145,6 +236,24 @@ export async function resolverAcaoDoGuia(entrada: EntradaResolucao): Promise<Aca
   const capabilityKey = acao.requiredCapability;
   const estadoLigacao: ConnectionState = entrada.connectionState ?? "NOT_CONNECTED";
   const publico = entrada.audience ?? m.audiences[0];
+
+  // ── Passo 2: parceria em modo LIGACAO ───────────────────────────────
+  // Antes da pré-visualização, porque em produção é este que vale. A rota
+  // tem de estar ativa: `enabled` deixa de ser um campo decorativo.
+  if (rotaDoGuiaAtiva(entrada.slug)) {
+    const ligacao = await passoDeLigacao({
+      dataMode: acao.dataPolicy,
+      capabilityKey,
+      // A copy de LIGACAO é obrigatória num Guia ativado — a de handoff
+      // prometeria transporte de dados que não acontece.
+      rotulo: rotuloLigacao(acao),
+      superficie: "guia.next_step",
+      slug: m.slug,
+      intent: acao.intent,
+      exigeRevisaoHumana: acao.exigeRevisaoHumana ?? false,
+    });
+    if (ligacao) return ligacao;
+  }
 
   // ── Pré-visualização: catálogo local, sem rede ──────────────────────
   if (previewAtivo()) {
@@ -260,6 +369,24 @@ export async function resolverAcaoDoSimulador(entrada: EntradaSimulador): Promis
 
   const capabilityKey = rota.requiredCapability;
   const estadoLigacao: ConnectionState = entrada.connectionState ?? "NOT_CONNECTED";
+
+  // `rota.enabled` NUNCA era lido aqui. O campo existia, era testado, e não
+  // tinha efeito no encaminhamento. Não fazia mal enquanto nada chegasse tão
+  // longe (`estadoIntegracao()` nunca é "pronta" sem credenciais); passa a
+  // fazer no momento em que existe um caminho de resolução que não passa por
+  // aí — que é exatamente o que o modo LIGACAO introduz.
+  if (!rota.enabled) return null;
+
+  const ligacao = await passoDeLigacao({
+    dataMode: rota.dataMode,
+    capabilityKey,
+    rotulo: rota.fallbackLabelLigacao ?? rota.fallbackLabel,
+    superficie: "simulador.plano_acao",
+    slug: rota.simulador,
+    intent: rota.intent,
+    exigeRevisaoHumana: rota.exigeRevisaoHumana ?? false,
+  });
+  if (ligacao) return ligacao;
 
   if (previewAtivo()) {
     const cap = catalogoDePreview().capabilities.find((c) => c.key === capabilityKey);

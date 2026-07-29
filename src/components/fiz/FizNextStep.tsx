@@ -21,6 +21,7 @@ import { FizMarca } from "./FizLogo";
 // ─────────────────────────────────────────────────────────────────────────
 
 type EstadoAcao =
+  | "disponivel_ligacao"
   | "disponivel_ligado" | "disponivel_por_ligar" | "disponivel_criar_conta"
   | "indisponivel" | "requer_plano_fiz" | "fiz_indisponivel";
 
@@ -35,10 +36,24 @@ interface AcaoResolvida {
   motivo?: string;
   degradado: boolean;
   exigeRevisaoHumana: boolean;
+  /** Rota nossa (`/ir/fiz?…`), só em `disponivel_ligacao`. */
+  destinoLigacao?: string;
 }
 
 interface FizNextStepProps {
   slug: string;
+  /**
+   * Ação já resolvida no servidor.
+   *
+   * Em modo LIGACAO a resposta NÃO DEPENDE DE NADA que só se saiba no
+   * browser: o destino é conhecido no momento em que a página é renderizada.
+   * Manter o `fetch` custava um round-trip por visita em 54 Guias, um salto
+   * de layout, e — o mais grave — NENHUM LINK para quem tem JavaScript
+   * desligado ou bloqueado.
+   *
+   * Sem `acaoInicial`, o componente faz exatamente o que fazia antes.
+   */
+  acaoInicial?: AcaoResolvida | null;
   /** Campos que este Guia propõe transferir, já com valores legíveis. */
   camposPropostos?: CampoConsentimento[];
   camposNuncaEnviados?: readonly string[];
@@ -51,16 +66,21 @@ const NUNCA_ENVIADOS_PADRAO = [
 
 export default function FizNextStep({
   slug,
+  acaoInicial = null,
   camposPropostos = [],
   camposNuncaEnviados = NUNCA_ENVIADOS_PADRAO,
 }: FizNextStepProps) {
-  const [acao, setAcao] = useState<AcaoResolvida | null>(null);
-  const [carregado, setCarregado] = useState(false);
+  const [acao, setAcao] = useState<AcaoResolvida | null>(acaoInicial);
+  const [carregado, setCarregado] = useState(acaoInicial !== null);
   const [dialogoAberto, setDialogoAberto] = useState(false);
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
+    // Em LIGACAO a resposta é estática: já veio do servidor e não se repete.
+    // Repetir o pedido não traria informação nova e reintroduziria
+    // exatamente o round-trip que a resolução no servidor eliminou.
+    if (acaoInicial?.estado === "disponivel_ligacao") return;
     // Integração desligada: nem sequer se faz o pedido.
     if (!fizAtiva()) {
       setCarregado(true);
@@ -85,7 +105,7 @@ export default function FizNextStep({
     return () => {
       ativo = false;
     };
-  }, [slug]);
+  }, [slug, acaoInicial]);
 
   const autorizar = useCallback(
     async (camposAutorizados: string[]) => {
@@ -160,6 +180,13 @@ export default function FizNextStep({
 
         {!indisponivelTemporario && (
           <div className="mt-4">
+            {/* Modo LIGACAO: um `<a href>` real, presente no HTML inicial.
+                Sem diálogo de consentimento — não há nada a consentir,
+                porque não segue nada. */}
+            {acao.estado === "disponivel_ligacao" && acao.destinoLigacao && (
+              <FizActionButton href={acao.destinoLigacao}>{acao.rotulo}</FizActionButton>
+            )}
+
             {acao.estado === "disponivel_por_ligar" && (
               <div className="flex flex-col gap-2">
                 <p className="flex items-start gap-1.5 text-xs text-stone-600 dark:text-stone-400">

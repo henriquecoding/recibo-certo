@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   GUIDE_MANIFESTS, manifesto, TOOL_HREFS, ARQUETIPOS, HUB_GRUPOS,
-  assertManifestsIntegrity, type GuideManifest,
+  assertManifestsIntegrity, rotuloLigacao, type GuideManifest,
 } from "@/lib/guias/manifests";
 import {
   LEGAL_SOURCES, LEITURAS_COMPLEMENTARES, DOMINIOS_AUTORIZADOS,
@@ -13,7 +13,9 @@ import { LEGAL_CLAIMS, claimsDoGuia, assertClaimsIntegrity } from "@/lib/guias/c
 import { APLICABILIDADE, assertAplicabilidadeIntegrity } from "@/lib/guias/aplicabilidade";
 import { HISTORICO_GUIAS, assertHistoricoIntegrity } from "@/lib/guias/historico";
 import { pesquisarGuias, normalizar, fontesDoGuia, confiancaDoGuia } from "@/lib/guias";
-import { FIZ_GUIDE_ROUTES, GUIAS_SEM_ACAO_FIZ, MANIFESTO_ROTAS_META } from "@/content/fiz-guide-routes";
+import { FIZ_GUIDE_ROUTES, GUIAS_SEM_ACAO_FIZ, MANIFESTO_ROTAS_META, ROTAS_ATIVAS_ORFAS } from "@/content/fiz-guide-routes";
+import { modoEfetivo } from "@/lib/parcerias/modos";
+import { EXPRESSOES_DE_HANDOFF } from "@/content/parcerias-copy";
 import { FIZ_SIMULATOR_ROUTES, SIMULADORES_SEM_ACAO_FIZ, META_ROTAS_SIMULADORES, rotaDoSimulador } from "@/content/fiz-simulator-routes";
 import { CAMPOS_VALIDOS, ROTULO_CAMPO, CAMPOS_NUNCA_ENVIADOS } from "@/lib/fiz/handoff-fields";
 import { destinoFizValido, urlSemDadosSensiveis, PARTNER_SCOPES, USER_SCOPES, SCOPES_LIGACAO_BASICA } from "@/lib/fiz/contracts";
@@ -274,10 +276,39 @@ describe("guias:fiz-contract — capacidade, payload e consentimento seguem o co
     }
   });
 
-  it("todas as rotas nascem desativadas enquanto a parceria estiver por fechar", () => {
-    // Ponto 3 da arquitetura: não existe lançamento provisório.
-    expect(MANIFESTO_ROTAS_META.ativas).toBe(0);
-    for (const r of FIZ_GUIDE_ROUTES) expect(r.enabled, r.guideSlug).toBe(false);
+  it("nenhuma rota é ativada acima do modo contratado com o parceiro", () => {
+    // A regra antiga era «nada ativo», e estava certa enquanto o único modo
+    // possível era o handoff: sem catálogo da FIZ e sem sandbox validada,
+    // qualquer ativação seria uma promessa por cumprir.
+    //
+    // Com um modo de LIGAÇÃO contratado, essa formulação passou a proibir
+    // aquilo que a parceria já permite. A regra REAL — a que a antiga
+    // guardava sem a saber nomear — é esta: uma rota nunca corre em modo mais
+    // permissivo do que o que está contratado. Uma rota de handoff numa
+    // parceria em LIGACAO degrada para ligação; não desaparece, e não passa
+    // à frente.
+    for (const r of FIZ_GUIDE_ROUTES) {
+      if (!r.enabled) continue;
+      expect(modoEfetivo("LIGACAO", r.dataMode), r.guideSlug).toBe("LIGACAO");
+    }
+  });
+
+  it("uma rota ativada tem copy própria do modo em que corre", () => {
+    // A copy de handoff («continuar sem repetir dados») é FALSA em modo
+    // LIGACAO. Um Guia ativado sem rótulo de ligação prometeria transporte
+    // de dados que não acontece.
+    for (const r of FIZ_GUIDE_ROUTES) {
+      if (!r.enabled) continue;
+      const m = manifesto(r.guideSlug)!;
+      expect(m.fizAction, r.guideSlug).toBeDefined();
+      expect(rotuloLigacao(m.fizAction!).length, r.guideSlug).toBeGreaterThan(3);
+    }
+  });
+
+  it("as rotas ativadas existem mesmo", () => {
+    // Um slug mal escrito em `ROTAS_ATIVAS` é silencioso: a rota nunca ativa
+    // e ninguém dá por isso.
+    expect(ROTAS_ATIVAS_ORFAS).toEqual([]);
   });
 
   it("cada guia ou tem ação FIZ ou tem razão documentada para não ter", () => {
@@ -442,8 +473,25 @@ describe("guias:fiz-contract — simuladores (ponto 12.3 da arquitetura)", () =>
     }
   });
 
-  it("todas as rotas de simulador nascem desativadas", () => {
-    expect(META_ROTAS_SIMULADORES.ativas).toBe(0);
+  it("nenhum simulador é ativado acima do modo contratado", () => {
+    for (const r of FIZ_SIMULATOR_ROUTES) {
+      if (!r.enabled) continue;
+      expect(modoEfetivo("LIGACAO", r.dataMode), r.simulador).toBe("LIGACAO");
+    }
+  });
+
+  it("todo o simulador tem par de copy para o modo LIGACAO", () => {
+    // Aqui a copy de ligação é OBRIGATÓRIA em todas as rotas, não só nas
+    // ativadas: ao contrário dos Guias, um simulador não tem um recurso por
+    // intenção — a promessa é específica e não há default honesto possível.
+    for (const r of FIZ_SIMULATOR_ROUTES) {
+      expect(r.fallbackLabelLigacao.length, r.simulador).toBeGreaterThan(5);
+      expect(r.promessaLigacao.length, r.simulador).toBeGreaterThan(20);
+      for (const proibida of EXPRESSOES_DE_HANDOFF) {
+        expect(r.fallbackLabelLigacao.toLowerCase(), `${r.simulador} · rótulo`).not.toContain(proibida);
+        expect(r.promessaLigacao.toLowerCase(), `${r.simulador} · promessa`).not.toContain(proibida);
+      }
+    }
   });
 
   it("cada simulador ou tem ação ou tem razão documentada", () => {

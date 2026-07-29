@@ -12,6 +12,8 @@ import {
   type SimulacaoIRS,
 } from "@/lib/fiscal";
 import FizLogo from "@/components/fiz/FizLogo";
+import FizActionButton from "@/components/fiz/FizActionButton";
+import { NOTA_LIGACAO } from "@/content/parcerias-copy";
 import { fizAtiva } from "@/lib/fiz/flag";
 import {
   BotaoPausa,
@@ -195,7 +197,10 @@ const ATO_META: Record<AtoId, { rotulo: string; legenda: string }> = {
   coletavel: { rotulo: "Coletável", legenda: "Do bruto ao rendimento coletável" },
   escaloes: { rotulo: "Escalões", legenda: "Onde o imposto se forma" },
   saldo: { rotulo: "Acerto", legenda: "Reembolso ou imposto a pagar" },
-  fiz: { rotulo: "Entrega", legenda: "Quem trata das obrigações" },
+  // A régua é o caminho DECLARADO: `ReguaDeAtos` anuncia «Passo N de M: …».
+  // Um leitor de ecrã deve saber que este passo leva para fora antes de lá
+  // chegar — «Entrega» não dizia isso.
+  fiz: { rotulo: "Parceiro", legenda: "Quem trata das obrigações — ligação para a FIZ" },
 };
 
 /** Quanto tempo cada ato fica em cena. O dos escalões é o mais longo porque
@@ -734,7 +739,7 @@ const PASSOS_FIZ = [
   { Icon: ShieldCheck, texto: "Acompanhar as obrigações que se seguem" },
 ];
 
-function AtoFiz({ decl }: { decl: DeclaracaoResult }) {
+function AtoFiz({ decl, aoTrancar }: { decl: DeclaracaoResult; aoTrancar: () => void }) {
   return (
     <m.div variants={palco} initial="oculto" animate="entra">
       <TituloAto nota="Parceiro">E depois do número</TituloAto>
@@ -750,6 +755,19 @@ function AtoFiz({ decl }: { decl: DeclaracaoResult }) {
           </div>
         </div>
       </m.div>
+
+      <FizActionButton
+        href="/ir/fiz?s=demo.irs&v=compacta&i=PREPARE_IRS&d=registo"
+        className="mt-2.5"
+        // As mesmas três trancas do Hero: ponteiro, foco e toque põem o
+        // relógio em `parado`, não em `sobrevoo`. Quem chegou ao botão
+        // escolheu parar; retoma no BotaoPausa.
+        onPointerEnter={aoTrancar}
+        onFocus={aoTrancar}
+        onTouchStart={aoTrancar}
+      >
+        Conhecer a FIZ
+      </FizActionButton>
 
       <div className="mt-2 space-y-1">
         {PASSOS_FIZ.map((p) => (
@@ -767,9 +785,13 @@ function AtoFiz({ decl }: { decl: DeclaracaoResult }) {
         ))}
       </div>
 
+      {/* Aqui vivia a pior frase do site: «escolhes campo a campo o que segue
+          contigo — a começar pelo IRS estimado de X», com o X interpolado do
+          resultado real. Em modo LIGACAO nada segue. Interpolar um valor
+          calculado numa promessa de transporte que não existe é pior do que
+          uma promessa vaga, porque é concreta e verificável — e falsa. */}
       <m.p variants={linha} className="mt-2 text-[10px] leading-relaxed text-stone-400">
-        Escolhes campo a campo o que segue contigo — a começar pelo IRS estimado de{" "}
-        {eur0(decl.irsTotal)}.
+        {NOTA_LIGACAO}
       </m.p>
     </m.div>
   );
@@ -961,7 +983,7 @@ export default function DemoIRS() {
               {ato === "coletavel" && <AtoColetavel sim={sim} reduz={reduz} />}
               {ato === "escaloes" && <AtoEscaloes sim={sim} reduz={reduz} />}
               {ato === "saldo" && <AtoSaldo decl={decl} reduz={reduz} />}
-              {ato === "fiz" && <AtoFiz decl={decl} />}
+              {ato === "fiz" && <AtoFiz decl={decl} aoTrancar={() => setParado(true)} />}
             </m.div>
           </AnimatePresence>
         </div>

@@ -19,6 +19,19 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.8.0",
+    data: "2026-07-29",
+    titulo: "Parceria com a FIZ: uma ligação, sempre declarada",
+    itens: [
+      "Nos Guias e nos simuladores passa a haver um caminho para a FIZ — software de faturação e contabilidade para quem passa recibos verdes e para empresas. É uma ligação de afiliado: recebemos comissão se subscreveres, o preço para ti é o mesmo, e está identificado como publicidade em todos os sítios onde aparece.",
+      "A ligação não leva dados teus. Nenhum dado pessoal viaja no endereço, não pomos cookies para a contar, e o registo do clique não guarda o teu IP nem te liga a nada. Está descrito na página de Privacidade, incluindo o que já ficava guardado no teu browser.",
+      "Nada muda no que escrevemos: os Guias continuam a explicar alternativas, as fontes legais continuam visíveis, e há um teste automático que falha se um Guia mencionar a FIZ fora do bloco de parceria.",
+      "As demonstrações em direto da página inicial e do simulador de IRS deixaram de ter um último passo decorativo — passa a haver um botão a sério. E, por baixo de cada uma, uma faixa que não se move: o botão dentro da demonstração só existe durante alguns segundos, e essa faixa é o caminho para quem usa teclado, ecrã tátil, ou pediu ao sistema menos animações.",
+      "Duas frases desapareceram do site porque prometiam uma coisa que não acontece: diziam que escolherias «campo a campo» o que seguia para a FIZ, e uma delas chegava a citar o teu IRS estimado. Nesta fase não segue nada — a ligação abre o site deles e a tua simulação fica onde está.",
+      "O cartão de parceiro dizia «Parceiro verificado» e mais nada. Passa a dizer também «Ligação comercial»: anunciar «verificado» e omitir «pago» era meia verdade.",
+    ],
+  },
+  {
     version: "2.7.0",
     data: "2026-07-29",
     titulo: "Quem tem salário e recibos verdes deixa de ver dois números diferentes",

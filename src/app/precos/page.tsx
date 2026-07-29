@@ -4,6 +4,7 @@ import Precos from "@/components/Precos";
 import FAQ from "@/components/FAQ";
 
 import Footer from "@/components/Footer";
+import AnuncioSlot from "@/components/parcerias/AnuncioSlot";
 import { generateBreadcrumbSchema } from "@/lib/seo";
 import { faqs } from "@/lib/faq";
 
@@ -76,6 +77,12 @@ export default function PrecosPage() {
         <Nav />
         <main className="pt-8">
           <Precos />
+          {/* O slot público que faltava: a tabela `anuncios` tinha CRUD e
+              pré-visualização no admin desde a migração 004 e NADA no site a
+              consumia. Os anúncios existiam e não apareciam. */}
+          <div className="mx-auto max-w-4xl px-6 py-4">
+            <AnuncioSlot superficie="anuncio.landing_pricing" />
+          </div>
           <FAQ />
         </main>
         <Footer />

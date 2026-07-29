@@ -20,6 +20,22 @@ interface FizActionButtonProps {
   desativado?: boolean;
   variante?: "primaria" | "secundaria";
   className?: string;
+  /**
+   * Trancas para quando este botão vive dentro de conteúdo que se move
+   * sozinho (as demonstrações em direto).
+   *
+   * Um botão que só existe durante 3 segundos a cada ciclo é um botão hostil.
+   * Estes três eventos param o relógio ANTES de o alvo sair de cena: com o
+   * ponteiro por cima (WCAG 2.5.7 aplicado a um alvo em movimento), ao
+   * receber foco de teclado, e ao primeiro toque num ecrã tátil — onde
+   * `onMouseEnter` não dispara de forma fiável e está a maior parte da
+   * audiência.
+   */
+  onPointerEnter?: () => void;
+  onFocus?: () => void;
+  onTouchStart?: () => void;
+  /** Rótulo acessível, quando o texto visível não chega. */
+  ariaLabel?: string;
 }
 
 export default function FizActionButton({
@@ -30,6 +46,10 @@ export default function FizActionButton({
   desativado = false,
   variante = "primaria",
   className = "",
+  onPointerEnter,
+  onFocus,
+  onTouchStart,
+  ariaLabel,
 }: FizActionButtonProps) {
   const base =
     "inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-fiz-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto";
@@ -57,6 +77,10 @@ export default function FizActionButton({
         href={href}
         target="_blank"
         rel="noopener noreferrer nofollow sponsored"
+        aria-label={ariaLabel}
+        onPointerEnter={onPointerEnter}
+        onFocus={onFocus}
+        onTouchStart={onTouchStart}
         className={`${base} ${estilo} ${className}`}
       >
         {conteudo}
@@ -65,7 +89,16 @@ export default function FizActionButton({
   }
 
   return (
-    <button type="button" onClick={onClick} disabled={desativado || ocupado} className={`${base} ${estilo} ${className}`}>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={desativado || ocupado}
+      aria-label={ariaLabel}
+      onPointerEnter={onPointerEnter}
+      onFocus={onFocus}
+      onTouchStart={onTouchStart}
+      className={`${base} ${estilo} ${className}`}
+    >
       {conteudo}
     </button>
   );

@@ -9,6 +9,7 @@ import FontesGuia from "./FontesGuia";
 import HistoricoGuia from "./HistoricoGuia";
 import NotaDisclaimer from "./NotaDisclaimer";
 import FizNextStep from "@/components/fiz/FizNextStep";
+import { resolverAcaoDoGuia } from "@/lib/fiz/guide-routing.server";
 import { manifestoObrigatorio, ARQUETIPOS } from "@/lib/guias/manifests";
 import { aplicabilidade } from "@/lib/guias/aplicabilidade";
 import { generateArticleSchema, SITE_URL } from "@/lib/seo";
@@ -38,9 +39,17 @@ interface GuiaLayoutProps {
   descricaoHero?: string;
 }
 
-export default function GuiaLayout({ slug, children, descricaoHero }: GuiaLayoutProps) {
+export default async function GuiaLayout({ slug, children, descricaoHero }: GuiaLayoutProps) {
   const m = manifestoObrigatorio(slug);
   const a = aplicabilidade(slug);
+
+  // Resolvido AQUI, no servidor, e não por `fetch` na montagem do componente.
+  // Em modo LIGACAO o destino é conhecido no momento em que a página é
+  // renderizada: manter o pedido custava um round-trip por visita em 54
+  // Guias, um salto de layout, e nenhum link para quem tem JavaScript
+  // desligado. `resolverAcaoDoGuia` nunca lança — devolve sempre um estado
+  // renderizável, ou `null`.
+  const acaoInicial = await resolverAcaoDoGuia({ slug, placement: "NEXT_STEP" });
 
   const article = generateArticleSchema({
     headline: m.title,
@@ -88,7 +97,7 @@ export default function GuiaLayout({ slug, children, descricaoHero }: GuiaLayout
       {children}
 
       {a && <ChecklistGuia slug={slug} itens={a.checklist} />}
-      <FizNextStep slug={slug} />
+      <FizNextStep slug={slug} acaoInicial={acaoInicial} />
       <SimuladoresRelacionados slug={slug} />
       <GuiasRelacionados slug={slug} />
       <FontesGuia slug={slug} />

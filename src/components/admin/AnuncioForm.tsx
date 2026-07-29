@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import type { AnuncioRow, AnuncioInput, TipoAnuncio } from "@/lib/supabase/admin";
+import CriativoParceiroPreview, { FORMATOS_CRIATIVO } from "./CriativoParceiroPreview";
 import {
   Bank, Building, FileSign, Heart, Invoice, Laptop, ShoppingBag, Briefcase,
   Monitor, Smartphone, Eye, GoogleAds, ImageIcon, Link, Check, Warning,
@@ -15,7 +16,17 @@ const TIPOS: { id: TipoAnuncio; label: string; desc: string }[] = [
   { id: "google_ads", label: "Google Ads", desc: "Unidade de anúncio do Google AdSense com ID e slot" },
   { id: "banner", label: "Banner personalizado", desc: "Banner com imagem, texto e cores configuráveis" },
   { id: "nativo", label: "Anúncio nativo", desc: "Anúncio com aparência de conteúdo orgânico" },
+  {
+    id: "criativo_parceiro",
+    label: "Criativo de parceiro",
+    desc: "Criativo do kit do parceiro. O destino é sempre /ir/<parceiro> — nunca uma URL escrita à mão",
+  },
 ];
+
+/** Reaproveita `google_format` para guardar o formato — a coluna já existe
+ *  e é texto livre; acrescentar outra por causa de cinco valores seria uma
+ *  migração para nada. O comentário fica aqui para quem vier a seguir. */
+type FormatoCriativo = "leaderboard" | "billboard" | "retangulo" | "retanguloGrande" | "movel" | "half-page";
 
 const POSICOES = [
   { id: "dashboard", label: "Dashboard", desc: "Página principal do painel" },
@@ -250,6 +261,12 @@ function AdPreview({ anuncio, device }: { anuncio: Partial<AnuncioInput>; device
               {anuncio.tipo === "google_ads" && <GoogleAdsPreview a={anuncio} />}
               {anuncio.tipo === "banner" && <BannerPreview a={anuncio} />}
               {anuncio.tipo === "nativo" && <NativoPreview a={anuncio} />}
+              {anuncio.tipo === "criativo_parceiro" && (
+                <CriativoParceiroPreview
+                  formato={(anuncio.google_format as FormatoCriativo) ?? "leaderboard"}
+                  divulgacao={anuncio.banner_texto ?? undefined}
+                />
+              )}
             </div>
           </div>
           {/* Resto da página */}
@@ -599,6 +616,11 @@ export default function AnuncioForm({ inicial, modoEdicao = false, onGravar }: A
     if (tipo === "google_ads" && !form.google_slot_id?.trim()) return setErro("O Slot ID é obrigatório.");
     if (tipo === "banner" && !form.banner_titulo?.trim()) return setErro("O título do banner é obrigatório.");
     if (tipo === "nativo" && !form.url?.trim()) return setErro("O URL de destino é obrigatório.");
+    // O criativo de parceiro NÃO pede URL: o destino é sempre o
+    // redirecionador. Pede divulgação, que é obrigatória por contrato.
+    if (tipo === "criativo_parceiro" && !(form.banner_texto ?? "").trim()) {
+      return setErro("A divulgação é obrigatória num criativo de parceiro (cl. 11.2 do contrato).");
+    }
 
     setGravando(true);
     const e2 = await onGravar(form as AnuncioInput);
@@ -714,11 +736,13 @@ export default function AnuncioForm({ inicial, modoEdicao = false, onGravar }: A
             {tipo === "google_ads" && "Configuração do Google Ads"}
             {tipo === "banner" && "Configuração do banner"}
             {tipo === "nativo" && "Configuração do anúncio nativo"}
+            {tipo === "criativo_parceiro" && "Criativo de parceiro"}
           </h3>
           {tipo === "parceiro" && <FormParceiro data={form} onChange={patch} />}
           {tipo === "google_ads" && <FormGoogleAds data={form} onChange={patch} />}
           {tipo === "banner" && <FormBanner data={form} onChange={patch} />}
           {tipo === "nativo" && <FormNativo data={form} onChange={patch} />}
+          {tipo === "criativo_parceiro" && <FormCriativoParceiro data={form} onChange={patch} />}
         </div>
 
         {/* Posicionamento */}
@@ -872,5 +896,63 @@ export default function AnuncioForm({ inicial, modoEdicao = false, onGravar }: A
         </div>
       </div>
     </form>
+  );
+}
+
+// ── Formulário do criativo de parceiro ───────────────────────────────────
+//  Deliberadamente curto. Não há campo de URL: o destino é sempre
+//  `/ir/<parceiro>`, construído e validado a cada clique. Um campo de URL
+//  aqui seria uma porta para escrever um destino que ninguém verifica.
+function FormCriativoParceiro({
+  data,
+  onChange,
+}: {
+  data: Partial<AnuncioInput>;
+  onChange: (p: Partial<AnuncioInput>) => void;
+}) {
+  const formato = (data.google_format as FormatoCriativo) ?? "leaderboard";
+  return (
+    <div className="space-y-4">
+      <div>
+        <label htmlFor="cp-formato" className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-stone-500">
+          Formato
+        </label>
+        <select
+          id="cp-formato"
+          value={formato}
+          onChange={(e) => onChange({ google_format: e.target.value })}
+          className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-sm text-stone-800 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        >
+          {FORMATOS_CRIATIVO.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.label}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-[11px] text-stone-400">
+          {FORMATOS_CRIATIVO.find((f) => f.id === formato)?.nota}
+        </p>
+      </div>
+
+      <div>
+        <label htmlFor="cp-divulgacao" className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-stone-500">
+          Divulgação <span className="normal-case tracking-normal text-red-500">(obrigatória)</span>
+        </label>
+        <textarea
+          id="cp-divulgacao"
+          rows={3}
+          value={data.banner_texto ?? ""}
+          onChange={(e) => onChange({ banner_texto: e.target.value })}
+          placeholder="Ligação de afiliado (#publicidade): se subscreveres através daqui, recebemos uma comissão."
+          className="w-full resize-none rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-sm leading-relaxed text-stone-800 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        />
+      </div>
+
+      <div className="rounded-xl bg-stone-50 p-3 text-[11px] leading-relaxed text-stone-500 dark:bg-stone-800/60 dark:text-stone-400">
+        O destino é sempre <code className="font-mono">/ir/&lt;parceiro&gt;</code>, com a superfície e a
+        variante como parâmetros. O domínio é validado a cada clique contra a lista da parceria — não
+        há URL para escrever aqui.
+      </div>
+    </div>
   );
 }

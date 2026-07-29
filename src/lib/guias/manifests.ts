@@ -80,8 +80,40 @@ export interface FizGuideAction {
   dataPolicy: GuideDataMode;
   /** Rótulo por omissão — a FIZ pode devolver outro aprovado por ela. */
   fallbackLabel: string;
+  /**
+   * Rótulo em modo LIGACAO (Fase 1 — link de afiliado).
+   *
+   * `fallbackLabel` descreve o handoff: «continuar sem repetir dados». Em modo
+   * LIGACAO nada é transportado, e essa frase passa a ser FALSA. Este campo é
+   * o par correto — e é opcional de propósito: sem ele vale
+   * `ROTULO_LIGACAO_POR_INTENT`, que cobre os 54 Guias de uma vez em vez de
+   * 54 strings quase iguais escritas à mão, cada uma delas uma oportunidade
+   * de alguém copiar a errada.
+   */
+  fallbackLabelLigacao?: string;
   /** Ações que a FIZ nunca deve executar sem revisão humana do utilizador. */
   exigeRevisaoHumana?: boolean;
+}
+
+/**
+ * Rótulo de modo LIGACAO por intenção.
+ *
+ * Nenhum promete transporte de dados — é essa a única regra dura aqui, e é
+ * verificada em `parcerias:copy` contra a lista de expressões proibidas.
+ */
+export const ROTULO_LIGACAO_POR_INTENT: Record<FizIntent, string> = {
+  START_FREELANCER: "Abrir atividade com a FIZ",
+  CONFIGURE_FREELANCER: "Emitir e declarar com a FIZ",
+  CONFIGURE_VAT: "Tratar do IVA com a FIZ",
+  CONFIGURE_SOCIAL_SECURITY: "Tratar da Segurança Social com a FIZ",
+  PREPARE_IRS: "Entregar o IRS com a FIZ",
+  START_COMPANY: "Constituir a empresa com a FIZ",
+  FIND_ACCOUNTANT: "Falar com um contabilista certificado",
+};
+
+/** O rótulo que uma ação mostra em modo LIGACAO. Nunca vazio. */
+export function rotuloLigacao(acao: FizGuideAction): string {
+  return acao.fallbackLabelLigacao?.trim() || ROTULO_LIGACAO_POR_INTENT[acao.intent];
 }
 
 // ─── Estado editorial ──────────────────────────────────────────────────

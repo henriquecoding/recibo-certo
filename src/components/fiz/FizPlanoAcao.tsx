@@ -26,6 +26,7 @@ import type { SimuladorId } from "@/content/fiz-simulator-routes";
 // ─────────────────────────────────────────────────────────────────────────
 
 type EstadoAcao =
+  | "disponivel_ligacao"
   | "disponivel_ligado" | "disponivel_por_ligar" | "disponivel_criar_conta"
   | "indisponivel" | "requer_plano_fiz" | "fiz_indisponivel";
 
@@ -40,6 +41,8 @@ interface AcaoResolvida {
   degradado: boolean;
   exigeRevisaoHumana: boolean;
   preview: boolean;
+  /** Rota nossa (`/ir/fiz?…`), só em `disponivel_ligacao`. */
+  destinoLigacao?: string;
 }
 
 /** Valores da simulação, já formatados para leitura humana. */
@@ -139,14 +142,22 @@ export default function FizPlanoAcao({
   const [erro, setErro] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
 
-  const { identidade } = useIdentidadeFiz();
+  // ── Minimização de dados (RGPD) ────────────────────────────────────────
+  // `useIdentidadeFiz()` lê nome, NIF, email e telefone do perfil para os
+  // mostrar no diálogo de consentimento. Em modo LIGACAO NÃO HÁ DIÁLOGO — e
+  // sem diálogo não há finalidade. O hook é chamado com a leitura desligada.
+  const modoLigacao = acao?.estado === "disponivel_ligacao";
+  const { identidade } = useIdentidadeFiz({ ativo: !modoLigacao });
   const campos = useMemo(() => {
+    // Em LIGACAO nada é transportado: `camposPropostos` nem sequer é
+    // calculado, quanto mais enviado ao servidor.
+    if (modoLigacao) return [];
     const todos = paraCampos(valores, identidade);
     // Nunca oferecer o que o servidor vai recusar: o utilizador escolheria um
     // campo, carregaria em autorizar e levaria com um erro sem perceber
     // porquê.
     return propostos ? todos.filter((c) => propostos.includes(c.campo as CampoHandoff)) : todos;
-  }, [valores, identidade, propostos]);
+  }, [valores, identidade, propostos, modoLigacao]);
 
   useEffect(() => {
     if (!fizAtiva()) {
@@ -302,7 +313,15 @@ export default function FizPlanoAcao({
 
         {!indisponivelTemporario && (
           <div className="mt-4">
-            {acao.estado === "disponivel_por_ligar" ? (
+            {/* Modo LIGACAO: uma âncora real para uma rota nossa, com o
+                destino de alta intenção (`d=registo`) — quem chega ao fim de
+                um simulador já decidiu. Nenhum diálogo, nenhum campo, nenhum
+                pedido de identidade. */}
+            {acao.estado === "disponivel_ligacao" && acao.destinoLigacao ? (
+              <FizActionButton href={`${acao.destinoLigacao}&d=registo`}>
+                {acao.rotulo}
+              </FizActionButton>
+            ) : acao.estado === "disponivel_por_ligar" ? (
               <FizActionButton href="/dashboard/conta?ligar=fiz">Ligar a minha conta FIZ</FizActionButton>
             ) : acao.estado === "requer_plano_fiz" ? (
               <div className="flex flex-col gap-2">

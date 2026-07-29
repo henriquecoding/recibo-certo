@@ -10,6 +10,7 @@ import {
   generateSoftwareApplicationSchema,
 } from "@/lib/seo";
 import { SimuladorIRSLazy, DemoIRSLazy } from "./lazy";
+import FizFaixaDemo from "@/components/fiz/FizFaixaDemo";
 
 export const metadata: Metadata = {
   title: "Simulador de IRS 2026 — calcula o teu IRS anual passo a passo | ReciboCerto",
@@ -194,8 +195,12 @@ export default function SimuladorIRSLandingPage() {
             ))}
           </ul>
         </div>
-        <div className="flex justify-center lg:justify-end">
+        <div className="flex flex-col items-center gap-3 lg:items-end">
           <DemoIRSLazy />
+          {/* Fora do palco e no HTML inicial: o botão dentro do ato só existe
+              durante uma fração do ciclo e nunca aparece a quem pediu menos
+              movimento. Esta faixa é o piso. */}
+          <FizFaixaDemo superficie="demo.irs.faixa" className="w-full max-w-[420px]" />
         </div>
       </section>
 

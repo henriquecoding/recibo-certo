@@ -25,7 +25,7 @@ const TOC = [
   { id: "finalidade", label: "Finalidades e base legal" },
   { id: "armazenamento-local", label: "Plano gratuito: dados locais" },
   { id: "nuvem-pro", label: "Plano Plus: dados na nuvem" },
-  { id: "fiz", label: "Partilha com a FIZ (opcional)" },
+  { id: "fiz", label: "FIZ: partilha e ligações de afiliado" },
   { id: "pagamentos", label: "Pagamentos (Stripe)" },
   { id: "comunicacoes", label: "Comunicações por email" },
   { id: "cookies", label: "Cookies e tecnologias" },
@@ -368,6 +368,57 @@ export default function PrivacidadePage() {
         <p>
           A partir do momento em que os dados chegam à FIZ, é a FIZ a responsável pelo tratamento
           que deles faz, ao abrigo da política de privacidade e do contrato que tiveres com ela.
+        </p>
+
+        <h3 className="mt-6 font-display text-base font-semibold text-stone-800 dark:text-stone-100">
+          Ligações de afiliado
+        </h3>
+        <p>
+          Além da partilha descrita acima, que ainda não está ativa, existe hoje uma coisa mais
+          simples: <strong>ligações para o site da FIZ que nos pagam comissão</strong> se
+          subscreveres através delas. Estão identificadas como publicidade em todos os sítios onde
+          aparecem, e o preço que pagas é o mesmo — a comissão sai do lado deles.
+        </p>
+        <p>
+          <strong>Estas ligações não transportam dados teus.</strong> Nenhum dado pessoal viaja no
+          endereço: o que segue é apenas de que página do nosso site vieste (por exemplo,
+          «fim do Guia do IVA») e um identificador aleatório desse clique, gerado no momento e que
+          não fica guardado no teu equipamento nem liga dois cliques teus.
+        </p>
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong>Não pomos cookies</strong> nem qualquer identificador no teu browser para
+            contar cliques. Registamos o clique no nosso servidor, sem o teu IP e sem o teu
+            user-agent em bruto — só uma classificação grosseira de telemóvel, tablet ou
+            computador.
+          </li>
+          <li>
+            Se seguires a ligação, <strong>a FIZ pode pôr um cookie no domínio dela</strong> para
+            reconhecer que vieste daqui. Esse cookie é responsabilidade da FIZ e rege-se pela
+            política de privacidade dela, não por esta.
+          </li>
+          <li>
+            Não usamos estas ligações para te seguir entre sites, nem juntamos os cliques ao teu
+            perfil ou à tua conta.
+          </li>
+        </ul>
+        <p>
+          As ligações de afiliado não mudam o que escrevemos: os Guias continuam a poder explicar
+          alternativas à FIZ, as fontes legais continuam visíveis, e nenhum conteúdo é reescrito
+          para aumentar conversão.
+        </p>
+
+        <h3 className="mt-6 font-display text-base font-semibold text-stone-800 dark:text-stone-100">
+          Cartões de parceiro: o que fica guardado no teu equipamento
+        </h3>
+        <p>
+          Quando dispensas um cartão de parceiro, essa escolha é guardada no{" "}
+          <strong className="text-stone-700 dark:text-stone-200">localStorage</strong> do teu
+          browser para não te voltarmos a mostrar o mesmo cartão; e a rotação entre cartões usa o{" "}
+          <strong className="text-stone-700 dark:text-stone-200">sessionStorage</strong>, que
+          desaparece quando fechas o separador. São dados estritamente necessários para a
+          funcionalidade que pediste — dispensar um cartão —, ficam no teu dispositivo, não são
+          enviados para os nossos servidores, e apagam-se quando limpas os dados do site.
         </p>
       </Section>
 

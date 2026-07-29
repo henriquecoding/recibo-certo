@@ -10,6 +10,7 @@ import { versaoDoGuia } from "@/lib/fiz/guide-routing.server";
 import type { Intent, ProfilePrefill, SimulationSummary } from "@/lib/fiz/contracts";
 import { previewAtivo, destinoDePreview } from "@/lib/fiz/preview.server";
 import { rotaDoSimulador, type SimuladorId } from "@/content/fiz-simulator-routes";
+import { parceriaAtiva, parceriasAtivas } from "@/lib/parcerias/catalogo.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,6 +53,25 @@ export async function POST(req: NextRequest) {
 
     if (!corpo || !intent) {
       return NextResponse.json({ erro: "Falta a intenção do handoff.", codigo: "invalido" }, { status: 400, headers: semCache });
+    }
+
+    // ── Defesa em profundidade ──────────────────────────────────────────
+    // Em modo LIGACAO não há transporte de dados, e a interface já não abre
+    // o diálogo. Isso não chega: uma recusa que vive só no cliente é uma
+    // sugestão. Aqui o servidor fecha a porta, com código próprio para o
+    // caso ser distinguível de um erro genérico nos registos.
+    if (parceriasAtivas()) {
+      const parceria = await parceriaAtiva("fiz");
+      if (parceria && parceria.modo === "LIGACAO") {
+        return NextResponse.json(
+          {
+            erro:
+              "A parceria está em modo de ligação simples: não há transferência de dados. Abre a FIZ pelo botão e a tua simulação fica aqui.",
+            codigo: "modo_nao_permite",
+          },
+          { status: 409, headers: semCache },
+        );
+      }
     }
     if (corpo.simulador && !rotaSim) {
       return NextResponse.json({ erro: "Simulador desconhecido.", codigo: "nao_encontrado" }, { status: 404, headers: semCache });

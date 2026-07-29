@@ -27,12 +27,28 @@ export interface IdentidadeDisponivel {
 
 const VAZIA: IdentidadeDisponivel = {};
 
-export function useIdentidadeFiz(): { identidade: IdentidadeDisponivel; carregada: boolean } {
+/**
+ * `ativo: false` desliga a leitura por completo.
+ *
+ * Existe por minimização de dados: em modo LIGACAO não há diálogo de
+ * consentimento, e sem diálogo não há finalidade para ler o nome, o NIF, o
+ * email e o telefone do perfil. Um hook que lê «só para o caso de» é
+ * exatamente o que o RGPD chama tratamento sem finalidade.
+ */
+export function useIdentidadeFiz(
+  opcoes: { ativo?: boolean } = {},
+): { identidade: IdentidadeDisponivel; carregada: boolean } {
+  const { ativo: leituraAtiva = true } = opcoes;
   const { user, carregado: authCarregado } = useAuth();
   const [identidade, setIdentidade] = useState<IdentidadeDisponivel>(VAZIA);
   const [carregada, setCarregada] = useState(false);
 
   useEffect(() => {
+    if (!leituraAtiva) {
+      setIdentidade(VAZIA);
+      setCarregada(true);
+      return;
+    }
     if (!authCarregado) return;
     if (!user || !supabaseConfigurado()) {
       setIdentidade(VAZIA);
@@ -68,7 +84,7 @@ export function useIdentidadeFiz(): { identidade: IdentidadeDisponivel; carregad
     return () => {
       ativo = false;
     };
-  }, [authCarregado, user]);
+  }, [authCarregado, user, leituraAtiva]);
 
   return { identidade, carregada };
 }
