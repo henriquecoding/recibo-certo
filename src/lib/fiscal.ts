@@ -17,6 +17,7 @@ import {
   SS_TAXA,
   SS_COEFICIENTE,
   SS_BASE_MAX_MENSAL,
+  SS_ACUMULACAO_LIMITE_MENSAL,
   REGIME_SIMPLIFICADO,
   IRS_JOVEM,
   ESCALOES_IRS,
@@ -149,6 +150,119 @@ export function isencaoIRSJovem(ano?: number): number {
   return IRS_JOVEM.isencaoPorAno.value[ano] ?? 0;
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+//  SEGURANÇA SOCIAL DO TRABALHADOR INDEPENDENTE — um só cálculo
+//  ---------------------------------------------------------------------
+//  Havia três versões disto no motor e as três discordavam:
+//
+//    · `calcular()` aplicava o teto mas não o mínimo mensal;
+//    · o `ssAnual` de `simularIRSAnual` aplicava teto e mínimo, mas tratava
+//      a acumulação com emprego como isenção TOTAL;
+//    · a regra dos 15% (Art. 31.º n.º 13) usava sempre o coeficiente de
+//      serviços, sem teto e sem olhar a isenções — a 200 000 € de faturação
+//      creditava 29 960 € de contribuições contra uns reais de 16 552 €.
+//
+//  As três decidem a mesma coisa: quanto se paga de Segurança Social. Passa a
+//  ser esta função a decidi-lo, e cada chamador escolhe apenas o período.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface IsencoesSS {
+  /**
+   * Art. 157.º n.º 1 al. b): primeiros 12 meses de atividade. Isenção total —
+   * esta é mesmo uma isenção.
+   */
+  primeiroAno?: boolean;
+  /**
+   * Art. 157.º n.º 1 al. a): acumulação com trabalho por conta de outrem.
+   * Dispensa **condicionada** — só vale enquanto o rendimento relevante
+   * mensal médio ficar abaixo de 4 × IAS. Acima, contribui-se sobre o
+   * excedente e sem contribuição mínima.
+   */
+  acumulaEmprego?: boolean;
+}
+
+export interface ContribuicoesSS {
+  /** Rendimento relevante mensal médio, já com o teto de 12 × IAS aplicado. */
+  baseMensal: number;
+  /** Rendimento relevante mensal médio antes do teto (para explicar o corte). */
+  baseMensalSemTeto: number;
+  contribuicaoMensal: number;
+  contribuicaoAnual: number;
+  /** O teto de 12 × IAS mordeu? */
+  limitadoPeloTeto: boolean;
+  /** A dispensa por acumulação está a ser aplicada, total ou parcialmente? */
+  dispensaAcumulacao: "total" | "parcial" | "nenhuma";
+}
+
+/**
+ * Contribuições anuais de um trabalhador independente, com teto (12 × IAS),
+ * contribuição mínima (20 €/mês), coeficiente por natureza da atividade e as
+ * isenções do Art. 157.º.
+ */
+export function contribuicoesSS(
+  brutoAnual: number,
+  baseSS: BaseSS,
+  isencoes: IsencoesSS = {},
+): ContribuicoesSS {
+  const bruto = sanitize(brutoAnual);
+  const coeficiente = SS_COEFICIENTE[baseSS].value;
+  const baseMensalSemTeto = (bruto * coeficiente) / 12;
+  const baseMensal = Math.min(baseMensalSemTeto, SS_BASE_MAX_MENSAL.value);
+  const limitadoPeloTeto = baseMensalSemTeto > SS_BASE_MAX_MENSAL.value;
+
+  const vazio = (dispensa: ContribuicoesSS["dispensaAcumulacao"]): ContribuicoesSS => ({
+    baseMensal,
+    baseMensalSemTeto,
+    contribuicaoMensal: 0,
+    contribuicaoAnual: 0,
+    limitadoPeloTeto,
+    dispensaAcumulacao: dispensa,
+  });
+
+  // Sem faturação não há nada a mostrar. A contribuição mínima de 20 €/mês é
+  // real — paga-se mesmo declarando zero — mas é uma obrigação de quem TEM
+  // atividade aberta, não o resultado de uma simulação por preencher. Dizê-la
+  // é trabalho da copy; aqui devolvê-la faria a interface anunciar 240 €/ano
+  // de encargo a quem ainda não escreveu um número.
+  if (bruto <= 0) return vazio("nenhuma");
+
+  if (isencoes.primeiroAno) return vazio("nenhuma");
+
+  if (isencoes.acumulaEmprego) {
+    // Art. 157.º n.º 1 al. a): contribui-se sobre o EXCEDENTE a 4 × IAS. Abaixo
+    // disso não há contribuição nenhuma — e acima não há mínimo de 20 €, porque
+    // o mínimo é do regime geral, não desta dispensa.
+    const excedente = Math.max(0, baseMensal - SS_ACUMULACAO_LIMITE_MENSAL.value);
+    if (excedente <= 0) return vazio("total");
+    const contribuicaoMensal = excedente * SS_TAXA.value;
+    return {
+      baseMensal,
+      baseMensalSemTeto,
+      contribuicaoMensal,
+      contribuicaoAnual: contribuicaoMensal * 12,
+      limitadoPeloTeto,
+      dispensaAcumulacao: "parcial",
+    };
+  }
+
+  const contribuicaoMensal = Math.max(SS_MIN_MENSAL.value, baseMensal * SS_TAXA.value);
+  return {
+    baseMensal,
+    baseMensalSemTeto,
+    contribuicaoMensal,
+    contribuicaoAnual: contribuicaoMensal * 12,
+    limitadoPeloTeto,
+    dispensaAcumulacao: "nenhuma",
+  };
+}
+
+/** Atalho para quem só quer o total anual. */
+export const contribuicoesSSAnuais = (
+  brutoAnual: number,
+  baseSS: BaseSS,
+  isencoes: IsencoesSS = {},
+): number => contribuicoesSS(brutoAnual, baseSS, isencoes).contribuicaoAnual;
+
 export function calcular(input: CalcInput): CalcResult {
   const bruto = sanitize(input.bruto);
   const avisos: string[] = [];
@@ -167,11 +281,14 @@ export function calcular(input: CalcInput): CalcResult {
   const iva = bruto * taxaIVA;
 
   // ── Segurança Social (estimativa proporcional ao recibo) ──
-  let segSocial = 0;
-  if (!input.isencaoSSPrimeiroAno && !input.acumulaEmprego) {
-    const baseSS = Math.min(bruto * SS_COEFICIENTE[input.baseSS].value, SS_BASE_MAX_MENSAL.value);
-    segSocial = baseSS * SS_TAXA.value;
-  }
+  // Mesmo cálculo do apuramento anual, anualizado e dividido de volta: assim a
+  // tesouraria por recibo e o acerto do ano não podem divergir. Traz para aqui
+  // o mínimo mensal de 20 € (que faltava) e a dispensa por acumulação passa a
+  // ser condicionada aos 4 × IAS em vez de zerar tudo.
+  const segSocial = contribuicoesSS(bruto * 12, input.baseSS, {
+    primeiroAno: input.isencaoSSPrimeiroAno,
+    acumulaEmprego: input.acumulaEmprego,
+  }).contribuicaoMensal;
 
   const entradaConta = bruto + iva - retencaoIRS;
   const liquido = bruto - retencaoIRS - segSocial;
@@ -684,7 +801,17 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     // bruto, a componente automática é a dedução específica (4 104 €/8,54×IAS)
     // OU as contribuições obrigatórias TOTAIS para a Segurança Social, a maior.
     // (Não é a parte que excede 10% — isso é a dedução autónoma do n.º 2.)
-    const ssContribuicoes = brutoAnual * SS_COEFICIENTE.servicos.value * SS_TAXA.value;
+    //
+    // «Contribuições obrigatórias» são as que a pessoa PAGA. A linha anterior
+    // multiplicava a faturação por 0,7 × 21,4% sem teto, sem coeficiente por
+    // tipo e sem olhar às isenções: a 200 000 € creditava 29 960 € contra
+    // 16 552 € reais (≈ 6 400 € de IRS a menos), a quem vende bens creditava
+    // 7 490 € em vez de 4 587 €, e a quem estava isento no 1.º ano creditava
+    // contribuições que nunca pagou.
+    const ssContribuicoes = contribuicoesSSAnuais(brutoAnual, BASE_SS_POR_TIPO[tipo], {
+      primeiroAno: input.isencaoSSPrimeiroAno,
+      acumulaEmprego: input.acumulaEmprego,
+    });
     despesasAutomaticas = Math.max(DEDUCAO_ESPECIFICA_CATB.value, ssContribuicoes);
     acrescimo15 = aplicaRegra15
       ? Math.max(0, REGIME_15PCT.value * brutoAnual - (despesasAutomaticas + despesasJustificadas))
@@ -910,18 +1037,16 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   const minimoExistenciaAplicado = minimoExistenciaDecision.status === "applied";
 
   // ── SS anual estimado (para display; não afecta o IRS) ───────────────────
+  // A acumulação com emprego NÃO é isenção total (Art. 157.º n.º 1 al. a): é
+  // dispensa até 4 × IAS de rendimento relevante mensal médio, com contribuição
+  // sobre o excedente acima disso. Zerar incondicionalmente escondia perto de
+  // 9 000 €/ano a quem faturasse acima de ~36 800 €.
   const acumulaEmprego = !!input.acumulaEmprego;
-  const isencaoSSEntrada = acumulaEmprego || !!input.isencaoSSPrimeiroAno;
-  const ssAnual = (() => {
-    if (isencaoSSEntrada) return 0;
-    const baseSS = SS_COEFICIENTE[BASE_SS_POR_TIPO[tipo]].value;
-    const rendMensalMedio = (brutoAnual * baseSS) / 12;
-    const mensal = Math.min(
-      Math.max(SS_MIN_MENSAL.value, rendMensalMedio * SS_TAXA.value),
-      SS_BASE_MAX_MENSAL.value * SS_TAXA.value
-    );
-    return mensal * 12;
-  })();
+  const ss = contribuicoesSS(brutoAnual, BASE_SS_POR_TIPO[tipo], {
+    primeiroAno: input.isencaoSSPrimeiroAno,
+    acumulaEmprego,
+  });
+  const ssAnual = ss.contribuicaoAnual;
 
   const taxaMediaEfetiva = brutoAnual > 0 ? irsEstimado / brutoAnual : 0;
   const retencoesPagas = sanitize(input.retencoesPagas ?? 0);

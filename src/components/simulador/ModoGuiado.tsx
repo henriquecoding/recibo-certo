@@ -42,11 +42,13 @@ import {
   COEFICIENTE_POR_TIPO,
   SS_TAXA,
   SS_COEFICIENTE,
+  SS_ACUMULACAO_LIMITE_MENSAL,
+  IAS,
   MINIMO_EXISTENCIA,
   type Atividade,
   type Regiao,
 } from "@/lib/fiscal-data";
-import { calcular, simularIRSAnual, type RegimeIVA } from "@/lib/fiscal";
+import { calcular, simularIRSAnual, contribuicoesSSAnuais, type RegimeIVA } from "@/lib/fiscal";
 import { gerarPrazos, diasAte } from "@/lib/prazos";
 import { useScrollTopOnStep } from "@/lib/scroll";
 import {
@@ -591,6 +593,23 @@ export default function ModoGuiado({
   const brutoAnual = bruto * recibosAno;
   const efAtiv = atividadeEspecifica ? efeitoFiscal(atividadeEspecifica) : null;
 
+  // Poupança de SS = o que se pagaria sem isenção MENOS o que se paga com ela.
+  // Estava a passar-se a contribuição efetiva como se fosse a poupança: com a
+  // isenção total dava 0 (e o badge nunca aparecia) e, agora que a acumulação
+  // acima de 4 × IAS deixa contribuição a pagar, daria o número ao contrário —
+  // anunciar como poupança aquilo que a pessoa desembolsa.
+  const ssAnualPoupanca = useMemo(() => {
+    if (!isencaoSS) return 0;
+    const semIsencao = contribuicoesSSAnuais(brutoAnual, card.baseSS);
+    const comIsencao = isencaoCpas
+      ? 0 // CPAS/CGA: sai do Regime Geral por inteiro; a caixa própria tem taxas suas.
+      : contribuicoesSSAnuais(brutoAnual, card.baseSS, {
+          primeiroAno: isencaoSSPrimeiroAno,
+          acumulaEmprego,
+        });
+    return Math.max(0, semIsencao - comIsencao);
+  }, [isencaoSS, isencaoCpas, isencaoSSPrimeiroAno, acumulaEmprego, brutoAnual, card.baseSS]);
+
   const resultRecibo = useMemo(
     () =>
       calcular({
@@ -1030,7 +1049,7 @@ export default function ModoGuiado({
                     setDespRendas={setDespRendas}
                     despGerais={despGerais}
                     setDespGerais={setDespGerais}
-                    ssAnualPoupanca={resultRecibo.segSocial * recibosAno}
+                    ssAnualPoupanca={ssAnualPoupanca}
                   />
                 </m.div>
               )}
@@ -2216,7 +2235,7 @@ function PassoSituacao({
             />
             <ToggleCard
               titulo="Acumulas com emprego por conta de outrem?"
-              descricao="Se o teu empregador paga SS ≥ €537/mês, podes ficar isento como independente."
+              descricao={`Se o teu empregador paga SS ≥ ${fmt(IAS.value)}/mês ficas dispensado como independente — mas só até ${fmt(SS_ACUMULACAO_LIMITE_MENSAL.value)}/mês de rendimento relevante. Acima disso contribuis sobre o excedente (Art. 157.º).`}
               ativo={acumulaEmprego}
               onToggle={() => {
                 if (!acumulaEmprego) setIsencaoSSPrimeiroAno(false);

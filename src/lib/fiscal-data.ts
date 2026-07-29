@@ -630,6 +630,37 @@ export const SS_ISENCAO_PRIMEIRO_ANO_MESES = sv(
   "Aplica-se a quem não teve atividade independente nos 3 anos anteriores."
 );
 
+/**
+ * Art. 157.º n.º 1 al. a) do Código Contributivo — quem acumula atividade
+ * independente com trabalho por conta de outrem só está dispensado de
+ * contribuir enquanto o rendimento relevante mensal médio for **inferior a
+ * 4 × IAS**. Acima disso contribui sobre o EXCEDENTE (e sem o mínimo de 20 €).
+ *
+ * Não é, portanto, uma isenção total: era assim que o motor a tratava, e a
+ * partir de ~36 800 €/ano de faturação de serviços isso apagava contribuições
+ * na ordem dos milhares de euros.
+ *
+ * A dispensa exige ainda condições cumulativas que o simulador não consegue
+ * verificar (entidades sem relação de domínio entre si, o outro regime cobrir
+ * as mesmas eventualidades e a remuneração desse regime ser ≥ 1 × IAS) — daí
+ * a nota, para o resultado não passar por certificado.
+ */
+export const SS_ACUMULACAO_LIMITE_IAS = sv(
+  4,
+  "Art. 157.º n.º 1 al. a) Código Contributivo — dispensa até 4 × IAS de rendimento relevante mensal médio",
+  "segSocialGov",
+  TODAY,
+  "Acima do limite contribui-se sobre o excedente, sem contribuição mínima. Depende ainda de a remuneração do trabalho dependente ser ≥ 1 × IAS."
+);
+
+/** Valor do limite de acumulação em euros por mês (4 × IAS). */
+export const SS_ACUMULACAO_LIMITE_MENSAL = sv(
+  Math.round(SS_ACUMULACAO_LIMITE_IAS.value * IAS.value * 100) / 100,
+  "Art. 157.º n.º 1 al. a) Código Contributivo — 4 × IAS",
+  "segSocialGov",
+  TODAY
+);
+
 // ═══════════════════════════════════════════════════════════════════════
 //  REGIME SIMPLIFICADO (IRS) — coeficientes para o rendimento tributável
 // ═══════════════════════════════════════════════════════════════════════
@@ -2628,6 +2659,16 @@ export function assertFiscalDataIntegrity(): void {
   if (Math.abs(IRS_JOVEM_TETO_CALC - IRS_JOVEM.tetoIAS.value * IAS_VALUE) > EPS) {
     erros.push("Teto do IRS Jovem inconsistente com 55×IAS.");
   }
+  if (
+    Math.abs(SS_ACUMULACAO_LIMITE_IAS.value * IAS_VALUE - SS_ACUMULACAO_LIMITE_MENSAL.value) > EPS
+  ) {
+    erros.push("Limite de acumulação da SS inconsistente com 4×IAS.");
+  }
+  // O limite de acumulação tem de ficar abaixo do teto: acima dele a dispensa
+  // do Art. 157.º deixaria de ter qualquer efeito prático.
+  if (!(SS_ACUMULACAO_LIMITE_MENSAL.value < SS_BASE_MAX_MENSAL.value)) {
+    erros.push("Limite de acumulação da SS (4×IAS) não é inferior ao teto (12×IAS).");
+  }
 
   // 2) Excesso de IVA = 125% do limite de isenção.
   if (Math.abs(IVA_ISENCAO_EXCESSO.value - IVA_ISENCAO_LIMITE.value * 1.25) > EPS) {
@@ -3012,6 +3053,8 @@ export function assertFiscalDataIntegrity(): void {
     ...Object.values(SS_COEFICIENTE),
     SS_BASE_MAX_MENSAL,
     SS_ISENCAO_PRIMEIRO_ANO_MESES,
+    SS_ACUMULACAO_LIMITE_IAS,
+    SS_ACUMULACAO_LIMITE_MENSAL,
     REGIME_SIMPLIFICADO.limite,
     REGIME_SIMPLIFICADO.coefServicos151,
     REGIME_SIMPLIFICADO.coefOutrosServicos,

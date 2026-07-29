@@ -3621,7 +3621,11 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     {
       id: "acumula",
       label: "Acumulo com trabalho dependente",
-      sub: `Isento SS se emprego ≥ ${IAS_2026}€/mês e RR independente < ${(4 * IAS_2026).toLocaleString("pt-PT", { maximumFractionDigits: 0 })}€/mês`,
+      // A regra dos 4 × IAS estava escrita aqui e não era aplicada em lado
+      // nenhum: o motor zerava a SS fosse qual fosse a faturação. Agora é
+      // aplicada, e o rótulo diz o que acontece acima do limite — «isento» era
+      // meia verdade, porque acima de 4 × IAS contribui-se sobre o excedente.
+      sub: `Dispensa de SS se o emprego pagar ≥ ${IAS_2026}€/mês; acima de ${(4 * IAS_2026).toLocaleString("pt-PT", { maximumFractionDigits: 0 })}€/mês de rendimento relevante contribuis sobre o excedente`,
       val: acumulaEmprego,
       set: (v: boolean) => {
         if (v) setIsencaoSSPrimeiroAno(false);
