@@ -3692,6 +3692,27 @@ function ResultadoFinal({
             >
               Simulador completo <ArrowRight size={14} />
             </button>
+
+            {/* O que este modo assumiu.
+                O guiado e o completo partilham o motor mas não o conjunto de
+                perguntas: aqui não se pergunta dependentes nem tributação
+                conjunta, e para uma família com dois filhos a declarar em
+                conjunto a diferença são milhares de euros. O botão acima
+                transporta o estado, o que dá a entender continuidade — e
+                depois o número muda, sem nada no ecrã a explicar porquê.
+
+                Manter o guiado curto é a razão de ser do modo. Dizer o que
+                ficou de fora custa três linhas e transforma a limitação num
+                convite ao passo seguinte. */}
+            <p className="rounded-xl border border-stone-200 bg-white px-3.5 py-3 text-[11px] leading-relaxed text-stone-500 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-400">
+              <strong className="font-semibold text-stone-600 dark:text-stone-300">
+                O que assumimos:
+              </strong>{" "}
+              que não tens dependentes e que declaras sozinho. Se tiveres filhos,
+              ascendentes a teu cargo ou declarares em conjunto, o imposto é
+              menor — o simulador completo pergunta tudo isso e dá-te um número
+              mais próximo do real.
+            </p>
             <button
               type="button"
               onClick={onVoltar}
