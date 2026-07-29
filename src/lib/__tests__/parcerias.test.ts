@@ -33,6 +33,7 @@ import {
 import { FIZ_SIMULATOR_ROUTES } from "@/content/fiz-simulator-routes";
 import { FIZ_GUIDE_ROUTES } from "@/content/fiz-guide-routes";
 import { ROTULO_LIGACAO_POR_INTENT } from "@/lib/guias/manifests";
+import { PARCERIA_FIZ } from "@/content/parcerias-fiz";
 
 const RAIZ = join(__dirname, "..", "..");
 const MIGRACAO = join(RAIZ, "..", "supabase", "migrations", "025_parcerias_configuraveis.sql");
@@ -449,12 +450,17 @@ describe("parcerias:divulgacao — sem exceção e sem toggle", () => {
 
 // ─────────────────────────────────────────────────────────────────────────
 describe("parcerias:sem-links-em-codigo", () => {
-  it("nenhum componente escreve o link do parceiro à mão", () => {
-    // Se a FIZ mudar o formato do link, muda-se uma linha na base de dados e
-    // não 60 componentes. Um `href` para fiz.co em código quebraria isso — e
-    // exporia o código de afiliado em HTML estático, onde é raspado.
+  it("o link do parceiro vive num só ficheiro de código", () => {
+    // A base de dados continua a mandar quando existe — é lá que se muda o
+    // link sem deploy. Mas tem de haver um piso: com a parceria SÓ na base de
+    // dados, uma migração por aplicar fazia o site cair na pré-visualização da
+    // Fase 2 e mostrar um diálogo de consentimento a prometer transporte de
+    // dados. `parcerias-fiz.ts` é esse piso, e é o único sítio onde o link
+    // pode aparecer em código.
+    const PERMITIDO = join("content", "parcerias-fiz.ts");
     const infratores: string[] = [];
     for (const ficheiro of ficheirosFonte(RAIZ)) {
+      if (ficheiro.endsWith(PERMITIDO)) continue;
       const fonte = readFileSync(ficheiro, "utf8");
       const linhas = fonte.split("\n");
       for (const l of linhas) {
@@ -614,5 +620,183 @@ describe("parcerias:link-real — o link emitido pela FIZ, ponta a ponta", () =>
     for (const chave of new URL(u).searchParams.keys()) {
       expect(chave).not.toMatch(/nif|niss|email|telefone|iban|morada|nome/i);
     }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+describe("parcerias:sem-configuracao — funciona no dia do deploy", () => {
+  // O teste que faltava, e que teria apanhado a falha inteira: a primeira
+  // versão só ligava com `PARCERIAS_ATIVAS=true`, uma linha no Supabase e
+  // `NEXT_PUBLIC_FIZ_ENABLED=true` definida NO BUILD. Nenhuma das três estava
+  // posta em lado nenhum — e o resultado não foi um erro, foi o site a
+  // mostrar a pré-visualização da Fase 2 com um diálogo de consentimento a
+  // prometer transporte de dados. Um caminho de degradação silencioso é pior
+  // do que uma falha ruidosa.
+  const semAmbiente = <T,>(fn: () => T): T => {
+    const guardadas = {
+      enabled: process.env.NEXT_PUBLIC_FIZ_ENABLED,
+      preview: process.env.NEXT_PUBLIC_FIZ_PREVIEW,
+      desligadas: process.env.PARCERIAS_DESLIGADAS,
+      vercel: process.env.NEXT_PUBLIC_VERCEL_ENV,
+    };
+    delete process.env.NEXT_PUBLIC_FIZ_ENABLED;
+    delete process.env.NEXT_PUBLIC_FIZ_PREVIEW;
+    delete process.env.PARCERIAS_DESLIGADAS;
+    delete process.env.NEXT_PUBLIC_VERCEL_ENV;
+    try {
+      return fn();
+    } finally {
+      for (const [k, v] of Object.entries({
+        NEXT_PUBLIC_FIZ_ENABLED: guardadas.enabled,
+        NEXT_PUBLIC_FIZ_PREVIEW: guardadas.preview,
+        PARCERIAS_DESLIGADAS: guardadas.desligadas,
+        NEXT_PUBLIC_VERCEL_ENV: guardadas.vercel,
+      })) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
+  };
+
+  it("a bandeira da FIZ está ligada por omissão", async () => {
+    const { fizAtiva } = await import("@/lib/fiz/flag");
+    expect(semAmbiente(() => fizAtiva())).toBe(true);
+  });
+
+  it("as parcerias estão ligadas por omissão", async () => {
+    const { parceriasAtivas } = await import("@/lib/parcerias/catalogo.server");
+    expect(semAmbiente(() => parceriasAtivas())).toBe(true);
+  });
+
+  it("a parceria resolve-se sem Supabase", async () => {
+    const { parceriaAtiva, parceriaUtilizavel, limparCacheParcerias } = await import(
+      "@/lib/parcerias/catalogo.server"
+    );
+    limparCacheParcerias();
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const chave = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    try {
+      const p = await parceriaAtiva("fiz");
+      expect(p).not.toBeNull();
+      expect(parceriaUtilizavel(p)).toBe(true);
+      expect(p!.modo).toBe("LIGACAO");
+      expect(p!.linkAfiliado).toContain("ref=");
+      expect(p!.divulgacao.length).toBeGreaterThan(20);
+    } finally {
+      if (url) process.env.NEXT_PUBLIC_SUPABASE_URL = url;
+      if (chave) process.env.SUPABASE_SERVICE_ROLE_KEY = chave;
+      limparCacheParcerias();
+    }
+  });
+
+  it("as superfícies ativas resolvem-se sem base de dados", async () => {
+    const { placementDaSuperficie, limparCacheParcerias } = await import(
+      "@/lib/parcerias/catalogo.server"
+    );
+    limparCacheParcerias();
+    for (const s of PARCERIA_FIZ.superficiesAtivas) {
+      const p = await placementDaSuperficie("fiz", s);
+      expect(p, s).not.toBeNull();
+    }
+    // E uma que NÃO está na lista continua desligada — a ativação é faseada,
+    // não é «tudo o que existe».
+    expect(await placementDaSuperficie("fiz", "anuncio.dashboard")).toBeNull();
+    limparCacheParcerias();
+  });
+
+  it("o piso em código traz os dois destinos e a divulgação", () => {
+    expect(PARCERIA_FIZ.linkAfiliado).toMatch(/^https:\/\/fiz\.co\/\?ref=/);
+    expect(PARCERIA_FIZ.linkAfiliadoRegisto).toMatch(/^https:\/\/app\.fiz\.co\/auth\?ref=/);
+    // Os dois links têm de partilhar o mesmo código: dois códigos seriam duas
+    // reconciliações para a mesma parceria.
+    const cod = (u: string) => new URL(u).searchParams.get("ref");
+    expect(cod(PARCERIA_FIZ.linkAfiliado)).toBe(cod(PARCERIA_FIZ.linkAfiliadoRegisto));
+    // E os destinos têm de pertencer aos domínios que a própria definição
+    // autoriza — senão o redirecionador recusa o seu próprio link.
+    for (const l of [PARCERIA_FIZ.linkAfiliado, PARCERIA_FIZ.linkAfiliadoRegisto]) {
+      expect(hostPermitido(new URL(l), PARCERIA_FIZ.dominiosPermitidos), l).toBe(true);
+    }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+describe("parcerias:sem-modal — o diálogo de consentimento não pode abrir", () => {
+  // Este é o defeito que o utilizador viu no ecrã: ao clicar no simulador
+  // abria «Levar a tua simulação para a FIZ · Continuar com a FIZ sem repetir
+  // dados», com o seletor de campos e o NIF lá dentro. Não era um bug de
+  // interface — era a resolução a cair na pré-visualização da Fase 2 porque o
+  // passo de ligação estava atrás de uma variável que ninguém definia.
+  const plano = readFileSync(join(RAIZ, "components", "fiz", "FizPlanoAcao.tsx"), "utf8");
+
+  it("o botão que abre o diálogo depende de consentimento E de campos", () => {
+    // Em LIGACAO o servidor devolve `requiresConsent: false` e uma lista de
+    // campos vazia. As duas condições falham, e não há caminho para o abrir.
+    expect(plano).toMatch(/const podeEnviar = acao\.requiresConsent && campos\.length > 0;/);
+  });
+
+  it("a API não envia a lista de campos em modo ligação", () => {
+    const rota = readFileSync(
+      join(RAIZ, "app", "api", "integrations", "fiz", "simulator-route", "route.ts"),
+      "utf8",
+    );
+    expect(rota).toMatch(/emLigacao \? \[\] : rota\.camposPropostos/);
+  });
+
+  it("o passo de ligação corre ANTES da pré-visualização", () => {
+    const fonte = readFileSync(join(RAIZ, "lib", "fiz", "guide-routing.server.ts"), "utf8");
+    const iLigacao = fonte.indexOf("passoDeLigacao({");
+    const iPreview = fonte.indexOf("if (previewAtivo())");
+    expect(iLigacao).toBeGreaterThan(0);
+    expect(iPreview).toBeGreaterThan(0);
+    expect(iLigacao).toBeLessThan(iPreview);
+  });
+
+  it("a pré-visualização só ganha quando é pedida explicitamente", () => {
+    const fonte = readFileSync(join(RAIZ, "lib", "fiz", "guide-routing.server.ts"), "utf8");
+    expect(fonte).toMatch(/NEXT_PUBLIC_FIZ_PREVIEW === "true"/);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+describe("parcerias:copy-visivel — o que se escreve chega ao ecrã", () => {
+  it("a promessa do modo LIGACAO é renderizada", () => {
+    // Escrevi oito pares de copy em `fiz-simulator-routes.ts` e nenhum
+    // chegava ao ecrã: `FizPlanoAcao` não mostrava `promessa` nenhuma. Copy
+    // que ninguém vê é copy que ninguém revê.
+    const resolucao = readFileSync(join(RAIZ, "lib", "fiz", "guide-routing.server.ts"), "utf8");
+    expect(resolucao).toMatch(/promessa: rota\.promessaLigacao/);
+    const plano = readFileSync(join(RAIZ, "components", "fiz", "FizPlanoAcao.tsx"), "utf8");
+    expect(plano).toMatch(/\{acao\.promessa\}/);
+  });
+
+  it("o rótulo do simulador em LIGACAO é o do modo, sem recurso ao de handoff", () => {
+    const resolucao = readFileSync(join(RAIZ, "lib", "fiz", "guide-routing.server.ts"), "utf8");
+    // `?? rota.fallbackLabel` seria uma porta para a copy de handoff voltar.
+    expect(resolucao).toMatch(/rotulo: rota\.fallbackLabelLigacao,/);
+  });
+
+  it("a imagem do kit é usada onde não se reproduz em código", () => {
+    const card = readFileSync(join(RAIZ, "components", "fiz", "FizParceriaCard.tsx"), "utf8");
+    expect(card).toMatch(/fiz-300x600-pt/);
+    expect(card).toMatch(/width=\{300\}/);
+    expect(card).toMatch(/height=\{600\}/);
+    // Dimensões explícitas e `lazy`: um criativo não pode custar a página.
+    expect(card).toMatch(/loading="lazy"/);
+    // E não pode ser recortado — cl. 15.1. Só o código; o comentário ao lado
+    // explica precisamente porque é que `object-cover` não está lá.
+    const codigo = card
+      .split("\n")
+      .filter((l) => !l.trim().startsWith("//") && !l.trim().startsWith("*"))
+      .join("\n");
+    expect(codigo).not.toMatch(/object-cover/);
+  });
+
+  it("o cartão de preços tem um caminho real para a FIZ", () => {
+    // Descrevia a parceria e o único destino era uma página nossa.
+    const card = readFileSync(join(RAIZ, "components", "fiz", "FizParceriaCard.tsx"), "utf8");
+    expect(card).toMatch(/\/ir\/fiz\?s=precos\.faixa/);
+    expect(card).toMatch(/FizDisclosure/);
   });
 });

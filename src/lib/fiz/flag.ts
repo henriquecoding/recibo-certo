@@ -7,14 +7,22 @@
 //  separação torna a fronteira óbvia em vez de implícita.)
 //
 //  Regra de ativação, por ordem:
-//    1. NEXT_PUBLIC_FIZ_ENABLED="true"  → ligada, onde quer que seja.
-//    2. NEXT_PUBLIC_FIZ_ENABLED="false" → desligada, sem exceções.
-//    3. Sem decisão explícita → LIGADA em deploys de pré-visualização
-//       (branches) e DESLIGADA em produção.
+//    1. NEXT_PUBLIC_FIZ_ENABLED="false" → desligada, sem exceções.
+//    2. NEXT_PUBLIC_FIZ_ENABLED="true"  → ligada, onde quer que seja.
+//    3. Sem decisão explícita → LIGADA.
 //
-//  A regra 3 existe por uma razão prática: a parceria está em negociação e
-//  precisa de ser revista em deploys de ramo, sem obrigar a configurar
-//  variáveis na Vercel de cada vez. Produção nunca liga por omissão.
+//  ⚠️ A regra 3 já foi o contrário: «ligada em deploys de ramo, DESLIGADA em
+//  produção». Fazia sentido enquanto a parceria estava em negociação — não se
+//  liga em produção o que ainda não está assinado. Deixou de fazer no dia em
+//  que passou a haver um contrato de afiliado e um link pessoal.
+//
+//  O efeito da regra antiga era mau e silencioso: fazia-se deploy e não
+//  aparecia nada, porque `NEXT_PUBLIC_FIZ_ENABLED` é inlined NO BUILD e
+//  ninguém a tinha definido. Ficava tudo desligado sem um único erro.
+//
+//  Nota que continua a valer: sendo `NEXT_PUBLIC_`, esta variável é lida no
+//  momento do build. Defini-la só no runtime não tem efeito nenhum no
+//  browser.
 // ═══════════════════════════════════════════════════════════════════════
 
 /** "production" | "preview" | "development" — definido pela Vercel. */
@@ -50,9 +58,9 @@ export function ehPreVisualizacaoDeploy(): boolean {
 
 export function fizAtiva(): boolean {
   const bandeira = process.env.NEXT_PUBLIC_FIZ_ENABLED;
-  if (bandeira === "true") return true;
   if (bandeira === "false") return false;
-  return ehPreVisualizacaoDeploy();
+  if (bandeira === "true") return true;
+  return true;
 }
 
 /**

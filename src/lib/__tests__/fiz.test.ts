@@ -365,12 +365,29 @@ describe("bandeira e pré-visualização", () => {
     }
   });
 
-  it("em produção na Vercel nada liga por omissão", async () => {
+  it("em produção a parceria liga, mas a pré-visualização não", async () => {
+    // A regra antiga era «em produção nada liga por omissão», e estava certa
+    // enquanto a parceria estava em negociação: não se liga em produção o que
+    // ainda não está assinado.
+    //
+    // Com contrato de afiliado e link pessoal, essa regra passou a ter um
+    // efeito silencioso e mau: fazia-se deploy e não aparecia nada, porque
+    // `NEXT_PUBLIC_FIZ_ENABLED` é inlined no build e ninguém a definia.
+    //
+    // O que NÃO muda, e é o que a regra realmente protegia: o catálogo
+    // SIMULADO nunca chega a utilizadores reais.
     process.env.NEXT_PUBLIC_VERCEL_ENV = "production";
     delete process.env.NEXT_PUBLIC_FIZ_ENABLED;
     const { fizAtiva, previewPermitidoNoCliente } = await import("@/lib/fiz/flag");
-    expect(fizAtiva()).toBe(false);
+    expect(fizAtiva()).toBe(true);
     expect(previewPermitidoNoCliente()).toBe(false);
+  });
+
+  it("continua a haver um interruptor explícito para desligar", async () => {
+    process.env.NEXT_PUBLIC_FIZ_ENABLED = "false";
+    const { fizAtiva } = await import("@/lib/fiz/flag");
+    expect(fizAtiva()).toBe(false);
+    delete process.env.NEXT_PUBLIC_FIZ_ENABLED;
   });
 });
 

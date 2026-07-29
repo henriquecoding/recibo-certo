@@ -29,6 +29,7 @@ export const CHANGELOG: EntradaChangelog[] = [
       "As demonstrações em direto da página inicial e do simulador de IRS deixaram de ter um último passo decorativo — passa a haver um botão a sério. E, por baixo de cada uma, uma faixa que não se move: o botão dentro da demonstração só existe durante alguns segundos, e essa faixa é o caminho para quem usa teclado, ecrã tátil, ou pediu ao sistema menos animações.",
       "Duas frases desapareceram do site porque prometiam uma coisa que não acontece: diziam que escolherias «campo a campo» o que seguia para a FIZ, e uma delas chegava a citar o teu IRS estimado. Nesta fase não segue nada — a ligação abre o site deles e a tua simulação fica onde está.",
       "O cartão de parceiro dizia «Parceiro verificado» e mais nada. Passa a dizer também «Ligação comercial»: anunciar «verificado» e omitir «pago» era meia verdade.",
+      "Na página de Planos, o cartão da FIZ explicava a parceria e não tinha um único caminho para lá ir — o único botão levava a uma página nossa. Passa a ter o botão a sério, com a divulgação ao lado.",
     ],
   },
   {

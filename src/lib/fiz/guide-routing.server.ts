@@ -80,6 +80,11 @@ export interface AcaoFizResolvida {
   destinoLigacao?: string;
   /** Modo efetivo desta superfície — o mínimo entre a parceria e a rota. */
   modo?: ModoParceria;
+  /**
+   * O que o utilizador ganha ao continuar, no modo em que a superfície corre.
+   * Em LIGACAO descreve o que o parceiro faz; nunca o que seria transportado.
+   */
+  promessa?: string;
 }
 
 /**
@@ -99,14 +104,20 @@ const CHAVE_FIZ = "fiz";
 /**
  * Passo de LIGAÇÃO — o primeiro a ser tentado depois da bandeira.
  *
- * Guardado por `PARCERIAS_ATIVAS`, e é isso que resolve o problema da base de
- * dados partilhada entre produção e deploys de ramo: em produção a variável é
- * "true" e a ligação de afiliado ganha ao catálogo simulado; nos deploys de
- * ramo fica por definir e este passo não corre, pelo que a Fase 2 continua a
- * poder ser revista em pré-visualização com a mesma linha ativa no Supabase.
+ * ⚠️ Corre ANTES da pré-visualização, e isso é o ponto.
  *
- * Devolve `null` quando não há parceria em modo LIGACAO — e aí a resolução
- * segue exatamente como seguia antes.
+ * A primeira versão punha-o atrás de `PARCERIAS_ATIVAS`, uma variável que não
+ * estava definida em lado nenhum. O efeito: este passo nunca corria, a
+ * resolução caía no catálogo simulado da Fase 2, e o site abria um diálogo de
+ * consentimento a prometer «continuar sem repetir dados» — a SIMULAÇÃO de uma
+ * integração que não existe, por cima da parceria que existe mesmo.
+ *
+ * A ordem certa é esta: o que está contratado hoje ganha a uma maquete do que
+ * talvez venha a estar. Quem quiser rever o desenho da Fase 2 num deploy de
+ * ramo pede a pré-visualização explicitamente com
+ * `NEXT_PUBLIC_FIZ_PREVIEW=true` — e aí, e só aí, ela passa à frente.
+ *
+ * Devolve `null` quando não há parceria em modo LIGACAO.
  */
 async function passoDeLigacao(entrada: {
   dataMode: GuideRoute["dataMode"];
@@ -116,8 +127,12 @@ async function passoDeLigacao(entrada: {
   slug?: string;
   intent?: FizIntent;
   exigeRevisaoHumana: boolean;
+  promessa?: string;
 }): Promise<AcaoFizResolvida | null> {
   if (!parceriasAtivas()) return null;
+  // A pré-visualização da Fase 2 só ganha quando é pedida explicitamente.
+  // Sem isto, qualquer ambiente que não seja produção mostraria a maquete.
+  if (process.env.NEXT_PUBLIC_FIZ_PREVIEW === "true") return null;
 
   const parceria = await parceriaAtiva(CHAVE_FIZ);
   if (!parceriaUtilizavel(parceria)) return null;
@@ -147,6 +162,7 @@ async function passoDeLigacao(entrada: {
     preview: false,
     destinoLigacao: `${destino.pathname}${destino.search}`,
     modo,
+    promessa: entrada.promessa,
   };
 }
 
@@ -380,11 +396,12 @@ export async function resolverAcaoDoSimulador(entrada: EntradaSimulador): Promis
   const ligacao = await passoDeLigacao({
     dataMode: rota.dataMode,
     capabilityKey,
-    rotulo: rota.fallbackLabelLigacao ?? rota.fallbackLabel,
+    rotulo: rota.fallbackLabelLigacao,
     superficie: "simulador.plano_acao",
     slug: rota.simulador,
     intent: rota.intent,
     exigeRevisaoHumana: rota.exigeRevisaoHumana ?? false,
+    promessa: rota.promessaLigacao,
   });
   if (ligacao) return ligacao;
 

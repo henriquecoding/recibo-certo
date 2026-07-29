@@ -17,6 +17,11 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { modoValido, type ModoParceria } from "./modos";
+import {
+  PARCERIA_FIZ,
+  VARIANTE_POR_SUPERFICIE,
+  type DefinicaoParceria,
+} from "@/content/parcerias-fiz";
 
 export interface ParceriaAtiva {
   id: string;
@@ -56,17 +61,22 @@ export interface PlacementParceria {
 }
 
 /**
- * `PARCERIAS_ATIVAS` resolve o problema da base de dados partilhada entre
- * produção e deploys de ramo.
+ * Desligar TODAS as parcerias, em qualquer ambiente.
  *
- * A mesma linha do Supabase serve os dois. Em produção a variável é "true" e
- * a ligação de afiliado ganha ao catálogo simulado. Nos deploys de ramo fica
- * por definir, e a resolução continua a passar pela pré-visualização — que é
- * a única superfície onde o handoff da Fase 2 pode ser desenhado e revisto.
- * Sem isto, ativar a parceria apagaria essa superfície.
+ * A versão anterior era o contrário — `PARCERIAS_ATIVAS=true` para LIGAR — e
+ * isso teve um efeito que não previ: como a variável não estava definida em
+ * lado nenhum, o passo de ligação nunca corria, e a resolução caía na
+ * pré-visualização da Fase 2. O site mostrava um diálogo de consentimento a
+ * prometer transporte de dados, para uma integração que não existe, em vez da
+ * parceria de afiliado que existe mesmo.
+ *
+ * O sentido certo é este: uma parceria contratada está ligada por omissão, e
+ * é preciso um ato explícito para a desligar. Quem quiser rever o desenho da
+ * Fase 2 num deploy de ramo põe `NEXT_PUBLIC_FIZ_PREVIEW=true`, que a faz
+ * ganhar — ver `passoDeLigacao` em `guide-routing.server.ts`.
  */
 export function parceriasAtivas(): boolean {
-  return process.env.PARCERIAS_ATIVAS === "true";
+  return process.env.PARCERIAS_DESLIGADAS !== "true";
 }
 
 /** Permite desligar o registo de cliques sem desligar os links. */
@@ -112,12 +122,47 @@ export function parceriaUtilizavel(p: ParceriaAtiva | null): p is ParceriaAtiva 
  * Nunca lança: uma falha de rede ao Supabase não pode partir a renderização
  * de um Guia. O pior que acontece é o bloco de parceria não aparecer.
  */
+/** Definições em código, por chave. É o piso; a base de dados sobrepõe-se. */
+const DEFINICOES: Record<string, DefinicaoParceria> = { fiz: PARCERIA_FIZ };
+
+/** Converte a definição em código no mesmo formato da linha da base de dados. */
+function daDefinicao(d: DefinicaoParceria): ParceriaAtiva {
+  return {
+    id: d.id,
+    parceiroKey: d.parceiroKey,
+    nome: d.nome,
+    modo: "LIGACAO",
+    linkAfiliado: d.linkAfiliado,
+    linkAfiliadoRegisto: d.linkAfiliadoRegisto,
+    dominiosPermitidos: d.dominiosPermitidos,
+    subidParam: d.subidParam,
+    caminhoSuportado: d.caminhoSuportado,
+    divulgacao: d.divulgacao,
+    logoUrl: null,
+    corMarca: null,
+    comissaoDescricao: d.comissaoDescricao,
+    atribuicaoJanelaDias: d.atribuicaoJanelaDias,
+    validacaoDias: d.validacaoDias,
+    atribuicaoNota: d.atribuicaoNota,
+    inicioEm: null,
+    fimEm: null,
+    ativo: true,
+  };
+}
+
 export async function parceriaAtiva(key: string): Promise<ParceriaAtiva | null> {
   const emCache = cacheParceria.get(key);
   if (emCache && Date.now() - emCache.em < TTL_MS) return emCache.valor;
 
+  const base = DEFINICOES[key] ? daDefinicao(DEFINICOES[key]) : null;
+
   const sb = servico();
-  if (!sb) return null;
+  // Sem Supabase, vale o que está em código. Antes devolvia-se `null` — e era
+  // esse `null` que fazia o site mostrar a pré-visualização em vez da parceria.
+  if (!sb) {
+    cacheParceria.set(key, { em: Date.now(), valor: base });
+    return base;
+  }
 
   const { data, error } = await sb
     .from("admin_partners")
@@ -125,10 +170,9 @@ export async function parceriaAtiva(key: string): Promise<ParceriaAtiva | null> 
     .eq("parceiro_key", key)
     .maybeSingle();
 
-  if (error) {
-    // Não se guarda um erro em cache: a próxima visita volta a tentar.
-    return null;
-  }
+  // Um erro de rede não pode fazer desaparecer a parceria: cai-se no piso,
+  // e não se guarda o erro em cache.
+  if (error) return base;
 
   const valor: ParceriaAtiva | null = data
     ? {
@@ -152,7 +196,7 @@ export async function parceriaAtiva(key: string): Promise<ParceriaAtiva | null> 
         fimEm: data.fim_em ?? null,
         ativo: !!data.ativo,
       }
-    : null;
+    : base;
 
   cacheParceria.set(key, { em: Date.now(), valor });
   return valor;
@@ -193,13 +237,39 @@ export async function placementsDaParceria(parceiroId: string): Promise<Placemen
   return valor;
 }
 
-/** O placement de uma superfície, ou `null` se não estiver ativo. */
+/**
+ * O placement de uma superfície, ou `null` se não estiver ativo.
+ *
+ * Mesma fusão da parceria: a linha em `partner_placements` manda quando
+ * existe; sem ela vale a lista de superfícies ativas em código. Sem este
+ * piso, ligar a parceria não mostraria nada até alguém abrir o admin e
+ * carregar em dezasseis interruptores.
+ */
 export async function placementDaSuperficie(
   parceiroId: string,
   superficie: string,
 ): Promise<PlacementParceria | null> {
   const todos = await placementsDaParceria(parceiroId);
-  return todos.find((p) => p.superficie === superficie) ?? null;
+  const daBase = todos.find((p) => p.superficie === superficie);
+  if (daBase) return daBase;
+
+  const def = Object.values(DEFINICOES).find((d) => d.id === parceiroId);
+  if (!def) return null;
+  if (!def.superficiesAtivas.includes(superficie as never)) return null;
+
+  return {
+    id: `${parceiroId}:${superficie}`,
+    parceiroId,
+    superficie,
+    variante: VARIANTE_POR_SUPERFICIE[superficie as never] ?? "padrao",
+    criativoId: null,
+    copyTitulo: null,
+    copySub: null,
+    copyCta: null,
+    copyNota: null,
+    divulgacao: null,
+    ordem: 0,
+  };
 }
 
 /**

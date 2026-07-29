@@ -40,8 +40,15 @@ export async function POST(req: NextRequest) {
     // que este simulador pode mesmo transferir. É conveniência, não
     // segurança: a rota do handoff volta a filtrar pela mesma lista, porque
     // um cliente adulterado não fica preso a esta resposta.
+    //
+    // Em modo LIGACAO não há diálogo — e por isso não há razão para a lista
+    // sair daqui. Enviá-la seria anunciar «este simulador pode transferir o
+    // teu NIF, o teu email e o teu telefone» numa resposta a um pedido que
+    // nunca vai transferir nada. Minimização não é só não guardar: é também
+    // não dizer.
+    const emLigacao = acao?.estado === "disponivel_ligacao";
     return NextResponse.json(
-      { acao, camposPropostos: rota.camposPropostos },
+      { acao, camposPropostos: emLigacao ? [] : rota.camposPropostos },
       { headers: semCache },
     );
   } catch (erro) {

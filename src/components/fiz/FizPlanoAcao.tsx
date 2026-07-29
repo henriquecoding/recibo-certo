@@ -43,6 +43,8 @@ interface AcaoResolvida {
   preview: boolean;
   /** Rota nossa (`/ir/fiz?…`), só em `disponivel_ligacao`. */
   destinoLigacao?: string;
+  /** O que o parceiro faz — o par de copy do modo em que a superfície corre. */
+  promessa?: string;
 }
 
 /** Valores da simulação, já formatados para leitura humana. */
@@ -257,6 +259,15 @@ export default function FizPlanoAcao({
         <h2 id={`fiz-plano-${simulador}`} className="font-display text-xl font-semibold text-ink">
           {indisponivelTemporario ? "Continuação temporariamente indisponível" : acao.rotulo}
         </h2>
+
+        {/* O que o parceiro faz, na linguagem do modo em que corremos.
+            Estas frases existiam em `fiz-simulator-routes.ts` e nunca eram
+            mostradas — escrevi oito pares e nenhum chegava ao ecrã. */}
+        {acao.promessa && (
+          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+            {acao.promessa}
+          </p>
+        )}
 
         {/* Estimativa vs. execução — a distinção que o ponto 4.3 da
             arquitetura exige que nunca se perca. */}
