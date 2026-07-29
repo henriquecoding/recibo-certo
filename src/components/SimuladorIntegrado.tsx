@@ -120,10 +120,6 @@ import {
   DISPENSA_RETENCAO_LIMITE,
   ESCALOES_IRS,
   MINIMO_EXISTENCIA,
-  SS_TAXA,
-  SS_COEFICIENTE,
-  SS_BASE_MAX_MENSAL,
-  SS_MIN_MENSAL,
   SS_DEPENDENTE,
   COEFICIENTE_POR_TIPO,
   RETENCAO,
@@ -172,6 +168,7 @@ import {
   efeitoFiscal,
   type Atividade,
   type Regiao,
+  BASE_SS_POR_TIPO,
   type BaseSS,
   type EscalaoIVA,
   type TipoAtividade as TipoFiscalCanonico,
@@ -181,6 +178,8 @@ import {
   taxaIVAEfetiva,
   simularIRSAnual,
   irsProgressivo,
+  retencaoNaFonte,
+  contribuicoesSSAnuais,
   calcularAbatimentoMinimoExistencia,
   type RegimeIVA,
   type SimulacaoIRS,
@@ -253,10 +252,6 @@ const ModoGuiadoEmpresa = dynamic(() => import("@/components/simulador/ModoGuiad
 
 const IAS_2026 = IAS.value;
 const MINIMO_EXISTENCIA_2026 = MINIMO_EXISTENCIA.value;
-const SS_TAXA_TI = SS_TAXA.value;
-const SS_BASE_PCT = SS_COEFICIENTE.servicos.value;
-const SS_MAX_MENSAL = SS_BASE_MAX_MENSAL.value;
-const SS_MIN = SS_MIN_MENSAL.value;
 const IVA_ISENCAO_LIMITE = IVA_ISENCAO_LIMITE_SRC.value;
 const IVA_ISENCAO_LIMITE_IMEDIATO = IVA_ISENCAO_EXCESSO_SRC.value;
 const IRS_JOVEM_LIMITE_2026 = IRS_JOVEM.tetoIAS.value * IAS_2026;
@@ -501,14 +496,10 @@ const IRC_PME = {
 // FUNÇÕES DE CÁLCULO FISCAL
 // ─────────────────────────────────────────────────────────────────────────────
 
-function calcularSSAnual(faturacaoAnual: number): number {
-  const rendRelevMensal = (faturacaoAnual * SS_BASE_PCT) / 12;
-  const contribuicaoMensal = Math.min(
-    SS_MAX_MENSAL,
-    Math.max(SS_MIN, rendRelevMensal * SS_TAXA_TI),
-  );
-  return contribuicaoMensal * 12;
-}
+// A Segurança Social é decidida em `fiscal.ts` — `contribuicoesSSAnuais()`.
+// Havia aqui uma quarta cópia do cálculo, com o coeficiente de serviços
+// cravado e sem distinguir as isenções entre si.
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TRIBUTAÇÃO AUTÓNOMA
@@ -564,7 +555,7 @@ function simularContabOrganizada(
     0,
     faturacao - despesasReais - custoContabilista,
   );
-  const ssAnual = isencaoSS ? 0 : calcularSSAnual(faturacao);
+  const ssAnual = isencaoSS ? 0 : contribuicoesSSAnuais(faturacao, BASE_SS_POR_TIPO[TIPO_LOCAL_PARA_CANONICO[tipoAtiv]]);
 
   // IRS Jovem aplica-se à Contabilidade Organizada (Categoria B)
   const isencaoPct =
@@ -655,6 +646,7 @@ interface InputsParticularidades {
   conjunta?: boolean; // tributação conjunta (quociente conjugal)
   outrosRendimentos?: number; // outros rendimentos (Cat. A / pensões) a englobar
   anoAtividade?: number; // 1.º/2.º ano → redução do coeficiente
+  dispensaRetencao?: boolean; // Art. 101.º-B: sem retenção na fonte
   numDep3plus: number; // dependentes > 3 anos
   numDep3minus: number; // dependentes ≤ 3 anos
   numDep2_6: number; // 2.º+ dependentes ≤ 6 anos
@@ -736,11 +728,26 @@ interface ResultadoAnualRV extends SimulacaoIRS {
  * Adaptador fino sobre `simularIRSAnual` (motor canónico verificado).
  * Mantém a assinatura histórica para não partir os consumidores da UI.
  */
+/**
+ * Isenções de Segurança Social. Deixou de ser um booleano só.
+ *
+ * Enquanto «isento» significava «SS = 0», dava para passar um OR das três
+ * situações. Já não dá: a isenção do 1.º ano é total, a acumulação com emprego
+ * é uma dispensa até 4 × IAS (com contribuição sobre o excedente) e a CPAS/CGA
+ * é uma caixa própria, fora do Regime Geral. Colapsá-las tratava quem está no
+ * 1.º ano como quem acumula — e passava a cobrar-lhe contribuições.
+ */
+interface IsencoesSSInput {
+  primeiroAno: boolean;
+  acumulaEmprego: boolean;
+  cpas: boolean;
+}
+
 function simularAnualRV(
   faturacao: number,
   tipo: TipoAtividade,
   irsJovemAno: number,
-  isencaoSS: boolean,
+  isencoesSS: IsencoesSSInput,
   partic: InputsParticularidades = {
     deficiencia: false,
     ifici: false,
@@ -780,23 +787,40 @@ function simularAnualRV(
       gerais: partic.despGerais,
       rendas: partic.despRendas,
     },
-    // A isenção de SS (1.º ano OU acumulação) é resolvida no UI; força SS=0.
-    acumulaEmprego: isencaoSS,
+    // Cada isenção segue a sua regra no motor. A CPAS/CGA não é isenção do
+    // Art. 157.º — é sair do Regime Geral — mas para efeitos deste simulador
+    // (que não modela as taxas da caixa própria) o resultado é o mesmo: nada
+    // a descontar para a Segurança Social.
+    isencaoSSPrimeiroAno: isencoesSS.primeiroAno || isencoesSS.cpas,
+    acumulaEmprego: isencoesSS.acumulaEmprego,
   });
 
-  const retencaoAnual = faturacao * ret;
-  const irs = sim.irsEstimado;
+  // Retenção na fonte: a mesma fórmula de `calcular()`, não a taxa nua.
+  //
+  // Estava `faturacao * ret`, sem condições. Quem marca a dispensa do
+  // Art. 101.º-B via na mesma um «reembolso de X (retiveste Y)» com um Y que
+  // nunca existiu; e no IRS Jovem a base da retenção também é reduzida pela
+  // parte isenta, o que aqui era ignorado — tornando o reembolso fantasma
+  // ainda maior justamente para quem está no 1.º ano.
+  const retencaoAnual = retencaoNaFonte(faturacao, ret, {
+    dispensa: partic.dispensaRetencao,
+    irsJovemAno: irsJovemAno > 0 ? irsJovemAno : undefined,
+  });
+  const irs = sim.irsImputavelCatB;
   const ssAnual = sim.ssAnual;
   const liquido = faturacao - irs - ssAnual;
 
+  // Parcelas reais, vindas do motor. Antes eram zeros com um total certo por
+  // cima — qualquer detalhe aberto a partir daqui não somava.
+  const det = sim.deducoesDespesasDetalhe;
   const deducoesColeta: DeducoesColeta = {
     dependentes: sim.deducaoDependentes,
     deficienciaContrib: sim.deducaoDeficiencia,
     deficienciaDepend: 0,
-    saude: 0,
-    educacao: 0,
-    gerais: 0,
-    rendas: 0,
+    saude: det.saude,
+    educacao: det.educacao,
+    gerais: det.gerais,
+    rendas: det.rendas,
     total: sim.deducaoDependentes + sim.deducaoDespesas + sim.deducaoDeficiencia,
   };
 
@@ -827,7 +851,7 @@ function calcularBreakEven(
   custoConstAnual: number,
 ): number | null {
   for (let v = 0; v <= 200_000; v += 2_000) {
-    const rv = simularAnualRV(v, tipo, 0, false);
+    const rv = simularAnualRV(v, tipo, 0, { primeiroAno: false, acumulaEmprego: false, cpas: false });
     const em = simularEmpresa(
       v,
       despesasOper,
@@ -3323,6 +3347,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     conjunta,
     outrosRendimentos,
     anoAtividade,
+    dispensaRetencao,
     numDep3plus,
     numDep3minus,
     numDep2_6,
@@ -3369,7 +3394,11 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
         brutoAnual,
         tipoAtiv,
         irsJovemAno,
-        isencaoSS,
+        {
+          primeiroAno: isencaoSSPrimeiroAno,
+          acumulaEmprego,
+          cpas: isencaoCpas,
+        },
         particularidades,
         atividade.coef,
       ),
@@ -3378,7 +3407,10 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
       tipoAtiv,
       irsJovemAno,
       atividade.coef,
-      isencaoSS,
+      isencaoSSPrimeiroAno,
+      acumulaEmprego,
+      isencaoCpas,
+      dispensaRetencao,
       deficiencia,
       ifici,
       rnhAntigo,
@@ -3546,7 +3578,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   // simulação (vivem neste módulo). Mantêm o tipo de atividade actual e
   // ignoram particularidades individuais para uma comparação "limpa".
   const calcularLiquidoRVFat = useCallback(
-    (fat: number) => simularAnualRV(fat, tipoAtiv, 0, false).liquido,
+    (fat: number) => simularAnualRV(fat, tipoAtiv, 0, { primeiroAno: false, acumulaEmprego: false, cpas: false }).liquido,
     [tipoAtiv],
   );
   const calcularLiquidoEmpresaFat = useCallback(
@@ -6271,15 +6303,12 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                                     €/ano. Sendo isento, não cobras IVA e o teu
                                     disponível sobe para{" "}
                                     <strong>
-                                      {fmt(
-                                        Math.round(
-                                          bruto -
-                                            bruto *
-                                              TIPO_ATIVIDADE_PARAMS[tipoAtiv]
-                                                .ret -
-                                            base * 0.7 * SS_TAXA_TI,
-                                        ),
-                                      )}
+                                      {/* Sem IVA, o disponível é o líquido que o
+                                          motor já calcula. Estava aqui uma conta
+                                          à mão com o coeficiente de serviços
+                                          cravado a 0,7 — errada para quem vende
+                                          bens, e cega às isenções de SS. */}
+                                      {fmt(Math.round(resultRecibo.liquido))}
                                     </strong>
                                     .
                                   </span>
@@ -6599,7 +6628,7 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
                       {/* Calendário fiscal */}
                       <TimelineFiscal
                         ssAnualMensal={
-                          isencaoSS ? 0 : calcularSSAnual(brutoAnual) / 12
+                          isencaoSS ? 0 : resultAnualRV.ssAnual / 12
                         }
                         isencaoSS={isencaoSS}
                         acertoIRS={resultAnualRV.acertoIRS}

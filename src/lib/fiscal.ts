@@ -263,18 +263,38 @@ export const contribuicoesSSAnuais = (
   isencoes: IsencoesSS = {},
 ): number => contribuicoesSS(brutoAnual, baseSS, isencoes).contribuicaoAnual;
 
+/**
+ * Retenção na fonte sobre um valor faturado.
+ *
+ * Duas condições que se esquecem com facilidade quando a conta é escrita à
+ * mão — e foram esquecidas: a dispensa do Art. 101.º-B zera a retenção, e o
+ * IRS Jovem reduz a base, porque só se retém sobre a parte tributável.
+ * Escrever `faturado × taxa` no acerto anual produzia um «reembolso» de
+ * retenções que nunca tinham sido feitas.
+ */
+export function retencaoNaFonte(
+  base: number,
+  taxa: number,
+  opcoes: { dispensa?: boolean; irsJovemAno?: number } = {},
+): number {
+  if (opcoes.dispensa) return 0;
+  return sanitize(base) * (1 - isencaoIRSJovem(opcoes.irsJovemAno)) * taxa;
+}
+
 export function calcular(input: CalcInput): CalcResult {
   const bruto = sanitize(input.bruto);
   const avisos: string[] = [];
 
   // ── Retenção na fonte (adiantamento de IRS) ──
+  // O IRS Jovem isenta parte do rendimento, logo a retenção incide apenas
+  // sobre a parte tributável (estimativa — a tabela oficial da AT é progressiva).
   const isencaoJovem = isencaoIRSJovem(input.irsJovemAno);
   const retencaoBase = input.retencaoOverride ?? RETENCAO[input.tipo].value;
   const taxaRetencao = input.dispensaRetencao ? 0 : retencaoBase;
-  // O IRS Jovem isenta parte do rendimento, logo a retenção incide apenas
-  // sobre a parte tributável (estimativa — a tabela oficial da AT é progressiva).
-  const baseRetencao = bruto * (1 - isencaoJovem);
-  const retencaoIRS = baseRetencao * taxaRetencao;
+  const retencaoIRS = retencaoNaFonte(bruto, retencaoBase, {
+    dispensa: input.dispensaRetencao,
+    irsJovemAno: input.irsJovemAno,
+  });
 
   // ── IVA ──
   const taxaIVA = taxaIVAEfetiva(input.regiao, input.regimeIVA);
@@ -732,6 +752,24 @@ export interface SimulacaoIRS {
   deducaoAscendentes: number;
   /** Deduções de despesas (saúde+educação+gerais+rendas+PPR+donativos) após limite global. */
   deducaoDespesas: number;
+  /**
+   * As parcelas por trás de `deducaoDespesas`, já com os limites individuais
+   * de cada rubrica aplicados. `somaBruta` é o total antes do limite global do
+   * Art. 78.º n.º 7; `aplicado` é o que efetivamente abate à coleta.
+   */
+  deducoesDespesasDetalhe: {
+    saude: number;
+    educacao: number;
+    gerais: number;
+    rendas: number;
+    lares: number;
+    ppr: number;
+    donativos: number;
+    somaBruta: number;
+    limiteGlobal: number;
+    limitado: boolean;
+    aplicado: number;
+  };
   /** Dedução à coleta por PPR (Art. 21.º EBF), antes do limite global. */
   deducaoPPR: number;
   /** Dedução à coleta por donativos (Art. 63.º EBF), antes do limite global. */
@@ -1031,10 +1069,27 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     : 0;
 
   // Limite global (Art. 78.º n.º 7): saúde + educação + gerais + rendas + lares + PPR + donativos.
-  const deducaoDespesas = Math.min(
-    dGerais + dSaude + dEducacao + dRendas + dLares + deducaoPPR + deducaoDonativos,
-    limiteGlobalDeducoes(rendimentoColetavelFinal)
-  );
+  const somaDespesasBruta =
+    dGerais + dSaude + dEducacao + dRendas + dLares + deducaoPPR + deducaoDonativos;
+  const limiteGlobal = limiteGlobalDeducoes(rendimentoColetavelFinal);
+  const deducaoDespesas = Math.min(somaDespesasBruta, limiteGlobal);
+  // Parcela a parcela, para quem quiser abrir o detalhe. A UI do modo completo
+  // montava este objeto à mão com zeros em todas as linhas e o total certo —
+  // qualquer detalhe aberto a partir dali mostrava números que não somavam.
+  const deducoesDespesasDetalhe = {
+    saude: dSaude,
+    educacao: dEducacao,
+    gerais: dGerais,
+    rendas: dRendas,
+    lares: dLares,
+    ppr: deducaoPPR,
+    donativos: deducaoDonativos,
+    somaBruta: somaDespesasBruta,
+    limiteGlobal,
+    /** O limite do Art. 78.º n.º 7 cortou alguma coisa? */
+    limitado: somaDespesasBruta > limiteGlobal,
+    aplicado: deducaoDespesas,
+  };
 
   // Ascendentes (Art. 78.º-A): 525 € por ascendente; 635 € se existir só um.
   // Fora do limite global, tal como a dedução por dependentes.
@@ -1116,6 +1171,7 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     deducaoDependentes,
     deducaoAscendentes,
     deducaoDespesas,
+    deducoesDespesasDetalhe,
     deducaoPPR,
     deducaoDonativos,
     deducaoPensaoAlimentos,
