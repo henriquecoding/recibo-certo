@@ -21,6 +21,24 @@ import type { VantagensEstado } from "@/hooks/useQuizFiscal";
 import type { QuizOpcao, QuizCategoria } from "@/lib/quiz-fiscal";
 import type { QuizProgressoProps } from "./QuizFiscalApp";
 
+/**
+ * `prefers-reduced-motion` do sistema. As partículas e os springs corriam
+ * sempre, e o toggle que prometia desligá-los era decorativo — duas falhas
+ * que se resolvem no mesmo sítio.
+ */
+function usaMovimentoReduzido(): boolean {
+  const [reduzido, setReduzido] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduzido(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setReduzido(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  return reduzido;
+}
+
 const LETRAS = ["A", "B", "C", "D"];
 
 interface QuizProps {
@@ -38,6 +56,8 @@ interface QuizProps {
   acertou: boolean | null;
   tempoRestante?: number;
   tempoTotal?: number;
+  /** Aviso quando a seleção teve de ceder dificuldade/categoria (QZ-16). */
+  avisoSelecao?: string;
   vantagens: VantagensEstado;
   modo: "normal" | "guiado";
   onEliminar2: () => void;
@@ -95,6 +115,7 @@ export default function Quiz({
   acertou,
   tempoRestante,
   tempoTotal,
+  avisoSelecao,
   vantagens,
   modo,
   onEliminar2,
@@ -123,8 +144,17 @@ export default function Quiz({
   streakAtual,
   progresso,
 }: QuizProps) {
-  const { soarAcerto, soarErro, soarToque } = useGameJuice();
   const { config, updateConfig } = useQuizConfig();
+  // Som e vibração passam a respeitar o painel — antes tocavam e vibravam
+  // sempre, e desligar no painel não fazia nada.
+  const { soarAcerto, soarErro, soarToque } = useGameJuice({
+    somAtivo: config.somAtivo,
+    vibracaoAtiva: config.vibracaoAtiva,
+  });
+  // «Animações e partículas»: além do toggle, respeita-se
+  // `prefers-reduced-motion` do sistema, que nem sequer era consultado.
+  const reduzirMovimento = usaMovimentoReduzido();
+  const animar = config.animacoesAtivas && !reduzirMovimento;
   const { sessoes: histSessoes } = useQuizProgresso();
   const [tremendoTela, setTremendoTela] = useState(false);
   const [configAberta, setConfigAberta] = useState(false);
@@ -155,6 +185,15 @@ export default function Quiz({
       // respondiam à pergunta e fechavam o diálogo.
       const alvo = e.target as HTMLElement | null;
       if (alvo && (alvo.tagName === "INPUT" || alvo.tagName === "TEXTAREA" || alvo.isContentEditable)) return;
+      // «Atalhos de teclado» desligado: só ficam Enter/Espaço para avançar,
+      // que é navegação e não um atalho de jogo.
+      if (!config.atalhosTeclado) {
+        if ((e.key === "Enter" || e.key === " ") && respondida) {
+          e.preventDefault();
+          onSeguinte();
+        }
+        return;
+      }
       const mapa: Record<string, number> = {
         "1": 0, "2": 1, "3": 2, "4": 3,
         "a": 0, "b": 1, "c": 2, "d": 3,
@@ -171,13 +210,31 @@ export default function Quiz({
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [respondida, opcoes, onOpcaoClick, onSeguinte, soarToque]);
+  }, [respondida, opcoes, onOpcaoClick, onSeguinte, soarToque, config.atalhosTeclado]);
 
   const progressPct = Math.round(((indice + 1) / total) * 100);
   const tPct = tempoRestante != null && tempoTotal ? (tempoRestante / tempoTotal) * 100 : null;
   const acertoPct = total > 0 ? Math.round((acertosAteAgora / (indice + 1 || 1)) * 100) : 0;
 
   const catMeta = categoriaAtiva ? META_CATEGORIA_QUIZ[categoriaAtiva] : null;
+
+  // ── Anúncios para leitor de ecrã (WCAG 2.2 AA, 4.1.3 Status Messages) ──
+  // O quiz não tinha uma única `aria-live`: nem o resultado da resposta nem o
+  // cronómetro a esgotar-se eram anunciados. Num jogo cronometrado, isso é a
+  // diferença entre jogável e injogável.
+  const anuncioResposta = !respondida
+    ? ""
+    : acertou
+      ? `Certo. ${opcoes[opcaoEstados.findIndex((e) => e === "correta")]?.texto ?? ""}`
+      : `Errado. A resposta certa é ${opcoes[opcaoEstados.findIndex((e) => e === "correta")]?.texto ?? ""}`;
+
+  // O cronómetro não se anuncia segundo a segundo — seria insuportável.
+  // Anuncia-se nos marcos que importam para decidir.
+  const MARCOS_TEMPO = [30, 10, 5];
+  const anuncioTempo =
+    !respondida && tempoRestante != null && MARCOS_TEMPO.includes(tempoRestante)
+      ? `${tempoRestante} segundos restantes`
+      : "";
   const CatIcon = catMeta ? resolveQuizIcon(catMeta.icon) : null;
 
   const xpNoNivel = progresso.xpAtual - progresso.xpNivelBase;
@@ -393,14 +450,35 @@ export default function Quiz({
                 </AnimatePresence>
 
                 {/* Hint teclado — só aparece antes de responder */}
-                {!respondida && (
+                {!respondida && config.atalhosTeclado && (
                   <p className="px-6 pb-2 text-[10px] text-right" style={{ color: "#b0a090" }}>
                     Atalho: teclas A–D ou 1–4
                   </p>
                 )}
 
+                {/* Regiões vivas: invisíveis, mas lidas em voz alta. */}
+                <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+                  {anuncioResposta}
+                </p>
+                <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+                  {anuncioTempo}
+                </p>
+
+                {avisoSelecao && (
+                  <p
+                    className="mx-6 mb-2 rounded-lg px-3 py-2 text-[11px] leading-relaxed"
+                    style={{ backgroundColor: "#f5efe4", color: "#7a6a58" }}
+                  >
+                    {avisoSelecao}
+                  </p>
+                )}
+
                 {/* Options */}
-                <div className="px-6 pb-5 space-y-2.5">
+                <div
+                  className="px-6 pb-5 space-y-2.5"
+                  role="radiogroup"
+                  aria-label="Opções de resposta"
+                >
                   {opcoes.map((opcao, idx) => {
                     const estado = opcaoEstados[idx];
                     if (!estado) return null;
@@ -413,9 +491,17 @@ export default function Quiz({
                         onClick={() => { soarToque(); onOpcaoClick(idx); }}
                         className={`${btnClass} relative overflow-visible focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#3a5232]`}
                         style={btnStyle}
-                        whileHover={!respondida && estado === "default" ? { scale: 1.015, y: -1 } : undefined}
-                        whileTap={!respondida && estado !== "eliminada" ? { scale: 0.96 } : undefined}
+                        whileHover={animar && !respondida && estado === "default" ? { scale: 1.015, y: -1 } : undefined}
+                        whileTap={animar && !respondida && estado !== "eliminada" ? { scale: 0.96 } : undefined}
                         transition={{ type: "spring", stiffness: 500, damping: 26 }}
+                        role="radio"
+                        // A opção que o utilizador escolheu: no modo guiado é
+                        // o estado «selecionada»; no normal, depois de
+                        // responder, é a que ficou marcada certa ou errada.
+                        aria-checked={
+                          estado === "selecionada" ||
+                          (respondida && (estado === "errada" || (estado === "correta" && acertou === true)))
+                        }
                         aria-label={`Opção ${LETRAS[idx]}: ${opcao.texto}`}
                       >
                         <span
@@ -428,7 +514,7 @@ export default function Quiz({
                           {opcao.texto}
                         </span>
                         {estado === "correta" && <Check size={18} className="shrink-0 text-[#3a5232]" />}
-                        {estado === "correta" && <ParticulasAcerto />}
+                        {estado === "correta" && animar && <ParticulasAcerto />}
                       </m.button>
                     );
                   })}

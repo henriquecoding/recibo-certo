@@ -1,7 +1,9 @@
-// GERADO automaticamente por __gen_meta.test.ts — não editar à mão.
+// GERADO automaticamente por scripts/gen-quiz-meta.mjs — não editar à mão.
 // Contagens do banco de perguntas, para o ecrã de seleção poder mostrar os
-// totais SEM importar (e descarregar) os ~900 KB de bancos. Regenerar com:
-//   npx vitest run src/lib/quiz-fiscal/__gen_meta.test.ts
+// totais SEM importar (e descarregar) os ~900 KB de bancos.
+//
+// Regenerar com:  npm run quiz:meta
+// Verificar com:  npm run quiz:meta:check   (corre no CI e falha se divergir)
 import type { QuizCategoria } from "./types";
 
 export interface ContagemCategoria { total: number; facil: number; medio: number; dificil: number }
@@ -67,23 +69,23 @@ export const ESTATISTICAS_BANCO: Record<QuizCategoria, ContagemCategoria> = {
     "medio": 41,
     "dificil": 29
   },
-  "dep_irs": {
-    "total": 87,
-    "facil": 31,
-    "medio": 28,
-    "dificil": 28
-  },
   "dep_ss": {
     "total": 109,
     "facil": 29,
     "medio": 53,
     "dificil": 27
   },
+  "dep_irs": {
+    "total": 87,
+    "facil": 31,
+    "medio": 28,
+    "dificil": 28
+  },
   "dep_subsidios": {
-    "total": 101,
+    "total": 123,
     "facil": 31,
     "medio": 27,
-    "dificil": 43
+    "dificil": 65
   },
   "empresa_criacao": {
     "total": 102,
@@ -103,6 +105,6 @@ export const ESTATISTICAS_BANCO: Record<QuizCategoria, ContagemCategoria> = {
     "medio": 44,
     "dificil": 26
   }
-} as Record<QuizCategoria, ContagemCategoria>;
+};
 
-export const TOTAL_PERGUNTAS_META = 1592;
+export const TOTAL_PERGUNTAS_META = 1614;

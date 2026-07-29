@@ -500,14 +500,17 @@ export const PERGUNTAS_ATIVIDADES: QuizPergunta[] = [
     id: "ativ-40",
     categoria: "atividades",
     dificuldade: 2,
-    pergunta: "Qual o coeficiente para subsídios destinados à exploração no regime simplificado?",
+    // Reescrita: o enunciado era palavra por palavra igual ao de `rs-80`.
+    // A armadilha real não é o valor de um coeficiente isolado — é confundir
+    // os dois tipos de subsídio, que têm coeficientes muito diferentes.
+    pergunta: "Recebi um subsídio ao investimento e outro à exploração. Têm o mesmo coeficiente no regime simplificado?",
     opcoes: [
-      { texto: "0,10", porque: "Subsídios destinados à exploração têm coeficiente 0,10 (Art. 31.º, al. f) CIRS) — apenas 10% do valor recebido é tributável." },
-      { texto: "0,30", porque: "0,30 aplica-se a subsídios NÃO destinados à exploração — os destinados à exploração têm 0,10." },
-      { texto: "0,15", porque: "0,15 é para vendas de bens e hotelaria, não para subsídios." },
-      { texto: "0,35", porque: "0,35 aplica-se a outras prestações de serviços, não a subsídios." },
+      { texto: "Sim, ambos a 0,10.", porque: "Só os destinados à exploração têm 0,10. Os restantes subsídios têm coeficiente 0,30." },
+      { texto: "Não: exploração a 0,10, os restantes a 0,30.", porque: "Correto. O Art. 31.º, n.º 1 distingue os subsídios destinados à exploração (al. f, coeficiente 0,10) dos restantes subsídios (al. g, coeficiente 0,30) — o triplo do rendimento tributável." },
+      { texto: "Sim, ambos a 0,30.", porque: "Os destinados à exploração são tributados a 0,10, não a 0,30." },
+      { texto: "Não: exploração a 0,30, os restantes a 0,10.", porque: "Está trocado — é o contrário." },
     ],
-    correta: 0,
+    correta: 1,
     legalBasis: "Art. 31.º, n.º 1, al. f) CIRS",
     fonte: fonte("art31"),
   },
@@ -845,12 +848,15 @@ export const PERGUNTAS_ATIVIDADES: QuizPergunta[] = [
     id: "ativ-63",
     categoria: "atividades",
     dificuldade: 2,
-    pergunta: "A regra dos 15% aplica-se a rendimentos de propriedade intelectual (coeficiente 0,95)?",
+    // Reescrita: o enunciado era palavra por palavra igual ao de `rs-30`.
+    // Testa agora o mesmo artigo pelo lado oposto — quais os coeficientes
+    // que a regra alcança —, que é a formulação em que as pessoas hesitam.
+    pergunta: "A que coeficientes se aplica a regra dos 15% do Art. 31.º, n.º 2 CIRS?",
     opcoes: [
-      { texto: "Sim, aplica-se a todos os tipos de rendimento.", porque: "A regra dos 15% só se aplica aos coeficientes 0,75 e 0,35 — o coeficiente 0,95 está isento." },
-      { texto: "Não — só se aplica aos coeficientes 0,75 e 0,35.", porque: "A regra dos 15% (Art. 31.º, n.º 2 CIRS) aplica-se apenas às alíneas b) (0,75) e c) (0,35). Rendimentos de propriedade intelectual (coef. 0,95, al. d) estão isentos." },
-      { texto: "Sim, mas apenas acima de 50 000 EUR.", porque: "A regra dos 15% depende do tipo de coeficiente, não do volume de negócios." },
-      { texto: "Sim, com exigência de 25% em vez de 15%.", porque: "Não existe exigência de 25% — a regra dos 15% aplica-se apenas aos coeficientes 0,75 e 0,35." },
+      { texto: "A todos os coeficientes do regime simplificado.", porque: "Não: o n.º 2 restringe-a às alíneas b) e c), ou seja aos coeficientes 0,75 e 0,35." },
+      { texto: "Apenas aos coeficientes 0,75 e 0,35.", porque: "Correto. A regra dos 15% aplica-se só às alíneas b) e c) do n.º 1 — quem tem coeficiente 0,95, 0,30, 0,15 ou 0,10 não precisa de justificar despesas por esta via." },
+      { texto: "Apenas ao coeficiente 0,75.", porque: "Falta o 0,35, das outras prestações de serviços da alínea c)." },
+      { texto: "Apenas aos coeficientes de vendas (0,15).", porque: "As vendas de bens não estão abrangidas — a regra visa as prestações de serviços." },
     ],
     correta: 1,
     legalBasis: "Art. 31.º, n.º 2 CIRS",

@@ -20,10 +20,17 @@ interface ResultadoProps {
   levelUp?: boolean;
   nivelNovo?: { nivel: number; titulo: string };
   cupaoGanho?: CupaoQuiz | null;
+  /**
+   * Reinício da sessão. Vem de fora porque tem de consumir energia — usar
+   * `quiz.jogarNovamente` diretamente permitia sessões ilimitadas sem
+   * gastar nada (basta nunca voltar ao menu).
+   */
+  onJogarNovamente?: () => void;
 }
 
-export default function Resultado({ quiz, xpGanho = 0, levelUp = false, nivelNovo, cupaoGanho }: ResultadoProps) {
+export default function Resultado({ quiz, xpGanho = 0, levelUp = false, nivelNovo, cupaoGanho, onJogarNovamente }: ResultadoProps) {
   const { resultado, sessao, jogarNovamente, reiniciar } = quiz;
+  const repetir = onJogarNovamente ?? jogarNovamente;
   if (!resultado) return null;
 
   const { acertos, totalPerguntas, percentagem, porCategoria, classificacao, respostas, modo } = resultado;
@@ -239,7 +246,7 @@ export default function Resultado({ quiz, xpGanho = 0, levelUp = false, nivelNov
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
-            onClick={jogarNovamente}
+            onClick={repetir}
             className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-quiz-forest px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-quiz-forest-deep active:scale-[0.98] dark:bg-quiz-olive dark:hover:bg-quiz-sage-dark"
           >
             <Rocket size={16} />

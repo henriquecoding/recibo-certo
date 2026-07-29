@@ -38,9 +38,12 @@ export default function QuizFiscalApp() {
   // Quando o quiz termina, regista a sessão na persistência + verifica desafio
   useEffect(() => {
     if (quiz.status !== "resultado" || !quiz.resultado) return;
-    const resultadoId = `${quiz.resultado.modo}-${quiz.resultado.acertos}-${quiz.resultado.totalPerguntas}-${quiz.resultado.pontos}`;
-    if (sessaoRegistadaRef.current === resultadoId) return;
-    sessaoRegistadaRef.current = resultadoId;
+    // A chave é o ID da sessão, não o seu RESULTADO. Com a chave anterior
+    // (`modo-acertos-total-pontos`), dois 8/10 seguidos com a mesma pontuação
+    // contavam como a mesma sessão — e `jogarNovamente()` nem sequer passa
+    // por «selecao», que era o único sítio onde a chave se limpava.
+    if (!quiz.sessaoId || sessaoRegistadaRef.current === quiz.sessaoId) return;
+    sessaoRegistadaRef.current = quiz.sessaoId;
 
     progresso.registrarSessao(
       quiz.resultado,
@@ -50,17 +53,26 @@ export default function QuizFiscalApp() {
     ).then(setResultadoSessao).catch(() => {/* noop */});
 
     if (user && quiz.config?.dificuldade) {
-      registarSessaoDesafio(
-        user.id,
-        quiz.config.dificuldade,
-        quiz.resultado.totalPerguntas,
-        quiz.resultado.acertos,
-      ).then((r) => {
-        if (r.cupaoGerado) setCupaoGanho(r.cupaoGerado);
-      }).catch(() => {/* noop */});
+      // Envia-se o que o utilizador ESCOLHEU, traduzido para os índices do
+      // banco — nunca o número de acertos. Quem apura o resultado é o
+      // servidor, que é o único lado que conhece as respostas certas sem
+      // depender do que o cliente afirma.
+      const respostasParaVerificacao = quiz.resultado.respostas.map((r) => {
+        const item = quiz.sessao.find((s) => s.pergunta.id === r.perguntaId);
+        const original =
+          item && r.opcaoSelecionada !== null
+            ? item.indicesOriginais[r.opcaoSelecionada] ?? null
+            : null;
+        return { perguntaId: r.perguntaId, opcaoSelecionada: original };
+      });
+      registarSessaoDesafio(respostasParaVerificacao, quiz.config.dificuldade)
+        .then((r) => {
+          if (r.cupaoGerado) setCupaoGanho(r.cupaoGerado);
+        })
+        .catch(() => {/* noop */});
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quiz.status, quiz.resultado]);
+  }, [quiz.status, quiz.resultado, quiz.sessaoId]);
 
   useEffect(() => {
     if (quiz.status === "selecao") {
@@ -73,6 +85,18 @@ export default function QuizFiscalApp() {
   const handleIniciar = async (cfg: QuizFiscalConfig) => {
     progresso.consumirEnergia();
     await quiz.iniciar(cfg);
+  };
+
+  /**
+   * «Jogar novamente» a partir do ecrã de resultado chamava
+   * `quiz.jogarNovamente()` diretamente, sem passar por aqui — ou seja, sem
+   * consumir energia. Bastava não voltar ao menu para jogar sessões
+   * ilimitadas. Se a energia é uma alavanca de conversão, tem de ser cobrada
+   * em todos os caminhos que iniciam uma sessão.
+   */
+  const handleJogarNovamente = async () => {
+    progresso.consumirEnergia();
+    quiz.jogarNovamente();
   };
 
   if (quiz.status === "jogando") {
@@ -126,6 +150,7 @@ export default function QuizFiscalApp() {
             levelUp={resultadoSessao?.levelUp ?? false}
             nivelNovo={resultadoSessao?.nivelNovo}
             cupaoGanho={cupaoGanho}
+            onJogarNovamente={handleJogarNovamente}
           />
         )}
       </div>

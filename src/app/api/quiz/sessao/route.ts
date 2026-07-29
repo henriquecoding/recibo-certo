@@ -1,0 +1,142 @@
+// ═══════════════════════════════════════════════════════════════════════
+//  POST /api/quiz/sessao — regista uma sessão de desafio, com verificação
+//  ---------------------------------------------------------------------
+//  `registarSessaoDesafio` era chamada DO CLIENTE, com valores DO CLIENTE:
+//  bastava enviar `acertos: 10` para o progresso avançar. Nada era
+//  recalculado. Aqui o servidor recebe as escolhas e apura os acertos a
+//  partir do banco de perguntas, que só ele conhece.
+// ═══════════════════════════════════════════════════════════════════════
+
+import { NextResponse } from "next/server";
+import {
+  META_DESAFIO_SERVIDOR,
+  VALIDADE_CUPAO_DIAS,
+  gerarCodigoCupaoServidor,
+  supabaseServico,
+  utilizadorDoPedido,
+  verificarSessao,
+  type RespostaSubmetida,
+} from "@/lib/quiz-fiscal/server";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function POST(req: Request) {
+  const userId = await utilizadorDoPedido(req);
+  if (!userId) return NextResponse.json({ erro: "Não autenticado." }, { status: 401 });
+
+  const sb = supabaseServico();
+  if (!sb) return NextResponse.json({ erro: "Serviço indisponível." }, { status: 503 });
+
+  let corpo: { dificuldade?: number; respostas?: RespostaSubmetida[] };
+  try {
+    corpo = await req.json();
+  } catch {
+    return NextResponse.json({ erro: "Pedido inválido." }, { status: 400 });
+  }
+
+  const respostas = Array.isArray(corpo.respostas) ? corpo.respostas.slice(0, 50) : [];
+  const dificuldade = Number(corpo.dificuldade);
+  if (respostas.length === 0 || !Number.isFinite(dificuldade)) {
+    return NextResponse.json({ erro: "Pedido inválido." }, { status: 400 });
+  }
+
+  const verificado = await verificarSessao({ dificuldade, respostas });
+  if (verificado.desconhecidos.length > 0) {
+    // IDs que não existem no banco só aparecem numa submissão forjada.
+    return NextResponse.json({ erro: "Sessão inválida." }, { status: 400 });
+  }
+  if (!verificado.caminho) {
+    return NextResponse.json({ ok: true, acertos: verificado.acertos, cupaoGerado: null });
+  }
+
+  const caminho = verificado.caminho;
+  const meta = META_DESAFIO_SERVIDOR[caminho].meta;
+  const outros = (["medio", "dificil"] as const).filter((c) => c !== caminho);
+  const agora = new Date().toISOString();
+
+  // A sessão só conta para o caminho da sua dificuldade; os outros caminhos
+  // são sempre repostos, como no comportamento original.
+  const reposicoes = outros.map((c) => ({
+    user_id: userId,
+    caminho: c,
+    sequencia_atual: 0,
+    sequencia_meta: META_DESAFIO_SERVIDOR[c].meta,
+    atualizado_em: agora,
+  }));
+
+  if (!verificado.perfeito) {
+    const { error } = await sb.from("quiz_achievement_progress").upsert(
+      [{ user_id: userId, caminho, sequencia_atual: 0, sequencia_meta: meta, atualizado_em: agora }, ...reposicoes],
+      { onConflict: "user_id,caminho" },
+    );
+    if (error) return NextResponse.json({ erro: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true, acertos: verificado.acertos, cupaoGerado: null });
+  }
+
+  const { data: linha, error: errLeitura } = await sb
+    .from("quiz_achievement_progress")
+    .select("sequencia_atual")
+    .eq("user_id", userId)
+    .eq("caminho", caminho)
+    .maybeSingle();
+  if (errLeitura) return NextResponse.json({ erro: errLeitura.message }, { status: 500 });
+
+  const novaSeq = (linha?.sequencia_atual ?? 0) + 1;
+  const atingiuMeta = novaSeq >= meta;
+
+  const { error: errProgresso } = await sb.from("quiz_achievement_progress").upsert(
+    [
+      {
+        user_id: userId,
+        caminho,
+        // Ao atingir a meta a sequência recomeça.
+        sequencia_atual: atingiuMeta ? 0 : novaSeq,
+        sequencia_meta: meta,
+        atualizado_em: agora,
+      },
+      ...reposicoes,
+    ],
+    { onConflict: "user_id,caminho" },
+  );
+  if (errProgresso) return NextResponse.json({ erro: errProgresso.message }, { status: 500 });
+
+  if (!atingiuMeta) {
+    return NextResponse.json({
+      ok: true,
+      acertos: verificado.acertos,
+      sequenciaAtual: novaSeq,
+      cupaoGerado: null,
+    });
+  }
+
+  const { data: cupao, error: errCupao } = await sb
+    .from("quiz_cupoes")
+    .insert({
+      user_id: userId,
+      codigo: gerarCodigoCupaoServidor(),
+      caminho,
+      meses: META_DESAFIO_SERVIDOR[caminho].meses,
+      estado: "disponivel",
+      expira_em: new Date(Date.now() + VALIDADE_CUPAO_DIAS * 24 * 60 * 60 * 1000).toISOString(),
+    })
+    .select()
+    .single();
+  if (errCupao) return NextResponse.json({ erro: errCupao.message }, { status: 500 });
+
+  return NextResponse.json({
+    ok: true,
+    acertos: verificado.acertos,
+    sequenciaAtual: 0,
+    cupaoGerado: {
+      id: cupao.id,
+      codigo: cupao.codigo,
+      caminho: cupao.caminho,
+      meses: cupao.meses,
+      estado: cupao.estado,
+      criadoEm: cupao.criado_em,
+      ativadoEm: cupao.ativado_em,
+      expiraEm: cupao.expira_em,
+    },
+  });
+}

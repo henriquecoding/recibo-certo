@@ -555,7 +555,7 @@ export default function PerfilPage() {
   const handleAtivarCupao = useCallback(async (cupaoId: string) => {
     if (!user) return;
     setCupaoAtivando(cupaoId);
-    const { erro } = await ativarCupao(cupaoId, user.id);
+    const { erro } = await ativarCupao(cupaoId);
     setCupaoAtivando(null);
     if (!erro) {
       setCupoes((prev) =>

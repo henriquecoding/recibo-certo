@@ -723,27 +723,52 @@ AJUDAS.forEach((a, i) => {
 });
 
 // Cenários — trabalho suplementar (valor de 1 hora extra)
+//
+// Os seis segmentos do Art. 268.º CT, pela ordem em que vivem em
+// `TRABALHO_SUPLEMENTAR.acrescimos`: 25% e 37,5% em dia útil até 100h/ano;
+// 50% em descanso/feriado até 100h/ano; e, acima de 100h/ano, 50% na 1.ª hora
+// em dia útil, 75% nas seguintes e 100% em descanso/feriado.
+const CONTEXTO_SUPLEMENTAR = [
+  "na 1.ª hora em dia útil (até 100h/ano)",
+  "nas horas seguintes em dia útil (até 100h/ano)",
+  "em dia de descanso ou feriado (até 100h/ano)",
+  "na 1.ª hora em dia útil, acima de 100h/ano",
+  "nas horas seguintes em dia útil, acima de 100h/ano",
+  "em dia de descanso ou feriado, acima de 100h/ano",
+];
+
+/**
+ * Acréscimo de OUTRO segmento, garantidamente diferente do de `j`. Sem isto,
+ * o distrator do segmento 2 usava `ACRESCIMOS[3]` — que vale o mesmo 0,5 — e
+ * gerava uma opção errada com exatamente o mesmo valor da correta.
+ */
+function acrescimoDistinto(j: number): number {
+  const atual = ACRESCIMOS[j];
+  return ACRESCIMOS.find((a) => a !== atual) ?? atual;
+}
+
 const BASES_SUP = [820, 1000, 1200, 1500, 1800, 2100, 2500, 3000, 950, 1350, 2800];
 BASES_SUP.forEach((base, i) => {
   const horaria = cent((base * 12) / (52 * HORAS_SEMANA));
   ACRESCIMOS.forEach((ac, j) => {
     const valor = cent(horaria * (1 + ac));
-    const ctx =
-      ac === ACRESCIMOS[0] ? "1.ª hora em dia útil"
-      : ac === ACRESCIMOS[1] ? "horas seguintes em dia útil"
-      : ac === ACRESCIMOS[2] ? "em dia de descanso/feriado"
-      : "em descanso/feriado acima de 100h/ano";
+    // O rótulo tem de vir do ÍNDICE do segmento, não do valor do acréscimo.
+    // `ACRESCIMOS` tem seis segmentos e dois deles valem 0,5 (descanso até
+    // 100h/ano e 1.ª hora em dia útil acima de 100h/ano): comparar por valor
+    // dava o mesmo texto aos dois, e como o enunciado inclui a percentagem,
+    // as duas perguntas ficavam palavra por palavra iguais.
+    const ctx = CONTEXTO_SUPLEMENTAR[j] ?? "em trabalho suplementar";
     acc.push(
       montar(
         `dep-sub-sup-${i}-${j}`,
         "dep_subsidios",
-        // 1.ª hora em dia útil é o caso mais simples → médio; os restantes → difícil.
+        // O primeiro segmento é o caso mais simples → médio; os restantes → difícil.
         j === 0 ? 2 : 3,
         `Salário base de ${eur(base)} (40h/semana). Quanto vale 1 hora suplementar ${ctx} (acréscimo de ${pct(ac)})?`,
         { texto: eur(valor), porque: `Correto. Retribuição horária ${eur(horaria)} × (1 + ${pct(ac)}) = ${eur(valor)}.` },
         [
           { texto: eur(horaria), porque: "É a retribuição horária base, sem o acréscimo." },
-          { texto: eur(cent(horaria * (1 + (j < 3 ? ACRESCIMOS[j + 1] : ACRESCIMOS[0])))), porque: "Usa um acréscimo de outro tipo de hora." },
+          { texto: eur(cent(horaria * (1 + acrescimoDistinto(j)))), porque: "Usa o acréscimo de outro tipo de hora suplementar." },
           { texto: eur(cent(horaria * ac)), porque: "Conta só o acréscimo, esquecendo a hora base (1 + acréscimo)." },
         ],
         "Art. 268.º e 271.º CT — valor da hora suplementar",

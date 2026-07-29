@@ -12,6 +12,7 @@
  */
 
 import { TOTAL_PERGUNTAS_META } from "@/lib/quiz-fiscal/quiz-meta";
+import { META_CATEGORIA_QUIZ } from "@/lib/quiz-fiscal/types";
 import { GUIDE_MANIFESTS } from "@/lib/guias/manifests";
 
 export const SITE_URL = "https://www.recibocerto.pt";
@@ -34,6 +35,9 @@ export interface PublicRoute {
     manifesto novo passa a chegar ao sitemap, ao índice, à navegação e ao
     seo-audit de uma só vez; era esta duplicação manual que a auditoria
     identificou no ponto 4.5. Ordenado para o sitemap ser estável. */
+/** Categorias do Quiz Fiscal com página própria. */
+export const QUIZ_CATEGORIA_SLUGS: readonly string[] = Object.keys(META_CATEGORIA_QUIZ).sort();
+
 export const GUIA_SLUGS: readonly string[] = GUIDE_MANIFESTS
   .filter((m) => m.status !== "archived")
   .map((m) => m.slug)
@@ -58,6 +62,14 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
   { path: "/precos",      changeFrequency: "monthly", priority: 0.8 },
   { path: "/investidores", changeFrequency: "monthly", priority: 0.6 },
   { path: "/quiz-fiscal", changeFrequency: "monthly", priority: 0.7 },
+  // As 16 categorias do quiz são rotas estáticas com conteúdo real e JSON-LD
+  // (ver `app/quiz-fiscal/[categoria]`). Derivam do catálogo para nunca
+  // divergirem dele.
+  ...QUIZ_CATEGORIA_SLUGS.map((slug) => ({
+    path: `/quiz-fiscal/${slug}`,
+    changeFrequency: "monthly" as const,
+    priority: 0.6,
+  })),
   { path: "/guias",       changeFrequency: "monthly", priority: 0.8 },
   ...GUIA_SLUGS.map((slug) => ({
     path: `/guias/${slug}`,
@@ -214,6 +226,53 @@ export function generateFAQSchema(faqs: { q: string; a: string }[]) {
         "@type": "Answer",
         text: f.a,
       },
+    })),
+  };
+}
+
+// ─── Schema: Quiz (schema.org/Quiz + Question + Answer) ──────────────────────
+
+/**
+ * Schema de um conjunto de perguntas com resposta e explicação.
+ *
+ * O quiz é a maior peça de conteúdo do site — 1.614 perguntas, cada uma com
+ * base legal e ligação à fonte oficial — e não tinha uma linha de JSON-LD.
+ * `Quiz`, `Question` e `Answer` são tipos reconhecidos e elegíveis para
+ * resultados enriquecidos.
+ */
+export function generateQuizSchema(opts: {
+  nome: string;
+  descricao: string;
+  url: string;
+  perguntas: {
+    pergunta: string;
+    respostaCerta: string;
+    explicacao: string;
+    respostasErradas: string[];
+  }[];
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Quiz",
+    name: opts.nome,
+    description: opts.descricao,
+    url: `${SITE_URL}${opts.url}`,
+    inLanguage: "pt-PT",
+    educationalLevel: "beginner",
+    about: { "@type": "Thing", name: "Fiscalidade portuguesa" },
+    hasPart: opts.perguntas.map((p) => ({
+      "@type": "Question",
+      eduQuestionType: "Multiple choice",
+      name: p.pergunta,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: p.respostaCerta,
+        explanation: p.explicacao,
+      },
+      suggestedAnswer: p.respostasErradas.map((t) => ({
+        "@type": "Answer",
+        text: t,
+      })),
     })),
   };
 }

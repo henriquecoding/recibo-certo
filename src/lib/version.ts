@@ -13,7 +13,7 @@
 // INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto nunca o faz reaparecer para a mesma versão.
 
-export const APP_VERSION = "2.4.0";
+export const APP_VERSION = "2.5.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {
@@ -24,6 +24,25 @@ export interface EntradaChangelog {
 }
 
 export const CHANGELOG: EntradaChangelog[] = [
+  {
+    version: "2.5.0",
+    data: "2026-07-29",
+    titulo: "Quiz Fiscal: prémios que chegam mesmo, definições que funcionam",
+    itens: [
+      "Quem ganhava 3 meses de plano no quiz não os recebia: o cupão era marcado como usado, aparecia a mensagem de sucesso e a subscrição nunca chegava a ser criada. Agora a ativação é feita no servidor, o plano é atribuído primeiro e o cupão só é queimado depois — se alguma coisa falhar, o cupão continua teu.",
+      "O tempo por pergunta que escolhes nas definições passou a ser respeitado. O painel oferecia Livre, 30, 60 e 90 segundos e o jogo dava sempre 20. «Livre» desliga mesmo o cronómetro, e o bónus de velocidade passou a contar em função do tempo que escolheste.",
+      "Cinco definições que não faziam nada passaram a fazer: som, vibração, animações e partículas, explicações automáticas e atalhos de teclado. Desligar o som desliga o som.",
+      "O som deixa de morrer ao fim de duas respostas certas — era um limite do browser que o jogo atingia por criar um contexto de áudio novo em cada nota.",
+      "Deixas de repetir perguntas de sessão para sessão: o quiz lembra-se das que já te mostrou. Se uma categoria não tiver perguntas suficientes, passa a dizer-to em vez de ir buscar perguntas de outros temas em silêncio.",
+      "«Pular» deixa de desalinhar as contas — a pergunta pulada aparece no detalhe do resultado. O «Escudo» passa a proteger mesmo a sequência, e o «Eliminar 2» deixa de reactivar a opção que a «Segunda Chance» já tinha eliminado.",
+      "Repetir o quiz com a mesma pontuação volta a dar XP: as sessões seguidas eram tratadas como a mesma e a segunda não contava.",
+      "Uma pergunta ensinava uma dedução que já não existe (o piso de 4.104 €, eliminado em 2024) e contradizia o simulador do próprio site. Corrigida — e passou a haver uma verificação automática que impede o quiz de envelhecer sem ninguém dar por isso.",
+      "Uma pergunta tinha duas opções idênticas e uma delas contava como errada: quem sabia a resposta certa tinha metade das probabilidades de ser marcado como certo. Corrigida, e catorze enunciados repetidos deixaram de poder sair duas vezes na mesma sessão.",
+      "O site anunciava 1.592 perguntas e o banco já tinha 1.614. A contagem passou a ser gerada a partir do banco real.",
+      "Novas páginas por tema (/quiz-fiscal/retencao, /quiz-fiscal/iva, e mais catorze) com perguntas, respostas explicadas e a base legal visíveis — para quem procura no Google encontrar a resposta certa em vez de uma página vazia.",
+      "O quiz passou a anunciar em voz alta, para leitores de ecrã, se acertaste ou erraste e quando o tempo está a esgotar-se — e a respeitar a preferência do sistema por menos animações.",
+    ],
+  },
   {
     version: "2.4.0",
     data: "2026-07-29",
