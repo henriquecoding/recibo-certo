@@ -64,7 +64,6 @@ describe("preço do Plus", () => {
       join("app", "precos", "page.tsx"),
       join("app", "termos", "page.tsx"),
       join("components", "Precos.tsx"),
-      join("components", "checkout", "EmbeddedCheckout.tsx"),
       join("lib", "email", "templates.ts"),
     ];
     const literal = /\d+,\d{2}\s*€|€\s*\d+,\d{2}/;

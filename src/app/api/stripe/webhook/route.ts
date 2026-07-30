@@ -29,8 +29,20 @@ async function atualizarSubscricao(
 ) {
   const sb = getSupabaseAdmin();
   if (!sb) {
-    console.warn("[stripe/webhook] Supabase service role não configurado — subscrição não persistida.");
-    return;
+    // Mesma lição que a escrita rejeitada, abaixo — e aqui era pior: um
+    // `return` silencioso respondia 200 à Stripe, que dava o evento por
+    // entregue e nunca mais o repetia. O cliente ficava a pagar todos os
+    // meses sem nunca receber o acesso, e só se descobria pela reclamação.
+    //
+    // Uma configuração em falta é reparável: lançar faz o handler responder
+    // 500, a Stripe reenvia durante ~3 dias, e assim que a variável existir o
+    // evento entra sozinho. Falhar alto é a única opção segura quando já
+    // houve cobrança.
+    console.error(
+      "[stripe/webhook] SUPABASE_SERVICE_ROLE_KEY em falta — impossível registar a subscrição. " +
+        "A devolver 500 para a Stripe repetir o evento.",
+    );
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY em falta — subscrição não persistida.");
   }
 
   const item = subscription.items.data[0];
@@ -97,7 +109,19 @@ export async function POST(req: NextRequest) {
             }
           }
         }
-        if (uid) await atualizarSubscricao(uid, sub);
+        if (uid) {
+          await atualizarSubscricao(uid, sub);
+        } else {
+          // Não se lança aqui: ao contrário da chave em falta, repetir não
+          // resolve — se não há utilizador que corresponda, não haverá daqui
+          // a três dias. Mas tem de ficar registado como ERRO: alguém está a
+          // pagar sem receber acesso, e isto é a única pista.
+          console.error(
+            `[stripe/webhook] Subscrição ${sub.id} sem utilizador correspondente ` +
+              `(sem metadata.supabase_uid e sem perfil com o email do cliente). ` +
+              `O cliente está a pagar sem acesso — atribuir à mão.`,
+          );
+        }
 
         if (event.type === "customer.subscription.created" && sub.status === "active") {
           const customerEmail = await obterEmailCliente(sub.customer as string);

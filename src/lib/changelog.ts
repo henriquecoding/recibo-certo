@@ -19,6 +19,16 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.9.2",
+    data: "2026-07-30",
+    titulo: "Um pagamento nunca mais pode ficar sem acesso em silêncio",
+    itens: [
+      "Se o registo de uma subscrição falhasse por falta de configuração, o sistema dizia à Stripe que estava tudo bem e o evento nunca era repetido: quem pagasse continuava a ser cobrado todos os meses sem nunca receber o Plus, e só se descobria pela reclamação. Agora a falha é assumida e a Stripe repete o pedido até ficar registado.",
+      "E se um pagamento não corresponder a nenhuma conta, passa a ficar registado como erro, com o número da subscrição — em vez de desaparecer sem deixar rasto.",
+      "Foi removido um ecrã de pagamento antigo que já não estava ligado a lado nenhum e que dava a mensagem «Bem-vindo ao Plus» sem chegar a criar subscrição nenhuma. Ninguém lhe chegava, mas era um alçapão à espera.",
+    ],
+  },
+  {
     version: "2.9.1",
     data: "2026-07-30",
     titulo: "Quando a parceria não aparece, passa a dizer-se porquê",
