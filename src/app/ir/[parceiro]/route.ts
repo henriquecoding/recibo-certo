@@ -30,7 +30,8 @@ import {
   classificarDispositivo,
 } from "@/lib/parcerias/link.server";
 import { ParceriaError, type CodigoParceria } from "@/lib/parcerias/errors";
-import type { FizIntent } from "@/lib/guias/manifests";
+import { superficieValida } from "@/content/parcerias-destinos";
+import { manifesto, type FizIntent } from "@/lib/guias/manifests";
 
 // `nodejs` porque se lê o Supabase com a service role; `force-dynamic` para
 // que nenhuma camada de cache do Next transforme o 302 numa resposta estática.
@@ -74,9 +75,27 @@ export async function GET(
   const { parceiro: key } = await ctx.params;
   const url = new URL(pedido.url);
 
-  const superficie = url.searchParams.get("s") ?? "desconhecida";
-  const variante = url.searchParams.get("v");
-  const slug = url.searchParams.get("g");
+  // ── Atribuição: só vocabulário nosso, nunca texto do visitante ──────
+  // `s` e `g` acabam em `utm_campaign` e `utm_content`, ou seja, saem daqui
+  // para a FIZ. Vinham verbatim da query string, e a verificação final de
+  // `construirLinkAfiliado` só olha para os NOMES dos parâmetros, não para
+  // os valores — portanto um link forjado como `/ir/fiz?g=<email ou NIF>`
+  // entregava esse valor ao parceiro e gravava-o no nosso registo de
+  // cliques. Ambos são listas fechadas que já existem no repositório, por
+  // isso valida-se contra elas e descarta-se em silêncio o que não bater
+  // certo: o visitante clicou num botão legítimo e tem de chegar ao destino.
+  const superficieBruta = url.searchParams.get("s");
+  const superficie =
+    superficieBruta && superficieValida(superficieBruta) ? superficieBruta : "desconhecida";
+  // `v` não sai daqui para o parceiro, mas é gravado no nosso registo de
+  // cliques, por isso também não pode ser texto livre do visitante. Aqui não
+  // serve uma lista fechada em código — o admin pode criar variantes novas em
+  // `partner_placements` —, por isso limita-se à FORMA: um só token curto em
+  // minúsculas, que é o que todas as nossas variantes são.
+  const varianteBruta = url.searchParams.get("v");
+  const variante = varianteBruta && /^[a-z0-9_-]{1,32}$/.test(varianteBruta) ? varianteBruta : null;
+  const slugBruto = url.searchParams.get("g");
+  const slug = slugBruto && manifesto(slugBruto) ? slugBruto : null;
   const intentBruto = url.searchParams.get("i");
   // `d=registo` manda para o formulário de inscrição em vez da homepage.
   const destino = url.searchParams.get("d") === "registo" ? ("registo" as const) : ("site" as const);

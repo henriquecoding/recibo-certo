@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
+  carregarBancoQuiz,
   getPerguntasComDiagnostico,
   embaralharOpcoes,
   embaralhar,
@@ -8,6 +9,9 @@ import {
   type QuizPergunta,
   type SelecaoDiagnostico,
 } from "@/lib/quiz-fiscal";
+// De `./desafio`, não de `./server`: este último arrasta a `service_role` e
+// nunca pode entrar num bundle de browser.
+import { éDificuldadeDeDesafio } from "@/lib/quiz-fiscal/desafio";
 import { lerVistas, registarVistas } from "@/lib/quiz-fiscal/vistas";
 import { calcularPontosPergunta } from "@/lib/quiz-fiscal/progresso";
 import type { Atividade } from "@/lib/fiscal-data";
@@ -209,6 +213,8 @@ export interface UseQuizFiscalReturn {
   status: QuizStatus;
   /** Identificador único da sessão em curso (ver QZ-14). */
   sessaoId: string;
+  /** Bilhete do servidor desta sessão de desafio, ou null em modo livre. */
+  bilheteDesafio: string | null;
   /** O que a seleção teve de ceder para encher a sessão (null = nada). */
   diagnosticoSelecao: SelecaoDiagnostico | null;
   config: QuizFiscalConfig | null;
@@ -309,6 +315,19 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
    */
   const [sessaoId, setSessaoId] = useState<string>("");
   /**
+   * Bilhete do servidor, quando esta sessão é de desafio (dificuldade 2 ou 3).
+   *
+   * O `sessaoId` acima é local e serve só para deduplicar XP — não prova
+   * nada. Este vem de `/api/quiz/sessao/abrir`, é único, vale uma submissão e
+   * traz as perguntas que o servidor sorteou. É o que faz o prémio depender
+   * de sessões jogadas e não do número de pedidos que alguém consegue fazer.
+   *
+   * `null` em modo livre, sem sessão autenticada, ou se o servidor não
+   * responder: nesses casos joga-se igual, mas a sessão não conta para o
+   * desafio — e é o servidor que a recusa, não o cliente que finge.
+   */
+  const [bilheteDesafio, setBilheteDesafio] = useState<string | null>(null);
+  /**
    * O que a seleção teve de ceder para encher a sessão. Pedir «Difícil» e
    * receber perguntas fáceis — ou pedir uma categoria e receber outra — nunca
    * era comunicado ao utilizador.
@@ -318,10 +337,42 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
   const construirSessao = useCallback(async (cfg: QuizFiscalConfig): Promise<{
     sessao: SessaoPergunta[];
     diagnostico: SelecaoDiagnostico | null;
+    bilhete: string | null;
   }> => {
     const quantidade = cfg.quantidade ?? QUANTIDADE_DEFAULT;
     let perguntas: QuizPergunta[];
     let diagnostico: SelecaoDiagnostico | null = null;
+
+    // ── Sessão de desafio: as perguntas vêm do servidor ─────────────────
+    // Nas dificuldades que dão prémio pede-se um bilhete. As perguntas são as
+    // que o servidor sorteou — escolhê-las aqui era o que permitia jogar
+    // sempre as mesmas dez e reclamar o prémio de cada vez.
+    if (!cfg.atividade && éDificuldadeDeDesafio(cfg.dificuldade)) {
+      const { abrirSessaoDesafio } = await import("@/lib/supabase/quiz-achievements");
+      const bilhete = await abrirSessaoDesafio(cfg.dificuldade as number);
+      if (bilhete) {
+        const banco = await carregarBancoQuiz();
+        const porId = new Map(banco.map((p) => [p.id, p]));
+        const doServidor = bilhete.perguntaIds
+          .map((id) => porId.get(id))
+          .filter((p): p is QuizPergunta => Boolean(p));
+
+        // Se o banco local não conhecer alguma das perguntas do bilhete, algo
+        // está dessincronizado — cai-se na seleção local e a sessão vale como
+        // treino. Melhor jogar sem prémio do que mostrar um ecrã vazio.
+        if (doServidor.length === bilhete.perguntaIds.length) {
+          registarVistas(doServidor.map((p) => p.id));
+          return {
+            sessao: doServidor.map((pergunta) => {
+              const { opcoes, correta, indicesOriginais } = embaralharOpcoes(pergunta);
+              return { pergunta, opcoes, correta, indicesOriginais };
+            }),
+            diagnostico: null,
+            bilhete: bilhete.sessaoId,
+          };
+        }
+      }
+    }
 
     if (cfg.atividade) {
       // Gerador de atividade (pesado) carregado sob procura — só neste modo.
@@ -349,15 +400,17 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
         return { pergunta, opcoes, correta, indicesOriginais };
       }),
       diagnostico,
+      bilhete: null,
     };
   }, []);
 
   const iniciar = useCallback(async (cfg: QuizFiscalConfig) => {
-    const { sessao: novaSessao, diagnostico } = await construirSessao(cfg);
+    const { sessao: novaSessao, diagnostico, bilhete } = await construirSessao(cfg);
     const agora = Date.now();
     setConfig(cfg);
     setSessao(novaSessao);
     setDiagnosticoSelecao(diagnostico);
+    setBilheteDesafio(bilhete);
     setIndice(0);
     setRespostas([]);
     setSelecionada(null);
@@ -396,6 +449,7 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
     setStatus("selecao");
     setConfig(null);
     setSessao([]);
+    setBilheteDesafio(null);
     setIndice(0);
     setRespostas([]);
     setResultado(null);
@@ -676,6 +730,7 @@ export function useQuizFiscal(): UseQuizFiscalReturn {
   return {
     status,
     sessaoId,
+    bilheteDesafio,
     diagnosticoSelecao,
     config,
     sessao,

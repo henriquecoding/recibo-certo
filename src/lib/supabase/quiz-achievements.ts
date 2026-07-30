@@ -74,6 +74,7 @@ export async function obterProgressoDesafio(userId: string): Promise<ProgressoDe
 export async function registarSessaoDesafio(
   respostas: { perguntaId: string; opcaoSelecionada: number | null }[],
   dificuldade: number,
+  sessaoId?: string | null,
 ): Promise<{ cupaoGerado?: CupaoQuiz; erro?: string }> {
   if (!supabaseConfigurado()) return {};
   if (respostas.length === 0) return {};
@@ -86,13 +87,47 @@ export async function registarSessaoDesafio(
     const r = await fetch("/api/quiz/sessao", {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-      body: JSON.stringify({ dificuldade, respostas }),
+      // `sessaoId` é o bilhete emitido por `/api/quiz/sessao/abrir`. Sem ele,
+      // uma dificuldade de desafio é recusada — é o que impede submeter a
+      // mesma sessão vencedora repetidamente.
+      body: JSON.stringify({ dificuldade, respostas, ...(sessaoId ? { sessaoId } : {}) }),
     });
     const corpo = await r.json().catch(() => ({}));
     if (!r.ok) return { erro: corpo?.erro ?? "Não foi possível registar a sessão." };
     return { cupaoGerado: corpo?.cupaoGerado ?? undefined };
   } catch {
     return { erro: "Sem ligação ao servidor." };
+  }
+}
+
+/**
+ * Pede ao servidor o bilhete de uma sessão de desafio.
+ *
+ * Devolve as dez perguntas que o SERVIDOR sorteou — é com essas que se joga.
+ * Sem sessão autenticada ou sem Supabase configurado devolve `null`, e o
+ * quiz segue em modo livre: joga-se igual, não conta para o prémio.
+ */
+export async function abrirSessaoDesafio(
+  dificuldade: number,
+): Promise<{ sessaoId: string; perguntaIds: string[] } | null> {
+  if (!supabaseConfigurado()) return null;
+
+  const { data: sessao } = await getSupabase().auth.getSession();
+  const token = sessao.session?.access_token;
+  if (!token) return null;
+
+  try {
+    const r = await fetch("/api/quiz/sessao/abrir", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      body: JSON.stringify({ dificuldade }),
+    });
+    if (!r.ok) return null;
+    const corpo = await r.json().catch(() => null);
+    if (!corpo?.sessaoId || !Array.isArray(corpo.perguntaIds)) return null;
+    return { sessaoId: corpo.sessaoId as string, perguntaIds: corpo.perguntaIds as string[] };
+  } catch {
+    return null;
   }
 }
 

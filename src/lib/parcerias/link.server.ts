@@ -35,6 +35,45 @@ export function gerarClickId(): string {
 }
 
 /**
+ * Parâmetros que carregam o código de afiliado no link do parceiro.
+ *
+ * Não é uma lista de tudo o que existe no mercado — é a dos parceiros que
+ * temos. A FIZ usa `ref`; os outros dois estão aqui porque são os nomes que
+ * aparecem a seguir com mais frequência e custa zero antecipá-los.
+ */
+const PARAMS_DE_AFILIADO = ["ref", "aff", "affiliate"];
+
+/**
+ * Estamos em produção a sério?
+ *
+ * `NODE_ENV` não serve para esta pergunta: numa pré-visualização da Vercel
+ * vale `production` na mesma, que é precisamente o ambiente onde mais se
+ * clica sem intenção de comprar. Quem sabe a diferença é `VERCEL_ENV`, que
+ * vale `production`, `preview` ou `development`. Fora da Vercel (local, CI)
+ * a variável não existe e a resposta é não.
+ */
+function emProducao(): boolean {
+  const vercel = process.env.VERCEL_ENV;
+  if (vercel) return vercel === "production";
+  return false;
+}
+
+/**
+ * Fora de produção, o link vai sem código de afiliado.
+ *
+ * Um clique de QA numa pré-visualização é um clique real no sistema do
+ * parceiro: entra na janela de atribuição de 90 dias e, se a conta for a
+ * nossa, é uma auto-referência — o tipo de coisa que faz um programa de
+ * afiliados ser cancelado, e que o contrato proíbe. O destino continua a ser
+ * o site deles (a pré-visualização tem de ser fiel); o que não vai é o
+ * código.
+ */
+function limparAfiliadoForaDeProducao(url: URL): void {
+  if (emProducao()) return;
+  for (const p of PARAMS_DE_AFILIADO) url.searchParams.delete(p);
+}
+
+/**
  * Qual dos dois destinos do parceiro usar.
  *
  * `site` é a homepage; `registo` é o formulário de inscrição. Quem chega do
@@ -105,6 +144,10 @@ export function construirLinkAfiliado(entrada: EntradaLink): LinkConstruido {
   url.searchParams.set("utm_medium", "afiliado");
   url.searchParams.set("utm_campaign", entrada.superficie);
   if (entrada.slug) url.searchParams.set("utm_content", entrada.slug);
+
+  // Por último, para apanhar o código venha ele de onde vier: do piso em
+  // código, da linha na base de dados, ou de um caminho de registo próprio.
+  limparAfiliadoForaDeProducao(url);
 
   const final = url.toString();
   if (!urlSemDadosSensiveis(final)) {

@@ -65,7 +65,7 @@ export default function QuizFiscalApp() {
             : null;
         return { perguntaId: r.perguntaId, opcaoSelecionada: original };
       });
-      registarSessaoDesafio(respostasParaVerificacao, quiz.config.dificuldade)
+      registarSessaoDesafio(respostasParaVerificacao, quiz.config.dificuldade, quiz.bilheteDesafio)
         .then((r) => {
           if (r.cupaoGerado) setCupaoGanho(r.cupaoGerado);
         })
@@ -83,7 +83,7 @@ export default function QuizFiscalApp() {
   }, [quiz.status]);
 
   const handleIniciar = async (cfg: QuizFiscalConfig) => {
-    progresso.consumirEnergia();
+    if (!progresso.consumirEnergia()) return;
     await quiz.iniciar(cfg);
   };
 
@@ -93,11 +93,18 @@ export default function QuizFiscalApp() {
    * consumir energia. Bastava não voltar ao menu para jogar sessões
    * ilimitadas. Se a energia é uma alavanca de conversão, tem de ser cobrada
    * em todos os caminhos que iniciam uma sessão.
+   *
+   * Cobrar não chegava: `consumirEnergia()` limitava-se a travar em zero e
+   * não dizia nada a quem a chamava, por isso a sessão começava na mesma. A
+   * zero, o caminho fecha-se aqui — e o botão no ecrã de resultado aparece
+   * desativado, para a recusa ser visível antes do clique e não depois.
    */
   const handleJogarNovamente = async () => {
-    progresso.consumirEnergia();
+    if (!progresso.consumirEnergia()) return;
     quiz.jogarNovamente();
   };
+
+  const semEnergia = progresso.energiaRestante <= 0 && !progresso.energiaIlimitada;
 
   if (quiz.status === "jogando") {
     const progressoProps = {
@@ -151,6 +158,7 @@ export default function QuizFiscalApp() {
             nivelNovo={resultadoSessao?.nivelNovo}
             cupaoGanho={cupaoGanho}
             onJogarNovamente={handleJogarNovamente}
+            semEnergia={semEnergia}
           />
         )}
       </div>

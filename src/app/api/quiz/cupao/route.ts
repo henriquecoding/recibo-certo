@@ -14,11 +14,10 @@
 
 import { NextResponse } from "next/server";
 import { supabaseServico, utilizadorDoPedido } from "@/lib/quiz-fiscal/server";
+import { fimDaConcessao } from "@/lib/plus/concessao";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const DIAS_POR_MES = 30;
 
 export async function POST(req: Request) {
   const userId = await utilizadorDoPedido(req);
@@ -52,20 +51,31 @@ export async function POST(req: Request) {
   }
 
   const agora = new Date();
-  const fim = new Date(agora.getTime() + cupao.meses * DIAS_POR_MES * 24 * 60 * 60 * 1000);
+  const fim = fimDaConcessao(cupao.meses, agora);
 
   // 1) Entregar o prémio PRIMEIRO. Se falhar, o cupão continua disponível e
   //    o utilizador pode tentar de novo — que é exatamente o que não
   //    acontecia antes.
+  //
+  // `onConflict: "cupao_id"` e não `"user_id"`: `user_id` não tem constraint
+  // única (só um índice normal), e o PostgreSQL recusa um ON CONFLICT sem
+  // restrição correspondente — era isto que fazia TODA a ativação dar 500.
+  // `cupao_id` é também a chave certa em substância: ativar o mesmo cupão
+  // duas vezes não pode gerar duas concessões, e quem já paga por Stripe não
+  // perde a linha da subscrição ao resgatar um prémio.
+  //
+  // `concessao_termina_em` é o que faz isto acabar. Sem provedor não há
+  // webhook a mudar o `status`, e sem esta data a concessão era Plus eterno.
   const { error: errSub } = await sb.from("subscriptions").upsert(
     {
       user_id: userId,
+      cupao_id: cupaoId,
       status: "active",
       intervalo: "monthly",
       inicio: agora.toISOString(),
-      cancelado_em: fim.toISOString(),
+      concessao_termina_em: fim.toISOString(),
     },
-    { onConflict: "user_id" },
+    { onConflict: "cupao_id" },
   );
   if (errSub) {
     return NextResponse.json(

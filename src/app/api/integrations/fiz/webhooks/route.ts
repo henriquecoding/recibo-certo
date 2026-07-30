@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verificarEvento, jaProcessado, marcarProcessado } from "@/lib/fiz/webhooks.server";
-import { invalidarCatalogo } from "@/lib/fiz/capabilities.server";
-import { servicoSupabase, revogarPorPartnerUserId } from "@/lib/fiz/session.server";
+import { servicoSupabase } from "@/lib/fiz/session.server";
+import { processar, sujeitoDe } from "@/lib/fiz/webhook-processar.server";
 import type { WebhookEvent } from "@/lib/fiz/contracts";
 
 export const runtime = "nodejs";
@@ -57,23 +57,37 @@ export async function POST(req: NextRequest) {
       subject_id: sujeitoDe(evento),
       payload: evento.data,
     });
-    // Violação de unicidade = evento repetido. É sucesso, não erro.
+    // Violação de unicidade = já recebemos este evento. Mas RECEBIDO não é o
+    // mesmo que PROCESSADO: se a tentativa anterior falhou a aplicar o efeito,
+    // a linha está lá com `processed_at` a NULL. Tratar as duas da mesma
+    // maneira era o que fazia uma revogação de ligação falhada nunca ser
+    // reaplicada — a repetição da FIZ, que era a segunda oportunidade,
+    // respondia «já temos» e ia-se embora.
     if (error && error.code === "23505") {
-      marcarProcessado(evento.id);
-      return NextResponse.json({ recebido: true, repetido: true }, { status: 200 });
+      const { data: existente } = await sb
+        .from("partner_events")
+        .select("processed_at")
+        .eq("partner", "fiz")
+        .eq("partner_event_id", evento.id)
+        .maybeSingle();
+
+      if (existente?.processed_at) {
+        marcarProcessado(evento.id);
+        return NextResponse.json({ recebido: true, repetido: true }, { status: 200 });
+      }
+      // Sem `processed_at`: cai para o processamento em baixo e tenta outra vez.
+      console.warn("[fiz] evento repetido ainda não processado, a tentar de novo:", evento.id);
+    } else if (error) {
+      // Não conseguimos registar o evento. Sem linha não há reprocessamento
+      // possível, por isso NÃO se pode confirmar a receção: 500 para a FIZ
+      // reenviar. Confirmar aqui era perder o evento em silêncio.
+      console.error("[fiz] evento não registado:", error.message);
+      return NextResponse.json({ recebido: false }, { status: 500 });
     }
-    if (error) console.warn("[fiz] evento não registado:", error.message);
   }
 
   try {
     await processar(evento);
-    if (sb) {
-      await sb
-        .from("partner_events")
-        .update({ processed_at: new Date().toISOString() })
-        .eq("partner", "fiz")
-        .eq("partner_event_id", evento.id);
-    }
   } catch (erro) {
     const mensagem = erro instanceof Error ? erro.message : "erro desconhecido";
     console.error("[fiz] falha ao processar evento", evento.type, mensagem);
@@ -84,56 +98,29 @@ export async function POST(req: NextRequest) {
         .eq("partner", "fiz")
         .eq("partner_event_id", evento.id);
     }
-    // 202 na mesma: o evento está guardado e pode ser reprocessado. Devolver
-    // 5xx só faria a FIZ reenviar um evento que já temos.
+    // ⚠️ NÃO se marca como processado e NÃO se confirma a receção.
+    //
+    // Isto respondia 202 com a justificação de que «o evento está guardado e
+    // pode ser reprocessado». Podia, mas nada o reprocessava: não havia
+    // consumidor nenhum a ler as linhas com `processing_error`. O efeito —
+    // apagar tokens de uma ligação revogada, por exemplo — ficava por aplicar
+    // para sempre, e a entrega at-least-once da FIZ não ajudava, porque a
+    // repetição era respondida como duplicado.
+    //
+    // Agora há duas redes: o 5xx faz a FIZ reenviar, e
+    // `/api/integrations/fiz/webhooks/reprocessar` apanha o que sobrar.
+    return NextResponse.json({ recebido: false, retentar: true }, { status: 500 });
   }
 
+  if (sb) {
+    await sb
+      .from("partner_events")
+      .update({ processed_at: new Date().toISOString(), processing_error: null })
+      .eq("partner", "fiz")
+      .eq("partner_event_id", evento.id);
+  }
+
+  // Só aqui, depois de o efeito estar aplicado.
   marcarProcessado(evento.id);
   return NextResponse.json({ recebido: true }, { status: 202 });
-}
-
-function sujeitoDe(evento: WebhookEvent): string | null {
-  const dados = evento.data as Record<string, unknown>;
-  for (const chave of ["userId", "partnerUserId", "referralId", "handoffId", "declarationId", "obligationId"]) {
-    const valor = dados?.[chave];
-    if (typeof valor === "string") return valor;
-  }
-  return null;
-}
-
-async function processar(evento: WebhookEvent): Promise<void> {
-  switch (evento.type) {
-    case "partner.capability.changed":
-      // O catálogo em cache deixou de ser verdade.
-      invalidarCatalogo();
-      return;
-
-    case "user.connection.revoked": {
-      const partnerUserId = (evento.data as { partnerUserId?: string }).partnerUserId;
-      if (partnerUserId) await revogarPorPartnerUserId(partnerUserId);
-      return;
-    }
-
-    case "partner.handoff.accepted":
-    case "partner.handoff.expired": {
-      const sb = servicoSupabase();
-      const id = (evento.data as { handoffId?: string; externalHandoffId?: string }).externalHandoffId;
-      if (!sb || !id) return;
-      await sb
-        .from("partner_handoffs")
-        .update({
-          status: evento.type === "partner.handoff.accepted" ? "accepted" : "expired",
-          accepted_at: evento.type === "partner.handoff.accepted" ? new Date().toISOString() : null,
-        })
-        .eq("external_handoff_id", id);
-      return;
-    }
-
-    default:
-      // Os restantes eventos (atribuição, comissões, estados de obrigações e
-      // declarações) ficam registados em `partner_events` para reconciliação
-      // e leitura sob procura. Não há estado local a atualizar: o Recibo
-      // Certo não replica o livro fiscal da FIZ (ponto 13.5).
-      return;
-  }
 }

@@ -7,7 +7,6 @@ import {
   atualizarParceiro,
   listarPlacements,
   guardarPlacement,
-  eliminarPlacement,
   type PartnerRow,
 } from "@/lib/supabase/admin";
 import PartnerForm from "@/components/admin/PartnerForm";
@@ -41,8 +40,15 @@ export default function EditarParceiro() {
 
   // As superfícies vivem noutra tabela: gravam-se depois do parceiro, e é
   // aqui que a lista escolhida no formulário vira linhas em
-  // `partner_placements`. Uma superfície desticada é APAGADA, não desativada:
-  // a linha só existe enquanto for uma decisão em vigor.
+  // `partner_placements`.
+  //
+  // ⚠️ Uma superfície desticada é DESATIVADA, não apagada. Já foi apagada, e
+  // isso tornava o interruptor decorativo: o piso em código
+  // (`superficiesAtivas`, em `parcerias-fiz.ts`) recria um placement ativo
+  // para toda a superfície que não exista na base, por isso apagar a linha
+  // fazia o anúncio reaparecer no site logo a seguir a alguém o desligar no
+  // admin. A linha desligada é o registo de que a decisão foi tomada — é ela
+  // que o piso respeita.
   const gravarSuperficies = async (escolhidas: Superficie[]) => {
     const atuais = await listarPlacements(id).catch(() => []);
     const atuaisChaves = new Set(atuais.map((p) => p.superficie));
@@ -74,8 +80,8 @@ export default function EditarParceiro() {
     }
 
     for (const p of atuais) {
-      if (!escolhidas.includes(p.superficie as Superficie)) {
-        const { erro } = await eliminarPlacement(p.id);
+      if (!escolhidas.includes(p.superficie as Superficie) && p.ativo) {
+        const { erro } = await guardarPlacement({ ...p, ativo: false });
         if (erro) return erro;
       }
     }
