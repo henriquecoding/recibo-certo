@@ -42,6 +42,7 @@ import {
 } from "@/lib/supabase/admin";
 import { ROTULO_SUPERFICIE, type Superficie } from "@/content/parcerias-destinos";
 import { fmt as eur } from "@/lib/format";
+import { lerCsv } from "@/lib/parcerias/csv-comissoes";
 
 /** Retenção na fonte sobre comissões de intermediação. */
 const RETENCAO_INTERMEDIACAO = 0.25;
@@ -53,67 +54,6 @@ function agrupar<T>(linhas: T[], chave: (l: T) => string): Array<[string, number
     mapa.set(k, (mapa.get(k) ?? 0) + 1);
   }
   return [...mapa.entries()].sort((a, b) => b[1] - a[1]);
-}
-
-/**
- * CSV do relatório semanal do parceiro.
- *
- * ⚠️ As colunas exatas ainda não foram confirmadas pela FIZ — este leitor
- * aceita os nomes mais prováveis e falha alto quando não os encontra, em vez
- * de importar zeros em silêncio.
- */
-function lerCsv(texto: string): { linhas: Omit<PartnerCommissionInput, "parceiro_id">[]; erro?: string } {
-  const linhasTexto = texto.trim().split(/\r?\n/);
-  if (linhasTexto.length < 2) return { linhas: [], erro: "O ficheiro não tem linhas de dados." };
-
-  const cab = linhasTexto[0].split(/[,;]/).map((c) => c.trim().toLowerCase());
-  const col = (...nomes: string[]) => {
-    for (const n of nomes) {
-      const i = cab.indexOf(n);
-      if (i >= 0) return i;
-    }
-    return -1;
-  };
-
-  const iId = col("id", "referencia", "reference");
-  const iEstado = col("estado", "status");
-  const iLiquido = col("valor_liquido", "net", "net_amount", "liquido");
-  const iComissao = col("comissao", "commission", "valor_comissao");
-  const iData = col("data", "date", "ocorrido_em");
-  const iPlano = col("plano", "plan");
-
-  if (iId < 0 || iLiquido < 0 || iComissao < 0 || iData < 0) {
-    return {
-      linhas: [],
-      erro: `Faltam colunas obrigatórias. Encontradas: ${cab.join(", ")}. São precisas id, valor líquido, comissão e data.`,
-    };
-  }
-
-  const num = (v: string) => Number(String(v).replace(/[^\d,.-]/g, "").replace(",", ".")) || 0;
-  const estadoValido = (v: string): EstadoComissao => {
-    const s = v?.trim().toLowerCase();
-    if (s === "confirmada" || s === "confirmed" || s === "approved") return "confirmada";
-    if (s === "anulada" || s === "cancelled" || s === "refunded") return "anulada";
-    if (s === "paga" || s === "paid") return "paga";
-    return "pendente";
-  };
-
-  const linhas = linhasTexto.slice(1).filter(Boolean).map((l) => {
-    const c = l.split(/[,;]/);
-    return {
-      id: c[iId]?.trim() ?? "",
-      referencia: null,
-      estado: iEstado >= 0 ? estadoValido(c[iEstado]) : ("pendente" as EstadoComissao),
-      valor_liquido: num(c[iLiquido]),
-      valor_comissao: num(c[iComissao]),
-      plano: iPlano >= 0 ? (c[iPlano]?.trim() ?? null) : null,
-      ocorrido_em: c[iData]?.trim() ?? "",
-      confirmavel_em: null,
-      origem: "csv" as const,
-    };
-  });
-
-  return { linhas: linhas.filter((l) => l.id && l.ocorrido_em) };
 }
 
 function Cartao({

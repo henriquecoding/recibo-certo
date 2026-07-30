@@ -26,9 +26,15 @@ interface ResultadoProps {
    * gastar nada (basta nunca voltar ao menu).
    */
   onJogarNovamente?: () => void;
+  /**
+   * Sem energia para outra sessão. O botão continua visível — é ele que
+   * explica porque não dá — mas fica inerte, em vez de aceitar o clique e não
+   * fazer nada.
+   */
+  semEnergia?: boolean;
 }
 
-export default function Resultado({ quiz, xpGanho = 0, levelUp = false, nivelNovo, cupaoGanho, onJogarNovamente }: ResultadoProps) {
+export default function Resultado({ quiz, xpGanho = 0, levelUp = false, nivelNovo, cupaoGanho, onJogarNovamente, semEnergia = false }: ResultadoProps) {
   const { resultado, sessao, jogarNovamente, reiniciar } = quiz;
   const repetir = onJogarNovamente ?? jogarNovamente;
   if (!resultado) return null;
@@ -247,7 +253,9 @@ export default function Resultado({ quiz, xpGanho = 0, levelUp = false, nivelNov
           <button
             type="button"
             onClick={repetir}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-quiz-forest px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-quiz-forest-deep active:scale-[0.98] dark:bg-quiz-olive dark:hover:bg-quiz-sage-dark"
+            disabled={semEnergia}
+            aria-describedby={semEnergia ? "quiz-sem-energia" : undefined}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-quiz-forest px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-quiz-forest-deep active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none disabled:hover:bg-quiz-forest dark:bg-quiz-olive dark:hover:bg-quiz-sage-dark dark:disabled:hover:bg-quiz-olive"
           >
             <Rocket size={16} />
             Jogar novamente
@@ -261,6 +269,14 @@ export default function Resultado({ quiz, xpGanho = 0, levelUp = false, nivelNov
             Escolher outro tema
           </button>
         </div>
+        {semEnergia && (
+          <p
+            id="quiz-sem-energia"
+            className="mt-3 text-center text-xs text-quiz-sage-dark dark:text-quiz-sage"
+          >
+            Ficaste sem energia por hoje. Volta amanhã, ou passa ao Plus para jogar sem limite.
+          </p>
+        )}
         {modo === "normal" && (
           <p className="mt-3 text-center text-xs text-quiz-sage">
             Queres entender o porque de cada resposta? Experimenta o Modo Guiado.

@@ -21,6 +21,7 @@ import {
 } from "@/lib/email/templates";
 import { IVA_ISENCAO_LIMITE } from "@/lib/fiscal-data";
 import { cronAutorizado } from "@/lib/cron-auth";
+import { plusAtivoFiltro } from "@/lib/plus/concessao";
 
 const LIMITE = IVA_ISENCAO_LIMITE.value; // 15 000 €
 const ANO = new Date().getFullYear();
@@ -53,10 +54,16 @@ export async function POST(req: NextRequest) {
   }
 
   // 1. Buscar utilizadores Pro ativos
+  //
+  // O `.or()` é obrigatório aqui: esta rota lê com `service_role`, que ignora
+  // a RLS — logo a policy da migração 027, que esconde do cliente as
+  // concessões de cupão já expiradas, não se aplica. Sem o filtro, quem
+  // ganhou três meses no Quiz em 2026 continuava a receber alertas em 2030.
   const { data: subs, error: subErr } = await sb
     .from("subscriptions")
     .select("user_id")
-    .in("status", ["active", "trialing"]);
+    .in("status", ["active", "trialing"])
+    .or(plusAtivoFiltro());
 
   if (subErr || !subs || subs.length === 0) {
     return NextResponse.json({ msg: "Sem subscritores Plus ativos.", enviados: 0 });

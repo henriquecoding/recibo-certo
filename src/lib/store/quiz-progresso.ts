@@ -63,7 +63,15 @@ export interface QuizProgressoReturn {
   /** Atribui XP avulso (ex.: recompensa por reportar um erro). */
   adicionarXpBonus: (quantidade: number) => Promise<RegistrarSessaoResult>;
 
-  consumirEnergia: () => void;
+  /**
+   * Cobra uma unidade de energia. Devolve `false` quando não havia nenhuma
+   * para cobrar — e nesse caso a sessão NÃO pode começar.
+   *
+   * Devolvia `void`, e como o cálculo é `Math.max(0, energia - 1)`, chamá-la
+   * a zero era uma operação bem-sucedida que não fazia nada. Quem iniciava
+   * um jogo não tinha por onde saber que não tinha pago.
+   */
+  consumirEnergia: () => boolean;
   refrescarEnergia: () => void;
 }
 
@@ -323,9 +331,10 @@ export function useQuizProgresso(): QuizProgressoReturn {
   const nivel = nivelParaXP(xp);
   const energiaIlimitada = isPro || nivel.nivel >= NIVEL_ENERGIA_ILIMITADA;
 
-  const consumirEnergia = useCallback(() => {
-    if (energiaIlimitada) return;
-    const nova = Math.max(0, energiaRestante - 1);
+  const consumirEnergia = useCallback((): boolean => {
+    if (energiaIlimitada) return true;
+    if (energiaRestante <= 0) return false;
+    const nova = energiaRestante - 1;
     setEnergiaRestante(nova);
 
     if (naNuvem && user) {
@@ -339,6 +348,7 @@ export function useQuizProgresso(): QuizProgressoReturn {
       const prog = lerProgressoLocal();
       gravarProgressoLocal({ ...prog, energiaRestante: nova, energiaResetAt });
     }
+    return true;
   }, [energiaIlimitada, energiaRestante, energiaResetAt, naNuvem, user]);
 
   const refrescarEnergia = useCallback(() => {

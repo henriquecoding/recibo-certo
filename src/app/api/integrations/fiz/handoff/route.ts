@@ -60,18 +60,33 @@ export async function POST(req: NextRequest) {
     // o diálogo. Isso não chega: uma recusa que vive só no cliente é uma
     // sugestão. Aqui o servidor fecha a porta, com código próprio para o
     // caso ser distinguível de um erro genérico nos registos.
-    if (parceriasAtivas()) {
-      const parceria = await parceriaAtiva("fiz");
-      if (parceria && parceria.modo === "LIGACAO") {
-        return NextResponse.json(
-          {
-            erro:
-              "A parceria está em modo de ligação simples: não há transferência de dados. Abre a FIZ pelo botão e a tua simulação fica aqui.",
-            codigo: "modo_nao_permite",
-          },
-          { status: 409, headers: semCache },
-        );
-      }
+    //
+    // ⚠️ O interruptor geral (`PARCERIAS_DESLIGADAS`) tem de RECUSAR, não de
+    // saltar a verificação. Isto esteve dentro de um `if (parceriasAtivas())`,
+    // o que invertia o seu sentido: com as parcerias desligadas o guarda de
+    // modo deixava de correr e a execução seguia para `criarHandoff` — ou
+    // seja, o único estado em que NADA pode ser enviado era precisamente o
+    // estado em que tudo passava. Um interruptor de emergência que abre a
+    // porta é pior do que não existir.
+    if (!parceriasAtivas()) {
+      return NextResponse.json(
+        {
+          erro: "As parcerias estão desativadas. Nenhum dado é enviado para fora do ReciboCerto.",
+          codigo: "parcerias_desligadas",
+        },
+        { status: 409, headers: semCache },
+      );
+    }
+    const parceria = await parceriaAtiva("fiz");
+    if (!parceria || parceria.modo === "LIGACAO") {
+      return NextResponse.json(
+        {
+          erro:
+            "A parceria está em modo de ligação simples: não há transferência de dados. Abre a FIZ pelo botão e a tua simulação fica aqui.",
+          codigo: "modo_nao_permite",
+        },
+        { status: 409, headers: semCache },
+      );
     }
     if (corpo.simulador && !rotaSim) {
       return NextResponse.json({ erro: "Simulador desconhecido.", codigo: "nao_encontrado" }, { status: 404, headers: semCache });

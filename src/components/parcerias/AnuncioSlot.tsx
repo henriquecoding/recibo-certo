@@ -11,6 +11,17 @@
 //  `/ir/<parceiro>`, validado a cada clique, nunca uma URL escrita à mão no
 //  formulário.
 //
+//  ⚠️ Durante um tempo este cabeçalho dizia isto e o corpo não o fazia: o
+//  componente resolvia sempre a parceria FIZ fixa em código e nunca chegava a
+//  consultar `anuncios`. Criar, desligar, ordenar ou segmentar um anúncio no
+//  admin não tinha efeito nenhum. Agora a tabela é consultada primeiro (ver
+//  `anuncioDaSuperficie`), com esta precedência:
+//
+//   · linha ATIVA para a superfície  → manda ela, incluindo `mostrar_desktop`
+//     e `mostrar_mobile`;
+//   · linha INATIVA                  → não se mostra nada (decisão explícita);
+//   · nenhuma linha                  → piso em código, como antes.
+//
 //  Regras de desempenho, porque um anúncio não pode custar a página:
 //   · dimensões explícitas ou `aspect-ratio` — um 300×600 sem elas numa
 //     página de Guia é CLS garantido;
@@ -32,6 +43,7 @@ import {
   parceriasAtivas,
   placementDaSuperficie,
 } from "@/lib/parcerias/catalogo.server";
+import { anuncioDaSuperficie, classesDeDispositivo } from "@/lib/parcerias/anuncios.server";
 import type { Superficie } from "@/content/parcerias-destinos";
 
 /**
@@ -79,11 +91,22 @@ export default async function AnuncioSlot({
   className?: string;
 }) {
   if (!parceriasAtivas()) return null;
+
+  // A configuração do admin vem PRIMEIRO. Se alguém desligou esta superfície,
+  // acaba aqui — antes de olhar para o piso em código, que de outra forma a
+  // ressuscitava.
+  const config = await anuncioDaSuperficie(superficie);
+  if (config.estado === "desligado") return null;
+
   const parceria = await parceriaAtiva("fiz");
   if (!parceriaUtilizavel(parceria)) return null;
 
   const placement = await placementDaSuperficie(parceria.id, superficie);
   if (!placement) return null;
+
+  // `mostrar_desktop` / `mostrar_mobile` do admin, por CSS.
+  const classesDispositivo =
+    config.estado === "configurado" ? classesDeDispositivo(config.anuncio) : "";
 
   const divulgacao =
     placement.divulgacao?.trim() || parceria.divulgacao.trim() || DIVULGACAO_LIGACAO;
@@ -94,7 +117,7 @@ export default async function AnuncioSlot({
 
   return (
     <aside
-      className={className}
+      className={`${className} ${classesDispositivo}`.trim()}
       // Um bloco publicitário identifica-se como tal na árvore de
       // acessibilidade, não só no texto por baixo.
       aria-label="Publicidade de parceiro"

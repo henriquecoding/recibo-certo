@@ -91,7 +91,9 @@ export default async function FizFaixaDemo({
   const placement = await placementDaSuperficie(parceria.id, superficie);
   if (!placement) {
     return semFaixa(
-      `sem placement para "${superficie}" (nem ativo em partner_placements, nem em superficiesAtivas de parceiro "${parceria.id}")`,
+      `sem placement para "${superficie}" — ou existe linha em partner_placements com ativo=false ` +
+        `(desligada no painel: desde a #85 isso manda e o piso em código já não a repõe), ` +
+        `ou não existe linha e a superfície não consta de superficiesAtivas do parceiro "${parceria.id}"`,
     );
   }
 
