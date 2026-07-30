@@ -60,6 +60,11 @@ export interface PlacementParceria {
   ordem: number;
 }
 
+/** Como vem da base: igual, mais o interruptor que o admin controla. */
+interface PlacementCru extends PlacementParceria {
+  ativo: boolean;
+}
+
 /**
  * Desligar TODAS as parcerias, em qualquer ambiente.
  *
@@ -97,7 +102,10 @@ function servico(): SupabaseClient | null {
 // produzir efeito — que é precisamente a operação que tem de ser rápida.
 const TTL_MS = 60_000;
 const cacheParceria = new Map<string, { em: number; valor: ParceriaAtiva | null }>();
-const cachePlacements = new Map<string, { em: number; valor: PlacementParceria[] }>();
+// Guarda as linhas CRUAS (com `ativo`): é a diferença entre «desligado» e
+// «inexistente» que `placementDaSuperficie` precisa de ver, e um cache que já
+// tivesse filtrado os desligados apagava-a outra vez.
+const cachePlacements = new Map<string, { em: number; valor: PlacementCru[] }>();
 
 /** Só para testes: esvazia a cache entre casos. */
 export function limparCacheParcerias(): void {
@@ -202,8 +210,17 @@ export async function parceriaAtiva(key: string): Promise<ParceriaAtiva | null> 
   return valor;
 }
 
-/** Placements ativos de uma parceria, por superfície. */
-export async function placementsDaParceria(parceiroId: string): Promise<PlacementParceria[]> {
+/**
+ * TODAS as linhas de `partner_placements` desta parceria, ativas ou não.
+ *
+ * Lê-se o desligado de propósito. Filtrar por `ativo = true` na consulta
+ * apagava a diferença entre «nunca ninguém configurou esta superfície» e
+ * «alguém desligou-a no admin» — e, como o piso em código recria um placement
+ * ativo para toda a superfície que não encontre na base, desligar deixava de
+ * ter efeito nenhum. Quem decide é `placementDaSuperficie`, que precisa de ver
+ * a linha para saber que ela existe.
+ */
+async function placementsCrus(parceiroId: string): Promise<PlacementCru[]> {
   const emCache = cachePlacements.get(parceiroId);
   if (emCache && Date.now() - emCache.em < TTL_MS) return emCache.valor;
 
@@ -214,12 +231,11 @@ export async function placementsDaParceria(parceiroId: string): Promise<Placemen
     .from("partner_placements")
     .select("*")
     .eq("parceiro_id", parceiroId)
-    .eq("ativo", true)
     .order("ordem", { ascending: true });
 
   if (error) return [];
 
-  const valor: PlacementParceria[] = (data ?? []).map((r) => ({
+  const valor: PlacementCru[] = (data ?? []).map((r) => ({
     id: String(r.id),
     parceiroId: String(r.parceiro_id),
     superficie: String(r.superficie),
@@ -231,10 +247,17 @@ export async function placementsDaParceria(parceiroId: string): Promise<Placemen
     copyNota: r.copy_nota ?? null,
     divulgacao: r.divulgacao ?? null,
     ordem: Number(r.ordem ?? 0),
+    ativo: r.ativo !== false,
   }));
 
   cachePlacements.set(parceiroId, { em: Date.now(), valor });
   return valor;
+}
+
+/** Placements ativos de uma parceria, por superfície. */
+export async function placementsDaParceria(parceiroId: string): Promise<PlacementParceria[]> {
+  const todos = await placementsCrus(parceiroId);
+  return todos.filter((p) => p.ativo).map(({ ativo: _ativo, ...resto }) => resto);
 }
 
 /**
@@ -244,14 +267,25 @@ export async function placementsDaParceria(parceiroId: string): Promise<Placemen
  * existe; sem ela vale a lista de superfícies ativas em código. Sem este
  * piso, ligar a parceria não mostraria nada até alguém abrir o admin e
  * carregar em dezasseis interruptores.
+ *
+ * ⚠️ O piso só vale na AUSÊNCIA de configuração. Uma linha desligada é uma
+ * decisão explícita de quem gere o site e ganha ao código — caso contrário o
+ * interruptor do admin não fazia nada, as linhas semeadas com `ativo = false`
+ * na migração apareciam na mesma, e uma superfície desmarcada no formulário
+ * (que apaga a linha) voltava a aparecer sozinha. Só a linha APAGADA volta ao
+ * piso; a linha presente e desligada fica desligada.
  */
 export async function placementDaSuperficie(
   parceiroId: string,
   superficie: string,
 ): Promise<PlacementParceria | null> {
-  const todos = await placementsDaParceria(parceiroId);
+  const todos = await placementsCrus(parceiroId);
   const daBase = todos.find((p) => p.superficie === superficie);
-  if (daBase) return daBase;
+  if (daBase) {
+    if (!daBase.ativo) return null;
+    const { ativo: _ativo, ...resto } = daBase;
+    return resto;
+  }
 
   const def = Object.values(DEFINICOES).find((d) => d.id === parceiroId);
   if (!def) return null;

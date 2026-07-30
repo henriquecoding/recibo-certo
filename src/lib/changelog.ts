@@ -19,6 +19,20 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.8.1",
+    data: "2026-07-30",
+    titulo: "Correções na parceria e no quiz, vindas de uma revisão ao código",
+    itens: [
+      "O interruptor que desliga todas as parcerias de uma vez estava ao contrário: em vez de travar o envio de dados para a FIZ, era precisamente com ele ligado que o envio deixava de ser verificado. Nunca chegou a acontecer nada — a parceria está em modo de ligação simples, que não transporta dados —, mas o travão passa a travar.",
+      "Um endereço de saída para a FIZ construído à mão podia levar texto arbitrário nos parâmetros de origem, incluindo algo como um email ou um NIF escritos por quem montasse o link. Esses parâmetros passam a ser aceites apenas se corresponderem a uma página ou a um guia que existe de verdade; o resto é descartado e o visitante segue para o destino como antes.",
+      "As colunas onde ficam os códigos de acesso da ligação à FIZ não estavam realmente protegidas de leitura pelo navegador: a instrução que as devia fechar não tem esse efeito na base de dados quando existe permissão sobre a tabela inteira. O conteúdo está cifrado e a chave nunca sai do servidor, por isso não havia nada aproveitável — mas agora a permissão diz o mesmo que a intenção.",
+      "No painel de administração, desmarcar um local onde a publicidade da parceria aparece não tinha efeito nenhum: o site voltava a mostrá-la a seguir. Desligar passa a desligar.",
+      "A importação do relatório de comissões do parceiro lia mal ficheiros portugueses: um valor como 1.234,56 € desalinhava as colunas e podia acabar gravado como zero euros, sem aviso. Passa a ler os dois formatos (1.234,56 e 1,234.56) e, se um montante não se perceber, recusa o ficheiro inteiro e diz qual a linha — em vez de importar números errados.",
+      "No quiz fiscal, chegar a zero de energia e continuar a carregar em «Jogar novamente» começava sessões novas sem custo nenhum. O botão passa a ficar desativado, com a razão à vista.",
+      "Em pré-visualizações e em desenvolvimento, os cliques na FIZ deixam de levar o código de afiliado — assim os testes internos não se contam como recomendações.",
+    ],
+  },
+  {
     version: "2.8.0",
     data: "2026-07-29",
     titulo: "Parceria com a FIZ: uma ligação, sempre declarada",

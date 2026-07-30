@@ -9,7 +9,7 @@
 //  quando alguém copiar um bloco de um sítio para o outro.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { modoEfetivo, modoDaRota, modoValido, transportaDados } from "@/lib/parcerias/modos";
@@ -507,6 +507,20 @@ describe("parcerias:rotas-ativas — a ativação é faseada e coerente", () => 
 
 // ─────────────────────────────────────────────────────────────────────────
 describe("parcerias:link-real — o link emitido pela FIZ, ponta a ponta", () => {
+  // Este bloco descreve o link de PRODUÇÃO, que é o único que leva o código
+  // de afiliado. Fora de produção o construtor retira-o de propósito, para um
+  // clique de QA numa pré-visualização não entrar na janela de atribuição de
+  // 90 dias e virar auto-referência. Sem declarar o ambiente, estes testes
+  // estariam a afirmar do ambiente errado.
+  const envOriginal = process.env.VERCEL_ENV;
+  beforeAll(() => {
+    process.env.VERCEL_ENV = "production";
+  });
+  afterAll(() => {
+    if (envOriginal === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = envOriginal;
+  });
+
   // Os dois destinos reais. Vivem na migração; aqui só se prova que o
   // construtor os trata como deve.
   const FIZ: ParceriaAtiva = {
