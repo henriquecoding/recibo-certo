@@ -31,7 +31,7 @@ export const CHANGELOG: EntradaChangelog[] = [
     ],
   },
   {
-    version: "2.8.1",
+    version: "2.8.2",
     data: "2026-07-30",
     titulo: "Correções na parceria e no quiz, vindas de uma revisão ao código",
     itens: [
@@ -42,6 +42,15 @@ export const CHANGELOG: EntradaChangelog[] = [
       "A importação do relatório de comissões do parceiro lia mal ficheiros portugueses: um valor como 1.234,56 € desalinhava as colunas e podia acabar gravado como zero euros, sem aviso. Passa a ler os dois formatos (1.234,56 e 1,234.56) e, se um montante não se perceber, recusa o ficheiro inteiro e diz qual a linha — em vez de importar números errados.",
       "No quiz fiscal, chegar a zero de energia e continuar a carregar em «Jogar novamente» começava sessões novas sem custo nenhum. O botão passa a ficar desativado, com a razão à vista.",
       "Em pré-visualizações e em desenvolvimento, os cliques na FIZ deixam de levar o código de afiliado — assim os testes internos não se contam como recomendações.",
+    ],
+  },
+  {
+    version: "2.8.1",
+    data: "2026-07-30",
+    titulo: "Subscrever o Plus deixa de bater numa parede",
+    itens: [
+      "O botão «Subscrever o Plus» não conseguia chegar ao pagamento: ia buscar o preço a um sítio onde ele nunca era guardado e devolvia um erro. Passa a usar o preço único do Plus, o mesmo que a página de Planos anuncia.",
+      "O pedido de pagamento deixou de aceitar um plano vindo do browser. Havia um só plano à venda, mas o pedido podia pedir outro — agora é o servidor que decide, e decide sempre o Plus.",
     ],
   },
   {

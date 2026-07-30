@@ -23,7 +23,7 @@ interface SubscricaoContexto {
       Enquanto o estado carrega, `pode` devolve false — os gates tratam o
       carregamento em separado para não piscar conteúdo bloqueado. */
   pode: (permissao: Entitlement) => boolean;
-  abrirCheckout: (intervalo?: "monthly" | "annual") => Promise<void>;
+  abrirCheckout: () => Promise<void>;
   abrirPortal: () => Promise<void>;
 }
 
@@ -79,7 +79,7 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
 
   const pode = useCallback((permissao: Entitlement) => planoTem(plano, permissao), [plano]);
 
-  const abrirCheckout = useCallback(async (int: "monthly" | "annual" = "annual") => {
+  const abrirCheckout = useCallback(async () => {
     const token = await obterToken();
     if (!token) return;
 
@@ -89,7 +89,6 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ intervalo: int }),
     });
 
     const json = await res.json();

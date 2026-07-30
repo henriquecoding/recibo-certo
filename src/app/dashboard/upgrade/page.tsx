@@ -40,7 +40,7 @@ export default function UpgradePage() {
   const handleSubscrever = async () => {
     setLoading(true);
     try {
-      await abrirCheckout("monthly");
+      await abrirCheckout();
     } finally {
       setLoading(false);
     }
