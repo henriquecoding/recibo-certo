@@ -19,6 +19,15 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.8.1",
+    data: "2026-07-30",
+    titulo: "Subscrever o Plus deixa de bater numa parede",
+    itens: [
+      "O botão «Subscrever o Plus» não conseguia chegar ao pagamento: ia buscar o preço a um sítio onde ele nunca era guardado e devolvia um erro. Passa a usar o preço único do Plus, o mesmo que a página de Planos anuncia.",
+      "O pedido de pagamento deixou de aceitar um plano vindo do browser. Havia um só plano à venda, mas o pedido podia pedir outro — agora é o servidor que decide, e decide sempre o Plus.",
+    ],
+  },
+  {
     version: "2.8.0",
     data: "2026-07-29",
     titulo: "Parceria com a FIZ: uma ligação, sempre declarada",
