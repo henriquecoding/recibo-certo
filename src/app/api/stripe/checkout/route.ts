@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getStripe } from "@/lib/stripe/server";
-import { STRIPE_CONFIG, type PlanoIntervalo } from "@/lib/stripe/config";
+import { STRIPE_CONFIG } from "@/lib/stripe/config";
 import { createClient } from "@supabase/supabase-js";
 
 async function obterUtilizador(req: NextRequest) {
@@ -25,9 +25,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ erro: "Autenticação necessária." }, { status: 401 });
     }
 
-    const body = (await req.json()) as { intervalo?: PlanoIntervalo };
-    const intervalo = body.intervalo ?? "annual";
-    const priceId = STRIPE_CONFIG.prices[intervalo];
+    // Um plano só (ponto 11 da arquitetura da parceria): não há seletor de
+    // intervalo, o checkout cria sempre a subscrição do Plus.
+    const priceId = STRIPE_CONFIG.prices.plus;
 
     if (!priceId) {
       return NextResponse.json({ erro: "Preço não configurado." }, { status: 500 });
