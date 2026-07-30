@@ -7,6 +7,10 @@
 //  atribuição do redirecionador — e servem de cerca: se alguém desfizer uma
 //  destas correções, é aqui que se sabe.
 //
+//  Cobre as onze: sete pequenas, mais as quatro que exigiram desenho novo
+//  (concessão de Plus por cupão, bilhete de sessão do quiz, reprocessamento de
+//  webhooks, e o slot público a ler a tabela `anuncios`).
+//
 //  Os que são só de estrutura (uma migração, um `if` invertido, um `disabled`)
 //  não se testam aqui: verificam-se a ler o ficheiro, e um teste que
 //  reescrevesse o mesmo `if` não provava nada.
@@ -23,6 +27,8 @@ import {
 } from "@/lib/parcerias/csv-comissoes";
 import { construirLinkAfiliado } from "@/lib/parcerias/link.server";
 import { superficieValida, SUPERFICIES } from "@/content/parcerias-destinos";
+import { concessaoValida, fimDaConcessao } from "@/lib/plus/concessao";
+import { classesDeDispositivo } from "@/lib/parcerias/anuncios.server";
 import { DIVULGACAO_LIGACAO } from "@/content/parcerias-copy";
 import type { ParceriaAtiva } from "@/lib/parcerias/catalogo.server";
 
@@ -322,5 +328,231 @@ describe("revisao:energia — não se joga a zero", () => {
 
   it("o botão de repetir fica inerte a zero", () => {
     expect(readFileSync(RESULTADO, "utf8")).toMatch(/disabled=\{semEnergia\}/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  OS QUATRO ARQUITETURAIS
+//  ---------------------------------------------------------------------
+//  Estes quatro exigiram decisões de desenho, não só uma linha trocada. Os
+//  testes abaixo cobrem a lógica pura que deu para extrair; o resto verifica-se
+//  na fonte, porque depende do Supabase.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("revisao:cupoes — o prémio entrega-se e ACABA", () => {
+  const M = join(RAIZ, "supabase/migrations/027_cupoes_concedem_plus.sql");
+  const ROTA = join(RAIZ, "src/app/api/quiz/cupao/route.ts");
+
+  it("existe constraint única em cupao_id — o alvo do ON CONFLICT", () => {
+    const sql = readFileSync(M, "utf8");
+    expect(sql).toMatch(/subscriptions_cupao_id_unique UNIQUE \(cupao_id\)/);
+  });
+
+  it("a rota usa cupao_id e não user_id", () => {
+    const fonte = readFileSync(ROTA, "utf8");
+    // `user_id` só tem índice normal; o PostgreSQL recusa esse ON CONFLICT.
+    expect(fonte).toMatch(/onConflict: "cupao_id"/);
+    expect(fonte).not.toMatch(/onConflict: "user_id"/);
+  });
+
+  it("uma concessão de cupão é obrigada a ter fim", () => {
+    const sql = readFileSync(M, "utf8");
+    // Sem este CHECK, esquecer o campo no código dava Plus eterno em silêncio.
+    expect(sql).toMatch(/cupao_id IS NULL OR concessao_termina_em IS NOT NULL/);
+  });
+
+  it("a rota escreve a data de fim", () => {
+    expect(readFileSync(ROTA, "utf8")).toMatch(/concessao_termina_em: fim\.toISOString\(\)/);
+  });
+
+  it("a policy esconde a concessão expirada", () => {
+    const sql = readFileSync(M, "utf8");
+    expect(sql).toMatch(/concessao_termina_em IS NULL OR concessao_termina_em > now\(\)/);
+  });
+
+  it("quem lê com service_role filtra à mão", () => {
+    // A RLS não se aplica ao service_role: sem o filtro, quem ganhou três
+    // meses em 2026 recebia alertas em 2030.
+    expect(readFileSync(join(RAIZ, "src/app/api/email/guardiao/route.ts"), "utf8")).toMatch(
+      /plusAtivoFiltro\(\)/,
+    );
+  });
+
+  describe("concessaoValida", () => {
+    const agora = new Date("2026-07-30T12:00:00Z");
+
+    it("uma subscrição de provedor não expira por data", () => {
+      expect(concessaoValida({ status: "active", concessao_termina_em: null }, agora)).toBe(true);
+    });
+
+    it("uma concessão dentro do prazo vale", () => {
+      expect(
+        concessaoValida({ status: "active", concessao_termina_em: "2026-10-30T12:00:00Z" }, agora),
+      ).toBe(true);
+    });
+
+    it("uma concessão fora do prazo NÃO vale", () => {
+      expect(
+        concessaoValida({ status: "active", concessao_termina_em: "2026-06-30T12:00:00Z" }, agora),
+      ).toBe(false);
+    });
+
+    it("estado cancelado nunca vale, mesmo dentro do prazo", () => {
+      expect(
+        concessaoValida({ status: "canceled", concessao_termina_em: "2026-10-30T12:00:00Z" }, agora),
+      ).toBe(false);
+    });
+
+    it("past_due mantém o acesso — é o período de graça do provedor", () => {
+      expect(concessaoValida({ status: "past_due", concessao_termina_em: null }, agora)).toBe(true);
+    });
+  });
+
+  describe("fimDaConcessao", () => {
+    it("conta meses de calendário, não 30 dias", () => {
+      // Três meses de 30 dias são 90 dias; de 1 de janeiro a 1 de abril são 91.
+      // A versão anterior dava ao utilizador menos dias do que o prometido.
+      const fim = fimDaConcessao(3, new Date("2026-01-01T00:00:00Z"));
+      expect(fim.toISOString().slice(0, 10)).toBe("2026-04-01");
+    });
+
+    it("atravessa a fronteira do ano", () => {
+      const fim = fimDaConcessao(3, new Date("2026-11-15T00:00:00Z"));
+      expect(fim.toISOString().slice(0, 10)).toBe("2027-02-15");
+    });
+  });
+});
+
+describe("revisao:bilhete — o desafio deixa de se poder repetir", () => {
+  const M = join(RAIZ, "supabase/migrations/028_quiz_sessoes_emitidas_pelo_servidor.sql");
+  const SUBMETER = join(RAIZ, "src/app/api/quiz/sessao/route.ts");
+  const ABRIR = join(RAIZ, "src/app/api/quiz/sessao/abrir/route.ts");
+
+  it("a tabela de bilhetes é exclusiva do servidor", () => {
+    const sql = readFileSync(M, "utf8");
+    expect(sql).toMatch(/ENABLE ROW LEVEL SECURITY/);
+    // Nenhuma policy para o cliente + privilégios revogados. Um bilhete que o
+    // jogador pudesse editar não era um bilhete.
+    expect(sql).toMatch(/REVOKE ALL ON public\.quiz_sessoes FROM authenticated, anon;/);
+    expect(sql).not.toMatch(/CREATE POLICY/);
+  });
+
+  it("a submissão exige bilhete nas dificuldades de desafio", () => {
+    const fonte = readFileSync(SUBMETER, "utf8");
+    expect(fonte).toMatch(/if \(!sessaoId\)/);
+    expect(fonte).toMatch(/\.is\("submetido_em", null\)/);
+  });
+
+  it("o bilhete fecha com UPDATE condicional — uso único", () => {
+    const fonte = readFileSync(SUBMETER, "utf8");
+    const fecho = fonte.slice(fonte.indexOf("update({ submetido_em"));
+    // A condição no próprio UPDATE é o que faz dois pedidos simultâneos com o
+    // mesmo bilhete contarem uma só vez.
+    expect(fecho).toMatch(/\.is\("submetido_em", null\)/);
+  });
+
+  it("o servidor escolhe as perguntas, não o cliente", () => {
+    expect(readFileSync(ABRIR, "utf8")).toMatch(/escolherPerguntasDoBilhete\(dificuldade\)/);
+  });
+
+  it("há teto diário de bilhetes", () => {
+    expect(readFileSync(ABRIR, "utf8")).toMatch(/LIMITE_BILHETES_DIA/);
+  });
+
+  it("verificarSessao exige correspondência exata com o bilhete", () => {
+    const fonte = readFileSync(join(RAIZ, "src/lib/quiz-fiscal/server.ts"), "utf8");
+    expect(fonte).toMatch(/correspondeAoBilhete/);
+    // `perfeito` — que é o que dá o prémio — depende disso.
+    const bloco = fonte.slice(fonte.indexOf("perfeito:"), fonte.indexOf("caminho,\n    desconhecidos"));
+    expect(bloco).toMatch(/correspondeAoBilhete/);
+  });
+
+  it("o cliente nunca importa o módulo de servidor do quiz", () => {
+    // `server.ts` arrasta a service_role. As constantes partilhadas vivem em
+    // `desafio.ts` exatamente para isto.
+    const hook = readFileSync(join(RAIZ, "src/hooks/useQuizFiscal.ts"), "utf8");
+    expect(hook).not.toMatch(/quiz-fiscal\/server/);
+    expect(hook).toMatch(/quiz-fiscal\/desafio/);
+  });
+});
+
+describe("revisao:webhooks — só se confirma o que ficou aplicado", () => {
+  const ROTA = join(RAIZ, "src/app/api/integrations/fiz/webhooks/route.ts");
+  const REPROC = join(RAIZ, "src/app/api/integrations/fiz/webhooks/reprocessar/route.ts");
+
+  it("uma falha a processar devolve 5xx, não 202", () => {
+    const fonte = readFileSync(ROTA, "utf8");
+    const bloco = fonte.slice(fonte.indexOf("} catch (erro) {"));
+    expect(bloco).toMatch(/status: 500/);
+  });
+
+  it("marcarProcessado só corre depois do processamento", () => {
+    const fonte = readFileSync(ROTA, "utf8");
+    const posCatch = fonte.indexOf("} catch (erro) {");
+    const fimCatch = fonte.indexOf("retentar: true");
+    // Dentro do catch não pode haver marcação de processado.
+    expect(fonte.slice(posCatch, fimCatch)).not.toMatch(/marcarProcessado/);
+  });
+
+  it("recebido não é confundido com processado", () => {
+    const fonte = readFileSync(ROTA, "utf8");
+    // Numa violação de unicidade, verifica-se `processed_at` antes de dizer
+    // «repetido» — senão a repetição da FIZ, que era a segunda oportunidade,
+    // era respondida como duplicado e o efeito nunca se aplicava.
+    expect(fonte).toMatch(/select\("processed_at"\)/);
+    expect(fonte).toMatch(/existente\?\.processed_at/);
+  });
+
+  it("existe um consumidor que reprocessa a fila", () => {
+    const fonte = readFileSync(REPROC, "utf8");
+    expect(fonte).toMatch(/\.is\("processed_at", null\)/);
+    expect(fonte).toMatch(/cronAutorizado\(req\)/);
+    // E desiste, para um evento impossível não ficar em ciclo eterno.
+    expect(fonte).toMatch(/TENTATIVAS_MAXIMAS/);
+  });
+});
+
+describe("revisao:anuncios — o admin passa a mandar no site", () => {
+  const LIB = join(RAIZ, "src/lib/parcerias/anuncios.server.ts");
+  const SLOT = join(RAIZ, "src/components/parcerias/AnuncioSlot.tsx");
+
+  it("o slot público consulta a tabela `anuncios`", () => {
+    const fonte = readFileSync(SLOT, "utf8");
+    expect(fonte).toMatch(/anuncioDaSuperficie\(superficie\)/);
+  });
+
+  it("uma superfície desligada no admin não mostra nada", () => {
+    const fonte = readFileSync(SLOT, "utf8");
+    expect(fonte).toMatch(/config\.estado === "desligado"/);
+
+    // E a verificação vem ANTES do piso em código, senão este ressuscitava-a.
+    // Compara-se dentro do CORPO da função: `placementDaSuperficie` aparece
+    // primeiro no bloco de imports, no topo do ficheiro.
+    const corpo = fonte.slice(fonte.indexOf("export default async function AnuncioSlot"));
+    expect(corpo.indexOf('config.estado === "desligado"')).toBeLessThan(
+      corpo.indexOf("await placementDaSuperficie"),
+    );
+  });
+
+  it("a consulta lê também as linhas inativas", () => {
+    const fonte = readFileSync(LIB, "utf8");
+    // Filtrar por ativo=true apagava a diferença entre «desligado» e «nunca
+    // configurado» — a mesma armadilha dos placements.
+    expect(fonte).not.toMatch(/\.eq\("ativo", true\)/);
+  });
+
+  describe("classesDeDispositivo", () => {
+    it("os dois ligados não impõem classe nenhuma", () => {
+      expect(classesDeDispositivo({ mostrarDesktop: true, mostrarMobile: true })).toBe("");
+    });
+    it("só telemóvel esconde a partir de sm", () => {
+      expect(classesDeDispositivo({ mostrarDesktop: false, mostrarMobile: true })).toBe("sm:hidden");
+    });
+    it("só computador esconde abaixo de sm", () => {
+      expect(classesDeDispositivo({ mostrarDesktop: true, mostrarMobile: false })).toBe("hidden sm:block");
+    });
+    it("nenhum dos dois esconde sempre", () => {
+      expect(classesDeDispositivo({ mostrarDesktop: false, mostrarMobile: false })).toBe("hidden");
+    });
   });
 });

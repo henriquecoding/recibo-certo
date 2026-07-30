@@ -25,6 +25,7 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { carregarBancoQuiz } from "./index";
+import { PERGUNTAS_SESSAO_DESAFIO as PERGUNTAS } from "./desafio";
 import type { CaminhoCupao } from "@/lib/supabase/quiz-achievements";
 
 /** Metas de cada caminho de desafio. Espelha `META_DESAFIO` do cliente. */
@@ -33,11 +34,32 @@ export const META_DESAFIO_SERVIDOR: Record<CaminhoCupao, { meta: number; meses: 
   dificil: { meta: 3, meses: 3 },
 };
 
-/** Perguntas por sessão exigidas para uma sessão contar para o desafio. */
-export const PERGUNTAS_SESSAO_DESAFIO = 10;
+// `PERGUNTAS_SESSAO_DESAFIO` e `DIFICULDADES_DE_DESAFIO` vivem em `./desafio`,
+// que não tem dependências e por isso pode ser importado pelo cliente também.
+// Reexportam-se aqui para não quebrar quem já os importava deste módulo.
+export { PERGUNTAS_SESSAO_DESAFIO, DIFICULDADES_DE_DESAFIO } from "./desafio";
 
 /** Validade do cupão, em dias. */
 export const VALIDADE_CUPAO_DIAS = 90;
+
+/**
+ * Bilhetes que um utilizador pode abrir por dia.
+ *
+ * Não é o limite de jogo — a energia é que trata disso, e é generosa. Este é
+ * o teto que impede um script de abrir mil bilhetes e submeter mil sessões
+ * perfeitas. Está bem acima de qualquer sessão humana num dia: as metas são
+ * 5 sessões seguidas (médio) e 3 (difícil).
+ */
+export const LIMITE_BILHETES_DIA = 40;
+
+/**
+ * Tempo mínimo plausível para responder a dez perguntas, em milissegundos.
+ *
+ * Dois segundos por pergunta é um piso deliberadamente baixo — não se quer
+ * castigar quem sabe as respostas —, mas fecha a submissão instantânea, que
+ * é a assinatura de um script.
+ */
+export const TEMPO_MINIMO_SESSAO_MS = PERGUNTAS * 2_000;
 
 export interface RespostaSubmetida {
   perguntaId: string;
@@ -48,6 +70,12 @@ export interface RespostaSubmetida {
 export interface SessaoSubmetida {
   dificuldade: number;
   respostas: RespostaSubmetida[];
+  /**
+   * As perguntas que o bilhete autoriza. Quando presente, `verificarSessao`
+   * exige correspondência exata — é o que impede repetir uma sessão
+   * vencedora com ids escolhidos pelo cliente.
+   */
+  perguntasAutorizadas?: readonly string[];
 }
 
 export interface ResultadoVerificado {
@@ -57,6 +85,11 @@ export interface ResultadoVerificado {
   caminho: CaminhoCupao | null;
   /** IDs que não existem no banco — sinal de submissão forjada. */
   desconhecidos: string[];
+  /**
+   * As perguntas submetidas são as do bilhete. `true` quando não havia
+   * bilhete a validar (sessões livres, que não dão prémio).
+   */
+  correspondeAoBilhete: boolean;
 }
 
 /** Cliente com `service_role`. Só existe no servidor; nunca no bundle. */
@@ -122,18 +155,65 @@ export async function verificarSessao(sessao: SessaoSubmetida): Promise<Resultad
   const caminho: CaminhoCupao | null =
     sessao.dificuldade === 2 ? "medio" : sessao.dificuldade === 3 ? "dificil" : null;
 
+  // As perguntas submetidas têm de ser EXATAMENTE as do bilhete. Sem isto, um
+  // bilhete legítimo autorizava a submissão de dez outras perguntas quaisquer
+  // — por exemplo, dez que o atacante já sabe de cor.
+  const autorizadas = sessao.perguntasAutorizadas;
+  const correspondeAoBilhete =
+    !autorizadas ||
+    (autorizadas.length === contadas.size && autorizadas.every((id) => contadas.has(id)));
+
   return {
     totalPerguntas,
     acertos,
     // Só conta como sessão perfeita se todas as perguntas existirem, forem
-    // exatamente as da sessão-padrão e todas estiverem certas.
+    // exatamente as do bilhete emitido pelo servidor, e todas estiverem certas.
     perfeito:
       desconhecidos.length === 0 &&
-      totalPerguntas === PERGUNTAS_SESSAO_DESAFIO &&
+      correspondeAoBilhete &&
+      totalPerguntas === PERGUNTAS &&
       acertos === totalPerguntas,
     caminho,
     desconhecidos,
+    correspondeAoBilhete,
   };
+}
+
+/**
+ * As dez perguntas de um bilhete, escolhidas PELO SERVIDOR.
+ *
+ * Escolher aqui, e não no cliente, é o que dá sentido ao bilhete: se o
+ * jogador escolhesse as perguntas, podia escolher sempre as mesmas dez que
+ * sabe de cor. O sorteio usa `crypto` em vez de `Math.random` porque isto
+ * decide a atribuição de um prémio.
+ */
+export async function escolherPerguntasDoBilhete(dificuldade: number): Promise<string[]> {
+  const banco = await carregarBancoQuiz();
+  const elegiveis = banco.filter((p) => p.dificuldade === dificuldade);
+  // Se uma dificuldade não tiver dez perguntas próprias, o desafio dessa
+  // dificuldade não pode existir — melhor falhar a abrir do que emitir um
+  // bilhete impossível de cumprir.
+  if (elegiveis.length < PERGUNTAS) return [];
+
+  const ids = elegiveis.map((p) => p.id);
+  // Fisher-Yates com bytes de `crypto`.
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = inteiroAleatorio(i + 1);
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  return ids.slice(0, PERGUNTAS);
+}
+
+/** Inteiro em [0, limite), sem o enviesamento do módulo. */
+function inteiroAleatorio(limite: number): number {
+  const max = Math.floor(0xffffffff / limite) * limite;
+  const buf = new Uint32Array(1);
+  let v: number;
+  do {
+    crypto.getRandomValues(buf);
+    v = buf[0];
+  } while (v >= max);
+  return v % limite;
 }
 
 /** Código legível, sem caracteres ambíguos. */

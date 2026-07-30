@@ -19,6 +19,18 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.9.0",
+    data: "2026-07-30",
+    titulo: "Os cupões do Quiz passam a funcionar — e outras correções de fundo",
+    itens: [
+      "Quem ganhou meses de Plus no Quiz Fiscal não os conseguia ativar: o botão devolvia sempre um erro, por uma incompatibilidade na base de dados que fazia falhar todas as ativações. Está corrigido — os cupões que já tinhas continuam válidos e podem ser ativados agora.",
+      "Ao mesmo tempo, corrigiu-se algo que ia na direção oposta: um cupão de três meses não tinha data de fim, e ao ser ativado dava Plus para sempre. Uma concessão ganha no Quiz passa a acabar na data certa, contada em meses de calendário (três meses a partir de 1 de janeiro terminam a 1 de abril, não 90 dias depois).",
+      "As sessões de desafio do Quiz passam a ser abertas pelo servidor, que escolhe as dez perguntas e permite uma só submissão por sessão. Antes era possível repetir indefinidamente a mesma sessão vencedora e acumular cupões sem jogar — o que tornava o prémio de quem joga a sério menos significativo.",
+      "Eventos vindos da FIZ que falhassem a ser aplicados eram tratados como concluídos e nunca voltavam a ser tentados. Agora, se um evento falhar, é repetido — e há uma verificação periódica que recupera o que tenha ficado atrás.",
+      "No painel de administração, os anúncios voltam a ter efeito no site: criar, desativar, ordenar ou escolher se aparecem no telemóvel ou no computador passa a refletir-se no que é mostrado. Até agora essas opções não mudavam nada.",
+    ],
+  },
+  {
     version: "2.8.1",
     data: "2026-07-30",
     titulo: "Correções na parceria e no quiz, vindas de uma revisão ao código",

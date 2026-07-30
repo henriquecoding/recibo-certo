@@ -65,7 +65,7 @@ export default function QuizFiscalApp() {
             : null;
         return { perguntaId: r.perguntaId, opcaoSelecionada: original };
       });
-      registarSessaoDesafio(respostasParaVerificacao, quiz.config.dificuldade)
+      registarSessaoDesafio(respostasParaVerificacao, quiz.config.dificuldade, quiz.bilheteDesafio)
         .then((r) => {
           if (r.cupaoGerado) setCupaoGanho(r.cupaoGerado);
         })
