@@ -57,14 +57,43 @@ export default async function FizFaixaDemo({
   superficie: Extract<Superficie, "demo.hero.faixa" | "demo.irs.faixa">;
   className?: string;
 }) {
+  // ── Porque é que isto avisa ────────────────────────────────────────────
+  //  As cinco condições abaixo devolvem todas `null`, e `null` desenha
+  //  exatamente o mesmo que uma parceria que nunca existiu: nada. Quando o
+  //  cartaz desaparece de produção, o HTML não distingue "interruptor de
+  //  emergência ligado" de "link em falta na base de dados" — e sem essa
+  //  distinção o diagnóstico é adivinhação.
+  //
+  //  O aviso só sai quando a faixa NÃO aparece, o que em operação normal é
+  //  nunca. Fica no log do build (a página é estática) e nomeia a condição.
+  const semFaixa = (motivo: string) => {
+    console.warn(`[parcerias] ${superficie}: cartaz não renderizado — ${motivo}.`);
+    return null;
+  };
+
   // Sem parceria ativa não há faixa — e a demo continua exatamente igual.
-  if (!parceriasAtivas()) return null;
+  if (!parceriasAtivas()) return semFaixa("PARCERIAS_DESLIGADAS=true no ambiente");
   const parceria = await parceriaAtiva("fiz");
-  if (!parceriaUtilizavel(parceria)) return null;
-  if (parceria.modo !== "LIGACAO") return null;
+  // `parceriaUtilizavel` é um type guard: no ramo negativo o TypeScript
+  // estreita `parceria` para `null`, mas em runtime ela pode muito bem ser um
+  // objeto — só que inativo, sem link ou fora da janela. É precisamente esse
+  // objeto que interessa ao diagnóstico, daí a referência guardada antes.
+  const bruta = parceria;
+  if (!parceriaUtilizavel(parceria)) {
+    return semFaixa(
+      bruta
+        ? `parceria "fiz" inutilizável (ativo=${bruta.ativo}, link=${!!bruta.linkAfiliado}, janela=${bruta.inicioEm ?? "—"}..${bruta.fimEm ?? "—"})`
+        : 'parceria "fiz" não encontrada em admin_partners nem em código',
+    );
+  }
+  if (parceria.modo !== "LIGACAO") return semFaixa(`modo da parceria é "${parceria.modo}", não "LIGACAO"`);
 
   const placement = await placementDaSuperficie(parceria.id, superficie);
-  if (!placement) return null;
+  if (!placement) {
+    return semFaixa(
+      `sem placement para "${superficie}" (nem ativo em partner_placements, nem em superficiesAtivas de parceiro "${parceria.id}")`,
+    );
+  }
 
   const recurso = copyDaSuperficie(superficie);
   const titulo = placement.copyTitulo?.trim() || recurso.titulo;

@@ -19,6 +19,15 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.8.2",
+    data: "2026-07-30",
+    titulo: "Quando a parceria não aparece, passa a dizer-se porquê",
+    itens: [
+      "O bloco de parceria pode não aparecer por cinco motivos diferentes, e todos davam exatamente o mesmo resultado no ecrã: nada. Passa a ficar registado qual deles foi, para deixar de se confundir «está desligado de propósito» com «avariou».",
+      "Nada muda no que vês nem no que é mostrado: continua a aparecer quando está ligado e a não aparecer quando não está.",
+    ],
+  },
+  {
     version: "2.8.1",
     data: "2026-07-30",
     titulo: "Subscrever o Plus deixa de bater numa parede",

@@ -79,6 +79,25 @@ export function parceriasAtivas(): boolean {
   return process.env.PARCERIAS_DESLIGADAS !== "true";
 }
 
+// ── O interruptor tem de se ouvir ────────────────────────────────────────
+//  Desligar as parcerias não produzia erro nenhum: as superfícies deixavam
+//  simplesmente de existir no HTML. O sintoma — ausência — é indistinguível
+//  de uma parceria que nunca foi configurada, de um placement inativo ou de
+//  um link em falta, porque as cinco condições de `FizFaixaDemo` devolvem
+//  todas o mesmo: nada.
+//
+//  Custou horas a diagnosticar uma vez. Este aviso corre ao carregar o
+//  módulo — portanto TAMBÉM durante a geração estática — e fica no log do
+//  build, que é onde alguém olha quando o cartaz desaparece.
+if (process.env.PARCERIAS_DESLIGADAS === "true") {
+  console.warn(
+    "[parcerias] PARCERIAS_DESLIGADAS=true — TODAS as parcerias estão desligadas " +
+      "neste ambiente. Nenhum cartaz, ligação ou bloco de parceiro é renderizado. " +
+      "As páginas estáticas gravam esta decisão no build: remover a variável exige " +
+      "um redeploy para ter efeito.",
+  );
+}
+
 /** Permite desligar o registo de cliques sem desligar os links. */
 export function cliquesAtivos(): boolean {
   return process.env.PARCERIAS_CLIQUES_ATIVOS !== "false";
