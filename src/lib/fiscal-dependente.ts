@@ -24,12 +24,16 @@ import {
   HORARIO_SEMANAL_COMPLETO,
   TRABALHO_SUPLEMENTAR,
   RETENCAO_SUPLEMENTAR_FATOR,
-  AJUDAS_CUSTO,
   IRS_JOVEM_TETO_CALC,
   SEGURO_ACIDENTES_TRABALHO_ESTIMATIVA,
+  fatorMaximoDependenteDeficiente,
+  limiteAjudasCusto,
+  parcelaIncapacidadeFamiliar,
   tabelaRetencaoDependente,
   type EscalaoRetencao,
+  type EscalaoAjudasCusto,
   type EstadoCivilRet,
+  type IncapacidadeFamiliarRet,
   type TipoAtividade,
   type Regiao,
 } from "./fiscal-data";
@@ -101,12 +105,18 @@ function parcelaAbater(esc: EscalaoRetencao, remuneracao: number): number {
  * oficial: `R × taxa marginal máxima − parcela a abater − (parcela por
  * dependente × n.º dependentes)`, nunca negativa. Com 3+ dependentes aplica-se
  * a redução de 1 p.p. na taxa marginal (Despacho 233-A/2026, n.º 5 al. h).
+ *
+ * `abatimentoIncapacidade` é o acréscimo à parcela a abater do n.º 5, al. a) e
+ * b) — dependentes com incapacidade ≥ 60% (com o fator do n.º 6) e cônjuge com
+ * incapacidade na situação de único titular. Resolve-se em
+ * `parcelaIncapacidadeFamiliar` (fiscal-data), não aqui.
  */
 export function retencaoIRSDependente(
   salarioBruto: number,
   dependentes = 0,
   tabela: EscalaoRetencao[] = RETENCAO_DEP_CONTINENTE_T1.value,
-  parcelaDependente: number = RETENCAO_DEP_POR_DEPENDENTE.value
+  parcelaDependente: number = RETENCAO_DEP_POR_DEPENDENTE.value,
+  abatimentoIncapacidade = 0
 ): number {
   const R = Math.max(0, salarioBruto);
   const dep = Math.max(0, dependentes);
@@ -114,17 +124,68 @@ export function retencaoIRSDependente(
   if (esc.taxa === 0) return 0;
   // n.º 5 al. h): 3+ dependentes → −1 p.p. na taxa marginal (parcela inalterada).
   const taxa = dep >= 3 ? Math.max(0, esc.taxa - RETENCAO_DEP_REDUCAO_3MAIS.value) : esc.taxa;
-  const ret = R * taxa - parcelaAbater(esc, R) - parcelaDependente * dep;
+  const ret =
+    R * taxa - parcelaAbater(esc, R) - parcelaDependente * dep - Math.max(0, abatimentoIncapacidade);
   return Math.max(0, cent(ret));
 }
 
-export interface RetencaoAnualCatAInput {
-  /** Rendimento bruto ANUAL da categoria A. */
-  brutoAnual: number;
+/**
+ * Situação pessoal que determina a tabela de retenção e as parcelas a abater.
+ *
+ * Existe para que nenhuma via de cálculo (mês, subsídios, suplementar, cálculo
+ * inverso, ano, auditoria) possa esquecer-se de um campo: passa-se o conjunto
+ * inteiro ou não se passa nada. Antes eram cinco argumentos posicionais
+ * repetidos em oito sítios — e a incapacidade dos dependentes, que a interface
+ * recolhia, não chegava a nenhum deles.
+ */
+export interface SituacaoRetencao extends IncapacidadeFamiliarRet {
   dependentes?: number;
   estadoCivil?: EstadoCivilRet;
+  /** Grau de incapacidade ≥ 60% do PRÓPRIO titular (tabelas IV-VII). */
   deficiencia?: boolean;
   regiao?: Regiao;
+}
+
+interface SituacaoResolvida {
+  dependentes: number;
+  estadoCivil: EstadoCivilRet;
+  deficiencia: boolean;
+  regiao: Regiao;
+  dependentesDeficientes: number;
+  fatorDependenteDeficiente: number;
+  conjugeDeficiente: boolean;
+}
+
+/**
+ * Normaliza a situação pessoal: inteiros não negativos, dependentes com
+ * incapacidade nunca acima do total de dependentes e fator dentro do máximo
+ * legal da situação familiar (n.º 6 do Despacho).
+ */
+export function resolverSituacao(input: SituacaoRetencao = {}): SituacaoResolvida {
+  const estadoCivil = input.estadoCivil ?? "naoCasado";
+  const dependentes = Math.max(0, Math.floor(input.dependentes ?? 0));
+  const dependentesDeficientes = Math.min(
+    dependentes,
+    Math.max(0, Math.floor(input.dependentesDeficientes ?? 0))
+  );
+  const fatorDependenteDeficiente = Math.min(
+    fatorMaximoDependenteDeficiente(estadoCivil),
+    Math.max(1, Math.floor(input.fatorDependenteDeficiente ?? 1))
+  );
+  return {
+    dependentes,
+    estadoCivil,
+    deficiencia: input.deficiencia ?? false,
+    regiao: input.regiao ?? "continente",
+    dependentesDeficientes,
+    fatorDependenteDeficiente,
+    conjugeDeficiente: (input.conjugeDeficiente ?? false) && estadoCivil === "casadoUnico",
+  };
+}
+
+export interface RetencaoAnualCatAInput extends SituacaoRetencao {
+  /** Rendimento bruto ANUAL da categoria A. */
+  brutoAnual: number;
   /** Ano de benefício do IRS Jovem (1 a 10); 0/undefined se não aplicável. */
   irsJovemAno?: number;
 }
@@ -145,27 +206,34 @@ export function estimarRetencaoAnualCatA(input: RetencaoAnualCatAInput): number 
   const bruto = Math.max(0, input.brutoAnual);
   if (bruto <= 0) return 0;
   const mensal = bruto / MESES_RETRIBUICAO;
-  const dependentes = Math.max(0, Math.floor(input.dependentes ?? 0));
-  const estadoCivil = input.estadoCivil ?? "naoCasado";
-  const deficiencia = !!input.deficiencia;
-  const regiao = input.regiao ?? "continente";
+  const situacao = resolverSituacao(input);
   const mensalRetido =
     input.irsJovemAno && input.irsJovemAno > 0
-      ? retencaoJovem(mensal, dependentes, estadoCivil, deficiencia, regiao, input.irsJovemAno)
-      : retencaoPorSituacao(mensal, dependentes, estadoCivil, deficiencia, regiao);
+      ? retencaoJovem(mensal, situacao, input.irsJovemAno)
+      : retencaoPorSituacao(mensal, situacao);
   return cent(mensalRetido * MESES_RETRIBUICAO);
 }
 
-/** Retenção mensal resolvendo a tabela pela situação familiar (estado civil + deficiência). */
-function retencaoPorSituacao(
-  salarioBruto: number,
-  dependentes: number,
-  estadoCivil: EstadoCivilRet,
-  deficiencia: boolean,
-  regiao: Regiao = "continente"
-): number {
-  const tab = tabelaRetencaoDependente(estadoCivil, dependentes, deficiencia, regiao);
-  return retencaoIRSDependente(salarioBruto, dependentes, tab.escaloes, tab.parcelaDependente);
+/**
+ * Retenção mensal resolvendo a tabela pela situação familiar (estado civil,
+ * dependentes, deficiência do titular e região) e somando à parcela a abater as
+ * parcelas de incapacidade do agregado (n.º 5, al. a) e b) do Despacho).
+ */
+function retencaoPorSituacao(salarioBruto: number, situacao: SituacaoResolvida): number {
+  const tab = tabelaRetencaoDependente(
+    situacao.estadoCivil,
+    situacao.dependentes,
+    situacao.deficiencia,
+    situacao.regiao
+  );
+  const incapacidade = parcelaIncapacidadeFamiliar(situacao.estadoCivil, situacao);
+  return retencaoIRSDependente(
+    salarioBruto,
+    situacao.dependentes,
+    tab.escaloes,
+    tab.parcelaDependente,
+    incapacidade
+  );
 }
 
 /**
@@ -184,36 +252,25 @@ function retencaoPorSituacao(
  */
 function retencaoJovem(
   salarioBruto: number,
-  dependentes: number,
-  estadoCivil: EstadoCivilRet,
-  deficiencia: boolean,
-  regiao: Regiao,
+  situacao: SituacaoResolvida,
   irsJovemAno?: number
 ): number {
   const R = Math.max(0, salarioBruto);
-  const retNormal = retencaoPorSituacao(R, dependentes, estadoCivil, deficiencia, regiao);
+  const retNormal = retencaoPorSituacao(R, situacao);
   if (retNormal <= 0 || R <= 0) return retNormal;
   const { isentoEur } = isencaoJovemRemuneracao(R, irsJovemAno);
   return Math.max(0, cent(retNormal * (1 - isentoEur / R)));
 }
 
-export interface VencimentoInput {
+export interface VencimentoInput extends SituacaoRetencao {
   /** Remuneração base mensal ilíquida (bruto). */
   salarioBruto: number;
-  /** Número de dependentes a cargo. */
-  dependentes?: number;
   /** Valor diário do subsídio de refeição (0 se não houver). */
   subsidioRefeicaoDia?: number;
   /** Pago em cartão/vale (limite mais alto) em vez de numerário. */
   subsidioRefeicaoCartao?: boolean;
   /** Dias úteis do mês (default 22). */
   diasUteis?: number;
-  /** Situação familiar para a tabela de retenção (default não casado). */
-  estadoCivil?: EstadoCivilRet;
-  /** Titular com deficiência ≥ 60% (tabelas IV-VII). */
-  deficiencia?: boolean;
-  /** Região fiscal (tabelas de retenção próprias na Madeira e nos Açores). */
-  regiao?: Regiao;
   /** Ano de benefício do IRS Jovem (1 a 10); 0/undefined se não aplicável. */
   irsJovemAno?: number;
 }
@@ -263,11 +320,7 @@ export interface VencimentoResult {
  */
 export function calcularVencimento(input: VencimentoInput): VencimentoResult {
   const r = calcularReciboMensal({
-    salarioBruto: input.salarioBruto,
-    dependentes: input.dependentes,
-    estadoCivil: input.estadoCivil,
-    deficiencia: input.deficiencia,
-    regiao: input.regiao,
+    ...input,
     irsJovemAno: input.irsJovemAno,
     subsidioRefeicaoDia: input.subsidioRefeicaoDia,
     subsidioRefeicaoCartao: input.subsidioRefeicaoCartao,
@@ -310,18 +363,30 @@ export function calcularVencimento(input: VencimentoInput): VencimentoResult {
 //  É ESTIMATIVA — não substitui o recibo oficial.
 // ─────────────────────────────────────────────────────────────────────
 
-export interface ReciboMensalInput {
+/** Uma deslocação: dias, valor diário e escalão que fixa o limite isento. */
+export interface AjudaCustoLinha {
+  dias: number;
+  valorDia: number;
+  estrangeiro?: boolean;
+  /** Escalão de ajudas de custo aplicável (default: trabalhador). */
+  escalao?: EscalaoAjudasCusto;
+}
+
+export interface ReciboMensalInput extends SituacaoRetencao {
   /** Remuneração base mensal ilíquida. */
   salarioBruto: number;
-  dependentes?: number;
-  estadoCivil?: EstadoCivilRet;
-  deficiencia?: boolean;
-  /** Região fiscal (tabelas de retenção próprias na Madeira e nos Açores). */
-  regiao?: Regiao;
   /** Ano de benefício do IRS Jovem (1 a 10); 0/undefined se não aplicável. */
   irsJovemAno?: number;
   /** Período normal de trabalho semanal (horas). Default 40. */
   horasSemanais?: number;
+  /**
+   * Complementos fixos que integram a retribuição para efeitos do Art. 271.º CT
+   * (diuturnidades, subsídio de função, isenção de horário…). Entram na fórmula
+   * da retribuição horária, logo no valor da hora extra, do trabalho noturno e
+   * do desconto por falta. Não são somados duas vezes ao bruto: continuam a
+   * chegar por `outrosRendimentosSujeitos`.
+   */
+  complementosRetributivos?: number;
   // Subsídio de refeição
   subsidioRefeicaoDia?: number;
   subsidioRefeicaoCartao?: boolean;
@@ -346,9 +411,20 @@ export interface ReciboMensalInput {
   /** Outros rendimentos sujeitos a IRS/SS (feriados, diuturnidades, etc.). */
   outrosRendimentosSujeitos?: number;
   // Ajudas de custo (deslocações)
+  /**
+   * Deslocações linha a linha. O limite diário isento aplica-se a CADA
+   * deslocação — agregar valores diários diferentes e dividir pelo total de
+   * dias inventa um valor médio que nenhuma deslocação teve e faz desaparecer
+   * excessos reais (100 €/dia + 30 €/dia não são duas deslocações a 65 €/dia).
+   */
+  ajudas?: readonly AjudaCustoLinha[];
+  /** @deprecated Usar `ajudas`. Mantido para cenários guardados e importações. */
   ajudasNacionalDias?: number;
+  /** @deprecated Usar `ajudas`. */
   ajudasNacionalValorDia?: number;
+  /** @deprecated Usar `ajudas`. */
   ajudasEstrangeiroDias?: number;
+  /** @deprecated Usar `ajudas`. */
   ajudasEstrangeiroValorDia?: number;
 }
 
@@ -377,6 +453,16 @@ export interface ReciboMensalResult {
   ajudasTotal: number;
   ajudasIsentas: number;
   ajudasTributadas: number;
+  /** Cada deslocação com o seu limite diário, parte isenta e parte tributada. */
+  ajudasDetalhe: {
+    dias: number;
+    valorDia: number;
+    estrangeiro: boolean;
+    limiteDia: number;
+    total: number;
+    isento: number;
+    tributado: number;
+  }[];
   // Subsídio de refeição
   subsidioRefeicaoTotal: number;
   subsidioRefeicaoIsento: number;
@@ -419,14 +505,18 @@ export interface ReciboMensalResult {
 
 export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResult {
   const salarioBase = Math.max(0, input.salarioBruto);
-  const dependentes = Math.max(0, Math.floor(input.dependentes ?? 0));
-  const ec = input.estadoCivil ?? "naoCasado";
-  const def = input.deficiencia ?? false;
-  const reg = input.regiao ?? "continente";
+  const situacao = resolverSituacao(input);
+  const dependentes = situacao.dependentes;
 
-  // Retribuição horária (Art. 271.º CT).
+  // Retribuição horária (Art. 271.º CT): (RM × 12) ÷ (52 × n), onde RM é a
+  // RETRIBUIÇÃO mensal — não apenas o vencimento base. Os complementos com
+  // caráter retributivo (diuturnidades, subsídio de função, isenção de horário)
+  // integram-na, pelo que valorizam a hora extra, o trabalho noturno e o
+  // desconto por falta. Com 2 000 € de base e 200 € de diuturnidades, ignorá-los
+  // subavaliava dez horas extra em 14,38 €.
   const horasSemanais = Math.max(1, input.horasSemanais ?? HORARIO_SEMANAL_COMPLETO.value);
-  const retribuicaoHoraria = cent((salarioBase * 12) / (52 * horasSemanais));
+  const complementos = Math.max(0, input.complementosRetributivos ?? 0);
+  const retribuicaoHoraria = cent(((salarioBase + complementos) * 12) / (52 * horasSemanais));
 
   // Faltas — horas de ausência não remuneradas reduzem a base.
   const horasAusencia = Math.max(0, input.horasAusencia ?? 0);
@@ -464,15 +554,23 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
   // de PDF que conhece a "remuneração sujeita" mas não a decompõe linha a linha).
   const outrosSujeitos = Math.max(0, input.outrosRendimentosSujeitos ?? 0);
 
-  // Ajudas de custo — isentas até ao limite diário; o excesso é tributado.
-  const ajN = Math.max(0, input.ajudasNacionalDias ?? 0);
-  const ajNv = Math.max(0, input.ajudasNacionalValorDia ?? 0);
-  const ajE = Math.max(0, input.ajudasEstrangeiroDias ?? 0);
-  const ajEv = Math.max(0, input.ajudasEstrangeiroValorDia ?? 0);
-  const ajudasTotal = cent(ajN * ajNv + ajE * ajEv);
-  const ajudasIsentas = cent(
-    Math.min(ajNv, AJUDAS_CUSTO.nacionalDia.value) * ajN + Math.min(ajEv, AJUDAS_CUSTO.estrangeiroDia.value) * ajE
-  );
+  // Ajudas de custo — isentas até ao limite diário de CADA deslocação; o
+  // excesso é tributado. Os campos agregados legados convertem-se numa linha.
+  const ajudas: AjudaCustoLinha[] = [
+    ...(input.ajudas ?? []),
+    { dias: input.ajudasNacionalDias ?? 0, valorDia: input.ajudasNacionalValorDia ?? 0, estrangeiro: false },
+    { dias: input.ajudasEstrangeiroDias ?? 0, valorDia: input.ajudasEstrangeiroValorDia ?? 0, estrangeiro: true },
+  ].filter((linha) => linha.dias > 0 && linha.valorDia > 0);
+  const ajudasDetalhe = ajudas.map((linha) => {
+    const dias = Math.max(0, linha.dias);
+    const valorDia = Math.max(0, linha.valorDia);
+    const limite = limiteAjudasCusto(!!linha.estrangeiro, linha.escalao);
+    const total = cent(dias * valorDia);
+    const isento = cent(dias * Math.min(valorDia, limite));
+    return { ...linha, dias, valorDia, limiteDia: limite, total, isento, tributado: cent(total - isento) };
+  });
+  const ajudasTotal = cent(ajudasDetalhe.reduce((s, x) => s + x.total, 0));
+  const ajudasIsentas = cent(ajudasDetalhe.reduce((s, x) => s + x.isento, 0));
   const ajudasTributadas = cent(ajudasTotal - ajudasIsentas);
 
   // Subsídio de refeição.
@@ -502,7 +600,7 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
   const remMensal = cent(baseRemunerada + premio + outrosSujeitos + ajudasTributadas + subsidioRefeicaoTributado);
   const ano = input.irsJovemAno;
   const jovemMes = isencaoJovemRemuneracao(remMensal, ano);
-  const irsBaseMensal = retencaoJovem(remMensal, dependentes, ec, def, reg, ano);
+  const irsBaseMensal = retencaoJovem(remMensal, situacao, ano);
   // Trabalho suplementar: retenção autónoma = 50% da taxa efetiva mensal.
   const taxaEfetivaMes = remMensal > 0 ? irsBaseMensal / remMensal : 0;
   const suplementarIRS = cent(suplementarTotal * taxaEfetivaMes * RETENCAO_SUPLEMENTAR_FATOR.value);
@@ -512,13 +610,13 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
   // parte proporcional do imposto calculado sobre o direito total.
   const irsFerias = subsidioFeriasDireitoTotal > 0
     ? cent(
-        retencaoJovem(subsidioFeriasDireitoTotal, dependentes, ec, def, reg, ano)
+        retencaoJovem(subsidioFeriasDireitoTotal, situacao, ano)
           * subsidioFerias / subsidioFeriasDireitoTotal,
       )
     : 0;
   const irsNatal = subsidioNatalDireitoTotal > 0
     ? cent(
-        retencaoJovem(subsidioNatalDireitoTotal, dependentes, ec, def, reg, ano)
+        retencaoJovem(subsidioNatalDireitoTotal, situacao, ano)
           * subsidioNatal / subsidioNatalDireitoTotal,
       )
     : 0;
@@ -535,15 +633,16 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
       * subsidioNatal / subsidioNatalDireitoTotal
     : 0;
   const rendimentoIsentoJovem = cent(jovemMes.isentoEur + isentoFerias + isentoNatal);
+  const retencaoMensalSemJovem = retencaoPorSituacao(remMensal, situacao);
   const irsSemJovem = cent(
-    retencaoPorSituacao(remMensal, dependentes, ec, def, reg) +
-      cent(suplementarTotal * (remMensal > 0 ? retencaoPorSituacao(remMensal, dependentes, ec, def, reg) / remMensal : 0) * RETENCAO_SUPLEMENTAR_FATOR.value) +
+    retencaoMensalSemJovem +
+      cent(suplementarTotal * (remMensal > 0 ? retencaoMensalSemJovem / remMensal : 0) * RETENCAO_SUPLEMENTAR_FATOR.value) +
       (subsidioFeriasDireitoTotal > 0
-        ? retencaoPorSituacao(subsidioFeriasDireitoTotal, dependentes, ec, def, reg)
+        ? retencaoPorSituacao(subsidioFeriasDireitoTotal, situacao)
           * subsidioFerias / subsidioFeriasDireitoTotal
         : 0) +
       (subsidioNatalDireitoTotal > 0
-        ? retencaoPorSituacao(subsidioNatalDireitoTotal, dependentes, ec, def, reg)
+        ? retencaoPorSituacao(subsidioNatalDireitoTotal, situacao)
           * subsidioNatal / subsidioNatalDireitoTotal
         : 0)
   );
@@ -605,6 +704,15 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
     ajudasTotal,
     ajudasIsentas,
     ajudasTributadas,
+    ajudasDetalhe: ajudasDetalhe.map((linha) => ({
+      dias: linha.dias,
+      valorDia: linha.valorDia,
+      estrangeiro: !!linha.estrangeiro,
+      limiteDia: linha.limiteDia,
+      total: linha.total,
+      isento: linha.isento,
+      tributado: linha.tributado,
+    })),
     subsidioRefeicaoTotal,
     subsidioRefeicaoIsento,
     subsidioRefeicaoTributado,
@@ -659,6 +767,10 @@ export interface VencimentoAnualResult {
   irsNatal: number;
   subsidioRefeicaoAnual: number;
   subsidioRefeicaoIsentoAnual: number;
+  /** Parte do subsídio de refeição acima do limite — tributada em IRS e SS. */
+  subsidioRefeicaoTributadoAnual: number;
+  /** Base de incidência da Segurança Social no ano (14 meses + excessos). */
+  baseSSAnual: number;
   liquidoAnual: number;
   /** Líquido anual ÷ 12 — o que se recebe por mês se os subsídios forem em duodécimos. */
   liquidoMedioMes: number;
@@ -676,46 +788,60 @@ export interface VencimentoAnualResult {
  */
 export function calcularVencimentoAnual(input: VencimentoAnualInput): VencimentoAnualResult {
   const bruto = Math.max(0, input.salarioBruto);
-  const dependentes = Math.max(0, Math.floor(input.dependentes ?? 0));
+  const situacao = resolverSituacao(input);
 
   const subsidioFerias = bruto;
   const subsidioNatal = bruto;
   const brutoAnual = cent(bruto * 14);
 
-  // SS incide sobre salário + ambos os subsídios.
-  const ssAnual = cent(brutoAnual * SS_DEPENDENTE.trabalhador.value);
-
-  // Retenção autónoma: fórmula aplicada a cada remuneração em separado.
-  const ec = input.estadoCivil ?? "naoCasado";
-  const def = input.deficiencia ?? false;
-  const reg = input.regiao ?? "continente";
-  const ano = input.irsJovemAno;
-  const irsSalario = cent(retencaoJovem(bruto, dependentes, ec, def, reg, ano) * 12);
-  const irsFerias = retencaoJovem(subsidioFerias, dependentes, ec, def, reg, ano);
-  const irsNatal = retencaoJovem(subsidioNatal, dependentes, ec, def, reg, ano);
-  const irsAnual = cent(irsSalario + irsFerias + irsNatal);
-
-  // Isenção do IRS Jovem no ano: salário (×12, com teto mensal) + ambos os subsídios.
-  const jovemMes = isencaoJovemRemuneracao(bruto, ano);
-  const rendimentoIsentoJovemAnual = cent(
-    jovemMes.isentoEur * 12 +
-      isencaoJovemRemuneracao(subsidioFerias, ano).isentoEur +
-      isencaoJovemRemuneracao(subsidioNatal, ano).isentoEur
-  );
-
-  // Subsídio de refeição: pago só nos meses trabalhados (default 11).
-  const meses = Math.max(0, input.mesesSubsidioRefeicao ?? 11);
+  // Subsídio de refeição: pago só nos meses trabalhados (default 11). A parte
+  // acima do limite diário É rendimento sujeito — entra na base de incidência
+  // da SS e na remuneração do mês para a tabela de retenção, exatamente como no
+  // cálculo mensal. Somá-la ao líquido como se fosse isenta sobreavaliava o ano
+  // inteiro (num salário de 1 500 € com 11 €/dia em dinheiro, +411,95 €).
+  const MESES_SALARIO = 12;
+  const meses = Math.min(MESES_SALARIO, Math.max(0, input.mesesSubsidioRefeicao ?? 11));
   const dias = Math.max(0, input.diasUteis ?? 22);
   const valorDia = Math.max(0, input.subsidioRefeicaoDia ?? 0);
   const limiteDia = input.subsidioRefeicaoCartao
     ? SUBSIDIO_REFEICAO.cartao.value
     : SUBSIDIO_REFEICAO.dinheiro.value;
+  const excessoMes = cent(Math.max(0, valorDia - limiteDia) * dias);
   const subsidioRefeicaoAnual = cent(valorDia * dias * meses);
   const subsidioRefeicaoIsentoAnual = cent(Math.min(valorDia, limiteDia) * dias * meses);
+  const subsidioRefeicaoTributadoAnual = cent(subsidioRefeicaoAnual - subsidioRefeicaoIsentoAnual);
 
-  const liquidoAnual = cent(brutoAnual - ssAnual - irsAnual + subsidioRefeicaoAnual);
+  // SS incide sobre salário, ambos os subsídios e o excesso de refeição.
+  const baseSSAnual = cent(brutoAnual + subsidioRefeicaoTributadoAnual);
+  const ssAnual = cent(baseSSAnual * SS_DEPENDENTE.trabalhador.value);
+
+  // Retenção autónoma: fórmula aplicada a cada remuneração em separado. Os meses
+  // com excesso de refeição retêm sobre a remuneração acrescida desse excesso.
+  const ano = input.irsJovemAno;
+  const irsSalario = cent(
+    retencaoJovem(bruto + excessoMes, situacao, ano) * meses +
+      retencaoJovem(bruto, situacao, ano) * (MESES_SALARIO - meses)
+  );
+  const irsFerias = retencaoJovem(subsidioFerias, situacao, ano);
+  const irsNatal = retencaoJovem(subsidioNatal, situacao, ano);
+  const irsAnual = cent(irsSalario + irsFerias + irsNatal);
+
+  // Isenção do IRS Jovem no ano: salário (×12, com teto mensal) + ambos os subsídios.
+  const jovemMes = isencaoJovemRemuneracao(bruto, ano);
+  const rendimentoIsentoJovemAnual = cent(
+    isencaoJovemRemuneracao(bruto + excessoMes, ano).isentoEur * meses +
+      jovemMes.isentoEur * (MESES_SALARIO - meses) +
+      isencaoJovemRemuneracao(subsidioFerias, ano).isentoEur +
+      isencaoJovemRemuneracao(subsidioNatal, ano).isentoEur
+  );
+
+  const liquidoAnual = cent(brutoAnual + subsidioRefeicaoAnual - ssAnual - irsAnual);
   const liquidoMedioMes = cent(liquidoAnual / 12);
-  const taxaEfetiva = brutoAnual > 0 ? (ssAnual + irsAnual) / brutoAnual : 0;
+  // Mesma definição do mês: IRS + SS sobre o rendimento SUJEITO (exclui a parte
+  // isenta do subsídio de refeição). Antes o ano media sobre o bruto e o mês
+  // sobre o sujeito — duas taxas «efetivas» diferentes no mesmo ecrã.
+  const rendimentoSujeitoAnual = baseSSAnual;
+  const taxaEfetiva = rendimentoSujeitoAnual > 0 ? (ssAnual + irsAnual) / rendimentoSujeitoAnual : 0;
 
   return {
     brutoAnual,
@@ -728,6 +854,8 @@ export function calcularVencimentoAnual(input: VencimentoAnualInput): Vencimento
     irsNatal,
     subsidioRefeicaoAnual,
     subsidioRefeicaoIsentoAnual,
+    subsidioRefeicaoTributadoAnual,
+    baseSSAnual,
     liquidoAnual,
     liquidoMedioMes,
     taxaEfetiva,
@@ -895,11 +1023,8 @@ export function compararCategorias(input: ComparacaoCategoriasInput): Comparacao
 //  quanto reservar para o acerto. ESTIMATIVA — apuramento oficial difere.
 // ─────────────────────────────────────────────────────────────────────
 
-export interface MealheiroDependenteInput {
+export interface MealheiroDependenteInput extends SituacaoRetencao {
   salarioBruto: number;
-  dependentes?: number;
-  /** Dependentes com grau de incapacidade ≥ 60% (Art. 78.º-A — +2,5×IAS/dep.). */
-  dependentesDeficientes?: number;
   /** Dependentes com 3 anos ou menos (Art. 78.º-A — 726 € cada). */
   dependentesBebe?: number;
   /**
@@ -909,9 +1034,6 @@ export interface MealheiroDependenteInput {
   dependentesLista?: Array<{ ate3: boolean; deficiente: boolean; guarda: number }>;
   /** Rendimentos variáveis anuais (comissões, prémios, horas extra). */
   variavelAnual?: number;
-  estadoCivil?: EstadoCivilRet;
-  deficiencia?: boolean;
-  regiao?: Regiao;
   /** Ano de benefício do IRS Jovem (1 a 10); 0/undefined se não aplicável. */
   irsJovemAno?: number;
   // ── Situação familiar e deduções à coleta (paridade com a Categoria B) ──
@@ -971,10 +1093,7 @@ export interface MealheiroDependenteResult {
 function retencaoVariavelAnual(
   salarioBase: number,
   variavelAnual: number,
-  dependentes: number,
-  ec: EstadoCivilRet,
-  def: boolean,
-  reg: Regiao,
+  situacao: SituacaoResolvida,
   irsJovemAno?: number
 ): number {
   const V = Math.max(0, variavelAnual);
@@ -983,8 +1102,8 @@ function retencaoVariavelAnual(
   // sobe de `salarioBase` para `salarioBase + V/12` e a retenção é a da
   // linha correspondente da tabela.
   const acrescimoMes = V / 12;
-  const comVariavel = retencaoJovem(salarioBase + acrescimoMes, dependentes, ec, def, reg, irsJovemAno);
-  const semVariavel = retencaoJovem(salarioBase, dependentes, ec, def, reg, irsJovemAno);
+  const comVariavel = retencaoJovem(salarioBase + acrescimoMes, situacao, irsJovemAno);
+  const semVariavel = retencaoJovem(salarioBase, situacao, irsJovemAno);
   return cent(Math.max(0, comVariavel - semVariavel) * 12);
 }
 
@@ -1055,21 +1174,18 @@ export function mealheiroDependente(input: MealheiroDependenteInput): MealheiroD
 
   const irsApurado = cent(Math.max(0, coletaBruta - deducaoDependentes - outrasDeducoes.total));
 
-  // Retido na fonte estimado: salário (14 meses) + variável pela linha da tabela.
-  const ec = input.estadoCivil ?? "naoCasado";
-  const reg = input.regiao ?? "continente";
+  // Retido na fonte estimado: salário (14 meses) + variável pela linha da
+  // tabela. A retenção acompanha a MESMA situação declarada (incluindo
+  // incapacidade de dependentes e do cônjuge) — se o retido a ignorasse, o
+  // acerto anual apareceria inflacionado a quem já a comunicou à empresa.
+  const situacao = resolverSituacao(input);
   const irsRetidoBase = calcularVencimentoAnual({
+    ...input,
     salarioBruto: base,
-    dependentes: dep,
     subsidioRefeicaoDia: 0,
-    estadoCivil: ec,
-    deficiencia: temDeficiencia,
-    regiao: reg,
     irsJovemAno: ano,
   }).irsAnual;
-  const irsRetido = cent(
-    irsRetidoBase + retencaoVariavelAnual(base, variavel, dep, ec, temDeficiencia, reg, ano)
-  );
+  const irsRetido = cent(irsRetidoBase + retencaoVariavelAnual(base, variavel, situacao, ano));
 
   const acerto = cent(irsApurado - irsRetido);
   const reservaMensal = acerto > 0 ? cent(acerto / 12) : 0;
@@ -1151,10 +1267,7 @@ const AUDIT_TOLERANCIA = 2;
 
 export function auditarRecibo(input: AuditoriaInput): AuditoriaResult {
   const r = calcularVencimento(input);
-  const dep = Math.max(0, Math.floor(input.dependentes ?? 0));
-  const ec = input.estadoCivil ?? "naoCasado";
-  const def = input.deficiencia ?? false;
-  const reg = input.regiao ?? "continente";
+  const situacao = resolverSituacao(input);
   const ano = input.irsJovemAno;
 
   // Se a remuneração sujeita do recibo for fornecida, o esperado é calculado
@@ -1165,7 +1278,7 @@ export function auditarRecibo(input: AuditoriaInput): AuditoriaResult {
   const jovem = isencaoJovemRemuneracao(baseIncidencia, ano);
 
   const ssEsperado = usaSujeita ? cent(baseIncidencia * SS_DEPENDENTE.trabalhador.value) : r.ssTrabalhador;
-  const irsEsperado = usaSujeita ? retencaoJovem(baseIncidencia, dep, ec, def, reg, ano) : r.irsRetido;
+  const irsEsperado = usaSujeita ? retencaoJovem(baseIncidencia, situacao, ano) : r.irsRetido;
   const custoEmpresa = usaSujeita ? cent(baseIncidencia * (1 + SS_DEPENDENTE.entidade.value)) : r.custoEmpresa;
 
   const ssDiferenca = cent(Math.max(0, input.ssDeclarado) - ssEsperado);

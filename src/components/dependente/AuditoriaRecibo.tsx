@@ -11,7 +11,7 @@ import { ResultadoAuditoria } from "@/components/dependente/ResultadoAuditoria";
 import { ShieldCheck, Mail } from "@/components/ui/Icons";
 import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
 
-const DEPENDENTES = [0, 1, 2, 3, 4];
+const MAX_DEPENDENTES = 20;
 const num = (s: string) => Math.max(0, parseNumericDraft(s) ?? 0);
 const soDecimal = (s: string) => sanitizeNumericDraft(s);
 
@@ -83,23 +83,40 @@ export function AuditoriaRecibo() {
           </div>
         </div>
         <div>
-          <span className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-2">Dependentes</span>
-          <div className="flex gap-1.5" role="group" aria-label="Número de dependentes">
-            {DEPENDENTES.map((d) => (
-              <button
-                key={d}
-                type="button"
-                aria-pressed={dependentes === d}
-                onClick={() => setDependentes(d)}
-                className={`flex-1 rounded-xl border px-2 py-2.5 text-sm font-semibold transition-all ${
-                  dependentes === d
-                    ? "border-brand bg-brand text-white shadow-glow"
-                    : "border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:border-brand"
-                }`}
-              >
-                {d === 4 ? "4+" : d}
-              </button>
-            ))}
+          {/* Um botão «4+» que enviava exatamente 4 ao motor auditava quem tem
+              cinco dependentes com a retenção de quem tem quatro. O campo passa
+              a aceitar o número real. */}
+          <label htmlFor="a-dependentes" className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-2">Dependentes</label>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Menos dependentes"
+              onClick={() => setDependentes(Math.max(0, dependentes - 1))}
+              disabled={dependentes <= 0}
+              className="flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-stone-200 bg-white text-lg font-semibold leading-none text-stone-600 transition hover:border-brand hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:opacity-30 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400"
+            >
+              −
+            </button>
+            <input
+              id="a-dependentes"
+              type="text"
+              inputMode="numeric"
+              value={String(dependentes)}
+              onChange={(e) => {
+                const parsed = parseNumericDraft(sanitizeNumericDraft(e.target.value, { maxDecimals: 0 }), { maxDecimals: 0 });
+                setDependentes(parsed === null ? 0 : Math.min(MAX_DEPENDENTES, Math.max(0, Math.floor(parsed))));
+              }}
+              className={`${campo} text-center tabular-nums`}
+            />
+            <button
+              type="button"
+              aria-label="Mais dependentes"
+              onClick={() => setDependentes(Math.min(MAX_DEPENDENTES, dependentes + 1))}
+              disabled={dependentes >= MAX_DEPENDENTES}
+              className="flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-stone-200 bg-white text-lg font-semibold leading-none text-stone-600 transition hover:border-brand hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:opacity-30 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400"
+            >
+              +
+            </button>
           </div>
         </div>
         <div>

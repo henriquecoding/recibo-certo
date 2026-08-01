@@ -1,0 +1,49 @@
+name: Testes fiscais e build
+
+# Ponto 9.3 e P3.3 da auditoria ao simulador de recibos de vencimento: as
+# tabelas de retenção estavam internamente coerentes e oficialmente
+# desatualizadas ao mesmo tempo, e nada corria o conjunto de testes a cada
+# alteração. Este workflow é a barreira que faltava — corre em TODOS os pull
+# requests e em todos os pushes para `main`, sem filtro de caminhos: uma
+# alteração num componente pode partir uma invariante fiscal tão bem como uma
+# alteração em `fiscal-data.ts`.
+#
+# `assertFiscalDataIntegrity()` e `assertChangelogIntegrity()` correm na
+# importação dos módulos, pelo que tanto os testes como o build falham se os
+# dados fiscais ficarem incoerentes.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    name: Tipos, testes e build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+
+      - name: Tipos (TypeScript strict)
+        run: npx tsc --noEmit
+
+      - name: Conjunto de testes
+        run: npm test
+
+      - name: Coerência dos dados fiscais nas skills
+        run: npm run skills:check
+
+      - name: Build de produção
+        run: npm run build
+
+      - name: Auditoria de dependências (0 vulnerabilidades altas)
+        run: npm audit --audit-level=high

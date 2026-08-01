@@ -15,6 +15,12 @@ export interface RelatorioVencimento {
   situacao: string;
   dependentes: number;
   dependentesDeficientes?: number;
+  /** Fator do n.º 6 do Despacho 233-A/2026 comunicado à entidade devedora. */
+  fatorDependentesDeficientes?: number;
+  /** Cônjuge/unido de facto sem rendimentos cat. A/H e com incapacidade ≥ 60%. */
+  conjugeDeficiente?: boolean;
+  /** Período normal de trabalho semanal usado na retribuição horária. */
+  horasSemanais?: number;
   deficiencia: boolean;
   subsidioDia: number;
   subsidioForma: string; // "Cartão" | "Dinheiro" | "—"
@@ -54,6 +60,9 @@ export interface RelatorioVencimento {
   ssAnual: number;
   liquidoAnual: number;
   liquidoMedioMes: number;
+  subsidioRefeicaoAnual?: number;
+  /** Parte do subsídio de refeição do ano acima do limite (tributada). */
+  subsidioRefeicaoTributadoAnual?: number;
   /** Decomposição opcional do novo builder; ausente nos relatórios legados. */
   linhas?: readonly RelatorioVencimentoLinha[];
 }
@@ -173,14 +182,25 @@ export function relatorioVencimentoHTML(d: RelatorioVencimento): string {
     ${press("Salário-base mensal", eur(salarioBase))}
     ${press("Situação familiar", esc(d.situacao))}
     ${press("Dependentes", String(d.dependentes))}${d.dependentesDeficientes ? `
-    ${press("Dependentes com deficiência", String(d.dependentesDeficientes))}` : ""}
-    ${press("Grau de incapacidade ≥ 60%", d.deficiencia ? "Sim" : "Não")}
+    ${press("Dependentes com incapacidade ≥ 60%", `${d.dependentesDeficientes}${(d.fatorDependentesDeficientes ?? 1) > 1 ? ` · fator ${d.fatorDependentesDeficientes}×` : ""}`)}` : ""}${d.conjugeDeficiente ? `
+    ${press("Cônjuge com incapacidade ≥ 60%", "Sim (sem rendimentos cat. A/H)")}` : ""}
+    ${press("Titular com incapacidade ≥ 60%", d.deficiencia ? "Sim" : "Não")}
+    ${d.horasSemanais ? press("Horas por semana", `${String(d.horasSemanais).replace(".", ",")} h`) : ""}
     ${press("Subsídio de refeição", temSubsidio ? `${eur(d.subsidioDia)}/dia · ${esc(d.subsidioForma)}` : "Não aplicável")}
     ${press("Dias úteis considerados", temSubsidio ? String(d.diasUteis) : "—")}
     ${press("Subsídios de férias/Natal", d.duodecimos ? "Em duodécimos" : "Por inteiro")}
     ${press("Região", esc(regiao))}
     ${press("IRS Jovem", d.irsJovemAtivo ? `${pctf(d.irsJovemPct ?? 0)} · ${d.irsJovemAno ?? 1}.º ano` : "Não aplicável")}
   </div>
+  ${
+    d.dependentesDeficientes || d.conjugeDeficiente
+      ? `<div class="explica"><h3>Incapacidade no agregado</h3><ul>
+        ${d.dependentesDeficientes ? `<li>Cada dependente com grau de incapacidade permanente ≥ 60% acresce à <b>parcela a abater</b> da retenção mensal (Despacho n.º 233-A/2026, n.º 5, al. a), com o fator comunicado à entidade devedora nos termos dos n.ºs 6 e 7. Os totais deste relatório já o incluem.</li>` : ""}
+        ${d.conjugeDeficiente ? `<li>Cônjuge ou unido de facto sem rendimentos das categorias A ou H e com incapacidade ≥ 60%: acresce à parcela a abater na situação de «casado, único titular» (n.º 5, al. b). Incluído nos totais.</li>` : ""}
+        <li>A <b>dedução à coleta</b> por dependente com deficiência (Art. 87.º CIRS) é do apuramento anual e <b>não</b> está nos valores de retenção acima.</li>
+      </ul></div>`
+      : ""
+  }
 
   <h2>Para onde vai o salário bruto</h2>
   <div class="bar">
@@ -230,6 +250,17 @@ export function relatorioVencimentoHTML(d: RelatorioVencimento): string {
     ${lin("Bruto anual", "12 meses de salário + subsídios de férias e de Natal", eur(d.brutoAnual))}
     ${lin("Subsídio de férias", `Tributado em separado · − ${eur(d.irsFerias)} de IRS`, eur(d.subsidioFerias))}
     ${lin("Subsídio de Natal", `Tributado em separado · − ${eur(d.irsNatal)} de IRS`, eur(d.subsidioNatal))}
+    ${
+      (d.subsidioRefeicaoAnual ?? 0) > 0
+        ? lin(
+            "Subsídio de refeição no ano",
+            (d.subsidioRefeicaoTributadoAnual ?? 0) > 0
+              ? `${eur(d.subsidioRefeicaoTributadoAnual ?? 0)} acima do limite diário entram nas bases de IRS e Segurança Social`
+              : "Integralmente dentro do limite diário isento",
+            eur(d.subsidioRefeicaoAnual ?? 0)
+          )
+        : ""
+    }
     ${lin("IRS retido no ano", "Soma da retenção do salário e dos subsídios", "− " + eur(d.irsAnual))}
     ${lin("Segurança Social no ano", `${pctf(d.ssTaxaTrab)} sobre todas as remunerações`, "− " + eur(d.ssAnual))}
     ${lin("Líquido anual", `Equivale a ${eur(d.liquidoMedioMes)}/mês em média`, eur(d.liquidoAnual), true)}

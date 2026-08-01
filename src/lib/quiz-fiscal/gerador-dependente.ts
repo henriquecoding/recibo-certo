@@ -86,8 +86,8 @@ const TSU_TRAB = SS_DEPENDENTE.trabalhador.value; // 0,11
 const TSU_ENT = SS_DEPENDENTE.entidade.value; // 0,2375
 const LIM_DINHEIRO = SUBSIDIO_REFEICAO.dinheiro.value; // 6,15
 const LIM_CARTAO = SUBSIDIO_REFEICAO.cartao.value; // 10,46
-const LIM_NACIONAL = AJUDAS_CUSTO.nacionalDia.value; // 62,75
-const LIM_ESTRANGEIRO = AJUDAS_CUSTO.estrangeiroDia.value; // 89,35
+const LIM_NACIONAL = AJUDAS_CUSTO.nacionalDia.value; // 65,89
+const LIM_ESTRANGEIRO = AJUDAS_CUSTO.estrangeiroDia.value; // 148,91
 const ACRESCIMOS = TRABALHO_SUPLEMENTAR.acrescimos.value; // [0,25; 0,375; 0,5; 1]
 const HORAS_SEMANA = HORARIO_SEMANAL_COMPLETO.value; // 40
 const FATOR_SUP = RETENCAO_SUPLEMENTAR_FATOR.value; // 0,5
@@ -685,18 +685,18 @@ VALORES_REF.forEach((v) => {
 const AJUDAS = [
   { valor: 50, dias: 5, nacional: true },
   { valor: 70, dias: 5, nacional: true },
-  { valor: 62.75, dias: 10, nacional: true },
+  { valor: LIM_NACIONAL, dias: 10, nacional: true },
   { valor: 80, dias: 3, nacional: true },
   { valor: 55, dias: 8, nacional: true },
   { valor: 90, dias: 4, nacional: true },
   { valor: 65, dias: 12, nacional: true },
   { valor: 80, dias: 4, nacional: false },
   { valor: 100, dias: 5, nacional: false },
-  { valor: 89.35, dias: 6, nacional: false },
+  { valor: LIM_ESTRANGEIRO, dias: 6, nacional: false },
   { valor: 120, dias: 2, nacional: false },
   { valor: 75, dias: 7, nacional: false },
   { valor: 150, dias: 3, nacional: false },
-  { valor: 89.35, dias: 10, nacional: false },
+  { valor: LIM_ESTRANGEIRO, dias: 10, nacional: false },
 ];
 AJUDAS.forEach((a, i) => {
   const limite = a.nacional ? LIM_NACIONAL : LIM_ESTRANGEIRO;

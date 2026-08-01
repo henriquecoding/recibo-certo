@@ -4,7 +4,15 @@ import { useState } from "react";
 import { Building, Calculator, Check, Heart, Receipt, ShieldCheck, Warning, Wallet } from "@/components/ui/Icons";
 import { SegBar, SegLegend, type Seg } from "@/components/dependente/ui";
 import { fmt, pct } from "@/lib/format";
-import { SS_DEPENDENTE, SUBSIDIO_REFEICAO, DEDUCAO_DEPENDENTE_DEFICIENCIA } from "@/lib/fiscal-data";
+import {
+  SS_DEPENDENTE,
+  SUBSIDIO_REFEICAO,
+  DEDUCAO_DEPENDENTE_DEFICIENCIA,
+  RETENCAO_CONJUGE_DEFICIENTE,
+  RETENCAO_DEP_DEFICIENTE,
+  parcelaIncapacidadeFamiliar,
+  type EstadoCivilRet,
+} from "@/lib/fiscal-data";
 import type { ReciboMensalResult, VencimentoAnualResult } from "@/lib/fiscal-dependente";
 import type { PayrollDisplayLine } from "@/lib/payroll-simulator-legacy-adapter";
 
@@ -35,7 +43,7 @@ function TreatmentBadge({ treatment }: { treatment: PayrollDisplayLine["treatmen
   return <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${item.cls}`}>{item.label}</span>;
 }
 
-function MonthlyBreakdown({ lines, result }: { lines: readonly PayrollDisplayLine[]; result: ReciboMensalResult }) {
+function MonthlyBreakdown({ lines, result, incapacidade }: { lines: readonly PayrollDisplayLine[]; result: ReciboMensalResult; incapacidade: React.ReactNode }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2">
@@ -44,6 +52,8 @@ function MonthlyBreakdown({ lines, result }: { lines: readonly PayrollDisplayLin
         <Metric label="Segurança Social" value={`− ${fmt(result.ssTrabalhador)}`} hint={`sobre ${fmt(result.baseSS)}`} />
         <Metric label="Taxa efetiva" value={pct(result.taxaEfetiva)} hint="IRS + SS / rendimento sujeito" />
       </div>
+
+      {incapacidade}
 
       <div className="overflow-hidden rounded-2xl border border-stone-100 dark:border-stone-800">
         <div className="flex items-center justify-between gap-3 border-b border-stone-100 bg-stone-50/80 px-3.5 py-3 dark:border-stone-800 dark:bg-stone-950/30">
@@ -87,6 +97,7 @@ function AnnualBreakdown({ annual, hasMonthlyExtras, duodecimos, dependentesDefi
     { label: "Segurança Social", value: annual.ssAnual, cls: CLS_SS },
   ];
   const deducaoDefic = Math.round(dependentesDeficientes * DEDUCAO_DEPENDENTE_DEFICIENCIA.value * 100) / 100;
+  const refeicaoTributada = annual.subsidioRefeicaoTributadoAnual;
   return (
     <div className="space-y-4">
       {hasMonthlyExtras && (
@@ -111,6 +122,12 @@ function AnnualBreakdown({ annual, hasMonthlyExtras, duodecimos, dependentesDefi
         <div className="flex items-center justify-between text-xs"><span className="text-stone-500 dark:text-stone-400">IRS sobre salários (12×)</span><strong className="tabular-nums text-stone-700 dark:text-stone-200">{fmt(annual.irsSalario)}</strong></div>
         <div className="mt-2 flex items-center justify-between text-xs"><span className="text-stone-500 dark:text-stone-400">IRS sobre férias</span><strong className="tabular-nums text-stone-700 dark:text-stone-200">{fmt(annual.irsFerias)}</strong></div>
         <div className="mt-2 flex items-center justify-between text-xs"><span className="text-stone-500 dark:text-stone-400">IRS sobre Natal</span><strong className="tabular-nums text-stone-700 dark:text-stone-200">{fmt(annual.irsNatal)}</strong></div>
+        {annual.subsidioRefeicaoAnual > 0 && (
+          <div className="mt-2 flex items-center justify-between text-xs"><span className="text-stone-500 dark:text-stone-400">Subsídio de refeição no ano</span><strong className="tabular-nums text-stone-700 dark:text-stone-200">{fmt(annual.subsidioRefeicaoAnual)}</strong></div>
+        )}
+        {refeicaoTributada > 0 && (
+          <p className="mt-2 text-[11px] leading-relaxed text-stone-400">Inclui {fmt(refeicaoTributada)} acima do limite diário, que entram nas bases de IRS e Segurança Social do ano — como em cada mês.</p>
+        )}
       </div>
       {dependentesDeficientes > 0 && (
         <div className="flex gap-2.5 rounded-2xl border border-brand/20 bg-brand-light/50 p-3.5 dark:bg-brand/10">
@@ -120,11 +137,45 @@ function AnnualBreakdown({ annual, hasMonthlyExtras, duodecimos, dependentesDefi
               {dependentesDeficientes} dependente{dependentesDeficientes > 1 ? "s" : ""} com incapacidade ≥ 60%
             </p>
             <p className="mt-1 text-[11px] leading-relaxed text-brand-dark/75 dark:text-brand-light/75">
-              Dão direito a mais {fmt(deducaoDefic)} de dedução à coleta no acerto anual de IRS (2,5 × IAS por dependente, Art. 87.º CIRS), até ao limite da coleta. Não altera a retenção mensal do recibo.
+              A retenção mensal acima já reflete a parcela do Despacho 233-A/2026. <strong>Além disso</strong>, no acerto anual de IRS acresce {fmt(deducaoDefic)} de dedução à coleta (2,5 × IAS por dependente, Art. 87.º CIRS), até ao limite da coleta — não está incluída nestes números, que são de retenção.
             </p>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Onde a incapacidade do agregado entra na retenção deste mês. Separa
+ * explicitamente o que é RETENÇÃO (aqui) do que é dedução à coleta no
+ * apuramento anual — a interface anterior misturava as duas coisas e chegava a
+ * afirmar que a incapacidade de um dependente não altera a retenção mensal.
+ */
+function IncapacidadeRetencao({ estadoCivil, dependentesDeficientes, fator, conjugeDeficiente }: {
+  estadoCivil: EstadoCivilRet;
+  dependentesDeficientes: number;
+  fator: number;
+  conjugeDeficiente: boolean;
+}) {
+  const porDependente = estadoCivil === "casadoDois"
+    ? RETENCAO_DEP_DEFICIENTE.value.casadoDois
+    : RETENCAO_DEP_DEFICIENTE.value.naoCasadoOuUnico;
+  const total = parcelaIncapacidadeFamiliar(estadoCivil, {
+    dependentesDeficientes,
+    fatorDependenteDeficiente: fator,
+    conjugeDeficiente,
+  });
+  if (total <= 0) return null;
+  return (
+    <div className="rounded-2xl border border-brand/20 bg-brand-light/50 p-3.5 dark:bg-brand/10">
+      <div className="flex items-center gap-2"><Heart size={15} className="flex-none text-brand" /><p className="text-xs font-semibold text-brand-dark dark:text-brand-light">Incapacidade no agregado — menos {fmt(total)} de IRS este mês</p></div>
+      <ul className="mt-2 space-y-1 text-[11px] leading-relaxed text-brand-dark/75 dark:text-brand-light/75">
+        {dependentesDeficientes > 0 && (
+          <li>{dependentesDeficientes} dependente{dependentesDeficientes > 1 ? "s" : ""} × {fmt(porDependente)}{fator > 1 ? ` × fator ${fator}` : ""} acresce à parcela a abater (n.º 5 al. a) e n.º 6).</li>
+        )}
+        {conjugeDeficiente && <li>Cônjuge sem rendimentos das categorias A ou H: mais {fmt(RETENCAO_CONJUGE_DEFICIENTE.value)} (n.º 5 al. b).</li>}
+      </ul>
     </div>
   );
 }
@@ -134,15 +185,18 @@ function EmployerBreakdown({ result, cost }: { result: ReciboMensalResult; cost:
   return (
     <div className="space-y-4">
       <div className="rounded-2xl bg-ink p-5 text-white dark:bg-stone-800">
-        <div className="flex items-center gap-2 text-white/70"><Building size={15} /><span className="text-[11px] font-semibold uppercase tracking-wide">Custo total deste mês</span></div>
+        {/* Chamar-lhe «custo total» prometia mais do que o número contém: fica
+            de fora o seguro obrigatório de acidentes de trabalho (estimado à
+            parte), formação e custos indiretos. O nome passa a dizer o que é. */}
+        <div className="flex items-center gap-2 text-white/70"><Building size={15} /><span className="text-[11px] font-semibold uppercase tracking-wide">Custo salarial direto — regime geral</span></div>
         <p className="mt-2 font-display text-3xl font-semibold tabular-nums">{fmt(cost)}</p>
-        <p className="mt-1 text-[11px] leading-relaxed text-white/60">Inclui tudo o que recebes e a contribuição patronal. Não inclui seguros, formação ou outros custos indiretos.</p>
+        <p className="mt-1 text-[11px] leading-relaxed text-white/60">Tudo o que recebes mais a contribuição patronal do regime geral. NÃO inclui o seguro obrigatório de acidentes de trabalho ({fmt(result.seguroAcidentesEstimado)} estimados), formação nem outros custos indiretos.</p>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <Metric label="Remunerações e abonos" value={fmt(result.brutoTotal)} />
         <Metric label="SS da empresa" value={fmt(employerSS)} hint={`${pct(SS_DEPENDENTE.entidade.value)} sobre ${fmt(result.baseSS)}`} />
         <Metric label="Custo / líquido" value={result.liquido > 0 ? `${(cost / result.liquido).toFixed(2).replace(".", ",")}×` : "—"} />
-        <Metric label="Custo não recebido" value={fmt(Math.max(0, cost - result.liquido))} />
+        <Metric label="Com seguro estimado" value={fmt(result.custoEmpresaComSeguro)} hint="estimativa: o prémio depende da atividade e da seguradora" />
       </div>
     </div>
   );
@@ -174,7 +228,7 @@ function Memory({ result }: { result: ReciboMensalResult }) {
   );
 }
 
-export function ResultadoMotorRecibo({ result, lines, annual, employerCost, hasMonthlyExtras, duodecimos, issues, targetGross, dependentesDeficientes = 0 }: {
+export function ResultadoMotorRecibo({ result, lines, annual, employerCost, hasMonthlyExtras, duodecimos, issues, targetGross, dependentesDeficientes = 0, fatorDependentesDeficientes = 1, conjugeDeficiente = false, estadoCivil = "naoCasado" }: {
   result: ReciboMensalResult;
   lines: readonly PayrollDisplayLine[];
   annual: VencimentoAnualResult;
@@ -184,6 +238,9 @@ export function ResultadoMotorRecibo({ result, lines, annual, employerCost, hasM
   issues: readonly string[];
   targetGross?: number;
   dependentesDeficientes?: number;
+  fatorDependentesDeficientes?: number;
+  conjugeDeficiente?: boolean;
+  estadoCivil?: EstadoCivilRet;
 }) {
   const [tab, setTab] = useState<ResultTab>("month");
   const stay = Math.max(0, result.liquido);
@@ -254,7 +311,20 @@ export function ResultadoMotorRecibo({ result, lines, annual, employerCost, hasM
         </div>
 
         <div className="p-4 sm:p-5">
-          {tab === "month" && <MonthlyBreakdown lines={lines} result={result} />}
+          {tab === "month" && (
+            <MonthlyBreakdown
+              lines={lines}
+              result={result}
+              incapacidade={
+                <IncapacidadeRetencao
+                  estadoCivil={estadoCivil}
+                  dependentesDeficientes={dependentesDeficientes}
+                  fator={fatorDependentesDeficientes}
+                  conjugeDeficiente={conjugeDeficiente}
+                />
+              }
+            />
+          )}
           {tab === "year" && <AnnualBreakdown annual={annual} hasMonthlyExtras={hasMonthlyExtras} duodecimos={duodecimos} dependentesDeficientes={dependentesDeficientes} />}
           {tab === "employer" && <EmployerBreakdown result={result} cost={employerCost} />}
           {tab === "memory" && <Memory result={result} />}

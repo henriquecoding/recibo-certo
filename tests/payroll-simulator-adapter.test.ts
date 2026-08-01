@@ -116,7 +116,31 @@ describe("adaptador do builder de recibos", () => {
   it("respeita o montante manual de um subsídio ao completar os duodécimos", () => {
     const manual = rubric({ id: "real-holiday", type: "holiday_subsidy", amount: 180 });
     const rubrics = includeMonthlyDuodecimos([manual], context.baseSalary, true);
-    expect(rubrics.filter((item) => item.type === "holiday_subsidy")).toEqual([manual]);
+    // O montante do utilizador é preservado; só se lhe junta o direito anual a
+    // que a fração pertence, para a retenção do Art. 99.º-C, n.º 6.
+    expect(rubrics.filter((item) => item.type === "holiday_subsidy")).toEqual([
+      { ...manual, entitlement: 2_000 },
+    ]);
     expect(rubrics.filter((item) => item.type === "christmas_subsidy")).toHaveLength(1);
+  });
+
+  it("retém sobre o direito anual quando o duodécimo do subsídio é manual", () => {
+    const manual = rubric({ id: "real-holiday", type: "holiday_subsidy", amount: 180 });
+    const rubrics = includeMonthlyDuodecimos([manual], context.baseSalary, true);
+    const result = calculateLegacyPayroll(context, rubrics);
+    // Art. 99.º-C, n.º 6: imposto do subsídio COMPLETO × fração paga. Tratar os
+    // 180 € como se fossem o direito inteiro punha a retenção a zero (a tabela
+    // isenta remunerações até 920 €), e o líquido do mês vinha inflacionado.
+    const direito = calcularVencimento({
+      salarioBruto: 2_000,
+      dependentes: 0,
+      estadoCivil: "naoCasado",
+      regiao: "continente",
+      subsidioRefeicaoDia: 0,
+      diasUteis: 0,
+    }).irsRetido;
+    expect(result.result.subsidioFerias).toBe(180);
+    expect(result.result.irsFerias).toBe(Math.round((direito * 180 / 2_000) * 100) / 100);
+    expect(result.result.irsFerias).toBeGreaterThan(0);
   });
 });

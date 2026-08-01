@@ -19,6 +19,23 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.10.0",
+    data: "2026-08-01",
+    titulo: "A incapacidade na família passa a contar no recibo — e outras correções fiscais",
+    itens: [
+      "Se indicavas um dependente com incapacidade ≥ 60%, o simulador mostrava-o no ecrã mas ignorava-o no cálculo. Passa a reduzir o IRS retido todos os meses, como manda o despacho das tabelas de 2026: menos 84,82 € por dependente (42,41 € se fores casado com dois titulares), e podes indicar o fator até 3× ou 6× que tenhas comunicado à empresa.",
+      "Nova opção para cônjuge ou unido de facto com incapacidade ≥ 60% e sem rendimentos, na situação de casado com um único titular: menos 135,71 € de retenção por mês.",
+      "O campo de dependentes deixou de parar nos «4+». Quem tem cinco ou mais via a retenção de quem tem quatro — cerca de 34 € a mais por mês, por dependente esquecido.",
+      "As tabelas da Madeira passaram a ser as retificadas em janeiro. Num salário de 7 000 €, o simulador estava a indicar mais 59,61 € de retenção por mês do que a lei manda.",
+      "A vista anual deixou de somar ao líquido a parte do subsídio de refeição acima do limite como se fosse isenta. Num salário de 1 500 € com 11 €/dia em dinheiro, o ano aparecia 411,95 € mais generoso do que a soma dos meses.",
+      "Ajudas de custo atualizadas para os valores em vigor (65,89 €/dia em Portugal, 148,91 €/dia no estrangeiro) e com o escalão de administração. Cada deslocação passa a ter o seu limite — antes eram somadas e divididas por dias, o que criava um valor médio que nenhuma delas teve.",
+      "As diuturnidades passam a entrar no valor da hora, como manda o Código do Trabalho: valorizam horas extra, trabalho noturno e o desconto por falta.",
+      "O trabalho noturno declarado em horas voltou a aparecer no detalhe, no PDF e no CSV — contava para o total mas desaparecia da lista. E duas linhas do mesmo tipo de hora extra deixaram de aparecer com o valor duplicado.",
+      "Com os subsídios em duodécimos, uma parcela introduzida à mão passa a ser tratada como fração do subsídio completo para efeitos de retenção, em vez de ficar quase sempre sem imposto.",
+      "O «custo total para a empresa» passou a chamar-se «custo salarial direto — regime geral» e diz o que não inclui. O horário semanal é validado em vez de recuar em silêncio para 40 horas.",
+    ],
+  },
+  {
     version: "2.9.2",
     data: "2026-07-30",
     titulo: "Um pagamento nunca mais pode ficar sem acesso em silêncio",

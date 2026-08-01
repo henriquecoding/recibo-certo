@@ -13,6 +13,8 @@ import {
   parseNumericDraft,
   sanitizeNumericDraft,
 } from "@/lib/numeric-input";
+import { limiteAjudasCusto } from "@/lib/fiscal-data";
+import { fmt as eur } from "@/lib/format";
 
 const CATEGORY_LABEL = {
   fixed: "Fixos",
@@ -30,11 +32,12 @@ const BENEFITS_PENDING = [
   ["Stock options", "Exige plano, datas de aquisição/exercício e residência."],
 ] as const;
 
+// As deslocações deixaram de ser linha única: o limite diário isento aplica-se
+// a CADA deslocação, e obrigar a somá-las numa só linha forçava um valor médio
+// por dia que nenhuma deslocação teve.
 const SINGLETON_TYPES = new Set<PayrollRubricType>([
   "holiday_subsidy",
   "christmas_subsidy",
-  "travel_national",
-  "travel_foreign",
 ]);
 
 const inputClass = "w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm font-medium tabular-nums text-stone-800 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100";
@@ -89,9 +92,10 @@ function RubricEditor({ rubric, onChange, onRemove }: {
   onRemove: () => void;
 }) {
   const meta = RUBRIC_META[rubric.type];
+  const estrangeiro = rubric.type === "travel_foreign";
   const incomplete =
     (meta.editor === "amount" && rubric.amount <= 0)
-    || (meta.editor === "hours" && rubric.hours <= 0)
+    || (meta.editor === "hours" && rubric.hours <= 0 && !(rubric.type === "night_work" && rubric.amount > 0))
     || (meta.editor === "travel" && (rubric.days <= 0 || rubric.dailyAmount <= 0))
     || (meta.editor === "award" && (rubric.amount <= 0 || rubric.regularity === "unknown"));
 
@@ -129,6 +133,29 @@ function RubricEditor({ rubric, onChange, onRemove }: {
           <>
             <Field label="Dias" suffix="dias" value={rubric.days} inputMode="numeric" onChange={(days) => onChange({ ...rubric, days: Math.floor(days) })} />
             <Field label="Valor por dia" suffix="€" value={rubric.dailyAmount} onChange={(dailyAmount) => onChange({ ...rubric, dailyAmount })} />
+            {/* O limite isento não é um número só: o CIRS remete para os limites
+                dos servidores do Estado, que têm escalões. Sem esta pergunta,
+                um administrador via como tributado o que a lei isenta. */}
+            <fieldset className="min-w-0 sm:col-span-2">
+              <legend className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Limite legal aplicável</legend>
+              <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-stone-100 p-1 dark:bg-stone-800">
+                {([
+                  ["trabalhador", `Trabalhador · ${eur(limiteAjudasCusto(estrangeiro, "trabalhador"))}/dia`],
+                  ["direcao", `Administração · ${eur(limiteAjudasCusto(estrangeiro, "direcao"))}/dia`],
+                ] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={(rubric.travelTier ?? "trabalhador") === value}
+                    onClick={() => onChange({ ...rubric, travelTier: value })}
+                    className={`flex min-h-[36px] items-center justify-center rounded-lg px-1.5 py-2 text-center text-[11px] font-semibold leading-tight transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${(rubric.travelTier ?? "trabalhador") === value ? "bg-white text-brand shadow-sm dark:bg-stone-700 dark:text-brand-light" : "text-stone-500 hover:text-stone-700 dark:text-stone-400"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[10px] leading-relaxed text-stone-400">Administradores, gerentes e membros de órgãos estatutários seguem o escalão equiparado a membros do Governo (Art. 2.º, n.º 3, al. d) CIRS).</p>
+            </fieldset>
           </>
         )}
         {meta.editor === "award" && (

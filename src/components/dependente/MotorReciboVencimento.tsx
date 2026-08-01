@@ -10,7 +10,9 @@ import {
   employerCost,
   includeMonthlyDuodecimos,
   mealLimit,
+  validateContext,
   validateRubrics,
+  WEEKLY_HOURS_RANGE,
   type PayrollRubricDraft,
   type PayrollSimulatorContext,
 } from "@/lib/payroll-simulator-legacy-adapter";
@@ -18,7 +20,15 @@ import { calcularVencimentoAnual } from "@/lib/fiscal-dependente";
 import { solveNetToGross } from "@/lib/payroll-inverse";
 import type { ReciboExtraido } from "@/lib/recibo-pdf";
 import type { EstadoCivilRet, Regiao } from "@/lib/fiscal-data";
-import { SS_DEPENDENTE, DEDUCAO_DEPENDENTE_DEFICIENCIA } from "@/lib/fiscal-data";
+import {
+  SS_DEPENDENTE,
+  DEDUCAO_DEPENDENTE_DEFICIENCIA,
+  RETENCAO_CONJUGE_DEFICIENTE,
+  RETENCAO_DEP_DEFICIENTE,
+  RETENCAO_UNICO_TITULAR_FRACAO,
+  fatorMaximoDependenteDeficiente,
+} from "@/lib/fiscal-data";
+import { FISCAL_YEAR } from "@/lib/fiscal-year";
 import { fmt, pct } from "@/lib/format";
 import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
 import { useExportacaoPro } from "@/lib/store/exportacao-pro";
@@ -101,6 +111,44 @@ function MoneyField({ id, label, value, onChange, hint }: { id: string; label: s
   );
 }
 
+/**
+ * Contador com limites explícitos. Substitui o segmento «0 1 2 3 4+», em que o
+ * «4+» enviava exatamente 4 ao motor: quem tinha cinco dependentes via a
+ * retenção de quem tem quatro, 34,29 €/mês a mais, sem nenhum aviso.
+ */
+function Stepper({ id, value, min, max, onChange, decreaseLabel, increaseLabel }: {
+  id: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+  decreaseLabel: string;
+  increaseLabel: string;
+}) {
+  const clamp = (next: number) => Math.min(max, Math.max(min, next));
+  const button = "flex h-9 w-9 flex-none items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-lg font-semibold leading-none text-stone-600 transition hover:border-brand hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:opacity-30 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400";
+  return (
+    <div className="flex flex-none items-center gap-2">
+      <button type="button" aria-label={decreaseLabel} onClick={() => onChange(clamp(value - 1))} disabled={value <= min} className={button}>−</button>
+      <input
+        id={id}
+        type="text"
+        inputMode="numeric"
+        value={String(value)}
+        onChange={(event) => {
+          const parsed = parseNumericDraft(sanitizeNumericDraft(event.target.value, { maxDecimals: 0 }), { maxDecimals: 0 });
+          onChange(parsed === null ? min : clamp(Math.floor(parsed)));
+        }}
+        aria-valuemin={min}
+        aria-valuemax={max}
+        aria-valuenow={value}
+        className="h-9 w-12 rounded-lg border border-stone-200 bg-white text-center text-sm font-bold tabular-nums text-stone-800 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+      />
+      <button type="button" aria-label={increaseLabel} onClick={() => onChange(clamp(value + 1))} disabled={value >= max} className={button}>+</button>
+    </div>
+  );
+}
+
 function SectionHeader({ step, icon, title, hint }: { step: string; icon: React.ReactNode; title: string; hint: string }) {
   return (
     <div className="mb-4 flex items-start gap-3">
@@ -136,6 +184,8 @@ interface SavedSnapshotV2 extends Record<string, unknown> {
   month: number;
   dependants: number;
   dependantsWithDisability: number;
+  disabilityFactor: number;
+  spouseDisability: boolean;
   maritalStatus: EstadoCivilRet;
   disability: boolean;
   region: Regiao;
@@ -254,6 +304,8 @@ export function MotorReciboVencimento() {
   const [month, setMonth] = useState(() => new Date().getMonth());
   const [dependants, setDependants] = useState(0);
   const [dependantsWithDisability, setDependantsWithDisability] = useState(0);
+  const [disabilityFactor, setDisabilityFactor] = useState(1);
+  const [spouseDisability, setSpouseDisability] = useState(false);
   const [maritalStatus, setMaritalStatus] = useState<EstadoCivilRet>("naoCasado");
   const [disability, setDisability] = useState(false);
   const [region, setRegion] = useState<Regiao>("continente");
@@ -272,12 +324,22 @@ export function MotorReciboVencimento() {
   const [saveDialog, setSaveDialog] = useState(false);
   const [saveNotice, setSaveNotice] = useState<{ type: "ok" | "error"; text: string } | null>(null);
 
+  // Fator máximo do n.º 6 do Despacho: 3 (não casado / único titular) ou 6
+  // (casado, dois titulares). Ao mudar de situação familiar, um fator acima do
+  // máximo é limitado aqui e no motor — nunca aplicado em silêncio.
+  const maxDisabilityFactor = fatorMaximoDependenteDeficiente(maritalStatus);
+  const effectiveFactor = Math.min(maxDisabilityFactor, Math.max(1, disabilityFactor));
+  const effectiveSpouseDisability = spouseDisability && maritalStatus === "casadoUnico";
+
   const makeContext = (baseSalary: number): PayrollSimulatorContext => ({
     baseSalary,
-    weeklyHours: Math.max(1, parseNumber(weeklyHours) || 40),
+    weeklyHours: parseNumber(weeklyHours),
     dependants,
     maritalStatus,
     disability,
+    dependantsWithDisability: Math.min(dependants, dependantsWithDisability),
+    disabilityFactor: effectiveFactor,
+    spouseDisability: effectiveSpouseDisability,
     region,
     youthIrsBenefitYear: youthIrs ? youthYear : undefined,
     meal: {
@@ -292,12 +354,13 @@ export function MotorReciboVencimento() {
     () => mode === "target" ? solveTargetGross(parseNumber(target), makeContext, rubrics, duodecimos) : undefined,
     // makeContext is intentionally represented by its primitive dependencies.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [mode, target, weeklyHours, dependants, maritalStatus, disability, region, youthIrs, youthYear, mealEnabled, mealDaily, mealDays, mealCard, rubrics, duodecimos],
+    [mode, target, weeklyHours, dependants, dependantsWithDisability, effectiveFactor, effectiveSpouseDisability, maritalStatus, disability, region, youthIrs, youthYear, mealEnabled, mealDaily, mealDays, mealCard, rubrics, duodecimos],
   );
   const targetGross = targetSolution?.gross;
   const baseSalary = mode === "target" ? targetGross ?? 0 : parseNumber(gross);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const context = useMemo(() => makeContext(baseSalary), [
-    baseSalary, weeklyHours, dependants, maritalStatus, disability, region, youthIrs, youthYear, mealEnabled, mealDaily, mealDays, mealCard,
+    baseSalary, weeklyHours, dependants, dependantsWithDisability, effectiveFactor, effectiveSpouseDisability, maritalStatus, disability, region, youthIrs, youthYear, mealEnabled, mealDaily, mealDays, mealCard,
   ]);
   const calculationRubrics = useMemo(
     () => includeMonthlyDuodecimos(rubrics, baseSalary, duodecimos),
@@ -307,6 +370,9 @@ export function MotorReciboVencimento() {
   const annual = useMemo(() => calcularVencimentoAnual({
     salarioBruto: baseSalary,
     dependentes: dependants,
+    dependentesDeficientes: Math.min(dependants, dependantsWithDisability),
+    fatorDependenteDeficiente: effectiveFactor,
+    conjugeDeficiente: effectiveSpouseDisability,
     subsidioRefeicaoDia: mealEnabled ? parseNumber(mealDaily) : 0,
     subsidioRefeicaoCartao: mealCard,
     diasUteis: Math.min(31, Math.floor(parseNumber(mealDays))),
@@ -314,11 +380,12 @@ export function MotorReciboVencimento() {
     deficiencia: disability,
     regiao: region,
     irsJovemAno: youthIrs ? youthYear : undefined,
-  }), [baseSalary, dependants, mealEnabled, mealDaily, mealCard, mealDays, maritalStatus, disability, region, youthIrs, youthYear]);
+  }), [baseSalary, dependants, dependantsWithDisability, effectiveFactor, effectiveSpouseDisability, mealEnabled, mealDaily, mealCard, mealDays, maritalStatus, disability, region, youthIrs, youthYear]);
   const issues = useMemo(() => [
+    ...validateContext(context),
     ...validateRubrics(rubrics),
     ...(targetSolution && !targetSolution.reached ? ["O objetivo líquido excede o intervalo suportado (bruto até 50 000 €)."] : []),
-  ], [rubrics, targetSolution]);
+  ], [context, rubrics, targetSolution]);
   const companyCost = employerCost(calculation.result);
   const { naNuvem, limite, limiteAtingido, guardar } = useCenarios();
   const exportAccess = useExportacaoPro();
@@ -331,6 +398,8 @@ export function MotorReciboVencimento() {
     month,
     dependants,
     dependantsWithDisability,
+    disabilityFactor: effectiveFactor,
+    spouseDisability: effectiveSpouseDisability,
     maritalStatus,
     disability,
     region,
@@ -356,6 +425,8 @@ export function MotorReciboVencimento() {
       if (current.month !== undefined) setMonth(current.month);
       if (current.dependants !== undefined) setDependants(current.dependants);
       if (current.dependantsWithDisability !== undefined) setDependantsWithDisability(current.dependantsWithDisability);
+      if (current.disabilityFactor !== undefined) setDisabilityFactor(current.disabilityFactor);
+      if (current.spouseDisability !== undefined) setSpouseDisability(current.spouseDisability);
       if (current.maritalStatus) setMaritalStatus(current.maritalStatus);
       if (current.disability !== undefined) setDisability(current.disability);
       if (current.region) setRegion(current.region);
@@ -410,9 +481,14 @@ export function MotorReciboVencimento() {
       setMealDaily(String(Math.round(((receipt.subsidioRefeicaoTotal ?? 0) / days) * 100) / 100).replace(".", ","));
     }
     if ((receipt.premio ?? 0) > 0) next.push({ id: `import-award-${now}`, type: "performance_award", amount: receipt.premio ?? 0, hours: 0, days: 0, dailyAmount: 0, regularity: "unknown" });
+    // Os feriados reconhecidos passam a ser uma rubrica própria em vez de
+    // desaparecerem dentro do resíduo: quem confere um recibo precisa de ver a
+    // linha que o recibo tem, não um total agregado sem nome.
+    if ((receipt.feriados ?? 0) > 0) next.push({ id: `import-holiday-work-${now}`, type: "other_taxable", amount: receipt.feriados ?? 0, hours: 0, days: 0, dailyAmount: 0, regularity: "unknown" });
     const base = receipt.salarioBase ?? 0;
     const knownAward = receipt.premio ?? 0;
-    const residual = Math.max(0, Math.round(((receipt.remuneracaoSujeita ?? base) - base - knownAward) * 100) / 100);
+    const knownHolidays = receipt.feriados ?? 0;
+    const residual = Math.max(0, Math.round(((receipt.remuneracaoSujeita ?? base) - base - knownAward - knownHolidays) * 100) / 100);
     if (residual > 0) next.push({ id: `import-other-${now}`, type: "other_taxable", amount: residual, hours: 0, days: 0, dailyAmount: 0, regularity: "unknown" });
     setRubrics(next);
     if (receipt.mes !== undefined) setMonth(receipt.mes);
@@ -452,7 +528,21 @@ export function MotorReciboVencimento() {
 
   function exportCsv() {
     if (!exportAccess.tentarExportar("vencimento")) return;
-    const rows = [
+    // O CSV inclui o detalhe de cada linha E os pressupostos que determinaram a
+    // retenção. Um ficheiro que mostra «1 dependente com incapacidade» ao lado
+    // de totais apurados sem ela é pior do que não o mostrar.
+    const rows: (string | number)[][] = [
+      ["Pressuposto", "Valor"],
+      ["Mês", `${MONTHS[month]} 2026`],
+      ["Situação familiar", FAMILY_OPTIONS.find(([value]) => value === maritalStatus)?.[1] ?? "—"],
+      ["Região fiscal", REGION_OPTIONS.find(([value]) => value === region)?.[1] ?? "Continente"],
+      ["Horas por semana", parseNumber(weeklyHours)],
+      ["Dependentes", dependants],
+      ["Dependentes com incapacidade ≥ 60%", Math.min(dependants, dependantsWithDisability)],
+      ["Fator comunicado à empresa", dependantsWithDisability > 0 ? `${effectiveFactor}x` : "—"],
+      ["Cônjuge com incapacidade ≥ 60%", effectiveSpouseDisability ? "Sim" : "Não"],
+      ["Titular com incapacidade ≥ 60%", disability ? "Sim" : "Não"],
+      [],
       ["Rubrica", "Bruto/Caixa", "Base IRS", "Base SS", "IRS retido", "SS trabalhador", "Impacto líquido"],
       ...calculation.lines.map((line) => [line.label, line.amount, line.irsBase, line.socialSecurityBase, line.irsWithheld, line.employeeSocialSecurity, line.netImpact]),
       ["TOTAL", calculation.result.brutoTotal, calculation.result.brutoTotal - calculation.result.ajudasIsentas - calculation.result.subsidioRefeicaoIsento, calculation.result.baseSS, calculation.result.irsTotal, calculation.result.ssTrabalhador, calculation.result.liquido],
@@ -479,7 +569,10 @@ export function MotorReciboVencimento() {
     printRelatorioVencimento({
       situacao: FAMILY_OPTIONS.find(([value]) => value === maritalStatus)?.[1] ?? "—",
       dependentes: dependants,
-      dependentesDeficientes: dependantsWithDisability,
+      dependentesDeficientes: Math.min(dependants, dependantsWithDisability),
+      fatorDependentesDeficientes: effectiveFactor,
+      conjugeDeficiente: effectiveSpouseDisability,
+      horasSemanais: parseNumber(weeklyHours),
       deficiencia: disability,
       subsidioDia: mealEnabled ? parseNumber(mealDaily) : 0,
       subsidioForma: mealEnabled ? (mealCard ? "Cartão" : "Dinheiro") : "—",
@@ -513,6 +606,8 @@ export function MotorReciboVencimento() {
       ssAnual: annual.ssAnual,
       liquidoAnual: annual.liquidoAnual,
       liquidoMedioMes: annual.liquidoMedioMes,
+      subsidioRefeicaoAnual: annual.subsidioRefeicaoAnual,
+      subsidioRefeicaoTributadoAnual: annual.subsidioRefeicaoTributadoAnual,
       linhas: calculation.lines.map((line) => ({
         rubrica: line.label,
         detalhe: line.detail ? `${line.detail} · ${line.source}` : line.source,
@@ -527,9 +622,13 @@ export function MotorReciboVencimento() {
   }
 
   const mealExceeds = mealEnabled && parseNumber(mealDaily) > mealLimit(mealCard);
+  const weeklyHoursInvalid = validateContext(context).length > 0;
   const auditInput = {
     salarioBruto: baseSalary,
     dependentes: dependants,
+    dependentesDeficientes: Math.min(dependants, dependantsWithDisability),
+    fatorDependenteDeficiente: effectiveFactor,
+    conjugeDeficiente: effectiveSpouseDisability,
     subsidioRefeicaoDia: mealEnabled ? parseNumber(mealDaily) : 0,
     subsidioRefeicaoCartao: mealCard,
     diasUteis: parseNumber(mealDays),
@@ -560,9 +659,20 @@ export function MotorReciboVencimento() {
 
       <ImportarReciboPDF onAplicar={applyImportedReceipt} />
       {imported && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-brand/20 bg-brand-light/50 px-4 py-3 text-xs text-brand-dark dark:bg-brand/10 dark:text-brand-light">
-          <span className="inline-flex items-center gap-2"><Check size={13} /> Recibo importado{imported.empresaNome ? ` · ${imported.empresaNome}` : ""}{imported.mes !== undefined ? ` · ${MONTHS[imported.mes]}` : ""}</span>
-          <span className="text-[10px] opacity-70">Confirma as rubricas assinaladas antes de concluir.</span>
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-brand/20 bg-brand-light/50 px-4 py-3 text-xs text-brand-dark dark:bg-brand/10 dark:text-brand-light">
+            <span className="inline-flex items-center gap-2"><Check size={13} /> Recibo importado{imported.empresaNome ? ` · ${imported.empresaNome}` : ""}{imported.mes !== undefined ? ` · ${MONTHS[imported.mes]}` : ""}</span>
+            <span className="text-[10px] opacity-70">Confirma as rubricas assinaladas antes de concluir.</span>
+          </div>
+          {imported.ano !== undefined && imported.ano !== FISCAL_YEAR && (
+            /* As tabelas deste simulador são as de 2026. Recalcular um recibo de
+               outro ano com elas dá um resultado errado — e a diferença apareceria
+               como se fosse um erro da entidade empregadora. */
+            <div className="flex items-start gap-2 rounded-2xl border border-alert-border bg-alert-bg p-3.5 text-[11px] leading-relaxed text-alert-text">
+              <Warning size={13} className="mt-0.5 flex-none" />
+              <span>O recibo importado é de <strong>{imported.ano}</strong>, mas este simulador aplica as tabelas de retenção de {FISCAL_YEAR}. Os valores esperados e a auditoria não são comparáveis com um recibo de outro ano.</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -575,35 +685,59 @@ export function MotorReciboVencimento() {
             <SectionHeader step="Passo 01" icon={<LayoutGrid size={17} />} title="Contexto do recibo" hint="Só pedimos dados que mudam a retenção ou o cálculo das rubricas." />
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block"><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Mês</span><span className="relative block"><Calendar size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" /><select value={month} onChange={(event) => setMonth(Number(event.target.value))} className={`${inputClass} pl-9`}>{MONTHS.map((label, index) => <option key={label} value={index}>{label} 2026</option>)}</select></span></label>
-              <label className="block"><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Horas por semana</span><span className="relative block"><input type="text" inputMode="decimal" value={weeklyHours} onChange={(event) => setWeeklyHours(sanitizeNumericDraft(event.target.value))} className={`${inputClass} pr-12`} /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">horas</span></span></label>
+              <label className="block"><span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Mês <InfoTip label="Para que serve o mês">Identifica o período do recibo, do cenário guardado e das exportações. As tabelas de retenção de 2026 são iguais em todos os meses do ano, por isso mudar o mês não altera o IRS nem a Segurança Social.</InfoTip></span><span className="relative block"><Calendar size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" /><select value={month} onChange={(event) => setMonth(Number(event.target.value))} className={`${inputClass} pl-9`}>{MONTHS.map((label, index) => <option key={label} value={index}>{label} 2026</option>)}</select></span></label>
+              <label className="block"><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Horas por semana</span><span className="relative block"><input type="text" inputMode="decimal" value={weeklyHours} onChange={(event) => setWeeklyHours(sanitizeNumericDraft(event.target.value))} aria-invalid={weeklyHoursInvalid} aria-describedby={weeklyHoursInvalid ? "weekly-hours-error" : undefined} className={`${inputClass} pr-12 ${weeklyHoursInvalid ? "border-alert-border focus:border-alert-border focus:ring-alert-border/20" : ""}`} /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">horas</span></span>{weeklyHoursInvalid && <span id="weekly-hours-error" className="mt-1.5 block text-[11px] leading-relaxed text-alert-text">Indica entre {WEEKLY_HOURS_RANGE.min} e {WEEKLY_HOURS_RANGE.max} horas — é a base do valor da hora extra e do desconto por falta.</span>}</label>
             </div>
 
             <div className="mt-4">
-              <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Situação familiar</span>
+              <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Situação familiar <InfoTip label="Despacho 233-A/2026, n.ºs 8 e 9">As tabelas de «casado» aplicam-se também à união de facto enquadrável no Art. 14.º do CIRS. A tabela de «único titular» só é aplicável se o outro cônjuge ou unido de facto não auferir rendimentos englobáveis ou se um dos dois tiver pelo menos {pct(RETENCAO_UNICO_TITULAR_FRACAO.value)} do rendimento englobado do agregado.</InfoTip></span>
               <div className="grid gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800 sm:grid-cols-3">{FAMILY_OPTIONS.map(([value, label]) => <button key={value} type="button" aria-pressed={maritalStatus === value} onClick={() => setMaritalStatus(value)} className={segmentClass(maritalStatus === value)}>{label}</button>)}</div>
+              {maritalStatus === "casadoUnico" && (
+                <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-stone-400"><Warning size={12} className="mt-0.5 flex-none" /> Confirma a condição do n.º 9: só é «único titular» se o outro titular não tiver rendimentos englobáveis, ou se um dos dois concentrar {pct(RETENCAO_UNICO_TITULAR_FRACAO.value)} do rendimento do agregado. Caso contrário, a tabela correta é a de dois titulares.</p>
+              )}
             </div>
 
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Dependentes</span><div className="grid grid-cols-5 gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800">{[0, 1, 2, 3, 4].map((value) => <button key={value} type="button" aria-pressed={dependants === value} onClick={() => { setDependants(value); if (value < dependantsWithDisability) setDependantsWithDisability(value); }} className={segmentClass(dependants === value)}>{value === 4 ? "4+" : value}</button>)}</div></div>
+              <div>
+                <label htmlFor="dependants-count" className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Dependentes <InfoTip label="Art. 13.º CIRS">Contam os filhos, adotados e enteados menores; os maiores até aos 25 anos que não aufiram anualmente mais do que a retribuição mínima mensal garantida; e os inaptos para o trabalho e para angariar meios de subsistência. Em guarda partilhada, cada dependente conta para o agregado conforme a residência acordada e comunicada à AT.</InfoTip></label>
+                <Stepper id="dependants-count" value={dependants} min={0} max={20} decreaseLabel="Menos dependentes" increaseLabel="Mais dependentes" onChange={(value) => { setDependants(value); if (value < dependantsWithDisability) setDependantsWithDisability(value); }} />
+              </div>
               <div><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Região fiscal</span><div className="grid grid-cols-3 gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800">{REGION_OPTIONS.map(([value, label]) => <button key={value} type="button" aria-pressed={region === value} onClick={() => setRegion(value)} className={segmentClass(region === value)}>{label}</button>)}</div></div>
             </div>
 
             {dependants > 0 && (
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-3 dark:border-stone-700 dark:bg-stone-900">
-                <div className="flex min-w-0 items-center gap-2">
-                  <Heart size={15} className="flex-none text-brand" />
-                  <span className="text-xs font-medium text-stone-600 dark:text-stone-300">Com incapacidade ≥ 60%</span>
-                  <InfoTip label="Art. 87.º CIRS">
-                    Cada dependente com grau de incapacidade permanente ≥ 60% (atestado multiúso) dá direito a mais {fmt(DEDUCAO_DEPENDENTE_DEFICIENCIA.value)} de dedução à coleta de IRS no acerto anual (2,5 × IAS). Acumula com a dedução normal por dependente e não altera a retenção mensal.
-                  </InfoTip>
+              <div className="mt-3 rounded-2xl border border-stone-200 bg-white px-4 py-3 dark:border-stone-700 dark:bg-stone-900">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Heart size={15} className="flex-none text-brand" />
+                    <label htmlFor="dependants-disability" className="text-xs font-medium text-stone-600 dark:text-stone-300">Com incapacidade ≥ 60%</label>
+                    <InfoTip label="Despacho 233-A/2026, n.º 5 al. a)">
+                      Cada dependente com grau de incapacidade permanente ≥ 60% (atestado multiúso) acresce {fmt(maritalStatus === "casadoDois" ? RETENCAO_DEP_DEFICIENTE.value.casadoDois : RETENCAO_DEP_DEFICIENTE.value.naoCasadoOuUnico)} à parcela a abater da retenção — ou seja, reduz o IRS retido TODOS OS MESES. No acerto anual acresce ainda {fmt(DEDUCAO_DEPENDENTE_DEFICIENCIA.value)} de dedução à coleta por dependente (2,5 × IAS, Art. 87.º CIRS).
+                    </InfoTip>
+                  </div>
+                  <Stepper id="dependants-disability" value={dependantsWithDisability} min={0} max={dependants} decreaseLabel="Menos dependentes com incapacidade" increaseLabel="Mais dependentes com incapacidade" onChange={setDependantsWithDisability} />
                 </div>
-                <div className="flex flex-none items-center gap-2">
-                  <button type="button" aria-label="Menos dependentes com incapacidade" onClick={() => setDependantsWithDisability(Math.max(0, dependantsWithDisability - 1))} disabled={dependantsWithDisability <= 0} className="flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-lg font-semibold leading-none text-stone-600 transition hover:border-brand hover:text-brand disabled:opacity-30 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400">−</button>
-                  <span className="w-6 text-center text-sm font-bold tabular-nums text-stone-800 dark:text-stone-100">{dependantsWithDisability}</span>
-                  <button type="button" aria-label="Mais dependentes com incapacidade" onClick={() => setDependantsWithDisability(Math.min(dependants, dependantsWithDisability + 1))} disabled={dependantsWithDisability >= dependants} className="flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-lg font-semibold leading-none text-stone-600 transition hover:border-brand hover:text-brand disabled:opacity-30 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400">+</button>
-                </div>
+                {dependantsWithDisability > 0 && (
+                  <div className="mt-3 border-t border-stone-100 pt-3 dark:border-stone-800">
+                    <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Fator comunicado à empresa <InfoTip label="Despacho 233-A/2026, n.ºs 6 e 7">A parcela por dependente com incapacidade pode ser multiplicada até {maxDisabilityFactor}× nesta situação familiar. O fator não é automático: tem de ser comunicado à entidade que paga o rendimento antes do pagamento. Deixa em 1× se não o comunicaste.</InfoTip></span>
+                    <div className={`grid gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800 ${maxDisabilityFactor > 3 ? "grid-cols-6" : "grid-cols-3"}`}>
+                      {Array.from({ length: maxDisabilityFactor }, (_, index) => index + 1).map((value) => (
+                        <button key={value} type="button" aria-pressed={effectiveFactor === value} onClick={() => setDisabilityFactor(value)} className={segmentClass(effectiveFactor === value)}>{value}×</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
+            )}
+
+            {maritalStatus === "casadoUnico" && (
+              <label className={`mt-3 flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition ${spouseDisability ? "border-brand/30 bg-brand-light/40 dark:bg-brand/10" : "border-stone-200 dark:border-stone-700"}`}>
+                <input type="checkbox" checked={spouseDisability} onChange={(event) => setSpouseDisability(event.target.checked)} className="mt-0.5 h-4 w-4 flex-none accent-brand" />
+                <span>
+                  <span className="block text-xs font-semibold text-stone-700 dark:text-stone-200">Cônjuge com incapacidade ≥ 60% e sem rendimentos</span>
+                  <span className="mt-0.5 block text-[10px] leading-relaxed text-stone-400">Acresce {fmt(RETENCAO_CONJUGE_DEFICIENTE.value)} à parcela a abater todos os meses (Despacho 233-A/2026, n.º 5 al. b). Só se aplica se o cônjuge ou unido de facto não auferir rendimentos das categorias A ou H.</span>
+                </span>
+              </label>
             )}
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -655,7 +789,10 @@ export function MotorReciboVencimento() {
             duodecimos={duodecimos}
             issues={issues}
             targetGross={mode === "target" ? targetGross : undefined}
-            dependentesDeficientes={dependantsWithDisability}
+            dependentesDeficientes={Math.min(dependants, dependantsWithDisability)}
+            fatorDependentesDeficientes={effectiveFactor}
+            conjugeDeficiente={effectiveSpouseDisability}
+            estadoCivil={maritalStatus}
           />
         </div>
       </div>

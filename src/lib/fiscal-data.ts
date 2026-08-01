@@ -26,7 +26,7 @@ export { FISCAL_YEAR } from "./fiscal-year";
  * descreve mal o que aconteceu. `assertFiscalDataIntegrity()` faz o build falhar
  * se algum parâmetro for mais recente do que esta data.
  */
-export const DATA_LAST_REVIEW = "2026-07-29" as const;
+export const DATA_LAST_REVIEW = "2026-08-01" as const;
 
 // ─── Registo de fontes (evita repetir URLs longos) ─────────────────────
 export interface Source {
@@ -211,16 +211,16 @@ export const SOURCES = {
     url: "https://www.doutorfinancas.pt/carreira-e-rendimentos/rendimentos/retencao-na-fonte-sobre-trabalho-suplementar-alteracoes-e-beneficios-fiscais/",
   },
   ajudasCusto2026: {
-    label: "Ajudas de custo 2026 — valores nacionais e internacionais (limites de isenção IRS/SS) · CRN Contabilidade",
-    url: "https://crncontabilidade.pt/blog/tabela-de-ajudas-de-custo-em-2026-valores-nacionais-e-internacionais-actualizados/",
+    label: "Ajudas de custo — tabela oficial em vigor (limites legais dos servidores do Estado, referência do Art. 2.º, n.º 3, al. d) CIRS) · DGAEP",
+    url: "https://www.dgaep.gov.pt/stap/infoPageTabelas.cfm?KeepThis=true&objid=C63BAF54-E6CE-49C1-BBF1-C5AC0AF36C68",
   },
   codContributivo: {
     label: "Código dos Regimes Contributivos (Lei 110/2009) — base de incidência contributiva (prémios regulares) · Diário da República",
     url: "https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2009-34514575",
   },
   madeiraRetencao2026: {
-    label: "Despacho n.º 19/2026 (SRF) — Tabelas de retenção na fonte de IRS 2026, Região Autónoma da Madeira · JORAM",
-    url: "https://joram.madeira.gov.pt/joram/2serie/Ano%20de%202026/IISerie-013-2026-01-20Supl4.pdf",
+    label: "Declaração de Retificação n.º 10/2026 — republicação integral das tabelas de retenção na fonte de IRS 2026 da Região Autónoma da Madeira (retifica o Despacho n.º 19/2026) · JORAM",
+    url: "https://joram.madeira.gov.pt/joram/2serie/Ano%20de%202026/IISerie-016-2026-01-23Supl3.pdf",
   },
   acoresRetencao2026: {
     label: "Despacho n.º 1179/2026 — Tabelas de retenção na fonte de IRS 2026, Região Autónoma dos Açores · Diário da República",
@@ -2300,6 +2300,10 @@ export const IRS_JOVEM_TETO_CALC = IRS_JOVEM.tetoIAS.value * IAS_VALUE; // 55 ×
 // ═══════════════════════════════════════════════════════════════════════
 
 const DEP_TODAY = "2026-06-17";
+// Data de verificação da revisão do simulador de recibos de vencimento: parcelas
+// de incapacidade do n.º 5/n.º 6 do Despacho 233-A/2026, republicação das tabelas
+// da Madeira e tabela de ajudas de custo da DGAEP.
+const REV_RETENCAO_INCAPACIDADE = "2026-08-01";
 
 /** Taxas de contribuição para a Segurança Social — trabalho por conta de outrem. */
 export const SS_DEPENDENTE = {
@@ -2378,21 +2382,59 @@ export const RETENCAO_SUPLEMENTAR_FATOR = sv(
   DEP_TODAY
 );
 
-/** Ajudas de custo — limites diários isentos de IRS e Segurança Social (2026, «restantes trabalhadores»). */
+/**
+ * Ajudas de custo — limites diários isentos de IRS e Segurança Social.
+ *
+ * O Art. 2.º, n.º 3, al. d) do CIRS não fixa valores: remete para «os limites
+ * legais estabelecidos para os servidores do Estado», publicados pela DGAEP. Daí
+ * haver DOIS patamares no setor privado, e não um só:
+ *  · trabalhadores em geral → escalão dos servidores com nível remuneratório
+ *    superior a 18 (65,89 € / 148,91 €);
+ *  · administradores, gerentes e membros de órgãos estatutários → escalão
+ *    equiparado a membros do Governo (72,65 € / 167,07 €).
+ *
+ * Os valores anteriores (62,75 € / 89,35 €) estavam desatualizados: o nacional
+ * era o de 2024, antes do aumento de 5% do Decreto-Lei n.º 1/2025, e o do
+ * estrangeiro nem sequer correspondia ao patamar certo — tributava indevidamente
+ * deslocações inteiramente cobertas pela isenção.
+ */
 export const AJUDAS_CUSTO = {
   nacionalDia: sv(
-    62.75,
-    "Limite diário isento — deslocação em território nacional (valor da Função Pública)",
+    65.89,
+    "Art. 2.º, n.º 3, al. d) CIRS — limite diário isento em território nacional (servidor do Estado com nível remuneratório superior a 18)",
     "ajudasCusto2026",
-    DEP_TODAY
+    REV_RETENCAO_INCAPACIDADE
   ),
   estrangeiroDia: sv(
-    89.35,
-    "Limite diário isento — deslocação ao estrangeiro (valor da Função Pública)",
+    148.91,
+    "Art. 2.º, n.º 3, al. d) CIRS — limite diário isento em deslocação ao estrangeiro (servidor do Estado com nível remuneratório superior a 18)",
     "ajudasCusto2026",
-    DEP_TODAY
+    REV_RETENCAO_INCAPACIDADE
+  ),
+  nacionalDiaDirecao: sv(
+    72.65,
+    "Art. 2.º, n.º 3, al. d) CIRS — limite diário isento em território nacional para administradores/gerentes (escalão de membros do Governo)",
+    "ajudasCusto2026",
+    REV_RETENCAO_INCAPACIDADE
+  ),
+  estrangeiroDiaDirecao: sv(
+    167.07,
+    "Art. 2.º, n.º 3, al. d) CIRS — limite diário isento em deslocação ao estrangeiro para administradores/gerentes (escalão de membros do Governo)",
+    "ajudasCusto2026",
+    REV_RETENCAO_INCAPACIDADE
   ),
 };
+
+/** Escalão de ajudas de custo aplicável a quem se desloca. */
+export type EscalaoAjudasCusto = "trabalhador" | "direcao";
+
+/** Limite diário isento de ajudas de custo, por destino e escalão. */
+export function limiteAjudasCusto(estrangeiro: boolean, escalao: EscalaoAjudasCusto = "trabalhador"): number {
+  if (estrangeiro) {
+    return escalao === "direcao" ? AJUDAS_CUSTO.estrangeiroDiaDirecao.value : AJUDAS_CUSTO.estrangeiroDia.value;
+  }
+  return escalao === "direcao" ? AJUDAS_CUSTO.nacionalDiaDirecao.value : AJUDAS_CUSTO.nacionalDia.value;
+}
 
 /**
  * Dedução específica do trabalho dependente (Categoria A): 8,54 × IAS — ou, se
@@ -2459,6 +2501,101 @@ export const RETENCAO_DEP_REDUCAO_3MAIS = sv(
   "despachoRetencao2026",
   DEP_TODAY
 );
+
+/**
+ * Parcela ACRESCIDA à parcela a abater por cada dependente com grau de
+ * incapacidade permanente ≥ 60% (Despacho 233-A/2026, n.º 5, al. a). Os mesmos
+ * valores constam do Despacho n.º 19/2026 (Madeira) e do n.º 1179/2026 (Açores).
+ *
+ * O n.º 6 permite multiplicar esta parcela até três vezes (não casado ou casado
+ * único titular) ou até seis vezes (casado, dois titulares); o n.º 7 exige que o
+ * sujeito passivo COMUNIQUE o fator pretendido à entidade devedora antes do
+ * pagamento — por isso o fator é uma escolha do utilizador, com 1 por omissão, e
+ * não algo que se possa presumir.
+ */
+export const RETENCAO_DEP_DEFICIENTE = sv(
+  {
+    naoCasadoOuUnico: 84.82,
+    casadoDois: 42.41,
+    fatorMaxNaoCasadoOuUnico: 3,
+    fatorMaxCasadoDois: 6,
+  },
+  "Despacho n.º 233-A/2026, n.ºs 5 al. a), 6 e 7 — parcela por dependente com incapacidade ≥ 60% e fator de multiplicação comunicável",
+  "despachoRetencao2026",
+  REV_RETENCAO_INCAPACIDADE
+);
+
+/**
+ * Parcela acrescida à parcela a abater quando, na situação «casado, único
+ * titular», o cônjuge ou unido de facto não aufere rendimentos das categorias A
+ * ou H e tem grau de incapacidade permanente ≥ 60% (Despacho 233-A/2026, n.º 5,
+ * al. b). Não existe equivalente nas restantes situações familiares.
+ */
+export const RETENCAO_CONJUGE_DEFICIENTE = sv(
+  135.71,
+  "Despacho n.º 233-A/2026, n.º 5, al. b) — cônjuge/unido de facto sem rendimentos das cat. A ou H e com incapacidade ≥ 60%",
+  "despachoRetencao2026",
+  REV_RETENCAO_INCAPACIDADE
+);
+
+/**
+ * Fração do rendimento englobado do agregado a partir da qual as tabelas
+ * «casado, único titular» são aplicáveis havendo dois titulares com rendimentos
+ * (Despacho 233-A/2026, n.º 9). Abaixo dela, a tabela correta é a de dois
+ * titulares — a fórmula pode estar certa e ser a tabela errada.
+ */
+export const RETENCAO_UNICO_TITULAR_FRACAO = sv(
+  0.95,
+  "Despacho n.º 233-A/2026, n.º 9 — tabelas de «casado, único titular» só quando o outro titular não aufere rendimentos englobáveis ou um deles tem ≥ 95% do rendimento englobado",
+  "despachoRetencao2026",
+  REV_RETENCAO_INCAPACIDADE
+);
+
+/** Incapacidade do agregado que acresce à parcela a abater da retenção mensal. */
+export interface IncapacidadeFamiliarRet {
+  /** Dependentes com grau de incapacidade permanente ≥ 60%. */
+  dependentesDeficientes?: number;
+  /** Fator de multiplicação comunicado à entidade devedora (n.ºs 6 e 7). */
+  fatorDependenteDeficiente?: number;
+  /** Cônjuge/unido de facto sem rendimentos cat. A/H e com incapacidade ≥ 60%. */
+  conjugeDeficiente?: boolean;
+}
+
+/** Fator máximo de multiplicação da parcela por dependente com incapacidade. */
+export function fatorMaximoDependenteDeficiente(estadoCivil: EstadoCivilRet): number {
+  return estadoCivil === "casadoDois"
+    ? RETENCAO_DEP_DEFICIENTE.value.fatorMaxCasadoDois
+    : RETENCAO_DEP_DEFICIENTE.value.fatorMaxNaoCasadoOuUnico;
+}
+
+/**
+ * Valor total a ACRESCER à parcela a abater por incapacidade de dependentes e do
+ * cônjuge (Despacho 233-A/2026, n.º 5, al. a) e b), com o fator do n.º 6).
+ *
+ * Devolve zero quando não há incapacidade declarada, pelo que pode ser somado
+ * incondicionalmente à parcela a abater de qualquer tabela.
+ */
+export function parcelaIncapacidadeFamiliar(
+  estadoCivil: EstadoCivilRet,
+  incapacidade: IncapacidadeFamiliarRet = {}
+): number {
+  const deps = Math.max(0, Math.floor(incapacidade.dependentesDeficientes ?? 0));
+  const porDependente =
+    estadoCivil === "casadoDois"
+      ? RETENCAO_DEP_DEFICIENTE.value.casadoDois
+      : RETENCAO_DEP_DEFICIENTE.value.naoCasadoOuUnico;
+  const fator = Math.min(
+    fatorMaximoDependenteDeficiente(estadoCivil),
+    Math.max(1, Math.floor(incapacidade.fatorDependenteDeficiente ?? 1))
+  );
+  // Al. b) é exclusiva de «casado, único titular»: aplicá-la noutra situação
+  // familiar seria inventar uma dedução que a tabela dessa pessoa não prevê.
+  const conjuge =
+    incapacidade.conjugeDeficiente && estadoCivil === "casadoUnico"
+      ? RETENCAO_CONJUGE_DEFICIENTE.value
+      : 0;
+  return Math.round((deps * porDependente * fator + conjuge) * 100) / 100;
+}
 
 /**
  * Escalão de uma tabela de retenção na fonte. A `parcelaAbater`:
@@ -2601,8 +2738,15 @@ export const RETENCAO_DEP_TABELAS = sv<Record<"i" | "ii" | "iii" | "iv" | "v" | 
   "Transcritas integralmente do Despacho oficial publicado em Diário da República."
 );
 
-// ── Região Autónoma da Madeira — Despacho n.º 19/2026 (JORAM, 20-01-2026) ──
+// ── Região Autónoma da Madeira — Despacho n.º 19/2026 (JORAM, 20-01-2026),
+//    RETIFICADO pela Declaração de Retificação n.º 10/2026 (JORAM, 23-01-2026) ──
 // Tabela II = Tabela I com parcela adicional por dependente de 34,29 €.
+//
+// A primeira publicação saiu com inexatidões nas Tabelas I e II e foi objeto de
+// republicação integral três dias depois. As cinco últimas linhas abaixo são as
+// da versão RETIFICADA: a versão inicial dava 23,70%/283,91 e 30,28%/521,72 nos
+// escalões de 3 614 € e 6 585 €, e abatimentos mais baixos daí para cima —
+// numa remuneração de 7 000 € isso retinha 59,61 €/mês a mais do que a lei manda.
 const ESC_MADEIRA_I: EscalaoRetencao[] = [
   { ate: 980, taxa: 0, parcelaAbater: 0 },
   { ate: 1028, taxa: 0.0872, parcelaAbater: { coef: 2.6, base: 1356.92 } },
@@ -2611,11 +2755,11 @@ const ESC_MADEIRA_I: EscalaoRetencao[] = [
   { ate: 1623, taxa: 0.1763, parcelaAbater: 164.31 },
   { ate: 2332, taxa: 0.223, parcelaAbater: 240.11 },
   { ate: 3203, taxa: 0.2242, parcelaAbater: 242.91 },
-  { ate: 3614, taxa: 0.237, parcelaAbater: 283.91 },
-  { ate: 6585, taxa: 0.3028, parcelaAbater: 521.72 },
-  { ate: 6954, taxa: 0.2802, parcelaAbater: 372.9 },
-  { ate: 21411, taxa: 0.2924, parcelaAbater: 457.74 },
-  { ate: Infinity, taxa: 0.3278, parcelaAbater: 1215.69 },
+  { ate: 3614, taxa: 0.2727, parcelaAbater: 398.26 },
+  { ate: 6585, taxa: 0.2778, parcelaAbater: 416.7 },
+  { ate: 6954, taxa: 0.2802, parcelaAbater: 432.51 },
+  { ate: 21411, taxa: 0.2924, parcelaAbater: 517.35 },
+  { ate: Infinity, taxa: 0.3278, parcelaAbater: 1275.3 },
 ];
 export const RETENCAO_DEP_MADEIRA = sv<Record<"i" | "ii" | "iii" | "iv" | "v" | "vi" | "vii", TabelaRetencaoDep>>(
   {
@@ -2689,10 +2833,10 @@ export const RETENCAO_DEP_MADEIRA = sv<Record<"i" | "ii" | "iii" | "iv" | "v" | 
       ],
     },
   },
-  "Despacho n.º 19/2026 (SRF) — Tabelas I-VII, Madeira (trabalho dependente)",
+  "Despacho n.º 19/2026 (SRF), retificado pela Declaração de Retificação n.º 10/2026 — Tabelas I-VII, Madeira (trabalho dependente)",
   "madeiraRetencao2026",
-  DEP_TODAY,
-  "Transcritas do Jornal Oficial da RAM, II Série n.º 13, 4.º Suplemento, 20-01-2026."
+  REV_RETENCAO_INCAPACIDADE,
+  "Transcritas da republicação integral no Jornal Oficial da RAM, II Série n.º 16, 3.º Suplemento, 23-01-2026. As Tabelas III a VII não foram alteradas pela retificação."
 );
 
 // ── Região Autónoma dos Açores — Despacho n.º 1179/2026 (DR, 03-02-2026) ──
@@ -3688,8 +3832,43 @@ export function assertFiscalDataIntegrity(): void {
   if (!(AJUDAS_CUSTO.nacionalDia.value > 0 && AJUDAS_CUSTO.estrangeiroDia.value > AJUDAS_CUSTO.nacionalDia.value)) {
     erros.push("Ajudas de custo: estrangeiro deve exceder nacional e ambos positivos.");
   }
+  if (
+    !(AJUDAS_CUSTO.nacionalDiaDirecao.value > AJUDAS_CUSTO.nacionalDia.value
+      && AJUDAS_CUSTO.estrangeiroDiaDirecao.value > AJUDAS_CUSTO.estrangeiroDia.value)
+  ) {
+    erros.push("Ajudas de custo: o escalão de direção deve exceder o do trabalhador em ambos os destinos.");
+  }
   if (!(RETENCAO_DEP_ISENCAO.value > 0)) erros.push("Limiar de isenção de retenção (cat. A) não positivo.");
   if (!(RETENCAO_DEP_POR_DEPENDENTE.value > 0)) erros.push("Parcela por dependente (cat. A) não positiva.");
+  // Incapacidade do agregado (Despacho 233-A/2026, n.ºs 5 e 6): a parcela de
+  // «casado, dois titulares» é metade da das restantes situações porque cada
+  // titular retém sobre a sua parte — se um dia as duas ficarem iguais, é sinal
+  // de transcrição errada, não de alteração legislativa.
+  const incapDep = RETENCAO_DEP_DEFICIENTE.value;
+  if (!(incapDep.naoCasadoOuUnico > 0 && incapDep.casadoDois > 0)) {
+    erros.push("Parcela por dependente com incapacidade (cat. A) não positiva.");
+  }
+  if (Math.abs(incapDep.naoCasadoOuUnico - 2 * incapDep.casadoDois) > EPS) {
+    erros.push("Parcela por dependente com incapacidade: a de casado dois titulares deve ser metade da de não casado/único titular.");
+  }
+  if (!(Number.isInteger(incapDep.fatorMaxNaoCasadoOuUnico) && incapDep.fatorMaxNaoCasadoOuUnico >= 1)) {
+    erros.push("Fator máximo por dependente com incapacidade (não casado/único titular) inválido.");
+  }
+  if (!(Number.isInteger(incapDep.fatorMaxCasadoDois) && incapDep.fatorMaxCasadoDois >= incapDep.fatorMaxNaoCasadoOuUnico)) {
+    erros.push("Fator máximo por dependente com incapacidade (casado dois titulares) inválido.");
+  }
+  if (!(RETENCAO_CONJUGE_DEFICIENTE.value > 0)) {
+    erros.push("Parcela por cônjuge com incapacidade (cat. A) não positiva.");
+  }
+  if (!(RETENCAO_UNICO_TITULAR_FRACAO.value > 0.5 && RETENCAO_UNICO_TITULAR_FRACAO.value <= 1)) {
+    erros.push("Fração do rendimento englobado para «casado, único titular» fora de (0,5; 1].");
+  }
+  // A al. b) é exclusiva de «casado, único titular»: a asserção prende a regra
+  // ao código, para que nenhuma refatoração a espalhe pelas outras situações.
+  if (parcelaIncapacidadeFamiliar("casadoDois", { conjugeDeficiente: true }) !== 0
+    || parcelaIncapacidadeFamiliar("naoCasado", { conjugeDeficiente: true }) !== 0) {
+    erros.push("Parcela do cônjuge com incapacidade aplicada fora de «casado, único titular».");
+  }
   if (Math.abs(DEDUCAO_ESPECIFICA_DEPENDENTE.value - Math.round(8.54 * IAS.value * 100) / 100) > EPS) {
     erros.push("Dedução específica (cat. A) deve ser 8,54 × IAS.");
   }
@@ -3897,8 +4076,14 @@ export function assertFiscalDataIntegrity(): void {
     HORARIO_SEMANAL_COMPLETO,
     TRABALHO_SUPLEMENTAR.acrescimos,
     RETENCAO_SUPLEMENTAR_FATOR,
+    RETENCAO_DEP_REDUCAO_3MAIS,
+    RETENCAO_DEP_DEFICIENTE,
+    RETENCAO_CONJUGE_DEFICIENTE,
+    RETENCAO_UNICO_TITULAR_FRACAO,
     AJUDAS_CUSTO.nacionalDia,
     AJUDAS_CUSTO.estrangeiroDia,
+    AJUDAS_CUSTO.nacionalDiaDirecao,
+    AJUDAS_CUSTO.estrangeiroDiaDirecao,
     DEDUCAO_ESPECIFICA_DEPENDENTE,
     ...Object.values(RETENCAO),
     DISPENSA_RETENCAO_LIMITE,
