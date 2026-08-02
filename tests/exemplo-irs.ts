@@ -15,13 +15,13 @@ export const JSON_EXEMPLO_IRS = "src/documentos/irs-exemplo.json";
 
 export const ENTRADA_EXEMPLO: DeclaracaoInput = {
   conjunta: false,
-  salarios: { bruto: 46_000, retencoes: 9_400, contribuicoesSS: 5_060 },
+  salarios: { bruto: 88_000, retencoes: 24_600, contribuicoesSS: 9_680 },
   independente: {
-    brutoAnual: 18_000,
+    brutoAnual: 26_000,
     tipo: "art151",
     anoAtividade: 4,
     regimeContabilidade: "simplificado",
-    retencoesPagas: 4_140,
+    retencoesPagas: 5_980,
   },
   capitais: { dividendos: 3_200, juros: 450, retencoes: 1_022 },
   prediais: { rendaAnual: 9_600, despesas: 1_150, habitacao: true, duracao: "5a10" },

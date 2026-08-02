@@ -57,7 +57,12 @@ function escaloes(r: DeclaracaoResult) {
   return lista.map((e, i) => ({
     // `ate: null` é o último escalão — não tem teto, e escrever um seria mentir.
     ate: e.ate === null ? null : cent(e.ate),
-    taxaTexto: pctExatoDoc(e.taxa),
+    // Uma casa SEMPRE: numa coluna, «48%» ao lado de «44,6%» lê-se como um
+    // erro. As taxas do Art. 68.º são publicadas a uma casa decimal, por isso
+    // não se perde precisão nenhuma — e um teste prende essa premissa, para o
+    // dia em que uma tabela nova traga duas casas.
+    taxaTexto: pctDoc(e.taxa),
+    taxaExata: pctExatoDoc(e.taxa),
     rendimento: rendimentos[i],
     imposto: impostos[i],
   }));

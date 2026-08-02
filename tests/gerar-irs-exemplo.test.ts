@@ -27,8 +27,20 @@ describe("dados da declaração de exemplo", () => {
     expect(dados.escaloes.length, "escalões").toBeGreaterThan(1);
     expect(dados.deducoes.length, "deduções").toBeGreaterThan(1);
     expect(dados.memoria.length, "memória").toBeGreaterThan(1);
-    expect(dados.funil.passos.length, "funil").toBeGreaterThanOrEqual(1);
+    expect(dados.funil.passos.length, "funil").toBeGreaterThan(1);
     expect(dados.identificacao.length, "identificação").toBeGreaterThan(1);
+    // Estes dois só existem acima de 80 000 € de coletável. O cenário foi
+    // subido de propósito para lá chegar: em baixo deles, o bloco do limite
+    // global e a nota do adicional eram Typst que nunca compilava — e Typst
+    // que nunca compila é Typst que se parte sem ninguém dar por isso.
+    expect(dados.limiteDeducoes, "limite global do Art. 78.º n.º 7").not.toBeNull();
+    expect(dados.adicionalSolidariedade, "adicional de solidariedade").toBeGreaterThan(0);
+  });
+
+  it("o limite global é coerente: o que se perdeu é o que passou do teto", async () => {
+    const l = dadosTypst(await construirDeclaracaoExemplo()).limiteDeducoes!;
+    expect(l.dentroDoLimite).toBe(l.limiteGlobal);
+    expect(arredondar(l.somaBruta - l.limiteGlobal)).toBe(l.perdido);
   });
 
   it("a soma dos escalões é a coleta do englobamento", async () => {
@@ -38,6 +50,17 @@ describe("dados da declaração de exemplo", () => {
     // A coleta acrescenta o adicional de solidariedade, quando existe.
     const coleta = dados.apuramento.find((l) => l.rubrica.startsWith("Coleta"));
     expect(arredondar(soma + dados.adicionalSolidariedade)).toBe(coleta?.valor);
+  });
+
+  it("arredondar as taxas a uma casa não perde precisão nenhuma", async () => {
+    // A coluna mostra sempre uma casa decimal para ler alinhada. Isso só é
+    // legítimo enquanto as taxas do Art. 68.º forem publicadas a uma casa; se
+    // uma tabela futura trouxer 23,45%, este teste falha antes de o documento
+    // mostrar 23,5% como se fosse o valor da lei.
+    for (const e of dadosTypst(await construirDeclaracaoExemplo()).escaloes) {
+      const semZeros = e.taxaTexto.replace(",0%", "%");
+      expect(semZeros, `taxa ${e.taxaExata}`).toBe(e.taxaExata);
+    }
   });
 
   it("o rendimento repartido pelos escalões é o coletável", async () => {
