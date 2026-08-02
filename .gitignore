@@ -49,3 +49,7 @@ next-env.d.ts
 
 # Documentos compostos (gerados por `npm run docs`)
 /out
+
+# Cache do Python das funções da Vercel
+__pycache__/
+*.pyc
