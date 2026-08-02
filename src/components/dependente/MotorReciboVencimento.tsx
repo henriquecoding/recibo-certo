@@ -36,6 +36,7 @@ import { getSupabase } from "@/lib/supabase/client";
 import { MIME, descarregar, nomeFicheiro } from "@/lib/export/nomes";
 import { numeroDoc } from "@/lib/export/dinheiro";
 import { livroXLSX, tabelasCSV, type DocumentoVencimento } from "@/lib/export/documento-vencimento";
+import { prestacoesDoAno } from "@/lib/export/prestacoes";
 import { fmt, pct } from "@/lib/format";
 import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
 import { useExportacaoPro } from "@/lib/store/exportacao-pro";
@@ -561,6 +562,7 @@ export function MotorReciboVencimento() {
       mes: calculation.result,
       ano: annual,
       custoEmpresa: companyCost,
+      prestacoes: prestacoesDoAno({ base: calculation.input }),
       baseLegal: [
         { norma: "Despacho n.º 233-A/2026", determina: "Tabelas de retenção na fonte aplicadas à remuneração deste mês e a cada subsídio", verificadoEm: DATA_LAST_REVIEW },
         { norma: "Código Contributivo, arts. 44.º-48.º", determina: "Base de incidência da Segurança Social e taxas de 11% e 23,75%", verificadoEm: DATA_LAST_REVIEW },

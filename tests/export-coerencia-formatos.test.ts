@@ -8,6 +8,7 @@
 
 import { describe, expect, it } from "vitest";
 import { calculateLegacyPayroll, employerCost, includeMonthlyDuodecimos } from "../src/lib/payroll-simulator-legacy-adapter";
+import { prestacoesDoAno } from "../src/lib/export/prestacoes";
 import { calcularVencimentoAnual } from "../src/lib/fiscal-dependente";
 import { criarProveniencia } from "../src/lib/export/referencia";
 import { dadosTypst, liquidoDoMes, livroXLSX, tabelasCSV, type DocumentoVencimento } from "../src/lib/export/documento-vencimento";
@@ -59,6 +60,7 @@ async function documento(): Promise<DocumentoVencimento> {
     mes: calculo.result,
     ano,
     custoEmpresa: employerCost(calculo.result),
+    prestacoes: prestacoesDoAno({ base: calculo.input }),
     baseLegal: [
       { norma: "Despacho n.º 233-A/2026", determina: "Tabelas de retenção na fonte aplicadas à remuneração do mês", verificadoEm: "2026-08-01" },
     ],

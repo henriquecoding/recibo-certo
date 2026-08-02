@@ -16,6 +16,7 @@ import type { Proveniencia } from "./referencia";
 import { cent, dataExtenso, eur } from "./dinheiro";
 import { dinheiro, numero, texto, vazio, type TabelaCSV } from "./csv";
 import type { ColunaXLSX, FolhaXLSX, LivroXLSX } from "./xlsx";
+import { amplitude, niveisDePrestacao } from "./prestacoes";
 
 export interface PressupostoDoc {
   codigo: string;
@@ -42,6 +43,14 @@ export interface DocumentoVencimento {
   ambito: readonly string[];
   /** Memória de cálculo: existe para poder ser contestada. */
   memoria: readonly { rubrica: string; formula: string; valor: number; fonte: string }[];
+  /**
+   * As catorze prestações do ano, cada uma apurada pelo MOTOR — não derivada
+   * dos totais anuais. É a diferença entre um gráfico auditável e um gráfico
+   * bonito: repartir um total anual por doze exigiria supor em que mês cai
+   * cada subsídio e quantos meses têm refeição, e nenhuma dessas coisas se
+   * pode afirmar sem o dizer.
+   */
+  prestacoes: readonly { rotulo: string; liquido: number; destaque: boolean; nota?: string }[];
 }
 
 /** A resposta à pergunta. Tudo o resto no documento é justificação disto. */
@@ -137,6 +146,18 @@ export function tabelasCSV(doc: DocumentoVencimento): { variante: string; nome: 
       },
     },
     {
+      variante: "prestacoes",
+      nome: "Ano — as 14 prestações",
+      tabela: {
+        colunas: [
+          { codigo: "prestacao", rotulo: "Prestação" },
+          { codigo: "liquido_eur", rotulo: "Líquido" },
+          { codigo: "nota", rotulo: "Nota" },
+        ],
+        linhas: doc.prestacoes.map((p) => [texto(p.rotulo), dinheiro(p.liquido), texto(p.nota ?? "")]),
+      },
+    },
+    {
       variante: "memoria",
       nome: "Memória de cálculo",
       tabela: {
@@ -170,6 +191,17 @@ export function livroXLSX(doc: DocumentoVencimento): LivroXLSX {
       nota: "O total é uma fórmula SUBTOTAL: ao filtrar linhas, ele acompanha o filtro em vez de mentir.",
     },
     { nome: "Ano — decomposição", colunas: COLUNAS_ANO, linhas: linhasAno(doc) },
+    {
+      nome: "Ano — as 14 prestações",
+      colunas: [
+        { codigo: "prestacao", rotulo: "Prestação", tipo: "texto", largura: 16 },
+        { codigo: "liquido_eur", rotulo: "Líquido", tipo: "dinheiro" },
+        { codigo: "nota", rotulo: "Nota", tipo: "texto", largura: 30 },
+      ],
+      linhas: doc.prestacoes.map((p) => [p.rotulo, cent(p.liquido), p.nota ?? ""]),
+      totais: ["liquido_eur"],
+      nota: "O mês de cada subsídio depende da entidade empregadora — por isso aparecem no fim, identificados, e não num mês inventado.",
+    },
     {
       nome: "Memória de cálculo",
       colunas: COLUNAS_MEMORIA,
@@ -250,6 +282,16 @@ export function dadosTypst(doc: DocumentoVencimento) {
       liquidoMedioMes: cent(doc.ano.liquidoMedioMes),
     },
     memoria: doc.memoria.map((m) => ({ ...m, valor: cent(m.valor) })),
+    prestacoes: doc.prestacoes.map((p) => ({ ...p, liquido: cent(p.liquido), nota: p.nota ?? "" })),
+    // Os níveis são o que o relatório desenha; as prestações ficam para o CSV e
+    // para a folha de cálculo, onde catorze linhas são catorze linhas úteis.
+    niveis: niveisDePrestacao(doc.prestacoes).map((n) => ({ ...n, nota: n.nota ?? "" })),
+    amplitude: (() => {
+      const a = amplitude(doc.prestacoes);
+      return a
+        ? { menor: a.menor.rotulo, maior: a.maior.rotulo, diferenca: a.diferenca, valorMenor: a.menor.liquido, valorMaior: a.maior.liquido }
+        : null;
+    })(),
     baseLegal: doc.baseLegal,
     ambito: doc.ambito,
   };

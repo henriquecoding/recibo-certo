@@ -4,6 +4,7 @@
 //
 // Todos os números do documento saem daqui — do motor, nunca escritos à mão.
 import { calculateLegacyPayroll, employerCost, includeMonthlyDuodecimos } from "../src/lib/payroll-simulator-legacy-adapter";
+import { prestacoesDoAno } from "../src/lib/export/prestacoes";
 import { calcularVencimentoAnual } from "../src/lib/fiscal-dependente";
 import { criarProveniencia } from "../src/lib/export/referencia";
 import type { DocumentoVencimento } from "../src/lib/export/documento-vencimento";
@@ -60,6 +61,7 @@ export async function construirDocumentoExemplo(): Promise<DocumentoVencimento> 
     mes: calculo.result,
     ano,
     custoEmpresa: employerCost(calculo.result),
+    prestacoes: prestacoesDoAno({ base: calculo.input }),
     baseLegal: [
       { norma: "Despacho n.º 233-A/2026", determina: "Tabelas de retenção na fonte aplicadas à remuneração do mês e a cada subsídio", verificadoEm: DATA_LAST_REVIEW },
       { norma: "Código Contributivo, arts. 44.º-48.º", determina: "Base de incidência da Segurança Social e taxas do trabalhador e da entidade", verificadoEm: DATA_LAST_REVIEW },

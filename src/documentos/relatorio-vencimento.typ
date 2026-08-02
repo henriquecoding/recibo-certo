@@ -133,10 +133,32 @@
 
 == O ano
 
-#nota-margem[
+#text(size: t-peq, fill: ink-soft)[
   Catorze prestações: doze meses mais os subsídios de férias e de Natal, cada um
-  com retenção autónoma. A parte do subsídio de refeição acima do limite diário
-  entra nas bases, como em cada mês.
+  com retenção autónoma. O mês em que cada subsídio é pago depende da entidade
+  empregadora — por isso aparecem identificados pelo nome, e não num mês
+  inventado. Abaixo estão agrupadas pelos valores distintos que produzem.
+]
+
+#v(1.1em)
+
+#niveis-prestacoes(d.niveis)
+
+#v(1.3em)
+
+#if d.amplitude != none [
+  #block(width: medida-cheia, inset: (left: 9pt), stroke: (left: 2pt + brand), {
+    set text(size: t-peq, fill: ink-soft)
+    [
+      Entre a prestação mais baixa (#text(fill: ink, weight: 600)[#d.amplitude.menor],
+      #eur(d.amplitude.valorMenor)) e a mais alta (#text(fill: ink, weight: 600)[#d.amplitude.maior],
+      #eur(d.amplitude.valorMaior)) vão #text(fill: brand-deep, weight: 700)[#eur(d.amplitude.diferenca)].
+      É a amplitude que ninguém antecipa ao olhar só para o salário — e a razão
+      pela qual um mês pode parecer errado sem estar.
+    ]
+  })
+
+  #v(1.3em)
 ]
 
 #block(width: col-corpo, {

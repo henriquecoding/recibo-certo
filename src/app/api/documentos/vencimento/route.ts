@@ -18,10 +18,11 @@
 import { NextResponse } from "next/server";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { assinar, podeExportar, registarEmissao, requerente, urlCompositor } from "@/lib/documentos/emissao";
-import { calculateLegacyPayroll, employerCost, includeMonthlyDuodecimos } from "@/lib/payroll-simulator-legacy-adapter";
+import { buildLegacyPayrollInput, calculateLegacyPayroll, employerCost, includeMonthlyDuodecimos } from "@/lib/payroll-simulator-legacy-adapter";
 import { calcularVencimentoAnual } from "@/lib/fiscal-dependente";
 import { criarProveniencia } from "@/lib/export/referencia";
 import { dadosTypst, type DocumentoVencimento } from "@/lib/export/documento-vencimento";
+import { prestacoesDoAno } from "@/lib/export/prestacoes";
 import { contentDisposition, nomeFicheiro } from "@/lib/export/nomes";
 import { DATA_LAST_REVIEW, SS_DEPENDENTE } from "@/lib/fiscal-data";
 import { pctDoc } from "@/lib/export/dinheiro";
@@ -94,6 +95,7 @@ export async function POST(pedido: Request) {
     mes: calculo.result,
     ano: anual,
     custoEmpresa: employerCost(calculo.result),
+    prestacoes: prestacoesDoAno({ base: buildLegacyPayrollInput(contexto, rubricas) }),
     baseLegal: [
       { norma: "Despacho n.º 233-A/2026", determina: "Tabelas de retenção na fonte aplicadas à remuneração do mês e a cada subsídio", verificadoEm: DATA_LAST_REVIEW },
       { norma: "Código Contributivo, arts. 44.º-48.º", determina: "Base de incidência da Segurança Social e taxas do trabalhador e da entidade", verificadoEm: DATA_LAST_REVIEW },

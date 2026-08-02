@@ -1,0 +1,139 @@
+{
+  "periodo": "Janeiro a Junho de 2026",
+  "proveniencia": {
+    "referencia": "RC-2026-RCB-HQTDT9",
+    "digest": "8742820aa9f1af24455513d13a1b63ead679295800f77a83c800341fa816518b",
+    "motor": "2.12.0",
+    "anoFiscal": 2026,
+    "emitidoEm": "1 de agosto de 2026",
+    "verificacao": "https://recibocerto.pt/v/RC-2026-RCB-HQTDT9"
+  },
+  "quantos": 6,
+  "resposta": {
+    "rotulo": "Líquido do período",
+    "valor": 10605.42,
+    "contexto": "de 17 100,00 € faturados em 6 recibos"
+  },
+  "filtros": [
+    {
+      "rotulo": "Período",
+      "valor": "1 de janeiro a 30 de junho de 2026"
+    },
+    {
+      "rotulo": "Estado",
+      "valor": "Todos os recibos guardados"
+    },
+    {
+      "rotulo": "Região fiscal",
+      "valor": "Continente"
+    }
+  ],
+  "linhas": [
+    {
+      "data": "15/01/2026",
+      "cliente": "Câmara Municipal de Aveiro",
+      "tipo": "Profissão do Art. 151.º",
+      "bruto": 4200,
+      "iva": 966,
+      "retencao": 966,
+      "ss": 629.16,
+      "liquido": 2604.84
+    },
+    {
+      "data": "12/02/2026",
+      "cliente": "Nortada Studio",
+      "tipo": "Profissão do Art. 151.º",
+      "bruto": 1850,
+      "iva": 425.5,
+      "retencao": 425.5,
+      "ss": 277.13,
+      "liquido": 1147.37
+    },
+    {
+      "data": "03/03/2026",
+      "cliente": "Câmara Municipal de Aveiro",
+      "tipo": "Profissão do Art. 151.º",
+      "bruto": 4200,
+      "iva": 966,
+      "retencao": 966,
+      "ss": 629.16,
+      "liquido": 2604.84
+    },
+    {
+      "data": "21/04/2026",
+      "cliente": "Fundação Rio Vivo",
+      "tipo": "Profissão do Art. 151.º",
+      "bruto": 950,
+      "iva": 0,
+      "retencao": 218.5,
+      "ss": 142.31,
+      "liquido": 589.19
+    },
+    {
+      "data": "09/05/2026",
+      "cliente": "Nortada Studio",
+      "tipo": "Profissão do Art. 151.º",
+      "bruto": 2300,
+      "iva": 529,
+      "retencao": 529,
+      "ss": 344.54,
+      "liquido": 1426.46
+    },
+    {
+      "data": "30/06/2026",
+      "cliente": "Câmara Municipal de Aveiro",
+      "tipo": "Profissão do Art. 151.º",
+      "bruto": 3600,
+      "iva": 828,
+      "retencao": 828,
+      "ss": 539.28,
+      "liquido": 2232.72
+    }
+  ],
+  "total": {
+    "bruto": 17100,
+    "iva": 3714.5,
+    "retencao": 3933,
+    "ss": 2561.58,
+    "liquido": 10605.42
+  },
+  "clientes": {
+    "distintos": 3,
+    "pesoTotalTexto": "100,0%",
+    "topo": [
+      {
+        "cliente": "Câmara Municipal de Aveiro",
+        "bruto": 12000,
+        "quantos": 3,
+        "peso": 0.7017543859649122,
+        "pesoTexto": "70,2%"
+      },
+      {
+        "cliente": "Nortada Studio",
+        "bruto": 4150,
+        "quantos": 2,
+        "peso": 0.24269005847953215,
+        "pesoTexto": "24,3%"
+      },
+      {
+        "cliente": "Fundação Rio Vivo",
+        "bruto": 950,
+        "quantos": 1,
+        "peso": 0.05555555555555555,
+        "pesoTexto": "5,6%"
+      }
+    ],
+    "cauda": null
+  },
+  "concentracao": {
+    "cliente": "Câmara Municipal de Aveiro",
+    "pesoTexto": "70,2%"
+  },
+  "liquidoMedio": "1 767,57 €",
+  "ambito": [
+    "Lista os recibos guardados na aplicação, não os comunicados ao Portal das Finanças.",
+    "A retenção na fonte indicada é a do recibo; o IRS final apura-se na declaração anual.",
+    "A Segurança Social mostrada é a contribuição estimada sobre a base declarada.",
+    "Não substitui a fatura-recibo emitida no Portal das Finanças."
+  ]
+}

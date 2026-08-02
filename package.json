@@ -37,7 +37,7 @@
     "docs:fontes": "python3 scripts/preparar-fontes.py",
     "docs:fontes:check": "python3 scripts/preparar-fontes.py --verificar",
     "docs:build": "python3 scripts/compor-documento.py",
-    "docs:verify": "python3 scripts/verificar-documentos.py out/relatorio-vencimento.pdf && node scripts/verificar-texto-pdf.mjs out/relatorio-vencimento.pdf",
+    "docs:verify": "python3 scripts/verificar-documentos.py out/relatorio-vencimento.pdf out/mapa-recibos.pdf && node scripts/verificar-texto-pdf.mjs out/relatorio-vencimento.pdf out/mapa-recibos.pdf",
     "docs": "npm run docs:fontes:check && npm run docs:build && npm run docs:verify"
   },
   "dependencies": {

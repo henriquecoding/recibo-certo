@@ -1,12 +1,12 @@
 {
   "periodo": "Julho de 2026",
   "proveniencia": {
-    "referencia": "RC-2026-VNC-JQYJUM",
+    "referencia": "RC-2026-VNC-6KA8C2",
     "digest": "c40ff91f3d02308f533cfa39cc8c944c90d8c7ffe2c3de6b65d4c13d849503b5",
     "motor": "2.12.0",
     "anoFiscal": 2026,
     "emitidoEm": "1 de agosto de 2026",
-    "verificacao": "https://recibocerto.pt/v/RC-2026-VNC-JQYJUM"
+    "verificacao": "https://recibocerto.pt/v/RC-2026-VNC-6KA8C2"
   },
   "resposta": {
     "rotulo": "Líquido deste mês",
@@ -150,6 +150,131 @@
       "fonte": "—"
     }
   ],
+  "prestacoes": [
+    {
+      "rotulo": "Jan",
+      "liquido": 1834.13,
+      "destaque": false,
+      "nota": ""
+    },
+    {
+      "rotulo": "Fev",
+      "liquido": 1834.13,
+      "destaque": false,
+      "nota": ""
+    },
+    {
+      "rotulo": "Mar",
+      "liquido": 1834.13,
+      "destaque": false,
+      "nota": ""
+    },
+    {
+      "rotulo": "Abr",
+      "liquido": 1834.13,
+      "destaque": false,
+      "nota": ""
+    },
+    {
+      "rotulo": "Mai",
+      "liquido": 1834.13,
+      "destaque": false,
+      "nota": ""
+    },
+    {
+      "rotulo": "Jun",
+      "liquido": 1834.13,
+      "destaque": false,
+      "nota": ""
+    },
+    {
+      "rotulo": "Jul",
+      "liquido": 1834.13,
+      "destaque": false,
+      "nota": ""
+    },
+    {
+      "rotulo": "Ago",
+      "liquido": 1834.13,
+      "destaque": false,
+      "nota": ""
+    },
+    {
+      "rotulo": "Set",
+      "liquido": 1834.13,
+      "destaque": false,
+      "nota": ""
+    },
+    {
+      "rotulo": "Out",
+      "liquido": 1834.13,
+      "destaque": false,
+      "nota": ""
+    },
+    {
+      "rotulo": "Nov",
+      "liquido": 1834.13,
+      "destaque": false,
+      "nota": ""
+    },
+    {
+      "rotulo": "Dez",
+      "liquido": 1619.93,
+      "destaque": false,
+      "nota": "sem subsídio de refeição"
+    },
+    {
+      "rotulo": "Férias",
+      "liquido": 1619.93,
+      "destaque": true,
+      "nota": "retenção autónoma"
+    },
+    {
+      "rotulo": "Natal",
+      "liquido": 1619.93,
+      "destaque": true,
+      "nota": "retenção autónoma"
+    }
+  ],
+  "niveis": [
+    {
+      "quantas": 11,
+      "quais": "Jan a Nov",
+      "liquido": 1834.13,
+      "peso": 0.8058818736164489,
+      "pesoTexto": "80,6%",
+      "diferenca": 0,
+      "nota": "",
+      "destaque": false
+    },
+    {
+      "quantas": 1,
+      "quais": "Dez",
+      "liquido": 1619.93,
+      "peso": 0.06470604212785026,
+      "pesoTexto": "6,5%",
+      "diferenca": -214.2,
+      "nota": "sem subsídio de refeição",
+      "destaque": false
+    },
+    {
+      "quantas": 2,
+      "quais": "Férias e Natal",
+      "liquido": 1619.93,
+      "peso": 0.12941208425570053,
+      "pesoTexto": "12,9%",
+      "diferenca": -214.2,
+      "nota": "retenção autónoma",
+      "destaque": true
+    }
+  ],
+  "amplitude": {
+    "menor": "Dez",
+    "maior": "Jan",
+    "diferenca": 214.2,
+    "valorMenor": 1619.93,
+    "valorMaior": 1834.13
+  },
   "baseLegal": [
     {
       "norma": "Despacho n.º 233-A/2026",

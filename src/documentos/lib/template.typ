@@ -133,10 +133,13 @@
 /// Nota na coluna de margem. REGRA DURA: onde há tabela de medida cheia não
 /// pode haver nota de margem — colidem.
 #let nota-margem(corpo) = {
-  place(
-    right,
+  // `place(right, dx: ...)` alinhava a caixa pela DIREITA da coluna de corpo e
+  // depois empurrava-a mais 144 mm — as notas saíam todas fora do papel e não
+  // aparecia nenhuma. O deslocamento é a partir da esquerda.
+  block(width: 0pt, height: 0pt, spacing: 0pt, place(
+    top + left,
     dx: col-corpo + goteira,
-    dy: 0pt,
+    dy: 0.35em,
     box(width: col-margem, {
       // Fio curto por cima: liga a nota ao corpo sem uma caixa.
       line(length: 8mm, stroke: 0.8pt + brand)
@@ -145,7 +148,7 @@
       set par(justify: false, leading: 0.55em)
       corpo
     }),
-  )
+  ))
 }
 
 /// Barra segmentada. NÃO depende da cor: cada segmento leva um fio a separá-lo
@@ -286,6 +289,78 @@
   )
 }
 
+
+/// Os níveis de prestação do ano.
+///
+/// Aqui esteve um gráfico de catorze barras, duas vezes. Desde zero era uma
+/// paliçada plana (12% de variação em 34 mm são quatro milímetros); em desvio
+/// face à média já se lia, mas continuava a gastar catorze marcas para dizer
+/// dois factos — porque a remuneração recorrente é a MESMA todos os meses, e o
+/// que muda é só ter ou não subsídio de refeição e os dois subsídios, retidos à
+/// parte. Não é um defeito destes dados: é a forma do modelo.
+///
+/// Catorze marcas para dois factos é enfeite. Ficam os níveis: um por valor
+/// distinto, com quantos são, quais, quanto pesam no ano e porque diferem. A
+/// barra mede o PESO no total anual — a única grandeza aqui que varia de forma
+/// interessante — e cada segmento tem o rótulo por baixo, sem legenda.
+#let niveis-prestacoes(niveis, largura: medida-cheia) = {
+  if niveis.len() == 0 { return }
+  let total = niveis.map(n => n.peso).sum()
+  if total <= 0 { return }
+  let cores = (brand-deep, brand, brand-mint, fio-forte)
+
+  block(width: largura, breakable: false, {
+    box(
+      width: 100%,
+      height: 9pt,
+      clip: true,
+      radius: 4.5pt,
+      stack(
+        dir: ltr,
+        ..niveis
+          .enumerate()
+          .map(((i, n)) => stack(
+            dir: ltr,
+            rect(width: 100% * (n.peso / total), height: 9pt, fill: cores.at(calc.min(i, 3)), stroke: none),
+            if i < niveis.len() - 1 { rect(width: 1.2pt, height: 9pt, fill: white, stroke: none) },
+          ))
+      ),
+    )
+    v(0.8em)
+    grid(
+      columns: niveis.map(_ => 1fr),
+      column-gutter: 14pt,
+      ..niveis
+        .enumerate()
+        .map(((i, n)) => {
+          set par(justify: false, leading: 0.55em)
+          block({
+            // Fio da cor do segmento: liga o rótulo à barra sem obrigar o olho a
+            // consultar uma legenda separada.
+            line(length: 100%, stroke: 1.6pt + cores.at(calc.min(i, 3)))
+            v(0.55em)
+            eyebrow(
+              if n.quantas == 1 { "1 prestação" } else { str(n.quantas) + " prestações" },
+              cor: ink-mute,
+            )
+            v(0.3em)
+            text(size: t-nota, fill: ink-soft)[#n.quais]
+            v(0.5em)
+            text(size: t-h3, weight: 700, fill: if n.destaque { brand-deep } else { ink })[#eur(n.liquido)]
+            v(0.35em)
+            text(size: t-micro, fill: ink-mute)[
+              #n.pesoTexto do ano
+              #if n.diferenca < 0 [
+                #linebreak() #text(fill: ink-soft)[#eur(n.diferenca) face à mais alta]
+              ]
+              #if n.nota != "" [#linebreak() #n.nota]
+            ]
+          })
+        })
+    )
+  })
+}
+
 /// Cartão de indicador. Três ou quatro em linha, sem caixas fechadas: só um
 /// fio de topo a marcar a coluna.
 #let indicadores(itens) = grid(
@@ -376,7 +451,20 @@
       text(weight: 600)[Emitido em],
       text(hyphenate: false)[#emitido],
       text(weight: 600)[Confirmar em],
-      text(size: t-micro, hyphenate: false)[#url],
+      {
+        // O `https://` não se escreve num browser desde 2015 e é o que empurrava
+        // a referência para fora da coluna. Quebra-se no `/` final — de
+        // propósito, com a referência inteira na segunda linha — e nunca a meio
+        // dela: uma referência partida deixa de se poder ditar ao telefone.
+        let limpo = url.replace(regex("^https?://"), "")
+        let corte = limpo.split("/v/")
+        set text(size: t-micro, hyphenate: false)
+        if corte.len() == 2 {
+          [#(corte.at(0))/v/#linebreak()#text(fill: ink, weight: 600)[#(corte.at(1))]]
+        } else {
+          [#limpo]
+        }
+      },
     )
     v(4pt)
     grid(

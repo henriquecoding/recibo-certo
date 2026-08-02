@@ -45,6 +45,7 @@ NORMAS = ["a-2a", "ua-1"]
 # caminho vindo de fora seria travessia de diretórios.
 TEMPLATES = {
     "vencimento": "relatorio-vencimento.typ",
+    "recibos": "mapa-recibos.typ",
 }
 
 # 1 MB chega para o modelo de um recibo com folga; acima disso é abuso.

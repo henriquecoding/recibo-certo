@@ -19,6 +19,19 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.13.0",
+    data: "2026-08-02",
+    titulo: "O mapa de recibos também é um documento",
+    itens: [
+      "O PDF dos teus recibos deixou de sair pela janela de impressão do browser. Antes, se tivesses um bloqueador de pop-ups, o botão simplesmente não fazia nada — e quando funcionava, saía com a fonte do teu computador. Agora é composto por nós, sai sempre igual e traz referência verificável em recibocerto.pt/v.",
+      "O mapa passou a mostrar de onde vem o teu dinheiro: quanto pesa cada cliente na faturação do período. Perder um cliente que vale 70% do que faturas é um acontecimento diferente de perder um que vale 5% — e isso não se via em lado nenhum.",
+      "O mapa leva agora escrito o critério com que foi feito (que período, que pesquisa, quantos recibos de quantos). Um mapa que não diz o que deixou de fora não se pode conferir.",
+      "As datas dos recibos no PDF passam a estar em dd/mm/aaaa, como se escreve em Portugal, em vez do formato de máquina.",
+      "No relatório de vencimento, a secção do ano deixou de ter um gráfico de catorze barras. Catorze barras davam dois valores distintos — os meses com subsídio de refeição e os sem — e ocupavam meia página para dizer o que agora se lê de uma vez: quantas prestações há de cada valor, quanto pesam no ano e porque diferem.",
+      "O endereço de verificação impresso no PDF já não parte a referência a meio da linha.",
+    ],
+  },
+  {
     version: "2.12.0",
     data: "2026-08-02",
     titulo: "O relatório passou a ser um documento a sério",

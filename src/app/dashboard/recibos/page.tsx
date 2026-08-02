@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRecibos, calcularReciboDashboard, resumirDashboard, type Recibo } from "@/lib/store/recibos";
-import { downloadCSV, printRecibosPDF } from "@/lib/export";
+import { downloadCSV } from "@/lib/export";
+import { descarregar, MIME, nomeFicheiro } from "@/lib/export/nomes";
+import { getSupabase } from "@/lib/supabase/client";
 import { fmt, pct } from "@/lib/format";
 import {
   Trash, Receipt, Export, ArrowRight, BarChart2, Calendar,
@@ -31,6 +33,9 @@ export default function RecibosPage() {
   const [filtroMes, setFiltroMes] = useState<string>("todos");
   const [vista, setVista] = useState<Vista>("lista");
   const [mesAberto, setMesAberto] = useState<string | null>(null);
+  const [pdfState, setPdfState] = useState<{ estado: "inativo" | "a-compor" | "pronto" | "erro"; texto?: string }>({
+    estado: "inativo",
+  });
 
   const filtrados = recibos.filter((r) => {
     if (query.trim() && !r.cliente.toLowerCase().includes(query.trim().toLowerCase())) return false;
@@ -50,6 +55,64 @@ export default function RecibosPage() {
     const [ano, mes] = k.split("-");
     return new Date(Number(ano), Number(mes) - 1, 1).toLocaleDateString("pt-PT", { month: "long", year: "numeric" });
   };
+
+  /**
+   * O PDF é composto NO SERVIDOR.
+   *
+   * O caminho anterior era `window.open` + `window.print()`: falhava em
+   * silêncio atrás de um bloqueador de pop-ups, saía com a fonte do computador
+   * de quem imprimia e não deixava rasto nenhum de proveniência. Aqui sai o
+   * documento da marca, em PDF/A-2a + PDF/UA-1, com referência verificável.
+   *
+   * Vão os recibos EM BRUTO, nunca os totais: o servidor recalcula tudo. Se
+   * aceitasse os valores do cliente, o documento com o cabeçalho da marca podia
+   * dizer qualquer coisa.
+   */
+  async function exportarPDF() {
+    if (filtrados.length === 0) return;
+    setPdfState({ estado: "a-compor" });
+    // O que o utilizador tinha filtrado vai no documento: um mapa sem o
+    // critério de seleção não é verificável por quem o recebe.
+    const periodo = filtroMes === "todos" ? "Todos os recibos" : nomeMes(filtroMes);
+    try {
+      const { data } = await getSupabase().auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) {
+        setPdfState({ estado: "erro", texto: "Inicia sessão para descarregar o mapa." });
+        return;
+      }
+      const resposta = await fetch("/api/documentos/recibos", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          recibos: filtrados,
+          periodo,
+          filtros: [
+            { rotulo: "Período", valor: periodo },
+            { rotulo: "Pesquisa por cliente", valor: query.trim() || "sem filtro" },
+            { rotulo: "Recibos incluídos", valor: `${filtrados.length} de ${recibos.length} guardados` },
+          ],
+        }),
+      });
+      if (resposta.status === 402) {
+        setPdfState({ estado: "erro", texto: "O mapa em PDF faz parte do Plus." });
+        return;
+      }
+      if (!resposta.ok) {
+        setPdfState({ estado: "erro", texto: "Não foi possível compor o mapa. Tenta de novo." });
+        return;
+      }
+      const referencia = resposta.headers.get("x-documento-referencia") ?? "";
+      descarregar(
+        await resposta.arrayBuffer(),
+        nomeFicheiro({ assunto: "mapa de recibos", periodo, referencia: referencia || "RC", extensao: "pdf" }),
+        MIME.pdf,
+      );
+      setPdfState({ estado: "pronto", texto: referencia });
+    } catch {
+      setPdfState({ estado: "erro", texto: "Não foi possível contactar o servidor." });
+    }
+  }
 
   const resumoTotal = useMemo(() => resumirDashboard(recibos), [recibos]);
   const mediaRecibo = recibos.length > 0 ? resumoTotal.liquido / recibos.length : 0;
@@ -86,7 +149,7 @@ export default function RecibosPage() {
         </div>
         {recibos.length > 0 && (
           <ProGate title="Exportação Plus" description="Exporta os teus recibos em CSV ou PDF para enviar ao contabilista.">
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => downloadCSV(recibos)}
@@ -96,12 +159,23 @@ export default function RecibosPage() {
               </button>
               <button
                 type="button"
-                onClick={() => printRecibosPDF(recibos)}
-                className="inline-flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm font-semibold text-stone-600 transition-colors hover:border-stone-300 dark:bg-stone-900 dark:border-stone-700 dark:text-stone-300 dark:hover:border-stone-600"
+                onClick={() => void exportarPDF().catch(() => {})}
+                disabled={pdfState.estado === "a-compor" || filtrados.length === 0}
+                className="inline-flex items-center gap-2 rounded-xl border border-brand/25 bg-brand-light px-3.5 py-2 text-sm font-semibold text-brand-dark transition-colors hover:border-brand disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand/10 dark:text-brand-light"
               >
-                <Export size={16} /> PDF
+                <Export size={16} /> {pdfState.estado === "a-compor" ? "A compor…" : "PDF"}
               </button>
             </div>
+            {pdfState.estado !== "inativo" && pdfState.estado !== "a-compor" && (
+              <p
+                aria-live="polite"
+                className={`mt-2 text-[11px] leading-relaxed ${pdfState.estado === "erro" ? "text-alert-text" : "text-brand-dark dark:text-brand-light"}`}
+              >
+                {pdfState.estado === "pronto"
+                  ? `Mapa emitido${pdfState.texto ? ` · referência ${pdfState.texto}` : ""}.`
+                  : pdfState.texto}
+              </p>
+            )}
           </ProGate>
         )}
       </header>
