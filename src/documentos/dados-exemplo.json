@@ -1,0 +1,186 @@
+{
+  "periodo": "Julho de 2026",
+  "proveniencia": {
+    "referencia": "RC-2026-VNC-BMBL7K",
+    "digest": "c40ff91f3d02308f533cfa39cc8c944c90d8c7ffe2c3de6b65d4c13d849503b5",
+    "motor": "2.11.0",
+    "anoFiscal": 2026,
+    "emitidoEm": "2026-08-01T12:00:00.000Z",
+    "verificacao": "https://recibocerto.pt/v/RC-2026-VNC-BMBL7K"
+  },
+  "resposta": {
+    "rotulo": "Líquido deste mês",
+    "valor": 2087.74,
+    "contexto": "de 2330.87 € de remunerações e abonos"
+  },
+  "totais": {
+    "bruto": 2330.87,
+    "irs": 37.8,
+    "ss": 205.33,
+    "liquido": 2087.74,
+    "baseSS": 1866.67,
+    "taxaEfetiva": 0.11486438604033694,
+    "custoEmpresa": 2774.2,
+    "seguroAcidentes": 18.67
+  },
+  "pressupostos": [
+    {
+      "rotulo": "Mês",
+      "valor": "Julho de 2026"
+    },
+    {
+      "rotulo": "Situação familiar",
+      "valor": "Casado · 1 titular"
+    },
+    {
+      "rotulo": "Região fiscal",
+      "valor": "Continente"
+    },
+    {
+      "rotulo": "Horas por semana",
+      "valor": "40 h"
+    },
+    {
+      "rotulo": "Dependentes",
+      "valor": "1"
+    },
+    {
+      "rotulo": "Subsídio de refeição",
+      "valor": "10,20 EUR/dia · cartão · 21 dias"
+    },
+    {
+      "rotulo": "IRS Jovem",
+      "valor": "3.º ano"
+    }
+  ],
+  "rubricas": [
+    {
+      "rubrica": "Vencimento base",
+      "detalhe": "",
+      "fonte": "CIRS art. 2.º · CRC art. 46.º",
+      "tratamento": "subject",
+      "bruto": 1850,
+      "baseIRS": 1850,
+      "baseSS": 1850,
+      "irs": 33.17,
+      "ss": 203.5,
+      "liquido": 1613.33
+    },
+    {
+      "rubrica": "Extra 25%",
+      "detalhe": "1.25 h",
+      "fonte": "CT arts. 268.º e 271.º",
+      "tratamento": "subject",
+      "bruto": 16.67,
+      "baseIRS": 16.67,
+      "baseSS": 16.67,
+      "irs": 0.15,
+      "ss": 1.83,
+      "liquido": 14.69
+    },
+    {
+      "rubrica": "Prémio",
+      "detalhe": "fora da base SS por não regularidade declarada",
+      "fonte": "CRC arts. 46.º–47.º",
+      "tratamento": "partial",
+      "bruto": 250,
+      "baseIRS": 250,
+      "baseSS": 0,
+      "irs": 4.48,
+      "ss": 0,
+      "liquido": 245.52
+    },
+    {
+      "rubrica": "Subsídio de refeição",
+      "detalhe": "21 dias · 214.2 € isentos",
+      "fonte": "CIRS art. 2.º · Portaria 51-B/2026",
+      "tratamento": "exempt",
+      "bruto": 214.2,
+      "baseIRS": 0,
+      "baseSS": 0,
+      "irs": 0,
+      "ss": 0,
+      "liquido": 214.2
+    }
+  ],
+  "ano": {
+    "bruto": 25900,
+    "refeicao": 2356.2,
+    "refeicaoTributada": 0,
+    "irs": 371.98,
+    "ss": 2849,
+    "liquido": 25035.22,
+    "liquidoMedioMes": 2086.27
+  },
+  "memoria": [
+    {
+      "rubrica": "Retribuição horária",
+      "formula": "(retribuição mensal × 12) ÷ (52 × 40 horas)",
+      "valor": 10.67,
+      "fonte": "CT art. 271.º"
+    },
+    {
+      "rubrica": "Base da Segurança Social",
+      "formula": "soma das rubricas contributivas do mês",
+      "valor": 1866.67,
+      "fonte": "CRC arts. 44.º-48.º"
+    },
+    {
+      "rubrica": "Segurança Social do trabalhador",
+      "formula": "base × 11,0%",
+      "valor": 205.33,
+      "fonte": "CRC art. 53.º"
+    },
+    {
+      "rubrica": "Retenção da remuneração mensal",
+      "formula": "R × taxa marginal − parcela a abater − parcela por dependente",
+      "valor": 37.65,
+      "fonte": "Despacho 233-A/2026"
+    },
+    {
+      "rubrica": "Retenção do trabalho suplementar",
+      "formula": "suplementar × 50% da taxa efetiva do mês",
+      "valor": 0.15,
+      "fonte": "Despacho 233-A/2026, n.º 5 al. f)"
+    },
+    {
+      "rubrica": "Líquido do mês",
+      "formula": "bruto/caixa − Segurança Social − IRS",
+      "valor": 2087.74,
+      "fonte": "—"
+    }
+  ],
+  "baseLegal": [
+    {
+      "norma": "Despacho n.º 233-A/2026",
+      "determina": "Tabelas de retenção na fonte aplicadas à remuneração do mês e a cada subsídio",
+      "verificadoEm": "2026-08-01"
+    },
+    {
+      "norma": "Código Contributivo, arts. 44.º-48.º",
+      "determina": "Base de incidência da Segurança Social e taxas do trabalhador e da entidade",
+      "verificadoEm": "2026-08-01"
+    },
+    {
+      "norma": "Art. 2.º, n.º 3 CIRS",
+      "determina": "Limite diário isento do subsídio de refeição em cartão",
+      "verificadoEm": "2026-08-01"
+    },
+    {
+      "norma": "Art. 99.º-C CIRS",
+      "determina": "Retenção autónoma dos subsídios e do trabalho suplementar",
+      "verificadoEm": "2026-08-01"
+    },
+    {
+      "norma": "CT arts. 262.º e 271.º",
+      "determina": "Retribuição horária que valoriza o trabalho suplementar",
+      "verificadoEm": "2026-08-01"
+    }
+  ],
+  "ambito": [
+    "Não substitui o recibo emitido pela entidade empregadora.",
+    "Mostra a retenção na fonte do mês, não o IRS apurado no ano.",
+    "Não modela benefícios em espécie nem instrumentos de regulamentação coletiva mais favoráveis.",
+    "O custo da empresa não inclui seguro de acidentes de trabalho, formação nem custos indiretos."
+  ]
+}

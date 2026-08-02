@@ -12,6 +12,15 @@ import {
 } from "@/lib/store/cenarios";
 import { fmt, pct } from "@/lib/format";
 import {
+  data as celulaData,
+  escreverCSV,
+  numero,
+  texto,
+  type DialetoCSV,
+  type TabelaCSV,
+} from "@/lib/export/csv";
+import { MIME, descarregar } from "@/lib/export/nomes";
+import {
   Invoice, Wallet, Building, Calculator, Trash, Export, ArrowRight, Sparkle, Lock, Scale,
 } from "@/components/ui/Icons";
 import type { ReactNode } from "react";
@@ -33,36 +42,34 @@ const dataPt = (iso: string) => {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" });
 };
 
-// ─── Exportação refinada (CSV) — preserva todos os dados (snapshot completo) ──
-function exportarCenariosCSV(cenarios: Cenario[]): void {
-  if (typeof window === "undefined") return;
-  const cell = (s: string) => `"${(s || "").replace(/"/g, '""')}"`;
-  const num = (n: number) => (Number.isFinite(n) ? n : 0).toFixed(2).replace(".", ",");
-  const linhas: string[] = [
-    "ReciboCerto — Cenários guardados;;;;",
-    `Exportado em;${new Date().toLocaleString("pt-PT")};;;`,
-    "",
-    "Tipo;Nome;Criado em;Destaque;Valor;Dados (instantâneo completo, JSON)",
-  ];
-  for (const c of cenarios) {
-    linhas.push(
-      [
-        cell(META_TIPO_CENARIO[c.tipo].label),
-        cell(c.nome),
-        cell(dataPt(c.criadoEm)),
-        cell(c.resumo.destaqueLabel),
-        c.resumo.destaqueFmt === "pct" ? cell(pct(c.resumo.destaque)) : num(c.resumo.destaque),
-        cell(JSON.stringify(c.dados)),
-      ].join(";")
-    );
-  }
-  const blob = new Blob(["﻿" + linhas.join("\r\n")], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "cenarios-recibocerto.csv";
-  a.click();
-  URL.revokeObjectURL(url);
+// ─── Exportação (CSV) — preserva todos os dados (instantâneo completo) ───────
+// As duas linhas de título e a linha em branco que existiam por cima do
+// cabeçalho faziam com que nenhuma ferramenta importasse o ficheiro. Um CSV é
+// uma tabela: um cabeçalho, nada por cima dele.
+function exportarCenariosCSV(cenarios: Cenario[], dialeto: DialetoCSV = "humano"): void {
+  const tabela: TabelaCSV = {
+    colunas: [
+      { codigo: "tipo", rotulo: "Tipo" },
+      { codigo: "nome", rotulo: "Nome" },
+      { codigo: "criado_em", rotulo: "Criado em" },
+      { codigo: "destaque_rotulo", rotulo: "Destaque" },
+      { codigo: "destaque_valor", rotulo: "Valor" },
+      { codigo: "destaque_unidade", rotulo: "Unidade" },
+      { codigo: "dados_json", rotulo: "Dados (instantâneo completo, JSON)" },
+    ],
+    linhas: cenarios.map((c) => [
+      texto(META_TIPO_CENARIO[c.tipo].label),
+      texto(c.nome),
+      celulaData(c.criadoEm),
+      texto(c.resumo.destaqueLabel),
+      // O valor vai sempre como número — a unidade tem coluna própria. Assim a
+      // coluna soma no Excel em vez de ser texto por causa do «%» ou do «€».
+      numero(c.resumo.destaque),
+      texto(c.resumo.destaqueFmt === "pct" ? "fração" : "EUR"),
+      texto(JSON.stringify(c.dados)),
+    ]),
+  };
+  descarregar(escreverCSV(tabela, { dialeto }), `cenarios-recibocerto.csv`, MIME.csv);
 }
 
 export default function CenariosPage() {

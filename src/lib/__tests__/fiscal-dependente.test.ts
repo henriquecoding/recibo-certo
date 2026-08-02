@@ -134,6 +134,22 @@ describe("gerarCSVCenarios", () => {
     expect(dados).toContain(";");
     expect(dados).toContain("1500,00");
   });
+
+  it("é uma tabela: o cabeçalho é a primeira linha, sem preâmbulo nem linhas vazias", () => {
+    // O preâmbulo de quatro linhas com fonte e data fazia com que nenhuma
+    // ferramenta importasse o ficheiro — não era um CSV, era um relatório com
+    // a extensão errada.
+    const linhas = gerarCSVCenarios([cenario]).replace(/^﻿/, "").split("\r\n");
+    expect(linhas[0].startsWith("Cenário;")).toBe(true);
+    expect(linhas.filter((l) => l === "")).toHaveLength(0);
+    expect(linhas).toHaveLength(2);
+  });
+
+  it("no dialeto de máquina é RFC 4180 com códigos estáveis", () => {
+    const linhas = gerarCSVCenarios([cenario], "maquina").split("\r\n");
+    expect(linhas[0].startsWith("cenario,salario_bruto_eur,")).toBe(true);
+    expect(linhas[1]).toContain("1500.00");
+  });
 });
 
 // ── mealheiroDependente ───────────────────────────────────────────────────────

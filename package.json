@@ -33,10 +33,16 @@
     "parcerias:copy": "vitest run src/lib/__tests__/parcerias.test.ts -t \"parcerias:copy\"",
     "parcerias:links": "vitest run src/lib/__tests__/parcerias.test.ts -t \"parcerias:links\"",
     "parcerias:sem-estado": "vitest run src/lib/__tests__/parcerias.test.ts -t \"parcerias:sem-estado\"",
-    "parcerias:demo": "vitest run src/lib/__tests__/parcerias.test.ts -t \"parcerias:demo\""
+    "parcerias:demo": "vitest run src/lib/__tests__/parcerias.test.ts -t \"parcerias:demo\"",
+    "docs:fontes": "python3 scripts/preparar-fontes.py",
+    "docs:fontes:check": "python3 scripts/preparar-fontes.py --verificar",
+    "docs:build": "python3 scripts/compor-documento.py",
+    "docs:verify": "python3 scripts/verificar-documentos.py out/relatorio-vencimento.pdf && node scripts/verificar-texto-pdf.mjs out/relatorio-vencimento.pdf",
+    "docs": "npm run docs:fontes:check && npm run docs:build && npm run docs:verify"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
+    "exceljs": "^4.4.0",
     "leaflet": "^1.9.4",
     "motion": "^12.40.0",
     "next": "^16.2.6",
@@ -47,6 +53,8 @@
     "stripe": "^22.2.0"
   },
   "devDependencies": {
+    "@fontsource/dm-sans": "^5.3.0",
+    "@fontsource/playfair-display": "^5.3.0",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^20.14.10",
     "@types/react": "^19.2.15",
@@ -59,7 +67,8 @@
   },
   "overrides": {
     "postcss": "^8.5.23",
-    "sharp": "^0.35.3"
+    "sharp": "^0.35.3",
+    "uuid": "^11.1.1"
   },
   "browserslist": [
     "chrome >= 111",

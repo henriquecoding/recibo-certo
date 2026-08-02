@@ -32,6 +32,8 @@ const ImportarReciboPDF = dynamic(
 );
 import { gerarCSVCenarios, type CenarioVencimento } from "@/lib/store/vencimentos";
 import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
+import { MIME, descarregar } from "@/lib/export/nomes";
+import { dataISO } from "@/lib/export/dinheiro";
 import { useExportacaoPro } from "@/lib/store/exportacao-pro";
 import UpsellExportacao from "@/components/ui/UpsellExportacao";
 import GuardarCenarioDialog from "@/components/ui/GuardarCenarioDialog";
@@ -274,14 +276,12 @@ export function SimuladorVencimento() {
       duodecimos,
       criadoEm: new Date().toISOString(),
     };
-    const csv = gerarCSVCenarios([cenarioAtual]);
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `recibocerto-cenarios-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    // O BOM, o separador e o escape vêm do dialeto; aqui só se descarrega.
+    descarregar(
+      gerarCSVCenarios([cenarioAtual]),
+      `recibocerto-cenarios-${dataISO(new Date())}.csv`,
+      MIME.csv,
+    );
   }
 
   async function descarregarRelatorio() {

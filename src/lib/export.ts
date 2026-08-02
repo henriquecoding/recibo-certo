@@ -1,53 +1,60 @@
 // Exportação de recibos — CSV (download) e PDF (via janela de impressão).
-// Sem dependências: usa Blob/URL e window.print. Só corre no cliente.
+//
+// A serialização, o arredondamento e a formatação vêm de `src/lib/export/*`.
+// Um formatador de dinheiro por ficheiro é como se chegava a «2051,58 €» numa
+// linha e «24 748,00 €» na seguinte, dentro do mesmo documento.
 
 import { calcularRecibo, type Recibo } from "@/lib/store/recibos";
 import { META_TIPO } from "@/lib/fiscal-data";
+import {
+  dinheiro,
+  escreverCSV,
+  texto,
+  data as celulaData,
+  type DialetoCSV,
+  type TabelaCSV,
+} from "@/lib/export/csv";
+import { eur } from "@/lib/export/dinheiro";
+import { MIME, descarregar } from "@/lib/export/nomes";
 
-const num = (n: number) => n.toFixed(2).replace(".", ",");
+/** Uma tabela, um cabeçalho — códigos estáveis ao lado dos rótulos legíveis. */
+const COLUNAS_RECIBOS = [
+  { codigo: "data", rotulo: "Data" },
+  { codigo: "cliente", rotulo: "Cliente" },
+  { codigo: "tipo", rotulo: "Tipo" },
+  { codigo: "bruto_eur", rotulo: "Valor" },
+  { codigo: "iva_eur", rotulo: "IVA" },
+  { codigo: "retencao_irs_eur", rotulo: "Retenção IRS" },
+  { codigo: "seguranca_social_eur", rotulo: "Segurança Social" },
+  { codigo: "liquido_eur", rotulo: "Líquido" },
+] as const;
 
-/**
- * Célula CSV segura: aspas duplicadas e neutralização de injeção de fórmula
- * (Excel/Sheets executam células que começam por = + - @ tab/CR). Prefixa `'`.
- */
-function csvCell(value: string): string {
-  const v = value ?? "";
-  const safe = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
-  return `"${safe.replace(/"/g, '""')}"`;
+export function recibosTabela(recibos: Recibo[]): TabelaCSV {
+  return {
+    colunas: COLUNAS_RECIBOS,
+    linhas: recibos.map((r) => {
+      const c = calcularRecibo(r);
+      return [
+        celulaData(r.data),
+        texto(r.cliente || ""),
+        texto(META_TIPO[r.tipo].label),
+        dinheiro(c.bruto),
+        dinheiro(c.iva),
+        dinheiro(c.retencaoIRS),
+        dinheiro(c.segSocial),
+        dinheiro(c.liquido),
+      ];
+    }),
+  };
 }
 
-export function recibosToCSV(recibos: Recibo[]): string {
-  const cab = ["Data", "Cliente", "Tipo", "Valor", "IVA", "Retenção IRS", "Segurança Social", "Líquido"];
-  const linhas = recibos.map((r) => {
-    const c = calcularRecibo(r);
-    return [
-      r.data,
-      csvCell(r.cliente || ""),
-      csvCell(META_TIPO[r.tipo].label),
-      num(c.bruto),
-      num(c.iva),
-      num(c.retencaoIRS),
-      num(c.segSocial),
-      num(c.liquido),
-    ].join(";");
-  });
-  // BOM para o Excel reconhecer UTF-8; separador ';' (convenção pt-PT).
-  return "﻿" + [cab.join(";"), ...linhas].join("\r\n");
+export function recibosToCSV(recibos: Recibo[], dialeto: DialetoCSV = "humano"): string {
+  return escreverCSV(recibosTabela(recibos), { dialeto });
 }
 
-export function downloadCSV(recibos: Recibo[], filename = "recibos.csv"): void {
-  if (typeof window === "undefined") return;
-  const blob = new Blob([recibosToCSV(recibos)], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
+export function downloadCSV(recibos: Recibo[], filename = "recibos.csv", dialeto: DialetoCSV = "humano"): void {
+  descarregar(recibosToCSV(recibos, dialeto), filename, MIME.csv);
 }
-
-const eur = (n: number) =>
-  new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(n);
 
 export function printRecibosPDF(recibos: Recibo[]): void {
   if (typeof window === "undefined") return;

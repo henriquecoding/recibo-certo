@@ -13,6 +13,16 @@ import { getSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/auth";
 import { useSubscricao } from "@/lib/stripe/subscription";
 import { calcularVencimento, calcularVencimentoAnual } from "@/lib/fiscal-dependente";
+import {
+  data,
+  dinheiro,
+  escreverCSV,
+  numero,
+  texto,
+  type DialetoCSV,
+  type TabelaCSV,
+} from "@/lib/export/csv";
+import { arredondar } from "@/lib/export/dinheiro";
 
 export interface CenarioVencimento {
   id: string;
@@ -65,90 +75,84 @@ const ordenar = (xs: CenarioVencimento[]) =>
   [...xs].sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
 
 // ─── Exportação CSV (Pro) ────────────────────────────────────────────────
-// Documento detalhado: preâmbulo com fonte/data, cabeçalhos legíveis com
-// unidades e a decomposição completa (mensal + anual de 14 meses), recalculada
-// pelos motores verificados. Separador ';' e decimais com vírgula para abrir
-// corretamente no Excel pt-PT (a BOM é adicionada por quem faz o download).
-const txt = (s: string) => (/[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
-const eur = (n: number) => (Number.isFinite(n) ? n : 0).toFixed(2).replace(".", ",");
-const pctv = (n: number) => `${(n * 100).toFixed(1).replace(".", ",")}%`;
-const dataCurta = (iso: string) => {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("pt-PT");
-};
+// Uma tabela, um cabeçalho. O preâmbulo de quatro linhas com fonte e data que
+// existia por cima do cabeçalho fazia com que nenhuma ferramenta importasse o
+// ficheiro — a proveniência vive no PDF e no separador de verificação do XLSX,
+// não a meio de uma tabela.
 
-/** Gera um CSV detalhado dos cenários com a decomposição mensal e anual
- *  recalculada pelos motores verificados (recibo mensal + 14 meses). */
-export function gerarCSVCenarios(cenarios: CenarioVencimento[]): string {
-  const preambulo = [
-    "ReciboCerto — Cenários de vencimento",
-    `Gerado em;${new Date().toLocaleDateString("pt-PT")}`,
-    "Fonte;Despacho n.º 233-A/2026 (Tabelas I a VII, Continente)",
-    "Nota;Valores em euros, decimais com vírgula. Estimativa — não substitui o recibo oficial.",
-    "",
-  ];
-  const cabecalho = [
-    "Cenário",
-    "Salário bruto (€)",
-    "Dependentes",
-    "Situação",
-    "Subsídio refeição/dia (€)",
-    "Forma",
-    "Dias úteis",
-    "Subsídios em duodécimos",
-    "Subsídio refeição/mês (€)",
-    "Subsídio isento/mês (€)",
-    "Segurança Social/mês (€)",
-    "Retenção IRS/mês (€)",
-    "Vencimento líquido/mês (€)",
-    "Taxa efetiva",
-    "Custo p/ empresa/mês (€)",
-    "Bruto anual (€)",
-    "Subsídio de férias (€)",
-    "Subsídio de Natal (€)",
-    "IRS anual (€)",
-    "Segurança Social anual (€)",
-    "Líquido anual (€)",
-    "Líquido médio/mês (€)",
-    "Criado em",
-  ];
-  const linhas = cenarios.map((c) => {
-    const args = {
-      salarioBruto: c.salarioBruto,
-      dependentes: c.dependentes,
-      subsidioRefeicaoDia: c.subsidioRefeicaoDia,
-      subsidioRefeicaoCartao: c.subsidioRefeicaoCartao,
-      diasUteis: c.diasUteis,
-    };
-    const m = calcularVencimento(args);
-    const a = calcularVencimentoAnual(args);
-    return [
-      txt(c.nome ?? "(sem nome)"),
-      eur(c.salarioBruto),
-      c.dependentes,
-      "Não casado",
-      eur(c.subsidioRefeicaoDia),
-      c.subsidioRefeicaoDia > 0 ? (c.subsidioRefeicaoCartao ? "Cartão" : "Dinheiro") : "—",
-      c.diasUteis,
-      c.duodecimos ? "Sim" : "Não",
-      eur(m.subsidioRefeicaoTotal),
-      eur(m.subsidioRefeicaoIsento),
-      eur(m.ssTrabalhador),
-      eur(m.irsRetido),
-      eur(m.liquido),
-      pctv(m.taxaEfetiva),
-      eur(m.custoEmpresa),
-      eur(a.brutoAnual),
-      eur(a.subsidioFerias),
-      eur(a.subsidioNatal),
-      eur(a.irsAnual),
-      eur(a.ssAnual),
-      eur(a.liquidoAnual),
-      eur(a.liquidoMedioMes),
-      dataCurta(c.criadoEm),
-    ].join(";");
-  });
-  return [...preambulo, cabecalho.join(";"), ...linhas].join("\r\n");
+const COLUNAS_CENARIOS = [
+  { codigo: "cenario", rotulo: "Cenário" },
+  { codigo: "salario_bruto_eur", rotulo: "Salário bruto (€)" },
+  { codigo: "dependentes", rotulo: "Dependentes" },
+  { codigo: "situacao", rotulo: "Situação" },
+  { codigo: "subsidio_refeicao_dia_eur", rotulo: "Subsídio refeição/dia (€)" },
+  { codigo: "subsidio_refeicao_forma", rotulo: "Forma" },
+  { codigo: "dias_uteis", rotulo: "Dias úteis" },
+  { codigo: "duodecimos", rotulo: "Subsídios em duodécimos" },
+  { codigo: "subsidio_refeicao_mes_eur", rotulo: "Subsídio refeição/mês (€)" },
+  { codigo: "subsidio_refeicao_isento_mes_eur", rotulo: "Subsídio isento/mês (€)" },
+  { codigo: "seguranca_social_mes_eur", rotulo: "Segurança Social/mês (€)" },
+  { codigo: "retencao_irs_mes_eur", rotulo: "Retenção IRS/mês (€)" },
+  { codigo: "liquido_mes_eur", rotulo: "Vencimento líquido/mês (€)" },
+  { codigo: "taxa_efetiva", rotulo: "Taxa efetiva" },
+  { codigo: "custo_empresa_mes_eur", rotulo: "Custo p/ empresa/mês (€)" },
+  { codigo: "bruto_anual_eur", rotulo: "Bruto anual (€)" },
+  { codigo: "subsidio_ferias_eur", rotulo: "Subsídio de férias (€)" },
+  { codigo: "subsidio_natal_eur", rotulo: "Subsídio de Natal (€)" },
+  { codigo: "irs_anual_eur", rotulo: "IRS anual (€)" },
+  { codigo: "seguranca_social_anual_eur", rotulo: "Segurança Social anual (€)" },
+  { codigo: "liquido_anual_eur", rotulo: "Líquido anual (€)" },
+  { codigo: "liquido_medio_mes_eur", rotulo: "Líquido médio/mês (€)" },
+  { codigo: "criado_em", rotulo: "Criado em" },
+] as const;
+
+/** Tabela dos cenários com a decomposição mensal e anual recalculada pelos motores. */
+export function tabelaCenarios(cenarios: CenarioVencimento[]): TabelaCSV {
+  return {
+    colunas: COLUNAS_CENARIOS,
+    linhas: cenarios.map((c) => {
+      const args = {
+        salarioBruto: c.salarioBruto,
+        dependentes: c.dependentes,
+        subsidioRefeicaoDia: c.subsidioRefeicaoDia,
+        subsidioRefeicaoCartao: c.subsidioRefeicaoCartao,
+        diasUteis: c.diasUteis,
+      };
+      const m = calcularVencimento(args);
+      const a = calcularVencimentoAnual(args);
+      return [
+        texto(c.nome ?? "(sem nome)"),
+        dinheiro(c.salarioBruto),
+        numero(c.dependentes),
+        texto("Não casado"),
+        dinheiro(c.subsidioRefeicaoDia),
+        texto(c.subsidioRefeicaoDia > 0 ? (c.subsidioRefeicaoCartao ? "Cartão" : "Dinheiro") : ""),
+        numero(c.diasUteis),
+        texto(c.duodecimos ? "Sim" : "Não"),
+        dinheiro(m.subsidioRefeicaoTotal),
+        dinheiro(m.subsidioRefeicaoIsento),
+        dinheiro(m.ssTrabalhador),
+        dinheiro(m.irsRetido),
+        dinheiro(m.liquido),
+        // Fração, não texto com «%»: assim a coluna continua a ser numérica.
+        numero(arredondar(m.taxaEfetiva, 4)),
+        dinheiro(m.custoEmpresa),
+        dinheiro(a.brutoAnual),
+        dinheiro(a.subsidioFerias),
+        dinheiro(a.subsidioNatal),
+        dinheiro(a.irsAnual),
+        dinheiro(a.ssAnual),
+        dinheiro(a.liquidoAnual),
+        dinheiro(a.liquidoMedioMes),
+        data(c.criadoEm),
+      ];
+    }),
+  };
+}
+
+/** CSV detalhado dos cenários, no dialeto pedido (default: humano/Excel pt-PT). */
+export function gerarCSVCenarios(cenarios: CenarioVencimento[], dialeto: DialetoCSV = "humano"): string {
+  return escreverCSV(tabelaCenarios(cenarios), { dialeto });
 }
 
 // ─── Mapeamento Supabase ────────────────────────────────────────────────

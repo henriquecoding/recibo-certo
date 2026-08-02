@@ -19,6 +19,21 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.11.0",
+    data: "2026-08-02",
+    titulo: "Os ficheiros que levas contigo passaram a ser documentos",
+    itens: [
+      "O relatório de vencimento passou a ser composto com as fontes da marca embebidas, em vez de sair com a fonte que cada computador tivesse à mão. Dois assinantes do mesmo plano recebiam documentos com desenho diferente — e nenhum deles recebia a marca.",
+      "Os números das colunas passam a alinhar. Os algarismos do DM Sans têm larguras diferentes (o «1» é mais de duas vezes mais estreito do que o «0»), e numa coluna de euros nada batia certo; passámos a usar uma variante de largura fixa.",
+      "O documento cumpre agora as normas de arquivo (PDF/A-2a) e de acessibilidade (PDF/UA-1): abre daqui a dez anos, lê-se com leitor de ecrã, e as tabelas dizem de que coluna vem cada número.",
+      "Novo botão «Folha de cálculo»: um recibo tem várias tabelas e um CSV só sabe ter uma. O ficheiro do Excel guarda números a sério — a coluna soma, o total é uma fórmula que acompanha os filtros, e o cabeçalho repete-se ao imprimir.",
+      "O CSV passou a sair em dois: um para o Excel em português e outro em RFC 4180 para importar noutro programa. Antes havia um só, com três tabelas e linhas em branco pelo meio — que nenhuma ferramenta conseguia importar.",
+      "Corrigido um erro de arredondamento que podia fazer o PDF e o CSV do mesmo documento diferirem num cêntimo. E os milhares passam a estar sempre agrupados: aparecia «2051,58 €» numa linha e «24 748,00 €» na seguinte.",
+      "Cada documento leva agora uma referência legível, uma impressão digital dos dados, a versão do motor e a data — os quatro ficheiros do mesmo cálculo reconhecem-se pelo nome.",
+      "As exportações passaram a ter defesa contra fórmulas maliciosas em todos os campos de texto, sem estragar as colunas de números.",
+    ],
+  },
+  {
     version: "2.10.0",
     data: "2026-08-01",
     titulo: "A incapacidade na família passa a contar no recibo — e outras correções fiscais",

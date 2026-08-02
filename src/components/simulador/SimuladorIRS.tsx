@@ -1122,7 +1122,7 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
               oportunidades={oportunidades}
               completude={completude}
               onExportar={() => { if (exportPro.tentarExportar("irs")) exportarDeclaracaoIRS(resultado, montarCabecalho()); }}
-              onExportarCSV={() => { if (exportPro.tentarExportar("irs")) exportarDeclaracaoCSV(resultado, montarCabecalho()); }}
+              onExportarCSV={() => { if (exportPro.tentarExportar("irs")) void exportarDeclaracaoCSV(resultado, montarCabecalho()).catch(() => {}); }}
               onLimpar={limparTudo}
               onGuardar={() => setDialogGuardar(true)}
               cenarioFeedback={cenarioFeedback}

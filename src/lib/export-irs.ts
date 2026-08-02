@@ -3,9 +3,13 @@
 // Só corre no cliente.
 
 import type { DeclaracaoResult } from "@/lib/fiscal";
+import { dinheiro, escreverCSV, numero, texto, type TabelaCSV } from "@/lib/export/csv";
+import { criarProveniencia } from "@/lib/export/referencia";
+import { MIME, descarregar, nomeFicheiro } from "@/lib/export/nomes";
+import { eur as eurDoc, pctDoc } from "@/lib/export/dinheiro";
 
-const eur = (n: number) => new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(n);
-const pctf = (n: number) => `${(n * 100).toLocaleString("pt-PT", { maximumFractionDigits: 1 })}%`;
+const eur = eurDoc;
+const pctf = pctDoc;
 const esc = (s: string) => (s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] || c));
 
 /** Cabeçalho do relatório: identificação e agregado familiar. */
@@ -19,59 +23,131 @@ export interface CabecalhoDeclaracao {
   ascendentes: number;
 }
 
-const num = (n: number) => n.toFixed(2).replace(".", ",");
-const csvCell = (s: string) => `"${(s || "").replace(/"/g, '""')}"`;
+/**
+ * A simulação de IRS tem TRÊS tabelas — rendimentos por categoria, apuramento
+ * e memória de cálculo. Um CSV só sabe ter uma.
+ *
+ * A versão anterior escrevia as três no mesmo ficheiro, separadas por linhas em
+ * branco e com três cabeçalhos diferentes. Nenhuma ferramenta importa isso: não
+ * era uma tabela, era um relatório com a extensão errada. Agora são três
+ * ficheiros, cada um com um cabeçalho e nada por cima dele.
+ */
+export function declaracaoTabelas(r: DeclaracaoResult, cab?: CabecalhoDeclaracao): {
+  nome: string;
+  variante: string;
+  tabela: TabelaCSV;
+}[] {
+  const tabelas: { nome: string; variante: string; tabela: TabelaCSV }[] = [];
 
-/** Exporta a declaração simulada como CSV (download), separador ';' (pt-PT). */
-export function exportarDeclaracaoCSV(r: DeclaracaoResult, cab?: CabecalhoDeclaracao): void {
-  if (typeof window === "undefined") return;
-  const linhas: string[] = [];
   if (cab) {
-    linhas.push("Identificação e agregado;");
-    if (cab.nome) linhas.push(`Nome;${csvCell(cab.nome)}`);
-    if (cab.nif) linhas.push(`NIF;${csvCell(cab.nif)}`);
-    linhas.push(`Residência fiscal;${csvCell(cab.residencia)}`);
-    linhas.push(`Estado civil;${csvCell(cab.estadoCivil)}`);
-    linhas.push(`Tributação;${csvCell(cab.tributacao)}`);
-    linhas.push(`Dependentes;${csvCell(cab.dependentes.join(" | ") || "—")}`);
-    linhas.push(`Ascendentes a cargo;${cab.ascendentes}`);
-    linhas.push("");
-  }
-  linhas.push("Rendimentos por categoria;;;;");
-  linhas.push("Anexo;Categoria;Bruto;Englobado;Imposto autónomo");
-  for (const c of r.componentes) {
-    linhas.push([csvCell(c.anexo), csvCell(c.rotulo), num(c.bruto), num(c.englobado), num(c.impostoAutonomo)].join(";"));
-  }
-  linhas.push("");
-  linhas.push("Apuramento;");
-  const ap: Array<[string, number]> = [
-    ["Rendimento global", r.rendimentoGlobal],
-    ["Rendimento coletável", r.rendimentoColetavel],
-    ["Coleta (englobamento)", r.coletaEnglobamento],
-    ["Tributação autónoma", r.impostoAutonomo],
-    ["Deduções à coleta", r.deducoesColeta],
-    ["Crédito dupla tributação", r.creditoDuplaTributacao],
-    ["IRS total estimado", r.irsTotal],
-    ["Segurança Social (cat. B)", r.ssAnual],
-    ["Retenções + pag. por conta", r.retencoesTotais + r.pagamentosPorConta],
-    [r.saldo >= 0 ? "Reembolso estimado" : "Imposto a pagar estimado", Math.abs(r.saldo)],
-  ];
-  for (const [k, v] of ap) linhas.push(`${csvCell(k)};${num(v)}`);
-  linhas.push("");
-  linhas.push("Memória de cálculo;;");
-  linhas.push("Anexo;Descrição;Valor");
-  for (const l of r.memoria) {
-    linhas.push([csvCell(l.anexo || ""), csvCell(l.rotulo + (l.baseLegal ? ` (${l.baseLegal})` : "")), num(l.valor)].join(";"));
+    tabelas.push({
+      nome: "Identificação e agregado",
+      variante: "agregado",
+      tabela: {
+        colunas: [
+          { codigo: "campo", rotulo: "Campo" },
+          { codigo: "valor", rotulo: "Valor" },
+        ],
+        linhas: [
+          ...(cab.nome ? [[texto("Nome"), texto(cab.nome)]] : []),
+          ...(cab.nif ? [[texto("NIF"), texto(cab.nif)]] : []),
+          [texto("Residência fiscal"), texto(cab.residencia)],
+          [texto("Estado civil"), texto(cab.estadoCivil)],
+          [texto("Tributação"), texto(cab.tributacao)],
+          [texto("Dependentes"), texto(cab.dependentes.join(" | "))],
+          [texto("Ascendentes a cargo"), numero(cab.ascendentes)],
+        ],
+      },
+    });
   }
 
-  const conteudo = "﻿" + linhas.join("\r\n");
-  const blob = new Blob([conteudo], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "simulacao-irs.csv";
-  a.click();
-  URL.revokeObjectURL(url);
+  tabelas.push({
+    nome: "Rendimentos por categoria",
+    variante: "rendimentos",
+    tabela: {
+      colunas: [
+        { codigo: "anexo", rotulo: "Anexo" },
+        { codigo: "categoria", rotulo: "Categoria" },
+        { codigo: "bruto_eur", rotulo: "Bruto" },
+        { codigo: "englobado_eur", rotulo: "Englobado" },
+        { codigo: "imposto_autonomo_eur", rotulo: "Imposto autónomo" },
+      ],
+      linhas: r.componentes.map((c) => [
+        texto(c.anexo),
+        texto(c.rotulo),
+        dinheiro(c.bruto),
+        dinheiro(c.englobado),
+        dinheiro(c.impostoAutonomo),
+      ]),
+    },
+  });
+
+  const apuramento: Array<[string, string, number]> = [
+    ["rendimento_global", "Rendimento global", r.rendimentoGlobal],
+    ["rendimento_coletavel", "Rendimento coletável", r.rendimentoColetavel],
+    ["coleta_englobamento", "Coleta (englobamento)", r.coletaEnglobamento],
+    ["tributacao_autonoma", "Tributação autónoma", r.impostoAutonomo],
+    ["deducoes_coleta", "Deduções à coleta", r.deducoesColeta],
+    ["credito_dupla_tributacao", "Crédito dupla tributação", r.creditoDuplaTributacao],
+    ["irs_total", "IRS total estimado", r.irsTotal],
+    ["seguranca_social_cat_b", "Segurança Social (cat. B)", r.ssAnual],
+    ["retencoes_e_pagamentos_conta", "Retenções + pagamentos por conta", r.retencoesTotais + r.pagamentosPorConta],
+    [r.saldo >= 0 ? "reembolso_estimado" : "imposto_a_pagar_estimado", r.saldo >= 0 ? "Reembolso estimado" : "Imposto a pagar estimado", Math.abs(r.saldo)],
+  ];
+  tabelas.push({
+    nome: "Apuramento",
+    variante: "apuramento",
+    tabela: {
+      colunas: [
+        { codigo: "codigo", rotulo: "Código" },
+        { codigo: "rubrica", rotulo: "Rubrica" },
+        { codigo: "valor_eur", rotulo: "Valor" },
+      ],
+      linhas: apuramento.map(([codigo, rotulo, valor]) => [texto(codigo), texto(rotulo), dinheiro(valor)]),
+    },
+  });
+
+  tabelas.push({
+    nome: "Memória de cálculo",
+    variante: "memoria",
+    tabela: {
+      colunas: [
+        { codigo: "anexo", rotulo: "Anexo" },
+        { codigo: "descricao", rotulo: "Descrição" },
+        { codigo: "base_legal", rotulo: "Base legal" },
+        { codigo: "valor_eur", rotulo: "Valor" },
+      ],
+      linhas: r.memoria.map((l) => [
+        texto(l.anexo || ""),
+        texto(l.rotulo),
+        texto(l.baseLegal || ""),
+        dinheiro(l.valor),
+      ]),
+    },
+  });
+
+  return tabelas;
+}
+
+/**
+ * Exporta a simulação como um ficheiro por tabela, nos dois dialetos. A
+ * referência partilhada permite a quem receba os ficheiros saber que falam
+ * todos do mesmo apuramento.
+ */
+export async function exportarDeclaracaoCSV(r: DeclaracaoResult, cab?: CabecalhoDeclaracao): Promise<void> {
+  if (typeof window === "undefined") return;
+  const { referencia } = await criarProveniencia("irs", { componentes: r.componentes, saldo: r.saldo });
+  for (const { variante, tabela } of declaracaoTabelas(r, cab)) {
+    for (const dialeto of ["humano", "maquina"] as const) {
+      const nome = nomeFicheiro({
+        assunto: "simulacao de IRS",
+        referencia,
+        variante: dialeto === "maquina" ? `${variante}-dados` : variante,
+        extensao: "csv",
+      });
+      descarregar(escreverCSV(tabela, { dialeto }), nome, MIME.csv);
+    }
+  }
 }
 
 export function exportarDeclaracaoIRS(r: DeclaracaoResult, cab?: CabecalhoDeclaracao): void {

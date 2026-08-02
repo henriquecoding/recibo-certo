@@ -21,6 +21,7 @@ import { solveNetToGross } from "@/lib/payroll-inverse";
 import type { ReciboExtraido } from "@/lib/recibo-pdf";
 import type { EstadoCivilRet, Regiao } from "@/lib/fiscal-data";
 import {
+  DATA_LAST_REVIEW,
   SS_DEPENDENTE,
   DEDUCAO_DEPENDENTE_DEFICIENCIA,
   RETENCAO_CONJUGE_DEFICIENTE,
@@ -29,6 +30,11 @@ import {
   fatorMaximoDependenteDeficiente,
 } from "@/lib/fiscal-data";
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
+import { escreverCSV } from "@/lib/export/csv";
+import { criarProveniencia } from "@/lib/export/referencia";
+import { MIME, descarregar, nomeFicheiro } from "@/lib/export/nomes";
+import { numeroDoc } from "@/lib/export/dinheiro";
+import { livroXLSX, tabelasCSV, type DocumentoVencimento } from "@/lib/export/documento-vencimento";
 import { fmt, pct } from "@/lib/format";
 import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
 import { useExportacaoPro } from "@/lib/store/exportacao-pro";
@@ -526,35 +532,92 @@ export function MotorReciboVencimento() {
     setSaveDialog(false);
   }
 
-  function exportCsv() {
+  /**
+   * O documento — um modelo, quatro formatos. O PDF, o XLSX e os dois CSV leem
+   * daqui, e é essa a razão de o líquido ser garantidamente o mesmo número nos
+   * quatro: não há «cada formato», há um modelo.
+   */
+  async function construirDocumento(): Promise<DocumentoVencimento> {
+    return {
+      periodo: `${MONTHS[month]} de ${FISCAL_YEAR}`,
+      proveniencia: await criarProveniencia("vencimento", snapshot),
+      pressupostos: [
+        { codigo: "mes", rotulo: "Mês", valor: `${MONTHS[month]} de ${FISCAL_YEAR}` },
+        { codigo: "situacao_familiar", rotulo: "Situação familiar", valor: FAMILY_OPTIONS.find(([value]) => value === maritalStatus)?.[1] ?? "—" },
+        { codigo: "regiao_fiscal", rotulo: "Região fiscal", valor: REGION_OPTIONS.find(([value]) => value === region)?.[1] ?? "Continente" },
+        { codigo: "horas_por_semana", rotulo: "Horas por semana", valor: `${numeroDoc(parseNumber(weeklyHours))} h` },
+        { codigo: "dependentes", rotulo: "Dependentes", valor: String(dependants) },
+        { codigo: "dependentes_com_incapacidade", rotulo: "Dependentes com incapacidade ≥ 60%", valor: String(Math.min(dependants, dependantsWithDisability)) },
+        { codigo: "fator_incapacidade", rotulo: "Fator comunicado à empresa", valor: dependantsWithDisability > 0 ? `${effectiveFactor}×` : "—" },
+        { codigo: "conjuge_com_incapacidade", rotulo: "Cônjuge com incapacidade ≥ 60%", valor: effectiveSpouseDisability ? "Sim" : "Não" },
+        { codigo: "titular_com_incapacidade", rotulo: "Titular com incapacidade ≥ 60%", valor: disability ? "Sim" : "Não" },
+        { codigo: "subsidio_refeicao", rotulo: "Subsídio de refeição", valor: mealEnabled ? `${fmt(parseNumber(mealDaily))}/dia · ${mealCard ? "cartão" : "dinheiro"} · ${Math.min(31, Math.floor(parseNumber(mealDays)))} dias` : "Não aplicável" },
+        { codigo: "duodecimos", rotulo: "Subsídios de férias e Natal", valor: duodecimos ? "Em duodécimos" : "Por inteiro" },
+        { codigo: "irs_jovem", rotulo: "IRS Jovem", valor: youthIrs ? `${youthYear}.º ano` : "Não aplicável" },
+      ],
+      linhas: calculation.lines,
+      mes: calculation.result,
+      ano: annual,
+      custoEmpresa: companyCost,
+      baseLegal: [
+        { norma: "Despacho n.º 233-A/2026", determina: "Tabelas de retenção na fonte aplicadas à remuneração deste mês e a cada subsídio", verificadoEm: DATA_LAST_REVIEW },
+        { norma: "Código Contributivo, arts. 44.º-48.º", determina: "Base de incidência da Segurança Social e taxas de 11% e 23,75%", verificadoEm: DATA_LAST_REVIEW },
+        { norma: "Art. 2.º, n.º 3 CIRS", determina: "Limites isentos do subsídio de refeição e das ajudas de custo", verificadoEm: DATA_LAST_REVIEW },
+        { norma: "Art. 99.º-C CIRS", determina: "Retenção autónoma dos subsídios de férias e de Natal e do trabalho suplementar", verificadoEm: DATA_LAST_REVIEW },
+        { norma: "CT arts. 262.º e 271.º", determina: "Retribuição horária que valoriza horas extra, trabalho noturno e faltas", verificadoEm: DATA_LAST_REVIEW },
+      ],
+      ambito: [
+        "Não substitui o recibo emitido pela entidade empregadora.",
+        "Mostra a RETENÇÃO na fonte do mês, não o IRS apurado no ano — o acerto depende da declaração completa.",
+        "Não modela benefícios em espécie (viatura, seguros, planos de pensões) nem instrumentos de regulamentação coletiva mais favoráveis.",
+        "O custo da empresa não inclui o seguro de acidentes de trabalho, formação nem custos indiretos.",
+      ],
+      memoria: [
+        { rubrica: "Retribuição horária", formula: "(retribuição mensal × 12) ÷ (52 × horas semanais)", valor: calculation.result.retribuicaoHoraria, fonte: "CT art. 271.º" },
+        { rubrica: "Base de incidência da SS", formula: "soma das rubricas contributivas do mês", valor: calculation.result.baseSS, fonte: "CRC arts. 44.º-48.º" },
+        { rubrica: "Segurança Social do trabalhador", formula: `base × ${pct(SS_DEPENDENTE.trabalhador.value)}`, valor: calculation.result.ssTrabalhador, fonte: "CRC art. 53.º" },
+        { rubrica: "Retenção da remuneração mensal", formula: "R × taxa marginal − parcela a abater − parcelas por dependente e por incapacidade", valor: calculation.result.irsBaseMensal, fonte: "Despacho 233-A/2026" },
+        { rubrica: "Retenção do trabalho suplementar", formula: "suplementar × 50% da taxa efetiva do mês", valor: calculation.result.suplementarIRS, fonte: "Despacho 233-A/2026, n.º 5 al. f)" },
+        { rubrica: "Retenção dos subsídios", formula: "imposto do direito completo × fração paga", valor: calculation.result.irsSubsidios, fonte: "Art. 99.º-C, n.º 6 CIRS" },
+        { rubrica: "Líquido do mês", formula: "bruto/caixa − Segurança Social − IRS", valor: calculation.result.liquido, fonte: "—" },
+      ],
+    };
+  }
+
+  async function exportCsv() {
     if (!exportAccess.tentarExportar("vencimento")) return;
-    // O CSV inclui o detalhe de cada linha E os pressupostos que determinaram a
-    // retenção. Um ficheiro que mostra «1 dependente com incapacidade» ao lado
-    // de totais apurados sem ela é pior do que não o mostrar.
-    const rows: (string | number)[][] = [
-      ["Pressuposto", "Valor"],
-      ["Mês", `${MONTHS[month]} 2026`],
-      ["Situação familiar", FAMILY_OPTIONS.find(([value]) => value === maritalStatus)?.[1] ?? "—"],
-      ["Região fiscal", REGION_OPTIONS.find(([value]) => value === region)?.[1] ?? "Continente"],
-      ["Horas por semana", parseNumber(weeklyHours)],
-      ["Dependentes", dependants],
-      ["Dependentes com incapacidade ≥ 60%", Math.min(dependants, dependantsWithDisability)],
-      ["Fator comunicado à empresa", dependantsWithDisability > 0 ? `${effectiveFactor}x` : "—"],
-      ["Cônjuge com incapacidade ≥ 60%", effectiveSpouseDisability ? "Sim" : "Não"],
-      ["Titular com incapacidade ≥ 60%", disability ? "Sim" : "Não"],
-      [],
-      ["Rubrica", "Bruto/Caixa", "Base IRS", "Base SS", "IRS retido", "SS trabalhador", "Impacto líquido"],
-      ...calculation.lines.map((line) => [line.label, line.amount, line.irsBase, line.socialSecurityBase, line.irsWithheld, line.employeeSocialSecurity, line.netImpact]),
-      ["TOTAL", calculation.result.brutoTotal, calculation.result.brutoTotal - calculation.result.ajudasIsentas - calculation.result.subsidioRefeicaoIsento, calculation.result.baseSS, calculation.result.irsTotal, calculation.result.ssTrabalhador, calculation.result.liquido],
-    ];
-    const csv = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(";")).join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `recibo-${MONTHS[month].toLowerCase()}-2026.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    const doc = await construirDocumento();
+    for (const { variante, tabela } of tabelasCSV(doc)) {
+      for (const dialeto of ["humano", "maquina"] as const) {
+        descarregar(
+          escreverCSV(tabela, { dialeto }),
+          nomeFicheiro({
+            assunto: "relatorio de vencimento",
+            periodo: doc.periodo,
+            referencia: doc.proveniencia.referencia,
+            variante: dialeto === "maquina" ? `${variante}-dados` : variante,
+            extensao: "csv",
+          }),
+          MIME.csv,
+        );
+      }
+    }
+  }
+
+  async function exportXlsx() {
+    if (!exportAccess.tentarExportar("vencimento")) return;
+    const doc = await construirDocumento();
+    const { construirXLSX } = await import("@/lib/export/xlsx");
+    descarregar(
+      await construirXLSX(livroXLSX(doc)),
+      nomeFicheiro({
+        assunto: "relatorio de vencimento",
+        periodo: doc.periodo,
+        referencia: doc.proveniencia.referencia,
+        extensao: "xlsx",
+      }),
+      MIME.xlsx,
+    );
   }
 
   async function exportPdf() {
@@ -817,7 +880,20 @@ export function MotorReciboVencimento() {
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-stone-100 p-4 dark:border-stone-800"><div className="flex items-center gap-2"><History size={15} className="text-brand" /><p className="text-xs font-semibold text-stone-700 dark:text-stone-200">Guardar cenário</p></div><p className="mt-1 text-[10px] leading-relaxed text-stone-400">Preserva contexto, rubricas e modo de cálculo para comparar mais tarde.</p><button type="button" disabled={limiteAtingido} onClick={() => setSaveDialog(true)} className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-glow transition hover:shadow-float disabled:cursor-not-allowed disabled:opacity-50"><Plus size={13} /> Guardar</button><p className="mt-2 text-[9px] text-stone-400">{naNuvem ? "Sincronização na nuvem ativa" : `Plano grátis: ${limite} cenário`}</p></div>
-          <ProGate title="Exportar recibo detalhado" description="Leva a decomposição por rubrica para PDF ou CSV."><div className="rounded-2xl border border-stone-100 p-4 dark:border-stone-800"><div className="flex items-center gap-2"><Export size={15} className="text-brand" /><p className="text-xs font-semibold text-stone-700 dark:text-stone-200">Relatório e dados</p></div><p className="mt-1 text-[10px] leading-relaxed text-stone-400">Exporta totais, incidências e impacto líquido de cada linha.</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={exportPdf} className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3 py-2 text-[11px] font-semibold text-white"><FileSign size={13} /> PDF</button><button type="button" onClick={exportCsv} className="inline-flex items-center gap-1.5 rounded-xl border border-brand/25 bg-brand-light px-3 py-2 text-[11px] font-semibold text-brand-dark"><Export size={13} /> CSV</button></div></div></ProGate>
+          <ProGate title="Exportar recibo detalhado" description="Leva a decomposição por rubrica para a folha de cálculo, para PDF ou para dados.">
+            <div className="rounded-2xl border border-stone-100 p-4 dark:border-stone-800">
+              <div className="flex items-center gap-2"><Export size={15} className="text-brand" /><p className="text-xs font-semibold text-stone-700 dark:text-stone-200">Relatório e dados</p></div>
+              <p className="mt-1 text-[10px] leading-relaxed text-stone-400">Pressupostos, rubrica a rubrica, memória de cálculo e base legal. Os ficheiros partilham a mesma referência.</p>
+              {/* A folha de cálculo é o formato humano: um recibo tem várias
+                  tabelas e um CSV só sabe ter uma. Daí ser o botão em destaque. */}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" onClick={() => void exportXlsx().catch(() => {})} className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3 py-2 text-[11px] font-semibold text-white shadow-glow transition hover:shadow-float"><LayoutGrid size={13} /> Folha de cálculo</button>
+                <button type="button" onClick={() => void exportPdf().catch(() => {})} className="inline-flex items-center gap-1.5 rounded-xl border border-brand/25 bg-brand-light px-3 py-2 text-[11px] font-semibold text-brand-dark"><FileSign size={13} /> PDF</button>
+                <button type="button" onClick={() => void exportCsv().catch(() => {})} className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 px-3 py-2 text-[11px] font-semibold text-stone-600 transition hover:border-brand hover:text-brand dark:border-stone-700 dark:text-stone-300"><Export size={13} /> CSV</button>
+              </div>
+              <p className="mt-2 text-[9px] leading-relaxed text-stone-400">O CSV sai em dois dialetos: um para o Excel em português, outro em RFC 4180 para importar noutro programa.</p>
+            </div>
+          </ProGate>
         </div>
 
         {saveNotice && <div className={`mt-3 flex items-start gap-2 rounded-2xl border p-3 text-xs ${saveNotice.type === "ok" ? "border-brand/20 bg-brand-light text-brand-dark" : "border-clay-border bg-clay-bg text-clay-text"}`}><ShieldCheck size={14} className="mt-0.5 flex-none" /><span>{saveNotice.text} {saveNotice.type === "ok" && <Link href="/dashboard/cenarios" className="ml-1 inline-flex items-center gap-0.5 font-semibold underline">Ver cenários <ArrowRight size={11} /></Link>}</span></div>}

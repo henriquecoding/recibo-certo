@@ -2,6 +2,9 @@
 
 import { useState, useMemo } from "react";
 import { ShieldCheck, Check, Warning, Clock, ExternalLink, ChevronDown, ChevronUp, Search, Filter, Export } from "@/components/ui/Icons";
+import { escreverCSV, numero, texto, vazio, type CelulaCSV, type TabelaCSV } from "@/lib/export/csv";
+import { dataISO } from "@/lib/export/dinheiro";
+import { MIME, descarregar } from "@/lib/export/nomes";
 
 type Severidade = "ok" | "info" | "aviso" | "erro";
 type Confianca = "alta" | "media" | "baixa" | "nenhuma";
@@ -436,32 +439,47 @@ function truncate(s: string, max: number): string {
   return s.length <= max ? s : s.slice(0, max - 1) + "…";
 }
 
+// Este ficheiro juntava campos do motor com texto livre («esperado», «obtido»)
+// sem defesa nenhuma contra injeção de fórmulas, e separava as linhas com LF em
+// vez de CRLF. Passa pela mesma serialização de todo o produto.
 function exportarCSV(dados: Record<string, RespostaAuditoria | null>) {
-  const linhas: string[] = ["Agente;Grupo;Teste;Severidade;Esperado;Obtido;Confiança;Confirmações;Fontes Consultadas"];
+  const linhas: CelulaCSV[][] = [];
   for (const agente of AGENTES) {
     const d = dados[agente.id];
     if (!d) continue;
     for (const r of d.resultados) {
       linhas.push([
-        agente.titulo,
-        r.grupo,
-        r.nome,
-        r.severidade,
-        `"${r.esperado}"`,
-        `"${r.obtido}"`,
-        r.confianca ?? "",
-        r.confirmacoes?.toString() ?? "",
-        r.fontesConsultadas?.toString() ?? "",
-      ].join(";"));
+        texto(agente.titulo),
+        texto(r.grupo),
+        texto(r.nome),
+        texto(r.severidade),
+        texto(r.esperado),
+        texto(r.obtido),
+        r.confianca === undefined ? vazio() : texto(r.confianca),
+        r.confirmacoes === undefined ? vazio() : numero(r.confirmacoes),
+        r.fontesConsultadas === undefined ? vazio() : numero(r.fontesConsultadas),
+      ]);
     }
   }
-  const blob = new Blob(["﻿" + linhas.join("\n")], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `auditoria-fiscal-${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const tabela: TabelaCSV = {
+    colunas: [
+      { codigo: "agente", rotulo: "Agente" },
+      { codigo: "grupo", rotulo: "Grupo" },
+      { codigo: "teste", rotulo: "Teste" },
+      { codigo: "severidade", rotulo: "Severidade" },
+      { codigo: "esperado", rotulo: "Esperado" },
+      { codigo: "obtido", rotulo: "Obtido" },
+      { codigo: "confianca", rotulo: "Confiança" },
+      { codigo: "confirmacoes", rotulo: "Confirmações" },
+      { codigo: "fontes_consultadas", rotulo: "Fontes consultadas" },
+    ],
+    linhas,
+  };
+  descarregar(
+    escreverCSV(tabela, { dialeto: "humano" }),
+    `auditoria-fiscal-${dataISO(new Date())}.csv`,
+    MIME.csv,
+  );
 }
 
 export default function AdminAuditoria() {
