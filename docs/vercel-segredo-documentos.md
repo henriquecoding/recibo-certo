@@ -1,7 +1,8 @@
 # Configurar `DOCUMENTOS_HMAC_SEGREDO` na Vercel
 
-O botão «PDF» do simulador de vencimento não funciona sem esta variável. Este
-guia leva-te do zero ao PDF descarregado, com a forma de confirmar cada passo.
+Os botões «PDF» não funcionam sem esta variável — nem o do simulador de
+vencimento, nem o do mapa de recibos. Este guia leva-te do zero ao PDF
+descarregado, com a forma de confirmar cada passo.
 
 Demora cerca de cinco minutos.
 
@@ -14,6 +15,7 @@ na mesma implantação da aplicação. Quando alguém carrega em «PDF»:
 
 ```
 browser  ──▶  /api/documentos/vencimento   (Next: sessão, direito, cálculo)
+         └─▶  /api/documentos/recibos      (idem, para o mapa de recibos)
                         │
                         │  POST assinado com HMAC-SHA256
                         ▼
@@ -22,6 +24,10 @@ browser  ──▶  /api/documentos/vencimento   (Next: sessão, direito, cálcu
                         ▼
               PDF de volta ao browser
 ```
+
+As duas rotas usam o **mesmo** segredo e o **mesmo** compositor: só muda o
+`tipo` que enviam (`vencimento` ou `recibos`) e, com ele, o modelo tipográfico.
+Configurar a variável liga as duas de uma vez.
 
 A assinatura existe porque, sem ela, **qualquer pessoa** podia mandar compor um
 documento com o cabeçalho da ReciboCerto e o conteúdo que quisesse — bastava
@@ -169,6 +175,17 @@ recibocerto-relatorio-de-vencimento-agosto-de-2026-RC-2026-VNC-8F3K2M.pdf
 E, por baixo dos botões, aparece «Relatório emitido · referência
 RC-2026-VNC-8F3K2M».
 
+### 4.4 · E o mapa de recibos?
+
+1. Entra em <https://www.recibocerto.pt/dashboard/recibos> com a mesma conta
+2. Garante que tens pelo menos um recibo guardado
+3. **PDF**
+
+Descarrega um ficheiro com uma referência começada por `RC-2026-RCB-` e aparece
+«Mapa emitido · referência …». Se o do vencimento funciona e este não, o
+problema não é do segredo — é do próprio mapa; ver os registos da rota
+`/api/documentos/recibos`.
+
 ---
 
 ## Se alguma coisa correr mal
@@ -177,7 +194,7 @@ RC-2026-VNC-8F3K2M».
 |---|---|---|
 | «Inicia sessão para descarregar o relatório.» | Não há sessão iniciada. | Entrar na conta. |
 | «O relatório em PDF faz parte do Plus.» | A conta não tem Plus. O servidor devolveu 402 — o gate está a funcionar. | Nada. É o comportamento certo. |
-| «Não foi possível compor o relatório.» | A função devolveu erro. Quase sempre: o segredo não está definido, ou está diferente entre a app e a função. | Repetir os passos 2 e 3, e confirmar com o 4.2. |
+| «Não foi possível compor o relatório.» ou «…o mapa.» | A função devolveu erro. Quase sempre: o segredo não está definido, ou está diferente entre a app e a função. | Repetir os passos 2 e 3, e confirmar com o 4.2. |
 | «Não foi possível contactar o servidor.» | A função não respondeu de todo. | Ver o estado da implantação na Vercel. |
 | O PDF sai, mas a referência não aparece em `/v/…` | A tabela `documentos_emitidos` não existe ou o `SUPABASE_SERVICE_ROLE_KEY` não está definido. | Aplicar `supabase/migrations/20260802_documentos_emitidos.sql`. O PDF sair na mesma é de propósito: perder o registo é mau, negar o ficheiro já composto é pior. |
 
