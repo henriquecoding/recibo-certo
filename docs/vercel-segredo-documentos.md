@@ -1,7 +1,7 @@
 # Configurar `DOCUMENTOS_HMAC_SEGREDO` na Vercel
 
 Os botões «PDF» não funcionam sem esta variável — nem o do simulador de
-vencimento, nem o do mapa de recibos. Este guia leva-te do zero ao PDF
+vencimento, nem o do mapa de recibos, nem o da declaração de IRS. Este guia leva-te do zero ao PDF
 descarregado, com a forma de confirmar cada passo.
 
 Demora cerca de cinco minutos.
@@ -15,7 +15,8 @@ na mesma implantação da aplicação. Quando alguém carrega em «PDF»:
 
 ```
 browser  ──▶  /api/documentos/vencimento   (Next: sessão, direito, cálculo)
-         └─▶  /api/documentos/recibos      (idem, para o mapa de recibos)
+         ├─▶  /api/documentos/recibos      (idem, para o mapa de recibos)
+         └─▶  /api/documentos/irs          (idem, para a declaração de IRS)
                         │
                         │  POST assinado com HMAC-SHA256
                         ▼
@@ -25,9 +26,9 @@ browser  ──▶  /api/documentos/vencimento   (Next: sessão, direito, cálcu
               PDF de volta ao browser
 ```
 
-As duas rotas usam o **mesmo** segredo e o **mesmo** compositor: só muda o
-`tipo` que enviam (`vencimento` ou `recibos`) e, com ele, o modelo tipográfico.
-Configurar a variável liga as duas de uma vez.
+As três rotas usam o **mesmo** segredo e o **mesmo** compositor: só muda o
+`tipo` que enviam (`vencimento`, `recibos` ou `irs`) e, com ele, o modelo
+tipográfico. Configurar a variável liga as três de uma vez.
 
 A assinatura existe porque, sem ela, **qualquer pessoa** podia mandar compor um
 documento com o cabeçalho da ReciboCerto e o conteúdo que quisesse — bastava
@@ -175,16 +176,20 @@ recibocerto-relatorio-de-vencimento-agosto-de-2026-RC-2026-VNC-8F3K2M.pdf
 E, por baixo dos botões, aparece «Relatório emitido · referência
 RC-2026-VNC-8F3K2M».
 
-### 4.4 · E o mapa de recibos?
+### 4.4 · E os outros dois documentos?
 
 1. Entra em <https://www.recibocerto.pt/dashboard/recibos> com a mesma conta
 2. Garante que tens pelo menos um recibo guardado
 3. **PDF**
 
 Descarrega um ficheiro com uma referência começada por `RC-2026-RCB-` e aparece
-«Mapa emitido · referência …». Se o do vencimento funciona e este não, o
-problema não é do segredo — é do próprio mapa; ver os registos da rota
-`/api/documentos/recibos`.
+«Mapa emitido · referência …».
+
+Para a declaração de IRS: <https://www.recibocerto.pt/dashboard/simulador>,
+etapa de revisão, botão **PDF** — referência começada por `RC-2026-IRS-`.
+
+Se um deles funciona e outro não, o problema **não é do segredo**: é do
+documento em si. Ver os registos da rota respetiva.
 
 ---
 

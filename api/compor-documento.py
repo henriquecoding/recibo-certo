@@ -46,6 +46,7 @@ NORMAS = ["a-2a", "ua-1"]
 TEMPLATES = {
     "vencimento": "relatorio-vencimento.typ",
     "recibos": "mapa-recibos.typ",
+    "irs": "declaracao-irs.typ",
 }
 
 # 1 MB chega para o modelo de um recibo com folga; acima disso é abuso.

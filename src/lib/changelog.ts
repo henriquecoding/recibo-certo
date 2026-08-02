@@ -19,6 +19,19 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.14.0",
+    data: "2026-08-02",
+    titulo: "A declaração de IRS em PDF, escalão a escalão",
+    itens: [
+      "A simulação de IRS passou a sair em PDF composto por nós, como o recibo de vencimento e o mapa de recibos. Era o último que ainda saía pela janela de impressão do browser — e o que mais sofria com isso, porque é o mais longo.",
+      "O documento mostra agora os escalões um a um: quanto do teu rendimento caiu em cada escalão e quanto imposto pagou cada fatia. É a resposta à pergunta que ninguém sabe explicar — porque é que a tua taxa efetiva é 19,8% se o teu escalão diz 44,6%.",
+      "Quando as tuas deduções batem no limite global do Art. 78.º, o PDF mostra a conta: quanto somaste, qual era o teto e quanto se perdeu. É onde se percebe que juntar mais faturas já não muda nada.",
+      "Acrescenta o caminho do rendimento global até ao coletável, passo a passo, e a memória de cálculo completa com a fórmula e o artigo de cada linha.",
+      "As colunas de euros passam a fechar ao cêntimo: oito escalões arredondados um a um davam um cêntimo a mais do que a coleta, na mesma página. Agora a soma bate sempre certo.",
+      "Os valores escritos dentro das fórmulas passam a agrupar os milhares como os das tabelas — antes lia-se «5060,00 €» numa linha e «1 206,20 €» na seguinte.",
+    ],
+  },
+  {
     version: "2.13.0",
     data: "2026-08-02",
     titulo: "O mapa de recibos também é um documento",

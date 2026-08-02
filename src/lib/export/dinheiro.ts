@@ -44,6 +44,79 @@ export function arredondar(valor: number, casas: number = CASAS_CENTIMO): number
 /** `arredondar` ao cêntimo — o caso esmagadoramente mais comum. */
 export const cent = (valor: number): number => arredondar(valor, CASAS_CENTIMO);
 
+/**
+ * Reparte um total pelas suas parcelas de forma que a soma das parcelas
+ * arredondadas seja EXATAMENTE o total arredondado.
+ *
+ * Arredondar cada parcela ao cêntimo e somá-las não dá, em geral, o mesmo que
+ * arredondar a soma: os erros de arredondamento acumulam-se. Numa tabela de
+ * escalões de IRS isso significa uma coluna cujo total não bate certo com a
+ * linha da coleta um centímetro mais abaixo, no mesmo documento — que é
+ * exatamente o defeito que faz um leitor deixar de confiar em tudo o resto.
+ *
+ * O método é o do maior resto: trunca-se cada parcela ao cêntimo e distribui-se
+ * o que faltar, um cêntimo de cada vez, pelas parcelas que mais perderam a
+ * truncar. Cada parcela fica a menos de um cêntimo do valor exato, e a soma
+ * fecha ao cêntimo. É o que se faz em contabilidade para repartir um total, e
+ * não uma invenção deste projeto.
+ */
+export function repartirCentimos(valores: readonly number[], total: number): number[] {
+  if (valores.length === 0) return [];
+
+  const alvo = Math.round(arredondar(total) * 100);
+  const chao = valores.map((v) => Math.floor(arredondar(v * 100, 6)));
+  const restos = valores.map((v, i) => arredondar(v * 100, 6) - chao[i]);
+
+  let sobra = alvo - chao.reduce((s, c) => s + c, 0);
+  // Se a diferença não é de meia dúzia de cêntimos, o total não é a soma
+  // destas parcelas — repartir seria esconder um erro de cálculo, não um
+  // arredondamento. Devolve-se o arredondamento simples e deixa-se o defeito à
+  // vista de quem o possa corrigir.
+  if (Math.abs(sobra) > valores.length + 1) return valores.map(cent);
+
+  const ordem = restos
+    .map((resto, i) => ({ resto, i }))
+    .sort((a, b) => (sobra > 0 ? b.resto - a.resto : a.resto - b.resto));
+
+  const centimos = [...chao];
+  const passo = Math.sign(sobra);
+  for (let k = 0; sobra !== 0; k++) {
+    centimos[ordem[k % ordem.length].i] += passo;
+    sobra -= passo;
+  }
+  return centimos.map((c) => c / 100);
+}
+
+/** O separador de milhares do pt-PT: espaço inquebrável, não um espaço normal. */
+const SEPARADOR_MILHARES = " ";
+
+/**
+ * Reagrupa os milhares de valores já escritos dentro de uma frase.
+ *
+ * Existe por uma razão concreta e visível. As fórmulas da memória de cálculo
+ * são construídas no motor com o formatador da INTERFACE, que segue o CLDR do
+ * pt-PT à risca — e o CLDR só agrupa a partir de cinco algarismos
+ * (`minimumGroupingDigits: 2`). Numa página de UI isso é correto; numa coluna
+ * de documento produz «5060,00 €» na linha de cima e «1 206,20 €» na de baixo,
+ * que é exatamente o defeito que este módulo existe para eliminar.
+ *
+ * Reformatar as fórmulas no motor obrigaria a passar-lhe um formatador, e
+ * mudar o formatador da interface faria o site inteiro deixar de seguir o
+ * CLDR por causa de uma tabela. Reagrupar à saída é a correção mínima.
+ *
+ * Só toca em números com EXATAMENTE duas casas decimais e quatro ou mais
+ * algarismos inteiros: percentagens (uma casa) e referências legais («Art.
+ * 78.º», «n.º 2») ficam intactas.
+ */
+export function regruparMilhares(texto: string): string {
+  return texto.replace(/\d+,\d{2}(?!\d)/g, (numero) => {
+    const [inteiro, decimal] = numero.split(",");
+    if (inteiro.length <= 3) return numero;
+    const agrupado = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, SEPARADOR_MILHARES);
+    return `${agrupado},${decimal}`;
+  });
+}
+
 /** Valor finito e não negativo (entradas do utilizador, campos opcionais). */
 export const positivo = (valor: number | undefined | null): number =>
   Math.max(0, Number.isFinite(valor as number) ? (valor as number) : 0);

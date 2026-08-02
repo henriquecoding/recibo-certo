@@ -1,0 +1,375 @@
+{
+  "periodo": "2026",
+  "proveniencia": {
+    "referencia": "RC-2026-IRS-GT9TVP",
+    "digest": "dfaa9d0f2771257224e6fc82b7cac6b938cd469d9f517bfe5004425ddc52bf8e",
+    "motor": "2.14.0",
+    "anoFiscal": 2026,
+    "emitidoEm": "1 de agosto de 2026",
+    "verificacao": "https://recibocerto.pt/v/RC-2026-IRS-GT9TVP"
+  },
+  "resposta": {
+    "titulo": "O que ainda falta pagar",
+    "rotulo": "Imposto a pagar, estimado",
+    "valor": 2110.52,
+    "contexto": "de 16 672,52 € de IRS apurado, contra 14 562,00 € já entregues",
+    "devolve": false
+  },
+  "segmentos": [
+    {
+      "rotulo": "IRS apurado no ano",
+      "valor": 16672.52
+    },
+    {
+      "rotulo": "Ainda em falta",
+      "valor": 2110.52
+    }
+  ],
+  "totais": {
+    "rendimentoGlobal": 84050,
+    "rendimentoColetavel": 58440,
+    "irsTotal": 16672.52,
+    "taxaEfetivaTexto": "19,8%",
+    "taxaMarginalTexto": "44,6%",
+    "ssAnual": 2696.4
+  },
+  "identificacao": [
+    {
+      "rotulo": "Residência fiscal",
+      "valor": "Continente"
+    },
+    {
+      "rotulo": "Estado civil",
+      "valor": "Casado"
+    },
+    {
+      "rotulo": "Tributação",
+      "valor": "Separada"
+    },
+    {
+      "rotulo": "Dependentes",
+      "valor": "Dependente 1 · Dependente 2 (até 3 anos)"
+    },
+    {
+      "rotulo": "Ascendentes a cargo",
+      "valor": "1"
+    }
+  ],
+  "componentes": [
+    {
+      "anexo": "Anexo A",
+      "categoria": "Trabalho dependente",
+      "bruto": 46000,
+      "englobado": 40940,
+      "autonomo": 0
+    },
+    {
+      "anexo": "Anexo E",
+      "categoria": "Dividendos e juros",
+      "bruto": 3650,
+      "englobado": 0,
+      "autonomo": 1022
+    },
+    {
+      "anexo": "Anexo F",
+      "categoria": "Rendimentos prediais",
+      "bruto": 9600,
+      "englobado": 0,
+      "autonomo": 1267.5
+    },
+    {
+      "anexo": "Anexo J",
+      "categoria": "Rendimentos estrangeiros",
+      "bruto": 4000,
+      "englobado": 4000,
+      "autonomo": 0
+    },
+    {
+      "anexo": "Anexo G",
+      "categoria": "Mais-valias mobiliárias",
+      "bruto": 2800,
+      "englobado": 0,
+      "autonomo": 784
+    },
+    {
+      "anexo": "Anexo B",
+      "categoria": "Trabalho independente",
+      "bruto": 18000,
+      "englobado": 13500,
+      "autonomo": 0
+    }
+  ],
+  "totalComponentes": {
+    "bruto": 84050,
+    "englobado": 58440,
+    "autonomo": 3073.5
+  },
+  "funil": {
+    "passos": [
+      {
+        "rotulo": "Rendimento global declarado",
+        "valor": 84050
+      },
+      {
+        "rotulo": "Rendimento tributado a taxas próprias, fora do englobamento",
+        "valor": -25610,
+        "base": "Arts. 71.º-72.º"
+      }
+    ],
+    "coletavel": 58440
+  },
+  "escaloes": [
+    {
+      "ate": 8342,
+      "taxaTexto": "12,5%",
+      "rendimento": 8342,
+      "imposto": 1042.75
+    },
+    {
+      "ate": 12587,
+      "taxaTexto": "15,7%",
+      "rendimento": 4245,
+      "imposto": 666.46
+    },
+    {
+      "ate": 17838,
+      "taxaTexto": "21,2%",
+      "rendimento": 5251,
+      "imposto": 1113.21
+    },
+    {
+      "ate": 23089,
+      "taxaTexto": "24,1%",
+      "rendimento": 5251,
+      "imposto": 1265.49
+    },
+    {
+      "ate": 29397,
+      "taxaTexto": "31,1%",
+      "rendimento": 6308,
+      "imposto": 1961.79
+    },
+    {
+      "ate": 43090,
+      "taxaTexto": "34,9%",
+      "rendimento": 13693,
+      "imposto": 4778.86
+    },
+    {
+      "ate": 46566,
+      "taxaTexto": "43,1%",
+      "rendimento": 3476,
+      "imposto": 1498.16
+    },
+    {
+      "ate": 86634,
+      "taxaTexto": "44,6%",
+      "rendimento": 11874,
+      "imposto": 5295.8
+    }
+  ],
+  "totalEscaloes": {
+    "rendimento": 58440,
+    "imposto": 17622.52
+  },
+  "adicionalSolidariedade": 0,
+  "taxaFixa": "",
+  "deducoes": [
+    {
+      "rubrica": "Dependentes",
+      "valor": 1326,
+      "base": "Art. 78.º-A",
+      "foraDoTeto": true
+    },
+    {
+      "rubrica": "Ascendentes em comunhão de habitação",
+      "valor": 635,
+      "base": "Art. 78.º-A",
+      "foraDoTeto": true
+    },
+    {
+      "rubrica": "Despesas gerais familiares",
+      "valor": 87.5,
+      "base": "Art. 78.º-B",
+      "foraDoTeto": true
+    },
+    {
+      "rubrica": "Despesas de saúde",
+      "valor": 360,
+      "base": "Art. 78.º-C",
+      "foraDoTeto": false
+    },
+    {
+      "rubrica": "Despesas de educação",
+      "valor": 540,
+      "base": "Art. 78.º-D",
+      "foraDoTeto": false
+    },
+    {
+      "rubrica": "PPR",
+      "valor": 350,
+      "base": "Art. 21.º EBF",
+      "foraDoTeto": false
+    },
+    {
+      "rubrica": "Donativos",
+      "valor": 125,
+      "base": "Art. 63.º EBF",
+      "foraDoTeto": false
+    }
+  ],
+  "deducoesTotal": 3423.5,
+  "limiteDeducoes": null,
+  "apuramento": [
+    {
+      "rubrica": "Coleta do englobamento",
+      "valor": 17622.52,
+      "base": "Art. 68.º"
+    },
+    {
+      "rubrica": "Tributação autónoma das taxas especiais",
+      "valor": 3073.5,
+      "base": "Arts. 71.º-72.º"
+    },
+    {
+      "rubrica": "Deduções à coleta",
+      "valor": -3423.5,
+      "base": "Art. 78.º"
+    },
+    {
+      "rubrica": "Crédito por dupla tributação internacional",
+      "valor": -600,
+      "base": "Art. 81.º"
+    }
+  ],
+  "irsTotal": 16672.52,
+  "pagamentos": [
+    {
+      "rubrica": "Retenções na fonte",
+      "valor": 14562
+    }
+  ],
+  "pago": 14562,
+  "saldo": -2110.52,
+  "memoria": [
+    {
+      "anexo": "Anexo A",
+      "rubrica": "Rendimento líquido de trabalho dependente",
+      "formula": "46 000,00 € − contribuições para a SS 5 060,00 € (Art. 25.º n.º 2)",
+      "base": "Art. 25.º CIRS",
+      "valor": 40940
+    },
+    {
+      "anexo": "Anexo E",
+      "rubrica": "Capitais — taxa liberatória",
+      "formula": "3 650,00 € × 28,0%",
+      "base": "Art. 71.º CIRS",
+      "valor": 1022
+    },
+    {
+      "anexo": "Anexo F",
+      "rubrica": "Rendas — taxa autónoma",
+      "formula": "8 450,00 € × 15,0%",
+      "base": "Art. 72.º CIRS",
+      "valor": 1267.5
+    },
+    {
+      "anexo": "Anexo J",
+      "rubrica": "Rendimento obtido no estrangeiro (sem categoria indicada)",
+      "formula": "",
+      "base": "Art. 15.º + Art. 81.º CIRS",
+      "valor": 4000
+    },
+    {
+      "anexo": "Anexo G",
+      "rubrica": "Mais-valias mobiliárias — taxa especial",
+      "formula": "2 800,00 € × 28,0%",
+      "base": "Art. 72.º n.º 1 CIRS",
+      "valor": 784
+    },
+    {
+      "anexo": "Anexo B",
+      "rubrica": "Rendimento tributável (regime simplificado)",
+      "formula": "18 000,00 € × coef. 75,0%",
+      "base": "Art. 31.º CIRS",
+      "valor": 13500
+    },
+    {
+      "anexo": "Anexo J",
+      "rubrica": "Crédito dupla tributação",
+      "formula": "mín(imposto pago 600,00 €; fração da coleta 1 206,20 €)",
+      "base": "Art. 81.º CIRS",
+      "valor": -600
+    },
+    {
+      "anexo": "Anexo H",
+      "rubrica": "Dedução por ascendentes",
+      "formula": "",
+      "base": "Art. 78.º-A CIRS",
+      "valor": -635
+    },
+    {
+      "anexo": "Anexo H",
+      "rubrica": "Benefício PPR",
+      "formula": "20% do aplicado (limite por idade)",
+      "base": "Art. 21.º EBF",
+      "valor": -350
+    },
+    {
+      "anexo": "Anexo H",
+      "rubrica": "Benefício donativos",
+      "formula": "25% do donativo (máx 15% da coleta)",
+      "base": "Art. 63.º EBF",
+      "valor": -125
+    },
+    {
+      "anexo": "",
+      "rubrica": "Coleta do englobamento",
+      "formula": "IRS sobre 58 440,00 € (escalões)",
+      "base": "Art. 68.º + 69.º CIRS",
+      "valor": 17622.52
+    },
+    {
+      "anexo": "",
+      "rubrica": "Tributação autónoma",
+      "formula": "",
+      "base": "Art. 72.º CIRS",
+      "valor": 3073.5
+    },
+    {
+      "anexo": "",
+      "rubrica": "Deduções à coleta",
+      "formula": "",
+      "base": "Art. 78.º CIRS",
+      "valor": -3423.5
+    },
+    {
+      "anexo": "",
+      "rubrica": "IRS total estimado",
+      "formula": "",
+      "base": "",
+      "valor": 16672.52
+    },
+    {
+      "anexo": "",
+      "rubrica": "Retenções e pagamentos por conta",
+      "formula": "",
+      "base": "",
+      "valor": -14562
+    },
+    {
+      "anexo": "",
+      "rubrica": "Imposto a pagar estimado",
+      "formula": "",
+      "base": "",
+      "valor": 2110.52
+    }
+  ],
+  "avisos": [],
+  "ambito": [
+    "É uma estimativa informativa: não substitui a declaração Modelo 3 entregue à Autoridade Tributária.",
+    "Assume que os valores introduzidos estão completos e corretamente enquadrados por categoria.",
+    "Não modela benefícios fiscais fora dos indicados, nem regimes negociados caso a caso.",
+    "A Segurança Social da categoria B é devida à parte e não entra no apuramento do IRS."
+  ]
+}

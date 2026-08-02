@@ -84,7 +84,10 @@ import ProHint from "@/components/ui/ProHint";
 import PartnerSpot from "@/components/dashboard/PartnerSpot";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import GuardarCenarioDialog from "@/components/ui/GuardarCenarioDialog";
-import { exportarDeclaracaoIRS, exportarDeclaracaoCSV } from "@/lib/export-irs";
+import { exportarDeclaracaoCSV } from "@/lib/export-irs";
+import { descarregar, MIME, nomeFicheiro } from "@/lib/export/nomes";
+import { getSupabase } from "@/lib/supabase/client";
+import { FISCAL_YEAR } from "@/lib/fiscal-data";
 import { useScrollTopOnStep } from "@/lib/scroll";
 import { DistribuicaoRendimento, DistribuicaoFiscal } from "@/components/simulador/Graficos";
 import EditorOperacoes from "@/components/simulador/EditorOperacoes";
@@ -164,6 +167,9 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
   const { recibos, carregado, resumo } = useRecibos();
   const cenariosStore = useCenarios();
   const exportPro = useExportacaoPro();
+  const [pdfState, setPdfState] = useState<{ estado: "inativo" | "a-compor" | "pronto" | "erro"; texto?: string }>({
+    estado: "inativo",
+  });
 
   // ── Navegação ──────────────────────────────────────────────────────────────
   const [passo, setPasso] = useState(0);
@@ -424,6 +430,57 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
     }
     if (typeof window !== "undefined") window.location.reload();
   };
+
+  /**
+   * O PDF é composto NO SERVIDOR.
+   *
+   * O caminho anterior era `window.open` + `window.print()`: falhava em
+   * silêncio atrás de um bloqueador de pop-ups e saía com a fonte de cada
+   * computador. Agora sai o documento da marca, em PDF/A-2a + PDF/UA-1, com
+   * referência verificável.
+   *
+   * Vai a ENTRADA da simulação, nunca o resultado: um documento que anuncia um
+   * reembolso com o cabeçalho da marca tem de ter sido apurado por nós.
+   */
+  async function exportarPDF() {
+    if (!exportPro.tentarExportar("irs")) return;
+    setPdfState({ estado: "a-compor" });
+    const periodo = String(FISCAL_YEAR);
+    try {
+      const { data } = await getSupabase().auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) {
+        setPdfState({ estado: "erro", texto: "Inicia sessão para descarregar a declaração." });
+        return;
+      }
+      const resposta = await fetch("/api/documentos/irs", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          entrada: construirDeclaracaoInput(estado),
+          cabecalho: montarCabecalho(),
+          periodo,
+        }),
+      });
+      if (resposta.status === 402) {
+        setPdfState({ estado: "erro", texto: "A declaração em PDF faz parte do Plus." });
+        return;
+      }
+      if (!resposta.ok) {
+        setPdfState({ estado: "erro", texto: "Não foi possível compor a declaração. Tenta de novo." });
+        return;
+      }
+      const referencia = resposta.headers.get("x-documento-referencia") ?? "";
+      descarregar(
+        await resposta.arrayBuffer(),
+        nomeFicheiro({ assunto: "declaracao de irs", periodo, referencia: referencia || "RC", extensao: "pdf" }),
+        MIME.pdf,
+      );
+      setPdfState({ estado: "pronto", texto: referencia });
+    } catch {
+      setPdfState({ estado: "erro", texto: "Não foi possível contactar o servidor." });
+    }
+  }
 
   const montarCabecalho = () => ({
     nome: contribuinte.nome,
@@ -1121,7 +1178,8 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
               avisos={avisos}
               oportunidades={oportunidades}
               completude={completude}
-              onExportar={() => { if (exportPro.tentarExportar("irs")) exportarDeclaracaoIRS(resultado, montarCabecalho()); }}
+              onExportar={() => void exportarPDF().catch(() => {})}
+              pdfState={pdfState}
               onExportarCSV={() => { if (exportPro.tentarExportar("irs")) void exportarDeclaracaoCSV(resultado, montarCabecalho()).catch(() => {}); }}
               onLimpar={limparTudo}
               onGuardar={() => setDialogGuardar(true)}
@@ -2272,6 +2330,7 @@ function PassoRevisao({
   onGuardar,
   cenarioFeedback,
   gravadoLabel,
+  pdfState,
 }: {
   estado: EstadoDeclaracao;
   resultado: ReturnType<typeof simularDeclaracaoIRS>;
@@ -2285,6 +2344,7 @@ function PassoRevisao({
   onGuardar: () => void;
   cenarioFeedback: { tipo: "ok" | "erro"; texto: string } | null;
   gravadoLabel: string;
+  pdfState: { estado: "inativo" | "a-compor" | "pronto" | "erro"; texto?: string };
 }) {
   return (
     <>
@@ -2300,9 +2360,10 @@ function PassoRevisao({
         <button
           type="button"
           onClick={onExportar}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-600 transition-colors hover:border-brand hover:text-brand dark:border-stone-700 dark:text-stone-300"
+          disabled={pdfState.estado === "a-compor"}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-brand/25 bg-brand-light px-4 py-2.5 text-sm font-semibold text-brand-dark transition-colors hover:border-brand disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand/10 dark:text-brand-light"
         >
-          <Export size={16} /> Exportar / imprimir
+          <Export size={16} /> {pdfState.estado === "a-compor" ? "A compor…" : "PDF"}
         </button>
         <button
           type="button"
@@ -2322,6 +2383,17 @@ function PassoRevisao({
           <Check size={12} className="text-brand" /> {gravadoLabel}
         </span>
       </div>
+
+      {pdfState.estado !== "inativo" && pdfState.estado !== "a-compor" && (
+        <p
+          aria-live="polite"
+          className={`mt-2 text-xs leading-relaxed ${pdfState.estado === "erro" ? "text-alert-text" : "text-brand-dark dark:text-brand-light"}`}
+        >
+          {pdfState.estado === "pronto"
+            ? `Declaração emitida${pdfState.texto ? ` · referência ${pdfState.texto}` : ""}.`
+            : pdfState.texto}
+        </p>
+      )}
 
       {/* Ponto 12.3 da arquitetura. Fica logo a seguir às ações e antes da
           revisão detalhada: quem chega à etapa 4 já tem a conta feita e o

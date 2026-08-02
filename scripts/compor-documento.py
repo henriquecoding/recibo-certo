@@ -43,6 +43,11 @@ DOCUMENTOS = [
         "dados": "/src/documentos/recibos-exemplo.json",
         "saida": "out/mapa-recibos.pdf",
     },
+    {
+        "typ": "src/documentos/declaracao-irs.typ",
+        "dados": "/src/documentos/irs-exemplo.json",
+        "saida": "out/declaracao-irs.pdf",
+    },
 ]
 
 

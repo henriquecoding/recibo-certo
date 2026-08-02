@@ -12,6 +12,8 @@ import {
   eurMaquina,
   numeroDoc,
   pctDoc,
+  regruparMilhares,
+  repartirCentimos,
 } from "../src/lib/export/dinheiro";
 import {
   DIALETOS,
@@ -321,5 +323,64 @@ describe("nomes de ficheiro", () => {
     const cabecalho = contentDisposition("recibocerto-relatorio-RC-2026-VNC-8F3K2M.pdf");
     expect(cabecalho).toContain('filename="recibocerto-relatorio-RC-2026-VNC-8F3K2M.pdf"');
     expect(cabecalho).toContain("filename*=UTF-8''");
+  });
+});
+
+describe("repartição de cêntimos", () => {
+  it("faz a soma das parcelas dar exatamente o total", () => {
+    // O caso real que a motivou: oito escalões de IRS que, arredondados um a
+    // um, davam 17 622,53 € contra os 17 622,52 € da coleta.
+    const exatos = [1042.75, 666.465, 1113.212, 1265.4855, 1961.788, 4778.857, 1498.156, 5295.797];
+    const total = exatos.reduce((s, v) => s + v, 0);
+    const partes = repartirCentimos(exatos, total);
+    expect(arredondar(partes.reduce((s, v) => s + v, 0))).toBe(cent(total));
+  });
+
+  it("nunca afasta uma parcela mais de um cêntimo do valor exato", () => {
+    const exatos = [10.004, 10.004, 10.004, 10.004, 10.004];
+    for (const [i, parte] of repartirCentimos(exatos, 50.02).entries()) {
+      expect(Math.abs(parte - exatos[i])).toBeLessThan(0.01);
+    }
+  });
+
+  it("aguenta valores negativos e listas de um só elemento", () => {
+    expect(repartirCentimos([-3.333, -3.333, -3.334], -10)).toHaveLength(3);
+    expect(arredondar(repartirCentimos([-3.333, -3.333, -3.334], -10).reduce((s, v) => s + v, 0))).toBe(-10);
+    expect(repartirCentimos([7.5], 7.5)).toEqual([7.5]);
+    expect(repartirCentimos([], 0)).toEqual([]);
+  });
+
+  it("não esconde um erro de cálculo: se o total não é a soma, não o inventa", () => {
+    // Repartir uma diferença grande transformaria um defeito de motor num
+    // documento bonito e errado. Aqui devolve o arredondamento simples.
+    expect(repartirCentimos([1, 1], 500)).toEqual([1, 1]);
+  });
+});
+
+describe("reagrupamento de milhares dentro de frases", () => {
+  // O separador é um espaço INQUEBRÁVEL (U+00A0), não um espaço normal —
+  // escrito aqui como escape para o teste não passar por acidente com o
+  // caractere errado, que é indistinguível a olho.
+  const NB = "\u00A0";
+
+  it("agrupa o que o CLDR do pt-PT deixa sem separador", () => {
+    expect(regruparMilhares(`46${NB}000,00 € − contribuições 5060,00 €`)).toBe(
+      `46${NB}000,00 € − contribuições 5${NB}060,00 €`,
+    );
+    expect(regruparMilhares("8450,00 € × 15,0%")).toBe(`8${NB}450,00 € × 15,0%`);
+    expect(regruparMilhares("1234567,89 €")).toBe(`1${NB}234${NB}567,89 €`);
+  });
+
+  it("não toca em percentagens nem em referências legais", () => {
+    // As percentagens têm UMA casa decimal e os artigos não têm vírgula —
+    // é isso que os mantém fora do alcance da expressão.
+    expect(regruparMilhares("18 000,00 € × coef. 75,0%")).toBe("18 000,00 € × coef. 75,0%");
+    expect(regruparMilhares("Art. 25.º n.º 2 CIRS")).toBe("Art. 25.º n.º 2 CIRS");
+    expect(regruparMilhares("2800,00 € × 28,0%")).toBe(`2${NB}800,00 € × 28,0%`);
+  });
+
+  it("deixa quieto o que já está agrupado", () => {
+    const ja = `mín(imposto pago 600,00 €; fração da coleta 1${NB}206,20 €)`;
+    expect(regruparMilhares(ja)).toBe(ja);
   });
 });
