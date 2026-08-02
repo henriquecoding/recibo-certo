@@ -61,7 +61,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: npm ci
-      - run: pip install typst fonttools brotli pikepdf
+      - run: pip install -r requirements.txt
+      - run: pip install fonttools brotli pikepdf
 
       # As fontes preparadas estão versionadas; isto confirma que continuam a
       # bater certo com os estáticos de origem — se um dia o @fontsource mudar
@@ -78,6 +79,28 @@ jobs:
 
       - name: Fontes embebidas, estrutura, metadados e extração
         run: npm run docs:verify
+
+      # A função da Vercel e o script local partilham `compor()`: se a função
+      # deixar de compor, o documento não sai em produção — e é preciso que
+      # isso falhe aqui e não lá.
+      - name: Compor pela função da Vercel
+        env:
+          DOCUMENTOS_HMAC_SEGREDO: ci-apenas-para-teste
+        run: |
+          python3 - <<'EOF'
+          import importlib.util, json, hashlib, hmac, os
+          spec = importlib.util.spec_from_file_location("compor", "api/compor-documento.py")
+          mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+          corpo = json.dumps({"tipo": "vencimento", "dados": {}}, ensure_ascii=False).encode()
+          segredo = os.environ["DOCUMENTOS_HMAC_SEGREDO"].encode()
+          assert mod._assinatura_valida(corpo, hmac.new(segredo, corpo, hashlib.sha256).hexdigest())
+          assert not mod._assinatura_valida(corpo, "0" * 64), "assinatura errada foi aceite"
+          dados = json.load(open("src/documentos/dados-exemplo.json", encoding="utf-8"))
+          pdf = mod.compor("vencimento", dados)
+          open("out/via-funcao.pdf", "wb").write(pdf)
+          print(f"função compôs {len(pdf)} bytes")
+          EOF
+          python3 scripts/verificar-documentos.py out/via-funcao.pdf
 
       - name: Guardar o documento composto
         if: always()

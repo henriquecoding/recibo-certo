@@ -32,6 +32,7 @@ import {
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
 import { escreverCSV } from "@/lib/export/csv";
 import { criarProveniencia } from "@/lib/export/referencia";
+import { getSupabase } from "@/lib/supabase/client";
 import { MIME, descarregar, nomeFicheiro } from "@/lib/export/nomes";
 import { numeroDoc } from "@/lib/export/dinheiro";
 import { livroXLSX, tabelasCSV, type DocumentoVencimento } from "@/lib/export/documento-vencimento";
@@ -329,6 +330,7 @@ export function MotorReciboVencimento() {
   const [auditKey, setAuditKey] = useState(0);
   const [saveDialog, setSaveDialog] = useState(false);
   const [saveNotice, setSaveNotice] = useState<{ type: "ok" | "error"; text: string } | null>(null);
+  const [exportState, setExportState] = useState<{ estado: "inativo" | "a-compor" | "pronto" | "erro"; texto?: string }>({ estado: "inativo" });
 
   // Fator máximo do n.º 6 do Despacho: 3 (não casado / único titular) ou 6
   // (casado, dois titulares). Ao mudar de situação familiar, um fator acima do
@@ -620,68 +622,62 @@ export function MotorReciboVencimento() {
     );
   }
 
+  /**
+   * O PDF é composto NO SERVIDOR.
+   *
+   * Enquanto era gerado no cliente, `localStorage.clear()` devolvia as
+   * exportações todas, para sempre, em qualquer browser — o servidor nunca via
+   * o pedido, e o gate era decorativo. E o que saía era uma janela de impressão
+   * com o desenho de cada computador, não o documento da marca.
+   *
+   * O cliente envia PRESSUPOSTOS, nunca resultados: se enviasse resultados, o
+   * documento assinado pela marca podia dizer qualquer coisa.
+   */
   async function exportPdf() {
     if (!exportAccess.tentarExportar("vencimento")) return;
-    // As três linhas do IRS Jovem vêm do MESMO cálculo que o resto do
-    // relatório (`calculation.result`), e não de um recibo simplificado só
-    // com o salário base. Num recibo com horas extra, prémios ou subsídios, a
-    // linha «poupança do IRS Jovem» deixava de corresponder ao documento onde
-    // estava impressa — e o PDF é justamente o que a pessoa leva aos recursos
-    // humanos.
-    const { printRelatorioVencimento } = await import("@/lib/export-vencimento");
-    printRelatorioVencimento({
-      situacao: FAMILY_OPTIONS.find(([value]) => value === maritalStatus)?.[1] ?? "—",
-      dependentes: dependants,
-      dependentesDeficientes: Math.min(dependants, dependantsWithDisability),
-      fatorDependentesDeficientes: effectiveFactor,
-      conjugeDeficiente: effectiveSpouseDisability,
-      horasSemanais: parseNumber(weeklyHours),
-      deficiencia: disability,
-      subsidioDia: mealEnabled ? parseNumber(mealDaily) : 0,
-      subsidioForma: mealEnabled ? (mealCard ? "Cartão" : "Dinheiro") : "—",
-      diasUteis: parseNumber(mealDays),
-      duodecimos,
-      regiao: REGION_OPTIONS.find(([value]) => value === region)?.[1] ?? "Continente",
-      salarioBase: baseSalary,
-      bruto: calculation.result.brutoTotal,
-      ssTrabalhador: calculation.result.ssTrabalhador,
-      irsRetido: calculation.result.irsTotal,
-      subsidioRefeicaoTotal: calculation.result.subsidioRefeicaoTotal,
-      subsidioRefeicaoIsento: calculation.result.subsidioRefeicaoIsento,
-      subsidioRefeicaoTributado: calculation.result.subsidioRefeicaoTributado,
-      liquido: calculation.result.liquido,
-      liquidoMostrado: calculation.result.liquido,
-      taxaEfetiva: calculation.result.taxaEfetiva,
-      custoEmpresa: companyCost,
-      irsJovemAtivo: youthIrs,
-      irsJovemPct: calculation.result.isencaoJovemPct,
-      irsJovemAno: youthYear,
-      rendimentoIsentoJovem: calculation.result.rendimentoIsentoJovem,
-      irsSemJovem: calculation.result.irsSemJovem,
-      ssTaxaTrab: SS_DEPENDENTE.trabalhador.value,
-      tsuTaxa: SS_DEPENDENTE.entidade.value,
-      brutoAnual: annual.brutoAnual,
-      subsidioFerias: annual.subsidioFerias,
-      subsidioNatal: annual.subsidioNatal,
-      irsFerias: annual.irsFerias,
-      irsNatal: annual.irsNatal,
-      irsAnual: annual.irsAnual,
-      ssAnual: annual.ssAnual,
-      liquidoAnual: annual.liquidoAnual,
-      liquidoMedioMes: annual.liquidoMedioMes,
-      subsidioRefeicaoAnual: annual.subsidioRefeicaoAnual,
-      subsidioRefeicaoTributadoAnual: annual.subsidioRefeicaoTributadoAnual,
-      linhas: calculation.lines.map((line) => ({
-        rubrica: line.label,
-        detalhe: line.detail ? `${line.detail} · ${line.source}` : line.source,
-        valor: line.amount,
-        baseIRS: line.irsBase,
-        baseSS: line.socialSecurityBase,
-        irs: line.irsWithheld,
-        ss: line.employeeSocialSecurity,
-        liquido: line.netImpact,
-      })),
-    });
+    setExportState({ estado: "a-compor" });
+    try {
+      const { data } = await getSupabase().auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) {
+        setExportState({ estado: "erro", texto: "Inicia sessão para descarregar o relatório." });
+        return;
+      }
+      const resposta = await fetch("/api/documentos/vencimento", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          contexto: makeContext(baseSalary),
+          rubricas: rubrics,
+          duodecimos,
+          periodo: `${MONTHS[month]} de ${FISCAL_YEAR}`,
+          pressupostos: (await construirDocumento()).pressupostos,
+        }),
+      });
+      if (resposta.status === 402) {
+        // O cliente reage ao CÓDIGO, não a uma comparação de strings.
+        setExportState({ estado: "erro", texto: "O relatório em PDF faz parte do Plus." });
+        return;
+      }
+      if (!resposta.ok) {
+        setExportState({ estado: "erro", texto: "Não foi possível compor o relatório. Tenta de novo." });
+        return;
+      }
+      const referencia = resposta.headers.get("x-documento-referencia") ?? "";
+      descarregar(
+        await resposta.arrayBuffer(),
+        nomeFicheiro({
+          assunto: "relatorio de vencimento",
+          periodo: `${MONTHS[month]} de ${FISCAL_YEAR}`,
+          referencia: referencia || "RC",
+          extensao: "pdf",
+        }),
+        MIME.pdf,
+      );
+      setExportState({ estado: "pronto", texto: referencia });
+    } catch {
+      setExportState({ estado: "erro", texto: "Não foi possível contactar o servidor." });
+    }
   }
 
   const mealExceeds = mealEnabled && parseNumber(mealDaily) > mealLimit(mealCard);
@@ -892,6 +888,13 @@ export function MotorReciboVencimento() {
                 <button type="button" onClick={() => void exportCsv().catch(() => {})} className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 px-3 py-2 text-[11px] font-semibold text-stone-600 transition hover:border-brand hover:text-brand dark:border-stone-700 dark:text-stone-300"><Export size={13} /> CSV</button>
               </div>
               <p className="mt-2 text-[9px] leading-relaxed text-stone-400">O CSV sai em dois dialetos: um para o Excel em português, outro em RFC 4180 para importar noutro programa.</p>
+              {exportState.estado !== "inativo" && (
+                <p aria-live="polite" className={`mt-2 text-[10px] leading-relaxed ${exportState.estado === "erro" ? "text-alert-text" : "text-brand-dark dark:text-brand-light"}`}>
+                  {exportState.estado === "a-compor" && "A compor o relatório…"}
+                  {exportState.estado === "pronto" && `Relatório emitido${exportState.texto ? ` · referência ${exportState.texto}` : ""}.`}
+                  {exportState.estado === "erro" && exportState.texto}
+                </p>
+              )}
             </div>
           </ProGate>
         </div>

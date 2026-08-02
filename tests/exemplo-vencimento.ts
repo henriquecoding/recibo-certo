@@ -53,7 +53,7 @@ export async function construirDocumentoExemplo(): Promise<DocumentoVencimento> 
       { codigo: "regiao_fiscal", rotulo: "Região fiscal", valor: "Continente" },
       { codigo: "horas_por_semana", rotulo: "Horas por semana", valor: "40 h" },
       { codigo: "dependentes", rotulo: "Dependentes", valor: "1" },
-      { codigo: "subsidio_refeicao", rotulo: "Subsídio de refeição", valor: "10,20 EUR/dia · cartão · 21 dias" },
+      { codigo: "subsidio_refeicao", rotulo: "Subsídio de refeição", valor: "10,20 €/dia em cartão, 21 dias" },
       { codigo: "irs_jovem", rotulo: "IRS Jovem", valor: "3.º ano" },
     ],
     linhas: calculo.lines,

@@ -19,6 +19,18 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.12.0",
+    data: "2026-08-02",
+    titulo: "O relatório passou a ser um documento a sério",
+    itens: [
+      "O relatório de vencimento foi redesenhado de alto a baixo: abre com a resposta à pergunta — quanto fica contigo — num painel próprio, e só depois vem a justificação, rubrica a rubrica.",
+      "Passou a ser composto nos nossos servidores em vez de ser impresso pelo teu browser. Na prática: sai sempre igual, em qualquer computador, com as fontes certas e sem a data e o «about:blank» que o browser carimbava por cima do rodapé.",
+      "Cada relatório traz uma referência e um código de barras. Basta lê-lo com a câmara, ou escrever a referência em recibocerto.pt/v, para confirmar que o documento foi mesmo emitido por nós — sem sessão iniciada e sem instalar nada.",
+      "A página de verificação não mostra o conteúdo do documento nem quem o pediu: confirma a emissão e mostra a impressão digital, para comparares com a que está impressa.",
+      "Os valores em euros no relatório passam a estar alinhados ao cêntimo e agrupados aos milhares — antes as colunas ficavam em degraus.",
+    ],
+  },
+  {
     version: "2.11.0",
     data: "2026-08-02",
     titulo: "Os ficheiros que levas contigo passaram a ser documentos",

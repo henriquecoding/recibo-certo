@@ -6,15 +6,20 @@
 //  `calcularVencimentoAnual`. É essa regra que torna o relatório auditável.
 //
 //  Compilar:
-//    typst compile --root . --input dados=<caminho> \
-//      --pdf-standard a-2a,ua-1 --font-path src/documentos/fontes \
-//      src/documentos/relatorio-vencimento.typ saida.pdf
+//    npm run docs:build
 // ─────────────────────────────────────────────────────────────────────
 
 #import "lib/tokens.typ": *
 #import "lib/template.typ": *
+#import "lib/qr.typ": codigo-referencia
 
-#let d = json(sys.inputs.at("dados", default: "dados-exemplo.json"))
+// Os dados chegam de duas formas: como JSON em texto (é assim que a função
+// Python os passa, sem escrever nada em disco) ou como caminho dentro da raiz
+// do projeto (é assim que o script local os passa, para se poder editar o
+// ficheiro e recompor). Um serverless não tem sítio dentro da raiz onde
+// escrever, e o compositor recusa-se a ler fora dela — daí as duas formas.
+#let _entrada = sys.inputs.at("dados", default: "/src/documentos/dados-exemplo.json")
+#let d = if _entrada.trim().starts-with("{") { json(bytes(_entrada)) } else { json(_entrada) }
 #let p = d.proveniencia
 
 #show: documento.with(
@@ -24,31 +29,40 @@
 )
 
 // ── 1 · Uma pergunta, uma resposta ──────────────────────────────────────────
+//
+// O primeiro terço da primeira página responde à pergunta. Tudo o que vem a
+// seguir é justificação — e essa hierarquia tem de se ver em três segundos.
 
-#eyebrow("ReciboCerto · copiloto fiscal")
-#v(0.3em)
-
-= Relatório de vencimento
-
-#text(size: t-lead, fill: ink-soft)[
-  #d.periodo. Este documento decompõe o vencimento rubrica a rubrica, mostra
-  sobre que bases incidem o IRS e a Segurança Social, e diz de onde vem cada
-  número.
-]
-
-#resposta(
+#capa-resposta(
+  titulo: [= Onde foi parar o teu salário],
+  periodo: d.periodo,
   rotulo: d.resposta.rotulo,
-  valor: eur(d.resposta.valor),
+  valor: d.resposta.valor,
   contexto: d.resposta.contexto,
+  referencia: p.referencia,
+  segmentos: (
+    (rotulo: "Fica contigo", valor: d.totais.liquido),
+    (rotulo: "Retenção de IRS", valor: d.totais.irs),
+    (rotulo: "Segurança Social", valor: d.totais.ss),
+  ),
 )
 
-#barra-segmentos((
-  (rotulo: "Fica contigo", valor: d.totais.liquido),
-  (rotulo: "Retenção de IRS", valor: d.totais.irs),
-  (rotulo: "Segurança Social", valor: d.totais.ss),
+#v(15pt)
+
+#indicadores((
+  (rotulo: "Bruto / caixa", valor: eur(d.totais.bruto), nota: "remunerações e abonos"),
+  (rotulo: "Taxa efetiva", valor: pct(d.totais.taxaEfetiva), nota: "sobre o rendimento sujeito", acento: true),
+  (rotulo: "Custo da empresa", valor: eur(d.totais.custoEmpresa), nota: "regime geral, sem seguro"),
+  (rotulo: "Líquido anual", valor: eur(d.ano.liquido), nota: eur(d.ano.liquidoMedioMes) + " por mês"),
 ))
 
-#v(1.2em)
+#v(6pt)
+
+#text(size: t-lead, fill: ink-soft)[
+  Este documento decompõe o vencimento rubrica a rubrica, mostra sobre que
+  bases incidem o IRS e a Segurança Social, e diz de onde vem cada número.
+  Pode ser levado ao departamento de pessoal ou a um contabilista.
+]
 
 // ── 2 · Pressupostos ────────────────────────────────────────────────────────
 
@@ -62,11 +76,15 @@
 
 #block(width: col-corpo, {
   set text(size: t-peq)
+  set par(justify: false, leading: 0.5em)
   grid(
-    columns: (auto, 1fr),
-    row-gutter: 4.5pt,
-    column-gutter: 12pt,
-    ..d.pressupostos.map(item => (text(fill: ink-mute)[#item.rotulo], text(fill: ink)[#item.valor])).flatten()
+    columns: (auto, 1fr, auto, 1fr),
+    column-gutter: (7pt, 20pt, 7pt),
+    row-gutter: 5.5pt,
+    ..d.pressupostos.map(item => (
+      text(fill: ink-mute, hyphenate: false)[#item.rotulo],
+      text(fill: ink, weight: 600)[#item.valor],
+    )).flatten()
   )
 })
 
@@ -79,7 +97,7 @@
   cabecalhos: ("Rubrica", "Bruto", "Base IRS", "Base SS", "IRS", "SS", "Líquido"),
   linhas: d.rubricas.map(r => (
     {
-      [#r.rubrica]
+      text(weight: 600)[#r.rubrica]
       if r.detalhe != "" {
         linebreak()
         text(size: t-micro, fill: ink-mute)[#r.detalhe]
@@ -103,14 +121,15 @@
   ),
 )
 
-#v(0.4em)
+#v(0.5em)
 #text(size: t-micro, fill: ink-mute)[
   Valores em euros. Um traço indica que a rubrica não incide nessa base — que é
-  diferente de incidir sobre zero. A taxa efetiva do mês é #pct(d.totais.taxaEfetiva)
-  sobre o rendimento sujeito.
+  diferente de incidir sobre zero.
 ]
 
 // ── 4 · O ano ───────────────────────────────────────────────────────────────
+
+#pagebreak(weak: true)
 
 == O ano
 
@@ -122,23 +141,25 @@
 
 #block(width: col-corpo, {
   set text(size: t-peq)
-  grid(
+  let linha(rotulo, valor, forte: false) = grid(
     columns: (1fr, auto),
-    row-gutter: 4.5pt,
-    [Remunerações do ano], eur(d.ano.bruto),
-    [Subsídio de refeição], eur(d.ano.refeicao),
-    [Do qual, acima do limite (tributado)], eur(d.ano.refeicaoTributada),
-    [Retenção de IRS no ano], eur(-d.ano.irs),
-    [Segurança Social no ano], eur(-d.ano.ss),
+    text(weight: if forte { 700 } else { 400 })[#rotulo],
+    text(weight: if forte { 700 } else { 400 })[#eur(valor)],
   )
+  linha("Remunerações do ano (14 prestações)", d.ano.bruto)
   v(4pt)
-  line(length: 100%, stroke: 0.8pt + brand-deep)
+  linha("Subsídio de refeição", d.ano.refeicao)
   v(4pt)
-  grid(
-    columns: (1fr, auto),
-    text(weight: 700)[Líquido anual], text(weight: 700, eur(d.ano.liquido)),
-  )
-  v(2pt)
+  linha("Do qual, acima do limite diário (tributado)", d.ano.refeicaoTributada)
+  v(4pt)
+  linha("Retenção de IRS no ano", -d.ano.irs)
+  v(4pt)
+  linha("Segurança Social no ano", -d.ano.ss)
+  v(7pt)
+  line(length: 100%, stroke: 0.9pt + brand-deep)
+  v(7pt)
+  linha("Líquido anual", d.ano.liquido, forte: true)
+  v(3pt)
   text(size: t-micro, fill: ink-mute)[Equivale a #eur(d.ano.liquidoMedioMes) por mês, em média.]
 })
 
@@ -146,23 +167,31 @@
 
 == Custo salarial direto — regime geral
 
+#nota-margem[
+  Não se chama «custo total» porque não é: fica de fora o seguro obrigatório de
+  acidentes de trabalho, a formação e os custos indiretos.
+]
+
 #block(width: col-corpo, {
   set text(size: t-peq)
-  grid(
+  let linha(rotulo, valor, forte: false) = grid(
     columns: (1fr, auto),
-    row-gutter: 4.5pt,
-    [Remunerações e abonos], eur(d.totais.bruto),
-    [Contribuição da entidade empregadora], eur(d.totais.custoEmpresa - d.totais.bruto),
-    text(weight: 700)[Custo salarial direto], text(weight: 700, eur(d.totais.custoEmpresa)),
-    [Seguro de acidentes de trabalho (estimado, NÃO incluído acima)], eur(d.totais.seguroAcidentes),
+    text(weight: if forte { 700 } else { 400 })[#rotulo],
+    text(weight: if forte { 700 } else { 400 })[#eur(valor)],
   )
+  linha("Remunerações e abonos", d.totais.bruto)
+  v(4pt)
+  linha("Contribuição da entidade empregadora", d.totais.custoEmpresa - d.totais.bruto)
+  v(7pt)
+  line(length: 100%, stroke: 0.9pt + brand-deep)
+  v(7pt)
+  linha("Custo salarial direto", d.totais.custoEmpresa, forte: true)
+  v(6pt)
+  text(fill: ink-mute)[
+    Seguro de acidentes de trabalho, estimado e #emph[não] incluído acima:
+    #text(fill: ink, weight: 600)[#eur(d.totais.seguroAcidentes)]
+  ]
 })
-
-#v(0.3em)
-#text(size: t-micro, fill: ink-mute)[
-  Não inclui o seguro obrigatório de acidentes de trabalho, formação nem custos
-  indiretos — daí não se chamar «custo total».
-]
 
 // ── 6 · Memória de cálculo ──────────────────────────────────────────────────
 
@@ -174,33 +203,35 @@
   Existe para poder ser contestada. É o que separa «confia em nós» de «vê por ti».
 ]
 
-#v(0.6em)
+#v(0.7em)
 
 #tabela-financeira(
   colunas: ("texto", "texto", "n"),
   cabecalhos: ("Rubrica", "Como se chega ao valor", "Valor"),
   linhas: d.memoria.map(m => (
-    [#m.rubrica],
+    text(weight: 600)[#m.rubrica],
     {
       text(size: t-micro)[#m.formula]
-      linebreak()
-      text(size: t-micro, fill: ink-mute)[#m.fonte]
+      if m.fonte != "—" and m.fonte != "" {
+        linebreak()
+        text(size: t-micro, fill: brand-dark)[#m.fonte]
+      }
     },
     eur(m.valor, simbolo: false),
   )),
 )
 
-// ── 7 · Base legal e âmbito ─────────────────────────────────────────────────
+// ── 7 · Base legal, âmbito e verificação ────────────────────────────────────
 
 == Base legal
 
 #base-legal(d.baseLegal)
 
-#v(1em)
+#v(1.1em)
 
 #ambito(d.ambito)
 
-#v(1em)
+#v(1.1em)
 
 #verificacao(
   referencia: p.referencia,
@@ -209,4 +240,5 @@
   ano: str(p.anoFiscal),
   emitido: p.emitidoEm,
   url: p.verificacao,
+  codigo: codigo-referencia(p.referencia),
 )

@@ -13,7 +13,7 @@
 import type { ReciboMensalResult, VencimentoAnualResult } from "@/lib/fiscal-dependente";
 import type { PayrollDisplayLine } from "@/lib/payroll-simulator-legacy-adapter";
 import type { Proveniencia } from "./referencia";
-import { cent } from "./dinheiro";
+import { cent, dataExtenso, eur } from "./dinheiro";
 import { dinheiro, numero, texto, vazio, type TabelaCSV } from "./csv";
 import type { ColunaXLSX, FolhaXLSX, LivroXLSX } from "./xlsx";
 
@@ -207,11 +207,15 @@ export function livroXLSX(doc: DocumentoVencimento): LivroXLSX {
 export function dadosTypst(doc: DocumentoVencimento) {
   return {
     periodo: doc.periodo,
-    proveniencia: doc.proveniencia,
+    // A data de emissão vai composta em português: «2026-08-01T12:00:00.000Z»
+    // é a forma de a guardar, não a de a ler.
+    proveniencia: { ...doc.proveniencia, emitidoEm: dataExtenso(doc.proveniencia.emitidoEm) },
     resposta: {
       rotulo: "Líquido deste mês",
       valor: liquidoDoMes(doc),
-      contexto: `de ${cent(doc.mes.brutoTotal)} € de remunerações e abonos`,
+      // Formatado aqui e não no template: o template não formata dinheiro,
+      // recebe-o composto — é a mesma regra que o impede de calcular.
+      contexto: `de ${eur(doc.mes.brutoTotal)} de remunerações e abonos`,
     },
     totais: {
       bruto: cent(doc.mes.brutoTotal),

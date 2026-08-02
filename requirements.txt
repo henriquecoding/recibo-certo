@@ -1,0 +1,7 @@
+# Runtime da função Python da Vercel (api/compor-documento.py).
+#
+# `typst` é o compositor tipográfico, distribuído como wheel compilado — é o
+# que permite ter PDF/A-2a e PDF/UA-1 sem versionar um binário de 53 MB.
+# Fixado à versão exata: uma alteração do compositor pode mudar a paginação, e
+# a paginação é uma característica do produto.
+typst==0.15.0

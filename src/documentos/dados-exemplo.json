@@ -1,17 +1,17 @@
 {
   "periodo": "Julho de 2026",
   "proveniencia": {
-    "referencia": "RC-2026-VNC-BMBL7K",
+    "referencia": "RC-2026-VNC-6WHMMD",
     "digest": "c40ff91f3d02308f533cfa39cc8c944c90d8c7ffe2c3de6b65d4c13d849503b5",
-    "motor": "2.11.0",
+    "motor": "2.12.0",
     "anoFiscal": 2026,
-    "emitidoEm": "2026-08-01T12:00:00.000Z",
-    "verificacao": "https://recibocerto.pt/v/RC-2026-VNC-BMBL7K"
+    "emitidoEm": "1 de agosto de 2026",
+    "verificacao": "https://recibocerto.pt/v/RC-2026-VNC-6WHMMD"
   },
   "resposta": {
     "rotulo": "Líquido deste mês",
     "valor": 2087.74,
-    "contexto": "de 2330.87 € de remunerações e abonos"
+    "contexto": "de 2 330,87 € de remunerações e abonos"
   },
   "totais": {
     "bruto": 2330.87,
@@ -46,7 +46,7 @@
     },
     {
       "rotulo": "Subsídio de refeição",
-      "valor": "10,20 EUR/dia · cartão · 21 dias"
+      "valor": "10,20 €/dia em cartão, 21 dias"
     },
     {
       "rotulo": "IRS Jovem",
@@ -92,7 +92,7 @@
     },
     {
       "rubrica": "Subsídio de refeição",
-      "detalhe": "21 dias · 214.2 € isentos",
+      "detalhe": "21 dias · 214,20 € isentos",
       "fonte": "CIRS art. 2.º · Portaria 51-B/2026",
       "tratamento": "exempt",
       "bruto": 214.2,

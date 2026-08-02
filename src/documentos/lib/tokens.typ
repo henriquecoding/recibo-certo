@@ -27,6 +27,9 @@
 #let brand-light = rgb("#E1F5EE")
 #let brand-dark = rgb("#0F6E56")
 #let brand-deep = rgb("#0A4A39")
+// Verde quase preto para a faixa de capa: sobre ele, o branco dá 15,9:1 e o
+// brand-mint 7,4:1 — os dois acima do mínimo com folga larga.
+#let brand-noite = rgb("#07352A")
 
 #let ink = rgb("#1A1A17")
 #let ink-soft = rgb("#4A4A44")
@@ -40,6 +43,7 @@
 
 #let creme = rgb("#F5F4F0")
 #let fio = rgb("#E3E1DA")
+#let fio-forte = rgb("#C9C6BC")
 #let alerta = rgb("#8A5A1B")
 #let alerta-fundo = rgb("#FDF6EC")
 
@@ -67,9 +71,11 @@
 #let t-peq = 8.2pt // tabelas densas
 #let t-corpo = 9pt // corpo
 #let t-lead = 10.5pt // primeira frase de secção
+#let t-h3 = 11pt
 #let t-h2 = 13pt // título de parte
 #let t-h1 = 22pt // título do documento
-#let t-hero = 40pt // o número que responde à pergunta
+#let t-capa = 30pt // título na capa
+#let t-hero = 46pt // o número que responde à pergunta
 
 #let entrelinha = 0.62em
 
@@ -130,6 +136,30 @@
       if simbolo { [ ] + [€] }
     },
   )
+}
+
+/// O número do herói: parte inteira grande, cêntimos menores e elevados. É o
+/// detalhe que separa um número impresso de um número composto.
+#let eur-hero(valor, tamanho: t-hero, cor: brand-deep) = {
+  let centimos = calc.round(calc.abs(valor) * 100)
+  let inteiro = int(centimos / 100)
+  let resto = calc.rem(centimos, 100)
+  let decimais = if resto < 10 { "0" + str(resto) } else { str(resto) }
+  box({
+    set text(font: fonte-corpo, fill: cor)
+    text(size: tamanho, weight: 700)[
+      #if valor < 0 { sym.minus }
+      #for (i, g) in _agrupar(inteiro).enumerate() {
+        if i > 0 { sep-milhares }
+        g
+      }
+    ]
+    // 0,46 do corpo, alinhado ao topo da altura-x — não sobrescrito real, que
+    // usaria uma fonte de tamanho arbitrário do motor.
+    text(size: tamanho * 0.46, weight: 600, baseline: -tamanho * 0.36)[,#decimais]
+    h(0.12em)
+    text(size: tamanho * 0.40, weight: 500, fill: cor.lighten(18%))[€]
+  })
 }
 
 /// Percentagem com uma casa.

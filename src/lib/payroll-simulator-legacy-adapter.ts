@@ -18,6 +18,7 @@ import {
   type Regiao,
 } from "./fiscal-data";
 import { calcularTrabalhoNoturno } from "./fiscal-laboral";
+import { eur } from "./export/dinheiro";
 
 export type PayrollRubricType =
   | "seniority"
@@ -337,7 +338,7 @@ function rubricAmount(
       ssBase: taxable,
       treatment: taxable <= 0 ? "exempt" : exempt > 0 ? "partial" : "subject",
       bucket: "normal",
-      detail: `${linha.dias} dia${linha.dias === 1 ? "" : "s"} · limite ${limit.toFixed(2)} €/dia · ${exempt.toFixed(2)} € isentos`,
+      detail: `${linha.dias} dia${linha.dias === 1 ? "" : "s"} · limite ${eur(limit)}/dia · ${eur(exempt)} isentos`,
     };
   }
   if (rubric.type === "night_work") {
@@ -369,7 +370,7 @@ function rubricAmount(
   }
   const entitlement = positive(rubric.entitlement ?? 0);
   const fractionDetail = entitlement > amount
-    ? `fração de um direito anual de ${entitlement.toFixed(2)} €`
+    ? `fração de um direito anual de ${eur(entitlement)}`
     : undefined;
   if (rubric.type === "holiday_subsidy") return { amount, irsBase: amount, ssBase: amount, treatment: "subject", bucket: "holiday", detail: fractionDetail };
   if (rubric.type === "christmas_subsidy") return { amount, irsBase: amount, ssBase: amount, treatment: "subject", bucket: "christmas", detail: fractionDetail };
@@ -489,7 +490,7 @@ export function buildPayrollDisplayLines(
       socialSecurityBase: result.subsidioRefeicaoTributado,
       treatment: result.subsidioRefeicaoTributado > 0 ? "partial" : "exempt",
       bucket: "normal",
-      detail: `${context.meal.days} dias · ${cent(result.subsidioRefeicaoIsento)} € isentos`,
+      detail: `${context.meal.days} dias · ${eur(result.subsidioRefeicaoIsento)} isentos`,
     });
   }
 
