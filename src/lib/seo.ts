@@ -14,6 +14,7 @@
 import { TOTAL_PERGUNTAS_META } from "@/lib/quiz-fiscal/quiz-meta";
 import { META_CATEGORIA_QUIZ } from "@/lib/quiz-fiscal/types";
 import { GUIDE_MANIFESTS } from "@/lib/guias/manifests";
+import { guiaSemCorpo } from "@/lib/guias/expansao/derivar";
 
 export const SITE_URL = "https://www.recibocerto.pt";
 export const SITE_NAME = "ReciboCerto";
@@ -38,8 +39,21 @@ export interface PublicRoute {
 /** Categorias do Quiz Fiscal com página própria. */
 export const QUIZ_CATEGORIA_SLUGS: readonly string[] = Object.keys(META_CATEGORIA_QUIZ).sort();
 
+/**
+ * Um guia entra no sitemap quando tem corpo redigido.
+ *
+ * O filtro era só `status !== "archived"`, e chegava enquanto todos os
+ * guias nasciam escritos. A expansão de 2026 trouxe 112 andaimes — base
+ * legal completa, fontes verificadas, corpo por escrever — e submeter ao
+ * Google uma página cujo corpo ainda não existe é pedir para ser avaliado
+ * por ela. O pacote é explícito: «não indexar guias com corpo vazio».
+ *
+ * `draft` é exatamente esse estado. A página continua a existir e a
+ * responder — quem tiver o link vê as fontes e vê que está em preparação —
+ * mas não se anuncia. Ver `expansao/derivar.ts`.
+ */
 export const GUIA_SLUGS: readonly string[] = GUIDE_MANIFESTS
-  .filter((m) => m.status !== "archived")
+  .filter((m) => m.status !== "archived" && !guiaSemCorpo(m.slug))
   .map((m) => m.slug)
   .sort();
 

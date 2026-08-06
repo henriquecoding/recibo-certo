@@ -19,6 +19,21 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.15.0",
+    data: "2026-08-06",
+    titulo: "Seis secções novas nos Guias — e um prazo do IMI que estava errado",
+    itens: [
+      "Os Guias cresceram de 57 para 169 e ganharam seis secções que faltavam: Casa e património, Investir e poupar, Família e ciclo de vida, Reforma e fim de carreira, Trabalhar com o estrangeiro e Por profissão. Respondíamos bem a «sou independente, o que tenho de fazer» e não respondíamos de todo a «comprei casa» ou «tenho ações lá fora».",
+      "Quatro guias já escritos por inteiro: o IMI, o IMT na compra de casa, o AIMI e o valor patrimonial tributário — como é calculado e como pedir reavaliação. Foram redigidos com o articulado aberto ao lado, artigo a artigo.",
+      "Foi assim que apanhámos um erro: o IMI entre 100 € e 500 € paga-se em maio e NOVEMBRO, não em maio e agosto. Quem seguisse a indicação errada ficava três meses à espera de uma nota de cobrança que não vinha.",
+      "Dois limites de isenção de IMI que circulavam sem artigo que os sustentasse foram retirados, em vez de publicados na dúvida. Um número redondo com ar de certeza é o que ninguém vai confirmar.",
+      "O artigo 53.º do Código do IVA mudou de nome — o Decreto-Lei n.º 35/2025 reescreveu-o e passou a chamar-se «Âmbito de aplicação no território nacional». Estávamos a citá-lo pela epígrafe antiga. O limite de 15 000 € mantém-se.",
+      "Os juros indemnizatórios passaram a citar o artigo 43.º da Lei Geral Tributária pela página do Portal das Finanças, onde o texto é verificável, em vez do Diário da República.",
+      "As 199 fontes oficiais do site foram todas testadas: cada URL, cada âncora. O verificador passou a correr em ciclo até estabilizar e a guardar um resumo do texto de cada artigo — para avisar quando a lei muda debaixo de um guia, que foi exatamente o que aconteceu com o artigo 53.º.",
+      "Os guias cujo corpo ainda está por escrever mostram a base legal completa e dizem que estão em preparação. Não entram no índice nem no sitemap: uma página por acabar não se candidata a resultado de pesquisa.",
+    ],
+  },
+  {
     version: "2.14.0",
     data: "2026-08-02",
     titulo: "A declaração de IRS em PDF, escalão a escalão",

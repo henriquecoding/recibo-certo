@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/Icons";
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
 import { claimsDoGuia, type GuideAudience } from "./claims";
+import { HUB_GRUPOS_EXPANSAO, MANIFESTOS_EXPANSAO, guiaSemCorpo } from "./expansao/derivar";
 
 export type IconType = React.ComponentType<{ size?: number; className?: string }>;
 
@@ -41,13 +42,24 @@ export const ARQUETIPOS: Record<Archetype, { rotulo: string; objetivo: string }>
     única por tipo de contribuinte, que continua disponível como filtro. */
 export type HubGroup =
   | "comecar" | "faturar" | "contribuir" | "irs" | "empresa" | "conta-outrem"
-  | "prazos" | "direitos" | "encerrar";
+  | "prazos" | "direitos" | "encerrar"
+  // Secções criadas pela expansão editorial de agosto de 2026. O catálogo
+  // respondia bem a «sou independente, o que tenho de fazer?» e não
+  // respondia de todo a «comprei casa», «tenho ações lá fora», «vou-me
+  // reformar» ou «faço TVDE» — perguntas fiscais tão comuns como as outras.
+  | "investir" | "casa" | "familia" | "reforma" | "estrangeiro" | "profissao";
 
+// A ORDEM é a do ciclo de vida do contribuinte, não a alfabética nem a
+// cronológica de criação: começa-se, fatura-se, contribui-se, declara-se —
+// e só depois vêm as decisões de vida (poupar, comprar casa, constituir
+// família, reformar-se), o estrangeiro, a profissão concreta, a empresa, o
+// emprego, os prazos, os direitos e o encerramento.
 export const HUB_GRUPOS: { id: HubGroup; titulo: string; descricao: string }[] = [
   { id: "comecar", titulo: "Começar", descricao: "Abrir atividade, escolher o regime e perceber o que vais pagar." },
   { id: "faturar", titulo: "Faturar", descricao: "Que documento emitir, com que IVA e com que retenção." },
   { id: "contribuir", titulo: "Gerir contribuições", descricao: "Segurança Social, acumulação e adiantamentos de IRS." },
   { id: "irs", titulo: "Preparar o IRS", descricao: "Escalões, benefícios, deduções e o que esperar do reembolso." },
+  ...HUB_GRUPOS_EXPANSAO.filter((h) => ["investir", "casa", "familia", "reforma", "estrangeiro", "profissao"].includes(h.id)),
   { id: "empresa", titulo: "Gerir uma empresa", descricao: "Constituir, tributar e cumprir as obrigações da sociedade." },
   { id: "conta-outrem", titulo: "Trabalho por conta de outrem", descricao: "Recibo de vencimento, subsídios e horas extra." },
   { id: "prazos", titulo: "Cumprir prazos", descricao: "O calendário das obrigações fiscais e contributivas." },
@@ -156,7 +168,10 @@ export interface GuideManifest {
 export type ToolId =
   | "simulador-irs" | "recibo-vencimento" | "auditoria-recibo" | "mapa-contabilistas"
   | "ato-isolado" | "regime-simplificado" | "classificar-atividade" | "simulador-empresa"
-  | "simulador-herancas" | "payout-mor" | "comparador" | "quiz-fiscal" | "calculadora";
+  | "simulador-herancas" | "payout-mor" | "comparador" | "quiz-fiscal" | "calculadora"
+  // O painel de prazos é a continuação natural de tudo o que tem data
+  // marcada — IMI, IMT, declarações periódicas. Entrou com a expansão.
+  | "prazos";
 
 export const TOOL_HREFS: Record<ToolId, string> = {
   "simulador-irs": "/ferramentas/simulador-irs",
@@ -172,6 +187,7 @@ export const TOOL_HREFS: Record<ToolId, string> = {
   comparador: "/?modo=comparar",
   "quiz-fiscal": "/quiz-fiscal",
   calculadora: "/#calculadora",
+  prazos: "/dashboard/prazos",
 };
 
 const DE = `${FISCAL_YEAR}-01-01`;
@@ -360,7 +376,12 @@ export const GUIDE_MANIFESTS: GuideManifest[] = [
     relatedToolIds: ["simulador-irs", "calculadora"],
     // Ponto 5/#10: avaliação contextual. Nunca automatizar a conclusão laboral.
     fizAction: { topic: "ACCOUNTANT", intent: "FIND_ACCOUNTANT", requiredCapability: "accountant.assessment", dataPolicy: "NO_DATA", fallbackLabel: "Pedir uma avaliação a um contabilista na FIZ", exigeRevisaoHumana: true },
-    seo: { description: "Salário e recibos verdes ao mesmo tempo: IRS somado, dispensa de contribuições, entidade contratante e presunção laboral — três coisas diferentes.", aliases: ["acumular emprego e recibos verdes", "recibos verdes e contrato", "falso recibo verde", "entidade contratante", "dependência económica"], schema: ["Article"] },
+    seo: { description: "Salário e recibos verdes ao mesmo tempo: IRS somado, dispensa de contribuições, entidade contratante e presunção laboral — três coisas diferentes.", // "falso recibo verde" saiu daqui: existe guia dedicado desde julho de
+    // 2026 (`falsos-recibos-verdes`) e o sinónimo continuava a apontar para
+    // este, que trata de acumulação legítima. Enquanto a pesquisa somava
+    // pontos por palavra a ordem safava-se por acaso; ao passar a reconhecer
+    // o sinónimo exato, o acaso acabou e a pergunta ia parar ao guia errado.
+    aliases: ["acumular emprego e recibos verdes", "recibos verdes e contrato", "trabalho dependente e independente ao mesmo tempo", "entidade contratante", "dependência económica"], schema: ["Article"] },
     owner: EQUIPA, reviewer: REVISOR_PENDENTE, lastReviewedAt: REVISTO, status: "published",
   },
   {
@@ -429,7 +450,13 @@ export const GUIDE_MANIFESTS: GuideManifest[] = [
     categoria: "Transversal", hub: "irs", archetype: "calculation", icon: Coin, tempo: 6,
     audiences: ["TI", "EMPLOYEE", "MIXED"], effectiveFrom: DE,
     engineBindings: ["MAIS_VALIAS_TAXA", "ESCALOES_IRS"],
-    relatedGuideIds: ["escaloes-irs", "deducoes-coleta", "reembolso-irs"],
+    // Ligações inversas da expansão (fase 3 do pacote). Este guia fala de
+    // vender casa e não tinha uma única ligação para os impostos que
+    // rodeiam esse mesmo imóvel — o que se paga ao comprar, o que se paga
+    // todos os anos, e o valor patrimonial de que os três dependem. O
+    // pacote fez 24 ligações para o catálogo antigo e recebia zero de
+    // volta; é este o lado que faltava.
+    relatedGuideIds: ["escaloes-irs", "deducoes-coleta", "reembolso-irs", "mais-valias-imoveis", "imt", "imi", "vpt-reavaliacao"],
     relatedToolIds: ["simulador-irs"],
     fizAction: { topic: "IRS", intent: "FIND_ACCOUNTANT", requiredCapability: "accountant.assessment", dataPolicy: "CONSENTED_HANDOFF", fallbackLabel: "Pedir revisão a um contabilista na FIZ", exigeRevisaoHumana: true },
     seo: { description: "Mais-valias na categoria G: imóveis, valores mobiliários e criptoativos tratados em separado, com taxas, isenções e englobamento.", aliases: ["mais valias", "mais-valias ações", "cripto irs", "vender casa irs", "categoria g"], schema: ["Article"] },
@@ -792,7 +819,7 @@ export const GUIDE_MANIFESTS: GuideManifest[] = [
     relatedGuideIds: ["acumulacao-emprego", "abrir-atividade", "recibo-vencimento", "seguranca-social"],
     relatedToolIds: ["recibo-vencimento", "comparador"],
     fizAction: { topic: "ACCOUNTANT", intent: "FIND_ACCOUNTANT", requiredCapability: "employment.classification-review", dataPolicy: "CONSENTED_HANDOFF", fallbackLabel: "Rever o enquadramento com a FIZ", exigeRevisaoHumana: true },
-    seo: { description: "Presunção de contrato de trabalho: os indícios do Art. 12.º do Código do Trabalho, o que muda se a presunção operar e onde se reclama.", aliases: ["falsos recibos verdes", "presunção de contrato de trabalho", "recibos verdes ilegais", "dependência económica", "artigo 12 código do trabalho"], schema: ["Article"] },
+    seo: { description: "Presunção de contrato de trabalho: os indícios do Art. 12.º do Código do Trabalho, o que muda se a presunção operar e onde se reclama.", aliases: ["falsos recibos verdes", "falso recibo verde", "presunção de contrato de trabalho", "recibos verdes ilegais", "dependência económica", "artigo 12 código do trabalho"], schema: ["Article"] },
     owner: EQUIPA, reviewer: REVISOR_PENDENTE, lastReviewedAt: REVISTO, status: "published",
   },
 
@@ -1021,6 +1048,13 @@ export const GUIDE_MANIFESTS: GuideManifest[] = [
     seo: { description: "Faltas justificadas e injustificadas: quais determinam perda de retribuição mesmo sendo justificadas, o efeito no subsídio de refeição e nas férias, e como se calcula o desconto.", aliases: ["faltas justificadas", "desconto por falta", "faltar ao trabalho sem justificação", "perco o subsídio de refeição", "quantas faltas posso dar"], schema: ["Article"] },
     owner: EQUIPA, reviewer: REVISOR_PENDENTE, lastReviewedAt: NOVOS_REVISTO, status: "draft",
   },
+
+  // ══ Expansão editorial de agosto de 2026 ════════════════════════════
+  //  Os 112 guias do pacote, DERIVADOS do catálogo verificado em vez de
+  //  escritos aqui um a um. A fonte é `expansao/catalogo.ts`; a tradução
+  //  para manifesto — e a regra que decide o estado editorial de cada um —
+  //  está em `expansao/derivar.ts`.
+  ...MANIFESTOS_EXPANSAO,
 ];
 
 // ─── Acesso ────────────────────────────────────────────────────────────
@@ -1047,10 +1081,24 @@ export function manifestosPublicados(): GuideManifest[] {
   return GUIDE_MANIFESTS.filter((m) => m.status !== "archived");
 }
 
+/**
+ * Os guias a mostrar em «A seguir a este».
+ *
+ * O manifesto declara as ligações todas — incluindo as que apontam para
+ * guias da expansão ainda sem corpo, e essas são precisamente as que
+ * vamos querer quando estiverem escritas. O que não se faz é mostrá-las
+ * já: um cartão que promete «Mais-valias na venda de imóveis» e abre uma
+ * página a dizer «em preparação» gasta a confiança de quem clicou.
+ *
+ * A ligação continua registada e continua a contar para o grafo interno.
+ * Só não é apresentada enquanto não houver o que ler do outro lado.
+ */
 export function guiasRelacionados(slug: string): GuideManifest[] {
   const m = manifesto(slug);
   if (!m) return [];
-  return m.relatedGuideIds.map((id) => POR_SLUG.get(id)).filter((g): g is GuideManifest => Boolean(g));
+  return m.relatedGuideIds
+    .map((id) => POR_SLUG.get(id))
+    .filter((g): g is GuideManifest => Boolean(g) && !guiaSemCorpo(g!.slug));
 }
 
 /** Estado de confiança apresentado no topo de cada Guia (ponto 9.4).

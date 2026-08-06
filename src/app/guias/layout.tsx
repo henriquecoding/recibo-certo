@@ -8,6 +8,7 @@ import Footer from "@/components/Footer";
 import { ChevronRight, ChevronDown, Menu, Megaphone } from "@/components/ui/Icons";
 import { generateBreadcrumbSchema } from "@/lib/seo";
 import { GUIDE_MANIFESTS, HUB_GRUPOS, type GuideManifest, type HubGroup } from "@/lib/guias/manifests";
+import { guiaSemCorpo } from "@/lib/guias/expansao/derivar";
 
 // ─────────────────────────────────────────────────────────────────────────
 //  Navegação dos Guias — DERIVADA dos manifestos.
@@ -23,7 +24,9 @@ import { GUIDE_MANIFESTS, HUB_GRUPOS, type GuideManifest, type HubGroup } from "
 const SECCOES: { id: HubGroup; titulo: string; items: GuideManifest[] }[] = HUB_GRUPOS.map((g) => ({
   id: g.id,
   titulo: g.titulo,
-  items: GUIDE_MANIFESTS.filter((m) => m.hub === g.id && m.status !== "archived"),
+  // Sem os andaimes da expansão: a barra lateral é para navegar em
+  // conteúdo que existe, não em títulos por escrever.
+  items: GUIDE_MANIFESTS.filter((m) => m.hub === g.id && m.status !== "archived" && !guiaSemCorpo(m.slug)),
 })).filter((s) => s.items.length > 0);
 
 const TODOS = SECCOES.flatMap((s) => s.items);

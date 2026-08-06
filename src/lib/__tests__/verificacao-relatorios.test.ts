@@ -6,6 +6,7 @@ import * as FDep from "@/lib/fiscal-dependente";
 import * as FLab from "@/lib/fiscal-laboral";
 import { solveNetToGross } from "@/lib/payroll-inverse";
 import { GUIDE_MANIFESTS } from "@/lib/guias/manifests";
+import { SLUGS_EXPANSAO } from "@/lib/guias/expansao/catalogo";
 import { LEGAL_CLAIMS } from "@/lib/guias/claims";
 import { LEITURAS_POR_GUIA } from "@/lib/guias";
 import { DOMINIOS_QUE_BLOQUEIAM } from "@/lib/guias/legal-sources";
@@ -186,7 +187,7 @@ describe("RELATÓRIO 2 — auditoria dos guias", () => {
       .filter((s) => man(s)!.engineBindings.length === 0);
     expect(semBindings).toEqual([]);
   });
-  it("14 guias novos, catálogo de 57", () => {
+  it("14 guias novos, catálogo de 57 antes da expansão", () => {
     const novos = ["salario-gerente-ou-dividendos","distribuir-lucros","pagamentos-por-conta-irc","prejuizos-fiscais","contratar-primeiro-trabalhador","modelo-22-e-ies","fechar-empresa","baixa-medica","licenca-parental","subsidio-desemprego","fim-do-contrato","ferias-direitos","trabalho-noturno-e-turnos","faltas-ao-trabalho"];
     for (const id of novos) {
       const m = man(id);
@@ -194,8 +195,14 @@ describe("RELATÓRIO 2 — auditoria dos guias", () => {
       expect(m!.status, id).toBe("draft");
       expect(LEGAL_CLAIMS.filter((c) => c.guideId === id).length, id).toBeGreaterThan(0);
     }
-    expect(GUIDE_MANIFESTS).toHaveLength(57);
-    expect(GUIDE_MANIFESTS.filter((m) => m.categoria === "Empresas")).toHaveLength(12);
-    expect(GUIDE_MANIFESTS.filter((m) => m.categoria === "Conta de outrem")).toHaveLength(10);
+    // 57 + os 112 da expansão editorial de agosto de 2026.
+    expect(GUIDE_MANIFESTS).toHaveLength(57 + 112);
+    // Contagens do catálogo ANTERIOR à expansão — é isso que este relatório
+    // verifica. A expansão acrescentou 18 guias de Empresas e 10 de Conta de
+    // outrem, que têm as suas próprias contagens em `guias:expansao`.
+    const anteriores = GUIDE_MANIFESTS.filter((m) => !SLUGS_EXPANSAO.includes(m.slug));
+    expect(anteriores).toHaveLength(57);
+    expect(anteriores.filter((m) => m.categoria === "Empresas")).toHaveLength(12);
+    expect(anteriores.filter((m) => m.categoria === "Conta de outrem")).toHaveLength(10);
   });
 });

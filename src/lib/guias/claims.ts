@@ -17,6 +17,7 @@
 
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
 import { LEGAL_SOURCES, type LegalSourceId } from "./legal-sources";
+import { CLAIMS_EXPANSAO } from "./expansao/derivar";
 
 export type Confidence =
   | "verified" // confirmada em fonte oficial na data de revisão
@@ -482,6 +483,12 @@ export const LEGAL_CLAIMS: LegalClaim[] = [
 ];
 
 // ─── Acesso ────────────────────────────────────────────────────────────
+
+// A expansão editorial de 2026 acrescenta uma afirmação por guia — a
+// resposta curta do pacote, ancorada na base legal verificada. Entram por
+// concatenação e passam pelas mesmas asserções: fonte existente, data ISO
+// e nenhuma afirmação verificada assente em fonte histórica.
+LEGAL_CLAIMS.push(...CLAIMS_EXPANSAO);
 
 export function claimsDoGuia(guideId: string): LegalClaim[] {
   return LEGAL_CLAIMS.filter((c) => c.guideId === guideId);

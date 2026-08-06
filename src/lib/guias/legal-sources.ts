@@ -24,6 +24,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
+import { FONTES_EXPANSAO, LEITURAS_EXPANSAO } from "./expansao/fontes";
 
 // ─── Autoridades competentes ───────────────────────────────────────────
 
@@ -60,6 +61,10 @@ export const DOMINIOS_AUTORIZADOS: Record<string, Authority> = {
   "www2.gov.pt": "GOV",
   "eportugal.gov.pt": "GOV",
   "www.pgdlisboa.pt": "OTHER_OFFICIAL",
+  // Instituto do Emprego e Formação Profissional, I. P. — instituto público.
+  // Entrou com a expansão de 2026: é a autoridade competente para os apoios
+  // à contratação citados nos guias de empresa.
+  "www.iefp.pt": "OTHER_OFFICIAL",
   "ec.europa.eu": "EU",
   "vies.ec.europa.eu": "EU",
   "vat-one-stop-shop.ec.europa.eu": "EU",
@@ -242,6 +247,13 @@ function at(
 }
 
 export const LEGAL_SOURCES = {
+  // As fontes acrescentadas pela expansão editorial de 2026 (112 guias
+  // novos) entram aqui por espalhamento, com as chaves do pacote — ver
+  // `expansao/fontes.ts`. Ficam sujeitas às MESMAS asserções que as
+  // restantes: domínio autorizado, HTTPS, artigo declarado, âncoras e URL
+  // sem duplicados. Se uma delas estivesse errada, o build parava.
+  ...FONTES_EXPANSAO,
+
   // ── CIRS ─────────────────────────────────────────────────────────────
   // O n.º 6 fixa o MOMENTO da tributação da categoria B e é a norma que
   // explica porque é que se paga IRS de uma fatura que ainda não foi paga.
@@ -279,9 +291,24 @@ export const LEGAL_SOURCES = {
   civa18: at("civa18", "18.º", "Art. 18.º CIVA — Taxas do imposto", "iva18", "civa_rep"),
   civa33: at("civa33", "33.º", "Art. 33.º CIVA — Cessação de atividade", "iva33", "civa_rep"),
   civa36: at("civa36", "36.º", "Art. 36.º CIVA — Prazo de emissão e formalidades das faturas", "iva36", "civa_rep"),
+  // A epígrafe deixou de ser «Regime de isenção».
+  //
+  // O Decreto-Lei n.º 35/2025, de 24 de março, reescreveu o artigo e mudou-lhe
+  // a epígrafe para «Âmbito de aplicação no território nacional» — a alteração
+  // vem assinalada no próprio texto publicado pela AT, e foi confirmada no
+  // portal a 2026-08-06. O URL sempre esteve certo; o que estava desatualizado
+  // era o título que citávamos, e citar uma epígrafe que já não existe é o
+  // género de detalhe que faz um leitor atento duvidar de tudo o resto.
+  //
+  // O limiar de 15 000 € mantém-se (n.º 1). O que é novo é o regime
+  // transfronteiriço: sujeitos passivos de outros Estados-Membros passam a
+  // poder beneficiar da isenção cá, com volume de negócios na UE até 100 000 €
+  // e número individual com sufixo «EX» (n.º 2), por remissão para o
+  // art. 58.º-A. Matéria para o guia, não para o catálogo.
   civa53: {
-    ...at("civa53", "53.º", "Art. 53.º CIVA — Regime de isenção", "artigo-53-o-do-civa", "civa_rep"),
-    expectedAnchors: ["Artigo 53.º"],
+    ...at("civa53", "53.º", "Art. 53.º CIVA — Âmbito de aplicação no território nacional", "artigo-53-o-do-civa", "civa_rep"),
+    expectedAnchors: ["Artigo 53.º", "Âmbito de aplicação no território nacional"],
+    lastCheckedAt: "2026-08-06",
   },
   // Recuperação do IVA já entregue ao Estado sobre faturas que o cliente
   // não pagou. É o remédio, no IVA, do problema que o Art. 3.º n.º 6 do
@@ -292,6 +319,13 @@ export const LEGAL_SOURCES = {
   // ao contrário dos homólogos do CIRS ("Artigo 78.º-A", sem espaço).
   // Verificado a 2026-07-27. Sem esta distinção o monitor de ligações
   // acusaria as três fontes como inválidas estando elas certas.
+  //
+  // O pacote de expansão de 2026 dava estes quatro artigos como não tendo
+  // página no Portal das Finanças, e mandava trocá-los pelo PDF do Código.
+  // NÃO se trocou: os quatro URL foram testados a 2026-08-06 e devolveram
+  // 200 com o articulado. Trocar um artigo navegável por um PDF de centenas
+  // de páginas teria piorado a fonte com base num diagnóstico que não se
+  // confirmou — e é para isto que serve ir lá ver antes de agir.
   civa78a: {
     ...at("civa78a", "78.º-A", "Art. 78.º-A CIVA — Créditos de cobrança duvidosa e incobráveis", "iva78a", "civa_rep"),
     expectedAnchors: ["Artigo 78.º -A"],
@@ -448,20 +482,21 @@ export const LEGAL_SOURCES = {
   // O Art. 43.º NÃO é servido em `lgt43` no Portal das Finanças (404,
   // verificado a 2026-07-27), ao contrário dos 24.º, 45.º, 48.º e 100.º.
   // Cita-se a versão consolidada do Diário da República.
+  // Passou do Diário da República para o Portal das Finanças, e o título
+  // passou a ser a epígrafe oficial.
+  //
+  // A auditoria de 2026 anotou que este artigo não vive em `lgt43.aspx` — e
+  // não vive mesmo: esse caminho devolve 404 (confirmado a 2026-08-06). Vive
+  // em `juros-indemnizatorios.aspx`, que devolve 200 com o articulado
+  // completo. Era a única fonte da LGT que estávamos a citar pelo DR, o que
+  // custava duas coisas: a epígrafe real ficava escondida atrás de uma
+  // descrição nossa («juros indemnizatórios devidos ao contribuinte», que não
+  // é o que a lei escreve), e o monitor não conseguia validar âncora nenhuma
+  // porque o DR serve um shell vazio. Agora valida.
   lgt43: {
-    id: "lgt43",
-    authority: "DR",
-    title: "Art. 43.º LGT — Juros indemnizatórios devidos ao contribuinte",
-    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/1998-34438775-118879628",
-    jurisdiction: "PT",
-    sourceType: "code_article",
-    article: "43.º",
-    effectiveFrom: ANO,
-    consolidada: true,
-    renderMode: "spa",
-    expectedAnchors: [],
-    lastCheckedAt: VERIFICADO,
-    status: "active",
+    ...at("lgt43", "43.º", "Art. 43.º LGT — Pagamento indevido da prestação tributária", "juros-indemnizatorios", "lgt"),
+    expectedAnchors: ["Artigo 43.º", "Pagamento indevido da prestação tributária"],
+    lastCheckedAt: "2026-08-06",
   },
   lgt45: at("lgt45", "45.º", "Art. 45.º LGT — Caducidade do direito à liquidação", "lgt45", "lgt"),
   lgt48: at("lgt48", "48.º", "Art. 48.º LGT — Prescrição das dívidas tributárias", "lgt48", "lgt"),
@@ -900,6 +935,8 @@ export type LegalSourceId = keyof typeof LEGAL_SOURCES;
 // ─── Leitura complementar (nunca fundamenta uma regra) ─────────────────
 
 export const LEITURAS_COMPLEMENTARES = {
+  ...LEITURAS_EXPANSAO,
+
   // ── Direitos e cobranças ───────────────────────────────────────────
   //    Os 14 guias desta secção não tinham nenhuma leitura complementar:
   //    o bloco aparecia vazio nas páginas novas e cheio nas antigas, sem
