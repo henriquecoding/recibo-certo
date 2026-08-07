@@ -176,6 +176,18 @@ export const SOURCES = {
     label: "Art. 78.º CIRS — Deduções à coleta · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs78.aspx",
   },
+  art13cirs: {
+    label: "Art. 13.º CIRS — Sujeito passivo, agregado familiar, dependentes e as responsabilidades parentais exercidas em comum · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs13.aspx",
+  },
+  art26cis: {
+    label: "Art. 26.º CIS — Participação da transmissão de bens: prazo até ao final do 3.º mês seguinte · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/selo/Pages/selo26.aspx",
+  },
+  art6cisSelo: {
+    label: "Art. 6.º CIS — Isenções: cônjuge ou unido de facto, descendentes e ascendentes nas transmissões gratuitas da verba 1.2 · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/selo/Pages/selo6.aspx",
+  },
   art78aCirs: {
     label: "Art. 78.º-A CIRS — Dedução por dependentes · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs78a.aspx",
@@ -661,6 +673,9 @@ const REV_PROTECAO_2026 = "2026-08-07";
 // arts. 36.º, 53.º, 58.º e 78.º do CIVA na coleção consolidada, já com a
 // redação do Decreto-Lei n.º 35/2025.
 const REV_FATURACAO = "2026-08-07";
+// Data de verificação do bloco da família — art. 13.º, art. 78.º (n.os 9 a
+// 12) e art. 83.º-A do CIRS, e arts. 6.º e 26.º do Código do Imposto do Selo.
+const REV_FAMILIA = "2026-08-07";
 // Data de verificação dos coeficientes de desvalorização da moeda (Portaria 382/2025).
 const REV_COEF_MOEDA = "2026-06-23";
 // Data de verificação do Salário Mínimo Nacional 2026 (RMMG 920 €, DL 139/2025).
@@ -1212,6 +1227,7 @@ export const DECLARACAO_PERIODICA_IVA = {
     REV_FATURACAO
   ),
 } as const;
+
 
 /**
  * Coimas tributárias — o RGIT, lido no articulado a 07/08/2026.
@@ -4122,6 +4138,165 @@ export const SMN = sv(
   "segSocialGov",
   REV_SMN
 );
+
+/**
+ * Dependentes e agregado familiar — Art. 13.º do CIRS, lido a 07/08/2026.
+ *
+ * Três regras que decidem quase tudo o que a secção da família trata, e
+ * que são citadas de memória com mais frequência do que lidas.
+ */
+export const DEPENDENTES_IRS = {
+  /** A idade-limite dos dependentes maiores. */
+  idadeMaxima: sv(
+    25,
+    "Art. 13.º, n.º 5, als. b) e d) CIRS — filhos, adotados, enteados e afilhados civis maiores que não tenham mais de 25 anos",
+    "art13cirs",
+    REV_FAMILIA
+  ),
+  /**
+   * O limite de rendimentos do dependente maior.
+   *
+   * A lei não fixa um valor: remete para a retribuição mínima mensal
+   * garantida — «nem aufiram anualmente rendimentos superiores ao valor da
+   * retribuição mínima mensal garantida». É por isso um limiar que sobe
+   * sozinho todos os anos, e é mais baixo do que quase toda a gente supõe.
+   */
+  limiteRendimentoAnual: sv(
+    SMN.value,
+    "Art. 13.º, n.º 5, al. b) CIRS — rendimentos anuais não superiores ao valor da retribuição mínima mensal garantida",
+    "art13cirs",
+    REV_FAMILIA,
+    "A lei remete para a RMMG e não fixa montante próprio: o limiar acompanha o salário mínimo do ano."
+  ),
+  /** A data que decide a situação pessoal e familiar. */
+  situacaoRelevanteEm: sv(
+    "o último dia do ano a que o imposto respeite",
+    "Art. 13.º, n.º 8 CIRS — a situação pessoal e familiar relevante para efeitos de tributação é a que se verificar no último dia do ano",
+    "art13cirs",
+    REV_FAMILIA
+  ),
+  /** Não se pode estar em dois agregados. */
+  umSoAgregado: sv(
+    true,
+    "Art. 13.º, n.º 7 CIRS — as pessoas referidas não podem, simultaneamente, fazer parte de mais de um agregado familiar nem, integrando um agregado, ser consideradas sujeitos passivos autónomos",
+    "art13cirs",
+    REV_FAMILIA
+  ),
+} as const;
+
+/**
+ * Guarda partilhada — Art. 78.º, n.os 9 a 12 do CIRS, com o n.º 11 na
+ * redação do Decreto-Lei n.º 49/2025.
+ *
+ * O mecanismo é este: por defeito, um dependente que conste das duas
+ * declarações vale METADE das deduções em cada uma. Uma partilha
+ * diferente exige acordo que a fixe quantitativamente E comunicação de
+ * ambos, até ao fim de fevereiro. Não comunicando — ou não somando 100% —
+ * volta-se à divisão em partes iguais.
+ */
+export const GUARDA_PARTILHADA = {
+  /** A redução automática quando o dependente consta das duas declarações. */
+  fracaoPorSujeitoPassivo: sv(
+    0.5,
+    "Art. 78.º, n.º 9 CIRS — sempre que o mesmo dependente ou ascendente conste de mais do que uma declaração, o valor das deduções à coleta é reduzido para metade, por sujeito passivo",
+    "art78cirs",
+    REV_FAMILIA
+  ),
+  /** O prazo da comunicação da percentagem. */
+  prazoComunicacao: sv(
+    "até ao final do mês de fevereiro do ano seguinte àquele a que o imposto respeita",
+    "Art. 78.º, n.º 11 CIRS (redação do Decreto-Lei n.º 49/2025) — os sujeitos passivos devem indicar no Portal das Finanças a percentagem que lhes corresponde na partilha de despesas",
+    "art78cirs",
+    REV_FAMILIA
+  ),
+  /** O que acontece sem comunicação, ou com comunicações que não fecham. */
+  supletivo: sv(
+    "o valor das deduções à coleta é dividido em partes iguais",
+    "Art. 78.º, n.º 12 CIRS — caso não efetuem a comunicação ou a soma das percentagens comunicadas por ambos não corresponda a 100%",
+    "art78cirs",
+    REV_FAMILIA
+  ),
+  /** A condição para uma partilha diferente de metade. */
+  exigeAcordoQuantificado: sv(
+    true,
+    "Art. 78.º, n.º 10 CIRS — só quando o acordo de regulação do exercício em comum das responsabilidades parentais estabeleça partilha não igualitária e fixe QUANTITATIVAMENTE a percentagem de cada sujeito passivo",
+    "art78cirs",
+    REV_FAMILIA
+  ),
+} as const;
+
+/**
+ * Pensões de alimentos — Art. 83.º-A do CIRS.
+ *
+ * A dedução é generosa — 20% sem limite máximo — e tem duas condições que
+ * a anulam por inteiro quando falham: a obrigação tem de resultar de
+ * SENTENÇA ou de ACORDO HOMOLOGADO, e o beneficiário não pode fazer parte
+ * do mesmo agregado nem ter outras deduções ao abrigo do Art. 78.º.
+ */
+export const PENSAO_ALIMENTOS_IRS = {
+  taxa: sv(
+    DEDUCAO_PENSAO_ALIMENTOS.value,
+    "Art. 83.º-A, n.º 1 CIRS — dedução de 20% das importâncias comprovadamente suportadas e não reembolsadas",
+    "art83aCirs",
+    REV_FAMILIA
+  ),
+  semLimite: sv(
+    true,
+    "Art. 83.º-A, n.º 1 CIRS — a norma não fixa limite máximo à dedução",
+    "art83aCirs",
+    REV_FAMILIA
+  ),
+  exigeTituloJudicial: sv(
+    "sentença judicial ou acordo homologado nos termos da lei civil",
+    "Art. 83.º-A, n.º 1 CIRS — a obrigação tem de resultar de um destes títulos",
+    "art83aCirs",
+    REV_FAMILIA,
+    "Um acordo particular entre os pais, por escrito que seja, não abre o direito a esta dedução."
+  ),
+  incompativelComDependente: sv(
+    true,
+    "Art. 83.º-A, n.º 1 CIRS — salvo nos casos em que o beneficiário faça parte do mesmo agregado familiar para efeitos fiscais ou relativamente ao qual estejam previstas outras deduções à coleta ao abrigo do Art. 78.º",
+    "art83aCirs",
+    REV_FAMILIA,
+    "Não se deduz a pensão e se declara o mesmo filho como dependente: a lei escolhe um caminho ou o outro."
+  ),
+} as const;
+
+/**
+ * Heranças e doações — a participação do Art. 26.º do CIS.
+ *
+ * A isenção da família direta é conhecida; a obrigação de participar,
+ * que existe MESMO havendo isenção, é o que se esquece.
+ */
+export const TRANSMISSAO_GRATUITA_PARTICIPACAO = {
+  prazoMeses: sv(
+    3,
+    "Art. 26.º, n.º 3 CIS — a participação deve ser apresentada até ao final do 3.º mês seguinte ao do nascimento da obrigação tributária",
+    "art26cis",
+    REV_FAMILIA
+  ),
+  adiamentoMaximoDias: sv(
+    60,
+    "Art. 26.º, n.º 5 CIS — os prazos são improrrogáveis, salvo alegando-se e provando-se motivo justificado, caso em que o chefe de finanças pode conceder adiamento até ao limite máximo de 60 dias",
+    "art26cis",
+    REV_FAMILIA
+  ),
+  quemParticipa: sv(
+    "o cabeça-de-casal e o beneficiário",
+    "Art. 26.º, n.º 1 CIS — ambos são obrigados a participar ao serviço de finanças competente",
+    "art26cis",
+    REV_FAMILIA,
+    "Identificando o cabeça-de-casal todos os beneficiários, estes ficam desonerados da participação que lhes competiria (n.º 4)."
+  ),
+  isentos: sv(
+    "o cônjuge ou unido de facto, descendentes e ascendentes",
+    "Art. 6.º, al. e) CIS — isenção nas transmissões gratuitas sujeitas à verba 1.2 da Tabela Geral de que sejam beneficiários",
+    "art6cisSelo",
+    REV_FAMILIA,
+    "A isenção é do imposto, não da participação."
+  ),
+} as const;
+
 
 // Valores derivados (calculados, nunca digitados à mão) ──────────────────
 export const IAS_VALUE = IAS.value;

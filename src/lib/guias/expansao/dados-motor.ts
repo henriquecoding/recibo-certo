@@ -31,8 +31,17 @@ import {
   CREDITO_IMPOSTO_ESTRANGEIRO,
   DEDUCAO_ESPECIFICA_PENSOES,
   DECLARACAO_PERIODICA_IVA,
+  DEDUCAO_ASCENDENTE,
+  DEDUCAO_ASCENDENTE_UNICO,
+  DEDUCAO_DEPENDENTE,
+  DEDUCAO_DEPENDENTE_BEBE,
+  DEDUCAO_LARES,
+  DEPENDENTES_IRS,
   DISPENSA_COIMA,
+  EXCLUSAO_DEFICIENCIA_MAX,
+  EXCLUSAO_DEFICIENCIA_TAXA,
   FATURACAO_PRAZOS,
+  GUARDA_PARTILHADA,
   ENTIDADE_CONTRATANTE,
   ENTIDADE_CONTRATANTE_LIMIAR_CALC,
   DEDUCAO_PPR,
@@ -66,6 +75,7 @@ import {
   IVA_TAXAS,
   ISENCOES_CIVA_PROFISSOES,
   IS_CREDITO,
+  IS_DOACAO_IMOVEL,
   IS_TAXA_AQUISICAO,
   IS_TRANSMISSAO_GRATUITA,
   MINIMO_EXISTENCIA,
@@ -77,6 +87,7 @@ import {
   MAIS_VALIAS_REPORTE,
   NAO_RESIDENTES,
   OIC_NACIONAIS,
+  PENSAO_ALIMENTOS_IRS,
   PPR_RESGATE,
   PPR_TAXA_EFETIVA_CONDICOES_LEGAIS,
   PRAZO_MODELO1_MESES,
@@ -99,6 +110,7 @@ import {
   SS_COEFICIENTE,
   SS_ISENCAO_PRIMEIRO_ANO_MESES,
   SS_TAXA,
+  TRANSMISSAO_GRATUITA_PARTICIPACAO,
   SUBSIDIO_DESEMPREGO,
   SUBSIDIO_DOENCA,
   type EscalaoIMT,
@@ -820,6 +832,74 @@ export const DADOS_MOTOR: Record<string, DadoDoMotor[]> = {
     d("REDUCAO_COIMA", "Prazo para pagar a coima reduzida", `${REDUCAO_COIMA.prazoPagamentoDias.value} dias`, "e a situação tem de ficar regularizada no mesmo prazo · art. 30.º, n.º 3, al. a) RGIT"),
     d("COIMAS_RGIT", "Mínimo a pagar, havendo redução", fmt(COIMAS_RGIT.minimoComReducao.value), "art. 26.º, n.º 3 RGIT"),
     d("SS_MIN_MENSAL", "A contribuição mínima que gera dívida em silêncio", fmt(SS_MIN_MENSAL.value), "existe mesmo em trimestres sem faturação, e é a origem mais comum de dívida contributiva"),
+  ],
+
+  // ── Família e ciclo de vida ──────────────────────────────────────────
+  //    O eixo é o art. 13.º: a situação pessoal e familiar que conta é a
+  //    do ÚLTIMO DIA DO ANO, e ninguém pode estar em dois agregados. Daí
+  //    sai quase tudo o que esta secção resolve.
+  "herancas-imposto-selo": [
+    d("IS_TRANSMISSAO_GRATUITA", "Taxa geral", pctExato(IS_TRANSMISSAO_GRATUITA.value), "aquisição gratuita de bens: heranças, legados e doações · verba 1.2 TGIS"),
+    d("TRANSMISSAO_GRATUITA_PARTICIPACAO", "Quem está isento", TRANSMISSAO_GRATUITA_PARTICIPACAO.isentos.value, "a isenção é do imposto, não da participação · art. 6.º, al. e) CIS"),
+    d("TRANSMISSAO_GRATUITA_PARTICIPACAO", "Prazo da participação", `${TRANSMISSAO_GRATUITA_PARTICIPACAO.prazoMeses.value} meses`, "até ao final do 3.º mês seguinte ao do nascimento da obrigação tributária · art. 26.º, n.º 3 CIS"),
+    d("TRANSMISSAO_GRATUITA_PARTICIPACAO", "Quem participa", TRANSMISSAO_GRATUITA_PARTICIPACAO.quemParticipa.value, "identificando o cabeça-de-casal todos os beneficiários, estes ficam desonerados · art. 26.º, n.os 1 e 4 CIS"),
+    d("TRANSMISSAO_GRATUITA_PARTICIPACAO", "Adiamento máximo", `${TRANSMISSAO_GRATUITA_PARTICIPACAO.adiamentoMaximoDias.value} dias`, "os prazos são improrrogáveis salvo motivo justificado, alegado e provado · art. 26.º, n.º 5 CIS"),
+  ],
+
+  "doacoes": [
+    d("IS_TRANSMISSAO_GRATUITA", "Imposto do selo — taxa geral", pctExato(IS_TRANSMISSAO_GRATUITA.value), "igual na doação e na herança · verba 1.2 TGIS"),
+    d("TRANSMISSAO_GRATUITA_PARTICIPACAO", "Quem está isento, nas duas vias", TRANSMISSAO_GRATUITA_PARTICIPACAO.isentos.value, "art. 6.º, al. e) CIS"),
+    d("IS_DOACAO_IMOVEL", "Doação de imóvel — o que a herança não paga", pctExato(IS_DOACAO_IMOVEL.value), "a verba 1.1 incide sobre doações e transmissões onerosas de imóveis, mesmo para família isenta da verba 1.2; a herança não está sujeita a ela"),
+    d("TRANSMISSAO_GRATUITA_PARTICIPACAO", "Prazo da participação", `${TRANSMISSAO_GRATUITA_PARTICIPACAO.prazoMeses.value} meses`, "art. 26.º, n.º 3 CIS"),
+    d("MAIS_VALIAS_IMOBILIARIO_INCLUSAO", "Se o donatário vender depois", `${pctExato(MAIS_VALIAS_IMOBILIARIO_INCLUSAO.value)} da mais-valia é tributada`, "e o valor de aquisição é o que serviu de base ao imposto do selo · arts. 43.º e 45.º CIRS"),
+  ],
+
+  "divorcio-irs": [
+    d("DEPENDENTES_IRS", "A data que decide o estado civil", DEPENDENTES_IRS.situacaoRelevanteEm.value, "art. 13.º, n.º 8 CIRS"),
+    d("DEPENDENTES_IRS", "Um dependente, um agregado", "não pode fazer parte de dois", "art. 13.º, n.º 7 CIRS"),
+    d("GUARDA_PARTILHADA", "Dependente em duas declarações", `deduções a ${pctExato(GUARDA_PARTILHADA.fracaoPorSujeitoPassivo.value)} em cada uma`, "art. 78.º, n.º 9 CIRS"),
+    d("PENSAO_ALIMENTOS_IRS", "Pensão de alimentos — dedução", pctExato(PENSAO_ALIMENTOS_IRS.taxa.value), "das importâncias comprovadamente suportadas e não reembolsadas · art. 83.º-A, n.º 1 CIRS"),
+    d("MAIS_VALIAS_IMOBILIARIO_INCLUSAO", "Venda futura da casa partilhada", `${pctExato(MAIS_VALIAS_IMOBILIARIO_INCLUSAO.value)} da mais-valia é tributada`, "art. 43.º, n.º 2, al. b) CIRS"),
+  ],
+
+  "pensao-alimentos-irs": [
+    d("PENSAO_ALIMENTOS_IRS", "Dedução à coleta", pctExato(PENSAO_ALIMENTOS_IRS.taxa.value), "das importâncias comprovadamente suportadas e não reembolsadas · art. 83.º-A, n.º 1 CIRS"),
+    d("PENSAO_ALIMENTOS_IRS", "Limite máximo", "não há", "a norma não fixa teto — é das poucas deduções sem limite · art. 83.º-A, n.º 1 CIRS"),
+    d("PENSAO_ALIMENTOS_IRS", "O requisito que decide tudo", PENSAO_ALIMENTOS_IRS.exigeTituloJudicial.value, "um acordo particular entre os pais não abre o direito · art. 83.º-A, n.º 1 CIRS"),
+    d("PENSAO_ALIMENTOS_IRS", "Incompatível com declarar o mesmo filho como dependente", "sim", "salvo nos casos em que o beneficiário faça parte do mesmo agregado ou tenha outras deduções do art. 78.º · art. 83.º-A, n.º 1 CIRS"),
+    d("DEPENDENTES_IRS", "Para filhos maiores, valem os requisitos do art. 13.º", `até ${DEPENDENTES_IRS.idadeMaxima.value} anos`, "e com rendimentos anuais não superiores ao limite legal · art. 83.º-A, n.º 2 CIRS"),
+  ],
+
+  "guarda-partilhada-irs": [
+    d("GUARDA_PARTILHADA", "Por defeito, em duas declarações", `${pctExato(GUARDA_PARTILHADA.fracaoPorSujeitoPassivo.value)} das deduções em cada uma`, "art. 78.º, n.º 9 CIRS"),
+    d("GUARDA_PARTILHADA", "Prazo de comunicação", GUARDA_PARTILHADA.prazoComunicacao.value, "no Portal das Finanças, por ambos os progenitores · art. 78.º, n.º 11 CIRS"),
+    d("GUARDA_PARTILHADA", "Sem comunicação, ou não somando 100%", GUARDA_PARTILHADA.supletivo.value, "art. 78.º, n.º 12 CIRS"),
+    d("GUARDA_PARTILHADA", "Para uma partilha diferente de metade", "acordo que a fixe quantitativamente", "não basta acordar: o acordo tem de fixar a percentagem de cada um · art. 78.º, n.º 10 CIRS"),
+    d("DEPENDENTES_IRS", "Onde o dependente é considerado", DEPENDENTES_IRS.situacaoRelevanteEm.value, "pela residência fixada na regulação ou, na falta, pela identidade de domicílio fiscal · art. 13.º, n.os 8 e 9 CIRS"),
+  ],
+
+  "dependentes-irs": [
+    d("DEPENDENTES_IRS", "Idade-limite dos dependentes maiores", `${DEPENDENTES_IRS.idadeMaxima.value} anos`, "art. 13.º, n.º 5, al. b) CIRS"),
+    d("DEPENDENTES_IRS", "Limite de rendimentos do dependente", fmt(DEPENDENTES_IRS.limiteRendimentoAnual.value), "a lei remete para a retribuição mínima mensal garantida e não fixa montante próprio · art. 13.º, n.º 5, al. b) CIRS"),
+    d("DEPENDENTES_IRS", "Um dependente, um agregado", "não pode fazer parte de dois", "nem, integrando um agregado, ser considerado sujeito passivo autónomo · art. 13.º, n.º 7 CIRS"),
+    d("DEDUCAO_DEPENDENTE", "Dedução por dependente", fmt(DEDUCAO_DEPENDENTE.value), "com mais de 3 anos · art. 78.º-A CIRS"),
+    d("DEDUCAO_DEPENDENTE_BEBE", "Dedução por dependente até 3 anos", fmt(DEDUCAO_DEPENDENTE_BEBE.value), "art. 78.º-A CIRS"),
+    d("GUARDA_PARTILHADA", "Se constar de duas declarações", `${pctExato(GUARDA_PARTILHADA.fracaoPorSujeitoPassivo.value)} em cada uma`, "art. 78.º, n.º 9 CIRS"),
+  ],
+
+  "deficiencia-irs": [
+    d("EXCLUSAO_DEFICIENCIA_TAXA", "Exclusão parcial de rendimentos", pctExato(EXCLUSAO_DEFICIENCIA_TAXA.value), "das categorias A e B, para sujeitos passivos com deficiência"),
+    d("EXCLUSAO_DEFICIENCIA_MAX", "Teto da exclusão", fmt(EXCLUSAO_DEFICIENCIA_MAX.value), "por titular"),
+    d("DEDUCAO_DEPENDENTE", "Dedução por dependente", fmt(DEDUCAO_DEPENDENTE.value), "acresce às deduções próprias da deficiência · art. 78.º-A CIRS"),
+    d("DEPENDENTES_IRS", "Dependentes inaptos para o trabalho", "sem limite de idade", "os filhos maiores inaptos para o trabalho e para angariar meios de subsistência não têm o limite dos 25 anos · art. 13.º, n.º 5, al. c) CIRS"),
+  ],
+
+  "ascendentes-lares": [
+    d("DEDUCAO_ASCENDENTE", "Dedução por ascendente", fmt(DEDUCAO_ASCENDENTE.value), "por cada ascendente em comunhão de habitação · art. 78.º-A CIRS"),
+    d("DEDUCAO_ASCENDENTE_UNICO", "Havendo um só ascendente", fmt(DEDUCAO_ASCENDENTE_UNICO.value), "art. 78.º-A CIRS"),
+    d("DEDUCAO_LARES", "Despesas com lares — dedução", pctExato(DEDUCAO_LARES.value.taxa), "dos encargos suportados · art. 84.º CIRS"),
+    d("DEDUCAO_LARES", "Despesas com lares — teto", fmt(DEDUCAO_LARES.value.limite), "por agregado, e não por ascendente · art. 84.º CIRS"),
+    d("GUARDA_PARTILHADA", "Ascendente em duas declarações", `deduções a ${pctExato(GUARDA_PARTILHADA.fracaoPorSujeitoPassivo.value)} em cada uma`, "a regra do art. 78.º, n.º 9 vale para ascendentes como para dependentes"),
   ],
 };
 

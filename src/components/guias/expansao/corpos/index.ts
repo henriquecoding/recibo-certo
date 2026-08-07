@@ -81,6 +81,14 @@ import CorpoModelo30 from "./modelo-30";
 import CorpoDmrDmis from "./dmr-dmis";
 import CorpoPortalDasFinancas from "./portal-das-financas";
 import CorpoSituacaoRegularizada from "./situacao-regularizada";
+import CorpoHerancasImpostoSelo from "./herancas-imposto-selo";
+import CorpoDoacoes from "./doacoes";
+import CorpoPensaoAlimentosIrs from "./pensao-alimentos-irs";
+import CorpoGuardaPartilhadaIrs from "./guarda-partilhada-irs";
+import CorpoDivorcioIrs from "./divorcio-irs";
+import CorpoDependentesIrs from "./dependentes-irs";
+import CorpoDeficienciaIrs from "./deficiencia-irs";
+import CorpoAscendentesLares from "./ascendentes-lares";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  CORPOS REDIGIDOS DOS GUIAS DA EXPANSÃO
@@ -177,4 +185,12 @@ export const CORPOS: Record<string, ComponentType> = {
   "dmr-dmis": CorpoDmrDmis,
   "portal-das-financas": CorpoPortalDasFinancas,
   "situacao-regularizada": CorpoSituacaoRegularizada,
+  "herancas-imposto-selo": CorpoHerancasImpostoSelo,
+  "doacoes": CorpoDoacoes,
+  "pensao-alimentos-irs": CorpoPensaoAlimentosIrs,
+  "guarda-partilhada-irs": CorpoGuardaPartilhadaIrs,
+  "divorcio-irs": CorpoDivorcioIrs,
+  "dependentes-irs": CorpoDependentesIrs,
+  "deficiencia-irs": CorpoDeficienciaIrs,
+  "ascendentes-lares": CorpoAscendentesLares,
 };

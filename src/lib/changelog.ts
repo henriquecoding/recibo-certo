@@ -19,6 +19,24 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.23.0",
+    data: "2026-08-07",
+    titulo: "Família e ciclo de vida — heranças, divórcio, guarda partilhada e dependentes",
+    itens: [
+      "Oito guias novos sobre o que a vida traz e o IRS regista: heranças e imposto do selo, doações, pensão de alimentos, guarda partilhada, divórcio, quem conta como dependente, o regime da deficiência e os ascendentes a cargo.",
+      "A resposta que resolve metade das perguntas sobre heranças, e que quase ninguém conhece: cônjuge, filhos, netos, pais e avós estão ISENTOS de imposto do selo na transmissão gratuita. Herdar de um pai não paga imposto do selo. O que paga é o que fica de fora dessa linha — irmãos, sobrinhos, amigos.",
+      "Mas isento não é dispensado: a participação à administração fiscal faz-se até ao fim do terceiro mês seguinte ao do falecimento, e é obrigatória mesmo quando não há imposto nenhum a pagar.",
+      "O primeiro prazo fiscal do ano, e o mais esquecido: em guarda conjunta, a repartição das despesas comunica-se até ao fim de fevereiro, no Portal das Finanças, POR AMBOS os progenitores — e repete-se todos os anos, ainda que nada tenha mudado.",
+      "Constando o mesmo filho de duas declarações, as deduções são automaticamente reduzidas a metade em cada uma. Afastar essa divisão exige duas coisas ao mesmo tempo: um acordo que fixe a percentagem QUANTITATIVAMENTE, e comunicação de ambos no prazo. Percentagens comunicadas que não fechem — por discordância ou por erro de digitação — caem na divisão a meio.",
+      "Ou deduzes a pensão de alimentos, ou declaras o mesmo filho como dependente. Nunca as duas. É a incompatibilidade que a lei escreve no mesmo número, e o erro mais frequente de quem se divorcia.",
+      "E a pensão só dá dedução se resultar de sentença ou de acordo homologado. Um acordo entre pais, sem homologação, não abre o direito — por muito que o dinheiro saia todos os meses.",
+      "O limite de rendimentos de um filho para continuar dependente é bastante mais baixo do que a maior parte das pessoas supõe: a lei não fixa montante, remete para o salário mínimo. Dois meses bem pagos num trabalho de verão chegam para o ultrapassar — e o que se perde não é só a dedução, são todas as despesas dele.",
+      "No divórcio, o estado civil que conta é o de 31 de dezembro. Um divórcio decretado em março e um decretado em dezembro têm exatamente o mesmo efeito sobre o ano inteiro.",
+      "Ajudar um pai a pagar a casa não dá direito à dedução por ascendente: a lei exige comunhão de habitação, não dependência económica. O que se aplica à maioria das famílias é a dedução de encargos com lares — que é separada, não exige nada disso, e tem um teto por agregado (dois pais em lar não dão o dobro do limite).",
+      "No regime da deficiência, o guia diz o que NÃO publica e porquê: o grau mínimo de incapacidade é atualizado e não foi possível confirmá-lo em fonte oficial legível, por isso manda confirmar em vez de repetir números que circulam na imprensa.",
+    ],
+  },
+  {
     version: "2.22.0",
     data: "2026-08-07",
     titulo: "Cumprir prazos — e a regra das notificações eletrónicas que custa processos",

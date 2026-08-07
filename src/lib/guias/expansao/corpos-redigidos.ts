@@ -256,4 +256,38 @@ export const CORPOS_REDIGIDOS: ReadonlySet<string> = new Set([
   //    CATÁLOGO» e avisa que a idade normal de acesso e o fator de
   //    sustentabilidade são fixados por portaria anual. Fica andaime até
   //    o DL 187/2007 e as portarias estarem verificados.
+
+  // ── Família e ciclo de vida ─────────────────────────────────────────
+  //    O art. 6.º, al. e) do Código do Imposto do Selo é o número que o
+  //    pacote não trazia e que resolve metade das perguntas desta
+  //    secção: cônjuge, descendentes e ascendentes estão ISENTOS na
+  //    transmissão gratuita. O que fica de fora — irmãos, sobrinhos,
+  //    amigos — paga a verba 1.2 da Tabela Geral. O art. 26.º dá o prazo
+  //    de três meses para a participação, e o art. 27.º o adiamento.
+  "herancas-imposto-selo",
+  "doacoes",
+  //    O art. 78.º, n.º 1, al. j) e o n.º 12 do CIRS: a dedução da
+  //    pensão de alimentos exige título judicial ou acordo homologado, e
+  //    é INCOMPATÍVEL com declarar o mesmo filho como dependente. A
+  //    escolha é uma, não as duas.
+  "pensao-alimentos-irs",
+  //    O art. 78.º, n.os 9 a 11 (o n.º 11 já na redação do DL 49/2025)
+  //    dá a regra que ninguém conhece: constando o dependente de mais do
+  //    que uma declaração, as deduções são reduzidas a metade em cada
+  //    uma — e só um acordo que FIXE QUANTITATIVAMENTE a percentagem,
+  //    comunicado por AMBOS até ao fim de fevereiro, afasta essa
+  //    divisão. Percentagens que não somem 100% caem no supletivo.
+  "guarda-partilhada-irs",
+  "divorcio-irs",
+  //    O art. 13.º, n.º 5 do CIRS não fixa montante para o limite de
+  //    rendimentos do dependente: remete para a retribuição mínima
+  //    mensal garantida. O motor deriva-o do salário mínimo e
+  //    acompanha-o sozinho, ano após ano, sem hardcode.
+  "dependentes-irs",
+  //    O grau mínimo de incapacidade NÃO é publicado: o pacote avisa
+  //    que é atualizado e que não se deve replicar valores de imprensa,
+  //    e não foi possível confirmá-lo em fonte oficial legível. O guia
+  //    diz isso na página, e manda confirmar.
+  "deficiencia-irs",
+  "ascendentes-lares",
 ]);
