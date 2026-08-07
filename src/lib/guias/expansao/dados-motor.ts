@@ -57,11 +57,17 @@ import {
   MAIS_VALIAS_MOBILIARIAS_TAXA,
   MAIS_VALIAS_REINVESTIMENTO_MESES,
   MAIS_VALIAS_REPORTE,
+  NAO_RESIDENTES,
   OIC_NACIONAIS,
   PPR_RESGATE,
   PPR_TAXA_EFETIVA_CONDICOES_LEGAIS,
   PRAZO_MODELO1_MESES,
+  PROGRAMA_REGRESSAR,
+  PROGRAMA_REGRESSAR_TETO_CALC,
   REGIME_SIMPLIFICADO,
+  RENDIMENTO_MUNDIAL,
+  REPRESENTANTE_FISCAL,
+  RESIDENCIA_FISCAL,
   type EscalaoIMT,
 } from "@/lib/fiscal-data";
 import { fmt, pctExato } from "@/lib/format";
@@ -299,6 +305,96 @@ export const DADOS_MOTOR: Record<string, DadoDoMotor[]> = {
     d("AIMI", "AIMI — imóvel da empresa em uso pessoal", pctExato(AIMI.taxaSingular.value), "tributado à taxa das pessoas singulares, e identificado no anexo à declaração de rendimentos · art. 135.º-F, n.º 4 CIMI"),
     d("MAIS_VALIAS_IMOBILIARIO_INCLUSAO", "Mais-valia — em nome pessoal", `${pctExato(MAIS_VALIAS_IMOBILIARIO_INCLUSAO.value)} tributada`, "em IRC não há regra equivalente: a mais-valia entra por inteiro no lucro tributável · art. 43.º CIRS"),
     d("IMT_TAXA_COMERCIAL", "Tirar o imóvel da empresa", pctExato(IMT_TAXA_COMERCIAL.value), "é uma transmissão: há IMT outra vez, sobre o maior entre o valor do ato e o VPT · arts. 12.º e 17.º CIMT"),
+  ],
+
+  // ── Trabalhar com o estrangeiro ──────────────────────────────────────
+  //    Tudo nesta secção pende de uma pergunta só — és residente fiscal ou
+  //    não? — e é por isso que os critérios do art. 16.º aparecem em mais
+  //    do que um guia. Não é repetição: é a mesma norma vista do lado de
+  //    quem chega, de quem sai e de quem nunca cá viveu.
+  "residencia-fiscal": [
+    d("RESIDENCIA_FISCAL", "Critério temporal", `mais de ${RESIDENCIA_FISCAL.diasPermanencia.value} dias`, `seguidos ou interpolados, em qualquer período de ${RESIDENCIA_FISCAL.janelaMeses.value} meses com início ou fim no ano em causa · art. 16.º, n.º 1, al. a) CIRS`),
+    d("RESIDENCIA_FISCAL", "O que conta como dia", RESIDENCIA_FISCAL.contaComoDia.value, "art. 16.º, n.º 2 CIRS"),
+    d("RESIDENCIA_FISCAL", "Critério da habitação", RESIDENCIA_FISCAL.criterioHabitacao.value, "basta um dia do período, e dispensa a contagem · art. 16.º, n.º 1, al. b) CIRS"),
+    d("RESIDENCIA_FISCAL", "Início da residência", RESIDENCIA_FISCAL.inicioResidencia.value, "salvo quem tenha sido residente em qualquer dia do ano anterior — nesse caso, desde 1 de janeiro · art. 16.º, n.º 3 CIRS"),
+    d("RESIDENCIA_FISCAL", "Fim da residência", RESIDENCIA_FISCAL.fimResidencia.value, "art. 16.º, n.º 4 CIRS"),
+    d("RESIDENCIA_FISCAL", "Aferida por pessoa", "cada sujeito passivo do agregado", "num casal, um pode ser residente e o outro não · art. 16.º, n.º 5 CIRS"),
+    d("RENDIMENTO_MUNDIAL", "Efeito de ser residente", "tributação pelo rendimento mundial", "o IRS incide sobre a totalidade dos rendimentos, incluindo os obtidos fora · art. 15.º, n.º 1 CIRS"),
+    d("RESIDENCIA_FISCAL", "Prazo para comunicar a alteração", `${RESIDENCIA_FISCAL.prazoComunicarDias.value} dias`, "e a mudança de domicílio é ineficaz enquanto não for comunicada · art. 19.º, n.os 4 e 5 LGT"),
+  ],
+
+  "sair-de-portugal": [
+    d("RESIDENCIA_FISCAL", "Prazo para comunicar a saída", `${RESIDENCIA_FISCAL.prazoComunicarDias.value} dias`, "a contar da alteração do estatuto de residência · art. 19.º, n.º 5 LGT"),
+    d("RESIDENCIA_FISCAL", "Sem comunicação", "a mudança não produz efeitos", "é ineficaz a mudança de domicílio enquanto não for comunicada à administração tributária · art. 19.º, n.º 4 LGT"),
+    d("RESIDENCIA_FISCAL", "Fim da residência", RESIDENCIA_FISCAL.fimResidencia.value, "art. 16.º, n.º 4 CIRS"),
+    d("RESIDENCIA_FISCAL", "Residente todo o ano da saída, se", RESIDENCIA_FISCAL.residenteTodoOAnoDaSaida.value, `condições cumulativas; cai se provares tributação lá fora a taxa não inferior a ${pctExato(RESIDENCIA_FISCAL.limiarTributacaoNoEstrangeiro.value)} da portuguesa · art. 16.º, n.os 14 e 15 CIRS`),
+    d("RESIDENCIA_FISCAL", "Sair e voltar no ano seguinte", RESIDENCIA_FISCAL.regressoNoAnoSeguinte.value, "art. 16.º, n.º 16 CIRS"),
+    d("RESIDENCIA_FISCAL", "Mudança para regime fiscal mais favorável", `${RESIDENCIA_FISCAL.paraisoFiscalAnos.value} anos`, "nacionais portugueses continuam havidos como residentes no ano da mudança e nos quatro seguintes, salvo prova de razões atendíveis · art. 16.º, n.º 6 CIRS"),
+    d("REPRESENTANTE_FISCAL", "Ausência que obriga a representante", `mais de ${REPRESENTANTE_FISCAL.ausenciaMeses.value} meses`, "art. 19.º, n.º 6 LGT"),
+  ],
+
+  "nao-residentes-irs": [
+    d("RENDIMENTO_MUNDIAL", "Âmbito", "apenas rendimentos obtidos em Portugal", "sendo não residente, o IRS incide unicamente sobre os rendimentos obtidos em território português · art. 15.º, n.º 2 CIRS"),
+    d("NAO_RESIDENTES", "Trabalho, categoria B e pensões", pctExato(NAO_RESIDENTES.taxaTrabalhoEPensoes.value), "retenção liberatória, mesmo em ato isolado · art. 71.º, n.º 4, als. a) e c) CIRS"),
+    d("NAO_RESIDENTES", "Rendimentos de capitais", pctExato(NAO_RESIDENTES.taxaCapitais.value), "a mesma taxa dos residentes · art. 71.º, n.º 1, al. a) CIRS"),
+    d("NAO_RESIDENTES", "Restantes rendimentos", pctExato(NAO_RESIDENTES.taxaOutrosRendimentos.value), "os que não são imputáveis a estabelecimento estável nem sofreram retenção liberatória · art. 72.º, n.º 1, al. b) CIRS"),
+    d("NAO_RESIDENTES", "Com estabelecimento estável cá", pctExato(NAO_RESIDENTES.taxaEstabelecimentoEstavel.value), "art. 72.º, n.º 6, al. a) CIRS"),
+    d("NAO_RESIDENTES", "Sobre que valor incide", NAO_RESIDENTES.incideSobre.value, "é daqui que vem a ausência de deduções; exceto pensões, que têm a dedução do art. 53.º · art. 71.º, n.º 8 CIRS"),
+    d("NAO_RESIDENTES", "Sem retenção até", "à retribuição mínima mensal garantida", "no trabalho ou serviços prestados a uma única entidade, mediante declaração escrita · art. 71.º, n.os 5 e 6 CIRS"),
+    d("NAO_RESIDENTES", "Opção pelas taxas progressivas", NAO_RESIDENTES.opcaoTaxasProgressivas.value, "contam todos os rendimentos, incluindo os obtidos fora · art. 72.º, n.os 15 e 16 CIRS"),
+    d("NAO_RESIDENTES", "Prazo para pedir a devolução", `${NAO_RESIDENTES.devolucaoPrazoAnos.value} anos`, "contados do final do ano civil seguinte ao do facto tributário · art. 71.º, n.º 13 CIRS"),
+  ],
+
+  "programa-regressar": [
+    d("PROGRAMA_REGRESSAR", "Exclusão", pctExato(PROGRAMA_REGRESSAR.exclusao.value), "dos rendimentos do trabalho dependente e dos empresariais e profissionais — categorias A e B · art. 12.º-A, n.º 1 CIRS"),
+    d("PROGRAMA_REGRESSAR_TETO_CALC", "Teto anual da exclusão", fmt(PROGRAMA_REGRESSAR_TETO_CALC), "limite superior do primeiro escalão do art. 68.º-A; morde no montante excluído, não no rendimento · art. 12.º-A, n.º 1 CIRS"),
+    d("PROGRAMA_REGRESSAR", "Duração", `${PROGRAMA_REGRESSAR.anos.value} anos`, "art. 12.º-A, n.º 1 CIRS"),
+    d("PROGRAMA_REGRESSAR", "Anos sem ser residente", `${PROGRAMA_REGRESSAR.anosSemResidencia.value} anos`, "não ter sido considerado residente em território português em qualquer dos cinco anos anteriores · art. 12.º-A, n.º 1, al. b) CIRS"),
+    d("PROGRAMA_REGRESSAR", "Último ano para se tornar residente", String(PROGRAMA_REGRESSAR.ultimoAnoParaSeTornarResidente.value), "é o ano-limite da redação em vigor; a janela já foi prorrogada antes · art. 12.º-A, n.º 1, al. a) CIRS"),
+    d("PROGRAMA_REGRESSAR", "Só para quem já cá foi residente", "sim", "é o regime dos EX-residentes: quem nunca cá viveu não é elegível · art. 12.º-A, n.º 1, al. c) CIRS"),
+    d("PROGRAMA_REGRESSAR", "Acumula com o residente não habitual", "não", "art. 12.º-A, n.º 2 CIRS"),
+  ],
+
+  "representante-fiscal": [
+    d("REPRESENTANTE_FISCAL", "Quem tem de designar", REPRESENTANTE_FISCAL.obrigatorioPara.value, "art. 19.º, n.º 6 LGT"),
+    d("REPRESENTANTE_FISCAL", "Ausência que ativa a obrigação", `mais de ${REPRESENTANTE_FISCAL.ausenciaMeses.value} meses`, "vale para quem reside cá e se ausenta · art. 19.º, n.º 6 LGT"),
+    d("REPRESENTANTE_FISCAL", "Onde é facultativa", REPRESENTANTE_FISCAL.facultativoPara.value, "a lei fixa o critério, não uma lista de países · art. 19.º, n.º 8 LGT"),
+    d("REPRESENTANTE_FISCAL", "A alternativa, para qualquer país", "aderir às notificações eletrónicas", "morada única digital, notificações e citações eletrónicas no Portal das Finanças ou caixa postal eletrónica · art. 19.º, n.º 15 LGT"),
+    d("REPRESENTANTE_FISCAL", "O que se perde sem representante", REPRESENTANTE_FISCAL.semRepresentante.value, "art. 19.º, n.º 7 LGT"),
+    d("REPRESENTANTE_FISCAL", "Renúncia — prazo da AT", `${REPRESENTANTE_FISCAL.renunciaPrazoDias.value} dias`, "desde que tenha decorrido um ano da nomeação ou haja novo representante · art. 19.º, n.os 9 e 10 LGT"),
+  ],
+
+  "convencao-dupla-tributacao": [
+    d("CREDITO_IMPOSTO_ESTRANGEIRO", "O que o crédito nunca ultrapassa", "o menor dos dois limites", `${CREDITO_IMPOSTO_ESTRANGEIRO.duploLimite.value.join(" · ")} · art. 81.º, n.º 1 CIRS`),
+    d("CREDITO_IMPOSTO_ESTRANGEIRO", "Havendo convenção", "o teto é o da convenção", "a dedução não pode ultrapassar o imposto pago no estrangeiro nos termos previstos pela convenção · art. 81.º, n.º 2 CIRS"),
+    d("CREDITO_IMPOSTO_ESTRANGEIRO", "Reporte por insuficiência de coleta", `${CREDITO_IMPOSTO_ESTRANGEIRO.reporteAnos.value} anos`, "art. 81.º, n.º 3 CIRS"),
+    d("RENDIMENTO_MUNDIAL", "Porque é que a convenção é precisa", "tributação pelo rendimento mundial", "é a sujeição do art. 15.º, n.º 1 que cria a dupla tributação que a convenção reparte"),
+  ],
+
+  "modelo-21-rfi": [
+    d("NAO_RESIDENTES", "O que o formulário evita", `retenção de ${pctExato(NAO_RESIDENTES.taxaTrabalhoEPensoes.value)} ou ${pctExato(NAO_RESIDENTES.taxaCapitais.value)}`, "conforme a categoria; a convenção reduz ou dispensa · arts. 71.º e 72.º CIRS"),
+    d("NAO_RESIDENTES", "Se a retenção já foi feita", `${NAO_RESIDENTES.devolucaoPrazoAnos.value} anos para pedir devolução`, "contados do final do ano civil seguinte ao do facto tributário · art. 71.º, n.º 13 CIRS"),
+  ],
+
+  "primeiro-ano-fiscal-portugal": [
+    d("RESIDENCIA_FISCAL", "Quando começas a ser residente", RESIDENCIA_FISCAL.inicioResidencia.value, "art. 16.º, n.º 3 CIRS"),
+    d("RESIDENCIA_FISCAL", "Critério temporal", `mais de ${RESIDENCIA_FISCAL.diasPermanencia.value} dias`, `em qualquer período de ${RESIDENCIA_FISCAL.janelaMeses.value} meses com início ou fim no ano em causa · art. 16.º, n.º 1, al. a) CIRS`),
+    d("RESIDENCIA_FISCAL", "Prazo para comunicar a alteração", `${RESIDENCIA_FISCAL.prazoComunicarDias.value} dias`, "art. 19.º, n.º 5 LGT"),
+    d("RENDIMENTO_MUNDIAL", "O que muda quando passas a residente", "tributação pelo rendimento mundial", "art. 15.º, n.º 1 CIRS"),
+    d("PROGRAMA_REGRESSAR", "Só para quem já cá foi residente", "sim", "quem chega pela primeira vez não é elegível para o regime dos ex-residentes · art. 12.º-A, n.º 1, al. c) CIRS"),
+  ],
+
+  "nomada-digital-d8": [
+    d("RESIDENCIA_FISCAL", "Quando Portugal passa a tributar-te", `mais de ${RESIDENCIA_FISCAL.diasPermanencia.value} dias`, `em qualquer período de ${RESIDENCIA_FISCAL.janelaMeses.value} meses — ou antes disso, pelo critério da habitação · art. 16.º, n.º 1 CIRS`),
+    d("RESIDENCIA_FISCAL", "O que conta como dia", RESIDENCIA_FISCAL.contaComoDia.value, "art. 16.º, n.º 2 CIRS"),
+    d("RENDIMENTO_MUNDIAL", "O que passa a ser tributado", "a totalidade dos rendimentos", "incluindo os obtidos fora de Portugal, venham de onde vierem · art. 15.º, n.º 1 CIRS"),
+    d("RESIDENCIA_FISCAL", "Prazo para comunicar a alteração", `${RESIDENCIA_FISCAL.prazoComunicarDias.value} dias`, "art. 19.º, n.º 5 LGT"),
+  ],
+
+  "remoto-empresa-estrangeira": [
+    d("RENDIMENTO_MUNDIAL", "Sendo residente cá", "tributação pelo rendimento mundial", "a sede do empregador não muda a sujeição · art. 15.º, n.º 1 CIRS"),
+    d("REGIME_SIMPLIFICADO", "Recibos verdes — coeficiente dos serviços", pctExato(REGIME_SIMPLIFICADO.coefServicos151.value), "do rendimento bruto vai a imposto no regime simplificado, nas profissões da tabela do art. 151.º · art. 31.º, n.º 1, al. b) CIRS"),
+    d("CREDITO_IMPOSTO_ESTRANGEIRO", "Se houver imposto retido lá fora", `crédito até ${CREDITO_IMPOSTO_ESTRANGEIRO.reporteAnos.value} anos`, "pelo menor dos dois limites, com reporte por insuficiência de coleta · art. 81.º CIRS"),
   ],
 };
 

@@ -19,6 +19,24 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.17.0",
+    data: "2026-08-07",
+    titulo: "Trabalhar com o estrangeiro — e 17 fontes do IVA que abriam na lei errada",
+    itens: [
+      "A secção «Trabalhar com o estrangeiro» ficou completa: dez guias, para quem chega, para quem sai, para quem volta, para quem trabalha remoto e para quem cá tem rendimentos sem cá viver.",
+      "Os 183 dias não se contam por ano civil. A lei diz «em qualquer período de 12 meses com início ou fim no ano em causa» — é uma janela deslizante. Quem esteve cá de setembro a abril não chega a 183 dias em nenhum dos dois anos civis, mas chega no período a cavalo dos dois, e é residente fiscal.",
+      "E conta como dia de presença qualquer dia, completo ou parcial, que inclua dormida. Numa ida e volta de fim de semana contam os dois dias.",
+      "Basta um dos critérios. Ter cá casa em condições que revelem intenção de a manter como residência habitual torna-te residente sem contar dia nenhum — e basta um dia do período.",
+      "A residência fiscal é de cada pessoa, não do casal. Num agregado, um cônjuge pode ser residente e o outro não, no mesmo ano e na mesma casa.",
+      "Quem sai de Portugal tem 60 dias para comunicar, e a mudança de domicílio é ineficaz enquanto não for comunicada. Pior: há uma regra que torna o ano da saída um ano inteiro de residente — se permaneceste cá mais de 183 dias nesse ano e recebeste alguma coisa depois de sair. Cai se provares que esse rendimento foi tributado lá fora, mas o ónus é teu.",
+      "E se saíres e voltares no ano seguinte, a lei considera-te residente durante a totalidade desse ano. A saída apaga-se.",
+      "Corrigimos e completámos o Programa Regressar. São cinco anos sem ter sido residente, é preciso ter cá sido residente antes — quem chega pela primeira vez não é elegível, por muitos anos que tenha vivido fora — e a janela de entrada fecha em 2026 na redação em vigor. Há ainda um teto anual à exclusão que quase ninguém menciona.",
+      "Não há uma taxa dos não residentes: há quatro, conforme a categoria. E há duas portas de volta às taxas progressivas para quem reside na União Europeia ou no Espaço Económico Europeu — uma opção e um pedido de devolução com prazo de dois anos — que praticamente ninguém usa.",
+      "Sobre o representante fiscal, a lei não tem lista de países dispensados: tem um critério. E tem, desde 2022, uma segunda dispensa que vale para qualquer país e que muda tudo — aderir às notificações eletrónicas dispensa a nomeação.",
+      "As 17 fontes do Código do IVA que citávamos abriam numa coleção que serve a redação histórica. O artigo 53.º ainda lá diz que o limiar da isenção são 10 000 € — quem clicasse para confirmar encontrava um número fora de vigor há anos. Estão todas corrigidas, e o verificador passa a falhar o build se alguma voltar ao caminho antigo.",
+    ],
+  },
+  {
     version: "2.16.0",
     data: "2026-08-07",
     titulo: "Investir e poupar, fechada — e uma escada de ETFs que quase ninguém conhece",

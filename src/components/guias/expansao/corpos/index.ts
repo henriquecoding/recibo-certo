@@ -22,6 +22,16 @@ import CorpoReporteMenosValias from "./reporte-menos-valias";
 import CorpoPprIrs from "./ppr-irs";
 import CorpoCriptoStakingMining from "./cripto-staking-mining";
 import CorpoEtfIrs from "./etf-irs";
+import CorpoResidenciaFiscal from "./residencia-fiscal";
+import CorpoSairDePortugal from "./sair-de-portugal";
+import CorpoNaoResidentesIrs from "./nao-residentes-irs";
+import CorpoProgramaRegressar from "./programa-regressar";
+import CorpoModelo21Rfi from "./modelo-21-rfi";
+import CorpoRepresentanteFiscal from "./representante-fiscal";
+import CorpoConvencaoDuplaTributacao from "./convencao-dupla-tributacao";
+import CorpoPrimeiroAnoFiscalPortugal from "./primeiro-ano-fiscal-portugal";
+import CorpoNomadaDigitalD8 from "./nomada-digital-d8";
+import CorpoRemotoEmpresaEstrangeira from "./remoto-empresa-estrangeira";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  CORPOS REDIGIDOS DOS GUIAS DA EXPANSÃO
@@ -59,4 +69,14 @@ export const CORPOS: Record<string, ComponentType> = {
   "ppr-irs": CorpoPprIrs,
   "cripto-staking-mining": CorpoCriptoStakingMining,
   "etf-irs": CorpoEtfIrs,
+  "residencia-fiscal": CorpoResidenciaFiscal,
+  "sair-de-portugal": CorpoSairDePortugal,
+  "nao-residentes-irs": CorpoNaoResidentesIrs,
+  "programa-regressar": CorpoProgramaRegressar,
+  "modelo-21-rfi": CorpoModelo21Rfi,
+  "representante-fiscal": CorpoRepresentanteFiscal,
+  "convencao-dupla-tributacao": CorpoConvencaoDuplaTributacao,
+  "primeiro-ano-fiscal-portugal": CorpoPrimeiroAnoFiscalPortugal,
+  "nomada-digital-d8": CorpoNomadaDigitalD8,
+  "remoto-empresa-estrangeira": CorpoRemotoEmpresaEstrangeira,
 };

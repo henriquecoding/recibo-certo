@@ -72,4 +72,36 @@ export const CORPOS_REDIGIDOS: ReadonlySet<string> = new Set([
   //    22.º e 22.º-A do EBF, que não constavam da base legal do pacote —
   //    e pelo caminho apareceu a escada do art. 43.º, n.º 5 do CIRS.
   "etf-irs",
+
+  // ── Trabalhar com o estrangeiro ─────────────────────────────────────
+  //    A secção inteira pende de uma pergunta só — és residente fiscal ou
+  //    não? — e foi por isso que o art. 16.º foi lido inteiro antes de se
+  //    escrever a primeira linha. Trouxe três coisas que a explicação
+  //    corrente costuma perder: a janela dos 183 dias é DESLIZANTE e não o
+  //    ano civil; conta como dia de presença qualquer dia que inclua
+  //    dormida; e a residência é aferida por pessoa, não pelo agregado.
+  "residencia-fiscal",
+  "primeiro-ano-fiscal-portugal",
+  //    Os n.os 14 a 16 do art. 16.º são o que torna o ano da saída um ano
+  //    inteiro de residente — a regra que ninguém conta a quem se muda em
+  //    setembro e recebe alguma coisa em novembro.
+  "sair-de-portugal",
+  //    O pacote marcou dois dados com «confirmar» e classificou o guia como
+  //    ALTA MANUTENÇÃO. Ficaram confirmados — cinco anos sem residência,
+  //    janela até 2026 — e apareceu um terceiro que o pacote não trazia: o
+  //    teto anual da exclusão, que a lei foi buscar ao art. 68.º-A.
+  "programa-regressar",
+  //    «Não afirmar uma taxa única de 25% sem qualificar a categoria», dizia
+  //    o pacote. São quatro taxas, e há duas portas de volta às progressivas
+  //    para quem reside na UE ou no EEE que quase ninguém usa.
+  "nao-residentes-irs",
+  "modelo-21-rfi",
+  //    O pacote mandava confirmar a lista de países dispensados de nomear
+  //    representante. A lei não tem lista: tem um critério — e tem, desde o
+  //    Decreto-Lei n.º 44/2022, uma segunda dispensa que vale para qualquer
+  //    país e que o pacote não mencionava.
+  "representante-fiscal",
+  "convencao-dupla-tributacao",
+  "nomada-digital-d8",
+  "remoto-empresa-estrangeira",
 ]);

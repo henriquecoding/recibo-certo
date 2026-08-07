@@ -1265,6 +1265,19 @@ export const RESIDENCIA_FISCAL = {
     "art16cirs",
     REV_ESTRANGEIRO
   ),
+  /**
+   * A saída da regra anterior: prova de tributação efetiva lá fora.
+   *
+   * Fora da UE e do EEE, não basta ter sido tributado — a taxa aplicada
+   * tem de não ser inferior a esta fração da que cá se aplicaria. É o que
+   * separa uma mudança real de uma mudança para não pagar.
+   */
+  limiarTributacaoNoEstrangeiro: sv(
+    0.6,
+    "Art. 16.º, n.º 15, al. b) CIRS — noutro Estado não abrangido pela al. a), a taxa de tributação aplicável àqueles rendimentos não pode ser inferior a 60% daquela que lhes seria aplicável caso o sujeito passivo mantivesse a residência em território português",
+    "art16cirs",
+    REV_ESTRANGEIRO
+  ),
   /** Sair e voltar no ano seguinte apaga a saída. */
   regressoNoAnoSeguinte: sv(
     "residente durante a totalidade do ano",
