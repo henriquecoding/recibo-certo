@@ -346,3 +346,50 @@ describe("guias:expansao — o corpo e o plano do pacote", () => {
     }
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════
+//  A CADEIA QUE PÕE UM GUIA NO ÍNDICE E NO SITEMAP
+//  ---------------------------------------------------------------------
+//  Escrever o corpo não chega: um guia só é encontrável se atravessar
+//  quatro camadas — `CORPOS_REDIGIDOS` → `GUIDE_MANIFESTS` → `GUIA_SLUGS`
+//  → sitemap e índice. Cada uma tem o seu filtro, e basta um deles ficar
+//  desalinhado para o trabalho existir e não ser visto por ninguém.
+//
+//  Estas asserções fixam a cadeia nos DOIS sentidos. Um guia escrito que
+//  não chegue ao sitemap é trabalho invisível; um andaime que lá chegue é
+//  uma página por acabar candidata a resultado de pesquisa. Nenhum dos
+//  dois é aceitável, e nenhum dos dois se nota a olho.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("guias:expansao — índice e sitemap", () => {
+  it("todo o guia com corpo redigido chega a GUIA_SLUGS", () => {
+    const fora = [...CORPOS_REDIGIDOS].filter((slug) => !GUIA_SLUGS.includes(slug));
+    expect(fora, "guias escritos que não entram no sitemap nem no índice").toEqual([]);
+  });
+
+  it("nenhum andaime chega a GUIA_SLUGS", () => {
+    const dentro = SLUGS_EXPANSAO.filter(
+      (slug) => !CORPOS_REDIGIDOS.has(slug) && GUIA_SLUGS.includes(slug),
+    );
+    expect(dentro, "guias por escrever anunciados no sitemap").toEqual([]);
+  });
+
+  it("cada guia escrito tem manifesto, e o manifesto não o marca como rascunho", () => {
+    for (const slug of CORPOS_REDIGIDOS) {
+      const m = GUIDE_MANIFESTS.find((x) => x.slug === slug);
+      expect(m, `${slug}: sem manifesto`).toBeDefined();
+      // `draft` é o que `guiaSemCorpo()` produz — um guia escrito nunca
+      // pode lá ficar, ou sai do índice sem ninguém dar por isso.
+      expect(m!.status, `${slug}: manifesto ainda em rascunho`).not.toBe("draft");
+    }
+  });
+
+  it("GUIA_SLUGS = guias originais + guias da expansão escritos", () => {
+    const daExpansaoNoIndice = GUIA_SLUGS.filter((s) => SLUGS_EXPANSAO.includes(s));
+    expect(daExpansaoNoIndice.length).toBe(CORPOS_REDIGIDOS.size);
+    // E o total cresce exatamente com o que se escreve: qualquer outra
+    // variação significa que alguma coisa entrou ou saiu por outra via.
+    const originais = GUIA_SLUGS.length - daExpansaoNoIndice.length;
+    expect(originais, "o número de guias originais não devia mudar por escrever expansão").toBe(57);
+  });
+});
