@@ -19,6 +19,24 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.24.0",
+    data: "2026-08-07",
+    titulo: "Gerir uma empresa — e uma correção ao motor vinda do artigo 43.º-D",
+    itens: [
+      "Nove guias novos para quem tem sociedade: SIFIDE, RFAI, o incentivo à capitalização, stock options, apoios do IEFP à contratação, suprimentos e prestações suplementares, obrigações societárias, viatura da empresa e amortizações de equipamento.",
+      "A leitura do artigo 43.º-D do Estatuto dos Benefícios Fiscais corrigiu o próprio motor: a Lei n.º 45-A/2024 revogou o n.º 2 e acabou com a majoração do spread para PME e empresas de pequena-média capitalização. Hoje o spread é único — 2 pontos percentuais sobre a Euribor a 12 meses, para todas. Textos que ainda distingam dois spreads estão desatualizados.",
+      "E o limite do incentivo à capitalização é o MAIOR dos dois, não o menor: 4 000 000 € ou 30% do resultado antes de depreciações, amortizações, gastos de financiamento e impostos. Ler isto depressa dá o resultado ao contrário.",
+      "Distribuir dividendos apaga benefício acumulado nos anos anteriores: as saídas a favor dos sócios entram com sinal negativo no cálculo dos aumentos líquidos, e a janela abrange seis períodos anteriores. Passa a ser um número a pôr na conta quando se decide quanto distribuir, e em que ano.",
+      "A taxa efetiva das stock options não está escrita em nenhum artigo — sai do encontro de dois. O Estatuto manda considerar metade do ganho; o artigo 72.º do Código do IRS tributa o resto à taxa autónoma. É por isso que anda por aí com valores diferentes, e é por isso que aqui é derivada em vez de copiada.",
+      "Sair de Portugal é um facto tributário para quem tem opções: perder a residência aciona a tributação, reportada ao momento do exercício — sem ter vendido nada e sem ter recebido um euro. Há uma isenção parcial até 20 vezes o IAS, e só pode ser usada uma vez na vida.",
+      "Pede à empresa, por escrito, que confirme as condições do plano. Se ela confirmar — ou se não responder em 90 dias — fica subsidiariamente responsável pelo imposto em falta. O silêncio dela protege-te, e o pedido é gratuito.",
+      "Mil euros é a fronteira que resolve a maior parte das dúvidas sobre amortizações: até esse custo unitário, o bem deduz-se todo no ano em que é reconhecido. A exceção trava a compra «às peças» — um conjunto que deva ser depreciado como um todo não se divide em vinte faturas de novecentos euros.",
+      "Na viatura da empresa, a tributação autónoma paga-se mesmo em ano de prejuízo — e sobe quando o exercício dá prejuízo. É a característica que mais inverte a comparação com o reembolso de quilómetros, e a que quase nunca entra na conta.",
+      "Nos apoios do IEFP, a candidatura é ANTES de contratar. Quem já assinou o contrato perdeu a medida, e não há recuperação possível.",
+      "Três coisas continuam a não ser publicadas, de propósito, porque não foi possível confirmá-las em fonte oficial legível: as taxas de depreciação por tipo de ativo (vivem no decreto regulamentar), o limite por quilómetro em viatura própria e os montantes de cada medida do IEFP. Os guias dizem-no na página e mandam ao sítio certo.",
+    ],
+  }
+  {
     version: "2.23.0",
     data: "2026-08-07",
     titulo: "Família e ciclo de vida — heranças, divórcio, guarda partilhada e dependentes",

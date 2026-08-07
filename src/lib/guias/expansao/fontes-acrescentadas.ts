@@ -48,6 +48,13 @@ export const FONTES_ACRESCENTADAS: Record<string, string[]> = {
   // essa regra prevalecer sobre qualquer legislação especial. Sem ela, o
   // guia não conseguia mostrar de onde vem a divergência que descreve.
   "insolvencia-pessoal": ["lgt30"],
+  // O pacote mandava ler «o CIRS e o EBF em vigor» sem dizer que artigos.
+  // São dois, e vivem longe um do outro: o 56.º-A (exclusão de rendimentos,
+  // com frações diferentes para trabalho e pensões) e o 87.º (definição de
+  // pessoa com deficiência, deduções à coleta, despesa de acompanhamento e
+  // a escada de descida do n.º 9). Sem os dois, metade do guia ficava sem
+  // fonte — e a outra metade atribuída ao artigo errado.
+  "deficiencia-irs": ["art56aCirs", "cirs87"],
 };
 
 export const fontesAcrescentadas = (slug: string): string[] => FONTES_ACRESCENTADAS[slug] ?? [];

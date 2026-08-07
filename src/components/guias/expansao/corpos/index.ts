@@ -89,6 +89,15 @@ import CorpoDivorcioIrs from "./divorcio-irs";
 import CorpoDependentesIrs from "./dependentes-irs";
 import CorpoDeficienciaIrs from "./deficiencia-irs";
 import CorpoAscendentesLares from "./ascendentes-lares";
+import CorpoSifide from "./sifide";
+import CorpoRfai from "./rfai";
+import CorpoIceCapitalizacao from "./ice-capitalizacao";
+import CorpoStockOptions from "./stock-options";
+import CorpoApoiosContratacaoIefp from "./apoios-contratacao-iefp";
+import CorpoSuprimentosPrestacoesSuplementares from "./suprimentos-prestacoes-suplementares";
+import CorpoObrigacoesSocietarias from "./obrigacoes-societarias";
+import CorpoViaturaEmpresa from "./viatura-empresa";
+import CorpoAmortizacoesEquipamento from "./amortizacoes-equipamento";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  CORPOS REDIGIDOS DOS GUIAS DA EXPANSÃO
@@ -193,4 +202,13 @@ export const CORPOS: Record<string, ComponentType> = {
   "dependentes-irs": CorpoDependentesIrs,
   "deficiencia-irs": CorpoDeficienciaIrs,
   "ascendentes-lares": CorpoAscendentesLares,
+  "sifide": CorpoSifide,
+  "rfai": CorpoRfai,
+  "ice-capitalizacao": CorpoIceCapitalizacao,
+  "stock-options": CorpoStockOptions,
+  "apoios-contratacao-iefp": CorpoApoiosContratacaoIefp,
+  "suprimentos-prestacoes-suplementares": CorpoSuprimentosPrestacoesSuplementares,
+  "obrigacoes-societarias": CorpoObrigacoesSocietarias,
+  "viatura-empresa": CorpoViaturaEmpresa,
+  "amortizacoes-equipamento": CorpoAmortizacoesEquipamento,
 };

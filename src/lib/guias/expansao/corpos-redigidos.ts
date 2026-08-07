@@ -290,4 +290,39 @@ export const CORPOS_REDIGIDOS: ReadonlySet<string> = new Set([
   //    diz isso na página, e manda confirmar.
   "deficiencia-irs",
   "ascendentes-lares",
+
+  // ── Gerir uma empresa ───────────────────────────────────────────────
+  //    Dois benefícios que o motor já tinha e que ganharam corpo (SIFIDE
+  //    e RFAI), e dois que foram lidos de raiz no articulado: o art.
+  //    43.º-D do EBF (ICE) e o art. 43.º-C (startups). Do primeiro veio
+  //    uma correção ao próprio motor — a Lei n.º 45-A/2024 revogou o
+  //    n.º 2 e acabou com a majoração do spread por dimensão da empresa,
+  //    que a nota antiga ainda descrevia.
+  "sifide",
+  "rfai",
+  "ice-capitalizacao",
+  //    A taxa efetiva das stock options não está escrita em artigo
+  //    nenhum: o EBF manda considerar metade do ganho, o art. 72.º,
+  //    n.º 1, al. f) do CIRS tributa o resto à taxa autónoma. É derivada,
+  //    não copiada — e por isso acompanha qualquer alteração a qualquer
+  //    dos dois.
+  "stock-options",
+  //    Nenhum montante de medida do IEFP é publicado: são fixados por
+  //    portaria e concretizados em avisos de abertura que mudam durante
+  //    o ano. O que se publica é a mecânica — indexação ao IAS,
+  //    candidatura ANTES da contratação, manutenção do posto.
+  "apoios-contratacao-iefp",
+  "suprimentos-prestacoes-suplementares",
+  //    Sem UMA data de calendário, de propósito: os prazos de aprovação
+  //    e depósito de contas dependem do exercício e têm sido objeto de
+  //    prorrogações anuais.
+  "obrigacoes-societarias",
+  //    O limite por quilómetro em viatura própria fica de fora: é fixado
+  //    por referência aos servidores do Estado e não foi possível
+  //    confirmar a portaria em vigor nesta revisão.
+  "viatura-empresa",
+  //    As taxas de depreciação por tipo de ativo também não: o n.º 1 do
+  //    art. 31.º do CIRC remete para o decreto regulamentar, e é lá que
+  //    vivem. O guia dá o mecanismo, que é estável.
+  "amortizacoes-equipamento",
 ]);

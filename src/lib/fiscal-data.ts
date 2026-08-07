@@ -466,6 +466,30 @@ export const SOURCES = {
     label: "Art. 22.º-A EBF — Rendimentos pagos por organismos de investimento coletivo aos participantes: retenção na distribuição e no resgate · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-22-ordm-a.aspx",
   },
+  ebf43c: {
+    label: "Art. 43.º-C EBF — Incentivo fiscal à aquisição de participações sociais de startups · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf43c.aspx",
+  },
+  ebf43d: {
+    label: "Art. 43.º-D EBF — Regime fiscal de incentivo à capitalização das empresas (ICE) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf43d.aspx",
+  },
+  circ31: {
+    label: "Art. 31.º CIRC — Quotas de depreciação ou amortização · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/CIRC_2R/Pages/irc31.aspx",
+  },
+  circ33: {
+    label: "Art. 33.º CIRC — Elementos de reduzido valor · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/CIRC_2R/Pages/irc33.aspx",
+  },
+  circ34: {
+    label: "Art. 34.º CIRC — Depreciações e amortizações não dedutíveis para efeitos fiscais · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/CIRC_2R/Pages/irc34.aspx",
+  },
+  art72cirsF: {
+    label: "Art. 72.º, n.º 1, al. f) CIRS — taxa autónoma de 28% sobre os ganhos de planos de opções abrangidos pelo art. 43.º-C do EBF · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs72.aspx",
+  },
   art63EBF: {
     label: "Art. 63.º EBF — Estatuto do Mecenato: donativos, dedução de 25% com limite de 15% da coleta · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-63-ordm-.aspx",
@@ -676,6 +700,10 @@ const REV_FATURACAO = "2026-08-07";
 // Data de verificação do bloco da família — art. 13.º, art. 78.º (n.os 9 a
 // 12) e art. 83.º-A do CIRS, e arts. 6.º e 26.º do Código do Imposto do Selo.
 const REV_FAMILIA = "2026-08-07";
+// Data de verificação da secção «Gerir uma empresa»: arts. 31.º, 33.º e
+// 34.º do CIRC, arts. 43.º-C e 43.º-D do EBF e art. 72.º, n.º 1, al. f)
+// do CIRS, lidos no articulado do Portal das Finanças.
+const REV_EMPRESA = "2026-08-07";
 // Data de verificação dos coeficientes de desvalorização da moeda (Portaria 382/2025).
 const REV_COEF_MOEDA = "2026-06-23";
 // Data de verificação do Salário Mínimo Nacional 2026 (RMMG 920 €, DL 139/2025).
@@ -3013,11 +3041,197 @@ export const RFAI_REPORTE_ANOS = sv(
 
 /** Nota informativa única sobre a revogação da DLRR e o sucessor ICE. */
 export const DLRR_REVOGADA_NOTA = sv(
-  "A DLRR foi revogada com efeitos a 1 de janeiro de 2023 (Art. 281.º da Lei n.º 24-D/2022 — OE2023). O benefício sucessor é o ICE — Incentivo à Capitalização das Empresas (Art. 43.º-D EBF): dedução ao lucro tributável indexada à Euribor a 12 meses (+2 p.p. para PME e Small Mid Cap) sobre os aumentos líquidos dos capitais próprios elegíveis, com majoração transitória de 20% em 2026. O apuramento exige dados do balanço — fala com um contabilista certificado.",
+  "A DLRR foi revogada com efeitos a 1 de janeiro de 2023 (Art. 281.º da Lei n.º 24-D/2022 — OE2023). O benefício sucessor é o ICE — Incentivo à Capitalização das Empresas (Art. 43.º-D EBF): dedução ao lucro tributável correspondente à Euribor a 12 meses do período, adicionada de um spread de 2 pontos percentuais, sobre os aumentos líquidos dos capitais próprios elegíveis. O apuramento exige dados do balanço — fala com um contabilista certificado.",
   "Art. 281.º Lei 24-D/2022 (revogação) · Art. 43.º-D EBF (ICE)",
-  "occICE",
-  "2026-07-20"
+  "ebf43d",
+  REV_EMPRESA,
+  "O spread do n.º 1 passou a ser único com a Lei n.º 45-A/2024, que revogou o n.º 2 — deixou de haver majoração por dimensão da empresa."
 );
+
+// ═══════════════════════════════════════════════════════════════════════
+//  ICE — Incentivo à Capitalização das Empresas (Art. 43.º-D EBF)
+//  Verificado a 07/08/2026 contra o articulado no Portal das Finanças,
+//  na redação da Lei n.º 45-A/2024.
+//
+//  A taxa não é simulável sem dados do período: depende da média da
+//  Euribor a 12 meses calculada com base no último dia de cada mês. O que
+//  É fixo — e é o que decide se vale a pena — são o spread, os dois
+//  limites do n.º 4 e o reporte do n.º 5.
+// ═══════════════════════════════════════════════════════════════════════
+
+export const ICE = {
+  spread: sv(
+    0.02,
+    "Art. 43.º-D, n.º 1 EBF — taxa Euribor a 12 meses do período, adicionada de um spread de 2 pontos percentuais",
+    "ebf43d",
+    REV_EMPRESA,
+    "Spread único desde a Lei n.º 45-A/2024, que revogou o n.º 2 (majoração para PME e Small Mid Cap)."
+  ),
+  limiteAbsoluto: sv(
+    4_000_000,
+    "Art. 43.º-D, n.º 4, al. a) EBF — a dedução não pode exceder, em cada período, o MAIOR de €4 000 000 ou do limite da al. b)",
+    "ebf43d",
+    REV_EMPRESA
+  ),
+  limiteEbitda: sv(
+    0.30,
+    "Art. 43.º-D, n.º 4, al. b) EBF — 30% do resultado antes de depreciações, amortizações, gastos de financiamento líquidos e impostos, nos termos do art. 67.º do CIRC",
+    "ebf43d",
+    REV_EMPRESA
+  ),
+  reporteAnos: sv(
+    5,
+    "Art. 43.º-D, n.º 5 EBF — a parte que exceda o limite da al. b) do n.º 4 é dedutível num ou mais dos cinco períodos de tributação posteriores",
+    "ebf43d",
+    REV_EMPRESA
+  ),
+  periodosAnteriores: sv(
+    6,
+    "Art. 43.º-D, n.º 3 EBF — os aumentos líquidos apuram-se pelo somatório do próprio exercício e de cada um dos seis períodos de tributação anteriores",
+    "ebf43d",
+    REV_EMPRESA,
+    "Resultando desse somatório uma diferença negativa, considera-se zero — não gera dedução negativa."
+  ),
+  primeiroPeriodoElegivel: sv(
+    "períodos de tributação que se iniciem em ou após 1 de janeiro de 2023",
+    "Art. 43.º-D, n.º 9 EBF",
+    "ebf43d",
+    REV_EMPRESA
+  ),
+  exigeSituacaoRegularizada: sv(
+    "ter a situação fiscal e contributiva regularizada, contabilidade regularmente organizada e lucro tributável não determinado por métodos indiretos",
+    "Art. 43.º-D, n.º 7, als. b), c) e d) EBF",
+    "ebf43d",
+    REV_EMPRESA
+  ),
+};
+
+// ═══════════════════════════════════════════════════════════════════════
+//  STOCK OPTIONS — Art. 43.º-C EBF (Lei das Startups, Lei n.º 21/2023)
+//  + Art. 72.º, n.º 1, al. f) do CIRS.
+//  Verificado a 07/08/2026 contra os dois articulados.
+//
+//  A taxa efetiva não está escrita em lado nenhum: sai do encontro dos
+//  dois artigos. O EBF manda considerar metade do ganho; o CIRS tributa
+//  o que resta à taxa autónoma de 28%. Metade de 28 dá 14 — e é por isso
+//  que a fração e a taxa vivem aqui juntas e derivadas, e não à mão.
+// ═══════════════════════════════════════════════════════════════════════
+
+export const STOCK_OPTIONS_STARTUP = {
+  fracaoTributada: sv(
+    0.5,
+    "Art. 43.º-C, n.º 1 EBF — os ganhos são considerados em 50% do seu valor",
+    "ebf43c",
+    REV_EMPRESA
+  ),
+  taxa: sv(
+    0.28,
+    "Art. 72.º, n.º 1, al. f) CIRS — taxa autónoma de 28% sobre os ganhos que beneficiem do regime do art. 43.º-C do EBF",
+    "art72cirsF",
+    REV_EMPRESA
+  ),
+  retencaoMinimaAnos: sv(
+    1,
+    "Art. 43.º-C, n.º 4 EBF — a tributação depende da manutenção dos direitos subjacentes por um período mínimo de um ano",
+    "ebf43c",
+    REV_EMPRESA
+  ),
+  isencaoSaidaEmIas: sv(
+    20,
+    "Art. 43.º-C, n.º 5 EBF — perdendo a residência, os rendimentos ficam parcialmente isentos até 20 × IAS, sendo englobados para determinação da taxa dos restantes",
+    "ebf43c",
+    REV_EMPRESA
+  ),
+  isencaoSaidaUmaVez: sv(
+    "a isenção só pode ser utilizada uma vez pelo sujeito passivo",
+    "Art. 43.º-C, n.º 6 EBF",
+    "ebf43c",
+    REV_EMPRESA
+  ),
+  prazoRespostaEntidadeDias: sv(
+    90,
+    "Art. 43.º-C, n.º 8 EBF — confirmando por escrito, ou não respondendo no prazo de 90 dias, a entidade é subsidiariamente responsável pelo imposto em falta",
+    "ebf43c",
+    REV_EMPRESA
+  ),
+  participacaoQueExclui: sv(
+    0.20,
+    "Art. 43.º-C, n.º 9 EBF — estão excluídos os sujeitos passivos que detenham, direta ou indiretamente, participação não inferior a 20% do capital social ou dos direitos de voto",
+    "ebf43c",
+    REV_EMPRESA,
+    "O n.º 10 afasta esta exclusão nas startups e nas micro e pequenas empresas."
+  ),
+  limiarInovacao: sv(
+    0.10,
+    "Art. 43.º-C, n.º 2, al. b) EBF — despesas com I&D, patentes, desenhos ou modelos industriais ou programas de computador equivalentes a pelo menos 10% dos gastos ou do volume de negócios",
+    "ebf43c",
+    REV_EMPRESA
+  ),
+  momentosDeTributacao: sv(
+    "alienação dos valores mobiliários, perda da qualidade de residente em território português ou transmissão gratuita — o primeiro que ocorrer",
+    "Art. 43.º-C, n.º 4, als. a), b) e c) EBF",
+    "ebf43c",
+    REV_EMPRESA
+  ),
+};
+
+/** Taxa efetiva do regime: metade do ganho, à taxa autónoma. */
+export const STOCK_OPTIONS_TAXA_EFETIVA =
+  STOCK_OPTIONS_STARTUP.fracaoTributada.value * STOCK_OPTIONS_STARTUP.taxa.value;
+
+// ═══════════════════════════════════════════════════════════════════════
+//  DEPRECIAÇÕES (Arts. 31.º, 33.º e 34.º CIRC) — verificados a 07/08/2026.
+//  As TAXAS por tipo de ativo não estão no Código: o art. 31.º remete para
+//  «o decreto regulamentar que estabelece o respetivo regime», e é lá que
+//  vivem. Não são publicadas aqui — o que é publicável é o mecanismo.
+// ═══════════════════════════════════════════════════════════════════════
+
+export const ELEMENTOS_REDUZIDO_VALOR = sv(
+  1000,
+  "Art. 33.º CIRC — custo unitário de aquisição ou produção até €1 000: dedução integral no período de tributação em que seja reconhecido",
+  "circ33",
+  REV_EMPRESA,
+  "Exceto quando o elemento faça parte integrante de um conjunto que deva ser depreciado como um todo — a exceção que trava a compra de um portátil «às peças»."
+);
+
+export const DEPRECIACAO = {
+  /** Coeficientes máximos do método das quotas decrescentes, por vida útil. */
+  quotasDecrescentes: sv(
+    [
+      { vidaUtil: "inferior a cinco anos", coeficiente: 1.5 },
+      { vidaUtil: "de cinco ou seis anos", coeficiente: 2 },
+      { vidaUtil: "superior a seis anos", coeficiente: 2.5 },
+    ] as { vidaUtil: string; coeficiente: number }[],
+    "Art. 31.º, n.º 4 CIRC — coeficientes máximos que corrigem a taxa no método das quotas decrescentes",
+    "circ31",
+    REV_EMPRESA
+  ),
+  taxasNoDecretoRegulamentar: sv(
+    "as taxas de depreciação por tipo de ativo constam do decreto regulamentar que estabelece o respetivo regime, e não do Código do IRC",
+    "Art. 31.º, n.º 1 CIRC",
+    "circ31",
+    REV_EMPRESA
+  ),
+  proporcionalNoAnoDeEntrada: sv(
+    "no ano de início de funcionamento pode optar-se por uma taxa deduzida da anual, correspondente ao número de meses contados desde o mês de entrada em funcionamento",
+    "Art. 31.º, n.º 7 CIRC",
+    "circ31",
+    REV_EMPRESA
+  ),
+  semTaxaFixada: sv(
+    "não havendo taxa fixada para o elemento, são aceites as que a Autoridade Tributária considere razoáveis, tendo em conta o período de vida útil esperada",
+    "Art. 31.º, n.º 3 CIRC",
+    "circ31",
+    REV_EMPRESA
+  ),
+  naoDedutiveis: sv(
+    "as praticadas para além do período máximo de vida útil, as que excedam os limites legais, a parte do imóvel correspondente ao terreno e a parcela do custo das viaturas ligeiras que exceda o montante definido por portaria",
+    "Art. 34.º, n.º 1, als. b), c), d) e e) CIRC",
+    "circ34",
+    REV_EMPRESA,
+    "A al. e) abrange expressamente os veículos elétricos, e ressalva os bens afetos ao serviço público de transportes ou destinados a aluguer."
+  ),
+};
 
 // ═══════════════════════════════════════════════════════════════════════
 //  SIFIDE II — Sistema de Incentivos Fiscais à I&D (Art. 35.º–42.º CFI)
@@ -3092,21 +3306,37 @@ export const IFICI_PRAZO_ANOS = sv(
 // ═══════════════════════════════════════════════════════════════════════
 
 /**
- * Art. 56.º-A CIRS — Exclusão parcial de rendimentos de trabalho/atividade
- * de sujeitos com deficiência ≥ 60%: 15% dos rendimentos Cat. B até €2 500.
- * Reduz o rendimento TRIBUTÁVEL (antes de calcular coleta).
+ * Art. 56.º-A CIRS — Exclusão parcial de rendimentos de sujeitos passivos com
+ * deficiência. O artigo não fala em exclusão: diz que os rendimentos brutos
+ * «são considerados apenas por 85%» nas categorias A e B, e «apenas por 90%»
+ * na categoria H. A exclusão é o complemento — 15% e 10%, respetivamente.
+ *
+ * As duas frações são DIFERENTES, e é o erro que mais se repete nesta matéria:
+ * uma pensão não tem a mesma exclusão que um salário. O teto de €2 500 é por
+ * CATEGORIA de rendimentos, não por sujeito passivo.
+ *
+ * O grau mínimo de 60% NÃO consta deste artigo — está no n.º 5 do art. 87.º,
+ * e é de lá que vem (`DEDUCAO_DEFICIENCIA_GRAU_MINIMO`).
  */
 export const EXCLUSAO_DEFICIENCIA_TAXA = sv(
   0.15,
-  "Art. 56.º-A CIRS — exclusão de 15% dos rendimentos Cat. B de pessoas com deficiência ≥ 60%",
+  "Art. 56.º-A, n.º 1, al. a) CIRS — rendimentos das categorias A e B considerados apenas por 85% (exclusão de 15%)",
   "art56aCirs",
-  TODAY
+  REV_FAMILIA
+);
+/** Categoria H (pensões): considerada por 90% — logo, exclusão de 10%. */
+export const EXCLUSAO_DEFICIENCIA_TAXA_PENSOES = sv(
+  0.10,
+  "Art. 56.º-A, n.º 1, al. b) CIRS — rendimentos da categoria H considerados apenas por 90% (exclusão de 10%)",
+  "art56aCirs",
+  REV_FAMILIA,
+  "Diferente da fração das categorias A e B. Uma pensão não tem a mesma exclusão que um salário."
 );
 export const EXCLUSAO_DEFICIENCIA_MAX = sv(
   2_500,
-  "Art. 56.º-A CIRS — exclusão máxima de €2 500 por categoria de rendimento",
+  "Art. 56.º-A, n.º 2 CIRS — a parte do rendimento excluída de tributação não pode exceder, POR CATEGORIA de rendimentos, €2 500",
   "art56aCirs",
-  TODAY
+  REV_FAMILIA
 );
 
 /**
@@ -3124,10 +3354,108 @@ export const DEDUCAO_DEFICIENCIA_COLETA = sv(
 /** Grau mínimo de incapacidade permanente (comprovado por atestado médico). */
 export const DEDUCAO_DEFICIENCIA_GRAU_MINIMO = sv(
   60,
-  "Art. 56.º-A / 87.º CIRS — grau mínimo de incapacidade permanente de 60%",
+  "Art. 87.º, n.º 5 CIRS — considera-se pessoa com deficiência aquela que apresente grau de incapacidade permanente igual ou superior a 60%, comprovado por atestado médico de incapacidade multiúso",
   "portalFinancasArt87",
-  TODAY
+  REV_FAMILIA,
+  "O grau consta do n.º 5 do art. 87.º — não do art. 56.º-A, que nada diz sobre graus."
 );
+
+/**
+ * O resto do art. 87.º do CIRS, que é onde está quase tudo o que interessa a
+ * quem vive este regime e que raramente aparece escrito num sítio só.
+ *
+ * Três deduções somam-se sem se anularem — o n.º 8 di-lo por palavras: «as
+ * deduções previstas nos n.os 1, 6 e 7 são cumulativas». E há dois graus
+ * distintos em jogo: 60% abre o regime, 90% abre a despesa de acompanhamento.
+ *
+ * O n.º 9, aditado pela Lei n.º 82/2023, resolve o caso de quem perde o grau
+ * numa reavaliação depois de cinco anos a beneficiar: a dedução não cai a zero
+ * de um ano para o outro, desce em escada ao longo de quatro anos, desde que
+ * se mantenha uma incapacidade de pelo menos 20%.
+ */
+export const DEFICIENCIA_ART87 = {
+  dependenteOuAscendente: sv(
+    Math.round(2.5 * IAS.value * 100) / 100,
+    "Art. 87.º, n.º 1 CIRS — 2,5 × IAS por cada dependente com deficiência e por cada ascendente com deficiência nas condições da al. b) do n.º 1 do art. 78.º-A",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  educacaoEReabilitacao: sv(
+    0.30,
+    "Art. 87.º, n.º 2 CIRS — 30% da totalidade das despesas com educação e reabilitação do sujeito passivo ou dependentes com deficiência",
+    "portalFinancasArt87",
+    REV_FAMILIA,
+    "Sem teto próprio no artigo — ao contrário da dedução geral de educação."
+  ),
+  premiosSeguroVida: sv(
+    0.25,
+    "Art. 87.º, n.º 2 CIRS — 25% dos prémios de seguros de vida ou contribuições a associações mutualistas que garantam exclusivamente riscos de morte, invalidez ou reforma por velhice",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  limitePremiosNaColeta: sv(
+    0.15,
+    "Art. 87.º, n.º 4 CIRS — a dedução dos prémios de seguros ou das contribuições a associações mutualistas não pode exceder 15% da coleta de IRS",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  limiteContribuicoesReforma: sv(
+    65,
+    "Art. 87.º, n.º 3 CIRS — limite de €65 para as contribuições pagas para reforma por velhice (sujeitos passivos não casados ou separados judicialmente)",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  limiteContribuicoesReformaCasados: sv(
+    130,
+    "Art. 87.º, n.º 3 CIRS — limite de €130 tratando-se de sujeitos passivos casados e não separados judicialmente de pessoas e bens",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  acompanhamento: sv(
+    Math.round(4 * IAS.value * 100) / 100,
+    "Art. 87.º, n.º 6 CIRS — dedução à coleta, a título de despesa de acompanhamento, igual a 4 × IAS por cada sujeito passivo ou dependente",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  grauAcompanhamento: sv(
+    90,
+    "Art. 87.º, n.º 6 CIRS — a despesa de acompanhamento exige grau de invalidez permanente igual ou superior a 90%",
+    "portalFinancasArt87",
+    REV_FAMILIA,
+    "Segundo grau, distinto dos 60% que abrem o regime."
+  ),
+  forcasArmadas: sv(
+    Math.round(IAS.value * 100) / 100,
+    "Art. 87.º, n.º 7 CIRS — mais 1 × IAS por cada sujeito passivo com deficiência das Forças Armadas abrangido pelos Decretos-Leis n.os 43/76 e 314/90",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  cumulativas: sv(
+    "as deduções previstas nos n.os 1, 6 e 7 são cumulativas",
+    "Art. 87.º, n.º 8 CIRS",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  /** N.º 9: escada de descida, em múltiplos do IAS, ano a ano após a reavaliação. */
+  descidaAposReavaliacao: sv(
+    [2, 1.5, 1, 0.5] as number[],
+    "Art. 87.º, n.º 9 CIRS (aditado pela Lei n.º 82/2023) — 2, 1,5, 1 e 0,5 IAS no primeiro, segundo, terceiro e quarto anos subsequentes à revisão que atribua grau inferior a 60%",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  descidaAnosMinimosBeneficio: sv(
+    5,
+    "Art. 87.º, n.º 9 CIRS — exige ter beneficiado da dedução do n.º 1 durante pelo menos cinco anos",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  descidaGrauMinimo: sv(
+    20,
+    "Art. 87.º, n.º 9 CIRS — desde que se mantenha uma incapacidade igual ou superior a 20%",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+};
 
 /**
  * Art. 55.º do Código Contributivo — base de incidência dos membros de órgãos
@@ -5850,6 +6178,75 @@ export function assertFiscalDataIntegrity(): void {
   if (Math.abs(DEDUCAO_DEPENDENTE_DEFICIENCIA.value - Math.round(2.5 * IAS.value * 100) / 100) > EPS) {
     erros.push("Dedução dependente deficiência não corresponde a 2,5 × IAS.");
   }
+  // A exclusão da categoria H é MENOR que a das categorias A e B (90% vs 85%
+  // de rendimento considerado). Trocá-las tributa a menos uma pensão.
+  if (!isRate(EXCLUSAO_DEFICIENCIA_TAXA_PENSOES.value)) {
+    erros.push("Taxa exclusão deficiência Cat. H (Art. 56.º-A) inválida.");
+  }
+  if (!(EXCLUSAO_DEFICIENCIA_TAXA_PENSOES.value < EXCLUSAO_DEFICIENCIA_TAXA.value)) {
+    erros.push("Exclusão da Cat. H deveria ser inferior à das Cat. A/B (Art. 56.º-A, n.º 1).");
+  }
+  // Art. 87.º — o resto do artigo.
+  for (const [nome, taxa] of [
+    ["educação e reabilitação (n.º 2)", DEFICIENCIA_ART87.educacaoEReabilitacao],
+    ["prémios de seguro (n.º 2)", DEFICIENCIA_ART87.premiosSeguroVida],
+    ["limite dos prémios na coleta (n.º 4)", DEFICIENCIA_ART87.limitePremiosNaColeta],
+  ] as const) {
+    if (!isRate(taxa.value)) erros.push(`Taxa do Art. 87.º — ${nome} — inválida.`);
+  }
+  if (!(DEFICIENCIA_ART87.limiteContribuicoesReformaCasados.value
+    === 2 * DEFICIENCIA_ART87.limiteContribuicoesReforma.value)) {
+    erros.push("Art. 87.º, n.º 3: o limite dos casados é o dobro do dos não casados (€130 / €65).");
+  }
+  // Dois graus distintos: 60% abre o regime, 90% abre o acompanhamento.
+  if (!(DEFICIENCIA_ART87.grauAcompanhamento.value > DEDUCAO_DEFICIENCIA_GRAU_MINIMO.value)) {
+    erros.push("Art. 87.º, n.º 6: o grau da despesa de acompanhamento tem de exceder o grau de acesso ao regime.");
+  }
+  if (Math.abs(DEFICIENCIA_ART87.acompanhamento.value - DEDUCAO_DEFICIENCIA_COLETA.value) > EPS) {
+    erros.push("Art. 87.º, n.º 6: a despesa de acompanhamento é igual a 4 × IAS, como a dedução do n.º 1.");
+  }
+  if (Math.abs(DEFICIENCIA_ART87.dependenteOuAscendente.value - DEDUCAO_DEPENDENTE_DEFICIENCIA.value) > EPS) {
+    erros.push("Art. 87.º, n.º 1: a dedução por ascendente com deficiência é a mesma do dependente (2,5 × IAS).");
+  }
+  // A escada do n.º 9 desce, e nunca sobe.
+  const escada = DEFICIENCIA_ART87.descidaAposReavaliacao.value;
+  if (escada.length !== 4 || escada.some((v, i) => i > 0 && v >= escada[i - 1])) {
+    erros.push("Art. 87.º, n.º 9: a escada de descida tem quatro degraus estritamente decrescentes.");
+  }
+  if (!(DEFICIENCIA_ART87.descidaGrauMinimo.value < DEDUCAO_DEFICIENCIA_GRAU_MINIMO.value)) {
+    erros.push("Art. 87.º, n.º 9: o grau residual (20%) tem de ser inferior ao grau de acesso (60%).");
+  }
+  // Gerir uma empresa. O ICE é o único benefício em que o limite NÃO é um
+  // teto único: o n.º 4 manda escolher o MAIOR dos dois, e trocar isso por
+  // um mínimo cortava a dedução a quem tem EBITDA grande.
+  if (!isRate(ICE.spread.value)) erros.push("Spread do ICE (Art. 43.º-D, n.º 1 EBF) inválido.");
+  if (!isRate(ICE.limiteEbitda.value)) erros.push("Limite EBITDA do ICE (Art. 43.º-D, n.º 4 EBF) inválido.");
+  if (!(ICE.limiteAbsoluto.value > 0)) erros.push("Limite absoluto do ICE não positivo.");
+  if (!(ICE.periodosAnteriores.value > ICE.reporteAnos.value)) {
+    erros.push("ICE: a janela de apuramento (6 períodos) deveria exceder o reporte (5 períodos).");
+  }
+  // Stock options: metade do ganho à taxa autónoma. Se a fração deixar de
+  // ser uma fração, a taxa efetiva do regime deixa de fazer sentido.
+  if (!isRate(STOCK_OPTIONS_STARTUP.fracaoTributada.value)) {
+    erros.push("Fração tributada das stock options (Art. 43.º-C, n.º 1 EBF) inválida.");
+  }
+  if (!isRate(STOCK_OPTIONS_STARTUP.taxa.value)) {
+    erros.push("Taxa das stock options (Art. 72.º, n.º 1, al. f) CIRS) inválida.");
+  }
+  if (!(STOCK_OPTIONS_TAXA_EFETIVA < STOCK_OPTIONS_STARTUP.taxa.value)) {
+    erros.push("A taxa efetiva das stock options tem de ser inferior à taxa autónoma — é metade dela.");
+  }
+  if (!(STOCK_OPTIONS_STARTUP.isencaoSaidaEmIas.value > 0)) {
+    erros.push("Isenção de saída das stock options (Art. 43.º-C, n.º 5 EBF) não positiva.");
+  }
+  if (!(ELEMENTOS_REDUZIDO_VALOR.value > 0)) erros.push("Limiar dos elementos de reduzido valor não positivo.");
+  // Os coeficientes das quotas decrescentes crescem com a vida útil, e
+  // nenhum deles reduz a quota — corrigi-la para baixo seria o contrário
+  // do que o método faz.
+  const coefs = DEPRECIACAO.quotasDecrescentes.value;
+  if (coefs.length !== 3 || coefs.some((c, i) => c.coeficiente <= 1 || (i > 0 && c.coeficiente <= coefs[i - 1].coeficiente))) {
+    erros.push("Art. 31.º, n.º 4 CIRC: os três coeficientes são maiores que 1 e crescem com a vida útil.");
+  }
   if (!isRate(DEDUCAO_RENDAS.value.taxa)) erros.push("Taxa dedução rendas inválida.");
   if (!(DEDUCAO_RENDAS.value.limite > 0)) erros.push("Limite dedução rendas não positivo.");
   if (!(SS_MIN_MENSAL.value > 0)) erros.push("SS mínimo mensal não positivo.");
@@ -6247,11 +6644,18 @@ export function assertFiscalDataIntegrity(): void {
     LIMITE_GLOBAL_DEDUCOES,
     // Deficiência (Art. 56.º-A + Art. 87.º)
     EXCLUSAO_DEFICIENCIA_TAXA,
+    EXCLUSAO_DEFICIENCIA_TAXA_PENSOES,
     EXCLUSAO_DEFICIENCIA_MAX,
     DEDUCAO_DEFICIENCIA_COLETA,
     DEDUCAO_DEFICIENCIA_GRAU_MINIMO,
     DEDUCAO_DEPENDENTE_DEFICIENCIA,
+    ...Object.values(DEFICIENCIA_ART87),
     SS_MIN_MENSAL,
+    // Gerir uma empresa (Arts. 31.º/33.º/34.º CIRC, 43.º-C/43.º-D EBF)
+    ELEMENTOS_REDUZIDO_VALOR,
+    ...Object.values(DEPRECIACAO),
+    ...Object.values(ICE),
+    ...Object.values(STOCK_OPTIONS_STARTUP),
     // Tributação Autónoma
     TA_THRESHOLDS,
     TA_VIATURAS_COMBUSTAO,

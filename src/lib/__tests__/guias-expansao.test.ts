@@ -152,10 +152,20 @@ describe("guias:expansao — critérios de aceitação da secção 5", () => {
       expect(guiaExpansao(c.slug), c.slug).toBeDefined();
       expect(LEGAL_SOURCES, `${c.slug} → ${c.fonte}`).toHaveProperty(c.fonte);
       expect(c.motivo.length, `${c.slug}/${c.dado}`).toBeGreaterThan(60);
-      expect(
-        CONTEUDO_EXPANSAO[c.slug].dados.some((d) => d.label === c.dado),
-        `${c.slug} → dado "${c.dado}" não existe no pacote`,
-      ).toBe(true);
+      if (c.semDadoNoPacote) {
+        // A dispensa só vale onde não há tabela nenhuma para apontar. Num
+        // guia com `dados`, um `dado` que não case com nenhuma linha é uma
+        // gralha — e a dispensa não a pode encobrir.
+        expect(
+          CONTEUDO_EXPANSAO[c.slug].dados,
+          `${c.slug} → "semDadoNoPacote" num guia que TEM dados no pacote`,
+        ).toHaveLength(0);
+      } else {
+        expect(
+          CONTEUDO_EXPANSAO[c.slug].dados.some((d) => d.label === c.dado),
+          `${c.slug} → dado "${c.dado}" não existe no pacote`,
+        ).toBe(true);
+      }
       if (c.acao === "corrigir") {
         expect(c.verificado, `${c.slug}/${c.dado}`).toBeTruthy();
         // Uma entrada corrigida não pode continuar a pedir confirmação: a

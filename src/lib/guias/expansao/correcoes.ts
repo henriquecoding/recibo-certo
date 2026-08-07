@@ -41,6 +41,18 @@ export interface CorrecaoAoPacote {
   /** Chave de `LEGAL_SOURCES` onde a verificação foi feita. */
   fonte: string;
   verificadoEm: string;
+  /**
+   * Nem toda a divergência nasce de uma linha da tabela do pacote. Há guias
+   * a que o pacote não deu `dados` nenhuns e cuja instrução vive no aviso em
+   * prosa — «ler o CIRS em vigor e não replicar valores de imprensa», por
+   * exemplo. Essas divergências continuam a ser divergências e continuam a
+   * merecer rasto; o que não têm é `label` para apontar.
+   *
+   * Marcar isto dispensa a correspondência com a tabela, e SÓ é aceite em
+   * guias sem `dados` no pacote — nos outros, um `dado` que não case com
+   * nenhuma linha continua a ser o que sempre foi: uma gralha.
+   */
+  semDadoNoPacote?: true;
 }
 
 const EM = "2026-08-06";
@@ -164,6 +176,34 @@ export const CORRECOES_AO_PACOTE: CorrecaoAoPacote[] = [
     motivo:
       "O próprio pacote avisa que «há jurisprudência divergente quanto à exoneração de créditos tributários — apresentar como questão em aberto, não como regra fechada», e depois publica-a como dado. As duas coisas não podem coexistir. O que está verificado é a norma de onde a tese nasce: o Art. 30.º, n.os 2 e 3 da LGT, que declara o crédito tributário indisponível e manda essa regra prevalecer sobre qualquer legislação especial — o que inclui o CIRE. É isso que o guia mostra, com a divergência assumida e a recomendação de levar o caso a um advogado. Uma regra dada como fechada num tema que os tribunais não fecharam é pior do que não dizer nada.",
     fonte: "lgt30",
+    verificadoEm: EM_PROFISSOES,
+  },
+  {
+    slug: "deficiencia-irs",
+    dado: "Grau mínimo de incapacidade",
+    semDadoNoPacote: true,
+    noPacote: "«atualizado — não replicar valores de imprensa»",
+    verificado: "60%",
+    notaVerificada:
+      "grau de incapacidade permanente, comprovado por atestado médico de incapacidade multiúso · art. 87.º, n.º 5 CIRS",
+    acao: "corrigir",
+    motivo:
+      "Numa primeira redação este guia não publicou o grau, por não ter sido possível confirmá-lo. Foi um excesso de cautela: o número está no articulado, no n.º 5 do art. 87.º do CIRS, e o motor já o tinha. O sítio onde é frequente procurá-lo — e onde não está — é o art. 56.º-A, que trata da exclusão de rendimentos e nada diz sobre graus. Reter um valor que a lei publica é tão mau como inventar um que ela não tem: manda o leitor procurar noutro lado, onde encontrará artigos de imprensa desatualizados.",
+    fonte: "cirs87",
+    verificadoEm: EM_PROFISSOES,
+  },
+  {
+    slug: "deficiencia-irs",
+    dado: "Exclusão de rendimentos na categoria H",
+    semDadoNoPacote: true,
+    noPacote: "a mesma fração das categorias A e B",
+    verificado: "10% (rendimentos considerados por 90%)",
+    notaVerificada:
+      "art. 56.º-A, n.º 1, al. b) CIRS — as pensões são consideradas por 90%, e não por 85% como as categorias A e B",
+    acao: "corrigir",
+    motivo:
+      "O art. 56.º-A tem DUAS alíneas com frações diferentes, e tratá-las como uma só é o erro mais repetido nesta matéria — inclusive no motor, que só tinha a das categorias A e B. Aplicar a fração do trabalho a uma pensão calcula a exclusão a mais e faz a liquidação não bater certo. O teto de 2 500 € também não é «por titular», como se lê com frequência: o n.º 2 diz «por categoria de rendimentos», o que dá dois tetos a quem tem salário e pensão.",
+    fonte: "art56aCirs",
     verificadoEm: EM_PROFISSOES,
   },
 ];

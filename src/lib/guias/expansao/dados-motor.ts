@@ -21,7 +21,36 @@
 //  mostrar um número que o motor não conhece.
 // ═══════════════════════════════════════════════════════════════════════
 
+import type { TAViaturasTaxas } from "@/lib/fiscal-data";
 import {
+  DEPRECIACAO,
+  ELEMENTOS_REDUZIDO_VALOR,
+  ICE,
+  IRC_TAXA_GERAL,
+  IRC_TAXA_PME,
+  IRC_LIMITE_PME,
+  RFAI_TAXA_INTERIOR,
+  RFAI_TAXA_INTERIOR_EXCEDENTE,
+  RFAI_TAXA_LITORAL,
+  RFAI_LIMITE_INVESTIMENTO_INTERIOR,
+  RFAI_LIMITE_COLETA,
+  RFAI_REPORTE_ANOS,
+  SIFIDE_TAXA_BASE,
+  SIFIDE_TAXA_INCREMENTAL,
+  SIFIDE_TETO_INCREMENTAL,
+  SIFIDE_MAJORACAO_PME_JOVEM,
+  SIFIDE_REPORTE_ANOS,
+  STOCK_OPTIONS_STARTUP,
+  STOCK_OPTIONS_TAXA_EFETIVA,
+  TA_AJUDAS_CUSTO,
+  TA_VIATURAS_COMBUSTAO,
+  TA_VIATURAS_ELETRICA,
+  TA_VIATURAS_PHEV,
+  TA_ELETRICA_LIMITE_CUSTO,
+  TA_AGRAVAMENTO_PREJUIZO,
+  AJUDAS_CUSTO,
+  SS_DEPENDENTE,
+  SMN,
   AIMI,
   CAPITAIS_TAXA_LIBERATORIA,
   AJUSTE_BASE_SS,
@@ -40,6 +69,10 @@ import {
   DISPENSA_COIMA,
   EXCLUSAO_DEFICIENCIA_MAX,
   EXCLUSAO_DEFICIENCIA_TAXA,
+  EXCLUSAO_DEFICIENCIA_TAXA_PENSOES,
+  DEDUCAO_DEFICIENCIA_COLETA,
+  DEDUCAO_DEFICIENCIA_GRAU_MINIMO,
+  DEFICIENCIA_ART87,
   FATURACAO_PRAZOS,
   GUARDA_PARTILHADA,
   ENTIDADE_CONTRATANTE,
@@ -189,6 +222,12 @@ const enquadramentoCategoriaB = (): DadoDoMotor[] => [
   d("SS_COEFICIENTE", "Base de incidência — vendas", pctExato(SS_COEFICIENTE.bens.value), "do rendimento de venda de bens"),
   d("SS_ISENCAO_PRIMEIRO_ANO_MESES", "Isenção de contribuições no início", `${SS_ISENCAO_PRIMEIRO_ANO_MESES.value} meses`, "a contar do início de atividade; é o fim desta isenção que muda a conta no segundo ano"),
 ];
+
+// As taxas de tributação autónoma de viaturas vêm por escalão de custo de
+// aquisição, num objeto de três campos. Serializar aqui evita escrever à
+// mão três percentagens que o motor já tem.
+const taxasPorEscalao = (t: TAViaturasTaxas): string =>
+  [t.ate37500, t.ate45000, t.acima45000].map((v) => pctExato(v)).join(" · ");
 
 export const DADOS_MOTOR: Record<string, DadoDoMotor[]> = {
   imi: [
@@ -888,8 +927,16 @@ export const DADOS_MOTOR: Record<string, DadoDoMotor[]> = {
   ],
 
   "deficiencia-irs": [
-    d("EXCLUSAO_DEFICIENCIA_TAXA", "Exclusão parcial de rendimentos", pctExato(EXCLUSAO_DEFICIENCIA_TAXA.value), "das categorias A e B, para sujeitos passivos com deficiência"),
-    d("EXCLUSAO_DEFICIENCIA_MAX", "Teto da exclusão", fmt(EXCLUSAO_DEFICIENCIA_MAX.value), "por titular"),
+    d("DEDUCAO_DEFICIENCIA_GRAU_MINIMO", "Grau mínimo de incapacidade", `${DEDUCAO_DEFICIENCIA_GRAU_MINIMO.value}%`, "permanente, comprovado por atestado médico de incapacidade multiúso · art. 87.º, n.º 5 CIRS"),
+    d("EXCLUSAO_DEFICIENCIA_TAXA", "Exclusão — categorias A e B", pctExato(EXCLUSAO_DEFICIENCIA_TAXA.value), "os rendimentos brutos são considerados apenas por 85% · art. 56.º-A, n.º 1, al. a) CIRS"),
+    d("EXCLUSAO_DEFICIENCIA_TAXA_PENSOES", "Exclusão — categoria H", pctExato(EXCLUSAO_DEFICIENCIA_TAXA_PENSOES.value), "as pensões são consideradas por 90%, e não por 85% · art. 56.º-A, n.º 1, al. b) CIRS"),
+    d("EXCLUSAO_DEFICIENCIA_MAX", "Teto da exclusão", fmt(EXCLUSAO_DEFICIENCIA_MAX.value), "por CATEGORIA de rendimentos, não por titular · art. 56.º-A, n.º 2 CIRS"),
+    d("DEDUCAO_DEFICIENCIA_COLETA", "Dedução à coleta do titular", fmt(DEDUCAO_DEFICIENCIA_COLETA.value), "quatro vezes o valor do IAS · art. 87.º, n.º 1 CIRS"),
+    d("DEFICIENCIA_ART87", "Por dependente ou ascendente", fmt(DEFICIENCIA_ART87.dependenteOuAscendente.value), "2,5 × IAS por cada um · art. 87.º, n.º 1 CIRS"),
+    d("DEFICIENCIA_ART87", "Educação e reabilitação", pctExato(DEFICIENCIA_ART87.educacaoEReabilitacao.value), "da totalidade das despesas, sem teto próprio no artigo · art. 87.º, n.º 2 CIRS"),
+    d("DEFICIENCIA_ART87", "Prémios de seguro de vida", pctExato(DEFICIENCIA_ART87.premiosSeguroVida.value), `com o limite de ${pctExato(DEFICIENCIA_ART87.limitePremiosNaColeta.value)} da coleta · art. 87.º, n.os 2 e 4 CIRS`),
+    d("DEFICIENCIA_ART87", "Despesa de acompanhamento", fmt(DEFICIENCIA_ART87.acompanhamento.value), `exige grau de invalidez de ${DEFICIENCIA_ART87.grauAcompanhamento.value}% ou superior · art. 87.º, n.º 6 CIRS`),
+    d("DEFICIENCIA_ART87", "Deficiência das Forças Armadas", fmt(DEFICIENCIA_ART87.forcasArmadas.value), "acresce 1 × IAS, e as três deduções são cumulativas · art. 87.º, n.os 7 e 8 CIRS"),
     d("DEDUCAO_DEPENDENTE", "Dedução por dependente", fmt(DEDUCAO_DEPENDENTE.value), "acresce às deduções próprias da deficiência · art. 78.º-A CIRS"),
     d("DEPENDENTES_IRS", "Dependentes inaptos para o trabalho", "sem limite de idade", "os filhos maiores inaptos para o trabalho e para angariar meios de subsistência não têm o limite dos 25 anos · art. 13.º, n.º 5, al. c) CIRS"),
   ],
@@ -900,6 +947,84 @@ export const DADOS_MOTOR: Record<string, DadoDoMotor[]> = {
     d("DEDUCAO_LARES", "Despesas com lares — dedução", pctExato(DEDUCAO_LARES.value.taxa), "dos encargos suportados · art. 84.º CIRS"),
     d("DEDUCAO_LARES", "Despesas com lares — teto", fmt(DEDUCAO_LARES.value.limite), "por agregado, e não por ascendente · art. 84.º CIRS"),
     d("GUARDA_PARTILHADA", "Ascendente em duas declarações", `deduções a ${pctExato(GUARDA_PARTILHADA.fracaoPorSujeitoPassivo.value)} em cada uma`, "a regra do art. 78.º, n.º 9 vale para ascendentes como para dependentes"),
+  ],
+
+  // ── Gerir uma empresa ───────────────────────────────────────────────
+  "sifide": [
+    d("SIFIDE_TAXA_BASE", "Taxa base", pctExato(SIFIDE_TAXA_BASE.value), "das despesas de I&D do período · art. 36.º CFI"),
+    d("SIFIDE_TAXA_INCREMENTAL", "Taxa incremental", pctExato(SIFIDE_TAXA_INCREMENTAL.value), "do aumento face à média dos dois anos anteriores · art. 36.º CFI"),
+    d("SIFIDE_TETO_INCREMENTAL", "Teto do incremento elegível", fmt(SIFIDE_TETO_INCREMENTAL.value), "limite do aumento a que a taxa incremental se aplica · art. 36.º CFI"),
+    d("SIFIDE_MAJORACAO_PME_JOVEM", "Majoração de PME jovem", pctExato(SIFIDE_MAJORACAO_PME_JOVEM.value), "para PME com menos de dois exercícios e sem histórico incremental · art. 36.º CFI"),
+    d("SIFIDE_REPORTE_ANOS", "Reporte por insuficiência de coleta", `${SIFIDE_REPORTE_ANOS.value} exercícios`, "o crédito não deduzido não se perde no ano · art. 37.º CFI"),
+  ],
+
+  "rfai": [
+    d("RFAI_TAXA_INTERIOR", "Dedução — Norte, Centro, Alentejo, Açores e Madeira", pctExato(RFAI_TAXA_INTERIOR.value), "do investimento elegível · art. 23.º CFI"),
+    d("RFAI_TAXA_INTERIOR_EXCEDENTE", "Acima do limiar, nessas regiões", pctExato(RFAI_TAXA_INTERIOR_EXCEDENTE.value), "sobre a parcela que exceda o limiar · art. 23.º CFI"),
+    d("RFAI_LIMITE_INVESTIMENTO_INTERIOR", "Limiar do investimento", fmt(RFAI_LIMITE_INVESTIMENTO_INTERIOR.value), "acima dele a taxa desce · art. 23.º CFI"),
+    d("RFAI_TAXA_LITORAL", "Dedução — Lisboa e Algarve", pctExato(RFAI_TAXA_LITORAL.value), "do investimento elegível · art. 23.º CFI"),
+    d("RFAI_LIMITE_COLETA", "Limite da dedução à coleta", pctExato(RFAI_LIMITE_COLETA.value), "da coleta de IRC do período, e a totalidade nos primeiros exercícios de atividade · art. 24.º CFI"),
+    d("RFAI_REPORTE_ANOS", "Reporte do saldo", `${RFAI_REPORTE_ANOS.value} exercícios`, "art. 24.º CFI"),
+  ],
+
+  "ice-capitalizacao": [
+    d("ICE", "Spread sobre a Euribor a 12 meses", `+${ICE.spread.value * 100} pontos percentuais`.replace(".", ","), "aplicado aos aumentos líquidos dos capitais próprios elegíveis · art. 43.º-D, n.º 1 EBF"),
+    d("ICE", "Limite — o maior dos dois", fmt(ICE.limiteAbsoluto.value), `ou ${pctExato(ICE.limiteEbitda.value)} do EBITDA fiscal, consoante o que for maior · art. 43.º-D, n.º 4 EBF`),
+    d("ICE", "Janela de apuramento", `${ICE.periodosAnteriores.value} períodos anteriores`, "mais o próprio exercício; se o somatório for negativo, considera-se zero · art. 43.º-D, n.º 3 EBF"),
+    d("ICE", "Reporte do excedente", `${ICE.reporteAnos.value} períodos`, "a parte que exceda o limite do EBITDA é dedutível mais tarde · art. 43.º-D, n.º 5 EBF"),
+    d("ICE", "Aumentos elegíveis desde", ICE.primeiroPeriodoElegivel.value, "art. 43.º-D, n.º 9 EBF"),
+    d("ICE", "Condições de acesso", ICE.exigeSituacaoRegularizada.value, "art. 43.º-D, n.º 7 EBF"),
+  ],
+
+  "stock-options": [
+    d("STOCK_OPTIONS_STARTUP", "Fração do ganho tributada", pctExato(STOCK_OPTIONS_STARTUP.fracaoTributada.value), "os ganhos são considerados em metade do seu valor · art. 43.º-C, n.º 1 EBF"),
+    d("STOCK_OPTIONS_STARTUP", "Taxa autónoma", pctExato(STOCK_OPTIONS_STARTUP.taxa.value), "art. 72.º, n.º 1, al. f) CIRS"),
+    d("STOCK_OPTIONS_TAXA_EFETIVA", "Taxa efetiva do regime", pctExato(STOCK_OPTIONS_TAXA_EFETIVA), "metade do ganho à taxa autónoma — não está escrita em nenhum artigo, sai do encontro dos dois"),
+    d("STOCK_OPTIONS_STARTUP", "Período mínimo de detenção", `${STOCK_OPTIONS_STARTUP.retencaoMinimaAnos.value} ano`, "de manutenção dos direitos subjacentes · art. 43.º-C, n.º 4 EBF"),
+    d("STOCK_OPTIONS_STARTUP", "Momentos de tributação", STOCK_OPTIONS_STARTUP.momentosDeTributacao.value, "art. 43.º-C, n.º 4 EBF"),
+    d("STOCK_OPTIONS_STARTUP", "Isenção na perda de residência", fmt(STOCK_OPTIONS_STARTUP.isencaoSaidaEmIas.value * IAS.value), `${STOCK_OPTIONS_STARTUP.isencaoSaidaEmIas.value} × IAS, e ${STOCK_OPTIONS_STARTUP.isencaoSaidaUmaVez.value} · art. 43.º-C, n.os 5 e 6 EBF`),
+    d("STOCK_OPTIONS_STARTUP", "Participação que exclui do regime", pctExato(STOCK_OPTIONS_STARTUP.participacaoQueExclui.value), "do capital social ou dos direitos de voto, salvo em startups e micro e pequenas empresas · art. 43.º-C, n.os 9 e 10 EBF"),
+    d("STOCK_OPTIONS_STARTUP", "Silêncio da entidade", `${STOCK_OPTIONS_STARTUP.prazoRespostaEntidadeDias.value} dias`, "não respondendo ao pedido de confirmação, fica subsidiariamente responsável pelo imposto em falta · art. 43.º-C, n.º 8 EBF"),
+  ],
+
+  "amortizacoes-equipamento": [
+    d("ELEMENTOS_REDUZIDO_VALOR", "Dedução integral no ano", fmt(ELEMENTOS_REDUZIDO_VALOR.value), "custo unitário até este valor deduz-se todo no período em que é reconhecido · art. 33.º CIRC"),
+    d("DEPRECIACAO", "Onde estão as taxas", DEPRECIACAO.taxasNoDecretoRegulamentar.value, "art. 31.º, n.º 1 CIRC"),
+    d("DEPRECIACAO", "Sem taxa fixada para o bem", DEPRECIACAO.semTaxaFixada.value, "art. 31.º, n.º 3 CIRC"),
+    d("DEPRECIACAO", "Quotas decrescentes — coeficientes", DEPRECIACAO.quotasDecrescentes.value.map((c) => `${String(c.coeficiente).replace(".", ",")} (vida útil ${c.vidaUtil})`).join(" · "), "corrigem a taxa no método das quotas decrescentes · art. 31.º, n.º 4 CIRC"),
+    d("DEPRECIACAO", "Ano de entrada em funcionamento", DEPRECIACAO.proporcionalNoAnoDeEntrada.value, "art. 31.º, n.º 7 CIRC"),
+    d("DEPRECIACAO", "O que não é aceite como gasto", DEPRECIACAO.naoDedutiveis.value, "art. 34.º, n.º 1 CIRC"),
+  ],
+
+  "viatura-empresa": [
+    d("TA_VIATURAS_COMBUSTAO", "Tributação autónoma — combustão", taxasPorEscalao(TA_VIATURAS_COMBUSTAO.value), "por escalão de custo de aquisição · art. 88.º, n.º 3 CIRC"),
+    d("TA_VIATURAS_PHEV", "Híbridos plug-in", taxasPorEscalao(TA_VIATURAS_PHEV.value), "art. 88.º CIRC"),
+    d("TA_VIATURAS_ELETRICA", "Elétricos", pctExato(TA_VIATURAS_ELETRICA.value), `até ao custo de aquisição de ${fmt(TA_ELETRICA_LIMITE_CUSTO.value)} · art. 88.º CIRC`),
+    d("TA_AGRAVAMENTO_PREJUIZO", "Agravamento com prejuízo fiscal", `+${TA_AGRAVAMENTO_PREJUIZO.value * 100} pontos`.replace(".", ","), "as taxas sobem quando o exercício dá prejuízo · art. 88.º, n.º 14 CIRC"),
+    d("AJUDAS_CUSTO", "Ajudas de custo — limite diário isento", fmt(AJUDAS_CUSTO.nacionalDia.value), "em território nacional, para trabalhadores em geral · art. 2.º, n.º 3, al. d) CIRS"),
+    d("TA_AJUDAS_CUSTO", "Tributação autónoma das ajudas e dos quilómetros", pctExato(TA_AJUDAS_CUSTO.value), "quando não faturados a clientes nem tributados em IRS na esfera do beneficiário · art. 88.º, n.º 9 CIRC"),
+    d("DEPRECIACAO", "Depreciação da viatura", DEPRECIACAO.naoDedutiveis.value, "art. 34.º, n.º 1, al. e) CIRC"),
+  ],
+
+  "suprimentos-prestacoes-suplementares": [
+    d("ICE", "Prestações suplementares e o ICE", `+${ICE.spread.value * 100} pontos percentuais`.replace(".", ","), "as entradas em dinheiro contam como aumento de capitais próprios elegíveis; os suprimentos, sendo dívida, não · art. 43.º-D, n.os 1 e 6 EBF"),
+    d("ICE", "Reembolso reduz o benefício", ICE.exigeSituacaoRegularizada.value, "as saídas a favor dos titulares entram no cálculo dos aumentos LÍQUIDOS · art. 43.º-D, n.º 6, al. b) EBF"),
+    d("IRC_TAXA_GERAL", "IRC — taxa geral", pctExato(IRC_TAXA_GERAL.value), "art. 87.º CIRC"),
+    d("IRC_TAXA_PME", "IRC — taxa reduzida de PME", pctExato(IRC_TAXA_PME.value), `sobre os primeiros ${fmt(IRC_LIMITE_PME.value)} de matéria coletável · art. 87.º CIRC`),
+  ],
+
+  "obrigacoes-societarias": [
+    d("IRC_TAXA_GERAL", "IRC — taxa geral", pctExato(IRC_TAXA_GERAL.value), "art. 87.º CIRC"),
+    d("IRC_TAXA_PME", "IRC — taxa reduzida de PME", pctExato(IRC_TAXA_PME.value), `sobre os primeiros ${fmt(IRC_LIMITE_PME.value)} de matéria coletável · art. 87.º CIRC`),
+    d("ICE", "Situação fiscal e contributiva", ICE.exigeSituacaoRegularizada.value, "é condição de acesso a benefícios fiscais — e o que mais bloqueia candidaturas · art. 43.º-D, n.º 7 EBF"),
+  ],
+
+  "apoios-contratacao-iefp": [
+    d("IAS", "Indexante dos Apoios Sociais", fmt(IAS.value), "é a ele que os apoios do IEFP estão indexados, e não a um valor fixo em euros"),
+    d("SMN", "Retribuição mínima mensal garantida", fmt(SMN.value), "referência dos apoios e da remuneração mínima do posto de trabalho apoiado"),
+    d("SS_DEPENDENTE", "Taxa contributiva da entidade empregadora", pctExato(SS_DEPENDENTE.entidade.value), "regime geral — é sobre ela que incidem as isenções e reduções contributivas"),
+    d("SS_DEPENDENTE", "Taxa contributiva do trabalhador", pctExato(SS_DEPENDENTE.trabalhador.value), "sobre a remuneração ilíquida"),
+    d("ICE", "Situação regularizada", ICE.exigeSituacaoRegularizada.value, "condição transversal aos apoios públicos — sem ela a candidatura não avança"),
   ],
 };
 

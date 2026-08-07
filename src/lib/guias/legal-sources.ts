@@ -331,6 +331,17 @@ const FONTES_BASE = {
   // Insolvência é legislação especial. Verificado a 2026-08-07.
   lgt30: at("lgt30", "30.º", "Art. 30.º LGT — Objeto da relação jurídica tributária e indisponibilidade do crédito", "lgt30", "lgt"),
 
+  // ── CIRS: o regime das pessoas com deficiência, nos dois artigos ─────
+  // O pacote mandava «ler o CIRS em vigor e não replicar valores de
+  // imprensa» sem dizer onde ler. São dois artigos, e trocá-los é o erro
+  // corrente: o 56.º-A trata da EXCLUSÃO de rendimentos (com frações
+  // diferentes para o trabalho e para as pensões, e um teto por categoria)
+  // e nada diz sobre graus; o 87.º define quem é pessoa com deficiência
+  // (n.º 5, 60%), fixa as deduções à coleta e, desde a Lei n.º 82/2023,
+  // a escada de descida de quem perde o grau numa reavaliação (n.º 9).
+  // Verificado a 2026-08-07. O art. 87.º já cá estava como `cirs87`.
+  art56aCirs: at("art56aCirs", "56.º-A", "Art. 56.º-A CIRS — Sujeitos passivos com deficiência", "irs56a", "cirs_rep"),
+
   // ── EBF: organismos de investimento coletivo ─────────────────────────
   // O pacote marcou o guia dos ETFs com um aviso — «o regime dos OIC tem
   // especificidades (DL 7/2015), confirmar antes de afirmar o tratamento de
