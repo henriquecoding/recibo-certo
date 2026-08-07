@@ -92,6 +92,18 @@ export const CORRECOES_AO_PACOTE: CorrecaoAoPacote[] = [
     fonte: "cirs31",
     verificadoEm: EM,
   },
+  {
+    slug: "ppr-irs",
+    dado: "Taxa sobre o rendimento em resgate nas condições legais",
+    noPacote: "8,6%",
+    verificado: "8%",
+    notaVerificada: "dois quintos do rendimento, tributados autonomamente a 20% · art. 21.º, n.º 3, al. b) EBF",
+    acao: "corrigir",
+    motivo:
+      "O art. 21.º do EBF tem dois regimes de resgate e o pacote misturou-os. DENTRO das situações definidas na lei (n.º 3, al. b)), a matéria coletável é constituída por dois quintos do rendimento e a tributação é autónoma à taxa de 20% — dois quintos de 20% dão 8%. FORA delas (n.º 5), o rendimento é tributado autonomamente a 21,5%, e sem a redução a dois quintos. Os 8,6% do pacote são exatamente dois quintos de 21,5%: a fração de um regime aplicada à taxa do outro. Nenhum dos dois casos dá esse número.",
+    fonte: "EBF-21",
+    verificadoEm: EM,
+  },
 ];
 
 const POR_SLUG = new Map<string, CorrecaoAoPacote[]>();

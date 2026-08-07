@@ -303,6 +303,16 @@ export const LEGAL_SOURCES = {
   circ46: at("circ46", "46.º", "Art. 46.º CIRC — Conceito de mais-valias e de menos-valias", "irc46", "CIRC_2R"),
   circ47: at("circ47", "47.º", "Art. 47.º CIRC — Correção monetária das mais-valias e das menos-valias", "irc47", "CIRC_2R"),
 
+  // ── EBF: organismos de investimento coletivo ─────────────────────────
+  // O pacote marcou o guia dos ETFs com um aviso — «o regime dos OIC tem
+  // especificidades (DL 7/2015), confirmar antes de afirmar o tratamento de
+  // fundos nacionais». Confirmou-se, e é onde vivem as duas metades do
+  // regime: o art. 22.º diz o que o FUNDO não paga, o art. 22.º-A diz o que
+  // o PARTICIPANTE paga. Sem os dois, o guia teria de se calar sobre
+  // fundos portugueses. Verificados a 2026-08-07.
+  ebf22: at("ebf22", "22.º", "Art. 22.º EBF — Organismos de investimento coletivo", "ebf-artigo-22-ordm", "bf_rep"),
+  ebf22a: at("ebf22a", "22.º-A", "Art. 22.º-A EBF — Rendimentos pagos por organismos de investimento coletivo aos seus participantes", "ebf-artigo-22-ordm-a", "bf_rep"),
+
   civa6: at("civa6", "6.º", "Art. 6.º CIVA — Localização das operações", "iva6", "civa_rep"),
   civa9: at("civa9", "9.º", "Art. 9.º CIVA — Isenções nas operações internas", "iva9", "civa_rep"),
   civa18: at("civa18", "18.º", "Art. 18.º CIVA — Taxas do imposto", "iva18", "civa_rep"),

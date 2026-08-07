@@ -19,6 +19,22 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.16.0",
+    data: "2026-08-07",
+    titulo: "Investir e poupar, fechada — e uma escada de ETFs que quase ninguém conhece",
+    itens: [
+      "A secção «Investir e poupar» ficou completa: dez guias, do Anexo J ao PPR, passando pelos dividendos, pelo crédito de imposto pago lá fora, pelos ETFs, pelo reporte de perdas e pelo staking de cripto.",
+      "Se tens ETFs há mais de dois anos, estás a pagar imposto a mais se não souberes disto: a lei exclui de tributação uma fatia do ganho consoante o tempo que os tiveste — 10 % dos dois aos cinco anos, 20 % dos cinco aos oito, 30 % a partir daí. Vale para ações cotadas e fundos abertos. E corta nos dois sentidos: quem vende a perder também leva parte da menos-valia excluída.",
+      "Sobre fundos portugueses ficou explicado o que ninguém explica: o fundo não paga imposto sobre juros, rendas e mais-valias da carteira — o imposto aparece à saída, quando o dinheiro chega a ti. Não é isenção, é adiamento com mudança de dono da fatura.",
+      "E um erro que sai caro: quem comprou unidades de participação a outra pessoa, ou as recebeu em herança ou doação, tem de comunicar a data e o valor de aquisição. Sem essa comunicação, a retenção no resgate incide sobre o valor todo — capital incluído — e não apenas sobre o ganho.",
+      "Corrigimos o que dizíamos sobre o resgate de PPR. Dentro das condições da lei são 8 % sobre o rendimento, não 8,6 %: dois quintos do rendimento tributados a 20 %. Fora dessas condições são 21,5 %, e sem a redução a dois quintos. Os 8,6 % que circulam por aí são a fração de um regime aplicada à taxa do outro — não correspondem a caso nenhum.",
+      "Staking e mining: as fontes divergem, e a lei explica porquê. Se a recompensa te é paga em euros, é rendimento de capitais no momento em que a recebes. Se te é paga na própria cripto — o caso normal — não há nada a pagar nessa altura: paga-se como mais-valia quando venderes o que recebeste. A diferença não é de classificação, é de momento, e quem declara ao receber está a antecipar imposto que a lei manda cobrar mais tarde.",
+      "O crédito por imposto pago no estrangeiro tem um duplo limite que quase toda a gente falha: nunca mais do que pagaste lá, nunca mais do que a parte da coleta portuguesa correspondente àquele rendimento — e, havendo convenção, nunca mais do que a convenção permitia reter. O excesso não se recupera cá; recupera-se no país da fonte.",
+      "Dividendos: a opção pelo englobamento é global, não é seletiva. Quem a exerce fica obrigado a englobar tudo o que tem na mesma categoria — não se escolhem os que dão jeito.",
+      "O regime dos organismos de investimento coletivo — os artigos 22.º e 22.º-A do Estatuto dos Benefícios Fiscais — entrou no motor fiscal, com base legal e data de verificação, tal como a escada da exclusão por tempo de detenção. Nenhum destes números está escrito no texto de um guia.",
+    ],
+  },
+  {
     version: "2.15.0",
     data: "2026-08-06",
     titulo: "Seis secções novas nos Guias — e um prazo do IMI que estava errado",

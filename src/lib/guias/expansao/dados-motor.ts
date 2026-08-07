@@ -26,7 +26,10 @@ import {
   CAPITAIS_TAXA_LIBERATORIA,
   CATEGORIA_F,
   CREDITO_IMPOSTO_ESTRANGEIRO,
+  DEDUCAO_PPR,
+  DIVIDENDOS_ENGLOBAMENTO_FRACAO,
   CRIPTO_ISENCAO_DIAS,
+  CRIPTO_REMUNERACAO,
   CRIPTO_TAXA_CURTO_PRAZO,
   IAS,
   IMI_AGRAVAMENTO_DEVOLUTO,
@@ -48,11 +51,15 @@ import {
   IS_CREDITO,
   IS_TAXA_AQUISICAO,
   IS_TRANSMISSAO_GRATUITA,
+  MAIS_VALIAS_EXCLUSAO_DETENCAO,
   MAIS_VALIAS_IMOBILIARIO_INCLUSAO,
   MAIS_VALIAS_IMOVEIS,
   MAIS_VALIAS_MOBILIARIAS_TAXA,
   MAIS_VALIAS_REINVESTIMENTO_MESES,
   MAIS_VALIAS_REPORTE,
+  OIC_NACIONAIS,
+  PPR_RESGATE,
+  PPR_TAXA_EFETIVA_CONDICOES_LEGAIS,
   PRAZO_MODELO1_MESES,
   REGIME_SIMPLIFICADO,
   type EscalaoIMT,
@@ -234,6 +241,56 @@ export const DADOS_MOTOR: Record<string, DadoDoMotor[]> = {
     d("CAPITAIS_TAXA_LIBERATORIA", "Taxa liberatória", pctExato(CAPITAIS_TAXA_LIBERATORIA.value), "retenção na fonte a título definitivo sobre rendimentos de capitais obtidos em território português · art. 71.º, n.º 1 CIRS"),
     d("RENDIMENTO_MUNDIAL", "Pagador estrangeiro", "declarável no Anexo J", "não há retenção cá, mas o rendimento é tributado na mesma — és tributado pelo rendimento mundial · art. 15.º, n.º 1 CIRS"),
     d("CREDITO_IMPOSTO_ESTRANGEIRO", "Imposto retido lá fora", "o menor dos dois", "crédito limitado ao imposto pago ou à fração da coleta portuguesa · art. 81.º, n.º 1 CIRS"),
+  ],
+
+  "dividendos-irs": [
+    d("CAPITAIS_TAXA_LIBERATORIA", "Taxa liberatória", pctExato(CAPITAIS_TAXA_LIBERATORIA.value), "retenção na fonte a título definitivo; o dividendo chega-te já líquido · art. 71.º, n.º 1 CIRS"),
+    d("DIVIDENDOS_ENGLOBAMENTO_FRACAO", "Se optares pelo englobamento", `só ${pctExato(DIVIDENDOS_ENGLOBAMENTO_FRACAO.value)} do lucro conta`, "os lucros já tributados em IRC entram por metade no rendimento coletável · art. 40.º-A, n.º 1 CIRS"),
+    d("CREDITO_IMPOSTO_ESTRANGEIRO", "Dividendos de fonte estrangeira", "o menor dos dois", "não há retenção liberatória cá; há crédito de imposto, limitado ao imposto pago lá ou à fração da coleta portuguesa · art. 81.º CIRS"),
+  ],
+
+  "credito-imposto-estrangeiro": [
+    d("CREDITO_IMPOSTO_ESTRANGEIRO", "O limite geral", "o menor dos dois", "imposto pago no estrangeiro, ou fração da coleta do IRS correspondente a esses rendimentos · art. 81.º, n.º 1 CIRS"),
+    d("CREDITO_IMPOSTO_ESTRANGEIRO", "O segundo limite, havendo convenção", "o que a convenção permitia reter", "a dedução não pode ultrapassar o imposto pago nos termos previstos pela convenção · art. 81.º, n.º 2 CIRS"),
+    d("CREDITO_IMPOSTO_ESTRANGEIRO", "Coleta insuficiente no ano", `${CREDITO_IMPOSTO_ESTRANGEIRO.reporteAnos.value} anos`, "o remanescente deduz-se à coleta dos períodos de tributação seguintes · art. 81.º, n.º 3 CIRS"),
+    d("RENDIMENTO_MUNDIAL", "Porque é que o crédito existe", "rendimento mundial", "sendo residente, és tributado cá sobre o que ganhas lá — o crédito é o que evita pagar duas vezes · art. 15.º, n.º 1 CIRS"),
+  ],
+
+  "etf-irs": [
+    d("MAIS_VALIAS_MOBILIARIAS_TAXA", "Mais-valias na alienação", pctExato(MAIS_VALIAS_MOBILIARIAS_TAXA.value), "taxa especial sobre o saldo do ano, com opção de englobamento · art. 72.º, n.º 1 CIRS"),
+    d("CAPITAIS_TAXA_LIBERATORIA", "Distribuições", pctExato(CAPITAIS_TAXA_LIBERATORIA.value), "rendimentos de capitais; retenção liberatória quando pagos por entidade portuguesa · arts. 5.º e 71.º CIRS"),
+    d("OIC_NACIONAIS", "Fundo português — resgate", pctExato(OIC_NACIONAIS.retencaoResgate.value), "retenção na fonte a título definitivo, já com a exclusão por tempo de detenção · art. 22.º-A, n.º 1, al. b) EBF"),
+    d("OIC_NACIONAIS", "Fundo português — o que o fundo não paga", "capitais, prediais e mais-valias", "não entram no lucro tributável do fundo: o imposto aparece à saída, no participante · art. 22.º, n.º 3 EBF"),
+    d("OIC_NACIONAIS", "Comprado em mercado secundário e não comunicado", "retenção sobre o bruto", "sem a comunicação da data e do valor de aquisição, a retenção incide sobre todo o resgate, não só sobre o ganho · art. 22.º-A, n.os 10 e 11 EBF"),
+    d("MAIS_VALIAS_EXCLUSAO_DETENCAO", "Excluído — detido de 2 a 5 anos", pctExato(MAIS_VALIAS_EXCLUSAO_DETENCAO.de2a5Anos.value), "do rendimento, não da taxa · art. 43.º, n.º 5, al. a) CIRS"),
+    d("MAIS_VALIAS_EXCLUSAO_DETENCAO", "Excluído — detido de 5 a 8 anos", pctExato(MAIS_VALIAS_EXCLUSAO_DETENCAO.de5a8Anos.value), "art. 43.º, n.º 5, al. b) CIRS"),
+    d("MAIS_VALIAS_EXCLUSAO_DETENCAO", "Excluído — detido há 8 anos ou mais", pctExato(MAIS_VALIAS_EXCLUSAO_DETENCAO.mais8Anos.value), "art. 43.º, n.º 5, al. c) CIRS"),
+    d("MAIS_VALIAS_EXCLUSAO_DETENCAO", "A que ativos se aplica a escada", MAIS_VALIAS_EXCLUSAO_DETENCAO.ambito.value, "ficam de fora o que não é admitido à negociação e os fundos fechados · art. 43.º, n.º 5 CIRS"),
+    d("MAIS_VALIAS_REPORTE", "Reporte de menos-valias", `${MAIS_VALIAS_REPORTE.anos.value} anos`, "só com englobamento no ano da perda · art. 55.º, n.º 1, al. d) CIRS"),
+  ],
+
+  "ppr-irs": [
+    d("DEDUCAO_PPR", "Dedução à coleta", pctExato(DEDUCAO_PPR.value.taxa), "dos valores aplicados no ano, com limite por idade · art. 21.º, n.º 2 EBF"),
+    d("DEDUCAO_PPR", "Limite — menos de 35 anos", fmt(DEDUCAO_PPR.value.ate35), "limite máximo anual da dedução · art. 21.º, n.º 2, al. a) EBF"),
+    d("DEDUCAO_PPR", "Limite — dos 35 aos 50 anos", fmt(DEDUCAO_PPR.value.de35a50), "art. 21.º, n.º 2, al. b) EBF"),
+    d("DEDUCAO_PPR", "Limite — mais de 50 anos", fmt(DEDUCAO_PPR.value.mais50), "art. 21.º, n.º 2, al. c) EBF"),
+    d("PPR_TAXA_EFETIVA_CONDICOES_LEGAIS", "Resgate nas condições legais", pctExato(PPR_TAXA_EFETIVA_CONDICOES_LEGAIS), `dois quintos do rendimento tributados a ${pctExato(PPR_RESGATE.taxaAutonoma.value)} · art. 21.º, n.º 3, al. b) EBF`),
+    d("PPR_RESGATE", "Resgate fora das condições", pctExato(PPR_RESGATE.taxaForaDasCondicoes.value), "sobre o rendimento, sem a redução a dois quintos · art. 21.º, n.º 5 EBF"),
+    d("PPR_RESGATE", "Deduções a devolver", `+${pctExato(PPR_RESGATE.majoracaoAnual.value)} por ano`, "as importâncias deduzidas são majoradas por cada ano ou fração decorrido e acrescidas à coleta · art. 21.º, n.º 4 EBF"),
+    d("PPR_RESGATE", "Prazo que dispensa a devolução", `${PPR_RESGATE.anosParaDispensa.value} anos`, "a contar de cada entrega, ocorrendo uma das situações definidas na lei — ou em caso de morte do subscritor · art. 21.º, n.º 4 EBF"),
+  ],
+
+  "cripto-staking-mining": [
+    d("CRIPTO_REMUNERACAO", "Recompensa paga em euros", "categoria E, ao receber", "quaisquer formas de remuneração decorrentes de operações com criptoativos são rendimentos de capitais · art. 5.º, n.º 2, al. u) CIRS"),
+    d("CRIPTO_REMUNERACAO", "Recompensa paga na própria cripto", "categoria G, ao alienar", "não há tributação na receção: é tributada como mais-valia no momento da alienação do que foi recebido · art. 5.º, n.º 11 CIRS"),
+    d("CRIPTO_ISENCAO_DIAS", "Contagem para a exclusão", `${CRIPTO_ISENCAO_DIAS.value} dias`, "aplicada aos criptoativos recebidos, a partir do momento em que passam a ser teus · art. 10.º, n.º 19 CIRS"),
+  ],
+
+  "reporte-menos-valias": [
+    d("MAIS_VALIAS_REPORTE", "Reporte — valores mobiliários e criptoativos", `${MAIS_VALIAS_REPORTE.anos.value} anos`, "saldo negativo das operações das als. b), c), e), f), g), h) e k) do n.º 1 do art. 10.º · art. 55.º, n.º 1, al. d) CIRS"),
+    d("MAIS_VALIAS_REPORTE", "A condição", "englobamento no ano da perda", "«quando o sujeito passivo opte ou seja obrigado a englobar esses rendimentos» · art. 55.º, n.º 1, al. d) CIRS"),
+    d("MAIS_VALIAS_REPORTE", "Reporte — mais-valias imobiliárias", `${MAIS_VALIAS_REPORTE.anosImobiliario.value} anos`, "a percentagem do saldo negativo a que se refere o n.º 2 do art. 43.º · art. 55.º, n.º 1, al. c) CIRS"),
+    d("MAIS_VALIAS_IMOBILIARIO_INCLUSAO", "O que transita nas imobiliárias", pctExato(MAIS_VALIAS_IMOBILIARIO_INCLUSAO.value), "é a mesma fração que é tributada quando o saldo é positivo · art. 43.º, n.º 2 CIRS"),
   ],
 
   "imovel-empresa-ou-pessoal": [

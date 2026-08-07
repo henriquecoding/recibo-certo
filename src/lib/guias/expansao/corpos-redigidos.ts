@@ -54,4 +54,22 @@ export const CORPOS_REDIGIDOS: ReadonlySet<string> = new Set([
   "corretoras-estrangeiras-irs",
   "cripto-365-dias",
   "rendimentos-capitais-categoria-e",
+  "dividendos-irs",
+  "credito-imposto-estrangeiro",
+  "reporte-menos-valias",
+  //    Os 8,6% do resgate de PPR eram dois quintos de 21,5% — a fração de um
+  //    regime aplicada à taxa do outro. Nas condições legais são 8%; fora
+  //    delas são 21,5% sem fração nenhuma. Ver `correcoes.ts`.
+  "ppr-irs",
+  //    O pacote marcava staking como PONTO SENSÍVEL, com as fontes
+  //    divididas entre categoria B e E. A lei resolve-o sozinha: o n.º 11
+  //    do art. 5.º trata o caso de a recompensa ser paga na própria cripto,
+  //    e aí não há facto tributário na receção. A divergência não era de
+  //    classificação — era de momento.
+  "cripto-staking-mining",
+  //    O único guia com aviso de implementação explícito («confirmar antes
+  //    de afirmar o tratamento de fundos nacionais»). Confirmado nos arts.
+  //    22.º e 22.º-A do EBF, que não constavam da base legal do pacote —
+  //    e pelo caminho apareceu a escada do art. 43.º, n.º 5 do CIRS.
+  "etf-irs",
 ]);

@@ -35,6 +35,13 @@ export const FONTES_ACRESCENTADAS: Record<string, string[]> = {
   // foi deduzindo, e o art. 47.º só corrige a inflação a partir de dois
   // anos. Nenhum dos dois vinha no pacote.
   "imovel-empresa-ou-pessoal": ["circ46", "circ47"],
+  // O único guia em que o pacote diz explicitamente o que falta: «o regime
+  // dos organismos de investimento coletivo tem especificidades (DL 7/2015)
+  // — confirmar antes de afirmar o tratamento de fundos nacionais». São
+  // estes dois artigos, e nenhum deles constava da base legal do guia: o
+  // art. 22.º do EBF (o que o fundo não paga) e o art. 22.º-A (o que o
+  // participante paga, na distribuição e no resgate).
+  "etf-irs": ["ebf22", "ebf22a"],
 };
 
 export const fontesAcrescentadas = (slug: string): string[] => FONTES_ACRESCENTADAS[slug] ?? [];

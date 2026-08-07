@@ -26,7 +26,7 @@ export { FISCAL_YEAR } from "./fiscal-year";
  * descreve mal o que aconteceu. `assertFiscalDataIntegrity()` faz o build falhar
  * se algum parâmetro for mais recente do que esta data.
  */
-export const DATA_LAST_REVIEW = "2026-08-06" as const;
+export const DATA_LAST_REVIEW = "2026-08-07" as const;
 
 // ─── Registo de fontes (evita repetir URLs longos) ─────────────────────
 export interface Source {
@@ -282,6 +282,10 @@ export const SOURCES = {
     label: "Tabela Geral do Imposto do Selo — verbas 1.1, 1.2, 2 e 17 (PDF consolidado do CIS) · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/Cod_download/Documents/CIS.pdf",
   },
+  art5cirs: {
+    label: "Art. 5.º CIRS — Rendimentos da categoria E, incluindo a remuneração de operações com criptoativos (al. u) do n.º 2 e n.º 11) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs5.aspx",
+  },
   art15cirs: {
     label: "Art. 15.º CIRS — Âmbito da sujeição (rendimento mundial dos residentes) · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs15.aspx",
@@ -353,6 +357,14 @@ export const SOURCES = {
   art21EBF: {
     label: "Art. 21.º EBF — PPR: dedução à coleta de 20% com limites por idade · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-21-ordm-.aspx",
+  },
+  ebf22: {
+    label: "Art. 22.º EBF — Organismos de investimento coletivo: IRC sobre o lucro tributável, excluídos os rendimentos dos arts. 5.º, 8.º e 10.º do CIRS · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-22-ordm.aspx",
+  },
+  ebf22a: {
+    label: "Art. 22.º-A EBF — Rendimentos pagos por organismos de investimento coletivo aos participantes: retenção na distribuição e no resgate · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-22-ordm-a.aspx",
   },
   art63EBF: {
     label: "Art. 63.º EBF — Estatuto do Mecenato: donativos, dedução de 25% com limite de 15% da coleta · Portal das Finanças (AT)",
@@ -534,6 +546,10 @@ const TODAY = "2026-06-11";
 const REV_MAIS_VALIAS = "2026-06-22";
 // Data de verificação dos benefícios fiscais à coleta (PPR, donativos, ascendentes).
 const REV_BENEFICIOS = "2026-06-22";
+// Data de verificação do regime dos organismos de investimento coletivo
+// (arts. 22.º e 22.º-A do EBF) e da exclusão por tempo de detenção do
+// Art. 43.º, n.º 5 do CIRS — lidos no articulado do Portal das Finanças.
+const REV_INVESTIMENTO = "2026-08-07";
 // Data de verificação dos coeficientes de desvalorização da moeda (Portaria 382/2025).
 const REV_COEF_MOEDA = "2026-06-23";
 // Data de verificação do Salário Mínimo Nacional 2026 (RMMG 920 €, DL 139/2025).
@@ -2626,6 +2642,122 @@ export const MAIS_VALIAS_DETENCAO_DIAS = sv(
   REV_MAIS_VALIAS
 );
 
+/**
+ * Exclusão parcial por tempo de detenção — a escada do Art. 43.º, n.º 5.
+ *
+ * Aditada pela Lei n.º 31/2024 e lida no articulado a 07/08/2026. Vale para
+ * valores mobiliários ADMITIDOS À NEGOCIAÇÃO e para partes de organismos de
+ * investimento coletivo ABERTOS — ou seja, para ações cotadas, ETFs e fundos
+ * abertos, e não para participações em sociedades não cotadas.
+ *
+ * Exclui uma fração do RENDIMENTO, não da taxa: 30% excluídos aos 8 anos
+ * significa que a taxa de 28% incide sobre 70% do ganho.
+ *
+ * O sinal é simétrico — a lei diz «quando positivo ou negativo». Num ano de
+ * perdas, a mesma escada corta a menos-valia que se leva para o saldo.
+ */
+export const MAIS_VALIAS_EXCLUSAO_DETENCAO = {
+  /** Detidos > 2 anos e < 5 anos. */
+  de2a5Anos: sv(
+    0.1,
+    "Art. 43.º, n.º 5, al. a) CIRS (Lei n.º 31/2024) — são excluídos da tributação 10% do rendimento quando resultem de ativos detidos por período superior a 2 anos e inferior a 5",
+    "art43cirs",
+    REV_INVESTIMENTO
+  ),
+  /** Detidos ≥ 5 anos e < 8 anos. */
+  de5a8Anos: sv(
+    0.2,
+    "Art. 43.º, n.º 5, al. b) CIRS (Lei n.º 31/2024) — 20% do rendimento excluídos entre os 5 e os 8 anos de detenção",
+    "art43cirs",
+    REV_INVESTIMENTO
+  ),
+  /** Detidos ≥ 8 anos. */
+  mais8Anos: sv(
+    0.3,
+    "Art. 43.º, n.º 5, al. c) CIRS (Lei n.º 31/2024) — 30% do rendimento excluídos a partir dos 8 anos de detenção",
+    "art43cirs",
+    REV_INVESTIMENTO
+  ),
+  /** A que ativos se aplica, nas palavras da lei. */
+  ambito: sv(
+    "valores mobiliários admitidos à negociação e partes de organismos de investimento coletivo abertos",
+    "Art. 43.º, n.º 5 CIRS — delimitação do âmbito da exclusão",
+    "art43cirs",
+    REV_INVESTIMENTO,
+    "Fica de fora o que não é admitido à negociação, e os fundos fechados."
+  ),
+} as const;
+
+/**
+ * Organismos de investimento coletivo constituídos em Portugal — o regime
+ * que o Decreto-Lei n.º 7/2015 instalou e que continua em vigor.
+ *
+ * O pacote de expansão mandava confirmar isto antes de afirmar seja o que
+ * for sobre fundos nacionais, e com razão: a arquitetura não é intuitiva.
+ * O fundo É sujeito passivo de IRC (Art. 22.º, n.º 1 EBF), mas o Art. 22.º,
+ * n.º 3 manda NÃO considerar, no lucro tributável, os rendimentos dos
+ * artigos 5.º, 8.º e 10.º do CIRS — isto é, precisamente os juros, as rendas
+ * e as mais-valias de que uma carteira vive.
+ *
+ * O resultado prático é tributação à SAÍDA: o fundo acumula sem imposto
+ * sobre o retorno da carteira, e o imposto aparece quando o participante
+ * recebe (Art. 22.º-A). Não é isenção — é adiamento com mudança de sujeito.
+ */
+export const OIC_NACIONAIS = {
+  /** O que o fundo não leva a lucro tributável. */
+  rendimentosExcluidosNoFundo: sv(
+    "capitais, prediais e mais-valias (arts. 5.º, 8.º e 10.º do CIRS)",
+    "Art. 22.º, n.º 3 EBF (Decreto-Lei n.º 7/2015) — não são considerados, para apuramento do lucro tributável, os rendimentos referidos nos artigos 5.º, 8.º e 10.º do Código do IRS",
+    "ebf22",
+    REV_INVESTIMENTO,
+    "Exceto quando provenham de entidades em regime fiscal claramente mais favorável."
+  ),
+  /** Derramas de que o fundo está isento. */
+  isentoDeDerramas: sv(
+    true,
+    "Art. 22.º, n.º 6 EBF — as entidades referidas no n.º 1 estão isentas de derrama municipal e derrama estadual",
+    "ebf22",
+    REV_INVESTIMENTO
+  ),
+  /** Retenção sobre rendimentos DISTRIBUÍDOS a residentes. */
+  retencaoDistribuicao: sv(
+    0.28,
+    "Art. 22.º-A, n.º 1, al. a), subal. i) EBF — retenção na fonte à taxa do n.º 1 do Art. 71.º do CIRS, com caráter definitivo fora de atividade comercial, industrial ou agrícola",
+    "ebf22a",
+    REV_INVESTIMENTO
+  ),
+  /** Retenção sobre o RESGATE de unidades de participação. */
+  retencaoResgate: sv(
+    0.28,
+    "Art. 22.º-A, n.º 1, al. b) EBF (Lei n.º 31/2024) — retenção na fonte a título definitivo à taxa do n.º 1 do Art. 72.º do CIRS, tendo em conta o n.º 5 do Art. 43.º",
+    "ebf22a",
+    REV_INVESTIMENTO,
+    "A remissão para o n.º 5 do Art. 43.º é o que traz a exclusão por tempo de detenção para dentro do resgate."
+  ),
+  /** A opção que devolve o imposto retido à natureza de imposto por conta. */
+  permiteEnglobamento: sv(
+    true,
+    "Art. 22.º-A, n.º 2 EBF — a opção pelo englobamento converte o imposto retido em imposto por conta, nos termos do Art. 78.º do CIRS",
+    "ebf22a",
+    REV_INVESTIMENTO
+  ),
+  /** O que acontece a quem comprou em mercado secundário e não comunicou. */
+  penalizacaoSemComunicacao: sv(
+    "retenção sobre o montante bruto do resgate",
+    "Art. 22.º-A, n.os 10 e 11 EBF — quem adquire em mercado secundário ou a título gratuito deve comunicar a data e o valor de aquisição; não o fazendo, a retenção incide sobre o montante bruto",
+    "ebf22a",
+    REV_INVESTIMENTO,
+    "Retenção sobre o bruto é retenção sobre o capital, e não só sobre o ganho."
+  ),
+  /** Fundos imobiliários: os rendimentos mudam de natureza. */
+  fundosImobiliarios: sv(
+    "rendimentos de bens imóveis",
+    "Art. 22.º-A, n.º 13 EBF — os rendimentos de unidades de participação em fundos de investimento imobiliário, incluindo as mais-valias da transmissão onerosa, resgate ou liquidação, são considerados rendimentos de bens imóveis",
+    "ebf22a",
+    REV_INVESTIMENTO
+  ),
+} as const;
+
 /** Taxa autónoma sobre mais-valias de criptoativos detidos menos de 365 dias. */
 export const CRIPTO_TAXA_CURTO_PRAZO = sv(
   0.28,
@@ -2633,6 +2765,41 @@ export const CRIPTO_TAXA_CURTO_PRAZO = sv(
   "faciliteCripto2026",
   REV_MAIS_VALIAS
 );
+
+/**
+ * Remuneração de operações com criptoativos — staking, lending e afins.
+ *
+ * É o ponto em que as fontes de terceiros mais divergem, e a divergência
+ * tem explicação: quem lê só a alínea u) do n.º 2 conclui «categoria E,
+ * tributado ao receber». Falta-lhe o n.º 11 do mesmo artigo, que trata
+ * separadamente o caso — muito mais comum — de a recompensa ser paga NA
+ * PRÓPRIA CRIPTO.
+ *
+ * A lei resolve isto sozinha:
+ *   · recompensa paga em euros        → categoria E, tributada ao receber;
+ *   · recompensa paga em criptoativos → NÃO é tributada na receção; é
+ *     tributada como mais-valia no momento em que esses criptoativos forem
+ *     alienados.
+ *
+ * A diferença não é de classificação — é de MOMENTO. Quem declara staking
+ * pago em cripto no ano em que o recebeu está a antecipar um imposto que a
+ * lei manda cobrar mais tarde.
+ */
+export const CRIPTO_REMUNERACAO = {
+  categoriaQuandoPagaEmMoeda: sv(
+    "E",
+    "Art. 5.º, n.º 2, al. u) CIRS (aditada pela Lei n.º 24-D/2022) — quaisquer formas de remuneração decorrentes de operações relativas a criptoativos são rendimentos de capitais",
+    "art5cirs",
+    REV_PATRIMONIO
+  ),
+  categoriaQuandoPagaEmCripto: sv(
+    "G",
+    "Art. 5.º, n.º 11 CIRS (aditado pela Lei n.º 24-D/2022) — os rendimentos da al. u) do n.º 2, quando assumam a forma de criptoativos, são tributados como mais-valia no momento da alienação dos criptoativos recebidos",
+    "art5cirs",
+    REV_PATRIMONIO,
+    "Não há facto tributário na receção: o momento é o da alienação do que foi recebido."
+  ),
+};
 
 /** Período de detenção (dias) a partir do qual os criptoativos ficam isentos. */
 export const CRIPTO_ISENCAO_DIAS = sv(
@@ -2759,6 +2926,75 @@ export const DEDUCAO_PPR = sv<DeducaoPPR>(
   "Art. 21.º EBF — PPR: 20% dos valores aplicados; limite €400 (< 35), €350 (35–50), €300 (> 50)",
   "art21EBF",
   REV_BENEFICIOS
+);
+
+/**
+ * O outro lado do PPR: o que se paga ao resgatar.
+ *
+ * Há DOIS regimes, e confundi-los custa dinheiro em qualquer dos sentidos.
+ * Dentro das situações definidas na lei, a matéria coletável é apenas dois
+ * quintos do rendimento e a tributação é autónoma a 20% — o que dá uma taxa
+ * efetiva de 8% sobre o rendimento. Fora delas, o rendimento é tributado
+ * autonomamente a 21,5%, pelas regras da categoria E, sem a redução a dois
+ * quintos.
+ *
+ * A dedução à coleta tem um regime próprio e SEPARADO: perde-se com
+ * majoração de 10% por cada ano ou fração decorrido desde que foi feita.
+ * As duas consequências somam-se — não são alternativas.
+ */
+export const PPR_RESGATE = {
+  fracaoTributavel: sv(
+    0.4,
+    "Art. 21.º, n.º 3, al. b), 1) EBF — a matéria coletável é constituída por dois quintos do rendimento",
+    "art21EBF",
+    REV_PATRIMONIO
+  ),
+  taxaAutonoma: sv(
+    0.2,
+    "Art. 21.º, n.º 3, al. b), 2) EBF — a tributação é autónoma, sendo efetuada à taxa de 20%",
+    "art21EBF",
+    REV_PATRIMONIO
+  ),
+  taxaForaDasCondicoes: sv(
+    0.215,
+    "Art. 21.º, n.º 5 EBF — reembolso fora de qualquer das situações definidas na lei: rendimento tributado autonomamente à taxa de 21,5%, pelas regras da categoria E",
+    "art21EBF",
+    REV_PATRIMONIO,
+    "Sem a redução a dois quintos do n.º 3, al. b). É esta a distinção que gera o erro de calcular 2/5 × 21,5%."
+  ),
+  majoracaoAnual: sv(
+    0.1,
+    "Art. 21.º, n.º 4 EBF — as importâncias deduzidas são majoradas em 10% por cada ano ou fração decorrido desde aquele em que foi exercido o direito à dedução",
+    "art21EBF",
+    REV_PATRIMONIO
+  ),
+  anosParaDispensa: sv(
+    5,
+    "Art. 21.º, n.º 4 EBF — salvo morte do subscritor ou quando tenham decorrido pelo menos cinco anos a contar da respetiva entrega e ocorra uma das situações definidas na lei",
+    "art21EBF",
+    REV_PATRIMONIO
+  ),
+};
+
+/** Taxa efetiva sobre o rendimento do PPR resgatado nas condições legais:
+    dois quintos do rendimento, tributados a 20%. Calculada, não escrita. */
+export const PPR_TAXA_EFETIVA_CONDICOES_LEGAIS =
+  PPR_RESGATE.fracaoTributavel.value * PPR_RESGATE.taxaAutonoma.value;
+
+/**
+ * Englobamento de lucros distribuídos: só metade conta.
+ *
+ * É a peça que decide se englobar dividendos compensa. Optando pelo
+ * englobamento, os lucros de pessoas coletivas sujeitas e não isentas de
+ * IRC são considerados em apenas 50% do seu valor — porque já foram
+ * tributados na esfera da sociedade.
+ */
+export const DIVIDENDOS_ENGLOBAMENTO_FRACAO = sv(
+  0.5,
+  "Art. 40.º-A, n.º 1 CIRS — no caso de opção pelo englobamento, os lucros são considerados em apenas 50% do seu valor",
+  "art40aCirs",
+  REV_PATRIMONIO,
+  "Exige que a entidade devedora tenha sede ou direção efetiva em Portugal e o beneficiário resida cá (n.º 2), ou que seja residente na UE/EEE nas condições do n.º 4."
 );
 
 export interface DeducaoDonativos {

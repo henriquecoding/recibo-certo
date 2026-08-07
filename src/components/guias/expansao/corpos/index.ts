@@ -16,6 +16,12 @@ import CorpoAnexoJ from "./anexo-j";
 import CorpoCorretorasEstrangeirasIrs from "./corretoras-estrangeiras-irs";
 import CorpoCripto365Dias from "./cripto-365-dias";
 import CorpoRendimentosCapitaisCategoriaE from "./rendimentos-capitais-categoria-e";
+import CorpoDividendosIrs from "./dividendos-irs";
+import CorpoCreditoImpostoEstrangeiro from "./credito-imposto-estrangeiro";
+import CorpoReporteMenosValias from "./reporte-menos-valias";
+import CorpoPprIrs from "./ppr-irs";
+import CorpoCriptoStakingMining from "./cripto-staking-mining";
+import CorpoEtfIrs from "./etf-irs";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  CORPOS REDIGIDOS DOS GUIAS DA EXPANSÃO
@@ -47,4 +53,10 @@ export const CORPOS: Record<string, ComponentType> = {
   "corretoras-estrangeiras-irs": CorpoCorretorasEstrangeirasIrs,
   "cripto-365-dias": CorpoCripto365Dias,
   "rendimentos-capitais-categoria-e": CorpoRendimentosCapitaisCategoriaE,
+  "dividendos-irs": CorpoDividendosIrs,
+  "credito-imposto-estrangeiro": CorpoCreditoImpostoEstrangeiro,
+  "reporte-menos-valias": CorpoReporteMenosValias,
+  "ppr-irs": CorpoPprIrs,
+  "cripto-staking-mining": CorpoCriptoStakingMining,
+  "etf-irs": CorpoEtfIrs,
 };
