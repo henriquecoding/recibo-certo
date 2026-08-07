@@ -29,4 +29,12 @@ export const CORPOS_REDIGIDOS: ReadonlySet<string> = new Set([
   "imt",
   "aimi",
   "vpt-reavaliacao",
+  "imposto-selo-compra-casa",
+  // ── Arrendamento ────────────────────────────────────────────────────
+  //    A escada de reduções do art. 72.º vinha no pacote com «confirmar
+  //    percentagens e durações» — está confirmada, e são pontos
+  //    percentuais, não percentagens da taxa. Ver `correcoes.ts`.
+  "arrendamento-categoria-f",
+  "despesas-senhorio",
+  "recibo-renda-modelo-44",
 ]);

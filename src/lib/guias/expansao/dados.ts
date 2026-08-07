@@ -16,6 +16,7 @@
 
 import { CONTEUDO_EXPANSAO, type DadoAnual } from "./conteudo";
 import { correcoesDoGuia } from "./correcoes";
+import { dadosAcrescentados } from "./dados-acrescentados";
 
 export interface DadosDoGuia {
   /** Prontos para mostrar. */
@@ -43,13 +44,29 @@ export function dadosDoGuia(slug: string): DadosDoGuia {
       retidos.push({ label: d.label, razao: "verificacao-sem-confirmacao" });
       continue;
     }
+    // A ordem importa: uma correção verificada VENCE o `porConfirmar` do
+    // pacote. «Confirmar» é um pedido, e uma correção registada aqui é a
+    // resposta a esse pedido — foi-se ler o artigo e ficou lá escrito o que
+    // se leu. Testar `porConfirmar` primeiro deixava o valor retido para
+    // sempre, e o trabalho de verificação sem efeito nenhum na página.
+    if (correcao?.acao === "corrigir" && correcao.verificado) {
+      corrigidos.push({ label: d.label, noPacote: d.valor, verificado: correcao.verificado });
+      publicaveis.push({ ...d, valor: correcao.verificado, nota: correcao.notaVerificada ?? d.nota, porConfirmar: false });
+      continue;
+    }
     if (d.porConfirmar) {
       retidos.push({ label: d.label, razao: "pacote-por-confirmar" });
       continue;
     }
-    if (correcao?.acao === "corrigir" && correcao.verificado) {
-      corrigidos.push({ label: d.label, noPacote: d.valor, verificado: correcao.verificado });
-      publicaveis.push({ ...d, valor: correcao.verificado });
+    publicaveis.push(d);
+  }
+
+  // Os valores levantados durante a redação entram no fim, na ordem em que
+  // foram declarados. Passam pelo mesmo filtro de `porConfirmar` que os do
+  // pacote — não há via rápida para publicar um número.
+  for (const d of dadosAcrescentados(slug)) {
+    if (d.porConfirmar) {
+      retidos.push({ label: d.label, razao: "pacote-por-confirmar" });
       continue;
     }
     publicaveis.push(d);

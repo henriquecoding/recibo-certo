@@ -11,6 +11,7 @@ import { claimsDoGuia, fonteIdsDoGuia, guiaExigeRevisao } from "./claims";
 import { GUIDE_MANIFESTS, manifesto, estadoRevisao, type GuideManifest, type EstadoRevisao } from "./manifests";
 import { LEITURAS_POR_GUIA_EXPANSAO } from "./expansao/derivar";
 import { guiaExpansao } from "./expansao/catalogo";
+import { fontesAcrescentadas } from "./expansao/fontes-acrescentadas";
 
 // ─── Fontes de um Guia, já resolvidas e ordenadas ──────────────────────
 
@@ -112,7 +113,10 @@ export const LEITURAS_POR_GUIA: Record<string, ComplementaryReadingId[]> = {
 export function fontesDoGuia(slug: string): FontesDoGuia {
   const ordem: Record<string, number> = { AT: 0, DR: 1, SS: 2, GOV: 3, EU: 4, OTHER_OFFICIAL: 5 };
   const daExpansao = guiaExpansao(slug);
-  const ids = (daExpansao?.fontesOficiais as LegalSourceId[] | undefined) ?? fonteIdsDoGuia(slug);
+  const doPacote = daExpansao
+    ? [...daExpansao.fontesOficiais, ...fontesAcrescentadas(slug)]
+    : undefined;
+  const ids = (doPacote as LegalSourceId[] | undefined) ?? fonteIdsDoGuia(slug);
   const oficiais = ids
     .map((id: LegalSourceId) => legalSource(id))
     .sort((a, b) => ordem[a.authority] - ordem[b.authority] || a.title.localeCompare(b.title, "pt-PT"));

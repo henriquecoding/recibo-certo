@@ -10,6 +10,9 @@ import { CONTEUDO_EXPANSAO } from "@/lib/guias/expansao/conteudo";
 import { CORPOS_REDIGIDOS } from "@/lib/guias/expansao/corpos-redigidos";
 import { CORRECOES_AO_PACOTE } from "@/lib/guias/expansao/correcoes";
 import { dadosDoGuia } from "@/lib/guias/expansao/dados";
+import { FONTES_ACRESCENTADAS } from "@/lib/guias/expansao/fontes-acrescentadas";
+import { DADOS_ACRESCENTADOS } from "@/lib/guias/expansao/dados-acrescentados";
+import { fontesDoGuia } from "@/lib/guias";
 import { guiaSemCorpo, estadoDoGuia, rotuloCurto } from "@/lib/guias/expansao/derivar";
 import { CORPOS } from "@/components/guias/expansao/corpos";
 import { GUIA_SLUGS } from "@/lib/seo";
@@ -151,7 +154,13 @@ describe("guias:expansao — critérios de aceitação da secção 5", () => {
         CONTEUDO_EXPANSAO[c.slug].dados.some((d) => d.label === c.dado),
         `${c.slug} → dado "${c.dado}" não existe no pacote`,
       ).toBe(true);
-      if (c.acao === "corrigir") expect(c.verificado, `${c.slug}/${c.dado}`).toBeTruthy();
+      if (c.acao === "corrigir") {
+        expect(c.verificado, `${c.slug}/${c.dado}`).toBeTruthy();
+        // Uma entrada corrigida não pode continuar a pedir confirmação: a
+        // nota fica ao lado do valor e é o que o leitor lê a seguir a ele.
+        const nota = c.notaVerificada ?? CONTEUDO_EXPANSAO[c.slug].dados.find((d) => d.label === c.dado)?.nota ?? "";
+        expect(nota.toLowerCase(), `${c.slug}/${c.dado}`).not.toContain("confirmar");
+      }
     }
   });
 
@@ -164,6 +173,36 @@ describe("guias:expansao — critérios de aceitação da secção 5", () => {
     for (const c of CORRECOES_AO_PACOTE.filter((x) => x.acao === "reter")) {
       const labels = dadosDoGuia(c.slug).publicaveis.map((d) => d.label);
       expect(labels, `${c.slug}/${c.dado}`).not.toContain(c.dado);
+    }
+  });
+
+  it("o que a redação acrescentou ao pacote traz sempre fonte", () => {
+    // O pacote é auditável porque cada campo tem proveniência. O que se lhe
+    // junta durante a redação tem de ser igualmente auditável, senão a
+    // garantia dura até ao primeiro acrescento.
+    for (const [slug, fontes] of Object.entries(FONTES_ACRESCENTADAS)) {
+      expect(guiaExpansao(slug), slug).toBeDefined();
+      expect(fontes.length, slug).toBeGreaterThan(0);
+      for (const id of fontes) expect(LEGAL_SOURCES, `${slug} → ${id}`).toHaveProperty(id);
+    }
+    for (const [slug, dados] of Object.entries(DADOS_ACRESCENTADOS)) {
+      expect(guiaExpansao(slug), slug).toBeDefined();
+      for (const d of dados) {
+        expect(LEGAL_SOURCES, `${slug}/${d.label} → ${d.fonte}`).toHaveProperty(d.fonte);
+        expect(d.nota.length, `${slug}/${d.label}`).toBeGreaterThan(10);
+      }
+    }
+  });
+
+  it("a fonte de um valor acrescentado aparece no bloco de fontes do guia", () => {
+    // De nada serve declarar a fonte no código se o leitor não a vê. Se um
+    // valor é publicado com base num artigo, esse artigo tem de estar
+    // listado na página — é essa a promessa de «fonte por afirmação».
+    for (const [slug, dados] of Object.entries(DADOS_ACRESCENTADOS)) {
+      const visiveis = new Set(fontesDoGuia(slug).oficiais.map((f) => f.id));
+      for (const d of dados) {
+        expect([...visiveis], `${slug}/${d.label} → ${d.fonte}`).toContain(d.fonte);
+      }
     }
   });
 

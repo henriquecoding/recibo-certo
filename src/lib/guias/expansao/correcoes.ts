@@ -30,6 +30,11 @@ export interface CorrecaoAoPacote {
   noPacote: string;
   /** O valor verificado. Ausente quando a ação é "reter". */
   verificado?: string;
+  /** Substitui a nota do pacote quando esta deixou de fazer sentido.
+      Uma entrada corrigida que continue a mostrar «confirmar percentagens»
+      diz ao leitor que o número é provisório depois de ele ter deixado de
+      o ser — e a nota é o que se lê a seguir ao valor. */
+  notaVerificada?: string;
   acao: "corrigir" | "reter";
   /** Porque é que diverge, e onde se confirma. Escrito para quem revê. */
   motivo: string;
@@ -46,6 +51,7 @@ export const CORRECOES_AO_PACOTE: CorrecaoAoPacote[] = [
     dado: "Prazo — IMI entre 100 € e 500 €",
     noPacote: "maio e agosto",
     verificado: "maio e novembro",
+    notaVerificada: "duas prestações · art. 120.º, n.º 1, al. b) CIMI",
     acao: "corrigir",
     motivo:
       "O art. 120.º, n.º 1, al. b) do CIMI, na redação da Lei n.º 71/2018, diz «em duas prestações, nos meses de maio e novembro». Agosto só entra no escalão seguinte — o das três prestações, que é maio, agosto e novembro. Publicar «maio e agosto» levava quem paga em duas prestações a marcar a segunda com três meses de antecedência e a estranhar não ter nota de cobrança.",
@@ -60,6 +66,18 @@ export const CORRECOES_AO_PACOTE: CorrecaoAoPacote[] = [
     motivo:
       "A isenção temporária de habitação própria e permanente não vive no CIMI, e nenhum dos seis artigos que o pacote dá como base legal deste guia a prevê: o art. 11.º-A do CIMI é a isenção PERMANENTE de baixos rendimentos, com limiares expressos em múltiplos do IAS (2,3 × 14 IAS de rendimento, 10 × 14 IAS de VPT global) e não em euros fixos. Os 125 000 € e os 153 300 € pertencem ao regime do Estatuto dos Benefícios Fiscais, que não foi possível verificar neste levantamento. Ficam de fora até haver artigo confirmado — dois números redondos com ar de certeza são precisamente o que ninguém vai confirmar.",
     fonte: "CIMI-11A",
+    verificadoEm: EM,
+  },
+  {
+    slug: "arrendamento-categoria-f",
+    dado: "Reduções",
+    noPacote: "por contratos de duração mais longa (confirmar percentagens e durações na redação em vigor)",
+    verificado: "−10 pontos (5 a 10 anos) · −15 pontos (10 a 20) · −20 pontos (20 ou mais)",
+    notaVerificada: "pontos percentuais sobre a taxa autónoma, em arrendamento para habitação permanente · art. 72.º, n.os 3 a 5 CIRS",
+    acao: "corrigir",
+    motivo:
+      "O pacote marcou este valor para confirmar e a confirmação foi feita: os n.os 3, 4 e 5 do art. 72.º do CIRS, na redação da Lei n.º 56/2023, fixam reduções em PONTOS PERCENTUAIS sobre a taxa autónoma, e não em percentagem dela. A diferença é material — 10 pontos sobre 25% dá 15%, enquanto «menos 10%» daria 22,5%. Cada renovação de igual duração nos contratos de 5 a 10 anos acrescenta 2 pontos, com o teto de 10 pontos para o conjunto das renovações.",
+    fonte: "cirs72",
     verificadoEm: EM,
   },
 ];

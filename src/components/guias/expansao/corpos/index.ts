@@ -3,6 +3,10 @@ import CorpoIMI from "./imi";
 import CorpoIMT from "./imt";
 import CorpoAIMI from "./aimi";
 import CorpoVptReavaliacao from "./vpt-reavaliacao";
+import CorpoImpostoSeloCompraCasa from "./imposto-selo-compra-casa";
+import CorpoDespesasSenhorio from "./despesas-senhorio";
+import CorpoArrendamentoCategoriaF from "./arrendamento-categoria-f";
+import CorpoReciboRendaModelo44 from "./recibo-renda-modelo-44";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  CORPOS REDIGIDOS DOS GUIAS DA EXPANSÃO
@@ -21,4 +25,8 @@ export const CORPOS: Record<string, ComponentType> = {
   imt: CorpoIMT,
   aimi: CorpoAIMI,
   "vpt-reavaliacao": CorpoVptReavaliacao,
+  "imposto-selo-compra-casa": CorpoImpostoSeloCompraCasa,
+  "despesas-senhorio": CorpoDespesasSenhorio,
+  "arrendamento-categoria-f": CorpoArrendamentoCategoriaF,
+  "recibo-renda-modelo-44": CorpoReciboRendaModelo44,
 };

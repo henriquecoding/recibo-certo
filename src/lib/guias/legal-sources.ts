@@ -284,6 +284,11 @@ export const LEGAL_SOURCES = {
   cirs101: at("cirs101", "101.º", "Art. 101.º CIRS — Retenção na fonte sobre rendimentos da categoria B", "irs101", "cirs_rep"),
   cirs101b: at("cirs101b", "101.º-B", "Art. 101.º-B CIRS — Dispensa de retenção na fonte", "irs101b", "cirs_rep"),
   cirs102: at("cirs102", "102.º", "Art. 102.º CIRS — Pagamentos por conta", "irs102", "cirs_rep"),
+  // O pacote de expansão deu esta página como não verificável. Abre, e o
+  // n.º 5 é o que fundamenta a obrigação do senhorio: ou recibo de renda em
+  // modelo oficial, ou declaração anual até ao fim de fevereiro. Verificado
+  // a 2026-08-06.
+  cirs115: at("cirs115", "115.º", "Art. 115.º CIRS — Emissão de recibos e faturas", "irs115", "cirs_rep"),
 
   // ── CIVA ─────────────────────────────────────────────────────────────
   civa6: at("civa6", "6.º", "Art. 6.º CIVA — Localização das operações", "iva6", "civa_rep"),
@@ -497,6 +502,29 @@ export const LEGAL_SOURCES = {
     ...at("lgt43", "43.º", "Art. 43.º LGT — Pagamento indevido da prestação tributária", "juros-indemnizatorios", "lgt"),
     expectedAnchors: ["Artigo 43.º", "Pagamento indevido da prestação tributária"],
     lastCheckedAt: "2026-08-06",
+  },
+  // A Tabela Geral do Imposto do Selo não tem página de artigo no portal —
+  // os artigos do CIS remetem para ela, mas as TAXAS vivem só aqui, no PDF
+  // do código consolidado. Sem esta fonte, os 0,8% da escritura e os 0,60%
+  // do crédito de longo prazo eram números sem artigo por trás, que é
+  // exatamente o que este catálogo existe para impedir.
+  //
+  // Verificado a 2026-08-06 no PDF publicado pela AT («Última atualização:
+  // Decreto-Lei n.º 49/2025, de 27 de março»): verba 1.1 → 0,8% sobre o
+  // valor; verba 1.2 → 10%; verba 17.1.2 → 0,50% e 17.1.3 → 0,60%.
+  tgis: {
+    id: "tgis",
+    authority: "AT",
+    title: "Tabela Geral do Imposto do Selo — verbas e taxas",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/Cod_download/Documents/CIS.pdf",
+    jurisdiction: "PT",
+    sourceType: "official_guide",
+    effectiveFrom: ANO,
+    consolidada: true,
+    renderMode: "pdf",
+    expectedAnchors: [],
+    lastCheckedAt: "2026-08-06",
+    status: "active",
   },
   lgt45: at("lgt45", "45.º", "Art. 45.º LGT — Caducidade do direito à liquidação", "lgt45", "lgt"),
   lgt48: at("lgt48", "48.º", "Art. 48.º LGT — Prescrição das dívidas tributárias", "lgt48", "lgt"),
