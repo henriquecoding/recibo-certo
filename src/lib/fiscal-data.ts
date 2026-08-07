@@ -72,16 +72,24 @@ export const SOURCES = {
     label: "Art. 12.º-A CIRS — Regime fiscal aplicável a ex-residentes (Programa Regressar) · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs12a.aspx",
   },
+  art16cirs: {
+    label: "Art. 16.º CIRS — Residência: os 183 dias, o critério da habitação, a residência parcial e a regra do ano da saída · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs16.aspx",
+  },
+  lgt19: {
+    label: "Art. 19.º LGT — Domicílio fiscal, prazo de 60 dias para comunicar a alteração de residência e regime do representante fiscal · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/lgt/Pages/lgt19.aspx",
+  },
   art70cirs: {
     label: "Art. 70.º CIRS — Mínimo de existência · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs70.aspx",
   },
   art71cirs: {
-    label: "Art. 71.º CIRS — Taxas liberatórias (dividendos) · Portal das Finanças (AT)",
+    label: "Art. 71.º CIRS — Taxas liberatórias: capitais a 28%, trabalho e pensões de não residentes a 25%, devolução a residentes na UE/EEE · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs71.aspx",
   },
   art72: {
-    label: "Art. 72.º CIRS — Taxas especiais (rendimentos prediais, categoria F) · Portal das Finanças (AT)",
+    label: "Art. 72.º CIRS — Taxas especiais: rendimentos prediais, mais-valias, não residentes e a opção pelas taxas progressivas na UE/EEE · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs72.aspx",
   },
   art78cirs: {
@@ -550,6 +558,10 @@ const REV_BENEFICIOS = "2026-06-22";
 // (arts. 22.º e 22.º-A do EBF) e da exclusão por tempo de detenção do
 // Art. 43.º, n.º 5 do CIRS — lidos no articulado do Portal das Finanças.
 const REV_INVESTIMENTO = "2026-08-07";
+// Data de verificação do bloco de rendimentos e residência internacionais —
+// Art. 16.º do CIRS (residência), Art. 12.º-A (ex-residentes) e Art. 19.º da
+// LGT (domicílio fiscal e representante), lidos no Portal das Finanças.
+const REV_ESTRANGEIRO = "2026-08-07";
 // Data de verificação dos coeficientes de desvalorização da moeda (Portaria 382/2025).
 const REV_COEF_MOEDA = "2026-06-23";
 // Data de verificação do Salário Mínimo Nacional 2026 (RMMG 920 €, DL 139/2025).
@@ -931,6 +943,46 @@ export const IRS_JOVEM = {
 export const PROGRAMA_REGRESSAR = {
   exclusao: sv(0.5, "Art. 12.º-A, n.º 1 CIRS — exclusão de 50% dos rendimentos das categorias A e B", "art12aCirs", DATA_LAST_REVIEW),
   anos: sv(5, "Art. 12.º-A, n.º 1 CIRS — cinco anos, incluindo o do regresso", "art12aCirs", DATA_LAST_REVIEW),
+  /**
+   * As quatro condições cumulativas do n.º 1, na redação da Lei n.º 82/2023
+   * — lidas no articulado a 07/08/2026, porque o pacote de expansão marcou
+   * duas delas como «confirmar» e a resposta é datada.
+   */
+  anosSemResidencia: sv(
+    5,
+    "Art. 12.º-A, n.º 1, al. b) CIRS — não ter sido considerado residente em território português em qualquer dos cinco anos anteriores",
+    "art12aCirs",
+    REV_ESTRANGEIRO
+  ),
+  /** A janela fecha, e a lei diz o ano. */
+  ultimoAnoParaSeTornarResidente: sv(
+    2026,
+    "Art. 12.º-A, n.º 1, al. a) CIRS (Lei n.º 82/2023) — tornar-se fiscalmente residente nos termos dos n.os 1 e 2 do Art. 16.º até 2026",
+    "art12aCirs",
+    REV_ESTRANGEIRO,
+    "É o último ano previsto na redação em vigor. A janela já foi prorrogada antes; enquanto não o for de novo, quem se tornar residente em 2027 fica de fora."
+  ),
+  /** É para quem VOLTA — não para quem chega pela primeira vez. */
+  exigeResidenciaAnterior: sv(
+    true,
+    "Art. 12.º-A, n.º 1, al. c) CIRS — ter sido residente em território português em qualquer período antecedente ao dos cinco anos anteriores",
+    "art12aCirs",
+    REV_ESTRANGEIRO,
+    "É o regime dos EX-residentes: quem nunca cá foi residente não é elegível, por muitos anos que tenha vivido fora."
+  ),
+  exigeSituacaoRegularizada: sv(
+    true,
+    "Art. 12.º-A, n.º 1, al. d) CIRS — ter a situação tributária regularizada",
+    "art12aCirs",
+    REV_ESTRANGEIRO
+  ),
+  /** Não acumula com o residente não habitual. */
+  incompativelComRNH: sv(
+    true,
+    "Art. 12.º-A, n.º 2 CIRS — não podem beneficiar deste regime os sujeitos passivos que tenham solicitado a sua inscrição como residente não habitual",
+    "art12aCirs",
+    REV_ESTRANGEIRO
+  ),
 };
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1125,6 +1177,251 @@ export const RENDIMENTO_MUNDIAL = sv(
   REV_PATRIMONIO,
   "Aos não residentes o IRS incide unicamente sobre os rendimentos obtidos em território português (n.º 2)."
 );
+
+/**
+ * Residência fiscal — os critérios do Art. 16.º, lidos no articulado a
+ * 07/08/2026.
+ *
+ * O pacote avisa, e com razão, que residência fiscal (Art. 16.º CIRS),
+ * domicílio fiscal (Art. 19.º LGT) e autorização de residência são três
+ * coisas diferentes que toda a gente confunde. Só a primeira decide o que
+ * Portugal tributa.
+ *
+ * Três coisas que a letra diz e as explicações costumam perder:
+ *
+ *  · O período dos 183 dias NÃO é o ano civil — é «qualquer período de 12
+ *    meses com início ou fim no ano em causa». É uma janela deslizante.
+ *  · Basta UM dos critérios do n.º 1. O da habitação dispensa por completo
+ *    a contagem de dias.
+ *  · A residência é aferida em relação a CADA sujeito passivo do agregado
+ *    (n.º 5). Num casal, um pode ser residente e o outro não.
+ */
+export const RESIDENCIA_FISCAL = {
+  /** Dias de permanência que, por si só, tornam residente. */
+  diasPermanencia: sv(
+    183,
+    "Art. 16.º, n.º 1, al. a) CIRS — permanência por mais de 183 dias, seguidos ou interpolados, em qualquer período de 12 meses com início ou fim no ano em causa",
+    "art16cirs",
+    REV_ESTRANGEIRO,
+    "São mais de 183 dias, não 183: no dia 183 ainda não és residente por esta via."
+  ),
+  /** A janela em que os dias se contam. */
+  janelaMeses: sv(
+    12,
+    "Art. 16.º, n.º 1, al. a) CIRS — qualquer período de 12 meses com início ou fim no ano em causa",
+    "art16cirs",
+    REV_ESTRANGEIRO,
+    "Janela deslizante, não ano civil. Uma estadia a cavalo de dois anos pode contar toda para o mesmo período."
+  ),
+  /** O que conta como dia de presença. */
+  contaComoDia: sv(
+    "qualquer dia, completo ou parcial, que inclua dormida",
+    "Art. 16.º, n.º 2 CIRS — considera-se dia de presença em território português qualquer dia, completo ou parcial, que inclua dormida no mesmo",
+    "art16cirs",
+    REV_ESTRANGEIRO,
+    "Um dia de chegada e um dia de partida contam ambos, se houve dormida."
+  ),
+  /** O critério que dispensa a contagem de dias. */
+  criterioHabitacao: sv(
+    "habitação em condições que façam supor intenção atual de a manter e ocupar como residência habitual",
+    "Art. 16.º, n.º 1, al. b) CIRS — tendo permanecido por menos tempo, dispor de habitação nessas condições num qualquer dia do período",
+    "art16cirs",
+    REV_ESTRANGEIRO,
+    "Basta um dia do período. Não é ter casa: é ter casa em condições que revelem a intenção."
+  ),
+  /** A residência é individual, não do agregado. */
+  aferidaPorSujeitoPassivo: sv(
+    true,
+    "Art. 16.º, n.º 5 CIRS — a residência fiscal é aferida em relação a cada sujeito passivo do agregado",
+    "art16cirs",
+    REV_ESTRANGEIRO
+  ),
+  /** Quando começa a residência, no ano da chegada. */
+  inicioResidencia: sv(
+    "primeiro dia do período de permanência",
+    "Art. 16.º, n.º 3 CIRS — tornam-se residentes desde o primeiro dia de permanência, salvo se tiverem sido residentes em qualquer dia do ano anterior, caso em que desde 1 de janeiro",
+    "art16cirs",
+    REV_ESTRANGEIRO
+  ),
+  /** Quando termina, no ano da saída. */
+  fimResidencia: sv(
+    "último dia de permanência",
+    "Art. 16.º, n.º 4 CIRS — a perda da qualidade de residente ocorre a partir do último dia de permanência, salvo nos casos dos n.os 14 e 16",
+    "art16cirs",
+    REV_ESTRANGEIRO
+  ),
+  /**
+   * A regra que apanha quem sai tarde e recebe depois de sair.
+   *
+   * Continuas residente durante TODO o ano da saída se, cumulativamente,
+   * permaneceste cá mais de 183 dias nesse ano E recebeste, depois do
+   * último dia de permanência, rendimentos que seriam sujeitos a IRS.
+   * Cai se provares que esses rendimentos foram tributados na UE/EEE com
+   * cooperação, ou noutro Estado a taxa não inferior a 60% da portuguesa.
+   */
+  residenteTodoOAnoDaSaida: sv(
+    "mais de 183 dias nesse ano e rendimentos obtidos após o último dia de permanência",
+    "Art. 16.º, n.os 14 e 15 CIRS — condições cumulativas, com a exceção da tributação no estrangeiro a taxa não inferior a 60% da que cá se aplicaria",
+    "art16cirs",
+    REV_ESTRANGEIRO
+  ),
+  /** Sair e voltar no ano seguinte apaga a saída. */
+  regressoNoAnoSeguinte: sv(
+    "residente durante a totalidade do ano",
+    "Art. 16.º, n.º 16 CIRS — considera-se residente durante a totalidade do ano quem volte a adquirir essa qualidade no ano subsequente àquele em que a perdeu",
+    "art16cirs",
+    REV_ESTRANGEIRO
+  ),
+  /** Mudar para um paraíso fiscal não corta a residência de imediato. */
+  paraisoFiscalAnos: sv(
+    4,
+    "Art. 16.º, n.º 6 CIRS — nacionais portugueses que deslocalizem a residência para regime fiscal claramente mais favorável continuam havidos como residentes no ano da mudança e nos quatro subsequentes",
+    "art16cirs",
+    REV_ESTRANGEIRO,
+    "Salvo prova de razões atendíveis, designadamente atividade temporária por conta de entidade patronal domiciliada em Portugal."
+  ),
+  /** Prazo para comunicar a mudança de estatuto de residência. */
+  prazoComunicarDias: sv(
+    60,
+    "Art. 19.º, n.º 5 LGT — sempre que se altere o estatuto de residência, o sujeito passivo deve comunicá-lo à administração tributária no prazo de 60 dias",
+    "lgt19",
+    REV_ESTRANGEIRO,
+    "É ineficaz a mudança de domicílio enquanto não for comunicada (n.º 4)."
+  ),
+} as const;
+
+/**
+ * Representante fiscal — Art. 19.º da LGT, lido a 07/08/2026.
+ *
+ * O pacote manda confirmar a lista de países dispensados, e a confirmação
+ * dá uma resposta diferente da esperada: a lei NÃO tem lista de países.
+ * Tem um critério (UE, ou EEE com cooperação administrativa equivalente) —
+ * e, desde o Decreto-Lei n.º 44/2022, uma segunda porta que dispensa a
+ * nomeação a QUALQUER não residente: aderir às notificações eletrónicas.
+ */
+export const REPRESENTANTE_FISCAL = {
+  /** Quem tem de designar. */
+  obrigatorioPara: sv(
+    "residentes no estrangeiro e residentes que se ausentem por mais de seis meses",
+    "Art. 19.º, n.º 6 LGT — os sujeitos passivos residentes no estrangeiro, bem como os que, residindo cá, se ausentem por período superior a seis meses, devem designar um representante com residência em território nacional",
+    "lgt19",
+    REV_ESTRANGEIRO
+  ),
+  /** Meses de ausência que ativam a obrigação para quem reside cá. */
+  ausenciaMeses: sv(
+    6,
+    "Art. 19.º, n.º 6 LGT — ausência do território nacional por período superior a seis meses",
+    "lgt19",
+    REV_ESTRANGEIRO
+  ),
+  /** Onde a designação é facultativa. */
+  facultativoPara: sv(
+    "União Europeia e Espaço Económico Europeu com cooperação administrativa equivalente",
+    "Art. 19.º, n.º 8 LGT — a designação é meramente facultativa em relação a não residentes de, ou residentes que se ausentem para, Estados membros da UE ou do EEE, neste último caso desde que vinculados a cooperação administrativa equivalente",
+    "lgt19",
+    REV_ESTRANGEIRO,
+    "A lei não fixa uma lista de países: fixa o critério. O EEE são a Noruega, a Islândia e o Listenstaine."
+  ),
+  /** A segunda porta, que vale para qualquer país. */
+  dispensaPorNotificacoesEletronicas: sv(
+    true,
+    "Art. 19.º, n.º 15 LGT (Decreto-Lei n.º 44/2022) — a obrigatoriedade de designar representante não é aplicável a quem adira ao serviço público de notificações eletrónicas associado à morada única digital, ao regime de notificações e citações eletrónicas no Portal das Finanças ou à caixa postal eletrónica",
+    "lgt19",
+    REV_ESTRANGEIRO,
+    "Cancelar a adesão, residindo fora da UE/EEE, só produz efeitos depois de designado representante (n.º 16)."
+  ),
+  /** O que se perde sem representante, quando ele é obrigatório. */
+  semRepresentante: sv(
+    "não se exercem direitos perante a administração tributária, incluindo reclamação, recurso e impugnação",
+    "Art. 19.º, n.º 7 LGT — independentemente das sanções aplicáveis, o exercício dos direitos depende da designação de representante",
+    "lgt19",
+    REV_ESTRANGEIRO
+  ),
+  /** Prazo da AT para processar a renúncia do representante. */
+  renunciaPrazoDias: sv(
+    90,
+    "Art. 19.º, n.º 10 LGT — a renúncia é eficaz perante a AT quando lhe for comunicada, devendo esta proceder às alterações em 90 dias, desde que tenha decorrido pelo menos um ano desde a nomeação ou tenha sido nomeado novo representante",
+    "lgt19",
+    REV_ESTRANGEIRO
+  ),
+} as const;
+
+/**
+ * Como Portugal tributa quem cá não reside — Arts. 71.º e 72.º, lidos a
+ * 07/08/2026.
+ *
+ * O pacote avisa: «não afirmar uma taxa única de 25% sem qualificar a
+ * categoria». O aviso é certo e fica curto — não há uma taxa, há três, e
+ * há duas saídas que quase ninguém usa.
+ *
+ * As taxas incidem sobre o rendimento ILÍQUIDO (Art. 71.º, n.º 8): é por
+ * isto que um não residente não tem deduções, e não por a lei lhas negar
+ * uma a uma. Mas quem reside na UE ou no EEE com troca de informações tem
+ * duas portas de volta às taxas progressivas — a opção do Art. 72.º, n.º
+ * 15 e o pedido de devolução do Art. 71.º, n.os 11 a 13. Em ambas contam
+ * TODOS os rendimentos, incluindo os obtidos fora de Portugal.
+ */
+export const NAO_RESIDENTES = {
+  /** Trabalho dependente, categoria B (mesmo em ato isolado) e pensões. */
+  taxaTrabalhoEPensoes: sv(
+    0.25,
+    "Art. 71.º, n.º 4, als. a) e c) CIRS — retenção na fonte a título definitivo, à taxa liberatória de 25%, sobre rendimentos do trabalho dependente, todos os rendimentos empresariais e profissionais (ainda que de atos isolados) e pensões obtidos em território português por não residentes",
+    "art71cirs",
+    REV_ESTRANGEIRO
+  ),
+  /** Rendimentos de capitais obtidos cá — a taxa é a mesma dos residentes. */
+  taxaCapitais: sv(
+    0.28,
+    "Art. 71.º, n.º 1, al. a) CIRS — rendimentos de capitais obtidos em território português, por residentes ou não residentes, à taxa liberatória de 28%",
+    "art71cirs",
+    REV_ESTRANGEIRO
+  ),
+  /** Tudo o que sobra e não sofreu retenção liberatória. */
+  taxaOutrosRendimentos: sv(
+    0.28,
+    "Art. 72.º, n.º 1, al. b) CIRS — outros rendimentos auferidos por não residentes não imputáveis a estabelecimento estável e não sujeitos a retenção às taxas liberatórias, à taxa autónoma de 28%",
+    "art72",
+    REV_ESTRANGEIRO
+  ),
+  /** Quando há estabelecimento estável em Portugal. */
+  taxaEstabelecimentoEstavel: sv(
+    0.25,
+    "Art. 72.º, n.º 6, al. a) CIRS — rendimentos auferidos por não residentes imputáveis a estabelecimento estável situado em território português, à taxa autónoma de 25%",
+    "art72",
+    REV_ESTRANGEIRO
+  ),
+  /** A base sobre que a taxa incide. */
+  incideSobre: sv(
+    "rendimentos ilíquidos",
+    "Art. 71.º, n.º 8 CIRS — as taxas incidem sobre os rendimentos ilíquidos, exceto nas pensões, que beneficiam da dedução do Art. 53.º",
+    "art71cirs",
+    REV_ESTRANGEIRO,
+    "É daqui que vem a ausência de deduções: não há um rendimento líquido a que abater seja o que for."
+  ),
+  /** A folga na retenção do trabalho, quando há uma só entidade. */
+  semRetencaoAteRmmg: sv(
+    true,
+    "Art. 71.º, n.º 5 CIRS — não é aplicada retenção até ao valor da retribuição mínima mensal garantida, quando os rendimentos resultem de trabalho ou serviços prestados a uma única entidade",
+    "art71cirs",
+    REV_ESTRANGEIRO,
+    "Depende de declaração escrita do titular à entidade devedora (n.º 6)."
+  ),
+  /** A opção pelas taxas progressivas, para residentes na UE/EEE. */
+  opcaoTaxasProgressivas: sv(
+    "residentes noutro Estado-Membro da UE ou do EEE com intercâmbio de informações",
+    "Art. 72.º, n.os 15 e 16 CIRS — podem optar pela tributação à taxa que seria aplicável a residentes, sendo considerados todos os rendimentos, incluindo os obtidos fora do território",
+    "art72",
+    REV_ESTRANGEIRO
+  ),
+  /** O pedido de devolução do que foi retido a mais. */
+  devolucaoPrazoAnos: sv(
+    2,
+    "Art. 71.º, n.º 13 CIRS — a devolução deve ser requerida no prazo de dois anos contados do final do ano civil seguinte àquele em que se verificou o facto tributário",
+    "art71cirs",
+    REV_ESTRANGEIRO,
+    "A AT restitui até ao fim do 3.º mês seguinte à apresentação dos elementos; falhando o prazo, acrescem juros indemnizatórios."
+  ),
+} as const;
 
 export const CREDITO_IMPOSTO_ESTRANGEIRO = {
   /** Anos para usar o crédito que a coleta do ano não chegou para absorver. */

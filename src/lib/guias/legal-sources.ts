@@ -25,6 +25,7 @@
 
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
 import { FONTES_EXPANSAO, LEITURAS_EXPANSAO } from "./expansao/fontes";
+import { ALIAS_DE_FONTE, CHAVES_ALIAS, URL_CORRIGIDO } from "./expansao/fontes-corrigidas";
 
 // ─── Autoridades competentes ───────────────────────────────────────────
 
@@ -246,13 +247,32 @@ function at(
   };
 }
 
-export const LEGAL_SOURCES = {
+/**
+ * `FONTES_EXPANSAO` com os URL corrigidos e sem as chaves que passaram a
+ * ser alias — essas voltam a entrar mais abaixo, já a apontar para a
+ * entrada existente. Ver `expansao/fontes-corrigidas.ts` para o porquê.
+ */
+const FONTES_EXPANSAO_CORRIGIDAS = Object.fromEntries(
+  Object.entries(FONTES_EXPANSAO)
+    .filter(([chave]) => !CHAVES_ALIAS.has(chave))
+    .map(([chave, fonte]) => [
+      chave,
+      URL_CORRIGIDO[chave] ? { ...fonte, url: URL_CORRIGIDO[chave] } : fonte,
+    ]),
+) as typeof FONTES_EXPANSAO;
+
+/** O catálogo antes dos alias — é dele que os alias copiam a entrada. */
+const FONTES_BASE = {
   // As fontes acrescentadas pela expansão editorial de 2026 (112 guias
   // novos) entram aqui por espalhamento, com as chaves do pacote — ver
   // `expansao/fontes.ts`. Ficam sujeitas às MESMAS asserções que as
   // restantes: domínio autorizado, HTTPS, artigo declarado, âncoras e URL
   // sem duplicados. Se uma delas estivesse errada, o build parava.
-  ...FONTES_EXPANSAO,
+  //
+  // `FONTES_EXPANSAO_CORRIGIDAS` é `FONTES_EXPANSAO` com os caminhos do
+  // Código do IVA apontados para a redação em vigor: as 17 que o pacote
+  // entregou serviam a redação histórica. Ver `expansao/fontes-corrigidas.ts`.
+  ...FONTES_EXPANSAO_CORRIGIDAS,
 
   // ── CIRS ─────────────────────────────────────────────────────────────
   // O n.º 6 fixa o MOMENTO da tributação da categoria B e é a norma que
@@ -980,6 +1000,27 @@ export const LEGAL_SOURCES = {
   },
 } as const satisfies Record<string, LegalSource>;
 
+export const LEGAL_SOURCES = {
+  ...FONTES_BASE,
+
+  // ── Alias das chaves do pacote para fontes que já cá viviam ──────────
+  // Seis artigos do CIVA tinham fonte com o caminho certo antes de o
+  // pacote chegar. Corrigir o URL do pacote criava duas chaves para a
+  // mesma página do Portal das Finanças — duas coisas a manter em vez de
+  // uma, e duas datas de verificação a divergir com o tempo.
+  //
+  // A chave do pacote continua a resolver, porque é por ela que 112 guias
+  // citam a fonte; o que ela devolve é a MESMA entrada, com o `id` da
+  // chave para a asserção de coerência não disparar. `assertLegalSources-
+  // Integrity()` sabe quais são e não as conta como URL duplicado.
+  ...Object.fromEntries(
+    Object.entries(ALIAS_DE_FONTE).map(([doPacote, existente]) => [
+      doPacote,
+      { ...(FONTES_BASE as Record<string, LegalSource>)[existente], id: doPacote },
+    ]),
+  ),
+} as const satisfies Record<string, LegalSource>;
+
 export type LegalSourceId = keyof typeof LEGAL_SOURCES;
 
 // ─── Leitura complementar (nunca fundamenta uma regra) ─────────────────
@@ -1118,12 +1159,28 @@ export function assertLegalSourcesIntegrity(): void {
     }
 
     const url = s.url.replace(/\/$/, "");
-    if (vistos.has(url)) erros.push(`Fonte "${chave}": URL duplicado no catálogo (${url}).`);
-    vistos.add(url);
+    // Os alias apontam de propósito para a mesma página de uma entrada que
+    // já existe: são a mesma fonte com a chave que o pacote usa. Contá-los
+    // como duplicado seria falhar o build por uma coisa deliberada.
+    if (!CHAVES_ALIAS.has(chave)) {
+      if (vistos.has(url)) erros.push(`Fonte "${chave}": URL duplicado no catálogo (${url}).`);
+      vistos.add(url);
+    }
 
     // Falha 3.1 da auditoria: o caminho /circ_rep/ serve a redação até 2013.
     if (s.url.includes("/circ_rep/")) {
       erros.push(`Fonte "${chave}": /circ_rep/ é a versão histórica do CIRC. Usar /CIRC_2R/.`);
+    }
+    // A irmã da anterior, apanhada na expansão de agosto de 2026: o caminho
+    // /codigos_tributarios/civa/ responde 200 e serve a redação histórica do
+    // Código do IVA. O art. 53.º ainda lá diz 10 000 € — um leitor que fosse
+    // confirmar o limiar da isenção encontrava um número que saiu de vigor há
+    // anos. A consolidada é /civa_rep/.
+    if (/\/codigos_tributarios\/civa\/Pages\//i.test(s.url)) {
+      erros.push(
+        `Fonte "${chave}": /codigos_tributarios/civa/ é a versão histórica do CIVA ` +
+          `(o art. 53.º ainda lá tem o limiar de 10 000 €). Usar /civa_rep/.`,
+      );
     }
     // O inverso, para o CIRS: `CIRS_2R` não existe (404 no portal). A
     // auditoria recomendou-o por simetria com o CIRC; seguir a recomendação
