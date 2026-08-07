@@ -19,6 +19,24 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.22.0",
+    data: "2026-08-07",
+    titulo: "Cumprir prazos — e a regra das notificações eletrónicas que custa processos",
+    itens: [
+      "A secção «Cumprir prazos» ficou completa: oito guias sobre o SAF-T mensal, a declaração periódica de IVA, a recapitulativa, as Modelo 10 e 30, a DMR e a DMIS, o Portal das Finanças e as certidões de situação regularizada.",
+      "A regra com mais impacto prático de todo o site: numa notificação eletrónica, o prazo corre MESMO QUE NUNCA ENTRES NO PORTAL. Se não acederes, a lei considera a notificação feita ao fim de um número de dias contado da disponibilização. Aderir às notificações eletrónicas é assumir o hábito de consultar — quem adere e não consulta fica em pior posição do que quem recebia por correio.",
+      "O número que decide se entregas IVA todos os meses ou de três em três meses: 650 000 € de volume de negócios do ano anterior. Igual ou superior é mensal; abaixo é trimestral. E quem passa o limiar tem de entregar declaração de alterações durante o mês de janeiro seguinte — não é automático.",
+      "Entrega até ao dia 20, pagamento até ao dia 25, ambos do segundo mês seguinte ao período. São dois prazos diferentes com consequências diferentes: falhar a declaração é uma infração, falhar a entrega do imposto é outra, e esta mede-se em proporção do que ficou por entregar.",
+      "Quem paga a um fornecedor estrangeiro e devia reter na fonte, mas não reteve, RESPONDE PELO IMPOSTO. Não é uma responsabilidade subsidiária: a AT liquida a quem tinha a obrigação de reter. Na dúvida, retém — reter a mais é reversível, não reter não é.",
+      "E ter formulário RFI válido dispensa de reter, não dispensa de comunicar. A Modelo 30 entrega-se na mesma.",
+      "A declaração recapitulativa é obrigatória mesmo para quem está isento de IVA pelo artigo 53.º. É o ponto que gera mais incumprimento em toda esta matéria — e vale nos dois sentidos, porque quem compra serviços a fornecedores da União também tem de se registar.",
+      "Um mês sem faturação comunica-se na mesma. A administração distingue «não houve documentos» de «não foi comunicado» — e a segunda é uma falta, detetada automaticamente, com coima por cada período.",
+      "As certidões de situação regularizada são gratuitas e saem em minutos. O que as bloqueia costuma ser pequeno e antigo: uma coima de há dois anos, um trimestre da Segurança Social, uma declaração não entregue num período sem operações. E declarações em falta bloqueiam mesmo sem haver dívida nenhuma.",
+      "Mas uma dívida em plano de prestações, com as prestações em dia, NÃO bloqueia. Não é preciso pagar tudo para ter a situação regularizada — é preciso ter a dívida enquadrada e estar a cumprir.",
+      "Nesta leva não fixámos nenhum dia de calendário: o prazo do SAF-T já foi dia 5, dia 8 e dia 12, e os prazos de cada trimestre variam com fins de semana e feriados. Os guias dão a regra, que é estável, e mandam ao calendário fiscal do ano.",
+    ],
+  },
+  {
     version: "2.21.0",
     data: "2026-08-07",
     titulo: "Faturar, do ATCUD ao IVA na Europa — e um regime novo que quase ninguém conhece",

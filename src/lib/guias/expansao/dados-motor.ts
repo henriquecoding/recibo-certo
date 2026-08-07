@@ -30,6 +30,7 @@ import {
   CREDITO_TRIBUTARIO_INDISPONIVEL,
   CREDITO_IMPOSTO_ESTRANGEIRO,
   DEDUCAO_ESPECIFICA_PENSOES,
+  DECLARACAO_PERIODICA_IVA,
   DISPENSA_COIMA,
   FATURACAO_PRAZOS,
   ENTIDADE_CONTRATANTE,
@@ -757,6 +758,68 @@ export const DADOS_MOTOR: Record<string, DadoDoMotor[]> = {
     d("FATURACAO_PRAZOS", "Prazo de emissão — regra geral", `${FATURACAO_PRAZOS.regraGeralDiasUteis.value}.º dia útil`, "art. 36.º, n.º 1, al. a) CIVA"),
     d("ISENCAO_IVA_REGIME", "Limiar da isenção de IVA, para referência", fmt(ISENCAO_IVA_REGIME.limiarNacional.value), "os limiares do programa certificado são outros, e vivem no DL 28/2019"),
     d("COIMAS_RGIT", "Falta ou atraso na apresentação de documentos", `${fmt(COIMAS_RGIT.faltaDeclaracoesMin.value)} a ${fmt(COIMAS_RGIT.faltaDeclaracoesMax.value)}`, "art. 117.º, n.º 1 RGIT"),
+  ],
+
+  // ── Cumprir prazos ───────────────────────────────────────────────────
+  //    O pacote dá os prazos da declaração periódica mas não dá o número
+  //    que decide qual deles se aplica: o limiar de 650 000 € do art. 41.º.
+  //    É ele que separa quem entrega todos os meses de quem entrega por
+  //    trimestre — e é o dado mais útil desta secção.
+  "declaracao-periodica-iva": [
+    d("DECLARACAO_PERIODICA_IVA", "Mensal ou trimestral — o limiar", fmt(DECLARACAO_PERIODICA_IVA.limiarMensal.value), "volume de negócios do ano civil anterior; igual ou superior é mensal, abaixo é trimestral · art. 41.º, n.º 1 CIVA"),
+    d("DECLARACAO_PERIODICA_IVA", "Prazo de entrega", `dia ${DECLARACAO_PERIODICA_IVA.diaEntrega.value} do ${DECLARACAO_PERIODICA_IVA.mesesAposPeriodo.value}.º mês seguinte`, "ao mês ou ao trimestre a que respeitam as operações · art. 41.º, n.º 1 CIVA"),
+    d("DECLARACAO_PERIODICA_IVA", "Prazo de pagamento", `dia ${DECLARACAO_PERIODICA_IVA.diaPagamento.value} do ${DECLARACAO_PERIODICA_IVA.mesesAposPeriodo.value}.º mês seguinte`, "cinco dias depois da entrega · art. 27.º, n.º 1 CIVA"),
+    d("DECLARACAO_PERIODICA_IVA", "Optar pelo regime mensal", "só durante o mês de janeiro", "produzindo efeitos a partir de 1 de janeiro desse ano · art. 41.º, n.º 3, al. b) CIVA"),
+    d("REGULARIZACAO_IVA", "Regularizar a teu favor exige", REGULARIZACAO_IVA.provaExigida.value, "art. 78.º, n.º 5 CIVA"),
+    d("FALTA_ENTREGA_PRESTACAO", "Não entregar o imposto — negligência", `${pctExato(FALTA_ENTREGA_PRESTACAO.negligenciaMin.value)} a ${pctExato(FALTA_ENTREGA_PRESTACAO.negligenciaMax.value)}`, "do imposto em falta · art. 114.º, n.º 2 RGIT"),
+  ],
+
+  "saf-t-faturacao": [
+    d("COIMAS_RGIT", "Falta ou atraso na comunicação", `${fmt(COIMAS_RGIT.faltaDeclaracoesMin.value)} a ${fmt(COIMAS_RGIT.faltaDeclaracoesMax.value)}`, "por cada período em falta · art. 117.º, n.º 1 RGIT"),
+    d("REDUCAO_COIMA", "Comunicar antes de qualquer ação da AT", pctExato(REDUCAO_COIMA.antesDeQualquerAcao.value), "do montante mínimo legal · art. 30.º, n.º 1, al. a) RGIT"),
+    d("COIMAS_RGIT", "Mínimo a pagar, havendo redução", fmt(COIMAS_RGIT.minimoComReducao.value), "art. 26.º, n.º 3 RGIT"),
+    d("FATURACAO_PRAZOS", "Prazo de emissão da fatura, para referência", `${FATURACAO_PRAZOS.regraGeralDiasUteis.value}.º dia útil`, "é outro prazo e não se confunde com o da comunicação · art. 36.º, n.º 1, al. a) CIVA"),
+  ],
+
+  "declaracao-recapitulativa": [
+    d("FATURACAO_PRAZOS", "Prazo da fatura intracomunitária", `até ao dia ${FATURACAO_PRAZOS.intracomunitariasAteDiaDoMesSeguinte.value} do mês seguinte`, "quando o serviço é tributável no território de outro Estado-Membro · art. 36.º, n.º 1, al. b) CIVA"),
+    d("ISENCAO_IVA_REGIME", "Estar isento do art. 53.º dispensa?", "não", "a obrigação existe mesmo no regime de isenção — é o ponto que gera mais incumprimento"),
+    d("COIMAS_RGIT", "Falta ou atraso na entrega", `${fmt(COIMAS_RGIT.faltaDeclaracoesMin.value)} a ${fmt(COIMAS_RGIT.faltaDeclaracoesMax.value)}`, "art. 117.º, n.º 1 RGIT"),
+  ],
+
+  "modelo-10": [
+    d("RETENCAO", "Retenção — profissão do art. 151.º", pctExato(RETENCAO.art151.value), "é uma das retenções que a Modelo 10 comunica · art. 101.º, n.º 1, al. a) CIRS"),
+    d("RETENCAO", "Retenção — outras atividades", pctExato(RETENCAO.outros.value), "art. 101.º CIRS"),
+    d("RETENCAO", "Retenção — direitos de autor", pctExato(RETENCAO.diretosAutor.value), "art. 101.º CIRS"),
+    d("COIMAS_RGIT", "Falta ou atraso de declarações", `${fmt(COIMAS_RGIT.faltaDeclaracoesMin.value)} a ${fmt(COIMAS_RGIT.faltaDeclaracoesMax.value)}`, "art. 116.º, n.º 1 RGIT"),
+  ],
+
+  "modelo-30": [
+    d("NAO_RESIDENTES", "Trabalho, categoria B e pensões", pctExato(NAO_RESIDENTES.taxaTrabalhoEPensoes.value), "retenção liberatória sobre rendimentos obtidos cá por não residentes · art. 71.º, n.º 4 CIRS"),
+    d("NAO_RESIDENTES", "Rendimentos de capitais", pctExato(NAO_RESIDENTES.taxaCapitais.value), "art. 71.º, n.º 1, al. a) CIRS"),
+    d("NAO_RESIDENTES", "Restantes rendimentos", pctExato(NAO_RESIDENTES.taxaOutrosRendimentos.value), "art. 72.º, n.º 1, al. b) CIRS"),
+    d("FALTA_ENTREGA_PRESTACAO", "Não reter — negligência", `${pctExato(FALTA_ENTREGA_PRESTACAO.negligenciaMin.value)} a ${pctExato(FALTA_ENTREGA_PRESTACAO.negligenciaMax.value)}`, "do imposto em falta; quem não retém responde pelo imposto · art. 114.º, n.º 2 RGIT"),
+    d("FALTA_ENTREGA_PRESTACAO", "Não reter — dolo", `até ${FALTA_ENTREGA_PRESTACAO.doloFatorMax.value}× o valor em falta`, "art. 114.º, n.º 1 RGIT"),
+  ],
+
+  "dmr-dmis": [
+    d("COIMAS_RGIT", "Falta ou atraso de declarações", `${fmt(COIMAS_RGIT.faltaDeclaracoesMin.value)} a ${fmt(COIMAS_RGIT.faltaDeclaracoesMax.value)}`, "por cada período em falta · art. 116.º, n.º 1 RGIT"),
+    d("REDUCAO_COIMA", "Entregar antes de qualquer ação da AT", pctExato(REDUCAO_COIMA.antesDeQualquerAcao.value), "do montante mínimo legal · art. 30.º, n.º 1, al. a) RGIT"),
+    d("COIMAS_RGIT", "Mínimo a pagar, havendo redução", fmt(COIMAS_RGIT.minimoComReducao.value), "art. 26.º, n.º 3 RGIT"),
+    d("SS_TAXA", "A declaração da Segurança Social é outra", pctExato(SS_TAXA.value), "a DMR fiscal e a declaração de remunerações da Segurança Social são obrigações distintas, para entidades distintas"),
+  ],
+
+  "portal-das-financas": [
+    d("RESIDENCIA_FISCAL", "Prazo para comunicar a mudança de domicílio", `${RESIDENCIA_FISCAL.prazoComunicarDias.value} dias`, "e a mudança é ineficaz enquanto não for comunicada · art. 19.º, n.os 4 e 5 LGT"),
+    d("REPRESENTANTE_FISCAL", "Notificações eletrónicas dispensam representante", "sim", "a obrigatoriedade não é aplicável a quem adira ao serviço · art. 19.º, n.º 15 LGT"),
+    d("REVISAO_E_RECLAMACAO", "Reclamar de uma liquidação", `${REVISAO_E_RECLAMACAO.reclamacaoGraciosaDias.value} dias`, "e o prazo conta-se da notificação — daí a importância de a ler a tempo · art. 70.º, n.º 1 CPPT"),
+  ],
+
+  "situacao-regularizada": [
+    d("REDUCAO_COIMA", "Regularizar antes de qualquer ação da AT", pctExato(REDUCAO_COIMA.antesDeQualquerAcao.value), "do montante mínimo legal da coima · art. 30.º, n.º 1, al. a) RGIT"),
+    d("REDUCAO_COIMA", "Prazo para pagar a coima reduzida", `${REDUCAO_COIMA.prazoPagamentoDias.value} dias`, "e a situação tem de ficar regularizada no mesmo prazo · art. 30.º, n.º 3, al. a) RGIT"),
+    d("COIMAS_RGIT", "Mínimo a pagar, havendo redução", fmt(COIMAS_RGIT.minimoComReducao.value), "art. 26.º, n.º 3 RGIT"),
+    d("SS_MIN_MENSAL", "A contribuição mínima que gera dívida em silêncio", fmt(SS_MIN_MENSAL.value), "existe mesmo em trimestres sem faturação, e é a origem mais comum de dívida contributiva"),
   ],
 };
 

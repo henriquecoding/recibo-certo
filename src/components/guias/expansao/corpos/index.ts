@@ -73,6 +73,14 @@ import CorpoVies from "./vies";
 import CorpoAutoliquidacaoIva from "./autoliquidacao-iva";
 import CorpoOssIva from "./oss-iva";
 import CorpoIoss from "./ioss";
+import CorpoSafTFaturacao from "./saf-t-faturacao";
+import CorpoDeclaracaoPeriodicaIva from "./declaracao-periodica-iva";
+import CorpoDeclaracaoRecapitulativa from "./declaracao-recapitulativa";
+import CorpoModelo10 from "./modelo-10";
+import CorpoModelo30 from "./modelo-30";
+import CorpoDmrDmis from "./dmr-dmis";
+import CorpoPortalDasFinancas from "./portal-das-financas";
+import CorpoSituacaoRegularizada from "./situacao-regularizada";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  CORPOS REDIGIDOS DOS GUIAS DA EXPANSÃO
@@ -161,4 +169,12 @@ export const CORPOS: Record<string, ComponentType> = {
   "autoliquidacao-iva": CorpoAutoliquidacaoIva,
   "oss-iva": CorpoOssIva,
   "ioss": CorpoIoss,
+  "saf-t-faturacao": CorpoSafTFaturacao,
+  "declaracao-periodica-iva": CorpoDeclaracaoPeriodicaIva,
+  "declaracao-recapitulativa": CorpoDeclaracaoRecapitulativa,
+  "modelo-10": CorpoModelo10,
+  "modelo-30": CorpoModelo30,
+  "dmr-dmis": CorpoDmrDmis,
+  "portal-das-financas": CorpoPortalDasFinancas,
+  "situacao-regularizada": CorpoSituacaoRegularizada,
 };

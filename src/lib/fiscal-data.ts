@@ -124,6 +124,14 @@ export const SOURCES = {
     label: "Art. 58.º EBF — Propriedade intelectual: englobamento por 50%, só ao titular originário, com o teto de 10 000 € · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-58-ordm-.aspx",
   },
+  civa27: {
+    label: "Art. 27.º CIVA — Pagamento do imposto apurado: até ao dia 25 do 2.º mês seguinte · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva27.aspx",
+  },
+  civa41: {
+    label: "Art. 41.º CIVA — Prazo de entrega da declaração periódica: dia 20 do 2.º mês seguinte, e o limiar de 650 000 € que separa mensal de trimestral · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva41.aspx",
+  },
   civa36: {
     label: "Art. 36.º CIVA — Prazo de emissão e formalidades das faturas: 5.º dia útil, 15.º dia do mês seguinte nas intracomunitárias, data do recebimento nos adiantamentos · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva36.aspx",
@@ -1151,6 +1159,56 @@ export const ISENCAO_IVA_REGIME = {
     15,
     "Art. 58.º, n.º 5 CIVA — declaração de alterações do Art. 32.º, no prazo de 15 dias úteis",
     "civa58",
+    REV_FATURACAO
+  ),
+} as const;
+
+
+/**
+ * A declaração periódica de IVA — Arts. 41.º e 27.º do CIVA, lidos na
+ * coleção consolidada a 07/08/2026, já com as alterações do Decreto-Lei
+ * n.º 49/2025.
+ *
+ * O pacote dá os prazos mas não dá o número que decide qual deles se
+ * aplica: o limiar de 650 000 € de volume de negócios do ano anterior. É
+ * ele que separa quem entrega todos os meses de quem entrega por
+ * trimestre — e quem o ultrapassa passa a mensal a partir de 1 de janeiro
+ * do ano seguinte, mediante declaração de alterações entregue em janeiro.
+ */
+export const DECLARACAO_PERIODICA_IVA = {
+  /** O limiar que separa mensal de trimestral. */
+  limiarMensal: sv(
+    650000,
+    "Art. 41.º, n.º 1 CIVA — periodicidade mensal para volume de negócios igual ou superior a 650 000 € no ano civil anterior; trimestral abaixo disso",
+    "civa41",
+    REV_FATURACAO
+  ),
+  /** Dia-limite de entrega. */
+  diaEntrega: sv(
+    20,
+    "Art. 41.º, n.º 1 CIVA — até ao dia 20 do 2.º mês seguinte àquele a que respeitam as operações, ou ao trimestre",
+    "civa41",
+    REV_FATURACAO
+  ),
+  /** Dia-limite de pagamento. */
+  diaPagamento: sv(
+    25,
+    "Art. 27.º, n.º 1 CIVA — até ao dia 25 do 2.º mês seguinte àquele a que respeitam as operações, ou ao trimestre",
+    "civa27",
+    REV_FATURACAO
+  ),
+  /** Quantos meses depois do período. */
+  mesesAposPeriodo: sv(
+    2,
+    "Arts. 41.º e 27.º CIVA — os prazos contam-se sobre o 2.º mês seguinte ao período",
+    "civa41",
+    REV_FATURACAO
+  ),
+  /** A opção pelo regime mensal, e quando se exerce. */
+  opcaoMensalEmJaneiro: sv(
+    true,
+    "Art. 41.º, n.os 2 e 3, al. b) CIVA — os sujeitos passivos trimestrais podem optar pelo envio mensal; estando já registados, a declaração de alterações só pode ser apresentada durante o mês de janeiro, produzindo efeitos a partir de 1 de janeiro",
+    "civa41",
     REV_FATURACAO
   ),
 } as const;

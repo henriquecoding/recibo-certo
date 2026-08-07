@@ -227,6 +227,31 @@ export const CORPOS_REDIGIDOS: ReadonlySet<string> = new Set([
   "atcud-qr-code",
   "faturacao-eletronica",
   "programa-faturacao-certificado",
+
+  // ── Cumprir prazos ──────────────────────────────────────────────────
+  //    O art. 41.º do CIVA dá o número que o pacote não trazia e que
+  //    decide tudo nesta secção: o limiar de 650 000 € que separa quem
+  //    entrega a declaração periódica todos os meses de quem a entrega
+  //    por trimestre. E o art. 27.º dá o segundo prazo, cinco dias
+  //    depois do primeiro — entrega a 20, pagamento a 25.
+  "declaracao-periodica-iva",
+  //    Aqui o pacote manda o contrário do costume outra vez: os dias
+  //    concretos variam com fins de semana e feriados, e o prazo do
+  //    SAF-T já foi dia 5, dia 8 e dia 12. Estes guias dão a REGRA e
+  //    mandam ao calendário fiscal do ano — não fixam dias.
+  "saf-t-faturacao",
+  "declaracao-recapitulativa",
+  "modelo-10",
+  //    Quem devia reter e não reteve RESPONDE PELO IMPOSTO. É a
+  //    responsabilidade do substituto tributário, e é o que faz deste o
+  //    guia mais sério da secção.
+  "modelo-30",
+  "dmr-dmis",
+  //    A presunção de notificação eletrónica é o ponto de maior impacto
+  //    prático de todo o site: o prazo corre mesmo que nunca entres no
+  //    portal. Aderir é assumir o hábito de consultar.
+  "portal-das-financas",
+  "situacao-regularizada",
   //    Falta `reforma-antecipada`: o pacote marca-o «SEM BASE LEGAL NO
   //    CATÁLOGO» e avisa que a idade normal de acesso e o fator de
   //    sustentabilidade são fixados por portaria anual. Fica andaime até
