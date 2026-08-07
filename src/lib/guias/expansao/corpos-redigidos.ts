@@ -169,4 +169,42 @@ export const CORPOS_REDIGIDOS: ReadonlySet<string> = new Set([
   //    art. 58.º-A, n.º 6, que está na lei.
   "e-fatura",
   "reclamar-deducoes",
+
+  // ── Gerir contribuições ─────────────────────────────────────────────
+  //    Um eixo atravessa a secção inteira: a base de incidência que
+  //    declaras é, ao mesmo tempo, o que pagas hoje e a remuneração
+  //    registada de que sairão a baixa, a parentalidade, o desemprego e a
+  //    pensão. O ajuste de ±25% é a única alavanca — e é de dois gumes.
+  "declaracao-trimestral-ss",
+  "isencao-contribuicoes-ss",
+  "entidade-contratante",
+  //    O período de espera do subsídio de doença DIFERE entre
+  //    independentes e trabalhadores por conta de outrem, e não foi
+  //    possível confirmar o dos independentes: o Diário da República
+  //    serve um shell vazio e o portal da Segurança Social é renderizado
+  //    por JavaScript. O guia diz que é maior do que os 3 dias dos
+  //    trabalhadores por conta de outrem e manda confirmá-lo — sem o
+  //    inventar. O mesmo vale para os prazos da parentalidade.
+  "subsidio-doenca-independentes",
+  "parentalidade-independentes",
+  "desemprego-independentes",
+  "seguro-acidentes-independentes",
+  //    Falta `rc-profissional`: o pacote marca-o «SEM BASE LEGAL NO
+  //    CATÁLOGO — a obrigatoriedade é definida profissão a profissão nos
+  //    estatutos das respetivas ordens, não existe norma única». Fica
+  //    andaime até haver fontes verificadas, que é o que o pacote manda.
+
+  // ── Reforma e fim de carreira ───────────────────────────────────────
+  //    O art. 53.º do CIRS já NÃO tem valor próprio: na redação da Lei n.º
+  //    45-A/2024 remete para a al. a) do n.º 1 do art. 25.º. O valor fixo
+  //    que o pacote trazia está desatualizado, e o motor passa a derivá-lo
+  //    da dedução do trabalho dependente. Ver `correcoes.ts`.
+  "irs-pensionistas",
+  "reformado-recibos-verdes",
+  "reforma-independentes",
+  "pensao-estrangeira",
+  //    Falta `reforma-antecipada`: o pacote marca-o «SEM BASE LEGAL NO
+  //    CATÁLOGO» e avisa que a idade normal de acesso e o fator de
+  //    sustentabilidade são fixados por portaria anual. Fica andaime até
+  //    o DL 187/2007 e as portarias estarem verificados.
 ]);

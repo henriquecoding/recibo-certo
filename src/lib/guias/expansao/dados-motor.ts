@@ -24,11 +24,15 @@
 import {
   AIMI,
   CAPITAIS_TAXA_LIBERATORIA,
+  AJUSTE_BASE_SS,
   CATEGORIA_F,
   COIMAS_RGIT,
   CREDITO_TRIBUTARIO_INDISPONIVEL,
   CREDITO_IMPOSTO_ESTRANGEIRO,
+  DEDUCAO_ESPECIFICA_PENSOES,
   DISPENSA_COIMA,
+  ENTIDADE_CONTRATANTE,
+  ENTIDADE_CONTRATANTE_LIMIAR_CALC,
   DEDUCAO_PPR,
   DIVIDENDOS_ENGLOBAMENTO_FRACAO,
   CRIPTO_ISENCAO_DIAS,
@@ -59,6 +63,7 @@ import {
   IS_CREDITO,
   IS_TAXA_AQUISICAO,
   IS_TRANSMISSAO_GRATUITA,
+  MINIMO_EXISTENCIA,
   MAIS_VALIAS_EXCLUSAO_DETENCAO,
   MAIS_VALIAS_IMOBILIARIO_INCLUSAO,
   MAIS_VALIAS_IMOVEIS,
@@ -81,9 +86,15 @@ import {
   REPRESENTANTE_FISCAL,
   RESIDENCIA_FISCAL,
   REVISAO_E_RECLAMACAO,
+  SS_BASE_MAX_MENSAL,
+  SS_MIN_MENSAL,
+  SS_ACUMULACAO_LIMITE_IAS,
+  SS_ACUMULACAO_LIMITE_MENSAL,
   SS_COEFICIENTE,
   SS_ISENCAO_PRIMEIRO_ANO_MESES,
   SS_TAXA,
+  SUBSIDIO_DESEMPREGO,
+  SUBSIDIO_DOENCA,
   type EscalaoIMT,
 } from "@/lib/fiscal-data";
 import { fmt, pctExato } from "@/lib/format";
@@ -564,6 +575,101 @@ export const DADOS_MOTOR: Record<string, DadoDoMotor[]> = {
     d("CREDITO_TRIBUTARIO_INDISPONIVEL", "A exoneração abrange dívidas fiscais?", "questão em aberto", "há decisões judiciais em sentidos diferentes; não é matéria a fechar num guia"),
     d("REDUCAO_COIMA", "Alternativa — regularizar antes de qualquer ação da AT", pctExato(REDUCAO_COIMA.antesDeQualquerAcao.value), "do montante mínimo legal da coima · art. 30.º, n.º 1, al. a) RGIT"),
     d("COIMAS_RGIT", "Mínimo a pagar, havendo redução", fmt(COIMAS_RGIT.minimoComReducao.value), "art. 26.º, n.º 3 RGIT"),
+  ],
+
+  // ── Gerir contribuições · Reforma ────────────────────────────────────
+  //    O eixo é um só e atravessa a secção inteira: a base de incidência
+  //    que declaras é, ao mesmo tempo, o que pagas hoje e a remuneração
+  //    registada de que sairão a baixa, a parentalidade e a pensão. É por
+  //    isso que o ajuste de ±25% aparece em quase todas estas tabelas.
+  "declaracao-trimestral-ss": [
+    d("SS_COEFICIENTE", "Base de incidência — serviços", pctExato(SS_COEFICIENTE.servicos.value), "do rendimento de prestação de serviços declarado no trimestre"),
+    d("SS_COEFICIENTE", "Base de incidência — vendas", pctExato(SS_COEFICIENTE.bens.value), "do rendimento de venda de bens"),
+    d("SS_TAXA", "Taxa contributiva", pctExato(SS_TAXA.value), "sobre a base de incidência · Código dos Regimes Contributivos"),
+    d("AJUSTE_BASE_SS", "Ajuste voluntário", `±${pctExato(AJUSTE_BASE_SS.amplitude.value)}`, `em intervalos de ${pctExato(AJUSTE_BASE_SS.degrau.value)} sobre a base apurada`),
+    d("SS_BASE_MAX_MENSAL", "Teto da base mensal", fmt(SS_BASE_MAX_MENSAL.value), "acima deste valor não há contribuição adicional"),
+    d("SS_MIN_MENSAL", "Contribuição mínima mensal", fmt(SS_MIN_MENSAL.value), "existe mesmo em trimestres sem faturação"),
+    d("SS_ISENCAO_PRIMEIRO_ANO_MESES", "Isenção no início de atividade", `${SS_ISENCAO_PRIMEIRO_ANO_MESES.value} meses`, "a contar do início; é o fim desta isenção que muda a conta no segundo ano"),
+  ],
+
+  "isencao-contribuicoes-ss": [
+    d("SS_ISENCAO_PRIMEIRO_ANO_MESES", "Início de atividade", `${SS_ISENCAO_PRIMEIRO_ANO_MESES.value} meses`, "isenção automática, sem pedido"),
+    d("SS_ACUMULACAO_LIMITE_IAS", "Acumulação com trabalho dependente — limiar", `${SS_ACUMULACAO_LIMITE_IAS.value} × IAS`, `remuneração mensal média do trabalho dependente igual ou superior a ${fmt(SS_ACUMULACAO_LIMITE_MENSAL.value)}`),
+    d("SS_TAXA", "Taxa quando há obrigação", pctExato(SS_TAXA.value), "sobre a base de incidência"),
+    d("SS_COEFICIENTE", "Base de incidência — serviços", pctExato(SS_COEFICIENTE.servicos.value), "é sobre ela que a isenção incide, não sobre a faturação"),
+    d("SS_MIN_MENSAL", "O que se paga quando não há isenção", `mínimo de ${fmt(SS_MIN_MENSAL.value)}`, "mesmo sem faturação no trimestre"),
+  ],
+
+  "entidade-contratante": [
+    d("ENTIDADE_CONTRATANTE", "Quando existe a obrigação", `dependência superior a ${pctExato(ENTIDADE_CONTRATANTE.dependenciaMinima.value)}`, "a entidade beneficia de mais de metade do valor total da atividade do independente"),
+    d("ENTIDADE_CONTRATANTE", "Dependência acima de 50% e até 80%", pctExato(ENTIDADE_CONTRATANTE.taxaAte80.value), "taxa da entidade contratante"),
+    d("ENTIDADE_CONTRATANTE", "Dependência superior a 80%", pctExato(ENTIDADE_CONTRATANTE.taxaAcima80.value), "taxa da entidade contratante"),
+    d("ENTIDADE_CONTRATANTE_LIMIAR_CALC", "Limiar de ativação", `${fmt(ENTIDADE_CONTRATANTE_LIMIAR_CALC)} por ano`, `${ENTIDADE_CONTRATANTE.limiarIAS.value} × IAS de ${fmt(IAS.value)}`),
+    d("SS_TAXA", "A tua taxa, para comparar", pctExato(SS_TAXA.value), "a contribuição da entidade contratante é autónoma e não substitui a tua"),
+  ],
+
+  "subsidio-doenca-independentes": [
+    d("SUBSIDIO_DOENCA", "Prazo de garantia", `${SUBSIDIO_DOENCA.prazoGarantiaMeses.value} meses`, "com registo de remunerações, seguidos ou interpolados · DL 28/2004"),
+    d("SUBSIDIO_DOENCA", "Percentagem — até 30 dias", pctExato(SUBSIDIO_DOENCA.escaloes.value[0]?.taxa ?? 0), "da remuneração de referência · DL 28/2004"),
+    d("SUBSIDIO_DOENCA", "Percentagem — 31 a 90 dias", pctExato(SUBSIDIO_DOENCA.escaloes.value[1]?.taxa ?? 0), "da remuneração de referência · DL 28/2004"),
+    d("SUBSIDIO_DOENCA", "Percentagem — 91 a 365 dias", pctExato(SUBSIDIO_DOENCA.escaloes.value[2]?.taxa ?? 0), "da remuneração de referência · DL 28/2004"),
+    d("SUBSIDIO_DOENCA", "Percentagem — mais de 365 dias", pctExato(SUBSIDIO_DOENCA.escaloes.value[3]?.taxa ?? 0), "da remuneração de referência · DL 28/2004"),
+    d("SUBSIDIO_DOENCA", "Majoração", `+${pctExato(SUBSIDIO_DOENCA.majoracao.value)}`, `nos escalões mais baixos, quando a remuneração de referência não excede ${fmt(SUBSIDIO_DOENCA.majoracaoRemuneracaoLimite.value)} ou o agregado tem três ou mais descendentes`),
+    d("SS_COEFICIENTE", "De onde sai a remuneração de referência", `${pctExato(SS_COEFICIENTE.servicos.value)} do rendimento declarado`, "é a base de incidência que declaraste — e é por isso que baixá-la sai caro aqui"),
+    d("AJUSTE_BASE_SS", "O que o ajuste custa aqui", `±${pctExato(AJUSTE_BASE_SS.amplitude.value)}`, "baixar a base baixa a contribuição e, na mesma proporção, o subsídio"),
+  ],
+
+  "parentalidade-independentes": [
+    d("SS_COEFICIENTE", "De onde sai a remuneração de referência", `${pctExato(SS_COEFICIENTE.servicos.value)} do rendimento declarado`, "é a base de incidência dos meses relevantes"),
+    d("AJUSTE_BASE_SS", "O efeito de ter baixado a base", `±${pctExato(AJUSTE_BASE_SS.amplitude.value)}`, `em degraus de ${pctExato(AJUSTE_BASE_SS.degrau.value)}; o subsídio segue a base, não a faturação`),
+    d("SS_TAXA", "Taxa contributiva", pctExato(SS_TAXA.value), "sobre a base de incidência"),
+    d("SS_MIN_MENSAL", "Contribuição mínima", fmt(SS_MIN_MENSAL.value), "é ela que fixa o piso da remuneração registada de quem fatura pouco"),
+  ],
+
+  "desemprego-independentes": [
+    d("SUBSIDIO_DESEMPREGO", "Prazo de garantia", `${SUBSIDIO_DESEMPREGO.prazoGarantiaDias.value} dias`, "com registo de remunerações"),
+    d("SUBSIDIO_DESEMPREGO", "Percentagem", pctExato(SUBSIDIO_DESEMPREGO.taxa.value), "da remuneração de referência"),
+    d("SUBSIDIO_DESEMPREGO", "Limite mínimo", `${SUBSIDIO_DESEMPREGO.minimoIAS.value} × IAS`, `${fmt(SUBSIDIO_DESEMPREGO.minimoIAS.value * IAS.value)} com o IAS de ${fmt(IAS.value)}`),
+    d("SUBSIDIO_DESEMPREGO", "Limite máximo", `${SUBSIDIO_DESEMPREGO.maximoIAS.value} × IAS`, `${fmt(SUBSIDIO_DESEMPREGO.maximoIAS.value * IAS.value)} com o IAS de ${fmt(IAS.value)}`),
+    d("SUBSIDIO_DESEMPREGO", "Duração", `${SUBSIDIO_DESEMPREGO.duracaoMinimaDias.value} a ${SUBSIDIO_DESEMPREGO.duracaoMaximaDias.value} dias`, "conforme a idade e a carreira contributiva"),
+    d("SS_COEFICIENTE", "De onde sai a remuneração de referência", `${pctExato(SS_COEFICIENTE.servicos.value)} do rendimento declarado`, "a base de incidência declarada nas trimestrais"),
+  ],
+
+  "seguro-acidentes-independentes": [
+    d("SS_TAXA", "O que a contribuição cobre", pctExato(SS_TAXA.value), "doença, parentalidade, desemprego e velhice — não cobre acidentes de trabalho"),
+    d("SS_COEFICIENTE", "Base de incidência — serviços", pctExato(SS_COEFICIENTE.servicos.value), "é também a referência habitual do prémio do seguro"),
+  ],
+
+  "reforma-independentes": [
+    d("SS_TAXA", "Taxa contributiva", pctExato(SS_TAXA.value), "sobre a base de incidência"),
+    d("SS_COEFICIENTE", "Base de incidência — serviços", pctExato(SS_COEFICIENTE.servicos.value), "é esta que fica registada na carreira contributiva"),
+    d("SS_COEFICIENTE", "Base de incidência — vendas", pctExato(SS_COEFICIENTE.bens.value), "do rendimento de venda de bens"),
+    d("AJUSTE_BASE_SS", "Ajuste na declaração trimestral", `±${pctExato(AJUSTE_BASE_SS.amplitude.value)}`, `em degraus de ${pctExato(AJUSTE_BASE_SS.degrau.value)} — baixa a contribuição hoje e a remuneração registada para sempre`),
+    d("SS_MIN_MENSAL", "Contribuição mínima mensal", fmt(SS_MIN_MENSAL.value), "fixa o piso da remuneração registada"),
+    d("SS_ISENCAO_PRIMEIRO_ANO_MESES", "Período isento no início", `${SS_ISENCAO_PRIMEIRO_ANO_MESES.value} meses`, "sem contribuição e, por isso, sem remuneração registada"),
+  ],
+
+  "irs-pensionistas": [
+    d("DEDUCAO_ESPECIFICA_PENSOES", "Dedução específica", fmt(DEDUCAO_ESPECIFICA_PENSOES.value), "o art. 53.º já não fixa valor próprio: remete para a al. a) do n.º 1 do art. 25.º · art. 53.º, n.º 1 CIRS"),
+    d("DEDUCAO_ESPECIFICA_PENSOES", "Rendimentos até esse valor", "deduzem a totalidade", "aos rendimentos brutos de valor igual ou inferior deduz-se a totalidade do seu quantitativo · art. 53.º, n.º 1 CIRS"),
+    d("MINIMO_EXISTENCIA", "Mínimo de existência", fmt(MINIMO_EXISTENCIA.value), "valor de referência abaixo do qual não há imposto a pagar · art. 70.º CIRS"),
+  ],
+
+  "reformado-recibos-verdes": [
+    d("DEDUCAO_ESPECIFICA_PENSOES", "Dedução específica da pensão", fmt(DEDUCAO_ESPECIFICA_PENSOES.value), "art. 53.º, n.º 1 CIRS"),
+    d("REGIME_SIMPLIFICADO", "Coeficiente — profissão do art. 151.º", pctExato(REGIME_SIMPLIFICADO.coefServicos151.value), "sobre o rendimento da atividade · art. 31.º, n.º 1, al. b) CIRS"),
+    d("REGIME_SIMPLIFICADO", "Coeficiente — outras prestações de serviços", pctExato(REGIME_SIMPLIFICADO.coefOutrosServicos.value), "art. 31.º, n.º 1, al. c) CIRS"),
+    d("RETENCAO", "Retenção — profissão do art. 151.º", pctExato(RETENCAO.art151.value), "art. 101.º, n.º 1, al. a) CIRS"),
+    d("SS_TAXA", "Taxa contributiva da atividade", pctExato(SS_TAXA.value), "sobre a base de incidência, havendo obrigação de contribuir"),
+    d("SS_ISENCAO_PRIMEIRO_ANO_MESES", "Isenção no início de atividade", `${SS_ISENCAO_PRIMEIRO_ANO_MESES.value} meses`, "aplica-se também a quem abre atividade já reformado"),
+  ],
+
+  "pensao-estrangeira": [
+    d("RENDIMENTO_MUNDIAL", "Sendo residente cá", "declaras a pensão em Portugal", "o IRS incide sobre a totalidade dos rendimentos, incluindo os obtidos fora · art. 15.º, n.º 1 CIRS"),
+    d("DEDUCAO_ESPECIFICA_PENSOES", "Dedução específica", fmt(DEDUCAO_ESPECIFICA_PENSOES.value), "aplica-se à categoria H, venha a pensão de onde vier · art. 53.º, n.º 1 CIRS"),
+    d("CREDITO_IMPOSTO_ESTRANGEIRO", "Se houve imposto retido lá fora", "o menor dos dois limites", `${CREDITO_IMPOSTO_ESTRANGEIRO.duploLimite.value.join(" · ")} · art. 81.º, n.º 1 CIRS`),
+    d("CREDITO_IMPOSTO_ESTRANGEIRO", "Reporte por insuficiência de coleta", `${CREDITO_IMPOSTO_ESTRANGEIRO.reporteAnos.value} anos`, "art. 81.º, n.º 3 CIRS"),
+    d("RESIDENCIA_FISCAL", "O que decide onde declaras", `mais de ${RESIDENCIA_FISCAL.diasPermanencia.value} dias`, `em qualquer período de ${RESIDENCIA_FISCAL.janelaMeses.value} meses — ou o critério da habitação · art. 16.º, n.º 1 CIRS`),
   ],
 };
 

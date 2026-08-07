@@ -108,6 +108,10 @@ export const SOURCES = {
     label: "Art. 70.º CPPT — Reclamação graciosa: prazo de 120 dias · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cppt/Pages/cppt70.aspx",
   },
+  art53cirs: {
+    label: "Art. 53.º CIRS — Pensões: a dedução específica remete para a al. a) do n.º 1 do Art. 25.º · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs53.aspx",
+  },
   art57cirs: {
     label: "Art. 57.º CIRS — Declaração de rendimentos, contitularidade e a declaração por cada estatuto de residência · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs57.aspx",
@@ -494,6 +498,10 @@ export const SOURCES = {
     label: "Código do Trabalho (Lei 7/2009, versão consolidada) — férias, faltas, noturno e cessação · Diário da República",
     url: "https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2009-34546475",
   },
+  ssEntidadeContratante: {
+    label: "Entidades contratantes de trabalhadores independentes — dependência económica e taxas de 7% e 10% · Segurança Social",
+    url: "https://www.seg-social.pt/entidades-contratantes",
+  },
   ssDoenca: {
     label: "Subsídio de doença — montante, prazo de garantia e período de espera · Segurança Social",
     url: "https://www.seg-social.pt/subsidio-de-doenca",
@@ -622,6 +630,9 @@ const REV_PROFISSOES = "2026-08-07";
 // arts. 26.º, 29.º, 30.º, 114.º, 116.º e 117.º do RGIT, art. 78.º da LGT,
 // art. 70.º do CPPT e arts. 57.º e 58.º-A do CIRS.
 const REV_INFRACOES = "2026-08-07";
+// Data de verificação do bloco da proteção social dos independentes e das
+// pensões — art. 53.º do CIRS e o Código dos Regimes Contributivos.
+const REV_PROTECAO_2026 = "2026-08-07";
 // Data de verificação dos coeficientes de desvalorização da moeda (Portaria 382/2025).
 const REV_COEF_MOEDA = "2026-06-23";
 // Data de verificação do Salário Mínimo Nacional 2026 (RMMG 920 €, DL 139/2025).
@@ -4046,6 +4057,94 @@ export const DEDUCAO_ESPECIFICA_DEPENDENTE = sv(
   "art25cirs",
   DEP_TODAY
 );
+
+
+/**
+ * Dedução específica das pensões — Art. 53.º, n.º 1 do CIRS.
+ *
+ * Lido no articulado a 07/08/2026, e a leitura muda o que se pode
+ * escrever: na redação da Lei n.º 45-A/2024, o artigo JÁ NÃO TEM VALOR
+ * PRÓPRIO. Remete para «o previsto na alínea a) do n.º 1 do artigo 25.º»
+ * — a dedução específica do trabalho dependente.
+ *
+ * Por isso não é um número: é uma referência. Escrever aqui um valor
+ * fixo criava a segunda cópia do mesmo montante, e no ano em que o IAS
+ * mudasse as duas divergiam sem ninguém dar por isso.
+ */
+export const DEDUCAO_ESPECIFICA_PENSOES = sv(
+  DEDUCAO_ESPECIFICA_DEPENDENTE.value,
+  "Art. 53.º, n.º 1 CIRS (redação da Lei n.º 45-A/2024) — aos rendimentos brutos da categoria H deduz-se o previsto na al. a) do n.º 1 do Art. 25.º, até à concorrência do rendimento",
+  "art53cirs",
+  REV_PROTECAO_2026,
+  "Rendimentos anuais iguais ou inferiores a este montante deduzem a totalidade do seu quantitativo (n.º 1); acima disso, deduz-se o montante fixado (n.º 2)."
+);
+
+/**
+ * Entidade contratante — a contribuição que o CLIENTE paga quando um
+ * independente depende economicamente dele.
+ *
+ * Não sai do bolso do independente e não lhe acrescenta proteção: é uma
+ * contribuição autónoma da entidade, apurada oficiosamente pela Segurança
+ * Social a partir das declarações trimestrais.
+ */
+export const ENTIDADE_CONTRATANTE = {
+  /** Dependência a partir da qual a obrigação existe. */
+  dependenciaMinima: sv(
+    0.5,
+    "Código dos Regimes Contributivos — considera-se entidade contratante a que beneficie de mais de 50% do valor total da atividade do trabalhador independente",
+    "ssEntidadeContratante",
+    REV_PROTECAO_2026
+  ),
+  /** Dependência de mais de 50% e até 80%. */
+  taxaAte80: sv(
+    0.07,
+    "Código dos Regimes Contributivos — taxa de 7% quando a dependência económica é superior a 50% e igual ou inferior a 80%",
+    "ssEntidadeContratante",
+    REV_PROTECAO_2026
+  ),
+  /** Dependência superior a 80%. */
+  taxaAcima80: sv(
+    0.1,
+    "Código dos Regimes Contributivos — taxa de 10% quando a dependência económica é superior a 80%",
+    "ssEntidadeContratante",
+    REV_PROTECAO_2026
+  ),
+  /** O limiar de rendimento anual que ativa a obrigação, em múltiplos do IAS. */
+  limiarIAS: sv(
+    6,
+    "Código dos Regimes Contributivos — a obrigação só existe quando o rendimento anual do trabalhador independente é superior a seis vezes o valor do IAS",
+    "ssEntidadeContratante",
+    REV_PROTECAO_2026
+  ),
+} as const;
+
+/** O limiar da entidade contratante, em euros do ano corrente. */
+export const ENTIDADE_CONTRATANTE_LIMIAR_CALC =
+  Math.round(ENTIDADE_CONTRATANTE.limiarIAS.value * IAS.value * 100) / 100;
+
+/**
+ * O ajuste voluntário da base de incidência, na declaração trimestral.
+ *
+ * É a única alavanca que o independente tem sobre a sua contribuição — e
+ * é uma alavanca de dois gumes, porque a base de incidência é também a
+ * remuneração registada de que sairão o subsídio de doença, o subsídio
+ * parental e, no fim, a pensão. Baixar hoje é poupar hoje e receber menos
+ * em todos os momentos em que precisar.
+ */
+export const AJUSTE_BASE_SS = {
+  amplitude: sv(
+    0.25,
+    "Código dos Regimes Contributivos — o trabalhador independente pode fazer variar a base de incidência apurada em ±25%",
+    "segSocialGov",
+    REV_PROTECAO_2026
+  ),
+  degrau: sv(
+    0.05,
+    "Código dos Regimes Contributivos — a variação faz-se em intervalos de 5 pontos percentuais",
+    "segSocialGov",
+    REV_PROTECAO_2026
+  ),
+} as const;
 
 /**
  * Tecto da dedução específica da categoria A quando elevada por quotizações

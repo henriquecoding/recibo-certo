@@ -19,6 +19,23 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.20.0",
+    data: "2026-08-07",
+    titulo: "Contribuições e reforma — a decisão trimestral que vale uma vida",
+    itens: [
+      "Onze guias novos sobre a Segurança Social de quem trabalha por conta própria e sobre a reforma: declaração trimestral, isenções, entidade contratante, baixa médica, parentalidade, desemprego, seguro de acidentes, pensões e o IRS de quem já se reformou.",
+      "O fio que atravessa tudo: a base de incidência que declaras de três em três meses é, ao mesmo tempo, o que pagas hoje e a remuneração registada de que sairão a tua baixa médica, o teu subsídio parental, o teu subsídio de desemprego e a tua pensão. Não são contas separadas — é o mesmo número.",
+      "O ajuste voluntário permite fazê-la variar até um quarto, para cima ou para baixo. Baixar poupa alguns euros por mês agora e reduz, na mesma proporção, tudo o que vieres a receber. A poupança é imediata e visível; o custo é distante e invisível — e é essa assimetria que leva quase toda a gente a decidir mal.",
+      "E há um uso do ajuste que quase ninguém faz: subir. Quem sabe que vai ter um filho pode aumentar a base nos trimestres anteriores ao nascimento, pagando mais agora para receber mais durante a licença. É a única prestação que dá meses de aviso.",
+      "A Segurança Social NÃO cobre acidentes de trabalho. É um ramo autónomo, e quem trabalha por conta própria é obrigado a ter seguro próprio para si mesmo. Estar em dia com as contribuições não dá cobertura nenhuma neste domínio — e a baixa por acidente não é a baixa por doença.",
+      "Quando um cliente representa mais de metade da tua atividade anual, passa a ter contribuição própria — 7 % ou 10 %, conforme o grau de dependência. Não sai do teu bolso, mas também não te acrescenta proteção nenhuma. E é o mesmo indício que a Segurança Social vê quando avalia falsos recibos verdes.",
+      "Corrigimos a dedução específica das pensões. O artigo 53.º do Código do IRS já não tem valor próprio: desde a Lei n.º 45-A/2024 remete para a dedução do trabalho dependente. O valor fixo que continua a circular vem de uma redação antiga — agora o site deriva-o, e acompanha sozinho.",
+      "Um reformado pode passar recibos verdes, mas a pensão e a atividade somam-se no englobamento — e cada fonte retém como se fosse a única. O acerto é sistematicamente a pagar. Nas pensões de invalidez, porém, a verificação prévia é indispensável: aí o erro pode implicar devolver pensões recebidas.",
+      "Dois guias ficam por publicar de propósito. A obrigatoriedade do seguro de responsabilidade civil profissional é definida profissão a profissão, sem norma única; e o regime da reforma antecipada depende de portarias anuais. Preferimos deixá-los por acabar a publicar valores que não conseguimos confirmar.",
+      "Pelo mesmo motivo, não fixámos o período de espera do subsídio de doença dos independentes: sabemos que é maior do que os três dias de quem trabalha por conta de outrem, mas não conseguimos confirmar o número em fonte oficial legível. O guia diz isso, e diz onde confirmar.",
+    ],
+  },
+  {
     version: "2.19.0",
     data: "2026-08-07",
     titulo: "Coimas, inspeções e o IRS automático — com uma regra que custa dinheiro a quem não a conhece",

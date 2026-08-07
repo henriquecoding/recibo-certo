@@ -51,6 +51,17 @@ import CorpoDeclaracaoSubstituicao from "./declaracao-substituicao";
 import CorpoIrsForaDoPrazo from "./irs-fora-do-prazo";
 import CorpoEFatura from "./e-fatura";
 import CorpoReclamarDeducoes from "./reclamar-deducoes";
+import CorpoDeclaracaoTrimestralSs from "./declaracao-trimestral-ss";
+import CorpoIsencaoContribuicoesSs from "./isencao-contribuicoes-ss";
+import CorpoEntidadeContratante from "./entidade-contratante";
+import CorpoSubsidioDoencaIndependentes from "./subsidio-doenca-independentes";
+import CorpoParentalidadeIndependentes from "./parentalidade-independentes";
+import CorpoDesempregoIndependentes from "./desemprego-independentes";
+import CorpoSeguroAcidentesIndependentes from "./seguro-acidentes-independentes";
+import CorpoIrsPensionistas from "./irs-pensionistas";
+import CorpoReformadoRecibosVerdes from "./reformado-recibos-verdes";
+import CorpoReformaIndependentes from "./reforma-independentes";
+import CorpoPensaoEstrangeira from "./pensao-estrangeira";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  CORPOS REDIGIDOS DOS GUIAS DA EXPANSÃO
@@ -117,4 +128,15 @@ export const CORPOS: Record<string, ComponentType> = {
   "irs-fora-do-prazo": CorpoIrsForaDoPrazo,
   "e-fatura": CorpoEFatura,
   "reclamar-deducoes": CorpoReclamarDeducoes,
+  "declaracao-trimestral-ss": CorpoDeclaracaoTrimestralSs,
+  "isencao-contribuicoes-ss": CorpoIsencaoContribuicoesSs,
+  "entidade-contratante": CorpoEntidadeContratante,
+  "subsidio-doenca-independentes": CorpoSubsidioDoencaIndependentes,
+  "parentalidade-independentes": CorpoParentalidadeIndependentes,
+  "desemprego-independentes": CorpoDesempregoIndependentes,
+  "seguro-acidentes-independentes": CorpoSeguroAcidentesIndependentes,
+  "irs-pensionistas": CorpoIrsPensionistas,
+  "reformado-recibos-verdes": CorpoReformadoRecibosVerdes,
+  "reforma-independentes": CorpoReformaIndependentes,
+  "pensao-estrangeira": CorpoPensaoEstrangeira,
 };
