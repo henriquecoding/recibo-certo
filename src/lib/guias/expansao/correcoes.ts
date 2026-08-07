@@ -208,12 +208,15 @@ export const CORRECOES_AO_PACOTE: CorrecaoAoPacote[] = [
   },
   {
     slug: "contrato-a-termo",
-    dado: "Código do Trabalho — texto consolidado",
-    noPacote: "base legal «ct» para toda a secção «Trabalho por conta de outrem»",
-    acao: "reter",
+    dado: "Código do Trabalho — onde se lê o texto consolidado",
+    noPacote: "base legal «ct», apontada ao Diário da República",
+    verificado: "articulado consolidado na base jurídica da PGD Lisboa, currência confirmada contra a DGERT",
+    notaVerificada:
+      "ambas as fontes terminam a lista de alterações na Lei n.º 32/2025, de 27 de março — 24 diplomas, a mesma sequência",
+    acao: "corrigir",
     semDadoNoPacote: true,
     motivo:
-      "Os dez guias laborais desta secção — contrato a termo, período experimental, teletrabalho, formação contínua, banco de horas, trabalhador-estudante, despedimento, assédio, FCT/FGCT e acidente de trabalho — assentam todos no Código do Trabalho, e o Código do Trabalho não tem articulado legível. O Diário da República serve as páginas de legislação consolidada como aplicação de página única: o pedido devolve 2,3 KB de shell vazio, sem uma linha de texto legal. O PDF da publicação original de 2009 está disponível, mas é anterior a todas as alterações posteriores, incluindo a Lei n.º 13/2023 («Agenda do Trabalho Digno»), que reescreveu precisamente as matérias destes guias. Publicar durações de período experimental, prazos de aviso prévio ou limites de renovação de contratos a termo a partir de um texto de 2009 seria dar por vigente o que já não vige — o erro que este projeto proíbe na primeira das suas regras. Os guias ficam andaimes, com `noindex`, até haver fonte consolidada verificável. O único da secção que foi escrito é `ajudas-de-custo-km`, e foi porque é fiscal e não laboral: vive no art. 2.º, n.º 3 do CIRS, que está no Portal das Finanças e foi lido.",
+      "Os dez guias laborais desta secção assentam no Código do Trabalho, e o Código do Trabalho não é um código fiscal: não está no Portal das Finanças. O Diário da República — a fonte que o pacote indicava — serve as páginas de legislação consolidada como aplicação de página única, e o pedido devolve 2,3 KB de shell vazio, sem uma linha de texto legal; o PDF da publicação original de 2009 é legível mas anterior a todas as alterações, incluindo a Lei n.º 13/2023, que reescreveu precisamente estas matérias. A base de dados jurídica da Procuradoria-Geral Distrital de Lisboa serve o articulado consolidado inteiro, com o histórico de alterações artigo a artigo. Como é fonte secundária, a currência foi verificada contra fonte governamental independente: a lista de 24 diplomas que apresenta termina na Lei n.º 32/2025, exatamente a que a DGERT — a direção-geral responsável pela matéria — dá como última alteração. Duas fontes, a mesma lista. É isso que sustenta os valores desta secção, e ambas ficam registadas.",
     fonte: "ct",
     verificadoEm: EM_PROFISSOES,
   },

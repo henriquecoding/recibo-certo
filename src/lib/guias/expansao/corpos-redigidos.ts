@@ -327,18 +327,38 @@ export const CORPOS_REDIGIDOS: ReadonlySet<string> = new Set([
   "amortizacoes-equipamento",
 
   // ── Trabalho por conta de outrem ────────────────────────────────────
-  //    Só UM guia desta secção, e a razão está registada em
-  //    `correcoes.ts`: os outros dez assentam no Código do Trabalho, cujo
-  //    texto CONSOLIDADO não é legível neste ambiente — o Diário da
-  //    República serve um shell vazio, e o PDF de 2009 é anterior a todas
-  //    as alterações, incluindo a Lei n.º 13/2023. Publicar durações de
-  //    período experimental ou de contrato a termo a partir dele seria
-  //    exatamente o erro que este projeto proíbe.
+  //    Esta secção esteve bloqueada por não haver texto CONSOLIDADO do
+  //    Código do Trabalho legível: o Diário da República serve as suas
+  //    páginas de legislação consolidada como aplicação de página única
+  //    (2,3 KB de shell vazio), e o PDF de 2009 é anterior a todas as
+  //    alterações. Desbloqueou com a base de dados jurídica da PGD
+  //    Lisboa, que o serve inteiro com o histórico artigo a artigo — e a
+  //    currência foi confirmada CONTRA a DGERT: ambas terminam na Lei n.º
+  //    32/2025, de 27 de março. Duas fontes, a mesma lista de 24
+  //    diplomas.
   //
-  //    Este cabe porque é FISCAL, não laboral: vive no art. 2.º, n.º 3,
-  //    als. b), c) e d) do CIRS, que está no Portal das Finanças e foi
-  //    lido. E trouxe uma correção ao motor — o limite dos vales de
-  //    refeição não é um segundo valor, é o do numerário majorado em 70%,
-  //    e passa a ser derivado.
+  //    Este é o fiscal da secção — vive no art. 2.º, n.º 3, als. b), c) e
+  //    d) do CIRS. Trouxe uma correção ao motor: o limite dos vales de
+  //    refeição não é um segundo valor, é o do numerário majorado em 70%.
   "ajudas-de-custo-km",
+  //    O art. 208.º-A está REVOGADO: o banco de horas individual deixou
+  //    de existir, e continua a ser descrito como vigente em quase toda a
+  //    informação em circulação. É o facto mais valioso da secção.
+  "banco-de-horas",
+  "periodo-experimental",
+  "contrato-a-termo",
+  "formacao-40-horas",
+  "teletrabalho",
+  "trabalhador-estudante",
+  "assedio-trabalho",
+  //    Os tetos do art. 366.º são múltiplos da retribuição mínima mensal
+  //    garantida — 20 × e 240 × — e por isso derivam do salário mínimo em
+  //    vez de serem mantidos em euros.
+  "despedimento",
+  //    Dois guias que descrevem o mecanismo e retêm os números: as taxas
+  //    e percentagens dos fundos de compensação vivem na Lei n.º 70/2013,
+  //    e as prestações por acidente na Lei n.º 98/2009 — nenhuma das duas
+  //    foi legível em fonte oficial consolidada nesta revisão.
+  "fct-fgct",
+  "acidente-de-trabalho",
 ]);

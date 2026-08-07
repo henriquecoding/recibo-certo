@@ -99,6 +99,16 @@ import CorpoObrigacoesSocietarias from "./obrigacoes-societarias";
 import CorpoViaturaEmpresa from "./viatura-empresa";
 import CorpoAmortizacoesEquipamento from "./amortizacoes-equipamento";
 import CorpoAjudasDeCustoKm from "./ajudas-de-custo-km";
+import CorpoContratoATermo from "./contrato-a-termo";
+import CorpoPeriodoExperimental from "./periodo-experimental";
+import CorpoTeletrabalho from "./teletrabalho";
+import CorpoFormacao40Horas from "./formacao-40-horas";
+import CorpoBancoDeHoras from "./banco-de-horas";
+import CorpoTrabalhadorEstudante from "./trabalhador-estudante";
+import CorpoDespedimento from "./despedimento";
+import CorpoAssedioTrabalho from "./assedio-trabalho";
+import CorpoFctFgct from "./fct-fgct";
+import CorpoAcidenteDeTrabalho from "./acidente-de-trabalho";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  CORPOS REDIGIDOS DOS GUIAS DA EXPANSÃO
@@ -213,4 +223,14 @@ export const CORPOS: Record<string, ComponentType> = {
   "viatura-empresa": CorpoViaturaEmpresa,
   "amortizacoes-equipamento": CorpoAmortizacoesEquipamento,
   "ajudas-de-custo-km": CorpoAjudasDeCustoKm,
+  "contrato-a-termo": CorpoContratoATermo,
+  "periodo-experimental": CorpoPeriodoExperimental,
+  "teletrabalho": CorpoTeletrabalho,
+  "formacao-40-horas": CorpoFormacao40Horas,
+  "banco-de-horas": CorpoBancoDeHoras,
+  "trabalhador-estudante": CorpoTrabalhadorEstudante,
+  "despedimento": CorpoDespedimento,
+  "assedio-trabalho": CorpoAssedioTrabalho,
+  "fct-fgct": CorpoFctFgct,
+  "acidente-de-trabalho": CorpoAcidenteDeTrabalho,
 };

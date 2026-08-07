@@ -19,6 +19,25 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.26.0",
+    data: "2026-08-07",
+    titulo: "Trabalho por conta de outrem — e o banco de horas individual, que já não existe",
+    itens: [
+      "A última secção fica fechada: dez guias novos sobre período experimental, contrato a termo, teletrabalho, formação contínua, banco de horas, trabalhador-estudante, assédio, despedimento, fundos de compensação e acidentes de trabalho.",
+      "O banco de horas INDIVIDUAL foi revogado — o artigo que o previa já não existe na ordem jurídica. Continua a ser descrito como vigente em quase toda a informação em circulação, e continua a haver acordos individuais a ser propostos com base nele. Não há regime que os suporte.",
+      "Trabalho anterior reduz ou elimina o período experimental — e ninguém te vai lembrar disso. Vale com o mesmo empregador (contrato a termo, trabalho temporário, prestação de serviços ou estágio para a mesma atividade) e, para quem procura primeiro emprego ou está em desemprego de longa duração, também com empregador diferente.",
+      "Depois de 60 dias de experiência, o empregador já não pode denunciar de um dia para o outro: deve sete dias de aviso prévio, e 30 dias passados os 120. Falhar o aviso não anula a denúncia — obriga a pagar a retribuição correspondente.",
+      "As 40 horas anuais de formação que não sejam dadas transformam-se em crédito de horas TEU, com retribuição e a contar como tempo de serviço. E, cessando o contrato, o que não foi dado paga-se. É dinheiro que quase nunca aparece nas contas finais sem ser pedido.",
+      "Mas o crédito caduca três anos depois de se constituir. Acumular sem usar acaba por perder.",
+      "Em teletrabalho, a lei nomeia as despesas que o empregador tem de compensar integralmente: energia, rede e manutenção — não só o computador. E o pagamento é devido imediatamente após a despesa, não no fim do ano.",
+      "É vedado ao empregador capturar imagem, som, escrita ou histórico de quem trabalha à distância. É contraordenação muito grave. E a visita ao domicílio exige aviso prévio de 24 horas e concordância do trabalhador.",
+      "Receber a compensação por despedimento sem reservas presume que aceitaste o despedimento. Para o contestar, é preciso devolver a totalidade em simultâneo. É a decisão irreversível desta matéria, e toma-se sem se perceber que se está a tomá-la.",
+      "Os dois tetos da compensação são múltiplos do salário mínimo — 20 vezes para a retribuição a considerar, 240 vezes para o montante global — e por isso sobem sozinhos todos os anos. Tabelas copiadas de artigos antigos estão sempre erradas por defeito.",
+      "Na proteção de quem denuncia assédio, a lei cobre o denunciante E as testemunhas por ele indicadas, até decisão final transitada em julgado. Nomeá-las na própria denúncia é o que as protege.",
+      "Continuam sem números publicados, com o motivo escrito na página: as prestações por acidente de trabalho, as taxas dos fundos de compensação, os quantitativos de dispensa do trabalhador-estudante e o limite fiscal da compensação de teletrabalho — todos vivem em diplomas que não foi possível ler em versão consolidada.",
+    ],
+  },
+  {
     version: "2.25.0",
     data: "2026-08-07",
     titulo: "Ajudas de custo e subsídio de refeição — e o limite dos vales, que afinal é derivado",

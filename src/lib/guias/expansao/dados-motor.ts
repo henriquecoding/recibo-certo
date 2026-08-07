@@ -23,6 +23,18 @@
 
 import type { TAViaturasTaxas } from "@/lib/fiscal-data";
 import {
+  ASSEDIO_TRABALHO,
+  BANCO_DE_HORAS,
+  COMPENSACAO_DESPEDIMENTO,
+  COMPENSACAO_TETO_GLOBAL,
+  COMPENSACAO_TETO_RETRIBUICAO,
+  CONTRATO_A_TERMO,
+  DENUNCIA_EXPERIMENTAL,
+  FORMACAO_CONTINUA,
+  PERIODO_EXPERIMENTAL,
+  TELETRABALHO,
+  TRABALHADOR_ESTUDANTE,
+  HORARIO_SEMANAL_COMPLETO,
   ABONO_PARA_FALHAS,
   AJUDAS_CUSTO_PRESSUPOSTOS,
   SUBSIDIO_REFEICAO,
@@ -1012,6 +1024,94 @@ export const DADOS_MOTOR: Record<string, DadoDoMotor[]> = {
     d("AJUDAS_CUSTO_PRESSUPOSTOS", "A condição que não é um valor", AJUDAS_CUSTO_PRESSUPOSTOS.value, "ficar abaixo do limite não chega · art. 2.º, n.º 3, al. d) CIRS"),
     d("ABONO_PARA_FALHAS", "Abono para falhas", pctExato(ABONO_PARA_FALHAS.value), "só é rendimento na parte que exceda esta fração da remuneração mensal fixa · art. 2.º, n.º 3, al. c) CIRS"),
     d("TA_AJUDAS_CUSTO", "Tributação autónoma na empresa", pctExato(TA_AJUDAS_CUSTO.value), "sobre ajudas de custo e quilómetros não faturados a clientes nem tributados em IRS no beneficiário · art. 88.º, n.º 9 CIRC"),
+  ],
+
+  "periodo-experimental": [
+    d("PERIODO_EXPERIMENTAL", "Generalidade dos trabalhadores", `${PERIODO_EXPERIMENTAL.geral.value} dias`, "contrato por tempo indeterminado · art. 112.º, n.º 1, al. a) CT"),
+    d("PERIODO_EXPERIMENTAL", "Cargos qualificados, de confiança e primeiro emprego", `${PERIODO_EXPERIMENTAL.qualificados.value} dias`, "art. 112.º, n.º 1, al. b) CT"),
+    d("PERIODO_EXPERIMENTAL", "Cargo de direção ou quadro superior", `${PERIODO_EXPERIMENTAL.direcao.value} dias`, "art. 112.º, n.º 1, al. c) CT"),
+    d("PERIODO_EXPERIMENTAL", "Contrato a termo de seis meses ou mais", `${PERIODO_EXPERIMENTAL.termoSeisMesesOuMais.value} dias`, "art. 112.º, n.º 2, al. a) CT"),
+    d("PERIODO_EXPERIMENTAL", "Contrato a termo de menos de seis meses", `${PERIODO_EXPERIMENTAL.termoMenosDeSeisMeses.value} dias`, "art. 112.º, n.º 2, al. b) CT"),
+    d("PERIODO_EXPERIMENTAL", "Comissão de serviço", `até ${PERIODO_EXPERIMENTAL.comissaoDeServico.value} dias`, "e só havendo estipulação expressa no acordo · art. 112.º, n.º 3 CT"),
+    d("DENUNCIA_EXPERIMENTAL", "Aviso prévio do empregador — a partir de 60 dias", `${DENUNCIA_EXPERIMENTAL.aviso7Dias.value} dias`, "tendo o período experimental durado mais de 60 dias · art. 114.º, n.º 2 CT"),
+    d("DENUNCIA_EXPERIMENTAL", "Aviso prévio do empregador — a partir de 120 dias", `${DENUNCIA_EXPERIMENTAL.aviso30Dias.value} dias`, "art. 114.º, n.º 3 CT"),
+    d("PERIODO_EXPERIMENTAL", "Antiguidade", PERIODO_EXPERIMENTAL.antiguidadeContaDesdeOInicio.value, "art. 112.º, n.º 8 CT"),
+  ],
+
+  "contrato-a-termo": [
+    d("CONTRATO_A_TERMO", "Duração máxima — termo certo", `${CONTRATO_A_TERMO.duracaoMaximaTermoCerto.value} anos`, "art. 148.º, n.º 1 CT"),
+    d("CONTRATO_A_TERMO", "Duração máxima — termo incerto", `${CONTRATO_A_TERMO.duracaoMaximaTermoIncerto.value} anos`, "art. 148.º, n.º 5 CT"),
+    d("CONTRATO_A_TERMO", "Duração mínima", `${CONTRATO_A_TERMO.duracaoMinimaMeses.value} meses`, "só pode ser inferior nas situações das als. a) a g) do n.º 2 do art. 140.º; violando-o, considera-se celebrado por seis meses · art. 148.º, n.os 2 e 3 CT"),
+    d("CONTRATO_A_TERMO", "Condição de admissibilidade", CONTRATO_A_TERMO.soNecessidadesTemporarias.value, "art. 140.º, n.º 1 CT"),
+    d("CONTRATO_A_TERMO", "Ónus da prova", CONTRATO_A_TERMO.onusDaProva.value, "art. 140.º, n.º 5 CT"),
+    d("CONTRATO_A_TERMO", "Nova empresa ou estabelecimento", `menos de ${CONTRATO_A_TERMO.novaEmpresaTrabalhadores.value} trabalhadores`, "nos dois anos posteriores ao início · art. 140.º, n.º 4, al. a) CT"),
+  ],
+
+  "formacao-40-horas": [
+    d("FORMACAO_CONTINUA", "Direito individual anual", `${FORMACAO_CONTINUA.horasAnuais.value} horas`, "proporcional em contrato a termo de três meses ou mais · art. 131.º, n.º 2 CT"),
+    d("FORMACAO_CONTINUA", "Cobertura mínima da empresa", pctExato(FORMACAO_CONTINUA.fracaoMinimaDeTrabalhadores.value), "dos trabalhadores, em cada ano · art. 131.º, n.º 5 CT"),
+    d("FORMACAO_CONTINUA", "Antecipação ou diferimento", `${FORMACAO_CONTINUA.antecipacaoOuDiferimentoAnos.value} anos`, `e ${FORMACAO_CONTINUA.antecipacaoDuplaCertificacaoAnos.value} anos em RVCC ou dupla certificação · art. 131.º, n.os 6 e 7 CT`),
+    d("FORMACAO_CONTINUA", "Vira crédito de horas ao fim de", `${FORMACAO_CONTINUA.prazoAteViragemEmCredito.value} anos`, "as horas não asseguradas transformam-se em crédito, em igual número · art. 132.º, n.º 1 CT"),
+    d("FORMACAO_CONTINUA", "Aviso para usar o crédito", `${FORMACAO_CONTINUA.antecedenciaComunicacaoDias.value} dias`, "art. 132.º, n.º 3 CT"),
+    d("FORMACAO_CONTINUA", "O crédito caduca ao fim de", `${FORMACAO_CONTINUA.caducidadeDoCreditoAnos.value} anos`, "art. 132.º, n.º 6 CT"),
+    d("FORMACAO_CONTINUA", "Na cessação do contrato", FORMACAO_CONTINUA.pagamentoNaCessacao.value, "art. 134.º CT"),
+  ],
+
+  "banco-de-horas": [
+    d("BANCO_DE_HORAS", "Banco de horas individual", BANCO_DE_HORAS.individualRevogado.value, "art. 208.º-A CT"),
+    d("BANCO_DE_HORAS", "Acréscimo diário — banco grupal", `até ${BANCO_DE_HORAS.grupalAcrescimoDiario.value} horas`, "art. 208.º-B, n.º 3 CT"),
+    d("BANCO_DE_HORAS", "Máximo semanal", `${BANCO_DE_HORAS.grupalMaximoSemanal.value} horas`, `contra as ${HORARIO_SEMANAL_COMPLETO.value} do horário completo · art. 208.º-B, n.º 3 CT`),
+    d("BANCO_DE_HORAS", "Máximo anual do acréscimo", `${BANCO_DE_HORAS.grupalMaximoAnual.value} horas`, "art. 208.º-B, n.º 3 CT"),
+    d("BANCO_DE_HORAS", "Maioria exigida no referendo", pctExato(BANCO_DE_HORAS.grupalMaioriaReferendo.value), "dos trabalhadores abrangidos · art. 208.º-B, n.º 6 CT"),
+    d("BANCO_DE_HORAS", "Duração máxima do regime", `${BANCO_DE_HORAS.grupalDuracaoMaximaAnos.value} anos`, "art. 208.º-B, n.º 4, al. b) CT"),
+    d("BANCO_DE_HORAS", "Antecedência do referendo", `${BANCO_DE_HORAS.grupalAntecedenciaReferendoDias.value} dias`, "de publicitação e comunicação · art. 208.º-B, n.º 5 CT"),
+  ],
+
+  "teletrabalho": [
+    d("TELETRABALHO", "Forma", TELETRABALHO.exigeAcordoEscrito.value, "art. 166.º, n.º 2 CT"),
+    d("TELETRABALHO", "Local de trabalho", TELETRABALHO.localDeTrabalho.value, "art. 166.º, n.º 4, al. b) CT"),
+    d("TELETRABALHO", "Despesas adicionais", TELETRABALHO.despesasIntegralmenteCompensadas.value, "art. 168.º, n.º 2 CT"),
+    d("TELETRABALHO", "Como se apuram, sem valor fixo", TELETRABALHO.criterioDasDespesas.value, "art. 168.º, n.º 4 CT"),
+    d("TELETRABALHO", "Quando se paga", TELETRABALHO.pagamentoImediato.value, "art. 168.º, n.º 5 CT"),
+    d("TELETRABALHO", "Tratamento fiscal", TELETRABALHO.tratamentoFiscal.value, "o limite consta de portaria, e não do Código · art. 168.º, n.º 6 CT"),
+    d("TELETRABALHO", "Visita ao domicílio", `aviso prévio de ${TELETRABALHO.avisoVisitaHoras.value} horas`, "e concordância do trabalhador · art. 170.º, n.º 2 CT"),
+    d("TELETRABALHO", "Controlo proibido", TELETRABALHO.controloProibido.value, "art. 170.º, n.os 5 e 7 CT"),
+  ],
+
+  "trabalhador-estudante": [
+    d("TRABALHADOR_ESTUDANTE", "Prova perante o empregador", TRABALHADOR_ESTUDANTE.provaDaCondicao.value, "art. 94.º, n.º 1 CT"),
+    d("TRABALHADOR_ESTUDANTE", "Aproveitamento escolar", TRABALHADOR_ESTUDANTE.aproveitamentoEscolar.value, "art. 94.º, n.º 4 CT"),
+    d("TRABALHADOR_ESTUDANTE", "Escolha do horário", TRABALHADOR_ESTUDANTE.horarioCompativel.value, "art. 94.º, n.º 3 CT"),
+    d("TRABALHADOR_ESTUDANTE", "Não cumulação", TRABALHADOR_ESTUDANTE.naoCumulavel.value, "art. 94.º, n.º 6 CT"),
+    d("FORMACAO_CONTINUA", "Conta para a formação contínua", `${FORMACAO_CONTINUA.horasAnuais.value} horas anuais`, "as horas de dispensa para aulas e as faltas para provas contam para o direito individual à formação · art. 131.º, n.º 4 CT"),
+  ],
+
+  "assedio-trabalho": [
+    d("ASSEDIO_TRABALHO", "Definição legal", ASSEDIO_TRABALHO.definicao.value, "art. 29.º, n.º 2 CT"),
+    d("ASSEDIO_TRABALHO", "Assédio sexual", ASSEDIO_TRABALHO.assedioSexual.value, "art. 29.º, n.º 3 CT"),
+    d("ASSEDIO_TRABALHO", "Direito da vítima", ASSEDIO_TRABALHO.direitoAIndemnizacao.value, "art. 29.º, n.º 4 CT"),
+    d("ASSEDIO_TRABALHO", "Gravidade contraordenacional", ASSEDIO_TRABALHO.contraordenacao.value, "art. 29.º, n.º 5 CT"),
+    d("ASSEDIO_TRABALHO", "Proteção do denunciante", ASSEDIO_TRABALHO.protecaoDoDenunciante.value, "e das testemunhas por si indicadas · art. 29.º, n.º 6 CT"),
+  ],
+
+  "despedimento": [
+    d("COMPENSACAO_DESPEDIMENTO", "Compensação por ano de antiguidade", `${COMPENSACAO_DESPEDIMENTO.diasPorAno.value} dias`, "de retribuição base e diuturnidades, por cada ano completo · art. 366.º, n.º 1 CT"),
+    d("COMPENSACAO_TETO_RETRIBUICAO", "Teto da retribuição a considerar", fmt(COMPENSACAO_TETO_RETRIBUICAO), `${COMPENSACAO_DESPEDIMENTO.tetoRetribuicaoEmSmn.value} × a retribuição mínima mensal garantida · art. 366.º, n.º 2, al. a) CT`),
+    d("COMPENSACAO_TETO_GLOBAL", "Teto global da compensação", fmt(COMPENSACAO_TETO_GLOBAL), `${COMPENSACAO_DESPEDIMENTO.tetoGlobalEmSmn.value} × o salário mínimo, ou ${COMPENSACAO_DESPEDIMENTO.tetoGlobalEmMeses.value} × a retribuição · art. 366.º, n.º 2, al. b) CT`),
+    d("COMPENSACAO_DESPEDIMENTO", "Valor diário", `retribuição mensal ÷ ${COMPENSACAO_DESPEDIMENTO.divisorDiario.value}`, "art. 366.º, n.º 2, al. c) CT"),
+    d("COMPENSACAO_DESPEDIMENTO", "Fração de ano", COMPENSACAO_DESPEDIMENTO.fracaoProporcional.value, "art. 366.º, n.º 2, al. d) CT"),
+    d("COMPENSACAO_DESPEDIMENTO", "Receber a compensação", COMPENSACAO_DESPEDIMENTO.presuncaoDeAceitacao.value, "art. 366.º, n.os 4 e 5 CT"),
+  ],
+
+  "fct-fgct": [
+    d("COMPENSACAO_DESPEDIMENTO", "Compensação de referência", `${COMPENSACAO_DESPEDIMENTO.diasPorAno.value} dias por ano`, "de retribuição base e diuturnidades · art. 366.º, n.º 1 CT"),
+    d("COMPENSACAO_TETO_GLOBAL", "Teto global", fmt(COMPENSACAO_TETO_GLOBAL), `${COMPENSACAO_DESPEDIMENTO.tetoGlobalEmSmn.value} × o salário mínimo · art. 366.º, n.º 2, al. b) CT`),
+    d("COMPENSACAO_DESPEDIMENTO", "Quem responde pela compensação", "o empregador, pela totalidade — sem prejuízo do direito do trabalhador a acionar o FGCT", "art. 366.º, n.º 3 CT"),
+  ],
+
+  "acidente-de-trabalho": [
+    d("TELETRABALHO", "Local de trabalho em teletrabalho", TELETRABALHO.localDeTrabalho.value, "é o que determina a cobertura do acidente ocorrido em casa · art. 166.º, n.º 4, al. b) CT"),
+    d("TELETRABALHO", "Horário acordado", TELETRABALHO.exigeAcordoEscrito.value, "sem acordo escrito não há horário fixado — e é o horário que delimita o tempo de trabalho"),
   ],
 
   "viatura-empresa": [

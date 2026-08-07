@@ -208,6 +208,46 @@ export const SOURCES = {
     label: "Art. 12.º-B CIRS — IRS Jovem · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs12b.aspx",
   },
+  ctPeriodoExperimental: {
+    label: "Art. 112.º Código do Trabalho — Duração do período experimental · Base de Dados Jurídica da PGD Lisboa (versão consolidada)",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0112&nid=1047&tabela=leis&nversao=",
+  },
+  ctDenunciaExperimental: {
+    label: "Art. 114.º Código do Trabalho — Denúncia do contrato durante o período experimental · PGD Lisboa",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0114&nid=1047&tabela=leis&nversao=",
+  },
+  ctTermo: {
+    label: "Arts. 140.º e 148.º Código do Trabalho — Admissibilidade e duração do contrato a termo resolutivo · PGD Lisboa",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0140&nid=1047&tabela=leis&nversao=",
+  },
+  ctFormacao: {
+    label: "Arts. 131.º, 132.º e 134.º Código do Trabalho — Formação contínua, crédito de horas e efeito da cessação · PGD Lisboa",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0131&nid=1047&tabela=leis&nversao=",
+  },
+  ctBancoHoras: {
+    label: "Arts. 208.º-A e 208.º-B Código do Trabalho — Banco de horas individual (revogado) e grupal · PGD Lisboa",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0208B&nid=1047&tabela=leis&nversao=",
+  },
+  ctTeletrabalho: {
+    label: "Arts. 166.º, 168.º e 170.º Código do Trabalho — Acordo, equipamentos e despesas, e privacidade em teletrabalho · PGD Lisboa",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0168&nid=1047&tabela=leis&nversao=",
+  },
+  ctAssedio: {
+    label: "Art. 29.º Código do Trabalho — Assédio · PGD Lisboa",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0029&nid=1047&tabela=leis&nversao=",
+  },
+  ctTrabalhadorEstudante: {
+    label: "Art. 94.º Código do Trabalho — Concessão do estatuto de trabalhador-estudante · PGD Lisboa",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0094&nid=1047&tabela=leis&nversao=",
+  },
+  ctCompensacao: {
+    label: "Art. 366.º Código do Trabalho — Compensação por despedimento coletivo · PGD Lisboa",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0366&nid=1047&tabela=leis&nversao=",
+  },
+  dgertCodigoTrabalho: {
+    label: "Código do Trabalho e regulamentação — lista oficial de alterações · DGERT (Direção-Geral do Emprego e das Relações de Trabalho)",
+    url: "https://www.dgert.gov.pt/codigo-do-trabalho-e-regulamentacao",
+  },
   art2cirs: {
     label: "Art. 2.º CIRS — Rendimentos da categoria A: subsídio de refeição, abono para falhas e ajudas de custo · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs2.aspx",
@@ -708,6 +748,10 @@ const REV_FAMILIA = "2026-08-07";
 // 34.º do CIRC, arts. 43.º-C e 43.º-D do EBF e art. 72.º, n.º 1, al. f)
 // do CIRS, lidos no articulado do Portal das Finanças.
 const REV_EMPRESA = "2026-08-07";
+// Data de verificação do Código do Trabalho: articulado consolidado lido na
+// base da PGD Lisboa, com a lista de alterações confirmada contra a DGERT —
+// ambas terminam na Lei n.º 32/2025, de 27 de março.
+const REV_TRABALHO = "2026-08-07";
 // Data de verificação dos coeficientes de desvalorização da moeda (Portaria 382/2025).
 const REV_COEF_MOEDA = "2026-06-23";
 // Data de verificação do Salário Mínimo Nacional 2026 (RMMG 920 €, DL 139/2025).
@@ -4738,6 +4782,446 @@ export const AJUDAS_CUSTO_PRESSUPOSTOS = sv(
   "A mesma alínea tributa as verbas para despesas de deslocação, viagens ou representação de que não tenham sido prestadas contas até ao termo do exercício."
 );
 
+
+// ═══════════════════════════════════════════════════════════════════════
+//  CÓDIGO DO TRABALHO — o que a secção «Trabalho por conta de outrem»
+//  precisa, lido no articulado consolidado a 07/08/2026.
+//
+//  Sobre a fonte, porque a decisão importa: o texto CONSOLIDADO do Código
+//  do Trabalho não está no Portal das Finanças (não é um código fiscal) e
+//  o Diário da República serve as suas páginas de legislação consolidada
+//  como aplicação de página única — o pedido devolve 2,3 KB de shell
+//  vazio. A base de dados jurídica da Procuradoria-Geral Distrital de
+//  Lisboa serve-o inteiro, com o histórico de alterações artigo a artigo.
+//
+//  A currência foi confirmada CONTRA fonte governamental independente: a
+//  lista de alterações que a PGD Lisboa apresenta termina na Lei n.º
+//  32/2025, de 27 de março, exatamente a mesma que a DGERT — a direção-
+//  geral responsável pela matéria — dá como última alteração ao Código.
+//  Duas fontes, a mesma lista de 24 diplomas. É isso que sustenta estes
+//  valores, e é por isso que ambas ficam registadas em `SOURCES`.
+// ═══════════════════════════════════════════════════════════════════════
+
+/** Art. 112.º — durações do período experimental, em dias. */
+export const PERIODO_EXPERIMENTAL = {
+  geral: sv(
+    90,
+    "Art. 112.º, n.º 1, al. a) CT — 90 dias para a generalidade dos trabalhadores, em contrato por tempo indeterminado",
+    "ctPeriodoExperimental",
+    REV_TRABALHO
+  ),
+  qualificados: sv(
+    180,
+    "Art. 112.º, n.º 1, al. b) CT — 180 dias para cargos de complexidade técnica, elevado grau de responsabilidade ou especial qualificação, funções de confiança, e quem esteja à procura de primeiro emprego ou em desemprego de longa duração",
+    "ctPeriodoExperimental",
+    REV_TRABALHO
+  ),
+  direcao: sv(
+    240,
+    "Art. 112.º, n.º 1, al. c) CT — 240 dias para trabalhador que exerça cargo de direção ou quadro superior",
+    "ctPeriodoExperimental",
+    REV_TRABALHO
+  ),
+  termoSeisMesesOuMais: sv(
+    30,
+    "Art. 112.º, n.º 2, al. a) CT — 30 dias em contrato a termo de duração igual ou superior a seis meses",
+    "ctPeriodoExperimental",
+    REV_TRABALHO
+  ),
+  termoMenosDeSeisMeses: sv(
+    15,
+    "Art. 112.º, n.º 2, al. b) CT — 15 dias em contrato a termo certo de duração inferior a seis meses, ou a termo incerto cuja duração previsível não ultrapasse esse limite",
+    "ctPeriodoExperimental",
+    REV_TRABALHO
+  ),
+  comissaoDeServico: sv(
+    180,
+    "Art. 112.º, n.º 3 CT — em comissão de serviço depende de estipulação expressa e não pode exceder 180 dias",
+    "ctPeriodoExperimental",
+    REV_TRABALHO
+  ),
+  reducaoPorContratoAnterior: sv(
+    90,
+    "Art. 112.º, n.os 5 e 6 CT — o período do primeiro emprego/desemprego de longa duração é reduzido ou excluído consoante contrato a termo anterior com OUTRO empregador, ou estágio profissional com avaliação positiva nos últimos 12 meses, tenha durado 90 dias ou mais",
+    "ctPeriodoExperimental",
+    REV_TRABALHO
+  ),
+  antiguidadeContaDesdeOInicio: sv(
+    "a antiguidade do trabalhador conta-se desde o início do período experimental",
+    "Art. 112.º, n.º 8 CT",
+    "ctPeriodoExperimental",
+    REV_TRABALHO
+  ),
+};
+
+/** Art. 114.º — denúncia durante o período experimental. */
+export const DENUNCIA_EXPERIMENTAL = {
+  semAvisoPrevio: sv(
+    "qualquer das partes pode denunciar o contrato sem aviso prévio e sem invocação de justa causa, nem direito a indemnização",
+    "Art. 114.º, n.º 1 CT",
+    "ctDenunciaExperimental",
+    REV_TRABALHO,
+    "Salvo acordo escrito em contrário — e é a única porta que o contrato individual tem aqui."
+  ),
+  limiarAviso7Dias: sv(
+    60,
+    "Art. 114.º, n.º 2 CT — tendo o período experimental durado mais de 60 dias, a denúncia pelo empregador depende de aviso prévio de sete dias",
+    "ctDenunciaExperimental",
+    REV_TRABALHO
+  ),
+  aviso7Dias: sv(7, "Art. 114.º, n.º 2 CT — aviso prévio de sete dias", "ctDenunciaExperimental", REV_TRABALHO),
+  limiarAviso30Dias: sv(
+    120,
+    "Art. 114.º, n.º 3 CT — tendo durado mais de 120 dias, a denúncia pelo empregador depende de aviso prévio de 30 dias",
+    "ctDenunciaExperimental",
+    REV_TRABALHO
+  ),
+  aviso30Dias: sv(30, "Art. 114.º, n.º 3 CT — aviso prévio de 30 dias", "ctDenunciaExperimental", REV_TRABALHO),
+  faltaDeAviso: sv(
+    "o não cumprimento, total ou parcial, do aviso prévio determina o pagamento da retribuição correspondente ao período em falta",
+    "Art. 114.º, n.º 4 CT",
+    "ctDenunciaExperimental",
+    REV_TRABALHO
+  ),
+  comunicacaoIgualdadeDiasUteis: sv(
+    5,
+    "Art. 114.º, n.º 5 CT — a denúncia de trabalhadora grávida, puérpera ou lactante, de trabalhador em licença parental ou de trabalhador cuidador é comunicada à entidade competente na área da igualdade no prazo de cinco dias úteis",
+    "ctDenunciaExperimental",
+    REV_TRABALHO
+  ),
+  denunciaAbusiva: sv(
+    "é ilícita a denúncia que constitua abuso do direito, e o caráter abusivo só pode ser declarado pelos tribunais judiciais",
+    "Art. 114.º, n.os 7 e 8 CT",
+    "ctDenunciaExperimental",
+    REV_TRABALHO
+  ),
+};
+
+/** Arts. 140.º e 148.º — contrato a termo. */
+export const CONTRATO_A_TERMO = {
+  soNecessidadesTemporarias: sv(
+    "só pode ser celebrado para a satisfação de necessidades temporárias, objetivamente definidas pela entidade empregadora, e apenas pelo período estritamente necessário à satisfação dessas necessidades",
+    "Art. 140.º, n.º 1 CT",
+    "ctTermo",
+    REV_TRABALHO
+  ),
+  onusDaProva: sv(
+    "cabe ao empregador a prova dos factos que justificam a celebração de contrato de trabalho a termo",
+    "Art. 140.º, n.º 5 CT",
+    "ctTermo",
+    REV_TRABALHO
+  ),
+  duracaoMaximaTermoCerto: sv(
+    2,
+    "Art. 148.º, n.º 1 CT — a duração do contrato a termo certo não pode ser superior a dois anos",
+    "ctTermo",
+    REV_TRABALHO
+  ),
+  duracaoMaximaTermoIncerto: sv(
+    4,
+    "Art. 148.º, n.º 5 CT — a duração do contrato a termo incerto não pode ser superior a quatro anos",
+    "ctTermo",
+    REV_TRABALHO
+  ),
+  duracaoMinimaMeses: sv(
+    6,
+    "Art. 148.º, n.º 2 CT — só pode ser celebrado por prazo inferior a seis meses nas situações das als. a) a g) do n.º 2 do art. 140.º; violando-o, considera-se celebrado por seis meses",
+    "ctTermo",
+    REV_TRABALHO
+  ),
+  novaEmpresaTrabalhadores: sv(
+    250,
+    "Art. 140.º, n.º 4, al. a) CT — lançamento de nova atividade de duração incerta ou início de funcionamento de empresa ou estabelecimento de empresa com menos de 250 trabalhadores, nos dois anos posteriores",
+    "ctTermo",
+    REV_TRABALHO
+  ),
+  contraordenacao: sv(
+    "constitui contraordenação muito grave a violação do disposto em qualquer dos n.os 1 a 4 do art. 140.º",
+    "Art. 140.º, n.º 6 CT",
+    "ctTermo",
+    REV_TRABALHO
+  ),
+};
+
+/** Arts. 131.º, 132.º e 134.º — formação contínua. */
+export const FORMACAO_CONTINUA = {
+  horasAnuais: sv(
+    40,
+    "Art. 131.º, n.º 2 CT — o trabalhador tem direito, em cada ano, a um número mínimo de quarenta horas de formação contínua",
+    "ctFormacao",
+    REV_TRABALHO,
+    "Sendo contratado a termo por período igual ou superior a três meses, a um número proporcional à duração do contrato nesse ano."
+  ),
+  fracaoMinimaDeTrabalhadores: sv(
+    0.10,
+    "Art. 131.º, n.º 5 CT — o empregador deve assegurar, em cada ano, formação contínua a pelo menos 10% dos trabalhadores da empresa",
+    "ctFormacao",
+    REV_TRABALHO
+  ),
+  antecipacaoOuDiferimentoAnos: sv(
+    2,
+    "Art. 131.º, n.º 6 CT — o empregador pode antecipar até dois anos ou, prevendo-o o plano de formação, diferir por igual período",
+    "ctFormacao",
+    REV_TRABALHO
+  ),
+  antecipacaoDuplaCertificacaoAnos: sv(
+    5,
+    "Art. 131.º, n.º 7 CT — o período de antecipação é de cinco anos em processo de reconhecimento, validação e certificação de competências, ou em formação de dupla certificação",
+    "ctFormacao",
+    REV_TRABALHO
+  ),
+  prazoAteViragemEmCredito: sv(
+    2,
+    "Art. 132.º, n.º 1 CT — as horas não asseguradas pelo empregador até ao termo dos dois anos posteriores ao seu vencimento transformam-se em crédito de horas, em igual número, para formação por iniciativa do trabalhador",
+    "ctFormacao",
+    REV_TRABALHO
+  ),
+  creditoContaComoTrabalho: sv(
+    "o crédito de horas é referido ao período normal de trabalho, confere direito a retribuição e conta como tempo de serviço efetivo",
+    "Art. 132.º, n.º 2 CT",
+    "ctFormacao",
+    REV_TRABALHO
+  ),
+  antecedenciaComunicacaoDias: sv(
+    10,
+    "Art. 132.º, n.º 3 CT — o trabalhador pode utilizar o crédito mediante comunicação ao empregador com a antecedência mínima de 10 dias",
+    "ctFormacao",
+    REV_TRABALHO
+  ),
+  caducidadeDoCreditoAnos: sv(
+    3,
+    "Art. 132.º, n.º 6 CT — o crédito de horas para formação que não seja utilizado cessa passados três anos sobre a sua constituição",
+    "ctFormacao",
+    REV_TRABALHO
+  ),
+  pagamentoNaCessacao: sv(
+    "cessando o contrato, o trabalhador tem direito a receber a retribuição correspondente ao número mínimo anual de horas de formação que não lhe tenha sido proporcionado, ou ao crédito de horas de que seja titular à data da cessação",
+    "Art. 134.º CT",
+    "ctFormacao",
+    REV_TRABALHO
+  ),
+};
+
+/** Arts. 208.º-A e 208.º-B — banco de horas. */
+export const BANCO_DE_HORAS = {
+  individualRevogado: sv(
+    "o banco de horas individual foi REVOGADO — o art. 208.º-A já não existe na ordem jurídica",
+    "Art. 208.º-A CT (revogado)",
+    "ctBancoHoras",
+    REV_TRABALHO,
+    "Continua a ser descrito como vigente em muita informação em circulação. Não é."
+  ),
+  grupalAcrescimoDiario: sv(
+    2,
+    "Art. 208.º-B, n.º 3 CT — no banco de horas grupal o período normal de trabalho pode ser aumentado até duas horas diárias",
+    "ctBancoHoras",
+    REV_TRABALHO
+  ),
+  grupalMaximoSemanal: sv(
+    50,
+    "Art. 208.º-B, n.º 3 CT — pode atingir 50 horas semanais",
+    "ctBancoHoras",
+    REV_TRABALHO
+  ),
+  grupalMaximoAnual: sv(
+    150,
+    "Art. 208.º-B, n.º 3 CT — o acréscimo tem o limite de 150 horas por ano",
+    "ctBancoHoras",
+    REV_TRABALHO
+  ),
+  grupalMaioriaReferendo: sv(
+    0.65,
+    "Art. 208.º-B, n.º 6 CT — o regime só pode ser aplicado se o projeto for aprovado em referendo por, pelo menos, 65% dos trabalhadores abrangidos",
+    "ctBancoHoras",
+    REV_TRABALHO
+  ),
+  grupalDuracaoMaximaAnos: sv(
+    4,
+    "Art. 208.º-B, n.º 4, al. b) CT — o período durante o qual o regime é aplicável não pode ser superior a quatro anos",
+    "ctBancoHoras",
+    REV_TRABALHO
+  ),
+  grupalAntecedenciaReferendoDias: sv(
+    20,
+    "Art. 208.º-B, n.º 5 CT — o projeto é publicitado e comunicado com a antecedência mínima de 20 dias em relação à data do referendo",
+    "ctBancoHoras",
+    REV_TRABALHO
+  ),
+};
+
+/** Arts. 166.º, 168.º e 170.º — teletrabalho. */
+export const TELETRABALHO = {
+  exigeAcordoEscrito: sv(
+    "a implementação do regime de teletrabalho depende SEMPRE de acordo escrito, que pode constar do contrato inicial ou ser autónomo",
+    "Art. 166.º, n.º 2 CT",
+    "ctTeletrabalho",
+    REV_TRABALHO
+  ),
+  localDeTrabalho: sv(
+    "o local em que o trabalhador realiza habitualmente o trabalho é considerado, para todos os efeitos legais, o seu local de trabalho",
+    "Art. 166.º, n.º 4, al. b) CT",
+    "ctTeletrabalho",
+    REV_TRABALHO
+  ),
+  despesasIntegralmenteCompensadas: sv(
+    "são integralmente compensadas pelo empregador todas as despesas adicionais que, comprovadamente, o trabalhador suporte como direta consequência da aquisição ou uso dos equipamentos e sistemas, incluindo os acréscimos de custos de energia e da rede e os custos de manutenção",
+    "Art. 168.º, n.º 2 CT",
+    "ctTeletrabalho",
+    REV_TRABALHO
+  ),
+  criterioDasDespesas: sv(
+    "na ausência de acordo sobre um valor fixo, consideram-se despesas adicionais as correspondentes a bens ou serviços de que o trabalhador não dispunha antes do acordo, e as determinadas por comparação com as despesas homólogas do último mês de trabalho presencial",
+    "Art. 168.º, n.º 4 CT",
+    "ctTeletrabalho",
+    REV_TRABALHO
+  ),
+  pagamentoImediato: sv(
+    "o pagamento da compensação é devido imediatamente após a realização das despesas pelo trabalhador",
+    "Art. 168.º, n.º 5 CT",
+    "ctTeletrabalho",
+    REV_TRABALHO
+  ),
+  tratamentoFiscal: sv(
+    "a compensação é, para efeitos fiscais, custo para o empregador e NÃO constitui rendimento do trabalhador até ao limite do valor definido por portaria",
+    "Art. 168.º, n.º 6 CT",
+    "ctTeletrabalho",
+    REV_TRABALHO,
+    "O limite consta de portaria dos membros do Governo responsáveis pelas áreas dos assuntos fiscais e da segurança social — não do Código."
+  ),
+  avisoVisitaHoras: sv(
+    24,
+    "Art. 170.º, n.º 2 CT — sendo o teletrabalho realizado no domicílio, a visita ao local de trabalho requer aviso prévio de 24 horas e concordância do trabalhador",
+    "ctTeletrabalho",
+    REV_TRABALHO
+  ),
+  controloProibido: sv(
+    "é vedada a captura e utilização de imagem, de som, de escrita, de histórico, ou o recurso a outros meios de controlo que possam afetar o direito à privacidade do trabalhador",
+    "Art. 170.º, n.º 5 CT — a violação constitui contraordenação MUITO GRAVE (n.º 7)",
+    "ctTeletrabalho",
+    REV_TRABALHO
+  ),
+};
+
+/** Art. 29.º — assédio. */
+export const ASSEDIO_TRABALHO = {
+  definicao: sv(
+    "comportamento indesejado, nomeadamente o baseado em fator de discriminação, praticado aquando do acesso ao emprego ou no próprio emprego, trabalho ou formação profissional, com o objetivo OU O EFEITO de perturbar ou constranger a pessoa, afetar a sua dignidade, ou de lhe criar um ambiente intimidativo, hostil, degradante, humilhante ou desestabilizador",
+    "Art. 29.º, n.º 2 CT",
+    "ctAssedio",
+    REV_TRABALHO,
+    "«Objetivo ou efeito» — não é preciso provar intenção."
+  ),
+  assedioSexual: sv(
+    "comportamento indesejado de carácter sexual, sob forma verbal, não verbal ou física, com o mesmo objetivo ou efeito",
+    "Art. 29.º, n.º 3 CT",
+    "ctAssedio",
+    REV_TRABALHO
+  ),
+  direitoAIndemnizacao: sv(
+    "a prática de assédio confere à vítima o direito de indemnização",
+    "Art. 29.º, n.º 4 CT",
+    "ctAssedio",
+    REV_TRABALHO
+  ),
+  contraordenacao: sv(
+    "a prática de assédio constitui contraordenação muito grave, sem prejuízo da eventual responsabilidade penal",
+    "Art. 29.º, n.º 5 CT",
+    "ctAssedio",
+    REV_TRABALHO
+  ),
+  protecaoDoDenunciante: sv(
+    "o denunciante e as testemunhas por si indicadas não podem ser sancionados disciplinarmente, a menos que atuem com dolo, até decisão final transitada em julgado",
+    "Art. 29.º, n.º 6 CT",
+    "ctAssedio",
+    REV_TRABALHO
+  ),
+};
+
+/** Art. 94.º — trabalhador-estudante. */
+export const TRABALHADOR_ESTUDANTE = {
+  provaDaCondicao: sv(
+    "o trabalhador-estudante deve comprovar perante o empregador a sua condição de estudante, apresentando igualmente o horário das atividades educativas a frequentar",
+    "Art. 94.º, n.º 1 CT",
+    "ctTrabalhadorEstudante",
+    REV_TRABALHO
+  ),
+  aproveitamentoEscolar: sv(
+    "transição de ano, ou aprovação ou progressão em pelo menos METADE das disciplinas em que esteja matriculado",
+    "Art. 94.º, n.º 4 CT",
+    "ctTrabalhadorEstudante",
+    REV_TRABALHO
+  ),
+  horarioCompativel: sv(
+    "deve escolher, entre as possibilidades existentes, o horário mais compatível com o horário de trabalho, sob pena de não beneficiar dos inerentes direitos",
+    "Art. 94.º, n.º 3 CT",
+    "ctTrabalhadorEstudante",
+    REV_TRABALHO
+  ),
+  naoCumulavel: sv(
+    "não pode cumular os direitos previstos no Código com quaisquer regimes que visem os mesmos fins",
+    "Art. 94.º, n.º 6 CT",
+    "ctTrabalhadorEstudante",
+    REV_TRABALHO
+  ),
+};
+
+/**
+ * Art. 366.º — compensação por despedimento coletivo. Os dois tetos são
+ * múltiplos da retribuição mínima mensal garantida, e por isso derivam do
+ * SMN: sobem com ele, sozinhos.
+ */
+export const COMPENSACAO_DESPEDIMENTO = {
+  diasPorAno: sv(
+    14,
+    "Art. 366.º, n.º 1 CT — compensação correspondente a 14 dias de retribuição base e diuturnidades por cada ano completo de antiguidade",
+    "ctCompensacao",
+    REV_TRABALHO
+  ),
+  tetoRetribuicaoEmSmn: sv(
+    20,
+    "Art. 366.º, n.º 2, al. a) CT — a retribuição base mensal e diuturnidades a considerar não pode ser superior a 20 vezes a retribuição mínima mensal garantida",
+    "ctCompensacao",
+    REV_TRABALHO
+  ),
+  tetoGlobalEmMeses: sv(
+    12,
+    "Art. 366.º, n.º 2, al. b) CT — o montante global não pode ser superior a 12 vezes a retribuição base mensal e diuturnidades",
+    "ctCompensacao",
+    REV_TRABALHO
+  ),
+  tetoGlobalEmSmn: sv(
+    240,
+    "Art. 366.º, n.º 2, al. b) CT — ou, sendo aplicável o teto da al. a), a 240 vezes a retribuição mínima mensal garantida",
+    "ctCompensacao",
+    REV_TRABALHO
+  ),
+  divisorDiario: sv(
+    30,
+    "Art. 366.º, n.º 2, al. c) CT — o valor diário resulta da divisão por 30 da retribuição base mensal e diuturnidades",
+    "ctCompensacao",
+    REV_TRABALHO
+  ),
+  fracaoProporcional: sv(
+    "em caso de fração de ano, o montante da compensação é calculado proporcionalmente",
+    "Art. 366.º, n.º 2, al. d) CT",
+    "ctCompensacao",
+    REV_TRABALHO
+  ),
+  presuncaoDeAceitacao: sv(
+    "presume-se que o trabalhador aceita o despedimento quando recebe a totalidade da compensação — presunção ilidível se, em simultâneo, devolver a totalidade do que recebeu",
+    "Art. 366.º, n.os 4 e 5 CT",
+    "ctCompensacao",
+    REV_TRABALHO,
+    "É a razão pela qual receber a compensação sem reservas fecha a porta a contestar o despedimento."
+  ),
+};
+
+/** Tetos do art. 366.º em euros, derivados do salário mínimo. */
+export const COMPENSACAO_TETO_RETRIBUICAO =
+  Math.round(COMPENSACAO_DESPEDIMENTO.tetoRetribuicaoEmSmn.value * SMN.value * 100) / 100;
+export const COMPENSACAO_TETO_GLOBAL =
+  Math.round(COMPENSACAO_DESPEDIMENTO.tetoGlobalEmSmn.value * SMN.value * 100) / 100;
+
 /** Horário semanal a tempo completo — base da fórmula da retribuição horária. */
 export const HORARIO_SEMANAL_COMPLETO = sv(
   40,
@@ -6295,6 +6779,44 @@ export function assertFiscalDataIntegrity(): void {
   if (coefs.length !== 3 || coefs.some((c, i) => c.coeficiente <= 1 || (i > 0 && c.coeficiente <= coefs[i - 1].coeficiente))) {
     erros.push("Art. 31.º, n.º 4 CIRC: os três coeficientes são maiores que 1 e crescem com a vida útil.");
   }
+  // Código do Trabalho — a escada do período experimental sobe, e a do
+  // contrato a termo é sempre mais curta do que a do indeterminado.
+  if (!(PERIODO_EXPERIMENTAL.geral.value < PERIODO_EXPERIMENTAL.qualificados.value
+    && PERIODO_EXPERIMENTAL.qualificados.value < PERIODO_EXPERIMENTAL.direcao.value)) {
+    erros.push("Art. 112.º CT: as três durações do período experimental são estritamente crescentes.");
+  }
+  if (!(PERIODO_EXPERIMENTAL.termoMenosDeSeisMeses.value < PERIODO_EXPERIMENTAL.termoSeisMesesOuMais.value
+    && PERIODO_EXPERIMENTAL.termoSeisMesesOuMais.value < PERIODO_EXPERIMENTAL.geral.value)) {
+    erros.push("Art. 112.º, n.º 2 CT: o período experimental a termo é mais curto do que o do contrato sem termo.");
+  }
+  if (!(DENUNCIA_EXPERIMENTAL.limiarAviso7Dias.value < DENUNCIA_EXPERIMENTAL.limiarAviso30Dias.value
+    && DENUNCIA_EXPERIMENTAL.aviso7Dias.value < DENUNCIA_EXPERIMENTAL.aviso30Dias.value)) {
+    erros.push("Art. 114.º CT: limiares e avisos prévios da denúncia têm de crescer juntos.");
+  }
+  if (!(CONTRATO_A_TERMO.duracaoMaximaTermoCerto.value < CONTRATO_A_TERMO.duracaoMaximaTermoIncerto.value)) {
+    erros.push("Art. 148.º CT: o termo incerto admite duração superior à do termo certo.");
+  }
+  if (!(FORMACAO_CONTINUA.horasAnuais.value > 0) || !isRate(FORMACAO_CONTINUA.fracaoMinimaDeTrabalhadores.value)) {
+    erros.push("Art. 131.º CT: horas anuais de formação ou fração mínima de trabalhadores inválidas.");
+  }
+  if (!(FORMACAO_CONTINUA.caducidadeDoCreditoAnos.value > FORMACAO_CONTINUA.prazoAteViragemEmCredito.value)) {
+    erros.push("Arts. 131.º/132.º CT: o crédito caduca depois de se constituir, não antes.");
+  }
+  if (!isRate(BANCO_DE_HORAS.grupalMaioriaReferendo.value) || !(BANCO_DE_HORAS.grupalMaioriaReferendo.value > 0.5)) {
+    erros.push("Art. 208.º-B, n.º 6 CT: a maioria do referendo é uma fração superior a metade.");
+  }
+  if (!(BANCO_DE_HORAS.grupalMaximoSemanal.value > HORARIO_SEMANAL_COMPLETO.value)) {
+    erros.push("Art. 208.º-B CT: o máximo semanal do banco grupal excede o período normal de trabalho.");
+  }
+  // Os dois tetos do art. 366.º são múltiplos do salário mínimo, e o global
+  // é exatamente o produto do teto da retribuição pelo teto em meses.
+  if (COMPENSACAO_DESPEDIMENTO.tetoGlobalEmSmn.value
+    !== COMPENSACAO_DESPEDIMENTO.tetoRetribuicaoEmSmn.value * COMPENSACAO_DESPEDIMENTO.tetoGlobalEmMeses.value) {
+    erros.push("Art. 366.º, n.º 2 CT: 240 × RMMG tem de ser 20 × RMMG × 12 meses.");
+  }
+  if (!(COMPENSACAO_TETO_GLOBAL > COMPENSACAO_TETO_RETRIBUICAO && COMPENSACAO_TETO_RETRIBUICAO > SMN.value)) {
+    erros.push("Art. 366.º CT: os tetos derivados do salário mínimo estão incoerentes.");
+  }
   if (!isRate(DEDUCAO_RENDAS.value.taxa)) erros.push("Taxa dedução rendas inválida.");
   if (!(DEDUCAO_RENDAS.value.limite > 0)) erros.push("Limite dedução rendas não positivo.");
   if (!(SS_MIN_MENSAL.value > 0)) erros.push("SS mínimo mensal não positivo.");
@@ -6713,6 +7235,16 @@ export function assertFiscalDataIntegrity(): void {
     ...Object.values(DEPRECIACAO),
     ...Object.values(ICE),
     ...Object.values(STOCK_OPTIONS_STARTUP),
+    // Código do Trabalho
+    ...Object.values(PERIODO_EXPERIMENTAL),
+    ...Object.values(DENUNCIA_EXPERIMENTAL),
+    ...Object.values(CONTRATO_A_TERMO),
+    ...Object.values(FORMACAO_CONTINUA),
+    ...Object.values(BANCO_DE_HORAS),
+    ...Object.values(TELETRABALHO),
+    ...Object.values(ASSEDIO_TRABALHO),
+    ...Object.values(TRABALHADOR_ESTUDANTE),
+    ...Object.values(COMPENSACAO_DESPEDIMENTO),
     // Tributação Autónoma
     TA_THRESHOLDS,
     TA_VIATURAS_COMBUSTAO,
