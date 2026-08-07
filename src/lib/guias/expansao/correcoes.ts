@@ -44,6 +44,7 @@ export interface CorrecaoAoPacote {
 }
 
 const EM = "2026-08-06";
+const EM_PROFISSOES = "2026-08-07";
 
 export const CORRECOES_AO_PACOTE: CorrecaoAoPacote[] = [
   {
@@ -103,6 +104,34 @@ export const CORRECOES_AO_PACOTE: CorrecaoAoPacote[] = [
       "O art. 21.º do EBF tem dois regimes de resgate e o pacote misturou-os. DENTRO das situações definidas na lei (n.º 3, al. b)), a matéria coletável é constituída por dois quintos do rendimento e a tributação é autónoma à taxa de 20% — dois quintos de 20% dão 8%. FORA delas (n.º 5), o rendimento é tributado autonomamente a 21,5%, e sem a redução a dois quintos. Os 8,6% do pacote são exatamente dois quintos de 21,5%: a fração de um regime aplicada à taxa do outro. Nenhum dos dois casos dá esse número.",
     fonte: "EBF-21",
     verificadoEm: EM,
+  },
+  {
+    slug: "formadores-explicadores",
+    dado: "Isenção de IVA",
+    noPacote: "formação profissional em condições legalmente definidas",
+    verificado:
+      "formação profissional reconhecida · lições sobre matérias do ensino escolar ou superior",
+    notaVerificada:
+      "são duas isenções distintas: a formação profissional exige reconhecimento ministerial (art. 9.º, n.º 10) CIVA); as explicações são isentas pela natureza do serviço, sem reconhecimento nem limite de volume (art. 9.º, n.º 11) CIVA)",
+    acao: "corrigir",
+    motivo:
+      "O pacote descreve a isenção do art. 9.º só na parte da formação profissional, e a resposta curta do guia diz que «explicações particulares e formação não certificada seguem a regra geral, com a isenção do art. 53.º enquanto o volume o permitir». Não é assim para as explicações: o n.º 11) do art. 9.º, na redação da Lei n.º 82/2023, isenta expressamente «as prestações de serviços que consistam em lições ministradas sobre matérias do ensino escolar ou superior». É isenção pela natureza da operação e não depende de reconhecimento nem de volume de negócios — um explicador que ultrapasse os 15 000 € continua isento, e enquadrá-lo no art. 53.º levava-o a liquidar IVA que a lei não lhe pede. A distinção importa nas duas direções: quem dá formação profissional SEM reconhecimento não cabe no n.º 10) e cai, esse sim, na regra geral.",
+    fonte: "CIVA-9",
+    verificadoEm: EM_PROFISSOES,
+  },
+  {
+    slug: "profissionais-saude",
+    dado: "Isenção de IVA",
+    noPacote: "prestações de serviços de saúde",
+    verificado:
+      "serviços prestados no exercício das profissões de médico, odontologista, psicólogo, parteiro, enfermeiro e outras profissões paramédicas",
+    notaVerificada:
+      "a isenção do art. 9.º, n.º 1) CIVA é pela PROFISSÃO de quem presta, não pelo rótulo do serviço; o n.º 2) acrescenta os estabelecimentos hospitalares e clínicas e o n.º 3) os protésicos dentários. É isenção incompleta: não dá direito a dedução do IVA suportado.",
+    acao: "corrigir",
+    motivo:
+      "«Prestações de serviços de saúde» sugere um critério material — se é saúde, é isento — e o art. 9.º não funciona assim. O n.º 1) enumera profissões, e a porta de entrada de quem não é médico, odontologista, psicólogo, parteiro ou enfermeiro é a cláusula «outras profissões paramédicas», cujo alcance é delimitado por regulamentação e não por senso comum. A diferença apanha exatamente as atividades de fronteira que mais crescem — nutrição, osteopatia, terapias diversas —, onde o profissional que assume a isenção pelo tema do serviço pode estar a deixar de liquidar imposto devido.",
+    fonte: "CIVA-9",
+    verificadoEm: EM_PROFISSOES,
   },
 ];
 

@@ -19,6 +19,23 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.18.0",
+    data: "2026-08-07",
+    titulo: "Dez guias por profissão — e duas isenções de IVA que estavam mal explicadas",
+    itens: [
+      "A secção «Por profissão» ficou completa: TVDE, estafetas de plataforma, criadores de conteúdo, plataformas de subscrição, freelancers de tecnologia, profissionais de saúde, formadores e explicadores, artistas e direitos de autor, mediadores e projetistas.",
+      "Se dás explicações, provavelmente não precisas de liquidar IVA — mesmo acima dos 15 000 €. O artigo 9.º do Código do IVA isenta expressamente as lições sobre matérias do ensino escolar ou superior, e essa isenção não depende de reconhecimento nem de volume de negócios. Muita informação em circulação diz o contrário.",
+      "A formação profissional é outra coisa: só é isenta quando prestada por organismos públicos ou por entidades reconhecidas pelos ministérios competentes. Sem esse reconhecimento, cai na regra geral.",
+      "E na saúde a isenção é pela PROFISSÃO de quem presta — médico, odontologista, psicólogo, parteiro, enfermeiro e outras profissões paramédicas —, não pelo tema do serviço. É uma distinção que apanha exatamente as atividades de fronteira que mais crescem, onde assumir a isenção pelo assunto pode significar não estar a liquidar imposto devido.",
+      "Nos dois casos é isenção incompleta: não liquidas IVA e também não recuperas o IVA do equipamento que compras. Para quem monta um consultório ou uma sala de formação, esse imposto passa a ser preço.",
+      "Para artistas e músicos, o benefício dos direitos de autor tem três travões que quase nunca são explicados juntos: só vale ao autor original — herdeiros, cessionários e editoras ficam de fora —, exclui expressamente obras de arquitetura e obras publicitárias, e a importância que se pode excluir do englobamento tem um teto de 10 000 €.",
+      "E dizemos abertamente o que não conseguimos confirmar: esse artigo está sujeito ao prazo de caducidade dos benefícios fiscais, e a última prorrogação anotada pela Autoridade Tributária na página do próprio artigo é de 2021. O texto continua publicado sem marca de revogação, mas a vigência para o ano em causa deve ser confirmada antes de se contar com o benefício.",
+      "Cada um dos dez guias mostra os dois enquadramentos possíveis lado a lado — profissão da tabela do artigo 151.º ou atividade por CAE —, com os coeficientes, as retenções e as contribuições de cada um. A diferença entre eles é de mais de metade da matéria coletável, e não se decide por nome de profissão.",
+      "Para quem entrega ao domicílio, o guia é sobre o segundo ano: nos primeiros doze meses não há contribuições, e a partir daí aparece um custo fixo que costuma ser maior do que o IRS — com exatamente a mesma faturação.",
+      "Para quem faz projetos, uma regra de IVA que apanha muita gente: os serviços relacionados com um imóvel localizam-se onde o imóvel está, e não onde está o prestador. Um projeto para um edifício noutro país segue as regras de IVA desse país.",
+    ],
+  },
+  {
     version: "2.17.0",
     data: "2026-08-07",
     titulo: "Trabalhar com o estrangeiro — e 17 fontes do IVA que abriam na lei errada",

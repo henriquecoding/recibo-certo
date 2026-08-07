@@ -31,6 +31,7 @@ import {
   CRIPTO_ISENCAO_DIAS,
   CRIPTO_REMUNERACAO,
   CRIPTO_TAXA_CURTO_PRAZO,
+  DISPENSA_RETENCAO_LIMITE,
   IAS,
   IMI_AGRAVAMENTO_DEVOLUTO,
   IMI_ISENCAO_BAIXOS_RENDIMENTOS,
@@ -48,6 +49,8 @@ import {
   IMT_PRAZO_PAGAMENTO_DIAS,
   IMT_TAXA_COMERCIAL,
   IMT_TAXA_RUSTICO,
+  IVA_ISENCAO_LIMITE,
+  ISENCOES_CIVA_PROFISSOES,
   IS_CREDITO,
   IS_TAXA_AQUISICAO,
   IS_TRANSMISSAO_GRATUITA,
@@ -64,10 +67,16 @@ import {
   PRAZO_MODELO1_MESES,
   PROGRAMA_REGRESSAR,
   PROGRAMA_REGRESSAR_TETO_CALC,
+  PROPRIEDADE_INTELECTUAL_EBF,
+  REGIME_15PCT,
   REGIME_SIMPLIFICADO,
+  RETENCAO,
   RENDIMENTO_MUNDIAL,
   REPRESENTANTE_FISCAL,
   RESIDENCIA_FISCAL,
+  SS_COEFICIENTE,
+  SS_ISENCAO_PRIMEIRO_ANO_MESES,
+  SS_TAXA,
   type EscalaoIMT,
 } from "@/lib/fiscal-data";
 import { fmt, pctExato } from "@/lib/format";
@@ -119,6 +128,31 @@ const topoPrimeiroEscalao = (escaloes: readonly EscalaoIMT[]): number =>
 /** Onde acaba a taxa marginal e começa a taxa única. */
 const topoMarginais = (escaloes: readonly EscalaoIMT[]): number =>
   [...escaloes].reverse().find((e) => !e.taxaUnica)?.ate ?? 0;
+
+/**
+ * O bloco comum aos guias por profissão.
+ *
+ * O pacote repete o mesmo aviso nos dez: o CAE e o enquadramento no art.
+ * 151.º determinam coeficiente e retenção, e não se generaliza por nome de
+ * profissão. A resposta editorial é mostrar os DOIS enquadramentos lado a
+ * lado — quem lê vê a diferença que a escolha faz, em vez de receber um
+ * número que pode não ser o dele.
+ */
+const enquadramentoCategoriaB = (): DadoDoMotor[] => [
+  d("REGIME_SIMPLIFICADO", "Coeficiente — profissão da tabela do art. 151.º", pctExato(REGIME_SIMPLIFICADO.coefServicos151.value), "do rendimento bruto vai a imposto · art. 31.º, n.º 1, al. b) CIRS"),
+  d("REGIME_SIMPLIFICADO", "Coeficiente — outras prestações de serviços", pctExato(REGIME_SIMPLIFICADO.coefOutrosServicos.value), "atividade identificada por CAE e não constante da tabela do art. 151.º · art. 31.º, n.º 1, al. c) CIRS"),
+  d("REGIME_SIMPLIFICADO", "Coeficiente — vendas de bens", pctExato(REGIME_SIMPLIFICADO.coefVendas.value), "e também restauração e hotelaria · art. 31.º, n.º 1, al. a) CIRS"),
+  d("RETENCAO", "Retenção — profissão do art. 151.º", pctExato(RETENCAO.art151.value), "sobre o valor da fatura, quando o cliente tem contabilidade organizada · art. 101.º, n.º 1, al. a) CIRS"),
+  d("RETENCAO", "Retenção — outras atividades", pctExato(RETENCAO.outros.value), "art. 101.º CIRS"),
+  d("RETENCAO", "Retenção — vendas de bens", pctExato(RETENCAO.vendas.value), "a retenção incide sobre prestações de serviços, não sobre vendas"),
+  d("REGIME_15PCT", "Despesas a justificar", pctExato(REGIME_15PCT.value), "do rendimento bruto, nos coeficientes de serviços; a parte não justificada é acrescida ao rendimento tributável · art. 31.º CIRS"),
+  d("DISPENSA_RETENCAO_LIMITE", "Dispensa de retenção", `até ${fmt(DISPENSA_RETENCAO_LIMITE.value)}`, "de rendimento anual estimado da categoria B · art. 101.º-B, n.º 1, al. a) CIRS"),
+  d("IVA_ISENCAO_LIMITE", "Isenção de IVA", `até ${fmt(IVA_ISENCAO_LIMITE.value)}`, "de volume de negócios · art. 53.º CIVA"),
+  d("SS_TAXA", "Taxa contributiva", pctExato(SS_TAXA.value), "sobre a base de incidência · Código dos Regimes Contributivos"),
+  d("SS_COEFICIENTE", "Base de incidência — serviços", pctExato(SS_COEFICIENTE.servicos.value), "do rendimento de prestação de serviços declarado no trimestre"),
+  d("SS_COEFICIENTE", "Base de incidência — vendas", pctExato(SS_COEFICIENTE.bens.value), "do rendimento de venda de bens"),
+  d("SS_ISENCAO_PRIMEIRO_ANO_MESES", "Isenção de contribuições no início", `${SS_ISENCAO_PRIMEIRO_ANO_MESES.value} meses`, "a contar do início de atividade; é o fim desta isenção que muda a conta no segundo ano"),
+];
 
 export const DADOS_MOTOR: Record<string, DadoDoMotor[]> = {
   imi: [
@@ -395,6 +429,48 @@ export const DADOS_MOTOR: Record<string, DadoDoMotor[]> = {
     d("RENDIMENTO_MUNDIAL", "Sendo residente cá", "tributação pelo rendimento mundial", "a sede do empregador não muda a sujeição · art. 15.º, n.º 1 CIRS"),
     d("REGIME_SIMPLIFICADO", "Recibos verdes — coeficiente dos serviços", pctExato(REGIME_SIMPLIFICADO.coefServicos151.value), "do rendimento bruto vai a imposto no regime simplificado, nas profissões da tabela do art. 151.º · art. 31.º, n.º 1, al. b) CIRS"),
     d("CREDITO_IMPOSTO_ESTRANGEIRO", "Se houver imposto retido lá fora", `crédito até ${CREDITO_IMPOSTO_ESTRANGEIRO.reporteAnos.value} anos`, "pelo menor dos dois limites, com reporte por insuficiência de coleta · art. 81.º CIRS"),
+  ],
+
+  // ── Por profissão ────────────────────────────────────────────────────
+  //    O pacote põe o mesmo aviso nos dez guias: «o código CAE e o
+  //    enquadramento no art. 151.º determinam coeficiente e retenção —
+  //    verificar caso a caso e nunca generalizar por nome de profissão».
+  //    É por isso que estas tabelas mostram SEMPRE os dois enquadramentos
+  //    lado a lado, em vez de escolher um por profissão.
+  ...Object.fromEntries(
+    (
+      [
+        "tvde-motorista",
+        "estafeta-plataformas",
+        "criadores-de-conteudo",
+        "plataformas-subscricao",
+        "freelancer-tecnologia",
+        "mediacao-comissoes",
+        "arquitetos-engenheiros",
+      ] as const
+    ).map((slug) => [slug, enquadramentoCategoriaB()]),
+  ),
+
+  "profissionais-saude": [
+    d("ISENCOES_CIVA_PROFISSOES", "Isenção de IVA — quem", ISENCOES_CIVA_PROFISSOES.saude.value, "a isenção é pela profissão de quem presta, não pelo tema do serviço · art. 9.º, n.º 1) CIVA"),
+    d("ISENCOES_CIVA_PROFISSOES", "Que tipo de isenção é", "incompleta", "isenta a operação e retira o direito à dedução do IVA suportado nas compras"),
+    ...enquadramentoCategoriaB(),
+  ],
+
+  "formadores-explicadores": [
+    d("ISENCOES_CIVA_PROFISSOES", "Isento — explicações", ISENCOES_CIVA_PROFISSOES.licoes.value, "isenção pela natureza do serviço: não depende de reconhecimento nem de volume de negócios · art. 9.º, n.º 11) CIVA"),
+    d("ISENCOES_CIVA_PROFISSOES", "Isento — formação profissional", ISENCOES_CIVA_PROFISSOES.formacaoProfissional.value, "exige reconhecimento ministerial; sem ele, a formação cai na regra geral · art. 9.º, n.º 10) CIVA"),
+    ...enquadramentoCategoriaB(),
+  ],
+
+  "artistas-direitos-autor": [
+    d("PROPRIEDADE_INTELECTUAL_EBF", "Considerado no englobamento", pctExato(PROPRIEDADE_INTELECTUAL_EBF.fracaoEnglobada.value), "do valor do rendimento, líquido de outros benefícios · art. 58.º, n.º 1 EBF"),
+    d("PROPRIEDADE_INTELECTUAL_EBF", "Teto do que se pode excluir", fmt(PROPRIEDADE_INTELECTUAL_EBF.limiteExclusao.value), "morde no montante EXCLUÍDO, não no rendimento · art. 58.º, n.º 3 EBF"),
+    d("PROPRIEDADE_INTELECTUAL_EBF", "Só ao titular originário", "sim", "cessionários, herdeiros e editoras ficam de fora · art. 58.º, n.º 1 EBF"),
+    d("PROPRIEDADE_INTELECTUAL_EBF", "Abrange", PROPRIEDADE_INTELECTUAL_EBF.incluidas.value, "art. 58.º, n.º 1 EBF"),
+    d("PROPRIEDADE_INTELECTUAL_EBF", "Fica de fora", PROPRIEDADE_INTELECTUAL_EBF.excluidas.value, "exclusões expressas · art. 58.º, n.º 2 EBF"),
+    d("REGIME_SIMPLIFICADO", "Coeficiente da propriedade intelectual", pctExato(REGIME_SIMPLIFICADO.coefPropIntelectual.value), "na categoria B, quando o rendimento é da cessão ou utilização de direitos · art. 31.º, n.º 1, al. d) CIRS"),
+    d("RETENCAO", "Retenção sobre direitos de autor", pctExato(RETENCAO.diretosAutor.value), "art. 101.º CIRS"),
   ],
 };
 

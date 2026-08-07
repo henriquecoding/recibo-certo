@@ -104,4 +104,32 @@ export const CORPOS_REDIGIDOS: ReadonlySet<string> = new Set([
   "convencao-dupla-tributacao",
   "nomada-digital-d8",
   "remoto-empresa-estrangeira",
+
+  // ── Por profissão ───────────────────────────────────────────────────
+  //    O pacote repete o mesmo aviso nos dez guias: o CAE e o enquadramento
+  //    no art. 151.º determinam coeficiente e retenção, e não se generaliza
+  //    por nome de profissão. A resposta editorial foi mostrar SEMPRE os
+  //    dois enquadramentos lado a lado — quem lê vê a diferença que a
+  //    escolha faz, em vez de receber um número que pode não ser o dele.
+  "tvde-motorista",
+  "estafeta-plataformas",
+  "criadores-de-conteudo",
+  "plataformas-subscricao",
+  "freelancer-tecnologia",
+  //    O pacote descreve a isenção do art. 9.º como sendo «das prestações de
+  //    serviços de saúde». O artigo não funciona por tema: funciona pela
+  //    PROFISSÃO de quem presta. Ver `correcoes.ts`.
+  "profissionais-saude",
+  //    E dizia que as explicações particulares seguem a regra geral, com a
+  //    isenção do art. 53.º enquanto o volume o permitir. O n.º 11) do art.
+  //    9.º isenta-as pela natureza do serviço, sem reconhecimento nem
+  //    limite de volume. Também em `correcoes.ts`.
+  "formadores-explicadores",
+  //    O art. 58.º do EBF exclui expressamente as obras de arquitetura e as
+  //    publicitárias, e só vale ao titular ORIGINÁRIO — o que deixa de fora
+  //    cessionários, herdeiros e editoras. E tem uma nota de vigência que o
+  //    guia repete ao leitor em vez de a esconder.
+  "artistas-direitos-autor",
+  "mediacao-comissoes",
+  "arquitetos-engenheiros",
 ]);

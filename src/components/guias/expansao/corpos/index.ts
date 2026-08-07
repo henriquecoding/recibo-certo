@@ -32,6 +32,16 @@ import CorpoConvencaoDuplaTributacao from "./convencao-dupla-tributacao";
 import CorpoPrimeiroAnoFiscalPortugal from "./primeiro-ano-fiscal-portugal";
 import CorpoNomadaDigitalD8 from "./nomada-digital-d8";
 import CorpoRemotoEmpresaEstrangeira from "./remoto-empresa-estrangeira";
+import CorpoTvdeMotorista from "./tvde-motorista";
+import CorpoEstafetaPlataformas from "./estafeta-plataformas";
+import CorpoCriadoresDeConteudo from "./criadores-de-conteudo";
+import CorpoPlataformasSubscricao from "./plataformas-subscricao";
+import CorpoFreelancerTecnologia from "./freelancer-tecnologia";
+import CorpoProfissionaisSaude from "./profissionais-saude";
+import CorpoFormadoresExplicadores from "./formadores-explicadores";
+import CorpoArtistasDireitosAutor from "./artistas-direitos-autor";
+import CorpoMediacaoComissoes from "./mediacao-comissoes";
+import CorpoArquitetosEngenheiros from "./arquitetos-engenheiros";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  CORPOS REDIGIDOS DOS GUIAS DA EXPANSÃO
@@ -79,4 +89,14 @@ export const CORPOS: Record<string, ComponentType> = {
   "primeiro-ano-fiscal-portugal": CorpoPrimeiroAnoFiscalPortugal,
   "nomada-digital-d8": CorpoNomadaDigitalD8,
   "remoto-empresa-estrangeira": CorpoRemotoEmpresaEstrangeira,
+  "tvde-motorista": CorpoTvdeMotorista,
+  "estafeta-plataformas": CorpoEstafetaPlataformas,
+  "criadores-de-conteudo": CorpoCriadoresDeConteudo,
+  "plataformas-subscricao": CorpoPlataformasSubscricao,
+  "freelancer-tecnologia": CorpoFreelancerTecnologia,
+  "profissionais-saude": CorpoProfissionaisSaude,
+  "formadores-explicadores": CorpoFormadoresExplicadores,
+  "artistas-direitos-autor": CorpoArtistasDireitosAutor,
+  "mediacao-comissoes": CorpoMediacaoComissoes,
+  "arquitetos-engenheiros": CorpoArquitetosEngenheiros,
 };

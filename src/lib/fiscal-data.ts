@@ -72,6 +72,14 @@ export const SOURCES = {
     label: "Art. 12.º-A CIRS — Regime fiscal aplicável a ex-residentes (Programa Regressar) · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs12a.aspx",
   },
+  art58EBF: {
+    label: "Art. 58.º EBF — Propriedade intelectual: englobamento por 50%, só ao titular originário, com o teto de 10 000 € · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-58-ordm-.aspx",
+  },
+  civa9: {
+    label: "Art. 9.º CIVA — Isenções nas operações internas: saúde, ensino, formação profissional e lições particulares · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva9.aspx",
+  },
   art16cirs: {
     label: "Art. 16.º CIRS — Residência: os 183 dias, o critério da habitação, a residência parcial e a regra do ano da saída · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs16.aspx",
@@ -562,6 +570,10 @@ const REV_INVESTIMENTO = "2026-08-07";
 // Art. 16.º do CIRS (residência), Art. 12.º-A (ex-residentes) e Art. 19.º da
 // LGT (domicílio fiscal e representante), lidos no Portal das Finanças.
 const REV_ESTRANGEIRO = "2026-08-07";
+// Data de verificação do bloco das profissões — Art. 58.º do EBF
+// (propriedade intelectual) e as isenções do Art. 9.º do CIVA que decidem a
+// fiscalidade da saúde, da formação e das explicações.
+const REV_PROFISSOES = "2026-08-07";
 // Data de verificação dos coeficientes de desvalorização da moeda (Portaria 382/2025).
 const REV_COEF_MOEDA = "2026-06-23";
 // Data de verificação do Salário Mínimo Nacional 2026 (RMMG 920 €, DL 139/2025).
@@ -878,6 +890,103 @@ export const REGIME_SIMPLIFICADO = {
     TODAY
   ),
 };
+
+/**
+ * Propriedade intelectual — a exclusão parcial do Art. 58.º do EBF.
+ *
+ * Lido no articulado a 07/08/2026. É um benefício com três travões, e
+ * quem só conhece o primeiro fica com uma ideia errada do seu alcance:
+ *
+ *  · vale só ao **titular originário** — quem criou. Um cessionário de
+ *    direitos, um herdeiro ou uma editora não têm direito a ele;
+ *  · **exclui** obras escritas sem carácter literário, artístico ou
+ *    científico, obras de **arquitetura** e obras **publicitárias**;
+ *  · a importância a excluir do englobamento **não pode exceder 10 000 €**
+ *    — é um teto sobre o que se exclui, não sobre o que se ganha.
+ *
+ * Nota de vigência, e é importante: o Art. 58.º está sujeito ao prazo de
+ * caducidade do Art. 3.º, n.º 1 do EBF (cinco anos), e NÃO consta da lista
+ * de exceções do n.º 3 desse artigo. A última prorrogação que a AT anota na
+ * própria página do artigo é a da Lei n.º 21/2021, até 31/12/2021. O texto
+ * continua publicado na coleção consolidada sem marca de revogação, mas a
+ * vigência para um ano concreto tem de ser confirmada — e é isso que o guia
+ * diz ao leitor, em vez de a afirmar.
+ */
+export const PROPRIEDADE_INTELECTUAL_EBF = {
+  /** Fração do rendimento considerada no englobamento. */
+  fracaoEnglobada: sv(
+    0.5,
+    "Art. 58.º, n.º 1 EBF — os rendimentos são considerados no englobamento, para efeitos de IRS, apenas por 50% do seu valor, líquido de outros benefícios",
+    "art58EBF",
+    REV_PROFISSOES
+  ),
+  /** Teto do montante que se pode excluir do englobamento. */
+  limiteExclusao: sv(
+    10000,
+    "Art. 58.º, n.º 3 EBF — a importância a excluir do englobamento nos termos do n.º 1 não pode exceder 10 000 €",
+    "art58EBF",
+    REV_PROFISSOES,
+    "O teto morde no que se exclui, não no que se ganha."
+  ),
+  /** Quem pode usar o benefício. */
+  exigeTitularOriginario: sv(
+    true,
+    "Art. 58.º, n.º 1 EBF — quando auferidos por titulares de direitos de autor ou conexos residentes em território português, desde que sejam os titulares originários",
+    "art58EBF",
+    REV_PROFISSOES,
+    "Cessionários, herdeiros e editoras ficam de fora."
+  ),
+  /** O que a lei retira expressamente do benefício. */
+  excluidas: sv(
+    "obras escritas sem carácter literário, artístico ou científico, obras de arquitetura e obras publicitárias",
+    "Art. 58.º, n.º 2 EBF — exclusões expressas",
+    "art58EBF",
+    REV_PROFISSOES
+  ),
+  /** O que a lei inclui, e costuma surpreender. */
+  incluidas: sv(
+    "propriedade literária, artística e científica, incluindo a alienação de obras de arte de exemplar único e as obras de divulgação pedagógica e científica",
+    "Art. 58.º, n.º 1 EBF — âmbito",
+    "art58EBF",
+    REV_PROFISSOES
+  ),
+} as const;
+
+/**
+ * Isenções do Art. 9.º do CIVA que decidem a fiscalidade de três profissões
+ * inteiras — saúde, formação e explicações. Lidas no articulado a
+ * 07/08/2026, na coleção consolidada.
+ *
+ * São isenções INCOMPLETAS: isentam a operação e, por isso mesmo, retiram
+ * o direito à dedução do IVA suportado. Não é «não pagar IVA» — é ficar
+ * fora do imposto nos dois sentidos.
+ */
+export const ISENCOES_CIVA_PROFISSOES = {
+  /** Saúde: a isenção é pela PROFISSÃO, não pelo rótulo «serviço de saúde». */
+  saude: sv(
+    "médico, odontologista, psicólogo, parteiro, enfermeiro e outras profissões paramédicas",
+    "Art. 9.º, n.º 1) CIVA (redação da Lei n.º 2/2020) — prestações de serviços efetuadas no exercício destas profissões",
+    "civa9",
+    REV_PROFISSOES,
+    "O n.º 2) acrescenta os serviços médicos e sanitários prestados por estabelecimentos hospitalares e clínicas, e o n.º 3) os protésicos dentários."
+  ),
+  /** Formação profissional: depende de reconhecimento ministerial. */
+  formacaoProfissional: sv(
+    "organismos de direito público ou entidades reconhecidas como tendo competência nos domínios da formação e reabilitação profissionais pelos ministérios competentes",
+    "Art. 9.º, n.º 10) CIVA — prestações de serviços que tenham por objeto a formação profissional, e transmissões e prestações conexas",
+    "civa9",
+    REV_PROFISSOES,
+    "Sem o reconhecimento, a formação não cabe nesta isenção."
+  ),
+  /** Explicações: isentas por natureza, sem depender de reconhecimento. */
+  licoes: sv(
+    "lições ministradas sobre matérias do ensino escolar ou superior",
+    "Art. 9.º, n.º 11) CIVA (redação da Lei n.º 82/2023) — prestações de serviços que consistam em lições sobre matérias do ensino escolar ou superior",
+    "civa9",
+    REV_PROFISSOES,
+    "Não depende de reconhecimento nem de volume de negócios: é isenção pela natureza do serviço."
+  ),
+} as const;
 
 /** Coeficiente do regime simplificado por tipo de atividade. */
 export const COEFICIENTE_POR_TIPO: Record<TipoAtividade, number> = {
