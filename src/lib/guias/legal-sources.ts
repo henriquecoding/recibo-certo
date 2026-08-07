@@ -24,6 +24,8 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
+import { FONTES_EXPANSAO, LEITURAS_EXPANSAO } from "./expansao/fontes";
+import { ALIAS_DE_FONTE, CHAVES_ALIAS, URL_CORRIGIDO } from "./expansao/fontes-corrigidas";
 
 // ─── Autoridades competentes ───────────────────────────────────────────
 
@@ -60,6 +62,10 @@ export const DOMINIOS_AUTORIZADOS: Record<string, Authority> = {
   "www2.gov.pt": "GOV",
   "eportugal.gov.pt": "GOV",
   "www.pgdlisboa.pt": "OTHER_OFFICIAL",
+  // Instituto do Emprego e Formação Profissional, I. P. — instituto público.
+  // Entrou com a expansão de 2026: é a autoridade competente para os apoios
+  // à contratação citados nos guias de empresa.
+  "www.iefp.pt": "OTHER_OFFICIAL",
   "ec.europa.eu": "EU",
   "vies.ec.europa.eu": "EU",
   "vat-one-stop-shop.ec.europa.eu": "EU",
@@ -241,7 +247,33 @@ function at(
   };
 }
 
-export const LEGAL_SOURCES = {
+/**
+ * `FONTES_EXPANSAO` com os URL corrigidos e sem as chaves que passaram a
+ * ser alias — essas voltam a entrar mais abaixo, já a apontar para a
+ * entrada existente. Ver `expansao/fontes-corrigidas.ts` para o porquê.
+ */
+const FONTES_EXPANSAO_CORRIGIDAS = Object.fromEntries(
+  Object.entries(FONTES_EXPANSAO)
+    .filter(([chave]) => !CHAVES_ALIAS.has(chave))
+    .map(([chave, fonte]) => [
+      chave,
+      URL_CORRIGIDO[chave] ? { ...fonte, url: URL_CORRIGIDO[chave] } : fonte,
+    ]),
+) as typeof FONTES_EXPANSAO;
+
+/** O catálogo antes dos alias — é dele que os alias copiam a entrada. */
+const FONTES_BASE = {
+  // As fontes acrescentadas pela expansão editorial de 2026 (112 guias
+  // novos) entram aqui por espalhamento, com as chaves do pacote — ver
+  // `expansao/fontes.ts`. Ficam sujeitas às MESMAS asserções que as
+  // restantes: domínio autorizado, HTTPS, artigo declarado, âncoras e URL
+  // sem duplicados. Se uma delas estivesse errada, o build parava.
+  //
+  // `FONTES_EXPANSAO_CORRIGIDAS` é `FONTES_EXPANSAO` com os caminhos do
+  // Código do IVA apontados para a redação em vigor: as 17 que o pacote
+  // entregou serviam a redação histórica. Ver `expansao/fontes-corrigidas.ts`.
+  ...FONTES_EXPANSAO_CORRIGIDAS,
+
   // ── CIRS ─────────────────────────────────────────────────────────────
   // O n.º 6 fixa o MOMENTO da tributação da categoria B e é a norma que
   // explica porque é que se paga IRS de uma fatura que ainda não foi paga.
@@ -272,16 +304,86 @@ export const LEGAL_SOURCES = {
   cirs101: at("cirs101", "101.º", "Art. 101.º CIRS — Retenção na fonte sobre rendimentos da categoria B", "irs101", "cirs_rep"),
   cirs101b: at("cirs101b", "101.º-B", "Art. 101.º-B CIRS — Dispensa de retenção na fonte", "irs101b", "cirs_rep"),
   cirs102: at("cirs102", "102.º", "Art. 102.º CIRS — Pagamentos por conta", "irs102", "cirs_rep"),
+  // O pacote de expansão deu esta página como não verificável. Abre, e o
+  // n.º 5 é o que fundamenta a obrigação do senhorio: ou recibo de renda em
+  // modelo oficial, ou declaração anual até ao fim de fevereiro. Verificado
+  // a 2026-08-06.
+  cirs115: at("cirs115", "115.º", "Art. 115.º CIRS — Emissão de recibos e faturas", "irs115", "cirs_rep"),
+  // Herdar não custa imposto na maioria das famílias — custa quando se
+  // vende. É este artigo que fixa o valor de aquisição de quem recebeu a
+  // título gratuito, e sem ele o guia da herança não conseguia responder à
+  // única pergunta que aparece dez anos depois. Verificado a 2026-08-06.
+  cirs45: at("cirs45", "45.º", "Art. 45.º CIRS — Valor de aquisição a título gratuito", "irs45", "cirs_rep"),
 
   // ── CIVA ─────────────────────────────────────────────────────────────
+  // Comprar o imóvel pela empresa deduz depreciações — e o art. 46.º
+  // recupera-as todas no dia da venda, porque manda deduzir ao valor de
+  // aquisição as depreciações aceites fiscalmente. É a metade da conta que
+  // costuma faltar na decisão. Verificados a 2026-08-06.
+  circ46: at("circ46", "46.º", "Art. 46.º CIRC — Conceito de mais-valias e de menos-valias", "irc46", "CIRC_2R"),
+  circ47: at("circ47", "47.º", "Art. 47.º CIRC — Correção monetária das mais-valias e das menos-valias", "irc47", "CIRC_2R"),
+
+  // ── LGT: a indisponibilidade do crédito tributário ───────────────────
+  // É a norma de onde nasce a tese de que as dívidas fiscais não são
+  // abrangidas pela exoneração do passivo restante — e o n.º 3, aditado
+  // pela Lei n.º 55-A/2010, é o que a torna decisiva, porque manda a
+  // regra prevalecer sobre qualquer legislação especial. O Código da
+  // Insolvência é legislação especial. Verificado a 2026-08-07.
+  lgt30: at("lgt30", "30.º", "Art. 30.º LGT — Objeto da relação jurídica tributária e indisponibilidade do crédito", "lgt30", "lgt"),
+
+  // ── CIRS: o regime das pessoas com deficiência, nos dois artigos ─────
+  // O pacote mandava «ler o CIRS em vigor e não replicar valores de
+  // imprensa» sem dizer onde ler. São dois artigos, e trocá-los é o erro
+  // corrente: o 56.º-A trata da EXCLUSÃO de rendimentos (com frações
+  // diferentes para o trabalho e para as pensões, e um teto por categoria)
+  // e nada diz sobre graus; o 87.º define quem é pessoa com deficiência
+  // (n.º 5, 60%), fixa as deduções à coleta e, desde a Lei n.º 82/2023,
+  // a escada de descida de quem perde o grau numa reavaliação (n.º 9).
+  // Verificado a 2026-08-07. O art. 87.º já cá estava como `cirs87`.
+  // ── CIRS: os abonos que não são salário até deixarem de ser ─────────
+  // Subsídio de refeição, abono para falhas, ajudas de custo e quilómetros
+  // vivem todos no n.º 3 do art. 2.º. E a al. b), 2), na redação da Lei n.º
+  // 45-A/2024, não fixa dois montantes de subsídio de refeição: fixa um e
+  // uma majoração de 70% para vales — o que torna o valor do cartão
+  // derivado, e não uma segunda linha a manter à mão. Verificado a
+  // 2026-08-07.
+  art2cirsSelo: at("art2cirsSelo", "2.º", "Art. 2.º CIRS — Rendimentos da categoria A: subsídio de refeição, abono para falhas e ajudas de custo", "irs2", "cirs_rep"),
+
+  art56aCirs: at("art56aCirs", "56.º-A", "Art. 56.º-A CIRS — Sujeitos passivos com deficiência", "irs56a", "cirs_rep"),
+
+  // ── EBF: organismos de investimento coletivo ─────────────────────────
+  // O pacote marcou o guia dos ETFs com um aviso — «o regime dos OIC tem
+  // especificidades (DL 7/2015), confirmar antes de afirmar o tratamento de
+  // fundos nacionais». Confirmou-se, e é onde vivem as duas metades do
+  // regime: o art. 22.º diz o que o FUNDO não paga, o art. 22.º-A diz o que
+  // o PARTICIPANTE paga. Sem os dois, o guia teria de se calar sobre
+  // fundos portugueses. Verificados a 2026-08-07.
+  ebf22: at("ebf22", "22.º", "Art. 22.º EBF — Organismos de investimento coletivo", "ebf-artigo-22-ordm", "bf_rep"),
+  ebf22a: at("ebf22a", "22.º-A", "Art. 22.º-A EBF — Rendimentos pagos por organismos de investimento coletivo aos seus participantes", "ebf-artigo-22-ordm-a", "bf_rep"),
+
   civa6: at("civa6", "6.º", "Art. 6.º CIVA — Localização das operações", "iva6", "civa_rep"),
   civa9: at("civa9", "9.º", "Art. 9.º CIVA — Isenções nas operações internas", "iva9", "civa_rep"),
   civa18: at("civa18", "18.º", "Art. 18.º CIVA — Taxas do imposto", "iva18", "civa_rep"),
   civa33: at("civa33", "33.º", "Art. 33.º CIVA — Cessação de atividade", "iva33", "civa_rep"),
   civa36: at("civa36", "36.º", "Art. 36.º CIVA — Prazo de emissão e formalidades das faturas", "iva36", "civa_rep"),
+  // A epígrafe deixou de ser «Regime de isenção».
+  //
+  // O Decreto-Lei n.º 35/2025, de 24 de março, reescreveu o artigo e mudou-lhe
+  // a epígrafe para «Âmbito de aplicação no território nacional» — a alteração
+  // vem assinalada no próprio texto publicado pela AT, e foi confirmada no
+  // portal a 2026-08-06. O URL sempre esteve certo; o que estava desatualizado
+  // era o título que citávamos, e citar uma epígrafe que já não existe é o
+  // género de detalhe que faz um leitor atento duvidar de tudo o resto.
+  //
+  // O limiar de 15 000 € mantém-se (n.º 1). O que é novo é o regime
+  // transfronteiriço: sujeitos passivos de outros Estados-Membros passam a
+  // poder beneficiar da isenção cá, com volume de negócios na UE até 100 000 €
+  // e número individual com sufixo «EX» (n.º 2), por remissão para o
+  // art. 58.º-A. Matéria para o guia, não para o catálogo.
   civa53: {
-    ...at("civa53", "53.º", "Art. 53.º CIVA — Regime de isenção", "artigo-53-o-do-civa", "civa_rep"),
-    expectedAnchors: ["Artigo 53.º"],
+    ...at("civa53", "53.º", "Art. 53.º CIVA — Âmbito de aplicação no território nacional", "artigo-53-o-do-civa", "civa_rep"),
+    expectedAnchors: ["Artigo 53.º", "Âmbito de aplicação no território nacional"],
+    lastCheckedAt: "2026-08-06",
   },
   // Recuperação do IVA já entregue ao Estado sobre faturas que o cliente
   // não pagou. É o remédio, no IVA, do problema que o Art. 3.º n.º 6 do
@@ -292,6 +394,13 @@ export const LEGAL_SOURCES = {
   // ao contrário dos homólogos do CIRS ("Artigo 78.º-A", sem espaço).
   // Verificado a 2026-07-27. Sem esta distinção o monitor de ligações
   // acusaria as três fontes como inválidas estando elas certas.
+  //
+  // O pacote de expansão de 2026 dava estes quatro artigos como não tendo
+  // página no Portal das Finanças, e mandava trocá-los pelo PDF do Código.
+  // NÃO se trocou: os quatro URL foram testados a 2026-08-06 e devolveram
+  // 200 com o articulado. Trocar um artigo navegável por um PDF de centenas
+  // de páginas teria piorado a fonte com base num diagnóstico que não se
+  // confirmou — e é para isto que serve ir lá ver antes de agir.
   civa78a: {
     ...at("civa78a", "78.º-A", "Art. 78.º-A CIVA — Créditos de cobrança duvidosa e incobráveis", "iva78a", "civa_rep"),
     expectedAnchors: ["Artigo 78.º -A"],
@@ -448,19 +557,43 @@ export const LEGAL_SOURCES = {
   // O Art. 43.º NÃO é servido em `lgt43` no Portal das Finanças (404,
   // verificado a 2026-07-27), ao contrário dos 24.º, 45.º, 48.º e 100.º.
   // Cita-se a versão consolidada do Diário da República.
+  // Passou do Diário da República para o Portal das Finanças, e o título
+  // passou a ser a epígrafe oficial.
+  //
+  // A auditoria de 2026 anotou que este artigo não vive em `lgt43.aspx` — e
+  // não vive mesmo: esse caminho devolve 404 (confirmado a 2026-08-06). Vive
+  // em `juros-indemnizatorios.aspx`, que devolve 200 com o articulado
+  // completo. Era a única fonte da LGT que estávamos a citar pelo DR, o que
+  // custava duas coisas: a epígrafe real ficava escondida atrás de uma
+  // descrição nossa («juros indemnizatórios devidos ao contribuinte», que não
+  // é o que a lei escreve), e o monitor não conseguia validar âncora nenhuma
+  // porque o DR serve um shell vazio. Agora valida.
   lgt43: {
-    id: "lgt43",
-    authority: "DR",
-    title: "Art. 43.º LGT — Juros indemnizatórios devidos ao contribuinte",
-    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/1998-34438775-118879628",
+    ...at("lgt43", "43.º", "Art. 43.º LGT — Pagamento indevido da prestação tributária", "juros-indemnizatorios", "lgt"),
+    expectedAnchors: ["Artigo 43.º", "Pagamento indevido da prestação tributária"],
+    lastCheckedAt: "2026-08-06",
+  },
+  // A Tabela Geral do Imposto do Selo não tem página de artigo no portal —
+  // os artigos do CIS remetem para ela, mas as TAXAS vivem só aqui, no PDF
+  // do código consolidado. Sem esta fonte, os 0,8% da escritura e os 0,60%
+  // do crédito de longo prazo eram números sem artigo por trás, que é
+  // exatamente o que este catálogo existe para impedir.
+  //
+  // Verificado a 2026-08-06 no PDF publicado pela AT («Última atualização:
+  // Decreto-Lei n.º 49/2025, de 27 de março»): verba 1.1 → 0,8% sobre o
+  // valor; verba 1.2 → 10%; verba 17.1.2 → 0,50% e 17.1.3 → 0,60%.
+  tgis: {
+    id: "tgis",
+    authority: "AT",
+    title: "Tabela Geral do Imposto do Selo — verbas e taxas",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/Cod_download/Documents/CIS.pdf",
     jurisdiction: "PT",
-    sourceType: "code_article",
-    article: "43.º",
+    sourceType: "official_guide",
     effectiveFrom: ANO,
     consolidada: true,
-    renderMode: "spa",
+    renderMode: "pdf",
     expectedAnchors: [],
-    lastCheckedAt: VERIFICADO,
+    lastCheckedAt: "2026-08-06",
     status: "active",
   },
   lgt45: at("lgt45", "45.º", "Art. 45.º LGT — Caducidade do direito à liquidação", "lgt45", "lgt"),
@@ -895,11 +1028,34 @@ export const LEGAL_SOURCES = {
   },
 } as const satisfies Record<string, LegalSource>;
 
+export const LEGAL_SOURCES = {
+  ...FONTES_BASE,
+
+  // ── Alias das chaves do pacote para fontes que já cá viviam ──────────
+  // Seis artigos do CIVA tinham fonte com o caminho certo antes de o
+  // pacote chegar. Corrigir o URL do pacote criava duas chaves para a
+  // mesma página do Portal das Finanças — duas coisas a manter em vez de
+  // uma, e duas datas de verificação a divergir com o tempo.
+  //
+  // A chave do pacote continua a resolver, porque é por ela que 112 guias
+  // citam a fonte; o que ela devolve é a MESMA entrada, com o `id` da
+  // chave para a asserção de coerência não disparar. `assertLegalSources-
+  // Integrity()` sabe quais são e não as conta como URL duplicado.
+  ...Object.fromEntries(
+    Object.entries(ALIAS_DE_FONTE).map(([doPacote, existente]) => [
+      doPacote,
+      { ...(FONTES_BASE as Record<string, LegalSource>)[existente], id: doPacote },
+    ]),
+  ),
+} as const satisfies Record<string, LegalSource>;
+
 export type LegalSourceId = keyof typeof LEGAL_SOURCES;
 
 // ─── Leitura complementar (nunca fundamenta uma regra) ─────────────────
 
 export const LEITURAS_COMPLEMENTARES = {
+  ...LEITURAS_EXPANSAO,
+
   // ── Direitos e cobranças ───────────────────────────────────────────
   //    Os 14 guias desta secção não tinham nenhuma leitura complementar:
   //    o bloco aparecia vazio nas páginas novas e cheio nas antigas, sem
@@ -1031,12 +1187,28 @@ export function assertLegalSourcesIntegrity(): void {
     }
 
     const url = s.url.replace(/\/$/, "");
-    if (vistos.has(url)) erros.push(`Fonte "${chave}": URL duplicado no catálogo (${url}).`);
-    vistos.add(url);
+    // Os alias apontam de propósito para a mesma página de uma entrada que
+    // já existe: são a mesma fonte com a chave que o pacote usa. Contá-los
+    // como duplicado seria falhar o build por uma coisa deliberada.
+    if (!CHAVES_ALIAS.has(chave)) {
+      if (vistos.has(url)) erros.push(`Fonte "${chave}": URL duplicado no catálogo (${url}).`);
+      vistos.add(url);
+    }
 
     // Falha 3.1 da auditoria: o caminho /circ_rep/ serve a redação até 2013.
     if (s.url.includes("/circ_rep/")) {
       erros.push(`Fonte "${chave}": /circ_rep/ é a versão histórica do CIRC. Usar /CIRC_2R/.`);
+    }
+    // A irmã da anterior, apanhada na expansão de agosto de 2026: o caminho
+    // /codigos_tributarios/civa/ responde 200 e serve a redação histórica do
+    // Código do IVA. O art. 53.º ainda lá diz 10 000 € — um leitor que fosse
+    // confirmar o limiar da isenção encontrava um número que saiu de vigor há
+    // anos. A consolidada é /civa_rep/.
+    if (/\/codigos_tributarios\/civa\/Pages\//i.test(s.url)) {
+      erros.push(
+        `Fonte "${chave}": /codigos_tributarios/civa/ é a versão histórica do CIVA ` +
+          `(o art. 53.º ainda lá tem o limiar de 10 000 €). Usar /civa_rep/.`,
+      );
     }
     // O inverso, para o CIRS: `CIRS_2R` não existe (404 no portal). A
     // auditoria recomendou-o por simetria com o CIRC; seguir a recomendação

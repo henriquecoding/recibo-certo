@@ -9,6 +9,9 @@ export * from "./manifests";
 import { legalSource, type LegalSource, type LegalSourceId, LEITURAS_COMPLEMENTARES, type ComplementaryReading, type ComplementaryReadingId } from "./legal-sources";
 import { claimsDoGuia, fonteIdsDoGuia, guiaExigeRevisao } from "./claims";
 import { GUIDE_MANIFESTS, manifesto, estadoRevisao, type GuideManifest, type EstadoRevisao } from "./manifests";
+import { LEITURAS_POR_GUIA_EXPANSAO } from "./expansao/derivar";
+import { guiaExpansao } from "./expansao/catalogo";
+import { fontesAcrescentadas } from "./expansao/fontes-acrescentadas";
 
 // ─── Fontes de um Guia, já resolvidas e ordenadas ──────────────────────
 
@@ -86,11 +89,35 @@ export const LEITURAS_POR_GUIA: Record<string, ComplementaryReadingId[]> = {
   "ferias-direitos": ["dgertRelacoesLaborais", "actCondicoesTrabalho"],
   "trabalho-noturno-e-turnos": ["dgertRelacoesLaborais", "dfSuplementar"],
   "faltas-ao-trabalho": ["dgertRelacoesLaborais", "actCondicoesTrabalho"],
+
+  // ── Expansão editorial de agosto de 2026 ────────────────────────────
+  //    A leitura complementar dos 112 guias novos vem curada no pacote,
+  //    guia a guia. Entra por espalhamento para não haver aqui 112 linhas
+  //    a repetir o que o catálogo já diz.
+  ...(LEITURAS_POR_GUIA_EXPANSAO as Record<string, ComplementaryReadingId[]>),
 };
 
+/**
+ * As fontes oficiais de um guia.
+ *
+ * Nos 57 guias antigos derivam das afirmações — uma afirmação sem fonte não
+ * existe, e o bloco de fontes é a soma das fontes das afirmações.
+ *
+ * Nos guias da expansão a lista vem do pacote e é MAIOR do que a base legal
+ * da resposta curta: `fontes_oficiais` é `base_legal` mais os portais
+ * oficiais (Modelo 3, formulários RFI, páginas de serviço). O leitor que
+ * vai executar o procedimento precisa do portal tanto quanto do artigo, e é
+ * de `fontes_oficiais.length` que sai a contagem «{n} fontes oficiais» na
+ * barra de estado — como o pacote exige.
+ */
 export function fontesDoGuia(slug: string): FontesDoGuia {
   const ordem: Record<string, number> = { AT: 0, DR: 1, SS: 2, GOV: 3, EU: 4, OTHER_OFFICIAL: 5 };
-  const oficiais = fonteIdsDoGuia(slug)
+  const daExpansao = guiaExpansao(slug);
+  const doPacote = daExpansao
+    ? [...daExpansao.fontesOficiais, ...fontesAcrescentadas(slug)]
+    : undefined;
+  const ids = (doPacote as LegalSourceId[] | undefined) ?? fonteIdsDoGuia(slug);
+  const oficiais = ids
     .map((id: LegalSourceId) => legalSource(id))
     .sort((a, b) => ordem[a.authority] - ordem[b.authority] || a.title.localeCompare(b.title, "pt-PT"));
 
@@ -119,7 +146,7 @@ export function confiancaDoGuia(slug: string): ConfiancaDoGuia | null {
     revistoEm: m.lastReviewedAt,
     aplicavelDe: m.effectiveFrom,
     aplicavelAte: m.effectiveTo,
-    numeroFontesOficiais: fonteIdsDoGuia(slug).length,
+    numeroFontesOficiais: fontesDoGuia(slug).oficiais.length,
     afirmacoesPorRever: claimsDoGuia(slug).filter((c) => c.confidence === "review_required").length,
   };
 }
@@ -143,6 +170,9 @@ interface EntradaIndice {
   /** Campos por ordem decrescente de peso. */
   titulo: string;
   aliases: string;
+  /** Os sinónimos um a um, normalizados — para reconhecer quando a consulta
+      É um deles, e não apenas quando aparece algures no meio. */
+  listaAliases: string[];
   corpo: string;
 }
 
@@ -150,6 +180,7 @@ const INDICE: EntradaIndice[] = GUIDE_MANIFESTS.map((m) => ({
   slug: m.slug,
   titulo: normalizar(`${m.title} ${m.navLabel}`),
   aliases: normalizar(m.seo.aliases.join(" ")),
+  listaAliases: m.seo.aliases.map(normalizar),
   corpo: normalizar(
     [
       m.descricao,
@@ -172,13 +203,29 @@ export interface ResultadoPesquisa {
     título. Cada termo tem de aparecer algures (AND); a pontuação favorece
     títulos e sinónimos. */
 export function pesquisarGuias(consulta: string, limite = 12): ResultadoPesquisa[] {
-  const termos = normalizar(consulta).split(" ").filter((t) => t.length >= 2);
+  const frase = normalizar(consulta);
+  const termos = frase.split(" ").filter((t) => t.length >= 2);
   if (termos.length === 0) return [];
 
   const resultados: ResultadoPesquisa[] = [];
   for (const e of INDICE) {
     let pontuacao = 0;
     let todosPresentes = true;
+
+    // A consulta INTEIRA vale mais do que a soma das palavras soltas.
+    //
+    // Com 57 guias a pontuação por termo chegava. Com 169 deixou de chegar:
+    // "passar recibo" é um sinónimo declarado de `fatura-vs-recibo`, mas
+    // passou a perder para um guia cujo TÍTULO calha ter as duas palavras
+    // ("Reformado a passar recibos verdes") — dois acertos de título valem
+    // 20, um sinónimo exato valia 12. Quem escreve "passar recibo" quer
+    // saber que documento emitir, não o caso particular de um pensionista.
+    //
+    // Um sinónimo que é exatamente a consulta é o sinal mais forte que este
+    // índice tem: alguém previu aquela pergunta e apontou-lhe um guia.
+    if (e.listaAliases.includes(frase)) pontuacao += 30;
+    else if (e.aliases.includes(frase)) pontuacao += 8;
+    if (e.titulo.includes(frase)) pontuacao += 12;
 
     for (const termo of termos) {
       const noTitulo = e.titulo.includes(termo);

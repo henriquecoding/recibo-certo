@@ -21,6 +21,7 @@ on:
       - "src/components/fiz/**"
       - "src/lib/seo.ts"
       - "scripts/check-guias.mjs"
+      - "scripts/verificar-expansao.mjs"
       - ".github/workflows/guias-check.yml"
   schedule:
     # Segundas às 06:00 UTC — cedo o suficiente para haver tempo de reagir.
@@ -56,6 +57,11 @@ jobs:
         run: npm run guias:seo
       - name: guias:year-rollover
         run: npm run guias:year-rollover
+      - name: guias:expansao
+        # Critérios de aceitação da expansão editorial de 2026 (secção 5 do
+        # pacote): slugs, fontes resolvidas, meta descriptions, dados por
+        # confirmar retidos, corpos e plano do pacote.
+        run: npm run guias:expansao
       - name: Segurança da integração FIZ
         run: npx vitest run src/lib/__tests__/fiz.test.ts
 
@@ -75,6 +81,12 @@ jobs:
       - name: guias:links + guias:semantics
         id: monitor
         run: node scripts/check-guias.mjs | tee relatorio-guias.txt
+      - name: Ciclo de verificação da expansão
+        # Corre em ciclo até estabilizar e acrescenta o diff de fonte legal:
+        # guarda um resumo do texto de cada artigo e avisa quando muda. É a
+        # verificação que teria apanhado a reescrita do art. 53.º do CIVA
+        # antes de alguém a descobrir a ler o guia.
+        run: node scripts/verificar-expansao.mjs --hash | tee -a relatorio-guias.txt
       - name: Guardar relatório
         if: always()
         uses: actions/upload-artifact@v4

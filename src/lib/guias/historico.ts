@@ -35,8 +35,33 @@ export const ROTULO_ALTERACAO: Record<TipoAlteracao, string> = {
 };
 
 const AUDITORIA = "Auditoria editorial de 26 de julho de 2026";
+const EXPANSAO = "Expansão editorial dos Guias de 6 de agosto de 2026";
+
+import { HISTORICO_EXPANSAO } from "./expansao/derivar";
 
 export const HISTORICO_GUIAS: AlteracaoGuia[] = [
+  // Uma entrada por guia da expansão que já tem corpo redigido. Um andaime
+  // sem corpo não teve ainda alteração nenhuma com efeito para o leitor.
+  ...HISTORICO_EXPANSAO,
+
+  // ── Correções a conteúdo publicado, apuradas na expansão de agosto ──
+  {
+    guideId: "iva-recibos-verdes",
+    data: "2026-08-06",
+    tipo: "correcao_fonte",
+    descricao:
+      "O artigo 53.º do Código do IVA foi reescrito pelo Decreto-Lei n.º 35/2025 e passou a chamar-se «Âmbito de aplicação no território nacional». Estávamos a citá-lo pela epígrafe antiga, «Regime de isenção». O limite de 15 000 € mantém-se.",
+    origem: EXPANSAO,
+  },
+  {
+    guideId: "juros-indemnizatorios",
+    data: "2026-08-06",
+    tipo: "correcao_fonte",
+    descricao:
+      "A ligação para o artigo 43.º da Lei Geral Tributária passou a apontar para a página do Portal das Finanças, com o texto do artigo e a epígrafe oficial — «Pagamento indevido da prestação tributária». Antes apontava para o Diário da República, onde o artigo não é diretamente verificável.",
+    origem: EXPANSAO,
+  },
+
   // ── Secção nova: Direitos e cobranças ───────────────────────────────
   { guideId: "juros-indemnizatorios", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo sobre os juros que a Autoridade Tributária deve ao contribuinte quando o erro é dos serviços — o espelho dos juros de mora, e raramente pedido." },
   { guideId: "execucao-fiscal", data: "2026-07-27", tipo: "novo_conteudo", descricao: "Guia novo sobre o que acontece depois da citação em execução fiscal e sobre as saídas que continuam abertas." },

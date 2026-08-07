@@ -24,6 +24,8 @@ export interface AplicabilidadeGuia {
   checklist: string[];
 }
 
+import { APLICABILIDADE_EXPANSAO } from "./expansao/derivar";
+
 export const APLICABILIDADE: Record<string, AplicabilidadeGuia> = {
   // ── Direitos e cobranças ────────────────────────────────────────────
   "juros-indemnizatorios": {
@@ -997,6 +999,11 @@ export const APLICABILIDADE: Record<string, AplicabilidadeGuia> = {
       "Confirmar no recibo: além do dia, o subsídio de refeição desse dia perde-se.",
     ],
   },
+
+  // ── Expansão editorial de agosto de 2026 ────────────────────────────
+  //  Resposta curta, «aplica-se a ti se», «não se aplica se» e «o que
+  //  preparar» dos 112 guias novos — copiados do pacote, não reescritos.
+  ...APLICABILIDADE_EXPANSAO,
 };
 
 export function aplicabilidade(slug: string): AplicabilidadeGuia | undefined {

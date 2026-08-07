@@ -34,7 +34,15 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const FICHEIRO = join(__dirname, "..", "src", "lib", "guias", "legal-sources.ts");
+// O catálogo vive em DOIS ficheiros desde a expansão editorial de 2026: o
+// registo histórico e o das fontes que vieram com os 112 guias novos. O
+// monitor lê os dois — uma fonte fora do alcance do monitor é uma fonte que
+// pode apodrecer sem ninguém dar por isso, que é precisamente o problema
+// que este script existe para resolver.
+const FICHEIROS = [
+  join(__dirname, "..", "src", "lib", "guias", "legal-sources.ts"),
+  join(__dirname, "..", "src", "lib", "guias", "expansao", "fontes.ts"),
+];
 
 const args = process.argv.slice(2);
 const saidaJson = args.includes("--json");
@@ -254,7 +262,8 @@ async function verificar(fonte) {
 }
 
 async function main() {
-  const src = await readFile(FICHEIRO, "utf8");
+  const partes = await Promise.all(FICHEIROS.map((f) => readFile(f, "utf8")));
+  const src = partes.join("\n");
   DOMINIOS_QUE_BLOQUEIAM = extrairDominiosQueBloqueiam(src);
   if (DOMINIOS_QUE_BLOQUEIAM.length === 0) {
     console.error(

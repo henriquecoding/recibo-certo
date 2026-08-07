@@ -26,7 +26,7 @@ export { FISCAL_YEAR } from "./fiscal-year";
  * descreve mal o que aconteceu. `assertFiscalDataIntegrity()` faz o build falhar
  * se algum parâmetro for mais recente do que esta data.
  */
-export const DATA_LAST_REVIEW = "2026-08-01" as const;
+export const DATA_LAST_REVIEW = "2026-08-07" as const;
 
 // ─── Registo de fontes (evita repetir URLs longos) ─────────────────────
 export interface Source {
@@ -72,21 +72,121 @@ export const SOURCES = {
     label: "Art. 12.º-A CIRS — Regime fiscal aplicável a ex-residentes (Programa Regressar) · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs12a.aspx",
   },
+  lgt30: {
+    label: "Art. 30.º LGT — O crédito tributário é indisponível, e essa regra prevalece sobre qualquer legislação especial · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/lgt/Pages/lgt30.aspx",
+  },
+  rgit26: {
+    label: "Art. 26.º RGIT — Montante das coimas: mínimo de 50 €, ou 25 € em caso de redução; metade dos limites para pessoas singulares · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/rgit/Pages/rgit26.aspx",
+  },
+  rgit29: {
+    label: "Art. 29.º RGIT — Dispensa das coimas (redação da Lei n.º 7/2021) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/rgit/Pages/rgit29.aspx",
+  },
+  rgit30: {
+    label: "Art. 30.º RGIT — Direito à redução das coimas: 12,5% antes de qualquer ação, 50% até à audição prévia · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/rgit/Pages/rgit30.aspx",
+  },
+  rgit114: {
+    label: "Art. 114.º RGIT — Falta de entrega da prestação tributária · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/rgit/Pages/rgit114.aspx",
+  },
+  rgit116: {
+    label: "Art. 116.º RGIT — Falta ou atraso de declarações: coima de 150 € a 3 750 € · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/rgit/Pages/rgit116.aspx",
+  },
+  rgit117: {
+    label: "Art. 117.º RGIT — Falta ou atraso na apresentação de documentos e de declarações de início, alteração ou cessação · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/rgit/Pages/rgit117.aspx",
+  },
+  lgt78: {
+    label: "Art. 78.º LGT — Revisão dos atos tributários: quatro anos por erro imputável aos serviços, três anos por injustiça grave ou notória · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/lgt/Pages/lgt78.aspx",
+  },
+  cppt70: {
+    label: "Art. 70.º CPPT — Reclamação graciosa: prazo de 120 dias · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cppt/Pages/cppt70.aspx",
+  },
+  art53cirs: {
+    label: "Art. 53.º CIRS — Pensões: a dedução específica remete para a al. a) do n.º 1 do Art. 25.º · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs53.aspx",
+  },
+  art57cirs: {
+    label: "Art. 57.º CIRS — Declaração de rendimentos, contitularidade e a declaração por cada estatuto de residência · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs57.aspx",
+  },
+  art58aCirs: {
+    label: "Art. 58.º-A CIRS — Declaração automática de rendimentos: conversão em declaração entregue, tributação separada por defeito e substituição em 30 dias · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs58a.aspx",
+  },
+  art58EBF: {
+    label: "Art. 58.º EBF — Propriedade intelectual: englobamento por 50%, só ao titular originário, com o teto de 10 000 € · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-58-ordm-.aspx",
+  },
+  civa27: {
+    label: "Art. 27.º CIVA — Pagamento do imposto apurado: até ao dia 25 do 2.º mês seguinte · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva27.aspx",
+  },
+  civa41: {
+    label: "Art. 41.º CIVA — Prazo de entrega da declaração periódica: dia 20 do 2.º mês seguinte, e o limiar de 650 000 € que separa mensal de trimestral · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva41.aspx",
+  },
+  civa36: {
+    label: "Art. 36.º CIVA — Prazo de emissão e formalidades das faturas: 5.º dia útil, 15.º dia do mês seguinte nas intracomunitárias, data do recebimento nos adiantamentos · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva36.aspx",
+  },
+  civa53: {
+    label: "Art. 53.º CIVA — Âmbito de aplicação no território nacional: limiar de 15 000 €, e o regime transfronteiriço com o limiar de 100 000 € na União e o número EX · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-53-o-do-civa.aspx",
+  },
+  civa58: {
+    label: "Art. 58.º CIVA — Cessação do regime de isenção: a regra dos 25%, o efeito imediato e os 15 dias úteis para a declaração de alterações · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva58.aspx",
+  },
+  civa78: {
+    label: "Art. 78.º CIVA — Regularizações: prazos de retificação e a prova exigida para regularizar a favor do sujeito passivo · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva78.aspx",
+  },
+  civa9: {
+    label: "Art. 9.º CIVA — Isenções nas operações internas: saúde, ensino, formação profissional e lições particulares · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva9.aspx",
+  },
+  art16cirs: {
+    label: "Art. 16.º CIRS — Residência: os 183 dias, o critério da habitação, a residência parcial e a regra do ano da saída · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs16.aspx",
+  },
+  lgt19: {
+    label: "Art. 19.º LGT — Domicílio fiscal, prazo de 60 dias para comunicar a alteração de residência e regime do representante fiscal · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/lgt/Pages/lgt19.aspx",
+  },
   art70cirs: {
     label: "Art. 70.º CIRS — Mínimo de existência · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs70.aspx",
   },
   art71cirs: {
-    label: "Art. 71.º CIRS — Taxas liberatórias (dividendos) · Portal das Finanças (AT)",
+    label: "Art. 71.º CIRS — Taxas liberatórias: capitais a 28%, trabalho e pensões de não residentes a 25%, devolução a residentes na UE/EEE · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs71.aspx",
   },
   art72: {
-    label: "Art. 72.º CIRS — Taxas especiais (rendimentos prediais, categoria F) · Portal das Finanças (AT)",
+    label: "Art. 72.º CIRS — Taxas especiais: rendimentos prediais, mais-valias, não residentes e a opção pelas taxas progressivas na UE/EEE · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs72.aspx",
   },
   art78cirs: {
     label: "Art. 78.º CIRS — Deduções à coleta · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs78.aspx",
+  },
+  art13cirs: {
+    label: "Art. 13.º CIRS — Sujeito passivo, agregado familiar, dependentes e as responsabilidades parentais exercidas em comum · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs13.aspx",
+  },
+  art26cis: {
+    label: "Art. 26.º CIS — Participação da transmissão de bens: prazo até ao final do 3.º mês seguinte · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/selo/Pages/selo26.aspx",
+  },
+  art6cisSelo: {
+    label: "Art. 6.º CIS — Isenções: cônjuge ou unido de facto, descendentes e ascendentes nas transmissões gratuitas da verba 1.2 · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/selo/Pages/selo6.aspx",
   },
   art78aCirs: {
     label: "Art. 78.º-A CIRS — Dedução por dependentes · Portal das Finanças (AT)",
@@ -107,6 +207,50 @@ export const SOURCES = {
   art12bCirs: {
     label: "Art. 12.º-B CIRS — IRS Jovem · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs12b.aspx",
+  },
+  ctPeriodoExperimental: {
+    label: "Art. 112.º Código do Trabalho — Duração do período experimental · Base de Dados Jurídica da PGD Lisboa (versão consolidada)",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0112&nid=1047&tabela=leis&nversao=",
+  },
+  ctDenunciaExperimental: {
+    label: "Art. 114.º Código do Trabalho — Denúncia do contrato durante o período experimental · PGD Lisboa",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0114&nid=1047&tabela=leis&nversao=",
+  },
+  ctTermo: {
+    label: "Arts. 140.º e 148.º Código do Trabalho — Admissibilidade e duração do contrato a termo resolutivo · PGD Lisboa",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0140&nid=1047&tabela=leis&nversao=",
+  },
+  ctFormacao: {
+    label: "Arts. 131.º, 132.º e 134.º Código do Trabalho — Formação contínua, crédito de horas e efeito da cessação · PGD Lisboa",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0131&nid=1047&tabela=leis&nversao=",
+  },
+  ctBancoHoras: {
+    label: "Arts. 208.º-A e 208.º-B Código do Trabalho — Banco de horas individual (revogado) e grupal · PGD Lisboa",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0208B&nid=1047&tabela=leis&nversao=",
+  },
+  ctTeletrabalho: {
+    label: "Arts. 166.º, 168.º e 170.º Código do Trabalho — Acordo, equipamentos e despesas, e privacidade em teletrabalho · PGD Lisboa",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0168&nid=1047&tabela=leis&nversao=",
+  },
+  ctAssedio: {
+    label: "Art. 29.º Código do Trabalho — Assédio · PGD Lisboa",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0029&nid=1047&tabela=leis&nversao=",
+  },
+  ctTrabalhadorEstudante: {
+    label: "Art. 94.º Código do Trabalho — Concessão do estatuto de trabalhador-estudante · PGD Lisboa",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0094&nid=1047&tabela=leis&nversao=",
+  },
+  ctCompensacao: {
+    label: "Art. 366.º Código do Trabalho — Compensação por despedimento coletivo · PGD Lisboa",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0366&nid=1047&tabela=leis&nversao=",
+  },
+  dgertCodigoTrabalho: {
+    label: "Código do Trabalho e regulamentação — lista oficial de alterações · DGERT (Direção-Geral do Emprego e das Relações de Trabalho)",
+    url: "https://www.dgert.gov.pt/codigo-do-trabalho-e-regulamentacao",
+  },
+  art2cirs: {
+    label: "Art. 2.º CIRS — Rendimentos da categoria A: subsídio de refeição, abono para falhas e ajudas de custo · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs2.aspx",
   },
   art56aCirs: {
     label: "Art. 56.º-A CIRS — Exclusão de rendimentos de pessoas com deficiência · Portal das Finanças (AT)",
@@ -227,6 +371,94 @@ export const SOURCES = {
     url: "https://files.diariodarepublica.pt/2s/2026/02/023000000/0005100057.pdf",
   },
 
+  // ── CIMI / CIMT / TGIS — articulado da AT ──────────────────────────
+  //    Estas entradas substituem o guia da PwC como fonte dos parâmetros
+  //    patrimoniais. A PwC continua no registo: é boa leitura e é usada
+  //    onde não há artigo que fixe o número. Mas onde há artigo, é o artigo
+  //    que manda — a regra 1 deste projeto diz «só fontes oficiais», e um
+  //    guia de consultora não é a fonte de uma taxa que está na lei.
+  //    Verificados por leitura direta a 2026-08-06.
+  art112cimi: {
+    label: "Art. 112.º CIMI — Taxas (urbano 0,3%–0,45%; rústico 0,8%; agravamentos) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimi/Pages/cimi112.aspx",
+  },
+  art113cimi: {
+    label: "Art. 113.º CIMI — Competência e prazo da liquidação · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimi/Pages/cimi113.aspx",
+  },
+  art120cimi: {
+    label: "Art. 120.º CIMI — Prazo de pagamento (uma, duas ou três prestações) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimi/Pages/cimi120.aspx",
+  },
+  art11aCimi: {
+    label: "Art. 11.º-A CIMI — Isenção de prédios de reduzido VPT de sujeitos passivos de baixos rendimentos · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimi/Pages/cimi11a.aspx",
+  },
+  art135cCimi: {
+    label: "Art. 135.º-C CIMI — AIMI: regras de determinação do valor tributável e dedução · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimi/Pages/cimi135c.aspx",
+  },
+  art135fCimi: {
+    label: "Art. 135.º-F CIMI — AIMI: taxas · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimi/Pages/cimi135f.aspx",
+  },
+  art135gCimi: {
+    label: "Art. 135.º-G CIMI — AIMI: forma e prazo da liquidação · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimi/Pages/cimi135g.aspx",
+  },
+  art135hCimi: {
+    label: "Art. 135.º-H CIMI — AIMI: pagamento · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimi/Pages/cimi135h.aspx",
+  },
+  art9cimt: {
+    label: "Art. 9.º CIMT — Isenção pela aquisição de prédios destinados exclusivamente a habitação · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimt/Pages/cimt9.aspx",
+  },
+  art17cimt: {
+    label: "Art. 17.º CIMT — Taxas (escalões, taxas marginais e taxas únicas) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimt/Pages/cimt17.aspx",
+  },
+  art36cimt: {
+    label: "Art. 36.º CIMT — Prazos para pagamento · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimt/Pages/cimt36.aspx",
+  },
+  tgisPdf: {
+    label: "Tabela Geral do Imposto do Selo — verbas 1.1, 1.2, 2 e 17 (PDF consolidado do CIS) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/Cod_download/Documents/CIS.pdf",
+  },
+  art5cirs: {
+    label: "Art. 5.º CIRS — Rendimentos da categoria E, incluindo a remuneração de operações com criptoativos (al. u) do n.º 2 e n.º 11) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs5.aspx",
+  },
+  art15cirs: {
+    label: "Art. 15.º CIRS — Âmbito da sujeição (rendimento mundial dos residentes) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs15.aspx",
+  },
+  art41cirs: {
+    label: "Art. 41.º CIRS — Deduções aos rendimentos prediais (categoria F) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs41.aspx",
+  },
+  art51cirs: {
+    label: "Art. 51.º CIRS — Despesas e encargos (mais-valias) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs51.aspx",
+  },
+  art55cirs: {
+    label: "Art. 55.º CIRS — Dedução de perdas · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs55.aspx",
+  },
+  art115cirs: {
+    label: "Art. 115.º CIRS — Emissão de recibos e faturas (recibo de renda e declaração anual) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs115.aspx",
+  },
+  art46circ: {
+    label: "Art. 46.º CIRC — Conceito de mais-valias e menos-valias (dedução das depreciações) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/CIRC_2R/Pages/irc46.aspx",
+  },
+  art47circ: {
+    label: "Art. 47.º CIRC — Correção monetária das mais-valias e menos-valias · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/CIRC_2R/Pages/irc47.aspx",
+  },
+
   // ── PwC / CIMI / CIMT / TGIS — Impostos municipais ─────────────────
   pwcGuiaFiscal: {
     label: "PwC — Guia Fiscal 2026 (IMI, IMT, IS) · PwC Portugal",
@@ -269,6 +501,38 @@ export const SOURCES = {
   art21EBF: {
     label: "Art. 21.º EBF — PPR: dedução à coleta de 20% com limites por idade · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-21-ordm-.aspx",
+  },
+  ebf22: {
+    label: "Art. 22.º EBF — Organismos de investimento coletivo: IRC sobre o lucro tributável, excluídos os rendimentos dos arts. 5.º, 8.º e 10.º do CIRS · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-22-ordm.aspx",
+  },
+  ebf22a: {
+    label: "Art. 22.º-A EBF — Rendimentos pagos por organismos de investimento coletivo aos participantes: retenção na distribuição e no resgate · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-22-ordm-a.aspx",
+  },
+  ebf43c: {
+    label: "Art. 43.º-C EBF — Incentivo fiscal à aquisição de participações sociais de startups · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf43c.aspx",
+  },
+  ebf43d: {
+    label: "Art. 43.º-D EBF — Regime fiscal de incentivo à capitalização das empresas (ICE) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf43d.aspx",
+  },
+  circ31: {
+    label: "Art. 31.º CIRC — Quotas de depreciação ou amortização · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/CIRC_2R/Pages/irc31.aspx",
+  },
+  circ33: {
+    label: "Art. 33.º CIRC — Elementos de reduzido valor · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/CIRC_2R/Pages/irc33.aspx",
+  },
+  circ34: {
+    label: "Art. 34.º CIRC — Depreciações e amortizações não dedutíveis para efeitos fiscais · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/CIRC_2R/Pages/irc34.aspx",
+  },
+  art72cirsF: {
+    label: "Art. 72.º, n.º 1, al. f) CIRS — taxa autónoma de 28% sobre os ganhos de planos de opções abrangidos pelo art. 43.º-C do EBF · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs72.aspx",
   },
   art63EBF: {
     label: "Art. 63.º EBF — Estatuto do Mecenato: donativos, dedução de 25% com limite de 15% da coleta · Portal das Finanças (AT)",
@@ -337,6 +601,10 @@ export const SOURCES = {
   ct: {
     label: "Código do Trabalho (Lei 7/2009, versão consolidada) — férias, faltas, noturno e cessação · Diário da República",
     url: "https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2009-34546475",
+  },
+  ssEntidadeContratante: {
+    label: "Entidades contratantes de trabalhadores independentes — dependência económica e taxas de 7% e 10% · Segurança Social",
+    url: "https://www.seg-social.pt/entidades-contratantes",
   },
   ssDoenca: {
     label: "Subsídio de doença — montante, prazo de garantia e período de espera · Segurança Social",
@@ -450,10 +718,49 @@ const TODAY = "2026-06-11";
 const REV_MAIS_VALIAS = "2026-06-22";
 // Data de verificação dos benefícios fiscais à coleta (PPR, donativos, ascendentes).
 const REV_BENEFICIOS = "2026-06-22";
+// Data de verificação do regime dos organismos de investimento coletivo
+// (arts. 22.º e 22.º-A do EBF) e da exclusão por tempo de detenção do
+// Art. 43.º, n.º 5 do CIRS — lidos no articulado do Portal das Finanças.
+const REV_INVESTIMENTO = "2026-08-07";
+// Data de verificação do bloco de rendimentos e residência internacionais —
+// Art. 16.º do CIRS (residência), Art. 12.º-A (ex-residentes) e Art. 19.º da
+// LGT (domicílio fiscal e representante), lidos no Portal das Finanças.
+const REV_ESTRANGEIRO = "2026-08-07";
+// Data de verificação do bloco das profissões — Art. 58.º do EBF
+// (propriedade intelectual) e as isenções do Art. 9.º do CIVA que decidem a
+// fiscalidade da saúde, da formação e das explicações.
+const REV_PROFISSOES = "2026-08-07";
+// Data de verificação do bloco das infrações e da correção de declarações —
+// arts. 26.º, 29.º, 30.º, 114.º, 116.º e 117.º do RGIT, art. 78.º da LGT,
+// art. 70.º do CPPT e arts. 57.º e 58.º-A do CIRS.
+const REV_INFRACOES = "2026-08-07";
+// Data de verificação do bloco da proteção social dos independentes e das
+// pensões — art. 53.º do CIRS e o Código dos Regimes Contributivos.
+const REV_PROTECAO_2026 = "2026-08-07";
+// Data de verificação do bloco da faturação e do regime de isenção de IVA —
+// arts. 36.º, 53.º, 58.º e 78.º do CIVA na coleção consolidada, já com a
+// redação do Decreto-Lei n.º 35/2025.
+const REV_FATURACAO = "2026-08-07";
+// Data de verificação do bloco da família — art. 13.º, art. 78.º (n.os 9 a
+// 12) e art. 83.º-A do CIRS, e arts. 6.º e 26.º do Código do Imposto do Selo.
+const REV_FAMILIA = "2026-08-07";
+// Data de verificação da secção «Gerir uma empresa»: arts. 31.º, 33.º e
+// 34.º do CIRC, arts. 43.º-C e 43.º-D do EBF e art. 72.º, n.º 1, al. f)
+// do CIRS, lidos no articulado do Portal das Finanças.
+const REV_EMPRESA = "2026-08-07";
+// Data de verificação do Código do Trabalho: articulado consolidado lido na
+// base da PGD Lisboa, com a lista de alterações confirmada contra a DGERT —
+// ambas terminam na Lei n.º 32/2025, de 27 de março.
+const REV_TRABALHO = "2026-08-07";
 // Data de verificação dos coeficientes de desvalorização da moeda (Portaria 382/2025).
 const REV_COEF_MOEDA = "2026-06-23";
 // Data de verificação do Salário Mínimo Nacional 2026 (RMMG 920 €, DL 139/2025).
 const REV_SMN = "2026-07-14";
+// Data de leitura direta do articulado do CIMI, CIMT, TGIS e dos artigos do
+// CIRS/CIRC do património. Até aqui, vários destes parâmetros vinham do guia
+// fiscal da PwC — boa leitura, mas leitura de terceiros. Onde a lei fixa o
+// número, passa a ser a lei a sustentá-lo.
+const REV_PATRIMONIO = "2026-08-06";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  INDEXANTE DOS APOIOS SOCIAIS (IAS) — base de vários limites
@@ -729,8 +1036,23 @@ export const REGIME_SIMPLIFICADO = {
   coefOutrosServicos: sv(0.35, "Art. 31.º, n.º 1, al. c) CIRS — outras prestações de serviços", "art31", TODAY),
   coefVendas: sv(0.15, "Art. 31.º, n.º 1, al. a) CIRS — vendas de bens, restauração e hotelaria", "art31", TODAY),
   coefPropIntelectual: sv(0.95, "Art. 31.º, n.º 1, al. d) CIRS — propriedade intelectual/industrial", "art31", TODAY),
-  coefAlojamentoMoradia: sv(0.35, "Art. 31.º CIRS — alojamento local (moradia/apartamento)", "alojamentoLocal", TODAY),
-  coefAlojamentoContencao: sv(0.5, "Art. 31.º, n.º 1, al. h) CIRS — alojamento local em zona de contenção", "alojamentoLocal", TODAY),
+  // O AL em moradia ou apartamento está EXPRESSAMENTE EXCLUÍDO da al. a) —
+  // a das atividades hoteleiras — e cai por isso na regra geral das
+  // prestações de serviços da al. c). Lido no articulado a 2026-08-06; até
+  // aqui a fonte era um artigo da OCC, boa leitura mas leitura de terceiros.
+  coefAlojamentoMoradia: sv(
+    0.35,
+    "Art. 31.º, n.º 1, al. c) CIRS — o AL em moradia ou apartamento é excluído da al. a) e cai na regra geral das prestações de serviços",
+    "art31",
+    REV_PATRIMONIO
+  ),
+  coefAlojamentoContencao: sv(
+    0.5,
+    "Art. 31.º, n.º 1, al. h) CIRS (aditada pela Lei n.º 2/2020) — AL em moradia ou apartamento localizado em área de contenção",
+    "art31",
+    REV_PATRIMONIO,
+    "A delimitação das áreas é municipal e muda: verifica-se por morada, na câmara do concelho. A al. h) não consta do n.º 2, pelo que não permite a dedução autónoma das contribuições obrigatórias."
+  ),
   coefTransparencia: sv(1.0, "Art. 31.º, n.º 1, al. g) CIRS — serviços a sociedade onde detém ≥ 5%", "art31", TODAY),
   coefSubsidiosNaoExploracao: sv(
     0.3,
@@ -746,6 +1068,606 @@ export const REGIME_SIMPLIFICADO = {
     TODAY
   ),
 };
+
+/**
+ * Indisponibilidade do crédito tributário — Art. 30.º, n.os 2 e 3 da LGT.
+ *
+ * É a norma de onde nasce a tese de que as dívidas fiscais e à Segurança
+ * Social não são abrangidas pela exoneração do passivo restante. O n.º 3,
+ * aditado pela Lei n.º 55-A/2010, é o que a torna decisiva: manda-a
+ * prevalecer sobre qualquer legislação especial — e o Código da
+ * Insolvência é legislação especial.
+ *
+ * O motor guarda o texto da norma, não a conclusão. A questão de saber se
+ * a exoneração abrange créditos tributários tem decisões judiciais em
+ * sentidos diferentes, e não é ao motor fiscal que compete fechá-la — é
+ * por isso que o guia a apresenta em aberto.
+ */
+export const CREDITO_TRIBUTARIO_INDISPONIVEL = {
+  regra: sv(
+    "o crédito tributário é indisponível",
+    "Art. 30.º, n.º 2 LGT — só podendo fixar-se condições para a sua redução ou extinção com respeito pelo princípio da igualdade e da legalidade tributária",
+    "lgt30",
+    REV_INFRACOES
+  ),
+  prevaleceSobreLegislacaoEspecial: sv(
+    true,
+    "Art. 30.º, n.º 3 LGT (aditado pela Lei n.º 55-A/2010) — o disposto no número anterior prevalece sobre qualquer legislação especial",
+    "lgt30",
+    REV_INFRACOES,
+    "É este número que sustenta a tese de que a exoneração do passivo restante não abrange créditos tributários. A jurisprudência não é unânime."
+  ),
+} as const;
+
+
+/**
+ * Faturar — os prazos do Art. 36.º e as regularizações do Art. 78.º do
+ * CIVA, lidos na coleção consolidada a 07/08/2026.
+ *
+ * O prazo da fatura não é um só: são três, e o que os separa é o momento
+ * em que o imposto se torna devido. O caso dos adiantamentos é o que mais
+ * apanha gente — a fatura emite-se na DATA DO RECEBIMENTO, mesmo que o
+ * serviço ainda não tenha sido prestado.
+ */
+export const FATURACAO_PRAZOS = {
+  /** A regra geral. */
+  regraGeralDiasUteis: sv(
+    5,
+    "Art. 36.º, n.º 1, al. a) CIVA — a fatura deve ser emitida o mais tardar no 5.º dia útil seguinte ao do momento em que o imposto é devido nos termos do Art. 7.º",
+    "civa36",
+    REV_FATURACAO
+  ),
+  /** Prestações intracomunitárias de serviços tributáveis noutro Estado. */
+  intracomunitariasAteDiaDoMesSeguinte: sv(
+    15,
+    "Art. 36.º, n.º 1, al. b) CIVA — o mais tardar no 15.º dia do mês seguinte àquele em que o imposto é devido, nas prestações intracomunitárias de serviços tributáveis no território de outro Estado-Membro",
+    "civa36",
+    REV_FATURACAO
+  ),
+  /** Adiantamentos: o caso que apanha mais gente. */
+  adiantamentos: sv(
+    "na data do recebimento",
+    "Art. 36.º, n.º 1, al. c) CIVA — no caso de pagamentos relativos a transmissão de bens ou prestação de serviços ainda não efetuada",
+    "civa36",
+    REV_FATURACAO,
+    "Um sinal recebido em dezembro por trabalho de janeiro fatura-se em dezembro."
+  ),
+  /** Faturas globais. */
+  globaisDiasUteis: sv(
+    5,
+    "Art. 36.º, n.º 2 CIVA — o processamento das faturas globais não pode ir além de cinco dias úteis do termo do período a que respeitam",
+    "civa36",
+    REV_FATURACAO
+  ),
+} as const;
+
+/**
+ * Regularizações de IVA — Art. 78.º do CIVA.
+ *
+ * A assimetria é toda a matéria: corrigir a favor do Estado é
+ * OBRIGATÓRIO e tem prazo curto sem penalidade; corrigir a favor do
+ * sujeito passivo é FACULTATIVO, tem prazo longo — e exige prova.
+ */
+export const REGULARIZACAO_IVA = {
+  /** Anulação ou redução do valor tributável. */
+  anulacaoAtePeriodoSeguinte: sv(
+    "até ao final do período de imposto seguinte",
+    "Art. 78.º, n.º 2 CIVA — anulada a operação ou reduzido o valor tributável, o fornecedor pode deduzir o imposto correspondente até ao final do período de imposto seguinte àquele em que se verificarem as circunstâncias",
+    "civa78",
+    REV_FATURACAO
+  ),
+  /** Imposto liquidado a menos: obrigatório. */
+  aMenosObrigatorio: sv(
+    true,
+    "Art. 78.º, n.º 3 CIVA — nos casos de faturas inexatas, a retificação é obrigatória quando houver imposto liquidado a menos, podendo ser efetuada sem qualquer penalidade até ao final do período seguinte àquele a que respeita a fatura",
+    "civa78",
+    REV_FATURACAO
+  ),
+  /** Imposto liquidado a mais: facultativo, com prazo de dois anos. */
+  aMaisPrazoAnos: sv(
+    2,
+    "Art. 78.º, n.º 3 CIVA — a retificação é facultativa quando houver imposto liquidado a mais, mas apenas pode ser efetuada no prazo de dois anos",
+    "civa78",
+    REV_FATURACAO
+  ),
+  /** A condição que invalida a regularização mal feita. */
+  provaExigida: sv(
+    "prova de que o adquirente tomou conhecimento da retificação ou de que foi reembolsado do imposto",
+    "Art. 78.º, n.º 5 CIVA — sem ela, considera-se indevida a respetiva dedução",
+    "civa78",
+    REV_FATURACAO
+  ),
+  /** O prazo do lado de quem recebe a nota de crédito. */
+  adquirenteCorrigeAte: sv(
+    "até ao fim do período de imposto seguinte ao da receção do documento retificativo",
+    "Art. 78.º, n.º 4 CIVA — o adquirente sujeito passivo corrige a dedução efetuada",
+    "civa78",
+    REV_FATURACAO
+  ),
+} as const;
+
+/**
+ * O regime de isenção do Art. 53.º e a sua cessação (Art. 58.º), na
+ * redação do Decreto-Lei n.º 35/2025.
+ *
+ * A reforma de 2025 fez duas coisas ao mesmo tempo: mudou a epígrafe do
+ * Art. 53.º para «Âmbito de aplicação no território nacional» e abriu o
+ * regime a sujeitos passivos de outros Estados-Membros — com um segundo
+ * limiar, este à escala da União, e um número de identificação próprio
+ * com o sufixo «EX».
+ */
+export const ISENCAO_IVA_REGIME = {
+  /** O limiar nacional. */
+  limiarNacional: sv(
+    15000,
+    "Art. 53.º, n.º 1 CIVA (redação do Decreto-Lei n.º 35/2025) — volume de negócios anual em território nacional não superior a 15 000 €, no ano civil anterior",
+    "civa53",
+    REV_FATURACAO
+  ),
+  /** O limiar do regime transfronteiriço. */
+  limiarUniao: sv(
+    100000,
+    "Art. 53.º, n.º 2, al. a) CIVA — o volume de negócios anual na União Europeia do sujeito passivo não pode exceder 100 000 €",
+    "civa53",
+    REV_FATURACAO
+  ),
+  /** O identificador do regime transfronteiriço. */
+  sufixoIdentificacao: sv(
+    "EX",
+    "Art. 53.º, n.º 2, al. c) CIVA — número individual de identificação com o sufixo «EX», obtido no Estado-Membro de estabelecimento",
+    "civa53",
+    REV_FATURACAO
+  ),
+  /** O que a isenção custa. */
+  semDireitoADeducao: sv(
+    true,
+    "Art. 53.º, n.º 3 CIVA — os sujeitos passivos isentos estão excluídos do direito à dedução previsto nos artigos 19.º e 20.º e do direito ao reembolso",
+    "civa53",
+    REV_FATURACAO
+  ),
+  /** A margem que torna a mudança imediata. */
+  excessoQueTornaImediato: sv(
+    0.25,
+    "Art. 58.º, n.º 2, al. b) CIVA — deixa de poder beneficiar da isenção quem, no ano civil em curso, exceda o limiar em mais de 25%",
+    "civa58",
+    REV_FATURACAO
+  ),
+  /** Quando passa a ser devido imposto, em cada caso. */
+  efeitoNoAnoSeguinte: sv(
+    "a partir de 1 de janeiro do ano seguinte",
+    "Art. 58.º, n.º 4, al. a) CIVA — quando o limiar tenha sido ultrapassado no ano civil anterior",
+    "civa58",
+    REV_FATURACAO
+  ),
+  efeitoImediato: sv(
+    "a partir do momento em que o limiar é excedido em mais de 25%",
+    "Art. 58.º, n.º 4, al. b) CIVA",
+    "civa58",
+    REV_FATURACAO
+  ),
+  /** O prazo da declaração de alterações. */
+  prazoDeclaracaoAlteracoesDiasUteis: sv(
+    15,
+    "Art. 58.º, n.º 5 CIVA — declaração de alterações do Art. 32.º, no prazo de 15 dias úteis",
+    "civa58",
+    REV_FATURACAO
+  ),
+} as const;
+
+
+/**
+ * A declaração periódica de IVA — Arts. 41.º e 27.º do CIVA, lidos na
+ * coleção consolidada a 07/08/2026, já com as alterações do Decreto-Lei
+ * n.º 49/2025.
+ *
+ * O pacote dá os prazos mas não dá o número que decide qual deles se
+ * aplica: o limiar de 650 000 € de volume de negócios do ano anterior. É
+ * ele que separa quem entrega todos os meses de quem entrega por
+ * trimestre — e quem o ultrapassa passa a mensal a partir de 1 de janeiro
+ * do ano seguinte, mediante declaração de alterações entregue em janeiro.
+ */
+export const DECLARACAO_PERIODICA_IVA = {
+  /** O limiar que separa mensal de trimestral. */
+  limiarMensal: sv(
+    650000,
+    "Art. 41.º, n.º 1 CIVA — periodicidade mensal para volume de negócios igual ou superior a 650 000 € no ano civil anterior; trimestral abaixo disso",
+    "civa41",
+    REV_FATURACAO
+  ),
+  /** Dia-limite de entrega. */
+  diaEntrega: sv(
+    20,
+    "Art. 41.º, n.º 1 CIVA — até ao dia 20 do 2.º mês seguinte àquele a que respeitam as operações, ou ao trimestre",
+    "civa41",
+    REV_FATURACAO
+  ),
+  /** Dia-limite de pagamento. */
+  diaPagamento: sv(
+    25,
+    "Art. 27.º, n.º 1 CIVA — até ao dia 25 do 2.º mês seguinte àquele a que respeitam as operações, ou ao trimestre",
+    "civa27",
+    REV_FATURACAO
+  ),
+  /** Quantos meses depois do período. */
+  mesesAposPeriodo: sv(
+    2,
+    "Arts. 41.º e 27.º CIVA — os prazos contam-se sobre o 2.º mês seguinte ao período",
+    "civa41",
+    REV_FATURACAO
+  ),
+  /** A opção pelo regime mensal, e quando se exerce. */
+  opcaoMensalEmJaneiro: sv(
+    true,
+    "Art. 41.º, n.os 2 e 3, al. b) CIVA — os sujeitos passivos trimestrais podem optar pelo envio mensal; estando já registados, a declaração de alterações só pode ser apresentada durante o mês de janeiro, produzindo efeitos a partir de 1 de janeiro",
+    "civa41",
+    REV_FATURACAO
+  ),
+} as const;
+
+
+/**
+ * Coimas tributárias — o RGIT, lido no articulado a 07/08/2026.
+ *
+ * Três artigos que quase nunca são lidos juntos, e que só juntos fazem
+ * sentido: o 26.º fixa os tetos e os pisos, o 29.º a DISPENSA e o 30.º a
+ * REDUÇÃO. Dispensa e redução não são graus da mesma coisa — têm
+ * pressupostos diferentes, e quem confunde as duas pede a errada.
+ */
+export const COIMAS_RGIT = {
+  /** Falta ou atraso de declarações — o caso mais comum. */
+  faltaDeclaracoesMin: sv(
+    150,
+    "Art. 116.º, n.º 1 RGIT — a falta de declarações que devam ser apresentadas para a AT determinar, avaliar ou comprovar a matéria coletável, e a sua prestação fora do prazo legal, é punível com coima de 150 € a 3 750 €",
+    "rgit116",
+    REV_INFRACOES
+  ),
+  faltaDeclaracoesMax: sv(
+    3750,
+    "Art. 116.º, n.º 1 RGIT — limite máximo",
+    "rgit116",
+    REV_INFRACOES
+  ),
+  /** Declarações de início, alteração ou cessação de atividade. */
+  inicioAlteracaoCessacaoMin: sv(
+    300,
+    "Art. 117.º, n.º 2 RGIT — a falta de apresentação, ou apresentação fora do prazo, das declarações de início, alteração ou cessação de atividade é punível com coima de 300 € a 7 500 €",
+    "rgit117",
+    REV_INFRACOES
+  ),
+  inicioAlteracaoCessacaoMax: sv(
+    7500,
+    "Art. 117.º, n.º 2 RGIT — limite máximo",
+    "rgit117",
+    REV_INFRACOES
+  ),
+  /** O piso absoluto do que se paga. */
+  minimoAPagar: sv(
+    50,
+    "Art. 26.º, n.º 3 RGIT — o montante mínimo da coima a pagar é de 50 €",
+    "rgit26",
+    REV_INFRACOES
+  ),
+  /** E o piso quando há redução — é este que decide o caso comum. */
+  minimoComReducao: sv(
+    25,
+    "Art. 26.º, n.º 3 RGIT — exceto em caso de redução da coima, em que o mínimo a pagar é de 25 €",
+    "rgit26",
+    REV_INFRACOES,
+    "12,5% de 150 € dariam 18,75 €: é este piso que faz o valor subir para 25 €."
+  ),
+  /** Pessoas singulares pagam no máximo metade dos tetos das coletivas. */
+  fracaoLimitesPessoaSingular: sv(
+    0.5,
+    "Art. 26.º, n.º 2 RGIT — as coimas aplicáveis às pessoas singulares não podem exceder metade dos limites estabelecidos para as pessoas coletivas",
+    "rgit26",
+    REV_INFRACOES
+  ),
+  /** E as coletivas veem os limites dos tipos legais dobrados. */
+  fatorPessoaColetiva: sv(
+    2,
+    "Art. 26.º, n.º 4 RGIT — os limites mínimo e máximo das coimas previstas nos diferentes tipos legais são elevados para o dobro quando aplicadas a pessoa coletiva ou entidade equiparada",
+    "rgit26",
+    REV_INFRACOES
+  ),
+} as const;
+
+/**
+ * Redução da coima — Art. 30.º do RGIT, na redação da Lei n.º 7/2021 (em
+ * vigor desde 1 de janeiro de 2022).
+ *
+ * Duas percentagens e um relógio. O que as separa não é a gravidade da
+ * falta: é o MOMENTO em que se pede, medido contra a ação da AT.
+ *
+ * E há um n.º 5 que muda o guia todo: quando a regularização não depende
+ * de tributo a liquidar pelos serviços, «vale como pedido de redução a
+ * entrega da prestação tributária ou do documento ou declaração em
+ * falta». Ou seja — na maior parte dos casos, entregar a declaração É o
+ * pedido. Não há formulário a preencher.
+ */
+export const REDUCAO_COIMA = {
+  antesDeQualquerAcao: sv(
+    0.125,
+    "Art. 30.º, n.º 1, al. a) RGIT — sem que tenha sido levantado auto de notícia, recebida participação ou denúncia ou iniciado procedimento de inspeção tributária, para 12,5% do montante mínimo legal",
+    "rgit30",
+    REV_INFRACOES
+  ),
+  ateAudicaoPrevia: sv(
+    0.5,
+    "Art. 30.º, n.º 1, al. b) RGIT — até ao termo do prazo para apresentação de audição prévia no âmbito de procedimento de inspeção tributária, para 50% do montante mínimo legal",
+    "rgit30",
+    REV_INFRACOES
+  ),
+  /** Sobre que valor incidem as percentagens. */
+  baseDeCalculo: sv(
+    "o montante mínimo legal, e considera-se sempre o estabelecido para os casos de negligência",
+    "Art. 30.º, n.º 2 RGIT",
+    "rgit30",
+    REV_INFRACOES
+  ),
+  /** Prazo para pagar depois de notificado da coima reduzida. */
+  prazoPagamentoDias: sv(
+    30,
+    "Art. 30.º, n.º 3, al. a) RGIT — o direito à redução depende do pagamento nos 30 dias posteriores à notificação da coima reduzida e da regularização da situação tributária no mesmo prazo",
+    "rgit30",
+    REV_INFRACOES
+  ),
+  /** Quando é que o pedido é implícito. */
+  pedidoImplicito: sv(
+    "a entrega da prestação tributária ou do documento ou declaração em falta",
+    "Art. 30.º, n.º 5 RGIT — sempre que a regularização não dependa de tributo a liquidar pelos serviços, vale como pedido de redução",
+    "rgit30",
+    REV_INFRACOES
+  ),
+} as const;
+
+/**
+ * Dispensa de coima — Art. 29.º do RGIT, na redação da Lei n.º 7/2021.
+ *
+ * Não é uma redução maior: é outra coisa. O n.º 1 é um travão automático
+ * baseado num historial limpo de cinco anos; o n.º 2 é uma via própria,
+ * que exige ausência de prejuízo efetivo e regularização, e que tem de
+ * ser REQUERIDA no prazo da defesa.
+ */
+export const DISPENSA_COIMA = {
+  anosDeHistorialLimpo: sv(
+    5,
+    "Art. 29.º, n.º 1 RGIT — não pode ser aplicada coima quando o agente, nos cinco anos anteriores, não tenha sido condenado por infração tributária nem beneficiado de dispensa ou de coima reduzida",
+    "rgit29",
+    REV_INFRACOES
+  ),
+  exigeSemPrejuizoEfetivo: sv(
+    true,
+    "Art. 29.º, n.º 2, al. a) RGIT — a prática da infração não pode ocasionar prejuízo efetivo à receita tributária",
+    "rgit29",
+    REV_INFRACOES,
+    "E o n.º 3 fecha a porta ao caso mais comum: existe SEMPRE prejuízo efetivo quando esteja em causa falta de entrega da prestação tributária."
+  ),
+  requeridaNoPrazoDeDefesa: sv(
+    true,
+    "Art. 29.º, n.º 4 RGIT — a dispensa deve ser requerida no prazo concedido para a defesa, devendo a falta ser regularizada até ao termo desse prazo",
+    "rgit29",
+    REV_INFRACOES
+  ),
+} as const;
+
+/** Falta de entrega da prestação tributária — Art. 114.º do RGIT. */
+export const FALTA_ENTREGA_PRESTACAO = {
+  negligenciaMin: sv(
+    0.15,
+    "Art. 114.º, n.º 2 RGIT — sendo a conduta imputável a título de negligência, coima variável entre 15% e metade do imposto em falta",
+    "rgit114",
+    REV_INFRACOES
+  ),
+  negligenciaMax: sv(
+    0.5,
+    "Art. 114.º, n.º 2 RGIT — limite superior no caso de negligência",
+    "rgit114",
+    REV_INFRACOES
+  ),
+  doloFatorMax: sv(
+    2,
+    "Art. 114.º, n.º 1 RGIT — coima variável entre o valor da prestação em falta e o seu dobro",
+    "rgit114",
+    REV_INFRACOES
+  ),
+} as const;
+
+/**
+ * Corrigir depois de entregue — os prazos do Art. 78.º da LGT e do Art.
+ * 70.º do CPPT.
+ *
+ * O pacote manda confirmar estes prazos antes de indicar números. Estão
+ * confirmados, e são três relógios diferentes que costumam ser tratados
+ * como um só.
+ */
+export const REVISAO_E_RECLAMACAO = {
+  /** Reclamação graciosa da liquidação. */
+  reclamacaoGraciosaDias: sv(
+    120,
+    "Art. 70.º, n.º 1 CPPT — a reclamação graciosa é apresentada no prazo de 120 dias contados a partir dos factos previstos no n.º 1 do Art. 102.º",
+    "cppt70",
+    REV_INFRACOES
+  ),
+  /** Revisão por iniciativa da AT, por erro dos serviços. */
+  revisaoPorErroDosServicosAnos: sv(
+    4,
+    "Art. 78.º, n.º 1 LGT — por iniciativa da administração tributária, no prazo de quatro anos após a liquidação, ou a todo o tempo se o tributo ainda não tiver sido pago, com fundamento em erro imputável aos serviços",
+    "lgt78",
+    REV_INFRACOES,
+    "O pedido do contribuinte dirigido ao órgão competente interrompe este prazo (n.º 7)."
+  ),
+  /** A via excecional da injustiça grave ou notória. */
+  injusticaGraveAnos: sv(
+    3,
+    "Art. 78.º, n.º 4 LGT — o dirigente máximo do serviço pode autorizar, excecionalmente, nos três anos posteriores ao ato tributário, a revisão da matéria tributável com fundamento em injustiça grave ou notória",
+    "lgt78",
+    REV_INFRACOES,
+    "Desde que o erro não seja imputável a comportamento negligente do contribuinte."
+  ),
+  /** Duplicação de coleta. */
+  duplicacaoColetaAnos: sv(
+    4,
+    "Art. 78.º, n.º 6 LGT — a revisão por motivo de duplicação de coleta pode efetuar-se, seja qual for o fundamento, no prazo de quatro anos",
+    "lgt78",
+    REV_INFRACOES
+  ),
+} as const;
+
+/**
+ * Declaração automática de rendimentos — Art. 58.º-A do CIRS.
+ *
+ * O pacote deu a página deste artigo como não verificada. Abre, e tem
+ * duas regras que decidem o guia inteiro e que quase ninguém conhece:
+ *
+ *  · não fazer nada NÃO é não entregar. A declaração provisória
+ *    converte-se em declaração entregue pelo próprio, no fim do prazo;
+ *  · e nesse caso, sendo casado ou unido de facto, o regime que se
+ *    observa é o da tributação SEPARADA. Quem beneficiaria da conjunta
+ *    perde-a por inação, sem ninguém lho dizer.
+ */
+export const IRS_AUTOMATICO = {
+  /** Prazo para comunicar o agregado familiar. */
+  prazoElementosPessoais: sv(
+    "até ao final do mês de fevereiro",
+    "Art. 58.º-A, n.º 6 CIRS (redação do Decreto-Lei n.º 49/2025) — os sujeitos passivos podem indicar no Portal das Finanças os elementos pessoais relevantes, mediante autenticação de todos os membros do agregado familiar",
+    "art58aCirs",
+    REV_INFRACOES
+  ),
+  /** O que acontece a quem não comunica nada. */
+  semComunicacaoDeAgregado: sv(
+    "usam-se os elementos do ano anterior e, na falta deles, considera-se não casado e sem dependentes",
+    "Art. 58.º-A, n.º 7 CIRS",
+    "art58aCirs",
+    REV_INFRACOES
+  ),
+  /** O que acontece a quem não confirma nem entrega. */
+  seNadaForFeito: sv(
+    "a declaração provisória converte-se em declaração entregue pelo sujeito passivo",
+    "Art. 58.º-A, n.º 3 CIRS — quando, no fim do prazo do n.º 1 do Art. 60.º, não se tenha verificado a confirmação nem a entrega de qualquer declaração",
+    "art58aCirs",
+    REV_INFRACOES
+  ),
+  /** E com que regime de tributação. */
+  regimeSeNadaForFeito: sv(
+    "tributação separada",
+    "Art. 58.º-A, n.º 4, al. b) CIRS — no caso do n.º 3, observa-se, tratando-se de sujeitos passivos casados ou unidos de facto, o regime de tributação separada",
+    "art58aCirs",
+    REV_INFRACOES,
+    "Quem beneficiaria da tributação conjunta perde-a por inação."
+  ),
+  /** A janela para corrigir sem penalidade. */
+  substituicaoSemPenalidadeDias: sv(
+    30,
+    "Art. 58.º-A, n.º 3 CIRS — o sujeito passivo pode entregar uma declaração de substituição nos 30 dias posteriores à liquidação sem qualquer penalidade",
+    "art58aCirs",
+    REV_INFRACOES
+  ),
+  /** Quem é abrangido não está no artigo. */
+  universoDefinidoPor: sv(
+    "decreto regulamentar",
+    "Art. 58.º-A, n.º 8 CIRS — o universo dos sujeitos passivos abrangidos é fixado por decreto regulamentar",
+    "art58aCirs",
+    REV_INFRACOES,
+    "É por isto que o artigo não responde à pergunta «sou abrangido?»: a resposta vive noutro diploma, que muda."
+  ),
+} as const;
+
+/**
+ * Propriedade intelectual — a exclusão parcial do Art. 58.º do EBF.
+ *
+ * Lido no articulado a 07/08/2026. É um benefício com três travões, e
+ * quem só conhece o primeiro fica com uma ideia errada do seu alcance:
+ *
+ *  · vale só ao **titular originário** — quem criou. Um cessionário de
+ *    direitos, um herdeiro ou uma editora não têm direito a ele;
+ *  · **exclui** obras escritas sem carácter literário, artístico ou
+ *    científico, obras de **arquitetura** e obras **publicitárias**;
+ *  · a importância a excluir do englobamento **não pode exceder 10 000 €**
+ *    — é um teto sobre o que se exclui, não sobre o que se ganha.
+ *
+ * Nota de vigência, e é importante: o Art. 58.º está sujeito ao prazo de
+ * caducidade do Art. 3.º, n.º 1 do EBF (cinco anos), e NÃO consta da lista
+ * de exceções do n.º 3 desse artigo. A última prorrogação que a AT anota na
+ * própria página do artigo é a da Lei n.º 21/2021, até 31/12/2021. O texto
+ * continua publicado na coleção consolidada sem marca de revogação, mas a
+ * vigência para um ano concreto tem de ser confirmada — e é isso que o guia
+ * diz ao leitor, em vez de a afirmar.
+ */
+export const PROPRIEDADE_INTELECTUAL_EBF = {
+  /** Fração do rendimento considerada no englobamento. */
+  fracaoEnglobada: sv(
+    0.5,
+    "Art. 58.º, n.º 1 EBF — os rendimentos são considerados no englobamento, para efeitos de IRS, apenas por 50% do seu valor, líquido de outros benefícios",
+    "art58EBF",
+    REV_PROFISSOES
+  ),
+  /** Teto do montante que se pode excluir do englobamento. */
+  limiteExclusao: sv(
+    10000,
+    "Art. 58.º, n.º 3 EBF — a importância a excluir do englobamento nos termos do n.º 1 não pode exceder 10 000 €",
+    "art58EBF",
+    REV_PROFISSOES,
+    "O teto morde no que se exclui, não no que se ganha."
+  ),
+  /** Quem pode usar o benefício. */
+  exigeTitularOriginario: sv(
+    true,
+    "Art. 58.º, n.º 1 EBF — quando auferidos por titulares de direitos de autor ou conexos residentes em território português, desde que sejam os titulares originários",
+    "art58EBF",
+    REV_PROFISSOES,
+    "Cessionários, herdeiros e editoras ficam de fora."
+  ),
+  /** O que a lei retira expressamente do benefício. */
+  excluidas: sv(
+    "obras escritas sem carácter literário, artístico ou científico, obras de arquitetura e obras publicitárias",
+    "Art. 58.º, n.º 2 EBF — exclusões expressas",
+    "art58EBF",
+    REV_PROFISSOES
+  ),
+  /** O que a lei inclui, e costuma surpreender. */
+  incluidas: sv(
+    "propriedade literária, artística e científica, incluindo a alienação de obras de arte de exemplar único e as obras de divulgação pedagógica e científica",
+    "Art. 58.º, n.º 1 EBF — âmbito",
+    "art58EBF",
+    REV_PROFISSOES
+  ),
+} as const;
+
+/**
+ * Isenções do Art. 9.º do CIVA que decidem a fiscalidade de três profissões
+ * inteiras — saúde, formação e explicações. Lidas no articulado a
+ * 07/08/2026, na coleção consolidada.
+ *
+ * São isenções INCOMPLETAS: isentam a operação e, por isso mesmo, retiram
+ * o direito à dedução do IVA suportado. Não é «não pagar IVA» — é ficar
+ * fora do imposto nos dois sentidos.
+ */
+export const ISENCOES_CIVA_PROFISSOES = {
+  /** Saúde: a isenção é pela PROFISSÃO, não pelo rótulo «serviço de saúde». */
+  saude: sv(
+    "médico, odontologista, psicólogo, parteiro, enfermeiro e outras profissões paramédicas",
+    "Art. 9.º, n.º 1) CIVA (redação da Lei n.º 2/2020) — prestações de serviços efetuadas no exercício destas profissões",
+    "civa9",
+    REV_PROFISSOES,
+    "O n.º 2) acrescenta os serviços médicos e sanitários prestados por estabelecimentos hospitalares e clínicas, e o n.º 3) os protésicos dentários."
+  ),
+  /** Formação profissional: depende de reconhecimento ministerial. */
+  formacaoProfissional: sv(
+    "organismos de direito público ou entidades reconhecidas como tendo competência nos domínios da formação e reabilitação profissionais pelos ministérios competentes",
+    "Art. 9.º, n.º 10) CIVA — prestações de serviços que tenham por objeto a formação profissional, e transmissões e prestações conexas",
+    "civa9",
+    REV_PROFISSOES,
+    "Sem o reconhecimento, a formação não cabe nesta isenção."
+  ),
+  /** Explicações: isentas por natureza, sem depender de reconhecimento. */
+  licoes: sv(
+    "lições ministradas sobre matérias do ensino escolar ou superior",
+    "Art. 9.º, n.º 11) CIVA (redação da Lei n.º 82/2023) — prestações de serviços que consistam em lições sobre matérias do ensino escolar ou superior",
+    "civa9",
+    REV_PROFISSOES,
+    "Não depende de reconhecimento nem de volume de negócios: é isenção pela natureza do serviço."
+  ),
+} as const;
 
 /** Coeficiente do regime simplificado por tipo de atividade. */
 export const COEFICIENTE_POR_TIPO: Record<TipoAtividade, number> = {
@@ -811,6 +1733,46 @@ export const IRS_JOVEM = {
 export const PROGRAMA_REGRESSAR = {
   exclusao: sv(0.5, "Art. 12.º-A, n.º 1 CIRS — exclusão de 50% dos rendimentos das categorias A e B", "art12aCirs", DATA_LAST_REVIEW),
   anos: sv(5, "Art. 12.º-A, n.º 1 CIRS — cinco anos, incluindo o do regresso", "art12aCirs", DATA_LAST_REVIEW),
+  /**
+   * As quatro condições cumulativas do n.º 1, na redação da Lei n.º 82/2023
+   * — lidas no articulado a 07/08/2026, porque o pacote de expansão marcou
+   * duas delas como «confirmar» e a resposta é datada.
+   */
+  anosSemResidencia: sv(
+    5,
+    "Art. 12.º-A, n.º 1, al. b) CIRS — não ter sido considerado residente em território português em qualquer dos cinco anos anteriores",
+    "art12aCirs",
+    REV_ESTRANGEIRO
+  ),
+  /** A janela fecha, e a lei diz o ano. */
+  ultimoAnoParaSeTornarResidente: sv(
+    2026,
+    "Art. 12.º-A, n.º 1, al. a) CIRS (Lei n.º 82/2023) — tornar-se fiscalmente residente nos termos dos n.os 1 e 2 do Art. 16.º até 2026",
+    "art12aCirs",
+    REV_ESTRANGEIRO,
+    "É o último ano previsto na redação em vigor. A janela já foi prorrogada antes; enquanto não o for de novo, quem se tornar residente em 2027 fica de fora."
+  ),
+  /** É para quem VOLTA — não para quem chega pela primeira vez. */
+  exigeResidenciaAnterior: sv(
+    true,
+    "Art. 12.º-A, n.º 1, al. c) CIRS — ter sido residente em território português em qualquer período antecedente ao dos cinco anos anteriores",
+    "art12aCirs",
+    REV_ESTRANGEIRO,
+    "É o regime dos EX-residentes: quem nunca cá foi residente não é elegível, por muitos anos que tenha vivido fora."
+  ),
+  exigeSituacaoRegularizada: sv(
+    true,
+    "Art. 12.º-A, n.º 1, al. d) CIRS — ter a situação tributária regularizada",
+    "art12aCirs",
+    REV_ESTRANGEIRO
+  ),
+  /** Não acumula com o residente não habitual. */
+  incompativelComRNH: sv(
+    true,
+    "Art. 12.º-A, n.º 2 CIRS — não podem beneficiar deste regime os sujeitos passivos que tenham solicitado a sua inscrição como residente não habitual",
+    "art12aCirs",
+    REV_ESTRANGEIRO
+  ),
 };
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -976,6 +1938,346 @@ export const DIVIDENDOS_TAXA = sv(
   TODAY
 );
 
+/**
+ * A MESMA taxa do Art. 71.º, n.º 1, vista do lado dos juros, dos depósitos e
+ * dos restantes rendimentos de capitais.
+ *
+ * É deliberadamente uma referência e não um segundo valor: a norma é uma só —
+ * «estão sujeitos a retenção na fonte a título definitivo, à taxa liberatória
+ * de 28 %, os rendimentos de capitais obtidos em território português». Os
+ * dividendos são um caso dela, não uma regra à parte. Dois `sv()` com o mesmo
+ * número seriam dois sítios para atualizar no dia em que a taxa mudar, e um
+ * deles ficaria para trás.
+ */
+export const CAPITAIS_TAXA_LIBERATORIA = DIVIDENDOS_TAXA;
+
+// ═══════════════════════════════════════════════════════════════════════
+//  RENDIMENTOS DO ESTRANGEIRO E REPORTE DE PERDAS
+//  ---------------------------------------------------------------------
+//  O que os guias de «Investir e poupar» precisam e o motor não tinha: o
+//  duplo limite do crédito de imposto, os anos de reporte de cada coisa, e
+//  a condição — muito esquecida — de que o reporte de menos-valias depende
+//  de se ter optado pelo englobamento no ano da perda.
+// ═══════════════════════════════════════════════════════════════════════
+
+export const RENDIMENTO_MUNDIAL = sv(
+  true,
+  "Art. 15.º, n.º 1 CIRS — sendo as pessoas residentes em território português, o IRS incide sobre a totalidade dos seus rendimentos, incluindo os obtidos fora desse território",
+  "art15cirs",
+  REV_PATRIMONIO,
+  "Aos não residentes o IRS incide unicamente sobre os rendimentos obtidos em território português (n.º 2)."
+);
+
+/**
+ * Residência fiscal — os critérios do Art. 16.º, lidos no articulado a
+ * 07/08/2026.
+ *
+ * O pacote avisa, e com razão, que residência fiscal (Art. 16.º CIRS),
+ * domicílio fiscal (Art. 19.º LGT) e autorização de residência são três
+ * coisas diferentes que toda a gente confunde. Só a primeira decide o que
+ * Portugal tributa.
+ *
+ * Três coisas que a letra diz e as explicações costumam perder:
+ *
+ *  · O período dos 183 dias NÃO é o ano civil — é «qualquer período de 12
+ *    meses com início ou fim no ano em causa». É uma janela deslizante.
+ *  · Basta UM dos critérios do n.º 1. O da habitação dispensa por completo
+ *    a contagem de dias.
+ *  · A residência é aferida em relação a CADA sujeito passivo do agregado
+ *    (n.º 5). Num casal, um pode ser residente e o outro não.
+ */
+export const RESIDENCIA_FISCAL = {
+  /** Dias de permanência que, por si só, tornam residente. */
+  diasPermanencia: sv(
+    183,
+    "Art. 16.º, n.º 1, al. a) CIRS — permanência por mais de 183 dias, seguidos ou interpolados, em qualquer período de 12 meses com início ou fim no ano em causa",
+    "art16cirs",
+    REV_ESTRANGEIRO,
+    "São mais de 183 dias, não 183: no dia 183 ainda não és residente por esta via."
+  ),
+  /** A janela em que os dias se contam. */
+  janelaMeses: sv(
+    12,
+    "Art. 16.º, n.º 1, al. a) CIRS — qualquer período de 12 meses com início ou fim no ano em causa",
+    "art16cirs",
+    REV_ESTRANGEIRO,
+    "Janela deslizante, não ano civil. Uma estadia a cavalo de dois anos pode contar toda para o mesmo período."
+  ),
+  /** O que conta como dia de presença. */
+  contaComoDia: sv(
+    "qualquer dia, completo ou parcial, que inclua dormida",
+    "Art. 16.º, n.º 2 CIRS — considera-se dia de presença em território português qualquer dia, completo ou parcial, que inclua dormida no mesmo",
+    "art16cirs",
+    REV_ESTRANGEIRO,
+    "Um dia de chegada e um dia de partida contam ambos, se houve dormida."
+  ),
+  /** O critério que dispensa a contagem de dias. */
+  criterioHabitacao: sv(
+    "habitação em condições que façam supor intenção atual de a manter e ocupar como residência habitual",
+    "Art. 16.º, n.º 1, al. b) CIRS — tendo permanecido por menos tempo, dispor de habitação nessas condições num qualquer dia do período",
+    "art16cirs",
+    REV_ESTRANGEIRO,
+    "Basta um dia do período. Não é ter casa: é ter casa em condições que revelem a intenção."
+  ),
+  /** A residência é individual, não do agregado. */
+  aferidaPorSujeitoPassivo: sv(
+    true,
+    "Art. 16.º, n.º 5 CIRS — a residência fiscal é aferida em relação a cada sujeito passivo do agregado",
+    "art16cirs",
+    REV_ESTRANGEIRO
+  ),
+  /** Quando começa a residência, no ano da chegada. */
+  inicioResidencia: sv(
+    "primeiro dia do período de permanência",
+    "Art. 16.º, n.º 3 CIRS — tornam-se residentes desde o primeiro dia de permanência, salvo se tiverem sido residentes em qualquer dia do ano anterior, caso em que desde 1 de janeiro",
+    "art16cirs",
+    REV_ESTRANGEIRO
+  ),
+  /** Quando termina, no ano da saída. */
+  fimResidencia: sv(
+    "último dia de permanência",
+    "Art. 16.º, n.º 4 CIRS — a perda da qualidade de residente ocorre a partir do último dia de permanência, salvo nos casos dos n.os 14 e 16",
+    "art16cirs",
+    REV_ESTRANGEIRO
+  ),
+  /**
+   * A regra que apanha quem sai tarde e recebe depois de sair.
+   *
+   * Continuas residente durante TODO o ano da saída se, cumulativamente,
+   * permaneceste cá mais de 183 dias nesse ano E recebeste, depois do
+   * último dia de permanência, rendimentos que seriam sujeitos a IRS.
+   * Cai se provares que esses rendimentos foram tributados na UE/EEE com
+   * cooperação, ou noutro Estado a taxa não inferior a 60% da portuguesa.
+   */
+  residenteTodoOAnoDaSaida: sv(
+    "mais de 183 dias nesse ano e rendimentos obtidos após o último dia de permanência",
+    "Art. 16.º, n.os 14 e 15 CIRS — condições cumulativas, com a exceção da tributação no estrangeiro a taxa não inferior a 60% da que cá se aplicaria",
+    "art16cirs",
+    REV_ESTRANGEIRO
+  ),
+  /**
+   * A saída da regra anterior: prova de tributação efetiva lá fora.
+   *
+   * Fora da UE e do EEE, não basta ter sido tributado — a taxa aplicada
+   * tem de não ser inferior a esta fração da que cá se aplicaria. É o que
+   * separa uma mudança real de uma mudança para não pagar.
+   */
+  limiarTributacaoNoEstrangeiro: sv(
+    0.6,
+    "Art. 16.º, n.º 15, al. b) CIRS — noutro Estado não abrangido pela al. a), a taxa de tributação aplicável àqueles rendimentos não pode ser inferior a 60% daquela que lhes seria aplicável caso o sujeito passivo mantivesse a residência em território português",
+    "art16cirs",
+    REV_ESTRANGEIRO
+  ),
+  /** Sair e voltar no ano seguinte apaga a saída. */
+  regressoNoAnoSeguinte: sv(
+    "residente durante a totalidade do ano",
+    "Art. 16.º, n.º 16 CIRS — considera-se residente durante a totalidade do ano quem volte a adquirir essa qualidade no ano subsequente àquele em que a perdeu",
+    "art16cirs",
+    REV_ESTRANGEIRO
+  ),
+  /** Mudar para um paraíso fiscal não corta a residência de imediato. */
+  paraisoFiscalAnos: sv(
+    4,
+    "Art. 16.º, n.º 6 CIRS — nacionais portugueses que deslocalizem a residência para regime fiscal claramente mais favorável continuam havidos como residentes no ano da mudança e nos quatro subsequentes",
+    "art16cirs",
+    REV_ESTRANGEIRO,
+    "Salvo prova de razões atendíveis, designadamente atividade temporária por conta de entidade patronal domiciliada em Portugal."
+  ),
+  /** Prazo para comunicar a mudança de estatuto de residência. */
+  prazoComunicarDias: sv(
+    60,
+    "Art. 19.º, n.º 5 LGT — sempre que se altere o estatuto de residência, o sujeito passivo deve comunicá-lo à administração tributária no prazo de 60 dias",
+    "lgt19",
+    REV_ESTRANGEIRO,
+    "É ineficaz a mudança de domicílio enquanto não for comunicada (n.º 4)."
+  ),
+} as const;
+
+/**
+ * Representante fiscal — Art. 19.º da LGT, lido a 07/08/2026.
+ *
+ * O pacote manda confirmar a lista de países dispensados, e a confirmação
+ * dá uma resposta diferente da esperada: a lei NÃO tem lista de países.
+ * Tem um critério (UE, ou EEE com cooperação administrativa equivalente) —
+ * e, desde o Decreto-Lei n.º 44/2022, uma segunda porta que dispensa a
+ * nomeação a QUALQUER não residente: aderir às notificações eletrónicas.
+ */
+export const REPRESENTANTE_FISCAL = {
+  /** Quem tem de designar. */
+  obrigatorioPara: sv(
+    "residentes no estrangeiro e residentes que se ausentem por mais de seis meses",
+    "Art. 19.º, n.º 6 LGT — os sujeitos passivos residentes no estrangeiro, bem como os que, residindo cá, se ausentem por período superior a seis meses, devem designar um representante com residência em território nacional",
+    "lgt19",
+    REV_ESTRANGEIRO
+  ),
+  /** Meses de ausência que ativam a obrigação para quem reside cá. */
+  ausenciaMeses: sv(
+    6,
+    "Art. 19.º, n.º 6 LGT — ausência do território nacional por período superior a seis meses",
+    "lgt19",
+    REV_ESTRANGEIRO
+  ),
+  /** Onde a designação é facultativa. */
+  facultativoPara: sv(
+    "União Europeia e Espaço Económico Europeu com cooperação administrativa equivalente",
+    "Art. 19.º, n.º 8 LGT — a designação é meramente facultativa em relação a não residentes de, ou residentes que se ausentem para, Estados membros da UE ou do EEE, neste último caso desde que vinculados a cooperação administrativa equivalente",
+    "lgt19",
+    REV_ESTRANGEIRO,
+    "A lei não fixa uma lista de países: fixa o critério. O EEE são a Noruega, a Islândia e o Listenstaine."
+  ),
+  /** A segunda porta, que vale para qualquer país. */
+  dispensaPorNotificacoesEletronicas: sv(
+    true,
+    "Art. 19.º, n.º 15 LGT (Decreto-Lei n.º 44/2022) — a obrigatoriedade de designar representante não é aplicável a quem adira ao serviço público de notificações eletrónicas associado à morada única digital, ao regime de notificações e citações eletrónicas no Portal das Finanças ou à caixa postal eletrónica",
+    "lgt19",
+    REV_ESTRANGEIRO,
+    "Cancelar a adesão, residindo fora da UE/EEE, só produz efeitos depois de designado representante (n.º 16)."
+  ),
+  /** O que se perde sem representante, quando ele é obrigatório. */
+  semRepresentante: sv(
+    "não se exercem direitos perante a administração tributária, incluindo reclamação, recurso e impugnação",
+    "Art. 19.º, n.º 7 LGT — independentemente das sanções aplicáveis, o exercício dos direitos depende da designação de representante",
+    "lgt19",
+    REV_ESTRANGEIRO
+  ),
+  /** Prazo da AT para processar a renúncia do representante. */
+  renunciaPrazoDias: sv(
+    90,
+    "Art. 19.º, n.º 10 LGT — a renúncia é eficaz perante a AT quando lhe for comunicada, devendo esta proceder às alterações em 90 dias, desde que tenha decorrido pelo menos um ano desde a nomeação ou tenha sido nomeado novo representante",
+    "lgt19",
+    REV_ESTRANGEIRO
+  ),
+} as const;
+
+/**
+ * Como Portugal tributa quem cá não reside — Arts. 71.º e 72.º, lidos a
+ * 07/08/2026.
+ *
+ * O pacote avisa: «não afirmar uma taxa única de 25% sem qualificar a
+ * categoria». O aviso é certo e fica curto — não há uma taxa, há três, e
+ * há duas saídas que quase ninguém usa.
+ *
+ * As taxas incidem sobre o rendimento ILÍQUIDO (Art. 71.º, n.º 8): é por
+ * isto que um não residente não tem deduções, e não por a lei lhas negar
+ * uma a uma. Mas quem reside na UE ou no EEE com troca de informações tem
+ * duas portas de volta às taxas progressivas — a opção do Art. 72.º, n.º
+ * 15 e o pedido de devolução do Art. 71.º, n.os 11 a 13. Em ambas contam
+ * TODOS os rendimentos, incluindo os obtidos fora de Portugal.
+ */
+export const NAO_RESIDENTES = {
+  /** Trabalho dependente, categoria B (mesmo em ato isolado) e pensões. */
+  taxaTrabalhoEPensoes: sv(
+    0.25,
+    "Art. 71.º, n.º 4, als. a) e c) CIRS — retenção na fonte a título definitivo, à taxa liberatória de 25%, sobre rendimentos do trabalho dependente, todos os rendimentos empresariais e profissionais (ainda que de atos isolados) e pensões obtidos em território português por não residentes",
+    "art71cirs",
+    REV_ESTRANGEIRO
+  ),
+  /** Rendimentos de capitais obtidos cá — a taxa é a mesma dos residentes. */
+  taxaCapitais: sv(
+    0.28,
+    "Art. 71.º, n.º 1, al. a) CIRS — rendimentos de capitais obtidos em território português, por residentes ou não residentes, à taxa liberatória de 28%",
+    "art71cirs",
+    REV_ESTRANGEIRO
+  ),
+  /** Tudo o que sobra e não sofreu retenção liberatória. */
+  taxaOutrosRendimentos: sv(
+    0.28,
+    "Art. 72.º, n.º 1, al. b) CIRS — outros rendimentos auferidos por não residentes não imputáveis a estabelecimento estável e não sujeitos a retenção às taxas liberatórias, à taxa autónoma de 28%",
+    "art72",
+    REV_ESTRANGEIRO
+  ),
+  /** Quando há estabelecimento estável em Portugal. */
+  taxaEstabelecimentoEstavel: sv(
+    0.25,
+    "Art. 72.º, n.º 6, al. a) CIRS — rendimentos auferidos por não residentes imputáveis a estabelecimento estável situado em território português, à taxa autónoma de 25%",
+    "art72",
+    REV_ESTRANGEIRO
+  ),
+  /** A base sobre que a taxa incide. */
+  incideSobre: sv(
+    "rendimentos ilíquidos",
+    "Art. 71.º, n.º 8 CIRS — as taxas incidem sobre os rendimentos ilíquidos, exceto nas pensões, que beneficiam da dedução do Art. 53.º",
+    "art71cirs",
+    REV_ESTRANGEIRO,
+    "É daqui que vem a ausência de deduções: não há um rendimento líquido a que abater seja o que for."
+  ),
+  /** A folga na retenção do trabalho, quando há uma só entidade. */
+  semRetencaoAteRmmg: sv(
+    true,
+    "Art. 71.º, n.º 5 CIRS — não é aplicada retenção até ao valor da retribuição mínima mensal garantida, quando os rendimentos resultem de trabalho ou serviços prestados a uma única entidade",
+    "art71cirs",
+    REV_ESTRANGEIRO,
+    "Depende de declaração escrita do titular à entidade devedora (n.º 6)."
+  ),
+  /** A opção pelas taxas progressivas, para residentes na UE/EEE. */
+  opcaoTaxasProgressivas: sv(
+    "residentes noutro Estado-Membro da UE ou do EEE com intercâmbio de informações",
+    "Art. 72.º, n.os 15 e 16 CIRS — podem optar pela tributação à taxa que seria aplicável a residentes, sendo considerados todos os rendimentos, incluindo os obtidos fora do território",
+    "art72",
+    REV_ESTRANGEIRO
+  ),
+  /** O pedido de devolução do que foi retido a mais. */
+  devolucaoPrazoAnos: sv(
+    2,
+    "Art. 71.º, n.º 13 CIRS — a devolução deve ser requerida no prazo de dois anos contados do final do ano civil seguinte àquele em que se verificou o facto tributário",
+    "art71cirs",
+    REV_ESTRANGEIRO,
+    "A AT restitui até ao fim do 3.º mês seguinte à apresentação dos elementos; falhando o prazo, acrescem juros indemnizatórios."
+  ),
+} as const;
+
+export const CREDITO_IMPOSTO_ESTRANGEIRO = {
+  /** Anos para usar o crédito que a coleta do ano não chegou para absorver. */
+  reporteAnos: sv(
+    5,
+    "Art. 81.º, n.º 3 CIRS — por insuficiência de coleta, o remanescente pode ser deduzido à coleta dos cinco períodos de tributação seguintes",
+    "art81cirs",
+    REV_PATRIMONIO
+  ),
+  /**
+   * O crédito é o MENOR de dois valores (n.º 1) — e, havendo convenção, não
+   * pode ultrapassar o imposto pago no estrangeiro NOS TERMOS DA CONVENÇÃO
+   * (n.º 2). É o segundo limite que apanha quem sofreu retenção acima da
+   * taxa convencionada: essa parte recupera-se no país da fonte, não cá.
+   */
+  duploLimite: sv(
+    ["imposto sobre o rendimento pago no estrangeiro", "fração da coleta do IRS correspondente a esses rendimentos"],
+    "Art. 81.º, n.os 1 e 2 CIRS — o crédito corresponde à menor das duas importâncias e, havendo convenção, não pode ultrapassar o imposto pago nos termos previstos por ela",
+    "art81cirs",
+    REV_PATRIMONIO
+  ),
+};
+
+/**
+ * Reporte do saldo negativo de mais-valias mobiliárias e de criptoativos.
+ *
+ * A condição é a parte que mais se perde: o reporte só existe se o sujeito
+ * passivo OPTAR (ou for obrigado) pelo englobamento desses rendimentos no
+ * ano da perda. Quem deixa a taxa especial correr por defeito no ano mau
+ * fica sem nada para abater no ano bom.
+ */
+export const MAIS_VALIAS_REPORTE = {
+  anos: sv(
+    5,
+    "Art. 55.º, n.º 1, al. d) CIRS — o saldo negativo das operações das als. b), c), e), f), g), h) e k) do n.º 1 do art. 10.º pode ser reportado para os cinco anos seguintes",
+    "art55cirs",
+    REV_PATRIMONIO
+  ),
+  exigeEnglobamento: sv(
+    true,
+    "Art. 55.º, n.º 1, al. d) CIRS — «quando o sujeito passivo opte ou seja obrigado a englobar esses rendimentos»",
+    "art55cirs",
+    REV_PATRIMONIO
+  ),
+  /** Reporte do saldo negativo de mais-valias IMOBILIÁRIAS — outro prazo. */
+  anosImobiliario: sv(
+    5,
+    "Art. 55.º, n.º 1, al. c) CIRS — a percentagem do saldo negativo a que se refere o n.º 2 do art. 43.º reporta-se aos cinco anos seguintes",
+    "art55cirs",
+    REV_PATRIMONIO
+  ),
+};
+
 // ═══════════════════════════════════════════════════════════════════════
 //  CATEGORIA F — RENDIMENTOS PREDIAIS (rendas puras, sem alojamento local)
 //  ---------------------------------------------------------------------
@@ -1011,12 +2313,50 @@ export const CATEGORIA_F = {
    */
   reducaoDuracao: sv<Record<DuracaoArrendamento, number>>(
     { curto: 0, "5a10": 0.1, "10a20": 0.15, "20mais": 0.2 },
-    "Art. 72.º, n.os 2 a 5 CIRS (Lei 56/2023) — reduções por duração do contrato",
-    "rendasPrediais",
-    TODAY,
-    "Só para contratos de arrendamento habitacional permanente comunicados à AT. Renovações dão −2 p.p. cada, até −10 p.p. adicionais. O regime de renda moderada (taxa de 10%) anunciado no OE2026 está pendente de regulamentação e não é aqui aplicado."
+    "Art. 72.º, n.os 3 a 5 CIRS (Lei 56/2023) — reduções por duração do contrato, em PONTOS PERCENTUAIS",
+    "art72",
+    REV_PATRIMONIO,
+    "Só para contratos de arrendamento habitacional permanente. A redução é em pontos percentuais sobre a taxa autónoma, não em percentagem dela: −10 p.p. sobre 25% dá 15%, não 22,5%. O regime de renda moderada (taxa de 10%) anunciado no OE2026 está pendente de regulamentação e não é aqui aplicado."
+  ),
+  /** Redução adicional por cada renovação de igual duração (contratos de 5 a 10 anos). */
+  reducaoPorRenovacao: sv(
+    0.02,
+    "Art. 72.º, n.º 3 CIRS — por cada renovação com igual duração, redução de dois pontos percentuais",
+    "art72",
+    REV_PATRIMONIO
+  ),
+  /** Teto do conjunto das reduções obtidas por renovação. */
+  reducaoRenovacaoMax: sv(
+    0.1,
+    "Art. 72.º, n.º 3 CIRS — as reduções relativas à renovação estão sujeitas ao limite de 10 pontos percentuais",
+    "art72",
+    REV_PATRIMONIO
+  ),
+  /** Anos de reporte do resultado líquido negativo da categoria F. */
+  reporteDePerdasAnos: sv(
+    6,
+    "Art. 55.º, n.º 1, al. b) CIRS — o resultado líquido negativo da categoria F reporta-se aos seis anos seguintes",
+    "art55cirs",
+    REV_PATRIMONIO,
+    "Caduca se os prédios não gerarem rendimentos da categoria F em pelo menos 36 meses, seguidos ou interpolados, dos cinco anos seguintes (n.º 8)."
+  ),
+  /** Janela de obras de conservação anteriores ao arrendamento que são dedutíveis. */
+  obrasAntesArrendamentoMeses: sv(
+    24,
+    "Art. 41.º, n.º 7 CIRS — gastos de conservação e manutenção suportados nos 24 meses anteriores ao início do arrendamento",
+    "art41cirs",
+    REV_PATRIMONIO,
+    "Desde que o imóvel não tenha sido utilizado para outro fim que não o arrendamento."
+  ),
+  /** Prazo da declaração anual de rendas, alternativa ao recibo eletrónico. */
+  prazoDeclaracaoRendas: sv(
+    "fim de fevereiro",
+    "Art. 115.º, n.º 5, al. b) CIRS (redação do DL 49/2025) — declaração de modelo oficial até ao fim do mês de fevereiro, por referência ao ano anterior",
+    "art115cirs",
+    REV_PATRIMONIO
   ),
 };
+
 
 export const META_DURACAO: Record<DuracaoArrendamento, { label: string; sub: string }> = {
   curto: { label: "Menos de 5 anos", sub: "Sem redução" },
@@ -1749,11 +3089,197 @@ export const RFAI_REPORTE_ANOS = sv(
 
 /** Nota informativa única sobre a revogação da DLRR e o sucessor ICE. */
 export const DLRR_REVOGADA_NOTA = sv(
-  "A DLRR foi revogada com efeitos a 1 de janeiro de 2023 (Art. 281.º da Lei n.º 24-D/2022 — OE2023). O benefício sucessor é o ICE — Incentivo à Capitalização das Empresas (Art. 43.º-D EBF): dedução ao lucro tributável indexada à Euribor a 12 meses (+2 p.p. para PME e Small Mid Cap) sobre os aumentos líquidos dos capitais próprios elegíveis, com majoração transitória de 20% em 2026. O apuramento exige dados do balanço — fala com um contabilista certificado.",
+  "A DLRR foi revogada com efeitos a 1 de janeiro de 2023 (Art. 281.º da Lei n.º 24-D/2022 — OE2023). O benefício sucessor é o ICE — Incentivo à Capitalização das Empresas (Art. 43.º-D EBF): dedução ao lucro tributável correspondente à Euribor a 12 meses do período, adicionada de um spread de 2 pontos percentuais, sobre os aumentos líquidos dos capitais próprios elegíveis. O apuramento exige dados do balanço — fala com um contabilista certificado.",
   "Art. 281.º Lei 24-D/2022 (revogação) · Art. 43.º-D EBF (ICE)",
-  "occICE",
-  "2026-07-20"
+  "ebf43d",
+  REV_EMPRESA,
+  "O spread do n.º 1 passou a ser único com a Lei n.º 45-A/2024, que revogou o n.º 2 — deixou de haver majoração por dimensão da empresa."
 );
+
+// ═══════════════════════════════════════════════════════════════════════
+//  ICE — Incentivo à Capitalização das Empresas (Art. 43.º-D EBF)
+//  Verificado a 07/08/2026 contra o articulado no Portal das Finanças,
+//  na redação da Lei n.º 45-A/2024.
+//
+//  A taxa não é simulável sem dados do período: depende da média da
+//  Euribor a 12 meses calculada com base no último dia de cada mês. O que
+//  É fixo — e é o que decide se vale a pena — são o spread, os dois
+//  limites do n.º 4 e o reporte do n.º 5.
+// ═══════════════════════════════════════════════════════════════════════
+
+export const ICE = {
+  spread: sv(
+    0.02,
+    "Art. 43.º-D, n.º 1 EBF — taxa Euribor a 12 meses do período, adicionada de um spread de 2 pontos percentuais",
+    "ebf43d",
+    REV_EMPRESA,
+    "Spread único desde a Lei n.º 45-A/2024, que revogou o n.º 2 (majoração para PME e Small Mid Cap)."
+  ),
+  limiteAbsoluto: sv(
+    4_000_000,
+    "Art. 43.º-D, n.º 4, al. a) EBF — a dedução não pode exceder, em cada período, o MAIOR de €4 000 000 ou do limite da al. b)",
+    "ebf43d",
+    REV_EMPRESA
+  ),
+  limiteEbitda: sv(
+    0.30,
+    "Art. 43.º-D, n.º 4, al. b) EBF — 30% do resultado antes de depreciações, amortizações, gastos de financiamento líquidos e impostos, nos termos do art. 67.º do CIRC",
+    "ebf43d",
+    REV_EMPRESA
+  ),
+  reporteAnos: sv(
+    5,
+    "Art. 43.º-D, n.º 5 EBF — a parte que exceda o limite da al. b) do n.º 4 é dedutível num ou mais dos cinco períodos de tributação posteriores",
+    "ebf43d",
+    REV_EMPRESA
+  ),
+  periodosAnteriores: sv(
+    6,
+    "Art. 43.º-D, n.º 3 EBF — os aumentos líquidos apuram-se pelo somatório do próprio exercício e de cada um dos seis períodos de tributação anteriores",
+    "ebf43d",
+    REV_EMPRESA,
+    "Resultando desse somatório uma diferença negativa, considera-se zero — não gera dedução negativa."
+  ),
+  primeiroPeriodoElegivel: sv(
+    "períodos de tributação que se iniciem em ou após 1 de janeiro de 2023",
+    "Art. 43.º-D, n.º 9 EBF",
+    "ebf43d",
+    REV_EMPRESA
+  ),
+  exigeSituacaoRegularizada: sv(
+    "ter a situação fiscal e contributiva regularizada, contabilidade regularmente organizada e lucro tributável não determinado por métodos indiretos",
+    "Art. 43.º-D, n.º 7, als. b), c) e d) EBF",
+    "ebf43d",
+    REV_EMPRESA
+  ),
+};
+
+// ═══════════════════════════════════════════════════════════════════════
+//  STOCK OPTIONS — Art. 43.º-C EBF (Lei das Startups, Lei n.º 21/2023)
+//  + Art. 72.º, n.º 1, al. f) do CIRS.
+//  Verificado a 07/08/2026 contra os dois articulados.
+//
+//  A taxa efetiva não está escrita em lado nenhum: sai do encontro dos
+//  dois artigos. O EBF manda considerar metade do ganho; o CIRS tributa
+//  o que resta à taxa autónoma de 28%. Metade de 28 dá 14 — e é por isso
+//  que a fração e a taxa vivem aqui juntas e derivadas, e não à mão.
+// ═══════════════════════════════════════════════════════════════════════
+
+export const STOCK_OPTIONS_STARTUP = {
+  fracaoTributada: sv(
+    0.5,
+    "Art. 43.º-C, n.º 1 EBF — os ganhos são considerados em 50% do seu valor",
+    "ebf43c",
+    REV_EMPRESA
+  ),
+  taxa: sv(
+    0.28,
+    "Art. 72.º, n.º 1, al. f) CIRS — taxa autónoma de 28% sobre os ganhos que beneficiem do regime do art. 43.º-C do EBF",
+    "art72cirsF",
+    REV_EMPRESA
+  ),
+  retencaoMinimaAnos: sv(
+    1,
+    "Art. 43.º-C, n.º 4 EBF — a tributação depende da manutenção dos direitos subjacentes por um período mínimo de um ano",
+    "ebf43c",
+    REV_EMPRESA
+  ),
+  isencaoSaidaEmIas: sv(
+    20,
+    "Art. 43.º-C, n.º 5 EBF — perdendo a residência, os rendimentos ficam parcialmente isentos até 20 × IAS, sendo englobados para determinação da taxa dos restantes",
+    "ebf43c",
+    REV_EMPRESA
+  ),
+  isencaoSaidaUmaVez: sv(
+    "a isenção só pode ser utilizada uma vez pelo sujeito passivo",
+    "Art. 43.º-C, n.º 6 EBF",
+    "ebf43c",
+    REV_EMPRESA
+  ),
+  prazoRespostaEntidadeDias: sv(
+    90,
+    "Art. 43.º-C, n.º 8 EBF — confirmando por escrito, ou não respondendo no prazo de 90 dias, a entidade é subsidiariamente responsável pelo imposto em falta",
+    "ebf43c",
+    REV_EMPRESA
+  ),
+  participacaoQueExclui: sv(
+    0.20,
+    "Art. 43.º-C, n.º 9 EBF — estão excluídos os sujeitos passivos que detenham, direta ou indiretamente, participação não inferior a 20% do capital social ou dos direitos de voto",
+    "ebf43c",
+    REV_EMPRESA,
+    "O n.º 10 afasta esta exclusão nas startups e nas micro e pequenas empresas."
+  ),
+  limiarInovacao: sv(
+    0.10,
+    "Art. 43.º-C, n.º 2, al. b) EBF — despesas com I&D, patentes, desenhos ou modelos industriais ou programas de computador equivalentes a pelo menos 10% dos gastos ou do volume de negócios",
+    "ebf43c",
+    REV_EMPRESA
+  ),
+  momentosDeTributacao: sv(
+    "alienação dos valores mobiliários, perda da qualidade de residente em território português ou transmissão gratuita — o primeiro que ocorrer",
+    "Art. 43.º-C, n.º 4, als. a), b) e c) EBF",
+    "ebf43c",
+    REV_EMPRESA
+  ),
+};
+
+/** Taxa efetiva do regime: metade do ganho, à taxa autónoma. */
+export const STOCK_OPTIONS_TAXA_EFETIVA =
+  STOCK_OPTIONS_STARTUP.fracaoTributada.value * STOCK_OPTIONS_STARTUP.taxa.value;
+
+// ═══════════════════════════════════════════════════════════════════════
+//  DEPRECIAÇÕES (Arts. 31.º, 33.º e 34.º CIRC) — verificados a 07/08/2026.
+//  As TAXAS por tipo de ativo não estão no Código: o art. 31.º remete para
+//  «o decreto regulamentar que estabelece o respetivo regime», e é lá que
+//  vivem. Não são publicadas aqui — o que é publicável é o mecanismo.
+// ═══════════════════════════════════════════════════════════════════════
+
+export const ELEMENTOS_REDUZIDO_VALOR = sv(
+  1000,
+  "Art. 33.º CIRC — custo unitário de aquisição ou produção até €1 000: dedução integral no período de tributação em que seja reconhecido",
+  "circ33",
+  REV_EMPRESA,
+  "Exceto quando o elemento faça parte integrante de um conjunto que deva ser depreciado como um todo — a exceção que trava a compra de um portátil «às peças»."
+);
+
+export const DEPRECIACAO = {
+  /** Coeficientes máximos do método das quotas decrescentes, por vida útil. */
+  quotasDecrescentes: sv(
+    [
+      { vidaUtil: "inferior a cinco anos", coeficiente: 1.5 },
+      { vidaUtil: "de cinco ou seis anos", coeficiente: 2 },
+      { vidaUtil: "superior a seis anos", coeficiente: 2.5 },
+    ] as { vidaUtil: string; coeficiente: number }[],
+    "Art. 31.º, n.º 4 CIRC — coeficientes máximos que corrigem a taxa no método das quotas decrescentes",
+    "circ31",
+    REV_EMPRESA
+  ),
+  taxasNoDecretoRegulamentar: sv(
+    "as taxas de depreciação por tipo de ativo constam do decreto regulamentar que estabelece o respetivo regime, e não do Código do IRC",
+    "Art. 31.º, n.º 1 CIRC",
+    "circ31",
+    REV_EMPRESA
+  ),
+  proporcionalNoAnoDeEntrada: sv(
+    "no ano de início de funcionamento pode optar-se por uma taxa deduzida da anual, correspondente ao número de meses contados desde o mês de entrada em funcionamento",
+    "Art. 31.º, n.º 7 CIRC",
+    "circ31",
+    REV_EMPRESA
+  ),
+  semTaxaFixada: sv(
+    "não havendo taxa fixada para o elemento, são aceites as que a Autoridade Tributária considere razoáveis, tendo em conta o período de vida útil esperada",
+    "Art. 31.º, n.º 3 CIRC",
+    "circ31",
+    REV_EMPRESA
+  ),
+  naoDedutiveis: sv(
+    "as praticadas para além do período máximo de vida útil, as que excedam os limites legais, a parte do imóvel correspondente ao terreno e a parcela do custo das viaturas ligeiras que exceda o montante definido por portaria",
+    "Art. 34.º, n.º 1, als. b), c), d) e e) CIRC",
+    "circ34",
+    REV_EMPRESA,
+    "A al. e) abrange expressamente os veículos elétricos, e ressalva os bens afetos ao serviço público de transportes ou destinados a aluguer."
+  ),
+};
 
 // ═══════════════════════════════════════════════════════════════════════
 //  SIFIDE II — Sistema de Incentivos Fiscais à I&D (Art. 35.º–42.º CFI)
@@ -1828,21 +3354,37 @@ export const IFICI_PRAZO_ANOS = sv(
 // ═══════════════════════════════════════════════════════════════════════
 
 /**
- * Art. 56.º-A CIRS — Exclusão parcial de rendimentos de trabalho/atividade
- * de sujeitos com deficiência ≥ 60%: 15% dos rendimentos Cat. B até €2 500.
- * Reduz o rendimento TRIBUTÁVEL (antes de calcular coleta).
+ * Art. 56.º-A CIRS — Exclusão parcial de rendimentos de sujeitos passivos com
+ * deficiência. O artigo não fala em exclusão: diz que os rendimentos brutos
+ * «são considerados apenas por 85%» nas categorias A e B, e «apenas por 90%»
+ * na categoria H. A exclusão é o complemento — 15% e 10%, respetivamente.
+ *
+ * As duas frações são DIFERENTES, e é o erro que mais se repete nesta matéria:
+ * uma pensão não tem a mesma exclusão que um salário. O teto de €2 500 é por
+ * CATEGORIA de rendimentos, não por sujeito passivo.
+ *
+ * O grau mínimo de 60% NÃO consta deste artigo — está no n.º 5 do art. 87.º,
+ * e é de lá que vem (`DEDUCAO_DEFICIENCIA_GRAU_MINIMO`).
  */
 export const EXCLUSAO_DEFICIENCIA_TAXA = sv(
   0.15,
-  "Art. 56.º-A CIRS — exclusão de 15% dos rendimentos Cat. B de pessoas com deficiência ≥ 60%",
+  "Art. 56.º-A, n.º 1, al. a) CIRS — rendimentos das categorias A e B considerados apenas por 85% (exclusão de 15%)",
   "art56aCirs",
-  TODAY
+  REV_FAMILIA
+);
+/** Categoria H (pensões): considerada por 90% — logo, exclusão de 10%. */
+export const EXCLUSAO_DEFICIENCIA_TAXA_PENSOES = sv(
+  0.10,
+  "Art. 56.º-A, n.º 1, al. b) CIRS — rendimentos da categoria H considerados apenas por 90% (exclusão de 10%)",
+  "art56aCirs",
+  REV_FAMILIA,
+  "Diferente da fração das categorias A e B. Uma pensão não tem a mesma exclusão que um salário."
 );
 export const EXCLUSAO_DEFICIENCIA_MAX = sv(
   2_500,
-  "Art. 56.º-A CIRS — exclusão máxima de €2 500 por categoria de rendimento",
+  "Art. 56.º-A, n.º 2 CIRS — a parte do rendimento excluída de tributação não pode exceder, POR CATEGORIA de rendimentos, €2 500",
   "art56aCirs",
-  TODAY
+  REV_FAMILIA
 );
 
 /**
@@ -1860,10 +3402,108 @@ export const DEDUCAO_DEFICIENCIA_COLETA = sv(
 /** Grau mínimo de incapacidade permanente (comprovado por atestado médico). */
 export const DEDUCAO_DEFICIENCIA_GRAU_MINIMO = sv(
   60,
-  "Art. 56.º-A / 87.º CIRS — grau mínimo de incapacidade permanente de 60%",
+  "Art. 87.º, n.º 5 CIRS — considera-se pessoa com deficiência aquela que apresente grau de incapacidade permanente igual ou superior a 60%, comprovado por atestado médico de incapacidade multiúso",
   "portalFinancasArt87",
-  TODAY
+  REV_FAMILIA,
+  "O grau consta do n.º 5 do art. 87.º — não do art. 56.º-A, que nada diz sobre graus."
 );
+
+/**
+ * O resto do art. 87.º do CIRS, que é onde está quase tudo o que interessa a
+ * quem vive este regime e que raramente aparece escrito num sítio só.
+ *
+ * Três deduções somam-se sem se anularem — o n.º 8 di-lo por palavras: «as
+ * deduções previstas nos n.os 1, 6 e 7 são cumulativas». E há dois graus
+ * distintos em jogo: 60% abre o regime, 90% abre a despesa de acompanhamento.
+ *
+ * O n.º 9, aditado pela Lei n.º 82/2023, resolve o caso de quem perde o grau
+ * numa reavaliação depois de cinco anos a beneficiar: a dedução não cai a zero
+ * de um ano para o outro, desce em escada ao longo de quatro anos, desde que
+ * se mantenha uma incapacidade de pelo menos 20%.
+ */
+export const DEFICIENCIA_ART87 = {
+  dependenteOuAscendente: sv(
+    Math.round(2.5 * IAS.value * 100) / 100,
+    "Art. 87.º, n.º 1 CIRS — 2,5 × IAS por cada dependente com deficiência e por cada ascendente com deficiência nas condições da al. b) do n.º 1 do art. 78.º-A",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  educacaoEReabilitacao: sv(
+    0.30,
+    "Art. 87.º, n.º 2 CIRS — 30% da totalidade das despesas com educação e reabilitação do sujeito passivo ou dependentes com deficiência",
+    "portalFinancasArt87",
+    REV_FAMILIA,
+    "Sem teto próprio no artigo — ao contrário da dedução geral de educação."
+  ),
+  premiosSeguroVida: sv(
+    0.25,
+    "Art. 87.º, n.º 2 CIRS — 25% dos prémios de seguros de vida ou contribuições a associações mutualistas que garantam exclusivamente riscos de morte, invalidez ou reforma por velhice",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  limitePremiosNaColeta: sv(
+    0.15,
+    "Art. 87.º, n.º 4 CIRS — a dedução dos prémios de seguros ou das contribuições a associações mutualistas não pode exceder 15% da coleta de IRS",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  limiteContribuicoesReforma: sv(
+    65,
+    "Art. 87.º, n.º 3 CIRS — limite de €65 para as contribuições pagas para reforma por velhice (sujeitos passivos não casados ou separados judicialmente)",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  limiteContribuicoesReformaCasados: sv(
+    130,
+    "Art. 87.º, n.º 3 CIRS — limite de €130 tratando-se de sujeitos passivos casados e não separados judicialmente de pessoas e bens",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  acompanhamento: sv(
+    Math.round(4 * IAS.value * 100) / 100,
+    "Art. 87.º, n.º 6 CIRS — dedução à coleta, a título de despesa de acompanhamento, igual a 4 × IAS por cada sujeito passivo ou dependente",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  grauAcompanhamento: sv(
+    90,
+    "Art. 87.º, n.º 6 CIRS — a despesa de acompanhamento exige grau de invalidez permanente igual ou superior a 90%",
+    "portalFinancasArt87",
+    REV_FAMILIA,
+    "Segundo grau, distinto dos 60% que abrem o regime."
+  ),
+  forcasArmadas: sv(
+    Math.round(IAS.value * 100) / 100,
+    "Art. 87.º, n.º 7 CIRS — mais 1 × IAS por cada sujeito passivo com deficiência das Forças Armadas abrangido pelos Decretos-Leis n.os 43/76 e 314/90",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  cumulativas: sv(
+    "as deduções previstas nos n.os 1, 6 e 7 são cumulativas",
+    "Art. 87.º, n.º 8 CIRS",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  /** N.º 9: escada de descida, em múltiplos do IAS, ano a ano após a reavaliação. */
+  descidaAposReavaliacao: sv(
+    [2, 1.5, 1, 0.5] as number[],
+    "Art. 87.º, n.º 9 CIRS (aditado pela Lei n.º 82/2023) — 2, 1,5, 1 e 0,5 IAS no primeiro, segundo, terceiro e quarto anos subsequentes à revisão que atribua grau inferior a 60%",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  descidaAnosMinimosBeneficio: sv(
+    5,
+    "Art. 87.º, n.º 9 CIRS — exige ter beneficiado da dedução do n.º 1 durante pelo menos cinco anos",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+  descidaGrauMinimo: sv(
+    20,
+    "Art. 87.º, n.º 9 CIRS — desde que se mantenha uma incapacidade igual ou superior a 20%",
+    "portalFinancasArt87",
+    REV_FAMILIA
+  ),
+};
 
 /**
  * Art. 55.º do Código Contributivo — base de incidência dos membros de órgãos
@@ -1897,9 +3537,9 @@ export const SS_MIN_MENSAL = sv(
 
 export const IMI_TAXA_PADRAO = sv(
   0.003,
-  "Art. 112.º CIMI — taxa mínima IMI urbano (0,3%); municípios podem fixar até 0,45%",
-  "pwcGuiaFiscal",
-  TODAY
+  "Art. 112.º, n.º 1, al. c) CIMI — piso do intervalo legal da taxa de IMI urbano",
+  "art112cimi",
+  REV_PATRIMONIO
 );
 
 /** Opções de taxa de IMI urbano dentro do intervalo legal (0,3%–0,45%). Cada
@@ -1907,23 +3547,323 @@ export const IMI_TAXA_PADRAO = sv(
 export const IMI_TAXA_URBANO_OPCOES = sv(
   [0.003, 0.0035, 0.004, 0.0045],
   "Art. 112.º, n.º 1, al. c) CIMI — intervalo legal da taxa de IMI para prédios urbanos (0,3% a 0,45%)",
-  "pwcGuiaFiscal",
-  TODAY
+  "art112cimi",
+  REV_PATRIMONIO
 );
 
 export const IMT_TAXA_COMERCIAL = sv(
   0.065,
-  "Art. 17.º CIMT — taxa IMT para imóveis não habitacionais (serviços/comércio/indústria): 6,5%",
-  "pwcGuiaFiscal",
-  TODAY
+  "Art. 17.º, n.º 1, al. e) CIMT — aquisição de outros prédios urbanos e outras aquisições onerosas",
+  "art17cimt",
+  REV_PATRIMONIO
 );
 
 export const IS_TAXA_AQUISICAO = sv(
   0.008,
-  "Verba 1.1 TGIS — Imposto do Selo sobre aquisição onerosa de imóveis: 0,8%",
-  "pwcGuiaFiscal",
-  TODAY
+  "Verba 1.1 TGIS — aquisição onerosa ou por doação do direito de propriedade sobre imóveis",
+  "tgisPdf",
+  REV_PATRIMONIO
 );
+
+// ═══════════════════════════════════════════════════════════════════════
+//  PATRIMÓNIO — IMI, AIMI, IMT, selo do crédito, rendas e alojamento local
+//  ---------------------------------------------------------------------
+//  Tudo o que os guias de «Casa e património» mostram vive aqui, e não no
+//  texto deles. A razão é a regra de ouro do projeto: um número escrito no
+//  meio de um parágrafo é um número que ninguém encontra no dia em que a lei
+//  muda — e estes mudam todos os anos, com o Orçamento do Estado.
+//
+//  Cada valor traz o artigo que o fixa e a data em que foi lido. Os escalões
+//  do IMT foram transcritos das três tabelas do Art. 17.º; as taxas do selo
+//  da Tabela Geral, que não tem página de artigo e só existe no PDF do
+//  código consolidado.
+// ═══════════════════════════════════════════════════════════════════════
+
+/** Taxa de IMI dos prédios rústicos — fixa, ao contrário da dos urbanos. */
+export const IMI_TAXA_RUSTICO = sv(
+  0.008,
+  "Art. 112.º, n.º 1, al. a) CIMI — prédios rústicos",
+  "art112cimi",
+  REV_PATRIMONIO
+);
+
+/** Teto do intervalo legal da taxa de IMI urbano. */
+export const IMI_TAXA_URBANO_MAX = sv(
+  0.0045,
+  "Art. 112.º, n.º 1, al. c) CIMI — teto do intervalo legal da taxa de IMI urbano",
+  "art112cimi",
+  REV_PATRIMONIO
+);
+
+/** Taxa agravada de IMI para titulares com domicílio em regime fiscal mais favorável. */
+export const IMI_TAXA_OFFSHORE = sv(
+  0.075,
+  "Art. 112.º, n.º 4 CIMI — prédios de sujeitos passivos com domicílio fiscal em país, território ou região sujeito a regime fiscal mais favorável",
+  "art112cimi",
+  REV_PATRIMONIO
+);
+
+/** Multiplicador da taxa aplicado a prédios devolutos há mais de um ano e a ruínas. */
+export const IMI_AGRAVAMENTO_DEVOLUTO = sv(
+  3,
+  "Art. 112.º, n.º 3 CIMI — taxas elevadas ao triplo em prédios devolutos há mais de um ano ou em ruínas",
+  "art112cimi",
+  REV_PATRIMONIO
+);
+
+/** Escalões de pagamento do IMI: limite superior (€) e meses das prestações. */
+export interface PrestacaoIMI {
+  /** Limite superior do escalão, em euros. `null` = sem limite. */
+  ateEuros: number | null;
+  meses: readonly string[];
+}
+
+export const IMI_PRESTACOES = sv<readonly PrestacaoIMI[]>(
+  [
+    { ateEuros: 100, meses: ["maio"] },
+    { ateEuros: 500, meses: ["maio", "novembro"] },
+    { ateEuros: null, meses: ["maio", "agosto", "novembro"] },
+  ],
+  "Art. 120.º, n.º 1 CIMI (redação da Lei n.º 71/2018) — uma prestação até 100 €, duas até 500 €, três acima disso",
+  "art120cimi",
+  REV_PATRIMONIO,
+  "O escalão intermédio é maio e NOVEMBRO. Agosto só entra no escalão das três prestações."
+);
+
+/** Meses em que a AT liquida o IMI do ano anterior. */
+export const IMI_MESES_LIQUIDACAO = sv<readonly string[]>(
+  ["fevereiro", "abril"],
+  "Art. 113.º, n.º 2 CIMI — a liquidação é efetuada nos meses de fevereiro e abril do ano seguinte",
+  "art113cimi",
+  REV_PATRIMONIO
+);
+
+/** Abaixo deste montante não há sequer liquidação de IMI. */
+export const IMI_MINIMO_LIQUIDACAO = sv(
+  10,
+  "Art. 113.º, n.º 6 CIMI — não há lugar a liquidação quando o imposto a cobrar seja inferior a 10 €",
+  "art113cimi",
+  REV_PATRIMONIO
+);
+
+/**
+ * Isenção permanente do Art. 11.º-A: os limiares são múltiplos do IAS, não
+ * valores fixos em euros — é por isso que se guardam os multiplicadores e se
+ * calcula, em vez de se copiar um número que muda quando o IAS muda.
+ */
+export const IMI_ISENCAO_BAIXOS_RENDIMENTOS = {
+  /** Rendimento bruto total do agregado: 2,3 × (14 × IAS). */
+  multiplicadorRendimento: sv(
+    2.3,
+    "Art. 11.º-A, n.º 1 CIMI — rendimento bruto total do agregado não superior a 2,3 vezes o valor de 14 IAS",
+    "art11aCimi",
+    REV_PATRIMONIO
+  ),
+  /** VPT global de todos os prédios do agregado: 10 × (14 × IAS). */
+  multiplicadorVpt: sv(
+    10,
+    "Art. 11.º-A, n.º 1 CIMI — VPT global da totalidade dos prédios do agregado não superior a 10 vezes o valor de 14 IAS",
+    "art11aCimi",
+    REV_PATRIMONIO
+  ),
+  /** Número de IAS que forma a unidade de referência do artigo. */
+  mesesIAS: sv(
+    14,
+    "Art. 11.º-A, n.º 1 CIMI — a unidade de referência do artigo é «14 IAS»",
+    "art11aCimi",
+    REV_PATRIMONIO
+  ),
+};
+
+/** Limiares da isenção do Art. 11.º-A já calculados a partir do IAS em vigor. */
+export const IMI_ISENCAO_RENDIMENTO_LIMITE =
+  IMI_ISENCAO_BAIXOS_RENDIMENTOS.multiplicadorRendimento.value *
+  IMI_ISENCAO_BAIXOS_RENDIMENTOS.mesesIAS.value *
+  IAS.value;
+
+export const IMI_ISENCAO_VPT_LIMITE =
+  IMI_ISENCAO_BAIXOS_RENDIMENTOS.multiplicadorVpt.value *
+  IMI_ISENCAO_BAIXOS_RENDIMENTOS.mesesIAS.value *
+  IAS.value;
+
+// ─── AIMI ──────────────────────────────────────────────────────────────
+
+export const AIMI = {
+  /** Dedução ao valor tributável de pessoas singulares e heranças indivisas. */
+  deducaoSingular: sv(
+    600_000,
+    "Art. 135.º-C, n.º 2 CIMI — dedução de 600 000 € a pessoas singulares e a heranças indivisas",
+    "art135cCimi",
+    REV_PATRIMONIO,
+    "As pessoas coletivas não têm esta dedução: são tributadas sobre a soma toda."
+  ),
+  taxaSingular: sv(
+    0.007,
+    "Art. 135.º-F, n.º 1 CIMI — taxa aplicável a pessoas singulares e heranças indivisas",
+    "art135fCimi",
+    REV_PATRIMONIO
+  ),
+  taxaColetiva: sv(
+    0.004,
+    "Art. 135.º-F, n.º 1 CIMI — taxa aplicável a pessoas coletivas",
+    "art135fCimi",
+    REV_PATRIMONIO
+  ),
+  /** Taxa marginal sobre a parte do valor tributável acima de 1 M€. */
+  taxaMarginal1M: sv(
+    0.01,
+    "Art. 135.º-F, n.º 2 CIMI — taxa marginal na parte do valor tributável superior a 1 000 000 € e até 2 000 000 €",
+    "art135fCimi",
+    REV_PATRIMONIO
+  ),
+  /** Taxa marginal sobre a parte do valor tributável acima de 2 M€. */
+  taxaMarginal2M: sv(
+    0.015,
+    "Art. 135.º-F, n.º 3 CIMI — taxa marginal na parte do valor tributável superior a 2 000 000 €",
+    "art135fCimi",
+    REV_PATRIMONIO
+  ),
+  limiar1M: sv(
+    1_000_000,
+    "Art. 135.º-F, n.º 2 CIMI — limiar da primeira taxa marginal",
+    "art135fCimi",
+    REV_PATRIMONIO,
+    "Com opção pela tributação conjunta, o limiar conta ao dobro."
+  ),
+  limiar2M: sv(
+    2_000_000,
+    "Art. 135.º-F, n.º 3 CIMI — limiar da segunda taxa marginal",
+    "art135fCimi",
+    REV_PATRIMONIO
+  ),
+  taxaOffshore: sv(
+    0.075,
+    "Art. 135.º-F, n.º 5 CIMI — prédios de entidades sujeitas a regime fiscal mais favorável",
+    "art135fCimi",
+    REV_PATRIMONIO,
+    "Não se aplica a pessoas singulares (n.º 6)."
+  ),
+  mesLiquidacao: sv(
+    "junho",
+    "Art. 135.º-G, n.º 4 CIMI — a liquidação é efetuada no mês de junho do ano a que o imposto respeita",
+    "art135gCimi",
+    REV_PATRIMONIO
+  ),
+  mesPagamento: sv(
+    "setembro",
+    "Art. 135.º-H, n.º 1 CIMI — o pagamento é efetuado no mês de setembro do ano a que respeita",
+    "art135hCimi",
+    REV_PATRIMONIO
+  ),
+};
+
+// ─── IMT: escalões ─────────────────────────────────────────────────────
+
+/** Qual das três tabelas do Art. 17.º se aplica. */
+export type TabelaIMT = "hpp" | "jovem" | "secundaria";
+
+export interface EscalaoIMT {
+  /** Limite superior do escalão, em euros. `null` = sem limite. */
+  ate: number | null;
+  /** Taxa marginal (fração). */
+  taxa: number;
+  /** `true` quando a taxa é única sobre todo o valor, sem parcela a abater. */
+  taxaUnica?: boolean;
+}
+
+export const IMT_ESCALOES = sv<Record<TabelaIMT, readonly EscalaoIMT[]>>(
+  {
+    // Al. a) — habitação própria e permanente, exceto os da al. b).
+    hpp: [
+      { ate: 106_346, taxa: 0 },
+      { ate: 145_470, taxa: 0.02 },
+      { ate: 198_347, taxa: 0.05 },
+      { ate: 330_539, taxa: 0.07 },
+      { ate: 660_982, taxa: 0.08 },
+      { ate: 1_150_853, taxa: 0.06, taxaUnica: true },
+      { ate: null, taxa: 0.075, taxaUnica: true },
+    ],
+    // Al. b) — primeira aquisição de HPP por quem tenha 35 anos ou menos.
+    jovem: [
+      { ate: 330_539, taxa: 0 },
+      { ate: 660_982, taxa: 0.08 },
+      { ate: 1_150_853, taxa: 0.06, taxaUnica: true },
+      { ate: null, taxa: 0.075, taxaUnica: true },
+    ],
+    // Al. c) — habitação não destinada a habitação própria e permanente.
+    secundaria: [
+      { ate: 106_346, taxa: 0.01 },
+      { ate: 145_470, taxa: 0.02 },
+      { ate: 198_347, taxa: 0.05 },
+      { ate: 330_539, taxa: 0.07 },
+      { ate: 633_931, taxa: 0.08 },
+      { ate: 1_150_853, taxa: 0.06, taxaUnica: true },
+      { ate: null, taxa: 0.075, taxaUnica: true },
+    ],
+  },
+  "Art. 17.º, n.º 1, als. a), b) e c) CIMT — as três tabelas de escalões e taxas marginais",
+  "art17cimt",
+  REV_PATRIMONIO,
+  "Atualizados anualmente pelo Orçamento do Estado. Ler sempre do artigo antes de publicar."
+);
+
+export const IMT_TAXA_RUSTICO = sv(
+  0.05,
+  "Art. 17.º, n.º 1, al. d) CIMT — aquisição de prédios rústicos",
+  "art17cimt",
+  REV_PATRIMONIO
+);
+
+/** Condições da isenção jovem do Art. 9.º, n.º 2 e n.º 3. */
+export const IMT_ISENCAO_JOVEM = {
+  idadeMaxima: sv(
+    35,
+    "Art. 9.º, n.º 2 CIMT — sujeitos passivos com idade igual ou inferior a 35 anos à data da transmissão",
+    "art9cimt",
+    REV_PATRIMONIO,
+    "Exige ainda que seja a primeira aquisição de HPP e que o adquirente não seja considerado dependente no ano da transmissão."
+  ),
+  anosSemPropriedade: sv(
+    3,
+    "Art. 9.º, n.º 3 CIMT — exclusão de quem seja titular de prédio urbano habitacional à data da transmissão ou em qualquer momento nos três anos anteriores",
+    "art9cimt",
+    REV_PATRIMONIO
+  ),
+};
+
+/** Prazo de pagamento do IMT depois da liquidação. */
+export const IMT_PRAZO_PAGAMENTO_DIAS = sv(
+  30,
+  "Art. 36.º, n.º 1 CIMT (redação do DL 97/2026) — pagamento no próprio dia da liquidação ou nos 30 dias seguintes, sob pena de esta ficar sem efeito",
+  "art36cimt",
+  REV_PATRIMONIO
+);
+
+// ─── Imposto do selo do crédito (verba 17.1) ───────────────────────────
+
+export const IS_CREDITO = {
+  ateUmAnoPorMes: sv(
+    0.0004,
+    "Verba 17.1.1 TGIS — crédito de prazo inferior a um ano, por cada mês ou fração",
+    "tgisPdf",
+    REV_PATRIMONIO
+  ),
+  umAnoOuMais: sv(
+    0.005,
+    "Verba 17.1.2 TGIS — crédito de prazo igual ou superior a um ano",
+    "tgisPdf",
+    REV_PATRIMONIO
+  ),
+  cincoAnosOuMais: sv(
+    0.006,
+    "Verba 17.1.3 TGIS — crédito de prazo igual ou superior a cinco anos",
+    "tgisPdf",
+    REV_PATRIMONIO,
+    "É a taxa do crédito à habitação típico. A prorrogação do prazo conta sempre como nova concessão de crédito."
+  ),
+};
+
+
 
 // ═══════════════════════════════════════════════════════════════════════
 //  HERANÇAS E SUCESSÕES
@@ -2102,6 +4042,122 @@ export const MAIS_VALIAS_DETENCAO_DIAS = sv(
   REV_MAIS_VALIAS
 );
 
+/**
+ * Exclusão parcial por tempo de detenção — a escada do Art. 43.º, n.º 5.
+ *
+ * Aditada pela Lei n.º 31/2024 e lida no articulado a 07/08/2026. Vale para
+ * valores mobiliários ADMITIDOS À NEGOCIAÇÃO e para partes de organismos de
+ * investimento coletivo ABERTOS — ou seja, para ações cotadas, ETFs e fundos
+ * abertos, e não para participações em sociedades não cotadas.
+ *
+ * Exclui uma fração do RENDIMENTO, não da taxa: 30% excluídos aos 8 anos
+ * significa que a taxa de 28% incide sobre 70% do ganho.
+ *
+ * O sinal é simétrico — a lei diz «quando positivo ou negativo». Num ano de
+ * perdas, a mesma escada corta a menos-valia que se leva para o saldo.
+ */
+export const MAIS_VALIAS_EXCLUSAO_DETENCAO = {
+  /** Detidos > 2 anos e < 5 anos. */
+  de2a5Anos: sv(
+    0.1,
+    "Art. 43.º, n.º 5, al. a) CIRS (Lei n.º 31/2024) — são excluídos da tributação 10% do rendimento quando resultem de ativos detidos por período superior a 2 anos e inferior a 5",
+    "art43cirs",
+    REV_INVESTIMENTO
+  ),
+  /** Detidos ≥ 5 anos e < 8 anos. */
+  de5a8Anos: sv(
+    0.2,
+    "Art. 43.º, n.º 5, al. b) CIRS (Lei n.º 31/2024) — 20% do rendimento excluídos entre os 5 e os 8 anos de detenção",
+    "art43cirs",
+    REV_INVESTIMENTO
+  ),
+  /** Detidos ≥ 8 anos. */
+  mais8Anos: sv(
+    0.3,
+    "Art. 43.º, n.º 5, al. c) CIRS (Lei n.º 31/2024) — 30% do rendimento excluídos a partir dos 8 anos de detenção",
+    "art43cirs",
+    REV_INVESTIMENTO
+  ),
+  /** A que ativos se aplica, nas palavras da lei. */
+  ambito: sv(
+    "valores mobiliários admitidos à negociação e partes de organismos de investimento coletivo abertos",
+    "Art. 43.º, n.º 5 CIRS — delimitação do âmbito da exclusão",
+    "art43cirs",
+    REV_INVESTIMENTO,
+    "Fica de fora o que não é admitido à negociação, e os fundos fechados."
+  ),
+} as const;
+
+/**
+ * Organismos de investimento coletivo constituídos em Portugal — o regime
+ * que o Decreto-Lei n.º 7/2015 instalou e que continua em vigor.
+ *
+ * O pacote de expansão mandava confirmar isto antes de afirmar seja o que
+ * for sobre fundos nacionais, e com razão: a arquitetura não é intuitiva.
+ * O fundo É sujeito passivo de IRC (Art. 22.º, n.º 1 EBF), mas o Art. 22.º,
+ * n.º 3 manda NÃO considerar, no lucro tributável, os rendimentos dos
+ * artigos 5.º, 8.º e 10.º do CIRS — isto é, precisamente os juros, as rendas
+ * e as mais-valias de que uma carteira vive.
+ *
+ * O resultado prático é tributação à SAÍDA: o fundo acumula sem imposto
+ * sobre o retorno da carteira, e o imposto aparece quando o participante
+ * recebe (Art. 22.º-A). Não é isenção — é adiamento com mudança de sujeito.
+ */
+export const OIC_NACIONAIS = {
+  /** O que o fundo não leva a lucro tributável. */
+  rendimentosExcluidosNoFundo: sv(
+    "capitais, prediais e mais-valias (arts. 5.º, 8.º e 10.º do CIRS)",
+    "Art. 22.º, n.º 3 EBF (Decreto-Lei n.º 7/2015) — não são considerados, para apuramento do lucro tributável, os rendimentos referidos nos artigos 5.º, 8.º e 10.º do Código do IRS",
+    "ebf22",
+    REV_INVESTIMENTO,
+    "Exceto quando provenham de entidades em regime fiscal claramente mais favorável."
+  ),
+  /** Derramas de que o fundo está isento. */
+  isentoDeDerramas: sv(
+    true,
+    "Art. 22.º, n.º 6 EBF — as entidades referidas no n.º 1 estão isentas de derrama municipal e derrama estadual",
+    "ebf22",
+    REV_INVESTIMENTO
+  ),
+  /** Retenção sobre rendimentos DISTRIBUÍDOS a residentes. */
+  retencaoDistribuicao: sv(
+    0.28,
+    "Art. 22.º-A, n.º 1, al. a), subal. i) EBF — retenção na fonte à taxa do n.º 1 do Art. 71.º do CIRS, com caráter definitivo fora de atividade comercial, industrial ou agrícola",
+    "ebf22a",
+    REV_INVESTIMENTO
+  ),
+  /** Retenção sobre o RESGATE de unidades de participação. */
+  retencaoResgate: sv(
+    0.28,
+    "Art. 22.º-A, n.º 1, al. b) EBF (Lei n.º 31/2024) — retenção na fonte a título definitivo à taxa do n.º 1 do Art. 72.º do CIRS, tendo em conta o n.º 5 do Art. 43.º",
+    "ebf22a",
+    REV_INVESTIMENTO,
+    "A remissão para o n.º 5 do Art. 43.º é o que traz a exclusão por tempo de detenção para dentro do resgate."
+  ),
+  /** A opção que devolve o imposto retido à natureza de imposto por conta. */
+  permiteEnglobamento: sv(
+    true,
+    "Art. 22.º-A, n.º 2 EBF — a opção pelo englobamento converte o imposto retido em imposto por conta, nos termos do Art. 78.º do CIRS",
+    "ebf22a",
+    REV_INVESTIMENTO
+  ),
+  /** O que acontece a quem comprou em mercado secundário e não comunicou. */
+  penalizacaoSemComunicacao: sv(
+    "retenção sobre o montante bruto do resgate",
+    "Art. 22.º-A, n.os 10 e 11 EBF — quem adquire em mercado secundário ou a título gratuito deve comunicar a data e o valor de aquisição; não o fazendo, a retenção incide sobre o montante bruto",
+    "ebf22a",
+    REV_INVESTIMENTO,
+    "Retenção sobre o bruto é retenção sobre o capital, e não só sobre o ganho."
+  ),
+  /** Fundos imobiliários: os rendimentos mudam de natureza. */
+  fundosImobiliarios: sv(
+    "rendimentos de bens imóveis",
+    "Art. 22.º-A, n.º 13 EBF — os rendimentos de unidades de participação em fundos de investimento imobiliário, incluindo as mais-valias da transmissão onerosa, resgate ou liquidação, são considerados rendimentos de bens imóveis",
+    "ebf22a",
+    REV_INVESTIMENTO
+  ),
+} as const;
+
 /** Taxa autónoma sobre mais-valias de criptoativos detidos menos de 365 dias. */
 export const CRIPTO_TAXA_CURTO_PRAZO = sv(
   0.28,
@@ -2109,6 +4165,41 @@ export const CRIPTO_TAXA_CURTO_PRAZO = sv(
   "faciliteCripto2026",
   REV_MAIS_VALIAS
 );
+
+/**
+ * Remuneração de operações com criptoativos — staking, lending e afins.
+ *
+ * É o ponto em que as fontes de terceiros mais divergem, e a divergência
+ * tem explicação: quem lê só a alínea u) do n.º 2 conclui «categoria E,
+ * tributado ao receber». Falta-lhe o n.º 11 do mesmo artigo, que trata
+ * separadamente o caso — muito mais comum — de a recompensa ser paga NA
+ * PRÓPRIA CRIPTO.
+ *
+ * A lei resolve isto sozinha:
+ *   · recompensa paga em euros        → categoria E, tributada ao receber;
+ *   · recompensa paga em criptoativos → NÃO é tributada na receção; é
+ *     tributada como mais-valia no momento em que esses criptoativos forem
+ *     alienados.
+ *
+ * A diferença não é de classificação — é de MOMENTO. Quem declara staking
+ * pago em cripto no ano em que o recebeu está a antecipar um imposto que a
+ * lei manda cobrar mais tarde.
+ */
+export const CRIPTO_REMUNERACAO = {
+  categoriaQuandoPagaEmMoeda: sv(
+    "E",
+    "Art. 5.º, n.º 2, al. u) CIRS (aditada pela Lei n.º 24-D/2022) — quaisquer formas de remuneração decorrentes de operações relativas a criptoativos são rendimentos de capitais",
+    "art5cirs",
+    REV_PATRIMONIO
+  ),
+  categoriaQuandoPagaEmCripto: sv(
+    "G",
+    "Art. 5.º, n.º 11 CIRS (aditado pela Lei n.º 24-D/2022) — os rendimentos da al. u) do n.º 2, quando assumam a forma de criptoativos, são tributados como mais-valia no momento da alienação dos criptoativos recebidos",
+    "art5cirs",
+    REV_PATRIMONIO,
+    "Não há facto tributário na receção: o momento é o da alienação do que foi recebido."
+  ),
+};
 
 /** Período de detenção (dias) a partir do qual os criptoativos ficam isentos. */
 export const CRIPTO_ISENCAO_DIAS = sv(
@@ -2122,7 +4213,7 @@ export const CRIPTO_ISENCAO_DIAS = sv(
 /** Fração do saldo de mais-valias imobiliárias sujeita a tributação (residentes). */
 export const MAIS_VALIAS_IMOBILIARIO_INCLUSAO = sv(
   0.5,
-  "Art. 43.º, n.º 2 CIRS — apenas 50% do saldo de mais-valias imobiliárias é considerado (englobamento obrigatório às taxas progressivas)",
+  "Art. 43.º, n.º 2, al. b) CIRS — apenas 50% do saldo de mais-valias imobiliárias é considerado",
   "art43cirs",
   REV_MAIS_VALIAS
 );
@@ -2130,10 +4221,85 @@ export const MAIS_VALIAS_IMOBILIARIO_INCLUSAO = sv(
 /** Prazo de reinvestimento em habitação própria e permanente (exclusão). */
 export const MAIS_VALIAS_REINVESTIMENTO_MESES = sv(
   36,
-  "Art. 10.º, n.º 5 CIRS — reinvestimento na aquisição de HPP até 36 meses após (ou 24 meses antes) da realização, sem recurso ao crédito",
-  "cgdImoveisMaisValias",
-  REV_MAIS_VALIAS
+  "Art. 10.º, n.º 5, al. b) CIRS — reinvestimento efetuado entre os 24 meses anteriores e os 36 meses posteriores à realização",
+  "art10cirs",
+  REV_PATRIMONIO
 );
+
+/**
+ * Reinvestimento e mais-valias de imóveis — o resto dos prazos do Art. 10.º.
+ *
+ * Lido diretamente do articulado a 06/08/2026, incluindo os n.os 7 e 8 na
+ * redação do Decreto-Lei n.º 97/2026: a segunda via de exclusão, que não
+ * exige comprar para habitação própria mas sim para arrendar dentro dos
+ * limites de renda desse diploma.
+ */
+export const MAIS_VALIAS_IMOVEIS = {
+  /** Janela anterior à venda em que o reinvestimento já conta. */
+  reinvestimentoAntesMeses: sv(
+    24,
+    "Art. 10.º, n.º 5, al. b) CIRS — o reinvestimento conta desde os 24 meses anteriores à realização",
+    "art10cirs",
+    REV_PATRIMONIO
+  ),
+  /** Tempo mínimo de HPP no imóvel vendido, antes da transmissão. */
+  hppAntesDaVendaMeses: sv(
+    12,
+    "Art. 10.º, n.º 5, al. e) CIRS (redação do DL 57/2024) — habitação própria e permanente comprovada pelo domicílio fiscal nos 12 meses anteriores à transmissão",
+    "art10cirs",
+    REV_PATRIMONIO
+  ),
+  /** Prazo para afetar a habitação o imóvel adquirido com o reinvestimento. */
+  afetacaoAposReinvestimentoMeses: sv(
+    12,
+    "Art. 10.º, n.º 6, al. a) CIRS — o adquirente tem de afetar o imóvel a habitação até decorridos 12 meses após o reinvestimento",
+    "art10cirs",
+    REV_PATRIMONIO
+  ),
+  /** Prazo para requerer a inscrição na matriz em construção, ampliação ou melhoramento. */
+  inscricaoMatrizMeses: sv(
+    48,
+    "Art. 10.º, n.º 6, al. b) CIRS — inscrição na matriz requerida até 48 meses desde a data da realização",
+    "art10cirs",
+    REV_PATRIMONIO,
+    "E afetação do imóvel a habitação até ao fim do quinto ano seguinte ao da realização."
+  ),
+  /** Anos de detenção abaixo dos quais um imóvel com apoio público perde a redução a 50%. */
+  apoioPublicoAnos: sv(
+    10,
+    "Art. 43.º, n.º 2, al. a) CIRS — imóveis com apoio público não reembolsável superior a 30% do VPT vendidos antes de 10 anos são tributados por inteiro",
+    "art43cirs",
+    REV_PATRIMONIO
+  ),
+  apoioPublicoLimiarVpt: sv(
+    0.3,
+    "Art. 43.º, n.º 2, al. a) CIRS — apoio de valor superior a 30% do valor patrimonial tributário",
+    "art43cirs",
+    REV_PATRIMONIO
+  ),
+  /** Janela dos encargos de valorização que acrescem ao valor de aquisição. */
+  encargosValorizacaoAnos: sv(
+    12,
+    "Art. 51.º, n.º 1, al. a) CIRS — encargos com a valorização comprovadamente realizados nos últimos 12 anos",
+    "art51cirs",
+    REV_PATRIMONIO,
+    "Não contam os encargos realizados durante o período em que o imóvel esteve afeto a atividade empresarial ou profissional (n.º 3)."
+  ),
+  /** Segunda via de exclusão: reinvestir em imóveis para arrendamento a renda moderada. */
+  arrendamentoContratoMeses: sv(
+    6,
+    "Art. 10.º, n.º 8, al. a) CIRS (redação do DL 97/2026) — contrato de arrendamento habitacional dentro dos limites de renda celebrado nos seis meses seguintes ao reinvestimento ou à realização",
+    "art10cirs",
+    REV_PATRIMONIO,
+    "Salvo impedimento justificado, designadamente obras urgentes."
+  ),
+  arrendamentoManutencaoMeses: sv(
+    36,
+    "Art. 10.º, n.º 8, al. b) CIRS (redação do DL 97/2026) — o imóvel tem de estar arrendado pelo menos 36 meses, seguidos ou interpolados, nos primeiros cinco anos",
+    "art10cirs",
+    REV_PATRIMONIO
+  ),
+};
 
 // ═══════════════════════════════════════════════════════════════════════
 //  BENEFÍCIOS FISCAIS À COLETA — PPR, donativos e ascendentes
@@ -2160,6 +4326,75 @@ export const DEDUCAO_PPR = sv<DeducaoPPR>(
   "Art. 21.º EBF — PPR: 20% dos valores aplicados; limite €400 (< 35), €350 (35–50), €300 (> 50)",
   "art21EBF",
   REV_BENEFICIOS
+);
+
+/**
+ * O outro lado do PPR: o que se paga ao resgatar.
+ *
+ * Há DOIS regimes, e confundi-los custa dinheiro em qualquer dos sentidos.
+ * Dentro das situações definidas na lei, a matéria coletável é apenas dois
+ * quintos do rendimento e a tributação é autónoma a 20% — o que dá uma taxa
+ * efetiva de 8% sobre o rendimento. Fora delas, o rendimento é tributado
+ * autonomamente a 21,5%, pelas regras da categoria E, sem a redução a dois
+ * quintos.
+ *
+ * A dedução à coleta tem um regime próprio e SEPARADO: perde-se com
+ * majoração de 10% por cada ano ou fração decorrido desde que foi feita.
+ * As duas consequências somam-se — não são alternativas.
+ */
+export const PPR_RESGATE = {
+  fracaoTributavel: sv(
+    0.4,
+    "Art. 21.º, n.º 3, al. b), 1) EBF — a matéria coletável é constituída por dois quintos do rendimento",
+    "art21EBF",
+    REV_PATRIMONIO
+  ),
+  taxaAutonoma: sv(
+    0.2,
+    "Art. 21.º, n.º 3, al. b), 2) EBF — a tributação é autónoma, sendo efetuada à taxa de 20%",
+    "art21EBF",
+    REV_PATRIMONIO
+  ),
+  taxaForaDasCondicoes: sv(
+    0.215,
+    "Art. 21.º, n.º 5 EBF — reembolso fora de qualquer das situações definidas na lei: rendimento tributado autonomamente à taxa de 21,5%, pelas regras da categoria E",
+    "art21EBF",
+    REV_PATRIMONIO,
+    "Sem a redução a dois quintos do n.º 3, al. b). É esta a distinção que gera o erro de calcular 2/5 × 21,5%."
+  ),
+  majoracaoAnual: sv(
+    0.1,
+    "Art. 21.º, n.º 4 EBF — as importâncias deduzidas são majoradas em 10% por cada ano ou fração decorrido desde aquele em que foi exercido o direito à dedução",
+    "art21EBF",
+    REV_PATRIMONIO
+  ),
+  anosParaDispensa: sv(
+    5,
+    "Art. 21.º, n.º 4 EBF — salvo morte do subscritor ou quando tenham decorrido pelo menos cinco anos a contar da respetiva entrega e ocorra uma das situações definidas na lei",
+    "art21EBF",
+    REV_PATRIMONIO
+  ),
+};
+
+/** Taxa efetiva sobre o rendimento do PPR resgatado nas condições legais:
+    dois quintos do rendimento, tributados a 20%. Calculada, não escrita. */
+export const PPR_TAXA_EFETIVA_CONDICOES_LEGAIS =
+  PPR_RESGATE.fracaoTributavel.value * PPR_RESGATE.taxaAutonoma.value;
+
+/**
+ * Englobamento de lucros distribuídos: só metade conta.
+ *
+ * É a peça que decide se englobar dividendos compensa. Optando pelo
+ * englobamento, os lucros de pessoas coletivas sujeitas e não isentas de
+ * IRC são considerados em apenas 50% do seu valor — porque já foram
+ * tributados na esfera da sociedade.
+ */
+export const DIVIDENDOS_ENGLOBAMENTO_FRACAO = sv(
+  0.5,
+  "Art. 40.º-A, n.º 1 CIRS — no caso de opção pelo englobamento, os lucros são considerados em apenas 50% do seu valor",
+  "art40aCirs",
+  REV_PATRIMONIO,
+  "Exige que a entidade devedora tenha sede ou direção efetiva em Portugal e o beneficiário resida cá (n.º 2), ou que seja residente na UE/EEE nas condições do n.º 4."
 );
 
 export interface DeducaoDonativos {
@@ -2280,6 +4515,165 @@ export const SMN = sv(
   REV_SMN
 );
 
+/**
+ * Dependentes e agregado familiar — Art. 13.º do CIRS, lido a 07/08/2026.
+ *
+ * Três regras que decidem quase tudo o que a secção da família trata, e
+ * que são citadas de memória com mais frequência do que lidas.
+ */
+export const DEPENDENTES_IRS = {
+  /** A idade-limite dos dependentes maiores. */
+  idadeMaxima: sv(
+    25,
+    "Art. 13.º, n.º 5, als. b) e d) CIRS — filhos, adotados, enteados e afilhados civis maiores que não tenham mais de 25 anos",
+    "art13cirs",
+    REV_FAMILIA
+  ),
+  /**
+   * O limite de rendimentos do dependente maior.
+   *
+   * A lei não fixa um valor: remete para a retribuição mínima mensal
+   * garantida — «nem aufiram anualmente rendimentos superiores ao valor da
+   * retribuição mínima mensal garantida». É por isso um limiar que sobe
+   * sozinho todos os anos, e é mais baixo do que quase toda a gente supõe.
+   */
+  limiteRendimentoAnual: sv(
+    SMN.value,
+    "Art. 13.º, n.º 5, al. b) CIRS — rendimentos anuais não superiores ao valor da retribuição mínima mensal garantida",
+    "art13cirs",
+    REV_FAMILIA,
+    "A lei remete para a RMMG e não fixa montante próprio: o limiar acompanha o salário mínimo do ano."
+  ),
+  /** A data que decide a situação pessoal e familiar. */
+  situacaoRelevanteEm: sv(
+    "o último dia do ano a que o imposto respeite",
+    "Art. 13.º, n.º 8 CIRS — a situação pessoal e familiar relevante para efeitos de tributação é a que se verificar no último dia do ano",
+    "art13cirs",
+    REV_FAMILIA
+  ),
+  /** Não se pode estar em dois agregados. */
+  umSoAgregado: sv(
+    true,
+    "Art. 13.º, n.º 7 CIRS — as pessoas referidas não podem, simultaneamente, fazer parte de mais de um agregado familiar nem, integrando um agregado, ser consideradas sujeitos passivos autónomos",
+    "art13cirs",
+    REV_FAMILIA
+  ),
+} as const;
+
+/**
+ * Guarda partilhada — Art. 78.º, n.os 9 a 12 do CIRS, com o n.º 11 na
+ * redação do Decreto-Lei n.º 49/2025.
+ *
+ * O mecanismo é este: por defeito, um dependente que conste das duas
+ * declarações vale METADE das deduções em cada uma. Uma partilha
+ * diferente exige acordo que a fixe quantitativamente E comunicação de
+ * ambos, até ao fim de fevereiro. Não comunicando — ou não somando 100% —
+ * volta-se à divisão em partes iguais.
+ */
+export const GUARDA_PARTILHADA = {
+  /** A redução automática quando o dependente consta das duas declarações. */
+  fracaoPorSujeitoPassivo: sv(
+    0.5,
+    "Art. 78.º, n.º 9 CIRS — sempre que o mesmo dependente ou ascendente conste de mais do que uma declaração, o valor das deduções à coleta é reduzido para metade, por sujeito passivo",
+    "art78cirs",
+    REV_FAMILIA
+  ),
+  /** O prazo da comunicação da percentagem. */
+  prazoComunicacao: sv(
+    "até ao final do mês de fevereiro do ano seguinte àquele a que o imposto respeita",
+    "Art. 78.º, n.º 11 CIRS (redação do Decreto-Lei n.º 49/2025) — os sujeitos passivos devem indicar no Portal das Finanças a percentagem que lhes corresponde na partilha de despesas",
+    "art78cirs",
+    REV_FAMILIA
+  ),
+  /** O que acontece sem comunicação, ou com comunicações que não fecham. */
+  supletivo: sv(
+    "o valor das deduções à coleta é dividido em partes iguais",
+    "Art. 78.º, n.º 12 CIRS — caso não efetuem a comunicação ou a soma das percentagens comunicadas por ambos não corresponda a 100%",
+    "art78cirs",
+    REV_FAMILIA
+  ),
+  /** A condição para uma partilha diferente de metade. */
+  exigeAcordoQuantificado: sv(
+    true,
+    "Art. 78.º, n.º 10 CIRS — só quando o acordo de regulação do exercício em comum das responsabilidades parentais estabeleça partilha não igualitária e fixe QUANTITATIVAMENTE a percentagem de cada sujeito passivo",
+    "art78cirs",
+    REV_FAMILIA
+  ),
+} as const;
+
+/**
+ * Pensões de alimentos — Art. 83.º-A do CIRS.
+ *
+ * A dedução é generosa — 20% sem limite máximo — e tem duas condições que
+ * a anulam por inteiro quando falham: a obrigação tem de resultar de
+ * SENTENÇA ou de ACORDO HOMOLOGADO, e o beneficiário não pode fazer parte
+ * do mesmo agregado nem ter outras deduções ao abrigo do Art. 78.º.
+ */
+export const PENSAO_ALIMENTOS_IRS = {
+  taxa: sv(
+    DEDUCAO_PENSAO_ALIMENTOS.value,
+    "Art. 83.º-A, n.º 1 CIRS — dedução de 20% das importâncias comprovadamente suportadas e não reembolsadas",
+    "art83aCirs",
+    REV_FAMILIA
+  ),
+  semLimite: sv(
+    true,
+    "Art. 83.º-A, n.º 1 CIRS — a norma não fixa limite máximo à dedução",
+    "art83aCirs",
+    REV_FAMILIA
+  ),
+  exigeTituloJudicial: sv(
+    "sentença judicial ou acordo homologado nos termos da lei civil",
+    "Art. 83.º-A, n.º 1 CIRS — a obrigação tem de resultar de um destes títulos",
+    "art83aCirs",
+    REV_FAMILIA,
+    "Um acordo particular entre os pais, por escrito que seja, não abre o direito a esta dedução."
+  ),
+  incompativelComDependente: sv(
+    true,
+    "Art. 83.º-A, n.º 1 CIRS — salvo nos casos em que o beneficiário faça parte do mesmo agregado familiar para efeitos fiscais ou relativamente ao qual estejam previstas outras deduções à coleta ao abrigo do Art. 78.º",
+    "art83aCirs",
+    REV_FAMILIA,
+    "Não se deduz a pensão e se declara o mesmo filho como dependente: a lei escolhe um caminho ou o outro."
+  ),
+} as const;
+
+/**
+ * Heranças e doações — a participação do Art. 26.º do CIS.
+ *
+ * A isenção da família direta é conhecida; a obrigação de participar,
+ * que existe MESMO havendo isenção, é o que se esquece.
+ */
+export const TRANSMISSAO_GRATUITA_PARTICIPACAO = {
+  prazoMeses: sv(
+    3,
+    "Art. 26.º, n.º 3 CIS — a participação deve ser apresentada até ao final do 3.º mês seguinte ao do nascimento da obrigação tributária",
+    "art26cis",
+    REV_FAMILIA
+  ),
+  adiamentoMaximoDias: sv(
+    60,
+    "Art. 26.º, n.º 5 CIS — os prazos são improrrogáveis, salvo alegando-se e provando-se motivo justificado, caso em que o chefe de finanças pode conceder adiamento até ao limite máximo de 60 dias",
+    "art26cis",
+    REV_FAMILIA
+  ),
+  quemParticipa: sv(
+    "o cabeça-de-casal e o beneficiário",
+    "Art. 26.º, n.º 1 CIS — ambos são obrigados a participar ao serviço de finanças competente",
+    "art26cis",
+    REV_FAMILIA,
+    "Identificando o cabeça-de-casal todos os beneficiários, estes ficam desonerados da participação que lhes competiria (n.º 4)."
+  ),
+  isentos: sv(
+    "o cônjuge ou unido de facto, descendentes e ascendentes",
+    "Art. 6.º, al. e) CIS — isenção nas transmissões gratuitas sujeitas à verba 1.2 da Tabela Geral de que sejam beneficiários",
+    "art6cisSelo",
+    REV_FAMILIA,
+    "A isenção é do imposto, não da participação."
+  ),
+} as const;
+
+
 // Valores derivados (calculados, nunca digitados à mão) ──────────────────
 export const IAS_VALUE = IAS.value;
 export const SS_BASE_MAX_MENSAL_CALC = 12 * IAS_VALUE; // deve igualar SS_BASE_MAX_MENSAL.value
@@ -2327,22 +4721,506 @@ export const SS_DEPENDENTE = {
   ),
 };
 
-/** Subsídio de refeição — limites diários de isenção (IRS + SS), setor privado 2026. */
+/**
+ * Subsídio de refeição — limites diários de isenção (IRS + SS).
+ *
+ * A al. b), 2) do n.º 3 do art. 2.º do CIRS, na redação da Lei n.º 45-A/2024,
+ * não fixa DOIS montantes: fixa um, e uma majoração. É rendimento do trabalho
+ * o subsídio «na parte em que exceder o limite legal estabelecido ou em que o
+ * exceda em 70% sempre que o respetivo subsídio seja atribuído através de
+ * vales de refeição».
+ *
+ * O limite do cartão é, por isso, DERIVADO — não é um segundo número a manter
+ * à mão. Quando o valor em numerário sobe, o do cartão acompanha-o sozinho.
+ */
+export const SUBSIDIO_REFEICAO_MAJORACAO_VALES = sv(
+  0.70,
+  "Art. 2.º, n.º 3, al. b), 2) CIRS — o limite é excedido em 70% quando o subsídio é atribuído através de vales de refeição (Lei n.º 45-A/2024)",
+  "art2cirs",
+  REV_EMPRESA
+);
+
 export const SUBSIDIO_REFEICAO = {
   dinheiro: sv(
     6.15,
-    "Limite diário isento em numerário (Art. 2.º, n.º 3 CIRS)",
+    "Limite diário isento em numerário (Art. 2.º, n.º 3, al. b), 2) CIRS)",
     "subsidioRefeicao2026",
     DEP_TODAY
   ),
   cartao: sv(
-    10.46,
-    "Limite diário isento em cartão/vale de refeição (Art. 2.º, n.º 3 CIRS)",
-    "subsidioRefeicao2026",
-    DEP_TODAY,
-    "Subiu de 6,00€/10,20€ (2025) para 6,15€/10,46€ (2026)."
+    Math.round(6.15 * (1 + SUBSIDIO_REFEICAO_MAJORACAO_VALES.value) * 100) / 100,
+    "Limite diário isento em cartão/vale de refeição — o do numerário majorado em 70% (Art. 2.º, n.º 3, al. b), 2) CIRS)",
+    "art2cirs",
+    REV_EMPRESA,
+    "Derivado, não fixado: 6,15 € × 1,70 = 10,46 €. Subiu de 6,00 €/10,20 € (2025) para 6,15 €/10,46 € (2026)."
   ),
 };
+
+/**
+ * Abono para falhas — devido a quem, no seu trabalho, tenha de movimentar
+ * numerário. Só é rendimento na parte que exceda uma fração da remuneração
+ * mensal fixa, e é por isso que não tem valor em euros: tem percentagem.
+ */
+export const ABONO_PARA_FALHAS = sv(
+  0.05,
+  "Art. 2.º, n.º 3, al. c) CIRS — os abonos para falhas são rendimento do trabalho na parte em que excedam 5% da remuneração mensal fixa",
+  "art2cirs",
+  REV_EMPRESA
+);
+
+/**
+ * A condição que a al. d) do n.º 3 do art. 2.º impõe às ajudas de custo e aos
+ * quilómetros, e que é esquecida com mais frequência do que os limites: não
+ * basta ficar abaixo do valor: têm de ser observados os PRESSUPOSTOS da sua
+ * atribuição aos servidores do Estado.
+ */
+export const AJUDAS_CUSTO_PRESSUPOSTOS = sv(
+  "as ajudas de custo e as importâncias pela utilização de automóvel próprio em serviço são rendimento do trabalho na parte em que excedam os limites legais OU quando não sejam observados os pressupostos da sua atribuição aos servidores do Estado",
+  "Art. 2.º, n.º 3, al. d) CIRS",
+  "art2cirs",
+  REV_EMPRESA,
+  "A mesma alínea tributa as verbas para despesas de deslocação, viagens ou representação de que não tenham sido prestadas contas até ao termo do exercício."
+);
+
+
+// ═══════════════════════════════════════════════════════════════════════
+//  CÓDIGO DO TRABALHO — o que a secção «Trabalho por conta de outrem»
+//  precisa, lido no articulado consolidado a 07/08/2026.
+//
+//  Sobre a fonte, porque a decisão importa: o texto CONSOLIDADO do Código
+//  do Trabalho não está no Portal das Finanças (não é um código fiscal) e
+//  o Diário da República serve as suas páginas de legislação consolidada
+//  como aplicação de página única — o pedido devolve 2,3 KB de shell
+//  vazio. A base de dados jurídica da Procuradoria-Geral Distrital de
+//  Lisboa serve-o inteiro, com o histórico de alterações artigo a artigo.
+//
+//  A currência foi confirmada CONTRA fonte governamental independente: a
+//  lista de alterações que a PGD Lisboa apresenta termina na Lei n.º
+//  32/2025, de 27 de março, exatamente a mesma que a DGERT — a direção-
+//  geral responsável pela matéria — dá como última alteração ao Código.
+//  Duas fontes, a mesma lista de 24 diplomas. É isso que sustenta estes
+//  valores, e é por isso que ambas ficam registadas em `SOURCES`.
+// ═══════════════════════════════════════════════════════════════════════
+
+/** Art. 112.º — durações do período experimental, em dias. */
+export const PERIODO_EXPERIMENTAL = {
+  geral: sv(
+    90,
+    "Art. 112.º, n.º 1, al. a) CT — 90 dias para a generalidade dos trabalhadores, em contrato por tempo indeterminado",
+    "ctPeriodoExperimental",
+    REV_TRABALHO
+  ),
+  qualificados: sv(
+    180,
+    "Art. 112.º, n.º 1, al. b) CT — 180 dias para cargos de complexidade técnica, elevado grau de responsabilidade ou especial qualificação, funções de confiança, e quem esteja à procura de primeiro emprego ou em desemprego de longa duração",
+    "ctPeriodoExperimental",
+    REV_TRABALHO
+  ),
+  direcao: sv(
+    240,
+    "Art. 112.º, n.º 1, al. c) CT — 240 dias para trabalhador que exerça cargo de direção ou quadro superior",
+    "ctPeriodoExperimental",
+    REV_TRABALHO
+  ),
+  termoSeisMesesOuMais: sv(
+    30,
+    "Art. 112.º, n.º 2, al. a) CT — 30 dias em contrato a termo de duração igual ou superior a seis meses",
+    "ctPeriodoExperimental",
+    REV_TRABALHO
+  ),
+  termoMenosDeSeisMeses: sv(
+    15,
+    "Art. 112.º, n.º 2, al. b) CT — 15 dias em contrato a termo certo de duração inferior a seis meses, ou a termo incerto cuja duração previsível não ultrapasse esse limite",
+    "ctPeriodoExperimental",
+    REV_TRABALHO
+  ),
+  comissaoDeServico: sv(
+    180,
+    "Art. 112.º, n.º 3 CT — em comissão de serviço depende de estipulação expressa e não pode exceder 180 dias",
+    "ctPeriodoExperimental",
+    REV_TRABALHO
+  ),
+  reducaoPorContratoAnterior: sv(
+    90,
+    "Art. 112.º, n.os 5 e 6 CT — o período do primeiro emprego/desemprego de longa duração é reduzido ou excluído consoante contrato a termo anterior com OUTRO empregador, ou estágio profissional com avaliação positiva nos últimos 12 meses, tenha durado 90 dias ou mais",
+    "ctPeriodoExperimental",
+    REV_TRABALHO
+  ),
+  antiguidadeContaDesdeOInicio: sv(
+    "a antiguidade do trabalhador conta-se desde o início do período experimental",
+    "Art. 112.º, n.º 8 CT",
+    "ctPeriodoExperimental",
+    REV_TRABALHO
+  ),
+};
+
+/** Art. 114.º — denúncia durante o período experimental. */
+export const DENUNCIA_EXPERIMENTAL = {
+  semAvisoPrevio: sv(
+    "qualquer das partes pode denunciar o contrato sem aviso prévio e sem invocação de justa causa, nem direito a indemnização",
+    "Art. 114.º, n.º 1 CT",
+    "ctDenunciaExperimental",
+    REV_TRABALHO,
+    "Salvo acordo escrito em contrário — e é a única porta que o contrato individual tem aqui."
+  ),
+  limiarAviso7Dias: sv(
+    60,
+    "Art. 114.º, n.º 2 CT — tendo o período experimental durado mais de 60 dias, a denúncia pelo empregador depende de aviso prévio de sete dias",
+    "ctDenunciaExperimental",
+    REV_TRABALHO
+  ),
+  aviso7Dias: sv(7, "Art. 114.º, n.º 2 CT — aviso prévio de sete dias", "ctDenunciaExperimental", REV_TRABALHO),
+  limiarAviso30Dias: sv(
+    120,
+    "Art. 114.º, n.º 3 CT — tendo durado mais de 120 dias, a denúncia pelo empregador depende de aviso prévio de 30 dias",
+    "ctDenunciaExperimental",
+    REV_TRABALHO
+  ),
+  aviso30Dias: sv(30, "Art. 114.º, n.º 3 CT — aviso prévio de 30 dias", "ctDenunciaExperimental", REV_TRABALHO),
+  faltaDeAviso: sv(
+    "o não cumprimento, total ou parcial, do aviso prévio determina o pagamento da retribuição correspondente ao período em falta",
+    "Art. 114.º, n.º 4 CT",
+    "ctDenunciaExperimental",
+    REV_TRABALHO
+  ),
+  comunicacaoIgualdadeDiasUteis: sv(
+    5,
+    "Art. 114.º, n.º 5 CT — a denúncia de trabalhadora grávida, puérpera ou lactante, de trabalhador em licença parental ou de trabalhador cuidador é comunicada à entidade competente na área da igualdade no prazo de cinco dias úteis",
+    "ctDenunciaExperimental",
+    REV_TRABALHO
+  ),
+  denunciaAbusiva: sv(
+    "é ilícita a denúncia que constitua abuso do direito, e o caráter abusivo só pode ser declarado pelos tribunais judiciais",
+    "Art. 114.º, n.os 7 e 8 CT",
+    "ctDenunciaExperimental",
+    REV_TRABALHO
+  ),
+};
+
+/** Arts. 140.º e 148.º — contrato a termo. */
+export const CONTRATO_A_TERMO = {
+  soNecessidadesTemporarias: sv(
+    "só pode ser celebrado para a satisfação de necessidades temporárias, objetivamente definidas pela entidade empregadora, e apenas pelo período estritamente necessário à satisfação dessas necessidades",
+    "Art. 140.º, n.º 1 CT",
+    "ctTermo",
+    REV_TRABALHO
+  ),
+  onusDaProva: sv(
+    "cabe ao empregador a prova dos factos que justificam a celebração de contrato de trabalho a termo",
+    "Art. 140.º, n.º 5 CT",
+    "ctTermo",
+    REV_TRABALHO
+  ),
+  duracaoMaximaTermoCerto: sv(
+    2,
+    "Art. 148.º, n.º 1 CT — a duração do contrato a termo certo não pode ser superior a dois anos",
+    "ctTermo",
+    REV_TRABALHO
+  ),
+  duracaoMaximaTermoIncerto: sv(
+    4,
+    "Art. 148.º, n.º 5 CT — a duração do contrato a termo incerto não pode ser superior a quatro anos",
+    "ctTermo",
+    REV_TRABALHO
+  ),
+  duracaoMinimaMeses: sv(
+    6,
+    "Art. 148.º, n.º 2 CT — só pode ser celebrado por prazo inferior a seis meses nas situações das als. a) a g) do n.º 2 do art. 140.º; violando-o, considera-se celebrado por seis meses",
+    "ctTermo",
+    REV_TRABALHO
+  ),
+  novaEmpresaTrabalhadores: sv(
+    250,
+    "Art. 140.º, n.º 4, al. a) CT — lançamento de nova atividade de duração incerta ou início de funcionamento de empresa ou estabelecimento de empresa com menos de 250 trabalhadores, nos dois anos posteriores",
+    "ctTermo",
+    REV_TRABALHO
+  ),
+  contraordenacao: sv(
+    "constitui contraordenação muito grave a violação do disposto em qualquer dos n.os 1 a 4 do art. 140.º",
+    "Art. 140.º, n.º 6 CT",
+    "ctTermo",
+    REV_TRABALHO
+  ),
+};
+
+/** Arts. 131.º, 132.º e 134.º — formação contínua. */
+export const FORMACAO_CONTINUA = {
+  horasAnuais: sv(
+    40,
+    "Art. 131.º, n.º 2 CT — o trabalhador tem direito, em cada ano, a um número mínimo de quarenta horas de formação contínua",
+    "ctFormacao",
+    REV_TRABALHO,
+    "Sendo contratado a termo por período igual ou superior a três meses, a um número proporcional à duração do contrato nesse ano."
+  ),
+  fracaoMinimaDeTrabalhadores: sv(
+    0.10,
+    "Art. 131.º, n.º 5 CT — o empregador deve assegurar, em cada ano, formação contínua a pelo menos 10% dos trabalhadores da empresa",
+    "ctFormacao",
+    REV_TRABALHO
+  ),
+  antecipacaoOuDiferimentoAnos: sv(
+    2,
+    "Art. 131.º, n.º 6 CT — o empregador pode antecipar até dois anos ou, prevendo-o o plano de formação, diferir por igual período",
+    "ctFormacao",
+    REV_TRABALHO
+  ),
+  antecipacaoDuplaCertificacaoAnos: sv(
+    5,
+    "Art. 131.º, n.º 7 CT — o período de antecipação é de cinco anos em processo de reconhecimento, validação e certificação de competências, ou em formação de dupla certificação",
+    "ctFormacao",
+    REV_TRABALHO
+  ),
+  prazoAteViragemEmCredito: sv(
+    2,
+    "Art. 132.º, n.º 1 CT — as horas não asseguradas pelo empregador até ao termo dos dois anos posteriores ao seu vencimento transformam-se em crédito de horas, em igual número, para formação por iniciativa do trabalhador",
+    "ctFormacao",
+    REV_TRABALHO
+  ),
+  creditoContaComoTrabalho: sv(
+    "o crédito de horas é referido ao período normal de trabalho, confere direito a retribuição e conta como tempo de serviço efetivo",
+    "Art. 132.º, n.º 2 CT",
+    "ctFormacao",
+    REV_TRABALHO
+  ),
+  antecedenciaComunicacaoDias: sv(
+    10,
+    "Art. 132.º, n.º 3 CT — o trabalhador pode utilizar o crédito mediante comunicação ao empregador com a antecedência mínima de 10 dias",
+    "ctFormacao",
+    REV_TRABALHO
+  ),
+  caducidadeDoCreditoAnos: sv(
+    3,
+    "Art. 132.º, n.º 6 CT — o crédito de horas para formação que não seja utilizado cessa passados três anos sobre a sua constituição",
+    "ctFormacao",
+    REV_TRABALHO
+  ),
+  pagamentoNaCessacao: sv(
+    "cessando o contrato, o trabalhador tem direito a receber a retribuição correspondente ao número mínimo anual de horas de formação que não lhe tenha sido proporcionado, ou ao crédito de horas de que seja titular à data da cessação",
+    "Art. 134.º CT",
+    "ctFormacao",
+    REV_TRABALHO
+  ),
+};
+
+/** Arts. 208.º-A e 208.º-B — banco de horas. */
+export const BANCO_DE_HORAS = {
+  individualRevogado: sv(
+    "o banco de horas individual foi REVOGADO — o art. 208.º-A já não existe na ordem jurídica",
+    "Art. 208.º-A CT (revogado)",
+    "ctBancoHoras",
+    REV_TRABALHO,
+    "Continua a ser descrito como vigente em muita informação em circulação. Não é."
+  ),
+  grupalAcrescimoDiario: sv(
+    2,
+    "Art. 208.º-B, n.º 3 CT — no banco de horas grupal o período normal de trabalho pode ser aumentado até duas horas diárias",
+    "ctBancoHoras",
+    REV_TRABALHO
+  ),
+  grupalMaximoSemanal: sv(
+    50,
+    "Art. 208.º-B, n.º 3 CT — pode atingir 50 horas semanais",
+    "ctBancoHoras",
+    REV_TRABALHO
+  ),
+  grupalMaximoAnual: sv(
+    150,
+    "Art. 208.º-B, n.º 3 CT — o acréscimo tem o limite de 150 horas por ano",
+    "ctBancoHoras",
+    REV_TRABALHO
+  ),
+  grupalMaioriaReferendo: sv(
+    0.65,
+    "Art. 208.º-B, n.º 6 CT — o regime só pode ser aplicado se o projeto for aprovado em referendo por, pelo menos, 65% dos trabalhadores abrangidos",
+    "ctBancoHoras",
+    REV_TRABALHO
+  ),
+  grupalDuracaoMaximaAnos: sv(
+    4,
+    "Art. 208.º-B, n.º 4, al. b) CT — o período durante o qual o regime é aplicável não pode ser superior a quatro anos",
+    "ctBancoHoras",
+    REV_TRABALHO
+  ),
+  grupalAntecedenciaReferendoDias: sv(
+    20,
+    "Art. 208.º-B, n.º 5 CT — o projeto é publicitado e comunicado com a antecedência mínima de 20 dias em relação à data do referendo",
+    "ctBancoHoras",
+    REV_TRABALHO
+  ),
+};
+
+/** Arts. 166.º, 168.º e 170.º — teletrabalho. */
+export const TELETRABALHO = {
+  exigeAcordoEscrito: sv(
+    "a implementação do regime de teletrabalho depende SEMPRE de acordo escrito, que pode constar do contrato inicial ou ser autónomo",
+    "Art. 166.º, n.º 2 CT",
+    "ctTeletrabalho",
+    REV_TRABALHO
+  ),
+  localDeTrabalho: sv(
+    "o local em que o trabalhador realiza habitualmente o trabalho é considerado, para todos os efeitos legais, o seu local de trabalho",
+    "Art. 166.º, n.º 4, al. b) CT",
+    "ctTeletrabalho",
+    REV_TRABALHO
+  ),
+  despesasIntegralmenteCompensadas: sv(
+    "são integralmente compensadas pelo empregador todas as despesas adicionais que, comprovadamente, o trabalhador suporte como direta consequência da aquisição ou uso dos equipamentos e sistemas, incluindo os acréscimos de custos de energia e da rede e os custos de manutenção",
+    "Art. 168.º, n.º 2 CT",
+    "ctTeletrabalho",
+    REV_TRABALHO
+  ),
+  criterioDasDespesas: sv(
+    "na ausência de acordo sobre um valor fixo, consideram-se despesas adicionais as correspondentes a bens ou serviços de que o trabalhador não dispunha antes do acordo, e as determinadas por comparação com as despesas homólogas do último mês de trabalho presencial",
+    "Art. 168.º, n.º 4 CT",
+    "ctTeletrabalho",
+    REV_TRABALHO
+  ),
+  pagamentoImediato: sv(
+    "o pagamento da compensação é devido imediatamente após a realização das despesas pelo trabalhador",
+    "Art. 168.º, n.º 5 CT",
+    "ctTeletrabalho",
+    REV_TRABALHO
+  ),
+  tratamentoFiscal: sv(
+    "a compensação é, para efeitos fiscais, custo para o empregador e NÃO constitui rendimento do trabalhador até ao limite do valor definido por portaria",
+    "Art. 168.º, n.º 6 CT",
+    "ctTeletrabalho",
+    REV_TRABALHO,
+    "O limite consta de portaria dos membros do Governo responsáveis pelas áreas dos assuntos fiscais e da segurança social — não do Código."
+  ),
+  avisoVisitaHoras: sv(
+    24,
+    "Art. 170.º, n.º 2 CT — sendo o teletrabalho realizado no domicílio, a visita ao local de trabalho requer aviso prévio de 24 horas e concordância do trabalhador",
+    "ctTeletrabalho",
+    REV_TRABALHO
+  ),
+  controloProibido: sv(
+    "é vedada a captura e utilização de imagem, de som, de escrita, de histórico, ou o recurso a outros meios de controlo que possam afetar o direito à privacidade do trabalhador",
+    "Art. 170.º, n.º 5 CT — a violação constitui contraordenação MUITO GRAVE (n.º 7)",
+    "ctTeletrabalho",
+    REV_TRABALHO
+  ),
+};
+
+/** Art. 29.º — assédio. */
+export const ASSEDIO_TRABALHO = {
+  definicao: sv(
+    "comportamento indesejado, nomeadamente o baseado em fator de discriminação, praticado aquando do acesso ao emprego ou no próprio emprego, trabalho ou formação profissional, com o objetivo OU O EFEITO de perturbar ou constranger a pessoa, afetar a sua dignidade, ou de lhe criar um ambiente intimidativo, hostil, degradante, humilhante ou desestabilizador",
+    "Art. 29.º, n.º 2 CT",
+    "ctAssedio",
+    REV_TRABALHO,
+    "«Objetivo ou efeito» — não é preciso provar intenção."
+  ),
+  assedioSexual: sv(
+    "comportamento indesejado de carácter sexual, sob forma verbal, não verbal ou física, com o mesmo objetivo ou efeito",
+    "Art. 29.º, n.º 3 CT",
+    "ctAssedio",
+    REV_TRABALHO
+  ),
+  direitoAIndemnizacao: sv(
+    "a prática de assédio confere à vítima o direito de indemnização",
+    "Art. 29.º, n.º 4 CT",
+    "ctAssedio",
+    REV_TRABALHO
+  ),
+  contraordenacao: sv(
+    "a prática de assédio constitui contraordenação muito grave, sem prejuízo da eventual responsabilidade penal",
+    "Art. 29.º, n.º 5 CT",
+    "ctAssedio",
+    REV_TRABALHO
+  ),
+  protecaoDoDenunciante: sv(
+    "o denunciante e as testemunhas por si indicadas não podem ser sancionados disciplinarmente, a menos que atuem com dolo, até decisão final transitada em julgado",
+    "Art. 29.º, n.º 6 CT",
+    "ctAssedio",
+    REV_TRABALHO
+  ),
+};
+
+/** Art. 94.º — trabalhador-estudante. */
+export const TRABALHADOR_ESTUDANTE = {
+  provaDaCondicao: sv(
+    "o trabalhador-estudante deve comprovar perante o empregador a sua condição de estudante, apresentando igualmente o horário das atividades educativas a frequentar",
+    "Art. 94.º, n.º 1 CT",
+    "ctTrabalhadorEstudante",
+    REV_TRABALHO
+  ),
+  aproveitamentoEscolar: sv(
+    "transição de ano, ou aprovação ou progressão em pelo menos METADE das disciplinas em que esteja matriculado",
+    "Art. 94.º, n.º 4 CT",
+    "ctTrabalhadorEstudante",
+    REV_TRABALHO
+  ),
+  horarioCompativel: sv(
+    "deve escolher, entre as possibilidades existentes, o horário mais compatível com o horário de trabalho, sob pena de não beneficiar dos inerentes direitos",
+    "Art. 94.º, n.º 3 CT",
+    "ctTrabalhadorEstudante",
+    REV_TRABALHO
+  ),
+  naoCumulavel: sv(
+    "não pode cumular os direitos previstos no Código com quaisquer regimes que visem os mesmos fins",
+    "Art. 94.º, n.º 6 CT",
+    "ctTrabalhadorEstudante",
+    REV_TRABALHO
+  ),
+};
+
+/**
+ * Art. 366.º — compensação por despedimento coletivo. Os dois tetos são
+ * múltiplos da retribuição mínima mensal garantida, e por isso derivam do
+ * SMN: sobem com ele, sozinhos.
+ */
+export const COMPENSACAO_DESPEDIMENTO = {
+  diasPorAno: sv(
+    14,
+    "Art. 366.º, n.º 1 CT — compensação correspondente a 14 dias de retribuição base e diuturnidades por cada ano completo de antiguidade",
+    "ctCompensacao",
+    REV_TRABALHO
+  ),
+  tetoRetribuicaoEmSmn: sv(
+    20,
+    "Art. 366.º, n.º 2, al. a) CT — a retribuição base mensal e diuturnidades a considerar não pode ser superior a 20 vezes a retribuição mínima mensal garantida",
+    "ctCompensacao",
+    REV_TRABALHO
+  ),
+  tetoGlobalEmMeses: sv(
+    12,
+    "Art. 366.º, n.º 2, al. b) CT — o montante global não pode ser superior a 12 vezes a retribuição base mensal e diuturnidades",
+    "ctCompensacao",
+    REV_TRABALHO
+  ),
+  tetoGlobalEmSmn: sv(
+    240,
+    "Art. 366.º, n.º 2, al. b) CT — ou, sendo aplicável o teto da al. a), a 240 vezes a retribuição mínima mensal garantida",
+    "ctCompensacao",
+    REV_TRABALHO
+  ),
+  divisorDiario: sv(
+    30,
+    "Art. 366.º, n.º 2, al. c) CT — o valor diário resulta da divisão por 30 da retribuição base mensal e diuturnidades",
+    "ctCompensacao",
+    REV_TRABALHO
+  ),
+  fracaoProporcional: sv(
+    "em caso de fração de ano, o montante da compensação é calculado proporcionalmente",
+    "Art. 366.º, n.º 2, al. d) CT",
+    "ctCompensacao",
+    REV_TRABALHO
+  ),
+  presuncaoDeAceitacao: sv(
+    "presume-se que o trabalhador aceita o despedimento quando recebe a totalidade da compensação — presunção ilidível se, em simultâneo, devolver a totalidade do que recebeu",
+    "Art. 366.º, n.os 4 e 5 CT",
+    "ctCompensacao",
+    REV_TRABALHO,
+    "É a razão pela qual receber a compensação sem reservas fecha a porta a contestar o despedimento."
+  ),
+};
+
+/** Tetos do art. 366.º em euros, derivados do salário mínimo. */
+export const COMPENSACAO_TETO_RETRIBUICAO =
+  Math.round(COMPENSACAO_DESPEDIMENTO.tetoRetribuicaoEmSmn.value * SMN.value * 100) / 100;
+export const COMPENSACAO_TETO_GLOBAL =
+  Math.round(COMPENSACAO_DESPEDIMENTO.tetoGlobalEmSmn.value * SMN.value * 100) / 100;
 
 /** Horário semanal a tempo completo — base da fórmula da retribuição horária. */
 export const HORARIO_SEMANAL_COMPLETO = sv(
@@ -2447,6 +5325,94 @@ export const DEDUCAO_ESPECIFICA_DEPENDENTE = sv(
   "art25cirs",
   DEP_TODAY
 );
+
+
+/**
+ * Dedução específica das pensões — Art. 53.º, n.º 1 do CIRS.
+ *
+ * Lido no articulado a 07/08/2026, e a leitura muda o que se pode
+ * escrever: na redação da Lei n.º 45-A/2024, o artigo JÁ NÃO TEM VALOR
+ * PRÓPRIO. Remete para «o previsto na alínea a) do n.º 1 do artigo 25.º»
+ * — a dedução específica do trabalho dependente.
+ *
+ * Por isso não é um número: é uma referência. Escrever aqui um valor
+ * fixo criava a segunda cópia do mesmo montante, e no ano em que o IAS
+ * mudasse as duas divergiam sem ninguém dar por isso.
+ */
+export const DEDUCAO_ESPECIFICA_PENSOES = sv(
+  DEDUCAO_ESPECIFICA_DEPENDENTE.value,
+  "Art. 53.º, n.º 1 CIRS (redação da Lei n.º 45-A/2024) — aos rendimentos brutos da categoria H deduz-se o previsto na al. a) do n.º 1 do Art. 25.º, até à concorrência do rendimento",
+  "art53cirs",
+  REV_PROTECAO_2026,
+  "Rendimentos anuais iguais ou inferiores a este montante deduzem a totalidade do seu quantitativo (n.º 1); acima disso, deduz-se o montante fixado (n.º 2)."
+);
+
+/**
+ * Entidade contratante — a contribuição que o CLIENTE paga quando um
+ * independente depende economicamente dele.
+ *
+ * Não sai do bolso do independente e não lhe acrescenta proteção: é uma
+ * contribuição autónoma da entidade, apurada oficiosamente pela Segurança
+ * Social a partir das declarações trimestrais.
+ */
+export const ENTIDADE_CONTRATANTE = {
+  /** Dependência a partir da qual a obrigação existe. */
+  dependenciaMinima: sv(
+    0.5,
+    "Código dos Regimes Contributivos — considera-se entidade contratante a que beneficie de mais de 50% do valor total da atividade do trabalhador independente",
+    "ssEntidadeContratante",
+    REV_PROTECAO_2026
+  ),
+  /** Dependência de mais de 50% e até 80%. */
+  taxaAte80: sv(
+    0.07,
+    "Código dos Regimes Contributivos — taxa de 7% quando a dependência económica é superior a 50% e igual ou inferior a 80%",
+    "ssEntidadeContratante",
+    REV_PROTECAO_2026
+  ),
+  /** Dependência superior a 80%. */
+  taxaAcima80: sv(
+    0.1,
+    "Código dos Regimes Contributivos — taxa de 10% quando a dependência económica é superior a 80%",
+    "ssEntidadeContratante",
+    REV_PROTECAO_2026
+  ),
+  /** O limiar de rendimento anual que ativa a obrigação, em múltiplos do IAS. */
+  limiarIAS: sv(
+    6,
+    "Código dos Regimes Contributivos — a obrigação só existe quando o rendimento anual do trabalhador independente é superior a seis vezes o valor do IAS",
+    "ssEntidadeContratante",
+    REV_PROTECAO_2026
+  ),
+} as const;
+
+/** O limiar da entidade contratante, em euros do ano corrente. */
+export const ENTIDADE_CONTRATANTE_LIMIAR_CALC =
+  Math.round(ENTIDADE_CONTRATANTE.limiarIAS.value * IAS.value * 100) / 100;
+
+/**
+ * O ajuste voluntário da base de incidência, na declaração trimestral.
+ *
+ * É a única alavanca que o independente tem sobre a sua contribuição — e
+ * é uma alavanca de dois gumes, porque a base de incidência é também a
+ * remuneração registada de que sairão o subsídio de doença, o subsídio
+ * parental e, no fim, a pensão. Baixar hoje é poupar hoje e receber menos
+ * em todos os momentos em que precisar.
+ */
+export const AJUSTE_BASE_SS = {
+  amplitude: sv(
+    0.25,
+    "Código dos Regimes Contributivos — o trabalhador independente pode fazer variar a base de incidência apurada em ±25%",
+    "segSocialGov",
+    REV_PROTECAO_2026
+  ),
+  degrau: sv(
+    0.05,
+    "Código dos Regimes Contributivos — a variação faz-se em intervalos de 5 pontos percentuais",
+    "segSocialGov",
+    REV_PROTECAO_2026
+  ),
+} as const;
 
 /**
  * Tecto da dedução específica da categoria A quando elevada por quotizações
@@ -3744,6 +6710,113 @@ export function assertFiscalDataIntegrity(): void {
   if (Math.abs(DEDUCAO_DEPENDENTE_DEFICIENCIA.value - Math.round(2.5 * IAS.value * 100) / 100) > EPS) {
     erros.push("Dedução dependente deficiência não corresponde a 2,5 × IAS.");
   }
+  // A exclusão da categoria H é MENOR que a das categorias A e B (90% vs 85%
+  // de rendimento considerado). Trocá-las tributa a menos uma pensão.
+  if (!isRate(EXCLUSAO_DEFICIENCIA_TAXA_PENSOES.value)) {
+    erros.push("Taxa exclusão deficiência Cat. H (Art. 56.º-A) inválida.");
+  }
+  if (!(EXCLUSAO_DEFICIENCIA_TAXA_PENSOES.value < EXCLUSAO_DEFICIENCIA_TAXA.value)) {
+    erros.push("Exclusão da Cat. H deveria ser inferior à das Cat. A/B (Art. 56.º-A, n.º 1).");
+  }
+  // Art. 87.º — o resto do artigo.
+  for (const [nome, taxa] of [
+    ["educação e reabilitação (n.º 2)", DEFICIENCIA_ART87.educacaoEReabilitacao],
+    ["prémios de seguro (n.º 2)", DEFICIENCIA_ART87.premiosSeguroVida],
+    ["limite dos prémios na coleta (n.º 4)", DEFICIENCIA_ART87.limitePremiosNaColeta],
+  ] as const) {
+    if (!isRate(taxa.value)) erros.push(`Taxa do Art. 87.º — ${nome} — inválida.`);
+  }
+  if (!(DEFICIENCIA_ART87.limiteContribuicoesReformaCasados.value
+    === 2 * DEFICIENCIA_ART87.limiteContribuicoesReforma.value)) {
+    erros.push("Art. 87.º, n.º 3: o limite dos casados é o dobro do dos não casados (€130 / €65).");
+  }
+  // Dois graus distintos: 60% abre o regime, 90% abre o acompanhamento.
+  if (!(DEFICIENCIA_ART87.grauAcompanhamento.value > DEDUCAO_DEFICIENCIA_GRAU_MINIMO.value)) {
+    erros.push("Art. 87.º, n.º 6: o grau da despesa de acompanhamento tem de exceder o grau de acesso ao regime.");
+  }
+  if (Math.abs(DEFICIENCIA_ART87.acompanhamento.value - DEDUCAO_DEFICIENCIA_COLETA.value) > EPS) {
+    erros.push("Art. 87.º, n.º 6: a despesa de acompanhamento é igual a 4 × IAS, como a dedução do n.º 1.");
+  }
+  if (Math.abs(DEFICIENCIA_ART87.dependenteOuAscendente.value - DEDUCAO_DEPENDENTE_DEFICIENCIA.value) > EPS) {
+    erros.push("Art. 87.º, n.º 1: a dedução por ascendente com deficiência é a mesma do dependente (2,5 × IAS).");
+  }
+  // A escada do n.º 9 desce, e nunca sobe.
+  const escada = DEFICIENCIA_ART87.descidaAposReavaliacao.value;
+  if (escada.length !== 4 || escada.some((v, i) => i > 0 && v >= escada[i - 1])) {
+    erros.push("Art. 87.º, n.º 9: a escada de descida tem quatro degraus estritamente decrescentes.");
+  }
+  if (!(DEFICIENCIA_ART87.descidaGrauMinimo.value < DEDUCAO_DEFICIENCIA_GRAU_MINIMO.value)) {
+    erros.push("Art. 87.º, n.º 9: o grau residual (20%) tem de ser inferior ao grau de acesso (60%).");
+  }
+  // Gerir uma empresa. O ICE é o único benefício em que o limite NÃO é um
+  // teto único: o n.º 4 manda escolher o MAIOR dos dois, e trocar isso por
+  // um mínimo cortava a dedução a quem tem EBITDA grande.
+  if (!isRate(ICE.spread.value)) erros.push("Spread do ICE (Art. 43.º-D, n.º 1 EBF) inválido.");
+  if (!isRate(ICE.limiteEbitda.value)) erros.push("Limite EBITDA do ICE (Art. 43.º-D, n.º 4 EBF) inválido.");
+  if (!(ICE.limiteAbsoluto.value > 0)) erros.push("Limite absoluto do ICE não positivo.");
+  if (!(ICE.periodosAnteriores.value > ICE.reporteAnos.value)) {
+    erros.push("ICE: a janela de apuramento (6 períodos) deveria exceder o reporte (5 períodos).");
+  }
+  // Stock options: metade do ganho à taxa autónoma. Se a fração deixar de
+  // ser uma fração, a taxa efetiva do regime deixa de fazer sentido.
+  if (!isRate(STOCK_OPTIONS_STARTUP.fracaoTributada.value)) {
+    erros.push("Fração tributada das stock options (Art. 43.º-C, n.º 1 EBF) inválida.");
+  }
+  if (!isRate(STOCK_OPTIONS_STARTUP.taxa.value)) {
+    erros.push("Taxa das stock options (Art. 72.º, n.º 1, al. f) CIRS) inválida.");
+  }
+  if (!(STOCK_OPTIONS_TAXA_EFETIVA < STOCK_OPTIONS_STARTUP.taxa.value)) {
+    erros.push("A taxa efetiva das stock options tem de ser inferior à taxa autónoma — é metade dela.");
+  }
+  if (!(STOCK_OPTIONS_STARTUP.isencaoSaidaEmIas.value > 0)) {
+    erros.push("Isenção de saída das stock options (Art. 43.º-C, n.º 5 EBF) não positiva.");
+  }
+  if (!(ELEMENTOS_REDUZIDO_VALOR.value > 0)) erros.push("Limiar dos elementos de reduzido valor não positivo.");
+  // Os coeficientes das quotas decrescentes crescem com a vida útil, e
+  // nenhum deles reduz a quota — corrigi-la para baixo seria o contrário
+  // do que o método faz.
+  const coefs = DEPRECIACAO.quotasDecrescentes.value;
+  if (coefs.length !== 3 || coefs.some((c, i) => c.coeficiente <= 1 || (i > 0 && c.coeficiente <= coefs[i - 1].coeficiente))) {
+    erros.push("Art. 31.º, n.º 4 CIRC: os três coeficientes são maiores que 1 e crescem com a vida útil.");
+  }
+  // Código do Trabalho — a escada do período experimental sobe, e a do
+  // contrato a termo é sempre mais curta do que a do indeterminado.
+  if (!(PERIODO_EXPERIMENTAL.geral.value < PERIODO_EXPERIMENTAL.qualificados.value
+    && PERIODO_EXPERIMENTAL.qualificados.value < PERIODO_EXPERIMENTAL.direcao.value)) {
+    erros.push("Art. 112.º CT: as três durações do período experimental são estritamente crescentes.");
+  }
+  if (!(PERIODO_EXPERIMENTAL.termoMenosDeSeisMeses.value < PERIODO_EXPERIMENTAL.termoSeisMesesOuMais.value
+    && PERIODO_EXPERIMENTAL.termoSeisMesesOuMais.value < PERIODO_EXPERIMENTAL.geral.value)) {
+    erros.push("Art. 112.º, n.º 2 CT: o período experimental a termo é mais curto do que o do contrato sem termo.");
+  }
+  if (!(DENUNCIA_EXPERIMENTAL.limiarAviso7Dias.value < DENUNCIA_EXPERIMENTAL.limiarAviso30Dias.value
+    && DENUNCIA_EXPERIMENTAL.aviso7Dias.value < DENUNCIA_EXPERIMENTAL.aviso30Dias.value)) {
+    erros.push("Art. 114.º CT: limiares e avisos prévios da denúncia têm de crescer juntos.");
+  }
+  if (!(CONTRATO_A_TERMO.duracaoMaximaTermoCerto.value < CONTRATO_A_TERMO.duracaoMaximaTermoIncerto.value)) {
+    erros.push("Art. 148.º CT: o termo incerto admite duração superior à do termo certo.");
+  }
+  if (!(FORMACAO_CONTINUA.horasAnuais.value > 0) || !isRate(FORMACAO_CONTINUA.fracaoMinimaDeTrabalhadores.value)) {
+    erros.push("Art. 131.º CT: horas anuais de formação ou fração mínima de trabalhadores inválidas.");
+  }
+  if (!(FORMACAO_CONTINUA.caducidadeDoCreditoAnos.value > FORMACAO_CONTINUA.prazoAteViragemEmCredito.value)) {
+    erros.push("Arts. 131.º/132.º CT: o crédito caduca depois de se constituir, não antes.");
+  }
+  if (!isRate(BANCO_DE_HORAS.grupalMaioriaReferendo.value) || !(BANCO_DE_HORAS.grupalMaioriaReferendo.value > 0.5)) {
+    erros.push("Art. 208.º-B, n.º 6 CT: a maioria do referendo é uma fração superior a metade.");
+  }
+  if (!(BANCO_DE_HORAS.grupalMaximoSemanal.value > HORARIO_SEMANAL_COMPLETO.value)) {
+    erros.push("Art. 208.º-B CT: o máximo semanal do banco grupal excede o período normal de trabalho.");
+  }
+  // Os dois tetos do art. 366.º são múltiplos do salário mínimo, e o global
+  // é exatamente o produto do teto da retribuição pelo teto em meses.
+  if (COMPENSACAO_DESPEDIMENTO.tetoGlobalEmSmn.value
+    !== COMPENSACAO_DESPEDIMENTO.tetoRetribuicaoEmSmn.value * COMPENSACAO_DESPEDIMENTO.tetoGlobalEmMeses.value) {
+    erros.push("Art. 366.º, n.º 2 CT: 240 × RMMG tem de ser 20 × RMMG × 12 meses.");
+  }
+  if (!(COMPENSACAO_TETO_GLOBAL > COMPENSACAO_TETO_RETRIBUICAO && COMPENSACAO_TETO_RETRIBUICAO > SMN.value)) {
+    erros.push("Art. 366.º CT: os tetos derivados do salário mínimo estão incoerentes.");
+  }
   if (!isRate(DEDUCAO_RENDAS.value.taxa)) erros.push("Taxa dedução rendas inválida.");
   if (!(DEDUCAO_RENDAS.value.limite > 0)) erros.push("Limite dedução rendas não positivo.");
   if (!(SS_MIN_MENSAL.value > 0)) erros.push("SS mínimo mensal não positivo.");
@@ -3829,6 +6902,12 @@ export function assertFiscalDataIntegrity(): void {
     if (!(r > 0 && r <= 2)) erros.push(`Acréscimo de trabalho suplementar ${i + 1} fora de (0, 2].`);
   });
   if (!isRate(RETENCAO_SUPLEMENTAR_FATOR.value)) erros.push("Fator de retenção do trabalho suplementar fora de [0,1].");
+  // O limite do cartão é o do numerário majorado — não um segundo valor.
+  if (Math.abs(SUBSIDIO_REFEICAO.cartao.value
+    - Math.round(SUBSIDIO_REFEICAO.dinheiro.value * (1 + SUBSIDIO_REFEICAO_MAJORACAO_VALES.value) * 100) / 100) > EPS) {
+    erros.push("Subsídio de refeição: o limite em vales é o do numerário majorado em 70% (Art. 2.º, n.º 3, al. b), 2) CIRS).");
+  }
+  if (!isRate(ABONO_PARA_FALHAS.value)) erros.push("Abono para falhas (Art. 2.º, n.º 3, al. c) CIRS) inválido.");
   if (!(AJUDAS_CUSTO.nacionalDia.value > 0 && AJUDAS_CUSTO.estrangeiroDia.value > AJUDAS_CUSTO.nacionalDia.value)) {
     erros.push("Ajudas de custo: estrangeiro deve exceder nacional e ambos positivos.");
   }
@@ -4069,6 +7148,9 @@ export function assertFiscalDataIntegrity(): void {
     IAS,
     SS_DEPENDENTE.trabalhador, SS_DEPENDENTE.entidade, SS_DEPENDENTE.ipss,
     SUBSIDIO_REFEICAO.dinheiro, SUBSIDIO_REFEICAO.cartao,
+    SUBSIDIO_REFEICAO_MAJORACAO_VALES,
+    ABONO_PARA_FALHAS,
+    AJUDAS_CUSTO_PRESSUPOSTOS,
     RETENCAO_DEP_ISENCAO, RETENCAO_DEP_POR_DEPENDENTE, RETENCAO_DEP_CONTINENTE_T1,
     RETENCAO_DEP_TABELAS,
     RETENCAO_DEP_MADEIRA,
@@ -4141,11 +7223,28 @@ export function assertFiscalDataIntegrity(): void {
     LIMITE_GLOBAL_DEDUCOES,
     // Deficiência (Art. 56.º-A + Art. 87.º)
     EXCLUSAO_DEFICIENCIA_TAXA,
+    EXCLUSAO_DEFICIENCIA_TAXA_PENSOES,
     EXCLUSAO_DEFICIENCIA_MAX,
     DEDUCAO_DEFICIENCIA_COLETA,
     DEDUCAO_DEFICIENCIA_GRAU_MINIMO,
     DEDUCAO_DEPENDENTE_DEFICIENCIA,
+    ...Object.values(DEFICIENCIA_ART87),
     SS_MIN_MENSAL,
+    // Gerir uma empresa (Arts. 31.º/33.º/34.º CIRC, 43.º-C/43.º-D EBF)
+    ELEMENTOS_REDUZIDO_VALOR,
+    ...Object.values(DEPRECIACAO),
+    ...Object.values(ICE),
+    ...Object.values(STOCK_OPTIONS_STARTUP),
+    // Código do Trabalho
+    ...Object.values(PERIODO_EXPERIMENTAL),
+    ...Object.values(DENUNCIA_EXPERIMENTAL),
+    ...Object.values(CONTRATO_A_TERMO),
+    ...Object.values(FORMACAO_CONTINUA),
+    ...Object.values(BANCO_DE_HORAS),
+    ...Object.values(TELETRABALHO),
+    ...Object.values(ASSEDIO_TRABALHO),
+    ...Object.values(TRABALHADOR_ESTUDANTE),
+    ...Object.values(COMPENSACAO_DESPEDIMENTO),
     // Tributação Autónoma
     TA_THRESHOLDS,
     TA_VIATURAS_COMBUSTAO,

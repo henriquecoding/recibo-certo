@@ -16,6 +16,7 @@ import {
   type HubGroup,
   type IconType,
 } from "@/lib/guias/manifests";
+import { guiaSemCorpo } from "@/lib/guias/expansao/derivar";
 import type { Perfil } from "@/lib/perfil";
 
 export type { IconType, Categoria, HubGroup };
@@ -44,7 +45,13 @@ const daManifesto = (m: GuideManifest): Guia => ({
   icon: m.icon,
 });
 
-export const GUIAS: Guia[] = GUIDE_MANIFESTS.filter((m) => m.status !== "archived").map(daManifesto);
+// O índice mostra o que existe para ler. Um andaime da expansão — fontes
+// completas, corpo por escrever — não está para ser lido, e anunciá-lo no
+// catálogo era prometer conteúdo que ainda não há. Mesmo critério do
+// sitemap (`GUIA_SLUGS`), para os dois nunca divergirem.
+export const GUIAS: Guia[] = GUIDE_MANIFESTS
+  .filter((m) => m.status !== "archived" && !guiaSemCorpo(m.slug))
+  .map(daManifesto);
 
 /** Slug de um guia a partir do href ("/guias/abrir-atividade" → "abrir-atividade"). */
 export const guiaSlug = (g: Guia): string => g.href.replace("/guias/", "");

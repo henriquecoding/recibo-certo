@@ -20,6 +20,7 @@ import { FIZ_SIMULATOR_ROUTES, SIMULADORES_SEM_ACAO_FIZ, META_ROTAS_SIMULADORES,
 import { CAMPOS_VALIDOS, ROTULO_CAMPO, CAMPOS_NUNCA_ENVIADOS } from "@/lib/fiz/handoff-fields";
 import { destinoFizValido, urlSemDadosSensiveis, PARTNER_SCOPES, USER_SCOPES, SCOPES_LIGACAO_BASICA } from "@/lib/fiz/contracts";
 import { GUIA_SLUGS } from "@/lib/seo";
+import { guiaSemCorpo } from "@/lib/guias/expansao/derivar";
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -39,13 +40,13 @@ describe("guias:lint — manifesto, proprietário, revisão e campos obrigatóri
     expect(() => assertHistoricoIntegrity()).not.toThrow();
   });
 
-  it("os 57 guias do catálogo têm manifesto, proprietário e revisor", () => {
+  it("os 169 guias do catálogo têm manifesto, proprietário e revisor", () => {
     // Contagem fixa de propósito: é a rede que apanha um guia a desaparecer
     // do catálogo sem ninguém dar por isso. Subiu de 29 para 43 com a
     // secção «Direitos e cobranças», e de 43 para 57 com os sete guias de
-    // Empresas e os sete de Conta de outrem. A categoria «Conta de outrem»
-    // passou de 7% para 18% do catálogo.
-    expect(GUIDE_MANIFESTS).toHaveLength(57);
+    // Empresas e os sete de Conta de outrem. A expansão editorial de agosto
+    // de 2026 acrescentou 112 (57 + 112 = 169), com seis secções novas.
+    expect(GUIDE_MANIFESTS).toHaveLength(57 + 112);
     for (const m of GUIDE_MANIFESTS) {
       expect(m.owner, m.slug).toBeTruthy();
       expect(m.reviewer, m.slug).toBeTruthy();
@@ -233,9 +234,21 @@ describe("guias:routes — guias, relações, ferramentas e ações apontam para
     expect(combinacoes.size).toBeGreaterThan(8);
   });
 
-  it("o sitemap espelha exatamente os manifestos", () => {
+  it("o sitemap espelha os manifestos com corpo redigido — e só esses", () => {
     // Falha 4.5: a navegação e o índice duplicavam o catálogo à mão.
-    expect([...GUIA_SLUGS].sort()).toEqual([...slugs].sort());
+    //
+    // O espelho deixou de ser total quando a expansão trouxe andaimes: um
+    // guia em `draft` tem base legal e fontes, mas não tem corpo, e
+    // submeter ao Google uma página por escrever é pedir para ser avaliado
+    // por ela. O espelho continua a ser exato — muda o que reflete.
+    const publicaveis = GUIDE_MANIFESTS
+      .filter((m) => m.status !== "archived" && !guiaSemCorpo(m.slug))
+      .map((m) => m.slug);
+    expect([...GUIA_SLUGS].sort()).toEqual([...publicaveis].sort());
+
+    const andaimes = GUIDE_MANIFESTS.map((m) => m.slug).filter(guiaSemCorpo);
+    expect(andaimes.length).toBeGreaterThan(0);
+    for (const slug of andaimes) expect(GUIA_SLUGS, slug).not.toContain(slug);
   });
 
   it("toda a ligação interna escrita à mão no corpo de um guia aponta para uma rota que existe", () => {
