@@ -208,6 +208,10 @@ export const SOURCES = {
     label: "Art. 12.º-B CIRS — IRS Jovem · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs12b.aspx",
   },
+  art2cirs: {
+    label: "Art. 2.º CIRS — Rendimentos da categoria A: subsídio de refeição, abono para falhas e ajudas de custo · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs2.aspx",
+  },
   art56aCirs: {
     label: "Art. 56.º-A CIRS — Exclusão de rendimentos de pessoas com deficiência · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs56a.aspx",
@@ -4673,22 +4677,66 @@ export const SS_DEPENDENTE = {
   ),
 };
 
-/** Subsídio de refeição — limites diários de isenção (IRS + SS), setor privado 2026. */
+/**
+ * Subsídio de refeição — limites diários de isenção (IRS + SS).
+ *
+ * A al. b), 2) do n.º 3 do art. 2.º do CIRS, na redação da Lei n.º 45-A/2024,
+ * não fixa DOIS montantes: fixa um, e uma majoração. É rendimento do trabalho
+ * o subsídio «na parte em que exceder o limite legal estabelecido ou em que o
+ * exceda em 70% sempre que o respetivo subsídio seja atribuído através de
+ * vales de refeição».
+ *
+ * O limite do cartão é, por isso, DERIVADO — não é um segundo número a manter
+ * à mão. Quando o valor em numerário sobe, o do cartão acompanha-o sozinho.
+ */
+export const SUBSIDIO_REFEICAO_MAJORACAO_VALES = sv(
+  0.70,
+  "Art. 2.º, n.º 3, al. b), 2) CIRS — o limite é excedido em 70% quando o subsídio é atribuído através de vales de refeição (Lei n.º 45-A/2024)",
+  "art2cirs",
+  REV_EMPRESA
+);
+
 export const SUBSIDIO_REFEICAO = {
   dinheiro: sv(
     6.15,
-    "Limite diário isento em numerário (Art. 2.º, n.º 3 CIRS)",
+    "Limite diário isento em numerário (Art. 2.º, n.º 3, al. b), 2) CIRS)",
     "subsidioRefeicao2026",
     DEP_TODAY
   ),
   cartao: sv(
-    10.46,
-    "Limite diário isento em cartão/vale de refeição (Art. 2.º, n.º 3 CIRS)",
-    "subsidioRefeicao2026",
-    DEP_TODAY,
-    "Subiu de 6,00€/10,20€ (2025) para 6,15€/10,46€ (2026)."
+    Math.round(6.15 * (1 + SUBSIDIO_REFEICAO_MAJORACAO_VALES.value) * 100) / 100,
+    "Limite diário isento em cartão/vale de refeição — o do numerário majorado em 70% (Art. 2.º, n.º 3, al. b), 2) CIRS)",
+    "art2cirs",
+    REV_EMPRESA,
+    "Derivado, não fixado: 6,15 € × 1,70 = 10,46 €. Subiu de 6,00 €/10,20 € (2025) para 6,15 €/10,46 € (2026)."
   ),
 };
+
+/**
+ * Abono para falhas — devido a quem, no seu trabalho, tenha de movimentar
+ * numerário. Só é rendimento na parte que exceda uma fração da remuneração
+ * mensal fixa, e é por isso que não tem valor em euros: tem percentagem.
+ */
+export const ABONO_PARA_FALHAS = sv(
+  0.05,
+  "Art. 2.º, n.º 3, al. c) CIRS — os abonos para falhas são rendimento do trabalho na parte em que excedam 5% da remuneração mensal fixa",
+  "art2cirs",
+  REV_EMPRESA
+);
+
+/**
+ * A condição que a al. d) do n.º 3 do art. 2.º impõe às ajudas de custo e aos
+ * quilómetros, e que é esquecida com mais frequência do que os limites: não
+ * basta ficar abaixo do valor: têm de ser observados os PRESSUPOSTOS da sua
+ * atribuição aos servidores do Estado.
+ */
+export const AJUDAS_CUSTO_PRESSUPOSTOS = sv(
+  "as ajudas de custo e as importâncias pela utilização de automóvel próprio em serviço são rendimento do trabalho na parte em que excedam os limites legais OU quando não sejam observados os pressupostos da sua atribuição aos servidores do Estado",
+  "Art. 2.º, n.º 3, al. d) CIRS",
+  "art2cirs",
+  REV_EMPRESA,
+  "A mesma alínea tributa as verbas para despesas de deslocação, viagens ou representação de que não tenham sido prestadas contas até ao termo do exercício."
+);
 
 /** Horário semanal a tempo completo — base da fórmula da retribuição horária. */
 export const HORARIO_SEMANAL_COMPLETO = sv(
@@ -6332,6 +6380,12 @@ export function assertFiscalDataIntegrity(): void {
     if (!(r > 0 && r <= 2)) erros.push(`Acréscimo de trabalho suplementar ${i + 1} fora de (0, 2].`);
   });
   if (!isRate(RETENCAO_SUPLEMENTAR_FATOR.value)) erros.push("Fator de retenção do trabalho suplementar fora de [0,1].");
+  // O limite do cartão é o do numerário majorado — não um segundo valor.
+  if (Math.abs(SUBSIDIO_REFEICAO.cartao.value
+    - Math.round(SUBSIDIO_REFEICAO.dinheiro.value * (1 + SUBSIDIO_REFEICAO_MAJORACAO_VALES.value) * 100) / 100) > EPS) {
+    erros.push("Subsídio de refeição: o limite em vales é o do numerário majorado em 70% (Art. 2.º, n.º 3, al. b), 2) CIRS).");
+  }
+  if (!isRate(ABONO_PARA_FALHAS.value)) erros.push("Abono para falhas (Art. 2.º, n.º 3, al. c) CIRS) inválido.");
   if (!(AJUDAS_CUSTO.nacionalDia.value > 0 && AJUDAS_CUSTO.estrangeiroDia.value > AJUDAS_CUSTO.nacionalDia.value)) {
     erros.push("Ajudas de custo: estrangeiro deve exceder nacional e ambos positivos.");
   }
@@ -6572,6 +6626,9 @@ export function assertFiscalDataIntegrity(): void {
     IAS,
     SS_DEPENDENTE.trabalhador, SS_DEPENDENTE.entidade, SS_DEPENDENTE.ipss,
     SUBSIDIO_REFEICAO.dinheiro, SUBSIDIO_REFEICAO.cartao,
+    SUBSIDIO_REFEICAO_MAJORACAO_VALES,
+    ABONO_PARA_FALHAS,
+    AJUDAS_CUSTO_PRESSUPOSTOS,
     RETENCAO_DEP_ISENCAO, RETENCAO_DEP_POR_DEPENDENTE, RETENCAO_DEP_CONTINENTE_T1,
     RETENCAO_DEP_TABELAS,
     RETENCAO_DEP_MADEIRA,

@@ -325,4 +325,20 @@ export const CORPOS_REDIGIDOS: ReadonlySet<string> = new Set([
   //    art. 31.º do CIRC remete para o decreto regulamentar, e é lá que
   //    vivem. O guia dá o mecanismo, que é estável.
   "amortizacoes-equipamento",
+
+  // ── Trabalho por conta de outrem ────────────────────────────────────
+  //    Só UM guia desta secção, e a razão está registada em
+  //    `correcoes.ts`: os outros dez assentam no Código do Trabalho, cujo
+  //    texto CONSOLIDADO não é legível neste ambiente — o Diário da
+  //    República serve um shell vazio, e o PDF de 2009 é anterior a todas
+  //    as alterações, incluindo a Lei n.º 13/2023. Publicar durações de
+  //    período experimental ou de contrato a termo a partir dele seria
+  //    exatamente o erro que este projeto proíbe.
+  //
+  //    Este cabe porque é FISCAL, não laboral: vive no art. 2.º, n.º 3,
+  //    als. b), c) e d) do CIRS, que está no Portal das Finanças e foi
+  //    lido. E trouxe uma correção ao motor — o limite dos vales de
+  //    refeição não é um segundo valor, é o do numerário majorado em 70%,
+  //    e passa a ser derivado.
+  "ajudas-de-custo-km",
 ]);

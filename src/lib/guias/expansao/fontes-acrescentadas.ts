@@ -55,6 +55,11 @@ export const FONTES_ACRESCENTADAS: Record<string, string[]> = {
   // a escada de descida do n.º 9). Sem os dois, metade do guia ficava sem
   // fonte — e a outra metade atribuída ao artigo errado.
   "deficiencia-irs": ["art56aCirs", "cirs87"],
+  // O pacote dava a base legal deste guia como sendo o art. 12.º do CIRS e
+  // duas circulares. O artigo que decide tudo é o 2.º, n.º 3: als. b) 2)
+  // (subsídio de refeição e a majoração dos vales), c) (abono para falhas) e
+  // d) (ajudas de custo, quilómetros e a condição dos pressupostos).
+  "ajudas-de-custo-km": ["art2cirsSelo"],
 };
 
 export const fontesAcrescentadas = (slug: string): string[] => FONTES_ACRESCENTADAS[slug] ?? [];

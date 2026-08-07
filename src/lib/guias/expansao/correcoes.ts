@@ -206,6 +206,40 @@ export const CORRECOES_AO_PACOTE: CorrecaoAoPacote[] = [
     fonte: "art56aCirs",
     verificadoEm: EM_PROFISSOES,
   },
+  {
+    slug: "contrato-a-termo",
+    dado: "Código do Trabalho — texto consolidado",
+    noPacote: "base legal «ct» para toda a secção «Trabalho por conta de outrem»",
+    acao: "reter",
+    semDadoNoPacote: true,
+    motivo:
+      "Os dez guias laborais desta secção — contrato a termo, período experimental, teletrabalho, formação contínua, banco de horas, trabalhador-estudante, despedimento, assédio, FCT/FGCT e acidente de trabalho — assentam todos no Código do Trabalho, e o Código do Trabalho não tem articulado legível. O Diário da República serve as páginas de legislação consolidada como aplicação de página única: o pedido devolve 2,3 KB de shell vazio, sem uma linha de texto legal. O PDF da publicação original de 2009 está disponível, mas é anterior a todas as alterações posteriores, incluindo a Lei n.º 13/2023 («Agenda do Trabalho Digno»), que reescreveu precisamente as matérias destes guias. Publicar durações de período experimental, prazos de aviso prévio ou limites de renovação de contratos a termo a partir de um texto de 2009 seria dar por vigente o que já não vige — o erro que este projeto proíbe na primeira das suas regras. Os guias ficam andaimes, com `noindex`, até haver fonte consolidada verificável. O único da secção que foi escrito é `ajudas-de-custo-km`, e foi porque é fiscal e não laboral: vive no art. 2.º, n.º 3 do CIRS, que está no Portal das Finanças e foi lido.",
+    fonte: "ct",
+    verificadoEm: EM_PROFISSOES,
+  },
+  {
+    slug: "ajudas-de-custo-km",
+    dado: "Subsídio de refeição em cartão ou vale",
+    noPacote: "10,46 €/dia",
+    verificado: "o valor em numerário majorado em 70%",
+    notaVerificada:
+      "art. 2.º, n.º 3, al. b), 2) CIRS, na redação da Lei n.º 45-A/2024 — é rendimento do trabalho o subsídio «na parte em que exceder o limite legal estabelecido ou em que o exceda em 70% sempre que o respetivo subsídio seja atribuído através de vales de refeição»",
+    acao: "corrigir",
+    motivo:
+      "A lei não fixa dois valores: fixa um e uma majoração. O motor tinha os dois em euros, lado a lado, o que obrigava a atualizar duas linhas por ano e permitia que divergissem em silêncio — bastava atualizar uma e esquecer a outra para o site passar a publicar uma relação que a lei não estabelece. Passa a ser derivado, com asserção que falha o build se a relação se perder. É também a razão pela qual o valor do cartão sobe sozinho quando o do numerário subir.",
+    fonte: "art2cirsSelo",
+    verificadoEm: EM_PROFISSOES,
+  },
+  {
+    slug: "ajudas-de-custo-km",
+    dado: "Quilómetros em viatura própria",
+    noPacote: "0,40 €/km",
+    acao: "reter",
+    motivo:
+      "A al. d) do n.º 3 do art. 2.º do CIRS não fixa valor por quilómetro: remete para «os limites legais estabelecidos para os servidores do Estado», que vivem em diploma próprio e são atualizados. Não foi possível confirmar o valor em vigor em fonte oficial legível nesta revisão, e este é o pior sítio possível para arriscar um cêntimo: o número replica-se por milhares de quilómetros e por todos os trabalhadores da empresa, e um valor a mais tributa retroativamente o que se pensava isento. O guia diz que o limite existe, diz de onde vem e manda confirmá-lo antes de fixar a tabela interna.",
+    fonte: "art2cirsSelo",
+    verificadoEm: EM_PROFISSOES,
+  },
 ];
 
 const POR_SLUG = new Map<string, CorrecaoAoPacote[]>();

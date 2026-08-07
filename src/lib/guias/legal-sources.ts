@@ -340,6 +340,15 @@ const FONTES_BASE = {
   // (n.º 5, 60%), fixa as deduções à coleta e, desde a Lei n.º 82/2023,
   // a escada de descida de quem perde o grau numa reavaliação (n.º 9).
   // Verificado a 2026-08-07. O art. 87.º já cá estava como `cirs87`.
+  // ── CIRS: os abonos que não são salário até deixarem de ser ─────────
+  // Subsídio de refeição, abono para falhas, ajudas de custo e quilómetros
+  // vivem todos no n.º 3 do art. 2.º. E a al. b), 2), na redação da Lei n.º
+  // 45-A/2024, não fixa dois montantes de subsídio de refeição: fixa um e
+  // uma majoração de 70% para vales — o que torna o valor do cartão
+  // derivado, e não uma segunda linha a manter à mão. Verificado a
+  // 2026-08-07.
+  art2cirsSelo: at("art2cirsSelo", "2.º", "Art. 2.º CIRS — Rendimentos da categoria A: subsídio de refeição, abono para falhas e ajudas de custo", "irs2", "cirs_rep"),
+
   art56aCirs: at("art56aCirs", "56.º-A", "Art. 56.º-A CIRS — Sujeitos passivos com deficiência", "irs56a", "cirs_rep"),
 
   // ── EBF: organismos de investimento coletivo ─────────────────────────

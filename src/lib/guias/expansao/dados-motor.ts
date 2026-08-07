@@ -23,6 +23,10 @@
 
 import type { TAViaturasTaxas } from "@/lib/fiscal-data";
 import {
+  ABONO_PARA_FALHAS,
+  AJUDAS_CUSTO_PRESSUPOSTOS,
+  SUBSIDIO_REFEICAO,
+  SUBSIDIO_REFEICAO_MAJORACAO_VALES,
   DEPRECIACAO,
   ELEMENTOS_REDUZIDO_VALOR,
   ICE,
@@ -994,6 +998,20 @@ export const DADOS_MOTOR: Record<string, DadoDoMotor[]> = {
     d("DEPRECIACAO", "Quotas decrescentes — coeficientes", DEPRECIACAO.quotasDecrescentes.value.map((c) => `${String(c.coeficiente).replace(".", ",")} (vida útil ${c.vidaUtil})`).join(" · "), "corrigem a taxa no método das quotas decrescentes · art. 31.º, n.º 4 CIRC"),
     d("DEPRECIACAO", "Ano de entrada em funcionamento", DEPRECIACAO.proporcionalNoAnoDeEntrada.value, "art. 31.º, n.º 7 CIRC"),
     d("DEPRECIACAO", "O que não é aceite como gasto", DEPRECIACAO.naoDedutiveis.value, "art. 34.º, n.º 1 CIRC"),
+  ],
+
+  // ── Trabalho por conta de outrem ────────────────────────────────────
+  "ajudas-de-custo-km": [
+    d("SUBSIDIO_REFEICAO", "Subsídio de refeição em numerário", fmt(SUBSIDIO_REFEICAO.dinheiro.value), "limite diário isento de IRS e de Segurança Social · art. 2.º, n.º 3, al. b), 2) CIRS"),
+    d("SUBSIDIO_REFEICAO_MAJORACAO_VALES", "Majoração dos vales de refeição", pctExato(SUBSIDIO_REFEICAO_MAJORACAO_VALES.value), "a lei fixa um limite e diz que é excedido nesta proporção quando o subsídio é pago em vales · Lei n.º 45-A/2024"),
+    d("SUBSIDIO_REFEICAO", "Subsídio de refeição em cartão", fmt(SUBSIDIO_REFEICAO.cartao.value), "é o valor em numerário majorado, e não um segundo montante fixado na lei"),
+    d("AJUDAS_CUSTO", "Ajudas de custo — trabalhadores, em Portugal", fmt(AJUDAS_CUSTO.nacionalDia.value), "por dia · art. 2.º, n.º 3, al. d) CIRS"),
+    d("AJUDAS_CUSTO", "Ajudas de custo — trabalhadores, no estrangeiro", fmt(AJUDAS_CUSTO.estrangeiroDia.value), "por dia · art. 2.º, n.º 3, al. d) CIRS"),
+    d("AJUDAS_CUSTO", "Ajudas de custo — órgãos estatutários, em Portugal", fmt(AJUDAS_CUSTO.nacionalDiaDirecao.value), "escalão equiparado a membros do Governo · art. 2.º, n.º 3, al. d) CIRS"),
+    d("AJUDAS_CUSTO", "Ajudas de custo — órgãos estatutários, no estrangeiro", fmt(AJUDAS_CUSTO.estrangeiroDiaDirecao.value), "escalão equiparado a membros do Governo · art. 2.º, n.º 3, al. d) CIRS"),
+    d("AJUDAS_CUSTO_PRESSUPOSTOS", "A condição que não é um valor", AJUDAS_CUSTO_PRESSUPOSTOS.value, "ficar abaixo do limite não chega · art. 2.º, n.º 3, al. d) CIRS"),
+    d("ABONO_PARA_FALHAS", "Abono para falhas", pctExato(ABONO_PARA_FALHAS.value), "só é rendimento na parte que exceda esta fração da remuneração mensal fixa · art. 2.º, n.º 3, al. c) CIRS"),
+    d("TA_AJUDAS_CUSTO", "Tributação autónoma na empresa", pctExato(TA_AJUDAS_CUSTO.value), "sobre ajudas de custo e quilómetros não faturados a clientes nem tributados em IRS no beneficiário · art. 88.º, n.º 9 CIRC"),
   ],
 
   "viatura-empresa": [

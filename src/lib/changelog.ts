@@ -19,6 +19,22 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.25.0",
+    data: "2026-08-07",
+    titulo: "Ajudas de custo e subsídio de refeição — e o limite dos vales, que afinal é derivado",
+    itens: [
+      "Guia novo sobre ajudas de custo, quilómetros, subsídio de refeição e abono para falhas: até onde não pagam IRS nem Segurança Social, e a partir de onde passam a ser salário para todos os efeitos.",
+      "A lei não fixa dois valores de subsídio de refeição. Fixa um — o do numerário — e diz que é excedido em 70% quando o subsídio é pago através de vales. O valor do cartão é, por isso, DERIVADO: passa a sair da conta em vez de ser mantido à mão, e sobe sozinho quando o outro subir.",
+      "Entre pagar o subsídio em dinheiro e pagar em cartão vão mais de quatro euros por dia de trabalho, livres de imposto e de contribuições dos dois lados. É a mudança com melhor retorno de toda esta matéria, e não custa nada à empresa.",
+      "As ajudas de custo têm DOIS patamares, e não um: um para trabalhadores em geral, outro — mais alto — para administradores, gerentes e membros de órgãos estatutários, por lhes corresponder o escalão equiparado a membros do Governo. Usar o patamar errado custa nos dois sentidos.",
+      "E ficar abaixo do limite não chega: a lei exige também que sejam observados os PRESSUPOSTOS da atribuição aos servidores do Estado. Uma ajuda de custo fixa, mensal e igual, paga a quem trabalha sempre no mesmo sítio, não cumpre nenhum — e é requalificada como salário, com IRS, contribuições e coimas dos dois lados.",
+      "O abono para falhas, que quase ninguém conhece, não tem valor em euros: só é rendimento na parte que exceda 5% da remuneração mensal fixa. Sobe com o salário, sozinho.",
+      "Verbas para deslocações de que não tenham sido prestadas contas até ao fim do exercício passam a ser rendimento tributável. É uma limpeza de dezembro, não de abril.",
+      "O valor por quilómetro em viatura própria NÃO é publicado, e o guia diz porquê: o Código do IRS remete para os limites dos servidores do Estado, fixados em diploma próprio que não foi possível confirmar nesta revisão. Um cêntimo errado aqui replica-se por milhares de quilómetros.",
+      "Os restantes dez guias da secção do trabalho por conta de outrem continuam por publicar, e a razão ficou registada: o texto consolidado do Código do Trabalho não é legível — o Diário da República serve uma página vazia, e o PDF de 2009 é anterior a todas as alterações, incluindo a Lei n.º 13/2023. Publicar durações de período experimental ou de contrato a termo a partir dele seria dar por vigente o que já não vige.",
+    ],
+  },
+  {
     version: "2.24.0",
     data: "2026-08-07",
     titulo: "Gerir uma empresa — e uma correção ao motor vinda do artigo 43.º-D",
@@ -35,7 +51,7 @@ export const CHANGELOG: EntradaChangelog[] = [
       "Nos apoios do IEFP, a candidatura é ANTES de contratar. Quem já assinou o contrato perdeu a medida, e não há recuperação possível.",
       "Três coisas continuam a não ser publicadas, de propósito, porque não foi possível confirmá-las em fonte oficial legível: as taxas de depreciação por tipo de ativo (vivem no decreto regulamentar), o limite por quilómetro em viatura própria e os montantes de cada medida do IEFP. Os guias dizem-no na página e mandam ao sítio certo.",
     ],
-  }
+  },
   {
     version: "2.23.0",
     data: "2026-08-07",

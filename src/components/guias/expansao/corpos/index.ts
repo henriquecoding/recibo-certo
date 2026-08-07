@@ -98,6 +98,7 @@ import CorpoSuprimentosPrestacoesSuplementares from "./suprimentos-prestacoes-su
 import CorpoObrigacoesSocietarias from "./obrigacoes-societarias";
 import CorpoViaturaEmpresa from "./viatura-empresa";
 import CorpoAmortizacoesEquipamento from "./amortizacoes-equipamento";
+import CorpoAjudasDeCustoKm from "./ajudas-de-custo-km";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  CORPOS REDIGIDOS DOS GUIAS DA EXPANSÃO
@@ -211,4 +212,5 @@ export const CORPOS: Record<string, ComponentType> = {
   "obrigacoes-societarias": CorpoObrigacoesSocietarias,
   "viatura-empresa": CorpoViaturaEmpresa,
   "amortizacoes-equipamento": CorpoAmortizacoesEquipamento,
+  "ajudas-de-custo-km": CorpoAjudasDeCustoKm,
 };
