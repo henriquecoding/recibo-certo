@@ -46,4 +46,12 @@ export const CORPOS_REDIGIDOS: ReadonlySet<string> = new Set([
   "al-vs-arrendamento",
   "herdar-imovel",
   "imovel-empresa-ou-pessoal",
+
+  // ── Investir e poupar ───────────────────────────────────────────────
+  //    O eixo destes é o mesmo: o que vem de fora não é pré-preenchido, e
+  //    a obrigação de declarar não desaparece por não haver retenção cá.
+  "anexo-j",
+  "corretoras-estrangeiras-irs",
+  "cripto-365-dias",
+  "rendimentos-capitais-categoria-e",
 ]);

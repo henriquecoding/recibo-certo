@@ -12,6 +12,10 @@ import CorpoAlojamentoLocal from "./alojamento-local";
 import CorpoAlVsArrendamento from "./al-vs-arrendamento";
 import CorpoHerdarImovel from "./herdar-imovel";
 import CorpoImovelEmpresaOuPessoal from "./imovel-empresa-ou-pessoal";
+import CorpoAnexoJ from "./anexo-j";
+import CorpoCorretorasEstrangeirasIrs from "./corretoras-estrangeiras-irs";
+import CorpoCripto365Dias from "./cripto-365-dias";
+import CorpoRendimentosCapitaisCategoriaE from "./rendimentos-capitais-categoria-e";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  CORPOS REDIGIDOS DOS GUIAS DA EXPANSÃO
@@ -39,4 +43,8 @@ export const CORPOS: Record<string, ComponentType> = {
   "al-vs-arrendamento": CorpoAlVsArrendamento,
   "herdar-imovel": CorpoHerdarImovel,
   "imovel-empresa-ou-pessoal": CorpoImovelEmpresaOuPessoal,
+  "anexo-j": CorpoAnexoJ,
+  "corretoras-estrangeiras-irs": CorpoCorretorasEstrangeirasIrs,
+  "cripto-365-dias": CorpoCripto365Dias,
+  "rendimentos-capitais-categoria-e": CorpoRendimentosCapitaisCategoriaE,
 };

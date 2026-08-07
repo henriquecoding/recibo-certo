@@ -282,6 +282,10 @@ export const SOURCES = {
     label: "Tabela Geral do Imposto do Selo — verbas 1.1, 1.2, 2 e 17 (PDF consolidado do CIS) · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/Cod_download/Documents/CIS.pdf",
   },
+  art15cirs: {
+    label: "Art. 15.º CIRS — Âmbito da sujeição (rendimento mundial dos residentes) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs15.aspx",
+  },
   art41cirs: {
     label: "Art. 41.º CIRS — Deduções aos rendimentos prediais (categoria F) · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs41.aspx",
@@ -1075,6 +1079,88 @@ export const DIVIDENDOS_TAXA = sv(
   "art71cirs",
   TODAY
 );
+
+/**
+ * A MESMA taxa do Art. 71.º, n.º 1, vista do lado dos juros, dos depósitos e
+ * dos restantes rendimentos de capitais.
+ *
+ * É deliberadamente uma referência e não um segundo valor: a norma é uma só —
+ * «estão sujeitos a retenção na fonte a título definitivo, à taxa liberatória
+ * de 28 %, os rendimentos de capitais obtidos em território português». Os
+ * dividendos são um caso dela, não uma regra à parte. Dois `sv()` com o mesmo
+ * número seriam dois sítios para atualizar no dia em que a taxa mudar, e um
+ * deles ficaria para trás.
+ */
+export const CAPITAIS_TAXA_LIBERATORIA = DIVIDENDOS_TAXA;
+
+// ═══════════════════════════════════════════════════════════════════════
+//  RENDIMENTOS DO ESTRANGEIRO E REPORTE DE PERDAS
+//  ---------------------------------------------------------------------
+//  O que os guias de «Investir e poupar» precisam e o motor não tinha: o
+//  duplo limite do crédito de imposto, os anos de reporte de cada coisa, e
+//  a condição — muito esquecida — de que o reporte de menos-valias depende
+//  de se ter optado pelo englobamento no ano da perda.
+// ═══════════════════════════════════════════════════════════════════════
+
+export const RENDIMENTO_MUNDIAL = sv(
+  true,
+  "Art. 15.º, n.º 1 CIRS — sendo as pessoas residentes em território português, o IRS incide sobre a totalidade dos seus rendimentos, incluindo os obtidos fora desse território",
+  "art15cirs",
+  REV_PATRIMONIO,
+  "Aos não residentes o IRS incide unicamente sobre os rendimentos obtidos em território português (n.º 2)."
+);
+
+export const CREDITO_IMPOSTO_ESTRANGEIRO = {
+  /** Anos para usar o crédito que a coleta do ano não chegou para absorver. */
+  reporteAnos: sv(
+    5,
+    "Art. 81.º, n.º 3 CIRS — por insuficiência de coleta, o remanescente pode ser deduzido à coleta dos cinco períodos de tributação seguintes",
+    "art81cirs",
+    REV_PATRIMONIO
+  ),
+  /**
+   * O crédito é o MENOR de dois valores (n.º 1) — e, havendo convenção, não
+   * pode ultrapassar o imposto pago no estrangeiro NOS TERMOS DA CONVENÇÃO
+   * (n.º 2). É o segundo limite que apanha quem sofreu retenção acima da
+   * taxa convencionada: essa parte recupera-se no país da fonte, não cá.
+   */
+  duploLimite: sv(
+    ["imposto sobre o rendimento pago no estrangeiro", "fração da coleta do IRS correspondente a esses rendimentos"],
+    "Art. 81.º, n.os 1 e 2 CIRS — o crédito corresponde à menor das duas importâncias e, havendo convenção, não pode ultrapassar o imposto pago nos termos previstos por ela",
+    "art81cirs",
+    REV_PATRIMONIO
+  ),
+};
+
+/**
+ * Reporte do saldo negativo de mais-valias mobiliárias e de criptoativos.
+ *
+ * A condição é a parte que mais se perde: o reporte só existe se o sujeito
+ * passivo OPTAR (ou for obrigado) pelo englobamento desses rendimentos no
+ * ano da perda. Quem deixa a taxa especial correr por defeito no ano mau
+ * fica sem nada para abater no ano bom.
+ */
+export const MAIS_VALIAS_REPORTE = {
+  anos: sv(
+    5,
+    "Art. 55.º, n.º 1, al. d) CIRS — o saldo negativo das operações das als. b), c), e), f), g), h) e k) do n.º 1 do art. 10.º pode ser reportado para os cinco anos seguintes",
+    "art55cirs",
+    REV_PATRIMONIO
+  ),
+  exigeEnglobamento: sv(
+    true,
+    "Art. 55.º, n.º 1, al. d) CIRS — «quando o sujeito passivo opte ou seja obrigado a englobar esses rendimentos»",
+    "art55cirs",
+    REV_PATRIMONIO
+  ),
+  /** Reporte do saldo negativo de mais-valias IMOBILIÁRIAS — outro prazo. */
+  anosImobiliario: sv(
+    5,
+    "Art. 55.º, n.º 1, al. c) CIRS — a percentagem do saldo negativo a que se refere o n.º 2 do art. 43.º reporta-se aos cinco anos seguintes",
+    "art55cirs",
+    REV_PATRIMONIO
+  ),
+};
 
 // ═══════════════════════════════════════════════════════════════════════
 //  CATEGORIA F — RENDIMENTOS PREDIAIS (rendas puras, sem alojamento local)

@@ -12,6 +12,7 @@ import { CORRECOES_AO_PACOTE } from "@/lib/guias/expansao/correcoes";
 import { dadosDoGuia } from "@/lib/guias/expansao/dados";
 import { FONTES_ACRESCENTADAS } from "@/lib/guias/expansao/fontes-acrescentadas";
 import { DADOS_MOTOR, bindingsDoGuia } from "@/lib/guias/expansao/dados-motor";
+import * as FISCAL from "@/lib/fiscal-data";
 import { IMI_PRESTACOES } from "@/lib/fiscal-data";
 import { fontesDoGuia } from "@/lib/guias";
 import { guiaSemCorpo, estadoDoGuia, rotuloCurto } from "@/lib/guias/expansao/derivar";
@@ -239,7 +240,11 @@ describe("guias:expansao — nada de hardcode: os números vêm do motor", () =>
     for (const [slug, dados] of Object.entries(DADOS_MOTOR)) {
       expect(guiaExpansao(slug), slug).toBeDefined();
       for (const d of dados) {
-        expect(d.binding.length, `${slug}/${d.label}`).toBeGreaterThan(2);
+        // O binding tem de ser um parâmetro que EXISTE em `fiscal-data.ts`.
+        // Sem isto seria uma etiqueta decorativa: dizia «vim do motor» sem
+        // que ninguém verificasse de onde, e sobreviveria a um `sv()`
+        // renomeado ou apagado.
+        expect(FISCAL, `${slug}/${d.label} → ${d.binding}`).toHaveProperty(d.binding);
         expect(d.nota.length, `${slug}/${d.label}`).toBeGreaterThan(10);
       }
     }

@@ -23,7 +23,11 @@
 
 import {
   AIMI,
+  CAPITAIS_TAXA_LIBERATORIA,
   CATEGORIA_F,
+  CREDITO_IMPOSTO_ESTRANGEIRO,
+  CRIPTO_ISENCAO_DIAS,
+  CRIPTO_TAXA_CURTO_PRAZO,
   IAS,
   IMI_AGRAVAMENTO_DEVOLUTO,
   IMI_ISENCAO_BAIXOS_RENDIMENTOS,
@@ -46,7 +50,9 @@ import {
   IS_TRANSMISSAO_GRATUITA,
   MAIS_VALIAS_IMOBILIARIO_INCLUSAO,
   MAIS_VALIAS_IMOVEIS,
+  MAIS_VALIAS_MOBILIARIAS_TAXA,
   MAIS_VALIAS_REINVESTIMENTO_MESES,
+  MAIS_VALIAS_REPORTE,
   PRAZO_MODELO1_MESES,
   REGIME_SIMPLIFICADO,
   type EscalaoIMT,
@@ -200,6 +206,34 @@ export const DADOS_MOTOR: Record<string, DadoDoMotor[]> = {
     d("IS_TRANSMISSAO_GRATUITA", "Taxa geral — transmissões gratuitas", pctExato(IS_TRANSMISSAO_GRATUITA.value), "proporcional, não progressiva · verba 1.2 da Tabela Geral"),
     d("PRAZO_MODELO1_MESES", "Prazo da participação à AT", `fim do ${PRAZO_MODELO1_MESES.value}.º mês seguinte`, "improrrogável, salvo motivo justificado (adiamento até 60 dias) · art. 26.º, n.os 3 e 5 CIS"),
     d("MAIS_VALIAS_IMOBILIARIO_INCLUSAO", "Se venderes o que herdaste", `${pctExato(MAIS_VALIAS_IMOBILIARIO_INCLUSAO.value)} da mais-valia é tributada`, "com valor de aquisição igual ao considerado para o imposto do selo · arts. 43.º e 45.º CIRS"),
+  ],
+
+  // ── Investir e poupar ───────────────────────────────────────────────
+
+  "anexo-j": [
+    d("RENDIMENTO_MUNDIAL", "Regra de base", "rendimento mundial", "sendo residente, o IRS incide sobre a totalidade dos teus rendimentos, incluindo os obtidos fora de Portugal · art. 15.º, n.º 1 CIRS"),
+    d("CREDITO_IMPOSTO_ESTRANGEIRO", "Crédito de imposto — o limite", "o menor dos dois", "imposto pago lá fora ou fração da coleta portuguesa correspondente a esse rendimento · art. 81.º, n.º 1 CIRS"),
+    d("CREDITO_IMPOSTO_ESTRANGEIRO", "Crédito que a coleta não absorveu", `${CREDITO_IMPOSTO_ESTRANGEIRO.reporteAnos.value} anos`, "por insuficiência de coleta, o remanescente deduz-se nos períodos seguintes · art. 81.º, n.º 3 CIRS"),
+  ],
+
+  "corretoras-estrangeiras-irs": [
+    d("MAIS_VALIAS_MOBILIARIAS_TAXA", "Mais-valias de valores mobiliários", pctExato(MAIS_VALIAS_MOBILIARIAS_TAXA.value), "taxa especial sobre o saldo positivo do ano, com opção de englobamento · art. 72.º CIRS"),
+    d("CAPITAIS_TAXA_LIBERATORIA", "Dividendos e juros", pctExato(CAPITAIS_TAXA_LIBERATORIA.value), "taxa liberatória do art. 71.º, n.º 1 CIRS — quando o pagador é estrangeiro, não há retenção cá e o rendimento é declarado"),
+    d("CREDITO_IMPOSTO_ESTRANGEIRO", "Imposto retido na origem", "o menor dos dois", "crédito limitado ao imposto pago lá fora ou à fração da coleta portuguesa — e, havendo convenção, ao que ela permitia reter · art. 81.º CIRS"),
+    d("MAIS_VALIAS_REPORTE", "Reporte de menos-valias", `${MAIS_VALIAS_REPORTE.anos.value} anos`, "só se optares pelo englobamento no ano da perda · art. 55.º, n.º 1, al. d) CIRS"),
+  ],
+
+  "cripto-365-dias": [
+    d("CRIPTO_ISENCAO_DIAS", "Detenção igual ou superior a 365 dias", "excluída de tributação", `a exclusão do art. 10.º, n.º 19 CIRS conta a partir de ${CRIPTO_ISENCAO_DIAS.value} dias — mas a operação continua declarável`),
+    d("CRIPTO_TAXA_CURTO_PRAZO", "Detenção inferior a 365 dias", pctExato(CRIPTO_TAXA_CURTO_PRAZO.value), "taxa especial sobre o saldo, com opção de englobamento · arts. 10.º, n.º 1, al. k) e 72.º CIRS"),
+    d("MAIS_VALIAS_REPORTE", "Reporte de menos-valias", `${MAIS_VALIAS_REPORTE.anos.value} anos`, "as operações com criptoativos são a al. k) do n.º 1 do art. 10.º, abrangida pelo reporte · art. 55.º, n.º 1, al. d) CIRS"),
+    d("MAIS_VALIAS_REPORTE", "Condição do reporte", "englobamento no ano da perda", "sem a opção exercida nesse ano, o saldo negativo não transita · art. 55.º, n.º 1, al. d) CIRS"),
+  ],
+
+  "rendimentos-capitais-categoria-e": [
+    d("CAPITAIS_TAXA_LIBERATORIA", "Taxa liberatória", pctExato(CAPITAIS_TAXA_LIBERATORIA.value), "retenção na fonte a título definitivo sobre rendimentos de capitais obtidos em território português · art. 71.º, n.º 1 CIRS"),
+    d("RENDIMENTO_MUNDIAL", "Pagador estrangeiro", "declarável no Anexo J", "não há retenção cá, mas o rendimento é tributado na mesma — és tributado pelo rendimento mundial · art. 15.º, n.º 1 CIRS"),
+    d("CREDITO_IMPOSTO_ESTRANGEIRO", "Imposto retido lá fora", "o menor dos dois", "crédito limitado ao imposto pago ou à fração da coleta portuguesa · art. 81.º, n.º 1 CIRS"),
   ],
 
   "imovel-empresa-ou-pessoal": [
