@@ -1,4 +1,9 @@
 import { Seccao, Paragrafo, Nota, AvisoPrazo, VaiPara } from "@/components/guias/BlocosDireitos";
+import {
+  IMI_AGRAVAMENTO_DEVOLUTO, IMI_TAXA_OFFSHORE, IMI_TAXA_PADRAO,
+  IMI_TAXA_RUSTICO, IMI_TAXA_URBANO_MAX, IMI_ISENCAO_BAIXOS_RENDIMENTOS,
+} from "@/lib/fiscal-data";
+import { pctExato } from "@/lib/format";
 
 // Corpo verificado contra o articulado no Portal das Finanças a 06/08/2026:
 // arts. 112.º, 113.º, 120.º, 38.º, 11.º-A e 130.º do CIMI. Nenhuma taxa
@@ -15,15 +20,17 @@ export default function CorpoIMI() {
         </Paragrafo>
         <Paragrafo>
           A lei não fixa uma taxa única. Fixa um intervalo: os prédios urbanos ficam entre{" "}
-          <strong>0,3% e 0,45%</strong> e os prédios rústicos têm taxa própria de{" "}
-          <strong>0,8%</strong>. É dentro desse intervalo que cada assembleia municipal decide,
+          <strong>{pctExato(IMI_TAXA_PADRAO.value)} e {pctExato(IMI_TAXA_URBANO_MAX.value)}</strong> e os
+          prédios rústicos têm taxa própria de <strong>{pctExato(IMI_TAXA_RUSTICO.value)}</strong>. É
+          dentro desse intervalo que cada assembleia municipal decide,
           todos os anos, quanto cobra.
         </Paragrafo>
         <Nota titulo="Há dois agravamentos que apanham gente distraída">
           Prédios urbanos devolutos há mais de um ano e prédios em ruínas veem a taxa{" "}
-          <strong>elevada ao triplo</strong>. E se o proprietário tiver domicílio fiscal num
-          território com regime fiscal claramente mais favorável, a taxa passa a{" "}
-          <strong>7,5%</strong> — mais de dez vezes a normal. Nenhum dos dois é raro em heranças
+          <strong>elevada ao {IMI_AGRAVAMENTO_DEVOLUTO.value === 3 ? "triplo" : `${IMI_AGRAVAMENTO_DEVOLUTO.value}×`}</strong>. E se o
+          proprietário tiver domicílio fiscal num território com regime fiscal claramente mais
+          favorável, a taxa passa a <strong>{pctExato(IMI_TAXA_OFFSHORE.value)}</strong> — mais de dez
+          vezes a normal. Nenhum dos dois é raro em heranças
           antigas que ninguém tratou.
         </Nota>
       </Seccao>
@@ -49,10 +56,10 @@ export default function CorpoIMI() {
         </Paragrafo>
         <Paragrafo>
           Há ainda margens de ajuste que valem a pena conhecer: os municípios podem{" "}
-          <strong>minorar até 30%</strong> a taxa em zonas de reabilitação urbana ou de combate à
-          desertificação, e podem <strong>reduzir até 20%</strong> a taxa dos prédios arrendados —
-          reduções que se acumulam. Do outro lado, podem majorar até 30% a taxa de prédios
-          degradados.
+          <strong>minorar</strong> a taxa em zonas de reabilitação urbana ou de combate à
+          desertificação, e podem <strong>reduzir</strong> a taxa dos prédios arrendados — reduções
+          que se acumulam. Do outro lado, podem majorar a taxa de prédios degradados. As margens
+          exatas de cada uma estão no art. 112.º, nos n.os 6 a 8.
         </Paragrafo>
         <Nota titulo="Por isso é que não escrevemos aqui a taxa do teu concelho">
           Seriam 308 números a mudar todos os anos. Confirma a taxa em vigor junto do teu município
@@ -102,8 +109,11 @@ export default function CorpoIMI() {
           oficiosamente, todos os anos, sem ninguém a pedir. Abrange os prédios rústicos e a
           habitação própria e permanente do sujeito passivo ou do agregado, e os limites estão
           escritos em múltiplos do <strong>IAS</strong>, não em euros fixos — o rendimento bruto
-          total do agregado não pode passar 2,3 vezes o valor de 14 IAS, nem o VPT global de todos
-          os prédios do agregado passar 10 vezes o valor de 14 IAS.
+          total do agregado não pode passar {IMI_ISENCAO_BAIXOS_RENDIMENTOS.multiplicadorRendimento.value.toString().replace(".", ",")} vezes
+          o valor de {IMI_ISENCAO_BAIXOS_RENDIMENTOS.mesesIAS.value} IAS, nem o VPT global de todos os
+          prédios do agregado passar {IMI_ISENCAO_BAIXOS_RENDIMENTOS.multiplicadorVpt.value} vezes esse
+          mesmo valor. Os dois limiares, já calculados com o IAS em vigor, estão na tabela de dados
+          aqui em baixo.
         </Paragrafo>
         <Paragrafo>
           Contam os rendimentos do <strong>ano anterior</strong> àquele a que respeita a isenção. A

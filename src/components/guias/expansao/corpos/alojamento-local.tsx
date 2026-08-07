@@ -69,9 +69,10 @@ export default function CorpoAlojamentoLocal() {
         </Paragrafo>
         <AvisoPrazo titulo="Há uma dedução que se perde ao mesmo tempo">
           Os rendimentos das alíneas b) e c) do art. 31.º permitem deduzir as contribuições
-          obrigatórias para regimes de proteção social na parte em que excedam 10% do rendimento
-          bruto. A alínea das áreas de contenção <strong>não está nessa lista</strong>. Quem passa a
-          área de contenção perde as duas coisas: sobe o coeficiente e deixa de ter aquela dedução.
+          obrigatórias para regimes de proteção social na parte em que excedem a fração do
+          rendimento bruto fixada no n.º 2 desse artigo. A alínea das áreas de contenção{" "}
+          <strong>não está nessa lista</strong>. Quem passa a área de contenção perde as duas
+          coisas: sobe o coeficiente e deixa de ter aquela dedução.
         </AvisoPrazo>
         <Paragrafo>
           A delimitação das áreas de contenção é <strong>municipal</strong> e muda. Confirma sempre

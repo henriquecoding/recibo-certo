@@ -1,4 +1,8 @@
 import { Seccao, Paragrafo, Nota, AvisoPrazo, VaiPara } from "@/components/guias/BlocosDireitos";
+import { CATEGORIA_F, REGIME_SIMPLIFICADO } from "@/lib/fiscal-data";
+import { pctExato } from "@/lib/format";
+
+const COEF_AL = String(REGIME_SIMPLIFICADO.coefAlojamentoMoradia.value).replace(".", ",");
 
 // Corpo verificado a 06/08/2026: arts. 3.º, 31.º (n.º 1, als. c e h, e n.º 2)
 // e 72.º (n.os 1 e 2) do CIRS. É um guia de DECISÃO — não dá um vencedor,
@@ -38,9 +42,10 @@ export default function CorpoAlVsArrendamento() {
           faturação de AL pagam impostos diferentes consoante o que ganham fora dele.
         </Paragrafo>
         <AvisoPrazo titulo="É aqui que a comparação se decide, e não na taxa nominal">
-          Comparar «25% da categoria F» com «coeficiente de 0,35 da categoria B» não quer dizer
-          nada: uma é uma taxa sobre o líquido, a outra é uma fração do bruto que depois é
-          tributada pela tua taxa marginal. Só a conta feita com os teus números responde.
+          Comparar «{pctExato(CATEGORIA_F.taxaHabitacao.value)} da categoria F» com «coeficiente de{" "}
+          {COEF_AL} da categoria B» não quer dizer nada: uma é uma taxa sobre o líquido, a outra é
+          uma fração do bruto que depois é tributada pela tua taxa marginal. Só a conta feita com os
+          teus números responde.
         </AvisoPrazo>
         <VaiPara href="/guias/escaloes-irs">Os escalões em que o rendimento do AL vai cair</VaiPara>
       </Seccao>
@@ -55,8 +60,8 @@ export default function CorpoAlVsArrendamento() {
         <Paragrafo>
           Há uma compensação parcial no lado do IRS: no regime simplificado, os rendimentos de
           prestações de serviços permitem deduzir as contribuições obrigatórias na parte em que
-          excedam 10% do rendimento bruto. Mas atenção — essa dedução{" "}
-          <strong>não abrange</strong> a alínea das áreas de contenção.
+          excedem uma fração do rendimento bruto fixada no n.º 2 do art. 31.º. Mas atenção — essa
+          dedução <strong>não abrange</strong> a alínea das áreas de contenção.
         </Paragrafo>
         <VaiPara href="/guias/seguranca-social">
           Como se calcula a contribuição de um trabalhador independente

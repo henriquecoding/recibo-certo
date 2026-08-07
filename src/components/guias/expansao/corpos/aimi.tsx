@@ -1,4 +1,6 @@
 import { Seccao, Paragrafo, Nota, VaiPara } from "@/components/guias/BlocosDireitos";
+import { AIMI } from "@/lib/fiscal-data";
+import { fmt, pctExato } from "@/lib/format";
 
 // Corpo verificado contra o articulado no Portal das Finanças a 06/08/2026:
 // arts. 135.º-A a 135.º-H do CIMI.
@@ -26,10 +28,10 @@ export default function CorpoAIMI() {
 
       <Seccao titulo="A dedução por sujeito passivo">
         <Paragrafo>
-          Ao valor tributável deduz-se <strong>600 000 €</strong> quando o sujeito passivo é uma
-          pessoa singular, e o mesmo montante quando é uma herança indivisa. Só o que passar disso é
-          tributado. Uma pessoa singular com imóveis habitacionais que somem 500 000 € de VPT não
-          paga AIMI nenhum — e não tem de fazer nada para isso.
+          Ao valor tributável deduz-se <strong>{fmt(AIMI.deducaoSingular.value)}</strong> quando o
+          sujeito passivo é uma pessoa singular, e o mesmo montante quando é uma herança indivisa.
+          Só o que passar disso é tributado. Quem tenha imóveis habitacionais que somem menos do que
+          isso em VPT não paga AIMI nenhum — e não tem de fazer nada para isso.
         </Paragrafo>
         <Paragrafo>
           As pessoas coletivas não têm esta dedução: são tributadas sobre a soma toda.
@@ -52,21 +54,25 @@ export default function CorpoAIMI() {
 
       <Seccao titulo="As taxas por escalão">
         <Paragrafo>
-          Sobre o valor que sobra depois da dedução, a taxa é de <strong>0,7%</strong> para pessoas
-          singulares e heranças indivisas, e de <strong>0,4%</strong> para pessoas coletivas.
+          Sobre o valor que sobra depois da dedução, a taxa é de{" "}
+          <strong>{pctExato(AIMI.taxaSingular.value)}</strong> para pessoas singulares e heranças
+          indivisas, e de <strong>{pctExato(AIMI.taxaColetiva.value)}</strong> para pessoas coletivas.
         </Paragrafo>
         <Paragrafo>
           Para pessoas singulares há dois agravamentos marginais, calculados sobre o valor
-          tributável <em>antes</em> da dedução: <strong>1%</strong> na parte que exceda 1 000 000 €
-          e não passe 2 000 000 €, e <strong>1,5%</strong> na parte acima de 2 000 000 €. Com a
-          opção conjunta, estes dois patamares contam ao dobro.
+          tributável <em>antes</em> da dedução:{" "}
+          <strong>{pctExato(AIMI.taxaMarginal1M.value)}</strong> na parte que exceda{" "}
+          {fmt(AIMI.limiar1M.value)} e não passe {fmt(AIMI.limiar2M.value)}, e{" "}
+          <strong>{pctExato(AIMI.taxaMarginal2M.value)}</strong> na parte acima de{" "}
+          {fmt(AIMI.limiar2M.value)}. Com a opção conjunta, estes dois patamares contam ao dobro.
         </Paragrafo>
         <Nota titulo="Dois casos com taxa muito mais alta">
           Prédios detidos por pessoas coletivas mas afetos ao <strong>uso pessoal</strong> dos
           titulares do capital, dos órgãos sociais ou dos seus cônjuges, ascendentes e descendentes
-          são tributados a 0,7% — como se fossem de pessoa singular — com o agravamento marginal de
-          1% acima de 1 000 000 €. E os prédios de entidades sujeitas a regime fiscal mais favorável
-          pagam <strong>7,5%</strong>. Esta última não se aplica a pessoas singulares.
+          são tributados à taxa das pessoas singulares — com o agravamento marginal acima de{" "}
+          {fmt(AIMI.limiar1M.value)}. E os prédios de entidades sujeitas a regime fiscal mais
+          favorável pagam <strong>{pctExato(AIMI.taxaOffshore.value)}</strong>. Esta última não se
+          aplica a pessoas singulares.
         </Nota>
       </Seccao>
 
@@ -75,7 +81,7 @@ export default function CorpoAIMI() {
           A liquidação é anual e automática, feita pela AT com base nas matrizes a{" "}
           <strong>1 de janeiro</strong> do ano a que o adicional respeita — data diferente da do
           IMI, que se reporta a 31 de dezembro. Os meses de liquidação e de pagamento estão na
-          tabela de dados aqui em baixo, e o documento de cobrança é enviado até ao fim do mês
+          tabela de dados aqui em baixo; o documento de cobrança é enviado até ao fim do mês
           anterior ao do pagamento.
         </Paragrafo>
         <Paragrafo>

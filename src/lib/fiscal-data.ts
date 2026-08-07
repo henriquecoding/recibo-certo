@@ -26,7 +26,7 @@ export { FISCAL_YEAR } from "./fiscal-year";
  * descreve mal o que aconteceu. `assertFiscalDataIntegrity()` faz o build falhar
  * se algum parâmetro for mais recente do que esta data.
  */
-export const DATA_LAST_REVIEW = "2026-08-01" as const;
+export const DATA_LAST_REVIEW = "2026-08-06" as const;
 
 // ─── Registo de fontes (evita repetir URLs longos) ─────────────────────
 export interface Source {
@@ -225,6 +225,86 @@ export const SOURCES = {
   acoresRetencao2026: {
     label: "Despacho n.º 1179/2026 — Tabelas de retenção na fonte de IRS 2026, Região Autónoma dos Açores · Diário da República",
     url: "https://files.diariodarepublica.pt/2s/2026/02/023000000/0005100057.pdf",
+  },
+
+  // ── CIMI / CIMT / TGIS — articulado da AT ──────────────────────────
+  //    Estas entradas substituem o guia da PwC como fonte dos parâmetros
+  //    patrimoniais. A PwC continua no registo: é boa leitura e é usada
+  //    onde não há artigo que fixe o número. Mas onde há artigo, é o artigo
+  //    que manda — a regra 1 deste projeto diz «só fontes oficiais», e um
+  //    guia de consultora não é a fonte de uma taxa que está na lei.
+  //    Verificados por leitura direta a 2026-08-06.
+  art112cimi: {
+    label: "Art. 112.º CIMI — Taxas (urbano 0,3%–0,45%; rústico 0,8%; agravamentos) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimi/Pages/cimi112.aspx",
+  },
+  art113cimi: {
+    label: "Art. 113.º CIMI — Competência e prazo da liquidação · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimi/Pages/cimi113.aspx",
+  },
+  art120cimi: {
+    label: "Art. 120.º CIMI — Prazo de pagamento (uma, duas ou três prestações) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimi/Pages/cimi120.aspx",
+  },
+  art11aCimi: {
+    label: "Art. 11.º-A CIMI — Isenção de prédios de reduzido VPT de sujeitos passivos de baixos rendimentos · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimi/Pages/cimi11a.aspx",
+  },
+  art135cCimi: {
+    label: "Art. 135.º-C CIMI — AIMI: regras de determinação do valor tributável e dedução · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimi/Pages/cimi135c.aspx",
+  },
+  art135fCimi: {
+    label: "Art. 135.º-F CIMI — AIMI: taxas · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimi/Pages/cimi135f.aspx",
+  },
+  art135gCimi: {
+    label: "Art. 135.º-G CIMI — AIMI: forma e prazo da liquidação · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimi/Pages/cimi135g.aspx",
+  },
+  art135hCimi: {
+    label: "Art. 135.º-H CIMI — AIMI: pagamento · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimi/Pages/cimi135h.aspx",
+  },
+  art9cimt: {
+    label: "Art. 9.º CIMT — Isenção pela aquisição de prédios destinados exclusivamente a habitação · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimt/Pages/cimt9.aspx",
+  },
+  art17cimt: {
+    label: "Art. 17.º CIMT — Taxas (escalões, taxas marginais e taxas únicas) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimt/Pages/cimt17.aspx",
+  },
+  art36cimt: {
+    label: "Art. 36.º CIMT — Prazos para pagamento · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cimt/Pages/cimt36.aspx",
+  },
+  tgisPdf: {
+    label: "Tabela Geral do Imposto do Selo — verbas 1.1, 1.2, 2 e 17 (PDF consolidado do CIS) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/Cod_download/Documents/CIS.pdf",
+  },
+  art41cirs: {
+    label: "Art. 41.º CIRS — Deduções aos rendimentos prediais (categoria F) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs41.aspx",
+  },
+  art51cirs: {
+    label: "Art. 51.º CIRS — Despesas e encargos (mais-valias) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs51.aspx",
+  },
+  art55cirs: {
+    label: "Art. 55.º CIRS — Dedução de perdas · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs55.aspx",
+  },
+  art115cirs: {
+    label: "Art. 115.º CIRS — Emissão de recibos e faturas (recibo de renda e declaração anual) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs115.aspx",
+  },
+  art46circ: {
+    label: "Art. 46.º CIRC — Conceito de mais-valias e menos-valias (dedução das depreciações) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/CIRC_2R/Pages/irc46.aspx",
+  },
+  art47circ: {
+    label: "Art. 47.º CIRC — Correção monetária das mais-valias e menos-valias · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/CIRC_2R/Pages/irc47.aspx",
   },
 
   // ── PwC / CIMI / CIMT / TGIS — Impostos municipais ─────────────────
@@ -454,6 +534,11 @@ const REV_BENEFICIOS = "2026-06-22";
 const REV_COEF_MOEDA = "2026-06-23";
 // Data de verificação do Salário Mínimo Nacional 2026 (RMMG 920 €, DL 139/2025).
 const REV_SMN = "2026-07-14";
+// Data de leitura direta do articulado do CIMI, CIMT, TGIS e dos artigos do
+// CIRS/CIRC do património. Até aqui, vários destes parâmetros vinham do guia
+// fiscal da PwC — boa leitura, mas leitura de terceiros. Onde a lei fixa o
+// número, passa a ser a lei a sustentá-lo.
+const REV_PATRIMONIO = "2026-08-06";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  INDEXANTE DOS APOIOS SOCIAIS (IAS) — base de vários limites
@@ -729,8 +814,23 @@ export const REGIME_SIMPLIFICADO = {
   coefOutrosServicos: sv(0.35, "Art. 31.º, n.º 1, al. c) CIRS — outras prestações de serviços", "art31", TODAY),
   coefVendas: sv(0.15, "Art. 31.º, n.º 1, al. a) CIRS — vendas de bens, restauração e hotelaria", "art31", TODAY),
   coefPropIntelectual: sv(0.95, "Art. 31.º, n.º 1, al. d) CIRS — propriedade intelectual/industrial", "art31", TODAY),
-  coefAlojamentoMoradia: sv(0.35, "Art. 31.º CIRS — alojamento local (moradia/apartamento)", "alojamentoLocal", TODAY),
-  coefAlojamentoContencao: sv(0.5, "Art. 31.º, n.º 1, al. h) CIRS — alojamento local em zona de contenção", "alojamentoLocal", TODAY),
+  // O AL em moradia ou apartamento está EXPRESSAMENTE EXCLUÍDO da al. a) —
+  // a das atividades hoteleiras — e cai por isso na regra geral das
+  // prestações de serviços da al. c). Lido no articulado a 2026-08-06; até
+  // aqui a fonte era um artigo da OCC, boa leitura mas leitura de terceiros.
+  coefAlojamentoMoradia: sv(
+    0.35,
+    "Art. 31.º, n.º 1, al. c) CIRS — o AL em moradia ou apartamento é excluído da al. a) e cai na regra geral das prestações de serviços",
+    "art31",
+    REV_PATRIMONIO
+  ),
+  coefAlojamentoContencao: sv(
+    0.5,
+    "Art. 31.º, n.º 1, al. h) CIRS (aditada pela Lei n.º 2/2020) — AL em moradia ou apartamento localizado em área de contenção",
+    "art31",
+    REV_PATRIMONIO,
+    "A delimitação das áreas é municipal e muda: verifica-se por morada, na câmara do concelho. A al. h) não consta do n.º 2, pelo que não permite a dedução autónoma das contribuições obrigatórias."
+  ),
   coefTransparencia: sv(1.0, "Art. 31.º, n.º 1, al. g) CIRS — serviços a sociedade onde detém ≥ 5%", "art31", TODAY),
   coefSubsidiosNaoExploracao: sv(
     0.3,
@@ -1011,12 +1111,50 @@ export const CATEGORIA_F = {
    */
   reducaoDuracao: sv<Record<DuracaoArrendamento, number>>(
     { curto: 0, "5a10": 0.1, "10a20": 0.15, "20mais": 0.2 },
-    "Art. 72.º, n.os 2 a 5 CIRS (Lei 56/2023) — reduções por duração do contrato",
-    "rendasPrediais",
-    TODAY,
-    "Só para contratos de arrendamento habitacional permanente comunicados à AT. Renovações dão −2 p.p. cada, até −10 p.p. adicionais. O regime de renda moderada (taxa de 10%) anunciado no OE2026 está pendente de regulamentação e não é aqui aplicado."
+    "Art. 72.º, n.os 3 a 5 CIRS (Lei 56/2023) — reduções por duração do contrato, em PONTOS PERCENTUAIS",
+    "art72",
+    REV_PATRIMONIO,
+    "Só para contratos de arrendamento habitacional permanente. A redução é em pontos percentuais sobre a taxa autónoma, não em percentagem dela: −10 p.p. sobre 25% dá 15%, não 22,5%. O regime de renda moderada (taxa de 10%) anunciado no OE2026 está pendente de regulamentação e não é aqui aplicado."
+  ),
+  /** Redução adicional por cada renovação de igual duração (contratos de 5 a 10 anos). */
+  reducaoPorRenovacao: sv(
+    0.02,
+    "Art. 72.º, n.º 3 CIRS — por cada renovação com igual duração, redução de dois pontos percentuais",
+    "art72",
+    REV_PATRIMONIO
+  ),
+  /** Teto do conjunto das reduções obtidas por renovação. */
+  reducaoRenovacaoMax: sv(
+    0.1,
+    "Art. 72.º, n.º 3 CIRS — as reduções relativas à renovação estão sujeitas ao limite de 10 pontos percentuais",
+    "art72",
+    REV_PATRIMONIO
+  ),
+  /** Anos de reporte do resultado líquido negativo da categoria F. */
+  reporteDePerdasAnos: sv(
+    6,
+    "Art. 55.º, n.º 1, al. b) CIRS — o resultado líquido negativo da categoria F reporta-se aos seis anos seguintes",
+    "art55cirs",
+    REV_PATRIMONIO,
+    "Caduca se os prédios não gerarem rendimentos da categoria F em pelo menos 36 meses, seguidos ou interpolados, dos cinco anos seguintes (n.º 8)."
+  ),
+  /** Janela de obras de conservação anteriores ao arrendamento que são dedutíveis. */
+  obrasAntesArrendamentoMeses: sv(
+    24,
+    "Art. 41.º, n.º 7 CIRS — gastos de conservação e manutenção suportados nos 24 meses anteriores ao início do arrendamento",
+    "art41cirs",
+    REV_PATRIMONIO,
+    "Desde que o imóvel não tenha sido utilizado para outro fim que não o arrendamento."
+  ),
+  /** Prazo da declaração anual de rendas, alternativa ao recibo eletrónico. */
+  prazoDeclaracaoRendas: sv(
+    "fim de fevereiro",
+    "Art. 115.º, n.º 5, al. b) CIRS (redação do DL 49/2025) — declaração de modelo oficial até ao fim do mês de fevereiro, por referência ao ano anterior",
+    "art115cirs",
+    REV_PATRIMONIO
   ),
 };
+
 
 export const META_DURACAO: Record<DuracaoArrendamento, { label: string; sub: string }> = {
   curto: { label: "Menos de 5 anos", sub: "Sem redução" },
@@ -1897,9 +2035,9 @@ export const SS_MIN_MENSAL = sv(
 
 export const IMI_TAXA_PADRAO = sv(
   0.003,
-  "Art. 112.º CIMI — taxa mínima IMI urbano (0,3%); municípios podem fixar até 0,45%",
-  "pwcGuiaFiscal",
-  TODAY
+  "Art. 112.º, n.º 1, al. c) CIMI — piso do intervalo legal da taxa de IMI urbano",
+  "art112cimi",
+  REV_PATRIMONIO
 );
 
 /** Opções de taxa de IMI urbano dentro do intervalo legal (0,3%–0,45%). Cada
@@ -1907,23 +2045,323 @@ export const IMI_TAXA_PADRAO = sv(
 export const IMI_TAXA_URBANO_OPCOES = sv(
   [0.003, 0.0035, 0.004, 0.0045],
   "Art. 112.º, n.º 1, al. c) CIMI — intervalo legal da taxa de IMI para prédios urbanos (0,3% a 0,45%)",
-  "pwcGuiaFiscal",
-  TODAY
+  "art112cimi",
+  REV_PATRIMONIO
 );
 
 export const IMT_TAXA_COMERCIAL = sv(
   0.065,
-  "Art. 17.º CIMT — taxa IMT para imóveis não habitacionais (serviços/comércio/indústria): 6,5%",
-  "pwcGuiaFiscal",
-  TODAY
+  "Art. 17.º, n.º 1, al. e) CIMT — aquisição de outros prédios urbanos e outras aquisições onerosas",
+  "art17cimt",
+  REV_PATRIMONIO
 );
 
 export const IS_TAXA_AQUISICAO = sv(
   0.008,
-  "Verba 1.1 TGIS — Imposto do Selo sobre aquisição onerosa de imóveis: 0,8%",
-  "pwcGuiaFiscal",
-  TODAY
+  "Verba 1.1 TGIS — aquisição onerosa ou por doação do direito de propriedade sobre imóveis",
+  "tgisPdf",
+  REV_PATRIMONIO
 );
+
+// ═══════════════════════════════════════════════════════════════════════
+//  PATRIMÓNIO — IMI, AIMI, IMT, selo do crédito, rendas e alojamento local
+//  ---------------------------------------------------------------------
+//  Tudo o que os guias de «Casa e património» mostram vive aqui, e não no
+//  texto deles. A razão é a regra de ouro do projeto: um número escrito no
+//  meio de um parágrafo é um número que ninguém encontra no dia em que a lei
+//  muda — e estes mudam todos os anos, com o Orçamento do Estado.
+//
+//  Cada valor traz o artigo que o fixa e a data em que foi lido. Os escalões
+//  do IMT foram transcritos das três tabelas do Art. 17.º; as taxas do selo
+//  da Tabela Geral, que não tem página de artigo e só existe no PDF do
+//  código consolidado.
+// ═══════════════════════════════════════════════════════════════════════
+
+/** Taxa de IMI dos prédios rústicos — fixa, ao contrário da dos urbanos. */
+export const IMI_TAXA_RUSTICO = sv(
+  0.008,
+  "Art. 112.º, n.º 1, al. a) CIMI — prédios rústicos",
+  "art112cimi",
+  REV_PATRIMONIO
+);
+
+/** Teto do intervalo legal da taxa de IMI urbano. */
+export const IMI_TAXA_URBANO_MAX = sv(
+  0.0045,
+  "Art. 112.º, n.º 1, al. c) CIMI — teto do intervalo legal da taxa de IMI urbano",
+  "art112cimi",
+  REV_PATRIMONIO
+);
+
+/** Taxa agravada de IMI para titulares com domicílio em regime fiscal mais favorável. */
+export const IMI_TAXA_OFFSHORE = sv(
+  0.075,
+  "Art. 112.º, n.º 4 CIMI — prédios de sujeitos passivos com domicílio fiscal em país, território ou região sujeito a regime fiscal mais favorável",
+  "art112cimi",
+  REV_PATRIMONIO
+);
+
+/** Multiplicador da taxa aplicado a prédios devolutos há mais de um ano e a ruínas. */
+export const IMI_AGRAVAMENTO_DEVOLUTO = sv(
+  3,
+  "Art. 112.º, n.º 3 CIMI — taxas elevadas ao triplo em prédios devolutos há mais de um ano ou em ruínas",
+  "art112cimi",
+  REV_PATRIMONIO
+);
+
+/** Escalões de pagamento do IMI: limite superior (€) e meses das prestações. */
+export interface PrestacaoIMI {
+  /** Limite superior do escalão, em euros. `null` = sem limite. */
+  ateEuros: number | null;
+  meses: readonly string[];
+}
+
+export const IMI_PRESTACOES = sv<readonly PrestacaoIMI[]>(
+  [
+    { ateEuros: 100, meses: ["maio"] },
+    { ateEuros: 500, meses: ["maio", "novembro"] },
+    { ateEuros: null, meses: ["maio", "agosto", "novembro"] },
+  ],
+  "Art. 120.º, n.º 1 CIMI (redação da Lei n.º 71/2018) — uma prestação até 100 €, duas até 500 €, três acima disso",
+  "art120cimi",
+  REV_PATRIMONIO,
+  "O escalão intermédio é maio e NOVEMBRO. Agosto só entra no escalão das três prestações."
+);
+
+/** Meses em que a AT liquida o IMI do ano anterior. */
+export const IMI_MESES_LIQUIDACAO = sv<readonly string[]>(
+  ["fevereiro", "abril"],
+  "Art. 113.º, n.º 2 CIMI — a liquidação é efetuada nos meses de fevereiro e abril do ano seguinte",
+  "art113cimi",
+  REV_PATRIMONIO
+);
+
+/** Abaixo deste montante não há sequer liquidação de IMI. */
+export const IMI_MINIMO_LIQUIDACAO = sv(
+  10,
+  "Art. 113.º, n.º 6 CIMI — não há lugar a liquidação quando o imposto a cobrar seja inferior a 10 €",
+  "art113cimi",
+  REV_PATRIMONIO
+);
+
+/**
+ * Isenção permanente do Art. 11.º-A: os limiares são múltiplos do IAS, não
+ * valores fixos em euros — é por isso que se guardam os multiplicadores e se
+ * calcula, em vez de se copiar um número que muda quando o IAS muda.
+ */
+export const IMI_ISENCAO_BAIXOS_RENDIMENTOS = {
+  /** Rendimento bruto total do agregado: 2,3 × (14 × IAS). */
+  multiplicadorRendimento: sv(
+    2.3,
+    "Art. 11.º-A, n.º 1 CIMI — rendimento bruto total do agregado não superior a 2,3 vezes o valor de 14 IAS",
+    "art11aCimi",
+    REV_PATRIMONIO
+  ),
+  /** VPT global de todos os prédios do agregado: 10 × (14 × IAS). */
+  multiplicadorVpt: sv(
+    10,
+    "Art. 11.º-A, n.º 1 CIMI — VPT global da totalidade dos prédios do agregado não superior a 10 vezes o valor de 14 IAS",
+    "art11aCimi",
+    REV_PATRIMONIO
+  ),
+  /** Número de IAS que forma a unidade de referência do artigo. */
+  mesesIAS: sv(
+    14,
+    "Art. 11.º-A, n.º 1 CIMI — a unidade de referência do artigo é «14 IAS»",
+    "art11aCimi",
+    REV_PATRIMONIO
+  ),
+};
+
+/** Limiares da isenção do Art. 11.º-A já calculados a partir do IAS em vigor. */
+export const IMI_ISENCAO_RENDIMENTO_LIMITE =
+  IMI_ISENCAO_BAIXOS_RENDIMENTOS.multiplicadorRendimento.value *
+  IMI_ISENCAO_BAIXOS_RENDIMENTOS.mesesIAS.value *
+  IAS.value;
+
+export const IMI_ISENCAO_VPT_LIMITE =
+  IMI_ISENCAO_BAIXOS_RENDIMENTOS.multiplicadorVpt.value *
+  IMI_ISENCAO_BAIXOS_RENDIMENTOS.mesesIAS.value *
+  IAS.value;
+
+// ─── AIMI ──────────────────────────────────────────────────────────────
+
+export const AIMI = {
+  /** Dedução ao valor tributável de pessoas singulares e heranças indivisas. */
+  deducaoSingular: sv(
+    600_000,
+    "Art. 135.º-C, n.º 2 CIMI — dedução de 600 000 € a pessoas singulares e a heranças indivisas",
+    "art135cCimi",
+    REV_PATRIMONIO,
+    "As pessoas coletivas não têm esta dedução: são tributadas sobre a soma toda."
+  ),
+  taxaSingular: sv(
+    0.007,
+    "Art. 135.º-F, n.º 1 CIMI — taxa aplicável a pessoas singulares e heranças indivisas",
+    "art135fCimi",
+    REV_PATRIMONIO
+  ),
+  taxaColetiva: sv(
+    0.004,
+    "Art. 135.º-F, n.º 1 CIMI — taxa aplicável a pessoas coletivas",
+    "art135fCimi",
+    REV_PATRIMONIO
+  ),
+  /** Taxa marginal sobre a parte do valor tributável acima de 1 M€. */
+  taxaMarginal1M: sv(
+    0.01,
+    "Art. 135.º-F, n.º 2 CIMI — taxa marginal na parte do valor tributável superior a 1 000 000 € e até 2 000 000 €",
+    "art135fCimi",
+    REV_PATRIMONIO
+  ),
+  /** Taxa marginal sobre a parte do valor tributável acima de 2 M€. */
+  taxaMarginal2M: sv(
+    0.015,
+    "Art. 135.º-F, n.º 3 CIMI — taxa marginal na parte do valor tributável superior a 2 000 000 €",
+    "art135fCimi",
+    REV_PATRIMONIO
+  ),
+  limiar1M: sv(
+    1_000_000,
+    "Art. 135.º-F, n.º 2 CIMI — limiar da primeira taxa marginal",
+    "art135fCimi",
+    REV_PATRIMONIO,
+    "Com opção pela tributação conjunta, o limiar conta ao dobro."
+  ),
+  limiar2M: sv(
+    2_000_000,
+    "Art. 135.º-F, n.º 3 CIMI — limiar da segunda taxa marginal",
+    "art135fCimi",
+    REV_PATRIMONIO
+  ),
+  taxaOffshore: sv(
+    0.075,
+    "Art. 135.º-F, n.º 5 CIMI — prédios de entidades sujeitas a regime fiscal mais favorável",
+    "art135fCimi",
+    REV_PATRIMONIO,
+    "Não se aplica a pessoas singulares (n.º 6)."
+  ),
+  mesLiquidacao: sv(
+    "junho",
+    "Art. 135.º-G, n.º 4 CIMI — a liquidação é efetuada no mês de junho do ano a que o imposto respeita",
+    "art135gCimi",
+    REV_PATRIMONIO
+  ),
+  mesPagamento: sv(
+    "setembro",
+    "Art. 135.º-H, n.º 1 CIMI — o pagamento é efetuado no mês de setembro do ano a que respeita",
+    "art135hCimi",
+    REV_PATRIMONIO
+  ),
+};
+
+// ─── IMT: escalões ─────────────────────────────────────────────────────
+
+/** Qual das três tabelas do Art. 17.º se aplica. */
+export type TabelaIMT = "hpp" | "jovem" | "secundaria";
+
+export interface EscalaoIMT {
+  /** Limite superior do escalão, em euros. `null` = sem limite. */
+  ate: number | null;
+  /** Taxa marginal (fração). */
+  taxa: number;
+  /** `true` quando a taxa é única sobre todo o valor, sem parcela a abater. */
+  taxaUnica?: boolean;
+}
+
+export const IMT_ESCALOES = sv<Record<TabelaIMT, readonly EscalaoIMT[]>>(
+  {
+    // Al. a) — habitação própria e permanente, exceto os da al. b).
+    hpp: [
+      { ate: 106_346, taxa: 0 },
+      { ate: 145_470, taxa: 0.02 },
+      { ate: 198_347, taxa: 0.05 },
+      { ate: 330_539, taxa: 0.07 },
+      { ate: 660_982, taxa: 0.08 },
+      { ate: 1_150_853, taxa: 0.06, taxaUnica: true },
+      { ate: null, taxa: 0.075, taxaUnica: true },
+    ],
+    // Al. b) — primeira aquisição de HPP por quem tenha 35 anos ou menos.
+    jovem: [
+      { ate: 330_539, taxa: 0 },
+      { ate: 660_982, taxa: 0.08 },
+      { ate: 1_150_853, taxa: 0.06, taxaUnica: true },
+      { ate: null, taxa: 0.075, taxaUnica: true },
+    ],
+    // Al. c) — habitação não destinada a habitação própria e permanente.
+    secundaria: [
+      { ate: 106_346, taxa: 0.01 },
+      { ate: 145_470, taxa: 0.02 },
+      { ate: 198_347, taxa: 0.05 },
+      { ate: 330_539, taxa: 0.07 },
+      { ate: 633_931, taxa: 0.08 },
+      { ate: 1_150_853, taxa: 0.06, taxaUnica: true },
+      { ate: null, taxa: 0.075, taxaUnica: true },
+    ],
+  },
+  "Art. 17.º, n.º 1, als. a), b) e c) CIMT — as três tabelas de escalões e taxas marginais",
+  "art17cimt",
+  REV_PATRIMONIO,
+  "Atualizados anualmente pelo Orçamento do Estado. Ler sempre do artigo antes de publicar."
+);
+
+export const IMT_TAXA_RUSTICO = sv(
+  0.05,
+  "Art. 17.º, n.º 1, al. d) CIMT — aquisição de prédios rústicos",
+  "art17cimt",
+  REV_PATRIMONIO
+);
+
+/** Condições da isenção jovem do Art. 9.º, n.º 2 e n.º 3. */
+export const IMT_ISENCAO_JOVEM = {
+  idadeMaxima: sv(
+    35,
+    "Art. 9.º, n.º 2 CIMT — sujeitos passivos com idade igual ou inferior a 35 anos à data da transmissão",
+    "art9cimt",
+    REV_PATRIMONIO,
+    "Exige ainda que seja a primeira aquisição de HPP e que o adquirente não seja considerado dependente no ano da transmissão."
+  ),
+  anosSemPropriedade: sv(
+    3,
+    "Art. 9.º, n.º 3 CIMT — exclusão de quem seja titular de prédio urbano habitacional à data da transmissão ou em qualquer momento nos três anos anteriores",
+    "art9cimt",
+    REV_PATRIMONIO
+  ),
+};
+
+/** Prazo de pagamento do IMT depois da liquidação. */
+export const IMT_PRAZO_PAGAMENTO_DIAS = sv(
+  30,
+  "Art. 36.º, n.º 1 CIMT (redação do DL 97/2026) — pagamento no próprio dia da liquidação ou nos 30 dias seguintes, sob pena de esta ficar sem efeito",
+  "art36cimt",
+  REV_PATRIMONIO
+);
+
+// ─── Imposto do selo do crédito (verba 17.1) ───────────────────────────
+
+export const IS_CREDITO = {
+  ateUmAnoPorMes: sv(
+    0.0004,
+    "Verba 17.1.1 TGIS — crédito de prazo inferior a um ano, por cada mês ou fração",
+    "tgisPdf",
+    REV_PATRIMONIO
+  ),
+  umAnoOuMais: sv(
+    0.005,
+    "Verba 17.1.2 TGIS — crédito de prazo igual ou superior a um ano",
+    "tgisPdf",
+    REV_PATRIMONIO
+  ),
+  cincoAnosOuMais: sv(
+    0.006,
+    "Verba 17.1.3 TGIS — crédito de prazo igual ou superior a cinco anos",
+    "tgisPdf",
+    REV_PATRIMONIO,
+    "É a taxa do crédito à habitação típico. A prorrogação do prazo conta sempre como nova concessão de crédito."
+  ),
+};
+
+
 
 // ═══════════════════════════════════════════════════════════════════════
 //  HERANÇAS E SUCESSÕES
@@ -2122,7 +2560,7 @@ export const CRIPTO_ISENCAO_DIAS = sv(
 /** Fração do saldo de mais-valias imobiliárias sujeita a tributação (residentes). */
 export const MAIS_VALIAS_IMOBILIARIO_INCLUSAO = sv(
   0.5,
-  "Art. 43.º, n.º 2 CIRS — apenas 50% do saldo de mais-valias imobiliárias é considerado (englobamento obrigatório às taxas progressivas)",
+  "Art. 43.º, n.º 2, al. b) CIRS — apenas 50% do saldo de mais-valias imobiliárias é considerado",
   "art43cirs",
   REV_MAIS_VALIAS
 );
@@ -2130,10 +2568,85 @@ export const MAIS_VALIAS_IMOBILIARIO_INCLUSAO = sv(
 /** Prazo de reinvestimento em habitação própria e permanente (exclusão). */
 export const MAIS_VALIAS_REINVESTIMENTO_MESES = sv(
   36,
-  "Art. 10.º, n.º 5 CIRS — reinvestimento na aquisição de HPP até 36 meses após (ou 24 meses antes) da realização, sem recurso ao crédito",
-  "cgdImoveisMaisValias",
-  REV_MAIS_VALIAS
+  "Art. 10.º, n.º 5, al. b) CIRS — reinvestimento efetuado entre os 24 meses anteriores e os 36 meses posteriores à realização",
+  "art10cirs",
+  REV_PATRIMONIO
 );
+
+/**
+ * Reinvestimento e mais-valias de imóveis — o resto dos prazos do Art. 10.º.
+ *
+ * Lido diretamente do articulado a 06/08/2026, incluindo os n.os 7 e 8 na
+ * redação do Decreto-Lei n.º 97/2026: a segunda via de exclusão, que não
+ * exige comprar para habitação própria mas sim para arrendar dentro dos
+ * limites de renda desse diploma.
+ */
+export const MAIS_VALIAS_IMOVEIS = {
+  /** Janela anterior à venda em que o reinvestimento já conta. */
+  reinvestimentoAntesMeses: sv(
+    24,
+    "Art. 10.º, n.º 5, al. b) CIRS — o reinvestimento conta desde os 24 meses anteriores à realização",
+    "art10cirs",
+    REV_PATRIMONIO
+  ),
+  /** Tempo mínimo de HPP no imóvel vendido, antes da transmissão. */
+  hppAntesDaVendaMeses: sv(
+    12,
+    "Art. 10.º, n.º 5, al. e) CIRS (redação do DL 57/2024) — habitação própria e permanente comprovada pelo domicílio fiscal nos 12 meses anteriores à transmissão",
+    "art10cirs",
+    REV_PATRIMONIO
+  ),
+  /** Prazo para afetar a habitação o imóvel adquirido com o reinvestimento. */
+  afetacaoAposReinvestimentoMeses: sv(
+    12,
+    "Art. 10.º, n.º 6, al. a) CIRS — o adquirente tem de afetar o imóvel a habitação até decorridos 12 meses após o reinvestimento",
+    "art10cirs",
+    REV_PATRIMONIO
+  ),
+  /** Prazo para requerer a inscrição na matriz em construção, ampliação ou melhoramento. */
+  inscricaoMatrizMeses: sv(
+    48,
+    "Art. 10.º, n.º 6, al. b) CIRS — inscrição na matriz requerida até 48 meses desde a data da realização",
+    "art10cirs",
+    REV_PATRIMONIO,
+    "E afetação do imóvel a habitação até ao fim do quinto ano seguinte ao da realização."
+  ),
+  /** Anos de detenção abaixo dos quais um imóvel com apoio público perde a redução a 50%. */
+  apoioPublicoAnos: sv(
+    10,
+    "Art. 43.º, n.º 2, al. a) CIRS — imóveis com apoio público não reembolsável superior a 30% do VPT vendidos antes de 10 anos são tributados por inteiro",
+    "art43cirs",
+    REV_PATRIMONIO
+  ),
+  apoioPublicoLimiarVpt: sv(
+    0.3,
+    "Art. 43.º, n.º 2, al. a) CIRS — apoio de valor superior a 30% do valor patrimonial tributário",
+    "art43cirs",
+    REV_PATRIMONIO
+  ),
+  /** Janela dos encargos de valorização que acrescem ao valor de aquisição. */
+  encargosValorizacaoAnos: sv(
+    12,
+    "Art. 51.º, n.º 1, al. a) CIRS — encargos com a valorização comprovadamente realizados nos últimos 12 anos",
+    "art51cirs",
+    REV_PATRIMONIO,
+    "Não contam os encargos realizados durante o período em que o imóvel esteve afeto a atividade empresarial ou profissional (n.º 3)."
+  ),
+  /** Segunda via de exclusão: reinvestir em imóveis para arrendamento a renda moderada. */
+  arrendamentoContratoMeses: sv(
+    6,
+    "Art. 10.º, n.º 8, al. a) CIRS (redação do DL 97/2026) — contrato de arrendamento habitacional dentro dos limites de renda celebrado nos seis meses seguintes ao reinvestimento ou à realização",
+    "art10cirs",
+    REV_PATRIMONIO,
+    "Salvo impedimento justificado, designadamente obras urgentes."
+  ),
+  arrendamentoManutencaoMeses: sv(
+    36,
+    "Art. 10.º, n.º 8, al. b) CIRS (redação do DL 97/2026) — o imóvel tem de estar arrendado pelo menos 36 meses, seguidos ou interpolados, nos primeiros cinco anos",
+    "art10cirs",
+    REV_PATRIMONIO
+  ),
+};
 
 // ═══════════════════════════════════════════════════════════════════════
 //  BENEFÍCIOS FISCAIS À COLETA — PPR, donativos e ascendentes

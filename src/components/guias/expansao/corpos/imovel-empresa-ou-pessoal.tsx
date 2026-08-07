@@ -1,4 +1,6 @@
 import { Seccao, Paragrafo, Nota, AvisoPrazo, VaiPara } from "@/components/guias/BlocosDireitos";
+import { MAIS_VALIAS_IMOBILIARIO_INCLUSAO } from "@/lib/fiscal-data";
+import { pctExato } from "@/lib/format";
 
 // Corpo verificado a 06/08/2026: arts. 23.º, 46.º e 47.º do CIRC, arts.
 // 135.º-A, 135.º-B e 135.º-F (n.º 4) do CIMI e art. 12.º do CIMT.
@@ -63,8 +65,9 @@ export default function CorpoImovelEmpresaOuPessoal() {
           tenham decorrido <strong>pelo menos dois anos</strong> desde a aquisição.
         </Paragrafo>
         <Nota titulo="E do lado pessoal, metade não é tributada">
-          Nas mais-valias de imóveis em IRS, o saldo é considerado em 50% do seu valor. Em IRC não
-          há regra equivalente: a mais-valia entra por inteiro no lucro tributável. Somando isto à
+          Nas mais-valias de imóveis em IRS, o saldo é considerado em{" "}
+          {pctExato(MAIS_VALIAS_IMOBILIARIO_INCLUSAO.value)} do seu valor. Em IRC não há regra
+          equivalente: a mais-valia entra por inteiro no lucro tributável. Somando isto à
           recuperação das depreciações, a venda é frequentemente onde a opção pela empresa se
           desfaz.
         </Nota>

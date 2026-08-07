@@ -1,4 +1,6 @@
 import { Seccao, Paragrafo, Nota, AvisoPrazo, VaiPara } from "@/components/guias/BlocosDireitos";
+import { MAIS_VALIAS_IMOBILIARIO_INCLUSAO, MAIS_VALIAS_IMOVEIS } from "@/lib/fiscal-data";
+import { pctExato } from "@/lib/format";
 
 // Corpo verificado contra o articulado no Portal das Finanças a 06/08/2026:
 // arts. 10.º (n.os 5 a 8), 43.º, 44.º, 51.º e 55.º do CIRS. O n.º 7 — o
@@ -45,15 +47,16 @@ export default function CorpoMaisValiasImoveis() {
 
       <Seccao titulo="Porque só metade é tributada">
         <Paragrafo>
-          O saldo das mais-valias de imóveis é <strong>considerado em 50% do seu valor</strong>. É
+          O saldo das mais-valias de imóveis é{" "}
+          <strong>considerado em {pctExato(MAIS_VALIAS_IMOBILIARIO_INCLUSAO.value)} do seu valor</strong>. É
           uma regra do art. 43.º e é a razão pela qual o imposto acaba por ser menor do que a
           intuição sugere: metade do ganho nunca chega a entrar no rendimento coletável.
         </Paragrafo>
         <AvisoPrazo titulo="Há um caso em que o saldo conta por inteiro">
           Imóveis que tenham beneficiado de <strong>apoio público não reembolsável</strong> para
-          aquisição ou obras, de valor superior a 30% do VPT, e que sejam vendidos antes de
-          decorridos 10 anos, são tributados a <strong>100%</strong> do saldo. A regra dos 50% não
-          se aplica.
+          aquisição ou obras, acima da fração do VPT que está na tabela de dados, e que sejam
+          vendidos antes do prazo aí indicado, são tributados{" "}
+          <strong>por inteiro</strong>. A redução do art. 43.º não se aplica.
         </AvisoPrazo>
       </Seccao>
 
@@ -118,7 +121,7 @@ export default function CorpoMaisValiasImoveis() {
         <Paragrafo>
           Não é tudo ou nada. Se reinvestires uma parte do valor de realização, a exclusão aplica-se
           na <strong>proporção</strong> do que foi reinvestido — o resto é tributado normalmente,
-          com a regra dos 50%.
+          com a inclusão parcial do art. 43.º.
         </Paragrafo>
         <Paragrafo>
           É por isso que a alínea que manda declarar a intenção diz «ainda que parcial»: mesmo

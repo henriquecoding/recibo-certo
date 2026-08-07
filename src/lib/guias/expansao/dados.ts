@@ -16,7 +16,7 @@
 
 import { CONTEUDO_EXPANSAO, type DadoAnual } from "./conteudo";
 import { correcoesDoGuia } from "./correcoes";
-import { dadosAcrescentados } from "./dados-acrescentados";
+import { dadosDoMotor } from "./dados-motor";
 
 export interface DadosDoGuia {
   /** Prontos para mostrar. */
@@ -26,11 +26,28 @@ export interface DadosDoGuia {
   retidos: { label: string; razao: "pacote-por-confirmar" | "verificacao-sem-confirmacao" }[];
   /** Valores que a verificação corrigiu. Já vão aplicados em `publicaveis`. */
   corrigidos: { label: string; noPacote: string; verificado: string }[];
+  /** De onde saem os valores mostrados. `"motor"` = `fiscal-data.ts`, com
+      tipo, base legal e data de verificação; `"pacote"` = o texto que o
+      pacote entregou, que é o que os andaimes ainda mostram. */
+  origem?: "motor" | "pacote";
 }
 
 export function dadosDoGuia(slug: string): DadosDoGuia {
   const conteudo = CONTEUDO_EXPANSAO[slug];
   if (!conteudo) return { publicaveis: [], retidos: [], corrigidos: [] };
+
+  // Quando o motor conhece a matéria do guia, é ele que manda — inteiro.
+  //
+  // Não se misturam as duas origens numa só tabela: metade dos valores
+  // validados por `assertFiscalDataIntegrity()` e a outra metade em texto
+  // solto seria pior do que qualquer das duas puras, porque ninguém a olhar
+  // para a tabela saberia qual é qual. A lista do pacote fica em
+  // `conteudo.ts`, e `correcoes.ts` continua a registar onde divergimos
+  // dela e porquê.
+  const doMotor = dadosDoMotor(slug);
+  if (doMotor.length > 0) {
+    return { publicaveis: doMotor, retidos: [], corrigidos: [], origem: "motor" };
+  }
 
   const correcoes = correcoesDoGuia(slug);
   const publicaveis: DadoAnual[] = [];
@@ -61,16 +78,5 @@ export function dadosDoGuia(slug: string): DadosDoGuia {
     publicaveis.push(d);
   }
 
-  // Os valores levantados durante a redação entram no fim, na ordem em que
-  // foram declarados. Passam pelo mesmo filtro de `porConfirmar` que os do
-  // pacote — não há via rápida para publicar um número.
-  for (const d of dadosAcrescentados(slug)) {
-    if (d.porConfirmar) {
-      retidos.push({ label: d.label, razao: "pacote-por-confirmar" });
-      continue;
-    }
-    publicaveis.push(d);
-  }
-
-  return { publicaveis, retidos, corrigidos };
+  return { publicaveis, retidos, corrigidos, origem: "pacote" };
 }

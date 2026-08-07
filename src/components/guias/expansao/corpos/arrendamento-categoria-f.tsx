@@ -1,4 +1,9 @@
 import { Seccao, Paragrafo, Nota, AvisoPrazo, VaiPara } from "@/components/guias/BlocosDireitos";
+import { CATEGORIA_F } from "@/lib/fiscal-data";
+import { pctExato } from "@/lib/format";
+
+const TAXA = CATEGORIA_F.taxaHabitacao.value;
+const R5 = CATEGORIA_F.reducaoDuracao.value["5a10"];
 
 // Corpo verificado contra o articulado no Portal das Finanças a 06/08/2026:
 // arts. 8.º, 41.º, 22.º, 72.º e 55.º do CIRS. A escada de reduções do art.
@@ -30,18 +35,18 @@ export default function CorpoArrendamentoCategoriaF() {
         </VaiPara>
       </Seccao>
 
-      <Seccao titulo="A taxa autónoma de 25%">
+      <Seccao titulo={`A taxa autónoma de ${pctExato(TAXA)}`}>
         <Paragrafo>
           Os rendimentos prediais de <strong>arrendamento habitacional</strong> são tributados à
-          taxa autónoma de <strong>25%</strong>. Autónoma quer dizer que não se soma aos outros
+          taxa autónoma que está na tabela de dados aqui em baixo. Autónoma quer dizer que não se soma aos outros
           rendimentos nem sobe de escalão com eles: é uma taxa fixa sobre aquele rendimento
           líquido.
         </Paragrafo>
-        <AvisoPrazo titulo="Nem todas as rendas são 25%">
-          Os 25% são a taxa do arrendamento habitacional. Os rendimentos prediais que não caibam aí
-          — arrendamento de escritório, de loja, de armazém, cedência para publicidade — continuam
-          na taxa autónoma geral de <strong>28%</strong>. É a distinção que mais custa dinheiro a
-          quem assume uma taxa única para tudo.
+        <AvisoPrazo titulo={`Nem todas as rendas são ${pctExato(TAXA)}`}>
+          A taxa mais baixa é a do arrendamento habitacional. Os rendimentos prediais que não caibam
+          aí — arrendamento de escritório, de loja, de armazém, cedência para publicidade — ficam na
+          taxa autónoma geral, três pontos acima. É a distinção que mais custa dinheiro a quem
+          assume uma taxa única para tudo, e as duas estão nos dados abaixo.
         </AvisoPrazo>
       </Seccao>
 
@@ -59,9 +64,12 @@ export default function CorpoArrendamentoCategoriaF() {
           <strong>10 pontos</strong> no total das reduções por renovação.
         </Paragrafo>
         <Nota titulo="Porque é que a distinção entre pontos e percentagem importa">
-          Uma redução de 10 pontos sobre 25% dá 15%. Uma redução «de 10%» daria 22,5%. É a
-          diferença entre pagar 15 € ou 22,50 € por cada 100 € de rendimento líquido — e a lei diz
-          pontos percentuais.
+          Uma redução de {pctExato(R5)} em pontos sobre {pctExato(TAXA)} dá{" "}
+          {pctExato(TAXA - R5)}. Se fosse «menos {pctExato(R5)} da taxa», daria{" "}
+          {pctExato(TAXA * (1 - R5))}. É a diferença entre pagar{" "}
+          {((TAXA - R5) * 100).toFixed(2).replace(".", ",")} € ou{" "}
+          {(TAXA * (1 - R5) * 100).toFixed(2).replace(".", ",")} € por cada 100 € de rendimento
+          líquido — e a lei diz pontos percentuais.
         </Nota>
       </Seccao>
 

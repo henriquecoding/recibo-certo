@@ -1,4 +1,5 @@
 import { Seccao, Paragrafo, Nota, AvisoPrazo, Passos, VaiPara } from "@/components/guias/BlocosDireitos";
+import { IMT_PRAZO_PAGAMENTO_DIAS } from "@/lib/fiscal-data";
 
 // Corpo verificado contra o articulado no Portal das Finanças a 06/08/2026:
 // arts. 12.º, 17.º, 9.º, 19.º, 36.º e 49.º do CIMT e art. 1.º do CIS.
@@ -31,7 +32,7 @@ export default function CorpoIMT() {
         </Paragrafo>
         <Paragrafo>
           Acima dos escalões há dois patamares de <strong>taxa única</strong> — e aí sim, aplica-se
-          a taxa a todo o valor, sem parcela nenhuma.
+          a taxa a todo o valor, sem parcela nenhuma. O topo de cada tabela está nos dados abaixo.
         </Paragrafo>
         <Nota titulo="A tabela não está escrita aqui de propósito">
           Os escalões do art. 17.º são atualizados todos os anos pelo Orçamento do Estado. Um número
@@ -45,8 +46,8 @@ export default function CorpoIMT() {
           A finalidade que declaras muda a tabela aplicável, e a diferença é grande. A{" "}
           <strong>habitação própria e permanente</strong> tem uma tabela onde os primeiros escalões
           estão isentos; a habitação secundária e o arrendamento começam a pagar{" "}
-          <strong>desde o primeiro euro</strong>. Prédios rústicos têm taxa de 5% e os restantes
-          prédios urbanos 6,5%.
+          <strong>desde o primeiro euro</strong>. Prédios rústicos e restantes prédios urbanos têm
+          taxas únicas próprias — as três estão na tabela de dados aqui em baixo.
         </Paragrafo>
         <AvisoPrazo titulo="Declarar HPP e não cumprir o destino é uma correção com juros à espera">
           A isenção e a tabela mais favorável dependem de o imóvel ser <em>efetivamente</em> afeto a
@@ -65,8 +66,8 @@ export default function CorpoIMT() {
         </Paragrafo>
         <Paragrafo>
           O limite não é um valor solto: é o topo do 1.º escalão da tabela própria destes
-          compradores. Até lá, IMT zero. Acima dele, a isenção acaba mas o benefício não desaparece
-          de vez — o primeiro escalão continua a 0% e só o excedente é tributado, o que na prática
+          compradores. Até esse limite não há IMT nenhum. Acima dele, a isenção acaba mas o benefício não desaparece
+          de vez — o primeiro escalão continua sem imposto e só o excedente é tributado, o que na prática
           funciona como isenção parcial. Os valores concretos estão na tabela de dados aqui em
           baixo.
         </Paragrafo>
@@ -99,7 +100,7 @@ export default function CorpoIMT() {
             },
             {
               titulo: "Pagar a guia",
-              texto: "No próprio dia da liquidação ou nos 30 dias seguintes. Passado esse prazo a liquidação fica sem efeito e há que a repetir.",
+              texto: `No próprio dia da liquidação ou nos ${IMT_PRAZO_PAGAMENTO_DIAS.value} dias seguintes. Passado esse prazo a liquidação fica sem efeito e há que a repetir.`,
             },
             {
               titulo: "Levar o comprovativo à escritura",

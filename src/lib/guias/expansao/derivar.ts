@@ -41,6 +41,7 @@ import type { AplicabilidadeGuia } from "../aplicabilidade";
 import { GUIAS_EXPANSAO, type GuiaExpansao } from "./catalogo";
 import { CONTEUDO_EXPANSAO } from "./conteudo";
 import { CORPOS_REDIGIDOS } from "./corpos-redigidos";
+import { bindingsDoGuia } from "./dados-motor";
 
 /** Data em que o pacote foi gerado e as fontes verificadas. */
 export const DATA_EXPANSAO = "2026-08-06";
@@ -145,7 +146,11 @@ export const MANIFESTOS_EXPANSAO: GuideManifest[] = GUIAS_EXPANSAO.map((g) => ({
   tempo: g.tempo,
   audiences: g.audiencias,
   effectiveFrom: DE,
-  engineBindings: [],
+  // Que parâmetros de `fiscal-data.ts` este guia usa. Nasceu vazio — os 112
+  // guias entraram sem uma única ligação ao motor, e os números que
+  // mostravam eram texto do pacote. Passou a derivar da tabela de dados:
+  // declarar o que se usa e usar o que se declara é a mesma linha de código.
+  engineBindings: bindingsDoGuia(g.slug),
   relatedGuideIds: g.relacionados,
   relatedToolIds: g.ferramentas,
   // Sem ação FIZ: o pacote não acordou nenhuma capacidade para estes guias,

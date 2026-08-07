@@ -11,7 +11,8 @@ import { CORPOS_REDIGIDOS } from "@/lib/guias/expansao/corpos-redigidos";
 import { CORRECOES_AO_PACOTE } from "@/lib/guias/expansao/correcoes";
 import { dadosDoGuia } from "@/lib/guias/expansao/dados";
 import { FONTES_ACRESCENTADAS } from "@/lib/guias/expansao/fontes-acrescentadas";
-import { DADOS_ACRESCENTADOS } from "@/lib/guias/expansao/dados-acrescentados";
+import { DADOS_MOTOR, bindingsDoGuia } from "@/lib/guias/expansao/dados-motor";
+import { IMI_PRESTACOES } from "@/lib/fiscal-data";
 import { fontesDoGuia } from "@/lib/guias";
 import { guiaSemCorpo, estadoDoGuia, rotuloCurto } from "@/lib/guias/expansao/derivar";
 import { CORPOS } from "@/components/guias/expansao/corpos";
@@ -164,44 +165,39 @@ describe("guias:expansao — critérios de aceitação da secção 5", () => {
     }
   });
 
-  it("uma correção aplicada substitui mesmo o valor do pacote", () => {
-    for (const c of CORRECOES_AO_PACOTE.filter((x) => x.acao === "corrigir")) {
-      const publicado = dadosDoGuia(c.slug).publicaveis.find((d) => d.label === c.dado);
-      expect(publicado?.valor, `${c.slug}/${c.dado}`).toBe(c.verificado);
-      expect(publicado?.valor, `${c.slug}/${c.dado}`).not.toBe(c.noPacote);
-    }
-    for (const c of CORRECOES_AO_PACOTE.filter((x) => x.acao === "reter")) {
-      const labels = dadosDoGuia(c.slug).publicaveis.map((d) => d.label);
-      expect(labels, `${c.slug}/${c.dado}`).not.toContain(c.dado);
-    }
-  });
-
-  it("o que a redação acrescentou ao pacote traz sempre fonte", () => {
-    // O pacote é auditável porque cada campo tem proveniência. O que se lhe
-    // junta durante a redação tem de ser igualmente auditável, senão a
-    // garantia dura até ao primeiro acrescento.
-    for (const [slug, fontes] of Object.entries(FONTES_ACRESCENTADAS)) {
-      expect(guiaExpansao(slug), slug).toBeDefined();
-      expect(fontes.length, slug).toBeGreaterThan(0);
-      for (const id of fontes) expect(LEGAL_SOURCES, `${slug} → ${id}`).toHaveProperty(id);
-    }
-    for (const [slug, dados] of Object.entries(DADOS_ACRESCENTADOS)) {
-      expect(guiaExpansao(slug), slug).toBeDefined();
-      for (const d of dados) {
-        expect(LEGAL_SOURCES, `${slug}/${d.label} → ${d.fonte}`).toHaveProperty(d.fonte);
-        expect(d.nota.length, `${slug}/${d.label}`).toBeGreaterThan(10);
+  it("o valor do pacote que foi corrigido nunca chega à página", () => {
+    // Vale para as duas origens. Quando o guia passou a ser servido pelo
+    // motor, a correção deixa de ser aplicada por substituição de texto —
+    // mas o resultado tem de ser o mesmo: o valor errado não aparece.
+    for (const c of CORRECOES_AO_PACOTE) {
+      const publicados = dadosDoGuia(c.slug).publicaveis;
+      const textoTodo = publicados.map((d) => `${d.label} ${d.valor} ${d.nota}`).join(" | ");
+      expect(textoTodo, `${c.slug}/${c.dado}`).not.toContain(c.noPacote);
+      if (c.acao === "reter") {
+        expect(publicados.map((d) => d.label), `${c.slug}/${c.dado}`).not.toContain(c.dado);
       }
     }
   });
 
-  it("a fonte de um valor acrescentado aparece no bloco de fontes do guia", () => {
-    // De nada serve declarar a fonte no código se o leitor não a vê. Se um
-    // valor é publicado com base num artigo, esse artigo tem de estar
-    // listado na página — é essa a promessa de «fonte por afirmação».
-    for (const [slug, dados] of Object.entries(DADOS_ACRESCENTADOS)) {
+  it("o motor reflete as correções feitas ao pacote", () => {
+    // A correção mais cara foi a do prazo do IMI. Se alguém repuser
+    // «maio e agosto» em `fiscal-data.ts`, isto falha — e é o único sítio
+    // onde repor faria efeito, agora que a página vem do motor.
+    const meses = IMI_PRESTACOES.value.map((p) => p.meses.join(" e "));
+    expect(meses).toContain("maio e novembro");
+    expect(meses).not.toContain("maio e agosto");
+  });
+
+  it("as fontes que a redação acrescentou existem e ficam visíveis", () => {
+    for (const [slug, fontes] of Object.entries(FONTES_ACRESCENTADAS)) {
+      expect(guiaExpansao(slug), slug).toBeDefined();
+      expect(fontes.length, slug).toBeGreaterThan(0);
       const visiveis = new Set(fontesDoGuia(slug).oficiais.map((f) => f.id));
-      for (const d of dados) {
-        expect([...visiveis], `${slug}/${d.label} → ${d.fonte}`).toContain(d.fonte);
+      for (const id of fontes) {
+        expect(LEGAL_SOURCES, `${slug} → ${id}`).toHaveProperty(id);
+        // Declarar a proveniência no código e não a mostrar ao leitor não
+        // seria proveniência nenhuma.
+        expect([...visiveis], `${slug} → ${id}`).toContain(id);
       }
     }
   });
@@ -220,6 +216,65 @@ describe("guias:expansao — critérios de aceitação da secção 5", () => {
       expect(estadoDoGuia(g), g.slug).not.toBe("published");
       expect(manifesto(g.slug)?.reviewer, g.slug).toContain("Por atribuir");
     }
+  });
+});
+
+describe("guias:expansao — nada de hardcode: os números vêm do motor", () => {
+  // Um valor fiscal escrito à mão num guia é um valor que ninguém valida,
+  // que não entra em conta nenhuma, e que continua ali com ar de certo no
+  // dia em que o Orçamento do Estado o muda. Estes três testes existem para
+  // que isso não possa voltar a acontecer sem o CI dar por ela.
+
+  const COM_NUMERO = /\d/;
+
+  it("todo o guia publicado serve a tabela de dados a partir do motor", () => {
+    const semMotor = comCorpo
+      .filter((g) => CONTEUDO_EXPANSAO[g.slug].dados.length > 0)
+      .filter((g) => dadosDoGuia(g.slug).origem !== "motor")
+      .map((g) => g.slug);
+    expect(semMotor).toEqual([]);
+  });
+
+  it("cada valor mostrado declara o parâmetro do motor de onde saiu", () => {
+    for (const [slug, dados] of Object.entries(DADOS_MOTOR)) {
+      expect(guiaExpansao(slug), slug).toBeDefined();
+      for (const d of dados) {
+        expect(d.binding.length, `${slug}/${d.label}`).toBeGreaterThan(2);
+        expect(d.nota.length, `${slug}/${d.label}`).toBeGreaterThan(10);
+      }
+    }
+  });
+
+  it("o manifesto declara os parâmetros que o guia usa", () => {
+    // `engineBindings` era uma lista vazia nos 112 guias. Deixa de poder
+    // sê-lo em qualquer guia que mostre números.
+    for (const g of comCorpo) {
+      const bindings = bindingsDoGuia(g.slug);
+      if (bindings.length === 0) continue;
+      expect(manifesto(g.slug)?.engineBindings, g.slug).toEqual(bindings);
+    }
+    const publicadosComNumeros = comCorpo.filter((g) =>
+      dadosDoGuia(g.slug).publicaveis.some((d) => COM_NUMERO.test(d.valor)),
+    );
+    for (const g of publicadosComNumeros) {
+      expect(manifesto(g.slug)!.engineBindings.length, g.slug).toBeGreaterThan(0);
+    }
+  });
+
+  it("o corpo de um guia não escreve percentagens à mão", () => {
+    // Uma percentagem no JSX de um corpo é um número fora do motor. Os
+    // corpos falam de «a taxa está na tabela de dados» e a tabela vem de
+    // `fiscal-data.ts` — quem escrever "25%" no texto parte este teste.
+    const dir = join(process.cwd(), "src/components/guias/expansao/corpos");
+    const infratores: string[] = [];
+    for (const ficheiro of readdirSync(dir).filter((f) => f.endsWith(".tsx"))) {
+      const fonte = readFileSync(join(dir, ficheiro), "utf8");
+      const corpo = fonte.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+      for (const m of corpo.matchAll(/\b\d+(?:[.,]\d+)?\s*%/g)) {
+        infratores.push(`${ficheiro}: "${m[0]}"`);
+      }
+    }
+    expect(infratores).toEqual([]);
   });
 });
 
