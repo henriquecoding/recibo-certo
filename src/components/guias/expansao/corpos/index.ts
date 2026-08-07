@@ -7,6 +7,11 @@ import CorpoImpostoSeloCompraCasa from "./imposto-selo-compra-casa";
 import CorpoDespesasSenhorio from "./despesas-senhorio";
 import CorpoArrendamentoCategoriaF from "./arrendamento-categoria-f";
 import CorpoReciboRendaModelo44 from "./recibo-renda-modelo-44";
+import CorpoMaisValiasImoveis from "./mais-valias-imoveis";
+import CorpoAlojamentoLocal from "./alojamento-local";
+import CorpoAlVsArrendamento from "./al-vs-arrendamento";
+import CorpoHerdarImovel from "./herdar-imovel";
+import CorpoImovelEmpresaOuPessoal from "./imovel-empresa-ou-pessoal";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  CORPOS REDIGIDOS DOS GUIAS DA EXPANSÃO
@@ -29,4 +34,9 @@ export const CORPOS: Record<string, ComponentType> = {
   "despesas-senhorio": CorpoDespesasSenhorio,
   "arrendamento-categoria-f": CorpoArrendamentoCategoriaF,
   "recibo-renda-modelo-44": CorpoReciboRendaModelo44,
+  "mais-valias-imoveis": CorpoMaisValiasImoveis,
+  "alojamento-local": CorpoAlojamentoLocal,
+  "al-vs-arrendamento": CorpoAlVsArrendamento,
+  "herdar-imovel": CorpoHerdarImovel,
+  "imovel-empresa-ou-pessoal": CorpoImovelEmpresaOuPessoal,
 };

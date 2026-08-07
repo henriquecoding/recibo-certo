@@ -37,4 +37,13 @@ export const CORPOS_REDIGIDOS: ReadonlySet<string> = new Set([
   "arrendamento-categoria-f",
   "despesas-senhorio",
   "recibo-renda-modelo-44",
+  // ── Venda, herança e a decisão do AL ────────────────────────────────
+  //    O reinvestimento em imóveis para arrendamento a renda moderada vinha
+  //    no pacote como «CONFIRMAR redação final»: está em vigor, com a
+  //    redação que o Decreto-Lei n.º 97/2026 deu aos n.os 7 e 8 do art. 10.º.
+  "mais-valias-imoveis",
+  "alojamento-local",
+  "al-vs-arrendamento",
+  "herdar-imovel",
+  "imovel-empresa-ou-pessoal",
 ]);

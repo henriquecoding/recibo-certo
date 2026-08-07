@@ -289,8 +289,20 @@ export const LEGAL_SOURCES = {
   // modelo oficial, ou declaração anual até ao fim de fevereiro. Verificado
   // a 2026-08-06.
   cirs115: at("cirs115", "115.º", "Art. 115.º CIRS — Emissão de recibos e faturas", "irs115", "cirs_rep"),
+  // Herdar não custa imposto na maioria das famílias — custa quando se
+  // vende. É este artigo que fixa o valor de aquisição de quem recebeu a
+  // título gratuito, e sem ele o guia da herança não conseguia responder à
+  // única pergunta que aparece dez anos depois. Verificado a 2026-08-06.
+  cirs45: at("cirs45", "45.º", "Art. 45.º CIRS — Valor de aquisição a título gratuito", "irs45", "cirs_rep"),
 
   // ── CIVA ─────────────────────────────────────────────────────────────
+  // Comprar o imóvel pela empresa deduz depreciações — e o art. 46.º
+  // recupera-as todas no dia da venda, porque manda deduzir ao valor de
+  // aquisição as depreciações aceites fiscalmente. É a metade da conta que
+  // costuma faltar na decisão. Verificados a 2026-08-06.
+  circ46: at("circ46", "46.º", "Art. 46.º CIRC — Conceito de mais-valias e de menos-valias", "irc46", "CIRC_2R"),
+  circ47: at("circ47", "47.º", "Art. 47.º CIRC — Correção monetária das mais-valias e das menos-valias", "irc47", "CIRC_2R"),
+
   civa6: at("civa6", "6.º", "Art. 6.º CIVA — Localização das operações", "iva6", "civa_rep"),
   civa9: at("civa9", "9.º", "Art. 9.º CIVA — Isenções nas operações internas", "iva9", "civa_rep"),
   civa18: at("civa18", "18.º", "Art. 18.º CIVA — Taxas do imposto", "iva18", "civa_rep"),

@@ -80,6 +80,18 @@ export const CORRECOES_AO_PACOTE: CorrecaoAoPacote[] = [
     fonte: "cirs72",
     verificadoEm: EM,
   },
+  {
+    slug: "alojamento-local",
+    dado: "Coeficiente — zonas de contenção",
+    noPacote: "0,50 (confirmar delimitação municipal aplicável)",
+    verificado: "0,50",
+    notaVerificada: "alojamento local em moradia ou apartamento localizado em área de contenção · art. 31.º, n.º 1, al. h) CIRS. A delimitação das áreas é municipal e muda: verifica-a por morada, na câmara do teu concelho.",
+    acao: "corrigir",
+    motivo:
+      "O coeficiente está confirmado: a al. h) do n.º 1 do art. 31.º do CIRS, aditada pela Lei n.º 2/2020, fixa 0,50 para o alojamento local em moradia ou apartamento localizado em área de contenção. O que continua a variar — e é o que o pacote mandava confirmar — é a DELIMITAÇÃO das áreas, que é municipal. Reter o coeficiente por causa da delimitação seria esconder um valor certo por causa de um dado que nunca será fixo; a nota passa a dizer isso ao leitor.",
+    fonte: "cirs31",
+    verificadoEm: EM,
+  },
 ];
 
 const POR_SLUG = new Map<string, CorrecaoAoPacote[]>();

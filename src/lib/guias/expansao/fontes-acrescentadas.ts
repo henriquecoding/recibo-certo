@@ -21,14 +21,20 @@ export const FONTES_ACRESCENTADAS: Record<string, string[]> = {
   // PDF do código consolidado. Sem ela, os 0,8% da escritura e os 0,60% do
   // crédito de longo prazo ficavam sem fonte.
   "imposto-selo-compra-casa": ["tgis"],
-  // Mesma razão, do outro lado da tabela: a verba 1.2 (transmissões
-  // gratuitas, 10%) e a isenção da al. e) do art. 6.º só fazem sentido
-  // juntas.
-  "herdar-imovel": ["tgis"],
   // O guia explica que documento se emite e em que prazo. Isso é o art.
   // 115.º, n.º 5 — que o pacote não incluía porque não conseguiu abrir a
   // página. Abre: verificada a 06/08/2026.
   "recibo-renda-modelo-44": ["cirs115"],
+  // Do outro lado da Tabela Geral: a verba 1.2 fixa a taxa das transmissões
+  // gratuitas, e a isenção da al. e) do art. 6.º só faz sentido ao lado
+  // dela. E quem herda não paga (quase sempre) — quem vende o que herdou,
+  // paga, e o valor de aquisição a título gratuito é o do art. 45.º.
+  "herdar-imovel": ["tgis", "cirs45"],
+  // A decisão empresa-ou-pessoal joga-se na venda, não na compra: o art.
+  // 46.º manda deduzir ao valor de aquisição as depreciações que a empresa
+  // foi deduzindo, e o art. 47.º só corrige a inflação a partir de dois
+  // anos. Nenhum dos dois vinha no pacote.
+  "imovel-empresa-ou-pessoal": ["circ46", "circ47"],
 };
 
 export const fontesAcrescentadas = (slug: string): string[] => FONTES_ACRESCENTADAS[slug] ?? [];
