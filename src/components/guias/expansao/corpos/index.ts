@@ -62,6 +62,17 @@ import CorpoIrsPensionistas from "./irs-pensionistas";
 import CorpoReformadoRecibosVerdes from "./reformado-recibos-verdes";
 import CorpoReformaIndependentes from "./reforma-independentes";
 import CorpoPensaoEstrangeira from "./pensao-estrangeira";
+import CorpoMudarRegimeIva from "./mudar-regime-iva";
+import CorpoNotaDeCredito from "./nota-de-credito";
+import CorpoAtcudQrCode from "./atcud-qr-code";
+import CorpoFaturacaoEletronica from "./faturacao-eletronica";
+import CorpoProgramaFaturacaoCertificado from "./programa-faturacao-certificado";
+import CorpoRenunciarIsencaoIva from "./renunciar-isencao-iva";
+import CorpoRegimeIsencaoUe from "./regime-isencao-ue";
+import CorpoVies from "./vies";
+import CorpoAutoliquidacaoIva from "./autoliquidacao-iva";
+import CorpoOssIva from "./oss-iva";
+import CorpoIoss from "./ioss";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  CORPOS REDIGIDOS DOS GUIAS DA EXPANSÃO
@@ -139,4 +150,15 @@ export const CORPOS: Record<string, ComponentType> = {
   "reformado-recibos-verdes": CorpoReformadoRecibosVerdes,
   "reforma-independentes": CorpoReformaIndependentes,
   "pensao-estrangeira": CorpoPensaoEstrangeira,
+  "mudar-regime-iva": CorpoMudarRegimeIva,
+  "nota-de-credito": CorpoNotaDeCredito,
+  "atcud-qr-code": CorpoAtcudQrCode,
+  "faturacao-eletronica": CorpoFaturacaoEletronica,
+  "programa-faturacao-certificado": CorpoProgramaFaturacaoCertificado,
+  "renunciar-isencao-iva": CorpoRenunciarIsencaoIva,
+  "regime-isencao-ue": CorpoRegimeIsencaoUe,
+  "vies": CorpoVies,
+  "autoliquidacao-iva": CorpoAutoliquidacaoIva,
+  "oss-iva": CorpoOssIva,
+  "ioss": CorpoIoss,
 };

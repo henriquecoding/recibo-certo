@@ -203,6 +203,30 @@ export const CORPOS_REDIGIDOS: ReadonlySet<string> = new Set([
   "reformado-recibos-verdes",
   "reforma-independentes",
   "pensao-estrangeira",
+
+  // ── Faturar ─────────────────────────────────────────────────────────
+  //    Todo este bloco foi lido na coleção CONSOLIDADA do CIVA — a mesma
+  //    cujo caminho o pacote errava —, já com a redação do Decreto-Lei n.º
+  //    35/2025. Essa reforma mudou a epígrafe do art. 53.º e abriu o
+  //    regime de isenção a sujeitos passivos de outros Estados-Membros,
+  //    com um segundo limiar à escala da União e o número com sufixo EX.
+  "mudar-regime-iva",
+  "renunciar-isencao-iva",
+  "regime-isencao-ue",
+  "nota-de-credito",
+  "autoliquidacao-iva",
+  "vies",
+  "oss-iva",
+  "ioss",
+  //    Três guias sem UMA data e sem UM limiar, de propósito: o pacote
+  //    marca a faturação eletrónica com «MÁXIMA PRIORIDADE DE VERIFICAÇÃO
+  //    — as datas foram sucessivamente adiadas por diplomas anuais, NÃO
+  //    publicar sem confirmar». O DL 28/2019 não tem articulado legível
+  //    (o Diário da República serve um shell vazio). Descrevem o
+  //    mecanismo, que é estável, e mandam confirmar o calendário.
+  "atcud-qr-code",
+  "faturacao-eletronica",
+  "programa-faturacao-certificado",
   //    Falta `reforma-antecipada`: o pacote marca-o «SEM BASE LEGAL NO
   //    CATÁLOGO» e avisa que a idade normal de acesso e o fator de
   //    sustentabilidade são fixados por portaria anual. Fica andaime até

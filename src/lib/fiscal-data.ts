@@ -124,6 +124,22 @@ export const SOURCES = {
     label: "Art. 58.º EBF — Propriedade intelectual: englobamento por 50%, só ao titular originário, com o teto de 10 000 € · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-58-ordm-.aspx",
   },
+  civa36: {
+    label: "Art. 36.º CIVA — Prazo de emissão e formalidades das faturas: 5.º dia útil, 15.º dia do mês seguinte nas intracomunitárias, data do recebimento nos adiantamentos · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva36.aspx",
+  },
+  civa53: {
+    label: "Art. 53.º CIVA — Âmbito de aplicação no território nacional: limiar de 15 000 €, e o regime transfronteiriço com o limiar de 100 000 € na União e o número EX · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-53-o-do-civa.aspx",
+  },
+  civa58: {
+    label: "Art. 58.º CIVA — Cessação do regime de isenção: a regra dos 25%, o efeito imediato e os 15 dias úteis para a declaração de alterações · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva58.aspx",
+  },
+  civa78: {
+    label: "Art. 78.º CIVA — Regularizações: prazos de retificação e a prova exigida para regularizar a favor do sujeito passivo · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva78.aspx",
+  },
   civa9: {
     label: "Art. 9.º CIVA — Isenções nas operações internas: saúde, ensino, formação profissional e lições particulares · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva9.aspx",
@@ -633,6 +649,10 @@ const REV_INFRACOES = "2026-08-07";
 // Data de verificação do bloco da proteção social dos independentes e das
 // pensões — art. 53.º do CIRS e o Código dos Regimes Contributivos.
 const REV_PROTECAO_2026 = "2026-08-07";
+// Data de verificação do bloco da faturação e do regime de isenção de IVA —
+// arts. 36.º, 53.º, 58.º e 78.º do CIVA na coleção consolidada, já com a
+// redação do Decreto-Lei n.º 35/2025.
+const REV_FATURACAO = "2026-08-07";
 // Data de verificação dos coeficientes de desvalorização da moeda (Portaria 382/2025).
 const REV_COEF_MOEDA = "2026-06-23";
 // Data de verificação do Salário Mínimo Nacional 2026 (RMMG 920 €, DL 139/2025).
@@ -977,6 +997,161 @@ export const CREDITO_TRIBUTARIO_INDISPONIVEL = {
     "lgt30",
     REV_INFRACOES,
     "É este número que sustenta a tese de que a exoneração do passivo restante não abrange créditos tributários. A jurisprudência não é unânime."
+  ),
+} as const;
+
+
+/**
+ * Faturar — os prazos do Art. 36.º e as regularizações do Art. 78.º do
+ * CIVA, lidos na coleção consolidada a 07/08/2026.
+ *
+ * O prazo da fatura não é um só: são três, e o que os separa é o momento
+ * em que o imposto se torna devido. O caso dos adiantamentos é o que mais
+ * apanha gente — a fatura emite-se na DATA DO RECEBIMENTO, mesmo que o
+ * serviço ainda não tenha sido prestado.
+ */
+export const FATURACAO_PRAZOS = {
+  /** A regra geral. */
+  regraGeralDiasUteis: sv(
+    5,
+    "Art. 36.º, n.º 1, al. a) CIVA — a fatura deve ser emitida o mais tardar no 5.º dia útil seguinte ao do momento em que o imposto é devido nos termos do Art. 7.º",
+    "civa36",
+    REV_FATURACAO
+  ),
+  /** Prestações intracomunitárias de serviços tributáveis noutro Estado. */
+  intracomunitariasAteDiaDoMesSeguinte: sv(
+    15,
+    "Art. 36.º, n.º 1, al. b) CIVA — o mais tardar no 15.º dia do mês seguinte àquele em que o imposto é devido, nas prestações intracomunitárias de serviços tributáveis no território de outro Estado-Membro",
+    "civa36",
+    REV_FATURACAO
+  ),
+  /** Adiantamentos: o caso que apanha mais gente. */
+  adiantamentos: sv(
+    "na data do recebimento",
+    "Art. 36.º, n.º 1, al. c) CIVA — no caso de pagamentos relativos a transmissão de bens ou prestação de serviços ainda não efetuada",
+    "civa36",
+    REV_FATURACAO,
+    "Um sinal recebido em dezembro por trabalho de janeiro fatura-se em dezembro."
+  ),
+  /** Faturas globais. */
+  globaisDiasUteis: sv(
+    5,
+    "Art. 36.º, n.º 2 CIVA — o processamento das faturas globais não pode ir além de cinco dias úteis do termo do período a que respeitam",
+    "civa36",
+    REV_FATURACAO
+  ),
+} as const;
+
+/**
+ * Regularizações de IVA — Art. 78.º do CIVA.
+ *
+ * A assimetria é toda a matéria: corrigir a favor do Estado é
+ * OBRIGATÓRIO e tem prazo curto sem penalidade; corrigir a favor do
+ * sujeito passivo é FACULTATIVO, tem prazo longo — e exige prova.
+ */
+export const REGULARIZACAO_IVA = {
+  /** Anulação ou redução do valor tributável. */
+  anulacaoAtePeriodoSeguinte: sv(
+    "até ao final do período de imposto seguinte",
+    "Art. 78.º, n.º 2 CIVA — anulada a operação ou reduzido o valor tributável, o fornecedor pode deduzir o imposto correspondente até ao final do período de imposto seguinte àquele em que se verificarem as circunstâncias",
+    "civa78",
+    REV_FATURACAO
+  ),
+  /** Imposto liquidado a menos: obrigatório. */
+  aMenosObrigatorio: sv(
+    true,
+    "Art. 78.º, n.º 3 CIVA — nos casos de faturas inexatas, a retificação é obrigatória quando houver imposto liquidado a menos, podendo ser efetuada sem qualquer penalidade até ao final do período seguinte àquele a que respeita a fatura",
+    "civa78",
+    REV_FATURACAO
+  ),
+  /** Imposto liquidado a mais: facultativo, com prazo de dois anos. */
+  aMaisPrazoAnos: sv(
+    2,
+    "Art. 78.º, n.º 3 CIVA — a retificação é facultativa quando houver imposto liquidado a mais, mas apenas pode ser efetuada no prazo de dois anos",
+    "civa78",
+    REV_FATURACAO
+  ),
+  /** A condição que invalida a regularização mal feita. */
+  provaExigida: sv(
+    "prova de que o adquirente tomou conhecimento da retificação ou de que foi reembolsado do imposto",
+    "Art. 78.º, n.º 5 CIVA — sem ela, considera-se indevida a respetiva dedução",
+    "civa78",
+    REV_FATURACAO
+  ),
+  /** O prazo do lado de quem recebe a nota de crédito. */
+  adquirenteCorrigeAte: sv(
+    "até ao fim do período de imposto seguinte ao da receção do documento retificativo",
+    "Art. 78.º, n.º 4 CIVA — o adquirente sujeito passivo corrige a dedução efetuada",
+    "civa78",
+    REV_FATURACAO
+  ),
+} as const;
+
+/**
+ * O regime de isenção do Art. 53.º e a sua cessação (Art. 58.º), na
+ * redação do Decreto-Lei n.º 35/2025.
+ *
+ * A reforma de 2025 fez duas coisas ao mesmo tempo: mudou a epígrafe do
+ * Art. 53.º para «Âmbito de aplicação no território nacional» e abriu o
+ * regime a sujeitos passivos de outros Estados-Membros — com um segundo
+ * limiar, este à escala da União, e um número de identificação próprio
+ * com o sufixo «EX».
+ */
+export const ISENCAO_IVA_REGIME = {
+  /** O limiar nacional. */
+  limiarNacional: sv(
+    15000,
+    "Art. 53.º, n.º 1 CIVA (redação do Decreto-Lei n.º 35/2025) — volume de negócios anual em território nacional não superior a 15 000 €, no ano civil anterior",
+    "civa53",
+    REV_FATURACAO
+  ),
+  /** O limiar do regime transfronteiriço. */
+  limiarUniao: sv(
+    100000,
+    "Art. 53.º, n.º 2, al. a) CIVA — o volume de negócios anual na União Europeia do sujeito passivo não pode exceder 100 000 €",
+    "civa53",
+    REV_FATURACAO
+  ),
+  /** O identificador do regime transfronteiriço. */
+  sufixoIdentificacao: sv(
+    "EX",
+    "Art. 53.º, n.º 2, al. c) CIVA — número individual de identificação com o sufixo «EX», obtido no Estado-Membro de estabelecimento",
+    "civa53",
+    REV_FATURACAO
+  ),
+  /** O que a isenção custa. */
+  semDireitoADeducao: sv(
+    true,
+    "Art. 53.º, n.º 3 CIVA — os sujeitos passivos isentos estão excluídos do direito à dedução previsto nos artigos 19.º e 20.º e do direito ao reembolso",
+    "civa53",
+    REV_FATURACAO
+  ),
+  /** A margem que torna a mudança imediata. */
+  excessoQueTornaImediato: sv(
+    0.25,
+    "Art. 58.º, n.º 2, al. b) CIVA — deixa de poder beneficiar da isenção quem, no ano civil em curso, exceda o limiar em mais de 25%",
+    "civa58",
+    REV_FATURACAO
+  ),
+  /** Quando passa a ser devido imposto, em cada caso. */
+  efeitoNoAnoSeguinte: sv(
+    "a partir de 1 de janeiro do ano seguinte",
+    "Art. 58.º, n.º 4, al. a) CIVA — quando o limiar tenha sido ultrapassado no ano civil anterior",
+    "civa58",
+    REV_FATURACAO
+  ),
+  efeitoImediato: sv(
+    "a partir do momento em que o limiar é excedido em mais de 25%",
+    "Art. 58.º, n.º 4, al. b) CIVA",
+    "civa58",
+    REV_FATURACAO
+  ),
+  /** O prazo da declaração de alterações. */
+  prazoDeclaracaoAlteracoesDiasUteis: sv(
+    15,
+    "Art. 58.º, n.º 5 CIVA — declaração de alterações do Art. 32.º, no prazo de 15 dias úteis",
+    "civa58",
+    REV_FATURACAO
   ),
 } as const;
 

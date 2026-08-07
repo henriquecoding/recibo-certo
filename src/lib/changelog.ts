@@ -19,6 +19,23 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.21.0",
+    data: "2026-08-07",
+    titulo: "Faturar, do ATCUD ao IVA na Europa — e um regime novo que quase ninguém conhece",
+    itens: [
+      "A secção «Faturar» ficou completa: onze guias sobre o ATCUD e o QR, a faturação eletrónica, o programa certificado, as notas de crédito, a autoliquidação, o VIES, o balcão único e a mudança de regime de IVA.",
+      "Desde 2025 há um regime que permite a uma pequena empresa portuguesa beneficiar da isenção de IVA NOUTROS países da União — sem se registar em cada um. Exige volume de negócios na União até 100 000 €, notificação prévia a Portugal e um número próprio com o sufixo EX. É novidade e está muito pouco explicado em português.",
+      "Passar os 15 000 € tem duas velocidades: se ultrapassaste no ano anterior, o IVA só é devido a partir de 1 de janeiro seguinte; se excedeste em mais de 25 % durante o ano, é devido a partir do momento da operação que o provocou. A fatura que passa esse patamar já leva IVA.",
+      "E há 15 dias úteis para entregar a declaração de alterações — um prazo curto que quase ninguém conhece.",
+      "Quem sai da isenção pode recuperar IVA que suportou antes: há um mecanismo de regularização para existências e bens do ativo adquiridos enquanto se estava isento. Tem prazo, ninguém avisa, e é dinheiro real para quem acabou de investir.",
+      "Estar isento do artigo 53.º NÃO dispensa o registo para operações intracomunitárias. É a lacuna mais comum de quem começa a faturar para fora — e vale nos dois sentidos: também quem compra software ou publicidade a fornecedores da União tem de autoliquidar o IVA cá, mesmo estando isento.",
+      "Um documento já comunicado à Autoridade Tributária não se apaga: corrige-se por nota de crédito. Apagar do programa não apaga da AT — o documento continua a contar para o teu volume de negócios e a aparecer no e-Fatura do cliente.",
+      "E regularizar IVA a teu favor exige prova de que o cliente tomou conhecimento da retificação. Sem ela, a lei considera a dedução indevida. É o requisito que quase toda a gente ignora.",
+      "Sobre a faturação eletrónica não publicámos uma única data, de propósito: foram sucessivamente adiadas por diplomas anuais e não conseguimos confirmar o calendário em vigor em fonte oficial legível. Os guias explicam as três obrigações que se confundem — o PDF, o formato estruturado e o SAF-T da contabilidade — e mandam confirmar as datas antes de qualquer decisão de investimento.",
+      "Pela mesma razão não fixámos os limiares do programa de faturação certificado. Mas há um critério que apanha muita gente e não depende de limiar nenhum: quem usa um programa informático para faturar é obrigado a que ele seja certificado — e uma folha de cálculo conta como programa informático.",
+    ],
+  },
+  {
     version: "2.20.0",
     data: "2026-08-07",
     titulo: "Contribuições e reforma — a decisão trimestral que vale uma vida",

@@ -31,6 +31,7 @@ import {
   CREDITO_IMPOSTO_ESTRANGEIRO,
   DEDUCAO_ESPECIFICA_PENSOES,
   DISPENSA_COIMA,
+  FATURACAO_PRAZOS,
   ENTIDADE_CONTRATANTE,
   ENTIDADE_CONTRATANTE_LIMIAR_CALC,
   DEDUCAO_PPR,
@@ -58,7 +59,10 @@ import {
   IMT_TAXA_COMERCIAL,
   IMT_TAXA_RUSTICO,
   IRS_AUTOMATICO,
+  ISENCAO_IVA_REGIME,
+  IVA_ISENCAO_EXCESSO,
   IVA_ISENCAO_LIMITE,
+  IVA_TAXAS,
   ISENCOES_CIVA_PROFISSOES,
   IS_CREDITO,
   IS_TAXA_AQUISICAO,
@@ -79,6 +83,7 @@ import {
   PROGRAMA_REGRESSAR_TETO_CALC,
   PROPRIEDADE_INTELECTUAL_EBF,
   REDUCAO_COIMA,
+  REGULARIZACAO_IVA,
   REGIME_15PCT,
   REGIME_SIMPLIFICADO,
   RETENCAO,
@@ -670,6 +675,88 @@ export const DADOS_MOTOR: Record<string, DadoDoMotor[]> = {
     d("CREDITO_IMPOSTO_ESTRANGEIRO", "Se houve imposto retido lá fora", "o menor dos dois limites", `${CREDITO_IMPOSTO_ESTRANGEIRO.duploLimite.value.join(" · ")} · art. 81.º, n.º 1 CIRS`),
     d("CREDITO_IMPOSTO_ESTRANGEIRO", "Reporte por insuficiência de coleta", `${CREDITO_IMPOSTO_ESTRANGEIRO.reporteAnos.value} anos`, "art. 81.º, n.º 3 CIRS"),
     d("RESIDENCIA_FISCAL", "O que decide onde declaras", `mais de ${RESIDENCIA_FISCAL.diasPermanencia.value} dias`, `em qualquer período de ${RESIDENCIA_FISCAL.janelaMeses.value} meses — ou o critério da habitação · art. 16.º, n.º 1 CIRS`),
+  ],
+
+  // ── Faturar ──────────────────────────────────────────────────────────
+  //    O bloco do IVA foi lido na coleção CONSOLIDADA (`civa_rep`), já com
+  //    a redação do Decreto-Lei n.º 35/2025 — que mudou a epígrafe do art.
+  //    53.º e abriu o regime de isenção a sujeitos passivos de outros
+  //    Estados-Membros, com um segundo limiar à escala da União.
+  "mudar-regime-iva": [
+    d("ISENCAO_IVA_REGIME", "Limiar nacional", fmt(ISENCAO_IVA_REGIME.limiarNacional.value), "volume de negócios anual em território nacional, no ano civil anterior · art. 53.º, n.º 1 CIVA"),
+    d("ISENCAO_IVA_REGIME", "Ultrapassagem que torna a mudança imediata", `mais de ${pctExato(ISENCAO_IVA_REGIME.excessoQueTornaImediato.value)} do limiar`, `isto é, acima de ${fmt(IVA_ISENCAO_EXCESSO.value)} · art. 58.º, n.º 2, al. b) CIVA`),
+    d("ISENCAO_IVA_REGIME", "Ultrapassagem no ano anterior — efeito", ISENCAO_IVA_REGIME.efeitoNoAnoSeguinte.value, "art. 58.º, n.º 4, al. a) CIVA"),
+    d("ISENCAO_IVA_REGIME", "Ultrapassagem acima de 25% — efeito", ISENCAO_IVA_REGIME.efeitoImediato.value, "art. 58.º, n.º 4, al. b) CIVA"),
+    d("ISENCAO_IVA_REGIME", "Prazo da declaração de alterações", `${ISENCAO_IVA_REGIME.prazoDeclaracaoAlteracoesDiasUteis.value} dias úteis`, "declaração do art. 32.º · art. 58.º, n.º 5 CIVA"),
+    d("IVA_TAXAS", "Taxa normal — continente", pctExato(IVA_TAXAS.continente.value.normal), "a que passas a liquidar · art. 18.º CIVA"),
+  ],
+
+  "renunciar-isencao-iva": [
+    d("ISENCAO_IVA_REGIME", "Limiar da isenção", fmt(ISENCAO_IVA_REGIME.limiarNacional.value), "volume de negócios anual em território nacional · art. 53.º, n.º 1 CIVA"),
+    d("ISENCAO_IVA_REGIME", "O que a isenção custa", "sem direito à dedução nem a reembolso", "os isentos estão excluídos do direito à dedução dos arts. 19.º e 20.º · art. 53.º, n.º 3 CIVA"),
+    d("IVA_TAXAS", "Taxa normal — continente", pctExato(IVA_TAXAS.continente.value.normal), "a que passarias a liquidar · art. 18.º CIVA"),
+    d("IVA_TAXAS", "Taxa intermédia — continente", pctExato(IVA_TAXAS.continente.value.intermedia), "art. 18.º CIVA"),
+    d("IVA_TAXAS", "Taxa reduzida — continente", pctExato(IVA_TAXAS.continente.value.reduzida), "art. 18.º CIVA"),
+  ],
+
+  "regime-isencao-ue": [
+    d("ISENCAO_IVA_REGIME", "Limiar nacional", fmt(ISENCAO_IVA_REGIME.limiarNacional.value), "volume de negócios anual em território nacional · art. 53.º, n.º 1 CIVA"),
+    d("ISENCAO_IVA_REGIME", "Limiar na União", fmt(ISENCAO_IVA_REGIME.limiarUniao.value), "o volume de negócios anual na União Europeia não pode exceder este valor · art. 53.º, n.º 2, al. a) CIVA"),
+    d("ISENCAO_IVA_REGIME", "Identificação do regime", `sufixo «${ISENCAO_IVA_REGIME.sufixoIdentificacao.value}»`, "número individual obtido no Estado-Membro de estabelecimento · art. 53.º, n.º 2, al. c) CIVA"),
+    d("ISENCAO_IVA_REGIME", "Notificação prévia", "ao Estado-Membro de estabelecimento", "de que se pretende beneficiar da isenção no outro território · art. 53.º, n.º 2, al. b) CIVA"),
+    d("ISENCAO_IVA_REGIME", "Quando cessa", "ao exceder o limiar da União", "no ano anterior ou no ano em curso · art. 58.º, n.º 3 CIVA"),
+    d("ISENCAO_IVA_REGIME", "O que a isenção custa", "sem direito à dedução nem a reembolso", "art. 53.º, n.º 3 CIVA"),
+  ],
+
+  "nota-de-credito": [
+    d("REGULARIZACAO_IVA", "Anulação ou redução do valor tributável", REGULARIZACAO_IVA.anulacaoAtePeriodoSeguinte.value, "prazo para o fornecedor deduzir o imposto correspondente · art. 78.º, n.º 2 CIVA"),
+    d("REGULARIZACAO_IVA", "Imposto liquidado a MENOS", "retificação obrigatória", "sem penalidade até ao final do período seguinte àquele a que respeita a fatura · art. 78.º, n.º 3 CIVA"),
+    d("REGULARIZACAO_IVA", "Imposto liquidado a MAIS", `facultativa, ${REGULARIZACAO_IVA.aMaisPrazoAnos.value} anos`, "art. 78.º, n.º 3 CIVA"),
+    d("REGULARIZACAO_IVA", "Regularizar a teu favor exige", REGULARIZACAO_IVA.provaExigida.value, "sem ela, a dedução considera-se indevida · art. 78.º, n.º 5 CIVA"),
+    d("REGULARIZACAO_IVA", "Do lado de quem recebe a nota de crédito", REGULARIZACAO_IVA.adquirenteCorrigeAte.value, "art. 78.º, n.º 4 CIVA"),
+    d("FATURACAO_PRAZOS", "Prazo de emissão da fatura", `${FATURACAO_PRAZOS.regraGeralDiasUteis.value}.º dia útil`, "seguinte ao momento em que o imposto é devido · art. 36.º, n.º 1, al. a) CIVA"),
+  ],
+
+  "autoliquidacao-iva": [
+    d("FATURACAO_PRAZOS", "Prazo — prestações intracomunitárias de serviços", `até ao dia ${FATURACAO_PRAZOS.intracomunitariasAteDiaDoMesSeguinte.value} do mês seguinte`, "quando tributáveis no território de outro Estado-Membro · art. 36.º, n.º 1, al. b) CIVA"),
+    d("FATURACAO_PRAZOS", "Prazo — regra geral", `${FATURACAO_PRAZOS.regraGeralDiasUteis.value}.º dia útil`, "seguinte ao momento em que o imposto é devido · art. 36.º, n.º 1, al. a) CIVA"),
+    d("IVA_TAXAS", "Taxa normal — continente", pctExato(IVA_TAXAS.continente.value.normal), "a que o adquirente liquida, quando é ele o devedor · art. 18.º CIVA"),
+  ],
+
+  "vies": [
+    d("ISENCAO_IVA_REGIME", "Estar isento do art. 53.º dispensa o registo?", "não", "o registo para operações intracomunitárias é autónomo do regime de isenção interno"),
+    d("FATURACAO_PRAZOS", "Prazo da fatura intracomunitária", `até ao dia ${FATURACAO_PRAZOS.intracomunitariasAteDiaDoMesSeguinte.value} do mês seguinte`, "art. 36.º, n.º 1, al. b) CIVA"),
+    d("IVA_TAXAS", "Se o número não for válido", pctExato(IVA_TAXAS.continente.value.normal), "liquidas IVA português à taxa normal, como numa operação interna · art. 18.º CIVA"),
+  ],
+
+  "oss-iva": [
+    d("IVA_TAXAS", "Portugal continental — taxa normal", pctExato(IVA_TAXAS.continente.value.normal), "cada Estado-Membro tem as suas; é o que torna o OSS necessário · art. 18.º CIVA"),
+    d("IVA_TAXAS", "Madeira — taxa normal", pctExato(IVA_TAXAS.madeira.value.normal), "art. 18.º CIVA"),
+    d("IVA_TAXAS", "Açores — taxa normal", pctExato(IVA_TAXAS.acores.value.normal), "art. 18.º CIVA"),
+    d("FATURACAO_PRAZOS", "Prazo da fatura — regra geral", `${FATURACAO_PRAZOS.regraGeralDiasUteis.value}.º dia útil`, "art. 36.º, n.º 1, al. a) CIVA"),
+  ],
+
+  "ioss": [
+    d("IVA_TAXAS", "Taxa aplicável — continente", pctExato(IVA_TAXAS.continente.value.normal), "é a taxa do país de destino que se aplica, não a do vendedor · art. 18.º CIVA"),
+    d("FATURACAO_PRAZOS", "Prazo da fatura — regra geral", `${FATURACAO_PRAZOS.regraGeralDiasUteis.value}.º dia útil`, "art. 36.º, n.º 1, al. a) CIVA"),
+  ],
+
+  "atcud-qr-code": [
+    d("FATURACAO_PRAZOS", "Prazo de emissão da fatura", `${FATURACAO_PRAZOS.regraGeralDiasUteis.value}.º dia útil`, "seguinte ao momento em que o imposto é devido · art. 36.º, n.º 1, al. a) CIVA"),
+    d("FATURACAO_PRAZOS", "Faturas globais", `${FATURACAO_PRAZOS.globaisDiasUteis.value} dias úteis`, "do termo do período a que respeitam · art. 36.º, n.º 2 CIVA"),
+    d("COIMAS_RGIT", "Documento sem os elementos obrigatórios", `${fmt(COIMAS_RGIT.faltaDeclaracoesMin.value)} a ${fmt(COIMAS_RGIT.faltaDeclaracoesMax.value)}`, "falta ou atraso na apresentação ou exibição de documentos · art. 117.º, n.º 1 RGIT"),
+  ],
+
+  "faturacao-eletronica": [
+    d("FATURACAO_PRAZOS", "Prazo de emissão — regra geral", `${FATURACAO_PRAZOS.regraGeralDiasUteis.value}.º dia útil`, "não muda com o formato do documento · art. 36.º, n.º 1, al. a) CIVA"),
+    d("FATURACAO_PRAZOS", "Prazo — adiantamentos", FATURACAO_PRAZOS.adiantamentos.value, "art. 36.º, n.º 1, al. c) CIVA"),
+    d("COIMAS_RGIT", "Falta ou atraso na apresentação de documentos", `${fmt(COIMAS_RGIT.faltaDeclaracoesMin.value)} a ${fmt(COIMAS_RGIT.faltaDeclaracoesMax.value)}`, "art. 117.º, n.º 1 RGIT"),
+  ],
+
+  "programa-faturacao-certificado": [
+    d("FATURACAO_PRAZOS", "Prazo de emissão — regra geral", `${FATURACAO_PRAZOS.regraGeralDiasUteis.value}.º dia útil`, "art. 36.º, n.º 1, al. a) CIVA"),
+    d("ISENCAO_IVA_REGIME", "Limiar da isenção de IVA, para referência", fmt(ISENCAO_IVA_REGIME.limiarNacional.value), "os limiares do programa certificado são outros, e vivem no DL 28/2019"),
+    d("COIMAS_RGIT", "Falta ou atraso na apresentação de documentos", `${fmt(COIMAS_RGIT.faltaDeclaracoesMin.value)} a ${fmt(COIMAS_RGIT.faltaDeclaracoesMax.value)}`, "art. 117.º, n.º 1 RGIT"),
   ],
 };
 
