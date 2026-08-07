@@ -72,6 +72,50 @@ export const SOURCES = {
     label: "Art. 12.º-A CIRS — Regime fiscal aplicável a ex-residentes (Programa Regressar) · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs12a.aspx",
   },
+  lgt30: {
+    label: "Art. 30.º LGT — O crédito tributário é indisponível, e essa regra prevalece sobre qualquer legislação especial · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/lgt/Pages/lgt30.aspx",
+  },
+  rgit26: {
+    label: "Art. 26.º RGIT — Montante das coimas: mínimo de 50 €, ou 25 € em caso de redução; metade dos limites para pessoas singulares · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/rgit/Pages/rgit26.aspx",
+  },
+  rgit29: {
+    label: "Art. 29.º RGIT — Dispensa das coimas (redação da Lei n.º 7/2021) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/rgit/Pages/rgit29.aspx",
+  },
+  rgit30: {
+    label: "Art. 30.º RGIT — Direito à redução das coimas: 12,5% antes de qualquer ação, 50% até à audição prévia · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/rgit/Pages/rgit30.aspx",
+  },
+  rgit114: {
+    label: "Art. 114.º RGIT — Falta de entrega da prestação tributária · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/rgit/Pages/rgit114.aspx",
+  },
+  rgit116: {
+    label: "Art. 116.º RGIT — Falta ou atraso de declarações: coima de 150 € a 3 750 € · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/rgit/Pages/rgit116.aspx",
+  },
+  rgit117: {
+    label: "Art. 117.º RGIT — Falta ou atraso na apresentação de documentos e de declarações de início, alteração ou cessação · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/rgit/Pages/rgit117.aspx",
+  },
+  lgt78: {
+    label: "Art. 78.º LGT — Revisão dos atos tributários: quatro anos por erro imputável aos serviços, três anos por injustiça grave ou notória · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/lgt/Pages/lgt78.aspx",
+  },
+  cppt70: {
+    label: "Art. 70.º CPPT — Reclamação graciosa: prazo de 120 dias · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cppt/Pages/cppt70.aspx",
+  },
+  art57cirs: {
+    label: "Art. 57.º CIRS — Declaração de rendimentos, contitularidade e a declaração por cada estatuto de residência · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs57.aspx",
+  },
+  art58aCirs: {
+    label: "Art. 58.º-A CIRS — Declaração automática de rendimentos: conversão em declaração entregue, tributação separada por defeito e substituição em 30 dias · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs58a.aspx",
+  },
   art58EBF: {
     label: "Art. 58.º EBF — Propriedade intelectual: englobamento por 50%, só ao titular originário, com o teto de 10 000 € · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/ebf-artigo-58-ordm-.aspx",
@@ -574,6 +618,10 @@ const REV_ESTRANGEIRO = "2026-08-07";
 // (propriedade intelectual) e as isenções do Art. 9.º do CIVA que decidem a
 // fiscalidade da saúde, da formação e das explicações.
 const REV_PROFISSOES = "2026-08-07";
+// Data de verificação do bloco das infrações e da correção de declarações —
+// arts. 26.º, 29.º, 30.º, 114.º, 116.º e 117.º do RGIT, art. 78.º da LGT,
+// art. 70.º do CPPT e arts. 57.º e 58.º-A do CIRS.
+const REV_INFRACOES = "2026-08-07";
 // Data de verificação dos coeficientes de desvalorização da moeda (Portaria 382/2025).
 const REV_COEF_MOEDA = "2026-06-23";
 // Data de verificação do Salário Mínimo Nacional 2026 (RMMG 920 €, DL 139/2025).
@@ -890,6 +938,303 @@ export const REGIME_SIMPLIFICADO = {
     TODAY
   ),
 };
+
+/**
+ * Indisponibilidade do crédito tributário — Art. 30.º, n.os 2 e 3 da LGT.
+ *
+ * É a norma de onde nasce a tese de que as dívidas fiscais e à Segurança
+ * Social não são abrangidas pela exoneração do passivo restante. O n.º 3,
+ * aditado pela Lei n.º 55-A/2010, é o que a torna decisiva: manda-a
+ * prevalecer sobre qualquer legislação especial — e o Código da
+ * Insolvência é legislação especial.
+ *
+ * O motor guarda o texto da norma, não a conclusão. A questão de saber se
+ * a exoneração abrange créditos tributários tem decisões judiciais em
+ * sentidos diferentes, e não é ao motor fiscal que compete fechá-la — é
+ * por isso que o guia a apresenta em aberto.
+ */
+export const CREDITO_TRIBUTARIO_INDISPONIVEL = {
+  regra: sv(
+    "o crédito tributário é indisponível",
+    "Art. 30.º, n.º 2 LGT — só podendo fixar-se condições para a sua redução ou extinção com respeito pelo princípio da igualdade e da legalidade tributária",
+    "lgt30",
+    REV_INFRACOES
+  ),
+  prevaleceSobreLegislacaoEspecial: sv(
+    true,
+    "Art. 30.º, n.º 3 LGT (aditado pela Lei n.º 55-A/2010) — o disposto no número anterior prevalece sobre qualquer legislação especial",
+    "lgt30",
+    REV_INFRACOES,
+    "É este número que sustenta a tese de que a exoneração do passivo restante não abrange créditos tributários. A jurisprudência não é unânime."
+  ),
+} as const;
+
+/**
+ * Coimas tributárias — o RGIT, lido no articulado a 07/08/2026.
+ *
+ * Três artigos que quase nunca são lidos juntos, e que só juntos fazem
+ * sentido: o 26.º fixa os tetos e os pisos, o 29.º a DISPENSA e o 30.º a
+ * REDUÇÃO. Dispensa e redução não são graus da mesma coisa — têm
+ * pressupostos diferentes, e quem confunde as duas pede a errada.
+ */
+export const COIMAS_RGIT = {
+  /** Falta ou atraso de declarações — o caso mais comum. */
+  faltaDeclaracoesMin: sv(
+    150,
+    "Art. 116.º, n.º 1 RGIT — a falta de declarações que devam ser apresentadas para a AT determinar, avaliar ou comprovar a matéria coletável, e a sua prestação fora do prazo legal, é punível com coima de 150 € a 3 750 €",
+    "rgit116",
+    REV_INFRACOES
+  ),
+  faltaDeclaracoesMax: sv(
+    3750,
+    "Art. 116.º, n.º 1 RGIT — limite máximo",
+    "rgit116",
+    REV_INFRACOES
+  ),
+  /** Declarações de início, alteração ou cessação de atividade. */
+  inicioAlteracaoCessacaoMin: sv(
+    300,
+    "Art. 117.º, n.º 2 RGIT — a falta de apresentação, ou apresentação fora do prazo, das declarações de início, alteração ou cessação de atividade é punível com coima de 300 € a 7 500 €",
+    "rgit117",
+    REV_INFRACOES
+  ),
+  inicioAlteracaoCessacaoMax: sv(
+    7500,
+    "Art. 117.º, n.º 2 RGIT — limite máximo",
+    "rgit117",
+    REV_INFRACOES
+  ),
+  /** O piso absoluto do que se paga. */
+  minimoAPagar: sv(
+    50,
+    "Art. 26.º, n.º 3 RGIT — o montante mínimo da coima a pagar é de 50 €",
+    "rgit26",
+    REV_INFRACOES
+  ),
+  /** E o piso quando há redução — é este que decide o caso comum. */
+  minimoComReducao: sv(
+    25,
+    "Art. 26.º, n.º 3 RGIT — exceto em caso de redução da coima, em que o mínimo a pagar é de 25 €",
+    "rgit26",
+    REV_INFRACOES,
+    "12,5% de 150 € dariam 18,75 €: é este piso que faz o valor subir para 25 €."
+  ),
+  /** Pessoas singulares pagam no máximo metade dos tetos das coletivas. */
+  fracaoLimitesPessoaSingular: sv(
+    0.5,
+    "Art. 26.º, n.º 2 RGIT — as coimas aplicáveis às pessoas singulares não podem exceder metade dos limites estabelecidos para as pessoas coletivas",
+    "rgit26",
+    REV_INFRACOES
+  ),
+  /** E as coletivas veem os limites dos tipos legais dobrados. */
+  fatorPessoaColetiva: sv(
+    2,
+    "Art. 26.º, n.º 4 RGIT — os limites mínimo e máximo das coimas previstas nos diferentes tipos legais são elevados para o dobro quando aplicadas a pessoa coletiva ou entidade equiparada",
+    "rgit26",
+    REV_INFRACOES
+  ),
+} as const;
+
+/**
+ * Redução da coima — Art. 30.º do RGIT, na redação da Lei n.º 7/2021 (em
+ * vigor desde 1 de janeiro de 2022).
+ *
+ * Duas percentagens e um relógio. O que as separa não é a gravidade da
+ * falta: é o MOMENTO em que se pede, medido contra a ação da AT.
+ *
+ * E há um n.º 5 que muda o guia todo: quando a regularização não depende
+ * de tributo a liquidar pelos serviços, «vale como pedido de redução a
+ * entrega da prestação tributária ou do documento ou declaração em
+ * falta». Ou seja — na maior parte dos casos, entregar a declaração É o
+ * pedido. Não há formulário a preencher.
+ */
+export const REDUCAO_COIMA = {
+  antesDeQualquerAcao: sv(
+    0.125,
+    "Art. 30.º, n.º 1, al. a) RGIT — sem que tenha sido levantado auto de notícia, recebida participação ou denúncia ou iniciado procedimento de inspeção tributária, para 12,5% do montante mínimo legal",
+    "rgit30",
+    REV_INFRACOES
+  ),
+  ateAudicaoPrevia: sv(
+    0.5,
+    "Art. 30.º, n.º 1, al. b) RGIT — até ao termo do prazo para apresentação de audição prévia no âmbito de procedimento de inspeção tributária, para 50% do montante mínimo legal",
+    "rgit30",
+    REV_INFRACOES
+  ),
+  /** Sobre que valor incidem as percentagens. */
+  baseDeCalculo: sv(
+    "o montante mínimo legal, e considera-se sempre o estabelecido para os casos de negligência",
+    "Art. 30.º, n.º 2 RGIT",
+    "rgit30",
+    REV_INFRACOES
+  ),
+  /** Prazo para pagar depois de notificado da coima reduzida. */
+  prazoPagamentoDias: sv(
+    30,
+    "Art. 30.º, n.º 3, al. a) RGIT — o direito à redução depende do pagamento nos 30 dias posteriores à notificação da coima reduzida e da regularização da situação tributária no mesmo prazo",
+    "rgit30",
+    REV_INFRACOES
+  ),
+  /** Quando é que o pedido é implícito. */
+  pedidoImplicito: sv(
+    "a entrega da prestação tributária ou do documento ou declaração em falta",
+    "Art. 30.º, n.º 5 RGIT — sempre que a regularização não dependa de tributo a liquidar pelos serviços, vale como pedido de redução",
+    "rgit30",
+    REV_INFRACOES
+  ),
+} as const;
+
+/**
+ * Dispensa de coima — Art. 29.º do RGIT, na redação da Lei n.º 7/2021.
+ *
+ * Não é uma redução maior: é outra coisa. O n.º 1 é um travão automático
+ * baseado num historial limpo de cinco anos; o n.º 2 é uma via própria,
+ * que exige ausência de prejuízo efetivo e regularização, e que tem de
+ * ser REQUERIDA no prazo da defesa.
+ */
+export const DISPENSA_COIMA = {
+  anosDeHistorialLimpo: sv(
+    5,
+    "Art. 29.º, n.º 1 RGIT — não pode ser aplicada coima quando o agente, nos cinco anos anteriores, não tenha sido condenado por infração tributária nem beneficiado de dispensa ou de coima reduzida",
+    "rgit29",
+    REV_INFRACOES
+  ),
+  exigeSemPrejuizoEfetivo: sv(
+    true,
+    "Art. 29.º, n.º 2, al. a) RGIT — a prática da infração não pode ocasionar prejuízo efetivo à receita tributária",
+    "rgit29",
+    REV_INFRACOES,
+    "E o n.º 3 fecha a porta ao caso mais comum: existe SEMPRE prejuízo efetivo quando esteja em causa falta de entrega da prestação tributária."
+  ),
+  requeridaNoPrazoDeDefesa: sv(
+    true,
+    "Art. 29.º, n.º 4 RGIT — a dispensa deve ser requerida no prazo concedido para a defesa, devendo a falta ser regularizada até ao termo desse prazo",
+    "rgit29",
+    REV_INFRACOES
+  ),
+} as const;
+
+/** Falta de entrega da prestação tributária — Art. 114.º do RGIT. */
+export const FALTA_ENTREGA_PRESTACAO = {
+  negligenciaMin: sv(
+    0.15,
+    "Art. 114.º, n.º 2 RGIT — sendo a conduta imputável a título de negligência, coima variável entre 15% e metade do imposto em falta",
+    "rgit114",
+    REV_INFRACOES
+  ),
+  negligenciaMax: sv(
+    0.5,
+    "Art. 114.º, n.º 2 RGIT — limite superior no caso de negligência",
+    "rgit114",
+    REV_INFRACOES
+  ),
+  doloFatorMax: sv(
+    2,
+    "Art. 114.º, n.º 1 RGIT — coima variável entre o valor da prestação em falta e o seu dobro",
+    "rgit114",
+    REV_INFRACOES
+  ),
+} as const;
+
+/**
+ * Corrigir depois de entregue — os prazos do Art. 78.º da LGT e do Art.
+ * 70.º do CPPT.
+ *
+ * O pacote manda confirmar estes prazos antes de indicar números. Estão
+ * confirmados, e são três relógios diferentes que costumam ser tratados
+ * como um só.
+ */
+export const REVISAO_E_RECLAMACAO = {
+  /** Reclamação graciosa da liquidação. */
+  reclamacaoGraciosaDias: sv(
+    120,
+    "Art. 70.º, n.º 1 CPPT — a reclamação graciosa é apresentada no prazo de 120 dias contados a partir dos factos previstos no n.º 1 do Art. 102.º",
+    "cppt70",
+    REV_INFRACOES
+  ),
+  /** Revisão por iniciativa da AT, por erro dos serviços. */
+  revisaoPorErroDosServicosAnos: sv(
+    4,
+    "Art. 78.º, n.º 1 LGT — por iniciativa da administração tributária, no prazo de quatro anos após a liquidação, ou a todo o tempo se o tributo ainda não tiver sido pago, com fundamento em erro imputável aos serviços",
+    "lgt78",
+    REV_INFRACOES,
+    "O pedido do contribuinte dirigido ao órgão competente interrompe este prazo (n.º 7)."
+  ),
+  /** A via excecional da injustiça grave ou notória. */
+  injusticaGraveAnos: sv(
+    3,
+    "Art. 78.º, n.º 4 LGT — o dirigente máximo do serviço pode autorizar, excecionalmente, nos três anos posteriores ao ato tributário, a revisão da matéria tributável com fundamento em injustiça grave ou notória",
+    "lgt78",
+    REV_INFRACOES,
+    "Desde que o erro não seja imputável a comportamento negligente do contribuinte."
+  ),
+  /** Duplicação de coleta. */
+  duplicacaoColetaAnos: sv(
+    4,
+    "Art. 78.º, n.º 6 LGT — a revisão por motivo de duplicação de coleta pode efetuar-se, seja qual for o fundamento, no prazo de quatro anos",
+    "lgt78",
+    REV_INFRACOES
+  ),
+} as const;
+
+/**
+ * Declaração automática de rendimentos — Art. 58.º-A do CIRS.
+ *
+ * O pacote deu a página deste artigo como não verificada. Abre, e tem
+ * duas regras que decidem o guia inteiro e que quase ninguém conhece:
+ *
+ *  · não fazer nada NÃO é não entregar. A declaração provisória
+ *    converte-se em declaração entregue pelo próprio, no fim do prazo;
+ *  · e nesse caso, sendo casado ou unido de facto, o regime que se
+ *    observa é o da tributação SEPARADA. Quem beneficiaria da conjunta
+ *    perde-a por inação, sem ninguém lho dizer.
+ */
+export const IRS_AUTOMATICO = {
+  /** Prazo para comunicar o agregado familiar. */
+  prazoElementosPessoais: sv(
+    "até ao final do mês de fevereiro",
+    "Art. 58.º-A, n.º 6 CIRS (redação do Decreto-Lei n.º 49/2025) — os sujeitos passivos podem indicar no Portal das Finanças os elementos pessoais relevantes, mediante autenticação de todos os membros do agregado familiar",
+    "art58aCirs",
+    REV_INFRACOES
+  ),
+  /** O que acontece a quem não comunica nada. */
+  semComunicacaoDeAgregado: sv(
+    "usam-se os elementos do ano anterior e, na falta deles, considera-se não casado e sem dependentes",
+    "Art. 58.º-A, n.º 7 CIRS",
+    "art58aCirs",
+    REV_INFRACOES
+  ),
+  /** O que acontece a quem não confirma nem entrega. */
+  seNadaForFeito: sv(
+    "a declaração provisória converte-se em declaração entregue pelo sujeito passivo",
+    "Art. 58.º-A, n.º 3 CIRS — quando, no fim do prazo do n.º 1 do Art. 60.º, não se tenha verificado a confirmação nem a entrega de qualquer declaração",
+    "art58aCirs",
+    REV_INFRACOES
+  ),
+  /** E com que regime de tributação. */
+  regimeSeNadaForFeito: sv(
+    "tributação separada",
+    "Art. 58.º-A, n.º 4, al. b) CIRS — no caso do n.º 3, observa-se, tratando-se de sujeitos passivos casados ou unidos de facto, o regime de tributação separada",
+    "art58aCirs",
+    REV_INFRACOES,
+    "Quem beneficiaria da tributação conjunta perde-a por inação."
+  ),
+  /** A janela para corrigir sem penalidade. */
+  substituicaoSemPenalidadeDias: sv(
+    30,
+    "Art. 58.º-A, n.º 3 CIRS — o sujeito passivo pode entregar uma declaração de substituição nos 30 dias posteriores à liquidação sem qualquer penalidade",
+    "art58aCirs",
+    REV_INFRACOES
+  ),
+  /** Quem é abrangido não está no artigo. */
+  universoDefinidoPor: sv(
+    "decreto regulamentar",
+    "Art. 58.º-A, n.º 8 CIRS — o universo dos sujeitos passivos abrangidos é fixado por decreto regulamentar",
+    "art58aCirs",
+    REV_INFRACOES,
+    "É por isto que o artigo não responde à pergunta «sou abrangido?»: a resposta vive noutro diploma, que muda."
+  ),
+} as const;
 
 /**
  * Propriedade intelectual — a exclusão parcial do Art. 58.º do EBF.

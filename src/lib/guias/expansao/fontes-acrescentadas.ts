@@ -42,6 +42,12 @@ export const FONTES_ACRESCENTADAS: Record<string, string[]> = {
   // art. 22.º do EBF (o que o fundo não paga) e o art. 22.º-A (o que o
   // participante paga, na distribuição e no resgate).
   "etf-irs": ["ebf22", "ebf22a"],
+  // A exoneração do passivo restante discute-se contra esta norma, e a
+  // base legal do pacote não a incluía: o art. 30.º da LGT declara o
+  // crédito tributário indisponível e — no n.º 3, aditado em 2010 — manda
+  // essa regra prevalecer sobre qualquer legislação especial. Sem ela, o
+  // guia não conseguia mostrar de onde vem a divergência que descreve.
+  "insolvencia-pessoal": ["lgt30"],
 };
 
 export const fontesAcrescentadas = (slug: string): string[] => FONTES_ACRESCENTADAS[slug] ?? [];

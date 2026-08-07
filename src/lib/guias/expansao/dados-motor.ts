@@ -25,13 +25,17 @@ import {
   AIMI,
   CAPITAIS_TAXA_LIBERATORIA,
   CATEGORIA_F,
+  COIMAS_RGIT,
+  CREDITO_TRIBUTARIO_INDISPONIVEL,
   CREDITO_IMPOSTO_ESTRANGEIRO,
+  DISPENSA_COIMA,
   DEDUCAO_PPR,
   DIVIDENDOS_ENGLOBAMENTO_FRACAO,
   CRIPTO_ISENCAO_DIAS,
   CRIPTO_REMUNERACAO,
   CRIPTO_TAXA_CURTO_PRAZO,
   DISPENSA_RETENCAO_LIMITE,
+  FALTA_ENTREGA_PRESTACAO,
   IAS,
   IMI_AGRAVAMENTO_DEVOLUTO,
   IMI_ISENCAO_BAIXOS_RENDIMENTOS,
@@ -49,6 +53,7 @@ import {
   IMT_PRAZO_PAGAMENTO_DIAS,
   IMT_TAXA_COMERCIAL,
   IMT_TAXA_RUSTICO,
+  IRS_AUTOMATICO,
   IVA_ISENCAO_LIMITE,
   ISENCOES_CIVA_PROFISSOES,
   IS_CREDITO,
@@ -68,12 +73,14 @@ import {
   PROGRAMA_REGRESSAR,
   PROGRAMA_REGRESSAR_TETO_CALC,
   PROPRIEDADE_INTELECTUAL_EBF,
+  REDUCAO_COIMA,
   REGIME_15PCT,
   REGIME_SIMPLIFICADO,
   RETENCAO,
   RENDIMENTO_MUNDIAL,
   REPRESENTANTE_FISCAL,
   RESIDENCIA_FISCAL,
+  REVISAO_E_RECLAMACAO,
   SS_COEFICIENTE,
   SS_ISENCAO_PRIMEIRO_ANO_MESES,
   SS_TAXA,
@@ -471,6 +478,92 @@ export const DADOS_MOTOR: Record<string, DadoDoMotor[]> = {
     d("PROPRIEDADE_INTELECTUAL_EBF", "Fica de fora", PROPRIEDADE_INTELECTUAL_EBF.excluidas.value, "exclusões expressas · art. 58.º, n.º 2 EBF"),
     d("REGIME_SIMPLIFICADO", "Coeficiente da propriedade intelectual", pctExato(REGIME_SIMPLIFICADO.coefPropIntelectual.value), "na categoria B, quando o rendimento é da cessão ou utilização de direitos · art. 31.º, n.º 1, al. d) CIRS"),
     d("RETENCAO", "Retenção sobre direitos de autor", pctExato(RETENCAO.diretosAutor.value), "art. 101.º CIRS"),
+  ],
+
+  // ── Preparar o IRS · Direitos e cobranças ────────────────────────────
+  //    Dispensa e redução de coima não são graus da mesma coisa: têm
+  //    pressupostos diferentes (arts. 29.º e 30.º do RGIT) e quem confunde
+  //    as duas pede a errada. As tabelas mostram-nas separadas.
+  "coimas-fiscais": [
+    d("COIMAS_RGIT", "Falta ou atraso de declarações", `${fmt(COIMAS_RGIT.faltaDeclaracoesMin.value)} a ${fmt(COIMAS_RGIT.faltaDeclaracoesMax.value)}`, "art. 116.º, n.º 1 RGIT"),
+    d("COIMAS_RGIT", "Início, alteração ou cessação de atividade", `${fmt(COIMAS_RGIT.inicioAlteracaoCessacaoMin.value)} a ${fmt(COIMAS_RGIT.inicioAlteracaoCessacaoMax.value)}`, "art. 117.º, n.º 2 RGIT"),
+    d("FALTA_ENTREGA_PRESTACAO", "Falta de entrega da prestação — negligência", `${pctExato(FALTA_ENTREGA_PRESTACAO.negligenciaMin.value)} a ${pctExato(FALTA_ENTREGA_PRESTACAO.negligenciaMax.value)}`, "do imposto em falta · art. 114.º, n.º 2 RGIT"),
+    d("FALTA_ENTREGA_PRESTACAO", "Falta de entrega da prestação — dolo", `até ${FALTA_ENTREGA_PRESTACAO.doloFatorMax.value}× o valor em falta`, "coima variável entre o valor da prestação em falta e o seu dobro · art. 114.º, n.º 1 RGIT"),
+    d("REDUCAO_COIMA", "Redução — antes de qualquer ação da AT", pctExato(REDUCAO_COIMA.antesDeQualquerAcao.value), "do montante mínimo legal · art. 30.º, n.º 1, al. a) RGIT"),
+    d("REDUCAO_COIMA", "Redução — até à audição prévia na inspeção", pctExato(REDUCAO_COIMA.ateAudicaoPrevia.value), "do montante mínimo legal · art. 30.º, n.º 1, al. b) RGIT"),
+    d("COIMAS_RGIT", "Mínimo a pagar", fmt(COIMAS_RGIT.minimoAPagar.value), "art. 26.º, n.º 3 RGIT"),
+    d("COIMAS_RGIT", "Mínimo a pagar, havendo redução", fmt(COIMAS_RGIT.minimoComReducao.value), "é este piso que manda no caso comum · art. 26.º, n.º 3 RGIT"),
+    d("DISPENSA_COIMA", "Dispensa — historial limpo exigido", `${DISPENSA_COIMA.anosDeHistorialLimpo.value} anos`, "sem condenação por infração tributária e sem ter beneficiado de dispensa ou redução · art. 29.º, n.º 1 RGIT"),
+    d("COIMAS_RGIT", "Pessoas singulares", `metade dos limites`, "as coimas aplicáveis a pessoas singulares não podem exceder metade dos limites das coletivas · art. 26.º, n.º 2 RGIT"),
+    d("COIMAS_RGIT", "Pessoas coletivas", `limites × ${COIMAS_RGIT.fatorPessoaColetiva.value}`, "os limites dos tipos legais são elevados para o dobro · art. 26.º, n.º 4 RGIT"),
+  ],
+
+  "regularizacao-voluntaria": [
+    d("REDUCAO_COIMA", "Redução — antes de qualquer ação da AT", pctExato(REDUCAO_COIMA.antesDeQualquerAcao.value), "sem auto de notícia, participação, denúncia ou início de inspeção · art. 30.º, n.º 1, al. a) RGIT"),
+    d("REDUCAO_COIMA", "Redução — até à audição prévia", pctExato(REDUCAO_COIMA.ateAudicaoPrevia.value), "já dentro de procedimento de inspeção · art. 30.º, n.º 1, al. b) RGIT"),
+    d("REDUCAO_COIMA", "Sobre que valor incide", REDUCAO_COIMA.baseDeCalculo.value, "art. 30.º, n.º 2 RGIT"),
+    d("COIMAS_RGIT", "Mínimo a pagar, havendo redução", fmt(COIMAS_RGIT.minimoComReducao.value), "art. 26.º, n.º 3 RGIT"),
+    d("REDUCAO_COIMA", "Prazo para pagar", `${REDUCAO_COIMA.prazoPagamentoDias.value} dias`, "posteriores à notificação da coima reduzida, com a situação regularizada no mesmo prazo · art. 30.º, n.º 3, al. a) RGIT"),
+    d("REDUCAO_COIMA", "Quando o pedido é implícito", REDUCAO_COIMA.pedidoImplicito.value, "quando a regularização não dependa de tributo a liquidar pelos serviços · art. 30.º, n.º 5 RGIT"),
+    d("DISPENSA_COIMA", "Dispensa — quando tem de ser pedida", "no prazo da defesa", "e a falta regularizada até ao termo desse prazo · art. 29.º, n.º 4 RGIT"),
+  ],
+
+  "irs-fora-do-prazo": [
+    d("COIMAS_RGIT", "Coima base", `${fmt(COIMAS_RGIT.faltaDeclaracoesMin.value)} a ${fmt(COIMAS_RGIT.faltaDeclaracoesMax.value)}`, "art. 116.º, n.º 1 RGIT"),
+    d("REDUCAO_COIMA", "Com regularização antes de qualquer ação da AT", pctExato(REDUCAO_COIMA.antesDeQualquerAcao.value), "do montante mínimo legal · art. 30.º, n.º 1, al. a) RGIT"),
+    d("COIMAS_RGIT", "Mínimo a pagar, havendo redução", fmt(COIMAS_RGIT.minimoComReducao.value), "art. 26.º, n.º 3 RGIT"),
+    d("REDUCAO_COIMA", "Prazo para pagar a coima reduzida", `${REDUCAO_COIMA.prazoPagamentoDias.value} dias`, "art. 30.º, n.º 3, al. a) RGIT"),
+    d("REVISAO_E_RECLAMACAO", "Reclamar da liquidação oficiosa", `${REVISAO_E_RECLAMACAO.reclamacaoGraciosaDias.value} dias`, "prazo da reclamação graciosa · art. 70.º, n.º 1 CPPT"),
+  ],
+
+  "declaracao-substituicao": [
+    d("REVISAO_E_RECLAMACAO", "Reclamação graciosa", `${REVISAO_E_RECLAMACAO.reclamacaoGraciosaDias.value} dias`, "contados dos factos do n.º 1 do art. 102.º · art. 70.º, n.º 1 CPPT"),
+    d("REVISAO_E_RECLAMACAO", "Revisão por erro dos serviços", `${REVISAO_E_RECLAMACAO.revisaoPorErroDosServicosAnos.value} anos`, "por iniciativa da AT, ou a todo o tempo se o tributo não estiver pago; o pedido do contribuinte interrompe o prazo · art. 78.º, n.os 1 e 7 LGT"),
+    d("REVISAO_E_RECLAMACAO", "Injustiça grave ou notória", `${REVISAO_E_RECLAMACAO.injusticaGraveAnos.value} anos`, "autorização excecional do dirigente máximo, se o erro não for imputável a negligência do contribuinte · art. 78.º, n.º 4 LGT"),
+    d("REVISAO_E_RECLAMACAO", "Duplicação de coleta", `${REVISAO_E_RECLAMACAO.duplicacaoColetaAnos.value} anos`, "seja qual for o fundamento · art. 78.º, n.º 6 LGT"),
+    d("REDUCAO_COIMA", "Se a correção aumentar o imposto", pctExato(REDUCAO_COIMA.antesDeQualquerAcao.value), "do mínimo legal, substituindo antes de qualquer ação da AT · art. 30.º, n.º 1, al. a) RGIT"),
+    d("IRS_AUTOMATICO", "Substituir a declaração automática", `${IRS_AUTOMATICO.substituicaoSemPenalidadeDias.value} dias`, "posteriores à liquidação, sem qualquer penalidade · art. 58.º-A, n.º 3 CIRS"),
+  ],
+
+  "irs-automatico": [
+    d("IRS_AUTOMATICO", "Quem é abrangido", IRS_AUTOMATICO.universoDefinidoPor.value, "o universo não está no artigo: é fixado por decreto regulamentar · art. 58.º-A, n.º 8 CIRS"),
+    d("IRS_AUTOMATICO", "Comunicar o agregado familiar", IRS_AUTOMATICO.prazoElementosPessoais.value, "no Portal das Finanças, com autenticação de todos os membros do agregado · art. 58.º-A, n.º 6 CIRS"),
+    d("IRS_AUTOMATICO", "Sem essa comunicação", IRS_AUTOMATICO.semComunicacaoDeAgregado.value, "art. 58.º-A, n.º 7 CIRS"),
+    d("IRS_AUTOMATICO", "Se não confirmares nem entregares", IRS_AUTOMATICO.seNadaForFeito.value, "não fazer nada não é não entregar · art. 58.º-A, n.º 3 CIRS"),
+    d("IRS_AUTOMATICO", "E com que regime de tributação", IRS_AUTOMATICO.regimeSeNadaForFeito.value, "quem beneficiaria da conjunta perde-a por inação · art. 58.º-A, n.º 4, al. b) CIRS"),
+    d("IRS_AUTOMATICO", "Corrigir sem penalidade", `${IRS_AUTOMATICO.substituicaoSemPenalidadeDias.value} dias`, "posteriores à liquidação · art. 58.º-A, n.º 3 CIRS"),
+  ],
+
+  "e-fatura": [
+    d("IRS_AUTOMATICO", "Comunicar o agregado familiar", IRS_AUTOMATICO.prazoElementosPessoais.value, "é o primeiro prazo do ano, e condiciona as deduções por dependentes · art. 58.º-A, n.º 6 CIRS"),
+    d("REVISAO_E_RECLAMACAO", "Se o prazo de reclamação passar", `${REVISAO_E_RECLAMACAO.reclamacaoGraciosaDias.value} dias da liquidação`, "as despesas ainda se declaram manualmente na Modelo 3, e resta a reclamação graciosa · art. 70.º, n.º 1 CPPT"),
+  ],
+
+  "reclamar-deducoes": [
+    d("REVISAO_E_RECLAMACAO", "Reclamação graciosa da liquidação", `${REVISAO_E_RECLAMACAO.reclamacaoGraciosaDias.value} dias`, "art. 70.º, n.º 1 CPPT"),
+    d("REVISAO_E_RECLAMACAO", "Revisão por erro dos serviços", `${REVISAO_E_RECLAMACAO.revisaoPorErroDosServicosAnos.value} anos`, "art. 78.º, n.º 1 LGT"),
+    d("REVISAO_E_RECLAMACAO", "Injustiça grave ou notória", `${REVISAO_E_RECLAMACAO.injusticaGraveAnos.value} anos`, "art. 78.º, n.º 4 LGT"),
+    d("IRS_AUTOMATICO", "Substituir a declaração automática", `${IRS_AUTOMATICO.substituicaoSemPenalidadeDias.value} dias`, "posteriores à liquidação, sem penalidade · art. 58.º-A, n.º 3 CIRS"),
+  ],
+
+  "inspecao-tributaria": [
+    d("REDUCAO_COIMA", "Regularizar até à audição prévia", pctExato(REDUCAO_COIMA.ateAudicaoPrevia.value), "do montante mínimo legal — é a última janela de redução · art. 30.º, n.º 1, al. b) RGIT"),
+    d("REDUCAO_COIMA", "Depois de a inspeção começar", `deixa de haver ${pctExato(REDUCAO_COIMA.antesDeQualquerAcao.value)}`, "a redução maior exige que nada tenha sido iniciado · art. 30.º, n.º 1, al. a) RGIT"),
+    d("REDUCAO_COIMA", "Prazo para pagar a coima reduzida", `${REDUCAO_COIMA.prazoPagamentoDias.value} dias`, "art. 30.º, n.º 3 RGIT"),
+    d("REVISAO_E_RECLAMACAO", "Reclamar da liquidação que resulte", `${REVISAO_E_RECLAMACAO.reclamacaoGraciosaDias.value} dias`, "art. 70.º, n.º 1 CPPT"),
+  ],
+
+  //    Os dois valores que o pacote trazia ficam retidos: o período de
+  //    cessão vive no CIRE, que não foi possível verificar, e «dívidas
+  //    fiscais em regra não abrangidas» é precisamente a questão que o
+  //    próprio pacote manda apresentar em aberto. O que se mostra é a
+  //    norma de onde a tese nasce — verificada — e nada mais.
+  "insolvencia-pessoal": [
+    d("CREDITO_TRIBUTARIO_INDISPONIVEL", "A norma de onde tudo parte", CREDITO_TRIBUTARIO_INDISPONIVEL.regra.value, "só podendo fixar-se condições para a sua redução ou extinção com respeito pelos princípios da igualdade e da legalidade tributária · art. 30.º, n.º 2 LGT"),
+    d("CREDITO_TRIBUTARIO_INDISPONIVEL", "E o que a torna decisiva", "prevalece sobre legislação especial", "aditado pela Lei n.º 55-A/2010; o Código da Insolvência é legislação especial · art. 30.º, n.º 3 LGT"),
+    d("CREDITO_TRIBUTARIO_INDISPONIVEL", "A exoneração abrange dívidas fiscais?", "questão em aberto", "há decisões judiciais em sentidos diferentes; não é matéria a fechar num guia"),
+    d("REDUCAO_COIMA", "Alternativa — regularizar antes de qualquer ação da AT", pctExato(REDUCAO_COIMA.antesDeQualquerAcao.value), "do montante mínimo legal da coima · art. 30.º, n.º 1, al. a) RGIT"),
+    d("COIMAS_RGIT", "Mínimo a pagar, havendo redução", fmt(COIMAS_RGIT.minimoComReducao.value), "art. 26.º, n.º 3 RGIT"),
   ],
 };
 

@@ -133,6 +133,39 @@ export const CORRECOES_AO_PACOTE: CorrecaoAoPacote[] = [
     fonte: "CIVA-9",
     verificadoEm: EM_PROFISSOES,
   },
+  {
+    slug: "regularizacao-voluntaria",
+    dado: "Prazo de regularização após pedido",
+    noPacote: "15 dias",
+    verificado: "30 dias",
+    notaVerificada:
+      "a contar da notificação da coima reduzida; no mesmo prazo tem de ficar regularizada a situação tributária · art. 30.º, n.º 3, al. a) RGIT",
+    acao: "corrigir",
+    motivo:
+      "A al. a) do n.º 3 do art. 30.º do RGIT, na redação da Lei n.º 7/2021, faz depender o direito à redução «do pagamento nos 30 dias posteriores à notificação da coima reduzida pela entidade competente e da regularização da situação tributária do infrator no mesmo prazo». Não há nenhum prazo de 15 dias nesta norma. O erro é benigno para quem o siga — pagar cedo não prejudica ninguém — mas publicar um prazo que não existe põe em dúvida os outros dois números do mesmo guia, que estão certos.",
+    fonte: "RGIT-30",
+    verificadoEm: EM_PROFISSOES,
+  },
+  {
+    slug: "insolvencia-pessoal",
+    dado: "Período de cessão",
+    noPacote: "3 anos",
+    acao: "reter",
+    motivo:
+      "O período de cessão é fixado no Código da Insolvência e da Recuperação de Empresas e foi objeto de alterações legislativas. O CIRE não tem página de articulado verificável no Portal das Finanças, e não foi possível confirmar a redação em vigor nesta revisão. É o número que estrutura toda a decisão de quem pondera este caminho — publicá-lo sem confirmação seria o pior sítio para o fazer. O guia diz que o prazo existe, diz onde o confirmar, e não o inventa.",
+    fonte: "CIRE",
+    verificadoEm: EM_PROFISSOES,
+  },
+  {
+    slug: "insolvencia-pessoal",
+    dado: "Dívidas fiscais e à Segurança Social",
+    noPacote: "em regra não abrangidas pela exoneração",
+    acao: "reter",
+    motivo:
+      "O próprio pacote avisa que «há jurisprudência divergente quanto à exoneração de créditos tributários — apresentar como questão em aberto, não como regra fechada», e depois publica-a como dado. As duas coisas não podem coexistir. O que está verificado é a norma de onde a tese nasce: o Art. 30.º, n.os 2 e 3 da LGT, que declara o crédito tributário indisponível e manda essa regra prevalecer sobre qualquer legislação especial — o que inclui o CIRE. É isso que o guia mostra, com a divergência assumida e a recomendação de levar o caso a um advogado. Uma regra dada como fechada num tema que os tribunais não fecharam é pior do que não dizer nada.",
+    fonte: "lgt30",
+    verificadoEm: EM_PROFISSOES,
+  },
 ];
 
 const POR_SLUG = new Map<string, CorrecaoAoPacote[]>();

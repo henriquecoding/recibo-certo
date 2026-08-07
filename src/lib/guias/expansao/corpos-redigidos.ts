@@ -132,4 +132,41 @@ export const CORPOS_REDIGIDOS: ReadonlySet<string> = new Set([
   "artistas-direitos-autor",
   "mediacao-comissoes",
   "arquitetos-engenheiros",
+
+  // ── Direitos e cobranças ────────────────────────────────────────────
+  //    Dispensa (art. 29.º) e redução (art. 30.º) da coima não são graus
+  //    da mesma coisa — têm pressupostos diferentes, e quem as confunde
+  //    pede a errada. E o «pedido que quase ninguém faz» é, na maior
+  //    parte dos casos, implícito: o n.º 5 do art. 30.º diz que vale como
+  //    pedido a própria entrega da declaração em falta.
+  "coimas-fiscais",
+  //    O pacote dava 15 dias para regularizar depois do pedido. A al. a)
+  //    do n.º 3 do art. 30.º diz 30. Ver `correcoes.ts`.
+  "regularizacao-voluntaria",
+  //    Os prazos que vivem só no RCPITA ficam sem número, com a indicação
+  //    de onde os confirmar: não foi possível verificar o diploma. O que
+  //    tem número vem da LGT, do RGIT e do CPPT.
+  "inspecao-tributaria",
+  //    Matéria judicial, e com jurisprudência dividida quanto à exoneração
+  //    de créditos tributários. Fica apresentada como questão em aberto —
+  //    que é o que é — e não como regra fechada em nenhum dos sentidos.
+  "insolvencia-pessoal",
+
+  // ── Preparar o IRS ──────────────────────────────────────────────────
+  //    O pacote dava a página do art. 58.º-A como não verificada. Abre — e
+  //    responde a duas perguntas que nenhuma fonte de terceiros responde
+  //    bem: não fazer nada NÃO é não entregar (a declaração provisória
+  //    converte-se em declaração entregue), e nesse caso o regime que se
+  //    aplica é o da tributação SEPARADA. Quem beneficiaria da conjunta
+  //    perde-a por inação, sem ninguém lho dizer.
+  "irs-automatico",
+  "declaracao-substituicao",
+  "irs-fora-do-prazo",
+  //    Aqui o pacote manda o contrário do costume: «as datas exatas mudam
+  //    todos os anos e podem ser prorrogadas por despacho — nunca fixar no
+  //    texto». Estes dois guias descrevem a SEQUÊNCIA do calendário e não
+  //    fixam nenhuma data de validação. O único prazo com número é o do
+  //    art. 58.º-A, n.º 6, que está na lei.
+  "e-fatura",
+  "reclamar-deducoes",
 ]);

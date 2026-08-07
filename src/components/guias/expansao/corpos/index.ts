@@ -42,6 +42,15 @@ import CorpoFormadoresExplicadores from "./formadores-explicadores";
 import CorpoArtistasDireitosAutor from "./artistas-direitos-autor";
 import CorpoMediacaoComissoes from "./mediacao-comissoes";
 import CorpoArquitetosEngenheiros from "./arquitetos-engenheiros";
+import CorpoCoimasFiscais from "./coimas-fiscais";
+import CorpoRegularizacaoVoluntaria from "./regularizacao-voluntaria";
+import CorpoInspecaoTributaria from "./inspecao-tributaria";
+import CorpoInsolvenciaPessoal from "./insolvencia-pessoal";
+import CorpoIrsAutomatico from "./irs-automatico";
+import CorpoDeclaracaoSubstituicao from "./declaracao-substituicao";
+import CorpoIrsForaDoPrazo from "./irs-fora-do-prazo";
+import CorpoEFatura from "./e-fatura";
+import CorpoReclamarDeducoes from "./reclamar-deducoes";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  CORPOS REDIGIDOS DOS GUIAS DA EXPANSÃO
@@ -99,4 +108,13 @@ export const CORPOS: Record<string, ComponentType> = {
   "artistas-direitos-autor": CorpoArtistasDireitosAutor,
   "mediacao-comissoes": CorpoMediacaoComissoes,
   "arquitetos-engenheiros": CorpoArquitetosEngenheiros,
+  "coimas-fiscais": CorpoCoimasFiscais,
+  "regularizacao-voluntaria": CorpoRegularizacaoVoluntaria,
+  "inspecao-tributaria": CorpoInspecaoTributaria,
+  "insolvencia-pessoal": CorpoInsolvenciaPessoal,
+  "irs-automatico": CorpoIrsAutomatico,
+  "declaracao-substituicao": CorpoDeclaracaoSubstituicao,
+  "irs-fora-do-prazo": CorpoIrsForaDoPrazo,
+  "e-fatura": CorpoEFatura,
+  "reclamar-deducoes": CorpoReclamarDeducoes,
 };

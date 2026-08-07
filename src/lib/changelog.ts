@@ -19,6 +19,24 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.19.0",
+    data: "2026-08-07",
+    titulo: "Coimas, inspeções e o IRS automático — com uma regra que custa dinheiro a quem não a conhece",
+    itens: [
+      "Duas secções novas completas: «Preparar o IRS» e «Direitos e cobranças». Nove guias sobre a declaração, o e-Fatura, as coimas, a regularização voluntária, a inspeção tributária e a insolvência pessoal.",
+      "A regra que mais dinheiro custa: no IRS automático, não fazer nada NÃO é não entregar. A declaração provisória converte-se em declaração entregue por ti no fim do prazo — e nesse caso, se és casado ou unido de facto, aplica-se a tributação SEPARADA. Quem beneficiaria da conjunta perde-a por inação, e ninguém lhe diz.",
+      "Mas há uma janela de emenda que quase ninguém conhece, e é a melhor de todo o IRS: nesses casos podes entregar uma declaração de substituição nos 30 dias posteriores à liquidação, sem qualquer penalidade.",
+      "Entregar o IRS fora do prazo tem coima entre 150 € e 3 750 € — mas quem entrega por iniciativa própria, antes de a Autoridade Tributária agir, paga o mínimo legal reduzido a 12,5 %, com o piso de 25 €. E não é preciso pedir nada: a lei diz que a própria entrega da declaração em falta vale como pedido de redução.",
+      "Dispensa e redução de coima não são a mesma coisa. A dispensa exige cinco anos de historial limpo, ou ausência de prejuízo para a receita — e nunca se aplica a quem não entregou imposto que devia. A redução depende só do momento: 12,5 % do mínimo antes de qualquer ação, 50 % até à audição prévia numa inspeção, nada depois disso.",
+      "Aproveitar uma redução hoje consome o historial limpo exigido pela dispensa nos cinco anos seguintes. É uma carta que só se joga uma vez.",
+      "Numa inspeção, a fase decisiva é a audição prévia sobre o projeto de relatório — é o último momento em que ainda se muda o desfecho sem contencioso, e a última janela de redução da coima. Explicamos o que é a ordem de serviço, o que ela delimita, e onde estão os limites do dever de colaboração.",
+      "Corrigir depois de entregar tem três relógios diferentes, que costumam ser confundidos: 120 dias para a reclamação graciosa, quatro anos para a revisão por erro dos serviços — e o teu pedido interrompe esse prazo —, e três anos para a via excecional da injustiça grave ou notória.",
+      "No e-Fatura, a regra central: faturas por classificar não entram nas deduções apuradas. Não são rejeitadas — simplesmente não contam, e ninguém avisa. E o primeiro prazo do ano é a comunicação do agregado familiar, até ao fim de fevereiro, com autenticação de todos os membros.",
+      "Não fixámos as datas de validação de faturas de propósito: mudam todos os anos e podem ser prorrogadas por despacho. O que os guias fixam é a sequência, que é estável.",
+      "Sobre insolvência pessoal, dizemos o que os tribunais não fecharam: há decisões em sentidos diferentes quanto a saber se a exoneração do passivo restante abrange dívidas fiscais e à Segurança Social. Mostramos a norma de onde a discussão nasce e recomendamos advogado — em vez de dar uma regra que não existe.",
+    ],
+  },
+  {
     version: "2.18.0",
     data: "2026-08-07",
     titulo: "Dez guias por profissão — e duas isenções de IVA que estavam mal explicadas",

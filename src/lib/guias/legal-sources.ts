@@ -323,6 +323,14 @@ const FONTES_BASE = {
   circ46: at("circ46", "46.º", "Art. 46.º CIRC — Conceito de mais-valias e de menos-valias", "irc46", "CIRC_2R"),
   circ47: at("circ47", "47.º", "Art. 47.º CIRC — Correção monetária das mais-valias e das menos-valias", "irc47", "CIRC_2R"),
 
+  // ── LGT: a indisponibilidade do crédito tributário ───────────────────
+  // É a norma de onde nasce a tese de que as dívidas fiscais não são
+  // abrangidas pela exoneração do passivo restante — e o n.º 3, aditado
+  // pela Lei n.º 55-A/2010, é o que a torna decisiva, porque manda a
+  // regra prevalecer sobre qualquer legislação especial. O Código da
+  // Insolvência é legislação especial. Verificado a 2026-08-07.
+  lgt30: at("lgt30", "30.º", "Art. 30.º LGT — Objeto da relação jurídica tributária e indisponibilidade do crédito", "lgt30", "lgt"),
+
   // ── EBF: organismos de investimento coletivo ─────────────────────────
   // O pacote marcou o guia dos ETFs com um aviso — «o regime dos OIC tem
   // especificidades (DL 7/2015), confirmar antes de afirmar o tratamento de
