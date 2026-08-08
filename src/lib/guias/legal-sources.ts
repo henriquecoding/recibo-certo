@@ -684,6 +684,24 @@ const FONTES_BASE = {
     lastCheckedAt: VERIFICADO,
     status: "active",
   },
+  // Primeira fonte servida pela base jurídica da PGD Lisboa a entrar neste
+  // catálogo. É `OTHER_OFFICIAL` e não `DR` de propósito: o Diário da
+  // República é o publicador oficial, a PGD Lisboa é quem serve o texto
+  // consolidado de forma legível — e a distinção tem de ficar visível.
+  lei2013APP: {
+    id: "lei2013APP",
+    authority: "OTHER_OFFICIAL",
+    title: "Lei n.º 2/2013 — Criação, organização e funcionamento das associações públicas profissionais (versão consolidada) · PGD Lisboa",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?nid=1873&tabela=leis",
+    jurisdiction: "PT",
+    sourceType: "law",
+    effectiveFrom: ANO,
+    consolidada: true,
+    renderMode: "html",
+    expectedAnchors: ["Seguro de responsabilidade profissional"],
+    lastCheckedAt: VERIFICADO,
+    status: "active",
+  },
   ct263: {
     id: "ct263",
     authority: "DR",

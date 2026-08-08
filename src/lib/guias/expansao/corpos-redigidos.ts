@@ -361,4 +361,17 @@ export const CORPOS_REDIGIDOS: ReadonlySet<string> = new Set([
   //    foi legível em fonte oficial consolidada nesta revisão.
   "fct-fgct",
   "acidente-de-trabalho",
+
+  // ── Gerir contribuições ─────────────────────────────────────────────
+  //    O pacote marcou este «SEM BASE LEGAL NO CATÁLOGO» e não lhe deu
+  //    artigo nenhum. Há: o art. 31.º da Lei n.º 2/2013 — a lei-quadro
+  //    das ordens profissionais — e responde à pergunta do título ao
+  //    contrário do que se assume. A lei geral NÃO obriga ninguém: diz
+  //    que os estatutos PODEM fazer depender o exercício da profissão do
+  //    seguro, e só onde haja risco direto e específico para a saúde,
+  //    para a segurança ou para o dinheiro de quem contrata. Os capitais
+  //    mínimos ficam de fora — vivem nos estatutos, profissão a
+  //    profissão, e um valor desatualizado aqui levaria alguém a
+  //    segurar-se abaixo do exigido.
+  "rc-profissional",
 ]);

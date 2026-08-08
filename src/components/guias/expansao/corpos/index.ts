@@ -109,6 +109,7 @@ import CorpoDespedimento from "./despedimento";
 import CorpoAssedioTrabalho from "./assedio-trabalho";
 import CorpoFctFgct from "./fct-fgct";
 import CorpoAcidenteDeTrabalho from "./acidente-de-trabalho";
+import CorpoRcProfissional from "./rc-profissional";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  CORPOS REDIGIDOS DOS GUIAS DA EXPANSÃO
@@ -233,4 +234,5 @@ export const CORPOS: Record<string, ComponentType> = {
   "assedio-trabalho": CorpoAssedioTrabalho,
   "fct-fgct": CorpoFctFgct,
   "acidente-de-trabalho": CorpoAcidenteDeTrabalho,
+  "rc-profissional": CorpoRcProfissional,
 };

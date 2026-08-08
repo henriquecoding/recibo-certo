@@ -23,6 +23,7 @@
 
 import type { TAViaturasTaxas } from "@/lib/fiscal-data";
 import {
+  RC_PROFISSIONAL,
   ASSEDIO_TRABALHO,
   BANCO_DE_HORAS,
   COMPENSACAO_DESPEDIMENTO,
@@ -1112,6 +1113,16 @@ export const DADOS_MOTOR: Record<string, DadoDoMotor[]> = {
   "acidente-de-trabalho": [
     d("TELETRABALHO", "Local de trabalho em teletrabalho", TELETRABALHO.localDeTrabalho.value, "é o que determina a cobertura do acidente ocorrido em casa · art. 166.º, n.º 4, al. b) CT"),
     d("TELETRABALHO", "Horário acordado", TELETRABALHO.exigeAcordoEscrito.value, "sem acordo escrito não há horário fixado — e é o horário que delimita o tempo de trabalho"),
+  ],
+
+  "rc-profissional": [
+    d("RC_PROFISSIONAL", "A lei geral obriga?", RC_PROFISSIONAL.naoEObrigatorioPorLeiGeral.value, "«podem», não «devem» — a obrigatoriedade não é universal · art. 31.º da Lei n.º 2/2013"),
+    d("RC_PROFISSIONAL", "O limite da faculdade", RC_PROFISSIONAL.testeDeRisco.value, "art. 31.º da Lei n.º 2/2013"),
+    d("RC_PROFISSIONAL", "Proporcionalidade da cobertura", RC_PROFISSIONAL.proporcionalidade.value, "art. 31.º da Lei n.º 2/2013"),
+    d("RC_PROFISSIONAL", "Onde vive a obrigação, quando existe", RC_PROFISSIONAL.ondeVemAObrigacao.value, "art. 8.º, n.º 1 da Lei n.º 2/2013"),
+    d("RC_PROFISSIONAL", "Seguro subscrito noutro Estado-Membro", RC_PROFISSIONAL.seguroDoutroEstadoMembro.value, "art. 38.º, n.º 1 da Lei n.º 2/2013"),
+    d("RC_PROFISSIONAL", "Cobertura parcial", RC_PROFISSIONAL.coberturaParcialComplementaSe.value, "art. 38.º, n.º 2 da Lei n.º 2/2013"),
+    d("RC_PROFISSIONAL", "Prova perante a ordem", RC_PROFISSIONAL.certidaoBasta.value, "art. 38.º, n.º 3 da Lei n.º 2/2013"),
   ],
 
   "viatura-empresa": [

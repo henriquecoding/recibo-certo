@@ -243,6 +243,31 @@ export const CORRECOES_AO_PACOTE: CorrecaoAoPacote[] = [
     fonte: "art2cirsSelo",
     verificadoEm: EM_PROFISSOES,
   },
+  {
+    slug: "rc-profissional",
+    dado: "Base legal do seguro de responsabilidade civil profissional",
+    noPacote: "«SEM BASE LEGAL NO CATÁLOGO» — nenhum artigo indicado",
+    verificado: "art. 31.º da Lei n.º 2/2013, com os arts. 8.º e 38.º",
+    notaVerificada:
+      "a lei-quadro das associações públicas profissionais diz que os estatutos PODEM fazer depender o exercício da profissão do seguro, e só onde o serviço apresente risco direto e específico para a saúde, para a segurança ou para a segurança financeira de quem o recebe",
+    acao: "corrigir",
+    semDadoNoPacote: true,
+    motivo:
+      "O pacote deixou este guia sem artigo nenhum, e é compreensível: procurou-se a obrigação onde ela não está. Não há norma geral que imponha o seguro — há uma norma geral que AUTORIZA os estatutos a impô-lo, e que limita essa autorização por um teste de risco. É o art. 31.º da Lei n.º 2/2013, e responde exatamente à pergunta do título ao contrário do que se assume. Somam-se o art. 8.º, n.º 1 (os estatutos são aprovados por lei, e é neles que a obrigação vive quando existe) e o art. 38.º (um profissional já segurado noutro Estado-Membro não pode ser obrigado a subscrever cá, e a certidão da seguradora estrangeira é título bastante — proteção que quase ninguém invoca). Os capitais mínimos continuam de fora: variam estatuto a estatuto, e um valor desatualizado aqui levaria alguém a segurar-se abaixo do exigido.",
+    fonte: "lei2013APP",
+    verificadoEm: EM_PROFISSOES,
+  },
+  {
+    slug: "reforma-antecipada",
+    dado: "Idade normal de acesso, fator de sustentabilidade e penalização",
+    noPacote: "«SEM BASE LEGAL NO CATÁLOGO»",
+    acao: "reter",
+    semDadoNoPacote: true,
+    motivo:
+      "Único guia dos 112 que fica por escrever, e não por falta de tentativa. O regime está no Decreto-Lei n.º 187/2007, que foi alterado pelo menos pelos Decretos-Leis n.os 167-E/2013, 79/2019 e 16-A/2021 — e não foi possível obter o seu texto CONSOLIDADO em nenhuma fonte legível: o Diário da República serve 2,3 KB de shell vazio nas páginas de legislação consolidada, a base jurídica da PGD Lisboa (que destravou o Código do Trabalho e a Lei n.º 2/2013) não o aloja, e o PDF que a Caixa Geral de Aposentações disponibiliza está atrás de uma ligação de sessão que devolve 404. Os dois números centrais do guia — a idade normal de acesso e o fator de sustentabilidade — são ainda fixados por portaria ANUAL, e a informação que circula sobre eles mistura anos: a mesma portaria fixa a idade de um ano e o fator do ano anterior, o que faz com que artigos de imprensa apresentem pares de valores que nunca coexistiram. Publicar uma penalização errada sobre uma pensão é um erro que acompanha alguém para o resto da vida. Fica andaime, com noindex, até haver articulado consolidado verificável.",
+    fonte: "ct",
+    verificadoEm: EM_PROFISSOES,
+  },
 ];
 
 const POR_SLUG = new Map<string, CorrecaoAoPacote[]>();

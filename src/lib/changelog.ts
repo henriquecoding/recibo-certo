@@ -19,6 +19,21 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.27.0",
+    data: "2026-08-07",
+    titulo: "Seguro de responsabilidade civil profissional — e a lei diz o contrário do que se assume",
+    itens: [
+      "Guia novo sobre o seguro de responsabilidade civil profissional: quem é mesmo obrigado, e porquê.",
+      "A resposta é a que menos se espera: a lei geral NÃO obriga ninguém. A lei-quadro das ordens profissionais diz que os estatutos PODEM fazer depender o exercício da profissão do seguro — «podem», não «devem». A obrigação, quando existe, nasce do estatuto de cada ordem, que é uma lei própria.",
+      "E mesmo essa faculdade tem travão: só pode ser exigido onde o serviço apresente risco direto e específico para a saúde ou segurança de quem o recebe — ou para a segurança financeira dele. É esse critério que explica porque é que umas profissões exigem seguro e outras não.",
+      "Se já tens seguro subscrito noutro Estado-Membro da União Europeia ou do Espaço Económico Europeu, não te podem obrigar a subscrever outro cá pela mesma atividade. Cobrindo só parte, complementas o que falta — e a certidão da seguradora estrangeira é título bastante. É uma proteção expressa na lei que quase ninguém invoca.",
+      "Quase todas estas apólices funcionam na base «claims made»: cobrem a reclamação apresentada durante a vigência, não o trabalho feito durante a vigência. Daí as duas datas que decidem casos — a retroatividade, que cobre o passado, e o período posterior, que cobre depois de deixares de exercer. Cessar atividade não fecha a exposição.",
+      "Não confundir com o seguro de acidentes de trabalho: um protege terceiros do dano que o teu trabalho lhes causa, o outro protege-te a ti do acidente sofrido no trabalho. Ter um não dispensa o outro.",
+      "Os capitais mínimos não são publicados, de propósito: vivem nos estatutos, profissão a profissão, e um valor desatualizado aqui levaria alguém a segurar-se abaixo do exigido.",
+      "Fica um único guia dos 112 por escrever — o da reforma antecipada — e a razão está registada: não foi possível obter o texto consolidado do diploma que fixa o regime, e os dois números centrais são fixados por portaria anual. Publicar uma penalização errada sobre uma pensão é um erro que acompanha alguém para o resto da vida.",
+    ],
+  },
+  {
     version: "2.26.0",
     data: "2026-08-07",
     titulo: "Trabalho por conta de outrem — e o banco de horas individual, que já não existe",

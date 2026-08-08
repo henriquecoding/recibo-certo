@@ -208,6 +208,10 @@ export const SOURCES = {
     label: "Art. 12.º-B CIRS — IRS Jovem · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs12b.aspx",
   },
+  lei2013APP: {
+    label: "Lei n.º 2/2013 — Criação, organização e funcionamento das associações públicas profissionais · Base de Dados Jurídica da PGD Lisboa (versão consolidada)",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?nid=1873&tabela=leis",
+  },
   ctPeriodoExperimental: {
     label: "Art. 112.º Código do Trabalho — Duração do período experimental · Base de Dados Jurídica da PGD Lisboa (versão consolidada)",
     url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0112&nid=1047&tabela=leis&nversao=",
@@ -4802,6 +4806,70 @@ export const AJUDAS_CUSTO_PRESSUPOSTOS = sv(
 //  valores, e é por isso que ambas ficam registadas em `SOURCES`.
 // ═══════════════════════════════════════════════════════════════════════
 
+
+// ═══════════════════════════════════════════════════════════════════════
+//  SEGURO DE RESPONSABILIDADE CIVIL PROFISSIONAL
+//  Arts. 8.º, 31.º e 38.º da Lei n.º 2/2013 — a lei-quadro das ordens
+//  profissionais. Lidos a 07/08/2026 no articulado consolidado da PGD
+//  Lisboa (na redação da Lei n.º 12/2023, a última que a alterou).
+//
+//  Este é o artigo que responde à pergunta do guia, e responde-a ao
+//  contrário do que se assume: a lei geral NÃO impõe o seguro a ninguém.
+//  Diz que os estatutos PODEM fazer depender dele o exercício da
+//  profissão — e mesmo essa faculdade está limitada por um teste de
+//  risco. A obrigação, quando existe, nasce do estatuto da ordem, que é
+//  aprovado por lei própria; e é aí, profissão a profissão, que se
+//  confirmam capitais mínimos e coberturas. Nenhum valor é publicado
+//  aqui por isso mesmo.
+// ═══════════════════════════════════════════════════════════════════════
+
+export const RC_PROFISSIONAL = {
+  naoEObrigatorioPorLeiGeral: sv(
+    "os estatutos das associações públicas profissionais PODEM fazer depender o exercício da profissão da subscrição de um seguro obrigatório de responsabilidade civil profissional, ou da prestação de garantia ou instrumento equivalente",
+    "Art. 31.º da Lei n.º 2/2013",
+    "lei2013APP",
+    REV_TRABALHO,
+    "«Podem», não «devem» — a obrigatoriedade não é universal e não decorre da lei-quadro."
+  ),
+  testeDeRisco: sv(
+    "só pode ser exigido na medida em que o serviço profissional apresente risco direto e específico para a saúde ou segurança do destinatário do serviço ou de terceiro, ou para a segurança financeira do destinatário",
+    "Art. 31.º da Lei n.º 2/2013",
+    "lei2013APP",
+    REV_TRABALHO,
+    "É o critério que explica porque é que umas profissões o exigem e outras não."
+  ),
+  proporcionalidade: sv(
+    "o seguro, a garantia ou o instrumento equivalente devem ser adequados à natureza e à dimensão do risco",
+    "Art. 31.º da Lei n.º 2/2013",
+    "lei2013APP",
+    REV_TRABALHO
+  ),
+  ondeVemAObrigacao: sv(
+    "os estatutos das associações públicas profissionais são aprovados por lei, e é neles que a obrigação — quando existe — vive, com os capitais mínimos e as coberturas de cada profissão",
+    "Art. 8.º, n.º 1 da Lei n.º 2/2013",
+    "lei2013APP",
+    REV_TRABALHO
+  ),
+  seguroDoutroEstadoMembro: sv(
+    "não pode ser imposta a um prestador estabelecido noutro Estado-Membro da União Europeia ou do Espaço Económico Europeu a subscrição de um seguro pela atividade desenvolvida em Portugal, caso essa atividade já esteja, total ou parcialmente, coberta por seguro, garantia ou instrumento equivalente subscrito no Estado onde está estabelecido",
+    "Art. 38.º, n.º 1 da Lei n.º 2/2013",
+    "lei2013APP",
+    REV_TRABALHO
+  ),
+  coberturaParcialComplementaSe: sv(
+    "cobrindo o seguro de outro Estado-Membro apenas parte dos riscos, o prestador deve complementá-lo de forma a abranger os elementos ou riscos não cobertos",
+    "Art. 38.º, n.º 2 da Lei n.º 2/2013",
+    "lei2013APP",
+    REV_TRABALHO
+  ),
+  certidaoBasta: sv(
+    "a certidão emitida por instituição de crédito ou empresa de seguros estabelecida noutro Estado-Membro é título bastante para demonstrar o cumprimento do requisito",
+    "Art. 38.º, n.º 3 da Lei n.º 2/2013",
+    "lei2013APP",
+    REV_TRABALHO
+  ),
+};
+
 /** Art. 112.º — durações do período experimental, em dias. */
 export const PERIODO_EXPERIMENTAL = {
   geral: sv(
@@ -7235,6 +7303,7 @@ export function assertFiscalDataIntegrity(): void {
     ...Object.values(DEPRECIACAO),
     ...Object.values(ICE),
     ...Object.values(STOCK_OPTIONS_STARTUP),
+    ...Object.values(RC_PROFISSIONAL),
     // Código do Trabalho
     ...Object.values(PERIODO_EXPERIMENTAL),
     ...Object.values(DENUNCIA_EXPERIMENTAL),

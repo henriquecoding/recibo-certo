@@ -60,6 +60,10 @@ export const FONTES_ACRESCENTADAS: Record<string, string[]> = {
   // (subsídio de refeição e a majoração dos vales), c) (abono para falhas) e
   // d) (ajudas de custo, quilómetros e a condição dos pressupostos).
   "ajudas-de-custo-km": ["art2cirsSelo"],
+  // O pacote deixou este guia sem base legal nenhuma. A lei-quadro das
+  // ordens profissionais tem o artigo que responde à pergunta do título —
+  // e responde-a ao contrário do que se assume.
+  "rc-profissional": ["lei2013APP"],
 };
 
 export const fontesAcrescentadas = (slug: string): string[] => FONTES_ACRESCENTADAS[slug] ?? [];
