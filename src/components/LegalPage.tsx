@@ -20,6 +20,14 @@ interface LegalPageProps {
   lastUpdated: string;
   toc: TocItem[];
   children: ReactNode;
+  /** Sobrancelha do cabeçalho. As páginas de autoridade (§10.3 do
+      relatório estratégico) usam este mesmo molde sem serem documentos
+      legais — daí ser parametrizável em vez de estar escrito no layout. */
+  eyebrow?: string;
+  /** Segundo selo ao lado da data. */
+  selo?: string;
+  ctaTitulo?: string;
+  ctaTexto?: string;
 }
 
 // ── Primitivas de conteúdo (exportadas para usar nas páginas) ─
@@ -169,6 +177,10 @@ export default function LegalPage({
   lastUpdated,
   toc,
   children,
+  eyebrow = "Documentação legal",
+  selo = "Conformidade RGPD",
+  ctaTitulo = "Dúvidas sobre esta política?",
+  ctaTexto = "Envia-nos um email e respondemos no prazo de 30 dias úteis.",
 }: LegalPageProps) {
   return (
     <div className="flex min-h-screen flex-col bg-cream dark:bg-stone-900">
@@ -201,7 +213,7 @@ export default function LegalPage({
           </Link>
 
           <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-brand-mint/60">
-            Documentação legal
+            {eyebrow}
           </div>
           <h1 className="font-display text-3xl font-bold text-white sm:text-4xl">{title}</h1>
           <p className="mt-3 max-w-xl text-sm leading-relaxed text-stone-400">{subtitle}</p>
@@ -213,7 +225,7 @@ export default function LegalPage({
             </div>
             <div className="flex items-center gap-1.5 text-xs text-stone-600">
               <Lock size={12} />
-              Conformidade RGPD
+              {selo}
             </div>
           </div>
 
@@ -295,10 +307,10 @@ export default function LegalPage({
           <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <div>
               <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">
-                Dúvidas sobre esta política?
+                {ctaTitulo}
               </p>
               <p className="mt-0.5 text-xs text-stone-400">
-                Envia-nos um email e respondemos no prazo de 30 dias úteis.
+                {ctaTexto}
               </p>
             </div>
             <a

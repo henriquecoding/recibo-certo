@@ -19,6 +19,21 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.27.0",
+    data: "2026-08-08",
+    titulo: "Como calculamos, o que já verificámos e o que ainda não sabemos — três páginas novas",
+    itens: [
+      "Passa a haver uma página de metodologia: de onde vêm as regras, como um número é apurado, o que o cálculo NÃO cobre e o que fazer quando achas que está errado. Um site que calcula impostos e não explica como o faz está a pedir confiança sem a merecer.",
+      "E uma página de estado dos dados, onde todos os números são contados a partir do código, não escritos à mão: quantos parâmetros fiscais têm base legal, fonte oficial e data de verificação, quantos guias estão publicados e quantos ainda estão em preparação.",
+      "Essa página inclui uma secção com o que ainda FALTA. Uma página de cobertura que só mostrasse o que está feito seria publicidade.",
+      "E um changelog fiscal público: todas as correções e atualizações às regras, com data e razão. Quando corrigimos alguma coisa, o que estava errado continua lá descrito. É a diferença entre «sempre atualizado» — que ninguém consegue verificar — e um registo que qualquer pessoa pode confrontar.",
+      "Os números da página inicial («167 guias fiscais», «1 614 perguntas») apareciam a zero para quem lê o site sem JavaScript: leitores de ecrã, motores de busca e assistentes de IA. Agora estão no HTML desde o primeiro byte, e a animação passou a ser só uma animação.",
+      "O sitemap anunciava que TODAS as páginas tinham mudado sempre que publicávamos qualquer coisa — porque usava a data da publicação em vez da data de revisão de cada página. Um guia revisto em julho dizia ter mudado hoje. Agora cada página comunica a sua data real, e são seis datas diferentes em vez de uma.",
+      "O ficheiro que diz aos rastreadores o que podem ler passou a nomear um a um os motores de resposta — o da pesquisa do ChatGPT, o do Perplexity, o do Google — em vez de os deixar a uma regra genérica. São decisões separadas e agora estão escritas.",
+      "Por baixo de tudo isto: uma camada de medição sem dependências de terceiros, que só existe com o teu consentimento de estatística e que RECUSA qualquer evento que contenha um valor de rendimento, um NIF, um documento ou texto livre. A verificação corre no teu dispositivo, antes de qualquer envio.",
+    ],
+  },
+  {
     version: "2.26.0",
     data: "2026-08-07",
     titulo: "Trabalho por conta de outrem — e o banco de horas individual, que já não existe",

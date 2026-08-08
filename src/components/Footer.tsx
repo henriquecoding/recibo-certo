@@ -38,7 +38,14 @@ const NAV_APRENDER = [
   { label: "Ato isolado", href: "/guias/ato-isolado" },
 ];
 
+// As três páginas de autoridade (§10.3 do relatório estratégico) entram
+// aqui, e não numa secção escondida: metodologia, cobertura dos dados e
+// histórico de correções são o que sustenta tudo o resto. Um site que
+// calcula impostos e não diz como o faz pede confiança sem a merecer.
 const NAV_EMPRESA = [
+  { label: "Metodologia", href: "/metodologia" },
+  { label: "Estado dos dados", href: "/estado-dos-dados" },
+  { label: "Changelog fiscal", href: "/changelog-fiscal" },
   { label: "Planos e preços", href: "/precos" },
   { label: "Investidores", href: "/investidores" },
   { label: "Dashboard", href: "/dashboard" },
