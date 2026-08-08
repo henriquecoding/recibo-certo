@@ -96,6 +96,13 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
     changeFrequency: "monthly" as const,
     priority: 0.7,
   })),
+  // Páginas de autoridade (§10.3 do relatório estratégico): metodologia,
+  // cobertura dos dados e histórico de correções fiscais. Prioridade alta
+  // porque são o que sustenta a confiança em tudo o resto — e o que um
+  // motor de resposta precisa de encontrar para nos poder citar.
+  { path: "/metodologia",      changeFrequency: "monthly", priority: 0.7 },
+  { path: "/estado-dos-dados", changeFrequency: "weekly",  priority: 0.7 },
+  { path: "/changelog-fiscal", changeFrequency: "weekly",  priority: 0.7 },
   { path: "/privacidade", changeFrequency: "yearly", priority: 0.3 },
   { path: "/termos",      changeFrequency: "yearly", priority: 0.3 },
   { path: "/cookies",     changeFrequency: "yearly", priority: 0.3 },

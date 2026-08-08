@@ -8,6 +8,7 @@ import { SubscricaoProvider } from "@/lib/stripe/subscription";
 import DeferredOverlays from "@/components/ui/DeferredOverlays";
 import ChromeMobile from "@/components/ChromeMobile";
 import FeedbackModal from "@/components/feedback/FeedbackModal";
+import Medicao from "@/components/Medicao";
 // Importado pelo efeito colateral: `assertChangelogIntegrity()` corre ao
 // carregar o módulo e faz o build falhar se `APP_VERSION` e a entrada mais
 // recente do CHANGELOG divergirem. Antes essa garantia vinha de graça, porque
@@ -150,6 +151,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   {children}
                   <ChromeMobile />
                   <FeedbackModal />
+                  <Medicao />
                   <DeferredOverlays />
                 </MotionProvider>
               </PerfilProvider>

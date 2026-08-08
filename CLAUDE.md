@@ -7,6 +7,8 @@
 > - `design-system-recibocerto` — UI, dark mode, motion, acessibilidade
 > - `arquitetura-recibocerto` — stack, estrutura, convenções
 > - `verificacao-e-qualidade` — como verificar antes de concluir
+> - `crescimento-recibocerto` — clusters de decisão, medição, routing comercial
+>   e autoridade (LER antes de criar páginas, ferramentas, guias ou CTAs)
 >
 > Nota: o `CLAUDE.md` da pasta-pai (Desktop, "Refúgio Animal") **NÃO** pertence a
 > este projeto — ignora-o.
@@ -64,6 +66,13 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
 - `src/lib/fiscal.ts` — motor: `calcular` (tesouraria/recibo), `simularIRSAnual` (anual), `compararRegimes`.
 - `src/lib/insights.ts` — insights proativos + `saudeFiscal`.
 - `src/lib/store/recibos.ts` — repositório (localStorage; trocar por Supabase no futuro).
+- `src/lib/analytics/` — ★ camada de medição: dicionário de eventos, identidade e
+  atribuição, barreira de PII, DVM (North Star) e definições do painel semanal.
+- `src/lib/clusters.ts` — os oito clusters de decisão, ICPs e inventário dos guias.
+- `src/lib/routing.ts` — motor de routing comercial (FIZ / contabilista / Plus /
+  sem parceiro) e as fronteiras que nunca se atravessam.
+- `src/lib/autoridade.ts` — anatomia de resultado e de página citável, benchmark de IA.
+- `src/lib/revisoes.ts` — data material de cada rota (o `lastmod` real do sitemap).
 - `src/lib/motion.ts` — variantes de animação.
 - `src/lib/version.ts` — ★ `APP_VERSION` + `CHANGELOG` do popup de Novidades (subir a cada merge para `main`; ver regra 9).
 - `src/app/` — landing (`page.tsx`) + `dashboard/*` (visão geral, recibos, receitas, prazos, simulador, comparador) + `api/fiscal-data`.
