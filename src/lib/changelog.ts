@@ -19,6 +19,19 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.29.0",
+    data: "2026-08-10",
+    titulo: "O primeiro ecrã, endireitado — e um botão para voltar ao topo",
+    itens: [
+      "O seletor «Sou trabalhador / Gostaria de» era quatro objetos a competir: o rótulo vivia numa caixa estreita à esquerda das opções e «SOU TRABALHADOR» não cabia lá — transbordava por cima do grupo ao lado no computador e partia-se em duas linhas no telemóvel. Agora o rótulo está por cima, as quatro opções têm todas a mesma largura e há um só contorno à volta de tudo: uma bandeja com quatro escolhas, não quatro caixas.",
+      "O título da página inicial era medido pela largura da JANELA, mas vive numa coluna com pouco mais de um terço dela. Resultado: quatro linhas de cinco palavras, com o bloco de texto mais alto do que o cartão da demo ao lado. Passou a ter escala própria — o mesmo peso editorial, em três linhas cheias.",
+      "Os atalhos («Para ti») e os selos de confiança eram texto solto a seguir aos botões, cada um com o seu espaçamento. Passaram a ser um degrau próprio, com os atalhos em pastilhas que dá mesmo para acertar com o dedo — antes eram links de 13 píxeis.",
+      "No telemóvel, «Calcular o meu recibo» partia-se em duas linhas com a seta a flutuar ao lado. Os dois botões passaram a barras de largura total, empilhadas.",
+      "A faixa da FIZ, logo por baixo do hero, começava 24 píxeis mais à direita do que tudo o resto da página. Alinhou.",
+      "E há um botão de voltar ao topo, em todas as páginas do site — no computador e no telemóvel. Aparece quando sais do primeiro ecrã e não aparece antes; no telemóvel fica acima da barra de baixo, sem tapar nada. Não existe no painel, que tem navegação própria.",
+    ],
+  },
+  {
     version: "2.28.0",
     data: "2026-08-10",
     titulo: "A pesquisa passou para o centro do cabeçalho — e deixou de ser uma janela",
