@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "motion/react";
 import { Keyboard, Search } from "@/components/ui/Icons";
 import { CATEGORIAS, categoriaPorContexto } from "@/lib/busca";
-import { CONSULTA_SECRETARIA, useAtalhoBusca, useMotorBusca } from "./motor";
+import { CONSULTA_SECRETARIA, anunciarEstadoBusca, useAtalhoBusca, useMotorBusca } from "./motor";
 import { AbasCategorias, CampoBusca, ChipsFiltro, CorpoResultados, RodapeBusca } from "./partes";
 
 /**
@@ -83,6 +83,26 @@ export function DockPesquisa({ inputId }: { inputId?: string }) {
   useEffect(() => {
     setAberto(false);
   }, [pathname]);
+
+  /**
+   * ┌─────────────────────────────────────────────────────────────────────────┐
+   * │ O CABEÇALHO TEM DE SABER QUE A PESQUISA ESTÁ ABERTA                      │
+   * │                                                                         │
+   * │ O painel está ancorado ao invólucro da barra, e o invólucro muda de      │
+   * │ LINHA da grelha quando o cabeçalho encolhe. Sem este aviso, rolar com o  │
+   * │ painel aberto encolhia o cabeçalho por baixo dele: o painel saltava da   │
+   * │ segunda linha para a primeira e ia parar por cima da marca e do botão,   │
+   * │ com metade do cabeçalho a espreitar de cada lado.                        │
+   * │                                                                         │
+   * │ Com o aviso, o cabeçalho congela o estado enquanto a pesquisa está       │
+   * │ aberta — e isso aqui não custa nada, porque ele é `fixed` com um         │
+   * │ espaçador de altura constante: mudar (ou não mudar) a sua altura não     │
+   * │ move um pixel do documento.                                              │
+   * └─────────────────────────────────────────────────────────────────────────┘
+   */
+  useEffect(() => {
+    anunciarEstadoBusca(aberto);
+  }, [aberto]);
 
   /**
    * ┌─────────────────────────────────────────────────────────────────────────┐

@@ -78,10 +78,10 @@ describe("cabecalho:ambitos", () => {
   });
 
   it("uma sub-rota profunda acende o âmbito mais específico, e só esse", () => {
-    expect(ambitoAtivo("/ferramentas/classificar-atividade")?.label).toBe("Atividades");
-    expect(ambitoAtivo("/ferramentas/simulador-irs")?.label).toBe("Ferramentas");
+    expect(ambitoAtivo("/ferramentas/classificar-atividade")).toBeNull();
+    expect(ambitoAtivo("/ferramentas/simulador-irs")).toBeNull();
     expect(ambitoAtivo("/guias/iva-trimestral")?.label).toBe("Guias");
-    expect(ambitoAtivo("/quiz-fiscal/iva")?.label).toBe("Guias");
+    expect(ambitoAtivo("/quiz-fiscal/iva")?.label).toBe("Quiz");
   });
 
   it("uma rota sem âmbito não acende nada", () => {

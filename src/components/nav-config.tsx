@@ -96,15 +96,23 @@ export interface AmbitoHeader {
 
 export const NAV_AMBITOS: AmbitoHeader[] = [
   { label: "Simuladores", href: "/#calculadora", prefixos: [] },
-  { label: "Guias", href: "/guias", prefixos: ["/guias", "/quiz-fiscal"] },
-  {
-    label: "Atividades",
-    href: "/ferramentas/classificar-atividade",
-    prefixos: ["/ferramentas/classificar-atividade", "/dashboard/classificar-atividade"],
-  },
-  { label: "Ferramentas", href: "/ferramentas", prefixos: ["/ferramentas"] },
+  { label: "Guias", href: "/guias", prefixos: ["/guias"] },
+  { label: "Quiz", href: "/quiz-fiscal", prefixos: ["/quiz-fiscal"] },
   { label: "Planos", href: "/precos", prefixos: ["/precos"] },
 ];
+
+/*
+ * Notas sobre quem saiu desta lista, para não voltar a entrar por engano:
+ *
+ * · «Ferramentas» apontava para `/ferramentas` e é o índice completo. Continua
+ *   a ser o destino da barra de pesquisa sem JavaScript e o item «Todas as
+ *   ferramentas» dentro do painel — não desapareceu do produto, saiu da barra;
+ * · «Atividades» dá lugar ao Quiz. O classificador de atividades continua no
+ *   painel de pesquisa, com âmbito próprio (`categoriaPorContexto` devolve
+ *   `atividades` nessa rota), que é onde a pesquisa dele faz sentido;
+ * · `/quiz-fiscal` era um prefixo de «Guias» e passou a ter item próprio.
+ *   Deixá-lo nos dois acendia dois itens ao mesmo tempo — ver `ambitoAtivo`.
+ */
 
 /**
  * Qual dos âmbitos está aceso — e é sempre UM, no máximo.

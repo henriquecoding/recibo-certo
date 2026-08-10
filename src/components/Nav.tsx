@@ -10,6 +10,7 @@ import { Logo, ArrowRight, User, Megaphone } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useAuth } from "@/lib/supabase/auth";
 import { NAV_AMBITOS, ambitoAtivo } from "@/components/nav-config";
+import { useBuscaAberta } from "@/components/busca/motor";
 import { abrirFeedback } from "@/components/feedback/abrir";
 
 /**
@@ -46,7 +47,39 @@ import { abrirFeedback } from "@/components/feedback/abrir";
  */
 export default function Nav() {
   const { abrirModal, disponivel, user } = useAuth();
-  const [compacto, setCompacto] = useState(false);
+  const [rolado, setRolado] = useState(false);
+  const buscaAberta = useBuscaAberta();
+
+  /**
+   * Enquanto a pesquisa está aberta o cabeçalho não encolhe.
+   *
+   * O painel está ancorado ao invólucro da barra, e encolher move o invólucro
+   * de linha — o painel iria com ele, para cima da marca. Congelar é grátis
+   * aqui: o cabeçalho é `fixed` com espaçador de altura constante, portanto a
+   * sua altura não participa no fluxo do documento.
+   */
+  const compacto = rolado && !buscaAberta;
+
+  /**
+   * ┌─────────────────────────────────────────────────────────────────────────┐
+   * │ A GEOMETRIA CONGELA COM A PESQUISA ABERTA; A SUPERFÍCIE NÃO              │
+   * │                                                                         │
+   * │ São duas decisões diferentes e estavam presas à mesma variável:          │
+   * │                                                                         │
+   * │  · a ALTURA (duas linhas ou uma) tem de ficar quieta enquanto o painel   │
+   * │    está aberto, senão ele muda de linha por baixo de quem está a ler;    │
+   * │  · o FUNDO depende só de haver conteúdo a passar por baixo. E com a      │
+   * │    pesquisa aberta e a página rolada há — portanto o cabeçalho tem de    │
+   * │    ficar opaco na mesma.                                                 │
+   * │                                                                         │
+   * │ Enquanto foram a mesma variável, esse caso ficava com o fundo a 70% e o  │
+   * │ texto da página a ler-se através do cabeçalho, por trás do painel.       │
+   * │                                                                         │
+   * │ O desfoque acompanha a translucidez, e por isso continua a existir só no │
+   * │ topo — onde nada passa por baixo e recompor a faixa não custa nada.      │
+   * └─────────────────────────────────────────────────────────────────────────┘
+   */
+  const opaco = rolado;
   const [avatarUrl, setAvatarUrl] = useState("");
   const pathname = usePathname();
   const sentinela = useRef<HTMLDivElement>(null);
@@ -86,7 +119,7 @@ export default function Nav() {
   useEffect(() => {
     const alvo = sentinela.current;
     if (!alvo) return;
-    const observador = new IntersectionObserver(([entrada]) => setCompacto(!entrada?.isIntersecting), {
+    const observador = new IntersectionObserver(([entrada]) => setRolado(!entrada?.isIntersecting), {
       threshold: 0,
     });
     observador.observe(alvo);
@@ -109,18 +142,19 @@ export default function Nav() {
         data-compacto={compacto}
         aria-label="Principal"
         className={`group fixed inset-x-0 top-0 z-50 hidden border-b transition-[height,background-color,border-color,box-shadow] duration-300 lg:block ${
-          compacto
+          compacto ? "h-[var(--rc-header-linha)]" : "h-[var(--rc-header-linha)] lg:h-[var(--rc-header-alto)]"
+        } ${
+          opaco
             ? /**
-               * Encolhido é o estado em que se ROLA — e é por isso que aqui não
-               * há `backdrop-blur`. Desfocar o fundo obriga o compositor a
-               * reprocessar toda a faixa por trás do cabeçalho em cada frame
-               * de scroll, e a 100% de opacidade não se distingue de um fundo
-               * sólido. Trocava-se um efeito que não se vê por um custo que se
-               * sente. No topo, onde nada passa por baixo, o desfoque é grátis
-               * e fica.
+               * Rolado é o estado em que passa conteúdo por baixo — e é por
+               * isso que aqui não há `backdrop-blur`. Desfocar obriga o
+               * compositor a reprocessar toda a faixa por trás do cabeçalho em
+               * cada frame, e a 100% de opacidade não se distingue de um fundo
+               * sólido: trocava-se um efeito que não se vê por um custo que se
+               * sente.
                */
-              "h-[var(--rc-header-linha)] border-stone-200/70 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-950"
-            : "h-[var(--rc-header-linha)] border-transparent bg-white/70 backdrop-blur-xl dark:bg-stone-950/70 lg:h-[var(--rc-header-alto)]"
+              "border-stone-200/70 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-950"
+            : "border-transparent bg-white/70 backdrop-blur-xl dark:bg-stone-950/70"
         }`}
       >
         {/**
@@ -146,7 +180,7 @@ export default function Nav() {
          * │ vizinhos até partirem em duas linhas.                              │
          * └───────────────────────────────────────────────────────────────────┘
          */}
-        <div className="mx-auto grid h-full max-w-5xl grid-cols-[minmax(15rem,1fr)_minmax(0,26rem)_minmax(15rem,1fr)] grid-rows-[var(--rc-header-linha)_1fr] items-center gap-x-4 px-6">
+        <div className="mx-auto grid h-full max-w-5xl grid-cols-[minmax(18.5rem,1fr)_minmax(0,26rem)_minmax(18.5rem,1fr)] grid-rows-[var(--rc-header-linha)_1fr] items-center gap-x-4 px-6 xl:max-w-6xl xl:grid-cols-[minmax(22rem,1fr)_minmax(0,26rem)_minmax(22rem,1fr)]">
           <Link
             href="/"
             aria-label="ReciboCerto — início"
@@ -248,7 +282,7 @@ export default function Nav() {
                     onClick={() => abrirModal("criar")}
                     className="btn-shine inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-4 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
                   >
-                    Começar Grátis
+                    Começar<span className="hidden xl:inline">&nbsp;Grátis</span>
                     <ArrowRight size={13} />
                   </button>
                 </m.div>
@@ -259,7 +293,7 @@ export default function Nav() {
                   href="/dashboard"
                   className="btn-shine inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-4 text-sm font-semibold text-white no-underline shadow-glow transition-shadow hover:shadow-float"
                 >
-                  Começar Grátis
+                  Começar<span className="hidden xl:inline">&nbsp;Grátis</span>
                   <ArrowRight size={13} />
                 </Link>
               </m.div>

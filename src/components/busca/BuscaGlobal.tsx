@@ -45,6 +45,13 @@ export default function BuscaOverlay() {
    * Aqui a folha é modal e cobre tudo, portanto não há o caso «cliquei noutro
    * sítio e já disse para onde ia»: fechar é sempre voltar de onde se veio.
    */
+  // Avisa a barra fixa para se tornar inerte enquanto a folha está por cima
+  // dela — declarado ANTES do efeito de foco, para que a libertação do `inert`
+  // seja despachada primeiro.
+  useEffect(() => {
+    anunciarEstadoBusca(aberto);
+  }, [aberto]);
+
   const devolverFoco = useRef(false);
 
   const fechar = useCallback(() => {
@@ -53,11 +60,29 @@ export default function BuscaOverlay() {
   }, []);
   const abrir = useCallback(() => setAberto(true), []);
 
-  useEffect(() => {
-    if (aberto || !devolverFoco.current) return;
+  /**
+   * ┌─────────────────────────────────────────────────────────────────────────┐
+   * │ DEVOLVER O FOCO É ESPERAR QUE A FOLHA SAIA — E ISSO TEM UMA API          │
+   * │                                                                         │
+   * │ Duas coisas disputam este instante e ambas demoram o que quiserem: a     │
+   * │ barra por baixo está `inert` (e um elemento inerte recusa foco em        │
+   * │ silêncio), e a folha continua MONTADA durante a animação de saída, com o │
+   * │ campo dela ainda a segurar o foco.                                       │
+   * │                                                                         │
+   * │ Medido: a folha só desaparece aos ~375 ms. Um `requestAnimationFrame`    │
+   * │ dispara aos ~16 ms — cedo de mais para as duas coisas, e o `focus()`     │
+   * │ não fazia nada. Um `setTimeout` afinado ao número medido seria pior:     │
+   * │ passaria a depender da duração de uma animação que alguém pode afinar.   │
+   * │                                                                         │
+   * │ `onExitComplete` é a própria biblioteca a dizer «já saiu». Não há número │
+   * │ para acertar, e mudar a animação não parte isto.                          │
+   * └─────────────────────────────────────────────────────────────────────────┘
+   */
+  const devolverFocoAgora = useCallback(() => {
+    if (!devolverFoco.current) return;
     devolverFoco.current = false;
     document.querySelector<HTMLElement>('[data-busca-gatilho="movel"]')?.focus();
-  }, [aberto]);
+  }, []);
 
   useAtalhoBusca({ ativaQuando: CONSULTA_MOVEL, aberto, abrir, fechar });
 
@@ -67,12 +92,6 @@ export default function BuscaOverlay() {
   useEffect(() => {
     if (aberto) reiniciar();
   }, [aberto, reiniciar]);
-
-  // Avisa a barra fixa do telemóvel para se tornar inerte enquanto a folha
-  // está por cima dela — ver o quadro em `motor.ts`.
-  useEffect(() => {
-    anunciarEstadoBusca(aberto);
-  }, [aberto]);
 
   useEffect(() => {
     setAberto(false);
@@ -121,7 +140,7 @@ export default function BuscaOverlay() {
   }, [aberto]);
 
   return (
-    <AnimatePresence>
+    <AnimatePresence onExitComplete={devolverFocoAgora}>
       {aberto && (
         <div className="fixed inset-0 z-[120] lg:hidden" role="dialog" aria-modal="true" aria-label="Pesquisa">
           <m.div
