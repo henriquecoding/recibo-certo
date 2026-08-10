@@ -249,7 +249,7 @@ export function AbasCategorias({
             </span>
             <span className={secretaria ? "" : "text-[11px] font-semibold leading-none"}>{c.label}</span>
             {secretaria && ativo && (
-              <span className="text-[11px] font-medium text-brand-dark/60 dark:text-brand/60">{c.sub}</span>
+              <span className="text-[11px] font-medium text-brand-dark dark:text-brand">{c.sub}</span>
             )}
           </button>
         );
@@ -271,7 +271,7 @@ export function ChipsFiltro({
 
   return (
     <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto border-t border-stone-100 px-4 py-2 dark:border-stone-800 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <span className="flex-shrink-0 pr-0.5 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+      <span className="flex-shrink-0 pr-0.5 text-[10px] font-bold uppercase tracking-wider text-stone-600">
         Filtrar
       </span>
       {motor.filtros.map((f) => {
@@ -299,12 +299,12 @@ export function ChipsFiltro({
         <button
           type="button"
           onClick={() => motor.setFiltro("all")}
-          className="flex min-h-9 flex-shrink-0 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-stone-400 hover:text-stone-600"
+          className="flex min-h-9 flex-shrink-0 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-stone-600 hover:text-stone-800"
         >
           <Close size={12} /> Limpar
         </button>
       )}
-      <span className="ml-auto flex-shrink-0 whitespace-nowrap pl-2 text-[11px] font-bold tabular-nums text-stone-400">
+      <span className="ml-auto flex-shrink-0 whitespace-nowrap pl-2 text-[11px] font-bold tabular-nums text-stone-600">
         {motor.totalResultados}
       </span>
     </div>
@@ -357,7 +357,7 @@ function LinhaResultado({
         <span className="block truncate text-sm font-semibold text-stone-800 dark:text-stone-100">
           <Realce texto={titulo} query={query} />
         </span>
-        <span className="block truncate text-xs text-stone-500 dark:text-stone-400">{descricao}</span>
+        <span className="block truncate text-xs text-stone-600 dark:text-stone-400">{descricao}</span>
       </span>
       <ArrowRight size={14} className="flex-shrink-0 text-stone-300" />
     </button>
@@ -367,7 +367,7 @@ function LinhaResultado({
 function Seccao({ titulo, Icon, children }: { titulo: string; Icon: IconT; children: ReactNode }) {
   return (
     <div>
-      <p className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-stone-400">
+      <p className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-stone-600">
         <Icon size={11} /> {titulo}
       </p>
       {children}
@@ -456,7 +456,7 @@ export function CorpoResultados({ motor, colunas = 3 }: { motor: MotorBusca; col
                   <span className="block truncate text-xs font-semibold text-stone-700 dark:text-stone-200">
                     {item.label}
                   </span>
-                  <span className="block truncate text-[10px] text-stone-400">{item.desc}</span>
+                  <span className="block truncate text-[10px] text-stone-600">{item.desc}</span>
                 </span>
                 <ChevronRight size={13} className="flex-shrink-0 text-stone-300" />
               </button>
@@ -473,7 +473,7 @@ export function CorpoResultados({ motor, colunas = 3 }: { motor: MotorBusca; col
     <div className="px-2 py-2">
       {!temQuery && motor.recentes.length > 0 && (
         <div className="px-3 pb-2">
-          <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-stone-400">
+          <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-stone-600">
             <History size={11} /> Recentes
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -494,7 +494,7 @@ export function CorpoResultados({ motor, colunas = 3 }: { motor: MotorBusca; col
       {categoria !== "atividades" &&
         Object.entries(grupos).map(([grupo, lista]) => (
           <div key={grupo} className="mb-1">
-            <p className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-widest text-stone-400">{grupo}</p>
+            <p className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-widest text-stone-600">{grupo}</p>
             {lista.map((it) => (
               <LinhaResultado
                 key={it.id}
@@ -526,7 +526,7 @@ export function CorpoResultados({ motor, colunas = 3 }: { motor: MotorBusca; col
           <p className="text-sm text-stone-500 dark:text-stone-400">
             Sem resultados para «{query}» em {motor.categoriaAtual.label.toLowerCase()}.
           </p>
-          <p className="mt-1 text-xs text-stone-400">Experimenta outro âmbito acima.</p>
+          <p className="mt-1 text-xs text-stone-600">Experimenta outro âmbito acima.</p>
         </div>
       )}
     </div>
@@ -537,7 +537,7 @@ export function CorpoResultados({ motor, colunas = 3 }: { motor: MotorBusca; col
 
 export function RodapeBusca({ motor }: { motor: MotorBusca }) {
   return (
-    <div className="flex shrink-0 items-center justify-between border-t border-stone-100 px-5 py-2.5 text-[11px] text-stone-400 dark:border-stone-800">
+    <div className="flex shrink-0 items-center justify-between border-t border-stone-100 px-5 py-2.5 text-[11px] text-stone-600 dark:border-stone-800">
       <span className="flex items-center gap-1.5">
         Enter abre o primeiro resultado
         <ChevronRight size={10} className="text-stone-300" />

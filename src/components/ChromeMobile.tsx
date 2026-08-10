@@ -122,6 +122,7 @@ export default function ChromeMobile() {
               window.dispatchEvent(new Event(EVENTO_ABRIR));
             }}
             aria-label="Pesquisar no ReciboCerto"
+            data-busca-gatilho="movel"
             className={`flex min-h-[48px] w-full items-center gap-2.5 rounded-xl border border-stone-200 bg-white py-2 pl-3 pr-2 text-sm text-stone-500 no-underline shadow-sm transition-[border-color,opacity] active:border-brand/50 dark:border-stone-700 dark:bg-stone-900 ${
               buscaAberta ? "opacity-0" : ""
             }`}

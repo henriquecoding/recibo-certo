@@ -36,8 +36,28 @@ export default function BuscaOverlay() {
   const [aberto, setAberto] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const fechar = useCallback(() => setAberto(false), []);
+  /**
+   * Fechar devolve o foco à barra fixa — a mesma regra do painel de
+   * secretária, e pela mesma razão: sem isto, Escape deixa o foco no `<body>`
+   * e a tabulação recomeça no topo do documento. Ver o quadro em
+   * `DockPesquisa.tsx`.
+   *
+   * Aqui a folha é modal e cobre tudo, portanto não há o caso «cliquei noutro
+   * sítio e já disse para onde ia»: fechar é sempre voltar de onde se veio.
+   */
+  const devolverFoco = useRef(false);
+
+  const fechar = useCallback(() => {
+    devolverFoco.current = true;
+    setAberto(false);
+  }, []);
   const abrir = useCallback(() => setAberto(true), []);
+
+  useEffect(() => {
+    if (aberto || !devolverFoco.current) return;
+    devolverFoco.current = false;
+    document.querySelector<HTMLElement>('[data-busca-gatilho="movel"]')?.focus();
+  }, [aberto]);
 
   useAtalhoBusca({ ativaQuando: CONSULTA_MOVEL, aberto, abrir, fechar });
 

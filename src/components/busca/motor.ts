@@ -281,9 +281,21 @@ export function useAtalhoBusca({
   abrir: () => void;
   fechar: () => void;
 }) {
-  // Refs para o efeito não voltar a registar os ouvintes a cada tecla.
+  /**
+   * As dependências vivem numa ref para o efeito não voltar a registar os
+   * ouvintes a cada render — mas a ref é actualizada num EFEITO, não no corpo
+   * do componente.
+   *
+   * Escrever numa ref durante o render é o que parece mais simples e é o que a
+   * documentação do React desaconselha: um render pode ser começado e deitado
+   * fora (StrictMode, transições, Suspense), e a escrita fica lá na mesma.
+   * Aqui isso significaria o atalho a fechar um painel que já reabriu, ou a
+   * chamar um `fechar` de uma versão do componente que já não existe.
+   */
   const ref = useRef({ aberto, abrir, fechar });
-  ref.current = { aberto, abrir, fechar };
+  useEffect(() => {
+    ref.current = { aberto, abrir, fechar };
+  });
 
   useEffect(() => {
     const consulta = window.matchMedia(ativaQuando);

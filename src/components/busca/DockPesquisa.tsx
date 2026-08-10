@@ -40,10 +40,43 @@ export function DockPesquisa({ inputId }: { inputId?: string }) {
   const gerado = useId();
   const idCampo = inputId ?? `${gerado}-busca`;
 
-  const fechar = useCallback(() => setAberto(false), []);
+  /**
+   * ┌─────────────────────────────────────────────────────────────────────────┐
+   * │ FECHAR TEM DE DEVOLVER O FOCO — MAS NEM SEMPRE                           │
+   * │                                                                         │
+   * │ Sem isto, fechar com Escape deixava o foco no `<body>`: quem navega por  │
+   * │ teclado carregava em Escape e recomeçava a tabulação no topo do          │
+   * │ documento, com o cabeçalho inteiro a percorrer antes de voltar ao sítio  │
+   * │ onde estava. É o tipo de defeito que não se vê com o rato.               │
+   * │                                                                         │
+   * │ Mas não é «devolver sempre»: um clique FORA do painel já disse para onde │
+   * │ a pessoa queria ir, e roubar-lhe o foco de volta para a barra desfazia   │
+   * │ exactamente o que ela acabou de fazer. O mesmo vale para o `Tab` que sai │
+   * │ do painel e para a navegação — aí o destino é outra página.              │
+   * │                                                                         │
+   * │ Portanto: Escape, o botão ✕ e o atalho devolvem; clique fora, saída por  │
+   * │ Tab e navegação não. A regra é «quem fechou indicou destino?».           │
+   * └─────────────────────────────────────────────────────────────────────────┘
+   */
+  const devolverFoco = useRef(false);
+
+  const fechar = useCallback((opcoes?: { restaurarFoco?: boolean }) => {
+    devolverFoco.current = opcoes?.restaurarFoco ?? false;
+    setAberto(false);
+  }, []);
+
+  const fecharComFoco = useCallback(() => fechar({ restaurarFoco: true }), [fechar]);
   const abrir = useCallback(() => setAberto(true), []);
 
-  useAtalhoBusca({ ativaQuando: CONSULTA_SECRETARIA, aberto, abrir, fechar });
+  useEffect(() => {
+    if (aberto || !devolverFoco.current) return;
+    devolverFoco.current = false;
+    // A barra só volta a existir no commit em que o painel sai, e este efeito
+    // corre depois desse commit — por isso é aqui e não no `fechar`.
+    document.getElementById(idCampo)?.focus();
+  }, [aberto, idCampo]);
+
+  useAtalhoBusca({ ativaQuando: CONSULTA_SECRETARIA, aberto, abrir, fechar: fecharComFoco });
 
   // Mudar de página fecha — um painel que sobrevive à navegação fica a tapar
   // a página onde a pessoa acabou de aterrar.
@@ -71,7 +104,7 @@ export function DockPesquisa({ inputId }: { inputId?: string }) {
   return (
     <div className="relative h-[var(--rc-dock-h)] w-full">
       {aberto ? (
-        <PainelExpandido idCampo={idCampo} aoFechar={fechar} />
+        <PainelExpandido idCampo={idCampo} aoFechar={fechar} aoFecharComFoco={fecharComFoco} />
       ) : (
         <BarraFechada idCampo={idCampo} sugestao={sugestao} aoAbrir={abrir} />
       )}
@@ -120,7 +153,7 @@ function BarraFechada({
       className="group flex h-[var(--rc-dock-h)] w-full items-center gap-3 rounded-2xl border border-stone-200 bg-white/90 pl-4 pr-2 text-left no-underline shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-brand/40 hover:shadow-lift focus-visible:border-brand/50 dark:border-stone-700 dark:bg-stone-900/70 dark:hover:border-brand/40"
     >
       <Search size={17} className="flex-shrink-0 text-stone-400 transition-colors group-hover:text-brand" />
-      <span className="min-w-0 flex-1 truncate text-sm text-stone-400 dark:text-stone-500">{sugestao}</span>
+      <span className="min-w-0 flex-1 truncate text-sm text-stone-500 dark:text-stone-400">{sugestao}</span>
       <span className="hidden flex-shrink-0 items-center gap-0.5 rounded-md border border-stone-200 px-1.5 py-0.5 text-[10px] font-semibold text-stone-400 xl:inline-flex dark:border-stone-700">
         <Keyboard size={11} /> K
       </span>
@@ -141,9 +174,20 @@ function BarraFechada({
  * cada página do site pagaria o índice de pesquisa e o reducer de uma pesquisa
  * que ninguém abriu.
  */
-function PainelExpandido({ idCampo, aoFechar }: { idCampo: string; aoFechar: () => void }) {
+function PainelExpandido({
+  idCampo,
+  aoFechar,
+  aoFecharComFoco,
+}: {
+  /** Fecha sem mexer no foco: clique fora, saída por Tab, navegação. */
+  aoFechar: () => void;
+  /** Fecha e devolve o foco à barra: Escape e o botão ✕. */
+  aoFecharComFoco: () => void;
+  idCampo: string;
+}) {
   const caixa = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
+  // A navegação fecha SEM devolver o foco: o destino é outra página.
   const motor = useMotorBusca({ aoFechar });
 
   const { reiniciar } = motor;
@@ -166,7 +210,8 @@ function PainelExpandido({ idCampo, aoFechar }: { idCampo: string; aoFechar: () 
     const onTecla = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        aoFechar();
+        // Escape não indica destino: quem o carrega quer voltar ao campo.
+        aoFecharComFoco();
       }
     };
     document.addEventListener("pointerdown", onPointerDown);
@@ -175,7 +220,7 @@ function PainelExpandido({ idCampo, aoFechar }: { idCampo: string; aoFechar: () 
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onTecla);
     };
-  }, [aoFechar]);
+  }, [aoFechar, aoFecharComFoco]);
 
   return (
     <AnimatePresence>
@@ -219,7 +264,7 @@ function PainelExpandido({ idCampo, aoFechar }: { idCampo: string; aoFechar: () 
         className="rc-dock-painel flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-float ring-1 ring-black/5 dark:border-stone-700 dark:bg-stone-900 dark:ring-white/5"
       >
         <div className="border-b border-stone-100 dark:border-stone-800">
-          <CampoBusca motor={motor} inputRef={input} id={idCampo} aoFechar={aoFechar} compacto />
+          <CampoBusca motor={motor} inputRef={input} id={idCampo} aoFechar={aoFecharComFoco} compacto />
         </div>
 
         <div className="border-b border-stone-100 dark:border-stone-800">
