@@ -19,6 +19,20 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.28.0",
+    data: "2026-08-10",
+    titulo: "A pesquisa passou para o centro do cabeçalho — e deixou de ser uma janela",
+    itens: [
+      "A barra de pesquisa estava espremida entre os links e os botões, com o tamanho de um detalhe. Passa a ter uma linha só para si, no centro do cabeçalho, com os âmbitos por cima a dizer o que vai procurar: Simuladores, Guias, Quiz e Planos.",
+      "Ao rolar a página, o cabeçalho recolhe para uma linha e a barra encolhe para junto da marca — continua no mesmo eixo e à mesma distância do topo do ecrã. Muda de tamanho; nunca muda de sítio.",
+      "No computador, clicar na barra deixou de abrir uma janela centrada com um véu escuro por cima da página. O painel abre agora ancorado à própria barra, sem véu e sem prender o foco: o resto do site continua legível e clicável, e clicar fora fecha. É o mesmo campo a ficar maior, que é o que uma barra de pesquisa deve fazer.",
+      "O menu «Recursos Fiscais» só abria ao passar o rato — na prática, invisível para quem usa um ecrã tátil. Os nove destinos passaram todos para dentro do painel de pesquisa, onde são pesquisáveis, alcançáveis por teclado e existem também no telemóvel.",
+      "No telemóvel, a barra fixa mostrava sempre a etiqueta «Tudo», mas a pesquisa nunca abriu em «tudo» — abre no âmbito da página onde estás. Agora a etiqueta e o texto de sugestão dizem a verdade, e a barra deixa de ser alcançável por tabulação quando a folha de pesquisa está aberta por cima dela.",
+      "A pesquisa passou a funcionar sem JavaScript: a barra é uma ligação a sério, portanto quem chegue antes do código carregar — rede fraca, extensão a bloquear — vai parar ao índice de ferramentas em vez de carregar num botão que não faz nada. E Ctrl/⌘+clique volta a abrir noutro separador.",
+      "Por dentro, a pesquisa do telemóvel e a do computador passaram a partilhar o mesmo motor e os mesmos resultados. Eram duas cópias, e uma correção só chegava a metade dos ecrãs.",
+    ],
+  },
+  {
     version: "2.27.0",
     data: "2026-08-08",
     titulo: "Como calculamos, o que já verificámos e o que ainda não sabemos — três páginas novas",
