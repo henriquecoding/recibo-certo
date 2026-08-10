@@ -10,6 +10,75 @@
   --cat-ss: #1d9e75;
   --cat-iva: #7a5c00;
   --cat-irs: #0f6e56;
+
+  /* ══════════════════════════════════════════════════════════════════
+     GEOMETRIA DO CABEÇALHO E DA BARRA DE PESQUISA
+
+     Estes quatro números são geometria PARTILHADA, não estilo de um
+     componente. Cada um é lido em mais do que um sítio, e uma segunda
+     cópia divergiria na primeira afinação — em silêncio, porque nada
+     parte: o cabeçalho fica apenas ligeiramente errado.
+
+     · --rc-header-linha  a linha da marca/ações. É também a primeira
+       linha da grelha e a altura TOTAL do cabeçalho quando encolhido.
+     · --rc-header-alto   no topo da página: a linha de chrome mais a
+       linha da barra. O espaçador em fluxo reserva sempre este valor.
+     · --rc-dock-h        a altura da barra, aberta ou fechada. A
+       primeira linha do painel tem esta altura para o campo não se
+       mexer um pixel quando o painel abre por cima dela.
+     · --rc-dock-larga    a largura da barra expandida — e do painel,
+       que TEM de ser a mesma, senão o campo salta ao ser clicado.
+     ══════════════════════════════════════════════════════════════════ */
+  --rc-header-linha: 72px;
+  --rc-header-alto: 136px;
+  --rc-dock-h: 48px;
+  --rc-dock-larga: 44rem;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   O PAINEL DE PESQUISA DO CABEÇALHO
+
+   ┌──────────────────────────────────────────────────────────────────┐
+   │ CENTRAR UMA CAIXA MAIS LARGA DO QUE AQUILO QUE A CONTÉM           │
+   │                                                                  │
+   │ Este painel é o caso invulgar: com o cabeçalho encolhido, o       │
+   │ invólucro da barra tem ~22 rem e o painel tem 44. E é             │
+   │ intencional — a barra encolhe, os resultados não, porque o título │
+   │ e a descrição de uma ferramenta não cabem em meia largura.        │
+   │                                                                  │
+   │ Isso põe fora de jogo as duas formas habituais de centrar:        │
+   │                                                                  │
+   │  · `margin-inline: auto` — a especificação manda pôr a margem a   │
+   │    zero quando a largura excede o contentor, e a caixa encosta à  │
+   │    ESQUERDA e transborda para a direita;                          │
+   │  · `left: 50%` com `translateX(-50%)` — funciona, e obriga a uma  │
+   │    transformação permanente que se COMPÕE com qualquer animação   │
+   │    de entrada que também escreva em `transform`, fazendo o painel │
+   │    aparecer deslocado antes de saltar para o lugar.               │
+   │                                                                  │
+   │ `left: calc(50% - largura/2)` não tem nenhum dos dois problemas.  │
+   │ O `50%` resolve contra o invólucro, portanto o painel fica        │
+   │ centrado NELE seja qual for a relação entre as larguras — o valor │
+   │ fica simplesmente negativo quando o painel é maior, o que é       │
+   │ legítimo em posicionamento absoluto. E é posição pura: não há     │
+   │ transformação nenhuma com que compor.                             │
+   │                                                                  │
+   │ A largura entra DUAS vezes na mesma conta, por isso vive numa     │
+   │ variável: escrita à mão nos dois sítios, bastaria afinar uma para │
+   │ o painel ficar descentrado por metade da diferença, e em silêncio.│
+   └──────────────────────────────────────────────────────────────────┘
+   ════════════════════════════════════════════════════════════════════ */
+.rc-dock-painel {
+  --rc-painel-w: min(var(--rc-dock-larga), calc(100vw - 2rem));
+
+  position: absolute;
+  top: 0;
+  left: calc(50% - var(--rc-painel-w) / 2);
+  z-index: 60;
+  width: var(--rc-painel-w);
+  /* O painel nunca passa do ecrã: acima disto o corpo rola por dentro.
+     `dvh` e não `vh` porque no browser móvel a barra de endereço mente. */
+  max-height: min(36rem, calc(100dvh - var(--rc-header-alto) - 2rem));
 }
 
 * {
