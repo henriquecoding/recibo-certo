@@ -261,6 +261,38 @@ function PainelExpandido({
       if (dentroDoCabecalho(alvo)) aoFechar();
     };
 
+    /**
+     * ┌───────────────────────────────────────────────────────────────────────┐
+     * │ O TERCEIRO CAMINHO — E ERA ESTE QUE PARTIA O CLIQUE                    │
+     * │                                                                       │
+     * │ O painel tinha um `onBlur` que o fechava assim que o foco lhe saísse.  │
+     * │ Parece a regra certa e é a que quebrava a navegação, porque o foco sai │
+     * │ no `mousedown` — antes do `pointerup`, antes do `click`. Medido na     │
+     * │ sequência real:                                                        │
+     * │                                                                       │
+     * │   pointerdown a«Guias»  → painel aberto                                │
+     * │   blur input → rel=A    → painel aberto                                │
+     * │   blur a«Guias»         → PAINEL JÁ FECHADO                            │
+     * │   pointerup span«…»     → o rato já aterra noutro elemento             │
+     * │   click div«…»          → o clique vai para o antepassado comum        │
+     * │                                                                       │
+     * │ Fechar no `blur` retirava o cabeçalho de baixo do próprio gesto: o     │
+     * │ painel fecha, o cabeçalho compacta, a fila de âmbitos sai do documento │
+     * │ e o link deixa de existir a meio do clique.                            │
+     * │                                                                       │
+     * │ Passa a ser `focusin` no documento, com a mesma regra dos outros dois  │
+     * │ caminhos: o que está DENTRO do cabeçalho não fecha nada por si — fecha │
+     * │ quando o clique se consuma, ou quando o foco sair do cabeçalho todo.   │
+     * │ Assim o `Tab` que sai do painel para a página continua a fechar, e o   │
+     * │ que fica no cabeçalho não destrói o alvo do gesto em curso.            │
+     * └───────────────────────────────────────────────────────────────────────┘
+     */
+    const onFoco = (e: FocusEvent) => {
+      const alvo = e.target as Node | null;
+      if (dentroDoPainel(alvo) || dentroDoCabecalho(alvo)) return;
+      aoFechar();
+    };
+
     const onTecla = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
@@ -271,10 +303,12 @@ function PainelExpandido({
 
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("click", onClique);
+    document.addEventListener("focusin", onFoco);
     document.addEventListener("keydown", onTecla);
     return () => {
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("click", onClique);
+      document.removeEventListener("focusin", onFoco);
       document.removeEventListener("keydown", onTecla);
     };
   }, [aoFechar, aoFecharComFoco]);
@@ -310,11 +344,6 @@ function PainelExpandido({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.16 }}
-        // Sair do painel com Tab fecha-o. Sem isto ficava um painel aberto por
-        // trás do foco, a tapar conteúdo que a pessoa já não está a usar.
-        onBlur={(e) => {
-          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) aoFechar();
-        }}
         // Marcador estável de invariância: as auditorias contam quantos motores
         // existem, e a resposta tem de ser sempre um. Não é estilo nem dado.
         data-busca-painel="aberto"
