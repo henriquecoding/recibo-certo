@@ -7,6 +7,7 @@ import { PerfilProvider } from "@/lib/perfil";
 import { SubscricaoProvider } from "@/lib/stripe/subscription";
 import DeferredOverlays from "@/components/ui/DeferredOverlays";
 import ChromeMobile from "@/components/ChromeMobile";
+import BotaoTopo from "@/components/ui/BotaoTopo";
 import FeedbackModal from "@/components/feedback/FeedbackModal";
 import Medicao from "@/components/Medicao";
 // Importado pelo efeito colateral: `assertChangelogIntegrity()` corre ao
@@ -150,6 +151,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <MotionProvider>
                   {children}
                   <ChromeMobile />
+                  {/* Voltar ao topo — global em todo o site público; esconde-se
+                      sozinho no /dashboard e no /admin. */}
+                  <BotaoTopo />
                   <FeedbackModal />
                   <Medicao />
                   <DeferredOverlays />

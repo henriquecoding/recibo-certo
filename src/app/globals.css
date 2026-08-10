@@ -43,6 +43,16 @@ body {
   line-height: 1.08;
   letter-spacing: -0.015em;
 }
+/* Título do hero. Escala PRÓPRIA porque o `display-1` é medido pela largura da
+   JANELA (6vw → 72px a 1440px) e o hero vive numa coluna de ~490px: o título
+   quebrava em quatro linhas de cinco palavras, com um bloco de texto mais alto
+   do que o cartão ao lado. Aqui a escala é a da COLUNA — o mesmo peso
+   editorial, em três linhas cheias. */
+.display-hero {
+  font-size: clamp(2rem, 3.9vw, 3.25rem);
+  line-height: 1.06;
+  letter-spacing: -0.022em;
+}
 .text-balance {
   text-wrap: balance;
 }

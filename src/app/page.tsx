@@ -83,8 +83,14 @@ export default function Home() {
               piso — renderizado no servidor, imóvel, e o único caminho para
               quem tem movimento reduzido, JavaScript desligado ou um ecrã
               tátil onde o alvo desaparece por baixo do dedo. */}
-          <div className="mx-auto max-w-5xl px-6">
-            <FizFaixaDemo superficie="demo.hero.faixa" />
+          {/* `px-6` por fora e `max-w-5xl` por dentro — a mesma ordem das
+              secções e do hero. Com as duas classes no mesmo elemento, o
+              conteúdo desta faixa nascia 24px mais à direita do que tudo o que
+              tem por cima e por baixo. */}
+          <div className="px-6">
+            <div className="mx-auto max-w-5xl">
+              <FizFaixaDemo superficie="demo.hero.faixa" />
+            </div>
           </div>
 
           {/*
