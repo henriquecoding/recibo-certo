@@ -19,6 +19,8 @@ import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useAuth } from "@/lib/supabase/auth";
 import { NAV_FERRAMENTAS, NAV_APRENDER, type NavItem } from "@/components/nav-config";
 import { abrirFeedback } from "@/components/feedback/abrir";
+import { useBuscaAberta } from "@/components/busca/motor";
+import { CATEGORIAS, categoriaPorContexto } from "@/lib/busca";
 
 const EVENTO_ABRIR = "recibocerto:busca:abrir";
 
@@ -34,6 +36,14 @@ export default function ChromeMobile() {
   const { user, abrirModal, disponivel } = useAuth();
   const [menu, setMenu] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState("");
+  const buscaAberta = useBuscaAberta();
+
+  // O âmbito que a rota implica — a mesma dedução que a pesquisa usa ao abrir.
+  // Ler daqui e não de um rótulo fixo é o que impede a barra de prometer um
+  // corpus e entregar outro.
+  const ambito = CATEGORIAS.find((c) => c.id === categoriaPorContexto(pathname ?? "/")) ?? CATEGORIAS[0];
+  const rotuloAmbito = ambito.label;
+  const sugestaoBusca = ambito.placeholder;
 
   useEffect(() => { setMenu(false); }, [pathname]);
 
@@ -78,20 +88,51 @@ export default function ChromeMobile() {
 
       {/* Chrome inferior (telemóvel + tablet) */}
       <div className="fixed inset-x-0 bottom-0 z-50 lg:hidden">
-        {/* Barra de pesquisa — destaque, por cima do header */}
-        <div className="px-3 pb-2.5">
-          <button
-            type="button"
-            onClick={() => window.dispatchEvent(new Event(EVENTO_ABRIR))}
+        {/**
+         * ┌───────────────────────────────────────────────────────────────┐
+         * │ A BARRA FIXA — TRÊS CORREÇÕES, E UMA DELAS ERA UMA MENTIRA     │
+         * │                                                               │
+         * │ 1. A pastilha dizia sempre «Tudo». A pesquisa nunca abriu em   │
+         * │    «tudo»: abre no âmbito que a ROTA implica. Em `/guias` a    │
+         * │    barra prometia uma coisa e entregava outra — e o rótulo era │
+         * │    fixo, portanto nada o denunciava. Agora diz o âmbito real,  │
+         * │    e o texto de sugestão vem do mesmo sítio.                   │
+         * │                                                               │
+         * │ 2. Era um `<button>`, e um botão sem JavaScript é um adorno:   │
+         * │    quem chegue antes do chunk carregar carrega e não acontece  │
+         * │    nada. Passa a ser uma ligação para o índice de ferramentas, │
+         * │    com o clique normal interceptado — e `⌘+clique` volta a     │
+         * │    abrir noutro separador.                                     │
+         * │                                                               │
+         * │ 3. Ficava alcançável por `Tab` DEBAIXO da folha de pesquisa.   │
+         * │    `inert` fecha-a ao teclado e ao leitor de ecrã enquanto a   │
+         * │    folha está por cima.                                        │
+         * │                                                               │
+         * │ E fica mais leve: a moldura de 2 px, a sombra alta e o quadrado│
+         * │ verde sólido competiam com a navegação logo por baixo, num     │
+         * │ ecrã onde só há espaço para uma coisa ganhar a atenção.        │
+         * └───────────────────────────────────────────────────────────────┘
+         */}
+        <div className="px-3 pb-2.5" inert={buscaAberta ? true : undefined}>
+          <Link
+            href="/ferramentas"
+            onClick={(e) => {
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+              e.preventDefault();
+              window.dispatchEvent(new Event(EVENTO_ABRIR));
+            }}
             aria-label="Pesquisar no ReciboCerto"
-            className="flex w-full items-center gap-3 rounded-xl border-2 border-brand/30 bg-white py-2 pl-2 pr-3 text-sm font-medium text-stone-500 shadow-lift transition-colors active:border-brand dark:border-brand/40 dark:bg-stone-900"
+            data-busca-gatilho="movel"
+            className={`flex min-h-[48px] w-full items-center gap-2.5 rounded-xl border border-stone-200 bg-white py-2 pl-3 pr-2 text-sm text-stone-500 no-underline shadow-sm transition-[border-color,opacity] active:border-brand/50 dark:border-stone-700 dark:bg-stone-900 ${
+              buscaAberta ? "opacity-0" : ""
+            }`}
           >
-            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand text-white">
-              <Search size={18} />
+            <Search size={17} className="flex-shrink-0 text-stone-400" />
+            <span className="min-w-0 flex-1 truncate text-left">{sugestaoBusca}</span>
+            <span className="flex-shrink-0 rounded-md bg-brand-light px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-dark dark:bg-brand/15 dark:text-brand">
+              {rotuloAmbito}
             </span>
-            <span className="flex-1 truncate text-left">Pesquisar ferramentas, guias…</span>
-            <span className="flex-shrink-0 rounded-md bg-brand-light px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-dark">Tudo</span>
-          </button>
+          </Link>
         </div>
 
         {/* Header inferior */}

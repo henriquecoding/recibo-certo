@@ -54,6 +54,95 @@ export const NAV_FERRAMENTAS: NavItem[] = [
   },
 ];
 
+/**
+ * Os ÂMBITOS do cabeçalho — a linha por cima da barra de pesquisa.
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ ISTO NÃO É UM MENU AO LADO DA PESQUISA — É O ÂMBITO DELA                 │
+ * │                                                                         │
+ * │ A diferença é toda. Um menu leva a outra página e a pesquisa fica na     │
+ * │ mesma; um âmbito muda O QUE a barra por baixo procura. Aqui é as duas    │
+ * │ coisas ao mesmo tempo, e de propósito: cada item é uma ligação a sério   │
+ * │ — funciona sem JavaScript, abre noutro separador com `⌘+clique`, entra   │
+ * │ no histórico — e a barra segue o destino porque a categoria é DEDUZIDA   │
+ * │ da rota (`categoriaPorContexto`), não guardada num estado à parte.       │
+ * │                                                                         │
+ * │ Uma segunda memória — «o âmbito escolhido no cabeçalho» — divergiria da  │
+ * │ rota na primeira navegação que não passasse por aqui: um link no corpo   │
+ * │ da página, o botão «voltar», uma partilha. A rota é a única verdade que  │
+ * │ todos os caminhos já actualizam.                                        │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ O QUE ACONTECEU AO MENU «RECURSOS FISCAIS»                               │
+ * │                                                                         │
+ * │ Era um mega-dropdown de nove destinos que abria ao passar o rato. Sai da │
+ * │ barra, e nenhum dos nove se perde: passam todos para o painel de         │
+ * │ pesquisa, que está permanentemente a um clique e — ao contrário de um    │
+ * │ menu — é pesquisável, navegável por teclado e alcançável no telemóvel.   │
+ * │                                                                         │
+ * │ Um menu que só abre com `hover` é, na prática, invisível para quem usa   │
+ * │ toque. Trocá-lo por um painel de pesquisa não é perder navegação: é      │
+ * │ deixar de a esconder atrás de um gesto que metade dos dispositivos não   │
+ * │ tem.                                                                     │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ */
+export interface AmbitoHeader {
+  label: string;
+  href: string;
+  /** Prefixos de rota que acendem este item. O primeiro que casar ganha. */
+  prefixos: string[];
+}
+
+export const NAV_AMBITOS: AmbitoHeader[] = [
+  { label: "Simuladores", href: "/#calculadora", prefixos: [] },
+  { label: "Guias", href: "/guias", prefixos: ["/guias"] },
+  { label: "Quiz", href: "/quiz-fiscal", prefixos: ["/quiz-fiscal"] },
+  { label: "Planos", href: "/precos", prefixos: ["/precos"] },
+];
+
+/*
+ * Notas sobre quem saiu desta lista, para não voltar a entrar por engano:
+ *
+ * · «Ferramentas» apontava para `/ferramentas` e é o índice completo. Continua
+ *   a ser o destino da barra de pesquisa sem JavaScript e o item «Todas as
+ *   ferramentas» dentro do painel — não desapareceu do produto, saiu da barra;
+ * · «Atividades» dá lugar ao Quiz. O classificador de atividades continua no
+ *   painel de pesquisa, com âmbito próprio (`categoriaPorContexto` devolve
+ *   `atividades` nessa rota), que é onde a pesquisa dele faz sentido;
+ * · `/quiz-fiscal` era um prefixo de «Guias» e passou a ter item próprio.
+ *   Deixá-lo nos dois acendia dois itens ao mesmo tempo — ver `ambitoAtivo`.
+ */
+
+/**
+ * Qual dos âmbitos está aceso — e é sempre UM, no máximo.
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ PORQUE ISTO É UMA FUNÇÃO E NÃO UM TESTE POR ITEM                         │
+ * │                                                                         │
+ * │ A versão anterior perguntava a cada item, em separado, se a rota lhe     │
+ * │ pertencia. Em `/ferramentas/classificar-atividade` respondiam DOIS que   │
+ * │ sim — «Atividades», pelo prefixo completo, e «Ferramentas», porque a     │
+ * │ rota também começa por `/ferramentas`. O cabeçalho marcava duas páginas  │
+ * │ ao mesmo tempo, e dois `aria-current="page"` no mesmo documento dizem a  │
+ * │ um leitor de ecrã que a pessoa está em dois sítios.                      │
+ * │                                                                         │
+ * │ Decidir de uma vez, pela ORDEM da lista, resolve por construção: o mais  │
+ * │ específico está primeiro e ganha. E como é uma função, o teste verifica  │
+ * │ exactamente o que o cabeçalho executa — não uma segunda regra parecida.  │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ */
+export function ambitoAtivo(pathname: string | null | undefined): AmbitoHeader | null {
+  if (!pathname) return null;
+  const comPrefixo = NAV_AMBITOS.find(
+    (a) => a.prefixos.length > 0 && a.prefixos.some((p) => pathname === p || pathname.startsWith(`${p}/`)),
+  );
+  if (comPrefixo) return comPrefixo;
+  // A lista vazia é a página inicial: não tem prefixo porque `/` seria prefixo
+  // de tudo. Só acende quando a rota é exactamente a raiz.
+  return pathname === "/" ? (NAV_AMBITOS.find((a) => a.prefixos.length === 0) ?? null) : null;
+}
+
 export const NAV_APRENDER: NavItem[] = [
   {
     label: "Simulador de IRS",

@@ -1,0 +1,343 @@
+"use client";
+
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { m, AnimatePresence } from "motion/react";
+import { Keyboard, Search } from "@/components/ui/Icons";
+import { CATEGORIAS, categoriaPorContexto } from "@/lib/busca";
+import { CONSULTA_SECRETARIA, anunciarEstadoBusca, useAtalhoBusca, useMotorBusca } from "./motor";
+import { AbasCategorias, CampoBusca, ChipsFiltro, CorpoResultados, RodapeBusca } from "./partes";
+
+/**
+ * A barra de pesquisa do cabeçalho — que EXPANDE, e não abre uma janela.
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ PORQUE ISTO NÃO É O MODAL QUE JÁ EXISTIA                                 │
+ * │                                                                         │
+ * │ No telemóvel a pesquisa é uma folha modal, e é a decisão certa: em 360px │
+ * │ não há «ao lado», o teclado virtual come metade do ecrã e o conteúdo tem │
+ * │ de crescer para cima a partir da zona do polegar.                        │
+ * │                                                                         │
+ * │ No computador o mesmo modal estava errado, e por uma razão concreta: a   │
+ * │ barra vive no cabeçalho, e ao clicar nela aparecia uma caixa NOUTRO      │
+ * │ SÍTIO — centrada no ecrã, com um véu escuro a apagar a página. Isso      │
+ * │ lê-se como «apareceu uma janela», não como «o campo cresceu», e quem não │
+ * │ reparasse no ✕ ficava com a sensação de estar preso.                     │
+ * │                                                                         │
+ * │ Aqui o painel abre ANCORADO à barra, imediatamente por baixo, sem véu e  │
+ * │ sem prender o foco: o resto da página continua legível e clicável, e     │
+ * │ clicar fora fecha. É o mesmo objecto a ficar maior.                      │
+ * │                                                                         │
+ * │ O que se perde ao deixar de ser modal — Escape, clique fora, saída por   │
+ * │ Tab — está reimplementado aqui de forma explícita. É o padrão de         │
+ * │ combobox não-modal do WAI-ARIA.                                          │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ */
+export function DockPesquisa({ inputId }: { inputId?: string }) {
+  const pathname = usePathname();
+  const [aberto, setAberto] = useState(false);
+  const gerado = useId();
+  const idCampo = inputId ?? `${gerado}-busca`;
+
+  /**
+   * ┌─────────────────────────────────────────────────────────────────────────┐
+   * │ FECHAR TEM DE DEVOLVER O FOCO — MAS NEM SEMPRE                           │
+   * │                                                                         │
+   * │ Sem isto, fechar com Escape deixava o foco no `<body>`: quem navega por  │
+   * │ teclado carregava em Escape e recomeçava a tabulação no topo do          │
+   * │ documento, com o cabeçalho inteiro a percorrer antes de voltar ao sítio  │
+   * │ onde estava. É o tipo de defeito que não se vê com o rato.               │
+   * │                                                                         │
+   * │ Mas não é «devolver sempre»: um clique FORA do painel já disse para onde │
+   * │ a pessoa queria ir, e roubar-lhe o foco de volta para a barra desfazia   │
+   * │ exactamente o que ela acabou de fazer. O mesmo vale para o `Tab` que sai │
+   * │ do painel e para a navegação — aí o destino é outra página.              │
+   * │                                                                         │
+   * │ Portanto: Escape, o botão ✕ e o atalho devolvem; clique fora, saída por  │
+   * │ Tab e navegação não. A regra é «quem fechou indicou destino?».           │
+   * └─────────────────────────────────────────────────────────────────────────┘
+   */
+  const devolverFoco = useRef(false);
+
+  const fechar = useCallback((opcoes?: { restaurarFoco?: boolean }) => {
+    devolverFoco.current = opcoes?.restaurarFoco ?? false;
+    setAberto(false);
+  }, []);
+
+  const fecharComFoco = useCallback(() => fechar({ restaurarFoco: true }), [fechar]);
+  const abrir = useCallback(() => setAberto(true), []);
+
+  useEffect(() => {
+    if (aberto || !devolverFoco.current) return;
+    devolverFoco.current = false;
+    // A barra só volta a existir no commit em que o painel sai, e este efeito
+    // corre depois desse commit — por isso é aqui e não no `fechar`.
+    document.getElementById(idCampo)?.focus();
+  }, [aberto, idCampo]);
+
+  useAtalhoBusca({ ativaQuando: CONSULTA_SECRETARIA, aberto, abrir, fechar: fecharComFoco });
+
+  // Mudar de página fecha — um painel que sobrevive à navegação fica a tapar
+  // a página onde a pessoa acabou de aterrar.
+  useEffect(() => {
+    setAberto(false);
+  }, [pathname]);
+
+  /**
+   * ┌─────────────────────────────────────────────────────────────────────────┐
+   * │ O CABEÇALHO TEM DE SABER QUE A PESQUISA ESTÁ ABERTA                      │
+   * │                                                                         │
+   * │ O painel está ancorado ao invólucro da barra, e o invólucro muda de      │
+   * │ LINHA da grelha quando o cabeçalho encolhe. Sem este aviso, rolar com o  │
+   * │ painel aberto encolhia o cabeçalho por baixo dele: o painel saltava da   │
+   * │ segunda linha para a primeira e ia parar por cima da marca e do botão,   │
+   * │ com metade do cabeçalho a espreitar de cada lado.                        │
+   * │                                                                         │
+   * │ Com o aviso, o cabeçalho congela o estado enquanto a pesquisa está       │
+   * │ aberta — e isso aqui não custa nada, porque ele é `fixed` com um         │
+   * │ espaçador de altura constante: mudar (ou não mudar) a sua altura não     │
+   * │ move um pixel do documento.                                              │
+   * └─────────────────────────────────────────────────────────────────────────┘
+   */
+  useEffect(() => {
+    anunciarEstadoBusca(aberto);
+  }, [aberto]);
+
+  /**
+   * ┌─────────────────────────────────────────────────────────────────────────┐
+   * │ A BARRA FECHADA SEGUE A ROTA, E NUNCA A ÚLTIMA PESQUISA                  │
+   * │                                                                         │
+   * │ O texto de sugestão vem do âmbito que a rota actual implica: em `/guias` │
+   * │ diz «IVA, Segurança Social, IRS Jovem…»; em `classificar-atividade` diz  │
+   * │ «Designer, médico, programador…». Guardar aqui o último âmbito ESCOLHIDO │
+   * │ dentro do painel deixaria a barra fechada a prometer um corpus que já    │
+   * │ não é o da página — e navegar para outro lado não a soltava.             │
+   * │                                                                         │
+   * │ Fechada, a barra fala da página onde se está. O âmbito escolhido dentro  │
+   * │ do painel é estado do painel, e morre com ele.                           │
+   * └─────────────────────────────────────────────────────────────────────────┘
+   */
+  const categoriaDaRota = categoriaPorContexto(pathname ?? "/");
+  const sugestao = CATEGORIAS.find((c) => c.id === categoriaDaRota)?.placeholder ?? "Pesquisar…";
+
+  return (
+    <div className="relative h-[var(--rc-dock-h)] w-full">
+      {aberto ? (
+        <PainelExpandido idCampo={idCampo} aoFechar={fechar} aoFecharComFoco={fecharComFoco} />
+      ) : (
+        <BarraFechada idCampo={idCampo} sugestao={sugestao} aoAbrir={abrir} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ É UMA LIGAÇÃO, E ISSO É PROGRESSIVE ENHANCEMENT A SÉRIO                  │
+ * │                                                                         │
+ * │ O gatilho anterior era um `<button>`, e um botão sem JavaScript é um     │
+ * │ adorno: quem chegue antes do chunk carregar — rede móvel má, extensão a  │
+ * │ bloquear, erro de rede — carrega e não acontece nada.                    │
+ * │                                                                         │
+ * │ Uma ligação resolve os três casos com um só elemento: sem JavaScript     │
+ * │ navega para o índice completo de ferramentas, que é um destino honesto   │
+ * │ para quem queria procurar; com JavaScript o clique normal é interceptado │
+ * │ e abre o painel; e `⌘+clique` continua a abrir o índice noutro           │
+ * │ separador, coisa que um `<button>` nunca poderia fazer.                  │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ */
+function BarraFechada({
+  idCampo,
+  sugestao,
+  aoAbrir,
+}: {
+  idCampo: string;
+  sugestao: string;
+  aoAbrir: () => void;
+}) {
+  return (
+    <Link
+      href="/ferramentas"
+      id={idCampo}
+      aria-label="Pesquisar ferramentas, guias e atividades"
+      aria-keyshortcuts="Control+K Meta+K"
+      onClick={(e) => {
+        // `⌘/Ctrl/Shift/Alt + clique` e o botão do meio pertencem ao browser:
+        // são as formas de abrir noutro separador, e interceptá-las seria
+        // roubar à pessoa uma coisa que ela pediu explicitamente.
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        e.preventDefault();
+        aoAbrir();
+      }}
+      className="group flex h-[var(--rc-dock-h)] w-full items-center gap-3 rounded-2xl border border-stone-200 bg-white/90 pl-4 pr-2 text-left no-underline shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-brand/40 hover:shadow-lift focus-visible:border-brand/50 dark:border-stone-700 dark:bg-stone-900/70 dark:hover:border-brand/40"
+    >
+      <Search size={17} className="flex-shrink-0 text-stone-400 transition-colors group-hover:text-brand" />
+      <span className="min-w-0 flex-1 truncate text-sm text-stone-500 dark:text-stone-400">{sugestao}</span>
+      <span className="hidden flex-shrink-0 items-center gap-0.5 rounded-md border border-stone-200 px-1.5 py-0.5 text-[10px] font-semibold text-stone-400 xl:inline-flex dark:border-stone-700">
+        <Keyboard size={11} /> K
+      </span>
+      <span
+        aria-hidden
+        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand text-white transition-colors group-hover:bg-brand-dark"
+      >
+        <Search size={16} />
+      </span>
+    </Link>
+  );
+}
+
+/**
+ * O painel aberto: a mesma barra, mais alta, com os resultados por baixo.
+ *
+ * Monta o motor — é por isso que só existe quando aberto. Sem esta separação,
+ * cada página do site pagaria o índice de pesquisa e o reducer de uma pesquisa
+ * que ninguém abriu.
+ */
+function PainelExpandido({
+  idCampo,
+  aoFechar,
+  aoFecharComFoco,
+}: {
+  /** Fecha sem mexer no foco: clique fora, saída por Tab, navegação. */
+  aoFechar: () => void;
+  /** Fecha e devolve o foco à barra: Escape e o botão ✕. */
+  aoFecharComFoco: () => void;
+  idCampo: string;
+}) {
+  const caixa = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLInputElement>(null);
+  // A navegação fecha SEM devolver o foco: o destino é outra página.
+  const motor = useMotorBusca({ aoFechar });
+
+  const { reiniciar } = motor;
+  useEffect(() => {
+    reiniciar();
+    input.current?.focus();
+  }, [reiniciar]);
+
+  /**
+   * Fechar por clique fora e por Escape.
+   *
+   * Num diálogo modal o navegador trata disto. Aqui é explícito — e
+   * `pointerdown` em vez de `click` porque um clique que começa DENTRO e acaba
+   * fora (ao seleccionar texto, por exemplo) não deve fechar o painel.
+   *
+   * ┌─────────────────────────────────────────────────────────────────────────┐
+   * │ FECHAR NO `pointerdown` DESTRUÍA O ALVO DO PRÓPRIO CLIQUE                │
+   * │                                                                         │
+   * │ Com a página rolada e o painel aberto, clicar em «Guias» ou «Quiz»       │
+   * │ fechava a pesquisa e não navegava. A cadeia é toda de coisas correctas   │
+   * │ à peça e errada no conjunto:                                             │
+   * │                                                                         │
+   * │  1. `pointerdown` fecha o painel;                                        │
+   * │  2. o cabeçalho deixa de estar congelado e compacta;                     │
+   * │  3. compactado, a fila de âmbitos leva `display: none`;                  │
+   * │  4. o `click` chega a um elemento que já não está no documento — e um    │
+   * │     `click` sem alvo não navega.                                         │
+   * │                                                                         │
+   * │ O `pointerdown` continua a fechar tudo o que é FORA do cabeçalho, que é  │
+   * │ o caso comum e onde nada desaparece. Dentro do cabeçalho espera-se pelo  │
+   * │ `click`: nessa altura a navegação (ou o tema, ou o menu) já foi          │
+   * │ despachada pelo próprio elemento, e fechar a seguir não lhe tira nada.   │
+   * └─────────────────────────────────────────────────────────────────────────┘
+   */
+  useEffect(() => {
+    const dentroDoPainel = (alvo: Node | null) => !!alvo && !!caixa.current?.contains(alvo);
+    const dentroDoCabecalho = (alvo: Node | null) =>
+      !!alvo && !!(alvo instanceof Element ? alvo : alvo.parentElement)?.closest("nav[data-compacto]");
+
+    const onPointerDown = (e: PointerEvent) => {
+      const alvo = e.target as Node | null;
+      if (dentroDoPainel(alvo) || dentroDoCabecalho(alvo)) return;
+      aoFechar();
+    };
+
+    const onClique = (e: MouseEvent) => {
+      const alvo = e.target as Node | null;
+      if (dentroDoPainel(alvo)) return;
+      // Só chega aqui o que está no cabeçalho e fora do painel: o elemento já
+      // fez o que tinha a fazer, e agora o painel pode sair.
+      if (dentroDoCabecalho(alvo)) aoFechar();
+    };
+
+    const onTecla = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        // Escape não indica destino: quem o carrega quer voltar ao campo.
+        aoFecharComFoco();
+      }
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("click", onClique);
+    document.addEventListener("keydown", onTecla);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("click", onClique);
+      document.removeEventListener("keydown", onTecla);
+    };
+  }, [aoFechar, aoFecharComFoco]);
+
+  return (
+    <AnimatePresence>
+      <m.div
+        ref={caixa}
+        key="painel"
+        /**
+         * ┌───────────────────────────────────────────────────────────────────┐
+         * │ SÓ OPACIDADE — E NENHUMA TRANSFORMAÇÃO, NEM PARA CENTRAR           │
+         * │                                                                   │
+         * │ A posição vive toda em `.rc-dock-painel`, no CSS, e centra por     │
+         * │ aritmética (`left: calc(50% - largura/2)`). Aqui não entra         │
+         * │ `x`, `y` nem `scale`, e isso é deliberado:                         │
+         * │                                                                   │
+         * │  · uma transformação de entrada COMPÕE-SE com a que centrasse o    │
+         * │    painel, e o resultado é ele aparecer deslocado antes de saltar  │
+         * │    para o sítio — um defeito que só se vê em movimento, nunca      │
+         * │    numa captura de ecrã;                                           │
+         * │  · o painel abre exactamente por cima da barra fechada, com a      │
+         * │    mesma primeira linha. Qualquer escala ou deslocamento moveria   │
+         * │    o campo debaixo do cursor de quem acabou de clicar nele.         │
+         * │                                                                   │
+         * │ POSIÇÃO é do layout, ENTRADA é da animação. Enquanto não           │
+         * │ escreverem na mesma propriedade, não há como uma partir a outra.   │
+         * │                                                                   │
+         * │ `opacity` é composta na GPU, sem layout nem repintura. E o         │
+         * │ `MotionConfig reducedMotion="user"` da app trata do resto.         │
+         * └───────────────────────────────────────────────────────────────────┘
+         */
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.16 }}
+        // Sair do painel com Tab fecha-o. Sem isto ficava um painel aberto por
+        // trás do foco, a tapar conteúdo que a pessoa já não está a usar.
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) aoFechar();
+        }}
+        // Marcador estável de invariância: as auditorias contam quantos motores
+        // existem, e a resposta tem de ser sempre um. Não é estilo nem dado.
+        data-busca-painel="aberto"
+        className="rc-dock-painel flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-float ring-1 ring-black/5 dark:border-stone-700 dark:bg-stone-900 dark:ring-white/5"
+      >
+        <div className="border-b border-stone-100 dark:border-stone-800">
+          <CampoBusca motor={motor} inputRef={input} id={idCampo} aoFechar={aoFecharComFoco} compacto />
+        </div>
+
+        <div className="border-b border-stone-100 dark:border-stone-800">
+          <AbasCategorias motor={motor} inputRef={input} variante="secretaria" />
+        </div>
+
+        <ChipsFiltro motor={motor} inputRef={input} />
+
+        {/* `min-h-0` é o que permite ao filho rolar dentro de um flex column:
+            sem isso o conteúdo empurra a caixa e o painel cresce sem fim. */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <CorpoResultados motor={motor} colunas={6} />
+        </div>
+
+        <RodapeBusca motor={motor} />
+      </m.div>
+    </AnimatePresence>
+  );
+}
