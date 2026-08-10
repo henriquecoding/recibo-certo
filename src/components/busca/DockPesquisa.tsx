@@ -222,11 +222,45 @@ function PainelExpandido({
    * Num diálogo modal o navegador trata disto. Aqui é explícito — e
    * `pointerdown` em vez de `click` porque um clique que começa DENTRO e acaba
    * fora (ao seleccionar texto, por exemplo) não deve fechar o painel.
+   *
+   * ┌─────────────────────────────────────────────────────────────────────────┐
+   * │ FECHAR NO `pointerdown` DESTRUÍA O ALVO DO PRÓPRIO CLIQUE                │
+   * │                                                                         │
+   * │ Com a página rolada e o painel aberto, clicar em «Guias» ou «Quiz»       │
+   * │ fechava a pesquisa e não navegava. A cadeia é toda de coisas correctas   │
+   * │ à peça e errada no conjunto:                                             │
+   * │                                                                         │
+   * │  1. `pointerdown` fecha o painel;                                        │
+   * │  2. o cabeçalho deixa de estar congelado e compacta;                     │
+   * │  3. compactado, a fila de âmbitos leva `display: none`;                  │
+   * │  4. o `click` chega a um elemento que já não está no documento — e um    │
+   * │     `click` sem alvo não navega.                                         │
+   * │                                                                         │
+   * │ O `pointerdown` continua a fechar tudo o que é FORA do cabeçalho, que é  │
+   * │ o caso comum e onde nada desaparece. Dentro do cabeçalho espera-se pelo  │
+   * │ `click`: nessa altura a navegação (ou o tema, ou o menu) já foi          │
+   * │ despachada pelo próprio elemento, e fechar a seguir não lhe tira nada.   │
+   * └─────────────────────────────────────────────────────────────────────────┘
    */
   useEffect(() => {
+    const dentroDoPainel = (alvo: Node | null) => !!alvo && !!caixa.current?.contains(alvo);
+    const dentroDoCabecalho = (alvo: Node | null) =>
+      !!alvo && !!(alvo instanceof Element ? alvo : alvo.parentElement)?.closest("nav[data-compacto]");
+
     const onPointerDown = (e: PointerEvent) => {
-      if (!caixa.current?.contains(e.target as Node)) aoFechar();
+      const alvo = e.target as Node | null;
+      if (dentroDoPainel(alvo) || dentroDoCabecalho(alvo)) return;
+      aoFechar();
     };
+
+    const onClique = (e: MouseEvent) => {
+      const alvo = e.target as Node | null;
+      if (dentroDoPainel(alvo)) return;
+      // Só chega aqui o que está no cabeçalho e fora do painel: o elemento já
+      // fez o que tinha a fazer, e agora o painel pode sair.
+      if (dentroDoCabecalho(alvo)) aoFechar();
+    };
+
     const onTecla = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
@@ -234,10 +268,13 @@ function PainelExpandido({
         aoFecharComFoco();
       }
     };
+
     document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("click", onClique);
     document.addEventListener("keydown", onTecla);
     return () => {
       document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("click", onClique);
       document.removeEventListener("keydown", onTecla);
     };
   }, [aoFechar, aoFecharComFoco]);
