@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "postinstall": "node scripts/copy-pdf-worker.mjs",
-    "prebuild": "node scripts/copy-pdf-worker.mjs",
+    "prebuild": "node scripts/copy-pdf-worker.mjs && node scripts/gen-novidades.mjs",
+    "novidades:gen": "node scripts/gen-novidades.mjs",
+    "novidades:check": "node scripts/gen-novidades.mjs --check",
     "build": "next build",
     "start": "next start",
     "fiscal:check": "node scripts/check-fiscal-data.mjs",
