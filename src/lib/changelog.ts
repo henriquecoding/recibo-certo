@@ -19,6 +19,17 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.36.0",
+    data: "2026-08-11",
+    titulo: "Peças de base atualizadas, uma a uma e com a mão no travão",
+    itens: [
+      "As bibliotecas que sustentam o site — o motor de páginas, a biblioteca de interface, as animações, o leitor de PDF e a ligação aos pagamentos — passaram a versões novas. Nada disto muda o que vês; muda o que está por baixo, e é assim que se evita ficar preso a uma versão velha até já não haver caminho de volta.",
+      "Cada salto grande foi instalado sozinho e verificado à parte, incluindo no browser: as animações a entrar e a sair, o leitor de PDF a extrair mesmo o texto de um documento, e o site inteiro em claro e escuro, ao telemóvel e no computador.",
+      "Uma atualização ficou de fora de propósito: a do sistema de estilos. Não é uma atualização, é uma mudança de forma de escrever os estilos todos, e arriscava partir o modo claro. Fica para ser feita com tempo, ou não é feita.",
+      "E o robô que propõe estas atualizações estava a juntar, num pedido só, uma correção trivial e uma mudança de fundo — bastava a segunda falhar para a primeira ficar bloqueada. Agora vêm separadas.",
+    ],
+  },
+  {
     version: "2.35.0",
     data: "2026-08-11",
     titulo: "As abas do cabeçalho voltam quando abres a pesquisa",
