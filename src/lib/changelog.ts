@@ -32,6 +32,8 @@ export const CHANGELOG: EntradaChangelog[] = [
       "O endereço do site estava escrito em quatro sítios, e nem todos concordavam: uns com «www», outros sem. Para uma pessoa é indiferente — o servidor reencaminha. Para a Stripe e para o OAuth da FIZ não é: o endereço de retorno é comparado letra a letra, e o que não bate é recusado. Passou a haver um só.",
       "O endereço de verificação impresso nos documentos exportados apontava para a versão errada do domínio. Um PDF sobrevive ao mês em que foi feito; o endereço nele tem de continuar a levar a algum lado.",
       "E a aplicação dizia-se na versão 2.31 enquanto o ficheiro de projeto dizia 0.1. Havia duas versões, o que é o mesmo que não haver nenhuma. Agora a compilação recusa avançar se voltarem a divergir.",
+      "No Quiz, dois desafios terminados exatamente ao mesmo tempo no último passo de um ciclo davam dois cupões em vez de um: ambos liam o progresso antes de qualquer um o gravar. Agora só a primeira gravação conta o prémio, e a segunda percebe que chegou tarde.",
+      "Ainda no Quiz: um envio com dados corrompidos queimava a sessão antes sequer de ser verificado — perdia-se um desafio por um erro de rede. Passa a ser verificado primeiro. E o teto diário de desafios reiniciava à meia-noite do servidor, que no verão é uma hora antes da meia-noite em Portugal.",
     ],
   },
   {
