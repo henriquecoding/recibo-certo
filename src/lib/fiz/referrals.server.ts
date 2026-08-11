@@ -9,6 +9,7 @@
 //  clique é um problema comercial nosso, não do utilizador.
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
 import { randomUUID } from "node:crypto";
 import { pedirFiz } from "./client.server";
 import { fizServerConfig } from "./config";

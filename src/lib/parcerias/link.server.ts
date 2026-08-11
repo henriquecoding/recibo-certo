@@ -12,6 +12,7 @@
 //  construímos todos os valores, a disciplina tem de viver aqui.
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
 import { randomUUID } from "node:crypto";
 import { urlSemDadosSensiveis } from "@/lib/fiz/contracts";
 import { DESTINO_POR_INTENT } from "@/content/parcerias-destinos";

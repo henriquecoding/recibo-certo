@@ -1,8 +1,26 @@
 # ReciboCerto
 
+> [!IMPORTANT]
+> Software proprietário e confidencial. Este repositório não concede licença
+> para copiar, reutilizar, treinar modelos de IA, criar obras derivadas ou
+> redistribuir o código e os conteúdos. Consulta `LICENSE` e `SECURITY.md`.
+
 Calculadora de recibos verdes para trabalhadores independentes em Portugal — IRS
 (retenção na fonte), Segurança Social e IVA, com as **taxas de 2026 verificadas e
 com fonte**. Landing page + calculadora interativa, pronta para deploy na Vercel.
+
+## Princípio local-first
+
+As calculadoras, os simuladores e o quiz gratuitos executam no browser. Não
+exigem conta e, na utilização local normal, valores fiscais, respostas e
+resultados não são enviados ao servidor. A conta e a sincronização na nuvem são
+opcionais e não podem tornar-se condição para as funções essenciais.
+
+Esta é também uma decisão de segurança: o código e os bancos necessários à
+execução local são observáveis no browser, mas os dados do utilizador ficam no
+dispositivo. Proteger propriedade intelectual nunca justifica mover estes
+cálculos para uma API, criar um login obrigatório ou recolher inputs sem
+aprovação expressa do titular e revisão de privacidade.
 
 ## Stack
 
@@ -58,7 +76,7 @@ src/
     ├── fiscal-data.ts        # ★ FONTE DE VERDADE FISCAL (ver abaixo)
     ├── fiscal.ts             # motor de cálculo + simulador IRS (sem números mágicos)
     ├── prazos.ts             # geração das datas-limite fiscais
-    ├── store/recibos.ts      # repositório de recibos (localStorage → Supabase)
+    ├── store/recibos.ts      # localStorage por omissão; sincronização opcional
     ├── faq.ts · format.ts · scroll.ts
 scripts/check-fiscal-data.mjs # monitor de desatualização dos dados
 .github/workflows/
@@ -98,9 +116,10 @@ Em `/dashboard` (acessível pelo botão “Abrir dashboard”):
 - **Calendário fiscal** — vista de mês com marcadores por categoria, navegação e
   detalhe do dia, além da vista em lista.
 
-> MVP em **modo local**: os dados ficam em `localStorage`. A camada
-> `lib/store/recibos.ts` isola a persistência — basta substituir a implementação
-> por Supabase (auth + base de dados na nuvem) sem alterar a UI.
+> O **modo local é permanente**, não um passo provisório: os dados ficam em
+> `localStorage` e as funções essenciais continuam disponíveis sem conta. A
+> sincronização com Supabase é uma opção adicional para quem a escolher; não
+> substitui nem pode degradar o caminho local.
 
 ## Sistema de integridade dos dados fiscais
 

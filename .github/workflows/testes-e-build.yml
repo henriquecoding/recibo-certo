@@ -52,6 +52,11 @@ jobs:
       - name: Build de produção
         run: npm run build
 
+      # Arranca o artefacto dentro do runner. Não cria preview nem deployment:
+      # verifica a fronteira HTTP real antes de qualquer merge para produção.
+      - name: Smoke do artefacto de produção (sem deploy)
+        run: node scripts/smoke-production.mjs
+
       - name: Auditoria de dependências (0 vulnerabilidades altas)
         run: npm audit --audit-level=high
 

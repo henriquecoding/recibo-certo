@@ -15,6 +15,7 @@
 //  Nenhum segredo tem prefixo NEXT_PUBLIC_ — só a bandeira é pública.
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
 import { fizAtiva as bandeiraAtiva } from "./flag";
 
 export type EstadoIntegracao = "desligada" | "sem_credenciais" | "pronta";

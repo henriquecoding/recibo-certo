@@ -1,0 +1,13 @@
+# O CODEOWNERS só se torna obrigatório quando a ruleset de main exige
+# aprovação do proprietário do código.
+*                                      @henriquecoding
+/.github/                              @henriquecoding
+/src/app/api/                          @henriquecoding
+/src/lib/                              @henriquecoding
+/src/proxy.ts                          @henriquecoding
+/supabase/migrations/                  @henriquecoding
+/next.config.mjs                       @henriquecoding
+/package.json                          @henriquecoding
+/package-lock.json                     @henriquecoding
+/LICENSE                               @henriquecoding
+/SECURITY.md                           @henriquecoding

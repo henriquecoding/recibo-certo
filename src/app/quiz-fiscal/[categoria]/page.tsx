@@ -1,15 +1,12 @@
 // ═══════════════════════════════════════════════════════════════════════
-//  /quiz-fiscal/[categoria] — a melhor página de conteúdo, agora indexável
+//  /quiz-fiscal/[categoria] — página pública com exposição mínima
 //  ---------------------------------------------------------------------
-//  `/quiz-fiscal` renderiza apenas `<QuizFiscalApp />`, que é `"use client"`:
-//  o Google recebia uma casca vazia numa página com 1.614 perguntas, cada
-//  uma com base legal e ligação à fonte oficial, por trás.
-//
-//  Estas 16 rotas são renderizadas NO SERVIDOR e estáticas: cada uma mostra
-//  uma amostra de perguntas em HTML — enunciado, resposta certa, explicação,
-//  base legal e fonte — com o jogo por cima. É conteúdo real a atacar cauda
-//  longa real («qual a taxa de retenção do artigo 151», «coeficiente 0,75
-//  regime simplificado»), com JSON-LD `Quiz` e `BreadcrumbList`.
+//  A página continua indexável por título e ligação, mas já não publica em
+//  massa respostas certas, explicações e opções erradas em HTML/JSON-LD.
+//  Mostra apenas uma amostra pequena de enunciados e a respetiva fonte oficial.
+//  O jogo continua deliberadamente local: não exige conta nem envia respostas
+//  ou resultados ao servidor. O banco no bundle é o custo aceite dessa escolha
+//  de privacidade, documentado em docs/PROTECAO-ATIVOS.md.
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { Metadata } from "next";
@@ -22,12 +19,12 @@ import {
   getEstatisticasBanco,
   type QuizCategoria,
 } from "@/lib/quiz-fiscal";
-import { generateBreadcrumbSchema, generateQuizSchema, SITE_URL } from "@/lib/seo";
+import { generateBreadcrumbSchema, SITE_URL } from "@/lib/seo";
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
 import QuizCategoriaCTA from "@/components/quiz-fiscal/QuizCategoriaCTA";
 
 /** Perguntas mostradas em HTML por página. O jogo tem o banco completo. */
-const AMOSTRA = 20;
+const AMOSTRA = 5;
 
 export const dynamicParams = false;
 
@@ -50,11 +47,11 @@ export async function generateMetadata(
 
   return {
     title: `Quiz de ${meta.label} ${FISCAL_YEAR} — ${total} perguntas com base legal`,
-    description: `${meta.descricao} ${total} perguntas com resposta explicada, base legal e ligação à fonte oficial.`,
+    description: `${meta.descricao} ${total} perguntas interativas com base legal e ligação à fonte oficial.`,
     alternates: { canonical: `${SITE_URL}${url}` },
     openGraph: {
       title: `Quiz de ${meta.label} ${FISCAL_YEAR} — ReciboCerto`,
-      description: `${meta.descricao} ${total} perguntas com resposta explicada e base legal.`,
+      description: `${meta.descricao} ${total} perguntas interativas com base legal.`,
       url: `${SITE_URL}${url}`,
       siteName: "ReciboCerto",
       locale: "pt_PT",
@@ -78,18 +75,6 @@ export default async function QuizCategoriaPage(
   const amostra = daCategoria.slice(0, AMOSTRA);
   const url = `/quiz-fiscal/${categoria}`;
 
-  const quizSchema = generateQuizSchema({
-    nome: `Quiz de ${meta.label} — ${FISCAL_YEAR}`,
-    descricao: meta.descricao,
-    url,
-    perguntas: amostra.map((p) => ({
-      pergunta: p.pergunta,
-      respostaCerta: p.opcoes[p.correta].texto,
-      explicacao: p.opcoes[p.correta].porque,
-      respostasErradas: p.opcoes.filter((_, i) => i !== p.correta).map((o) => o.texto),
-    })),
-  });
-
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Início", url: "/" },
     { name: "Quiz Fiscal", url: "/quiz-fiscal" },
@@ -98,7 +83,6 @@ export default async function QuizCategoriaPage(
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(quizSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
 
       <nav aria-label="Caminho" className="mb-6 text-xs text-stone-500 dark:text-stone-400">
@@ -143,13 +127,6 @@ export default async function QuizCategoriaPage(
               <h3 className="text-sm font-semibold leading-snug text-stone-800 dark:text-stone-100">
                 {i + 1}. {p.pergunta}
               </h3>
-              <p className="mt-3 text-sm text-stone-700 dark:text-stone-200">
-                <span className="font-semibold text-brand">Resposta: </span>
-                {p.opcoes[p.correta].texto}
-              </p>
-              <p className="mt-2 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
-                {p.opcoes[p.correta].porque}
-              </p>
               <p className="mt-3 border-t border-stone-100 pt-2 text-[11px] text-stone-500 dark:border-stone-800 dark:text-stone-400">
                 {p.legalBasis} ·{" "}
                 <a

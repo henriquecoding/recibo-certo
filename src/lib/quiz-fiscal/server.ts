@@ -23,6 +23,7 @@
 //  acertos a partir do banco — que só ele conhece.
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { carregarBancoQuiz } from "./index";
 import { PERGUNTAS_SESSAO_DESAFIO as PERGUNTAS } from "./desafio";

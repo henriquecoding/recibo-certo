@@ -19,6 +19,21 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.32.0",
+    data: "2026-08-11",
+    titulo: "O conteúdo e os segredos passaram a ter fronteiras mais fortes",
+    itens: [
+      "O projeto passa a declarar de forma inequívoca que o código, os textos, as perguntas, os cálculos, o design e os restantes ativos são proprietários: não há autorização implícita para copiar, reutilizar, redistribuir ou treinar sistemas com eles.",
+      "Os rastreadores conhecidos de treino, pesquisa e recolha por inteligência artificial passam a ser recusados tanto nas instruções públicas como à entrada do servidor. A lista fica centralizada para que uma alteração não deixe regras contraditórias espalhadas pelo site.",
+      "Fica expressamente reservada a prospeção de textos e dados, incluindo por um sinal TDM legível por máquinas, e os termos explicam a proibição de scraping, treino, embeddings, bases de conhecimento e reprodução automatizada.",
+      "As páginas passam a recusar incorporação noutros sites, a limitar pré-visualizações e excertos, a ocultar a identificação do framework e a impedir a publicação de source maps do browser em produção.",
+      "Os módulos que lidam com credenciais, pagamentos, documentos, integrações, notificações e administração foram marcados como exclusivos do servidor. Se algum deles for importado por engano para código do browser, a compilação deixa de aceitar esse caminho.",
+      "O quiz público deixou de entregar no HTML estruturado as respostas certas e as explicações, e a página de amostra mostra apenas uma seleção pequena de enunciados. O jogo continua deliberadamente no dispositivo, sem conta obrigatória e sem enviar respostas ou resultados: proteger o conteúdo não pode custar a privacidade de quem o usa.",
+      "Uma verificação nova corre em cada proposta de alteração e trava regressões: procura segredos, ficheiros de ambiente, source maps, módulos sensíveis expostos e a remoção acidental das reservas e bloqueios.",
+      "Estas barreiras reduzem recolha automática e tornam o uso indevido contratualmente explícito e demonstrável. Não fingimos, porém, que um conteúdo visível num browser pode ser tecnicamente impossível de guardar: o que precisa de sigilo absoluto não pode ser enviado ao dispositivo.",
+    ],
+  },
+  {
     version: "2.31.0",
     data: "2026-08-11",
     titulo: "A página de investidores, reconstruída — e o formulário deixou de escrever direto na base de dados",

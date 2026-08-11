@@ -9,6 +9,7 @@
 //  não pode ficar quebrado porque a FIZ está em baixo (ponto 6.3).
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
 import { pedirFiz } from "./client.server";
 import { obterCatalogo } from "./capabilities.server";
 import { FizError } from "./errors";

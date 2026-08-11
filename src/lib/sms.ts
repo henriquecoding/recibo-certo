@@ -1,3 +1,5 @@
+import "server-only";
+
 // Envio de SMS transacionais via Twilio
 // Usado pelo sistema de alertas para notificações críticas (IVA 95%, SS vence em 7 dias)
 

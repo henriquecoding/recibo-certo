@@ -11,6 +11,7 @@
 //  referência confirma que ela existe e a que digest corresponde, e mais nada.
 // ─────────────────────────────────────────────────────────────────────
 
+import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import type { Plano } from "@/lib/entitlements";
 import { planoTem, type Entitlement } from "@/lib/entitlements";

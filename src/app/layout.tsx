@@ -108,11 +108,19 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+    // Estas diretivas genéricas limitam snippets também noutros motores que
+    // as respeitem. Mantêm o título e o URL indexáveis.
+    "max-image-preview": "none",
+    "max-video-preview": 0,
+    "max-snippet": 0,
     googleBot: {
       index: true,
       follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
+      // Mantém título e URL elegíveis para pesquisa, mas impede que o conteúdo
+      // seja usado como input direto nos modos de IA da Pesquisa Google.
+      "max-image-preview": "none",
+      "max-video-preview": 0,
+      "max-snippet": 0,
     },
   },
   verification: {
@@ -134,6 +142,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-PT" className={`${dmSans.variable} ${playfair.variable}`} suppressHydrationWarning>
       <head>
+        {/* Reserva de direitos TDM também dentro do HTML. O cabeçalho HTTP e
+            /.well-known/tdmrep.json declaram a mesma decisão. */}
+        <meta name="tdm-reservation" content="1" />
         {/* Aplica o tema antes da pintura (evita flash). Lê a preferência
             guardada ou a do sistema. */}
         <script
