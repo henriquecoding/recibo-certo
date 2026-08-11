@@ -4,8 +4,9 @@
 //  A página continua indexável por título e ligação, mas já não publica em
 //  massa respostas certas, explicações e opções erradas em HTML/JSON-LD.
 //  Mostra apenas uma amostra pequena de enunciados e a respetiva fonte oficial.
-//  O banco completo continua a exigir migração server-side (documentada em
-//  docs/PROTECAO-ATIVOS.md) para deixar de integrar o bundle do jogo.
+//  O jogo continua deliberadamente local: não exige conta nem envia respostas
+//  ou resultados ao servidor. O banco no bundle é o custo aceite dessa escolha
+//  de privacidade, documentado em docs/PROTECAO-ATIVOS.md.
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { Metadata } from "next";
