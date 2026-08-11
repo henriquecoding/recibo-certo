@@ -17,6 +17,7 @@
 //  medo, e o que a entrega at-least-once da FIZ exige de qualquer maneira.
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
 import { invalidarCatalogo } from "@/lib/fiz/capabilities.server";
 import { servicoSupabase, revogarPorPartnerUserId } from "@/lib/fiz/session.server";
 import type { WebhookEvent } from "@/lib/fiz/contracts";
