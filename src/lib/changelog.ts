@@ -19,6 +19,24 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.31.0",
+    data: "2026-08-11",
+    titulo: "A página de investidores, reconstruída — e o formulário deixou de escrever direto na base de dados",
+    itens: [
+      "A página começava com zeros. «0,0 milhões de empresas», «TAM 0,0 M», resultados a 0 € — os números só apareciam depois de o JavaScript correr e a animação disparar. Quem tinha scripts bloqueados, quem partilhava a ligação e os motores de busca viam um mercado de zero. Agora todos os números estão no HTML desde o primeiro byte.",
+      "Dizia «1,3 milhões de empresas» sem fonte, ano nem definição. O INE conta 1 526 926 empresas ativas em 2023 e a ficha europeia estima 1 104 691 PME — universos diferentes, e nenhum deles é o cliente deste produto. O mercado passou a ser calculado de baixo para cima, a partir de quem usamos mesmo servir, com a fonte, o ano e as taxas explicadas ao lado, mais três cenários de preço.",
+      "Dizia «97% micro e pequenas». Na fonte usada, são 95,5% e 3,8% — 99,3%.",
+      "Anunciava «penetração atual» de 4%, o que dava a entender cerca de 52 mil utilizadores. Não existia métrica nenhuma a sustentá-lo: era um objetivo com o rótulo de tração. Saiu.",
+      "Apresentava crédito, take rate, reconciliação bancária e «código auditado» com o mesmo peso visual do que já funciona. Agora cada afirmação traz o seu estado — em produção, piloto, planeado ou hipótese — com cor própria, e há uma verificação que faz a compilação falhar se alguma coisa futura for escrita como presente.",
+      "As métricas que decidem um investimento — utilizadores ativos, receita, retenção, conversão — passaram a estar definidas na página, mas SEM número, porque ainda não há fonte auditável para elas. Preferimos dizer isso a mostrar um valor que ninguém consegue reproduzir.",
+      "O gráfico da empresa somava 101%: cada fatia era arredondada por si. Passou a ser repartido por um método que garante 100, e há teste com mil composições aleatórias.",
+      "O formulário escrevia direto na base de dados a partir do browser, sem limite de pedidos, sem honeypot e sem servidor pelo meio — um script podia escrever milhares de linhas válidas. Agora entra por uma rota no servidor, com validação completa, limite por IP e por email guardado na base de dados, chave de idempotência para o duplo-clique não criar dois registos, e o IP nunca guardado em claro.",
+      "E deixou de pedir uma «proposta de investimento» a quem ainda não viu nada. Pede o deck, numa coluna, com etiquetas ligadas aos campos, erros anunciados a leitores de ecrã e botões que já não se espremem num telemóvel de 320px.",
+      "Passa a haver aviso de que a página é informativa e não uma oferta, e a Política de Privacidade passou a descrever este tratamento: que dados, para quê, com que base legal, por quanto tempo e quem os trata por nossa conta. A frase «nunca partilhamos informação com terceiros» era falsa e saiu — o que é verdade é que não os vendemos.",
+      "O banner grande de investidores saiu do rodapé de todas as páginas. Ocupava a atenção de quem veio calcular impostos e não trazia ninguém de fora. A ligação continua na lista do rodapé.",
+    ],
+  },
+  {
     version: "2.30.0",
     data: "2026-08-10",
     titulo: "Este painel, reorganizado — o mês atual, e a história atrás de uma porta",
