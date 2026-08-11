@@ -29,6 +29,20 @@ exigir(ficheiros.includes("LICENSE"), "LICENSE proprietária não pode ser remov
 exigir(ficheiros.includes("SECURITY.md"), "SECURITY.md não pode ser removido.");
 exigir(ficheiros.includes(".github/CODEOWNERS"), "CODEOWNERS não pode ser removido.");
 
+const securityTxt = ler("public/.well-known/security.txt");
+exigir(
+  securityTxt.includes("Contact: mailto:recibocerto.pt@gmail.com") &&
+    securityTxt.includes("Canonical: https://www.recibocerto.pt/.well-known/security.txt"),
+  "security.txt deve manter contacto e URL canónica.",
+);
+const expiraSecurityTxt = securityTxt.match(/^Expires:\s*(.+)$/m)?.[1]?.trim();
+exigir(
+  Boolean(expiraSecurityTxt) &&
+    Number.isFinite(Date.parse(expiraSecurityTxt)) &&
+    Date.parse(expiraSecurityTxt) > Date.now(),
+  "security.txt está sem validade ou expirou; renovar a data Expires.",
+);
+
 const nextConfig = ler("next.config.mjs");
 exigir(
   /productionBrowserSourceMaps\s*:\s*false/.test(nextConfig),
