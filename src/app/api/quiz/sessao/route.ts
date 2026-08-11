@@ -25,6 +25,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { NextResponse } from "next/server";
+import { avancoCondicional, premiosAutomaticosAtivos } from "@/lib/quiz-fiscal/concorrencia";
 import {
   DIFICULDADES_DE_DESAFIO,
   META_DESAFIO_SERVIDOR,
@@ -109,6 +110,29 @@ export async function POST(req: Request) {
       );
     }
 
+  }
+
+  // ── Validar ANTES de queimar ─────────────────────────────────────────
+  // RC-QUIZ-001: o bilhete era fechado aqui, antes destas verificações. Um
+  // payload malformado — um erro de rede a meio, um cliente antigo — custava
+  // a sessão a quem a tinha aberto legitimamente, e não havia como a devolver.
+  // Validar primeiro não abre brecha nenhuma: o fecho continua a ser um UPDATE
+  // condicional, e é ele que decide quem conta o prémio.
+  const verificado = await verificarSessao({
+    dificuldade,
+    respostas,
+    ...(bilhete ? { perguntasAutorizadas: bilhete.pergunta_ids } : {}),
+  });
+  if (verificado.desconhecidos.length > 0) {
+    // IDs que não existem no banco só aparecem numa submissão forjada.
+    return NextResponse.json({ erro: "Sessão inválida." }, { status: 400 });
+  }
+  if (!verificado.correspondeAoBilhete) {
+    // O bilhete era legítimo, as perguntas não são as dele.
+    return NextResponse.json({ erro: "As perguntas não são as desta sessão." }, { status: 409 });
+  }
+
+  if (bilhete) {
     // Fecha o bilhete ANTES de contar o prémio, com a condição no próprio
     // UPDATE: dois pedidos simultâneos com o mesmo bilhete — que é como se
     // duplica um prémio — só um passa. Mesmo padrão do resgate do cupão.
@@ -124,19 +148,6 @@ export async function POST(req: Request) {
     }
   }
 
-  const verificado = await verificarSessao({
-    dificuldade,
-    respostas,
-    ...(bilhete ? { perguntasAutorizadas: bilhete.pergunta_ids } : {}),
-  });
-  if (verificado.desconhecidos.length > 0) {
-    // IDs que não existem no banco só aparecem numa submissão forjada.
-    return NextResponse.json({ erro: "Sessão inválida." }, { status: 400 });
-  }
-  if (!verificado.correspondeAoBilhete) {
-    // O bilhete era legítimo, as perguntas não são as dele.
-    return NextResponse.json({ erro: "As perguntas não são as desta sessão." }, { status: 409 });
-  }
   if (!verificado.caminho) {
     return NextResponse.json({ ok: true, acertos: verificado.acertos, cupaoGerado: null });
   }
@@ -173,31 +184,89 @@ export async function POST(req: Request) {
     .maybeSingle();
   if (errLeitura) return NextResponse.json({ erro: errLeitura.message }, { status: 500 });
 
-  const novaSeq = (linha?.sequencia_atual ?? 0) + 1;
-  const atingiuMeta = novaSeq >= meta;
+  const sequenciaLida = linha?.sequencia_atual ?? 0;
+  const avanco = avancoCondicional(sequenciaLida, meta);
+  const novaSeq = avanco.fechouCiclo ? meta : avanco.sequenciaAGravar;
 
-  const { error: errProgresso } = await sb.from("quiz_achievement_progress").upsert(
-    [
-      {
-        user_id: userId,
-        caminho,
-        // Ao atingir a meta a sequência recomeça.
-        sequencia_atual: atingiuMeta ? 0 : novaSeq,
-        sequencia_meta: meta,
-        atualizado_em: agora,
-      },
-      ...reposicoes,
-    ],
-    { onConflict: "user_id,caminho" },
-  );
-  if (errProgresso) return NextResponse.json({ erro: errProgresso.message }, { status: 500 });
+  // Os outros caminhos são sempre repostos — são linhas distintas e não
+  // participam na corrida deste.
+  if (reposicoes.length > 0) {
+    const { error: errReposicao } = await sb
+      .from("quiz_achievement_progress")
+      .upsert(reposicoes, { onConflict: "user_id,caminho" });
+    if (errReposicao) return NextResponse.json({ erro: errReposicao.message }, { status: 500 });
+  }
 
-  if (!atingiuMeta) {
+  // ── RC-QUIZ-001: o compare-and-swap ──────────────────────────────────
+  // Antes era um `upsert` que escrevia por cima do que lá estivesse. Dois
+  // bilhetes distintos submetidos ao mesmo tempo no limiar liam ambos a mesma
+  // sequência, calculavam ambos a meta e emitiam ambos um cupão — dois prémios
+  // para um ciclo. A condição `eq("sequencia_atual", sequenciaLida)` faz o
+  // segundo UPDATE não encontrar linha nenhuma, e é ela que decide quem fecha
+  // o ciclo. Quem perde a corrida não perde a sessão: o progresso dele já foi
+  // contado pelo vencedor, e nenhum prémio duplicado é emitido.
+  let escritaMinha: boolean;
+  if (linha) {
+    const { data: gravado, error: errProgresso } = await sb
+      .from("quiz_achievement_progress")
+      .update({ sequencia_atual: avanco.sequenciaAGravar, sequencia_meta: meta, atualizado_em: agora })
+      .eq("user_id", userId)
+      .eq("caminho", caminho)
+      .eq("sequencia_atual", sequenciaLida)
+      .select("caminho");
+    if (errProgresso) return NextResponse.json({ erro: errProgresso.message }, { status: 500 });
+    escritaMinha = Boolean(gravado && gravado.length > 0);
+  } else {
+    // Primeira sessão perfeita deste caminho: a linha ainda não existe. A
+    // chave primária (user_id, caminho) trata da corrida — quem chegar
+    // segundo colide e sabe que não foi ele a criar.
+    const { error: errInsercao } = await sb.from("quiz_achievement_progress").insert({
+      user_id: userId,
+      caminho,
+      sequencia_atual: avanco.sequenciaAGravar,
+      sequencia_meta: meta,
+      atualizado_em: agora,
+    });
+    // 23505 = violação de unicidade: outro pedido criou a linha primeiro.
+    if (errInsercao && errInsercao.code !== "23505") {
+      return NextResponse.json({ erro: errInsercao.message }, { status: 500 });
+    }
+    escritaMinha = !errInsercao;
+  }
+
+  if (!avanco.fechouCiclo) {
     return NextResponse.json({
       ok: true,
       acertos: verificado.acertos,
       sequenciaAtual: novaSeq,
       cupaoGerado: null,
+    });
+  }
+
+  if (!escritaMinha) {
+    // Alguém fechou este ciclo entre a leitura e a escrita. O prémio é dele.
+    return NextResponse.json({
+      ok: true,
+      acertos: verificado.acertos,
+      sequenciaAtual: 0,
+      cupaoGerado: null,
+    });
+  }
+
+  if (!premiosAutomaticosAtivos()) {
+    // Travão administrativo (RC-QUIZ-001). O ciclo fechou e ficou registado;
+    // só a emissão automática está suspensa. Fica em registo para ser emitido
+    // à mão, porque a pessoa ganhou-o.
+    console.warn(
+      `[quiz] Ciclo fechado com emissão automática suspensa — user=${userId} caminho=${caminho}. ` +
+        "Emitir cupão manualmente.",
+    );
+    return NextResponse.json({
+      ok: true,
+      acertos: verificado.acertos,
+      sequenciaAtual: 0,
+      cupaoGerado: null,
+      premioPendente: true,
     });
   }
 

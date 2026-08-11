@@ -15,8 +15,12 @@ import { TOTAL_PERGUNTAS_META } from "@/lib/quiz-fiscal/quiz-meta";
 import { META_CATEGORIA_QUIZ } from "@/lib/quiz-fiscal/types";
 import { GUIDE_MANIFESTS } from "@/lib/guias/manifests";
 import { guiaSemCorpo } from "@/lib/guias/expansao/derivar";
+import { ORIGEM_CANONICA } from "@/lib/origem";
 
-export const SITE_URL = "https://www.recibocerto.pt";
+// RC-CFG-001: a origem vive em `origem.ts` e sai daqui com o nome que o resto
+// do site já usa. Duas declarações da mesma origem foi exatamente como o
+// canónico e os `redirect_uri` de OAuth acabaram em hosts diferentes.
+export const SITE_URL = ORIGEM_CANONICA;
 export const SITE_NAME = "ReciboCerto";
 
 // ─── Registo central de rotas públicas indexáveis ────────────────────────────

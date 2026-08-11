@@ -3,6 +3,7 @@ import { utilizadorDoPedido, accessTokenValido, apagarLigacao } from "@/lib/fiz/
 import { pedirFiz } from "@/lib/fiz/client.server";
 import { USER_SCOPES } from "@/lib/fiz/contracts";
 import { respostaErro, naoAutenticado, semCache } from "@/lib/fiz/route-helpers.server";
+import { guardaFiz } from "@/lib/fiz/gate.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,11 @@ export const dynamic = "force-dynamic";
  * ligação que pediu para terminar.
  */
 export async function POST(req: NextRequest) {
+  // ⚠️ RC-FIZ-002 — porta do servidor. Esta rota aceita ou transporta dados;
+  // com a integração desligada não pode sequer ler o corpo do pedido.
+  const fechada = guardaFiz();
+  if (fechada) return fechada;
+
   try {
     const utilizador = await utilizadorDoPedido(req);
     if (!utilizador) return naoAutenticado();

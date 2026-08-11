@@ -672,9 +672,21 @@ describe("parcerias:sem-configuracao — funciona no dia do deploy", () => {
     }
   };
 
-  it("a bandeira da FIZ está ligada por omissão", async () => {
+  // ⚠️ A EXPECTATIVA MUDOU DE PROPÓSITO — RC-FIZ-002.
+  //
+  // Este teste afirmava `true`: a bandeira ligava-se sozinha quando a variável
+  // faltava. Era a correção de um problema anterior (uma regra que desligava
+  // em produção fazia deploys aparecerem vazios), mas o remédio abria uma
+  // porta: qualquer ambiente sem configuração — um preview esquecido, um
+  // servidor novo, um CI — nascia com a integração ligada.
+  //
+  // O relatório mestre de 11-08-2026 classifica isto como P0. A bandeira passa
+  // a falhar FECHADA e a má configuração passa a ser ruidosa em vez de
+  // silenciosa (ver `diagnosticoFiz()` em `gate.server.ts`). O teste não foi
+  // apagado — inverteu-se, que é o registo honesto de uma decisão revista.
+  it("a bandeira da FIZ está DESLIGADA por omissão (falha fechada)", async () => {
     const { fizAtiva } = await import("@/lib/fiz/flag");
-    expect(semAmbiente(() => fizAtiva())).toBe(true);
+    expect(semAmbiente(() => fizAtiva())).toBe(false);
   });
 
   it("as parcerias estão ligadas por omissão", async () => {

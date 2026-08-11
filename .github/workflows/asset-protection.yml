@@ -13,7 +13,10 @@ permissions:
 
 concurrency:
   group: protecao-ativos-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Como nos restantes workflows: em `main` NÃO se cancela, para cada commit
+  # da linha principal ficar com o seu próprio resultado de fronteira
+  # registado. Num PR, o push seguinte torna o anterior irrelevante.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   fronteira:

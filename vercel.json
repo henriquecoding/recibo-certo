@@ -9,7 +9,9 @@
   },
   "git": {
     "deploymentEnabled": {
-      "agent/protecao-ativos-proprietarios": false
+      "agent/protecao-ativos-proprietarios": false,
+      "agent/**": false,
+      "dependabot/**": false
     }
   }
 }

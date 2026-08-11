@@ -358,27 +358,42 @@ describe("bandeira e pré-visualização", () => {
       const { ehProducao, previewPermitidoNoCliente, fizAtiva } = await import("@/lib/fiz/flag");
       expect(ehProducao()).toBe(false);
       expect(previewPermitidoNoCliente()).toBe(true);
+      // ⚠️ RC-FIZ-002: a bandeira deixou de se ligar sozinha. Num deploy de
+      // ramo continua a ser possível pré-visualizar — mas é preciso DIZER que
+      // se quer, o que é o ponto: um ambiente sem configuração não nasce com
+      // a integração ligada.
       delete process.env.NEXT_PUBLIC_FIZ_ENABLED;
+      expect(fizAtiva()).toBe(false);
+      process.env.NEXT_PUBLIC_FIZ_ENABLED = "true";
       expect(fizAtiva()).toBe(true);
     } finally {
       Object.defineProperty(process.env, "NODE_ENV", { value: anterior, configurable: true });
     }
   });
 
-  it("em produção a parceria liga, mas a pré-visualização não", async () => {
-    // A regra antiga era «em produção nada liga por omissão», e estava certa
-    // enquanto a parceria estava em negociação: não se liga em produção o que
-    // ainda não está assinado.
+  it("em produção nada liga por omissão, e a pré-visualização nunca", async () => {
+    // ⚠️ A EXPECTATIVA MUDOU — RC-FIZ-002.
     //
-    // Com contrato de afiliado e link pessoal, essa regra passou a ter um
-    // efeito silencioso e mau: fazia-se deploy e não aparecia nada, porque
-    // `NEXT_PUBLIC_FIZ_ENABLED` é inlined no build e ninguém a definia.
+    // Este teste afirmava que em produção a parceria ligava por omissão. A
+    // razão está escrita acima e era boa: a regra anterior fazia deploys
+    // aparecerem vazios, porque `NEXT_PUBLIC_FIZ_ENABLED` é inlined no build e
+    // ninguém a definia.
     //
-    // O que NÃO muda, e é o que a regra realmente protegia: o catálogo
+    // Mas o remédio deixava qualquer ambiente sem configuração a nascer com a
+    // integração LIGADA. A resposta certa à falha silenciosa é outra: falhar
+    // fechado e tornar a má configuração ruidosa — `diagnosticoFiz()` enumera
+    // o que falta, capacidade a capacidade, em vez de deixar adivinhar.
+    //
+    // O que NÃO muda, e é o que a regra sempre protegeu de facto: o catálogo
     // SIMULADO nunca chega a utilizadores reais.
     process.env.NEXT_PUBLIC_VERCEL_ENV = "production";
     delete process.env.NEXT_PUBLIC_FIZ_ENABLED;
     const { fizAtiva, previewPermitidoNoCliente } = await import("@/lib/fiz/flag");
+    expect(fizAtiva()).toBe(false);
+    expect(previewPermitidoNoCliente()).toBe(false);
+
+    // E com o interruptor ligado, liga — sem nunca abrir a pré-visualização.
+    process.env.NEXT_PUBLIC_FIZ_ENABLED = "true";
     expect(fizAtiva()).toBe(true);
     expect(previewPermitidoNoCliente()).toBe(false);
   });

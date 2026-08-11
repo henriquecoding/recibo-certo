@@ -20,15 +20,18 @@
 
 import { DATA_LAST_REVIEW, PARAMETROS_AUDITADOS, SOURCES } from "@/lib/fiscal-data";
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
-import { GUIDE_MANIFESTS } from "@/lib/guias/manifests";
 import { CLUSTERS } from "@/lib/clusters";
-import { FERRAMENTA_SLUGS, SITE_URL } from "@/lib/seo";
+import { FERRAMENTA_SLUGS, GUIA_SLUGS, SITE_URL } from "@/lib/seo";
 import { NUNCA_COMUNICAR } from "@/lib/routing";
 
 export const dynamic = "force-static";
 
 export function GET() {
-  const publicados = GUIDE_MANIFESTS.filter((m) => m.status === "published").length;
+  // RC-CONT-001: este ficheiro contava `status === "published"` e anunciava um
+  // número muito menor do que o que a homepage, o /guias e o sitemap dizem.
+  // Um agente que lesse os dois via o site a contradizer-se sobre si próprio.
+  // `GUIA_SLUGS` é a contagem canónica — a mesma que o sitemap submete.
+  const publicados = GUIA_SLUGS.length;
 
   const corpo = `# ReciboCerto
 

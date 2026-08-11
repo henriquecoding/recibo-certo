@@ -56,11 +56,29 @@ export function ehPreVisualizacaoDeploy(): boolean {
   return ambienteDeploy() === "preview";
 }
 
+/**
+ * A integração está ligada?
+ *
+ * ⚠️ RC-FIZ-002 — FALHA FECHADA. Só a string exata `"true"` liga. Ausente,
+ * vazia, `"false"`, `"1"`, `"TRUE"` ou lixo: desligada.
+ *
+ * A versão anterior devolvia `true` quando a variável faltava, e a razão está
+ * escrita no cabeçalho deste ficheiro: a regra ainda antes dessa — "ligada em
+ * preview, desligada em produção" — tinha causado um deploy silenciosamente
+ * vazio, porque ninguém definira a variável.
+ *
+ * O diagnóstico estava certo; o remédio é que estava trocado. A resposta a uma
+ * falha silenciosa não é abrir a porta por omissão — é fechá-la e tornar a má
+ * configuração RUIDOSA. É o que `diagnosticoFiz()` faz em `gate.server.ts`:
+ * enumera o que falta, capacidade a capacidade, em vez de deixar adivinhar.
+ *
+ * E isto é só a bandeira de APRESENTAÇÃO. O que decide se o servidor aceita
+ * dados é `fizAtivaNoServidor()`, que lê outra variável — porque esta, sendo
+ * `NEXT_PUBLIC_`, fica gravada no build e um build antigo continuaria a dizer
+ * "ligada" muito depois de alguém a ter desligado.
+ */
 export function fizAtiva(): boolean {
-  const bandeira = process.env.NEXT_PUBLIC_FIZ_ENABLED;
-  if (bandeira === "false") return false;
-  if (bandeira === "true") return true;
-  return true;
+  return process.env.NEXT_PUBLIC_FIZ_ENABLED === "true";
 }
 
 /**

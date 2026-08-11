@@ -3,6 +3,7 @@ import { abrirEstado, trocarCodigo, COOKIE_ESTADO } from "@/lib/fiz/oauth.server
 import { guardarLigacao } from "@/lib/fiz/session.server";
 import { comparaSegura } from "@/lib/fiz/tokens.server";
 import { fizServerConfig } from "@/lib/fiz/config";
+import { guardaFiz } from "@/lib/fiz/gate.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +16,11 @@ export const dynamic = "force-dynamic";
  * de estado (`fiz=ligado` / `fiz=erro`), nunca com dados do utilizador.
  */
 export async function GET(req: NextRequest) {
+  // ⚠️ RC-FIZ-002 — porta do servidor. Esta rota aceita ou transporta dados;
+  // com a integração desligada não pode sequer ler o corpo do pedido.
+  const fechada = guardaFiz();
+  if (fechada) return fechada;
+
   const { appUrl } = fizServerConfig();
   const parametros = req.nextUrl.searchParams;
 

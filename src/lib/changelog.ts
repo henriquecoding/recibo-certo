@@ -19,13 +19,43 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
-    version: "2.33.1",
+    version: "2.35.0",
     data: "2026-08-11",
     titulo: "As abas do cabeçalho voltam quando abres a pesquisa",
     itens: [
       "Com a página rolada, o cabeçalho encolhe e as abas — Simular, Guias, Quiz, Planos — recolhem com ele. Abrir a pesquisa costumava trazê-las de volta; na versão anterior deixou de trazer, e o painel ficava por cima da faixa onde elas deviam estar. Quem abria a pesquisa perdia a navegação do site enquanto pesquisava.",
       "Volta ao que era: abrir a pesquisa devolve o cabeçalho ao estado alto, as abas reaparecem, e o painel abre por baixo delas — nunca em cima.",
       "A verificação automática do cabeçalho passou a medir o que interessa. Antes confirmava que a altura não mudava, um número que não diz nada a ninguém; agora confirma que as abas continuam visíveis, que o painel não as cobre e que continuam a responder ao clique.",
+    ],
+  },
+  {
+    version: "2.34.0",
+    data: "2026-08-11",
+    titulo: "Portas que fecham sozinhas, e frases que voltaram a ser verdade",
+    itens: [
+      "A integração com a FIZ estava LIGADA por omissão: bastava a variável que a controla estar em falta para ela se dar por ativa. E as rotas que transportam dados não consultavam bandeira nenhuma — aceitavam pedidos mesmo com a integração desligada. Agora só a palavra «true», escrita de propósito, a liga; e o servidor decide com a sua própria variável, para um build antigo não conseguir manter a porta aberta depois de alguém a fechar.",
+      "O acesso ao Plus era concedido a qualquer subscrição ativa, sem olhar ao que tinha sido comprado. Um preço de teste, um preço antigo de outro produto ou um preço de 0 € criado à mão davam o produto pago na mesma. Passa a haver uma lista de preços autorizados, e só esses concedem.",
+      "A Política de Privacidade dizia que havia autenticação multifator. Não há. A frase saiu — não vamos publicar uma promessa de segurança que o código não cumpre. No lugar dela ficou uma medida que existe mesmo e é verificada em cada compilação.",
+      "E a mesma política dizia que, no plano gratuito, nada sai do teu dispositivo. É verdade para tudo o que escreves nas calculadoras, mas havia duas exceções por dizer: a medição de utilização, se a aceitares, e os formulários que submetes. Estão agora escritas onde a afirmação é feita, não três secções abaixo.",
+      "O rodapé prometia dados fiscais «atualizados automaticamente». O que é automático é a vigilância: o sistema deteta que um valor oficial mudou e abre um aviso. A alteração é sempre feita por uma pessoa, com a fonte na mão. O texto passou a dizer isso.",
+      "O site anunciava 167 guias e o ficheiro que descreve o site a agentes automáticos dizia 52. Passaram a contar a mesma coisa, a partir da mesma lista.",
+      "O endereço do site estava escrito em quatro sítios, e nem todos concordavam: uns com «www», outros sem. Para uma pessoa é indiferente — o servidor reencaminha. Para a Stripe e para o OAuth da FIZ não é: o endereço de retorno é comparado letra a letra, e o que não bate é recusado. Passou a haver um só.",
+      "O endereço de verificação impresso nos documentos exportados apontava para a versão errada do domínio. Um PDF sobrevive ao mês em que foi feito; o endereço nele tem de continuar a levar a algum lado.",
+      "E a aplicação dizia-se na versão 2.31 enquanto o ficheiro de projeto dizia 0.1. Havia duas versões, o que é o mesmo que não haver nenhuma. Agora a compilação recusa avançar se voltarem a divergir.",
+      "No Quiz, dois desafios terminados exatamente ao mesmo tempo no último passo de um ciclo davam dois cupões em vez de um: ambos liam o progresso antes de qualquer um o gravar. Agora só a primeira gravação conta o prémio, e a segunda percebe que chegou tarde.",
+      "Ainda no Quiz: um envio com dados corrompidos queimava a sessão antes sequer de ser verificado — perdia-se um desafio por um erro de rede. Passa a ser verificado primeiro. E o teto diário de desafios reiniciava à meia-noite do servidor, que no verão é uma hora antes da meia-noite em Portugal.",
+    ],
+  },
+  {
+    version: "2.33.1",
+    data: "2026-08-11",
+    titulo: "Protegido sem desaparecer dos motores de pesquisa",
+    itens: [
+      "O Google e o Bing voltam a poder mostrar o ReciboCerto com excertos completos, imagens grandes e vídeos nos resultados. As páginas públicas continuam com indexação e seguimento permitidos: proteger o conteúdo não significa esconder o site.",
+      "A proteção contra treino, prospeção de textos e dados, bases derivadas e scraping declarado mantém-se: robots, bloqueio HTTP, TDMRep, termos proprietários, source maps desativados e fronteiras de servidor continuam ativos.",
+      "Os simuladores e o Quiz Fiscal continuam gratuitos, sem conta obrigatória e a funcionar no dispositivo. Nenhum valor fiscal, resposta ou resultado foi movido para uma API para tentar esconder o código.",
+      "As atualizações automáticas de dependências continuam disponíveis, mas as branches de agentes e do Dependabot deixam de criar previews na Vercel. Só uma integração validada na main pode originar o deploy final.",
+      "O CI passa a reprovar duas regressões: limitar novamente os snippets/previews dos motores convencionais ou reativar deployments automáticos nas branches que devem apenas executar testes.",
     ],
   },
   {
