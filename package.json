@@ -1,13 +1,15 @@
 {
   "name": "recibo-certo",
-  "version": "0.1.0",
+  "version": "2.32.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "postinstall": "node scripts/copy-pdf-worker.mjs",
-    "prebuild": "node scripts/copy-pdf-worker.mjs && node scripts/gen-novidades.mjs",
+    "prebuild": "node scripts/check-versao.mjs && node scripts/copy-pdf-worker.mjs && node scripts/gen-novidades.mjs",
     "novidades:gen": "node scripts/gen-novidades.mjs",
     "novidades:check": "node scripts/gen-novidades.mjs --check",
+    "versao:check": "node scripts/check-versao.mjs",
+    "versao:fix": "node scripts/check-versao.mjs --fix",
     "build": "next build",
     "start": "next start",
     "fiscal:check": "node scripts/check-fiscal-data.mjs",

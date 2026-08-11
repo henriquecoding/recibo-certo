@@ -6,7 +6,11 @@
 //
 // Resultado: 1 única fatura mensal (payout) em vez de 1 por cada venda.
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+import { appUrl } from "@/lib/origem";
+
+// RC-CFG-001: origem normalizada, para o retorno do checkout coincidir com o
+// host que o site serve.
+const APP_URL = appUrl();
 
 export const LS_CONFIG = {
   storeId:        process.env.LS_STORE_ID        ?? "",

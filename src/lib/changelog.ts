@@ -19,6 +19,22 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.32.0",
+    data: "2026-08-11",
+    titulo: "Portas que fecham sozinhas, e frases que voltaram a ser verdade",
+    itens: [
+      "A integração com a FIZ estava LIGADA por omissão: bastava a variável que a controla estar em falta para ela se dar por ativa. E as rotas que transportam dados não consultavam bandeira nenhuma — aceitavam pedidos mesmo com a integração desligada. Agora só a palavra «true», escrita de propósito, a liga; e o servidor decide com a sua própria variável, para um build antigo não conseguir manter a porta aberta depois de alguém a fechar.",
+      "O acesso ao Plus era concedido a qualquer subscrição ativa, sem olhar ao que tinha sido comprado. Um preço de teste, um preço antigo de outro produto ou um preço de 0 € criado à mão davam o produto pago na mesma. Passa a haver uma lista de preços autorizados, e só esses concedem.",
+      "A Política de Privacidade dizia que havia autenticação multifator. Não há. A frase saiu — não vamos publicar uma promessa de segurança que o código não cumpre. No lugar dela ficou uma medida que existe mesmo e é verificada em cada compilação.",
+      "E a mesma política dizia que, no plano gratuito, nada sai do teu dispositivo. É verdade para tudo o que escreves nas calculadoras, mas havia duas exceções por dizer: a medição de utilização, se a aceitares, e os formulários que submetes. Estão agora escritas onde a afirmação é feita, não três secções abaixo.",
+      "O rodapé prometia dados fiscais «atualizados automaticamente». O que é automático é a vigilância: o sistema deteta que um valor oficial mudou e abre um aviso. A alteração é sempre feita por uma pessoa, com a fonte na mão. O texto passou a dizer isso.",
+      "O site anunciava 167 guias e o ficheiro que descreve o site a agentes automáticos dizia 52. Passaram a contar a mesma coisa, a partir da mesma lista.",
+      "O endereço do site estava escrito em quatro sítios, e nem todos concordavam: uns com «www», outros sem. Para uma pessoa é indiferente — o servidor reencaminha. Para a Stripe e para o OAuth da FIZ não é: o endereço de retorno é comparado letra a letra, e o que não bate é recusado. Passou a haver um só.",
+      "O endereço de verificação impresso nos documentos exportados apontava para a versão errada do domínio. Um PDF sobrevive ao mês em que foi feito; o endereço nele tem de continuar a levar a algum lado.",
+      "E a aplicação dizia-se na versão 2.31 enquanto o ficheiro de projeto dizia 0.1. Havia duas versões, o que é o mesmo que não haver nenhuma. Agora a compilação recusa avançar se voltarem a divergir.",
+    ],
+  },
+  {
     version: "2.31.0",
     data: "2026-08-11",
     titulo: "A página de investidores, reconstruída — e o formulário deixou de escrever direto na base de dados",
