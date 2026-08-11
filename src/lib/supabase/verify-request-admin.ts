@@ -4,6 +4,7 @@
 // (auth.getUser) e confirma o role='admin' na tabela profiles sob a RLS do
 // próprio utilizador. Não depende de cookies nem da service-role key.
 
+import "server-only";
 import { createClient } from "@supabase/supabase-js";
 
 export async function pedidoDeAdmin(req: Request): Promise<boolean> {
