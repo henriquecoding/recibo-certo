@@ -70,10 +70,11 @@ utilizador.
 - bloqueio total, no robots.txt, dos agentes declarados de IA, treino, datasets
   e scraping comercial;
 - resposta HTTP 403 no Proxy para os mesmos User-Agents;
-- Googlebot e Bingbot convencionais continuam a poder indexar título e URL;
-- `max-snippet: 0`, `max-image-preview: none` e
-  `max-video-preview: 0`: reduz a reutilização em Search e impede o conteúdo
-  de ser input direto dos modos de IA da Pesquisa Google;
+- Googlebot e Bingbot convencionais continuam a poder indexar páginas, seguir
+  ligações e mostrar snippets, imagens e vídeos completos;
+- a metadata global mantém `index: true`, `follow: true`,
+  `max-snippet: -1`, `max-image-preview: large` e
+  `max-video-preview: -1`;
 - `tdm-reservation: 1` em header HTTP e HTML;
 - `/.well-known/tdmrep.json` com reserva para todo o origin;
 - `X-Robots-Tag: noai, noimageai` como sinal suplementar;
@@ -82,11 +83,12 @@ utilizador.
 - remoção das respostas e explicações em massa das páginas de categoria;
 - amostra pública reduzida de 20 para 5 enunciados e remoção do Quiz JSON-LD.
 
-**Impacto deliberado:** o ReciboCerto deixa de aparecer como fonte de conteúdo
-nas pesquisas do ChatGPT, Claude e Perplexity que respeitem estes controlos.
-No Google, títulos e URLs podem continuar indexados, mas sem snippet nem preview
-de imagem. Isto protege conteúdo à custa de descoberta; não deve ser revertido
-sem uma decisão explícita do titular.
+**Equilíbrio deliberado:** o ReciboCerto permanece plenamente descobrível nos
+motores de pesquisa convencionais e acessível em navegadores normais. Crawlers
+de treino, datasets, scraping comercial e motores de resposta de IA que
+respeitem estes controlos continuam bloqueados. A reserva de direitos não deve
+ser implementada por meio de `noindex`, `nofollow`, `nosnippet` ou limites
+globais de preview.
 
 ### 3.3 Fronteiras técnicas
 
@@ -337,7 +339,7 @@ Se código, conteúdo ou credencial aparecer fora do controlo:
 - [Anthropic — bots e bloqueio por robots.txt](https://support.claude.com/en/articles/8896518-does-anthropic-crawl-data-from-the-web-and-how-can-site-owners-block-the-crawler)
 - [Google — Google-Extended](https://developers.google.com/crawling/docs/crawlers-fetchers/google-common-crawlers)
 - [Google — controlo de AI Overviews/AI Mode](https://developers.google.com/search/docs/appearance/ai-features)
-- [Google — nosnippet e max-snippet](https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag)
+- [Google — diretivas de indexação, snippets e previews](https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag)
 - [W3C Community Group — TDM Reservation Protocol](https://www.w3.org/community/reports/tdmrep/CG-FINAL-tdmrep-20240510/)
 - [EUR-Lex — Diretiva (UE) 2019/790](https://eur-lex.europa.eu/eli/dir/2019/790/oj/eng)
 - [GitHub — secret scanning](https://docs.github.com/code-security/secret-scanning/about-secret-scanning)
@@ -352,6 +354,7 @@ A proteção só pode ser chamada de concluída quando:
 - ruleset e checks impedem merge inseguro;
 - histórico foi analisado e segredos encontrados foram rodados;
 - calculadoras, simuladores e quiz continuam completos sem conta;
+- páginas públicas continuam indexáveis, com snippets e previews normais;
 - inputs fiscais, respostas e resultados não saem do dispositivo no modo local;
 - respostas do quiz não aparecem em massa em HTML, JSON-LD, feeds ou APIs;
 - a observabilidade do código necessário ao modo local está documentada como

@@ -19,6 +19,18 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.33.1",
+    data: "2026-08-11",
+    titulo: "Protegido sem desaparecer dos motores de pesquisa",
+    itens: [
+      "O Google e o Bing voltam a poder mostrar o ReciboCerto com excertos completos, imagens grandes e vídeos nos resultados. As páginas públicas continuam com indexação e seguimento permitidos: proteger o conteúdo não significa esconder o site.",
+      "A proteção contra treino, prospeção de textos e dados, bases derivadas e scraping declarado mantém-se: robots, bloqueio HTTP, TDMRep, termos proprietários, source maps desativados e fronteiras de servidor continuam ativos.",
+      "Os simuladores e o Quiz Fiscal continuam gratuitos, sem conta obrigatória e a funcionar no dispositivo. Nenhum valor fiscal, resposta ou resultado foi movido para uma API para tentar esconder o código.",
+      "As atualizações automáticas de dependências continuam disponíveis, mas as branches de agentes e do Dependabot deixam de criar previews na Vercel. Só uma integração validada na main pode originar o deploy final.",
+      "O CI passa a reprovar duas regressões: limitar novamente os snippets/previews dos motores convencionais ou reativar deployments automáticos nas branches que devem apenas executar testes.",
+    ],
+  },
+  {
     version: "2.33.0",
     data: "2026-08-11",
     titulo: "A pesquisa passou a saber o que o site tem — os 167 guias, e não 14",

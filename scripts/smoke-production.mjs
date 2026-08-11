@@ -60,6 +60,27 @@ async function executar() {
   const htmlInicial = await inicial.text();
 
   exigir(htmlInicial.includes("ReciboCerto"), "A página inicial não contém a aplicação.");
+
+  const metaRobots = htmlInicial.match(/<meta name="robots" content="([^"]+)"/i)?.[1] || "";
+  const metaGooglebot =
+    htmlInicial.match(/<meta name="googlebot" content="([^"]+)"/i)?.[1] || "";
+  exigir(
+    metaRobots.includes("index") &&
+      metaRobots.includes("follow") &&
+      !metaRobots.includes("noindex") &&
+      !metaRobots.includes("nofollow"),
+    `Metadata robots pública restringida: ${metaRobots || "em falta"}.`,
+  );
+  exigir(
+    metaGooglebot.includes("index") &&
+      metaGooglebot.includes("follow") &&
+      metaGooglebot.includes("max-image-preview:large") &&
+      metaGooglebot.includes("max-video-preview:-1") &&
+      metaGooglebot.includes("max-snippet:-1") &&
+      !metaGooglebot.includes("max-snippet:0"),
+    `Metadata Googlebot deixou de permitir descoberta completa: ${metaGooglebot || "em falta"}.`,
+  );
+
   exigir(inicial.headers.get("tdm-reservation") === "1", "Header tdm-reservation em falta.");
   exigir(inicial.headers.get("x-frame-options") === "DENY", "X-Frame-Options não é DENY.");
   exigir(
@@ -119,7 +140,7 @@ async function executar() {
   exigir(bloqueado.status === 403, `GPTBot recebeu ${bloqueado.status}, esperado 403.`);
 
   console.log(
-    "Smoke de produção aprovado: páginas públicas sem conta, headers, robots, TDM, security.txt e bloqueio de crawler.",
+    "Smoke de produção aprovado: descoberta, páginas públicas sem conta, headers, robots, TDM, security.txt e bloqueio de crawler.",
   );
 }
 
