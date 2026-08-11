@@ -1,6 +1,7 @@
 // Cliente servidor do Lemon Squeezy
 // Todas as chamadas à API usam a chave secreta (nunca exposta ao cliente).
 
+import "server-only";
 import crypto from "crypto";
 
 const LS_API_BASE = "https://api.lemonsqueezy.com/v1";
