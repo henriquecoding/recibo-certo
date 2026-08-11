@@ -109,19 +109,15 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
-    // Estas diretivas genéricas limitam snippets também noutros motores que
-    // as respeitem. Mantêm o título e o URL indexáveis.
-    "max-image-preview": "none",
-    "max-video-preview": 0,
-    "max-snippet": 0,
+    // A pesquisa convencional permanece plenamente visível. A reserva contra
+    // treino e extração de IA vive nas políticas separadas de crawler/TDM,
+    // sem sacrificar snippets, imagens ou vídeos nos resultados de pesquisa.
     googleBot: {
       index: true,
       follow: true,
-      // Mantém título e URL elegíveis para pesquisa, mas impede que o conteúdo
-      // seja usado como input direto nos modos de IA da Pesquisa Google.
-      "max-image-preview": "none",
-      "max-video-preview": 0,
-      "max-snippet": 0,
+      "max-image-preview": "large",
+      "max-video-preview": -1,
+      "max-snippet": -1,
     },
   },
   verification: {
