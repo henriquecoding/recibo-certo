@@ -10,11 +10,29 @@ updates:
       timezone: Europe/Lisbon
     open-pull-requests-limit: 5
     versioning-strategy: increase-if-necessary
+    # Agrupar por tipo de dependência juntava, num PR só, um patch trivial e um
+    # salto de major — e bastava o major partir para o PR inteiro ficar
+    # vermelho, levando atrás as atualizações que estavam boas. Foi o que
+    # aconteceu ao #94 e ao #95. Agora o corte é por TIPO DE SALTO: patches e
+    # minors vêm juntos, porque se avaliam juntos; cada major vem sozinho,
+    # porque cada um se decide por si.
     groups:
-      runtime:
-        dependency-type: production
-      development:
-        dependency-type: development
+      seguras:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      # O CLAUDE.md fixa a Tailwind v3 e proíbe re-arquitetar a stack. A v4 é
+      # uma reescrita da configuração em CSS (`@theme`), muda o `darkMode:
+      # "class"` para `@custom-variant` e obriga a refazer a disputa de
+      # especificidade documentada no `globals.css`. Não é uma atualização: é
+      # uma migração, e faz-se de propósito ou não se faz.
+      - dependency-name: tailwindcss
+        update-types: ["version-update:semver-major"]
+      # `@types/node` segue o Node que corremos (ver `.nvmrc`), não o mais
+      # recente no npm. Tipos de um Node mais novo descrevem APIs que não
+      # existem em produção — o compilador aprova e o runtime rebenta.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: deps
 
