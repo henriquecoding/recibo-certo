@@ -2,6 +2,12 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // O código de produção continua minificado e nunca publica source maps no
+  // browser. É uma barreira de exposição, não uma promessa de impossibilidade
+  // de engenharia reversa: JavaScript executado no cliente é sempre observável.
+  poweredByHeader: false,
+  productionBrowserSourceMaps: false,
+
   // Tree-shaking dirigido aos barrels mais pesados — evita arrastar o pacote
   // inteiro do `motion` para o bundle inicial.
   experimental: {
@@ -53,12 +59,20 @@ const nextConfig = {
     const securityHeaders = [
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-      { key: "X-Frame-Options", value: "SAMEORIGIN" },
-      { key: "Strict-Transport-Security", value: "max-age=31536000" },
-      { key: "Permissions-Policy", value: "camera=(), microphone=()" },
+      { key: "X-Frame-Options", value: "DENY" },
+      { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+      { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), usb=()" },
+      { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+      { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
+      // Reserva legível por máquina dos direitos de prospeção de texto e dados
+      // (TDMRep / Art. 4.º, n.º 3 da Diretiva (UE) 2019/790).
+      { key: "tdm-reservation", value: "1" },
+      // noai/noimageai ainda não são diretivas universais; são uma camada
+      // adicional e nunca substituem robots.txt, TDMRep nem controlo de acesso.
+      { key: "X-Robots-Tag", value: "noai, noimageai" },
       {
         key: "Content-Security-Policy",
-        value: "base-uri 'self'; object-src 'none'; frame-ancestors 'self'",
+        value: "base-uri 'self'; object-src 'none'; frame-ancestors 'none'",
       },
     ];
 
