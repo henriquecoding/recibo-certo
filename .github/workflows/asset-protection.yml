@@ -1,0 +1,31 @@
+name: Proteção de ativos
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: protecao-ativos-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fronteira:
+    name: Fronteira de segurança e propriedade
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # actions/checkout v4.2.2 fixada ao commit para impedir troca silenciosa
+      # da Action por uma tag mutável.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Verificar exposição, segredos e fronteiras server-only
+        run: node scripts/check-security-boundary.mjs
