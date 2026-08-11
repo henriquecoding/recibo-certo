@@ -1,0 +1,71 @@
+RECIBOCERTO — LICENÇA PROPRIETÁRIA
+Todos os direitos reservados
+
+Copyright © 2026 ReciboCerto. Titular do projeto: Henrique Passos.
+
+1. Ausência de licença implícita
+
+Este repositório, o seu histórico, código-fonte, documentação, arquitetura,
+interfaces, conteúdos, bases compiladas, banco de perguntas, explicações,
+motores e ativos de marca são disponibilizados apenas a pessoas expressamente
+autorizadas. A posse, visualização, clonagem técnica, acesso ao site publicado
+ou receção de uma cópia não concede qualquer licença de copyright, base de
+dados, marca, patente, segredo comercial ou outro direito de propriedade
+intelectual.
+
+2. Utilização autorizada
+
+Só é permitida a utilização normal da interface pública do ReciboCerto para
+obter cálculos próprios e gerir os dados introduzidos pelo próprio utilizador,
+nos limites dos Termos de Utilização publicados em
+https://www.recibocerto.pt/termos.
+
+Colaboradores do repositório podem usar o código exclusivamente para executar
+tarefas autorizadas no projeto ReciboCerto. Essa autorização é pessoal,
+revogável, não exclusiva, intransmissível e não permite reutilização noutro
+produto.
+
+3. Utilizações proibidas sem autorização prévia e escrita
+
+É proibido, designadamente:
+
+- copiar, redistribuir, publicar, sublicenciar, vender ou disponibilizar o
+  código ou os conteúdos, no todo ou em parte;
+- criar obras, produtos, serviços ou conjuntos de dados derivados;
+- realizar scraping, extração em massa, engenharia reversa, descompilação ou
+  reconstrução da arquitetura ou dos motores;
+- utilizar qualquer material ou saída para treino, fine-tuning, distilação,
+  avaliação, grounding, RAG, embeddings, indexação vetorial ou melhoria de
+  sistemas de inteligência artificial;
+- replicar a seleção, organização ou investimento substancial das bases
+  compiladas e do banco de perguntas;
+- remover avisos de autoria, identificadores de proveniência ou medidas de
+  proteção;
+- usar a marca ReciboCerto ou sinais confundíveis.
+
+Os direitos de prospeção de textos e dados são expressamente reservados para
+efeitos do artigo 4.º, n.º 3, da Diretiva (UE) 2019/790 e da legislação
+aplicável que a transpõe.
+
+4. Materiais excluídos
+
+Esta licença não reivindica direitos sobre leis, atos oficiais ou meros factos
+fiscais. Componentes de terceiros continuam sujeitos às respetivas licenças.
+A proteção do ReciboCerto incide nas criações originais e, quando aplicável, na
+seleção, organização, validação, explicação e investimento substancial na
+compilação e manutenção dos dados.
+
+5. Acesso indevido e confidencialidade
+
+Se recebeu acesso ao repositório por engano, deve cessar imediatamente o
+acesso, não conservar cópias e contactar o titular. Credenciais, chaves,
+configurações privadas, dados de utilizadores e informação comercial são
+confidenciais independentemente de marcação adicional.
+
+6. Cessação e reserva
+
+Qualquer autorização termina automaticamente com a violação destas condições,
+sem prejuízo dos direitos e meios legais do titular. Nenhuma omissão ou atraso
+na defesa de um direito constitui renúncia.
+
+Pedidos de licença: recibocerto.pt@gmail.com
