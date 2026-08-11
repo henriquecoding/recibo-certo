@@ -1,0 +1,4 @@
+Contact: mailto:recibocerto.pt@gmail.com
+Preferred-Languages: pt, en
+Expires: 2027-08-10T23:59:59.000Z
+Canonical: https://www.recibocerto.pt/.well-known/security.txt
