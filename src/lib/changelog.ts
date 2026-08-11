@@ -19,6 +19,20 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.30.0",
+    data: "2026-08-10",
+    titulo: "Este painel, reorganizado — o mês atual, e a história atrás de uma porta",
+    itens: [
+      "Eram 176 versões numa tira única, todas abertas ao mesmo tempo: 766 pontos de texto seguidos, sem uma única referência entre o que mudou hoje e o que mudou em junho.",
+      "Agora abre no MÊS ATUAL e mais nada. Os meses anteriores ficam em baixo, fechados, com o nome do mês e quantas versões tem cada um — e só são carregados se abrires esse mês. Junho tem 120 versões; não há razão para as levares contigo só porque vieste ler o que mudou esta semana.",
+      "A versão nova — a razão pela qual este painel apareceu — passou a ter cartão próprio no topo, aberto. Antes era a primeira linha de uma lista onde tudo tinha o mesmo peso.",
+      "Cada versão é uma linha fechada que abre quando lhe tocas, com o nome do mês colado ao topo enquanto rolas.",
+      "E abre num instante. O texto de todas as versões são 186 KB e vinham como JavaScript: o telemóvel tinha de os descarregar, interpretar e executar antes de mostrar uma linha — 58 KB comprimidos. Agora entrar custa 1,9 KB, e o painel desenha 266 elementos em vez de 3835. Num telemóvel modesto em rede 3G, o conteúdo aparecia 835 milésimos de segundo depois do painel; agora aparece em 81.",
+      "O que se escreve continua a escrever-se no mesmo sítio de sempre: os ficheiros que o painel lê são gerados a partir dele em cada compilação — um por mês —, e há uma verificação que trava a integração se ficarem para trás.",
+      "Nada mudou nas regras de quando este painel aparece: primeira visita, ou versão nova. Nunca a cada atualização de página.",
+    ],
+  },
+  {
     version: "2.29.0",
     data: "2026-08-10",
     titulo: "O primeiro ecrã, endireitado — e um botão para voltar ao topo",

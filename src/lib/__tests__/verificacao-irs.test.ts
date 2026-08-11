@@ -341,9 +341,23 @@ describe("F-16 · a página não carrega tudo de uma vez", () => {
     // popup que aparece uma vez por versão.
     const versao = readFileSync(join(RAIZ, "lib", "version.ts"), "utf8");
     expect(versao).not.toMatch(/export const CHANGELOG/);
+
+    // Antes, a garantia era o `import()` dinâmico — o changelog ainda ia para
+    // o browser, só que num chunk à parte (173 KB, 58 comprimidos, a parsear
+    // antes de mostrar uma linha). Agora não vai de todo: o popup lê JSON
+    // estático gerado por `scripts/gen-novidades.mjs`. A verificação passa a
+    // ser a forte — o módulo não pode ser referido de maneira nenhuma.
     const modal = readFileSync(join(RAIZ, "components", "ui", "NovidadesModal.tsx"), "utf8");
-    expect(modal).toMatch(/import\("@\/lib\/changelog"\)/);
+    expect(modal).not.toMatch(/@\/lib\/changelog/);
+    expect(modal).toMatch(/@\/lib\/novidades/);
+
+    const loader = readFileSync(join(RAIZ, "lib", "novidades.ts"), "utf8");
+    expect(loader).not.toMatch(/@\/lib\/changelog/);
+    expect(loader).toMatch(/\/novidades\/indice\.json/);
   });
+
+  // As regras 10 e 11 do popup (quando aparece, e o que carrega ao entrar)
+  // vivem em `novidades-popup.test.ts`, que é só sobre isso.
 });
 
 describe("F-17 · JSON-LD completo na página do simulador", () => {
