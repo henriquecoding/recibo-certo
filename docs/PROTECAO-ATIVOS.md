@@ -56,6 +56,8 @@ utilizador.
 - `LICENSE` proprietária e `package.json#license = UNLICENSED`;
 - aviso inequívoco no README;
 - `SECURITY.md` com divulgação privada e regras de teste;
+- `/.well-known/security.txt` no formato padronizado, com contacto, URL
+  canónica e validade verificada pelo CI;
 - CODEOWNERS para toda a árvore e reforço nas áreas críticas;
 - template de PR com checklist de segredos, bundles, APIs e licenças;
 - Dependabot para npm e GitHub Actions;
