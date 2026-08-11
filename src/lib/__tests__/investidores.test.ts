@@ -387,6 +387,17 @@ describe("arquitetura da página", () => {
     expect(rota).not.toMatch(/ip: *clientIp|ip_address/);
   });
 
+  it("aguenta a migração ainda não estar corrida", () => {
+    // O código é publicado no merge; o SQL corre à mão, noutro momento. Nessa
+    // janela a função e as colunas novas não existem — e recusar todos os
+    // contactos com 503 seria pior do que o problema que a migração resolve.
+    const rota = codigo("app", "api", "investidores", "interesse", "route.ts");
+    expect(rota).toMatch(/PGRST202/); // função de rate limit em falta
+    expect(rota).toMatch(/PGRST204/); // colunas em falta
+    expect(rota).toMatch(/investidores_rate_limit_por_migrar/);
+    expect(rota).toMatch(/investidores_colunas_por_migrar/);
+  });
+
   it("a migração fecha o INSERT anónimo", () => {
     const sql = readFileSync(
       join(RAIZ, "..", "supabase", "migrations", "031_investidores_endurecimento.sql"),

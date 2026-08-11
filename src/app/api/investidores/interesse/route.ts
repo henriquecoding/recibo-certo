@@ -116,6 +116,14 @@ export async function POST(req: NextRequest) {
   }
 
   // 6 · o limite a sério
+  //
+  // ⚠️ TOLERA A MIGRAÇÃO 031 AINDA NÃO ESTAR CORRIDA. O código é publicado
+  // pela Vercel no instante do merge; o SQL corre à mão no Supabase, noutro
+  // momento. Entre um e outro, esta função não existe — e falhar aqui com 503
+  // deixaria o formulário a recusar TODOS os contactos, que é pior do que o
+  // problema que a migração vem resolver. Nessa janela vale o limite em
+  // memória, que já foi aplicado acima; quando o SQL correr, o limite forte
+  // entra sozinho, sem novo deploy.
   const { data: permitido, error: erroLimite } = await admin.rpc("consume_investor_rate_limit", {
     p_ip_hash: ipHash,
     p_email_hash: emailHash,
@@ -125,16 +133,22 @@ export async function POST(req: NextRequest) {
   });
 
   if (erroLimite) {
-    console.error("investidores_rate_limit_falhou", { code: erroLimite.code });
-    return erro("temporarily_unavailable", 503);
+    // PGRST202 = função não encontrada no schema cache.
+    if (erroLimite.code === "PGRST202") {
+      console.warn("investidores_rate_limit_por_migrar");
+    } else {
+      console.error("investidores_rate_limit_falhou", { code: erroLimite.code });
+      return erro("temporarily_unavailable", 503);
+    }
+  } else if (!permitido) {
+    return erro("rate_limited", 429);
   }
-  if (!permitido) return erro("rate_limited", 429);
 
   // 7 · escrita
   const retencao = new Date();
   retencao.setMonth(retencao.getMonth() + RETENCAO_MESES);
 
-  const { error: erroInsert } = await admin.from("propostas_investidores").insert({
+  const legado = {
     nome: lead.name,
     email: lead.email,
     empresa: lead.organisation || null,
@@ -142,9 +156,13 @@ export async function POST(req: NextRequest) {
     // `interesse` é NOT NULL no schema legado e guardava texto livre; passa a
     // guardar o valor do enum, que é o que a página oferece.
     interesse: lead.interest,
-    ticket_band: lead.ticketBand || null,
     mensagem: lead.message || null,
+  };
+
+  const completo = {
+    ...legado,
     estado: "new",
+    ticket_band: lead.ticketBand || null,
     source_url: lead.sourceUrl,
     utm_source: lead.utmSource || null,
     utm_medium: lead.utmMedium || null,
@@ -154,7 +172,19 @@ export async function POST(req: NextRequest) {
     ip_hash: ipHash,
     idempotency_key: lead.idempotencyKey,
     retention_until: retencao.toISOString(),
-  });
+  };
+
+  let { error: erroInsert } = await admin.from("propostas_investidores").insert(completo);
+
+  // PGRST204 = coluna inexistente. Mesma janela: colunas novas ainda por
+  // criar. Repete-se com o que o schema antigo tem, e o contacto não se
+  // perde — perde-se a proveniência, que se recupera falando com a pessoa.
+  if (erroInsert?.code === "PGRST204") {
+    console.warn("investidores_colunas_por_migrar");
+    ({ error: erroInsert } = await admin
+      .from("propostas_investidores")
+      .insert({ ...legado, estado: "pendente" }));
+  }
 
   // 23505 = violação de unicidade → é o mesmo pedido a chegar segunda vez.
   // Responder "aceite" é o correto: do ponto de vista de quem enviou, está.
