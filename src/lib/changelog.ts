@@ -19,6 +19,25 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.31.0",
+    data: "2026-08-11",
+    titulo: "A pesquisa passou a saber o que o site tem — os 167 guias, e não 14",
+    itens: [
+      "A barra do topo procurava numa lista à parte, escrita à mão, com 14 guias. O site tem 167. Mais de nove em cada dez guias publicados simplesmente não existiam para quem os procurasse — e nada dava erro, só devolvia menos. Agora a pesquisa é construída a partir do mesmo catálogo que gera as páginas: 305 destinos entre simuladores, guias, o Quiz, os planos e as 123 atividades do Art. 151.º. Registar um guia novo passa a chegar à pesquisa sozinho, e há uma verificação que trava a integração se algum dia voltarem a divergir.",
+      "Escrever «doações» devolvia «Retenção na fonte» e «Fatura, recibo e fatura-recibo». Não eram maus resultados: eram inventados — bastava que as letras aparecessem pela mesma ordem algures no texto, e em português quase tudo é subsequência de quase tudo. Essa regra desapareceu. Ficam frase exata, início de palavra, palavra inteira, sinónimos e o perdão de UMA gralha em palavras com cinco letras ou mais.",
+      "Os resultados passaram a ser ligações a sério. Voltam a funcionar o «abrir em novo separador», o menu do botão direito, o copiar endereço e a pré-visualização do link — seis coisas que o browser dá de graça e que se perdiam por serem botões.",
+      "O Enter deixou de abrir «o primeiro resultado» sem dizer qual era. Passa a levar a /pesquisar, uma página com endereço próprio que se partilha, se guarda nos favoritos e funciona sem JavaScript — e que é também a rede de segurança quando a pesquisa do topo não carrega.",
+      "Abrir a pesquisa em «Atividades» sem escrever nada criava 120 resultados e 130 paragens de tabulação dentro do painel. Agora nada é listado antes de haver pergunta: o painel abre com três tarefas, as pesquisas recentes e mais nada.",
+      "Na primeira visita, «Novidades» aparecia por cima das preferências de cookies com o foco preso no diálogo de baixo — via-se uma superfície e o teclado estava noutra. Passa a haver uma regra única para todo o site: nunca mais do que uma janela modal ao mesmo tempo. O consentimento vem primeiro; este painel espera pela vez, e só se dá por visto quando é mesmo mostrado.",
+      "As perguntas «onde estou?» e «o que preciso de resolver?» deixaram de partilhar os mesmos botões. «Quiz» e «Planos» pareciam mudar o que a barra procurava e não mudavam nada. A navegação é agora navegação — e acende em todas as páginas de ferramenta, que antes não acendiam nenhuma —, e a pesquisa filtra por Simular, Compreender ou Cumprir.",
+      "No telemóvel, a barra de baixo tem cinco lugares com nome escrito: Início, Pesquisar, Guias, Quiz e Conta. Eram cinco ícones sem uma palavra, e o último mudava de destino conforme houvesse sessão. Cada lugar significa agora sempre a mesma coisa. Em tablet a barra deixou de ir de extremo a extremo: fica centrada e ao alcance do polegar.",
+      "As pesquisas recentes deixaram de ser guardadas para sempre. Expiram em 30 dias, há um botão para as apagar, e o que se parecer com NIF, IBAN, email ou um número comprido nunca chega a ser guardado.",
+      "Com a página rolada, clicar na barra fazia o cabeçalho voltar a crescer 64 px e tapar mais conteúdo — exatamente no momento de decidir o que procurar. Deixou de o fazer.",
+      "O catálogo fiscal e as fichas dos guias saíram do carregamento inicial das páginas públicas: a pesquisa é pedida quando passas o rato pela barra, lhe tocas ou lhe dás foco — e não antes.",
+      "O contorno de foco do teclado deixou de ser uma moldura preta e passou a ser a cor da marca, legível nos dois temas. O atalho mostra ⌘K no Mac e Ctrl K no resto. E as ligações internas (#calculadora) deixam de aterrar por baixo do cabeçalho.",
+    ],
+  },
+  {
     version: "2.30.0",
     data: "2026-08-10",
     titulo: "Este painel, reorganizado — o mês atual, e a história atrás de uma porta",

@@ -6,6 +6,7 @@ import { AuthProvider } from "@/lib/supabase/auth";
 import { PerfilProvider } from "@/lib/perfil";
 import { SubscricaoProvider } from "@/lib/stripe/subscription";
 import DeferredOverlays from "@/components/ui/DeferredOverlays";
+import { CoordenadorOverlays } from "@/components/overlays/CoordenadorOverlays";
 import ChromeMobile from "@/components/ChromeMobile";
 import BotaoTopo from "@/components/ui/BotaoTopo";
 import FeedbackModal from "@/components/feedback/FeedbackModal";
@@ -149,14 +150,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Suspense>
               <PerfilProvider>
                 <MotionProvider>
-                  {children}
-                  <ChromeMobile />
-                  {/* Voltar ao topo — global em todo o site público; esconde-se
-                      sozinho no /dashboard e no /admin. */}
-                  <BotaoTopo />
-                  <FeedbackModal />
-                  <Medicao />
-                  <DeferredOverlays />
+                  {/* O coordenador de overlays envolve tudo o que pode abrir
+                      uma superfície por cima da página. A invariante que
+                      entrega — nunca mais de um `aria-modal` activo — só se
+                      consegue garantir de um sítio que os veja a todos.
+                      Ver `components/overlays/CoordenadorOverlays.tsx`. */}
+                  <CoordenadorOverlays>
+                    {children}
+                    <ChromeMobile />
+                    {/* Voltar ao topo — global em todo o site público;
+                        esconde-se sozinho no /dashboard e no /admin. */}
+                    <BotaoTopo />
+                    <FeedbackModal />
+                    <Medicao />
+                    <DeferredOverlays />
+                  </CoordenadorOverlays>
                 </MotionProvider>
               </PerfilProvider>
             </Suspense>

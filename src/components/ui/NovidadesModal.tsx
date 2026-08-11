@@ -32,9 +32,31 @@ import {
   type MesFechado,
 } from "@/lib/novidades";
 import { useModalA11y } from "@/hooks/useModalA11y";
+import { useOverlay } from "@/components/overlays/CoordenadorOverlays";
 
 export default function NovidadesModal() {
-  const [aberto, setAberto] = useState(false);
+  const [querAbrir, setAberto] = useState(false);
+
+  /**
+   * ⚠️ REGRA IMUTÁVEL (regra 10) × COORDENADOR DE OVERLAYS (P0-05)
+   *
+   * As duas encaixam, e a ordem importa. A regra diz que a versão é
+   * marcada como vista NO INSTANTE EM QUE O POPUP É MOSTRADO — e é isso
+   * que continua a acontecer, no efeito mais abaixo, quando `aberto`
+   * passa a verdadeiro.
+   *
+   * O que muda é o que significa «mostrado». Antes, a marca era posta no
+   * momento da DECISÃO — e a auditoria encontrou o caso em que a decisão
+   * e a exibição não coincidem: na primeira visita o popup era montado
+   * por cima do diálogo de cookies, com o foco preso em baixo. A pessoa
+   * nunca o leu, e a versão ficava marcada como vista à mesma. Agora
+   * espera pela vaga: com o consentimento por decidir, isto não abre —
+   * e como não abre, também não se dá por visto.
+   *
+   * `iniciadoPeloUtilizador: false` é o que o põe no fim da fila. É a
+   * única superfície aqui que ninguém pediu.
+   */
+  const aberto = useOverlay("novidades", querAbrir, { modal: true, iniciadoPeloUtilizador: false });
   // `null` = ainda a carregar. A DECISÃO de abrir NÃO depende disto: é tomada
   // e persistida no efeito abaixo, com a versão que vem do módulo leve.
   const [indice, setIndice] = useState<IndiceNovidades | null>(null);
@@ -47,23 +69,30 @@ export default function NovidadesModal() {
   const [expandida, setExpandida] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
+  // ⚠️ REGRA IMUTÁVEL do popup de Novidades (não alterar sem autorização):
+  // o popup só pode aparecer (1) na primeira visita de sempre e (2) quando
+  // surge uma NOVA versão (APP_VERSION muda no changelog). Nunca a cada
+  // refresh. Aqui decide-se apenas SE se quer abrir.
   useEffect(() => {
     try {
-      const visto = localStorage.getItem(VERSAO_STORAGE_KEY);
-      if (visto !== APP_VERSION) {
-        setAberto(true);
-        // ⚠️ REGRA IMUTÁVEL do popup de Novidades (não alterar sem autorização):
-        // o popup só pode aparecer (1) na primeira visita de sempre e (2) quando
-        // surge uma NOVA versão (APP_VERSION muda no changelog). Para isso,
-        // marcamos a versão como vista NO INSTANTE em que é mostrado — não apenas
-        // ao fechar. Assim, se o utilizador atualizar a página com o popup aberto,
-        // nunca reaparece para a mesma versão. Voltar a abrir só com nova versão.
-        localStorage.setItem(VERSAO_STORAGE_KEY, APP_VERSION);
-      }
+      if (localStorage.getItem(VERSAO_STORAGE_KEY) !== APP_VERSION) setAberto(true);
     } catch {
       // ignore
     }
   }, []);
+
+  // ⚠️ REGRA IMUTÁVEL, segunda metade: a versão é marcada como vista NO
+  // INSTANTE em que o popup é mostrado — não apenas ao fechar. Assim,
+  // atualizar a página com ele aberto não o faz reaparecer para a mesma
+  // versão. Voltar a abrir, só com versão nova.
+  useEffect(() => {
+    if (!aberto) return;
+    try {
+      localStorage.setItem(VERSAO_STORAGE_KEY, APP_VERSION);
+    } catch {
+      // ignore
+    }
+  }, [aberto]);
 
   // Carrega o índice só depois de a decisão de abrir estar tomada. Se falhar,
   // o popup fecha-se em silêncio — nunca fica um diálogo vazio a bloquear a

@@ -1,30 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import {
-  CATEGORIAS,
-  FERRAMENTAS,
-  GUIAS,
-  categoriaPorContexto,
-  pesquisarAtividades,
-  pesquisarItens,
-  type CategoriaBusca,
-  type ItemBusca,
-} from "@/lib/busca";
+import { useEffect, useRef, useState } from "react";
 
-// ─────────────────────────────────────────────────────────────────────
-// O MOTOR DA PESQUISA — um só, para as duas superfícies.
-//
-// A pesquisa tem duas caras: no telemóvel é uma folha modal (em 360 px não
-// há "ao lado", e o teclado virtual come metade do ecrã); no computador é a
-// barra do cabeçalho a expandir-se onde está. São composições diferentes do
-// MESMO motor — estado, atalhos, filtros, resultados e recentes vivem aqui.
-//
-// Se cada superfície tivesse a sua cópia, a primeira regra que alguém
-// afinasse ficava a valer só de um lado, e o defeito só apareceria no
-// tamanho de ecrã que quem afinou não estava a usar.
-// ─────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════
+//  O QUE O CABEÇALHO PRECISA DE SABER SOBRE A PESQUISA — E MAIS NADA
+//  ---------------------------------------------------------------------
+//  ┌─────────────────────────────────────────────────────────────────────┐
+//  │ ESTE FICHEIRO É LEVE, E ISSO É UMA DECISÃO DE ARQUITECTURA (P1-02)   │
+//  │                                                                     │
+//  │ Aqui vivia também o motor da pesquisa — e o motor importava o        │
+//  │ índice, que importava `fiscal-data.ts`. Como o cabeçalho importa     │
+//  │ este ficheiro, a cadeia arrastava o catálogo fiscal para o bundle    │
+//  │ inicial de TODAS as páginas públicas. O comentário dizia que só      │
+//  │ carregava ao abrir; o grafo de imports dizia o contrário, e o grafo  │
+//  │ é que manda.                                                         │
+//  │                                                                     │
+//  │ O que ficou: atalhos de teclado, consultas de media e o par de       │
+//  │ eventos. Zero importações de dados. O controlador da pesquisa vive   │
+//  │ em `useControladorBusca.ts` e só chega por `next/dynamic`; o índice  │
+//  │ é um JSON que só é pedido quando alguém mostra intenção de procurar. │
+//  └─────────────────────────────────────────────────────────────────────┘
+// ═══════════════════════════════════════════════════════════════════════
 
 /**
  * A fronteira entre as duas superfícies, escrita UMA vez.
@@ -52,10 +48,9 @@ export const EVENTO_BUSCA_ABRIR = "recibocerto:busca:abrir";
 /**
  * A pesquisa anuncia quando abre e quando fecha.
  *
- * Serve a barra fixa do telemóvel, que fica POR BAIXO da folha modal: sem
- * saber que a folha está aberta, ela continua a receber o `Tab` e o leitor de
- * ecrã continua a anunciar um campo que ninguém vê. `inert` resolve-o — mas só
- * se houver um sinal, e um evento é o que este projecto já usa para o inverso.
+ * Serve a barra fixa do telemóvel, que fica POR BAIXO do diálogo: sem
+ * saber que ele está aberto, ela continua a receber o `Tab` e o leitor de
+ * ecrã continua a anunciar um campo que ninguém vê.
  */
 export const EVENTO_BUSCA_ESTADO = "recibocerto:busca:estado";
 
@@ -73,210 +68,58 @@ export function useBuscaAberta(): boolean {
   return aberta;
 }
 
-const RECENTES_KEY = "recibocerto:busca:recentes";
-const RECENTES_MAX = 6;
-
-export function lerRecentes(): string[] {
-  try {
-    const cru = localStorage.getItem(RECENTES_KEY);
-    const lista = cru ? JSON.parse(cru) : [];
-    return Array.isArray(lista) ? lista.filter((x): x is string => typeof x === "string") : [];
-  } catch {
-    return [];
-  }
-}
-
-function guardarRecente(q: string) {
-  const termo = q.trim();
-  // Menos de dois caracteres não é uma pesquisa: é o caminho até uma. Guardar
-  // "d" como recente enche a lista de ruído e empurra para fora o que serve.
-  if (termo.length < 2) return;
-  try {
-    const lista = [termo, ...lerRecentes().filter((x) => x !== termo)].slice(0, RECENTES_MAX);
-    localStorage.setItem(RECENTES_KEY, JSON.stringify(lista));
-  } catch {
-    /* modo privado, quota cheia — a pesquisa continua a funcionar sem histórico */
-  }
-}
-
-/**
- * Adia o valor sem adiar o que se ESCREVE.
- *
- * O input é controlado por `query` (responde a cada tecla, sem atraso
- * perceptível); é a CONSULTA que espera. Ligar o input ao valor adiado
- * faria o cursor saltar e o texto aparecer a 160 ms de atraso.
- */
-function useAdiado<T>(valor: T, ms = 160): T {
-  const [v, setV] = useState(valor);
-  useEffect(() => {
-    const t = setTimeout(() => setV(valor), ms);
-    return () => clearTimeout(t);
-  }, [valor, ms]);
-  return v;
-}
-
-/**
- * Os atalhos do estado inicial — ids de `FERRAMENTAS`, não rótulos.
- *
- * Um id que deixe de existir desaparece daqui em SILÊNCIO: o `.filter()` que
- * os resolve remove o que não encontra, e a grelha fica com menos cartões sem
- * partir nada. Por isso há um teste que confirma que todos resolvem.
- */
-const MAIS_UTILIZADOS = ["f-comparar", "f-irs", "f-rv", "f-empresa", "f-venc", "f-simplificado"];
-
-export interface FiltroDef {
-  id: string;
-  label: string;
-}
-
-export interface MotorBusca {
-  categoria: CategoriaBusca;
-  trocarCategoria: (c: CategoriaBusca) => void;
-  query: string;
-  setQuery: (q: string) => void;
-  filtro: string;
-  setFiltro: (f: string) => void;
-  filtros: FiltroDef[];
-  grupos: Record<string, ItemBusca[]>;
-  resultadosAtividades: ReturnType<typeof pesquisarAtividades>;
-  totalResultados: number;
-  temQuery: boolean;
-  categoriaAtual: (typeof CATEGORIAS)[number];
-  recentes: string[];
-  maisUtilizados: ItemBusca[];
-  /** Navega e fecha. Guarda o termo nos recentes. */
-  navegar: (href: string) => void;
-  /** Enter abre o primeiro resultado — a via de quem não larga o teclado. */
-  aoSubmeter: () => void;
-  /** Repõe o estado para uma abertura nova, com o âmbito da rota actual. */
-  reiniciar: () => void;
-}
-
-export function useMotorBusca({ aoFechar }: { aoFechar: () => void }): MotorBusca {
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const [categoria, setCategoria] = useState<CategoriaBusca>(() => categoriaPorContexto(pathname ?? "/"));
-  const [query, setQuery] = useState("");
-  const [filtro, setFiltro] = useState("all");
-  const [recentes, setRecentes] = useState<string[]>([]);
-  const adiado = useAdiado(query);
-
-  const trocarCategoria = useCallback((c: CategoriaBusca) => {
-    setCategoria(c);
-    // O filtro pertence à categoria: "Art. 151.º" não existe em Guias, e
-    // mantê-lo activo ao trocar devolveria zero resultados sem explicar porquê.
-    setFiltro("all");
-  }, []);
-
-  const reiniciar = useCallback(() => {
-    setCategoria(categoriaPorContexto(pathname ?? "/"));
-    setFiltro("all");
-    setQuery("");
-    setRecentes(lerRecentes());
-  }, [pathname]);
-
-  const itens = categoria === "guias" ? GUIAS : FERRAMENTAS;
-
-  const resultadosItens = useMemo(
-    () =>
-      categoria === "atividades"
-        ? []
-        : pesquisarItens(itens, adiado).filter((it) => filtro === "all" || it.grupo === filtro),
-    [categoria, itens, adiado, filtro],
-  );
-
-  const resultadosAtividades = useMemo(
-    () =>
-      categoria === "atividades"
-        ? pesquisarAtividades(adiado, 120).filter((a) => filtro === "all" || a.tipo === filtro)
-        : [],
-    [categoria, adiado, filtro],
-  );
-
-  const filtros = useMemo<FiltroDef[]>(() => {
-    if (categoria === "atividades") {
-      return [
-        { id: "all", label: "Todas" },
-        { id: "art151", label: "Art. 151.º" },
-        { id: "outros", label: "Outros serviços" },
-        { id: "vendas", label: "Vendas / hotelaria" },
-        { id: "diretosAutor", label: "Direitos de autor" },
-      ];
-    }
-    const fonte = categoria === "guias" ? GUIAS : FERRAMENTAS;
-    const grupos = Array.from(new Set(fonte.map((i) => i.grupo)));
-    return [{ id: "all", label: "Tudo" }, ...grupos.map((g) => ({ id: g, label: g }))];
-  }, [categoria]);
-
-  const grupos = useMemo(() => {
-    const g: Record<string, ItemBusca[]> = {};
-    for (const it of resultadosItens) (g[it.grupo] ??= []).push(it);
-    return g;
-  }, [resultadosItens]);
-
-  const navegar = useCallback(
-    (href: string) => {
-      guardarRecente(query);
-      aoFechar();
-      router.push(href);
-    },
-    [query, aoFechar, router],
-  );
-
-  const aoSubmeter = useCallback(() => {
-    if (categoria === "atividades") {
-      const primeiro = resultadosAtividades[0];
-      if (primeiro) navegar(`/dashboard/classificar-atividade?q=${encodeURIComponent(primeiro.label)}`);
-      return;
-    }
-    const primeiro = resultadosItens[0];
-    if (primeiro) navegar(primeiro.href);
-  }, [categoria, resultadosAtividades, resultadosItens, navegar]);
-
-  const maisUtilizados = useMemo(
-    () => MAIS_UTILIZADOS.map((id) => FERRAMENTAS.find((f) => f.id === id)).filter((x): x is ItemBusca => !!x),
-    [],
-  );
-
-  const categoriaAtual = CATEGORIAS.find((c) => c.id === categoria) ?? CATEGORIAS[0];
-
-  return {
-    categoria,
-    trocarCategoria,
-    query,
-    setQuery,
-    filtro,
-    setFiltro,
-    filtros,
-    grupos,
-    resultadosAtividades,
-    totalResultados: categoria === "atividades" ? resultadosAtividades.length : resultadosItens.length,
-    temQuery: !!adiado.trim(),
-    categoriaAtual,
-    recentes,
-    maisUtilizados,
-    navegar,
-    aoSubmeter,
-    reiniciar,
-  };
-}
-
 /**
  * Quem responde ao `⌘K` e ao evento global — e apenas UMA superfície responde.
  *
  * As duas montam este hook. `ativaQuando` é a consulta de media que decide
  * qual delas está no ecrã, e a que não está simplesmente ignora o atalho. Sem
- * este acordo, `⌘K` abriria a folha modal E o painel do cabeçalho ao mesmo
- * tempo, com dois campos a disputar o foco.
+ * este acordo, `⌘K` abriria o diálogo do telemóvel E o painel do cabeçalho ao
+ * mesmo tempo, com dois campos a disputar o foco.
  */
+/**
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ QUEM RESPONDE QUANDO NÃO HÁ LANÇADOR DE SECRETARIA                   │
+ * │                                                                     │
+ * │ O acordo «só uma superfície responde» era por LARGURA, e isso deixou │
+ * │ um botão morto: o painel tem a sua própria barra lateral, com um     │
+ * │ botão de pesquisa, e o cabeçalho público (que traz o lançador de     │
+ * │ secretária) não existe lá. Num ecrã largo dentro do painel, esse     │
+ * │ botão disparava o evento global e NINGUÉM o ouvia — clicar não fazia │
+ * │ nada, e `⌘K` também não.                                             │
+ * │                                                                     │
+ * │ A regra certa não é a largura: é «existe um lançador ancorado?». Se  │
+ * │ existir, é ele que abre (é onde a pessoa clicou). Se não existir, o  │
+ * │ diálogo responde, seja qual for a largura — que é exactamente o que  │
+ * │ um botão de pesquisa sem barra por baixo deve fazer.                 │
+ * │                                                                     │
+ * │ Um contador de módulo e não um contexto: isto é lido dentro de um    │
+ * │ ouvinte de teclado, fora do ciclo de render, e não tem de provocar   │
+ * │ actualizações em ninguém.                                            │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
+let lancadoresDeSecretaria = 0;
+
+export function registarLancadorSecretaria(): () => void {
+  lancadoresDeSecretaria += 1;
+  return () => {
+    lancadoresDeSecretaria -= 1;
+  };
+}
+
+export function haLancadorDeSecretaria(): boolean {
+  return lancadoresDeSecretaria > 0;
+}
+
 export function useAtalhoBusca({
   ativaQuando,
+  tambemQuando,
   aberto,
   abrir,
   fechar,
 }: {
   ativaQuando: string;
+  /** Condição extra, avaliada no momento do gesto. Ver o quadro acima. */
+  tambemQuando?: () => boolean;
   aberto: boolean;
   abrir: () => void;
   fechar: () => void;
@@ -292,15 +135,15 @@ export function useAtalhoBusca({
    * Aqui isso significaria o atalho a fechar um painel que já reabriu, ou a
    * chamar um `fechar` de uma versão do componente que já não existe.
    */
-  const ref = useRef({ aberto, abrir, fechar });
+  const ref = useRef({ aberto, abrir, fechar, tambemQuando });
   useEffect(() => {
-    ref.current = { aberto, abrir, fechar };
+    ref.current = { aberto, abrir, fechar, tambemQuando };
   });
 
   useEffect(() => {
     const consulta = window.matchMedia(ativaQuando);
 
-    const naSuperficieCerta = () => consulta.matches;
+    const naSuperficieCerta = () => consulta.matches || (ref.current.tambemQuando?.() ?? false);
 
     const onTecla = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -327,6 +170,26 @@ export function useAtalhoBusca({
   }, [ativaQuando]);
 }
 
+/**
+ * `⌘K` no Mac, `Ctrl K` no resto — e nada antes de saber qual.
+ *
+ * Um glifo de Command fixo não comunica nada a quem está em Windows ou
+ * Linux, que é a maioria (P2-03). Só depois de montar é que há `navigator`,
+ * e por isso o rótulo entra no segundo render: é decoração `aria-hidden`, e
+ * o nome acessível do lançador nunca dependeu disto.
+ *
+ * Vive AQUI, no módulo leve, e não junto das peças visuais: é o lançador
+ * que o usa, e o lançador está no bundle inicial de todas as páginas.
+ */
+export function useAtalhoDoSistema(): string {
+  const [rotulo, setRotulo] = useState("");
+  useEffect(() => {
+    const mac = /mac|iphone|ipad|ipod/i.test(navigator.platform || navigator.userAgent);
+    setRotulo(mac ? "⌘K" : "Ctrl K");
+  }, []);
+  return rotulo;
+}
+
 /** `true` quando a consulta de media corresponde. Estável no servidor. */
 export function useMediaQuery(consulta: string): boolean {
   const [corresponde, setCorresponde] = useState(false);
@@ -338,4 +201,46 @@ export function useMediaQuery(consulta: string): boolean {
     return () => mq.removeEventListener("change", sync);
   }, [consulta]);
   return corresponde;
+}
+
+/**
+ * Leva o foco ao primeiro resultado da lista.
+ *
+ * `ArrowDown` no campo entra nos resultados; `ArrowUp` no primeiro volta ao
+ * campo. É a única navegação por setas que existe — deliberadamente. Uma
+ * combobox completa (selecção activa anunciada, `aria-activedescendant`,
+ * Enter a abrir o item seleccionado) seria o outro contrato possível, e o
+ * erro está em prometer esse e entregar este. Aqui os resultados são
+ * ligações verdadeiras: o `Tab` entra neles, o browser anuncia-os como
+ * ligações e a seta é só um atalho.
+ */
+export function focarPrimeiroResultado(container: HTMLElement | null) {
+  container?.querySelector<HTMLElement>("[data-resultado]")?.focus();
+}
+
+/**
+ * O caminho de volta: `ArrowUp` no PRIMEIRO resultado devolve o foco ao
+ * campo. Sem ele, a seta era um caminho só de ida — entrava-se na lista e
+ * só se saía com `Shift+Tab`, que é uma tecla diferente para desfazer a
+ * mesma acção.
+ *
+ * Vive nas duas superfícies porque o contrato de teclado é o mesmo nas
+ * duas; a composição é que muda.
+ */
+export function useVoltarAoCampo(
+  listaRef: React.RefObject<HTMLElement | null>,
+  inputRef: React.RefObject<HTMLInputElement | null>,
+) {
+  useEffect(() => {
+    const onTecla = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowUp") return;
+      const ativo = document.activeElement;
+      if (!(ativo instanceof HTMLElement) || ativo.dataset.resultado === undefined) return;
+      if (ativo !== listaRef.current?.querySelector("[data-resultado]")) return;
+      e.preventDefault();
+      inputRef.current?.focus();
+    };
+    document.addEventListener("keydown", onTecla);
+    return () => document.removeEventListener("keydown", onTecla);
+  }, [listaRef, inputRef]);
 }
