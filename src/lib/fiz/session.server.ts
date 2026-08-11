@@ -10,6 +10,7 @@
 //  em vez de ficar num estado ambíguo.
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cifrarToken, decifrarToken } from "./tokens.server";
 import { renovarTokens } from "./oauth.server";
