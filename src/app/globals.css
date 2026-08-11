@@ -81,12 +81,77 @@
   max-height: min(36rem, calc(100dvh - var(--rc-header-alto) - 2rem));
 }
 
+/* ════════════════════════════════════════════════════════════════════
+   O FOCO VISÍVEL DO CABEÇALHO E DA PESQUISA
+
+   ┌──────────────────────────────────────────────────────────────────┐
+   │ NÃO REMOVER O FOCO — DAR-LHE UMA REGRA (P2-01)                    │
+   │                                                                  │
+   │ No lançador compacto, o foco por omissão do browser desenhava uma │
+   │ moldura preta e dobrada, muito mais pesada do que tudo o resto do │
+   │ desenho. A tentação, nesse ponto, é `outline: none` — e é o erro  │
+   │ que deixa quem navega por teclado sem saber onde está.            │
+   │                                                                  │
+   │ Dois píxeis na cor da marca, dois de afastamento e um halo da cor │
+   │ da superfície por baixo: o halo é o que garante contraste quando  │
+   │ o elemento focado está sobre um fundo da própria cor da marca     │
+   │ (WCAG 2.2 — Focus Appearance). Funciona nos dois temas porque a   │
+   │ superfície é um token, não um branco escrito à mão.               │
+   └──────────────────────────────────────────────────────────────────┘
+   ════════════════════════════════════════════════════════════════════ */
+:root {
+  --rc-foco: #0f6e56;
+  --rc-foco-halo: #ffffff;
+}
+
+.focus-marca:focus-visible {
+  outline: 2px solid var(--rc-foco);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px var(--rc-foco-halo);
+}
+
+/* ┌──────────────────────────────────────────────────────────────────┐
+   │ TRÊS CRUZES SEGUIDAS, E DUAS ERAM NOSSAS                          │
+   │                                                                  │
+   │ `input[type="search"]` traz uma cruz de limpar desenhada pelo     │
+   │ próprio browser. Ao lado do nosso «Limpar pesquisa» e do          │
+   │ «Fechar pesquisa», o campo acabava com três ✕ em fila — e a do    │
+   │ meio nem sequer respondia ao tema.                                │
+   │                                                                  │
+   │ Fica a nossa, que tem nome acessível, alvo de 36 px e cor do      │
+   │ sistema de desenho. `type="search"` mantém-se: é o que dá o       │
+   │ «procurar» no teclado do telemóvel e a semântica ao leitor de     │
+   │ ecrã — é só a decoração que sai.                                  │
+   └──────────────────────────────────────────────────────────────────┘ */
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 * {
   box-sizing: border-box;
 }
 
 html {
   scroll-behavior: smooth;
+
+  /* ┌────────────────────────────────────────────────────────────────┐
+     │ ÂNCORAS QUE NÃO ATERRAM DEBAIXO DO CABEÇALHO (P2-06)            │
+     │                                                                │
+     │ Abrir `/#calculadora` directamente deixava o alvo abaixo da     │
+     │ dobra e só depois se corrigia — sinal de que o layout ainda     │
+     │ estava a assentar quando o browser fez o scroll. Reservar a     │
+     │ altura do cabeçalho fixo aqui resolve o caso comum sem depender │
+     │ de um segundo scroll, e o `scroll-margin-top` nos alvos cobre   │
+     │ os que não passam por este caminho.                             │
+     └────────────────────────────────────────────────────────────────┘ */
+  scroll-padding-top: calc(var(--rc-header-linha) + 12px);
+}
+
+[id],
+[data-scroll-target] {
+  scroll-margin-top: calc(var(--rc-header-linha) + 12px);
 }
 
 body {
@@ -223,6 +288,11 @@ input[type="number"]::-webkit-outer-spin-button {
    ════════════════════════════════════════════════════════════════════ */
   .dark {
     --background: #141613;
+    /* Foco: a marca escura fica surda sobre superfícies escuras, e o halo
+       branco fazia um segundo anel a competir com o próprio contorno.
+       Ver o quadro sobre `.focus-marca` no topo do ficheiro. */
+    --rc-foco: #4fd1a3;
+    --rc-foco-halo: #141613;
     --quiz-page-bg: #181b16;
     --quiz-heading: #e8e6dc;
     --quiz-muted: #9a9889;

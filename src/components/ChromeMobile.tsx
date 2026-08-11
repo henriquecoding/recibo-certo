@@ -1,11 +1,34 @@
 "use client";
 
-// Chrome inferior para telemóvel e tablet (< lg): o header vive em baixo (zona do
-// polegar) e a barra de pesquisa fica logo por cima. É o ÚNICO header no
-// telemóvel — o Nav.tsx (header de topo) é desktop-only, por isso aqui tem de
-// existir tudo o que há no header normal: simuladores, ferramentas, aprender,
-// planos, conta (com foto) e a Central de Feedback. Logo→home é regra fixa.
-// Não aparece no /dashboard nem no /admin (que têm o seu próprio chrome).
+// ═══════════════════════════════════════════════════════════════════════
+//  O CHROME INFERIOR — telemóvel e tablet (< lg)
+//  ---------------------------------------------------------------------
+//  É o ÚNICO cabeçalho abaixo de `lg`: o `Nav.tsx` é só de secretária. Por
+//  isso tudo o que existe no cabeçalho normal tem de estar alcançável
+//  daqui. Não aparece no /dashboard nem no /admin (que têm chrome próprio).
+//
+//  ┌─────────────────────────────────────────────────────────────────────┐
+//  │ CINCO ÍCONES SEM RÓTULO, E UM DELES MUDAVA DE SIGNIFICADO (P1-05)    │
+//  │                                                                     │
+//  │ Era: marca · corneta · menu · tema · conta-ou-começar. Cinco alvos   │
+//  │ sem uma única palavra, num sítio onde a pessoa tem de acertar à      │
+//  │ primeira com o polegar. O último mudava de destino conforme houvesse │
+//  │ sessão — o mesmo lugar levava a sítios diferentes em dias            │
+//  │ diferentes. O feedback aparecia duas vezes (aqui e dentro do menu) e │
+//  │ o tema ocupava um dos cinco lugares mais valiosos do produto.        │
+//  │                                                                     │
+//  │ Passa a haver cinco DESTINOS estáveis, com rótulo visível:            │
+//  │                                                                     │
+//  │      Início · Pesquisar · Guias · Quiz · Conta                       │
+//  │                                                                     │
+//  │ Cada um significa sempre a mesma coisa. O tema e o feedback vivem    │
+//  │ dentro de «Conta», que é onde se procuram acções de conta e suporte. │
+//  │                                                                     │
+//  │ A barra de pesquisa separada que existia por cima desaparece: a      │
+//  │ pesquisa é agora um dos cinco lugares, sempre no mesmo sítio, em vez │
+//  │ de uma segunda superfície com uma pastilha de âmbito por baixo.      │
+//  └─────────────────────────────────────────────────────────────────────┘
+// ═══════════════════════════════════════════════════════════════════════
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -13,39 +36,50 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "motion/react";
 import {
-  LogoMark, Search, Menu, Close, Calculator, LayoutGrid, ArrowRight, Coin, Megaphone, ChevronRight,
+  LogoMark, Home, Search, BookOpen, Trophy, User, Close, LayoutGrid, ArrowRight, Coin, Megaphone, ChevronRight,
 } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useAuth } from "@/lib/supabase/auth";
 import { NAV_FERRAMENTAS, NAV_APRENDER, type NavItem } from "@/components/nav-config";
 import { abrirFeedback } from "@/components/feedback/abrir";
-import { useBuscaAberta } from "@/components/busca/motor";
-import { CATEGORIAS, categoriaPorContexto } from "@/lib/busca";
+import { EVENTO_BUSCA_ABRIR, useBuscaAberta } from "@/components/busca/motor";
+import { SuperficieModal } from "@/components/overlays/SuperficieModal";
+import { useOverlay } from "@/components/overlays/CoordenadorOverlays";
+import { medirNavegacao } from "@/lib/busca/medicao";
 
-const EVENTO_ABRIR = "recibocerto:busca:abrir";
-
-const PRINCIPAL: NavItem = {
-  href: "/#calculadora", label: "Simuladores", desc: "Calcula o teu líquido real", Icon: Calculator,
-};
 const PLANOS: NavItem = {
   href: "/precos", label: "Planos", desc: "Subscrições e benefícios", Icon: Coin,
 };
 
+type Slot =
+  | { tipo: "link"; id: string; label: string; href: string; Icon: NavItem["Icon"] }
+  | { tipo: "acao"; id: string; label: string; Icon: NavItem["Icon"] };
+
+/**
+ * Os cinco lugares. A ordem é fixa e o significado nunca muda com o estado
+ * da sessão: mudar o destino de um lugar por baixo do dedo de quem já
+ * aprendeu onde ele está é a forma mais rápida de desfazer essa memória.
+ */
+const SLOTS: Slot[] = [
+  { tipo: "link", id: "inicio", label: "Início", href: "/", Icon: Home },
+  { tipo: "acao", id: "pesquisar", label: "Pesquisar", Icon: Search },
+  { tipo: "link", id: "guias", label: "Guias", href: "/guias", Icon: BookOpen },
+  { tipo: "link", id: "quiz", label: "Quiz", href: "/quiz-fiscal", Icon: Trophy },
+  { tipo: "acao", id: "conta", label: "Conta", Icon: User },
+];
+
 export default function ChromeMobile() {
   const pathname = usePathname();
   const { user, abrirModal, disponivel } = useAuth();
-  const [menu, setMenu] = useState(false);
+  const [querMenu, setQuerMenu] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState("");
   const buscaAberta = useBuscaAberta();
 
-  // O âmbito que a rota implica — a mesma dedução que a pesquisa usa ao abrir.
-  // Ler daqui e não de um rótulo fixo é o que impede a barra de prometer um
-  // corpus e entregar outro.
-  const ambito = CATEGORIAS.find((c) => c.id === categoriaPorContexto(pathname ?? "/")) ?? CATEGORIAS[0];
-  const rotuloAmbito = ambito.label;
-  const sugestaoBusca = ambito.placeholder;
+  // A vaga do coordenador: o menu é modal, logo não pode coexistir com o
+  // consentimento nem com a pesquisa. Ver `CoordenadorOverlays.tsx`.
+  const menu = useOverlay("menu", querMenu, { modal: true, iniciadoPeloUtilizador: true });
 
-  useEffect(() => { setMenu(false); }, [pathname]);
+  useEffect(() => { setQuerMenu(false); }, [pathname]);
 
   // Foto de perfil (só quando há sessão) — mesmo padrão do header de desktop.
   useEffect(() => {
@@ -56,15 +90,6 @@ export default function ChromeMobile() {
     );
     return () => { ativo = false; };
   }, [user]);
-
-  useEffect(() => {
-    if (!menu) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMenu(false); };
-    document.addEventListener("keydown", onKey);
-    return () => { document.body.style.overflow = prev; document.removeEventListener("keydown", onKey); };
-  }, [menu]);
 
   const [quizPlaying, setQuizPlaying] = useState(false);
   useEffect(() => {
@@ -79,181 +104,183 @@ export default function ChromeMobile() {
 
   if (pathname.startsWith("/dashboard") || pathname.startsWith("/admin") || quizPlaying) return null;
 
-  const ativo = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href.split("?")[0].split("#")[0]) && href !== "/#calculadora");
+  const ativo = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  const ativoMenu = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href.split("?")[0].split("#")[0]) && href !== "/#calculadora";
 
   return (
     <>
-      {/* Espaço para o conteúdo não ficar tapado pelo chrome inferior */}
-      <div className="h-[124px] lg:hidden" aria-hidden />
+      {/* Espaço para o conteúdo não ficar tapado pelo chrome inferior. A
+          altura acompanha a barra: cinco alvos de 44 px com rótulo, mais a
+          área segura do dispositivo. */}
+      <div className="h-[76px] lg:hidden" aria-hidden />
 
-      {/* Chrome inferior (telemóvel + tablet) */}
-      <div className="fixed inset-x-0 bottom-0 z-50 lg:hidden">
-        {/**
-         * ┌───────────────────────────────────────────────────────────────┐
-         * │ A BARRA FIXA — TRÊS CORREÇÕES, E UMA DELAS ERA UMA MENTIRA     │
-         * │                                                               │
-         * │ 1. A pastilha dizia sempre «Tudo». A pesquisa nunca abriu em   │
-         * │    «tudo»: abre no âmbito que a ROTA implica. Em `/guias` a    │
-         * │    barra prometia uma coisa e entregava outra — e o rótulo era │
-         * │    fixo, portanto nada o denunciava. Agora diz o âmbito real,  │
-         * │    e o texto de sugestão vem do mesmo sítio.                   │
-         * │                                                               │
-         * │ 2. Era um `<button>`, e um botão sem JavaScript é um adorno:   │
-         * │    quem chegue antes do chunk carregar carrega e não acontece  │
-         * │    nada. Passa a ser uma ligação para o índice de ferramentas, │
-         * │    com o clique normal interceptado — e `⌘+clique` volta a     │
-         * │    abrir noutro separador.                                     │
-         * │                                                               │
-         * │ 3. Ficava alcançável por `Tab` DEBAIXO da folha de pesquisa.   │
-         * │    `inert` fecha-a ao teclado e ao leitor de ecrã enquanto a   │
-         * │    folha está por cima.                                        │
-         * │                                                               │
-         * │ E fica mais leve: a moldura de 2 px, a sombra alta e o quadrado│
-         * │ verde sólido competiam com a navegação logo por baixo, num     │
-         * │ ecrã onde só há espaço para uma coisa ganhar a atenção.        │
-         * └───────────────────────────────────────────────────────────────┘
-         */}
-        <div className="px-3 pb-2.5" inert={buscaAberta ? true : undefined}>
-          <Link
-            href="/ferramentas"
-            onClick={(e) => {
-              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-              e.preventDefault();
-              window.dispatchEvent(new Event(EVENTO_ABRIR));
-            }}
-            aria-label="Pesquisar no ReciboCerto"
-            data-busca-gatilho="movel"
-            className={`flex min-h-[48px] w-full items-center gap-2.5 rounded-xl border border-stone-200 bg-white py-2 pl-3 pr-2 text-sm text-stone-500 no-underline shadow-sm transition-[border-color,opacity] active:border-brand/50 dark:border-stone-700 dark:bg-stone-900 ${
-              buscaAberta ? "opacity-0" : ""
-            }`}
-          >
-            <Search size={17} className="flex-shrink-0 text-stone-400" />
-            <span className="min-w-0 flex-1 truncate text-left">{sugestaoBusca}</span>
-            <span className="flex-shrink-0 rounded-md bg-brand-light px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-dark dark:bg-brand/15 dark:text-brand">
-              {rotuloAmbito}
-            </span>
-          </Link>
-        </div>
-
-        {/* Header inferior */}
+      {/**
+       * ┌───────────────────────────────────────────────────────────────┐
+       * │ O TABLET DEIXA DE HERDAR O TELEMÓVEL (P2-05)                   │
+       * │                                                               │
+       * │ De 360 a 1023 px era exactamente a mesma barra de extremo a    │
+       * │ extremo. Num ecrã de 900 px isso põe «Início» e «Conta» a mais │
+       * │ de meio palmo um do outro, com o olhar a atravessar o ecrã     │
+       * │ inteiro entre dois alvos que se usam a seguir um ao outro.     │
+       * │                                                               │
+       * │ A partir de `md` a doca fica centrada, com 40 rem no máximo e  │
+       * │ afastada do fundo: os cinco alvos ficam ao alcance do polegar  │
+       * │ de quem segura o tablet, e o conteúdo respira por baixo.       │
+       * └───────────────────────────────────────────────────────────────┘
+       */}
+      <div className="fixed inset-x-0 bottom-0 z-50 lg:hidden md:px-6 md:pb-4">
         <nav
           aria-label="Navegação"
-          className="flex items-center justify-between gap-1 border-t border-stone-100 bg-cream/95 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/95"
+          className="mx-auto flex items-stretch justify-between gap-1 border-t border-stone-100 bg-cream/95 px-1 pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/95 md:max-w-[40rem] md:rounded-2xl md:border md:px-2 md:pb-1.5 md:shadow-float"
         >
-          {/* Logo → home (é o botão de início; regra fixa) */}
-          <Link href="/" aria-label="Início — ReciboCerto" aria-current={pathname === "/" ? "page" : undefined} className={`flex h-11 items-center gap-1.5 rounded-lg pl-1.5 pr-2.5 transition-colors ${pathname === "/" ? "bg-brand-light text-brand" : "text-brand hover:bg-brand/10"}`}>
-            <LogoMark size={26} />
-          </Link>
+          {SLOTS.map((slot) => {
+            const on = slot.tipo === "link" ? ativo(slot.href) : slot.id === "conta" ? menu : false;
+            const classe = `focus-marca flex min-h-[44px] min-w-[3.25rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 no-underline transition-colors ${
+              on
+                ? "bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand"
+                : "text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+            }`;
+            const conteudo = (
+              <>
+                {slot.id === "conta" && avatarUrl ? (
+                  <AvatarConta url={avatarUrl} size={20} fallback={<slot.Icon size={20} />} />
+                ) : (
+                  <slot.Icon size={20} />
+                )}
+                {/* O rótulo é o que torna o lugar aprendível. Um ícone
+                    isolado obriga a adivinhar; cinco obrigam a adivinhar
+                    cinco vezes. */}
+                <span className="text-[10px] font-semibold leading-none">{slot.label}</span>
+              </>
+            );
 
-          {/* Sugestões e suporte (Central de Feedback) */}
-          <button
-            type="button"
-            onClick={() => abrirFeedback({ area: pathname })}
-            aria-label="Sugestões e suporte"
-            className="flex h-11 w-11 items-center justify-center rounded-lg text-stone-500 transition-colors hover:bg-stone-100 hover:text-brand dark:text-stone-400 dark:hover:bg-stone-800"
-          >
-            <Megaphone size={20} />
-          </button>
+            if (slot.tipo === "link") {
+              return (
+                <Link
+                  key={slot.id}
+                  href={slot.href}
+                  aria-current={on ? "page" : undefined}
+                  onClick={() => medirNavegacao(slot.id, window.innerWidth >= 768 ? "tablet" : "movel")}
+                  className={classe}
+                >
+                  {conteudo}
+                </Link>
+              );
+            }
 
-          <button type="button" onClick={() => setMenu(true)} aria-haspopup="dialog" aria-expanded={menu} aria-label="Abrir menu" className="flex h-11 w-11 items-center justify-center rounded-lg text-stone-500 transition-colors hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800">
-            <Menu size={22} />
-          </button>
-
-          <ThemeToggle />
-
-          {user ? (
-            <Link href="/dashboard" aria-label="Painel" className="flex h-11 w-11 items-center justify-center rounded-lg bg-brand/10 text-brand transition-colors hover:bg-brand hover:text-white">
-              <AvatarConta url={avatarUrl} size={28} fallback={<LayoutGrid size={20} />} />
-            </Link>
-          ) : disponivel ? (
-            <button type="button" onClick={() => abrirModal("criar")} className="flex h-11 items-center justify-center rounded-lg bg-brand px-3.5 text-xs font-bold text-white shadow-glow">
-              Começar
-            </button>
-          ) : (
-            <Link href="/dashboard" className="flex h-11 items-center justify-center rounded-lg bg-brand px-3.5 text-xs font-bold text-white shadow-glow">
-              Começar
-            </Link>
-          )}
+            const ePesquisa = slot.id === "pesquisar";
+            return (
+              <button
+                key={slot.id}
+                type="button"
+                data-busca-gatilho={ePesquisa ? "movel" : undefined}
+                aria-haspopup={ePesquisa ? "dialog" : "dialog"}
+                aria-expanded={ePesquisa ? buscaAberta : menu}
+                onClick={() => {
+                  if (ePesquisa) window.dispatchEvent(new Event(EVENTO_BUSCA_ABRIR));
+                  else setQuerMenu(true);
+                }}
+                className={classe}
+              >
+                {conteudo}
+              </button>
+            );
+          })}
         </nav>
       </div>
 
-      {/* Menu (folha inferior) — espelha o header de desktop, organizado por secções */}
-      <AnimatePresence>
-        {menu && (
-          <div className="fixed inset-0 z-[80] lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
-            <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="absolute inset-0 bg-stone-900/45 backdrop-blur-md" onClick={() => setMenu(false)} aria-hidden />
-            <m.div
-              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 32, stiffness: 340 }}
-              className="absolute inset-x-0 bottom-0 flex max-h-[88dvh] flex-col rounded-t-2xl border-t border-stone-200/80 bg-white shadow-float dark:border-stone-800 dark:bg-stone-900"
-            >
-              <div className="flex shrink-0 items-center justify-between border-b border-stone-100 px-5 py-4 dark:border-stone-800">
-                <Link href="/" aria-label="ReciboCerto — início" className="flex items-center gap-2 text-brand">
-                  <LogoMark size={26} />
-                  <span className="font-display text-sm font-semibold text-stone-800 dark:text-stone-100">Recibo<span className="text-brand">Certo</span></span>
-                </Link>
-                <button type="button" onClick={() => setMenu(false)} aria-label="Fechar menu" className="flex h-9 w-9 items-center justify-center rounded-xl text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800">
-                  <Close size={18} />
-                </button>
-              </div>
+      {/* «Conta» — a folha inferior com conta, navegação, tema e suporte. */}
+      <SuperficieModal
+        aberto={menu}
+        aoFechar={() => setQuerMenu(false)}
+        rotulo="Conta e navegação"
+        className="fixed inset-0 z-[80] lg:hidden"
+      >
+        <AnimatePresence>
+          <m.div
+            key="veu"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="absolute inset-0 bg-stone-900/45 backdrop-blur-md"
+            onClick={() => setQuerMenu(false)}
+            aria-hidden
+          />
+          <m.div
+            key="folha"
+            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 32, stiffness: 340 }}
+            className="absolute inset-x-0 bottom-0 flex max-h-[88dvh] flex-col rounded-t-2xl border-t border-stone-200/80 bg-white shadow-float dark:border-stone-800 dark:bg-stone-900"
+          >
+            <div className="flex shrink-0 items-center justify-between border-b border-stone-100 px-5 py-4 dark:border-stone-800">
+              <Link href="/" aria-label="ReciboCerto — início" className="focus-marca flex items-center gap-2 text-brand no-underline">
+                <LogoMark size={26} />
+                <span className="font-display text-sm font-semibold text-stone-800 dark:text-stone-100">Recibo<span className="text-brand">Certo</span></span>
+              </Link>
+              <button type="button" onClick={() => setQuerMenu(false)} aria-label="Fechar" className="focus-marca flex h-9 w-9 items-center justify-center rounded-xl text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800">
+                <Close size={18} />
+              </button>
+            </div>
 
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-                {/* Destaque: Simuladores */}
-                <LinhaMenu item={PRINCIPAL} ativo={pathname === "/"} destaque />
-
-                <SeccaoMenu titulo="Ferramentas">
-                  {NAV_FERRAMENTAS.map((l) => (
-                    <LinhaMenu key={l.href} item={l} ativo={ativo(l.href)} />
-                  ))}
-                </SeccaoMenu>
-
-                <SeccaoMenu titulo="Aprender">
-                  {NAV_APRENDER.map((l) => (
-                    <LinhaMenu key={l.href} item={l} ativo={ativo(l.href)} />
-                  ))}
-                </SeccaoMenu>
-
-                <SeccaoMenu titulo="Mais">
-                  <LinhaMenu item={PLANOS} ativo={ativo(PLANOS.href)} />
-                  {/* Central de Feedback */}
-                  <button
-                    type="button"
-                    onClick={() => { setMenu(false); abrirFeedback({ area: pathname }); }}
-                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors hover:bg-stone-50 dark:hover:bg-stone-800"
-                  >
-                    <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-brand-light text-brand">
-                      <Megaphone size={18} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold text-stone-800 dark:text-stone-100">Sugestões e reportes</span>
-                      <span className="block truncate text-xs text-stone-500 dark:text-stone-400">Ideias, erros, dúvidas ou uma mensagem</span>
-                    </span>
-                    <ChevronRight size={14} className="flex-shrink-0 text-stone-300" />
-                  </button>
-                </SeccaoMenu>
-
-                <div className="border-t border-stone-100 pt-3 dark:border-stone-800">
-                  {user ? (
-                    <Link href="/dashboard" className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-glow">
-                      <LayoutGrid size={16} /> Ir para o painel
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+              <div className="border-b border-stone-100 pb-3 dark:border-stone-800">
+                {user ? (
+                  <Link href="/dashboard" className="focus-marca flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white no-underline shadow-glow">
+                    <LayoutGrid size={16} /> Ir para o painel
+                  </Link>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {disponivel && (
+                      <button type="button" onClick={() => { setQuerMenu(false); abrirModal("entrar"); }} className="focus-marca flex w-full items-center justify-center rounded-xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 dark:border-stone-700 dark:text-stone-300">
+                        Entrar
+                      </button>
+                    )}
+                    <Link href={disponivel ? "#" : "/dashboard"} onClick={(e) => { if (disponivel) { e.preventDefault(); setQuerMenu(false); abrirModal("criar"); } }} className="focus-marca flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white no-underline shadow-glow">
+                      Começar grátis <ArrowRight size={14} />
                     </Link>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      {disponivel && (
-                        <button type="button" onClick={() => { setMenu(false); abrirModal("entrar"); }} className="flex w-full items-center justify-center rounded-xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 dark:border-stone-700 dark:text-stone-300">
-                          Entrar
-                        </button>
-                      )}
-                      <Link href={disponivel ? "#" : "/dashboard"} onClick={(e) => { if (disponivel) { e.preventDefault(); setMenu(false); abrirModal("criar"); } }} className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-glow">
-                        Começar grátis <ArrowRight size={14} />
-                      </Link>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
-            </m.div>
-          </div>
-        )}
-      </AnimatePresence>
+
+              <SeccaoMenu titulo="Ferramentas">
+                {NAV_FERRAMENTAS.map((l) => (
+                  <LinhaMenu key={l.href} item={l} ativo={ativoMenu(l.href)} />
+                ))}
+              </SeccaoMenu>
+
+              <SeccaoMenu titulo="Aprender">
+                {NAV_APRENDER.map((l) => (
+                  <LinhaMenu key={l.href} item={l} ativo={ativoMenu(l.href)} />
+                ))}
+              </SeccaoMenu>
+
+              <SeccaoMenu titulo="Mais">
+                <LinhaMenu item={PLANOS} ativo={ativoMenu(PLANOS.href)} />
+                <button
+                  type="button"
+                  onClick={() => { setQuerMenu(false); abrirFeedback({ area: pathname }); }}
+                  className="focus-marca flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors hover:bg-stone-50 dark:hover:bg-stone-800"
+                >
+                  <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-brand-light text-brand">
+                    <Megaphone size={18} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-stone-800 dark:text-stone-100">Sugestões e reportes</span>
+                    <span className="block truncate text-xs text-stone-500 dark:text-stone-400">Ideias, erros, dúvidas ou uma mensagem</span>
+                  </span>
+                  <ChevronRight size={14} className="flex-shrink-0 text-stone-300" />
+                </button>
+
+                <div className="flex items-center justify-between gap-3 rounded-xl px-4 py-3">
+                  <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">Tema</span>
+                  <ThemeToggle />
+                </div>
+              </SeccaoMenu>
+            </div>
+          </m.div>
+        </AnimatePresence>
+      </SuperficieModal>
     </>
   );
 }
@@ -277,13 +304,13 @@ function SeccaoMenu({ titulo, children }: { titulo: string; children: React.Reac
   );
 }
 
-function LinhaMenu({ item, ativo, destaque }: { item: NavItem; ativo: boolean; destaque?: boolean }) {
+function LinhaMenu({ item, ativo }: { item: NavItem; ativo: boolean }) {
   const { Icon } = item;
   return (
     <Link
       href={item.href}
-      className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-colors ${
-        ativo ? "bg-brand-light" : destaque ? "bg-stone-50 dark:bg-stone-800/60" : "hover:bg-stone-50 dark:hover:bg-stone-800"
+      className={`focus-marca flex items-center gap-3 rounded-xl px-4 py-3 no-underline transition-colors ${
+        ativo ? "bg-brand-light dark:bg-brand/15" : "hover:bg-stone-50 dark:hover:bg-stone-800"
       }`}
     >
       <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg ${ativo ? "bg-brand text-white" : "bg-brand-light text-brand"}`}>

@@ -5,9 +5,13 @@
   "scripts": {
     "dev": "next dev",
     "postinstall": "node scripts/copy-pdf-worker.mjs",
-    "prebuild": "node scripts/copy-pdf-worker.mjs && node scripts/gen-novidades.mjs",
+    "prebuild": "node scripts/copy-pdf-worker.mjs && node scripts/gen-novidades.mjs && node scripts/gen-busca-indice.mjs",
     "novidades:gen": "node scripts/gen-novidades.mjs",
     "novidades:check": "node scripts/gen-novidades.mjs --check",
+    "busca:indice": "node scripts/gen-busca-indice.mjs",
+    "busca:indice:check": "node scripts/gen-busca-indice.mjs --check",
+    "busca:check": "vitest run src/lib/__tests__/busca-cabecalho.test.ts src/lib/__tests__/busca-fronteira.test.ts && node scripts/gen-busca-indice.mjs --check",
+    "cabecalho:e2e": "node scripts/verificar-cabecalho.mjs",
     "build": "next build",
     "start": "next start",
     "fiscal:check": "node scripts/check-fiscal-data.mjs",
@@ -59,6 +63,7 @@
     "stripe": "^22.2.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@fontsource/dm-sans": "^5.3.0",
     "@fontsource/playfair-display": "^5.3.0",
     "@types/leaflet": "^1.9.21",
@@ -66,6 +71,7 @@
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.20",
+    "playwright": "^1.62.1",
     "postcss": "^8.5.23",
     "tailwindcss": "^3.4.15",
     "typescript": "^5.5.3",
