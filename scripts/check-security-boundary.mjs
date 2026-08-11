@@ -77,6 +77,38 @@ exigir(
   "Proxy deixou de aplicar bloqueio HTTP aos crawlers declarados.",
 );
 
+// Local-first é uma fronteira de privacidade: o quiz corrige no browser, o
+// modo gratuito não exige conta e não pode nascer uma API de sessões/respostas
+// como falsa solução para esconder o banco público.
+const readme = ler("README.md");
+const privacidade = ler("src/app/privacidade/page.tsx");
+const quizLocal = ler("src/hooks/useQuizFiscal.ts");
+exigir(
+  readme.includes("modo local é permanente") &&
+    readme.includes("Não exigem conta"),
+  "README deixou de declarar o modo local permanente e sem conta.",
+);
+exigir(
+  privacidade.includes("não é necessário criar conta") &&
+    privacidade.includes("não são transmitidos para os nossos servidores"),
+  "Política de Privacidade deixou de garantir o modo gratuito local.",
+);
+exigir(
+  quizLocal.includes("carregarBancoQuiz") &&
+    quizLocal.includes("embaralharOpcoes"),
+  "Quiz deixou de selecionar/corrigir localmente.",
+);
+exigir(
+  !ficheiros.some((caminho) =>
+    /^src\/app\/api\/quiz\/sessoes(?:\/|$)/.test(caminho),
+  ),
+  "Não criar API de sessões/respostas: o quiz deve permanecer local-first.",
+);
+exigir(
+  !/fetch\s*\(\s*["'`]\/api\/quiz\/sessoes/.test(quizLocal),
+  "Quiz local passou a enviar sessões/respostas para uma API.",
+);
+
 for (const caminho of ficheiros) {
   const normalizado = caminho.toLowerCase();
 
@@ -160,5 +192,5 @@ if (falhas.length > 0) {
 
 console.log(
   `Fronteira de segurança aprovada: ${ficheiros.length} ficheiros verificados; ` +
-    "licença, TDM, crawlers, source maps, segredos e módulos server-only intactos.",
+    "licença, local-first, TDM, crawlers, source maps, segredos e módulos server-only intactos.",
 );
