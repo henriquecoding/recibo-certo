@@ -26,6 +26,7 @@ const TOC = [
   { id: "armazenamento-local", label: "Plano gratuito: dados locais" },
   { id: "nuvem-pro", label: "Plano Plus: dados na nuvem" },
   { id: "fiz", label: "FIZ: partilha e ligações de afiliado" },
+  { id: "investidores", label: "Contactos de investidores" },
   { id: "pagamentos", label: "Pagamentos (Stripe)" },
   { id: "comunicacoes", label: "Comunicações por email" },
   { id: "cookies", label: "Cookies e tecnologias" },
@@ -313,9 +314,15 @@ export default function PrivacidadePage() {
           ]}
         />
         <Nota tipo="aviso">
-          O plano gratuito não envia dados para a Supabase: os teus dados ficam exclusivamente no teu
-          browser. Os subprocessadores de pagamento e email só tratam dados quando crias conta,
-          subscreves ou ativas alertas/emails.
+          Usar os simuladores e os guias no plano gratuito não envia dados para a Supabase: ficam
+          exclusivamente no teu browser. Há uma exceção, e é preciso dizê-la: se preencheres um
+          formulário de contacto — o de{" "}
+          <a href="#investidores" className="font-medium text-brand hover:underline dark:text-brand-mint">
+            investidores
+          </a>{" "}
+          ou o de sugestões — esses dados são enviados e guardados, mesmo sem conta. Os
+          subprocessadores de pagamento e email só tratam dados quando crias conta, subscreves,
+          ativas alertas ou nos escreves.
         </Nota>
       </Section>
 
@@ -422,6 +429,62 @@ export default function PrivacidadePage() {
         </p>
       </Section>
 
+      {/* Contactos de investidores — o tratamento que faltava declarar.
+          A página /investidores tem um formulário público, sem conta, cujos
+          dados vão para a nossa base de dados. Estava a acontecer sem estar
+          descrito em lado nenhum desta política, e com uma frase no próprio
+          formulário — "nunca partilhamos informação com terceiros" — que não
+          era verdade: pelo menos a base de dados e o serviço de email tratam
+          esses dados por nossa conta. O que é verdade é que não os vendemos. */}
+      <Section id="investidores" title="Contactos de investidores">
+        <p>
+          Se preencheres o formulário em{" "}
+          <a href="/investidores" className="font-medium text-brand hover:underline dark:text-brand-mint">
+            /investidores
+          </a>
+          , tratamos os dados que aí indicas. Este tratamento acontece{" "}
+          <strong className="text-stone-700 dark:text-stone-200">sem conta e sem subscrição</strong>,
+          e por isso é descrito aqui à parte do resto.
+        </p>
+
+        <Tabela
+          colunas={["O que", "Detalhe"]}
+          linhas={[
+            ["Dados recolhidos", "Nome, email profissional, fundo ou empresa, cargo, tipo de interesse e uma mensagem opcional."],
+            ["Recolhidos automaticamente", "Página de origem, parâmetros de campanha (UTM) e um código derivado do teu IP (HMAC com sal diário) — o IP em claro nunca é guardado."],
+            ["Finalidade", "Avaliar o interesse, responder ao contacto e conduzir a conversa de investimento."],
+            ["Base legal", "Diligências pré-contratuais a teu pedido (art. 6.º, n.º 1, al. b) do RGPD) e interesse legítimo em responder a quem nos escreve (al. f))."],
+            ["Conservação", "12 meses a contar do último contacto, salvo relação ativa. Findo o prazo, o registo entra numa fila de eliminação revista por nós."],
+            ["Quem trata por nossa conta", "Supabase (base de dados, UE), Vercel (alojamento e função servidor, UE) e Resend (envio do alerta interno e da confirmação)."],
+            ["Decisões automatizadas", "Nenhuma. Um contacto é lido por uma pessoa."],
+          ]}
+        />
+
+        <Nota tipo="aviso">
+          O código derivado do IP existe para limitar abuso — impedir que um script escreva
+          centenas de contactos. Muda todos os dias por construção, o que o torna inútil para
+          seguir alguém ao longo do tempo, e não é reversível para o IP original.
+        </Nota>
+
+        <p>
+          <strong className="text-stone-700 dark:text-stone-200">Não vendemos estes dados</strong>{" "}
+          nem os usamos para marketing. A caixa que confirmas ao enviar é um reconhecimento de que
+          leste esta nota — não é o consentimento que legitima o tratamento, porque a base legal
+          correta aqui é outra. Guardamos a versão da nota que te foi mostrada e a data, para se
+          poder verificar depois o que foi comunicado no momento da recolha.
+        </p>
+        <p>
+          Para acederes, corrigires ou apagares o teu contacto, escreve para{" "}
+          <a
+            href="mailto:recibocerto.pt@gmail.com"
+            className="font-medium text-brand hover:underline dark:text-brand-mint"
+          >
+            recibocerto.pt@gmail.com
+          </a>
+          . Apagamos sem perguntar porquê.
+        </p>
+      </Section>
+
       {/* 10 — Transferências internacionais */}
       <Section id="transferencias" title="Transferências internacionais de dados">
         <p>
@@ -448,6 +511,7 @@ export default function PrivacidadePage() {
             ["Após eliminação da conta", "Até 30 dias", "Período de recuperação contra eliminação acidental"],
             ["Dados de faturação/subscrição", "Até 10 anos", "Obrigações legais e fiscais (faturação)"],
             ["Email de comunicações opcionais", "Até cancelares a subscrição", "Consentimento"],
+            ["Contactos de investidores", "12 meses após o último contacto", "Diligências pré-contratuais e resposta ao contacto"],
             ["Logs de infraestrutura", "Máximo 30 dias", "Segurança operacional"],
           ]}
         />
