@@ -97,14 +97,18 @@ exigir(
 const readme = ler("README.md");
 const privacidade = ler("src/app/privacidade/page.tsx");
 const quizLocal = ler("src/hooks/useQuizFiscal.ts");
+const textoPlano = (valor) =>
+  valor.replace(/[*_`]/g, "").replace(/\s+/g, " ").toLocaleLowerCase("pt-PT");
+const readmePlano = textoPlano(readme);
+const privacidadePlana = textoPlano(privacidade);
 exigir(
-  readme.includes("modo local é permanente") &&
-    readme.includes("Não exigem conta"),
+  readmePlano.includes("modo local é permanente") &&
+    readmePlano.includes("não exigem conta"),
   "README deixou de declarar o modo local permanente e sem conta.",
 );
 exigir(
-  privacidade.includes("não é necessário criar conta") &&
-    privacidade.includes("não são transmitidos para os nossos servidores"),
+  privacidadePlana.includes("não é necessário criar conta") &&
+    privacidadePlana.includes("não são transmitidos para os nossos servidores"),
   "Política de Privacidade deixou de garantir o modo gratuito local.",
 );
 exigir(
