@@ -1,3 +1,5 @@
+import "server-only";
+
 export const STRIPE_CONFIG = {
   prices: {
     // Único preço vendido hoje (ponto 11 da arquitetura da parceria — ver
