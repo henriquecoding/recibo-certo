@@ -113,6 +113,15 @@ export default function PrivacidadePage() {
               "Marcadores de guias e progresso de funcionalidades guardado localmente",
             ]}
           />
+          <p className="mt-4">
+            Há duas exceções, e são só estas: se aceitares a{" "}
+            <strong className="text-stone-700 dark:text-stone-200">medição de utilização</strong>{" "}
+            (analytics), são enviados eventos sobre o que fazes no site — nunca os valores que
+            introduzes; e se submeteres um{" "}
+            <strong className="text-stone-700 dark:text-stone-200">formulário</strong> (lista de
+            espera, contacto, sugestão), enviamos o que escreveste nesse formulário. Fora isso,
+            nada sai do teu dispositivo no plano gratuito.
+          </p>
         </Sub>
 
         <Sub title="Conta e plano Plus">
@@ -575,7 +584,7 @@ export default function PrivacidadePage() {
             "Comunicações encriptadas via TLS/HTTPS em todo o site",
             "Dados da nuvem encriptados em repouso e isolados por conta com Row-Level Security",
             "Palavras-passe geridas com algoritmos de hash seguros — nunca guardadas em texto simples",
-            "Autenticação multifator disponível para contas",
+            "Chaves de administração isoladas do código que o browser descarrega, por barreira verificada na compilação",
             "Princípio do mínimo privilégio nos acessos de infraestrutura",
             "Auditoria de segurança automática das dependências (CI/GitHub Actions)",
           ]}

@@ -227,7 +227,7 @@ export default function Footer() {
               <div className="mt-6 rounded-xl border border-stone-200/60 bg-white/60 p-4 dark:border-stone-800 dark:bg-stone-900/40">
                 <p className="text-[11px] font-semibold text-stone-700 dark:text-stone-200">Dados oficiais {FISCAL_YEAR}</p>
                 <p className="mt-1 text-[11px] leading-relaxed text-stone-400 dark:text-stone-500">
-                  Tabelas AT, taxas SS e limites do Orçamento de Estado — verificados e atualizados automaticamente.
+                  Tabelas AT, taxas SS e limites do Orçamento de Estado — monitorizados automaticamente e revistos por humanos.
                 </p>
                 <Link
                   href="/#fontes"
