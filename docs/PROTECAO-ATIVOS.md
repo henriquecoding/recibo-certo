@@ -21,9 +21,18 @@ A proteção profissional combina quatro resultados mensuráveis:
 4. autoria, reserva de direitos e cadeia de prova ficam inequívocas para permitir
    reação jurídica e operacional.
 
-Esta branch aplica as medidas que são seguras sem reescrever o produto. A
-migração server-side abaixo é necessária para proteger de verdade o banco do
-quiz e os motores que constituam segredo comercial.
+Esta branch aplica apenas medidas compatíveis com a arquitetura **local-first**
+do produto. Os simuladores, o quiz e as ferramentas gratuitas continuam a
+calcular no browser, sem conta obrigatória e sem transmitir os valores,
+respostas ou resultados introduzidos pelo utilizador.
+
+Há uma escolha de segurança deliberada: código e perguntas necessários para
+execução local têm de chegar ao browser e, por isso, são tecnicamente
+observáveis. O ReciboCerto privilegia a privacidade e o acesso sem conta sobre
+esconder essa lógica num servidor. A proteção desses ativos assenta no
+repositório privado, reserva jurídica, redução de superfícies de extração,
+bloqueio de crawlers e ausência de source maps — nunca na recolha dos dados do
+utilizador.
 
 ## 2. Diagnóstico confirmado
 
@@ -32,9 +41,9 @@ quiz e os motores que constituam segredo comercial.
 | GitHub | Repositório privado | Bom ponto de partida; colaboradores e tokens ainda precisam de mínimo privilégio |
 | Licença | Não existia `LICENSE` | Um terceiro não recebia uma autorização open source, mas a intenção e os limites não estavam inequívocos |
 | Crawlers | GPTBot, ClaudeBot, Google-Extended, Meta, Perplexity e outros estavam explicitamente autorizados | Conteúdo disponível para treino, grounding e indexação de IA |
-| Quiz | O cliente importa o banco completo, incluindo `correta` | O bundle público permite reconstruir perguntas, respostas e explicações |
+| Quiz | O cliente importa o banco completo, incluindo `correta`, para jogar e corrigir localmente | O bundle público permite reconstruir o banco; é o custo assumido de não enviar respostas nem exigir conta |
 | Landing do quiz | Cada categoria publicava 20 respostas certas e explicações em HTML e JSON-LD | Extração em massa sem sequer jogar |
-| Motores fiscais | Diversas fórmulas e tabelas executam no cliente | A lógica enviada ao browser é observável; muitos dados base são, contudo, lei e factos públicos |
+| Motores fiscais | Fórmulas e tabelas executam no cliente por desenho de privacidade | A lógica enviada ao browser é observável, mas os valores pessoais não saem do dispositivo; muitos dados base são lei e factos públicos |
 | Source maps | Não havia declaração explícita | O padrão do Next já não os publica, mas uma regressão futura não era bloqueada |
 | Módulos privilegiados | Vários ficheiros “server” liam segredos sem `server-only` | Um import errado poderia transportar uma fronteira privilegiada para Client Components |
 | Ownership | Não existia CODEOWNERS | Mudanças críticas não tinham proprietário declarado |
@@ -85,8 +94,10 @@ sem uma decisão explícita do titular.
 - `Cross-Origin-Resource-Policy: same-origin`;
 - `X-Permitted-Cross-Domain-Policies: none`;
 - HSTS alargado para dois anos e subdomínios;
-- `server-only` em módulos de Supabase administrativo, Stripe, Lemon Squeezy,
-  Resend, Twilio, cron, documentos, analytics, quiz e integração FIZ;
+- `server-only` apenas nos módulos realmente privilegiados: Supabase
+  administrativo, pagamentos, email/SMS, cron, emissão documental, integrações
+  e operações administrativas do quiz; o jogo e os cálculos locais não foram
+  movidos para o servidor;
 - CI reprova ficheiros de ambiente, chaves privadas, credenciais conhecidas,
   source maps públicos ou retirada das reservas de direitos.
 
@@ -124,108 +135,94 @@ experiência, banco original e implementação. Um concorrente pode implementar
 as mesmas leis de forma independente; não pode copiar a expressão protegida ou
 a compilação do ReciboCerto.
 
-## 5. P0 — retirar o banco do quiz do browser
+## 5. P0 — preservar a arquitetura local-first
 
-### 5.1 Arquitetura alvo
+### 5.1 Invariantes do produto
 
-```mermaid
-flowchart TD
-    A["Cliente pede sessão"] --> B["API autentica e limita"]
-    B --> C["Servidor seleciona perguntas"]
-    C --> D["Resposta sem correta/explicação"]
-    D --> E["Cliente envia opção opaca"]
-    E --> F["Servidor corrige uma resposta"]
-    F --> G["Feedback mínimo + próxima pergunta"]
-    G --> H["Servidor fecha e assina resultado"]
-```
+Estas regras são requisitos de segurança e privacidade, não detalhes de
+implementação:
 
-Contrato recomendado:
+1. calculadoras, simuladores e quiz gratuitos calculam e corrigem no dispositivo;
+2. abrir uma conta não é condição para calcular, jogar, consultar guias ou usar
+   as funções essenciais;
+3. valores fiscais, escolhas, respostas e resultados ficam no browser no modo
+   gratuito/local;
+4. sincronização na nuvem só existe como opção explícita de quem escolhe entrar
+   numa conta e nunca deve degradar o modo local;
+5. telemetria, logs e relatórios automáticos não recebem inputs fiscais,
+   respostas do quiz, documentos ou texto livre;
+6. nenhuma medida de proteção de propriedade intelectual pode criar uma API que
+   passe a receber estes dados sem aprovação expressa do titular e nova análise
+   de privacidade.
 
-1. `POST /api/quiz/sessoes`
-   - recebe categoria, dificuldade e quantidade;
-   - aplica rate limit por utilizador, IP e janela;
-   - seleciona no servidor;
-   - guarda IDs e permutação das opções numa tabela/armazenamento efémero;
-   - devolve `sessaoId`, enunciados e opções com tokens opacos;
-   - nunca devolve `correta`, mapa de índices, explicações antecipadas ou o
-     banco completo.
+A consequência é inevitável: para executar o quiz e os simuladores localmente,
+o browser recebe o código, as tabelas e as perguntas necessárias. Uma pessoa
+com DevTools pode observá-los. Encriptar o bundle com uma chave entregue no
+mesmo bundle, ofuscar agressivamente ou exigir login não resolve esta tensão.
+O projeto aceita essa observabilidade para preservar privacidade, rapidez,
+resiliência e facilidade de acesso.
 
-2. `POST /api/quiz/sessoes/:id/respostas`
-   - aceita uma única pergunta ainda aberta e um token de opção;
-   - usa update condicional/versão para impedir replay e concorrência;
-   - corrige no servidor;
-   - só então devolve correto/errado, explicação daquela pergunta e fonte;
-   - limita tentativas e tamanho do corpo.
+### 5.2 Proteções compatíveis
 
-3. `POST /api/quiz/sessoes/:id/fechar`
-   - fecha uma vez;
-   - calcula pontos, streak e prémios no servidor;
-   - emite resultado assinado e idempotente;
-   - não confia em acertos, tempo, dificuldade ou pontos enviados pelo cliente.
+- manter o repositório e o histórico privados;
+- desativar source maps de produção e fingerprinting desnecessário;
+- minificar e dividir bundles apenas por desempenho, sem chamar isso de
+  confidencialidade;
+- não publicar gabaritos e explicações em massa em HTML, JSON-LD, feeds ou APIs;
+- carregar apenas os recursos necessários a cada experiência quando isso
+  melhorar desempenho, sabendo que os restantes continuam recuperáveis;
+- bloquear crawlers declarados, reservar TDM e limitar extração anormal no CDN
+  sem identificar ou perfilar utilizadores legítimos;
+- manter atribuição, licença proprietária, provas de autoria e processo de
+  incidente;
+- proteger exclusivamente no servidor chaves, operações administrativas,
+  pagamentos, webhooks e integrações que já dependem de backend.
 
-4. expiração curta
-   - sessão expira;
-   - estado é apagado segundo política de retenção;
-   - não transportar o gabarito num JWT apenas assinado: JWT assinado é legível.
-     Usar estado server-side ou envelope AEAD com chave exclusivamente no
-     servidor.
+Não implementar para esconder o modo local:
 
-### 5.2 Refatoração obrigatória
-
-- separar `QuizPerguntaPrivada` de `QuizPerguntaPublica`;
-- marcar o loader do banco com `server-only`;
-- remover do hook cliente:
-  - `carregarBancoQuiz`;
-  - `embaralharOpcoes`;
-  - `correta`;
-  - `indicesOriginais`;
-- eliminar imports dinâmicos de `perguntas-*.ts` no caminho cliente;
-- obter explicação apenas depois da resposta;
-- impedir endpoints de listagem, pesquisa ou exportação do banco;
-- remover respostas completas de HTML, JSON-LD, RSC payloads e caches;
-- proteger previews e deployments antigos que ainda contêm bundles históricos.
+- uma API de sessões/respostas do quiz;
+- cálculo remoto obrigatório de simuladores;
+- login wall;
+- envio silencioso de valores, respostas ou resultados;
+- CAPTCHA ou desafio em cada utilização normal;
+- bloqueio de copiar/colar, seleção, acessibilidade ou DevTools.
 
 ### 5.3 Provas de aceitação
 
-O merge só está pronto quando:
+Antes do merge e em regressões futuras, verificar:
 
-- `rg "perguntas-parte|perguntas-iva|correta" .next/static` não encontra o
-  banco nem um gabarito;
-- uma string-canário de uma pergunta privada não aparece em nenhum JS público;
-- respostas inventadas, repetidas, fora de ordem e concorrentes falham;
-- a mesma sessão não gera prémio duas vezes;
-- o modo normal, guiado, vantagens, acessibilidade e mobile passam os testes;
-- o custo e a latência P95 do novo fluxo são medidos;
-- os Termos e a Política de Privacidade refletem qualquer dado agora enviado ao
-  servidor.
+- uma janela privada, sem conta, consegue usar calculadoras, simuladores e quiz;
+- durante a utilização local normal, o painel Network não mostra pedidos com
+  valores introduzidos, opções escolhidas, respostas ou resultados;
+- o quiz seleciona, corrige, explica e guarda progresso localmente;
+- o modo local continua funcional quando Supabase e fornecedores opcionais
+  estão indisponíveis;
+- criar conta ou sincronizar é uma escolha separada e claramente explicada;
+- limpar os dados do site elimina o estado local;
+- leitores de ecrã, teclado, mobile e reduced motion continuam suportados;
+- as páginas públicas não voltam a expor respostas em massa.
 
-## 6. P0/P1 — motores fiscais
+## 6. Classificação das fronteiras
 
-Classificar antes de migrar:
-
-| Classe | Local recomendado | Motivo |
+| Componente | Fronteira obrigatória | Regra |
 |---|---|---|
-| Taxas e factos oficiais | Público/client quando útil | Não são exclusivos; transparência e verificabilidade geram confiança |
-| Fórmulas triviais previstas na lei | Client ou server conforme privacidade | Escondê-las não cria exclusividade real |
-| Orquestração, inferência, heurísticas e cenários originais | Server-only | Constituem implementação e know-how próprios |
-| Relatórios premium, scoring e recomendações | Server-only + entitlement | Evita distribuição do motor e permite abuso controlado |
-| Chaves, regras administrativas e anti-fraude | Server-only obrigatório | Fronteira de segurança |
+| Calculadoras e simuladores fiscais gratuitos | Browser | Cálculo local; nenhum input pessoal enviado |
+| Seleção, correção e explicação do quiz | Browser | Jogo completo sem conta e sem API de respostas |
+| Recibos, cenários e progresso gratuitos | `localStorage` | Dispositivo por omissão; exportação/eliminação pelo utilizador |
+| Sincronização Plus | Nuvem opcional | Só depois de conta e escolha explícita, com minimização e RLS |
+| Fontes, taxas e bases legais | Estático/público | Transparência e verificabilidade |
+| Pagamentos, webhooks, chaves, administração e integrações | Servidor | `server-only`, autorização, validação e mínimo privilégio |
 
-Para cada motor server-side:
+Qualquer proposta de mudar uma função da primeira metade da tabela para o
+servidor precisa de demonstrar por que não consegue preservar os mesmos
+benefícios localmente, quais dados passariam a ser tratados, a base legal,
+retenção, logs, subprocessadores, modo sem conta e comportamento em falha.
+Sem aprovação expressa, a mudança é reprovada.
 
-- esquema de entrada estrito e limite de bytes;
-- recolha mínima de dados, sem logs de valores fiscais pessoais;
-- autenticação/autorização e entitlements no servidor;
-- rate limit distribuído e resposta idempotente;
-- versão do motor, hash das regras e fontes na resposta;
-- resultados necessários apenas, nunca tabelas internas completas;
-- métricas de abuso sem PII;
-- testes fiscais mantidos no repositório privado;
-- avaliação de impacto RGPD antes de transferir cálculos hoje locais.
-
-A migração integral de todos os simuladores para APIs sem esta avaliação seria
-um retrocesso de privacidade e desempenho. O objetivo é proteger apenas o
-know-how realmente exclusivo.
+A proteção de ativos deve, portanto, distinguir confidencialidade de privacidade:
+segredos operacionais nunca chegam ao browser; já a lógica necessária ao modo
+local chega, permanece proprietária e não ganha autorização de cópia por estar
+tecnicamente acessível.
 
 ## 7. Definições manuais obrigatórias no GitHub
 
@@ -281,7 +278,9 @@ branch:
   Twilio, FIZ ou cifra a previews não confiáveis;
 - acesso da equipa com mínimo privilégio e 2FA;
 - rever integrações e tokens de deploy;
-- configurar WAF/rate limit para rotas de quiz, documentos, pesquisa e APIs;
+- configurar WAF/rate limit nas rotas de escrita, documentos, pesquisa e APIs
+  existentes, sem criar endpoints que recebam respostas do quiz ou inputs dos
+  simuladores gratuitos;
 - validar o User-Agent no origin apenas como sinal, nunca como identidade;
 - manter logs sem inputs fiscais, tokens ou dados pessoais.
 
@@ -292,7 +291,8 @@ branch:
 - `service_role` apenas em código server-only;
 - rodar imediatamente qualquer segredo encontrado em Git, logs ou preview;
 - separar projetos/credenciais de produção e desenvolvimento;
-- TTL e retenção explícitos para sessões de quiz, rate limits e eventos;
+- TTL e retenção explícitos para dados sincronizados opcionalmente, rate
+  limits e eventos;
 - webhooks com assinatura, anti-replay, idempotência e relógio tolerado;
 - backups protegidos e restauração testada.
 
@@ -349,9 +349,13 @@ A proteção só pode ser chamada de concluída quando:
 - repositório, backups e previews têm acesso mínimo e auditado;
 - ruleset e checks impedem merge inseguro;
 - histórico foi analisado e segredos encontrados foram rodados;
-- banco do quiz não aparece em bundles nem respostas em massa;
-- motores exclusivos estão server-side;
-- APIs resistem a scraping, replay e concorrência dentro dos limites definidos;
+- calculadoras, simuladores e quiz continuam completos sem conta;
+- inputs fiscais, respostas e resultados não saem do dispositivo no modo local;
+- respostas do quiz não aparecem em massa em HTML, JSON-LD, feeds ou APIs;
+- a observabilidade do código necessário ao modo local está documentada como
+  um risco aceite, sem criar recolha de dados para a eliminar;
+- APIs privilegiadas resistem a scraping, replay e concorrência dentro dos
+  limites definidos;
 - deployments antigos expostos foram protegidos/removidos;
 - termos foram revistos juridicamente;
 - existem monitorização, evidência e procedimento de incidente;
