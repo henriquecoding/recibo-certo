@@ -10,6 +10,7 @@
 //  URL de retorno.
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
 import { createHash, randomBytes, createHmac } from "node:crypto";
 import { fizServerConfig, redirectUri } from "./config";
 import { FizError, codigoDeStatus } from "./errors";
