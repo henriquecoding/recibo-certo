@@ -356,52 +356,8 @@ describe("F-16 · a página não carrega tudo de uma vez", () => {
     expect(loader).toMatch(/\/novidades\/indice\.json/);
   });
 
-  it("o índice do popup é pequeno e cobre a história toda", () => {
-    // O corte é por PROFUNDIDADE: o índice traz os títulos de TODAS as versões
-    // (para a lista por mês existir inteira à primeira pintura) e só o corpo da
-    // entrada nova. Se um dia alguém puser os corpos todos no índice, isto
-    // falha antes de chegar a produção.
-    const indice = JSON.parse(
-      readFileSync(join(RAIZ, "..", "public", "novidades", "indice.json"), "utf8"),
-    );
-    const corpo = JSON.parse(
-      readFileSync(join(RAIZ, "..", "public", "novidades", "corpo.json"), "utf8"),
-    );
-
-    const noIndice = indice.meses.reduce(
-      (s: number, m: { entradas: unknown[] }) => s + m.entradas.length,
-      0,
-    );
-    expect(noIndice).toBe(indice.totalVersoes);
-    expect(Object.keys(corpo)).toHaveLength(indice.totalVersoes);
-
-    // A entrada mais recente traz o corpo consigo — é a única que abre
-    // expandida, e não pode esperar por um segundo pedido.
-    expect(indice.destaque.length).toBeGreaterThan(0);
-    expect(indice.destaque).toEqual(corpo[indice.appVersion]);
-
-    // Teto generoso, mas que trava a regressão que este trabalho corrigiu.
-    const kb = Buffer.byteLength(JSON.stringify(indice)) / 1024;
-    expect(kb, `indice.json tem ${kb.toFixed(1)} KB`).toBeLessThan(40);
-  });
-
-  it("o popup de Novidades mantém a regra imutável de quando aparece", () => {
-    // CLAUDE.md, regra 10: só na primeira visita de sempre e quando muda a
-    // versão — nunca a cada refresh. A marca de "visto" tem de ser escrita no
-    // instante em que o popup é MOSTRADO, não só ao fechar.
-    const modal = readFileSync(join(RAIZ, "components", "ui", "NovidadesModal.tsx"), "utf8");
-    const decisao = modal.slice(
-      modal.indexOf("const visto = localStorage.getItem"),
-      modal.indexOf("}, []);"),
-    );
-    expect(decisao).toMatch(/visto !== APP_VERSION/);
-    expect(decisao).toMatch(/setAberto\(true\)/);
-    expect(decisao).toMatch(/localStorage\.setItem\(VERSAO_STORAGE_KEY, APP_VERSION\)/);
-    // E o fecho volta a marcar, como rede de segurança.
-    expect(modal.slice(modal.indexOf("function fechar()"))).toMatch(
-      /localStorage\.setItem\(VERSAO_STORAGE_KEY, APP_VERSION\)/,
-    );
-  });
+  // As regras 10 e 11 do popup (quando aparece, e o que carrega ao entrar)
+  // vivem em `novidades-popup.test.ts`, que é só sobre isso.
 });
 
 describe("F-17 · JSON-LD completo na página do simulador", () => {

@@ -1,20 +1,21 @@
 // Carregamento dos dados do popup "Novidades & Atualizações".
 //
-// Os dados NÃO vivem num módulo JavaScript. Vivem em dois ficheiros estáticos
-// gerados por `scripts/gen-novidades.mjs` a partir de `src/lib/changelog.ts`
-// (que continua a ser a fonte de verdade, e o sítio onde se escreve uma
-// entrada nova). A razão está escrita nesse script; em duas linhas:
+// ⚠️ REGRA INEGOCIÁVEL (CLAUDE.md, regra 11) — AO ABRIR, O POPUP SÓ CARREGA O
+// MÊS ATUAL. Os meses anteriores entram como um grupo fechado com o nome do
+// mês, e os dados desse mês só são pedidos quando alguém clica nele.
 //
-//   · o changelog são 186 KB de prosa. Como módulo, era um chunk de 173 KB
-//     que o browser tinha de descarregar, PARSEAR e executar antes de mostrar
-//     uma linha;
-//   · como JSON estático, não passa pelo parser de JS, não entra no grafo de
-//     módulos, é `JSON.parse` puro e fica na CDN com cache própria.
+// A regra vale por CONSTRUÇÃO, não por disciplina: o índice não contém as
+// entradas dos meses anteriores — só o nome e a contagem. Não há como um
+// componente distraído as mostrar à entrada, porque elas não estão lá. Ver
+// `scripts/gen-novidades.mjs`, que é quem talha os ficheiros.
 //
-// E o corte é por PROFUNDIDADE, não por data: o índice (~6 KB comprimido)
-// traz os títulos de todas as 175 versões, já agrupadas por mês, mais o corpo
-// da entrada nova — que é a única que abre expandida. Os corpos das restantes
-// só são buscados se alguém mostrar intenção de abrir uma.
+// Os dados NÃO vivem num módulo JavaScript. Vivem em ficheiros estáticos
+// gerados a partir de `src/lib/changelog.ts` (que continua a ser a fonte de
+// verdade, e o sítio onde se escreve uma entrada nova). A razão está escrita
+// nesse script; em duas linhas: o changelog são 186 KB de prosa, e como módulo
+// era um chunk de 173 KB que o browser tinha de descarregar, PARSEAR e
+// executar antes de mostrar uma linha. Como JSON estático não passa pelo
+// parser de JS, não entra no grafo de módulos e fica na CDN com cache própria.
 
 import { APP_VERSION } from "@/lib/version";
 
@@ -27,12 +28,25 @@ export interface EntradaResumo {
   n: number;
 }
 
-export interface MesNovidades {
-  /** "2026-08" */
+export interface EntradaCompleta extends EntradaResumo {
+  itens: string[];
+}
+
+/** Um mês completo — entradas e corpos. Um ficheiro por mês. */
+export interface MesCompleto {
   chave: string;
-  /** "Agosto de 2026" */
   rotulo: string;
-  entradas: EntradaResumo[];
+  entradas: EntradaCompleta[];
+}
+
+/** O que o popup sabe de um mês anterior antes de alguém lhe tocar. */
+export interface MesFechado {
+  /** "2026-07" */
+  chave: string;
+  /** "Julho de 2026" */
+  rotulo: string;
+  /** Quantas versões tem — para o grupo poder anunciar-se sem ser carregado. */
+  n: number;
 }
 
 export interface IndiceNovidades {
@@ -40,21 +54,19 @@ export interface IndiceNovidades {
   totalVersoes: number;
   /** Marcadores da versão mais recente, para a primeira pintura não esperar. */
   destaque: string[];
-  meses: MesNovidades[];
+  mesAtual: { chave: string; rotulo: string; entradas: EntradaResumo[] } | null;
+  anteriores: MesFechado[];
 }
-
-export type CorpoNovidades = Record<string, string[]>;
 
 // `?v=` com a versão da app: os ficheiros não têm hash no nome, e é isto que
 // garante que uma cache intermédia nunca serve um índice sem a entrada que
 // acabou de fazer o popup aparecer.
-const URL_INDICE = `/novidades/indice.json?v=${APP_VERSION}`;
-const URL_CORPO = `/novidades/corpo.json?v=${APP_VERSION}`;
+const sufixo = `?v=${APP_VERSION}`;
 
 // Memorizadas ao nível do módulo: o painel abre, fecha e reabre sem repetir
-// pedidos, e várias linhas a pedir o corpo ao mesmo tempo partilham um só.
+// pedidos, e várias linhas a pedir o mesmo mês ao mesmo tempo partilham um só.
 let promessaIndice: Promise<IndiceNovidades> | null = null;
-let promessaCorpo: Promise<CorpoNovidades> | null = null;
+const promessasMes = new Map<string, Promise<MesCompleto>>();
 
 async function buscar<T>(url: string): Promise<T> {
   const resposta = await fetch(url);
@@ -65,17 +77,25 @@ async function buscar<T>(url: string): Promise<T> {
 export function carregarIndice(): Promise<IndiceNovidades> {
   // Em caso de falha, esquecer a promessa para que uma nova tentativa (abrir
   // outra vez) não fique presa ao erro da primeira.
-  promessaIndice ??= buscar<IndiceNovidades>(URL_INDICE).catch((e) => {
+  promessaIndice ??= buscar<IndiceNovidades>(`/novidades/indice.json${sufixo}`).catch((e) => {
     promessaIndice = null;
     throw e;
   });
   return promessaIndice;
 }
 
-export function carregarCorpo(): Promise<CorpoNovidades> {
-  promessaCorpo ??= buscar<CorpoNovidades>(URL_CORPO).catch((e) => {
-    promessaCorpo = null;
+/**
+ * Um mês, inteiro, com os corpos. Chamado (a) por intenção de abrir uma
+ * entrada do mês atual e (b) ao clicar no grupo de um mês anterior — nunca à
+ * entrada, e nunca em lote.
+ */
+export function carregarMes(chave: string): Promise<MesCompleto> {
+  const emCurso = promessasMes.get(chave);
+  if (emCurso) return emCurso;
+  const promessa = buscar<MesCompleto>(`/novidades/meses/${chave}.json${sufixo}`).catch((e) => {
+    promessasMes.delete(chave);
     throw e;
   });
-  return promessaCorpo;
+  promessasMes.set(chave, promessa);
+  return promessa;
 }

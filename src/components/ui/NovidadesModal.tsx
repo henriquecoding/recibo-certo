@@ -2,35 +2,34 @@
 
 // Popup "Novidades & Atualizações".
 //
-// ⚠️ REGRA IMUTÁVEL (não alterar sem autorização) — ver CLAUDE.md, regra 10:
-// só pode aparecer (1) na PRIMEIRA visita de sempre e (2) quando surge uma
-// versão NOVA. Nunca a cada refresh. A garantia está no primeiro efeito, e
-// mantém-se palavra por palavra: a versão é marcada como vista NO INSTANTE em
-// que o popup é mostrado, não só ao fechar.
+// ⚠️ REGRA IMUTÁVEL (CLAUDE.md, regra 10) — QUANDO APARECE: só na PRIMEIRA
+// visita de sempre e quando surge uma versão NOVA. Nunca a cada refresh. A
+// garantia está no primeiro efeito, palavra por palavra: a versão é marcada
+// como vista NO INSTANTE em que o popup é mostrado, não só ao fechar.
 //
-// ── O que mudou na apresentação ────────────────────────────────────────────
-// Eram 175 versões numa tira única, todas expandidas: 760 marcadores de uma
-// vez, sem um único ponto de referência entre "hoje" e junho. Agora:
+// ⚠️ REGRA INEGOCIÁVEL (CLAUDE.md, regra 11) — O QUE CARREGA AO ABRIR: só o
+// MÊS ATUAL. Os meses anteriores entram fechados, como um grupo com o nome do
+// mês, e os dados desse mês só são pedidos quando alguém clica nele. A regra
+// vale por construção — o índice não traz sequer os títulos dos meses
+// anteriores, só o nome e a contagem (ver `scripts/gen-novidades.mjs`).
 //
-//   · a versão nova tem cartão próprio no topo, aberto — é o que a pessoa
-//     veio ler, e deixa de ser mais um item de uma lista uniforme;
-//   · a história fica agrupada POR MÊS, com o cabeçalho do mês colado ao topo
-//     enquanto se rola, para nunca se perder o sítio;
-//   · cada versão antiga é uma linha fechada que abre a pedido — o que faz o
-//     painel pintar 175 linhas simples em vez de 760 parágrafos.
-//
-// E os dados deixaram de ser JavaScript: ver `src/lib/novidades.ts`.
+// ── A apresentação ─────────────────────────────────────────────────────────
+// Eram 176 versões numa tira única, todas expandidas: 766 marcadores de uma
+// vez, sem um único ponto de referência entre "hoje" e junho. Agora a versão
+// nova tem cartão próprio no topo, o mês atual é uma lista de linhas que abrem
+// a pedido, e a história anterior está atrás de um grupo por mês.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { m, AnimatePresence } from "motion/react";
 import { Close, Sparkle, ChevronDown } from "@/components/ui/Icons";
 import { APP_VERSION, VERSAO_STORAGE_KEY } from "@/lib/version";
 import {
-  carregarCorpo,
   carregarIndice,
-  type CorpoNovidades,
+  carregarMes,
   type EntradaResumo,
   type IndiceNovidades,
+  type MesCompleto,
+  type MesFechado,
 } from "@/lib/novidades";
 import { useModalA11y } from "@/hooks/useModalA11y";
 
@@ -39,8 +38,12 @@ export default function NovidadesModal() {
   // `null` = ainda a carregar. A DECISÃO de abrir NÃO depende disto: é tomada
   // e persistida no efeito abaixo, com a versão que vem do módulo leve.
   const [indice, setIndice] = useState<IndiceNovidades | null>(null);
-  const [corpo, setCorpo] = useState<CorpoNovidades | null>(null);
-  const [corpoFalhou, setCorpoFalhou] = useState(false);
+  /** Meses já carregados, por chave. Nunca há um pedido repetido. */
+  const [meses, setMeses] = useState<Record<string, MesCompleto>>({});
+  /** Meses cujo carregamento falhou — para o dizer em vez de fingir. */
+  const [falhados, setFalhados] = useState<Record<string, true>>({});
+  /** Meses anteriores que o utilizador abriu. */
+  const [abertos, setAbertos] = useState<Record<string, true>>({});
   const [expandida, setExpandida] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -74,20 +77,22 @@ export default function NovidadesModal() {
     return () => { vivo = false; };
   }, [aberto, indice]);
 
-  // Os corpos das entradas antigas, buscados à PRIMEIRA INTENÇÃO de abrir uma
-  // (rato por cima ou foco de teclado) — o mesmo padrão de `prefetchSimulador`
-  // no seletor de modo. Quando o clique chega, já lá está.
-  const pedirCorpo = useCallback(() => {
-    if (corpo) return;
-    setCorpoFalhou(false);
-    carregarCorpo()
-      .then(setCorpo)
-      // Uma falha aqui não estraga o painel: a entrada nova continua inteira
-      // (vem no índice) e a lista continua navegável. Só o detalhe das antigas
-      // é que fica por vir — e diz-se, em vez de deixar um esqueleto a pulsar
-      // para sempre.
-      .catch(() => setCorpoFalhou(true));
-  }, [corpo]);
+  /**
+   * Pede UM mês. É o único caminho por onde entram dados além do índice, e
+   * nunca corre sozinho: ou porque alguém mostrou intenção de abrir uma
+   * entrada do mês atual (rato por cima, foco de teclado — o mesmo padrão de
+   * `prefetchSimulador`), ou porque clicou no grupo de um mês anterior.
+   */
+  const pedirMes = useCallback((chave: string) => {
+    setMeses((atuais) => {
+      if (!atuais[chave]) {
+        carregarMes(chave)
+          .then((mes) => setMeses((m) => ({ ...m, [chave]: mes })))
+          .catch(() => setFalhados((f) => ({ ...f, [chave]: true })));
+      }
+      return atuais;
+    });
+  }, []);
 
   function fechar() {
     // Redundante (já marcado ao mostrar), mas mantém a garantia se algo falhar.
@@ -102,10 +107,24 @@ export default function NovidadesModal() {
   // Escape + scroll-lock + focus-trap + restauro de foco.
   useModalA11y(aberto, fechar, dialogRef);
 
-  const alternar = (version: string) => {
+  const alternarEntrada = (version: string, chaveMes: string) => {
     setExpandida((atual) => (atual === version ? null : version));
-    pedirCorpo();
+    pedirMes(chaveMes);
   };
+
+  const alternarMes = (chave: string) => {
+    setAbertos((atuais) => {
+      const proximo = { ...atuais };
+      if (proximo[chave]) delete proximo[chave];
+      else proximo[chave] = true;
+      return proximo;
+    });
+    pedirMes(chave);
+  };
+
+  /** Corpo de uma entrada, se o mês dela já cá estiver. */
+  const itensDe = (chaveMes: string, version: string) =>
+    meses[chaveMes]?.entradas.find((e) => e.version === version)?.itens ?? null;
 
   return (
     <AnimatePresence>
@@ -152,8 +171,8 @@ export default function NovidadesModal() {
                       Novidades &amp; Atualizações
                     </h2>
                     <p className="mt-0.5 text-[12px] text-stone-400 dark:text-stone-500">
-                      {indice
-                        ? `${indice.totalVersoes} versões · desde ${primeiroMes(indice)}`
+                      {indice?.mesAtual
+                        ? `${indice.mesAtual.rotulo} · ${indice.totalVersoes} versões no total`
                         : "Fique a par das últimas melhorias no ReciboCerto."}
                     </p>
                   </div>
@@ -176,40 +195,50 @@ export default function NovidadesModal() {
                 ) : (
                   <>
                     <Destaque indice={indice} />
-                    {indice.meses.map((mes) => (
-                      <section key={mes.chave} aria-labelledby={`novidades-mes-${mes.chave}`}>
-                        {/* Cabeçalho do mês, colado ao topo enquanto se rola:
-                            é a âncora que dizia onde se está e não existia.
-                            Fundo OPACO, não translúcido com desfoque: por cima
-                            de uma lista em movimento, o desfoque deixava passar
-                            um fantasma da linha que ia por baixo — e um
-                            `backdrop-filter` a recalcular a cada fotograma é a
-                            última coisa que se quer numa lista que rola. */}
-                        <h3
-                          id={`novidades-mes-${mes.chave}`}
-                          className="sticky top-0 z-10 flex items-baseline justify-between gap-3 border-b border-stone-100 bg-white px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-stone-400 dark:border-stone-800 dark:bg-stone-900 sm:px-6"
-                        >
-                          {mes.rotulo}
-                          <span className="font-semibold normal-case tracking-normal text-stone-300 dark:text-stone-600">
-                            {mes.entradas.length} {mes.entradas.length === 1 ? "versão" : "versões"}
-                          </span>
-                        </h3>
+
+                    {/* ── O mês atual, aberto ────────────────────────────── */}
+                    {indice.mesAtual && (
+                      <section aria-labelledby="novidades-mes-atual">
+                        <CabecalhoMes id="novidades-mes-atual" rotulo={indice.mesAtual.rotulo} n={indice.mesAtual.entradas.length} />
                         <ul className="px-5 py-1 sm:px-6">
-                          {mes.entradas.map((entrada) => (
+                          {indice.mesAtual.entradas.map((entrada) => (
                             <Linha
                               key={entrada.version}
                               entrada={entrada}
                               nova={entrada.version === APP_VERSION}
                               expandida={expandida === entrada.version}
-                              itens={corpo?.[entrada.version] ?? null}
-                              falhou={corpoFalhou}
-                              onAlternar={() => alternar(entrada.version)}
-                              onIntencao={pedirCorpo}
+                              itens={itensDe(indice.mesAtual!.chave, entrada.version)}
+                              falhou={Boolean(falhados[indice.mesAtual!.chave])}
+                              onAlternar={() => alternarEntrada(entrada.version, indice.mesAtual!.chave)}
+                              onIntencao={() => pedirMes(indice.mesAtual!.chave)}
                             />
                           ))}
                         </ul>
                       </section>
-                    ))}
+                    )}
+
+                    {/* ── Os meses anteriores, fechados ──────────────────── */}
+                    {indice.anteriores.length > 0 && (
+                      <div className="px-5 pb-5 pt-3 sm:px-6">
+                        <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.14em] text-stone-400">
+                          Antes disso
+                        </p>
+                        <div className="space-y-2">
+                          {indice.anteriores.map((mes) => (
+                            <GrupoMes
+                              key={mes.chave}
+                              mes={mes}
+                              aberto={Boolean(abertos[mes.chave])}
+                              dados={meses[mes.chave] ?? null}
+                              falhou={Boolean(falhados[mes.chave])}
+                              expandida={expandida}
+                              onAlternarMes={() => alternarMes(mes.chave)}
+                              onAlternarEntrada={(v) => alternarEntrada(v, mes.chave)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -234,11 +263,11 @@ export default function NovidadesModal() {
 
 /* ── A versão nova ─────────────────────────────────────────────────────────
    Cartão próprio, sempre aberto. É o que a pessoa veio ler; ser a primeira
-   linha de uma lista uniforme de 175 tratava-a como se fosse igual às
-   outras. Os marcadores vêm no índice, por isso pinta sem segundo pedido. */
+   linha de uma lista uniforme tratava-a como igual às outras. Os marcadores
+   vêm no índice, por isso pinta sem segundo pedido. */
 
 function Destaque({ indice }: { indice: IndiceNovidades }) {
-  const entrada = indice.meses[0]?.entradas[0];
+  const entrada = indice.mesAtual?.entradas[0];
   if (!entrada) return null;
   return (
     <div className="px-5 pb-5 pt-5 sm:px-6">
@@ -259,7 +288,110 @@ function Destaque({ indice }: { indice: IndiceNovidades }) {
   );
 }
 
-/* ── Uma versão da história ────────────────────────────────────────────── */
+/* ── Cabeçalho de mês, colado ao topo ──────────────────────────────────────
+   Fundo OPACO, não translúcido com desfoque: por cima de uma lista em
+   movimento o desfoque deixava passar um fantasma da linha que ia por baixo,
+   e um `backdrop-filter` a recalcular a cada fotograma é a última coisa que se
+   quer numa lista que rola. */
+
+function CabecalhoMes({ id, rotulo, n }: { id: string; rotulo: string; n: number }) {
+  return (
+    <h3
+      id={id}
+      className="sticky top-0 z-10 flex items-baseline justify-between gap-3 border-b border-stone-100 bg-white px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-stone-400 dark:border-stone-800 dark:bg-stone-900 sm:px-6"
+    >
+      {rotulo}
+      <span className="font-semibold normal-case tracking-normal text-stone-300 dark:text-stone-600">
+        {n} {n === 1 ? "versão" : "versões"}
+      </span>
+    </h3>
+  );
+}
+
+/* ── Um mês anterior ───────────────────────────────────────────────────────
+   Fechado, é uma pastinha: nome do mês e quantas versões tem. Nada deste mês
+   está no browser até alguém clicar aqui — nem os títulos. É a regra 11, e é
+   por isso que este componente recebe `dados: null` e não uma lista já
+   carregada à espera de ser mostrada. */
+
+function GrupoMes({
+  mes,
+  aberto,
+  dados,
+  falhou,
+  expandida,
+  onAlternarMes,
+  onAlternarEntrada,
+}: {
+  mes: MesFechado;
+  aberto: boolean;
+  dados: MesCompleto | null;
+  falhou: boolean;
+  expandida: string | null;
+  onAlternarMes: () => void;
+  onAlternarEntrada: (version: string) => void;
+}) {
+  const idPainel = `novidades-grupo-${mes.chave}`;
+  return (
+    <div className="overflow-hidden rounded-2xl border border-stone-200/80 bg-stone-50/60 dark:border-stone-700/70 dark:bg-stone-800/40">
+      <button
+        type="button"
+        onClick={onAlternarMes}
+        aria-expanded={aberto}
+        aria-controls={idPainel}
+        className="group flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:hover:bg-stone-800/80 dark:focus-visible:ring-offset-stone-900"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13px] font-semibold text-stone-700 transition-colors group-hover:text-brand-dark dark:text-stone-200 dark:group-hover:text-brand">
+            {mes.rotulo}
+          </span>
+          <span className="mt-0.5 block text-[11px] text-stone-400 dark:text-stone-500">
+            {/* "por carregar" e não "toca para carregar": o painel vive no
+                telemóvel e no computador, e o dedo não é a única forma de lá
+                chegar — o teclado também. */}
+            {mes.n} {mes.n === 1 ? "versão" : "versões"}
+            {!aberto && " · por carregar"}
+          </span>
+        </span>
+        <ChevronDown
+          size={15}
+          className={`shrink-0 transition-transform duration-200 ${
+            aberto ? "rotate-180 text-brand" : "text-stone-400 group-hover:text-brand"
+          }`}
+        />
+      </button>
+
+      {aberto && (
+        <div id={idPainel} role="region" aria-label={mes.rotulo} className="border-t border-stone-200/70 bg-white px-3.5 dark:border-stone-700/70 dark:bg-stone-900">
+          {dados ? (
+            <ul>
+              {dados.entradas.map((entrada) => (
+                <Linha
+                  key={entrada.version}
+                  entrada={entrada}
+                  nova={false}
+                  expandida={expandida === entrada.version}
+                  itens={entrada.itens}
+                  falhou={false}
+                  onAlternar={() => onAlternarEntrada(entrada.version)}
+                  onIntencao={() => {}}
+                />
+              ))}
+            </ul>
+          ) : falhou ? (
+            <p className="py-3 text-[12px] leading-relaxed text-stone-400">
+              Não foi possível carregar {mes.rotulo}. Fecha e volta a abrir o grupo para tentar outra vez.
+            </p>
+          ) : (
+            <EsqueletoLinhas n={Math.min(mes.n, 4)} />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Uma versão ────────────────────────────────────────────────────────── */
 
 function Linha({
   entrada,
@@ -323,14 +455,14 @@ function Linha({
       </button>
 
       {/* Só existe no DOM quando aberta. É isto que faz a diferença entre
-          pintar 175 linhas e pintar 760 parágrafos. */}
+          pintar linhas e pintar parágrafos. */}
       {expandida && (
         <div id={idPainel} role="region" aria-label={`Detalhes da versão ${entrada.version}`} className="pb-3 pl-[18px] pr-1">
           {itens ? (
             <Itens itens={itens} />
           ) : falhou ? (
             <p className="text-[12px] leading-relaxed text-stone-400">
-              Não foi possível carregar o detalhe desta versão. Tenta outra vez a partir de outra entrada.
+              Não foi possível carregar o detalhe desta versão.
             </p>
           ) : (
             <EsqueletoItens n={entrada.n} />
@@ -372,6 +504,21 @@ function Esqueleto() {
   );
 }
 
+/** Esqueleto de linhas de versão — enquanto um mês anterior está a chegar. */
+function EsqueletoLinhas({ n }: { n: number }) {
+  return (
+    <div className="space-y-3 py-3" aria-hidden>
+      {Array.from({ length: n }, (_, i) => (
+        <div key={i} className="space-y-1.5">
+          <div className="h-2.5 w-16 animate-pulse rounded bg-stone-100 dark:bg-stone-800" />
+          <div className="h-3 animate-pulse rounded bg-stone-100 dark:bg-stone-800" style={{ width: `${88 - i * 9}%` }} />
+        </div>
+      ))}
+      <p className="sr-only">A carregar as versões deste mês…</p>
+    </div>
+  );
+}
+
 /** Esqueleto com a altura do conteúdo que aí vem — sem salto quando chega. */
 function EsqueletoItens({ n }: { n: number }) {
   return (
@@ -381,10 +528,4 @@ function EsqueletoItens({ n }: { n: number }) {
       ))}
     </div>
   );
-}
-
-/** "Junho de 2026" → "junho de 2026", para caber na frase do cabeçalho. */
-function primeiroMes(indice: IndiceNovidades): string {
-  const rotulo = indice.meses[indice.meses.length - 1]?.rotulo ?? "";
-  return rotulo.charAt(0).toLowerCase() + rotulo.slice(1);
 }
