@@ -108,6 +108,11 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+    // Estas diretivas genéricas limitam snippets também noutros motores que
+    // as respeitem. Mantêm o título e o URL indexáveis.
+    "max-image-preview": "none",
+    "max-video-preview": 0,
+    "max-snippet": 0,
     googleBot: {
       index: true,
       follow: true,
