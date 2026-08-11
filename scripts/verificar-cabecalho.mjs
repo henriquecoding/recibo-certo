@@ -124,13 +124,45 @@ const abrirPainel = async (page) => {
   reg("aponta para /pesquisar sem JavaScript", (await lancador.getAttribute("href")) === "/pesquisar");
   reg("declara aria-controls", !!(await lancador.getAttribute("aria-controls")));
 
-  // Densidade independente do overlay (P1-03).
+  /**
+   * ┌───────────────────────────────────────────────────────────────────┐
+   * │ COM A PESQUISA ABERTA, A NAVEGAÇÃO CONTINUA LÁ                     │
+   * │                                                                   │
+   * │ Isto é o que substitui o «abrir não muda a densidade» que estava   │
+   * │ aqui — e que era a asserção errada. Medir a altura do cabeçalho    │
+   * │ não diz nada a ninguém; o que interessa é se as abas continuam a   │
+   * │ ser vistas e clicadas enquanto se pesquisa. Com o cabeçalho        │
+   * │ compacto elas estão escondidas, e o painel de 44 rem fica por cima │
+   * │ da faixa onde deviam estar — foi assim que uma regressão real      │
+   * │ passou por um portão verde.                                        │
+   * │                                                                   │
+   * │ Testa-se rolado, que é o único estado onde isto pode falhar.       │
+   * └───────────────────────────────────────────────────────────────────┘
+   */
   await page.evaluate(() => window.scrollTo(0, 600));
   await page.waitForTimeout(700);
-  const antes = await page.locator("nav[data-compacto]").evaluate((e) => e.getBoundingClientRect().height);
   await abrirPainel(page);
-  const depois = await page.locator("nav[data-compacto]").evaluate((e) => e.getBoundingClientRect().height);
-  reg("abrir a pesquisa não muda a densidade", Math.abs(antes - depois) < 1, `${antes}px → ${depois}px`);
+
+  const abas = page.locator('nav[data-compacto] a[href="/guias"]').first();
+  reg("com a pesquisa aberta e a página rolada, as abas continuam visíveis", await abas.isVisible());
+
+  const sobreposto = await page.evaluate(() => {
+    const aba = document.querySelector('nav[data-compacto] a[href="/guias"]');
+    const painel = document.querySelector('[data-busca-painel="aberto"]');
+    if (!aba || !painel) return null;
+    const a = aba.getBoundingClientRect();
+    const p = painel.getBoundingClientRect();
+    // Interseção de rectângulos: o painel não pode cobrir a aba.
+    return !(p.right <= a.left || p.left >= a.right || p.bottom <= a.top || p.top >= a.bottom);
+  });
+  reg("e o painel não fica por cima delas", sobreposto === false, String(sobreposto));
+
+  // E continuam a responder ao clique — não é só estarem desenhadas.
+  reg("e continuam clicáveis", await abas.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const topo = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return el.contains(topo) || topo === el;
+  }));
 
   const painel = page.locator('[data-busca-painel="aberto"]');
   reg("o painel NÃO se declara modal", (await painel.getAttribute("aria-modal")) === null);

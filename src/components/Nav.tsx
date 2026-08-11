@@ -48,34 +48,45 @@ export default function Nav() {
 
   /**
    * ┌─────────────────────────────────────────────────────────────────────┐
-   * │ A DENSIDADE É DO SCROLL. ABRIR A PESQUISA NÃO LHE TOCA (P1-03)       │
+   * │ ABRIR A PESQUISA REEXPANDE O CABEÇALHO — E ISSO É DE PROPÓSITO       │
    * │                                                                     │
-   * │ Era `rolado && !buscaAberta`: com a página rolada, clicar na barra   │
-   * │ voltava a expandir o cabeçalho de 72 px para 136 px. O documento não │
-   * │ sofria salto — o espaçador trata disso — mas a superfície fixa       │
-   * │ crescia 64 px e tapava mais conteúdo exactamente no momento em que a │
-   * │ pessoa estava a decidir o que procurar.                              │
+   * │ Houve uma tentativa de tornar a densidade independente do overlay    │
+   * │ (P1-03 da auditoria: «abrir busca não muda density»). Em abstracto   │
+   * │ faz sentido; neste cabeçalho estava errado, e o erro foi meu.        │
    * │                                                                     │
-   * │ Densidade e overlay são duas perguntas diferentes e passam a ter     │
-   * │ duas respostas. O que continua a ser verdade é o INVERSO: rolar com  │
-   * │ o painel aberto não pode mudar a densidade, porque o painel está     │
-   * │ ancorado ao invólucro da barra e ele muda de linha da grelha. Por    │
-   * │ isso o observador ignora as mudanças enquanto a pesquisa está        │
-   * │ aberta: a densidade fica onde estava, sem NUNCA depender do acto de  │
-   * │ abrir. É a invariante do §9.7: «abrir busca não muda `density`».     │
+   * │ A razão é que a navegação VIVE na linha que desaparece ao compactar  │
+   * │ (`group-data-[compacto=true]:hidden`). Com o cabeçalho compacto e o  │
+   * │ painel aberto, o resultado era: as abas Simular/Guias/Quiz/Planos    │
+   * │ sumiam, e o painel — que tem 44 rem, muito mais largo do que a barra │
+   * │ encolhida — ficava por cima da faixa onde elas deviam estar. Quem    │
+   * │ abria a pesquisa perdia a navegação do site enquanto pesquisava.     │
+   * │                                                                     │
+   * │ Congelar a densidade só é neutro num cabeçalho onde a navegação não  │
+   * │ depende dela. Aqui depende. Portanto: abrir a pesquisa devolve o     │
+   * │ cabeçalho ao estado alto, as abas voltam, e o painel abre na segunda │
+   * │ linha — POR BAIXO delas, não em cima.                                │
+   * │                                                                     │
+   * │ O efeito secundário que a auditoria temia (a superfície fixa crescer │
+   * │ 64 px no momento da intenção) é real e é o preço menor: 64 px de     │
+   * │ conteúdo tapado contra a navegação inteira inacessível.              │
    * └─────────────────────────────────────────────────────────────────────┘
    */
-  const compacto = rolado;
+  const compacto = rolado && !buscaAberta;
+
+  /**
+   * O FUNDO não segue a densidade — segue o scroll, e só ele.
+   *
+   * São duas decisões diferentes e já estiveram presas à mesma variável: a
+   * ALTURA tem de ficar quieta enquanto o painel está aberto, mas o fundo
+   * depende apenas de haver conteúdo a passar por baixo. Com a pesquisa
+   * aberta e a página rolada há — e o cabeçalho tem de ficar opaco na
+   * mesma, senão o texto da página lê-se através dele, por trás do painel.
+   */
   const opaco = rolado;
 
   const [avatarUrl, setAvatarUrl] = useState("");
   const pathname = usePathname();
   const sentinela = useRef<HTMLDivElement>(null);
-
-  const buscaAbertaRef = useRef(buscaAberta);
-  useEffect(() => {
-    buscaAbertaRef.current = buscaAberta;
-  }, [buscaAberta]);
 
   useEffect(() => {
     if (!user) {
@@ -109,16 +120,9 @@ export default function Nav() {
   useEffect(() => {
     const alvo = sentinela.current;
     if (!alvo) return;
-    const observador = new IntersectionObserver(
-      ([entrada]) => {
-        // Ver o quadro sobre densidade: com o painel aberto, a geometria fica
-        // congelada onde está — senão o painel saltaria de linha por baixo de
-        // quem está a ler.
-        if (buscaAbertaRef.current) return;
-        setRolado(!entrada?.isIntersecting);
-      },
-      { threshold: 0 },
-    );
+    const observador = new IntersectionObserver(([entrada]) => setRolado(!entrada?.isIntersecting), {
+      threshold: 0,
+    });
     observador.observe(alvo);
     return () => observador.disconnect();
   }, []);

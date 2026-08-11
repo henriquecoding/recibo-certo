@@ -19,6 +19,16 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.33.1",
+    data: "2026-08-11",
+    titulo: "As abas do cabeçalho voltam quando abres a pesquisa",
+    itens: [
+      "Com a página rolada, o cabeçalho encolhe e as abas — Simular, Guias, Quiz, Planos — recolhem com ele. Abrir a pesquisa costumava trazê-las de volta; na versão anterior deixou de trazer, e o painel ficava por cima da faixa onde elas deviam estar. Quem abria a pesquisa perdia a navegação do site enquanto pesquisava.",
+      "Volta ao que era: abrir a pesquisa devolve o cabeçalho ao estado alto, as abas reaparecem, e o painel abre por baixo delas — nunca em cima.",
+      "A verificação automática do cabeçalho passou a medir o que interessa. Antes confirmava que a altura não mudava, um número que não diz nada a ninguém; agora confirma que as abas continuam visíveis, que o painel não as cobre e que continuam a responder ao clique.",
+    ],
+  },
+  {
     version: "2.33.0",
     data: "2026-08-11",
     titulo: "A pesquisa passou a saber o que o site tem — os 167 guias, e não 14",
