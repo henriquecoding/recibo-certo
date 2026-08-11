@@ -1,5 +1,10 @@
 # ReciboCerto
 
+> [!IMPORTANT]
+> Software proprietário e confidencial. Este repositório não concede licença
+> para copiar, reutilizar, treinar modelos de IA, criar obras derivadas ou
+> redistribuir o código e os conteúdos. Consulta `LICENSE` e `SECURITY.md`.
+
 Calculadora de recibos verdes para trabalhadores independentes em Portugal — IRS
 (retenção na fonte), Segurança Social e IVA, com as **taxas de 2026 verificadas e
 com fonte**. Landing page + calculadora interativa, pronta para deploy na Vercel.
