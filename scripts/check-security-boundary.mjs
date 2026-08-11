@@ -57,6 +57,29 @@ exigir(
   "O header tdm-reservation: 1 está em falta.",
 );
 
+// Proteger conteúdo não pode tornar o site invisível: a homepage deve continuar
+// indexável e elegível para snippets/previews completos nos motores tradicionais.
+const layout = ler("src/app/layout.tsx");
+exigir(
+  /robots:\s*\{[\s\S]{0,300}index:\s*true[\s\S]{0,120}follow:\s*true/.test(layout),
+  "Metadata global deixou de permitir indexação e seguimento.",
+);
+exigir(
+  layout.includes('"max-image-preview": "large"') &&
+    layout.includes('"max-video-preview": -1') &&
+    layout.includes('"max-snippet": -1') &&
+    !layout.includes('"max-image-preview": "none"') &&
+    !layout.includes('"max-snippet": 0'),
+  "SEO global deve permitir snippets e previews completos; proteção de IA pertence à política de crawlers/TDM.",
+);
+
+const vercel = JSON.parse(ler("vercel.json") || "{}");
+exigir(
+  vercel?.git?.deploymentEnabled?.["agent/**"] === false &&
+    vercel?.git?.deploymentEnabled?.["dependabot/**"] === false,
+  "Previews Vercel de branches agent/** e dependabot/** devem permanecer desativados.",
+);
+
 const tdm = JSON.parse(ler("public/.well-known/tdmrep.json") || "[]");
 exigir(
   Array.isArray(tdm) &&
