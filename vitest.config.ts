@@ -9,8 +9,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // `server-only` é uma fronteira interpretada pelo Next. Nos testes
-      // unitários, aponta para um módulo vazio sem alterar o build de produção.
+      // `server-only` é um marcador do Next: importá-lo faz o BUILD falhar se
+      // um componente de cliente puxar o módulo. Essa garantia vive no build,
+      // que é onde interessa — mas o pacote não resolve fora dele, e sem este
+      // atalho nenhum módulo `.server.ts` protegido podia ser testado.
       "server-only": path.resolve(__dirname, "./tests/server-only-stub.ts"),
     },
   },

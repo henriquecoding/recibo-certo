@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { enviarEmail } from "@/lib/email/send";
 import { emailSubscricaoAtivada, emailSubscricaoCancelada } from "@/lib/email/templates";
 import type Stripe from "stripe";
+import { precoConcedePlus } from "@/lib/stripe/precos-autorizados";
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -58,6 +59,20 @@ async function atualizarSubscricao(
       ? new Date(subscription.canceled_at * 1000).toISOString()
       : null,
   };
+
+  // ⚠️ RC-BILL-002 — alerta acionável para preço não autorizado.
+  //
+  // A subscrição é guardada na mesma, porque o registo tem de ser verdadeiro:
+  // ela existe do lado da Stripe e alguém pode estar a ser cobrado. O que NÃO
+  // acontece é conceder Plus — isso é decidido por `concedePlus`, que exige o
+  // preço na allowlist. Este erro é o que transforma "silenciosamente não
+  // funciona" em "alguém tem de olhar para isto".
+  if (!precoConcedePlus(dados.price_id)) {
+    console.error(
+      "[stripe/webhook] Subscrição com preço NÃO autorizado — registada, mas sem conceder Plus.",
+      { subscription: subscription.id, price_id: dados.price_id, status: subscription.status },
+    );
+  }
 
   // O erro TEM de ser lido. Sem isto, uma escrita rejeitada devolvia 200 à
   // Stripe, que nunca voltava a tentar — e um cliente que pagou ficava sem

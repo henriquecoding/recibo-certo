@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 import { useAuth } from "@/lib/supabase/auth";
 import { supabaseConfigurado } from "@/lib/supabase/config";
 import { planoTem, type Entitlement, type Plano } from "@/lib/entitlements";
+import { concedePlus } from "@/lib/stripe/precos-autorizados";
 
 // Cliente Supabase sob procura — mantém o SDK fora do bundle inicial (ver auth.tsx).
 async function sb() {
@@ -54,7 +55,7 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
     sb().then((cliente) => {
       if (!ativo) return;
       cliente.from("subscriptions")
-        .select("status, intervalo")
+        .select("status, intervalo, price_id")
         .eq("user_id", user.id)
         .in("status", ["active", "trialing", "past_due"])
         .order("criado_em", { ascending: false })
@@ -62,8 +63,22 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
         .then(({ data }) => {
           if (!ativo) return;
           if (data && data.length > 0) {
-            setStatus(data[0].status as StatusSubscricao);
-            setIntervalo(data[0].intervalo as "monthly" | "annual");
+            // ⚠️ RC-BILL-002 — o preço decide, não só o estado.
+            //
+            // Antes bastava existir uma subscrição `active`/`trialing`/
+            // `past_due` para o Plus ser concedido: qualquer preço servia,
+            // incluindo um de teste, um antigo de outro produto ou um criado
+            // à mão no painel. `concedePlus` exige as duas coisas.
+            const linha = data[0] as { status: string; intervalo: string; price_id: string | null };
+            if (!concedePlus({ status: linha.status, priceId: linha.price_id })) {
+              console.warn("[stripe] Subscrição com preço não autorizado — Plus não concedido.");
+              setStatus(null);
+              setIntervalo(null);
+              setCarregado(true);
+              return;
+            }
+            setStatus(linha.status as StatusSubscricao);
+            setIntervalo(linha.intervalo as "monthly" | "annual");
           } else {
             setStatus(null);
             setIntervalo(null);

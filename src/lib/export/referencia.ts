@@ -17,6 +17,7 @@
 
 import { APP_VERSION } from "@/lib/version";
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
+import { ORIGEM_CANONICA } from "@/lib/origem";
 
 /**
  * Alfabeto sem I, O, 0 e 1 — os quatro carateres que as pessoas trocam ao ler
@@ -117,9 +118,17 @@ export interface Proveniencia {
   verificacao: string;
 }
 
-/** Base pública do site, para o URL de verificação. */
-export const BASE_PUBLICA =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") || "https://recibocerto.pt";
+/**
+ * Base pública do site, para o URL de verificação impresso nos documentos.
+ *
+ * RC-CFG-001: é a origem CANÓNICA, e não `appUrl()`. Um PDF sobrevive ao
+ * ambiente que o produziu — quem o receber daqui a um ano tem de poder
+ * escrever o endereço e chegar ao site. Um URL de pré-visualização, ou um
+ * `localhost`, tornaria o documento inverificável no momento em que mais
+ * conta. (Antes lia uma `NEXT_PUBLIC_SITE_URL` que ninguém definia em lado
+ * nenhum, com o apex como recurso — ou seja, sempre o apex.)
+ */
+export const BASE_PUBLICA = ORIGEM_CANONICA;
 
 export async function criarProveniencia(
   tipo: TipoDocumento,

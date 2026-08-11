@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { NextResponse } from "next/server";
+import { dentroDoTeto, inicioDoDiaEm } from "@/lib/quiz-fiscal/concorrencia";
 import {
   DIFICULDADES_DE_DESAFIO,
   LIMITE_BILHETES_DIA,
@@ -49,23 +50,6 @@ export async function POST(req: Request) {
     );
   }
 
-  // Teto diário. Não substitui a energia — é a rede de segurança contra um
-  // script que peça bilhetes em série.
-  const inicioDoDia = new Date();
-  inicioDoDia.setHours(0, 0, 0, 0);
-  const { count, error: errConta } = await sb
-    .from("quiz_sessoes")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .gte("criado_em", inicioDoDia.toISOString());
-  if (errConta) return NextResponse.json({ erro: errConta.message }, { status: 500 });
-  if ((count ?? 0) >= LIMITE_BILHETES_DIA) {
-    return NextResponse.json(
-      { erro: "Já abriste muitas sessões de desafio hoje. Volta amanhã." },
-      { status: 429 },
-    );
-  }
-
   const perguntaIds = await escolherPerguntasDoBilhete(dificuldade);
   if (perguntaIds.length === 0) {
     return NextResponse.json(
@@ -74,12 +58,43 @@ export async function POST(req: Request) {
     );
   }
 
+  // ── Teto diário: inserir e depois ver a posição na fila ───────────────
+  // RC-QUIZ-001: contava-se ANTES de inserir. Dois pedidos simultâneos liam
+  // ambos `limite - 1`, ambos concluíam que cabiam, e ambos inseriam — e com
+  // vinte em paralelo passavam os vinte. Agora insere-se primeiro e conta-se
+  // quantos bilhetes desta pessoa vieram ANTES do meu: isso dá uma ordem
+  // estável, que não depende de quando cada pedido leu. Quem fica acima do
+  // teto retira o próprio bilhete.
+  //
+  // Não é uma transação — a correção definitiva é um contador atómico, na
+  // Onda 1 — mas transforma um excesso ilimitado num excesso impossível,
+  // salvo empate ao microssegundo no `criado_em`.
+  const inicioDoDia = inicioDoDiaEm();
+
   const { data: bilhete, error } = await sb
     .from("quiz_sessoes")
     .insert({ user_id: userId, dificuldade, pergunta_ids: perguntaIds })
-    .select("id")
+    .select("id, criado_em")
     .single();
   if (error) return NextResponse.json({ erro: error.message }, { status: 500 });
+
+  const { count, error: errConta } = await sb
+    .from("quiz_sessoes")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .gte("criado_em", inicioDoDia)
+    .lt("criado_em", bilhete.criado_em);
+  if (errConta) return NextResponse.json({ erro: errConta.message }, { status: 500 });
+
+  if (!dentroDoTeto(count ?? 0, LIMITE_BILHETES_DIA)) {
+    // O bilhete não chegou a ser usado: retirá-lo devolve a vaga e evita que
+    // um pedido recusado conte para o teto de amanhã.
+    await sb.from("quiz_sessoes").delete().eq("id", bilhete.id).is("submetido_em", null);
+    return NextResponse.json(
+      { erro: "Já abriste muitas sessões de desafio hoje. Volta amanhã." },
+      { status: 429 },
+    );
+  }
 
   return NextResponse.json({ sessaoId: bilhete.id, perguntaIds });
 }
