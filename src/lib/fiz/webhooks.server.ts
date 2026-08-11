@@ -8,6 +8,7 @@
 //    · resposta rápida — o processamento pesado fica para depois.
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { fizServerConfig } from "./config";
 import { WEBHOOK_HEADERS, WEBHOOK_EVENT_TYPES, type WebhookEvent, type WebhookEventType } from "./contracts";

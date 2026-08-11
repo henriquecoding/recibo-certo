@@ -26,12 +26,16 @@ const TIPOS: { id: TipoFeedback; label: string; desc: string; Icon: typeof Light
   { id: "mensagem", label: "Mensagem", desc: "Elogio ou outro", Icon: Heart },
 ];
 
+import { useOverlay } from "@/components/overlays/CoordenadorOverlays";
+
 const MAX = 4000;
 
 export default function FeedbackModal() {
   const { user } = useAuth();
   const pathname = usePathname();
-  const [aberto, setAberto] = useState(false);
+  const [querAbrir, setAberto] = useState(false);
+  // A vaga do coordenador: nunca dois `aria-modal` ao mesmo tempo.
+  const aberto = useOverlay("feedback", querAbrir, { modal: true, iniciadoPeloUtilizador: true });
   const [tipo, setTipo] = useState<TipoFeedback>("sugestao");
   const [mensagem, setMensagem] = useState("");
   const [email, setEmail] = useState("");

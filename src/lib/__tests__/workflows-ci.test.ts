@@ -48,13 +48,20 @@ describe("RC-SEC-002 · actions fixadas por SHA", () => {
     expect(moveis, `fixar por SHA completo:\n${moveis.join("\n")}`).toEqual([]);
   });
 
-  it("cada SHA traz ao lado a versão que representa, para ser legível", () => {
+  it("cada SHA diz, em comentário, que versão representa", () => {
+    // Um SHA sozinho é ilegível: ninguém sabe se está atrasado sem o ir
+    // procurar. A versão pode vir no fim da linha ou no comentário logo
+    // acima — as duas leem-se igualmente bem.
     const semComentario: string[] = [];
     for (const f of ficheiros) {
-      for (const linha of ler(f).split("\n")) {
-        if (!/uses:\s*\S+@[0-9a-f]{40}/.test(linha)) continue;
-        if (!/#\s*v?\d/.test(linha)) semComentario.push(`${f}: ${linha.trim()}`);
-      }
+      const linhas = ler(f).split("\n");
+      linhas.forEach((linha, i) => {
+        if (!/uses:\s*\S+@[0-9a-f]{40}/.test(linha)) return;
+        const acima = linhas.slice(Math.max(0, i - 3), i).join("\n");
+        if (!/#\s*v?\d/.test(linha) && !/v\d+(\.\d+)*/.test(acima)) {
+          semComentario.push(`${f}: ${linha.trim()}`);
+        }
+      });
     }
     expect(semComentario).toEqual([]);
   });
@@ -90,7 +97,9 @@ describe("RC-CI-005 · runs obsoletos são cancelados", () => {
     for (const f of ficheiros) {
       const fonte = ler(f);
       expect(fonte, `${f} sem concurrency`).toMatch(/^concurrency:/m);
-      expect(fonte, `${f} sem group`).toMatch(/group:\s*\$\{\{/);
+      // O grupo pode ter um prefixo próprio; o que não pode faltar é o `ref`,
+      // que é o que separa um PR de outro.
+      expect(fonte, `${f} sem group por ref`).toMatch(/group:.*github\.ref/);
     }
   });
 

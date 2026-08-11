@@ -19,7 +19,7 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
-    version: "2.32.0",
+    version: "2.34.0",
     data: "2026-08-11",
     titulo: "Portas que fecham sozinhas, e frases que voltaram a ser verdade",
     itens: [
@@ -34,6 +34,52 @@ export const CHANGELOG: EntradaChangelog[] = [
       "E a aplicação dizia-se na versão 2.31 enquanto o ficheiro de projeto dizia 0.1. Havia duas versões, o que é o mesmo que não haver nenhuma. Agora a compilação recusa avançar se voltarem a divergir.",
       "No Quiz, dois desafios terminados exatamente ao mesmo tempo no último passo de um ciclo davam dois cupões em vez de um: ambos liam o progresso antes de qualquer um o gravar. Agora só a primeira gravação conta o prémio, e a segunda percebe que chegou tarde.",
       "Ainda no Quiz: um envio com dados corrompidos queimava a sessão antes sequer de ser verificado — perdia-se um desafio por um erro de rede. Passa a ser verificado primeiro. E o teto diário de desafios reiniciava à meia-noite do servidor, que no verão é uma hora antes da meia-noite em Portugal.",
+    ],
+  },
+  {
+    version: "2.33.1",
+    data: "2026-08-11",
+    titulo: "Protegido sem desaparecer dos motores de pesquisa",
+    itens: [
+      "O Google e o Bing voltam a poder mostrar o ReciboCerto com excertos completos, imagens grandes e vídeos nos resultados. As páginas públicas continuam com indexação e seguimento permitidos: proteger o conteúdo não significa esconder o site.",
+      "A proteção contra treino, prospeção de textos e dados, bases derivadas e scraping declarado mantém-se: robots, bloqueio HTTP, TDMRep, termos proprietários, source maps desativados e fronteiras de servidor continuam ativos.",
+      "Os simuladores e o Quiz Fiscal continuam gratuitos, sem conta obrigatória e a funcionar no dispositivo. Nenhum valor fiscal, resposta ou resultado foi movido para uma API para tentar esconder o código.",
+      "As atualizações automáticas de dependências continuam disponíveis, mas as branches de agentes e do Dependabot deixam de criar previews na Vercel. Só uma integração validada na main pode originar o deploy final.",
+      "O CI passa a reprovar duas regressões: limitar novamente os snippets/previews dos motores convencionais ou reativar deployments automáticos nas branches que devem apenas executar testes.",
+    ],
+  },
+  {
+    version: "2.33.0",
+    data: "2026-08-11",
+    titulo: "A pesquisa passou a saber o que o site tem — os 167 guias, e não 14",
+    itens: [
+      "A barra do topo procurava numa lista à parte, escrita à mão, com 14 guias. O site tem 167. Mais de nove em cada dez guias publicados simplesmente não existiam para quem os procurasse — e nada dava erro, só devolvia menos. Agora a pesquisa é construída a partir do mesmo catálogo que gera as páginas: 305 destinos entre simuladores, guias, o Quiz, os planos e as 123 atividades do Art. 151.º. Registar um guia novo passa a chegar à pesquisa sozinho, e há uma verificação que trava a integração se algum dia voltarem a divergir.",
+      "Escrever «doações» devolvia «Retenção na fonte» e «Fatura, recibo e fatura-recibo». Não eram maus resultados: eram inventados — bastava que as letras aparecessem pela mesma ordem algures no texto, e em português quase tudo é subsequência de quase tudo. Essa regra desapareceu. Ficam frase exata, início de palavra, palavra inteira, sinónimos e o perdão de UMA gralha em palavras com cinco letras ou mais.",
+      "Os resultados passaram a ser ligações a sério. Voltam a funcionar o «abrir em novo separador», o menu do botão direito, o copiar endereço e a pré-visualização do link — seis coisas que o browser dá de graça e que se perdiam por serem botões.",
+      "O Enter deixou de abrir «o primeiro resultado» sem dizer qual era. Passa a levar a /pesquisar, uma página com endereço próprio que se partilha, se guarda nos favoritos e funciona sem JavaScript — e que é também a rede de segurança quando a pesquisa do topo não carrega.",
+      "Abrir a pesquisa em «Atividades» sem escrever nada criava 120 resultados e 130 paragens de tabulação dentro do painel. Agora nada é listado antes de haver pergunta: o painel abre com três tarefas, as pesquisas recentes e mais nada.",
+      "Na primeira visita, «Novidades» aparecia por cima das preferências de cookies com o foco preso no diálogo de baixo — via-se uma superfície e o teclado estava noutra. Passa a haver uma regra única para todo o site: nunca mais do que uma janela modal ao mesmo tempo. O consentimento vem primeiro; este painel espera pela vez, e só se dá por visto quando é mesmo mostrado.",
+      "As perguntas «onde estou?» e «o que preciso de resolver?» deixaram de partilhar os mesmos botões. «Quiz» e «Planos» pareciam mudar o que a barra procurava e não mudavam nada. A navegação é agora navegação — e acende em todas as páginas de ferramenta, que antes não acendiam nenhuma —, e a pesquisa filtra por Simular, Compreender ou Cumprir.",
+      "No telemóvel, a barra de baixo tem cinco lugares com nome escrito: Início, Pesquisar, Guias, Quiz e Conta. Eram cinco ícones sem uma palavra, e o último mudava de destino conforme houvesse sessão. Cada lugar significa agora sempre a mesma coisa. Em tablet a barra deixou de ir de extremo a extremo: fica centrada e ao alcance do polegar.",
+      "As pesquisas recentes deixaram de ser guardadas para sempre. Expiram em 30 dias, há um botão para as apagar, e o que se parecer com NIF, IBAN, email ou um número comprido nunca chega a ser guardado.",
+      "Com a página rolada, clicar na barra fazia o cabeçalho voltar a crescer 64 px e tapar mais conteúdo — exatamente no momento de decidir o que procurar. Deixou de o fazer.",
+      "O catálogo fiscal e as fichas dos guias saíram do carregamento inicial das páginas públicas: a pesquisa é pedida quando passas o rato pela barra, lhe tocas ou lhe dás foco — e não antes.",
+      "O contorno de foco do teclado deixou de ser uma moldura preta e passou a ser a cor da marca, legível nos dois temas. O atalho mostra ⌘K no Mac e Ctrl K no resto. E as ligações internas (#calculadora) deixam de aterrar por baixo do cabeçalho.",
+    ],
+  },
+  {
+    version: "2.32.0",
+    data: "2026-08-11",
+    titulo: "O conteúdo e os segredos passaram a ter fronteiras mais fortes",
+    itens: [
+      "O projeto passa a declarar de forma inequívoca que o código, os textos, as perguntas, os cálculos, o design e os restantes ativos são proprietários: não há autorização implícita para copiar, reutilizar, redistribuir ou treinar sistemas com eles.",
+      "Os rastreadores conhecidos de treino, pesquisa e recolha por inteligência artificial passam a ser recusados tanto nas instruções públicas como à entrada do servidor. A lista fica centralizada para que uma alteração não deixe regras contraditórias espalhadas pelo site.",
+      "Fica expressamente reservada a prospeção de textos e dados, incluindo por um sinal TDM legível por máquinas, e os termos explicam a proibição de scraping, treino, embeddings, bases de conhecimento e reprodução automatizada.",
+      "As páginas passam a recusar incorporação noutros sites, a limitar pré-visualizações e excertos, a ocultar a identificação do framework e a impedir a publicação de source maps do browser em produção.",
+      "Os módulos que lidam com credenciais, pagamentos, documentos, integrações, notificações e administração foram marcados como exclusivos do servidor. Se algum deles for importado por engano para código do browser, a compilação deixa de aceitar esse caminho.",
+      "O quiz público deixou de entregar no HTML estruturado as respostas certas e as explicações, e a página de amostra mostra apenas uma seleção pequena de enunciados. O jogo continua deliberadamente no dispositivo, sem conta obrigatória e sem enviar respostas ou resultados: proteger o conteúdo não pode custar a privacidade de quem o usa.",
+      "Uma verificação nova corre em cada proposta de alteração e trava regressões: procura segredos, ficheiros de ambiente, source maps, módulos sensíveis expostos e a remoção acidental das reservas e bloqueios.",
+      "Estas barreiras reduzem recolha automática e tornam o uso indevido contratualmente explícito e demonstrável. Não fingimos, porém, que um conteúdo visível num browser pode ser tecnicamente impossível de guardar: o que precisa de sigilo absoluto não pode ser enviado ao dispositivo.",
     ],
   },
   {

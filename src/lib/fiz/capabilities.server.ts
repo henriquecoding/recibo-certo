@@ -9,6 +9,7 @@
 //  curtas — o Guia nunca fica preso à espera da FIZ.
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
 import { pedirFiz } from "./client.server";
 import { PARTNER_SCOPES, type CapabilityCatalog, type Capability, type CapabilityAvailability } from "./contracts";
 import { FizError } from "./errors";

@@ -6,13 +6,17 @@ import { Close, ArrowRight, User, Google, Linkedin, Check } from "@/components/u
 import { useAuth } from "@/lib/supabase/auth";
 import { validarPassword } from "@/lib/validacao-password";
 import { useModalA11y } from "@/hooks/useModalA11y";
+import { useOverlay } from "@/components/overlays/CoordenadorOverlays";
 
 export default function AuthModal() {
   const {
-    modalAberto, modoModal, fecharModal,
+    modalAberto: querAbrir, modoModal, fecharModal,
     entrar, registar, entrarComGoogle, entrarComLinkedin,
     disponivel,
   } = useAuth();
+
+  // A vaga do coordenador: nunca dois `aria-modal` ao mesmo tempo.
+  const modalAberto = useOverlay("auth", querAbrir, { modal: true, iniciadoPeloUtilizador: true });
 
   const [modo, setModo] = useState<"entrar" | "criar">(modoModal);
   const [email, setEmail] = useState("");

@@ -3,19 +3,29 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "motion/react";
-import { CONSULTA_MOVEL, anunciarEstadoBusca, useAtalhoBusca, useMotorBusca } from "./motor";
-import { AbasCategorias, CampoBusca, ChipsFiltro, CorpoResultados } from "./partes";
+import { SuperficieModal } from "@/components/overlays/SuperficieModal";
+import { useOverlay } from "@/components/overlays/CoordenadorOverlays";
+import { TETO_DIALOGO } from "@/lib/busca/pontuar";
+import {
+  CONSULTA_MOVEL,
+  anunciarEstadoBusca,
+  focarPrimeiroResultado,
+  haLancadorDeSecretaria,
+  useAtalhoBusca,
+  useVoltarAoCampo,
+} from "./motor";
+import { ChipsIntencao, CorpoResultados, EstadoAcessivel, FormularioBusca } from "./partes";
+import { useControladorBusca } from "./useControladorBusca";
 
-// O botão de pesquisa vive em `./BuscaTrigger` (ficheiro leve) para não arrastar
-// este overlay nem o índice de pesquisa para o bundle inicial de quem só mostra
-// o botão. Reexportado aqui por retrocompatibilidade.
+// O botão de pesquisa vive em `./BuscaTrigger` (ficheiro leve) para não
+// arrastar este diálogo nem o índice para o bundle de quem só mostra o botão.
 export { BuscaTrigger } from "./BuscaTrigger";
 
 /**
- * A pesquisa no TELEMÓVEL — uma folha modal, e é a decisão certa.
+ * A pesquisa no TELEMÓVEL — um diálogo modal, e é a decisão certa.
  *
  * ┌─────────────────────────────────────────────────────────────────────────┐
- * │ PORQUE AQUI CONTINUA A SER UM MODAL, E NO COMPUTADOR DEIXOU DE SER       │
+ * │ PORQUE AQUI É MODAL E NO COMPUTADOR NÃO                                  │
  * │                                                                         │
  * │ Em 360 px não há «ao lado»: um painel ancorado a uma barra ocuparia o    │
  * │ ecrã todo na mesma, mas sem o dizer, e o teclado virtual — que come      │
@@ -23,79 +33,66 @@ export { BuscaTrigger } from "./BuscaTrigger";
  * │                                                                         │
  * │ Por isso o campo vive em BAIXO, na zona do polegar e imediatamente       │
  * │ acima do teclado, e os resultados crescem para CIMA. A ordem visual é    │
- * │ invertida com `order-*`; o conteúdo é exactamente o mesmo do painel de   │
- * │ secretária, vindo dos mesmos componentes.                                │
+ * │ invertida com `order-*`; o conteúdo vem dos mesmos componentes do        │
+ * │ painel de secretária.                                                    │
  * │                                                                         │
- * │ Só uma das duas superfícies responde ao `⌘K` e ao evento global — ver o  │
- * │ quadro em `motor.ts`. Sem esse acordo, um portátil com janela estreita   │
- * │ abriria as duas ao mesmo tempo, com dois campos a disputar o foco.       │
+ * │ Sendo modal a sério, o contrato é completo — foco inicial, prisão do     │
+ * │ Tab, fundo `inert`, scroll bloqueado e devolução do foco — e vem todo    │
+ * │ de `SuperficieModal`, que o escreve UMA vez para todos os diálogos.      │
  * └─────────────────────────────────────────────────────────────────────────┘
  */
 export default function BuscaOverlay() {
   const pathname = usePathname();
-  const [aberto, setAberto] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [querAbrir, setQuerAbrir] = useState(false);
 
-  /**
-   * Fechar devolve o foco à barra fixa — a mesma regra do painel de
-   * secretária, e pela mesma razão: sem isto, Escape deixa o foco no `<body>`
-   * e a tabulação recomeça no topo do documento. Ver o quadro em
-   * `DockPesquisa.tsx`.
-   *
-   * Aqui a folha é modal e cobre tudo, portanto não há o caso «cliquei noutro
-   * sítio e já disse para onde ia»: fechar é sempre voltar de onde se veio.
-   */
-  // Avisa a barra fixa para se tornar inerte enquanto a folha está por cima
-  // dela — declarado ANTES do efeito de foco, para que a libertação do `inert`
-  // seja despachada primeiro.
+  // A vaga do coordenador: nunca há dois `aria-modal` ao mesmo tempo.
+  const aberto = useOverlay("busca", querAbrir, { modal: true, iniciadoPeloUtilizador: true });
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const lista = useRef<HTMLDivElement>(null);
+
+  const fechar = useCallback(() => setQuerAbrir(false), []);
+  const abrir = useCallback(() => setQuerAbrir(true), []);
+
+  // Avisa a barra fixa para se tornar inerte enquanto o diálogo está por cima
+  // dela. (O `inert` por irmãos de `SuperficieModal` já a cobre; este evento
+  // continua a servir a opacidade da própria barra, que é visual.)
   useEffect(() => {
     anunciarEstadoBusca(aberto);
   }, [aberto]);
 
-  const devolverFoco = useRef(false);
+  // Ver o quadro em `motor.ts`: em ecrã largo o lançador ancorado é que
+  // abre — a não ser que não exista nenhum (é o caso do painel, que tem
+  // barra lateral própria), e aí é este diálogo que responde.
+  useAtalhoBusca({
+    ativaQuando: CONSULTA_MOVEL,
+    tambemQuando: () => !haLancadorDeSecretaria(),
+    aberto,
+    abrir,
+    fechar,
+  });
 
-  const fechar = useCallback(() => {
-    devolverFoco.current = true;
-    setAberto(false);
-  }, []);
-  const abrir = useCallback(() => setAberto(true), []);
+  useEffect(() => {
+    setQuerAbrir(false);
+  }, [pathname]);
 
   /**
-   * ┌─────────────────────────────────────────────────────────────────────────┐
-   * │ DEVOLVER O FOCO É ESPERAR QUE A FOLHA SAIA — E ISSO TEM UMA API          │
-   * │                                                                         │
-   * │ Duas coisas disputam este instante e ambas demoram o que quiserem: a     │
-   * │ barra por baixo está `inert` (e um elemento inerte recusa foco em        │
-   * │ silêncio), e a folha continua MONTADA durante a animação de saída, com o │
-   * │ campo dela ainda a segurar o foco.                                       │
-   * │                                                                         │
-   * │ Medido: a folha só desaparece aos ~375 ms. Um `requestAnimationFrame`    │
-   * │ dispara aos ~16 ms — cedo de mais para as duas coisas, e o `focus()`     │
-   * │ não fazia nada. Um `setTimeout` afinado ao número medido seria pior:     │
-   * │ passaria a depender da duração de uma animação que alguém pode afinar.   │
-   * │                                                                         │
-   * │ `onExitComplete` é a própria biblioteca a dizer «já saiu». Não há número │
-   * │ para acertar, e mudar a animação não parte isto.                          │
-   * └─────────────────────────────────────────────────────────────────────────┘
+   * Redimensionar para secretária fecha — mas só quando há para onde ir.
+   *
+   * O contrato de interação diz «fecha com foco seguro ou migra uma única
+   * vez, sem dois campos». Fechar aqui é a metade simples; a outra metade é
+   * não fechar no painel, onde este diálogo É a única superfície que existe
+   * e fechá-lo deixaria a pessoa sem pesquisa nenhuma.
    */
-  const devolverFocoAgora = useCallback(() => {
-    if (!devolverFoco.current) return;
-    devolverFoco.current = false;
-    document.querySelector<HTMLElement>('[data-busca-gatilho="movel"]')?.focus();
-  }, []);
-
-  useAtalhoBusca({ ativaQuando: CONSULTA_MOVEL, aberto, abrir, fechar });
-
-  const motor = useMotorBusca({ aoFechar: fechar });
-  const { reiniciar } = motor;
-
   useEffect(() => {
-    if (aberto) reiniciar();
-  }, [aberto, reiniciar]);
-
-  useEffect(() => {
-    setAberto(false);
-  }, [pathname]);
+    if (!aberto) return;
+    const mq = window.matchMedia(CONSULTA_MOVEL);
+    const aoMudar = () => {
+      if (!mq.matches && haLancadorDeSecretaria()) setQuerAbrir(false);
+    };
+    mq.addEventListener("change", aoMudar);
+    return () => mq.removeEventListener("change", aoMudar);
+  }, [aberto]);
 
   /**
    * O teclado virtual muda a altura útil, e a folha tem de o acompanhar.
@@ -128,77 +125,121 @@ export default function BuscaOverlay() {
     };
   }, [aberto]);
 
-  useEffect(() => {
-    if (!aberto) return;
-    const anterior = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const t = setTimeout(() => inputRef.current?.focus(), 60);
-    return () => {
-      document.body.style.overflow = anterior;
-      clearTimeout(t);
-    };
-  }, [aberto]);
+  return (
+    <SuperficieModal
+      aberto={aberto}
+      aoFechar={fechar}
+      rotulo="Pesquisa"
+      focoInicial={() => inputRef.current}
+      // O gatilho é a barra fixa do chrome inferior. Se ela já não existir
+      // (mudou de rota, mudou de largura), `SuperficieModal` cai no elemento
+      // que tinha o foco antes — nunca no `<body>`.
+      focoDeRegresso={() => document.querySelector<HTMLElement>('[data-busca-gatilho="movel"]')}
+      // Sem `lg:hidden`: em ecrã largo isto SÓ monta quando não há
+      // lançador ancorado, e escondê-lo por CSS deixaria o painel com um
+      // diálogo aberto e invisível a prender o foco.
+      className="fixed inset-0 z-[120]"
+    >
+      <Conteudo
+        fechar={fechar}
+        inputRef={inputRef}
+        lista={lista}
+        tecladoInset={tecladoInset}
+        alturaVisivel={alturaVisivel}
+      />
+    </SuperficieModal>
+  );
+}
+
+/**
+ * O conteúdo vive num componente próprio porque monta com o diálogo.
+ *
+ * O controlador tem estado por abertura (consulta, intenção, recentes lidos
+ * no momento, medição de abandono) e é isso que o faz nascer limpo de cada
+ * vez, sem um `reiniciar()` que alguém se esqueça de chamar.
+ */
+function Conteudo({
+  fechar,
+  inputRef,
+  lista,
+  tecladoInset,
+  alturaVisivel,
+}: {
+  fechar: () => void;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  lista: React.RefObject<HTMLDivElement | null>;
+  tecladoInset: number;
+  alturaVisivel: number;
+}) {
+  const controlador = useControladorBusca({ teto: TETO_DIALOGO });
+
+  // O mesmo contrato de teclado das duas superfícies — ver `motor.ts`.
+  useVoltarAoCampo(lista, inputRef);
 
   return (
-    <AnimatePresence onExitComplete={devolverFocoAgora}>
-      {aberto && (
-        <div className="fixed inset-0 z-[120] lg:hidden" role="dialog" aria-modal="true" aria-label="Pesquisa">
-          <m.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            className="absolute inset-0 bg-stone-900/45 backdrop-blur-md"
-            onClick={fechar}
+    <AnimatePresence>
+      <m.div
+        key="folha"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
+        className="absolute inset-0 bg-stone-900/45 backdrop-blur-md"
+        onClick={fechar}
+        aria-hidden
+      />
+
+      <div
+        key="caixa"
+        className="pointer-events-none absolute inset-0 flex items-end justify-center sm:items-start sm:p-4 sm:pt-[6vh]"
+      >
+        <m.div
+          initial={{ y: 28, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 24, opacity: 0 }}
+          transition={{ type: "spring", damping: 32, stiffness: 340 }}
+          style={{
+            marginBottom: tecladoInset,
+            maxHeight: alturaVisivel ? alturaVisivel - 12 : undefined,
+            transition: "margin-bottom 0.22s cubic-bezier(0.16,1,0.3,1)",
+          }}
+          data-busca-painel="movel"
+          className="pointer-events-auto flex max-h-[100dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border border-stone-200/80 bg-white shadow-float ring-1 ring-black/5 dark:border-stone-800 dark:bg-stone-900 dark:ring-white/5 sm:max-h-[82dvh] sm:rounded-2xl"
+        >
+          {/* Campo — em baixo no telemóvel (zona do polegar, acima do
+              teclado); em cima a partir de `sm`. */}
+          <div className="order-3 shrink-0 border-stone-100 dark:border-stone-800 sm:order-1 sm:border-b">
+            <FormularioBusca
+              controlador={controlador}
+              inputRef={inputRef}
+              id="rc-busca-movel"
+              aoFechar={fechar}
+              aoDescer={() => focarPrimeiroResultado(lista.current)}
+            />
+          </div>
+
+          <div className="order-2 shrink-0 sm:order-2">
+            <ChipsIntencao controlador={controlador} inputRef={inputRef} />
+          </div>
+
+          {/* `min-h-0` é o que permite ao filho rolar dentro de um flex
+              column: sem isso o conteúdo empurra a caixa e a folha cresce
+              para lá do ecrã. */}
+          <div className="order-1 min-h-0 flex-1 overflow-y-auto overscroll-contain sm:order-3">
+            <CorpoResultados controlador={controlador} aoFechar={fechar} listaRef={lista} />
+          </div>
+
+          {/* Área segura — recolhe quando o teclado está aberto, senão
+              ficaria uma faixa vazia entre o campo e o teclado. */}
+          <div
             aria-hidden
+            className="order-4 shrink-0 sm:hidden"
+            style={{ height: tecladoInset > 0 ? 0 : "env(safe-area-inset-bottom)" }}
           />
 
-          <div className="pointer-events-none absolute inset-0 flex items-end justify-center sm:items-start sm:p-4 sm:pt-[6vh]">
-            <m.div
-              initial={{ y: 28, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 24, opacity: 0 }}
-              transition={{ type: "spring", damping: 32, stiffness: 340 }}
-              style={{
-                marginBottom: tecladoInset,
-                maxHeight: alturaVisivel ? alturaVisivel - 12 : undefined,
-                transition: "margin-bottom 0.22s cubic-bezier(0.16,1,0.3,1)",
-              }}
-              data-busca-painel="movel"
-              className="pointer-events-auto flex max-h-[100dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border border-stone-200/80 bg-white shadow-float ring-1 ring-black/5 dark:border-stone-800 dark:bg-stone-900 dark:ring-white/5 sm:max-h-[82dvh] sm:rounded-2xl"
-            >
-              {/* Campo — em baixo no telemóvel (zona do polegar, acima do
-                  teclado); em cima a partir de `sm`. */}
-              <div className="order-4 shrink-0 border-stone-100 dark:border-stone-800 sm:order-1 sm:border-b">
-                <CampoBusca motor={motor} inputRef={inputRef} id="rc-busca-movel" aoFechar={fechar} />
-              </div>
-
-              <div className="order-3 shrink-0 border-b border-stone-100 dark:border-stone-800 sm:order-2">
-                <AbasCategorias motor={motor} inputRef={inputRef} />
-              </div>
-
-              <div className="order-2 shrink-0 sm:order-3">
-                <ChipsFiltro motor={motor} inputRef={inputRef} />
-              </div>
-
-              {/* `min-h-0` é o que permite ao filho rolar dentro de um flex
-                  column: sem isso o conteúdo empurra a caixa e a folha cresce
-                  para lá do ecrã. */}
-              <div className="order-1 min-h-0 flex-1 overflow-y-auto overscroll-contain sm:order-4">
-                <CorpoResultados motor={motor} colunas={6} />
-              </div>
-
-              {/* Área segura — recolhe quando o teclado está aberto, senão
-                  ficaria uma faixa vazia entre o campo e o teclado. */}
-              <div
-                aria-hidden
-                className="order-5 shrink-0 sm:hidden"
-                style={{ height: tecladoInset > 0 ? 0 : "env(safe-area-inset-bottom)" }}
-              />
-            </m.div>
-          </div>
-        </div>
-      )}
+          <EstadoAcessivel id="rc-busca-movel-estado" mensagem={controlador.mensagemEstado} />
+        </m.div>
+      </div>
     </AnimatePresence>
   );
 }

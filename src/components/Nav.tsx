@@ -2,16 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { m } from "motion/react";
-import { DockPesquisa } from "@/components/busca/DockPesquisa";
-import { Logo, ArrowRight, User, Megaphone } from "@/components/ui/Icons";
-import ThemeToggle from "@/components/ui/ThemeToggle";
+import { LancadorBusca } from "@/components/busca/LancadorBusca";
+import { MenuConta } from "@/components/header/MenuConta";
+import { Logo, ArrowRight } from "@/components/ui/Icons";
 import { useAuth } from "@/lib/supabase/auth";
-import { NAV_AMBITOS, ambitoAtivo } from "@/components/nav-config";
+import { NAV_PRINCIPAL, navAtivo } from "@/components/nav-config";
+import { medirNavegacao } from "@/lib/busca/medicao";
 import { useBuscaAberta } from "@/components/busca/motor";
-import { abrirFeedback } from "@/components/feedback/abrir";
 
 /**
  * O cabeçalho de secretária — duas linhas no topo, uma ao rolar.
@@ -22,12 +21,12 @@ import { abrirFeedback } from "@/components/feedback/abrir";
  * │ Estava espremida entre os links e os botões, com 200 px e um rótulo      │
  * │ «Pesquisar…» — do tamanho de um detalhe, num produto onde encontrar a    │
  * │ ferramenta certa É a tarefa. Agora tem uma linha só para si, com largura │
- * │ a sério, e os âmbitos por cima dizem o que ela vai procurar.             │
+ * │ a sério, e a navegação por cima diz onde se está.                        │
  * │                                                                         │
- * │ A partir dos primeiros 40 px de scroll a atenção é do conteúdo: os       │
- * │ âmbitos recolhem, a barra encolhe para junto da marca e o cabeçalho fica │
- * │ numa linha. Continua no mesmo eixo e à mesma distância do topo do ecrã.  │
- * │ Muda de tamanho; nunca muda de sítio.                                    │
+ * │ A partir dos primeiros 40 px de scroll a atenção é do conteúdo: a        │
+ * │ navegação recolhe, a barra encolhe para junto da marca e o cabeçalho     │
+ * │ fica numa linha. Continua no mesmo eixo e à mesma distância do topo do   │
+ * │ ecrã. Muda de tamanho; nunca muda de sítio.                              │
  * └─────────────────────────────────────────────────────────────────────────┘
  *
  * ┌─────────────────────────────────────────────────────────────────────────┐
@@ -36,53 +35,47 @@ import { abrirFeedback } from "@/components/feedback/abrir";
  * │ Um cabeçalho que encolhe E ocupa espaço no fluxo é uma realimentação,    │
  * │ não um efeito: encolher tira altura ao documento, o documento fica mais  │
  * │ curto, o browser reajusta a posição de scroll, o reajuste atravessa o    │
- * │ limiar ao contrário, e ele volta a crescer. O resultado é o cabeçalho a  │
- * │ piscar e o texto a saltar debaixo do cursor.                             │
+ * │ limiar ao contrário, e ele volta a crescer.                              │
  * │                                                                         │
  * │ Fora do fluxo — `fixed`, com um espaçador que reserva SEMPRE a altura    │
- * │ máxima — o problema deixa de poder existir. No topo o cabeçalho          │
- * │ preenche o espaçador exactamente; quando encolhe é o conteúdo que passa  │
- * │ por baixo, como em qualquer cabeçalho fixo. Nenhum pixel se mexe.        │
+ * │ máxima — o problema deixa de poder existir.                              │
  * └─────────────────────────────────────────────────────────────────────────┘
  */
 export default function Nav() {
-  const { abrirModal, disponivel, user } = useAuth();
+  const { disponivel, user } = useAuth();
   const [rolado, setRolado] = useState(false);
   const buscaAberta = useBuscaAberta();
 
   /**
-   * Enquanto a pesquisa está aberta o cabeçalho não encolhe.
-   *
-   * O painel está ancorado ao invólucro da barra, e encolher move o invólucro
-   * de linha — o painel iria com ele, para cima da marca. Congelar é grátis
-   * aqui: o cabeçalho é `fixed` com espaçador de altura constante, portanto a
-   * sua altura não participa no fluxo do documento.
+   * ┌─────────────────────────────────────────────────────────────────────┐
+   * │ A DENSIDADE É DO SCROLL. ABRIR A PESQUISA NÃO LHE TOCA (P1-03)       │
+   * │                                                                     │
+   * │ Era `rolado && !buscaAberta`: com a página rolada, clicar na barra   │
+   * │ voltava a expandir o cabeçalho de 72 px para 136 px. O documento não │
+   * │ sofria salto — o espaçador trata disso — mas a superfície fixa       │
+   * │ crescia 64 px e tapava mais conteúdo exactamente no momento em que a │
+   * │ pessoa estava a decidir o que procurar.                              │
+   * │                                                                     │
+   * │ Densidade e overlay são duas perguntas diferentes e passam a ter     │
+   * │ duas respostas. O que continua a ser verdade é o INVERSO: rolar com  │
+   * │ o painel aberto não pode mudar a densidade, porque o painel está     │
+   * │ ancorado ao invólucro da barra e ele muda de linha da grelha. Por    │
+   * │ isso o observador ignora as mudanças enquanto a pesquisa está        │
+   * │ aberta: a densidade fica onde estava, sem NUNCA depender do acto de  │
+   * │ abrir. É a invariante do §9.7: «abrir busca não muda `density`».     │
+   * └─────────────────────────────────────────────────────────────────────┘
    */
-  const compacto = rolado && !buscaAberta;
-
-  /**
-   * ┌─────────────────────────────────────────────────────────────────────────┐
-   * │ A GEOMETRIA CONGELA COM A PESQUISA ABERTA; A SUPERFÍCIE NÃO              │
-   * │                                                                         │
-   * │ São duas decisões diferentes e estavam presas à mesma variável:          │
-   * │                                                                         │
-   * │  · a ALTURA (duas linhas ou uma) tem de ficar quieta enquanto o painel   │
-   * │    está aberto, senão ele muda de linha por baixo de quem está a ler;    │
-   * │  · o FUNDO depende só de haver conteúdo a passar por baixo. E com a      │
-   * │    pesquisa aberta e a página rolada há — portanto o cabeçalho tem de    │
-   * │    ficar opaco na mesma.                                                 │
-   * │                                                                         │
-   * │ Enquanto foram a mesma variável, esse caso ficava com o fundo a 70% e o  │
-   * │ texto da página a ler-se através do cabeçalho, por trás do painel.       │
-   * │                                                                         │
-   * │ O desfoque acompanha a translucidez, e por isso continua a existir só no │
-   * │ topo — onde nada passa por baixo e recompor a faixa não custa nada.      │
-   * └─────────────────────────────────────────────────────────────────────────┘
-   */
+  const compacto = rolado;
   const opaco = rolado;
+
   const [avatarUrl, setAvatarUrl] = useState("");
   const pathname = usePathname();
   const sentinela = useRef<HTMLDivElement>(null);
+
+  const buscaAbertaRef = useRef(buscaAberta);
+  useEffect(() => {
+    buscaAbertaRef.current = buscaAberta;
+  }, [buscaAberta]);
 
   useEffect(() => {
     if (!user) {
@@ -111,23 +104,27 @@ export default function Nav() {
    * │ ou três vezes por sessão. A sentinela é um elemento de 40 px no topo do  │
    * │ documento: o `IntersectionObserver` avisa quando ele sai do ecrã, e o    │
    * │ limiar passa a ser geometria em vez de aritmética repetida a 60 Hz.      │
-   * │                                                                         │
-   * │ O limiar VIVE na altura da sentinela. Mudá-lo é mudar um número no       │
-   * │ `className` — não há segunda cópia dele em JavaScript para divergir.     │
    * └─────────────────────────────────────────────────────────────────────────┘
    */
   useEffect(() => {
     const alvo = sentinela.current;
     if (!alvo) return;
-    const observador = new IntersectionObserver(([entrada]) => setRolado(!entrada?.isIntersecting), {
-      threshold: 0,
-    });
+    const observador = new IntersectionObserver(
+      ([entrada]) => {
+        // Ver o quadro sobre densidade: com o painel aberto, a geometria fica
+        // congelada onde está — senão o painel saltaria de linha por baixo de
+        // quem está a ler.
+        if (buscaAbertaRef.current) return;
+        setRolado(!entrada?.isIntersecting);
+      },
+      { threshold: 0 },
+    );
     observador.observe(alvo);
     return () => observador.disconnect();
   }, []);
 
   // Um só item aceso, decidido de uma vez — ver o quadro em `nav-config.tsx`.
-  const aceso = ambitoAtivo(pathname);
+  const aceso = navAtivo(pathname);
 
   return (
     <>
@@ -161,71 +158,54 @@ export default function Nav() {
          * ┌───────────────────────────────────────────────────────────────────┐
          * │ UMA GRELHA DE DUAS LINHAS, E A BARRA MUDA DE CÉLULA                │
          * │                                                                   │
-         * │ Linha 1: marca · âmbitos · ações. Linha 2: a barra, a atravessar   │
-         * │ as três colunas. Quando o cabeçalho encolhe, a linha 2 fica vazia  │
-         * │ (`1fr` do que sobra de zero é zero) e a barra passa para a coluna  │
-         * │ do meio da linha 1, no lugar dos âmbitos.                          │
+         * │ Linha 1: marca · navegação · acções. Linha 2: a barra, a           │
+         * │ atravessar as três colunas. Quando o cabeçalho encolhe, a linha 2  │
+         * │ fica vazia e a barra passa para a coluna do meio da linha 1.       │
          * │                                                                   │
          * │ A CONSEQUÊNCIA QUE ISTO EXISTE PARA GARANTIR: nos dois estados a   │
-         * │ barra fica centrada no MESMO eixo. Expandida centra-se nas três    │
-         * │ colunas juntas; encolhida centra-se na do meio — e como as         │
-         * │ laterais têm o mesmo mínimo, o centro da coluna do meio é o centro │
-         * │ do cabeçalho. A barra muda de largura e de linha; nunca desliza    │
-         * │ para o lado.                                                       │
-         * │                                                                   │
-         * │ Os mínimos laterais são iguais por isso mesmo, e não por os dois   │
-         * │ lados precisarem do mesmo: o direito precisa de ~15 rem (feedback, │
-         * │ tema e Dashboard numa linha), o esquerdo precisa de menos. É o     │
-         * │ CENTRO que cede quando o ecrã aperta, em vez de espremer os        │
-         * │ vizinhos até partirem em duas linhas.                              │
+         * │ barra fica centrada no MESMO eixo. A barra muda de largura e de    │
+         * │ linha; nunca desliza para o lado.                                  │
          * └───────────────────────────────────────────────────────────────────┘
          */}
-        <div className="mx-auto grid h-full max-w-5xl grid-cols-[minmax(18.5rem,1fr)_minmax(0,26rem)_minmax(18.5rem,1fr)] grid-rows-[var(--rc-header-linha)_1fr] items-center gap-x-4 px-6 xl:max-w-6xl xl:grid-cols-[minmax(22rem,1fr)_minmax(0,26rem)_minmax(22rem,1fr)]">
+        <div className="mx-auto grid h-full max-w-5xl grid-cols-[minmax(14rem,1fr)_minmax(0,26rem)_minmax(14rem,1fr)] grid-rows-[var(--rc-header-linha)_1fr] items-center gap-x-4 px-6 xl:max-w-6xl xl:grid-cols-[minmax(16rem,1fr)_minmax(0,26rem)_minmax(16rem,1fr)]">
           <Link
             href="/"
             aria-label="ReciboCerto — início"
-            className="col-start-1 row-start-1 flex-shrink-0 justify-self-start rounded-xl"
+            className="focus-marca col-start-1 row-start-1 flex-shrink-0 justify-self-start rounded-xl"
           >
             <Logo />
           </Link>
 
           {/* Recolhe ao rolar — ver o quadro em `nav-config.tsx`. */}
-          <nav
-            aria-label="Âmbitos"
-            className="col-start-2 row-start-1 justify-self-center group-data-[compacto=true]:hidden"
-          >
-            <ul className="flex items-center gap-0.5">
-              {NAV_AMBITOS.map((item) => {
-                const ativo = aceso?.href === item.href;
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      // `page` e não `true`: o item aceso É a página onde se
-                      // está, e é isso que um leitor de ecrã tem de anunciar.
-                      aria-current={ativo ? "page" : undefined}
-                      className={`relative flex min-h-[40px] items-center whitespace-nowrap rounded-xl px-3 text-sm font-medium no-underline transition-colors ${
-                        ativo
-                          ? "text-stone-900 dark:text-stone-100"
-                          : "text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200"
-                      }`}
-                    >
-                      {item.label}
-                      {/* O traço marca a ROTA; o rato marca com fundo. Dois
-                          sinais de natureza diferente para não haver dois
-                          itens a parecerem activos ao mesmo tempo. */}
-                      {ativo && (
-                        <span
-                          aria-hidden
-                          className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-brand"
-                        />
-                      )}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
+          <ul className="col-start-2 row-start-1 flex items-center gap-0.5 justify-self-center group-data-[compacto=true]:hidden">
+            {NAV_PRINCIPAL.map((item) => {
+              const ativo = aceso?.href === item.href;
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    // `page` e não `true`: o item aceso É a página onde se
+                    // está, e é isso que um leitor de ecrã tem de anunciar.
+                    aria-current={ativo ? "page" : undefined}
+                    onClick={() => medirNavegacao(item.href, "secretaria")}
+                    className={`focus-marca relative flex min-h-[40px] items-center whitespace-nowrap rounded-xl px-3 text-sm font-medium no-underline transition-colors ${
+                      ativo
+                        ? "text-stone-900 dark:text-stone-100"
+                        : "text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200"
+                    }`}
+                  >
+                    {item.label}
+                    {/* O traço marca a ROTA; o rato marca com fundo. Dois
+                        sinais de natureza diferente para não haver dois
+                        itens a parecerem activos ao mesmo tempo. */}
+                    {ativo && (
+                      <span aria-hidden className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-brand" />
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
 
           {/**
            * A barra: linha 2 a atravessar a grelha quando o cabeçalho está
@@ -235,72 +215,52 @@ export default function Nav() {
            * arrastar-se depois de já ter aterrado.
            */}
           <div className="col-span-3 col-start-1 row-start-2 w-full justify-self-center group-data-[compacto=true]:col-span-1 group-data-[compacto=true]:col-start-2 group-data-[compacto=true]:row-start-1 group-data-[compacto=true]:max-w-[22rem] lg:max-w-[var(--rc-dock-larga)]">
-            <DockPesquisa inputId="rc-header-busca" />
+            <LancadorBusca inputId="rc-header-busca" />
           </div>
 
+          {/* Uma entrada de conta/ajuda e UMA acção. O tema e o feedback
+              vivem dentro do menu — ver o quadro em `MenuConta.tsx`. */}
           <div className="col-start-3 row-start-1 flex items-center justify-self-end gap-2">
-            <button
-              type="button"
-              onClick={() => abrirFeedback()}
-              aria-label="Sugestões, erros e dúvidas"
-              title="Sugestões, erros e dúvidas"
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-stone-500 transition-colors hover:bg-stone-100 hover:text-brand dark:text-stone-400 dark:hover:bg-stone-800"
-            >
-              <Megaphone size={17} />
-            </button>
+            <MenuConta avatarUrl={avatarUrl} />
 
-            <div className="mx-1 h-5 w-px bg-stone-200 dark:bg-stone-700" aria-hidden />
-
-            <ThemeToggle />
-
-            {user ? (
-              <Link
-                href="/dashboard"
-                className="group/cta relative inline-flex min-h-[40px] items-center gap-2 rounded-xl bg-brand/10 py-1.5 pl-2 pr-3.5 text-sm font-semibold text-brand no-underline transition-colors hover:bg-brand hover:text-white"
-              >
-                <span className="relative flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-brand/15 transition-colors group-hover/cta:bg-white/20">
-                  {avatarUrl ? (
-                    <Image src={avatarUrl} alt="" fill className="rounded-lg object-cover" sizes="28px" unoptimized />
-                  ) : (
-                    <User size={14} />
-                  )}
-                </span>
-                Dashboard
-              </Link>
-            ) : disponivel ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => abrirModal("entrar")}
-                  className="min-h-[40px] rounded-xl px-3 text-sm font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
-                >
-                  Entrar
-                </button>
-                <m.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
-                  <button
-                    type="button"
-                    onClick={() => abrirModal("criar")}
-                    className="btn-shine inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-4 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
-                  >
-                    Começar<span className="hidden xl:inline">&nbsp;Grátis</span>
-                    <ArrowRight size={13} />
-                  </button>
-                </m.div>
-              </>
-            ) : (
-              <m.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
+            <m.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
+              {user ? (
                 <Link
                   href="/dashboard"
-                  className="btn-shine inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-4 text-sm font-semibold text-white no-underline shadow-glow transition-shadow hover:shadow-float"
+                  className="btn-shine focus-marca inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-4 text-sm font-semibold text-white no-underline shadow-glow transition-shadow hover:shadow-float"
+                >
+                  Painel
+                  <ArrowRight size={13} aria-hidden />
+                </Link>
+              ) : disponivel ? (
+                <CTAComecar />
+              ) : (
+                <Link
+                  href="/dashboard"
+                  className="btn-shine focus-marca inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-4 text-sm font-semibold text-white no-underline shadow-glow transition-shadow hover:shadow-float"
                 >
                   Começar<span className="hidden xl:inline">&nbsp;Grátis</span>
-                  <ArrowRight size={13} />
+                  <ArrowRight size={13} aria-hidden />
                 </Link>
-              </m.div>
-            )}
+              )}
+            </m.div>
           </div>
         </div>
       </nav>
     </>
+  );
+}
+
+function CTAComecar() {
+  const { abrirModal } = useAuth();
+  return (
+    <button
+      type="button"
+      onClick={() => abrirModal("criar")}
+      className="btn-shine focus-marca inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-4 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
+    >
+      Começar<span className="hidden xl:inline">&nbsp;Grátis</span>
+      <ArrowRight size={13} aria-hidden />
+    </button>
   );
 }

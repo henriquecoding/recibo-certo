@@ -1,3 +1,4 @@
+import "server-only";
 import { appUrl } from "@/lib/origem";
 
 export const STRIPE_CONFIG = {

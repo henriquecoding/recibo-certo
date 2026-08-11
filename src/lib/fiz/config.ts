@@ -15,6 +15,7 @@
 //  Nenhum segredo tem prefixo NEXT_PUBLIC_ — só a bandeira é pública.
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
 import { appUrl } from "@/lib/origem";
 import { fizAtiva as bandeiraAtiva } from "./flag";
 

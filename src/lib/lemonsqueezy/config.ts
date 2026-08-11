@@ -1,3 +1,5 @@
+import "server-only";
+
 // Configuração do Lemon Squeezy (Merchant of Record)
 //
 // A Lemon Squeezy é a entidade legal vendedora (MoR). Toda a gestão de IVA

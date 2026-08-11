@@ -23,17 +23,45 @@ const MODAL = readFileSync(join(SRC, "components", "ui", "NovidadesModal.tsx"), 
 const LOADER = readFileSync(join(SRC, "lib", "novidades.ts"), "utf8");
 const indice = JSON.parse(readFileSync(join(PUBLICO, "indice.json"), "utf8"));
 
+// O bloco que DECIDE se o popup quer abrir: efeito com `[]`, só localStorage.
+const DECISAO = MODAL.slice(
+  MODAL.indexOf("localStorage.getItem(VERSAO_STORAGE_KEY)"),
+  MODAL.indexOf("}, []);"),
+);
+// O bloco que MARCA a versão como vista quando o popup é mostrado.
+const MARCA = MODAL.slice(MODAL.indexOf("if (!aberto) return;"), MODAL.indexOf("}, [aberto]);"));
+
 describe("Regra 10 · quando o popup aparece (IMUTÁVEL)", () => {
-  it("decide pela versão vista e marca-a no instante em que mostra", () => {
-    const decisao = MODAL.slice(
-      MODAL.indexOf("const visto = localStorage.getItem"),
-      MODAL.indexOf("}, []);"),
-    );
-    expect(decisao).toMatch(/visto !== APP_VERSION/);
-    expect(decisao).toMatch(/setAberto\(true\)/);
-    // A marca É escrita aqui, dentro do mesmo bloco que abre — e não só no
-    // `fechar()`. Sem isto, um refresh com o popup aberto fá-lo reaparecer.
-    expect(decisao).toMatch(/localStorage\.setItem\(VERSAO_STORAGE_KEY, APP_VERSION\)/);
+  it("decide pela versão vista, sem depender de nada que possa falhar", () => {
+    expect(DECISAO).toMatch(/localStorage\.getItem\(VERSAO_STORAGE_KEY\) !== APP_VERSION/);
+    expect(DECISAO).toMatch(/setAberto\(true\)/);
+    // Se um dia alguém lhe meter um `await`/`then`, uma falha de rede passa a
+    // poder engolir o popup de uma versão inteira.
+    expect(DECISAO).not.toMatch(/await|\.then\(|carregar/);
+  });
+
+  it("marca a versão no INSTANTE em que o popup é mostrado", () => {
+    // ┌───────────────────────────────────────────────────────────────────┐
+    // │ A REGRA NÃO MUDOU — MUDOU O QUE «MOSTRADO» SIGNIFICA               │
+    // │                                                                   │
+    // │ A marca era escrita no bloco da DECISÃO. Enquanto decidir e        │
+    // │ mostrar foram a mesma coisa, chegava; deixaram de ser quando o     │
+    // │ coordenador de overlays passou a poder adiar este popup para       │
+    // │ depois do consentimento (P0-05 da auditoria do cabeçalho).         │
+    // │                                                                   │
+    // │ Antes disso, a auditoria encontrou o caso mau: na primeira visita  │
+    // │ o popup montava POR CIMA do diálogo de cookies, com o foco preso   │
+    // │ em baixo — a pessoa nunca o leu e a versão ficava marcada na       │
+    // │ mesma. Marcar quando é MOSTRADO é a mesma regra, aplicada ao       │
+    // │ instante certo, e é mais estrita do que era.                       │
+    // │                                                                   │
+    // │ O que continua exactamente igual: a marca não espera pelo fecho.   │
+    // │ Atualizar a página com o popup aberto não o faz reaparecer.        │
+    // └───────────────────────────────────────────────────────────────────┘
+    expect(MARCA, "falta o efeito que marca a versão ao mostrar").toBeTruthy();
+    expect(MARCA).toMatch(/localStorage\.setItem\(VERSAO_STORAGE_KEY, APP_VERSION\)/);
+    // Depende de `aberto` — a permissão do coordenador — e de mais nada.
+    expect(MODAL).toMatch(/\}, \[aberto\]\);/);
   });
 
   it("o fecho volta a marcar, como rede de segurança", () => {
@@ -42,15 +70,10 @@ describe("Regra 10 · quando o popup aparece (IMUTÁVEL)", () => {
     );
   });
 
-  it("a decisão não depende de nenhum carregamento", () => {
-    // O efeito que decide corre com `[]` e só toca em localStorage + estado.
-    // Se um dia alguém lhe meter um `await`/`then`, uma falha de rede passa a
-    // poder engolir o popup de uma versão inteira.
-    const decisao = MODAL.slice(
-      MODAL.indexOf("const visto = localStorage.getItem"),
-      MODAL.indexOf("}, []);"),
-    );
-    expect(decisao).not.toMatch(/await|\.then\(|carregar/);
+  it("não abre por cima de outro modal — pede vaga ao coordenador", () => {
+    // A outra metade da mesma garantia: um popup que não pode ser lido não
+    // se pode dar por visto.
+    expect(MODAL).toMatch(/useOverlay\("novidades",\s*querAbrir,\s*\{\s*modal:\s*true,\s*iniciadoPeloUtilizador:\s*false\s*\}\)/);
   });
 });
 

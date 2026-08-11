@@ -6,6 +6,7 @@ import { m, AnimatePresence } from "motion/react";
 import { EASE } from "@/lib/motion";
 import { Cookie } from "@/components/ui/Icons";
 import { lerConsentimento, guardarConsentimento, ABRIR_PREFERENCIAS_EVENT } from "@/lib/cookie-consent";
+import { useOverlay } from "@/components/overlays/CoordenadorOverlays";
 
 function Switch({
   checked,
@@ -58,8 +59,17 @@ function Categoria({
 }
 
 export default function CookieConsent() {
-  const [aberto, setAberto] = useState(false);
+  const [querAbrir, setAberto] = useState(false);
   const [jaDecidiu, setJaDecidiu] = useState(true);
+
+  /**
+   * O consentimento tem a prioridade máxima do coordenador.
+   *
+   * Não é para se defender de nada: é para que o que aparece a seguir —
+   * as Novidades, sobretudo — saiba esperar. Antes coexistiam, com o
+   * popup de Novidades por cima e o foco preso aqui em baixo (P0-05).
+   */
+  const aberto = useOverlay("cookies", querAbrir, { modal: true, iniciadoPeloUtilizador: true });
   const [estatistica, setEstatistica] = useState(false);
   const [marketing, setMarketing] = useState(false);
   const painelRef = useRef<HTMLDivElement>(null);

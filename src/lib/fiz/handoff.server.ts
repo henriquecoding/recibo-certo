@@ -12,6 +12,7 @@
 //    · enviar dados é GRATUITO — nunca se verifica o plano Plus aqui.
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
 import { randomUUID } from "node:crypto";
 import { pedirFiz } from "./client.server";
 import { fizServerConfig, POLITICA_CONSENTIMENTO_VERSAO } from "./config";
