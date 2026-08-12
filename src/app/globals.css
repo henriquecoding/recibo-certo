@@ -582,6 +582,37 @@ input[type="number"]::-webkit-outer-spin-button {
     color: #e0a48c;
   }
 
+  /* Pastéis de categoria do painel. No escuro invertem a lógica: a
+     superfície fica funda e tingida, e o texto passa a ser o pastel — que é
+     o que mantém a mesma leitura («isto é rosa, aquilo é azul») sem ficar
+     um bloco claro a arder no meio de um ecrã escuro. */
+  .dark .bg-categoria-rosa-bg { background-color: #2e1a22; }
+  .dark .border-categoria-rosa-border { border-color: #4d2b39; }
+  .dark .text-categoria-rosa-text { color: #eaa8c0; }
+
+  .dark .bg-categoria-azul-bg { background-color: #16212f; }
+  .dark .border-categoria-azul-border { border-color: #2a3d55; }
+  .dark .text-categoria-azul-text { color: #9dc0ee; }
+
+  .dark .bg-categoria-lilas-bg { background-color: #211d33; }
+  .dark .border-categoria-lilas-border { border-color: #383052; }
+  .dark .text-categoria-lilas-text { color: #b9aeee; }
+
+  .dark .bg-categoria-areia-bg { background-color: #2a2118; }
+  .dark .border-categoria-areia-border { border-color: #47382a; }
+  .dark .text-categoria-areia-text { color: #dcb68c; }
+
+  /* As mesmas cores com opacidade (bg-categoria-rosa-bg/60…), pelo mesmo
+     motivo dos restantes overlays por substring. */
+  .dark [class*="bg-categoria-rosa-bg/"]   { background-color: rgb(46 26 34 / 0.7); }
+  .dark [class*="bg-categoria-azul-bg/"]   { background-color: rgb(22 33 47 / 0.7); }
+  .dark [class*="bg-categoria-lilas-bg/"]  { background-color: rgb(33 29 51 / 0.7); }
+  .dark [class*="bg-categoria-areia-bg/"]  { background-color: rgb(42 33 24 / 0.7); }
+  .dark [class*="border-categoria-rosa-border/"]  { border-color: rgb(77 43 57 / 0.6); }
+  .dark [class*="border-categoria-azul-border/"]  { border-color: rgb(42 61 85 / 0.6); }
+  .dark [class*="border-categoria-lilas-border/"] { border-color: rgb(56 48 82 / 0.6); }
+  .dark [class*="border-categoria-areia-border/"] { border-color: rgb(71 56 42 / 0.6); }
+
   /* Sombras mais profundas no escuro */
   .dark .shadow-card {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px -16px rgba(0, 0, 0, 0.6);

@@ -31,6 +31,23 @@ const config: Config = {
           border: "#E6C5B7",
           text: "#97553C",
         },
+        // ── Pastéis de CATEGORIA (painel de contabilistas) ──────────────
+        //
+        // Servem para distinguir TIPOS de coisa num ecrã denso — uma consulta
+        // online de uma presencial, um pedido de um envio — e não para
+        // decorar. A regra que os mantém úteis: a cor identifica, o verde da
+        // marca age. Um botão nunca é rosa; um cartão de dados nunca é verde
+        // a não ser que o assunto seja mesmo a marca.
+        //
+        // Cada tom tem `bg` (superfície), `text` (mínimo AA sobre o `bg`) e
+        // `border`. Todos têm override `.dark` em globals.css — sem isso, um
+        // pastel claro sobre superfície escura fica ilegível.
+        categoria: {
+          rosa:  { bg: "#FBE9EF", text: "#8E3A5B", border: "#F3D2DE" },
+          azul:  { bg: "#E4EDFB", text: "#2E4E7E", border: "#CBDDF5" },
+          lilas: { bg: "#EDE9FA", text: "#4F3D8C", border: "#DCD5F3" },
+          areia: { bg: "#F7EEE2", text: "#7A5230", border: "#EBDCC7" },
+        },
         // ── Paleta FIZ (parceiro de execução fiscal) ────────────────────
         // Escala do amarelo pastel até ao amarelo da marca FIZ (#FAC72B,
         // o fundo da logo). Usada EXCLUSIVAMENTE em superfícies FIZ, para

@@ -6,9 +6,12 @@
 // é uma escrita normal: passa por /api/contabilistas/consulta, que confirma a
 // identidade e chama `carimbar_consulta` com a chave de serviço.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { AnimatePresence } from "motion/react";
 import { usarFicha, cabecalhoAuth } from "@/components/contabilistas/usarFicha";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
+import GrelhaSemanal from "@/components/contabilistas/GrelhaSemanal";
+import DetalheConsulta from "@/components/contabilistas/DetalheConsulta";
 import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import {
@@ -16,14 +19,12 @@ import {
 } from "@/lib/contabilistas/dados";
 import type { Agendamento, EstadoAgendamento } from "@/lib/contabilistas/tipos";
 import {
-  NOMES_DIAS, diaLocal, horaLocal, minutosDeHora, rotularDia,
-  type RegraDisponibilidade,
+  NOMES_DIAS, minutosDeHora, type RegraDisponibilidade,
 } from "@/lib/contabilistas/agenda";
 import Button from "@/components/ui/Button";
-import Badge from "@/components/ui/Badge";
 import { useAvisos } from "@/components/ui/Avisos";
 import { useConfirmar, type PedidoConfirmacao } from "@/components/ui/Confirmar";
-import { Calendar, Check, Clock, Close, Gift, Plus, Trash } from "@/components/ui/Icons";
+import { Calendar, Plus, Trash } from "@/components/ui/Icons";
 
 const ROTULO_ESTADO: Record<EstadoAgendamento, { texto: string; tom: "brand" | "alert" | "neutral" | "danger" }> = {
   pedido: { texto: "Por confirmar", tom: "alert" },
@@ -89,6 +90,7 @@ export default function AgendaPage() {
   const confirmar = useConfirmar();
   const [aba, setAba] = useState<"consultas" | "semana">("consultas");
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
+  const [aberta, setAberta] = useState<Agendamento | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
 
   const carregar = useCallback(async (id: string) => {
@@ -163,121 +165,38 @@ export default function AgendaPage() {
       </div>
 
       {aba === "consultas" ? (
-        <Consultas
-          agendamentos={agendamentos}
-          ocupado={ocupado}
-          onEstado={mudarEstado}
-          fidelidadeAtiva={ficha.fidelidadeAtiva}
-        />
+        agendamentos.length === 0 ? (
+          <EstadoVazio
+            Icon={Calendar}
+            titulo="Ainda não há consultas"
+            descricao="Os teus clientes marcam a partir do teu perfil público. Define primeiro a semana-tipo para haver horários livres."
+          />
+        ) : (
+          <GrelhaSemanal
+            agendamentos={agendamentos}
+            ocupado={ocupado}
+            onAbrir={(a) => setAberta(a)}
+          />
+        )
       ) : (
         <SemanaTipo contabilistaId={ficha.userId} duracaoOmissao={ficha.duracaoConsultaMin} />
       )}
+
+      {/* A folha da consulta escolhida. As perguntas antes do irreversível
+          continuam em `mudarEstado` — a folha só pede a ação. */}
+      <AnimatePresence>
+        {aberta && (
+          <DetalheConsulta
+            key={aberta.id}
+            consulta={agendamentos.find((a) => a.id === aberta.id) ?? aberta}
+            ocupado={ocupado === aberta.id}
+            fidelidadeAtiva={ficha.fidelidadeAtiva}
+            onEstado={async (a, estado) => { await mudarEstado(a, estado); setAberta(null); }}
+            onFechar={() => setAberta(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
-  );
-}
-
-function Consultas({
-  agendamentos, ocupado, onEstado, fidelidadeAtiva,
-}: {
-  agendamentos: Agendamento[];
-  ocupado: string | null;
-  onEstado: (a: Agendamento, e: EstadoAgendamento) => void;
-  fidelidadeAtiva: boolean;
-}) {
-  const agora = Date.now();
-  const { futuras, passadas } = useMemo(() => {
-    const f: Agendamento[] = [], p: Agendamento[] = [];
-    for (const a of agendamentos) (new Date(a.inicio).getTime() >= agora ? f : p).push(a);
-    return { futuras: f, passadas: p.reverse() };
-  }, [agendamentos, agora]);
-
-  if (agendamentos.length === 0) {
-    return (
-      <EstadoVazio
-        Icon={Calendar}
-        titulo="Ainda não há consultas"
-        descricao="Os teus clientes marcam a partir do teu perfil público. Define primeiro a semana-tipo para haver horários livres."
-      />
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <Grupo titulo="A seguir" lista={futuras} ocupado={ocupado} onEstado={onEstado} fidelidadeAtiva={fidelidadeAtiva} />
-      <Grupo titulo="Passadas" lista={passadas.slice(0, 30)} ocupado={ocupado} onEstado={onEstado} fidelidadeAtiva={fidelidadeAtiva} />
-    </div>
-  );
-}
-
-function Grupo({
-  titulo, lista, ocupado, onEstado, fidelidadeAtiva,
-}: {
-  titulo: string; lista: Agendamento[]; ocupado: string | null;
-  onEstado: (a: Agendamento, e: EstadoAgendamento) => void; fidelidadeAtiva: boolean;
-}) {
-  if (lista.length === 0) return null;
-  return (
-    <section aria-labelledby={`grupo-${titulo}`}>
-      <h2 id={`grupo-${titulo}`} className="font-display text-xl text-ink">{titulo}</h2>
-      <ul className="mt-3 space-y-3">
-        {lista.map((a) => {
-          const meta = ROTULO_ESTADO[a.estado];
-          const jaComecou = new Date(a.inicio).getTime() <= Date.now();
-          const terminada = a.estado.startsWith("cancelado") || a.estado === "realizada" || a.estado === "nao_compareceu";
-          return (
-            <li key={a.id} className="rounded-4xl border border-stone-200 bg-white p-4 shadow-card sm:p-5">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="font-semibold text-stone-800">{rotularDia(diaLocal(new Date(a.inicio)))}</p>
-                  <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm tabular-nums text-stone-500">
-                    <Clock size={14} aria-hidden />
-                    {horaLocal(new Date(a.inicio))} — {horaLocal(new Date(a.fim))}
-                    <span className="text-stone-300">·</span>
-                    {a.modalidade === "online" ? "Online" : "Presencial"}
-                  </p>
-                </div>
-                <Badge tone={meta.tom}>{meta.texto}</Badge>
-              </div>
-
-              {a.assunto && (
-                <p className="mt-2.5 rounded-2xl bg-cream px-3.5 py-2.5 text-sm leading-relaxed text-stone-600">
-                  {a.assunto}
-                </p>
-              )}
-
-              {!terminada && (
-                <div className="mt-3.5 flex flex-wrap gap-2">
-                  {a.estado === "pedido" && (
-                    <Button size="sm" disabled={ocupado === a.id} onClick={() => onEstado(a, "confirmado")}>
-                      <Check size={15} aria-hidden /> Confirmar
-                    </Button>
-                  )}
-                  {jaComecou && (
-                    <Button
-                      size="sm"
-                      variant={a.estado === "confirmado" ? "primary" : "secondary"}
-                      disabled={ocupado === a.id}
-                      onClick={() => onEstado(a, "realizada")}
-                      title={fidelidadeAtiva ? "Carimba o cartão de fidelidade" : undefined}
-                    >
-                      <Gift size={15} aria-hidden /> Marcar realizada
-                    </Button>
-                  )}
-                  <Button size="sm" variant="ghost" disabled={ocupado === a.id} onClick={() => onEstado(a, "cancelado_contabilista")}>
-                    <Close size={15} aria-hidden /> Cancelar
-                  </Button>
-                  {jaComecou && (
-                    <Button size="sm" variant="ghost" disabled={ocupado === a.id} onClick={() => onEstado(a, "nao_compareceu")}>
-                      Não compareceu
-                    </Button>
-                  )}
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </section>
   );
 }
 

@@ -150,9 +150,9 @@ export default function HojePage() {
       )}
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Numero rotulo="Pedidos de cliente" valor={porResponder} href="/contabilista/clientes" Icon={User} />
-        <Numero rotulo="Consultas por confirmar" valor={porConfirmar} href="/contabilista/agenda" Icon={Calendar} />
-        <Numero rotulo="Partilhas por ler" valor={porLer} href="/contabilista/partilhas" Icon={PaperClip} />
+        <Numero tom="rosa" rotulo="Pedidos de cliente" valor={porResponder} href="/contabilista/clientes" Icon={User} />
+        <Numero tom="azul" rotulo="Consultas por confirmar" valor={porConfirmar} href="/contabilista/agenda" Icon={Calendar} />
+        <Numero tom="lilas" rotulo="Partilhas por ler" valor={porLer} href="/contabilista/partilhas" Icon={PaperClip} />
       </div>
 
       <section aria-labelledby="proximas-titulo" className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
@@ -209,25 +209,59 @@ export default function HojePage() {
   );
 }
 
+/**
+ * Um número que exige ação, com a cor da sua categoria.
+ *
+ * A cor identifica o assunto — pedidos, consultas, partilhas — e não o
+ * estado: a urgência lê-se no número, não no tom. A zero, o bloco esbate-se
+ * para branco, porque um zero colorido chama a atenção para nada.
+ */
+const TOM_NUMERO = {
+  rosa: {
+    caixa: "border-categoria-rosa-border bg-categoria-rosa-bg",
+    icone: "text-categoria-rosa-text",
+    numero: "text-categoria-rosa-text",
+  },
+  azul: {
+    caixa: "border-categoria-azul-border bg-categoria-azul-bg",
+    icone: "text-categoria-azul-text",
+    numero: "text-categoria-azul-text",
+  },
+  lilas: {
+    caixa: "border-categoria-lilas-border bg-categoria-lilas-bg",
+    icone: "text-categoria-lilas-text",
+    numero: "text-categoria-lilas-text",
+  },
+} as const;
+
 function Numero({
-  rotulo, valor, href, Icon,
+  rotulo, valor, href, Icon, tom,
 }: {
-  rotulo: string; valor: number; href: string;
+  rotulo: string; valor: number; href: string; tom: keyof typeof TOM_NUMERO;
   Icon: React.ComponentType<{ size?: number; className?: string }>;
 }) {
   const exigeAtencao = valor > 0;
+  const cor = TOM_NUMERO[tom];
   return (
     <Link
       href={href}
-      className={`rounded-4xl border bg-white p-5 shadow-card transition-shadow hover:shadow-lift ${
-        exigeAtencao ? "border-brand/30" : "border-stone-200"
+      className={`group flex items-start gap-3.5 rounded-4xl border p-5 transition-shadow hover:shadow-lift ${
+        exigeAtencao ? cor.caixa : "border-stone-200 bg-white"
       }`}
     >
-      <Icon size={18} className={exigeAtencao ? "text-brand" : "text-stone-300"} aria-hidden />
-      <p className={`mt-3 font-display text-3xl tabular-nums ${exigeAtencao ? "text-ink" : "text-stone-300"}`}>
-        {valor}
-      </p>
-      <p className="mt-0.5 text-sm text-stone-500">{rotulo}</p>
+      <span
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+          exigeAtencao ? "bg-white/70" : "bg-stone-50"
+        }`}
+      >
+        <Icon size={17} className={exigeAtencao ? cor.icone : "text-stone-300"} aria-hidden />
+      </span>
+      <span className="min-w-0">
+        <span className={`block font-display text-3xl leading-none tabular-nums ${exigeAtencao ? cor.numero : "text-stone-300"}`}>
+          {valor}
+        </span>
+        <span className="mt-1.5 block text-sm leading-tight text-stone-600">{rotulo}</span>
+      </span>
     </Link>
   );
 }

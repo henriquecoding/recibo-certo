@@ -203,22 +203,41 @@ export function Numeros({
 }: {
   realizadas: number; carimbos: number; meta: number; envios: number; mostraCartao: boolean;
 }) {
-  const tiles: { valor: string; rotulo: string }[] = [
-    { valor: String(realizadas), rotulo: realizadas === 1 ? "consulta feita" : "consultas feitas" },
-    ...(mostraCartao ? [{ valor: `${carimbos}/${meta}`, rotulo: "no cartão" }] : []),
-    { valor: String(envios), rotulo: envios === 1 ? "envio ativo" : "envios ativos" },
+  // A cor identifica o assunto: consultas, cartão, envios. É a mesma
+  // convenção do painel do contabilista, para quem passa dos dois lados.
+  const tiles: { valor: string; rotulo: string; caixa: string; cor: string }[] = [
+    {
+      valor: String(realizadas),
+      rotulo: realizadas === 1 ? "consulta feita" : "consultas feitas",
+      caixa: "border-categoria-azul-border bg-categoria-azul-bg",
+      cor: "text-categoria-azul-text",
+    },
+    ...(mostraCartao
+      ? [{
+          valor: `${carimbos}/${meta}`,
+          rotulo: "no cartão",
+          caixa: "border-brand/25 bg-brand-light",
+          cor: "text-brand-dark",
+        }]
+      : []),
+    {
+      valor: String(envios),
+      rotulo: envios === 1 ? "envio ativo" : "envios ativos",
+      caixa: "border-categoria-lilas-border bg-categoria-lilas-bg",
+      cor: "text-categoria-lilas-text",
+    },
   ];
 
   return (
     <dl className={`grid gap-2.5 ${tiles.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
       {tiles.map((t) => (
-        <div key={t.rotulo} className="rounded-2xl border border-stone-200 bg-white px-3 py-3.5 text-center sm:px-4">
+        <div key={t.rotulo} className={`rounded-2xl border px-3 py-3.5 text-center sm:px-4 ${t.caixa}`}>
           <dt className="sr-only">{t.rotulo}</dt>
           <dd>
-            <span className="block font-display text-2xl leading-none tabular-nums text-ink sm:text-3xl">
+            <span className={`block font-display text-2xl leading-none tabular-nums sm:text-3xl ${t.cor}`}>
               {t.valor}
             </span>
-            <span className="mt-1.5 block text-xs leading-tight text-stone-500">{t.rotulo}</span>
+            <span className="mt-1.5 block text-xs leading-tight text-stone-600">{t.rotulo}</span>
           </dd>
         </div>
       ))}
