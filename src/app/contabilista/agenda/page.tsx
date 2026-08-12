@@ -19,7 +19,9 @@ import {
 } from "@/lib/contabilistas/agenda";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
-import { Calendar, Check, Clock, Close, Gift, Plus, Trash, Warning } from "@/components/ui/Icons";
+import { useAvisos } from "@/components/ui/Avisos";
+import { useConfirmar, type PedidoConfirmacao } from "@/components/ui/Confirmar";
+import { Calendar, Check, Clock, Close, Gift, Plus, Trash } from "@/components/ui/Icons";
 
 const ROTULO_ESTADO: Record<EstadoAgendamento, { texto: string; tom: "brand" | "alert" | "neutral" | "danger" }> = {
   pedido: { texto: "Por confirmar", tom: "alert" },
@@ -30,12 +32,61 @@ const ROTULO_ESTADO: Record<EstadoAgendamento, { texto: string; tom: "brand" | "
   nao_compareceu: { texto: "Não compareceu", tom: "danger" },
 };
 
+/**
+ * A pergunta antes de cada transição — e o silêncio onde não é precisa.
+ *
+ * Confirmar uma consulta é construtivo e reversível: não se pergunta nada.
+ * As outras três fecham portas, e uma delas (`realizada`) escreve um
+ * carimbo que não se descarimba — é a única escrita deste ecrã que a
+ * pessoa não consegue desfazer sozinha.
+ */
+function perguntaDe(estado: EstadoAgendamento, fidelidadeAtiva: boolean): PedidoConfirmacao | null {
+  if (estado === "realizada") {
+    return {
+      titulo: "Marcar esta consulta como realizada?",
+      descricao: fidelidadeAtiva
+        ? "Fica registada como feita e carimba o cartão de fidelidade deste cliente."
+        : "Fica registada como feita.",
+      consequencias: fidelidadeAtiva
+        ? ["O carimbo não se retira.", "Se o cartão ficar completo, é emitido um cupão de desconto."]
+        : undefined,
+      confirmar: "Marcar realizada",
+    };
+  }
+  if (estado === "cancelado_contabilista") {
+    return {
+      titulo: "Cancelar esta consulta?",
+      descricao: "O cliente vê o cancelamento na área dele.",
+      consequencias: ["O horário volta a ficar livre para outra pessoa.", "Não carimba o cartão."],
+      confirmar: "Cancelar consulta",
+      cancelar: "Voltar atrás",
+      tom: "perigo",
+    };
+  }
+  if (estado === "nao_compareceu") {
+    return {
+      titulo: "Registar que o cliente não compareceu?",
+      descricao: "A consulta fecha sem carimbo, e o registo fica visível para os dois.",
+      confirmar: "Registar falta",
+      tom: "perigo",
+    };
+  }
+  return null;
+}
+
+const FEITO: Partial<Record<EstadoAgendamento, string>> = {
+  confirmado: "Consulta confirmada.",
+  realizada: "Consulta registada como realizada.",
+  cancelado_contabilista: "Consulta cancelada.",
+  nao_compareceu: "Falta registada.",
+};
+
 export default function AgendaPage() {
   const { ficha, aCarregar } = usarFicha();
+  const avisos = useAvisos();
+  const confirmar = useConfirmar();
   const [aba, setAba] = useState<"consultas" | "semana">("consultas");
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
-  const [erro, setErro] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
 
   const carregar = useCallback(async (id: string) => {
@@ -43,14 +94,18 @@ export default function AgendaPage() {
       setAgendamentos(await listarAgendamentos({
         contabilistaId: id, desde: new Date(Date.now() - 90 * 86400_000),
       }));
-    } catch (e) { setErro((e as Error).message); }
-  }, []);
+    } catch (e) { avisos.erro((e as Error).message); }
+  }, [avisos]);
 
   useEffect(() => { if (ficha) void carregar(ficha.userId); }, [ficha, carregar]);
 
   async function mudarEstado(a: Agendamento, estado: EstadoAgendamento) {
     if (!ficha) return;
-    setOcupado(a.id); setErro(null); setAviso(null);
+
+    const pergunta = perguntaDe(estado, ficha.fidelidadeAtiva);
+    if (pergunta && !(await confirmar(pergunta))) return;
+
+    setOcupado(a.id);
     try {
       const res = await fetch("/api/contabilistas/consulta", {
         method: "PATCH",
@@ -61,16 +116,21 @@ export default function AgendaPage() {
         erro?: string;
         fidelidade?: { completou?: boolean; carimbos?: number; meta?: number; percentagem?: number } | null;
       };
-      if (!res.ok) { setErro(corpo.erro ?? "Não foi possível atualizar."); return; }
+      if (!res.ok) { avisos.erro(corpo.erro ?? "Não foi possível atualizar."); return; }
 
       const f = corpo.fidelidade;
       if (f?.completou) {
-        setAviso(`Cartão completo. Foi emitido um cupão de ${f.percentagem}% para este cliente.`);
+        avisos.sucesso("Cartão completo.", {
+          detalhe: `Foi emitido um cupão de ${f.percentagem}% para este cliente.`,
+          duracaoMs: 9000,
+        });
       } else if (f && typeof f.carimbos === "number") {
-        setAviso(`Consulta registada. Cartão em ${f.carimbos} de ${f.meta}.`);
+        avisos.sucesso("Consulta registada.", { detalhe: `Cartão em ${f.carimbos} de ${f.meta}.` });
+      } else {
+        avisos.sucesso(FEITO[estado] ?? "Agenda atualizada.");
       }
       await carregar(ficha.userId);
-    } catch { setErro("Falha de rede. Tenta outra vez."); }
+    } catch { avisos.erro("Falha de rede. Tenta outra vez."); }
     finally { setOcupado(null); }
   }
 
@@ -99,17 +159,6 @@ export default function AgendaPage() {
           </button>
         ))}
       </div>
-
-      {erro && (
-        <p role="alert" className="flex items-start gap-2 rounded-2xl bg-clay-bg px-4 py-3 text-sm text-clay-text">
-          <Warning size={16} className="mt-0.5 shrink-0" aria-hidden /> {erro}
-        </p>
-      )}
-      {aviso && (
-        <p role="status" className="flex items-start gap-2 rounded-2xl bg-brand-light px-4 py-3 text-sm text-brand-dark">
-          <Gift size={16} className="mt-0.5 shrink-0" aria-hidden /> {aviso}
-        </p>
-      )}
 
       {aba === "consultas" ? (
         <Consultas
@@ -231,10 +280,12 @@ function Grupo({
 }
 
 function SemanaTipo({ contabilistaId, duracaoOmissao }: { contabilistaId: string; duracaoOmissao: number }) {
+  const avisos = useAvisos();
+  const confirmar = useConfirmar();
   const [regras, setRegras] = useState<RegraDisponibilidade[]>([]);
   const [estado, setEstado] = useState<"a-ler" | "pronto" | "a-guardar">("a-ler");
   const [erro, setErro] = useState<string | null>(null);
-  const [guardado, setGuardado] = useState(false);
+  const [porGuardar, setPorGuardar] = useState(false);
 
   useEffect(() => {
     let vivo = true;
@@ -245,27 +296,49 @@ function SemanaTipo({ contabilistaId, duracaoOmissao }: { contabilistaId: string
   }, [contabilistaId]);
 
   function acrescentar(dia: number) {
-    setGuardado(false);
+    setPorGuardar(true);
     setRegras((r) => [...r, { diaSemana: dia, inicio: "09:00", fim: "13:00", duracaoMin: duracaoOmissao }]);
   }
-  function remover(i: number) { setGuardado(false); setRegras((r) => r.filter((_, j) => j !== i)); }
+  function remover(i: number) { setPorGuardar(true); setRegras((r) => r.filter((_, j) => j !== i)); }
   function editar(i: number, campo: keyof RegraDisponibilidade, valor: string | number) {
-    setGuardado(false);
+    setPorGuardar(true);
     setRegras((r) => r.map((x, j) => (j === i ? { ...x, [campo]: valor } : x)));
   }
 
   async function guardar() {
     setErro(null);
+    // Os erros de formulário ficam JUNTO do formulário. Um aviso que
+    // desaparece sozinho não serve para dizer «corrige esta hora».
     for (const r of regras) {
       const i = minutosDeHora(r.inicio), f = minutosDeHora(r.fim);
       if (i === null || f === null) { setErro("Há uma hora mal escrita. Usa o formato 09:00."); return; }
       if (f <= i) { setErro("A hora de fim tem de ser depois da hora de início."); return; }
       if (f - i < r.duracaoMin) { setErro("O intervalo é mais curto do que a duração da consulta."); return; }
     }
+
+    // Guardar uma semana vazia é fechar a agenda ao público. É legítimo —
+    // férias, agenda cheia — mas não deve acontecer por distração.
+    if (regras.length === 0) {
+      const ok = await confirmar({
+        titulo: "Guardar a semana sem nenhum período?",
+        descricao: "Sem horários publicados, ninguém consegue marcar consulta contigo.",
+        consequencias: ["As consultas já marcadas mantêm-se.", "Podes voltar a abrir horários quando quiseres."],
+        confirmar: "Guardar assim",
+        tom: "perigo",
+      });
+      if (!ok) return;
+    }
+
     setEstado("a-guardar");
     const { erro: e } = await guardarDisponibilidade(contabilistaId, regras);
     setEstado("pronto");
-    if (e) setErro(e); else setGuardado(true);
+    if (e) { setErro(e); return; }
+    setPorGuardar(false);
+    avisos.sucesso("Semana-tipo guardada.", {
+      detalhe: regras.length === 0
+        ? "Ficaste sem horários publicados."
+        : "Os clientes já veem estes horários no teu perfil.",
+    });
   }
 
   if (estado === "a-ler") return <div className="h-64 animate-pulse rounded-4xl bg-stone-100" aria-busy="true" />;
@@ -327,11 +400,16 @@ function SemanaTipo({ contabilistaId, duracaoOmissao }: { contabilistaId: string
         })}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Fica colado ao fundo do ecrã: numa semana com sete cartões, o
+          botão de guardar não pode viver só no fim do scroll. Acima da
+          navegação de telemóvel, que também mora no fundo. */}
+      <div className="sticky bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-10 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-stone-200 bg-white/95 p-3 shadow-lift backdrop-blur lg:bottom-4">
         <Button onClick={guardar} disabled={estado === "a-guardar"}>
           {estado === "a-guardar" ? "A guardar…" : "Guardar semana-tipo"}
         </Button>
-        {guardado && <span role="status" className="text-sm font-medium text-brand-dark">Guardado.</span>}
+        <span role="status" className="text-sm text-stone-500">
+          {porGuardar ? "Tens alterações por guardar." : "Está tudo guardado."}
+        </span>
       </div>
     </div>
   );

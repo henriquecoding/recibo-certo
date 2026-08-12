@@ -115,6 +115,12 @@ export interface Partilha {
   titulo: string;
   /** Cópia imutável do que foi enviado. Nunca um apontador para os dados vivos. */
   conteudo: Record<string, unknown>;
+  /**
+   * O que o cliente escreveu ao enviar — «o que queres que ele veja
+   * primeiro». É a única parte da partilha escrita por uma pessoa e não
+   * calculada por uma ferramenta, e por isso a primeira a ser lida.
+   */
+  nota: string | null;
   estado: EstadoPartilha;
   consentimentoVersao: string;
   criadoEm: string;

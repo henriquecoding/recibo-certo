@@ -425,6 +425,7 @@ function paraPartilha(l: Linha): Partilha {
     tipo: l.tipo as TipoPartilha,
     titulo: l.titulo as string,
     conteudo: (l.conteudo as Record<string, unknown>) ?? {},
+    nota: (l.nota_cliente as string | null) ?? null,
     estado: l.estado as Partilha["estado"],
     consentimentoVersao: l.consentimento_versao as string,
     criadoEm: l.criado_em as string,

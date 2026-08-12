@@ -20,6 +20,8 @@ import { ROTULO_VINCULO, ROTULO_PARTILHA } from "@/lib/contabilistas/vinculo";
 import { diaLocal, rotularDia } from "@/lib/contabilistas/agenda";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
+import { useAvisos } from "@/components/ui/Avisos";
+import { useConfirmar, type PedidoConfirmacao } from "@/components/ui/Confirmar";
 import { Check, Close, User, Warning, ChevronDown, ChevronUp, Lock } from "@/components/ui/Icons";
 
 interface CartaoLinha {
@@ -27,8 +29,58 @@ interface CartaoLinha {
   desconto_pct: number; preco_base_cents: number;
 }
 
+type EstadoDecidido = "ativo" | "pausado" | "terminado";
+
+/**
+ * Aceitar e reativar abrem portas — não se pergunta nada.
+ *
+ * Recusar, pausar e terminar fecham-nas, e a diferença entre as três não é
+ * de tom: é de consequência. Terminar corta o acesso a tudo o que a pessoa
+ * já tinha enviado, e isso tem de estar escrito antes do clique, não
+ * descoberto depois.
+ */
+function perguntaVinculo(de: Vinculo["estado"], para: EstadoDecidido): PedidoConfirmacao | null {
+  if (para === "terminado" && de === "pendente") {
+    return {
+      titulo: "Recusar este pedido?",
+      descricao: "A pessoa deixa de aparecer na tua lista e pode voltar a pedir mais tarde.",
+      confirmar: "Recusar pedido",
+      tom: "perigo",
+    };
+  }
+  if (para === "terminado") {
+    return {
+      titulo: "Terminar o acompanhamento?",
+      descricao: "É a decisão mais definitiva deste ecrã.",
+      consequencias: [
+        "Deixas de conseguir abrir o que este cliente te enviou.",
+        "As consultas já realizadas e o cartão ficam no histórico.",
+        "A pessoa pode voltar a pedir para ser tua cliente.",
+      ],
+      confirmar: "Terminar acompanhamento",
+      tom: "perigo",
+    };
+  }
+  if (para === "pausado") {
+    return {
+      titulo: "Pausar este acompanhamento?",
+      descricao: "Continuas a ver o que te enviou, mas o cliente não marca consultas novas enquanto estiver em pausa.",
+      confirmar: "Pausar",
+    };
+  }
+  return null;
+}
+
+const FEITO_VINCULO: Record<EstadoDecidido, string> = {
+  ativo: "Cliente ativo.",
+  pausado: "Acompanhamento em pausa.",
+  terminado: "Acompanhamento terminado.",
+};
+
 export default function ClientesPage() {
   const { ficha, aCarregar } = usarFicha();
+  const avisos = useAvisos();
+  const confirmar = useConfirmar();
   const [vinculos, setVinculos] = useState<Vinculo[]>([]);
   const [cartoes, setCartoes] = useState<Record<string, CartaoLinha>>({});
   const [partilhas, setPartilhas] = useState<Partilha[]>([]);
@@ -59,11 +111,21 @@ export default function ClientesPage() {
 
   useEffect(() => { if (ficha) void carregar(ficha.userId); }, [ficha, carregar]);
 
-  async function decidir(v: Vinculo, estado: "ativo" | "pausado" | "terminado") {
+  async function decidir(v: Vinculo, estado: EstadoDecidido) {
     if (!ficha) return;
+
+    const pergunta = perguntaVinculo(v.estado, estado);
+    if (pergunta && !(await confirmar(pergunta))) return;
+
     setOcupado(v.id); setErro(null);
     const { erro: e } = await decidirVinculo(v.id, estado);
-    if (e) setErro(e); else await carregar(ficha.userId);
+    if (e) avisos.erro(e);
+    else {
+      avisos.sucesso(
+        v.estado === "pendente" && estado === "ativo" ? "Pedido aceite." : FEITO_VINCULO[estado],
+      );
+      await carregar(ficha.userId);
+    }
     setOcupado(null);
   }
 

@@ -4,19 +4,23 @@
 // propósito; abrir marca como vista, e o cliente pode revogar a qualquer
 // momento — a partir daí desaparece daqui, sem depender deste ecrã.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, m } from "motion/react";
 import { usarFicha } from "@/components/contabilistas/usarFicha";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import { listarPartilhas, marcarPartilhaVista } from "@/lib/contabilistas/dados";
 import { ROTULO_PARTILHA } from "@/lib/contabilistas/vinculo";
 import type { Partilha } from "@/lib/contabilistas/tipos";
 import Badge from "@/components/ui/Badge";
-import { PaperClip, ChevronDown, ChevronUp, Warning } from "@/components/ui/Icons";
+import { PaperClip, ChevronDown, ChevronUp, Warning, PenLine } from "@/components/ui/Icons";
+
+type Filtro = "todas" | "novas";
 
 export default function PartilhasPage() {
   const { ficha, aCarregar } = usarFicha();
   const [lista, setLista] = useState<Partilha[]>([]);
   const [aberto, setAberto] = useState<string | null>(null);
+  const [filtro, setFiltro] = useState<Filtro>("todas");
   const [erro, setErro] = useState<string | null>(null);
 
   const carregar = useCallback(async (id: string) => {
@@ -25,6 +29,12 @@ export default function PartilhasPage() {
   }, []);
 
   useEffect(() => { if (ficha) void carregar(ficha.userId); }, [ficha, carregar]);
+
+  const novas = useMemo(() => lista.filter((p) => p.estado === "enviada").length, [lista]);
+  const visiveis = useMemo(
+    () => (filtro === "novas" ? lista.filter((p) => p.estado === "enviada") : lista),
+    [lista, filtro],
+  );
 
   async function abrir(p: Partilha) {
     if (aberto === p.id) { setAberto(null); return; }
@@ -35,7 +45,7 @@ export default function PartilhasPage() {
     }
   }
 
-  if (aCarregar) return <div className="h-96 animate-pulse rounded-4xl bg-stone-100" aria-busy="true" />;
+  if (aCarregar) return <Esqueleto />;
   if (!ficha) return null;
 
   return (
@@ -55,15 +65,37 @@ export default function PartilhasPage() {
         </p>
       )}
 
+      {lista.length > 0 && (
+        <div role="group" aria-label="Filtrar partilhas" className="flex gap-1.5">
+          {([["todas", `Todas (${lista.length})`], ["novas", `Por ler (${novas})`]] as const).map(([id, txt]) => (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={filtro === id}
+              onClick={() => setFiltro(id)}
+              className={`min-h-[2.25rem] shrink-0 rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors ${
+                filtro === id ? "bg-brand text-white" : "bg-white text-stone-600 hover:bg-stone-100"
+              }`}
+            >
+              {txt}
+            </button>
+          ))}
+        </div>
+      )}
+
       {lista.length === 0 ? (
         <EstadoVazio
           Icon={PaperClip}
           titulo="Nada recebido"
           descricao="Quando um cliente te enviar uma simulação a partir de uma ferramenta do site, ela aparece aqui."
         />
+      ) : visiveis.length === 0 ? (
+        <p className="rounded-4xl border border-stone-200 bg-white px-5 py-8 text-center text-sm text-stone-500">
+          Leste tudo. Não há partilhas por ler.
+        </p>
       ) : (
         <ul className="space-y-3">
-          {lista.map((p) => {
+          {visiveis.map((p) => {
             const expandido = aberto === p.id;
             return (
               <li key={p.id} className="rounded-4xl border border-stone-200 bg-white shadow-card">
@@ -81,35 +113,81 @@ export default function PartilhasPage() {
                     </span>
                   </span>
                   <span className="flex shrink-0 items-center gap-2">
+                    {p.nota && (
+                      <PenLine size={15} className="text-stone-400" aria-label="Tem uma nota do cliente" />
+                    )}
                     {p.estado === "enviada" && <Badge tone="brand">Nova</Badge>}
                     {expandido ? <ChevronUp size={18} className="text-stone-400" aria-hidden /> : <ChevronDown size={18} className="text-stone-400" aria-hidden />}
                   </span>
                 </button>
 
-                {expandido && (
-                  <div className="border-t border-stone-100 p-4 sm:p-5">
-                    <dl className="grid gap-x-6 gap-y-2.5 sm:grid-cols-2">
-                      {Object.entries(p.conteudo).map(([chave, valor]) => (
-                        <div key={chave} className="min-w-0 border-b border-stone-100 pb-2 last:border-0">
-                          <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">
-                            {humanizar(chave)}
-                          </dt>
-                          <dd className="mt-0.5 break-words text-sm tabular-nums text-stone-800">
-                            {formatar(valor)}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                    <p className="mt-4 text-xs text-stone-400">
-                      Consentimento registado na versão {p.consentimentoVersao}.
-                    </p>
-                  </div>
-                )}
+                <AnimatePresence initial={false}>
+                  {expandido && (
+                    <m.div
+                      key="corpo"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                      className="overflow-hidden"
+                    >
+                      <div className="border-t border-stone-100 p-4 sm:p-5">
+                        {/* A nota do cliente vem primeiro: é a única linha
+                            escrita por uma pessoa, e diz por onde começar. */}
+                        {p.nota && (
+                          <p className="mb-4 flex items-start gap-2.5 rounded-2xl bg-cream px-4 py-3 text-sm leading-relaxed text-stone-700">
+                            <PenLine size={15} className="mt-0.5 shrink-0 text-stone-400" aria-hidden />
+                            <span className="whitespace-pre-line">{p.nota}</span>
+                          </p>
+                        )}
+
+                        <dl className="grid gap-x-6 gap-y-2.5 sm:grid-cols-2">
+                          {Object.entries(p.conteudo).map(([chave, valor]) => (
+                            <div key={chave} className="min-w-0 border-b border-stone-100 pb-2 last:border-0">
+                              <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">
+                                {humanizar(chave)}
+                              </dt>
+                              <dd className="mt-0.5 break-words text-sm tabular-nums text-stone-800">
+                                {formatar(valor)}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                        <p className="mt-4 text-xs text-stone-400">
+                          Consentimento registado na versão {p.consentimentoVersao}.
+                        </p>
+                      </div>
+                    </m.div>
+                  )}
+                </AnimatePresence>
               </li>
             );
           })}
         </ul>
       )}
+    </div>
+  );
+}
+
+/**
+ * O esqueleto tem a FORMA do que vem a seguir — cabeçalho, filtros, três
+ * cartões. Um retângulo cinzento genérico diz «espera»; isto diz «espera, e
+ * o que vem é uma lista».
+ */
+function Esqueleto() {
+  return (
+    <div className="space-y-6" aria-busy="true">
+      <div className="space-y-2">
+        <div className="h-3 w-24 animate-pulse rounded bg-stone-100" />
+        <div className="h-9 w-44 animate-pulse rounded-xl bg-stone-100" />
+      </div>
+      <div className="flex gap-1.5">
+        <div className="h-9 w-28 animate-pulse rounded-xl bg-stone-100" />
+        <div className="h-9 w-28 animate-pulse rounded-xl bg-stone-100" />
+      </div>
+      <div className="space-y-3">
+        {[0, 1, 2].map((i) => <div key={i} className="h-20 animate-pulse rounded-4xl bg-stone-100" />)}
+      </div>
     </div>
   );
 }

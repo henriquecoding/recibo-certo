@@ -16,6 +16,8 @@ import { useCallback, useEffect, useState } from "react";
 import { getSupabase } from "@/lib/supabase/client";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
+import { useAvisos } from "@/components/ui/Avisos";
+import { useConfirmar, type PedidoConfirmacao } from "@/components/ui/Confirmar";
 import {
   Check, Close, Lock, Mail, PaperClip, Warning, ChevronDown, ChevronUp, ShieldCheck,
 } from "@/components/ui/Icons";
@@ -36,6 +38,8 @@ const TOM: Record<string, "brand" | "alert" | "neutral" | "danger"> = {
 };
 
 export default function AdminContabilistasPage() {
+  const avisos = useAvisos();
+  const confirmar = useConfirmar();
   const [pedidos, setPedidos] = useState<PedidoRow[]>([]);
   const [contas, setContas] = useState<ContaRow[]>([]);
   const [aLer, setALer] = useState(true);
@@ -65,23 +69,30 @@ export default function AdminContabilistasPage() {
 
   useEffect(() => { void carregar(); }, [carregar]);
 
-  async function decidir(corpo: Record<string, unknown>, chave: string) {
+  async function decidir(
+    corpo: Record<string, unknown>,
+    chave: string,
+    opcoes: { pergunta?: PedidoConfirmacao; feito: string },
+  ) {
+    if (opcoes.pergunta && !(await confirmar(opcoes.pergunta))) return;
+
     setOcupado(chave); setErro(null);
     try {
       const res = await fetch("/api/admin/contabilistas", {
         method: "PATCH", headers: await cabecalho(), body: JSON.stringify(corpo),
       });
       const r = (await res.json()) as { erro?: string };
-      if (!res.ok) { setErro(r.erro ?? "Não foi possível concluir."); return; }
+      if (!res.ok) { avisos.erro(r.erro ?? "Não foi possível concluir."); return; }
+      avisos.sucesso(opcoes.feito);
       await carregar();
-    } catch { setErro("Falha de rede."); }
+    } catch { avisos.erro("Falha de rede."); }
     finally { setOcupado(null); }
   }
 
   async function verDocumento(caminho: string) {
     const { data, error } = await getSupabase()
       .storage.from("contabilista-documentos").createSignedUrl(caminho, 300);
-    if (error || !data) { setErro("Não foi possível abrir o documento."); return; }
+    if (error || !data) { avisos.erro("Não foi possível abrir o documento."); return; }
     window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   }
 
@@ -205,7 +216,21 @@ export default function AdminContabilistasPage() {
                             <Button
                               size="sm"
                               disabled={ocupado === p.id}
-                              onClick={() => decidir({ pedidoId: p.id, decisao: "aprovar", motivo: motivos[p.id] }, p.id)}
+                              onClick={() =>
+                                decidir({ pedidoId: p.id, decisao: "aprovar", motivo: motivos[p.id] }, p.id, {
+                                  feito: `${p.nome} passou a ter conta de contabilista.`,
+                                  pergunta: {
+                                    titulo: `Aprovar ${p.nome}?`,
+                                    descricao: "Aprovar cria a conta e abre o painel de gestão a esta pessoa.",
+                                    consequencias: [
+                                      "Passa a poder receber clientes, marcar consultas e emitir cupões.",
+                                      "Não ganha acesso aos dados fiscais de ninguém — só ao que cada cliente lhe enviar.",
+                                      "A decisão fica na auditoria, com quem a tomou.",
+                                    ],
+                                    confirmar: "Aprovar e criar conta",
+                                  },
+                                })
+                              }
                             >
                               <Check size={15} aria-hidden /> Aprovar e criar conta
                             </Button>
@@ -213,7 +238,25 @@ export default function AdminContabilistasPage() {
                               size="sm"
                               variant="secondary"
                               disabled={ocupado === p.id}
-                              onClick={() => decidir({ pedidoId: p.id, decisao: "recusar", motivo: motivos[p.id] }, p.id)}
+                              onClick={() => {
+                                // A recusa sem motivo é rejeitada pelo servidor. Dizê-lo
+                                // aqui poupa uma ida ao servidor para ouvir «falta o motivo».
+                                if ((motivos[p.id] ?? "").trim().length < 5) {
+                                  avisos.erro("Escreve o motivo antes de recusar.", {
+                                    detalhe: "É o que a pessoa vai ler para saber o que corrigir.",
+                                  });
+                                  return;
+                                }
+                                void decidir({ pedidoId: p.id, decisao: "recusar", motivo: motivos[p.id] }, p.id, {
+                                  feito: "Candidatura recusada.",
+                                  pergunta: {
+                                    titulo: `Recusar a candidatura de ${p.nome}?`,
+                                    descricao: "A pessoa recebe o motivo que escreveste e pode corrigir e voltar a candidatar-se.",
+                                    confirmar: "Recusar candidatura",
+                                    tom: "perigo",
+                                  },
+                                });
+                              }}
                             >
                               <Close size={15} aria-hidden /> Recusar
                             </Button>
@@ -222,7 +265,11 @@ export default function AdminContabilistasPage() {
                                 size="sm"
                                 variant="ghost"
                                 disabled={ocupado === p.id}
-                                onClick={() => decidir({ pedidoId: p.id, decisao: "em_analise" }, p.id)}
+                                onClick={() =>
+                                  decidir({ pedidoId: p.id, decisao: "em_analise" }, p.id, {
+                                    feito: "Candidatura marcada como em análise.",
+                                  })
+                                }
                               >
                                 Marcar em análise
                               </Button>
@@ -266,11 +313,24 @@ export default function AdminContabilistasPage() {
                           onClick={() => {
                             const motivo = motivos[c.user_id] ?? "";
                             if (motivo.trim().length < 5) {
-                              setErro("Escreve o motivo da suspensão no campo desta conta antes de suspender.");
+                              avisos.erro("Escreve o motivo da suspensão no campo desta conta.");
                               setMotivos((m) => ({ ...m, [c.user_id]: motivo }));
                               return;
                             }
-                            decidir({ userId: c.user_id, decisao: "suspender", motivo }, c.user_id);
+                            void decidir({ userId: c.user_id, decisao: "suspender", motivo }, c.user_id, {
+                              feito: `${c.nome} ficou suspenso.`,
+                              pergunta: {
+                                titulo: `Suspender ${c.nome}?`,
+                                descricao: "O painel de gestão fecha-se imediatamente para esta pessoa.",
+                                consequencias: [
+                                  "O perfil sai do diretório e ninguém lhe pode marcar consulta.",
+                                  "Os clientes atuais mantêm o que já lhe enviaram.",
+                                  "Podes reativar a conta a qualquer momento.",
+                                ],
+                                confirmar: "Suspender conta",
+                                tom: "perigo",
+                              },
+                            });
                           }}
                         >
                           Suspender
@@ -280,7 +340,11 @@ export default function AdminContabilistasPage() {
                           size="sm"
                           variant="secondary"
                           disabled={ocupado === c.user_id}
-                          onClick={() => decidir({ userId: c.user_id, decisao: "reativar" }, c.user_id)}
+                          onClick={() =>
+                            decidir({ userId: c.user_id, decisao: "reativar" }, c.user_id, {
+                              feito: `${c.nome} voltou a ter acesso ao painel.`,
+                            })
+                          }
                         >
                           Reativar
                         </Button>

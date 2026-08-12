@@ -17,16 +17,20 @@ import {
 } from "@/lib/contabilistas/fidelidade";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
-import { Gift, Warning, Check } from "@/components/ui/Icons";
+import { useAvisos } from "@/components/ui/Avisos";
+import { useConfirmar } from "@/components/ui/Confirmar";
+import { Gift, Warning } from "@/components/ui/Icons";
 
 export default function FidelidadePage() {
   const { ficha, aCarregar, recarregar } = usarFicha();
+  const avisos = useAvisos();
+  const confirmar = useConfirmar();
   const [preco, setPreco] = useState("");
   const [meta, setMeta] = useState(5);
   const [desconto, setDesconto] = useState(10);
   const [ativa, setAtiva] = useState(false);
   const [erros, setErros] = useState<string[]>([]);
-  const [guardado, setGuardado] = useState(false);
+  const [porGuardar, setPorGuardar] = useState(false);
   const [aGuardar, setAGuardar] = useState(false);
 
   useEffect(() => {
@@ -35,16 +39,32 @@ export default function FidelidadePage() {
     setMeta(ficha.fidelidadeMeta);
     setDesconto(ficha.fidelidadeDescontoPct);
     setAtiva(ficha.fidelidadeAtiva);
+    setPorGuardar(false);
   }, [ficha]);
 
   const precoCents = Math.round((Number(preco.replace(",", ".")) || 0) * 100);
 
   async function guardar() {
     if (!ficha) return;
-    setGuardado(false);
     const v = validarConfigFidelidade({ descontoPct: desconto, meta, precoConsultaCents: precoCents, ativa });
     setErros(v.erros);
     if (!v.ok) return;
+
+    // Desligar um cartão que estava ligado interrompe uma promessa já feita
+    // a quem tem carimbos a meio. Não é proibido — é para ser deliberado.
+    if (ficha.fidelidadeAtiva && !ativa) {
+      const ok = await confirmar({
+        titulo: "Desligar o cartão de fidelidade?",
+        descricao: "As consultas continuam a ser registadas, mas deixam de carimbar.",
+        consequencias: [
+          "Os cartões a meio ficam onde estão, à espera.",
+          "Os cupões já emitidos continuam válidos até expirarem.",
+        ],
+        confirmar: "Desligar cartão",
+        tom: "perigo",
+      });
+      if (!ok) return;
+    }
 
     setAGuardar(true);
     const { erro } = await atualizarFicha(ficha.userId, {
@@ -55,8 +75,11 @@ export default function FidelidadePage() {
     });
     setAGuardar(false);
     if (erro) { setErros([erro]); return; }
-    setGuardado(true);
+    setPorGuardar(false);
     recarregar();
+    avisos.sucesso(ativa ? "Cartão de fidelidade guardado." : "Cartão guardado, e desligado.", {
+      detalhe: ativa ? `${meta} consultas para ${desconto}% de desconto.` : undefined,
+    });
   }
 
   if (aCarregar) return <div className="h-96 animate-pulse rounded-4xl bg-stone-100" aria-busy="true" />;
@@ -87,7 +110,7 @@ export default function FidelidadePage() {
                 type="text"
                 inputMode="decimal"
                 value={preco}
-                onChange={(e) => { setPreco(e.target.value); setGuardado(false); }}
+                onChange={(e) => { setPreco(e.target.value); setPorGuardar(true); }}
                 placeholder="120,00"
                 aria-describedby="preco-ajuda"
                 className="min-h-[2.75rem] w-40 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm tabular-nums text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
@@ -108,7 +131,7 @@ export default function FidelidadePage() {
                 min={META_MIN}
                 max={META_MAX}
                 value={meta}
-                onChange={(e) => { setMeta(Number(e.target.value)); setGuardado(false); }}
+                onChange={(e) => { setMeta(Number(e.target.value)); setPorGuardar(true); }}
                 className="h-2 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-stone-200 accent-brand"
               />
               <span className="w-10 shrink-0 text-right text-sm font-semibold tabular-nums text-stone-800">{meta}</span>
@@ -129,7 +152,7 @@ export default function FidelidadePage() {
                 min={DESCONTO_MIN_PCT}
                 max={DESCONTO_MAX_PCT}
                 value={desconto}
-                onChange={(e) => { setDesconto(Number(e.target.value)); setGuardado(false); }}
+                onChange={(e) => { setDesconto(Number(e.target.value)); setPorGuardar(true); }}
                 className="h-2 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-stone-200 accent-brand"
               />
               <span className="w-12 shrink-0 text-right text-sm font-semibold tabular-nums text-stone-800">{desconto}%</span>
@@ -140,7 +163,7 @@ export default function FidelidadePage() {
             <input
               type="checkbox"
               checked={ativa}
-              onChange={(e) => { setAtiva(e.target.checked); setGuardado(false); }}
+              onChange={(e) => { setAtiva(e.target.checked); setPorGuardar(true); }}
               className="mt-0.5 h-4 w-4 shrink-0 rounded accent-brand"
             />
             <span className="text-sm text-stone-600">
@@ -160,15 +183,13 @@ export default function FidelidadePage() {
             </ul>
           )}
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="sticky bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-10 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-stone-200 bg-white/95 p-3 shadow-lift backdrop-blur lg:bottom-4">
             <Button onClick={guardar} disabled={aGuardar}>
               {aGuardar ? "A guardar…" : "Guardar"}
             </Button>
-            {guardado && (
-              <span role="status" className="flex items-center gap-1.5 text-sm font-medium text-brand-dark">
-                <Check size={15} aria-hidden /> Guardado.
-              </span>
-            )}
+            <span role="status" className="text-sm text-stone-500">
+              {porGuardar ? "Tens alterações por guardar." : "Está tudo guardado."}
+            </span>
           </div>
 
           <p className="border-t border-stone-100 pt-4 text-xs leading-relaxed text-stone-400">
@@ -209,8 +230,17 @@ export default function FidelidadePage() {
   );
 }
 
-/** Validar um código que o cliente apresenta na consulta. */
+/**
+ * Dar por usado um código que o cliente apresenta na consulta.
+ *
+ * ⚠️ Isto CONSOME o cupão: a rota marca-o como usado no mesmo pedido em que
+ * o valida — não há forma de o espreitar sem o gastar. Enquanto foi só um
+ * botão «Validar», a interface prometia uma verificação e fazia uma escrita
+ * irreversível. Agora diz o que faz, e pergunta antes.
+ */
 function Resgate() {
+  const avisos = useAvisos();
+  const confirmar = useConfirmar();
   const [codigo, setCodigo] = useState("");
   const [estado, setEstado] = useState<"parado" | "a-validar">("parado");
   const [resposta, setResposta] = useState<{ ok: boolean; texto: string } | null>(null);
@@ -228,6 +258,18 @@ function Resgate() {
       setResposta({ ok: false, texto: "O código tem oito caracteres, no formato RC-XXXX-XXXX." });
       return;
     }
+
+    const ok = await confirmar({
+      titulo: `Dar o cupão ${normalizado} por usado?`,
+      descricao: "Faz isto quando aplicares o desconto na consulta.",
+      consequencias: [
+        "O cupão fica gasto e não volta a ser aceite.",
+        "O ReciboCerto regista que o desconto foi dado — não o cobra nem o paga.",
+      ],
+      confirmar: "Dar por usado",
+    });
+    if (!ok) return;
+
     setEstado("a-validar"); setResposta(null);
     try {
       const res = await fetch("/api/contabilistas/cupao", {
@@ -238,14 +280,24 @@ function Resgate() {
       const corpo = (await res.json()) as {
         erro?: string; percentagem?: number; finalCents?: number; baseCents?: number;
       };
-      if (!res.ok) { setResposta({ ok: false, texto: corpo.erro ?? "Não foi possível validar." }); return; }
+      if (!res.ok) {
+        setResposta({ ok: false, texto: corpo.erro ?? "Não foi possível validar." });
+        avisos.erro(corpo.erro ?? "Não foi possível validar o cupão.");
+        return;
+      }
+      // A resposta fica no ecrã, e não só no aviso: são as contas do
+      // desconto, e o contabilista precisa delas à frente enquanto cobra.
       setResposta({
         ok: true,
-        texto: `Válido: ${corpo.percentagem}% de desconto. ${eurosDeCents(corpo.baseCents ?? 0)} passam a ${eurosDeCents(corpo.finalCents ?? 0)}.`,
+        texto: `Usado: ${corpo.percentagem}% de desconto. ${eurosDeCents(corpo.baseCents ?? 0)} passam a ${eurosDeCents(corpo.finalCents ?? 0)}.`,
       });
+      avisos.sucesso("Cupão dado por usado.");
       setCodigo("");
       if (ficha) meusCupoes({ contabilistaId: ficha.userId }).then(setCupoes).catch(() => {});
-    } catch { setResposta({ ok: false, texto: "Falha de rede. Tenta outra vez." }); }
+    } catch {
+      setResposta({ ok: false, texto: "Falha de rede. Tenta outra vez." });
+      avisos.erro("Falha de rede. Tenta outra vez.");
+    }
     finally { setEstado("parado"); }
   }
 
@@ -255,8 +307,9 @@ function Resgate() {
     <section aria-labelledby="resgate-titulo" className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
       <h2 id="resgate-titulo" className="font-display text-xl text-ink">Usar um cupão</h2>
       <p className="mt-1.5 text-sm leading-relaxed text-stone-500">
-        Quando um cliente apresentar o código, valida-o aqui. Marcar como usado regista
-        que o desconto foi dado — o pagamento continua a ser entre vocês os dois.
+        Quando um cliente apresentar o código, dá-o por usado aqui — depois de
+        aplicares o desconto. O código é gasto no momento em que o validas, e
+        isso não se desfaz. O pagamento continua a ser entre vocês os dois.
       </p>
 
       <div className="mt-4 flex flex-wrap items-end gap-2.5">
@@ -272,7 +325,7 @@ function Resgate() {
           />
         </label>
         <Button onClick={validar} disabled={estado === "a-validar"}>
-          {estado === "a-validar" ? "A validar…" : "Validar"}
+          {estado === "a-validar" ? "A registar…" : "Validar e dar por usado"}
         </Button>
       </div>
 

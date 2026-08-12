@@ -20,12 +20,16 @@ import CartaoFidelidade from "@/components/contabilistas/CartaoFidelidade";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
+import { useAvisos } from "@/components/ui/Avisos";
+import { useConfirmar } from "@/components/ui/Confirmar";
 import {
-  Briefcase, Calendar, Check, Clock, Copy, Gift, MapPin, Warning, PaperClip,
+  Briefcase, Calendar, Check, Clock, Copy, Gift, MapPin, PaperClip, Warning,
 } from "@/components/ui/Icons";
 
 export default function MeuContabilistaPage() {
   const { user, carregado, abrirModal, disponivel } = useAuth();
+  const avisos = useAvisos();
+  const confirmar = useConfirmar();
   const [vinculo, setVinculo] = useState<(Vinculo & { contabilista: Contabilista | null }) | null>(null);
   const [cartao, setCartao] = useState<CartaoLido | null>(null);
   const [cupoes, setCupoes] = useState<CupaoLido[]>([]);
@@ -34,6 +38,7 @@ export default function MeuContabilistaPage() {
   const [aLer, setALer] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     if (!user) { setALer(false); return; }
@@ -60,8 +65,75 @@ export default function MeuContabilistaPage() {
     try {
       await navigator.clipboard.writeText(codigo);
       setCopiado(codigo);
+      avisos.sucesso("Código copiado.", { detalhe: "Apresenta-o na próxima consulta." });
       setTimeout(() => setCopiado(null), 2000);
-    } catch { /* sem área de transferência: o código está à vista de qualquer forma */ }
+    } catch {
+      // Sem área de transferência o código continua à vista — o que falha é
+      // a comodidade, não o acesso ao desconto.
+      avisos.info("Não deu para copiar.", { detalhe: `Aponta o código: ${codigo}` });
+    }
+  }
+
+  /** Terminar corta o acesso a tudo o que já foi enviado. Pergunta-se. */
+  async function terminar() {
+    if (!vinculo) return;
+    const nome = vinculo.contabilista?.nome ?? "o contabilista";
+    const ok = await confirmar({
+      titulo: `Terminar o acompanhamento com ${nome}?`,
+      descricao: "Podes voltar a ligar-te mais tarde, aqui ou pelo diretório.",
+      consequencias: [
+        "Deixa de conseguir abrir tudo o que já lhe enviaste.",
+        "As consultas marcadas que ainda não aconteceram são canceladas.",
+        "O teu histórico e os teus dados continuam contigo, intactos.",
+      ],
+      confirmar: "Terminar acompanhamento",
+      tom: "perigo",
+    });
+    if (!ok) return;
+
+    setOcupado(vinculo.id);
+    const { erro: e } = await terminarVinculo(vinculo.id);
+    setOcupado(null);
+    if (e) { avisos.erro(e); return; }
+    avisos.sucesso("Acompanhamento terminado.", { detalhe: `${nome} deixou de ter acesso ao que enviaste.` });
+    await carregar();
+  }
+
+  async function revogar(p: Partilha) {
+    const ok = await confirmar({
+      titulo: "Revogar o acesso a este envio?",
+      descricao: `«${p.titulo}» deixa de abrir do lado do contabilista.`,
+      consequencias: ["Continua a ver que houve um envio, mas não o conteúdo.", "Podes voltar a enviar quando quiseres."],
+      confirmar: "Revogar acesso",
+      tom: "perigo",
+    });
+    if (!ok) return;
+
+    setOcupado(p.id);
+    const { erro: e } = await revogarPartilha(p.id);
+    setOcupado(null);
+    if (e) { avisos.erro(e); return; }
+    avisos.sucesso("Acesso revogado.");
+    await carregar();
+  }
+
+  async function cancelar(a: Agendamento) {
+    const ok = await confirmar({
+      titulo: "Cancelar esta consulta?",
+      descricao: `${rotularDia(diaLocal(new Date(a.inicio)))}, às ${horaLocal(new Date(a.inicio))}.`,
+      consequencias: ["O horário volta a ficar livre.", "Não conta para o cartão de fidelidade."],
+      confirmar: "Cancelar consulta",
+      cancelar: "Manter",
+      tom: "perigo",
+    });
+    if (!ok) return;
+
+    setOcupado(a.id);
+    const { erro: e } = await cancelarConsulta(a.id);
+    setOcupado(null);
+    if (e) { avisos.erro(e); return; }
+    avisos.sucesso("Consulta cancelada.");
+    await carregar();
   }
 
   if (!carregado || aLer) {
@@ -146,15 +218,7 @@ export default function MeuContabilistaPage() {
           <Link href={`/contabilistas/${cc.slug}`}>
             <Button variant="secondary" size="sm">Ver perfil e marcar</Button>
           </Link>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={async () => {
-              if (!vinculo) return;
-              const { erro: e } = await terminarVinculo(vinculo.id);
-              if (e) setErro(e); else await carregar();
-            }}
-          >
+          <Button variant="ghost" size="sm" disabled={ocupado === vinculo.id} onClick={terminar}>
             Terminar acompanhamento
           </Button>
         </div>
@@ -237,14 +301,7 @@ export default function MeuContabilistaPage() {
                         : a.estado === "nao_compareceu" ? "Não compareceste" : "Cancelada"}
                     </Badge>
                     {cancelavel && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={async () => {
-                          const { erro: e } = await cancelarConsulta(a.id);
-                          if (e) setErro(e); else await carregar();
-                        }}
-                      >
+                      <Button size="sm" variant="ghost" disabled={ocupado === a.id} onClick={() => cancelar(a)}>
                         Cancelar
                       </Button>
                     )}
@@ -284,14 +341,7 @@ export default function MeuContabilistaPage() {
                 {p.estado === "revogada" ? (
                   <Badge tone="neutral">Revogada</Badge>
                 ) : (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={async () => {
-                      const { erro: e } = await revogarPartilha(p.id);
-                      if (e) setErro(e); else await carregar();
-                    }}
-                  >
+                  <Button size="sm" variant="ghost" disabled={ocupado === p.id} onClick={() => revogar(p)}>
                     Revogar acesso
                   </Button>
                 )}

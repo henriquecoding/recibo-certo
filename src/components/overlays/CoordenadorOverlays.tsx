@@ -34,18 +34,23 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { registar } from "@/lib/analytics/cliente";
 import { CONSENT_CHANGED_EVENT, lerConsentimento } from "@/lib/cookie-consent";
 
-export type NomeOverlay = "cookies" | "busca" | "menu" | "auth" | "feedback" | "novidades";
+export type NomeOverlay =
+  | "cookies" | "confirmacao" | "busca" | "menu" | "auth" | "feedback" | "novidades";
 
 /**
  * A ordem por que o produto cede a atenção.
  *
  * O consentimento manda porque é a única superfície que a lei obriga a
- * resolver antes de tudo o resto. A seguir vem o que a PESSOA pediu — se
- * carregou em «Pesquisar», é isso que tem de aparecer. As novidades ficam
- * em último: são a única coisa aqui que ninguém pediu.
+ * resolver antes de tudo o resto. Logo a seguir vem a confirmação de uma
+ * ação destrutiva: é a única pergunta do produto cuja resposta não se
+ * desfaz, e tapá-la com o que quer que seja seria pedir uma decisão sobre
+ * uma frase que a pessoa deixou de ver. Depois vem o que a PESSOA pediu —
+ * se carregou em «Pesquisar», é isso que tem de aparecer. As novidades
+ * ficam em último: são a única coisa aqui que ninguém pediu.
  */
 export const PRIORIDADE: Record<NomeOverlay, number> = {
   cookies: 100,
+  confirmacao: 95,
   busca: 80,
   menu: 80,
   feedback: 75,

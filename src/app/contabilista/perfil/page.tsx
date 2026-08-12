@@ -10,18 +10,32 @@ import { usarFicha } from "@/components/contabilistas/usarFicha";
 import { atualizarFicha } from "@/lib/contabilistas/dados";
 import { DISTRITOS, ESPECIALIDADES } from "@/lib/contabilistas/catalogo";
 import Button from "@/components/ui/Button";
-import { Check, ExternalLink, Warning } from "@/components/ui/Icons";
+import { useAvisos } from "@/components/ui/Avisos";
+import { ExternalLink, Warning } from "@/components/ui/Icons";
+
+interface Formulario {
+  nome: string; occ: string; bio: string; distrito: string; concelho: string;
+  email: string; telefone: string; website: string; aceita: boolean;
+  especialidades: string[]; modalidades: string[];
+}
 
 export default function PerfilPage() {
   const { ficha, aCarregar, recarregar } = usarFicha();
-  const [f, setF] = useState({
+  const avisos = useAvisos();
+  const [f, setF] = useState<Formulario>({
     nome: "", occ: "", bio: "", distrito: "", concelho: "",
     email: "", telefone: "", website: "", aceita: true,
-    especialidades: [] as string[], modalidades: ["presencial", "online"] as string[],
+    especialidades: [], modalidades: ["presencial", "online"],
   });
   const [erro, setErro] = useState<string | null>(null);
-  const [guardado, setGuardado] = useState(false);
+  const [porGuardar, setPorGuardar] = useState(false);
   const [aGuardar, setAGuardar] = useState(false);
+
+  /** Uma só porta para mudar o formulário — e para saber que mudou. */
+  function mudar(patch: Partial<Formulario>) {
+    setPorGuardar(true);
+    setF((x) => ({ ...x, ...patch }));
+  }
 
   useEffect(() => {
     if (!ficha) return;
@@ -32,10 +46,11 @@ export default function PerfilPage() {
       website: ficha.website ?? "", aceita: ficha.aceitaNovosClientes,
       especialidades: ficha.especialidades, modalidades: ficha.modalidades,
     });
+    setPorGuardar(false);
   }, [ficha]);
 
   function alternar(lista: "especialidades" | "modalidades", valor: string) {
-    setGuardado(false);
+    setPorGuardar(true);
     setF((x) => ({
       ...x,
       [lista]: x[lista].includes(valor) ? x[lista].filter((v) => v !== valor) : [...x[lista], valor],
@@ -44,7 +59,7 @@ export default function PerfilPage() {
 
   async function guardar() {
     if (!ficha) return;
-    setErro(null); setGuardado(false);
+    setErro(null);
     if (f.nome.trim().length < 2) { setErro("O nome não pode ficar vazio."); return; }
     if (f.modalidades.length === 0) { setErro("Escolhe pelo menos uma modalidade de atendimento."); return; }
 
@@ -63,7 +78,14 @@ export default function PerfilPage() {
       aceita_novos_clientes: f.aceita,
     });
     setAGuardar(false);
-    if (e) setErro(e); else { setGuardado(true); recarregar(); }
+    if (e) { setErro(e); return; }
+    setPorGuardar(false);
+    recarregar();
+    avisos.sucesso("Perfil guardado.", {
+      detalhe: f.aceita
+        ? "É isto que os clientes veem no diretório."
+        : "Continuas no diretório, mas sem aceitar novos clientes.",
+    });
   }
 
   if (aCarregar) return <div className="h-96 animate-pulse rounded-4xl bg-stone-100" aria-busy="true" />;
@@ -90,13 +112,13 @@ export default function PerfilPage() {
 
       <div className="space-y-5 rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Texto rotulo="Nome" id="nome" valor={f.nome} onChange={(v) => { setF({ ...f, nome: v }); setGuardado(false); }} />
+          <Texto rotulo="Nome" id="nome" valor={f.nome} onChange={(v) => mudar({ nome: v })} />
           <Texto
             rotulo="Nº de inscrição na OCC"
             id="occ"
             valor={f.occ}
             ajuda="Opcional. Fica visível no perfil público."
-            onChange={(v) => { setF({ ...f, occ: v }); setGuardado(false); }}
+            onChange={(v) => mudar({ occ: v })}
           />
         </div>
 
@@ -104,7 +126,7 @@ export default function PerfilPage() {
           <span className="text-sm font-semibold text-stone-700">Apresentação</span>
           <textarea
             value={f.bio}
-            onChange={(e) => { setF({ ...f, bio: e.target.value.slice(0, 2000) }); setGuardado(false); }}
+            onChange={(e) => mudar({ bio: e.target.value.slice(0, 2000) })}
             rows={5}
             className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm leading-relaxed text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
             placeholder="Com quem trabalhas, em que és mais forte, como costumas acompanhar."
@@ -117,14 +139,14 @@ export default function PerfilPage() {
             <span className="text-sm font-semibold text-stone-700">Distrito</span>
             <select
               value={f.distrito}
-              onChange={(e) => { setF({ ...f, distrito: e.target.value }); setGuardado(false); }}
+              onChange={(e) => mudar({ distrito: e.target.value })}
               className="mt-2 min-h-[2.75rem] w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
             >
               <option value="">Sem distrito</option>
               {DISTRITOS.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
           </label>
-          <Texto rotulo="Concelho" id="concelho" valor={f.concelho} onChange={(v) => { setF({ ...f, concelho: v }); setGuardado(false); }} />
+          <Texto rotulo="Concelho" id="concelho" valor={f.concelho} onChange={(v) => mudar({ concelho: v })} />
         </div>
 
         <fieldset>
@@ -172,16 +194,16 @@ export default function PerfilPage() {
         </fieldset>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Texto rotulo="Email de contacto" id="email" tipo="email" valor={f.email} onChange={(v) => { setF({ ...f, email: v }); setGuardado(false); }} />
-          <Texto rotulo="Telefone" id="tel" tipo="tel" valor={f.telefone} onChange={(v) => { setF({ ...f, telefone: v }); setGuardado(false); }} />
+          <Texto rotulo="Email de contacto" id="email" tipo="email" valor={f.email} onChange={(v) => mudar({ email: v })} />
+          <Texto rotulo="Telefone" id="tel" tipo="tel" valor={f.telefone} onChange={(v) => mudar({ telefone: v })} />
         </div>
-        <Texto rotulo="Site" id="site" tipo="url" valor={f.website} onChange={(v) => { setF({ ...f, website: v }); setGuardado(false); }} />
+        <Texto rotulo="Site" id="site" tipo="url" valor={f.website} onChange={(v) => mudar({ website: v })} />
 
         <label className="flex items-start gap-3 rounded-2xl bg-cream p-4">
           <input
             type="checkbox"
             checked={f.aceita}
-            onChange={(e) => { setF({ ...f, aceita: e.target.checked }); setGuardado(false); }}
+            onChange={(e) => mudar({ aceita: e.target.checked })}
             className="mt-0.5 h-4 w-4 shrink-0 rounded accent-brand"
           />
           <span className="text-sm text-stone-600">
@@ -190,15 +212,13 @@ export default function PerfilPage() {
           </span>
         </label>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="sticky bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-10 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-stone-200 bg-white/95 p-3 shadow-lift backdrop-blur lg:bottom-4">
           <Button onClick={guardar} disabled={aGuardar}>
             {aGuardar ? "A guardar…" : "Guardar perfil"}
           </Button>
-          {guardado && (
-            <span role="status" className="flex items-center gap-1.5 text-sm font-medium text-brand-dark">
-              <Check size={15} aria-hidden /> Guardado.
-            </span>
-          )}
+          <span role="status" className="text-sm text-stone-500">
+            {porGuardar ? "Tens alterações por guardar." : "Está tudo guardado."}
+          </span>
         </div>
 
         <p className="border-t border-stone-100 pt-4 text-xs leading-relaxed text-stone-400">
