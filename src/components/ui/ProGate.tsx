@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Lock, Sparkle } from "@/components/ui/Icons";
 import { useSubscricao } from "@/lib/stripe/subscription";
-import type { Entitlement } from "@/lib/entitlements";
+import { permissaoDe, type Entitlement, type Funcionalidade } from "@/lib/entitlements";
 
 // Bloqueio Pro contextual (abordagem mista): o conteúdo avançado continua
 // presente, mas desfocado e inerte para quem não tem Pro, com uma camada de
@@ -18,7 +18,8 @@ export default function ProGate({
   cta = "Desbloquear com o Plus",
   href = "/precos",
   className = "",
-  requer = "export.bundle",
+  feature,
+  requer,
 }: {
   title: string;
   description: string;
@@ -26,24 +27,43 @@ export default function ProGate({
   cta?: string;
   href?: string;
   className?: string;
-  /** Permissão exigida. O valor por omissão cobre as exportações, que são
-      o caso mais comum; funcionalidades específicas passam a sua. */
+  /** Funcionalidade protegida. A permissão sai da matriz única. */
+  feature?: Funcionalidade;
+  /** Permissão exigida, quando não há funcionalidade na matriz. */
   requer?: Entitlement;
 }) {
   const { pode, carregado } = useSubscricao();
 
+  // A permissão vem da matriz única (RC-P1-10). Antes havia um valor por
+  // omissão — `export.bundle` — e cartões como a Saúde Fiscal apareciam atrás
+  // do gate das exportações, sem que ninguém o tivesse decidido.
+  const permissao: Entitlement = feature ? permissaoDe(feature) : (requer ?? "export.bundle");
+
   // O estado da subscrição vive num provider acima e é preenchido de forma
   // assíncrona. Como esta página tem ilhas `next/dynamic({ ssr:false })`, o
   // React pode hidratar esta subárvore DEPOIS de o provider já ter carregado —
-  // e então o primeiro render do cliente (gate fechado) não coincidia com o
-  // HTML do servidor (gate aberto), partindo a hidratação da página inteira.
-  // Este `montado` é local: o seu efeito só corre depois de este componente
-  // hidratar, pelo que o primeiro render é sempre igual ao do servidor.
+  // e então o primeiro render do cliente não coincidia com o HTML do servidor,
+  // partindo a hidratação da página inteira. Este `montado` é local: o seu
+  // efeito só corre depois de este componente hidratar, pelo que o primeiro
+  // render é sempre igual ao do servidor.
   const [montado, setMontado] = useState(false);
   useEffect(() => setMontado(true), []);
 
-  // Enquanto o estado não carrega (ou a permissão existe), mostra o conteúdo real.
-  if (!montado || !carregado || pode(requer)) return <>{children}</>;
+  // Enquanto não se sabe o plano, o gate está FECHADO — um esqueleto neutro,
+  // igual no servidor e no cliente. Mostrar o conteúdo protegido "só enquanto
+  // carrega" entregava-o a toda a gente durante esse instante.
+  if (!montado || !carregado) {
+    return (
+      <div
+        className={`animate-pulse rounded-2xl border border-stone-100 bg-stone-50 dark:border-stone-800 dark:bg-stone-900/60 ${className}`}
+        style={{ minHeight: "9rem" }}
+        aria-busy="true"
+        aria-label={`${title} — a carregar`}
+      />
+    );
+  }
+
+  if (pode(permissao)) return <>{children}</>;
 
   return (
     <div className={`relative overflow-hidden rounded-2xl border border-stone-100 dark:border-stone-800 ${className}`}>

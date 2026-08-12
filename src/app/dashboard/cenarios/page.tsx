@@ -1,15 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   useCenarios,
   marcarReabertura,
   META_TIPO_CENARIO,
+  TIPOS_CENARIO,
   type Cenario,
   type TipoCenario,
 } from "@/lib/store/cenarios";
+import { useSubscricao } from "@/lib/stripe/subscription";
+import { permissaoDe } from "@/lib/entitlements";
 import { fmt, pct } from "@/lib/format";
 import {
   data as celulaData,
@@ -21,7 +24,7 @@ import {
 } from "@/lib/export/csv";
 import { MIME, descarregar } from "@/lib/export/nomes";
 import {
-  Invoice, Wallet, Building, Calculator, Trash, Export, ArrowRight, Sparkle, Lock, Scale,
+  Invoice, Wallet, Building, Calculator, Trash, Export, ArrowRight, Sparkle, Lock, Scale, Warning, History,
 } from "@/components/ui/Icons";
 import type { ReactNode } from "react";
 
@@ -29,12 +32,13 @@ const ICONES: Record<string, (p: { size?: number; className?: string }) => React
   Invoice, Wallet, Building, Calculator, Scale,
 };
 
-const SIMULADORES: { tipo: TipoCenario; rota: string }[] = [
-  { tipo: "recibos", rota: META_TIPO_CENARIO.recibos.rota },
-  { tipo: "vencimento", rota: META_TIPO_CENARIO.vencimento.rota },
-  { tipo: "empresa", rota: META_TIPO_CENARIO.empresa.rota },
-  { tipo: "irs", rota: META_TIPO_CENARIO.irs.rota },
-];
+// Deriva da fonte única. Uma segunda lista escrita à mão foi como os cenários
+// de heranças passaram a ser guardados mas nunca mostrados — e a contar na
+// mesma para o limite do plano grátis (RC-P0-04).
+const SIMULADORES: { tipo: TipoCenario; rota: string }[] = TIPOS_CENARIO.map((tipo) => ({
+  tipo,
+  rota: META_TIPO_CENARIO[tipo].rota,
+}));
 
 const fmtValor = (v: number, f?: "eur" | "pct") => (f === "pct" ? pct(v) : fmt(v));
 const dataPt = (iso: string) => {
@@ -74,10 +78,29 @@ function exportarCenariosCSV(cenarios: Cenario[], dialeto: DialetoCSV = "humano"
 
 export default function CenariosPage() {
   const router = useRouter();
-  const { cenarios, carregado, naNuvem, plano, limite, limiteAtingido, remover } = useCenarios();
+  const {
+    cenarios, carregado, naNuvem, limite, limiteAtingido, remover,
+    erroCarregamento, locaisPorImportar, importarLocais, adiarImportacao,
+  } = useCenarios();
+  const { pode } = useSubscricao();
+  // O CSV de cenários é uma exportação: exige a permissão de exportação, como
+  // as outras (RC-P1-10). Antes passava sem gate nenhum.
+  const podeExportar = pode(permissaoDe("exportar-csv"));
+
+  const [aRemover, setARemover] = useState<Cenario | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  // Eliminar passa a pedir confirmação: com gravação otimista e erros
+  // silenciosos, um toque sem rede de segurança era perda de dados (RC-P2-06).
+  const confirmarRemocao = useCallback(async () => {
+    if (!aRemover) return;
+    const r = await remover(aRemover.id);
+    setARemover(null);
+    if (!r.ok) setAviso(r.erro.mensagem);
+  }, [aRemover, remover]);
 
   const porTipo = useMemo(() => {
-    const grupos: Record<TipoCenario, Cenario[]> = { recibos: [], vencimento: [], empresa: [], irs: [], herancas: [] };
+    const grupos = Object.fromEntries(TIPOS_CENARIO.map((t) => [t, [] as Cenario[]])) as Record<TipoCenario, Cenario[]>;
     for (const c of cenarios) grupos[c.tipo]?.push(c);
     return grupos;
   }, [cenarios]);
@@ -95,11 +118,12 @@ export default function CenariosPage() {
           <div className="eyebrow mb-2 text-brand">Gestão</div>
           <h1 className="display-2 font-display font-semibold text-stone-800 dark:text-stone-100">Os meus cenários</h1>
           <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-stone-500 dark:text-stone-400">
-            Tudo o que simulaste num só lugar — recibos verdes, salário, empresa e IRS. Cada cenário guarda todos os
-            dados que preencheste, para reabrires e continuares de onde ficaste.
+            Os cenários dos simuladores completos — recibos verdes, salário, empresa, IRS e heranças — num só lugar.
+            Cada um guarda todos os dados que preencheste, para reabrires e continuares de onde ficaste. As
+            ferramentas rápidas (comparador, ato isolado, auditoria de recibo) calculam mas não guardam cenário.
           </p>
         </div>
-        {cenarios.length > 0 && (
+        {cenarios.length > 0 && podeExportar && (
           <button
             type="button"
             onClick={() => exportarCenariosCSV(cenarios)}
@@ -132,12 +156,70 @@ export default function CenariosPage() {
         </div>
       </div>
 
+      {/* Cenários locais por trazer para a conta (RC-P1-07). Nunca se substitui
+          uma coleção pela outra em silêncio: a pessoa escolhe. */}
+      {locaisPorImportar > 0 && (
+        <div className="mb-6 rounded-2xl border border-brand/30 bg-brand-light px-4 py-3">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex-shrink-0 text-brand"><History size={18} /></span>
+            <p className="text-sm text-brand-dark">
+              Tens {locaisPorImportar} {locaisPorImportar === 1 ? "cenário guardado" : "cenários guardados"} neste
+              dispositivo que ainda não estão na tua conta.
+            </p>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2 pl-[30px]">
+            <button
+              type="button"
+              onClick={async () => {
+                const r = await importarLocais();
+                if (!r.ok) setAviso(r.erro.mensagem);
+              }}
+              className="min-h-9 rounded-xl bg-brand px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
+            >
+              Trazer para a nuvem
+            </button>
+            <button
+              type="button"
+              onClick={adiarImportacao}
+              className="min-h-9 rounded-xl px-3 py-2 text-sm font-medium text-brand-dark transition-colors hover:bg-white/40"
+            >
+              Manter só neste dispositivo
+            </button>
+          </div>
+        </div>
+      )}
+
+      {aviso && (
+        <p role="alert" className="mb-4 rounded-2xl border border-alert-border bg-alert-bg px-4 py-3 text-sm text-alert-text">
+          {aviso}
+        </p>
+      )}
+
       {/* Conteúdo */}
       {!carregado ? (
         <div className="space-y-3">
           {[0, 1].map((i) => (
             <div key={i} className="h-28 animate-pulse rounded-4xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900" />
           ))}
+        </div>
+      ) : erroCarregamento ? (
+        /* Falhar a ler não é "não tens cenários" — mostrar a lista vazia aqui
+           parecia perda de histórico (RC-P0-03). */
+        <div className="rounded-4xl border border-alert-border bg-alert-bg p-8 text-center">
+          <span className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-alert-text/10 text-alert-text">
+            <Warning size={20} />
+          </span>
+          <h2 className="font-display text-lg font-semibold text-alert-text">Não foi possível carregar os teus cenários</h2>
+          <p className="mx-auto mt-1 max-w-md text-sm text-alert-text/80">
+            {erroCarregamento.mensagem} Os cenários continuam guardados — isto é uma falha a lê-los.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-4 inline-flex min-h-9 items-center gap-2 rounded-xl bg-alert-text px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            Tentar novamente
+          </button>
         </div>
       ) : cenarios.length === 0 ? (
         <EstadoVazio />
@@ -162,12 +244,51 @@ export default function CenariosPage() {
                 </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {lista.map((c) => (
-                    <CartaoCenario key={c.id} cenario={c} onAbrir={() => abrir(c)} onRemover={() => remover(c.id)} />
+                    <CartaoCenario key={c.id} cenario={c} onAbrir={() => abrir(c)} onRemover={() => setARemover(c)} />
                   ))}
                 </div>
               </section>
             );
           })}
+        </div>
+      )}
+
+      {/* Confirmação de eliminação — folha inferior no telemóvel (RC-P2-06). */}
+      {aRemover && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="remover-titulo"
+          onClick={(e) => { if (e.target === e.currentTarget) setARemover(null); }}
+        >
+          <div
+            className="w-full max-w-sm rounded-t-4xl bg-white p-6 shadow-float sm:rounded-4xl dark:bg-stone-900"
+            style={{ maxHeight: "90dvh", paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
+          >
+            <h2 id="remover-titulo" className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">
+              Apagar «{aRemover.nome || "Cenário sem nome"}»?
+            </h2>
+            <p className="mt-1.5 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
+              O cenário e todos os dados que preencheste desaparecem. Não é possível recuperar.
+            </p>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setARemover(null)}
+                className="min-h-10 rounded-xl border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-600 transition-colors hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
+              >
+                Manter
+              </button>
+              <button
+                type="button"
+                onClick={confirmarRemocao}
+                className="min-h-10 rounded-xl bg-alert-text px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              >
+                Apagar cenário
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -223,7 +344,8 @@ function EstadoVazio() {
       </span>
       <h2 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">Ainda não guardaste cenários</h2>
       <p className="mx-auto mt-1.5 max-w-md text-sm leading-relaxed text-stone-500 dark:text-stone-400">
-        Em qualquer simulador, no fim, toca em «Guardar cenário» — aparece aqui com todos os dados, pronto a reabrir.
+        Em qualquer um dos simuladores completos, no fim, toca em «Guardar cenário» — aparece aqui com todos os
+        dados, pronto a reabrir.
       </p>
       <div className="mt-5 flex flex-wrap justify-center gap-2">
         {SIMULADORES.map(({ tipo, rota }) => {

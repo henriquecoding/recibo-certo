@@ -6,7 +6,9 @@ import Link from "next/link";
 import { m, AnimatePresence } from "motion/react";
 import { useAuth } from "@/lib/supabase/auth";
 import { useSubscricao } from "@/lib/stripe/subscription";
-import { useRecibos, resumir } from "@/lib/store/recibos";
+import { useRecibos } from "@/lib/store/recibos";
+import { usePreferenciasFiscais } from "@/lib/store/preferencias-fiscais";
+import PerfilFiscalEditor from "@/components/dashboard/PerfilFiscalEditor";
 import { useQuizProgresso } from "@/lib/store/quiz-progresso";
 import { NIVEIS } from "@/lib/quiz-fiscal/progresso";
 import { saudeFiscal } from "@/lib/insights";
@@ -35,6 +37,7 @@ import {
   Award,
   Target,
   BarChart2,
+  Calculator,
   ChevronRight,
   Gauge,
   BookOpen,
@@ -481,7 +484,10 @@ export default function PerfilPage() {
   const { recibos, carregado: recibosCarregado } = useRecibos();
   const quiz = useQuizProgresso();
   const [isAdmin, setIsAdmin] = useState(false);
-  const [activeSection, setActiveSection] = useState<"progresso" | "conquistas" | "historico">("progresso");
+  const [activeSection, setActiveSection] = useState<"progresso" | "fiscal" | "conquistas" | "historico">("progresso");
+  // O perfil fiscal alimenta os guardiões e a estimativa de IRS: é aqui que
+  // deixa de ser suposição (RC-P1-01).
+  const { prefs } = usePreferenciasFiscais();
 
   // ── Supabase profile state ──
   const [perfil, setPerfil] = useState<DadosPerfil>({ nome: "", telefone: "", nif: "", avatarUrl: "" });
@@ -620,8 +626,11 @@ export default function PerfilPage() {
   }, [user]);
 
   const saude = useMemo(
-    () => (recibosCarregado ? saudeFiscal(recibos) : { score: 0, estado: "Tranquilo" as const, fatores: [] }),
-    [recibosCarregado, recibos],
+    () =>
+      recibosCarregado
+        ? saudeFiscal(recibos, { prefs })
+        : { score: null, estado: "Por configurar" as const, fatores: [], emFalta: [], confianca: "insuficiente" as const, metodologia: "" },
+    [recibosCarregado, recibos, prefs],
   );
 
   const totalRecibos = recibos.length;
@@ -1105,6 +1114,12 @@ export default function PerfilPage() {
                 onClick={() => setActiveSection("progresso")}
               />
               <SectionTab
+                ativo={activeSection === "fiscal"}
+                icon={Calculator}
+                label="Perfil fiscal"
+                onClick={() => setActiveSection("fiscal")}
+              />
+              <SectionTab
                 ativo={activeSection === "conquistas"}
                 icon={Award}
                 label="Conquistas"
@@ -1218,6 +1233,19 @@ export default function PerfilPage() {
                       </div>
                     </div>
                   </ProGate>
+                </m.div>
+              )}
+
+              {/* ── PERFIL FISCAL ── */}
+              {activeSection === "fiscal" && (
+                <m.div
+                  key="fiscal"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.28, ease: EASE }}
+                >
+                  <PerfilFiscalEditor />
                 </m.div>
               )}
 
@@ -1427,11 +1455,11 @@ export default function PerfilPage() {
                         strokeWidth="3"
                         className="text-brand"
                         strokeLinecap="round"
-                        strokeDasharray={`${saude.score * 0.975} 97.5`}
+                        strokeDasharray={`${(saude.score ?? 0) * 0.975} 97.5`}
                       />
                     </svg>
                     <span className="absolute text-base font-semibold tabular-nums text-stone-800 dark:text-stone-100">
-                      {saude.score}
+                      {saude.score ?? "—"}
                     </span>
                   </div>
                   <div>

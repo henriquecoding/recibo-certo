@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import RegistarRecibo, { type RespostaRegisto } from "@/components/dashboard/RegistarRecibo";
 import Link from "next/link";
 import { gravarExportRecibosVerdes } from "@/lib/store/importacao-irs";
 import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
@@ -121,7 +122,7 @@ export interface EstadoGuiadoSaida {
 
 interface ModoGuiadoProps {
   onIrParaSimuladorCompleto: (estado: EstadoGuiadoSaida) => void;
-  onGuardarRecibo?: (recibo: ReciboGuiadoSaida, cliente: string) => void;
+  onGuardarRecibo?: (recibo: ReciboGuiadoSaida, cliente: string, data: string) => Promise<RespostaRegisto>;
 }
 
 export interface ReciboGuiadoSaida {
@@ -775,7 +776,7 @@ export default function ModoGuiado({
 
   const nomePadraoCenario = `Recibos verdes · ${fmt(brutoAnual)}/ano`;
 
-  function guardarCenario(nome: string) {
+  async function guardarCenario(nome: string) {
     const rotuloAtiv = atividadeEspecifica?.label ?? card.titulo;
     const cargaFiscal = brutoAnual > 0 ? (irsAnual + ssAnual) / brutoAnual : 0;
     const resumo: ResumoCenario = {
@@ -789,9 +790,10 @@ export default function ModoGuiado({
         { label: "Carga fiscal", valor: cargaFiscal, fmt: "pct" },
       ],
     };
-    const r = cenariosStore.guardar({ tipo: "recibos", nome: nome || nomePadraoCenario, resumo, dados: { ...montarSnapshot(), _rotulo: rotuloAtiv } });
-    setCenarioFeedback(r.erro ? { tipo: "erro", texto: r.erro } : { tipo: "ok", texto: "Cenário guardado em «Os meus cenários»." });
-    setDialogGuardar(false);
+    // Só se anuncia "guardado" depois de a gravação confirmar (RC-P0-03).
+    const r = await cenariosStore.guardar({ tipo: "recibos", nome: nome || nomePadraoCenario, resumo, dados: { ...montarSnapshot(), _rotulo: rotuloAtiv } });
+    setCenarioFeedback(r.ok ? { tipo: "ok", texto: "Cenário guardado em «Os meus cenários»." } : { tipo: "erro", texto: r.erro.mensagem });
+    if (r.ok) setDialogGuardar(false);
   }
 
   // Reabre um cenário marcado a partir da página de gestão (uma vez, na montagem).
@@ -1140,7 +1142,7 @@ export default function ModoGuiado({
                     }}
                     onVoltar={() => setPasso(3)}
                     onProximosPassos={() => setPasso("contabilista")}
-                    onGuardarRecibo={onGuardarRecibo ? (cliente: string) => onGuardarRecibo({
+                    onGuardarRecibo={onGuardarRecibo ? (cliente: string, data: string) => onGuardarRecibo({
                       valor: bruto,
                       tipo: card.tipoFiscal,
                       atividade: atividadeEspecifica?.label,
@@ -1154,7 +1156,7 @@ export default function ModoGuiado({
                         iva: ivaAnual / recibosAno,
                         liquido: liquidoAnual / recibosAno,
                       },
-                    }, cliente) : undefined}
+                    }, cliente, data) : undefined}
                   />
 
                   {/* ── Guardar este cenário na página de gestão ── */}
@@ -2903,69 +2905,6 @@ function SeparadorBloco({ label }: { label: string }) {
 
 // ─── ResultadoFinal ───────────────────────────────────────────────────────────
 
-function GuardarReciboBtn({ onGuardar }: { onGuardar: (cliente: string) => void }) {
-  const [aberto, setAberto] = useState(false);
-  const [cliente, setCliente] = useState("");
-  const [guardado, setGuardado] = useState(false);
-
-  if (guardado) {
-    return (
-      <div className="flex items-center justify-center gap-2 rounded-2xl border border-brand/30 bg-brand-light px-5 py-3 text-sm font-semibold text-brand-dark dark:bg-brand/10 dark:border-brand/20 dark:text-brand">
-        <Check size={16} />
-        Recibo guardado no painel
-      </div>
-    );
-  }
-
-  if (!aberto) {
-    return (
-      <button
-        type="button"
-        onClick={() => setAberto(true)}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand bg-white px-5 py-3 text-sm font-semibold text-brand transition-all hover:bg-brand-light dark:bg-stone-900 dark:hover:bg-brand/10"
-      >
-        <ArrowRight size={14} />
-        Guardar no painel
-      </button>
-    );
-  }
-
-  return (
-    <div className="space-y-2 rounded-2xl border border-brand/30 bg-brand-light/50 p-4 dark:bg-brand/5 dark:border-brand/20">
-      <label className="block text-xs font-medium text-stone-600 dark:text-stone-300">
-        Nome do cliente
-      </label>
-      <input
-        type="text"
-        value={cliente}
-        onChange={(e) => setCliente(e.target.value)}
-        placeholder="Ex: Empresa X"
-        autoFocus
-        className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-brand dark:bg-stone-800 dark:border-stone-700 dark:text-stone-100"
-      />
-      <div className="flex gap-2">
-        <button
-          type="button"
-          disabled={!cliente.trim()}
-          onClick={() => {
-            onGuardar(cliente.trim());
-            setGuardado(true);
-          }}
-          className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white transition-all hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Guardar
-        </button>
-        <button
-          type="button"
-          onClick={() => { setAberto(false); setCliente(""); }}
-          className="rounded-xl border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-500 transition-all hover:bg-stone-50 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800"
-        >
-          Cancelar
-        </button>
-      </div>
-    </div>
-  );
-}
 
 function ResultadoFinal({
   brutoAnual,
@@ -3044,7 +2983,7 @@ function ResultadoFinal({
   onRecomecar: () => void;
   onVoltar: () => void;
   onProximosPassos: () => void;
-  onGuardarRecibo?: (cliente: string) => void;
+  onGuardarRecibo?: (cliente: string, data: string) => Promise<RespostaRegisto>;
 }) {
   // `simAnual` chega calculado do componente-pai.
   //
@@ -3699,7 +3638,7 @@ function ResultadoFinal({
           {/* ── CTAs ─────────────────────────────────────────────────────── */}
           <div className="flex flex-col gap-2.5">
             {onGuardarRecibo && (
-              <GuardarReciboBtn onGuardar={onGuardarRecibo} />
+              <RegistarRecibo onGuardar={onGuardarRecibo} />
             )}
             <button
               type="button"

@@ -369,9 +369,9 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
   useEffect(() => {
     if (hidratado && !tinhaSnapshot.current && carregado && recibos.length > 0) {
       setIndBruto(String(Math.round(resumo.bruto)));
-      setIndRet(String(Math.round(resumo.retencao)));
+      setIndRet(String(Math.round(resumo.retencaoEfetiva)));
     }
-  }, [hidratado, carregado, recibos.length, resumo.bruto, resumo.retencao]);
+  }, [hidratado, carregado, recibos.length, resumo.bruto, resumo.retencaoEfetiva]);
 
   const ef = efeitoFiscal(atividade);
   const efB = efeitoFiscal(atividadeB);
@@ -615,7 +615,7 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
   // não só o resultado.
   const nomePadraoCenario = `Declaração IRS ${contribuinte.nome ? `· ${contribuinte.nome.trim()}` : ""}`.trim();
 
-  const guardarCenario = (nome: string) => {
+  const guardarCenario = async (nome: string) => {
     const nomePadrao = nomePadraoCenario;
     const resumoCen: ResumoCenario = {
       destaque: Math.abs(resultado.saldo),
@@ -627,14 +627,14 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
         { label: "Taxa efetiva", valor: resultado.taxaEfetiva, fmt: "pct" },
       ],
     };
-    const r = cenariosStore.guardar({
+    const r = await cenariosStore.guardar({
       tipo: "irs",
       nome: nome || nomePadrao,
       resumo: resumoCen,
       dados: montarSnapshot(),
     });
-    if (r.erro) {
-      setCenarioFeedback({ tipo: "erro", texto: r.erro });
+    if (!r.ok) {
+      setCenarioFeedback({ tipo: "erro", texto: r.erro.mensagem });
     } else {
       setCenarioFeedback({ tipo: "ok", texto: "Cenário guardado na página «Os meus cenários»." });
     }
@@ -659,9 +659,9 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
         icone: "Receipt",
         detalhes: [
           `Faturação ${fmt(resumo.bruto)}`,
-          ...(resumo.retencao > 0 ? [`Retenções ${fmt(resumo.retencao)}`] : []),
+          ...(resumo.retencaoEfetiva > 0 ? [`Retenções ${fmt(resumo.retencaoEfetiva)}`] : []),
         ],
-        patch: { ativar: ["independente"], indBruto: Math.round(resumo.bruto), indRet: Math.round(resumo.retencao) },
+        patch: { ativar: ["independente"], indBruto: Math.round(resumo.bruto), indRet: Math.round(resumo.retencaoEfetiva) },
       });
     }
     lista.push(...fontesDeArmazenamento());

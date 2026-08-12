@@ -505,7 +505,7 @@ export function MotorReciboVencimento() {
     setAuditKey((value) => value + 1);
   }
 
-  function saveScenario(name: string) {
+  async function saveScenario(name: string) {
     const summary: ResumoCenario = {
       destaque: calculation.result.liquido,
       destaqueLabel: "Líquido do mês",
@@ -517,9 +517,9 @@ export function MotorReciboVencimento() {
         { label: "Taxa efetiva", valor: calculation.result.taxaEfetiva, fmt: "pct" },
       ],
     };
-    const result = guardar({ tipo: "vencimento", nome: name, resumo: summary, dados: snapshot });
-    if (result.erro) {
-      setSaveNotice({ type: "error", text: result.erro });
+    const result = await guardar({ tipo: "vencimento", nome: name, resumo: summary, dados: snapshot });
+    if (!result.ok) {
+      setSaveNotice({ type: "error", text: result.erro.mensagem });
     } else {
       mirrorLegacyPayrollScenario({
         name,

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { calcularReciboDashboard, type Recibo } from "@/lib/store/recibos";
+import { resultadoDoRecibo, type Recibo } from "@/lib/recibos-contrato";
 import { fmt } from "@/lib/format";
 import { ArrowRight } from "@/components/ui/Icons";
 import Badge from "@/components/ui/Badge";
@@ -41,7 +41,7 @@ export default function TabelaRecibos({ recibos }: { recibos: Recibo[] }) {
           </thead>
           <tbody>
             {recentes.map((r) => {
-              const c = calcularReciboDashboard(r);
+              const c = resultadoDoRecibo(r);
               return (
                 <tr key={r.id} className="border-t border-stone-50 dark:border-stone-800">
                   <td className="px-2 py-2.5">

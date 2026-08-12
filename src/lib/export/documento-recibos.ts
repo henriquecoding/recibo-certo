@@ -12,7 +12,7 @@
 //  verificação.
 // ─────────────────────────────────────────────────────────────────────
 
-import { calcularRecibo, type Recibo } from "@/lib/store/recibos";
+import { resultadoDoRecibo, type Recibo } from "@/lib/recibos-contrato";
 import { META_TIPO } from "@/lib/fiscal-data";
 import { cent, dataExtenso, dataPT, eur, pctDoc } from "./dinheiro";
 import type { Proveniencia } from "./referencia";
@@ -40,7 +40,7 @@ interface LinhaRecibo {
 
 function linhas(recibos: readonly Recibo[]): LinhaRecibo[] {
   return recibos.map((r) => {
-    const c = calcularRecibo(r);
+    const c = resultadoDoRecibo(r);
     return {
       // dd/mm/aaaa: o mapa vai para um contabilista português, e o ISO é o
       // dialeto de máquina — vive no CSV, não numa coluna que alguém lê.
@@ -49,9 +49,9 @@ function linhas(recibos: readonly Recibo[]): LinhaRecibo[] {
       cliente: r.cliente?.trim() || "—",
       tipo: META_TIPO[r.tipo].label,
       bruto: cent(c.bruto),
-      iva: cent(c.iva),
-      retencao: cent(c.retencaoIRS),
-      ss: cent(c.segSocial),
+      iva: cent(c.ivaCobrado),
+      retencao: cent(c.retencaoEfetiva),
+      ss: cent(c.segurancaSocialEstimada),
       liquido: cent(c.liquido),
     };
   });

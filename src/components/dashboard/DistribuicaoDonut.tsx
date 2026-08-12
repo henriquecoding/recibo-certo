@@ -7,16 +7,19 @@ import { fmt, pct } from "@/lib/format";
 // verde da marca, IRS = mint claro, Seg. Social = verde profundo. `cls` →
 // currentColor + classe que adapta ao modo escuro (override em globals.css);
 // `color` → hex fixo (o mint é legível nos dois temas).
-const SEG: { key: "liquido" | "retencao" | "segSocial"; label: string; color?: string; cls?: string }[] = [
+// O segmento do meio é a retenção EFETIVAMENTE feita (Art. 101.º-B), não o
+// IRS anual estimado: são grandezas diferentes e chamar-lhes o mesmo era
+// parte do que fazia o painel e o CSV discordarem (RC-P0-02).
+const SEG: { key: "liquido" | "retencaoEfetiva" | "segurancaSocialEstimada"; label: string; color?: string; cls?: string }[] = [
   { key: "liquido", label: "Teu", cls: "text-brand" },
-  { key: "retencao", label: "IRS estimado", color: "#9FE1CB" },
-  { key: "segSocial", label: "Seg. Social", cls: "text-brand-deep" },
+  { key: "retencaoEfetiva", label: "Retenção IRS", color: "#9FE1CB" },
+  { key: "segurancaSocialEstimada", label: "Seg. Social", cls: "text-brand-deep" },
 ];
 
 // Donut de distribuição do recibo: para onde vai o que faturaste no mês.
 // O IVA fica de fora (é do Estado, pass-through) — coerente com o resto do produto.
 export default function DistribuicaoDonut({ resumo }: { resumo: ResumoRecibos }) {
-  const real = resumo.liquido + resumo.retencao + resumo.segSocial;
+  const real = resumo.liquido + resumo.retencaoEfetiva + resumo.segurancaSocialEstimada;
   const vazio = real <= 0;
   const base = real || 1;
   const r = 52;

@@ -318,7 +318,7 @@ export default function ModoGuiadoHeranca() {
     };
   }
 
-  function guardarCenario(nome: string) {
+  async function guardarCenario(nome: string) {
     const resumo: ResumoCenario = {
       destaque: resultado.selo.total,
       destaqueLabel: "Imposto do Selo total",
@@ -329,9 +329,9 @@ export default function ModoGuiadoHeranca() {
         { label: "N.º de herdeiros", valor: resultado.partilha.quinhoes.length },
       ],
     };
-    const r = cenariosStore.guardar({ tipo: "herancas", nome: nome || "Herança", resumo, dados: montarSnapshot() });
-    setCenarioFeedback(r.erro ? { tipo: "erro", texto: r.erro } : { tipo: "ok", texto: "Cenário guardado em «Os meus cenários»." });
-    setDialogGuardar(false);
+    const r = await cenariosStore.guardar({ tipo: "herancas", nome: nome || "Herança", resumo, dados: montarSnapshot() });
+    setCenarioFeedback(r.ok ? { tipo: "ok", texto: "Cenário guardado em «Os meus cenários»." } : { tipo: "erro", texto: r.erro.mensagem });
+    if (r.ok) setDialogGuardar(false);
   }
 
   // Navegação

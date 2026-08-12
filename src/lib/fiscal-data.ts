@@ -778,6 +778,9 @@ export const IAS = sv(
 // ═══════════════════════════════════════════════════════════════════════
 export type TipoAtividade = "art151" | "outros" | "vendas" | "diretosAutor";
 
+/** Conjunto fechado dos tipos, para validar dados que vêm de fora (RC-P1-12). */
+export const TIPOS_ATIVIDADE = ["art151", "outros", "vendas", "diretosAutor"] as const;
+
 export const RETENCAO: Record<TipoAtividade, Sourced<number>> = {
   art151: sv(
     0.23,
@@ -860,6 +863,12 @@ export const IVA_ISENCAO_EXCESSO = sv(
 
 export type Regiao = "continente" | "madeira" | "acores";
 export type EscalaoIVA = "reduzida" | "intermedia" | "normal";
+
+/** Conjuntos fechados, para validar dados persistidos (RC-P1-12). */
+export const REGIOES = ["continente", "madeira", "acores"] as const;
+export const ESCALOES_IVA = ["reduzida", "intermedia", "normal"] as const;
+/** Regime de IVA de um recibo: isento (Art. 53.º) ou uma das taxas. */
+export const REGIMES_IVA = ["isento", "reduzida", "intermedia", "normal"] as const;
 
 export const IVA_TAXAS: Record<Regiao, Sourced<Record<EscalaoIVA, number>>> = {
   continente: sv(
@@ -960,6 +969,8 @@ export const SS_TAXA = sv(
 
 /** Coeficiente do rendimento relevante consoante a natureza da atividade. */
 export type BaseSS = "servicos" | "bens";
+/** Conjunto fechado das bases, para validar dados persistidos (RC-P1-12). */
+export const BASES_SS = ["servicos", "bens"] as const;
 export const SS_COEFICIENTE: Record<BaseSS, Sourced<number>> = {
   servicos: sv(0.7, "Art. 162.º Código Contributivo — prestação de serviços", "segSocialGov", TODAY),
   bens: sv(
@@ -6708,6 +6719,24 @@ export function assertFiscalDataIntegrity(): void {
   // 2) Excesso de IVA = 125% do limite de isenção.
   if (Math.abs(IVA_ISENCAO_EXCESSO.value - IVA_ISENCAO_LIMITE.value * 1.25) > EPS) {
     erros.push("Limiar de excesso de IVA não corresponde a 125% do limite de isenção.");
+  }
+
+  // 2b) Os conjuntos fechados usados na validação têm de cobrir exatamente as
+  // chaves reais. Um enum que se desalinhe põe a validação a recusar dados
+  // legítimos (ou a aceitar lixo) sem ninguém dar por isso.
+  const mesmoConjunto = (a: readonly string[], b: readonly string[]) =>
+    a.length === b.length && [...a].sort().join("|") === [...b].sort().join("|");
+  if (!mesmoConjunto(TIPOS_ATIVIDADE, Object.keys(RETENCAO))) {
+    erros.push("TIPOS_ATIVIDADE não corresponde às chaves de RETENCAO.");
+  }
+  if (!mesmoConjunto(REGIOES, Object.keys(IVA_TAXAS))) {
+    erros.push("REGIOES não corresponde às chaves de IVA_TAXAS.");
+  }
+  if (!mesmoConjunto(BASES_SS, Object.keys(SS_COEFICIENTE))) {
+    erros.push("BASES_SS não corresponde às chaves de SS_COEFICIENTE.");
+  }
+  if (!mesmoConjunto(REGIMES_IVA, ["isento", ...ESCALOES_IVA])) {
+    erros.push("REGIMES_IVA não corresponde a «isento» mais os escalões de IVA.");
   }
 
   // 3) Todas as taxas no intervalo [0, 1].

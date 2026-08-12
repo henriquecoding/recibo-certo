@@ -927,7 +927,7 @@ export default function ModoGuiadoEmpresa({
 
   const nomePadraoCenario = `Empresa · ${fmt(resultado.faturacao)}/ano`;
 
-  function guardarCenario(nome: string) {
+  async function guardarCenario(nome: string) {
     const nomePadrao = nomePadraoCenario;
     const resumo: ResumoCenario = {
       destaque: resultado.liquidoGerente,
@@ -940,9 +940,9 @@ export default function ModoGuiadoEmpresa({
         { label: "Taxa efetiva", valor: resultado.taxaEfetiva, fmt: "pct" },
       ],
     };
-    const r = cenariosStore.guardar({ tipo: "empresa", nome: nome || nomePadrao, resumo, dados: montarSnapshot() });
-    setCenarioFeedback(r.erro ? { tipo: "erro", texto: r.erro } : { tipo: "ok", texto: "Cenário guardado em «Os meus cenários»." });
-    setDialogGuardar(false);
+    const r = await cenariosStore.guardar({ tipo: "empresa", nome: nome || nomePadrao, resumo, dados: montarSnapshot() });
+    setCenarioFeedback(r.ok ? { tipo: "ok", texto: "Cenário guardado em «Os meus cenários»." } : { tipo: "erro", texto: r.erro.mensagem });
+    if (r.ok) setDialogGuardar(false);
   }
 
   // Reabre um cenário marcado a partir da página de gestão (uma vez, na montagem).
