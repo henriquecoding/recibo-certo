@@ -336,7 +336,13 @@ export default function MeuContabilistaPage() {
                   <p className="mt-0.5 text-xs text-stone-500">
                     {ROTULO_PARTILHA[p.tipo]} ·{" "}
                     {new Intl.DateTimeFormat("pt-PT", { dateStyle: "medium" }).format(new Date(p.criadoEm))}
+                    {p.estado === "vista" && " · já foi visto"}
                   </p>
+                  {/* O que a pessoa escreveu ao enviar. Ver o próprio recado
+                      é o que torna a lista reconhecível meses depois. */}
+                  {p.nota && (
+                    <p className="mt-1 line-clamp-2 text-xs italic leading-relaxed text-stone-500">«{p.nota}»</p>
+                  )}
                 </div>
                 {p.estado === "revogada" ? (
                   <Badge tone="neutral">Revogada</Badge>

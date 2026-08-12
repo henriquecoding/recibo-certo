@@ -166,15 +166,36 @@ um seria criar a possibilidade de o cobrar. Está coberto por teste.
 | # | Etapa | Estado |
 |---|---|---|
 | 1 | Plano (este documento) | ✅ |
-| 2 | Domínio puro + testes | |
-| 3 | Migração SQL 042 + RLS | |
-| 4 | Rotas de API | |
-| 5 | Painel do contabilista | |
-| 6 | Área do cliente | |
-| 7 | Diretório público e candidatura | |
-| 8 | Aprovação por administração | |
-| 9 | Routing e medição | |
-| 10 | Verificação e publicação | |
+| 2 | Domínio puro + testes | ✅ |
+| 3 | Migração SQL 042 + RLS | ✅ |
+| 4 | Rotas de API | ✅ |
+| 5 | Painel do contabilista | ✅ |
+| 6 | Área do cliente | ✅ |
+| 7 | Diretório público e candidatura | ✅ |
+| 8 | Aprovação por administração | ✅ |
+| 9 | Routing e medição | ✅ |
+| 10 | Experiência: feedback, confirmações e marcação | ✅ |
+| 11 | Verificação e publicação | falta o sitemap (§11) |
+
+## 10.1 A camada de feedback (etapa 10)
+
+Duas peças, na raiz da app, dentro do `CoordenadorOverlays`:
+
+- **`ui/Avisos.tsx`** — a resposta a cada ação. Aparece em baixo, acima da
+  navegação de telemóvel, e o relógio para enquanto o rato ou o teclado lá
+  estiverem. Erros anunciam-se com `alert`; o resto com `status`.
+- **`ui/Confirmar.tsx`** — a pergunta antes do que não se desfaz, com as
+  consequências escritas, o foco a começar em «Cancelar» e o teclado preso
+  dentro do diálogo. É `aria-modal`, por isso disputa a vaga dos overlays com
+  prioridade 95 — acima de tudo menos do consentimento de cookies. Recusada a
+  vaga, responde «não»: uma promessa por resolver deixava a ação suspensa.
+
+O que conta como irreversível, e por isso pergunta: terminar um vínculo,
+revogar uma partilha, cancelar ou recusar, suspender uma conta, desligar o
+cartão de fidelidade, dar um cupão por usado — e **marcar uma consulta como
+realizada**, que carimba o cartão e não se descarimba.
+
+As invariantes estão fixadas em `src/lib/__tests__/contabilistas-experiencia.test.ts`.
 
 ## 10. O que fica de fora (decisões explícitas)
 

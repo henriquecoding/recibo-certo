@@ -85,6 +85,7 @@ import ProHint from "@/components/ui/ProHint";
 import PartnerSpot from "@/components/dashboard/PartnerSpot";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import GuardarCenarioDialog from "@/components/ui/GuardarCenarioDialog";
+import EnviarAoContabilista from "@/components/contabilistas/EnviarAoContabilista";
 import { exportarDeclaracaoCSV } from "@/lib/export-irs";
 import { descarregar, MIME, nomeFicheiro } from "@/lib/export/nomes";
 import { getSupabase } from "@/lib/supabase/client";
@@ -1220,6 +1221,30 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
         {/* Coluna de resultado (sempre visível) */}
         <div className="lg:sticky lg:top-6">
           <ResumoLateral resultado={resultado} reembolso={reembolso} completude={completude} nErros={erros.length} />
+
+          {/* A ponte para o contabilista. Aparece só quando há um número
+              para enviar — uma simulação vazia não é uma pergunta.
+              ⚠️ NÃO verifica o plano, e não pode passar a verificar:
+              `PARTILHA_NUNCA_EXIGE_PLUS`, coberto por teste. */}
+          {resultado.rendimentoGlobal > 0 && (
+            <div className="mt-4">
+              <EnviarAoContabilista
+                tipo="simulador_irs"
+                toolId="simulador-irs"
+                titulo={`Simulação de IRS ${FISCAL_YEAR}`}
+                conteudo={{
+                  ano: FISCAL_YEAR,
+                  rendimentoBruto: Math.round(resultado.rendimentoGlobal),
+                  irsEstimado: Math.round(resultado.irsTotal),
+                  taxaEfetiva: Number((resultado.taxaEfetiva * 100).toFixed(2)),
+                  retencoes: Math.round(resultado.retencoesTotais),
+                  reembolsoOuPagar: reembolso
+                    ? `Reembolso estimado de ${fmt(Math.abs(resultado.saldo))}`
+                    : `A pagar, estimados ${fmt(Math.abs(resultado.saldo))}`,
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
 

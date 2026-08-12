@@ -29,6 +29,11 @@ export const CHANGELOG: EntradaChangelog[] = [
       "O desconto é acordado e aplicado pelo contabilista. O ReciboCerto regista o cartão e mostra-te o código; não cobra a consulta nem processa pagamentos.",
       "Se és contabilista, podes pedir acesso a um painel de gestão com agenda, clientes, partilhas recebidas e o cartão de fidelidade configurável. Candidatas-te com uma justificação e, se quiseres, com o número de inscrição na Ordem ou documentos comprovativos — que só tu e a administração conseguem ler. Também podes não anexar nada e tratar disso por email. Cada candidatura é analisada por uma pessoa antes de ser aprovada; uma recusa explica-te porquê, e podes corrigir e voltar a candidatar-te.",
       "Dois horários iguais deixaram de ser possíveis: se duas pessoas tentarem marcar o mesmo, a segunda é avisada na hora em vez de ficar com uma marcação que não existe.",
+      "Marcar consulta são dois passos, não uma lista infinita: escolhes o dia numa tira com as horas livres de cada um, depois a hora, e só então vês o que vais pedir — dia, hora, duração, preço e modalidade — antes de confirmares. As horas são as de Lisboa, e está escrito no ecrã.",
+      "Nada que não se desfaz acontece sem uma pergunta. Terminar um acompanhamento, revogar um envio, cancelar uma consulta, recusar um cliente ou dar uma consulta por realizada passam todos por um aviso que diz, antes, o que vai acontecer — e o botão que começa selecionado é sempre o de cancelar.",
+      "Cada ação passou a ter resposta visível, onde os olhos já estão: em baixo, por cima de tudo, sem tapar a navegação. Se estiveres a ler um aviso, ele espera por ti.",
+      "A nota que escreves ao enviar uma simulação passa a ser a primeira coisa que o contabilista lê. Antes era guardada e nunca mostrada.",
+      "Do lado do contabilista, «validar» um cupão gastava-o no mesmo gesto sem o dizer. Agora o botão diz «validar e dar por usado», e pergunta antes.",
     ],
   },
   {

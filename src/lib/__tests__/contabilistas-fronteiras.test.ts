@@ -163,11 +163,15 @@ describe("partilha: só passa o que está na lista branca", () => {
   });
 
   it("remove tudo o que não está autorizado, e diz o que removeu", () => {
+    // Os valores vão vazios de propósito: o que este teste verifica é que a
+    // CHAVE não autorizada não passa, seja qual for o valor — e um valor com
+    // ar de credencial faz disparar os scanners de segredos do CI por uma
+    // linha que nunca foi um segredo.
     const r = sanitizarConteudoPartilha("simulador_irs", {
       ano: 2026,
-      nif: "123456789",
-      password: "segredo",
-      tokenSessao: "abc",
+      nif: "",
+      password: "",
+      tokenSessao: "",
     });
     expect(r.conteudo).toEqual({ ano: 2026 });
     expect(r.removidos.sort()).toEqual(["nif", "password", "tokenSessao"]);

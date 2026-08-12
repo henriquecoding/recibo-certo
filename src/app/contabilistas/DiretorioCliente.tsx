@@ -8,6 +8,7 @@ import { eurosDeCents } from "@/lib/contabilistas/fidelidade";
 import type { Contabilista } from "@/lib/contabilistas/tipos";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
 import { Briefcase, MapPin, Search, Gift, Warning } from "@/components/ui/Icons";
 
 export default function DiretorioCliente() {
@@ -17,6 +18,8 @@ export default function DiretorioCliente() {
   const [procura, setProcura] = useState("");
   const [distrito, setDistrito] = useState("");
   const [especialidade, setEspecialidade] = useState("");
+  const [modalidade, setModalidade] = useState<"" | "online" | "presencial">("");
+  const [comVagas, setComVagas] = useState(false);
 
   useEffect(() => {
     let vivo = true;
@@ -37,6 +40,8 @@ export default function DiretorioCliente() {
     return lista.filter((c) => {
       if (distrito && c.distrito !== distrito) return false;
       if (especialidade && !c.especialidades.includes(especialidade)) return false;
+      if (modalidade && !c.modalidades.includes(modalidade)) return false;
+      if (comVagas && !c.aceitaNovosClientes) return false;
       if (!p) return true;
       return (
         c.nome.toLowerCase().includes(p) ||
@@ -45,7 +50,14 @@ export default function DiretorioCliente() {
         c.especialidades.some((e) => e.toLowerCase().includes(p))
       );
     });
-  }, [lista, procura, distrito, especialidade]);
+  }, [lista, procura, distrito, especialidade, modalidade, comVagas]);
+
+  const temFiltros = Boolean(procura || distrito || especialidade || modalidade || comVagas);
+
+  function limparFiltros() {
+    setProcura(""); setDistrito(""); setEspecialidade("");
+    setModalidade(""); setComVagas(false);
+  }
 
   if (estado === "a-ler") {
     return (
@@ -100,13 +112,54 @@ export default function DiretorioCliente() {
             {ESPECIALIDADES.map((e) => <option key={e} value={e}>{e}</option>)}
           </select>
         </div>
+
+        {/* Quem atende online não depende do distrito — é o filtro que
+            transforma «não há ninguém no meu concelho» em «há». */}
+        <div className="flex flex-wrap items-center gap-2">
+          {([["", "Presencial e online"], ["online", "Atende online"], ["presencial", "Atende presencial"]] as const).map(
+            ([valor, texto]) => (
+              <button
+                key={valor || "todas"}
+                type="button"
+                aria-pressed={modalidade === valor}
+                onClick={() => setModalidade(valor)}
+                className={`min-h-[2.25rem] rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
+                  modalidade === valor ? "bg-brand text-white" : "bg-white text-stone-600 hover:bg-stone-100"
+                }`}
+              >
+                {texto}
+              </button>
+            ),
+          )}
+          <button
+            type="button"
+            aria-pressed={comVagas}
+            onClick={() => setComVagas((v) => !v)}
+            className={`min-h-[2.25rem] rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
+              comVagas ? "bg-brand text-white" : "bg-white text-stone-600 hover:bg-stone-100"
+            }`}
+          >
+            Só com vagas
+          </button>
+        </div>
       </div>
 
-      <p role="status" className="mt-4 text-sm text-stone-500">
-        {filtrada.length === 0
-          ? "Nenhum resultado."
-          : `${filtrada.length} ${filtrada.length === 1 ? "contabilista" : "contabilistas"}.`}
-      </p>
+      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <p role="status" className="text-sm text-stone-500">
+          {filtrada.length === 0
+            ? "Nenhum resultado."
+            : `${filtrada.length} ${filtrada.length === 1 ? "contabilista" : "contabilistas"}.`}
+        </p>
+        {temFiltros && (
+          <button
+            type="button"
+            onClick={limparFiltros}
+            className="min-h-[2.25rem] text-sm font-medium text-brand-dark underline underline-offset-2 hover:text-brand"
+          >
+            Limpar filtros
+          </button>
+        )}
+      </div>
 
       {filtrada.length === 0 ? (
         <div className="mt-4">
@@ -116,7 +169,16 @@ export default function DiretorioCliente() {
             descricao={
               lista.length === 0
                 ? "Ainda não há contabilistas aprovados. Se és contabilista, podes ser dos primeiros."
-                : "Tenta alargar a procura ou limpar os filtros."
+                : "Tenta alargar a procura, ou procura quem atenda online."
+            }
+            acao={
+              lista.length === 0 ? (
+                <Link href="/contabilistas/candidatura">
+                  <Button variant="secondary">Candidatar-me</Button>
+                </Link>
+              ) : (
+                <Button variant="secondary" onClick={limparFiltros}>Limpar filtros</Button>
+              )
             }
           />
         </div>
