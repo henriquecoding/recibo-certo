@@ -139,6 +139,17 @@ export async function POST(req: NextRequest) {
           );
         }
 
+        // Voltou a haver subscrição válida: o agendamento de apagamento
+        // deixa de fazer sentido. Cobre tanto quem resubscreveu como quem
+        // só resolveu um pagamento falhado.
+        if (uid && ["active", "trialing", "past_due"].includes(sub.status)) {
+          const sbPurga = getSupabaseAdmin();
+          if (sbPurga) {
+            const { error } = await sbPurga.rpc("cancelar_purga", { p_user_id: uid });
+            if (error) console.error("[stripe/webhook] Falha ao cancelar purga:", error);
+          }
+        }
+
         if (event.type === "customer.subscription.created" && sub.status === "active") {
           const customerEmail = await obterEmailCliente(sub.customer as string);
           const item = sub.items.data[0];
@@ -170,6 +181,17 @@ export async function POST(req: NextRequest) {
         if (uid) {
           (sub as Stripe.Subscription).status = "canceled";
           await atualizarSubscricao(uid, sub);
+
+          // Minimização de dados: acabou a subscrição, acaba a razão para
+          // guardarmos o conteúdo fiscal na nuvem. Agenda-se, não se apaga
+          // já — uma subscrição também acaba quando um cartão expira, e
+          // apagar no instante destruiria os dados de quem nunca escolheu
+          // sair. A janela está em `dias_ate_purga()`.
+          const sbPurga = getSupabaseAdmin();
+          if (sbPurga) {
+            const { error } = await sbPurga.rpc("agendar_purga", { p_user_id: uid });
+            if (error) console.error("[stripe/webhook] Falha ao agendar purga:", error);
+          }
         }
         const customerEmail = await obterEmailCliente(sub.customer as string);
         if (customerEmail) {
@@ -263,6 +285,10 @@ export async function POST(req: NextRequest) {
           console.error("[stripe/webhook] Falha ao registar compra vitalícia:", error);
           return NextResponse.json({ erro: "Erro interno." }, { status: 500 });
         }
+
+        // Quem comprou o vitalício não pode ficar com um apagamento
+        // agendado de uma subscrição anterior.
+        await sb.rpc("cancelar_purga", { p_user_id: uid });
 
         console.info("[stripe/webhook] Compra vitalícia registada:", { uid, paymentIntent });
         break;

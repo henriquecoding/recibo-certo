@@ -13,5 +13,11 @@
       "agent/**": false,
       "dependabot/**": false
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/purgar-dados",
+      "schedule": "0 4 * * *"
+    }
+  ]
 }

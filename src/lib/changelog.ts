@@ -19,6 +19,18 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.43.0",
+    data: "2026-08-12",
+    titulo: "Se cancelares, os teus dados saem mesmo dos nossos servidores",
+    itens: [
+      "Não guardamos dados fiscais de quem já não usa o serviço. Se cancelares o Plus, o que está guardado na nuvem — recibos verdes, recibos de vencimento, cenários e o perfil fiscal — é apagado dos nossos servidores 30 dias depois. É a decisão mais segura para ti: dados que não guardamos não podem ser expostos se alguma coisa correr mal do nosso lado.",
+      "Isto acontece mesmo, não é uma frase nos Termos. Há uma rotina diária que apaga o que passou o prazo, e o apagamento é verificado.",
+      "Porquê 30 dias e não logo? Porque uma subscrição também acaba quando um cartão expira. Apagar no instante destruiria os dados de quem nunca escolheu sair e só precisava de atualizar o cartão. O prazo dá tempo para resolver o pagamento, exportar o que quiseres levar, ou voltar atrás — se resubscreveres dentro dele, não se apaga nada.",
+      "O aviso aparece nos dois momentos em que interessa: na página de planos, antes de subscreveres, e outra vez quando vais gerir a subscrição — com a lista do que sai, a lista do que fica, e um atalho para exportares primeiro.",
+      "O que está guardado no teu dispositivo não é tocado — nunca foi nosso. A tua conta também não é apagada: cancelar a subscrição não é apagar a conta.",
+    ],
+  },
+  {
     version: "2.42.0",
     data: "2026-08-12",
     titulo: "Mil lugares vitalícios, contados a sério",

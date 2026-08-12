@@ -9,6 +9,7 @@ import { validarPassword, type ErroPassword } from "@/lib/validacao-password";
 import { descreverEstado } from "@/lib/stripe/precos-autorizados";
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Google, History, Linkedin, Lock, LogOut, ShieldCheck, Warning } from "@/components/ui/Icons";
 import FizConnectionCard from "@/components/fiz/FizConnectionCard";
+import AvisoCancelamento from "@/components/conta/AvisoCancelamento";
 
 const campo =
   "w-full px-3.5 py-2.5 text-[16px] text-stone-800 dark:text-stone-100 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all";
@@ -357,6 +358,10 @@ function Beneficio({ icon, texto }: { icon: React.ReactNode; texto: string }) {
  */
 function SecaoSubscricao() {
   const { status, vitalicio, abrirPortal } = useSubscricao();
+  // O cancelamento acontece no portal do Stripe. Este é o último momento em
+  // que somos nós a falar — e portanto o único em que podemos dizer o que
+  // acontece aos dados guardados.
+  const [avisoAberto, setAvisoAberto] = useState(false);
   const { user } = useAuth();
   const d = descreverEstado(status, !!user);
 
@@ -394,7 +399,7 @@ function SecaoSubscricao() {
       ) : d.temAcesso || d.requerAcao ? (
         <button
           type="button"
-          onClick={abrirPortal}
+          onClick={() => (d.requerAcao ? abrirPortal() : setAvisoAberto(true))}
           className="flex min-h-9 flex-shrink-0 items-center gap-1 text-xs font-semibold text-brand-dark transition-colors hover:underline dark:text-brand"
         >
           {d.requerAcao ? "Resolver agora" : "Gerir"}
@@ -409,6 +414,12 @@ function SecaoSubscricao() {
           <ArrowRight size={11} />
         </a>
       )}
+
+      <AvisoCancelamento
+        aberto={avisoAberto}
+        aFechar={() => setAvisoAberto(false)}
+        aContinuar={() => { setAvisoAberto(false); abrirPortal(); }}
+      />
     </div>
   );
 }

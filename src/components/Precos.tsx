@@ -10,6 +10,7 @@ import {
 import { fizAtiva } from "@/lib/fiz/flag";
 import FizParceriaCard from "@/components/fiz/FizParceriaCard";
 import ContadorVitalicio from "@/components/ContadorVitalicio";
+import { DIAS_ATE_PURGA } from "@/lib/plus/purga";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  Preços — reestruturado segundo o ponto 11 da arquitetura da parceria.
@@ -175,6 +176,19 @@ export default function Precos() {
                 Subscrever o Plus
               </Link>
               <p className="mt-2 text-center text-xs text-stone-400">Cancela quando quiseres · sem compromisso</p>
+
+              {/* Dito aqui, e não escondido nos Termos: quem está a decidir
+                  se subscreve tem direito a saber o que acontece aos dados
+                  se um dia sair. */}
+              <p className="mt-4 flex items-start gap-2 rounded-2xl bg-stone-50 px-3.5 py-3 text-xs leading-relaxed text-stone-500 dark:bg-stone-800/60 dark:text-stone-400">
+                <span className="mt-0.5 flex-shrink-0 text-stone-400"><Lock size={13} /></span>
+                <span>
+                  Se cancelares, o que está guardado na nuvem é apagado dos nossos servidores{" "}
+                  {DIAS_ATE_PURGA} dias depois. Não guardamos dados fiscais de quem já não usa o
+                  serviço — dados que não guardamos não podem ser expostos. O que está no teu
+                  dispositivo fica contigo.
+                </span>
+              </p>
             </m.div>
           </Reveal>
 
