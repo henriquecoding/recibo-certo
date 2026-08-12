@@ -9,7 +9,7 @@ import { termoGuardavel } from "@/lib/busca/recentes";
 import { sugestoesPorContexto } from "@/lib/busca/sugestoes";
 import { NAV_APRENDER, NAV_FERRAMENTAS, NAV_PRINCIPAL, navAtivo } from "@/components/nav-config";
 import { GUIAS } from "@/lib/guias-config";
-import { FERRAMENTAS } from "@/lib/ferramentas-config";
+import { CATALOGO_FERRAMENTAS } from "@/lib/ferramentas";
 import { PRIORIDADE } from "@/components/overlays/CoordenadorOverlays";
 
 // ─────────────────────────────────────────────────────────────────────
@@ -39,7 +39,10 @@ describe("busca:cobertura", () => {
   });
 
   it("indexa todas as ferramentas do catálogo público", () => {
-    const esperados = FERRAMENTAS.map((f) => f.href).sort();
+    const esperados: string[] = CATALOGO_FERRAMENTAS
+      .filter((f) => f.surfaces.includes("search"))
+      .map((f) => f.canonicalHref as string)
+      .sort();
     const indexados = DOCS.filter((d) => d.tipo === "ferramenta" || d.tipo === "quiz")
       .map((d) => d.href)
       .filter((h) => esperados.includes(h))

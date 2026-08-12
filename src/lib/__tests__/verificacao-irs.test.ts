@@ -21,6 +21,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { porId } from "@/lib/ferramentas";
 import {
   simularDeclaracaoIRS,
   simularIRSAnual,
@@ -417,10 +418,15 @@ describe("F-18 · acessibilidade", () => {
 
 describe("F-19/F-20 · H1 e caminho a seguir", () => {
   it("o H1 leva a query principal", () => {
-    const fonte = readFileSync(PAGINA, "utf8");
-    const h1 = fonte.match(/<h1[^>]*>([\s\S]*?)<\/h1>/);
-    expect(h1).not.toBeNull();
-    expect(h1![1]).toMatch(/Simulador de IRS 2026/);
+    // O H1 deixou de estar escrito nesta página: passou a ser renderizado
+    // pelo `ToolShell` a partir do catálogo, para não poder divergir do
+    // destino que o hub anuncia. A verificação segue a fonte de verdade —
+    // e continua a reprovar se a âncora de pesquisa se perder.
+    const tool = porId("simulador-irs");
+    expect(tool).toBeDefined();
+    expect(tool!.h1 ?? tool!.title).toMatch(/Simulador de IRS 2026/);
+    expect(readFileSync(PAGINA, "utf8"), "a página tem de usar o ToolShell")
+      .toContain("<ToolShell");
   });
 
   it("o resultado sugere sempre um passo seguinte, com ou sem categoria B", () => {

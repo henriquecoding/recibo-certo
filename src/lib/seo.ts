@@ -16,6 +16,7 @@ import { META_CATEGORIA_QUIZ } from "@/lib/quiz-fiscal/types";
 import { GUIDE_MANIFESTS } from "@/lib/guias/manifests";
 import { guiaSemCorpo } from "@/lib/guias/expansao/derivar";
 import { ORIGEM_CANONICA } from "@/lib/origem";
+import { SLUGS_PUBLICOS } from "@/lib/ferramentas/selecionar";
 
 // RC-CFG-001: a origem vive em `origem.ts` e sai daqui com o nome que o resto
 // do site já usa. Duas declarações da mesma origem foi exatamente como o
@@ -62,18 +63,19 @@ export const GUIA_SLUGS: readonly string[] = GUIDE_MANIFESTS
   .sort();
 
 /** Slugs das ferramentas em `src/app/ferramentas/<slug>`. */
-export const FERRAMENTA_SLUGS = [
-  "simulador-irs",
-  "simulador-empresa",
-  "simulador-herancas",
-  "recibo-vencimento",
-  "regime-simplificado",
-  "ato-isolado",
-  "classificar-atividade",
-  "auditoria-recibo",
-  "mapa-contabilistas",
-  "payout-mor",
-] as const;
+/**
+ * Os slugs públicos das ferramentas — DERIVADOS do catálogo (§7.3).
+ *
+ * Era uma lista literal, mantida à mão em paralelo com `FERRAMENTAS`. Havia
+ * um teste a provar que as duas coincidiam — o que impedia uma gralha entre
+ * elas, mas não detetava a falha real: uma ferramenta que existisse no
+ * produto e nunca tivesse sido acrescentada a NENHUMA das duas. Foi assim
+ * que a calculadora de Segurança Social trimestral e o simulador de IRS
+ * Jovem viveram meses fora do sitemap, da pesquisa e do hub.
+ *
+ * Agora o sitemap não pode ficar para trás do catálogo, porque é o catálogo.
+ */
+export const FERRAMENTA_SLUGS: readonly string[] = SLUGS_PUBLICOS;
 
 export const PUBLIC_ROUTES: PublicRoute[] = [
   { path: "/",            changeFrequency: "weekly",  priority: 1.0 },

@@ -107,10 +107,17 @@ const seoSrc = readFileSync(join(SRC, "lib", "seo.ts"), "utf8");
 // dos Guias. É de lá que o registo é lido agora.
 const manifestosSrc = readFileSync(join(SRC, "lib", "guias", "manifests.ts"), "utf8");
 const guiaRegistry = [...manifestosSrc.matchAll(/^\s{4}id: "([a-z0-9-]+)", slug: "([a-z0-9-]+)",/gm)].map((m) => m[2]);
-const ferramentaRegistry = parseArray(seoSrc, "FERRAMENTA_SLUGS");
+// FERRAMENTA_SLUGS deixou de ser uma lista literal: passou a derivar do
+// catálogo único (src/lib/ferramentas/catalogo.ts), pela mesma razão que os
+// Guias derivam dos manifestos. É de lá que o registo é lido agora.
+const catalogoSrc = readFileSync(join(SRC, "lib", "ferramentas", "catalogo.ts"), "utf8");
+const ferramentaRegistry = [...catalogoSrc.matchAll(/^\s{4}slug: "([a-z0-9-]+)",$/gm)].map((m) => m[1]);
 
 if (guiaRegistry.length === 0) {
   fails.push("Não foi possível ler os slugs dos manifestos de Guias — o seo-audit ficaria cego.");
+}
+if (ferramentaRegistry.length === 0) {
+  fails.push("Não foi possível ler os slugs do catálogo de ferramentas — o seo-audit ficaria cego.");
 }
 
 const guiaReal = routeSlugs(join(APP, "guias"));

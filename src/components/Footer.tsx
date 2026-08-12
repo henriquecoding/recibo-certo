@@ -22,7 +22,7 @@ const NAV_FERRAMENTAS = [
   { label: "Calculadora de recibos verdes", href: "/#calculadora", Icon: Receipt },
   { label: "Simulador de IRS anual", href: "/ferramentas/simulador-irs", Icon: Calculator },
   { label: "Recibo de vencimento", href: "/ferramentas/recibo-vencimento", Icon: Briefcase },
-  { label: "Comparador de regimes", href: "/?modo=comparar", Icon: Scale },
+  { label: "Comparador de regimes", href: "/ferramentas/comparar-regimes", Icon: Scale },
   { label: "Simulador de empresa", href: "/ferramentas/simulador-empresa", Icon: Calculator },
   { label: "Mapa de preços por região", href: "/ferramentas/mapa-contabilistas", Icon: MapPin },
   { label: "Prazos fiscais", href: "/dashboard/prazos", Icon: Calendar },

@@ -1,65 +1,40 @@
+// ═══════════════════════════════════════════════════════════════════════
+//  O hub do painel — agora DERIVADO do catálogo (P0-04)
+//  ---------------------------------------------------------------------
+//  Este ficheiro era o terceiro registo paralelo de ferramentas, e o pior
+//  dos três: `FERRAMENTAS` e `FERRAMENTA_SLUGS` tinham pelo menos um teste
+//  a provar que coincidiam entre si; o `BLOCOS` daqui não participava em
+//  garantia nenhuma. Omitia, em silêncio, o simulador de IRS, o comparador
+//  público, as heranças e as duas calculadoras escondidas em guias.
+//
+//  Deixou de haver lista. Os blocos são os objetivos do catálogo, e uma
+//  ferramenta nova aparece aqui no dia em que entra no catálogo — sem
+//  ninguém se lembrar deste ficheiro.
+//
+//  A rota preferida é a do painel quando existe (mantém o contexto e os
+//  cenários guardados); caso contrário, a pública. Não há segunda
+//  implementação: é o mesmo componente de domínio dos dois lados.
+// ═══════════════════════════════════════════════════════════════════════
+
 import Link from "next/link";
-import {
-  Wallet,
-  Building,
-  Scale,
-  Gauge,
-  Swap,
-  ShieldCheck,
-  Search,
-  MapPin,
-  ShoppingBag,
-  BookOpen,
-  Trophy,
-  ArrowRight,
-} from "@/components/ui/Icons";
-import type { ComponentType } from "react";
+import { BookOpen, Trophy, ArrowRight } from "@/components/ui/Icons";
+import { agruparPorObjetivo, ROTULO_INTENT } from "@/lib/ferramentas";
+import { iconeDe } from "@/components/ferramentas/icon-map";
 
-type IconType = ComponentType<{ size?: number; className?: string }>;
-
-interface Recurso {
-  href: string;
-  titulo: string;
-  desc: string;
-  icon: IconType;
-}
-interface Bloco {
-  titulo: string;
-  recursos: Recurso[];
-}
-
-// Surfaces TODO o site dentro do dashboard — para o utilizador ver, num só
-// sítio, os simuladores, as ferramentas e os guias (não só os recibos verdes).
-const BLOCOS: Bloco[] = [
-  {
-    titulo: "Simuladores & decisores",
-    recursos: [
-      { href: "/dashboard/recibo-vencimento", titulo: "Recibo de vencimento", desc: "Do bruto ao líquido por conta de outrem", icon: Wallet },
-      { href: "/dashboard/empresa", titulo: "Abrir empresa", desc: "Líquido via sociedade: IRC + dividendos", icon: Building },
-      { href: "/dashboard/comparar", titulo: "Comparar cenários", desc: "Recibos verdes vs contrato vs empresa", icon: Scale },
-      { href: "/dashboard/regime-simplificado", titulo: "Regime simplificado", desc: "Coeficiente, tributável e IRS estimado", icon: Gauge },
-      { href: "/dashboard/ato-isolado", titulo: "Ato isolado ou atividade", desc: "Descobre o que faz sentido para ti", icon: Swap },
-    ],
-  },
-  {
-    titulo: "Ferramentas",
-    recursos: [
-      { href: "/dashboard/auditoria-recibo", titulo: "Auditoria do recibo", desc: "Confirma se o teu recibo está certo", icon: ShieldCheck },
-      { href: "/dashboard/classificar-atividade", titulo: "Classificar atividade", desc: "Retenção, coeficiente e SS por profissão", icon: Search },
-      { href: "/dashboard/mapa-contabilistas", titulo: "Mapa de preços por região", desc: "Contabilistas, notários e advogados, num mapa", icon: MapPin },
-      { href: "/ferramentas/payout-mor", titulo: "Recibo Merchant of Record", desc: "Paddle / Lemon Squeezy em 5 passos", icon: ShoppingBag },
-    ],
-  },
-  {
-    titulo: "Aprender",
-    recursos: [
-      { href: "/guias", titulo: "Guias fiscais", desc: "IRS, IVA, Segurança Social e mais", icon: BookOpen },
-      { href: "/quiz-fiscal", titulo: "Quiz Fiscal", desc: "Testa-te com base legal e fontes", icon: Trophy },
-    ],
-  },
+/** Aprender fica visualmente separado: não são ferramentas (§2.2). */
+const APRENDER = [
+  { href: "/guias", titulo: "Guias fiscais", desc: "IRS, IVA, Segurança Social e mais", icon: BookOpen },
+  { href: "/quiz-fiscal", titulo: "Quiz Fiscal", desc: "Testa-te com base legal e fontes", icon: Trophy },
 ];
 
+const CARTAO =
+  "group flex items-start gap-3 rounded-2xl border border-stone-100 bg-white p-4 shadow-card transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift dark:border-stone-800 dark:bg-stone-900";
+const ICONE =
+  "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand transition-colors group-hover:bg-brand group-hover:text-white";
+
 export default function HubRecursos() {
+  const grupos = agruparPorObjetivo();
+
   return (
     <section aria-labelledby="hub-recursos" className="mt-10">
       <div className="mb-4">
@@ -67,32 +42,32 @@ export default function HubRecursos() {
           Explorar tudo o que tens
         </h2>
         <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-          Para além dos recibos verdes: simuladores, ferramentas e guias — agora também a partir daqui.
+          Para além dos recibos verdes: todas as ferramentas, organizadas pelo que queres resolver.
         </p>
       </div>
 
       <div className="space-y-6">
-        {BLOCOS.map((bloco) => (
-          <div key={bloco.titulo}>
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-stone-400">{bloco.titulo}</p>
+        {grupos.map((grupo) => (
+          <div key={grupo.objetivo}>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+              {ROTULO_INTENT[grupo.objetivo]}
+            </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {bloco.recursos.map((r) => {
-                const Icon = r.icon;
+              {grupo.ferramentas.map((f) => {
+                const Icon = iconeDe(f.icon);
                 return (
-                  <Link
-                    key={r.href}
-                    href={r.href}
-                    className="group flex items-start gap-3 rounded-2xl border border-stone-100 bg-white p-4 shadow-card transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift dark:border-stone-800 dark:bg-stone-900"
-                  >
-                    <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand transition-colors group-hover:bg-brand group-hover:text-white">
+                  <Link key={f.id} href={f.dashboardHref ?? f.canonicalHref} className={CARTAO}>
+                    <span className={ICONE}>
                       <Icon size={18} />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-1 text-sm font-semibold text-stone-800 dark:text-stone-100">
-                        {r.titulo}
+                        {f.title}
                         <ArrowRight size={13} className="flex-shrink-0 text-stone-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
                       </span>
-                      <span className="mt-0.5 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">{r.desc}</span>
+                      <span className="mt-0.5 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+                        {f.shortOutcome}
+                      </span>
                     </span>
                   </Link>
                 );
@@ -100,6 +75,29 @@ export default function HubRecursos() {
             </div>
           </div>
         ))}
+
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-stone-400">Aprender</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {APRENDER.map((r) => {
+              const Icon = r.icon;
+              return (
+                <Link key={r.href} href={r.href} className={CARTAO}>
+                  <span className={ICONE}>
+                    <Icon size={18} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1 text-sm font-semibold text-stone-800 dark:text-stone-100">
+                      {r.titulo}
+                      <ArrowRight size={13} className="flex-shrink-0 text-stone-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
+                    </span>
+                    <span className="mt-0.5 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">{r.desc}</span>
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </section>
   );
