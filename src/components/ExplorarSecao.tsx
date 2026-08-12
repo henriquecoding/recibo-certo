@@ -18,9 +18,9 @@ import dynamic from "next/dynamic";
 import { m, AnimatePresence } from "motion/react";
 import { usePerfil, type Perfil } from "@/lib/perfil";
 import { usePerto } from "@/lib/use-perto";
-import { ferramentasPorPerfil, type FerramentaMeta } from "@/lib/ferramentas-config";
+import { ferramentasPorPerfil, TOTAL_FERRAMENTAS, ROTULO_KIND, type ToolDefinition } from "@/lib/ferramentas";
+import { iconeDe } from "@/components/ferramentas/icon-map";
 import { guiasPorPerfil } from "@/lib/guias-config";
-import { FERRAMENTA_SLUGS } from "@/lib/seo";
 import { TOTAL_PERGUNTAS_META } from "@/lib/quiz-fiscal/quiz-meta";
 import Reveal from "@/components/ui/Reveal";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
@@ -134,23 +134,24 @@ function CartaoCompacto({
 }
 
 // ── Destaque com cartão (perfis sem demo) ────────────────────────────────────
-function DestaqueCartao({ f, chip }: { f: FerramentaMeta; chip: string }) {
+function DestaqueCartao({ f, chip }: { f: ToolDefinition; chip: string }) {
+  const Icon = iconeDe(f.icon);
   return (
     <Link
-      href={f.href}
+      href={f.canonicalHref}
       className="group relative grid gap-5 rounded-4xl border border-brand/25 bg-white p-6 shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:border-brand/50 hover:shadow-float focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:bg-stone-900 sm:p-7 lg:grid-cols-[1fr_auto] lg:items-center"
     >
       <div className="min-w-0">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand text-white shadow-glow">
-            <f.Icon size={19} />
+            <Icon size={19} />
           </span>
           <span className="rounded-full bg-brand-light px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-brand-dark dark:bg-brand/10 dark:text-brand">
             Começa por aqui
           </span>
         </div>
-        <div className="font-display text-2xl font-semibold leading-tight text-ink sm:text-[1.7rem]">{f.titulo}</div>
-        <p className="mt-2 max-w-xl text-sm leading-relaxed text-stone-500 dark:text-stone-400">{f.descricao}</p>
+        <div className="font-display text-2xl font-semibold leading-tight text-ink sm:text-[1.7rem]">{f.title}</div>
+        <p className="mt-2 max-w-xl text-sm leading-relaxed text-stone-500 dark:text-stone-400">{f.shortOutcome}</p>
         <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-600 dark:bg-stone-800 dark:text-stone-300">
           <Check size={11} className="text-brand" /> {chip}
         </div>
@@ -218,7 +219,7 @@ export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) 
   // Fila de ferramentas: quando o destaque é a demo do IRS, a grelha inclui a
   // ferramenta-chave do perfil (e nunca duplica o próprio IRS).
   const ferramentasFila = (comDemo ? [destaque, ...restantes] : restantes)
-    .filter((f) => f.slug !== "simulador-irs")
+    .filter((f) => f.id !== "simulador-irs")
     .slice(0, 4);
 
   const guias = guiasPorPerfil(perfil).slice(0, 3);
@@ -255,7 +256,7 @@ export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) 
             href="/ferramentas"
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition-colors hover:text-brand-dark dark:hover:text-brand-mint"
           >
-            Ver as {FERRAMENTA_SLUGS.length} ferramentas <ArrowRight size={14} />
+            Ver as {TOTAL_FERRAMENTAS} ferramentas <ArrowRight size={14} />
           </Link>
         </div>
       </Reveal>
@@ -286,12 +287,12 @@ export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {ferramentasFila.map((f) => (
               <CartaoCompacto
-                key={f.slug || f.href}
-                href={f.href}
-                Icon={f.Icon}
-                titulo={f.titulo}
-                descricao={f.descricao}
-                badge={f.badge}
+                key={f.id}
+                href={f.canonicalHref}
+                Icon={iconeDe(f.icon)}
+                titulo={f.title}
+                descricao={f.shortOutcome}
+                badge={f.highlight ?? ROTULO_KIND[f.kind]}
               />
             ))}
           </div>

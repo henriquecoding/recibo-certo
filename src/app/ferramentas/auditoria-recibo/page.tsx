@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AuditoriaRecibo } from "@/components/dependente/AuditoriaRecibo";
+import AuditoriaReciboLazy from "./lazy";
 
 export const metadata: Metadata = {
   title: "Auditoria do recibo de vencimento 2026 — o teu salário está correto?",
@@ -38,7 +38,7 @@ export default function AuditoriaReciboPage() {
         </p>
       </div>
 
-      <AuditoriaRecibo />
+      <AuditoriaReciboLazy />
 
       <div className="mt-2 rounded-2xl border border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 p-5 space-y-2">
         <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">Como funciona</p>

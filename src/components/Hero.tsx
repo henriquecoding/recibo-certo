@@ -7,7 +7,8 @@ import { ArrowRight, ShieldCheck, FileSign, Warning, Calendar, Check, Sparkle, C
 import { scrollToId } from "@/lib/scroll";
 import { staggerContainer, staggerItem, EASE } from "@/lib/motion";
 import { usePerfil, type Perfil } from "@/lib/perfil";
-import { ferramentasPorPerfil } from "@/lib/ferramentas-config";
+import { ferramentasPorPerfil } from "@/lib/ferramentas";
+import { iconeDe } from "@/components/ferramentas/icon-map";
 import { guiasPorPerfil } from "@/lib/guias-config";
 import SeletorModo from "@/components/SeletorModo";
 import ComoFuncionaModal from "@/components/ComoFuncionaModal";
@@ -1286,7 +1287,7 @@ export default function Hero({
                   Para ti
                 </span>
                 {[
-                  { href: atalhoFerramenta.href, Icon: atalhoFerramenta.Icon, titulo: atalhoFerramenta.titulo },
+                  { href: atalhoFerramenta.canonicalHref, Icon: iconeDe(atalhoFerramenta.icon), titulo: atalhoFerramenta.title },
                   { href: atalhoGuia.href, Icon: atalhoGuia.icon, titulo: atalhoGuia.titulo },
                 ].map((a) => (
                   <Link

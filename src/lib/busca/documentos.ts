@@ -36,27 +36,52 @@ import {
   HUB_GRUPOS,
 } from "@/lib/guias/manifests";
 import { guiaSemCorpo } from "@/lib/guias/expansao/derivar";
-import { FERRAMENTAS } from "@/lib/ferramentas-config";
+import { CATALOGO_FERRAMENTAS } from "@/lib/ferramentas";
 import { TOTAL_PERGUNTAS_META } from "@/lib/quiz-fiscal/quiz-meta";
 import type { DocumentoBusca, Intencao, PerfilBusca } from "./esquema";
 import { normalizar } from "./normalizar";
 
 /* ─── Ferramentas ─────────────────────────────────────────────────── */
 
+/**
+ * Os perfis do catálogo e os da pesquisa não são o mesmo eixo: o catálogo
+ * distingue «familia», a pesquisa não. Uma ferramenta que sirva três ou mais
+ * perfis é transversal — é isso que «todos» significa aqui.
+ */
+const perfisDeBusca = (perfis: readonly string[]): PerfilBusca[] => {
+  if (perfis.length >= 3) return ["todos"];
+  const mapeados = perfis
+    .map((p) => (p === "familia" ? "todos" : p))
+    .filter((p): p is PerfilBusca =>
+      p === "independente" || p === "dependente" || p === "empresa" || p === "todos");
+  return mapeados.length > 0 ? [...new Set(mapeados)] : ["todos"];
+};
+
+/**
+ * Objetivos do catálogo → intenções da pesquisa.
+ * `comparar` e `calcular` são ambos «simular»; `verificar` é «cumprir» quando
+ * o que a pessoa quer é confirmar que está em conformidade.
+ */
+const INTENCAO_DE_OBJETIVO: Record<string, Intencao[]> = {
+  calcular: ["simular"],
+  comparar: ["simular", "compreender"],
+  verificar: ["cumprir", "simular"],
+  cumprir: ["cumprir"],
+};
+
 const documentosFerramentas = (): DocumentoBusca[] =>
-  FERRAMENTAS.map((f) => ({
-    // O `slug` está vazio nos cartões só-hub (comparador, quiz): nesses o id
-    // vem do destino, que é o que os distingue.
-    id: `ferramenta:${f.slug || normalizar(f.href).replace(/\s+/g, "-")}`,
-    tipo: f.busca.tipo ?? "ferramenta",
-    titulo: f.titulo,
-    descricao: f.descricao,
-    href: f.href,
-    aliases: f.busca.aliases,
-    grupo: f.busca.grupo,
-    intencoes: f.busca.intencoes,
-    perfis: f.busca.perfis,
-    prioridade: f.busca.prioridade,
+  CATALOGO_FERRAMENTAS.filter((f) => f.surfaces.includes("search")).map((f) => ({
+    id: `ferramenta:${f.id}`,
+    tipo: "ferramenta" as const,
+    titulo: f.title,
+    descricao: f.shortOutcome,
+    href: f.canonicalHref,
+    aliases: f.aliases,
+    grupo: f.searchGroup,
+    intencoes: [...new Set(f.intents.flatMap((i) => INTENCAO_DE_OBJETIVO[i] ?? ["simular"]))],
+    perfis: perfisDeBusca(f.profiles),
+    anoFiscal: f.fiscalYear,
+    prioridade: f.searchPriority,
   }));
 
 /**
@@ -67,17 +92,21 @@ const documentosFerramentas = (): DocumentoBusca[] =>
  * de fora do índice era obrigar quem escreve «preços» a não encontrar nada.
  */
 const documentosAvulso = (): DocumentoBusca[] => [
+  // A calculadora de recibos verdes deixou de estar aqui: passou a ter
+  // ferramenta com destino canónico (`/ferramentas/recibos-verdes`) e vem do
+  // catálogo como todas as outras. Manter esta entrada seria repor a lista
+  // paralela — e fazer competir `/#calculadora` com a própria ferramenta.
   {
-    id: "ferramenta:calculadora",
-    tipo: "ferramenta",
-    titulo: "Calculadora de recibos verdes",
-    descricao: "O líquido real de um recibo: IRS, Segurança Social e IVA, em segundos.",
-    href: "/#calculadora",
-    aliases: ["calculadora", "recibo verde", "quanto recebo", "líquido", "tesouraria", "quanto guardar"],
-    grupo: "Simuladores",
-    intencoes: ["simular"],
-    perfis: ["independente"],
-    prioridade: 96,
+    id: "quiz:quiz-fiscal",
+    tipo: "quiz",
+    titulo: "Quiz Fiscal",
+    descricao: "Testa os teus conhecimentos, com base legal e fontes oficiais em cada resposta.",
+    href: "/quiz-fiscal",
+    aliases: ["quiz", "quiz fiscal", "perguntas", "testar conhecimentos", "treinar"],
+    grupo: "Aprender",
+    intencoes: ["compreender"],
+    perfis: ["todos"],
+    prioridade: 55,
   },
   {
     id: "plano:precos",

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import GuiaLayout from "@/components/guias/GuiaLayout";
 import { metadataDoGuia } from "@/lib/guias/metadata";
 import { CalculadoraSSTrimestral } from "@/components/guias/CalculadoraSSTrimestral";
 import InfoTip from "@/components/ui/InfoTip";
-import { Check } from "@/components/ui/Icons";
+import { Check, ArrowRight } from "@/components/ui/Icons";
 import { SS_TAXA, SS_COEFICIENTE, SS_BASE_MAX_MENSAL, SS_MIN_MENSAL, IAS_VALUE } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 
@@ -30,6 +31,20 @@ export default function SegurancaSocialPage() {
           </p>
         </div>
         <CalculadoraSSTrimestral />
+      </section>
+
+      <section className="mb-10">
+        <div className="rounded-3xl border border-brand bg-brand-light p-5 dark:bg-brand/10">
+          <p className="text-sm leading-relaxed text-stone-700 dark:text-stone-300">
+            Esta calculadora tem página própria, com o calendário de declaração e pagamento, os cenários de acumulação com trabalho dependente e a ligação ao simulador de recibos verdes.
+          </p>
+          <Link
+            href="/ferramentas/seguranca-social"
+            className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-brand-dark transition-colors hover:text-brand dark:text-brand"
+          >
+            Abrir a calculadora completa <ArrowRight size={14} />
+          </Link>
+        </div>
       </section>
 
       <section className="mb-10">

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import ModoGuiadoEmpresa from "@/components/simulador/ModoGuiadoEmpresa";
+import ModoGuiadoEmpresaLazy from "./lazy";
 
 export const metadata: Metadata = {
   title: "Simulador de empresa (Lda) 2026 — IRC, dividendos e custos | ReciboCerto",
@@ -39,7 +39,7 @@ export default function SimuladorEmpresaPage() {
         </p>
       </div>
 
-      <ModoGuiadoEmpresa />
+      <ModoGuiadoEmpresaLazy />
     </>
   );
 }

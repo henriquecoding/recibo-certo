@@ -79,7 +79,7 @@ export const CLUSTERS: readonly Cluster[] = [
     id: "salario-vs-recibos",
     titulo: "Salário vs recibos",
     intencoes: ["comparar proposta", "custo para a empresa", "risco de dependência económica"],
-    ativoPrincipal: "/?modo=comparar",
+    ativoPrincipal: "/ferramentas/comparar-regimes",
     transicao: "guardar",
     transicaoNota: "Guardar o cenário; FIZ apenas se a escolha for independente.",
     icp: "C",

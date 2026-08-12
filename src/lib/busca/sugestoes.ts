@@ -42,7 +42,7 @@ const GUIAS: Sugestao[] = [
 
 const FERRAMENTAS: Sugestao[] = [
   { id: "s-irs", titulo: "Simulador de IRS anual", pergunta: "Vou ter reembolso ou acerto?", href: "/ferramentas/simulador-irs" },
-  { id: "s-comparar", titulo: "Comparar cenários", pergunta: "Compensa abrir empresa?", href: "/?modo=comparar" },
+  { id: "s-comparar", titulo: "Comparar cenários", pergunta: "Compensa abrir empresa?", href: "/ferramentas/comparar-regimes" },
   { id: "s-classificar", titulo: "Classificar atividade", pergunta: "Que retenção se aplica à minha profissão?", href: "/ferramentas/classificar-atividade" },
 ];
 

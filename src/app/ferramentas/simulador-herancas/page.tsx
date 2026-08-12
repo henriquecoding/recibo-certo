@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import SimuladorHeranca from "@/components/SimuladorHeranca";
+import SimuladorHerancaLazy from "./lazy";
 import { generateFAQSchema } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -68,7 +68,7 @@ export default function SimuladorHerancasPage() {
         </p>
       </div>
 
-      <SimuladorHeranca />
+      <SimuladorHerancaLazy />
 
       <section className="mx-auto mt-16 max-w-3xl">
         <h2 className="font-display text-2xl font-semibold text-ink">Perguntas frequentes</h2>

@@ -1,5 +1,22 @@
 "use client";
 
+// ═══════════════════════════════════════════════════════════════════════
+//  Moldura comum das ferramentas.
+//
+//  A LARGURA DEIXOU DE SER UMA EXCEÇÃO CODIFICADA (§P1-01). Havia isto:
+//
+//      const largo = pathname === "/ferramentas/simulador-irs";
+//
+//  — uma linha que dava espaço a uma ferramenta e espremia a 768px todas as
+//  outras, incluindo o mapa, o comparador, as heranças e a empresa. A
+//  largura é uma propriedade da tarefa, por isso vive no catálogo
+//  (`layout: "compact" | "split" | "wide" | "map"`) e é lida daqui.
+//
+//  O breadcrumb também deriva do catálogo, tal como já derivava — só que
+//  agora o catálogo está completo, incluindo as quatro ferramentas que
+//  antes não tinham landing nenhuma.
+// ═══════════════════════════════════════════════════════════════════════
+
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -7,21 +24,23 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import { ChevronRight } from "@/components/ui/Icons";
 import { generateBreadcrumbSchema } from "@/lib/seo";
-import { FERRAMENTAS } from "@/lib/ferramentas-config";
+import { porHref } from "@/lib/ferramentas";
+import { LARGURA_POR_LAYOUT } from "@/components/ferramentas/ToolShell";
 
 export default function FerramentasLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  // Derivado da fonte única — o breadcrumb cobre sempre TODAS as ferramentas
-  // (o array local antigo estava incompleto: faltava o simulador de heranças).
-  const ferramentaAtiva = FERRAMENTAS.find((f) => f.href === pathname);
-  // O Simulador de IRS embute o simulador completo (layout largo, como a página
-  // de Simuladores); as restantes ferramentas mantêm a coluna estreita de leitura.
-  const largo = pathname === "/ferramentas/simulador-irs";
+  const ferramentaAtiva = porHref(pathname);
+  // O hub tem largura própria: é uma grelha, não uma coluna de leitura.
+  const largura = ferramentaAtiva
+    ? LARGURA_POR_LAYOUT[ferramentaAtiva.layout]
+    : "max-w-6xl";
 
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Início", url: "/" },
     { name: "Ferramentas", url: "/ferramentas" },
-    ...(ferramentaAtiva ? [{ name: ferramentaAtiva.titulo, url: ferramentaAtiva.href }] : []),
+    ...(ferramentaAtiva
+      ? [{ name: ferramentaAtiva.title, url: ferramentaAtiva.canonicalHref }]
+      : []),
   ]);
 
   return (
@@ -32,16 +51,16 @@ export default function FerramentasLayout({ children }: { children: ReactNode })
       />
       <Nav />
       <div className="min-h-screen bg-cream dark:bg-stone-950">
-        <div className={`mx-auto px-6 py-8 ${largo ? "max-w-5xl" : "max-w-3xl"}`}>
+        <div className={`mx-auto px-5 py-8 sm:px-6 ${largura}`}>
           {/* Breadcrumb */}
-          <nav aria-label="Localização" className="mb-8 flex items-center gap-1.5 text-xs text-stone-400">
-            <Link href="/" className="hover:text-stone-600 dark:hover:text-stone-300 transition-colors">Início</Link>
+          <nav aria-label="Localização" className="mb-8 flex flex-wrap items-center gap-1.5 text-xs text-stone-400">
+            <Link href="/" className="transition-colors hover:text-stone-600 dark:hover:text-stone-300">Início</Link>
             <ChevronRight size={12} />
-            <Link href="/ferramentas" className="hover:text-stone-600 dark:hover:text-stone-300 transition-colors">Ferramentas</Link>
+            <Link href="/ferramentas" className="transition-colors hover:text-stone-600 dark:hover:text-stone-300">Ferramentas</Link>
             {ferramentaAtiva && (
               <>
                 <ChevronRight size={12} />
-                <span className="text-stone-600 dark:text-stone-300">{ferramentaAtiva.titulo}</span>
+                <span className="text-stone-600 dark:text-stone-300">{ferramentaAtiva.title}</span>
               </>
             )}
           </nav>

@@ -17,9 +17,10 @@ import {
 // passaria a arrastar as 169 fichas editoriais para o bundle inicial de
 // todas as páginas públicas — para escrever um número.
 // Coberto por `busca-fronteira.test.ts`.
-import { FERRAMENTAS } from "@/lib/ferramentas-config";
+import { TOTAL_FERRAMENTAS } from "@/lib/ferramentas";
 
-const N_FERRAMENTAS = FERRAMENTAS.filter((f) => f.slug).length;
+// A contagem deriva do catálogo (§2.3): conta ferramentas reais, não cartões.
+const N_FERRAMENTAS = TOTAL_FERRAMENTAS;
 
 export interface NavItem {
   label: string;

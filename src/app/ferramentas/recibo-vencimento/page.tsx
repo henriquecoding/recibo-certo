@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { MotorReciboVencimento } from "@/components/dependente/MotorReciboVencimento";
+import MotorReciboVencimentoLazy from "./lazy";
 import { SS_DEPENDENTE } from "@/lib/fiscal-data";
 import { pct } from "@/lib/format";
 
@@ -39,7 +39,7 @@ export default function ReciboVencimentoPage() {
         </p>
       </div>
 
-      <MotorReciboVencimento />
+      <MotorReciboVencimentoLazy />
 
       <div className="mt-2 rounded-2xl border border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 p-5 space-y-2">
         <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">Como funciona</p>
