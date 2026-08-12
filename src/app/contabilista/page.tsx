@@ -17,7 +17,7 @@ import {
   listarAgendamentos, listarPartilhas, meusClientes,
 } from "@/lib/contabilistas/dados";
 import type { Agendamento, Partilha, Vinculo } from "@/lib/contabilistas/tipos";
-import { horaLocal, rotularDia, diaLocal } from "@/lib/contabilistas/agenda";
+import { horaLocal, rotularDia, diaLocal, tempoAte } from "@/lib/contabilistas/agenda";
 import { Calendar, User, PaperClip, Clock, Warning, Check } from "@/components/ui/Icons";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -125,7 +125,7 @@ export default function HojePage() {
             <span className="text-stone-300" aria-hidden>·</span>
             {seguinte.modalidade === "online" ? "Online" : "Presencial"}
             <span className="text-stone-300" aria-hidden>·</span>
-            <span className="font-medium text-stone-700">{daqui(seguinte.inicio)}</span>
+            <span className="font-medium text-stone-700">{tempoAte(seguinte.inicio)}</span>
           </p>
 
           {seguinte.assunto && (
@@ -207,23 +207,6 @@ export default function HojePage() {
       </section>
     </div>
   );
-}
-
-/**
- * «daqui a 3 horas», «amanhã», «daqui a 5 dias».
- *
- * Uma data por extenso obriga a fazer a conta de cabeça; isto responde à
- * pergunta que a pessoa está mesmo a fazer, que é «tenho de me despachar?».
- */
-function daqui(inicioISO: string): string {
-  const minutos = Math.round((new Date(inicioISO).getTime() - Date.now()) / 60000);
-  if (minutos <= 0) return "a decorrer";
-  if (minutos < 60) return `daqui a ${minutos} min`;
-  const horas = Math.round(minutos / 60);
-  if (horas < 24) return `daqui a ${horas} ${horas === 1 ? "hora" : "horas"}`;
-  const dias = Math.round(horas / 24);
-  if (dias === 1) return "amanhã";
-  return `daqui a ${dias} dias`;
 }
 
 function Numero({

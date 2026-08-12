@@ -317,6 +317,26 @@ export function rotularDia(dia: string, tz: string = FUSO_PT): string {
   }).format(instante);
 }
 
+/**
+ * «daqui a 3 horas», «amanhã», «daqui a 5 dias» — ou «a decorrer».
+ *
+ * Uma data por extenso obriga a pessoa a fazer a conta de cabeça. Isto
+ * responde à pergunta que ela está mesmo a fazer, que é «tenho de me
+ * despachar?». Puro e com `agora` injetável, para ser testável.
+ */
+export function tempoAte(inicioISO: string, agora: Date = new Date()): string {
+  const minutos = Math.round((new Date(inicioISO).getTime() - agora.getTime()) / 60_000);
+  if (minutos <= 0) return "a decorrer";
+  if (minutos < 60) return `daqui a ${minutos} min`;
+
+  const horas = Math.round(minutos / 60);
+  if (horas < 24) return `daqui a ${horas} ${horas === 1 ? "hora" : "horas"}`;
+
+  const dias = Math.round(horas / 24);
+  if (dias === 1) return "amanhã";
+  return `daqui a ${dias} dias`;
+}
+
 /** A semana-tipo por omissão de um perfil novo: dias úteis, 09–13 e 14–18. */
 export function disponibilidadePorOmissao(duracaoMin = 60): RegraDisponibilidade[] {
   const regras: RegraDisponibilidade[] = [];

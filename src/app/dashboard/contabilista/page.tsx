@@ -14,7 +14,7 @@ import {
 } from "@/lib/contabilistas/dados";
 import type { Agendamento, Contabilista, Partilha, Vinculo } from "@/lib/contabilistas/tipos";
 import { ROTULO_PARTILHA, ROTULO_VINCULO } from "@/lib/contabilistas/vinculo";
-import { diaLocal, horaLocal, rotularDia } from "@/lib/contabilistas/agenda";
+import { diaLocal, horaLocal, rotularDia, tempoAte } from "@/lib/contabilistas/agenda";
 import { eurosDeCents, valorComDesconto } from "@/lib/contabilistas/fidelidade";
 import CartaoFidelidade from "@/components/contabilistas/CartaoFidelidade";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
@@ -136,10 +136,10 @@ export default function MeuContabilistaPage() {
     await carregar();
   }
 
-  if (!carregado || aLer) {
-    return <div className="h-96 animate-pulse rounded-4xl bg-stone-100" aria-busy="true" />;
-  }
-
+  // Sem nuvem configurada não há nada para esperar — e perguntá-lo antes do
+  // carregamento evita o mesmo erro de hidratação que a candidatura tinha:
+  // `disponivel` vem da configuração e vale igual dos dois lados; `carregado`
+  // muda num efeito que pode correr antes de este pedaço hidratar.
   if (!disponivel) {
     return (
       <Envolvente>
@@ -147,6 +147,22 @@ export default function MeuContabilistaPage() {
           Esta área precisa da conta na nuvem, que ainda não está configurada.
         </p>
       </Envolvente>
+    );
+  }
+
+  if (!carregado || aLer) {
+    // Com a forma do que vem a seguir: cabeçalho, ficha do contabilista,
+    // cartão e duas secções. Um retângulo só diz «espera»; isto diz o que.
+    return (
+      <div className="space-y-6" aria-busy="true">
+        <div className="space-y-2">
+          <div className="h-3 w-24 animate-pulse rounded bg-stone-100" />
+          <div className="h-10 w-56 animate-pulse rounded-xl bg-stone-100" />
+        </div>
+        <div className="h-40 animate-pulse rounded-4xl bg-stone-100" />
+        <div className="h-32 animate-pulse rounded-4xl bg-stone-100" />
+        <div className="h-48 animate-pulse rounded-4xl bg-stone-100" />
+      </div>
     );
   }
 
@@ -286,11 +302,17 @@ export default function MeuContabilistaPage() {
                     <p className="text-sm font-semibold capitalize text-stone-800">
                       {rotularDia(diaLocal(new Date(a.inicio)))}
                     </p>
-                    <p className="mt-0.5 flex items-center gap-1.5 text-sm tabular-nums text-stone-500">
+                    <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm tabular-nums text-stone-500">
                       <Clock size={14} aria-hidden />
                       {horaLocal(new Date(a.inicio))}
-                      <span className="text-stone-300">·</span>
+                      <span className="text-stone-300" aria-hidden>·</span>
                       {a.modalidade === "online" ? "Online" : "Presencial"}
+                      {futura && (a.estado === "pedido" || a.estado === "confirmado") && (
+                        <>
+                          <span className="text-stone-300" aria-hidden>·</span>
+                          <span className="font-medium text-stone-600">{tempoAte(a.inicio)}</span>
+                        </>
+                      )}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">

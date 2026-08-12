@@ -11,6 +11,7 @@ import {
   partesLocais,
   rotularDia,
   type RegraDisponibilidade,
+  tempoAte,
 } from "@/lib/contabilistas/agenda";
 
 // 2026-08-17 é uma segunda-feira de verão (Lisboa em UTC+1).
@@ -266,5 +267,25 @@ describe("agenda: apresentação", () => {
     expect(rotularDia(SEGUNDA_VERAO, FUSO_PT)).toContain("segunda");
     expect(rotularDia(SEGUNDA_VERAO, FUSO_PT)).toContain("agosto");
     expect(rotularDia(SEGUNDA_INVERNO, FUSO_PT)).toContain("janeiro");
+  });
+
+  // O que a pessoa pergunta ao olhar para a agenda não é «que dia é», é
+  // «tenho de me despachar?». É a essa pergunta que `tempoAte` responde.
+  describe("tempoAte", () => {
+    const agora = new Date("2026-08-17T09:00:00Z");
+    const daqui = (ms: number) => new Date(agora.getTime() + ms).toISOString();
+
+    it("conta em minutos, horas e dias, e diz «amanhã» quando é amanhã", () => {
+      expect(tempoAte(daqui(25 * 60_000), agora)).toBe("daqui a 25 min");
+      expect(tempoAte(daqui(60 * 60_000), agora)).toBe("daqui a 1 hora");
+      expect(tempoAte(daqui(3 * 3600_000), agora)).toBe("daqui a 3 horas");
+      expect(tempoAte(daqui(24 * 3600_000), agora)).toBe("amanhã");
+      expect(tempoAte(daqui(5 * 86400_000), agora)).toBe("daqui a 5 dias");
+    });
+
+    it("uma consulta que já começou está a decorrer, não «daqui a -20 min»", () => {
+      expect(tempoAte(daqui(-20 * 60_000), agora)).toBe("a decorrer");
+      expect(tempoAte(agora.toISOString(), agora)).toBe("a decorrer");
+    });
   });
 });

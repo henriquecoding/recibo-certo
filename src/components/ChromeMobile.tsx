@@ -37,6 +37,7 @@ import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "motion/react";
 import {
   LogoMark, Home, Search, BookOpen, Trophy, User, Close, LayoutGrid, ArrowRight, Coin, Megaphone, ChevronRight,
+  Briefcase,
 } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useAuth } from "@/lib/supabase/auth";
@@ -49,6 +50,16 @@ import { medirNavegacao } from "@/lib/busca/medicao";
 
 const PLANOS: NavItem = {
   href: "/precos", label: "Planos", desc: "Subscrições e benefícios", Icon: Coin,
+};
+
+// Está na barra do desktop ao lado de «Planos»; no telemóvel os cinco lugares
+// do fundo são fixos, por isso entra no menu — mas na mesma secção, para o
+// menu continuar a ter exactamente o que a barra tem.
+const CONTABILISTAS: NavItem = {
+  href: "/contabilistas",
+  label: "Contabilistas",
+  desc: "Ligar-te, marcar consulta e enviar simulações",
+  Icon: Briefcase,
 };
 
 type Slot =
@@ -256,6 +267,7 @@ export default function ChromeMobile() {
               </SeccaoMenu>
 
               <SeccaoMenu titulo="Mais">
+                <LinhaMenu item={CONTABILISTAS} ativo={ativoMenu(CONTABILISTAS.href)} />
                 <LinhaMenu item={PLANOS} ativo={ativoMenu(PLANOS.href)} />
                 <button
                   type="button"

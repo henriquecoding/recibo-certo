@@ -17,6 +17,7 @@ import { useAuth } from "@/lib/supabase/auth";
 import { minhasCandidaturas, submeterCandidatura } from "@/lib/contabilistas/dados";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
+import { useAvisos } from "@/components/ui/Avisos";
 import { Check, Lock, PaperClip, Warning, Trash } from "@/components/ui/Icons";
 
 const MAX_DOCS = 5;
@@ -30,6 +31,8 @@ interface Pedido {
 
 export default function FormularioCandidatura() {
   const { user, carregado, abrirModal, disponivel } = useAuth();
+  const avisos = useAvisos();
+  const [aSubir, setASubir] = useState<{ feitos: number; total: number } | null>(null);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -53,12 +56,22 @@ export default function FormularioCandidatura() {
     if (!lista) return;
     setErro(null);
     const novos: File[] = [];
+    // Um ficheiro recusado avisa-se um a um: escolher cinco e ver uma só
+    // mensagem deixava a pessoa sem saber qual deles não entrou.
     for (const f of Array.from(lista)) {
-      if (!TIPOS_ACEITES.includes(f.type)) { setErro(`«${f.name}» não é PDF nem imagem.`); continue; }
-      if (f.size > MAX_BYTES) { setErro(`«${f.name}» passa dos 5 MB.`); continue; }
+      if (!TIPOS_ACEITES.includes(f.type)) { avisos.erro(`«${f.name}» não é PDF nem imagem.`); continue; }
+      if (f.size > MAX_BYTES) { avisos.erro(`«${f.name}» passa dos 5 MB.`); continue; }
       novos.push(f);
     }
-    setFicheiros((atual) => [...atual, ...novos].slice(0, MAX_DOCS));
+    setFicheiros((atual) => {
+      const juntos = [...atual, ...novos];
+      if (juntos.length > MAX_DOCS) {
+        avisos.info(`São no máximo ${MAX_DOCS} documentos.`, {
+          detalhe: `${juntos.length - MAX_DOCS} ficaram de fora.`,
+        });
+      }
+      return juntos.slice(0, MAX_DOCS);
+    });
   }
 
   async function enviar(e: React.FormEvent) {
@@ -77,6 +90,9 @@ export default function FormularioCandidatura() {
       if (ficheiros.length > 0) {
         const { getSupabase } = await import("@/lib/supabase/client");
         const sb = getSupabase();
+        // Carregar cinco ficheiros pode demorar. Sem contagem, um botão
+        // parado durante meio minuto parece um botão avariado.
+        setASubir({ feitos: 0, total: ficheiros.length });
         for (const f of ficheiros) {
           // A pasta é o id da pessoa: a política de storage da migração 042
           // só deixa escrever dentro da própria pasta.
@@ -87,6 +103,7 @@ export default function FormularioCandidatura() {
             .upload(caminho, f, { upsert: false, contentType: f.type });
           if (error) throw new Error(`Não foi possível enviar «${f.name}»: ${error.message}`);
           caminhos.push(caminho);
+          setASubir((a) => (a ? { ...a, feitos: a.feitos + 1 } : a));
         }
       }
 
@@ -99,11 +116,24 @@ export default function FormularioCandidatura() {
       setErro((err as Error).message);
     } finally {
       setAEnviar(false);
+      setASubir(null);
     }
   }
 
-  if (!carregado) return <div className="mt-8 h-64 animate-pulse rounded-4xl bg-stone-100" aria-busy="true" />;
-
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ A ORDEM DESTAS DUAS GUARDAS NÃO É INDIFERENTE                     │
+  // │                                                                   │
+  // │ Estava ao contrário, e dava um erro de hidratação real numa        │
+  // │ instalação sem nuvem configurada: o servidor desenhava o esqueleto │
+  // │ (`carregado` é falso durante o render do servidor) e o cliente     │
+  // │ desenhava já a mensagem — porque o `AuthProvider` está acima desta │
+  // │ fronteira de Suspense e o efeito dele corre ANTES de este pedaço   │
+  // │ hidratar. React deitava a subárvore fora e voltava a desenhá-la.   │
+  // │                                                                   │
+  // │ `disponivel` não depende de sessão nenhuma: vem da configuração, e │
+  // │ vale o mesmo no servidor e no cliente. Perguntá-lo primeiro é a    │
+  // │ ordem certa por significado, e por acaso é também a que hidrata.   │
+  // └───────────────────────────────────────────────────────────────────┘
   if (!disponivel) {
     return (
       <p className="mt-8 rounded-2xl bg-alert-bg px-4 py-3 text-sm text-alert-text">
@@ -111,6 +141,8 @@ export default function FormularioCandidatura() {
       </p>
     );
   }
+
+  if (!carregado) return <div className="mt-8 h-64 animate-pulse rounded-4xl bg-stone-100" aria-busy="true" />;
 
   if (!user) {
     return (
@@ -249,9 +281,16 @@ export default function FormularioCandidatura() {
         </p>
       )}
 
-      <Button type="submit" disabled={aEnviar}>
-        {aEnviar ? "A enviar…" : "Enviar candidatura"}
-      </Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" disabled={aEnviar}>
+          {aEnviar ? "A enviar…" : "Enviar candidatura"}
+        </Button>
+        {aSubir && (
+          <span role="status" className="text-sm tabular-nums text-stone-500">
+            Documento {Math.min(aSubir.feitos + 1, aSubir.total)} de {aSubir.total}…
+          </span>
+        )}
+      </div>
 
       <p className="border-t border-stone-100 pt-4 text-xs leading-relaxed text-stone-400">
         Só a administração do ReciboCerto vê esta candidatura. Aprovar cria a tua conta de

@@ -156,6 +156,26 @@ describe("o que é guardado é o que é mostrado", () => {
   });
 });
 
+describe("o servidor e o cliente desenham a mesma coisa", () => {
+  // O erro era real e silencioso: numa instalação sem nuvem configurada, o
+  // servidor desenhava o esqueleto («ainda a carregar») e o cliente desenhava
+  // já a mensagem de indisponível — porque o `AuthProvider` está acima da
+  // fronteira de Suspense e o efeito dele corre antes de o pedaço hidratar.
+  // React deitava a subárvore fora e voltava a desenhá-la.
+  const COM_DUAS_GUARDAS: [string, string][] = [
+    ["candidatura", ler("app", "contabilistas", "candidatura", "FormularioCandidatura.tsx")],
+    ["área do cliente", ler("app", "dashboard", "contabilista", "page.tsx")],
+  ];
+
+  it.each(COM_DUAS_GUARDAS)("%s pergunta por `disponivel` antes de `carregado`", (_nome, fonte) => {
+    const disponivel = fonte.indexOf("if (!disponivel)");
+    const carregado = fonte.search(/if \(!carregado/);
+    expect(disponivel).toBeGreaterThan(-1);
+    expect(carregado).toBeGreaterThan(-1);
+    expect(disponivel).toBeLessThan(carregado);
+  });
+});
+
 describe("marcar consulta continua a não custar nada", () => {
   it("a marcação não sabe o que é um plano", () => {
     const MARCACAO = ler("components", "contabilistas", "Marcacao.tsx");

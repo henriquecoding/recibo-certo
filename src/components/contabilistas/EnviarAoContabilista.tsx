@@ -16,7 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/supabase/auth";
 import { meuVinculo, partilhar } from "@/lib/contabilistas/dados";
 import type { Contabilista, TipoPartilha } from "@/lib/contabilistas/tipos";
@@ -27,6 +27,9 @@ import {
 import { registar } from "@/lib/analytics/cliente";
 import Button from "@/components/ui/Button";
 import { Briefcase, Check, Close, Lock, Warning } from "@/components/ui/Icons";
+
+const FOCAVEIS =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 interface Props {
   tipo: TipoPartilha;
@@ -151,14 +154,44 @@ function Folha({
   const [nota, setNota] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [estado, setEstado] = useState<"parado" | "a-enviar" | "enviado">("parado");
+  const caixaRef = useRef<HTMLDivElement>(null);
 
   const limpo = sanitizarConteudoPartilha(tipo, conteudo);
   const campos = Object.entries(limpo.conteudo);
 
   const fechar = useCallback(() => onFechar(), [onFechar]);
 
+  // O foco entra na folha ao abrir e volta a quem o tinha ao fechar. Sem
+  // isto, o teclado ficava na página por baixo — a ler uma coisa e a
+  // navegar noutra.
   useEffect(() => {
-    const aoTeclar = (e: KeyboardEvent) => { if (e.key === "Escape") fechar(); };
+    const anterior = document.activeElement as HTMLElement | null;
+    const t = setTimeout(() => {
+      caixaRef.current?.querySelector<HTMLElement>(FOCAVEIS)?.focus();
+    }, 60);
+    return () => {
+      clearTimeout(t);
+      if (anterior && typeof anterior.focus === "function") anterior.focus();
+    };
+  }, []);
+
+  useEffect(() => {
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { fechar(); return; }
+      if (e.key !== "Tab" || !caixaRef.current) return;
+
+      const focaveis = Array.from(caixaRef.current.querySelectorAll<HTMLElement>(FOCAVEIS));
+      if (focaveis.length === 0) return;
+      const primeiro = focaveis[0];
+      const ultimo = focaveis[focaveis.length - 1];
+      const atual = document.activeElement;
+
+      if (e.shiftKey && (atual === primeiro || !caixaRef.current.contains(atual))) {
+        e.preventDefault(); ultimo.focus();
+      } else if (!e.shiftKey && atual === ultimo) {
+        e.preventDefault(); primeiro.focus();
+      }
+    };
     document.addEventListener("keydown", aoTeclar);
     return () => document.removeEventListener("keydown", aoTeclar);
   }, [fechar]);
@@ -193,6 +226,7 @@ function Folha({
       onClick={(e) => { if (e.target === e.currentTarget) fechar(); }}
     >
       <div
+        ref={caixaRef}
         className="flex max-h-[90dvh] w-full max-w-lg flex-col rounded-t-4xl bg-white shadow-float sm:rounded-4xl"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >

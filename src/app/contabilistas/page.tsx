@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import DiretorioCliente from "./DiretorioCliente";
-import { ArrowRight } from "@/components/ui/Icons";
+import AtalhosDoVisitante from "./AtalhosDoVisitante";
+import {
+  ArrowRight, Calendar, Gift, Lock, PaperClip, User,
+} from "@/components/ui/Icons";
 
 export const metadata: Metadata = {
   title: "Contabilistas certificados | ReciboCerto",
@@ -9,6 +12,36 @@ export const metadata: Metadata = {
     "Encontra um contabilista certificado, envia-lhe as tuas simulações e marca consulta. Gratuito e sem plano pago.",
   alternates: { canonical: "/contabilistas" },
 };
+
+/**
+ * As quatro coisas que aqui se fazem — e nenhuma delas custa dinheiro.
+ *
+ * A frase «não precisa de plano» aparece porque é verdade e porque é a
+ * pergunta que se faz a seguir: `PARTILHA_NUNCA_EXIGE_PLUS`, em
+ * `contabilistas/vinculo.ts`, garante-o em código e está coberto por teste.
+ */
+const POSSIBILIDADES = [
+  {
+    Icon: User,
+    titulo: "Ligares-te a um contabilista",
+    texto: "Escolhes um do diretório e pedes para seres cliente. Ele aceita — ou não — e a partir daí ficam ligados.",
+  },
+  {
+    Icon: Calendar,
+    titulo: "Marcares consulta",
+    texto: "Vês os horários livres dele, escolhes o dia e a hora, e dizes o assunto. Online ou presencial, conforme atender.",
+  },
+  {
+    Icon: PaperClip,
+    titulo: "Enviares as tuas simulações",
+    texto: "Das ferramentas do site, com um clique. Vês campo a campo o que segue antes de confirmar, e podes revogar depois.",
+  },
+  {
+    Icon: Gift,
+    titulo: "Juntares carimbos",
+    texto: "Cada consulta realizada carimba o cartão dele. Ao completá-lo ganhas um desconto na consulta seguinte, entre 10% e 50%.",
+  },
+] as const;
 
 export default function DiretorioPage() {
   return (
@@ -26,6 +59,37 @@ export default function DiretorioPage() {
           </p>
         </header>
 
+        {/* Para quem já tem contabilista, pedido por aceitar ou painel de
+            gestão, o próximo passo não é «escolher» — e é esse que aparece. */}
+        <AtalhosDoVisitante />
+
+        {/* O que se pode fazer daqui, dito antes de a pessoa escolher alguém:
+            escolher é mais fácil quando se sabe para quê. */}
+        <section aria-labelledby="podes-titulo" className="mt-10">
+          <h2 id="podes-titulo" className="font-display text-2xl text-ink">
+            O que podes fazer aqui
+          </h2>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+            {POSSIBILIDADES.map(({ Icon, titulo, texto }) => (
+              <li key={titulo} className="flex gap-3.5 rounded-4xl border border-stone-200 bg-white p-5 shadow-card">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-light text-brand-dark">
+                  <Icon size={18} aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-stone-800">{titulo}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-stone-600">{texto}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 flex items-start gap-2 text-sm leading-relaxed text-stone-500">
+            <Lock size={15} className="mt-0.5 shrink-0 text-stone-400" aria-hidden />
+            Ligares-te a alguém não lhe dá acesso aos teus dados. O contabilista vê o que
+            lhe enviares, um envio de cada vez, e podes revogar o acesso quando quiseres.
+          </p>
+        </section>
+
+        <h2 className="mt-12 font-display text-2xl text-ink">Escolher um contabilista</h2>
         <DiretorioCliente />
 
         <aside className="mt-12 rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
