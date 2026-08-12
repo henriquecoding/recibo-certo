@@ -19,6 +19,21 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.39.0",
+    data: "2026-08-12",
+    titulo: "O perfil fiscal deixou de ser um interrogatório",
+    itens: [
+      "O perfil fiscal era uma parede de dezoito campos todos do mesmo tamanho, quase todos menus cinzentos, com contadores a mostrar zero — que é indistinguível de «ainda não respondi». Agora cada secção é um cartão que diz o que destranca e quantas perguntas ainda lhe faltam, e as perguntas de sim ou não são botões à vista em vez de menus fechados.",
+      "A barra de progresso conta as perguntas que se aplicam mesmo a ti. Se não acumulas trabalho independente com um emprego, as três condições da acumulação não te são perguntadas nem contadas — antes ficavam lá a manter a barra permanentemente incompleta.",
+      "Nos valores em euros, deixar em branco passou a querer dizer «não sei», que é diferente de zero. Parece um pormenor e não é: era por confundir as duas coisas que o painel dava um número em vez de dizer que lhe faltava informação.",
+      "O perfil fiscal passa a exigir sessão iniciada. São as tuas condições pessoais — início de atividade, regime de IVA, agregado, rendimento do cônjuge — e ficavam apenas neste browser, à mercê da primeira limpeza de dados. As calculadoras, os simuladores e os guias continuam a funcionar sem conta, como sempre.",
+      "A página de Conta e segurança estava numa coluna estreita no meio de um ecrã vazio. Ganhou espaço e organização: quem está com sessão iniciada, o que o plano inclui, e a segurança à parte. E podes entrar com o Google ou o LinkedIn a partir daqui — já era possível na aplicação, mas não nesta página.",
+      "O teu plano deixou de ficar desatualizado numa aba aberta. Se mudavas de plano no portal do Stripe, noutro dispositivo, ou se uma renovação falhava, esta aba continuava a mostrar o plano antigo até recarregares à mão. Agora volta a confirmar sempre que regressas ao separador.",
+      "E ao acabares de pagar deixaste de ver «Plano Grátis» à tua espera. O Stripe traz-te de volta no instante do pagamento, mas a confirmação chega uns segundos depois — a página passa a esperar por ela em vez de te dizer que não tens Plus.",
+      "Quem preencheu o perfil fiscal antes de ter Plus tinha-o guardado só no dispositivo. Ao passar a Plus, o perfil ficava por subir até à edição seguinte, e num segundo dispositivo aparecia em branco. Passa a subir logo na primeira vez que abres.",
+    ],
+  },
+  {
     version: "2.38.0",
     data: "2026-08-12",
     titulo: "O painel passa a dar sempre o mesmo número",
