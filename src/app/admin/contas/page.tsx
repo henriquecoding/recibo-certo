@@ -28,11 +28,48 @@ import type { ContaAdmin, AtoDeAdmin } from "@/app/api/admin/contas/route";
 
 type Filtro = "todas" | "admin" | "user" | "plus";
 
+// Num registo de auditoria, a hora conta tanto como o dia: «foi a 12 de
+// agosto» não distingue dois atos da mesma tarde.
+const dataHoraPT = (iso: string) =>
+  new Intl.DateTimeFormat("pt-PT", {
+    day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  }).format(new Date(iso));
+
 const dataPT = (iso: string | null) =>
   iso
     ? new Intl.DateTimeFormat("pt-PT", { day: "2-digit", month: "short", year: "numeric" })
         .format(new Date(iso))
     : "—";
+
+// O registo cobre dois tipos de ato: os da própria secção de contas, escritos
+// pela rota com o antes e o depois, e os do resto do painel, escritos por um
+// gatilho da base de dados (migração 041) na forma `operacao:tabela`.
+const OPERACAO: Record<string, string> = {
+  insert: "criou",
+  update: "alterou",
+  delete: "apagou",
+};
+const TABELA: Record<string, string> = {
+  site_feedback: "um reporte de feedback",
+  quiz_question_reports: "um reporte do Quiz",
+  email_waitlist: "um email da lista de espera",
+  propostas_investidores: "uma proposta de investidor",
+  admin_partners: "um parceiro",
+  anuncios: "um anúncio",
+  partner_placements: "uma superfície de parceiro",
+  partner_creatives: "um criativo de parceiro",
+};
+
+function descreverAto(a: AtoDeAdmin): string {
+  if (a.acao === "promover_admin") return "promoveu a administração";
+  if (a.acao === "despromover_admin") return "removeu a administração de";
+  const [op, tabela] = a.acao.split(":");
+  if (op && tabela) {
+    return `${OPERACAO[op] ?? op} ${TABELA[tabela] ?? tabela}`;
+  }
+  return a.acao;
+}
 
 export default function ContasPage() {
   const { user } = useAuth();
@@ -268,8 +305,10 @@ export default function ContasPage() {
           Registo de administração
         </h2>
         <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-          Quem promoveu ou despromoveu quem, e quando. Escrito pelo servidor e não
-          editável por ninguém — nem por quem administra.
+          Todos os atos de administração: mudanças de papel, e o que foi criado,
+          alterado ou apagado no painel. Guarda quem, o quê e quando — nunca o
+          conteúdo das linhas. Escrito pela base de dados e não editável por
+          ninguém, nem por quem administra.
         </p>
 
         {registo.length === 0 ? (
@@ -283,14 +322,12 @@ export default function ContasPage() {
                 <span className="font-semibold text-stone-700 dark:text-stone-200">
                   {a.ator_email ?? "conta apagada"}
                 </span>
-                <span className="text-stone-500 dark:text-stone-400">
-                  {a.acao === "promover_admin" ? "promoveu a administração" : "removeu a administração de"}
-                </span>
-                <span className="font-semibold text-stone-700 dark:text-stone-200">
-                  {a.alvo_email ?? "—"}
-                </span>
-                <time dateTime={a.criado_em} className="ml-auto flex-shrink-0 text-xs text-stone-400">
-                  {dataPT(a.criado_em)}
+                <span className="text-stone-500 dark:text-stone-400">{descreverAto(a)}</span>
+                {a.alvo_email ? (
+                  <span className="font-semibold text-stone-700 dark:text-stone-200">{a.alvo_email}</span>
+                ) : null}
+                <time dateTime={a.criado_em} className="ml-auto flex-shrink-0 tabular-nums text-xs text-stone-400">
+                  {dataHoraPT(a.criado_em)}
                 </time>
               </li>
             ))}
