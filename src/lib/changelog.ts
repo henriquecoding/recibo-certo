@@ -19,6 +19,18 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.44.0",
+    data: "2026-08-12",
+    titulo: "Zona de risco: apagar o que quiseres, quando quiseres",
+    itens: [
+      "Em Conta e segurança há agora uma zona de risco, separada de tudo o resto e no vermelho pastel que usamos para ações destrutivas. Podes apagar o que quiseres, no momento em que quiseres, sem pedir nada a ninguém.",
+      "Podes apagar por partes: só os recibos verdes, só os recibos de vencimento, só os cenários guardados, ou só o perfil fiscal. Podes apagar tudo de uma vez, mantendo a conta e recomeçando do zero. E podes apagar a conta por completo.",
+      "Antes de apagar, tens de escrever o que vais fazer. O campo só aceita essa frase — uma tecla que não corresponda simplesmente não entra, e colar outra coisa qualquer também não passa. Não é para dificultar: é para que ninguém apague nada sem ler o que está a apagar. Se já leste e não queres escrever, há uma caixa que preenche por ti.",
+      "Apagar na nuvem apaga também o que está guardado neste dispositivo. E se apagares a conta, avisamos-te de que isso não cancela uma subscrição ativa — é o engano mais caro que podias cometer aqui.",
+      "Do lado do servidor, quem apaga é sempre a tua sessão a apagar os teus dados: a identidade vem do teu início de sessão e nunca do pedido, e a frase de confirmação é verificada outra vez. Um pedido feito fora do site não contorna nada disto.",
+    ],
+  },
+  {
     version: "2.43.0",
     data: "2026-08-12",
     titulo: "Se cancelares, os teus dados saem mesmo dos nossos servidores",

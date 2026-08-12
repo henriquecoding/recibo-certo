@@ -10,6 +10,7 @@ import { descreverEstado } from "@/lib/stripe/precos-autorizados";
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Google, History, Linkedin, Lock, LogOut, ShieldCheck, Warning } from "@/components/ui/Icons";
 import FizConnectionCard from "@/components/fiz/FizConnectionCard";
 import AvisoCancelamento from "@/components/conta/AvisoCancelamento";
+import ZonaDeRisco from "@/components/conta/ZonaDeRisco";
 
 const campo =
   "w-full px-3.5 py-2.5 text-[16px] text-stone-800 dark:text-stone-100 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all";
@@ -167,6 +168,10 @@ export default function ContaPage() {
             </section>
           </div>
         </div>
+
+        {/* Separada de tudo o resto, e a última coisa da página: uma secção
+            que apaga não pode estar ao lado de uma que guarda. */}
+        <ZonaDeRisco />
       </Wrapper>
     );
   }
