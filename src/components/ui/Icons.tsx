@@ -659,6 +659,21 @@ export function Spinner({ size = 18, className }: IconProps) {
   );
 }
 
+/** Sincronização com a nuvem. Path do Lucide "cloud". */
+export function Cloud({ size = 18, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} aria-hidden focusable={false}>
+      <path
+        d="M17.5 19a4.5 4.5 0 0 0 .5-8.97A6 6 0 0 0 6.34 9.4 4 4 0 0 0 7 19h10.5Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 // ─── Gamificação / engagement ───────────────────────────────
 // Path idêntico ao Lucide "Flame" — stroke currentColor como todos os outros ícones
 export function Fire({ size = 18, className }: IconProps) {

@@ -199,6 +199,17 @@ function gravar(prefs: PreferenciasFiscais): Resultado<void> {
 
 // ─── Hook ──────────────────────────────────────────────────────────────
 
+/**
+ * Um perfil por estrear é indistinguível dos valores por omissão. Só vale a
+ * pena subir o que a pessoa realmente respondeu — subir defaults por cima de
+ * uma conta nova não acrescenta nada e pisaria dados de outro dispositivo.
+ */
+function vazio(p: PreferenciasFiscais): boolean {
+  return (Object.keys(DEFAULTS) as Array<keyof PreferenciasFiscais>)
+    .filter((k) => k !== "v")
+    .every((k) => p[k] === DEFAULTS[k]);
+}
+
 export function usePreferenciasFiscais() {
   const { user } = useAuth();
   const { plano } = useSubscricao();
@@ -232,7 +243,33 @@ export function usePreferenciasFiscais() {
             .maybeSingle();
           if (!ativo) return;
           if (error) throw error;
-          setPrefs(data?.preferencias_fiscais ? normalizar(data.preferencias_fiscais) : ler());
+
+          if (data?.preferencias_fiscais) {
+            setPrefs(normalizar(data.preferencias_fiscais));
+          } else {
+            // A NUVEM AINDA NÃO TEM NADA — mas este dispositivo pode ter.
+            //
+            // Acontece a quem preencheu o perfil antes de ter Plus: as
+            // preferências ficaram em localStorage e a coluna ficou vazia.
+            // Ler o local e parar aqui — que era o comportamento anterior —
+            // resolvia ESTE dispositivo e deixava a nuvem por preencher: no
+            // segundo dispositivo a pessoa encontrava o perfil em branco e
+            // achava que o tinha perdido.
+            //
+            // Ao subir o que é local na primeira leitura, o perfil passa a
+            // existir onde diz que existe. Uma falha aqui é irrelevante: o
+            // local continua a ser fonte legítima e a próxima gravação
+            // tenta de novo.
+            const locais = ler();
+            setPrefs(locais);
+            if (!vazio(locais)) {
+              await getSupabase()
+                .from("profiles")
+                .update({ preferencias_fiscais: locais })
+                .eq("id", userId)
+                .then(undefined, () => undefined);
+            }
+          }
         } catch {
           if (!ativo) return;
           // A nuvem falhou: o dispositivo continua a ser uma fonte legítima.

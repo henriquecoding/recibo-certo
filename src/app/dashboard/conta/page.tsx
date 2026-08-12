@@ -7,7 +7,7 @@ import { useSubscricao } from "@/lib/stripe/subscription";
 import { getSupabase } from "@/lib/supabase/client";
 import { validarPassword, type ErroPassword } from "@/lib/validacao-password";
 import { descreverEstado } from "@/lib/stripe/precos-autorizados";
-import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, History, Lock, Warning } from "@/components/ui/Icons";
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Google, History, Linkedin, Lock, LogOut, ShieldCheck, Warning } from "@/components/ui/Icons";
 import FizConnectionCard from "@/components/fiz/FizConnectionCard";
 
 const campo =
@@ -15,7 +15,7 @@ const campo =
 const rotulo = "mb-1.5 block text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400";
 
 export default function ContaPage() {
-  const { user, carregado, disponivel, entrar, registar, sair } = useAuth();
+  const { user, carregado, disponivel, entrar, registar, sair, entrarComGoogle, entrarComLinkedin } = useAuth();
   const [modo, setModo] = useState<"entrar" | "registar">("entrar");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -71,44 +71,100 @@ export default function ContaPage() {
 
   if (user) {
     return (
-      <Wrapper>
-        <div className="space-y-5">
-          {/* Sessão */}
-          <div className="rounded-4xl border border-stone-100 bg-white p-7 shadow-card dark:border-stone-800 dark:bg-stone-900">
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-light text-brand">
-                <Check size={20} />
-              </span>
-              <div className="min-w-0">
-                <h2 className="text-sm font-semibold text-stone-800 dark:text-stone-100">Sessão iniciada</h2>
-                <p className="truncate text-sm text-stone-500 dark:text-stone-400">{user.email}</p>
-              </div>
+      <Wrapper largo>
+        {/* ── Identidade: quem está aqui, e em que plano ─────────────── */}
+        <section
+          aria-labelledby="conta-sessao"
+          className="mb-4 rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-6"
+        >
+          <div className="flex flex-wrap items-center gap-4">
+            <Inicial email={user.email ?? ""} />
+            <div className="min-w-0 flex-1">
+              <h2 id="conta-sessao" className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-stone-400">
+                <Check size={12} className="text-brand" /> Sessão iniciada
+              </h2>
+              <p className="mt-0.5 truncate text-[15px] font-semibold text-stone-800 dark:text-stone-100">
+                {user.email}
+              </p>
             </div>
-
-            <SecaoSubscricao />
-
-            {/* Um benefício, dito uma vez. Havia duas linhas a dizer o mesmo,
-                mais um parágrafo a repeti-lo pela terceira vez (RC-P1-11). */}
-            <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5 dark:border-stone-800">
-              <Beneficio icon={<History size={16} />} texto="Histórico na nuvem, sincronizado em todos os dispositivos." />
-              <Beneficio icon={<Check size={16} />} texto="Cenários ilimitados e exportações para o contabilista." />
-            </div>
-
             <button
               type="button"
               onClick={sair}
-              className="mt-5 inline-flex justify-center rounded-2xl border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300 dark:border-stone-700 dark:text-stone-300 dark:hover:border-stone-600"
+              className="inline-flex min-h-10 flex-shrink-0 items-center gap-1.5 rounded-2xl border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-600 transition-colors hover:border-stone-300 hover:text-stone-800 dark:border-stone-700 dark:text-stone-300 dark:hover:border-stone-600"
             >
-              Terminar sessão
+              <LogOut size={14} /> Terminar sessão
             </button>
           </div>
 
-          {/* Ligação ao parceiro de execução fiscal. Só aparece quando a
-              integração está ativa — e nunca depende do plano Plus. */}
-          <FizConnectionCard />
+          <SecaoSubscricao />
 
-          {/* Alterar password */}
+          {/* Um benefício, dito uma vez. Havia duas linhas a dizer o mesmo,
+              mais um parágrafo a repeti-lo pela terceira vez (RC-P1-11). */}
+          <div className="mt-5 grid gap-2.5 border-t border-stone-100 pt-5 dark:border-stone-800 sm:grid-cols-2">
+            <Beneficio icon={<History size={16} />} texto="Histórico na nuvem, sincronizado em todos os dispositivos." />
+            <Beneficio icon={<Check size={16} />} texto="Cenários ilimitados e exportações para o contabilista." />
+          </div>
+        </section>
+
+        {/* ── Duas colunas no computador: segurança à esquerda, o resto
+               à direita. Empilham no telemóvel, segurança primeiro. ──── */}
+        <div className="grid items-start gap-4 lg:grid-cols-[1.15fr_0.85fr]">
           <SecaoPassword />
+
+          <div className="space-y-4">
+            {/* Ligação ao parceiro de execução fiscal. Só aparece quando a
+                integração está ativa — e nunca depende do plano Plus. */}
+            <FizConnectionCard />
+
+            <section
+              aria-labelledby="conta-perfil-fiscal"
+              className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-6"
+            >
+              <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand">
+                <ShieldCheck size={18} />
+              </span>
+              <h2 id="conta-perfil-fiscal" className="text-sm font-semibold text-stone-800 dark:text-stone-100">
+                Perfil fiscal
+              </h2>
+              <p className="mt-1 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+                As condições que fazem o painel falar de ti — início de atividade, regime de IVA,
+                agregado. Precisam de sessão iniciada, e já a tens.
+              </p>
+              <Link
+                href="/dashboard/perfil"
+                className="mt-3 inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-brand transition-colors hover:text-brand-dark"
+              >
+                Rever o perfil fiscal <ArrowRight size={13} />
+              </Link>
+            </section>
+
+            <section
+              aria-labelledby="conta-privacidade"
+              className="rounded-4xl border border-stone-100 bg-stone-50 p-5 dark:border-stone-800 dark:bg-stone-900/50 sm:p-6"
+            >
+              <h2 id="conta-privacidade" className="text-sm font-semibold text-stone-800 dark:text-stone-100">
+                Os teus dados
+              </h2>
+              <p className="mt-1 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+                O que escreves nas calculadoras fica no teu dispositivo. A conta serve para
+                sincronizar o que escolheres guardar — não para poderes calcular.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link
+                  href="/privacidade"
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs font-semibold text-stone-600 transition-colors hover:border-brand hover:text-brand dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
+                >
+                  Política de privacidade
+                </Link>
+                <Link
+                  href="/dashboard/cenarios"
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs font-semibold text-stone-600 transition-colors hover:border-brand hover:text-brand dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
+                >
+                  Cenários guardados
+                </Link>
+              </div>
+            </section>
+          </div>
         </div>
       </Wrapper>
     );
@@ -202,28 +258,84 @@ export default function ContaPage() {
           </button>
         </form>
 
-        <p className="mt-4 text-center text-xs leading-relaxed text-stone-400">
-          Criar conta é opcional e gratuito. Sem conta, o ReciboCerto continua a funcionar neste dispositivo.
+        {/* Os provedores já existiam no `useAuth` e não estavam em lado
+            nenhum desta página: quem tinha entrado com o Google alguma vez
+            não tinha por onde o voltar a fazer aqui. */}
+        <div className="my-5 flex items-center gap-3" aria-hidden="true">
+          <span className="h-px flex-1 bg-stone-200 dark:bg-stone-700" />
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">ou</span>
+          <span className="h-px flex-1 bg-stone-200 dark:bg-stone-700" />
+        </div>
+
+        <div className="grid gap-2.5 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={entrarComGoogle}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:hover:border-stone-600"
+          >
+            <Google size={16} /> Google
+          </button>
+          <button
+            type="button"
+            onClick={entrarComLinkedin}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:hover:border-stone-600"
+          >
+            <Linkedin size={16} /> LinkedIn
+          </button>
+        </div>
+
+        <p className="mt-5 border-t border-stone-100 pt-4 text-center text-xs leading-relaxed text-stone-400 dark:border-stone-800">
+          Criar conta é gratuito. As calculadoras, os simuladores e os guias funcionam sem conta — a
+          sessão serve para teres um perfil fiscal e um histórico que persistem.
         </p>
       </div>
     </Wrapper>
   );
 }
 
-function Wrapper({ children }: { children: React.ReactNode }) {
+/**
+ * A moldura da página.
+ *
+ * Era `max-w-md` — uma coluna de 448px para tudo, incluindo o estado de
+ * sessão iniciada, que tem identidade, plano, ligação ao parceiro e
+ * segurança para mostrar. Três cartões empilhados numa faixa estreita, no
+ * meio de um ecrã vazio, faziam a página parecer inacabada. A largura passa
+ * a depender do que há para mostrar: o formulário de entrada continua
+ * estreito (é uma tarefa só), a gestão da conta ganha espaço.
+ */
+function Wrapper({ children, largo = false }: { children: React.ReactNode; largo?: boolean }) {
   return (
-    <div className="mx-auto max-w-md">
-      <Link href="/dashboard" className="mb-5 inline-flex items-center gap-1.5 text-sm text-stone-400 transition-colors hover:text-stone-700 dark:hover:text-stone-200">
+    <div className={`mx-auto ${largo ? "max-w-4xl" : "max-w-md"}`}>
+      <Link
+        href="/dashboard"
+        className="mb-5 inline-flex min-h-9 items-center gap-1.5 text-sm text-stone-400 transition-colors hover:text-stone-700 dark:hover:text-stone-200"
+      >
         <ArrowLeft size={13} />
         Voltar ao painel
       </Link>
-      <header className="mb-6">
-        <p className="mb-1 text-xs font-medium uppercase tracking-wider text-stone-400">Conta · Segurança</p>
-        <h1 className="font-display text-3xl font-semibold text-stone-800 dark:text-stone-100">Conta e segurança</h1>
-        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">Gere a tua sessão e altera a tua password.</p>
+      <header className="mb-7">
+        <p className="eyebrow mb-2 text-brand">Conta e segurança</p>
+        <h1 className="font-display display-2 font-semibold text-ink text-balance">
+          A tua conta, sem surpresas.
+        </h1>
+        <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-stone-500 dark:text-stone-400">
+          Quem está com sessão iniciada, o que o teu plano inclui e como proteges o acesso.
+        </p>
       </header>
       {children}
     </div>
+  );
+}
+
+/** Inicial do email, para dar rosto à sessão sem pedir uma fotografia. */
+function Inicial({ email }: { email: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-brand text-lg font-bold uppercase text-white shadow-glow"
+    >
+      {email.trim().charAt(0) || "?"}
+    </span>
   );
 }
 
