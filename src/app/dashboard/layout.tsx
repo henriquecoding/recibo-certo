@@ -66,6 +66,7 @@ const GRUPOS: NavGroup[] = [
       { href: "/dashboard/recibos", label: "Recibos registados", short: "Recibos", icon: Invoice },
       { href: "/dashboard/receitas", label: "Receitas", short: "Receitas", icon: History },
       { href: "/dashboard/prazos", label: "Prazos fiscais", short: "Prazos", icon: Calendar },
+      { href: "/dashboard/contabilista", label: "O meu contabilista", short: "Contabilista", icon: Briefcase },
     ],
   },
   {

@@ -36,6 +36,8 @@ import {
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
 import { DATA_LAST_REVIEW } from "@/lib/fiscal-data";
 import { escolherRota, type SinaisDoUtilizador } from "@/lib/routing";
+import EnviarAoContabilista from "@/components/contabilistas/EnviarAoContabilista";
+import type { TipoPartilha } from "@/lib/contabilistas/tipos";
 import type { EstadoConfianca } from "@/lib/analytics/eventos";
 
 export interface Premissa {
@@ -90,6 +92,18 @@ export interface ResultadoExplicadoProps {
 
   /** Sinais para escolher o próximo passo. Ver `lib/routing.ts`. */
   sinais: SinaisDoUtilizador;
+  /**
+   * Torna este resultado enviável ao contabilista da pessoa.
+   *
+   * Opcional porque nem todo o resultado é partilhável: o conteúdo tem de
+   * caber numa das listas brancas de `contabilistas/vinculo.ts`. Quando
+   * está presente, aparece o bloco de envio — que nunca verifica o plano.
+   */
+  partilha?: {
+    tipo: TipoPartilha;
+    conteudo: unknown;
+    toolId: string;
+  };
   /** Conteúdo extra, entre os cenários e as fontes. */
   children?: ReactNode;
 }
@@ -114,7 +128,10 @@ const ROTULO_CONFIANCA: Record<EstadoConfianca, { texto: string; classe: string 
     apenas do cookie do parceiro». */
 const DESTINO_ROTA: Record<string, { href: string; rotulo: string }> = {
   fiz: { href: "/ir/fiz?s=simulador.plano_acao&v=resultado", rotulo: "Continuar na FIZ" },
-  contabilista: { href: "/ferramentas/mapa-contabilistas", rotulo: "Falar com um profissional" },
+  // Passou do mapa de preços para o diretório: o mapa diz quanto custa, o
+  // diretório tem pessoas a quem a pessoa se pode ligar — e a quem pode
+  // enviar este resultado sem pagar nada.
+  contabilista: { href: "/contabilistas", rotulo: "Falar com um contabilista" },
   plus: { href: "/precos", rotulo: "Guardar e acompanhar" },
   sem_parceiro: { href: "/metodologia", rotulo: "Ver como calculamos" },
 };
@@ -147,7 +164,7 @@ function Bloco({
 export default function ResultadoExplicado({
   titulo, valor, valorMaximo, perfil, confianca, notaConfianca,
   premissas, formula, arredondamento, versaoMotor,
-  acao, cenarios, fontes, limites, sinais, children,
+  acao, cenarios, fontes, limites, sinais, partilha, children,
 }: ResultadoExplicadoProps) {
   const rota = escolherRota(sinais);
   const destino = DESTINO_ROTA[rota.rota] ?? DESTINO_ROTA.sem_parceiro;
@@ -337,6 +354,21 @@ export default function ResultadoExplicado({
             ? " Nada é enviado sem que confirmes, e podes retirar o consentimento depois."
             : ""}
         </p>
+
+        {/* Envio direto para quem já tem contabilista ligado. Fica DEPOIS da
+            ação principal e com peso visual menor: o §7.3 é explícito em
+            «nunca três ações com o mesmo peso». */}
+        {partilha && (
+          <div className="mt-4 border-t border-stone-200 pt-4 dark:border-stone-700">
+            <EnviarAoContabilista
+              tipo={partilha.tipo}
+              conteudo={partilha.conteudo}
+              toolId={partilha.toolId}
+              titulo={titulo}
+              variante="discreto"
+            />
+          </div>
+        )}
       </footer>
     </article>
   );

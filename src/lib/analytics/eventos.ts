@@ -72,6 +72,9 @@ export type NomeEvento =
   | "fiz_impression"
   | "fiz_click"
   | "fiz_outcome"
+  | "accountant_link_request"
+  | "accountant_share"
+  | "accountant_booking"
   | "lead_consent"
   | "lead_submitted"
   | "lead_accepted"
@@ -152,6 +155,33 @@ export interface PayloadsEvento {
     /** Em cêntimos, para não arrastar vírgula flutuante na reconciliação. */
     eligible_revenue_cents: number;
     lag_days: number;
+  };
+  /**
+   * ┌───────────────────────────────────────────────────────────────────┐
+   * │ A REGRA DESTES TRÊS: NENHUM DADO FISCAL, NENHUMA IDENTIDADE       │
+   * │                                                                   │
+   * │ Uma partilha com o contabilista É conteúdo fiscal — valores,      │
+   * │ regimes, por vezes o nome de um cliente no campo de notas. Nada    │
+   * │ disso entra aqui, nem truncado nem em amostra.                    │
+   * │                                                                   │
+   * │ O `tool_id` diz de que ferramenta veio; o resto é forma. O id do  │
+   * │ contabilista também não entra: cruzado com o utilizador, seria a  │
+   * │ relação profissional de alguém num sistema de medição.            │
+   * └───────────────────────────────────────────────────────────────────┘
+   */
+  accountant_link_request: { entry_page: string; user_state: EstadoConta };
+  accountant_share: {
+    tool_id: string;
+    /** Tipo de partilha (`simulador_irs`, …) — rótulo nosso, não conteúdo. */
+    share_kind: string;
+    consent_version: string;
+    /** Quantos campos seguiram. Um número, nunca os campos. */
+    field_count: number;
+  };
+  accountant_booking: {
+    /** `pedido` ou `cancelado` — a ação, não a data nem o assunto. */
+    action: string;
+    modality: string;
   };
   lead_consent: { case_type: string; partner_id: string; consent_version: string };
   lead_submitted: { case_type: string; partner_id: string; consent_version: string };
@@ -332,6 +362,21 @@ export const CATALOGO: Record<NomeEvento, DefinicaoEvento> = {
     disparo: "Postback ou reconciliação do parceiro.",
     serve: "Receita por 1.000 DVM e taxa de reconciliação (meta ≥ 95%).",
     origem: "servidor",
+  },
+  accountant_link_request: {
+    disparo: "Pedido de vínculo enviado a um contabilista do diretório.",
+    serve: "Se o diretório converte, e a partir de que páginas.",
+    origem: "cliente",
+  },
+  accountant_share: {
+    disparo: "Simulação enviada ao contabilista vinculado, depois do consentimento.",
+    serve: "Se a ligação ao contabilista é usada, ou só criada e esquecida.",
+    origem: "cliente",
+  },
+  accountant_booking: {
+    disparo: "Consulta pedida ou cancelada pelo cliente.",
+    serve: "Se a agenda é usada — e quanto do que é marcado se desmarca.",
+    origem: "cliente",
   },
   lead_consent: {
     disparo: "Consentimento específico dado para partilhar o caso.",

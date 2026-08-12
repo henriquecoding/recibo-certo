@@ -106,6 +106,22 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
   // cobertura dos dados e histórico de correções fiscais. Prioridade alta
   // porque são o que sustenta a confiança em tudo o resto — e o que um
   // motor de resposta precisa de encontrar para nos poder citar.
+  // ⚠️ AO FAZER MERGE: acrescentar aqui as duas rotas da plataforma de
+  // contabilistas, e em `REVISOES_MANUAIS` a data real da publicação:
+  //
+  //   { path: "/contabilistas",             changeFrequency: "weekly",  priority: 0.8 },
+  //   { path: "/contabilistas/candidatura", changeFrequency: "monthly", priority: 0.5 },
+  //
+  // Ficam de fora enquanto a branch não é publicada porque as duas
+  // invariantes de `crescimento.test.ts` — «toda a rota pública tem data
+  // material» e «nenhuma data é a do build» — só se podem cumprir as duas
+  // com a data verdadeira da publicação, que ainda não existe. Anunciar no
+  // sitemap uma página que ainda não está no ar, com uma data inventada
+  // para o teste passar, seria mentir duas vezes para não falhar uma.
+  //
+  // Os PERFIS individuais (`/contabilistas/[slug]`) nunca entram: dependem
+  // de quem está aprovado num dado momento, e um sitemap estático a
+  // prometer URLs que podem desaparecer é pior do que não os listar.
   { path: "/metodologia",      changeFrequency: "monthly", priority: 0.7 },
   { path: "/estado-dos-dados", changeFrequency: "weekly",  priority: 0.7 },
   { path: "/changelog-fiscal", changeFrequency: "weekly",  priority: 0.7 },

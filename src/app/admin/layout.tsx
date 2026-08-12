@@ -13,6 +13,7 @@ const NAV = [
   { href: "/admin/painel", label: "Painel semanal", icon: CheckTrend },
   { href: "/admin/contas", label: "Contas", icon: User },
   { href: "/admin/propostas", label: "Propostas", icon: Briefcase },
+  { href: "/admin/contabilistas", label: "Contabilistas", icon: ShieldCheck },
   { href: "/admin/anuncios", label: "Anúncios", icon: Megaphone },
   { href: "/admin/reportes", label: "Central de reportes", icon: Flag },
   { href: "/admin/waitlist", label: "Lista de espera", icon: BellAlert },

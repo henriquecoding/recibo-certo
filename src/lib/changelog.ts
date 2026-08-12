@@ -19,6 +19,19 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.46.0",
+    data: "2026-08-12",
+    titulo: "O teu contabilista, dentro do ReciboCerto",
+    itens: [
+      "Há agora um diretório de contabilistas certificados. Podes ligar-te a um, enviar-lhe as simulações que fizeste aqui e marcar consulta — tudo gratuito, sem precisares do Plus. Isto não é um plano nem um extra: é o que a app passa a fazer.",
+      "Ligares-te a alguém não lhe dá acesso aos teus dados. Continua a valer o que a página de privacidade diz: só tu acedes ao que é teu. O que o contabilista vê é aquilo que lhe enviares, um envio de cada vez — e antes de confirmares vês, campo a campo, exatamente o que segue. Podes revogar o acesso quando quiseres, e terminar o acompanhamento fecha-lhe a porta a tudo o que já tinha recebido.",
+      "A cada consulta realizada, carimbas o cartão de fidelidade do teu contabilista. Ao completá-lo, ganhas um cupão de desconto na consulta seguinte — a percentagem é definida por ele, entre 10% e 50%. Se ele mudar a percentagem a meio, o teu cartão mantém a que tinha quando começou: a promessa que te foi feita não muda a meio do caminho.",
+      "O desconto é acordado e aplicado pelo contabilista. O ReciboCerto regista o cartão e mostra-te o código; não cobra a consulta nem processa pagamentos.",
+      "Se és contabilista, podes pedir acesso a um painel de gestão com agenda, clientes, partilhas recebidas e o cartão de fidelidade configurável. Candidatas-te com uma justificação e, se quiseres, com o número de inscrição na Ordem ou documentos comprovativos — que só tu e a administração conseguem ler. Também podes não anexar nada e tratar disso por email. Cada candidatura é analisada por uma pessoa antes de ser aprovada; uma recusa explica-te porquê, e podes corrigir e voltar a candidatar-te.",
+      "Dois horários iguais deixaram de ser possíveis: se duas pessoas tentarem marcar o mesmo, a segunda é avisada na hora em vez de ficar com uma marcação que não existe.",
+    ],
+  },
+  {
     version: "2.45.0",
     data: "2026-08-12",
     titulo: "«Só tu acedes aos teus dados» deixou de ser só uma frase",
