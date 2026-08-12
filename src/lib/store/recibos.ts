@@ -202,17 +202,32 @@ function dropComputed(id: string): void {
   }
 }
 
-/** Reanexa `_computed` (do cache local) a recibos vindos da nuvem ou do localStorage. */
+/**
+ * Reanexa `_computed` (do cache local) a recibos vindos da nuvem ou do
+ * localStorage.
+ *
+ * Uma leitura e, quando muito, uma escrita — para a coleção toda. A versão
+ * anterior chamava `cacheComputed` dentro do `map`, e cada chamada lia e
+ * reserializava o cache inteiro: com 500 recibos eram 500 leituras e 500
+ * `JSON.stringify` do objeto completo, a cada carregamento do painel
+ * (RC-P3-01).
+ */
 function enriquecerComputed(recibos: Recibo[]): Recibo[] {
   const cache = readComputedCache();
-  return recibos.map((r) => {
+  let mudou = false;
+  const saida = recibos.map((r) => {
     if (r._computed) {
       // Garante que o cache fica sincronizado quando o valor já vem embutido (local).
-      if (!cache[r.id]) cacheComputed(r.id, r._computed);
+      if (!cache[r.id]) {
+        cache[r.id] = r._computed;
+        mudou = true;
+      }
       return r;
     }
     return cache[r.id] ? { ...r, _computed: cache[r.id] } : r;
   });
+  if (mudou) writeComputedCache(cache);
+  return saida;
 }
 
 function importacaoAdiada(userId: string): boolean {

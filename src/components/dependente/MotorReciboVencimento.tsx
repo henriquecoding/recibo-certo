@@ -38,6 +38,7 @@ import { numeroDoc } from "@/lib/export/dinheiro";
 import { livroXLSX, tabelasCSV, type DocumentoVencimento } from "@/lib/export/documento-vencimento";
 import { prestacoesDoAno } from "@/lib/export/prestacoes";
 import { fmt, pct } from "@/lib/format";
+import { gravarCenarioVencimento } from "@/lib/store/importacao-irs";
 import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
 import { useExportacaoPro } from "@/lib/store/exportacao-pro";
 import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
@@ -237,7 +238,6 @@ interface LegacySavedSnapshot extends Record<string, unknown> {
   ajEValStr?: string;
 }
 
-const LEGACY_PAYROLL_STORAGE_KEY = "recibocerto:vencimentos:v1";
 const LEGACY_OVERTIME_TYPES = [
   "overtime_workday_first",
   "overtime_workday_following",
@@ -278,32 +278,6 @@ function legacyRubrics(saved: LegacySavedSnapshot): PayrollRubricDraft[] {
   return next;
 }
 
-function mirrorLegacyPayrollScenario(scenario: {
-  name: string;
-  baseSalary: number;
-  dependants: number;
-  mealDaily: number;
-  mealCard: boolean;
-  mealDays: number;
-  duodecimos: boolean;
-}) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(LEGACY_PAYROLL_STORAGE_KEY, JSON.stringify([{
-      id: "atual",
-      nome: scenario.name,
-      salarioBruto: scenario.baseSalary,
-      dependentes: scenario.dependants,
-      subsidioRefeicaoDia: scenario.mealDaily,
-      subsidioRefeicaoCartao: scenario.mealCard,
-      diasUteis: scenario.mealDays,
-      duodecimos: scenario.duodecimos,
-      criadoEm: new Date().toISOString(),
-    }]));
-  } catch {
-    // localStorage indisponível: o cenário principal continua guardado.
-  }
-}
 
 export function MotorReciboVencimento() {
   const [mode, setMode] = useState<"gross" | "target">("gross");
@@ -521,15 +495,10 @@ export function MotorReciboVencimento() {
     if (!result.ok) {
       setSaveNotice({ type: "error", text: result.erro.mensagem });
     } else {
-      mirrorLegacyPayrollScenario({
-        name,
-        baseSalary,
-        dependants,
-        mealDaily: mealEnabled ? parseNumber(mealDaily) : 0,
-        mealCard,
-        mealDays: mealEnabled ? Math.min(31, Math.floor(parseNumber(mealDays))) : 0,
-        duodecimos,
-      });
+      // O IRS passa a receber o instantâneo COMPLETO — as rubricas variáveis,
+      // a região, o estado civil, o IRS Jovem e a deficiência deixam de se
+      // perder na ponte (RC-P1-02).
+      gravarCenarioVencimento(snapshot as unknown as Record<string, unknown>);
       setSaveNotice({ type: "ok", text: "Cenário guardado com todas as rubricas." });
     }
     setSaveDialog(false);

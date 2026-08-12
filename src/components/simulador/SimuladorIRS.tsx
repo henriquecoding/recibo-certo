@@ -45,6 +45,7 @@ import {
 } from "@/lib/irs-guiado";
 import {
   fontesDeArmazenamento,
+  fontesDeCenarios,
   type FonteImportacao,
   type PatchImportacao,
 } from "@/lib/store/importacao-irs";
@@ -665,6 +666,9 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
       });
     }
     lista.push(...fontesDeArmazenamento());
+    // Cenários da NUVEM: sem isto, um cenário de vencimento criado noutro
+    // dispositivo nunca chegava ao IRS (RC-P1-02).
+    lista.push(...fontesDeCenarios(cenariosStore.cenarios));
     setFontesImport(lista);
     setImportAberto(true);
   };

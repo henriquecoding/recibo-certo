@@ -10,7 +10,7 @@
 // configurar" e mostra o que falta.
 
 import { resumoDoMes, faturadoNoAno, anoFiscalCorrente, type Recibo, type OpcoesCalcRecibo } from "@/lib/recibos-contrato";
-import { proximosPrazos, diasAte, type PrazoAvaliado, type PerfilPrazos } from "@/lib/prazos";
+import { proximosPrazos, prazosAplicaveis, diasAte, type PrazoAvaliado, type PerfilPrazos } from "@/lib/prazos";
 import { IVA_ISENCAO_LIMITE } from "@/lib/fiscal-data";
 import {
   perfilPrazos,
@@ -127,6 +127,8 @@ export interface ContextoSaude {
    * souber, o indicador não pode falar em cumprimento.
    */
   temPrazosConfirmados?: boolean;
+  /** Chaves `AAAA::id` das obrigações que a pessoa marcou como tratadas. */
+  cumpridos?: ReadonlySet<string>;
   ref?: Date;
 }
 
@@ -194,8 +196,26 @@ export function saudeFiscal(recibos: Recibo[], contexto: ContextoSaude = {}): Sa
     fatores.push({ label: "Recibos em dia", estado: doMes ? "ok" : "atencao", ok: doMes });
   }
 
-  // ── Cumprimento: por agora nunca é conhecido ───────────────────────
-  if (!contexto.temPrazosConfirmados) {
+  // ── Cumprimento: só entra quando há mesmo estado confirmado ────────
+  // Este fator mede o que a pessoa marcou como tratado entre as obrigações
+  // APLICÁVEIS já vencidas. Sem marcações, continua desconhecido — nunca se
+  // presume cumprimento nem incumprimento.
+  if (contexto.temPrazosConfirmados && contexto.cumpridos && conheceRegime) {
+    const vencidas = prazosAplicaveis(ano, perfil as PerfilPrazos).filter((p) => diasAte(p.data, ref) < 0);
+    if (vencidas.length === 0) {
+      fatores.push({ label: "Sem obrigações vencidas este ano", estado: "ok", ok: true });
+      pontos.push(1);
+    } else {
+      const tratadas = vencidas.filter((p) => contexto.cumpridos!.has(`${ano}::${p.id}`)).length;
+      const razao = tratadas / vencidas.length;
+      pontos.push(razao);
+      fatores.push({
+        label: `Obrigações tratadas (${tratadas}/${vencidas.length})`,
+        estado: razao >= 0.99 ? "ok" : "atencao",
+        ok: razao >= 0.99,
+      });
+    }
+  } else {
     fatores.push({ label: "Obrigações entregues (por confirmar)", estado: "desconhecido", ok: false });
   }
 

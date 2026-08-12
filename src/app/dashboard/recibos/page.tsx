@@ -34,6 +34,15 @@ export default function RecibosPage() {
   const [filtroMes, setFiltroMes] = useState<string>("todos");
   const [vista, setVista] = useState<Vista>("lista");
   const [mesAberto, setMesAberto] = useState<string | null>(null);
+  /**
+   * Quantos meses são desenhados de uma vez (RC-P3-01).
+   *
+   * Todos os recibos são calculados no browser; um histórico de anos pintava
+   * a página inteira de uma vez. Os meses entram por blocos e a pessoa pede
+   * mais — o cálculo acompanha o que está mesmo à vista.
+   */
+  const MESES_POR_BLOCO = 12;
+  const [mesesVisiveis, setMesesVisiveis] = useState(MESES_POR_BLOCO);
   const [pdfState, setPdfState] = useState<{ estado: "inativo" | "a-compor" | "pronto" | "erro"; texto?: string }>({
     estado: "inativo",
   });
@@ -409,7 +418,7 @@ export default function RecibosPage() {
             /* ── Vista lista (com agrupamento mensal) ──────────────── */
             <>
               {meses.length === 0 && <p className="text-sm text-stone-400">Sem recibos para &ldquo;{query}&rdquo;.</p>}
-              {meses.map((mesKey) => {
+              {meses.slice(0, mesesVisiveis).map((mesKey) => {
                 const doMes = grupos[mesKey];
                 const resumoMes = resumirRecibos(doMes, null);
                 const aberto = mesAberto === null || mesAberto === mesKey;
@@ -492,6 +501,15 @@ export default function RecibosPage() {
                   </div>
                 );
               })}
+              {meses.length > mesesVisiveis && (
+                <button
+                  type="button"
+                  onClick={() => setMesesVisiveis((n) => n + MESES_POR_BLOCO)}
+                  className="min-h-11 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-600 transition-colors hover:border-brand hover:text-brand dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
+                >
+                  Mostrar mais meses ({meses.length - mesesVisiveis} por mostrar)
+                </button>
+              )}
             </>
           )}
 

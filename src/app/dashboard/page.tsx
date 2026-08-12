@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRecibos } from "@/lib/store/recibos";
 import { resumoDoAno, resumoDoMes } from "@/lib/recibos-contrato";
 import { usePreferenciasFiscais } from "@/lib/store/preferencias-fiscais";
+import { usePrazosCumpridos } from "@/lib/store/prazos-cumpridos";
 import { usePerfil } from "@/lib/perfil";
 import { gerarInsights, saudeFiscal, type Insight, type SaudeFiscal } from "@/lib/insights";
 import { fmt } from "@/lib/format";
@@ -52,6 +53,9 @@ export default function VisaoGeral() {
     locaisPorImportar, importarLocais, adiarImportacao,
   } = useRecibos();
   const { prefs } = usePreferenciasFiscais();
+  // O estado de cumprimento é evidência real: sem ele o indicador não podia
+  // falar de organização (RC-P1-04 + RC-P1-05).
+  const { cumpridos, carregado: cumprCarregado } = usePrazosCumpridos();
   const { perfil, definir } = usePerfil();
   const [onboarded, setOnboarded] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -98,8 +102,8 @@ export default function VisaoGeral() {
     [carregado, recibos, opcoesFiscais, prefs],
   );
   const saude: SaudeFiscal = useMemo(
-    () => saudeFiscal(recibos, { prefs, temPrazosConfirmados: false }),
-    [recibos, prefs],
+    () => saudeFiscal(recibos, { prefs, temPrazosConfirmados: cumprCarregado, cumpridos }),
+    [recibos, prefs, cumprCarregado, cumpridos],
   );
 
   // ── Escopo temporal explícito (RC-P0-01) ────────────────────────────────

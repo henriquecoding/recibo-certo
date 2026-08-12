@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/supabase/auth";
 import { useSubscricao } from "@/lib/stripe/subscription";
 import { getSupabase } from "@/lib/supabase/client";
 import { validarPassword, type ErroPassword } from "@/lib/validacao-password";
+import { descreverEstado } from "@/lib/stripe/precos-autorizados";
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, History, Lock, Warning } from "@/components/ui/Icons";
 import FizConnectionCard from "@/components/fiz/FizConnectionCard";
 
@@ -86,14 +87,12 @@ export default function ContaPage() {
 
             <SecaoSubscricao />
 
+            {/* Um benefício, dito uma vez. Havia duas linhas a dizer o mesmo,
+                mais um parágrafo a repeti-lo pela terceira vez (RC-P1-11). */}
             <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5 dark:border-stone-800">
-              <Beneficio icon={<History size={16} />} texto="Os teus recibos vão ficar seguros na nuvem e em todos os dispositivos." />
               <Beneficio icon={<History size={16} />} texto="Histórico na nuvem, sincronizado em todos os dispositivos." />
+              <Beneficio icon={<Check size={16} />} texto="Cenários ilimitados e exportações para o contabilista." />
             </div>
-
-            <p className="mt-5 rounded-xl bg-cream p-3 text-xs leading-relaxed text-stone-500 dark:bg-stone-800 dark:text-stone-400">
-              A tua conta está criada e pronta. Com o Plus, os teus recibos ficam sincronizados na nuvem em todos os dispositivos.
-            </p>
 
             <button
               type="button"
@@ -237,46 +236,56 @@ function Beneficio({ icon, texto }: { icon: React.ReactNode; texto: string }) {
   );
 }
 
+/**
+ * Estado da subscrição, por estado real.
+ *
+ * Mostrava "A experimentar" para tudo o que não fosse `active` — incluindo um
+ * pagamento em atraso e uma subscrição cancelada (RC-P1-11). A tradução vive
+ * agora numa máquina de estados explícita, com o período de graça escrito.
+ */
 function SecaoSubscricao() {
-  const { plano, status, abrirPortal } = useSubscricao();
+  const { status, abrirPortal } = useSubscricao();
+  const { user } = useAuth();
+  const d = descreverEstado(status, !!user);
 
-  if (plano === "plus") {
-    return (
-      <div className="mt-5 flex items-center justify-between rounded-2xl border border-brand/20 bg-brand-light/50 px-4 py-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">Plano Plus</span>
-            <span className="inline-flex items-center rounded-full bg-brand px-2 py-0.5 text-[9px] font-semibold text-white">
-              {status === "active" ? "Ativo" : "A experimentar"}
-            </span>
-          </div>
-          <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">Acesso a todas as funcionalidades.</p>
+  const tom = {
+    positivo: { moldura: "border-brand/20 bg-brand-light/50", badge: "bg-brand text-white" },
+    aviso: { moldura: "border-amber-200 bg-amber-50 dark:border-amber-800/40 dark:bg-amber-950/20", badge: "bg-amber-500 text-white" },
+    alerta: { moldura: "border-alert-border bg-alert-bg", badge: "bg-alert-text text-white" },
+    neutro: { moldura: "border-stone-100 bg-stone-50 dark:border-stone-800 dark:bg-stone-800", badge: "bg-stone-400 text-white" },
+  }[d.tom];
+
+  return (
+    <div className={`mt-5 flex flex-wrap items-start justify-between gap-3 rounded-2xl border px-4 py-3 ${tom.moldura}`}>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">
+            {d.temAcesso ? "Plano Plus" : "Plano Grátis"}
+          </span>
+          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold ${tom.badge}`}>
+            {d.etiqueta}
+          </span>
         </div>
+        <p className="mt-0.5 text-xs leading-relaxed text-stone-500 dark:text-stone-400">{d.mensagem}</p>
+      </div>
+      {d.temAcesso || d.requerAcao ? (
         <button
           type="button"
           onClick={abrirPortal}
-          className="flex items-center gap-1 text-xs font-semibold text-brand-dark transition-colors hover:underline dark:text-brand"
+          className="flex min-h-9 flex-shrink-0 items-center gap-1 text-xs font-semibold text-brand-dark transition-colors hover:underline dark:text-brand"
         >
-          Gerir
+          {d.requerAcao ? "Resolver agora" : "Gerir"}
           <ArrowRight size={11} />
         </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-5 flex items-center justify-between rounded-2xl border border-stone-100 bg-stone-50 px-4 py-3 dark:border-stone-800 dark:bg-stone-800">
-      <div>
-        <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">Plano Grátis</span>
-        <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">Passa ao Plus para desbloquear alertas, nuvem e exportação.</p>
-      </div>
-      <a
-        href="/dashboard/upgrade"
-        className="flex items-center gap-1 rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-shadow hover:shadow-glow"
-      >
-        Upgrade
-        <ArrowRight size={11} />
-      </a>
+      ) : (
+        <a
+          href="/dashboard/upgrade"
+          className="flex min-h-9 flex-shrink-0 items-center gap-1 rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-shadow hover:shadow-glow"
+        >
+          Upgrade
+          <ArrowRight size={11} />
+        </a>
+      )}
     </div>
   );
 }
@@ -293,6 +302,14 @@ function SecaoPassword() {
   const [msg, setMsg] = useState<{ tipo: "sucesso" | "erro"; texto: string } | null>(null);
 
   const errosNova = novaPassword.length > 0 ? validarPassword(novaPassword) : [];
+
+  /**
+   * Contas só de OAuth (Google e afins) não têm password no Supabase.
+   * Mostrar-lhes um formulário que começa por pedir "a tua password atual" é
+   * pedir algo que não existe — e o pedido falhava sempre (RC-P1-11).
+   */
+  const identidades = (user?.identities ?? []) as { provider?: string }[];
+  const soOAuth = identidades.length > 0 && !identidades.some((i) => i.provider === "email");
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -348,6 +365,27 @@ function SecaoPassword() {
     }
     setAProcessar(false);
   };
+
+  if (soOAuth) {
+    const nomeProvedor = identidades[0]?.provider ?? "provedor externo";
+    return (
+      <div className="rounded-4xl border border-stone-100 bg-white p-7 shadow-card dark:border-stone-800 dark:bg-stone-900">
+        <div className="mb-3 flex items-center gap-3">
+          <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-light text-brand">
+            <Lock size={20} />
+          </span>
+          <div>
+            <h2 className="text-sm font-semibold text-stone-800 dark:text-stone-100">Segurança da conta</h2>
+            <p className="text-xs text-stone-500 dark:text-stone-400">A tua sessão é gerida fora do ReciboCerto.</p>
+          </div>
+        </div>
+        <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-300">
+          Entraste com <strong className="capitalize">{nomeProvedor}</strong>, por isso não há password para alterar
+          aqui. A palavra-passe e a verificação em duas etapas são geridas na tua conta {nomeProvedor}.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-4xl border border-stone-100 bg-white p-7 shadow-card dark:border-stone-800 dark:bg-stone-900">

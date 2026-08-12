@@ -19,6 +19,33 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.37.0",
+    data: "2026-08-12",
+    titulo: "O painel passa a dar sempre o mesmo número",
+    itens: [
+      "O «Acumulado do ano» somava os recibos todos, de todos os anos. Em janeiro, o que faturaste no ano passado continuava lá dentro. Agora o ano é o ano: os anteriores ficam no histórico, e há uma linha a dizer-te quando tens recibos guardados que não são deste ano.",
+      "O mesmo recibo dava um líquido no painel, outro na página de Receitas e um terceiro no ficheiro que envias ao contabilista. Passou a haver um cálculo só, partilhado por todos. E a «retenção de IRS» — o que o cliente retém — deixou de partilhar o nome com o «IRS anual estimado», que é outra coisa e agora aparece à parte.",
+      "O IVA que cobras nos recibos deixou de se chamar «IVA a entregar». O que se entrega é o que cobraste menos o das tuas despesas, e enquanto não registares despesas ninguém sabe esse número — passa a chamar-se «IVA cobrado», que é o que realmente é.",
+      "Guardar deixou de ser uma promessa. Antes a aplicação dizia «Guardado» e só depois tentava gravar; se falhasse, o registo desaparecia no recarregamento seguinte. Agora só te diz que guardou depois de guardar mesmo — e se estiveres sem rede, a alteração fica em fila e sobe sozinha quando a ligação voltar.",
+      "Quando não conseguimos ler o teu histórico, dizemos isso. Antes aparecia uma lista vazia, indistinguível de «não tens nada» — o susto errado pela razão errada.",
+      "Ao registares um recibo, escolhes a data do documento. Antes ficava carimbado com a data de hoje, e um recibo de março lançado em agosto ia parar ao mês, ao trimestre e — em janeiro — ao ano errados, arrastando consigo os gráficos, o IVA e a estimativa de IRS.",
+      "Guardar recibos deixou de exigir conta. Sempre prometemos que dava para usar sem registo e o botão pedia sessão à mesma. A conta serve para sincronizar entre dispositivos, não para poderes ter memória.",
+      "Os prazos foram refeitos a partir da Agenda Fiscal oficial de 2026. Os pagamentos por conta de IRS são a 20 de julho, 21 de setembro e 21 de dezembro — os dois últimos porque o dia 20 calha a um domingo. E a declaração de IVA do 2.º trimestre entrega-se em setembro, não em agosto: estávamos a avisar-te para o mês errado.",
+      "Declarar e pagar passaram a ser duas coisas. São dois prazos diferentes, com datas diferentes, e mostrá-los como um só escondia metade do que tens a fazer. Cada obrigação traz agora a base legal, a fonte oficial e a data em que a regra foi conferida.",
+      "O calendário deixou de ser igual para toda a gente. Se estás isento de IVA, os prazos de IVA não te aparecem. Se a AT não te liquidou pagamentos por conta, não te aparecem também. E podes marcar o que já trataste.",
+      "O aviso do limite de IVA estava a dizer a coisa errada em dois sítios: nunca chegava a reconhecer que tinhas ultrapassado o limite, e quando ultrapassavas mostrava «excedido em 0 €». Agora distingue o que a lei distingue — passar o limite até 25% adia o IVA para 1 de janeiro; passar mais do que isso torna-o devido no momento.",
+      "O cartão da Segurança Social punha a reserva a zero só porque assinalaste que acumulas com um emprego. A dispensa depende de três condições, e agora perguntamos por elas: enquanto não estiverem confirmadas, reservamos o valor cheio — é melhor sobrar do que faltar.",
+      "A estimativa de IRS deixou de inventar um número quando lhe falta metade da história. Se acumulas com um salário e não sabemos quanto ganhas, ou se tributas em conjunto e não sabemos o rendimento do teu cônjuge, dizemos que não conseguimos estimar — porque o imposto é progressivo e qualquer número que déssemos ficaria abaixo do real.",
+      "A «saúde fiscal» dava 72 em 100 a quem não tinha registado um único recibo. Um número com ar de diagnóstico assente em nada. Agora, sem informação suficiente, diz «por configurar» e mostra o que falta.",
+      "Há um perfil fiscal onde podes preencher tudo isto de uma vez — regime de IVA, início de atividade, dispensa de retenção, acumulação, agregado. É de lá que os avisos passam a falar de ti em vez de falarem de uma pessoa média.",
+      "Os cenários de heranças eram guardados na aparência e recusados na realidade: nunca chegavam a aparecer na gestão, mas contavam para o limite do plano grátis. Ficam a funcionar de ponta a ponta.",
+      "Apagar um cenário passa a pedir confirmação. E os cenários guardados sem conta podem agora subir para a nuvem quando entras, como já acontecia com os recibos.",
+      "O cenário do recibo de vencimento chega ao simulador de IRS inteiro. Prémios, horas extra, ajudas de custo, região, estado civil, IRS Jovem — tudo isso ficava pelo caminho e só passavam quatro campos. E um cenário criado no telemóvel já chega ao IRS no computador.",
+      "Na conta, «A experimentar» aparecia para qualquer estado que não fosse ativo, incluindo pagamento em atraso e subscrição cancelada. Cada estado passa a dizer o que é, e quem entrou com o Google deixa de ver um formulário a pedir uma palavra-passe que nunca teve.",
+      "O menu do telemóvel prende o foco enquanto está aberto e devolve-o ao fechar, o gráfico de receitas tem uma tabela com os valores para quem usa leitor de ecrã, e os separadores do painel navegam-se com as setas.",
+    ],
+  },
+  {
     version: "2.36.0",
     data: "2026-08-11",
     titulo: "Peças de base atualizadas, uma a uma e com a mão no travão",

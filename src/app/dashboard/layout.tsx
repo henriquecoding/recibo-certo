@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Logo,
   LayoutGrid,
@@ -194,18 +194,59 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     setMenuAberto(false);
   }, [pathname]);
 
-  // ESC fecha + bloqueia o scroll do corpo enquanto o menu está aberto.
+  // ── Diálogo modal a sério (RC-P2-04) ───────────────────────────────────
+  // Fechava com Escape e bloqueava o scroll, mas o foco continuava a passear
+  // pelo fundo: quem navega com teclado ou leitor de ecrã saía do menu sem
+  // dar por isso, e ao fechar o foco ficava perdido no topo da página.
+  const painelMenuRef = useRef<HTMLDivElement | null>(null);
+  const focoAnteriorRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
     if (!menuAberto) return;
+
+    focoAnteriorRef.current = document.activeElement as HTMLElement | null;
+    const painel = painelMenuRef.current;
+
+    const focaveis = () =>
+      Array.from(
+        painel?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((el) => el.offsetParent !== null);
+
+    // Foco inicial dentro do painel.
+    focaveis()[0]?.focus();
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuAberto(false);
+      if (e.key === "Escape") {
+        setMenuAberto(false);
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const lista = focaveis();
+      if (lista.length === 0) return;
+      const primeiro = lista[0];
+      const ultimo = lista[lista.length - 1];
+      const ativo = document.activeElement as HTMLElement | null;
+      // Ciclo fechado: o Tab não sai do painel em nenhuma das direções.
+      if (e.shiftKey && (ativo === primeiro || !painel?.contains(ativo))) {
+        e.preventDefault();
+        ultimo.focus();
+      } else if (!e.shiftKey && (ativo === ultimo || !painel?.contains(ativo))) {
+        e.preventDefault();
+        primeiro.focus();
+      }
     };
+
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
+      // Devolve o foco a quem abriu o menu.
+      focoAnteriorRef.current?.focus?.();
     };
   }, [menuAberto]);
 
@@ -335,7 +376,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               onClick={() => setMenuAberto(false)}
               aria-hidden
             />
-            <div className="absolute inset-x-0 bottom-0 flex max-h-[92dvh] flex-col rounded-t-4xl bg-cream shadow-float">
+            <div ref={painelMenuRef} className="absolute inset-x-0 bottom-0 flex max-h-[92dvh] flex-col rounded-t-4xl bg-cream shadow-float">
               <div className="flex shrink-0 items-center justify-between border-b border-stone-100 px-5 py-4">
                 <div className="flex items-center gap-2">
                   <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-light text-brand"><Menu size={16} /></span>
