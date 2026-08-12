@@ -66,7 +66,7 @@ export default function SubsidioDesempregoPage() {
         </Paragrafo>
         <VaiPara href="/guias/fim-do-contrato">As contas finais do contrato</VaiPara>
         <VaiPara href="/guias/acumulacao-emprego">Acumular com trabalho independente</VaiPara>
-        <VaiPara href="/?modo=comparar">Comparar cenários depois do desemprego</VaiPara>
+        <VaiPara href="/ferramentas/comparar-regimes">Comparar cenários depois do desemprego</VaiPara>
       </Seccao>
     </GuiaLayout>
   );

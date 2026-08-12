@@ -15,6 +15,7 @@
 //  parceiro está utilizável?
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { modoValido, type ModoParceria } from "./modos";
 import {

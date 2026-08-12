@@ -3,6 +3,7 @@ import { verificarEvento, jaProcessado, marcarProcessado } from "@/lib/fiz/webho
 import { servicoSupabase } from "@/lib/fiz/session.server";
 import { processar, sujeitoDe } from "@/lib/fiz/webhook-processar.server";
 import type { WebhookEvent } from "@/lib/fiz/contracts";
+import { guardaFiz } from "@/lib/fiz/gate.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +22,11 @@ export const dynamic = "force-dynamic";
 const TAMANHO_MAXIMO_BYTES = 256 * 1024;
 
 export async function POST(req: NextRequest) {
+  // ⚠️ RC-FIZ-002 — porta do servidor. Esta rota aceita ou transporta dados;
+  // com a integração desligada não pode sequer ler o corpo do pedido.
+  const fechada = guardaFiz();
+  if (fechada) return fechada;
+
   // A assinatura só pode ser verificada sobre os bytes brutos, o que obriga a
   // ter o corpo inteiro em memória ANTES de saber se é legítimo. Este ponto é
   // público e não autenticado, por isso o tamanho é travado à entrada — senão

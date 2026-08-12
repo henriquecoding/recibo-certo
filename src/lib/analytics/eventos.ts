@@ -77,7 +77,18 @@ export type NomeEvento =
   | "lead_accepted"
   | "lead_won"
   | "return_7d"
-  | "return_30d";
+  | "return_30d"
+  // ── Cabeçalho e pesquisa global (§15 da auditoria do cabeçalho) ──────
+  // Sete eventos, e nenhum transporta o que foi escrito. Sem eles não há
+  // como provar descoberta, relevância nem tempo até valor — e a auditoria
+  // dá 4/10 a esta dimensão precisamente por não existir contrato nenhum.
+  | "header_search_open"
+  | "header_search_submit"
+  | "header_search_result_click"
+  | "header_search_zero_results"
+  | "header_search_abandon"
+  | "header_nav_click"
+  | "header_overlay_conflict";
 
 /** Propriedades de cada evento. O `Payload` de um evento é o seu contrato. */
 export interface PayloadsEvento {
@@ -148,6 +159,66 @@ export interface PayloadsEvento {
   lead_won: { case_type: string; partner_id: string; status: string; lag_days: number };
   return_7d: Retorno;
   return_30d: Retorno;
+
+  /**
+   * ┌───────────────────────────────────────────────────────────────────┐
+   * │ A REGRA DESTES SETE: A CONSULTA NUNCA SAI DO DISPOSITIVO           │
+   * │                                                                   │
+   * │ Nem truncada, nem «anonimizada», nem em amostra. Num produto       │
+   * │ fiscal, a frase escrita na barra é um nome de cliente, um NIF, uma │
+   * │ doença que dá dedução — e não há forma de a limpar que sobreviva a │
+   * │ um utilizador criativo. O que se mede é a FORMA da consulta        │
+   * │ (comprimento em balde, número de palavras) e o que ela produziu.   │
+   * │                                                                   │
+   * │ A barreira de `pii.ts` já recusaria um campo chamado `pesquisa`.   │
+   * │ Isto é a decisão de desenho por trás dela: não há nenhum campo     │
+   * │ onde a consulta caiba.                                            │
+   * └───────────────────────────────────────────────────────────────────┘
+   */
+  header_search_open: ContextoBusca & {
+    /** `frio` = índice ainda por carregar; `quente` = já em memória. */
+    load_state: "frio" | "quente";
+  };
+  header_search_submit: ContextoBusca & {
+    /** Balde do comprimento: "1-3", "4-10", "11-25", "26+". Nunca o texto. */
+    length_bucket: string;
+    token_count: number;
+    intent: string;
+  };
+  header_search_result_click: ContextoBusca & {
+    /** Id do documento do índice — um rótulo nosso, não conteúdo do utilizador. */
+    document_id: string;
+    kind: string;
+    /** Posição na lista, a começar em 1. É a métrica de relevância. */
+    rank: number;
+    intent: string;
+  };
+  header_search_zero_results: ContextoBusca & {
+    length_bucket: string;
+    intent: string;
+    /** Versão do índice — separa «não existe» de «ainda não estava indexado». */
+    corpus_version: number;
+  };
+  header_search_abandon: ContextoBusca & {
+    had_query: boolean;
+    result_count_bucket: string;
+    duration_bucket: string;
+  };
+  header_nav_click: { item_id: string; viewport_class: ClasseViewport };
+  header_overlay_conflict: {
+    /** O overlay que pediu para abrir e o que já estava aberto. */
+    requested: string;
+    active: string;
+  };
+}
+
+/** Telemóvel, tablet ou secretária — pela largura, não pelo user-agent. */
+export type ClasseViewport = "movel" | "tablet" | "secretaria";
+
+interface ContextoBusca {
+  viewport_class: ClasseViewport;
+  /** Família da rota (`/guias`, `/ferramentas`, …). Nunca o URL completo. */
+  route_group: string;
 }
 
 interface AcaoResultado {
@@ -292,6 +363,41 @@ export const CATALOGO: Record<NomeEvento, DefinicaoEvento> = {
     serve: "R30 — o teste de «o produto merece uma subscrição?».",
     origem: "cliente",
   },
+  header_search_open: {
+    disparo: "Superfície de pesquisa aberta (clique, ⌘K ou evento global).",
+    serve: "Denominador de tudo o resto: quantas visitas chegam a procurar.",
+    origem: "cliente",
+  },
+  header_search_submit: {
+    disparo: "Consulta estabilizada com pelo menos dois caracteres.",
+    serve: "Taxa de reformulação e forma das perguntas reais.",
+    origem: "cliente",
+  },
+  header_search_result_click: {
+    disparo: "Clique num resultado da pesquisa.",
+    serve: "Search success rate e CTR do primeiro resultado.",
+    origem: "cliente",
+  },
+  header_search_zero_results: {
+    disparo: "Consulta válida sem qualquer resultado acima do limiar.",
+    serve: "Zero-result rate — o sinal directo de lacunas no catálogo.",
+    origem: "cliente",
+  },
+  header_search_abandon: {
+    disparo: "Pesquisa fechada sem clique em nenhum resultado.",
+    serve: "Abandono com consulta — onde a pesquisa promete e não entrega.",
+    origem: "cliente",
+  },
+  header_nav_click: {
+    disparo: "Clique num item da navegação principal do cabeçalho.",
+    serve: "Se a navegação separada da pesquisa é usada, e por quem.",
+    origem: "cliente",
+  },
+  header_overlay_conflict: {
+    disparo: "Um overlay pediu para abrir com outro modal já activo.",
+    serve: "Guardrail: o número tem de ser zero (§15, SLO absoluto).",
+    origem: "cliente",
+  },
 };
 
 /** Os eventos que o browser NÃO pode afirmar. Ver `DefinicaoEvento.origem`. */
@@ -318,6 +424,30 @@ export function baldeDeTempo(ms: number): string {
   if (ms < 60_000) return "15-60s";
   if (ms < 300_000) return "1-5min";
   return "5min+";
+}
+
+/**
+ * Balde do COMPRIMENTO de uma consulta — nunca a consulta.
+ *
+ * Saber que as pesquisas com zero resultados têm quase todas mais de 25
+ * caracteres diz o que é preciso saber (as pessoas escrevem frases e o
+ * índice espera termos). O texto exacto não acrescentaria nada a essa
+ * conclusão e acrescentaria tudo ao risco.
+ */
+export function baldeDeComprimento(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "0";
+  if (n <= 3) return "1-3";
+  if (n <= 10) return "4-10";
+  if (n <= 25) return "11-25";
+  return "26+";
+}
+
+/** Balde de contagem de resultados — «nenhum», «poucos», «muitos». */
+export function baldeDeContagem(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "0";
+  if (n <= 3) return "1-3";
+  if (n <= 8) return "4-8";
+  return "9+";
 }
 
 /**

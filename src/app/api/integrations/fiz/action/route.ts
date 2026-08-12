@@ -4,6 +4,7 @@ import { utilizadorDoPedido, accessTokenValido } from "@/lib/fiz/session.server"
 import { respostaErro, naoAutenticado, semCache } from "@/lib/fiz/route-helpers.server";
 import { fizServerConfig } from "@/lib/fiz/config";
 import { regressoSeguro } from "@/lib/fiz/oauth.server";
+import { guardaFiz } from "@/lib/fiz/gate.server";
 import {
   destinoFizValido,
   urlSemDadosSensiveis,
@@ -24,6 +25,11 @@ const TIPOS: ActionResourceType[] = ["OBLIGATION", "DECLARATION", "INVOICE_DRAFT
  * DENTRO da FIZ (ponto 15.3 da arquitetura). Esta rota só abre a porta.
  */
 export async function POST(req: NextRequest) {
+  // ⚠️ RC-FIZ-002 — porta do servidor. Esta rota aceita ou transporta dados;
+  // com a integração desligada não pode sequer ler o corpo do pedido.
+  const fechada = guardaFiz();
+  if (fechada) return fechada;
+
   try {
     const utilizador = await utilizadorDoPedido(req);
     if (!utilizador) return naoAutenticado();

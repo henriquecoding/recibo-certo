@@ -1,3 +1,6 @@
+import "server-only";
+import { appUrl } from "@/lib/origem";
+
 export const STRIPE_CONFIG = {
   prices: {
     // Único preço vendido hoje (ponto 11 da arquitetura da parceria — ver
@@ -9,9 +12,11 @@ export const STRIPE_CONFIG = {
     annual: process.env.STRIPE_PRICE_ANNUAL ?? "",
     quiz_master: process.env.STRIPE_PRICE_QUIZ_MASTER ?? "",
   },
-  portalReturnUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/dashboard/conta`,
-  checkoutSuccessUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/dashboard?plano=ativo`,
-  checkoutCancelUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/dashboard/upgrade`,
+  // RC-CFG-001: a origem passa por `appUrl()` — normaliza a barra final e
+  // corrige o apex para o www, que é o host registado na Stripe.
+  portalReturnUrl: `${appUrl()}/dashboard/conta`,
+  checkoutSuccessUrl: `${appUrl()}/dashboard?plano=ativo`,
+  checkoutCancelUrl: `${appUrl()}/dashboard/upgrade`,
 } as const;
 
 export type PlanoIntervalo = "monthly" | "annual" | "quiz_master";

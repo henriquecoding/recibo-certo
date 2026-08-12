@@ -12,6 +12,7 @@
 //  guarda um token em claro como alternativa.
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
 import { createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from "node:crypto";
 import { fizServerConfig } from "./config";
 import { FizError } from "./errors";

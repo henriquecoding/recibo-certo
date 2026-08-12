@@ -18,6 +18,14 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  # RC-CI-005: um push novo cancela o run anterior do mesmo ramo/PR, para a
+  # fila nao ficar entupida com resultados que ja nao interessam a ninguem.
+  # Em `main` NAO se cancela: cada commit da linha principal tem de ficar com
+  # o seu proprio resultado registado.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 permissions:
   contents: read
 
@@ -26,10 +34,11 @@ jobs:
     name: Tipos, testes e build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "22"
+          node-version-file: .nvmrc
+
           cache: npm
       - run: npm ci
 
@@ -42,8 +51,20 @@ jobs:
       - name: Coerência dos dados fiscais nas skills
         run: npm run skills:check
 
+      # Os dados do popup de Novidades são derivados de `src/lib/changelog.ts`
+      # por `gen-novidades.mjs`. O `prebuild` regenera-os, por isso o build
+      # nunca sai errado — mas a cópia versionada é o que o `next dev` serve, e
+      # é essa que esta verificação impede de envelhecer.
+      - name: Dados do popup de Novidades em dia
+        run: npm run novidades:check
+
       - name: Build de produção
         run: npm run build
+
+      # Arranca o artefacto dentro do runner. Não cria preview nem deployment:
+      # verifica a fronteira HTTP real antes de qualquer merge para produção.
+      - name: Smoke do artefacto de produção (sem deploy)
+        run: node scripts/smoke-production.mjs
 
       - name: Auditoria de dependências (0 vulnerabilidades altas)
         run: npm audit --audit-level=high
@@ -52,12 +73,13 @@ jobs:
     name: Documentos — normas e tipografia
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "22"
+          node-version-file: .nvmrc
+
           cache: npm
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
       - run: npm ci
@@ -104,7 +126,7 @@ jobs:
 
       - name: Guardar o documento composto
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: documentos
           path: out/*.pdf

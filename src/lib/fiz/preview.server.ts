@@ -20,6 +20,7 @@
 //      para a FIZ: em pré-visualização ninguém é enviado para lado nenhum.
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
 import { fizAtiva, previewPermitidoNoCliente } from "./flag";
 import { fizServerConfig } from "./config";
 import type { CapabilityCatalog, GuideRoute } from "./contracts";

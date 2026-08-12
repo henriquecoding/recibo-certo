@@ -337,17 +337,19 @@ describe("QZ-11 a QZ-19 · lógica de jogo", () => {
 });
 
 describe("QZ-20 / QZ-21 / QZ-22 · SEO, metadata e acessibilidade", () => {
-  it("QZ-20 · há rotas estáticas por categoria com JSON-LD", () => {
+  it("QZ-20 · há rotas estáticas com breadcrumbs, sem gabarito em JSON-LD", () => {
     const rota = "src/app/quiz-fiscal/[categoria]/page.tsx";
     expect(existsSync(join(raiz, rota))).toBe(true);
     const f = ler(rota);
     expect(f).toMatch(/generateStaticParams/);
-    expect(f).toMatch(/generateQuizSchema/);
+    expect(f).not.toMatch(/generateQuizSchema/);
     expect(f).toMatch(/generateBreadcrumbSchema/);
     expect(f).toMatch(/application\/ld\+json/);
-    // Renderiza conteúdo real, não uma casca.
+    // Mantém conteúdo editorial verificável, sem respostas/opções em massa.
+    expect(f).toMatch(/const AMOSTRA = 5/);
     expect(f).toMatch(/legalBasis/);
     expect(f).toMatch(/fonte\.url/);
+    expect(f).not.toMatch(/p\.correta|p\.opcoes|p\.explicacao/);
   });
 
   it("QZ-20 · o layout do quiz deixou de ser cliente sem necessidade", () => {

@@ -8,6 +8,7 @@
 //    · registo sem payload fiscal (ponto 15.2 da arquitetura).
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
 import { randomUUID } from "node:crypto";
 import { estadoIntegracao, fizServerConfig } from "./config";
 import { FizError, codigoDeStatus, circuitoAberto, registarFalha, registarSucesso } from "./errors";

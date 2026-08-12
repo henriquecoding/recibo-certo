@@ -59,6 +59,17 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
    nova (`APP_VERSION` muda). NUNCA a cada refresh. A versão é marcada como vista
    no instante em que o popup é mostrado (ver `NovidadesModal.tsx`), não só ao
    fechar — atualizar a página com ele aberto não o pode fazer reaparecer.
+11. **Popup "Novidades" — carregamento por mês (INEGOCIÁVEL).** Ao abrir, o popup
+   só pode carregar o **mês atual**. Os meses anteriores entram fechados, como um
+   grupo com o nome do mês e a contagem de versões, e os dados desse mês só são
+   pedidos **quando a pessoa clica nesse grupo** — um pedido por mês, nunca em
+   lote e nunca à entrada. A regra vale por construção, não por disciplina:
+   `scripts/gen-novidades.mjs` escreve `public/novidades/indice.json` SEM as
+   entradas dos meses anteriores (só nome e contagem) e um
+   `public/novidades/meses/AAAA-MM.json` por mês. Nenhum componente as pode
+   mostrar à entrada porque elas não estão lá. O changelog NUNCA volta a ser
+   importado como módulo JavaScript pelo cliente. Coberto por
+   `src/lib/__tests__/novidades-popup.test.ts`.
 
 ## Mapa rápido
 

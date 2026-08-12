@@ -11,6 +11,7 @@ import type { Intent, ProfilePrefill, SimulationSummary } from "@/lib/fiz/contra
 import { previewAtivo, destinoDePreview } from "@/lib/fiz/preview.server";
 import { rotaDoSimulador, type SimuladorId } from "@/content/fiz-simulator-routes";
 import { parceriaAtiva, parceriasAtivas } from "@/lib/parcerias/catalogo.server";
+import { guardaFiz } from "@/lib/fiz/gate.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +27,11 @@ const CAMPOS_VALIDOS = Object.keys(ROTULO_CAMPO) as CampoHandoff[];
  * que o utilizador viu.
  */
 export async function POST(req: NextRequest) {
+  // ⚠️ RC-FIZ-002 — porta do servidor. Esta rota aceita ou transporta dados;
+  // com a integração desligada não pode sequer ler o corpo do pedido.
+  const fechada = guardaFiz();
+  if (fechada) return fechada;
+
   try {
     const corpo = (await req.json().catch(() => null)) as {
       slug?: string;

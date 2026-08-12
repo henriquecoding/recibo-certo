@@ -184,7 +184,7 @@ export const TOOL_HREFS: Record<ToolId, string> = {
   "simulador-empresa": "/ferramentas/simulador-empresa",
   "simulador-herancas": "/ferramentas/simulador-herancas",
   "payout-mor": "/ferramentas/payout-mor",
-  comparador: "/?modo=comparar",
+  comparador: "/ferramentas/comparar-regimes",
   "quiz-fiscal": "/quiz-fiscal",
   calculadora: "/#calculadora",
   prazos: "/dashboard/prazos",

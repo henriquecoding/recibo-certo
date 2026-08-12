@@ -142,7 +142,7 @@ export const PROMPTS_BENCHMARK: readonly PromptBenchmark[] = [
   { id: "b11", icp: "B", pergunta: "Como preencho o anexo B do IRS?", paginaAlvo: "/ferramentas/simulador-irs" },
   { id: "b12", icp: "B", pergunta: "Como faturo a um cliente noutro país da União Europeia?", paginaAlvo: "/guias/clientes-estrangeiros" },
   { id: "b13", icp: "B", pergunta: "Recebi de uma plataforma que é merchant of record: que recibo passo?", paginaAlvo: "/ferramentas/payout-mor" },
-  { id: "b14", icp: "C", pergunta: "Compensa-me mais recibos verdes ou contrato de trabalho?", paginaAlvo: "/?modo=comparar" },
+  { id: "b14", icp: "C", pergunta: "Compensa-me mais recibos verdes ou contrato de trabalho?", paginaAlvo: "/ferramentas/comparar-regimes" },
   { id: "b15", icp: "C", pergunta: "Como calculo o salário líquido a partir do bruto em 2026?", paginaAlvo: "/ferramentas/recibo-vencimento" },
   { id: "b16", icp: "C", pergunta: "O meu recibo de vencimento está com os descontos certos?", paginaAlvo: "/ferramentas/auditoria-recibo" },
   { id: "b17", icp: "C", pergunta: "Posso ter recibos verdes e um emprego ao mesmo tempo?", paginaAlvo: "/guias/acumulacao-emprego" },

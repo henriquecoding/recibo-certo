@@ -21,6 +21,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { porId } from "@/lib/ferramentas";
 import {
   simularDeclaracaoIRS,
   simularIRSAnual,
@@ -341,9 +342,23 @@ describe("F-16 · a página não carrega tudo de uma vez", () => {
     // popup que aparece uma vez por versão.
     const versao = readFileSync(join(RAIZ, "lib", "version.ts"), "utf8");
     expect(versao).not.toMatch(/export const CHANGELOG/);
+
+    // Antes, a garantia era o `import()` dinâmico — o changelog ainda ia para
+    // o browser, só que num chunk à parte (173 KB, 58 comprimidos, a parsear
+    // antes de mostrar uma linha). Agora não vai de todo: o popup lê JSON
+    // estático gerado por `scripts/gen-novidades.mjs`. A verificação passa a
+    // ser a forte — o módulo não pode ser referido de maneira nenhuma.
     const modal = readFileSync(join(RAIZ, "components", "ui", "NovidadesModal.tsx"), "utf8");
-    expect(modal).toMatch(/import\("@\/lib\/changelog"\)/);
+    expect(modal).not.toMatch(/@\/lib\/changelog/);
+    expect(modal).toMatch(/@\/lib\/novidades/);
+
+    const loader = readFileSync(join(RAIZ, "lib", "novidades.ts"), "utf8");
+    expect(loader).not.toMatch(/@\/lib\/changelog/);
+    expect(loader).toMatch(/\/novidades\/indice\.json/);
   });
+
+  // As regras 10 e 11 do popup (quando aparece, e o que carrega ao entrar)
+  // vivem em `novidades-popup.test.ts`, que é só sobre isso.
 });
 
 describe("F-17 · JSON-LD completo na página do simulador", () => {
@@ -403,10 +418,15 @@ describe("F-18 · acessibilidade", () => {
 
 describe("F-19/F-20 · H1 e caminho a seguir", () => {
   it("o H1 leva a query principal", () => {
-    const fonte = readFileSync(PAGINA, "utf8");
-    const h1 = fonte.match(/<h1[^>]*>([\s\S]*?)<\/h1>/);
-    expect(h1).not.toBeNull();
-    expect(h1![1]).toMatch(/Simulador de IRS 2026/);
+    // O H1 deixou de estar escrito nesta página: passou a ser renderizado
+    // pelo `ToolShell` a partir do catálogo, para não poder divergir do
+    // destino que o hub anuncia. A verificação segue a fonte de verdade —
+    // e continua a reprovar se a âncora de pesquisa se perder.
+    const tool = porId("simulador-irs");
+    expect(tool).toBeDefined();
+    expect(tool!.h1 ?? tool!.title).toMatch(/Simulador de IRS 2026/);
+    expect(readFileSync(PAGINA, "utf8"), "a página tem de usar o ToolShell")
+      .toContain("<ToolShell");
   });
 
   it("o resultado sugere sempre um passo seguinte, com ou sem categoria B", () => {

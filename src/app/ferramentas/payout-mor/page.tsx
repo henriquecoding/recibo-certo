@@ -1,25 +1,42 @@
 import type { Metadata } from "next";
+import ToolShell from "@/components/ferramentas/ToolShell";
+import { porId } from "@/lib/ferramentas";
+import { generateSoftwareApplicationSchema } from "@/lib/seo";
 import Wizard from "./Wizard";
 
+const TOOL = porId("payout-mor")!;
+
 export const metadata: Metadata = {
-  title: "Recibo verde ao Merchant of Record | ReciboCerto",
+  title: "Recibo verde ao Merchant of Record (Paddle, Lemon Squeezy) | ReciboCerto",
   description:
-    "Guia passo-a-passo para emitir o recibo mensal ao Paddle ou Lemon Squeezy com IVA em autoliquidação e 100 % do payout líquido.",
-  alternates: { canonical: "https://www.recibocerto.pt/ferramentas/payout-mor" },
+    "Guia passo-a-passo para emitir o recibo mensal ao Paddle ou Lemon Squeezy com IVA em autoliquidação e 100 % do payout líquido. Dados do adquirente e fundamento legal incluídos.",
+  keywords: [
+    "recibo merchant of record", "paddle recibo verde", "lemon squeezy recibo",
+    "IVA autoliquidação payout", "recibo para plataforma estrangeira",
+  ],
+  alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
+  openGraph: {
+    title: "Recibo verde ao Merchant of Record | ReciboCerto",
+    description:
+      "Cinco passos para emitir o recibo do teu payout com o adquirente, o IVA e a retenção corretos.",
+    url: `https://www.recibocerto.pt${TOOL.canonicalHref}`,
+    siteName: "ReciboCerto",
+    locale: "pt_PT",
+    type: "article",
+  },
 };
 
 export default function PayoutMorPage() {
+  const appSchema = generateSoftwareApplicationSchema();
   return (
-    <main className="mx-auto max-w-2xl px-4 py-12">
-      <div className="eyebrow mb-2 text-brand">Ferramentas</div>
-      <h1 className="font-display text-3xl font-semibold text-stone-800 dark:text-stone-100 mb-2">
-        Recibo ao Merchant of Record
-      </h1>
-      <p className="mb-10 text-sm leading-relaxed text-stone-500 max-w-lg">
-        Emite o recibo verde mensal ao Paddle ou Lemon Squeezy com IVA em
-        autoliquidação. Resultado: 100 % do payout líquido, sem burocracia fiscal.
-      </p>
-      <Wizard />
-    </main>
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema) }} />
+      <ToolShell
+        tool={TOOL}
+        subtitulo="Emite o recibo verde mensal ao Paddle ou Lemon Squeezy com IVA em autoliquidação — 100 % do payout líquido, com o fundamento legal de cada campo."
+      >
+        <Wizard />
+      </ToolShell>
+    </>
   );
 }

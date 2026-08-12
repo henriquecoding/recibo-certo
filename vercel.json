@@ -6,5 +6,12 @@
       "maxDuration": 30,
       "includeFiles": "src/documentos/**"
     }
+  },
+  "git": {
+    "deploymentEnabled": {
+      "agent/protecao-ativos-proprietarios": false,
+      "agent/**": false,
+      "dependabot/**": false
+    }
   }
 }

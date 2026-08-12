@@ -48,15 +48,60 @@ const ESTADO_META: Record<
     cor: "bg-stone-100 border-stone-200",
     texto: "text-stone-500",
   },
+  // ── Estados novos do pipeline (migração 031) ──────────────────────────
+  // "aprovado/rejeitado" descrevia mal um primeiro contacto: dava a entender
+  // que aprovamos unilateralmente uma proposta antes de haver relação ou
+  // diligência. Estes descrevem onde a CONVERSA está. Os antigos ficam para
+  // as linhas que já existem em produção.
+  new: {
+    label: "Novo",
+    cor: "bg-amber-100 border-amber-200 dark:bg-amber-900/30 dark:border-amber-800/40",
+    texto: "text-amber-700 dark:text-amber-400",
+  },
+  qualified: {
+    label: "Qualificado",
+    cor: "bg-blue-100 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800/40",
+    texto: "text-blue-700 dark:text-blue-400",
+  },
+  deck_sent: {
+    label: "Deck enviado",
+    cor: "bg-violet-100 border-violet-200 dark:bg-violet-900/30 dark:border-violet-800/40",
+    texto: "text-violet-700 dark:text-violet-400",
+  },
+  meeting_booked: {
+    label: "Reunião marcada",
+    cor: "bg-cyan-100 border-cyan-200 dark:bg-cyan-900/30 dark:border-cyan-800/40",
+    texto: "text-cyan-700 dark:text-cyan-400",
+  },
+  diligence: {
+    label: "Diligência",
+    cor: "bg-indigo-100 border-indigo-200 dark:bg-indigo-900/30 dark:border-indigo-800/40",
+    texto: "text-indigo-700 dark:text-indigo-400",
+  },
+  invested: {
+    label: "Investiu",
+    cor: "bg-emerald-100 border-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-800/40",
+    texto: "text-emerald-700 dark:text-emerald-400",
+  },
+  passed: {
+    label: "Passou",
+    cor: "bg-stone-100 border-stone-200",
+    texto: "text-stone-500",
+  },
 };
 
+/** Ordem de trabalho do pipeline. Os estados legados ficam no fim, para as
+ *  linhas antigas continuarem alcançáveis sem poluir o caminho normal. */
 const FILTROS: { valor: EstadoProposta | "todos"; label: string }[] = [
   { valor: "todos", label: "Todas" },
-  { valor: "pendente", label: "Pendentes" },
-  { valor: "em_analise", label: "Em análise" },
-  { valor: "contactado", label: "Contactadas" },
-  { valor: "aprovado", label: "Aprovadas" },
-  { valor: "rejeitado", label: "Rejeitadas" },
+  { valor: "new", label: "Novas" },
+  { valor: "qualified", label: "Qualificadas" },
+  { valor: "deck_sent", label: "Deck enviado" },
+  { valor: "meeting_booked", label: "Reunião" },
+  { valor: "diligence", label: "Diligência" },
+  { valor: "invested", label: "Investiram" },
+  { valor: "passed", label: "Passaram" },
+  { valor: "pendente", label: "Pendentes (legado)" },
 ];
 
 function formatarData(iso: string) {
@@ -104,14 +149,12 @@ export default function AdminPropostas() {
   );
 
   const contagem = useMemo(() => {
-    const base: Record<EstadoProposta, number> = {
-      pendente: 0,
-      em_analise: 0,
-      contactado: 0,
-      aprovado: 0,
-      rejeitado: 0,
-    };
-    for (const r of lista) base[r.estado]++;
+    // Construído a partir das chaves de ESTADO_META para nunca voltar a
+    // divergir dele quando o pipeline ganhar (ou perder) um estado.
+    const base = Object.fromEntries(
+      (Object.keys(ESTADO_META) as EstadoProposta[]).map((e) => [e, 0]),
+    ) as Record<EstadoProposta, number>;
+    for (const r of lista) if (r.estado in base) base[r.estado]++;
     return base;
   }, [lista]);
 

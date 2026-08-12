@@ -2,7 +2,6 @@
 // Todas as operações de escrita passam pela RLS — só funcionam com sessão admin.
 
 import { getSupabase } from "./client";
-import { emailValido, normalizarEmail } from "@/lib/validacao-email";
 import type { ModoParceria } from "@/lib/parcerias/modos";
 
 // ── Anúncios ─────────────────────────────────────────────────
@@ -421,7 +420,28 @@ export async function eliminarWaitlistEntry(id: string): Promise<{ erro?: string
 
 // ── Propostas de investidores ───────────────────────────────
 
-export type EstadoProposta = "pendente" | "em_analise" | "contactado" | "aprovado" | "rejeitado";
+/**
+ * Estados de um contacto de investidor.
+ *
+ * Os cinco primeiros descrevem onde a CONVERSA está. Os antigos ("aprovado",
+ * "rejeitado") descreviam mal um primeiro contacto — davam a entender que o
+ * ReciboCerto aprova unilateralmente uma proposta antes de haver relação ou
+ * diligência — mas continuam aqui porque há linhas em produção com esses
+ * valores, e apagá-los do tipo partia o painel que as mostra.
+ */
+export type EstadoProposta =
+  | "new"
+  | "qualified"
+  | "deck_sent"
+  | "meeting_booked"
+  | "diligence"
+  | "passed"
+  | "invested"
+  | "pendente"
+  | "em_analise"
+  | "contactado"
+  | "aprovado"
+  | "rejeitado";
 
 export interface PropostaRow {
   id: string;
@@ -444,25 +464,33 @@ export interface PropostaRow {
   notas_admin: string | null;
   submetido_em: string;
   atualizado_em: string;
+  // ── Colunas da migração 031. Opcionais porque as linhas legadas não as
+  // têm: são preenchidas só a partir da rota nova.
+  source_url?: string | null;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  privacy_version?: string | null;
+  privacy_acknowledged_at?: string | null;
+  ticket_band?: string | null;
+  owner?: string | null;
+  next_action_at?: string | null;
+  last_contacted_at?: string | null;
+  retention_until?: string | null;
 }
 
-export type PropostaInput = Omit<PropostaRow, "id" | "estado" | "notas_admin" | "submetido_em" | "atualizado_em">;
-
-export async function submeterProposta(p: PropostaInput): Promise<{ erro?: string }> {
-  // Validação (primeira linha; a RLS + CHECKs de BD são a defesa a sério).
-  const nome = (p.nome ?? "").trim();
-  const email = (p.email ?? "").trim();
-  const interesse = (p.interesse ?? "").trim();
-  if (!nome || nome.length > 200) return { erro: "Nome inválido." };
-  if (!emailValido(email)) return { erro: "Email inválido." };
-  if (!interesse || interesse.length > 2000) return { erro: "Indica o teu interesse." };
-  if ((p.mensagem ?? "").length > 5000) return { erro: "Mensagem demasiado longa." };
-
-  const { error } = await getSupabase()
-    .from("propostas_investidores")
-    .insert({ ...p, nome, email: normalizarEmail(email), interesse });
-  return error ? { erro: error.message } : {};
-}
+// ⚠️ `submeterProposta` foi REMOVIDA de propósito.
+//
+// Escrevia direto na tabela a partir do browser, com a chave anónima. Não
+// havia limite de pedidos, nem honeypot, nem endpoint no servidor: um script
+// podia escrever mil linhas perfeitamente válidas numa tarde, e os CHECKs de
+// comprimento descritos na migração 020 como "endurecimento contra spam" não
+// impediam nada disso — limitam o tamanho de um payload, não a quantidade.
+//
+// A migração 031 revoga o INSERT de `anon`/`authenticated`. O caminho é agora
+// POST /api/investidores/interesse, no servidor, com service role, validação
+// completa, rate limit atómico na base de dados e idempotência. Repor uma
+// função como esta voltaria a abrir a porta que a migração fechou.
 
 export async function listarPropostas(): Promise<PropostaRow[]> {
   const { data, error } = await getSupabase()

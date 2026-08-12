@@ -1,12 +1,12 @@
 {
   "periodo": "Julho de 2026",
   "proveniencia": {
-    "referencia": "RC-2026-VNC-8QP6GF",
+    "referencia": "RC-2026-VNC-K9AYSA",
     "digest": "c40ff91f3d02308f533cfa39cc8c944c90d8c7ffe2c3de6b65d4c13d849503b5",
-    "motor": "2.14.0",
+    "motor": "2.34.0",
     "anoFiscal": 2026,
     "emitidoEm": "1 de agosto de 2026",
-    "verificacao": "https://recibocerto.pt/v/RC-2026-VNC-8QP6GF"
+    "verificacao": "https://www.recibocerto.pt/v/RC-2026-VNC-K9AYSA"
   },
   "resposta": {
     "rotulo": "Líquido deste mês",
@@ -279,27 +279,27 @@
     {
       "norma": "Despacho n.º 233-A/2026",
       "determina": "Tabelas de retenção na fonte aplicadas à remuneração do mês e a cada subsídio",
-      "verificadoEm": "2026-08-01"
+      "verificadoEm": "2026-08-07"
     },
     {
       "norma": "Código Contributivo, arts. 44.º-48.º",
       "determina": "Base de incidência da Segurança Social e taxas do trabalhador e da entidade",
-      "verificadoEm": "2026-08-01"
+      "verificadoEm": "2026-08-07"
     },
     {
       "norma": "Art. 2.º, n.º 3 CIRS",
       "determina": "Limite diário isento do subsídio de refeição em cartão",
-      "verificadoEm": "2026-08-01"
+      "verificadoEm": "2026-08-07"
     },
     {
       "norma": "Art. 99.º-C CIRS",
       "determina": "Retenção autónoma dos subsídios e do trabalho suplementar",
-      "verificadoEm": "2026-08-01"
+      "verificadoEm": "2026-08-07"
     },
     {
       "norma": "CT arts. 262.º e 271.º",
       "determina": "Retribuição horária que valoriza o trabalho suplementar",
-      "verificadoEm": "2026-08-01"
+      "verificadoEm": "2026-08-07"
     }
   ],
   "ambito": [

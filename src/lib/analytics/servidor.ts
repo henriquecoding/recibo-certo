@@ -17,6 +17,7 @@
 //  cliente é um identificador que qualquer pessoa pode repetir.
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { CATALOGO, type NomeEvento, type PayloadsEvento } from "./eventos";

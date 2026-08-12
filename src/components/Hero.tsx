@@ -7,7 +7,8 @@ import { ArrowRight, ShieldCheck, FileSign, Warning, Calendar, Check, Sparkle, C
 import { scrollToId } from "@/lib/scroll";
 import { staggerContainer, staggerItem, EASE } from "@/lib/motion";
 import { usePerfil, type Perfil } from "@/lib/perfil";
-import { ferramentasPorPerfil } from "@/lib/ferramentas-config";
+import { ferramentasPorPerfil } from "@/lib/ferramentas";
+import { iconeDe } from "@/components/ferramentas/icon-map";
 import { guiasPorPerfil } from "@/lib/guias-config";
 import SeletorModo from "@/components/SeletorModo";
 import ComoFuncionaModal from "@/components/ComoFuncionaModal";
@@ -1148,37 +1149,65 @@ export default function Hero({
   const atalhoFerramenta = ferramentasPorPerfil(perfil).destaque;
   const atalhoGuia = guiasPorPerfil(perfil)[0];
 
-  const btnPrimario = "btn-shine inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3.5 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-float";
-  const btnSecundario = "inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-6 py-3.5 text-sm font-semibold text-stone-700 transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:hover:border-stone-600 dark:hover:bg-stone-700";
+  // No telemóvel os CTAs são barras de largura total, empilhadas: a 360px, dois
+  // botões lado a lado davam ~150px cada e "Calcular o meu recibo" partia-se em
+  // duas linhas com a seta a flutuar ao lado. A partir de `sm:` voltam à fila,
+  // com a largura do seu texto.
+  const btnBase = "inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all sm:w-auto sm:px-6";
+  const btnPrimario = `btn-shine ${btnBase} bg-brand text-white shadow-glow hover:-translate-y-0.5 hover:shadow-float`;
+  const btnSecundario = `${btnBase} border border-stone-200 bg-white text-stone-700 hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:hover:border-stone-600 dark:hover:bg-stone-700`;
 
   return (
     // O `pt` contava duas vezes o mesmo espaço: o `Nav` já reserva 72px com
     // um espaçador próprio em ecrã largo, e o `pt-20` somava mais 80 por cima
     // — 152px até ao conteúdo, dos quais ~79 completamente vazios por baixo
     // da barra. No telemóvel não há espaçador nem barra no topo, e os mesmos
-    // 80px ficavam a olhar para o nada. Agora: 32px no telemóvel, e 40px no
-    // desktop SOMADOS ao espaçador do Nav.
-    <section className="grain relative overflow-hidden px-6 pt-8 pb-16 lg:pt-10">
+    // 80px ficavam a olhar para o nada. Agora: 24px no telemóvel, 32px a
+    // partir de `sm:` e 40px no desktop SOMADOS ao espaçador do Nav.
+    // `data-hero`: marca o primeiro ecrã para o `BotaoTopo` — é ao sair daqui
+    // que o botão de voltar ao topo entra em cena.
+    <section
+      data-hero
+      className="grain relative overflow-hidden px-6 pt-6 pb-14 sm:pt-8 lg:pt-10 lg:pb-20"
+    >
+      {/* Atmosfera: dois halos que seguem a composição — um por trás do cartão
+          (canto superior direito), outro a apoiar o bloco de texto (em baixo, à
+          esquerda). Antes o segundo estava a meia altura do lado esquerdo e
+          cortava o título ao meio com uma mancha verde. */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-32 -right-24 h-[28rem] w-[28rem] rounded-full bg-brand/15 blur-3xl" />
-        <div className="absolute top-40 -left-32 h-[24rem] w-[24rem] rounded-full bg-brand-mint/20 blur-3xl" />
+        <div className="absolute -top-40 -right-32 h-[30rem] w-[30rem] rounded-full bg-brand/12 blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 h-[26rem] w-[26rem] rounded-full bg-brand-mint/15 blur-3xl" />
       </div>
 
-      <div className="mx-auto grid max-w-5xl items-start gap-12 lg:grid-cols-[1fr_1.1fr]">
-        <m.div initial="hidden" animate="visible" variants={staggerContainer}>
-          <m.div variants={staggerItem} className="mb-6">
+      {/* `items-center`: as duas colunas passaram a ter alturas próximas, e
+          centrá-las uma na outra elimina o vazio que sobrava por baixo do
+          cartão. `gap-y` menor do que `gap-x` — no telemóvel as colunas são
+          uma pilha e 48px entre elas era um buraco. */}
+      <div className="mx-auto grid max-w-5xl items-center gap-x-12 gap-y-10 lg:grid-cols-2">
+        {/* Uma medida só para toda a coluna de texto. Sem ela, entre `sm:` e
+            `lg:` (onde ainda não há duas colunas) cada bloco tinha o seu limite
+            — seletor a 512px, título a toda a largura, subtítulo a 46ch — e o
+            lado direito ficava serrilhado. A partir de `lg:` quem manda é a
+            grelha. */}
+        <m.div
+          initial="hidden"
+          animate="visible"
+          variants={staggerContainer}
+          className="max-w-xl lg:max-w-none"
+        >
+          <m.div variants={staggerItem}>
             <SeletorModo />
           </m.div>
 
-          <m.h1 variants={staggerItem} className="font-display display-1 text-balance font-semibold text-ink">
+          <m.h1 variants={staggerItem} className="mt-7 font-display display-hero text-balance font-semibold text-ink">
             {dados.h1}
           </m.h1>
 
-          <m.p variants={staggerItem} className="mt-6 max-w-md text-lg leading-relaxed text-stone-500">
+          <m.p variants={staggerItem} className="mt-5 max-w-[46ch] text-base leading-relaxed text-stone-500 sm:text-lg">
             {dados.sub}
           </m.p>
 
-          <m.div variants={staggerItem} className="mt-9 flex flex-wrap gap-3">
+          <m.div variants={staggerItem} className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             {dados.primary.setModo ? (
               <button
                 type="button"
@@ -1233,8 +1262,18 @@ export default function Hero({
             )}
           </m.div>
 
-          {/* Atalhos que se moldam ao perfil: a ferramenta certa + o guia certo */}
-          <m.div variants={staggerItem} className="mt-6">
+          {/* ── Rodapé do bloco de texto ────────────────────────────────────
+              Os atalhos e os selos de confiança eram duas filas de texto solto
+              a seguir aos CTAs, cada uma com o seu espaçamento — no telemóvel
+              partiam-se em linhas desalinhadas e liam-se como sobras. Agora são
+              um degrau próprio: uma régua a abrir, os atalhos como pastilhas
+              (alvo tátil a sério, não um link de 13px) e os selos por baixo, em
+              voz baixa. */}
+          <m.div
+            variants={staggerItem}
+            className="mt-8 border-t border-stone-200/70 pt-6 dark:border-stone-800"
+          >
+            {/* Atalhos que se moldam ao perfil: a ferramenta certa + o guia certo */}
             <AnimatePresence mode="wait" initial={false}>
               <m.div
                 key={`atalhos-${perfil}`}
@@ -1242,37 +1281,37 @@ export default function Hero({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.25, ease: EASE }}
-                className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs"
+                className="flex flex-wrap items-center gap-2"
               >
-                <span className="font-medium text-stone-400">Para ti:</span>
-                <Link
-                  href={atalhoFerramenta.href}
-                  className="group inline-flex items-center gap-1.5 font-semibold text-stone-500 transition-colors hover:text-brand-dark dark:text-stone-400 dark:hover:text-brand"
-                >
-                  <atalhoFerramenta.Icon size={13} className="text-brand" />
-                  {atalhoFerramenta.titulo}
-                  <ArrowRight size={10} className="transition-transform group-hover:translate-x-0.5" />
-                </Link>
-                <Link
-                  href={atalhoGuia.href}
-                  className="group inline-flex items-center gap-1.5 font-semibold text-stone-500 transition-colors hover:text-brand-dark dark:text-stone-400 dark:hover:text-brand"
-                >
-                  <atalhoGuia.icon size={13} className="text-brand" />
-                  {atalhoGuia.titulo}
-                  <ArrowRight size={10} className="transition-transform group-hover:translate-x-0.5" />
-                </Link>
+                <span className="mr-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">
+                  Para ti
+                </span>
+                {[
+                  { href: atalhoFerramenta.canonicalHref, Icon: iconeDe(atalhoFerramenta.icon), titulo: atalhoFerramenta.title },
+                  { href: atalhoGuia.href, Icon: atalhoGuia.icon, titulo: atalhoGuia.titulo },
+                ].map((a) => (
+                  <Link
+                    key={a.href}
+                    href={a.href}
+                    className="group inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-stone-200/80 bg-white/70 px-3 py-1.5 text-xs font-semibold text-stone-600 transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:text-brand-dark hover:shadow-card dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300 dark:hover:text-brand"
+                  >
+                    <a.Icon size={13} className="flex-shrink-0 text-brand" />
+                    {a.titulo}
+                    <ArrowRight size={10} className="flex-shrink-0 text-stone-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
+                  </Link>
+                ))}
               </m.div>
             </AnimatePresence>
-          </m.div>
 
-          <m.ul variants={staggerItem} className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-            {TRUST.map((b) => (
-              <li key={b.text} className="flex items-center gap-2">
-                <span className="text-brand">{b.icon}</span>
-                <span className="text-xs font-medium text-stone-500">{b.text}</span>
-              </li>
-            ))}
-          </m.ul>
+            <ul className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+              {TRUST.map((b) => (
+                <li key={b.text} className="flex items-center gap-2">
+                  <span className="flex-shrink-0 text-brand">{b.icon}</span>
+                  <span className="text-xs font-medium text-stone-500">{b.text}</span>
+                </li>
+              ))}
+            </ul>
+          </m.div>
         </m.div>
 
         <m.div
@@ -1280,7 +1319,7 @@ export default function Hero({
           initial={{ opacity: 0, y: 28 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: EASE, delay: 0.1 }}
-          className="relative"
+          className="relative max-w-xl lg:max-w-none"
         >
           <HeroCard perfil={perfil} card={c} />
         </m.div>

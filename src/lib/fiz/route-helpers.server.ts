@@ -6,6 +6,8 @@
 //  (ponto 15.2 da arquitetura) — só código, estado e request id.
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
+
 import { NextResponse } from "next/server";
 import { FizError, MENSAGEM_UTILIZADOR, type CodigoErroFiz } from "./errors";
 

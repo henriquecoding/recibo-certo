@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "@/components/ui/Icons";
 import { manifesto, TOOL_HREFS, type ToolId } from "@/lib/guias/manifests";
-import { FERRAMENTAS } from "@/lib/ferramentas-config";
+import { porId, porSlug } from "@/lib/ferramentas";
 
 // ─────────────────────────────────────────────────────────────────────────
 //  Ferramentas relacionadas — agora CONTEXTUAIS.
@@ -19,7 +19,9 @@ interface Destino {
   href: string;
 }
 
-// Rotas que não constam de FERRAMENTAS (hub, comparador e quiz).
+// Rotas que NÃO são ferramentas do catálogo. O comparador saiu daqui: passou
+// a ter destino canónico próprio (`/ferramentas/comparar-regimes`) e é
+// resolvido pelo catálogo como qualquer outra.
 const EXTRA: Partial<Record<ToolId, Destino>> = {
   calculadora: {
     titulo: "Simuladores",
@@ -39,11 +41,11 @@ const EXTRA: Partial<Record<ToolId, Destino>> = {
 };
 
 function resolver(id: ToolId): Destino | null {
-  const extra = EXTRA[id];
-  if (extra) return extra;
-  const f = FERRAMENTAS.find((x) => x.slug === id);
-  if (!f) return null;
-  return { titulo: f.titulo, descricao: f.descricao, href: f.href };
+  // O catálogo resolve por id e por slug: os manifestos dos Guias referem
+  // ferramentas pelo slug, que hoje coincide com o id em todas elas.
+  const f = porId(id) ?? porSlug(id);
+  if (f) return { titulo: f.title, descricao: f.shortOutcome, href: f.canonicalHref };
+  return EXTRA[id] ?? null;
 }
 
 export default function SimuladoresRelacionados({ slug }: { slug: string }) {

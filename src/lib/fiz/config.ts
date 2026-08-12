@@ -15,6 +15,8 @@
 //  Nenhum segredo tem prefixo NEXT_PUBLIC_ — só a bandeira é pública.
 // ═══════════════════════════════════════════════════════════════════════
 
+import "server-only";
+import { appUrl } from "@/lib/origem";
 import { fizAtiva as bandeiraAtiva } from "./flag";
 
 export type EstadoIntegracao = "desligada" | "sem_credenciais" | "pronta";
@@ -55,7 +57,9 @@ export function fizServerConfig() {
     /** Chave de cifra dos refresh tokens em repouso (32 bytes em base64). */
     tokenEncryptionKey: process.env.FIZ_TOKEN_ENCRYPTION_KEY ?? "",
     referralCode: process.env.FIZ_REFERRAL_CODE ?? "recibocerto",
-    appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+    // RC-CFG-001: o `redirect_uri` do OAuth é comparado literalmente com o que
+    // está registado na FIZ — o apex e o www não são a mesma coisa para eles.
+    appUrl: appUrl(),
     /** Margem de segurança antes de considerar um access token expirado. */
     margemExpiracaoSegundos: 60,
     /** Ponto 20 da arquitetura: expiração do handoff ≤ 30 min. */

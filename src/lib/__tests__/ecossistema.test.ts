@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { GUIA_SLUGS, FERRAMENTA_SLUGS } from "@/lib/seo";
 import { GUIAS, guiaSlug, GUIAS_DESTAQUE_POR_PERFIL, CATEGORIA_POR_PERFIL, guiasPorPerfil } from "@/lib/guias-config";
-import { FERRAMENTAS, DESTAQUE_POR_PERFIL, ORDEM_POR_PERFIL, ferramentasPorPerfil } from "@/lib/ferramentas-config";
+import {
+  CATALOGO_FERRAMENTAS, DESTAQUE_POR_PERFIL, ORDEM_POR_PERFIL, ferramentasPorPerfil,
+} from "@/lib/ferramentas";
 import type { Perfil } from "@/lib/perfil";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -26,16 +28,22 @@ describe("guias: seo.ts ↔ guias-config.ts", () => {
   });
 });
 
-describe("ferramentas: seo.ts ↔ ferramentas-config.ts", () => {
-  it("FERRAMENTA_SLUGS e FERRAMENTAS (sem só-hub) são o mesmo conjunto", () => {
+describe("ferramentas: seo.ts ↔ catálogo", () => {
+  // Já não é um espelho entre duas listas escritas à mão: `FERRAMENTA_SLUGS`
+  // DERIVA do catálogo. O teste continua a existir para apanhar o caso em que
+  // alguém volte a introduzir uma lista literal em `seo.ts`.
+  it("FERRAMENTA_SLUGS deriva do catálogo", () => {
     const doSitemap = [...FERRAMENTA_SLUGS].sort();
-    const daConfig = FERRAMENTAS.filter((f) => !f.soHub).map((f) => f.slug).sort();
-    expect(daConfig).toEqual(doSitemap);
+    const doCatalogo = CATALOGO_FERRAMENTAS
+      .filter((f) => f.surfaces.includes("sitemap"))
+      .map((f) => f.slug)
+      .sort();
+    expect(doSitemap).toEqual(doCatalogo);
   });
 
-  it("cada ferramenta oficial aponta para a própria landing pública", () => {
-    for (const f of FERRAMENTAS.filter((x) => !x.soHub)) {
-      expect(f.href).toBe(`/ferramentas/${f.slug}`);
+  it("cada ferramenta aponta para a própria landing pública", () => {
+    for (const f of CATALOGO_FERRAMENTAS) {
+      expect(f.canonicalHref).toBe(`/ferramentas/${f.slug}`);
     }
   });
 });
@@ -44,7 +52,7 @@ describe("curadoria da homepage por perfil", () => {
   it("todo o destaque de ferramentas existe e cada perfil tem 4 cartões de grelha", () => {
     for (const p of PERFIS) {
       const { destaque, restantes } = ferramentasPorPerfil(p);
-      expect(destaque.slug).toBe(DESTAQUE_POR_PERFIL[p]);
+      expect(destaque.id).toBe(DESTAQUE_POR_PERFIL[p]);
       expect(restantes).toHaveLength(ORDEM_POR_PERFIL[p].length);
       expect(restantes.length).toBeGreaterThanOrEqual(3);
       // o destaque não se repete na grelha

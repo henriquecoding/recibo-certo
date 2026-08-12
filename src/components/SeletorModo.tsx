@@ -1,12 +1,22 @@
 "use client";
 
-// Seletor de modo da homepage. Dois grupos mutuamente exclusivos, separados
-// por uma linha: "Sou Trabalhador" (Independente / Por conta de outrem) e
-// "Gostaria de" (Abrir Empresa / Comparar Cenários). Define o `perfil` global,
-// que ramifica TODO o conteúdo da homepage (hero, calculadora, features…).
-// Cada opção é um chip com ícone — selecionado preenchido a marca, não
-// selecionado com superfície e contorno próprios (estado de botão legível,
-// não texto solto), com hover que eleva.
+// Seletor de modo da homepage. Dois grupos mutuamente exclusivos —
+// "Sou trabalhador" (Independente / Por conta de outrem) e "Gostaria de"
+// (Abrir empresa / Comparar cenários). Define o `perfil` global, que ramifica
+// TODO o conteúdo da homepage (hero, calculadora, features…).
+//
+// ── Porque é UM cartão, e não dois grupos soltos ────────────────────────────
+// O desenho anterior punha o rótulo À ESQUERDA das opções, numa caixa de largura
+// fixa (`w-28`). "SOU TRABALHADOR" em maiúsculas não cabe em 112px: transbordava
+// para cima do grupo ao lado no desktop e partia em duas linhas no telemóvel —
+// as duas filas ficavam com alturas diferentes e o conjunto perdia o eixo. Os
+// dois grupos tinham ainda contorno próprio, larguras diferentes (o texto de
+// cada par manda) e uma régua em gradiente a flutuar entre eles: três caixas a
+// competir onde só há uma decisão.
+//
+// Agora: rótulo POR CIMA (nunca corta, em qualquer largura), opções numa grelha
+// de duas colunas iguais (margens alinhadas nas duas filas) e um só contorno à
+// volta de tudo — uma bandeja com quatro escolhas, não quatro objetos.
 
 import type { ReactNode } from "react";
 import { usePerfil, type Perfil } from "@/lib/perfil";
@@ -39,15 +49,15 @@ function Grupo({
   definir: (p: Perfil) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      <span className="w-28 flex-shrink-0 text-xs font-semibold uppercase tracking-wide text-stone-400">
+    <div>
+      <span className="mb-1.5 block px-1 text-[10px] font-bold uppercase tracking-[0.14em] text-stone-400">
         {titulo}
       </span>
-      <div
-        role="group"
-        aria-label={ariaLabel}
-        className="inline-flex gap-1.5 rounded-2xl border border-stone-200/80 bg-stone-50/80 p-1 shadow-sm backdrop-blur-sm dark:border-stone-700 dark:bg-stone-900/60"
-      >
+      {/* Duas colunas iguais: as opções deixam de ter a largura do seu próprio
+          texto, por isso as duas filas ficam com a mesma margem direita e o
+          cartão ganha um eixo. `items-stretch` (implícito na grelha) mantém a
+          mesma altura mesmo quando um rótulo quebra em duas linhas a 360px. */}
+      <div role="group" aria-label={ariaLabel} className="grid grid-cols-2 gap-1.5">
         {opcoes.map((o) => {
           const ativo = perfil === o.chave;
           return (
@@ -58,14 +68,14 @@ function Grupo({
               onClick={() => definir(o.chave)}
               onPointerEnter={() => prefetchSimulador(o.chave)}
               onFocus={() => prefetchSimulador(o.chave)}
-              className={`group inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-200 ${
+              className={`group inline-flex min-h-[42px] items-center justify-center gap-2 rounded-xl px-2.5 py-2 text-center text-xs font-semibold leading-tight transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:px-3 ${
                 ativo
                   ? "bg-brand text-white shadow-glow"
-                  : "border border-stone-200 bg-white text-stone-600 shadow-card hover:-translate-y-0.5 hover:border-brand/40 hover:text-brand-dark dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300 dark:hover:text-brand"
+                  : "border border-stone-200/80 bg-white text-stone-600 shadow-sm hover:-translate-y-0.5 hover:border-brand/40 hover:text-brand-dark hover:shadow-card dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300 dark:hover:text-brand"
               }`}
             >
               <span
-                className={`transition-colors ${
+                className={`flex-shrink-0 transition-colors ${
                   ativo ? "text-white" : "text-stone-400 group-hover:text-brand"
                 }`}
               >
@@ -83,10 +93,32 @@ function Grupo({
 export default function SeletorModo({ center = false }: { center?: boolean }) {
   const { perfil, definir } = usePerfil();
   return (
-    <div className={`flex flex-col gap-3 ${center ? "items-center" : "items-start"}`}>
-      <Grupo titulo="Sou Trabalhador" ariaLabel="O teu perfil de trabalhador" opcoes={TRABALHADOR} perfil={perfil} definir={definir} />
-      <div className={`h-px bg-gradient-to-r from-transparent via-stone-200 to-transparent dark:via-stone-700 ${center ? "w-80" : "w-full max-w-lg"}`} />
-      <Grupo titulo="Gostaria de" ariaLabel="O que queres fazer" opcoes={GOSTARIA} perfil={perfil} definir={definir} />
+    <div
+      className={`w-full rounded-2xl border border-stone-200/70 bg-stone-50/70 p-2 shadow-sm backdrop-blur-sm dark:border-stone-700/80 dark:bg-stone-900/50 sm:p-2.5 ${
+        center ? "mx-auto max-w-md" : ""
+      }`}
+    >
+      <Grupo
+        titulo="Sou trabalhador"
+        ariaLabel="O teu perfil de trabalhador"
+        opcoes={TRABALHADOR}
+        perfil={perfil}
+        definir={definir}
+      />
+      {/* Régua interior: separa as duas perguntas sem lhes dar contorno próprio.
+          De margem a margem do cartão (`-mx-*`), para ser uma divisória e não
+          mais um traço a flutuar. */}
+      <div
+        aria-hidden
+        className="-mx-2 my-2.5 h-px bg-stone-200/70 dark:bg-stone-700/60 sm:-mx-2.5"
+      />
+      <Grupo
+        titulo="Gostaria de"
+        ariaLabel="O que queres fazer"
+        opcoes={GOSTARIA}
+        perfil={perfil}
+        definir={definir}
+      />
     </div>
   );
 }

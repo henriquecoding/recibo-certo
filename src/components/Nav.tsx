@@ -2,277 +2,269 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { m, AnimatePresence } from "motion/react";
-import { BuscaTrigger } from "@/components/busca/BuscaTrigger";
-import { Logo, ArrowRight, ChevronDown, User, Megaphone } from "@/components/ui/Icons";
-import ThemeToggle from "@/components/ui/ThemeToggle";
-import { EASE } from "@/lib/motion";
+import { m } from "motion/react";
+import { LancadorBusca } from "@/components/busca/LancadorBusca";
+import { MenuConta } from "@/components/header/MenuConta";
+import { Logo, ArrowRight } from "@/components/ui/Icons";
 import { useAuth } from "@/lib/supabase/auth";
-import {
-  NAV_FERRAMENTAS as SUBMENU_FERRAMENTAS,
-  NAV_APRENDER as SUBMENU_APRENDER,
-} from "@/components/nav-config";
-import { abrirFeedback } from "@/components/feedback/abrir";
+import { NAV_PRINCIPAL, navAtivo } from "@/components/nav-config";
+import { medirNavegacao } from "@/lib/busca/medicao";
+import { useBuscaAberta } from "@/components/busca/motor";
 
+/**
+ * O cabeçalho de secretária — duas linhas no topo, uma ao rolar.
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ A PESQUISA É O ELEMENTO CENTRAL, E UM ELEMENTO CENTRAL PRECISA DE ESPAÇO │
+ * │                                                                         │
+ * │ Estava espremida entre os links e os botões, com 200 px e um rótulo      │
+ * │ «Pesquisar…» — do tamanho de um detalhe, num produto onde encontrar a    │
+ * │ ferramenta certa É a tarefa. Agora tem uma linha só para si, com largura │
+ * │ a sério, e a navegação por cima diz onde se está.                        │
+ * │                                                                         │
+ * │ A partir dos primeiros 40 px de scroll a atenção é do conteúdo: a        │
+ * │ navegação recolhe, a barra encolhe para junto da marca e o cabeçalho     │
+ * │ fica numa linha. Continua no mesmo eixo e à mesma distância do topo do   │
+ * │ ecrã. Muda de tamanho; nunca muda de sítio.                              │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ PORQUE HÁ UM ESPAÇADOR EM FLUXO COM ALTURA CONSTANTE                     │
+ * │                                                                         │
+ * │ Um cabeçalho que encolhe E ocupa espaço no fluxo é uma realimentação,    │
+ * │ não um efeito: encolher tira altura ao documento, o documento fica mais  │
+ * │ curto, o browser reajusta a posição de scroll, o reajuste atravessa o    │
+ * │ limiar ao contrário, e ele volta a crescer.                              │
+ * │                                                                         │
+ * │ Fora do fluxo — `fixed`, com um espaçador que reserva SEMPRE a altura    │
+ * │ máxima — o problema deixa de poder existir.                              │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ */
 export default function Nav() {
-  const { abrirModal, disponivel, user } = useAuth();
-  const [scrolled, setScrolled] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { disponivel, user } = useAuth();
+  const [rolado, setRolado] = useState(false);
+  const buscaAberta = useBuscaAberta();
+
+  /**
+   * ┌─────────────────────────────────────────────────────────────────────┐
+   * │ ABRIR A PESQUISA REEXPANDE O CABEÇALHO — E ISSO É DE PROPÓSITO       │
+   * │                                                                     │
+   * │ Houve uma tentativa de tornar a densidade independente do overlay    │
+   * │ (P1-03 da auditoria: «abrir busca não muda density»). Em abstracto   │
+   * │ faz sentido; neste cabeçalho estava errado, e o erro foi meu.        │
+   * │                                                                     │
+   * │ A razão é que a navegação VIVE na linha que desaparece ao compactar  │
+   * │ (`group-data-[compacto=true]:hidden`). Com o cabeçalho compacto e o  │
+   * │ painel aberto, o resultado era: as abas Simular/Guias/Quiz/Planos    │
+   * │ sumiam, e o painel — que tem 44 rem, muito mais largo do que a barra │
+   * │ encolhida — ficava por cima da faixa onde elas deviam estar. Quem    │
+   * │ abria a pesquisa perdia a navegação do site enquanto pesquisava.     │
+   * │                                                                     │
+   * │ Congelar a densidade só é neutro num cabeçalho onde a navegação não  │
+   * │ depende dela. Aqui depende. Portanto: abrir a pesquisa devolve o     │
+   * │ cabeçalho ao estado alto, as abas voltam, e o painel abre na segunda │
+   * │ linha — POR BAIXO delas, não em cima.                                │
+   * │                                                                     │
+   * │ O efeito secundário que a auditoria temia (a superfície fixa crescer │
+   * │ 64 px no momento da intenção) é real e é o preço menor: 64 px de     │
+   * │ conteúdo tapado contra a navegação inteira inacessível.              │
+   * └─────────────────────────────────────────────────────────────────────┘
+   */
+  const compacto = rolado && !buscaAberta;
+
+  /**
+   * O FUNDO não segue a densidade — segue o scroll, e só ele.
+   *
+   * São duas decisões diferentes e já estiveram presas à mesma variável: a
+   * ALTURA tem de ficar quieta enquanto o painel está aberto, mas o fundo
+   * depende apenas de haver conteúdo a passar por baixo. Com a pesquisa
+   * aberta e a página rolada há — e o cabeçalho tem de ficar opaco na
+   * mesma, senão o texto da página lê-se através dele, por trás do painel.
+   */
+  const opaco = rolado;
+
   const [avatarUrl, setAvatarUrl] = useState("");
   const pathname = usePathname();
-  const dropdownTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sentinela = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!user) { setAvatarUrl(""); return; }
+    if (!user) {
+      setAvatarUrl("");
+      return;
+    }
     let ativo = true;
     // Carrega o leitor de perfil (que importa o SDK do Supabase) só quando há
     // sessão — mantém o SDK fora do bundle inicial das páginas públicas.
     import("@/lib/supabase/profile").then(({ obterPerfil }) =>
-      obterPerfil(user.id).then((p) => { if (ativo) setAvatarUrl(p.avatarUrl); })
+      obterPerfil(user.id).then((p) => {
+        if (ativo) setAvatarUrl(p.avatarUrl);
+      }),
     );
-    return () => { ativo = false; };
+    return () => {
+      ativo = false;
+    };
   }, [user]);
 
+  /**
+   * ┌─────────────────────────────────────────────────────────────────────────┐
+   * │ UMA SENTINELA, E NÃO UM OUVINTE DE SCROLL                                │
+   * │                                                                         │
+   * │ O ouvinte corria em cada evento de scroll, na thread principal, durante  │
+   * │ toda a leitura da página — para responder a uma pergunta que muda duas   │
+   * │ ou três vezes por sessão. A sentinela é um elemento de 40 px no topo do  │
+   * │ documento: o `IntersectionObserver` avisa quando ele sai do ecrã, e o    │
+   * │ limiar passa a ser geometria em vez de aritmética repetida a 60 Hz.      │
+   * └─────────────────────────────────────────────────────────────────────────┘
+   */
   useEffect(() => {
-    setScrolled(window.scrollY > 8);
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    const alvo = sentinela.current;
+    if (!alvo) return;
+    const observador = new IntersectionObserver(([entrada]) => setRolado(!entrada?.isIntersecting), {
+      threshold: 0,
+    });
+    observador.observe(alvo);
+    return () => observador.disconnect();
   }, []);
 
-  useEffect(() => {
-    setDropdownOpen(false);
-  }, [pathname]);
-
-  function openDropdown() {
-    if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
-    setDropdownOpen(true);
-  }
-
-  function closeDropdown() {
-    dropdownTimeoutRef.current = setTimeout(() => setDropdownOpen(false), 150);
-  }
-
-  function isActive(href: string) {
-    if (href === "/") return pathname === "/";
-    if (href.startsWith("/#")) return pathname === "/";
-    return pathname.startsWith(href);
-  }
-
-  const isRecursosActive =
-    pathname.startsWith("/guias") ||
-    pathname.startsWith("/quiz-fiscal") ||
-    pathname.startsWith("/ferramentas") ||
-    pathname.startsWith("/dashboard/prazos") ||
-    pathname.startsWith("/dashboard/classificar") ||
-    pathname.startsWith("/dashboard/mapa");
+  // Um só item aceso, decidido de uma vez — ver o quadro em `nav-config.tsx`.
+  const aceso = navAtivo(pathname);
 
   return (
     <>
-      {/* Spacer — só no desktop. No telemóvel o cabeçalho vive em baixo
-          (ChromeMobile), por isso aqui não reservamos espaço nem mostramos
-          este header (evita o "duplo header" no telemóvel). */}
-      <div className="hidden h-[72px] lg:block" aria-hidden />
+      {/* Espaçador em fluxo — só no desktop. No telemóvel o cabeçalho vive em
+          baixo (ChromeMobile), por isso aqui não reservamos espaço nem
+          mostramos este header (evita o «duplo header» no telemóvel). */}
+      <div aria-hidden className="relative hidden h-[var(--rc-header-alto)] lg:block">
+        <div ref={sentinela} className="absolute inset-x-0 top-0 h-10" />
+      </div>
 
       <nav
-        className={`fixed inset-x-0 top-0 z-50 hidden transition-[border-color,background-color,box-shadow] duration-300 lg:block ${
-          scrolled
-            ? "border-b border-stone-200/60 bg-white/80 shadow-sm backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/80"
-            : "border-b border-transparent bg-white/60 backdrop-blur-md dark:bg-stone-950/60"
+        data-compacto={compacto}
+        aria-label="Principal"
+        className={`group fixed inset-x-0 top-0 z-50 hidden border-b transition-[height,background-color,border-color,box-shadow] duration-300 lg:block ${
+          compacto ? "h-[var(--rc-header-linha)]" : "h-[var(--rc-header-linha)] lg:h-[var(--rc-header-alto)]"
+        } ${
+          opaco
+            ? /**
+               * Rolado é o estado em que passa conteúdo por baixo — e é por
+               * isso que aqui não há `backdrop-blur`. Desfocar obriga o
+               * compositor a reprocessar toda a faixa por trás do cabeçalho em
+               * cada frame, e a 100% de opacidade não se distingue de um fundo
+               * sólido: trocava-se um efeito que não se vê por um custo que se
+               * sente.
+               */
+              "border-stone-200/70 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-950"
+            : "border-transparent bg-white/70 backdrop-blur-xl dark:bg-stone-950/70"
         }`}
       >
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-5 sm:h-[72px] sm:px-6">
-          {/* Logo */}
-          <Link href="/" aria-label="ReciboCerto — início" className="flex-shrink-0">
+        {/**
+         * ┌───────────────────────────────────────────────────────────────────┐
+         * │ UMA GRELHA DE DUAS LINHAS, E A BARRA MUDA DE CÉLULA                │
+         * │                                                                   │
+         * │ Linha 1: marca · navegação · acções. Linha 2: a barra, a           │
+         * │ atravessar as três colunas. Quando o cabeçalho encolhe, a linha 2  │
+         * │ fica vazia e a barra passa para a coluna do meio da linha 1.       │
+         * │                                                                   │
+         * │ A CONSEQUÊNCIA QUE ISTO EXISTE PARA GARANTIR: nos dois estados a   │
+         * │ barra fica centrada no MESMO eixo. A barra muda de largura e de    │
+         * │ linha; nunca desliza para o lado.                                  │
+         * └───────────────────────────────────────────────────────────────────┘
+         */}
+        <div className="mx-auto grid h-full max-w-5xl grid-cols-[minmax(14rem,1fr)_minmax(0,26rem)_minmax(14rem,1fr)] grid-rows-[var(--rc-header-linha)_1fr] items-center gap-x-4 px-6 xl:max-w-6xl xl:grid-cols-[minmax(16rem,1fr)_minmax(0,26rem)_minmax(16rem,1fr)]">
+          <Link
+            href="/"
+            aria-label="ReciboCerto — início"
+            className="focus-marca col-start-1 row-start-1 flex-shrink-0 justify-self-start rounded-xl"
+          >
             <Logo />
           </Link>
 
-          {/* ── Desktop nav links ── */}
-          <div className="hidden items-center gap-0.5 lg:flex">
-            <NavLink href="/#calculadora" active={isActive("/#calculadora")}>
-              Simuladores
-            </NavLink>
-
-            {/* Recursos Fiscais mega-dropdown */}
-            <div
-              className="relative"
-              onMouseEnter={openDropdown}
-              onMouseLeave={closeDropdown}
-            >
-              <button
-                aria-expanded={dropdownOpen}
-                aria-haspopup="true"
-                className={`flex items-center gap-1 rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
-                  isRecursosActive || dropdownOpen
-                    ? "bg-stone-100 text-stone-900 dark:bg-stone-800 dark:text-stone-100"
-                    : "text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200"
-                }`}
-              >
-                Recursos Fiscais
-                <m.span
-                  animate={{ rotate: dropdownOpen ? 180 : 0 }}
-                  transition={{ duration: 0.2, ease: EASE }}
-                  className="flex"
-                >
-                  <ChevronDown size={13} />
-                </m.span>
-              </button>
-
-              <AnimatePresence>
-                {dropdownOpen && (
-                  <m.div
-                    key="dropdown"
-                    initial={{ opacity: 0, y: -6, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -6, scale: 0.97 }}
-                    transition={{ duration: 0.18, ease: EASE }}
-                    className="absolute -left-4 top-full mt-2 grid w-[480px] grid-cols-2 gap-px overflow-hidden rounded-2xl border border-stone-200/80 bg-stone-100 shadow-float dark:border-stone-800 dark:bg-stone-800"
+          {/* Recolhe ao rolar — ver o quadro em `nav-config.tsx`. */}
+          <ul className="col-start-2 row-start-1 flex items-center gap-0.5 justify-self-center group-data-[compacto=true]:hidden">
+            {NAV_PRINCIPAL.map((item) => {
+              const ativo = aceso?.href === item.href;
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    // `page` e não `true`: o item aceso É a página onde se
+                    // está, e é isso que um leitor de ecrã tem de anunciar.
+                    aria-current={ativo ? "page" : undefined}
+                    onClick={() => medirNavegacao(item.href, "secretaria")}
+                    className={`focus-marca relative flex min-h-[40px] items-center whitespace-nowrap rounded-xl px-3 text-sm font-medium no-underline transition-colors ${
+                      ativo
+                        ? "text-stone-900 dark:text-stone-100"
+                        : "text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200"
+                    }`}
                   >
-                    {/* Ferramentas */}
-                    <div className="bg-white p-2 dark:bg-stone-900">
-                      <p className="mb-1 px-3 pt-1 text-[10px] font-bold uppercase tracking-widest text-stone-400">
-                        Ferramentas
-                      </p>
-                      {SUBMENU_FERRAMENTAS.map((item) => (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className="flex items-start gap-2.5 rounded-xl px-3 py-2 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800"
-                        >
-                          <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-light text-brand">
-                            <item.Icon size={14} />
-                          </span>
-                          <span>
-                            <span className="block text-[13px] font-semibold text-stone-800 dark:text-stone-100">
-                              {item.label}
-                            </span>
-                            <span className="block text-[11px] leading-snug text-stone-400">
-                              {item.desc}
-                            </span>
-                          </span>
-                        </Link>
-                      ))}
-                    </div>
+                    {item.label}
+                    {/* O traço marca a ROTA; o rato marca com fundo. Dois
+                        sinais de natureza diferente para não haver dois
+                        itens a parecerem activos ao mesmo tempo. */}
+                    {ativo && (
+                      <span aria-hidden className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-brand" />
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
 
-                    {/* Aprender */}
-                    <div className="bg-white p-2 dark:bg-stone-900">
-                      <p className="mb-1 px-3 pt-1 text-[10px] font-bold uppercase tracking-widest text-stone-400">
-                        Aprender
-                      </p>
-                      {SUBMENU_APRENDER.map((item) => (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className="flex items-start gap-2.5 rounded-xl px-3 py-2 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800"
-                        >
-                          <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-light text-brand">
-                            <item.Icon size={14} />
-                          </span>
-                          <span>
-                            <span className="block text-[13px] font-semibold text-stone-800 dark:text-stone-100">
-                              {item.label}
-                            </span>
-                            <span className="block text-[11px] leading-snug text-stone-400">
-                              {item.desc}
-                            </span>
-                          </span>
-                        </Link>
-                      ))}
-                    </div>
-                  </m.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            <NavLink href="/precos" active={isActive("/precos")}>
-              Planos
-            </NavLink>
+          {/**
+           * A barra: linha 2 a atravessar a grelha quando o cabeçalho está
+           * alto; coluna do meio da linha 1 quando encolhe. Sem transição de
+           * largura — `grid-row` não é interpolável, portanto a mudança de
+           * linha é instantânea, e animar só a largura deixaria a caixa a
+           * arrastar-se depois de já ter aterrado.
+           */}
+          <div className="col-span-3 col-start-1 row-start-2 w-full justify-self-center group-data-[compacto=true]:col-span-1 group-data-[compacto=true]:col-start-2 group-data-[compacto=true]:row-start-1 group-data-[compacto=true]:max-w-[22rem] lg:max-w-[var(--rc-dock-larga)]">
+            <LancadorBusca inputId="rc-header-busca" />
           </div>
 
-          {/* ── Desktop CTAs ── */}
-          <div className="hidden items-center gap-2 lg:flex">
-            <BuscaTrigger />
+          {/* Uma entrada de conta/ajuda e UMA acção. O tema e o feedback
+              vivem dentro do menu — ver o quadro em `MenuConta.tsx`. */}
+          <div className="col-start-3 row-start-1 flex items-center justify-self-end gap-2">
+            <MenuConta avatarUrl={avatarUrl} />
 
-            <button
-              type="button"
-              onClick={() => abrirFeedback()}
-              aria-label="Sugestões, erros e dúvidas"
-              title="Sugestões, erros e dúvidas"
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-stone-500 transition-colors hover:bg-stone-100 hover:text-brand dark:text-stone-400 dark:hover:bg-stone-800"
-            >
-              <Megaphone size={17} />
-            </button>
-
-            <div className="mx-1 h-5 w-px bg-stone-200 dark:bg-stone-700" aria-hidden />
-
-            <ThemeToggle />
-
-            {user ? (
-              <Link
-                href="/dashboard"
-                className="group relative inline-flex items-center gap-2 rounded-xl bg-brand/10 py-1.5 pl-2 pr-3.5 text-sm font-semibold text-brand transition-colors hover:bg-brand hover:text-white"
-              >
-                <span className="relative flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-brand/15 transition-colors group-hover:bg-white/20">
-                  {avatarUrl ? (
-                    <Image src={avatarUrl} alt="" fill className="rounded-lg object-cover" sizes="28px" unoptimized />
-                  ) : (
-                    <User size={14} />
-                  )}
-                </span>
-                Dashboard
-              </Link>
-            ) : disponivel ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => abrirModal("entrar")}
-                  className="rounded-xl px-3.5 py-2 text-sm font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
-                >
-                  Entrar
-                </button>
-                <m.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
-                  <button
-                    type="button"
-                    onClick={() => abrirModal("criar")}
-                    className="btn-shine inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
-                  >
-                    Começar Grátis
-                    <ArrowRight size={13} />
-                  </button>
-                </m.div>
-              </>
-            ) : (
-              <m.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
+            <m.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
+              {user ? (
                 <Link
                   href="/dashboard"
-                  className="btn-shine inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
+                  className="btn-shine focus-marca inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-4 text-sm font-semibold text-white no-underline shadow-glow transition-shadow hover:shadow-float"
                 >
-                  Começar Grátis
-                  <ArrowRight size={13} />
+                  Painel
+                  <ArrowRight size={13} aria-hidden />
                 </Link>
-              </m.div>
-            )}
+              ) : disponivel ? (
+                <CTAComecar />
+              ) : (
+                <Link
+                  href="/dashboard"
+                  className="btn-shine focus-marca inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-4 text-sm font-semibold text-white no-underline shadow-glow transition-shadow hover:shadow-float"
+                >
+                  Começar<span className="hidden xl:inline">&nbsp;Grátis</span>
+                  <ArrowRight size={13} aria-hidden />
+                </Link>
+              )}
+            </m.div>
           </div>
-
         </div>
       </nav>
     </>
   );
 }
 
-function NavLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
+function CTAComecar() {
+  const { abrirModal } = useAuth();
   return (
-    <Link
-      href={href}
-      className={`rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
-        active
-          ? "bg-stone-100 text-stone-900 dark:bg-stone-800 dark:text-stone-100"
-          : "text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200"
-      }`}
+    <button
+      type="button"
+      onClick={() => abrirModal("criar")}
+      className="btn-shine focus-marca inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-4 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
     >
-      {children}
-    </Link>
+      Começar<span className="hidden xl:inline">&nbsp;Grátis</span>
+      <ArrowRight size={13} aria-hidden />
+    </button>
   );
 }

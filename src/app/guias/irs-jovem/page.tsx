@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import GuiaLayout from "@/components/guias/GuiaLayout";
 import { metadataDoGuia } from "@/lib/guias/metadata";
 import { SimuladorIRSJovem } from "@/components/guias/SimuladorIRSJovem";
 import InfoTip from "@/components/ui/InfoTip";
-import { Check } from "@/components/ui/Icons";
+import { Check, ArrowRight } from "@/components/ui/Icons";
 import { IRS_JOVEM, IAS_VALUE } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
 import Badge from "@/components/ui/Badge";
@@ -27,6 +28,20 @@ export default function IRSJovemPage() {
 
       <section className="mb-6">
         <SimuladorIRSJovem />
+      </section>
+
+      <section className="mb-10">
+        <div className="rounded-3xl border border-brand bg-brand-light p-5 dark:bg-brand/10">
+          <p className="text-sm leading-relaxed text-stone-700 dark:text-stone-300">
+            Este simulador tem página própria, com a triagem de elegibilidade passo a passo, o teto em IAS traduzido para euros e a comparação lado a lado com e sem o benefício.
+          </p>
+          <Link
+            href="/ferramentas/irs-jovem"
+            className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-brand-dark transition-colors hover:text-brand dark:text-brand"
+          >
+            Abrir o simulador completo <ArrowRight size={14} />
+          </Link>
+        </div>
       </section>
 
       <section className="mb-10">

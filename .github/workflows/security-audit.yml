@@ -14,6 +14,14 @@ on:
     - cron: "0 6 * * 1"
   workflow_dispatch: {}
 
+concurrency:
+  # RC-CI-005: um push novo cancela o run anterior do mesmo ramo/PR, para a
+  # fila nao ficar entupida com resultados que ja nao interessam a ninguem.
+  # Em `main` NAO se cancela: cada commit da linha principal tem de ficar com
+  # o seu proprio resultado registado.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 permissions:
   contents: read
   issues: write
@@ -22,11 +30,12 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 20
+          node-version-file: .nvmrc
+
           cache: npm
 
       - name: Instalar dependências
@@ -42,7 +51,7 @@ jobs:
 
       - name: Abrir issue em vulnerabilidade high (apenas no agendamento)
         if: github.event_name == 'schedule' && steps.audit.outputs.exit_code != '0'
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const fs = require('fs');

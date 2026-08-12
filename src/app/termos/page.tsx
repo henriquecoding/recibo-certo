@@ -39,7 +39,7 @@ export default function TermosPage() {
     <LegalPage
       title="Termos de Utilização"
       subtitle="Ao utilizar o ReciboCerto, aceitas estas condições. Lê-as com atenção — são escritas em linguagem clara, sem jargão jurídico desnecessário."
-      lastUpdated="Janeiro de 2026"
+      lastUpdated="11 de agosto de 2026"
       toc={TOC}
     >
       {/* 1 */}
@@ -169,7 +169,9 @@ export default function TermosPage() {
             "Utilizar a plataforma para fins ilegais ou contrários à ordem pública",
             "Tentar aceder a áreas restritas ou sistemas não autorizados",
             "Realizar engenharia reversa, descompilar ou extrair o código-fonte",
-            "Usar scripts automáticos ou robots para aceder ao serviço em volume",
+            "Usar scripts automáticos, robots, crawlers ou técnicas de scraping sem autorização escrita",
+            "Contornar limites técnicos, desafios anti-bot, controlos de acesso ou instruções machine-readable",
+            "Recolher conteúdo para treino, fine-tuning, avaliação, grounding, RAG, embeddings ou bases de dados de sistemas de inteligência artificial",
             "Reproduzir, distribuir ou vender o serviço ou qualquer parte dele",
             "Publicar ou transmitir conteúdo malicioso, difamatório ou ilegal",
             "Utilizar a plataforma para substituir o aconselhamento de um contabilista certificado (TOC/ROC) em decisões de elevado impacto",
@@ -184,35 +186,72 @@ export default function TermosPage() {
       {/* 5 */}
       <Section id="propriedade-intelectual" title="Propriedade intelectual">
         <p>
-          Todo o conteúdo do ReciboCerto — incluindo o design, código-fonte, textos, marca,
-          logótipo, ícones e dados compilados — é propriedade exclusiva de recibocerto.pt ou
-          dos seus licenciadores, protegido pela legislação portuguesa e europeia de direitos
-          de autor e propriedade intelectual.
+          Salvo indicação expressa em contrário, o software, arquitetura, motores de cálculo,
+          seleção e organização das bases de dados, banco de perguntas, explicações, textos,
+          design, identidade visual, marca, logótipo, ícones e demais materiais originais do
+          ReciboCerto são propriedade exclusiva do respetivo titular ou dos seus licenciadores.
+          Todos os direitos não concedidos expressamente ficam reservados.
         </p>
-        <Sub title="O que podes fazer">
+
+        <Sub title="Licença limitada de utilização">
+          <p>
+            O acesso ao site concede apenas uma autorização pessoal, limitada, revogável,
+            não exclusiva e intransmissível para interagir com a interface normal e obter
+            cálculos para uso próprio. O acesso público ao resultado de uma página ou de uma
+            API não concede licença sobre o código, a compilação, o método, o conteúdo ou a marca.
+          </p>
           <ListaCheck
             items={[
-              "Utilizar a plataforma para os teus cálculos pessoais e profissionais",
-              "Exportar os teus próprios dados em CSV ou PDF",
-              "Partilhar o link recibocerto.pt com outros trabalhadores independentes",
-              "Citar cálculos ou estimativas indicando claramente a fonte (\"calculado com ReciboCerto\")",
+              "Utilizar a interface para cálculos pessoais e profissionais próprios",
+              "Exportar os dados que o próprio utilizador introduziu",
+              "Partilhar uma ligação para uma página pública do ReciboCerto",
+              "Citar uma estimativa pontual, em extensão razoável, identificando claramente a fonte",
             ]}
           />
         </Sub>
-        <Sub title="O que não podes fazer">
+
+        <Sub title="Reserva expressa para inteligência artificial e prospeção de dados">
+          <p>
+            Para efeitos do artigo 4.º, n.º 3, da Diretiva (UE) 2019/790 e da legislação
+            aplicável que a transpõe, o titular reserva expressamente os direitos de reprodução
+            e extração para prospeção de textos e dados. Esta reserva é igualmente declarada
+            através do ficheiro <code>/.well-known/tdmrep.json</code>, do cabeçalho HTTP
+            <code> tdm-reservation: 1</code>, de metadados HTML e do ficheiro robots.txt.
+          </p>
           <Lista
             items={[
-              "Reproduzir o código, design ou conteúdo sem autorização por escrito",
-              "Criar produtos derivados baseados na plataforma",
-              "Usar a marca ReciboCerto em materiais de marketing sem autorização",
-              "Alegar que o ReciboCerto te pertence ou é afiliado ao teu negócio",
+              "Não é autorizado usar conteúdo ou saídas para treino, fine-tuning, distilação, avaliação ou melhoria de modelos de IA",
+              "Não é autorizado criar embeddings, índices vetoriais, conjuntos de dados, sistemas RAG ou cópias pesquisáveis do conteúdo",
+              "Não é autorizado extrair em massa perguntas, respostas, explicações, guias, interfaces, resultados ou lógica dos motores",
+              "Não é autorizado fornecer o conteúdo a terceiros para qualquer uma destas finalidades",
+              "Qualquer licença para prospeção de dados ou IA exige autorização prévia, específica e escrita",
+            ]}
+          />
+          <Nota tipo="aviso">
+            Instruções técnicas não transformam conteúdo público em segredo e podem ser
+            desrespeitadas por agentes maliciosos. Servem para tornar a reserva inequívoca,
+            apoiar bloqueios técnicos e preservar prova; não constituem uma garantia absoluta
+            contra cópia.
+          </Nota>
+        </Sub>
+
+        <Sub title="Código, banco de dados e obras derivadas">
+          <Lista
+            items={[
+              "É proibido copiar, adaptar, traduzir, descompilar, reconstruir ou criar obras derivadas do código, design ou conteúdo",
+              "É proibido replicar a seleção, estrutura ou investimento substancial do banco de perguntas e das bases compiladas",
+              "É proibido disponibilizar um serviço concorrente que reproduza elementos protegidos do ReciboCerto",
+              "É proibido remover avisos de autoria, marcas, identificadores de proveniência ou medidas de proteção",
+              "É proibido usar a marca ReciboCerto ou elementos confundíveis sem autorização",
             ]}
           />
         </Sub>
+
         <p className="mt-3">
-          Os dados fiscais utilizados (taxas de IRS, SS, IVA) são de domínio público,
-          provenientes de fontes oficiais da Autoridade Tributária (AT) e do Orçamento do Estado.
-          A nossa compilação e apresentação desses dados está sujeita a direitos de autor.
+          A legislação, os atos oficiais e os factos fiscais subjacentes não são apropriados
+          pelo ReciboCerto. Componentes de terceiros mantêm as respetivas licenças. A proteção
+          incide sobre as criações originais e, quando aplicável, sobre a seleção, organização,
+          validação, explicação e investimento na compilação e manutenção dos dados.
         </p>
       </Section>
 

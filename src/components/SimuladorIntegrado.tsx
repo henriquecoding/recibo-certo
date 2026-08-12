@@ -4321,8 +4321,13 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     </div>
   );
 
+  // O `id="calculadora"` vive na `<section>` que envolve esta zona
+  // (`app/page.tsx`) — é para lá que apontam `/#calculadora` e o
+  // `TOOL_HREFS.calculadora`. Tê-lo TAMBÉM aqui punha dois elementos com o
+  // mesmo id no documento: HTML inválido, e um alvo de âncora ambíguo num
+  // sítio onde a âncora é a principal porta de entrada do produto.
   return (
-    <div id="calculadora" className="relative scroll-mt-24">
+    <div data-scroll-target className="relative scroll-mt-24">
       {/* Halo decorativo */}
       <div
         className="absolute inset-0 rounded-3xl opacity-30 pointer-events-none dark:opacity-0"

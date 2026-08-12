@@ -6,7 +6,9 @@ import { AuthProvider } from "@/lib/supabase/auth";
 import { PerfilProvider } from "@/lib/perfil";
 import { SubscricaoProvider } from "@/lib/stripe/subscription";
 import DeferredOverlays from "@/components/ui/DeferredOverlays";
+import { CoordenadorOverlays } from "@/components/overlays/CoordenadorOverlays";
 import ChromeMobile from "@/components/ChromeMobile";
+import BotaoTopo from "@/components/ui/BotaoTopo";
 import FeedbackModal from "@/components/feedback/FeedbackModal";
 import Medicao from "@/components/Medicao";
 // Importado pelo efeito colateral: `assertChangelogIntegrity()` corre ao
@@ -107,10 +109,14 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+    // A pesquisa convencional permanece plenamente visível. A reserva contra
+    // treino e extração de IA vive nas políticas separadas de crawler/TDM,
+    // sem sacrificar snippets, imagens ou vídeos nos resultados de pesquisa.
     googleBot: {
       index: true,
       follow: true,
       "max-image-preview": "large",
+      "max-video-preview": -1,
       "max-snippet": -1,
     },
   },
@@ -133,6 +139,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-PT" className={`${dmSans.variable} ${playfair.variable}`} suppressHydrationWarning>
       <head>
+        {/* Reserva de direitos TDM também dentro do HTML. O cabeçalho HTTP e
+            /.well-known/tdmrep.json declaram a mesma decisão. */}
+        <meta name="tdm-reservation" content="1" />
         {/* Aplica o tema antes da pintura (evita flash). Lê a preferência
             guardada ou a do sistema. */}
         <script
@@ -148,11 +157,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Suspense>
               <PerfilProvider>
                 <MotionProvider>
-                  {children}
-                  <ChromeMobile />
-                  <FeedbackModal />
-                  <Medicao />
-                  <DeferredOverlays />
+                  {/* O coordenador de overlays envolve tudo o que pode abrir
+                      uma superfície por cima da página. A invariante que
+                      entrega — nunca mais de um `aria-modal` activo — só se
+                      consegue garantir de um sítio que os veja a todos.
+                      Ver `components/overlays/CoordenadorOverlays.tsx`. */}
+                  <CoordenadorOverlays>
+                    {children}
+                    <ChromeMobile />
+                    {/* Voltar ao topo — global em todo o site público;
+                        esconde-se sozinho no /dashboard e no /admin. */}
+                    <BotaoTopo />
+                    <FeedbackModal />
+                    <Medicao />
+                    <DeferredOverlays />
+                  </CoordenadorOverlays>
                 </MotionProvider>
               </PerfilProvider>
             </Suspense>
