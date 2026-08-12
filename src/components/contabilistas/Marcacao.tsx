@@ -155,7 +155,7 @@ export default function Marcacao({ cc, dias, ocupado, onMarcar }: Props) {
         aria-labelledby={diaEscolhido ? `${idBase}-dia-${diaEscolhido}` : undefined}
       >
         <h3 className="text-sm font-semibold text-stone-700">
-          {diaEscolhido ? <span className="capitalize">{rotularDia(diaEscolhido)}</span> : "Escolhe a hora"}
+          {diaEscolhido ? <span className="first-letter:uppercase">{rotularDia(diaEscolhido)}</span> : "Escolhe a hora"}
         </h3>
         <ul className="mt-2.5 grid grid-cols-3 gap-2 sm:grid-cols-5">
           {horas.map((s) => {
@@ -195,7 +195,7 @@ export default function Marcacao({ cc, dias, ocupado, onMarcar }: Props) {
               <p className="eyebrow">O que vais pedir</p>
               <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-display text-lg text-ink">
                 <Calendar size={17} className="text-brand-dark" aria-hidden />
-                <span className="capitalize">{rotularDia(slot.dia)}</span>
+                <span className="first-letter:uppercase">{rotularDia(slot.dia)}</span>
                 <span className="text-stone-300" aria-hidden>·</span>
                 <Clock size={16} className="text-brand-dark" aria-hidden />
                 <span className="tabular-nums">{slot.hora}</span>

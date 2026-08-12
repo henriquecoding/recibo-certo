@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 import { usarFicha } from "@/components/contabilistas/usarFicha";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
+import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import { listarPartilhas, marcarPartilhaVista } from "@/lib/contabilistas/dados";
 import { ROTULO_PARTILHA } from "@/lib/contabilistas/vinculo";
 import type { Partilha } from "@/lib/contabilistas/tipos";
@@ -50,14 +51,10 @@ export default function PartilhasPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="eyebrow">Painel de gestão</p>
-        <h1 className="mt-1 font-display text-3xl text-ink sm:text-4xl">Partilhas</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-stone-500">
-          Simulações que os teus clientes te enviaram. São cópias do que estava no
-          ecrã no momento do envio — não acompanham alterações posteriores.
-        </p>
-      </header>
+      <CabecalhoPainel
+        titulo="Partilhas"
+        descricao="Simulações que os teus clientes te enviaram. São cópias do que estava no ecrã no momento do envio — não acompanham alterações posteriores."
+      />
 
       {erro && (
         <p role="alert" className="flex items-start gap-2 rounded-2xl bg-clay-bg px-4 py-3 text-sm text-clay-text">

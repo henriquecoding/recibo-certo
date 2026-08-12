@@ -10,6 +10,8 @@
 import { useEffect, useState } from "react";
 import { usarFicha, cabecalhoAuth } from "@/components/contabilistas/usarFicha";
 import CartaoFidelidade from "@/components/contabilistas/CartaoFidelidade";
+import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
+import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import { atualizarFicha, meusCupoes, type CupaoLido } from "@/lib/contabilistas/dados";
 import {
   DESCONTO_MAX_PCT, DESCONTO_MIN_PCT, META_MAX, META_MIN,
@@ -82,21 +84,17 @@ export default function FidelidadePage() {
     });
   }
 
-  if (aCarregar) return <div className="h-96 animate-pulse rounded-4xl bg-stone-100" aria-busy="true" />;
+  if (aCarregar) return <EsqueletoPainel forma="duasColunas" />;
   if (!ficha) return null;
 
   const exemplo = valorComDesconto(precoCents, desconto);
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="eyebrow">Painel de gestão</p>
-        <h1 className="mt-1 font-display text-3xl text-ink sm:text-4xl">Fidelidade</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-stone-500">
-          Um carimbo por consulta realizada. Ao completar o cartão, o cliente recebe
-          um cupão de desconto sobre o preço que definires aqui.
-        </p>
-      </header>
+      <CabecalhoPainel
+        titulo="Fidelidade"
+        descricao="Um carimbo por consulta realizada. Ao completar o cartão, o cliente recebe um cupão de desconto sobre o preço que definires aqui."
+      />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <div className="space-y-5 rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">

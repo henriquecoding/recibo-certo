@@ -9,6 +9,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usarFicha, cabecalhoAuth } from "@/components/contabilistas/usarFicha";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
+import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
+import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import {
   listarAgendamentos, obterDisponibilidade, guardarDisponibilidade,
 } from "@/lib/contabilistas/dados";
@@ -134,15 +136,15 @@ export default function AgendaPage() {
     finally { setOcupado(null); }
   }
 
-  if (aCarregar) return <div className="h-96 animate-pulse rounded-4xl bg-stone-100" aria-busy="true" />;
+  if (aCarregar) return <EsqueletoPainel forma="lista" />;
   if (!ficha) return null;
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="eyebrow">Painel de gestão</p>
-        <h1 className="mt-1 font-display text-3xl text-ink sm:text-4xl">Agenda</h1>
-      </header>
+      <CabecalhoPainel
+        titulo="Agenda"
+        descricao="As consultas marcadas e os horários que os clientes veem no teu perfil."
+      />
 
       <div role="tablist" aria-label="Secções da agenda" className="flex gap-1.5 overflow-x-auto">
         {([["consultas", "Consultas"], ["semana", "Semana-tipo"]] as const).map(([id, txt]) => (

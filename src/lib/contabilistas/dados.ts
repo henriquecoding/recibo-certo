@@ -235,6 +235,45 @@ export async function meusClientes(contabilistaId: string): Promise<Vinculo[]> {
   return (data ?? []).map((l) => paraVinculo(l as unknown as Linha));
 }
 
+/**
+ * O que está à espera de resposta, para a navegação do painel.
+ *
+ * Três contagens, sem trazer uma linha sequer: `head: true` pede ao
+ * PostgREST só o cabeçalho com o total. A navegação precisa de saber
+ * QUANTOS, não QUAIS — e trazer as linhas todas para escrever um número
+ * ao lado de «Clientes» seria pagar a lista inteira em cada página.
+ *
+ * Falhar aqui não pode partir o painel: uma contagem que não veio é um
+ * zero, e o ecrã por baixo continua a dizer a verdade.
+ */
+export async function contagensDoPainel(contabilistaId: string): Promise<{
+  pedidos: number;
+  partilhasPorLer: number;
+  consultasPorConfirmar: number;
+}> {
+  const sb = getSupabase();
+  const so = (n: number | null, erro: unknown) => (erro ? 0 : n ?? 0);
+
+  try {
+    const [v, p, a] = await Promise.all([
+      sb.from("contabilista_vinculos").select("id", { count: "exact", head: true })
+        .eq("contabilista_id", contabilistaId).eq("estado", "pendente"),
+      sb.from("partilhas").select("id", { count: "exact", head: true })
+        .eq("contabilista_id", contabilistaId).eq("estado", "enviada"),
+      sb.from("agendamentos").select("id", { count: "exact", head: true })
+        .eq("contabilista_id", contabilistaId).eq("estado", "pedido"),
+    ]);
+
+    return {
+      pedidos: so(v.count, v.error),
+      partilhasPorLer: so(p.count, p.error),
+      consultasPorConfirmar: so(a.count, a.error),
+    };
+  } catch {
+    return { pedidos: 0, partilhasPorLer: 0, consultasPorConfirmar: 0 };
+  }
+}
+
 // ─── Disponibilidade ───────────────────────────────────────────────────
 
 export async function obterDisponibilidade(

@@ -10,6 +10,8 @@ import { usarFicha } from "@/components/contabilistas/usarFicha";
 import { atualizarFicha } from "@/lib/contabilistas/dados";
 import { DISTRITOS, ESPECIALIDADES } from "@/lib/contabilistas/catalogo";
 import Button from "@/components/ui/Button";
+import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
+import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import { useAvisos } from "@/components/ui/Avisos";
 import { ExternalLink, Warning } from "@/components/ui/Icons";
 
@@ -88,21 +90,23 @@ export default function PerfilPage() {
     });
   }
 
-  if (aCarregar) return <div className="h-96 animate-pulse rounded-4xl bg-stone-100" aria-busy="true" />;
+  if (aCarregar) return <EsqueletoPainel forma="formulario" />;
   if (!ficha) return null;
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="eyebrow">Painel de gestão</p>
-        <h1 className="mt-1 font-display text-3xl text-ink sm:text-4xl">Perfil público</h1>
-        <Link
-          href={`/contabilistas/${ficha.slug}`}
-          className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-dark underline underline-offset-2"
-        >
-          Ver como os clientes veem <ExternalLink size={14} aria-hidden />
-        </Link>
-      </header>
+      <CabecalhoPainel
+        titulo="Perfil público"
+        descricao="É isto que aparece no diretório e na página onde os clientes te encontram."
+        acao={
+          <Link
+            href={`/contabilistas/${ficha.slug}`}
+            className="inline-flex min-h-[2.5rem] items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-4 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300"
+          >
+            Ver como os clientes veem <ExternalLink size={14} aria-hidden />
+          </Link>
+        }
+      />
 
       {erro && (
         <p role="alert" className="flex items-start gap-2 rounded-2xl bg-clay-bg px-4 py-3 text-sm text-clay-text">

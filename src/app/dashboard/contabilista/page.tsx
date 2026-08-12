@@ -1,30 +1,47 @@
 "use client";
 
-// A minha contabilista / o meu contabilista.
+// ═══════════════════════════════════════════════════════════════════════
+//  O MEU CONTABILISTA — o hub do cliente
+//  ---------------------------------------------------------------------
+//  A versão anterior era uma pilha de cartões brancos iguais: ficha,
+//  cartão, cupões, consultas, envios — todos com o mesmo peso, todos com a
+//  mesma moldura, e a ação destrutiva («terminar acompanhamento») ao lado
+//  da ação principal, com o mesmo tamanho. Quem abria isto não tinha como
+//  saber onde olhar primeiro.
 //
-// ⚠️ Nada nesta página verifica o plano. Ligar-se, enviar simulações e marcar
-// consultas são gratuitos — ver `PARTILHA_NUNCA_EXIGE_PLUS`, coberto por teste.
+//  A página passa a responder por ordem às perguntas de quem chega:
+//
+//    1. QUEM É?          ficha com monograma, estado e as ações que valem.
+//    2. QUANDO É?        a próxima consulta em destaque, ou o convite a marcar.
+//    3. COMO VAMOS?      três números que existem — consultas, carimbos, envios.
+//    4. O QUE GANHEI?    cartão de fidelidade e cupões, desenhados como cupões.
+//    5. O QUE JÁ FOI?    histórico e envios, recolhidos até serem pedidos.
+//    6. E SE QUISER SAIR? em baixo, separado, em tom de argila.
+//
+//  ⚠️ Nada nesta página verifica o plano. Ligar-se, enviar simulações e
+//  marcar consultas são gratuitos — ver `PARTILHA_NUNCA_EXIGE_PLUS`,
+//  coberto por teste.
+// ═══════════════════════════════════════════════════════════════════════
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/supabase/auth";
 import {
   cancelarConsulta, listarAgendamentos, listarPartilhas, meuCartao, meuVinculo,
   meusCupoes, revogarPartilha, terminarVinculo, type CartaoLido, type CupaoLido,
 } from "@/lib/contabilistas/dados";
 import type { Agendamento, Contabilista, Partilha, Vinculo } from "@/lib/contabilistas/tipos";
-import { ROTULO_PARTILHA, ROTULO_VINCULO } from "@/lib/contabilistas/vinculo";
-import { diaLocal, horaLocal, rotularDia, tempoAte } from "@/lib/contabilistas/agenda";
-import { eurosDeCents, valorComDesconto } from "@/lib/contabilistas/fidelidade";
+import { diaLocal, horaLocal, rotularDia } from "@/lib/contabilistas/agenda";
 import CartaoFidelidade from "@/components/contabilistas/CartaoFidelidade";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
+import {
+  Cupoes, Envios, Ficha, Historico, Numeros, ProximaConsulta, SemContabilista,
+  ZonaTerminar, primeiroNome,
+} from "@/components/contabilistas/hub";
 import Button from "@/components/ui/Button";
-import Badge from "@/components/ui/Badge";
 import { useAvisos } from "@/components/ui/Avisos";
 import { useConfirmar } from "@/components/ui/Confirmar";
-import {
-  Briefcase, Calendar, Check, Clock, Copy, Gift, MapPin, PaperClip, Warning,
-} from "@/components/ui/Icons";
+import { Briefcase, Warning } from "@/components/ui/Icons";
 
 export default function MeuContabilistaPage() {
   const { user, carregado, abrirModal, disponivel } = useAuth();
@@ -60,6 +77,17 @@ export default function MeuContabilistaPage() {
   }, [user]);
 
   useEffect(() => { if (carregado) void carregar(); }, [carregado, carregar]);
+
+  const agora = Date.now();
+  const { proxima, passadas } = useMemo(() => {
+    const futuras = consultas
+      .filter((a) => new Date(a.inicio).getTime() >= agora && (a.estado === "pedido" || a.estado === "confirmado"))
+      .sort((a, b) => a.inicio.localeCompare(b.inicio));
+    const resto = consultas
+      .filter((a) => !futuras.includes(a))
+      .sort((a, b) => b.inicio.localeCompare(a.inicio));
+    return { proxima: futuras[0] ?? null, passadas: [...futuras.slice(1), ...resto] };
+  }, [consultas, agora]);
 
   async function copiar(codigo: string) {
     try {
@@ -137,9 +165,9 @@ export default function MeuContabilistaPage() {
   }
 
   // Sem nuvem configurada não há nada para esperar — e perguntá-lo antes do
-  // carregamento evita o mesmo erro de hidratação que a candidatura tinha:
-  // `disponivel` vem da configuração e vale igual dos dois lados; `carregado`
-  // muda num efeito que pode correr antes de este pedaço hidratar.
+  // carregamento evita um erro de hidratação: `disponivel` vem da
+  // configuração e vale igual dos dois lados; `carregado` muda num efeito
+  // que pode correr antes de este pedaço hidratar.
   if (!disponivel) {
     return (
       <Envolvente>
@@ -150,21 +178,7 @@ export default function MeuContabilistaPage() {
     );
   }
 
-  if (!carregado || aLer) {
-    // Com a forma do que vem a seguir: cabeçalho, ficha do contabilista,
-    // cartão e duas secções. Um retângulo só diz «espera»; isto diz o que.
-    return (
-      <div className="space-y-6" aria-busy="true">
-        <div className="space-y-2">
-          <div className="h-3 w-24 animate-pulse rounded bg-stone-100" />
-          <div className="h-10 w-56 animate-pulse rounded-xl bg-stone-100" />
-        </div>
-        <div className="h-40 animate-pulse rounded-4xl bg-stone-100" />
-        <div className="h-32 animate-pulse rounded-4xl bg-stone-100" />
-        <div className="h-48 animate-pulse rounded-4xl bg-stone-100" />
-      </div>
-    );
-  }
+  if (!carregado || aLer) return <Esqueleto />;
 
   if (!user) {
     return (
@@ -179,26 +193,16 @@ export default function MeuContabilistaPage() {
     );
   }
 
-  const disponiveis = cupoes.filter((c) => c.estado === "disponivel");
-
   // A verificação é sobre o par inteiro para o TypeScript poder estreitar
   // `vinculo` a seguir — `vinculo?.contabilista` não lhe diz nada sobre
   // `vinculo` em si.
-  if (!vinculo || !vinculo.contabilista) {
-    return (
-      <Envolvente>
-        <EstadoVazio
-          Icon={Briefcase}
-          titulo="Ainda não tens contabilista"
-          descricao="Liga-te a um contabilista certificado para lhe enviares as tuas simulações e marcares consultas. É gratuito e não precisa de nenhum plano."
-          acao={<Link href="/contabilistas"><Button>Ver contabilistas</Button></Link>}
-        />
-      </Envolvente>
-    );
-  }
+  if (!vinculo || !vinculo.contabilista) return <SemContabilista Envolvente={Envolvente} />;
 
   const cc = vinculo.contabilista;
   const ativo = vinculo.estado === "ativo";
+  const disponiveis = cupoes.filter((c) => c.estado === "disponivel");
+  const realizadas = consultas.filter((a) => a.estado === "realizada").length;
+  const enviosAtivos = partilhas.filter((p) => p.estado !== "revogada").length;
 
   return (
     <Envolvente>
@@ -208,41 +212,26 @@ export default function MeuContabilistaPage() {
         </p>
       )}
 
-      <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="font-display text-2xl text-ink">{cc.nome}</h2>
-            {(cc.concelho || cc.distrito) && (
-              <p className="mt-1.5 flex items-center gap-1.5 text-sm text-stone-500">
-                <MapPin size={14} aria-hidden />
-                {[cc.concelho, cc.distrito].filter(Boolean).join(", ")}
-              </p>
-            )}
-          </div>
-          <Badge tone={ativo ? "brand" : "alert"}>{ROTULO_VINCULO[vinculo.estado]}</Badge>
-        </div>
+      <Ficha cc={cc} vinculo={vinculo} ativo={ativo} />
 
-        {!ativo && (
-          <p className="mt-4 rounded-2xl bg-cream px-4 py-3 text-sm leading-relaxed text-stone-600">
-            {vinculo.estado === "pendente" || vinculo.estado === "convidado"
-              ? "O pedido ainda não foi aceite. Assim que for, podes marcar consultas e enviar simulações."
-              : "O acompanhamento está em pausa."}
-          </p>
-        )}
+      {ativo && (
+        <ProximaConsulta
+          consulta={proxima}
+          slug={cc.slug}
+          ocupado={ocupado}
+          onCancelar={cancelar}
+        />
+      )}
 
-        <div className="mt-5 flex flex-wrap gap-2">
-          <Link href={`/contabilistas/${cc.slug}`}>
-            <Button variant="secondary" size="sm">Ver perfil e marcar</Button>
-          </Link>
-          <Button variant="ghost" size="sm" disabled={ocupado === vinculo.id} onClick={terminar}>
-            Terminar acompanhamento
-          </Button>
-        </div>
-        <p className="mt-3 text-xs leading-relaxed text-stone-400">
-          Ao terminar, o contabilista deixa de ver tudo o que lhe enviaste. O teu histórico
-          fica contigo.
-        </p>
-      </section>
+      {ativo && (realizadas > 0 || enviosAtivos > 0 || cartao) && (
+        <Numeros
+          realizadas={realizadas}
+          carimbos={cartao?.carimbos ?? 0}
+          meta={cartao?.meta ?? 0}
+          envios={enviosAtivos}
+          mostraCartao={Boolean(cartao) && cc.fidelidadeAtiva}
+        />
+      )}
 
       {cartao && cc.fidelidadeAtiva && (
         <CartaoFidelidade
@@ -250,141 +239,33 @@ export default function MeuContabilistaPage() {
           meta={cartao.meta}
           descontoPct={cartao.descontoPct}
           precoBaseCents={cartao.precoBaseCents}
-          titulo={`As tuas consultas com ${cc.nome.split(" ")[0]}`}
+          titulo={`As tuas consultas com ${primeiroNome(cc.nome)}`}
         />
       )}
 
       {disponiveis.length > 0 && (
-        <section aria-labelledby="cupoes-titulo" className="rounded-4xl border border-brand/20 bg-brand-light/40 p-5 sm:p-6">
-          <h2 id="cupoes-titulo" className="flex items-center gap-2 font-display text-xl text-ink">
-            <Gift size={19} className="text-brand-dark" aria-hidden />
-            {disponiveis.length === 1 ? "Tens um desconto" : `Tens ${disponiveis.length} descontos`}
-          </h2>
-          <ul className="mt-4 space-y-2.5">
-            {disponiveis.map((c) => {
-              const v = valorComDesconto(c.valorBaseCents, c.percentagem);
-              return (
-                <li key={c.id} className="rounded-2xl bg-white p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-mono text-lg font-semibold tracking-wide text-ink">{c.codigo}</span>
-                    <Button size="sm" variant="secondary" onClick={() => copiar(c.codigo)}>
-                      {copiado === c.codigo ? <><Check size={14} aria-hidden /> Copiado</> : <><Copy size={14} aria-hidden /> Copiar</>}
-                    </Button>
-                  </div>
-                  <p className="mt-2 text-sm text-stone-600">
-                    <strong className="text-stone-800">{c.percentagem}% de desconto</strong> — {eurosDeCents(v.baseCents)}{" "}
-                    passam a {eurosDeCents(v.finalCents)}. Válido até{" "}
-                    {new Intl.DateTimeFormat("pt-PT", { dateStyle: "long" }).format(new Date(c.expiraEm))}.
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-          <p className="mt-3 text-xs leading-relaxed text-stone-500">
-            Apresenta o código na próxima consulta. O desconto é aplicado pelo contabilista;
-            o ReciboCerto não cobra a consulta nem processa pagamentos.
-          </p>
-        </section>
+        <Cupoes lista={disponiveis} copiado={copiado} onCopiar={copiar} />
       )}
 
-      <section aria-labelledby="consultas-titulo" className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
-        <h2 id="consultas-titulo" className="font-display text-xl text-ink">As tuas consultas</h2>
-        {consultas.length === 0 ? (
-          <p className="mt-3 text-sm text-stone-500">Ainda não marcaste nenhuma.</p>
-        ) : (
-          <ul className="mt-3 divide-y divide-stone-100">
-            {consultas.slice(0, 12).map((a) => {
-              const futura = new Date(a.inicio).getTime() > Date.now();
-              const cancelavel = futura && (a.estado === "pedido" || a.estado === "confirmado");
-              return (
-                <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold capitalize text-stone-800">
-                      {rotularDia(diaLocal(new Date(a.inicio)))}
-                    </p>
-                    <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm tabular-nums text-stone-500">
-                      <Clock size={14} aria-hidden />
-                      {horaLocal(new Date(a.inicio))}
-                      <span className="text-stone-300" aria-hidden>·</span>
-                      {a.modalidade === "online" ? "Online" : "Presencial"}
-                      {futura && (a.estado === "pedido" || a.estado === "confirmado") && (
-                        <>
-                          <span className="text-stone-300" aria-hidden>·</span>
-                          <span className="font-medium text-stone-600">{tempoAte(a.inicio)}</span>
-                        </>
-                      )}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Badge tone={a.estado === "confirmado" ? "brand" : a.estado === "realizada" ? "neutral" : "alert"}>
-                      {a.estado === "pedido" ? "Por confirmar"
-                        : a.estado === "confirmado" ? "Confirmada"
-                        : a.estado === "realizada" ? "Realizada"
-                        : a.estado === "nao_compareceu" ? "Não compareceste" : "Cancelada"}
-                    </Badge>
-                    {cancelavel && (
-                      <Button size="sm" variant="ghost" disabled={ocupado === a.id} onClick={() => cancelar(a)}>
-                        Cancelar
-                      </Button>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+      {passadas.length > 0 && <Historico lista={passadas} />}
 
-      <section aria-labelledby="partilhas-titulo" className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
-        <h2 id="partilhas-titulo" className="font-display text-xl text-ink">O que já enviaste</h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-stone-500">
-          Cada envio é uma cópia do que estava no ecrã. Podes revogar o acesso a qualquer
-          momento — a partir daí o contabilista deixa de o conseguir abrir.
-        </p>
-        {partilhas.length === 0 ? (
-          <div className="mt-4">
-            <EstadoVazio
-              Icon={PaperClip}
-              titulo="Ainda não enviaste nada"
-              descricao="Nas ferramentas e simuladores aparece a opção de enviar o resultado ao teu contabilista."
-            />
-          </div>
-        ) : (
-          <ul className="mt-4 space-y-2.5">
-            {partilhas.map((p) => (
-              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-cream px-4 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-stone-800">{p.titulo}</p>
-                  <p className="mt-0.5 text-xs text-stone-500">
-                    {ROTULO_PARTILHA[p.tipo]} ·{" "}
-                    {new Intl.DateTimeFormat("pt-PT", { dateStyle: "medium" }).format(new Date(p.criadoEm))}
-                    {p.estado === "vista" && " · já foi visto"}
-                  </p>
-                  {/* O que a pessoa escreveu ao enviar. Ver o próprio recado
-                      é o que torna a lista reconhecível meses depois. */}
-                  {p.nota && (
-                    <p className="mt-1 line-clamp-2 text-xs italic leading-relaxed text-stone-500">«{p.nota}»</p>
-                  )}
-                </div>
-                {p.estado === "revogada" ? (
-                  <Badge tone="neutral">Revogada</Badge>
-                ) : (
-                  <Button size="sm" variant="ghost" disabled={ocupado === p.id} onClick={() => revogar(p)}>
-                    Revogar acesso
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <Envios
+        lista={partilhas}
+        nome={primeiroNome(cc.nome)}
+        ocupado={ocupado}
+        onRevogar={revogar}
+      />
+
+      <ZonaTerminar nome={primeiroNome(cc.nome)} ocupado={ocupado === vinculo.id} onTerminar={terminar} />
     </Envolvente>
   );
 }
 
+// ─── Moldura e esqueleto ───────────────────────────────────────────────
+
 function Envolvente({ children }: { children: React.ReactNode }) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <header>
         <p className="eyebrow">A minha conta</p>
         <h1 className="mt-1 font-display text-3xl text-ink sm:text-4xl">O meu contabilista</h1>
@@ -393,3 +274,22 @@ function Envolvente({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+/** Com a forma do que vem: ficha, próxima consulta, números, secções. */
+function Esqueleto() {
+  return (
+    <div className="space-y-5" aria-busy="true">
+      <div className="space-y-2">
+        <div className="h-3 w-24 animate-pulse rounded bg-stone-100" />
+        <div className="h-10 w-56 animate-pulse rounded-xl bg-stone-100" />
+      </div>
+      <div className="h-44 animate-pulse rounded-4xl bg-stone-100" />
+      <div className="h-32 animate-pulse rounded-4xl bg-stone-100" />
+      <div className="grid grid-cols-3 gap-2.5">
+        {[0, 1, 2].map((i) => <div key={i} className="h-20 animate-pulse rounded-2xl bg-stone-100" />)}
+      </div>
+      <div className="h-48 animate-pulse rounded-4xl bg-stone-100" />
+    </div>
+  );
+}
+

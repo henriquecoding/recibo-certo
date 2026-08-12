@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usarFicha, cabecalhoAuth } from "@/components/contabilistas/usarFicha";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
+import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import {
   listarAgendamentos, listarPartilhas, meusClientes,
 } from "@/lib/contabilistas/dados";
@@ -83,15 +84,14 @@ export default function HojePage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="eyebrow">Painel de gestão</p>
-        <h1 className="mt-1 font-display text-3xl text-ink sm:text-4xl">Hoje</h1>
-        <p className="mt-2 text-sm text-stone-500">
-          {deHoje.length === 0
+      <CabecalhoPainel
+        titulo="Hoje"
+        descricao={
+          deHoje.length === 0
             ? "Não tens consultas marcadas para hoje."
-            : `${deHoje.length} ${deHoje.length === 1 ? "consulta hoje" : "consultas hoje"}.`}
-        </p>
-      </header>
+            : `${deHoje.length} ${deHoje.length === 1 ? "consulta hoje" : "consultas hoje"}.`
+        }
+      />
 
       {erro && (
         <p role="alert" className="flex items-start gap-2 rounded-2xl bg-alert-bg px-4 py-3 text-sm text-alert-text">
@@ -116,7 +116,7 @@ export default function HojePage() {
           className="rounded-4xl border border-brand/25 bg-brand-light/40 p-5 sm:p-6"
         >
           <p className="eyebrow">A seguir</p>
-          <h2 id="seguinte-titulo" className="mt-1 font-display text-2xl capitalize text-ink">
+          <h2 id="seguinte-titulo" className="mt-1 font-display text-2xl text-ink first-letter:uppercase">
             {rotularDia(diaLocal(new Date(seguinte.inicio)))}
           </h2>
           <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm tabular-nums text-stone-600">
@@ -174,7 +174,7 @@ export default function HojePage() {
             {proximas.slice(1, 7).map((a) => (
               <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold capitalize text-stone-800">
+                  <p className="text-sm font-semibold text-stone-800 first-letter:uppercase">
                     {rotularDia(diaLocal(new Date(a.inicio)))}
                   </p>
                   <p className="mt-0.5 flex items-center gap-1.5 text-sm tabular-nums text-stone-500">

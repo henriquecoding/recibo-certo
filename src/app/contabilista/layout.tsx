@@ -13,7 +13,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { useAuth } from "@/lib/supabase/auth";
-import { obterMinhaFicha } from "@/lib/contabilistas/dados";
+import { contagensDoPainel, obterMinhaFicha } from "@/lib/contabilistas/dados";
 import type { Contabilista } from "@/lib/contabilistas/tipos";
 import {
   Logo, LayoutGrid, Calendar, User, PaperClip, Gift, Settings, ArrowLeft, Warning,
@@ -21,26 +21,46 @@ import {
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import Button from "@/components/ui/Button";
 
+interface Contagens {
+  pedidos: number;
+  partilhasPorLer: number;
+  consultasPorConfirmar: number;
+}
+
 interface Item {
   href: string;
   label: string;
   curto: string;
   Icon: ComponentType<{ size?: number; className?: string }>;
+  /** Quantas coisas esperam por resposta neste separador. */
+  porResponder?: (c: Contagens) => number;
 }
 
 const NAV: Item[] = [
   { href: "/contabilista", label: "Hoje", curto: "Hoje", Icon: LayoutGrid },
-  { href: "/contabilista/agenda", label: "Agenda", curto: "Agenda", Icon: Calendar },
-  { href: "/contabilista/clientes", label: "Clientes", curto: "Clientes", Icon: User },
-  { href: "/contabilista/partilhas", label: "Partilhas", curto: "Partilhas", Icon: PaperClip },
+  {
+    href: "/contabilista/agenda", label: "Agenda", curto: "Agenda", Icon: Calendar,
+    porResponder: (c) => c.consultasPorConfirmar,
+  },
+  {
+    href: "/contabilista/clientes", label: "Clientes", curto: "Clientes", Icon: User,
+    porResponder: (c) => c.pedidos,
+  },
+  {
+    href: "/contabilista/partilhas", label: "Partilhas", curto: "Partilhas", Icon: PaperClip,
+    porResponder: (c) => c.partilhasPorLer,
+  },
   { href: "/contabilista/fidelidade", label: "Fidelidade", curto: "Fidelidade", Icon: Gift },
   { href: "/contabilista/perfil", label: "Perfil público", curto: "Perfil", Icon: Settings },
 ];
+
+const SEM_CONTAGENS: Contagens = { pedidos: 0, partilhasPorLer: 0, consultasPorConfirmar: 0 };
 
 export default function ContabilistaLayout({ children }: { children: ReactNode }) {
   const { user, carregado, disponivel, abrirModal } = useAuth();
   const pathname = usePathname();
   const [ficha, setFicha] = useState<Contabilista | null>(null);
+  const [contagens, setContagens] = useState<Contagens>(SEM_CONTAGENS);
   const [aVerificar, setAVerificar] = useState(true);
 
   useEffect(() => {
@@ -53,6 +73,18 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
       .finally(() => { if (vivo) setAVerificar(false); });
     return () => { vivo = false; };
   }, [carregado, user, disponivel]);
+
+  // As contagens da navegação. Recarregam a cada mudança de separador —
+  // é quando o número pode ter deixado de ser verdade, porque a ação que o
+  // mudou aconteceu no ecrã anterior.
+  useEffect(() => {
+    if (!user || !disponivel || ficha?.estado !== "aprovado") return;
+    let vivo = true;
+    contagensDoPainel(user.id)
+      .then((c) => { if (vivo) setContagens(c); })
+      .catch(() => { if (vivo) setContagens(SEM_CONTAGENS); });
+    return () => { vivo = false; };
+  }, [user, disponivel, ficha?.estado, pathname]);
 
   if (!carregado || aVerificar) {
     return (
@@ -104,8 +136,9 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
 
         <nav aria-label="Painel de contabilista" className="hidden border-t border-stone-100 lg:block">
           <ul className="mx-auto flex max-w-6xl gap-1 px-4">
-            {NAV.map(({ href, label, Icon }) => {
+            {NAV.map(({ href, label, Icon, porResponder }) => {
               const ativo = href === "/contabilista" ? pathname === href : pathname.startsWith(href);
+              const quantos = porResponder?.(contagens) ?? 0;
               return (
                 <li key={href}>
                   <Link
@@ -119,6 +152,12 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
                   >
                     <Icon size={16} aria-hidden />
                     {label}
+                    {quantos > 0 && (
+                      <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-brand px-1.5 text-[0.6875rem] font-semibold tabular-nums text-white">
+                        {quantos}
+                        <span className="sr-only"> por responder</span>
+                      </span>
+                    )}
                   </Link>
                 </li>
               );
@@ -136,8 +175,9 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <ul className="mx-auto grid max-w-3xl grid-cols-6">
-          {NAV.map(({ href, curto, Icon }) => {
+          {NAV.map(({ href, curto, Icon, porResponder }) => {
             const ativo = href === "/contabilista" ? pathname === href : pathname.startsWith(href);
+            const quantos = porResponder?.(contagens) ?? 0;
             return (
               <li key={href}>
                 <Link
@@ -147,7 +187,18 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
                     ativo ? "text-brand-dark" : "text-stone-400"
                   }`}
                 >
-                  <Icon size={19} aria-hidden />
+                  <span className="relative">
+                    <Icon size={19} aria-hidden />
+                    {/* No telemóvel não há espaço para o número ao lado do
+                        rótulo: o ponto diz «há coisas aqui», e o ecrã diz
+                        quantas. */}
+                    {quantos > 0 && (
+                      <span
+                        className="absolute -right-1.5 -top-0.5 flex h-2 w-2 rounded-full bg-brand ring-2 ring-white"
+                        aria-label={`${quantos} por responder`}
+                      />
+                    )}
+                  </span>
                   <span className="truncate">{curto}</span>
                 </Link>
               </li>

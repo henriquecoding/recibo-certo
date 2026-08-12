@@ -10,6 +10,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { usarFicha } from "@/components/contabilistas/usarFicha";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
+import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
+import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import CartaoFidelidade from "@/components/contabilistas/CartaoFidelidade";
 import {
   decidirVinculo, listarAgendamentos, listarPartilhas, meusClientes,
@@ -129,7 +131,7 @@ export default function ClientesPage() {
     setOcupado(null);
   }
 
-  if (aCarregar) return <div className="h-96 animate-pulse rounded-4xl bg-stone-100" aria-busy="true" />;
+  if (aCarregar) return <EsqueletoPainel forma="lista" />;
   if (!ficha) return null;
 
   const pendentes = vinculos.filter((v) => v.estado === "pendente");
@@ -138,10 +140,10 @@ export default function ClientesPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="eyebrow">Painel de gestão</p>
-        <h1 className="mt-1 font-display text-3xl text-ink sm:text-4xl">Clientes</h1>
-      </header>
+      <CabecalhoPainel
+        titulo="Clientes"
+        descricao="Quem te pediu para ser cliente, quem já é, e o que cada um te enviou."
+      />
 
       {erro && (
         <p role="alert" className="flex items-start gap-2 rounded-2xl bg-clay-bg px-4 py-3 text-sm text-clay-text">

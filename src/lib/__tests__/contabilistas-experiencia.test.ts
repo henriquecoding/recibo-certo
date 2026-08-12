@@ -26,6 +26,8 @@ const COORDENADOR = ler("components", "overlays", "CoordenadorOverlays.tsx");
 const CONFIRMAR = ler("components", "ui", "Confirmar.tsx");
 const AVISOS = ler("components", "ui", "Avisos.tsx");
 const DADOS = ler("lib", "contabilistas", "dados.ts");
+/** As peças do hub do cliente — desenham o que a página lhes passa. */
+const HUB = ler("components", "contabilistas", "hub.tsx");
 
 /** Os ecrãs da plataforma, do lado de quem gere e do lado de quem é cliente. */
 const ECRAS = {
@@ -143,8 +145,10 @@ describe("o que é guardado é o que é mostrado", () => {
     // contabilista recebia a simulação sem o recado que a explicava.
     expect(DADOS).toMatch(/nota_cliente: p\.nota/);
     expect(DADOS).toMatch(/nota: \(l\.nota_cliente as string \| null\) \?\? null/);
+    // Do lado de quem recebe (o painel) e do lado de quem enviou (o hub do
+    // cliente, cuja apresentação vive em `contabilistas/hub.tsx`).
     expect(ECRAS.partilhas).toMatch(/p\.nota/);
-    expect(ECRAS.areaCliente).toMatch(/p\.nota/);
+    expect(HUB).toMatch(/p\.nota/);
   });
 
   it("o cupão diz que é gasto ao ser validado", () => {
