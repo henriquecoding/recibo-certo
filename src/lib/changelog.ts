@@ -19,6 +19,19 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.37.0",
+    data: "2026-08-12",
+    titulo: "Um centro de ferramentas — e quatro que estavam escondidas",
+    itens: [
+      "A página de Ferramentas era uma lista de cartões quase iguais, numa coluna estreita: num ecrã grande via-se o título e dois cartões, e o resto ficava por baixo. Passa a ser um centro. Começas pelo problema — calcular, comparar, verificar ou cumprir —, pesquisas por palavras do dia a dia («quanto recebo», «salário», «segurança social») e filtras por perfil, tema e tipo. Os filtros ficam no endereço, por isso podes partilhar a vista ou usar o botão de voltar atrás sem perder o que escolheste.",
+      "Quatro ferramentas que já existiam não apareciam em lado nenhum. A calculadora de recibos verdes — o centro deste produto — só vivia na página inicial e no teu painel, sem morada própria. O comparador de regimes tinha um cartão, mas levava-te ao topo da página inicial em vez de à ferramenta. E a calculadora trimestral da Segurança Social e o simulador do IRS Jovem estavam enterrados dentro de guias, invisíveis para quem não estivesse já a lê-los. As quatro passam a ter página própria, a contar para a contagem e a aparecer na pesquisa.",
+      "Antes de abrires qualquer ferramenta passas a saber o mesmo sobre todas: quanto tempo demora, o que precisas de ter à mão, que é grátis e sem conta, que os cálculos ficam no teu dispositivo e em que data as regras foram verificadas pela última vez. Antes, cada ferramenta respondia a uma parte disto, ou a nada.",
+      "No fim de cada ferramenta há agora um caminho em vez de um beco: as ferramentas relacionadas e os percursos completos — começar a trabalhar por conta própria, avaliar uma proposta de trabalho, confirmar um recibo, preparar o ano fiscal. E se tiveres cenários guardados neste dispositivo, o centro mostra-tos para continuares de onde ficaste, sem precisares de conta para os reabrir.",
+      "As ferramentas que precisam de espaço deixaram de o pedir emprestado. O mapa de preços, o comparador, as heranças e a empresa estavam limitados à mesma coluna estreita de um decisor de quatro perguntas, por causa de uma exceção escrita à mão para uma única página.",
+      "Por dentro, deixou de haver três listas de ferramentas mantidas à mão em sítios diferentes. Passou a haver uma só, e a compilação falha se alguma ferramenta ficar de fora do centro, da pesquisa ou do mapa do site — que foi exatamente como as quatro se tinham perdido.",
+    ],
+  },
+  {
     version: "2.36.0",
     data: "2026-08-11",
     titulo: "Peças de base atualizadas, uma a uma e com a mão no travão",
