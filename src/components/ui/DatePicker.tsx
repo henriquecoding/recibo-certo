@@ -30,6 +30,14 @@ const DIAS_SEMANA = [
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
+/**
+ * Só a primeira letra.
+ *
+ * O CSS `capitalize` maiusculiza TODAS as palavras e dava «Agosto De 2026».
+ * Em português a preposição fica minúscula.
+ */
+const maiusculaInicial = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 function parseISO(s: string): { y: number; m: number; d: number } | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || "");
   if (!match) return null;
@@ -215,9 +223,9 @@ export default function DatePicker({
               <button
                 type="button"
                 onClick={() => setVista((v) => (v === "dias" ? "meses" : v === "meses" ? "anos" : "dias"))}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-sm font-semibold capitalize text-stone-800 transition-colors hover:bg-stone-100 dark:text-stone-100 dark:hover:bg-stone-800"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 dark:text-stone-100 dark:hover:bg-stone-800"
               >
-                {vista === "dias" && `${MESES[foco.m]} de ${foco.y}`}
+                {vista === "dias" && `${maiusculaInicial(MESES[foco.m])} de ${foco.y}`}
                 {vista === "meses" && `${foco.y}`}
                 {vista === "anos" && `${anoBase} – ${anoBase + 11}`}
                 <ChevronDown size={14} className="text-stone-400" />

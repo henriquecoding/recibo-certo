@@ -17,6 +17,7 @@
 
 import { useState } from "react";
 import { Check, ArrowRight } from "@/components/ui/Icons";
+import DatePicker from "@/components/ui/DatePicker";
 
 /** O que a gravação responde a quem carregou no botão. */
 export interface RespostaRegisto {
@@ -88,13 +89,12 @@ export default function RegistarRecibo({
         <label htmlFor="registar-data" className="mb-1 block text-xs font-medium text-stone-600 dark:text-stone-300">
           Data do recibo
         </label>
-        <input
+        <DatePicker
           id="registar-data"
-          type="date"
           value={data}
           max={hojeIso}
-          onChange={(e) => setData(e.target.value)}
-          className={campo}
+          onChange={setData}
+          ariaLabel="Data do recibo"
         />
         <p className="mt-1 text-[11px] text-stone-400">
           A data do documento, não a de hoje — é ela que define o mês, o trimestre e o ano fiscal.

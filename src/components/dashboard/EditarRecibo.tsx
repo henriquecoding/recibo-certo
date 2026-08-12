@@ -18,6 +18,7 @@ import { anoDoRecibo, type Recibo, type NovoRecibo } from "@/lib/recibos-contrat
 import type { Resultado } from "@/lib/store/persistencia";
 import { fmt } from "@/lib/format";
 import { Warning } from "@/components/ui/Icons";
+import DatePicker from "@/components/ui/DatePicker";
 
 export default function EditarRecibo({
   recibo,
@@ -63,7 +64,7 @@ export default function EditarRecibo({
             <label htmlFor="editar-data" className="mb-1 block text-xs font-medium text-stone-600 dark:text-stone-300">
               Data do recibo
             </label>
-            <input id="editar-data" type="date" value={data} onChange={(e) => setData(e.target.value)} className={campo} />
+            <DatePicker id="editar-data" value={data} onChange={setData} ariaLabel="Data do recibo" />
             <p className="mt-1 text-[11px] text-stone-400">
               A data do documento define o mês, o trimestre e o ano fiscal deste recibo.
             </p>

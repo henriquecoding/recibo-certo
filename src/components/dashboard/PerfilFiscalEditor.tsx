@@ -41,11 +41,18 @@ import {
 import {
   CAMPO_BASE, Rotulo, EscolhaTresEstados, CampoMoeda, CampoContagem, Interruptor,
 } from "./perfil-fiscal/campos";
+import DatePicker from "@/components/ui/DatePicker";
 import { SECCOES, completude, type IdSeccao } from "./perfil-fiscal/completude";
 
 const ICONES: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   Calendar, Receipt, Coin, ShieldCheck, Home,
 };
+
+/** Uma atividade não pode ter começado amanhã. */
+function hojeISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 type EstadoGravacao =
   | { tipo: "inativo" }
@@ -204,17 +211,18 @@ function Editor() {
       {/* ── Secções ──────────────────────────────────────────────────── */}
       <Seccao id="atividade" faltas={faltas}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Rotulo
-            htmlFor="pf-inicio"
-            label="Início de atividade"
-            ajuda="A isenção de Segurança Social do primeiro ano conta 12 meses a partir desta data — não de um ano civil."
-          >
-            <input
+          {/* Deixou de ser `<input type="date">`: o calendário que aparecia
+              era o do Chromium — cinzentos que não são os nossos, cantos
+              vivos, tipografia do sistema — e nenhum CSS lhe tocava. O
+              `DatePicker` do design system já existia e já era usado no
+              simulador de IRS; faltava aqui. */}
+          <Rotulo htmlFor="pf-inicio" label="Início de atividade" ajuda="A isenção de Segurança Social do primeiro ano conta 12 meses a partir desta data — não de um ano civil.">
+            <DatePicker
               id="pf-inicio"
-              type="date"
-              className={CAMPO_BASE}
               value={prefs.dataInicioAtividade}
-              onChange={(e) => gravar({ dataInicioAtividade: e.target.value })}
+              onChange={(v) => gravar({ dataInicioAtividade: v })}
+              max={hojeISO()}
+              ariaLabel="Início de atividade"
             />
           </Rotulo>
 
