@@ -7,6 +7,7 @@
 // `src/lib/contabilistas/vinculo.ts`, coberto por teste.
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/supabase/auth";
 import {
@@ -15,7 +16,7 @@ import {
 } from "@/lib/contabilistas/dados";
 import type { Contabilista, Modalidade } from "@/lib/contabilistas/tipos";
 import {
-  agruparPorDia, diaLocal, gerarSlots, rotularDia,
+  agruparPorDia, diaLocal, gerarSlots,
   type Excecao, type RegraDisponibilidade, type Slot,
 } from "@/lib/contabilistas/agenda";
 import { podeAgendar, podePedirVinculo, vinculoAtivo } from "@/lib/contabilistas/vinculo";
@@ -23,14 +24,18 @@ import { eurosDeCents, valorComDesconto } from "@/lib/contabilistas/fidelidade";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
+import Marcacao from "@/components/contabilistas/Marcacao";
+import { useAvisos } from "@/components/ui/Avisos";
 import {
-  Calendar, Check, Gift, Globe, Mail, MapPin, ShieldCheck, Warning, Clock,
+  Calendar, Gift, Globe, Mail, MapPin, ShieldCheck, Warning,
 } from "@/components/ui/Icons";
 
 const JANELA_DIAS = 30;
 
 export default function PerfilPublico({ slug }: { slug: string }) {
   const { user, carregado, abrirModal } = useAuth();
+  const router = useRouter();
+  const avisos = useAvisos();
   const [cc, setCc] = useState<Contabilista | null>(null);
   const [regras, setRegras] = useState<RegraDisponibilidade[]>([]);
   const [excecoes, setExcecoes] = useState<Excecao[]>([]);
@@ -39,11 +44,7 @@ export default function PerfilPublico({ slug }: { slug: string }) {
   const [naoEncontrado, setNaoEncontrado] = useState(false);
   const [aLer, setALer] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
   const [ocupado, setOcupadoBotao] = useState(false);
-  const [slotEscolhido, setSlotEscolhido] = useState<Slot | null>(null);
-  const [modalidade, setModalidade] = useState<Modalidade>("online");
-  const [assunto, setAssunto] = useState("");
 
   const carregar = useCallback(async () => {
     setALer(true);
@@ -51,7 +52,8 @@ export default function PerfilPublico({ slug }: { slug: string }) {
       const ficha = await obterContabilistaPorSlug(slug);
       if (!ficha) { setNaoEncontrado(true); return; }
       setCc(ficha);
-      setModalidade(ficha.modalidades.includes("online") ? "online" : "presencial");
+      // A modalidade por omissão passou a ser escolhida dentro da marcação,
+      // que é onde a pergunta se faz.
 
       const de = new Date();
       const ate = new Date(Date.now() + JANELA_DIAS * 86400_000);
@@ -86,30 +88,48 @@ export default function PerfilPublico({ slug }: { slug: string }) {
   async function ligar() {
     if (!cc) return;
     if (!user) { abrirModal("criar"); return; }
-    setOcupadoBotao(true); setErro(null); setAviso(null);
+    setOcupadoBotao(true);
     const { erro: e } = await pedirVinculo(cc.userId, user.id);
     setOcupadoBotao(false);
-    if (e) { setErro(e); return; }
-    setAviso("Pedido enviado. Assim que for aceite, podes marcar consulta e enviar simulações.");
+    if (e) { avisos.erro(e); return; }
+    avisos.sucesso("Pedido enviado.", {
+      detalhe: "Assim que for aceite, podes marcar consulta e enviar simulações.",
+    });
     setEstadoVinculo("pendente");
   }
 
-  async function marcar() {
-    if (!cc || !user || !slotEscolhido) return;
-    setOcupadoBotao(true); setErro(null); setAviso(null);
+  async function marcar({ slot, modalidade, assunto }: {
+    slot: Slot; modalidade: Modalidade; assunto: string;
+  }): Promise<boolean> {
+    if (!cc || !user) return false;
+    setOcupadoBotao(true);
     const { erro: e } = await marcarConsulta({
       contabilistaId: cc.userId,
       clienteId: user.id,
-      inicio: slotEscolhido.inicio,
-      fim: slotEscolhido.fim,
+      inicio: slot.inicio,
+      fim: slot.fim,
       modalidade,
       assunto,
     });
     setOcupadoBotao(false);
-    if (e) { setErro(e); await carregar(); return; }
-    setAviso("Consulta pedida. O contabilista confirma e recebes a resposta na tua área.");
-    setSlotEscolhido(null); setAssunto("");
+
+    if (e) {
+      // A colisão de horários é resolvida pela base de dados, não por uma
+      // leitura anterior: dois pedidos ao mesmo tempo e o segundo falha a
+      // ESCREVER. Recarregar aqui é o que faz o horário desaparecer da
+      // grelha em vez de continuar a ser oferecido.
+      avisos.erro(e, { detalhe: "A agenda foi atualizada com os horários que ainda estão livres." });
+      await carregar();
+      return false;
+    }
+
+    avisos.sucesso("Consulta pedida.", {
+      detalhe: "O contabilista confirma, e a resposta aparece na tua área.",
+      acao: { texto: "Ver as minhas consultas", onClick: () => router.push("/dashboard/contabilista") },
+      duracaoMs: 9000,
+    });
     await carregar();
+    return true;
   }
 
   if (naoEncontrado) {
@@ -236,11 +256,6 @@ export default function PerfilPublico({ slug }: { slug: string }) {
             <Warning size={16} className="mt-0.5 shrink-0" aria-hidden /> {erro}
           </p>
         )}
-        {aviso && (
-          <p role="status" className="mt-5 flex items-start gap-2 rounded-2xl bg-brand-light px-4 py-3 text-sm text-brand-dark">
-            <Check size={16} className="mt-0.5 shrink-0" aria-hidden /> {aviso}
-          </p>
-        )}
 
         {/* ── Vínculo ─────────────────────────────────────────────── */}
         {!ativo && (
@@ -288,81 +303,9 @@ export default function PerfilPublico({ slug }: { slug: string }) {
               />
             </div>
           ) : (
-            <>
-              <div className="mt-4 space-y-4">
-                {dias.map(({ dia, slots: doDia }) => (
-                  <div key={dia}>
-                    <h3 className="text-sm font-semibold capitalize text-stone-700">{rotularDia(dia)}</h3>
-                    <ul className="mt-2 flex flex-wrap gap-2">
-                      {doDia.map((s) => {
-                        const escolhido = slotEscolhido?.inicio === s.inicio;
-                        return (
-                          <li key={s.inicio}>
-                            <button
-                              type="button"
-                              aria-pressed={escolhido}
-                              onClick={() => setSlotEscolhido(escolhido ? null : s)}
-                              className={`min-h-[2.5rem] rounded-xl px-3.5 py-2 text-sm font-medium tabular-nums transition-colors ${
-                                escolhido
-                                  ? "bg-brand text-white"
-                                  : "bg-stone-100 text-stone-700 hover:bg-stone-200"
-                              }`}
-                            >
-                              {s.hora}
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-
-              {slotEscolhido && (
-                <div className="mt-5 space-y-4 rounded-2xl bg-cream p-4">
-                  <p className="flex items-center gap-2 text-sm font-semibold text-stone-800">
-                    <Clock size={15} aria-hidden />
-                    <span className="capitalize">{rotularDia(slotEscolhido.dia)}</span>, às {slotEscolhido.hora}
-                  </p>
-
-                  {cc.modalidades.length > 1 && (
-                    <fieldset>
-                      <legend className="text-sm font-medium text-stone-600">Modalidade</legend>
-                      <div className="mt-2 flex gap-2">
-                        {cc.modalidades.map((m) => (
-                          <button
-                            key={m}
-                            type="button"
-                            aria-pressed={modalidade === m}
-                            onClick={() => setModalidade(m)}
-                            className={`min-h-[2.25rem] rounded-xl px-3.5 py-2 text-sm font-medium capitalize transition-colors ${
-                              modalidade === m ? "bg-brand text-white" : "bg-white text-stone-700 hover:bg-stone-100"
-                            }`}
-                          >
-                            {m}
-                          </button>
-                        ))}
-                      </div>
-                    </fieldset>
-                  )}
-
-                  <label className="block">
-                    <span className="text-sm font-medium text-stone-600">Assunto (opcional)</span>
-                    <textarea
-                      value={assunto}
-                      onChange={(e) => setAssunto(e.target.value.slice(0, 500))}
-                      rows={3}
-                      placeholder="O que queres tratar nesta consulta."
-                      className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm leading-relaxed text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-                    />
-                  </label>
-
-                  <Button onClick={marcar} disabled={ocupado}>
-                    {ocupado ? "A marcar…" : "Pedir consulta"}
-                  </Button>
-                </div>
-              )}
-            </>
+            <div className="mt-4">
+              <Marcacao cc={cc} dias={dias} ocupado={ocupado} onMarcar={marcar} />
+            </div>
           )}
         </section>
       </div>
