@@ -19,6 +19,17 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.45.0",
+    data: "2026-08-12",
+    titulo: "«Só tu acedes aos teus dados» deixou de ser só uma frase",
+    itens: [
+      "A página de privacidade sempre disse que só tu acedes aos teus dados. Não era inteiramente verdade: quatro regras da base de dados deixavam qualquer conta de administração ler o conteúdo dos recibos verdes, dos recibos de vencimento e dos cenários de toda a gente — e em dois desses casos também alterar e apagar. Foram removidas. Hoje, o conteúdo é alcançável pela tua conta e por mais nenhuma.",
+      "A administração continua a poder gerir contas — email, plano, quem administra — e a ver quantos registos existem. Ver quantos não é ver o quê. Apoio que precise de olhar para o conteúdo passa a exigir que sejas tu a mostrá-lo.",
+      "Promover ou remover alguém da administração passa a ficar registado: quem fez, sobre quem, e quando. O registo é escrito pelo servidor e não é editável por ninguém — nem por quem administra. Sem rasto, não há forma de distinguir «não aconteceu nada» de «não sabemos o que aconteceu».",
+      "A base de dados nunca fica sem administração: a última conta de administração não pode ser despromovida.",
+    ],
+  },
+  {
     version: "2.44.0",
     data: "2026-08-12",
     titulo: "Zona de risco: apagar o que quiseres, quando quiseres",
