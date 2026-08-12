@@ -19,6 +19,16 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.40.0",
+    data: "2026-08-12",
+    titulo: "O calendário passou a ser nosso",
+    itens: [
+      "Em três sítios — o perfil fiscal, registar um recibo e editar um recibo — o calendário que se abria não era desenho nosso nenhum: era o do próprio navegador. Daí o aspeto destoante, com cinzentos que não são os nossos e cantos vivos no meio de uma interface toda arredondada. E como era do navegador, mudava de aspeto conforme usasses Chrome, Firefox ou Safari.",
+      "Passa a ser o mesmo calendário que já usavas no simulador de IRS: salta direto ao mês e ao ano, o que interessa quando a data é de há uns anos, respeita o modo escuro e navega-se todo com o teclado. A semana começa à segunda-feira, como cá.",
+      "E o cabeçalho dizia «Agosto De 2026», com a preposição em maiúscula. Agora diz «Agosto de 2026».",
+    ],
+  },
+  {
     version: "2.39.0",
     data: "2026-08-12",
     titulo: "O perfil fiscal deixou de ser um interrogatório",
