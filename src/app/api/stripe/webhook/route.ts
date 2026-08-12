@@ -182,6 +182,78 @@ export async function POST(req: NextRequest) {
         console.warn("[stripe/webhook] Pagamento falhado:", invoice.id);
         break;
       }
+
+      // ── Compra vitalícia ────────────────────────────────────────────
+      // Uma compra única não cria subscrição nenhuma no Stripe: não há
+      // `customer.subscription.created`, não há `status` que alguém venha
+      // mudar depois. O que chega é isto, uma vez, e é a partir daqui que a
+      // concessão passa a existir.
+      case "checkout.session.completed": {
+        const sessao = event.data.object as Stripe.Checkout.Session;
+
+        // As subscrições já são tratadas pelos eventos de subscrição.
+        if (sessao.mode !== "payment") break;
+        if (sessao.payment_status !== "paid") {
+          console.warn("[stripe/webhook] Sessão de compra sem pagamento confirmado:", sessao.id);
+          break;
+        }
+
+        const uid = sessao.metadata?.supabase_uid ?? sessao.client_reference_id ?? null;
+        if (!uid) {
+          console.error("[stripe/webhook] Compra vitalícia sem supabase_uid:", sessao.id);
+          break;
+        }
+
+        const paymentIntent =
+          typeof sessao.payment_intent === "string"
+            ? sessao.payment_intent
+            : sessao.payment_intent?.id ?? null;
+        if (!paymentIntent) {
+          console.error("[stripe/webhook] Compra vitalícia sem payment_intent:", sessao.id);
+          break;
+        }
+
+        // O preço vem da linha comprada, não dos metadados: os metadados são
+        // nossos e podiam mentir; a linha é o que o Stripe cobrou.
+        const linhas = await stripe.checkout.sessions.listLineItems(sessao.id, { limit: 1 });
+        const priceId = linhas.data[0]?.price?.id ?? null;
+
+        // A MESMA regra do RC-BILL-002, aplicada à compra única: um preço que
+        // não reconhecemos não compra acesso para sempre.
+        if (!precoConcedePlus(priceId)) {
+          console.error(
+            "[stripe/webhook] Compra vitalícia com preço não autorizado — concessão recusada.",
+            { sessao: sessao.id, price_id: priceId },
+          );
+          break;
+        }
+
+        const sb = getSupabaseAdmin();
+        if (!sb) break;
+
+        // `onConflict` no pagamento: o Stripe reentrega eventos, e reentregar
+        // este não pode criar uma segunda concessão.
+        const { error } = await sb.from("subscriptions").upsert(
+          {
+            user_id: uid,
+            origem: "vitalicio",
+            status: "active",
+            intervalo: "lifetime",
+            price_id: priceId,
+            stripe_payment_intent: paymentIntent,
+            stripe_customer_id: typeof sessao.customer === "string" ? sessao.customer : null,
+            concessao_termina_em: null,
+          },
+          { onConflict: "stripe_payment_intent" },
+        );
+        if (error) {
+          console.error("[stripe/webhook] Falha ao registar compra vitalícia:", error);
+          return NextResponse.json({ erro: "Erro interno." }, { status: 500 });
+        }
+
+        console.info("[stripe/webhook] Compra vitalícia registada:", { uid, paymentIntent });
+        break;
+      }
     }
   } catch (err) {
     console.error("[stripe/webhook] Erro ao processar evento:", err);

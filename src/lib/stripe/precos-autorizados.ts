@@ -51,6 +51,8 @@ export function precosAutorizados(): string[] {
     process.env.NEXT_PUBLIC_STRIPE_PRICE_PLUS_MONTHLY,
     process.env.STRIPE_PRICE_PLUS_LEGACY,
     process.env.NEXT_PUBLIC_STRIPE_PRICE_PLUS_LEGACY,
+    process.env.STRIPE_PRICE_PLUS_LIFETIME,
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_PLUS_LIFETIME,
   ];
   const ids = [...new Set(brutos.map((v) => v?.trim()).filter((v): v is string => Boolean(v && v.startsWith("price_"))))];
 
@@ -86,10 +88,71 @@ export type EstadoComAcesso = (typeof ESTADOS_COM_ACESSO)[number];
  * Plus — nunca o estado sozinho, que foi exatamente o erro que o relatório
  * encontrou.
  */
-export function concedePlus(input: { status: string | null | undefined; priceId: string | null | undefined }): boolean {
+/** De onde vem uma concessão. Espelha o CHECK `subscriptions_origem_check`. */
+export type OrigemConcessao = "stripe" | "lemon_squeezy" | "cupao" | "vitalicio" | "manual";
+
+export interface LinhaConcessao {
+  status: string | null | undefined;
+  priceId: string | null | undefined;
+  origem?: OrigemConcessao | null;
+  /** Identificador da subscrição no Lemon Squeezy, quando é essa a origem. */
+  lsSubscriptionId?: string | null;
+  /** Pagamento único que originou uma compra vitalícia. */
+  paymentIntent?: string | null;
+  /** Fim de uma concessão sem provedor (cupão). */
+  terminaEm?: string | null;
+}
+
+/**
+ * A decisão completa, num sítio só.
+ *
+ * O `price_id` deixou de ser a única prova aceite, porque nunca foi a prova
+ * de TODAS as origens — era só a do Stripe. Uma subscrição do Lemon Squeezy
+ * identifica-se pelo `ls_subscription_id` e nunca teve `price_id`; estava a
+ * ser recusada por não ter uma coluna que não lhe pertence. Uma compra
+ * vitalícia não tem subscrição nenhuma. Uma concessão manual não tem preço
+ * por definição.
+ *
+ * O que NÃO mudou é a regra que originou tudo isto (RC-BILL-002): uma
+ * subscrição do Stripe continua a precisar de um preço autorizado, e uma
+ * compra vitalícia também — senão qualquer pagamento de 0 € criado à mão
+ * comprava acesso para sempre.
+ */
+export function concedePlus(input: LinhaConcessao): boolean {
   if (!input.status) return false;
   if (!(ESTADOS_COM_ACESSO as readonly string[]).includes(input.status)) return false;
-  return precoConcedePlus(input.priceId);
+
+  // Uma concessão com prazo só vale enquanto durar, seja qual for a origem.
+  if (input.terminaEm && new Date(input.terminaEm) <= new Date()) return false;
+
+  switch (input.origem ?? "stripe") {
+    case "stripe":
+      return precoConcedePlus(input.priceId);
+
+    // Compra única: exige o pagamento que a prova E um preço autorizado.
+    case "vitalicio":
+      return Boolean(input.paymentIntent) && precoConcedePlus(input.priceId);
+
+    // O Lemon Squeezy identifica-se pela sua própria coluna.
+    case "lemon_squeezy":
+      return Boolean(input.lsSubscriptionId);
+
+    // O cupão é validado pelo prazo, já verificado acima. Não tem preço.
+    case "cupao":
+      return true;
+
+    // Decisão humana, com motivo obrigatório e autor registado no schema.
+    case "manual":
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+/** Esta concessão é para sempre? Muda o que a interface promete. */
+export function eVitalicio(origem: OrigemConcessao | null | undefined): boolean {
+  return origem === "vitalicio" || origem === "manual";
 }
 
 // ─── Máquina de estados da subscrição (RC-P1-11) ───────────────────────

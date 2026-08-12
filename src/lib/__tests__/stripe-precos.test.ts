@@ -6,6 +6,7 @@
 // mão no painel concediam o produto pago na mesma.
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { PLUS, mesesParaCompensarVitalicio, precoVitalicioFormatado } from "@/lib/entitlements";
 
 const ORIGINAL = { ...process.env };
 const PRECO_ATUAL = "price_plus_mensal_2026";
@@ -21,6 +22,8 @@ beforeEach(() => {
     "NEXT_PUBLIC_STRIPE_PRICE_PLUS_MONTHLY",
     "STRIPE_PRICE_PLUS_LEGACY",
     "NEXT_PUBLIC_STRIPE_PRICE_PLUS_LEGACY",
+    "STRIPE_PRICE_PLUS_LIFETIME",
+    "NEXT_PUBLIC_STRIPE_PRICE_PLUS_LIFETIME",
   ]) {
     delete process.env[k];
   }
@@ -127,5 +130,118 @@ describe("RC-BILL-002 · o provider e o webhook usam a allowlist", () => {
     // E continua a guardar o registo: a subscrição existe do lado da Stripe e
     // alguém pode estar a ser cobrado. Apagar o facto seria pior.
     expect(fonte).toMatch(/upsert\(dados/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  ORIGEM DA CONCESSÃO — vitalício, manual, cupão e Lemon Squeezy
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("concedePlus: cada origem traz a prova que lhe compete", () => {
+  const PRECO = "price_teste_plus_mensal";
+  const VITALICIO = "price_teste_plus_vitalicio";
+
+  beforeEach(() => {
+    process.env.STRIPE_PRICE_PLUS_MONTHLY = PRECO;
+    process.env.STRIPE_PRICE_PLUS_LIFETIME = VITALICIO;
+  });
+
+  it("uma subscrição Stripe continua a exigir preço autorizado", async () => {
+    const { concedePlus, eVitalicio } = await mod();
+    expect(concedePlus({ origem: "stripe", status: "active", priceId: PRECO })).toBe(true);
+    expect(concedePlus({ origem: "stripe", status: "active", priceId: "price_intruso" })).toBe(false);
+    expect(concedePlus({ origem: "stripe", status: "active", priceId: null })).toBe(false);
+  });
+
+  it("o Lemon Squeezy identifica-se pela sua própria coluna, não por um price_id", async () => {
+    const { concedePlus, eVitalicio } = await mod();
+    // Era isto que negava o Plus a um subscritor legítimo: `price_id` é uma
+    // coluna do Stripe, e uma subscrição do LS nunca a teve.
+    expect(concedePlus({
+      origem: "lemon_squeezy", status: "active", priceId: null, lsSubscriptionId: "ls_123",
+    })).toBe(true);
+    expect(concedePlus({
+      origem: "lemon_squeezy", status: "active", priceId: null, lsSubscriptionId: null,
+    })).toBe(false);
+  });
+
+  it("uma compra vitalícia exige o pagamento E um preço autorizado", async () => {
+    const { concedePlus, eVitalicio } = await mod();
+    expect(concedePlus({
+      origem: "vitalicio", status: "active", priceId: VITALICIO, paymentIntent: "pi_1",
+    })).toBe(true);
+    // Sem o pagamento que a prova, é uma linha escrita à mão.
+    expect(concedePlus({
+      origem: "vitalicio", status: "active", priceId: VITALICIO, paymentIntent: null,
+    })).toBe(false);
+    // RC-BILL-002 aplica-se à compra única: um preço de 0 € criado à mão não
+    // compra acesso para sempre.
+    expect(concedePlus({
+      origem: "vitalicio", status: "active", priceId: "price_zero", paymentIntent: "pi_1",
+    })).toBe(false);
+  });
+
+  it("uma concessão manual não tem preço, e não precisa", async () => {
+    const { concedePlus, eVitalicio } = await mod();
+    expect(concedePlus({ origem: "manual", status: "active", priceId: null })).toBe(true);
+  });
+
+  it("um cupão vale enquanto durar", async () => {
+    const { concedePlus, eVitalicio } = await mod();
+    const ontem = new Date(Date.now() - 86_400_000).toISOString();
+    const amanha = new Date(Date.now() + 86_400_000).toISOString();
+    expect(concedePlus({ origem: "cupao", status: "active", priceId: null, terminaEm: amanha })).toBe(true);
+    expect(concedePlus({ origem: "cupao", status: "active", priceId: null, terminaEm: ontem })).toBe(false);
+  });
+
+  it("um prazo expirado vence qualquer origem", async () => {
+    const { concedePlus, eVitalicio } = await mod();
+    const ontem = new Date(Date.now() - 86_400_000).toISOString();
+    expect(concedePlus({ origem: "manual", status: "active", priceId: null, terminaEm: ontem })).toBe(false);
+    expect(concedePlus({ origem: "stripe", status: "active", priceId: PRECO, terminaEm: ontem })).toBe(false);
+  });
+
+  it("um estado sem acesso vence qualquer origem", async () => {
+    const { concedePlus, eVitalicio } = await mod();
+    for (const origem of ["stripe", "manual", "vitalicio", "cupao", "lemon_squeezy"] as const) {
+      expect(concedePlus({ origem, status: "canceled", priceId: PRECO, paymentIntent: "pi_1", lsSubscriptionId: "ls_1" }), origem).toBe(false);
+    }
+  });
+
+  it("sem origem declarada assume-se Stripe — a regra mais estrita", async () => {
+    const { concedePlus, eVitalicio } = await mod();
+    expect(concedePlus({ status: "active", priceId: PRECO })).toBe(true);
+    expect(concedePlus({ status: "active", priceId: null })).toBe(false);
+  });
+
+  it("só vitalício e manual são acesso para sempre", async () => {
+    const { concedePlus, eVitalicio } = await mod();
+    expect(eVitalicio("vitalicio")).toBe(true);
+    expect(eVitalicio("manual")).toBe(true);
+    expect(eVitalicio("stripe")).toBe(false);
+    expect(eVitalicio("cupao")).toBe(false);
+    expect(eVitalicio(null)).toBe(false);
+  });
+});
+
+describe("preço vitalício: a aritmética que a página promete", () => {
+  it("19,99 € compensa a partir de 11 meses de mensalidade", () => {
+    // 19,99 / 1,99 = 10,05. Aos 10 meses o mensal ainda sai mais barato
+    // (19,90 €); é ao 11.º que a compra única passa à frente. Arredondar
+    // para baixo daria uma promessa falsa por nove cêntimos.
+    expect(PLUS.precoVitalicio).toBe(19.99);
+    expect(mesesParaCompensarVitalicio()).toBe(11);
+    expect(PLUS.precoMensal * 10).toBeLessThan(PLUS.precoVitalicio);
+    expect(PLUS.precoMensal * 11).toBeGreaterThan(PLUS.precoVitalicio);
+  });
+
+  it("os meses são derivados dos preços, não escritos à mão", () => {
+    const esperado = Math.ceil(PLUS.precoVitalicio / PLUS.precoMensal);
+    expect(mesesParaCompensarVitalicio()).toBe(esperado);
+  });
+
+  it("o preço vitalício é formatado em euros de Portugal", () => {
+    expect(precoVitalicioFormatado()).toMatch(/19,99/);
+    expect(precoVitalicioFormatado()).toContain("€");
   });
 });

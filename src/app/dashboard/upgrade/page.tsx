@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/supabase/auth";
-import { useSubscricao } from "@/lib/stripe/subscription";
+import { useSubscricao, type Modalidade } from "@/lib/stripe/subscription";
 import Link from "next/link";
 import { BellAlert, History, Wallet, Export, ChartProjection, Check, ArrowRight, Lock } from "@/components/ui/Icons";
 import { PLUS, precoPlusFormatado } from "@/lib/entitlements";
@@ -34,13 +34,22 @@ const BENEFICIOS = [
 
 export default function UpgradePage() {
   const { user } = useAuth();
-  const { plano, abrirCheckout, abrirPortal } = useSubscricao();
+  const { plano, vitalicio, abrirCheckout, abrirPortal } = useSubscricao();
   const [loading, setLoading] = useState(false);
+  const [modalidade, setModalidade] = useState<Modalidade>("mensal");
+
+  // A página de planos liga para cá com a modalidade escolhida. Lê-se do
+  // `window` e não de `useSearchParams` para a rota continuar estática — o
+  // mesmo motivo que governa os filtros do hub de ferramentas.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("modalidade");
+    if (q === "vitalicio") setModalidade("vitalicio");
+  }, []);
 
   const handleSubscrever = async () => {
     setLoading(true);
     try {
-      await abrirCheckout();
+      await abrirCheckout(modalidade);
     } finally {
       setLoading(false);
     }
@@ -53,9 +62,13 @@ export default function UpgradePage() {
           <span className="inline-flex items-center rounded-full bg-brand px-3 py-1 text-xs font-semibold text-white">
             Plus ativo
           </span>
-          <h1 className="mt-4 font-display text-2xl font-semibold text-ink">Já tens o Recibo Certo Plus</h1>
+          <h1 className="mt-4 font-display text-2xl font-semibold text-ink">
+            {vitalicio ? "Tens o Plus para sempre" : "Já tens o Recibo Certo Plus"}
+          </h1>
           <p className="mt-2 text-sm text-stone-500">
-            Obrigado por subscreveres. Tens acesso a todas as funcionalidades.
+            {vitalicio
+              ? "O teu acesso não renova nem expira — não há nada para gerir nem para cancelar."
+              : "Obrigado por subscreveres. Tens acesso a todas as funcionalidades."}
           </p>
           <button
             type="button"

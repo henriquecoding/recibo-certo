@@ -118,6 +118,15 @@ export const PLUS = {
    * daquele que era cobrado.
    */
   temAnual: false,
+  /**
+   * Compra única: o MESMO Plus, pago uma vez em vez de todos os meses.
+   *
+   * Não é um terceiro plano — é uma segunda forma de pagar o único que há.
+   * A distinção não é cosmética: assim que passar a haver dois conjuntos de
+   * funcionalidades, a promessa de «um plano só, sem escadaria» deixa de
+   * ser verdade, e é essa promessa que a página faz.
+   */
+  precoVitalicio: 19.99,
   /** O que o Plus NÃO é — a confusão mais provável, por isso está aqui. */
   naoInclui: [
     "Não inclui nenhum plano nem serviço pago da FIZ.",
@@ -126,13 +135,23 @@ export const PLUS = {
   ],
 } as const;
 
+const emEuros = (v: number): string =>
+  v.toLocaleString("pt-PT", { style: "currency", currency: PLUS.moeda, minimumFractionDigits: 2 });
+
 /** "1,99 €" — a forma que aparece em toda a interface e nos emails. */
-export const precoPlusFormatado = (): string =>
-  PLUS.precoMensal.toLocaleString("pt-PT", {
-    style: "currency",
-    currency: PLUS.moeda,
-    minimumFractionDigits: 2,
-  });
+export const precoPlusFormatado = (): string => emEuros(PLUS.precoMensal);
+
+/** "19,99 €" — a compra única. */
+export const precoVitalicioFormatado = (): string => emEuros(PLUS.precoVitalicio);
+
+/**
+ * Ao fim de quantos meses a compra única fica mais barata que a mensal.
+ *
+ * Calculado, nunca escrito à mão: se um dos preços mudar e este número
+ * ficasse fixo, a página passava a fazer uma promessa aritmética falsa.
+ */
+export const mesesParaCompensarVitalicio = (): number =>
+  Math.ceil(PLUS.precoVitalicio / PLUS.precoMensal);
 
 /**
  * O Quiz Master deixou de existir como subscrição separada (ponto 11.4):

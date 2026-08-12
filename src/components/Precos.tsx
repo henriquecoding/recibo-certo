@@ -4,7 +4,9 @@ import Link from "next/link";
 import { m } from "motion/react";
 import { Check, Lock, ShieldCheck, Flag, Sparkle } from "@/components/ui/Icons";
 import Reveal from "@/components/ui/Reveal";
-import { PLUS } from "@/lib/entitlements";
+import {
+  PLUS, precoPlusFormatado, precoVitalicioFormatado, mesesParaCompensarVitalicio,
+} from "@/lib/entitlements";
 import { fizAtiva } from "@/lib/fiz/flag";
 import FizParceriaCard from "@/components/fiz/FizParceriaCard";
 
@@ -70,10 +72,10 @@ const GARANTIAS = [
   { icon: <Flag size={14} />, texto: "Dados em servidores na UE" },
 ];
 
-const precoFormatado = PLUS.precoMensal.toLocaleString("pt-PT", {
-  style: "currency",
-  currency: PLUS.moeda,
-});
+// Os três derivam do mesmo sítio (`PLUS`), que é a única origem dos preços.
+const precoFormatado = precoPlusFormatado();
+const precoVitalicio = precoVitalicioFormatado();
+const mesesCompensa = mesesParaCompensarVitalicio();
 
 function MatrizCelula({ valor }: { valor: boolean | string }) {
   if (valor === true) return <span className="inline-flex text-brand"><Check size={16} /></span>;
@@ -94,16 +96,19 @@ export default function Precos() {
       <div className="mx-auto max-w-5xl">
         <Reveal className="mb-8 text-center">
           <div className="eyebrow mb-3 text-brand">Planos</div>
-          <h2 className="font-display display-2 font-semibold text-ink">Um plano só. Sem escadaria.</h2>
-          <p className="mx-auto mt-3 max-w-md text-stone-500">
+          <h2 className="font-display display-2 font-semibold text-ink">Um plano só. Duas formas de pagar.</h2>
+          <p className="mx-auto mt-3 max-w-lg text-stone-500">
             Calcular, simular e ler os guias é grátis para sempre. O Plus é para quem quer guardar,
-            comparar e exportar.
+            comparar e exportar — e é exatamente o mesmo Plus, pagues todos os meses ou uma vez só.
           </p>
         </Reveal>
 
-        {/* Dois planos, duas colunas. A FIZ saiu daqui de propósito: estar na
-            mesma grelha fazia-a ler-se como um terceiro escalão a pagar. */}
-        <div className="mx-auto grid max-w-3xl items-start gap-4 sm:grid-cols-2">
+        {/* Três cartões, mas NÃO três escalões: o Grátis e depois o mesmo Plus
+            em duas modalidades de pagamento. A lista de funcionalidades do
+            vitalício não acrescenta nada à do mensal de propósito — no dia em
+            que acrescentar, passa a haver escadaria e o título fica a mentir.
+            A FIZ continua fora desta grelha: aqui leria-se como um escalão. */}
+        <div className="mx-auto grid max-w-5xl items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {/* ── Grátis ── */}
           <Reveal>
             <div className="flex h-full flex-col rounded-4xl border border-stone-100 bg-white p-6 shadow-card sm:p-7">
@@ -170,6 +175,64 @@ export default function Precos() {
               </Link>
               <p className="mt-2 text-center text-xs text-stone-400">Cancela quando quiseres · sem compromisso</p>
             </m.div>
+          </Reveal>
+
+          {/* ── Vitalício ── */}
+          <Reveal delay={0.16}>
+            <div className="flex h-full flex-col rounded-4xl border border-stone-200 bg-white p-6 shadow-card dark:border-stone-700 sm:p-7">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-stone-500">Plus vitalício</h3>
+                <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600 dark:bg-stone-800 dark:text-stone-300">
+                  Pagas uma vez
+                </span>
+              </div>
+              <div className="mt-2 flex items-baseline gap-1.5">
+                <span className="font-display text-4xl font-semibold tabular-nums text-ink">{precoVitalicio}</span>
+                <span className="text-xs text-stone-400">uma vez</span>
+              </div>
+              <p className="mt-1 text-xs text-stone-400">
+                Sem renovação e sem nada para cancelar depois.
+              </p>
+
+              <p className="mt-4 text-sm font-semibold text-stone-700 dark:text-stone-300">
+                Exatamente o mesmo Plus:
+              </p>
+              <ul className="mt-3 space-y-2.5">
+                <li className="flex items-start gap-2.5">
+                  <span className="mt-0.5 flex-shrink-0 text-brand"><Check size={16} /></span>
+                  <span className="text-sm text-stone-600 dark:text-stone-300">
+                    Tudo o que o Plus mensal inclui, sem exceções nem extras.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <span className="mt-0.5 flex-shrink-0 text-brand"><Check size={16} /></span>
+                  <span className="text-sm text-stone-600 dark:text-stone-300">
+                    As funcionalidades que forem sendo acrescentadas ao Plus.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <span className="mt-0.5 flex-shrink-0 text-brand"><Check size={16} /></span>
+                  <span className="text-sm text-stone-600 dark:text-stone-300">
+                    Um pagamento único. Não há subscrição para gerir nem para esquecer.
+                  </span>
+                </li>
+              </ul>
+
+              {/* O número é calculado a partir dos dois preços. Escrito à mão,
+                  ficava falso no dia em que um deles mudasse. */}
+              <p className="mt-4 rounded-2xl bg-stone-50 px-3.5 py-2.5 text-xs leading-relaxed text-stone-500 dark:bg-stone-800/60 dark:text-stone-400">
+                Compensa a partir de {mesesCompensa} meses de utilização. Abaixo disso, o mensal sai
+                mais barato — e podes começar por aí.
+              </p>
+
+              <Link
+                href="/dashboard/upgrade?modalidade=vitalicio"
+                className="mt-6 inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-brand px-5 py-3 text-sm font-semibold text-brand-dark transition-colors hover:bg-brand hover:text-white dark:text-brand"
+              >
+                Comprar o vitalício
+              </Link>
+              <p className="mt-2 text-center text-xs text-stone-400">Pagamento único · sem renovação</p>
+            </div>
           </Reveal>
 
         </div>

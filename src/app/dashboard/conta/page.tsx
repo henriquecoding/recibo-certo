@@ -356,7 +356,7 @@ function Beneficio({ icon, texto }: { icon: React.ReactNode; texto: string }) {
  * agora numa máquina de estados explícita, com o período de graça escrito.
  */
 function SecaoSubscricao() {
-  const { status, abrirPortal } = useSubscricao();
+  const { status, vitalicio, abrirPortal } = useSubscricao();
   const { user } = useAuth();
   const d = descreverEstado(status, !!user);
 
@@ -372,15 +372,26 @@ function SecaoSubscricao() {
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">
-            {d.temAcesso ? "Plano Plus" : "Plano Grátis"}
+            {d.temAcesso ? (vitalicio ? "Plus vitalício" : "Plano Plus") : "Plano Grátis"}
           </span>
           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold ${tom.badge}`}>
             {d.etiqueta}
           </span>
         </div>
-        <p className="mt-0.5 text-xs leading-relaxed text-stone-500 dark:text-stone-400">{d.mensagem}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+          {vitalicio
+            ? "Compra única. O acesso não renova nem expira."
+            : d.mensagem}
+        </p>
       </div>
-      {d.temAcesso || d.requerAcao ? (
+      {/* Um acesso vitalício não tem portal de faturação: não há subscrição
+          para gerir, nem renovação para cancelar. Mostrar «Gerir» abriria um
+          portal do Stripe vazio e faria a pessoa duvidar do que comprou. */}
+      {vitalicio ? (
+        <span className="flex-shrink-0 text-xs font-semibold text-brand-dark dark:text-brand">
+          Para sempre
+        </span>
+      ) : d.temAcesso || d.requerAcao ? (
         <button
           type="button"
           onClick={abrirPortal}

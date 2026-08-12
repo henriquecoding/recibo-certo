@@ -4,13 +4,26 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 import { useAuth } from "@/lib/supabase/auth";
 import { supabaseConfigurado } from "@/lib/supabase/config";
 import { planoTem, type Entitlement, type Plano } from "@/lib/entitlements";
-import { concedePlus } from "@/lib/stripe/precos-autorizados";
+import { concedePlus, eVitalicio, type OrigemConcessao } from "@/lib/stripe/precos-autorizados";
+
+interface LinhaSubscricao {
+  status: string;
+  intervalo: string;
+  price_id: string | null;
+  origem: OrigemConcessao | null;
+  ls_subscription_id: string | null;
+  stripe_payment_intent: string | null;
+  concessao_termina_em: string | null;
+}
 
 // Cliente Supabase sob procura — mantém o SDK fora do bundle inicial (ver auth.tsx).
 async function sb() {
   const { getSupabase } = await import("@/lib/supabase/client");
   return getSupabase();
 }
+
+/** Como se paga o Plus. Não são planos diferentes — é o mesmo Plus. */
+export type Modalidade = "mensal" | "vitalicio";
 
 type StatusSubscricao = "active" | "trialing" | "past_due" | "canceled" | "incomplete" | null;
 
@@ -19,12 +32,17 @@ interface SubscricaoContexto {
   plano: Plano;
   status: StatusSubscricao;
   intervalo: "monthly" | "annual" | null;
+  /** De onde vem o acesso. Muda o que a interface pode prometer. */
+  origem: OrigemConcessao | null;
+  /** Acesso para sempre: não há renovação, nem portal de subscrição. */
+  vitalicio: boolean;
   carregado: boolean;
   /** Verificar SEMPRE a permissão, nunca o nome do plano (ponto 11.5).
       Enquanto o estado carrega, `pode` devolve false — os gates tratam o
       carregamento em separado para não piscar conteúdo bloqueado. */
   pode: (permissao: Entitlement) => boolean;
-  abrirCheckout: () => Promise<void>;
+  /** Uma modalidade de pagamento, não um plano: o Plus é o mesmo nas duas. */
+  abrirCheckout: (modalidade?: Modalidade) => Promise<void>;
   abrirPortal: () => Promise<void>;
   /**
    * Vai buscar de novo o estado da subscrição.
@@ -57,6 +75,7 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
   const { user, carregado: authCarregado } = useAuth();
   const [status, setStatus] = useState<StatusSubscricao>(null);
   const [intervalo, setIntervalo] = useState<"monthly" | "annual" | null>(null);
+  const [origem, setOrigem] = useState<OrigemConcessao | null>(null);
   const [carregado, setCarregado] = useState(false);
 
   /** Um contador que, ao mudar, força nova leitura. */
@@ -68,6 +87,7 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
     if (!user || !supabaseConfigurado()) {
       setStatus(null);
       setIntervalo(null);
+      setOrigem(null);
       setCarregado(true);
       return;
     }
@@ -81,7 +101,7 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
       sb().then((cliente) => {
         if (!ativo) return;
         cliente.from("subscriptions")
-          .select("status, intervalo, price_id")
+          .select("status, intervalo, price_id, origem, ls_subscription_id, stripe_payment_intent, concessao_termina_em")
           .eq("user_id", user.id)
           .in("status", ["active", "trialing", "past_due"])
           .order("criado_em", { ascending: false })
@@ -95,22 +115,32 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
               // `past_due` para o Plus ser concedido: qualquer preço servia,
               // incluindo um de teste, um antigo de outro produto ou um criado
               // à mão no painel. `concedePlus` exige as duas coisas.
-              const linha = data[0] as { status: string; intervalo: string; price_id: string | null };
-              if (!concedePlus({ status: linha.status, priceId: linha.price_id })) {
-                console.warn("[stripe] Subscrição com preço não autorizado — Plus não concedido.");
+              const linha = data[0] as LinhaSubscricao;
+              if (!concedePlus({
+                status: linha.status,
+                priceId: linha.price_id,
+                origem: linha.origem,
+                lsSubscriptionId: linha.ls_subscription_id,
+                paymentIntent: linha.stripe_payment_intent,
+                terminaEm: linha.concessao_termina_em,
+              })) {
+                console.warn("[stripe] Concessão sem prova válida para a sua origem — Plus não concedido.");
                 setStatus(null);
                 setIntervalo(null);
+                setOrigem(null);
                 setCarregado(true);
                 return;
               }
               setStatus(linha.status as StatusSubscricao);
               setIntervalo(linha.intervalo as "monthly" | "annual");
+              setOrigem(linha.origem ?? "stripe");
               setCarregado(true);
               return;
             }
 
             setStatus(null);
             setIntervalo(null);
+            setOrigem(null);
             setCarregado(true);
 
             // A CORRIDA COM O WEBHOOK.
@@ -161,7 +191,7 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
 
   const pode = useCallback((permissao: Entitlement) => planoTem(plano, permissao), [plano]);
 
-  const abrirCheckout = useCallback(async () => {
+  const abrirCheckout = useCallback(async (modalidade: Modalidade = "mensal") => {
     const token = await obterToken();
     if (!token) return;
 
@@ -171,6 +201,7 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
+      body: JSON.stringify({ modalidade }),
     });
 
     const json = await res.json();
@@ -194,7 +225,7 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <Ctx.Provider value={{ plano, status, intervalo, carregado, pode, abrirCheckout, abrirPortal, revalidar }}>
+    <Ctx.Provider value={{ plano, status, intervalo, origem, vitalicio: eVitalicio(origem), carregado, pode, abrirCheckout, abrirPortal, revalidar }}>
       {children}
     </Ctx.Provider>
   );

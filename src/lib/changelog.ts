@@ -19,6 +19,17 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.41.0",
+    data: "2026-08-12",
+    titulo: "Plus vitalício: o mesmo plano, pago uma vez",
+    itens: [
+      "Passa a haver uma segunda forma de pagar o Plus: 19,99 € uma vez, para sempre, em vez de 1,99 € por mês. Não é um plano melhor nem um plano diferente — é exatamente o mesmo Plus, incluindo o que lhe for sendo acrescentado. Compensa a partir de 11 meses de utilização; abaixo disso o mensal sai mais barato, e a página diz isso em vez de o esconder.",
+      "Quem compra o vitalício não fica com uma subscrição para gerir. Não há renovação, não há nada para cancelar, e a conta deixa de mostrar um botão de gestão de subscrição que abriria um portal vazio.",
+      "Por dentro, o acesso vitalício deixou de ser uma subscrição a fingir. Havia duas contas com acesso permanente escritas em colunas de fornecedores que nunca as emitiram — uma no campo do Stripe, outra no do Lemon Squeezy. Desde o endurecimento da verificação de preços, as duas estavam a ser RECUSADAS: tinham acesso vitalício no papel e plano grátis na prática.",
+      "Agora cada concessão declara de onde vem — subscrição, compra única, cupão do Quiz ou decisão nossa — e cada origem traz a prova que lhe compete. Uma concessão manual exige um motivo escrito e fica com o registo de quem a deu; uma compra vitalícia exige o pagamento que a originou. A verificação de preço continua a valer para as duas formas pagas: um preço que não reconhecemos não compra acesso, muito menos acesso para sempre.",
+    ],
+  },
+  {
     version: "2.40.0",
     data: "2026-08-12",
     titulo: "O calendário passou a ser nosso",

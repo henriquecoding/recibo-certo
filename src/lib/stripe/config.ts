@@ -8,6 +8,8 @@ export const STRIPE_CONFIG = {
     // chaves legadas, só para subscrições antigas já existentes na Stripe;
     // nenhum checkout novo as usa.
     plus: process.env.STRIPE_PRICE_PLUS_MONTHLY ?? "",
+    // Compra única. `mode: "payment"` no checkout, nunca "subscription".
+    vitalicio: process.env.STRIPE_PRICE_PLUS_LIFETIME ?? "",
     monthly: process.env.STRIPE_PRICE_MONTHLY ?? "",
     annual: process.env.STRIPE_PRICE_ANNUAL ?? "",
     quiz_master: process.env.STRIPE_PRICE_QUIZ_MASTER ?? "",
