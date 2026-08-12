@@ -42,7 +42,7 @@ interface SubscricaoContexto {
       carregamento em separado para não piscar conteúdo bloqueado. */
   pode: (permissao: Entitlement) => boolean;
   /** Uma modalidade de pagamento, não um plano: o Plus é o mesmo nas duas. */
-  abrirCheckout: (modalidade?: Modalidade) => Promise<void>;
+  abrirCheckout: (modalidade?: Modalidade) => Promise<{ erro: string; esgotado: boolean } | undefined>;
   abrirPortal: () => Promise<void>;
   /**
    * Vai buscar de novo o estado da subscrição.
@@ -205,7 +205,14 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
     });
 
     const json = await res.json();
-    if (json.url) window.location.href = json.url;
+    if (json.url) {
+      window.location.href = json.url;
+      return;
+    }
+    // 409 = os lugares vitalícios esgotaram entre carregar a página e clicar.
+    // Devolve-se o erro em vez de falhar em silêncio, para a página poder
+    // dizer o que aconteceu.
+    if (json.erro) return { erro: json.erro as string, esgotado: Boolean(json.esgotado) };
   }, []);
 
   const abrirPortal = useCallback(async () => {

@@ -5,6 +5,7 @@ import { enviarEmail } from "@/lib/email/send";
 import { emailSubscricaoAtivada, emailSubscricaoCancelada } from "@/lib/email/templates";
 import type Stripe from "stripe";
 import { precoConcedePlus } from "@/lib/stripe/precos-autorizados";
+import { foiLimiteAtingido } from "@/lib/plus/vitalicio";
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -247,6 +248,18 @@ export async function POST(req: NextRequest) {
           { onConflict: "stripe_payment_intent" },
         );
         if (error) {
+          // O lugar esgotou entre o checkout e o pagamento. É uma corrida
+          // estreita mas possível, e o dinheiro JÁ ENTROU: repetir o webhook
+          // não cria lugar nenhum, por isso responde-se 200 para o Stripe
+          // parar de tentar, e grita-se com tudo o que é preciso para o
+          // reembolso ser feito à mão.
+          if (foiLimiteAtingido(error)) {
+            console.error(
+              "[stripe/webhook] REEMBOLSO NECESSÁRIO — compra vitalícia paga sem lugar disponível.",
+              { payment_intent: paymentIntent, sessao: sessao.id, uid },
+            );
+            return NextResponse.json({ recebido: true, reembolso_necessario: true });
+          }
           console.error("[stripe/webhook] Falha ao registar compra vitalícia:", error);
           return NextResponse.json({ erro: "Erro interno." }, { status: 500 });
         }

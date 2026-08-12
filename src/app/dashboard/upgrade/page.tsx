@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/supabase/auth";
 import { useSubscricao, type Modalidade } from "@/lib/stripe/subscription";
 import Link from "next/link";
 import { BellAlert, History, Wallet, Export, ChartProjection, Check, ArrowRight, Lock } from "@/components/ui/Icons";
-import { PLUS, precoPlusFormatado } from "@/lib/entitlements";
+import { PLUS, precoPlusFormatado, precoVitalicioFormatado } from "@/lib/entitlements";
 import { fizAtiva } from "@/lib/fiz/flag";
 import FizLogo from "@/components/fiz/FizLogo";
 
@@ -46,10 +46,19 @@ export default function UpgradePage() {
     if (q === "vitalicio") setModalidade("vitalicio");
   }, []);
 
+  const [erro, setErro] = useState<string | null>(null);
+
   const handleSubscrever = async () => {
     setLoading(true);
+    setErro(null);
     try {
-      await abrirCheckout(modalidade);
+      const r = await abrirCheckout(modalidade);
+      if (r?.erro) {
+        setErro(r.erro);
+        // Se o vitalício esgotou, a única opção que resta é o mensal — e é
+        // melhor deixá-la já escolhida do que obrigar a perceber sozinho.
+        if (r.esgotado) setModalidade("mensal");
+      }
     } finally {
       setLoading(false);
     }
@@ -116,11 +125,51 @@ export default function UpgradePage() {
             escrito à mão aqui, e em desacordo com a página pública. */}
         <div className="flex items-baseline gap-1.5">
           <span className="font-display text-4xl font-semibold text-ink tabular-nums">
-            {precoPlusFormatado()}
+            {modalidade === "vitalicio" ? precoVitalicioFormatado() : precoPlusFormatado()}
           </span>
-          <span className="text-sm text-stone-400">por mês</span>
+          <span className="text-sm text-stone-400">
+            {modalidade === "vitalicio" ? "uma vez" : "por mês"}
+          </span>
         </div>
-        <p className="mt-1 text-xs text-stone-400">faturado mensalmente</p>
+        <p className="mt-1 text-xs text-stone-400">
+          {modalidade === "vitalicio"
+            ? "pagamento único · sem renovação"
+            : "faturado mensalmente"}
+        </p>
+
+        {/* Trocar de modalidade sem sair da página. É a MESMA coisa a ser
+            paga de duas maneiras, por isso não é uma escolha de plano. */}
+        <div
+          role="radiogroup"
+          aria-label="Como queres pagar o Plus"
+          className="mt-5 inline-flex gap-1 rounded-2xl border border-stone-200 bg-stone-50 p-1 dark:border-stone-700 dark:bg-stone-800/60"
+        >
+          {([
+            { id: "mensal", label: "Todos os meses" },
+            { id: "vitalicio", label: "Uma vez, para sempre" },
+          ] as const).map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              role="radio"
+              aria-checked={modalidade === o.id}
+              onClick={() => { setModalidade(o.id); setErro(null); }}
+              className={`min-h-10 rounded-xl px-4 text-[13px] font-semibold transition-colors ${
+                modalidade === o.id
+                  ? "bg-white text-brand-dark shadow-card dark:bg-stone-700 dark:text-brand"
+                  : "text-stone-500 hover:text-stone-700 dark:text-stone-400"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+
+        {erro ? (
+          <p role="alert" className="mt-4 max-w-sm rounded-2xl bg-alert-bg px-4 py-2.5 text-xs leading-relaxed text-alert-text">
+            {erro}
+          </p>
+        ) : null}
 
         {user ? (
           <button

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getStripe } from "@/lib/stripe/server";
 import { STRIPE_CONFIG } from "@/lib/stripe/config";
 import { createClient } from "@supabase/supabase-js";
+import { lugaresVitalicios } from "@/lib/plus/vitalicio";
 
 async function obterUtilizador(req: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -42,6 +43,22 @@ export async function POST(req: NextRequest) {
         },
         { status: 500 },
       );
+    }
+
+    // Recusar ANTES de cobrar. O gatilho da base de dados é que garante o
+    // limite, mas se só ele recusasse, a pessoa pagava primeiro e só depois
+    // descobria que não havia lugar — e ficávamos a dever um reembolso.
+    if (vitalicio) {
+      const lugares = await lugaresVitalicios();
+      if (lugares.esgotado) {
+        return NextResponse.json(
+          {
+            erro: "Os lugares vitalícios esgotaram. O Plus mensal continua disponível.",
+            esgotado: true,
+          },
+          { status: 409 },
+        );
+      }
     }
 
     const stripe = getStripe();

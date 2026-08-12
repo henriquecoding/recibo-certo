@@ -9,6 +9,7 @@ import {
 } from "@/lib/entitlements";
 import { fizAtiva } from "@/lib/fiz/flag";
 import FizParceriaCard from "@/components/fiz/FizParceriaCard";
+import ContadorVitalicio from "@/components/ContadorVitalicio";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  Preços — reestruturado segundo o ponto 11 da arquitetura da parceria.
@@ -183,7 +184,7 @@ export default function Precos() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold text-stone-500">Plus vitalício</h3>
                 <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600 dark:bg-stone-800 dark:text-stone-300">
-                  Pagas uma vez
+                  1000 lugares
                 </span>
               </div>
               <div className="mt-2 flex items-baseline gap-1.5">
@@ -191,13 +192,13 @@ export default function Precos() {
                 <span className="text-xs text-stone-400">uma vez</span>
               </div>
               <p className="mt-1 text-xs text-stone-400">
-                Sem renovação e sem nada para cancelar depois.
+                Sem renovação e sem nada para cancelar depois. Limitado a 1000 contas.
               </p>
 
               <p className="mt-4 text-sm font-semibold text-stone-700 dark:text-stone-300">
                 Exatamente o mesmo Plus:
               </p>
-              <ul className="mt-3 space-y-2.5">
+              <ul className="mt-3 flex-1 space-y-2.5">
                 <li className="flex items-start gap-2.5">
                   <span className="mt-0.5 flex-shrink-0 text-brand"><Check size={16} /></span>
                   <span className="text-sm text-stone-600 dark:text-stone-300">
@@ -225,13 +226,9 @@ export default function Precos() {
                 mais barato — e podes começar por aí.
               </p>
 
-              <Link
-                href="/dashboard/upgrade?modalidade=vitalicio"
-                className="mt-6 inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-brand px-5 py-3 text-sm font-semibold text-brand-dark transition-colors hover:bg-brand hover:text-white dark:text-brand"
-              >
-                Comprar o vitalício
-              </Link>
-              <p className="mt-2 text-center text-xs text-stone-400">Pagamento único · sem renovação</p>
+              {/* Contagem real, lida da base de dados. O botão bloqueia quando
+                  esgota — mas quem garante o limite é o gatilho, não isto. */}
+              <ContadorVitalicio cta="Comprar o vitalício" />
             </div>
           </Reveal>
 

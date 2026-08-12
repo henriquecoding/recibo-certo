@@ -19,6 +19,18 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.42.0",
+    data: "2026-08-12",
+    titulo: "Mil lugares vitalícios, contados a sério",
+    itens: [
+      "O Plus vitalício passa a ter um limite real: 1000 contas, e não mais. O cartão mostra quantos lugares já foram ocupados, lido da base de dados no momento em que abres a página — não é um número escrito à mão nem uma estimativa.",
+      "As duas contas que já tinham acesso vitalício contam para os mil. Eram lugares dados; seria estranho oferecer mil por cima deles.",
+      "Quando esgotar, o botão de compra desaparece e dá lugar a uma explicação — com o Plus mensal, que não tem limite nenhum e inclui exatamente o mesmo.",
+      "O limite não vive na página: vive na base de dados, dentro da mesma operação que regista a compra. Isto importa mais do que parece — se duas pessoas comprassem o último lugar ao mesmo tempo, as duas veriam «999 ocupados» e as duas passariam. Agora a base de dados põe-nas em fila e só uma entra.",
+      "E se o último lugar for ocupado entre alguém abrir o pagamento e concluí-lo, o pagamento é recusado antes de ser cobrado. No caso extremo de já ter sido cobrado, fica registado como reembolso a fazer em vez de desaparecer.",
+    ],
+  },
+  {
     version: "2.41.0",
     data: "2026-08-12",
     titulo: "Plus vitalício: o mesmo plano, pago uma vez",
