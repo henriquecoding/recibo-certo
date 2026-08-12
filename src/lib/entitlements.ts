@@ -58,6 +58,49 @@ export function planoTem(plano: Plano, permissao: Entitlement): boolean {
   return ENTITLEMENTS_POR_PLANO[plano].has(permissao);
 }
 
+// ─── Matriz única funcionalidade → permissão (RC-P1-10) ────────────────
+//
+// Cada gate declarava a sua permissão à mão e o `ProGate` tinha
+// `export.bundle` por omissão: a Saúde Fiscal e as reservas apareciam atrás
+// do gate das exportações, o CSV de cenários passava sem `export.csv`, e um
+// plano podia receber benefícios que ninguém lhe prometeu. Aqui existe UMA
+// tabela; os componentes referem a funcionalidade, não a permissão.
+
+export type Funcionalidade =
+  | "saude-fiscal"
+  | "reserva-trimestral"
+  | "guardiao-iva"
+  | "guardiao-retencao"
+  | "guardiao-ss"
+  | "estimativa-irs"
+  | "historico-nuvem"
+  | "cenarios-ilimitados"
+  | "exportar-csv"
+  | "exportar-pdf"
+  | "exportar-dossie"
+  | "auditoria-recibo-vencimento"
+  | "avatar-perfil";
+
+export const PERMISSAO_DA_FUNCIONALIDADE: Record<Funcionalidade, Entitlement> = {
+  "saude-fiscal": "tax.reserve",
+  "reserva-trimestral": "tax.reserve",
+  "guardiao-iva": "tax.reserve",
+  "guardiao-retencao": "tax.reserve",
+  "guardiao-ss": "tax.reserve",
+  "estimativa-irs": "tax.reserve",
+  "historico-nuvem": "history.cloud",
+  "cenarios-ilimitados": "scenarios.unlimited",
+  "exportar-csv": "export.csv",
+  "exportar-pdf": "export.pdf",
+  "exportar-dossie": "export.bundle",
+  "auditoria-recibo-vencimento": "audit.payslip",
+  "avatar-perfil": "profile.avatar",
+};
+
+export function permissaoDe(f: Funcionalidade): Entitlement {
+  return PERMISSAO_DA_FUNCIONALIDADE[f];
+}
+
 // ─── Oferta comercial ──────────────────────────────────────────────────
 
 export const PLUS = {

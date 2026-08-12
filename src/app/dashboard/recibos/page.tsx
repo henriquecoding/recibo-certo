@@ -3,13 +3,15 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useRecibos, calcularReciboDashboard, resumirDashboard, type Recibo } from "@/lib/store/recibos";
+import { useRecibos } from "@/lib/store/recibos";
+import EditarRecibo from "@/components/dashboard/EditarRecibo";
+import { resultadoDoRecibo, resumirRecibos, anoFiscalCorrente, type Recibo } from "@/lib/recibos-contrato";
 import { downloadCSV } from "@/lib/export";
 import { descarregar, MIME, nomeFicheiro } from "@/lib/export/nomes";
 import { getSupabase } from "@/lib/supabase/client";
 import { fmt, pct } from "@/lib/format";
 import {
-  Trash, Receipt, Export, ArrowRight, BarChart2, Calendar,
+  Trash, Pencil, Receipt, Export, ArrowRight, BarChart2, Calendar,
   Wallet, Sparkle, Filter, ChevronDown, ChevronUp, User,
 } from "@/components/ui/Icons";
 import ProGate from "@/components/ui/ProGate";
@@ -28,11 +30,23 @@ const ReceitaChart = dynamic(() => import("@/components/dashboard/ReceitaChart")
 type Vista = "lista" | "tabela";
 
 export default function RecibosPage() {
-  const { recibos, carregado, remover } = useRecibos();
+  const { recibos, carregado, remover, atualizar } = useRecibos();
+  // Sem isto, um recibo lançado com a data errada ficava errado para sempre
+  // e arrastava o mês, o trimestre e o ano fiscal com ele (RC-P0-09).
+  const [aEditar, setAEditar] = useState<Recibo | null>(null);
   const [query, setQuery] = useState("");
   const [filtroMes, setFiltroMes] = useState<string>("todos");
   const [vista, setVista] = useState<Vista>("lista");
   const [mesAberto, setMesAberto] = useState<string | null>(null);
+  /**
+   * Quantos meses são desenhados de uma vez (RC-P3-01).
+   *
+   * Todos os recibos são calculados no browser; um histórico de anos pintava
+   * a página inteira de uma vez. Os meses entram por blocos e a pessoa pede
+   * mais — o cálculo acompanha o que está mesmo à vista.
+   */
+  const MESES_POR_BLOCO = 12;
+  const [mesesVisiveis, setMesesVisiveis] = useState(MESES_POR_BLOCO);
   const [pdfState, setPdfState] = useState<{ estado: "inativo" | "a-compor" | "pronto" | "erro"; texto?: string }>({
     estado: "inativo",
   });
@@ -114,7 +128,7 @@ export default function RecibosPage() {
     }
   }
 
-  const resumoTotal = useMemo(() => resumirDashboard(recibos), [recibos]);
+  const resumoTotal = useMemo(() => resumirRecibos(recibos, null), [recibos]);
   const mediaRecibo = recibos.length > 0 ? resumoTotal.liquido / recibos.length : 0;
   const taxaEfetiva = resumoTotal.bruto > 0 ? 1 - resumoTotal.liquido / resumoTotal.bruto : 0;
   const clientesUnicos = new Set(recibos.map((r) => r.cliente.trim().toLowerCase())).size;
@@ -124,7 +138,7 @@ export default function RecibosPage() {
     const mapa: Record<string, { nome: string; bruto: number; liquido: number; count: number }> = {};
     recibos.forEach((r) => {
       const chave = r.cliente.trim().toLowerCase() || "(sem nome)";
-      const c = calcularReciboDashboard(r);
+      const c = resultadoDoRecibo(r);
       if (!mapa[chave]) mapa[chave] = { nome: r.cliente.trim() || "Sem nome", bruto: 0, liquido: 0, count: 0 };
       mapa[chave].bruto += c.bruto;
       mapa[chave].liquido += c.liquido;
@@ -237,7 +251,7 @@ export default function RecibosPage() {
           {/* ── Gráficos: receita anual + distribuição ──────────────── */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <ErrorBoundary fallback={null}>
-              <ReceitaChart recibos={recibos} />
+              <ReceitaChart recibos={recibos} ano={anoFiscalCorrente()} />
             </ErrorBoundary>
             <DistribuicaoCard resumo={resumoTotal} />
           </div>
@@ -249,9 +263,9 @@ export default function RecibosPage() {
               <InfoTip>Valores acumulados de todos os recibos registados. A retenção na fonte e Seg. Social são adiantamentos — o valor final depende da declaração de IRS.</InfoTip>
             </h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <ImpostoMini label="IRS estimado" valor={resumoTotal.retencao} />
-              <ImpostoMini label="Seg. Social" valor={resumoTotal.segSocial} />
-              <ImpostoMini label="IVA cobrado" valor={resumoTotal.iva} />
+              <ImpostoMini label="Retenção IRS" valor={resumoTotal.retencaoEfetiva} />
+              <ImpostoMini label="Seg. Social" valor={resumoTotal.segurancaSocialEstimada} />
+              <ImpostoMini label="IVA cobrado" valor={resumoTotal.ivaCobrado} />
               <ImpostoMini label="Média/recibo" valor={mediaRecibo} accent />
             </div>
           </div>
@@ -356,7 +370,7 @@ export default function RecibosPage() {
                   </thead>
                   <tbody>
                     {filtrados.map((r) => {
-                      const c = calcularReciboDashboard(r);
+                      const c = resultadoDoRecibo(r);
                       return (
                         <tr key={r.id} className="border-t border-stone-50 transition-colors hover:bg-stone-50/50 dark:border-stone-800 dark:hover:bg-stone-800/40">
                           <td className="px-5 py-3">
@@ -367,11 +381,20 @@ export default function RecibosPage() {
                             <Badge tone="neutral">{r.atividade ? r.atividade.split("·").pop()?.trim().slice(0, 20) ?? META_TIPO[r.tipo].label : META_TIPO[r.tipo].label}</Badge>
                           </td>
                           <td className="px-3 py-3 text-right text-sm font-medium tabular-nums text-stone-700 dark:text-stone-300">{fmt(c.bruto)}</td>
-                          <td className="hidden px-3 py-3 text-right text-sm tabular-nums text-stone-500 dark:text-stone-400 md:table-cell">{fmt(c.iva)}</td>
-                          <td className="hidden px-3 py-3 text-right text-sm tabular-nums text-stone-500 dark:text-stone-400 md:table-cell">{fmt(c.retencaoIRS)}</td>
-                          <td className="hidden px-3 py-3 text-right text-sm tabular-nums text-stone-500 dark:text-stone-400 lg:table-cell">{fmt(c.segSocial)}</td>
+                          <td className="hidden px-3 py-3 text-right text-sm tabular-nums text-stone-500 dark:text-stone-400 md:table-cell">{fmt(c.ivaCobrado)}</td>
+                          <td className="hidden px-3 py-3 text-right text-sm tabular-nums text-stone-500 dark:text-stone-400 md:table-cell">{fmt(c.retencaoEfetiva)}</td>
+                          <td className="hidden px-3 py-3 text-right text-sm tabular-nums text-stone-500 dark:text-stone-400 lg:table-cell">{fmt(c.segurancaSocialEstimada)}</td>
                           <td className="px-3 py-3 text-right text-sm font-semibold tabular-nums text-brand">{fmt(c.liquido)}</td>
                           <td className="px-3 py-3">
+                            <div className="flex items-center justify-end gap-0.5">
+                            <button
+                              type="button"
+                              onClick={() => setAEditar(r)}
+                              aria-label={`Editar recibo de ${r.cliente || "sem nome"}`}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-300 transition-all hover:bg-brand-light hover:text-brand dark:hover:bg-brand/15"
+                            >
+                              <Pencil size={14} />
+                            </button>
                             <button
                               type="button"
                               onClick={() => { if (window.confirm(`Remover o recibo de ${r.cliente || "sem nome"} (${fmt(r.valor)})?`)) remover(r.id); }}
@@ -380,6 +403,7 @@ export default function RecibosPage() {
                             >
                               <Trash size={14} />
                             </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -389,11 +413,11 @@ export default function RecibosPage() {
                     <tfoot>
                       <tr className="border-t-2 border-stone-200 dark:border-stone-700">
                         <td colSpan={3} className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-stone-400">Total</td>
-                        <td className="px-3 py-3 text-right text-sm font-semibold tabular-nums text-stone-700 dark:text-stone-200">{fmt(filtrados.reduce((s, r) => s + calcularReciboDashboard(r).bruto, 0))}</td>
-                        <td className="hidden px-3 py-3 text-right text-sm font-semibold tabular-nums text-stone-500 dark:text-stone-400 md:table-cell">{fmt(filtrados.reduce((s, r) => s + calcularReciboDashboard(r).iva, 0))}</td>
-                        <td className="hidden px-3 py-3 text-right text-sm font-semibold tabular-nums text-stone-500 dark:text-stone-400 md:table-cell">{fmt(filtrados.reduce((s, r) => s + calcularReciboDashboard(r).retencaoIRS, 0))}</td>
-                        <td className="hidden px-3 py-3 text-right text-sm font-semibold tabular-nums text-stone-500 dark:text-stone-400 lg:table-cell">{fmt(filtrados.reduce((s, r) => s + calcularReciboDashboard(r).segSocial, 0))}</td>
-                        <td className="px-3 py-3 text-right text-sm font-semibold tabular-nums text-brand">{fmt(filtrados.reduce((s, r) => s + calcularReciboDashboard(r).liquido, 0))}</td>
+                        <td className="px-3 py-3 text-right text-sm font-semibold tabular-nums text-stone-700 dark:text-stone-200">{fmt(filtrados.reduce((s, r) => s + resultadoDoRecibo(r).bruto, 0))}</td>
+                        <td className="hidden px-3 py-3 text-right text-sm font-semibold tabular-nums text-stone-500 dark:text-stone-400 md:table-cell">{fmt(filtrados.reduce((s, r) => s + resultadoDoRecibo(r).ivaCobrado, 0))}</td>
+                        <td className="hidden px-3 py-3 text-right text-sm font-semibold tabular-nums text-stone-500 dark:text-stone-400 md:table-cell">{fmt(filtrados.reduce((s, r) => s + resultadoDoRecibo(r).retencaoEfetiva, 0))}</td>
+                        <td className="hidden px-3 py-3 text-right text-sm font-semibold tabular-nums text-stone-500 dark:text-stone-400 lg:table-cell">{fmt(filtrados.reduce((s, r) => s + resultadoDoRecibo(r).segurancaSocialEstimada, 0))}</td>
+                        <td className="px-3 py-3 text-right text-sm font-semibold tabular-nums text-brand">{fmt(filtrados.reduce((s, r) => s + resultadoDoRecibo(r).liquido, 0))}</td>
                         <td className="px-3 py-3" />
                       </tr>
                     </tfoot>
@@ -408,9 +432,9 @@ export default function RecibosPage() {
             /* ── Vista lista (com agrupamento mensal) ──────────────── */
             <>
               {meses.length === 0 && <p className="text-sm text-stone-400">Sem recibos para &ldquo;{query}&rdquo;.</p>}
-              {meses.map((mesKey) => {
+              {meses.slice(0, mesesVisiveis).map((mesKey) => {
                 const doMes = grupos[mesKey];
-                const resumoMes = resumirDashboard(doMes);
+                const resumoMes = resumirRecibos(doMes, null);
                 const aberto = mesAberto === null || mesAberto === mesKey;
                 return (
                   <div key={mesKey} className="rounded-4xl border border-stone-100 bg-white shadow-card dark:bg-stone-900 dark:border-stone-800">
@@ -440,16 +464,16 @@ export default function RecibosPage() {
                       <div className="border-t border-stone-50 px-5 pb-5 sm:px-6 dark:border-stone-800">
                         {/* Mini resumo mensal */}
                         <div className="grid grid-cols-2 gap-2 py-3 sm:grid-cols-4">
-                          <MesMini label="IRS estimado" valor={resumoMes.retencao} />
-                          <MesMini label="Seg. Social" valor={resumoMes.segSocial} />
-                          <MesMini label="IVA cobrado" valor={resumoMes.iva} />
+                          <MesMini label="IRS estimado" valor={resumoMes.retencaoEfetiva} />
+                          <MesMini label="Seg. Social" valor={resumoMes.segurancaSocialEstimada} />
+                          <MesMini label="IVA cobrado" valor={resumoMes.ivaCobrado} />
                           <MesMini label="Líquido" valor={resumoMes.liquido} accent />
                         </div>
 
                         {/* Lista de recibos do mês */}
                         <ul className="space-y-2">
                           {doMes.map((r) => {
-                            const c = calcularReciboDashboard(r);
+                            const c = resultadoDoRecibo(r);
                             return (
                               <li
                                 key={r.id}
@@ -465,23 +489,33 @@ export default function RecibosPage() {
                                     <span>{r.atividade ? r.atividade.split("·").pop()?.trim().slice(0, 25) ?? META_TIPO[r.tipo].label : META_TIPO[r.tipo].label}</span>
                                     <span>·</span>
                                     <span>Bruto {fmt(c.bruto)}</span>
-                                    {c.iva > 0 && <><span>·</span><span>IVA {fmt(c.iva)}</span></>}
-                                    {c.retencaoIRS > 0 && <><span>·</span><span>Ret. {fmt(c.retencaoIRS)}</span></>}
-                                    {c.segSocial > 0 && <><span>·</span><span>SS {fmt(c.segSocial)}</span></>}
+                                    {c.ivaCobrado > 0 && <><span>·</span><span>IVA {fmt(c.ivaCobrado)}</span></>}
+                                    {c.retencaoEfetiva > 0 && <><span>·</span><span>Ret. {fmt(c.retencaoEfetiva)}</span></>}
+                                    {c.segurancaSocialEstimada > 0 && <><span>·</span><span>SS {fmt(c.segurancaSocialEstimada)}</span></>}
                                   </div>
                                 </div>
                                 <div className="flex-shrink-0 text-right">
                                   <div className="font-display text-base font-semibold text-brand">{fmt(c.liquido)}</div>
                                   <div className="text-[11px] text-stone-400">líquido</div>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => { if (window.confirm(`Remover o recibo de ${r.cliente || "sem nome"} (${fmt(r.valor)})?`)) remover(r.id); }}
-                                  aria-label={`Remover recibo de ${r.cliente}`}
-                                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-stone-300 transition-all hover:bg-red-50 hover:text-red-400 dark:hover:bg-red-900/20"
-                                >
-                                  <Trash size={14} />
-                                </button>
+                                <div className="flex flex-shrink-0 items-center gap-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => setAEditar(r)}
+                                    aria-label={`Editar recibo de ${r.cliente || "sem nome"}`}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-300 transition-all hover:bg-brand-light hover:text-brand dark:hover:bg-brand/15"
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => { if (window.confirm(`Remover o recibo de ${r.cliente || "sem nome"} (${fmt(r.valor)})?`)) remover(r.id); }}
+                                    aria-label={`Remover recibo de ${r.cliente}`}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-300 transition-all hover:bg-red-50 hover:text-red-400 dark:hover:bg-red-900/20"
+                                  >
+                                    <Trash size={14} />
+                                  </button>
+                                </div>
                               </li>
                             );
                           })}
@@ -491,6 +525,15 @@ export default function RecibosPage() {
                   </div>
                 );
               })}
+              {meses.length > mesesVisiveis && (
+                <button
+                  type="button"
+                  onClick={() => setMesesVisiveis((n) => n + MESES_POR_BLOCO)}
+                  className="min-h-11 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-600 transition-colors hover:border-brand hover:text-brand dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
+                >
+                  Mostrar mais meses ({meses.length - mesesVisiveis} por mostrar)
+                </button>
+              )}
             </>
           )}
 
@@ -505,6 +548,14 @@ export default function RecibosPage() {
             </Link>
           </div>
         </div>
+      )}
+
+      {aEditar && (
+        <EditarRecibo
+          recibo={aEditar}
+          onGuardar={atualizar}
+          onFechar={() => setAEditar(null)}
+        />
       )}
     </div>
   );
@@ -549,14 +600,14 @@ function MesMini({ label, valor, accent }: { label: string; valor: number; accen
   );
 }
 
-const SEG: { key: "liquido" | "retencao" | "segSocial"; label: string; color?: string; cls?: string }[] = [
+const SEG: { key: "liquido" | "retencaoEfetiva" | "segurancaSocialEstimada"; label: string; color?: string; cls?: string }[] = [
   { key: "liquido", label: "Para ti", cls: "text-brand" },
-  { key: "retencao", label: "IRS estimado", color: "#9FE1CB" },
-  { key: "segSocial", label: "Seg. Social", cls: "text-brand-deep" },
+  { key: "retencaoEfetiva", label: "Retenção IRS", color: "#9FE1CB" },
+  { key: "segurancaSocialEstimada", label: "Seg. Social", cls: "text-brand-deep" },
 ];
 
-function DistribuicaoCard({ resumo }: { resumo: { liquido: number; retencao: number; segSocial: number; iva: number } }) {
-  const real = resumo.liquido + resumo.retencao + resumo.segSocial;
+function DistribuicaoCard({ resumo }: { resumo: { liquido: number; retencaoEfetiva: number; segurancaSocialEstimada: number; ivaCobrado: number } }) {
+  const real = resumo.liquido + resumo.retencaoEfetiva + resumo.segurancaSocialEstimada;
   const vazio = real <= 0;
   const base = real || 1;
   const r = 52;
@@ -614,11 +665,11 @@ function DistribuicaoCard({ resumo }: { resumo: { liquido: number; retencao: num
               <span className="flex-shrink-0 text-xs font-semibold tabular-nums text-stone-700 dark:text-stone-300">{fmt(a.value)}</span>
             </li>
           ))}
-          {resumo.iva > 0 && (
+          {resumo.ivaCobrado > 0 && (
             <li className="flex items-center gap-2 border-t border-stone-100 pt-2 dark:border-stone-800">
               <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-stone-300 dark:bg-stone-600" />
               <span className="min-w-0 flex-1 truncate text-xs text-stone-500 dark:text-stone-400">IVA cobrado</span>
-              <span className="flex-shrink-0 text-xs font-semibold tabular-nums text-stone-700 dark:text-stone-300">{fmt(resumo.iva)}</span>
+              <span className="flex-shrink-0 text-xs font-semibold tabular-nums text-stone-700 dark:text-stone-300">{fmt(resumo.ivaCobrado)}</span>
             </li>
           )}
         </ul>

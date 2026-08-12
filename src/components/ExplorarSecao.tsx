@@ -8,7 +8,7 @@
 //     (independente/comparar), ou o cartão da ferramenta-chave (dependente/empresa);
 //   · uma fila compacta de ferramentas relevantes;
 //   · uma fila compacta de guias + o Quiz.
-// Curadoria vem da fonte única (ferramentas-config/guias-config). A DemoIRS entra
+// Curadoria vem da fonte única (lib/ferramentas + guias-config). A DemoIRS entra
 // em chunk próprio (fiscal-data fora do arranque) e só é montada nos perfis que a
 // mostram — "só o necessário conforme a seleção".
 // ─────────────────────────────────────────────────────────────────────────────

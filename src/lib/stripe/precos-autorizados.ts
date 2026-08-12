@@ -91,3 +91,121 @@ export function concedePlus(input: { status: string | null | undefined; priceId:
   if (!(ESTADOS_COM_ACESSO as readonly string[]).includes(input.status)) return false;
   return precoConcedePlus(input.priceId);
 }
+
+// ─── Máquina de estados da subscrição (RC-P1-11) ───────────────────────
+//
+// A página de conta mostrava "A experimentar" para QUALQUER estado que não
+// fosse ativo — incluindo pagamento em atraso e subscrição cancelada — e o
+// `past_due` recebia o Plus sem que ninguém explicasse porquê. O período de
+// graça é uma decisão de produto: fica escrita, com prazo, e cada estado tem
+// a sua mensagem.
+
+/**
+ * Dias em que o acesso se mantém depois de um pagamento falhar.
+ *
+ * Não é um acidente do código: preferimos que quem tem um cartão expirado
+ * continue a ver o seu histórico enquanto resolve, em vez de perder o acesso
+ * ao que já pagou. O Stripe tenta cobrar de novo dentro desta janela.
+ */
+export const DIAS_PERIODO_GRACA = 14;
+
+export type EstadoConta =
+  | "sem-conta"
+  | "gratis"
+  | "ativo"
+  | "periodo-experimental"
+  | "pagamento-em-atraso"
+  | "cancelado"
+  | "incompleto";
+
+export interface DescricaoEstado {
+  estado: EstadoConta;
+  /** Rótulo curto para o cartão da conta. */
+  etiqueta: string;
+  /** Explicação em pt-PT do que está a acontecer. */
+  mensagem: string;
+  /** Tem acesso às funcionalidades do Plus? */
+  temAcesso: boolean;
+  /** Precisa de ação de quem lê. */
+  requerAcao: boolean;
+  tom: "neutro" | "positivo" | "aviso" | "alerta";
+}
+
+/** Traduz o estado bruto do Stripe numa descrição para a interface. */
+export function descreverEstado(
+  status: string | null | undefined,
+  temSessao: boolean,
+): DescricaoEstado {
+  if (!temSessao) {
+    return {
+      estado: "sem-conta",
+      etiqueta: "Sem conta",
+      mensagem: "Estás a usar o ReciboCerto sem conta. Os dados ficam guardados neste dispositivo.",
+      temAcesso: false,
+      requerAcao: false,
+      tom: "neutro",
+    };
+  }
+
+  switch (status) {
+    case "active":
+      return {
+        estado: "ativo",
+        etiqueta: "Plus ativo",
+        mensagem: "A tua subscrição está ativa. Histórico na nuvem, cenários ilimitados e exportações.",
+        temAcesso: true,
+        requerAcao: false,
+        tom: "positivo",
+      };
+    case "trialing":
+      return {
+        estado: "periodo-experimental",
+        etiqueta: "Período experimental",
+        mensagem: "Estás a experimentar o Plus. No fim do período, a subscrição começa a ser cobrada.",
+        temAcesso: true,
+        requerAcao: false,
+        tom: "positivo",
+      };
+    case "past_due":
+      return {
+        estado: "pagamento-em-atraso",
+        etiqueta: "Pagamento em atraso",
+        mensagem:
+          `O último pagamento não foi concluído. Mantens o acesso durante ${DIAS_PERIODO_GRACA} dias enquanto ` +
+          "resolves — atualiza o método de pagamento para não o perderes.",
+        temAcesso: true,
+        requerAcao: true,
+        tom: "aviso",
+      };
+    case "canceled":
+      return {
+        estado: "cancelado",
+        etiqueta: "Subscrição cancelada",
+        mensagem:
+          "A subscrição foi cancelada. Os teus dados continuam guardados, mas as funcionalidades do Plus deixaram " +
+          "de estar disponíveis.",
+        temAcesso: false,
+        requerAcao: false,
+        tom: "neutro",
+      };
+    case "incomplete":
+    case "incomplete_expired":
+      return {
+        estado: "incompleto",
+        etiqueta: "Subscrição por concluir",
+        mensagem: "A subscrição ficou a meio — o pagamento não chegou a ser confirmado. Podes tentar de novo.",
+        temAcesso: false,
+        requerAcao: true,
+        tom: "aviso",
+      };
+    default:
+      return {
+        estado: "gratis",
+        etiqueta: "Plano grátis",
+        mensagem: "Estás no plano grátis. Calculadoras e guias sem limite; o Plus acrescenta nuvem e exportações.",
+        temAcesso: false,
+        requerAcao: false,
+        tom: "neutro",
+      };
+  }
+}

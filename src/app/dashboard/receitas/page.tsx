@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRecibos, calcularRecibo, type Recibo } from "@/lib/store/recibos";
+import { useRecibos } from "@/lib/store/recibos";
+import { resultadoDoRecibo, resumirRecibos, recibosDoAno, anoFiscalCorrente, type Recibo } from "@/lib/recibos-contrato";
 import { fmt, pct } from "@/lib/format";
 import { Receipt } from "@/components/ui/Icons";
 import Badge from "@/components/ui/Badge";
@@ -19,18 +20,19 @@ export default function ReceitasPage() {
   const { recibos, carregado } = useRecibos();
   const [periodo, setPeriodo] = useState<Periodo>("ano");
 
-  const filtrados = useMemo(() => {
-    if (periodo === "tudo") return recibos;
-    const ano = new Date().getFullYear();
-    return recibos.filter((r) => new Date(r.data + "T00:00:00").getFullYear() === ano);
-  }, [recibos, periodo]);
+  const anoFiscal = anoFiscalCorrente();
+  const filtrados = useMemo(
+    () => (periodo === "tudo" ? recibos : recibosDoAno(recibos, anoFiscal)),
+    [recibos, periodo, anoFiscal],
+  );
 
+  // O MESMO agregador do painel e das exportações: era aqui que a página de
+  // Receitas recalculava por outra semântica e dava um líquido diferente
+  // para os mesmos recibos (RC-P0-02).
   const kpis = useMemo(() => {
-    const bruto = filtrados.reduce((s, r) => s + r.valor, 0);
-    const liquido = filtrados.reduce((s, r) => s + calcularRecibo(r).liquido, 0);
-    const total = filtrados.length;
-    return { bruto, liquido, total, ticket: total ? bruto / total : 0 };
-  }, [filtrados]);
+    const r = resumirRecibos(filtrados, periodo === "tudo" ? null : anoFiscal);
+    return { bruto: r.bruto, liquido: r.liquido, total: r.total, ticket: r.total ? r.bruto / r.total : 0 };
+  }, [filtrados, periodo, anoFiscal]);
 
   const categorias = useMemo(() => {
     const m = new Map<TipoAtividade, number>();
@@ -130,7 +132,7 @@ export default function ReceitasPage() {
             <div className="col-span-12 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:col-span-4 lg:grid-cols-1">
               {[
                 { l: "Faturado", v: fmt(kpis.bruto) },
-                { l: "Recibos emitidos", v: String(kpis.total) },
+                { l: "Recibos registados", v: String(kpis.total) },
                 { l: "Ticket médio", v: fmt(kpis.ticket) },
               ].map((k) => (
                 <div key={k.l} className="flex-1 rounded-3xl border border-stone-100 bg-white px-4 py-4 shadow-card dark:bg-stone-900 dark:border-stone-800">
@@ -193,7 +195,7 @@ export default function ReceitasPage() {
                     </div>
                     <ul className="relative space-y-3 border-l-2 border-stone-100 dark:border-stone-800 pl-5">
                       {g.recibos.map((r) => {
-                        const c = calcularRecibo(r);
+                        const c = resultadoDoRecibo(r);
                         return (
                           <li key={r.id} className="relative">
                             <span className="absolute -left-[1.5rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-stone-900 bg-brand" />

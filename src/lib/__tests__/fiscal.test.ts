@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { projetarDataLimite } from "@/components/dashboard/IvaProgresso";
-import { prazoDeclaracaoSS, proximoPagamentoSS, calcularSS } from "@/components/dashboard/GuardiaoSS";
+import { prazoDeclaracaoSS, proximoPagamentoSS, calcularSS } from "@/lib/fiscal-ss-prazos";
 import {
   IVA_ISENCAO_LIMITE,
   SS_TAXA,
@@ -128,33 +128,41 @@ describe("mínimo de existência — fórmula por troços do artigo 70.º", () =
 // ── projetarDataLimite ────────────────────────────────────────────────────────
 
 describe("projetarDataLimite", () => {
+  // O mês deixou de ser um parâmetro à parte: sai da data de referência, que
+  // já lá estava. Dois argumentos para a mesma coisa deixavam passar chamadas
+  // em que o mês e a data discordavam.
   it("retorna null se faturado é zero", () => {
-    expect(projetarDataLimite(0, LIMITE_IVA, 5)).toBeNull();
+    expect(projetarDataLimite(0, LIMITE_IVA, new Date(2026, 5, 1))).toBeNull();
   });
 
   it("retorna null se já ultrapassou o limite", () => {
-    expect(projetarDataLimite(16_000, LIMITE_IVA, 5)).toBeNull();
+    expect(projetarDataLimite(16_000, LIMITE_IVA, new Date(2026, 5, 1))).toBeNull();
   });
 
   it("projeta 6 meses à frente se faturou 7500€ em 6 meses (jan-jun)", () => {
-    // mesAtual = 5 (junho, 0-indexed) → 6 meses decorridos → média 1250/mês
-    // Restam 7500€ / 1250€ = 6 meses. Base fixa (junho) → projeta dezembro.
-    const base = new Date(2026, 5, 1); // junho 2026, determinístico
-    const data = projetarDataLimite(7_500, LIMITE_IVA, 5, base);
+    // junho → 6 meses decorridos → média 1250/mês.
+    // Restam 7500€ / 1250€ = 6 meses → projeta dezembro.
+    const data = projetarDataLimite(7_500, LIMITE_IVA, new Date(2026, 5, 1));
     expect(data).not.toBeNull();
     expect(data!.getMonth()).toBe(11); // dezembro
   });
 
   it("projeta 1 mês se faturou 14500€ em 10 meses", () => {
     // média 1450/mês; restam 500€ → < 1 mês → Math.ceil = 1
-    const base = new Date(2026, 9, 1); // outubro 2026, determinístico
-    const data = projetarDataLimite(14_500, LIMITE_IVA, 9, base);
+    const data = projetarDataLimite(14_500, LIMITE_IVA, new Date(2026, 9, 1));
     expect(data).not.toBeNull();
     expect(data!.getMonth()).toBe(10); // novembro (outubro + 1)
   });
 
   it("retorna null se a média mensal é zero (limite já atingido)", () => {
-    expect(projetarDataLimite(15_000, LIMITE_IVA, 5)).toBeNull();
+    expect(projetarDataLimite(15_000, LIMITE_IVA, new Date(2026, 5, 1))).toBeNull();
+  });
+
+  it("não projeta para fora do ano civil — o limiar do Art. 53.º reinicia", () => {
+    // Faturação baixa em novembro: ao ritmo atual o limite só seria atingido
+    // em 2027, e a esse ponto o contador já foi a zero. Projetar isso seria
+    // descrever um facto que não existe.
+    expect(projetarDataLimite(1_000, LIMITE_IVA, new Date(2026, 10, 1))).toBeNull();
   });
 });
 

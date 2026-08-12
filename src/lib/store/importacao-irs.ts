@@ -15,7 +15,8 @@
 import type { TipoAtividade } from "@/lib/fiscal-data";
 import type { RendimentoId } from "@/lib/irs-guiado";
 import { lerPreferenciasFiscais } from "@/lib/store/preferencias-fiscais";
-import { calcularVencimentoAnual } from "@/lib/fiscal-dependente";
+import { adaptarCenarioVencimento } from "@/lib/store/cenario-vencimento-adaptador";
+import type { Cenario } from "@/lib/store/cenarios";
 
 // ─── Patch normalizado aplicável ao estado do Simulador de IRS ──────────────
 export interface PatchImportacao {
@@ -94,7 +95,12 @@ export interface ExportEmpresa {
 
 const KEY_RV = "recibocerto:export-recibos-verdes:v1";
 const KEY_EMP = "recibocerto:export-empresa:v1";
-const KEY_VENC = "recibocerto:vencimentos:v1";
+/**
+ * Instantâneo COMPLETO do último cenário de vencimento — o mesmo objeto que
+ * vai para a store de cenários. Substitui `recibocerto:vencimentos:v1`, o
+ * espelho legado que reduzia o cenário a quatro campos (RC-P1-02).
+ */
+const KEY_VENC = "recibocerto:cenario-vencimento:v2";
 
 function lerJSON<T>(key: string): T | null {
   if (typeof window === "undefined") return null;
@@ -121,14 +127,59 @@ export const gravarExportEmpresa = (s: ExportEmpresa) => gravarJSON(KEY_EMP, s);
 const euros = (n: number) =>
   `${Math.round(n).toLocaleString("pt-PT")} €`;
 
-// ─── Cenário de vencimento (mesmo formato do store de vencimentos) ──────────
-interface CenarioVencimentoMin {
-  nome?: string;
-  salarioBruto: number;
-  dependentes: number;
-  subsidioRefeicaoDia: number;
-  subsidioRefeicaoCartao: boolean;
-  diasUteis: number;
+/**
+ * Constrói a fonte de importação a partir de um instantâneo de vencimento.
+ *
+ * Funciona igual para um cenário local e para um vindo da nuvem: é o mesmo
+ * objeto. A ponte anterior só existia em localStorage, por isso um cenário
+ * criado no telemóvel nunca chegava ao IRS no portátil.
+ */
+export function fonteDeVencimento(dados: Record<string, unknown>, nome?: string): FonteImportacao | null {
+  const v = adaptarCenarioVencimento(dados);
+  if (!v) return null;
+
+  const detalhes = [
+    `Bruto anual (14 meses + variáveis) ${euros(v.brutoAnual)}`,
+    `Retenção de IRS anual ${euros(v.irsAnual)}`,
+    `Segurança Social anual ${euros(v.ssAnual)}`,
+  ];
+  if (v.dependentes > 0) detalhes.push(`${v.dependentes} dependente(s)`);
+  if (v.rubricasAnualizadas > 0) detalhes.push(`Rubricas variáveis ${euros(v.rubricasAnualizadas)}/ano`);
+  if (v.irsJovemAno !== null) detalhes.push(`IRS Jovem (${v.irsJovemAno}.º ano)`);
+  if (v.estadoCivil) detalhes.push(`Estado civil: ${v.estadoCivil}`);
+  if (v.regiao !== "continente") detalhes.push(`Região: ${v.regiao}`);
+  if (v.deficiencia) detalhes.push("Deficiência declarada");
+  // O que NÃO foi importado é dito, em vez de desaparecer em silêncio.
+  detalhes.push(...v.naoImportado.map((n) => `Nota: ${n}`));
+
+  return {
+    id: "vencimento",
+    titulo: "Recibo de vencimento",
+    descricao: nome ? `Cenário «${nome}» do simulador de vencimento.` : "O teu último cenário de vencimento simulado.",
+    icone: "Briefcase",
+    detalhes,
+    patch: {
+      ativar: ["salarios"],
+      salBruto: v.brutoAnual,
+      salRet: v.irsAnual,
+      dependentesCount: v.dependentes || undefined,
+      deficiencia: v.deficiencia || undefined,
+    },
+  };
+}
+
+/** Grava o instantâneo completo do cenário de vencimento para o IRS o ler. */
+export const gravarCenarioVencimento = (snapshot: Record<string, unknown>) => gravarJSON(KEY_VENC, snapshot);
+
+/**
+ * As fontes que vêm dos cenários guardados na NUVEM. A página do simulador
+ * passa-as; sem isto, um cenário criado noutro dispositivo não chegava ao IRS.
+ */
+export function fontesDeCenarios(cenarios: Cenario[]): FonteImportacao[] {
+  const venc = cenarios.find((c) => c.tipo === "vencimento");
+  if (!venc) return [];
+  const f = fonteDeVencimento(venc.dados, venc.nome);
+  return f ? [{ ...f, id: `vencimento-nuvem-${venc.id}` }] : [];
 }
 
 /**
@@ -177,35 +228,10 @@ export function fontesDeArmazenamento(): FonteImportacao[] {
     });
   }
 
-  // 2. Recibo de vencimento (cenário mais recente guardado)
-  const cenarios = lerJSON<CenarioVencimentoMin[]>(KEY_VENC);
-  if (Array.isArray(cenarios) && cenarios.length > 0 && cenarios[0]?.salarioBruto > 0) {
-    const c = cenarios[0];
-    const anual = calcularVencimentoAnual({
-      salarioBruto: c.salarioBruto,
-      dependentes: c.dependentes,
-      subsidioRefeicaoDia: c.subsidioRefeicaoDia,
-      subsidioRefeicaoCartao: c.subsidioRefeicaoCartao,
-      diasUteis: c.diasUteis,
-    });
-    fontes.push({
-      id: "vencimento",
-      titulo: "Recibo de vencimento",
-      descricao: c.nome ? `Cenário «${c.nome}» do simulador de vencimento.` : "O teu último cenário de vencimento simulado.",
-      icone: "Briefcase",
-      detalhes: [
-        `Bruto anual (14 meses) ${euros(anual.brutoAnual)}`,
-        `Retenção de IRS anual ${euros(anual.irsAnual)}`,
-        ...(c.dependentes > 0 ? [`${c.dependentes} dependente(s)`] : []),
-      ],
-      patch: {
-        ativar: ["salarios"],
-        salBruto: Math.round(anual.brutoAnual),
-        salRet: Math.round(anual.irsAnual),
-        dependentesCount: c.dependentes || undefined,
-      },
-    });
-  }
+  // 2. Recibo de vencimento — instantâneo COMPLETO, local ou da nuvem.
+  const dadosVenc = lerJSON<Record<string, unknown>>(KEY_VENC);
+  const fonteVenc = dadosVenc ? fonteDeVencimento(dadosVenc) : null;
+  if (fonteVenc) fontes.push(fonteVenc);
 
   // 3. Abrir empresa (gerente: salário cat. A + dividendos cat. E)
   const emp = lerJSON<ExportEmpresa>(KEY_EMP);

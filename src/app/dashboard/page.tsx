@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
-import { useRecibos, resumirDashboard, type Recibo } from "@/lib/store/recibos";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRecibos } from "@/lib/store/recibos";
+import { resumoDoAno, resumoDoMes } from "@/lib/recibos-contrato";
 import { usePreferenciasFiscais } from "@/lib/store/preferencias-fiscais";
+import { usePrazosCumpridos } from "@/lib/store/prazos-cumpridos";
 import { usePerfil } from "@/lib/perfil";
 import { gerarInsights, saudeFiscal, type Insight, type SaudeFiscal } from "@/lib/insights";
 import { fmt } from "@/lib/format";
@@ -36,12 +38,6 @@ const DistribuicaoDonut = dynamic(() => import("@/components/dashboard/Distribui
   loading: () => <div className="h-64 animate-pulse rounded-4xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900" />,
 });
 
-function mesAtual(recibos: Recibo[]): Recibo[] {
-  const agora = new Date();
-  const p = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}`;
-  return recibos.filter((r) => r.data.startsWith(p));
-}
-
 function saudacao(): string {
   const h = new Date().getHours();
   if (h < 12) return "Bom dia";
@@ -52,11 +48,15 @@ function saudacao(): string {
 type Lente = "recibos" | "vencimento" | "empresa";
 
 export default function VisaoGeral() {
-  const { recibos, carregado, naNuvem, locaisPorImportar, importarLocais, adiarImportacao } = useRecibos();
+  const {
+    recibos, carregado, naNuvem, anoFiscal, erroCarregamento,
+    locaisPorImportar, importarLocais, adiarImportacao,
+  } = useRecibos();
   const { prefs } = usePreferenciasFiscais();
+  // O estado de cumprimento é evidência real: sem ele o indicador não podia
+  // falar de organização (RC-P1-04 + RC-P1-05).
+  const { cumpridos, carregado: cumprCarregado } = usePrazosCumpridos();
   const { perfil, definir } = usePerfil();
-  const [insights, setInsights] = useState<Insight[]>([]);
-  const [saude, setSaude] = useState<SaudeFiscal>({ score: 0, estado: "Tranquilo", fatores: [] });
   const [onboarded, setOnboarded] = useState(true);
   const [mounted, setMounted] = useState(false);
 
@@ -75,6 +75,16 @@ export default function VisaoGeral() {
     }
   }, []);
 
+  const [aImportar, setAImportar] = useState(false);
+  const [erroImportacao, setErroImportacao] = useState<string | null>(null);
+  const trazerParaNuvem = useCallback(async () => {
+    setAImportar(true);
+    setErroImportacao(null);
+    const r = await importarLocais();
+    if (!r.ok) setErroImportacao(r.erro.mensagem);
+    setAImportar(false);
+  }, [importarLocais]);
+
   const concluirOnboarding = () => {
     try {
       localStorage.setItem("recibocerto:onboarded", "1");
@@ -84,15 +94,25 @@ export default function VisaoGeral() {
     setOnboarded(true);
   };
 
-  useEffect(() => {
-    if (carregado) {
-      setInsights(gerarInsights(recibos, opcoesFiscais));
-      setSaude(saudeFiscal(recibos));
-    }
-  }, [carregado, recibos, opcoesFiscais]);
+  // Derivar por `useMemo` em vez de copiar para estado num efeito: a cópia
+  // gerava uma pintura extra e um instante em que o painel mostrava o score
+  // inicial (RC-P3-02).
+  const insights: Insight[] = useMemo(
+    () => (carregado ? gerarInsights(recibos, opcoesFiscais, prefs) : []),
+    [carregado, recibos, opcoesFiscais, prefs],
+  );
+  const saude: SaudeFiscal = useMemo(
+    () => saudeFiscal(recibos, { prefs, temPrazosConfirmados: cumprCarregado, cumpridos }),
+    [recibos, prefs, cumprCarregado, cumpridos],
+  );
 
-  const mes = resumirDashboard(mesAtual(recibos));
-  const ano = resumirDashboard(recibos);
+  // ── Escopo temporal explícito (RC-P0-01) ────────────────────────────────
+  // O "ano" era calculado sobre TODA a coleção: ao entrar em 2027, os recibos
+  // de 2026 continuavam somados ao acumulado. Passa a haver um `anoFiscal` e
+  // nenhum resumo sem escopo.
+  const mes = useMemo(() => resumoDoMes(recibos), [recibos]);
+  const ano = useMemo(() => resumoDoAno(recibos, anoFiscal), [recibos, anoFiscal]);
+  const recibosDesteAno = useMemo(() => ano.total, [ano.total]);
   const temRecibos = recibos.length > 0;
 
   // ── Lente do dashboard: adapta os dados e gráficos ao tipo de cenário ──────
@@ -105,12 +125,39 @@ export default function VisaoGeral() {
     { chave: "empresa", perfil: "empresa", label: "Empresa", Icon: Building },
   ];
 
-  const ctaPorLente: Record<Lente, { label: string; href: string }> = {
-    recibos: { label: "Registar recibo", href: "/#calculadora" },
-    vencimento: { label: "Simular vencimento", href: "/dashboard/recibo-vencimento" },
-    empresa: { label: "Simular empresa", href: "/dashboard/empresa" },
+  // A rota de registo é canónica e vive DENTRO do painel: o CTA apontava para
+  // `/#calculadora`, que atira a pessoa para fora do dashboard, enquanto o
+  // onboarding apontava para outro sítio — dois caminhos para a mesma coisa
+  // (RC-P2-01). O ícone acompanha a lente em vez de ser sempre um recibo.
+  const ctaPorLente: Record<Lente, { label: string; href: string; Icon: typeof Receipt }> = {
+    recibos: { label: "Registar recibo", href: "/dashboard/recibos-verdes", Icon: Receipt },
+    vencimento: { label: "Simular vencimento", href: "/dashboard/recibo-vencimento", Icon: Wallet },
+    empresa: { label: "Simular empresa", href: "/dashboard/empresa", Icon: Building },
   };
   const cta = ctaPorLente[lente];
+
+  // ── Tablist com teclado completo (RC-P2-03) ─────────────────────────────
+  // O tablist declarava `role="tab"` mas não tinha painel associado, nem
+  // `aria-controls`, nem roving tabindex, nem navegação por setas: todos os
+  // separadores estavam na ordem de tabulação e nenhum dizia o que controlava.
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const indiceAtivo = LENTES.findIndex((l) => l.chave === lente);
+  const aoTeclarNasLentes = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const teclas: Record<string, number> = { ArrowRight: 1, ArrowLeft: -1 };
+      let destino: number | null = null;
+      if (e.key in teclas) destino = (indiceAtivo + teclas[e.key] + LENTES.length) % LENTES.length;
+      else if (e.key === "Home") destino = 0;
+      else if (e.key === "End") destino = LENTES.length - 1;
+      if (destino === null) return;
+      e.preventDefault();
+      definir(LENTES[destino].perfil);
+      tabRefs.current[destino]?.focus();
+    },
+    // `LENTES` é reconstruído a cada render mas tem conteúdo estável.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [indiceAtivo, definir],
+  );
 
   const dataHoje = mounted
     ? new Date().toLocaleDateString("pt-PT", { weekday: "long", day: "numeric", month: "long" })
@@ -137,23 +184,34 @@ export default function VisaoGeral() {
           href={cta.href}
           className="btn-shine inline-flex items-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-float"
         >
-          <Receipt size={16} />
+          <cta.Icon size={16} />
           {cta.label}
         </Link>
       </header>
 
       {/* ── Seletor de lente: adapta o dashboard ao tipo de cenário ───────── */}
-      <div role="tablist" aria-label="Tipo de cenário" className="mb-6 inline-flex flex-wrap gap-1.5 rounded-2xl border border-stone-200/80 bg-stone-50/80 p-1 shadow-sm dark:border-stone-700 dark:bg-stone-900/60">
-        {LENTES.map((l) => {
+      <div
+        role="tablist"
+        aria-label="Tipo de cenário"
+        onKeyDown={aoTeclarNasLentes}
+        className="mb-6 inline-flex flex-wrap gap-1.5 rounded-2xl border border-stone-200/80 bg-stone-50/80 p-1 shadow-sm dark:border-stone-700 dark:bg-stone-900/60"
+      >
+        {LENTES.map((l, i) => {
           const ativo = lente === l.chave;
           return (
             <button
               key={l.chave}
               type="button"
               role="tab"
+              id={`lente-tab-${l.chave}`}
               aria-selected={ativo}
+              aria-controls={`lente-painel-${l.chave}`}
+              // Roving tabindex: um só separador na ordem de tabulação; as
+              // setas movem entre eles, como manda o padrão de tabs.
+              tabIndex={ativo ? 0 : -1}
+              ref={(el) => { tabRefs.current[i] = el; }}
               onClick={() => definir(l.perfil)}
-              className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-200 ${
+              className={`inline-flex min-h-9 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-200 ${
                 ativo
                   ? "bg-brand text-white shadow-glow"
                   : "text-stone-500 hover:text-brand-dark dark:text-stone-400 dark:hover:text-brand"
@@ -166,10 +224,30 @@ export default function VisaoGeral() {
         })}
       </div>
 
+      <div id={`lente-painel-${lente}`} role="tabpanel" aria-labelledby={`lente-tab-${lente}`} tabIndex={0}>
       {lente !== "recibos" ? (
         <PainelCenarioTipo tipo={lente} />
       ) : !carregado ? (
         <Skeleton />
+      ) : erroCarregamento ? (
+        /* Falhar a LER não é o mesmo que não ter recibos: cair para uma lista
+           vazia fazia parecer que o histórico se perdeu (RC-P0-03). */
+        <div className="rounded-4xl border border-alert-border bg-alert-bg p-8 text-center">
+          <span className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-alert-text/10 text-alert-text">
+            <Warning size={20} />
+          </span>
+          <h2 className="font-display text-lg font-semibold text-alert-text">Não foi possível carregar o teu histórico</h2>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-alert-text/80">
+            {erroCarregamento.mensagem} Os teus recibos continuam guardados — isto é uma falha a lê-los, não uma perda.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-4 inline-flex min-h-9 items-center gap-2 rounded-xl bg-alert-text px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            Tentar novamente
+          </button>
+        </div>
       ) : !onboarded && !temRecibos ? (
         <Onboarding onConcluir={concluirOnboarding} />
       ) : (
@@ -196,16 +274,21 @@ export default function VisaoGeral() {
                     dispositivo. Queres trazê-{locaisPorImportar === 1 ? "lo" : "los"} para a tua conta na nuvem?
                   </p>
                 </div>
-                <div className="mt-3 flex gap-2 pl-[30px]">
-                  <button type="button" onClick={importarLocais}
-                    className="rounded-xl bg-brand px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-dark">
-                    Trazer para a nuvem
+                <div className="mt-3 flex flex-wrap gap-2 pl-[30px]">
+                  <button type="button" onClick={trazerParaNuvem} disabled={aImportar}
+                    className="min-h-9 rounded-xl bg-brand px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+                    {aImportar ? "A trazer…" : "Trazer para a nuvem"}
                   </button>
                   <button type="button" onClick={adiarImportacao}
-                    className="rounded-xl px-3 py-2 text-sm font-medium text-brand-dark transition-colors hover:bg-white/40">
+                    className="min-h-9 rounded-xl px-3 py-2 text-sm font-medium text-brand-dark transition-colors hover:bg-white/40">
                     Agora não
                   </button>
                 </div>
+                {/* Só se anuncia sucesso depois de a nuvem confirmar; se falhar,
+                    a pessoa fica a saber porquê (RC-P0-03). */}
+                {erroImportacao && (
+                  <p role="alert" className="mt-2 pl-[30px] text-xs font-medium text-alert-text">{erroImportacao}</p>
+                )}
               </div>
             </div>
           )}
@@ -263,12 +346,15 @@ export default function VisaoGeral() {
                 </div>
               )}
 
-              {/* Mini-cards: IRS, SS, IVA */}
+              {/* Mini-cards: retenção, SS, IVA.
+                  «Retenção IRS» e não «IRS estimado»: o que sai do recibo é a
+                  retenção na fonte; a estimativa anual é outra grandeza e tem
+                  cartão próprio (RC-P0-02). */}
               <div className="relative mt-5 grid grid-cols-3 gap-2">
                 {[
-                  { l: "IRS estimado", v: mes.retencao },
-                  { l: "Seg. Social", v: mes.segSocial },
-                  { l: "IVA", v: mes.iva },
+                  { l: "Retenção IRS", v: mes.retencaoEfetiva },
+                  { l: "Seg. Social", v: mes.segurancaSocialEstimada },
+                  { l: "IVA cobrado", v: mes.ivaCobrado },
                 ].map((c) => (
                   <div key={c.l} className="rounded-2xl bg-white/10 px-3 py-2.5 backdrop-blur-sm">
                     <div className="text-[11px] text-green-100/70">{c.l}</div>
@@ -281,18 +367,33 @@ export default function VisaoGeral() {
 
           {/* ── Painel lateral: Saúde + Acumulado ───────────────── */}
           <div className="col-span-12 flex flex-col gap-4 lg:col-span-4">
-            <ProGate title="Saúde Fiscal" description="Indicador detalhado da tua situação fiscal — diversificação, reservas e organização.">
-              <SaudeCard score={saude.score} estado={saude.estado} fatores={saude.fatores} />
+            <ProGate feature="saude-fiscal" title="Saúde Fiscal" description="Indicador detalhado da tua situação fiscal — margem de IVA, prazos aplicáveis e acompanhamento.">
+              <SaudeCard saude={saude} />
             </ProGate>
             <div className="flex-1 rounded-4xl border border-stone-100 bg-white p-6 shadow-card dark:border-stone-800 dark:bg-stone-900">
-              <h2 className="mb-4 text-sm font-semibold text-stone-700 dark:text-stone-200">Acumulado do ano</h2>
+              <div className="mb-4 flex items-center gap-1.5">
+                <h2 className="text-sm font-semibold text-stone-700 dark:text-stone-200">Acumulado de {anoFiscal}</h2>
+                <InfoTip>
+                  Só os recibos com data de {anoFiscal}. Os anos anteriores ficam no histórico e não entram
+                  neste acumulado.
+                </InfoTip>
+              </div>
               <Linha label="Faturado" value={ano.bruto} />
-              <Linha label="IRS estimado" value={ano.retencao} />
-              <Linha label="IVA cobrado" value={ano.iva} />
-              <Linha label="Segurança Social" value={ano.segSocial} />
+              <Linha label="Retenção IRS" value={ano.retencaoEfetiva} />
+              {ano.irsEstimado !== null && (
+                <Linha label="IRS anual estimado" value={ano.irsEstimado} />
+              )}
+              <Linha label="IVA cobrado" value={ano.ivaCobrado} />
+              <Linha label="Segurança Social" value={ano.segurancaSocialEstimada} />
               <div className="mt-3 border-t border-stone-100 pt-3 dark:border-stone-800">
                 <Linha label="Líquido para ti" value={ano.liquido} destaque />
               </div>
+              {recibosDesteAno === 0 && temRecibos && (
+                <p className="mt-3 text-[11px] leading-relaxed text-stone-400">
+                  Tens recibos guardados, mas nenhum com data de {anoFiscal}.{" "}
+                  <Link href="/dashboard/recibos" className="font-medium text-brand hover:underline">Ver o histórico</Link>
+                </p>
+              )}
             </div>
           </div>
 
@@ -300,7 +401,7 @@ export default function VisaoGeral() {
 
           <div className="col-span-12 lg:col-span-7">
             <ErrorBoundary etiqueta="gráfico de receitas">
-              <ReceitaChart recibos={recibos} />
+              <ReceitaChart recibos={recibos} ano={anoFiscal} />
             </ErrorBoundary>
           </div>
 
@@ -320,29 +421,31 @@ export default function VisaoGeral() {
 
           <div className="col-span-12 sm:col-span-6 lg:col-span-4">
             <ErrorBoundary etiqueta="progresso IVA">
-              <IvaProgresso recibos={recibos} />
+              <IvaProgresso recibos={recibos} ano={anoFiscal} prefs={prefs} />
             </ErrorBoundary>
           </div>
 
           <div className="col-span-12 lg:col-span-4">
-            <PoupancaTrimestral recibos={recibos} />
+            <ProGate feature="reserva-trimestral" title="Reserva do trimestre" description="Quanto apartar deste trimestre para IVA e Segurança Social.">
+              <PoupancaTrimestral recibos={recibos} ano={anoFiscal} />
+            </ProGate>
           </div>
 
           {/* ══ ROW 3b: Guardiões (Retenção + Seg. Social) ══════ */}
 
           <div className="col-span-12 sm:col-span-6">
-            <GuardiaoRetencao recibos={recibos} />
+            <GuardiaoRetencao recibos={recibos} ano={anoFiscal} prefs={prefs} />
           </div>
 
           <div className="col-span-12 sm:col-span-6">
-            <GuardiaoSS recibos={recibos} primeiroAno={prefs.isencaoSSPrimeiroAno} acumulaEmprego={prefs.acumulaEmprego} />
+            <GuardiaoSS recibos={recibos} ano={anoFiscal} prefs={prefs} />
           </div>
 
           {/* ══ ROW 4: Estimativa IRS + Tabela + Insights ═══════ */}
 
           <div className="col-span-12 lg:col-span-4">
             <ErrorBoundary etiqueta="estimativa IRS">
-              <EstimativaIRS recibos={recibos} prefs={prefs} />
+              <EstimativaIRS recibos={recibos} prefs={prefs} ano={anoFiscal} />
             </ErrorBoundary>
           </div>
 
@@ -366,6 +469,7 @@ export default function VisaoGeral() {
 
         </div>
       )}
+      </div>
 
       {/* ── Hub: todo o site a partir do dashboard ───────────────── */}
       {carregado && <HubRecursos />}
@@ -375,7 +479,42 @@ export default function VisaoGeral() {
 
 /* ── Sub-componentes ──────────────────────────────────────────────── */
 
-function SaudeCard({ score, estado, fatores }: { score: number; estado: string; fatores: { label: string; ok: boolean }[] }) {
+/**
+ * Cartão de saúde fiscal.
+ *
+ * Com dados insuficientes NÃO desenha um número: um score de 72 sobre nenhuma
+ * evidência lia-se como diagnóstico e não era um (RC-P1-04). Nesse caso mostra
+ * o que falta e como lá chegar.
+ */
+function SaudeCard({ saude }: { saude: SaudeFiscal }) {
+  const { score, estado, fatores, emFalta, metodologia } = saude;
+
+  if (score === null) {
+    return (
+      <div className="rounded-4xl border border-stone-100 bg-white p-6 shadow-card dark:border-stone-800 dark:bg-stone-900">
+        <div className="mb-3 flex items-center gap-1.5">
+          <h2 className="text-sm font-semibold text-stone-700 dark:text-stone-200">Saúde fiscal</h2>
+          <InfoTip>{metodologia}</InfoTip>
+        </div>
+        <p className="text-sm font-semibold text-stone-500 dark:text-stone-400">Por configurar</p>
+        <p className="mt-1 text-xs leading-relaxed text-stone-400">
+          Ainda não há evidência suficiente para um indicador honesto. Falta:
+        </p>
+        <ul className="mt-2 space-y-1">
+          {emFalta.map((f) => (
+            <li key={f} className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400">
+              <span className="text-stone-300 dark:text-stone-600"><Warning size={12} /></span>
+              {f}
+            </li>
+          ))}
+        </ul>
+        <Link href="/dashboard/perfil" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline">
+          Completar o perfil fiscal <ArrowRight size={11} />
+        </Link>
+      </div>
+    );
+  }
+
   const corClasse = score >= 80 ? "text-brand" : score >= 60 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400";
   const corSVG =
     score >= 80
@@ -390,10 +529,7 @@ function SaudeCard({ score, estado, fatores }: { score: number; estado: string; 
     <div className="rounded-4xl border border-stone-100 bg-white p-6 shadow-card dark:border-stone-800 dark:bg-stone-900">
       <div className="mb-3 flex items-center gap-1.5">
         <h2 className="text-sm font-semibold text-stone-700 dark:text-stone-200">Saúde fiscal</h2>
-        <InfoTip>
-          Indicador de organização (0–100) a partir da margem até ao limite de IVA, da antecedência do próximo prazo
-          e do acompanhamento dos recibos. Não é uma garantia.
-        </InfoTip>
+        <InfoTip>{metodologia}</InfoTip>
       </div>
       <div className="flex items-center gap-4">
         <div className="relative flex-shrink-0">
@@ -422,8 +558,8 @@ function SaudeCard({ score, estado, fatores }: { score: number; estado: string; 
           <ul className="mt-1.5 space-y-1">
             {fatores.map((f) => (
               <li key={f.label} className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400">
-                <span className={f.ok ? "text-brand" : "text-stone-300 dark:text-stone-600"}>
-                  {f.ok ? <Check size={12} /> : <Warning size={12} />}
+                <span className={f.estado === "ok" ? "text-brand" : "text-stone-300 dark:text-stone-600"}>
+                  {f.estado === "ok" ? <Check size={12} /> : <Warning size={12} />}
                 </span>
                 {f.label}
               </li>
@@ -431,6 +567,12 @@ function SaudeCard({ score, estado, fatores }: { score: number; estado: string; 
           </ul>
         </div>
       </div>
+      {emFalta.length > 0 && (
+        <p className="mt-3 text-[10px] leading-relaxed text-stone-400">
+          Estimativa parcial — falta {emFalta.join(", ").toLowerCase()}.{" "}
+          <Link href="/dashboard/perfil" className="font-medium text-brand hover:underline">Completar o perfil</Link>
+        </p>
+      )}
     </div>
   );
 }
