@@ -51,7 +51,8 @@
     "docs:build": "python3 scripts/compor-documento.py",
     "docs:verify": "python3 scripts/verificar-documentos.py out/relatorio-vencimento.pdf out/mapa-recibos.pdf out/declaracao-irs.pdf && node scripts/verificar-texto-pdf.mjs out/relatorio-vencimento.pdf out/mapa-recibos.pdf out/declaracao-irs.pdf",
     "docs": "npm run docs:fontes:check && npm run docs:build && npm run docs:verify",
-    "security:boundary": "node scripts/check-security-boundary.mjs"
+    "security:boundary": "node scripts/check-security-boundary.mjs",
+    "rls:check": "bash scripts/testar-rls.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
