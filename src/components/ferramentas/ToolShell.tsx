@@ -61,7 +61,7 @@ export default function ToolShell({ tool, children, contexto, subtitulo }: ToolS
           </span>
         </div>
         <h1 className="font-display display-2 mb-3 font-semibold text-ink text-balance">
-          {tool.title}
+          {tool.h1 ?? tool.title}
         </h1>
         <p className="max-w-2xl text-lg leading-relaxed text-stone-500 dark:text-stone-400">
           {subtitulo ?? tool.shortOutcome}

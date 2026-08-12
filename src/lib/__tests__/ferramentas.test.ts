@@ -341,3 +341,49 @@ describe("as quatro ferramentas que faltavam", () => {
     expect(TOTAL_FERRAMENTAS).toBe(14);
   });
 });
+
+describe("gramática comum: todas as ferramentas usam o mesmo ToolShell", () => {
+  it("nenhuma página escreve o seu próprio H1", () => {
+    // Antes, cada landing tinha o seu hero: eyebrow, H1 e subtítulo escritos
+    // à mão, com gramáticas diferentes. Era a raiz de «as ferramentas não
+    // parecem pertencer ao mesmo sistema» (P1-08). O H1 vem do catálogo.
+    for (const f of CATALOGO_FERRAMENTAS) {
+      const fonte = lerFonte(`src/app/ferramentas/${f.slug}/page.tsx`);
+      expect(fonte, `${f.slug}: não usa ToolShell`).toContain("<ToolShell");
+      expect(fonte, `${f.slug}: escreve um <h1> próprio`).not.toMatch(/<h1[\s>]/);
+    }
+  });
+
+  it("nenhuma página abre um <main> dentro do layout", () => {
+    // Dois landmarks `main` na mesma página quebram a navegação por
+    // regiões num leitor de ecrã. O layout já abre um.
+    for (const f of CATALOGO_FERRAMENTAS) {
+      const fonte = lerFonte(`src/app/ferramentas/${f.slug}/page.tsx`);
+      expect(fonte, `${f.slug}: <main> aninhado`).not.toMatch(/<main[\s>]/);
+    }
+  });
+
+  it("o H1 de cada ferramenta com procura própria leva a sua âncora", () => {
+    const ancoras: Array<[string, RegExp]> = [
+      ["recibos-verdes", /recibos verdes 2026/i],
+      ["simulador-irs", /IRS 2026/i],
+      ["recibo-vencimento", /líquido 2026/i],
+      ["seguranca-social", /segurança social/i],
+      ["irs-jovem", /IRS Jovem 2026/i],
+      ["simulador-herancas", /heranças/i],
+    ];
+    for (const [id, padrao] of ancoras) {
+      const f = porId(id)!;
+      expect(f.h1 ?? f.title, `${id}: H1 sem a âncora de pesquisa`).toMatch(padrao);
+    }
+  });
+
+  it("toda a ferramenta declara tempo, dados necessários e CTA próprio", () => {
+    for (const f of CATALOGO_FERRAMENTAS) {
+      expect(f.estimatedMinutes, f.id).toBeGreaterThan(0);
+      expect(f.requiredInputs.length, f.id).toBeGreaterThan(0);
+      // O CTA é específico («Calcular líquido»), nunca genérico.
+      expect(f.cta, f.id).not.toMatch(/^(abrir|ver|come(ç|c)ar|entrar)$/i);
+    }
+  });
+});

@@ -60,6 +60,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     slug: "recibos-verdes",
     canonicalHref: "/ferramentas/recibos-verdes",
     title: "Simulador de recibos verdes",
+    h1: "Calculadora de recibos verdes 2026 — quanto fica mesmo para ti.",
     shortOutcome: "Quanto de cada recibo fica mesmo para ti, depois de IRS, Segurança Social e IVA.",
     description:
       "A calculadora central de quem passa recibos verdes: do valor faturado ao líquido disponível, com o que reservar para impostos e o que sobra para a conta. IRS, retenção na fonte, Segurança Social e IVA em camadas separadas, com os coeficientes e taxas oficiais de 2026.",
@@ -95,6 +96,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     slug: "simulador-irs",
     canonicalHref: "/ferramentas/simulador-irs",
     title: "Simulador de IRS anual",
+    h1: "Simulador de IRS 2026 — do bruto ao reembolso.",
     shortOutcome: "Se vais receber reembolso ou pagar — e porquê, passo a passo.",
     description:
       "O IRS de 2026 completo: todas as categorias e anexos (A, B, E, F, G, H e J), tributação conjunta e memória de cálculo — do rendimento ao reembolso.",
@@ -129,6 +131,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     slug: "recibo-vencimento",
     canonicalHref: "/ferramentas/recibo-vencimento",
     title: "Simulador de salário líquido",
+    h1: "Salário líquido 2026 — do bruto ao que recebes.",
     shortOutcome: "O teu líquido mensal e anual, e como o recibo lá chega.",
     description:
       "Por conta de outrem? Do salário bruto ao líquido — IRS retido, Segurança Social e subsídio de refeição, com as tabelas oficiais de 2026.",
@@ -194,6 +197,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     slug: "seguranca-social",
     canonicalHref: "/ferramentas/seguranca-social",
     title: "Calculadora de Segurança Social trimestral",
+    h1: "Segurança Social do trabalhador independente — quanto pagas por mês.",
     shortOutcome: "Quanto declarar e quanto pagar por mês, no próximo trimestre.",
     description:
       "A declaração trimestral de quem trabalha por conta própria: média dos três meses, coeficiente por tipo de atividade, ajuste de ±25%, mínimos e máximos — e o calendário de declaração e pagamento.",
@@ -227,6 +231,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     slug: "irs-jovem",
     canonicalHref: "/ferramentas/irs-jovem",
     title: "Simulador de IRS Jovem",
+    h1: "IRS Jovem 2026 — és elegível e quanto poupas?",
     shortOutcome: "Se és elegível e quanto o benefício muda no teu IRS.",
     description:
       "Triagem de elegibilidade e cálculo do IRS Jovem de 2026: ano de benefício, percentagem de isenção, teto em IAS traduzido para euros e comparação lado a lado com e sem o benefício.",
@@ -360,6 +365,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     slug: "simulador-herancas",
     canonicalHref: "/ferramentas/simulador-herancas",
     title: "Simulador de heranças e sucessões",
+    h1: "Heranças em Portugal — quem herda o quê e quanto se paga.",
     shortOutcome: "Quem herda o quê, e que imposto se aplica a cada um.",
     description:
       "Quem herda o quê e quanto se paga de Imposto do Selo — a família direta é isenta. Meação, legítima e quota disponível, partilha e comparação herança vs doação. Guiado e completo.",

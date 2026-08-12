@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
+import ToolShell from "@/components/ferramentas/ToolShell";
+import { porId } from "@/lib/ferramentas";
 import AuditoriaReciboLazy from "./lazy";
+
+const TOOL = porId("auditoria-recibo")!;
 
 export const metadata: Metadata = {
   title: "Auditoria do recibo de vencimento 2026 — o teu salário está correto?",
@@ -12,7 +16,7 @@ export const metadata: Metadata = {
     "auditar retenção IRS 2026",
     "segurança social mal descontada",
   ],
-  alternates: { canonical: "https://www.recibocerto.pt/ferramentas/auditoria-recibo" },
+  alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
   openGraph: {
     title: "Auditoria do recibo de vencimento 2026 | ReciboCerto",
     description: "Deteta erros de IRS e Segurança Social no teu recibo de vencimento, face às tabelas oficiais de 2026.",
@@ -25,30 +29,23 @@ export const metadata: Metadata = {
 
 export default function AuditoriaReciboPage() {
   return (
-    <>
-      <div className="mb-8">
-        <div className="eyebrow mb-3 text-brand">Por conta de outrem · grátis</div>
-        <h1 className="font-display display-2 font-semibold text-ink mb-4 text-balance">
-          O teu recibo está certo?
-        </h1>
-        <p className="text-lg text-stone-500 dark:text-stone-400 leading-relaxed">
-          Introduz o salário bruto e os valores que constam no teu recibo de vencimento — a retenção
-          de IRS e o desconto da Segurança Social. Comparamos com as tabelas oficiais de 2026 e
-          dizemos-te se algo não bate certo.
-        </p>
-      </div>
-
+    <ToolShell
+      tool={TOOL}
+      subtitulo="Introduz os valores que constam no teu recibo. Comparamos com as tabelas oficiais de 2026 e dizemos-te o que não bate certo — e porquê."
+      contexto={
+          <section className="rounded-4xl border border-stone-100 bg-stone-50 p-5 dark:border-stone-800 dark:bg-stone-900/50 sm:p-6">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">Como funciona</p>
+            <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+              A Segurança Social do trabalhador é 11% sobre o bruto. A retenção de IRS segue a tabela de
+              retenção na fonte de 2026 (Despacho 233-A/2026), em função do salário e dos dependentes.
+              Confrontamos esses valores com os do teu recibo e assinalamos divergências acima de uma
+              pequena tolerância de arredondamento. Uma divergência assinalada é um ponto a confirmar
+              com quem processa o teu salário — não é, por si só, prova de erro.
+            </p>
+          </section>
+      }
+    >
       <AuditoriaReciboLazy />
-
-      <div className="mt-2 rounded-2xl border border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 p-5 space-y-2">
-        <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">Como funciona</p>
-        <p className="text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
-          A Segurança Social do trabalhador é 11% sobre o bruto. A retenção de IRS segue a tabela de
-          retenção na fonte de 2026 (Despacho 233-A/2026), em função do salário e dos dependentes.
-          Confrontamos esses valores com os do teu recibo e assinalamos divergências acima de uma
-          pequena tolerância de arredondamento.
-        </p>
-      </div>
-    </>
+    </ToolShell>
   );
 }

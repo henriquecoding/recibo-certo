@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
+import ToolShell from "@/components/ferramentas/ToolShell";
+import { porId } from "@/lib/ferramentas";
 import SimuladorHerancaLazy from "./lazy";
 import { generateFAQSchema } from "@/lib/seo";
+
+const TOOL = porId("simulador-herancas")!;
 
 export const metadata: Metadata = {
   title: "Simulador de Heranças e Sucessões 2026 — partilha e Imposto do Selo | ReciboCerto",
@@ -15,7 +19,7 @@ export const metadata: Metadata = {
     "herança vs doação",
     "quem paga imposto herança",
   ],
-  alternates: { canonical: "https://www.recibocerto.pt/ferramentas/simulador-herancas" },
+  alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
   openGraph: {
     title: "Simulador de Heranças e Sucessões 2026 | ReciboCerto",
     description:
@@ -56,33 +60,29 @@ export default function SimuladorHerancasPage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
 
-      <div className="mb-8">
-        <div className="eyebrow mb-3 text-brand">Heranças e sucessões</div>
-        <h1 className="font-display display-2 font-semibold text-ink mb-4 text-balance">
-          Quem herda o quê — e quanto se paga?
-        </h1>
-        <p className="text-lg text-stone-500 dark:text-stone-400 leading-relaxed">
-          Em Portugal não há imposto sobre heranças: a família direta é isenta. Este simulador mostra
-          a meação do cônjuge, a partilha entre herdeiros e o Imposto do Selo — e compara herdar com
-          doar em vida. Com a legislação de 2026.
-        </p>
-      </div>
-
-      <SimuladorHerancaLazy />
-
-      <section className="mx-auto mt-16 max-w-3xl">
-        <h2 className="font-display text-2xl font-semibold text-ink">Perguntas frequentes</h2>
-        <div className="mt-6 space-y-3">
-          {FAQS.map((f) => (
-            <details key={f.q} className="group rounded-2xl border border-stone-100 bg-white p-5 dark:border-stone-800 dark:bg-stone-900">
-              <summary className="cursor-pointer list-none text-sm font-semibold text-stone-800 marker:hidden dark:text-stone-100">
-                {f.q}
-              </summary>
-              <p className="mt-3 text-sm leading-relaxed text-stone-500 dark:text-stone-400">{f.a}</p>
-            </details>
-          ))}
-        </div>
-      </section>
+      <ToolShell
+        tool={TOOL}
+        subtitulo="Em Portugal não há imposto sobre heranças: a família direta é isenta. Vê a meação do cônjuge, a partilha entre herdeiros e o Imposto do Selo — e compara herdar com doar em vida."
+        contexto={
+          <section>
+            <h2 className="font-display mb-4 text-xl font-semibold text-stone-800 dark:text-stone-100">
+              Perguntas frequentes
+            </h2>
+            <div className="space-y-3">
+              {FAQS.map((f) => (
+                <details key={f.q} className="group rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
+                  <summary className="cursor-pointer list-none text-[15px] font-semibold text-stone-800 marker:hidden dark:text-stone-100">
+                    {f.q}
+                  </summary>
+                  <p className="mt-3 text-sm leading-relaxed text-stone-500 dark:text-stone-400">{f.a}</p>
+                </details>
+              ))}
+            </div>
+          </section>
+        }
+      >
+        <SimuladorHerancaLazy />
+      </ToolShell>
     </>
   );
 }

@@ -67,8 +67,17 @@ export interface ToolDefinition {
   id: string;
   slug: string;
   canonicalHref: `/ferramentas/${string}`;
-  /** Título orientado à tarefa — o que a pessoa quer fazer. */
+  /** Título orientado à tarefa — o que a pessoa quer fazer. É o do cartão. */
   title: string;
+  /**
+   * H1 da landing, quando a âncora de pesquisa não cabe no título do cartão.
+   *
+   * O cartão do hub vive numa grelha e quer ser curto; o H1 tem de conter a
+   * query que as pessoas escrevem («simulador de IRS 2026»). São trabalhos
+   * diferentes, mas continuam a sair do mesmo sítio — a alternativa era o H1
+   * ficar escrito à mão na página, livre de divergir do catálogo.
+   */
+  h1?: string;
   /** Uma frase: o que a pessoa RECEBE. Não uma enumeração de leis (§5.3). */
   shortOutcome: string;
   description: string;
