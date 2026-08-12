@@ -4,13 +4,14 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRecibos } from "@/lib/store/recibos";
+import EditarRecibo from "@/components/dashboard/EditarRecibo";
 import { resultadoDoRecibo, resumirRecibos, anoFiscalCorrente, type Recibo } from "@/lib/recibos-contrato";
 import { downloadCSV } from "@/lib/export";
 import { descarregar, MIME, nomeFicheiro } from "@/lib/export/nomes";
 import { getSupabase } from "@/lib/supabase/client";
 import { fmt, pct } from "@/lib/format";
 import {
-  Trash, Receipt, Export, ArrowRight, BarChart2, Calendar,
+  Trash, Pencil, Receipt, Export, ArrowRight, BarChart2, Calendar,
   Wallet, Sparkle, Filter, ChevronDown, ChevronUp, User,
 } from "@/components/ui/Icons";
 import ProGate from "@/components/ui/ProGate";
@@ -29,7 +30,10 @@ const ReceitaChart = dynamic(() => import("@/components/dashboard/ReceitaChart")
 type Vista = "lista" | "tabela";
 
 export default function RecibosPage() {
-  const { recibos, carregado, remover } = useRecibos();
+  const { recibos, carregado, remover, atualizar } = useRecibos();
+  // Sem isto, um recibo lançado com a data errada ficava errado para sempre
+  // e arrastava o mês, o trimestre e o ano fiscal com ele (RC-P0-09).
+  const [aEditar, setAEditar] = useState<Recibo | null>(null);
   const [query, setQuery] = useState("");
   const [filtroMes, setFiltroMes] = useState<string>("todos");
   const [vista, setVista] = useState<Vista>("lista");
@@ -382,6 +386,15 @@ export default function RecibosPage() {
                           <td className="hidden px-3 py-3 text-right text-sm tabular-nums text-stone-500 dark:text-stone-400 lg:table-cell">{fmt(c.segurancaSocialEstimada)}</td>
                           <td className="px-3 py-3 text-right text-sm font-semibold tabular-nums text-brand">{fmt(c.liquido)}</td>
                           <td className="px-3 py-3">
+                            <div className="flex items-center justify-end gap-0.5">
+                            <button
+                              type="button"
+                              onClick={() => setAEditar(r)}
+                              aria-label={`Editar recibo de ${r.cliente || "sem nome"}`}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-300 transition-all hover:bg-brand-light hover:text-brand dark:hover:bg-brand/15"
+                            >
+                              <Pencil size={14} />
+                            </button>
                             <button
                               type="button"
                               onClick={() => { if (window.confirm(`Remover o recibo de ${r.cliente || "sem nome"} (${fmt(r.valor)})?`)) remover(r.id); }}
@@ -390,6 +403,7 @@ export default function RecibosPage() {
                             >
                               <Trash size={14} />
                             </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -484,14 +498,24 @@ export default function RecibosPage() {
                                   <div className="font-display text-base font-semibold text-brand">{fmt(c.liquido)}</div>
                                   <div className="text-[11px] text-stone-400">líquido</div>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => { if (window.confirm(`Remover o recibo de ${r.cliente || "sem nome"} (${fmt(r.valor)})?`)) remover(r.id); }}
-                                  aria-label={`Remover recibo de ${r.cliente}`}
-                                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-stone-300 transition-all hover:bg-red-50 hover:text-red-400 dark:hover:bg-red-900/20"
-                                >
-                                  <Trash size={14} />
-                                </button>
+                                <div className="flex flex-shrink-0 items-center gap-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => setAEditar(r)}
+                                    aria-label={`Editar recibo de ${r.cliente || "sem nome"}`}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-300 transition-all hover:bg-brand-light hover:text-brand dark:hover:bg-brand/15"
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => { if (window.confirm(`Remover o recibo de ${r.cliente || "sem nome"} (${fmt(r.valor)})?`)) remover(r.id); }}
+                                    aria-label={`Remover recibo de ${r.cliente}`}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-300 transition-all hover:bg-red-50 hover:text-red-400 dark:hover:bg-red-900/20"
+                                  >
+                                    <Trash size={14} />
+                                  </button>
+                                </div>
                               </li>
                             );
                           })}
@@ -524,6 +548,14 @@ export default function RecibosPage() {
             </Link>
           </div>
         </div>
+      )}
+
+      {aEditar && (
+        <EditarRecibo
+          recibo={aEditar}
+          onGuardar={atualizar}
+          onFechar={() => setAEditar(null)}
+        />
       )}
     </div>
   );

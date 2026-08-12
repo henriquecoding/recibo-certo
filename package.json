@@ -14,6 +14,7 @@
     "busca:indice:check": "node scripts/gen-busca-indice.mjs --check",
     "busca:check": "vitest run src/lib/__tests__/busca-cabecalho.test.ts src/lib/__tests__/busca-fronteira.test.ts && node scripts/gen-busca-indice.mjs --check",
     "cabecalho:e2e": "node scripts/verificar-cabecalho.mjs",
+    "dashboard:e2e": "node scripts/verificar-dashboard.mjs",
     "build": "next build",
     "start": "next start",
     "fiscal:check": "node scripts/check-fiscal-data.mjs",

@@ -8,6 +8,7 @@ import {
   Logo,
   LayoutGrid,
   Receipt,
+  Invoice,
   History,
   Calendar,
   Calculator,
@@ -59,6 +60,10 @@ const GRUPOS: NavGroup[] = [
     itens: [
       { href: "/dashboard", label: "Visão geral", short: "Início", icon: LayoutGrid },
       { href: "/dashboard/cenarios", label: "Os meus cenários", short: "Cenários", icon: Receipt },
+      // Uma taxonomia só: cenários simulados, recibos registados, receitas
+      // agregadas. A gestão de recibos era o destino do CTA e do onboarding e
+      // não estava na navegação de lado nenhum (RC-P2-01).
+      { href: "/dashboard/recibos", label: "Recibos registados", short: "Recibos", icon: Invoice },
       { href: "/dashboard/receitas", label: "Receitas", short: "Receitas", icon: History },
       { href: "/dashboard/prazos", label: "Prazos fiscais", short: "Prazos", icon: Calendar },
     ],

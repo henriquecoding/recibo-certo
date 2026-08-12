@@ -43,6 +43,8 @@ export const CHANGELOG: EntradaChangelog[] = [
       "O cenário do recibo de vencimento chega ao simulador de IRS inteiro. Prémios, horas extra, ajudas de custo, região, estado civil, IRS Jovem — tudo isso ficava pelo caminho e só passavam quatro campos. E um cenário criado no telemóvel já chega ao IRS no computador.",
       "Na conta, «A experimentar» aparecia para qualquer estado que não fosse ativo, incluindo pagamento em atraso e subscrição cancelada. Cada estado passa a dizer o que é, e quem entrou com o Google deixa de ver um formulário a pedir uma palavra-passe que nunca teve.",
       "O menu do telemóvel prende o foco enquanto está aberto e devolve-o ao fechar, o gráfico de receitas tem uma tabela com os valores para quem usa leitor de ecrã, e os separadores do painel navegam-se com as setas.",
+      "Podes finalmente editar um recibo já registado. A data e o cliente corrigem-se, e se a correção mudar o recibo de ano civil dizemos-te isso antes de guardares.",
+      "Os «Recibos registados» passam a estar na barra lateral. Eram o destino do botão de registar e do onboarding, e não estavam na navegação de lado nenhum.",
     ],
   },
   {
