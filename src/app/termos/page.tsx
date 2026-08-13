@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import LegalPage, {
   Section, Sub, Nota, Lista, ListaCheck, Tabela,
 } from "@/components/LegalPage";
-import { precoPlusFormatado } from "@/lib/entitlements";
+import { precoPlusFormatado, precoVitalicioFormatado } from "@/lib/entitlements";
 
 export const metadata: Metadata = {
   title: "Termos de Utilização — ReciboCerto",
@@ -39,7 +39,7 @@ export default function TermosPage() {
     <LegalPage
       title="Termos de Utilização"
       subtitle="Ao utilizar o ReciboCerto, aceitas estas condições. Lê-as com atenção — são escritas em linguagem clara, sem jargão jurídico desnecessário."
-      lastUpdated="11 de agosto de 2026"
+      lastUpdated="13 de agosto de 2026"
       toc={TOC}
     >
       {/* 1 */}
@@ -79,19 +79,18 @@ export default function TermosPage() {
 
       {/* 2 */}
       <Section id="acesso" title="Acesso e conta">
-        <Sub title="Plano gratuito — sem registo">
+        <Sub title="Plano gratuito">
           <p>
-            O plano gratuito não requer criação de conta. Podes utilizar a calculadora, o
-            simulador de IRS, o comparador de regimes e o calendário fiscal sem qualquer
-            identificação. Os teus dados ficam exclusivamente no armazenamento local (localStorage)
-            do teu browser e nunca são transmitidos para os nossos servidores.
+            O plano gratuito não exige conta para calcular, simular ou ler os guias. O histórico
+            e uma amostra de cenário ficam no armazenamento local (localStorage) do teu browser;
+            criar uma conta gratuita não ativa sincronização de dados fiscais na nuvem.
           </p>
         </Sub>
 
         <Sub title="Conta Plus">
           <p>
-            Quando o plano Plus for lançado, poderás criar uma conta com endereço de email e
-            palavra-passe. Ao criares conta, comprometeste a:
+            Para usar o Plus, crias ou utilizas uma conta com endereço de email e palavra-passe.
+            Ao criares conta, comprometeste a:
           </p>
           <Lista
             items={[
@@ -124,35 +123,55 @@ export default function TermosPage() {
             [
               "Gratuito",
               "0 € / sempre",
-              "Calculadora, simulador, comparador, prazos, arquivo local (localStorage)",
+              "Calculadoras, simuladores, guias, prazos, histórico local e 1 amostra de cenário",
             ],
             [
-              "Plus",
+              "Plus mensal",
               `${precoPlusFormatado()}/mês`,
-              "Sincronização na nuvem, exportação avançada, multi-dispositivo",
+              "Nuvem, cenários ilimitados, CSV/PDF, auditoria, mealheiro e Quiz avançado",
+            ],
+            [
+              "Plus vitalício",
+              `${precoVitalicioFormatado()}, uma vez`,
+              "Mesmo Plus, sem renovação; campanha fundadora limitada aos 1000 lugares anunciados",
             ],
           ]}
         />
-        <Sub title="Política de reembolso">
+        <Sub title="14 dias para pedir reembolso — não é um trial">
           <p>
-            Para o plano Plus, oferecemos um período de reembolso de 14 dias a contar da data
-            de subscrição, sem necessidade de justificação, conforme o direito de arrependimento
-            previsto no Decreto-Lei n.º 24/2014, de 14 de fevereiro (contratos celebrados à
-            distância). Para solicitar reembolso, envia um email para{" "}
+            O pagamento é cobrado quando concluis o Checkout e o Plus fica disponível de imediato.
+            Não existe um período experimental com cobrança posterior. Ainda assim, na primeira
+            compra do Plus mensal ou vitalício, podes pedir o reembolso integral nos 14 dias
+            seguintes, sem necessidade de justificação. Esta garantia comercial não limita os
+            direitos de livre resolução que sejam aplicáveis. Para pedir o reembolso, envia um
+            email a{" "}
             <a
               href="mailto:recibocerto.pt@gmail.com"
               className="font-medium text-brand hover:underline dark:text-brand-mint"
             >
               recibocerto.pt@gmail.com
             </a>{" "}
-            com o assunto "Reembolso".
+            com o assunto "Reembolso" e o email da conta. Quando o reembolso for confirmado, o
+            acesso Plus é revogado e os dados sujeitos à política de retenção abaixo.
           </p>
         </Sub>
         <Sub title="Renovação e cancelamento">
           <p>
-            As subscrições do plano Plus renovam-se automaticamente no período acordado (mensal
-            ou anual). Podes cancelar a qualquer momento a partir da área de conta; o acesso
-            Plus mantém-se até ao final do período já pago.
+            O Plus mensal renova-se automaticamente todos os meses. Podes cancelá-lo a qualquer
+            momento no portal de faturação; o acesso mantém-se até ao fim do período já pago. O
+            Plus vitalício é um pagamento único e não se renova.
+          </p>
+          <p className="mt-3">
+            Neste contexto, “vitalício” significa acesso durante a vida operacional do serviço
+            ReciboCerto e enquanto a conta respeitar estes Termos; não constitui uma garantia de
+            funcionamento perpétuo. A limitação a 1000 lugares inclui compras e concessões
+            fundadoras já atribuídas, e não será aumentada silenciosamente enquanto esta oferta
+            for anunciada como limitada.
+          </p>
+          <p className="mt-3">
+            Depois de perderes o acesso Plus, os dados fiscais guardados na nuvem ficam disponíveis
+            durante 30 dias e são depois eliminados dos nossos servidores. O que estiver guardado
+            apenas no teu dispositivo permanece contigo.
           </p>
         </Sub>
       </Section>
@@ -383,8 +402,9 @@ export default function TermosPage() {
           />
         </Sub>
         <p className="mt-3">
-          Em caso de encerramento do serviço Plus, reembolsaremos o valor proporcional do
-          período pago não utilizado.
+          Em caso de encerramento do serviço Plus, daremos o aviso acima, permitiremos a exportação
+          dos dados e reembolsaremos aos subscritores mensais o valor proporcional do período pago
+          não utilizado, sem prejuízo dos restantes direitos obrigatórios aplicáveis.
         </p>
       </Section>
 
@@ -402,8 +422,16 @@ export default function TermosPage() {
             <strong className="text-stone-700 dark:text-stone-200">
               Centro de Arbitragem de Conflitos de Consumo de Lisboa (CACCL)
             </strong>{" "}
-            ou consultar a plataforma europeia de resolução de litígios em linha
-            (RLL) da Comissão Europeia.
+            ou consultar a{" "}
+            <a
+              href="https://consumer-redress.ec.europa.eu/dispute-resolution-bodies"
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-brand hover:underline dark:text-brand-mint"
+            >
+              lista europeia de entidades de resolução de litígios
+            </a>
+            .
           </p>
         </Sub>
         <Nota tipo="info">

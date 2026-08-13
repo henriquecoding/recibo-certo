@@ -37,7 +37,9 @@ describe("RC-BILL-002 · allowlist de preço", () => {
     const { concedePlus } = await mod();
     expect(concedePlus({ status: "active", priceId: PRECO_ATUAL })).toBe(true);
     expect(concedePlus({ status: "trialing", priceId: PRECO_ATUAL })).toBe(true);
-    expect(concedePlus({ status: "past_due", priceId: PRECO_ATUAL })).toBe(true);
+    const graca = new Date(Date.now() + 86_400_000).toISOString();
+    expect(concedePlus({ status: "past_due", priceId: PRECO_ATUAL, periodoGracaTerminaEm: graca })).toBe(true);
+    expect(concedePlus({ status: "past_due", priceId: PRECO_ATUAL, periodoGracaTerminaEm: null })).toBe(false);
   });
 
   it("um preço NÃO autorizado nunca concede, por mais ativo que esteja", async () => {
@@ -75,6 +77,12 @@ describe("RC-BILL-002 · allowlist de preço", () => {
     expect(precosAutorizados()).toEqual([PRECO_ATUAL, PRECO_ANTIGO]);
   });
 
+  it("aceita mais do que um preço histórico separado por vírgulas", async () => {
+    process.env.STRIPE_PRICE_PLUS_LEGACY = "price_legado_mensal, price_legado_anual";
+    const { precosLegados } = await mod();
+    expect(precosLegados()).toEqual(["price_legado_mensal", "price_legado_anual"]);
+  });
+
   it("sem allowlist configurada, NADA concede", async () => {
     // Falha fechada. Parece agressivo, mas `STRIPE_PRICE_PLUS_MONTHLY` é a
     // mesma variável que o checkout precisa para existir: num ambiente onde há
@@ -110,26 +118,21 @@ describe("RC-BILL-002 · allowlist de preço", () => {
   });
 });
 
-describe("RC-BILL-002 · o provider e o webhook usam a allowlist", () => {
-  it("o provider decide com preço, não só com estado", async () => {
+describe("RC-BILL-002 · a decisão vive no servidor", () => {
+  it("o provider consulta o endpoint canónico e não a tabela diretamente", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const fonte = readFileSync(join(__dirname, "..", "stripe", "subscription.tsx"), "utf8");
-    expect(fonte).toMatch(/concedePlus/);
-    expect(fonte).toMatch(/price_id/);
+    expect(fonte).toContain("/api/entitlements");
+    expect(fonte).not.toMatch(/\.from\("subscriptions"\)/);
   });
 
-  it("o webhook alerta quando chega um preço não autorizado", async () => {
+  it("a projeção valida o preço na Stripe antes de o catálogo conceder Plus", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
-    const fonte = readFileSync(
-      join(__dirname, "..", "..", "app", "api", "stripe", "webhook", "route.ts"),
-      "utf8",
-    );
-    expect(fonte).toMatch(/precoConcedePlus/);
-    // E continua a guardar o registo: a subscrição existe do lado da Stripe e
-    // alguém pode estar a ser cobrado. Apagar o facto seria pior.
-    expect(fonte).toMatch(/upsert\(dados/);
+    const fonte = readFileSync(join(__dirname, "..", "billing", "projection.ts"), "utf8");
+    expect(fonte).toMatch(/validarPrecoQueConcedePlus/);
+    expect(fonte).toMatch(/upsert\(row/);
   });
 });
 
@@ -183,15 +186,20 @@ describe("concedePlus: cada origem traz a prova que lhe compete", () => {
 
   it("uma concessão manual não tem preço, e não precisa", async () => {
     const { concedePlus, eVitalicio } = await mod();
-    expect(concedePlus({ origem: "manual", status: "active", priceId: null })).toBe(true);
+    expect(concedePlus({
+      origem: "manual", status: "active", priceId: null,
+      motivo: "concessão de suporte", concedidoPor: "00000000-0000-4000-8000-000000000001",
+    })).toBe(true);
+    expect(concedePlus({ origem: "manual", status: "active", priceId: null })).toBe(false);
   });
 
   it("um cupão vale enquanto durar", async () => {
     const { concedePlus, eVitalicio } = await mod();
     const ontem = new Date(Date.now() - 86_400_000).toISOString();
     const amanha = new Date(Date.now() + 86_400_000).toISOString();
-    expect(concedePlus({ origem: "cupao", status: "active", priceId: null, terminaEm: amanha })).toBe(true);
-    expect(concedePlus({ origem: "cupao", status: "active", priceId: null, terminaEm: ontem })).toBe(false);
+    expect(concedePlus({ origem: "cupao", status: "active", priceId: null, terminaEm: amanha, cupaoId: "cupao_1" })).toBe(true);
+    expect(concedePlus({ origem: "cupao", status: "active", priceId: null, terminaEm: ontem, cupaoId: "cupao_1" })).toBe(false);
+    expect(concedePlus({ origem: "cupao", status: "active", priceId: null, terminaEm: amanha })).toBe(false);
   });
 
   it("um prazo expirado vence qualquer origem", async () => {

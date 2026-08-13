@@ -1,245 +1,234 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
+import {
+  createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode,
+} from "react";
 import { useAuth } from "@/lib/supabase/auth";
 import { supabaseConfigurado } from "@/lib/supabase/config";
 import { planoTem, type Entitlement, type Plano } from "@/lib/entitlements";
-import { concedePlus, eVitalicio, type OrigemConcessao } from "@/lib/stripe/precos-autorizados";
+import type { OrigemConcessao } from "@/lib/stripe/precos-autorizados";
 
-interface LinhaSubscricao {
-  status: string;
-  intervalo: string;
-  price_id: string | null;
-  origem: OrigemConcessao | null;
-  ls_subscription_id: string | null;
-  stripe_payment_intent: string | null;
-  concessao_termina_em: string | null;
-}
-
-// Cliente Supabase sob procura — mantém o SDK fora do bundle inicial (ver auth.tsx).
-async function sb() {
-  const { getSupabase } = await import("@/lib/supabase/client");
-  return getSupabase();
-}
-
-/** Como se paga o Plus. Não são planos diferentes — é o mesmo Plus. */
 export type Modalidade = "mensal" | "vitalicio";
-
-type StatusSubscricao = "active" | "trialing" | "past_due" | "canceled" | "incomplete" | null;
+type StatusSubscricao =
+  | "active" | "trialing" | "past_due" | "canceled" | "incomplete"
+  | "incomplete_expired" | "unpaid" | "paused" | null;
 
 interface SubscricaoContexto {
-  /** "plus" substituiu "pro": o Plus unifica o antigo Pro e o Quiz Master. */
   plano: Plano;
   status: StatusSubscricao;
   intervalo: "monthly" | "annual" | null;
-  /** De onde vem o acesso. Muda o que a interface pode prometer. */
   origem: OrigemConcessao | null;
-  /** Acesso para sempre: não há renovação, nem portal de subscrição. */
   vitalicio: boolean;
+  periodoGracaTerminaEm: string | null;
+  temClienteStripe: boolean;
   carregado: boolean;
-  /** Verificar SEMPRE a permissão, nunca o nome do plano (ponto 11.5).
-      Enquanto o estado carrega, `pode` devolve false — os gates tratam o
-      carregamento em separado para não piscar conteúdo bloqueado. */
   pode: (permissao: Entitlement) => boolean;
-  /** Uma modalidade de pagamento, não um plano: o Plus é o mesmo nas duas. */
   abrirCheckout: (modalidade?: Modalidade) => Promise<{ erro: string; esgotado: boolean } | undefined>;
   abrirPortal: () => Promise<void>;
-  /**
-   * Vai buscar de novo o estado da subscrição.
-   *
-   * Existe porque a fonte de verdade é o webhook do Stripe, que escreve na
-   * tabela `subscriptions` de forma ASSÍNCRONA — e o cliente lia uma vez e
-   * mais nada.
-   */
   revalidar: () => void;
+}
+
+interface EntitlementsResponse {
+  plano: Plano;
+  status: StatusSubscricao;
+  intervalo: "monthly" | "annual" | null;
+  origem: OrigemConcessao | null;
+  vitalicio: boolean;
+  periodoGracaTerminaEm: string | null;
+  temClienteStripe: boolean;
 }
 
 const Ctx = createContext<SubscricaoContexto | null>(null);
 
-async function obterToken(): Promise<string | null> {
+async function tokenAtual(): Promise<string | null> {
   if (!supabaseConfigurado()) return null;
-  const { data } = await (await sb()).auth.getSession();
+  const { getSupabase } = await import("@/lib/supabase/client");
+  const { data } = await getSupabase().auth.getSession();
   return data.session?.access_token ?? null;
 }
 
-/**
- * Viemos agora do checkout do Stripe? `checkoutSuccessUrl` é
- * `/dashboard?plano=ativo` — é esse marcador que autoriza as repetições.
- */
-function esperaWebhook(): boolean {
-  if (typeof window === "undefined") return false;
-  return new URLSearchParams(window.location.search).get("plano") === "ativo";
+function checkoutSessionId(): string | null {
+  if (typeof window === "undefined") return null;
+  const value = new URLSearchParams(window.location.search).get("session_id");
+  return value?.match(/^cs_(?:live|test)_[A-Za-z0-9]+$/) ? value : null;
+}
+
+function clearCheckoutParams() {
+  const url = new URL(window.location.href);
+  url.searchParams.delete("session_id");
+  url.searchParams.delete("plano");
+  window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
 export function SubscricaoProvider({ children }: { children: ReactNode }) {
   const { user, carregado: authCarregado } = useAuth();
+  const userId = user?.id;
+  const [plano, setPlano] = useState<Plano>("free");
   const [status, setStatus] = useState<StatusSubscricao>(null);
   const [intervalo, setIntervalo] = useState<"monthly" | "annual" | null>(null);
   const [origem, setOrigem] = useState<OrigemConcessao | null>(null);
+  const [vitalicio, setVitalicio] = useState(false);
+  const [periodoGracaTerminaEm, setPeriodoGracaTerminaEm] = useState<string | null>(null);
+  const [temClienteStripe, setTemClienteStripe] = useState(false);
   const [carregado, setCarregado] = useState(false);
-
-  /** Um contador que, ao mudar, força nova leitura. */
   const [tentativa, setTentativa] = useState(0);
-  const revalidar = useCallback(() => setTentativa((n) => n + 1), []);
+  const revalidar = useCallback(() => setTentativa((value) => value + 1), []);
 
   useEffect(() => {
     if (!authCarregado) return;
-    if (!user || !supabaseConfigurado()) {
+    if (!userId || !supabaseConfigurado()) {
+      setPlano("free");
       setStatus(null);
       setIntervalo(null);
       setOrigem(null);
+      setVitalicio(false);
+      setPeriodoGracaTerminaEm(null);
       setCarregado(true);
       return;
     }
 
-    let ativo = true;
-    /** Repetições ainda disponíveis para a corrida com o webhook. */
-    let porTentar = esperaWebhook() ? 6 : 0;
-    let temporizador: ReturnType<typeof setTimeout> | undefined;
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let attemptsLeft = checkoutSessionId() ? 6 : 0;
+    let reconciled = false;
+    const controller = new AbortController();
 
-    const buscar = () => {
-      sb().then((cliente) => {
-        if (!ativo) return;
-        cliente.from("subscriptions")
-          .select("status, intervalo, price_id, origem, ls_subscription_id, stripe_payment_intent, concessao_termina_em")
-          .eq("user_id", user.id)
-          .in("status", ["active", "trialing", "past_due"])
-          .order("criado_em", { ascending: false })
-          .limit(1)
-          .then(({ data }) => {
-            if (!ativo) return;
-            if (data && data.length > 0) {
-              // ⚠️ RC-BILL-002 — o preço decide, não só o estado.
-              //
-              // Antes bastava existir uma subscrição `active`/`trialing`/
-              // `past_due` para o Plus ser concedido: qualquer preço servia,
-              // incluindo um de teste, um antigo de outro produto ou um criado
-              // à mão no painel. `concedePlus` exige as duas coisas.
-              const linha = data[0] as LinhaSubscricao;
-              if (!concedePlus({
-                status: linha.status,
-                priceId: linha.price_id,
-                origem: linha.origem,
-                lsSubscriptionId: linha.ls_subscription_id,
-                paymentIntent: linha.stripe_payment_intent,
-                terminaEm: linha.concessao_termina_em,
-              })) {
-                console.warn("[stripe] Concessão sem prova válida para a sua origem — Plus não concedido.");
-                setStatus(null);
-                setIntervalo(null);
-                setOrigem(null);
-                setCarregado(true);
-                return;
-              }
-              setStatus(linha.status as StatusSubscricao);
-              setIntervalo(linha.intervalo as "monthly" | "annual");
-              setOrigem(linha.origem ?? "stripe");
-              setCarregado(true);
-              return;
-            }
-
-            setStatus(null);
-            setIntervalo(null);
-            setOrigem(null);
-            setCarregado(true);
-
-            // A CORRIDA COM O WEBHOOK.
-            //
-            // O Stripe reencaminha o browser para `/dashboard?plano=ativo`
-            // no instante do pagamento; a linha em `subscriptions` só existe
-            // quando o webhook `checkout.session.completed` chegar, o que é
-            // assíncrono. Quem pagava via, à sua espera, «Plano Grátis» — e
-            // só recarregando à mão é que o Plus aparecia.
-            if (porTentar > 0) {
-              const espera = (7 - porTentar) * 1000;
-              porTentar -= 1;
-              temporizador = setTimeout(buscar, espera);
-            }
+    const load = async () => {
+      try {
+        const token = await tokenAtual();
+        if (!token || !active) throw new Error("Sessão indisponível.");
+        const sessionId = checkoutSessionId();
+        if (sessionId && !reconciled) {
+          const response = await fetch("/api/stripe/reconcile", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ session_id: sessionId }),
+            signal: controller.signal,
           });
-      });
+          const result = await response.json().catch(() => ({}));
+          if (result.reembolsado) {
+            reconciled = true;
+            clearCheckoutParams();
+            window.alert(result.mensagem ?? "O pagamento foi reembolsado automaticamente.");
+          } else if (response.status === 202 || result.pendente) {
+            // Alguns meios de pagamento confirmam de forma assíncrona. Mantém
+            // o identificador para as tentativas seguintes e para um refresh.
+          } else if (response.ok) {
+            reconciled = true;
+            clearCheckoutParams();
+          } else {
+            throw new Error(result.erro ?? "Não foi possível reconciliar o pagamento.");
+          }
+        }
+
+        const response = await fetch("/api/entitlements", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error("Não foi possível confirmar o plano.");
+        const result = await response.json() as EntitlementsResponse;
+        if (!active) return;
+        setPlano(result.plano);
+        setStatus(result.status);
+        setIntervalo(result.intervalo);
+        setOrigem(result.origem);
+        setVitalicio(result.vitalicio);
+        setPeriodoGracaTerminaEm(result.periodoGracaTerminaEm);
+        setTemClienteStripe(Boolean(result.temClienteStripe));
+        setCarregado(true);
+
+        if (checkoutSessionId() && result.plano !== "plus" && attemptsLeft > 0) {
+          const delay = (7 - attemptsLeft) * 1000;
+          attemptsLeft -= 1;
+          timer = setTimeout(load, delay);
+        }
+      } catch (error) {
+        if (!active || (error instanceof DOMException && error.name === "AbortError")) return;
+        console.error("[entitlements]", error);
+        setPlano("free");
+        setStatus(null);
+        setIntervalo(null);
+        setOrigem(null);
+        setVitalicio(false);
+        setPeriodoGracaTerminaEm(null);
+        setTemClienteStripe(false);
+        setCarregado(true);
+        if (attemptsLeft > 0) {
+          const delay = (7 - attemptsLeft) * 1000;
+          attemptsLeft -= 1;
+          timer = setTimeout(load, delay);
+        }
+      }
     };
 
-    buscar();
+    void load();
     return () => {
-      ativo = false;
-      if (temporizador) clearTimeout(temporizador);
+      active = false;
+      controller.abort();
+      if (timer) clearTimeout(timer);
     };
-  }, [user, authCarregado, tentativa]);
+  }, [userId, authCarregado, tentativa]);
 
-  /**
-   * Voltar ao separador revalida.
-   *
-   * O estado da subscrição muda FORA desta aba: no portal do Stripe, noutro
-   * dispositivo, ou por um webhook de renovação falhada. Sem isto, uma aba
-   * aberta desde ontem continuava a mostrar o plano de ontem — a conceder
-   * Plus a quem já cancelou, ou a negá-lo a quem acabou de pagar.
-   */
   useEffect(() => {
-    if (!user || !supabaseConfigurado()) return;
-    const aoVoltar = () => {
+    if (!userId || !supabaseConfigurado()) return;
+    const onReturn = () => {
       if (document.visibilityState === "visible") revalidar();
     };
-    document.addEventListener("visibilitychange", aoVoltar);
-    window.addEventListener("focus", aoVoltar);
+    document.addEventListener("visibilitychange", onReturn);
+    window.addEventListener("focus", onReturn);
     return () => {
-      document.removeEventListener("visibilitychange", aoVoltar);
-      window.removeEventListener("focus", aoVoltar);
+      document.removeEventListener("visibilitychange", onReturn);
+      window.removeEventListener("focus", onReturn);
     };
-  }, [user, revalidar]);
+  }, [userId, revalidar]);
 
-  const plano: Plano = status === "active" || status === "trialing" || status === "past_due" ? "plus" : "free";
-
-  const pode = useCallback((permissao: Entitlement) => planoTem(plano, permissao), [plano]);
+  const pode = useCallback((permission: Entitlement) => planoTem(plano, permission), [plano]);
 
   const abrirCheckout = useCallback(async (modalidade: Modalidade = "mensal") => {
-    const token = await obterToken();
-    if (!token) return;
-
-    const res = await fetch("/api/stripe/checkout", {
+    const token = await tokenAtual();
+    if (!token) return { erro: "Inicia sessão para escolher o Plus.", esgotado: false };
+    const response = await fetch("/api/stripe/checkout", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ modalidade }),
     });
-
-    const json = await res.json();
-    if (json.url) {
-      window.location.href = json.url;
+    const result = await response.json().catch(() => ({}));
+    if (result.url) {
+      window.location.href = result.url;
       return;
     }
-    // 409 = os lugares vitalícios esgotaram entre carregar a página e clicar.
-    // Devolve-se o erro em vez de falhar em silêncio, para a página poder
-    // dizer o que aconteceu.
-    if (json.erro) return { erro: json.erro as string, esgotado: Boolean(json.esgotado) };
+    return { erro: result.erro ?? "Não foi possível iniciar o pagamento.", esgotado: Boolean(result.esgotado) };
   }, []);
 
   const abrirPortal = useCallback(async () => {
-    const token = await obterToken();
+    const token = await tokenAtual();
     if (!token) return;
-
-    const res = await fetch("/api/stripe/portal", {
+    const response = await fetch("/api/stripe/portal", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     });
-
-    const json = await res.json();
-    if (json.url) window.location.href = json.url;
+    const result = await response.json().catch(() => ({}));
+    if (result.url) window.location.href = result.url;
   }, []);
 
+  const contextValue = useMemo<SubscricaoContexto>(() => ({
+    plano, status, intervalo, origem, vitalicio, periodoGracaTerminaEm,
+    temClienteStripe, carregado, pode, abrirCheckout, abrirPortal, revalidar,
+  }), [
+    plano, status, intervalo, origem, vitalicio, periodoGracaTerminaEm,
+    temClienteStripe, carregado, pode, abrirCheckout, abrirPortal, revalidar,
+  ]);
+
   return (
-    <Ctx.Provider value={{ plano, status, intervalo, origem, vitalicio: eVitalicio(origem), carregado, pode, abrirCheckout, abrirPortal, revalidar }}>
+    <Ctx.Provider value={contextValue}>
       {children}
     </Ctx.Provider>
   );
 }
 
 export function useSubscricao(): SubscricaoContexto {
-  const ctx = useContext(Ctx);
-  if (!ctx) throw new Error("useSubscricao tem de ser usado dentro de <SubscricaoProvider>.");
-  return ctx;
+  const context = useContext(Ctx);
+  if (!context) throw new Error("useSubscricao tem de estar dentro de <SubscricaoProvider>.");
+  return context;
 }

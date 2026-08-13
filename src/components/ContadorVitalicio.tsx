@@ -29,6 +29,10 @@ export default function ContadorVitalicio({ cta }: { cta: string }) {
     return () => { vivo = false; };
   }, []);
 
+  // A leitura também pode falhar. Nesse estado não enviamos ninguém para um
+  // pagamento que não conseguimos validar; o checkout repete a verificação.
+  const aCarregar = lugares === null;
+  const indisponivel = aCarregar || lugares?.verificado === false;
   const esgotado = lugares?.esgotado ?? false;
   const percentagem = lugares
     ? Math.min(100, Math.round((lugares.ocupados / Math.max(lugares.total, 1)) * 100))
@@ -63,19 +67,27 @@ export default function ContadorVitalicio({ cta }: { cta: string }) {
               />
             </div>
           </>
-        ) : null}
+        ) : (
+          <p className="text-xs font-medium text-stone-400">A confirmar disponibilidade…</p>
+        )}
       </div>
 
-      {esgotado ? (
+      {esgotado || indisponivel ? (
         <>
           <span
             aria-disabled="true"
             className="mt-6 inline-flex min-h-[44px] cursor-not-allowed items-center justify-center gap-2 rounded-2xl border border-stone-200 px-5 py-3 text-sm font-semibold text-stone-400 dark:border-stone-700 dark:text-stone-500"
           >
-            <Lock size={15} /> Lugares esgotados
+            <Lock size={15} /> {aCarregar
+              ? "A confirmar lugares"
+              : indisponivel ? "Temporariamente indisponível" : "Lugares esgotados"}
           </span>
           <p className="mt-2 text-center text-xs text-stone-400">
-            O Plus mensal continua disponível, com tudo o que o vitalício dava.
+            {aCarregar
+              ? "O botão fica disponível assim que o limite for confirmado."
+              : indisponivel
+              ? "Não foi possível confirmar os lugares. Tenta novamente daqui a pouco."
+              : "O Plus mensal continua disponível, com tudo o que o vitalício dava."}
           </p>
         </>
       ) : (

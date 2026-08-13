@@ -27,7 +27,7 @@ Tabelas confirmadas: `profiles`, `recibos`, `subscriptions`, `anuncios`,
 
 > **`recibos_vencimento`** (migration 010, aplicada 17/06/2026 via Management API):
 > cenários guardados do simulador de vencimento. RLS own+admin. Tiering: grátis
-> guarda até 3 cenários em localStorage; Pro sincroniza na nuvem (ilimitado).
+> guarda 1 amostra de cenário em localStorage; Plus sincroniza na nuvem (ilimitado).
 
 > **Conclusão:** a app está totalmente ligada ao Supabase (auth e-mail + Google +
 > LinkedIn OIDC, dados, admin, subscrições). Os três provedores de login foram

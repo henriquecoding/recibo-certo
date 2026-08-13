@@ -57,18 +57,16 @@ describe("lugares vitalícios: o que a interface faz com o número", () => {
     expect(rota).toMatch(/status: 409/);
   });
 
-  it("o webhook grita por um reembolso se o lugar esgotar depois de pago", () => {
-    const rota = ler("src/app/api/stripe/webhook/route.ts");
-    expect(rota).toContain("foiLimiteAtingido");
-    expect(rota).toMatch(/REEMBOLSO NECESSÁRIO/);
-    // 200 de propósito: repetir o webhook não cria lugar nenhum.
-    expect(rota).toMatch(/reembolso_necessario: true/);
+  it("uma corrida no último lugar provoca reembolso automático e idempotente", () => {
+    const projecao = ler("src/lib/billing/projection.ts");
+    expect(projecao).toContain("foiLimiteAtingido");
+    expect(projecao).toMatch(/refunds\.create/);
+    expect(projecao).toMatch(/idempotencyKey/);
   });
 
-  it("uma falha de leitura não bloqueia a compra", () => {
-    // Recusar dinheiro por causa de um problema nosso de leitura seria pior
-    // do que deixar o gatilho recusar no fim.
-    expect(LUGARES_DESCONHECIDOS.esgotado).toBe(false);
+  it("uma falha de leitura bloqueia a cobrança até a capacidade ser confirmada", () => {
+    expect(LUGARES_DESCONHECIDOS.esgotado).toBe(true);
+    expect(LUGARES_DESCONHECIDOS.verificado).toBe(false);
   });
 
   it("sem Supabase configurado devolve o estado desconhecido, não estoira", async () => {
@@ -118,3 +116,4 @@ describe("lugares vitalícios: o que a pessoa lê", () => {
     expect(c).toMatch(/mensal continua disponível/);
   });
 });
+

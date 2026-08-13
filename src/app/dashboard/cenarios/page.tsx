@@ -79,7 +79,7 @@ function exportarCenariosCSV(cenarios: Cenario[], dialeto: DialetoCSV = "humano"
 export default function CenariosPage() {
   const router = useRouter();
   const {
-    cenarios, carregado, naNuvem, limite, limiteAtingido, remover,
+    cenarios, carregado, naNuvem, limite, limiteAtingido, excedentesLegado, remover,
     erroCarregamento, locaisPorImportar, importarLocais, adiarImportacao,
   } = useCenarios();
   const { pode } = useSubscricao();
@@ -146,7 +146,15 @@ export default function CenariosPage() {
             </p>
           ) : (
             <p className={limiteAtingido ? "text-alert-text" : "text-stone-600 dark:text-stone-300"}>
-              {cenarios.length}/{limite} cenário guardado no plano grátis.{" "}
+              {excedentesLegado > 0 ? (
+                <>
+                  Tens {cenarios.length} cenários guardados de quando o plano grátis
+                  permitia mais — continuam aqui, não apagámos nenhum. O plano grátis
+                  guarda {limite}.{" "}
+                </>
+              ) : (
+                <>{cenarios.length}/{limite} cenário guardado no plano grátis.{" "}</>
+              )}
               <Link href="/dashboard/upgrade" className="font-semibold text-brand-dark underline-offset-2 hover:underline dark:text-brand">
                 Passa ao Plus
               </Link>{" "}

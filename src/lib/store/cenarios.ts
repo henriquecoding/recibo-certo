@@ -259,6 +259,12 @@ export function useCenarios() {
 
   const limiteAtingido = !naNuvem && cenarios.length >= LIMITE_FREE;
 
+  // Quem guardou cenários quando o Grátis permitia três continua a tê-los:
+  // apagá-los em silêncio seria destruir trabalho que ninguém pediu para
+  // destruir. Mas então a frase «uma amostra» deixa de ser verdadeira para
+  // essa pessoa — por isso o excedente é contado e dito em voz alta.
+  const excedentesLegado = naNuvem ? 0 : Math.max(0, cenarios.length - LIMITE_FREE);
+
   const guardar = useCallback(
     async (novo: NovoCenario): Promise<Resultado<Cenario>> => {
       if (!naNuvem && cenariosRef.current.length >= LIMITE_FREE) {
@@ -267,7 +273,9 @@ export function useCenarios() {
           mensagem:
             plano === "plus"
               ? "Inicia sessão para sincronizar os teus cenários na nuvem."
-              : `O plano grátis guarda ${LIMITE_FREE} cenário. Passa ao Plus para guardares todos os cenários, sincronizados na nuvem.`,
+              : cenariosRef.current.length > LIMITE_FREE
+                ? `Tens ${cenariosRef.current.length} cenários guardados de antes — não apagámos nenhum. O plano grátis guarda ${LIMITE_FREE}; apaga até ficares com ${LIMITE_FREE} para guardares um novo, ou passa ao Plus para os teres todos na nuvem.`
+                : `O plano grátis guarda ${LIMITE_FREE} cenário. Passa ao Plus para guardares todos os cenários, sincronizados na nuvem.`,
         });
       }
 
@@ -368,6 +376,7 @@ export function useCenarios() {
     erroCarregamento,
     limite: LIMITE_FREE,
     limiteAtingido,
+    excedentesLegado,
     locaisPorImportar,
     guardar,
     remover,

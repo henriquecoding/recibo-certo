@@ -373,9 +373,9 @@ describe("revisao:cupoes — o prémio entrega-se e ACABA", () => {
   it("quem lê com service_role filtra à mão", () => {
     // A RLS não se aplica ao service_role: sem o filtro, quem ganhou três
     // meses em 2026 recebia alertas em 2030.
-    expect(readFileSync(join(RAIZ, "src/app/api/email/guardiao/route.ts"), "utf8")).toMatch(
-      /plusAtivoFiltro\(\)/,
-    );
+    const fonte = readFileSync(join(RAIZ, "src/app/api/email/guardiao/route.ts"), "utf8");
+    expect(fonte).toMatch(/concedePlus/);
+    expect(fonte).toMatch(/billing_price_catalog/);
   });
 
   describe("concessaoValida", () => {
@@ -403,8 +403,21 @@ describe("revisao:cupoes — o prémio entrega-se e ACABA", () => {
       ).toBe(false);
     });
 
-    it("past_due mantém o acesso — é o período de graça do provedor", () => {
-      expect(concessaoValida({ status: "past_due", concessao_termina_em: null }, agora)).toBe(true);
+    it("past_due só mantém acesso dentro da janela de graça explícita", () => {
+      expect(concessaoValida({
+        status: "past_due",
+        concessao_termina_em: null,
+        periodo_graca_termina_em: "2026-08-14T12:00:00Z",
+      }, agora)).toBe(true);
+      // `agora` e 30-07-2026: a graca tem de ter terminado ANTES disso para
+      // negar acesso. A versao anterior usava 12-08-2026 — uma data futura —
+      // e exigia que uma graca ainda a decorrer fosse tratada como expirada.
+      expect(concessaoValida({
+        status: "past_due",
+        concessao_termina_em: null,
+        periodo_graca_termina_em: "2026-07-29T12:00:00Z",
+      }, agora)).toBe(false);
+      expect(concessaoValida({ status: "past_due", concessao_termina_em: null }, agora)).toBe(false);
     });
   });
 
@@ -556,3 +569,4 @@ describe("revisao:anuncios — o admin passa a mandar no site", () => {
     });
   });
 });
+
