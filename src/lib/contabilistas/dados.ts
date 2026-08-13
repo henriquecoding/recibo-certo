@@ -170,6 +170,7 @@ function paraVinculo(l: Linha): Vinculo {
     origem: l.origem as "cliente" | "contabilista",
     nomeCliente: (l.nome_cliente as string | null) ?? null,
     emailCliente: (l.email_cliente as string | null) ?? null,
+    mensagem: (l.mensagem as string | null) ?? null,
   };
 }
 
@@ -601,6 +602,7 @@ export interface CupaoLido {
   id: string;
   codigo: string;
   contabilistaId: string;
+  clienteId: string;
   percentagem: number;
   valorBaseCents: number;
   estado: "disponivel" | "usado" | "expirado";
@@ -614,7 +616,7 @@ export async function meusCupoes(filtro: {
 }): Promise<CupaoLido[]> {
   let q = getSupabase()
     .from("fidelidade_cupoes")
-    .select("id, codigo, contabilista_id, percentagem, valor_base_cents, estado, expira_em, criado_em")
+    .select("id, codigo, contabilista_id, cliente_id, percentagem, valor_base_cents, estado, expira_em, criado_em")
     .order("criado_em", { ascending: false });
   if (filtro.clienteId) q = q.eq("cliente_id", filtro.clienteId);
   if (filtro.contabilistaId) q = q.eq("contabilista_id", filtro.contabilistaId);
@@ -626,6 +628,7 @@ export async function meusCupoes(filtro: {
       id: r.id as string,
       codigo: r.codigo as string,
       contabilistaId: r.contabilista_id as string,
+      clienteId: r.cliente_id as string,
       percentagem: r.percentagem as number,
       valorBaseCents: r.valor_base_cents as number,
       estado: r.estado as CupaoLido["estado"],

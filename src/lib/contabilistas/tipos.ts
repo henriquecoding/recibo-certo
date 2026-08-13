@@ -104,6 +104,8 @@ export interface Vinculo {
   nomeCliente: string | null;
   /** Email que o cliente decidiu partilhar com este contabilista. */
   emailCliente: string | null;
+  /** Recado que o cliente escreveu ao pedir o vínculo. */
+  mensagem: string | null;
 }
 
 export interface Agendamento {

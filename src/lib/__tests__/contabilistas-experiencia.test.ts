@@ -33,6 +33,7 @@ const HUB = ler("components", "contabilistas", "hub.tsx");
 const ECRAS = {
   agenda: ler("app", "contabilista", "agenda", "page.tsx"),
   clientes: ler("app", "contabilista", "clientes", "page.tsx"),
+  fichaCliente: ler("app", "contabilista", "clientes", "[id]", "page.tsx"),
   fidelidade: ler("app", "contabilista", "fidelidade", "page.tsx"),
   hoje: ler("app", "contabilista", "page.tsx"),
   partilhas: ler("app", "contabilista", "partilhas", "page.tsx"),
@@ -50,11 +51,36 @@ const ECRAS = {
  */
 const DESTRUTIVAS: [keyof typeof ECRAS, RegExp][] = [
   ["agenda", /cancelado_contabilista|nao_compareceu|"realizada"/],
-  ["clientes", /decidirVinculo/],
+  // A lista de clientes deixou de escrever: passou a tabela, e as decisões
+  // sobre o vínculo mudaram-se para a ficha de cada pessoa. A invariante é a
+  // mesma — mudou o ficheiro onde ela tem de valer.
+  ["fichaCliente", /decidirVinculo/],
   ["areaCliente", /terminarVinculo|revogarPartilha|cancelarConsulta/],
   ["fidelidade", /\/api\/contabilistas\/cupao/],
   ["admin", /decisao: "recusar"|decisao: "suspender"/],
 ];
+
+describe("a lista de clientes é só leitura", () => {
+  it("não escreve nada — quem decide é a ficha", () => {
+    // Sem isto, a invariante de cima contorna-se sozinha: bastava alguém
+    // voltar a pôr um botão de «terminar» na linha da tabela, e a escrita
+    // destrutiva ficava num ecrã que nenhum teste vigia.
+    for (const escrita of [
+      "decidirVinculo", "terminarVinculo", "revogarPartilha",
+      "cancelarConsulta", "atualizarFicha", "/api/contabilistas/",
+    ]) {
+      expect(
+        ECRAS.clientes,
+        `a lista de clientes voltou a escrever (${escrita}) — move isso para a ficha`
+      ).not.toContain(escrita);
+    }
+  });
+
+  it("cada linha leva à ficha da pessoa", () => {
+    expect(ler("components", "contabilistas", "TabelaClientes.tsx"))
+      .toMatch(/\/contabilista\/clientes\/\$\{/);
+  });
+});
 
 describe("nada que não se desfaz acontece sem pergunta", () => {
   it.each(DESTRUTIVAS)("%s pede confirmação antes de escrever", (ecra, escrita) => {
