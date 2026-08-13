@@ -10,7 +10,9 @@ afterEach(() => { process.env = { ...originalEnv }; });
 
 describe("contrato comercial", () => {
   it("o Grátis oferece uma amostra de cenário, não a regra antiga de três", () => {
-    expect(read("src/components/Precos.tsx")).toContain('gratis: "1 amostra"');
+    const prices = read("src/components/Precos.tsx");
+    expect(prices).toContain('gratis: "1 amostra"');
+    expect(prices).toContain("1 amostra de cenário guardada neste dispositivo");
     expect(read("src/lib/store/cenarios.ts")).toMatch(/LIMITE_FREE\s*=\s*1/);
   });
 

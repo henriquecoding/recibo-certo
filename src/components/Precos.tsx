@@ -36,6 +36,7 @@ const GRATIS = [
   "Todos os guias, com fontes oficiais",
   "Calendário de prazos fiscais",
   "Quiz Fiscal",
+  "1 amostra de cenário guardada neste dispositivo",
   "Histórico neste dispositivo",
 ];
 
