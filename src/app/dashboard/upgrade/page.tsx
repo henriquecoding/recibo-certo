@@ -95,7 +95,11 @@ export default function UpgradePage() {
     // — que continua a poder passar para vitalício enquanto houver lugares.
     const comprouVitalicio = origem === "vitalicio";
     const concessaoManual = origem === "manual";
-    const temMensalidade = !comprouVitalicio && !concessaoManual;
+    // Só uma subscrição Stripe: é a única que `cancelRecurringAfterLifetime`
+    // sabe travar. Oferecer o vitalício a quem veio do Lemon Squeezy deixá-lo-ia
+    // a pagar nos dois sítios, e a quem tem um cupão prometia cancelar uma
+    // mensalidade que não existe.
+    const temMensalidade = origem === "stripe";
 
     return (
       <div className="mx-auto max-w-lg text-center">

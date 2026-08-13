@@ -186,6 +186,9 @@ describe("correções da auditoria do PR #104", () => {
     // E quem tem mensalidade consegue mesmo passar para vitalício.
     expect(page).toContain("Passar para vitalício");
     expect(page).toMatch(/abrirCheckout\("vitalicio"\)/);
+    // Mas só a mensalidade da Stripe: é a única que o servidor sabe cancelar
+    // depois da compra. Lemon Squeezy ficaria a cobrar em paralelo.
+    expect(page).toMatch(/const temMensalidade = origem === "stripe"/);
   });
 
   it("o cliente recebe do servidor se tem cliente Stripe", () => {
