@@ -23,6 +23,7 @@ import {
   gerarCodigoCupao,
 } from "@/lib/contabilistas/servidor";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { avisarOutraParte } from "@/lib/contabilistas/avisar";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -108,6 +109,18 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ erro: "Não foi possível atualizar a consulta." }, { status: 500 });
   }
 
+  // O cliente é avisado da decisão. Correr aqui e não no browser garante
+  // que o aviso acontece mesmo que quem clicou feche o separador a seguir.
+  const vinculo = await vinculoDe(sb, cc.userId, ag.cliente_id as string);
+  if (vinculo && (estado === "confirmado" || estado === "cancelado_contabilista")) {
+    await avisarOutraParte({
+      sb,
+      tipo: estado === "confirmado" ? "consulta_confirmada" : "consulta_cancelada",
+      vinculoId: vinculo,
+      autorId: cc.userId,
+    });
+  }
+
   if (estado !== "realizada") {
     return NextResponse.json({ ok: true, estado });
   }
@@ -127,5 +140,27 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: true, estado, fidelidade: null });
   }
 
+  const fecho = resultado as { completou?: boolean } | null;
+  if (fecho?.completou && vinculo) {
+    await avisarOutraParte({ sb, tipo: "cupao_ganho", vinculoId: vinculo, autorId: cc.userId });
+  }
+
   return NextResponse.json({ ok: true, estado, fidelidade: resultado ?? null });
+}
+
+
+/** O vínculo vivo entre estas duas pessoas, se houver. */
+async function vinculoDe(
+  sb: NonNullable<ReturnType<typeof supabaseServico>>,
+  contabilistaId: string,
+  clienteId: string
+): Promise<string | null> {
+  const { data } = await sb
+    .from("contabilista_vinculos")
+    .select("id")
+    .eq("contabilista_id", contabilistaId)
+    .eq("cliente_id", clienteId)
+    .neq("estado", "terminado")
+    .maybeSingle();
+  return (data?.id as string | undefined) ?? null;
 }

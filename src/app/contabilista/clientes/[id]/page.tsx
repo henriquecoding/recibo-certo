@@ -20,6 +20,7 @@ import { usarFicha } from "@/components/contabilistas/usarFicha";
 import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import CartaoFidelidade from "@/components/contabilistas/CartaoFidelidade";
+import Conversa from "@/components/contabilistas/Conversa";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import { useAvisos } from "@/components/ui/Avisos";
 import { useConfirmar, type PedidoConfirmacao } from "@/components/ui/Confirmar";
@@ -31,6 +32,7 @@ import { getSupabase } from "@/lib/supabase/client";
 import { resumirClientes, type CartaoDoCliente, type ResumoCliente } from "@/lib/contabilistas/resumo";
 import { ROTULO_PARTILHA, ROTULO_VINCULO } from "@/lib/contabilistas/vinculo";
 import { eurosDeCents } from "@/lib/contabilistas/fidelidade";
+import { avisarOutroLado } from "@/lib/contabilistas/conversa";
 import { diaLocal, horaLocal, rotularDia } from "@/lib/contabilistas/agenda";
 import type { Agendamento, Partilha } from "@/lib/contabilistas/tipos";
 import Button from "@/components/ui/Button";
@@ -127,6 +129,7 @@ export default function FichaClientePage() {
       return;
     }
     avisos.sucesso(para === "ativo" ? "Cliente ativo." : "Acompanhamento em pausa.");
+    if (para === "ativo") void avisarOutroLado("vinculo_aceite", resumo.vinculo.id);
     await carregar(ficha.userId);
   }
 
@@ -197,6 +200,15 @@ export default function FichaClientePage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <div className="space-y-6">
+          {/* A conversa fica em primeiro: é o que muda de dia para dia. As
+              consultas e os envios são o registo; isto é o que está vivo. */}
+          <Conversa
+            vinculoId={v.id}
+            meuId={ficha.userId}
+            estadoVinculo={v.estado}
+            tratamentoDoOutro={resumo.tratamento}
+          />
+
           {/* Consultas */}
           <section aria-labelledby="consultas-titulo" className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
             <h2 id="consultas-titulo" className="font-display text-xl text-ink">Consultas</h2>

@@ -32,6 +32,7 @@ import {
   LogOut,
 } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import SinoNotificacoes from "@/components/contabilistas/SinoNotificacoes";
 import { useAuth } from "@/lib/supabase/auth";
 import { verificarAdmin } from "@/lib/supabase/admin";
 import { obterPerfil } from "@/lib/supabase/profile";
@@ -302,7 +303,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <ArrowLeft size={12} />
                 Voltar ao site
               </Link>
-              <ThemeToggle />
+              <SinoNotificacoes />
+              <SinoNotificacoes />
+            <ThemeToggle />
             </div>
           </div>
         </aside>

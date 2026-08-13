@@ -33,6 +33,7 @@ import {
 import type { Agendamento, Contabilista, Partilha, Vinculo } from "@/lib/contabilistas/tipos";
 import { diaLocal, horaLocal, rotularDia } from "@/lib/contabilistas/agenda";
 import CartaoFidelidade from "@/components/contabilistas/CartaoFidelidade";
+import Conversa from "@/components/contabilistas/Conversa";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import {
   Cupoes, Envios, Ficha, Historico, Numeros, ProximaConsulta, SemContabilista,
@@ -213,6 +214,17 @@ export default function MeuContabilistaPage() {
       )}
 
       <Ficha cc={cc} vinculo={vinculo} ativo={ativo} />
+
+      {/* A conversa com quem trata das nossas contas é o que se abre mais
+          vezes. Fica logo abaixo da ficha, antes das consultas e dos envios. */}
+      {user && (vinculo.estado === "ativo" || vinculo.estado === "pausado") && (
+        <Conversa
+          vinculoId={vinculo.id}
+          meuId={user.id}
+          estadoVinculo={vinculo.estado}
+          tratamentoDoOutro={cc.nome}
+        />
+      )}
 
       {ativo && (
         <ProximaConsulta

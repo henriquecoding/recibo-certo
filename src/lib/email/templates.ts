@@ -286,3 +286,31 @@ export function emailAuditoriaRecibo(input: AuditoriaEmailInput): { subject: str
     `),
   };
 }
+
+
+/**
+ * Aviso da plataforma de contabilistas.
+ *
+ * Um molde só para todos: o texto vem do catálogo fechado de `avisar.ts`, e
+ * o email é o eco do que já está no sino. Fazer um template por tipo daria
+ * nove ficheiros a dizer a mesma coisa com palavras diferentes — e nove
+ * sítios para a marca deixar de ser coerente.
+ */
+export function emailAvisoPlataforma(
+  titulo: string,
+  corpo: string | undefined,
+  url: string
+): { subject: string; html: string } {
+  return {
+    subject: titulo,
+    html: layout(`
+      <h1 style="margin:0 0 12px;font-size:21px;font-weight:700;color:${INK};">${esc(titulo)}</h1>
+      ${corpo ? `<p style="margin:0;font-size:15px;line-height:1.65;color:${MUTED};">${esc(corpo)}</p>` : ""}
+      ${botao("Abrir no ReciboCerto", url)}
+      <p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#A8A29E;">
+        Recebeste isto porque tens uma conta ligada a um contabilista no ReciboCerto.
+        Podes terminar o acompanhamento a qualquer momento na tua área.
+      </p>
+    `),
+  };
+}

@@ -19,6 +19,7 @@ import {
   Logo, LayoutGrid, Calendar, User, PaperClip, Gift, Settings, ArrowLeft, Warning,
 } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import SinoNotificacoes from "@/components/contabilistas/SinoNotificacoes";
 import Button from "@/components/ui/Button";
 
 interface Contagens {
@@ -130,6 +131,7 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
             >
               <ArrowLeft size={15} aria-hidden /> A minha conta
             </Link>
+            <SinoNotificacoes />
             <ThemeToggle />
           </div>
         </div>

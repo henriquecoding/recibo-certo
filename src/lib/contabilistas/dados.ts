@@ -183,18 +183,21 @@ export interface PedidoDeVinculo {
   emailCliente?: string;
 }
 
-export async function pedirVinculo(p: PedidoDeVinculo): Promise<{ erro?: string }> {
-  const { error } = await getSupabase().from("contabilista_vinculos").insert({
+export async function pedirVinculo(
+  p: PedidoDeVinculo
+): Promise<{ erro?: string; vinculoId?: string }> {
+  const { data, error } = await getSupabase().from("contabilista_vinculos").insert({
     contabilista_id: p.contabilistaId,
     cliente_id: p.clienteId,
     origem: "cliente",
     mensagem: p.mensagem?.trim().slice(0, 1000) || null,
     nome_cliente: p.nomeCliente?.trim().slice(0, 80) || null,
     email_cliente: p.emailCliente?.trim().slice(0, 180) || null,
-  });
-  if (!error) return {};
-  if (error.code === "23505") return { erro: "Já tens um pedido com este contabilista." };
-  return { erro: error.message };
+  }).select("id").single();
+
+  if (!error && data) return { vinculoId: (data as unknown as Linha).id as string };
+  if (error?.code === "23505") return { erro: "Já tens um pedido com este contabilista." };
+  return { erro: error?.message ?? "Não foi possível enviar o pedido." };
 }
 
 /** O vínculo vivo do cliente, se houver. Um cliente tem no máximo um por CC. */
