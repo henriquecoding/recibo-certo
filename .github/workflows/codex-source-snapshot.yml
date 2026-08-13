@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - agent/pr102-hardening-workspace
+  pull_request:
+    branches:
+      - claude/continue-interrupted-pr-73s7hi
 
 permissions:
   contents: read
