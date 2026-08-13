@@ -148,10 +148,17 @@ describe("sincronização: Plus, nuvem e dispositivo", () => {
   it("o Plus exige estado aceite E preço autorizado", () => {
     // RC-BILL-002: um preço de teste ou um preço de 0 € criado à mão não
     // pode conceder Plus só por a subscrição estar «active».
+    // A decisão deixou de ser tomada no cliente: vive no servidor, em
+    // billing/access, atrás de /api/entitlements. O cliente não pode decidir.
+    const acesso = ler("src/lib/billing/access.ts");
+    expect(acesso).toContain("concedePlus");
+    expect(acesso).toMatch(/from\("subscriptions"\)/);
+    expect(acesso).toMatch(/\.eq\("user_id", userId\)/);
+    expect(acesso, "o preço tem de ser confirmado no catálogo").toMatch(/from\("billing_price_catalog"\)/);
+
     const fonte = ler(SUB);
-    expect(fonte).toContain("concedePlus");
-    expect(fonte).toMatch(/from\("subscriptions"\)/);
-    expect(fonte).toMatch(/\.eq\("user_id", user\.id\)/);
+    expect(fonte, "o cliente pergunta ao servidor").toContain("/api/entitlements");
+    expect(fonte, "o cliente não decide sozinho").not.toMatch(/from\("subscriptions"\)/);
   });
 
   it("o estado da subscrição é revalidado ao voltar ao separador", () => {
@@ -165,9 +172,13 @@ describe("sincronização: Plus, nuvem e dispositivo", () => {
 
   it("depois do checkout, espera pelo webhook em vez de dizer «Grátis»", () => {
     const fonte = ler(SUB);
-    expect(fonte).toContain("esperaWebhook");
-    expect(fonte).toMatch(/plano"\) === "ativo"/);
-    expect(fonte, "tem de haver um limite de tentativas").toMatch(/porTentar/);
+    // Voltando do Checkout, o plano ainda pode não estar projetado. Enquanto
+    // houver sessão de checkout no URL e o plano não for «plus», volta a
+    // perguntar — com um limite de tentativas para não ficar em ciclo.
+    expect(fonte).toContain("checkoutSessionId()");
+    expect(fonte).toMatch(/result\.plano !== "plus"/);
+    expect(fonte, "tem de haver um limite de tentativas").toMatch(/attemptsLeft/);
+    expect(fonte).toMatch(/setTimeout\(load/);
   });
 
   it("as preferências locais sobem para a nuvem na primeira leitura com Plus", () => {

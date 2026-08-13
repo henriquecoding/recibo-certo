@@ -28,6 +28,9 @@ export const CHANGELOG: EntradaChangelog[] = [
       "O Plus vitalício é uma campanha fundadora de 1000 lugares a 19,99 € uma vez. Os lugares são contados na base de dados, incluindo as duas concessões já existentes; um pagamento que chegue depois de o último lugar ser ocupado é reembolsado automaticamente.",
       "Checkout, portal, webhooks e reconciliação passam a usar uma identidade Stripe estável e operações idempotentes. Entregas repetidas ou fora de ordem não duplicam acesso, email ou efeitos; um preço desconhecido nunca concede Plus.",
       "A separação entre planos passa a ser aplicada também no servidor e na base: Grátis conserva os dados fiscais no dispositivo; Plus pode sincronizar histórico, cenários e perfil fiscal entre dispositivos e exportar. Em caso de erro de autorização ou de leitura, o acesso pago falha de forma fechada.",
+      "Pedir reembolso passa a fazer o que os Termos prometem, também na mensalidade: o acesso é revogado e a subscrição é cancelada no momento, sem depender de ninguém agir à mão. Antes, só o vitalício era tratado assim — um reembolso do primeiro mês deixava o Plus de pé e a cobrança seguinte por acontecer.",
+      "Quem já paga por mês passa a poder mudar para o vitalício a partir da página de subscrição, enquanto houver lugares. A mensalidade é cancelada no fim do período que já pagaste, sem cobranças a dobrar.",
+      "Quem recebeu o Plus como concessão da equipa deixa de ler que «foi um pagamento único» e deixa de ver um botão de pagamentos que não abria nada. Cada tipo de acesso passa a descrever-se como é.",
     ],
   },
   {

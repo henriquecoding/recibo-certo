@@ -409,10 +409,13 @@ describe("revisao:cupoes — o prémio entrega-se e ACABA", () => {
         concessao_termina_em: null,
         periodo_graca_termina_em: "2026-08-14T12:00:00Z",
       }, agora)).toBe(true);
+      // `agora` e 30-07-2026: a graca tem de ter terminado ANTES disso para
+      // negar acesso. A versao anterior usava 12-08-2026 — uma data futura —
+      // e exigia que uma graca ainda a decorrer fosse tratada como expirada.
       expect(concessaoValida({
         status: "past_due",
         concessao_termina_em: null,
-        periodo_graca_termina_em: "2026-08-12T12:00:00Z",
+        periodo_graca_termina_em: "2026-07-29T12:00:00Z",
       }, agora)).toBe(false);
       expect(concessaoValida({ status: "past_due", concessao_termina_em: null }, agora)).toBe(false);
     });

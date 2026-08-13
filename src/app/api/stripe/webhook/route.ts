@@ -5,7 +5,7 @@ import { claimStripeEvent, finishStripeEvent } from "@/lib/billing/ledger";
 import {
   BillingOrphanError,
   handleDispute,
-  revokeRefundedLifetime,
+  revokeRefundedCharge,
   subscriptionIdFromInvoice,
   syncCheckoutSession,
   syncSubscription,
@@ -74,7 +74,7 @@ async function processEvent(event: Stripe.Event): Promise<void> {
     case "checkout.session.async_payment_failed":
       return;
     case "charge.refunded":
-      await revokeRefundedLifetime(event.data.object as Stripe.Charge);
+      await revokeRefundedCharge(event.data.object as Stripe.Charge);
       return;
     case "charge.dispute.created":
     case "charge.dispute.closed":

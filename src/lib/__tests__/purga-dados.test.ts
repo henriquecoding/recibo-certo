@@ -18,8 +18,14 @@ describe("purga: o apagamento é real, não só um aviso", () => {
   });
 
   it("o webhook agenda quando a subscrição acaba", () => {
+    // A decisão vive agora na projeção de faturação; o webhook delega nela em
+    // vez de falar com o Postgres diretamente. A garantia é a mesma: o fim de
+    // uma subscrição tem de agendar a purga.
+    const p = ler("src/lib/billing/projection.ts");
+    expect(p).toContain('"agendar_purga"');
     const w = ler("src/app/api/stripe/webhook/route.ts");
-    expect(w).toContain('rpc("agendar_purga"');
+    expect(w, "o webhook tem de passar pela projeção").toContain("@/lib/billing/projection");
+    expect(w).toContain("syncSubscription");
   });
 
   it("uma rota de cron executa a purga", () => {
@@ -61,8 +67,10 @@ describe("purga: as salvaguardas", () => {
   it("reativar a subscrição cancela o apagamento", () => {
     const sql = ler(SQL);
     expect(sql).toMatch(/FUNCTION public\.cancelar_purga/);
+    const p = ler("src/lib/billing/projection.ts");
+    expect(p).toContain('"cancelar_purga"');
     const w = ler("src/app/api/stripe/webhook/route.ts");
-    expect(w).toContain('rpc("cancelar_purga"');
+    expect(w, "o webhook tem de passar pela projeção").toContain("@/lib/billing/projection");
   });
 
   it("a conta e o histórico de faturação não são apagados", () => {

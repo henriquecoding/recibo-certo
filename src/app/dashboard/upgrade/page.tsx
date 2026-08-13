@@ -35,7 +35,10 @@ const BENEFICIOS = [
 
 export default function UpgradePage() {
   const { user } = useAuth();
-  const { plano, vitalicio, carregado: planoCarregado, abrirCheckout, abrirPortal } = useSubscricao();
+  const {
+    plano, origem, carregado: planoCarregado, temClienteStripe,
+    abrirCheckout, abrirPortal,
+  } = useSubscricao();
   const [loading, setLoading] = useState(false);
   const [modalidade, setModalidade] = useState<Modalidade>("mensal");
   const [lugares, setLugares] = useState<LugaresVitalicios | null>(null);
@@ -86,6 +89,14 @@ export default function UpgradePage() {
   }
 
   if (plano === "plus") {
+    // Três situações diferentes que antes eram tratadas como uma só: quem
+    // comprou o vitalício, quem recebeu uma concessão manual (não pagou nada,
+    // por isso «pagamento único» seria falso) e quem tem mensalidade a correr
+    // — que continua a poder passar para vitalício enquanto houver lugares.
+    const comprouVitalicio = origem === "vitalicio";
+    const concessaoManual = origem === "manual";
+    const temMensalidade = !comprouVitalicio && !concessaoManual;
+
     return (
       <div className="mx-auto max-w-lg text-center">
         <div className="rounded-4xl border border-brand bg-white p-10 shadow-glow">
@@ -93,21 +104,62 @@ export default function UpgradePage() {
             Plus ativo
           </span>
           <h1 className="mt-4 font-display text-2xl font-semibold text-ink">
-            {vitalicio ? "Tens acesso vitalício ao Plus" : "Já tens o Recibo Certo Plus"}
+            {comprouVitalicio ? "Tens acesso vitalício ao Plus" : "Já tens o Recibo Certo Plus"}
           </h1>
           <p className="mt-2 text-sm text-stone-500">
-            {vitalicio
+            {comprouVitalicio
               ? "Foi um pagamento único: não há renovação nem subscrição para cancelar."
-              : "Obrigado por subscreveres. Tens acesso a todas as funcionalidades."}
+              : concessaoManual
+                ? "O teu acesso foi concedido pela equipa. Não há subscrição nem pagamento associado."
+                : "Obrigado por subscreveres. Tens acesso a todas as funcionalidades."}
           </p>
-          <button
-            type="button"
-            onClick={abrirPortal}
-            className="mt-6 inline-flex items-center gap-2 rounded-2xl border border-stone-200 px-5 py-3 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300"
-          >
-            {vitalicio ? "Ver pagamentos" : "Gerir subscrição"}
-            <ArrowRight size={14} />
-          </button>
+
+          {/* O portal do Stripe só existe para quem tem lá um cliente. Sem
+              isto, uma concessão manual abria um botão que falhava calado. */}
+          {temClienteStripe ? (
+            <button
+              type="button"
+              onClick={abrirPortal}
+              className="mt-6 inline-flex items-center gap-2 rounded-2xl border border-stone-200 px-5 py-3 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300"
+            >
+              {comprouVitalicio ? "Ver pagamentos" : "Gerir subscrição"}
+              <ArrowRight size={14} />
+            </button>
+          ) : null}
+
+          {temMensalidade && !vitalicioIndisponivel ? (
+            <div className="mt-8 border-t border-stone-100 pt-6">
+              <p className="text-sm text-stone-600">
+                Preferes deixar de pagar todos os meses? Passa para o vitalício
+                por {precoVitalicioFormatado()} uma única vez — a mensalidade é
+                cancelada automaticamente no fim do período já pago.
+              </p>
+              {lugares ? (
+                <p className="mt-2 text-xs text-stone-500">{textoLugares(lugares)}</p>
+              ) : null}
+              <button
+                type="button"
+                disabled={loading}
+                onClick={async () => {
+                  setLoading(true);
+                  setErro(null);
+                  try {
+                    const r = await abrirCheckout("vitalicio");
+                    if (r?.erro) setErro(r.erro);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+              >
+                {loading ? "A abrir…" : "Passar para vitalício"}
+                <ArrowRight size={14} />
+              </button>
+              {erro ? (
+                <p role="alert" className="mt-3 text-sm text-red-600">{erro}</p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
     );

@@ -186,6 +186,19 @@ async function cancelRecurringAfterLifetime(userId: string): Promise<void> {
   }));
 }
 
+/**
+ * Passos que têm de valer para SEMPRE depois de um vitalício ficar gravado:
+ * cancelar a purga agendada e travar a mensalidade que a pessoa já tinha.
+ * Correm fora da escrita da linha, por isso qualquer falha aqui faz o Stripe
+ * repetir o evento — e a repetição tem de voltar a passar por aqui. São
+ * ambos idempotentes: leem o estado atual e a Stripe leva chave de
+ * idempotência.
+ */
+async function finalizarVitalicio(userId: string): Promise<void> {
+  await purga(userId, true);
+  await cancelRecurringAfterLifetime(userId);
+}
+
 async function syncLifetime(session: Stripe.Checkout.Session): Promise<ProjectionResult> {
   const stripe = getStripe();
   const sb = supabaseAdmin();
@@ -217,13 +230,23 @@ async function syncLifetime(session: Stripe.Checkout.Session): Promise<Projectio
   }
 
   const { data: samePayment, error: sameError } = await sb.from("subscriptions")
-    .select("user_id")
+    .select("user_id, status, revogado_em")
     .eq("stripe_payment_intent", paymentIntent)
     .maybeSingle();
   if (sameError) throw new Error(`Falha ao verificar pagamento repetido: ${sameError.message}`);
   if (samePayment) {
     if (samePayment.user_id !== owner.userId) throw new BillingOrphanError("Pagamento associado a outra conta.");
-    return { kind: "lifetime", userId: owner.userId, email: owner.email, status: "active", recognized: true };
+    // A linha já cá está, mas isso não prova que os passos seguintes
+    // chegaram a correr: se um deles falhou, este é o caminho por onde a
+    // repetição do Stripe passa. Sair aqui sem os repetir deixava a pessoa
+    // com vitalício a pagar a mensalidade — ou com a purga por cancelar.
+    // Um vitalício já revogado (reembolso, disputa) não se reanima.
+    const aindaVale = samePayment.status === "active" && !samePayment.revogado_em;
+    if (aindaVale) await finalizarVitalicio(owner.userId);
+    return {
+      kind: "lifetime", userId: owner.userId, email: owner.email,
+      status: (samePayment.status as string | null) ?? "active", recognized: true,
+    };
   }
 
   const { data: previousLifetime, error: previousError } = await sb.from("subscriptions")
@@ -268,8 +291,7 @@ async function syncLifetime(session: Stripe.Checkout.Session): Promise<Projectio
     throw new Error(`Falha ao persistir compra vitalícia: ${error.message}`);
   }
 
-  await purga(owner.userId, true);
-  await cancelRecurringAfterLifetime(owner.userId);
+  await finalizarVitalicio(owner.userId);
   return { kind: "lifetime", userId: owner.userId, email: owner.email, status: "active", recognized: true };
 }
 
@@ -307,24 +329,61 @@ async function userIdsForPaymentIntent(paymentIntent: string): Promise<string[]>
   return [...new Set((data ?? []).map((row) => row.user_id as string))];
 }
 
-export async function revokeRefundedLifetime(charge: Stripe.Charge): Promise<void> {
+export async function revokeRefundedCharge(charge: Stripe.Charge): Promise<void> {
   // Webhooks podem chegar fora de ordem; a consulta atual impede que uma
   // fotografia antiga de reembolso parcial esconda um reembolso total posterior.
-  const current = await getStripe().charges.retrieve(charge.id);
+  const stripe = getStripe();
+  const current = await stripe.charges.retrieve(charge.id);
   if (!current.refunded && current.amount_refunded < current.amount) return;
   const paymentIntent = await paymentIntentOfCharge(current);
   if (!paymentIntent) return;
   const sb = supabaseAdmin();
   if (!sb) throw new Error("SUPABASE_SERVICE_ROLE_KEY não definida.");
+
+  const agora = new Date().toISOString();
   const users = await userIdsForPaymentIntent(paymentIntent);
   const { error } = await sb.from("subscriptions").update({
     status: "canceled",
-    cancelado_em: new Date().toISOString(),
-    revogado_em: new Date().toISOString(),
+    cancelado_em: agora,
+    revogado_em: agora,
     revogacao_motivo: "refund",
   }).eq("stripe_payment_intent", paymentIntent).eq("origem", "vitalicio");
   if (error) throw new Error(`Falha ao revogar reembolso: ${error.message}`);
   await Promise.all(users.map((userId) => purga(userId, false)));
+
+  // Os Termos prometem que o reembolso dentro dos 14 dias revoga o acesso.
+  // Um reembolso da mensalidade não passa por nenhuma linha vitalícia, por
+  // isso sem isto o acesso ficava de pé — e a subscrição continuava a cobrar
+  // no mês seguinte — até alguém agir à mão na Stripe.
+  const invoiceId = await invoiceForPaymentIntent(paymentIntent);
+  if (!invoiceId) return;
+  const subscriptionId = await invoiceSubscription(invoiceId);
+  if (!subscriptionId) return;
+
+  const { data: row, error: rowError } = await sb.from("subscriptions")
+    .select("user_id")
+    .eq("stripe_subscription_id", subscriptionId)
+    .maybeSingle();
+  if (rowError) throw new Error(`Falha ao localizar subscrição reembolsada: ${rowError.message}`);
+
+  // Ler antes de cancelar mantém a repetição segura mesmo depois de a
+  // idempotência HTTP da Stripe expirar.
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  if (subscription.status !== "canceled") {
+    await stripe.subscriptions.cancel(subscriptionId, {
+      invoice_now: false,
+      prorate: false,
+    }, { idempotencyKey: `recibocerto-refund-${paymentIntent}` });
+  }
+
+  const { error: subError } = await sb.from("subscriptions").update({
+    status: "canceled",
+    cancelado_em: agora,
+    revogado_em: agora,
+    revogacao_motivo: "refund",
+  }).eq("stripe_subscription_id", subscriptionId);
+  if (subError) throw new Error(`Falha ao revogar subscrição reembolsada: ${subError.message}`);
+  if (row?.user_id) await purga(row.user_id as string, false);
 }
 
 async function invoiceSubscription(invoiceId: string): Promise<string | null> {

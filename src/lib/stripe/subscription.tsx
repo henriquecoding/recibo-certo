@@ -20,6 +20,7 @@ interface SubscricaoContexto {
   origem: OrigemConcessao | null;
   vitalicio: boolean;
   periodoGracaTerminaEm: string | null;
+  temClienteStripe: boolean;
   carregado: boolean;
   pode: (permissao: Entitlement) => boolean;
   abrirCheckout: (modalidade?: Modalidade) => Promise<{ erro: string; esgotado: boolean } | undefined>;
@@ -34,6 +35,7 @@ interface EntitlementsResponse {
   origem: OrigemConcessao | null;
   vitalicio: boolean;
   periodoGracaTerminaEm: string | null;
+  temClienteStripe: boolean;
 }
 
 const Ctx = createContext<SubscricaoContexto | null>(null);
@@ -67,6 +69,7 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
   const [origem, setOrigem] = useState<OrigemConcessao | null>(null);
   const [vitalicio, setVitalicio] = useState(false);
   const [periodoGracaTerminaEm, setPeriodoGracaTerminaEm] = useState<string | null>(null);
+  const [temClienteStripe, setTemClienteStripe] = useState(false);
   const [carregado, setCarregado] = useState(false);
   const [tentativa, setTentativa] = useState(0);
   const revalidar = useCallback(() => setTentativa((value) => value + 1), []);
@@ -132,6 +135,7 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
         setOrigem(result.origem);
         setVitalicio(result.vitalicio);
         setPeriodoGracaTerminaEm(result.periodoGracaTerminaEm);
+        setTemClienteStripe(Boolean(result.temClienteStripe));
         setCarregado(true);
 
         if (checkoutSessionId() && result.plano !== "plus" && attemptsLeft > 0) {
@@ -148,6 +152,7 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
         setOrigem(null);
         setVitalicio(false);
         setPeriodoGracaTerminaEm(null);
+        setTemClienteStripe(false);
         setCarregado(true);
         if (attemptsLeft > 0) {
           const delay = (7 - attemptsLeft) * 1000;
@@ -209,10 +214,10 @@ export function SubscricaoProvider({ children }: { children: ReactNode }) {
 
   const contextValue = useMemo<SubscricaoContexto>(() => ({
     plano, status, intervalo, origem, vitalicio, periodoGracaTerminaEm,
-    carregado, pode, abrirCheckout, abrirPortal, revalidar,
+    temClienteStripe, carregado, pode, abrirCheckout, abrirPortal, revalidar,
   }), [
     plano, status, intervalo, origem, vitalicio, periodoGracaTerminaEm,
-    carregado, pode, abrirCheckout, abrirPortal, revalidar,
+    temClienteStripe, carregado, pode, abrirCheckout, abrirPortal, revalidar,
   ]);
 
   return (

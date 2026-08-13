@@ -303,19 +303,34 @@ AS $$
         (
           coalesce(s.origem, 'stripe') = 'stripe'
           AND s.stripe_subscription_id IS NOT NULL
-          AND EXISTS (
-            SELECT 1 FROM public.billing_price_catalog p
-            WHERE p.stripe_price_id = s.price_id AND p.concede_plus
+          AND (
+            EXISTS (
+              SELECT 1 FROM public.billing_price_catalog p
+              WHERE p.stripe_price_id = s.price_id AND p.concede_plus
+            )
+            -- Arranque: entre esta migração e a primeira validação de preço na
+            -- Stripe o catálogo está vazio. Sem esta salvaguarda, todas as
+            -- contas pagantes deixariam de poder escrever na nuvem, enquanto a
+            -- aplicação (que tem as variáveis de ambiente como alternativa)
+            -- continuaria a dizer-lhes que têm Plus. A porta fecha sozinha e
+            -- para sempre assim que o primeiro preço autorizado é gravado.
+            OR NOT EXISTS (SELECT 1 FROM public.billing_price_catalog p WHERE p.concede_plus)
           )
         )
         OR (
           s.origem = 'vitalicio'
           AND s.stripe_payment_intent IS NOT NULL
-          AND EXISTS (
-            SELECT 1 FROM public.billing_price_catalog p
-            WHERE p.stripe_price_id = s.price_id
-              AND p.modalidade = 'lifetime'
-              AND p.concede_plus
+          AND (
+            EXISTS (
+              SELECT 1 FROM public.billing_price_catalog p
+              WHERE p.stripe_price_id = s.price_id
+                AND p.modalidade = 'lifetime'
+                AND p.concede_plus
+            )
+            OR NOT EXISTS (
+              SELECT 1 FROM public.billing_price_catalog p
+              WHERE p.modalidade = 'lifetime' AND p.concede_plus
+            )
           )
         )
         OR (s.origem = 'lemon_squeezy' AND s.ls_subscription_id IS NOT NULL)

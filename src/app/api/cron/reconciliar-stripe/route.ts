@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cronAutorizado } from "@/lib/cron-auth";
 import { getStripe } from "@/lib/stripe/server";
 import { syncCheckoutSession, syncSubscription } from "@/lib/billing/projection";
+import { resolverPrecoCheckout } from "@/lib/billing/prices";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -23,6 +24,18 @@ export async function GET(req: NextRequest) {
   let subscriptions = 0;
   let lifetimeSessions = 0;
   const errors: string[] = [];
+
+  // Preenche o catálogo de preços antes de tudo o resto. Enquanto estiver
+  // vazio, o Postgres não consegue distinguir um preço autorizado de outro
+  // qualquer e a migração corre em modo de arranque. Resolver as duas
+  // lookup keys valida-as na Stripe e grava-as, fechando esse modo.
+  await Promise.all((["mensal", "vitalicio"] as const).map(async (modalidade) => {
+    try {
+      await resolverPrecoCheckout(modalidade);
+    } catch (error) {
+      errors.push(`preco:${modalidade}:${error instanceof Error ? error.message : String(error)}`);
+    }
+  }));
 
   const current = await stripe.subscriptions
     .list({ status: "all", limit: 100 })
