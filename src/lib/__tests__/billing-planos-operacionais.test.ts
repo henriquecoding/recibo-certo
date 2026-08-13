@@ -17,7 +17,14 @@ describe("contrato comercial", () => {
   it("exportação é Plus no cliente e no servidor", () => {
     expect(read("src/lib/store/exportacao-pro.ts")).toMatch(/LIMITE_EXPORT_GRATIS\s*=\s*0/);
     expect(read("src/lib/documentos/emissao.ts")).toContain("estadoAcessoDoUtilizador");
-    expect(read("src/lib/documentos/emissao.ts")).not.toMatch(/profiles.*plano|select\("plano"\)/s);
+    expect(read("src/lib/documentos/emissao.ts")).not.toMatch(/profiles[\s\S]*plano|select\("plano"\)/);
+  });
+
+  it("a base também impede contas Grátis de sincronizar o perfil fiscal", () => {
+    const migration = read("supabase/migrations/20260813_planos_operacionais.sql");
+    expect(migration).toContain("profiles_restringir_preferencias_fiscais");
+    expect(migration).toContain("PLANO_PLUS_NECESSARIO");
+    expect(migration).toContain("private.user_has_plus(NEW.id)");
   });
 
   it("os 14 dias são reembolso, não trial nem plano anual antigo", () => {

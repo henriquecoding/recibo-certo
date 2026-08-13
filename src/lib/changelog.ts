@@ -19,6 +19,18 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.46.0",
+    data: "2026-08-13",
+    titulo: "Um plano, duas formas de pagar — agora de ponta a ponta",
+    itens: [
+      "O plano Grátis passa a dizer e a cumprir a mesma coisa em todo o lado: podes guardar exatamente uma amostra de cenário neste dispositivo. A regra antiga de três amostras saiu da interface, dos testes e das fronteiras de acesso.",
+      "O Plus mensal mantém o preço fundador de 1,99 € por mês. A cobrança é imediata, sem período experimental; tens 14 dias para pedir reembolso. O cancelamento fica disponível no portal e o acesso acompanha pagamentos, falhas e recuperações sem depender de atualizar a página à mão.",
+      "O Plus vitalício é uma campanha fundadora de 1000 lugares a 19,99 € uma vez. Os lugares são contados na base de dados, incluindo as duas concessões já existentes; um pagamento que chegue depois de o último lugar ser ocupado é reembolsado automaticamente.",
+      "Checkout, portal, webhooks e reconciliação passam a usar uma identidade Stripe estável e operações idempotentes. Entregas repetidas ou fora de ordem não duplicam acesso, email ou efeitos; um preço desconhecido nunca concede Plus.",
+      "A separação entre planos passa a ser aplicada também no servidor e na base: Grátis conserva os dados fiscais no dispositivo; Plus pode sincronizar histórico, cenários e perfil fiscal entre dispositivos e exportar. Em caso de erro de autorização ou de leitura, o acesso pago falha de forma fechada.",
+    ],
+  },
+  {
     version: "2.45.0",
     data: "2026-08-12",
     titulo: "«Só tu acedes aos teus dados» deixou de ser só uma frase",

@@ -141,6 +141,15 @@ BEGIN
   EXCEPTION
     WHEN insufficient_privilege OR check_violation THEN NULL;
   END;
+
+  BEGIN
+    UPDATE public.profiles
+    SET preferencias_fiscais = '{"v": 2, "regimeIVA": "isento"}'::jsonb
+    WHERE id = '10000000-0000-4000-8000-000000000003';
+    RAISE EXCEPTION 'uma conta grátis conseguiu sincronizar o perfil fiscal';
+  EXCEPTION
+    WHEN insufficient_privilege THEN NULL;
+  END;
 END;
 $$;
 
@@ -158,5 +167,8 @@ SELECT set_config('request.jwt.claim.role', 'authenticated', true);
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000001', true);
 INSERT INTO public.cenarios (user_id, tipo, nome)
 VALUES ('10000000-0000-4000-8000-000000000001', 'irs', 'entra com Plus');
+UPDATE public.profiles
+SET preferencias_fiscais = '{"v": 2, "regimeIVA": "isento"}'::jsonb
+WHERE id = '10000000-0000-4000-8000-000000000001';
 
 ROLLBACK;

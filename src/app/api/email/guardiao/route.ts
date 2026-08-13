@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { enviarEmail } from "@/lib/email/send";
 import { emailGuardiaoFiscal, type NivelGuardiao } from "@/lib/email/templates";
 import { IVA_ISENCAO_LIMITE } from "@/lib/fiscal-data";
@@ -28,7 +28,7 @@ interface SubscriptionGrantRow {
   concedido_por: string | null;
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   if (!cronAutorizado(req)) return NextResponse.json({ erro: "Não autorizado." }, { status: 401 });
   const sb = supabaseAdmin();
   if (!sb) return NextResponse.json({ erro: "Supabase não configurado." }, { status: 500 });

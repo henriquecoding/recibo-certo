@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cronAutorizado } from "@/lib/cron-auth";
 import { getStripe } from "@/lib/stripe/server";
 import { syncCheckoutSession, syncSubscription } from "@/lib/billing/projection";
@@ -17,7 +17,7 @@ async function emLotes<T>(
   }
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   if (!cronAutorizado(req)) return NextResponse.json({ erro: "Não autorizado." }, { status: 401 });
   const stripe = getStripe();
   let subscriptions = 0;

@@ -82,6 +82,7 @@ export async function estadoAcessoDoUtilizador(userId: string): Promise<EstadoAc
 
   if (subsResult.error) throw new Error(`Falha ao ler direitos de acesso: ${subsResult.error.message}`);
   if (catalogResult.error) throw new Error(`Falha ao ler catálogo de preços: ${catalogResult.error.message}`);
+  if (customerResult.error) throw new Error(`Falha ao ler cliente Stripe: ${customerResult.error.message}`);
 
   // O cliente administrativo não usa os tipos gerados da base de dados; a
   // projeção é validada abaixo antes de conceder qualquer acesso.

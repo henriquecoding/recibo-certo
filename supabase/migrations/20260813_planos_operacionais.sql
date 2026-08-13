@@ -345,6 +345,45 @@ GRANT USAGE ON SCHEMA private TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION private.current_user_has_plus() TO authenticated;
 GRANT EXECUTE ON FUNCTION private.user_has_plus(uuid) TO service_role;
 
+-- O cliente já mantém o perfil fiscal no dispositivo para contas Grátis,
+-- mas a mesma fronteira precisa de existir na base: esconder o update na UI
+-- não impede um pedido direto à Data API. O gatilho só trava o próprio
+-- utilizador autenticado; service_role e rotinas administrativas continuam a
+-- poder executar purgas e tarefas de suporte.
+CREATE OR REPLACE FUNCTION private.profiles_restringir_preferencias_fiscais()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF (
+    (TG_OP = 'INSERT' AND NEW.preferencias_fiscais IS NOT NULL)
+    OR (
+      TG_OP = 'UPDATE'
+      AND NEW.preferencias_fiscais IS DISTINCT FROM OLD.preferencias_fiscais
+    )
+  )
+  AND (SELECT auth.uid()) = NEW.id
+  AND NOT private.user_has_plus(NEW.id)
+  THEN
+    RAISE EXCEPTION 'PLANO_PLUS_NECESSARIO: sincronizar o perfil fiscal exige Plus.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION private.profiles_restringir_preferencias_fiscais()
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION private.profiles_restringir_preferencias_fiscais() TO service_role;
+
+DROP TRIGGER IF EXISTS profiles_restringir_preferencias_fiscais ON public.profiles;
+CREATE TRIGGER profiles_restringir_preferencias_fiscais
+  BEFORE INSERT OR UPDATE OF preferencias_fiscais
+  ON public.profiles
+  FOR EACH ROW EXECUTE FUNCTION private.profiles_restringir_preferencias_fiscais();
+
 -- Histórico existente continua legível e eliminável pelo dono durante a
 -- janela de retenção. Criar ou alterar dados na nuvem exige Plus na própria
 -- base, não apenas um botão escondido no browser.
