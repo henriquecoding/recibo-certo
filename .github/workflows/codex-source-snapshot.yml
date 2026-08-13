@@ -1,0 +1,30 @@
+name: Codex source snapshot
+
+on:
+  push:
+    branches:
+      - agent/pr102-hardening-workspace
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact branch state
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Package repository source
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: recibo-certo-pr102-source
+          path: |
+            .
+            !.git/**
+            !node_modules/**
+            !.next/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
