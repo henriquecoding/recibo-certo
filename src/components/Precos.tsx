@@ -57,7 +57,7 @@ const MATRIZ: { f: string; gratis: boolean | string; plus: boolean | string }[] 
   { f: "Guias com fontes oficiais", gratis: true, plus: true },
   { f: "Calendário de prazos fiscais", gratis: true, plus: true },
   { f: "Histórico", gratis: "Neste dispositivo", plus: "Na nuvem, em todos" },
-  { f: "Cenários guardados", gratis: "Até 3", plus: "Ilimitados" },
+  { f: "Cenários guardados", gratis: "1 amostra", plus: "Ilimitados" },
   { f: "Auditoria de recibo de vencimento", gratis: false, plus: true },
   { f: "Exportação CSV e PDF", gratis: false, plus: true },
   { f: "Dossiê para o contabilista", gratis: false, plus: true },
@@ -70,7 +70,8 @@ const MATRIZ: { f: string; gratis: boolean | string; plus: boolean | string }[] 
 
 const GARANTIAS = [
   { icon: <Lock size={14} />, texto: "Pagamento seguro via Stripe" },
-  { icon: <ShieldCheck size={14} />, texto: "Cancela quando quiseres" },
+  { icon: <ShieldCheck size={14} />, texto: "Mensal cancelável a qualquer momento" },
+  { icon: <ShieldCheck size={14} />, texto: "14 dias para pedir reembolso" },
   { icon: <Flag size={14} />, texto: "Dados em servidores na UE" },
 ];
 
@@ -175,7 +176,9 @@ export default function Precos() {
               >
                 Subscrever o Plus
               </Link>
-              <p className="mt-2 text-center text-xs text-stone-400">Cancela quando quiseres · sem compromisso</p>
+              <p className="mt-2 text-center text-xs text-stone-400">
+                Cobrança imediata · cancela quando quiseres
+              </p>
 
               {/* Dito aqui, e não escondido nos Termos: quem está a decidir
                   se subscreve tem direito a saber o que acontece aos dados
@@ -198,7 +201,7 @@ export default function Precos() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold text-stone-500">Plus vitalício</h3>
                 <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600 dark:bg-stone-800 dark:text-stone-300">
-                  1000 lugares
+                  1000 lugares fundadores
                 </span>
               </div>
               <div className="mt-2 flex items-baseline gap-1.5">
@@ -206,7 +209,8 @@ export default function Precos() {
                 <span className="text-xs text-stone-400">uma vez</span>
               </div>
               <p className="mt-1 text-xs text-stone-400">
-                Sem renovação e sem nada para cancelar depois. Limitado a 1000 contas.
+                Pagamento fundador, sem renovação. Limitado a 1000 contas enquanto a campanha
+                de lançamento estiver disponível.
               </p>
 
               <p className="mt-4 text-sm font-semibold text-stone-700 dark:text-stone-300">
@@ -229,6 +233,12 @@ export default function Precos() {
                   <span className="mt-0.5 flex-shrink-0 text-brand"><Check size={16} /></span>
                   <span className="text-sm text-stone-600 dark:text-stone-300">
                     Um pagamento único. Não há subscrição para gerir nem para esquecer.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <span className="mt-0.5 flex-shrink-0 text-brand"><Check size={16} /></span>
+                  <span className="text-sm text-stone-600 dark:text-stone-300">
+                    Ajuda a financiar a evolução do Recibo Certo desde o lançamento.
                   </span>
                 </li>
               </ul>

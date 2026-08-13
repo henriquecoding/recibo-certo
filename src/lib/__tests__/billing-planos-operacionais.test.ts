@@ -1,0 +1,120 @@
+import { afterEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { concedePlus, descreverEstado } from "@/lib/stripe/precos-autorizados";
+
+const root = process.cwd();
+const read = (path: string) => readFileSync(join(root, path), "utf8");
+const originalEnv = { ...process.env };
+afterEach(() => { process.env = { ...originalEnv }; });
+
+describe("contrato comercial", () => {
+  it("o Grátis oferece uma amostra de cenário, não a regra antiga de três", () => {
+    expect(read("src/components/Precos.tsx")).toContain('gratis: "1 amostra"');
+    expect(read("src/lib/store/cenarios.ts")).toMatch(/LIMITE_FREE\s*=\s*1/);
+  });
+
+  it("exportação é Plus no cliente e no servidor", () => {
+    expect(read("src/lib/store/exportacao-pro.ts")).toMatch(/LIMITE_EXPORT_GRATIS\s*=\s*0/);
+    expect(read("src/lib/documentos/emissao.ts")).toContain("estadoAcessoDoUtilizador");
+    expect(read("src/lib/documentos/emissao.ts")).not.toMatch(/profiles.*plano|select\("plano"\)/s);
+  });
+
+  it("os 14 dias são reembolso, não trial nem plano anual antigo", () => {
+    const prices = read("src/components/Precos.tsx");
+    const terms = read("src/app/termos/page.tsx");
+    const checkout = read("src/app/api/stripe/checkout/route.ts");
+    expect(prices).toContain("Cobrança imediata");
+    expect(prices).toContain("14 dias para pedir reembolso");
+    expect(terms).toContain("não é um trial");
+    expect(terms).toContain("Plus vitalício");
+    expect(terms).not.toContain("mensal ou anual");
+    expect(checkout).not.toMatch(/trial_period_days/);
+  });
+
+  it("o vitalício é apresentado como campanha fundadora realmente limitada", () => {
+    const prices = read("src/components/Precos.tsx");
+    const terms = read("src/app/termos/page.tsx");
+    const upgrade = read("src/app/dashboard/upgrade/page.tsx");
+    expect(prices).toContain("1000 lugares fundadores");
+    expect(prices).toContain("Ajuda a financiar a evolução do Recibo Certo");
+    expect(terms).toContain("campanha fundadora limitada aos 1000 lugares");
+    expect(terms).toContain("vida operacional do serviço");
+    expect(upgrade).toContain("1000 lugares fundadores");
+    expect(upgrade).toContain("ajuda a financiar a evolução do Recibo Certo");
+    expect(upgrade).toContain("A confirmar o teu plano");
+  });
+
+  it("os Termos não remetem para a plataforma europeia RLL encerrada", () => {
+    const terms = read("src/app/termos/page.tsx");
+    expect(terms).not.toContain("plataforma europeia de resolução de litígios em linha");
+    expect(terms).toContain("consumer-redress.ec.europa.eu/dispute-resolution-bodies");
+  });
+});
+
+describe("período de graça", () => {
+  it("past_due só concede dentro de uma janela explícita", () => {
+    process.env.STRIPE_PRICE_PLUS_MONTHLY = "price_BillingMonthly";
+    const future = new Date("2030-01-02T00:00:00Z").toISOString();
+    const past = new Date("2029-12-31T00:00:00Z").toISOString();
+    const now = new Date("2030-01-01T00:00:00Z");
+    expect(concedePlus({
+      status: "past_due", priceId: "price_BillingMonthly", periodoGracaTerminaEm: future,
+    }, [], now)).toBe(true);
+    expect(concedePlus({
+      status: "past_due", priceId: "price_BillingMonthly", periodoGracaTerminaEm: past,
+    }, [], now)).toBe(false);
+    expect(concedePlus({
+      status: "past_due", priceId: "price_BillingMonthly", periodoGracaTerminaEm: null,
+    }, [], now)).toBe(false);
+  });
+
+  it("a mensagem da conta também falha fechada sem uma janela explícita", () => {
+    const estado = descreverEstado("past_due", true, null);
+    expect(estado.temAcesso).toBe(false);
+    expect(estado.etiqueta).toBe("Acesso suspenso");
+  });
+});
+
+describe("fronteiras e recuperação", () => {
+  const migration = () => read("supabase/migrations/20260813_planos_operacionais.sql");
+
+  it("a base aplica Plus às escritas de nuvem e avatar", () => {
+    const sql = migration();
+    expect(sql).toMatch(/recibos_insert_plus/);
+    expect(sql).toMatch(/cenarios_insert_plus/);
+    expect(sql).toMatch(/vencimentos_insert_plus/);
+    expect(sql).toMatch(/avatars_insert/);
+    expect(sql).toMatch(/private\.current_user_has_plus/);
+  });
+
+  it("webhooks têm ledger, lease, dead-letter e reconciliação", () => {
+    const sql = migration();
+    const webhook = read("src/app/api/stripe/webhook/route.ts");
+    expect(sql).toContain("billing_webhook_events");
+    expect(sql).toContain("lease_until");
+    expect(webhook).toContain("claimStripeEvent");
+    expect(webhook).toContain("dead_letter");
+    expect(read("src/app/api/cron/reconciliar-stripe/route.ts")).toContain("syncSubscription");
+  });
+
+  it("o checkout reutiliza sessões e confirma duplicados na própria Stripe", () => {
+    const checkout = read("src/app/api/stripe/checkout/route.ts");
+    expect(checkout).toMatch(/subscriptions\.list/);
+    expect(checkout).toMatch(/checkout\.sessions\.list/);
+    expect(checkout).toContain("reutilizada: true");
+  });
+
+  it("reembolsos e disputas usam o estado canónico atual", () => {
+    const projection = read("src/lib/billing/projection.ts");
+    expect(projection).toMatch(/charges\.retrieve\(charge\.id\)/);
+    expect(projection).toMatch(/disputes\.retrieve\(dispute\.id\)/);
+  });
+
+  it("o último lugar e pagamentos repetidos são reembolsados automaticamente", () => {
+    const projection = read("src/lib/billing/projection.ts");
+    expect(projection).toContain("foiLimiteAtingido");
+    expect(projection).toMatch(/refunds\.create/);
+    expect(projection).toMatch(/idempotencyKey/);
+  });
+});
