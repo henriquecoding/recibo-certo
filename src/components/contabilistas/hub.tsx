@@ -85,7 +85,7 @@ export function Ficha({
         </div>
 
         {!ativo && (
-          <p className="mt-4 rounded-2xl bg-white/70 px-4 py-3 text-sm leading-relaxed text-stone-600">
+          <p className="mt-4 rounded-2xl bg-white/70 px-4 py-3 text-sm leading-relaxed text-stone-600 dark:bg-white/10">
             {vinculo.estado === "pendente" || vinculo.estado === "convidado"
               ? "O pedido ainda não foi aceite. Assim que for, podes marcar consultas e enviar-lhe simulações."
               : "O acompanhamento está em pausa. Não podes marcar consultas novas enquanto assim for."}
@@ -176,7 +176,7 @@ export function ProximaConsulta({
       </p>
 
       {consulta.assunto && (
-        <p className="mt-3.5 rounded-2xl bg-white/70 px-4 py-3 text-sm leading-relaxed text-stone-700">
+        <p className="mt-3.5 rounded-2xl bg-white/70 px-4 py-3 text-sm leading-relaxed text-stone-700 dark:bg-white/10">
           {consulta.assunto}
         </p>
       )}

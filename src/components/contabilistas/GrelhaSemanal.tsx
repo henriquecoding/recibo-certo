@@ -216,7 +216,7 @@ export default function GrelhaSemanal({ agendamentos, ocupado, onAbrir }: Props)
         {dias.map((dia) => (
           <div
             key={dia}
-            className={`border-l border-stone-100 px-2 py-2.5 text-center ${dia === hoje ? "bg-brand-light/30" : ""}`}
+            className={`border-l border-stone-100 px-2 py-2.5 text-center ${dia === hoje ? "bg-brand/[0.07] dark:bg-brand/[0.12]" : ""}`}
           >
             <p className="text-[0.6875rem] font-medium uppercase tracking-wide text-stone-400">{diaCurto(dia)}</p>
             <p className={`font-display text-lg leading-tight tabular-nums ${dia === hoje ? "text-brand-dark" : "text-ink"}`}>
@@ -287,7 +287,7 @@ function Coluna({
   className: string;
 }) {
   return (
-    <div className={`relative border-l border-stone-100 ${hoje ? "bg-brand-light/20" : ""} ${className}`}>
+    <div className={`relative border-l border-stone-100 ${hoje ? "bg-brand/[0.05] dark:bg-brand/[0.09]" : ""} ${className}`}>
       {horas.map((h) => (
         <div key={h} className="border-b border-stone-100" style={{ height: ALTURA_HORA }} />
       ))}

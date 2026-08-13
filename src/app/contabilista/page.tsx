@@ -129,7 +129,7 @@ export default function HojePage() {
           </p>
 
           {seguinte.assunto && (
-            <p className="mt-3 rounded-2xl bg-white/70 px-4 py-3 text-sm leading-relaxed text-stone-700">
+            <p className="mt-3 rounded-2xl bg-white/70 px-4 py-3 text-sm leading-relaxed text-stone-700 dark:bg-white/10">
               {seguinte.assunto}
             </p>
           )}
@@ -251,7 +251,7 @@ function Numero({
     >
       <span
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-          exigeAtencao ? "bg-white/70" : "bg-stone-50"
+          exigeAtencao ? "bg-white/70 dark:bg-white/10" : "bg-stone-50"
         }`}
       >
         <Icon size={17} className={exigeAtencao ? cor.icone : "text-stone-300"} aria-hidden />

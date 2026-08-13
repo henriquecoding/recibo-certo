@@ -376,7 +376,7 @@ input[type="number"]::-webkit-outer-spin-button {
     background-color: #2e3329;
   }
   .dark .bg-brand-light {
-    background-color: #143329;
+    background-color: #123f2e;
   }
 
   /* Texto (quente, alto contraste mas suave) */
@@ -479,7 +479,7 @@ input[type="number"]::-webkit-outer-spin-button {
     color: rgb(111 206 172 / 0.88);
   }
   .dark [class*="bg-brand-light/"] {
-    background-color: rgb(20 51 41 / 0.55);
+    background-color: rgb(18 63 46 / 0.7);
   }
   .dark [class*="text-alert-text/"] {
     color: rgb(235 214 138 / 0.85);
@@ -494,13 +494,13 @@ input[type="number"]::-webkit-outer-spin-button {
     border-color: rgb(85 77 40 / 0.5);
   }
   .dark [class*="bg-clay-bg/"] {
-    background-color: rgb(42 29 22 / 0.7);
+    background-color: rgb(61 33 25 / 0.75);
   }
   .dark [class*="border-clay-border/"] {
-    border-color: rgb(74 51 37 / 0.6);
+    border-color: rgb(122 66 49 / 0.7);
   }
   .dark [class*="text-clay-text/"] {
-    color: rgb(224 164 140 / 0.85);
+    color: rgb(255 181 156 / 0.85);
   }
   .dark [class*="border-clay-text/"] {
     border-color: rgb(224 164 140 / 0.4);
@@ -573,45 +573,55 @@ input[type="number"]::-webkit-outer-spin-button {
 
   /* Argila/terracota — tom pastel suave para valores que saem, no escuro. */
   .dark .bg-clay-bg {
-    background-color: #2a1d16;
+    background-color: #3d2119;
   }
   .dark .border-clay-border {
-    border-color: #4a3325;
+    border-color: #7a4231;
   }
   .dark .text-clay-text {
-    color: #e0a48c;
+    color: #ffb59c;
   }
 
-  /* Pastéis de categoria do painel. No escuro invertem a lógica: a
-     superfície fica funda e tingida, e o texto passa a ser o pastel — que é
-     o que mantém a mesma leitura («isto é rosa, aquilo é azul») sem ficar
-     um bloco claro a arder no meio de um ecrã escuro. */
-  .dark .bg-categoria-rosa-bg { background-color: #2e1a22; }
-  .dark .border-categoria-rosa-border { border-color: #4d2b39; }
-  .dark .text-categoria-rosa-text { color: #eaa8c0; }
+  /* ──────────────────────────────────────────────────────────────────
+     Pastéis de categoria, no escuro.
 
-  .dark .bg-categoria-azul-bg { background-color: #16212f; }
-  .dark .border-categoria-azul-border { border-color: #2a3d55; }
-  .dark .text-categoria-azul-text { color: #9dc0ee; }
+     A primeira tentativa baixou a luminosidade E a saturação ao mesmo
+     tempo, e o resultado foi lama: quatro blocos castanho-acinzentados
+     que já não diziam «rosa», «azul», «lilás». Escurecer não é
+     dessaturar — num fundo escuro é preciso MAIS croma para o tom se
+     manter reconhecível, não menos.
 
-  .dark .bg-categoria-lilas-bg { background-color: #211d33; }
-  .dark .border-categoria-lilas-border { border-color: #383052; }
-  .dark .text-categoria-lilas-text { color: #b9aeee; }
+     A regra destes quatro trios: superfície funda mas tingida a sério
+     (croma alto, luminosidade ~18%), contorno a meio caminho para dar
+     aresta, e texto luminoso (~80%) que é o que carrega o tom. Todos
+     acima de 7:1 sobre a própria superfície.
+     ────────────────────────────────────────────────────────────────── */
+  .dark .bg-categoria-rosa-bg { background-color: #41202f; }
+  .dark .border-categoria-rosa-border { border-color: #7a3b57; }
+  .dark .text-categoria-rosa-text { color: #ffa9c7; }
 
-  .dark .bg-categoria-areia-bg { background-color: #2a2118; }
-  .dark .border-categoria-areia-border { border-color: #47382a; }
-  .dark .text-categoria-areia-text { color: #dcb68c; }
+  .dark .bg-categoria-azul-bg { background-color: #182b47; }
+  .dark .border-categoria-azul-border { border-color: #356194; }
+  .dark .text-categoria-azul-text { color: #9cc7ff; }
+
+  .dark .bg-categoria-lilas-bg { background-color: #2a2350; }
+  .dark .border-categoria-lilas-border { border-color: #544894; }
+  .dark .text-categoria-lilas-text { color: #c3b2ff; }
+
+  .dark .bg-categoria-areia-bg { background-color: #3b2a17; }
+  .dark .border-categoria-areia-border { border-color: #7a5527; }
+  .dark .text-categoria-areia-text { color: #f5c179; }
 
   /* As mesmas cores com opacidade (bg-categoria-rosa-bg/60…), pelo mesmo
      motivo dos restantes overlays por substring. */
-  .dark [class*="bg-categoria-rosa-bg/"]   { background-color: rgb(46 26 34 / 0.7); }
-  .dark [class*="bg-categoria-azul-bg/"]   { background-color: rgb(22 33 47 / 0.7); }
-  .dark [class*="bg-categoria-lilas-bg/"]  { background-color: rgb(33 29 51 / 0.7); }
-  .dark [class*="bg-categoria-areia-bg/"]  { background-color: rgb(42 33 24 / 0.7); }
-  .dark [class*="border-categoria-rosa-border/"]  { border-color: rgb(77 43 57 / 0.6); }
-  .dark [class*="border-categoria-azul-border/"]  { border-color: rgb(42 61 85 / 0.6); }
-  .dark [class*="border-categoria-lilas-border/"] { border-color: rgb(56 48 82 / 0.6); }
-  .dark [class*="border-categoria-areia-border/"] { border-color: rgb(71 56 42 / 0.6); }
+  .dark [class*="bg-categoria-rosa-bg/"]   { background-color: rgb(65 32 47 / 0.75); }
+  .dark [class*="bg-categoria-azul-bg/"]   { background-color: rgb(24 43 71 / 0.75); }
+  .dark [class*="bg-categoria-lilas-bg/"]  { background-color: rgb(42 35 80 / 0.75); }
+  .dark [class*="bg-categoria-areia-bg/"]  { background-color: rgb(59 42 23 / 0.75); }
+  .dark [class*="border-categoria-rosa-border/"]  { border-color: rgb(122 59 87 / 0.7); }
+  .dark [class*="border-categoria-azul-border/"]  { border-color: rgb(53 97 148 / 0.7); }
+  .dark [class*="border-categoria-lilas-border/"] { border-color: rgb(84 72 148 / 0.7); }
+  .dark [class*="border-categoria-areia-border/"] { border-color: rgb(122 85 39 / 0.7); }
 
   /* Sombras mais profundas no escuro */
   .dark .shadow-card {
