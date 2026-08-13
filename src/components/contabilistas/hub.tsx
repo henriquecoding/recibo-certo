@@ -181,6 +181,28 @@ export function ProximaConsulta({
         </p>
       )}
 
+      {/* Onde é. Até agora o cliente marcava presencial e nunca ficava a
+          saber a morada — a coluna existia e nenhum ecrã a lia. */}
+      {consulta.localOuLigacao && (
+        <p className="mt-3 flex items-start gap-2 rounded-2xl bg-white/70 px-4 py-3 text-sm leading-relaxed text-stone-700 dark:bg-white/10">
+          {consulta.modalidade === "online"
+            ? <Laptop size={15} className="mt-0.5 shrink-0 text-stone-400" aria-hidden />
+            : <MapPin size={15} className="mt-0.5 shrink-0 text-stone-400" aria-hidden />}
+          {consulta.modalidade === "online" && /^https?:\/\//i.test(consulta.localOuLigacao) ? (
+            <a
+              href={consulta.localOuLigacao}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              className="min-w-0 break-all font-medium underline underline-offset-2"
+            >
+              Entrar na chamada
+            </a>
+          ) : (
+            <span className="min-w-0 break-words">{consulta.localOuLigacao}</span>
+          )}
+        </p>
+      )}
+
       {consulta.estado === "pedido" && (
         <p className="mt-3 text-sm leading-relaxed text-stone-600">
           Ainda está por confirmar. Avisamos-te aqui assim que ele responder.

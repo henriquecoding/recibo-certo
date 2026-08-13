@@ -15,9 +15,10 @@ import DetalheConsulta from "@/components/contabilistas/DetalheConsulta";
 import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import {
-  listarAgendamentos, obterDisponibilidade, guardarDisponibilidade,
+  listarAgendamentos, obterDisponibilidade, guardarDisponibilidade, meusClientes,
 } from "@/lib/contabilistas/dados";
-import type { Agendamento, EstadoAgendamento } from "@/lib/contabilistas/tipos";
+import type { Agendamento, EstadoAgendamento, Vinculo } from "@/lib/contabilistas/tipos";
+import { tratamentoDoCliente } from "@/lib/contabilistas/tipos";
 import {
   NOMES_DIAS, minutosDeHora, type RegraDisponibilidade,
 } from "@/lib/contabilistas/agenda";
@@ -92,18 +93,31 @@ export default function AgendaPage() {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [aberta, setAberta] = useState<Agendamento | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
+  const [vinculos, setVinculos] = useState<Vinculo[]>([]);
+
+  /** O nome que o cliente deu neste vínculo, ou um identificador curto. */
+  const nomeDoCliente = useCallback(
+    (clienteId: string) => {
+      const v = vinculos.find((x) => x.clienteId === clienteId);
+      return tratamentoDoCliente(v ?? { nomeCliente: null, clienteId });
+    },
+    [vinculos]
+  );
 
   const carregar = useCallback(async (id: string) => {
     try {
-      setAgendamentos(await listarAgendamentos({
-        contabilistaId: id, desde: new Date(Date.now() - 90 * 86400_000),
-      }));
+      const [ags, vins] = await Promise.all([
+        listarAgendamentos({ contabilistaId: id, desde: new Date(Date.now() - 90 * 86400_000) }),
+        meusClientes(id),
+      ]);
+      setAgendamentos(ags);
+      setVinculos(vins);
     } catch (e) { avisos.erro((e as Error).message); }
   }, [avisos]);
 
   useEffect(() => { if (ficha) void carregar(ficha.userId); }, [ficha, carregar]);
 
-  async function mudarEstado(a: Agendamento, estado: EstadoAgendamento) {
+  async function mudarEstado(a: Agendamento, estado: EstadoAgendamento, localOuLigacao?: string) {
     if (!ficha) return;
 
     const pergunta = perguntaDe(estado, ficha.fidelidadeAtiva);
@@ -114,7 +128,13 @@ export default function AgendaPage() {
       const res = await fetch("/api/contabilistas/consulta", {
         method: "PATCH",
         headers: await cabecalhoAuth(),
-        body: JSON.stringify({ agendamentoId: a.id, estado }),
+        // `localOuLigacao` só vai quando há algo para gravar: enviar uma
+        // cadeia vazia apagaria a morada que já lá estava.
+        body: JSON.stringify({
+          agendamentoId: a.id,
+          estado,
+          ...(localOuLigacao?.trim() ? { localOuLigacao: localOuLigacao.trim() } : {}),
+        }),
       });
       const corpo = (await res.json()) as {
         erro?: string;
@@ -191,7 +211,11 @@ export default function AgendaPage() {
             consulta={agendamentos.find((a) => a.id === aberta.id) ?? aberta}
             ocupado={ocupado === aberta.id}
             fidelidadeAtiva={ficha.fidelidadeAtiva}
-            onEstado={async (a, estado) => { await mudarEstado(a, estado); setAberta(null); }}
+            nomeCliente={nomeDoCliente(aberta.clienteId)}
+            onEstado={async (a, estado, local) => {
+              await mudarEstado(a, estado, local);
+              setAberta(null);
+            }}
             onFechar={() => setAberta(null)}
           />
         )}

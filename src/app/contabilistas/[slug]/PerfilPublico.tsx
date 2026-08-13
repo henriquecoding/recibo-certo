@@ -45,6 +45,17 @@ export default function PerfilPublico({ slug }: { slug: string }) {
   const [aLer, setALer] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupadoBotao] = useState(false);
+  /**
+   * O que o cliente decide dar ao pedir o vínculo.
+   *
+   * Vazio é um resultado legítimo: o pedido segue à mesma e o contabilista
+   * vê um identificador curto. É por isso que isto é um formulário e não um
+   * botão — um botão que envia o nome sem perguntar não é uma escolha.
+   */
+  const [aApresentar, setAApresentar] = useState(false);
+  const [nomeParaOContabilista, setNome] = useState("");
+  const [emailParaOContabilista, setEmail] = useState("");
+  const [recado, setRecado] = useState("");
 
   const carregar = useCallback(async () => {
     setALer(true);
@@ -89,13 +100,20 @@ export default function PerfilPublico({ slug }: { slug: string }) {
     if (!cc) return;
     if (!user) { abrirModal("criar"); return; }
     setOcupadoBotao(true);
-    const { erro: e } = await pedirVinculo(cc.userId, user.id);
+    const { erro: e } = await pedirVinculo({
+      contabilistaId: cc.userId,
+      clienteId: user.id,
+      nomeCliente: nomeParaOContabilista,
+      emailCliente: emailParaOContabilista,
+      mensagem: recado,
+    });
     setOcupadoBotao(false);
     if (e) { avisos.erro(e); return; }
     avisos.sucesso("Pedido enviado.", {
       detalhe: "Assim que for aceite, podes marcar consulta e enviar simulações.",
     });
     setEstadoVinculo("pendente");
+    setAApresentar(false);
   }
 
   async function marcar({ slot, modalidade, assunto }: {
@@ -275,9 +293,76 @@ export default function PerfilPublico({ slug }: { slug: string }) {
                 O acompanhamento está em pausa.
               </p>
             ) : podePedir ? (
-              <Button className="mt-4" onClick={ligar} disabled={ocupado}>
-                {user ? "Pedir para ser cliente" : "Criar conta e pedir"}
-              </Button>
+              aApresentar && user ? (
+                <div className="mt-4 space-y-4 rounded-2xl bg-cream p-4">
+                  <p className="text-sm leading-relaxed text-stone-600">
+                    Só segue o que escreveres aqui. Podes deixar tudo em branco — o pedido
+                    vai na mesma, e {cc.nome.split(" ")[0]} vê um identificador em vez de um nome.
+                  </p>
+
+                  <label className="block">
+                    <span className="text-sm font-semibold text-stone-700">
+                      Como queres ser tratado?
+                    </span>
+                    <input
+                      value={nomeParaOContabilista}
+                      onChange={(e) => setNome(e.target.value.slice(0, 80))}
+                      placeholder="O nome por que te conhecem"
+                      autoComplete="name"
+                      className="mt-2 min-h-[2.75rem] w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-sm font-semibold text-stone-700">
+                      Email de contacto <span className="font-normal text-stone-400">(opcional)</span>
+                    </span>
+                    <input
+                      type="email"
+                      value={emailParaOContabilista}
+                      onChange={(e) => setEmail(e.target.value.slice(0, 180))}
+                      placeholder="Só se quiseres que ele te possa escrever"
+                      autoComplete="email"
+                      className="mt-2 min-h-[2.75rem] w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-sm font-semibold text-stone-700">
+                      Recado <span className="font-normal text-stone-400">(opcional)</span>
+                    </span>
+                    <textarea
+                      value={recado}
+                      onChange={(e) => setRecado(e.target.value.slice(0, 1000))}
+                      rows={3}
+                      placeholder="Em que precisas de ajuda."
+                      className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm leading-relaxed text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                    />
+                  </label>
+
+                  <p className="text-xs leading-relaxed text-stone-500">
+                    O nome e o email ficam só neste vínculo — não vêm da tua conta, e
+                    desaparecem no instante em que terminares o acompanhamento.
+                  </p>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button onClick={ligar} disabled={ocupado}>
+                      {ocupado ? "A enviar…" : "Enviar pedido"}
+                    </Button>
+                    <Button variant="ghost" onClick={() => setAApresentar(false)} disabled={ocupado}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  className="mt-4"
+                  onClick={() => (user ? setAApresentar(true) : abrirModal("criar"))}
+                  disabled={ocupado}
+                >
+                  {user ? "Pedir para ser cliente" : "Criar conta e pedir"}
+                </Button>
+              )
             ) : (
               <p className="mt-4 rounded-2xl bg-cream px-4 py-3 text-sm text-stone-600">
                 Este contabilista não está a aceitar novos clientes de momento.

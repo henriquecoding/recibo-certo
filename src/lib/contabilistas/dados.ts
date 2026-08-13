@@ -168,19 +168,28 @@ function paraVinculo(l: Linha): Vinculo {
     estado: l.estado as EstadoVinculo,
     criadoEm: l.criado_em as string,
     origem: l.origem as "cliente" | "contabilista",
+    nomeCliente: (l.nome_cliente as string | null) ?? null,
+    emailCliente: (l.email_cliente as string | null) ?? null,
   };
 }
 
-export async function pedirVinculo(
-  contabilistaId: string,
-  clienteId: string,
-  mensagem?: string
-): Promise<{ erro?: string }> {
+export interface PedidoDeVinculo {
+  contabilistaId: string;
+  clienteId: string;
+  mensagem?: string;
+  /** Como o cliente quer ser tratado. Opcional — ver `tratamentoDoCliente`. */
+  nomeCliente?: string;
+  emailCliente?: string;
+}
+
+export async function pedirVinculo(p: PedidoDeVinculo): Promise<{ erro?: string }> {
   const { error } = await getSupabase().from("contabilista_vinculos").insert({
-    contabilista_id: contabilistaId,
-    cliente_id: clienteId,
+    contabilista_id: p.contabilistaId,
+    cliente_id: p.clienteId,
     origem: "cliente",
-    mensagem: mensagem?.trim().slice(0, 1000) || null,
+    mensagem: p.mensagem?.trim().slice(0, 1000) || null,
+    nome_cliente: p.nomeCliente?.trim().slice(0, 80) || null,
+    email_cliente: p.emailCliente?.trim().slice(0, 180) || null,
   });
   if (!error) return {};
   if (error.code === "23505") return { erro: "Já tens um pedido com este contabilista." };
@@ -204,6 +213,24 @@ export async function meuVinculo(clienteId: string): Promise<
   const l = data as unknown as Linha;
   const cc = l.contabilista as Linha | null;
   return { ...paraVinculo(l), contabilista: cc ? paraContabilista(cc) : null };
+}
+
+/** O cliente corrige o nome por que quer ser tratado, sem terminar nada. */
+export async function atualizarIdentidadeNoVinculo(
+  id: string,
+  campos: { nomeCliente?: string | null; emailCliente?: string | null }
+): Promise<{ erro?: string }> {
+  const dados: Linha = {};
+  if (campos.nomeCliente !== undefined) {
+    dados.nome_cliente = campos.nomeCliente?.trim().slice(0, 80) || null;
+  }
+  if (campos.emailCliente !== undefined) {
+    dados.email_cliente = campos.emailCliente?.trim().slice(0, 180) || null;
+  }
+  if (Object.keys(dados).length === 0) return {};
+  const { error } = await getSupabase()
+    .from("contabilista_vinculos").update(dados).eq("id", id);
+  return error ? { erro: error.message } : {};
 }
 
 export async function terminarVinculo(id: string): Promise<{ erro?: string }> {
@@ -375,6 +402,7 @@ function paraAgendamento(l: Linha): Agendamento {
     estado: l.estado as EstadoAgendamento,
     modalidade: l.modalidade as Modalidade,
     assunto: (l.assunto as string | null) ?? null,
+    localOuLigacao: (l.local_ou_ligacao as string | null) ?? null,
     criadoEm: (l.criado_em as string) ?? "",
   };
 }

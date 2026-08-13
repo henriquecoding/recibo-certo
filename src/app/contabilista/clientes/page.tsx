@@ -19,12 +19,13 @@ import {
 import { getSupabase } from "@/lib/supabase/client";
 import type { Agendamento, Partilha, Vinculo } from "@/lib/contabilistas/tipos";
 import { ROTULO_VINCULO, ROTULO_PARTILHA } from "@/lib/contabilistas/vinculo";
+import { tratamentoDoCliente } from "@/lib/contabilistas/tipos";
 import { diaLocal, rotularDia } from "@/lib/contabilistas/agenda";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import { useAvisos } from "@/components/ui/Avisos";
 import { useConfirmar, type PedidoConfirmacao } from "@/components/ui/Confirmar";
-import { Check, Close, User, Warning, ChevronDown, ChevronUp, Lock } from "@/components/ui/Icons";
+import { Check, Close, User, Warning, ChevronDown, ChevronUp, Lock, Mail } from "@/components/ui/Icons";
 
 interface CartaoLinha {
   cliente_id: string; carimbos: number; meta: number;
@@ -215,14 +216,27 @@ export default function ClientesPage() {
                     aria-expanded={expandido}
                     className="flex w-full items-center justify-between gap-3 p-4 text-left sm:p-5"
                   >
-                    <span className="min-w-0">
-                      <span className="block font-semibold text-stone-800">
-                        Cliente desde{" "}
-                        {new Intl.DateTimeFormat("pt-PT", { month: "long", year: "numeric" }).format(new Date(v.criadoEm))}
+                    <span className="flex min-w-0 items-center gap-3">
+                      {/* Monograma, não fotografia: não recolhemos fotografias
+                          de ninguém, e passar a recolhê-las por estética seria
+                          uma decisão de dados pessoais sem justificação. */}
+                      <span
+                        aria-hidden
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-light text-sm font-semibold text-brand-dark"
+                      >
+                        {monograma(tratamentoDoCliente(v))}
                       </span>
-                      <span className="mt-0.5 block text-sm text-stone-500">
-                        {consultas.length} {consultas.length === 1 ? "consulta" : "consultas"} ·{" "}
-                        {dele.length} {dele.length === 1 ? "partilha" : "partilhas"}
+                      <span className="min-w-0">
+                        <span className="block truncate font-semibold text-stone-800">
+                          {tratamentoDoCliente(v)}
+                        </span>
+                        <span className="mt-0.5 block truncate text-sm text-stone-500">
+                          Desde {new Intl.DateTimeFormat("pt-PT", { month: "short", year: "numeric" }).format(new Date(v.criadoEm))}
+                          {" · "}
+                          {consultas.length} {consultas.length === 1 ? "consulta" : "consultas"}
+                          {" · "}
+                          {dele.length} {dele.length === 1 ? "partilha" : "partilhas"}
+                        </span>
                       </span>
                     </span>
                     <span className="flex shrink-0 items-center gap-2">
@@ -246,6 +260,15 @@ export default function ClientesPage() {
                         <p className="rounded-2xl bg-cream px-4 py-3 text-sm text-stone-500">
                           Ainda não há cartão. Abre-se na primeira consulta que marcares como realizada
                           {ficha.fidelidadeAtiva ? "." : ", depois de ligares o cartão de fidelidade."}
+                        </p>
+                      )}
+
+                      {v.emailCliente && (
+                        <p className="flex items-center gap-2 text-sm text-stone-600">
+                          <Mail size={15} className="shrink-0 text-stone-400" aria-hidden />
+                          <a href={`mailto:${v.emailCliente}`} className="min-w-0 truncate underline underline-offset-2">
+                            {v.emailCliente}
+                          </a>
                         </p>
                       )}
 
@@ -296,4 +319,16 @@ export default function ClientesPage() {
       )}
     </div>
   );
+}
+
+
+/**
+ * Duas letras a partir do tratamento. «Bruno Costa» → «BC»; «Cliente 4F2A»
+ * → «C4». Serve para distinguir linhas de relance, não para identificar.
+ */
+function monograma(nome: string): string {
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return "?";
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
 }

@@ -12,7 +12,7 @@ import {
 } from "@/lib/contabilistas/vinculo";
 import { DESCRICAO_ENTITLEMENT, ENTITLEMENTS_POR_PLANO, PERMISSAO_DA_FUNCIONALIDADE } from "@/lib/entitlements";
 import { ROTULO_PARTILHA } from "@/lib/contabilistas/vinculo";
-import type { TipoPartilha } from "@/lib/contabilistas/tipos";
+import { tratamentoDoCliente, type TipoPartilha } from "@/lib/contabilistas/tipos";
 
 const base: SinaisDoUtilizador = { confianca: "completo", temResultado: true };
 
@@ -236,5 +236,39 @@ describe("partilha: só passa o que está na lista branca", () => {
 
   it("a versão do consentimento está declarada", () => {
     expect(CONSENTIMENTO_VERSAO).toMatch(/^\d{4}-\d{2}-\d+$/);
+  });
+});
+
+describe("identidade: o nome viaja no vínculo, não na conta", () => {
+  it("usa o nome quando o cliente o deu", () => {
+    expect(tratamentoDoCliente({
+      nomeCliente: "Bruno Costa",
+      clienteId: "4f2a1111-2222-3333-4444-555555555555",
+    })).toBe("Bruno Costa");
+  });
+
+  it("cai num identificador curto e estável quando não há nome", () => {
+    const v = { nomeCliente: null, clienteId: "4f2a1111-2222-3333-4444-555555555555" };
+    expect(tratamentoDoCliente(v)).toBe("Cliente 4F2A");
+    expect(tratamentoDoCliente(v), "o mesmo id dá sempre o mesmo tratamento")
+      .toBe(tratamentoDoCliente(v));
+  });
+
+  it("trata um nome em branco como nome nenhum", () => {
+    // Um campo opcional preenchido com espaços não é um nome — mostrar
+    // uma linha vazia na lista seria pior do que mostrar o identificador.
+    expect(tratamentoDoCliente({
+      nomeCliente: "   ",
+      clienteId: "4f2a1111-2222-3333-4444-555555555555",
+    })).toBe("Cliente 4F2A");
+  });
+
+  it("nunca devolve vazio, seja qual for a entrada", () => {
+    for (const nome of [null, "", " ", "\t"]) {
+      const r = tratamentoDoCliente({
+        nomeCliente: nome, clienteId: "00000000-0000-0000-0000-000000000000",
+      });
+      expect(r.trim().length, JSON.stringify(nome)).toBeGreaterThan(0);
+    }
   });
 });

@@ -10,7 +10,7 @@
 // As perguntas antes do irreversível continuam a ser as do ecrã da agenda:
 // esta folha só pede a ação, não decide nada sozinha.
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { m } from "motion/react";
 import type { Agendamento, EstadoAgendamento } from "@/lib/contabilistas/tipos";
 import { diaLocal, horaLocal, rotularDia } from "@/lib/contabilistas/agenda";
@@ -31,14 +31,22 @@ const ROTULO: Record<EstadoAgendamento, { texto: string; tom: "brand" | "alert" 
 };
 
 export default function DetalheConsulta({
-  consulta, ocupado, fidelidadeAtiva, onEstado, onFechar,
+  consulta, ocupado, fidelidadeAtiva, nomeCliente, onEstado, onFechar,
 }: {
   consulta: Agendamento;
   ocupado: boolean;
   fidelidadeAtiva: boolean;
-  onEstado: (a: Agendamento, estado: EstadoAgendamento) => void;
+  /** Como tratar o cliente. Ver `tratamentoDoCliente` em `tipos.ts`. */
+  nomeCliente?: string;
+  /**
+   * O terceiro argumento é a morada ou o link da chamada. Vai junto com a
+   * mudança de estado de propósito: confirmar uma consulta presencial sem
+   * dizer onde é deixa o cliente exatamente onde estava.
+   */
+  onEstado: (a: Agendamento, estado: EstadoAgendamento, localOuLigacao?: string) => void;
   onFechar: () => void;
 }) {
+  const [local, setLocal] = useState(consulta.localOuLigacao ?? "");
   const caixaRef = useRef<HTMLDivElement>(null);
   const inicio = new Date(consulta.inicio);
   const jaComecou = inicio.getTime() <= Date.now();
@@ -100,6 +108,9 @@ export default function DetalheConsulta({
               <h2 id="detalhe-consulta-titulo" className="mt-1 font-display text-xl leading-tight text-ink first-letter:uppercase">
                 {rotularDia(diaLocal(inicio))}
               </h2>
+              {nomeCliente && (
+                <p className="mt-1 truncate text-sm font-semibold text-stone-700">{nomeCliente}</p>
+              )}
               <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm tabular-nums text-stone-600">
                 <span className="font-semibold">{horaLocal(inicio)} — {horaLocal(new Date(consulta.fim))}</span>
                 <span className="text-stone-300" aria-hidden>·</span>
@@ -132,12 +143,47 @@ export default function DetalheConsulta({
             {!consulta.assunto && (
               <p className="mt-3.5 text-sm text-stone-400">O cliente não escreveu um assunto.</p>
             )}
+
+            {/* Onde é.
+                A coluna existia desde a migração 042 e nenhum ecrã a lia:
+                quem marcava presencial nunca soube a morada, e quem marcava
+                online nunca recebeu o link. */}
+            {fechada ? (
+              consulta.localOuLigacao && (
+                <p className="mt-3.5 flex items-start gap-2 rounded-2xl bg-cream px-4 py-3 text-sm leading-relaxed text-stone-700">
+                  {consulta.modalidade === "online"
+                    ? <Laptop size={15} className="mt-0.5 shrink-0 text-stone-400" aria-hidden />
+                    : <MapPin size={15} className="mt-0.5 shrink-0 text-stone-400" aria-hidden />}
+                  <span className="min-w-0 break-words">{consulta.localOuLigacao}</span>
+                </p>
+              )
+            ) : (
+              <label className="mt-4 block">
+                <span className="text-sm font-semibold text-stone-700">
+                  {consulta.modalidade === "online" ? "Link da chamada" : "Morada"}
+                </span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-stone-400">
+                  O cliente vê isto na área dele assim que confirmares.
+                </span>
+                <input
+                  value={local}
+                  onChange={(e) => setLocal(e.target.value.slice(0, 500))}
+                  placeholder={
+                    consulta.modalidade === "online"
+                      ? "https://…"
+                      : "Rua, número, andar e sala"
+                  }
+                  inputMode={consulta.modalidade === "online" ? "url" : "text"}
+                  className="mt-2 min-h-[2.75rem] w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                />
+              </label>
+            )}
           </div>
 
           {!fechada && (
             <footer className="flex shrink-0 flex-wrap gap-2 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 sm:px-6">
               {consulta.estado === "pedido" && (
-                <Button size="sm" disabled={ocupado} onClick={() => onEstado(consulta, "confirmado")}>
+                <Button size="sm" disabled={ocupado} onClick={() => onEstado(consulta, "confirmado", local)}>
                   <Check size={15} aria-hidden /> Confirmar
                 </Button>
               )}
@@ -146,7 +192,7 @@ export default function DetalheConsulta({
                   size="sm"
                   variant={consulta.estado === "confirmado" ? "primary" : "secondary"}
                   disabled={ocupado}
-                  onClick={() => onEstado(consulta, "realizada")}
+                  onClick={() => onEstado(consulta, "realizada", local)}
                   title={fidelidadeAtiva ? "Carimba o cartão de fidelidade" : undefined}
                 >
                   <Gift size={15} aria-hidden /> Marcar realizada

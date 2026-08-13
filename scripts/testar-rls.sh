@@ -18,7 +18,9 @@ set -euo pipefail
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TESTES="$RAIZ/supabase/tests"
-MIGRACAO="$RAIZ/supabase/migrations/042_plataforma_contabilistas.sql"
+# Todas as migrações da plataforma, por ordem. Uma migração nova entra aqui
+# sozinha: o glob apanha-a, e a suíte passa a exercê-la sem se alterar.
+MIGRACOES=("$RAIZ"/supabase/migrations/04[2-9]_*.sql)
 
 PGBIN="${PGBIN:-/usr/lib/postgresql/16/bin}"
 BASE="${PGTESTDIR:-/home/pgtest}"
@@ -51,10 +53,12 @@ echo "· base de dados limpa"
 P -q -c "DROP DATABASE IF EXISTS rc_testes;" -c "CREATE DATABASE rc_testes;" >/dev/null
 P -q -d rc_testes -f "$TESTES/00-arreio-supabase.sql"
 
-echo "· migração 042 (1.ª passagem)"
-P -q -d rc_testes -f "$MIGRACAO" >/dev/null
-echo "· migração 042 (2.ª passagem — idempotência)"
-P -q -d rc_testes -f "$MIGRACAO" >/dev/null
+for passagem in "1.ª" "2.ª (idempotência)"; do
+  for m in "${MIGRACOES[@]}"; do
+    echo "· $(basename "$m") — passagem $passagem"
+    P -q -d rc_testes -f "$m" >/dev/null
+  done
+done
 
 P -q -d rc_testes -f "$TESTES/01-dados.sql"
 

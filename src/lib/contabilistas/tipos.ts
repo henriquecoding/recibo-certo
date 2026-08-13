@@ -93,6 +93,17 @@ export interface Vinculo {
   criadoEm: string;
   /** Quem iniciou: o cliente pediu, ou o contabilista convidou. */
   origem: "cliente" | "contabilista";
+  /**
+   * O nome por que o cliente quis ser tratado NESTE vínculo.
+   *
+   * `null` é um estado legítimo, não um dado em falta: dizer o nome é uma
+   * escolha do cliente, e sem ele o painel mostra um identificador curto.
+   * Não vem da conta — dois contabilistas podem ver nomes diferentes da
+   * mesma pessoa, e terminar o acompanhamento apaga-o (migração 043).
+   */
+  nomeCliente: string | null;
+  /** Email que o cliente decidiu partilhar com este contabilista. */
+  emailCliente: string | null;
 }
 
 export interface Agendamento {
@@ -104,7 +115,29 @@ export interface Agendamento {
   estado: EstadoAgendamento;
   modalidade: Modalidade;
   assunto: string | null;
+  /**
+   * Morada da consulta presencial, ou link da chamada.
+   *
+   * Existia na base de dados desde a migração 042 e a rota de API já a
+   * gravava — mas não estava neste tipo, e por isso nenhum ecrã a mostrava.
+   * Quem marcava presencial nunca soube a morada.
+   */
+  localOuLigacao: string | null;
   criadoEm: string;
+}
+
+/**
+ * Como tratar um cliente quando ele não deu nome.
+ *
+ * Quatro caracteres do id, em maiúsculas: curto, estável e suficiente para
+ * distinguir dois clientes numa lista. Não é uma alcunha simpática de
+ * propósito — parecer um nome quando não é seria pior do que assumir que
+ * não há nome nenhum.
+ */
+export function tratamentoDoCliente(v: Pick<Vinculo, "nomeCliente" | "clienteId">): string {
+  const nome = v.nomeCliente?.trim();
+  if (nome) return nome;
+  return `Cliente ${v.clienteId.replace(/-/g, "").slice(0, 4).toUpperCase()}`;
 }
 
 export interface Partilha {
