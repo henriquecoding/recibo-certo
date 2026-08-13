@@ -88,7 +88,7 @@ export default function ClientesPage() {
 
       <p className="flex items-start gap-2.5 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm leading-relaxed text-stone-600">
         <Lock size={16} className="mt-0.5 shrink-0 text-stone-400" aria-hidden />
-        Vês o que cada cliente te enviou, e mais nada. Ligares-te a alguém não dá
+        Vês o que cada cliente te enviou, e mais nada. Ter um cliente ligado não te dá
         acesso aos recibos, cenários ou simulações que essa pessoa guardou.
       </p>
 

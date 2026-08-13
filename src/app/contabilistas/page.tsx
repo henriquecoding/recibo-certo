@@ -23,23 +23,23 @@ export const metadata: Metadata = {
 const POSSIBILIDADES = [
   {
     Icon: User,
-    titulo: "Ligares-te a um contabilista",
-    texto: "Escolhes um do diretório e pedes para seres cliente. Ele aceita — ou não — e a partir daí ficam ligados.",
+    titulo: "Ligar-te a um contabilista",
+    texto: "Escolhes um da lista e pedes para seres cliente dele. Se aceitar, ficam ligados.",
   },
   {
     Icon: Calendar,
-    titulo: "Marcares consulta",
-    texto: "Vês os horários livres dele, escolhes o dia e a hora, e dizes o assunto. Online ou presencial, conforme atender.",
+    titulo: "Marcar consulta",
+    texto: "Vês os horários que ele tem livres, escolhes o dia e a hora e dizes do que se trata. Online ou presencial, conforme o que ele oferecer.",
   },
   {
     Icon: PaperClip,
-    titulo: "Enviares as tuas simulações",
-    texto: "Das ferramentas do site, com um clique. Vês campo a campo o que segue antes de confirmar, e podes revogar depois.",
+    titulo: "Enviar as tuas simulações",
+    texto: "A partir das ferramentas do site, com um clique. Antes de confirmares, vês campo a campo o que vai seguir — e podes retirar-lhe o acesso mais tarde.",
   },
   {
     Icon: Gift,
-    titulo: "Juntares carimbos",
-    texto: "Cada consulta realizada carimba o cartão dele. Ao completá-lo ganhas um desconto na consulta seguinte, entre 10% e 50%.",
+    titulo: "Juntar carimbos",
+    texto: "Cada consulta que fizeres carimba o teu cartão. Quando o completares, ganhas um desconto na consulta seguinte — entre 10% e 50%, conforme o contabilista definir.",
   },
 ] as const;
 
@@ -54,8 +54,8 @@ export default function DiretorioPage() {
           </h1>
           <p className="mt-4 text-base leading-relaxed text-stone-600">
             Liga-te a um contabilista, envia-lhe as simulações que fizeste aqui e marca
-            consulta — sem precisares de nenhum plano pago. A cada consulta realizada
-            carimbas o cartão de fidelidade dele.
+            consulta — sem precisares de nenhum plano pago. E cada consulta que fizeres
+            carimba o teu cartão de fidelidade.
           </p>
         </header>
 

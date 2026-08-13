@@ -529,8 +529,8 @@ export function SemContabilista({ Envolvente }: { Envolvente: (p: { children: Re
         <ul className="divide-y divide-stone-100">
           {[
             { Icon: Calendar, texto: "Marcas consulta nos horários que ele publica, online ou presencial." },
-            { Icon: PaperClip, texto: "Envias simulações com um clique, vendo campo a campo o que segue." },
-            { Icon: Gift, texto: "Cada consulta realizada carimba o cartão dele — e o cartão cheio vale desconto." },
+            { Icon: PaperClip, texto: "Envias simulações com um clique, e vês campo a campo o que segue." },
+            { Icon: Gift, texto: "Cada consulta que fizeres carimba o teu cartão — e o cartão cheio vale desconto." },
           ].map(({ Icon, texto }) => (
             <li key={texto} className="flex items-start gap-3 px-5 py-3.5 sm:px-7">
               <Icon size={17} className="mt-0.5 shrink-0 text-brand" aria-hidden />

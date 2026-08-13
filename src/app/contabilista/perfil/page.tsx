@@ -133,7 +133,7 @@ export default function PerfilPage() {
             onChange={(e) => mudar({ bio: e.target.value.slice(0, 2000) })}
             rows={5}
             className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm leading-relaxed text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-            placeholder="Com quem trabalhas, em que és mais forte, como costumas acompanhar."
+            placeholder="Com quem trabalhas, no que és mais forte, como costumas acompanhar."
           />
           <span className="mt-1 block text-xs tabular-nums text-stone-400">{f.bio.length} / 2000</span>
         </label>

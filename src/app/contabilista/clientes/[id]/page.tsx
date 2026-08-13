@@ -366,7 +366,7 @@ function perguntaVinculo(para: EstadoDecidido): PedidoConfirmacao | null {
   if (para === "terminado") {
     return {
       titulo: "Terminar o acompanhamento?",
-      descricao: "É a decisão mais definitiva desta página.",
+      descricao: "Não há volta a dar.",
       consequencias: [
         "Deixas de conseguir abrir o que este cliente te enviou.",
         "O nome e o email que ele deu são apagados.",
