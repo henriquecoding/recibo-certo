@@ -33,7 +33,7 @@ Importante: no GitHub, antes deste handoff, a branch preservava apenas o workflo
 1. `docs/auditorias/pr102/auditoria-profunda-pr102/` — auditoria profunda da PR #102, incluindo P0/P1/P2, diagnóstico visual “Mesa Fiscal”, runtime, CI, Vercel e gate de merge.
 2. `docs/auditorias/pr102/relatorio-mestre-privacidade-seguranca/` — relatório mestre de privacidade/segurança/persistência que o utilizador pediu explicitamente para incorporar neste trabalho.
 
-Os relatórios foram divididos apenas por limite operacional de transferência. **Concatenar `part-01.md`, `part-02.md`, ... em ordem reconstrói byte a byte o ficheiro original.** Os hashes SHA-256 estão no README de cada relatório. Não resumir nem substituir estes documentos por este handoff.
+A auditoria profunda da PR #102 foi preservada integralmente e as suas partes reconstroem byte a byte o ficheiro original. No relatório mestre de privacidade, o corpo principal e as secções finais foram preservados no diretório; as secções 17.4–17.8, que o conector não aceitou transferir literalmente, estão representadas por `part-06-resumo.md` e os respetivos requisitos operacionais foram incorporados neste handoff. Não substituir estes documentos pelo handoff nem ignorar essa continuidade.
 
 ## Requisitos de execução — segurança e dados
 
