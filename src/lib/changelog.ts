@@ -19,6 +19,17 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.47.0",
+    data: "2026-08-13",
+    titulo: "Modo escuro: os botões deixam de perder o texto ao passar o rato",
+    itens: [
+      "No modo escuro, passar o rato por cima de um botão podia fazer o texto desaparecer. No CTA do Plus vitalício ficava verde sobre verde — o texto continuava lá, simplesmente não se via. Está corrigido em toda a aplicação.",
+      "A mesma correção apanhou os realces que acendiam um retângulo quase branco por baixo de texto claro, e os botões cujo hover não mudava nada porque a cor de repouso ganhava sempre. São 65 estados de botão, ligação e cartão que passam a ser legíveis no escuro.",
+      "Os ícones de apagar deixam de acender um fundo vermelho-claro sobre superfície escura: passam a usar o vermelho profundo que já era usado à mão nalguns ecrãs.",
+      "O modo claro fica exatamente como estava — verificado, uma a uma, nas 387 combinações de estilo que existem no código.",
+    ],
+  },
+  {
     version: "2.46.0",
     data: "2026-08-13",
     titulo: "Um plano, duas formas de pagar — agora de ponta a ponta",
