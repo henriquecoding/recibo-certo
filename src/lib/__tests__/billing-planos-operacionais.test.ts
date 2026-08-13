@@ -198,3 +198,44 @@ describe("correções da auditoria do PR #104", () => {
     expect(read("src/lib/billing/access.ts")).toContain("temClienteStripe");
   });
 });
+
+describe("os quatro defeitos de segunda ordem", () => {
+  it("a reconciliação cobre uma campanha, não 48 horas", () => {
+    const cron = read("src/app/api/cron/reconciliar-stripe/route.ts");
+    expect(cron).toMatch(/JANELA_DIAS = 30/);
+    // Sem tecto artificial de 500/100: o que trava é o tempo.
+    expect(cron).not.toMatch(/autoPagingToArray/);
+    expect(cron).toMatch(/ORCAMENTO_MS/);
+    // E os reembolsos passam a ser reconciliados, não só os pagamentos.
+    expect(cron).toContain("revokeRefundedCharge");
+    expect(cron).toMatch(/charges\.list/);
+  });
+
+  it("o Guardião pagina em vez de truncar em silêncio", () => {
+    const rota = read("src/app/api/email/guardiao/route.ts");
+    expect(rota).toMatch(/const PAGINA = 1000/);
+    expect(rota).toContain("async function paginar");
+    expect(rota, "o filtro in(...) tem de ir em lotes").toContain("emPedacos(userIds, LOTE_IDS)");
+    // A paginação sem ordem estável devolveria páginas incoerentes.
+    expect(rota).toMatch(/\.order\("id"\)\.range\(de, ate\)/);
+    // E os emails deixam de sair um a um.
+    expect(rota).toContain("ENVIOS_EM_PARALELO");
+    expect(rota).not.toMatch(/for \(const userId of userIds\) \{[\s\S]*?await enviarEmail/);
+  });
+
+  it("o vitalício passa a emitir fatura", () => {
+    const checkout = read("src/app/api/stripe/checkout/route.ts");
+    // Uma subscrição fatura sozinha; mode=payment não.
+    expect(checkout).toMatch(/invoice_creation: \{ enabled: true \}/);
+  });
+
+  it("quem tinha três cenários ouve a verdade, e não perde nenhum", () => {
+    const store = read("src/lib/store/cenarios.ts");
+    expect(store).toContain("excedentesLegado");
+    expect(store, "nada é apagado por causa do limite novo")
+      .not.toMatch(/slice\(0, LIMITE_FREE\)/);
+    const page = read("src/app/dashboard/cenarios/page.tsx");
+    expect(page).toContain("excedentesLegado");
+    expect(page).toContain("não apagámos nenhum");
+  });
+});

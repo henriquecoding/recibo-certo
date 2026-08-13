@@ -97,6 +97,11 @@ export async function POST(req: Request) {
         payment_intent_data: {
           metadata: { supabase_uid: user.id, price_id: price.id, modalidade },
         },
+        // Uma subscrição gera fatura sozinha; um pagamento único não. Sem
+        // isto o vitalício ficava só com o recibo da Stripe, e o «Ver
+        // pagamentos» do portal abria um histórico vazio — logo para quem
+        // pagou de uma vez e mais precisa de comprovativo.
+        invoice_creation: { enabled: true },
       } : {
         subscription_data: {
           metadata: { supabase_uid: user.id, price_id: price.id, modalidade },

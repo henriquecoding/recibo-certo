@@ -31,6 +31,10 @@ export const CHANGELOG: EntradaChangelog[] = [
       "Pedir reembolso passa a fazer o que os Termos prometem, também na mensalidade: o acesso é revogado e a subscrição é cancelada no momento, sem depender de ninguém agir à mão. Antes, só o vitalício era tratado assim — um reembolso do primeiro mês deixava o Plus de pé e a cobrança seguinte por acontecer.",
       "Quem já paga por mês passa a poder mudar para o vitalício a partir da página de subscrição, enquanto houver lugares. A mensalidade é cancelada no fim do período que já pagaste, sem cobranças a dobrar.",
       "Quem recebeu o Plus como concessão da equipa deixa de ler que «foi um pagamento único» e deixa de ver um botão de pagamentos que não abria nada. Cada tipo de acesso passa a descrever-se como é.",
+      "O Guardião Fiscal deixa de poder falhar em silêncio. Lia no máximo mil linhas de cada vez, por isso, numa conta com muitos recibos, somava só uma parte da faturação e avisava tarde — ou não avisava. Passa a ler tudo, e os avisos saem em paralelo em vez de um de cada vez.",
+      "A conferência diária com a Stripe passa a olhar para trinta dias em vez de dois, e a incluir reembolsos. Um aviso perdido, um fim de semana de avaria ou uma semana de muitas compras deixam de poder esconder um pagamento sem acesso.",
+      "A compra vitalícia passa a emitir fatura, e não apenas recibo. Quem paga de uma vez é quem mais precisa do comprovativo, e o histórico de pagamentos deixa de aparecer vazio.",
+      "Quem guardou cenários quando o plano grátis permitia mais continua com todos eles — não foi apagado nada. A página passa a dizer isso com todas as letras, em vez de mostrar uma contagem que não batia certo.",
     ],
   },
   {
