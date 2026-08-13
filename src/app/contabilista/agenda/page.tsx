@@ -11,6 +11,7 @@ import { AnimatePresence } from "motion/react";
 import { usarFicha, cabecalhoAuth } from "@/components/contabilistas/usarFicha";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import GrelhaSemanal from "@/components/contabilistas/GrelhaSemanal";
+import VistaMes from "@/components/contabilistas/VistaMes";
 import DetalheConsulta from "@/components/contabilistas/DetalheConsulta";
 import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
@@ -89,7 +90,7 @@ export default function AgendaPage() {
   const { ficha, aCarregar } = usarFicha();
   const avisos = useAvisos();
   const confirmar = useConfirmar();
-  const [aba, setAba] = useState<"consultas" | "semana">("consultas");
+  const [aba, setAba] = useState<"semana" | "mes" | "tipo">("semana");
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [aberta, setAberta] = useState<Agendamento | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
@@ -168,8 +169,11 @@ export default function AgendaPage() {
         descricao="As consultas marcadas e os horários que os clientes veem no teu perfil."
       />
 
-      <div role="tablist" aria-label="Secções da agenda" className="flex gap-1.5 overflow-x-auto">
-        {([["consultas", "Consultas"], ["semana", "Semana-tipo"]] as const).map(([id, txt]) => (
+      {/* Semana e mês respondem a perguntas diferentes: a semana a «o que
+          tenho na quinta às três?», o mês a «como está o mês?». Não é a
+          mesma vista com mais dias, e por isso são dois separadores. */}
+      <div role="tablist" aria-label="Secções da agenda" className="-mx-1 flex gap-1.5 overflow-x-auto px-1">
+        {([["semana", "Semana"], ["mes", "Mês"], ["tipo", "Semana-tipo"]] as const).map(([id, txt]) => (
           <button
             key={id}
             role="tab"
@@ -184,13 +188,15 @@ export default function AgendaPage() {
         ))}
       </div>
 
-      {aba === "consultas" ? (
+      {aba === "semana" || aba === "mes" ? (
         agendamentos.length === 0 ? (
           <EstadoVazio
             Icon={Calendar}
             titulo="Ainda não há consultas"
             descricao="Os teus clientes marcam a partir do teu perfil público. Define primeiro a semana-tipo para haver horários livres."
           />
+        ) : aba === "mes" ? (
+          <VistaMes agendamentos={agendamentos} onAbrir={(a) => setAberta(a)} />
         ) : (
           <GrelhaSemanal
             agendamentos={agendamentos}
