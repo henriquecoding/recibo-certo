@@ -60,6 +60,21 @@ BEGIN
 END;
 $$;
 
+-- Sair da sessão: `auth.uid()` volta a ser NULL, que é como a chave de
+-- serviço vê o mundo.
+--
+-- `RESET ROLE` sozinho NÃO faz isto — a definição da sessão persiste, e sem
+-- esta função uma operação feita «como postgres» continuava a ser avaliada
+-- pelos gatilhos como sendo do último utilizador que entrou. Foi assim que
+-- um teste de anexos se viu recusado por uma regra que só se aplica a
+-- clientes.
+CREATE OR REPLACE FUNCTION t.sair() RETURNS void
+LANGUAGE plpgsql AS $$
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', '', false);
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION t.entrar(quem uuid) RETURNS void
 LANGUAGE plpgsql AS $$
 BEGIN
