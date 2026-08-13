@@ -17,6 +17,7 @@ import { contagensDoPainel, obterMinhaFicha } from "@/lib/contabilistas/dados";
 import type { Contabilista } from "@/lib/contabilistas/tipos";
 import {
   Logo, LayoutGrid, Calendar, User, PaperClip, Gift, Settings, ArrowLeft, Warning,
+  Target,
 } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import SinoNotificacoes from "@/components/contabilistas/SinoNotificacoes";
@@ -47,6 +48,7 @@ const NAV: Item[] = [
     href: "/contabilista/clientes", label: "Clientes", curto: "Clientes", Icon: User,
     porResponder: (c) => c.pedidos,
   },
+  { href: "/contabilista/trabalho", label: "Trabalho", curto: "Trabalho", Icon: Target },
   {
     href: "/contabilista/partilhas", label: "Partilhas", curto: "Partilhas", Icon: PaperClip,
     porResponder: (c) => c.partilhasPorLer,
