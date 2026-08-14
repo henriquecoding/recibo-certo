@@ -149,9 +149,9 @@ SELECT t.recusa($$INSERT INTO public.contabilista_mensagens (vinculo_id, autor_i
   VALUES ('cccc0000-0000-0000-0000-00000000000c',
           '11111111-1111-1111-1111-111111111111','Continuo aqui.')$$,
   'suspenso: escrever ao cliente');
-SELECT t.recusa($$UPDATE public.contabilista_vinculos SET estado='pausado'
-  WHERE id='cccc0000-0000-0000-0000-00000000000c'$$,
-  'suspenso: mexer no vínculo');
+SELECT t.rpc_recusa($$SELECT public.decidir_vinculo(
+    'cccc0000-0000-0000-0000-00000000000c', 'pausar')$$,
+  'transicao_nao_permitida', 'suspenso: mexer no vínculo');
 
 -- E o cliente? Continua dono do que é dele.
 SELECT t.entrar('88888888-8888-8888-8888-888888888888');
@@ -173,9 +173,10 @@ SELECT t.conta($$SELECT count(*) FROM public.contabilista_vinculos
 \echo ''
 \echo '── 33. P0.2 · Terminado é terminado ────────────────────────────'
 SELECT t.entrar('88888888-8888-8888-8888-888888888888');
-SELECT t.permite($$UPDATE public.contabilista_vinculos SET estado='terminado', terminado_em=now()
-  WHERE id='cccc0000-0000-0000-0000-00000000000c'$$, 'cliente termina');
+SELECT t.rpc_ok($$SELECT public.decidir_vinculo(
+    'cccc0000-0000-0000-0000-00000000000c', 'terminar')$$, 'cliente termina');
 SELECT t.entrar('11111111-1111-1111-1111-111111111111');
-SELECT t.recusa($$UPDATE public.contabilista_vinculos SET estado='ativo'
-  WHERE id='cccc0000-0000-0000-0000-00000000000c'$$,
+SELECT t.rpc_recusa($$SELECT public.decidir_vinculo(
+    'cccc0000-0000-0000-0000-00000000000c', 'reativar')$$,
+  'transicao_nao_permitida',
   'contabilista ressuscita o vínculo para recuperar o histórico');

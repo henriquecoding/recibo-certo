@@ -127,9 +127,9 @@ SELECT t.conta($$SELECT count(*) FROM public.partilhas WHERE estado='enviada'$$,
   'contabilista lê enquanto o vínculo dura');
 
 SELECT t.entrar('22222222-2222-2222-2222-222222222222');
-SELECT t.permite($$UPDATE public.contabilista_vinculos SET estado='terminado', terminado_em=now()
-  WHERE cliente_id='22222222-2222-2222-2222-222222222222'
-    AND contabilista_id='11111111-1111-1111-1111-111111111111'$$, 'cliente termina o vínculo');
+SELECT t.rpc_ok($$SELECT public.decidir_vinculo(
+    (SELECT id FROM public.contabilista_vinculos WHERE cliente_id='22222222-2222-2222-2222-222222222222' AND contabilista_id='11111111-1111-1111-1111-111111111111' LIMIT 1), 'terminar')$$,
+  'cliente termina o vínculo');
 
 SELECT t.entrar('11111111-1111-1111-1111-111111111111');
 SELECT t.conta($$SELECT count(*) FROM public.partilhas$$, 0,

@@ -12,7 +12,6 @@
 
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { formatarCodigoCupao } from "./fidelidade";
 
 export function supabaseServico(): SupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -42,17 +41,10 @@ export async function utilizadorDoPedido(req: Request): Promise<string | null> {
   return data.user.id;
 }
 
-/**
- * Código de cupão com aleatoriedade criptográfica.
- *
- * `Math.random()` não serve: um código adivinhável é um desconto adivinhável,
- * e quem o adivinhasse gastava o cupão de outra pessoa.
- */
-export function gerarCodigoCupao(): string {
-  const bytes = new Uint8Array(8);
-  crypto.getRandomValues(bytes);
-  return formatarCodigoCupao(bytes);
-}
+// O código do cupão não se gera aqui. Nasce dentro de `concluir_consulta`
+// (migração 047), na mesma transação que carimba: enquanto vinha de fora,
+// quem chamava escolhia-o — e um código escolhido é um código adivinhável
+// por quem o escolheu.
 
 // ─── Endereço público ──────────────────────────────────────────────────
 

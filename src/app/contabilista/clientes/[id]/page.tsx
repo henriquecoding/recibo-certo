@@ -32,7 +32,6 @@ import { getSupabase } from "@/lib/supabase/client";
 import { resumirClientes, type CartaoDoCliente, type ResumoCliente } from "@/lib/contabilistas/resumo";
 import { ROTULO_PARTILHA, ROTULO_VINCULO } from "@/lib/contabilistas/vinculo";
 import { eurosDeCents } from "@/lib/contabilistas/fidelidade";
-import { avisarOutroLado } from "@/lib/contabilistas/conversa";
 import { diaLocal, horaLocal, rotularDia } from "@/lib/contabilistas/agenda";
 import type { Agendamento, Partilha } from "@/lib/contabilistas/tipos";
 import Button from "@/components/ui/Button";
@@ -41,7 +40,7 @@ import {
   ArrowLeft, Calendar, Clock, Gift, Lock, Mail, PaperClip, User,
 } from "@/components/ui/Icons";
 
-type EstadoDecidido = "ativo" | "pausado" | "terminado";
+type Decisao = "aceitar" | "pausar" | "reativar" | "terminar";
 
 export default function FichaClientePage() {
   const { id } = useParams<{ id: string }>();
@@ -111,7 +110,7 @@ export default function FichaClientePage() {
     [consultas]
   );
 
-  async function decidir(para: EstadoDecidido) {
+  async function decidir(para: Decisao) {
     if (!resumo || !ficha) return;
     const pergunta = perguntaVinculo(para);
     if (pergunta && !(await confirmar(pergunta))) return;
@@ -121,16 +120,15 @@ export default function FichaClientePage() {
     setOcupado(false);
     if (erro) { avisos.erro(erro); return; }
 
-    if (para === "terminado") {
+    if (para === "terminar") {
       avisos.sucesso("Acompanhamento terminado.", {
         detalhe: "Deixaste de ver o que este cliente te tinha enviado.",
       });
       router.push("/contabilista/clientes");
       return;
     }
-    avisos.sucesso(para === "ativo" ? "Cliente ativo." : "Acompanhamento em pausa.");
-    if (para === "ativo") void avisarOutroLado("vinculo_aceite", resumo.vinculo.id);
-    await carregar(ficha.userId);
+    avisos.sucesso(para === "pausar" ? "Acompanhamento em pausa." : "Cliente ativo.");
+        await carregar(ficha.userId);
   }
 
   if (aCarregar || aLer) return <EsqueletoPainel />;
@@ -320,18 +318,18 @@ export default function FichaClientePage() {
             <div className="mt-3 flex flex-wrap gap-2">
               {v.estado === "pendente" || v.estado === "convidado" ? (
                 <>
-                  <Button size="sm" disabled={ocupado} onClick={() => decidir("ativo")}>Aceitar</Button>
-                  <Button size="sm" variant="ghost" disabled={ocupado} onClick={() => decidir("terminado")}>Recusar</Button>
+                  <Button size="sm" disabled={ocupado} onClick={() => decidir("aceitar")}>Aceitar</Button>
+                  <Button size="sm" variant="ghost" disabled={ocupado} onClick={() => decidir("terminar")}>Recusar</Button>
                 </>
               ) : v.estado === "ativo" ? (
                 <>
-                  <Button size="sm" variant="secondary" disabled={ocupado} onClick={() => decidir("pausado")}>Pausar</Button>
-                  <Button size="sm" variant="ghost" disabled={ocupado} onClick={() => decidir("terminado")}>Terminar</Button>
+                  <Button size="sm" variant="secondary" disabled={ocupado} onClick={() => decidir("pausar")}>Pausar</Button>
+                  <Button size="sm" variant="ghost" disabled={ocupado} onClick={() => decidir("terminar")}>Terminar</Button>
                 </>
               ) : v.estado === "pausado" ? (
                 <>
-                  <Button size="sm" disabled={ocupado} onClick={() => decidir("ativo")}>Reativar</Button>
-                  <Button size="sm" variant="ghost" disabled={ocupado} onClick={() => decidir("terminado")}>Terminar</Button>
+                  <Button size="sm" disabled={ocupado} onClick={() => decidir("aceitar")}>Reativar</Button>
+                  <Button size="sm" variant="ghost" disabled={ocupado} onClick={() => decidir("terminar")}>Terminar</Button>
                 </>
               ) : (
                 <p className="text-sm text-stone-400">Acompanhamento terminado.</p>
@@ -362,8 +360,8 @@ function Voltar() {
   );
 }
 
-function perguntaVinculo(para: EstadoDecidido): PedidoConfirmacao | null {
-  if (para === "terminado") {
+function perguntaVinculo(para: Decisao): PedidoConfirmacao | null {
+  if (para === "terminar") {
     return {
       titulo: "Terminar o acompanhamento?",
       descricao: "Não há volta a dar.",
@@ -377,7 +375,7 @@ function perguntaVinculo(para: EstadoDecidido): PedidoConfirmacao | null {
       tom: "perigo",
     };
   }
-  if (para === "pausado") {
+  if (para === "pausar") {
     return {
       titulo: "Pausar este acompanhamento?",
       descricao: "Continuas a ver o que te enviou, mas ele não marca consultas novas enquanto estiver em pausa.",

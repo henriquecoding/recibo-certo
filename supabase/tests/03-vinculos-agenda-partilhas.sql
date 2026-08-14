@@ -9,9 +9,14 @@ SELECT t.entrar('22222222-2222-2222-2222-222222222222');
 SELECT t.permite($$INSERT INTO public.contabilista_vinculos (contabilista_id, cliente_id)
   VALUES ('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222')$$,
   'cliente pede vínculo');
+SELECT t.rpc_recusa($$SELECT public.decidir_vinculo(
+    (SELECT id FROM public.contabilista_vinculos
+      WHERE cliente_id='22222222-2222-2222-2222-222222222222' LIMIT 1), 'aceitar')$$,
+  'transicao_nao_permitida', 'cliente aceita-se a si próprio como cliente');
+-- E o caminho antigo já nem existe: a escrita direta foi fechada na 047.
 SELECT t.recusa($$UPDATE public.contabilista_vinculos SET estado='ativo'
   WHERE cliente_id='22222222-2222-2222-2222-222222222222'$$,
-  'cliente aceita-se a si próprio como cliente');
+  'cliente aceita-se por escrita direta, sem passar pela função');
 SELECT t.recusa($$INSERT INTO public.contabilista_vinculos (contabilista_id, cliente_id, estado)
   VALUES ('55555555-5555-5555-5555-555555555555','22222222-2222-2222-2222-222222222222','ativo')$$,
   'cliente cria vínculo já ativo');
@@ -21,8 +26,11 @@ SELECT t.recusa($$INSERT INTO public.contabilista_vinculos (contabilista_id, cli
 
 -- O contabilista aceita.
 SELECT t.entrar('11111111-1111-1111-1111-111111111111');
-SELECT t.permite($$UPDATE public.contabilista_vinculos SET estado='ativo'
-  WHERE contabilista_id='11111111-1111-1111-1111-111111111111'$$, 'contabilista aceita o cliente');
+SELECT t.permite($$SELECT public.decidir_vinculo(
+    (SELECT id FROM public.contabilista_vinculos
+      WHERE contabilista_id='11111111-1111-1111-1111-111111111111'
+        AND cliente_id='22222222-2222-2222-2222-222222222222' LIMIT 1), 'aceitar')$$,
+  'contabilista aceita o cliente');
 
 -- Um terceiro não vê o vínculo de ninguém.
 SELECT t.entrar('33333333-3333-3333-3333-333333333333');
@@ -32,9 +40,37 @@ SELECT t.conta($$SELECT count(*) FROM public.contabilista_vinculos$$, 0,
 \echo ''
 \echo '── 7. Agendamentos: sem duplo agendamento, sem auto-carimbo ────'
 SELECT t.entrar('22222222-2222-2222-2222-222222222222');
-SELECT t.permite($$INSERT INTO public.agendamentos (contabilista_id, cliente_id, inicio, fim)
+SELECT t.rpc_ok($$SELECT public.marcar_consulta(
+    '11111111-1111-1111-1111-111111111111',
+    '2026-09-01T09:00:00+01','2026-09-01T10:00:00+01','online')$$,
+  'cliente marca consulta num horário publicado');
+
+-- ⚠️ As regras que a política nunca conseguiu ver, e a RPC vê.
+SELECT t.rpc_recusa($$SELECT public.marcar_consulta(
+    '11111111-1111-1111-1111-111111111111',
+    '2026-09-01T03:00:00+01','2026-09-01T04:00:00+01','online')$$,
+  'horario_nao_publicado', 'marcar às 3 da manhã, fora da agenda publicada');
+
+SELECT t.rpc_recusa($$SELECT public.marcar_consulta(
+    '11111111-1111-1111-1111-111111111111',
+    now() + interval '2 hours', now() + interval '3 hours', 'online')$$,
+  'sem_antecedencia', 'marcar daqui a duas horas');
+
+SELECT t.rpc_recusa($$SELECT public.marcar_consulta(
+    '11111111-1111-1111-1111-111111111111',
+    now() + interval '400 days', now() + interval '400 days 1 hour', 'online')$$,
+  'fora_da_janela', 'marcar daqui a mais de um ano');
+
+SELECT t.rpc_recusa($$SELECT public.marcar_consulta(
+    '11111111-1111-1111-1111-111111111111',
+    '2026-09-01T09:00:00+01','2026-09-01T09:20:00+01','online')$$,
+  'horario_nao_publicado', 'marcar 20 minutos num período de uma hora');
+
+-- E a escrita direta deixou de existir.
+SELECT t.recusa($$INSERT INTO public.agendamentos (contabilista_id, cliente_id, inicio, fim)
   VALUES ('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222',
-          '2026-09-01T09:00:00Z','2026-09-01T10:00:00Z')$$, 'cliente marca consulta');
+          '2026-09-02T09:00:00+01','2026-09-02T10:00:00+01')$$,
+  'marcar por escrita direta, contornando a RPC');
 
 -- A garantia estrutural: outra pessoa não ocupa o mesmo horário.
 SELECT t.entrar('33333333-3333-3333-3333-333333333333');
@@ -42,31 +78,36 @@ SELECT t.permite($$INSERT INTO public.contabilista_vinculos (contabilista_id, cl
   VALUES ('11111111-1111-1111-1111-111111111111','33333333-3333-3333-3333-333333333333')$$,
   'segundo cliente pede vínculo');
 SELECT t.entrar('11111111-1111-1111-1111-111111111111');
-SELECT t.permite($$UPDATE public.contabilista_vinculos SET estado='ativo'
-  WHERE cliente_id='33333333-3333-3333-3333-333333333333'$$, 'aceite');
+SELECT t.permite($$SELECT public.decidir_vinculo(
+    (SELECT id FROM public.contabilista_vinculos
+      WHERE cliente_id='33333333-3333-3333-3333-333333333333' LIMIT 1), 'aceitar')$$, 'aceite');
 SELECT t.entrar('33333333-3333-3333-3333-333333333333');
-SELECT t.recusa($$INSERT INTO public.agendamentos (contabilista_id, cliente_id, inicio, fim)
-  VALUES ('11111111-1111-1111-1111-111111111111','33333333-3333-3333-3333-333333333333',
-          '2026-09-01T09:30:00Z','2026-09-01T10:30:00Z')$$,
-  'segunda pessoa marca por cima do mesmo horário');
-SELECT t.permite($$INSERT INTO public.agendamentos (contabilista_id, cliente_id, inicio, fim)
-  VALUES ('11111111-1111-1111-1111-111111111111','33333333-3333-3333-3333-333333333333',
-          '2026-09-01T11:00:00Z','2026-09-01T12:00:00Z')$$, 'horário livre a seguir');
+SELECT t.rpc_recusa($$SELECT public.marcar_consulta(
+    '11111111-1111-1111-1111-111111111111',
+    '2026-09-01T09:00:00+01','2026-09-01T10:00:00+01','online')$$,
+  'horario_ocupado', 'segunda pessoa marca por cima do mesmo horário');
+SELECT t.rpc_ok($$SELECT public.marcar_consulta(
+    '11111111-1111-1111-1111-111111111111',
+    '2026-09-01T11:00:00+01','2026-09-01T12:00:00+01','online')$$,
+  'horário livre a seguir');
 
--- O cliente não marca a consulta como realizada — carimbava o cartão sozinho.
+-- O cliente não conclui a consulta — carimbava o cartão sozinho.
 SELECT t.entrar('22222222-2222-2222-2222-222222222222');
-SELECT t.recusa($$UPDATE public.agendamentos SET estado='realizada'
-  WHERE cliente_id='22222222-2222-2222-2222-222222222222'$$,
-  'cliente marca a consulta como realizada');
-SELECT t.permite($$UPDATE public.agendamentos SET estado='cancelado_cliente'
-  WHERE cliente_id='22222222-2222-2222-2222-222222222222'$$, 'cliente cancela a sua consulta');
+SELECT t.rpc_recusa($$SELECT public.concluir_consulta(
+    (SELECT id FROM public.agendamentos
+      WHERE cliente_id='22222222-2222-2222-2222-222222222222' LIMIT 1))$$,
+  'nao_concluivel', 'cliente conclui a própria consulta');
+SELECT t.rpc_ok($$SELECT public.cancelar_consulta(
+    (SELECT id FROM public.agendamentos
+      WHERE cliente_id='22222222-2222-2222-2222-222222222222' LIMIT 1))$$,
+  'cliente cancela a sua consulta');
 
 -- Sem vínculo ativo não se marca.
 SELECT t.entrar('55555555-5555-5555-5555-555555555555');
-SELECT t.recusa($$INSERT INTO public.agendamentos (contabilista_id, cliente_id, inicio, fim)
-  VALUES ('11111111-1111-1111-1111-111111111111','55555555-5555-5555-5555-555555555555',
-          '2026-09-02T09:00:00Z','2026-09-02T10:00:00Z')$$,
-  'marcar sem vínculo ativo');
+SELECT t.rpc_recusa($$SELECT public.marcar_consulta(
+    '11111111-1111-1111-1111-111111111111',
+    '2026-09-02T09:00:00+01','2026-09-02T10:00:00+01','online')$$,
+  'sem_vinculo_ativo', 'marcar sem vínculo ativo');
 
 \echo ''
 \echo '── 8. Partilhas: a fronteira de privacidade da migração 038 ────'

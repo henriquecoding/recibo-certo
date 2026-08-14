@@ -20,7 +20,6 @@ import {
   type Excecao, type RegraDisponibilidade, type Slot,
 } from "@/lib/contabilistas/agenda";
 import { podeAgendar, podePedirVinculo, vinculoAtivo } from "@/lib/contabilistas/vinculo";
-import { avisarOutroLado } from "@/lib/contabilistas/conversa";
 import { eurosDeCents, valorComDesconto } from "@/lib/contabilistas/fidelidade";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -101,7 +100,7 @@ export default function PerfilPublico({ slug }: { slug: string }) {
     if (!cc) return;
     if (!user) { abrirModal("criar"); return; }
     setOcupadoBotao(true);
-    const { erro: e, vinculoId } = await pedirVinculo({
+    const { erro: e } = await pedirVinculo({
       contabilistaId: cc.userId,
       clienteId: user.id,
       nomeCliente: nomeParaOContabilista,
@@ -115,7 +114,6 @@ export default function PerfilPublico({ slug }: { slug: string }) {
     });
     setEstadoVinculo("pendente");
     setAApresentar(false);
-    if (vinculoId) void avisarOutroLado("vinculo_pedido", vinculoId);
   }
 
   async function marcar({ slot, modalidade, assunto }: {
@@ -125,7 +123,6 @@ export default function PerfilPublico({ slug }: { slug: string }) {
     setOcupadoBotao(true);
     const { erro: e } = await marcarConsulta({
       contabilistaId: cc.userId,
-      clienteId: user.id,
       inicio: slot.inicio,
       fim: slot.fim,
       modalidade,

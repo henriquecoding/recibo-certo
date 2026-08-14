@@ -3,12 +3,13 @@
 // Agenda — consultas e semana-tipo.
 //
 // Marcar uma consulta como realizada é o que carimba o cartão, e por isso não
-// é uma escrita normal: passa por /api/contabilistas/consulta, que confirma a
-// identidade e chama `carimbar_consulta` com a chave de serviço.
+// é uma escrita normal: `concluir_consulta` conclui e carimba na mesma
+// transação, com a identidade de quem pede e as regras do lado da base de
+// dados. Se o carimbo falhar, a consulta não fica concluída.
 
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence } from "motion/react";
-import { usarFicha, cabecalhoAuth } from "@/components/contabilistas/usarFicha";
+import { usarFicha } from "@/components/contabilistas/usarFicha";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import GrelhaSemanal from "@/components/contabilistas/GrelhaSemanal";
 import VistaMes from "@/components/contabilistas/VistaMes";
@@ -17,6 +18,7 @@ import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import {
   listarAgendamentos, obterDisponibilidade, guardarDisponibilidade, meusClientes,
+  decidirConsulta,
 } from "@/lib/contabilistas/dados";
 import type { Agendamento, EstadoAgendamento, Vinculo } from "@/lib/contabilistas/tipos";
 import { tratamentoDoCliente } from "@/lib/contabilistas/tipos";
@@ -126,24 +128,9 @@ export default function AgendaPage() {
 
     setOcupado(a.id);
     try {
-      const res = await fetch("/api/contabilistas/consulta", {
-        method: "PATCH",
-        headers: await cabecalhoAuth(),
-        // `localOuLigacao` só vai quando há algo para gravar: enviar uma
-        // cadeia vazia apagaria a morada que já lá estava.
-        body: JSON.stringify({
-          agendamentoId: a.id,
-          estado,
-          ...(localOuLigacao?.trim() ? { localOuLigacao: localOuLigacao.trim() } : {}),
-        }),
-      });
-      const corpo = (await res.json()) as {
-        erro?: string;
-        fidelidade?: { completou?: boolean; carimbos?: number; meta?: number; percentagem?: number } | null;
-      };
-      if (!res.ok) { avisos.erro(corpo.erro ?? "Não foi possível atualizar."); return; }
+      const { erro, fidelidade: f } = await decidirConsulta(a.id, estado, localOuLigacao?.trim() || undefined);
+      if (erro) { avisos.erro(erro); return; }
 
-      const f = corpo.fidelidade;
       if (f?.completou) {
         avisos.sucesso("Cartão completo.", {
           detalhe: `Foi emitido um cupão de ${f.percentagem}% para este cliente.`,

@@ -34,9 +34,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v5
-
-      # O runner do GitHub já traz PostgreSQL instalado e parado. Usá-lo
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       # evita um serviço em contentor e o tempo de o esperar.
       - name: Arrancar o PostgreSQL
         run: |

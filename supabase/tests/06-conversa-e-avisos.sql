@@ -164,8 +164,15 @@ VALUES ('11111111-1111-1111-1111-111111111111','mensagem','Mensagem nova','/cont
 SET ROLE authenticated;
 
 SELECT t.entrar('33333333-3333-3333-3333-333333333333');
-SELECT t.conta($$SELECT count(*) FROM public.notificacoes$$, 0,
+-- Contar TUDO deixou de servir: desde a migração 047 as transições geram
+-- avisos, e o 3333 tem os seus por ter sido aceite como cliente. O que a
+-- invariante diz é outra coisa — que não vê os DE OUTRA PESSOA.
+SELECT t.conta($$SELECT count(*) FROM public.notificacoes
+  WHERE user_id <> '33333333-3333-3333-3333-333333333333'$$, 0,
   'ninguém vê as notificações de outra pessoa');
+SELECT t.conta($$SELECT count(*) FROM public.notificacoes
+  WHERE user_id = '11111111-1111-1111-1111-111111111111'$$, 0,
+  'nem as de um contabilista, sabendo-lhe o id');
 SELECT t.recusa($$INSERT INTO public.notificacoes (user_id, tipo, titulo)
   VALUES ('11111111-1111-1111-1111-111111111111','mensagem','Aviso forjado')$$,
   'inserir uma notificação na conta de outra pessoa');
@@ -174,7 +181,11 @@ SELECT t.recusa($$INSERT INTO public.notificacoes (user_id, tipo, titulo)
   'inserir uma notificação para si próprio');
 
 SELECT t.entrar('11111111-1111-1111-1111-111111111111');
-SELECT t.conta($$SELECT count(*) FROM public.notificacoes WHERE lida_em IS NULL$$, 1,
+-- Um número exato aqui passaria a mudar sempre que uma transição nova
+-- passasse a avisar. O que se prova é que o dono vê a sua, e que a que foi
+-- inserida acima está entre as que vê.
+SELECT t.conta($$SELECT count(*) FROM public.notificacoes
+  WHERE lida_em IS NULL AND titulo = 'Mensagem nova'$$, 1,
   'o dono vê a sua notificação por ler');
 SELECT t.permite($$UPDATE public.notificacoes SET lida_em=now()
   WHERE user_id='11111111-1111-1111-1111-111111111111'$$, 'o dono marca como lida');

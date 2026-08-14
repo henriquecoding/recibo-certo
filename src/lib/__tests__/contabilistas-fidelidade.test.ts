@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   DESCONTO_MIN_PCT,
@@ -151,6 +153,26 @@ describe("fidelidade: códigos", () => {
       const codigo = formatarCodigoCupao(new Uint8Array([i, i, i, i, i, i, i, i]));
       expect(codigo.slice(3)).not.toMatch(/[O0I1L]/);
     }
+  });
+
+  // Desde a migração 047 quem gera o código é a base de dados, dentro da
+  // mesma transação que carimba. As duas implementações têm de descrever o
+  // MESMO alfabeto: um código gerado lá e normalizado aqui tem de sobreviver
+  // à viagem, e isso deixa de ser verdade em silêncio se uma das duas mudar.
+  it("o alfabeto do servidor e o da base de dados são o mesmo", () => {
+    const sql = readFileSync(
+      join(process.cwd(), "supabase/migrations/047_rpcs_transacionais.sql"),
+      "utf8",
+    );
+    const noSql = sql.match(/v_alfabeto constant text := '([A-Z0-9]+)'/)?.[1];
+    expect(noSql, "047 deixou de gerar códigos").toBeTruthy();
+
+    // O alfabeto do lado do TypeScript, lido do que ele próprio produz.
+    const doTs = new Set<string>();
+    for (let i = 0; i < 256; i++) {
+      doTs.add(formatarCodigoCupao(new Uint8Array([i, 0, 0, 0, 0, 0, 0, 0])).charAt(3));
+    }
+    expect([...doTs].sort().join("")).toBe([...noSql!].sort().join(""));
   });
 
   it("aceita o código escrito à mão", () => {

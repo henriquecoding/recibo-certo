@@ -75,6 +75,51 @@ BEGIN
 END;
 $$;
 
+-- Ajudantes para as RPCs.
+--
+-- `SELECT rpc(...)` devolve SEMPRE uma linha — o jsonb — mesmo quando a
+-- operação foi recusada. Usar `t.permite` com uma RPC daria verde a tudo,
+-- incluindo às recusas. Estes olham para dentro da resposta.
+CREATE OR REPLACE FUNCTION t.rpc_ok(cmd text, rotulo text) RETURNS void
+LANGUAGE plpgsql AS $$
+DECLARE r jsonb;
+BEGIN
+  EXECUTE cmd INTO r;
+  IF r IS NULL OR NOT coalesce((r->>'ok')::boolean, false) THEN
+    RAISE EXCEPTION 'FALHA · % devia ter corrido: %', rotulo, coalesce(r::text, 'sem resposta');
+  END IF;
+  RAISE NOTICE '  ok  · %', rotulo;
+END;
+$$;
+
+/**
+ * Espera recusa, e verifica O MOTIVO.
+ *
+ * Sem comparar o motivo, uma recusa por «sem_vinculo_ativo» passaria por
+ * um teste que queria provar «sem_antecedencia» — e a garantia por
+ * verificar ficava por verificar, com o teste verde.
+ */
+CREATE OR REPLACE FUNCTION t.rpc_recusa(cmd text, motivo text, rotulo text) RETURNS void
+LANGUAGE plpgsql AS $$
+DECLARE r jsonb;
+BEGIN
+  BEGIN
+    EXECUTE cmd INTO r;
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      RAISE NOTICE '  ok  · recusado (sem privilégio): %', rotulo;
+      RETURN;
+  END;
+  IF coalesce((r->>'ok')::boolean, false) THEN
+    RAISE EXCEPTION 'FALHA DE SEGURANCA · % foi PERMITIDO: %', rotulo, r::text;
+  END IF;
+  IF motivo IS NOT NULL AND r->>'motivo' IS DISTINCT FROM motivo THEN
+    RAISE EXCEPTION 'FALHA · %: esperava o motivo «%», veio «%»', rotulo, motivo, r->>'motivo';
+  END IF;
+  RAISE NOTICE '  ok  · recusado (%): %', coalesce(r->>'motivo', '?'), rotulo;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION t.entrar(quem uuid) RETURNS void
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -113,3 +158,14 @@ VALUES ('66666666-6666-6666-6666-666666666666', 'carla-pendente', 'Carla Pendent
 
 GRANT USAGE ON SCHEMA t TO anon, authenticated, service_role;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA t TO anon, authenticated, service_role;
+
+
+-- Semana-tipo da Ana: dias úteis, 09–13 e 14–18, consultas de uma hora.
+-- Antes da migração 047 marcava-se a qualquer hora; agora o horário tem de
+-- estar publicado, e os testes precisam de o publicar.
+INSERT INTO public.contabilista_disponibilidade
+  (contabilista_id, dia_semana, hora_inicio, hora_fim, duracao_min)
+SELECT '11111111-1111-1111-1111-111111111111', d, h.i, h.f, 60
+FROM generate_series(1, 5) AS d,
+     (VALUES ('09:00'::time, '13:00'::time), ('14:00'::time, '18:00'::time)) AS h(i, f)
+ON CONFLICT DO NOTHING;

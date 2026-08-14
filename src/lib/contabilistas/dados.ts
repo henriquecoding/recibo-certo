@@ -238,21 +238,32 @@ export async function atualizarIdentidadeNoVinculo(
 }
 
 export async function terminarVinculo(id: string): Promise<{ erro?: string }> {
-  const { error } = await getSupabase()
-    .from("contabilista_vinculos")
-    .update({ estado: "terminado", terminado_em: new Date().toISOString() })
-    .eq("id", id);
-  return error ? { erro: error.message } : {};
+  return decidirVinculo(id, "terminar");
 }
 
+/**
+ * Transições do vínculo, por comando.
+ *
+ * A precondição de estado vive no `WHERE` da função (migração 047): dois
+ * cliques simultâneos não escrevem por cima um do outro — o segundo não
+ * encontra linha e é recusado.
+ */
 export async function decidirVinculo(
   id: string,
-  estado: Extract<EstadoVinculo, "ativo" | "pausado" | "terminado">
+  decisao: "aceitar" | "recusar" | "pausar" | "reativar" | "terminar"
 ): Promise<{ erro?: string }> {
-  const campos: Linha = { estado, atualizado_em: new Date().toISOString() };
-  if (estado === "terminado") campos.terminado_em = new Date().toISOString();
-  const { error } = await getSupabase().from("contabilista_vinculos").update(campos).eq("id", id);
-  return error ? { erro: error.message } : {};
+  const { data, error } = await getSupabase().rpc("decidir_vinculo", {
+    p_vinculo: id,
+    p_decisao: decisao,
+  });
+  if (error) return { erro: error.message };
+  const r = (data ?? {}) as { ok?: boolean; motivo?: string };
+  if (r.ok) return {};
+  return {
+    erro: r.motivo === "transicao_nao_permitida"
+      ? "Este acompanhamento já não estava nesse estado."
+      : "Não foi possível concluir.",
+  };
 }
 
 /** Os clientes de um contabilista, com o email de contacto de cada vínculo. */
@@ -437,39 +448,110 @@ export async function ocupadosDe(
   }));
 }
 
+/**
+ * Marca uma consulta.
+ *
+ * Passa pela RPC `marcar_consulta` e não por um INSERT: desde a migração
+ * 047 a escrita direta em `agendamentos` está revogada. A política sabia
+ * QUEM escrevia; não sabia se o horário estava publicado, se havia
+ * antecedência, nem se a duração era a do período. A função sabe.
+ */
 export async function marcarConsulta(p: {
   contabilistaId: string;
-  clienteId: string;
   inicio: string;
   fim: string;
   modalidade: Modalidade;
   assunto?: string;
-  cupaoId?: string | null;
-}): Promise<{ erro?: string }> {
-  const { error } = await getSupabase().from("agendamentos").insert({
-    contabilista_id: p.contabilistaId,
-    cliente_id: p.clienteId,
-    inicio: p.inicio,
-    fim: p.fim,
-    modalidade: p.modalidade,
-    assunto: p.assunto?.trim().slice(0, 500) || null,
-    cupao_id: p.cupaoId ?? null,
+  tipoConsultaId?: string | null;
+}): Promise<{ erro?: string; id?: string }> {
+  const { data, error } = await getSupabase().rpc("marcar_consulta", {
+    p_contabilista: p.contabilistaId,
+    p_inicio: p.inicio,
+    p_fim: p.fim,
+    p_modalidade: p.modalidade,
+    p_assunto: p.assunto?.trim().slice(0, 500) || null,
+    p_tipo: p.tipoConsultaId ?? null,
   });
-  if (!error) return {};
-  // 23P01 é a violação da restrição de exclusão: alguém marcou primeiro.
-  if (error.code === "23P01") {
-    return { erro: "Esse horário acabou de ser ocupado. Escolhe outro." };
-  }
-  return { erro: error.message };
+
+  if (error) return { erro: error.message };
+  const r = (data ?? {}) as { ok?: boolean; motivo?: string; id?: string };
+  if (r.ok) return { id: r.id };
+  return { erro: MOTIVO_MARCACAO[r.motivo ?? ""] ?? "Não foi possível marcar." };
 }
 
+/** O que cada motivo da RPC quer dizer para quem está a marcar. */
+const MOTIVO_MARCACAO: Record<string, string> = {
+  sem_vinculo_ativo: "Precisas de ser cliente deste contabilista.",
+  horario_ocupado: "Esse horário acabou de ser ocupado. Escolhe outro.",
+  horario_nao_publicado: "Esse horário não está entre os que o contabilista publicou.",
+  sem_antecedencia: "É preciso marcar com pelo menos 12 horas de antecedência.",
+  fora_da_janela: "Só se pode marcar até 60 dias para a frente.",
+  modalidade_invalida: "Escolhe presencial ou online.",
+  tipo_invalido: "Esse tipo de consulta já não está disponível.",
+  nao_autenticado: "Entra na tua conta para marcares.",
+};
+
 export async function cancelarConsulta(id: string): Promise<{ erro?: string }> {
-  const { error } = await getSupabase()
-    .from("agendamentos")
-    .update({ estado: "cancelado_cliente", atualizado_em: new Date().toISOString() })
-    .eq("id", id);
-  return error ? { erro: error.message } : {};
+  const { data, error } = await getSupabase().rpc("cancelar_consulta", { p_agendamento: id });
+  if (error) return { erro: error.message };
+  const r = (data ?? {}) as { ok?: boolean; motivo?: string };
+  if (r.ok) return {};
+  return {
+    erro: r.motivo === "ja_fechada"
+      ? "Esta consulta já não estava por realizar."
+      : "Não foi possível cancelar.",
+  };
 }
+
+/** O que o cartão de fidelidade ficou a valer depois de uma consulta. */
+export interface FidelidadeAposConsulta {
+  ok?: boolean;
+  motivo?: string;
+  completou?: boolean;
+  carimbos?: number;
+  meta?: number;
+  percentagem?: number;
+}
+
+/**
+ * O contabilista decide o que fazer a uma consulta sua.
+ *
+ * Cada decisão é uma RPC diferente porque cada uma tem regras diferentes:
+ * confirmar exige que ainda esteja por confirmar, concluir exige que já
+ * tenha começado, e concluir com presença carimba o cartão na MESMA
+ * transação. Isto era uma rota que fazia as três coisas com a chave de
+ * serviço; agora é a base de dados a decidir, com a identidade de quem pede.
+ */
+export async function decidirConsulta(
+  id: string,
+  estado: EstadoAgendamento,
+  localOuLigacao?: string
+): Promise<{ erro?: string; fidelidade?: FidelidadeAposConsulta | null }> {
+  const sb = getSupabase();
+
+  const chamada =
+    estado === "confirmado"
+      ? sb.rpc("confirmar_consulta", { p_agendamento: id, p_local: localOuLigacao ?? null })
+      : estado === "realizada"
+        ? sb.rpc("concluir_consulta", { p_agendamento: id, p_compareceu: true })
+        : estado === "nao_compareceu"
+          ? sb.rpc("concluir_consulta", { p_agendamento: id, p_compareceu: false })
+          : sb.rpc("cancelar_consulta", { p_agendamento: id });
+
+  const { data, error } = await chamada;
+  if (error) return { erro: error.message };
+
+  const r = (data ?? {}) as { ok?: boolean; motivo?: string; fidelidade?: FidelidadeAposConsulta | null };
+  if (r.ok) return { fidelidade: r.fidelidade ?? null };
+  return { erro: MOTIVO_CONSULTA[r.motivo ?? ""] ?? "Não foi possível atualizar a consulta." };
+}
+
+const MOTIVO_CONSULTA: Record<string, string> = {
+  nao_estava_por_confirmar: "Esta consulta já não estava por confirmar.",
+  nao_concluivel: "Só se conclui uma consulta que já começou e ainda está aberta.",
+  ja_fechada: "Esta consulta já não estava por realizar.",
+  sem_autorizacao: "Esta consulta não é tua.",
+};
 
 export async function listarAgendamentos(filtro: {
   contabilistaId?: string;

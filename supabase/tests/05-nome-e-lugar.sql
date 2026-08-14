@@ -29,9 +29,14 @@ SELECT t.conta($$SELECT count(*) FROM public.contabilista_vinculos
   'o vínculo continua pendente depois de corrigir o nome');
 
 -- O que a política deixou de proibir, o gatilho continua a proibir.
+SELECT t.rpc_recusa($$SELECT public.decidir_vinculo(
+    (SELECT id FROM public.contabilista_vinculos
+      WHERE cliente_id='55555555-5555-5555-5555-555555555555' LIMIT 1), 'aceitar')$$,
+  'transicao_nao_permitida', 'cliente aceita-se a si próprio');
+-- E por escrita direta o grant por coluna nem deixa lá chegar.
 SELECT t.recusa($$UPDATE public.contabilista_vinculos SET estado='ativo'
   WHERE cliente_id='55555555-5555-5555-5555-555555555555'$$,
-  'cliente aceita-se a si próprio pela porta que a política abriu');
+  'cliente muda o estado por escrita direta');
 SELECT t.recusa($$UPDATE public.contabilista_vinculos SET origem='contabilista'
   WHERE cliente_id='55555555-5555-5555-5555-555555555555'$$,
   'cliente reescreve quem iniciou o vínculo');
@@ -56,9 +61,9 @@ SELECT t.conta($$SELECT count(*) FROM public.contabilista_vinculos
 \echo ''
 \echo '── 16. Terminar leva o nome e o contacto com ele ───────────────'
 SELECT t.entrar('55555555-5555-5555-5555-555555555555');
-SELECT t.permite($$UPDATE public.contabilista_vinculos
-  SET estado='terminado', terminado_em=now()
-  WHERE cliente_id='55555555-5555-5555-5555-555555555555'$$, 'cliente termina');
+SELECT t.rpc_ok($$SELECT public.decidir_vinculo(
+    (SELECT id FROM public.contabilista_vinculos WHERE cliente_id='55555555-5555-5555-5555-555555555555' LIMIT 1), 'terminar')$$,
+  'cliente termina');
 
 RESET ROLE;
 SELECT t.conta($$SELECT count(*) FROM public.contabilista_vinculos
@@ -78,9 +83,8 @@ SELECT t.entrar('33333333-3333-3333-3333-333333333333');
 SELECT t.permite($$UPDATE public.contabilista_vinculos SET nome_cliente='Carla T.'
   WHERE cliente_id='33333333-3333-3333-3333-333333333333'$$, 'cliente 3333 dá o nome');
 SELECT t.entrar('11111111-1111-1111-1111-111111111111');
-SELECT t.permite($$UPDATE public.contabilista_vinculos SET estado='terminado', terminado_em=now()
-  WHERE cliente_id='33333333-3333-3333-3333-333333333333'
-    AND contabilista_id='11111111-1111-1111-1111-111111111111'$$,
+SELECT t.rpc_ok($$SELECT public.decidir_vinculo(
+    (SELECT id FROM public.contabilista_vinculos WHERE cliente_id='33333333-3333-3333-3333-333333333333' AND contabilista_id='11111111-1111-1111-1111-111111111111' LIMIT 1), 'terminar')$$,
   'contabilista termina o acompanhamento');
 RESET ROLE;
 SELECT t.conta($$SELECT count(*) FROM public.contabilista_vinculos

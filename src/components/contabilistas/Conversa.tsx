@@ -24,7 +24,7 @@ import { EASE } from "@/lib/motion";
 import { useAvisos } from "@/components/ui/Avisos";
 import {
   ANEXOS_MAX, ANEXO_MAX_BYTES, MENSAGEM_MAX, TIPOS_ANEXO_ACEITES,
-  avisarOutroLado, enviarMensagem, escutarMensagens, listarMensagens, marcarLidas,
+  enviarMensagem, escutarMensagens, listarMensagens, marcarLidas,
   tamanhoLegivel, urlDoAnexo, type Mensagem,
 } from "@/lib/contabilistas/conversa";
 import type { EstadoVinculo } from "@/lib/contabilistas/tipos";
@@ -148,7 +148,6 @@ export default function Conversa({
     if (r.recusados?.length) {
       avisos.erro(`Enviado, mas ${r.recusados.length} ficheiro(s) ficaram de fora.`, );
     }
-    void avisarOutroLado("mensagem", vinculoId);
     // A mensagem própria não vem pelo Realtime a tempo; relê-se.
     listarMensagens(vinculoId).then(setMensagens).catch(() => {});
   }

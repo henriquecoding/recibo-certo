@@ -11,11 +11,11 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { usarFicha, cabecalhoAuth } from "@/components/contabilistas/usarFicha";
+import { usarFicha } from "@/components/contabilistas/usarFicha";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import {
-  listarAgendamentos, listarPartilhas, meusClientes,
+  listarAgendamentos, listarPartilhas, meusClientes, decidirConsulta,
 } from "@/lib/contabilistas/dados";
 import type { Agendamento, Partilha, Vinculo } from "@/lib/contabilistas/tipos";
 import { horaLocal, rotularDia, diaLocal, tempoAte } from "@/lib/contabilistas/agenda";
@@ -64,13 +64,8 @@ export default function HojePage() {
     if (!ficha) return;
     setOcupado(a.id);
     try {
-      const res = await fetch("/api/contabilistas/consulta", {
-        method: "PATCH",
-        headers: await cabecalhoAuth(),
-        body: JSON.stringify({ agendamentoId: a.id, estado: "confirmado" }),
-      });
-      const corpo = (await res.json()) as { erro?: string };
-      if (!res.ok) { avisos.erro(corpo.erro ?? "Não foi possível confirmar."); return; }
+      const { erro } = await decidirConsulta(a.id, "confirmado");
+      if (erro) { avisos.erro(erro); return; }
       avisos.sucesso("Consulta confirmada.", { detalhe: "O cliente vê a confirmação na área dele." });
       await carregar(ficha.userId);
     } catch { avisos.erro("Falha de rede. Tenta outra vez."); }

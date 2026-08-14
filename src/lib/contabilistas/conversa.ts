@@ -259,23 +259,14 @@ export function tamanhoLegivel(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
 }
 
-/**
- * Toca o sino do outro lado.
- *
- * Nunca lança e nunca bloqueia: a escrita que o motivou já aconteceu, e um
- * aviso por dar não pode transformar uma operação bem-sucedida numa falha.
- */
-export async function avisarOutroLado(tipo: string, vinculoId: string): Promise<void> {
-  try {
-    const { data } = await getSupabase().auth.getSession();
-    const token = data.session?.access_token;
-    if (!token) return;
-    await fetch("/api/contabilistas/avisar", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ tipo, vinculoId }),
-    });
-  } catch {
-    /* sem aviso é melhor do que com um erro por cima de uma ação que correu bem */
-  }
-}
+// Não há aqui nenhuma função para «avisar o outro lado», e é de propósito.
+//
+// Havia: o browser chamava `/api/contabilistas/avisar` a seguir a escrever.
+// Isso tinha dois defeitos ao mesmo tempo — fechar o separador logo a seguir
+// e o aviso não chegar, ou saber um id de vínculo e o aviso chegar sem que
+// nada tivesse acontecido.
+//
+// Desde a migração 047 o aviso nasce da mesma transação que escreve o facto:
+// as RPCs avisam, e os INSERT que não são transições (pedido de vínculo,
+// mensagem, simulação) têm gatilho. Não há maneira de pedir um aviso sem
+// escrever a linha, nem de escrever a linha sem o aviso.
