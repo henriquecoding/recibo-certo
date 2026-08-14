@@ -7,6 +7,8 @@ import { PerfilProvider } from "@/lib/perfil";
 import { SubscricaoProvider } from "@/lib/stripe/subscription";
 import DeferredOverlays from "@/components/ui/DeferredOverlays";
 import { CoordenadorOverlays } from "@/components/overlays/CoordenadorOverlays";
+import { AvisosProvider } from "@/components/ui/Avisos";
+import { ConfirmacaoProvider } from "@/components/ui/Confirmar";
 import ChromeMobile from "@/components/ChromeMobile";
 import BotaoTopo from "@/components/ui/BotaoTopo";
 import FeedbackModal from "@/components/feedback/FeedbackModal";
@@ -163,14 +165,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                       consegue garantir de um sítio que os veja a todos.
                       Ver `components/overlays/CoordenadorOverlays.tsx`. */}
                   <CoordenadorOverlays>
-                    {children}
-                    <ChromeMobile />
-                    {/* Voltar ao topo — global em todo o site público;
-                        esconde-se sozinho no /dashboard e no /admin. */}
-                    <BotaoTopo />
-                    <FeedbackModal />
-                    <Medicao />
-                    <DeferredOverlays />
+                    {/* A camada de feedback: os avisos respondem a cada
+                        ação, as confirmações perguntam antes do que não se
+                        desfaz. Vivem dentro do coordenador porque a
+                        confirmação é `aria-modal` e tem de disputar a vaga
+                        com os outros — ver `ui/Confirmar.tsx`. */}
+                    <AvisosProvider>
+                      <ConfirmacaoProvider>
+                        {children}
+                        <ChromeMobile />
+                        {/* Voltar ao topo — global em todo o site público;
+                            esconde-se sozinho no /dashboard e no /admin. */}
+                        <BotaoTopo />
+                        <FeedbackModal />
+                        <Medicao />
+                        <DeferredOverlays />
+                      </ConfirmacaoProvider>
+                    </AvisosProvider>
                   </CoordenadorOverlays>
                 </MotionProvider>
               </PerfilProvider>

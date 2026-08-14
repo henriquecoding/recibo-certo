@@ -1,0 +1,37 @@
+name: Codex source snapshot
+
+on:
+  push:
+    branches:
+      - agent/pr102-hardening-workspace
+  pull_request:
+    branches:
+      - claude/continue-interrupted-pr-73s7hi
+
+permissions:
+  contents: read
+
+concurrency:
+  group: snapshot-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact branch state
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Package repository source
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: recibo-certo-pr102-source
+          path: |
+            .
+            !.git/**
+            !node_modules/**
+            !.next/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1

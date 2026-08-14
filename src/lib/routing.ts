@@ -11,13 +11,16 @@
 //      pergunta é informativa, nenhuma rota comercial abre. Monetizar uma
 //      dúvida mal resolvida é exatamente a «ansiedade» que o §12.1 proíbe
 //      monetizar.
-//   2. CONTABILISTA vem antes da FIZ. Um caso que exige julgamento
+//   2. O CONTABILISTA DA PRÓPRIA PESSOA, quando existe vínculo ativo. Não é
+//      uma lead: é alguém que ela escolheu, e a quem pode enviar o resultado
+//      sem pagar nada.
+//   3. CONTABILISTA vem antes da FIZ. Um caso que exige julgamento
 //      profissional — Lda, contabilidade organizada, multi-jurisdição,
 //      herança — não se resolve com execução de faturação, e mandá-lo para
 //      a FIZ seria empurrar alguém para a ferramenta errada porque a
 //      ferramenta errada é a que já está integrada.
-//   3. FIZ para execução dentro do escopo.
-//   4. PLUS para quem quer memória e planeamento.
+//   4. FIZ para execução dentro do escopo.
+//   5. PLUS para quem quer memória e planeamento.
 //
 //  Cada decisão devolve um `motivo` legível. É o mesmo código que o §8.1
 //  manda enviar em `fiz_click.reason`, e o mesmo que o §13.2 exige que
@@ -30,6 +33,7 @@ import type { EstadoConfianca, Rota } from "@/lib/analytics/eventos";
 export type MotivoRota =
   | "confianca_insuficiente"
   | "pergunta_informativa"
+  | "contabilista_vinculado"
   | "caso_exige_profissional"
   | "execucao_no_escopo"
   | "utilizador_recorrente"
@@ -52,6 +56,13 @@ export interface SinaisDoUtilizador {
   decisoesAnteriores?: number;
   /** Já é subscritor. */
   ehPlus?: boolean;
+  /**
+   * A pessoa já tem um contabilista ligado na plataforma, com vínculo ativo.
+   *
+   * Não é o mesmo que «o caso exige um profissional»: aqui há alguém que ela
+   * própria escolheu, e para quem pode enviar o resultado sem custo nenhum.
+   */
+  temContabilistaVinculado?: boolean;
 }
 
 export interface Encaminhamento {
@@ -118,7 +129,21 @@ export function escolherRota(s: SinaisDoUtilizador): Encaminhamento {
     return monta("sem_parceiro", "pergunta_informativa");
   }
 
-  // 2. Julgamento profissional. §13.2: «Apenas casos fora da rota FIZ ou
+  // 2. O contabilista da própria pessoa ganha à FIZ.
+  //
+  //    Entra DEPOIS das duas guardas de confiança, de propósito: ter
+  //    contabilista não transforma um resultado fora de escopo em conselho
+  //    bom, e mandar-lhe um cálculo que sabemos mau seria pior do que não
+  //    mandar nada.
+  //
+  //    Entra ANTES da FIZ porque não é uma lead vendida — é alguém que a
+  //    pessoa já escolheu, e enviar-lhe o resultado é gratuito (ver
+  //    `PARTILHA_NUNCA_EXIGE_PLUS` em `contabilistas/vinculo.ts`).
+  if (s.temContabilistaVinculado === true) {
+    return monta("contabilista", "contabilista_vinculado");
+  }
+
+  // 3. Julgamento profissional. §13.2: «Apenas casos fora da rota FIZ ou
   //    com necessidade profissional clara.»
   const exigeProfissional =
     s.enquadramento === "sociedade" ||
@@ -130,13 +155,13 @@ export function escolherRota(s: SinaisDoUtilizador): Encaminhamento {
     return monta("contabilista", "caso_exige_profissional");
   }
 
-  // 3. Execução dentro do escopo da FIZ.
+  // 4. Execução dentro do escopo da FIZ.
   const executaNaFiz = s.enquadramento === "independente" || s.enquadramento === "eni";
   if (executaNaFiz) {
     return monta("fiz", "execucao_no_escopo");
   }
 
-  // 4. Memória e planeamento. Quem já paga não precisa que lho vendam
+  // 5. Memória e planeamento. Quem já paga não precisa que lho vendam
   //    outra vez — e continuar a mostrar-lhe o Plus é ruído, não oferta.
   if (!s.ehPlus && (s.decisoesAnteriores ?? 0) >= 2) {
     return monta("plus", "utilizador_recorrente");

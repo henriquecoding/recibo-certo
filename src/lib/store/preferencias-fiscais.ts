@@ -30,6 +30,8 @@ import {
   gravarChave,
   type Resultado,
 } from "@/lib/store/persistencia";
+import { chaveAtiva } from "./cofre";
+import { destinoDosDados, aindaSemDestino } from "./persistencia";
 
 /** Versão do schema. Sobe quando a FORMA muda e é preciso migrar. */
 export const PREFS_SCHEMA_VERSAO = 2;
@@ -123,7 +125,10 @@ export const DEFAULTS: PreferenciasFiscais = {
   ifici: false,
 };
 
-const STORAGE_KEY = "recibocerto:preferencias-fiscais:v1";
+// A chave já não é uma constante: depende de quem está a usar o browser.
+// Enquanto era global, quem entrasse a seguir noutra conta via os dados de
+// quem entrou antes — ver `store/cofre.ts`.
+const STORAGE_KEY = () => chaveAtiva("perfil-fiscal");
 
 // ─── Validação e migração de forma ─────────────────────────────────────
 
@@ -184,7 +189,7 @@ export function dentroDoPrimeiroAno(dataInicio: string, ref: Date = new Date()):
 }
 
 function ler(): PreferenciasFiscais {
-  const raw = lerChave(STORAGE_KEY);
+  const raw = lerChave(STORAGE_KEY());
   if (!raw) return { ...DEFAULTS };
   try {
     return normalizar(JSON.parse(raw));
@@ -194,7 +199,7 @@ function ler(): PreferenciasFiscais {
 }
 
 function gravar(prefs: PreferenciasFiscais): Resultado<void> {
-  return gravarChave(STORAGE_KEY, JSON.stringify(prefs));
+  return gravarChave(STORAGE_KEY(), JSON.stringify(prefs));
 }
 
 // ─── Hook ──────────────────────────────────────────────────────────────
@@ -211,9 +216,13 @@ function vazio(p: PreferenciasFiscais): boolean {
 }
 
 export function usePreferenciasFiscais() {
-  const { user } = useAuth();
-  const { plano } = useSubscricao();
-  const naNuvem = supabaseConfigurado() && !!user && plano === "plus";
+  const { user, carregado: authPronto } = useAuth();
+  const { plano, carregado: planoPronto } = useSubscricao();
+  const destino = destinoDosDados({
+    disponivel: supabaseConfigurado(), userId: user?.id ?? null,
+    authPronto, plano, planoPronto,
+  });
+  const naNuvem = destino === "nuvem";
   const [prefs, setPrefs] = useState<PreferenciasFiscais>(DEFAULTS);
   const [carregado, setCarregado] = useState(false);
   /**
@@ -295,6 +304,11 @@ export function usePreferenciasFiscais() {
    */
   const atualizar = useCallback(
     async (patch: Partial<PreferenciasFiscais>): Promise<Resultado<PreferenciasFiscais>> => {
+      // Enquanto não se sabe o destino, não se escreve: escrever no
+      // aparelho e a subscrição chegar a seguir punha o registo num
+      // sítio de onde a aplicação nunca mais o lê.
+      if (destino === "por-decidir") return falha(aindaSemDestino());
+
       const proximas = normalizar({ ...prefs, ...patch });
       const local = gravar(proximas);
       if (!local.ok) return local;
@@ -313,7 +327,7 @@ export function usePreferenciasFiscais() {
       }
       return ok(proximas);
     },
-    [prefs, naNuvem, userId],
+    [prefs, destino, naNuvem, userId],
   );
 
   return { prefs, atualizar, carregado, naNuvem };

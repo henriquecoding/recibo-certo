@@ -690,12 +690,28 @@ export function Fire({ size = 18, className }: IconProps) {
   );
 }
 
-export function PaperClip({ size = 20, className }: IconProps) {
-  const h = Math.round(size * 2.6);
+/**
+ * Clipe de papel — o ícone de «anexo».
+ *
+ * A versão anterior era o único ícone deste ficheiro fora da grelha: um
+ * `viewBox` de 20×52 desenhado com traço 2.5 e altura forçada a 2,6 vezes
+ * a largura. Ao lado de qualquer outro ícone parecia um agrafo esticado,
+ * e o `size` mentia — pedir 15 dava 39 pixéis de altura.
+ *
+ * Redesenhado na grelha de 24 com o traço de 1.6 dos restantes, e na
+ * diagonal, que é a forma por que um clipe se reconhece em miniatura:
+ * verificado a 12, 15 e 19 px, que são os tamanhos a que aparece.
+ */
+export function PaperClip({ size = 18, className }: IconProps) {
   return (
-    <svg width={size} height={h} viewBox="0 0 20 52" fill="none" className={className} aria-hidden focusable={false}>
-      <path d="M15 11C15 5 5 5 5 11L5 38C5 47 15 47 15 38L15 21" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M10 11L10 38C10 43 15 43 15 38" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <svg {...svgProps(size, className)}>
+      <path
+        d="M19.5 10.4 11.6 18.3a4.4 4.4 0 0 1-6.2-6.2l8.2-8.2a3.1 3.1 0 0 1 4.4 4.4l-8.2 8.2a1.7 1.7 0 0 1-2.4-2.4l7.3-7.3"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

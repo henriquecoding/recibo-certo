@@ -1,0 +1,64 @@
+name: Políticas RLS
+
+# ═══════════════════════════════════════════════════════════════════════
+#  As garantias de segurança da plataforma de contabilistas correm aqui.
+#  ---------------------------------------------------------------------
+#  Bloqueador P0.8 da auditoria da PR #102: existiam mais de cem asserções
+#  de segurança — ownership, isolamento entre contabilistas, suspensão,
+#  imutabilidade de snapshots — e nenhuma delas protegia o merge. Um teste
+#  que só corre quando alguém se lembra não é uma garantia; é um hábito.
+#
+#  Sobe um PostgreSQL efémero, aplica as migrações da plataforma DUAS vezes
+#  (para provar a idempotência) e exerce as políticas com papéis reais:
+#  `anon`, `authenticated` e a chave de serviço, em nove identidades de
+#  domínio diferentes.
+# ═══════════════════════════════════════════════════════════════════════
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: {}
+
+concurrency:
+  group: rls-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  rls:
+    name: Garantias de RLS contra PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      # evita um serviço em contentor e o tempo de o esperar.
+      - name: Arrancar o PostgreSQL
+        run: |
+          sudo systemctl start postgresql.service
+          pg_isready --timeout=30
+          sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
+
+      - name: Correr as garantias
+        env:
+          PGPASSWORD: postgres
+        run: bash scripts/testar-rls.sh
+
+      # Se a suíte passar mas não tiver corrido nada, o verde é falso. O
+      # runner escreve o total; aqui confirma-se que não é zero.
+      - name: Confirmar que o ficheiro junto está em dia
+        run: node scripts/juntar-migracoes.mjs --check
+
+      - name: Confirmar que houve asserções
+        env:
+          PGPASSWORD: postgres
+        run: |
+          n=$(bash scripts/testar-rls.sh | grep -c "ok  ·" || true)
+          echo "Asserções verificadas: $n"
+          if [ "$n" -lt 100 ]; then
+            echo "::error::Só $n asserções correram — esperavam-se pelo menos 100." >&2
+            exit 1
+          fi

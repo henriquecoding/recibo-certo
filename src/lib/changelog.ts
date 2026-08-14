@@ -19,6 +19,39 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.48.0",
+    data: "2026-08-14",
+    titulo: "O que é teu sai quando pedires, e sai todo",
+    itens: [
+      "A zona de perigo mudou por inteiro. Em vez de meia dúzia de botões, tens agora a lista do que está mesmo guardado — com o número de registos à frente de cada linha — e escolhes exatamente o que sai e o que fica. Podes apagar as conversas com o teu contabilista e manter os recibos, ou o contrário.",
+      "Ao apagares a conta, apagamos tudo. Antes ficavam para trás as conversas, as consultas, as simulações enviadas, o cartão de fidelidade, as notificações e a candidatura — e quem tivesse escrito uma mensagem ou marcado uma consulta nem sequer conseguia apagar a conta. Pedimos desculpa por isso; está corrigido, e agora é uma operação só: ou sai tudo, ou não sai nada.",
+      "Também cancelamos a tua subscrição quando apagas a conta. Até aqui pedíamos-te que a cancelasses primeiro, o que era pôr do teu lado o trabalho de não continuares a ser cobrado.",
+      "Fica um registo do que foi apagado, que só tu podes ler e que ninguém pode reescrever — para poderes sempre saber o que saiu.",
+      "Se partilhas o computador ou o telemóvel com alguém, os dados guardados neste aparelho passam a ficar separados por pessoa. Antes, sair da conta e outra pessoa entrar mostrava-lhe os teus recibos. Não era preciso ninguém fazer nada de errado para acontecer, e lamentamos que fosse possível.",
+      "Dizemos-te também o que não conseguimos apagar a pedido — os registos de faturação que a lei nos obriga a guardar — e porquê, em vez de ficar por dizer.",
+      "Os ficheiros que envias ao teu contabilista passam a ser verificados antes de serem aceites: confirmamos que são mesmo do formato que dizem ser, e o que não for fica de fora. Podes também apagar um anexo que tenhas enviado, o que antes não era possível.",
+      "Marcar, confirmar, cancelar e concluir consultas passou a ser à prova de cliques repetidos e de duas pessoas a fazerem a mesma coisa ao mesmo tempo. E os avisos que recebes só aparecem quando o que os motivou aconteceu mesmo.",
+    ],
+  },
+  {
+    version: "2.47.0",
+    data: "2026-08-12",
+    titulo: "O teu contabilista, dentro do ReciboCerto",
+    itens: [
+      "Há agora um diretório de contabilistas certificados. Podes ligar-te a um, enviar-lhe as simulações que fizeste aqui e marcar consulta — tudo gratuito, sem precisares do Plus. Isto não é um plano nem um extra: é o que a app passa a fazer.",
+      "Ligares-te a alguém não lhe dá acesso aos teus dados. Continua a valer o que a página de privacidade diz: só tu acedes ao que é teu. O que o contabilista vê é aquilo que lhe enviares, um envio de cada vez — e antes de confirmares vês, campo a campo, exatamente o que segue. Podes revogar o acesso quando quiseres, e terminar o acompanhamento fecha-lhe a porta a tudo o que já tinha recebido.",
+      "A cada consulta realizada, carimbas o cartão de fidelidade do teu contabilista. Ao completá-lo, ganhas um cupão de desconto na consulta seguinte — a percentagem é definida por ele, entre 10% e 50%. Se ele mudar a percentagem a meio, o teu cartão mantém a que tinha quando começou: a promessa que te foi feita não muda a meio do caminho.",
+      "O desconto é acordado e aplicado pelo contabilista. O ReciboCerto regista o cartão e mostra-te o código; não cobra a consulta nem processa pagamentos.",
+      "Se és contabilista, podes pedir acesso a um painel de gestão com agenda, clientes, partilhas recebidas e o cartão de fidelidade configurável. Candidatas-te com uma justificação e, se quiseres, com o número de inscrição na Ordem ou documentos comprovativos — que só tu e a administração conseguem ler. Também podes não anexar nada e tratar disso por email. Cada candidatura é analisada por uma pessoa antes de ser aprovada; uma recusa explica-te porquê, e podes corrigir e voltar a candidatar-te.",
+      "Dois horários iguais deixaram de ser possíveis: se duas pessoas tentarem marcar o mesmo, a segunda é avisada na hora em vez de ficar com uma marcação que não existe.",
+      "Marcar consulta são dois passos, não uma lista infinita: escolhes o dia numa tira com as horas livres de cada um, depois a hora, e só então vês o que vais pedir — dia, hora, duração, preço e modalidade — antes de confirmares. As horas são as de Lisboa, e está escrito no ecrã.",
+      "Nada que não se desfaz acontece sem uma pergunta. Terminar um acompanhamento, revogar um envio, cancelar uma consulta, recusar um cliente ou dar uma consulta por realizada passam todos por um aviso que diz, antes, o que vai acontecer — e o botão que começa selecionado é sempre o de cancelar.",
+      "Cada ação passou a ter resposta visível, onde os olhos já estão: em baixo, por cima de tudo, sem tapar a navegação. Se estiveres a ler um aviso, ele espera por ti.",
+      "A nota que escreves ao enviar uma simulação passa a ser a primeira coisa que o contabilista lê. Antes era guardada e nunca mostrada.",
+      "Do lado do contabilista, «validar» um cupão gastava-o no mesmo gesto sem o dizer. Agora o botão diz «validar e dar por usado», e pergunta antes.",
+    ],
+  },
+  {
     version: "2.46.0",
     data: "2026-08-13",
     titulo: "Um plano, duas formas de pagar — agora de ponta a ponta",

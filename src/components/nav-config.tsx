@@ -110,6 +110,15 @@ export const NAV_PRINCIPAL: NavPrincipalItem[] = [
   { label: "Guias", href: "/guias", prefixos: ["/guias"] },
   { label: "Quiz", href: "/quiz-fiscal", prefixos: ["/quiz-fiscal"] },
   { label: "Planos", href: "/precos", prefixos: ["/precos"] },
+  // O diretório de contabilistas entra na barra, e não num menu, porque é a
+  // única coisa aqui que acaba com uma PESSOA do outro lado — ligar-se,
+  // marcar consulta, enviar uma simulação. Nenhuma dessas exige plano pago,
+  // e esconder isso atrás de «Planos» dava a entender o contrário.
+  //
+  // `/contabilistas` e não `/contabilista`: o painel de gestão vive no
+  // singular e não acende este item (o prefixo casa na rota exacta ou no
+  // separador — ver `navAtivo`).
+  { label: "Contabilistas", href: "/contabilistas", prefixos: ["/contabilistas"] },
 ];
 
 /**

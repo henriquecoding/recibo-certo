@@ -56,6 +56,20 @@ export const REVISOES_MANUAIS: Record<string, string> = {
   "/metodologia": DATA_LAST_REVIEW,
   "/estado-dos-dados": DATA_LAST_REVIEW,
   "/changelog-fiscal": DATA_LAST_REVIEW,
+  // ⚠️ A plataforma de contabilistas (`/contabilistas` e
+  // `/contabilistas/candidatura`) ainda NÃO tem data aqui, e é deliberado.
+  //
+  // A data material destas páginas é o dia em que forem publicadas, e esse
+  // dia é o do merge — que ainda não aconteceu. Escrever agora uma data
+  // seria inventar uma revisão que não ocorreu, exatamente o problema que
+  // este ficheiro existe para resolver.
+  //
+  // Sem entrada, `revisaoDaRota` devolve `null` e o sitemap OMITE o
+  // `lastModified` (ver `app/sitemap.ts`) — dizer nada é melhor do que
+  // dizer uma data falsa.
+  //
+  // AO FAZER MERGE PARA `main`: acrescentar as duas linhas com a data real
+  // da publicação.
 };
 
 const maisRecente = (datas: readonly string[]): string =>

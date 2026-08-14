@@ -150,3 +150,50 @@ export function removerChave(chave: string): void {
     /* nada a fazer — a chave já é inalcançável */
   }
 }
+
+// ── Onde é que isto vai ficar? ──────────────────────────────────────
+//
+// Cada repositório decidia sozinho: `disponivel && !!userId && plano ===
+// "plus"`. O defeito não está na regra, está no momento em que é feita a
+// pergunta. `plano` começa em "free" e só passa a "plus" quando a
+// subscrição responde — e nesse intervalo um assinante do Plus é tratado
+// como grátis.
+//
+// Nada disto dá erro. O recibo é guardado, a interface diz «Guardado», e
+// fica no aparelho. Depois a subscrição chega, a aplicação passa a ler da
+// nuvem, e o recibo desaparece do ecrã — está em disco, no sítio errado,
+// e ninguém sabe que existe.
+//
+// Por isso o destino tem três valores, e não dois. «Ainda não sei» é uma
+// resposta legítima, e é a única honesta enquanto a subscrição não
+// responde.
+
+export type Destino = "nuvem" | "local" | "por-decidir";
+
+export interface CondicoesDeDestino {
+  /** Há Supabase configurado. */
+  disponivel: boolean;
+  /** Quem está com sessão, se alguém. */
+  userId: string | null;
+  /** A autenticação já respondeu. */
+  authPronto: boolean;
+  plano: string;
+  /** A subscrição já respondeu. */
+  planoPronto: boolean;
+}
+
+export function destinoDosDados(c: CondicoesDeDestino): Destino {
+  if (!c.disponivel) return "local";
+  // Sem saber quem é, nem que plano tem, não há destino nenhum a
+  // escolher — e escolher na mesma é escolher mal metade das vezes.
+  if (!c.authPronto) return "por-decidir";
+  if (!c.userId) return "local";
+  if (!c.planoPronto) return "por-decidir";
+  return c.plano === "plus" ? "nuvem" : "local";
+}
+
+/** A falha a devolver a quem tenta gravar antes de haver destino. */
+export const aindaSemDestino = (): ErroPersistencia => ({
+  tipo: "rede",
+  mensagem: "Ainda estamos a confirmar a tua conta. Tenta outra vez daqui a um instante.",
+});

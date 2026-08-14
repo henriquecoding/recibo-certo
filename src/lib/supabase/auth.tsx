@@ -8,6 +8,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabaseConfigurado } from "./config";
+import { definirCofre } from "@/lib/store/cofre";
 
 // Carrega o cliente Supabase sob procura. Mantém o SDK (~200 KB) FORA do
 // bundle inicial de todas as páginas — só é descarregado quando a nuvem está
@@ -59,8 +60,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [modoModal, setModoModal] = useState<ModoModal>("entrar");
   const disponivel = supabaseConfigurado();
 
+  // O cofre local segue quem está com sessão, e é aqui — num sítio só —
+  // que essa ligação se faz. Enquanto as chaves eram globais, sair da
+  // conta e outra pessoa entrar no mesmo browser mostrava-lhe os recibos
+  // de quem tinha estado antes. Ver `store/cofre.ts`.
+  useEffect(() => {
+    definirCofre(user?.id ?? null);
+  }, [user]);
+
   useEffect(() => {
     if (!disponivel) {
+      // Sem Supabase, a aplicação é local — e o cofre é o anónimo, que é
+      // o que já era. Sem esta chamada, a migração das chaves antigas
+      // nunca corria para quem usa a aplicação sem conta.
+      definirCofre(null);
       setCarregado(true);
       return;
     }

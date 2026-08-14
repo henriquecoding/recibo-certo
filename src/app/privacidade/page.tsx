@@ -26,6 +26,7 @@ const TOC = [
   { id: "armazenamento-local", label: "Plano gratuito: dados locais" },
   { id: "nuvem-pro", label: "Plano Plus: dados na nuvem" },
   { id: "fiz", label: "FIZ: partilha e ligações de afiliado" },
+  { id: "contabilistas", label: "O teu contabilista: partilhas, conversa e ficheiros" },
   { id: "investidores", label: "Contactos de investidores" },
   { id: "pagamentos", label: "Pagamentos (Stripe)" },
   { id: "comunicacoes", label: "Comunicações por email" },
@@ -315,7 +316,7 @@ export default function PrivacidadePage() {
         <Tabela
           colunas={["Fornecedor", "Finalidade", "Localização", "Garantias"]}
           linhas={[
-            ["Supabase", "Base de dados e autenticação do plano Plus", "União Europeia", "Acordo de tratamento + cláusulas contratuais-tipo"],
+            ["Supabase", "Base de dados, autenticação e armazenamento. Plano Plus, e também a plataforma de contabilistas — que é gratuita.", "União Europeia", "Acordo de tratamento + cláusulas contratuais-tipo"],
             ["Vercel Inc.", "Alojamento do site e funções serverless", "União Europeia (Frankfurt)", "Acordo de tratamento de dados"],
             ["Stripe", "Processamento de pagamentos da subscrição", "UE / EUA", "PCI-DSS nível 1 + cláusulas contratuais-tipo"],
             ["Resend", "Envio de emails transacionais e alertas", "EUA", "Acordo de tratamento + cláusulas contratuais-tipo"],
@@ -324,8 +325,14 @@ export default function PrivacidadePage() {
         />
         <Nota tipo="aviso">
           Usar os simuladores e os guias no plano gratuito não envia dados para a Supabase: ficam
-          exclusivamente no teu browser. Há uma exceção, e é preciso dizê-la: se preencheres um
-          formulário de contacto — o de{" "}
+          exclusivamente no teu browser. Há exceções, e é preciso dizê-las. A primeira é a{" "}
+          <a href="#contabilistas" className="font-medium text-brand hover:underline dark:text-brand-mint">
+            plataforma de contabilistas
+          </a>
+          : ligares-te a um contabilista, falar com ele e enviar-lhe uma simulação são
+          gratuitos, mas passam pela Supabase — não há forma de dois dispositivos
+          diferentes partilharem uma conversa sem um servidor pelo meio. A segunda: se
+          preencheres um formulário de contacto — o de{" "}
           <a href="#investidores" className="font-medium text-brand hover:underline dark:text-brand-mint">
             investidores
           </a>{" "}
@@ -435,6 +442,57 @@ export default function PrivacidadePage() {
           desaparece quando fechas o separador. São dados estritamente necessários para a
           funcionalidade que pediste — dispensar um cartão —, ficam no teu dispositivo, não são
           enviados para os nossos servidores, e apagam-se quando limpas os dados do site.
+        </p>
+      </Section>
+
+      {/* A plataforma de contabilistas. Guardar mensagens e ficheiros de
+          clientes é um tratamento novo, e um tratamento que não está escrito
+          aqui é um tratamento que não devia estar a acontecer. */}
+      <Section id="contabilistas" title="O teu contabilista: partilhas, conversa e ficheiros">
+        <p>
+          Se te ligares a um contabilista no ReciboCerto, passam a existir três tipos de
+          dados que só existem por causa dessa relação. Nenhum deles é criado sem uma ação
+          tua, e todos desaparecem do lado dele quando terminares o acompanhamento.
+        </p>
+
+        <Lista
+          items={[
+            "O nome por que queres ser tratado e, se o deres, um email de contacto. Não vêm da tua conta: escreve-los quando pedes o vínculo, e são apagados no instante em que a relação termina — por ti ou por ele.",
+            "As simulações que lhe enviares. São cópias do que estava no ecrã no momento do envio, nunca uma ligação aos teus dados vivos. Podes revogar o acesso a qualquer uma, a qualquer momento.",
+            "As mensagens e os ficheiros que trocarem. Ficam guardados no nosso fornecedor de base de dados e de armazenamento (Supabase), sujeitos às mesmas regras do resto.",
+          ]}
+        />
+
+        <p>
+          <strong className="text-stone-700 dark:text-stone-200">
+            Sobre os ficheiros que envias na conversa:
+          </strong>{" "}
+          ficam num espaço privado, organizado por relação. Só tu e o contabilista com quem
+          falas lhes acedem — não outro contabilista da plataforma, e não a nossa
+          administração. Terminar o acompanhamento fecha o acesso dele aos ficheiros, sem
+          exceção. Cada ficheiro está limitado a 10 MB e a cinco por mensagem.
+        </p>
+
+        <Nota tipo="aviso">
+          Envia apenas o que for necessário para o trabalho que lhe pediste. Um documento
+          fiscal contém dados de terceiros — clientes teus, familiares, trabalhadores — e
+          esses terceiros têm direitos sobre eles que continuam a existir depois do envio.
+        </Nota>
+
+        <p>
+          A conversa NÃO passa por nenhum serviço de mensagens externo. Não usamos Teams,
+          Slack, Intercom nem equivalentes: uma conversa entre ti e o teu contabilista é
+          informação fiscal, e encaminhá-la para outra empresa acrescentaria um
+          subprocessador a quem não precisa de a ver.
+        </p>
+
+        <p>
+          <strong className="text-stone-700 dark:text-stone-200">
+            O contabilista não vê os teus dados fiscais.
+          </strong>{" "}
+          Ligares-te a alguém não lhe dá acesso aos teus recibos, cenários ou simulações
+          guardadas. Ele vê o que lhe enviares, um envio de cada vez — e antes de
+          confirmares mostramos-te, campo a campo, exatamente o que segue.
         </p>
       </Section>
 
