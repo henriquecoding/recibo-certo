@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { obterLinkedInPublico, type LinkedInPublico } from "@/lib/contabilistas/linkedin";
+import {
+  avatarLinkedInExpirou,
+  obterLinkedInPublico,
+  type LinkedInPublico,
+} from "@/lib/contabilistas/linkedin";
 
 export default function LinkedInPublico({
   contabilistaId,
@@ -11,9 +15,11 @@ export default function LinkedInPublico({
   nome: string;
 }) {
   const [dados, setDados] = useState<LinkedInPublico | null>(null);
+  const [avatarFalhou, setAvatarFalhou] = useState(false);
 
   useEffect(() => {
     let vivo = true;
+    setAvatarFalhou(false);
     obterLinkedInPublico(contabilistaId).then((d) => {
       if (vivo) setDados(d);
     });
@@ -28,16 +34,22 @@ export default function LinkedInPublico({
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase())
     .join("");
+  const avatarDisponivel = Boolean(dados.avatarUrl)
+    && !avatarLinkedInExpirou(dados.avatarUrl)
+    && !avatarFalhou;
 
   return (
     <div className="flex shrink-0 flex-col items-center gap-1.5">
-      {dados.avatarUrl ? (
+      {avatarDisponivel ? (
         // O browser nunca fala diretamente com o CDN do LinkedIn: a rota do
-        // ReciboCerto faz proxy da imagem e valida a origem no servidor.
+        // ReciboCerto faz proxy da imagem e valida a origem no servidor. Se o
+        // provider invalidar uma URL temporária antes do esperado, voltamos às
+        // iniciais em vez de deixar uma imagem quebrada no perfil público.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={`/api/contabilistas/linkedin-avatar/${encodeURIComponent(contabilistaId)}`}
           alt={`Fotografia profissional de ${nome}`}
+          onError={() => setAvatarFalhou(true)}
           className="h-20 w-20 rounded-3xl border border-stone-200 bg-stone-100 object-cover shadow-card sm:h-24 sm:w-24"
         />
       ) : (
