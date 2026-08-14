@@ -28,22 +28,20 @@ import { getSupabase } from "@/lib/supabase/client";
 import { Warning, Check, Spinner, Trash } from "@/components/ui/Icons";
 import { confirmacaoValida, recortarAoPrefixo, alvoPorId } from "@/lib/conta/apagar";
 import { CONJUNTOS, GRUPOS, type Conjunto } from "@/lib/conta/catalogo";
+import { esvaziarCofre } from "@/lib/store/cofre";
 
-/** Chaves locais que deixam de fazer sentido depois de apagar na nuvem. */
-const CHAVES_LOCAIS: Record<string, string[]> = {
-  recibos: ["recibocerto:recibos"],
-  vencimentos: ["recibocerto:vencimentos"],
-  cenarios: ["recibocerto:cenarios:v1"],
-  "perfil-fiscal": ["recibocerto:preferencias-fiscais"],
-};
-
-function limparLocal(ids: string[]) {
-  if (typeof window === "undefined") return;
-  for (const id of ids) {
-    for (const c of CHAVES_LOCAIS[id] ?? []) {
-      try { window.localStorage.removeItem(c); } catch { /* modo privado */ }
-    }
-  }
+/**
+ * Apagar na nuvem tem de apagar também o que está neste aparelho.
+ *
+ * Isto era uma lista escrita à mão, e três das quatro chaves estavam
+ * erradas — `recibocerto:recibos` quando a chave é `recibocerto:recibos:v1`.
+ * Apagava-se na nuvem, recarregava-se a página, e os dados locais estavam
+ * lá na mesma. Ninguém deu por isso porque a lista existia em dois sítios.
+ *
+ * Agora vem do cofre, que é onde os nomes vivem.
+ */
+function limparLocal(userId: string | null | undefined) {
+  esvaziarCofre(userId);
 }
 
 type Estado =
@@ -147,7 +145,7 @@ export default function ZonaDeRisco() {
           return;
         }
 
-        limparLocal(ids);
+        limparLocal(user?.id);
         // O número de linhas, e não «feito»: quem apaga quer saber quanto.
         const linhas = Object.values((json?.linhas ?? {}) as Record<string, number>)
           .reduce((a, b) => a + b, 0);
@@ -164,7 +162,7 @@ export default function ZonaDeRisco() {
         setEstado({ tipo: "erro", msg: "Não foi possível contactar o servidor." });
       }
     },
-    [escolhidos, texto, fechar, sair],
+    [escolhidos, texto, fechar, sair, user],
   );
 
   if (!user) return null;

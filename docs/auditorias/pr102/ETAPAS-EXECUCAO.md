@@ -151,10 +151,50 @@ O arreio de testes também não tinha nenhuma das tabelas anteriores à migraç�
 042, nem `profiles.preferencias_fiscais`. Uma função de apagar que nunca correu
 num teste não é uma garantia.
 
-## Etapa 4 — O destino dos dados obedecido pelos stores · por fazer
+## Etapa 4 — O destino dos dados obedecido pelos stores · **fechada**
 
-O destino não se infere do plano; cofres por utilizador; nunca declarar sucesso
-antes da confirmação; nenhuma migração silenciosa de local para nuvem.
+`src/lib/store/cofre.ts` e `destinoDosDados()` em `persistencia.ts`.
+1487 testes (eram 1468).
+
+### O que estava mal
+
+**As chaves locais eram globais.** `recibocerto:recibos:v1`, sem nada que
+dissesse de quem eram. Num browser partilhado — um computador de casa, um
+portátil de trabalho, um telemóvel emprestado — quem entrasse a seguir via os
+recibos, os vencimentos e o perfil fiscal de quem tinha entrado antes. É a mesma
+coisa que a migração 038 fecha do lado do servidor, aberta do lado do browser, e
+não era preciso ninguém fazer nada de errado: bastava sair da conta e outra
+pessoa entrar.
+
+**O destino era decidido cedo de mais.** Cada repositório fazia `disponivel &&
+!!userId && plano === "plus"`. A regra está certa; o momento não. `plano` começa
+em `"free"` e só passa a `"plus"` quando a subscrição responde — e nesse
+intervalo um assinante do Plus é tratado como grátis. Nada dá erro: o recibo é
+guardado, a interface diz «Guardado», e fica no aparelho. Depois a subscrição
+chega, a aplicação passa a ler da nuvem, e o recibo desaparece do ecrã. Está em
+disco, no sítio errado, e ninguém sabe que existe.
+
+**E a zona de perigo não limpava nada.** A lista de chaves locais estava escrita
+uma segunda vez dentro do componente, e três das quatro entradas estavam erradas
+— `recibocerto:recibos` quando a chave é `recibocerto:recibos:v1`. Apagava-se na
+nuvem, recarregava-se a página, e os dados locais continuavam lá.
+
+### O que passou a ser verdade
+
+| Achado | Como fica fechado |
+| --- | --- |
+| Chaves globais num browser partilhado | Cada pessoa tem o seu cofre (`::<cofre>` no fim da chave), ligado à sessão num sítio só — o `AuthProvider`. Mudar de conta muda de cofre; não há nada para limpar porque não há nada partilhado. Quem não tem sessão escreve no cofre `anonimo`, que continua partilhado e está **dito** no código. |
+| Quem já usava a aplicação perdia tudo | `migrarParaCofre()` copia a chave global para o cofre de quem entrou e **remove a antiga** — deixá-la era manter o problema. Se o cofre já tiver dados, o que lá está ganha; se a cópia falhar, a chave antiga fica (perder dados a arrumá-los é pior do que a desarrumação). |
+| Destino inferido do plano | `destinoDosDados()` tem **três** valores. «Ainda não sei» é uma resposta legítima, e é a única honesta enquanto a autenticação ou a subscrição não respondem. Todos os que escrevem recusam nesse estado, com uma mensagem em pt-PT e um erro do tipo recuperável. |
+| A lista de chaves existia duas vezes | Existe uma: `DOMINIOS`. O que fica deliberadamente fora — tema, consentimento de cookies, atribuição — está em `FORA_DO_COFRE` com a razão escrita, e um teste percorre `src/` inteiro à procura de qualquer `"recibocerto:…"` que não esteja num dos dois. |
+
+### O que ficou de fora, e porquê
+
+`quiz-progresso.ts` passou a decidir o destino pela função partilhada, mas o que
+escreve não recusa: `registrarSessao` devolve o XP ganho e a subida de nível, sem
+canal de falha, e só é chamado no fim de um quiz — muito depois de a autenticação
+ter respondido. Acrescentar-lhe um erro obriga a mudar quem o chama. Está escrito
+como exceção no teste, para não passar por esquecimento.
 
 ## Depois — o modelo de intermediação
 

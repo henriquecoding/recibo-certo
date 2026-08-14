@@ -187,7 +187,14 @@ describe("sincronização: Plus, nuvem e dispositivo", () => {
 
   it("a nuvem só entra em jogo com sessão E Plus", () => {
     const fonte = ler(PREFS);
-    expect(fonte).toMatch(/naNuvem = supabaseConfigurado\(\) && !!user && plano === "plus"/);
+    // A regra é a mesma; o que mudou foi quem a aplica. Enquanto cada
+    // repositório a escrevia por si, era feita cedo de mais: `plano`
+    // começa em "free" e um assinante do Plus era tratado como grátis até
+    // a subscrição responder — e o que guardasse nesse intervalo ficava
+    // no aparelho, invisível para a aplicação daí em diante.
+    expect(fonte).toContain("destinoDosDados");
+    expect(fonte).toMatch(/naNuvem = destino === "nuvem"/);
+    expect(fonte, "escreve antes de saber para onde").toContain('destino === "por-decidir"');
   });
 
   it("uma falha da nuvem não apaga o que está no dispositivo", () => {

@@ -17,14 +17,19 @@ import { getSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/auth";
 import { useSubscricao } from "@/lib/stripe/subscription";
 import { ok, falha, erroNuvem, lerChave, gravarChave, type Resultado } from "@/lib/store/persistencia";
+import { chaveAtiva } from "./cofre";
+import { destinoDosDados, aindaSemDestino } from "./persistencia";
 
-const STORAGE_KEY = "recibocerto:prazos-cumpridos:v1";
+// A chave já não é uma constante: depende de quem está a usar o browser.
+// Enquanto era global, quem entrasse a seguir noutra conta via os dados de
+// quem entrou antes — ver `store/cofre.ts`.
+const STORAGE_KEY = () => chaveAtiva("prazos");
 
 /** Chave estável de uma obrigação num ano. */
 export const chaveCumprimento = (prazoId: string, ano: number) => `${ano}::${prazoId}`;
 
 function lerLocal(): Set<string> {
-  const raw = lerChave(STORAGE_KEY);
+  const raw = lerChave(STORAGE_KEY());
   if (!raw) return new Set();
   try {
     const parsed = JSON.parse(raw);
@@ -35,14 +40,15 @@ function lerLocal(): Set<string> {
 }
 
 function gravarLocal(s: Set<string>): Resultado<void> {
-  return gravarChave(STORAGE_KEY, JSON.stringify([...s]));
+  return gravarChave(STORAGE_KEY(), JSON.stringify([...s]));
 }
 
 export function usePrazosCumpridos() {
   const { user, carregado: authPronto, disponivel } = useAuth();
-  const { plano } = useSubscricao();
+  const { plano, carregado: planoPronto } = useSubscricao();
   const userId = user?.id ?? null;
-  const naNuvem = disponivel && !!userId && plano === "plus";
+  const destino = destinoDosDados({ disponivel, userId, authPronto, plano, planoPronto });
+  const naNuvem = destino === "nuvem";
 
   const [cumpridos, setCumpridos] = useState<Set<string>>(new Set());
   const [carregado, setCarregado] = useState(false);
@@ -87,6 +93,11 @@ export function usePrazosCumpridos() {
 
   const marcar = useCallback(
     async (prazoId: string, ano: number, feito: boolean): Promise<Resultado<void>> => {
+      // Enquanto não se sabe o destino, não se escreve: escrever no
+      // aparelho e a subscrição chegar a seguir punha o registo num
+      // sítio de onde a aplicação nunca mais o lê.
+      if (destino === "por-decidir") return falha(aindaSemDestino());
+
       const chave = chaveCumprimento(prazoId, ano);
       const proximos = new Set(ref.current);
       if (feito) proximos.add(chave);
@@ -117,7 +128,7 @@ export function usePrazosCumpridos() {
       setCumpridos(proximos);
       return ok(undefined);
     },
-    [naNuvem, userId],
+    [destino, naNuvem, userId],
   );
 
   return { cumpridos, carregado, estaCumprido, marcar, naNuvem };

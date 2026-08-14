@@ -13,6 +13,7 @@ import {
   type NivelInfo,
 } from "@/lib/quiz-fiscal/progresso";
 import type { ResultadoQuiz } from "@/hooks/useQuizFiscal";
+import { destinoDosDados } from "./persistencia";
 
 // ── Tipos públicos ────────────────────────────────────────────────────────
 
@@ -125,10 +126,22 @@ function gravarSessoesLocal(sessoes: SessaoHistorico[]) {
 // ── Hook principal ────────────────────────────────────────────────────────
 
 export function useQuizProgresso(): QuizProgressoReturn {
-  const { user } = useAuth();
-  const { plano } = useSubscricao();
-  const naNuvem = !!user && supabaseConfigurado();
-  const isPro = plano === "plus";
+  const { user, carregado: authPronto } = useAuth();
+  const { plano, carregado: planoPronto } = useSubscricao();
+  // O quiz não distingue planos para escolher onde guardar — guarda na
+  // nuvem a quem tem sessão. Mas a pergunta continua a ser feita cedo de
+  // mais: antes de a autenticação responder, `user` é nulo e o progresso
+  // ia para o aparelho de quem afinal tinha conta.
+  const destino = destinoDosDados({
+    disponivel: supabaseConfigurado(),
+    userId: user?.id ?? null,
+    authPronto,
+    // Sem distinção de plano: quem tem sessão guarda na nuvem.
+    plano: "plus",
+    planoPronto: true,
+  });
+  const naNuvem = destino === "nuvem";
+  const isPro = plano === "plus" && planoPronto;
 
   const [xp, setXp] = useState(0);
   const [streakRecord, setStreakRecord] = useState(0);

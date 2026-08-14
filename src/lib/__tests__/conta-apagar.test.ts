@@ -177,6 +177,11 @@ describe("apagar: o que a pessoa vê", () => {
   it("apagar na nuvem também limpa o dispositivo", () => {
     const c = ler(UI);
     expect(c).toContain("limparLocal");
-    expect(c).toMatch(/localStorage\.removeItem/);
+    // Os nomes das chaves vêm do cofre, e não de uma lista escrita aqui.
+    // Enquanto eram duas listas, três das quatro chaves estavam erradas e
+    // os dados locais sobreviviam ao apagamento sem ninguém dar por isso.
+    expect(c).toContain("esvaziarCofre");
+    expect(c, "a lista de chaves não pode voltar a existir aqui")
+      .not.toMatch(/"recibocerto:/);
   });
 });

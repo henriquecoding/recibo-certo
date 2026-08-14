@@ -23,6 +23,8 @@ import {
   type TabelaCSV,
 } from "@/lib/export/csv";
 import { arredondar } from "@/lib/export/dinheiro";
+import { chaveAtiva } from "./cofre";
+import { destinoDosDados, aindaSemDestino } from "./persistencia";
 
 export interface CenarioVencimento {
   id: string;
@@ -42,13 +44,16 @@ export type NovoCenario = Omit<CenarioVencimento, "id" | "criadoEm">;
 /** Limite de cenários guardados no plano grátis (local). Pro é ilimitado. */
 export const LIMITE_FREE = 3;
 
-const STORAGE_KEY = "recibocerto:vencimentos:v1";
+// A chave já não é uma constante: depende de quem está a usar o browser.
+// Enquanto era global, quem entrasse a seguir noutra conta via os dados de
+// quem entrou antes — ver `store/cofre.ts`.
+const STORAGE_KEY = () => chaveAtiva("vencimentos");
 
 // ─── localStorage ──────────────────────────────────────────────────────
 function readLocal(): CenarioVencimento[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(STORAGE_KEY());
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? (parsed as CenarioVencimento[]) : [];
   } catch {
@@ -59,7 +64,7 @@ function readLocal(): CenarioVencimento[] {
 function writeLocal(xs: CenarioVencimento[]): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(xs));
+    window.localStorage.setItem(STORAGE_KEY(), JSON.stringify(xs));
   } catch {
     /* quota excedida / storage indisponível — ignora */
   }
@@ -210,9 +215,10 @@ async function cloudList(userId: string): Promise<CenarioVencimento[]> {
 // ─── Hook de acesso (modo duplo + tiering) ──────────────────────────────
 export function useVencimentos() {
   const { user, carregado: authPronto, disponivel } = useAuth();
-  const { plano } = useSubscricao();
+  const { plano, carregado: planoPronto } = useSubscricao();
   const userId = user?.id ?? null;
-  const naNuvem = disponivel && !!userId && plano === "plus";
+  const destino = destinoDosDados({ disponivel, userId, authPronto, plano, planoPronto });
+  const naNuvem = destino === "nuvem";
 
   const [cenarios, setCenarios] = useState<CenarioVencimento[]>([]);
   const [carregado, setCarregado] = useState(false);
@@ -250,6 +256,11 @@ export function useVencimentos() {
 
   const guardar = useCallback(
     (novo: NovoCenario): { erro?: string } => {
+      // Enquanto não se sabe o destino, não se escreve: escrever no
+      // aparelho e a subscrição chegar a seguir punha o registo num
+      // sítio de onde a aplicação nunca mais o lê.
+      if (destino === "por-decidir") return { erro: aindaSemDestino().mensagem };
+
       if (!naNuvem && cenarios.length >= LIMITE_FREE) {
         return { erro: `Plano grátis guarda até ${LIMITE_FREE} cenários. Passa ao Plus para histórico ilimitado na nuvem.` };
       }

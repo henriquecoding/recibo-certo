@@ -40,6 +40,8 @@ import {
   type ErroPersistencia,
   type Resultado,
 } from "@/lib/store/persistencia";
+import { chaveAtiva } from "./cofre";
+import { destinoDosDados, aindaSemDestino } from "./persistencia";
 
 export type TipoCenario = "recibos" | "vencimento" | "empresa" | "irs" | "herancas";
 
@@ -97,7 +99,10 @@ export const CENARIO_VERSAO = 1;
 /** Limite de cenários guardados no plano grátis (local). Plus é ilimitado. */
 export const LIMITE_FREE = 1;
 
-const STORAGE_KEY = "recibocerto:cenarios:v1";
+// A chave já não é uma constante: depende de quem está a usar o browser.
+// Enquanto era global, quem entrasse a seguir noutra conta via os dados de
+// quem entrou antes — ver `store/cofre.ts`.
+const STORAGE_KEY = () => chaveAtiva("cenarios");
 const MIGRACAO_ADIADA_KEY = (userId: string) => `recibocerto:cenarios-migracao-adiada:${userId}`;
 
 // ─── Validação ──────────────────────────────────────────────────────────
@@ -127,7 +132,7 @@ function validarCenario(c: unknown): { ok: true; valor: Cenario } | { ok: false;
 }
 
 function readLocal(): Cenario[] {
-  const raw = lerChave(STORAGE_KEY);
+  const raw = lerChave(STORAGE_KEY());
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
@@ -138,7 +143,7 @@ function readLocal(): Cenario[] {
 }
 
 function writeLocal(xs: Cenario[]): Resultado<void> {
-  return gravarChave(STORAGE_KEY, JSON.stringify(xs));
+  return gravarChave(STORAGE_KEY(), JSON.stringify(xs));
 }
 
 function uid(): string {
@@ -208,9 +213,10 @@ async function upsertCloud(c: Cenario, userId: string): Promise<Resultado<void>>
 // ─── Hook de acesso (modo duplo + tiering) ──────────────────────────────
 export function useCenarios() {
   const { user, carregado: authPronto, disponivel } = useAuth();
-  const { plano } = useSubscricao();
+  const { plano, carregado: planoPronto } = useSubscricao();
   const userId = user?.id ?? null;
-  const naNuvem = disponivel && !!userId && plano === "plus";
+  const destino = destinoDosDados({ disponivel, userId, authPronto, plano, planoPronto });
+  const naNuvem = destino === "nuvem";
 
   const [cenarios, setCenarios] = useState<Cenario[]>([]);
   const [carregado, setCarregado] = useState(false);
@@ -261,6 +267,11 @@ export function useCenarios() {
 
   const guardar = useCallback(
     async (novo: NovoCenario): Promise<Resultado<Cenario>> => {
+      // Enquanto não se sabe o destino, não se escreve: escrever no
+      // aparelho e a subscrição chegar a seguir punha o registo num
+      // sítio de onde a aplicação nunca mais o lê.
+      if (destino === "por-decidir") return falha(aindaSemDestino());
+
       if (!naNuvem && cenariosRef.current.length >= LIMITE_FREE) {
         return falha({
           tipo: "limite",
@@ -299,7 +310,7 @@ export function useCenarios() {
       setCenarios(proximos);
       return ok(cenario);
     },
-    [naNuvem, userId, plano],
+    [destino, naNuvem, userId, plano],
   );
 
   const remover = useCallback(
@@ -342,7 +353,7 @@ export function useCenarios() {
       if (!r.ok && !recuperavel(r.erro)) return r;
       if (!r.ok) return r;
     }
-    removerChave(STORAGE_KEY);
+    removerChave(STORAGE_KEY());
     setLocaisPorImportar(0);
     try {
       const rows = ordenar(await cloudList(userId));

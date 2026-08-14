@@ -56,6 +56,8 @@ import {
   type ResumoRecibos,
   type OpcoesCalcRecibo,
 } from "@/lib/recibos-contrato";
+import { chaveAtiva } from "./cofre";
+import { destinoDosDados, aindaSemDestino } from "./persistencia";
 
 // Reexportado para as páginas: o contrato é a fonte, este ficheiro a porta.
 export type { Recibo, ReciboComputed, NovoRecibo, ResumoRecibos, OpcoesCalcRecibo };
@@ -79,7 +81,10 @@ export {
 } from "@/lib/recibos-contrato";
 export type { Resultado, ErroPersistencia } from "@/lib/store/persistencia";
 
-const STORAGE_KEY = "recibocerto:recibos:v1";
+// A chave já não é uma constante: depende de quem está a usar o browser.
+// Enquanto era global, quem entrasse a seguir noutra conta via os dados de
+// quem entrou antes — ver `store/cofre.ts`.
+const STORAGE_KEY = () => chaveAtiva("recibos");
 const IMPORT_ADIADO_KEY = (userId: string) => `recibocerto:import-adiado:${userId}`;
 const FILA_KEY = (userId: string) => `recibocerto:recibos-fila:${userId}`;
 // Cache local dos valores pré-calculados pelo simulador (IRS real, líquido, etc.),
@@ -87,7 +92,7 @@ const FILA_KEY = (userId: string) => `recibocerto:recibos-fila:${userId}`;
 // Supabase não guarda `_computed` (a tabela `recibos` não tem colunas para isso),
 // por isso sem este cache os valores perdiam-se no round-trip à nuvem e o painel
 // caía no recálculo de retenção na fonte. Cross-device: ausente → recalcula.
-const COMPUTED_KEY = "recibocerto:recibos-computed:v1";
+const COMPUTED_KEY = () => chaveAtiva("recibos-computed");
 
 /**
  * Quantos recibos o modo anónimo guarda neste dispositivo (RC-P1-06).
@@ -141,7 +146,7 @@ export function validarNovoRecibo(novo: NovoRecibo): Resultado<NovoRecibo> {
 // ─── localStorage ──────────────────────────────────────────────────────
 
 function readLocalTriado(): Triagem<Recibo> {
-  const raw = lerChave(STORAGE_KEY);
+  const raw = lerChave(STORAGE_KEY());
   if (!raw) return { validos: [], invalidos: [] };
   try {
     const parsed = JSON.parse(raw);
@@ -159,19 +164,19 @@ function readLocal(): Recibo[] {
 /** Grava e devolve a falha em vez de a ignorar (quota, modo privado). */
 function writeLocal(recibos: Recibo[]): Resultado<void> {
   try {
-    return gravarChave(STORAGE_KEY, JSON.stringify(recibos));
+    return gravarChave(STORAGE_KEY(), JSON.stringify(recibos));
   } catch (e) {
     return falha(erroLocal(e));
   }
 }
 
 function clearLocal(): void {
-  removerChave(STORAGE_KEY);
+  removerChave(STORAGE_KEY());
 }
 
 // ─── Cache de valores pré-calculados (sobrevive ao round-trip do Supabase) ──
 function readComputedCache(): Record<string, ReciboComputed> {
-  const raw = lerChave(COMPUTED_KEY);
+  const raw = lerChave(COMPUTED_KEY());
   if (!raw) return {};
   try {
     const parsed = JSON.parse(raw);
@@ -182,7 +187,7 @@ function readComputedCache(): Record<string, ReciboComputed> {
 }
 
 function writeComputedCache(cache: Record<string, ReciboComputed>): void {
-  gravarChave(COMPUTED_KEY, JSON.stringify(cache));
+  gravarChave(COMPUTED_KEY(), JSON.stringify(cache));
 }
 
 /** Guarda os valores pré-calculados de um recibo (no-op se não houver). */
@@ -413,9 +418,10 @@ export type EstadoSync = "sincronizado" | "pendente" | "erro";
 
 export function useRecibos() {
   const { user, carregado: authPronto, disponivel } = useAuth();
-  const { plano } = useSubscricao();
+  const { plano, carregado: planoPronto } = useSubscricao();
   const userId = user?.id ?? null;
-  const naNuvem = disponivel && !!userId && plano === "plus";
+  const destino = destinoDosDados({ disponivel, userId, authPronto, plano, planoPronto });
+  const naNuvem = destino === "nuvem";
 
   const [recibos, setRecibos] = useState<Recibo[]>([]);
   const [carregado, setCarregado] = useState(false);
@@ -516,6 +522,11 @@ export function useRecibos() {
       opCloud: (() => Promise<Resultado<void>>) | null,
       filaSeOffline: OperacaoFila | null,
     ): Promise<Resultado<void>> => {
+      // Enquanto não se sabe o destino, não se escreve. Escrever no
+      // aparelho e a subscrição chegar a seguir punha o registo num
+      // sítio de onde a aplicação nunca mais o lê.
+      if (destino === "por-decidir") return falha(aindaSemDestino());
+
       const anteriores = recibosRef.current;
       const proximos = ordenar(transformar(anteriores));
 
@@ -554,7 +565,7 @@ export function useRecibos() {
       if (alvo) marcar(alvo, null);
       return r;
     },
-    [naNuvem, userId, marcar],
+    [destino, naNuvem, userId, marcar],
   );
 
   const adicionar = useCallback(
