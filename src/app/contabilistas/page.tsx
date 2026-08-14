@@ -45,14 +45,14 @@ const POSSIBILIDADES = [
 
 export default function DiretorioPage() {
   return (
-    <main className="min-h-[100dvh] bg-cream">
+    <main className="min-h-[100dvh] bg-cream dark:bg-stone-950">
       <div className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
         <header className="max-w-2xl">
           <p className="eyebrow">Diretório</p>
-          <h1 className="mt-2 font-display text-4xl leading-tight text-ink sm:text-5xl">
+          <h1 className="mt-2 font-display text-4xl leading-tight text-ink dark:text-stone-50 sm:text-5xl">
             Contabilistas certificados
           </h1>
-          <p className="mt-4 text-base leading-relaxed text-stone-600">
+          <p className="mt-4 text-base leading-relaxed text-stone-600 dark:text-stone-300">
             Liga-te a um contabilista, envia-lhe as simulações que fizeste aqui e marca
             consulta — sem precisares de nenhum plano pago. E cada consulta que fizeres
             carimba o teu cartão de fidelidade.
@@ -66,35 +66,35 @@ export default function DiretorioPage() {
         {/* O que se pode fazer daqui, dito antes de a pessoa escolher alguém:
             escolher é mais fácil quando se sabe para quê. */}
         <section aria-labelledby="podes-titulo" className="mt-10">
-          <h2 id="podes-titulo" className="font-display text-2xl text-ink">
+          <h2 id="podes-titulo" className="font-display text-2xl text-ink dark:text-stone-50">
             O que podes fazer aqui
           </h2>
           <ul className="mt-4 grid gap-3 sm:grid-cols-2">
             {POSSIBILIDADES.map(({ Icon, titulo, texto }) => (
-              <li key={titulo} className="flex gap-3.5 rounded-4xl border border-stone-200 bg-white p-5 shadow-card">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-light text-brand-dark">
+              <li key={titulo} className="flex gap-3.5 rounded-4xl border border-stone-200 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-light text-brand-dark dark:bg-brand/20 dark:text-brand-mint">
                   <Icon size={18} aria-hidden />
                 </span>
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-stone-800">{titulo}</h3>
-                  <p className="mt-1 text-sm leading-relaxed text-stone-600">{texto}</p>
+                  <h3 className="font-semibold text-stone-800 dark:text-stone-100">{titulo}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-stone-600 dark:text-stone-300">{texto}</p>
                 </div>
               </li>
             ))}
           </ul>
-          <p className="mt-3 flex items-start gap-2 text-sm leading-relaxed text-stone-500">
-            <Lock size={15} className="mt-0.5 shrink-0 text-stone-400" aria-hidden />
+          <p className="mt-3 flex items-start gap-2 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
+            <Lock size={15} className="mt-0.5 shrink-0 text-stone-400 dark:text-stone-500" aria-hidden />
             Ligares-te a alguém não lhe dá acesso aos teus dados. O contabilista vê o que
             lhe enviares, um envio de cada vez, e podes revogar o acesso quando quiseres.
           </p>
         </section>
 
-        <h2 className="mt-12 font-display text-2xl text-ink">Escolher um contabilista</h2>
+        <h2 className="mt-12 font-display text-2xl text-ink dark:text-stone-50">Escolher um contabilista</h2>
         <DiretorioCliente />
 
-        <aside className="mt-12 rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
-          <h2 className="font-display text-xl text-ink">És contabilista?</h2>
-          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-stone-600">
+        <aside className="mt-12 rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6 dark:border-stone-800 dark:bg-stone-900">
+          <h2 className="font-display text-xl text-ink dark:text-stone-50">És contabilista?</h2>
+          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-stone-600 dark:text-stone-300">
             Podes pedir acesso ao painel de gestão: agenda, clientes, partilhas e cartão
             de fidelidade. Qualquer conta se pode candidatar; a administração analisa
             cada pedido antes de aprovar.
