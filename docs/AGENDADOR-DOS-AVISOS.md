@@ -69,10 +69,15 @@ Três perguntas diferentes, três sítios:
 
 ```sql
 -- 1. O agendador correu?
-select jobname, status, start_time, return_message
-  from cron.job_run_details
- where jobname = 'recibo-certo-avisos-email'
- order by start_time desc limit 10;
+--
+-- `cron.job_run_details` não tem `jobname` — tem `jobid`. É preciso a
+-- junção, e não é detalhe: sem ela a consulta falha com «column does not
+-- exist» e parece que o agendamento não existe.
+select j.jobname, d.status, d.start_time, d.return_message
+  from cron.job_run_details d
+  join cron.job j on j.jobid = d.jobid
+ where j.jobname = 'recibo-certo-avisos-email'
+ order by d.start_time desc limit 10;
 
 -- 2. O pedido HTTP chegou ao Vercel, e com que resposta?
 select id, status_code, error_msg, created
@@ -83,7 +88,26 @@ select email_estado, count(*) from public.notificacoes group by 1;
 ```
 
 Um `status_code` 401 quer dizer que o segredo do Vault não corresponde ao do
-Vercel. Um 404 quer dizer que a rota ainda não foi publicada.
+Vercel. Um 404 quer dizer que a rota ainda não foi publicada — foi o que
+aconteceu na primeira execução, às 16:15 de 14/08, um minuto antes de a
+produção com a rota ficar pronta.
+
+Uma resposta saudável é assim:
+
+```json
+{"ok":true,"enviados":0}
+```
+
+`enviados: 0` com a fila vazia é o estado normal, e não um erro.
+
+Para forçar uma execução sem esperar pelos quinze minutos:
+
+```sql
+select public.disparar_avisos_email();
+```
+
+Devolve o id do pedido, que aparece a seguir em `net._http_response`. Cuidado:
+isto esvazia a fila a sério — se houver avisos por enviar, os emails saem.
 
 ## O que nunca pode acontecer
 

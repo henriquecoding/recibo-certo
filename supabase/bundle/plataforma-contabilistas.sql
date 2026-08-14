@@ -5067,6 +5067,10 @@ COMMENT ON FUNCTION public.expirar_propostas() IS
 --  Ver a secção 4.
 --
 --  Idempotente. Correr duas vezes deixa exatamente um trabalho agendado.
+--
+--  Para ver se correu, junta `cron.job_run_details` a `cron.job` pelo
+--  `jobid` — aquela tabela não tem `jobname`, e a consulta óbvia falha com
+--  «column does not exist». Ver docs/AGENDADOR-DOS-AVISOS.md.
 -- ═══════════════════════════════════════════════════════════════════════
 
 -- ── 1. As extensões ─────────────────────────────────────────────────
