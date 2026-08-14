@@ -550,6 +550,225 @@ input[type="number"]::-webkit-outer-spin-button {
   .dark .bg-brand [class~="bg-white/95"],
   .dark .bg-brand-dark [class~="bg-white/95"] { background-color: rgb(255 255 255 / 0.95); }
 
+  /* ─────────────────────────────────────────────────────────────────────────
+     VARIANTES DE ESTADO (hover / focus / group-hover) — o mesmo ponto cego
+
+     Os overrides acima só apanham a classe BASE (`.text-brand`, `.bg-stone-100`).
+     `hover:bg-stone-100` compila para uma classe PRÓPRIA — `.hover\:bg-stone-100`
+     — que nenhum deles apanha. Duas consequências, ambas visíveis:
+
+      1. O hover pintava a cor de MODO CLARO sobre um fundo escuro. Um botão com
+         `hover:bg-brand-light` acendia um retângulo quase branco (#E1F5EE) por
+         baixo de texto claro: 1,31:1 de contraste — o texto desaparecia.
+      2. Onde o override base APANHAVA o elemento, era ele a ganhar durante o
+         hover: `.dark .text-brand` e `.hover\:text-white:hover` têm a mesma
+         especificidade (0,2,0) e o `.dark` vem depois no ficheiro. O mesmo vale
+         para `dark:text-*`, que o Tailwind emite DEPOIS de `hover:*`. Resultado:
+         o CTA vitalício ficava verde sobre verde — 1,00:1, texto invisível.
+
+     É o mesmo ponto cego já documentado em cima para as variantes com opacidade
+     e para o branco translúcido nas superfícies de marca. Fecha-se da mesma
+     maneira: seletor de atributo (evita escapar o `:` do nome da classe) mais
+     `:hover`, o que dá (0,3,0) e ganha aos dois casos acima.
+
+     `:not([class*="dark:hover:…"])` — 138 elementos já trazem um `dark:hover:`
+     escrito à mão. Esses ficam de fora: quem foi explícito manda, e sem esta
+     guarda este bloco (que vem depois no ficheiro) passava-lhes por cima.
+
+     `bg-brand` / `bg-brand-dark` continuam FORA — os preenchimentos de marca são
+     fixos nos dois temas, por isso `hover:bg-brand` também tem de ser.
+     Tudo scoped a .dark: o modo claro fica intacto.
+     ───────────────────────────────────────────────────────────────────────── */
+
+  /* Texto */
+  .dark [class~="hover:text-brand"]:hover:not([class*="dark:hover:text-"]),
+  .dark .group:hover [class~="group-hover:text-brand"]:not([class*="dark:group-hover:text-"]) {
+    color: #5ec6a0;
+  }
+  .dark [class~="hover:text-brand-dark"]:hover:not([class*="dark:hover:text-"]),
+  .dark .group:hover [class~="group-hover:text-brand-dark"]:not([class*="dark:group-hover:text-"]) {
+    color: #6fceac;
+  }
+  .dark [class~="hover:text-brand-deep"]:hover:not([class*="dark:hover:text-"]) {
+    color: #37a07c;
+  }
+  .dark [class*="hover:text-brand/"]:hover:not([class*="dark:hover:text-"]) {
+    color: rgb(94 198 160 / 0.85);
+  }
+  /* `text-white` não é remapeado (é a cor de texto dos CTA de marca), mas
+     precisa de ser RE-AFIRMADO aqui: sem isto, um `dark:text-*` no mesmo
+     elemento ganhava-lhe durante o hover — era o bug do CTA vitalício. */
+  .dark [class~="hover:text-white"]:hover:not([class*="dark:hover:text-"]),
+  .dark .group:hover [class~="group-hover:text-white"]:not([class*="dark:group-hover:text-"]) {
+    color: #ffffff;
+  }
+  .dark [class~="hover:text-ink"]:hover:not([class*="dark:hover:text-"]),
+  .dark [class~="hover:text-stone-900"]:hover:not([class*="dark:hover:text-"]),
+  .dark [class~="hover:text-stone-800"]:hover:not([class*="dark:hover:text-"]),
+  .dark .group:hover [class~="group-hover:text-stone-800"]:not([class*="dark:group-hover:text-"]) {
+    color: #f2f0e8;
+  }
+  .dark [class~="hover:text-stone-700"]:hover:not([class*="dark:hover:text-"]) {
+    color: #e2e0d6;
+  }
+  .dark [class~="hover:text-stone-600"]:hover:not([class*="dark:hover:text-"]) {
+    color: #cfcdc3;
+  }
+  .dark [class~="hover:text-stone-500"]:hover:not([class*="dark:hover:text-"]) {
+    color: #a8a69c;
+  }
+  .dark [class~="hover:text-stone-400"]:hover:not([class*="dark:hover:text-"]) {
+    color: #8a887e;
+  }
+  .dark [class~="hover:text-alert-text"]:hover:not([class*="dark:hover:text-"]) {
+    color: #ebd68a;
+  }
+  .dark [class~="hover:text-clay-text"]:hover:not([class*="dark:hover:text-"]) {
+    color: #e0a48c;
+  }
+  .dark [class~="hover:text-fiz-700"]:hover:not([class*="dark:hover:text-"]) {
+    color: #fbd65c;
+  }
+  /* Vermelhos de ação destrutiva: o 500/600/800 do Tailwind é escuro de mais
+     sobre superfície escura. Mesmo par já usado em `--color-saude-mau`. */
+  .dark [class~="hover:text-red-400"]:hover:not([class*="dark:hover:text-"]),
+  .dark [class~="hover:text-red-500"]:hover:not([class*="dark:hover:text-"]),
+  .dark [class~="hover:text-red-600"]:hover:not([class*="dark:hover:text-"]),
+  .dark [class~="hover:text-red-800"]:hover:not([class*="dark:hover:text-"]) {
+    color: #f87171;
+  }
+
+  /* Superfícies */
+  .dark [class~="hover:bg-white"]:hover:not([class*="dark:hover:bg-"]),
+  .dark .group:hover [class~="group-hover:bg-white"]:not([class*="dark:group-hover:bg-"]) {
+    background-color: #1e221b;
+  }
+  .dark [class~="hover:bg-cream"]:hover:not([class*="dark:hover:bg-"]) {
+    background-color: #161914;
+  }
+  /* As variantes com opacidade compilam para classes próprias, e o
+     seletor de cima não as apanha — é o mesmo ponto cego já documentado
+     em cima, e voltou a aparecer com os ecrãs dos casos. */
+  .dark [class~="hover:bg-cream/40"]:hover:not([class*="dark:hover:bg-"]) {
+    background-color: rgb(22 25 20 / 0.4);
+  }
+  .dark [class~="hover:bg-cream/50"]:hover:not([class*="dark:hover:bg-"]) {
+    background-color: rgb(22 25 20 / 0.5);
+  }
+  .dark [class~="hover:bg-sand"]:hover:not([class*="dark:hover:bg-"]) {
+    background-color: #181b15;
+  }
+  .dark [class~="hover:bg-stone-50"]:hover:not([class*="dark:hover:bg-"]) {
+    background-color: #1a1d18;
+  }
+  .dark [class~="hover:bg-stone-100"]:hover:not([class*="dark:hover:bg-"]),
+  .dark .group:hover [class~="group-hover:bg-stone-100"]:not([class*="dark:group-hover:bg-"]) {
+    background-color: #24281f;
+  }
+  .dark [class~="hover:bg-stone-200"]:hover:not([class*="dark:hover:bg-"]) {
+    background-color: #2e3329;
+  }
+  /* `stone-300` não tem override base (nunca foi usado como superfície), mas é
+     usado no hover. Segue o mesmo degrau da escala que `border-stone-300`. */
+  .dark [class~="hover:bg-stone-300"]:hover:not([class*="dark:hover:bg-"]) {
+    background-color: #3a4034;
+  }
+  .dark [class~="hover:bg-brand-light"]:hover:not([class*="dark:hover:bg-"]),
+  .dark .group:hover [class~="group-hover:bg-brand-light"]:not([class*="dark:group-hover:bg-"]) {
+    background-color: #143329;
+  }
+  .dark [class~="hover:bg-alert-bg"]:hover:not([class*="dark:hover:bg-"]) {
+    background-color: #302b12;
+  }
+  .dark [class~="hover:bg-clay-bg"]:hover:not([class*="dark:hover:bg-"]) {
+    background-color: #2a1d16;
+  }
+  .dark [class~="hover:bg-fiz-50"]:hover:not([class*="dark:hover:bg-"]) {
+    background-color: #241d0a;
+  }
+  /* Superfícies com opacidade — mesmos valores das bases equivalentes. */
+  .dark [class*="hover:bg-white/"]:hover:not([class*="dark:hover:bg-"]) {
+    background-color: rgb(30 34 27 / 0.88);
+  }
+  .dark [class*="hover:bg-stone-50/"]:hover:not([class*="dark:hover:bg-"]) {
+    background-color: rgb(26 29 24 / 0.85);
+  }
+  .dark [class*="hover:bg-brand-light/"]:hover:not([class*="dark:hover:bg-"]) {
+    background-color: rgb(20 51 41 / 0.55);
+  }
+  .dark [class*="hover:bg-clay-bg/"]:hover:not([class*="dark:hover:bg-"]) {
+    background-color: rgb(42 29 22 / 0.7);
+  }
+
+  /* Bordas */
+  .dark [class~="hover:border-brand"]:hover:not([class*="dark:hover:border-"]),
+  .dark [class~="hover:border-brand-dark"]:hover:not([class*="dark:hover:border-"]),
+  .dark [class~="focus:border-brand"]:focus:not([class*="dark:focus:border-"]),
+  .dark [class~="focus:border-brand-dark"]:focus:not([class*="dark:focus:border-"]),
+  .dark [class~="focus-within:border-brand"]:focus-within:not([class*="dark:focus-within:border-"]),
+  .dark [class*="hover:border-brand/"]:hover:not([class*="dark:hover:border-"]) {
+    border-color: #347460;
+  }
+  .dark [class~="hover:border-stone-200"]:hover:not([class*="dark:hover:border-"]) {
+    border-color: #2e3329;
+  }
+  .dark [class~="hover:border-stone-300"]:hover:not([class*="dark:hover:border-"]),
+  .dark .group:hover [class~="group-hover:border-stone-300"]:not([class*="dark:group-hover:border-"]) {
+    border-color: #3a4034;
+  }
+  /* `stone-400` segue o degrau seguinte da escala de bordas do escuro. */
+  .dark [class~="hover:border-stone-400"]:hover:not([class*="dark:hover:border-"]) {
+    border-color: #464d3f;
+  }
+  .dark [class~="hover:border-alert-border"]:hover:not([class*="dark:hover:border-"]),
+  .dark [class~="focus:border-alert-border"]:focus:not([class*="dark:focus:border-"]) {
+    border-color: #554d28;
+  }
+  .dark [class~="hover:border-clay-text"]:hover:not([class*="dark:hover:border-"]),
+  .dark [class~="focus:border-clay-text"]:focus:not([class*="dark:focus:border-"]) {
+    border-color: #e0a48c;
+  }
+  .dark [class~="hover:border-fiz-400"]:hover:not([class*="dark:hover:border-"]) {
+    border-color: #5c4708;
+  }
+
+  /* Paleta de stock usada em ações destrutivas e em CTA invertidos. Não tem
+     override base (nunca é cor de superfície fora do hover), mas no hover
+     pintava claro: `hover:bg-red-50` acendia #FEF2F2 debaixo de texto vermelho
+     claro. Os valores seguem o que vários componentes já escreviam à mão em
+     `dark:hover:bg-red-900/20` — aqui passa a ser o comportamento por defeito. */
+  .dark [class~="hover:bg-red-50"]:hover:not([class*="dark:hover:bg-"]),
+  .dark [class~="hover:bg-red-100"]:hover:not([class*="dark:hover:bg-"]) {
+    background-color: rgb(127 29 29 / 0.25);
+  }
+  .dark [class~="hover:border-red-200"]:hover:not([class*="dark:hover:border-"]),
+  .dark [class~="hover:border-red-300"]:hover:not([class*="dark:hover:border-"]) {
+    border-color: #5c2626;
+  }
+  /* CTA invertido (botão claro sobre secção de marca): no escuro o `bg-white`
+     já é superfície escura, por isso o hover tem de SUBIR um degrau, não saltar
+     para verde-quase-branco. */
+  .dark [class~="hover:bg-green-50"]:hover:not([class*="dark:hover:bg-"]),
+  .dark [class~="hover:bg-emerald-50"]:hover:not([class*="dark:hover:bg-"]),
+  .dark [class~="hover:bg-emerald-100"]:hover:not([class*="dark:hover:bg-"]) {
+    background-color: #24281f;
+  }
+
+  /* Exceção das superfícies de marca, agora também no hover: sobre `bg-brand` o
+     branco translúcido é intencional (ver o bloco equivalente das classes base
+     mais acima). Vem DEPOIS das regras genéricas porque empata em
+     especificidade com elas — aqui é a ordem que decide, de propósito. */
+  .dark .bg-brand [class*="hover:bg-white/"]:hover,
+  .dark .bg-brand-dark [class*="hover:bg-white/"]:hover {
+    background-color: rgb(255 255 255 / 0.25);
+  }
+  .dark .bg-brand [class~="hover:bg-white/10"]:hover,
+  .dark .bg-brand-dark [class~="hover:bg-white/10"]:hover { background-color: rgb(255 255 255 / 0.1); }
+  .dark .bg-brand [class~="hover:bg-white/15"]:hover,
+  .dark .bg-brand-dark [class~="hover:bg-white/15"]:hover { background-color: rgb(255 255 255 / 0.15); }
+  .dark .bg-brand [class~="hover:bg-white/20"]:hover,
+  .dark .bg-brand-dark [class~="hover:bg-white/20"]:hover { background-color: rgb(255 255 255 / 0.2); }
+
   /* Alertas — dourado adaptado ao escuro, contraste reforçado */
   .dark .bg-alert-bg {
     background-color: #302b12;
