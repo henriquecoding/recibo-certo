@@ -1,0 +1,181 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import Button from "@/components/ui/Button";
+import { useAvisos } from "@/components/ui/Avisos";
+import {
+  desligarLinkedIn,
+  guardarUrlLinkedIn,
+  ligarLinkedIn,
+  normalizarUrlLinkedIn,
+  obterEstadoLinkedIn,
+  obterLinkedInPublico,
+  sincronizarLinkedIn,
+} from "@/lib/contabilistas/linkedin";
+
+export default function LinkedInConta({ contabilistaId }: { contabilistaId: string }) {
+  const avisos = useAvisos();
+  const [aLer, setALer] = useState(true);
+  const [ocupado, setOcupado] = useState(false);
+  const [ligado, setLigado] = useState(false);
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const [url, setUrl] = useState("");
+  const [urlGuardada, setUrlGuardada] = useState("");
+  const [erro, setErro] = useState<string | null>(null);
+
+  const carregar = useCallback(async () => {
+    setALer(true);
+    setErro(null);
+    const [estado, publico] = await Promise.all([
+      obterEstadoLinkedIn(),
+      obterLinkedInPublico(contabilistaId),
+    ]);
+
+    if (estado.erro) setErro(estado.erro);
+    setLigado(estado.ligado);
+    setUrl(publico.url ?? "");
+    setUrlGuardada(publico.url ?? "");
+    setAvatar(publico.avatarUrl ?? estado.fotoDaIdentidade);
+
+    // A foto verificada vive na ficha pública, não em metadata editável pelo
+    // browser. Quando a identidade existe, a própria base de dados copia a
+    // fotografia que veio do LinkedIn para a coluna protegida.
+    if (estado.ligado) {
+      const sync = await sincronizarLinkedIn();
+      if (sync.erro) setErro(sync.erro);
+      else setAvatar(sync.avatarUrl ?? estado.fotoDaIdentidade);
+    }
+
+    setALer(false);
+  }, [contabilistaId]);
+
+  useEffect(() => { void carregar(); }, [carregar]);
+
+  async function ligar() {
+    setOcupado(true);
+    setErro(null);
+    const { erro: e } = await ligarLinkedIn();
+    // Em sucesso o browser é redirecionado para o LinkedIn, por isso este
+    // estado só é observado quando a chamada falha antes de sair da página.
+    if (e) {
+      setOcupado(false);
+      const manual = /manual|linking|identity/i.test(e);
+      setErro(manual
+        ? "A ligação de identidades ainda não está ativa no Supabase Auth. Ativa «Enable Manual Linking» nas definições de autenticação."
+        : e);
+    }
+  }
+
+  async function desligar() {
+    setOcupado(true);
+    setErro(null);
+    const { erro: e } = await desligarLinkedIn();
+    setOcupado(false);
+    if (e) { setErro(e); return; }
+    setLigado(false);
+    setAvatar(null);
+    avisos.sucesso("LinkedIn desligado do perfil.");
+  }
+
+  async function guardarUrl() {
+    setOcupado(true);
+    setErro(null);
+    const resultado = await guardarUrlLinkedIn(contabilistaId, url);
+    setOcupado(false);
+    if (resultado.erro) { setErro(resultado.erro); return; }
+
+    const guardada = resultado.url ?? "";
+    setUrl(guardada);
+    setUrlGuardada(guardada);
+    avisos.sucesso(guardada ? "Endereço do LinkedIn guardado." : "Endereço do LinkedIn removido.");
+  }
+
+  const urlNormalizada = normalizarUrlLinkedIn(url);
+  const urlAlterada = (urlNormalizada ?? url.trim()) !== urlGuardada;
+
+  return (
+    <section aria-labelledby="linkedin-titulo" className="rounded-3xl border border-stone-200 bg-cream/55 p-4 sm:p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3.5">
+          {avatar ? (
+            // Não usamos next/image: a origem do LinkedIn é dinâmica. No perfil
+            // público a imagem passa pelo proxy do ReciboCerto; aqui só o dono
+            // da própria conta vê a pré-visualização direta.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatar}
+              alt="Fotografia atual do LinkedIn"
+              referrerPolicy="no-referrer"
+              className="h-14 w-14 shrink-0 rounded-2xl border border-stone-200 object-cover shadow-card"
+            />
+          ) : (
+            <div aria-hidden className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-stone-200 bg-white text-lg font-bold text-[#0A66C2] shadow-card">
+              in
+            </div>
+          )}
+
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 id="linkedin-titulo" className="font-semibold text-stone-800">LinkedIn</h2>
+              <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold ${
+                ligado ? "bg-brand-light text-brand-dark" : "bg-stone-100 text-stone-500"
+              }`}>
+                {ligado ? "Conta ligada" : "Não ligado"}
+              </span>
+            </div>
+            <p className="mt-1 max-w-xl text-xs leading-relaxed text-stone-500">
+              A foto é confirmada pela tua conta LinkedIn via OpenID Connect. O LinkedIn não envia o endereço público `/in/...` neste login, por isso esse link é confirmado por ti uma única vez.
+            </p>
+          </div>
+        </div>
+
+        <div className="shrink-0">
+          {ligado ? (
+            <Button type="button" size="sm" variant="secondary" onClick={desligar} disabled={ocupado || aLer}>
+              Desligar
+            </Button>
+          ) : (
+            <Button type="button" size="sm" onClick={ligar} disabled={ocupado || aLer}>
+              {ocupado ? "A abrir…" : "Ligar LinkedIn"}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {erro && (
+        <p role="alert" className="mt-3 rounded-xl bg-clay-bg px-3 py-2 text-xs leading-relaxed text-clay-text">
+          {erro}
+        </p>
+      )}
+
+      <div className="mt-4">
+        <label htmlFor="linkedin-url" className="text-sm font-semibold text-stone-700">Perfil público no LinkedIn</label>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+          <input
+            id="linkedin-url"
+            type="url"
+            inputMode="url"
+            autoComplete="url"
+            value={url}
+            disabled={!ligado || aLer}
+            onChange={(e) => setUrl(e.target.value.slice(0, 300))}
+            placeholder="https://www.linkedin.com/in/o-teu-perfil"
+            className="min-h-[2.75rem] min-w-0 flex-1 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm text-stone-800 disabled:cursor-not-allowed disabled:opacity-55 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={guardarUrl}
+            disabled={!ligado || aLer || ocupado || !urlAlterada || (Boolean(url.trim()) && !urlNormalizada)}
+          >
+            Guardar link
+          </Button>
+        </div>
+        {!ligado && (
+          <p className="mt-1.5 text-xs text-stone-400">Liga primeiro a conta para que o endereço e a fotografia possam aparecer no perfil público.</p>
+        )}
+      </div>
+    </section>
+  );
+}
