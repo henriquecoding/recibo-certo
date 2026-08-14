@@ -24,10 +24,6 @@
       "schedule": "15 4 * * *"
     },
     {
-      "path": "/api/cron/avisos-email",
-      "schedule": "*/15 * * * *"
-    },
-    {
       "path": "/api/cron/purgar-anexos",
       "schedule": "30 4 * * *"
     },

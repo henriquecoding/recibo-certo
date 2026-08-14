@@ -19,6 +19,14 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.50.0",
+    data: "2026-08-14",
+    titulo: "Os avisos da plataforma chegam em minutos, e nenhum se perde",
+    itens: [
+      "Quando o teu contabilista responde, quando uma consulta é confirmada ou quando completas o cartão de fidelidade, o email sai dentro de cerca de quinze minutos. Se o serviço de email estiver em baixo nesse momento, o aviso fica guardado e sai assim que der — não se perde nem chega duas vezes.",
+    ],
+  },
+  {
     version: "2.49.0",
     data: "2026-08-13",
     titulo: "Modo escuro: os botões deixam de perder o texto ao passar o rato",
