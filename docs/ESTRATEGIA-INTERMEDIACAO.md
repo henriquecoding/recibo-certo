@@ -1,6 +1,7 @@
 # Da ligação direta à intermediação — estratégia completa
 
-> Estado: plano aprovado, por implementar.
+> Estado: fases A, B e C implementadas na migração `051_intermediacao_casos.sql`.
+> A camada de domínio está em `src/lib/contabilistas/casos.ts`; falta a interface.
 > Substitui o modelo de vínculo direto da PR #102 **sem apagar o que lá está**:
 > quase tudo se reaproveita, mas a relação passa a ser mediada.
 > Ler com `docs/auditorias/pr102/HANDOFF-CLAUDE.md` e o relatório mestre de
@@ -18,8 +19,8 @@ isso convém dizer com precisão o que se mantém e o que cai.
 | | Modelo atual (PR #102) | Modelo de intermediação |
 |---|---|---|
 | Escolha | O cliente escolhe o contabilista | O cliente descreve o caso; o diretório serve para **ver quem existe**, não para escolher |
-| Identidade | O cliente dá o nome que quiser | O cliente dá **nome, NIF e contactos completos** — à plataforma |
-| Quem vê os contactos | O contabilista | **Só a plataforma.** O contabilista nunca |
+| Identidade | O cliente dá o nome que quiser | O cliente dá **nome, NIF e contactos completos** — o contabilista recebe **nome e NIF** |
+| Quem vê os contactos | O contabilista | **Só a plataforma.** Email, telefone e morada nunca chegam ao contabilista |
 | Conversa | Livre, direta, em tempo real | **Mediada**: quem quer dizer algo submete, a administração analisa e encaminha |
 | Resultado | Consultas marcadas | **Proposta** com valor, contrato e anexos |
 | Aceitação | Implícita | Só depois de **ler até ao fim** e confirmar |
@@ -56,25 +57,31 @@ importa (§7).
 A garantia central — o contabilista nunca vê contactos — não pode ser uma
 coluna que alguém se lembra de não devolver no `select`. É **duas tabelas**:
 
+A fronteira **não** é entre saber quem é a pessoa e não saber. Um contabilista
+precisa do nome e do NIF para fazer o trabalho e para orçamentar com seriedade;
+escondê-los seria fingir que se pode trabalhar às cegas. A fronteira é o
+**canal** — o que lhe permitiria continuar a conversa fora daqui.
+
 ```
-caso_identidade          ← só o cliente e a administração
+caso_contactos           ← só o cliente e a administração
   caso_id (PK/FK)
-  nome_completo, nif, email, telefone, morada
+  email, telefone, morada
 
 casos                    ← o que o contabilista vê
   id, cliente_id
-  referencia   «RC-2026-0041» — é assim que o contabilista trata o caso
+  referencia   «RC-2026-0041»
+  nome_completo, nif    ← identificação, não canal
   assunto, situacao, area, urgencia, orcamento_previsto
   estado: rascunho | submetido | em_triagem | encaminhado
         | com_proposta | aceite | recusado | fechado
 ```
 
-Sem `JOIN` possível a partir das políticas do contabilista. Não há
-`select` distraído que devolva o NIF, porque o NIF não está na tabela que ele
+Sem `JOIN` possível a partir das políticas do contabilista. Não há `select`
+distraído que devolva um telefone, porque o telefone não está na tabela que ele
 alcança. É o mesmo princípio da migração 038, levado ao fim.
 
-O NIF nunca aparece em claro num painel: guarda-se, e a administração vê-o
-mascarado (`•••••789`) salvo ação explícita registada em `admin_auditoria`.
+`nifMascarado` existe para listas — não é uma proteção, e o código di-lo: quem
+abre o caso vê o NIF inteiro, e é suposto.
 
 ### 3.2 Encaminhamento
 
@@ -222,14 +229,16 @@ topo, sempre:
 > As mensagens passam pela equipa do ReciboCerto antes de seguirem. É assim
 > que os teus contactos não chegam a ninguém sem tu quereres.
 
-## 8. O que fica por decidir
+## 8. As decisões que estavam por tomar, tomadas
 
-1. **Um caso vai para quantos contabilistas?** Um de cada vez é mais simples e
-   mais justo para quem responde; vários dão escolha ao cliente. Proposta: a
-   administração decide caso a caso, com um teto declarado na interface.
-2. **A administração pode editar uma mensagem, ou só aprovar e devolver?**
-   Editar é mais rápido e menos honesto. Proposta: só aprovar, devolver ou
-   recusar; a redação fica para exceções, sempre com o original preservado.
-3. **O que acontece ao vínculo direto e à conversa livre que já existem?**
-   Proposta: a conversa livre fica disponível só depois de uma proposta aceite
-   — aí já há contrato, e a mediação deixa de fazer sentido.
+1. **Um caso vai para vários contabilistas**, com um teto de **três**, imposto
+   por gatilho e declarado na interface. Não é a mesma lead vendida a vários: o
+   cliente sabe, escolhe entre propostas, e nenhum deles recebe canais de
+   contacto.
+2. **A administração aprova, devolve ou recusa.** Não há «editar»: a redação vai
+   para `corpo_encaminhado` e o `corpo` original é imutável por gatilho — uma
+   revisão que apaga a prova do que foi dito não é revisão, é reescrita.
+   Devolver ou recusar exige uma razão escrita.
+3. **A conversa livre abre depois de uma proposta aceite.** O vínculo passa a
+   nascer em `decidir_proposta`: é consequência da relação, e não porta de
+   entrada.

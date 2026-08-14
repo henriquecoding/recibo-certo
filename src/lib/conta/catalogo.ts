@@ -209,6 +209,23 @@ export const CONJUNTOS: Conjunto[] = [
     ficheiros: [{ balde: "contabilista-documentos", prefixo: "utilizador" }],
   },
 
+  // ── O caso, do lado de quem o submeteu ────────────────────────────
+  {
+    id: "casos", grupo: "contabilista",
+    titulo: "Casos que descreveste",
+    descricao: "Os pedidos que enviaste, com a situação que escreveste, os documentos que anexaste e as propostas que recebeste.",
+    tabelas: [
+      { nome: "proposta_anexos", posse: { por: "pende", de: "propostas" } },
+      { nome: "propostas", posse: { por: "pende", de: "casos" } },
+      { nome: "caso_mensagens", posse: { por: "pende", de: "casos" } },
+      { nome: "caso_encaminhamentos", posse: { por: "pende", de: "casos" } },
+      { nome: "caso_documentos", posse: { por: "pende", de: "casos" } },
+      { nome: "caso_contactos", posse: { por: "pende", de: "casos" } },
+      { nome: "casos", posse: { por: "coluna", coluna: "cliente_id" } },
+    ],
+    ficheiros: [{ balde: "contabilista-anexos", prefixo: "vinculo" }],
+  },
+
   // ── Avisos ────────────────────────────────────────────────────────
   {
     id: "alertas", grupo: "avisos",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getSupabase, supabaseConfigurado } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/auth";
 import { useSubscricao } from "@/lib/stripe/subscription";
@@ -35,6 +35,12 @@ export interface RegistrarSessaoResult {
   levelUp: boolean;
   nivelAnterior: NivelInfo;
   nivelNovo: NivelInfo;
+  /**
+   * O XP conta já no ecrã, mas ainda não foi gravado: a autenticação não
+   * tinha respondido e não se sabia se ia para a nuvem ou para o aparelho.
+   * Vai assim que se souber. Quem mostra o resultado pode dizer isto.
+   */
+  adiado?: boolean;
 }
 
 /** Nível a partir do qual a energia é ilimitada (sem necessidade de plano pago). */
@@ -149,6 +155,8 @@ export function useQuizProgresso(): QuizProgressoReturn {
   const [energiaResetAt, setEnergiaResetAt] = useState<string | null>(null);
   const [sessoes, setSessoes] = useState<SessaoHistorico[]>([]);
   const [carregado, setCarregado] = useState(false);
+  /** Sessões ganhas antes de se saber onde as guardar. Ver `registrarSessao`. */
+  const porGravar = useRef<{ sessao: SessaoHistorico; xp: number; record: number }[]>([]);
 
   // ── Carga inicial ──────────────────────────────────────────────────────
 
@@ -232,6 +240,45 @@ export function useQuizProgresso(): QuizProgressoReturn {
 
   // ── Registar sessão concluída ──────────────────────────────────────────
 
+  /** Escreve no sítio que o destino manda. Não decide nada — só executa. */
+  const gravarSessao = useCallback(async (
+    novaSessao: SessaoHistorico, novoXP: number, novoRecord: number,
+  ): Promise<void> => {
+    if (naNuvem && user) {
+      const sb = getSupabase();
+
+      // Upsert quiz_profile
+      const { error: errPerfil } = await sb.from("quiz_profiles").upsert({
+        id: user.id,
+        xp: novoXP,
+        streak_record: novoRecord,
+        energia_restante: Math.max(0, energiaRestante),
+        energia_reset_at: energiaResetAt,
+        atualizado_em: new Date().toISOString(),
+      }, { onConflict: "id" });
+      if (errPerfil) console.error("[quiz] Perfil não sincronizado:", errPerfil.message);
+
+      // Inserir sessão
+      const { error: errSessao } = await sb.from("quiz_sessions").insert({
+        user_id: user.id,
+        modo: novaSessao.modo,
+        categoria: novaSessao.categoria ?? null,
+        total_perguntas: novaSessao.totalPerguntas,
+        acertos: novaSessao.acertos,
+        pontos: novaSessao.pontos,
+        xp_ganho: novaSessao.xpGanho,
+        streak_maximo: novaSessao.streakMaximo,
+        tempo_total_seg: novaSessao.tempoTotalSeg,
+      });
+      if (errSessao) console.error("[quiz] Sessão não sincronizada:", errSessao.message);
+    } else {
+      // Persiste em localStorage
+      const prog = lerProgressoLocal();
+      gravarProgressoLocal({ ...prog, xp: novoXP, streakRecord: novoRecord });
+      gravarSessoesLocal([novaSessao, ...lerSessoesLocal()]);
+    }
+  }, [energiaRestante, energiaResetAt, naNuvem, user]);
+
   const registrarSessao = useCallback(async (
     resultado: ResultadoQuiz,
     pontosGanhos: number,
@@ -268,42 +315,29 @@ export function useQuizProgresso(): QuizProgressoReturn {
     setStreakRecord(novoRecord);
     setSessoes(prev => [novaSessao, ...prev].slice(0, MAX_SESSOES_LOCAL));
 
-    if (naNuvem && user) {
-      const sb = getSupabase();
-
-      // Upsert quiz_profile
-      const { error: errPerfil } = await sb.from("quiz_profiles").upsert({
-        id: user.id,
-        xp: novoXP,
-        streak_record: novoRecord,
-        energia_restante: Math.max(0, energiaRestante),
-        energia_reset_at: energiaResetAt,
-        atualizado_em: new Date().toISOString(),
-      }, { onConflict: "id" });
-      if (errPerfil) console.error("[quiz] Perfil não sincronizado:", errPerfil.message);
-
-      // Inserir sessão
-      const { error: errSessao } = await sb.from("quiz_sessions").insert({
-        user_id: user.id,
-        modo: novaSessao.modo,
-        categoria: novaSessao.categoria ?? null,
-        total_perguntas: novaSessao.totalPerguntas,
-        acertos: novaSessao.acertos,
-        pontos: novaSessao.pontos,
-        xp_ganho: novaSessao.xpGanho,
-        streak_maximo: novaSessao.streakMaximo,
-        tempo_total_seg: novaSessao.tempoTotalSeg,
-      });
-      if (errSessao) console.error("[quiz] Sessão não sincronizada:", errSessao.message);
-    } else {
-      // Persiste em localStorage
-      const prog = lerProgressoLocal();
-      gravarProgressoLocal({ ...prog, xp: novoXP, streakRecord: novoRecord });
-      gravarSessoesLocal([novaSessao, ...lerSessoesLocal()]);
+    // Sem destino conhecido, NÃO se escreve — mas também não se recusa. O
+    // XP acabou de ser ganho num quiz que a pessoa jogou; deitá-lo fora
+    // porque a autenticação ainda não respondeu seria pior do que o
+    // defeito que isto vem corrigir. Fica em espera e vai para o sítio
+    // certo assim que se souber qual é.
+    if (destino === "por-decidir") {
+      porGravar.current.push({ sessao: novaSessao, xp: novoXP, record: novoRecord });
+      return { xpGanho, levelUp, nivelAnterior, nivelNovo, adiado: true };
     }
 
+    await gravarSessao(novaSessao, novoXP, novoRecord);
     return { xpGanho, levelUp, nivelAnterior, nivelNovo };
-  }, [xp, streakRecord, energiaRestante, energiaResetAt, naNuvem, user]);
+  }, [xp, streakRecord, destino, gravarSessao]);
+
+  // O que ficou à espera de saber para onde ia. Corre uma vez, quando o
+  // destino deixa de ser «por decidir».
+  useEffect(() => {
+    if (destino === "por-decidir" || porGravar.current.length === 0) return;
+    const pendentes = porGravar.current.splice(0);
+    void (async () => {
+      for (const p of pendentes) await gravarSessao(p.sessao, p.xp, p.record);
+    })();
+  }, [destino, gravarSessao]);
 
   // ── XP avulso (recompensa por reportar erro, etc.) ─────────────────────
 
