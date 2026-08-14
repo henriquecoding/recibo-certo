@@ -39,7 +39,15 @@ else
   COMO_PG() { bash -c "$1"; }
 fi
 
-if ! pg_isready -h "$BASE" -q 2>/dev/null; then
+# No CI há um PostgreSQL já a correr, alcançável por TCP. Localmente
+# sobe-se um descartável. `PGHOST_RLS` distingue os dois casos sem obrigar
+# quem corre isto na sua máquina a configurar seja o que for.
+if [ -n "${CI:-}" ] && pg_isready -h localhost -q 2>/dev/null; then
+  BASE=localhost
+  export PGUSER="${PGUSER:-postgres}"
+fi
+
+if [ "$BASE" != "localhost" ] && ! pg_isready -h "$BASE" -q 2>/dev/null; then
   echo "· a arrancar PostgreSQL descartável em $BASE"
   COMO_PG "rm -rf $BASE/pgdata && mkdir -p $BASE/pgdata && chmod 700 $BASE/pgdata"
   COMO_PG "initdb -D $BASE/pgdata -A trust -U postgres" >/dev/null
