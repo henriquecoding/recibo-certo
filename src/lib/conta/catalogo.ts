@@ -294,6 +294,7 @@ export const FORA_DO_CATALOGO: Record<string, string> = {
   partner_placements: "Configuração comercial.",
   partner_link_clicks: "Cliques sem identidade.",
   partner_events: "Eventos de webhook do parceiro, chaveados pela ligação, e saem com ela.",
+  billing_customers: "A ligação entre a conta e o cliente na Stripe. Sai em cascata com a própria conta; apagá-la à parte deixava uma subscrição viva sem dono, e a cobrança a seguir sem a quem devolver.",
   guide_partner_routes: "Configuração de routing.",
   recibos_vencimento_legado: "Não existe; nome reservado.",
 };

@@ -1,12 +1,12 @@
 {
   "periodo": "Janeiro a Junho de 2026",
   "proveniencia": {
-    "referencia": "RC-2026-RCB-ATPX7E",
+    "referencia": "RC-2026-RCB-RT5WZE",
     "digest": "8742820aa9f1af24455513d13a1b63ead679295800f77a83c800341fa816518b",
     "motor": "2.46.0",
     "anoFiscal": 2026,
     "emitidoEm": "1 de agosto de 2026",
-    "verificacao": "https://www.recibocerto.pt/v/RC-2026-RCB-ATPX7E"
+    "verificacao": "https://www.recibocerto.pt/v/RC-2026-RCB-RT5WZE"
   },
   "quantos": 6,
   "resposta": {

@@ -14,11 +14,27 @@ import { join } from "node:path";
 
 const DIR = "supabase/migrations";
 const SAIDA = "supabase/bundle/plataforma-contabilistas.sql";
+
+// O intervalo, dito por extenso. `Number(f.slice(0,3)) >= 42` parecia
+// equivalente e não era: uma migração chamada `20260813_...` tem `202` nos
+// três primeiros dígitos, entrava no ficheiro junto sem ser da plataforma,
+// e ia parar ao fim de tudo por ordem alfabética. A `main` tem uma dessas.
 const DESDE = 42;
+const ATE = 99;
 
 const ficheiros = readdirSync(DIR)
-  .filter((f) => f.endsWith(".sql") && Number(f.slice(0, 3)) >= DESDE)
+  .filter((f) => {
+    const m = /^(\d{3})_/.exec(f);
+    if (!m || !f.endsWith(".sql")) return false;
+    const n = Number(m[1]);
+    return n >= DESDE && n <= ATE;
+  })
   .sort();
+
+if (ficheiros.length === 0) {
+  console.error("Nenhuma migração no intervalo — o filtro está errado.");
+  process.exit(1);
+}
 
 const cabecalho = `-- ═══════════════════════════════════════════════════════════════════════
 --  PLATAFORMA DE CONTABILISTAS — TODAS AS MIGRAÇÕES, POR ORDEM

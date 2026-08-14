@@ -409,6 +409,35 @@ no handoff FIZ**. Testar mensagem, onboarding e valor recorrente antes de testar
 preço; qualquer subida futura protege os utilizadores existentes e baseia-se em
 coortes.
 
+O plano Grátis, com calculadoras, simuladores, guias e **1 amostra de cenário**,
+é a experiência de aquisição. Não acrescentar um trial de 14 dias ao Plus: a
+cobrança é imediata e os 14 dias comunicados são uma garantia de reembolso, não
+um período gratuito com cobrança posterior.
+
+### 8.1.1 Vitalício fundador a 19,99 €
+
+O vitalício não é a economia recorrente do produto. É uma campanha limitada de
+capital de lançamento: o mesmo Plus, pago uma vez, com **1000 lugares fundadores**.
+A base de dados conta compras e concessões manuais no mesmo limite e serializa o
+último lugar, por isso o número anunciado não é apenas urgência de interface.
+
+| Campanha completa | Fórmula | Valor indicativo |
+|---|---|---|
+| Receita bruta máxima | 1000 × 19,99 € | 19 990 € |
+| Receita sem IVA (hipótese 23%) | 19 990 / 1,23 | 16 252 € |
+| Stripe Payments (hipótese 1,5% + 0,25 €) | 1000 × (19,99 × 1,5% + 0,25) | 550 € |
+| **Contribuição antes de infra, suporte e reembolsos** | | **~15 702 €** |
+
+Cada concessão manual ativa ocupa um desses lugares. Assim, a receita futura
+máxima é `(1000 − concessões ativas) × 19,99 €`; isto mantém a promessa dos mil
+lugares e torna auditável a diferença entre capacidade total e lugares pagos.
+
+**Decisão do vitalício:** manter 19,99 € durante a campanha fundadora, não o
+transformar numa oferta permanente e não lhe acrescentar trial. Depois de
+esgotar ou encerrar a campanha, o mensal continua como motor de receita e de
+manutenção do serviço. O valor líquido real depende do enquadramento de IVA,
+mix de cartões, reembolsos, fraude, infraestrutura e suporte.
+
 ### 8.2 Sensibilidade por 10 000 DVM
 
 > Modelo para perceber alavancas, **não previsão**. P = comissão média por

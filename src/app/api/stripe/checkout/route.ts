@@ -1,109 +1,122 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe/server";
 import { STRIPE_CONFIG } from "@/lib/stripe/config";
-import { createClient } from "@supabase/supabase-js";
-import { lugaresVitalicios } from "@/lib/plus/vitalicio";
+import { lugaresVitalicios } from "@/lib/plus/vitalicio-server";
+import { userDoPedido } from "@/lib/supabase/verify-request-user";
+import { estadoAcessoDoUtilizador } from "@/lib/billing/access";
+import { obterOuCriarCustomer } from "@/lib/billing/customers";
+import {
+  resolverPrecoCheckout,
+  STRIPE_INTEGRATION_IDENTIFIER,
+  type ModalidadeCheckout,
+} from "@/lib/billing/prices";
 
-async function obterUtilizador(req: NextRequest) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) return null;
+export const runtime = "nodejs";
 
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader) return null;
+export async function POST(req: Request) {
+  const user = await userDoPedido(req);
+  if (!user) return NextResponse.json({ erro: "Autenticação necessária." }, { status: 401 });
 
-  const sb = createClient(url, anonKey, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const { data } = await sb.auth.getUser();
-  return data.user;
-}
-
-export async function POST(req: NextRequest) {
   try {
-    const user = await obterUtilizador(req);
-    if (!user) {
-      return NextResponse.json({ erro: "Autenticação necessária." }, { status: 401 });
+    const body = await req.json().catch(() => ({}));
+    if (body?.modalidade !== "mensal" && body?.modalidade !== "vitalicio") {
+      return NextResponse.json({ erro: "Modalidade de pagamento inválida." }, { status: 400 });
     }
+    const modalidade: ModalidadeCheckout = body.modalidade;
+    const state = await estadoAcessoDoUtilizador(user.id);
 
-    // Continua a não haver escadaria de planos: há UM conjunto de
-    // funcionalidades (o Plus) e duas formas de o pagar — todos os meses,
-    // ou uma vez para sempre. O corpo do pedido só escolhe a forma.
-    const corpo = await req.json().catch(() => ({}));
-    const vitalicio = corpo?.modalidade === "vitalicio";
-
-    const priceId = vitalicio ? STRIPE_CONFIG.prices.vitalicio : STRIPE_CONFIG.prices.plus;
-
-    if (!priceId) {
-      return NextResponse.json(
-        {
-          erro: vitalicio
-            ? "O preço vitalício não está configurado (STRIPE_PRICE_PLUS_LIFETIME)."
-            : "Preço não configurado.",
-        },
-        { status: 500 },
-      );
+    if (state.vitalicio) {
+      return NextResponse.json({ erro: "A tua conta já tem Plus vitalício." }, { status: 409 });
     }
-
-    // Recusar ANTES de cobrar. O gatilho da base de dados é que garante o
-    // limite, mas se só ele recusasse, a pessoa pagava primeiro e só depois
-    // descobria que não havia lugar — e ficávamos a dever um reembolso.
-    if (vitalicio) {
-      const lugares = await lugaresVitalicios();
-      if (lugares.esgotado) {
-        return NextResponse.json(
-          {
-            erro: "Os lugares vitalícios esgotaram. O Plus mensal continua disponível.",
-            esgotado: true,
-          },
-          { status: 409 },
-        );
+    if (modalidade === "mensal" && state.plano === "plus" && state.origem !== "cupao") {
+      return NextResponse.json({ erro: "A tua conta já tem Plus ativo." }, { status: 409 });
+    }
+    if (
+      modalidade === "mensal"
+      && state.origem === "stripe"
+      && ["active", "trialing", "past_due", "unpaid", "paused"].includes(state.status ?? "")
+    ) {
+      return NextResponse.json({
+        erro: "Já existe faturação nesta conta. Atualiza o pagamento no portal em vez de criares outra subscrição.",
+      }, { status: 409 });
+    }
+    if (modalidade === "vitalicio") {
+      const places = await lugaresVitalicios();
+      if (places.esgotado) {
+        return NextResponse.json({
+          erro: "Os lugares vitalícios não estão disponíveis. O Plus mensal continua disponível.",
+          esgotado: true,
+        }, { status: 409 });
       }
     }
 
+    const [price, customer] = await Promise.all([
+      resolverPrecoCheckout(modalidade),
+      obterOuCriarCustomer(user),
+    ]);
     const stripe = getStripe();
 
-    const existentes = await stripe.customers.list({
-      email: user.email,
-      limit: 1,
-    });
-
-    let customerId: string;
-    if (existentes.data.length > 0) {
-      customerId = existentes.data[0].id;
-    } else {
-      const novo = await stripe.customers.create({
-        email: user.email!,
-        metadata: { supabase_uid: user.id },
-      });
-      customerId = novo.id;
+    // A projeção local pode estar alguns segundos atrás da Stripe. Confirmar
+    // também na origem impede duas mensalidades quando a pessoa abre dois
+    // separadores ou o primeiro webhook ainda está em trânsito.
+    if (modalidade === "mensal") {
+      const subscriptions = await stripe.subscriptions.list({ customer, status: "all", limit: 20 });
+      const alreadyBilling = subscriptions.data.some((subscription) =>
+        ["active", "trialing", "past_due", "unpaid", "paused"].includes(subscription.status));
+      if (alreadyBilling) {
+        return NextResponse.json({
+          erro: "Já existe faturação nesta conta. Gere-a no portal em vez de criares outra subscrição.",
+        }, { status: 409 });
+      }
     }
 
-    // Uma compra única NÃO cria uma subscrição no Stripe — logo não há
-    // `subscription_data`, não há `customer.subscription.created`, e o que
-    // chega ao webhook é `checkout.session.completed` com `mode=payment`.
-    // O `supabase_uid` viaja nos metadados da sessão E do pagamento, porque
-    // é por lá que o webhook sabe a quem conceder.
+    // Reutiliza uma sessão ainda aberta. Em conjunto com a chave idempotente,
+    // isto cobre tanto pedidos simultâneos como um segundo clique minutos depois.
+    const openSessions = await stripe.checkout.sessions.list({ customer, status: "open", limit: 20 });
+    const reusable = openSessions.data.find((candidate) =>
+      candidate.metadata?.supabase_uid === user.id
+      && candidate.metadata?.modalidade === modalidade
+      && candidate.metadata?.price_id === price.id
+      && candidate.expires_at > Math.floor(Date.now() / 1000)
+      && Boolean(candidate.url));
+    if (reusable?.url) return NextResponse.json({ url: reusable.url, reutilizada: true });
+
+    const bucket = Math.floor(Date.now() / (10 * 60_000));
     const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      mode: vitalicio ? "payment" : "subscription",
-      line_items: [{ price: priceId, quantity: 1 }],
+      customer,
+      customer_update: { address: "auto", name: "auto" },
+      billing_address_collection: "auto",
+      mode: modalidade === "vitalicio" ? "payment" : "subscription",
+      line_items: [{ price: price.id, quantity: 1 }],
       success_url: STRIPE_CONFIG.checkoutSuccessUrl,
       cancel_url: STRIPE_CONFIG.checkoutCancelUrl,
       client_reference_id: user.id,
-      metadata: { supabase_uid: user.id, modalidade: vitalicio ? "vitalicio" : "mensal" },
-      ...(vitalicio
-        ? { payment_intent_data: { metadata: { supabase_uid: user.id, price_id: priceId } } }
-        : { subscription_data: { metadata: { supabase_uid: user.id } } }),
+      integration_identifier: STRIPE_INTEGRATION_IDENTIFIER,
+      metadata: { supabase_uid: user.id, modalidade, price_id: price.id },
+      ...(modalidade === "vitalicio" ? {
+        payment_intent_data: {
+          metadata: { supabase_uid: user.id, price_id: price.id, modalidade },
+        },
+        // Uma subscrição gera fatura sozinha; um pagamento único não. Sem
+        // isto o vitalício ficava só com o recibo da Stripe, e o «Ver
+        // pagamentos» do portal abria um histórico vazio — logo para quem
+        // pagou de uma vez e mais precisa de comprovativo.
+        invoice_creation: { enabled: true },
+      } : {
+        subscription_data: {
+          metadata: { supabase_uid: user.id, price_id: price.id, modalidade },
+        },
+      }),
+      expires_at: Math.floor(Date.now() / 1000) + 31 * 60,
       locale: "pt",
+    }, {
+      idempotencyKey: `recibocerto-checkout-${user.id}-${modalidade}-${bucket}`,
     });
 
+    if (!session.url) throw new Error("A Stripe não devolveu o URL do checkout.");
     return NextResponse.json({ url: session.url });
-  } catch (err) {
-    console.error("[stripe/checkout]", err);
-    return NextResponse.json(
-      { erro: "Não foi possível criar a sessão de pagamento." },
-      { status: 500 },
-    );
+  } catch (error) {
+    console.error("[stripe/checkout]", error);
+    return NextResponse.json({ erro: "Não foi possível iniciar o pagamento." }, { status: 503 });
   }
 }

@@ -112,10 +112,9 @@ export const PLUS = {
    * página de planos promete "um plano só, sem escadaria", e um seletor
    * mensal/anual é uma escadaria.
    *
-   * Este valor é a ÚNICA origem do preço. Estava escrito à mão em quatro
-   * sítios — página pública (1,99 €), checkout (5,99 €), Termos (5,99 €) e
-   * emails (5,99 €) — e a página pública anunciava um preço diferente
-   * daquele que era cobrado.
+   * Este valor é a ÚNICA origem do preço na aplicação. A integração Stripe
+   * valida o montante, a moeda e a periodicidade antes de criar o Checkout,
+   * impedindo que uma configuração antiga cobre um valor diferente.
    */
   temAnual: false,
   /**

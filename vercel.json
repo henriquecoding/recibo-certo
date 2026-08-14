@@ -20,6 +20,10 @@
       "schedule": "0 4 * * *"
     },
     {
+      "path": "/api/cron/reconciliar-stripe",
+      "schedule": "15 4 * * *"
+    },
+    {
       "path": "/api/cron/avisos-email",
       "schedule": "*/15 * * * *"
     },

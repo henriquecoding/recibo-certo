@@ -6,6 +6,7 @@ import { useSubscricao, type Modalidade } from "@/lib/stripe/subscription";
 import Link from "next/link";
 import { BellAlert, History, Wallet, Export, ChartProjection, Check, ArrowRight, Lock } from "@/components/ui/Icons";
 import { PLUS, precoPlusFormatado, precoVitalicioFormatado } from "@/lib/entitlements";
+import { textoLugares, type LugaresVitalicios } from "@/lib/plus/vitalicio";
 import { fizAtiva } from "@/lib/fiz/flag";
 import FizLogo from "@/components/fiz/FizLogo";
 
@@ -34,9 +35,13 @@ const BENEFICIOS = [
 
 export default function UpgradePage() {
   const { user } = useAuth();
-  const { plano, vitalicio, abrirCheckout, abrirPortal } = useSubscricao();
+  const {
+    plano, origem, carregado: planoCarregado, temClienteStripe,
+    abrirCheckout, abrirPortal,
+  } = useSubscricao();
   const [loading, setLoading] = useState(false);
   const [modalidade, setModalidade] = useState<Modalidade>("mensal");
+  const [lugares, setLugares] = useState<LugaresVitalicios | null>(null);
 
   // A página de planos liga para cá com a modalidade escolhida. Lê-se do
   // `window` e não de `useSearchParams` para a rota continuar estática — o
@@ -46,9 +51,20 @@ export default function UpgradePage() {
     if (q === "vitalicio") setModalidade("vitalicio");
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    fetch("/api/vitalicio/lugares")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((result) => { if (active && result) setLugares(result as LugaresVitalicios); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
   const [erro, setErro] = useState<string | null>(null);
+  const vitalicioIndisponivel = !lugares || lugares.verificado === false || lugares.esgotado;
 
   const handleSubscrever = async () => {
+    if (modalidade === "vitalicio" && vitalicioIndisponivel) return;
     setLoading(true);
     setErro(null);
     try {
@@ -64,7 +80,27 @@ export default function UpgradePage() {
     }
   };
 
+  if (!planoCarregado) {
+    return (
+      <div aria-busy="true" className="mx-auto max-w-lg rounded-4xl border border-stone-100 bg-white p-10 text-center text-sm text-stone-500 shadow-card">
+        A confirmar o teu plano…
+      </div>
+    );
+  }
+
   if (plano === "plus") {
+    // Três situações diferentes que antes eram tratadas como uma só: quem
+    // comprou o vitalício, quem recebeu uma concessão manual (não pagou nada,
+    // por isso «pagamento único» seria falso) e quem tem mensalidade a correr
+    // — que continua a poder passar para vitalício enquanto houver lugares.
+    const comprouVitalicio = origem === "vitalicio";
+    const concessaoManual = origem === "manual";
+    // Só uma subscrição Stripe: é a única que `cancelRecurringAfterLifetime`
+    // sabe travar. Oferecer o vitalício a quem veio do Lemon Squeezy deixá-lo-ia
+    // a pagar nos dois sítios, e a quem tem um cupão prometia cancelar uma
+    // mensalidade que não existe.
+    const temMensalidade = origem === "stripe";
+
     return (
       <div className="mx-auto max-w-lg text-center">
         <div className="rounded-4xl border border-brand bg-white p-10 shadow-glow">
@@ -72,21 +108,62 @@ export default function UpgradePage() {
             Plus ativo
           </span>
           <h1 className="mt-4 font-display text-2xl font-semibold text-ink">
-            {vitalicio ? "Tens o Plus para sempre" : "Já tens o Recibo Certo Plus"}
+            {comprouVitalicio ? "Tens acesso vitalício ao Plus" : "Já tens o Recibo Certo Plus"}
           </h1>
           <p className="mt-2 text-sm text-stone-500">
-            {vitalicio
-              ? "O teu acesso não renova nem expira — não há nada para gerir nem para cancelar."
-              : "Obrigado por subscreveres. Tens acesso a todas as funcionalidades."}
+            {comprouVitalicio
+              ? "Foi um pagamento único: não há renovação nem subscrição para cancelar."
+              : concessaoManual
+                ? "O teu acesso foi concedido pela equipa. Não há subscrição nem pagamento associado."
+                : "Obrigado por subscreveres. Tens acesso a todas as funcionalidades."}
           </p>
-          <button
-            type="button"
-            onClick={abrirPortal}
-            className="mt-6 inline-flex items-center gap-2 rounded-2xl border border-stone-200 px-5 py-3 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300"
-          >
-            Gerir subscrição
-            <ArrowRight size={14} />
-          </button>
+
+          {/* O portal do Stripe só existe para quem tem lá um cliente. Sem
+              isto, uma concessão manual abria um botão que falhava calado. */}
+          {temClienteStripe ? (
+            <button
+              type="button"
+              onClick={abrirPortal}
+              className="mt-6 inline-flex items-center gap-2 rounded-2xl border border-stone-200 px-5 py-3 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300"
+            >
+              {comprouVitalicio ? "Ver pagamentos" : "Gerir subscrição"}
+              <ArrowRight size={14} />
+            </button>
+          ) : null}
+
+          {temMensalidade && !vitalicioIndisponivel ? (
+            <div className="mt-8 border-t border-stone-100 pt-6">
+              <p className="text-sm text-stone-600">
+                Preferes deixar de pagar todos os meses? Passa para o vitalício
+                por {precoVitalicioFormatado()} uma única vez — a mensalidade é
+                cancelada automaticamente no fim do período já pago.
+              </p>
+              {lugares ? (
+                <p className="mt-2 text-xs text-stone-500">{textoLugares(lugares)}</p>
+              ) : null}
+              <button
+                type="button"
+                disabled={loading}
+                onClick={async () => {
+                  setLoading(true);
+                  setErro(null);
+                  try {
+                    const r = await abrirCheckout("vitalicio");
+                    if (r?.erro) setErro(r.erro);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+              >
+                {loading ? "A abrir…" : "Passar para vitalício"}
+                <ArrowRight size={14} />
+              </button>
+              {erro ? (
+                <p role="alert" className="mt-3 text-sm text-red-600">{erro}</p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
     );
@@ -119,7 +196,7 @@ export default function UpgradePage() {
 
       {/* Preço + CTA */}
       <div className="mt-6 flex flex-col items-center rounded-4xl border border-brand bg-white p-8 text-center shadow-glow">
-        {/* Um só preço. O seletor Mensal/Anual foi removido: a página de
+        {/* Um só Plus. O seletor Mensal/Anual foi removido: a página de
             planos promete "um plano só, sem escadaria" e o seletor era
             precisamente uma escadaria. O valor vem de `PLUS` — estava
             escrito à mão aqui, e em desacordo com a página pública. */}
@@ -146,7 +223,7 @@ export default function UpgradePage() {
         >
           {([
             { id: "mensal", label: "Todos os meses" },
-            { id: "vitalicio", label: "Uma vez, para sempre" },
+            { id: "vitalicio", label: "Uma vez, vitalício" },
           ] as const).map((o) => (
             <button
               key={o.id}
@@ -165,6 +242,17 @@ export default function UpgradePage() {
           ))}
         </div>
 
+        {modalidade === "vitalicio" ? (
+          <p className={`mt-3 text-xs font-medium ${lugares?.verificado !== false && lugares?.esgotado ? "text-alert-text" : "text-stone-500"}`}>
+            {lugares ? textoLugares(lugares) : "A confirmar os lugares fundadores disponíveis…"}
+          </p>
+        ) : null}
+        {modalidade === "vitalicio" && lugares?.verificado !== false && !lugares?.esgotado ? (
+          <p className="mt-1 max-w-sm text-xs leading-relaxed text-stone-400">
+            Este pagamento fundador ajuda a financiar a evolução do Recibo Certo.
+          </p>
+        ) : null}
+
         {erro ? (
           <p role="alert" className="mt-4 max-w-sm rounded-2xl bg-alert-bg px-4 py-2.5 text-xs leading-relaxed text-alert-text">
             {erro}
@@ -175,10 +263,18 @@ export default function UpgradePage() {
           <button
             type="button"
             onClick={handleSubscrever}
-            disabled={loading}
+            disabled={loading || (modalidade === "vitalicio" && vitalicioIndisponivel)}
             className="btn-shine mt-5 inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float disabled:opacity-50"
           >
-            {loading ? "A preparar..." : "Subscrever o Plus"}
+            {loading
+              ? "A preparar..."
+              : modalidade === "vitalicio"
+                ? !lugares
+                  ? "A confirmar lugares..."
+                  : lugares.verificado === false
+                    ? "Temporariamente indisponível"
+                    : lugares.esgotado ? "Lugares esgotados" : "Comprar o vitalício"
+                : "Subscrever o Plus"}
             {!loading && <ArrowRight size={14} />}
           </button>
         ) : (
@@ -192,11 +288,16 @@ export default function UpgradePage() {
         )}
 
         <p className="mt-3 text-xs text-stone-400">
-          Pagamento seguro via Stripe. Cancela quando quiseres.
+          {modalidade === "vitalicio"
+            ? "Cobrança imediata e única via Stripe. 14 dias para pedir reembolso."
+            : "Cobrança imediata via Stripe. Cancela quando quiseres; 14 dias para pedir reembolso."}
         </p>
 
         <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-          {["Cancela quando quiseres", "Sem compromisso", "Dados em servidores na UE"].map((g) => (
+          {(modalidade === "vitalicio"
+            ? ["Sem renovação", "1000 lugares fundadores", "Dados em servidores na UE"]
+            : ["Cancela quando quiseres", "Sem trial", "Dados em servidores na UE"]
+          ).map((g) => (
             <li key={g} className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-500">
               <span className="text-brand"><Check size={13} /></span>
               {g}
@@ -207,7 +308,7 @@ export default function UpgradePage() {
 
       <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs text-stone-400">
         <span className="text-stone-400"><Lock size={12} /></span>
-        Tudo o que usas no plano Grátis continua grátis e sem limites.
+        As calculadoras, os simuladores e os guias do plano Grátis continuam grátis.
       </p>
 
       {/* A fronteira dita na página onde se paga. É aqui que a confusão sai
