@@ -307,8 +307,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 Voltar ao site
               </Link>
               <SinoNotificacoes />
-              <SinoNotificacoes />
-            <ThemeToggle />
+              <ThemeToggle />
             </div>
           </div>
         </aside>
