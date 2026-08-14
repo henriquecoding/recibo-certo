@@ -19,6 +19,21 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 
 export const CHANGELOG: EntradaChangelog[] = [
   {
+    version: "2.47.0",
+    data: "2026-08-14",
+    titulo: "O que é teu sai quando pedires, e sai todo",
+    itens: [
+      "A zona de perigo mudou por inteiro. Em vez de meia dúzia de botões, tens agora a lista do que está mesmo guardado — com o número de registos à frente de cada linha — e escolhes exatamente o que sai e o que fica. Podes apagar as conversas com o teu contabilista e manter os recibos, ou o contrário.",
+      "Ao apagares a conta, apagamos tudo. Antes ficavam para trás as conversas, as consultas, as simulações enviadas, o cartão de fidelidade, as notificações e a candidatura — e quem tivesse escrito uma mensagem ou marcado uma consulta nem sequer conseguia apagar a conta. Pedimos desculpa por isso; está corrigido, e agora é uma operação só: ou sai tudo, ou não sai nada.",
+      "Também cancelamos a tua subscrição quando apagas a conta. Até aqui pedíamos-te que a cancelasses primeiro, o que era pôr do teu lado o trabalho de não continuares a ser cobrado.",
+      "Fica um registo do que foi apagado, que só tu podes ler e que ninguém pode reescrever — para poderes sempre saber o que saiu.",
+      "Se partilhas o computador ou o telemóvel com alguém, os dados guardados neste aparelho passam a ficar separados por pessoa. Antes, sair da conta e outra pessoa entrar mostrava-lhe os teus recibos. Não era preciso ninguém fazer nada de errado para acontecer, e lamentamos que fosse possível.",
+      "Dizemos-te também o que não conseguimos apagar a pedido — os registos de faturação que a lei nos obriga a guardar — e porquê, em vez de ficar por dizer.",
+      "Os ficheiros que envias ao teu contabilista passam a ser verificados antes de serem aceites: confirmamos que são mesmo do formato que dizem ser, e o que não for fica de fora. Podes também apagar um anexo que tenhas enviado, o que antes não era possível.",
+      "Marcar, confirmar, cancelar e concluir consultas passou a ser à prova de cliques repetidos e de duas pessoas a fazerem a mesma coisa ao mesmo tempo. E os avisos que recebes só aparecem quando o que os motivou aconteceu mesmo.",
+    ],
+  },
+  {
     version: "2.46.0",
     data: "2026-08-12",
     titulo: "O teu contabilista, dentro do ReciboCerto",
