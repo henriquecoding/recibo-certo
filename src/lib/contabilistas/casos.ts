@@ -318,3 +318,143 @@ export async function decidirProposta(
   const r = (data ?? {}) as { ok?: boolean; motivo?: string };
   return r.ok ? {} : { erro: traduzir(r.motivo) };
 }
+
+// ─── Leituras ──────────────────────────────────────────────────────────
+//
+// Nenhuma destas funções filtra por quem está a ver. Não é esquecimento:
+// é a RLS da migração 051 que decide, e repetir a decisão aqui criaria um
+// segundo sítio onde ela poderia divergir — e o segundo sítio é sempre o
+// que fica desatualizado.
+
+interface Linha { [k: string]: unknown }
+
+const paraCaso = (l: Linha): Caso => ({
+  id: l.id as string,
+  referencia: l.referencia as string,
+  nomeCompleto: l.nome_completo as string,
+  nif: l.nif as string,
+  assunto: l.assunto as string,
+  situacao: l.situacao as string,
+  area: l.area as AreaDoCaso,
+  urgencia: l.urgencia as UrgenciaDoCaso,
+  orcamentoCents: (l.orcamento_cents as number | null) ?? null,
+  estado: l.estado as EstadoDoCaso,
+  notaTriagem: (l.nota_triagem as string | null) ?? null,
+  criadoEm: l.criado_em as string,
+  submetidoEm: (l.submetido_em as string | null) ?? null,
+});
+
+const paraMensagem = (l: Linha): MensagemDoCaso => ({
+  id: l.id as string,
+  casoId: l.caso_id as string,
+  autorId: l.autor_id as string,
+  autorPapel: l.autor_papel as "cliente" | "contabilista",
+  corpo: l.corpo as string,
+  corpoEncaminhado: (l.corpo_encaminhado as string | null) ?? null,
+  estado: l.estado as EstadoMensagem,
+  notaRevisao: (l.nota_revisao as string | null) ?? null,
+  criadoEm: l.criado_em as string,
+});
+
+const paraProposta = (l: Linha): Proposta => ({
+  id: l.id as string,
+  casoId: l.caso_id as string,
+  contabilistaId: l.contabilista_id as string,
+  corpo: l.corpo as string,
+  valorCents: l.valor_cents as number,
+  ivaIncluido: l.iva_incluido as boolean,
+  prazoExecucao: (l.prazo_execucao as string | null) ?? null,
+  validadeAte: (l.validade_ate as string | null) ?? null,
+  estado: l.estado as EstadoProposta,
+  lidaAteAoFimEm: (l.lida_ate_ao_fim_em as string | null) ?? null,
+  confirmacaoEm: (l.confirmacao_em as string | null) ?? null,
+  decididaEm: (l.decidida_em as string | null) ?? null,
+  motivo: (l.motivo as string | null) ?? null,
+  criadoEm: l.criado_em as string,
+});
+
+export async function listarCasos(): Promise<Caso[]> {
+  const { data } = await getSupabase()
+    .from("casos").select("*").order("criado_em", { ascending: false }).limit(50);
+  return ((data ?? []) as unknown as Linha[]).map(paraCaso);
+}
+
+export async function obterCaso(id: string): Promise<Caso | null> {
+  const { data } = await getSupabase()
+    .from("casos").select("*").eq("id", id).maybeSingle();
+  return data ? paraCaso(data as unknown as Linha) : null;
+}
+
+/** Os contactos. Só o próprio e a administração leem — o resto vê zero linhas. */
+export async function obterContactos(casoId: string): Promise<{
+  email: string; telefone: string | null; morada: string | null;
+} | null> {
+  const { data } = await getSupabase()
+    .from("caso_contactos").select("email, telefone, morada")
+    .eq("caso_id", casoId).maybeSingle();
+  if (!data) return null;
+  const l = data as unknown as Linha;
+  return {
+    email: l.email as string,
+    telefone: (l.telefone as string | null) ?? null,
+    morada: (l.morada as string | null) ?? null,
+  };
+}
+
+export async function listarMensagensDoCaso(casoId: string): Promise<MensagemDoCaso[]> {
+  const { data } = await getSupabase()
+    .from("caso_mensagens").select("*").eq("caso_id", casoId).order("criado_em");
+  return ((data ?? []) as unknown as Linha[]).map(paraMensagem);
+}
+
+export async function listarPropostas(casoId: string): Promise<Proposta[]> {
+  const { data } = await getSupabase()
+    .from("propostas").select("*").eq("caso_id", casoId)
+    .order("criado_em", { ascending: false });
+  return ((data ?? []) as unknown as Linha[]).map(paraProposta);
+}
+
+/** A fila da administração: o que espera por triagem, mais antigo primeiro. */
+export async function filaDeTriagem(): Promise<Caso[]> {
+  const { data } = await getSupabase()
+    .from("casos").select("*")
+    .in("estado", ["submetido", "em_triagem"])
+    .order("criado_em").limit(100);
+  return ((data ?? []) as unknown as Linha[]).map(paraCaso);
+}
+
+/** As mensagens por rever, de todos os casos. Também para a administração. */
+export async function filaDeRevisao(): Promise<(MensagemDoCaso & { referencia?: string })[]> {
+  const { data } = await getSupabase()
+    .from("caso_mensagens")
+    .select("*, caso:caso_id (referencia)")
+    .eq("estado", "submetida")
+    .order("criado_em").limit(100);
+  return ((data ?? []) as unknown as Linha[]).map((l) => ({
+    ...paraMensagem(l),
+    referencia: (l.caso as Linha | null)?.referencia as string | undefined,
+  }));
+}
+
+export interface NovaProposta {
+  casoId: string;
+  contabilistaId: string;
+  corpo: string;
+  valorCents: number;
+  ivaIncluido: boolean;
+  prazoExecucao?: string;
+  validadeAte?: string;
+}
+
+export async function enviarProposta(p: NovaProposta): Promise<{ erro?: string }> {
+  const { error } = await getSupabase().from("propostas").insert({
+    caso_id: p.casoId,
+    contabilista_id: p.contabilistaId,
+    corpo: p.corpo.trim(),
+    valor_cents: Math.max(0, Math.round(p.valorCents)),
+    iva_incluido: p.ivaIncluido,
+    prazo_execucao: p.prazoExecucao?.trim() || null,
+    validade_ate: p.validadeAte || null,
+  });
+  return error ? { erro: error.message } : {};
+}

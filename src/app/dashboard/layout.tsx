@@ -67,7 +67,10 @@ const GRUPOS: NavGroup[] = [
       { href: "/dashboard/recibos", label: "Recibos registados", short: "Recibos", icon: Invoice },
       { href: "/dashboard/receitas", label: "Receitas", short: "Receitas", icon: History },
       { href: "/dashboard/prazos", label: "Prazos fiscais", short: "Prazos", icon: Calendar },
-      { href: "/dashboard/contabilista", label: "O meu contabilista", short: "Contabilista", icon: Briefcase },
+      // «Os meus casos» é a porta de entrada; «O meu contabilista» é o que
+      // existe DEPOIS de uma proposta aceite. A ordem diz isso.
+      { href: "/dashboard/casos", label: "Os meus casos", short: "Casos", icon: Briefcase },
+      { href: "/dashboard/contabilista", label: "O meu contabilista", short: "Contabilista", icon: User },
     ],
   },
   {

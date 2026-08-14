@@ -1,7 +1,9 @@
 # Da ligação direta à intermediação — estratégia completa
 
-> Estado: fases A, B e C implementadas na migração `051_intermediacao_casos.sql`.
-> A camada de domínio está em `src/lib/contabilistas/casos.ts`; falta a interface.
+> Estado: fases A a D implementadas. Migração `051_intermediacao_casos.sql`,
+> domínio em `src/lib/contabilistas/casos.ts`, e cinco ecrãs:
+> `/dashboard/casos` (+ `novo`, + detalhe), `/contabilista/casos`, `/admin/casos`.
+> Falta: anexos no caso e na proposta, e a expiração automática das propostas.
 > Substitui o modelo de vínculo direto da PR #102 **sem apagar o que lá está**:
 > quase tudo se reaproveita, mas a relação passa a ser mediada.
 > Ler com `docs/auditorias/pr102/HANDOFF-CLAUDE.md` e o relatório mestre de

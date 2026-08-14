@@ -17,7 +17,7 @@ import { contagensDoPainel, obterMinhaFicha } from "@/lib/contabilistas/dados";
 import type { Contabilista } from "@/lib/contabilistas/tipos";
 import {
   Logo, LayoutGrid, Calendar, User, PaperClip, Gift, Settings, ArrowLeft, Warning,
-  Target,
+  Target, Briefcase,
 } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import SinoNotificacoes from "@/components/contabilistas/SinoNotificacoes";
@@ -40,6 +40,9 @@ interface Item {
 
 const NAV: Item[] = [
   { href: "/contabilista", label: "Hoje", curto: "Hoje", Icon: LayoutGrid },
+  // Os casos vêm antes da agenda: é por onde chegam clientes novos, e o
+  // que está por responder pesa mais do que o que já está marcado.
+  { href: "/contabilista/casos", label: "Casos", curto: "Casos", Icon: Briefcase },
   {
     href: "/contabilista/agenda", label: "Agenda", curto: "Agenda", Icon: Calendar,
     porResponder: (c) => c.consultasPorConfirmar,
