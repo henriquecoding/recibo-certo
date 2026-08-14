@@ -158,3 +158,56 @@ describe("RC-CASO-UI-004 · mobile-first e sem emojis", () => {
     }
   });
 });
+
+describe("RC-CASO-UI-005 · anexos, revisão e tempo real", () => {
+  const FICHEIROS = "src/components/casos/Ficheiros.tsx";
+
+  it("descarregar passa sempre pela rota que reconfirma", () => {
+    // Um URL assinado sobreviveria ao acesso que o produziu.
+    const fonte = ler(FICHEIROS);
+    expect(fonte).toContain("urlDoFicheiro");
+    expect(semComentarios(fonte)).not.toContain("createSignedUrl");
+  });
+
+  it("o ficheiro descarrega, não abre num separador", () => {
+    // Um separador servido do nosso domínio partilha a origem com a sessão.
+    const fonte = ler(FICHEIROS);
+    expect(fonte).toContain("a.download = nome");
+    expect(semComentarios(fonte)).not.toContain("window.open");
+  });
+
+  it("o endereço temporário é revogado — não fica em memória para sempre", () => {
+    expect(ler(FICHEIROS)).toContain("URL.revokeObjectURL");
+  });
+
+  it("o que ainda não seguiu diz-se, em vez de parecer entregue", () => {
+    const fonte = ler(FICHEIROS);
+    expect(fonte).toContain("Por rever");
+    // O texto do JSX quebra por onde a linha acaba: comparar com o
+    // espaçamento colapsado, senão o teste falha por causa de uma mudança
+    // de linha que não muda nada.
+    expect(fonte.replace(/\s+/g, " ")).toMatch(/pode ter os teus contactos lá dentro/i);
+  });
+
+  it("a triagem obriga a olhar antes de libertar", () => {
+    const fonte = ler(TRIAGEM);
+    expect(fonte).toContain("libertarDocumento");
+    expect(fonte.replace(/\s+/g, " ")).toMatch(/Abre cada um antes de o libertar/);
+    // E dá para voltar atrás: libertar por engano tem de ter desfazer.
+    expect(fonte).toContain("Libertado — retirar");
+  });
+
+  it("o contabilista não liberta nem anexa documentos ao caso", () => {
+    const codigo = semComentarios(ler(PAINEL_CC));
+    expect(codigo).not.toContain("libertarDocumento");
+    expect(codigo.replace(/\s+/g, " "))
+      .toMatch(/contexto="caso".{0,180}podeAnexar=\{false\}/);
+  });
+
+  it("a conversa mediada atualiza-se sozinha, e o canal fecha-se", () => {
+    const fonte = ler(DETALHE);
+    expect(fonte).toContain("escutarCaso");
+    // Um canal por montagem que nunca fecha esgota as ligações do plano.
+    expect(fonte).toMatch(/return escutarCaso\(/);
+  });
+});

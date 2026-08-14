@@ -18,12 +18,13 @@ import { useCallback, useEffect, useState } from "react";
 import { useAvisos } from "@/components/ui/Avisos";
 import Button from "@/components/ui/Button";
 import {
-  Briefcase, User, Clock, Check, Warning, Spinner, ArrowRight,
+  Briefcase, User, Clock, Check, Warning, Spinner, ArrowRight, PaperClip,
 } from "@/components/ui/Icons";
 import {
   filaDeTriagem, filaDeRevisao, obterContactos, encaminharCaso, reverMensagem,
+  listarDocumentosDoCaso, libertarDocumento, urlDoFicheiro,
   AREAS, URGENCIAS, euros,
-  type Caso, type MensagemDoCaso,
+  type Caso, type MensagemDoCaso, type DocumentoDoCaso,
 } from "@/lib/contabilistas/casos";
 import { listarContabilistas } from "@/lib/contabilistas/dados";
 import type { Contabilista } from "@/lib/contabilistas/tipos";
@@ -256,6 +257,26 @@ function CartaoDeTriagem({
   const [contactos, setContactos] = useState<{ email: string; telefone: string | null; morada: string | null } | null>(null);
   const [escolhido, setEscolhido] = useState("");
   const [ocupado, setOcupado] = useState(false);
+  const [documentos, setDocumentos] = useState<DocumentoDoCaso[]>([]);
+
+  useEffect(() => {
+    listarDocumentosDoCaso(caso.id).then(setDocumentos).catch(() => {});
+  }, [caso.id]);
+
+  async function alternarLibertacao(d: DocumentoDoCaso) {
+    const { erro } = await libertarDocumento(d.id, !d.libertadoEm);
+    if (erro) { avisos.erro(erro); return; }
+    setDocumentos(await listarDocumentosDoCaso(caso.id));
+  }
+
+  async function abrirDocumento(d: DocumentoDoCaso) {
+    const url = await urlDoFicheiro(d.caminho);
+    if (!url) { avisos.erro(`Não foi possível abrir «${d.nome}».`); return; }
+    const a = document.createElement("a");
+    a.href = url; a.download = d.nome; a.rel = "noopener";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  }
 
   const area = AREAS.find((a) => a.id === caso.area);
   const urgencia = URGENCIAS.find((u) => u.id === caso.urgencia);
@@ -319,6 +340,46 @@ function CartaoDeTriagem({
         >
           Mostrar contactos
         </button>
+      )}
+
+      {documentos.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-xs font-bold uppercase tracking-wide text-stone-500">
+            Documentos anexados
+          </h3>
+          <p className="mt-1 text-[11px] text-stone-400">
+            Abre cada um antes de o libertar. Um ficheiro pode trazer contactos lá dentro, e é
+            este o único sítio onde isso se apanha.
+          </p>
+          <ul className="mt-2 space-y-1.5">
+            {documentos.map((d) => (
+              <li
+                key={d.id}
+                className="flex flex-wrap items-center gap-2 rounded-2xl border border-stone-200 bg-white px-3.5 py-2.5"
+              >
+                <button
+                  type="button"
+                  onClick={() => void abrirDocumento(d)}
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                >
+                  <PaperClip size={14} className="shrink-0 text-stone-400" aria-hidden />
+                  <span className="truncate text-sm text-stone-700">{d.nome}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void alternarLibertacao(d)}
+                  className={`shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                    d.libertadoEm
+                      ? "bg-brand-light text-brand-dark hover:bg-brand-light/70"
+                      : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                  }`}
+                >
+                  {d.libertadoEm ? "Libertado — retirar" : "Libertar"}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <div className="mt-4 flex flex-col gap-2 border-t border-stone-100 pt-4 sm:flex-row sm:items-center">

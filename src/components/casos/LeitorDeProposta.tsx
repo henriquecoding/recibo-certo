@@ -22,18 +22,17 @@ import { m } from "framer-motion";
 import Button from "@/components/ui/Button";
 import { Check, Warning, Spinner, PaperClip, Clock } from "@/components/ui/Icons";
 import { useAvisos } from "@/components/ui/Avisos";
+import Ficheiros from "@/components/casos/Ficheiros";
 import {
   euros, marcarPropostaLida, confirmarLeitura, decidirProposta,
-  type Proposta,
+  listarAnexosDaProposta, type Proposta, type AnexoDaProposta,
 } from "@/lib/contabilistas/casos";
 
 export default function LeitorDeProposta({
   proposta,
-  anexos,
   aoDecidir,
 }: {
   proposta: Proposta;
-  anexos?: { id: string; nome: string; eContrato: boolean }[];
   aoDecidir: () => void;
 }) {
   const avisos = useAvisos();
@@ -47,6 +46,11 @@ export default function LeitorDeProposta({
   const [aPedirDesconto, setAPedirDesconto] = useState(false);
   const [valorPedido, setValorPedido] = useState("");
   const [justificacao, setJustificacao] = useState("");
+  const [anexos, setAnexos] = useState<AnexoDaProposta[]>([]);
+
+  useEffect(() => {
+    listarAnexosDaProposta(proposta.id).then(setAnexos).catch(() => {});
+  }, [proposta.id]);
 
   const decidida = proposta.estado !== "enviada" && proposta.estado !== "lida";
 
@@ -110,7 +114,7 @@ export default function LeitorDeProposta({
   }
 
   const pronto = chegouAoFim && confirmou;
-  const contrato = anexos?.find((a) => a.eContrato);
+  const contrato = anexos.find((a) => a.eContrato);
 
   return (
     <article className="overflow-hidden rounded-4xl border border-stone-200 bg-white shadow-card">
@@ -195,6 +199,21 @@ export default function LeitorDeProposta({
                 Esta proposta traz um contrato em anexo ({contrato.nome}). Lê-o antes de decidires
                 — o que aceitas é o contrato, e não só o resumo aqui em cima.
               </p>
+            )}
+
+            {anexos.length > 0 && (
+              <div className="mb-4">
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-stone-500">
+                  Em anexo
+                </p>
+                <Ficheiros
+                  contexto="proposta"
+                  alvo={proposta.id}
+                  ficheiros={anexos}
+                  podeAnexar={false}
+                  aoMudar={() => {}}
+                />
+              </div>
             )}
 
             {/* O fim do documento. Focável de propósito: quem chega aqui

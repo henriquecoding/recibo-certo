@@ -23,10 +23,12 @@ import LeitorDeProposta from "@/components/casos/LeitorDeProposta";
 import {
   ArrowLeft, Clock, Check, Warning, Lock, Spinner, ShieldCheck,
 } from "@/components/ui/Icons";
+import Ficheiros from "@/components/casos/Ficheiros";
 import {
   obterCaso, listarMensagensDoCaso, listarPropostas, submeterMensagem,
+  listarDocumentosDoCaso, escutarCaso,
   estadoDoCasoLegivel, AREAS, URGENCIAS, euros,
-  type Caso, type MensagemDoCaso, type Proposta,
+  type Caso, type MensagemDoCaso, type Proposta, type DocumentoDoCaso,
 } from "@/lib/contabilistas/casos";
 
 export default function DetalheDoCaso() {
@@ -37,21 +39,30 @@ export default function DetalheDoCaso() {
   const [caso, setCaso] = useState<Caso | null>(null);
   const [mensagens, setMensagens] = useState<MensagemDoCaso[]>([]);
   const [propostas, setPropostas] = useState<Proposta[]>([]);
+  const [documentos, setDocumentos] = useState<DocumentoDoCaso[]>([]);
   const [aCarregar, setACarregar] = useState(true);
   const [texto, setTexto] = useState("");
   const [aEnviar, setAEnviar] = useState(false);
 
   const carregar = useCallback(async () => {
-    const [c, m, p] = await Promise.all([
+    const [c, m, p, d] = await Promise.all([
       obterCaso(id), listarMensagensDoCaso(id), listarPropostas(id),
+      listarDocumentosDoCaso(id),
     ]);
-    setCaso(c); setMensagens(m); setPropostas(p); setACarregar(false);
+    setCaso(c); setMensagens(m); setPropostas(p); setDocumentos(d); setACarregar(false);
   }, [id]);
 
   useEffect(() => {
     if (!carregado) return;
     carregar().catch(() => setACarregar(false));
   }, [carregado, carregar]);
+
+  // Sem isto, a pessoa fica sem saber se a mensagem foi aprovada e
+  // recarrega a página à espera de uma resposta que já lá está.
+  useEffect(() => {
+    if (!carregado || !user) return;
+    return escutarCaso(id, () => { void carregar(); });
+  }, [carregado, user, id, carregar]);
 
   async function enviar() {
     if (!user || !texto.trim()) return;
@@ -133,6 +144,24 @@ export default function DetalheDoCaso() {
             <strong className="tabular-nums text-stone-700">{euros(caso.orcamentoCents)}</strong>.
           </p>
         )}
+      </section>
+
+      <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
+        <h2 className="font-display text-lg text-ink">Documentos</h2>
+        <p className="mt-1 text-sm leading-relaxed text-stone-500">
+          Faturas, declarações, o que ajudar a perceber a situação. Lemos cada um antes de
+          seguir — pode ter os teus contactos lá dentro.
+        </p>
+        <div className="mt-3">
+          <Ficheiros
+            contexto="caso"
+            alvo={caso.id}
+            ficheiros={documentos}
+            podeAnexar={caso.estado !== "fechado" && caso.estado !== "recusado"}
+            explicaLibertacao
+            aoMudar={() => void carregar()}
+          />
+        </div>
       </section>
 
       {porDecidir.length > 0 && (

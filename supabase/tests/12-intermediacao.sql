@@ -303,3 +303,196 @@ SELECT t.conta($$SELECT count(*) FROM public.propostas$$, 0,
   'e as propostas também — pendem do caso');
 SELECT t.conta($$SELECT count(*) FROM public.caso_mensagens$$, 0,
   'e as mensagens, incluindo as que já tinham sido aprovadas');
+
+\echo ''
+\echo '── 70. Anexos: uma vaga serve os três sítios ───────────────────'
+RESET ROLE;
+SELECT t.sair();
+
+-- Cenário novo: o caso anterior foi apagado no teste 69.
+INSERT INTO public.casos
+  (id, cliente_id, referencia, nome_completo, nif, assunto, situacao, area, estado)
+VALUES ('cafe0000-0000-0000-0000-00000000cafe',
+        '7a7a7a7a-0000-0000-0000-00000000007a','RC-2026-9001',
+        'Sofia Marques Pereira','123456789','IRS de 2026',
+        'Preciso de ajuda a entregar o IRS deste ano, com rendimentos de dois países.',
+        'irs','submetido');
+INSERT INTO public.caso_contactos (caso_id, email)
+VALUES ('cafe0000-0000-0000-0000-00000000cafe','sofia@exemplo.pt');
+
+SET ROLE authenticated;
+SELECT t.entrar('7a7a7a7a-0000-0000-0000-00000000007a');
+
+DO $$
+DECLARE r jsonb;
+BEGIN
+  r := public.abrir_vaga('caso','cafe0000-0000-0000-0000-00000000cafe','application/pdf', 90000);
+  ASSERT (r->>'ok')::boolean, format('devia abrir vaga de caso: %s', r);
+  ASSERT r->>'caminho' LIKE 'casos/cafe0000%', format('caminho: %s', r->>'caminho');
+  RAISE NOTICE '  ok  · o cliente abre vaga para um documento do caso';
+  PERFORM set_config('t.vaga_caso', r->>'id', false);
+END $$;
+
+-- Anexar ao caso de outra pessoa é o caminho óbvio.
+SELECT t.entrar('33333333-3333-3333-3333-333333333333');
+SELECT t.rpc_recusa($$SELECT public.abrir_vaga(
+  'caso','cafe0000-0000-0000-0000-00000000cafe','application/pdf',1000)$$,
+  'caso_nao_e_teu', 'anexar a um caso alheio');
+SELECT t.rpc_recusa($$SELECT public.abrir_vaga(
+  'nada','cafe0000-0000-0000-0000-00000000cafe','application/pdf',1000)$$,
+  'contexto_invalido', 'inventar um contexto');
+
+-- Os mesmos limites do balde, nos três contextos.
+SELECT t.entrar('7a7a7a7a-0000-0000-0000-00000000007a');
+SELECT t.rpc_recusa($$SELECT public.abrir_vaga(
+  'caso','cafe0000-0000-0000-0000-00000000cafe','text/html',1000)$$,
+  'tipo_recusado', 'anexar HTML ao caso');
+SELECT t.rpc_recusa($$SELECT public.abrir_vaga(
+  'caso','cafe0000-0000-0000-0000-00000000cafe','application/pdf',20000000)$$,
+  'tamanho_recusado', 'anexar vinte megabytes ao caso');
+
+-- A linha nasce por libertar. Um documento pode ter o nome da pessoa lá
+-- dentro, e quem decide se segue é quem faz a triagem.
+RESET ROLE; SELECT t.sair();
+SET ROLE service_role;
+SELECT t.rpc_ok($$SELECT public.fechar_vaga(
+  current_setting('t.vaga_caso')::uuid, 'IRS 2025.pdf', 90000)$$,
+  'o servidor fecha a vaga e regista o documento');
+RESET ROLE;
+SELECT t.conta($$SELECT count(*) FROM public.caso_documentos
+  WHERE caso_id='cafe0000-0000-0000-0000-00000000cafe' AND libertado_em IS NULL$$, 1,
+  'o documento nasce por libertar');
+SELECT set_config('t.caminho_doc',
+  (SELECT caminho FROM public.caso_documentos LIMIT 1), false);
+SELECT set_config('t.doc_id',
+  (SELECT id::text FROM public.caso_documentos LIMIT 1), false);
+
+\echo ''
+\echo '── 71. O contabilista só vê o que foi libertado ────────────────'
+SET ROLE authenticated;
+SELECT t.entrar('44444444-4444-4444-4444-444444444444');
+SELECT t.rpc_ok($$SELECT public.encaminhar_caso(
+  'cafe0000-0000-0000-0000-00000000cafe','11111111-1111-1111-1111-111111111111')$$,
+  'a administração encaminha o caso novo');
+
+SELECT t.entrar('11111111-1111-1111-1111-111111111111');
+SELECT t.conta($$SELECT count(*) FROM public.caso_documentos$$, 0,
+  'antes de libertado, o contabilista não vê o documento');
+-- Mesmo com o caminho exato: sem estar libertado, não segue.
+SELECT t.rpc_recusa($$SELECT public.anexo_legivel(
+  current_setting('t.caminho_doc'))$$,
+  'sem_acesso', 'nem com o caminho exato o consegue descarregar');
+SELECT t.rpc_recusa($$SELECT public.libertar_documento(
+  current_setting('t.doc_id')::uuid, true)$$,
+  'so_a_administracao', 'nem se liberta a si próprio o documento');
+
+RESET ROLE; SELECT t.sair();
+SET ROLE authenticated;
+SELECT t.entrar('44444444-4444-4444-4444-444444444444');
+SELECT t.rpc_ok($$SELECT public.libertar_documento(
+  current_setting('t.doc_id')::uuid, true)$$,
+  'a administração liberta o documento');
+
+SELECT t.entrar('11111111-1111-1111-1111-111111111111');
+SELECT t.conta($$SELECT count(*) FROM public.caso_documentos$$, 1,
+  'depois de libertado, o contabilista vê');
+SELECT t.rpc_ok($$SELECT public.anexo_legivel(
+  current_setting('t.caminho_doc'))$$, 'e consegue descarregá-lo');
+
+SELECT t.entrar('55555555-5555-5555-5555-555555555555');
+SELECT t.rpc_recusa($$SELECT public.anexo_legivel(
+  current_setting('t.caminho_doc'))$$,
+  'sem_acesso', 'um contabilista de fora do caso não descarrega nada');
+
+\echo ''
+\echo '── 72. O contrato da proposta ──────────────────────────────────'
+SELECT t.entrar('11111111-1111-1111-1111-111111111111');
+SELECT t.permite($$INSERT INTO public.propostas
+  (id, caso_id, contabilista_id, corpo, valor_cents, validade_ate)
+  VALUES ('beef0000-0000-0000-0000-00000000beef',
+          'cafe0000-0000-0000-0000-00000000cafe','11111111-1111-1111-1111-111111111111',
+          'Trato do IRS com rendimentos de dois países, incluindo o crédito de imposto.',
+          30000, current_date + 7)$$, 'proposta com validade');
+
+DO $$
+DECLARE r jsonb;
+BEGIN
+  r := public.abrir_vaga('proposta','beef0000-0000-0000-0000-00000000beef','application/pdf', 40000);
+  ASSERT (r->>'ok')::boolean, format('devia abrir vaga de proposta: %s', r);
+  PERFORM set_config('t.vaga_prop', r->>'id', false);
+  RAISE NOTICE '  ok  · o contabilista abre vaga para o contrato';
+END $$;
+
+SELECT t.entrar('7a7a7a7a-0000-0000-0000-00000000007a');
+SELECT t.rpc_recusa($$SELECT public.abrir_vaga(
+  'proposta','beef0000-0000-0000-0000-00000000beef','application/pdf',1000)$$,
+  'proposta_nao_e_tua', 'o cliente anexa à proposta que recebeu');
+
+RESET ROLE; SELECT t.sair();
+SET ROLE service_role;
+SELECT t.rpc_ok($$SELECT public.fechar_vaga(
+  current_setting('t.vaga_prop')::uuid, 'Contrato.pdf', 40000, true)$$,
+  'o contrato fica registado como contrato');
+RESET ROLE;
+SELECT t.conta($$SELECT count(*) FROM public.proposta_anexos WHERE e_contrato$$, 1,
+  'e distingue-se de um anexo qualquer');
+
+SET ROLE authenticated;
+SELECT t.entrar('7a7a7a7a-0000-0000-0000-00000000007a');
+SELECT t.rpc_ok($$SELECT public.anexo_legivel(
+  (SELECT caminho FROM public.proposta_anexos LIMIT 1))$$,
+  'quem recebeu a proposta lê o contrato');
+
+-- O caminho é lido como `postgres`: para um terceiro, a RLS de
+-- `proposta_anexos` devolve zero linhas, e a subconsulta traria NULL —
+-- o teste passaria por «não existe» em vez de por «não é teu», que é uma
+-- garantia diferente.
+RESET ROLE; SELECT t.sair();
+SELECT set_config('t.caminho_contrato',
+  (SELECT caminho FROM public.proposta_anexos LIMIT 1), false);
+SET ROLE authenticated;
+SELECT t.entrar('55555555-5555-5555-5555-555555555555');
+SELECT t.rpc_recusa($$SELECT public.anexo_legivel(
+  current_setting('t.caminho_contrato'))$$,
+  'sem_acesso', 'um terceiro não lê o contrato de outra pessoa');
+
+\echo ''
+\echo '── 73. O que passou da validade deixa de o prometer ────────────'
+RESET ROLE; SELECT t.sair();
+UPDATE public.propostas SET validade_ate = current_date - 1
+ WHERE id = 'beef0000-0000-0000-0000-00000000beef';
+
+SET ROLE authenticated;
+SELECT t.entrar('7a7a7a7a-0000-0000-0000-00000000007a');
+-- Já era recusada; o que faltava era deixar de aparecer como decidível.
+SELECT t.rpc_ok($$SELECT public.marcar_proposta_lida(
+  'beef0000-0000-0000-0000-00000000beef')$$, 'ainda se pode ler');
+SELECT t.rpc_ok($$SELECT public.confirmar_leitura_da_proposta(
+  'beef0000-0000-0000-0000-00000000beef')$$, 'e confirmar');
+SELECT t.rpc_recusa($$SELECT public.decidir_proposta(
+  'beef0000-0000-0000-0000-00000000beef','aceitar')$$,
+  'proposta_expirada', 'aceitar uma proposta fora da validade');
+
+RESET ROLE; SELECT t.sair();
+SET ROLE service_role;
+DO $$
+DECLARE n integer;
+BEGIN
+  n := public.expirar_propostas();
+  ASSERT n >= 1, format('devia expirar pelo menos uma, expirou %s', n);
+  RAISE NOTICE '  ok  · a varredura fecha o que passou da validade';
+  n := public.expirar_propostas();
+  ASSERT n = 0, format('a segunda passagem expirou %s', n);
+  RAISE NOTICE '  ok  · e a segunda passagem não encontra nada';
+END $$;
+RESET ROLE;
+SELECT t.conta($$SELECT count(*) FROM public.propostas
+  WHERE id='beef0000-0000-0000-0000-00000000beef' AND estado='expirada'$$, 1,
+  'a proposta está marcada como expirada');
+
+SET ROLE authenticated;
+SELECT t.entrar('11111111-1111-1111-1111-111111111111');
+SELECT t.rpc_recusa($$SELECT public.abrir_vaga(
+  'proposta','beef0000-0000-0000-0000-00000000beef','application/pdf',1000)$$,
+  'proposta_nao_e_tua', 'juntar um contrato a uma proposta já fechada');
+RESET ROLE;

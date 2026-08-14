@@ -239,6 +239,61 @@ E apagar a política de leitura do balde por inteiro parecia certo — o browser
 não precisa de ler — mas um `DELETE` precisa de ver a linha que apaga: quem tinha
 enviado um anexo deixava de o poder remover. Estreitar não é o mesmo que fechar.
 
+## Etapa 6 — O modelo de intermediação · **fechada**
+
+Migrações `051_intermediacao_casos.sql` e `052_anexos_do_caso_e_expiracao.sql`,
+domínio em `src/lib/contabilistas/casos.ts`, cinco ecrãs. 320 asserções de RLS
+(eram 291) e 1528 testes.
+
+### A fronteira, corrigida
+
+A primeira versão pôs o nome e o NIF do lado protegido. Estava errado: um
+contabilista precisa dos dois para trabalhar e para orçamentar com seriedade, e
+escondê-los seria fingir que se pode trabalhar às cegas.
+
+A fronteira é o **canal**, não a identidade:
+
+- `casos` — referência, assunto, situação, **nome completo e NIF**. O que o
+  contabilista vê.
+- `caso_contactos` — **email, telefone e morada**. Não há política nenhuma em
+  que ele caiba. A garantia não é um `USING` que o exclui: é a ausência de
+  qualquer caminho, e há um teste que falha se alguma política desta tabela
+  alguma vez mencionar encaminhamento.
+
+A morada ficou do lado protegido porque também é um canal — sabe-se onde a
+pessoa mora, aparece-se lá ou manda-se uma carta.
+
+### As garantias que o schema impõe
+
+| O que se garante | Como |
+| --- | --- |
+| Nada é dito sem revisão | Uma mensagem nasce `submetida` porque é o único estado que a política deixa entrar. Só `aprovada` é legível pelo outro lado. |
+| A revisão não apaga a prova | `corpo` é imutável por gatilho. A redação vai para `corpo_encaminhado`, e quem escreveu é avisado de que houve um ajuste. |
+| Devolver diz o que corrigir | `rever_mensagem` recusa devolver ou recusar sem razão escrita. |
+| Só decide quem leu | `decidir_proposta` recusa enquanto `lida_ate_ao_fim_em` ou `confirmacao_em` forem nulos; as duas só se escrevem por RPC própria e nenhuma se desfaz. |
+| Uma proposta não se reescreve | Gatilho de imutabilidade sobre corpo, valor, IVA e prazo. Quem quiser mudar envia outra, e as duas ficam. |
+| Um caso vai a três, no máximo | Gatilho sobre `caso_encaminhamentos`, não um número na interface. |
+| Um documento é lido antes de seguir | Nasce com `libertado_em` a nulo; o contabilista só alcança o que a administração libertou. |
+| O ficheiro não escolhe onde fica | As mesmas vagas de uso único da etapa 2, generalizadas para os três sítios — uma função, e não três parecidas onde os limites divergiriam. |
+| O que expirou di-lo | `expirar_propostas()` por cron. `decidir_proposta` já recusava; faltava a lista deixar de prometer o que o servidor recusa. |
+
+### O vínculo passa a ser consequência
+
+Nasce em `decidir_proposta`, ao aceitar. Antes disso não há relação — há um
+pedido. A conversa livre, a agenda e o cartão de fidelidade só fazem sentido a
+partir daí, e é a partir daí que existem.
+
+### Encontrado ao construir
+
+O teste de completude do catálogo (etapa 3) apanhou as **sete tabelas novas**
+antes de elas chegarem a produção sem saírem no apagamento da conta.
+
+E três testes meus estavam errados de uma maneira que os fazia passar por
+razões erradas: liam um caminho de ficheiro através de uma subconsulta sujeita
+a RLS, e para um terceiro isso devolvia `NULL` — o teste passava por «não
+existe» quando devia passar por «não é teu», que é outra garantia. Os caminhos
+passaram a ser lidos como `postgres`.
+
 ## Depois — o modelo de intermediação
 
 `docs/ESTRATEGIA-INTERMEDIACAO.md`, fases A a F, e as três perguntas em aberto

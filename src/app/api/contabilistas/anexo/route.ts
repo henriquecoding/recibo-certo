@@ -27,6 +27,9 @@ export const dynamic = "force-dynamic";
 
 const BALDE = "contabilista-anexos";
 
+/** Os três sítios que aceitam ficheiros. Qualquer outro nome é recusado. */
+const CONTEXTOS = ["mensagem", "caso", "proposta"];
+
 export async function POST(req: Request) {
   const userId = await utilizadorDoPedido(req);
   if (!userId) return NextResponse.json({ erro: "Não autenticado." }, { status: 401 });
@@ -43,12 +46,18 @@ export async function POST(req: Request) {
   const sb = supabaseServico();
   if (!sb) return NextResponse.json({ erro: "Serviço indisponível." }, { status: 503 });
 
-  let corpo: { mensagemId?: string; tipoMime?: string; bytes?: number };
+  let corpo: { contexto?: string; alvo?: string; mensagemId?: string;
+               tipoMime?: string; bytes?: number };
   try { corpo = await req.json(); }
   catch { return NextResponse.json({ erro: "Pedido inválido." }, { status: 400 }); }
 
-  if (typeof corpo.mensagemId !== "string" || typeof corpo.tipoMime !== "string"
-      || typeof corpo.bytes !== "number") {
+  // `mensagemId` é a forma antiga, de quando só a conversa aceitava
+  // ficheiros. Continua a funcionar para não partir quem ainda a envia.
+  const contexto = corpo.contexto ?? "mensagem";
+  const alvo = corpo.alvo ?? corpo.mensagemId;
+
+  if (!CONTEXTOS.includes(contexto) || typeof alvo !== "string"
+      || typeof corpo.tipoMime !== "string" || typeof corpo.bytes !== "number") {
     return NextResponse.json({ erro: "Pedido inválido." }, { status: 400 });
   }
 
@@ -58,8 +67,9 @@ export async function POST(req: Request) {
   const comoUtilizador = supabaseDoPedido(req);
   if (!comoUtilizador) return NextResponse.json({ erro: "Serviço indisponível." }, { status: 503 });
 
-  const { data, error } = await comoUtilizador.rpc("abrir_vaga_de_anexo", {
-    p_mensagem: corpo.mensagemId,
+  const { data, error } = await comoUtilizador.rpc("abrir_vaga", {
+    p_contexto: contexto,
+    p_alvo: alvo,
     p_tipo_mime: corpo.tipoMime,
     p_bytes: Math.round(corpo.bytes),
   });
@@ -98,7 +108,7 @@ export async function PATCH(req: Request) {
   const sb = supabaseServico();
   if (!sb) return NextResponse.json({ erro: "Serviço indisponível." }, { status: 503 });
 
-  let corpo: { vagaId?: string; nome?: string };
+  let corpo: { vagaId?: string; nome?: string; eContrato?: boolean };
   try { corpo = await req.json(); }
   catch { return NextResponse.json({ erro: "Pedido inválido." }, { status: 400 }); }
 
@@ -144,10 +154,11 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ erro: veredito.motivo }, { status: 415 });
   }
 
-  const { data, error } = await sb.rpc("fechar_vaga_de_anexo", {
+  const { data, error } = await sb.rpc("fechar_vaga", {
     p_vaga: vagaId,
     p_nome: (corpo.nome ?? "ficheiro").slice(0, 200),
     p_bytes: bytes,
+    p_e_contrato: corpo.eContrato === true,
   });
   if (error) {
     console.error("[anexo] fechar vaga:", error.message);
@@ -165,6 +176,9 @@ export async function PATCH(req: Request) {
 
 const MOTIVO: Record<string, string> = {
   mensagem_nao_e_tua: "Só se anexa a uma mensagem que tenhas escrito.",
+  caso_nao_e_teu: "Só se anexam documentos a um caso teu, e enquanto estiver aberto.",
+  proposta_nao_e_tua: "Só se anexa a uma proposta tua, e antes de ser decidida.",
+  contexto_invalido: "Não sabemos onde guardar isto.",
   tamanho_recusado: "O ficheiro passa dos 10 MB.",
   tipo_recusado: "Esse formato não é aceite.",
   sem_vagas: "Já tens cinco anexos nesta mensagem.",

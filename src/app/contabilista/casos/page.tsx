@@ -23,10 +23,13 @@ import { useAvisos } from "@/components/ui/Avisos";
 import {
   Briefcase, Lock, User, Spinner, Check, Clock, ShieldCheck,
 } from "@/components/ui/Icons";
+import Ficheiros from "@/components/casos/Ficheiros";
 import {
   listarCasos, listarMensagensDoCaso, listarPropostas, submeterMensagem,
-  enviarProposta, AREAS, URGENCIAS, euros,
-  type Caso, type MensagemDoCaso, type Proposta,
+  enviarProposta, listarDocumentosDoCaso, listarAnexosDaProposta,
+  AREAS, URGENCIAS, euros,
+  type Caso, type MensagemDoCaso, type Proposta, type DocumentoDoCaso,
+  type AnexoDaProposta,
 } from "@/lib/contabilistas/casos";
 
 export default function CasosDoContabilista() {
@@ -37,6 +40,7 @@ export default function CasosDoContabilista() {
   const [aberto, setAberto] = useState<string | null>(null);
   const [mensagens, setMensagens] = useState<MensagemDoCaso[]>([]);
   const [propostas, setPropostas] = useState<Proposta[]>([]);
+  const [documentos, setDocumentos] = useState<DocumentoDoCaso[]>([]);
 
   const carregar = useCallback(async () => {
     setCasos(await listarCasos());
@@ -47,8 +51,10 @@ export default function CasosDoContabilista() {
   const abrir = useCallback(async (id: string) => {
     if (aberto === id) { setAberto(null); return; }
     setAberto(id);
-    const [m, p] = await Promise.all([listarMensagensDoCaso(id), listarPropostas(id)]);
-    setMensagens(m); setPropostas(p);
+    const [m, p, d] = await Promise.all([
+      listarMensagensDoCaso(id), listarPropostas(id), listarDocumentosDoCaso(id),
+    ]);
+    setMensagens(m); setPropostas(p); setDocumentos(d);
   }, [aberto]);
 
   if (aCarregar) return <EsqueletoPainel />;
@@ -135,6 +141,26 @@ export default function CasosDoContabilista() {
                       Sem contactos: falas por aqui, e o que escreveres passa por revisão.
                     </p>
 
+                    {documentos.length > 0 && (
+                      <div className="mt-5">
+                        <h3 className="text-xs font-bold uppercase tracking-wide text-stone-500">
+                          Documentos
+                        </h3>
+                        <p className="mt-1 text-[11px] text-stone-400">
+                          Só o que já foi lido pela administração chega aqui.
+                        </p>
+                        <div className="mt-2">
+                          <Ficheiros
+                            contexto="caso"
+                            alvo={c.id}
+                            ficheiros={documentos}
+                            podeAnexar={false}
+                            aoMudar={() => void abrir(c.id)}
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     {mensagens.length > 0 && (
                       <div className="mt-5">
                         <h3 className="text-xs font-bold uppercase tracking-wide text-stone-500">
@@ -214,7 +240,8 @@ function ResponderAoCaso({
   const [ocupado, setOcupado] = useState(false);
 
   const minhas = propostas.filter((p) => p.contabilistaId === contabilistaId);
-  const emJogo = minhas.some((p) => p.estado === "enviada" || p.estado === "lida");
+  const emJogo = minhas.filter((p) => p.estado === "enviada" || p.estado === "lida");
+  const aberta = emJogo[0] ?? null;
 
   async function escrever() {
     setOcupado(true);
@@ -249,15 +276,31 @@ function ResponderAoCaso({
 
   if (modo === "nada") {
     return (
-      <div className="mt-5 flex flex-col gap-2 border-t border-stone-100 pt-5 sm:flex-row">
-        <Button onClick={() => setModo("proposta")} className="w-full sm:w-auto">
-          {emJogo ? "Enviar proposta nova" : "Enviar proposta"}
-        </Button>
-        <Button variant="secondary" onClick={() => setModo("mensagem")} className="w-full sm:w-auto">
-          Fazer uma pergunta
-        </Button>
-        {emJogo && (
-          <p className="self-center text-[11px] leading-relaxed text-stone-400">
+      <div className="mt-5 border-t border-stone-100 pt-5">
+        {/* O contrato junta-se à proposta enquanto ela estiver por decidir.
+            Depois de decidida é um documento fechado: juntar-lhe um
+            contrato a seguir mudava o que foi aceite. */}
+        {aberta && (
+          <div className="mb-4">
+            <h3 className="text-xs font-bold uppercase tracking-wide text-stone-500">
+              Anexos da proposta em aberto
+            </h3>
+            <div className="mt-2">
+              <AnexosDaProposta propostaId={aberta.id} aoMudar={aoMudar} />
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button onClick={() => setModo("proposta")} className="w-full sm:w-auto">
+            {aberta ? "Enviar proposta nova" : "Enviar proposta"}
+          </Button>
+          <Button variant="secondary" onClick={() => setModo("mensagem")} className="w-full sm:w-auto">
+            Fazer uma pergunta
+          </Button>
+        </div>
+        {aberta && (
+          <p className="mt-2 text-[11px] leading-relaxed text-stone-400">
             Uma proposta nova não substitui a anterior: as duas ficam, e a pessoa escolhe.
           </p>
         )}
@@ -367,5 +410,28 @@ function ResponderAoCaso({
         </>
       )}
     </div>
+  );
+}
+
+
+/** Os anexos de uma proposta ainda por decidir. */
+function AnexosDaProposta({ propostaId, aoMudar }: { propostaId: string; aoMudar: () => void }) {
+  const [anexos, setAnexos] = useState<AnexoDaProposta[]>([]);
+
+  const recarregar = useCallback(() => {
+    listarAnexosDaProposta(propostaId).then(setAnexos).catch(() => {});
+  }, [propostaId]);
+
+  useEffect(recarregar, [recarregar]);
+
+  return (
+    <Ficheiros
+      contexto="proposta"
+      alvo={propostaId}
+      ficheiros={anexos}
+      podeAnexar
+      comoContrato
+      aoMudar={() => { recarregar(); aoMudar(); }}
+    />
   );
 }

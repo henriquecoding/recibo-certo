@@ -458,3 +458,161 @@ export async function enviarProposta(p: NovaProposta): Promise<{ erro?: string }
   });
   return error ? { erro: error.message } : {};
 }
+
+// ─── Anexos ────────────────────────────────────────────────────────────
+
+export interface DocumentoDoCaso {
+  id: string;
+  caminho: string;
+  nome: string;
+  bytes: number;
+  tipoMime: string;
+  libertadoEm: string | null;
+  criadoEm: string;
+}
+
+export interface AnexoDaProposta {
+  id: string;
+  caminho: string;
+  nome: string;
+  bytes: number;
+  tipoMime: string;
+  eContrato: boolean;
+}
+
+export async function listarDocumentosDoCaso(casoId: string): Promise<DocumentoDoCaso[]> {
+  const { data } = await getSupabase()
+    .from("caso_documentos").select("*").eq("caso_id", casoId).order("criado_em");
+  return ((data ?? []) as unknown as Linha[]).map((l) => ({
+    id: l.id as string,
+    caminho: l.caminho as string,
+    nome: l.nome as string,
+    bytes: l.bytes as number,
+    tipoMime: l.tipo_mime as string,
+    libertadoEm: (l.libertado_em as string | null) ?? null,
+    criadoEm: l.criado_em as string,
+  }));
+}
+
+export async function listarAnexosDaProposta(propostaId: string): Promise<AnexoDaProposta[]> {
+  const { data } = await getSupabase()
+    .from("proposta_anexos").select("*").eq("proposta_id", propostaId).order("criado_em");
+  return ((data ?? []) as unknown as Linha[]).map((l) => ({
+    id: l.id as string,
+    caminho: l.caminho as string,
+    nome: l.nome as string,
+    bytes: l.bytes as number,
+    tipoMime: l.tipo_mime as string,
+    eContrato: l.e_contrato as boolean,
+  }));
+}
+
+export async function libertarDocumento(
+  id: string, libertar: boolean,
+): Promise<{ erro?: string }> {
+  const { data, error } = await getSupabase()
+    .rpc("libertar_documento", { p_documento: id, p_libertar: libertar });
+  if (error) return { erro: error.message };
+  const r = (data ?? {}) as { ok?: boolean; motivo?: string };
+  return r.ok ? {} : { erro: traduzir(r.motivo) };
+}
+
+/**
+ * Envia um ficheiro para um caso ou para uma proposta.
+ *
+ * O browser não escolhe o caminho nem escreve a linha: pede uma vaga, põe
+ * o ficheiro onde ela diz, e o servidor olha para os primeiros bytes antes
+ * de registar seja o que for. É o mesmo caminho dos anexos da conversa,
+ * porque ter dois seria ter um deles mais fraco.
+ */
+export async function enviarFicheiro(
+  contexto: "caso" | "proposta",
+  alvo: string,
+  ficheiro: File,
+  opcoes?: { eContrato?: boolean },
+): Promise<{ erro?: string }> {
+  const sb = getSupabase();
+  const { data } = await sb.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) return { erro: "A sessão expirou. Entra outra vez." };
+  const auth = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+
+  try {
+    const vaga = await fetch("/api/contabilistas/anexo", {
+      method: "POST",
+      headers: auth,
+      body: JSON.stringify({
+        contexto, alvo, tipoMime: ficheiro.type, bytes: ficheiro.size,
+      }),
+    });
+    const d = (await vaga.json()) as
+      { erro?: string; vagaId?: string; caminho?: string; token?: string };
+    if (!vaga.ok || !d.caminho || !d.token) return { erro: d.erro ?? "Envio recusado." };
+
+    const { error } = await sb.storage
+      .from("contabilista-anexos")
+      .uploadToSignedUrl(d.caminho, d.token, ficheiro, { contentType: ficheiro.type });
+    if (error) return { erro: error.message };
+
+    const fecho = await fetch("/api/contabilistas/anexo", {
+      method: "PATCH",
+      headers: auth,
+      body: JSON.stringify({
+        vagaId: d.vagaId, nome: ficheiro.name, eContrato: opcoes?.eContrato === true,
+      }),
+    });
+    if (!fecho.ok) {
+      const e = (await fecho.json()) as { erro?: string };
+      return { erro: e.erro ?? "O ficheiro não foi aceite." };
+    }
+    return {};
+  } catch {
+    return { erro: "Falha de rede. Tenta outra vez." };
+  }
+}
+
+/** Traz o ficheiro para o aparelho, com a autorização confirmada na hora. */
+export async function urlDoFicheiro(caminho: string): Promise<string | null> {
+  const { data } = await getSupabase().auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) return null;
+  try {
+    const res = await fetch("/api/contabilistas/descarregar", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ caminho }),
+    });
+    if (!res.ok) return null;
+    return URL.createObjectURL(await res.blob());
+  } catch {
+    return null;
+  }
+}
+
+// ─── Tempo real ────────────────────────────────────────────────────────
+
+/**
+ * Escuta o que muda num caso.
+ *
+ * Numa conversa com revisão pelo meio, não ver a mudança é pior do que num
+ * chat: a pessoa fica sem saber se a mensagem foi aprovada, e recarrega à
+ * espera de uma resposta que já lá está.
+ *
+ * Devolve a função de cancelamento. Quem chama TEM de a usar na limpeza do
+ * efeito — um canal por montagem que nunca fecha esgota as ligações
+ * simultâneas do plano, e o sintoma aparece longe da causa.
+ */
+export function escutarCaso(casoId: string, aoMudar: () => void): () => void {
+  const sb = getSupabase();
+  const canal = sb
+    .channel(`caso:${casoId}`)
+    .on("postgres_changes",
+      { event: "*", schema: "public", table: "caso_mensagens", filter: `caso_id=eq.${casoId}` },
+      () => aoMudar())
+    .on("postgres_changes",
+      { event: "*", schema: "public", table: "propostas", filter: `caso_id=eq.${casoId}` },
+      () => aoMudar())
+    .subscribe();
+
+  return () => { void sb.removeChannel(canal); };
+}
