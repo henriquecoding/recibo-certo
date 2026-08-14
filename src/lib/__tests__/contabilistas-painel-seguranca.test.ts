@@ -7,9 +7,10 @@ const SRC = join(__dirname, "..", "..");
 const RAIZ = join(SRC, "..");
 const ler = (...partes: string[]) => readFileSync(join(SRC, ...partes), "utf8");
 const LAYOUT = ler("app", "contabilista", "layout.tsx");
+const TRABALHO = ler("app", "contabilista", "trabalho", "page.tsx");
 const CSS = ler("app", "contabilista", "painel.module.css");
 const MIGRACAO = readFileSync(
-  join(RAIZ, "supabase", "migrations", "20260814_texto_seguro_painel_contabilista.sql"),
+  join(RAIZ, "supabase", "migrations", "20260814181500_texto_seguro_painel_contabilista.sql"),
   "utf8",
 );
 
@@ -85,6 +86,12 @@ describe("redesign do painel profissional", () => {
 
   it("não regressa para dois sinos Realtime no mesmo layout", () => {
     expect((LAYOUT.match(/<SinoNotificacoes \/>/g) ?? []).length).toBe(1);
+  });
+
+  it("usa o calendário do design system em vez do seletor nativo do browser", () => {
+    expect(TRABALHO).toContain('import DatePicker from "@/components/ui/DatePicker"');
+    expect(TRABALHO).toContain("<DatePicker");
+    expect(TRABALHO).not.toContain('type="date"');
   });
 
   it("trata campos, calendário, tabelas, tabs e modo escuro como um sistema", () => {
