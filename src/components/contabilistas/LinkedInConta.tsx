@@ -4,12 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
 import { useAvisos } from "@/components/ui/Avisos";
 import {
+  avatarLinkedInExpirou,
   desligarLinkedIn,
   guardarUrlLinkedIn,
   ligarLinkedIn,
   normalizarUrlLinkedIn,
   obterEstadoLinkedIn,
   obterLinkedInPublico,
+  renovarLinkedIn,
   sincronizarLinkedIn,
 } from "@/lib/contabilistas/linkedin";
 
@@ -19,6 +21,7 @@ export default function LinkedInConta({ contabilistaId }: { contabilistaId: stri
   const [ocupado, setOcupado] = useState(false);
   const [ligado, setLigado] = useState(false);
   const [avatar, setAvatar] = useState<string | null>(null);
+  const [avatarFalhou, setAvatarFalhou] = useState(false);
   const [url, setUrl] = useState("");
   const [urlGuardada, setUrlGuardada] = useState("");
   const [erro, setErro] = useState<string | null>(null);
@@ -26,6 +29,7 @@ export default function LinkedInConta({ contabilistaId }: { contabilistaId: stri
   const carregar = useCallback(async () => {
     setALer(true);
     setErro(null);
+    setAvatarFalhou(false);
     const [estado, publico] = await Promise.all([
       obterEstadoLinkedIn(),
       obterLinkedInPublico(contabilistaId),
@@ -74,7 +78,19 @@ export default function LinkedInConta({ contabilistaId }: { contabilistaId: stri
     if (e) { setErro(e); return; }
     setLigado(false);
     setAvatar(null);
+    setAvatarFalhou(false);
     avisos.sucesso("LinkedIn desligado do perfil.");
+  }
+
+  async function renovarFoto() {
+    setOcupado(true);
+    setErro(null);
+    const { erro: e } = await renovarLinkedIn();
+    if (e) {
+      setOcupado(false);
+      setErro(e);
+    }
+    // Em sucesso há redirecionamento para o consentimento do LinkedIn.
   }
 
   async function guardarUrl() {
@@ -92,20 +108,23 @@ export default function LinkedInConta({ contabilistaId }: { contabilistaId: stri
 
   const urlNormalizada = normalizarUrlLinkedIn(url);
   const urlAlterada = (urlNormalizada ?? url.trim()) !== urlGuardada;
+  const avatarExpirado = avatarLinkedInExpirou(avatar);
+  const mostrarAvatar = Boolean(avatar) && !avatarExpirado && !avatarFalhou;
 
   return (
     <section aria-labelledby="linkedin-titulo" className="rounded-3xl border border-stone-200 bg-cream/55 p-4 sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 items-center gap-3.5">
-          {avatar ? (
-            // Não usamos next/image: a origem do LinkedIn é dinâmica. No perfil
-            // público a imagem passa pelo proxy do ReciboCerto; aqui só o dono
-            // da própria conta vê a pré-visualização direta.
+          {mostrarAvatar ? (
+            // Também na pré-visualização do dono passamos pelo proxy do
+            // ReciboCerto. Evita hotlink direto, URLs externas expiradas a
+            // aparecer como imagem quebrada e mantém a mesma política do
+            // perfil público.
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={avatar}
+              src={`/api/contabilistas/linkedin-avatar/${encodeURIComponent(contabilistaId)}`}
               alt="Fotografia atual do LinkedIn"
-              referrerPolicy="no-referrer"
+              onError={() => setAvatarFalhou(true)}
               className="h-14 w-14 shrink-0 rounded-2xl border border-stone-200 object-cover shadow-card"
             />
           ) : (
@@ -146,6 +165,17 @@ export default function LinkedInConta({ contabilistaId }: { contabilistaId: stri
         <p role="alert" className="mt-3 rounded-xl bg-clay-bg px-3 py-2 text-xs leading-relaxed text-clay-text">
           {erro}
         </p>
+      )}
+
+      {ligado && avatar && (avatarExpirado || avatarFalhou) && (
+        <div className="mt-3 flex flex-col gap-2 rounded-xl border border-alert-border/70 bg-alert-bg/70 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs leading-relaxed text-alert-text">
+            A fotografia que o LinkedIn forneceu é temporária e já não está disponível. Renova a autorização para receber a fotografia atual sem alterar o teu login principal.
+          </p>
+          <Button type="button" size="sm" variant="secondary" onClick={renovarFoto} disabled={ocupado || aLer}>
+            {ocupado ? "A abrir…" : "Atualizar fotografia"}
+          </Button>
+        </div>
       )}
 
       <div className="mt-4">

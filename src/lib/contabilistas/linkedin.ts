@@ -36,6 +36,25 @@ export function normalizarUrlLinkedIn(valor: string): string | null {
   }
 }
 
+/**
+ * O claim `picture` do LinkedIn pode ser uma URL assinada e temporária.
+ * Atualmente essas URLs usam o parâmetro `e` como epoch em segundos. Se o
+ * provider mudar o formato e não houver esse parâmetro, não inventamos uma
+ * expiração: a imagem é tentada e o componente mantém fallback em `onError`.
+ */
+export function avatarLinkedInExpirou(valor: string | null | undefined, agora = Date.now()): boolean {
+  if (!valor) return false;
+  try {
+    const url = new URL(valor);
+    const expiracao = url.searchParams.get("e");
+    if (!expiracao || !/^\d+$/.test(expiracao)) return false;
+    const epochMs = Number(expiracao) * 1000;
+    return Number.isFinite(epochMs) && epochMs <= agora;
+  } catch {
+    return true;
+  }
+}
+
 export async function obterLinkedInPublico(contabilistaId: string): Promise<LinkedInPublico> {
   const { data, error } = await getSupabase()
     .from("contabilistas")
@@ -103,6 +122,33 @@ export async function desligarLinkedIn(): Promise<{ erro?: string }> {
 
   const sync = await sincronizarLinkedIn();
   return sync.erro ? { erro: sync.erro } : {};
+}
+
+/**
+ * Renova os claims OIDC (incluindo `picture`) quando o LinkedIn deixou uma
+ * fotografia temporária expirar. O utilizador continua autenticado pela sua
+ * identidade principal; só a identidade LinkedIn secundária é desligada e
+ * imediatamente volta a pedir consentimento ao provider.
+ */
+export async function renovarLinkedIn(): Promise<{ erro?: string }> {
+  const estado = await obterEstadoLinkedIn();
+  if (estado.erro) return { erro: estado.erro };
+  if (!estado.identidade) return ligarLinkedIn();
+
+  const { data: identidades, error: identidadesErro } = await getSupabase().auth.getUserIdentities();
+  if (identidadesErro) return { erro: identidadesErro.message };
+  if ((identidades?.identities?.length ?? 0) < 2) {
+    return { erro: "Não é possível renovar esta ligação sem outro método de acesso ativo na conta." };
+  }
+
+  const { error: unlinkErro } = await getSupabase().auth.unlinkIdentity(estado.identidade);
+  if (unlinkErro) return { erro: unlinkErro.message };
+
+  // Limpa a fotografia/subject verificados antes da nova autorização. Se esta
+  // sincronização falhar, ainda assim voltamos a pedir consentimento: o novo
+  // claim será sincronizado quando a página regressar do LinkedIn.
+  await sincronizarLinkedIn();
+  return ligarLinkedIn();
 }
 
 export async function guardarUrlLinkedIn(
