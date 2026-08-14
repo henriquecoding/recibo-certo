@@ -50,10 +50,12 @@ describe("LinkedIn dos contabilistas", () => {
   });
 
   it("serve a fotografia pública pelo próprio domínio e valida a origem no servidor", () => {
-    const componente = ler("src/components/contabilistas/LinkedInPublico.tsx");
+    const publico = ler("src/components/contabilistas/LinkedInPublico.tsx");
+    const avatar = ler("src/components/contabilistas/AvatarContabilista.tsx");
     const rota = ler("src/app/api/contabilistas/linkedin-avatar/[userId]/route.ts");
-    expect(componente).toContain("/api/contabilistas/linkedin-avatar/");
-    expect(componente).not.toMatch(/<img[\s\S]*src=\{dados\.avatarUrl\}/);
+    expect(publico).toContain("AvatarContabilista");
+    expect(avatar).toContain("/api/contabilistas/linkedin-avatar/");
+    expect(avatar).not.toMatch(/<img[\s\S]*src=\{avatarUrl\}/);
     expect(rota).toContain("origemLinkedInPermitida");
     expect(rota).toContain('tipo.startsWith("image/")');
     expect(rota).toContain("MAX_BYTES");

@@ -13,6 +13,15 @@ function identidadeLinkedIn(identidades: UserIdentity[]): UserIdentity | null {
   return identidades.find((i) => i.provider === LINKEDIN_PROVIDER) ?? null;
 }
 
+function paraLinkedInPublico(linha: Record<string, unknown> | null | undefined): LinkedInPublico {
+  if (!linha) return { url: null, avatarUrl: null, ligadoEm: null };
+  return {
+    url: (linha.linkedin_url as string | null) ?? null,
+    avatarUrl: (linha.linkedin_avatar_url as string | null) ?? null,
+    ligadoEm: (linha.linkedin_ligado_em as string | null) ?? null,
+  };
+}
+
 /**
  * Aceita o que a pessoa costuma colar (com ou sem https://), mas devolve uma
  * URL canónica, sem query/hash. Só perfis pessoais `/in/...` são aceites.
@@ -63,12 +72,36 @@ export async function obterLinkedInPublico(contabilistaId: string): Promise<Link
     .maybeSingle();
 
   if (error || !data) return { url: null, avatarUrl: null, ligadoEm: null };
-  const linha = data as Record<string, unknown>;
-  return {
-    url: (linha.linkedin_url as string | null) ?? null,
-    avatarUrl: (linha.linkedin_avatar_url as string | null) ?? null,
-    ligadoEm: (linha.linkedin_ligado_em as string | null) ?? null,
-  };
+  return paraLinkedInPublico(data as unknown as Record<string, unknown>);
+}
+
+/**
+ * Versão em lote para o diretório.
+ *
+ * Um cartão não pode custar uma query própria: com 40 contabilistas seriam
+ * 41 pedidos só para desenhar a primeira página. A ficha pública já é lida
+ * sob RLS; aqui pedimos as três colunas LinkedIn de todos os ids numa única
+ * ida à base e indexamos localmente.
+ */
+export async function obterLinkedInsPublicos(
+  contabilistaIds: readonly string[],
+): Promise<Record<string, LinkedInPublico>> {
+  const ids = Array.from(new Set(contabilistaIds.filter(Boolean))).slice(0, 200);
+  if (ids.length === 0) return {};
+
+  const { data, error } = await getSupabase()
+    .from("contabilistas")
+    .select("user_id, linkedin_url, linkedin_avatar_url, linkedin_ligado_em")
+    .in("user_id", ids);
+
+  if (error || !data) return {};
+
+  const resultado: Record<string, LinkedInPublico> = {};
+  for (const item of data as unknown as Record<string, unknown>[]) {
+    const userId = item.user_id as string | undefined;
+    if (userId) resultado[userId] = paraLinkedInPublico(item);
+  }
+  return resultado;
 }
 
 export async function obterEstadoLinkedIn(): Promise<{

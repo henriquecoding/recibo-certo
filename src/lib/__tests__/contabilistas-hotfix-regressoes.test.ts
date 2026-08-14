@@ -31,6 +31,7 @@ describe("hotfix do painel profissional", () => {
   it("não deixa uma fotografia temporária do LinkedIn aparecer quebrada", () => {
     const conta = ler("src/components/contabilistas/LinkedInConta.tsx");
     const publico = ler("src/components/contabilistas/LinkedInPublico.tsx");
+    const avatar = ler("src/components/contabilistas/AvatarContabilista.tsx");
     const lib = ler("src/lib/contabilistas/linkedin.ts");
 
     expect(lib).toContain("avatarLinkedInExpirou");
@@ -39,8 +40,10 @@ describe("hotfix do painel profissional", () => {
     expect(conta).toContain("/api/contabilistas/linkedin-avatar/");
     expect(conta).toContain("onError={() => setAvatarFalhou(true)}");
     expect(conta).toContain("Atualizar fotografia");
-    expect(publico).toContain("onError={() => setAvatarFalhou(true)}");
-    expect(publico).toContain("avatarLinkedInExpirou");
+    expect(publico).toContain("AvatarContabilista");
+    expect(avatar).toContain("/api/contabilistas/linkedin-avatar/");
+    expect(avatar).toContain("onError={() => setFalhou(true)}");
+    expect(avatar).toContain("avatarLinkedInExpirou");
   });
 
   it("liberta apenas o clipping do formulário de tarefa quando o calendário está aberto", () => {
