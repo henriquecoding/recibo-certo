@@ -12,6 +12,7 @@ import { DISTRITOS, ESPECIALIDADES } from "@/lib/contabilistas/catalogo";
 import Button from "@/components/ui/Button";
 import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
+import LinkedInConta from "@/components/contabilistas/LinkedInConta";
 import { useAvisos } from "@/components/ui/Avisos";
 import { ExternalLink, Warning } from "@/components/ui/Icons";
 
@@ -202,6 +203,8 @@ export default function PerfilPage() {
           <Texto rotulo="Telefone" id="tel" tipo="tel" valor={f.telefone} onChange={(v) => mudar({ telefone: v })} />
         </div>
         <Texto rotulo="Site" id="site" tipo="url" valor={f.website} onChange={(v) => mudar({ website: v })} />
+
+        <LinkedInConta contabilistaId={ficha.userId} />
 
         <label className="flex items-start gap-3 rounded-2xl bg-cream p-4">
           <input

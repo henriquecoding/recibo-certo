@@ -24,6 +24,7 @@ import { eurosDeCents, valorComDesconto } from "@/lib/contabilistas/fidelidade";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
+import LinkedInPublico from "@/components/contabilistas/LinkedInPublico";
 import Marcacao from "@/components/contabilistas/Marcacao";
 import { useAvisos } from "@/components/ui/Avisos";
 import {
@@ -184,18 +185,23 @@ export default function PerfilPublico({ slug }: { slug: string }) {
         </Link>
 
         <header className="mt-4 rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-7">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl">{cc.nome}</h1>
-              {(cc.concelho || cc.distrito) && (
-                <p className="mt-2 flex items-center gap-1.5 text-sm text-stone-500">
-                  <MapPin size={15} aria-hidden />
-                  {[cc.concelho, cc.distrito].filter(Boolean).join(", ")}
-                </p>
-              )}
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex min-w-0 flex-1 items-start gap-4">
+              <LinkedInPublico contabilistaId={cc.userId} nome={cc.nome} />
+              <div className="min-w-0">
+                <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl">{cc.nome}</h1>
+                {(cc.concelho || cc.distrito) && (
+                  <p className="mt-2 flex items-center gap-1.5 text-sm text-stone-500">
+                    <MapPin size={15} aria-hidden />
+                    {[cc.concelho, cc.distrito].filter(Boolean).join(", ")}
+                  </p>
+                )}
+              </div>
             </div>
-            {ativo && <Badge tone="brand">És cliente</Badge>}
-            {!cc.aceitaNovosClientes && !ativo && <Badge tone="neutral">Sem vagas</Badge>}
+            <div className="flex flex-wrap gap-2">
+              {ativo && <Badge tone="brand">És cliente</Badge>}
+              {!cc.aceitaNovosClientes && !ativo && <Badge tone="neutral">Sem vagas</Badge>}
+            </div>
           </div>
 
           {cc.occ && (

@@ -24,6 +24,7 @@ import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import { useAvisos } from "@/components/ui/Avisos";
 import { useConfirmar } from "@/components/ui/Confirmar";
+import DatePicker from "@/components/ui/DatePicker";
 import {
   COLUNAS, ETIQUETAS_SUGERIDAS, ROTULO_URGENCIA, acrescentarPasso, alternarPasso,
   apagarTarefa, criarTarefa, listarTarefas, moverTarefa, progressoDe, urgenciaDe,
@@ -422,15 +423,19 @@ function NovaTarefa({
           </select>
         </label>
 
-        <label className="block">
-          <span className="text-sm font-semibold text-stone-700">Prazo <span className="font-normal text-stone-400">(opcional)</span></span>
-          <input
-            type="date"
+        <div className="block">
+          <label htmlFor="prazo-tarefa" className="text-sm font-semibold text-stone-700">
+            Prazo <span className="font-normal text-stone-400">(opcional)</span>
+          </label>
+          <DatePicker
+            id="prazo-tarefa"
             value={prazo}
-            onChange={(e) => setPrazo(e.target.value)}
-            className="mt-2 min-h-[2.75rem] w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm tabular-nums text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+            onChange={setPrazo}
+            ariaLabel="Prazo da tarefa"
+            placeholder="dd/mm/aaaa"
+            className="mt-2"
           />
-        </label>
+        </div>
       </div>
 
       <fieldset>
