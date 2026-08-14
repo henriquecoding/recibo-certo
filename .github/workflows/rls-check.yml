@@ -49,6 +49,9 @@ jobs:
 
       # Se a suíte passar mas não tiver corrido nada, o verde é falso. O
       # runner escreve o total; aqui confirma-se que não é zero.
+      - name: Confirmar que o ficheiro junto está em dia
+        run: node scripts/juntar-migracoes.mjs --check
+
       - name: Confirmar que houve asserções
         env:
           PGPASSWORD: postgres
