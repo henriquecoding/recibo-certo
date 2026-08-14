@@ -16,6 +16,15 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.51.1",
+    data: "2026-08-14",
+    titulo: "LinkedIn e calendário do painel profissional corrigidos",
+    itens: [
+      "A ligação do LinkedIn volta a guardar o endereço público normalmente sem enfraquecer a proteção contra HTML e scripts. Fotografias temporárias que tenham expirado deixam de aparecer quebradas e podem ser renovadas pela própria ligação do LinkedIn.",
+      "O calendário de prazo ao criar uma tarefa deixa de ser cortado pelo contentor animado e continua a usar o mesmo DatePicker, incluindo modo escuro, teclado e formato pt-PT.",
+    ],
+  },
+  {
     version: "2.51.0",
     data: "2026-08-14",
     titulo: "O painel de contabilistas ficou mais claro — e texto executável fica à porta",
