@@ -103,12 +103,53 @@ autorização, force `Content-Disposition: attachment` e `X-Content-Type-Options
 nosniff` fica para a etapa seguinte, junto com o trilho de auditoria das
 leituras que a administração faz aos documentos de candidatura.
 
-## Etapa 3 — Zona de perigo granular e catálogo de dados · por fazer
+## Etapa 3 — Zona de perigo granular e catálogo de dados · **fechada**
 
-Um catálogo único a alimentar inventário, dependências, manifesto e eliminação
-transacional. Manifesto imutável, arrendamento contra execução concorrente,
-trabalho retomável, cancelamento idempotente do pagamento, e a conta de
-autenticação em último lugar.
+Migração `049_apagar_com_manifesto.sql` e `src/lib/conta/catalogo.ts`.
+227 asserções de RLS (eram 209).
+
+### O que estava mal
+
+A rota apagava **cinco tabelas**. A base de dados tem **vinte e oito** com dados
+de pessoas. Quem pedia para ser esquecido ficava com as conversas, as consultas,
+as partilhas, os cartões de fidelidade, as notificações e a candidatura por
+apagar — e a resposta dizia «ok, apagadas: 5».
+
+E se alguma vez tinha escrito uma mensagem ou marcado uma consulta, a conta
+**não era apagada de todo**: `contabilista_mensagens.autor_id` e
+`agendamentos.cliente_id` referem `auth.users` com `ON DELETE RESTRICT`, e essas
+tabelas não estavam na lista. `deleteUser` falhava e a resposta mandava a pessoa
+contactar-nos. Ou seja: quem mais tinha usado a plataforma era exatamente quem
+não conseguia sair dela.
+
+A causa não foi distração — a lista estava escrita à mão dentro da rota. Uma
+tabela nova nasce numa migração, e nada obrigava ninguém a voltar lá.
+
+### O que passou a ser verdade
+
+| Achado | Como fica fechado |
+| --- | --- |
+| Lista de tabelas escrita à mão | Um catálogo só (`catalogo.ts`), e um **teste que compara o catálogo com as tabelas que as migrações criam**. Uma tabela com coluna de dono que não apareça no catálogo, nem em `FORA_DO_CATALOGO` com uma razão escrita, faz o teste falhar antes de chegar a produção. |
+| Não era transação | `apagar_conjuntos(text[])` — uma transação, na ordem das dependências. Se alguma coisa levantar, não saiu nada, e agora a frase «nada foi perdido» é verdadeira. |
+| Não havia registo | `conta_apagamentos`: manifesto imutável, com contagens por tabela. Um gatilho recusa reescrevê-lo e apagá-lo — um registo que se pode alterar depois não é um registo, é uma alegação. Guarda o id em **texto**, sem referência: com chave estrangeira, apagar a conta levava o manifesto com ela. |
+| Escolher às cegas | `inventario_do_utilizador()` — a interface mostra o que a pessoa **tem**, não o que poderia ter. O que está a zero aparece esbatido e não se pode escolher; um grupo inteiro vazio não aparece. |
+| Nenhuma granularidade | Dezanove conjuntos em sete grupos, com caixas de seleção. Apagar as conversas e guardar os recibos passou a ser possível. |
+| Ficheiros ficavam para trás | `ficheiros_do_utilizador()` é chamada **antes** de as linhas saírem — depois, já ninguém sabe que caminhos pertenciam a que vínculo. |
+| A subscrição era problema de quem saía | A rota cancela-a. A cópia anterior dizia «se tens uma subscrição ativa, cancela-a primeiro», o que era empurrar para quem sai o trabalho de não continuar a ser cobrado. Idempotente: cancelar o que já está cancelado é uma resposta, não um erro. |
+| Não se dizia o que fica | A interface tem uma secção «o que fica, e porquê», alimentada pelo campo `retido` do catálogo. |
+
+### Encontrado ao escrever os testes
+
+O teste de completude apanhou quatro tabelas cuja coluna de posse eu tinha
+declarado errada: `quiz_profiles` é chaveada por `id`, `fidelidade_carimbos` por
+`cartao_id`, `contabilistas` por `user_id`, `contabilista_tarefa_passos` por
+`tarefa_id`. Um `DELETE` com a coluna errada não falha — **não apaga nada, em
+silêncio**, que é o pior resultado possível numa função destas. O modelo passou a
+declarar a posse por tabela, e não por conjunto.
+
+O arreio de testes também não tinha nenhuma das tabelas anteriores à migração
+042, nem `profiles.preferencias_fiscais`. Uma função de apagar que nunca correu
+num teste não é uma garantia.
 
 ## Etapa 4 — O destino dos dados obedecido pelos stores · por fazer
 

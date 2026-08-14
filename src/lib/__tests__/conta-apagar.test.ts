@@ -67,13 +67,44 @@ describe("apagar: a confirmação", () => {
 });
 
 describe("apagar: a rota não confia no cliente", () => {
-  it("o user_id vem do token, nunca do corpo do pedido", () => {
+  it("o user_id vem do token, e a rota nem sequer o passa adiante", () => {
     // Aceitar um id do corpo daria a qualquer pessoa autenticada a
-    // capacidade de apagar os dados de outra.
+    // capacidade de apagar os dados de outra. Desde a migração 049 a rota
+    // já nem tem por onde enganar-se: `apagar_conjuntos` não recebe id
+    // nenhum — lê `auth.uid()` do lado da base de dados.
     const r = ler(ROTA);
     expect(r).toContain("obterUtilizador(req)");
-    expect(r).toMatch(/eq\("user_id", user\.id\)/);
+    expect(r).toContain("apagar_conjuntos");
     expect(r, "o corpo não pode trazer um user_id").not.toMatch(/corpo\??\.\s*user_id/);
+    expect(r, "a RPC não pode receber um utilizador por parâmetro")
+      .not.toMatch(/p_user(_id)?:/);
+  });
+
+  it("apaga numa transação só, e não tabela a tabela", () => {
+    // Antes eram DELETE em série: falhar no terceiro deixava os dois
+    // primeiros apagados, e a resposta dizia que nada se tinha perdido.
+    const r = ler(ROTA);
+    expect(r, "nenhum DELETE direto na rota").not.toMatch(/\.from\([^)]+\)\s*\.delete\(/);
+  });
+
+  it("os ficheiros são perguntados ANTES de as linhas saírem", () => {
+    // Depois de o vínculo desaparecer não há como saber que caminhos lhe
+    // pertenciam, e os bytes ficavam no armazenamento para sempre.
+    // As chamadas, e não as menções: o cabeçalho do ficheiro explica a
+    // ordem por escrito, e procurar o nome apanhava a explicação primeiro.
+    const r = ler(ROTA);
+    const pergunta = r.indexOf('rpc("ficheiros_do_utilizador"');
+    const apaga = r.indexOf('rpc("apagar_conjuntos"');
+    expect(pergunta).toBeGreaterThan(0);
+    expect(apaga).toBeGreaterThan(0);
+    expect(pergunta).toBeLessThan(apaga);
+  });
+
+  it("a subscrição é cancelada por nós, e não pedida a quem sai", () => {
+    const r = ler(ROTA);
+    expect(r).toContain("cancelarSubscricao");
+    // Cancelar o que já está cancelado é uma resposta, não um erro.
+    expect(r).toMatch(/ja_cancelada|ja_nao_existia/);
   });
 
   it("exige sessão", () => {
@@ -89,15 +120,18 @@ describe("apagar: a rota não confia no cliente", () => {
     expect(r).toMatch(/status: 400/);
   });
 
-  it("um alvo desconhecido é recusado", () => {
+  it("um conjunto desconhecido é filtrado, e não apagado às cegas", () => {
     expect(alvoPorId("tabela_qualquer")).toBeUndefined();
-    expect(ler(ROTA)).toMatch(/Alvo desconhecido/);
+    // A rota cruza o que vem do corpo com o catálogo. Um nome de tabela
+    // enviado à mão não chega sequer à base de dados.
+    expect(ler(ROTA)).toMatch(/APAGAVEIS\.includes/);
   });
 
   it("a conta é apagada por último", () => {
     // Se algo falhasse antes, a pessoa ainda tem conta para tentar de novo.
     const r = ler(ROTA);
-    expect(r.indexOf("deleteUser")).toBeGreaterThan(r.indexOf("preferencias_fiscais"));
+    expect(r.indexOf("deleteUser")).toBeGreaterThan(r.indexOf('rpc("apagar_conjuntos"'));
+    expect(r.indexOf("deleteUser")).toBeGreaterThan(r.indexOf("await cancelarSubscricao"));
   });
 });
 
@@ -120,7 +154,7 @@ describe("apagar: o que a pessoa vê", () => {
 
   it("o botão de apagar está desativado até a frase bater certo", () => {
     const c = ler(UI);
-    expect(c).toMatch(/disabled=\{!prontoParaApagar/);
+    expect(c).toMatch(/disabled=\{!p\.pronto/);
   });
 
   it("cobre os alvos que foram pedidos", () => {

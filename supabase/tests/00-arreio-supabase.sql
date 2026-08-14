@@ -82,6 +82,47 @@ CREATE TABLE public.profiles (
   role text NOT NULL DEFAULT 'user' CHECK (role IN ('user','admin'))
 );
 
+-- `preferencias_fiscais` nasceu na migração 032, que este arreio não aplica.
+-- Sem ela, `apagar_conjuntos` falhava aqui e passava em produção — que é a
+-- pior maneira de um teste estar errado.
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS preferencias_fiscais jsonb;
+
+-- ── As tabelas anteriores à 042 que o apagamento toca ────────────────
+--
+-- Só o esqueleto: a chave e a coluna de dono. O que aqui se exercita é a
+-- migração 049, e não o esquema destas — mas sem elas a função não corre,
+-- e uma função de apagar que nunca correu num teste não é uma garantia.
+DO $arreio$
+DECLARE t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY[
+    'recibos','recibos_vencimento','cenarios','prazos_cumpridos',
+    'quiz_question_reports','quiz_achievement_progress','quiz_sessoes',
+    'quiz_sessions','quiz_cupoes','alertas_guardiao',
+    'partner_handoffs','partner_connections','site_feedback','subscriptions'
+  ] LOOP
+    EXECUTE format($f$
+      CREATE TABLE IF NOT EXISTS public.%I (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+        tipo text, canal text,
+        criado_em timestamptz NOT NULL DEFAULT now()
+      )$f$, t);
+    EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
+    EXECUTE format($f$
+      CREATE POLICY %I ON public.%I FOR ALL TO authenticated
+        USING (user_id = (SELECT auth.uid()))
+        WITH CHECK (user_id = (SELECT auth.uid()))$f$, t || '_dono', t);
+  END LOOP;
+END $arreio$;
+
+-- `quiz_profiles` é chaveada pelo id da pessoa, e não por `user_id` — foi
+-- isso que o teste do catálogo apanhou.
+CREATE TABLE IF NOT EXISTS public.quiz_profiles (
+  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  xp integer NOT NULL DEFAULT 0
+);
+
 CREATE OR REPLACE FUNCTION public.is_admin() RETURNS boolean
 LANGUAGE sql SECURITY DEFINER STABLE SET search_path = '' AS $$
   SELECT EXISTS (
