@@ -113,34 +113,61 @@ export async function enviarMensagem(p: {
   const mensagemId = (data as unknown as Linha).id as string;
   const recusados: string[] = [];
 
+  // O envio deixou de ser «escrever no balde e depois escrever a linha».
+  // O browser já não escolhe o caminho, já não escreve a linha, e já não é
+  // a última palavra sobre o tamanho nem sobre o tipo: pede uma vaga, envia
+  // para onde ela diz, e o servidor olha para os bytes antes de registar.
+  const auth = await cabecalhoDeAutorizacao();
+  if (!auth) return { recusados: (p.ficheiros ?? []).map((f) => `${f.name} (sessão expirada)`) };
+
   for (const f of (p.ficheiros ?? []).slice(0, ANEXOS_MAX)) {
+    // As mesmas perguntas que o servidor faz, feitas cedo: poupam uma ida
+    // e volta e dão uma resposta imediata a quem escolheu mal o ficheiro.
     if (f.size > ANEXO_MAX_BYTES) { recusados.push(`${f.name} (acima de 10 MB)`); continue; }
     if (!(TIPOS_ANEXO_ACEITES as readonly string[]).includes(f.type)) {
       recusados.push(`${f.name} (formato não aceite)`); continue;
     }
 
-    // O caminho começa pelo id do vínculo: é assim que a política do balde
-    // sabe quem pode ler, e é o que faz terminar o acompanhamento fechar
-    // também os ficheiros.
-    const nomeSeguro = f.name.replace(/[^\w.\-]/g, "_").slice(-80);
-    const caminho = `${p.vinculoId}/${mensagemId}-${Date.now()}-${nomeSeguro}`;
+    try {
+      const vaga = await fetch("/api/contabilistas/anexo", {
+        method: "POST",
+        headers: auth,
+        body: JSON.stringify({ mensagemId, tipoMime: f.type, bytes: f.size }),
+      });
+      const dadosVaga = (await vaga.json()) as
+        { erro?: string; vagaId?: string; caminho?: string; token?: string };
+      if (!vaga.ok || !dadosVaga.caminho || !dadosVaga.token) {
+        recusados.push(`${f.name} (${dadosVaga.erro ?? "envio recusado"})`); continue;
+      }
 
-    const { error: erroUp } = await sb.storage
-      .from("contabilista-anexos")
-      .upload(caminho, f, { upsert: false, contentType: f.type });
-    if (erroUp) { recusados.push(`${f.name} (${erroUp.message})`); continue; }
+      const { error: erroUp } = await sb.storage
+        .from("contabilista-anexos")
+        .uploadToSignedUrl(dadosVaga.caminho, dadosVaga.token, f, { contentType: f.type });
+      if (erroUp) { recusados.push(`${f.name} (${erroUp.message})`); continue; }
 
-    const { error: erroLinha } = await sb.from("contabilista_anexos").insert({
-      mensagem_id: mensagemId,
-      caminho,
-      nome: f.name.slice(0, 200),
-      bytes: f.size,
-      tipo_mime: f.type,
-    });
-    if (erroLinha) recusados.push(`${f.name} (${erroLinha.message})`);
+      const fecho = await fetch("/api/contabilistas/anexo", {
+        method: "PATCH",
+        headers: auth,
+        body: JSON.stringify({ vagaId: dadosVaga.vagaId, nome: f.name }),
+      });
+      if (!fecho.ok) {
+        const erro = (await fecho.json()) as { erro?: string };
+        recusados.push(`${f.name} (${erro.erro ?? "não foi aceite"})`);
+      }
+    } catch {
+      recusados.push(`${f.name} (falha de rede)`);
+    }
   }
 
   return recusados.length > 0 ? { recusados } : {};
+}
+
+/** O cabeçalho com o token da sessão, ou `null` se ela já não existir. */
+async function cabecalhoDeAutorizacao(): Promise<Record<string, string> | null> {
+  const { data } = await getSupabase().auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) return null;
+  return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
 }
 
 /** Marca como lidas as mensagens do OUTRO. As próprias nunca contam. */

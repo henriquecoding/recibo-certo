@@ -71,7 +71,8 @@ done
 P -q -d rc_testes -f "$TESTES/01-dados.sql"
 
 falhou=0
-for f in "$TESTES"/0[2-9]-*.sql; do
+# Do 02 em diante, por ordem. `0[2-9]` deixava o 10 de fora em silêncio.
+for f in $(ls "$TESTES"/[0-9][0-9]-*.sql | grep -v "/0[01]-"); do
   # Uma passagem só: estes testes escrevem, e correr o mesmo ficheiro duas
   # vezes falharia por os dados já lá estarem — não por falta de garantia.
   # O código de saída vem do psql (PIPESTATUS), nunca do grep, que devolve 1

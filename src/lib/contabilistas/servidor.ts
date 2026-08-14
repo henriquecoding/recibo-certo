@@ -22,6 +22,27 @@ export function supabaseServico(): SupabaseClient | null {
   });
 }
 
+/**
+ * Um cliente com o token de quem pede.
+ *
+ * Precisa-se dele sempre que a base de dados decide por `auth.uid()` — as
+ * RPC da migração 047 e 048 fazem-no todas. A chave de serviço não serve
+ * aí: com ela, `auth.uid()` é nulo e a função não sabe quem está a pedir.
+ */
+export function supabaseDoPedido(req: Request): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anon) return null;
+
+  const cabecalho = req.headers.get("authorization") ?? "";
+  if (!cabecalho.startsWith("Bearer ")) return null;
+
+  return createClient(url, anon, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: cabecalho } },
+  });
+}
+
 /** Quem fez o pedido, validando o token do Supabase. `null` se não houver. */
 export async function utilizadorDoPedido(req: Request): Promise<string | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

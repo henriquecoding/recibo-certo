@@ -54,12 +54,54 @@ identidade de quem pede.
 
 ---
 
-## Etapa 2 — Storage endurecido (PR-03) · por fazer
+## Etapa 2 — Storage endurecido (PR-03) · **fechada**
 
-`file_size_limit` e `allowed_mime_types` nos baldes; vagas de upload de uso
-único emitidas pelo servidor (ordinal 1–5, nunca `count(*)`); validação por
-magic bytes; nomes de ficheiro gerados; descarregamento com autorização atual,
-`Content-Disposition: attachment` e `nosniff`; reconciliação de órfãos.
+Migração `048_storage_endurecido.sql`. 209 asserções de RLS (eram 191).
+
+### O que estava mal
+
+Os dois baldes foram criados só com `public = false`. Tudo o resto — os dez
+megabytes, os cinco anexos por mensagem, os tipos aceites — vivia em
+`conversa.ts`, no browser. Quem falasse diretamente com a API de Storage não
+passava por nada disso: um ficheiro de dois gigabytes (`file_size_limit` era
+`NULL`), um executável anunciado como PDF (quem declara o tipo é quem envia),
+quinhentos objetos numa conversa (o teto de cinco estava num gatilho da tabela
+que *descreve* os anexos, não no balde), e o caminho à escolha.
+
+A tabela `contabilista_anexos` tem `bytes <= 10485760`. Não protegia nada: é o
+cliente que escreve esse número, e o objeto já lá está de qualquer maneira. Uma
+verificação sobre a linha que descreve o ficheiro não é uma verificação sobre o
+ficheiro.
+
+### O que passou a ser verdade
+
+| Achado | Como fica fechado |
+| --- | --- |
+| Sem limite de tamanho | `file_size_limit = 10485760` nos dois baldes. O serviço recusa antes de a linha existir. |
+| Sem limite de tipo | `allowed_mime_types` com nove entradas. **Não** estão lá `text/html` nem `image/svg+xml`: os dois executam ao serem abertos, e um ficheiro que executa servido do domínio de armazenamento é XSS guardado. |
+| Caminho escolhido pelo cliente | Vagas de uso único (`anexo_vagas`). O caminho é gerado pelo servidor e a política de `INSERT` exige uma vaga aberta com aquele caminho exato. O nome que a pessoa deu guarda-se em `contabilista_anexos.nome`, para se mostrar — nunca no caminho. |
+| Teto de cinco contornável | Índice único sobre `(mensagem_id, ordinal)`. Com `count(*)`, seis pedidos simultâneos leem todos «tenho quatro» e passam todos; com uma `UNIQUE`, o sexto colide. |
+| Tipo declarado, nunca verificado | `src/lib/ficheiros/assinatura.ts` olha para os primeiros 64 bytes. Se desmentirem o tipo, o objeto é **apagado** e não fica linha nenhuma a apontar-lhe. Há também uma lista do que nunca entra (MZ, ELF, Mach-O, classe Java, shebang), porque texto é fácil de imitar. |
+| Linha do anexo inventável | `REVOKE INSERT, UPDATE ON contabilista_anexos FROM authenticated`. A linha nasce em `fechar_vaga_de_anexo`, só acessível ao `service_role`, e **depois** de os bytes serem vistos. |
+| Ninguém podia apagar | Não havia política de `DELETE` neste balde — nem para quem tinha enviado. Agora há, limitada a quem enviou e enquanto o vínculo durar. |
+| Órfãos invisíveis | `purgar_anexos_orfaos()` e `purgar_vagas_velhas()`, com `/api/cron/purgar-anexos` a correr uma vez por dia. Duas horas de tolerância: menos apanharia envios ainda a decorrer. |
+
+### Encontrado ao escrever os testes
+
+O arreio do PostgreSQL não tinha `file_size_limit`, `allowed_mime_types` nem
+`metadata` — a suíte «provava» limites que nunca eram exercidos. Ganhou as
+colunas e um gatilho que recusa como o serviço do Supabase recusa. E o
+descobridor de ficheiros de teste era `0[2-9]-*.sql`: o ficheiro 10 teria sido
+ignorado em silêncio, e a suíte passaria a verde sem correr um único teste novo.
+
+### O que falta desta etapa
+
+O descarregamento continua a ser um URL assinado de cinco minutos, gerado no
+browser. A assinatura sobrevive à autorização que a produziu: terminar o vínculo
+um segundo depois não a invalida. Passar por uma rota que reconfirme a
+autorização, force `Content-Disposition: attachment` e `X-Content-Type-Options:
+nosniff` fica para a etapa seguinte, junto com o trilho de auditoria das
+leituras que a administração faz aos documentos de candidatura.
 
 ## Etapa 3 — Zona de perigo granular e catálogo de dados · por fazer
 

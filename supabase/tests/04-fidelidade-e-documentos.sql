@@ -143,11 +143,13 @@ SELECT t.conta($$SELECT count(*) FROM public.partilhas$$, 2,
 \echo ''
 \echo '── 13. Documentos: cada um só na sua pasta ─────────────────────'
 SELECT t.entrar('22222222-2222-2222-2222-222222222222');
-SELECT t.permite($$INSERT INTO storage.objects (bucket_id, name)
-  VALUES ('contabilista-documentos','22222222-2222-2222-2222-222222222222/cedula.pdf')$$,
+SELECT t.permite($$INSERT INTO storage.objects (bucket_id, name, metadata)
+  VALUES ('contabilista-documentos','22222222-2222-2222-2222-222222222222/cedula.pdf',
+          '{"size":180000,"mimetype":"application/pdf"}'::jsonb)$$,
   'envia para a sua própria pasta');
-SELECT t.recusa($$INSERT INTO storage.objects (bucket_id, name)
-  VALUES ('contabilista-documentos','11111111-1111-1111-1111-111111111111/falso.pdf')$$,
+SELECT t.recusa($$INSERT INTO storage.objects (bucket_id, name, metadata)
+  VALUES ('contabilista-documentos','11111111-1111-1111-1111-111111111111/falso.pdf',
+          '{"size":180000,"mimetype":"application/pdf"}'::jsonb)$$,
   'envia para a pasta de outra pessoa');
 SELECT t.entrar('33333333-3333-3333-3333-333333333333');
 SELECT t.conta($$SELECT count(*) FROM storage.objects
