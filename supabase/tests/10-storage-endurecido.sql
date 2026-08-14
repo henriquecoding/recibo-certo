@@ -174,3 +174,81 @@ SELECT t.entrar('c1c1c1c1-0000-0000-0000-00000000000c');
 SELECT t.recusa($$SELECT public.purgar_anexos_orfaos('2 hours')$$,
   'varrer o armazenamento à mão');
 RESET ROLE;
+
+\echo ''
+\echo '── 59. Um ficheiro só se abre a quem pode abri-lo AGORA ────────'
+RESET ROLE;
+SELECT t.sair();
+
+-- Um anexo a sério, com a linha que o descreve.
+INSERT INTO public.contabilista_mensagens (id, vinculo_id, autor_id, corpo)
+VALUES ('bbbb1111-0000-0000-0000-00000000000b',
+        'eeee0000-0000-0000-0000-00000000000e',
+        'c1c1c1c1-0000-0000-0000-00000000000c','Segue a fatura.')
+ON CONFLICT DO NOTHING;
+INSERT INTO public.contabilista_anexos (mensagem_id, caminho, nome, bytes, tipo_mime)
+VALUES ('bbbb1111-0000-0000-0000-00000000000b',
+        'eeee0000-0000-0000-0000-00000000000e/fatura', 'Fatura.pdf', 5000, 'application/pdf')
+ON CONFLICT DO NOTHING;
+
+SET ROLE authenticated;
+SELECT t.entrar('c1c1c1c1-0000-0000-0000-00000000000c');
+SELECT t.rpc_ok($$SELECT public.anexo_legivel('eeee0000-0000-0000-0000-00000000000e/fatura')$$,
+  'quem enviou pode descarregar');
+SELECT t.entrar('11111111-1111-1111-1111-111111111111');
+SELECT t.rpc_ok($$SELECT public.anexo_legivel('eeee0000-0000-0000-0000-00000000000e/fatura')$$,
+  'o contabilista do vínculo também');
+
+SELECT t.entrar('33333333-3333-3333-3333-333333333333');
+SELECT t.rpc_recusa($$SELECT public.anexo_legivel('eeee0000-0000-0000-0000-00000000000e/fatura')$$,
+  'sem_acesso', 'um terceiro descarrega o anexo de outra conversa');
+
+-- «Não existe» e «não é teu» respondem coisas diferentes à rota, mas a
+-- rota responde 404 às duas: a diferença dizia a quem tenta se o ficheiro
+-- existe.
+SELECT t.rpc_recusa($$SELECT public.anexo_legivel('nao/existe')$$,
+  'inexistente', 'descarregar um caminho inventado');
+
+-- ⚠️ ISTO ERA POSSÍVEL. O URL era assinado por cinco minutos e sobrevivia
+-- ao fim do acompanhamento — quem terminasse continuava a poder abrir.
+SELECT t.entrar('c1c1c1c1-0000-0000-0000-00000000000c');
+SELECT t.rpc_ok($$SELECT public.decidir_vinculo(
+  'eeee0000-0000-0000-0000-00000000000e', 'terminar')$$, 'o cliente termina');
+SELECT t.entrar('c1c1c1c1-0000-0000-0000-00000000000c');
+SELECT t.rpc_recusa($$SELECT public.anexo_legivel('eeee0000-0000-0000-0000-00000000000e/fatura')$$,
+  'sem_acesso', 'descarregar depois de o acompanhamento terminar');
+SELECT t.entrar('11111111-1111-1111-1111-111111111111');
+SELECT t.rpc_recusa($$SELECT public.anexo_legivel('eeee0000-0000-0000-0000-00000000000e/fatura')$$,
+  'sem_acesso', 'o contabilista descarrega depois de a relação acabar');
+
+\echo ''
+\echo '── 60. A administração lê, e fica escrito que leu ──────────────'
+RESET ROLE; SELECT t.sair();
+DELETE FROM public.admin_auditoria WHERE acao = 'documento_candidatura_lido';
+SET ROLE authenticated;
+
+-- O próprio lê o que é seu, e isso não é um ato de administração.
+SELECT t.entrar('22222222-2222-2222-2222-222222222222');
+SELECT t.rpc_ok($$SELECT public.documento_legivel_por_admin(
+  '22222222-2222-2222-2222-222222222222/cedula.pdf')$$,
+  'a pessoa lê o documento que enviou');
+SELECT t.conta($$SELECT count(*) FROM public.admin_auditoria
+  WHERE acao='documento_candidatura_lido'$$, 0,
+  'ler o que é seu não fica registado como ato de administração');
+
+SELECT t.entrar('33333333-3333-3333-3333-333333333333');
+SELECT t.rpc_recusa($$SELECT public.documento_legivel_por_admin(
+  '22222222-2222-2222-2222-222222222222/cedula.pdf')$$,
+  'sem_acesso', 'um terceiro lê a cédula profissional de outra pessoa');
+
+SELECT t.entrar('44444444-4444-4444-4444-444444444444');
+SELECT t.rpc_ok($$SELECT public.documento_legivel_por_admin(
+  '22222222-2222-2222-2222-222222222222/cedula.pdf')$$,
+  'a administração lê, para poder decidir');
+
+RESET ROLE; SELECT t.sair();
+SELECT t.conta($$SELECT count(*) FROM public.admin_auditoria
+  WHERE acao='documento_candidatura_lido'
+    AND ator_id='44444444-4444-4444-4444-444444444444'
+    AND alvo_id='22222222-2222-2222-2222-222222222222'$$, 1,
+  'e a leitura ficou escrita, com quem leu e de quem');

@@ -180,11 +180,36 @@ export async function marcarLidas(vinculoId: string, meuId: string): Promise<voi
     .is("lida_em", null);
 }
 
-/** URL assinado, válido cinco minutos. Nunca se guarda — assina-se na hora. */
-export async function urlDoAnexo(caminho: string): Promise<string | null> {
-  const { data } = await getSupabase()
-    .storage.from("contabilista-anexos").createSignedUrl(caminho, 300);
-  return data?.signedUrl ?? null;
+/**
+ * Traz o ficheiro para o aparelho de quem o pediu.
+ *
+ * Era um URL assinado de cinco minutos, pedido diretamente ao
+ * armazenamento. O problema não era a duração: a assinatura sobrevive à
+ * autorização que a produziu, e terminar o acompanhamento — que fecha o
+ * acesso a tudo — não a invalidava.
+ *
+ * Agora passa por uma rota que pergunta no instante do pedido, e que
+ * devolve o ficheiro com `Content-Disposition: attachment` e `nosniff`.
+ * O endereço temporário criado aqui é do browser, e morre com a página.
+ */
+export async function urlDoAnexo(
+  caminho: string,
+  tipo: "anexo" | "documento" = "anexo",
+): Promise<string | null> {
+  const auth = await cabecalhoDeAutorizacao();
+  if (!auth) return null;
+
+  try {
+    const res = await fetch("/api/contabilistas/descarregar", {
+      method: "POST",
+      headers: auth,
+      body: JSON.stringify({ caminho, tipo }),
+    });
+    if (!res.ok) return null;
+    return URL.createObjectURL(await res.blob());
+  } catch {
+    return null;
+  }
 }
 
 /**

@@ -20,7 +20,9 @@ RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TESTES="$RAIZ/supabase/tests"
 # Todas as migrações da plataforma, por ordem. Uma migração nova entra aqui
 # sozinha: o glob apanha-a, e a suíte passa a exercê-la sem se alterar.
-MIGRACOES=("$RAIZ"/supabase/migrations/04[2-9]_*.sql)
+# Da 042 em diante. `04[2-9]` deixava a 050 de fora — e uma migração que a
+# suíte não aplica é uma migração que ninguém testa, sem aviso nenhum.
+MIGRACOES=($(ls "$RAIZ"/supabase/migrations/*.sql | awk -F/ '$NF >= "042" '))
 
 PGBIN="${PGBIN:-/usr/lib/postgresql/16/bin}"
 BASE="${PGTESTDIR:-/home/pgtest}"

@@ -196,6 +196,49 @@ canal de falha, e só é chamado no fim de um quiz — muito depois de a autenti
 ter respondido. Acrescentar-lhe um erro obriga a mudar quem o chama. Está escrito
 como exceção no teste, para não passar por esquecimento.
 
+## Etapa 5 — Descarregar com a autorização de agora · **fechada**
+
+Migração `050_descarregar_com_autorizacao.sql` e `/api/contabilistas/descarregar`.
+239 asserções de RLS (eram 227).
+
+### O que estava mal
+
+Os anexos abriam-se com um URL assinado de cinco minutos, pedido pelo browser
+diretamente ao armazenamento. O problema não era a duração — **era que a
+assinatura sobrevive à autorização que a produziu**. Terminar o acompanhamento
+fecha o acesso a tudo, mas um URL assinado um segundo antes continuava a
+funcionar durante os cinco minutos seguintes, porque o serviço de armazenamento
+não sabe nada de vínculos: só verifica se a assinatura bate certo. O mesmo valia
+para um contabilista entretanto suspenso.
+
+E havia uma segunda metade, mais silenciosa: **a administração podia ler os
+documentos de candidatura sem deixar rasto nenhum**. `admin_auditoria` existe
+desde a migração 040 e registava aprovações e recusas; abrir a cédula
+profissional de alguém não passava por lá.
+
+### O que passou a ser verdade
+
+| Achado | Como fica fechado |
+| --- | --- |
+| A assinatura sobrevive ao acesso | `anexo_legivel(text)` pergunta no instante do pedido, com a identidade de quem pede, e usa a mesma `parte_do_vinculo` que governa a leitura das mensagens — um anexo não pode ser mais acessível do que a conversa a que pertence. |
+| O ficheiro abria no separador | `Content-Disposition: attachment` e `X-Content-Type-Options: nosniff`. Um separador servido do nosso domínio partilha a origem com a sessão de quem o abriu. Junta-se `Cache-Control: private, no-store` e `Referrer-Policy: no-referrer`. |
+| O tipo vinha do pedido | O `Content-Type` da resposta é o que ficou **guardado** depois de os bytes serem verificados na migração 048, e não o que o pedido diz. |
+| «Não existe» distinguia-se de «não é teu» | As duas respondem 404. A diferença dizia a quem tentava se o ficheiro existe. |
+| A administração lia sem rasto | `documento_legivel_por_admin(text)` escreve em `admin_auditoria` **antes** de entregar, na mesma transação da verificação: não há como ler sem ficar registado. Ler os próprios documentos não conta — não é um ato de administração. |
+| O browser lia o balde por si | A política de leitura estreita-se de «qualquer parte do vínculo lê qualquer objeto dele» para «cada um vê o que enviou», que é o mínimo para poder apagar o que enviou. |
+
+### Encontrado ao escrever os testes
+
+Duas vezes o mesmo tipo de defeito, e vale a pena registá-lo: **o descobridor de
+migrações do arreio era `04[2-9]_*.sql`**. A migração 050 nunca era aplicada, e a
+suíte passava a verde sem a exercer — exatamente como o descobridor de testes
+tinha deixado o ficheiro `10-` de fora na etapa anterior. Os dois passaram a ser
+intervalos abertos.
+
+E apagar a política de leitura do balde por inteiro parecia certo — o browser já
+não precisa de ler — mas um `DELETE` precisa de ver a linha que apaga: quem tinha
+enviado um anexo deixava de o poder remover. Estreitar não é o mesmo que fechar.
+
 ## Depois — o modelo de intermediação
 
 `docs/ESTRATEGIA-INTERMEDIACAO.md`, fases A a F, e as três perguntas em aberto

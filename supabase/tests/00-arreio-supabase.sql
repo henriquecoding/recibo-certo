@@ -130,6 +130,25 @@ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = '' AS $$
   );
 $$;
 
+-- `admin_auditoria` nasceu na 040. Sem ela, a leitura de documentos pela
+-- administração não tinha onde ficar escrita — e o teste que prova que
+-- fica não podia sequer correr.
+CREATE TABLE IF NOT EXISTS public.admin_auditoria (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  ator_id    uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  ator_email text,
+  acao       text NOT NULL,
+  alvo_id    uuid,
+  alvo_email text,
+  detalhe    jsonb NOT NULL DEFAULT '{}'::jsonb,
+  ip         text,
+  criado_em  timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.admin_auditoria ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "auditoria_admin_le" ON public.admin_auditoria
+  FOR SELECT TO authenticated USING (public.is_admin());
+
+
 -- O Supabase concede isto por omissão às tabelas do schema public.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO anon, authenticated, service_role;

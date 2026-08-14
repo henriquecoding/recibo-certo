@@ -128,10 +128,23 @@ export default function Conversa({
     setFicheiros((a) => [...a, ...novos].slice(0, ANEXOS_MAX));
   }
 
+  // O ficheiro descarrega, não abre num separador. Um separador servido
+  // do nosso domínio partilha a origem com a sessão de quem o abriu — e o
+  // servidor manda `Content-Disposition: attachment` precisamente para
+  // isso não acontecer, pelo que abrir aqui só produzia uma janela vazia.
   async function abrir(caminho: string, nome: string) {
     const url = await urlDoAnexo(caminho);
     if (!url) { avisos.erro(`Não foi possível abrir «${nome}».`); return; }
-    window.open(url, "_blank", "noopener,noreferrer");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = nome;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // O endereço temporário é do browser e não caduca sozinho: sem isto,
+    // os bytes de cada anexo aberto ficavam em memória até recarregar.
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
   }
 
   async function enviar(e?: React.FormEvent) {
