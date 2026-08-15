@@ -16,6 +16,15 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.54.0",
+    data: "2026-08-15",
+    titulo: "O que é público num contabilista passa a ser uma lista fechada",
+    itens: [
+      "O diretório e os perfis públicos dos contabilistas passam a ler um conjunto de campos declarado um a um, em vez da ficha inteira. O telefone deixa de sair para quem não tem sessão — nenhum ecrã o mostrava — e passa a estar disponível para quem já tem acompanhamento ativo com esse contabilista. O email, a apresentação, as áreas, a localização e o estado de vagas continuam públicos, como sempre estiveram.",
+      "Identificadores internos — a ligação à candidatura e o identificador técnico da conta LinkedIn — deixam de ser legíveis a partir do diretório. Não eram mostrados em lado nenhum e não têm razão para sair.",
+    ],
+  },
+  {
     version: "2.53.1",
     data: "2026-08-15",
     titulo: "Os documentos de exemplo passam a ser conferidos, não reescritos",

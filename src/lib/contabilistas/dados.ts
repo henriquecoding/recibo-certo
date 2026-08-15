@@ -47,11 +47,43 @@ function paraContabilista(l: Linha): Contabilista {
   };
 }
 
-const CAMPOS_PUBLICOS =
+/**
+ * As colunas da ficha PRÓPRIA, lidas da tabela.
+ *
+ * Serve o painel e o editor de perfil, onde o contabilista precisa de ver
+ * o seu `estado` (para saber que está suspenso) e o seu telefone. A
+ * política `contabilistas_proprio_le` é que autoriza esta leitura.
+ */
+const CAMPOS_DA_FICHA =
   "user_id, slug, nome, occ, bio, distrito, concelho, especialidades, modalidades, " +
   "email_contacto, telefone, website, estado, aceita_novos_clientes, " +
   "preco_consulta_cents, duracao_consulta_min, fidelidade_meta, fidelidade_desconto_pct, " +
   "fidelidade_ativa, criado_em";
+
+/**
+ * O contrato público é uma VIEW, não a tabela.
+ *
+ * A política do diretório dá a `anon` a linha inteira de `contabilistas` —
+ * escolhe linhas, não colunas. Hoje isso publica `linkedin_subject` (o
+ * identificador OIDC), `pedido_id` e o telefone, que ecrã nenhum mostra.
+ * Amanhã publica qualquer coluna nova: a Progressão desenhada para esta
+ * plataforma tem XP, patamar comprado e créditos, e uma delas aqui seria a
+ * comissão de toda a gente à vista.
+ *
+ * `contabilistas_publico` diz as colunas uma a uma. Ver a migração
+ * `20260815200000_contrato_publico_contabilistas.sql`.
+ */
+const VISTA_PUBLICA = "contabilistas_publico";
+
+/** O telefone não vem na view; sai por `contacto_do_contabilista`. */
+function paraContabilistaPublico(l: Linha): Contabilista {
+  return paraContabilista({
+    ...l,
+    // A view só contém linhas aprovadas — é a sua cláusula WHERE.
+    estado: "aprovado",
+    telefone: null,
+  });
+}
 
 // ─── Diretório público ─────────────────────────────────────────────────
 
@@ -64,9 +96,8 @@ export interface FiltroDiretorio {
 
 export async function listarContabilistas(f: FiltroDiretorio = {}): Promise<Contabilista[]> {
   let q = getSupabase()
-    .from("contabilistas")
-    .select(CAMPOS_PUBLICOS)
-    .eq("estado", "aprovado")
+    .from(VISTA_PUBLICA)
+    .select("*")
     .order("nome");
 
   if (f.distrito) q = q.eq("distrito", f.distrito);
@@ -79,24 +110,23 @@ export async function listarContabilistas(f: FiltroDiretorio = {}): Promise<Cont
 
   const { data, error } = await q.limit(200);
   if (error) throw new Error(error.message);
-  return (data ?? []).map((l) => paraContabilista(l as unknown as Linha));
+  return (data ?? []).map((l) => paraContabilistaPublico(l as unknown as Linha));
 }
 
 export async function obterContabilistaPorSlug(slug: string): Promise<Contabilista | null> {
   const { data } = await getSupabase()
-    .from("contabilistas")
-    .select(CAMPOS_PUBLICOS)
+    .from(VISTA_PUBLICA)
+    .select("*")
     .eq("slug", slug)
-    .eq("estado", "aprovado")
     .maybeSingle();
-  return data ? paraContabilista(data as unknown as Linha) : null;
+  return data ? paraContabilistaPublico(data as unknown as Linha) : null;
 }
 
 /** A ficha do próprio, em qualquer estado — para saber que está suspenso. */
 export async function obterMinhaFicha(userId: string): Promise<Contabilista | null> {
   const { data } = await getSupabase()
     .from("contabilistas")
-    .select(CAMPOS_PUBLICOS)
+    .select(CAMPOS_DA_FICHA)
     .eq("user_id", userId)
     .maybeSingle();
   return data ? paraContabilista(data as unknown as Linha) : null;
@@ -200,13 +230,21 @@ export async function pedirVinculo(
   return { erro: error?.message ?? "Não foi possível enviar o pedido." };
 }
 
-/** O vínculo vivo do cliente, se houver. Um cliente tem no máximo um por CC. */
+/**
+ * O vínculo vivo do cliente, se houver. Um cliente tem no máximo um por CC.
+ *
+ * São duas leituras e não um `join` embutido, de propósito. O cliente não
+ * tem política de leitura sobre a ficha do contabilista — tinha-a por
+ * arrastamento, através da política pública do diretório. Quando essa
+ * política sair, um `join` à tabela devolvia `null` e a área do cliente
+ * ficava sem o nome de quem o acompanha. A view não depende dela.
+ */
 export async function meuVinculo(clienteId: string): Promise<
   (Vinculo & { contabilista: Contabilista | null }) | null
 > {
   const { data } = await getSupabase()
     .from("contabilista_vinculos")
-    .select("*, contabilista:contabilista_id (" + CAMPOS_PUBLICOS + ")")
+    .select("*")
     .eq("cliente_id", clienteId)
     .neq("estado", "terminado")
     .order("criado_em", { ascending: false })
@@ -214,9 +252,40 @@ export async function meuVinculo(clienteId: string): Promise<
     .maybeSingle();
 
   if (!data) return null;
-  const l = data as unknown as Linha;
-  const cc = l.contabilista as Linha | null;
-  return { ...paraVinculo(l), contabilista: cc ? paraContabilista(cc) : null };
+  const vinculo = paraVinculo(data as unknown as Linha);
+
+  const { data: ficha } = await getSupabase()
+    .from(VISTA_PUBLICA)
+    .select("*")
+    .eq("user_id", vinculo.contabilistaId)
+    .maybeSingle();
+
+  return {
+    ...vinculo,
+    contabilista: ficha ? paraContabilistaPublico(ficha as unknown as Linha) : null,
+  };
+}
+
+/**
+ * Email e telefone do contabilista, para quem tem vínculo vivo.
+ *
+ * O telefone não vem no contrato público — nenhum ecrã do diretório o
+ * mostra, e publicá-lo seria dá-lo a quem o recolhe sem o dar a quem o
+ * procura. Quem tem relação pede-o por aqui.
+ */
+export async function contactoDoContabilista(
+  contabilistaId: string
+): Promise<{ emailContacto: string | null; telefone: string | null } | null> {
+  const { data, error } = await getSupabase()
+    .rpc("contacto_do_contabilista", { p_contabilista: contabilistaId });
+  if (error) return null;
+
+  const [linha] = (data ?? []) as unknown as Linha[];
+  if (!linha) return null;
+  return {
+    emailContacto: (linha.email_contacto as string | null) ?? null,
+    telefone: (linha.telefone as string | null) ?? null,
+  };
 }
 
 /** O cliente corrige o nome por que quer ser tratado, sem terminar nada. */
