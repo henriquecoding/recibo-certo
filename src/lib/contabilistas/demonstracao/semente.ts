@@ -139,7 +139,7 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
     userId: CONTABILISTA,
     slug: "contabilista-de-demonstracao",
     nome: "Marta Nogueira (demonstração)",
-    occ: "OCC 00000",
+    occ: "00000",
     bio:
       "Trabalho sobretudo com trabalhadores independentes e micro-empresas do " +
       "Porto e de Matosinhos. Acompanho o ano todo — não só na altura do IRS — " +
@@ -151,6 +151,16 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
     emailContacto: "marta@exemplo-demonstracao.pt",
     telefone: "220 000 000",
     website: "https://exemplo-demonstracao.pt",
+    tituloProfissional: "Contabilista Certificada",
+    apresentacaoCurta: "Acompanho freelancers e micro-empresas do Porto, o ano todo.",
+    idiomas: ["pt", "en"],
+    anosExperiencia: 12,
+    respostaMediaHoras: 24,
+    // Informado, não verificado: a demonstração tem de mostrar o estado
+    // mais comum, que é o de quem escreveu o número e ainda não o viu
+    // confirmado pela administração.
+    occVerificado: false,
+    linkedinLigado: false,
     estado: "aprovado",
     aceitaNovosClientes: true,
     precoConsultaCents: 6500,

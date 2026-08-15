@@ -36,6 +36,15 @@ function paraContabilista(l: Linha): Contabilista {
     emailContacto: (l.email_contacto as string | null) ?? null,
     telefone: (l.telefone as string | null) ?? null,
     website: (l.website as string | null) ?? null,
+    tituloProfissional: (l.titulo_profissional as string | null) ?? null,
+    apresentacaoCurta: (l.apresentacao_curta as string | null) ?? null,
+    idiomas: (l.idiomas as string[]) ?? [],
+    anosExperiencia: (l.anos_experiencia as number | null) ?? null,
+    respostaMediaHoras: (l.resposta_media_horas as number | null) ?? null,
+    // A view calcula-o; a tabela guarda o instante. As duas leituras dão
+    // a mesma resposta à única pergunta que a interface faz.
+    occVerificado: Boolean(l.occ_verificado ?? l.occ_verificado_em),
+    linkedinLigado: Boolean(l.linkedin_ligado ?? l.linkedin_ligado_em),
     estado: l.estado as Contabilista["estado"],
     aceitaNovosClientes: Boolean(l.aceita_novos_clientes),
     precoConsultaCents: (l.preco_consulta_cents as number) ?? 0,
@@ -58,7 +67,9 @@ const CAMPOS_DA_FICHA =
   "user_id, slug, nome, occ, bio, distrito, concelho, especialidades, modalidades, " +
   "email_contacto, telefone, website, estado, aceita_novos_clientes, " +
   "preco_consulta_cents, duracao_consulta_min, fidelidade_meta, fidelidade_desconto_pct, " +
-  "fidelidade_ativa, criado_em";
+  "fidelidade_ativa, criado_em, " +
+  "titulo_profissional, apresentacao_curta, idiomas, anos_experiencia, " +
+  "resposta_media_horas, occ_verificado_em, linkedin_ligado_em";
 
 /**
  * O contrato público é uma VIEW, não a tabela.
@@ -141,6 +152,9 @@ export async function atualizarFicha(
     aceita_novos_clientes: boolean; preco_consulta_cents: number;
     duracao_consulta_min: number; fidelidade_meta: number;
     fidelidade_desconto_pct: number; fidelidade_ativa: boolean;
+    titulo_profissional: string | null; apresentacao_curta: string | null;
+    idiomas: string[]; anos_experiencia: number | null;
+    resposta_media_horas: number | null;
   }>
 ): Promise<{ erro?: string }> {
   const { error } = await getSupabase()

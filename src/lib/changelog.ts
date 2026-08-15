@@ -16,6 +16,17 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.55.0",
+    data: "2026-08-15",
+    titulo: "O perfil profissional deixa de ser um formulário e passa a ser uma identidade",
+    itens: [
+      "A página de perfil do contabilista passa a ter o editor à esquerda e a pré-visualização do perfil público à direita, atualizada enquanto se escreve. Deixa de ser preciso guardar para perceber o que os clientes vão ver. Os campos organizam-se em blocos com pesos diferentes — identidade, áreas de trabalho, atendimento, contacto e disponibilidade — em vez de um formulário longo onde o site tinha o mesmo destaque que a apresentação.",
+      "O perfil ganha título profissional, apresentação de uma linha para o cartão do diretório, idiomas de atendimento, anos de experiência e tempo de resposta. Os dois últimos são declarados pelo próprio e a interface diz que o são: o Recibo Certo não apresenta como medição aquilo que não mede.",
+      "O número de inscrição na Ordem passa a distinguir «informado» de «verificado». Um número escrito no formulário aparece como informado; a verificação passa a ser um facto registado pela administração, e alterar o número retira-a automaticamente.",
+      "A disponibilidade para novos clientes deixa de ser uma caixa no fim da página e passa a ser uma escolha explícita entre aceitar novos clientes e não ter vagas — com o perfil a continuar público nos dois casos.",
+    ],
+  },
+  {
     version: "2.54.0",
     data: "2026-08-15",
     titulo: "O que é público num contabilista passa a ser uma lista fechada",

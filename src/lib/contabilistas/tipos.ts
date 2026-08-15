@@ -74,6 +74,30 @@ export interface Contabilista {
   emailContacto: string | null;
   telefone: string | null;
   website: string | null;
+  /**
+   * Identidade declarada pelo próprio — §120 e §139.
+   *
+   * Nenhum destes campos é calculado, e é essa a razão de existirem em
+   * vez de serem inferidos: os anos de experiência não se deduzem da data
+   * de registo, e o tempo de resposta é um compromisso e não uma medição.
+   * A interface é obrigada a rotulá-los como declarados.
+   */
+  tituloProfissional: string | null;
+  /** Uma linha para o cartão do diretório. Não substitui a bio. */
+  apresentacaoCurta: string | null;
+  /** Códigos do catálogo fechado (`pt`, `en`, …). Ver `perfil.ts`. */
+  idiomas: string[];
+  anosExperiencia: number | null;
+  respostaMediaHoras: number | null;
+  /**
+   * Facto administrativo, nunca escrito pelo próprio (§124).
+   *
+   * Um número no formulário é «informado». «Verificado» exige que alguém
+   * o tenha confirmado junto da Ordem — e mudar o número apaga o selo,
+   * por trigger.
+   */
+  occVerificado: boolean;
+  linkedinLigado: boolean;
   estado: EstadoContabilista;
   aceitaNovosClientes: boolean;
   /** Preço da consulta, em cêntimos. É sobre este valor que o cupão incide. */
