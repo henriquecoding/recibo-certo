@@ -5,6 +5,7 @@
 // (`calcularRecibo`), nunca escritos à mão.
 
 import { criarProveniencia } from "../src/lib/export/referencia";
+import { provenienciaDeExemplo } from "./documento-exemplo";
 import type { DocumentoRecibos } from "../src/lib/export/documento-recibos";
 import type { Recibo } from "../src/lib/store/recibos";
 
@@ -30,7 +31,10 @@ export const RECIBOS_EXEMPLO: Recibo[] = [
 export async function construirMapaExemplo(): Promise<DocumentoRecibos> {
   return {
     periodo: "Janeiro a Junho de 2026",
-    proveniencia: await criarProveniencia("recibos", { RECIBOS_EXEMPLO }, new Date("2026-08-01T12:00:00Z")),
+    proveniencia: provenienciaDeExemplo(
+      await criarProveniencia("recibos", { RECIBOS_EXEMPLO }, new Date("2026-08-01T12:00:00Z")),
+      "recibos",
+    ),
     recibos: RECIBOS_EXEMPLO,
     filtros: [
       { rotulo: "Período", valor: "1 de janeiro a 30 de junho de 2026" },

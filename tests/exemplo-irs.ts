@@ -8,6 +8,7 @@
 
 import { simularDeclaracaoIRS, type DeclaracaoInput } from "../src/lib/fiscal";
 import { criarProveniencia } from "../src/lib/export/referencia";
+import { provenienciaDeExemplo } from "./documento-exemplo";
 import type { DocumentoIRS } from "../src/lib/export/documento-irs";
 import type { CabecalhoDeclaracao } from "../src/lib/export-irs";
 
@@ -56,7 +57,10 @@ export async function construirDeclaracaoExemplo(): Promise<DocumentoIRS> {
   const resultado = simularDeclaracaoIRS(ENTRADA_EXEMPLO);
   return {
     periodo: "2026",
-    proveniencia: await criarProveniencia("irs", { ENTRADA_EXEMPLO }, new Date("2026-08-01T12:00:00Z")),
+    proveniencia: provenienciaDeExemplo(
+      await criarProveniencia("irs", { ENTRADA_EXEMPLO }, new Date("2026-08-01T12:00:00Z")),
+      "irs",
+    ),
     resultado,
     cabecalho: CABECALHO_EXEMPLO,
     ambito: [

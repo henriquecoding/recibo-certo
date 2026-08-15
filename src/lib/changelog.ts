@@ -16,6 +16,15 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.53.1",
+    data: "2026-08-15",
+    titulo: "Os documentos de exemplo passam a ser conferidos, não reescritos",
+    itens: [
+      "Os três documentos de demonstração — relatório de vencimento, mapa de recibos e declaração de IRS — passam a ter uma referência de exemplo estável em vez de uma referência de emissão inventada a cada vez. Quem abrir um destes PDF vê imediatamente que está perante um exemplo e não perante uma emissão real.",
+      "Os números destes documentos passam a ser conferidos contra o motor de cálculo a cada execução dos testes. Antes eram reescritos em silêncio, pelo que uma alteração ao cálculo podia mudar o que os documentos mostram sem que nada o assinalasse.",
+    ],
+  },
+  {
     version: "2.53.0",
     data: "2026-08-15",
     titulo: "A administração passa a ver o painel dos contabilistas por dentro",

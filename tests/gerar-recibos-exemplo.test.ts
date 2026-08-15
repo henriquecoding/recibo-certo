@@ -1,19 +1,17 @@
-// Gera o JSON do mapa de recibos a partir do MOTOR e verifica-o.
-//
-// Como o do relatório de vencimento, corre como teste para que o protótipo
-// nunca contenha um número que `calcularRecibo` não tenha produzido — e para
-// que `npm run docs` tenha sempre dados frescos para compor.
-import { writeFileSync } from "node:fs";
+// Confere que o JSON do mapa de recibos continua a ser o que o MOTOR produz,
+// para o protótipo nunca conter um número que `calcularRecibo` não tenha
+// produzido. Gera-se com `npm run docs:dados`.
 import { describe, expect, it } from "vitest";
 import { construirMapaExemplo, JSON_EXEMPLO_RECIBOS, RECIBOS_EXEMPLO } from "./exemplo-recibos";
+import { guardarOuConferir } from "./documento-exemplo";
 import { dadosTypst } from "../src/lib/export/documento-recibos";
 import { arredondar } from "../src/lib/export/dinheiro";
 
 describe("dados do mapa de recibos", () => {
-  it("são produzidos pelo motor e escritos para o compositor", async () => {
+  it("são os que o motor produz, e é isso que o compositor lê", async () => {
     const doc = await construirMapaExemplo();
     const dados = dadosTypst(doc);
-    writeFileSync(JSON_EXEMPLO_RECIBOS, JSON.stringify(dados, null, 2) + "\n");
+    guardarOuConferir(JSON_EXEMPLO_RECIBOS, dados);
 
     expect(dados.quantos).toBe(RECIBOS_EXEMPLO.length);
     expect(dados.linhas).toHaveLength(RECIBOS_EXEMPLO.length);

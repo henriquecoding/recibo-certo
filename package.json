@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.53.0",
+  "version": "2.53.1",
   "private": true,
   "scripts": {
     "build": "next build",
@@ -12,6 +12,7 @@
     "dev": "next dev",
     "docs": "npm run docs:fontes:check && npm run docs:build && npm run docs:verify",
     "docs:build": "python3 scripts/compor-documento.py",
+    "docs:dados": "GERAR_DOCUMENTOS=1 vitest run tests/gerar-dados-exemplo.test.ts tests/gerar-recibos-exemplo.test.ts tests/gerar-irs-exemplo.test.ts",
     "docs:fontes": "python3 scripts/preparar-fontes.py",
     "docs:fontes:check": "python3 scripts/preparar-fontes.py --verificar",
     "docs:verify": "python3 scripts/verificar-documentos.py out/relatorio-vencimento.pdf out/mapa-recibos.pdf out/declaracao-irs.pdf && node scripts/verificar-texto-pdf.mjs out/relatorio-vencimento.pdf out/mapa-recibos.pdf out/declaracao-irs.pdf",

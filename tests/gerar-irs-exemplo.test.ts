@@ -1,20 +1,19 @@
-// Gera o JSON da declaração a partir do MOTOR e verifica-o.
-//
-// Além de manter o protótipo fresco, prende os invariantes que o documento
+// Confere que o JSON da declaração continua a ser o que o MOTOR produz
+// (gera-se com `npm run docs:dados`) e prende os invariantes que o documento
 // promete ao leitor: se a soma dos escalões não bater com a coleta, ou se o
 // saldo não for a diferença entre o apurado e o entregue, o documento está a
 // mentir — e é melhor falhar aqui do que num PDF assinado pela marca.
-import { writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { construirDeclaracaoExemplo, JSON_EXEMPLO_IRS } from "./exemplo-irs";
+import { guardarOuConferir } from "./documento-exemplo";
 import { dadosTypst } from "../src/lib/export/documento-irs";
 import { arredondar } from "../src/lib/export/dinheiro";
 
 describe("dados da declaração de exemplo", () => {
-  it("são produzidos pelo motor e escritos para o compositor", async () => {
+  it("são os que o motor produz, e é isso que o compositor lê", async () => {
     const doc = await construirDeclaracaoExemplo();
     const dados = dadosTypst(doc);
-    writeFileSync(JSON_EXEMPLO_IRS, JSON.stringify(dados, null, 2) + "\n");
+    guardarOuConferir(JSON_EXEMPLO_IRS, dados);
 
     expect(dados.proveniencia.referencia).toMatch(/^RC-2026-IRS-/);
     expect(dados.componentes.length).toBeGreaterThan(3);

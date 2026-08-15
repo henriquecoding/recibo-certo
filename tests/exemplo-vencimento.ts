@@ -7,6 +7,7 @@ import { calculateLegacyPayroll, employerCost, includeMonthlyDuodecimos } from "
 import { prestacoesDoAno } from "../src/lib/export/prestacoes";
 import { calcularVencimentoAnual } from "../src/lib/fiscal-dependente";
 import { criarProveniencia } from "../src/lib/export/referencia";
+import { provenienciaDeExemplo } from "./documento-exemplo";
 import type { DocumentoVencimento } from "../src/lib/export/documento-vencimento";
 import { DATA_LAST_REVIEW, SS_DEPENDENTE } from "../src/lib/fiscal-data";
 import { pctDoc } from "../src/lib/export/dinheiro";
@@ -47,7 +48,10 @@ export async function construirDocumentoExemplo(): Promise<DocumentoVencimento> 
 
   return {
     periodo: "Julho de 2026",
-    proveniencia: await criarProveniencia("vencimento", { CONTEXTO_EXEMPLO, rubricas }, new Date("2026-08-01T12:00:00Z")),
+    proveniencia: provenienciaDeExemplo(
+      await criarProveniencia("vencimento", { CONTEXTO_EXEMPLO, rubricas }, new Date("2026-08-01T12:00:00Z")),
+      "vencimento",
+    ),
     pressupostos: [
       { codigo: "mes", rotulo: "Mês", valor: "Julho de 2026" },
       { codigo: "situacao_familiar", rotulo: "Situação familiar", valor: "Casado · 1 titular" },
