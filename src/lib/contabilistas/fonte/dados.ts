@@ -7,9 +7,11 @@ import type { Excecao, RegraDisponibilidade } from "../agenda";
 import type {
   Agendamento, Contabilista, EstadoAgendamento, Partilha, Vinculo,
 } from "../tipos";
+import type { EventoXPLido } from "../dados";
+import type { EstadoProgressao } from "../progressao";
 import { emDemonstracao, loja } from "./nucleo";
 
-export type { CartaoAberto, CupaoLido, FidelidadeAposConsulta } from "../dados";
+export type { CartaoAberto, CupaoLido, EventoXPLido, FidelidadeAposConsulta } from "../dados";
 
 // ─── Ficha ─────────────────────────────────────────────────────────────
 
@@ -169,4 +171,25 @@ export async function usarCupao(codigo: string): Promise<ResultadoCupao> {
   } catch {
     return { erro: "Falha de rede. Tenta outra vez." };
   }
+}
+
+// ─── Progressão ────────────────────────────────────────────────────────
+//
+// Só leituras, nos dois modos. Não há porta de escrita nenhuma para
+// abrir: a migração `20260815220000` não dá INSERT nem UPDATE a
+// `authenticated`, e a loja de demonstração respeita a mesma regra — uma
+// demonstração onde se pudesse pedir XP mentia sobre a única coisa que
+// nesta frente é uma garantia estrutural.
+
+export async function obterProgressao(contabilistaId: string): Promise<EstadoProgressao> {
+  if (emDemonstracao()) return (await loja()).obterProgressao();
+  return real.obterProgressao(contabilistaId);
+}
+
+export async function listarEventosXP(
+  contabilistaId: string,
+  limite?: number
+): Promise<EventoXPLido[]> {
+  if (emDemonstracao()) return (await loja()).listarEventosXP(limite);
+  return real.listarEventosXP(contabilistaId, limite);
 }

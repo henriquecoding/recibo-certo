@@ -78,8 +78,12 @@ describe("texto livre do painel profissional", () => {
 });
 
 describe("redesign do painel profissional", () => {
-  it("mantém os oito destinos sem os comprimir numa grelha de seis", () => {
-    expect((LAYOUT.match(/href: "\/contabilista/g) ?? []).length).toBe(8);
+  it("mantém todos os destinos sem os comprimir numa grelha de seis", () => {
+    // Nove desde que a Progressão entrou. O número está fixado de
+    // propósito — é o que apanha um destino removido por acidente — mas a
+    // regra que interessa é a que vem a seguir: nenhuma grelha fixa os
+    // comprime, e o destino ativo é trazido para o centro.
+    expect((LAYOUT.match(/href: "\/contabilista/g) ?? []).length).toBe(9);
     expect(LAYOUT).not.toContain("grid-cols-6");
     expect(LAYOUT).toContain("scrollIntoView");
   });

@@ -18,6 +18,7 @@ import type {
   Modalidade, Partilha, TipoPartilha, Vinculo,
 } from "./tipos";
 import type { Excecao, RegraDisponibilidade } from "./agenda";
+import { ESTADO_PROGRESSAO_INICIAL, type EstadoProgressao, type EventoXP } from "./progressao";
 import { CONSENTIMENTO_VERSAO, sanitizarConteudoPartilha, tituloPorOmissao } from "./vinculo";
 
 type Linha = Record<string, unknown>;
@@ -843,6 +844,68 @@ export async function meusCupoes(filtro: {
       valorBaseCents: r.valor_base_cents as number,
       estado: r.estado as CupaoLido["estado"],
       expiraEm: r.expira_em as string,
+      criadoEm: r.criado_em as string,
+    };
+  });
+}
+
+// ─── Progressão e comissão ─────────────────────────────────────────────
+//
+// Duas leituras, e NENHUMA escrita. Não é um esquecimento: a migração
+// `20260815220000` não dá política de INSERT nem de UPDATE a
+// `authenticated` sobre estas tabelas, e por isso não há função de escrita
+// que pudesse funcionar daqui. O XP nasce de transições que o servidor
+// observa, com a chave de serviço — foi a lição da migração 024.
+
+export async function obterProgressao(contabilistaId: string): Promise<EstadoProgressao> {
+  const { data } = await getSupabase()
+    .from("contabilista_progressao")
+    .select("xp, clientes_elegiveis, patamar_comprado, cartoes_concluidos")
+    .eq("contabilista_id", contabilistaId)
+    .maybeSingle();
+
+  // Sem linha é um estado legítimo: quem ainda não gerou XP nenhum não tem
+  // registo. Devolver o estado inicial evita um ecrã vazio onde a resposta
+  // certa é «estás no patamar 1».
+  if (!data) return { ...ESTADO_PROGRESSAO_INICIAL };
+  const r = data as unknown as Linha;
+  return {
+    xp: (r.xp as number) ?? 0,
+    clientesElegiveis: (r.clientes_elegiveis as number) ?? 0,
+    patamarComprado: (r.patamar_comprado as number | null) ?? null,
+    cartoesConcluidos: (r.cartoes_concluidos as number) ?? 0,
+  };
+}
+
+export interface EventoXPLido {
+  id: string;
+  evento: EventoXP;
+  xp: number;
+  origemTipo: string;
+  origemId: string;
+  criadoEm: string;
+}
+
+/** O registo recente, para a lista «atividade elegível» do ecrã. */
+export async function listarEventosXP(
+  contabilistaId: string,
+  limite = 8
+): Promise<EventoXPLido[]> {
+  const { data } = await getSupabase()
+    .from("contabilista_xp_eventos")
+    .select("id, evento, xp, origem_tipo, origem_id, criado_em")
+    .eq("contabilista_id", contabilistaId)
+    .order("criado_em", { ascending: false })
+    .limit(Math.min(50, Math.max(1, limite)));
+
+  return (data ?? []).map((l) => {
+    const r = l as Linha;
+    return {
+      id: r.id as string,
+      evento: r.evento as EventoXP,
+      xp: (r.xp as number) ?? 0,
+      origemTipo: r.origem_tipo as string,
+      origemId: r.origem_id as string,
       criadoEm: r.criado_em as string,
     };
   });

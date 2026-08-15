@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.59.0",
+    data: "2026-08-15",
+    titulo: "Progressão e comissão no painel do contabilista",
+    itens: [
+      "O painel de gestão ganha o separador «Progressão»: mostra a comissão em vigor, em que patamar estás dos seis, e exatamente o que falta para o próximo — quanto XP e quantos clientes elegíveis.",
+      "A comissão começa nos 10% e desce até 5%, um ponto por patamar. Sobe-se por trabalho feito: cada cliente que chega pelo ReciboCerto e cada serviço concluído contam, e um cartão de fidelidade fechado conta mais, porque é prova de relação continuada.",
+      "O ecrã diz, sem ser preciso procurar, sobre o que a comissão incide — o valor das propostas aceites e das consultas realizadas através da plataforma — e que é faturada ao contabilista: o cliente paga-lhe diretamente, e o ReciboCerto não retém nem processa esse pagamento.",
+      "Os cartões de fidelidade que os teus clientes concluem dão desconto no desbloqueio de patamares: 5% a partir do primeiro, 15% aos cinco, 20% aos dez.",
+      "O desbloqueio pago está desenhado e o preço é o final, já com desconto — mas a cobrança ainda não está ligada, e o ecrã di-lo no sítio onde se ia clicar, em vez de aceitar um clique que não faz nada. Até lá os patamares sobem por trabalho feito.",
+      "Um patamar desbloqueado compra a percentagem e mais nada: não compra posição no diretório, prioridade no encaminhamento de casos nem selo no perfil público. Fica escrito no ecrã e garantido no código — a progressão não é visível a quem consulta o diretório.",
+    ],
+  },
+  {
     version: "2.58.0",
     data: "2026-08-15",
     titulo: "O painel do contabilista ganha barra lateral, pesquisa e um perfil que se lê de uma vez",

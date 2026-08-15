@@ -29,7 +29,8 @@ import type { NovoTipoConsulta, TipoConsulta } from "../tipos-consulta";
 import type {
   Agendamento, Contabilista, EstadoAgendamento, Partilha, Vinculo,
 } from "../tipos";
-import { semear, type CupaoDemo, type EstadoDemonstracao } from "./semente";
+import type { EstadoProgressao } from "../progressao";
+import { semear, type CupaoDemo, type EstadoDemonstracao, type EventoXPDemo } from "./semente";
 
 // ─── O estado ──────────────────────────────────────────────────────────
 
@@ -715,6 +716,28 @@ export async function guardarUrlLinkedIn(url: string): Promise<{ erro?: string; 
   const l = bd().linkedin;
   l.url = url.trim() || null;
   return { url: l.url ?? "" };
+}
+
+// ─── Progressão ────────────────────────────────────────────────────────
+//
+// Leitura, e só leitura — igual ao painel real, e pela mesma razão: a
+// migração não dá escrita a `authenticated`, e a demonstração que aceitasse
+// um `+20 XP` a pedido mentia sobre a única coisa que aqui é uma garantia.
+//
+// Em particular NÃO há `desbloquearPatamar()`. A cobrança não está ligada
+// e um botão que funcionasse na demonstração daria a entender que funciona
+// no painel real.
+
+export async function obterProgressao(): Promise<EstadoProgressao> {
+  return copiar(bd().progressao);
+}
+
+export async function listarEventosXP(limite = 8): Promise<EventoXPDemo[]> {
+  return copiar(
+    [...bd().eventosXP]
+      .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
+      .slice(0, Math.max(1, limite))
+  );
 }
 
 // ─── O que não existe fora da base de dados ────────────────────────────

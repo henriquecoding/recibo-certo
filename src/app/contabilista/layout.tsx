@@ -39,6 +39,7 @@ import { contemCodigo } from "@/lib/feedback-sanitize";
 import {
   Logo, LayoutGrid, Calendar, User, PaperClip, Gift, Settings, ArrowLeft, Warning,
   Target, Briefcase, ShieldCheck, Eye, RotateCcw, Check, ChevronDown, ArrowRight,
+  Award,
 } from "@/components/ui/Icons";
 import { percentagemDoPerfil } from "@/lib/contabilistas/perfil";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -84,6 +85,7 @@ const NAV: Item[] = [
     porResponder: (c) => c.partilhasPorLer,
   },
   { href: "/contabilista/fidelidade", label: "Fidelidade", curto: "Fidelidade", Icon: Gift },
+  { href: "/contabilista/progressao", label: "Progressão", curto: "Progressão", Icon: Award },
   { href: "/contabilista/perfil", label: "Perfil", curto: "Perfil", Icon: Settings },
 ];
 
@@ -162,7 +164,7 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
     return () => { vivo = false; };
   }, [quemPergunta, podeLer, ficha?.estado, pathname]);
 
-  // A barra móvel tem oito destinos e rola horizontalmente. Quando a pessoa
+  // A barra móvel tem nove destinos e rola horizontalmente. Quando a pessoa
   // chega por ligação direta a um destino que está fora do primeiro ecrã,
   // o separador ativo vem para o centro em vez de ficar escondido.
   useEffect(() => {
@@ -203,7 +205,7 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
   return (
     <div className={`${styles.shell} ${styles.comSidebar}`}>
       {/* ── Sidebar (≥lg) ─────────────────────────────────────────────
-          Os oito destinos numa coluna. Numa calha horizontal obrigavam
+          Os nove destinos numa coluna. Numa calha horizontal obrigavam
           a comprimir ou a rolar, e o destino ativo perdia-se; aqui cabem
           todos e o topo fica livre para as ações do ecrã. */}
       <aside className={styles.sidebar}>
@@ -305,7 +307,7 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
       </main>
       </div>
 
-      {/* O painel tem oito destinos. Em vez de os comprimir numa grelha de
+      {/* O painel tem nove destinos. Em vez de os comprimir numa grelha de
           seis colunas, todos conservam alvo ≥44 px e a barra rola. O destino
           ativo é centrado automaticamente pelo efeito acima. */}
       <nav
@@ -390,9 +392,17 @@ function EstadoNaSidebar({ ficha, painel }: { ficha: Contabilista; painel: Paine
           </>
         )}
       </p>
-      {/* Nas referências este pé diz «Ver progressão». Passa a dizê-lo
-          quando o ecrã da progressão existir; até lá aponta para onde a
-          percentagem se resolve, que é o editor do perfil. */}
+      {/* O ecrã da progressão já existe, e este pé continua a dizer «Ver
+          perfil» — decisão tomada, não nota por resolver.
+
+          Nas referências este pé diz «Ver progressão», mas as referências
+          mostram DOIS cartões diferentes neste sítio: um de perfil (com a
+          percentagem) e um de comissão (com o patamar e o XP). Este cartão
+          é o do perfil: o número grande que mostra é a completude da
+          página. Mandá-lo para a Progressão criava exatamente a confusão
+          que a §133 proíbe — que preencher campos do perfil faz subir o
+          patamar e baixar a comissão, o que não é verdade.
+          A Progressão tem o seu destino próprio na navegação, acima. */}
       <span className="mt-2.5 flex items-center gap-1 text-xs font-semibold text-brand-mint">
         Ver perfil <ArrowRight size={12} aria-hidden />
       </span>

@@ -27,6 +27,7 @@ import type {
 } from "../casos";
 import type { Mensagem, Notificacao } from "../conversa";
 import type { TipoConsulta } from "../tipos-consulta";
+import type { EstadoProgressao, EventoXP } from "../progressao";
 
 /** O cartão de fidelidade como a base o guarda (uma linha por cliente). */
 export interface CartaoDemo {
@@ -78,6 +79,27 @@ export interface EstadoDemonstracao {
   notificacoes: Notificacao[];
   tiposConsulta: TipoConsulta[];
   linkedin: LinkedInDemo;
+  progressao: EstadoProgressao;
+  eventosXP: EventoXPDemo[];
+}
+
+/**
+ * Uma linha do registo de XP, como o painel a lê.
+ *
+ * Deliberadamente SEM o nome de quem gerou o XP. A tentação era guardá-lo
+ * aqui — a semente sabe-o — mas o painel real não tem essa coluna, e uma
+ * demonstração com uma lista mais informativa do que a verdadeira mente
+ * sobre o painel real, que é precisamente o que esta loja existe para não
+ * fazer. Os dois lados resolvem o nome da mesma maneira: pelo vínculo que
+ * o ecrã já carrega, com `tratamentoDoCliente`.
+ */
+export interface EventoXPDemo {
+  id: string;
+  evento: EventoXP;
+  xp: number;
+  origemTipo: string;
+  origemId: string;
+  criadoEm: string;
 }
 
 // ─── Identificadores ───────────────────────────────────────────────────
@@ -874,6 +896,67 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
     },
   ];
 
+  // ── Progressão ───────────────────────────────────────────────────────
+  //
+  // O estado da referência visual: patamar 3 (8% de comissão), a 60 XP do
+  // patamar 4. Cinco cartões de fidelidade fechados dão 15% de desconto no
+  // desbloqueio, que é o que faz os 39,99 € do patamar 4 chegarem aos
+  // 33,99 € do painel de preço — ao cêntimo.
+  //
+  // Os números NÃO são escolhidos para ficarem bonitos: são escolhidos
+  // para o ecrã da demonstração mostrar exatamente as contas da
+  // referência, e para quem abrir o painel poder confirmar que o cálculo
+  // é o mesmo do painel real.
+  const progressao: EstadoProgressao = {
+    xp: 540,
+    clientesElegiveis: 5,
+    patamarComprado: null,
+    cartoesConcluidos: 5,
+  };
+
+  const eventosXP: EventoXPDemo[] = [
+    {
+      id: "19000000-0000-4000-8000-000000001501",
+      evento: "cliente_elegivel",
+      xp: 20,
+      origemTipo: "vinculo",
+      origemId: VINCULO.tomas,
+      criadoEm: horasAtras(agora, 5),
+    },
+    {
+      id: "19000000-0000-4000-8000-000000001502",
+      evento: "cartao_fidelidade_concluido",
+      xp: 100,
+      origemTipo: "cartao",
+      origemId: "cc000000-0000-4000-8000-000000000201",
+      criadoEm: horasAtras(agora, 29),
+    },
+    {
+      id: "19000000-0000-4000-8000-000000001503",
+      evento: "cliente_elegivel",
+      xp: 20,
+      origemTipo: "vinculo",
+      origemId: VINCULO.sofia,
+      criadoEm: horasAtras(agora, 78),
+    },
+    {
+      id: "19000000-0000-4000-8000-000000001504",
+      evento: "servico_concluido",
+      xp: 15,
+      origemTipo: "agendamento",
+      origemId: "bb000000-0000-4000-8000-000000000304",
+      criadoEm: horasAtras(agora, 122),
+    },
+    {
+      id: "19000000-0000-4000-8000-000000001505",
+      evento: "servico_concluido",
+      xp: 15,
+      origemTipo: "agendamento",
+      origemId: "bb000000-0000-4000-8000-000000000305",
+      criadoEm: horasAtras(agora, 170),
+    },
+  ];
+
   return {
     ficha,
     vinculos,
@@ -893,5 +976,7 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
     notificacoes,
     tiposConsulta,
     linkedin: { ligado: false, url: null, avatarUrl: null },
+    progressao,
+    eventosXP,
   };
 }

@@ -181,6 +181,16 @@ export const CONJUNTOS: Conjunto[] = [
 
   // ── Contabilista, do lado de quem o é ─────────────────────────────
   {
+    id: "progressao", grupo: "profissional", soSe: "contabilista",
+    titulo: "Progressão e comissão",
+    descricao: "O patamar que alcançaste, o registo do que contou para lá chegares, e os patamares que desbloqueaste.",
+    tabelas: [
+      // O registo primeiro, o agregado depois: é dele que o total sai.
+      { nome: "contabilista_xp_eventos", posse: { por: "coluna", coluna: "contabilista_id" } },
+      { nome: "contabilista_progressao", posse: { por: "coluna", coluna: "contabilista_id" } },
+    ],
+  },
+  {
     id: "perfil-contabilista", grupo: "profissional", soSe: "contabilista",
     titulo: "Perfil público e agenda",
     descricao: "O teu perfil no diretório, a semana-tipo, as exceções e os tipos de consulta. Deixas de aparecer para quem procura.",
