@@ -35,7 +35,14 @@ const ECRAS = {
   clientes: ler("app", "contabilista", "clientes", "page.tsx"),
   fichaCliente: ler("app", "contabilista", "clientes", "[id]", "page.tsx"),
   fidelidade: ler("app", "contabilista", "fidelidade", "page.tsx"),
-  hoje: ler("app", "contabilista", "page.tsx"),
+  // O «Meu espaço» é a página MAIS o orquestrador da workspace: a rota
+  // passou a ser uma casca que monta `Workspace`, e é lá que vivem as
+  // escritas (guardar o layout, criar vistas). Ler só a página deixaria
+  // este guarda a olhar para um ficheiro sem escritas nenhumas — e a dar
+  // verde por não encontrar o que não estava lá.
+  hoje:
+    ler("app", "contabilista", "page.tsx") +
+    ler("components", "contabilistas", "dashboard", "Workspace.tsx"),
   partilhas: ler("app", "contabilista", "partilhas", "page.tsx"),
   perfil: ler("app", "contabilista", "perfil", "page.tsx"),
   areaCliente: ler("app", "dashboard", "contabilista", "page.tsx"),

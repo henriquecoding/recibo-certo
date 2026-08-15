@@ -28,6 +28,8 @@ import type {
 import type { Mensagem, Notificacao } from "../conversa";
 import type { TipoConsulta } from "../tipos-consulta";
 import type { EstadoProgressao, EventoXP } from "../progressao";
+import { VISTAS_POR_OMISSAO, layoutDaOmissao } from "../dashboard/omissao";
+import type { WorkspaceView } from "../dashboard/tipos";
 
 /** O cartão de fidelidade como a base o guarda (uma linha por cliente). */
 export interface CartaoDemo {
@@ -81,6 +83,7 @@ export interface EstadoDemonstracao {
   linkedin: LinkedInDemo;
   progressao: EstadoProgressao;
   eventosXP: EventoXPDemo[];
+  vistas: WorkspaceView[];
 }
 
 /**
@@ -957,6 +960,27 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
     },
   ];
 
+  // ── Vistas do painel ─────────────────────────────────────────────
+  //
+  // As mesmas quatro vistas de partida do painel real, com a mesma
+  // composição — «Meu dia» é a grelha da referência A. A demonstração
+  // usa `layoutDaOmissao`, não uma cópia: um segundo layout escrito à mão
+  // aqui deixaria de provar o que o painel real mostra.
+  let seqVista = 0;
+  const idDaVista = () => {
+    seqVista += 1;
+    return `d0000000-0000-4000-8000-${String(seqVista).padStart(12, "0")}`;
+  };
+  const vistas: WorkspaceView[] = VISTAS_POR_OMISSAO.map((v, i) => ({
+    id: `e0000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`,
+    nome: v.nome,
+    ordem: v.ordem,
+    principal: v.principal,
+    sistema: v.sistema,
+    revision: 1,
+    layout: layoutDaOmissao(v.posicoes, idDaVista),
+  }));
+
   return {
     ficha,
     vinculos,
@@ -978,5 +1002,6 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
     linkedin: { ligado: false, url: null, avatarUrl: null },
     progressao,
     eventosXP,
+    vistas,
   };
 }

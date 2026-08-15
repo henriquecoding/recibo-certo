@@ -181,6 +181,14 @@ export const CONJUNTOS: Conjunto[] = [
 
   // ── Contabilista, do lado de quem o é ─────────────────────────────
   {
+    id: "painel-vistas", grupo: "profissional", soSe: "contabilista",
+    titulo: "Vistas do painel",
+    descricao: "As vistas que criou e a forma como organizou os módulos em cada uma. É configuração de apresentação — não guarda dados de clientes.",
+    tabelas: [
+      { nome: "contabilista_dashboard_vistas", posse: { por: "coluna", coluna: "contabilista_id" } },
+    ],
+  },
+  {
     id: "progressao", grupo: "profissional", soSe: "contabilista",
     titulo: "Progressão e comissão",
     descricao: "O patamar que alcançaste, o registo do que contou para lá chegares, e os patamares que desbloqueaste.",

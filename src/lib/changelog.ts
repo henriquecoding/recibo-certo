@@ -16,6 +16,20 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.60.0",
+    data: "2026-08-15",
+    titulo: "O painel do contabilista passa a ser um espaço que se compõe",
+    itens: [
+      "O «Hoje» deixa de ser uma página fixa e passa a ser «Meu espaço»: um painel feito de módulos que se acrescentam, arrastam, redimensionam e removem. Abre com quatro vistas de partida — Meu dia, Fecho mensal, Clientes e Fiscal — e podes criar as tuas.",
+      "Dezasseis módulos disponíveis: agenda do dia, o que precisa de atenção, prazos próximos, partilhas e simulações recebidas, documentos por rever, atividade da semana, centro de avisos, estado do trabalho em quadro, clientes, casos, casos em risco, comunicações recentes, resumo por cliente, fidelidade e progressão.",
+      "Cada módulo muda de profundidade com o tamanho, e não de escala: pequeno é um resumo, grande é o conteúdo operacional. A biblioteca diz o tamanho e o formato de cada módulo antes de o acrescentares.",
+      "As alterações ao painel são gravadas de uma só vez, ao concluir a edição — com Desfazer e Repor durante o trabalho. Concluir sem ter mudado nada não grava nada.",
+      "Se tiveres o painel aberto em dois sítios, o que gravaste primeiro não é destruído em silêncio: o segundo avisa e deixa-te escolher entre carregar a versão mais recente ou manter o que estás a fazer.",
+      "No telemóvel o painel é uma coluna, não uma grelha espremida, e a organização faz-se numa folha inferior — subir, descer, tamanho e ocultar. Quem usa teclado move e redimensiona módulos pelo menu de cada um, com a mudança anunciada.",
+      "Nenhum módulo lê os teus dados fiscais. As simulações que o contabilista vê são as que o cliente escolheu partilhar, como sempre foi — não há calculadoras dentro do painel dele.",
+    ],
+  },
+  {
     version: "2.59.0",
     data: "2026-08-15",
     titulo: "Progressão e comissão no painel do contabilista",

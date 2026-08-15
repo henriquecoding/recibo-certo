@@ -1,0 +1,131 @@
+/* A barra «Modo de edição ativo». Verde claro de marca, porque é um
+   estado do ecrã e não um aviso — o amarelo está reservado a prazo e
+   atenção. */
+
+.barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.6rem;
+  border: 1px solid rgba(29, 158, 117, 0.24);
+  border-radius: 1.1rem;
+  background: rgba(225, 245, 238, 0.6);
+  padding: 0.7rem 0.85rem;
+}
+
+:global(.dark) .barra {
+  border-color: rgba(61, 205, 157, 0.22);
+  background: rgba(29, 158, 117, 0.1);
+}
+
+.icone {
+  display: inline-flex;
+  height: 1.6rem;
+  width: 1.6rem;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.55rem;
+  background: rgba(29, 158, 117, 0.16);
+  color: #0e6740;
+}
+
+:global(.dark) .icone { color: #6ee7b7; }
+
+.titulo {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #0e6740;
+}
+
+:global(.dark) .titulo { color: #7ee2be; }
+
+.sub {
+  display: block;
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: #57534e;
+}
+
+:global(.dark) .sub { color: #a8a29e; }
+
+.acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  /* No telemóvel toma a linha toda em vez de comprimir os três botões. */
+  flex-basis: 100%;
+}
+
+@media (min-width: 640px) {
+  .acoes { flex-basis: auto; margin-left: auto; }
+}
+
+.acao {
+  display: inline-flex;
+  min-height: 2.1rem;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid rgba(120, 113, 108, 0.16);
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 0 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: #44403c;
+  white-space: nowrap;
+}
+
+.acao:hover { border-color: rgba(29, 158, 117, 0.35); color: #0e6740; }
+
+.acaoAtiva {
+  border-color: rgba(29, 158, 117, 0.4);
+  background: #ffffff;
+  color: #0e6740;
+}
+
+:global(.dark) .acao {
+  border-color: rgba(231, 229, 228, 0.12);
+  background: rgba(20, 25, 19, 0.75);
+  color: #d6d3d1;
+}
+
+:global(.dark) .acao:hover { border-color: rgba(61, 205, 157, 0.3); color: #6ee7b7; }
+:global(.dark) .acaoAtiva { background: rgba(29, 158, 117, 0.16); color: #7ee2be; }
+
+.menu {
+  position: absolute;
+  top: calc(100% + 0.3rem);
+  right: 0;
+  z-index: 50;
+  min-width: 13rem;
+  overflow: hidden;
+  border: 1px solid rgba(120, 113, 108, 0.14);
+  border-radius: 0.9rem;
+  background: #ffffff;
+  padding: 0.25rem;
+  box-shadow: 0 18px 42px rgba(28, 25, 23, 0.16);
+}
+
+:global(.dark) .menu {
+  border-color: rgba(231, 229, 228, 0.1);
+  background: #1c211b;
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.45);
+}
+
+.menuItem {
+  display: block;
+  width: 100%;
+  border-radius: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  color: #44403c;
+}
+
+.menuItem:hover { background: rgba(29, 158, 117, 0.09); color: #0e6740; }
+:global(.dark) .menuItem { color: #d6d3d1; }
+:global(.dark) .menuItem:hover { background: rgba(29, 158, 117, 0.14); color: #6ee7b7; }

@@ -30,6 +30,9 @@ import type {
   Agendamento, Contabilista, EstadoAgendamento, Partilha, Vinculo,
 } from "../tipos";
 import type { EstadoProgressao } from "../progressao";
+import { validarLayout } from "../dashboard/layout";
+import { erroQueImpedeGravar } from "../dashboard/validacao";
+import type { WorkspaceLayoutV2, WorkspaceView } from "../dashboard/tipos";
 import { semear, type CupaoDemo, type EstadoDemonstracao, type EventoXPDemo } from "./semente";
 
 // ─── O estado ──────────────────────────────────────────────────────────
@@ -738,6 +741,105 @@ export async function listarEventosXP(limite = 8): Promise<EventoXPDemo[]> {
       .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
       .slice(0, Math.max(1, limite))
   );
+}
+
+// ─── Vistas do painel modular ──────────────────────────────────────────
+//
+// A demonstração bate contra as MESMAS paredes do painel real: guardar
+// com uma revisão antiga devolve `layout_desatualizado`, e um layout com
+// geometria impossível é recusado pela mesma validação. Uma demonstração
+// que aceita qualquer layout não prova nada sobre a gravação verdadeira.
+
+export async function listarVistas(): Promise<WorkspaceView[]> {
+  return copiar([...bd().vistas].sort((a, b) => a.ordem - b.ordem));
+}
+
+export async function guardarLayout(
+  vistaId: string,
+  revisionEsperada: number,
+  layout: WorkspaceLayoutV2,
+): Promise<{ ok: boolean; revision?: number; motivo?: string; detalhe?: string }> {
+  const vista = bd().vistas.find((v) => v.id === vistaId);
+  if (!vista) return { ok: false, motivo: "vista_inexistente" };
+  if (vista.revision !== revisionEsperada) {
+    return { ok: false, motivo: "layout_desatualizado", revision: vista.revision };
+  }
+  const v = validarLayout(layout);
+  // Recusa só o que o SQL recusa. Sobreposição NÃO é motivo de recusa: é
+  // o estado normal a meio de uma edição, e `validarLayout` já devolve o
+  // layout compactado. Ver `dashboard/validacao.ts`.
+  const impedimento = erroQueImpedeGravar(v);
+  if (impedimento) {
+    return { ok: false, motivo: "layout_invalido", detalhe: impedimento };
+  }
+  vista.revision += 1;
+  vista.layout = { ...v.layout, revision: vista.revision };
+  return { ok: true, revision: vista.revision };
+}
+
+export async function criarVista(
+  nome: string,
+  copiarDe?: string,
+): Promise<{ erro?: string; id?: string }> {
+  const estado = bd();
+  const limpo = nome.trim().slice(0, 60);
+  if (limpo.length < 1) return { erro: "Dá um nome à vista." };
+  if (estado.vistas.some((v) => v.nome.toLowerCase() === limpo.toLowerCase())) {
+    return { erro: "Já tens uma vista com esse nome." };
+  }
+  if (estado.vistas.length >= 8) return { erro: "Chegaste ao limite de vistas." };
+
+  const base = copiarDe ? estado.vistas.find((v) => v.id === copiarDe) : undefined;
+  const id = novoId();
+  estado.vistas.push({
+    id,
+    nome: limpo,
+    ordem: estado.vistas.length,
+    principal: false,
+    sistema: false,
+    revision: 1,
+    layout: base
+      ? copiar({ ...base.layout, revision: 1 })
+      : validarLayout({
+          version: 2, revision: 1,
+          grid: {
+            desktop: { columns: 12, rowHeight: 52, gap: 12 },
+            tablet: { columns: 8, rowHeight: 52, gap: 12 },
+          },
+          items: [],
+        }).layout,
+  });
+  return { id };
+}
+
+export async function renomearVista(vistaId: string, nome: string): Promise<{ erro?: string }> {
+  const estado = bd();
+  const vista = estado.vistas.find((v) => v.id === vistaId);
+  if (!vista) return { erro: "Essa vista já não existe." };
+  const limpo = nome.trim().slice(0, 60);
+  if (limpo.length < 1) return { erro: "Dá um nome à vista." };
+  if (estado.vistas.some((v) => v.id !== vistaId && v.nome.toLowerCase() === limpo.toLowerCase())) {
+    return { erro: "Já tens uma vista com esse nome." };
+  }
+  vista.nome = limpo;
+  return {};
+}
+
+export async function definirVistaPrincipal(vistaId: string): Promise<{ erro?: string }> {
+  const estado = bd();
+  if (!estado.vistas.some((v) => v.id === vistaId)) return { erro: "Essa vista já não existe." };
+  for (const v of estado.vistas) v.principal = v.id === vistaId;
+  return {};
+}
+
+export async function apagarVista(vistaId: string): Promise<{ erro?: string }> {
+  const estado = bd();
+  const vista = estado.vistas.find((v) => v.id === vistaId);
+  if (!vista) return {};
+  // A mesma regra da RLS real: as vistas de sistema não se apagam.
+  if (vista.sistema) return { erro: "As vistas de partida não podem ser apagadas." };
+  estado.vistas = estado.vistas.filter((v) => v.id !== vistaId);
+  return {};
 }
 
 // ─── O que não existe fora da base de dados ────────────────────────────

@@ -1,0 +1,322 @@
+/* ═══════════════════════════════════════════════════════════════════
+   PAINEL MODULAR — a grelha, a moldura e as afordâncias de edição
+   -------------------------------------------------------------------
+   A persistência usa unidades de grelha, e o CSS Grid usa as mesmas:
+   `grid-column: <col> / span <colSpan>`. Não há tradução para pixels em
+   sítio nenhum, e é por isso que o painel reaparece igual em qualquer
+   largura sem guardar medidas.
+
+   O modo normal não carrega nada disto de pesado: as regras de edição
+   estão todas atrás de `.moduloEdicao` / `.grelhaEdicao`.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.grelha {
+  display: grid;
+  gap: 12px;
+  grid-auto-rows: 52px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+/* Tablet: oito colunas, como o contrato do layout declara. */
+@media (max-width: 1023px) {
+  .grelha { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+}
+
+/* Telemóvel é uma LISTA, não a matriz espremida (§11). A ordem vem do
+   campo `mobile.order` do layout, aplicada por `order` inline. */
+@media (max-width: 639px) {
+  .grelha {
+    display: flex;
+    flex-direction: column;
+    grid-auto-rows: auto;
+  }
+  .celula {
+    grid-column: auto !important;
+    grid-row: auto !important;
+  }
+  .celulaS { min-height: 9rem; }
+  .celulaM { min-height: 13rem; }
+  .celulaL { min-height: 18rem; }
+}
+
+.celula {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* A grelha de encaixe, visível só em edição e só quando ligada (§9.2). */
+.grelhaVisivel {
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      rgba(29, 158, 117, 0.09) 0 1px,
+      transparent 1px calc((100% - 11 * 12px) / 12 + 12px)
+    );
+  background-position: 0 0;
+  border-radius: 1rem;
+}
+
+:global(.dark) .grelhaVisivel {
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      rgba(110, 231, 183, 0.08) 0 1px,
+      transparent 1px calc((100% - 11 * 12px) / 12 + 12px)
+    );
+}
+
+/* ── A moldura ───────────────────────────────────────────────────── */
+
+.modulo {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(120, 113, 108, 0.13);
+  border-radius: 1.25rem;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(28, 25, 23, 0.035), 0 10px 28px rgba(28, 25, 23, 0.04);
+  transition: box-shadow 160ms ease, transform 160ms ease, border-color 160ms ease;
+}
+
+:global(.dark) .modulo {
+  border-color: rgba(231, 229, 228, 0.08);
+  background: rgba(23, 28, 22, 0.92);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.022), 0 14px 36px rgba(0, 0, 0, 0.2);
+}
+
+/* Em edição o cartão levanta ao passar o rato — `lift`. */
+.moduloEdicao:hover {
+  border-color: rgba(29, 158, 117, 0.3);
+  box-shadow: 0 10px 30px rgba(28, 25, 23, 0.1), 0 2px 8px rgba(28, 25, 23, 0.045);
+}
+
+/* A arrastar: `float`, 6–10px acima, escala discreta. Não roda (§9.3). */
+.moduloAArrastar {
+  z-index: 40;
+  transform: translateY(-8px) scale(1.01);
+  border-color: rgba(29, 158, 117, 0.45);
+  box-shadow: 0 22px 48px rgba(15, 63, 37, 0.2), 0 4px 12px rgba(28, 25, 23, 0.08);
+  cursor: grabbing;
+}
+
+.moduloTopo {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: none;
+  padding: 0.7rem 0.75rem 0.55rem;
+}
+
+.moduloIcone {
+  display: inline-flex;
+  height: 1.35rem;
+  width: 1.35rem;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+}
+
+.moduloTitulo {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+  color: #1a1a17;
+}
+
+:global(.dark) .moduloTitulo { color: #f5f5f4; }
+
+.moduloCorpo {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 0 0.75rem 0.7rem;
+  scrollbar-width: thin;
+}
+
+/* ── Grip, tag, tamanho, resize ──────────────────────────────────── */
+
+.grip {
+  display: inline-flex;
+  height: 1.5rem;
+  width: 1.1rem;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.4rem;
+  color: #a8a29e;
+  cursor: grab;
+  touch-action: none;
+}
+
+.grip:hover { background: rgba(29, 158, 117, 0.1); color: #0e6740; }
+.grip:active { cursor: grabbing; }
+
+:global(.dark) .grip:hover { color: #6ee7b7; }
+
+.tag {
+  flex: none;
+  border-radius: 0.35rem;
+  background: rgba(120, 113, 108, 0.1);
+  padding: 0.1rem 0.3rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: #78716c;
+}
+
+:global(.dark) .tag {
+  background: rgba(255, 255, 255, 0.06);
+  color: #a8a29e;
+}
+
+.badgeTamanho {
+  display: inline-flex;
+  min-width: 1.3rem;
+  justify-content: center;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(120, 113, 108, 0.16);
+  padding: 0.05rem 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: #78716c;
+}
+
+:global(.dark) .badgeTamanho {
+  border-color: rgba(231, 229, 228, 0.12);
+  color: #a8a29e;
+}
+
+.menuBotao {
+  display: inline-flex;
+  height: 1.5rem;
+  min-width: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.45rem;
+  font-size: 0.75rem;
+  line-height: 1;
+  color: #a8a29e;
+}
+
+.menuBotao:hover { background: rgba(120, 113, 108, 0.1); color: #44403c; }
+:global(.dark) .menuBotao:hover { background: rgba(255, 255, 255, 0.06); color: #f5f5f4; }
+
+.menu {
+  position: absolute;
+  top: calc(100% + 0.3rem);
+  right: 0;
+  z-index: 50;
+  min-width: 11rem;
+  overflow: hidden;
+  border: 1px solid rgba(120, 113, 108, 0.14);
+  border-radius: 0.9rem;
+  background: #ffffff;
+  padding: 0.25rem;
+  box-shadow: 0 18px 42px rgba(28, 25, 23, 0.16);
+}
+
+:global(.dark) .menu {
+  border-color: rgba(231, 229, 228, 0.1);
+  background: #1c211b;
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.45);
+}
+
+.menuItem {
+  display: block;
+  width: 100%;
+  border-radius: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  color: #44403c;
+}
+
+.menuItem:hover { background: rgba(29, 158, 117, 0.09); color: #0e6740; }
+:global(.dark) .menuItem { color: #d6d3d1; }
+:global(.dark) .menuItem:hover { background: rgba(29, 158, 117, 0.14); color: #6ee7b7; }
+
+.menuItemSeparado {
+  margin-top: 0.25rem;
+  border-top: 1px solid rgba(120, 113, 108, 0.12);
+  padding-top: 0.5rem;
+  border-radius: 0 0 0.6rem 0.6rem;
+}
+
+:global(.dark) .menuItemSeparado { border-top-color: rgba(231, 229, 228, 0.09); }
+
+.menuItemPerigoso { color: #9a3412; }
+.menuItemPerigoso:hover { background: rgba(190, 78, 48, 0.1); color: #7c2d12; }
+:global(.dark) .menuItemPerigoso { color: #fca5a5; }
+
+.resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: inline-flex;
+  height: 1.5rem;
+  width: 1.5rem;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 0.2rem;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+.moduloEdicao { position: relative; }
+
+.resizeMarca {
+  display: block;
+  height: 0.6rem;
+  width: 0.6rem;
+  border-right: 2px solid rgba(29, 158, 117, 0.55);
+  border-bottom: 2px solid rgba(29, 158, 117, 0.55);
+  border-bottom-right-radius: 0.2rem;
+}
+
+/* ── O alvo de queda ─────────────────────────────────────────────── */
+
+/* «Solte aqui para posicionar» — a copy é a da referência A, e o alvo
+   tem o TAMANHO FINAL do módulo, não um retângulo genérico (§12.9). */
+.alvo {
+  display: flex;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed rgba(29, 158, 117, 0.45);
+  border-radius: 1.25rem;
+  background: rgba(29, 158, 117, 0.06);
+  padding: 0.75rem;
+  text-align: center;
+}
+
+:global(.dark) .alvo {
+  border-color: rgba(110, 231, 183, 0.35);
+  background: rgba(29, 158, 117, 0.1);
+}
+
+.alvoTexto {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #0e6740;
+}
+
+:global(.dark) .alvoTexto { color: #6ee7b7; }
+
+@media (prefers-reduced-motion: reduce) {
+  .modulo, .moduloAArrastar {
+    transition: none;
+    transform: none;
+  }
+}
