@@ -12,6 +12,12 @@
 //  formulários enviem HTML/scripts e explica o erro junto da interação.
 //  A segurança real não depende dela: a base repete a regra por trigger,
 //  pelo que contornar o browser não contorna a proteção.
+//
+//  ⚠️ Este layout serve DUAS moradas: `/contabilista`, onde vive o trabalho
+//  real, e `/admin/contabilista`, onde a administração abre o mesmo painel
+//  com dados inventados. Não há segunda implementação — o que se muda aqui
+//  muda nos dois. Onde a demonstração difere, a diferença está sempre atrás
+//  de `painel.demonstracao`, e nunca num ramo que duplique interface.
 // ═══════════════════════════════════════════════════════════════════════
 
 import Link from "next/link";
@@ -26,12 +32,13 @@ import {
   type ReactNode,
 } from "react";
 import { useAuth } from "@/lib/supabase/auth";
-import { contagensDoPainel, obterMinhaFicha } from "@/lib/contabilistas/dados";
+import { contagensDoPainel, obterMinhaFicha } from "@/lib/contabilistas/fonte/dados";
+import { usarPainel, type Painel } from "@/components/contabilistas/usarPainel";
 import type { Contabilista } from "@/lib/contabilistas/tipos";
 import { contemCodigo } from "@/lib/feedback-sanitize";
 import {
   Logo, LayoutGrid, Calendar, User, PaperClip, Gift, Settings, ArrowLeft, Warning,
-  Target, Briefcase, ShieldCheck,
+  Target, Briefcase, ShieldCheck, Eye, RotateCcw,
 } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import SinoNotificacoes from "@/components/contabilistas/SinoNotificacoes";
@@ -115,33 +122,41 @@ function marcarPerigoso(campo: CampoTexto) {
 export default function ContabilistaLayout({ children }: { children: ReactNode }) {
   const { user, carregado, disponivel, abrirModal } = useAuth();
   const pathname = usePathname();
+  const painel = usarPainel();
   const [ficha, setFicha] = useState<Contabilista | null>(null);
   const [contagens, setContagens] = useState<Contagens>(SEM_CONTAGENS);
   const [aVerificar, setAVerificar] = useState(true);
   const ativoMovel = useRef<HTMLAnchorElement>(null);
 
+  // Na demonstração a identidade do contabilista vem da semente, não da
+  // sessão: a loja vive em memória e ignora o id de quem pergunta. Quem
+  // chega àquela morada já passou pela guarda da administração — essa sim
+  // exige sessão e papel verificados no servidor.
+  const podeLer = painel.demonstracao || Boolean(user && disponivel);
+  const quemPergunta = user?.id ?? "";
+
   useEffect(() => {
     if (!carregado) return;
-    if (!user || !disponivel) { setAVerificar(false); return; }
+    if (!podeLer) { setAVerificar(false); return; }
     let vivo = true;
-    obterMinhaFicha(user.id)
+    obterMinhaFicha(quemPergunta)
       .then((f) => { if (vivo) setFicha(f); })
       .catch(() => { if (vivo) setFicha(null); })
       .finally(() => { if (vivo) setAVerificar(false); });
     return () => { vivo = false; };
-  }, [carregado, user, disponivel]);
+  }, [carregado, quemPergunta, podeLer]);
 
   // As contagens da navegação. Recarregam a cada mudança de separador —
   // é quando o número pode ter deixado de ser verdade, porque a ação que o
   // mudou aconteceu no ecrã anterior.
   useEffect(() => {
-    if (!user || !disponivel || ficha?.estado !== "aprovado") return;
+    if (!podeLer || ficha?.estado !== "aprovado") return;
     let vivo = true;
-    contagensDoPainel(user.id)
+    contagensDoPainel(quemPergunta)
       .then((c) => { if (vivo) setContagens(c); })
       .catch(() => { if (vivo) setContagens(SEM_CONTAGENS); });
     return () => { vivo = false; };
-  }, [user, disponivel, ficha?.estado, pathname]);
+  }, [quemPergunta, podeLer, ficha?.estado, pathname]);
 
   // A barra móvel tem oito destinos e rola horizontalmente. Quando a pessoa
   // chega por ligação direta a um destino que está fora do primeiro ecrã,
@@ -161,7 +176,7 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
     );
   }
 
-  if (!user) return <Portao titulo="Entra na tua conta" texto="O painel de gestão precisa de sessão iniciada." acao={<Button onClick={() => abrirModal("entrar")}>Entrar</Button>} />;
+  if (!user && !painel.demonstracao) return <Portao titulo="Entra na tua conta" texto="O painel de gestão precisa de sessão iniciada." acao={<Button onClick={() => abrirModal("entrar")}>Entrar</Button>} />;
 
   if (!ficha) {
     return (
@@ -185,19 +200,22 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
     <div className={styles.shell}>
       <header className={styles.topbar}>
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-2.5 sm:px-4">
-          <Link href="/contabilista" className={styles.identity} aria-label={`${ficha.nome} — painel de gestão`}>
+          <Link href={painel.href("/contabilista")} className={styles.identity} aria-label={`${ficha.nome} — painel de gestão`}>
             <Logo small />
             <span className="min-w-0">
-              <span className={styles.identityMeta}>Painel profissional</span>
+              <span className={styles.identityMeta}>
+                {painel.demonstracao ? "Painel profissional · simulado" : "Painel profissional"}
+              </span>
               <span className={`${styles.identityName} block text-ink`}>{ficha.nome}</span>
             </span>
           </Link>
           <div className="flex shrink-0 items-center gap-1.5">
             <Link
-              href="/dashboard"
+              href={painel.demonstracao ? "/admin" : "/dashboard"}
               className="hidden min-h-10 items-center gap-1.5 rounded-xl border border-stone-200/70 bg-white/50 px-3 text-sm font-medium text-stone-500 transition-colors hover:border-brand/20 hover:bg-white hover:text-stone-800 sm:inline-flex dark:border-stone-800 dark:bg-stone-900/40 dark:hover:bg-stone-900"
             >
-              <ArrowLeft size={15} aria-hidden /> A minha conta
+              <ArrowLeft size={15} aria-hidden />
+              {painel.demonstracao ? "Voltar à administração" : "A minha conta"}
             </Link>
             {/* Um só sino por layout. Duplicá-lo cria dois listeners Realtime
                 com o mesmo nome e volta a provocar a regressão já corrigida. */}
@@ -209,12 +227,13 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
         <nav aria-label="Painel de contabilista" className={`hidden lg:block ${styles.navRail}`}>
           <ul className={styles.navList}>
             {NAV.map(({ href, label, Icon, porResponder }) => {
-              const ativo = href === "/contabilista" ? pathname === href : pathname.startsWith(href);
+              const destino = painel.href(href);
+              const ativo = eAtivo(destino, pathname, painel);
               const quantos = porResponder?.(contagens) ?? 0;
               return (
                 <li key={href}>
                   <Link
-                    href={href}
+                    href={destino}
                     aria-current={ativo ? "page" : undefined}
                     className={`${styles.navLink} ${ativo ? styles.navLinkActive : ""}`}
                   >
@@ -235,6 +254,7 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
       </header>
 
       <main className={styles.content}>
+        {painel.demonstracao && <FaixaDemonstracao />}
         <ProtecaoTextoPainel>{children}</ProtecaoTextoPainel>
       </main>
 
@@ -248,13 +268,14 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
       >
         <ul className={styles.mobileList}>
           {NAV.map(({ href, curto, Icon, porResponder }) => {
-            const ativo = href === "/contabilista" ? pathname === href : pathname.startsWith(href);
+            const destino = painel.href(href);
+            const ativo = eAtivo(destino, pathname, painel);
             const quantos = porResponder?.(contagens) ?? 0;
             return (
               <li key={href} className={styles.mobileItem}>
                 <Link
                   ref={ativo ? ativoMovel : undefined}
-                  href={href}
+                  href={destino}
                   aria-current={ativo ? "page" : undefined}
                   className={`${styles.mobileLink} ${ativo ? styles.mobileLinkActive : ""}`}
                 >
@@ -274,6 +295,52 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
           })}
         </ul>
       </nav>
+    </div>
+  );
+}
+
+/** O separador ativo, medido contra a base onde o painel está aberto. */
+function eAtivo(destino: string, pathname: string, painel: Painel): boolean {
+  return destino === painel.base ? pathname === destino : pathname.startsWith(destino);
+}
+
+/**
+ * A faixa que diz onde a pessoa está.
+ *
+ * Um painel de demonstração que se parece com o real precisa de o dizer em
+ * todos os ecrãs, e não só à entrada: quem entra por ligação direta no
+ * separador dos casos não passou por nenhum aviso. A faixa fica no topo do
+ * conteúdo — acima da barra de proteção de texto, que também é do painel —
+ * e não desaparece com o scroll do separador.
+ *
+ * «Repor» recarrega a página de propósito: a loja vive em memória e é
+ * semeada de novo a cada carregamento, pelo que recarregar É repor. Fingir
+ * outro mecanismo daria duas formas de fazer a mesma coisa.
+ */
+function FaixaDemonstracao() {
+  return (
+    <div
+      role="status"
+      className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-brand/25 bg-brand-light/50 px-4 py-3 dark:border-brand/30 dark:bg-brand/10"
+    >
+      {/* No telemóvel o aviso fica com a linha toda e o botão passa para
+          baixo. A partilhar a linha com o botão a 360px, sobravam-lhe cerca
+          de 150px e o texto lia-se em coluna, palavra a palavra. */}
+      <p className="flex min-w-0 basis-full items-start gap-2.5 text-sm leading-relaxed text-stone-700 sm:flex-1 sm:basis-0 dark:text-stone-200">
+        <Eye size={16} className="mt-0.5 shrink-0 text-brand-dark dark:text-brand-mint" aria-hidden />
+        <span>
+          <strong className="font-semibold">Painel de contabilista em demonstração.</strong>{" "}
+          A estrutura, os ecrãs e as regras são os do painel real — os dados são inventados
+          e nada disto sai do teu browser. As alterações que fizeres duram até recarregares.
+        </span>
+      </p>
+      <button
+        type="button"
+        onClick={() => window.location.reload()}
+        className="focus-marca inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-xl border border-brand/30 bg-white px-3 text-sm font-semibold text-brand-dark transition-colors hover:bg-brand-light dark:border-brand/40 dark:bg-stone-900 dark:text-brand-mint"
+      >
+        <RotateCcw size={14} aria-hidden /> Repor os dados
+      </button>
     </div>
   );
 }

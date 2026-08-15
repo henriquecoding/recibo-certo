@@ -9,7 +9,7 @@ import { AnimatePresence, m } from "motion/react";
 import { usarFicha } from "@/components/contabilistas/usarFicha";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
-import { listarPartilhas, marcarPartilhaVista } from "@/lib/contabilistas/dados";
+import { listarPartilhas, marcarPartilhaVista } from "@/lib/contabilistas/fonte/dados";
 import { ROTULO_PARTILHA } from "@/lib/contabilistas/vinculo";
 import type { Partilha } from "@/lib/contabilistas/tipos";
 import Badge from "@/components/ui/Badge";

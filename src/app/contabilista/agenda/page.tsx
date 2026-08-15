@@ -19,7 +19,7 @@ import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import {
   listarAgendamentos, obterDisponibilidade, guardarDisponibilidade, meusClientes,
   decidirConsulta,
-} from "@/lib/contabilistas/dados";
+} from "@/lib/contabilistas/fonte/dados";
 import type { Agendamento, EstadoAgendamento, Vinculo } from "@/lib/contabilistas/tipos";
 import { tratamentoDoCliente } from "@/lib/contabilistas/tipos";
 import {

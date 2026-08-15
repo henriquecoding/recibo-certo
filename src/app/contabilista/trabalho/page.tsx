@@ -29,8 +29,8 @@ import {
   COLUNAS, ETIQUETAS_SUGERIDAS, ROTULO_URGENCIA, acrescentarPasso, alternarPasso,
   apagarTarefa, criarTarefa, listarTarefas, moverTarefa, progressoDe, urgenciaDe,
   type EstadoTarefa, type Tarefa,
-} from "@/lib/contabilistas/trabalho";
-import { meusClientes } from "@/lib/contabilistas/dados";
+} from "@/lib/contabilistas/fonte/trabalho";
+import { meusClientes } from "@/lib/contabilistas/fonte/dados";
 import { tratamentoDoCliente, type Vinculo } from "@/lib/contabilistas/tipos";
 import Button from "@/components/ui/Button";
 import {

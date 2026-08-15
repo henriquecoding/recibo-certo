@@ -26,7 +26,7 @@ import {
   ANEXOS_MAX, ANEXO_MAX_BYTES, MENSAGEM_MAX, TIPOS_ANEXO_ACEITES,
   enviarMensagem, escutarMensagens, listarMensagens, marcarLidas,
   tamanhoLegivel, urlDoAnexo, type Mensagem,
-} from "@/lib/contabilistas/conversa";
+} from "@/lib/contabilistas/fonte/conversa";
 import type { EstadoVinculo } from "@/lib/contabilistas/tipos";
 import Button from "@/components/ui/Button";
 import { ArrowRight, Close, PaperClip, Trash } from "@/components/ui/Icons";

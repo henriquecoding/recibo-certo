@@ -30,7 +30,7 @@ import {
   AREAS, URGENCIAS, euros,
   type Caso, type MensagemDoCaso, type Proposta, type DocumentoDoCaso,
   type AnexoDaProposta,
-} from "@/lib/contabilistas/casos";
+} from "@/lib/contabilistas/fonte/casos";
 
 export default function CasosDoContabilista() {
   const { ficha, aCarregar } = usarFicha();

@@ -20,7 +20,7 @@ import { useAuth } from "@/lib/supabase/auth";
 import {
   escutarNotificacoes, listarNotificacoes, marcarNotificacaoLida,
   marcarTodasLidas, type Notificacao,
-} from "@/lib/contabilistas/conversa";
+} from "@/lib/contabilistas/fonte/conversa";
 import { BellAlert, Check, Close } from "@/components/ui/Icons";
 
 export default function SinoNotificacoes() {

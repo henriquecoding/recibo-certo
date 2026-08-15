@@ -56,7 +56,12 @@ const DESTRUTIVAS: [keyof typeof ECRAS, RegExp][] = [
   // mesma — mudou o ficheiro onde ela tem de valer.
   ["fichaCliente", /decidirVinculo/],
   ["areaCliente", /terminarVinculo|revogarPartilha|cancelarConsulta/],
-  ["fidelidade", /\/api\/contabilistas\/cupao/],
+  // O ecrã deixou de chamar `/api/contabilistas/cupao` diretamente: a
+  // chamada mudou-se para a camada de dados (`fonte/dados.ts`), que a
+  // encaminha para a rota real ou para a loja de demonstração. A escrita
+  // continua a ser a mesma e continua a ser irreversível nos dois modos —
+  // o que este teste vigia é que ela não acontece sem pergunta.
+  ["fidelidade", /usarCupao/],
   ["admin", /decisao: "recusar"|decisao: "suspender"/],
 ];
 

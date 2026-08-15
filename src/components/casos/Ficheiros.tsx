@@ -16,8 +16,8 @@ import { useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import { useAvisos } from "@/components/ui/Avisos";
 import { PaperClip, Spinner, Check, Clock, Warning } from "@/components/ui/Icons";
-import { tamanhoLegivel } from "@/lib/contabilistas/conversa";
-import { enviarFicheiro, urlDoFicheiro } from "@/lib/contabilistas/casos";
+import { tamanhoLegivel } from "@/lib/contabilistas/fonte/conversa";
+import { enviarFicheiro, urlDoFicheiro } from "@/lib/contabilistas/fonte/casos";
 
 /** Os mesmos que o balde aceita. Aqui só para a caixa de escolha filtrar. */
 const ACEITES = [

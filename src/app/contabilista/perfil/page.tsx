@@ -7,7 +7,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usarFicha } from "@/components/contabilistas/usarFicha";
-import { atualizarFicha } from "@/lib/contabilistas/dados";
+import { usarPainel } from "@/components/contabilistas/usarPainel";
+import { atualizarFicha } from "@/lib/contabilistas/fonte/dados";
 import { DISTRITOS, ESPECIALIDADES } from "@/lib/contabilistas/catalogo";
 import Button from "@/components/ui/Button";
 import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
@@ -30,6 +31,7 @@ const OPCOES_DISTRITO: readonly OpcaoSelectMenu[] = [
 
 export default function PerfilPage() {
   const { ficha, aCarregar, recarregar } = usarFicha();
+  const painel = usarPainel();
   const avisos = useAvisos();
   const [f, setF] = useState<Formulario>({
     nome: "", occ: "", bio: "", distrito: "", concelho: "",
@@ -120,12 +122,21 @@ export default function PerfilPage() {
         titulo="Perfil público"
         descricao="É isto que aparece no diretório e na página onde os clientes te encontram."
         acao={
-          <Link
-            href={`/contabilistas/${ficha.slug}`}
-            className="focus-marca inline-flex min-h-[2.5rem] items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-4 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:border-stone-600"
-          >
-            Ver como os clientes veem <ExternalLink size={14} aria-hidden />
-          </Link>
+          // O diretório é público e real; o contabilista da demonstração não
+          // existe lá. Abrir a ligação daria uma página não encontrada — pior
+          // do que dizer, aqui, porque é que ela não abre.
+          painel.demonstracao ? (
+            <span className="inline-flex min-h-[2.5rem] items-center rounded-xl border border-dashed border-stone-300 px-4 text-sm text-stone-500 dark:border-stone-700 dark:text-stone-400">
+              Sem página pública: este perfil é simulado
+            </span>
+          ) : (
+            <Link
+              href={`/contabilistas/${ficha.slug}`}
+              className="focus-marca inline-flex min-h-[2.5rem] items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-4 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:border-stone-600"
+            >
+              Ver como os clientes veem <ExternalLink size={14} aria-hidden />
+            </Link>
+          )
         }
       />
 

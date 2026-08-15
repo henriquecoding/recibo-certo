@@ -25,10 +25,10 @@ import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import { useAvisos } from "@/components/ui/Avisos";
 import { useConfirmar, type PedidoConfirmacao } from "@/components/ui/Confirmar";
 import {
-  decidirVinculo, listarAgendamentos, listarPartilhas, meusClientes, meusCupoes,
-  type CupaoLido,
-} from "@/lib/contabilistas/dados";
-import { getSupabase } from "@/lib/supabase/client";
+  cartoesAbertos, decidirVinculo, listarAgendamentos, listarPartilhas, meusClientes,
+  meusCupoes, type CupaoLido,
+} from "@/lib/contabilistas/fonte/dados";
+import { usarPainel } from "@/components/contabilistas/usarPainel";
 import { resumirClientes, type CartaoDoCliente, type ResumoCliente } from "@/lib/contabilistas/resumo";
 import { ROTULO_PARTILHA, ROTULO_VINCULO } from "@/lib/contabilistas/vinculo";
 import { eurosDeCents } from "@/lib/contabilistas/fidelidade";
@@ -46,6 +46,7 @@ export default function FichaClientePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { ficha, aCarregar } = usarFicha();
+  const painel = usarPainel();
   const avisos = useAvisos();
   const confirmar = useConfirmar();
 
@@ -70,22 +71,13 @@ export default function FichaClientePage() {
       const vinculo = vinculos.find((v) => v.id === id);
       if (!vinculo) { setNaoEncontrado(true); return; }
 
-      const { data } = await getSupabase()
-        .from("fidelidade_cartoes")
-        .select("cliente_id, carimbos, meta, desconto_pct, preco_base_cents")
-        .eq("contabilista_id", contabilistaId)
-        .eq("cliente_id", vinculo.clienteId)
-        .eq("completo", false)
-        .maybeSingle();
-
       const cartoes: Record<string, CartaoDoCliente> = {};
-      if (data) {
-        const l = data as unknown as Record<string, number | string>;
-        cartoes[vinculo.clienteId] = {
-          carimbos: l.carimbos as number,
-          meta: l.meta as number,
-          descontoPct: l.desconto_pct as number,
-          precoBaseCents: l.preco_base_cents as number,
+      for (const c of await cartoesAbertos(contabilistaId, vinculo.clienteId)) {
+        cartoes[c.clienteId] = {
+          carimbos: c.carimbos,
+          meta: c.meta,
+          descontoPct: c.descontoPct,
+          precoBaseCents: c.precoBaseCents,
         };
       }
 
@@ -124,7 +116,7 @@ export default function FichaClientePage() {
       avisos.sucesso("Acompanhamento terminado.", {
         detalhe: "Deixaste de ver o que este cliente te tinha enviado.",
       });
-      router.push("/contabilista/clientes");
+      router.push(painel.href("/contabilista/clientes"));
       return;
     }
     avisos.sucesso(para === "pausar" ? "Acompanhamento em pausa." : "Cliente ativo.");
@@ -137,12 +129,12 @@ export default function FichaClientePage() {
   if (naoEncontrado || !resumo) {
     return (
       <div className="space-y-6">
-        <Voltar />
+        <Voltar href={painel.href("/contabilista/clientes")} />
         <EstadoVazio
           Icon={User}
           titulo="Cliente não encontrado"
           descricao="Este vínculo não existe, ou já não é teu."
-          acao={<Link href="/contabilista/clientes"><Button variant="secondary">Ver todos</Button></Link>}
+          acao={<Link href={painel.href("/contabilista/clientes")}><Button variant="secondary">Ver todos</Button></Link>}
         />
       </div>
     );
@@ -154,7 +146,7 @@ export default function FichaClientePage() {
 
   return (
     <div className="space-y-6">
-      <Voltar />
+      <Voltar href={painel.href("/contabilista/clientes")} />
 
       <CabecalhoPainel
         rotulo="Ficha de cliente"
@@ -268,7 +260,7 @@ export default function FichaClientePage() {
                 ))}
               </ul>
             )}
-            <Link href="/contabilista/partilhas" className="mt-4 inline-block text-sm font-semibold text-brand-dark underline underline-offset-2">
+            <Link href={painel.href("/contabilista/partilhas")} className="mt-4 inline-block text-sm font-semibold text-brand-dark underline underline-offset-2">
               Abrir em Partilhas
             </Link>
           </section>
@@ -349,10 +341,10 @@ export default function FichaClientePage() {
   );
 }
 
-function Voltar() {
+function Voltar({ href }: { href: string }) {
   return (
     <Link
-      href="/contabilista/clientes"
+      href={href}
       className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-500 transition-colors hover:text-stone-800"
     >
       <ArrowLeft size={15} aria-hidden /> Clientes

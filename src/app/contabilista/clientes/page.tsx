@@ -17,15 +17,11 @@ import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import TabelaClientes from "@/components/contabilistas/TabelaClientes";
 import { useAvisos } from "@/components/ui/Avisos";
-import { getSupabase } from "@/lib/supabase/client";
-import { listarAgendamentos, listarPartilhas, meusClientes } from "@/lib/contabilistas/dados";
+import {
+  cartoesAbertos, listarAgendamentos, listarPartilhas, meusClientes,
+} from "@/lib/contabilistas/fonte/dados";
 import { resumirClientes, type CartaoDoCliente, type ResumoCliente } from "@/lib/contabilistas/resumo";
 import { Lock } from "@/components/ui/Icons";
-
-interface CartaoLinha {
-  cliente_id: string; carimbos: number; meta: number;
-  desconto_pct: number; preco_base_cents: number;
-}
 
 export default function ClientesPage() {
   const { ficha, aCarregar } = usarFicha();
@@ -36,25 +32,20 @@ export default function ClientesPage() {
   const carregar = useCallback(async (contabilistaId: string) => {
     setALer(true);
     try {
-      const [vinculos, agendamentos, partilhas] = await Promise.all([
+      const [vinculos, agendamentos, partilhas, abertos] = await Promise.all([
         meusClientes(contabilistaId),
         listarAgendamentos({ contabilistaId }),
         listarPartilhas({ contabilistaId }),
+        cartoesAbertos(contabilistaId),
       ]);
 
-      const { data } = await getSupabase()
-        .from("fidelidade_cartoes")
-        .select("cliente_id, carimbos, meta, desconto_pct, preco_base_cents")
-        .eq("contabilista_id", contabilistaId)
-        .eq("completo", false);
-
       const cartoes: Record<string, CartaoDoCliente> = {};
-      for (const l of (data ?? []) as unknown as CartaoLinha[]) {
-        cartoes[l.cliente_id] = {
-          carimbos: l.carimbos,
-          meta: l.meta,
-          descontoPct: l.desconto_pct,
-          precoBaseCents: l.preco_base_cents,
+      for (const c of abertos) {
+        cartoes[c.clienteId] = {
+          carimbos: c.carimbos,
+          meta: c.meta,
+          descontoPct: c.descontoPct,
+          precoBaseCents: c.precoBaseCents,
         };
       }
 

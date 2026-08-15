@@ -12,11 +12,12 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usarFicha } from "@/components/contabilistas/usarFicha";
+import { usarPainel } from "@/components/contabilistas/usarPainel";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import {
   listarAgendamentos, listarPartilhas, meusClientes, decidirConsulta,
-} from "@/lib/contabilistas/dados";
+} from "@/lib/contabilistas/fonte/dados";
 import type { Agendamento, Partilha, Vinculo } from "@/lib/contabilistas/tipos";
 import { horaLocal, rotularDia, diaLocal, tempoAte } from "@/lib/contabilistas/agenda";
 import { Calendar, User, PaperClip, Clock, Warning, Check } from "@/components/ui/Icons";
@@ -26,6 +27,7 @@ import { useAvisos } from "@/components/ui/Avisos";
 
 export default function HojePage() {
   const { ficha, aCarregar } = usarFicha();
+  const painel = usarPainel();
   const avisos = useAvisos();
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [partilhas, setPartilhas] = useState<Partilha[]>([]);
@@ -97,7 +99,7 @@ export default function HojePage() {
       {!ficha.fidelidadeAtiva && (
         <p className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-600">
           O cartão de fidelidade está desligado.{" "}
-          <Link href="/contabilista/fidelidade" className="font-semibold text-brand-dark underline underline-offset-2">
+          <Link href={painel.href("/contabilista/fidelidade")} className="font-semibold text-brand-dark underline underline-offset-2">
             Configura o preço e a percentagem
           </Link>{" "}
           para começar a carimbar consultas.
@@ -137,7 +139,7 @@ export default function HojePage() {
             ) : (
               <Badge tone="brand">Confirmada</Badge>
             )}
-            <Link href="/contabilista/agenda">
+            <Link href={painel.href("/contabilista/agenda")}>
               <Button size="sm" variant="secondary">Abrir a agenda</Button>
             </Link>
           </div>
@@ -145,9 +147,9 @@ export default function HojePage() {
       )}
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Numero tom="rosa" rotulo="Pedidos de cliente" valor={porResponder} href="/contabilista/clientes" Icon={User} />
-        <Numero tom="azul" rotulo="Consultas por confirmar" valor={porConfirmar} href="/contabilista/agenda" Icon={Calendar} />
-        <Numero tom="lilas" rotulo="Partilhas por ler" valor={porLer} href="/contabilista/partilhas" Icon={PaperClip} />
+        <Numero tom="rosa" rotulo="Pedidos de cliente" valor={porResponder} href={painel.href("/contabilista/clientes")} Icon={User} />
+        <Numero tom="azul" rotulo="Consultas por confirmar" valor={porConfirmar} href={painel.href("/contabilista/agenda")} Icon={Calendar} />
+        <Numero tom="lilas" rotulo="Partilhas por ler" valor={porLer} href={painel.href("/contabilista/partilhas")} Icon={PaperClip} />
       </div>
 
       <section aria-labelledby="proximas-titulo" className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
@@ -194,7 +196,7 @@ export default function HojePage() {
           </ul>
         )}
         <Link
-          href="/contabilista/agenda"
+          href={painel.href("/contabilista/agenda")}
           className="mt-4 inline-block text-sm font-semibold text-brand-dark underline underline-offset-2"
         >
           Ver a agenda toda

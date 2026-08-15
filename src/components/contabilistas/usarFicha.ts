@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/supabase/auth";
-import { obterMinhaFicha } from "@/lib/contabilistas/dados";
+import { obterMinhaFicha } from "@/lib/contabilistas/fonte/dados";
 import type { Contabilista } from "@/lib/contabilistas/tipos";
 
 /**
@@ -38,10 +38,8 @@ export function usarFicha(): {
   return { ficha, userId: user?.id ?? null, aCarregar, recarregar };
 }
 
-/** Token de sessão, para os pedidos às rotas que usam a chave de serviço. */
-export async function cabecalhoAuth(): Promise<Record<string, string>> {
-  const { getSupabase } = await import("@/lib/supabase/client");
-  const { data } = await getSupabase().auth.getSession();
-  const token = data.session?.access_token;
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : { "Content-Type": "application/json" };
-}
+// Havia aqui um `cabecalhoAuth()` — o token de sessão para as rotas que usam
+// a chave de serviço. Deixou de ter quem o chamasse: a única rota que o
+// painel usava (validar um cupão) mudou-se para `fonte/dados.ts`, que é
+// quem decide se fala com o servidor ou com a loja de demonstração. Um
+// ecrã do painel que volte a montar um pedido à mão fica sem os dois modos.

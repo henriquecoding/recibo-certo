@@ -9,7 +9,8 @@ import {
   contarPropostas,
   type AnuncioRow,
 } from "@/lib/supabase/admin";
-import { Megaphone, ArrowRight, Plus, BellAlert, Briefcase, Eye, EyeOff } from "@/components/ui/Icons";
+import { BASE_DEMONSTRACAO } from "@/lib/contabilistas/demonstracao/rotas";
+import { Megaphone, ArrowRight, Plus, BellAlert, Briefcase, Eye, EyeOff, ShieldCheck } from "@/components/ui/Icons";
 
 const TIPO_COR: Record<string, string> = {
   parceiro: "bg-emerald-500",
@@ -90,6 +91,12 @@ export default function AdminHome() {
           titulo="Lista de espera"
           descricao={`${carregado ? nWaitlist : "—"} emails inscritos para o plano Plus.`}
           icon={<BellAlert size={20} />}
+        />
+        <ActionCard
+          href={BASE_DEMONSTRACAO}
+          titulo="Painel de contabilista"
+          descricao="Os mesmos ecrãs e as mesmas regras que o contabilista vê, com dados inventados."
+          icon={<ShieldCheck size={20} />}
         />
       </div>
 

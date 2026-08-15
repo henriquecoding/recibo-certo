@@ -8,11 +8,13 @@
 // garantia). Só a última é que impede mesmo.
 
 import { useEffect, useState } from "react";
-import { usarFicha, cabecalhoAuth } from "@/components/contabilistas/usarFicha";
+import { usarFicha } from "@/components/contabilistas/usarFicha";
 import CartaoFidelidade from "@/components/contabilistas/CartaoFidelidade";
 import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
-import { atualizarFicha, meusCupoes, type CupaoLido } from "@/lib/contabilistas/dados";
+import {
+  atualizarFicha, meusCupoes, usarCupao, type CupaoLido,
+} from "@/lib/contabilistas/fonte/dados";
 import {
   DESCONTO_MAX_PCT, DESCONTO_MIN_PCT, META_MAX, META_MIN,
   eurosDeCents, normalizarCodigoCupao, valorComDesconto, validarConfigFidelidade,
@@ -270,17 +272,10 @@ function Resgate() {
 
     setEstado("a-validar"); setResposta(null);
     try {
-      const res = await fetch("/api/contabilistas/cupao", {
-        method: "POST",
-        headers: await cabecalhoAuth(),
-        body: JSON.stringify({ codigo: normalizado }),
-      });
-      const corpo = (await res.json()) as {
-        erro?: string; percentagem?: number; finalCents?: number; baseCents?: number;
-      };
-      if (!res.ok) {
-        setResposta({ ok: false, texto: corpo.erro ?? "Não foi possível validar." });
-        avisos.erro(corpo.erro ?? "Não foi possível validar o cupão.");
+      const corpo = await usarCupao(normalizado);
+      if (corpo.erro) {
+        setResposta({ ok: false, texto: corpo.erro });
+        avisos.erro(corpo.erro);
         return;
       }
       // A resposta fica no ecrã, e não só no aviso: são as contas do

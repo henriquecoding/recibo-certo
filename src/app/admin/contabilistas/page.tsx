@@ -12,14 +12,16 @@
 //  pessoa sem saber o que corrigir, e ela pode voltar a candidatar-se.
 // ═══════════════════════════════════════════════════════════════════════
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { getSupabase } from "@/lib/supabase/client";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import { useAvisos } from "@/components/ui/Avisos";
 import { useConfirmar, type PedidoConfirmacao } from "@/components/ui/Confirmar";
+import { BASE_DEMONSTRACAO } from "@/lib/contabilistas/demonstracao/rotas";
 import {
-  Check, Close, Lock, Mail, PaperClip, Warning, ChevronDown, ChevronUp, ShieldCheck,
+  Check, Close, Eye, Lock, Mail, PaperClip, Warning, ChevronDown, ChevronUp, ShieldCheck,
 } from "@/components/ui/Icons";
 
 interface PedidoRow {
@@ -108,6 +110,27 @@ export default function AdminContabilistasPage() {
           recusar e suspender exigem motivo, e ficam registados na auditoria.
         </p>
       </header>
+
+      {/* Ver o painel do outro lado sem ser preciso a conta de ninguém.
+          A fronteira da migração 038 mantém-se de pé: isto não abre o painel
+          de um contabilista real — abre o mesmo painel com dados inventados. */}
+      <Link
+        href={BASE_DEMONSTRACAO}
+        className="group flex items-start gap-3.5 rounded-4xl border border-brand/25 bg-brand-light/40 p-5 transition-shadow hover:shadow-lift dark:border-brand/30 dark:bg-brand/10"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/80 text-brand-dark dark:bg-stone-950/60 dark:text-brand-mint">
+          <Eye size={19} aria-hidden />
+        </span>
+        <span className="min-w-0">
+          <span className="block font-semibold text-stone-800 transition-colors group-hover:text-brand-dark dark:text-stone-100">
+            Abrir o painel de gestão em demonstração
+          </span>
+          <span className="mt-0.5 block text-sm leading-relaxed text-stone-600 dark:text-stone-300">
+            Os mesmos ecrãs, as mesmas regras e as mesmas mensagens que o contabilista vê —
+            com um consultório inventado. Não mostra dados de ninguém.
+          </span>
+        </span>
+      </Link>
 
       {erro && (
         <p role="alert" className="flex items-start gap-2 rounded-2xl bg-clay-bg px-4 py-3 text-sm text-clay-text">

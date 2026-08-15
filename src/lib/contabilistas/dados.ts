@@ -683,6 +683,48 @@ export async function meuCartao(
   };
 }
 
+/** Um cartão a meio, como as listas do painel precisam dele. */
+export interface CartaoAberto {
+  clienteId: string;
+  carimbos: number;
+  meta: number;
+  descontoPct: number;
+  precoBaseCents: number;
+}
+
+/**
+ * Os cartões por completar deste contabilista.
+ *
+ * Vivia escrito à mão em dois ecrãs — a lista de clientes e a ficha de um
+ * cliente — cada um com o seu `select` e a sua conversão. Duas cópias da
+ * mesma leitura são duas oportunidades de divergirem, e nenhuma delas
+ * passava pela camada de dados: a demonstração do painel não as conseguia
+ * responder, porque não havia função nenhuma para responder.
+ */
+export async function cartoesAbertos(
+  contabilistaId: string,
+  clienteId?: string
+): Promise<CartaoAberto[]> {
+  let q = getSupabase()
+    .from("fidelidade_cartoes")
+    .select("cliente_id, carimbos, meta, desconto_pct, preco_base_cents")
+    .eq("contabilista_id", contabilistaId)
+    .eq("completo", false);
+  if (clienteId) q = q.eq("cliente_id", clienteId);
+
+  const { data } = await q;
+  return (data ?? []).map((l) => {
+    const r = l as unknown as Linha;
+    return {
+      clienteId: r.cliente_id as string,
+      carimbos: r.carimbos as number,
+      meta: r.meta as number,
+      descontoPct: r.desconto_pct as number,
+      precoBaseCents: r.preco_base_cents as number,
+    };
+  });
+}
+
 export interface CupaoLido {
   id: string;
   codigo: string;

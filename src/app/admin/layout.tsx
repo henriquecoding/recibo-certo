@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/lib/supabase/auth";
 import { verificarAdmin } from "@/lib/supabase/admin";
+import { eDemonstracao } from "@/lib/contabilistas/demonstracao/rotas";
 import { LogoMark, LayoutGrid, Megaphone, ArrowLeft, BellAlert, ShieldCheck, Flag, Briefcase, CheckTrend, User } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 
@@ -68,6 +69,13 @@ function AdminGuard({ children }: { children: ReactNode }) {
 function AdminLayout({ children }: { children: ReactNode }) {
   const { user, sair } = useAuth();
   const pathname = usePathname();
+
+  // O painel de contabilista em demonstração traz a moldura DELE — barra
+  // no topo, calha de separadores, doca no fundo. Envolvê-lo na moldura da
+  // administração punha duas barras no topo e duas navegações fixas no
+  // fundo do telemóvel, e deixava de mostrar o que se quer validar: o
+  // painel como o contabilista o vê. A guarda acima já correu.
+  if (eDemonstracao(pathname)) return <>{children}</>;
 
   return (
     <div className="min-h-screen bg-cream lg:grid lg:grid-cols-[240px_1fr]">

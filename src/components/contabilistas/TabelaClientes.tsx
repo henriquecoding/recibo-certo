@@ -26,6 +26,7 @@ import { ROTULO_VINCULO } from "@/lib/contabilistas/vinculo";
 import type { EstadoVinculo } from "@/lib/contabilistas/tipos";
 import Badge from "@/components/ui/Badge";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
+import { usarPainel } from "@/components/contabilistas/usarPainel";
 import { ChevronDown, ChevronUp, Search, User } from "@/components/ui/Icons";
 
 type Separador = "todos" | "ativo" | "pendente" | "pausado";
@@ -46,6 +47,7 @@ const COLUNAS: { id: ColunaCliente; rotulo: string; classe?: string }[] = [
 ];
 
 export default function TabelaClientes({ clientes }: { clientes: readonly ResumoCliente[] }) {
+  const painel = usarPainel();
   const [separador, setSeparador] = useState<Separador>("todos");
   const [procura, setProcura] = useState("");
   const [coluna, setColuna] = useState<ColunaCliente>("nome");
@@ -184,7 +186,7 @@ export default function TabelaClientes({ clientes }: { clientes: readonly Resumo
                   <tr key={r.vinculo.id} className="border-b border-stone-100 last:border-0 hover:bg-cream/50">
                     <td className="px-4 py-3">
                       <Link
-                        href={`/contabilista/clientes/${r.vinculo.id}`}
+                        href={painel.href(`/contabilista/clientes/${r.vinculo.id}`)}
                         className="flex items-center gap-3 font-semibold text-stone-800 hover:text-brand-dark"
                       >
                         <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-light text-xs font-semibold text-brand-dark">
@@ -225,7 +227,7 @@ export default function TabelaClientes({ clientes }: { clientes: readonly Resumo
             {visiveis.map((r) => (
               <li key={r.vinculo.id}>
                 <Link
-                  href={`/contabilista/clientes/${r.vinculo.id}`}
+                  href={painel.href(`/contabilista/clientes/${r.vinculo.id}`)}
                   className="flex items-center gap-3 rounded-4xl border border-stone-200 bg-white p-4 shadow-card transition-shadow hover:shadow-lift"
                 >
                   <span aria-hidden className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-light text-sm font-semibold text-brand-dark">

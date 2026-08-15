@@ -13,7 +13,7 @@ import {
   obterLinkedInPublico,
   renovarLinkedIn,
   sincronizarLinkedIn,
-} from "@/lib/contabilistas/linkedin";
+} from "@/lib/contabilistas/fonte/linkedin";
 
 export default function LinkedInConta({ contabilistaId }: { contabilistaId: string }) {
   const avisos = useAvisos();
