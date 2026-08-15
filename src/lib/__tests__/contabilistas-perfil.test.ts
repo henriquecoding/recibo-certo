@@ -16,7 +16,8 @@ import { describe, expect, it } from "vitest";
 import {
   IDIOMAS, acaoDoPerfilPublico, acaoEstaDisponivel, checklistPerfil,
   completudeDoPerfil, copyPreco, copyResposta, essenciaisDoPerfil,
-  nomesDosIdiomas, sinaisDeConfianca, type FichaDePerfil,
+  nomesDosIdiomas, percentagemDoPerfil, primeiroPorFazer, sinaisDeConfianca,
+  type FichaDePerfil,
 } from "../contabilistas/perfil";
 
 const BASE: FichaDePerfil = {
@@ -77,6 +78,42 @@ describe("o que falta ao perfil", () => {
 });
 
 // ─── §139 · sinais de confiança ────────────────────────────────────────
+
+// ─── A percentagem é uma só ────────────────────────────────────────────
+
+describe("a percentagem do perfil", () => {
+  it("é a da checklist, e não a dos essenciais", () => {
+    // Três sítios mostram esta percentagem ao mesmo tempo — a coluna
+    // lateral, o cabeçalho do editor e a barra da checklist. Se saísse de
+    // sítios diferentes, a mesma pessoa via números diferentes do mesmo
+    // perfil no mesmo ecrã.
+    const itens = checklistPerfil(BASE);
+    const feitos = itens.filter((i) => i.feito).length;
+    expect(percentagemDoPerfil(BASE)).toBe(Math.round((feitos / itens.length) * 100));
+  });
+
+  it("chega a 100 só quando a checklist inteira está feita", () => {
+    const cheia: FichaDePerfil = { ...BASE, linkedinLigado: true };
+    expect(checklistPerfil(cheia).every((i) => i.feito)).toBe(true);
+    expect(percentagemDoPerfil(cheia)).toBe(100);
+    expect(primeiroPorFazer(cheia)).toBeNull();
+  });
+
+  it("nunca é 100 com um item por fazer, mesmo que os essenciais estejam todos", () => {
+    const semLinkedIn: FichaDePerfil = { ...BASE, linkedinLigado: false };
+    expect(completudeDoPerfil(semLinkedIn).pronto).toBe(true);
+    expect(percentagemDoPerfil(semLinkedIn)).toBeLessThan(100);
+  });
+
+  it("aponta a primeira coisa em falta pela ordem da checklist", () => {
+    const vazio: FichaDePerfil = {
+      ...BASE, linkedinLigado: false, tituloProfissional: null,
+    };
+    // A fotografia vem antes do título na checklist, e é isso que a frase
+    // «Falta: …» do cabeçalho tem de dizer primeiro.
+    expect(primeiroPorFazer(vazio)?.id).toBe("foto");
+  });
+});
 
 describe("os sinais de confiança são factos", () => {
   it("um número OCC escrito no formulário é «informado», nunca «verificado»", () => {

@@ -31,11 +31,10 @@ import { atualizarFicha } from "@/lib/contabilistas/fonte/dados";
 import { DISTRITOS, ESPECIALIDADES } from "@/lib/contabilistas/catalogo";
 import {
   COPY_CONTACTOS, IDIOMAS, checklistPerfil, completudeDoPerfil,
-  type FichaDePerfil,
+  percentagemDoPerfil, primeiroPorFazer, type FichaDePerfil,
 } from "@/lib/contabilistas/perfil";
+import { obterLinkedInPublico } from "@/lib/contabilistas/fonte/linkedin";
 import Button from "@/components/ui/Button";
-import Badge from "@/components/ui/Badge";
-import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import LinkedInConta from "@/components/contabilistas/LinkedInConta";
 import PerfilPreview from "@/components/contabilistas/PerfilPreview";
@@ -49,7 +48,8 @@ import {
 } from "@/lib/contabilistas/fonte/tipos-consulta";
 import SelectMenu, { type OpcaoSelectMenu } from "@/components/ui/SelectMenu";
 import { useAvisos } from "@/components/ui/Avisos";
-import { Check, ExternalLink, Eye, Lock, Plus, Trash, User, Warning } from "@/components/ui/Icons";
+import { Check, ExternalLink, Eye, Linkedin, Lock, Plus, Trash, User, Warning } from "@/components/ui/Icons";
+import AvatarContabilista from "@/components/contabilistas/AvatarContabilista";
 
 interface Formulario {
   nome: string; occ: string; bio: string; distrito: string; concelho: string;
@@ -141,6 +141,10 @@ export default function PerfilPage() {
     () => (rascunho ? completudeDoPerfil(rascunho) : null),
     [rascunho],
   );
+  const checklist = useMemo(() => (rascunho ? checklistPerfil(rascunho) : []), [rascunho]);
+  const feitos = checklist.filter((i) => i.feito).length;
+  const percentagem = rascunho ? percentagemDoPerfil(rascunho) : 0;
+  const porFazer = rascunho ? primeiroPorFazer(rascunho) : null;
 
   // A semana-tipo mostra-se aqui e edita-se na agenda: são os mesmos dados,
   // e ter dois editores da mesma coisa é ter duas verdades (§143).
@@ -163,6 +167,35 @@ export default function PerfilPage() {
     try { setTipos(await listarTiposConsulta(id)); } catch { setTipos([]); }
   }, []);
   useEffect(() => { if (ficha) void recarregarTipos(ficha.userId); }, [ficha, recarregarTipos]);
+
+  // A fotografia. Não é um campo do perfil: vem do LinkedIn ligado, e é
+  // por isso que o editor não a deixa carregar à mão (§131).
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!ficha) return;
+    let vivo = true;
+    obterLinkedInPublico(ficha.userId)
+      .then((l) => { if (vivo) setAvatarUrl(l.avatarUrl); })
+      .catch(() => { if (vivo) setAvatarUrl(null); });
+    return () => { vivo = false; };
+  }, [ficha]);
+
+  /**
+   * Que blocos já têm o que precisam.
+   *
+   * É o que põe o galo no cabeçalho de cada bloco. Cada linha responde à
+   * pergunta «este bloco já dá contexto a quem lê o perfil?» — não «todos
+   * os campos estão preenchidos», que transformaria campos opcionais em
+   * obrigatórios pela porta das traseiras.
+   */
+  const blocoFeito = useMemo(() => ({
+    identidade: Boolean(f.nome.trim() && f.titulo.trim() && (f.apresentacaoCurta.trim() || f.bio.trim())),
+    especializacoes: f.especialidades.length > 0,
+    atendimento: f.modalidades.length > 0 && f.idiomas.length > 0,
+    consultas: (tipos ?? []).some((t) => t.ativo),
+    contacto: Boolean(f.email.trim()),
+    disponibilidade: (horarios ?? []).length > 0,
+  }), [f, tipos, horarios]);
 
   function alternar(lista: "especialidades" | "modalidades" | "idiomas", valor: string) {
     setPorGuardar(true);
@@ -231,91 +264,118 @@ export default function PerfilPage() {
         </Button>
       </AcoesDoPainel>
 
-      <CabecalhoPainel
-        titulo="Perfil profissional"
-        descricao="Controla o que os clientes veem antes de entrarem em contacto contigo."
-        acao={
-          // O diretório é público e real; o contabilista da demonstração não
-          // existe lá. Abrir a ligação daria uma página não encontrada.
-          painel.demonstracao ? (
-            <span className="inline-flex min-h-[2.5rem] items-center rounded-xl border border-dashed border-stone-300 px-4 text-sm text-stone-500 dark:border-stone-700 dark:text-stone-400">
-              Sem página pública: este perfil é simulado
-            </span>
-          ) : (
-            <Link
-              href={`/contabilistas/${ficha.slug}`}
-              className="focus-marca inline-flex min-h-[2.5rem] items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-4 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:border-stone-600"
-            >
-              Ver como cliente <ExternalLink size={14} aria-hidden />
-            </Link>
-          )
-        }
-      />
-
-      {/* Estado do perfil. O §127 pede uma superfície operacional, não um
-          parágrafo informativo — publicado, vagas, e o que falta. */}
+      {/* ── O cartão do topo ────────────────────────────────────────────
+          O que a referência põe aqui, e por esta ordem: quem é a página,
+          quanto está completa, e as três coisas que se decidem sem descer
+          — se está publicada, se aceita clientes, e como se vê por fora.
+          Substitui o cabeçalho genérico do painel: um título e um botão
+          «ver como cliente» diziam menos do que este cartão diz. */}
       <section
-        aria-label="Estado do perfil"
-        className="rounded-4xl border border-brand/20 bg-brand-light/40 p-5 dark:border-brand/25 dark:bg-brand/10 sm:p-6"
+        aria-labelledby="perfil-titulo"
+        className="relative overflow-hidden rounded-4xl border border-brand/20 bg-gradient-to-br from-brand-light/70 via-brand-light/30 to-transparent p-5 dark:border-brand/25 dark:from-brand/20 dark:via-brand/8 dark:to-transparent sm:p-6"
       >
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge tone="brand">Publicado</Badge>
-              {rascunho.aceitaNovosClientes
-                ? <Badge tone="brand">Aceita novos clientes</Badge>
-                : <Badge tone="neutral">Sem novas vagas</Badge>}
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex min-w-0 items-start gap-3.5 sm:gap-4">
+            <span
+              className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-full border border-brand/25 bg-white text-brand-dark dark:border-brand/30 dark:bg-stone-900 dark:text-brand-mint sm:flex"
+              aria-hidden
+            >
+              <User size={24} />
+            </span>
+            <div className="min-w-0">
+              {/* O h1 da página vive aqui. O título do topo é uma etiqueta
+                  de navegação — um `span` —, e não pode ser o cabeçalho. */}
+              <h1 id="perfil-titulo" className="font-display text-xl text-ink dark:text-stone-100 sm:text-2xl">
+                Perfil profissional
+              </h1>
+              <p className="mt-1 max-w-md text-sm leading-relaxed text-stone-600 dark:text-stone-300">
+                Esta informação é visível para os clientes no diretório e no
+                teu perfil público.
+              </p>
             </div>
-            <p className="mt-2.5 max-w-xl text-sm leading-relaxed text-stone-600 dark:text-stone-300">
-              É isto que aparece no diretório e na página onde os clientes te
-              encontram. O endereço público é{" "}
-              <code className="rounded bg-white/70 px-1.5 py-0.5 text-xs dark:bg-stone-950/60">
-                /contabilistas/{ficha.slug}
-              </code>{" "}
-              e só a administração o altera.
-            </p>
           </div>
 
-          <div className="w-full max-w-[16rem] shrink-0">
-            <p className="flex items-baseline justify-between gap-2 text-sm">
-              <span className="font-semibold text-stone-700 dark:text-stone-200">
-                {completude.rotulo}
+          <div className="w-full shrink-0 lg:max-w-[17rem]">
+            <p className="flex items-baseline justify-between gap-2">
+              <span className="text-sm font-semibold text-stone-700 dark:text-stone-200">
+                Perfil completo
               </span>
-              <span className="shrink-0 tabular-nums text-stone-500 dark:text-stone-400">
-                {completude.completos}/{completude.total}
+              <span className="font-display text-2xl tabular-nums text-brand-dark dark:text-brand-mint">
+                {percentagem}%
               </span>
             </p>
             <div
-              className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/70 dark:bg-stone-950/50"
+              className="mt-2 h-2 overflow-hidden rounded-full bg-white/80 dark:bg-stone-950/50"
               role="progressbar"
-              aria-valuenow={completude.completos}
+              aria-valuenow={percentagem}
               aria-valuemin={0}
-              aria-valuemax={completude.total}
-              aria-label="Essenciais do perfil preenchidos"
+              aria-valuemax={100}
+              aria-label="Perfil completo"
             >
               <div
                 className="h-full rounded-full bg-brand transition-[width] duration-500"
-                style={{ width: `${(completude.completos / completude.total) * 100}%` }}
+                style={{ width: `${percentagem}%` }}
               />
             </div>
-            <ul className="mt-2.5 flex flex-wrap gap-1.5">
-              {completude.essenciais.map((e) => (
-                <li
-                  key={e.id}
-                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ${
-                    e.completo
-                      ? "bg-white text-brand-dark dark:bg-stone-950/70 dark:text-brand-mint"
-                      : "bg-white/50 text-stone-500 dark:bg-stone-950/40 dark:text-stone-400"
-                  }`}
-                >
-                  {e.completo
-                    ? <Check size={11} className="text-brand" aria-hidden />
-                    : <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-stone-300 dark:bg-stone-600" />}
-                  {e.rotulo}
-                </li>
-              ))}
-            </ul>
+            {/* A frase diz o que falta A SÉRIO. A referência escreve aqui
+                «falta incluir testemunhos ou avaliações» — e testemunhos
+                escritos pelo próprio não são um sinal de confiança, são
+                copy. A §139 fecha essa porta; a frase sai da checklist. */}
+            <p className="mt-2 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+              {porFazer ? `Falta: ${porFazer.rotulo.toLowerCase()}.` : completude.rotulo + "."}
+            </p>
           </div>
+        </div>
+
+        {/* A linha das decisões. `aceita` é o único campo do perfil que se
+            edita fora dos blocos: é a pergunta que se responde mais vezes,
+            e obrigá-la a descer sete secções era pô-la fora de vista. */}
+        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-brand/15 pt-4 dark:border-brand/20">
+          <span className="inline-flex items-center gap-1.5 rounded-xl border border-brand/25 bg-white px-3 py-1.5 text-sm font-semibold text-brand-dark dark:border-brand/30 dark:bg-stone-900 dark:text-brand-mint">
+            <Check size={14} aria-hidden /> Publicado
+          </span>
+
+          <label className="inline-flex cursor-pointer items-center gap-2.5 text-sm font-medium text-stone-700 dark:text-stone-200">
+            <span>Aceita novos clientes</span>
+            <input
+              type="checkbox"
+              className="peer sr-only"
+              checked={f.aceita}
+              onChange={(e) => mudar({ aceita: e.target.checked })}
+            />
+            {/* O interruptor desenha-se a partir do estado e não com
+                `peer-checked` no botão de dentro: o `peer` só alcança
+                irmãos, e o botão é neto do input. */}
+            <span
+              aria-hidden
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand ${
+                f.aceita ? "bg-brand" : "bg-stone-300 dark:bg-stone-700"
+              }`}
+            >
+              <span
+                className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                  f.aceita ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </span>
+          </label>
+
+          <span className="w-full sm:ml-auto sm:w-auto">
+            {/* O diretório é público e real; o contabilista da demonstração
+                não existe lá. Abrir a ligação daria «não encontrado». */}
+            {painel.demonstracao ? (
+              <span className="inline-flex min-h-10 items-center rounded-xl border border-dashed border-stone-300 px-3.5 text-sm text-stone-500 dark:border-stone-700 dark:text-stone-400">
+                Sem página pública: perfil simulado
+              </span>
+            ) : (
+              <Link
+                href={`/contabilistas/${ficha.slug}`}
+                className="focus-marca inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3.5 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:border-stone-600"
+              >
+                Ver perfil público <ExternalLink size={14} aria-hidden />
+              </Link>
+            )}
+          </span>
         </div>
       </section>
 
@@ -330,7 +390,43 @@ export default function PerfilPage() {
           comprimidas (§152). */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0 space-y-5">
-          <Bloco numero={1} titulo="Identidade profissional" Icon={User}>
+          <Bloco numero={1} titulo="Identidade profissional" completo={blocoFeito.identidade}>
+            {/* A fotografia abre o bloco, como na referência. Não tem
+                botão de carregar: vem do LinkedIn ligado, e é o selo que
+                diz de onde veio (§131). Sem LinkedIn ficam as iniciais e
+                a legenda explica o que fazer. */}
+            <div className="mb-5 flex items-center gap-4">
+              <span className="relative shrink-0">
+                <AvatarContabilista
+                  contabilistaId={ficha.userId}
+                  nome={f.nome || ficha.nome}
+                  avatarUrl={avatarUrl}
+                  tamanho="lg"
+                />
+                {rascunho.linkedinLigado && (
+                  <span
+                    className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-xl border-2 border-white bg-[#0A66C2] text-[0.625rem] font-bold text-white dark:border-stone-900"
+                    aria-label="Fotografia do LinkedIn"
+                  >
+                    in
+                  </span>
+                )}
+              </span>
+              <p className="min-w-0 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+                {rascunho.linkedinLigado ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#0A66C2]/10 px-2 py-1 font-semibold text-[#0A66C2] dark:bg-[#0A66C2]/20 dark:text-[#7cb9f0]">
+                    <Linkedin size={13} aria-hidden /> Foto do LinkedIn
+                  </span>
+                ) : (
+                  <>
+                    Sem fotografia. Liga o LinkedIn no bloco 5 e a tua
+                    fotografia profissional passa a aparecer aqui e no perfil
+                    público.
+                  </>
+                )}
+              </p>
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-2">
               <Texto rotulo="Nome profissional" id="nome" valor={f.nome} onChange={(v) => mudar({ nome: v })} />
               <div>
@@ -406,7 +502,7 @@ export default function PerfilPage() {
             </label>
           </Bloco>
 
-          <Bloco numero={2} titulo="Áreas de trabalho" Icon={Check}>
+          <Bloco numero={2} titulo="Especializações" completo={blocoFeito.especializacoes}>
             <p className="text-sm leading-relaxed text-stone-500 dark:text-stone-400">
               São estas as áreas por que os clientes filtram no diretório.
             </p>
@@ -436,7 +532,7 @@ export default function PerfilPage() {
             </fieldset>
           </Bloco>
 
-          <Bloco numero={3} titulo="Atendimento e território" Icon={User}>
+          <Bloco numero={3} titulo="Atendimento e território" completo={blocoFeito.atendimento}>
             <fieldset>
               <legend className="text-sm font-semibold text-stone-700 dark:text-stone-200">Como atendes</legend>
               <div className="mt-2.5 flex flex-wrap gap-2">
@@ -504,20 +600,41 @@ export default function PerfilPage() {
               </div>
             </fieldset>
 
-            <div className="mt-4 max-w-xs">
-              <Numero
-                rotulo="Responde normalmente em"
-                id="resposta"
-                valor={f.respostaHoras}
-                max={168}
-                sufixo="horas"
-                ajuda="Um compromisso teu, não uma medição da plataforma."
-                onChange={(v) => mudar({ respostaHoras: v })}
-              />
+            <div className="mt-4 flex flex-wrap items-end gap-4">
+              <div className="max-w-xs flex-1">
+                <Numero
+                  rotulo="Responde normalmente em"
+                  id="resposta"
+                  valor={f.respostaHoras}
+                  max={168}
+                  sufixo="horas"
+                  ajuda="Um compromisso teu, não uma medição da plataforma."
+                  onChange={(v) => mudar({ respostaHoras: v })}
+                />
+              </div>
+              {/* Eco do interruptor do topo, não um segundo comando: quem
+                  está a rever o atendimento tem de ver isto sem subir, mas
+                  dois sítios a escrever o mesmo campo é que dá divergência. */}
+              <p className="mb-1">
+                <span className="block text-sm font-semibold text-stone-700 dark:text-stone-200">
+                  Aceita novos clientes
+                </span>
+                <span
+                  className={`mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium ${
+                    f.aceita
+                      ? "bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand-mint"
+                      : "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300"
+                  }`}
+                >
+                  {f.aceita
+                    ? <><Check size={14} aria-hidden /> Sim</>
+                    : "Sem novas vagas"}
+                </span>
+              </p>
             </div>
           </Bloco>
 
-          <Bloco numero={4} titulo="Consultas e honorário" Icon={Check}>
+          <Bloco numero={4} titulo="Consultas e honorário" completo={blocoFeito.consultas}>
             <p className="text-sm leading-relaxed text-stone-500 dark:text-stone-400">
               O que ofereces e por que valor. Aparece no teu perfil público
               como referência — o valor de cada consulta continua a ser
@@ -610,7 +727,7 @@ export default function PerfilPage() {
             )}
           </Bloco>
 
-          <Bloco numero={5} titulo="Contacto e presença digital" Icon={Lock}>
+          <Bloco numero={5} titulo="Confiança e contacto" completo={blocoFeito.contacto}>
             <div className="grid gap-4 sm:grid-cols-2">
               <Texto rotulo="Email de contacto" id="email" tipo="email" valor={f.email} onChange={(v) => mudar({ email: v })} />
               <Texto rotulo="Telefone" id="tel" tipo="tel" valor={f.telefone} onChange={(v) => mudar({ telefone: v })} />
@@ -632,26 +749,12 @@ export default function PerfilPage() {
             </div>
           </Bloco>
 
-          <Bloco numero={7} titulo="Disponibilidade comercial" Icon={Check}>
-            {/* Um checkbox no fundo do formulário não é uma decisão; é um
-                detalhe. A §132 pede que isto seja uma escolha visível. */}
-            <div role="radiogroup" aria-label="Disponibilidade para novos clientes" className="grid gap-2.5 sm:grid-cols-2">
-              <Opcao
-                escolhida={f.aceita}
-                onClick={() => mudar({ aceita: true })}
-                titulo="A aceitar novos clientes"
-                texto="Os clientes podem pedir acompanhamento a partir do teu perfil."
-              />
-              <Opcao
-                escolhida={!f.aceita}
-                onClick={() => mudar({ aceita: false })}
-                titulo="Sem novas vagas"
-                texto="O perfil continua público, mas os pedidos ficam desativados. Quem já é teu cliente não é afetado."
-              />
-            </div>
-          </Bloco>
+          {/* A disponibilidade comercial era o bloco 7. Subiu para o cartão
+              do topo, onde a referência a põe: é a pergunta que se responde
+              mais vezes, e sete secções abaixo estava fora de vista. A §132
+              continua satisfeita — é uma decisão visível, com estado. */}
 
-          <Bloco numero={6} titulo="Disponibilidade" Icon={Check}>
+          <Bloco numero={6} titulo="Disponibilidade" completo={blocoFeito.disponibilidade}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <p className="max-w-md text-sm leading-relaxed text-stone-500 dark:text-stone-400">
                 Os horários que os clientes veem no teu perfil. Editam-se na
@@ -700,36 +803,44 @@ export default function PerfilPage() {
         {/* Pré-visualização. `lg:sticky` só a partir do desktop — no
             telemóvel é uma secção normal no fim do fluxo (§152). */}
         <aside className="min-w-0 lg:sticky lg:top-4 lg:self-start">
-          <h2 className="mb-2.5 flex items-center gap-2 text-sm font-semibold text-stone-700 dark:text-stone-200">
-            <Eye size={15} className="text-brand" aria-hidden />
-            Pré-visualização pública
-          </h2>
-          <PerfilPreview ficha={rascunho} tipos={tipos} />
+          <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-stone-700 dark:text-stone-200">
+              <Eye size={15} className="text-brand" aria-hidden />
+              Pré-visualização pública
+            </h2>
+            {!painel.demonstracao && (
+              <Link
+                href={`/contabilistas/${ficha.slug}`}
+                className="focus-marca inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-brand-dark transition-colors hover:bg-brand-light dark:text-brand-mint dark:hover:bg-brand/15"
+              >
+                Ver perfil público <ExternalLink size={12} aria-hidden />
+              </Link>
+            )}
+          </div>
+          <PerfilPreview ficha={rascunho} tipos={tipos} avatarUrl={avatarUrl} />
 
           <section className="mt-4 rounded-4xl border border-stone-200 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h3 className="font-display text-lg text-ink dark:text-stone-100">Checklist essencial</h3>
               <span className="text-xs tabular-nums text-stone-500 dark:text-stone-400">
-                {checklistPerfil(rascunho).filter((i) => i.feito).length} de {checklistPerfil(rascunho).length} concluídos
+                {feitos} de {checklist.length} concluídos
               </span>
             </div>
             <div
               className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800"
               role="progressbar"
-              aria-valuenow={checklistPerfil(rascunho).filter((i) => i.feito).length}
+              aria-valuenow={feitos}
               aria-valuemin={0}
-              aria-valuemax={checklistPerfil(rascunho).length}
+              aria-valuemax={checklist.length}
               aria-label="Itens do checklist concluídos"
             >
               <div
                 className="h-full rounded-full bg-brand transition-[width] duration-500"
-                style={{
-                  width: `${(checklistPerfil(rascunho).filter((i) => i.feito).length / checklistPerfil(rascunho).length) * 100}%`,
-                }}
+                style={{ width: `${percentagem}%` }}
               />
             </div>
             <ul className="mt-3 space-y-2">
-              {checklistPerfil(rascunho).map((i) => (
+              {checklist.map((i) => (
                 <li key={i.id} className="flex items-start gap-2 text-sm">
                   {i.feito
                     ? <Check size={15} className="mt-0.5 shrink-0 text-brand" aria-hidden />
@@ -769,12 +880,20 @@ function numeroOuNulo(v: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Um bloco numerado do editor.
+ *
+ * O galo ao lado do número não é decoração: diz se aquele bloco já tem o
+ * que precisa. Um bloco por preencher mostra o número dentro do quadrado,
+ * e o galo só aparece quando `completo`. Assim a pessoa percorre a coluna
+ * e vê onde parar sem abrir cada secção.
+ */
 function Bloco({
-  numero, titulo, Icon, children,
+  numero, titulo, completo, children,
 }: {
   numero: number;
   titulo: string;
-  Icon: React.ComponentType<{ size?: number; className?: string }>;
+  completo: boolean;
   children: ReactNode;
 }) {
   return (
@@ -783,10 +902,21 @@ function Bloco({
       className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-6"
     >
       <h2 id={`bloco-${numero}`} className="flex items-center gap-2.5 font-display text-lg text-ink dark:text-stone-100">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand-mint">
-          <Icon size={15} aria-hidden />
+        <span
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-xs font-bold ${
+            completo
+              ? "bg-brand text-white"
+              : "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400"
+          }`}
+          aria-hidden
+        >
+          {completo ? <Check size={15} /> : numero}
         </span>
-        {titulo}
+        <span className="min-w-0">
+          <span className="tabular-nums text-stone-400 dark:text-stone-500">{numero}.</span>{" "}
+          {titulo}
+        </span>
+        <span className="sr-only">{completo ? " — preenchido" : " — por preencher"}</span>
       </h2>
       <div className="mt-4">{children}</div>
     </section>
@@ -872,41 +1002,6 @@ function NovoTipo({
         <Button type="button" size="sm" variant="ghost" onClick={onCancelar}>Cancelar</Button>
       </div>
     </form>
-  );
-}
-
-function Opcao({
-  escolhida, onClick, titulo, texto,
-}: {
-  escolhida: boolean; onClick: () => void; titulo: string; texto: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={escolhida}
-      onClick={onClick}
-      className={`focus-marca rounded-2xl border p-4 text-left transition-colors ${
-        escolhida
-          ? "border-brand bg-brand-light/50 dark:border-brand/50 dark:bg-brand/10"
-          : "border-stone-200 bg-white hover:border-stone-300 dark:border-stone-700 dark:bg-stone-950/40"
-      }`}
-    >
-      <span className="flex items-center gap-2">
-        <span
-          aria-hidden
-          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
-            escolhida ? "border-brand" : "border-stone-300 dark:border-stone-600"
-          }`}
-        >
-          {escolhida && <span className="h-2 w-2 rounded-full bg-brand" />}
-        </span>
-        <span className="font-semibold text-stone-800 dark:text-stone-100">{titulo}</span>
-      </span>
-      <span className="mt-1.5 block pl-6 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
-        {texto}
-      </span>
-    </button>
   );
 }
 

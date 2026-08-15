@@ -16,6 +16,17 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.58.0",
+    data: "2026-08-15",
+    titulo: "O painel do contabilista ganha barra lateral, pesquisa e um perfil que se lê de uma vez",
+    itens: [
+      "Uma pesquisa no topo de todos os ecrãs do painel, com atalho ⌘K (ou Ctrl+K). Procura por clientes, casos e tarefas, e salta para qualquer separador — escrever «jose» encontra «José», sem acentos e sem maiúsculas.",
+      "A coluna lateral fecha com o estado do perfil sempre à vista: se está visível, quanto está completo e se aceita novos clientes. A percentagem é uma só, calculada num sítio, para não haver dois números diferentes do mesmo perfil no mesmo ecrã.",
+      "O perfil profissional passa a abrir com um cartão que diz tudo de uma vez: quanto está completo, o que falta a seguir, se está publicado e se aceita clientes — com o interruptor ali mesmo, em vez de sete secções abaixo.",
+      "Cada bloco do perfil mostra um sinal de preenchido, para se perceber onde parar sem abrir secção por secção. A fotografia passa a abrir o bloco da identidade, com a origem identificada.",
+    ],
+  },
+  {
     version: "2.57.0",
     data: "2026-08-15",
     titulo: "Consultas e honorário no perfil profissional",

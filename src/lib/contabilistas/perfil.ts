@@ -183,6 +183,33 @@ export function checklistPerfil(f: FichaDePerfil): ItemChecklist[] {
   ];
 }
 
+/**
+ * A percentagem única do perfil.
+ *
+ * Uma só definição para os três sítios que a mostram — a coluna lateral,
+ * o cabeçalho do editor e a checklist. Se cada um a calculasse à sua
+ * maneira, a mesma pessoa via três números diferentes do mesmo perfil no
+ * mesmo ecrã, e nenhum deles ganhava credibilidade.
+ *
+ * Sai da checklist e não dos essenciais de propósito: os essenciais são
+ * três ou quatro, e uma barra que salta de 75% para 100% não informa.
+ */
+export function percentagemDoPerfil(f: FichaDePerfil): number {
+  const itens = checklistPerfil(f);
+  if (itens.length === 0) return 100;
+  return Math.round((itens.filter((i) => i.feito).length / itens.length) * 100);
+}
+
+/**
+ * A primeira coisa em falta, para a frase «Falta …» do cabeçalho.
+ *
+ * `null` quando não falta nada — e nesse caso a frase desaparece em vez
+ * de ser substituída por um elogio. O perfil está feito; não há prémio.
+ */
+export function primeiroPorFazer(f: FichaDePerfil): ItemChecklist | null {
+  return checklistPerfil(f).find((i) => !i.feito) ?? null;
+}
+
 // ─── Copy que não pode derrapar ────────────────────────────────────────
 
 /**

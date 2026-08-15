@@ -38,9 +38,12 @@ import type { Contabilista } from "@/lib/contabilistas/tipos";
 import { contemCodigo } from "@/lib/feedback-sanitize";
 import {
   Logo, LayoutGrid, Calendar, User, PaperClip, Gift, Settings, ArrowLeft, Warning,
-  Target, Briefcase, ShieldCheck, Eye, RotateCcw,
+  Target, Briefcase, ShieldCheck, Eye, RotateCcw, Check, ChevronDown, ArrowRight,
 } from "@/components/ui/Icons";
+import { percentagemDoPerfil } from "@/lib/contabilistas/perfil";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import AvatarContabilista from "@/components/contabilistas/AvatarContabilista";
+import BuscaDoPainel from "@/components/contabilistas/BuscaDoPainel";
 import SinoNotificacoes from "@/components/contabilistas/SinoNotificacoes";
 import Button from "@/components/ui/Button";
 import { useAvisos } from "@/components/ui/Avisos";
@@ -61,18 +64,19 @@ interface Item {
   porResponder?: (c: Contagens) => number;
 }
 
+// A ordem é a das referências: quem se acompanha primeiro (clientes),
+// depois o que se lhes está a fazer (casos, agenda, trabalho, partilhas),
+// e no fim o que é do próprio profissional (fidelidade, perfil).
 const NAV: Item[] = [
   { href: "/contabilista", label: "Hoje", curto: "Hoje", Icon: LayoutGrid },
-  // Os casos vêm antes da agenda: é por onde chegam clientes novos, e o
-  // que está por responder pesa mais do que o que já está marcado.
+  {
+    href: "/contabilista/clientes", label: "Clientes", curto: "Clientes", Icon: User,
+    porResponder: (c) => c.pedidos,
+  },
   { href: "/contabilista/casos", label: "Casos", curto: "Casos", Icon: Briefcase },
   {
     href: "/contabilista/agenda", label: "Agenda", curto: "Agenda", Icon: Calendar,
     porResponder: (c) => c.consultasPorConfirmar,
-  },
-  {
-    href: "/contabilista/clientes", label: "Clientes", curto: "Clientes", Icon: User,
-    porResponder: (c) => c.pedidos,
   },
   { href: "/contabilista/trabalho", label: "Trabalho", curto: "Trabalho", Icon: Target },
   {
@@ -80,7 +84,7 @@ const NAV: Item[] = [
     porResponder: (c) => c.partilhasPorLer,
   },
   { href: "/contabilista/fidelidade", label: "Fidelidade", curto: "Fidelidade", Icon: Gift },
-  { href: "/contabilista/perfil", label: "Perfil público", curto: "Perfil", Icon: Settings },
+  { href: "/contabilista/perfil", label: "Perfil", curto: "Perfil", Icon: Settings },
 ];
 
 const SEM_CONTAGENS: Contagens = { pedidos: 0, partilhasPorLer: 0, consultasPorConfirmar: 0 };
@@ -244,27 +248,21 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
         </nav>
 
         <div className={styles.sidebarRodape}>
-          <Link
-            href={painel.demonstracao ? "/admin" : "/dashboard"}
-            className="flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <ArrowLeft size={15} aria-hidden />
-            {painel.demonstracao ? "Voltar à administração" : "A minha conta"}
-          </Link>
-          <p className="mt-2 truncate px-3 text-xs text-white/45">{ficha.nome}</p>
+          <EstadoNaSidebar ficha={ficha} painel={painel} />
+          <PessoaNaSidebar ficha={ficha} painel={painel} />
         </div>
       </aside>
 
       {/* ── Coluna do conteúdo ───────────────────────────────────────── */}
       <div className="flex min-w-0 flex-col">
       <header className={styles.topbar}>
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-2.5 sm:px-4 lg:max-w-none">
+        <div className="mx-auto flex max-w-7xl items-center gap-2 px-3 py-2.5 sm:px-4 lg:max-w-none lg:gap-4">
           {/* A identidade só no telemóvel: no desktop está na sidebar, e
               repeti-la punha a mesma informação duas vezes no mesmo ecrã.
               O `lg:hidden` vai no invólucro e não no elemento com a classe
               do módulo CSS — `.identity` declara `display: flex`, e com a
               mesma especificidade ganha quem for escrito depois. */}
-          <span className="min-w-0 lg:hidden">
+          <span className="min-w-0 flex-1 lg:hidden">
             <Link
               href={painel.href("/contabilista")}
               className={styles.identity}
@@ -281,7 +279,13 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
           </span>
           {/* No desktop a identidade está na sidebar; o topo passa a ser
               do ecrã. `TituloDoPainel` é preenchido por cada página. */}
-          <div id="painel-titulo" className="hidden min-w-0 lg:block" />
+          <div id="painel-titulo" className="hidden min-w-0 shrink-0 lg:block" />
+          {/* A busca vive aqui e só aqui: uma segunda instância registava
+              um segundo ouvinte de ⌘K e abria duas paletas. A 360px o
+              componente encolhe sozinho para o ícone. */}
+          <div className="shrink-0 lg:flex lg:min-w-0 lg:flex-1 lg:justify-center">
+            <BuscaDoPainel painel={painel} destinos={NAV} contabilistaId={quemPergunta} />
+          </div>
           <div className="flex shrink-0 items-center gap-1.5">
             {/* As ações do ecrã montam-se aqui por portal — ver
                 `AcoesDoPainel`. É o que a referência mostra no topo:
@@ -338,6 +342,109 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
           })}
         </ul>
       </nav>
+    </div>
+  );
+}
+
+/**
+ * O cartão de estado, no fundo da coluna escura.
+ *
+ * Diz três coisas que valem em qualquer ecrã: se o perfil está visível,
+ * quanto falta para estar completo, e se aceita clientes. A percentagem
+ * vem de `percentagemDoPerfil` — a mesma função que o editor usa. Não há
+ * um segundo cálculo aqui, senão a coluna e o ecrã do perfil mostravam
+ * números diferentes do mesmo perfil, lado a lado.
+ *
+ * ⚠️ Isto NÃO é progressão profissional (§133): completar campos do perfil
+ * não dá XP nem baixa comissão. É só o estado de uma página.
+ */
+function EstadoNaSidebar({ ficha, painel }: { ficha: Contabilista; painel: Painel }) {
+  const pct = percentagemDoPerfil(ficha);
+  return (
+    <Link href={painel.href("/contabilista/perfil")} className={styles.sidebarCartao}>
+      <p className="flex items-center gap-1.5 text-sm font-semibold text-white">
+        <Check size={14} className="shrink-0 text-brand-mint" aria-hidden />
+        Perfil visível
+      </p>
+      <div
+        className={`${styles.sidebarBarra} mt-2.5`}
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Perfil completo"
+      >
+        <div className={styles.sidebarBarraProgresso} style={{ width: `${pct}%` }} />
+      </div>
+      <p className="mt-1.5 text-xs text-white/60">{pct}% completo</p>
+      <p className="mt-2 flex items-center gap-1.5 text-xs text-white/70">
+        {ficha.aceitaNovosClientes ? (
+          <>
+            <Check size={12} className="shrink-0 text-brand-mint" aria-hidden />
+            Aceita novos clientes
+          </>
+        ) : (
+          <>
+            <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-white/40" />
+            Sem novas vagas
+          </>
+        )}
+      </p>
+      {/* Nas referências este pé diz «Ver progressão». Passa a dizê-lo
+          quando o ecrã da progressão existir; até lá aponta para onde a
+          percentagem se resolve, que é o editor do perfil. */}
+      <span className="mt-2.5 flex items-center gap-1 text-xs font-semibold text-brand-mint">
+        Ver perfil <ArrowRight size={12} aria-hidden />
+      </span>
+    </Link>
+  );
+}
+
+/**
+ * A pessoa autenticada, no fundo de tudo.
+ *
+ * O galo abre o que era a antiga linha de rodapé — voltar à conta, ou à
+ * administração quando o painel está em demonstração. Colapsado por
+ * defeito porque é navegação de saída: usa-se uma vez por sessão.
+ */
+function PessoaNaSidebar({ ficha, painel }: { ficha: Contabilista; painel: Painel }) {
+  const [aberto, setAberto] = useState(false);
+  return (
+    <div className="mt-3 border-t border-white/10 pt-3">
+      {aberto && (
+        <Link
+          href={painel.demonstracao ? "/admin" : "/dashboard"}
+          className="mb-1 flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+        >
+          <ArrowLeft size={15} aria-hidden />
+          {painel.demonstracao ? "Voltar à administração" : "A minha conta"}
+        </Link>
+      )}
+      <button
+        type="button"
+        onClick={() => setAberto((a) => !a)}
+        aria-expanded={aberto}
+        className={`${styles.sidebarPessoa} focus-marca w-full`}
+      >
+        <span className="shrink-0 overflow-hidden rounded-full">
+          <AvatarContabilista
+            contabilistaId={ficha.userId}
+            nome={ficha.nome}
+            tamanho="sm"
+          />
+        </span>
+        <span className="min-w-0 flex-1 leading-tight">
+          <span className="block truncate text-sm font-semibold text-white">{ficha.nome}</span>
+          <span className="block truncate text-[0.6875rem] text-white/55">
+            {ficha.tituloProfissional ?? "Contabilista"}
+          </span>
+        </span>
+        <ChevronDown
+          size={14}
+          className={`shrink-0 text-white/50 transition-transform ${aberto ? "rotate-180" : ""}`}
+          aria-hidden
+        />
+      </button>
     </div>
   );
 }

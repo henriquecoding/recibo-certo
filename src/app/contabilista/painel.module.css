@@ -512,3 +512,135 @@
 .conteudoComSidebar {
   max-width: 84rem;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   A BUSCA DO TOPO
+   ------------------------------------------------------------------
+   Parece um campo mas é um botão: o que abre é uma paleta, e um
+   `input` no topo obrigaria a duplicar o estado do texto em dois
+   sítios. Ver `BuscaDoPainel`.
+
+   A 360px sobra o ícone. O título do ecrã e as ações já disputam a
+   linha; um campo de 20rem punha tudo em overflow.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.busca {
+  display: inline-flex;
+  min-height: 2.5rem;
+  min-width: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(120, 113, 108, 0.16);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 0 0.7rem;
+  color: rgb(120, 113, 108);
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.busca:hover {
+  border-color: rgba(29, 158, 117, 0.35);
+  background: #ffffff;
+}
+
+:global(.dark) .busca {
+  border-color: rgba(231, 229, 228, 0.12);
+  background: rgba(28, 25, 23, 0.5);
+}
+
+:global(.dark) .busca:hover {
+  border-color: rgba(44, 190, 145, 0.35);
+  background: rgba(28, 25, 23, 0.85);
+}
+
+.buscaTexto,
+.buscaAtalho {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .busca {
+    width: 100%;
+    max-width: 26rem;
+    justify-content: flex-start;
+    padding: 0 0.55rem 0 0.8rem;
+  }
+
+  .buscaTexto {
+    display: block;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+    font-size: 0.875rem;
+  }
+
+  .buscaAtalho {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 0.45rem;
+    border: 1px solid rgba(120, 113, 108, 0.18);
+    padding: 0.1rem 0.35rem;
+    font-family: inherit;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: rgb(168, 162, 158);
+  }
+
+  :global(.dark) .buscaAtalho {
+    border-color: rgba(231, 229, 228, 0.14);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   O CARTÃO DE ESTADO E A PESSOA, NO FUNDO DA BARRA LATERAL
+   ------------------------------------------------------------------
+   As referências fecham a coluna escura com duas coisas: um cartão que
+   diz como está o perfil, e a pessoa autenticada. São informação de
+   contexto permanente — não navegação —, e por isso ficam abaixo da
+   lista de destinos e não dentro dela.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.sidebarCartao {
+  display: block;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.09);
+  padding: 0.8rem 0.85rem;
+  transition: background-color 160ms ease;
+}
+
+.sidebarCartao:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.sidebarBarra {
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  height: 0.3rem;
+}
+
+.sidebarBarraProgresso {
+  height: 100%;
+  border-radius: 999px;
+  background: #9fe1cb;
+  transition: width 500ms ease;
+}
+
+.sidebarPessoa {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 3rem;
+  border-radius: 1rem;
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  transition: background-color 160ms ease;
+}
+
+.sidebarPessoa:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
