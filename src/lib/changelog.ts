@@ -16,6 +16,16 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.56.0",
+    data: "2026-08-15",
+    titulo: "O painel profissional ganha a barra lateral",
+    itens: [
+      "A navegação do painel de gestão passa da calha horizontal no topo para uma coluna à esquerda. Com oito destinos, a calha obrigava a comprimir ou a rolar e o separador ativo perdia-se; na coluna cabem todos e lê-se qual está aberto. No telemóvel nada muda: a navegação continua na barra inferior.",
+      "A barra do topo passa a ser do ecrã onde se está — mostra o título e as ações daquela página, como guardar ou pré-visualizar, sempre à vista e sem depender de chegar ao fim da página.",
+      "O perfil profissional ganha o quadro da disponibilidade semanal, que mostra os horários publicados sem sair da página; a edição continua na agenda, para não haver dois sítios a definir a mesma coisa.",
+    ],
+  },
+  {
     version: "2.55.0",
     data: "2026-08-15",
     titulo: "O perfil profissional deixa de ser um formulário e passa a ser uma identidade",

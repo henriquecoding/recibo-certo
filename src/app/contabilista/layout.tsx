@@ -197,35 +197,26 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
   }
 
   return (
-    <div className={styles.shell}>
-      <header className={styles.topbar}>
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-2.5 sm:px-4">
-          <Link href={painel.href("/contabilista")} className={styles.identity} aria-label={`${ficha.nome} — painel de gestão`}>
-            <Logo small />
-            <span className="min-w-0">
-              <span className={styles.identityMeta}>
-                {painel.demonstracao ? "Painel profissional · simulado" : "Painel profissional"}
-              </span>
-              <span className={`${styles.identityName} block text-ink`}>{ficha.nome}</span>
+    <div className={`${styles.shell} ${styles.comSidebar}`}>
+      {/* ── Sidebar (≥lg) ─────────────────────────────────────────────
+          Os oito destinos numa coluna. Numa calha horizontal obrigavam
+          a comprimir ou a rolar, e o destino ativo perdia-se; aqui cabem
+          todos e o topo fica livre para as ações do ecrã. */}
+      <aside className={styles.sidebar}>
+        <Link href={painel.href("/contabilista")} className={styles.sidebarMarca} aria-label="Painel de gestão">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 text-sm font-bold tracking-tight text-white">
+            RC
+          </span>
+          <span className="min-w-0 leading-tight">
+            <span className="block text-sm font-semibold text-white">Recibo Certo</span>
+            <span className="block text-[0.6875rem] uppercase tracking-wider text-white/55">
+              {painel.demonstracao ? "Painel simulado" : "Painel de gestão"}
             </span>
-          </Link>
-          <div className="flex shrink-0 items-center gap-1.5">
-            <Link
-              href={painel.demonstracao ? "/admin" : "/dashboard"}
-              className="hidden min-h-10 items-center gap-1.5 rounded-xl border border-stone-200/70 bg-white/50 px-3 text-sm font-medium text-stone-500 transition-colors hover:border-brand/20 hover:bg-white hover:text-stone-800 sm:inline-flex dark:border-stone-800 dark:bg-stone-900/40 dark:hover:bg-stone-900"
-            >
-              <ArrowLeft size={15} aria-hidden />
-              {painel.demonstracao ? "Voltar à administração" : "A minha conta"}
-            </Link>
-            {/* Um só sino por layout. Duplicá-lo cria dois listeners Realtime
-                com o mesmo nome e volta a provocar a regressão já corrigida. */}
-            <SinoNotificacoes />
-            <ThemeToggle />
-          </div>
-        </div>
+          </span>
+        </Link>
 
-        <nav aria-label="Painel de contabilista" className={`hidden lg:block ${styles.navRail}`}>
-          <ul className={styles.navList}>
+        <nav aria-label="Painel de contabilista" className={styles.sidebarNav}>
+          <ul className="space-y-0.5">
             {NAV.map(({ href, label, Icon, porResponder }) => {
               const destino = painel.href(href);
               const ativo = eAtivo(destino, pathname, painel);
@@ -235,12 +226,12 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
                   <Link
                     href={destino}
                     aria-current={ativo ? "page" : undefined}
-                    className={`${styles.navLink} ${ativo ? styles.navLinkActive : ""}`}
+                    className={`${styles.sidebarLink} ${ativo ? styles.sidebarLinkActive : ""}`}
                   >
-                    <Icon size={16} aria-hidden />
-                    {label}
+                    <Icon size={17} aria-hidden />
+                    <span className="min-w-0 truncate">{label}</span>
                     {quantos > 0 && (
-                      <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-brand px-1.5 text-[0.6875rem] font-semibold tabular-nums text-white">
+                      <span className={styles.sidebarBadge}>
                         {quantos}
                         <span className="sr-only"> por responder</span>
                       </span>
@@ -251,12 +242,64 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
             })}
           </ul>
         </nav>
+
+        <div className={styles.sidebarRodape}>
+          <Link
+            href={painel.demonstracao ? "/admin" : "/dashboard"}
+            className="flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <ArrowLeft size={15} aria-hidden />
+            {painel.demonstracao ? "Voltar à administração" : "A minha conta"}
+          </Link>
+          <p className="mt-2 truncate px-3 text-xs text-white/45">{ficha.nome}</p>
+        </div>
+      </aside>
+
+      {/* ── Coluna do conteúdo ───────────────────────────────────────── */}
+      <div className="flex min-w-0 flex-col">
+      <header className={styles.topbar}>
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-2.5 sm:px-4 lg:max-w-none">
+          {/* A identidade só no telemóvel: no desktop está na sidebar, e
+              repeti-la punha a mesma informação duas vezes no mesmo ecrã.
+              O `lg:hidden` vai no invólucro e não no elemento com a classe
+              do módulo CSS — `.identity` declara `display: flex`, e com a
+              mesma especificidade ganha quem for escrito depois. */}
+          <span className="min-w-0 lg:hidden">
+            <Link
+              href={painel.href("/contabilista")}
+              className={styles.identity}
+              aria-label={`${ficha.nome} — painel de gestão`}
+            >
+              <Logo small />
+              <span className="min-w-0">
+                <span className={styles.identityMeta}>
+                  {painel.demonstracao ? "Painel profissional · simulado" : "Painel profissional"}
+                </span>
+                <span className={`${styles.identityName} block text-ink`}>{ficha.nome}</span>
+              </span>
+            </Link>
+          </span>
+          {/* No desktop a identidade está na sidebar; o topo passa a ser
+              do ecrã. `TituloDoPainel` é preenchido por cada página. */}
+          <div id="painel-titulo" className="hidden min-w-0 lg:block" />
+          <div className="flex shrink-0 items-center gap-1.5">
+            {/* As ações do ecrã montam-se aqui por portal — ver
+                `AcoesDoPainel`. É o que a referência mostra no topo:
+                pré-visualizar, guardar, exportar, conforme a página. */}
+            <div id="painel-acoes" className="flex items-center gap-1.5" />
+            {/* Um só sino por layout. Duplicá-lo cria dois listeners Realtime
+                com o mesmo nome e volta a provocar a regressão já corrigida. */}
+            <SinoNotificacoes />
+            <ThemeToggle />
+          </div>
+        </div>
       </header>
 
-      <main className={styles.content}>
+      <main className={`${styles.content} ${styles.conteudoComSidebar}`}>
         {painel.demonstracao && <FaixaDemonstracao />}
         <ProtecaoTextoPainel>{children}</ProtecaoTextoPainel>
       </main>
+      </div>
 
       {/* O painel tem oito destinos. Em vez de os comprimir numa grelha de
           seis colunas, todos conservam alvo ≥44 px e a barra rola. O destino

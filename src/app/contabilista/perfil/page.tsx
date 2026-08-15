@@ -39,6 +39,9 @@ import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import LinkedInConta from "@/components/contabilistas/LinkedInConta";
 import PerfilPreview from "@/components/contabilistas/PerfilPreview";
+import AcoesDoPainel, { TituloDoPainel } from "@/components/contabilistas/AcoesDoPainel";
+import { obterDisponibilidade } from "@/lib/contabilistas/fonte/dados";
+import { NOMES_DIAS, type RegraDisponibilidade } from "@/lib/contabilistas/agenda";
 import SelectMenu, { type OpcaoSelectMenu } from "@/components/ui/SelectMenu";
 import { useAvisos } from "@/components/ui/Avisos";
 import { Check, ExternalLink, Eye, Lock, User, Warning } from "@/components/ui/Icons";
@@ -134,6 +137,18 @@ export default function PerfilPage() {
     [rascunho],
   );
 
+  // A semana-tipo mostra-se aqui e edita-se na agenda: são os mesmos dados,
+  // e ter dois editores da mesma coisa é ter duas verdades (§143).
+  const [horarios, setHorarios] = useState<RegraDisponibilidade[] | null>(null);
+  useEffect(() => {
+    if (!ficha) return;
+    let vivo = true;
+    obterDisponibilidade(ficha.userId)
+      .then((r) => { if (vivo) setHorarios(r); })
+      .catch(() => { if (vivo) setHorarios([]); });
+    return () => { vivo = false; };
+  }, [ficha]);
+
   function alternar(lista: "especialidades" | "modalidades" | "idiomas", valor: string) {
     setPorGuardar(true);
     setF((x) => ({
@@ -185,6 +200,22 @@ export default function PerfilPage() {
 
   return (
     <div className="space-y-6">
+      <TituloDoPainel>Perfil profissional</TituloDoPainel>
+      <AcoesDoPainel>
+        {!painel.demonstracao && (
+          <Link
+            href={`/contabilistas/${ficha.slug}`}
+            className="focus-marca inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-stone-200/70 bg-white/60 px-3 text-sm font-medium text-stone-600 transition-colors hover:bg-white dark:border-stone-800 dark:bg-stone-900/40 dark:text-stone-300"
+          >
+            <Eye size={15} aria-hidden /> Pré-visualizar
+          </Link>
+        )}
+        <Button size="sm" onClick={guardar} disabled={aGuardar || !porGuardar}>
+          <Check size={15} aria-hidden />
+          {aGuardar ? "A guardar…" : "Guardar alterações"}
+        </Button>
+      </AcoesDoPainel>
+
       <CabecalhoPainel
         titulo="Perfil profissional"
         descricao="Controla o que os clientes veem antes de entrarem em contacto contigo."
@@ -511,6 +542,51 @@ export default function PerfilPage() {
               />
             </div>
           </Bloco>
+
+          <Bloco numero={6} titulo="Disponibilidade" Icon={Check}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <p className="max-w-md text-sm leading-relaxed text-stone-500 dark:text-stone-400">
+                Os horários que os clientes veem no teu perfil. Editam-se na
+                agenda, na semana-tipo — são os mesmos dados.
+              </p>
+              <Link href={painel.href("/contabilista/agenda")}>
+                <Button size="sm" variant="secondary">Editar horários</Button>
+              </Link>
+            </div>
+
+            {horarios === null ? (
+              <div className="mt-4 h-20 animate-pulse rounded-2xl bg-stone-100 dark:bg-stone-800" aria-busy="true" />
+            ) : (
+              <ul className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+                {NOMES_DIAS.map((nome, dia) => {
+                  const doDia = horarios.filter((h) => h.diaSemana === dia);
+                  return (
+                    <li
+                      key={dia}
+                      className={`rounded-2xl border px-3 py-2.5 ${
+                        doDia.length > 0
+                          ? "border-brand/20 bg-brand-light/40 dark:border-brand/25 dark:bg-brand/10"
+                          : "border-stone-200 bg-stone-50/60 dark:border-stone-800 dark:bg-stone-950/40"
+                      }`}
+                    >
+                      <span className="block text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+                        {nome.slice(0, 3)}
+                      </span>
+                      {doDia.length === 0 ? (
+                        <span className="mt-1 block text-xs text-stone-400 dark:text-stone-500">Fechado</span>
+                      ) : (
+                        doDia.map((h, i) => (
+                          <span key={i} className="mt-1 block text-xs tabular-nums text-stone-700 dark:text-stone-300">
+                            {h.inicio}–{h.fim}
+                          </span>
+                        ))
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Bloco>
         </div>
 
         {/* Pré-visualização. `lg:sticky` só a partir do desktop — no
@@ -523,7 +599,27 @@ export default function PerfilPage() {
           <PerfilPreview ficha={rascunho} />
 
           <section className="mt-4 rounded-4xl border border-stone-200 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
-            <h3 className="font-display text-lg text-ink dark:text-stone-100">O que ainda dá para melhorar</h3>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 className="font-display text-lg text-ink dark:text-stone-100">Checklist essencial</h3>
+              <span className="text-xs tabular-nums text-stone-500 dark:text-stone-400">
+                {checklistPerfil(rascunho).filter((i) => i.feito).length} de {checklistPerfil(rascunho).length} concluídos
+              </span>
+            </div>
+            <div
+              className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800"
+              role="progressbar"
+              aria-valuenow={checklistPerfil(rascunho).filter((i) => i.feito).length}
+              aria-valuemin={0}
+              aria-valuemax={checklistPerfil(rascunho).length}
+              aria-label="Itens do checklist concluídos"
+            >
+              <div
+                className="h-full rounded-full bg-brand transition-[width] duration-500"
+                style={{
+                  width: `${(checklistPerfil(rascunho).filter((i) => i.feito).length / checklistPerfil(rascunho).length) * 100}%`,
+                }}
+              />
+            </div>
             <ul className="mt-3 space-y-2">
               {checklistPerfil(rascunho).map((i) => (
                 <li key={i.id} className="flex items-start gap-2 text-sm">
