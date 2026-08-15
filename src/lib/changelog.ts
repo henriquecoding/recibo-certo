@@ -16,6 +16,16 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.57.0",
+    data: "2026-08-15",
+    titulo: "Consultas e honorário no perfil profissional",
+    itens: [
+      "O contabilista passa a poder definir que consultas oferece, com duração e valor — primeira conversa, sessão online, acompanhamento mensal, o que fizer sentido. Aparecem no perfil público como referência, sempre acompanhadas da frase que diz que o valor final é acordado em função do serviço: continua a não haver preço único obrigatório.",
+      "Uma consulta pode ser gratuita, e isso é dito como oferta e não como campo por preencher. Cada consulta pode ser ocultada do perfil público sem ser apagada.",
+      "A pré-visualização do perfil ganha a fotografia com a origem identificada e as duas ações que o cliente vê — pedir acompanhamento e marcar consulta —, cada uma disponível apenas quando o estado da relação a permite.",
+    ],
+  },
+  {
     version: "2.56.0",
     data: "2026-08-15",
     titulo: "O painel profissional ganha a barra lateral",

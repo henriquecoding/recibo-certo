@@ -26,6 +26,7 @@ import type {
   AnexoDaProposta, Caso, DocumentoDoCaso, MensagemDoCaso, Proposta,
 } from "../casos";
 import type { Mensagem, Notificacao } from "../conversa";
+import type { TipoConsulta } from "../tipos-consulta";
 
 /** O cartão de fidelidade como a base o guarda (uma linha por cliente). */
 export interface CartaoDemo {
@@ -75,6 +76,7 @@ export interface EstadoDemonstracao {
   anexosDeProposta: AnexoDaProposta[];
   conversas: Mensagem[];
   notificacoes: Notificacao[];
+  tiposConsulta: TipoConsulta[];
   linkedin: LinkedInDemo;
 }
 
@@ -827,6 +829,51 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
     },
   ];
 
+  // Um catálogo com uma consulta grátis à cabeça: é o caso que obriga a
+  // interface a saber que zero não é um campo por preencher.
+  const tiposConsulta: TipoConsulta[] = [
+    {
+      id: "18000000-0000-4000-8000-000000001401",
+      contabilistaId: CONTABILISTA,
+      nome: "Primeira conversa",
+      descricao: "Percebo a tua situação e digo-te o que faz sentido fazer.",
+      duracaoMin: 30,
+      precoCents: 0,
+      ativo: true,
+      ordem: 1,
+    },
+    {
+      id: "18000000-0000-4000-8000-000000001402",
+      contabilistaId: CONTABILISTA,
+      nome: "Sessão online",
+      descricao: null,
+      duracaoMin: 45,
+      precoCents: 4900,
+      ativo: true,
+      ordem: 2,
+    },
+    {
+      id: "18000000-0000-4000-8000-000000001403",
+      contabilistaId: CONTABILISTA,
+      nome: "Acompanhamento mensal",
+      descricao: "Contabilidade corrente, obrigações e prazos.",
+      duracaoMin: 60,
+      precoCents: 8900,
+      ativo: true,
+      ordem: 3,
+    },
+    {
+      id: "18000000-0000-4000-8000-000000001404",
+      contabilistaId: CONTABILISTA,
+      nome: "Reunião pontual",
+      descricao: null,
+      duracaoMin: 60,
+      precoCents: 6900,
+      ativo: true,
+      ordem: 4,
+    },
+  ];
+
   return {
     ficha,
     vinculos,
@@ -844,6 +891,7 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
     anexosDeProposta,
     conversas,
     notificacoes,
+    tiposConsulta,
     linkedin: { ligado: false, url: null, avatarUrl: null },
   };
 }

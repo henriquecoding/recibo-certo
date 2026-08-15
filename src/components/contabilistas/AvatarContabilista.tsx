@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { avatarLinkedInExpirou } from "@/lib/contabilistas/linkedin";
+import { avatarLinkedInExpirou } from "@/lib/contabilistas/fonte/linkedin";
 
 type TamanhoAvatar = "sm" | "md" | "lg";
 

@@ -25,6 +25,7 @@ import type {
 } from "../casos";
 import type { Mensagem, Notificacao } from "../conversa";
 import type { EstadoTarefa, Tarefa } from "../trabalho";
+import type { NovoTipoConsulta, TipoConsulta } from "../tipos-consulta";
 import type {
   Agendamento, Contabilista, EstadoAgendamento, Partilha, Vinculo,
 } from "../tipos";
@@ -468,6 +469,53 @@ export async function alternarPasso(id: string, feito: boolean): Promise<{ erro?
     if (p) { p.feito = feito; return {}; }
   }
   return { erro: "Este passo já não existe." };
+}
+
+// ─── Tipos de consulta ─────────────────────────────────────────────────
+
+export async function listarTiposConsulta(): Promise<TipoConsulta[]> {
+  return copiar([...bd().tiposConsulta].sort((a, b) => a.ordem - b.ordem));
+}
+
+export async function criarTipoConsulta(t: NovoTipoConsulta): Promise<{ erro?: string; id?: string }> {
+  const nome = t.nome.trim();
+  if (nome.length < 2) return { erro: "Dá um nome ao tipo de consulta." };
+  if (t.duracaoMin < 15 || t.duracaoMin > 240) return { erro: "A duração vai de 15 a 240 minutos." };
+
+  const d = bd();
+  const id = novoId();
+  d.tiposConsulta.push({
+    id,
+    contabilistaId: d.ficha.userId,
+    nome: nome.slice(0, 80),
+    descricao: t.descricao?.trim().slice(0, 300) || null,
+    duracaoMin: t.duracaoMin,
+    precoCents: Math.max(0, Math.round(t.precoCents)),
+    ativo: true,
+    ordem: d.tiposConsulta.length + 1,
+  });
+  return { id };
+}
+
+export async function atualizarTipoConsulta(
+  id: string,
+  campos: Record<string, unknown>
+): Promise<{ erro?: string }> {
+  const t = bd().tiposConsulta.find((x) => x.id === id);
+  if (!t) return { erro: "Este tipo de consulta já não existe." };
+  if (typeof campos.nome === "string") t.nome = campos.nome;
+  if ("descricao" in campos) t.descricao = (campos.descricao as string | null) ?? null;
+  if (typeof campos.duracao_min === "number") t.duracaoMin = campos.duracao_min;
+  if (typeof campos.preco_cents === "number") t.precoCents = campos.preco_cents;
+  if (typeof campos.ativo === "boolean") t.ativo = campos.ativo;
+  if (typeof campos.ordem === "number") t.ordem = campos.ordem;
+  return {};
+}
+
+export async function apagarTipoConsulta(id: string): Promise<{ erro?: string }> {
+  const d = bd();
+  d.tiposConsulta = d.tiposConsulta.filter((t) => t.id !== id);
+  return {};
 }
 
 // ─── Casos ─────────────────────────────────────────────────────────────

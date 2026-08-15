@@ -22,19 +22,25 @@ import {
   ROTULO_ACAO, acaoDoPerfilPublico, acaoEstaDisponivel, copyResposta,
   nomesDosIdiomas, sinaisDeConfianca, type Contexto, type FichaDePerfil,
 } from "@/lib/contabilistas/perfil";
-import Badge from "@/components/ui/Badge";
-import Button from "@/components/ui/Button";
 import {
-  Check, Clock, Globe, MapPin, ShieldCheck, User,
-} from "@/components/ui/Icons";
+  COPY_VALORES_INDICATIVOS, duracaoLegivel, precoLegivel, type TipoConsulta,
+} from "@/lib/contabilistas/fonte/tipos-consulta";
+import AvatarContabilista from "@/components/contabilistas/AvatarContabilista";
+import Button from "@/components/ui/Button";
+import { Check, Clock, Globe, MapPin, ShieldCheck } from "@/components/ui/Icons";
 
 export default function PerfilPreview({
   ficha,
   contexto,
+  tipos,
+  avatarUrl,
 }: {
   ficha: FichaDePerfil;
   /** Quem está a ver. No editor é sempre o cenário de um visitante novo. */
   contexto?: Contexto;
+  /** O catálogo comercial. Sem ele, o bloco das consultas não aparece. */
+  tipos?: TipoConsulta[] | null;
+  avatarUrl?: string | null;
 }) {
   const ctx: Contexto = contexto ?? {
     autenticado: true,
@@ -66,8 +72,26 @@ export default function PerfilPreview({
         <div className="h-20 bg-gradient-to-br from-brand-deep via-brand-dark to-brand" aria-hidden />
 
         <div className="px-5 pb-5">
-          <span className="-mt-9 mb-3 flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-brand-light text-brand-dark shadow-card dark:border-stone-900 dark:bg-brand/20 dark:text-brand-mint">
-            <User size={26} aria-hidden />
+          {/* A fotografia, com o selo de quem a forneceu. O selo é um
+              facto — «esta foto vem do LinkedIn ligado» —, não um
+              distintivo de verificação institucional (§131). */}
+          <span className="relative -mt-9 mb-3 inline-block">
+            <span className="block overflow-hidden rounded-2xl border-4 border-white shadow-card dark:border-stone-900">
+              <AvatarContabilista
+                contabilistaId={ficha.userId}
+                nome={ficha.nome || "?"}
+                avatarUrl={avatarUrl}
+                tamanho="md"
+              />
+            </span>
+            {ficha.linkedinLigado && (
+              <span
+                className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-lg border-2 border-white bg-[#0A66C2] text-[0.5625rem] font-bold text-white dark:border-stone-900"
+                aria-label="Fotografia do LinkedIn"
+              >
+                in
+              </span>
+            )}
           </span>
 
           <h3 className="font-display text-xl text-ink dark:text-stone-100">
@@ -123,6 +147,33 @@ export default function PerfilPreview({
             </>
           )}
 
+          {tipos && tipos.filter((t) => t.ativo).length > 0 && (
+            <div className="mt-4 border-t border-stone-100 pt-4 dark:border-stone-800">
+              <p className="text-xs font-semibold uppercase tracking-wide text-stone-400">
+                Consultas
+              </p>
+              <ul className="mt-2 space-y-1.5">
+                {tipos.filter((t) => t.ativo).slice(0, 4).map((t) => (
+                  <li key={t.id} className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className="min-w-0 truncate text-stone-700 dark:text-stone-300">
+                      {t.nome}
+                      <span className="ml-1.5 text-xs text-stone-400">{duracaoLegivel(t.duracaoMin)}</span>
+                    </span>
+                    <span className={`shrink-0 font-semibold tabular-nums ${t.precoCents === 0 ? "text-brand-dark dark:text-brand-mint" : "text-stone-800 dark:text-stone-200"}`}>
+                      {precoLegivel(t.precoCents)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {/* Sem esta frase, a tabela deixa de ser uma âncora comercial
+                  e passa a ser uma tabela de preços fixos — que é o que a
+                  §123 diz que o produto não é. */}
+              <p className="mt-2 text-[0.6875rem] leading-relaxed text-stone-400 dark:text-stone-500">
+                {COPY_VALORES_INDICATIVOS}
+              </p>
+            </div>
+          )}
+
           <dl className="mt-4 space-y-2 border-t border-stone-100 pt-4 text-sm dark:border-stone-800">
             {resposta && (
               <Linha Icon={Clock} rotulo="Resposta">{resposta.replace("Responde normalmente em ", "")}</Linha>
@@ -140,17 +191,27 @@ export default function PerfilPreview({
             )}
           </dl>
 
-          {/* Uma ação, a que faz sentido. Não se oferece o que se vai
-              recusar a seguir num modal (§136). */}
-          <div className="mt-4">
+          {/* Duas ações, como a referência mostra — mas só as que o estado
+              do vínculo permite. Marcar consulta exige vínculo ativo; sem
+              ele, oferecer o botão era prometer o que se ia recusar a
+              seguir num modal (§136). */}
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
             <Button
               size="sm"
-              className="w-full"
+              variant={acao === "marcar_consulta" ? "secondary" : "primary"}
               disabled={!acaoEstaDisponivel(acao)}
               // A pré-visualização não escreve nada: é um espelho.
               onClick={() => {}}
             >
               {ROTULO_ACAO[acao]}
+            </Button>
+            <Button
+              size="sm"
+              variant={acao === "marcar_consulta" ? "primary" : "secondary"}
+              disabled={acao !== "marcar_consulta"}
+              onClick={() => {}}
+            >
+              Marcar consulta
             </Button>
           </div>
         </div>

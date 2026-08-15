@@ -24,7 +24,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { usarFicha } from "@/components/contabilistas/usarFicha";
 import { usarPainel } from "@/components/contabilistas/usarPainel";
 import { atualizarFicha } from "@/lib/contabilistas/fonte/dados";
@@ -42,9 +42,14 @@ import PerfilPreview from "@/components/contabilistas/PerfilPreview";
 import AcoesDoPainel, { TituloDoPainel } from "@/components/contabilistas/AcoesDoPainel";
 import { obterDisponibilidade } from "@/lib/contabilistas/fonte/dados";
 import { NOMES_DIAS, type RegraDisponibilidade } from "@/lib/contabilistas/agenda";
+import {
+  COPY_VALORES_INDICATIVOS, DURACOES, TIPOS_MAX, apagarTipoConsulta,
+  atualizarTipoConsulta, criarTipoConsulta, duracaoLegivel, listarTiposConsulta,
+  precoLegivel, type TipoConsulta,
+} from "@/lib/contabilistas/fonte/tipos-consulta";
 import SelectMenu, { type OpcaoSelectMenu } from "@/components/ui/SelectMenu";
 import { useAvisos } from "@/components/ui/Avisos";
-import { Check, ExternalLink, Eye, Lock, User, Warning } from "@/components/ui/Icons";
+import { Check, ExternalLink, Eye, Lock, Plus, Trash, User, Warning } from "@/components/ui/Icons";
 
 interface Formulario {
   nome: string; occ: string; bio: string; distrito: string; concelho: string;
@@ -148,6 +153,16 @@ export default function PerfilPage() {
       .catch(() => { if (vivo) setHorarios([]); });
     return () => { vivo = false; };
   }, [ficha]);
+
+  // O catálogo de consultas. Ao contrário do resto do editor, grava à peça:
+  // cada tipo é uma linha independente, e juntá-lo ao rascunho obrigaria a
+  // reconciliar criações e remoções num só `UPDATE`.
+  const [tipos, setTipos] = useState<TipoConsulta[] | null>(null);
+  const [aCriarTipo, setACriarTipo] = useState(false);
+  const recarregarTipos = useCallback(async (id: string) => {
+    try { setTipos(await listarTiposConsulta(id)); } catch { setTipos([]); }
+  }, []);
+  useEffect(() => { if (ficha) void recarregarTipos(ficha.userId); }, [ficha, recarregarTipos]);
 
   function alternar(lista: "especialidades" | "modalidades" | "idiomas", valor: string) {
     setPorGuardar(true);
@@ -502,7 +517,100 @@ export default function PerfilPage() {
             </div>
           </Bloco>
 
-          <Bloco numero={4} titulo="Contacto e presença digital" Icon={Lock}>
+          <Bloco numero={4} titulo="Consultas e honorário" Icon={Check}>
+            <p className="text-sm leading-relaxed text-stone-500 dark:text-stone-400">
+              O que ofereces e por que valor. Aparece no teu perfil público
+              como referência — o valor de cada consulta continua a ser
+              acordado contigo em função do serviço.
+            </p>
+
+            {tipos === null ? (
+              <div className="mt-4 h-24 animate-pulse rounded-2xl bg-stone-100 dark:bg-stone-800" aria-busy="true" />
+            ) : (
+              <>
+                {tipos.length > 0 && (
+                  <ul className="mt-4 space-y-2">
+                    {tipos.map((t) => (
+                      <li
+                        key={t.id}
+                        className="flex flex-wrap items-center gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-3 dark:border-stone-800 dark:bg-stone-950/40"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-semibold text-stone-800 dark:text-stone-100">
+                            {t.nome}
+                          </span>
+                          <span className="mt-0.5 block text-xs text-stone-500 dark:text-stone-400">
+                            {duracaoLegivel(t.duracaoMin)}
+                            {t.descricao && ` · ${t.descricao}`}
+                          </span>
+                        </span>
+                        <span className={`shrink-0 font-semibold tabular-nums ${t.precoCents === 0 ? "text-brand-dark dark:text-brand-mint" : "text-stone-800 dark:text-stone-200"}`}>
+                          {precoLegivel(t.precoCents)}
+                        </span>
+                        <span className="flex shrink-0 items-center gap-1">
+                          <button
+                            type="button"
+                            aria-pressed={t.ativo}
+                            onClick={async () => {
+                              await atualizarTipoConsulta(t.id, { ativo: !t.ativo });
+                              await recarregarTipos(ficha.userId);
+                            }}
+                            className="rounded-lg px-2 py-1 text-xs font-medium text-stone-500 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800"
+                          >
+                            {t.ativo ? "Visível" : "Oculto"}
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Remover «${t.nome}»`}
+                            onClick={async () => {
+                              await apagarTipoConsulta(t.id);
+                              await recarregarTipos(ficha.userId);
+                            }}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-clay-text dark:hover:bg-stone-800"
+                          >
+                            <Trash size={14} aria-hidden />
+                          </button>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {aCriarTipo ? (
+                  <NovoTipo
+                    onCancelar={() => setACriarTipo(false)}
+                    onCriar={async (dados) => {
+                      const { erro } = await criarTipoConsulta({ contabilistaId: ficha.userId, ...dados });
+                      if (erro) { avisos.erro(erro); return; }
+                      setACriarTipo(false);
+                      await recarregarTipos(ficha.userId);
+                      avisos.sucesso("Consulta adicionada.");
+                    }}
+                  />
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="mt-3"
+                    disabled={tipos.length >= TIPOS_MAX}
+                    onClick={() => setACriarTipo(true)}
+                  >
+                    <Plus size={14} aria-hidden /> Adicionar consulta
+                  </Button>
+                )}
+
+                {/* A frase não é uma nota de rodapé opcional: é o que
+                    distingue uma âncora comercial de uma tabela de preços
+                    fixos, e o que mantém isto compatível com a §123. */}
+                <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-stone-400 dark:text-stone-500">
+                  <Lock size={12} className="mt-0.5 shrink-0" aria-hidden />
+                  {COPY_VALORES_INDICATIVOS}
+                </p>
+              </>
+            )}
+          </Bloco>
+
+          <Bloco numero={5} titulo="Contacto e presença digital" Icon={Lock}>
             <div className="grid gap-4 sm:grid-cols-2">
               <Texto rotulo="Email de contacto" id="email" tipo="email" valor={f.email} onChange={(v) => mudar({ email: v })} />
               <Texto rotulo="Telefone" id="tel" tipo="tel" valor={f.telefone} onChange={(v) => mudar({ telefone: v })} />
@@ -524,7 +632,7 @@ export default function PerfilPage() {
             </div>
           </Bloco>
 
-          <Bloco numero={5} titulo="Disponibilidade comercial" Icon={Check}>
+          <Bloco numero={7} titulo="Disponibilidade comercial" Icon={Check}>
             {/* Um checkbox no fundo do formulário não é uma decisão; é um
                 detalhe. A §132 pede que isto seja uma escolha visível. */}
             <div role="radiogroup" aria-label="Disponibilidade para novos clientes" className="grid gap-2.5 sm:grid-cols-2">
@@ -596,7 +704,7 @@ export default function PerfilPage() {
             <Eye size={15} className="text-brand" aria-hidden />
             Pré-visualização pública
           </h2>
-          <PerfilPreview ficha={rascunho} />
+          <PerfilPreview ficha={rascunho} tipos={tipos} />
 
           <section className="mt-4 rounded-4xl border border-stone-200 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -682,6 +790,88 @@ function Bloco({
       </h2>
       <div className="mt-4">{children}</div>
     </section>
+  );
+}
+
+/** O formulário de uma consulta nova. Grava à peça, não com o rascunho. */
+function NovoTipo({
+  onCriar, onCancelar,
+}: {
+  onCriar: (d: { nome: string; descricao: string | null; duracaoMin: number; precoCents: number }) => void;
+  onCancelar: () => void;
+}) {
+  const [nome, setNome] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [duracao, setDuracao] = useState(60);
+  const [euros, setEuros] = useState("");
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onCriar({
+          nome,
+          descricao: descricao.trim() || null,
+          duracaoMin: duracao,
+          // Vazio é grátis, e grátis é uma oferta legítima — não um campo
+          // por preencher. Ver `tipos-consulta.ts`.
+          precoCents: Math.round(Number(euros.replace(",", ".") || "0") * 100),
+        });
+      }}
+      className="mt-3 space-y-3 rounded-2xl border border-stone-200 bg-cream/50 p-4 dark:border-stone-800 dark:bg-stone-950/50"
+    >
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block">
+          <span className="text-sm font-semibold text-stone-700 dark:text-stone-200">Nome</span>
+          <input
+            value={nome}
+            onChange={(e) => setNome(e.target.value.slice(0, 80))}
+            placeholder="Primeira conversa"
+            autoFocus
+            className="focus-marca mt-2 min-h-[2.75rem] w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+          />
+        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="block">
+            <span className="block text-sm font-semibold text-stone-700 dark:text-stone-200">Duração</span>
+            <SelectMenu
+              id="duracao-tipo-consulta"
+              value={String(duracao)}
+              options={DURACOES.map((d) => ({ value: String(d), label: duracaoLegivel(d) }))}
+              onChange={(v) => setDuracao(Number(v))}
+              ariaLabel="Duração da consulta"
+              className="mt-2"
+            />
+          </div>
+          <label className="block">
+            <span className="text-sm font-semibold text-stone-700 dark:text-stone-200">Valor</span>
+            <input
+              inputMode="decimal"
+              value={euros}
+              onChange={(e) => setEuros(e.target.value.replace(/[^\d,.]/g, ""))}
+              placeholder="Grátis"
+              className="focus-marca mt-2 min-h-[2.75rem] w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm tabular-nums dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+            />
+          </label>
+        </div>
+      </div>
+
+      <label className="block">
+        <span className="text-sm font-semibold text-stone-700 dark:text-stone-200">
+          Descrição <span className="font-normal text-stone-400">(opcional)</span>
+        </span>
+        <input
+          value={descricao}
+          onChange={(e) => setDescricao(e.target.value.slice(0, 300))}
+          className="focus-marca mt-2 min-h-[2.75rem] w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+        />
+      </label>
+
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" size="sm" disabled={nome.trim().length < 2}>Adicionar</Button>
+        <Button type="button" size="sm" variant="ghost" onClick={onCancelar}>Cancelar</Button>
+      </div>
+    </form>
   );
 }
 
