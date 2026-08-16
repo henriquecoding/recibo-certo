@@ -20,6 +20,7 @@ import {
   type Excecao, type RegraDisponibilidade, type Slot,
 } from "@/lib/contabilistas/agenda";
 import { podeAgendar, podePedirVinculo, vinculoAtivo } from "@/lib/contabilistas/vinculo";
+import { estadoOcc } from "@/lib/contabilistas/diretorio";
 import { eurosDeCents, valorComDesconto } from "@/lib/contabilistas/fidelidade";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -204,12 +205,13 @@ export default function PerfilPublico({ slug }: { slug: string }) {
             </div>
           </div>
 
-          {cc.occ && (
-            <p className="mt-3 flex items-center gap-1.5 text-sm text-stone-500">
-              <ShieldCheck size={15} className="text-brand" aria-hidden />
-              Inscrição na OCC n.º {cc.occ}
-            </p>
-          )}
+          {/* A mesma frase que o cartão do diretório mostra, vinda da mesma
+              função: um perfil que diz «verificada» onde a lista dizia
+              «informada» seriam duas verdades sobre a mesma inscrição (§50). */}
+          <p className="mt-3 flex items-center gap-1.5 text-sm text-stone-500">
+            <ShieldCheck size={15} className="text-brand" aria-hidden />
+            {estadoOcc(cc).etiqueta}
+          </p>
 
           {cc.bio && (
             <p className="mt-4 whitespace-pre-line text-base leading-relaxed text-stone-700">{cc.bio}</p>

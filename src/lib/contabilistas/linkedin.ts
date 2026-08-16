@@ -75,34 +75,13 @@ export async function obterLinkedInPublico(contabilistaId: string): Promise<Link
   return paraLinkedInPublico(data as unknown as Record<string, unknown>);
 }
 
-/**
- * Versão em lote para o diretório.
- *
- * Um cartão não pode custar uma query própria: com 40 contabilistas seriam
- * 41 pedidos só para desenhar a primeira página. A ficha pública já é lida
- * sob RLS; aqui pedimos as três colunas LinkedIn de todos os ids numa única
- * ida à base e indexamos localmente.
- */
-export async function obterLinkedInsPublicos(
-  contabilistaIds: readonly string[],
-): Promise<Record<string, LinkedInPublico>> {
-  const ids = Array.from(new Set(contabilistaIds.filter(Boolean))).slice(0, 200);
-  if (ids.length === 0) return {};
-
-  const { data, error } = await getSupabase()
-    .from("contabilistas")
-    .select("user_id, linkedin_url, linkedin_avatar_url, linkedin_ligado_em")
-    .in("user_id", ids);
-
-  if (error || !data) return {};
-
-  const resultado: Record<string, LinkedInPublico> = {};
-  for (const item of data as unknown as Record<string, unknown>[]) {
-    const userId = item.user_id as string | undefined;
-    if (userId) resultado[userId] = paraLinkedInPublico(item);
-  }
-  return resultado;
-}
+// Existiu aqui um `obterLinkedInsPublicos(ids)` — a leitura em lote que
+// evitava uma query por cartão no diretório. Saiu quando o diretório
+// deixou de precisar dela: `contabilistas_publico` passou a trazer o que
+// o cartão precisa sobre o LinkedIn na MESMA consulta dos resultados
+// (ver `diretorio.ts`), e o lote passou a ser uma segunda ida à base para
+// repetir o que já tinha chegado. Era também o último sítio onde uma
+// superfície pública lia a TABELA em vez da view.
 
 export async function obterEstadoLinkedIn(): Promise<{
   ligado: boolean;

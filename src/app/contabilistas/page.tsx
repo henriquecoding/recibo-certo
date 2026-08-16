@@ -1,111 +1,112 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import DiretorioCliente from "./DiretorioCliente";
-import AtalhosDoVisitante from "./AtalhosDoVisitante";
-import {
-  ArrowRight, Calendar, Gift, Lock, PaperClip, User,
-} from "@/components/ui/Icons";
+import DiretorioComoFunciona from "./DiretorioComoFunciona";
+import { ArrowRight, ShieldCheck } from "@/components/ui/Icons";
 
 export const metadata: Metadata = {
-  title: "Contabilistas certificados | ReciboCerto",
+  title: "Encontrar contabilista | ReciboCerto",
   description:
-    "Encontra um contabilista certificado, envia-lhe as tuas simulações e marca consulta. Gratuito e sem plano pago.",
+    "Encontra contabilistas por área de trabalho, localização e atendimento online ou presencial. Consulta o perfil profissional e pede vínculo, sem plano pago.",
+  // Os filtros são estados de uso, não páginas: a canónica é sempre a
+  // rota limpa, para não semear o índice com combinações infinitas (§74).
   alternates: { canonical: "/contabilistas" },
 };
 
 /**
- * As quatro coisas que aqui se fazem — e nenhuma delas custa dinheiro.
+ * O que muda nesta página: a ordem.
  *
- * A frase «não precisa de plano» aparece porque é verdade e porque é a
- * pergunta que se faz a seguir: `PARTILHA_NUNCA_EXIGE_PLUS`, em
- * `contabilistas/vinculo.ts`, garante-o em código e está coberto por teste.
+ * Antes explicava-se («o que podes fazer aqui», quatro cartões, nota de
+ * privacidade) e só depois se mostrava quem existe. Quem chega ao
+ * diretório não veio aprender o modelo — veio saber QUEM o pode ajudar.
+ * Por isso a procura vem antes da lista, a lista antes do tutorial, e a
+ * candidatura de contabilistas fica no fim, onde não compete com nada
+ * (§2, §16, §55).
  */
-const POSSIBILIDADES = [
-  {
-    Icon: User,
-    titulo: "Ligar-te a um contabilista",
-    texto: "Escolhes um da lista e pedes para seres cliente dele. Se aceitar, ficam ligados.",
-  },
-  {
-    Icon: Calendar,
-    titulo: "Marcar consulta",
-    texto: "Vês os horários que ele tem livres, escolhes o dia e a hora e dizes do que se trata. Online ou presencial, conforme o que ele oferecer.",
-  },
-  {
-    Icon: PaperClip,
-    titulo: "Enviar as tuas simulações",
-    texto: "A partir das ferramentas do site, com um clique. Antes de confirmares, vês campo a campo o que vai seguir — e podes retirar-lhe o acesso mais tarde.",
-  },
-  {
-    Icon: Gift,
-    titulo: "Juntar carimbos",
-    texto: "Cada consulta que fizeres carimba o teu cartão. Quando o completares, ganhas um desconto na consulta seguinte — entre 10% e 50%, conforme o contabilista definir.",
-  },
-] as const;
-
 export default function DiretorioPage() {
   return (
     <main className="min-h-[100dvh] bg-cream dark:bg-stone-950">
-      <div className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
-        <header className="max-w-2xl">
-          <p className="eyebrow">Diretório</p>
-          <h1 className="mt-2 font-display text-4xl leading-tight text-ink dark:text-stone-50 sm:text-5xl">
-            Contabilistas certificados
-          </h1>
-          <p className="mt-4 text-base leading-relaxed text-stone-600 dark:text-stone-300">
-            Liga-te a um contabilista, envia-lhe as simulações que fizeste aqui e marca
-            consulta — sem precisares de nenhum plano pago. E cada consulta que fizeres
-            carimba o teu cartão de fidelidade.
-          </p>
-        </header>
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
+        <section className="grid grid-cols-1 items-end gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <header className="max-w-2xl">
+            <p className="eyebrow">Diretório profissional</p>
+            <h1 className="mt-2 font-display text-[2.15rem] leading-[1.08] text-ink dark:text-stone-50 sm:text-5xl">
+              Encontra o contabilista certo para a tua situação.
+            </h1>
+            <p className="mt-3.5 text-base leading-relaxed text-stone-600 dark:text-stone-300">
+              Procura por área de trabalho, localização e forma de atendimento.
+              Consulta o perfil profissional e pede vínculo sem subscrição.
+            </p>
+          </header>
 
-        {/* Para quem já tem contabilista, pedido por aceitar ou painel de
-            gestão, o próximo passo não é «escolher» — e é esse que aparece. */}
-        <AtalhosDoVisitante />
-
-        {/* O que se pode fazer daqui, dito antes de a pessoa escolher alguém:
-            escolher é mais fácil quando se sabe para quê. */}
-        <section aria-labelledby="podes-titulo" className="mt-10">
-          <h2 id="podes-titulo" className="font-display text-2xl text-ink dark:text-stone-50">
-            O que podes fazer aqui
-          </h2>
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-            {POSSIBILIDADES.map(({ Icon, titulo, texto }) => (
-              <li key={titulo} className="flex gap-3.5 rounded-4xl border border-stone-200 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-light text-brand-dark dark:bg-brand/20 dark:text-brand-mint">
-                  <Icon size={18} aria-hidden />
-                </span>
-                <div className="min-w-0">
-                  <h3 className="font-semibold text-stone-800 dark:text-stone-100">{titulo}</h3>
-                  <p className="mt-1 text-sm leading-relaxed text-stone-600 dark:text-stone-300">{texto}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 flex items-start gap-2 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
-            <Lock size={15} className="mt-0.5 shrink-0 text-stone-400 dark:text-stone-500" aria-hidden />
-            Ligares-te a alguém não lhe dá acesso aos teus dados. O contabilista vê o que
-            lhe enviares, um envio de cada vez, e podes revogar o acesso quando quiseres.
-          </p>
+          {/* A promessa de privacidade em três linhas, e não em quatro
+              cartões: é uma condição para confiar na página, não o assunto
+              dela (§18). */}
+          <aside className="rounded-4xl border border-brand/15 bg-gradient-to-br from-brand-light/70 to-white p-5 shadow-card dark:border-brand/25 dark:from-brand/10 dark:to-stone-900">
+            <div className="flex gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand/15 text-brand-dark dark:text-brand-mint">
+                <ShieldCheck size={18} aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold text-stone-800 dark:text-stone-100">
+                  Tu decides o que é partilhado
+                </h2>
+                <p className="mt-1 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
+                  Vincular-te a um contabilista não abre os teus dados fiscais.
+                  Ele só recebe aquilo que enviares explicitamente.
+                </p>
+              </div>
+            </div>
+            <ul className="mt-3.5 flex flex-wrap gap-1.5">
+              {["Sem plano pago", "Partilhas revogáveis", "Perfis aprovados"].map((t) => (
+                <li
+                  key={t}
+                  className="rounded-full border border-stone-200/70 bg-white/70 px-2.5 py-1 text-[0.6875rem] font-medium text-stone-600 dark:border-stone-700 dark:bg-stone-900/60 dark:text-stone-300"
+                >
+                  {t}
+                </li>
+              ))}
+            </ul>
+          </aside>
         </section>
 
-        <h2 className="mt-12 font-display text-2xl text-ink dark:text-stone-50">Escolher um contabilista</h2>
-        <DiretorioCliente />
-
-        <aside className="mt-12 rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6 dark:border-stone-800 dark:bg-stone-900">
-          <h2 className="font-display text-xl text-ink dark:text-stone-50">És contabilista?</h2>
-          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-stone-600 dark:text-stone-300">
-            Podes pedir acesso ao painel de gestão: agenda, clientes, partilhas e cartão
-            de fidelidade. Qualquer conta se pode candidatar; a administração analisa
-            cada pedido antes de aprovar.
-          </p>
-          <Link
-            href="/contabilistas/candidatura"
-            className="btn-shine mt-4 inline-flex min-h-[2.75rem] items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
+        <div className="mt-7">
+          {/* `useSearchParams` obriga a uma fronteira de Suspense para o
+              resto da página poder ser servido estático. O esqueleto tem a
+              altura do finder, para a página não saltar (§78). */}
+          <Suspense
+            fallback={
+              <div
+                className="h-40 animate-pulse rounded-4xl border border-stone-200 bg-white/70 dark:border-stone-800 dark:bg-stone-900/60"
+                aria-hidden
+              />
+            }
           >
-            Pedir acesso <ArrowRight size={16} aria-hidden />
-          </Link>
-        </aside>
+            <DiretorioCliente />
+          </Suspense>
+        </div>
+
+        <div className="mt-12 space-y-4">
+          <DiretorioComoFunciona />
+
+          <aside className="flex flex-wrap items-center justify-between gap-4 rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6 dark:border-stone-800 dark:bg-stone-900">
+            <div className="min-w-0 max-w-2xl">
+              <h2 className="font-display text-xl text-ink dark:text-stone-50">És contabilista?</h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
+                Cria o teu perfil profissional e pede acesso ao painel de gestão: agenda,
+                clientes, partilhas e cartão de fidelidade. Qualquer conta se pode
+                candidatar; a administração analisa cada pedido antes de aprovar.
+              </p>
+            </div>
+            <Link
+              href="/contabilistas/candidatura"
+              className="btn-shine focus-marca inline-flex min-h-[2.75rem] items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
+            >
+              Candidatar-me <ArrowRight size={16} aria-hidden />
+            </Link>
+          </aside>
+        </div>
       </div>
     </main>
   );

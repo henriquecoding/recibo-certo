@@ -1,337 +1,315 @@
 "use client";
 
+// ═══════════════════════════════════════════════════════════════════════
+//  O DIRETÓRIO — procura, filtros e resultados
+//  ---------------------------------------------------------------------
+//  Três mudanças de fundo em relação ao que estava aqui:
+//
+//   1. **O estado vive no endereço.** `?q=irs&distrito=Lisboa&vagas=1` é o
+//      que a pessoa está a ver, e é isso que ela pode partilhar, atualizar
+//      ou reencontrar quando volta de um perfil (§20). O componente não
+//      guarda uma segunda cópia dos filtros: lê-os de `useSearchParams` e
+//      escreve-os com `history.replaceState`, que o router do Next
+//      reconhece — e assim não há uma entrada de histórico por tecla.
+//
+//   2. **Filtrar é trabalho da base de dados.** Antes vinham até 200
+//      fichas inteiras e o browser fazia `.filter()`. Agora cada mudança
+//      pede uma página de 24 já filtrada. É a diferença entre uma lista
+//      que funciona com doze contabilistas e uma que funciona com mil.
+//
+//   3. **Um pedido antigo nunca vence um novo.** Escrever «irs» e logo a
+//      seguir «iva» lança dois pedidos; se o primeiro chegar depois, os
+//      resultados de «irs» apareceriam por baixo da palavra «iva». O
+//      contador `pedido` garante que só a última resposta é escrita (§76).
+// ═══════════════════════════════════════════════════════════════════════
+
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { listarContabilistas } from "@/lib/contabilistas/dados";
-import { DISTRITOS, ESPECIALIDADES } from "@/lib/contabilistas/catalogo";
-import { eurosDeCents } from "@/lib/contabilistas/fidelidade";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
-  obterLinkedInsPublicos,
-  type LinkedInPublico,
-} from "@/lib/contabilistas/linkedin";
-import type { Contabilista } from "@/lib/contabilistas/tipos";
-import AvatarContabilista from "@/components/contabilistas/AvatarContabilista";
+  comFiltro, contarFiltros, filtroParaQuery, FILTRO_VAZIO, lerDiretorio, parseFiltro,
+  type CartaoDoDiretorio, type FiltroDiretorio, type OrdemDoDiretorio,
+} from "@/lib/contabilistas/diretorio";
+import ContabilistaCard from "./ContabilistaCard";
+import DiretorioFinder from "./DiretorioFinder";
+import { ColunaDeFiltros, FolhaDeFiltros } from "./DiretorioFiltros";
+import VisitanteContextBar from "./VisitanteContextBar";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import Button from "@/components/ui/Button";
 import SelectMenu, { type OpcaoSelectMenu } from "@/components/ui/SelectMenu";
-import {
-  ArrowRight, Briefcase, Building, Gift, Globe, MapPin, Search, ShieldCheck, Warning,
-} from "@/components/ui/Icons";
+import { Briefcase, Filter, Warning } from "@/components/ui/Icons";
 
-const OPCOES_DISTRITO: readonly OpcaoSelectMenu[] = [
-  { value: "", label: "Todos os distritos" },
-  ...DISTRITOS.map((d) => ({ value: d, label: d })),
+const OPCOES_ORDEM: readonly OpcaoSelectMenu[] = [
+  { value: "disponibilidade", label: "Quem aceita clientes primeiro" },
+  { value: "nome", label: "Nome (A–Z)" },
 ];
 
-const OPCOES_AREA: readonly OpcaoSelectMenu[] = [
-  { value: "", label: "Todas as áreas" },
-  ...ESPECIALIDADES.map((e) => ({ value: e, label: e })),
-];
-
-function textoModalidades(c: Contabilista): string {
-  const presencial = c.modalidades.includes("presencial");
-  const online = c.modalidades.includes("online");
-  if (presencial && online) return "Atendimento presencial e online";
-  if (online) return "Atendimento online";
-  if (presencial) return "Atendimento presencial";
-  return "Atendimento a combinar";
+function CartaoFantasma() {
+  return (
+    <div className="h-[19.5rem] animate-pulse rounded-4xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-900">
+      <div className="flex items-start gap-3.5">
+        <div className="h-12 w-12 shrink-0 rounded-2xl bg-stone-100 dark:bg-stone-800" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="h-4 w-2/3 rounded bg-stone-100 dark:bg-stone-800" />
+          <div className="h-3 w-1/2 rounded bg-stone-100 dark:bg-stone-800" />
+        </div>
+      </div>
+      <div className="mt-5 space-y-2">
+        <div className="h-3 w-full rounded bg-stone-100 dark:bg-stone-800" />
+        <div className="h-3 w-5/6 rounded bg-stone-100 dark:bg-stone-800" />
+      </div>
+      <div className="mt-5 flex gap-1.5">
+        <div className="h-6 w-16 rounded-lg bg-stone-100 dark:bg-stone-800" />
+        <div className="h-6 w-14 rounded-lg bg-stone-100 dark:bg-stone-800" />
+      </div>
+      <div className="mt-6 h-10 rounded-xl bg-stone-100 dark:bg-stone-800" />
+    </div>
+  );
 }
 
 export default function DiretorioCliente() {
-  const [lista, setLista] = useState<Contabilista[]>([]);
-  const [linkedin, setLinkedin] = useState<Record<string, LinkedInPublico>>({});
+  const params = useSearchParams();
+  const filtro = useMemo(() => parseFiltro(new URLSearchParams(params.toString())), [params]);
+
+  const [cartoes, setCartoes] = useState<CartaoDoDiretorio[]>([]);
+  const [total, setTotal] = useState(0);
+  const [temMais, setTemMais] = useState(false);
   const [estado, setEstado] = useState<"a-ler" | "pronto" | "erro">("a-ler");
-  const [erro, setErro] = useState("");
-  const [procura, setProcura] = useState("");
-  const [distrito, setDistrito] = useState("");
-  const [especialidade, setEspecialidade] = useState("");
-  const [modalidade, setModalidade] = useState<"" | "online" | "presencial">("");
-  const [comVagas, setComVagas] = useState(false);
+  const [aLer, setALer] = useState(true);
+  const [aCarregarMais, setACarregarMais] = useState(false);
+  const [folhaAberta, setFolhaAberta] = useState(false);
+  /** Incrementa no «Tentar novamente» — é o que faz o efeito repetir. */
+  const [tentativa, setTentativa] = useState(0);
+
+  // O filtro corrente sem passar pelas dependências do efeito: o efeito
+  // só deve reagir à IDENTIDADE dos filtros, não à página.
+  const filtroRef = useRef(filtro);
+  filtroRef.current = filtro;
+  const pedido = useRef(0);
+
+  const chaveDosFiltros = useMemo(() => filtroParaQuery({ ...filtro, pagina: 1 }), [filtro]);
+  const numeroDeFiltros = contarFiltros(filtro);
 
   useEffect(() => {
-    let vivo = true;
+    const meu = ++pedido.current;
+    setALer(true);
 
-    listarContabilistas()
-      .then(async (l) => {
-        const perfisLinkedIn = await obterLinkedInsPublicos(l.map((c) => c.userId));
-        if (!vivo) return;
-        setLista(l);
-        setLinkedin(perfisLinkedIn);
+    lerDiretorio(filtroRef.current, { desdeOInicio: true })
+      .then((p) => {
+        if (meu !== pedido.current) return;
+        setCartoes(p.cartoes);
+        setTotal(p.total);
+        setTemMais(p.temMais);
         setEstado("pronto");
       })
       .catch((e: Error) => {
-        if (vivo) {
-          // Sem Supabase configurado o diretório não existe — dizê-lo é melhor
-          // do que mostrar uma lista vazia que parece «não há ninguém».
-          setErro(e.message);
-          setEstado("erro");
-        }
+        if (meu !== pedido.current) return;
+        // A mensagem técnica fica na consola; a pessoa recebe uma frase e
+        // um botão. Um erro do PostgREST não é informação para ninguém (§80).
+        console.error("[diretorio] falha ao ler o diretório:", e.message);
+        setEstado("erro");
+      })
+      .finally(() => {
+        if (meu === pedido.current) setALer(false);
       });
+  }, [chaveDosFiltros, tentativa]);
 
-    return () => { vivo = false; };
+  /** Escreve o filtro no endereço. O router do Next lê-o de volta. */
+  const irPara = useCallback((novo: FiltroDiretorio) => {
+    const query = filtroParaQuery(novo);
+    window.history.replaceState(null, "", query ? `?${query}` : window.location.pathname);
   }, []);
 
-  const filtrada = useMemo(() => {
-    const p = procura.trim().toLowerCase();
-    return lista.filter((c) => {
-      if (distrito && c.distrito !== distrito) return false;
-      if (especialidade && !c.especialidades.includes(especialidade)) return false;
-      if (modalidade && !c.modalidades.includes(modalidade)) return false;
-      if (comVagas && !c.aceitaNovosClientes) return false;
-      if (!p) return true;
-      return (
-        c.nome.toLowerCase().includes(p) ||
-        (c.concelho ?? "").toLowerCase().includes(p) ||
-        (c.distrito ?? "").toLowerCase().includes(p) ||
-        c.especialidades.some((e) => e.toLowerCase().includes(p))
-      );
-    });
-  }, [lista, procura, distrito, especialidade, modalidade, comVagas]);
+  const mudar = useCallback(
+    (mudanca: Partial<FiltroDiretorio>) => irPara(comFiltro(filtroRef.current, mudanca)),
+    [irPara],
+  );
 
-  const temFiltros = Boolean(procura || distrito || especialidade || modalidade || comVagas);
+  // Limpar apaga os filtros, não a ordenação: a ordem é uma preferência de
+  // leitura, e reposicioná-la sem aviso é mudar a lista debaixo dos olhos.
+  const limpar = useCallback(
+    () => irPara({ ...FILTRO_VAZIO, ordem: filtroRef.current.ordem }),
+    [irPara],
+  );
 
-  function limparFiltros() {
-    setProcura("");
-    setDistrito("");
-    setEspecialidade("");
-    setModalidade("");
-    setComVagas(false);
+  function carregarMais() {
+    const proxima = { ...filtro, pagina: filtro.pagina + 1 };
+    const meu = ++pedido.current;
+    setACarregarMais(true);
+    irPara(proxima);
+
+    lerDiretorio(proxima, { desdeOInicio: false })
+      .then((p) => {
+        if (meu !== pedido.current) return;
+        // Concatenar e não substituir: quem carregou três páginas não pode
+        // perder as duas primeiras por ter pedido a terceira.
+        setCartoes((atuais) => [...atuais, ...p.cartoes]);
+        setTotal(p.total);
+        setTemMais(p.temMais);
+      })
+      .catch((e: Error) => {
+        if (meu === pedido.current) console.error("[diretorio] falha ao carregar mais:", e.message);
+      })
+      .finally(() => {
+        if (meu === pedido.current) setACarregarMais(false);
+      });
   }
 
-  if (estado === "a-ler") {
-    return (
-      <div className="mt-8 grid gap-4 sm:grid-cols-2" aria-busy="true">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-72 animate-pulse rounded-4xl bg-stone-100 dark:bg-stone-900" />
-        ))}
-      </div>
-    );
-  }
-
-  if (estado === "erro") {
-    return (
-      <p role="alert" className="mt-8 flex items-start gap-2 rounded-2xl bg-alert-bg px-4 py-3 text-sm text-alert-text dark:bg-yellow-950/30 dark:text-yellow-200">
-        <Warning size={16} className="mt-0.5 shrink-0" aria-hidden />
-        O diretório não está disponível de momento. {erro}
-      </p>
-    );
-  }
+  const semFiltros = numeroDeFiltros === 0;
 
   return (
     <>
-      <div className="mt-8 rounded-4xl border border-stone-200 bg-white/85 p-3 shadow-card backdrop-blur sm:p-4 dark:border-stone-800 dark:bg-stone-900/75">
-        <div className="space-y-3">
-          <label htmlFor="procura" className="sr-only">Procurar contabilista</label>
-          <div className="relative">
-            <Search size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500" aria-hidden />
-            <input
-              id="procura"
-              value={procura}
-              onChange={(e) => setProcura(e.target.value)}
-              placeholder="Nome, concelho ou área"
-              className="focus-marca min-h-[2.75rem] w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-11 pr-3.5 text-sm text-stone-800 shadow-sm placeholder:text-stone-400 focus:border-brand dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100 dark:placeholder:text-stone-600"
-            />
-          </div>
+      <DiretorioFinder filtro={filtro} onMudar={mudar} />
 
-          <div className="grid gap-2.5 sm:grid-cols-2">
-            <SelectMenu
-              id="distrito"
-              value={distrito}
-              options={OPCOES_DISTRITO}
-              onChange={setDistrito}
-              ariaLabel="Filtrar por distrito"
-            />
-            <SelectMenu
-              id="area"
-              value={especialidade}
-              options={OPCOES_AREA}
-              onChange={setEspecialidade}
-              ariaLabel="Filtrar por área"
-            />
-          </div>
-
-          {/* Quem atende online não depende do distrito — é o filtro que
-              transforma «não há ninguém no meu concelho» em «há». */}
-          <div className="flex flex-wrap items-center gap-2 pt-0.5">
-            {([["", "Presencial e online"], ["online", "Atende online"], ["presencial", "Atende presencial"]] as const).map(
-              ([valor, texto]) => (
-                <button
-                  key={valor || "todas"}
-                  type="button"
-                  aria-pressed={modalidade === valor}
-                  onClick={() => setModalidade(valor)}
-                  className={`min-h-[2.25rem] rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
-                    modalidade === valor
-                      ? "bg-brand text-white shadow-sm"
-                      : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
-                  }`}
-                >
-                  {texto}
-                </button>
-              ),
-            )}
-            <button
-              type="button"
-              aria-pressed={comVagas}
-              onClick={() => setComVagas((v) => !v)}
-              className={`min-h-[2.25rem] rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
-                comVagas
-                  ? "bg-brand text-white shadow-sm"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
-              }`}
-            >
-              Só com vagas
-            </button>
-          </div>
-        </div>
+      <div className="mt-4">
+        <VisitanteContextBar />
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <p role="status" className="text-sm text-stone-500 dark:text-stone-400">
-          {filtrada.length === 0
-            ? "Nenhum resultado."
-            : `${filtrada.length} ${filtrada.length === 1 ? "contabilista" : "contabilistas"}.`}
-        </p>
-        {temFiltros && (
+      <div className="mt-8 flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+        <div className="min-w-0">
+          <h2 id="resultados" className="font-display text-2xl text-ink dark:text-stone-50 sm:text-[1.75rem]">
+            Contabilistas disponíveis
+          </h2>
+          <p role="status" aria-live="polite" className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+            {estado === "erro"
+              ? "Não foi possível carregar o diretório."
+              : aLer && cartoes.length === 0
+                ? "A procurar…"
+                : total === 0
+                  ? "Nenhum perfil corresponde a esta procura."
+                  : `${total} ${total === 1 ? "perfil encontrado" : "perfis encontrados"}${
+                      filtro.ordem === "nome" ? " · por ordem alfabética" : " · quem aceita clientes primeiro"
+                    }`}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={limparFiltros}
-            className="min-h-[2.25rem] text-sm font-medium text-brand-dark underline underline-offset-2 hover:text-brand dark:text-brand-mint"
+            onClick={() => setFolhaAberta(true)}
+            className="focus-marca inline-flex min-h-[2.75rem] items-center gap-2 rounded-xl border border-stone-200 bg-white px-3.5 text-sm font-semibold text-stone-700 shadow-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 lg:hidden"
           >
-            Limpar filtros
+            <Filter size={15} aria-hidden />
+            Filtros
+            {numeroDeFiltros > 0 && (
+              <span className="rounded-full bg-brand px-1.5 py-0.5 text-[0.625rem] font-bold text-white">
+                {numeroDeFiltros}
+              </span>
+            )}
           </button>
-        )}
-      </div>
 
-      {filtrada.length === 0 ? (
-        <div className="mt-4">
-          <EstadoVazio
-            Icon={Briefcase}
-            titulo={lista.length === 0 ? "O diretório ainda está a começar" : "Sem resultados para estes filtros"}
-            descricao={
-              lista.length === 0
-                ? "Ainda não há contabilistas aprovados. Se és contabilista, podes ser dos primeiros."
-                : "Tenta alargar a procura, ou procura quem atenda online."
-            }
-            acao={
-              lista.length === 0 ? (
-                <Link href="/contabilistas/candidatura">
-                  <Button variant="secondary">Candidatar-me</Button>
-                </Link>
-              ) : (
-                <Button variant="secondary" onClick={limparFiltros}>Limpar filtros</Button>
-              )
-            }
+          <SelectMenu
+            id="diretorio-ordem"
+            value={filtro.ordem}
+            options={OPCOES_ORDEM}
+            onChange={(v) => mudar({ ordem: v as OrdemDoDiretorio })}
+            ariaLabel="Ordenar resultados"
+            className="w-[13.5rem]"
           />
         </div>
-      ) : (
-        <ul className="mt-4 grid gap-4 sm:grid-cols-2">
-          {filtrada.map((c) => {
-            const li = linkedin[c.userId];
-            const ligadoAoLinkedIn = Boolean(li?.ligadoEm);
-            return (
-              <li key={c.userId}>
-                <Link
-                  href={`/contabilistas/${c.slug}`}
-                  className="group relative flex h-full min-h-72 flex-col overflow-hidden rounded-4xl border border-stone-200 bg-white p-5 shadow-card transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-lift focus-marca dark:border-stone-800 dark:bg-stone-900 dark:hover:border-brand/40"
-                >
-                  <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-brand/5 blur-2xl transition-opacity group-hover:opacity-100 dark:bg-brand/10" />
+      </div>
 
-                  <div className="relative flex items-start gap-4">
-                    <AvatarContabilista
-                      contabilistaId={c.userId}
-                      nome={c.nome}
-                      avatarUrl={li?.avatarUrl}
-                      tamanho="md"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold ${
-                          c.aceitaNovosClientes
-                            ? "bg-brand-light text-brand-dark dark:bg-brand/20 dark:text-brand-mint"
-                            : "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400"
-                        }`}>
-                          {c.aceitaNovosClientes ? "Aceita novos clientes" : "Sem vagas"}
-                        </span>
-                        {ligadoAoLinkedIn && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-[#0A66C2]/10 px-2 py-0.5 text-[0.6875rem] font-semibold text-[#0A66C2] dark:bg-[#0A66C2]/20 dark:text-blue-300">
-                            <span aria-hidden className="flex h-3.5 w-3.5 items-center justify-center rounded-[3px] bg-[#0A66C2] text-[8px] font-bold leading-none text-white">in</span>
-                            LinkedIn ligado
-                          </span>
-                        )}
-                      </div>
+      {/* `grid-cols-1` e `minmax(0,…)` não são zelo: uma grelha sem colunas
+          declaradas cria uma coluna implícita `auto`, que se dimensiona pelo
+          conteúdo máximo e arrasta a página para lá do ecrã. É assim que um
+          cartão de 394px aparece dentro de um telemóvel de 360px. */}
+      <div className="mt-4 grid grid-cols-1 gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
+        <ColunaDeFiltros
+          filtro={filtro}
+          onMudar={mudar}
+          onLimpar={limpar}
+          temFiltros={numeroDeFiltros > 0}
+        />
 
-                      <h3 className="mt-2 font-display text-2xl leading-tight text-ink transition-colors group-hover:text-brand-dark dark:text-stone-50 dark:group-hover:text-brand-mint">
-                        {c.nome}
-                      </h3>
-                      <p className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-stone-500 dark:text-stone-400">
-                        <ShieldCheck size={14} className="shrink-0 text-brand" aria-hidden />
-                        {c.occ ? `OCC n.º ${c.occ}` : "Perfil profissional aprovado"}
-                      </p>
-
-                      {(c.concelho || c.distrito) && (
-                        <p className="mt-1.5 flex items-center gap-1.5 text-sm text-stone-500 dark:text-stone-400">
-                          <MapPin size={14} className="shrink-0" aria-hidden />
-                          {[c.concelho, c.distrito].filter(Boolean).join(", ")}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {c.bio ? (
-                    <p className="relative mt-4 line-clamp-3 text-sm leading-relaxed text-stone-600 dark:text-stone-300">{c.bio}</p>
-                  ) : (
-                    <p className="relative mt-4 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
-                      {textoModalidades(c)}. Abre o perfil para conhecer a disponibilidade, formas de contacto e como iniciar o acompanhamento.
-                    </p>
-                  )}
-
-                  <div className="relative mt-4 flex flex-wrap gap-1.5">
-                    {c.especialidades.slice(0, 3).map((e) => (
-                      <span key={e} className="rounded-lg bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-600 dark:bg-stone-800 dark:text-stone-300">
-                        {e}
-                      </span>
-                    ))}
-                    {c.especialidades.length > 3 && (
-                      <span className="px-1 py-1 text-xs text-stone-400">+{c.especialidades.length - 3}</span>
+        <div className="min-w-0">
+          {estado === "erro" ? (
+            <div
+              role="alert"
+              className="rounded-4xl border border-stone-200 bg-white px-5 py-10 text-center shadow-card dark:border-stone-800 dark:bg-stone-900"
+            >
+              <Warning size={26} className="mx-auto text-alert-text" aria-hidden />
+              <p className="mt-3 font-display text-lg text-ink dark:text-stone-50">
+                Não foi possível carregar o diretório.
+              </p>
+              <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-stone-500 dark:text-stone-400">
+                Pode ter sido uma falha momentânea de ligação. Os perfis continuam lá.
+              </p>
+              <div className="mt-5 flex justify-center">
+                <Button variant="secondary" onClick={() => setTentativa((t) => t + 1)}>
+                  Tentar novamente
+                </Button>
+              </div>
+            </div>
+          ) : aLer && cartoes.length === 0 ? (
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2" aria-busy="true" aria-label="A carregar contabilistas">
+              {Array.from({ length: 4 }, (_, i) => (
+                <li key={i}><CartaoFantasma /></li>
+              ))}
+            </ul>
+          ) : cartoes.length === 0 ? (
+            <EstadoVazio
+              Icon={Briefcase}
+              titulo={semFiltros ? "O diretório ainda está a começar" : "Não encontrámos ninguém com estes filtros"}
+              descricao={
+                semFiltros
+                  ? "Ainda não há contabilistas aprovados. Se és contabilista, podes ser dos primeiros."
+                  : filtro.distrito
+                    ? "Experimenta procurar quem atende online — não depende do distrito."
+                    : "Tenta com menos filtros, ou procura por outra área de trabalho."
+              }
+              acao={
+                semFiltros ? (
+                  <Link href="/contabilistas/candidatura">
+                    <Button variant="secondary">Candidatar-me</Button>
+                  </Link>
+                ) : (
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {filtro.distrito && (
+                      <Button variant="secondary" onClick={() => mudar({ distrito: "", modalidade: "online" })}>
+                        Ver quem atende online
+                      </Button>
                     )}
-                    {c.especialidades.length === 0 && c.modalidades.includes("online") && (
-                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-600 dark:bg-stone-800 dark:text-stone-300">
-                        <Globe size={13} aria-hidden /> Online
-                      </span>
-                    )}
-                    {c.especialidades.length === 0 && c.modalidades.includes("presencial") && (
-                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-600 dark:bg-stone-800 dark:text-stone-300">
-                        <Building size={13} aria-hidden /> Presencial
-                      </span>
-                    )}
+                    <Button variant="ghost" onClick={limpar}>Limpar filtros</Button>
                   </div>
+                )
+              }
+            />
+          ) : (
+            <>
+              <ul
+                className={`grid grid-cols-1 gap-4 transition-opacity sm:grid-cols-2 ${aLer ? "opacity-60" : "opacity-100"}`}
+              >
+                {cartoes.map((c) => (
+                  <li key={c.userId}>
+                    <ContabilistaCard cartao={c} areaEmDestaque={filtro.especialidade} />
+                  </li>
+                ))}
+              </ul>
 
-                  <div className="relative mt-auto flex flex-wrap items-end justify-between gap-3 border-t border-stone-100 pt-4 dark:border-stone-800">
-                    <div className="min-w-0 text-sm">
-                      {c.precoConsultaCents > 0 && (
-                        <p className="font-semibold tabular-nums text-stone-800 dark:text-stone-100">
-                          {eurosDeCents(c.precoConsultaCents)} <span className="font-normal text-stone-400">/ consulta</span>
-                        </p>
-                      )}
-                      {c.fidelidadeAtiva && (
-                        <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-brand-dark dark:text-brand-mint">
-                          <Gift size={13} aria-hidden />
-                          {c.fidelidadeDescontoPct}% ao fim de {c.fidelidadeMeta}
-                        </p>
-                      )}
-                    </div>
+              {temMais && (
+                <div className="mt-6 flex flex-col items-center gap-2">
+                  <Button variant="secondary" onClick={carregarMais} disabled={aCarregarMais}>
+                    {aCarregarMais ? "A carregar…" : "Carregar mais"}
+                  </Button>
+                  <p className="text-xs text-stone-400 dark:text-stone-500">
+                    A mostrar {cartoes.length} de {total}
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
 
-                    <span className="ml-auto inline-flex items-center gap-1.5 text-sm font-semibold text-brand-dark dark:text-brand-mint">
-                      Ver perfil <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" aria-hidden />
-                    </span>
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <FolhaDeFiltros
+        aberta={folhaAberta}
+        onFechar={() => setFolhaAberta(false)}
+        filtro={filtro}
+        onMudar={mudar}
+        onLimpar={limpar}
+        total={total}
+        aLer={aLer}
+      />
     </>
   );
 }

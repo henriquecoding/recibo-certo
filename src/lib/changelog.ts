@@ -16,6 +16,18 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.63.0",
+    data: "2026-08-16",
+    titulo: "Encontrar um contabilista passa a ser uma procura, não uma lista",
+    itens: [
+      "A página de contabilistas foi redesenhada à volta da procura: escreves o que precisas, escolhes distrito e forma de atendimento, e os resultados aparecem logo a seguir. A explicação de como tudo funciona desceu para depois da lista — continua lá, deixou de estar à frente.",
+      "Podes refinar por área de trabalho, idioma, quem aceita novos clientes e sinais de confiança (inscrição na Ordem confirmada, LinkedIn ligado). No telemóvel, os filtros abrem numa folha que sobe de baixo, com o número de resultados sempre à vista.",
+      "Os filtros ficam no endereço da página: podes partilhar a procura, atualizar sem perder nada e voltar de um perfil para a lista onde estavas.",
+      "Os cartões passam a mostrar o título profissional, as áreas de trabalho e como se atende. Sobre a inscrição na Ordem, dizem agora a verdade inteira: «informada» quando é um número escrito pelo próprio e «verificada» só depois de confirmada por nós.",
+      "A lista deixou de ser carregada de uma vez para ser filtrada no teu telemóvel — vem já filtrada e de 24 em 24. Menos dados a viajar, menos espera.",
+    ],
+  },
+  {
     version: "2.62.1",
     data: "2026-08-16",
     titulo: "O diretório volta a ler a fidelidade da regra em vigor",

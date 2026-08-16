@@ -15,16 +15,25 @@ export default function AvatarContabilista({
   contabilistaId,
   nome,
   avatarUrl,
+  temAvatar,
   tamanho = "md",
 }: {
   contabilistaId: string;
   nome: string;
   avatarUrl?: string | null;
+  /**
+   * A resposta já dada a «há fotografia?».
+   *
+   * O diretório não recebe a URL assinada do LinkedIn — resolve a
+   * existência e a validade na camada de dados e manda só o sim/não. Quem
+   * tiver a URL à mão continua a passar `avatarUrl` e nada muda.
+   */
+  temAvatar?: boolean;
   tamanho?: TamanhoAvatar;
 }) {
   const [falhou, setFalhou] = useState(false);
 
-  useEffect(() => { setFalhou(false); }, [avatarUrl, contabilistaId]);
+  useEffect(() => { setFalhou(false); }, [avatarUrl, temAvatar, contabilistaId]);
 
   const iniciais = nome
     .split(/\s+/)
@@ -33,8 +42,7 @@ export default function AvatarContabilista({
     .map((parte) => parte[0]?.toUpperCase())
     .join("");
 
-  const disponivel = Boolean(avatarUrl)
-    && !avatarLinkedInExpirou(avatarUrl)
+  const disponivel = (temAvatar ?? (Boolean(avatarUrl) && !avatarLinkedInExpirou(avatarUrl)))
     && !falhou;
   const tamanhoClasse = CLASSES_TAMANHO[tamanho];
 
