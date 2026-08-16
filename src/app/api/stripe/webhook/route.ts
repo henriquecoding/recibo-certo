@@ -97,8 +97,19 @@ async function processEvent(event: Stripe.Event): Promise<void> {
 export async function POST(req: Request) {
   const signature = req.headers.get("stripe-signature");
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!signature || !secret) {
-    return NextResponse.json({ erro: "Assinatura ou secret em falta." }, { status: 400 });
+
+  // Separadas pela mesma razão que em `connect-webhook`: um pedido sem
+  // assinatura é ruído; um secret em falta é o webhook inteiro parado, e
+  // tem de se ver nos registos sem ninguém ter de adivinhar.
+  if (!secret) {
+    console.error(
+      "[stripe/webhook] STRIPE_WEBHOOK_SECRET não está definido. " +
+        "Nenhum evento da plataforma é processado.",
+    );
+    return NextResponse.json({ erro: "Webhook não configurado." }, { status: 500 });
+  }
+  if (!signature) {
+    return NextResponse.json({ erro: "Assinatura em falta." }, { status: 400 });
   }
 
   let event: Stripe.Event;

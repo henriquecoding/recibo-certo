@@ -64,8 +64,27 @@ async function processar(event: Stripe.Event): Promise<void> {
 export async function POST(req: Request) {
   const assinatura = req.headers.get("stripe-signature");
   const segredo = process.env.STRIPE_CONNECT_WEBHOOK_SECRET;
-  if (!assinatura || !segredo) {
-    return NextResponse.json({ erro: "Assinatura ou secret em falta." }, { status: 400 });
+
+  // ⚠️ As duas recusas estavam na mesma linha, e a mesma frase saía nos dois
+  // casos. Parece um pormenor e não é: um pedido sem assinatura é ruído da
+  // internet, e um secret em falta é o sistema de recebimentos INTEIRO
+  // parado — `account.updated` nunca é processado, `charges_enabled` nunca
+  // sobe, e todos os contabilistas ficam em «a Stripe está a verificar»
+  // para sempre.
+  //
+  // Com a mesma mensagem para os dois, a única forma de distinguir era
+  // enviar uma assinatura falsa e ver se a resposta mudava. Foi assim que
+  // isto se encontrou, e não devia ter sido preciso.
+  if (!segredo) {
+    console.error(
+      "[stripe/connect-webhook] STRIPE_CONNECT_WEBHOOK_SECRET não está definido. " +
+        "Nenhum evento de conta ligada é processado: as contas dos contabilistas " +
+        "nunca passam a poder cobrar e os pagamentos nunca são dados por pagos.",
+    );
+    return NextResponse.json({ erro: "Webhook não configurado." }, { status: 500 });
+  }
+  if (!assinatura) {
+    return NextResponse.json({ erro: "Assinatura em falta." }, { status: 400 });
   }
 
   let event: Stripe.Event;
