@@ -25,14 +25,33 @@ export const COPY_BASE_DA_COMISSAO =
 /**
  * Quem cobra, e a quem.
  *
- * O Recibo Certo FATURA a taxa ao contabilista. Não retém nada do que o
- * cliente paga, porque não é intermediário financeiro entre os dois (§10
- * de `docs/PLATAFORMA-CONTABILISTAS.md`). A diferença não é de
- * contabilidade, é de licença: retirar uma percentagem do dinheiro de um
- * cliente antes de o entregar a outro é outra atividade.
+ * ── O QUE MUDOU, e o que continua igual
+ *
+ * A versão anterior dizia: «A taxa é faturada a ti pelo Recibo Certo. O
+ * cliente paga-te diretamente — a plataforma não retém nem processa esse
+ * pagamento.» O raciocínio por trás continua a valer inteiro: *retirar uma
+ * percentagem do dinheiro de um cliente antes de o entregar a outro é
+ * outra atividade.*
+ *
+ * O cliente passou a poder pagar pelo Recibo Certo. A forma escolhida foi
+ * a única que não atravessa aquela linha: **cobranças diretas** (Stripe
+ * Connect direct charges).
+ *
+ *   · a cobrança nasce na conta Stripe DO CONTABILISTA;
+ *   · ele é o comerciante de registo — é o nome dele no extrato do cliente;
+ *   · o dinheiro NUNCA entra no saldo do Recibo Certo, vai direto para o
+ *     saldo dele;
+ *   · a comissão sai como `application_fee`, que a Stripe encaminha.
+ *
+ * Ou seja: continua a ser verdade que o cliente paga ao contabilista e que
+ * a plataforma não retém o dinheiro de ninguém. O que deixou de ser
+ * verdade — e por isso mudou aqui — é que a plataforma não *processa* o
+ * pagamento. Processa: é ela que abre o checkout. Dizer o contrário passou
+ * a ser falso, e uma frase falsa sobre dinheiro é pior do que uma frase
+ * incómoda.
  */
 export const COPY_QUEM_FATURA =
-  "A taxa é faturada a ti pelo Recibo Certo. O cliente paga-te diretamente — a plataforma não retém nem processa esse pagamento.";
+  "O cliente paga-te diretamente: a cobrança nasce na tua conta Stripe e é o teu nome que aparece no extrato dele. A comissão é retida nesse momento — o dinheiro nunca passa pela conta do Recibo Certo.";
 
 /**
  * «Elegível» é uma palavra que exclui, e quem a lê tem direito a saber o
@@ -59,12 +78,19 @@ export const DESBLOQUEIO_NAO_COMPRA: readonly string[] = [
 /**
  * O estado da cobrança nesta etapa.
  *
- * O desbloqueio está desenhado e o preço é real, mas o Checkout ainda não
- * está ligado. Um botão que aceita o clique e não cobra nada seria pior do
- * que um botão que explica: a pessoa ficava à espera de uma fatura que não
- * vinha, e a acreditar que já tinha o patamar.
+ * Ficou ligado. O texto mantém-se porque a bandeira do lado do servidor
+ * (`accountant_tier_purchase`) continua a poder ser desligada sem tocar em
+ * código — e quando o for, é isto que a pessoa lê em vez de um botão que
+ * aceita o clique e não cobra nada.
  */
 export const COPY_DESBLOQUEIO_INDISPONIVEL =
-  "O desbloqueio pago ainda não está disponível. Assim que a cobrança abrir, avisamos-te — até lá, os patamares sobem por XP e clientes elegíveis.";
+  "O desbloqueio pago está temporariamente indisponível. Os patamares continuam a subir por XP e clientes elegíveis.";
 
-export const DESBLOQUEIO_PAGO_ATIVO = false;
+/**
+ * ⚠️ Isto é só o que a INTERFACE mostra. Quem decide mesmo é a bandeira
+ * `accountant_tier_purchase` na base de dados: `criar_intencao_desbloqueio`
+ * recusa com `compra_indisponivel` se ela estiver desligada, aconteça o
+ * que acontecer aqui. Uma constante de front-end nunca pode ser a única
+ * guarda de uma cobrança.
+ */
+export const DESBLOQUEIO_PAGO_ATIVO = true;

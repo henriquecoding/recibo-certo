@@ -103,7 +103,7 @@ function iniciais(nome: string): string {
 
 const LINHA = "flex items-start gap-2.5 py-1.5";
 const SUB = "truncate text-[0.6875rem] text-stone-400";
-const TITULO_LINHA = "truncate text-xs font-medium text-stone-700 dark:text-stone-200";
+const TITULO_LINHA = "truncate text-xs font-medium text-stone-700";
 
 function Contagem({ n, tom = "brand" }: { n: number; tom?: "brand" | "alert" }) {
   return (
@@ -200,7 +200,7 @@ function AgendaHoje({ densidade, broker, href }: PropsDoWidget) {
                 </span>
               )}
             </span>
-            <span className="shrink-0 rounded-md bg-stone-100 px-1.5 py-0.5 text-[0.625rem] font-semibold text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+            <span className="shrink-0 rounded-md bg-stone-100 px-1.5 py-0.5 text-[0.625rem] font-semibold text-stone-500">
               {ROTULO_DO_ESTADO[a.estado] ?? a.estado}
             </span>
           </li>
@@ -309,7 +309,7 @@ function PrazosProximos({ densidade, broker }: PropsDoWidget) {
               <span className={`block ${TITULO_LINHA}`}>{p.titulo}</span>
               {densidade !== "compact" && <span className={`block ${SUB}`}>{p.motivo}</span>}
             </span>
-            <span className="shrink-0 rounded-full bg-stone-100 px-2 py-0.5 text-[0.625rem] font-semibold tabular-nums text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+            <span className="shrink-0 rounded-full bg-stone-100 px-2 py-0.5 text-[0.625rem] font-semibold tabular-nums text-stone-500">
               {dias <= 0 ? "hoje" : dias === 1 ? "1 dia" : `${dias} dias`}
             </span>
           </li>
@@ -579,7 +579,7 @@ function CentroAvisos({ densidade, broker, href }: PropsDoWidget) {
             {c.rotulo}
           </p>
           <p className="mt-0.5 truncate text-xs font-semibold text-ink">{c.titulo}</p>
-          <p className="truncate text-[0.6875rem] text-stone-500 dark:text-stone-400">{c.corpo}</p>
+          <p className="truncate text-[0.6875rem] text-stone-500">{c.corpo}</p>
           <Link
             href={href(c.destino)}
             className="focus-marca mt-1 inline-flex items-center gap-1 text-[0.625rem] font-bold text-brand-dark hover:underline dark:text-brand-mint"
@@ -658,9 +658,9 @@ function EstadoTrabalho({ densidade, broker, href }: PropsDoWidget) {
                 {mostradas.map((t) => (
                   <li
                     key={t.id}
-                    className="rounded-lg border border-stone-200/70 bg-white px-1.5 py-1 dark:border-stone-800 dark:bg-stone-900"
+                    className="rounded-lg border border-stone-200/70 bg-white px-1.5 py-1"
                   >
-                    <span className="block truncate text-[0.6875rem] font-medium text-stone-700 dark:text-stone-200">
+                    <span className="block truncate text-[0.6875rem] font-medium text-stone-700">
                       {t.titulo}
                     </span>
                     {nomeDe(t) && (
@@ -837,7 +837,7 @@ function ResumoPorCliente({ densidade, broker, href }: PropsDoWidget) {
             const nConsultas = (agenda ?? []).filter((a: Agendamento) => a.clienteId === v.clienteId).length;
             return (
               <tr key={v.id}>
-                <td className="max-w-[10rem] truncate py-1.5 pr-2 text-xs font-medium text-stone-700 dark:text-stone-200">
+                <td className="max-w-[10rem] truncate py-1.5 pr-2 text-xs font-medium text-stone-700">
                   {tratamentoDoCliente(v)}
                 </td>
                 <td className="py-1.5 pr-2 text-right text-xs tabular-nums text-stone-500">{nTarefas}</td>
@@ -884,7 +884,7 @@ function Fidelidade({ broker, href }: PropsDoWidget) {
                 {c.p.faltam === 0 ? "completo" : `faltam ${c.p.faltam}`}
               </span>
             </div>
-            <div className="mt-1 h-1 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
+            <div className="mt-1 h-1 overflow-hidden rounded-full bg-stone-100">
               <div className="h-full rounded-full bg-brand" style={{ width: `${Math.round(c.p.fracao * 100)}%` }} />
             </div>
           </li>
@@ -923,7 +923,7 @@ function ProgressaoComissao({ broker, href }: PropsDoWidget) {
 
       {v.proximo && (
         <>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-stone-100">
             <div
               className="h-full rounded-full bg-brand"
               style={{ width: `${Math.round(v.progressoNoIntervalo * 100)}%` }}
@@ -973,6 +973,13 @@ export default function CorpoDoModulo({
   colSpan: number;
   rowSpan: number;
   broker: Broker;
+  /**
+   * Não é lida aqui — existe para o `memo` de `GrelhaEdicao` ver que algo
+   * mudou. Os widgets leem o broker imperativamente e por isso nenhuma
+   * outra prop se mexe quando os dados chegam. Removê-la volta a congelar
+   * os módulos em modo de edição.
+   */
+  versao?: number;
   href: (destino: string) => string;
 }) {
   const Corpo = CORPOS[type];

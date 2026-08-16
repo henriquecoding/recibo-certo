@@ -298,9 +298,15 @@ export function validarLayout(entrada: unknown): ResultadoValidacao {
 
   // Sobreposições: resolve-as em vez de recusar o layout inteiro. Um
   // painel que não abre é pior do que um painel arrumado.
-  const antes = items.map((i) => ({ ...i.desktop }));
+  //
+  // ⚠️ A comparação é por `instanceId` e NÃO por índice. `compactarVertical`
+  // devolve o array ORDENADO por (row, col): comparar `arrumados[i]` com
+  // `antes[i]` põe lado a lado módulos que não são o mesmo módulo, e
+  // qualquer layout guardado fora dessa ordem era assinalado como
+  // sobreposto sem ter uma única célula em comum.
+  const antes = new Map(items.map((i) => [i.instanceId, i.desktop.row]));
   const arrumados = compactarVertical(items);
-  if (arrumados.some((i, idx) => i.desktop.row !== antes[idx]?.row)) {
+  if (arrumados.some((i) => antes.get(i.instanceId) !== i.desktop.row)) {
     erros.push({ codigo: "modulos_sobrepostos" });
   }
 

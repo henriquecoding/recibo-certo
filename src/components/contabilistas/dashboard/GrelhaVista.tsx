@@ -103,7 +103,13 @@ function Celula({
     >
       <MolduraModulo type={item.type} tag={item.tag} placement={item.desktop} edicao={false}>
         {erro && erro.estado === "erro" ? (
-          <CorpoErro texto={erro.mensagem} />
+          <CorpoErro
+            texto={erro.mensagem}
+            onRepetir={() => {
+              pedido.current = true;
+              void broker.revalidar(def.dominios);
+            }}
+          />
         ) : aCarregar ? (
           <CorpoACarregar linhas={item.desktop.rowSpan >= 5 ? 4 : 3} />
         ) : (

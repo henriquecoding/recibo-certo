@@ -205,6 +205,22 @@ export const CONJUNTOS: Conjunto[] = [
     retido: "As compras de patamar ficam retidas pelo prazo legal de conservação de documentos de faturação. Deixam de estar ligadas ao teu perfil, mas o registo do pagamento não é apagável a pedido.",
   },
   {
+    id: "recebimentos", grupo: "profissional", soSe: "contabilista",
+    titulo: "Recebimentos e conta Stripe",
+    descricao:
+      "A ligação à tua conta Stripe e o registo das consultas que os teus clientes te pagaram pelo Recibo Certo. Os dados bancários e de identificação vivem na Stripe, não aqui — o que guardamos são valores, datas e estados.",
+    tabelas: [
+      { nome: "pagamentos", posse: { por: "coluna", coluna: "contabilista_id" } },
+      { nome: "contabilista_stripe", posse: { por: "coluna", coluna: "contabilista_id" } },
+    ],
+    // Um pagamento é um registo de uma transação real entre duas pessoas,
+    // e a fatura é do contabilista. Apagar a conta não pode apagar a prova
+    // de que o cliente pagou — nem para nós, nem para ele. Desligar a
+    // conta Stripe faz-se na Stripe, e é lá que os dados dela vivem.
+    retido:
+      "O histórico de pagamentos fica retido pelo prazo legal de conservação de documentos de faturação. Deixa de estar ligado ao teu perfil, mas o registo de uma transação entre ti e um cliente não é apagável a pedido de um dos dois.",
+  },
+  {
     id: "fidelidade-regras", grupo: "profissional", soSe: "contabilista",
     titulo: "Regras de fidelidade que publicaste",
     descricao: "As versões das regras do cartão que definiste ao longo do tempo. Cada uma fica ligada aos cartões que nasceram com ela.",

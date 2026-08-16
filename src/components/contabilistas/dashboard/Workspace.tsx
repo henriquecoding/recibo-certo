@@ -312,7 +312,7 @@ export default function Workspace({
 
   if (vistas.length === 0 || !ativa || !layout) {
     return (
-      <div className="rounded-4xl border border-stone-200 bg-white p-6 text-center shadow-card dark:border-stone-800">
+      <div className="rounded-4xl border border-stone-200 bg-white p-6 text-center shadow-card">
         <LayoutGrid size={22} className="mx-auto text-stone-300" aria-hidden />
         <h2 className="mt-3 font-display text-xl text-ink">Ainda não tens vistas neste painel</h2>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-stone-500">
@@ -322,10 +322,20 @@ export default function Workspace({
         <div className="mt-5 flex justify-center">
           <Button
             onClick={() => {
-              void listarVistas(contabilistaId).then((v) => {
-                setVistas(v);
-                setAtivaId(v.find((x) => x.principal)?.id ?? v[0]?.id ?? null);
-              });
+              // Este estado só é alcançável quando `listarVistas` JÁ falhou
+              // — a versão de `fonte/dashboard` cria as omissões sozinha
+              // quando a lista vem vazia. Sem `catch`, o botão repetia a
+              // mesma chamada, rejeitava em silêncio e nada acontecia.
+              void listarVistas(contabilistaId)
+                .then((v) => {
+                  setVistas(v);
+                  setAtivaId(v.find((x) => x.principal)?.id ?? v[0]?.id ?? null);
+                })
+                .catch((e: unknown) => {
+                  avisos.erro("Não foi possível criar as vistas.", {
+                    detalhe: e instanceof Error ? e.message : undefined,
+                  });
+                });
             }}
           >
             Criar as vistas de partida
@@ -368,7 +378,28 @@ export default function Workspace({
           aparece na vista ativa: gerir a que não se está a ver é pedir
           enganos. Em edição desaparece — mexer nas vistas a meio de um
           rascunho por gravar perdia o rascunho. */}
-      <div className={styles.vistas} role="tablist" aria-label="Vistas do painel">
+      {/* O padrão ARIA completo: `aria-controls` a apontar para a grelha,
+          `tabIndex` rotativo (só o ativo entra na tabulação) e setas entre
+          separadores. Não usa o componente `<Separadores>` porque cada
+          separador tem um menu `•••` irmão, que ali não cabe. */}
+      <div
+        className={styles.vistas}
+        role="tablist"
+        aria-label="Vistas do painel"
+        onKeyDown={(e) => {
+          if (edicao) return;
+          if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(e.key)) return;
+          e.preventDefault();
+          const i = vistas.findIndex((v) => v.id === ativaId);
+          const j =
+            e.key === "Home" ? 0
+            : e.key === "End" ? vistas.length - 1
+            : e.key === "ArrowRight" ? (i + 1) % vistas.length
+            : (i - 1 + vistas.length) % vistas.length;
+          const alvo = vistas[j];
+          if (alvo) setAtivaId(alvo.id);
+        }}
+      >
         {vistas.map((v) => {
           const ativaAqui = v.id === ativaId;
           return (
@@ -380,6 +411,8 @@ export default function Workspace({
                 type="button"
                 role="tab"
                 aria-selected={ativaAqui}
+                aria-controls="workspace-grelha"
+                tabIndex={ativaAqui ? 0 : -1}
                 onClick={() => {
                   if (edicao) return;
                   setAtivaId(v.id);
@@ -462,7 +495,7 @@ export default function Workspace({
       </div>
 
       <div className={edicao && biblioteca ? styles.comBiblioteca : undefined}>
-        <div className="min-w-0">
+        <div className="min-w-0" id="workspace-grelha" role="tabpanel" tabIndex={-1}>
           {edicao ? (
             <GrelhaEdicao
               layout={layout}

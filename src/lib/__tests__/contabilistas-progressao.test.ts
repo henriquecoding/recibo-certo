@@ -232,21 +232,52 @@ describe("o que a interface tem de dizer sobre dinheiro", () => {
     expect(COPY_BASE_DA_COMISSAO).toMatch(/consultas realizadas/i);
   });
 
-  it("diz quem fatura, e que não retém dinheiro de terceiros", () => {
-    // §10 do plano: o Recibo Certo não é intermediário financeiro entre
-    // cliente e contabilista. Afirmar o contrário seria afirmar uma
-    // atividade que não exerce.
-    expect(COPY_QUEM_FATURA).toMatch(/fatura/i);
-    expect(COPY_QUEM_FATURA).toMatch(/não ret[ée]m/i);
+  it("diz quem recebe o dinheiro, e que a plataforma não fica com ele", () => {
+    // ── MUDANÇA DE MODELO, deliberada.
+    //
+    // O cliente passou a poder pagar PELO Recibo Certo. A forma escolhida
+    // foi cobranças diretas (Stripe Connect direct charges), que é a única
+    // que não atravessa a linha da §10: a cobrança nasce na conta do
+    // contabilista, ele é o comerciante, e o dinheiro nunca entra no saldo
+    // da plataforma — a comissão sai como `application_fee`.
+    //
+    // Por isso o que se exige mudou. «Não processa» deixou de ser verdade
+    // (processa: abre o checkout) e uma frase falsa sobre dinheiro é pior
+    // do que uma frase incómoda. O que TEM de continuar lá é o essencial:
+    // quem recebe, e que a plataforma não fica com o dinheiro de ninguém.
     expect(COPY_QUEM_FATURA).toMatch(/paga-te diretamente/i);
+    expect(COPY_QUEM_FATURA).toMatch(/tua conta Stripe/i);
+    expect(COPY_QUEM_FATURA).toMatch(/nunca passa pela conta do Recibo Certo/i);
+
+    // E não pode voltar a dizer que a plataforma retém o dinheiro antes de
+    // o entregar: isso seria descrever a atividade que ela não exerce.
+    expect(COPY_QUEM_FATURA).not.toMatch(/ret[ée]m o (teu|seu) dinheiro/i);
   });
 
   it("diz o que «elegível» exclui", () => {
     expect(COPY_ELEGIBILIDADE).toMatch(/Recibo Certo/);
   });
 
-  it("a cobrança está desligada, e o código di-lo", () => {
-    expect(DESBLOQUEIO_PAGO_ATIVO).toBe(false);
+  it("a cobrança está ligada, mas nunca é a constante a decidir", () => {
+    // A bandeira do front-end passou a `true`. O que este teste protege
+    // agora é a coisa que importa: ela NÃO é a guarda.
+    //
+    // Quem decide é `accountant_tier_purchase` na base de dados —
+    // `criar_intencao_desbloqueio` recusa com `compra_indisponivel` se
+    // estiver desligada, aconteça o que acontecer no browser. Uma
+    // constante de interface nunca pode ser a única coisa entre uma
+    // pessoa e uma cobrança.
+    expect(DESBLOQUEIO_PAGO_ATIVO).toBe(true);
+
+    // `ler` e não `lerCodigo`: a explicação de quem manda mesmo está no
+    // comentário, e é lá que tem de continuar a estar.
+    const fronteiras = ler("src", "lib", "contabilistas", "progressao", "fronteiras.ts");
+    expect(fronteiras).toMatch(/accountant_tier_purchase/);
+
+    // E a rota tem mesmo de passar pela RPC que lê a bandeira.
+    const rota = lerCodigo("src", "app", "api", "contabilistas", "desbloqueio", "route.ts");
+    expect(rota).toMatch(/criarIntencaoComoUtilizador/);
+    expect(rota).toMatch(/compra_indisponivel/);
   });
 
   it("o ecrã nunca diz que a comissão aumenta", () => {

@@ -207,7 +207,7 @@ export function CorpoACarregar({ linhas = 3 }: { linhas?: number }) {
   return (
     <div className="space-y-2" aria-busy="true">
       {Array.from({ length: linhas }, (_, i) => (
-        <div key={i} className="h-8 animate-pulse rounded-lg bg-stone-100 dark:bg-stone-800" />
+        <div key={i} className="h-8 animate-pulse rounded-lg bg-stone-100" />
       ))}
     </div>
   );
@@ -221,11 +221,30 @@ export function CorpoVazio({ texto }: { texto: string }) {
   );
 }
 
-export function CorpoErro({ texto }: { texto: string }) {
+/**
+ * Um módulo que falhou.
+ *
+ * Tem de dar uma saída. Sem `onRepetir` isto era um beco: o broker guardava
+ * a promessa falhada para sempre e o cartão ficava em erro até se mudar de
+ * rota. A mensagem é a legível — o texto cru do Postgres vai para a consola,
+ * não para dentro de um cartão do painel.
+ */
+export function CorpoErro({
+  texto, onRepetir,
+}: { texto: string; onRepetir?: () => void }) {
   return (
-    <p role="status" className="flex h-full items-center justify-center px-2 text-center text-xs leading-relaxed text-clay-text">
-      {texto}
-    </p>
+    <div role="status" className="flex h-full flex-col items-center justify-center gap-2 px-2 text-center">
+      <p className="text-xs leading-relaxed text-clay-text">{texto}</p>
+      {onRepetir && (
+        <button
+          type="button"
+          onClick={onRepetir}
+          className="focus-marca inline-flex min-h-7 items-center rounded-lg border border-stone-200 px-2.5 text-[0.6875rem] font-semibold text-stone-600 transition-colors hover:bg-stone-100"
+        >
+          Tentar outra vez
+        </button>
+      )}
+    </div>
   );
 }
 

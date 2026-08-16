@@ -30,6 +30,13 @@ import type {
   Agendamento, Contabilista, EstadoAgendamento, Partilha, Vinculo,
 } from "../tipos";
 import type { EstadoProgressao } from "../progressao/catalogo";
+import { resumirClientes } from "../resumo";
+import type { ResumoClienteLido } from "../dados";
+import type {
+  ConsultaPorPagar as ConsultaPorPagarLida,
+  EstadoRecebimentos,
+  Pagamento as PagamentoLido,
+} from "../pagamentos";
 import type { ImpactoDaRegra, RegraLida, ResultadoPublicacao } from "../fidelidade/dados";
 import { validarLayout } from "../dashboard/layout";
 import { erroQueImpedeGravar } from "../dashboard/validacao";
@@ -115,6 +122,42 @@ export async function meusClientes(): Promise<Vinculo[]> {
   return copiar(
     [...bd().vinculos].sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
   );
+}
+
+/**
+ * O resumo por cliente, derivado em memória.
+ *
+ * No painel real isto vem agregado do servidor pela RPC
+ * `resumo_clientes_do_contabilista`. Aqui usa-se `resumirClientes` — a
+ * MESMA função pura onde as regras estão escritas — para a demonstração
+ * continuar a provar alguma coisa sobre o real em vez de ter uma segunda
+ * definição de «última consulta».
+ */
+export async function resumoDeClientes(): Promise<ResumoClienteLido[]> {
+  const b = bd();
+  const cartoes: Record<string, { carimbos: number; meta: number; descontoPct: number; precoBaseCents: number }> = {};
+  for (const c of b.cartoes) {
+    if (c.completo) continue;
+    cartoes[c.clienteId] = {
+      carimbos: c.carimbos, meta: c.meta,
+      descontoPct: c.descontoPct, precoBaseCents: c.precoBaseCents,
+    };
+  }
+
+  return resumirClientes({
+    vinculos: b.vinculos,
+    agendamentos: b.agendamentos,
+    partilhas: b.partilhas,
+    cartoes,
+  }).map((r) => ({
+    vinculo: r.vinculo,
+    consultasRealizadas: r.consultasRealizadas,
+    ultima: r.ultima,
+    proxima: r.proxima,
+    partilhas: r.partilhas,
+    partilhasPorLer: r.partilhasPorLer,
+    cartao: r.cartao,
+  }));
 }
 
 /**
@@ -386,6 +429,65 @@ export async function cartoesAbertos(clienteId?: string): Promise<CartaoAberto[]
     }));
 }
 
+// ─── Pagamentos ────────────────────────────────────────────────────────
+//
+// A demonstração mostra o ESTADO — uma conta ativa, pagamentos recebidos,
+// uma consulta por pagar — para o ecrã se poder validar. Nada aqui fala
+// com a Stripe: abrir um checkout verdadeiro a partir de um painel que diz
+// «dados inventados» seria cobrar dinheiro a sério por engano.
+
+export async function estadoDosRecebimentos(): Promise<EstadoRecebimentos> {
+  return {
+    ligada: true, podeCobrar: true, podeReceber: true,
+    dadosSubmetidos: true, requisitos: [],
+  };
+}
+
+export async function listarPagamentos(): Promise<PagamentoLido[]> {
+  const b = bd();
+  // Deriva das consultas realizadas com valor: sem uma segunda lista para
+  // manter em dia, e com números que batem certo com o resto do painel.
+  return b.agendamentos
+    .filter((a) => a.estado === "realizada")
+    .slice(0, 6)
+    .map((a, i) => {
+      const bruto = 6900 + i * 1000;
+      const comissaoBps = 900;
+      return {
+        id: `demo-pag-${a.id}`,
+        contabilistaId: b.ficha.userId,
+        clienteId: a.clienteId,
+        agendamentoId: a.id,
+        momento: (i % 2 === 0 ? "depois" : "no_pedido") as "depois" | "no_pedido",
+        estado: (i === 0 ? "pendente" : "pago") as PagamentoLido["estado"],
+        brutoCents: bruto,
+        descontoCents: 0,
+        liquidoCents: bruto,
+        comissaoCents: Math.round((bruto * comissaoBps) / 10000),
+        comissaoBps,
+        descricao: "Consulta",
+        criadoEm: a.inicio,
+        pagoEm: i === 0 ? null : a.inicio,
+      };
+    });
+}
+
+export async function consultasPorPagar(): Promise<ConsultaPorPagarLida[]> {
+  const b = bd();
+  const a = b.agendamentos.find((x) => x.estado === "realizada");
+  if (!a) return [];
+  return [{
+    agendamentoId: a.id,
+    contabilistaId: b.ficha.userId,
+    clienteId: a.clienteId,
+    inicio: a.inicio,
+    valorCents: 6900,
+    descricao: "Acompanhamento mensal",
+    pagamentoId: null,
+    pagamentoEstado: null,
+  }];
+}
+
 export async function meusCupoes(): Promise<CupaoDemo[]> {
   return copiar(
     [...bd().cupoes].sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
@@ -505,6 +607,7 @@ export async function criarTipoConsulta(t: NovoTipoConsulta): Promise<{ erro?: s
     descricao: t.descricao?.trim().slice(0, 300) || null,
     duracaoMin: t.duracaoMin,
     precoCents: Math.max(0, Math.round(t.precoCents)),
+    pagamento: t.pagamento ?? "depois",
     ativo: true,
     ordem: d.tiposConsulta.length + 1,
   });

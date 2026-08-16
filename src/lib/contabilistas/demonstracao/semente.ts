@@ -867,6 +867,9 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       descricao: "Percebo a tua situação e digo-te o que faz sentido fazer.",
       duracaoMin: 30,
       precoCents: 0,
+      // Grátis e sem cobrança: o caso que obriga o ecrã a saber que zero
+      // não é um campo por preencher.
+      pagamento: "sem_pagamento",
       ativo: true,
       ordem: 1,
     },
@@ -877,6 +880,8 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       descricao: null,
       duracaoMin: 45,
       precoCents: 4900,
+      // Pré-paga: é o caso em que a consulta só nasce depois da Stripe.
+      pagamento: "no_pedido",
       ativo: true,
       ordem: 2,
     },
@@ -887,6 +892,7 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       descricao: "Contabilidade corrente, obrigações e prazos.",
       duracaoMin: 60,
       precoCents: 8900,
+      pagamento: "depois",
       ativo: true,
       ordem: 3,
     },
@@ -897,6 +903,7 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       descricao: null,
       duracaoMin: 60,
       precoCents: 6900,
+      pagamento: "depois",
       ativo: true,
       ordem: 4,
     },

@@ -32,6 +32,14 @@ import Button from "@/components/ui/Button";
 import { useAvisos } from "@/components/ui/Avisos";
 import { useConfirmar, type PedidoConfirmacao } from "@/components/ui/Confirmar";
 import { Calendar, Plus, Trash } from "@/components/ui/Icons";
+import Separadores, { PainelDoSeparador } from "@/components/contabilistas/Separadores";
+import { usarRascunhoSujo } from "@/components/contabilistas/usarRascunhoSujo";
+
+const ABAS_AGENDA = [
+  { id: "semana" as const, rotulo: "Semana" },
+  { id: "mes" as const, rotulo: "Mês" },
+  { id: "tipo" as const, rotulo: "Semana-tipo" },
+];
 
 const ROTULO_ESTADO: Record<EstadoAgendamento, { texto: string; tom: "brand" | "alert" | "neutral" | "danger" }> = {
   pedido: { texto: "Por confirmar", tom: "alert" },
@@ -193,41 +201,44 @@ export default function AgendaPage() {
       {/* Semana e mês respondem a perguntas diferentes: a semana a «o que
           tenho na quinta às três?», o mês a «como está o mês?». Não é a
           mesma vista com mais dias, e por isso são dois separadores. */}
-      <div role="tablist" aria-label="Secções da agenda" className="-mx-1 flex gap-1.5 overflow-x-auto px-1">
-        {([["semana", "Semana"], ["mes", "Mês"], ["tipo", "Semana-tipo"]] as const).map(([id, txt]) => (
-          <button
-            key={id}
-            role="tab"
-            aria-selected={aba === id}
-            onClick={() => setAba(id)}
-            className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
-              aba === id ? "bg-brand text-white" : "bg-white text-stone-600 hover:bg-stone-100"
-            }`}
-          >
-            {txt}
-          </button>
-        ))}
-      </div>
+      <Separadores
+        itens={ABAS_AGENDA}
+        ativo={aba}
+        onEscolher={setAba}
+        etiqueta="Secções da agenda"
+        painelId="agenda-painel"
+      />
 
-      {aba === "semana" || aba === "mes" ? (
-        agendamentos.length === 0 ? (
-          <EstadoVazio
-            Icon={Calendar}
-            titulo="Ainda não há consultas"
-            descricao="Os teus clientes marcam a partir do teu perfil público. Define primeiro a semana-tipo para haver horários livres."
-          />
-        ) : aba === "mes" ? (
-          <VistaMes agendamentos={agendamentos} onAbrir={(a) => setAberta(a)} />
+      <PainelDoSeparador id="agenda-painel">
+        {aba === "semana" || aba === "mes" ? (
+          // ⚠️ O estado vazio não pode substituir a grelha: um contabilista
+          // que já definiu a semana-tipo e ainda não tem marcações precisa
+          // de VER os horários que publicou. Antes, sem consultas, tanto a
+          // semana como o mês desapareciam por completo.
+          <>
+            {agendamentos.length === 0 && (
+              <div className="mb-4">
+                <EstadoVazio
+                  Icon={Calendar}
+                  titulo="Ainda não há consultas marcadas"
+                  descricao="Os teus clientes marcam a partir do teu perfil público. Define a semana-tipo para haver horários livres."
+                />
+              </div>
+            )}
+            {aba === "mes" ? (
+              <VistaMes agendamentos={agendamentos} onAbrir={(a) => setAberta(a)} />
+            ) : (
+              <GrelhaSemanal
+                agendamentos={agendamentos}
+                ocupado={ocupado}
+                onAbrir={(a) => setAberta(a)}
+              />
+            )}
+          </>
         ) : (
-          <GrelhaSemanal
-            agendamentos={agendamentos}
-            ocupado={ocupado}
-            onAbrir={(a) => setAberta(a)}
-          />
-        )
-      ) : (
-        <SemanaTipo contabilistaId={ficha.userId} duracaoOmissao={ficha.duracaoConsultaMin} />
-      )}
+          <SemanaTipo contabilistaId={ficha.userId} duracaoOmissao={ficha.duracaoConsultaMin} />
+        )}
+      </PainelDoSeparador>
 
       {/* A folha da consulta escolhida. As perguntas antes do irreversível
           continuam em `mudarEstado` — a folha só pede a ação. */}
@@ -273,6 +284,11 @@ function SemanaTipo({ contabilistaId, duracaoOmissao }: { contabilistaId: string
   const [estado, setEstado] = useState<"a-ler" | "pronto" | "a-guardar">("a-ler");
   const [erro, setErro] = useState<string | null>(null);
   const [porGuardar, setPorGuardar] = useState(false);
+
+  usarRascunhoSujo({
+    sujo: porGuardar,
+    descricao: "Mudaste a semana-tipo e ainda não a guardaste.",
+  });
 
   useEffect(() => {
     let vivo = true;

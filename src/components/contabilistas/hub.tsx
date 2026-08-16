@@ -25,8 +25,8 @@ import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import {
-  Briefcase, Calendar, Check, ChevronDown, ChevronUp, Clock, Copy, Gift, Laptop,
-  Lock, MapPin, PaperClip, ShieldCheck,
+  Briefcase, Calendar, Check, ChevronDown, ChevronUp, Clock, Copy, Gift, Invoice,
+  Laptop, Lock, MapPin, PaperClip, ShieldCheck,
 } from "@/components/ui/Icons";
 
 export const ESTADO_CONSULTA: Record<string, { texto: string; tom: "brand" | "alert" | "neutral" | "danger" }> = {
@@ -322,6 +322,71 @@ export function Cupoes({
       <p className="mt-2.5 text-xs leading-relaxed text-stone-500">
         Apresenta o código na consulta. O desconto é aplicado pelo contabilista; o
         ReciboCerto regista-o e mostra-to, não cobra a consulta nem processa pagamentos.
+      </p>
+    </section>
+  );
+}
+
+// ─── Consultas por pagar ───────────────────────────────────────────────
+
+/**
+ * O que está por pagar, e a quem.
+ *
+ * Fica ACIMA do histórico e abaixo da próxima consulta: é uma dívida em
+ * aberto, e uma dívida em aberto não se esconde num acordeão. A frase que
+ * não pode faltar é a de quem recebe o dinheiro — o cliente está a pagar
+ * ao contabilista, não ao Recibo Certo, e o extrato do cartão dele vai
+ * dizer o nome do contabilista.
+ */
+export function PorPagar({
+  lista, nome, ocupado, onPagar,
+}: {
+  lista: { agendamentoId: string; inicio: string; valorCents: number; descricao: string }[];
+  nome: string;
+  ocupado: string | null;
+  onPagar: (agendamentoId: string) => void;
+}) {
+  if (lista.length === 0) return null;
+
+  return (
+    <section aria-labelledby="por-pagar-titulo" className="rounded-4xl border border-alert-border bg-alert-bg p-5 sm:p-6">
+      <h2 id="por-pagar-titulo" className="flex items-center gap-2 font-display text-xl text-alert-text">
+        <Invoice size={19} aria-hidden />
+        {lista.length === 1 ? "Tens uma consulta por pagar" : `Tens ${lista.length} consultas por pagar`}
+      </h2>
+
+      <ul className="mt-3.5 space-y-2.5">
+        {lista.map((c) => (
+          <li
+            key={c.agendamentoId}
+            className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5 rounded-2xl bg-white/70 px-4 py-3.5 dark:bg-white/10"
+          >
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-stone-800">{c.descricao}</p>
+              <p className="mt-0.5 text-xs text-stone-500 first-letter:uppercase">
+                {rotularDia(diaLocal(new Date(c.inicio)))} · {horaLocal(new Date(c.inicio))}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-3">
+              <span className="font-display text-lg tabular-nums text-ink">
+                {eurosDeCents(c.valorCents)}
+              </span>
+              <Button
+                size="sm"
+                disabled={ocupado === c.agendamentoId}
+                onClick={() => onPagar(c.agendamentoId)}
+              >
+                {ocupado === c.agendamentoId ? "A abrir…" : "Pagar"}
+              </Button>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-alert-text/85">
+        <ShieldCheck size={13} className="mt-0.5 shrink-0" aria-hidden />
+        Pagas diretamente a {nome} — é o nome dele que aparece no extrato do teu cartão.
+        O pagamento é processado pela Stripe e o Recibo Certo nunca fica com o teu dinheiro.
       </p>
     </section>
   );

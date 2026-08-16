@@ -315,10 +315,10 @@ export default function BuscaDoPainel({
 
         <div
           onKeyDown={aoTeclarNaPaleta}
-          className="relative z-10 flex max-h-[80dvh] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-lift dark:border-stone-800 dark:bg-stone-900"
+          className="relative z-10 flex max-h-[80dvh] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-lift"
           style={{ marginBottom: "env(safe-area-inset-bottom)" }}
         >
-          <div className="flex shrink-0 items-center gap-2.5 border-b border-stone-100 px-4 dark:border-stone-800">
+          <div className="flex shrink-0 items-center gap-2.5 border-b border-stone-100 px-4">
             <Search size={17} className="shrink-0 text-stone-400" aria-hidden />
             <input
               ref={campo}
@@ -331,7 +331,7 @@ export default function BuscaDoPainel({
               aria-activedescendant={visiveis.length ? `${idLista}-${indice}` : undefined}
               role="combobox"
               aria-expanded
-              className="min-w-0 flex-1 border-0 bg-transparent py-3.5 text-[0.9375rem] text-ink outline-none placeholder:text-stone-400 dark:text-stone-100"
+              className="min-w-0 flex-1 border-0 bg-transparent py-3.5 text-[0.9375rem] text-ink outline-none placeholder:text-stone-400"
             />
             <button
               type="button"
@@ -352,20 +352,20 @@ export default function BuscaDoPainel({
 
           <ul id={idLista} ref={lista} role="listbox" className="min-h-0 flex-1 overflow-y-auto p-2">
             {dados === null && termo && (
-              <li className="px-3 py-8 text-center text-sm text-stone-500 dark:text-stone-400">
+              <li className="px-3 py-8 text-center text-sm text-stone-500">
                 A preparar a pesquisa…
               </li>
             )}
 
             {escreveuPouco && (
-              <li className="px-3 py-8 text-center text-sm text-stone-500 dark:text-stone-400">
+              <li className="px-3 py-8 text-center text-sm text-stone-500">
                 Escreve pelo menos {MIN_CARACTERES} letras.
               </li>
             )}
 
             {termo && !escreveuPouco && dados !== null && visiveis.length === 0 && (
               <li className="px-3 py-8 text-center">
-                <p className="text-sm text-stone-600 dark:text-stone-300">
+                <p className="text-sm text-stone-600">
                   Sem resultados para «{termo}».
                 </p>
                 <p className="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-stone-400">
@@ -454,7 +454,7 @@ export default function BuscaDoPainel({
             ))}
           </ul>
 
-          <footer className="hidden shrink-0 items-center gap-4 border-t border-stone-100 px-4 py-2 text-[11px] text-stone-400 dark:border-stone-800 sm:flex">
+          <footer className="hidden shrink-0 items-center gap-4 border-t border-stone-100 px-4 py-2 text-[11px] text-stone-400 sm:flex">
             <span><kbd className="font-sans">↑</kbd> <kbd className="font-sans">↓</kbd> navegar</span>
             <span><kbd className="font-sans">↵</kbd> abrir</span>
             <span><kbd className="font-sans">esc</kbd> fechar</span>
@@ -491,7 +491,7 @@ function Linha({
         className={`flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm transition-colors ${
           ativa
             ? "bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand-mint"
-            : "text-stone-700 dark:text-stone-300"
+            : "text-stone-700"
         }`}
       >
         <Icon size={15} className="shrink-0 opacity-70" aria-hidden />

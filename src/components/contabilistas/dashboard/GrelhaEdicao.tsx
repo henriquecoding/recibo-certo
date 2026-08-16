@@ -70,6 +70,17 @@ export default function GrelhaEdicao({
   const [aMoverPorTeclado, setAMoverPorTeclado] = useState<string | null>(null);
   const [anuncio, setAnuncio] = useState("");
 
+  /**
+   * Onde o módulo estava quando o modo de mover por teclado abriu.
+   *
+   * Sem isto o `Escape` anunciava «Movimento cancelado» e não cancelava
+   * nada: cada seta já tinha aplicado a alteração via `onAlterar`, e o
+   * Escape limpava só a flag. Quem usa leitor de ecrã era a única pessoa a
+   * quem o painel mentia, porque quem vê percebe que o cartão ficou onde
+   * as setas o deixaram.
+   */
+  const origemDoTeclado = useRef<GridPlacement | null>(null);
+
   const colunas = layout.grid.desktop.columns;
   const visiveis = useMemo(() => layout.items.filter((i) => !i.hidden), [layout.items]);
 
@@ -254,12 +265,18 @@ export default function GrelhaEdicao({
                   onKeyDown: (e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      setAMoverPorTeclado((a) => (a === item.instanceId ? null : item.instanceId));
-                      setAnuncio(
-                        aMoverPorTeclado === item.instanceId
-                          ? "Movimento confirmado."
-                          : `A mover ${MODULOS[item.type].titulo} (${item.tag}). Use as setas. Enter confirma, Escape cancela.`,
-                      );
+                      const jaEstava = aMoverPorTeclado === item.instanceId;
+                      if (jaEstava) {
+                        origemDoTeclado.current = null;
+                        setAMoverPorTeclado(null);
+                        setAnuncio("Movimento confirmado.");
+                      } else {
+                        origemDoTeclado.current = { ...item.desktop };
+                        setAMoverPorTeclado(item.instanceId);
+                        setAnuncio(
+                          `A mover ${MODULOS[item.type].titulo} (${item.tag}). Use as setas. Enter confirma, Escape cancela.`,
+                        );
+                      }
                       return;
                     }
                     if (aMoverPorTeclado !== item.instanceId) return;
@@ -269,8 +286,17 @@ export default function GrelhaEdicao({
                     };
                     if (e.key === "Escape") {
                       e.preventDefault();
+                      // Cancelar é repor, não é só fechar o modo.
+                      const origem = origemDoTeclado.current;
+                      if (origem) {
+                        const items = layout.items.map((i) =>
+                          i.instanceId === item.instanceId ? { ...i, desktop: { ...origem } } : i,
+                        );
+                        onAlterar(resolverColisoes(items, item.instanceId, colunas));
+                      }
+                      origemDoTeclado.current = null;
                       setAMoverPorTeclado(null);
-                      setAnuncio("Movimento cancelado.");
+                      setAnuncio("Movimento cancelado. O módulo voltou ao sítio onde estava.");
                       return;
                     }
                     const p = passos[e.key];
@@ -283,11 +309,18 @@ export default function GrelhaEdicao({
                 }}
                 onRedimensionar={comecar(item, "redimensionar") as unknown as (e: React.PointerEvent<HTMLButtonElement>) => void}
               >
+                {/* `versao` é a prop que existe só para o `memo` deixar
+                    passar a chegada de dados. Os widgets leem o broker
+                    imperativamente, e sem ela nenhuma prop mudava — um
+                    módulo acabado de acrescentar ficava vazio até se sair
+                    da edição, que é exatamente o que `acrescentar` tenta
+                    evitar ao pedir o domínio de imediato. */}
                 <CorpoMemo
                   type={item.type}
                   colSpan={item.desktop.colSpan}
                   rowSpan={item.desktop.rowSpan}
                   broker={broker}
+                  versao={broker.versao}
                   href={href}
                 />
               </MolduraModulo>

@@ -25,8 +25,12 @@ export default function PartilhasPage() {
   const [erro, setErro] = useState<string | null>(null);
 
   const carregar = useCallback(async (id: string) => {
-    try { setLista(await listarPartilhas({ contabilistaId: id })); }
-    catch (e) { setErro((e as Error).message); }
+    try {
+      setLista(await listarPartilhas({ contabilistaId: id }));
+      // Sem isto, uma falha momentânea deixava a faixa vermelha no ecrã
+      // para sempre — mesmo depois de a leitura seguinte correr bem.
+      setErro(null);
+    } catch (e) { setErro((e as Error).message); }
   }, []);
 
   useEffect(() => { if (ficha) void carregar(ficha.userId); }, [ficha, carregar]);
@@ -41,8 +45,14 @@ export default function PartilhasPage() {
     if (aberto === p.id) { setAberto(null); return; }
     setAberto(p.id);
     if (p.estado === "enviada" && ficha) {
-      await marcarPartilhaVista(p.id);
-      setLista((l) => l.map((x) => (x.id === p.id ? { ...x, estado: "vista" } : x)));
+      try {
+        await marcarPartilhaVista(p.id);
+        setLista((l) => l.map((x) => (x.id === p.id ? { ...x, estado: "vista" } : x)));
+      } catch {
+        // Marcar como vista é conveniência: falhar não impede ler o
+        // conteúdo. O que não se pode é pintar «vista» sem ter gravado —
+        // o cliente lê esse estado do lado dele.
+      }
     }
   }
 

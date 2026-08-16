@@ -59,17 +59,36 @@ describe("diretório e perfil profissional — apresentação e tema", () => {
   });
 
   it("mantém contraste explícito no modo escuro", () => {
+    // ⚠️ MUDANÇA DE CONVENÇÃO, deliberada.
+    //
+    // Este teste exigia `dark:bg-stone-900` / `dark:text-stone-100` /
+    // `dark:border-stone-700` nos ecrãs do PAINEL. Isso contorna a camada
+    // de override `.dark` de `globals.css` — e ganha-lhe, porque a variante
+    // do Tailwind sai depois no CSS compilado com a mesma especificidade
+    // (`.dark\:bg-stone-900:is(.dark *)` = (0,2,0), tal como
+    // `.dark .bg-white`).
+    //
+    // O efeito era visível: os cartões do perfil e da fidelidade ficavam
+    // com a palete FRIA do Tailwind (#1c1917) enquanto os da agenda e dos
+    // casos ficavam com a palete QUENTE do projeto (#1e221b). Duas palete
+    // escuras no mesmo painel, a um clique de distância.
+    //
+    // A regra passa a ser a do `CLAUDE.md` e da skill de design: nos
+    // neutros, quem manda é a camada `.dark`. O que este teste garante
+    // agora é que ninguém volta a redeclará-los — e isso está fixado em
+    // `contabilistas-painel-coerencia.test.ts`.
     const perfil = ler("src/app/contabilista/perfil/page.tsx");
     const linkedinConta = ler("src/components/contabilistas/LinkedInConta.tsx");
 
-    expect(perfil).toContain("dark:bg-stone-900");
-    expect(perfil).toContain("dark:text-stone-100");
-    expect(perfil).toContain("dark:border-stone-700");
-    expect(linkedinConta).toContain("dark:bg-stone-950/55");
-    expect(linkedinConta).toContain("dark:text-stone-100");
+    for (const [nome, fonte] of [["perfil", perfil], ["LinkedInConta", linkedinConta]] as const) {
+      // `bg-white` e `border-stone-200` continuam lá: é deles que a camada
+      // `.dark` deriva o tom escuro.
+      expect(fonte, `${nome} deixou de usar as superfícies do design system`)
+        .toMatch(/bg-white|bg-cream/);
+    }
 
-    // Cada superfície nova do diretório declara fundo, texto e limite no
-    // tema escuro — o modo claro nunca deixa de ser o que estava escrito.
+    // O DIRETÓRIO PÚBLICO é outra coisa e mantém-se como estava: são
+    // superfícies fora do painel, e a unificação acima não lhes tocou.
     for (const ficheiro of [CLIENTE, CARTAO, FINDER, FILTROS]) {
       const fonte = ler(ficheiro);
       expect(fonte, ficheiro).toMatch(/dark:bg-stone-9\d0/);

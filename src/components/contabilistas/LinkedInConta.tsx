@@ -112,7 +112,7 @@ export default function LinkedInConta({ contabilistaId }: { contabilistaId: stri
   const mostrarAvatar = Boolean(avatar) && !avatarExpirado && !avatarFalhou;
 
   return (
-    <section aria-labelledby="linkedin-titulo" className="rounded-3xl border border-stone-200 bg-cream/55 p-4 sm:p-5 dark:border-stone-700 dark:bg-stone-950/55">
+    <section aria-labelledby="linkedin-titulo" className="rounded-3xl border border-stone-200 bg-cream/55 p-4 sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 items-center gap-3.5">
           {mostrarAvatar ? (
@@ -125,26 +125,26 @@ export default function LinkedInConta({ contabilistaId }: { contabilistaId: stri
               src={`/api/contabilistas/linkedin-avatar/${encodeURIComponent(contabilistaId)}`}
               alt="Fotografia atual do LinkedIn"
               onError={() => setAvatarFalhou(true)}
-              className="h-14 w-14 shrink-0 rounded-2xl border border-stone-200 object-cover shadow-card dark:border-stone-700"
+              className="h-14 w-14 shrink-0 rounded-2xl border border-stone-200 object-cover shadow-card"
             />
           ) : (
-            <div aria-hidden className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-stone-200 bg-white text-lg font-bold text-[#0A66C2] shadow-card dark:border-stone-700 dark:bg-stone-900">
+            <div aria-hidden className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-stone-200 bg-white text-lg font-bold text-[#0A66C2] shadow-card">
               in
             </div>
           )}
 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 id="linkedin-titulo" className="font-semibold text-stone-800 dark:text-stone-100">LinkedIn</h2>
+              <h2 id="linkedin-titulo" className="font-semibold text-stone-800">LinkedIn</h2>
               <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold ${
                 ligado
                   ? "bg-brand-light text-brand-dark dark:bg-brand/20 dark:text-brand-mint"
-                  : "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400"
+                  : "bg-stone-100 text-stone-500"
               }`}>
                 {ligado ? "Conta ligada" : "Não ligado"}
               </span>
             </div>
-            <p className="mt-1 max-w-xl text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+            <p className="mt-1 max-w-xl text-xs leading-relaxed text-stone-500">
               A foto é confirmada pela tua conta LinkedIn via OpenID Connect. O LinkedIn não envia o endereço público `/in/...` neste login, por isso esse link é confirmado por ti uma única vez.
             </p>
           </div>
@@ -181,7 +181,7 @@ export default function LinkedInConta({ contabilistaId }: { contabilistaId: stri
       )}
 
       <div className="mt-4">
-        <label htmlFor="linkedin-url" className="text-sm font-semibold text-stone-700 dark:text-stone-200">Perfil público no LinkedIn</label>
+        <label htmlFor="linkedin-url" className="text-sm font-semibold text-stone-700">Perfil público no LinkedIn</label>
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
           <input
             id="linkedin-url"
@@ -192,7 +192,7 @@ export default function LinkedInConta({ contabilistaId }: { contabilistaId: stri
             disabled={!ligado || aLer}
             onChange={(e) => setUrl(e.target.value.slice(0, 300))}
             placeholder="https://www.linkedin.com/in/o-teu-perfil"
-            className="focus-marca min-h-[2.75rem] min-w-0 flex-1 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm text-stone-800 placeholder:text-stone-400 disabled:cursor-not-allowed disabled:opacity-55 focus:border-brand dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:placeholder:text-stone-600"
+            className="focus-marca min-h-[2.75rem] min-w-0 flex-1 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm text-stone-800 placeholder:text-stone-400 disabled:cursor-not-allowed disabled:opacity-55 focus:border-brand dark:placeholder:text-stone-600"
           />
           <Button
             type="button"
@@ -205,7 +205,7 @@ export default function LinkedInConta({ contabilistaId }: { contabilistaId: stri
           </Button>
         </div>
         {!ligado && (
-          <p className="mt-1.5 text-xs text-stone-400 dark:text-stone-500">Liga primeiro a conta para que o endereço e a fotografia possam aparecer no perfil público.</p>
+          <p className="mt-1.5 text-xs text-stone-400">Liga primeiro a conta para que o endereço e a fotografia possam aparecer no perfil público.</p>
         )}
       </div>
     </section>

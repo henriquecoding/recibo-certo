@@ -39,7 +39,7 @@ import { contemCodigo } from "@/lib/feedback-sanitize";
 import {
   Logo, LayoutGrid, Calendar, User, PaperClip, Gift, Settings, ArrowLeft, Warning,
   Target, Briefcase, ShieldCheck, Eye, RotateCcw, Check, ChevronDown, ArrowRight,
-  Award,
+  Award, Invoice,
 } from "@/components/ui/Icons";
 import { percentagemDoPerfil } from "@/lib/contabilistas/perfil";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -85,6 +85,7 @@ const NAV: Item[] = [
     porResponder: (c) => c.partilhasPorLer,
   },
   { href: "/contabilista/fidelidade", label: "Fidelidade", curto: "Fidelidade", Icon: Gift },
+  { href: "/contabilista/pagamentos", label: "Recebimentos", curto: "Recebo", Icon: Invoice },
   { href: "/contabilista/progressao", label: "Progressão", curto: "Progressão", Icon: Award },
   { href: "/contabilista/perfil", label: "Perfil", curto: "Perfil", Icon: Settings },
 ];
@@ -486,7 +487,7 @@ function FaixaDemonstracao() {
       {/* No telemóvel o aviso fica com a linha toda e o botão passa para
           baixo. A partilhar a linha com o botão a 360px, sobravam-lhe cerca
           de 150px e o texto lia-se em coluna, palavra a palavra. */}
-      <p className="flex min-w-0 basis-full items-start gap-2.5 text-sm leading-relaxed text-stone-700 sm:flex-1 sm:basis-0 dark:text-stone-200">
+      <p className="flex min-w-0 basis-full items-start gap-2.5 text-sm leading-relaxed text-stone-700 sm:flex-1 sm:basis-0">
         <Eye size={16} className="mt-0.5 shrink-0 text-brand-dark dark:text-brand-mint" aria-hidden />
         <span>
           <strong className="font-semibold">Painel de contabilista em demonstração.</strong>{" "}
@@ -497,7 +498,7 @@ function FaixaDemonstracao() {
       <button
         type="button"
         onClick={() => window.location.reload()}
-        className="focus-marca inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-xl border border-brand/30 bg-white px-3 text-sm font-semibold text-brand-dark transition-colors hover:bg-brand-light dark:border-brand/40 dark:bg-stone-900 dark:text-brand-mint"
+        className="focus-marca inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-xl border border-brand/30 bg-white px-3 text-sm font-semibold text-brand-dark transition-colors hover:bg-brand-light dark:border-brand/40 dark:text-brand-mint"
       >
         <RotateCcw size={14} aria-hidden /> Repor os dados
       </button>
