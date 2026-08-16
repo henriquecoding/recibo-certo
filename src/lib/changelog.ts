@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.68.0",
+    data: "2026-08-16",
+    titulo: "A sala de acompanhamento passa a ser a página",
+    itens: [
+      "A tua área do contabilista abre agora como uma sala: quem te acompanha e as credenciais dele em cima, o próximo passo e o resumo da relação lado a lado, o que falta, a linha do tempo, e a caixa para escrever no fim.",
+      "O «Resumo da relação» responde às três perguntas de sempre num sítio só — quando é a próxima consulta, quanto está por pagar, e onde vai o cartão de fidelidade.",
+      "A linha do tempo ganhou ações: um pedido por responder tem «Responder» ao lado, uma consulta online tem «Abrir», uma simulação tem «Ver». Deixa de ser preciso procurar noutro ecrã o que a linha acabou de mencionar.",
+      "Escrever passou para dentro da sala. Uma linha só — juntar ficheiro, escrever, enviar — logo a seguir ao que aconteceu.",
+      "Do lado do contabilista, a ficha do cliente diz de frente o que existe e o que não existe: as ações possíveis, e «sem email · sem telemóvel · sem WhatsApp». Era a primeira pergunta de quem chegava, e ficava sem resposta.",
+      "«Contexto sem ruído» resume a relação em três linhas com data — próxima consulta, última partilha, fidelidade — para retomar uma conversa sem reler o histórico.",
+    ],
+  },
+  {
     version: "2.67.0",
     data: "2026-08-16",
     titulo: "Sala de acompanhamento: uma relação, uma linha do tempo, zero contactos expostos",

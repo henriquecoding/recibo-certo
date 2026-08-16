@@ -117,6 +117,36 @@ function legenda(e: EventoTimeline): string | null {
   return null;
 }
 
+/**
+ * A ação que cabe a cada acontecimento, se couber alguma.
+ *
+ * Não é uma lista de botões: é UM verbo, e só quando há mesmo o que
+ * fazer. Um «Ver» ao lado de cada linha transformava a linha do tempo
+ * numa grelha de botões, que é o oposto de uma história.
+ *
+ * O papel importa: «Responder» é do lado de quem recebeu o pedido, não de
+ * quem o fez — pôr o mesmo botão nos dois lados era oferecer ao
+ * contabilista responder ao seu próprio pedido.
+ */
+function accaoDoEvento(e: EventoTimeline, papel: "cliente" | "contabilista"): string | null {
+  if (e.tipo === "pedido") {
+    const porFechar = e.estado === "aberto" || e.estado === "respondido" || e.estado === "em_analise";
+    if (!porFechar) return null;
+    return papel === "cliente" ? (e.estado === "aberto" ? "Responder" : "Ver") : "Ver pedido";
+  }
+  if (e.tipo === "consulta") {
+    if (e.estado !== "confirmado") return null;
+    const inicio = e.meta.inicio as string | undefined;
+    if (!inicio || new Date(inicio).getTime() < Date.now()) return null;
+    return e.meta.localOuLigacao ? "Abrir" : "Ver";
+  }
+  if (e.tipo === "partilha") return e.estado === "revogada" ? null : "Ver";
+  if (e.tipo === "pagamento" && e.estado === "pendente") {
+    return papel === "cliente" ? "Pagar" : null;
+  }
+  return null;
+}
+
 function quando(iso: string): string {
   const d = new Date(iso);
   const hoje = new Date();
@@ -136,16 +166,21 @@ export default function TimelineRelacao({
   eventos,
   meuId,
   nomeDoOutro,
+  papel = "cliente",
   haMais = false,
   aCarregar = false,
   aoCarregarMais,
+  aoAgir,
 }: {
   eventos: EventoTimeline[];
   meuId: string;
   nomeDoOutro: string;
+  papel?: "cliente" | "contabilista";
   haMais?: boolean;
   aCarregar?: boolean;
   aoCarregarMais?: () => void;
+  /** Recebe o evento em que se carregou. A página decide para onde vai. */
+  aoAgir?: (e: EventoTimeline) => void;
 }) {
   if (eventos.length === 0) {
     return (
@@ -169,6 +204,7 @@ export default function TimelineRelacao({
 
         {eventos.map((e) => {
           const nota = legenda(e);
+          const accao = aoAgir ? accaoDoEvento(e, papel) : null;
           return (
             <li key={`${e.tipo}-${e.referenciaId}`} className="relative pl-6">
               <span
@@ -190,10 +226,23 @@ export default function TimelineRelacao({
                 <p className="mt-0.5 text-sm font-medium text-stone-700">{e.titulo}</p>
               )}
 
-              {e.corpo && (
-                <p className="mt-1 line-clamp-3 rounded-2xl bg-white px-3.5 py-2 text-sm leading-relaxed text-stone-600">
-                  {e.corpo}
-                </p>
+              {(e.corpo || accao) && (
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  {e.corpo && (
+                    <p className="line-clamp-3 min-w-0 flex-1 rounded-2xl bg-white px-3.5 py-2 text-sm leading-relaxed text-stone-600">
+                      {e.corpo}
+                    </p>
+                  )}
+                  {accao && (
+                    <button
+                      type="button"
+                      onClick={() => aoAgir?.(e)}
+                      className="min-h-[36px] shrink-0 rounded-xl bg-brand-light px-3 py-1.5 text-sm font-semibold text-brand-dark transition-colors hover:bg-brand/20 focus:outline-none focus:ring-2 focus:ring-brand/40"
+                    >
+                      {accao}
+                    </button>
+                  )}
+                </div>
               )}
 
               {nota && <p className="mt-1 text-xs text-stone-500">{nota}</p>}

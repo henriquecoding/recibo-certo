@@ -18,7 +18,7 @@
 //  reescrever a parte mais delicada do produto para ganhar um cabeçalho.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   criarPedido, decidirPedido, escutarPedidos, listarPedidos, listarTimeline,
   responderPedido, type DecisaoPedido,
@@ -32,6 +32,8 @@ import {
 import { pedidosPorTratar } from "@/lib/contabilistas/sala/proximo-passo";
 import type { EstadoVinculo } from "@/lib/contabilistas/tipos";
 import BlocoProximoPasso from "./BlocoProximoPasso";
+import ComposerRelacao from "./ComposerRelacao";
+import ResumoRelacao from "./ResumoRelacao";
 import CartaoPedido from "./CartaoPedido";
 import NovoPedido from "./NovoPedido";
 import TimelineRelacao from "./TimelineRelacao";
@@ -50,6 +52,19 @@ export interface SalaProps {
   consultas: { id: string; inicio: string; estado: string }[];
   partilhasPorLer?: number;
   porPagarCents?: number;
+  /** O cartão de fidelidade desta relação, para o resumo. */
+  fidelidade?: { carimbos: number; meta: number } | null;
+  /**
+   * O cabeçalho da sala. Vem de fora porque é a única peça que difere
+   * mesmo entre os dois lados — de um vê-se um contabilista, do outro um
+   * cliente — e passá-la como filho evita um `if` de estrutura aqui
+   * dentro que só serviria para reunir dois desenhos diferentes.
+   */
+  cabecalho?: ReactNode;
+  /** Mostrar o resumo da relação ao lado do próximo passo. */
+  mostrarResumo?: boolean;
+  /** Mostrar o compositor no fim. */
+  mostrarComposer?: boolean;
   /**
    * O que fazer quando o botão do próximo passo é carregado.
    *
@@ -64,7 +79,8 @@ export interface SalaProps {
 
 export default function Sala({
   vinculoId, papel, meuId, nomeDoOutro, estadoVinculo,
-  consultas, partilhasPorLer = 0, porPagarCents = 0,
+  consultas, partilhasPorLer = 0, porPagarCents = 0, fidelidade = null,
+  cabecalho, mostrarResumo = false, mostrarComposer = false,
   aoAgir, aoMudar,
 }: SalaProps) {
   const avisos = useAvisos();
@@ -182,9 +198,44 @@ export default function Sala({
 
   const pendencias = contarPendencias(retrato);
 
+  /**
+   * A próxima consulta, para o resumo.
+   *
+   * A mais próxima que ainda está de pé — pedida ou confirmada. Uma
+   * consulta cancelada continua na lista das consultas e não pode
+   * aparecer aqui: dizer «próxima consulta: 20 de agosto» sobre uma que
+   * foi desmarcada é uma afirmação falsa sobre a relação.
+   */
+  const proximaConsulta = useMemo(() => {
+    const agora = Date.now();
+    return (
+      consultas
+        .filter(
+          (c) =>
+            new Date(c.inicio).getTime() >= agora &&
+            (c.estado === "pedido" || c.estado === "confirmado"),
+        )
+        .sort((a, b) => a.inicio.localeCompare(b.inicio))[0]?.inicio ?? null
+    );
+  }, [consultas]);
+
   return (
     <div className="space-y-6">
-      <BlocoProximoPasso passo={passo} ocupado={ocupado} aoAgir={agir} />
+      {cabecalho}
+
+      {/* O próximo passo ocupa a largura toda quando está sozinho, e dois
+          terços quando há resumo ao lado. É a peça com direito a mais
+          espaço em qualquer dos casos. */}
+      <div className={mostrarResumo ? "grid gap-4 lg:grid-cols-[1.6fr_1fr]" : undefined}>
+        <BlocoProximoPasso passo={passo} ocupado={ocupado} aoAgir={agir} />
+        {mostrarResumo && (
+          <ResumoRelacao
+            proximaConsulta={proximaConsulta}
+            porPagarCents={porPagarCents}
+            fidelidade={fidelidade}
+          />
+        )}
+      </div>
 
       {/* ── O que falta ─────────────────────────────────────────── */}
       <section aria-labelledby="pendencias-titulo" className="space-y-3">
@@ -277,11 +328,39 @@ export default function Sala({
             eventos={eventos}
             meuId={meuId}
             nomeDoOutro={nomeDoOutro}
+            papel={papel}
             haMais={haMais}
             aCarregar={aCarregarMais}
             aoCarregarMais={() => void maisAntigos()}
+            aoAgir={(e) => {
+              if (e.tipo === "pedido") { agir(`pedido:${e.referenciaId}`); return; }
+              if (e.tipo === "consulta") {
+                const ligacao = e.meta.localOuLigacao as string | null | undefined;
+                // Só se abre o que é mesmo um endereço. Uma morada de
+                // consulta presencial vive no mesmo campo, e mandá-la para
+                // `window.open` abria um separador em branco.
+                if (ligacao && /^https?:\/\//i.test(ligacao)) {
+                  window.open(ligacao, "_blank", "noopener,noreferrer");
+                  return;
+                }
+                aoAgir?.(`consulta:${e.referenciaId}`);
+                return;
+              }
+              aoAgir?.(`${e.tipo}:${e.referenciaId}`);
+            }}
           />
         </div>
+
+        {mostrarComposer && estadoVinculo === "ativo" && (
+          <div className="mt-4">
+            <ComposerRelacao
+              vinculoId={vinculoId}
+              meuId={meuId}
+              nomeDoOutro={nomeDoOutro}
+              aoEnviar={() => { void carregar(); aoMudar?.(); }}
+            />
+          </div>
+        )}
       </section>
 
       <p className="flex items-start gap-2.5 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm leading-relaxed text-stone-600">
