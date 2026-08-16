@@ -31,6 +31,28 @@ TESTES="$RAIZ/supabase/tests"
 MIGRACOES=($(ls "$RAIZ"/supabase/migrations/*.sql \
   | grep -E '/0(4[2-9]|[5-9][0-9])_' | sort))
 
+# ── E as que vieram depois, com nome por data ────────────────────────
+#
+# Estas TÊM de correr aqui: os testes 13 e 14 exercem-nas. Vêm depois das
+# numeradas porque é essa a ordem real — a fronteira de contacto desfaz
+# uma coluna que uma migração de agosto tinha acabado de pôr numa RPC, e
+# aplicá-la antes reintroduzia o contacto do cliente sem ninguém dar por
+# isso.
+#
+# ⚠️ A LISTA É EXPLÍCITA, e não um `ls` de tudo o que tem data no nome.
+# Tentou-se o `ls`: as restantes migrações da plataforma aplicam-se sem
+# erro, mas mudam comportamento que os testes 02, 03, 04 e 12 afirmam
+# contra o esquema de 042-053 — a fidelidade passa a nascer inativa, o
+# motivo de recusa de `concluir_consulta` muda de nome, e uma proposta
+# passa a exigir leitura do contrato antes de ser aceite. Pô-las a correr
+# aqui exige atualizar esses quatro ficheiros, e isso é outro trabalho —
+# um que vale a pena, e que fica por fazer de olhos abertos e não por
+# distração.
+MIGRACOES+=(
+  "$RAIZ/supabase/migrations/20260816150000_fronteira_de_contacto.sql"
+  "$RAIZ/supabase/migrations/20260816160000_sala_de_acompanhamento.sql"
+)
+
 if [ ${#MIGRACOES[@]} -eq 0 ]; then
   echo "Nenhuma migração no intervalo — o filtro está errado." >&2
   exit 2

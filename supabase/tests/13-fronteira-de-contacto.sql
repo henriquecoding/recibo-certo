@@ -3,7 +3,7 @@
 \pset pager off
 
 -- ═══════════════════════════════════════════════════════════════════════
---  A FRONTEIRA DE CONTACTO (migração 054)
+--  A FRONTEIRA DE CONTACTO (migração da fronteira de contacto)
 --  ---------------------------------------------------------------------
 --  Duas garantias, e as duas têm de ser provadas contra a base de dados
 --  a sério, porque as duas são fáceis de reintroduzir sem dar por isso:

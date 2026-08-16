@@ -9,7 +9,7 @@ SET ROLE authenticated;
 -- 5555 ainda não tem vínculo com a Ana (1111). Pede um, e diz como quer ser
 -- tratado. O nome NÃO vem da conta: vem deste formulário.
 SELECT t.entrar('55555555-5555-5555-5555-555555555555');
--- O email que aqui estava saiu com a migração 054: o vínculo já não tem
+-- O email que aqui estava saiu com a migração da fronteira de contacto: o vínculo já não tem
 -- por onde guardar um canal de contacto do cliente. Ver o teste 13.
 SELECT t.permite($$INSERT INTO public.contabilista_vinculos
   (contabilista_id, cliente_id, nome_cliente)

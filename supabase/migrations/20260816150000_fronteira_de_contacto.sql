@@ -1,4 +1,4 @@
--- 054_fronteira_de_contacto.sql
+-- 20260816150000_fronteira_de_contacto.sql
 -- ═══════════════════════════════════════════════════════════════════════
 --  A FRONTEIRA DE CONTACTO
 --  ---------------------------------------------------------------------
@@ -228,7 +228,7 @@ GRANT  EXECUTE ON FUNCTION public.resumo_clientes_do_contabilista() TO authentic
 
 COMMENT ON FUNCTION public.resumo_clientes_do_contabilista() IS
   'Uma linha por cliente do contabilista autenticado. Não devolve nenhum canal '
-  'de contacto — ver migração 054 — e não lê tabelas fiscais (migração 038).';
+  'de contacto — ver migração da fronteira de contacto — e não lê tabelas fiscais (migração 038).';
 
 
 -- ── 3. O texto também é uma porta ───────────────────────────────────

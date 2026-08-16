@@ -50,6 +50,7 @@ function retrato(over: Partial<RetratoDaRelacao> = {}): RetratoDaRelacao {
     papel: "cliente", estadoVinculo: "ativo",
     pedidos: [], consultas: [],
     mensagensPorLer: 0, partilhasPorLer: 0, porPagarCents: 0,
+    aceitaPagamentos: true,
     agora: AGORA,
     ...over,
   };
@@ -112,6 +113,22 @@ describe("próximo passo: o cliente", () => {
     }));
     expect(p.chave).toBe("por_pagar");
     expect(p.destino).toBe("pagamento");
+  });
+
+  it("não oferece pagar a quem não tem por onde receber", () => {
+    // O beco sem saída que isto fecha: `consultas_por_pagar` não filtra
+    // pela conta Stripe, por isso uma consulta realizada aparecia por
+    // liquidar mesmo quando o contabilista nunca acabou de ligar a conta.
+    // O botão levava a uma recusa do servidor, e a pessoa ficava a achar
+    // que tinha falhado alguma coisa que ela fez.
+    const p = proximoPasso(retrato({ porPagarCents: 4500, aceitaPagamentos: false }));
+    expect(p.chave).not.toBe("por_pagar");
+    expect(p.cta).not.toBe("Pagar agora");
+  });
+
+  it("volta a oferecer pagar assim que a conta fica a receber", () => {
+    const p = proximoPasso(retrato({ porPagarCents: 4500, aceitaPagamentos: true }));
+    expect(p.chave).toBe("por_pagar");
   });
 
   it("diz que está à espera quando a consulta ainda não foi confirmada", () => {

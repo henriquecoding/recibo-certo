@@ -53,6 +53,7 @@ function paraContabilista(l: Linha): Contabilista {
     fidelidadeMeta: (l.fidelidade_meta as number) ?? 5,
     fidelidadeDescontoPct: (l.fidelidade_desconto_pct as number) ?? 10,
     fidelidadeAtiva: Boolean(l.fidelidade_ativa),
+    recebePagamentos: Boolean(l.recebe_pagamentos),
     criadoEm: (l.criado_em as string) ?? "",
   };
 }

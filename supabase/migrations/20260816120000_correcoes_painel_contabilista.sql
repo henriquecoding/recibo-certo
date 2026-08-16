@@ -127,7 +127,18 @@ COMMENT ON FUNCTION public.guardar_disponibilidade(jsonb) IS
 --     ainda no futuro;
 --   · partilhas revogadas não contam: o cliente retirou-as.
 
-CREATE OR REPLACE FUNCTION public.resumo_clientes_do_contabilista()
+-- ⚠️ DROP antes do CREATE, e não `CREATE OR REPLACE` sozinho.
+--
+-- Uma migração posterior — a da fronteira de contacto — reescreve esta
+-- função SEM a coluna `email_cliente`. Ao reaplicar o conjunto todo, este
+-- `CREATE OR REPLACE` tentava devolver uma assinatura diferente da que
+-- existe e falhava com «cannot change return type of existing function».
+-- O DROP torna cada migração idempotente por si, e a ordem dentro de uma
+-- passagem continua a decidir o estado final — que é o desta função sem o
+-- contacto do cliente.
+DROP FUNCTION IF EXISTS public.resumo_clientes_do_contabilista();
+
+CREATE FUNCTION public.resumo_clientes_do_contabilista()
 RETURNS TABLE (
   vinculo_id            uuid,
   cliente_id            uuid,

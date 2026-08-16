@@ -16,6 +16,20 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.69.0",
+    data: "2026-08-16",
+    titulo: "Recebimentos: a ligação à Stripe passa a ser um sistema, e não um link",
+    itens: [
+      "A ligação à conta de recebimentos passa a viver no teu perfil, ao lado do LinkedIn. Estava numa página que quem não soubesse que existia nunca abria — e o produto ficava a prometer pagamentos que ninguém tinha ativado.",
+      "Deixa de haver «ligado / não ligado». São seis estados, e o que interessa é o que estava escondido: uma conta pode já cobrar e ainda não deixar o dinheiro sair para o teu IBAN. Isso aparecia como «tudo pronto», e só se descobria à procura do dinheiro.",
+      "O que a Stripe ainda pede passa a estar em português. Antes lia-se «individual.verification.document»; agora lê-se «um documento de identificação (frente e verso)». Os campos de morada, que são quatro códigos e uma coisa a fazer, passam a ser uma linha só.",
+      "No diretório e no perfil público passa a dizer-se se um contabilista aceita pagamento pela plataforma. Era a pergunta de quem está a decidir marcar, e não tinha resposta em lado nenhum.",
+      "Corrigido um beco sem saída: uma consulta realizada aparecia «por pagar» mesmo quando o contabilista não tinha a conta pronta, e o botão de pagar dava erro. Agora só aparece quando há mesmo por onde pagar.",
+      "Nada da conta Stripe de um contabilista é visível para os clientes — nem o identificador, nem o que falta verificar. Sai só o facto de que se pode, ou não, pagar ali.",
+      "Corrigida a ligação que fazia os pagamentos falharem em silêncio: os avisos da Stripe estavam a ser enviados para um endereço que redirecionava, e nenhum chegava. Na prática, uma conta aprovada podia ficar para sempre em «a Stripe está a verificar», e um pagamento feito podia nunca ser dado por recebido.",
+    ],
+  },
+  {
     version: "2.68.0",
     data: "2026-08-16",
     titulo: "A sala de acompanhamento passa a ser a página",

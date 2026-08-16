@@ -56,7 +56,8 @@ const VISTA_PUBLICA = "contabilistas_publico";
 const CAMPOS_DO_CARTAO =
   "user_id,slug,nome,occ,occ_verificado,titulo_profissional,apresentacao_curta," +
   "distrito,concelho,especialidades,modalidades,idiomas,resposta_media_horas," +
-  "linkedin_ligado,linkedin_avatar_url,aceita_novos_clientes,fidelidade_ativa";
+  "linkedin_ligado,linkedin_avatar_url,aceita_novos_clientes,fidelidade_ativa," +
+  "recebe_pagamentos";
 
 /** Quantos cartões por página. §33: nunca centenas no DOM. */
 export const POR_PAGINA = 24;
@@ -92,6 +93,8 @@ export interface CartaoDoDiretorio {
   /** Há fotografia utilizável? A URL fica no servidor (§8, §86). */
   avatarDisponivel: boolean;
   fidelidadeAtiva: boolean;
+  /** Se o cliente consegue pagar-lhe aqui. Ver `Contabilista.recebePagamentos`. */
+  recebePagamentos: boolean;
 }
 
 export type ModalidadeFiltro = "" | "online" | "presencial" | "ambos";
@@ -162,6 +165,7 @@ function paraCartao(l: Linha): CartaoDoDiretorio {
     // imagem é sempre o endpoint do ReciboCerto.
     avatarDisponivel: Boolean(avatar) && !avatarLinkedInExpirou(avatar),
     fidelidadeAtiva: Boolean(l.fidelidade_ativa),
+    recebePagamentos: Boolean(l.recebe_pagamentos),
   };
 }
 

@@ -37,6 +37,7 @@ import { obterLinkedInPublico } from "@/lib/contabilistas/fonte/linkedin";
 import Button from "@/components/ui/Button";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import LinkedInConta from "@/components/contabilistas/LinkedInConta";
+import RecebimentosConta from "@/components/contabilistas/RecebimentosConta";
 import PerfilPreview from "@/components/contabilistas/PerfilPreview";
 import AcoesDoPainel, { TituloDoPainel } from "@/components/contabilistas/AcoesDoPainel";
 import { obterDisponibilidade } from "@/lib/contabilistas/fonte/dados";
@@ -787,6 +788,13 @@ export default function PerfilPage() {
 
             <div className="mt-4">
               <LinkedInConta contabilistaId={ficha.userId} />
+
+              {/* Os recebimentos são identidade profissional como o
+                  LinkedIn é, e por isso vivem no mesmo sítio. Estavam
+                  numa página que quem não soubesse que existia nunca
+                  abria — e o produto ficava a prometer pagamentos que
+                  ninguém tinha ativado. */}
+              <RecebimentosConta />
             </div>
           </Bloco>
 

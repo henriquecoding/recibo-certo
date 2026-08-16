@@ -179,13 +179,24 @@ export default function ContabilistaCard({
       </dl>
 
       <div className="relative mt-auto flex items-center justify-between gap-3 pt-3.5">
-        {cartao.fidelidadeAtiva ? (
-          <p className="flex items-center gap-1.5 text-xs font-medium text-brand-dark dark:text-brand-mint">
-            <Gift size={13} aria-hidden /> Fidelidade disponível
-          </p>
-        ) : (
-          <span />
-        )}
+        {/* Dois sinais no máximo, e nunca a ausência de nenhum deles.
+            «Não aceita pagamento aqui» num cartão de diretório é uma marca
+            negativa ao lado do nome de alguém, por uma coisa que na maioria
+            dos casos é só «ainda não ligou». O facto positivo aparece; o
+            negativo diz-se na página do perfil, onde há espaço para o dizer
+            sem parecer um aviso. */}
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          {cartao.fidelidadeAtiva && (
+            <p className="flex items-center gap-1.5 text-xs font-medium text-brand-dark dark:text-brand-mint">
+              <Gift size={13} aria-hidden /> Fidelidade disponível
+            </p>
+          )}
+          {cartao.recebePagamentos && (
+            <p className="flex items-center gap-1.5 text-xs font-medium text-brand-dark dark:text-brand-mint">
+              <ShieldCheck size={13} aria-hidden /> Pagamento pela plataforma
+            </p>
+          )}
+        </div>
 
         <Link
           href={`/contabilistas/${cartao.slug}`}

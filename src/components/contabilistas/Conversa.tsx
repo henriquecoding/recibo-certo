@@ -165,7 +165,7 @@ export default function Conversa({
     if (!texto.trim() || aEnviar) return;
     // A mesma regra que a base de dados aplica, aplicada aqui só para a
     // resposta ser imediata. Não é a fronteira — a fronteira é o gatilho
-    // da migração 054, que corre na transação que escreve.
+    // da migração da fronteira de contacto, que corre na transação que escreve.
     if (fuga.encontrado) return;
     setAEnviar(true);
     noFim.current = true;

@@ -14,7 +14,7 @@
 //
 //  O aviso de contacto aparece enquanto se escreve. É a diferença entre
 //  uma explicação e uma parede: a fronteira a sério está no gatilho da
-//  migração 054 e não vai a lado nenhum, mas ser recusado depois de
+//  migração da fronteira de contacto e não vai a lado nenhum, mas ser recusado depois de
 //  carregar em enviar não ensina nada a quem só estava a fazer o que se
 //  faz em todo o lado.
 // ═══════════════════════════════════════════════════════════════════════

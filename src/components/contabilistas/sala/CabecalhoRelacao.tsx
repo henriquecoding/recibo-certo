@@ -16,7 +16,7 @@
 //
 //  O selo «Tudo protegido na plataforma» não é decoração de confiança: é
 //  a afirmação que o produto tem de conseguir sustentar, e sustenta —
-//  desde a migração 054 não há coluna, RPC nem ecrã por onde um contacto
+//  desde a migração da fronteira de contacto não há coluna, RPC nem ecrã por onde um contacto
 //  do cliente chegue ao contabilista.
 // ═══════════════════════════════════════════════════════════════════════
 

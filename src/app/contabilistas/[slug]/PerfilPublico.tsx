@@ -22,6 +22,7 @@ import {
 import { podeAgendar, podePedirVinculo, vinculoAtivo } from "@/lib/contabilistas/vinculo";
 import { estadoOcc } from "@/lib/contabilistas/diretorio";
 import { eurosDeCents, valorComDesconto } from "@/lib/contabilistas/fidelidade";
+import { comoOClienteVe } from "@/lib/contabilistas/stripe/estado";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
@@ -232,6 +233,28 @@ export default function PerfilPublico({ slug }: { slug: string }) {
                 </dd>
               </div>
             )}
+            {/* Como se paga. A pergunta é de quem está a decidir marcar, e
+                até agora não tinha resposta em lado nenhum: marcava-se, e
+                descobria-se pelo silêncio se havia botão de pagar.
+
+                O que sai daqui é só o facto. Que a Stripe pediu um
+                documento a alguém é informação privada, e das que fazem
+                perder um cliente por uma razão que não é dele. */}
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">
+                Pagamento
+              </dt>
+              <dd className="mt-0.5 flex items-start gap-1.5 text-stone-800">
+                {cc.recebePagamentos ? (
+                  <>
+                    <ShieldCheck size={14} className="mt-0.5 shrink-0 text-brand" aria-hidden />
+                    <span>{comoOClienteVe(true).rotulo}</span>
+                  </>
+                ) : (
+                  <span className="text-stone-600">{comoOClienteVe(false).rotulo}</span>
+                )}
+              </dd>
+            </div>
             <div>
               <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Atendimento</dt>
               <dd className="mt-0.5 capitalize text-stone-800">{cc.modalidades.join(" e ")}</dd>

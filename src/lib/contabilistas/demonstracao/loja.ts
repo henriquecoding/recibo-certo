@@ -1033,7 +1033,7 @@ export async function apagarVista(vistaId: string): Promise<{ erro?: string }> {
 
 // ─── A sala: pedidos e linha do tempo ──────────────────────────────────
 //
-// As mesmas paredes da migração 055, e pelas mesmas razões: quem abre a
+// As mesmas paredes da migração da sala de acompanhamento, e pelas mesmas razões: quem abre a
 // demonstração para avaliar o produto tem de bater contra elas. Concluir
 // duas vezes falha aqui como falha lá.
 

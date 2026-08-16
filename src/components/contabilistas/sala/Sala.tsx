@@ -52,6 +52,8 @@ export interface SalaProps {
   consultas: { id: string; inicio: string; estado: string }[];
   partilhasPorLer?: number;
   porPagarCents?: number;
+  /** Se o contabilista consegue mesmo receber pela plataforma. */
+  aceitaPagamentos?: boolean;
   /** O cartão de fidelidade desta relação, para o resumo. */
   fidelidade?: { carimbos: number; meta: number } | null;
   /**
@@ -79,7 +81,8 @@ export interface SalaProps {
 
 export default function Sala({
   vinculoId, papel, meuId, nomeDoOutro, estadoVinculo,
-  consultas, partilhasPorLer = 0, porPagarCents = 0, fidelidade = null,
+  consultas, partilhasPorLer = 0, porPagarCents = 0, aceitaPagamentos = false,
+  fidelidade = null,
   cabecalho, mostrarResumo = false, mostrarComposer = false,
   aoAgir, aoMudar,
 }: SalaProps) {
@@ -136,10 +139,11 @@ export default function Sala({
   const retrato: RetratoDaRelacao = useMemo(
     () => ({
       papel, estadoVinculo, pedidos, consultas,
-      mensagensPorLer, partilhasPorLer, porPagarCents,
+      mensagensPorLer, partilhasPorLer, porPagarCents, aceitaPagamentos,
       agora: new Date(),
     }),
-    [papel, estadoVinculo, pedidos, consultas, mensagensPorLer, partilhasPorLer, porPagarCents],
+    [papel, estadoVinculo, pedidos, consultas, mensagensPorLer, partilhasPorLer,
+     porPagarCents, aceitaPagamentos],
   );
 
   const passo = useMemo(() => proximoPasso(retrato), [retrato]);
