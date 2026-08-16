@@ -46,6 +46,16 @@ export interface RetratoDaRelacao {
   partilhasPorLer: number;
   /** Só do lado do cliente: consultas realizadas por liquidar, em cêntimos. */
   porPagarCents: number;
+  /**
+   * Se o contabilista consegue mesmo receber pela plataforma.
+   *
+   * Sem isto, o passo «Pagar agora» aparecia a quem tem uma consulta por
+   * liquidar de um contabilista que nunca acabou de ligar a conta — e o
+   * botão levava a uma recusa do servidor. Um beco sem saída oferecido
+   * pela própria interface é pior do que não oferecer nada: a pessoa fica
+   * a achar que falhou alguma coisa que ela fez.
+   */
+  aceitaPagamentos: boolean;
   agora: Date;
 }
 
@@ -129,7 +139,9 @@ function passosDoCliente(r: RetratoDaRelacao): ProximoPasso[] {
   // 2. Dinheiro por liquidar. Vem antes da consulta futura porque é uma
   //    dívida a correr, e depois dos pedidos porque um prazo fiscal
   //    perdido custa mais do que um pagamento adiado.
-  if (r.porPagarCents > 0) {
+  //
+  //    Só quando há mesmo por onde pagar. Ver `aceitaPagamentos`.
+  if (r.porPagarCents > 0 && r.aceitaPagamentos) {
     out.push({
       chave: "por_pagar",
       titulo: "Tens uma consulta por pagar",

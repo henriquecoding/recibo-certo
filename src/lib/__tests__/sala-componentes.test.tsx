@@ -255,6 +255,7 @@ function contabilista(over: Partial<Contabilista> = {}): Contabilista {
     occVerificado: true, linkedinLigado: false, estado: "aprovado",
     aceitaNovosClientes: true, precoConsultaCents: 5000, duracaoConsultaMin: 45,
     fidelidadeMeta: 5, fidelidadeDescontoPct: 20, fidelidadeAtiva: true,
+    recebePagamentos: true,
     criadoEm: "2025-01-01T00:00:00Z",
     ...over,
   };

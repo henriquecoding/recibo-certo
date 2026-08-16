@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 //  SALA DE ACOMPANHAMENTO — tipos partilhados
 //  ---------------------------------------------------------------------
-//  Os mesmos nomes que a migração 055 usa nas restrições CHECK. Um estado
+//  Os mesmos nomes que a migração da sala de acompanhamento usa nas restrições CHECK. Um estado
 //  novo aqui sem estar lá e a base recusa a escrita — que é o
 //  comportamento certo.
 // ═══════════════════════════════════════════════════════════════════════
@@ -51,7 +51,7 @@ export interface PedidoCliente {
   tipo: TipoPedido;
   titulo: string;
   descricao: string | null;
-  /** Data (não instante) — ver a nota na migração 055. */
+  /** Data (não instante) — ver a nota na migração da sala de acompanhamento. */
   prazo: string | null;
   obrigatorio: boolean;
   estado: EstadoPedido;

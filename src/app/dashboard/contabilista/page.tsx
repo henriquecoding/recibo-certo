@@ -255,6 +255,7 @@ export default function MeuContabilistaPage() {
           estadoVinculo={vinculo.estado}
           consultas={consultas.map((a) => ({ id: a.id, inicio: a.inicio, estado: a.estado }))}
           porPagarCents={porPagar.reduce((t, c) => t + c.valorCents, 0)}
+          aceitaPagamentos={cc.recebePagamentos}
           fidelidade={cartao && cc.fidelidadeAtiva
             ? { carimbos: cartao.carimbos, meta: cartao.meta }
             : null}

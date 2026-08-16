@@ -199,6 +199,7 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
     fidelidadeMeta: 5,
     fidelidadeDescontoPct: 15,
     fidelidadeAtiva: true,
+    recebePagamentos: true,
     criadoEm: instante(agora, -420, 10),
   };
 

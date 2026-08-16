@@ -106,6 +106,16 @@ export interface Contabilista {
   fidelidadeMeta: number;
   fidelidadeDescontoPct: number;
   fidelidadeAtiva: boolean;
+  /**
+   * Se um cliente consegue mesmo pagar-lhe pela plataforma.
+   *
+   * Vem de `contabilistas_publico.recebe_pagamentos`, que por sua vez vem
+   * do `charges_enabled` da conta Stripe. É o ÚNICO facto que sai dessa
+   * conta para o lado público: nem o id, nem os requisitos, nem se está em
+   * análise. Quem vê `false` não consegue distinguir «nunca ligou» de «tem
+   * um documento por enviar», e é isso que se pretende.
+   */
+  recebePagamentos: boolean;
   criadoEm: string;
 }
 
@@ -132,7 +142,7 @@ export interface Vinculo {
 
 // Aqui esteve `emailCliente`, e a sua ausência é uma decisão, não um
 // esquecimento: o vínculo não guarda nenhum canal de contacto do cliente,
-// e a coluna deixou de existir na base de dados com a migração 054.
+// e a coluna deixou de existir na base de dados com a migração da fronteira de contacto.
 //
 // O motivo não é retenção artificial. É que tudo o que a plataforma promete
 // — a partilha que se revoga, o ficheiro que fecha quando o acompanhamento

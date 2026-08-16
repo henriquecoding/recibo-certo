@@ -3,7 +3,7 @@
 \pset pager off
 
 -- ═══════════════════════════════════════════════════════════════════════
---  A SALA DE ACOMPANHAMENTO (migração 055)
+--  A SALA DE ACOMPANHAMENTO (migração da sala de acompanhamento)
 --  ---------------------------------------------------------------------
 --  O pedido ao cliente e a linha do tempo. As duas garantias que interessam
 --  provar contra a base de dados a sério:

@@ -48,6 +48,7 @@ const BASE: FichaDePerfil = {
   respostaMediaHoras: 24,
   occVerificado: false,
   linkedinLigado: true,
+  recebePagamentos: false,
 };
 
 // ─── §133 · completude ─────────────────────────────────────────────────

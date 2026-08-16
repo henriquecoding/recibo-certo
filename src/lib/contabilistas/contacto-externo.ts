@@ -2,9 +2,9 @@
 //  CONTACTO EXTERNO — a mesma regra que a base de dados aplica
 //  ---------------------------------------------------------------------
 //  Isto NÃO é a fronteira de segurança. A fronteira é
-//  `texto_parece_contacto_externo` na migração 054, que corre dentro da
-//  transação que escreve — quem quiser contornar o browser fala com o
-//  PostgREST e encontra-a na mesma.
+//  `texto_parece_contacto_externo`, em SQL, que corre dentro da transação
+//  que escreve — quem quiser contornar o browser fala com o PostgREST e
+//  encontra-a na mesma.
 //
 //  Isto existe por uma razão diferente: para que a pessoa saiba ANTES de
 //  carregar em enviar. Um aviso a meio da escrita é uma explicação; a mesma
@@ -184,7 +184,7 @@ export function explicarContactoExterno(motivos: MotivoContacto[]): string {
 /**
  * A recusa vinda do servidor, traduzida.
  *
- * O gatilho da migração 054 levanta `22023` com `HINT = 'contacto_externo'`.
+ * O gatilho da migração da fronteira de contacto levanta `22023` com `HINT = 'contacto_externo'`.
  * Reconhecer a dica evita mostrar a mensagem crua do PostgreSQL a alguém
  * que só queria enviar uma frase.
  */

@@ -2,7 +2,7 @@
 //  SALA DE ACOMPANHAMENTO — acesso a dados, sob RLS
 //  ---------------------------------------------------------------------
 //  Como no resto de `lib/contabilistas`: nenhuma verificação de permissão
-//  vive aqui. Quem autoriza é a migração 055 — a política de leitura da
+//  vive aqui. Quem autoriza é a migração da sala de acompanhamento — a política de leitura da
 //  tabela e, na linha do tempo, a verificação escrita à mão dentro da
 //  função (que é SECURITY DEFINER e por isso passa por cima da RLS).
 //
@@ -55,7 +55,7 @@ export interface NovoPedido {
   tipo: TipoPedido;
   titulo: string;
   descricao?: string | null;
-  /** `AAAA-MM-DD`. Ver a nota sobre datas na migração 055. */
+  /** `AAAA-MM-DD`. Ver a nota sobre datas na migração da sala de acompanhamento. */
   prazo?: string | null;
   obrigatorio?: boolean;
 }

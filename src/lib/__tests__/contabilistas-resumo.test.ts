@@ -200,7 +200,7 @@ describe("resumo: procura", () => {
 
   // Este teste procurava pelo email, e passava. Passar a não haver nada
   // para encontrar é a alteração, não um teste que se perdeu: desde a
-  // migração 054 o vínculo não guarda contacto nenhum, e a busca do painel
+  // migração da fronteira de contacto o vínculo não guarda contacto nenhum, e a busca do painel
   // deixou de ter por onde o procurar.
   it("não tem por onde procurar um contacto", () => {
     for (const q of ["joao@", "@exemplo.pt", "912345678"]) {
