@@ -320,3 +320,44 @@
     transform: none;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   TELEMÓVEL: as afordâncias de grelha desaparecem
+   -------------------------------------------------------------------
+   Abaixo dos 640px a grelha vira uma LISTA (ver o topo do ficheiro), e
+   `grid-column`/`grid-row` deixam de ser lidos. O grip, o canto de
+   redimensionar, a etiqueta de tamanho e a grelha-guia continuavam à
+   vista — e nenhum deles mudava nada no ecrã.
+
+   Uma afordância que não faz nada é pior do que não existir: a pessoa
+   tenta, não acontece nada, e conclui que a aplicação está avariada. No
+   telemóvel a ordem e o tamanho mexem-se em «Organizar painel», que é
+   uma lista e faz sentido com o dedo.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 639px) {
+  .grip,
+  .resize,
+  .badgeTamanho {
+    display: none;
+  }
+
+  /* A guia de doze colunas sobre uma lista de um cartão por linha
+     desenhava riscas que não correspondiam a nada. */
+  .grelhaVisivel {
+    background-image: none;
+  }
+
+  /* Sem o grip, o título encosta à esquerda como no modo normal. */
+  .moduloTopo {
+    padding-left: 0.75rem;
+  }
+}
+
+/* A grelha a receber um módulo vindo da biblioteca. Sem uma resposta
+   visível, arrastar parecia não estar a acontecer — e durante muito tempo
+   não estava mesmo: não havia `onDrop` nenhum no painel. */
+.grelhaAReceber {
+  outline: 2px dashed rgba(29, 158, 117, 0.45);
+  outline-offset: 4px;
+  border-radius: 1rem;
+}

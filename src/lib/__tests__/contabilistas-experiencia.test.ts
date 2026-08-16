@@ -121,8 +121,17 @@ describe("nada que não se desfaz acontece sem pergunta", () => {
  * faz é marcar como lida a partilha que a pessoa acabou de abrir. A resposta
  * a isso é o selo «Nova» a desaparecer, à frente dos olhos. Um aviso a dizer
  * «marcado como lido» seria ruído por uma coisa que ninguém pediu.
+ *
+ * `clientes` fica de fora pela mesma família de razão, e desde que passou a
+ * ler o resumo agregado do servidor: é um ecrã SÓ DE LEITURA — a tabela
+ * procura, ordena e liga para a ficha, e não escreve nada. A única coisa
+ * que pode correr mal é o carregamento, e a resposta certa a isso não é um
+ * aviso que desaparece sozinho: é o painel de erro que fica no ecrã, diz
+ * que uma lista vazia seria uma afirmação diferente de «não conseguimos
+ * ler», e oferece «Tentar outra vez».
  */
-const ECRAS_QUE_ESCREVEM = Object.entries(ECRAS).filter(([nome]) => nome !== "partilhas");
+const SEM_ESCRITA = new Set(["partilhas", "clientes"]);
+const ECRAS_QUE_ESCREVEM = Object.entries(ECRAS).filter(([nome]) => !SEM_ESCRITA.has(nome));
 
 describe("toda a ação tem resposta, e a resposta é do produto", () => {
   it.each(ECRAS_QUE_ESCREVEM)("%s responde com avisos", (nome, fonte) => {

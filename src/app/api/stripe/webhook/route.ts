@@ -12,6 +12,7 @@ import {
 } from "@/lib/billing/projection";
 import { enviarEmail } from "@/lib/email/send";
 import { emailSubscricaoAtivada, emailSubscricaoCancelada } from "@/lib/email/templates";
+import { aplicarDesbloqueio, tipoDaSessao } from "@/lib/stripe/pagamentos-contabilistas";
 
 export const runtime = "nodejs";
 
@@ -68,7 +69,15 @@ async function processEvent(event: Stripe.Event): Promise<void> {
     }
     case "checkout.session.completed":
     case "checkout.session.async_payment_succeeded": {
-      await syncCheckoutSession((event.data.object as Stripe.Checkout.Session).id);
+      const sessao = event.data.object as Stripe.Checkout.Session;
+      // A compra de patamar é uma venda NOSSA, mas não é uma subscrição
+      // Plus: não passa pela projeção de billing. Separam-se pelos
+      // metadados, que a Stripe devolve tal e qual como os escrevemos.
+      if (tipoDaSessao(sessao) === "desbloqueio_patamar") {
+        await aplicarDesbloqueio(sessao);
+        return;
+      }
+      await syncCheckoutSession(sessao.id);
       return;
     }
     case "checkout.session.async_payment_failed":

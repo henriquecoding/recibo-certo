@@ -43,6 +43,22 @@ export async function decidirVinculo(
   return real.decidirVinculo(id, decisao);
 }
 
+/**
+ * O resumo por cliente.
+ *
+ * No real vem agregado do servidor; na demonstração a loja deriva-o das
+ * listas em memória com as MESMAS regras (`resumirClientes`). É por isso
+ * que a função pura continua a existir: é onde as regras estão escritas de
+ * forma testável, e é o que o modo de demonstração usa.
+ */
+export async function resumoDeClientes(contabilistaId: string): Promise<real.ResumoClienteLido[]> {
+  if (emDemonstracao()) return (await loja()).resumoDeClientes();
+  void contabilistaId; // no real quem pergunta é a sessão, não o argumento
+  return real.resumoDeClientes();
+}
+
+export type { ResumoClienteLido } from "../dados";
+
 export async function contagensDoPainel(contabilistaId: string): Promise<{
   pedidos: number;
   partilhasPorLer: number;

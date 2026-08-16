@@ -32,7 +32,7 @@ export function TituloDoPainel({ children }: { children: ReactNode }) {
   useEffect(() => { setAlvo(document.getElementById("painel-titulo")); }, []);
   if (!alvo) return null;
   return createPortal(
-    <span className="truncate text-sm font-semibold text-stone-700 dark:text-stone-200">{children}</span>,
+    <span className="truncate text-sm font-semibold text-stone-700">{children}</span>,
     alvo,
   );
 }

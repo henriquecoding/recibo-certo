@@ -199,8 +199,8 @@ As invariantes estão fixadas em `src/lib/__tests__/contabilistas-experiencia.te
 
 ## 10. O que fica de fora (decisões explícitas)
 
-- **Pagamentos da consulta.** O ReciboCerto não é intermediário financeiro entre
-  cliente e contabilista. O Stripe existente é do Plus e continua a ser só isso.
+- ~~**Pagamentos da consulta.** O ReciboCerto não é intermediário financeiro
+  entre cliente e contabilista.~~ **Revisto em 2026-08-16 — ver §12.**
 - **Notas clínicas / dossiê interno do contabilista.** Fora de âmbito por agora:
   guardar conteúdo profissional sobre terceiros levanta obrigações que não estão
   resolvidas.
@@ -208,3 +208,83 @@ As invariantes estão fixadas em `src/lib/__tests__/contabilistas-experiencia.te
   um-contabilista-uma-conta. `alem-da-sessao` mostra o caminho para organizações,
   se um dia fizer falta.
 - **Venda da mesma lead a vários contabilistas.** Proibido por `routing.ts`.
+
+---
+
+## 12. Pagamentos (2026-08-16) — a §10 revista
+
+A §10 dizia que o ReciboCerto não processa o pagamento da consulta. O
+raciocínio por trás continua escrito em `progressao/fronteiras.ts` e continua
+certo:
+
+> retirar uma percentagem do dinheiro de um cliente antes de o entregar a
+> outro é outra atividade.
+
+A decisão de produto mudou: o cliente passa a pagar o contabilista **através**
+do ReciboCerto. A forma escolhida é a única que não atravessa aquela linha.
+
+### Cobranças diretas, não de destino
+
+| | Direct charges (o que se fez) | Destination charges (o que não se fez) |
+|---|---|---|
+| Onde nasce a cobrança | conta do contabilista | conta da plataforma |
+| Comerciante de registo | o contabilista | a plataforma |
+| Nome no extrato do cliente | o do contabilista | o da plataforma |
+| Onde o dinheiro entra | saldo dele | saldo da plataforma, e só depois o dele |
+| A comissão | `application_fee_amount` | idem, mas sobre dinheiro já retido |
+
+A coluna da direita é o que a §10 proibia. A da esquerda mantém verdadeiro o
+essencial — *o cliente paga ao contabilista, e a plataforma não fica com o
+dinheiro de ninguém* — e é o que está implementado.
+
+**O que deixou de ser verdade**, e por isso mudou na copy: a plataforma
+*processa* o pagamento. É ela que abre o checkout. `COPY_QUEM_FATURA` foi
+reescrita para o dizer, porque uma frase falsa sobre dinheiro é pior do que
+uma frase incómoda.
+
+### As três invariantes
+
+1. **O valor nunca vem do browser.** `preparar_pagamento_consulta` calcula-o a
+   partir do catálogo do contabilista ou do preço real que ele fixou ao
+   concluir. Um preço que viajasse pelo cliente era um preço editável no
+   cliente — e a comissão sobre ele, também.
+2. **A comissão é lida no instante da cobrança** (`comissao_bps_do_contabilista`)
+   e guardada com o pagamento. Subir de patamar amanhã não muda o que foi
+   cobrado ontem.
+3. **O benefício de fidelidade é reservado, não gasto**, quando o checkout
+   abre. Só se consome em `liquidar_pagamento`. Um checkout abandonado não
+   queima um cupão.
+
+### Quando se paga
+
+Por tipo de consulta (`contabilista_tipos_consulta.pagamento`):
+
+| Política | O que acontece |
+|---|---|
+| `no_pedido` | Paga-se ao marcar. A consulta fica confirmada quando a Stripe confirma. |
+| `depois` | Marca-se sem pagar. Ao concluir com o preço real, o cliente recebe o pedido. É a omissão. |
+| `sem_pagamento` | Não gera cobrança nem comissão. Uma primeira conversa gratuita continua possível. |
+
+### Dois webhooks, dois segredos
+
+`/api/stripe/webhook` (plataforma: Plus + compra de patamares) e
+`/api/stripe/connect-webhook` (contas ligadas: consultas + `account.updated`).
+Não é arrumação — aceitar um evento de conta ligada com a assinatura da
+plataforma seria aceitar o que não se consegue verificar.
+
+### A compra de patamares NÃO foi reescrita
+
+Já existia inteira na migração `20260815233000`: `progressao_compras`,
+`criar_intencao_desbloqueio`, `aplicar_compra_patamar`, o ledger de créditos
+com `held`/`released`/`spent`, e o caso §70 — o XP alcançar o patamar durante
+o checkout, que marca `needs_refund` e nunca transfere o pagamento para o
+patamar seguinte. O que faltava era a bandeira `accountant_tier_purchase` e o
+checkout no meio.
+
+### O que continua de fora
+
+- **Reembolsos automáticos.** `needs_refund` fica registado para a
+  administração tratar; não há devolução automática.
+- **Faturação.** O recibo é do contabilista e sai da Stripe. O ReciboCerto não
+  emite fatura em nome dele.
+- **Pagamentos recorrentes de avença.** Só consultas, uma a uma.

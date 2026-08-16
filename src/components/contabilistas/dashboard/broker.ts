@@ -82,13 +82,47 @@ function inicioDoDia(): Date {
 export type EstadoDominio<K extends DominioDados = DominioDados> =
   | { estado: "a-carregar" }
   | { estado: "pronto"; dados: DadosDoDominio[K] }
-  | { estado: "erro"; mensagem: string };
+  /** `mensagem` é para se ler; `detalhe` é o texto cru, para a consola. */
+  | { estado: "erro"; mensagem: string; detalhe?: string };
+
+/**
+ * O que a pessoa lê quando um domínio falha.
+ *
+ * A mensagem crua do Postgres («new row violates row-level security policy
+ * for table…») não diz nada a quem está a trabalhar e diz demasiado sobre o
+ * schema a quem não está. O detalhe técnico continua a existir em
+ * `detalhe`, para quem abrir a consola.
+ */
+function mensagemLegivel(e: unknown): string {
+  const cru = e instanceof Error ? e.message : "";
+  if (/fetch|network|Failed to fetch/i.test(cru)) {
+    return "Sem ligação. Tenta outra vez.";
+  }
+  if (/JWT|token|session|not authenticated/i.test(cru)) {
+    return "A sessão expirou. Entra outra vez.";
+  }
+  if (/row-level security|permission denied|policy/i.test(cru)) {
+    return "Sem autorização para ler isto.";
+  }
+  return "Não foi possível carregar.";
+}
 
 export class Broker {
   private readonly emCurso = new Map<DominioDados, Promise<unknown>>();
   private readonly resultado = new Map<DominioDados, EstadoDominio>();
   private readonly ouvintes = new Set<() => void>();
   private readonly ler: ReturnType<typeof leitores>;
+
+  /**
+   * Quantas vezes o estado mudou desde que este broker nasceu.
+   *
+   * Existe por causa do `memo` em `GrelhaEdicao`: os widgets leem o broker
+   * imperativamente, e por isso NENHUMA prop muda quando os dados chegam.
+   * Sem este número, `memo(CorpoDoModulo)` corta o único render que os
+   * mostraria, e um módulo acabado de acrescentar à vista ficava vazio até
+   * se sair da edição. É a prop que carrega a mudança para dentro do memo.
+   */
+  versao = 0;
 
   constructor(contabilistaId: string) {
     this.ler = leitores(contabilistaId);
@@ -100,6 +134,7 @@ export class Broker {
   }
 
   private avisar() {
+    this.versao += 1;
     for (const fn of this.ouvintes) fn();
   }
 
@@ -124,9 +159,15 @@ export class Broker {
       .catch((e: unknown) => {
         // Um domínio que falha não pode deixar o painel em branco: o frame
         // fica, com a mensagem dentro. É a mesma regra do ErrorBoundary.
+        //
+        // A promessa sai de `emCurso` para que `revalidar` possa tentar
+        // outra vez: enquanto lá ficasse, um domínio que falhou uma vez
+        // ficava em erro até o painel desmontar.
+        this.emCurso.delete(dominio);
         this.resultado.set(dominio, {
           estado: "erro",
-          mensagem: e instanceof Error ? e.message : "Não foi possível carregar.",
+          mensagem: mensagemLegivel(e),
+          detalhe: e instanceof Error ? e.message : undefined,
         });
         this.avisar();
         return undefined;
@@ -138,5 +179,21 @@ export class Broker {
 
   pedirVarios(dominios: readonly DominioDados[]): Promise<unknown[]> {
     return Promise.all(dominios.map((d) => this.pedir(d)));
+  }
+
+  /**
+   * Deita fora o que está em cache e volta a ler.
+   *
+   * É o que faz o botão «Tentar outra vez» dentro de um módulo em erro, e
+   * é o que uma escrita noutro ecrã do painel precisa de chamar para o
+   * módulo deixar de mostrar o número antigo.
+   */
+  revalidar(dominios: readonly DominioDados[]): Promise<unknown[]> {
+    for (const d of dominios) {
+      this.emCurso.delete(d);
+      this.resultado.delete(d);
+    }
+    this.avisar();
+    return this.pedirVarios(dominios);
   }
 }

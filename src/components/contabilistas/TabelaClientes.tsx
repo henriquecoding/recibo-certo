@@ -25,6 +25,7 @@ import {
 import { ROTULO_VINCULO } from "@/lib/contabilistas/vinculo";
 import type { EstadoVinculo } from "@/lib/contabilistas/tipos";
 import Badge from "@/components/ui/Badge";
+import Separadores, { PainelDoSeparador } from "@/components/contabilistas/Separadores";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import { usarPainel } from "@/components/contabilistas/usarPainel";
 import { ChevronDown, ChevronUp, Search, User } from "@/components/ui/Icons";
@@ -91,26 +92,15 @@ export default function TabelaClientes({ clientes }: { clientes: readonly Resumo
     <div className="space-y-4">
       {/* Separadores e procura */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div role="tablist" aria-label="Filtrar clientes" className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
-          {SEPARADORES.map((s) => (
-            <button
-              key={s.id}
-              role="tab"
-              aria-selected={separador === s.id}
-              onClick={() => setSeparador(s.id)}
-              className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors ${
-                separador === s.id
-                  ? "bg-brand text-white"
-                  : "bg-white text-stone-600 hover:bg-stone-100"
-              }`}
-            >
-              {s.rotulo}
-              <span className={`tabular-nums ${separador === s.id ? "text-white/70" : "text-stone-400"}`}>
-                {contagens[s.id]}
-              </span>
-            </button>
-          ))}
-        </div>
+        <Separadores
+          itens={SEPARADORES.map((s) => ({
+            id: s.id, rotulo: s.rotulo, contagem: contagens[s.id],
+          }))}
+          ativo={separador}
+          onEscolher={setSeparador}
+          etiqueta="Filtrar clientes"
+          painelId="clientes-lista"
+        />
 
         <div className="relative sm:w-64">
           <label htmlFor="procurar-cliente" className="sr-only">Procurar cliente</label>
@@ -144,7 +134,8 @@ export default function TabelaClientes({ clientes }: { clientes: readonly Resumo
       ) : (
         <>
           {/* ── Ecrã grande: tabela ─────────────────────────────── */}
-          <div className="hidden overflow-hidden rounded-4xl border border-stone-200 bg-white shadow-card md:block">
+          <PainelDoSeparador id="clientes-lista">
+        <div className="hidden overflow-hidden rounded-4xl border border-stone-200 bg-white shadow-card md:block">
             <table className="w-full text-sm">
               <caption className="sr-only">
                 Clientes, ordenados por {COLUNAS.find((c) => c.id === coluna)?.rotulo},
@@ -253,6 +244,7 @@ export default function TabelaClientes({ clientes }: { clientes: readonly Resumo
               </li>
             ))}
           </ul>
+          </PainelDoSeparador>
         </>
       )}
     </div>

@@ -350,6 +350,65 @@ export async function decidirVinculo(
   };
 }
 
+/**
+ * Uma linha por cliente, com consultas, envios e cartão já contados.
+ *
+ * A página de clientes derivava isto em JavaScript a partir de três
+ * leituras — e `listarAgendamentos` ordena por `inicio` ASCENDENTE com
+ * `limit(300)`, pelo que guardava as consultas MAIS ANTIGAS. Acima desse
+ * número, «última consulta» e «próxima consulta» ficavam simplesmente
+ * errados, sem aviso, e são as colunas por que a tabela ordena.
+ *
+ * A agregação vive agora em SQL (`resumo_clientes_do_contabilista`).
+ * `resumirClientes` continua a existir: é o que a demonstração usa, e é
+ * onde as regras estão escritas de forma testável.
+ */
+export async function resumoDeClientes(): Promise<ResumoClienteLido[]> {
+  const { data, error } = await getSupabase().rpc("resumo_clientes_do_contabilista");
+  if (error) throw new Error(error.message);
+
+  return ((data ?? []) as unknown as Linha[]).map((r) => ({
+    vinculo: {
+      id: r.vinculo_id as string,
+      contabilistaId: "",
+      clienteId: r.cliente_id as string,
+      estado: r.estado as EstadoVinculo,
+      criadoEm: r.criado_em as string,
+      origem: r.origem as "cliente" | "contabilista",
+      nomeCliente: (r.nome_cliente as string | null) ?? null,
+      emailCliente: (r.email_cliente as string | null) ?? null,
+      mensagem: (r.mensagem as string | null) ?? null,
+    },
+    consultasRealizadas: (r.consultas_realizadas as number) ?? 0,
+    ultima: (r.ultima as string | null) ?? null,
+    proxima: (r.proxima as string | null) ?? null,
+    partilhas: (r.partilhas as number) ?? 0,
+    partilhasPorLer: (r.partilhas_por_ler as number) ?? 0,
+    cartao:
+      r.cartao_meta === null || r.cartao_meta === undefined
+        ? null
+        : {
+            carimbos: (r.cartao_carimbos as number) ?? 0,
+            meta: r.cartao_meta as number,
+            descontoPct: (r.cartao_desconto_pct as number) ?? 0,
+            precoBaseCents: (r.cartao_preco_base as number) ?? 0,
+          },
+  }));
+}
+
+/** O que a RPC devolve, antes de `tratamentoDoCliente` entrar. */
+export interface ResumoClienteLido {
+  vinculo: Vinculo;
+  consultasRealizadas: number;
+  ultima: string | null;
+  proxima: string | null;
+  partilhas: number;
+  partilhasPorLer: number;
+  cartao: {
+    carimbos: number; meta: number; descontoPct: number; precoBaseCents: number;
+  } | null;
+}
+
 /** Os clientes de um contabilista, com o email de contacto de cada vínculo. */
 export async function meusClientes(contabilistaId: string): Promise<Vinculo[]> {
   const { data, error } = await getSupabase()
@@ -424,30 +483,46 @@ export async function obterDisponibilidade(
   });
 }
 
+/**
+ * Substitui a semana-tipo. Uma transação, não duas escritas.
+ *
+ * Isto era um DELETE seguido de um INSERT a partir do browser. Se o INSERT
+ * falhasse — rede, validação, RLS — a semana-tipo já tinha desaparecido e o
+ * contabilista ficava sem horários publicados, com ninguém a conseguir
+ * marcar consulta. A RPC `guardar_disponibilidade` (migração
+ * `20260816120000`) valida tudo ANTES de apagar seja o que for.
+ */
 export async function guardarDisponibilidade(
-  contabilistaId: string,
+  _contabilistaId: string,
   regras: RegraDisponibilidade[]
 ): Promise<{ erro?: string }> {
-  const sb = getSupabase();
-  // Substituição integral: a semana-tipo é um conjunto, não um histórico.
-  const { error: erroApagar } = await sb
-    .from("contabilista_disponibilidade").delete().eq("contabilista_id", contabilistaId);
-  if (erroApagar) return { erro: erroApagar.message };
+  const { data, error } = await getSupabase().rpc("guardar_disponibilidade", {
+    p_regras: regras.map((r) => ({
+      diaSemana: r.diaSemana,
+      inicio: r.inicio,
+      fim: r.fim,
+      duracaoMin: r.duracaoMin,
+      intervaloMin: r.intervaloMin ?? 0,
+    })),
+  });
 
-  if (regras.length === 0) return {};
-
-  const { error } = await sb.from("contabilista_disponibilidade").insert(
-    regras.map((r) => ({
-      contabilista_id: contabilistaId,
-      dia_semana: r.diaSemana,
-      hora_inicio: r.inicio,
-      hora_fim: r.fim,
-      duracao_min: r.duracaoMin,
-      intervalo_min: r.intervaloMin ?? 0,
-    }))
-  );
-  return error ? { erro: error.message } : {};
+  if (error) return { erro: error.message };
+  const r = (data ?? {}) as { ok?: boolean; motivo?: string };
+  if (r.ok) return {};
+  return { erro: MOTIVO_DISPONIBILIDADE[r.motivo ?? ""] ?? "Não foi possível guardar a semana-tipo." };
 }
+
+const MOTIVO_DISPONIBILIDADE: Record<string, string> = {
+  sem_permissao: "A sessão perdeu a autorização. Entra outra vez.",
+  formato_invalido: "Não foi possível ler os períodos.",
+  periodos_a_mais: "São períodos a mais para uma semana. O limite é 60.",
+  dia_invalido: "Há um período num dia que não existe.",
+  hora_invalida: "Há uma hora mal escrita. Usa o formato 09:00.",
+  fim_antes_do_inicio: "A hora de fim tem de ser depois da hora de início.",
+  duracao_invalida: "A duração da consulta tem de estar entre 1 e 480 minutos.",
+  intervalo_invalido: "O intervalo entre consultas tem de estar entre 0 e 240 minutos.",
+  periodo_mais_curto_que_a_consulta: "O intervalo é mais curto do que a duração da consulta.",
+};
 
 export async function obterExcecoes(contabilistaId: string, desde?: string): Promise<Excecao[]> {
   let q = getSupabase()

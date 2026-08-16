@@ -83,10 +83,10 @@ export default function ConcluirConsulta({
 
       {/* Folha inferior no telemóvel, como o design system manda. */}
       <div
-        className="relative flex max-h-[90dvh] w-full min-h-0 flex-col rounded-t-4xl bg-white shadow-float sm:max-w-md sm:rounded-4xl dark:bg-stone-900"
+        className="relative flex max-h-[90dvh] w-full min-h-0 flex-col rounded-t-4xl bg-white shadow-float sm:max-w-md sm:rounded-4xl"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="flex-none border-b border-stone-100 px-5 pb-3 pt-5 dark:border-stone-800">
+        <div className="flex-none border-b border-stone-100 px-5 pb-3 pt-5">
           <h2 className="font-display text-xl text-ink">Concluir a consulta</h2>
           <p className="mt-1 text-sm text-stone-500">
             {nomeCliente} — indica o valor real desta consulta.
@@ -108,7 +108,7 @@ export default function ConcluirConsulta({
                 onChange={(e) => setTexto(e.target.value)}
                 placeholder="0,00"
                 aria-describedby="preco-nota"
-                className="min-h-11 w-full rounded-xl border border-stone-200 px-3 text-right font-display text-lg tabular-nums dark:border-stone-700"
+                className="min-h-11 w-full rounded-xl border border-stone-200 px-3 text-right font-display text-lg tabular-nums"
               />
               <span className="shrink-0 font-display text-lg text-stone-400">€</span>
             </div>
@@ -131,7 +131,7 @@ export default function ConcluirConsulta({
           </div>
 
           {beneficios.length > 0 && (
-            <fieldset className="rounded-2xl border border-stone-200 p-3.5 dark:border-stone-700">
+            <fieldset className="rounded-2xl border border-stone-200 p-3.5">
               <legend className="flex items-center gap-1.5 px-1 text-sm font-semibold text-ink">
                 <Gift size={14} className="text-brand-dark dark:text-brand-mint" aria-hidden />
                 Aplicar um benefício
@@ -154,7 +154,7 @@ export default function ConcluirConsulta({
               </div>
 
               {escolhido && valido && (
-                <dl className="mt-3 space-y-1 border-t border-stone-100 pt-3 text-sm dark:border-stone-800">
+                <dl className="mt-3 space-y-1 border-t border-stone-100 pt-3 text-sm">
                   <Linha rotulo="Valor" valor={eurosDeCents(precoCents)} />
                   <Linha
                     rotulo={`Desconto (${escolhido.percentagem}%)`}
@@ -174,11 +174,11 @@ export default function ConcluirConsulta({
           </p>
         </div>
 
-        <div className="flex flex-none flex-wrap items-center justify-end gap-2 border-t border-stone-100 px-5 py-3.5 dark:border-stone-800">
+        <div className="flex flex-none flex-wrap items-center justify-end gap-2 border-t border-stone-100 px-5 py-3.5">
           <button
             type="button"
             onClick={onCancelar}
-            className="focus-marca min-h-10 rounded-xl px-3 text-sm font-semibold text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-white/5"
+            className="focus-marca min-h-10 rounded-xl px-3 text-sm font-semibold text-stone-600 hover:bg-stone-100 dark:hover:bg-white/5"
           >
             Cancelar
           </button>
@@ -222,7 +222,7 @@ function Linha({
       <dd className={`tabular-nums ${
         forte ? "font-display text-lg text-ink"
           : destaque ? "font-medium text-brand-dark dark:text-brand-mint"
-            : "text-stone-700 dark:text-stone-200"
+            : "text-stone-700"
       }`}>
         {valor}
       </dd>

@@ -39,7 +39,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
-import { TituloDoPainel } from "@/components/contabilistas/AcoesDoPainel";
 import { usarFicha } from "@/components/contabilistas/usarFicha";
 import { usarPainel } from "@/components/contabilistas/usarPainel";
 import {
@@ -55,7 +54,10 @@ import {
   COPY_QUEM_FATURA, DESBLOQUEIO_NAO_COMPRA, DESBLOQUEIO_PAGO_ATIVO,
 } from "@/lib/contabilistas/progressao/fronteiras";
 import Badge from "@/components/ui/Badge";
-import { Award, Check, Gift, Info, Lock, Star, Target, Trophy } from "@/components/ui/Icons";
+import Button from "@/components/ui/Button";
+import { useAvisos } from "@/components/ui/Avisos";
+import { abrirDesbloqueio } from "@/lib/contabilistas/fonte/pagamentos";
+import { Award, Check, Gift, Info, Lock, Star, Target, Trophy, Warning } from "@/components/ui/Icons";
 import styles from "../painel.module.css";
 
 export default function ProgressaoPage() {
@@ -63,33 +65,61 @@ export default function ProgressaoPage() {
   const painel = usarPainel();
   const [estado, setEstado] = useState<EstadoProgressao | null>(null);
   const [eventos, setEventos] = useState<EventoXPLido[]>([]);
+  const [erro, setErro] = useState<string | null>(null);
+  const [tique, setTique] = useState(0);
 
   const quem = userId ?? ficha?.userId ?? "";
 
   useEffect(() => {
     if (!ficha) return;
     let vivo = true;
+    setErro(null);
     Promise.all([obterProgressao(quem), listarEventosXP(quem, 6)])
       .then(([p, e]) => { if (vivo) { setEstado(p); setEventos(e); } })
-      .catch(() => {
-        if (vivo) {
-          setEstado({
-            xp: 0, clientesElegiveis: 0, creditosDisponiveis: 0,
-            creditosReservados: 0, patamarConquistado: 1, patamarComprado: 1,
-          });
-        }
+      // ⚠️ NÃO substituir por um estado inicial fabricado. Isto apresentava
+      // «patamar Base · 10% · 0 XP» quando a leitura falhava, sem distinção
+      // nenhuma face ao valor verdadeiro — um número inventado sobre a
+      // comissão da própria pessoa. Uma lista vazia é uma coisa; um número
+      // errado sobre dinheiro é outra.
+      .catch((e: unknown) => {
+        if (vivo) setErro(e instanceof Error ? e.message : "Não foi possível ler a tua progressão.");
       });
     return () => { vivo = false; };
-  }, [ficha, quem]);
+  }, [ficha, quem, tique]);
 
-  if (aCarregar || !ficha || !estado) return <EsqueletoPainel forma="duasColunas" />;
+  if (aCarregar || !ficha) return <EsqueletoPainel forma="duasColunas" />;
+
+  if (erro) {
+    return (
+      <div className="space-y-6">
+        <CabecalhoPainel titulo="Progressão e comissão" />
+        <div role="alert" className="rounded-4xl border border-clay-border bg-clay-bg/40 px-5 py-10 text-center">
+          <Warning size={24} className="mx-auto text-clay-text" aria-hidden />
+          <p className="mt-3 font-semibold text-clay-text">
+            Não foi possível ler a tua progressão
+          </p>
+          <p className="mx-auto mt-1.5 max-w-md text-sm leading-relaxed text-stone-600">
+            Não mostramos um patamar por adivinhação — seria um número errado sobre a
+            tua comissão. {erro}
+          </p>
+          <button
+            type="button"
+            onClick={() => setTique((t) => t + 1)}
+            className="focus-marca mt-5 inline-flex min-h-10 items-center rounded-xl border border-stone-200 bg-white px-4 text-sm font-semibold text-stone-700 transition-colors hover:border-brand/35"
+          >
+            Tentar outra vez
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!estado) return <EsqueletoPainel forma="duasColunas" />;
 
   const v = vistaProgressao(estado);
 
   return (
     <div className="space-y-6">
-      <TituloDoPainel>Progressão e comissão</TituloDoPainel>
-
       <CabecalhoPainel
         titulo="Progressão e comissão"
         descricao="A taxa que o Recibo Certo cobra desce com o trabalho feito. Aqui vês em que patamar estás, o que falta para o próximo, e o que cada via custa."
@@ -197,7 +227,7 @@ function Hero({ v, estado }: { v: VistaProgressao; estado: EstadoProgressao }) {
 
 function BaseDaComissao() {
   return (
-    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6 dark:border-stone-800">
+    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
       <h2 className="flex items-center gap-2 font-display text-lg text-ink">
         <Award size={17} className="shrink-0 text-brand-dark dark:text-brand-mint" aria-hidden />
         Sobre o que incide a comissão
@@ -205,13 +235,13 @@ function BaseDaComissao() {
       <dl className="mt-3.5 grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl bg-cream/70 p-3.5 dark:bg-white/[0.03]">
           <dt className="text-xs font-bold uppercase tracking-wider text-stone-400">A base</dt>
-          <dd className="mt-1.5 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
+          <dd className="mt-1.5 text-sm leading-relaxed text-stone-600">
             {COPY_BASE_DA_COMISSAO}
           </dd>
         </div>
         <div className="rounded-2xl bg-cream/70 p-3.5 dark:bg-white/[0.03]">
           <dt className="text-xs font-bold uppercase tracking-wider text-stone-400">Quem fatura</dt>
-          <dd className="mt-1.5 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
+          <dd className="mt-1.5 text-sm leading-relaxed text-stone-600">
             {COPY_QUEM_FATURA}
           </dd>
         </div>
@@ -252,7 +282,7 @@ function DuasRotas({ v, estado }: { v: VistaProgressao; estado: EstadoProgressao
           <p className="flex items-center gap-2 text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-brand-dark dark:text-brand-mint">
             <Star size={13} aria-hidden /> Conquistar por mérito
           </p>
-          <p className="mt-2 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
+          <p className="mt-2 text-sm leading-relaxed text-stone-600">
             Cada serviço concluído e cada cliente novo aproximam-te do próximo patamar.
           </p>
 
@@ -266,7 +296,7 @@ function DuasRotas({ v, estado }: { v: VistaProgressao; estado: EstadoProgressao
                 fracao={estado.clientesElegiveis / Math.max(1, proximo.clientesMinimo)}
               />
             )}
-            <div className="flex items-baseline justify-between gap-3 border-t border-stone-100 pt-3 dark:border-stone-800">
+            <div className="flex items-baseline justify-between gap-3 border-t border-stone-100 pt-3">
               <dt className="font-semibold text-ink">Comissão ao atingir</dt>
               <dd className="font-display text-xl tabular-nums text-brand-dark dark:text-brand-mint">
                 {formatarComissao(proximo.comissaoBps)}
@@ -274,7 +304,7 @@ function DuasRotas({ v, estado }: { v: VistaProgressao; estado: EstadoProgressao
             </div>
           </dl>
 
-          <ul className="mt-4 space-y-1 border-t border-stone-100 pt-3.5 text-xs text-stone-500 dark:border-stone-800">
+          <ul className="mt-4 space-y-1 border-t border-stone-100 pt-3.5 text-xs text-stone-500">
             <li>Serviço concluído — <strong className="tabular-nums">+{XP_POR_EVENTO.servicoElegivel} XP</strong></li>
             <li>Primeiro serviço de um cliente novo — <strong className="tabular-nums">+{XP_POR_EVENTO.primeiroServicoDeNovoCliente} XP</strong></li>
             <li>Ciclo de fidelidade concluído — <strong className="tabular-nums">+{XP_POR_EVENTO.cartaoElegivelConcluido} XP</strong> e 1 crédito</li>
@@ -288,11 +318,11 @@ function DuasRotas({ v, estado }: { v: VistaProgressao; estado: EstadoProgressao
 
         {/* ── O «OU», vertical e ao meio ── */}
         <div className="flex items-center justify-center lg:flex-col">
-          <span aria-hidden className="hidden h-full w-px bg-stone-200 lg:block dark:bg-stone-800" />
-          <span className="my-2 rounded-full border border-stone-200 bg-white px-2.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-wider text-stone-400 dark:border-stone-700 dark:bg-stone-900">
+          <span aria-hidden className="hidden h-full w-px bg-stone-200 lg:block" />
+          <span className="my-2 rounded-full border border-stone-200 bg-white px-2.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-wider text-stone-400">
             ou
           </span>
-          <span aria-hidden className="hidden h-full w-px bg-stone-200 lg:block dark:bg-stone-800" />
+          <span aria-hidden className="hidden h-full w-px bg-stone-200 lg:block" />
         </div>
 
         {/* ── Desbloqueio (lilás, nunca verde) ── */}
@@ -300,7 +330,7 @@ function DuasRotas({ v, estado }: { v: VistaProgressao; estado: EstadoProgressao
           <p className="flex items-center gap-2 text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-categoria-lilas-text dark:text-violet-300">
             <Lock size={13} aria-hidden /> Desbloquear agora
           </p>
-          <p className="mt-2 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
+          <p className="mt-2 text-sm leading-relaxed text-stone-600">
             Passa ao patamar {proximo.ordem} de imediato, com{" "}
             {formatarComissao(proximo.comissaoBps)} de comissão.
           </p>
@@ -308,7 +338,7 @@ function DuasRotas({ v, estado }: { v: VistaProgressao; estado: EstadoProgressao
           <dl className="mt-4 space-y-2 text-sm">
             <div className="flex items-baseline justify-between gap-3">
               <dt className="text-stone-500">Preço base</dt>
-              <dd className="tabular-nums text-stone-700 dark:text-stone-200">
+              <dd className="tabular-nums text-stone-700">
                 {formatarEuros(sim?.baseCents ?? proximo.precoDesbloqueioCents ?? 0)}
               </dd>
             </div>
@@ -322,7 +352,7 @@ function DuasRotas({ v, estado }: { v: VistaProgressao; estado: EstadoProgressao
                 </dd>
               </div>
             )}
-            <div className="flex items-baseline justify-between gap-3 border-t border-stone-100 pt-2 dark:border-stone-800">
+            <div className="flex items-baseline justify-between gap-3 border-t border-stone-100 pt-2">
               <dt className="font-semibold text-ink">Preço final</dt>
               <dd className="font-display text-xl tabular-nums text-ink">
                 {formatarEuros(sim?.finalCents ?? proximo.precoDesbloqueioCents ?? 0)}
@@ -330,7 +360,15 @@ function DuasRotas({ v, estado }: { v: VistaProgressao; estado: EstadoProgressao
             </div>
           </dl>
 
-          {!DESBLOQUEIO_PAGO_ATIVO && (
+          {DESBLOQUEIO_PAGO_ATIVO ? (
+            <div className="mt-4">
+              <BotaoDesbloquear creditos={estado.creditosDisponiveis} />
+              <p className="mt-2 text-[0.6875rem] leading-relaxed text-stone-400">
+                Pagamento único, sem subscrição. O patamar fica teu — não desce se
+                deixares de faturar.
+              </p>
+            </div>
+          ) : (
             <p
               role="status"
               className="mt-4 flex items-start gap-2 rounded-2xl border border-alert-border bg-alert-bg px-3.5 py-3 text-xs leading-relaxed text-alert-text"
@@ -340,8 +378,8 @@ function DuasRotas({ v, estado }: { v: VistaProgressao; estado: EstadoProgressao
             </p>
           )}
 
-          <div className="mt-4 border-t border-stone-100 pt-3.5 dark:border-stone-800">
-            <p className="text-xs font-semibold text-stone-600 dark:text-stone-300">
+          <div className="mt-4 border-t border-stone-100 pt-3.5">
+            <p className="text-xs font-semibold text-stone-600">
               O que o desbloqueio não compra
             </p>
             <ul className="mt-2 space-y-1.5">
@@ -359,6 +397,39 @@ function DuasRotas({ v, estado }: { v: VistaProgressao; estado: EstadoProgressao
   );
 }
 
+/**
+ * O botão que abre o checkout.
+ *
+ * Manda quantos créditos quer gastar e mais nada — não o patamar, não o
+ * preço. Quem escolhe o alvo é `criar_intencao_desbloqueio` (§68: só o
+ * PRÓXIMO patamar) e quem calcula o preço é o mesmo SQL. É a §72, e é o
+ * que impede um browser de comprar o patamar 6 pelo preço do 2.
+ */
+function BotaoDesbloquear({ creditos }: { creditos: number }) {
+  const avisos = useAvisos();
+  const [ocupado, setOcupado] = useState(false);
+
+  return (
+    <Button
+      variant="secondary"
+      disabled={ocupado}
+      onClick={async () => {
+        setOcupado(true);
+        const r = await abrirDesbloqueio(creditos);
+        setOcupado(false);
+        if (r.erro) {
+          avisos.erro("Não foi possível abrir o pagamento.", { detalhe: r.erro });
+          return;
+        }
+        if (r.url) window.location.href = r.url;
+      }}
+    >
+      <Lock size={14} aria-hidden />
+      {ocupado ? "A abrir…" : "Desbloquear agora"}
+    </Button>
+  );
+}
+
 function Barra({
   rotulo, feito, alvo, fracao,
 }: { rotulo: string; feito: number; alvo: number; fracao: number }) {
@@ -367,12 +438,12 @@ function Barra({
     <div>
       <div className="flex items-baseline justify-between gap-3">
         <dt className="text-stone-500">{rotulo}</dt>
-        <dd className="tabular-nums font-semibold text-stone-700 dark:text-stone-200">
+        <dd className="tabular-nums font-semibold text-stone-700">
           {feito} / {alvo}
         </dd>
       </div>
       <div
-        className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800"
+        className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-stone-100"
         role="progressbar" aria-valuenow={feito} aria-valuemin={0} aria-valuemax={alvo}
         aria-label={rotulo}
       >
@@ -386,7 +457,7 @@ function Barra({
 
 function Jornada({ v }: { v: VistaProgressao }) {
   return (
-    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6 dark:border-stone-800">
+    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
       <h2 className="font-display text-xl text-ink">A tua jornada de progressão</h2>
       {/* §164: a comissão DESCE. «Cada patamar aumenta a tua comissão» está
           proibido pelo nome — diria o contrário do que o ecrã mostra. */}
@@ -413,7 +484,7 @@ function Jornada({ v }: { v: VistaProgressao }) {
                       ? "bg-brand-deep text-white"
                       : proximo
                         ? "border-2 border-alert-text/45 text-alert-text dark:border-amber-400/40 dark:text-amber-300"
-                        : "bg-stone-100 text-stone-400 dark:bg-stone-800 dark:text-stone-500"
+                        : "bg-stone-100 text-stone-400"
                 }`}
               >
                 {conquistado ? <Check size={13} aria-hidden /> : p.ordem}
@@ -444,7 +515,7 @@ function CreditosDeFidelidade({ estado }: { estado: EstadoProgressao }) {
   const seguinte = MARCOS_CREDITO.find((m) => m.creditos > estado.creditosDisponiveis);
 
   return (
-    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6 dark:border-stone-800">
+    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
       <h2 className="flex items-center gap-2 font-display text-lg text-ink">
         <Gift size={17} className="shrink-0 text-brand-dark dark:text-brand-mint" aria-hidden />
         Créditos de fidelidade
@@ -465,7 +536,7 @@ function CreditosDeFidelidade({ estado }: { estado: EstadoProgressao }) {
                 ativo ? "bg-brand-light/60 dark:bg-brand/10" : "bg-cream/70 dark:bg-white/[0.03]"
               }`}
             >
-              <span className="flex min-w-0 items-center gap-2 text-stone-600 dark:text-stone-300">
+              <span className="flex min-w-0 items-center gap-2 text-stone-600">
                 {ativo ? (
                   <Check size={14} className="shrink-0 text-brand-dark dark:text-brand-mint" aria-hidden />
                 ) : (
@@ -481,8 +552,8 @@ function CreditosDeFidelidade({ estado }: { estado: EstadoProgressao }) {
         })}
       </ul>
 
-      <div className="mt-4 border-t border-stone-100 pt-3.5 dark:border-stone-800">
-        <p className="text-sm text-stone-600 dark:text-stone-300">
+      <div className="mt-4 border-t border-stone-100 pt-3.5">
+        <p className="text-sm text-stone-600">
           Tens{" "}
           <strong className="font-semibold text-ink tabular-nums">{estado.creditosDisponiveis}</strong>{" "}
           {estado.creditosDisponiveis === 1 ? "crédito disponível" : "créditos disponíveis"}
@@ -540,7 +611,7 @@ function AtividadeElegivel({
   const reais = eventos.filter((e) => !e.shadow);
 
   return (
-    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6 dark:border-stone-800">
+    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
       <h2 className="flex items-center gap-2 font-display text-lg text-ink">
         <Target size={17} className="shrink-0 text-brand-dark dark:text-brand-mint" aria-hidden />
         Atividade elegível recente
@@ -564,7 +635,7 @@ function AtividadeElegivel({
           {reais.map((e) => (
             <li key={e.id} className="flex items-start justify-between gap-3 py-2.5">
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-stone-700 dark:text-stone-200">
+                <p className="truncate text-sm font-medium text-stone-700">
                   {ROTULO_DO_EVENTO[e.tipo] ?? "Atividade elegível"}
                 </p>
                 <p className="mt-0.5 truncate text-xs text-stone-400">{quando(e.criadoEm)}</p>
@@ -581,7 +652,7 @@ function AtividadeElegivel({
         </ul>
       )}
 
-      <p className="mt-3.5 flex items-start gap-2 border-t border-stone-100 pt-3.5 text-xs leading-relaxed text-stone-500 dark:border-stone-800">
+      <p className="mt-3.5 flex items-start gap-2 border-t border-stone-100 pt-3.5 text-xs leading-relaxed text-stone-500">
         <Info size={13} className="mt-0.5 shrink-0" aria-hidden />
         {COPY_ELEGIBILIDADE}
       </p>

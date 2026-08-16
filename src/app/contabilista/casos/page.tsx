@@ -21,7 +21,7 @@ import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import Button from "@/components/ui/Button";
 import { useAvisos } from "@/components/ui/Avisos";
 import {
-  Briefcase, Lock, User, Spinner, Check, Clock, PaperClip, ShieldCheck,
+  Briefcase, Lock, User, Spinner, Check, Clock, PaperClip, ShieldCheck, Warning,
 } from "@/components/ui/Icons";
 import Ficheiros from "@/components/casos/Ficheiros";
 import {
@@ -55,9 +55,19 @@ export default function CasosDoContabilista() {
   const [mensagens, setMensagens] = useState<MensagemDoCaso[]>([]);
   const [propostas, setPropostas] = useState<Proposta[]>([]);
   const [documentos, setDocumentos] = useState<DocumentoDoCaso[]>([]);
+  const [aAbrir, setAAbrir] = useState<string | null>(null);
+  // «Falhou» não é «está vazio». Sem esta distinção, uma leitura que falha
+  // mostrava «Ainda não te encaminhámos nenhum caso» — uma afirmação falsa
+  // sobre trabalho que pode existir.
+  const [erro, setErro] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
-    setCasos(await listarCasos());
+    try {
+      setCasos(await listarCasos());
+      setErro(null);
+    } catch (e) {
+      setErro((e as Error).message || "Não foi possível carregar os casos.");
+    }
   }, []);
 
   useEffect(() => { if (ficha) void carregar(); }, [ficha, carregar]);
@@ -65,11 +75,22 @@ export default function CasosDoContabilista() {
   const abrir = useCallback(async (id: string) => {
     if (aberto === id) { setAberto(null); return; }
     setAberto(id);
-    const [m, p, d] = await Promise.all([
-      listarMensagensDoCaso(id), listarPropostas(id), listarDocumentosDoCaso(id),
-    ]);
-    setMensagens(m); setPropostas(p); setDocumentos(d);
-  }, [aberto]);
+    // Limpar ANTES do pedido: os três slots são partilhados por todos os
+    // casos, e sem isto o caso B abria a mostrar as mensagens do caso A
+    // até a resposta chegar — num ecrã onde a decisão é enviar proposta.
+    setMensagens([]); setPropostas([]); setDocumentos([]);
+    setAAbrir(id);
+    try {
+      const [m, p, d] = await Promise.all([
+        listarMensagensDoCaso(id), listarPropostas(id), listarDocumentosDoCaso(id),
+      ]);
+      setMensagens(m); setPropostas(p); setDocumentos(d);
+    } catch (e) {
+      avisos.erro("Não foi possível abrir o caso.", { detalhe: (e as Error).message });
+    } finally {
+      setAAbrir((a) => (a === id ? null : a));
+    }
+  }, [aberto, avisos]);
 
   if (aCarregar) return <EsqueletoPainel />;
   if (!ficha) return null;
@@ -92,7 +113,23 @@ export default function CasosDoContabilista() {
         </span>
       </p>
 
-      {casos.length === 0 ? (
+      {erro ? (
+        <div role="alert" className="rounded-4xl border border-clay-border bg-clay-bg/40 px-5 py-8 text-center">
+          <Warning size={22} className="mx-auto text-clay-text" aria-hidden />
+          <p className="mt-3 text-sm font-semibold text-clay-text">
+            Não foi possível carregar os casos
+          </p>
+          <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-stone-600">
+            Isto não quer dizer que não tenhas casos — quer dizer que não conseguimos
+            saber. {erro}
+          </p>
+          <div className="mt-4 flex justify-center">
+            <Button size="sm" variant="secondary" onClick={() => void carregar()}>
+              Tentar outra vez
+            </Button>
+          </div>
+        </div>
+      ) : casos.length === 0 ? (
         <EstadoVazio
           Icon={Briefcase}
           titulo="Ainda não te encaminhámos nenhum caso"

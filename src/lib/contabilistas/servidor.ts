@@ -67,6 +67,47 @@ export async function utilizadorDoPedido(req: Request): Promise<string | null> {
 // quem chamava escolhia-o — e um código escolhido é um código adivinhável
 // por quem o escolheu.
 
+// ─── Compra de patamar ─────────────────────────────────────────────────
+
+export interface IntencaoDesbloqueio {
+  ok?: boolean;
+  motivo?: string;
+  compraId?: string;
+  targetTier?: number;
+  targetSlug?: string;
+  baseCents?: number;
+  creditos?: number;
+  descontoPct?: number;
+  finalCents?: number;
+}
+
+/**
+ * Abre a intenção de compra do próximo patamar.
+ *
+ * Corre com o TOKEN DE QUEM PEDE e não com a chave de serviço, e isso é o
+ * ponto: `criar_intencao_desbloqueio` decide tudo a partir de `auth.uid()`
+ * — quem é, em que patamar está, quantos créditos tem. Com a chave de
+ * serviço, `auth.uid()` seria nulo e a função recusava com `sem_permissao`.
+ *
+ * É também o que garante a §72: o browser não escolhe patamar nem preço.
+ * Manda quando muito quantos créditos quer gastar, e até isso é limitado
+ * pelo saldo real do lado de lá.
+ */
+export async function criarIntencaoComoUtilizador(
+  req: Request,
+  creditos: number,
+): Promise<{ erro?: string; dados?: IntencaoDesbloqueio }> {
+  const sb = supabaseDoPedido(req);
+  if (!sb) return { erro: "Sessão inválida." };
+
+  const { data, error } = await sb.rpc("criar_intencao_desbloqueio", {
+    p_creditos_a_usar: Math.max(0, Math.floor(creditos)),
+    p_idempotency_key: null,
+  });
+  if (error) return { erro: error.message };
+  return { dados: (data ?? {}) as IntencaoDesbloqueio };
+}
+
 // ─── Endereço público ──────────────────────────────────────────────────
 
 /** Palavras que não podem ser o endereço de ninguém — colidem com rotas. */

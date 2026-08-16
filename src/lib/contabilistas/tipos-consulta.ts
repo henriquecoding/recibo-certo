@@ -29,9 +29,44 @@ export interface TipoConsulta {
   duracaoMin: number;
   /** Cêntimos. Zero significa «grátis», e mostra-se como tal. */
   precoCents: number;
+  /** Quando é que se paga. Ver `PAGAMENTOS`. */
+  pagamento: MomentoDePagamento;
   ativo: boolean;
   ordem: number;
 }
+
+/**
+ * Quando é que uma consulta deste tipo se paga.
+ *
+ * A escolha não é só operacional — muda o que acontece ao marcar. Com
+ * `no_pedido`, a consulta só nasce depois de a Stripe confirmar; com
+ * `depois`, nasce como sempre nasceu e o pedido de pagamento aparece
+ * quando o contabilista a dá por realizada com o valor real.
+ */
+export type MomentoDePagamento = "no_pedido" | "depois" | "sem_pagamento";
+
+export const PAGAMENTOS: ReadonlyArray<{
+  id: MomentoDePagamento; rotulo: string; explicacao: string;
+}> = [
+  {
+    id: "depois",
+    rotulo: "Paga depois da consulta",
+    explicacao:
+      "Marca sem pagar. Quando deres a consulta por realizada com o valor real, o cliente recebe o pedido de pagamento.",
+  },
+  {
+    id: "no_pedido",
+    rotulo: "Paga ao marcar",
+    explicacao:
+      "A consulta só fica marcada depois de o pagamento passar. Evita faltas, e evita perseguir pagamentos.",
+  },
+  {
+    id: "sem_pagamento",
+    rotulo: "Não se paga por aqui",
+    explicacao:
+      "Uma primeira conversa gratuita, ou um acerto que fazes fora da plataforma. Não gera cobrança nem comissão.",
+  },
+];
 
 export const DURACOES = [15, 30, 45, 60, 90, 120, 180, 240] as const;
 export const TIPOS_MAX = 8;
@@ -44,12 +79,14 @@ function paraTipo(l: Linha): TipoConsulta {
     descricao: (l.descricao as string | null) ?? null,
     duracaoMin: (l.duracao_min as number) ?? 60,
     precoCents: (l.preco_cents as number) ?? 0,
+    pagamento: ((l.pagamento as MomentoDePagamento) ?? "depois"),
     ativo: Boolean(l.ativo),
     ordem: (l.ordem as number) ?? 0,
   };
 }
 
-const CAMPOS = "id, contabilista_id, nome, descricao, duracao_min, preco_cents, ativo, ordem";
+const CAMPOS =
+  "id, contabilista_id, nome, descricao, duracao_min, preco_cents, pagamento, ativo, ordem";
 
 export async function listarTiposConsulta(contabilistaId: string): Promise<TipoConsulta[]> {
   const { data, error } = await getSupabase()
@@ -68,6 +105,7 @@ export interface NovoTipoConsulta {
   descricao?: string | null;
   duracaoMin: number;
   precoCents: number;
+  pagamento?: MomentoDePagamento;
   ordem?: number;
 }
 
@@ -87,6 +125,7 @@ export async function criarTipoConsulta(t: NovoTipoConsulta): Promise<{ erro?: s
       descricao: t.descricao?.trim().slice(0, 300) || null,
       duracao_min: t.duracaoMin,
       preco_cents: Math.round(t.precoCents),
+      pagamento: t.pagamento ?? "depois",
       ordem: t.ordem ?? 0,
     })
     .select("id")
@@ -98,7 +137,10 @@ export async function criarTipoConsulta(t: NovoTipoConsulta): Promise<{ erro?: s
 
 export async function atualizarTipoConsulta(
   id: string,
-  campos: Partial<{ nome: string; descricao: string | null; duracao_min: number; preco_cents: number; ativo: boolean; ordem: number }>
+  campos: Partial<{
+    nome: string; descricao: string | null; duracao_min: number;
+    preco_cents: number; pagamento: MomentoDePagamento; ativo: boolean; ordem: number;
+  }>
 ): Promise<{ erro?: string }> {
   const { error } = await getSupabase()
     .from("contabilista_tipos_consulta").update(campos).eq("id", id);
@@ -140,3 +182,8 @@ export function duracaoLegivel(min: number): string {
  */
 export const COPY_VALORES_INDICATIVOS =
   "Valores indicativos. O valor final é acordado contigo em função do serviço necessário.";
+
+/** O rótulo curto de cada momento, para as listas. */
+export function pagamentoLegivel(m: MomentoDePagamento): string {
+  return PAGAMENTOS.find((p) => p.id === m)?.rotulo ?? "Paga depois da consulta";
+}

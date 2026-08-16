@@ -36,12 +36,15 @@ import CartaoFidelidade from "@/components/contabilistas/CartaoFidelidade";
 import Conversa from "@/components/contabilistas/Conversa";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import {
-  Cupoes, Envios, Ficha, Historico, Numeros, ProximaConsulta, SemContabilista,
-  ZonaTerminar, primeiroNome,
+  Cupoes, Envios, Ficha, Historico, Numeros, PorPagar, ProximaConsulta,
+  SemContabilista, ZonaTerminar, primeiroNome,
 } from "@/components/contabilistas/hub";
 import Button from "@/components/ui/Button";
 import { useAvisos } from "@/components/ui/Avisos";
 import { useConfirmar } from "@/components/ui/Confirmar";
+import {
+  abrirPagamentoDaConsulta, consultasPorPagar, type ConsultaPorPagar,
+} from "@/lib/contabilistas/fonte/pagamentos";
 import { Briefcase, Warning } from "@/components/ui/Icons";
 
 export default function MeuContabilistaPage() {
@@ -57,6 +60,8 @@ export default function MeuContabilistaPage() {
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
+  const [porPagar, setPorPagar] = useState<ConsultaPorPagar[]>([]);
+  const [aPagar, setAPagar] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     if (!user) { setALer(false); return; }
@@ -65,13 +70,17 @@ export default function MeuContabilistaPage() {
       const v = await meuVinculo(user.id);
       setVinculo(v);
       if (v?.contabilista) {
-        const [c, cu, ag, pa] = await Promise.all([
+        const [c, cu, ag, pa, pp] = await Promise.all([
           meuCartao(user.id, v.contabilistaId),
           meusCupoes({ clienteId: user.id }),
           listarAgendamentos({ clienteId: user.id }),
           listarPartilhas({ clienteId: user.id }),
+          // Falhar a ler o que está por pagar não pode partir a página: é
+          // uma secção a mais, não a razão de ela existir.
+          consultasPorPagar(user.id).catch(() => []),
         ]);
         setCartao(c); setCupoes(cu); setConsultas(ag); setPartilhas(pa);
+        setPorPagar(pp);
       }
     } catch (e) { setErro((e as Error).message); }
     finally { setALer(false); }
@@ -89,6 +98,22 @@ export default function MeuContabilistaPage() {
       .sort((a, b) => b.inicio.localeCompare(a.inicio));
     return { proxima: futuras[0] ?? null, passadas: [...futuras.slice(1), ...resto] };
   }, [consultas, agora]);
+
+  /**
+   * Abrir o pagamento de uma consulta.
+   *
+   * Repare-se no que NÃO vai daqui: valor nenhum. Manda-se o id do
+   * agendamento e o servidor calcula quanto é, quanto é a comissão e para
+   * que conta Stripe vai. Um valor escolhido no browser era um valor
+   * editável no browser.
+   */
+  async function pagar(agendamentoId: string) {
+    setAPagar(agendamentoId);
+    const r = await abrirPagamentoDaConsulta(agendamentoId);
+    setAPagar(null);
+    if (r.erro) { avisos.erro("Não foi possível abrir o pagamento.", { detalhe: r.erro }); return; }
+    if (r.url) window.location.href = r.url;
+  }
 
   async function copiar(codigo: string) {
     try {
@@ -258,6 +283,13 @@ export default function MeuContabilistaPage() {
       {disponiveis.length > 0 && (
         <Cupoes lista={disponiveis} copiado={copiado} onCopiar={copiar} />
       )}
+
+      <PorPagar
+        lista={porPagar}
+        nome={primeiroNome(cc.nome)}
+        ocupado={aPagar}
+        onPagar={pagar}
+      />
 
       {passadas.length > 0 && <Historico lista={passadas} />}
 

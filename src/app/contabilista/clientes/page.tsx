@@ -16,51 +16,67 @@ import { usarFicha } from "@/components/contabilistas/usarFicha";
 import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import TabelaClientes from "@/components/contabilistas/TabelaClientes";
-import { useAvisos } from "@/components/ui/Avisos";
-import {
-  cartoesAbertos, listarAgendamentos, listarPartilhas, meusClientes,
-} from "@/lib/contabilistas/fonte/dados";
-import { resumirClientes, type CartaoDoCliente, type ResumoCliente } from "@/lib/contabilistas/resumo";
-import { Lock } from "@/components/ui/Icons";
+import Button from "@/components/ui/Button";
+import { resumoDeClientes } from "@/lib/contabilistas/fonte/dados";
+import { tratamentoDoCliente } from "@/lib/contabilistas/tipos";
+import type { ResumoCliente } from "@/lib/contabilistas/resumo";
+import { Lock, Warning } from "@/components/ui/Icons";
 
 export default function ClientesPage() {
   const { ficha, aCarregar } = usarFicha();
-  const avisos = useAvisos();
   const [clientes, setClientes] = useState<ResumoCliente[]>([]);
   const [aLer, setALer] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
 
+  /**
+   * Uma leitura, já agregada pelo servidor.
+   *
+   * Isto lia três listas e derivava os totais em JavaScript — e como
+   * `listarAgendamentos` ordena por `inicio` ASCENDENTE com `limit(300)`,
+   * quem tivesse mais consultas do que isso via as MAIS ANTIGAS: «última
+   * consulta» e «próxima consulta» ficavam errados sem aviso nenhum, e são
+   * as colunas por que a tabela ordena.
+   */
   const carregar = useCallback(async (contabilistaId: string) => {
     setALer(true);
     try {
-      const [vinculos, agendamentos, partilhas, abertos] = await Promise.all([
-        meusClientes(contabilistaId),
-        listarAgendamentos({ contabilistaId }),
-        listarPartilhas({ contabilistaId }),
-        cartoesAbertos(contabilistaId),
-      ]);
-
-      const cartoes: Record<string, CartaoDoCliente> = {};
-      for (const c of abertos) {
-        cartoes[c.clienteId] = {
-          carimbos: c.carimbos,
-          meta: c.meta,
-          descontoPct: c.descontoPct,
-          precoBaseCents: c.precoBaseCents,
-        };
-      }
-
-      setClientes(resumirClientes({ vinculos, agendamentos, partilhas, cartoes }));
+      const linhas = await resumoDeClientes(contabilistaId);
+      setClientes(
+        linhas.map((l) => ({ ...l, tratamento: tratamentoDoCliente(l.vinculo) })),
+      );
+      setErro(null);
     } catch (e) {
-      avisos.erro((e as Error).message);
+      setErro((e as Error).message || "Não foi possível carregar os clientes.");
     } finally {
       setALer(false);
     }
-  }, [avisos]);
+  }, []);
 
   useEffect(() => { if (ficha) void carregar(ficha.userId); }, [ficha, carregar]);
 
   if (aCarregar || aLer) return <EsqueletoPainel />;
   if (!ficha) return null;
+
+  if (erro) {
+    return (
+      <div className="space-y-6">
+        <CabecalhoPainel titulo="Clientes" />
+        <div role="alert" className="rounded-4xl border border-clay-border bg-clay-bg/40 px-5 py-10 text-center">
+          <Warning size={22} className="mx-auto text-clay-text" aria-hidden />
+          <p className="mt-3 font-semibold text-clay-text">Não foi possível carregar os clientes</p>
+          <p className="mx-auto mt-1.5 max-w-md text-sm leading-relaxed text-stone-600">
+            Uma lista vazia diria que não tens clientes. Não é isso que sabemos — só
+            não conseguimos ler. {erro}
+          </p>
+          <div className="mt-5 flex justify-center">
+            <Button size="sm" variant="secondary" onClick={() => void carregar(ficha.userId)}>
+              Tentar outra vez
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const porResponder = clientes.filter(
     (r) => r.vinculo.estado === "pendente" || r.vinculo.estado === "convidado"

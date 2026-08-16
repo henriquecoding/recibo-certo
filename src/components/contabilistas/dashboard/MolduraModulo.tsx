@@ -24,7 +24,7 @@
  * salta quando ele chega.
  */
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { MODULOS } from "@/lib/contabilistas/dashboard/modulos";
 import { classesDoTom, tamanhoDoModulo } from "@/lib/contabilistas/dashboard/apresentacao";
 import type { GridPlacement, WidgetSize, WidgetType } from "@/lib/contabilistas/dashboard/tipos";
@@ -32,6 +32,7 @@ import {
   Award, BellAlert, Briefcase, Calendar, Clock, Gift, GripVertical, LayoutGrid,
   Mail, PaperClip, Invoice, User, Warning, BookOpen, CheckTrend, Target,
 } from "@/components/ui/Icons";
+import MenuFlutuante from "./MenuFlutuante";
 import styles from "./painel-modular.module.css";
 
 type IconeSVG = React.ComponentType<{ size?: number; className?: string }>;
@@ -146,59 +147,47 @@ export default function MolduraModulo({
   );
 }
 
-/** O menu `•••`. Fecha ao clicar fora e com Escape, e devolve o foco. */
+/**
+ * O menu `•••`.
+ *
+ * Vive em `MenuFlutuante`, e a razão é concreta: `.modulo` declara
+ * `overflow: hidden` — tem de declarar, senão um Kanban com muitos cartões
+ * estica o cartão para fora da célula — e isso RECORTAVA o menu a meio,
+ * por muito `z-index` que ele tivesse. Sair da árvore por portal é a única
+ * forma de o mostrar inteiro.
+ */
 function MenuModulo({ titulo, acoes }: { titulo: string; acoes: AcaoDoMenu[] }) {
-  const [aberto, setAberto] = useState(false);
-  const caixa = useRef<HTMLDivElement>(null);
-  const botao = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!aberto) return;
-    function fora(e: MouseEvent) {
-      if (!caixa.current?.contains(e.target as Node)) setAberto(false);
-    }
-    function tecla(e: KeyboardEvent) {
-      if (e.key === "Escape") { setAberto(false); botao.current?.focus(); }
-    }
-    document.addEventListener("mousedown", fora);
-    document.addEventListener("keydown", tecla);
-    return () => {
-      document.removeEventListener("mousedown", fora);
-      document.removeEventListener("keydown", tecla);
-    };
-  }, [aberto]);
-
   return (
-    <div ref={caixa} className="relative">
-      <button
-        ref={botao}
-        type="button"
-        onClick={() => setAberto((a) => !a)}
-        aria-expanded={aberto}
-        aria-haspopup="menu"
-        aria-label={`Opções de ${titulo}`}
-        className={`${styles.menuBotao} focus-marca`}
-      >
-        <span aria-hidden>•••</span>
-      </button>
-      {aberto && (
-        <div role="menu" className={styles.menu}>
-          {acoes.map((a) => (
-            <button
-              key={a.rotulo}
-              type="button"
-              role="menuitem"
-              onClick={() => { setAberto(false); a.onSelect(); }}
-              className={`${styles.menuItem} ${a.separar ? styles.menuItemSeparado : ""} ${
-                a.perigoso ? styles.menuItemPerigoso : ""
-              }`}
-            >
-              {a.rotulo}
-            </button>
-          ))}
-        </div>
+    <MenuFlutuante
+      etiqueta={`Opções de ${titulo}`}
+      className={styles.menu}
+      gatilho={(p) => (
+        <button
+          {...p}
+          type="button"
+          aria-label={`Opções de ${titulo}`}
+          className={`${styles.menuBotao} focus-marca`}
+        >
+          <span aria-hidden>•••</span>
+        </button>
       )}
-    </div>
+    >
+      {(fechar) =>
+        acoes.map((a) => (
+          <button
+            key={a.rotulo}
+            type="button"
+            role="menuitem"
+            onClick={() => { fechar(); a.onSelect(); }}
+            className={`${styles.menuItem} ${a.separar ? styles.menuItemSeparado : ""} ${
+              a.perigoso ? styles.menuItemPerigoso : ""
+            }`}
+          >
+            {a.rotulo}
+          </button>
+        ))
+      }
+    </MenuFlutuante>
   );
 }
 
@@ -207,7 +196,7 @@ export function CorpoACarregar({ linhas = 3 }: { linhas?: number }) {
   return (
     <div className="space-y-2" aria-busy="true">
       {Array.from({ length: linhas }, (_, i) => (
-        <div key={i} className="h-8 animate-pulse rounded-lg bg-stone-100 dark:bg-stone-800" />
+        <div key={i} className="h-8 animate-pulse rounded-lg bg-stone-100" />
       ))}
     </div>
   );
@@ -221,11 +210,30 @@ export function CorpoVazio({ texto }: { texto: string }) {
   );
 }
 
-export function CorpoErro({ texto }: { texto: string }) {
+/**
+ * Um módulo que falhou.
+ *
+ * Tem de dar uma saída. Sem `onRepetir` isto era um beco: o broker guardava
+ * a promessa falhada para sempre e o cartão ficava em erro até se mudar de
+ * rota. A mensagem é a legível — o texto cru do Postgres vai para a consola,
+ * não para dentro de um cartão do painel.
+ */
+export function CorpoErro({
+  texto, onRepetir,
+}: { texto: string; onRepetir?: () => void }) {
   return (
-    <p role="status" className="flex h-full items-center justify-center px-2 text-center text-xs leading-relaxed text-clay-text">
-      {texto}
-    </p>
+    <div role="status" className="flex h-full flex-col items-center justify-center gap-2 px-2 text-center">
+      <p className="text-xs leading-relaxed text-clay-text">{texto}</p>
+      {onRepetir && (
+        <button
+          type="button"
+          onClick={onRepetir}
+          className="focus-marca inline-flex min-h-7 items-center rounded-lg border border-stone-200 px-2.5 text-[0.6875rem] font-semibold text-stone-600 transition-colors hover:bg-stone-100"
+        >
+          Tentar outra vez
+        </button>
+      )}
+    </div>
   );
 }
 

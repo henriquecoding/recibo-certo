@@ -10,9 +10,12 @@ import type { NovoTipoConsulta, TipoConsulta } from "../tipos-consulta";
 import { emDemonstracao, loja } from "./nucleo";
 
 export {
-  COPY_VALORES_INDICATIVOS, DURACOES, TIPOS_MAX, duracaoLegivel, precoLegivel,
+  COPY_VALORES_INDICATIVOS, DURACOES, PAGAMENTOS, TIPOS_MAX, duracaoLegivel,
+  pagamentoLegivel, precoLegivel,
 } from "../tipos-consulta";
-export type { NovoTipoConsulta, TipoConsulta } from "../tipos-consulta";
+export type {
+  MomentoDePagamento, NovoTipoConsulta, TipoConsulta,
+} from "../tipos-consulta";
 
 export async function listarTiposConsulta(contabilistaId: string): Promise<TipoConsulta[]> {
   if (emDemonstracao()) return (await loja()).listarTiposConsulta();

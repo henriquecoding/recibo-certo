@@ -31,8 +31,10 @@ import {
   type EstadoTarefa, type Tarefa,
 } from "@/lib/contabilistas/fonte/trabalho";
 import { meusClientes } from "@/lib/contabilistas/fonte/dados";
+import { FUSO_PT } from "@/lib/contabilistas/agenda";
 import { tratamentoDoCliente, type Vinculo } from "@/lib/contabilistas/tipos";
 import Button from "@/components/ui/Button";
+import Separadores from "@/components/contabilistas/Separadores";
 import {
   Calendar, Check, ChevronDown, ChevronUp, Plus, Target, Trash, User,
 } from "@/components/ui/Icons";
@@ -49,16 +51,24 @@ export default function TrabalhoPage() {
   const [aberta, setAberta] = useState<string | null>(null);
   const [aCriar, setACriar] = useState(false);
 
-  const carregar = useCallback(async (id: string) => {
-    setALer(true);
+  /**
+   * `primeira` distingue a carga inicial de uma revalidação.
+   *
+   * Sem essa distinção, ticar uma checkbox de um passo chamava `carregar`,
+   * que punha `aLer = true`, e o quadro INTEIRO — quatro colunas, todos os
+   * cartões, o cartão aberto — desaparecia para um esqueleto durante duas
+   * idas à rede. Uma revalidação atualiza em silêncio.
+   */
+  const carregar = useCallback(async (id: string, primeira = false) => {
+    if (primeira) setALer(true);
     try {
       const [ts, vs] = await Promise.all([listarTarefas(id), meusClientes(id)]);
       setTarefas(ts); setVinculos(vs);
     } catch (e) { avisos.erro((e as Error).message); }
-    finally { setALer(false); }
+    finally { if (primeira) setALer(false); }
   }, [avisos]);
 
-  useEffect(() => { if (ficha) void carregar(ficha.userId); }, [ficha, carregar]);
+  useEffect(() => { if (ficha) void carregar(ficha.userId, true); }, [ficha, carregar]);
 
   const porColuna = useMemo(() => {
     const mapa = new Map<EstadoTarefa, Tarefa[]>();
@@ -143,27 +153,19 @@ export default function TrabalhoPage() {
 
       {/* Telemóvel: separadores. Uma coluna de cada vez, com as contagens
           das outras à vista. */}
-      <div role="tablist" aria-label="Colunas do quadro" className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:hidden">
-        {COLUNAS.map((c) => {
-          const n = porColuna.get(c.id)?.length ?? 0;
-          return (
-            <button
-              key={c.id}
-              role="tab"
-              aria-selected={coluna === c.id}
-              onClick={() => setColuna(c.id)}
-              className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors ${
-                coluna === c.id ? "bg-brand text-white" : "bg-white text-stone-600 hover:bg-stone-100"
-              }`}
-            >
-              {c.rotulo}
-              <span className={`tabular-nums ${coluna === c.id ? "text-white/70" : "text-stone-400"}`}>{n}</span>
-            </button>
-          );
-        })}
+      <div className="lg:hidden">
+        <Separadores
+          itens={COLUNAS.map((c) => ({
+            id: c.id, rotulo: c.rotulo, contagem: porColuna.get(c.id)?.length ?? 0,
+          }))}
+          ativo={coluna}
+          onEscolher={setColuna}
+          etiqueta="Colunas do quadro"
+          painelId="quadro-painel"
+        />
       </div>
 
-      <div className="lg:hidden">
+      <div className="lg:hidden" id="quadro-painel" role="tabpanel">
         <Coluna
           coluna={COLUNAS.find((c) => c.id === coluna)!}
           tarefas={porColuna.get(coluna) ?? []}
@@ -173,6 +175,7 @@ export default function TrabalhoPage() {
           onApagar={apagar}
           nomeDoCliente={nomeDoCliente}
           onRecarregar={() => carregar(ficha.userId)}
+          onErro={(m) => avisos.erro(m)}
         />
       </div>
 
@@ -189,6 +192,7 @@ export default function TrabalhoPage() {
             onApagar={apagar}
             nomeDoCliente={nomeDoCliente}
             onRecarregar={() => carregar(ficha.userId)}
+            onErro={(m) => avisos.erro(m)}
           />
         ))}
       </div>
@@ -197,7 +201,7 @@ export default function TrabalhoPage() {
 }
 
 function Coluna({
-  coluna, tarefas, aberta, onAbrir, onMover, onApagar, nomeDoCliente, onRecarregar,
+  coluna, tarefas, aberta, onAbrir, onMover, onApagar, nomeDoCliente, onRecarregar, onErro,
 }: {
   coluna: (typeof COLUNAS)[number];
   tarefas: Tarefa[];
@@ -207,6 +211,7 @@ function Coluna({
   onApagar: (t: Tarefa) => void;
   nomeDoCliente: (v: string | null) => string | null;
   onRecarregar: () => void;
+  onErro: (mensagem: string) => void;
 }) {
   return (
     <section aria-labelledby={`col-${coluna.id}`} className="flex flex-col">
@@ -231,6 +236,7 @@ function Coluna({
               onApagar={onApagar}
               cliente={nomeDoCliente(t.vinculoId)}
               onRecarregar={onRecarregar}
+              onErro={onErro}
             />
           ))}
         </ul>
@@ -240,7 +246,7 @@ function Coluna({
 }
 
 function CartaoTarefa({
-  tarefa, expandida, onAbrir, onMover, onApagar, cliente, onRecarregar,
+  tarefa, expandida, onAbrir, onMover, onApagar, cliente, onRecarregar, onErro,
 }: {
   tarefa: Tarefa;
   expandida: boolean;
@@ -249,6 +255,7 @@ function CartaoTarefa({
   onApagar: (t: Tarefa) => void;
   cliente: string | null;
   onRecarregar: () => void;
+  onErro: (mensagem: string) => void;
 }) {
   const [passoNovo, setPassoNovo] = useState("");
   const progresso = progressoDe(tarefa);
@@ -314,7 +321,14 @@ function CartaoTarefa({
                     <input
                       type="checkbox"
                       checked={p.feito}
-                      onChange={async (e) => { await alternarPasso(p.id, e.target.checked); onRecarregar(); }}
+                      onChange={async (e) => {
+                        // Sem tratar o erro, uma escrita falhada era
+                        // desfeita pelo recarregamento sem uma palavra: a
+                        // checkbox voltava atrás sozinha e parecia avaria.
+                        const { erro } = await alternarPasso(p.id, e.target.checked);
+                        if (erro) { onErro(erro); return; }
+                        onRecarregar();
+                      }}
                       className="mt-0.5 h-4 w-4 shrink-0 rounded accent-brand"
                     />
                     <span className={p.feito ? "text-stone-400 line-through" : "text-stone-700"}>{p.texto}</span>
@@ -328,7 +342,8 @@ function CartaoTarefa({
             onSubmit={async (e) => {
               e.preventDefault();
               if (!passoNovo.trim()) return;
-              await acrescentarPasso(tarefa.id, passoNovo, tarefa.passos.length + 1);
+              const { erro } = await acrescentarPasso(tarefa.id, passoNovo, tarefa.passos.length + 1);
+              if (erro) { onErro(erro); return; }
               setPassoNovo(""); onRecarregar();
             }}
             className="flex gap-2"
@@ -480,6 +495,9 @@ function NovaTarefa({
 
 function dataCurta(iso: string): string {
   const [a, m, d] = iso.split("-").map(Number);
-  return new Intl.DateTimeFormat("pt-PT", { day: "numeric", month: "short" })
-    .format(new Date(Date.UTC(a, m - 1, d)));
+  // `timeZone` explícito: sem ele o instante UTC era formatado no fuso do
+  // browser e um contabilista fora de Portugal via o dia anterior.
+  return new Intl.DateTimeFormat("pt-PT", {
+    day: "numeric", month: "short", timeZone: FUSO_PT,
+  }).format(new Date(Date.UTC(a, m - 1, d, 12)));
 }

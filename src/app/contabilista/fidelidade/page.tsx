@@ -49,7 +49,9 @@ import { usarFicha } from "@/components/contabilistas/usarFicha";
 import { usarPainel } from "@/components/contabilistas/usarPainel";
 import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
-import AcoesDoPainel, { TituloDoPainel } from "@/components/contabilistas/AcoesDoPainel";
+import AcoesDoPainel from "@/components/contabilistas/AcoesDoPainel";
+import Separadores, { PainelDoSeparador } from "@/components/contabilistas/Separadores";
+import { usarRascunhoSujo } from "@/components/contabilistas/usarRascunhoSujo";
 import {
   cartoesAbertos, meusCupoes, meusClientes, usarCupao,
   type CartaoAberto, type CupaoLido,
@@ -104,6 +106,18 @@ export default function FidelidadePage() {
   const [aGuardar, setAGuardar] = useState(false);
 
   const quem = userId ?? ficha?.userId ?? "";
+
+  // `mudou` só existe depois do render; a guarda precisa dele antes. É
+  // calculado aqui em vez de mais abaixo para o hook não ficar atrás de um
+  // `return` condicional.
+  const rascunhoSujo = Boolean(
+    regra && (regra.meta !== meta || regra.descontoPct !== desconto ||
+              regra.ativa !== ativa || regra.exigePagamento !== exigePagamento),
+  );
+  usarRascunhoSujo({
+    sujo: rascunhoSujo,
+    descricao: "Alteraste a regra do cartão e ainda não a publicaste.",
+  });
 
   const carregar = useCallback(async () => {
     const [r, h, i, c, cu, cl] = await Promise.all([
@@ -180,7 +194,11 @@ export default function FidelidadePage() {
       return;
     }
     if (r.inalterada) {
-      avisos.sucesso("Nada mudou — a regra continua na versão " + r.versao + ".");
+      // Recarregar mesmo assim: sem isto o rascunho continuava «sujo», o
+      // botão ficava ligado a prometer uma escrita que não ia acontecer, e
+      // a guarda de saída perguntava por alterações que já não existiam.
+      await carregar();
+      avisos.sucesso(`Nada mudou — a regra continua na versão ${r.versao}.`);
       return;
     }
     await carregar();
@@ -191,11 +209,9 @@ export default function FidelidadePage() {
 
   return (
     <div className="space-y-5">
-      <TituloDoPainel>Fidelidade</TituloDoPainel>
-
       <AcoesDoPainel>
         <Link href={`/contabilistas/${ficha.slug}`} target="_blank">
-          <span className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 text-sm font-semibold text-stone-700 hover:border-brand/35 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200">
+          <span className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 text-sm font-semibold text-stone-700 hover:border-brand/35">
             <Eye size={14} aria-hidden /> Ver como cliente
           </span>
         </Link>
@@ -209,28 +225,19 @@ export default function FidelidadePage() {
         descricao="Define quantos serviços fecham um cartão e que desconto o cliente recebe no fim. Uma regra publicada não muda os cartões que já começaram."
       />
 
-      {/* Separadores — os quatro da referência B. */}
-      <div role="tablist" aria-label="Separadores da fidelidade" className="flex flex-wrap gap-1">
-        {SEPARADORES.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            role="tab"
-            aria-selected={aba === s.id}
-            onClick={() => setAba(s.id)}
-            className={`focus-marca min-h-9 rounded-xl px-3 text-sm font-semibold transition-colors ${
-              aba === s.id
-                ? "bg-white text-brand-dark shadow-card dark:bg-stone-900 dark:text-brand-mint"
-                : "text-stone-500 hover:text-stone-800 dark:hover:text-stone-200"
-            }`}
-          >
-            {s.rotulo}
-          </button>
-        ))}
-      </div>
+      {/* Separadores — os quatro da referência B, com o padrão ARIA
+          completo: `aria-controls`, tabIndex rotativo e setas. */}
+      <Separadores
+        itens={SEPARADORES}
+        ativo={aba}
+        onEscolher={setAba}
+        etiqueta="Separadores da fidelidade"
+        painelId="fidelidade-painel"
+        className="flex flex-wrap gap-1"
+      />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="min-w-0 space-y-4">
+        <PainelDoSeparador id="fidelidade-painel" className="min-w-0 space-y-4">
           {aba === "regras" && (
             <RegrasECartao
               meta={meta} setMeta={setMeta}
@@ -265,7 +272,7 @@ export default function FidelidadePage() {
             />
           )}
           {aba === "historico" && <HistoricoDeRegras historico={historico} />}
-        </div>
+        </PainelDoSeparador>
 
         {/* A coluna da direita, sempre presente — é o que a imagem mostra. */}
         <div className="space-y-4">
@@ -296,7 +303,7 @@ function RegrasECartao({
 }) {
   return (
     <>
-      <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6 dark:border-stone-800">
+      <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
         <h2 className="font-display text-lg text-ink">Regra do cartão</h2>
         <p className="mt-1 text-sm text-stone-500">
           Define o cartão que os clientes recebem a partir de agora.
@@ -317,7 +324,7 @@ function RegrasECartao({
           />
         </div>
 
-        <div className="mt-4 space-y-2.5 border-t border-stone-100 pt-4 dark:border-stone-800">
+        <div className="mt-4 space-y-2.5 border-t border-stone-100 pt-4">
           <Interruptor
             ligado={ativa} onChange={setAtiva}
             titulo="Cartão de fidelidade ativo"
@@ -332,7 +339,7 @@ function RegrasECartao({
       </section>
 
       {/* O preço: valor SUGERIDO, e um só controlo. */}
-      <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6 dark:border-stone-800">
+      <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
         <h2 className="font-display text-lg text-ink">Preço da consulta</h2>
         <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <p className="font-display text-2xl text-ink tabular-nums">
@@ -387,7 +394,7 @@ function Passo({
           onClick={() => onChange(Math.max(min, valor - 1))}
           disabled={valor <= min}
           aria-label={`Diminuir ${rotulo}`}
-          className="focus-marca flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-stone-200 text-lg text-stone-600 disabled:opacity-40 dark:border-stone-700 dark:text-stone-300"
+          className="focus-marca flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-stone-200 text-lg text-stone-600 disabled:opacity-40"
         >
           −
         </button>
@@ -399,7 +406,7 @@ function Passo({
           onClick={() => onChange(Math.min(max, valor + 1))}
           disabled={valor >= max}
           aria-label={`Aumentar ${rotulo}`}
-          className="focus-marca flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-stone-200 text-lg text-stone-600 disabled:opacity-40 dark:border-stone-700 dark:text-stone-300"
+          className="focus-marca flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-stone-200 text-lg text-stone-600 disabled:opacity-40"
         >
           +
         </button>
@@ -460,7 +467,7 @@ function ConsultasEDescontos({
 }) {
   if (cartoes.length === 0) {
     return (
-      <section className="rounded-4xl border border-stone-200 bg-white p-6 text-center shadow-card dark:border-stone-800">
+      <section className="rounded-4xl border border-stone-200 bg-white p-6 text-center shadow-card">
         <Gift size={22} className="mx-auto text-stone-300" aria-hidden />
         <p className="mt-3 text-sm text-stone-500">
           Nenhum cartão em curso. O próximo serviço elegível abre um ciclo.
@@ -470,7 +477,7 @@ function ConsultasEDescontos({
   }
 
   return (
-    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6 dark:border-stone-800">
+    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
       <h2 className="font-display text-lg text-ink">Cartões em curso</h2>
       <p className="mt-1 text-sm text-stone-500">
         Cada cartão mantém a regra com que nasceu. O desconto entra na consulta em que o
@@ -487,7 +494,7 @@ function ConsultasEDescontos({
                   {c.carimbos} de {c.meta} · {c.descontoPct}% ao completar
                 </p>
               </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-stone-200/70 dark:bg-stone-700">
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-stone-200/70">
                 <div className="h-full rounded-full bg-brand" style={{ width: `${Math.round(p.fracao * 100)}%` }} />
               </div>
               <p className="mt-1.5 text-xs text-stone-400">
@@ -518,7 +525,7 @@ function CupoesEmitidos({
 }) {
   if (cupoes.length === 0) {
     return (
-      <section className="rounded-4xl border border-stone-200 bg-white p-6 text-center shadow-card dark:border-stone-800">
+      <section className="rounded-4xl border border-stone-200 bg-white p-6 text-center shadow-card">
         <Gift size={22} className="mx-auto text-stone-300" aria-hidden />
         <p className="mt-3 text-sm text-stone-500">
           Ainda não emitiste benefícios. Um cartão completo emite um, para uma consulta.
@@ -530,7 +537,7 @@ function CupoesEmitidos({
   return (
     <>
     <ValidarPorCodigo onUsar={onUsar} />
-    <section className="mt-4 rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6 dark:border-stone-800">
+    <section className="mt-4 rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
       <h2 className="font-display text-lg text-ink">Benefícios emitidos</h2>
       <p className="mt-1 text-sm text-stone-500">
         Cada um vale por uma consulta. Enquanto estiver por usar, o cliente não começa
@@ -553,7 +560,7 @@ function CupoesEmitidos({
               <button
                 type="button"
                 onClick={() => void onUsar(c.codigo)}
-                className="focus-marca shrink-0 rounded-xl border border-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-700 hover:border-brand/35 dark:border-stone-700 dark:text-stone-200"
+                className="focus-marca shrink-0 rounded-xl border border-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-700 hover:border-brand/35"
               >
                 Dar por usado
               </button>
@@ -583,7 +590,7 @@ function ValidarPorCodigo({ onUsar }: { onUsar: (codigo: string) => Promise<void
   const [ocupado, setOcupado] = useState(false);
 
   return (
-    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6 dark:border-stone-800">
+    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
       <h2 className="font-display text-lg text-ink">Validar um benefício</h2>
       <p className="mt-1 text-sm text-stone-500">
         O cliente mostra o código. Validar dá o benefício por{" "}
@@ -597,7 +604,7 @@ function ValidarPorCodigo({ onUsar }: { onUsar: (codigo: string) => Promise<void
           onChange={(e) => setCodigo(e.target.value.toUpperCase())}
           placeholder="RC-XXXX-XXXX"
           aria-label="Código do benefício"
-          className="min-h-10 min-w-0 flex-1 rounded-xl border border-stone-200 px-3 font-mono text-sm dark:border-stone-700"
+          className="min-h-10 min-w-0 flex-1 rounded-xl border border-stone-200 px-3 font-mono text-sm"
         />
         <Button
           onClick={async () => {
@@ -623,14 +630,14 @@ function ValidarPorCodigo({ onUsar }: { onUsar: (codigo: string) => Promise<void
 function HistoricoDeRegras({ historico }: { historico: RegraLida[] }) {
   if (historico.length === 0) {
     return (
-      <section className="rounded-4xl border border-stone-200 bg-white p-6 text-center shadow-card dark:border-stone-800">
+      <section className="rounded-4xl border border-stone-200 bg-white p-6 text-center shadow-card">
         <p className="text-sm text-stone-500">Ainda não publicaste nenhuma regra.</p>
       </section>
     );
   }
 
   return (
-    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6 dark:border-stone-800">
+    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
       <h2 className="font-display text-lg text-ink">Histórico de alterações</h2>
       <p className="mt-1 text-sm text-stone-500">
         Cada versão fica registada. Nenhuma é apagada — os cartões que nasceram com ela
@@ -643,7 +650,7 @@ function HistoricoDeRegras({ historico }: { historico: RegraLida[] }) {
             className={`rounded-2xl border p-3.5 ${
               r.substituidaEm === null
                 ? "border-brand/30 bg-brand-light/40 dark:border-brand/25 dark:bg-brand/10"
-                : "border-stone-200 bg-cream/70 dark:border-stone-800 dark:bg-white/[0.03]"
+                : "border-stone-200 bg-cream/70 dark:bg-white/[0.03]"
             }`}
           >
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -653,7 +660,7 @@ function HistoricoDeRegras({ historico }: { historico: RegraLida[] }) {
               </p>
               <p className="text-xs text-stone-400 tabular-nums">{data(r.publicadaEm)}</p>
             </div>
-            <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
+            <p className="mt-1 text-sm text-stone-600">
               {r.meta} serviços · {r.descontoPct}% ao completar ·{" "}
               {r.exigePagamento ? "só consultas pagas" : "qualquer consulta"} ·{" "}
               {r.ativa ? "ativa" : "inativa"}
@@ -729,7 +736,7 @@ function ComoFuncionaParaOCliente({ rascunho }: { rascunho: RegraLida }) {
   ];
 
   return (
-    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card dark:border-stone-800">
+    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card">
       <h2 className="font-display text-base text-ink">Como funciona para o cliente</h2>
       <ol className="mt-3 space-y-2.5">
         {passos.map((p, i) => (
@@ -737,11 +744,11 @@ function ComoFuncionaParaOCliente({ rascunho }: { rascunho: RegraLida }) {
             <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-light text-[0.625rem] font-bold text-brand-dark dark:bg-brand/15 dark:text-brand-mint">
               {i + 1}
             </span>
-            <span className="text-xs leading-relaxed text-stone-600 dark:text-stone-300">{p}</span>
+            <span className="text-xs leading-relaxed text-stone-600">{p}</span>
           </li>
         ))}
       </ol>
-      <p className="mt-3 flex items-start gap-2 border-t border-stone-100 pt-3 text-xs leading-relaxed text-stone-500 dark:border-stone-800">
+      <p className="mt-3 flex items-start gap-2 border-t border-stone-100 pt-3 text-xs leading-relaxed text-stone-500">
         <Warning size={13} className="mt-0.5 shrink-0" aria-hidden />
         O benefício é um acordo entre ti e o cliente. O Recibo Certo regista-o e mostra-o;
         não cobra a consulta nem processa o pagamento.
@@ -767,7 +774,7 @@ function ResumoDaRegra({
   ];
 
   return (
-    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card dark:border-stone-800">
+    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card">
       <h2 className="font-display text-base text-ink">
         {mudou ? "Resumo do que vais publicar" : "Resumo da regra atual"}
       </h2>
@@ -775,7 +782,7 @@ function ResumoDaRegra({
         {linhas.map(([k, v]) => (
           <div key={k} className="flex items-baseline justify-between gap-3">
             <dt className="text-stone-500">{k}</dt>
-            <dd className="shrink-0 text-right font-medium text-stone-800 dark:text-stone-200">{v}</dd>
+            <dd className="shrink-0 text-right font-medium text-stone-800">{v}</dd>
           </div>
         ))}
       </dl>

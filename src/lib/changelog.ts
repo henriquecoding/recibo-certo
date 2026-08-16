@@ -16,6 +16,33 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.66.0",
+    data: "2026-08-16",
+    titulo: "O painel no telemóvel: o que estava cortado, e o que não fazia nada",
+    itens: [
+      "O menu «•••» de cada módulo abria-se cortado a meio. Passa a aparecer inteiro, e a virar-se para cima quando está no fundo do ecrã. O mesmo valia para o menu «Alinhar» e para o das vistas — os três tinham a mesma causa.",
+      "No telemóvel, o modo de edição mostrava um puxador para arrastar, um canto para redimensionar e uma grelha-guia. Nenhum dos três fazia nada: nessa largura o painel é uma lista, não uma grelha. Desaparecem, e fica o que funciona com o dedo — «Organizar», onde se muda a ordem, o tamanho e o que aparece.",
+      "As ações de edição deixam de empilhar três filas de botões por cima do painel e passam a uma barra fixa no fundo. Antes ocupavam metade do ecrã antes de se ver um único módulo.",
+      "Arrastar um módulo da biblioteca para o painel passa a funcionar. Até agora o cartão levantava-se e voltava ao sítio, porque não havia nada do outro lado a receber.",
+      "O módulo «Comunicações recentes» dizia que o conteúdo abria na conversa, e não abria — as linhas não eram clicáveis. Agora são.",
+    ],
+  },
+  {
+    version: "2.65.0",
+    data: "2026-08-16",
+    titulo: "Pagar o contabilista pelo site, e vinte correções no painel de gestão",
+    itens: [
+      "Passas a poder pagar as consultas ao teu contabilista aqui mesmo. O pagamento é dele: a cobrança nasce na conta Stripe do contabilista, é o nome dele que aparece no extrato do teu cartão, e o dinheiro nunca passa pela conta do Recibo Certo.",
+      "Cada contabilista escolhe, por tipo de consulta, quando é que se paga: ao marcar, depois da consulta, ou nada por aqui. Uma primeira conversa gratuita continua a ser uma primeira conversa gratuita.",
+      "Os benefícios do cartão de fidelidade entram no pagamento: o desconto é aplicado no valor cobrado, e um benefício só é gasto quando o pagamento passa mesmo — desistir a meio não o queima.",
+      "Do lado do contabilista há um separador novo, «Recebimentos», que diz quem recebe o quê antes de pedir seja o que for: o valor que entra, a comissão retida, e quando é que o dinheiro chega ao IBAN.",
+      "O desbloqueio pago de patamares abriu. Continua a ser opcional — os patamares sobem por trabalho feito — e continua a não comprar posição no diretório, prioridade no encaminhamento nem selo nenhum no perfil.",
+      "Vinte correções no painel de gestão, encontradas numa revisão a fundo. As que se notam: o quadro de trabalho deixou de piscar todo ao ticar um passo; abrir um caso deixou de mostrar por instantes as mensagens do caso anterior; uma falha de carregamento deixou de se disfarçar de «não tens nada»; e sair de um formulário por gravar passa a perguntar antes de deitar fora o que escreveste.",
+      "A Progressão deixou de inventar um patamar quando não consegue ler os teus dados — um número errado sobre a tua comissão é pior do que dizer que falhou.",
+      "O modo escuro do painel passou a ter uma palete só. Havia duas, e mudar de separador mudava a cor dos cartões.",
+    ],
+  },
+  {
     version: "2.64.0",
     data: "2026-08-16",
     titulo: "O contrato lê-se antes de se aceitar, e o painel deixa-se arrumar",

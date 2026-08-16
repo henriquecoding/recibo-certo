@@ -25,7 +25,7 @@
  */
 
 import { memo, useCallback, useMemo, useRef, useState } from "react";
-import { MODULOS } from "@/lib/contabilistas/dashboard/modulos";
+import { MODULOS, definicao } from "@/lib/contabilistas/dashboard/modulos";
 import {
   MAX_LINHA, colide, resolverColisoes,
 } from "@/lib/contabilistas/dashboard/layout";
@@ -33,11 +33,12 @@ import {
   anuncioDeMovimento, anuncioDeTamanho, geometriaDoTamanho, tamanhosPermitidos,
 } from "@/lib/contabilistas/dashboard/apresentacao";
 import type {
-  GridPlacement, WidgetSize, WorkspaceLayoutV2, WorkspaceWidgetInstance,
+  GridPlacement, WidgetSize, WidgetType, WorkspaceLayoutV2, WorkspaceWidgetInstance,
 } from "@/lib/contabilistas/dashboard/tipos";
 import MolduraModulo, { type AcaoDoMenu } from "./MolduraModulo";
 import CorpoDoModulo from "./widgets";
 import type { Broker } from "./broker";
+import { usarEcraEstreito } from "./usarEcraEstreito";
 import styles from "./painel-modular.module.css";
 
 /** O corpo, memoizado: arrastar não é razão para recalcular conteúdo. */
@@ -56,7 +57,7 @@ interface Arrasto {
 }
 
 export default function GrelhaEdicao({
-  layout, broker, href, grelhaVisivel, onAlterar, onRemover,
+  layout, broker, href, grelhaVisivel, onAlterar, onRemover, onOrganizar, onAdicionar,
 }: {
   layout: WorkspaceLayoutV2;
   broker: Broker;
@@ -64,11 +65,37 @@ export default function GrelhaEdicao({
   grelhaVisivel: boolean;
   onAlterar: (items: WorkspaceWidgetInstance[]) => void;
   onRemover: (instanceId: string) => void;
+  /** Abre a folha do telemóvel — é lá que a ordem e o tamanho se mexem. */
+  onOrganizar: () => void;
+  /**
+   * Largar um módulo vindo da biblioteca.
+   *
+   * As entradas da biblioteca eram `draggable` e escreviam
+   * `text/rc-modulo` no `dataTransfer`, com um comentário a dizer que «a
+   * grelha aceita a queda». Não aceitava: não existia um único `onDrop`
+   * no painel inteiro. Arrastar da biblioteca não fazia absolutamente
+   * nada — o cartão voltava ao sítio e a pessoa ficava sem saber porquê.
+   */
+  onAdicionar: (type: WidgetType) => void;
 }) {
+  const estreito = usarEcraEstreito();
   const caixa = useRef<HTMLDivElement>(null);
   const [arrasto, setArrasto] = useState<Arrasto | null>(null);
   const [aMoverPorTeclado, setAMoverPorTeclado] = useState<string | null>(null);
   const [anuncio, setAnuncio] = useState("");
+  /** A grelha está a ser sobrevoada por um módulo da biblioteca. */
+  const [aReceber, setAReceber] = useState(false);
+
+  /**
+   * Onde o módulo estava quando o modo de mover por teclado abriu.
+   *
+   * Sem isto o `Escape` anunciava «Movimento cancelado» e não cancelava
+   * nada: cada seta já tinha aplicado a alteração via `onAlterar`, e o
+   * Escape limpava só a flag. Quem usa leitor de ecrã era a única pessoa a
+   * quem o painel mentia, porque quem vê percebe que o cartão ficou onde
+   * as setas o deixaram.
+   */
+  const origemDoTeclado = useRef<GridPlacement | null>(null);
 
   const colunas = layout.grid.desktop.columns;
   const visiveis = useMemo(() => layout.items.filter((i) => !i.hidden), [layout.items]);
@@ -204,33 +231,72 @@ export default function GrelhaEdicao({
     <>
       <div
         ref={caixa}
-        className={`${styles.grelha} ${grelhaVisivel ? styles.grelhaVisivel : ""}`}
+        className={`${styles.grelha} ${grelhaVisivel ? styles.grelhaVisivel : ""} ${
+          aReceber ? styles.grelhaAReceber : ""
+        }`}
         onPointerMove={arrasto ? mover : undefined}
         onPointerUp={arrasto ? largar : undefined}
         onPointerCancel={arrasto ? largar : undefined}
+        onDragOver={(e) => {
+          // Sem `preventDefault` o browser recusa a queda por omissão, e
+          // era essa a razão de o arrasto da biblioteca não dar nada.
+          if (!e.dataTransfer.types.includes("text/rc-modulo")) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+          if (!aReceber) setAReceber(true);
+        }}
+        onDragLeave={(e) => {
+          // Só quando sai mesmo da grelha — entrar num filho dispara
+          // `dragleave` no pai, e a moldura piscava a cada cartão.
+          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+          setAReceber(false);
+        }}
+        onDrop={(e) => {
+          const tipo = e.dataTransfer.getData("text/rc-modulo");
+          setAReceber(false);
+          if (!tipo) return;
+          e.preventDefault();
+          if (definicao(tipo)) onAdicionar(tipo as WidgetType);
+        }}
       >
         {visiveis.map((item) => {
           const aArrastar = arrasto?.instanceId === item.instanceId;
           const geo = aArrastar ? arrasto.alvo : item.desktop;
           const tamanhos = tamanhosPermitidos(item.type);
 
-          const acoes: AcaoDoMenu[] = [
-            { rotulo: "Mover para cima", onSelect: () => moverPorTeclado(item, 0, -1) },
-            { rotulo: "Mover para baixo", onSelect: () => moverPorTeclado(item, 0, 1) },
-            { rotulo: "Mover para a esquerda", onSelect: () => moverPorTeclado(item, -1, 0) },
-            { rotulo: "Mover para a direita", onSelect: () => moverPorTeclado(item, 1, 0) },
-            ...tamanhos.map((t, idx) => ({
-              rotulo: `Tamanho ${NOME_DO_TAMANHO[t]}`,
-              onSelect: () => mudarTamanho(item, t),
-              separar: idx === 0,
-            })),
-            {
-              rotulo: "Remover do painel",
-              onSelect: () => onRemover(item.instanceId),
-              separar: true,
-              perigoso: true,
-            },
-          ];
+          // ⚠️ Abaixo dos 640px a grelha é uma LISTA e `grid-column`/`grid-row`
+          // são ignorados. «Mover para a esquerda» e os tamanhos de grelha
+          // escreviam coordenadas que o ecrã não lê — o menu aceitava o
+          // toque e não acontecia nada. Aqui as entradas são as que MEXEM
+          // mesmo: a ordem e o tamanho da lista vivem em `mobile`, e quem
+          // lhes toca é a folha «Organizar painel».
+          const acoes: AcaoDoMenu[] = estreito
+            ? [
+                { rotulo: "Organizar e reordenar…", onSelect: onOrganizar },
+                {
+                  rotulo: "Remover do painel",
+                  onSelect: () => onRemover(item.instanceId),
+                  separar: true,
+                  perigoso: true,
+                },
+              ]
+            : [
+                { rotulo: "Mover para cima", onSelect: () => moverPorTeclado(item, 0, -1) },
+                { rotulo: "Mover para baixo", onSelect: () => moverPorTeclado(item, 0, 1) },
+                { rotulo: "Mover para a esquerda", onSelect: () => moverPorTeclado(item, -1, 0) },
+                { rotulo: "Mover para a direita", onSelect: () => moverPorTeclado(item, 1, 0) },
+                ...tamanhos.map((t, idx) => ({
+                  rotulo: `Tamanho ${NOME_DO_TAMANHO[t]}`,
+                  onSelect: () => mudarTamanho(item, t),
+                  separar: idx === 0,
+                })),
+                {
+                  rotulo: "Remover do painel",
+                  onSelect: () => onRemover(item.instanceId),
+                  separar: true,
+                  perigoso: true,
+                },
+              ];
 
           return (
             <div
@@ -250,16 +316,26 @@ export default function GrelhaEdicao({
                 aArrastar={aArrastar}
                 acoes={acoes}
                 arrastarProps={{
-                  onPointerDown: comecar(item, "mover") as unknown as React.PointerEventHandler<HTMLButtonElement>,
+                  // Num ecrã em lista, arrastar escreveria coordenadas de
+                  // grelha que ninguém lê. Não se instala o handler.
+                  onPointerDown: estreito
+                    ? undefined
+                    : (comecar(item, "mover") as unknown as React.PointerEventHandler<HTMLButtonElement>),
                   onKeyDown: (e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      setAMoverPorTeclado((a) => (a === item.instanceId ? null : item.instanceId));
-                      setAnuncio(
-                        aMoverPorTeclado === item.instanceId
-                          ? "Movimento confirmado."
-                          : `A mover ${MODULOS[item.type].titulo} (${item.tag}). Use as setas. Enter confirma, Escape cancela.`,
-                      );
+                      const jaEstava = aMoverPorTeclado === item.instanceId;
+                      if (jaEstava) {
+                        origemDoTeclado.current = null;
+                        setAMoverPorTeclado(null);
+                        setAnuncio("Movimento confirmado.");
+                      } else {
+                        origemDoTeclado.current = { ...item.desktop };
+                        setAMoverPorTeclado(item.instanceId);
+                        setAnuncio(
+                          `A mover ${MODULOS[item.type].titulo} (${item.tag}). Use as setas. Enter confirma, Escape cancela.`,
+                        );
+                      }
                       return;
                     }
                     if (aMoverPorTeclado !== item.instanceId) return;
@@ -269,8 +345,17 @@ export default function GrelhaEdicao({
                     };
                     if (e.key === "Escape") {
                       e.preventDefault();
+                      // Cancelar é repor, não é só fechar o modo.
+                      const origem = origemDoTeclado.current;
+                      if (origem) {
+                        const items = layout.items.map((i) =>
+                          i.instanceId === item.instanceId ? { ...i, desktop: { ...origem } } : i,
+                        );
+                        onAlterar(resolverColisoes(items, item.instanceId, colunas));
+                      }
+                      origemDoTeclado.current = null;
                       setAMoverPorTeclado(null);
-                      setAnuncio("Movimento cancelado.");
+                      setAnuncio("Movimento cancelado. O módulo voltou ao sítio onde estava.");
                       return;
                     }
                     const p = passos[e.key];
@@ -281,13 +366,24 @@ export default function GrelhaEdicao({
                   },
                   "aria-pressed": aMoverPorTeclado === item.instanceId,
                 }}
-                onRedimensionar={comecar(item, "redimensionar") as unknown as (e: React.PointerEvent<HTMLButtonElement>) => void}
+                onRedimensionar={
+                  estreito
+                    ? undefined
+                    : (comecar(item, "redimensionar") as unknown as (e: React.PointerEvent<HTMLButtonElement>) => void)
+                }
               >
+                {/* `versao` é a prop que existe só para o `memo` deixar
+                    passar a chegada de dados. Os widgets leem o broker
+                    imperativamente, e sem ela nenhuma prop mudava — um
+                    módulo acabado de acrescentar ficava vazio até se sair
+                    da edição, que é exatamente o que `acrescentar` tenta
+                    evitar ao pedir o domínio de imediato. */}
                 <CorpoMemo
                   type={item.type}
                   colSpan={item.desktop.colSpan}
                   rowSpan={item.desktop.rowSpan}
                   broker={broker}
+                  versao={broker.versao}
                   href={href}
                 />
               </MolduraModulo>

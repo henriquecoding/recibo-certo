@@ -65,7 +65,7 @@ export default function PerfilPreview({
     <div className="space-y-4">
       <section
         aria-label="Pré-visualização do perfil público"
-        className="overflow-hidden rounded-4xl border border-stone-200 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900"
+        className="overflow-hidden rounded-4xl border border-stone-200 bg-white shadow-card"
       >
         {/* A faixa do hero. Dá ao cartão a profundidade que o §150 pede sem
             o transformar num telemóvel falso dentro da página. */}
@@ -94,11 +94,11 @@ export default function PerfilPreview({
             )}
           </span>
 
-          <h3 className="font-display text-xl text-ink dark:text-stone-100">
+          <h3 className="font-display text-xl text-ink">
             {ficha.nome.trim() || "O teu nome"}
           </h3>
           {ficha.tituloProfissional?.trim() && (
-            <p className="mt-0.5 text-sm text-stone-500 dark:text-stone-400">{ficha.tituloProfissional}</p>
+            <p className="mt-0.5 text-sm text-stone-500">{ficha.tituloProfissional}</p>
           )}
 
           {/* Informado ≠ verificado. O rótulo é o que a §124 permite dizer. */}
@@ -112,13 +112,13 @@ export default function PerfilPreview({
           )}
 
           {(ficha.apresentacaoCurta?.trim() || ficha.bio.trim()) && (
-            <p className="mt-3 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
+            <p className="mt-3 text-sm leading-relaxed text-stone-600">
               {ficha.apresentacaoCurta?.trim() || ficha.bio.trim()}
             </p>
           )}
 
           {(lugar || atendimento) && (
-            <p className="mt-2.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
+            <p className="mt-2.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-stone-500">
               <MapPin size={13} className="shrink-0" aria-hidden />
               {[lugar, atendimento].filter(Boolean).join(" · ")}
             </p>
@@ -139,7 +139,7 @@ export default function PerfilPreview({
                   </li>
                 ))}
                 {ficha.especialidades.length > 6 && (
-                  <li className="rounded-lg bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-600 dark:bg-stone-800 dark:text-stone-300">
+                  <li className="rounded-lg bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-600">
                     +{ficha.especialidades.length - 6}
                   </li>
                 )}
@@ -148,18 +148,18 @@ export default function PerfilPreview({
           )}
 
           {tipos && tipos.filter((t) => t.ativo).length > 0 && (
-            <div className="mt-4 border-t border-stone-100 pt-4 dark:border-stone-800">
+            <div className="mt-4 border-t border-stone-100 pt-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-stone-400">
                 Consultas
               </p>
               <ul className="mt-2 space-y-1.5">
                 {tipos.filter((t) => t.ativo).slice(0, 4).map((t) => (
                   <li key={t.id} className="flex items-baseline justify-between gap-3 text-sm">
-                    <span className="min-w-0 truncate text-stone-700 dark:text-stone-300">
+                    <span className="min-w-0 truncate text-stone-700">
                       {t.nome}
                       <span className="ml-1.5 text-xs text-stone-400">{duracaoLegivel(t.duracaoMin)}</span>
                     </span>
-                    <span className={`shrink-0 font-semibold tabular-nums ${t.precoCents === 0 ? "text-brand-dark dark:text-brand-mint" : "text-stone-800 dark:text-stone-200"}`}>
+                    <span className={`shrink-0 font-semibold tabular-nums ${t.precoCents === 0 ? "text-brand-dark dark:text-brand-mint" : "text-stone-800"}`}>
                       {precoLegivel(t.precoCents)}
                     </span>
                   </li>
@@ -168,13 +168,13 @@ export default function PerfilPreview({
               {/* Sem esta frase, a tabela deixa de ser uma âncora comercial
                   e passa a ser uma tabela de preços fixos — que é o que a
                   §123 diz que o produto não é. */}
-              <p className="mt-2 text-[0.6875rem] leading-relaxed text-stone-400 dark:text-stone-500">
+              <p className="mt-2 text-[0.6875rem] leading-relaxed text-stone-400">
                 {COPY_VALORES_INDICATIVOS}
               </p>
             </div>
           )}
 
-          <dl className="mt-4 space-y-2 border-t border-stone-100 pt-4 text-sm dark:border-stone-800">
+          <dl className="mt-4 space-y-2 border-t border-stone-100 pt-4 text-sm">
             {resposta && (
               <Linha Icon={Clock} rotulo="Resposta">{resposta.replace("Responde normalmente em ", "")}</Linha>
             )}
@@ -220,17 +220,17 @@ export default function PerfilPreview({
       {sinais.length > 0 && (
         <section
           aria-labelledby="sinais-titulo"
-          className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900"
+          className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card"
         >
-          <h3 id="sinais-titulo" className="font-display text-lg text-ink dark:text-stone-100">
+          <h3 id="sinais-titulo" className="font-display text-lg text-ink">
             Sinais de confiança
           </h3>
-          <p className="mt-1 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+          <p className="mt-1 text-xs leading-relaxed text-stone-500">
             Só o que se consegue provar. Sem estrelas, sem «mais procurado».
           </p>
           <ul className="mt-3 space-y-2">
             {sinais.map((s) => (
-              <li key={s.id} className="flex items-center gap-2 text-sm text-stone-700 dark:text-stone-300">
+              <li key={s.id} className="flex items-center gap-2 text-sm text-stone-700">
                 <Check size={15} className="shrink-0 text-brand" aria-hidden />
                 {s.rotulo}
               </li>
@@ -251,11 +251,11 @@ function Linha({
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <dt className="flex min-w-0 items-center gap-2 text-stone-500 dark:text-stone-400">
+      <dt className="flex min-w-0 items-center gap-2 text-stone-500">
         <Icon size={14} className="shrink-0" aria-hidden />
         <span className="truncate">{rotulo}</span>
       </dt>
-      <dd className="shrink-0 font-medium text-stone-800 dark:text-stone-200">{children}</dd>
+      <dd className="shrink-0 font-medium text-stone-800">{children}</dd>
     </div>
   );
 }
