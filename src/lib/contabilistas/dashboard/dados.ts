@@ -4,7 +4,7 @@
  * Duas notas que explicam a forma deste ficheiro:
  *
  *  1. NÃO há função de `update` ao layout. A migração
- *     `20260815120100` não dá política de UPDATE a `authenticated`: mudar
+ *     `20260815220000` não dá política de UPDATE a `authenticated`: mudar
  *     layout, nome, ordem ou principal passa obrigatoriamente por RPC,
  *     que valida a geometria e faz compare-and-swap por `revision`. Um
  *     `UPDATE` livre daqui não funcionaria, e é isso que se pretende.

@@ -281,7 +281,7 @@ describe("dashboard — o que se grava é o layout normalizado", () => {
     // Se um dia o SQL deixar de as recusar, este teste falha e obriga a
     // reler a decisão em vez de a herdar por engano.
     const sql = readFileSync(
-      join(RAIZ, "supabase", "migrations", "20260815120100_dashboard_modular_contabilistas.sql"),
+      join(RAIZ, "supabase", "migrations", "20260815220000_dashboard_modular_contabilistas.sql"),
       "utf8",
     );
     const inicio = sql.indexOf("FUNCTION public.dashboard_layout_invalido");

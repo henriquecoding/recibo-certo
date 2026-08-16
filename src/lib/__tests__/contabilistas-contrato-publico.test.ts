@@ -32,7 +32,7 @@ const DADOS = ler("src", "lib", "contabilistas", "dados.ts");
 
 /** O corpo da view, para se poder perguntar o que ela seleciona. */
 const CORPO_DA_VIEW = MIGRACAO.slice(
-  MIGRACAO.indexOf("CREATE OR REPLACE VIEW public.contabilistas_publico"),
+  MIGRACAO.search(/CREATE\s+(?:OR\s+REPLACE\s+)?VIEW\s+public\.contabilistas_publico/),
   MIGRACAO.indexOf("COMMENT ON VIEW"),
 );
 
@@ -121,6 +121,100 @@ describe("o cliente lê a view, não a tabela", () => {
     // que o diretório fechar, o `join` devolvia null e a área do cliente
     // ficava sem o nome de quem o acompanha.
     expect(DADOS).not.toContain('contabilista:contabilista_id (');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  A VIEW É REDEFINIDA TRÊS VEZES, E ISSO TEM DUAS CONSEQUÊNCIAS
+//  ---------------------------------------------------------------------
+//  Três migrações desta série definem `contabilistas_publico`, cada uma
+//  acrescentando colunas NO MEIO da lista da anterior. Daí duas regras
+//  que ninguém adivinha ao escrever a quarta:
+//
+//   1. `CREATE OR REPLACE VIEW` NÃO SERVE. Só sabe acrescentar colunas no
+//      fim; sobre uma view já crescida recusa com «42P16: cannot drop
+//      columns from view». Custou uma reaplicação falhada em produção.
+//
+//   2. A ORDEM DOS NOMES DE FICHEIRO É A ORDEM DE APLICAÇÃO. Qualquer
+//      ferramenta aplica por ordem alfabética; se o nome não ordenar como
+//      a dependência, a última definição a correr é a errada — e o
+//      diretório passa a ler a fidelidade das colunas espelho em vez da
+//      regra corrente, sem nada falhar. Foi o que aconteceu: a série
+//      nasceu com nomes `1201xx/1202xx/1203xx` que ordenavam ANTES do
+//      contrato público e do perfil, ao contrário das dependências.
+// ═══════════════════════════════════════════════════════════════════════
+
+/** Cada definição da view, na ordem em que uma ferramenta as aplicaria. */
+function definicoesDaViewPorOrdemDeAplicacao(): { ficheiro: string; corpo: string }[] {
+  const dir = join(RAIZ, "supabase", "migrations");
+  const achados: { ficheiro: string; corpo: string }[] = [];
+  for (const ficheiro of readdirSync(dir).sort()) {
+    if (!ficheiro.endsWith(".sql")) continue;
+    const sql = ler("supabase", "migrations", ficheiro);
+    const re = /CREATE\s+(?:OR\s+REPLACE\s+)?VIEW\s+public\.contabilistas_publico/gi;
+    for (let m = re.exec(sql); m; m = re.exec(sql)) {
+      const fim = sql.indexOf(";", m.index);
+      achados.push({ ficheiro, corpo: sql.slice(m.index, fim === -1 ? undefined : fim) });
+    }
+  }
+  return achados;
+}
+
+describe("a view pública sobrevive a ser reaplicada", () => {
+  const definicoes = definicoesDaViewPorOrdemDeAplicacao();
+
+  it("há mais do que uma definição — é por isso que isto importa", () => {
+    expect(definicoes.length).toBeGreaterThan(1);
+  });
+
+  it.each(definicoes.map((d) => d.ficheiro))(
+    "%s cria a view com DROP antes, nunca com CREATE OR REPLACE",
+    (ficheiro) => {
+      const sql = ler("supabase", "migrations", ficheiro);
+      // `CREATE OR REPLACE VIEW` recusa com 42P16 se a view já cresceu.
+      expect(
+        /CREATE\s+OR\s+REPLACE\s+VIEW\s+public\.contabilistas_publico/i.test(sql),
+        `${ficheiro}: usa CREATE OR REPLACE VIEW — reaplicar dá 42P16`,
+      ).toBe(false);
+      expect(
+        /DROP\s+VIEW\s+IF\s+EXISTS\s+public\.contabilistas_publico/i.test(sql),
+        `${ficheiro}: falta o DROP VIEW IF EXISTS antes do CREATE`,
+      ).toBe(true);
+    },
+  );
+
+  it("a ÚLTIMA definição por ordem de ficheiro é a que lê a regra corrente", () => {
+    // Se um nome novo ordenar depois desta, o diretório volta a ler a
+    // fidelidade das colunas espelho de `contabilistas` sem nada falhar.
+    const ultima = definicoes.at(-1)!;
+    expect(
+      ultima.corpo,
+      `a última definição da view é em ${ultima.ficheiro}, e não lê fidelidade_regras`,
+    ).toContain("fidelidade_regras");
+  });
+
+  it("os nomes ordenam como as dependências, não ao contrário", () => {
+    const nomes = readdirSync(join(RAIZ, "supabase", "migrations")).sort();
+    const posicao = (parte: string) => nomes.findIndex((n) => n.includes(parte));
+
+    // O contrato público cria a view; o perfil acrescenta-lhe colunas que
+    // só ele cria; a fidelidade fecha-a lendo a regra; a progressão
+    // substitui os ganchos que a fidelidade deixou no-op.
+    const ordem = [
+      "contrato_publico_contabilistas",
+      "perfil_profissional_campos",
+      "dashboard_modular_contabilistas",
+      "fidelidade_v2_regras_versionadas",
+      "progressao_comissao_contabilistas",
+    ].map((p) => ({ p, i: posicao(p) }));
+
+    for (const { p, i } of ordem) expect(i, `migração ${p} não encontrada`).toBeGreaterThan(-1);
+    for (let k = 1; k < ordem.length; k++) {
+      expect(
+        ordem[k].i,
+        `${ordem[k].p} tem de ordenar DEPOIS de ${ordem[k - 1].p} — renomeia o ficheiro`,
+      ).toBeGreaterThan(ordem[k - 1].i);
+    }
   });
 });
 

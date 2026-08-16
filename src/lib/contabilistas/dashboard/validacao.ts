@@ -3,7 +3,7 @@
  *
  * A distinção que este ficheiro existe para fixar não é «o servidor aceita
  * sobreposições» — NÃO aceita. `dashboard_layout_invalido()` na migração
- * `20260815120100` devolve `modulos_sobrepostos` e a gravação falha.
+ * `20260815220000` devolve `modulos_sobrepostos` e a gravação falha.
  *
  * A distinção é outra: `validarLayout` recebe um layout e devolve DUAS
  * coisas — uma lista de erros sobre o que ENTROU, e um layout normalizado

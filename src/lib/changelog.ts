@@ -16,6 +16,16 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.62.1",
+    data: "2026-08-16",
+    titulo: "O diretório volta a ler a fidelidade da regra em vigor",
+    itens: [
+      "No perfil público e nos cartões do diretório, a meta do cartão de fidelidade e a percentagem de desconto voltam a vir da regra que está mesmo em vigor. Tinham passado a vir de uma cópia à parte, que podia divergir da regra publicada.",
+      "A fotografia do LinkedIn volta a fazer parte do que a ficha pública mostra.",
+      "Nada mudou no que é público: o telefone continua a sair só para quem tem vínculo, e a comissão, o XP e os patamares continuam invisíveis a quem não tem sessão.",
+    ],
+  },
+  {
     version: "2.62.0",
     data: "2026-08-16",
     titulo: "Concluir uma consulta passa a registar o valor real",

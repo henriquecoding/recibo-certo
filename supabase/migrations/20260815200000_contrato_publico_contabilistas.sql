@@ -44,7 +44,15 @@ BEGIN;
 --  privilégios do dono e continua a devolver as linhas aprovadas mesmo
 --  depois de a política pública da tabela ser retirada. É este o
 --  mecanismo que a substitui.
-CREATE OR REPLACE VIEW public.contabilistas_publico
+--
+--  `DROP` antes de `CREATE`, e nunca `CREATE OR REPLACE`: as migrações
+--  seguintes desta série acrescentam colunas a esta view NO MEIO da
+--  lista, e o `REPLACE` só sabe acrescentar no fim. Reaplicar esta
+--  migração sobre a view já crescida recusaria com
+--  «42P16: cannot drop columns from view». Vale para as três definições
+--  desta série — ver a mesma nota em 20260815210000 e 20260815230000.
+DROP VIEW IF EXISTS public.contabilistas_publico;
+CREATE VIEW public.contabilistas_publico
 WITH (security_invoker = false) AS
 SELECT
   c.user_id,

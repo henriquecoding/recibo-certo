@@ -877,7 +877,7 @@ export async function meusCupoes(filtro: {
 // ─── Progressão e comissão ─────────────────────────────────────────────
 //
 // Duas leituras, e NENHUMA escrita. A migração
-// `20260815120300_progressao_comissao_contabilistas.sql` não dá política de
+// `20260815233000_progressao_comissao_contabilistas.sql` não dá política de
 // INSERT nem de UPDATE a `authenticated` sobre estas tabelas: XP, créditos
 // e patamares nascem de RPCs do servidor. Foi a lição da migração 024 —
 // validar quem escreve não chega, é preciso validar o que é escrito.
