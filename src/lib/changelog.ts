@@ -16,6 +16,18 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.66.0",
+    data: "2026-08-16",
+    titulo: "O painel no telemóvel: o que estava cortado, e o que não fazia nada",
+    itens: [
+      "O menu «•••» de cada módulo abria-se cortado a meio. Passa a aparecer inteiro, e a virar-se para cima quando está no fundo do ecrã. O mesmo valia para o menu «Alinhar» e para o das vistas — os três tinham a mesma causa.",
+      "No telemóvel, o modo de edição mostrava um puxador para arrastar, um canto para redimensionar e uma grelha-guia. Nenhum dos três fazia nada: nessa largura o painel é uma lista, não uma grelha. Desaparecem, e fica o que funciona com o dedo — «Organizar», onde se muda a ordem, o tamanho e o que aparece.",
+      "As ações de edição deixam de empilhar três filas de botões por cima do painel e passam a uma barra fixa no fundo. Antes ocupavam metade do ecrã antes de se ver um único módulo.",
+      "Arrastar um módulo da biblioteca para o painel passa a funcionar. Até agora o cartão levantava-se e voltava ao sítio, porque não havia nada do outro lado a receber.",
+      "O módulo «Comunicações recentes» dizia que o conteúdo abria na conversa, e não abria — as linhas não eram clicáveis. Agora são.",
+    ],
+  },
+  {
     version: "2.65.0",
     data: "2026-08-16",
     titulo: "Pagar o contabilista pelo site, e vinte correções no painel de gestão",

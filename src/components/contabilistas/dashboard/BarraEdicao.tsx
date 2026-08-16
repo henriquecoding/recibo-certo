@@ -19,8 +19,8 @@
  * Desfazer, que continua a valer para esta ação como para qualquer outra.
  */
 
-import { useEffect, useRef, useState } from "react";
 import { GripHorizontal, Sparkle, ChevronDown, Check } from "@/components/ui/Icons";
+import MenuFlutuante from "./MenuFlutuante";
 import styles from "./barra-edicao.module.css";
 
 export default function BarraEdicao({
@@ -39,12 +39,22 @@ export default function BarraEdicao({
       </span>
       <span className="min-w-0 flex-1">
         <span className={styles.titulo}>Modo de edição ativo</span>
-        <span className={styles.sub}>
+        {/* Duas explicações, porque são dois gestos diferentes. No
+            telemóvel não se arrasta nem se redimensiona — a grelha é uma
+            lista — e prometer isso mandava a pessoa tentar uma coisa que
+            não acontece. */}
+        <span className={`${styles.sub} hidden sm:block`}>
           Personalize o seu painel arrastando, redimensionando e organizando os módulos.
+        </span>
+        <span className={`${styles.sub} sm:hidden`}>
+          Toque em «Organizar» para mudar a ordem, o tamanho e o que aparece.
         </span>
       </span>
 
-      <span className={styles.acoes}>
+      {/* Grelha, alinhar e arrumar escrevem em coordenadas de grelha, que
+          abaixo dos 640px ninguém lê. Escondem-se em vez de aceitarem o
+          toque e não fazerem nada. */}
+      <span className={`${styles.acoes} hidden sm:flex`}>
         <button
           type="button"
           onClick={onAlternarGrelha}
@@ -66,46 +76,30 @@ export default function BarraEdicao({
   );
 }
 
+/** O mesmo `MenuFlutuante` do módulo — tinha a mesma avaria de recorte. */
 function MenuAlinhar({
   onCompactar, onAlinharEsquerda,
 }: {
   onCompactar: () => void;
   onAlinharEsquerda: () => void;
 }) {
-  const [aberto, setAberto] = useState(false);
-  const caixa = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!aberto) return;
-    function fora(e: MouseEvent) {
-      if (!caixa.current?.contains(e.target as Node)) setAberto(false);
-    }
-    function tecla(e: KeyboardEvent) { if (e.key === "Escape") setAberto(false); }
-    document.addEventListener("mousedown", fora);
-    document.addEventListener("keydown", tecla);
-    return () => {
-      document.removeEventListener("mousedown", fora);
-      document.removeEventListener("keydown", tecla);
-    };
-  }, [aberto]);
-
   return (
-    <div ref={caixa} className="relative">
-      <button
-        type="button"
-        onClick={() => setAberto((a) => !a)}
-        aria-expanded={aberto}
-        aria-haspopup="menu"
-        className={`${styles.acao} focus-marca`}
-      >
-        Alinhar <ChevronDown size={12} aria-hidden />
-      </button>
-      {aberto && (
-        <div role="menu" className={styles.menu}>
+    <MenuFlutuante
+      etiqueta="Alinhar módulos"
+      className={styles.menu}
+      alinhar="esquerda"
+      gatilho={(p) => (
+        <button {...p} type="button" className={`${styles.acao} focus-marca`}>
+          Alinhar <ChevronDown size={12} aria-hidden />
+        </button>
+      )}
+    >
+      {(fechar) => (
+        <>
           <button
             type="button"
             role="menuitem"
-            onClick={() => { setAberto(false); onCompactar(); }}
+            onClick={() => { fechar(); onCompactar(); }}
             className={styles.menuItem}
           >
             Subir tudo o que puder subir
@@ -113,13 +107,13 @@ function MenuAlinhar({
           <button
             type="button"
             role="menuitem"
-            onClick={() => { setAberto(false); onAlinharEsquerda(); }}
+            onClick={() => { fechar(); onAlinharEsquerda(); }}
             className={styles.menuItem}
           >
             Alinhar à esquerda
           </button>
-        </div>
+        </>
       )}
-    </div>
+    </MenuFlutuante>
   );
 }

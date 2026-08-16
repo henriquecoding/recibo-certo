@@ -460,39 +460,52 @@ export default function Workspace({
           O `lg:hidden` vai no invólucro e não nos botões: `.organizar` e
           `.acaoTopo` declaram `display` no módulo CSS e, com a mesma
           especificidade, ganha a regra escrita depois. */}
-      <div className="lg:hidden">
-        {edicao ? (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setOrganizarMovel(true)}
-              className={`${styles.acaoTopo} focus-marca`}
-            >
-              Organizar painel
-            </button>
-            <button
-              type="button"
-              onClick={desfazer}
-              disabled={historico.length === 0}
-              className={`${styles.acaoTopo} focus-marca`}
-            >
-              <RotateCcw size={13} aria-hidden /> Desfazer
-            </button>
-            <button type="button" onClick={reporPadrao} className={`${styles.acaoTopo} focus-marca`}>
-              Repor
-            </button>
-            <span className="ml-auto">
-              <Button onClick={concluir} disabled={aGuardar}>
-                <Check size={14} aria-hidden /> {aGuardar ? "A guardar…" : "Concluir"}
-              </Button>
-            </span>
-          </div>
-        ) : (
+      {/* ── As ações, no telemóvel ─────────────────────────────────────
+          `AcoesDoPainel` é um portal para a barra do topo e só existe a
+          partir de `lg`. Aqui vive o equivalente.
+
+          Em edição isto é uma barra FIXA no fundo, acima da doca de
+          navegação. Antes eram três filas de botões empilhadas por cima
+          do painel — a barra de estado, mais «Organizar/Desfazer/Repor»,
+          mais o «Concluir» sozinho numa linha —, e num telefone comiam
+          metade do ecrã antes de se ver um único módulo. */}
+      {!edicao && (
+        <div className="lg:hidden">
           <Button variant="secondary" onClick={abrirEdicao}>
             <Settings size={14} aria-hidden /> Personalizar painel
           </Button>
-        )}
-      </div>
+        </div>
+      )}
+
+      {edicao && (
+        <div className={`${styles.barraMovel} lg:hidden`}>
+          <button
+            type="button"
+            onClick={() => setOrganizarMovel(true)}
+            className={`${styles.acaoTopo} focus-marca`}
+          >
+            Organizar
+          </button>
+          <button
+            type="button"
+            onClick={desfazer}
+            disabled={historico.length === 0}
+            aria-label="Desfazer a última alteração"
+            className={`${styles.acaoTopo} focus-marca`}
+          >
+            <RotateCcw size={13} aria-hidden />
+            <span className="sr-only sm:not-sr-only">Desfazer</span>
+          </button>
+          <button type="button" onClick={reporPadrao} className={`${styles.acaoTopo} focus-marca`}>
+            Repor
+          </button>
+          <span className="ml-auto">
+            <Button onClick={concluir} disabled={aGuardar}>
+              <Check size={14} aria-hidden /> {aGuardar ? "A guardar…" : "Concluir"}
+            </Button>
+          </span>
+        </div>
+      )}
 
       <div className={edicao && biblioteca ? styles.comBiblioteca : undefined}>
         <div className="min-w-0" id="workspace-grelha" role="tabpanel" tabIndex={-1}>
@@ -504,6 +517,8 @@ export default function Workspace({
               grelhaVisivel={grelhaVisivel}
               onAlterar={aplicar}
               onRemover={remover}
+              onOrganizar={() => setOrganizarMovel(true)}
+              onAdicionar={acrescentar}
             />
           ) : (
             <GrelhaVista layout={layout} broker={broker} href={href} />

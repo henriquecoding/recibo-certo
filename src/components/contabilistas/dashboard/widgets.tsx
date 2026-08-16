@@ -794,18 +794,43 @@ function ComunicacoesRecentes({ densidade, broker, href }: PropsDoWidget) {
   );
   if (lista.length === 0) return <CorpoVazio texto="Sem comunicações recentes." />;
 
+  // A descrição deste módulo no registry promete que «o conteúdo abre na
+  // conversa» — e não abria: as linhas não eram clicáveis e o `href` que
+  // este componente recebe não era usado em lado nenhum. Um cartão que
+  // mostra quem falou e não deixa responder é um beco.
   return (
-    <ul className="divide-y divide-stone-100 dark:divide-stone-800">
-      {lista.map((n) => (
-        <li key={n.id} className={LINHA}>
-          <span className="min-w-0 flex-1">
-            <span className={`block ${TITULO_LINHA}`}>{n.titulo}</span>
-            <span className={`block ${SUB}`}>{quando(n.criadoEm)}</span>
-          </span>
-          {!n.lidaEm && <span aria-label="Por ler" className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />}
-        </li>
-      ))}
-    </ul>
+    <div>
+      <ul className="divide-y divide-stone-100 dark:divide-stone-800">
+        {lista.map((n) => {
+          const linha = (
+            <>
+              <span className="min-w-0 flex-1">
+                <span className={`block ${TITULO_LINHA}`}>{n.titulo}</span>
+                <span className={`block ${SUB}`}>{quando(n.criadoEm)}</span>
+              </span>
+              {!n.lidaEm && (
+                <span aria-label="Por ler" className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+              )}
+            </>
+          );
+          return (
+            <li key={n.id}>
+              {n.url ? (
+                <Link
+                  href={href(n.url)}
+                  className={`${LINHA} focus-marca w-full rounded-lg hover:bg-stone-50 dark:hover:bg-white/[0.03]`}
+                >
+                  {linha}
+                </Link>
+              ) : (
+                <span className={LINHA}>{linha}</span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <VerTudo href={href("/contabilista/clientes")} texto="Ver clientes" />
+    </div>
   );
 }
 

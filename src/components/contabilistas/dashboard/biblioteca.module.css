@@ -216,3 +216,10 @@
   border-top-color: rgba(231, 229, 228, 0.07);
   color: #a8a29e;
 }
+
+/* O grip de arrasto some no telemóvel: o arrasto HTML5 não existe no
+   toque, e um grip que não se pode agarrar é uma promessa por cumprir.
+   O «+» continua lá, e é o que funciona com o dedo. */
+@media (max-width: 639px) {
+  .entradaGrip { display: none; }
+}

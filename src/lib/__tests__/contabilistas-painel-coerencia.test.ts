@@ -174,3 +174,111 @@ describe("cabeçalho — um sistema, não dois", () => {
     expect(duplicadas, `título duas vezes em: ${duplicadas.join(", ")}`).toEqual([]);
   });
 });
+
+describe("painel modular — o que estava cortado e o que não fazia nada", () => {
+  const ler = (...p: string[]) => readFileSync(join(SRC, ...p), "utf8");
+  const DASH = ["components", "contabilistas", "dashboard"];
+
+  /**
+   * O menu `•••` de cada módulo abria-se CORTADO a meio. Não era o
+   * `z-index`: `.modulo` declara `overflow: hidden` — e tem de declarar,
+   * senão um Kanban com muitos cartões estica o cartão para fora da célula
+   * — e um filho `position: absolute` é recortado pelo antepassado que o
+   * esconde, aconteça o que acontecer com o `z-index`.
+   *
+   * Não há solução dentro da árvore. Tem de sair dela por portal.
+   */
+  it("os menus saem da árvore por portal, senão o `overflow` corta-os", () => {
+    const menu = ler(...DASH, "MenuFlutuante.tsx");
+    expect(menu).toContain("createPortal");
+    expect(menu).toContain("document.body");
+    // E tem de saber virar-se para cima: um módulo no fundo do ecrã abria
+    // um menu que caía fora da janela.
+    expect(menu).toMatch(/paraCima/);
+
+    // Os três sítios que tinham a mesma avaria usam-no.
+    for (const ficheiro of ["MolduraModulo.tsx", "BarraEdicao.tsx", "GerirVista.tsx"]) {
+      expect(ler(...DASH, ficheiro), `${ficheiro} voltou a prender o menu`)
+        .toContain("MenuFlutuante");
+    }
+  });
+
+  it("o menu flutuante anula o `right` que as classes ainda trazem", () => {
+    // `styles.menu` e `styles.menuVista` mantêm `right: 0` do tempo em que
+    // eram `absolute`. Com `left` E `right` e largura automática, o
+    // elemento estica de um lado ao outro da janela.
+    const menu = ler(...DASH, "MenuFlutuante.tsx");
+    expect(menu).toMatch(/right:\s*"auto"/);
+  });
+
+  it("largar um módulo da biblioteca na grelha faz alguma coisa", () => {
+    // A biblioteca é `draggable` e escreve `text/rc-modulo` — durante
+    // muito tempo sem ninguém do outro lado a ouvir.
+    const grelha = ler(...DASH, "GrelhaEdicao.tsx");
+    expect(grelha).toContain("onDrop");
+    expect(grelha).toContain("text/rc-modulo");
+    // Sem `preventDefault` no `dragOver` o browser recusa a queda.
+    expect(grelha).toMatch(/onDragOver/);
+  });
+
+  it("nenhum menu do painel modular volta a ser um `absolute` preso", () => {
+    // `styles.menu*` continua a existir para o ASPETO; o que não pode
+    // voltar é o padrão de o montar dentro do módulo.
+    for (const ficheiro of ["MolduraModulo.tsx", "GerirVista.tsx"]) {
+      const fonte = ler(...DASH, ficheiro);
+      expect(fonte, ficheiro).not.toMatch(/\{aberto && \(\s*<div role="menu"/);
+    }
+  });
+
+  /**
+   * Abaixo dos 640px a grelha vira uma LISTA e `grid-column`/`grid-row`
+   * deixam de ser lidos. O grip, o canto de redimensionar, a etiqueta de
+   * tamanho e a grelha-guia continuavam à vista — e nenhum deles mudava
+   * nada no ecrã. Uma afordância que não faz nada é pior do que não
+   * existir: a pessoa tenta, não acontece nada, e conclui que a aplicação
+   * está avariada.
+   */
+  it("as afordâncias de grelha desaparecem onde a grelha é uma lista", () => {
+    const css = ler(...DASH, "painel-modular.module.css");
+    const movel = css.slice(css.lastIndexOf("@media (max-width: 639px)"));
+    for (const classe of [".grip", ".resize", ".badgeTamanho"]) {
+      expect(movel, `${classe} continua visível no telemóvel`).toContain(classe);
+    }
+    expect(movel).toContain("background-image: none");
+  });
+
+  it("arrastar e redimensionar nem se instalam num ecrã em lista", () => {
+    const grelha = ler(...DASH, "GrelhaEdicao.tsx");
+    expect(grelha).toContain("usarEcraEstreito");
+    // Os handlers ficam `undefined` — não é só CSS a esconder o botão.
+    expect(grelha).toMatch(/estreito\s*\?\s*undefined/);
+  });
+
+  it("as ações de grelha da barra de edição não aparecem no telemóvel", () => {
+    const barra = ler(...DASH, "BarraEdicao.tsx");
+    // Grelha, alinhar e arrumar escrevem em coordenadas que a lista ignora.
+    expect(barra).toMatch(/hidden sm:flex/);
+  });
+
+  /**
+   * O módulo «Comunicações recentes» dizia, no registry, que «o conteúdo
+   * abre na conversa» — e não abria. As linhas não eram clicáveis e o
+   * `href` que o componente recebia não era usado em lado nenhum.
+   */
+  it("nenhum widget recebe `href` e o deita fora", () => {
+    const widgets = ler(...DASH, "widgets.tsx");
+    const corpos = widgets.split(/\nfunction /).slice(1);
+    const mudos: string[] = [];
+    for (const corpo of corpos) {
+      const nome = corpo.slice(0, corpo.indexOf("("));
+      const assinatura = corpo.slice(0, corpo.indexOf(")"));
+      if (!/\bhref\b/.test(assinatura)) continue;      // não o recebe
+      // `VerTudo` recebe um `href: string` já construído — não é a função
+      // que traduz destinos. Não tem de a chamar.
+      if (/href:\s*string/.test(corpo.slice(0, 400))) continue;
+      const resto = corpo.slice(corpo.indexOf(")"));
+      if (!/href\(/.test(resto)) mudos.push(nome);
+    }
+    expect(mudos, `recebem href e não o usam: ${mudos.join(", ")}`).toEqual([]);
+  });
+});

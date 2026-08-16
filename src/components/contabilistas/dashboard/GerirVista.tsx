@@ -25,6 +25,7 @@ import { useAvisos } from "@/components/ui/Avisos";
 import { useConfirmar } from "@/components/ui/Confirmar";
 import type { WorkspaceView } from "@/lib/contabilistas/dashboard/tipos";
 import { Check, Close, Pencil, Star, Trash } from "@/components/ui/Icons";
+import MenuFlutuante from "./MenuFlutuante";
 import styles from "./workspace.module.css";
 
 /** O nome de uma vista. Curto porque vive num separador. */
@@ -46,29 +47,12 @@ export default function GerirVista({
   const avisos = useAvisos();
   const confirmar = useConfirmar();
 
-  const [aberto, setAberto] = useState(false);
   const [aRenomear, setARenomear] = useState(false);
   const [nome, setNome] = useState(vista.nome);
   const [ocupado, setOcupado] = useState(false);
-  const caixa = useRef<HTMLDivElement | null>(null);
   const campo = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => { setNome(vista.nome); }, [vista.nome]);
-
-  useEffect(() => {
-    if (!aberto) return;
-    const fecharFora = (e: PointerEvent) => {
-      const alvo = e.target as Node | null;
-      if (alvo && !caixa.current?.contains(alvo)) setAberto(false);
-    };
-    const fecharEscape = (e: KeyboardEvent) => { if (e.key === "Escape") setAberto(false); };
-    document.addEventListener("pointerdown", fecharFora);
-    document.addEventListener("keydown", fecharEscape);
-    return () => {
-      document.removeEventListener("pointerdown", fecharFora);
-      document.removeEventListener("keydown", fecharEscape);
-    };
-  }, [aberto]);
 
   useEffect(() => { if (aRenomear) campo.current?.select(); }, [aRenomear]);
 
@@ -86,7 +70,6 @@ export default function GerirVista({
   }
 
   async function tornarPrincipal() {
-    setAberto(false);
     setOcupado(true);
     const { definirVistaPrincipal } = await import("@/lib/contabilistas/fonte/dashboard");
     const { erro } = await definirVistaPrincipal(vista.id);
@@ -97,7 +80,6 @@ export default function GerirVista({
   }
 
   async function apagar() {
-    setAberto(false);
     const quantos = vista.layout.items.length;
     const ok = await confirmar({
       titulo: `Apagar a vista «${vista.nome}»?`,
@@ -153,59 +135,63 @@ export default function GerirVista({
   }
 
   return (
-    <span ref={caixa} className={styles.gerir}>
-      <button
-        type="button"
-        onClick={() => setAberto((a) => !a)}
-        disabled={ocupado}
-        aria-expanded={aberto}
-        aria-haspopup="menu"
-        aria-label={`Gerir a vista ${vista.nome}`}
-        className={`${styles.acaoVista} focus-marca`}
-      >
-        <span aria-hidden className={styles.tresPontos}>•••</span>
-      </button>
-
-      {aberto && (
-        <div role="menu" className={styles.menuVista}>
+    <span className={styles.gerir}>
+      <MenuFlutuante
+        etiqueta={`Gerir a vista ${vista.nome}`}
+        className={styles.menuVista}
+        gatilho={(p) => (
           <button
+            {...p}
             type="button"
-            role="menuitem"
-            onClick={() => { setAberto(false); setARenomear(true); }}
-            className={`${styles.itemMenu} focus-marca`}
+            disabled={ocupado}
+            aria-label={`Gerir a vista ${vista.nome}`}
+            className={`${styles.acaoVista} focus-marca`}
           >
-            <Pencil size={13} aria-hidden /> Mudar o nome
+            <span aria-hidden className={styles.tresPontos}>•••</span>
           </button>
-
-          {!ePrincipal && (
+        )}
+      >
+        {(fechar) => (
+          <>
             <button
               type="button"
               role="menuitem"
-              onClick={() => void tornarPrincipal()}
+              onClick={() => { fechar(); setARenomear(true); }}
               className={`${styles.itemMenu} focus-marca`}
             >
-              <Star size={13} aria-hidden /> Abrir esta primeiro
+              <Pencil size={13} aria-hidden /> Mudar o nome
             </button>
-          )}
 
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => void apagar()}
-            disabled={!podeApagar}
-            title={podeApagar ? undefined : "É a única vista do painel."}
-            className={`${styles.itemMenu} ${styles.itemDestrutivo} focus-marca`}
-          >
-            <Trash size={13} aria-hidden /> Apagar vista
-          </button>
+            {!ePrincipal && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => { fechar(); void tornarPrincipal(); }}
+                className={`${styles.itemMenu} focus-marca`}
+              >
+                <Star size={13} aria-hidden /> Abrir esta primeiro
+              </button>
+            )}
 
-          {!podeApagar && (
-            <p className={styles.notaMenu}>
-              <Close size={11} aria-hidden /> Um painel precisa de pelo menos uma vista.
-            </p>
-          )}
-        </div>
-      )}
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => { fechar(); void apagar(); }}
+              disabled={!podeApagar}
+              title={podeApagar ? undefined : "É a única vista do painel."}
+              className={`${styles.itemMenu} ${styles.itemDestrutivo} focus-marca`}
+            >
+              <Trash size={13} aria-hidden /> Apagar vista
+            </button>
+
+            {!podeApagar && (
+              <p className={styles.notaMenu}>
+                <Close size={11} aria-hidden /> Um painel precisa de pelo menos uma vista.
+              </p>
+            )}
+          </>
+        )}
+      </MenuFlutuante>
     </span>
   );
 }

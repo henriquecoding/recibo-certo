@@ -231,3 +231,35 @@
   background: #14181a;
   color: #f5f5f4;
 }
+
+/* ── A barra de edição do telemóvel ───────────────────────────────────
+   Fixa no fundo, acima da doca de navegação e da safe-area. É o mesmo
+   padrão do «Guardar semana-tipo» da agenda.
+
+   Existe porque a versão anterior empilhava três filas de controlos por
+   cima do painel: o cartão «Modo de edição ativo» com as suas ações, a
+   fila «Organizar / Desfazer / Repor», e o «Concluir» sozinho na linha
+   seguinte. Num telefone isso são cerca de 330px de cromo antes do
+   primeiro módulo — metade do ecrã a explicar-se em vez de mostrar o
+   painel que se está a editar. */
+.barraMovel {
+  position: sticky;
+  bottom: calc(3.75rem + env(safe-area-inset-bottom));
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(120, 113, 108, 0.16);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 0.5rem;
+  box-shadow: 0 -2px 10px rgba(28, 25, 23, 0.06), 0 12px 30px rgba(28, 25, 23, 0.08);
+  backdrop-filter: blur(8px);
+}
+
+:global(.dark) .barraMovel {
+  border-color: rgba(231, 229, 228, 0.1);
+  background: rgba(23, 28, 22, 0.96);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3), 0 12px 30px rgba(0, 0, 0, 0.35);
+}
