@@ -35,7 +35,6 @@ interface Pagina {
   numero: number;
   largura: number;
   altura: number;
-  desenhada: boolean;
 }
 
 export default function LeitorDeDocumento({
@@ -100,7 +99,7 @@ export default function LeitorDeDocumento({
         for (let n = 1; n <= doc.numPages; n++) {
           const pagina = await doc.getPage(n);
           const vista = pagina.getViewport({ scale: 1 });
-          medidas.push({ numero: n, largura: vista.width, altura: vista.height, desenhada: false });
+          medidas.push({ numero: n, largura: vista.width, altura: vista.height });
         }
         if (!vivo) return;
         setPaginas(medidas);
@@ -186,12 +185,17 @@ export default function LeitorDeDocumento({
   }, [estado, paginas.length, desenhar, marcarFim]);
 
   async function descarregar() {
-    const endereco = await urlDoFicheiro(caminho);
+    // O ficheiro já cá está quando o visualizador o abriu: pedi-lo outra
+    // vez seria uma segunda transferência autorizada do mesmo documento.
+    const jaAberto = url.current;
+    const endereco = jaAberto ?? (await urlDoFicheiro(caminho));
     if (!endereco) { avisos.erro(`Não foi possível abrir «${nome}».`); return; }
+
     const a = document.createElement("a");
     a.href = endereco; a.download = nome; a.rel = "noopener";
     document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(endereco), 30_000);
+    // Só se revoga o que foi criado aqui: o do visualizador ainda é dele.
+    if (!jaAberto) setTimeout(() => URL.revokeObjectURL(endereco), 30_000);
   }
 
   const progresso = paginas.length ? Math.round((atual / paginas.length) * 100) : 0;
