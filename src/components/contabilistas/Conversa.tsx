@@ -23,13 +23,16 @@ import { AnimatePresence, m } from "motion/react";
 import { EASE } from "@/lib/motion";
 import { useAvisos } from "@/components/ui/Avisos";
 import {
+  detetarContactoExterno, eRecusaDeContacto, explicarContactoExterno,
+} from "@/lib/contabilistas/contacto-externo";
+import {
   ANEXOS_MAX, ANEXO_MAX_BYTES, MENSAGEM_MAX, TIPOS_ANEXO_ACEITES,
   enviarMensagem, escutarMensagens, listarMensagens, marcarLidas,
   tamanhoLegivel, urlDoAnexo, type Mensagem,
 } from "@/lib/contabilistas/fonte/conversa";
 import type { EstadoVinculo } from "@/lib/contabilistas/tipos";
 import Button from "@/components/ui/Button";
-import { ArrowRight, Close, PaperClip, Trash } from "@/components/ui/Icons";
+import { ArrowRight, Close, PaperClip, Trash, Warning } from "@/components/ui/Icons";
 
 export default function Conversa({
   vinculoId, meuId, estadoVinculo, tratamentoDoOutro, ativa = true,
@@ -147,16 +150,43 @@ export default function Conversa({
     setTimeout(() => URL.revokeObjectURL(url), 30_000);
   }
 
+  /**
+   * O aviso aparece enquanto se escreve, e não ao carregar em enviar.
+   *
+   * É a diferença entre uma explicação e uma parede: quem escreve o
+   * telemóvel raramente está a tentar contornar nada — está a fazer o que
+   * se faz em todo o lado. Dizê-lo a tempo, com o motivo, é ensinar; deixar
+   * escrever e recusar no fim é castigar.
+   */
+  const fuga = detetarContactoExterno(texto);
+
   async function enviar(e?: React.FormEvent) {
     e?.preventDefault();
     if (!texto.trim() || aEnviar) return;
+    // A mesma regra que a base de dados aplica, aplicada aqui só para a
+    // resposta ser imediata. Não é a fronteira — a fronteira é o gatilho
+    // da migração 054, que corre na transação que escreve.
+    if (fuga.encontrado) return;
     setAEnviar(true);
     noFim.current = true;
 
     const r = await enviarMensagem({ vinculoId, autorId: meuId, corpo: texto, ficheiros });
     setAEnviar(false);
 
-    if (r.erro) { avisos.erro(r.erro); return; }
+    if (r.erro) {
+      // Se a fronteira do servidor recusar — porque o detetor do browser
+      // é mais brando, ou porque alguém falou diretamente com a API — a
+      // pessoa recebe a explicação e não a mensagem crua do PostgreSQL.
+      avisos.erro(
+        eRecusaDeContacto({ message: r.erro })
+          ? "Os contactos pessoais não se partilham aqui."
+          : r.erro,
+        eRecusaDeContacto({ message: r.erro })
+          ? { detalhe: "O acompanhamento fica todo nesta conversa, onde o histórico se guarda." }
+          : undefined,
+      );
+      return;
+    }
     setTexto(""); setFicheiros([]);
     if (r.recusados?.length) {
       avisos.erro(`Enviado, mas ${r.recusados.length} ficheiro(s) ficaram de fora.`, );
@@ -297,11 +327,24 @@ export default function Conversa({
             </ul>
           )}
 
+          {fuga.encontrado && (
+            <p
+              id="aviso-contacto"
+              role="status"
+              className="mb-2 flex items-start gap-2 rounded-xl bg-alert-bg px-3.5 py-2.5 text-sm leading-relaxed text-alert-text"
+            >
+              <Warning size={15} className="mt-0.5 shrink-0" aria-hidden />
+              {explicarContactoExterno(fuga.motivos)}
+            </p>
+          )}
+
           <div className="flex items-end gap-2">
             <label className="sr-only" htmlFor="mensagem">Mensagem</label>
             <textarea
               id="mensagem"
               value={texto}
+              aria-invalid={fuga.encontrado}
+              aria-describedby={fuga.encontrado ? "aviso-contacto" : undefined}
               onChange={(e) => setTexto(e.target.value.slice(0, MENSAGEM_MAX))}
               onKeyDown={(e) => {
                 // Enter envia; Shift+Enter faz parágrafo. No telemóvel o
@@ -312,7 +355,11 @@ export default function Conversa({
               }}
               rows={2}
               placeholder="Escreve aqui…"
-              className="min-h-[2.75rem] flex-1 resize-none rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm leading-relaxed text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+              className={`min-h-[2.75rem] flex-1 resize-none rounded-xl border bg-white px-3.5 py-2.5 text-sm leading-relaxed text-stone-800 focus:outline-none focus:ring-2 ${
+                fuga.encontrado
+                  ? "border-alert-border focus:border-alert-border focus:ring-alert-border/40"
+                  : "border-stone-200 focus:border-brand focus:ring-brand/30"
+              }`}
             />
 
             <label className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-stone-200 text-stone-500 transition-colors hover:border-stone-300 hover:text-stone-700">
@@ -327,7 +374,7 @@ export default function Conversa({
               />
             </label>
 
-            <Button type="submit" disabled={!texto.trim() || aEnviar} className="h-11 shrink-0 !px-4">
+            <Button type="submit" disabled={!texto.trim() || aEnviar || fuga.encontrado} className="h-11 shrink-0 !px-4">
               <ArrowRight size={16} aria-hidden />
               <span className="sr-only">Enviar</span>
             </Button>

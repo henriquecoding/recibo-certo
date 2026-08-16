@@ -34,6 +34,7 @@ import type { Agendamento, Contabilista, Partilha, Vinculo } from "@/lib/contabi
 import { diaLocal, horaLocal, rotularDia } from "@/lib/contabilistas/agenda";
 import CartaoFidelidade from "@/components/contabilistas/CartaoFidelidade";
 import Conversa from "@/components/contabilistas/Conversa";
+import Sala from "@/components/contabilistas/sala/Sala";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import {
   Cupoes, Envios, Ficha, Historico, Numeros, PorPagar, ProximaConsulta,
@@ -240,8 +241,36 @@ export default function MeuContabilistaPage() {
 
       <Ficha cc={cc} vinculo={vinculo} ativo={ativo} />
 
+      {/* A sala responde à pergunta com que se abre esta página: «tenho
+          alguma coisa para fazer?». Tudo o resto — cartão, cupões,
+          histórico — é contexto, e contexto vem depois da resposta. */}
+      {user && vinculo.estado !== "terminado" && (
+        <Sala
+          vinculoId={vinculo.id}
+          papel="cliente"
+          meuId={user.id}
+          nomeDoOutro={primeiroNome(cc.nome)}
+          estadoVinculo={vinculo.estado}
+          consultas={consultas.map((a) => ({ id: a.id, inicio: a.inicio, estado: a.estado }))}
+          porPagarCents={porPagar.reduce((t, c) => t + c.valorCents, 0)}
+          aoAgir={(destino) => {
+            if (destino === "pagamento") {
+              document.getElementById("por-pagar-titulo")?.scrollIntoView({
+                behavior: "smooth", block: "start",
+              });
+              return;
+            }
+            if (destino === "marcar") { window.location.href = `/contabilistas/${cc.slug}`; return; }
+            document.getElementById("conversa-titulo")?.scrollIntoView({
+              behavior: "smooth", block: "start",
+            });
+          }}
+          aoMudar={() => { void carregar(); }}
+        />
+      )}
+
       {/* A conversa com quem trata das nossas contas é o que se abre mais
-          vezes. Fica logo abaixo da ficha, antes das consultas e dos envios. */}
+          vezes. Fica logo abaixo da sala, antes das consultas e dos envios. */}
       {user && (vinculo.estado === "ativo" || vinculo.estado === "pausado") && (
         <Conversa
           vinculoId={vinculo.id}
