@@ -16,6 +16,18 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.64.0",
+    data: "2026-08-16",
+    titulo: "O contrato lê-se antes de se aceitar, e o painel deixa-se arrumar",
+    itens: [
+      "O contabilista passa a poder anexar o contrato no mesmo gesto em que envia a proposta. Se anexar, deixas de poder aceitar, recusar ou pedir desconto sem teres chegado à última página do documento — e o contrato abre-se dentro da própria página, sem transferências nem separadores abertos ao lado.",
+      "A regra não vive no botão: a base de dados recusa a decisão enquanto o contrato estiver por ler. Propostas sem contrato continuam exatamente como estavam.",
+      "A pesquisa do painel de gestão passa a usar o mesmo motor da pesquisa do site: ignora acentos, perdoa uma gralha, ordena por relevância e diz «não encontrei» quando não encontra. Passa também a cobrir consultas e partilhas, e não só clientes, casos e tarefas.",
+      "Antes de escreveres seja o que for, a pesquisa mostra o que está à espera de ti — pedidos por responder, casos sem proposta, prazos passados.",
+      "As vistas do painel modular deixam de ser para sempre: podes mudar-lhes o nome, escolher qual abre primeiro e apagar as que já não usas. A última não se apaga, e apagar diz antes o que leva com ela.",
+    ],
+  },
+  {
     version: "2.63.0",
     data: "2026-08-16",
     titulo: "Encontrar um contabilista passa a ser uma procura, não uma lista",

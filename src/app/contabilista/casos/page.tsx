@@ -13,7 +13,7 @@
 //  relação vive aqui dentro, e porquê.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usarFicha } from "@/components/contabilistas/usarFicha";
 import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
@@ -21,16 +21,30 @@ import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import Button from "@/components/ui/Button";
 import { useAvisos } from "@/components/ui/Avisos";
 import {
-  Briefcase, Lock, User, Spinner, Check, Clock, ShieldCheck,
+  Briefcase, Lock, User, Spinner, Check, Clock, PaperClip, ShieldCheck,
 } from "@/components/ui/Icons";
 import Ficheiros from "@/components/casos/Ficheiros";
 import {
   listarCasos, listarMensagensDoCaso, listarPropostas, submeterMensagem,
-  enviarProposta, listarDocumentosDoCaso, listarAnexosDaProposta,
+  enviarProposta, enviarFicheiro, listarDocumentosDoCaso, listarAnexosDaProposta,
   AREAS, URGENCIAS, euros,
   type Caso, type MensagemDoCaso, type Proposta, type DocumentoDoCaso,
   type AnexoDaProposta,
 } from "@/lib/contabilistas/fonte/casos";
+
+/**
+ * O que se aceita como contrato.
+ *
+ * A mesma lista do balde, restringida ao que faz sentido ler como
+ * contrato. O PDF é o único que o leitor consegue mostrar página a página
+ * dentro da app — os outros obrigam a descarregar, e por isso a leitura
+ * fica pior. Não se proíbem; diz-se apenas o que acontece.
+ */
+const ACEITES_CONTRATO = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
+].join(",");
 
 export default function CasosDoContabilista() {
   const { ficha, aCarregar } = usarFicha();
@@ -237,7 +251,9 @@ function ResponderAoCaso({
   const [valor, setValor] = useState("");
   const [ivaIncluido, setIvaIncluido] = useState(false);
   const [prazo, setPrazo] = useState("");
+  const [contrato, setContrato] = useState<File | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const escolhaDoContrato = useRef<HTMLInputElement | null>(null);
 
   const minhas = propostas.filter((p) => p.contabilistaId === contabilistaId);
   const emJogo = minhas.filter((p) => p.estado === "enviada" || p.estado === "lida");
@@ -255,9 +271,18 @@ function ResponderAoCaso({
     aoMudar();
   }
 
+  /**
+   * Envia a proposta e, se houver contrato escolhido, anexa-o a seguir.
+   *
+   * A ordem não é escolha: o anexo pendura-se numa proposta que já existe.
+   * Por isso o envio do ficheiro é parte da MESMA ação — e se falhar, não
+   * se diz «enviada» e pronto: diz-se que a proposta seguiu sem o contrato
+   * e deixa-se o ficheiro à mão para anexar. Uma proposta que promete um
+   * contrato que não chegou é pior do que uma proposta sem contrato.
+   */
   async function propor() {
     setOcupado(true);
-    const { erro } = await enviarProposta({
+    const { erro, id } = await enviarProposta({
       casoId: caso.id,
       contabilistaId,
       corpo,
@@ -265,11 +290,29 @@ function ResponderAoCaso({
       ivaIncluido,
       prazoExecucao: prazo || undefined,
     });
-    setOcupado(false);
-    if (erro) { avisos.erro(erro); return; }
-    setCorpo(""); setValor(""); setPrazo(""); setModo("nada");
+
+    if (erro) { setOcupado(false); avisos.erro(erro); return; }
+
+    if (contrato && id) {
+      const envio = await enviarFicheiro("proposta", id, contrato, { eContrato: true });
+      setOcupado(false);
+      if (envio.erro) {
+        avisos.erro(`A proposta seguiu, mas o contrato não: ${envio.erro}`, {
+          detalhe: "Anexa-o em «Anexos da proposta em aberto» — sem ele, a pessoa decide só com o resumo.",
+        });
+        setCorpo(""); setValor(""); setPrazo(""); setContrato(null); setModo("nada");
+        aoMudar();
+        return;
+      }
+    } else {
+      setOcupado(false);
+    }
+
+    setCorpo(""); setValor(""); setPrazo(""); setContrato(null); setModo("nada");
     avisos.sucesso("Proposta enviada.", {
-      detalhe: "A pessoa só pode decidir depois de a ler até ao fim.",
+      detalhe: contrato
+        ? "A pessoa só pode decidir depois de ler o contrato até à última página."
+        : "A pessoa só pode decidir depois de a ler até ao fim.",
     });
     aoMudar();
   }
@@ -395,13 +438,65 @@ function ResponderAoCaso({
             </div>
           </div>
 
+          {/* O contrato segue COM a proposta, e não depois: é ele que a
+              pessoa tem de ler até à última página antes de poder decidir
+              (migração `20260816090000`). */}
+          <div className="mt-4 rounded-2xl border border-stone-200 bg-white p-3.5">
+            <p className="text-sm font-semibold text-stone-700">Contrato ou documento a anexar</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-stone-500">
+              Opcional. Se anexares, a pessoa tem de o abrir e chegar ao fim antes de os
+              botões de decisão abrirem — em PDF, o documento é lido aqui mesmo, página a
+              página.
+            </p>
+
+            <input
+              ref={escolhaDoContrato}
+              type="file"
+              accept={ACEITES_CONTRATO}
+              className="sr-only"
+              id={`contrato-${caso.id}`}
+              onChange={(e) => setContrato(e.target.files?.[0] ?? null)}
+            />
+
+            {contrato ? (
+              <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-xl border border-stone-200 bg-cream/60 px-3 py-2">
+                <PaperClip size={14} className="shrink-0 text-stone-400" aria-hidden />
+                <span className="min-w-0 flex-1 truncate text-sm text-stone-700">{contrato.name}</span>
+                <span className="shrink-0 rounded-lg bg-alert-bg px-2 py-0.5 text-[10px] font-bold text-alert-text">
+                  Contrato
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setContrato(null);
+                    if (escolhaDoContrato.current) escolhaDoContrato.current.value = "";
+                  }}
+                >
+                  Remover
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => escolhaDoContrato.current?.click()}
+                className="mt-2.5 w-full sm:w-auto"
+              >
+                <PaperClip size={14} aria-hidden /> Escolher documento
+              </Button>
+            )}
+          </div>
+
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <Button
               onClick={() => void propor()}
               disabled={corpo.trim().length < 20 || !valor || ocupado}
               className="w-full sm:w-auto"
             >
-              {ocupado ? <><Spinner size={14} /> A enviar…</> : "Enviar proposta"}
+              {ocupado
+                ? <><Spinner size={14} /> A enviar…</>
+                : contrato ? "Enviar proposta com contrato" : "Enviar proposta"}
             </Button>
             <Button variant="ghost" onClick={() => setModo("nada")} className="w-full sm:w-auto">
               Cancelar

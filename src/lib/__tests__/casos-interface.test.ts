@@ -56,14 +56,14 @@ describe("RC-CASO-UI-002 · a decisão está fechada até se ler", () => {
   const fonte = ler(LEITOR);
 
   it("os três botões dependem da mesma condição", () => {
-    // `pronto` = chegou ao fim E confirmou.
-    expect(fonte).toContain("const pronto = chegouAoFim && confirmou;");
+    // `pronto` = chegou ao fim do texto E, havendo contrato, leu-o E confirmou.
+    expect(fonte).toContain("const pronto = chegouAoFim && !faltaOContrato && confirmou;");
     const decisoes = fonte.match(/disabled=\{!pronto/g) ?? [];
     expect(decisoes.length, "aceitar, pedir desconto e recusar").toBeGreaterThanOrEqual(3);
   });
 
   it("a caixa de confirmação não se marca antes de se chegar ao fim", () => {
-    expect(fonte).toMatch(/checked=\{confirmou\}\s*\n\s*disabled=\{!chegouAoFim\}/);
+    expect(fonte).toMatch(/checked=\{confirmou\}\s*\n\s*disabled=\{!chegouAoFim \|\| faltaOContrato\}/);
   });
 
   it("o fim do documento também se alcança por teclado", () => {
@@ -74,13 +74,73 @@ describe("RC-CASO-UI-002 · a decisão está fechada até se ler", () => {
   });
 
   it("diz o que falta, em vez de mostrar um botão morto", () => {
-    expect(fonte).toContain("Os botões abrem quando chegares ao fim do documento acima.");
+    expect(fonte).toContain("Os botões abrem quando chegares ao fim do texto acima.");
+    expect(fonte).toContain("Falta chegar à última página do contrato em anexo.");
     expect(fonte).toContain("Falta marcar a confirmação.");
   });
 
   it("a barra de progresso anuncia-se a quem não a vê", () => {
     expect(fonte).toContain('role="progressbar"');
     expect(fonte).toContain("aria-valuenow={progresso}");
+  });
+});
+
+describe("RC-CASO-UI-006 · o contrato lê-se antes de se decidir", () => {
+  const leitor = ler(LEITOR);
+  const documento = ler("src/components/casos/LeitorDeDocumento.tsx");
+  const painel = ler(PAINEL_CC);
+  const migracao = ler("supabase/migrations/20260816090000_contrato_da_proposta.sql");
+
+  it("o contabilista anexa o contrato no mesmo gesto em que envia a proposta", () => {
+    expect(painel).toContain("Contrato ou documento a anexar");
+    expect(painel).toContain('enviarFicheiro("proposta", id, contrato, { eContrato: true })');
+    // O envio do ficheiro é parte da mesma ação, e não um passo seguinte
+    // que se pode esquecer.
+    expect(painel).toContain("Enviar proposta com contrato");
+  });
+
+  it("uma proposta que promete contrato e o perde não é dada por enviada", () => {
+    expect(painel).toContain("A proposta seguiu, mas o contrato não");
+  });
+
+  it("o contrato abre-se dentro da página, e não como transferência solta", () => {
+    expect(leitor).toContain("LeitorDeDocumento");
+    expect(leitor).toContain("ssr: false");
+    expect(leitor).toContain("ErrorBoundary");
+    expect(documento).toContain("pdfjs-dist");
+    expect(documento).toContain("/pdf.worker.min.mjs");
+  });
+
+  it("chegar ao fim conta a rolar e conta por teclado", () => {
+    expect(documento).toContain("IntersectionObserver");
+    expect(documento).toContain("numero === paginas.length");
+    expect(documento).toContain("onFocus={marcarFim}");
+    // Um contrato de uma página está inteiro no ecrã: exigir um gesto sem
+    // destino seria uma armadilha.
+    expect(documento).toContain("if (medidas.length === 1) marcarFim();");
+  });
+
+  it("o que não é PDF diz o que consegue provar, em vez de fingir", () => {
+    expect(documento).toContain("sem-visualizador");
+    expect(documento).toMatch(/só tu sabes que o leste/i);
+  });
+
+  it("a garantia está na base de dados, e não no botão", () => {
+    expect(migracao).toContain("contrato_lido_em");
+    expect(migracao).toContain("public.proposta_tem_contrato");
+    // As duas escritas que decidem alguma coisa exigem a mesma condição.
+    const condicoes = migracao.match(
+      /NOT public\.proposta_tem_contrato\(p\.id\) OR p\.contrato_lido_em IS NOT NULL/g,
+    ) ?? [];
+    expect(condicoes.length, "confirmar_leitura e decidir_proposta").toBeGreaterThanOrEqual(2);
+    expect(migracao).toContain("'contrato_por_ler'");
+  });
+
+  it("propostas sem contrato continuam a decidir-se como antes", () => {
+    // A condição é sempre verdadeira quando não há anexo de contrato — e é
+    // por isso que ela começa por `NOT ... tem_contrato`.
+    expect(migracao).toMatch(/NOT public\.proposta_tem_contrato/);
+    expect(leitor).toContain("const faltaOContrato = Boolean(contrato) && !contratoLido;");
   });
 });
 

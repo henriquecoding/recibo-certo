@@ -97,6 +97,20 @@ function normalizarCampo(valor: string): string {
   return norm;
 }
 
+/**
+ * A pontuação de UM campo contra uma consulta já normalizada.
+ *
+ * Exportada porque a pesquisa do painel de contabilistas precisa
+ * exatamente desta escala — frase exata, prefixo, subcadeia em fronteira
+ * de palavra, token exato, prefixo de token e uma gralha a partir de
+ * cinco letras — sobre registos que não são documentos do site. Escrever
+ * uma segunda função com os mesmos números seria garantir que as duas
+ * divergiam no primeiro ajuste.
+ */
+export function pontuarTexto(consultaNormalizada: string, valor: string): number {
+  return pontuarCampo(consultaNormalizada, valor);
+}
+
 function pontuarCampo(consultaNormalizada: string, valor: string): number {
   const texto = normalizarCampo(valor);
   if (!consultaNormalizada || !texto) return 0;

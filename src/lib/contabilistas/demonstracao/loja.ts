@@ -583,12 +583,13 @@ export async function submeterMensagem(
   return {};
 }
 
-export async function enviarProposta(p: NovaProposta): Promise<{ erro?: string }> {
+export async function enviarProposta(p: NovaProposta): Promise<{ erro?: string; id?: string }> {
   if (!Number.isFinite(p.valorCents) || p.valorCents <= 0) return { erro: "Diz que valor propões." };
 
   const d = bd();
+  const id = novoId();
   d.propostas.unshift({
-    id: novoId(),
+    id,
     casoId: p.casoId,
     contabilistaId: p.contabilistaId,
     corpo: p.corpo.trim(),
@@ -598,6 +599,7 @@ export async function enviarProposta(p: NovaProposta): Promise<{ erro?: string }
     validadeAte: p.validadeAte || null,
     estado: "enviada",
     lidaAteAoFimEm: null,
+    contratoLidoEm: null,
     confirmacaoEm: null,
     decididaEm: null,
     motivo: null,
@@ -606,7 +608,7 @@ export async function enviarProposta(p: NovaProposta): Promise<{ erro?: string }
 
   const caso = d.casos.find((c) => c.id === p.casoId);
   if (caso && caso.estado === "encaminhado") caso.estado = "com_proposta";
-  return {};
+  return { id };
 }
 
 export async function listarDocumentosDoCaso(casoId: string): Promise<DocumentoDoCaso[]> {

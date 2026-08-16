@@ -301,3 +301,61 @@ describe("dashboard — o que se grava é o layout normalizado", () => {
     expect(CODIGOS_NORMALIZAVEIS).toContain("modulos_sobrepostos");
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════
+//  GERIR VISTAS — criar já se podia; o resto faltava
+//  ---------------------------------------------------------------------
+//  As funções existiam desde a migração do painel modular e nenhuma tinha
+//  botão: uma vista criada por engano ficava para sempre no separador,
+//  com o nome que o sistema lhe deu. Estes testes fixam as três regras
+//  que a interface nova tem de cumprir.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("dashboard — gerir as vistas", () => {
+  const gerir = readFileSync(
+    join(RAIZ, "src", "components", "contabilistas", "dashboard", "GerirVista.tsx"), "utf8",
+  );
+  const workspace = readFileSync(
+    join(RAIZ, "src", "components", "contabilistas", "dashboard", "Workspace.tsx"), "utf8",
+  );
+
+  it("as três operações que faltavam têm agora por onde ser feitas", () => {
+    expect(gerir).toContain("renomearVista");
+    expect(gerir).toContain("definirVistaPrincipal");
+    expect(gerir).toContain("apagarVista");
+    expect(workspace).toContain("GerirVista");
+  });
+
+  it("apagar pergunta antes, e diz o que leva com ela", () => {
+    expect(gerir).toContain("confirmar({");
+    expect(gerir).toMatch(/Apagar a vista/);
+    expect(gerir).toContain("consequencias");
+    // Diz também o que NÃO se perde: os módulos leem de dados que ficam.
+    expect(gerir).toMatch(/dados não se perdem/i);
+  });
+
+  it("a última vista não se apaga", () => {
+    // Um painel sem vistas não é um painel vazio: é um painel partido.
+    expect(gerir).toContain("podeApagar");
+    expect(gerir).toContain("disabled={!podeApagar}");
+    expect(workspace).toContain("podeApagar={vistas.length > 1}");
+  });
+
+  it("apagar a vista ativa não deixa o painel a apontar para nada", () => {
+    expect(workspace).toContain("async function recarregarVistas(apagada?: string)");
+    expect(workspace).toMatch(/apagada === ativaId/);
+    expect(workspace).toMatch(/frescas\.find\(\(v\) => v\.principal\)\?\.id \?\? frescas\[0\]\?\.id/);
+  });
+
+  it("não se mexe em vistas a meio de uma edição por gravar", () => {
+    // O rascunho vive em memória até «Concluir»: trocar de vista ou
+    // apagá-la a meio deitava-o fora sem o dizer.
+    expect(workspace).toContain("{ativaAqui && !edicao && (");
+  });
+
+  it("mudar o nome é escrever no sítio, com saída por Escape", () => {
+    expect(gerir).toContain('e.key === "Enter"');
+    expect(gerir).toContain('e.key === "Escape"');
+    expect(gerir).toContain("onBlur");
+  });
+});

@@ -47,6 +47,7 @@ import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import { Check, LayoutGrid, Plus, RotateCcw, Settings } from "@/components/ui/Icons";
 import { Broker } from "./broker";
 import GrelhaVista from "./GrelhaVista";
+import GerirVista from "./GerirVista";
 import BarraEdicao from "./BarraEdicao";
 import styles from "./workspace.module.css";
 
@@ -360,24 +361,46 @@ export default function Workspace({
         )}
       </AcoesDoPainel>
 
-      {/* ── Separadores de vistas ─────────────────────────────────── */}
+      {/* ── Separadores de vistas ───────────────────────────────────
+          Criar uma vista já se podia; mudar-lhe o nome, escolher qual
+          abre primeiro e apagá-la é o que faltava — e é o que fazia
+          «Vista 5» ficar para sempre onde ninguém a queria. O `•••` só
+          aparece na vista ativa: gerir a que não se está a ver é pedir
+          enganos. Em edição desaparece — mexer nas vistas a meio de um
+          rascunho por gravar perdia o rascunho. */}
       <div className={styles.vistas} role="tablist" aria-label="Vistas do painel">
-        {vistas.map((v) => (
-          <button
-            key={v.id}
-            type="button"
-            role="tab"
-            aria-selected={v.id === ativaId}
-            onClick={() => {
-              if (edicao) return;
-              setAtivaId(v.id);
-            }}
-            disabled={edicao && v.id !== ativaId}
-            className={`${styles.vista} ${v.id === ativaId ? styles.vistaAtiva : ""} focus-marca`}
-          >
-            {v.nome}
-          </button>
-        ))}
+        {vistas.map((v) => {
+          const ativaAqui = v.id === ativaId;
+          return (
+            <span
+              key={v.id}
+              className={`${styles.separador} ${ativaAqui ? styles.separadorAtivo : ""}`}
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={ativaAqui}
+                onClick={() => {
+                  if (edicao) return;
+                  setAtivaId(v.id);
+                }}
+                disabled={edicao && !ativaAqui}
+                className={`${styles.vista} ${ativaAqui ? styles.vistaAtiva : ""} focus-marca`}
+              >
+                {v.nome}
+              </button>
+
+              {ativaAqui && !edicao && (
+                <GerirVista
+                  vista={v}
+                  ePrincipal={Boolean(v.principal)}
+                  podeApagar={vistas.length > 1}
+                  aoMudar={(opcoes) => void recarregarVistas(opcoes?.apagada)}
+                />
+              )}
+            </span>
+          );
+        })}
         {!edicao && (
           <button type="button" onClick={() => criarVistaNova()} className={`${styles.novaVista} focus-marca`}>
             <Plus size={12} aria-hidden /> Nova vista
@@ -480,6 +503,22 @@ export default function Workspace({
       )}
     </div>
   );
+
+  /**
+   * Volta a ler as vistas depois de uma mudança na barra.
+   *
+   * `apagada` existe porque apagar a vista ATIVA deixaria `ativaId` a
+   * apontar para nada — e o ecrã cairia na recuperação «ainda não tens
+   * vistas», que seria falso. Quando é a ativa que sai, a escolha passa
+   * para a principal, ou para a primeira que sobrar.
+   */
+  async function recarregarVistas(apagada?: string) {
+    const frescas = await listarVistas(contabilistaId);
+    setVistas(frescas);
+    if (apagada && apagada === ativaId) {
+      setAtivaId(frescas.find((v) => v.principal)?.id ?? frescas[0]?.id ?? null);
+    }
+  }
 
   async function criarVistaNova() {
     const { criarVista } = await import("@/lib/contabilistas/fonte/dashboard");

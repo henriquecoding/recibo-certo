@@ -17,16 +17,33 @@
 //  ao receber foco — chega-se lá com Tab, e conta na mesma.
 // ═══════════════════════════════════════════════════════════════════════
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { m } from "framer-motion";
 import Button from "@/components/ui/Button";
 import { Check, Warning, Spinner, PaperClip, Clock } from "@/components/ui/Icons";
 import { useAvisos } from "@/components/ui/Avisos";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import Ficheiros from "@/components/casos/Ficheiros";
 import {
-  euros, marcarPropostaLida, confirmarLeitura, decidirProposta,
+  euros, marcarPropostaLida, marcarContratoLido, confirmarLeitura, decidirProposta,
   listarAnexosDaProposta, type Proposta, type AnexoDaProposta,
 } from "@/lib/contabilistas/casos";
+
+/**
+ * O leitor traz o `pdfjs` atrás — centenas de kilobytes que só fazem falta
+ * a quem tem mesmo um contrato para ler. Fica fora do pacote da página e
+ * dentro de uma fronteira de erro: se o visualizador rebentar, a proposta
+ * continua legível e a decisão continua fechada, que é o estado seguro.
+ */
+const LeitorDeDocumento = dynamic(() => import("@/components/casos/LeitorDeDocumento"), {
+  ssr: false,
+  loading: () => (
+    <p className="flex items-center gap-2 rounded-3xl border border-stone-200 px-4 py-6 text-sm text-stone-500">
+      <Spinner size={15} aria-hidden /> A preparar o contrato…
+    </p>
+  ),
+});
 
 export default function LeitorDeProposta({
   proposta,
@@ -40,6 +57,7 @@ export default function LeitorDeProposta({
   const corpo = useRef<HTMLDivElement | null>(null);
 
   const [chegouAoFim, setChegouAoFim] = useState(!!proposta.lidaAteAoFimEm);
+  const [contratoLido, setContratoLido] = useState(!!proposta.contratoLidoEm);
   const [confirmou, setConfirmou] = useState(!!proposta.confirmacaoEm);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [progresso, setProgresso] = useState(0);
@@ -87,6 +105,13 @@ export default function LeitorDeProposta({
     return () => observador.disconnect();
   }, [chegouAoFim, decidida, marcarFim]);
 
+  /** O leitor chegou à última página do contrato. */
+  const marcarContrato = useCallback(async () => {
+    setContratoLido(true);
+    const { erro } = await marcarContratoLido(proposta.id);
+    if (erro) { setContratoLido(false); avisos.erro(erro); }
+  }, [proposta.id, avisos]);
+
   async function confirmar(marcado: boolean) {
     if (!marcado) { setConfirmou(false); return; }
     setConfirmou(true);
@@ -113,8 +138,14 @@ export default function LeitorDeProposta({
     aoDecidir();
   }
 
-  const pronto = chegouAoFim && confirmou;
   const contrato = anexos.find((a) => a.eContrato);
+  // Havendo contrato, ler o resumo não chega: o que se aceita é o
+  // documento. A mesma condição está em `decidir_proposta` — esta só a
+  // torna visível (migração `20260816090000`).
+  // Sem contrato anexo não há nada a exigir: `faltaOContrato` é falso e a
+  // proposta comporta-se como sempre se comportou.
+  const faltaOContrato = Boolean(contrato) && !contratoLido;
+  const pronto = chegouAoFim && !faltaOContrato && confirmou;
 
   return (
     <article className="overflow-hidden rounded-4xl border border-stone-200 bg-white shadow-card">
@@ -194,14 +225,25 @@ export default function LeitorDeProposta({
             )}
 
             {contrato && (
-              <p className="mb-3 flex items-start gap-2 rounded-2xl bg-alert-bg px-4 py-3 text-xs leading-relaxed text-alert-text">
-                <PaperClip size={13} className="mt-0.5 shrink-0" aria-hidden />
-                Esta proposta traz um contrato em anexo ({contrato.nome}). Lê-o antes de decidires
-                — o que aceitas é o contrato, e não só o resumo aqui em cima.
-              </p>
+              <div className="mb-4">
+                <p className="mb-2 flex items-start gap-2 rounded-2xl bg-alert-bg px-4 py-3 text-xs leading-relaxed text-alert-text">
+                  <PaperClip size={13} className="mt-0.5 shrink-0" aria-hidden />
+                  O que aceitas é este contrato, e não o resumo aqui em cima. Lê-o até ao
+                  fim — os botões de decisão abrem quando chegares à última página.
+                </p>
+                <ErrorBoundary>
+                  <LeitorDeDocumento
+                    caminho={contrato.caminho}
+                    nome={contrato.nome}
+                    tipoMime={contrato.tipoMime}
+                    jaLido={contratoLido}
+                    aoChegarAoFim={() => void marcarContrato()}
+                  />
+                </ErrorBoundary>
+              </div>
             )}
 
-            {anexos.length > 0 && (
+            {anexos.filter((a) => !a.eContrato).length > 0 && (
               <div className="mb-4">
                 <p className="mb-2 text-xs font-bold uppercase tracking-wide text-stone-500">
                   Em anexo
@@ -209,7 +251,7 @@ export default function LeitorDeProposta({
                 <Ficheiros
                   contexto="proposta"
                   alvo={proposta.id}
-                  ficheiros={anexos}
+                  ficheiros={anexos.filter((a) => !a.eContrato)}
                   podeAnexar={false}
                   aoMudar={() => {}}
                 />
@@ -235,12 +277,14 @@ export default function LeitorDeProposta({
               <input
                 type="checkbox"
                 checked={confirmou}
-                disabled={!chegouAoFim}
+                disabled={!chegouAoFim || faltaOContrato}
                 onChange={(e) => void confirmar(e.target.checked)}
                 className="mt-0.5 h-4 w-4 shrink-0 rounded border-stone-300 text-brand focus:ring-brand disabled:cursor-not-allowed disabled:opacity-40"
               />
-              <span className={`text-sm leading-relaxed ${chegouAoFim ? "text-stone-700" : "text-stone-400"}`}>
-                Confirmo que li a proposta até ao fim e que compreendi o que estou a aceitar.
+              <span className={`text-sm leading-relaxed ${chegouAoFim && !faltaOContrato ? "text-stone-700" : "text-stone-400"}`}>
+                {contrato
+                  ? "Confirmo que li a proposta e o contrato em anexo até ao fim, e que compreendi o que estou a aceitar."
+                  : "Confirmo que li a proposta até ao fim e que compreendi o que estou a aceitar."}
               </span>
             </label>
 
@@ -323,8 +367,10 @@ export default function LeitorDeProposta({
             {!pronto && (
               <p className="mt-3 text-[11px] leading-relaxed text-stone-400">
                 {!chegouAoFim
-                  ? "Os botões abrem quando chegares ao fim do documento acima."
-                  : "Falta marcar a confirmação."}
+                  ? "Os botões abrem quando chegares ao fim do texto acima."
+                  : faltaOContrato
+                    ? "Falta chegar à última página do contrato em anexo."
+                    : "Falta marcar a confirmação."}
               </p>
             )}
           </div>

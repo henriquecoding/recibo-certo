@@ -117,3 +117,117 @@
 
 .organizar:hover { background: rgba(29, 158, 117, 0.1); }
 :global(.dark) .organizar { border-color: rgba(61, 205, 157, 0.32); color: #6ee7b7; }
+
+/* ── Gerir a vista ────────────────────────────────────────────────────
+   O separador ativo ganha um `•••` à direita. Nos inativos não aparece:
+   gerir uma vista que não se está a ver é pedir enganos, e três pontos
+   em cada separador enchiam a barra de ruído. */
+
+.separador {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.1rem;
+  border-bottom: 2px solid transparent;
+}
+
+.separadorAtivo { border-bottom-color: #1d9e75; }
+:global(.dark) .separadorAtivo { border-bottom-color: #3dcd9d; }
+
+/* Dentro do separador, o botão do nome já não desenha a linha — desenha-a
+   o invólucro, para o `•••` ficar por cima dela também. */
+.separador .vista, .separador .vistaAtiva { border-bottom-color: transparent; }
+
+.gerir { position: relative; display: inline-flex; }
+
+.acaoVista {
+  display: inline-flex;
+  min-height: 2.2rem;
+  min-width: 1.9rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  color: #a8a29e;
+}
+
+.acaoVista:hover { background: rgba(120, 113, 108, 0.1); color: #292524; }
+.acaoVista:disabled { opacity: 0.5; cursor: not-allowed; }
+:global(.dark) .acaoVista:hover { color: #f5f5f4; }
+
+.tresPontos { font-size: 0.7rem; letter-spacing: 0.05em; line-height: 1; }
+
+.menuVista {
+  position: absolute;
+  top: calc(100% + 0.3rem);
+  right: 0;
+  z-index: 60;
+  display: flex;
+  min-width: 12.5rem;
+  flex-direction: column;
+  gap: 0.1rem;
+  border: 1px solid rgba(120, 113, 108, 0.16);
+  border-radius: 0.9rem;
+  background: #fff;
+  padding: 0.3rem;
+  box-shadow: 0 18px 40px rgba(28, 25, 23, 0.16);
+}
+
+:global(.dark) .menuVista {
+  border-color: rgba(231, 229, 228, 0.12);
+  background: #14181a;
+}
+
+.itemMenu {
+  display: flex;
+  min-height: 2.25rem;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 0.6rem;
+  padding: 0 0.6rem;
+  text-align: left;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #44403c;
+}
+
+.itemMenu:hover:not(:disabled) { background: rgba(120, 113, 108, 0.1); }
+.itemMenu:disabled { opacity: 0.4; cursor: not-allowed; }
+:global(.dark) .itemMenu { color: #e7e5e4; }
+:global(.dark) .itemMenu:hover:not(:disabled) { background: rgba(231, 229, 228, 0.08); }
+
+.itemDestrutivo { color: #b91c1c; }
+.itemDestrutivo:hover:not(:disabled) { background: rgba(185, 28, 28, 0.08); }
+:global(.dark) .itemDestrutivo { color: #fca5a5; }
+
+.notaMenu {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem 0.35rem;
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: #a8a29e;
+}
+
+/* Renomear no sítio, sem diálogo. */
+.renomear { display: inline-flex; align-items: center; gap: 0.15rem; }
+
+.campoNome {
+  min-height: 2.2rem;
+  width: 9.5rem;
+  border: 1px solid rgba(29, 158, 117, 0.45);
+  border-radius: 0.6rem;
+  background: #fff;
+  padding: 0 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #292524;
+}
+
+.campoNome:focus { outline: 2px solid rgba(29, 158, 117, 0.35); outline-offset: 1px; }
+
+:global(.dark) .campoNome {
+  border-color: rgba(61, 205, 157, 0.4);
+  background: #14181a;
+  color: #f5f5f4;
+}

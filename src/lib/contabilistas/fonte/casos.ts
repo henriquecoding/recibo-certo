@@ -45,7 +45,7 @@ export async function submeterMensagem(
   return real.submeterMensagem(casoId, autorId, papel, corpo);
 }
 
-export async function enviarProposta(p: NovaProposta): Promise<{ erro?: string }> {
+export async function enviarProposta(p: NovaProposta): Promise<{ erro?: string; id?: string }> {
   if (emDemonstracao()) return (await loja()).enviarProposta(p);
   return real.enviarProposta(p);
 }

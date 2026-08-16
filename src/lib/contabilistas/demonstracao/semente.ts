@@ -731,6 +731,7 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       validadeAte: dia(agora, 12),
       estado: "lida",
       lidaAteAoFimEm: instante(agora, -5, 21),
+      contratoLidoEm: null,
       confirmacaoEm: null,
       decididaEm: null,
       motivo: null,

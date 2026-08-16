@@ -110,6 +110,15 @@ export interface Proposta {
   validadeAte: string | null;
   estado: EstadoProposta;
   lidaAteAoFimEm: string | null;
+  /**
+   * Quando o cliente chegou ao fim do CONTRATO anexo.
+   *
+   * Nulo em propostas sem contrato — e aí não é exigido. Onde há
+   * documento, o texto da proposta é o resumo e isto é o que fica a
+   * valer: `decidir_proposta` recusa enquanto for nulo (migração
+   * `20260816090000`).
+   */
+  contratoLidoEm: string | null;
   confirmacaoEm: string | null;
   decididaEm: string | null;
   motivo: string | null;
@@ -204,6 +213,8 @@ const MOTIVO: Record<string, string> = {
   decisao_invalida: "Decisão desconhecida.",
   ainda_nao_leste_ate_ao_fim: "Chega ao fim do documento antes de confirmares.",
   ainda_nao_leste_e_confirmaste: "Lê até ao fim e confirma antes de decidires.",
+  contrato_por_ler: "Abre o contrato em anexo e lê-o até ao fim antes de decidires.",
+  sem_contrato: "Esta proposta não traz contrato em anexo.",
   proposta_expirada: "Esta proposta já passou da validade.",
   nao_decidivel: "Esta proposta já não está por decidir.",
   nao_e_tua_ou_ja_decidida: "Esta proposta já não está por decidir.",
@@ -293,6 +304,20 @@ export async function marcarPropostaLida(id: string): Promise<{ erro?: string }>
   return r.ok ? {} : { erro: traduzir(r.motivo) };
 }
 
+/**
+ * Chegou ao fim do CONTRATO anexo.
+ *
+ * O leitor de documentos chama isto quando a última página é alcançada —
+ * a rolar ou por teclado. Sem esta marca, `confirmar_leitura` e
+ * `decidir_proposta` recusam em propostas que tragam contrato.
+ */
+export async function marcarContratoLido(id: string): Promise<{ erro?: string }> {
+  const { data, error } = await getSupabase().rpc("marcar_contrato_lido", { p_proposta: id });
+  if (error) return { erro: error.message };
+  const r = (data ?? {}) as { ok?: boolean; motivo?: string };
+  return r.ok ? {} : { erro: traduzir(r.motivo) };
+}
+
 /** «Confirmo que li e compreendi.» */
 export async function confirmarLeitura(id: string): Promise<{ erro?: string }> {
   const { data, error } = await getSupabase()
@@ -367,6 +392,7 @@ const paraProposta = (l: Linha): Proposta => ({
   validadeAte: (l.validade_ate as string | null) ?? null,
   estado: l.estado as EstadoProposta,
   lidaAteAoFimEm: (l.lida_ate_ao_fim_em as string | null) ?? null,
+  contratoLidoEm: (l.contrato_lido_em as string | null) ?? null,
   confirmacaoEm: (l.confirmacao_em as string | null) ?? null,
   decididaEm: (l.decidida_em as string | null) ?? null,
   motivo: (l.motivo as string | null) ?? null,
@@ -446,8 +472,16 @@ export interface NovaProposta {
   validadeAte?: string;
 }
 
-export async function enviarProposta(p: NovaProposta): Promise<{ erro?: string }> {
-  const { error } = await getSupabase().from("propostas").insert({
+/**
+ * Cria a proposta e devolve o id.
+ *
+ * O id não é um extra: os anexos penduram-se numa proposta que já existe,
+ * e sem ele o contrato ficaria sem onde ir. A ordem é esta de propósito —
+ * primeiro a proposta, depois os ficheiros — porque uma proposta sem
+ * anexo é uma proposta legítima, e um anexo sem proposta é lixo.
+ */
+export async function enviarProposta(p: NovaProposta): Promise<{ erro?: string; id?: string }> {
+  const { data, error } = await getSupabase().from("propostas").insert({
     caso_id: p.casoId,
     contabilista_id: p.contabilistaId,
     corpo: p.corpo.trim(),
@@ -455,8 +489,10 @@ export async function enviarProposta(p: NovaProposta): Promise<{ erro?: string }
     iva_incluido: p.ivaIncluido,
     prazo_execucao: p.prazoExecucao?.trim() || null,
     validade_ate: p.validadeAte || null,
-  });
-  return error ? { erro: error.message } : {};
+  }).select("id").single();
+
+  if (error) return { erro: error.message };
+  return { id: (data as { id: string } | null)?.id };
 }
 
 // ─── Anexos ────────────────────────────────────────────────────────────
