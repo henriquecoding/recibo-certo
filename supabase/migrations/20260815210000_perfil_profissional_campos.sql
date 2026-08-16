@@ -156,7 +156,15 @@ CREATE TRIGGER trg_texto_seguro_contabilistas
 -- ---------------------------------------------------------------------
 --  5. O contrato público cresce com eles — e só com eles
 -- ---------------------------------------------------------------------
-CREATE OR REPLACE VIEW public.contabilistas_publico
+--  `DROP` antes de `CREATE`, e não `CREATE OR REPLACE`: as colunas novas
+--  (`occ_verificado`, `titulo_profissional`, `apresentacao_curta`, …)
+--  entram NO MEIO da lista que a migração anterior criou, e o `REPLACE`
+--  só sabe acrescentar colunas no fim — recusa com «cannot change name of
+--  view column "bio"». Nada depende ainda desta view, por isso o `DROP` é
+--  barato; a partir do momento em que dependa, este passo precisa de
+--  recriar também os dependentes.
+DROP VIEW IF EXISTS public.contabilistas_publico;
+CREATE VIEW public.contabilistas_publico
 WITH (security_invoker = false) AS
 SELECT
   c.user_id,

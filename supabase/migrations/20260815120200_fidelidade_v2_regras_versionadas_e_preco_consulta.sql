@@ -612,17 +612,30 @@ GRANT SELECT ON public.fidelidade_regras TO authenticated;
 -- ---------------------------------------------------------------------
 -- 11. A view pública passa a ler a regra corrente, não as colunas espelho
 -- ---------------------------------------------------------------------
-CREATE OR REPLACE VIEW public.contabilistas_publico
+--  Só as TRÊS colunas de fidelidade mudam de origem: passam a vir da
+--  regra corrente em vez das colunas espelho de `contabilistas`. Todo o
+--  resto do contrato fica exatamente como a migração do perfil o deixou
+--  — em particular `email_contacto`, `preco_consulta_cents` e
+--  `duracao_consulta_min`, que o cartão do diretório e a ficha pública
+--  mostram. O preço deixou de ser a fonte de verdade da fidelidade
+--  (§14.1), mas continua a ser a SUGESTÃO comercial que a ficha publica
+--  e que o diálogo de concluir consulta pré-enche.
+--
+--  `DROP` antes de `CREATE`, pela mesma razão da migração do perfil: a
+--  lista de colunas muda de forma e `CREATE OR REPLACE VIEW` só sabe
+--  acrescentar no fim.
+DROP VIEW IF EXISTS public.contabilistas_publico;
+CREATE VIEW public.contabilistas_publico
 WITH (security_invoker = false) AS
 SELECT
   c.user_id,
   c.slug,
   c.nome,
+  c.occ,
+  (c.occ_verificado_em IS NOT NULL) AS occ_verificado,
   c.titulo_profissional,
   c.apresentacao_curta,
   c.bio,
-  c.occ,
-  (c.occ_verificado_em IS NOT NULL) AS occ_verificado,
   c.distrito,
   c.concelho,
   c.especialidades,
@@ -630,12 +643,15 @@ SELECT
   c.idiomas,
   c.anos_experiencia,
   c.resposta_media_horas,
-  c.aceita_novos_clientes,
+  c.email_contacto,
   c.website,
   c.linkedin_url,
-  coalesce(c.avatar_url, c.linkedin_avatar_url) AS avatar_url,
-  (c.linkedin_ligado_em IS NOT NULL)            AS linkedin_ligado,
-  coalesce(r.ativa, false)                      AS fidelidade_ativa,
+  c.linkedin_avatar_url,
+  (c.linkedin_ligado_em IS NOT NULL) AS linkedin_ligado,
+  c.aceita_novos_clientes,
+  c.preco_consulta_cents,
+  c.duracao_consulta_min,
+  coalesce(r.ativa, false)                                  AS fidelidade_ativa,
   CASE WHEN coalesce(r.ativa, false) THEN r.meta         END AS fidelidade_meta,
   CASE WHEN coalesce(r.ativa, false) THEN r.desconto_pct END AS fidelidade_desconto_pct,
   c.criado_em
@@ -643,5 +659,10 @@ FROM public.contabilistas c
 LEFT JOIN public.fidelidade_regras r
        ON r.contabilista_id = c.user_id AND r.substituida_em IS NULL
 WHERE c.estado = 'aprovado';
+
+COMMENT ON VIEW public.contabilistas_publico IS
+  'O contrato público do diretório e do perfil público. Acrescentar uma coluna aqui é uma decisão; acrescentar uma coluna a `contabilistas` deixa de ser. Não expõe telefone (ver contacto_do_contabilista), linkedin_subject, pedido_id nem estado. A fidelidade vem da regra corrente, não das colunas espelho.';
+
+GRANT SELECT ON public.contabilistas_publico TO anon, authenticated;
 
 COMMIT;
