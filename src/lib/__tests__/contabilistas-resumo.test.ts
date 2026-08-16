@@ -14,7 +14,6 @@ const vinculo = (id: string, over: Partial<Vinculo> = {}): Vinculo => ({
   criadoEm: "2026-01-01T00:00:00Z",
   origem: "cliente",
   nomeCliente: null,
-  emailCliente: null,
   mensagem: null,
   ...over,
 });
@@ -181,7 +180,7 @@ describe("resumo: ordenação", () => {
 
 describe("resumo: procura", () => {
   const lista: ResumoCliente[] = [
-    { vinculo: vinculo("a", { nomeCliente: "João Gonçalves", emailCliente: "joao@exemplo.pt" }),
+    { vinculo: vinculo("a", { nomeCliente: "João Gonçalves", mensagem: "IVA intracomunitário" }),
       tratamento: "João Gonçalves", consultasRealizadas: 0, proxima: null, ultima: null,
       partilhas: 0, partilhasPorLer: 0, cartao: null },
     { vinculo: vinculo("4f2a0000-0000-0000-0000-000000000000"),
@@ -195,8 +194,18 @@ describe("resumo: procura", () => {
     }
   });
 
-  it("encontra pelo email", () => {
-    expect(filtrarPorTexto(lista, "joao@").length).toBe(1);
+  it("encontra pelo recado que o cliente escreveu", () => {
+    expect(filtrarPorTexto(lista, "intracomunitário").length).toBe(1);
+  });
+
+  // Este teste procurava pelo email, e passava. Passar a não haver nada
+  // para encontrar é a alteração, não um teste que se perdeu: desde a
+  // migração 054 o vínculo não guarda contacto nenhum, e a busca do painel
+  // deixou de ter por onde o procurar.
+  it("não tem por onde procurar um contacto", () => {
+    for (const q of ["joao@", "@exemplo.pt", "912345678"]) {
+      expect(filtrarPorTexto(lista, q), q).toEqual([]);
+    }
   });
 
   it("encontra pelo identificador de quem não deu nome", () => {

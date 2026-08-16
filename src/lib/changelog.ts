@@ -16,6 +16,32 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.68.0",
+    data: "2026-08-16",
+    titulo: "A sala de acompanhamento passa a ser a página",
+    itens: [
+      "A tua área do contabilista abre agora como uma sala: quem te acompanha e as credenciais dele em cima, o próximo passo e o resumo da relação lado a lado, o que falta, a linha do tempo, e a caixa para escrever no fim.",
+      "O «Resumo da relação» responde às três perguntas de sempre num sítio só — quando é a próxima consulta, quanto está por pagar, e onde vai o cartão de fidelidade.",
+      "A linha do tempo ganhou ações: um pedido por responder tem «Responder» ao lado, uma consulta online tem «Abrir», uma simulação tem «Ver». Deixa de ser preciso procurar noutro ecrã o que a linha acabou de mencionar.",
+      "Escrever passou para dentro da sala. Uma linha só — juntar ficheiro, escrever, enviar — logo a seguir ao que aconteceu.",
+      "Do lado do contabilista, a ficha do cliente diz de frente o que existe e o que não existe: as ações possíveis, e «sem email · sem telemóvel · sem WhatsApp». Era a primeira pergunta de quem chegava, e ficava sem resposta.",
+      "«Contexto sem ruído» resume a relação em três linhas com data — próxima consulta, última partilha, fidelidade — para retomar uma conversa sem reler o histórico.",
+    ],
+  },
+  {
+    version: "2.67.0",
+    data: "2026-08-16",
+    titulo: "Sala de acompanhamento: uma relação, uma linha do tempo, zero contactos expostos",
+    itens: [
+      "O contabilista deixa de ter acesso ao teu email. O campo saiu do formulário, saiu do painel dele e saiu da base de dados — não está escondido, deixou de existir. O acompanhamento acontece todo aqui, onde fica registado e onde podes revogar o que enviaste.",
+      "Uma «sala de acompanhamento» abre os dois lados da relação com a mesma pergunta respondida em cima: o que falta fazer. Um passo de cada vez, com prazo quando há prazo, e «não há nada à tua espera» quando não há.",
+      "Mensagens, pedidos, partilhas, consultas, cupões e pagamentos passam a aparecer numa linha do tempo única, do mais recente para trás. Eram seis sítios diferentes para perceber uma coisa só.",
+      "O contabilista pode pedir uma coisa concreta — um documento, uma confirmação, uns dados — em vez de a escrever no meio da conversa. O pedido tem estado e prazo, e deixa de depender de alguém se lembrar de uma frase que passou.",
+      "Conversas com mais de 500 mensagens abriam nas mensagens MAIS ANTIGAS. Passam a abrir no que chegou agora, com «ver o que veio antes» para recuar.",
+      "Escrever um telemóvel ou um email na conversa passa a avisar enquanto se escreve, com o motivo. NIF, IBAN, referências de multibanco e números de fatura continuam a passar — foram testados um a um para não haver enganos.",
+    ],
+  },
+  {
     version: "2.66.0",
     data: "2026-08-16",
     titulo: "O painel no telemóvel: o que estava cortado, e o que não fazia nada",

@@ -56,7 +56,6 @@ export default function PerfilPublico({ slug }: { slug: string }) {
    */
   const [aApresentar, setAApresentar] = useState(false);
   const [nomeParaOContabilista, setNome] = useState("");
-  const [emailParaOContabilista, setEmail] = useState("");
   const [recado, setRecado] = useState("");
 
   const carregar = useCallback(async () => {
@@ -106,7 +105,6 @@ export default function PerfilPublico({ slug }: { slug: string }) {
       contabilistaId: cc.userId,
       clienteId: user.id,
       nomeCliente: nomeParaOContabilista,
-      emailCliente: emailParaOContabilista,
       mensagem: recado,
     });
     setOcupadoBotao(false);
@@ -322,20 +320,6 @@ export default function PerfilPublico({ slug }: { slug: string }) {
 
                   <label className="block">
                     <span className="text-sm font-semibold text-stone-700">
-                      Email de contacto <span className="font-normal text-stone-400">(opcional)</span>
-                    </span>
-                    <input
-                      type="email"
-                      value={emailParaOContabilista}
-                      onChange={(e) => setEmail(e.target.value.slice(0, 180))}
-                      placeholder="Só se quiseres que ele te possa escrever"
-                      autoComplete="email"
-                      className="mt-2 min-h-[2.75rem] w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="text-sm font-semibold text-stone-700">
                       Recado <span className="font-normal text-stone-400">(opcional)</span>
                     </span>
                     <textarea
@@ -348,8 +332,10 @@ export default function PerfilPublico({ slug }: { slug: string }) {
                   </label>
 
                   <p className="text-xs leading-relaxed text-stone-500">
-                    O nome e o email ficam só neste vínculo — não vêm da tua conta, e
-                    desaparecem no instante em que terminares o acompanhamento.
+                    O nome fica só neste vínculo — não vem da tua conta, e desaparece
+                    no instante em que terminares o acompanhamento. O teu email e o teu
+                    telemóvel não seguem: o acompanhamento acontece todo aqui, onde
+                    fica registado e onde podes revogar o que enviaste.
                   </p>
 
                   <div className="flex flex-wrap gap-2">

@@ -185,11 +185,6 @@ export default function TabelaClientes({ clientes }: { clientes: readonly Resumo
                         </span>
                         <span className="min-w-0">
                           <span className="block truncate">{r.tratamento}</span>
-                          {r.vinculo.emailCliente && (
-                            <span className="block truncate text-xs font-normal text-stone-400">
-                              {r.vinculo.emailCliente}
-                            </span>
-                          )}
                         </span>
                       </Link>
                     </td>

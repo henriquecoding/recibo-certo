@@ -214,7 +214,6 @@ function paraVinculo(l: Linha): Vinculo {
     criadoEm: l.criado_em as string,
     origem: l.origem as "cliente" | "contabilista",
     nomeCliente: (l.nome_cliente as string | null) ?? null,
-    emailCliente: (l.email_cliente as string | null) ?? null,
     mensagem: (l.mensagem as string | null) ?? null,
   };
 }
@@ -225,7 +224,6 @@ export interface PedidoDeVinculo {
   mensagem?: string;
   /** Como o cliente quer ser tratado. Opcional — ver `tratamentoDoCliente`. */
   nomeCliente?: string;
-  emailCliente?: string;
 }
 
 export async function pedirVinculo(
@@ -237,7 +235,6 @@ export async function pedirVinculo(
     origem: "cliente",
     mensagem: p.mensagem?.trim().slice(0, 1000) || null,
     nome_cliente: p.nomeCliente?.trim().slice(0, 80) || null,
-    email_cliente: p.emailCliente?.trim().slice(0, 180) || null,
   }).select("id").single();
 
   if (!error && data) return { vinculoId: (data as unknown as Linha).id as string };
@@ -306,14 +303,11 @@ export async function contactoDoContabilista(
 /** O cliente corrige o nome por que quer ser tratado, sem terminar nada. */
 export async function atualizarIdentidadeNoVinculo(
   id: string,
-  campos: { nomeCliente?: string | null; emailCliente?: string | null }
+  campos: { nomeCliente?: string | null }
 ): Promise<{ erro?: string }> {
   const dados: Linha = {};
   if (campos.nomeCliente !== undefined) {
     dados.nome_cliente = campos.nomeCliente?.trim().slice(0, 80) || null;
-  }
-  if (campos.emailCliente !== undefined) {
-    dados.email_cliente = campos.emailCliente?.trim().slice(0, 180) || null;
   }
   if (Object.keys(dados).length === 0) return {};
   const { error } = await getSupabase()
@@ -376,7 +370,6 @@ export async function resumoDeClientes(): Promise<ResumoClienteLido[]> {
       criadoEm: r.criado_em as string,
       origem: r.origem as "cliente" | "contabilista",
       nomeCliente: (r.nome_cliente as string | null) ?? null,
-      emailCliente: (r.email_cliente as string | null) ?? null,
       mensagem: (r.mensagem as string | null) ?? null,
     },
     consultasRealizadas: (r.consultas_realizadas as number) ?? 0,

@@ -24,6 +24,8 @@ import type {
   AnexoDaProposta, Caso, DocumentoDoCaso, MensagemDoCaso, NovaProposta, Proposta,
 } from "../casos";
 import type { Mensagem, Notificacao } from "../conversa";
+import type { EventoTimeline, PedidoCliente } from "../sala/tipos";
+import type { DecisaoPedido, NovoPedido } from "../sala/dados";
 import type { EstadoTarefa, Tarefa } from "../trabalho";
 import type { NovoTipoConsulta, TipoConsulta } from "../tipos-consulta";
 import type {
@@ -185,11 +187,11 @@ export async function decidirVinculo(
   }
 
   v.estado = regra.para;
-  // Terminar apaga o nome e o email — a migração 043 faz o mesmo, e é a
-  // diferença entre «deixei de acompanhar» e «continuo a ter os dados».
+  // Terminar apaga o nome — a migração 043 faz o mesmo, e é a diferença
+  // entre «deixei de acompanhar» e «continuo a ter os dados». Não há aqui
+  // email nenhum para apagar desde a 054: o vínculo deixou de o guardar.
   if (regra.para === "terminado") {
     v.nomeCliente = null;
-    v.emailCliente = null;
     v.mensagem = null;
   }
   return {};
@@ -1026,6 +1028,157 @@ export async function apagarVista(vistaId: string): Promise<{ erro?: string }> {
   if (vista.sistema) return { erro: "As vistas de partida não podem ser apagadas." };
   estado.vistas = estado.vistas.filter((v) => v.id !== vistaId);
   return {};
+}
+
+
+// ─── A sala: pedidos e linha do tempo ──────────────────────────────────
+//
+// As mesmas paredes da migração 055, e pelas mesmas razões: quem abre a
+// demonstração para avaliar o produto tem de bater contra elas. Concluir
+// duas vezes falha aqui como falha lá.
+
+export async function listarPedidos(vinculoId: string): Promise<PedidoCliente[]> {
+  return copiar(
+    bd().pedidos
+      .filter((p) => p.vinculoId === vinculoId)
+      .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
+  );
+}
+
+export async function criarPedido(p: NovoPedido): Promise<{ erro?: string; id?: string }> {
+  const estado = bd();
+  const titulo = p.titulo.trim();
+  if (titulo.length < 3) return { erro: "Escreve um título que se perceba." };
+
+  const abertos = estado.pedidos.filter(
+    (x) => x.vinculoId === p.vinculoId && ["aberto", "respondido", "em_analise"].includes(x.estado)
+  ).length;
+  if (abertos >= 20) return { erro: "Já há pedidos a mais por tratar nesta relação." };
+
+  const id = `17000000-0000-4000-8000-${String(Date.now()).slice(-12)}`;
+  estado.pedidos.unshift({
+    id,
+    vinculoId: p.vinculoId,
+    criadoPor: estado.ficha.userId,
+    tipo: p.tipo,
+    titulo,
+    descricao: p.descricao?.trim() || null,
+    prazo: p.prazo || null,
+    obrigatorio: p.obrigatorio ?? true,
+    estado: "aberto",
+    respostaTexto: null,
+    respostaMensagemId: null,
+    respondidoEm: null,
+    concluidoEm: null,
+    criadoEm: agora(),
+  });
+  return { id };
+}
+
+export async function responderPedido(p: {
+  pedidoId: string; texto?: string | null; mensagemId?: string | null;
+}): Promise<{ erro?: string }> {
+  const pedido = bd().pedidos.find((x) => x.id === p.pedidoId);
+  if (!pedido) return { erro: "Não foi possível concluir." };
+  if (!["aberto", "respondido", "em_analise"].includes(pedido.estado)) {
+    return { erro: "Este pedido já foi fechado." };
+  }
+  if (!p.texto?.trim() && !p.mensagemId) {
+    return { erro: "Escreve alguma coisa, ou junta um ficheiro." };
+  }
+  pedido.estado = "respondido";
+  pedido.respostaTexto = p.texto?.trim() || pedido.respostaTexto;
+  pedido.respostaMensagemId = p.mensagemId ?? pedido.respostaMensagemId;
+  pedido.respondidoEm = pedido.respondidoEm ?? agora();
+  return {};
+}
+
+export async function decidirPedido(
+  pedidoId: string,
+  decisao: DecisaoPedido
+): Promise<{ erro?: string }> {
+  const pedido = bd().pedidos.find((x) => x.id === pedidoId);
+  if (!pedido) return { erro: "Não foi possível concluir." };
+
+  const novo = { concluir: "concluido", analisar: "em_analise",
+                 reabrir: "aberto", cancelar: "cancelado" }[decisao];
+  if (pedido.estado === novo) return { erro: "Este pedido já não estava nesse estado." };
+  if (novo === "concluido" && !["aberto", "respondido", "em_analise"].includes(pedido.estado)) {
+    return { erro: "Este pedido já não estava nesse estado." };
+  }
+
+  pedido.estado = novo as PedidoCliente["estado"];
+  pedido.concluidoEm = novo === "concluido" ? agora() : null;
+  return {};
+}
+
+/**
+ * A linha do tempo, derivada em memória.
+ *
+ * A função no servidor faz a mesma união em SQL. Aqui é a mesma lista de
+ * fontes pela mesma ordem — se uma delas for esquecida num dos lados, a
+ * demonstração deixa de mostrar o que o painel real mostra, e é isso que
+ * torna a demonstração inútil.
+ */
+export async function listarTimeline(p: {
+  vinculoId: string; ate?: string | null; limite?: number;
+}): Promise<EventoTimeline[]> {
+  const estado = bd();
+  const v = estado.vinculos.find((x) => x.id === p.vinculoId);
+  if (!v) return [];
+
+  const eventos: EventoTimeline[] = [
+    ...estado.conversas
+      .filter((m) => m.vinculoId === p.vinculoId)
+      .map((m): EventoTimeline => ({
+        tipo: "mensagem", referenciaId: m.id, quando: m.criadoEm,
+        autorId: m.autorId, titulo: null, corpo: m.corpo, estado: null,
+        meta: { anexos: m.anexos.length, lida: m.lidaEm !== null },
+      })),
+    ...estado.pedidos
+      .filter((x) => x.vinculoId === p.vinculoId)
+      .map((x): EventoTimeline => ({
+        tipo: "pedido", referenciaId: x.id, quando: x.criadoEm,
+        autorId: x.criadoPor, titulo: x.titulo, corpo: x.descricao, estado: x.estado,
+        meta: { tipoPedido: x.tipo, prazo: x.prazo, obrigatorio: x.obrigatorio,
+                respondidoEm: x.respondidoEm },
+      })),
+    ...estado.partilhas
+      .filter((x) => x.clienteId === v.clienteId)
+      .map((x): EventoTimeline => ({
+        tipo: "partilha", referenciaId: x.id, quando: x.criadoEm,
+        autorId: v.clienteId, titulo: x.titulo, corpo: x.nota, estado: x.estado,
+        meta: { tipoPartilha: x.tipo },
+      })),
+    ...estado.agendamentos
+      .filter((x) => x.clienteId === v.clienteId)
+      .map((x): EventoTimeline => ({
+        tipo: "consulta", referenciaId: x.id, quando: x.criadoEm,
+        autorId: null, titulo: x.assunto ?? "Consulta", corpo: null, estado: x.estado,
+        meta: { inicio: x.inicio, fim: x.fim, modalidade: x.modalidade,
+                localOuLigacao: x.localOuLigacao },
+      })),
+    ...estado.cupoes
+      .filter((x) => x.clienteId === v.clienteId)
+      .map((x): EventoTimeline => ({
+        tipo: "fidelidade", referenciaId: x.id, quando: x.criadoEm,
+        autorId: null, titulo: "Cupão de desconto", corpo: x.codigo, estado: x.estado,
+        meta: { percentagem: x.percentagem, valorBaseCents: x.valorBaseCents,
+                expiraEm: x.expiraEm },
+      })),
+    {
+      tipo: "vinculo", referenciaId: v.id, quando: v.criadoEm,
+      autorId: null, titulo: "Início do acompanhamento", corpo: v.mensagem,
+      estado: v.estado, meta: { origem: v.origem },
+    },
+  ];
+
+  return copiar(
+    eventos
+      .filter((e) => !p.ate || e.quando < p.ate)
+      .sort((a, b) => b.quando.localeCompare(a.quando))
+      .slice(0, Math.min(Math.max(p.limite ?? 30, 1), 100))
+  );
 }
 
 // ─── O que não existe fora da base de dados ────────────────────────────

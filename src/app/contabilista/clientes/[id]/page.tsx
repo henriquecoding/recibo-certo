@@ -17,10 +17,13 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { usarFicha } from "@/components/contabilistas/usarFicha";
-import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import CartaoFidelidade from "@/components/contabilistas/CartaoFidelidade";
 import Conversa from "@/components/contabilistas/Conversa";
+import Sala from "@/components/contabilistas/sala/Sala";
+import {
+  AcoesDisponiveis, ContextoSemRuido, IdentidadeDoCliente, NotaDaPlataforma,
+} from "@/components/contabilistas/sala/PainelDoContabilista";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import { useAvisos } from "@/components/ui/Avisos";
 import { useConfirmar, type PedidoConfirmacao } from "@/components/ui/Confirmar";
@@ -30,14 +33,14 @@ import {
 } from "@/lib/contabilistas/fonte/dados";
 import { usarPainel } from "@/components/contabilistas/usarPainel";
 import { resumirClientes, type CartaoDoCliente, type ResumoCliente } from "@/lib/contabilistas/resumo";
-import { ROTULO_PARTILHA, ROTULO_VINCULO } from "@/lib/contabilistas/vinculo";
+import { ROTULO_PARTILHA } from "@/lib/contabilistas/vinculo";
 import { eurosDeCents } from "@/lib/contabilistas/fidelidade";
 import { diaLocal, horaLocal, rotularDia } from "@/lib/contabilistas/agenda";
 import type { Agendamento, Partilha } from "@/lib/contabilistas/tipos";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import {
-  ArrowLeft, Calendar, Clock, Gift, Lock, Mail, PaperClip, User,
+  ArrowLeft, Clock, Gift, User,
 } from "@/components/ui/Icons";
 
 type Decisao = "aceitar" | "pausar" | "reativar" | "terminar";
@@ -148,31 +151,6 @@ export default function FichaClientePage() {
     <div className="space-y-6">
       <Voltar href={painel.href("/contabilista/clientes")} />
 
-      <CabecalhoPainel
-        rotulo="Ficha de cliente"
-        titulo={resumo.tratamento}
-        descricao={
-          <>
-            Cliente desde{" "}
-            {new Intl.DateTimeFormat("pt-PT", { month: "long", year: "numeric" }).format(new Date(v.criadoEm))}
-            {" · "}
-            {resumo.consultasRealizadas} {resumo.consultasRealizadas === 1 ? "consulta realizada" : "consultas realizadas"}
-          </>
-        }
-        acao={<Badge tone={v.estado === "ativo" ? "brand" : v.estado === "pausado" ? "neutral" : "alert"}>
-          {ROTULO_VINCULO[v.estado]}
-        </Badge>}
-      />
-
-      {v.emailCliente && (
-        <p className="flex items-center gap-2 text-sm text-stone-600">
-          <Mail size={15} className="shrink-0 text-stone-400" aria-hidden />
-          <a href={`mailto:${v.emailCliente}`} className="min-w-0 truncate underline underline-offset-2">
-            {v.emailCliente}
-          </a>
-        </p>
-      )}
-
       {v.mensagem && (
         <p className="rounded-2xl bg-cream px-4 py-3 text-sm leading-relaxed text-stone-700">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-400">
@@ -182,16 +160,46 @@ export default function FichaClientePage() {
         </p>
       )}
 
-      <p className="flex items-start gap-2.5 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm leading-relaxed text-stone-600">
-        <Lock size={15} className="mt-0.5 shrink-0 text-stone-400" aria-hidden />
-        Esta página mostra o que este cliente te enviou. Os recibos, cenários e
-        simulações que ele guardou continuam só dele.
-      </p>
+      {/* A nota sobre a fronteira vive agora no fim da sala, onde diz a
+          mesma coisa e mais uma: que os contactos também não passam. Duas
+          notas com o mesmo conteúdo ensinam a saltar as duas. */}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <div className="space-y-6">
-          {/* A conversa fica em primeiro: é o que muda de dia para dia. As
-              consultas e os envios são o registo; isto é o que está vivo. */}
+          {/* A sala vem primeiro: responde a «o que falta fazer?», que é a
+              pergunta com que se abre a ficha de um cliente. A conversa
+              vem a seguir — é onde se fala, não onde se percebe o estado. */}
+          <Sala
+            vinculoId={v.id}
+            papel="contabilista"
+            meuId={ficha.userId}
+            nomeDoOutro={resumo.tratamento}
+            estadoVinculo={v.estado}
+            consultas={consultas.map((a) => ({ id: a.id, inicio: a.inicio, estado: a.estado }))}
+            partilhasPorLer={resumo.partilhasPorLer}
+            cabecalho={
+              <IdentidadeDoCliente
+                tratamento={resumo.tratamento}
+                vinculoConfirmado={v.estado === "ativo"}
+                desde={new Intl.DateTimeFormat("pt-PT", { month: "long", year: "numeric" })
+                  .format(new Date(v.criadoEm))}
+              />
+            }
+            aoAgir={(destino) => {
+              if (destino === "decidir" || destino === "conversa" || destino === "partilhas") {
+                document.getElementById(destinoParaAncora(destino))?.scrollIntoView({
+                  behavior: "smooth", block: "start",
+                });
+              }
+              if (destino.startsWith("consulta:")) {
+                document.getElementById("consultas-titulo")?.scrollIntoView({
+                  behavior: "smooth", block: "start",
+                });
+              }
+            }}
+            aoMudar={() => { if (ficha) void carregar(ficha.userId); }}
+          />
+
           <Conversa
             vinculoId={v.id}
             meuId={ficha.userId}
@@ -268,6 +276,24 @@ export default function FichaClientePage() {
 
         {/* Coluna lateral */}
         <aside className="space-y-4">
+          <AcoesDisponiveis
+            acoes={["Mensagem", "pedir documento", "consulta", "proposta", "pagamento"]}
+          />
+
+          <ContextoSemRuido
+            proximaConsulta={resumo.proxima}
+            ultimaPartilha={
+              envios.length > 0
+                ? { titulo: envios[0].titulo, quando: envios[0].criadoEm }
+                : null
+            }
+            fidelidade={
+              resumo.cartao
+                ? { carimbos: resumo.cartao.carimbos, meta: resumo.cartao.meta }
+                : null
+            }
+          />
+
           {resumo.cartao ? (
             <CartaoFidelidade
               carimbos={resumo.cartao.carimbos}
@@ -306,7 +332,7 @@ export default function FichaClientePage() {
           )}
 
           <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card">
-            <h2 className="font-display text-lg text-ink">Acompanhamento</h2>
+            <h2 id="acompanhamento-titulo" className="font-display text-lg text-ink">Acompanhamento</h2>
             <div className="mt-3 flex flex-wrap gap-2">
               {v.estado === "pendente" || v.estado === "convidado" ? (
                 <>
@@ -329,12 +355,7 @@ export default function FichaClientePage() {
             </div>
           </section>
 
-          {resumo.proxima && (
-            <p className="flex items-start gap-2 rounded-2xl bg-brand-light/50 px-4 py-3 text-sm leading-relaxed text-stone-700">
-              <Calendar size={15} className="mt-0.5 shrink-0 text-brand-dark" aria-hidden />
-              Próxima consulta a {new Intl.DateTimeFormat("pt-PT", { dateStyle: "long" }).format(new Date(resumo.proxima))}.
-            </p>
-          )}
+          <NotaDaPlataforma />
         </aside>
       </div>
     </div>
@@ -350,6 +371,13 @@ function Voltar({ href }: { href: string }) {
       <ArrowLeft size={15} aria-hidden /> Clientes
     </Link>
   );
+}
+
+/** Onde é que cada destino do próximo passo vive, nesta página. */
+function destinoParaAncora(destino: string): string {
+  if (destino === "decidir") return "acompanhamento-titulo";
+  if (destino === "partilhas") return "envios-titulo";
+  return "conversa-titulo";
 }
 
 function perguntaVinculo(para: Decisao): PedidoConfirmacao | null {

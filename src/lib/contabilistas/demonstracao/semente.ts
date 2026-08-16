@@ -26,6 +26,7 @@ import type {
   AnexoDaProposta, Caso, DocumentoDoCaso, MensagemDoCaso, Proposta,
 } from "../casos";
 import type { Mensagem, Notificacao } from "../conversa";
+import type { PedidoCliente } from "../sala/tipos";
 import type { TipoConsulta } from "../tipos-consulta";
 import type { EstadoProgressao } from "../progressao/catalogo";
 import type { TipoEventoXP } from "../dados";
@@ -80,6 +81,7 @@ export interface EstadoDemonstracao {
   documentos: DocumentoDoCaso[];
   anexosDeProposta: AnexoDaProposta[];
   conversas: Mensagem[];
+  pedidos: PedidoCliente[];
   notificacoes: Notificacao[];
   tiposConsulta: TipoConsulta[];
   linkedin: LinkedInDemo;
@@ -213,7 +215,6 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       criadoEm: instante(agora, -280, 11),
       origem: "cliente",
       nomeCliente: "Inês Barata",
-      emailCliente: "ines@exemplo-demonstracao.pt",
       mensagem: null,
     },
     {
@@ -224,7 +225,6 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       criadoEm: instante(agora, -150, 9),
       origem: "cliente",
       nomeCliente: "Duarte Pinto",
-      emailCliente: "duarte@exemplo-demonstracao.pt",
       mensagem: "Passei a faturar a clientes de Espanha e não sei o que muda no IVA.",
     },
     {
@@ -235,7 +235,6 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       criadoEm: instante(agora, -62, 16),
       origem: "contabilista",
       nomeCliente: "Carolina Sequeira",
-      emailCliente: "carolina@exemplo-demonstracao.pt",
       mensagem: null,
     },
     {
@@ -248,7 +247,6 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       criadoEm: horasAtras(agora, 20),
       origem: "cliente",
       nomeCliente: null,
-      emailCliente: null,
       mensagem:
         "Abri atividade no mês passado e ainda não emiti nenhum recibo. " +
         "Preciso de perceber o que tenho de fazer e quando.",
@@ -261,7 +259,6 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       criadoEm: instante(agora, -330, 15),
       origem: "cliente",
       nomeCliente: "Sofia Mendes",
-      emailCliente: "sofia@exemplo-demonstracao.pt",
       mensagem: null,
     },
     {
@@ -273,7 +270,6 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       criadoEm: instante(agora, -500, 12),
       origem: "cliente",
       nomeCliente: null,
-      emailCliente: null,
       mensagem: null,
     },
   ];
@@ -762,6 +758,60 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
     },
   ];
 
+  // Os pedidos ao cliente. Um por tratar com prazo a apertar, um já
+  // respondido à espera de ser olhado, e um fechado — que é o retrato de
+  // uma relação a funcionar, e não uma lista de pendências vermelhas.
+  const pedidos: PedidoCliente[] = [
+    {
+      id: "17000000-0000-4000-8000-000000001301",
+      vinculoId: VINCULO.carolina,
+      criadoPor: CONTABILISTA,
+      tipo: "documento",
+      titulo: "Fatura do portátil",
+      descricao: "A que ficou no email da loja. Serve o PDF ou uma fotografia legível.",
+      prazo: dia(agora, 2),
+      obrigatorio: true,
+      estado: "aberto",
+      respostaTexto: null,
+      respostaMensagemId: null,
+      respondidoEm: null,
+      concluidoEm: null,
+      criadoEm: horasAtras(agora, 5),
+    },
+    {
+      id: "17000000-0000-4000-8000-000000001302",
+      vinculoId: VINCULO.ines,
+      criadoPor: CONTABILISTA,
+      tipo: "confirmacao",
+      titulo: "Confirmar o regime para 2026",
+      descricao: "Simplificado, como em 2025. Confirma para eu fechar a declaração.",
+      prazo: dia(agora, 9),
+      obrigatorio: true,
+      estado: "respondido",
+      respostaTexto: "Confirmo. Mantemos o simplificado.",
+      respostaMensagemId: null,
+      respondidoEm: horasAtras(agora, 30),
+      concluidoEm: null,
+      criadoEm: instante(agora, -4, 10),
+    },
+    {
+      id: "17000000-0000-4000-8000-000000001303",
+      vinculoId: VINCULO.duarte,
+      criadoPor: CONTABILISTA,
+      tipo: "dados",
+      titulo: "NIF dos clientes espanhóis",
+      descricao: "Para verificar o registo no VIES antes de emitires a próxima fatura.",
+      prazo: null,
+      obrigatorio: false,
+      estado: "concluido",
+      respostaTexto: "Enviei os três por mensagem.",
+      respostaMensagemId: null,
+      respondidoEm: instante(agora, -12, 16),
+      concluidoEm: instante(agora, -11, 9),
+      criadoEm: instante(agora, -14, 11),
+    },
+  ];
+
   const conversas: Mensagem[] = [
     {
       id: "16000000-0000-4000-8000-000000001201",
@@ -1039,6 +1089,7 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
     documentos,
     anexosDeProposta,
     conversas,
+    pedidos,
     notificacoes,
     tiposConsulta,
     linkedin: { ligado: false, url: null, avatarUrl: null },

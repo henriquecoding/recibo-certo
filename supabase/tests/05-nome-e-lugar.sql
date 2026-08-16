@@ -9,10 +9,12 @@ SET ROLE authenticated;
 -- 5555 ainda não tem vínculo com a Ana (1111). Pede um, e diz como quer ser
 -- tratado. O nome NÃO vem da conta: vem deste formulário.
 SELECT t.entrar('55555555-5555-5555-5555-555555555555');
+-- O email que aqui estava saiu com a migração 054: o vínculo já não tem
+-- por onde guardar um canal de contacto do cliente. Ver o teste 13.
 SELECT t.permite($$INSERT INTO public.contabilista_vinculos
-  (contabilista_id, cliente_id, nome_cliente, email_cliente)
+  (contabilista_id, cliente_id, nome_cliente)
   VALUES ('11111111-1111-1111-1111-111111111111','55555555-5555-5555-5555-555555555555',
-          'Bruno C.','bruno@exemplo.pt')$$,
+          'Bruno C.')$$,
   'cliente pede vínculo e escolhe o nome por que quer ser tratado');
 
 SELECT t.recusa($$INSERT INTO public.contabilista_vinculos
@@ -59,7 +61,7 @@ SELECT t.conta($$SELECT count(*) FROM public.contabilista_vinculos
   'quem não é parte do vínculo não lê o nome de ninguém');
 
 \echo ''
-\echo '── 16. Terminar leva o nome e o contacto com ele ───────────────'
+\echo '── 16. Terminar leva o nome com ele ───────────────────────────'
 SELECT t.entrar('55555555-5555-5555-5555-555555555555');
 SELECT t.rpc_ok($$SELECT public.decidir_vinculo(
     (SELECT id FROM public.contabilista_vinculos WHERE cliente_id='55555555-5555-5555-5555-555555555555' LIMIT 1), 'terminar')$$,
@@ -68,8 +70,8 @@ SELECT t.rpc_ok($$SELECT public.decidir_vinculo(
 RESET ROLE;
 SELECT t.conta($$SELECT count(*) FROM public.contabilista_vinculos
   WHERE cliente_id='55555555-5555-5555-5555-555555555555'
-    AND (nome_cliente IS NOT NULL OR email_cliente IS NOT NULL)$$, 0,
-  'o nome e o email desapareceram no instante em que a relação terminou');
+    AND nome_cliente IS NOT NULL$$, 0,
+  'o nome desapareceu no instante em que a relação terminou');
 SELECT t.conta($$SELECT count(*) FROM public.contabilista_vinculos
   WHERE cliente_id='55555555-5555-5555-5555-555555555555'$$, 1,
   'a linha do vínculo fica — o que sai são os dados pessoais');

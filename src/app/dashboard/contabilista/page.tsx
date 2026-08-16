@@ -24,6 +24,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/supabase/auth";
 import {
@@ -33,7 +34,8 @@ import {
 import type { Agendamento, Contabilista, Partilha, Vinculo } from "@/lib/contabilistas/tipos";
 import { diaLocal, horaLocal, rotularDia } from "@/lib/contabilistas/agenda";
 import CartaoFidelidade from "@/components/contabilistas/CartaoFidelidade";
-import Conversa from "@/components/contabilistas/Conversa";
+import Sala from "@/components/contabilistas/sala/Sala";
+import CabecalhoRelacao from "@/components/contabilistas/sala/CabecalhoRelacao";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import {
   Cupoes, Envios, Ficha, Historico, Numeros, PorPagar, ProximaConsulta,
@@ -49,6 +51,7 @@ import { Briefcase, Warning } from "@/components/ui/Icons";
 
 export default function MeuContabilistaPage() {
   const { user, carregado, abrirModal, disponivel } = useAuth();
+  const router = useRouter();
   const avisos = useAvisos();
   const confirmar = useConfirmar();
   const [vinculo, setVinculo] = useState<(Vinculo & { contabilista: Contabilista | null }) | null>(null);
@@ -238,17 +241,55 @@ export default function MeuContabilistaPage() {
         </p>
       )}
 
-      <Ficha cc={cc} vinculo={vinculo} ativo={ativo} />
-
-      {/* A conversa com quem trata das nossas contas é o que se abre mais
-          vezes. Fica logo abaixo da ficha, antes das consultas e dos envios. */}
-      {user && (vinculo.estado === "ativo" || vinculo.estado === "pausado") && (
-        <Conversa
+      {/* A SALA DE ACOMPANHAMENTO.
+          Cabeçalho, próximo passo + resumo, o que falta, a linha do tempo
+          e o compositor — por esta ordem, que é a ordem por que se lê:
+          quem é, o que tenho de fazer, como vai isto, o que aconteceu, e
+          o que quero dizer. Tudo o que vem depois é histórico. */}
+      {user && vinculo.estado !== "terminado" ? (
+        <Sala
           vinculoId={vinculo.id}
+          papel="cliente"
           meuId={user.id}
+          nomeDoOutro={primeiroNome(cc.nome)}
           estadoVinculo={vinculo.estado}
-          tratamentoDoOutro={cc.nome}
+          consultas={consultas.map((a) => ({ id: a.id, inicio: a.inicio, estado: a.estado }))}
+          porPagarCents={porPagar.reduce((t, c) => t + c.valorCents, 0)}
+          fidelidade={cartao && cc.fidelidadeAtiva
+            ? { carimbos: cartao.carimbos, meta: cartao.meta }
+            : null}
+          mostrarResumo
+          mostrarComposer
+          cabecalho={
+            <CabecalhoRelacao
+              cc={cc}
+              estadoVinculo={vinculo.estado}
+              podeMarcar={ativo}
+              aoMarcar={() => router.push(`/contabilistas/${cc.slug}`)}
+            />
+          }
+          aoAgir={(destino) => {
+            if (destino === "pagamento" || destino.startsWith("pagamento:")) {
+              document.getElementById("por-pagar-titulo")?.scrollIntoView({
+                behavior: "smooth", block: "start",
+              });
+              return;
+            }
+            if (destino === "marcar") { router.push(`/contabilistas/${cc.slug}`); return; }
+            if (destino.startsWith("partilha:")) {
+              document.getElementById("envios-titulo")?.scrollIntoView({
+                behavior: "smooth", block: "start",
+              });
+              return;
+            }
+            document.getElementById("proxima-titulo")?.scrollIntoView({
+              behavior: "smooth", block: "start",
+            });
+          }}
+          aoMudar={() => { void carregar(); }}
         />
+      ) : (
+        <Ficha cc={cc} vinculo={vinculo} ativo={ativo} />
       )}
 
       {ativo && (
