@@ -117,3 +117,27 @@ describe("contrato público: a tabela da Stripe continua fechada", () => {
     expect(SQL).not.toMatch(/GRANT[^;]*ON public\.contabilista_stripe[^;]*anon/);
   });
 });
+
+describe("contrato público: o grant que se encontrou na base a sério", () => {
+  // `anon` tinha SELECT em `contabilista_stripe`. Não havia fuga — a RLS
+  // está ligada e a única política é `TO authenticated`, por isso um
+  // anónimo lia zero linhas. Mas um grant que só é inofensivo porque uma
+  // política o cobre é uma armadilha à espera de quem acrescentar uma
+  // política mais larga sem reparar que ele já lá estava.
+  const FECHO = readFileSync(
+    join(process.cwd(), "supabase/migrations/20260816180000_stripe_fecha_grant_anon.sql"),
+    "utf8",
+  );
+
+  it("revoga tudo ao anónimo", () => {
+    expect(FECHO).toContain("REVOKE ALL ON public.contabilista_stripe FROM anon");
+  });
+
+  it("mantém a leitura de quem tem sessão — é o cartão do perfil", () => {
+    expect(FECHO).toContain("GRANT SELECT ON public.contabilista_stripe TO authenticated");
+  });
+
+  it("não devolve nenhum privilégio ao anónimo por outra via", () => {
+    expect(FECHO).not.toMatch(/GRANT[^;]*TO[^;]*\banon\b/);
+  });
+});
