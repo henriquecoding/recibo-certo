@@ -55,7 +55,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "versao:check": "node scripts/check-versao.mjs",
-    "versao:fix": "node scripts/check-versao.mjs --fix"
+    "versao:fix": "node scripts/check-versao.mjs --fix",
+    "stripe:check": "node scripts/check-stripe-config.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
