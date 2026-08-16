@@ -16,6 +16,16 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.62.0",
+    data: "2026-08-16",
+    titulo: "Concluir uma consulta passa a registar o valor real",
+    itens: [
+      "Ao dar uma consulta por realizada, o painel pede o valor que cobraste. Vem preenchido com o valor sugerido no teu perfil e podes mudá-lo — é sobre esse valor que o desconto de fidelidade incide, e não sobre um preço global.",
+      "Se o cliente tiver um benefício por usar, podes aplicá-lo ali mesmo, com a conta feita à frente dos olhos antes de confirmares: valor, desconto e o que fica a cobrar.",
+      "Uma falta continua a fechar-se sem pedir valor — não há nada a cobrar. E dar por realizada continua a carimbar o cartão, que é uma ação que não se desfaz: por isso passou a ser um diálogo e não um botão direto.",
+    ],
+  },
+  {
     version: "2.61.0",
     data: "2026-08-16",
     titulo: "Fidelidade com regras versionadas, e a progressão com os valores certos",

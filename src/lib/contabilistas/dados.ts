@@ -606,10 +606,25 @@ export interface FidelidadeAposConsulta {
  * transação. Isto era uma rota que fazia as três coisas com a chave de
  * serviço; agora é a base de dados a decidir, com a identidade de quem pede.
  */
+/**
+ * Extras de conclusão, quando a consulta se dá por realizada.
+ *
+ * ⚠️ `precoCents` é OBRIGATÓRIO a partir da Fidelidade V2: a RPC recusa com
+ * `preco_obrigatorio` se vier nulo. É o preço REAL daquela consulta, e é
+ * sobre ele que o desconto do benefício incide — a §14.1 tirou ao preço
+ * global o papel de fonte de verdade da fidelidade.
+ */
+export interface ConclusaoDaConsulta {
+  precoCents: number;
+  /** Id do benefício a resgatar nesta consulta, se a pessoa o aplicar. */
+  cupaoId?: string | null;
+}
+
 export async function decidirConsulta(
   id: string,
   estado: EstadoAgendamento,
-  localOuLigacao?: string
+  localOuLigacao?: string,
+  conclusao?: ConclusaoDaConsulta
 ): Promise<{ erro?: string; fidelidade?: FidelidadeAposConsulta | null }> {
   const sb = getSupabase();
 
@@ -617,7 +632,14 @@ export async function decidirConsulta(
     estado === "confirmado"
       ? sb.rpc("confirmar_consulta", { p_agendamento: id, p_local: localOuLigacao ?? null })
       : estado === "realizada"
-        ? sb.rpc("concluir_consulta", { p_agendamento: id, p_compareceu: true })
+        ? sb.rpc("concluir_consulta", {
+            p_agendamento: id,
+            p_compareceu: true,
+            // Sem preço a RPC devolve `preco_obrigatorio`. Passá-lo aqui é o
+            // que liga o ecrã ao contrato novo; a UI recolhe-o antes.
+            p_preco_cents: conclusao?.precoCents ?? null,
+            p_cupao: conclusao?.cupaoId ?? null,
+          })
         : estado === "nao_compareceu"
           ? sb.rpc("concluir_consulta", { p_agendamento: id, p_compareceu: false })
           : sb.rpc("cancelar_consulta", { p_agendamento: id });
@@ -635,6 +657,9 @@ const MOTIVO_CONSULTA: Record<string, string> = {
   nao_concluivel: "Só se conclui uma consulta que já começou e ainda está aberta.",
   ja_fechada: "Esta consulta já não estava por realizar.",
   sem_autorizacao: "Esta consulta não é tua.",
+  preco_obrigatorio: "Indica o valor real desta consulta antes de a dar por realizada.",
+  cupao_invalido: "Esse benefício não é deste cliente, ou já foi usado.",
+  cupao_expirado: "Esse benefício já passou da validade.",
 };
 
 export async function listarAgendamentos(filtro: {

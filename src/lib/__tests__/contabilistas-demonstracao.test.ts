@@ -248,7 +248,7 @@ describe("a loja de demonstração aplica as regras do servidor", () => {
       (a) => (a.estado === "pedido" || a.estado === "confirmado") && Date.parse(a.inicio) > Date.now(),
     );
     expect(futura).toBeDefined();
-    const r = await loja.decidirConsulta(futura!.id, "realizada");
+    const r = await loja.decidirConsulta(futura!.id, "realizada", undefined, { precoCents: 6500 });
     expect(r.erro).toBe("Só se conclui uma consulta que já começou e ainda está aberta.");
   });
 
@@ -270,7 +270,7 @@ describe("a loja de demonstração aplica as regras do servidor", () => {
       criadoEm: new Date().toISOString(),
     });
 
-    const r = await loja.decidirConsulta("teste-carimbo", "realizada");
+    const r = await loja.decidirConsulta("teste-carimbo", "realizada", undefined, { precoCents: 6500 });
     expect(r.erro).toBeUndefined();
     expect(r.fidelidade?.carimbos).toBe(antes + 1);
   });
@@ -294,12 +294,44 @@ describe("a loja de demonstração aplica as regras do servidor", () => {
       criadoEm: new Date().toISOString(),
     });
 
-    const r = await loja.decidirConsulta("teste-completa", "realizada");
+    const r = await loja.decidirConsulta("teste-completa", "realizada", undefined, { precoCents: 6500 });
     expect(r.fidelidade?.completou).toBe(true);
     // A percentagem é a CONGELADA no cartão, não a da ficha de agora.
     expect(r.fidelidade?.percentagem).toBe(cartao.descontoPct);
     expect((await loja.meusCupoes()).length).toBe(cupoesAntes + 1);
     expect((await loja.cartoesAbertos(cartao.clienteId)).length).toBe(1);
+  });
+
+  it("concluir com presença sem preço é recusado, como a RPC recusa", async () => {
+    // Fidelidade V2: `concluir_consulta` devolve `preco_obrigatorio` sem
+    // preço, porque o desconto incide sobre o valor REAL da consulta e não
+    // sobre o preço global do perfil (§14.1). A demonstração bate contra a
+    // mesma parede — se aceitasse, mentia sobre o painel real.
+    const estado = loja.semearPara(new Date());
+    const injetar = (id: string) => estado.agendamentos.push({
+      id,
+      contabilistaId: estado.ficha.userId,
+      clienteId: estado.cartoes[0]!.clienteId,
+      inicio: new Date(Date.now() - 3600_000).toISOString(),
+      fim: new Date(Date.now() - 1800_000).toISOString(),
+      estado: "confirmado",
+      modalidade: "online",
+      assunto: null,
+      localOuLigacao: null,
+      criadoEm: new Date().toISOString(),
+    });
+
+    injetar("teste-sem-preco");
+    const semPreco = await loja.decidirConsulta("teste-sem-preco", "realizada");
+    expect(semPreco.erro).toMatch(/valor real/i);
+    // E a consulta continua aberta: uma recusa não pode fechar nada.
+    expect((await loja.listarAgendamentos()).find((a) => a.id === "teste-sem-preco")?.estado)
+      .toBe("confirmado");
+
+    // Uma falta continua a fechar sem preço: não há nada a cobrar.
+    injetar("teste-falta-sem-preco");
+    const falta = await loja.decidirConsulta("teste-falta-sem-preco", "nao_compareceu");
+    expect(falta.erro).toBeUndefined();
   });
 
   it("com o cartão desligado, uma consulta realizada não carimba", async () => {
@@ -318,7 +350,7 @@ describe("a loja de demonstração aplica as regras do servidor", () => {
       criadoEm: new Date().toISOString(),
     });
 
-    const r = await loja.decidirConsulta("teste-sem-cartao", "realizada");
+    const r = await loja.decidirConsulta("teste-sem-cartao", "realizada", undefined, { precoCents: 6500 });
     expect(r.fidelidade?.ok).toBe(false);
     expect(r.fidelidade?.motivo).toBe("fidelidade_inativa");
   });

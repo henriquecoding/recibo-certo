@@ -16,9 +16,12 @@ import VistaMes from "@/components/contabilistas/VistaMes";
 import DetalheConsulta from "@/components/contabilistas/DetalheConsulta";
 import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
+import ConcluirConsulta, { type ConclusaoEscolhida } from "@/components/contabilistas/ConcluirConsulta";
 import {
   listarAgendamentos, obterDisponibilidade, guardarDisponibilidade, meusClientes,
   decidirConsulta,
+  meusCupoes,
+  type CupaoLido,
 } from "@/lib/contabilistas/fonte/dados";
 import type { Agendamento, EstadoAgendamento, Vinculo } from "@/lib/contabilistas/tipos";
 import { tratamentoDoCliente } from "@/lib/contabilistas/tipos";
@@ -96,6 +99,9 @@ export default function AgendaPage() {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [aberta, setAberta] = useState<Agendamento | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
+  const [porConcluir, setPorConcluir] = useState<
+    { agendamento: Agendamento; beneficios: CupaoLido[] } | null
+  >(null);
   const [vinculos, setVinculos] = useState<Vinculo[]>([]);
 
   /** O nome que o cliente deu neste vínculo, ou um identificador curto. */
@@ -120,15 +126,42 @@ export default function AgendaPage() {
 
   useEffect(() => { if (ficha) void carregar(ficha.userId); }, [ficha, carregar]);
 
-  async function mudarEstado(a: Agendamento, estado: EstadoAgendamento, localOuLigacao?: string) {
+  /**
+   * Dar por REALIZADA passa por um diálogo, e não por uma confirmação.
+   *
+   * A Fidelidade V2 exige o preço real: `concluir_consulta` recusa com
+   * `preco_obrigatorio` sem ele. Uma pergunta de sim/não não consegue
+   * recolher um valor — por isso este estado, e não um `confirmar`.
+   */
+  async function pedirConclusao(a: Agendamento) {
+    if (!ficha) return;
+    const todos = await meusCupoes({ contabilistaId: ficha.userId }).catch(() => []);
+    setPorConcluir({
+      agendamento: a,
+      beneficios: todos.filter((c) => c.clienteId === a.clienteId && c.estado === "disponivel"),
+    });
+  }
+
+  async function mudarEstado(
+    a: Agendamento,
+    estado: EstadoAgendamento,
+    localOuLigacao?: string,
+    conclusao?: ConclusaoEscolhida,
+  ) {
     if (!ficha) return;
 
-    const pergunta = perguntaDe(estado, ficha.fidelidadeAtiva);
+    // «Realizada» sem preço nunca chega à RPC: abre o diálogo primeiro.
+    if (estado === "realizada" && !conclusao) { await pedirConclusao(a); return; }
+
+    const pergunta = estado === "realizada" ? null : perguntaDe(estado, ficha.fidelidadeAtiva);
     if (pergunta && !(await confirmar(pergunta))) return;
 
     setOcupado(a.id);
     try {
-      const { erro, fidelidade: f } = await decidirConsulta(a.id, estado, localOuLigacao?.trim() || undefined);
+      const { erro, fidelidade: f } = await decidirConsulta(
+        a.id, estado, localOuLigacao?.trim() || undefined,
+        conclusao ? { precoCents: conclusao.precoCents, cupaoId: conclusao.cupaoId } : undefined,
+      );
       if (erro) { avisos.erro(erro); return; }
 
       if (f?.completou) {
@@ -141,6 +174,7 @@ export default function AgendaPage() {
       } else {
         avisos.sucesso(FEITO[estado] ?? "Agenda atualizada.");
       }
+      setPorConcluir(null);
       await carregar(ficha.userId);
     } catch { avisos.erro("Falha de rede. Tenta outra vez."); }
     finally { setOcupado(null); }
@@ -213,6 +247,21 @@ export default function AgendaPage() {
           />
         )}
       </AnimatePresence>
+
+      {/* O diálogo do preço. Vive DENTRO da raiz do ecrã: fora dela o
+          `return` ficava com dois elementos de topo. */}
+      {porConcluir && (
+        <ConcluirConsulta
+          nomeCliente={nomeDoCliente(porConcluir.agendamento.clienteId)}
+          precoSugeridoCents={ficha.precoConsultaCents}
+          beneficios={porConcluir.beneficios}
+          aGuardar={ocupado === porConcluir.agendamento.id}
+          onCancelar={() => setPorConcluir(null)}
+          onConfirmar={(escolha) =>
+            void mudarEstado(porConcluir.agendamento, "realizada", undefined, escolha)
+          }
+        />
+      )}
     </div>
   );
 }

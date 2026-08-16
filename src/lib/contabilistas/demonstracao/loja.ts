@@ -224,7 +224,8 @@ export interface FidelidadeAposConsulta {
 export async function decidirConsulta(
   id: string,
   novoEstado: EstadoAgendamento,
-  localOuLigacao?: string
+  localOuLigacao?: string,
+  conclusao?: { precoCents: number; cupaoId?: string | null }
 ): Promise<{ erro?: string; fidelidade?: FidelidadeAposConsulta | null }> {
   const d = bd();
   const a = d.agendamentos.find((x) => x.id === id);
@@ -243,8 +244,16 @@ export async function decidirConsulta(
     if (!aberta || !jaComecou) {
       return { erro: "Só se conclui uma consulta que já começou e ainda está aberta." };
     }
+    if (novoEstado === "nao_compareceu") {
+      a.estado = novoEstado;
+      return { fidelidade: null };
+    }
+    // A MESMA precondição da RPC da Fidelidade V2: sem preço não conclui.
+    // Uma demonstração que aceitasse sem preço mentia sobre o painel real.
+    if (conclusao === undefined || !Number.isFinite(conclusao.precoCents) || conclusao.precoCents < 0) {
+      return { erro: "Indica o valor real desta consulta antes de a dar por realizada." };
+    }
     a.estado = novoEstado;
-    if (novoEstado === "nao_compareceu") return { fidelidade: null };
     return { fidelidade: carimbar(a) };
   }
 
