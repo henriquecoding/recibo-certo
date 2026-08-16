@@ -26,6 +26,7 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "No diretório e no perfil público passa a dizer-se se um contabilista aceita pagamento pela plataforma. Era a pergunta de quem está a decidir marcar, e não tinha resposta em lado nenhum.",
       "Corrigido um beco sem saída: uma consulta realizada aparecia «por pagar» mesmo quando o contabilista não tinha a conta pronta, e o botão de pagar dava erro. Agora só aparece quando há mesmo por onde pagar.",
       "Nada da conta Stripe de um contabilista é visível para os clientes — nem o identificador, nem o que falta verificar. Sai só o facto de que se pode, ou não, pagar ali.",
+      "Corrigida a ligação que fazia os pagamentos falharem em silêncio: os avisos da Stripe estavam a ser enviados para um endereço que redirecionava, e nenhum chegava. Na prática, uma conta aprovada podia ficar para sempre em «a Stripe está a verificar», e um pagamento feito podia nunca ser dado por recebido.",
     ],
   },
   {
