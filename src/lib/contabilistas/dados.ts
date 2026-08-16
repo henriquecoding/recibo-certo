@@ -18,7 +18,7 @@ import type {
   Modalidade, Partilha, TipoPartilha, Vinculo,
 } from "./tipos";
 import type { Excecao, RegraDisponibilidade } from "./agenda";
-import { ESTADO_PROGRESSAO_INICIAL, type EstadoProgressao, type EventoXP } from "./progressao";
+import type { EstadoProgressao } from "./progressao/catalogo";
 import { CONSENTIMENTO_VERSAO, sanitizarConteudoPartilha, tituloPorOmissao } from "./vinculo";
 
 type Linha = Record<string, unknown>;
@@ -851,49 +851,67 @@ export async function meusCupoes(filtro: {
 
 // ─── Progressão e comissão ─────────────────────────────────────────────
 //
-// Duas leituras, e NENHUMA escrita. Não é um esquecimento: a migração
-// `20260815220000` não dá política de INSERT nem de UPDATE a
-// `authenticated` sobre estas tabelas, e por isso não há função de escrita
-// que pudesse funcionar daqui. O XP nasce de transições que o servidor
-// observa, com a chave de serviço — foi a lição da migração 024.
+// Duas leituras, e NENHUMA escrita. A migração
+// `20260815120300_progressao_comissao_contabilistas.sql` não dá política de
+// INSERT nem de UPDATE a `authenticated` sobre estas tabelas: XP, créditos
+// e patamares nascem de RPCs do servidor. Foi a lição da migração 024 —
+// validar quem escreve não chega, é preciso validar o que é escrito.
+
+export const ESTADO_PROGRESSAO_INICIAL: EstadoProgressao = {
+  xp: 0,
+  clientesElegiveis: 0,
+  creditosDisponiveis: 0,
+  creditosReservados: 0,
+  patamarConquistado: 1,
+  patamarComprado: 1,
+};
 
 export async function obterProgressao(contabilistaId: string): Promise<EstadoProgressao> {
   const { data } = await getSupabase()
     .from("contabilista_progressao")
-    .select("xp, clientes_elegiveis, patamar_comprado, cartoes_concluidos")
+    .select("xp, clientes_elegiveis, creditos_disponiveis, creditos_reservados, highest_earned_tier, highest_purchased_tier")
     .eq("contabilista_id", contabilistaId)
     .maybeSingle();
 
-  // Sem linha é um estado legítimo: quem ainda não gerou XP nenhum não tem
-  // registo. Devolver o estado inicial evita um ecrã vazio onde a resposta
-  // certa é «estás no patamar 1».
+  // Sem linha é um estado legítimo: quem ainda não gerou XP não tem
+  // registo. Devolver o inicial evita um ecrã vazio onde a resposta certa
+  // é «estás no patamar Base».
   if (!data) return { ...ESTADO_PROGRESSAO_INICIAL };
   const r = data as unknown as Linha;
   return {
     xp: (r.xp as number) ?? 0,
     clientesElegiveis: (r.clientes_elegiveis as number) ?? 0,
-    patamarComprado: (r.patamar_comprado as number | null) ?? null,
-    cartoesConcluidos: (r.cartoes_concluidos as number) ?? 0,
+    creditosDisponiveis: (r.creditos_disponiveis as number) ?? 0,
+    creditosReservados: (r.creditos_reservados as number) ?? 0,
+    patamarConquistado: (r.highest_earned_tier as number) ?? 1,
+    patamarComprado: (r.highest_purchased_tier as number) ?? 1,
   };
 }
 
+/** Um evento do ledger de XP, como o painel o lê. */
+export type TipoEventoXP =
+  | "service_completed"
+  | "new_client_first_service"
+  | "loyalty_cycle_completed"
+  | "admin_adjustment"
+  | "reversal";
+
 export interface EventoXPLido {
   id: string;
-  evento: EventoXP;
+  tipo: TipoEventoXP;
   xp: number;
-  origemTipo: string;
-  origemId: string;
+  /** Eventos de sombra medem sem contar — não entram no XP em vigor. */
+  shadow: boolean;
   criadoEm: string;
 }
 
-/** O registo recente, para a lista «atividade elegível» do ecrã. */
 export async function listarEventosXP(
   contabilistaId: string,
   limite = 8
 ): Promise<EventoXPLido[]> {
   const { data } = await getSupabase()
-    .from("contabilista_xp_eventos")
-    .select("id, evento, xp, origem_tipo, origem_id, criado_em")
+    .from("progressao_eventos")
+    .select("id, tipo, xp_delta, shadow, criado_em")
     .eq("contabilista_id", contabilistaId)
     .order("criado_em", { ascending: false })
     .limit(Math.min(50, Math.max(1, limite)));
@@ -902,10 +920,9 @@ export async function listarEventosXP(
     const r = l as Linha;
     return {
       id: r.id as string,
-      evento: r.evento as EventoXP,
-      xp: (r.xp as number) ?? 0,
-      origemTipo: r.origem_tipo as string,
-      origemId: r.origem_id as string,
+      tipo: r.tipo as TipoEventoXP,
+      xp: (r.xp_delta as number) ?? 0,
+      shadow: Boolean(r.shadow),
       criadoEm: r.criado_em as string,
     };
   });

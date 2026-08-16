@@ -191,11 +191,25 @@ export const CONJUNTOS: Conjunto[] = [
   {
     id: "progressao", grupo: "profissional", soSe: "contabilista",
     titulo: "Progressão e comissão",
-    descricao: "O patamar que alcançaste, o registo do que contou para lá chegares, e os patamares que desbloqueaste.",
+    descricao: "O patamar que alcançaste, o registo do que contou para lá chegares, os créditos que ganhaste e os desbloqueios que compraste.",
     tabelas: [
-      // O registo primeiro, o agregado depois: é dele que o total sai.
-      { nome: "contabilista_xp_eventos", posse: { por: "coluna", coluna: "contabilista_id" } },
+      // Os registos primeiro, o agregado depois: é deles que o total sai.
+      { nome: "progressao_eventos", posse: { por: "coluna", coluna: "contabilista_id" } },
+      { nome: "creditos_fidelidade_ledger", posse: { por: "coluna", coluna: "contabilista_id" } },
+      { nome: "progressao_compras", posse: { por: "coluna", coluna: "contabilista_id" } },
       { nome: "contabilista_progressao", posse: { por: "coluna", coluna: "contabilista_id" } },
+    ],
+    // Uma compra é um registo fiscal do lado do Recibo Certo. Apagar a
+    // conta não pode apagar a prova de um pagamento recebido — e dizê-lo é
+    // parte de ser honesto sobre o que não se apaga a pedido.
+    retido: "As compras de patamar ficam retidas pelo prazo legal de conservação de documentos de faturação. Deixam de estar ligadas ao teu perfil, mas o registo do pagamento não é apagável a pedido.",
+  },
+  {
+    id: "fidelidade-regras", grupo: "profissional", soSe: "contabilista",
+    titulo: "Regras de fidelidade que publicaste",
+    descricao: "As versões das regras do cartão que definiste ao longo do tempo. Cada uma fica ligada aos cartões que nasceram com ela.",
+    tabelas: [
+      { nome: "fidelidade_regras", posse: { por: "coluna", coluna: "contabilista_id" } },
     ],
   },
   {

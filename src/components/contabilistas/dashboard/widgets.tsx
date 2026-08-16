@@ -30,8 +30,8 @@ import type { WidgetDensity, WidgetType } from "@/lib/contabilistas/dashboard/ti
 import { tratamentoDoCliente, type Vinculo } from "@/lib/contabilistas/tipos";
 import { eurosDeCents, progresso } from "@/lib/contabilistas/fidelidade";
 import {
-  calcularProgressao, comissaoLegivel, type EstadoProgressao,
-} from "@/lib/contabilistas/progressao";
+  formatarComissao, vistaProgressao, type EstadoProgressao,
+} from "@/lib/contabilistas/progressao/catalogo";
 import type { EstadoTarefa, Tarefa } from "@/lib/contabilistas/fonte/trabalho";
 import type { Agendamento, Partilha } from "@/lib/contabilistas/tipos";
 import type { Caso } from "@/lib/contabilistas/fonte/casos";
@@ -906,27 +906,32 @@ function Fidelidade({ broker, href }: PropsDoWidget) {
 function ProgressaoComissao({ broker, href }: PropsDoWidget) {
   const estado = ler(broker, "progressao");
   if (!estado) return null;
-  const p = calcularProgressao(estado as EstadoProgressao);
+  const v = vistaProgressao(estado as EstadoProgressao);
 
   return (
     <div>
       <p className="flex items-baseline gap-1.5">
-        <span className="font-display text-3xl leading-none text-ink tabular-nums">{p.comissaoPct}</span>
+        <span className="font-display text-3xl leading-none text-ink tabular-nums">
+          {formatarComissao(v.atual.comissaoBps).replace("%", "")}
+        </span>
         <span className="font-display text-lg leading-none text-stone-400">%</span>
         <span className="ml-auto text-[0.625rem] font-semibold text-stone-400">
-          Patamar {p.patamar.nivel} de 6
+          {v.atual.titulo} · {v.efetivo} de 6
         </span>
       </p>
       <p className="mt-1 text-[0.6875rem] text-stone-500">de comissão atual</p>
 
-      {p.proximo && (
+      {v.proximo && (
         <>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
-            <div className="h-full rounded-full bg-brand" style={{ width: `${Math.round(p.fracaoDoDegrau * 100)}%` }} />
+            <div
+              className="h-full rounded-full bg-brand"
+              style={{ width: `${Math.round(v.progressoNoIntervalo * 100)}%` }}
+            />
           </div>
           <p className="mt-1.5 text-[0.6875rem] text-stone-500">
-            Faltam <strong className="font-semibold text-ink tabular-nums">{p.xpEmFalta} XP</strong>{" "}
-            para {comissaoLegivel(p.proximo.comissaoPct)}.
+            Faltam <strong className="font-semibold text-ink tabular-nums">{v.xpEmFalta} XP</strong>{" "}
+            para {formatarComissao(v.proximo.comissaoBps)}.
           </p>
         </>
       )}

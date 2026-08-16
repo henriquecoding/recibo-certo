@@ -8,10 +8,10 @@ import type {
   Agendamento, Contabilista, EstadoAgendamento, Partilha, Vinculo,
 } from "../tipos";
 import type { EventoXPLido } from "../dados";
-import type { EstadoProgressao } from "../progressao";
+import type { EstadoProgressao } from "../progressao/catalogo";
 import { emDemonstracao, loja } from "./nucleo";
 
-export type { CartaoAberto, CupaoLido, EventoXPLido, FidelidadeAposConsulta } from "../dados";
+export type { CartaoAberto, CupaoLido, EventoXPLido, FidelidadeAposConsulta, TipoEventoXP } from "../dados";
 
 // ─── Ficha ─────────────────────────────────────────────────────────────
 

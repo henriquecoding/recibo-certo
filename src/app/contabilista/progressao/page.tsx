@@ -1,34 +1,38 @@
 "use client";
 
 // ═══════════════════════════════════════════════════════════════════════
-//  PROGRESSÃO E COMISSÃO — o ecrã
+//  PROGRESSÃO E COMISSÃO — o ecrã (REFERÊNCIA C)
 //  ---------------------------------------------------------------------
-//  Terceira frente do pacote de redesign, e a única que fala do dinheiro
-//  de quem está a ler. Isso muda o que o ecrã tem de fazer: além de
-//  mostrar o estado, tem de dizer, sem se ter de procurar, SOBRE O QUE a
-//  taxa incide e QUEM a fatura a quem. Um número de comissão sozinho num
-//  cartão bonito é a parte fácil e a parte inútil.
+//  Os VALORES são os do Relatório Mestre §164, não os da imagem. Onde a
+//  referência C mostra outro número, o relatório ganha:
 //
-//  Três decisões de desenho que valem a pena explicar:
+//    patamares   10% · 9% · 8% · 7% · 6% · 5%
+//    XP          0 · 200 · 500 · 900 · 1500 · 2300
+//    preços      grátis · 14,99 · 24,99 · 39,99 · 64,99 · 99,99
+//    XP/evento   +10 serviço · +25 primeiro serviço de cliente novo
+//                +100 ciclo de fidelidade concluído
 //
-//   · O cartão do topo é escuro nos dois temas, como a barra lateral. É a
-//     única superfície do painel que mostra um número que muda a fatura de
-//     quem o lê.
+//  A imagem escreve «Faltam 60 XP» com a barra em 540/600. Com os
+//  thresholds oficiais, 540 XP é patamar 3 e faltam 360 para o 4 — e a
+//  barra mede DENTRO do intervalo 500→900, não sobre o total.
 //
-//   · «Duas formas de subir» põe o mérito e o pagamento LADO A LADO, com o
-//     mérito primeiro e com o mesmo peso visual. Pôr o pagamento em
-//     destaque num ecrã que mede trabalho feito seria transformar a escada
-//     numa tabela de preços — e o `MONETIZACAO_PROIBIDA` não proíbe só
-//     ordenar por dinheiro, proíbe o dark pattern que o sugere.
+//  A HIERARQUIA é a da imagem, e essa segue-se à letra:
+//   1. a comissão atual é o herói dominante;
+//   2. o próximo patamar é a segunda prioridade;
+//   3. duas rotas lado a lado com o «OU» ao meio — mérito primeiro, e o
+//      pagamento NUNCA visualmente superior (§77.3). O verde da marca fica
+//      do lado do mérito; a compra usa lilás;
+//   4. a jornada 10→5 é um progress indicator com quatro estados, não seis
+//      cartões com o mesmo peso;
+//   5. XP, créditos e atividade em terceiro nível.
 //
-//   · Nenhum botão que não faça nada. A referência mostra «Ver histórico»
-//     e «Exportar» no topo; nenhuma das duas existe, e um botão que aceita
-//     o clique e não responde é pior do que a sua ausência. O registo de
-//     XP em baixo É o histórico que há.
-//
-//  A cobrança do desbloqueio NÃO está ligada (ver `DESBLOQUEIO_PAGO_ATIVO`).
-//  O preço é real e o desconto é real; o que falta é o Stripe. O ecrã
-//  di-lo no sítio onde a pessoa ia clicar, e não num aviso no fim.
+//  Duas correções de copy que a §164 exige pelo nome:
+//   · «Cada patamar REDUZ a comissão do Recibo Certo» — nunca «aumenta a
+//     tua comissão», que diz o contrário do que acontece num ecrã onde o
+//     número desce de 10% para 5%;
+//   · os marcos são de CRÉDITOS DISPONÍVEIS, não de cartões concluídos. Os
+//     créditos gastam-se ao comprar: quem concluiu 10 cartões e já gastou 5
+//     tem direito a 15%, não a 20%.
 // ═══════════════════════════════════════════════════════════════════════
 
 import { useEffect, useState } from "react";
@@ -39,36 +43,19 @@ import { TituloDoPainel } from "@/components/contabilistas/AcoesDoPainel";
 import { usarFicha } from "@/components/contabilistas/usarFicha";
 import { usarPainel } from "@/components/contabilistas/usarPainel";
 import {
-  listarEventosXP, meusClientes, obterProgressao, type EventoXPLido,
+  listarEventosXP, obterProgressao, type EventoXPLido, type TipoEventoXP,
 } from "@/lib/contabilistas/fonte/dados";
-import { tratamentoDoCliente, type Vinculo } from "@/lib/contabilistas/tipos";
-import { eurosDeCents } from "@/lib/contabilistas/fidelidade";
 import {
-  COMISSAO_PISO_PCT,
-  COPY_BASE_DA_COMISSAO,
-  COPY_DESBLOQUEIO_INDISPONIVEL,
-  COPY_DESCONTO_UNICO,
-  COPY_ELEGIBILIDADE,
-  COPY_QUEM_FATURA,
-  DESBLOQUEIO_NAO_COMPRA,
-  DESBLOQUEIO_PAGO_ATIVO,
-  ESCALA_FIDELIDADE,
-  ESTADO_PROGRESSAO_INICIAL,
-  PATAMARES,
-  PATAMAR_MAX,
-  ROTULO_DO_EVENTO,
-  calcularProgressao,
-  comissaoLegivel,
-  descontoDeFidelidadePct,
-  precoDeDesbloqueio,
-  proximoBonusDeFidelidade,
-  type EstadoProgressao,
-  type Progressao,
-} from "@/lib/contabilistas/progressao";
+  MARCOS_CREDITO, PATAMARES, XP_POR_EVENTO, copyEmFalta, copyJornadaProgressao,
+  descontoPorCreditos, descricaoDescontoFidelidade, formatarComissao, formatarEuros,
+  vistaProgressao, type EstadoProgressao, type VistaProgressao,
+} from "@/lib/contabilistas/progressao/catalogo";
+import {
+  COPY_BASE_DA_COMISSAO, COPY_DESBLOQUEIO_INDISPONIVEL, COPY_ELEGIBILIDADE,
+  COPY_QUEM_FATURA, DESBLOQUEIO_NAO_COMPRA, DESBLOQUEIO_PAGO_ATIVO,
+} from "@/lib/contabilistas/progressao/fronteiras";
 import Badge from "@/components/ui/Badge";
-import {
-  Award, Check, Gift, Info, Lock, Star, Target, Trophy,
-} from "@/components/ui/Icons";
+import { Award, Check, Gift, Info, Lock, Star, Target, Trophy } from "@/components/ui/Icons";
 import styles from "../painel.module.css";
 
 export default function ProgressaoPage() {
@@ -76,40 +63,28 @@ export default function ProgressaoPage() {
   const painel = usarPainel();
   const [estado, setEstado] = useState<EstadoProgressao | null>(null);
   const [eventos, setEventos] = useState<EventoXPLido[]>([]);
-  const [clientes, setClientes] = useState<Vinculo[]>([]);
 
-  const quemPergunta = userId ?? "";
+  const quem = userId ?? ficha?.userId ?? "";
 
   useEffect(() => {
     if (!ficha) return;
     let vivo = true;
-    // Os clientes vêm para resolver o NOME de cada evento de XP. É uma
-    // leitura que o painel já faz noutros ecrãs, e reutilizá-la evita uma
-    // coluna de nome no registo de XP — que seria uma segunda cópia de um
-    // nome que o cliente pode mudar ou retirar.
-    Promise.all([
-      obterProgressao(quemPergunta),
-      listarEventosXP(quemPergunta, 6),
-      meusClientes(quemPergunta),
-    ])
-      .then(([p, e, c]) => {
-        if (!vivo) return;
-        setEstado(p);
-        setEventos(e);
-        setClientes(c);
-      })
+    Promise.all([obterProgressao(quem), listarEventosXP(quem, 6)])
+      .then(([p, e]) => { if (vivo) { setEstado(p); setEventos(e); } })
       .catch(() => {
-        if (vivo) setEstado({ ...ESTADO_PROGRESSAO_INICIAL });
+        if (vivo) {
+          setEstado({
+            xp: 0, clientesElegiveis: 0, creditosDisponiveis: 0,
+            creditosReservados: 0, patamarConquistado: 1, patamarComprado: 1,
+          });
+        }
       });
     return () => { vivo = false; };
-  }, [ficha, quemPergunta]);
+  }, [ficha, quem]);
 
   if (aCarregar || !ficha || !estado) return <EsqueletoPainel forma="duasColunas" />;
 
-  const p = calcularProgressao(estado);
-  const nomePorVinculo = new Map(
-    clientes.map((v) => [v.id, tratamentoDoCliente(v)])
-  );
+  const v = vistaProgressao(estado);
 
   return (
     <div className="space-y-6">
@@ -117,38 +92,31 @@ export default function ProgressaoPage() {
 
       <CabecalhoPainel
         titulo="Progressão e comissão"
-        descricao="A taxa que o ReciboCerto cobra desce com o trabalho feito. Aqui vês em que patamar estás, o que falta para o próximo, e o que cada via custa."
+        descricao="A taxa que o Recibo Certo cobra desce com o trabalho feito. Aqui vês em que patamar estás, o que falta para o próximo, e o que cada via custa."
       />
 
-      <Hero p={p} />
-
-      {/* O que a taxa é, antes de qualquer forma de a baixar. Uma pessoa
-          que ainda não sabe sobre o que incide não pode decidir nada. */}
+      <Hero v={v} estado={estado} />
       <BaseDaComissao />
-
-      <DuasFormasDeSubir p={p} estado={estado} />
-
-      <Jornada p={p} />
+      <DuasRotas v={v} estado={estado} />
+      <Jornada v={v} />
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <DescontoDeFidelidade estado={estado} />
-        <AtividadeElegivel
-          eventos={eventos}
-          nomePorVinculo={nomePorVinculo}
-          painel={painel}
-        />
+        <CreditosDeFidelidade estado={estado} />
+        <AtividadeElegivel eventos={eventos} painel={painel} />
       </div>
     </div>
   );
 }
 
-// ─── O cartão do topo ──────────────────────────────────────────────────
+// ─── 1. O herói: a comissão atual ──────────────────────────────────────
 
-function Hero({ p }: { p: Progressao }) {
+function Hero({ v, estado }: { v: VistaProgressao; estado: EstadoProgressao }) {
+  const comprado = estado.patamarComprado > estado.patamarConquistado;
+  const falta = copyEmFalta(v);
+
   return (
     <section className={`${styles.heroProgressao} p-5 sm:p-7`}>
       <span className={styles.heroBrilho} aria-hidden />
-
       <div className="relative">
         <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-white/55">
           A tua progressão profissional
@@ -157,35 +125,32 @@ function Hero({ p }: { p: Progressao }) {
         <div className="mt-3 flex flex-wrap items-end gap-x-5 gap-y-3">
           <p className="flex items-baseline gap-1">
             <span className="font-display text-5xl leading-none text-white tabular-nums sm:text-6xl">
-              {p.comissaoPct}
+              {formatarComissao(v.atual.comissaoBps).replace("%", "")}
             </span>
             <span className="font-display text-2xl leading-none text-white/85">%</span>
           </p>
           <div className="min-w-0">
             <p className="flex flex-wrap items-center gap-2">
               <span className="text-lg font-semibold text-white">
-                Patamar {p.patamar.nivel} de {PATAMAR_MAX}
+                {v.atual.titulo} · patamar {v.efetivo} de {PATAMARES.length}
               </span>
-              {p.porDesbloqueio && (
+              {comprado && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[0.6875rem] font-semibold text-white/90">
                   <Lock size={11} aria-hidden /> Desbloqueado
                 </span>
               )}
             </p>
-            <p className="mt-0.5 text-sm text-white/65">
-              de comissão atual
-            </p>
+            <p className="mt-0.5 text-sm text-white/65">de comissão atual</p>
           </div>
         </div>
 
-        {/* O que falta, em números, e a barra do degrau atual. */}
         <div className="mt-5 rounded-2xl border border-white/12 bg-black/15 p-4">
-          {p.noTopo ? (
+          {v.noTopo ? (
             <p className="flex items-start gap-2.5 text-sm leading-relaxed text-white/85">
               <Trophy size={16} className="mt-0.5 shrink-0 text-brand-mint" aria-hidden />
               <span>
-                Estás no patamar mais alto. A comissão de {comissaoLegivel(COMISSAO_PISO_PCT)}{" "}
-                é a mais baixa que existe — não há mais degraus a subir.
+                Estás no patamar mais alto. {formatarComissao(v.atual.comissaoBps)} é a
+                comissão mais baixa que existe — não há mais degraus a subir.
               </span>
             </p>
           ) : (
@@ -193,34 +158,23 @@ function Hero({ p }: { p: Progressao }) {
               <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <p className="flex items-start gap-2.5 text-sm leading-relaxed text-white/85">
                   <Target size={16} className="mt-0.5 shrink-0 text-brand-mint" aria-hidden />
-                  <span>
-                    Faltam <strong className="font-semibold text-white tabular-nums">{p.xpEmFalta} XP</strong>
-                    {p.clientesEmFalta > 0 && (
-                      <>
-                        {" e "}
-                        <strong className="font-semibold text-white tabular-nums">
-                          {p.clientesEmFalta} {p.clientesEmFalta === 1 ? "cliente elegível" : "clientes elegíveis"}
-                        </strong>
-                      </>
-                    )}{" "}
-                    para chegar a {comissaoLegivel(p.proximo!.comissaoPct)} de comissão.
-                  </span>
+                  <span>{falta}</span>
                 </p>
                 <p className="shrink-0 text-xs font-semibold text-white/70 tabular-nums">
-                  {p.xp} / {p.proximo!.xpNecessario} XP
+                  {v.xp} / {v.proximo!.xpMinimo} XP
                 </p>
               </div>
               <div
                 className={`${styles.barraEscura} mt-3`}
                 role="progressbar"
-                aria-valuenow={p.xp}
-                aria-valuemin={p.xpDoDegrau.de}
-                aria-valuemax={p.xpDoDegrau.ate}
-                aria-label={`Progresso para o patamar ${p.proximo!.nivel}`}
+                aria-valuenow={v.xp}
+                aria-valuemin={v.atual.xpMinimo}
+                aria-valuemax={v.proximo!.xpMinimo}
+                aria-label={`Progresso para o patamar ${v.proximo!.titulo}`}
               >
                 <div
                   className={styles.barraEscuraProgresso}
-                  style={{ width: `${Math.round(p.fracaoDoDegrau * 100)}%` }}
+                  style={{ width: `${Math.round(v.progressoNoIntervalo * 100)}%` }}
                 />
               </div>
             </>
@@ -230,8 +184,8 @@ function Hero({ p }: { p: Progressao }) {
         <p className="mt-3.5 flex items-start gap-2 text-xs leading-relaxed text-white/55">
           <Info size={13} className="mt-0.5 shrink-0" aria-hidden />
           <span>
-            Os patamares sobem por trabalho feito. O desbloqueio pago é opcional
-            e compra apenas a percentagem.
+            Os patamares podem ser alcançados por mérito ou, opcionalmente,
+            desbloqueados com pagamento.
           </span>
         </p>
       </div>
@@ -241,13 +195,6 @@ function Hero({ p }: { p: Progressao }) {
 
 // ─── Sobre o que a taxa incide ─────────────────────────────────────────
 
-/**
- * As duas frases que não podem estar escondidas.
- *
- * Foi uma decisão deliberada não as pôr num `InfoTip`: um tooltip é o
- * sítio certo para um termo técnico e o sítio errado para o único facto
- * que determina quanto a pessoa vai pagar.
- */
 function BaseDaComissao() {
   return (
     <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6 dark:border-stone-800">
@@ -257,17 +204,13 @@ function BaseDaComissao() {
       </h2>
       <dl className="mt-3.5 grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl bg-cream/70 p-3.5 dark:bg-white/[0.03]">
-          <dt className="text-xs font-bold uppercase tracking-wider text-stone-400">
-            A base
-          </dt>
+          <dt className="text-xs font-bold uppercase tracking-wider text-stone-400">A base</dt>
           <dd className="mt-1.5 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
             {COPY_BASE_DA_COMISSAO}
           </dd>
         </div>
         <div className="rounded-2xl bg-cream/70 p-3.5 dark:bg-white/[0.03]">
-          <dt className="text-xs font-bold uppercase tracking-wider text-stone-400">
-            Quem fatura
-          </dt>
+          <dt className="text-xs font-bold uppercase tracking-wider text-stone-400">Quem fatura</dt>
           <dd className="mt-1.5 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
             {COPY_QUEM_FATURA}
           </dd>
@@ -277,109 +220,117 @@ function BaseDaComissao() {
   );
 }
 
-// ─── As duas vias ──────────────────────────────────────────────────────
+// ─── 2/3. As duas rotas, com o «OU» ao meio ────────────────────────────
 
-function DuasFormasDeSubir({ p, estado }: { p: Progressao; estado: EstadoProgressao }) {
-  if (p.noTopo) return null;
-  const proximo = p.proximo!;
-  const preco = precoDeDesbloqueio(proximo.nivel, estado.cartoesConcluidos);
+/**
+ * A imagem põe o «OU» VERTICAL, entre os dois cartões, discreto mas
+ * inevitável. É o que a §77.3 pede, e é o que impede a leitura de que
+ * pagar é o caminho e o mérito é a nota de rodapé.
+ *
+ * O verde da marca fica do lado do MÉRITO. A compra usa lilás — não é
+ * decoração: no design system o verde significa ação e marca, e pôr o
+ * botão de pagar em verde gigante ao lado de texto secundário era
+ * exatamente o dark pattern que a §77.3 nomeia.
+ */
+function DuasRotas({ v, estado }: { v: VistaProgressao; estado: EstadoProgressao }) {
+  if (v.noTopo || !v.proximo) return null;
+  const proximo = v.proximo;
+  const sim = v.simulacaoMelhorDesconto;
 
   return (
     <section>
       <h2 className="font-display text-xl text-ink">
-        Duas formas de subir para {comissaoLegivel(proximo.comissaoPct)}
+        Duas formas de subir para {formatarComissao(proximo.comissaoBps)}
       </h2>
       <p className="mt-1 text-sm text-stone-500">
         As duas chegam ao mesmo patamar. A primeira é a que a plataforma quer premiar.
       </p>
 
-      {/* No telemóvel empilham, com o mérito em cima. Não é só a ordem do
-          DOM: é a ordem de leitura, e é deliberada. */}
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        {/* ── Por mérito ── */}
-        <div className="flex flex-col rounded-4xl border border-brand/25 bg-white p-5 shadow-card dark:border-brand/25">
+      <div className="mt-4 grid items-stretch gap-3 lg:grid-cols-[1fr_auto_1fr]">
+        {/* ── Mérito (verde da marca) ── */}
+        <div className="flex flex-col rounded-4xl border border-brand/30 bg-white p-5 shadow-card dark:border-brand/25">
           <p className="flex items-center gap-2 text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-brand-dark dark:text-brand-mint">
-            <Star size={13} aria-hidden /> Ganhar por mérito
+            <Star size={13} aria-hidden /> Conquistar por mérito
           </p>
           <p className="mt-2 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
-            Cada cliente elegível e cada serviço concluído aproximam-te do próximo patamar.
+            Cada serviço concluído e cada cliente novo aproximam-te do próximo patamar.
           </p>
 
           <dl className="mt-4 space-y-3 text-sm">
-            <ProgressoLinha
-              rotulo="XP"
-              feito={p.xp}
-              alvo={proximo.xpNecessario}
-              fracao={p.fracaoDoDegrau}
-            />
-            <ProgressoLinha
-              rotulo="Clientes elegíveis"
-              feito={p.clientesDoDegrau.feitos}
-              alvo={p.clientesDoDegrau.precisos}
-              fracao={
-                p.clientesDoDegrau.precisos === 0
-                  ? 1
-                  : p.clientesDoDegrau.feitos / p.clientesDoDegrau.precisos
-              }
-            />
-
-            {/* O mesmo resumo que a coluna do desbloqueio dá em euros: o
-                que se recebe ao chegar lá. Sem ele, a via do mérito
-                mostrava progresso e a via paga mostrava resultado — e a
-                comparação que o ecrã pede ficava desequilibrada. */}
+            <Barra rotulo="XP" feito={v.xp} alvo={proximo.xpMinimo} fracao={v.progressoNoIntervalo} />
+            {proximo.clientesMinimo > 0 && (
+              <Barra
+                rotulo="Clientes elegíveis"
+                feito={estado.clientesElegiveis}
+                alvo={proximo.clientesMinimo}
+                fracao={estado.clientesElegiveis / Math.max(1, proximo.clientesMinimo)}
+              />
+            )}
             <div className="flex items-baseline justify-between gap-3 border-t border-stone-100 pt-3 dark:border-stone-800">
               <dt className="font-semibold text-ink">Comissão ao atingir</dt>
               <dd className="font-display text-xl tabular-nums text-brand-dark dark:text-brand-mint">
-                {comissaoLegivel(proximo.comissaoPct)}
+                {formatarComissao(proximo.comissaoBps)}
               </dd>
             </div>
           </dl>
 
-          <p className="mt-4 flex items-start gap-2 border-t border-stone-100 pt-3.5 text-xs leading-relaxed text-stone-500 dark:border-stone-800">
+          <ul className="mt-4 space-y-1 border-t border-stone-100 pt-3.5 text-xs text-stone-500 dark:border-stone-800">
+            <li>Serviço concluído — <strong className="tabular-nums">+{XP_POR_EVENTO.servicoElegivel} XP</strong></li>
+            <li>Primeiro serviço de um cliente novo — <strong className="tabular-nums">+{XP_POR_EVENTO.primeiroServicoDeNovoCliente} XP</strong></li>
+            <li>Ciclo de fidelidade concluído — <strong className="tabular-nums">+{XP_POR_EVENTO.cartaoElegivelConcluido} XP</strong> e 1 crédito</li>
+          </ul>
+
+          <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-stone-500">
             <Info size={13} className="mt-0.5 shrink-0" aria-hidden />
             {COPY_ELEGIBILIDADE}
           </p>
         </div>
 
-        {/* ── Por desbloqueio ── */}
-        <div className="flex flex-col rounded-4xl border border-stone-200 bg-white p-5 shadow-card dark:border-stone-800">
-          <p className="flex items-center gap-2 text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-stone-400">
-            <Lock size={13} aria-hidden /> Desbloquear
+        {/* ── O «OU», vertical e ao meio ── */}
+        <div className="flex items-center justify-center lg:flex-col">
+          <span aria-hidden className="hidden h-full w-px bg-stone-200 lg:block dark:bg-stone-800" />
+          <span className="my-2 rounded-full border border-stone-200 bg-white px-2.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-wider text-stone-400 dark:border-stone-700 dark:bg-stone-900">
+            ou
+          </span>
+          <span aria-hidden className="hidden h-full w-px bg-stone-200 lg:block dark:bg-stone-800" />
+        </div>
+
+        {/* ── Desbloqueio (lilás, nunca verde) ── */}
+        <div className="flex flex-col rounded-4xl border border-categoria-lilas-border bg-white p-5 shadow-card dark:border-violet-500/25">
+          <p className="flex items-center gap-2 text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-categoria-lilas-text dark:text-violet-300">
+            <Lock size={13} aria-hidden /> Desbloquear agora
           </p>
           <p className="mt-2 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
-            Passa ao patamar {proximo.nivel} de imediato, com{" "}
-            {comissaoLegivel(proximo.comissaoPct)} de comissão.
+            Passa ao patamar {proximo.ordem} de imediato, com{" "}
+            {formatarComissao(proximo.comissaoBps)} de comissão.
           </p>
 
           <dl className="mt-4 space-y-2 text-sm">
             <div className="flex items-baseline justify-between gap-3">
               <dt className="text-stone-500">Preço base</dt>
               <dd className="tabular-nums text-stone-700 dark:text-stone-200">
-                {eurosDeCents(preco.baseCents)}
+                {formatarEuros(sim?.baseCents ?? proximo.precoDesbloqueioCents ?? 0)}
               </dd>
             </div>
-            {preco.descontoPct > 0 && (
+            {sim && sim.descontoPct > 0 && (
               <div className="flex items-baseline justify-between gap-3">
                 <dt className="text-stone-500">
-                  Desconto de fidelidade ({preco.descontoPct}%)
+                  Créditos de fidelidade ({sim.creditosUsados} · {sim.descontoPct}%)
                 </dt>
-                <dd className="tabular-nums font-medium text-brand-dark dark:text-brand-mint">
-                  −{eurosDeCents(preco.descontoCents)}
+                <dd className="tabular-nums font-medium text-categoria-lilas-text dark:text-violet-300">
+                  −{formatarEuros(sim.baseCents - sim.finalCents)}
                 </dd>
               </div>
             )}
             <div className="flex items-baseline justify-between gap-3 border-t border-stone-100 pt-2 dark:border-stone-800">
               <dt className="font-semibold text-ink">Preço final</dt>
               <dd className="font-display text-xl tabular-nums text-ink">
-                {eurosDeCents(preco.finalCents)}
+                {formatarEuros(sim?.finalCents ?? proximo.precoDesbloqueioCents ?? 0)}
               </dd>
             </div>
           </dl>
 
-          {/* A cobrança não está ligada, e é aqui que isso se diz — no
-              sítio onde a pessoa ia clicar. Um botão desativado sem
-              explicação lê-se como uma avaria. */}
-          {DESBLOQUEIO_PAGO_ATIVO ? null : (
+          {!DESBLOQUEIO_PAGO_ATIVO && (
             <p
               role="status"
               className="mt-4 flex items-start gap-2 rounded-2xl border border-alert-border bg-alert-bg px-3.5 py-3 text-xs leading-relaxed text-alert-text"
@@ -394,13 +345,10 @@ function DuasFormasDeSubir({ p, estado }: { p: Progressao; estado: EstadoProgres
               O que o desbloqueio não compra
             </p>
             <ul className="mt-2 space-y-1.5">
-              {DESBLOQUEIO_NAO_COMPRA.map((linha) => (
-                <li key={linha} className="flex items-start gap-2 text-xs leading-relaxed text-stone-500">
-                  <span
-                    aria-hidden
-                    className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-stone-300 dark:bg-stone-600"
-                  />
-                  {linha}
+              {DESBLOQUEIO_NAO_COMPRA.map((l) => (
+                <li key={l} className="flex items-start gap-2 text-xs leading-relaxed text-stone-500">
+                  <span aria-hidden className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-stone-300 dark:bg-stone-600" />
+                  {l}
                 </li>
               ))}
             </ul>
@@ -411,14 +359,9 @@ function DuasFormasDeSubir({ p, estado }: { p: Progressao; estado: EstadoProgres
   );
 }
 
-function ProgressoLinha({
+function Barra({
   rotulo, feito, alvo, fracao,
-}: {
-  rotulo: string;
-  feito: number;
-  alvo: number;
-  fracao: number;
-}) {
+}: { rotulo: string; feito: number; alvo: number; fracao: number }) {
   const pct = Math.max(0, Math.min(100, Math.round(fracao * 100)));
   return (
     <div>
@@ -430,67 +373,60 @@ function ProgressoLinha({
       </div>
       <div
         className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800"
-        role="progressbar"
-        aria-valuenow={feito}
-        aria-valuemin={0}
-        aria-valuemax={alvo}
+        role="progressbar" aria-valuenow={feito} aria-valuemin={0} aria-valuemax={alvo}
         aria-label={rotulo}
       >
-        <div
-          className="h-full rounded-full bg-brand transition-[width] duration-500"
-          style={{ width: `${pct}%` }}
-        />
+        <div className="h-full rounded-full bg-brand transition-[width] duration-500" style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
 }
 
-// ─── A escada ──────────────────────────────────────────────────────────
+// ─── 4. A jornada: quatro estados, não seis cartões iguais ─────────────
 
-function Jornada({ p }: { p: Progressao }) {
+function Jornada({ v }: { v: VistaProgressao }) {
   return (
     <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6 dark:border-stone-800">
       <h2 className="font-display text-xl text-ink">A tua jornada de progressão</h2>
+      {/* §164: a comissão DESCE. «Cada patamar aumenta a tua comissão» está
+          proibido pelo nome — diria o contrário do que o ecrã mostra. */}
       <p className="mt-1 text-sm text-stone-500">
-        Cada patamar baixa a comissão em um ponto. O preço é o do desbloqueio imediato,
-        se o quiseres usar.
+        {copyJornadaProgressao("reducao")} O preço é o do desbloqueio imediato, se o quiseres usar.
       </p>
 
       <ol className={`${styles.escada} mt-4`}>
-        {PATAMARES.map((patamar) => {
-          const alcancado = patamar.nivel <= p.patamar.nivel;
-          const atual = patamar.nivel === p.patamar.nivel;
-          const proximo = patamar.nivel === (p.proximo?.nivel ?? -1);
+        {PATAMARES.map((p) => {
+          const conquistado = p.ordem < v.efetivo;
+          const atual = p.ordem === v.efetivo;
+          const proximo = p.ordem === v.efetivo + 1;
           return (
             <li
-              key={patamar.nivel}
+              key={p.ordem}
               aria-current={atual ? "step" : undefined}
-              className={`${styles.degrau} ${atual ? styles.degrauAtual : ""} ${
-                proximo ? styles.degrauProximo : ""
-              }`}
+              className={`${styles.degrau} ${atual ? styles.degrauAtual : ""} ${proximo ? styles.degrauProximo : ""}`}
             >
               <span
                 className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold tabular-nums ${
-                  alcancado
+                  conquistado
                     ? "bg-brand text-white"
-                    : "bg-stone-100 text-stone-400 dark:bg-stone-800 dark:text-stone-500"
+                    : atual
+                      ? "bg-brand-deep text-white"
+                      : proximo
+                        ? "border-2 border-alert-text/45 text-alert-text dark:border-amber-400/40 dark:text-amber-300"
+                        : "bg-stone-100 text-stone-400 dark:bg-stone-800 dark:text-stone-500"
                 }`}
               >
-                {alcancado && !atual ? <Check size={13} aria-hidden /> : patamar.nivel}
+                {conquistado ? <Check size={13} aria-hidden /> : p.ordem}
               </span>
               <span className="font-display text-lg leading-none text-ink tabular-nums">
-                {patamar.comissaoPct}%
+                {formatarComissao(p.comissaoBps)}
               </span>
-              <span className="text-[0.6875rem] font-medium text-stone-500">
-                Patamar {patamar.nivel}
-              </span>
+              <span className="text-[0.6875rem] font-medium text-stone-500">{p.titulo}</span>
               {atual ? (
                 <Badge tone="brand">Atual</Badge>
               ) : (
                 <span className="text-[0.6875rem] tabular-nums text-stone-400">
-                  {patamar.precoDesbloqueioCents === 0
-                    ? "Grátis"
-                    : eurosDeCents(patamar.precoDesbloqueioCents)}
+                  {p.precoDesbloqueioCents === null ? "Grátis" : formatarEuros(p.precoDesbloqueioCents)}
                 </span>
               )}
             </li>
@@ -501,54 +437,44 @@ function Jornada({ p }: { p: Progressao }) {
   );
 }
 
-// ─── Desconto de fidelidade ────────────────────────────────────────────
+// ─── 5. Créditos de fidelidade (não «cartões concluídos») ──────────────
 
-function DescontoDeFidelidade({ estado }: { estado: EstadoProgressao }) {
-  const atual = descontoDeFidelidadePct(estado.cartoesConcluidos);
-  const bonus = proximoBonusDeFidelidade(estado.cartoesConcluidos);
+function CreditosDeFidelidade({ estado }: { estado: EstadoProgressao }) {
+  const atual = descontoPorCreditos(estado.creditosDisponiveis);
+  const seguinte = MARCOS_CREDITO.find((m) => m.creditos > estado.creditosDisponiveis);
 
   return (
     <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6 dark:border-stone-800">
       <h2 className="flex items-center gap-2 font-display text-lg text-ink">
         <Gift size={17} className="shrink-0 text-brand-dark dark:text-brand-mint" aria-hidden />
-        Desconto de fidelidade
+        Créditos de fidelidade
       </h2>
       <p className="mt-1 text-sm text-stone-500">
-        Quantos mais cartões de fidelidade os teus clientes concluírem, maior o desconto
-        no desbloqueio de patamares.
+        Cada ciclo de fidelidade concluído dá um crédito. Os créditos descontam o
+        desbloqueio de patamares.
       </p>
 
       <ul className="mt-4 space-y-1.5">
-        {ESCALA_FIDELIDADE.map((degrau) => {
-          const ativo = estado.cartoesConcluidos >= degrau.cartoes;
+        {descricaoDescontoFidelidade().map((m, i) => {
+          const marco = MARCOS_CREDITO.filter((x) => x.creditos > 0)[i]!;
+          const ativo = estado.creditosDisponiveis >= marco.creditos;
           return (
             <li
-              key={degrau.cartoes}
+              key={m.rotulo}
               className={`flex items-center justify-between gap-3 rounded-2xl px-3.5 py-2.5 text-sm ${
-                ativo
-                  ? "bg-brand-light/60 dark:bg-brand/10"
-                  : "bg-cream/70 dark:bg-white/[0.03]"
+                ativo ? "bg-brand-light/60 dark:bg-brand/10" : "bg-cream/70 dark:bg-white/[0.03]"
               }`}
             >
               <span className="flex min-w-0 items-center gap-2 text-stone-600 dark:text-stone-300">
                 {ativo ? (
                   <Check size={14} className="shrink-0 text-brand-dark dark:text-brand-mint" aria-hidden />
                 ) : (
-                  <span
-                    aria-hidden
-                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-stone-300 dark:bg-stone-600"
-                  />
+                  <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-stone-300 dark:bg-stone-600" />
                 )}
-                <span className="truncate">
-                  {degrau.cartoes} {degrau.cartoes === 1 ? "cartão concluído" : "cartões concluídos"}
-                </span>
+                <span className="truncate">{m.rotulo}</span>
               </span>
-              <span
-                className={`shrink-0 tabular-nums font-semibold ${
-                  ativo ? "text-brand-dark dark:text-brand-mint" : "text-stone-400"
-                }`}
-              >
-                {degrau.descontoPct}%
+              <span className={`shrink-0 tabular-nums font-semibold ${ativo ? "text-brand-dark dark:text-brand-mint" : "text-stone-400"}`}>
+                {m.desconto}
               </span>
             </li>
           );
@@ -558,48 +484,61 @@ function DescontoDeFidelidade({ estado }: { estado: EstadoProgressao }) {
       <div className="mt-4 border-t border-stone-100 pt-3.5 dark:border-stone-800">
         <p className="text-sm text-stone-600 dark:text-stone-300">
           Tens{" "}
-          <strong className="font-semibold text-ink tabular-nums">
-            {estado.cartoesConcluidos}
-          </strong>{" "}
-          {estado.cartoesConcluidos === 1 ? "cartão concluído" : "cartões concluídos"}
+          <strong className="font-semibold text-ink tabular-nums">{estado.creditosDisponiveis}</strong>{" "}
+          {estado.creditosDisponiveis === 1 ? "crédito disponível" : "créditos disponíveis"}
           {atual > 0 ? (
-            <>
-              {" "}— o desconto em vigor é de{" "}
-              <strong className="font-semibold text-brand-dark dark:text-brand-mint tabular-nums">
-                {atual}%
-              </strong>
-              .
+            <> — dão{" "}
+              <strong className="font-semibold text-brand-dark dark:text-brand-mint tabular-nums">{atual}%</strong>{" "}
+              de desconto.
             </>
           ) : (
             <> — ainda sem desconto.</>
           )}
         </p>
-        {bonus && (
+        {estado.creditosReservados > 0 && (
           <p className="mt-1.5 text-sm text-stone-500">
-            {bonus.cartoesEmFalta === 1
-              ? "Falta 1 cartão"
-              : `Faltam ${bonus.cartoesEmFalta} cartões`}{" "}
-            para o desconto subir para {bonus.descontoPct}%.
+            <strong className="tabular-nums">{estado.creditosReservados}</strong> reservados
+            num pagamento a decorrer.
+          </p>
+        )}
+        {seguinte && (
+          <p className="mt-1.5 text-sm text-stone-500">
+            {seguinte.creditos - estado.creditosDisponiveis === 1
+              ? "Falta 1 crédito"
+              : `Faltam ${seguinte.creditos - estado.creditosDisponiveis} créditos`}{" "}
+            para o desconto subir para {seguinte.descontoPct}%.
           </p>
         )}
         <p className="mt-2.5 flex items-start gap-2 text-xs leading-relaxed text-stone-500">
           <Info size={13} className="mt-0.5 shrink-0" aria-hidden />
-          {COPY_DESCONTO_UNICO}
+          Os marcos não somam entre si, e os créditos são consumidos quando desbloqueias
+          um patamar. Podes guardá-los para um patamar mais alto.
         </p>
       </div>
     </section>
   );
 }
 
-// ─── O registo de XP ───────────────────────────────────────────────────
+// ─── Atividade elegível ────────────────────────────────────────────────
+
+const ROTULO_DO_EVENTO: Record<TipoEventoXP, string> = {
+  service_completed: "Serviço concluído",
+  new_client_first_service: "Primeiro serviço de um cliente novo",
+  loyalty_cycle_completed: "Ciclo de fidelidade concluído",
+  admin_adjustment: "Ajuste da administração",
+  reversal: "Reversão",
+};
 
 function AtividadeElegivel({
-  eventos, nomePorVinculo, painel,
+  eventos, painel,
 }: {
   eventos: EventoXPLido[];
-  nomePorVinculo: Map<string, string>;
-  painel: { href: (destino: string) => string };
+  painel: { href: (d: string) => string };
 }) {
+  // Eventos de sombra medem sem contar (rollout §116). Mostrá-los ao lado
+  // dos que contam daria um total que não bate com o XP em vigor.
+  const reais = eventos.filter((e) => !e.shadow);
+
   return (
     <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6 dark:border-stone-800">
       <h2 className="flex items-center gap-2 font-display text-lg text-ink">
@@ -607,11 +546,11 @@ function AtividadeElegivel({
         Atividade elegível recente
       </h2>
 
-      {eventos.length === 0 ? (
+      {reais.length === 0 ? (
         <div className="mt-4 rounded-2xl bg-cream/70 p-4 text-center dark:bg-white/[0.03]">
           <p className="text-sm text-stone-500">
-            Ainda não há atividade elegível. O XP aparece aqui quando um cliente chega
-            pelo ReciboCerto ou quando concluis um serviço.
+            Ainda não há atividade elegível. O XP aparece aqui quando concluis um serviço
+            ou quando um cliente novo chega pelo Recibo Certo.
           </p>
           <Link
             href={painel.href("/contabilista/clientes")}
@@ -622,27 +561,23 @@ function AtividadeElegivel({
         </div>
       ) : (
         <ul className="mt-4 divide-y divide-stone-100 dark:divide-stone-800">
-          {eventos.map((e) => {
-            const quem = nomePorVinculo.get(e.origemId);
-            return (
-              <li key={e.id} className="flex items-start justify-between gap-3 py-2.5">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-stone-700 dark:text-stone-200">
-                    {ROTULO_DO_EVENTO[e.evento] ?? "Atividade elegível"}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-stone-400">
-                    {/* O nome só aparece quando o vínculo ainda existe. Um
-                        acompanhamento terminado perde o nome por desenho
-                        (migração 043), e inventar um seria contrariá-la. */}
-                    {quem ? `${quem} · ${quando(e.criadoEm)}` : quando(e.criadoEm)}
-                  </p>
-                </div>
-                <span className="shrink-0 tabular-nums text-sm font-semibold text-brand-dark dark:text-brand-mint">
-                  +{e.xp} XP
-                </span>
-              </li>
-            );
-          })}
+          {reais.map((e) => (
+            <li key={e.id} className="flex items-start justify-between gap-3 py-2.5">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-stone-700 dark:text-stone-200">
+                  {ROTULO_DO_EVENTO[e.tipo] ?? "Atividade elegível"}
+                </p>
+                <p className="mt-0.5 truncate text-xs text-stone-400">{quando(e.criadoEm)}</p>
+              </div>
+              <span
+                className={`shrink-0 tabular-nums text-sm font-semibold ${
+                  e.xp < 0 ? "text-clay-text" : "text-brand-dark dark:text-brand-mint"
+                }`}
+              >
+                {e.xp > 0 ? "+" : ""}{e.xp} XP
+              </span>
+            </li>
+          ))}
         </ul>
       )}
 
@@ -654,7 +589,6 @@ function AtividadeElegivel({
   );
 }
 
-/** «Hoje», «Ontem», ou a data curta. O relógio é de quem está a ver. */
 function quando(iso: string): string {
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return "";
@@ -662,8 +596,7 @@ function quando(iso: string): string {
   const hoje = new Date();
   const dias = Math.floor(
     (new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).getTime() -
-      new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) /
-      86_400_000
+      new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) / 86_400_000,
   );
   if (dias <= 0) return "Hoje";
   if (dias === 1) return "Ontem";

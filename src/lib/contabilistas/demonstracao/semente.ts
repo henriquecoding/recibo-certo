@@ -27,7 +27,9 @@ import type {
 } from "../casos";
 import type { Mensagem, Notificacao } from "../conversa";
 import type { TipoConsulta } from "../tipos-consulta";
-import type { EstadoProgressao, EventoXP } from "../progressao";
+import type { EstadoProgressao } from "../progressao/catalogo";
+import type { TipoEventoXP } from "../dados";
+import type { RegraLida } from "../fidelidade/dados";
 import { VISTAS_POR_OMISSAO, layoutDaOmissao } from "../dashboard/omissao";
 import type { WorkspaceView } from "../dashboard/tipos";
 
@@ -84,6 +86,7 @@ export interface EstadoDemonstracao {
   progressao: EstadoProgressao;
   eventosXP: EventoXPDemo[];
   vistas: WorkspaceView[];
+  regrasFidelidade: RegraLida[];
 }
 
 /**
@@ -98,10 +101,9 @@ export interface EstadoDemonstracao {
  */
 export interface EventoXPDemo {
   id: string;
-  evento: EventoXP;
+  tipo: TipoEventoXP;
   xp: number;
-  origemTipo: string;
-  origemId: string;
+  shadow: boolean;
   criadoEm: string;
 }
 
@@ -901,62 +903,94 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
 
   // ── Progressão ───────────────────────────────────────────────────────
   //
-  // O estado da referência visual: patamar 3 (8% de comissão), a 60 XP do
-  // patamar 4. Cinco cartões de fidelidade fechados dão 15% de desconto no
-  // desbloqueio, que é o que faz os 39,99 € do patamar 4 chegarem aos
-  // 33,99 € do painel de preço — ao cêntimo.
+  // VALORES OFICIAIS (§164), não os do mockup. Com 540 XP a pessoa está no
+  // patamar 3 «Crescimento» (500 XP) e faltam-lhe 360 para o 4
+  // «Consolidado» (900 XP) — não os 60 que a referência C escreve, porque
+  // a referência partia de uma tabela de thresholds diferente.
   //
-  // Os números NÃO são escolhidos para ficarem bonitos: são escolhidos
-  // para o ecrã da demonstração mostrar exatamente as contas da
-  // referência, e para quem abrir o painel poder confirmar que o cálculo
-  // é o mesmo do painel real.
+  // Os 5 créditos disponíveis dão 15% de desconto, e é isso que faz os
+  // 39,99 € do patamar 4 chegarem aos 33,99 € — o painel de preço da
+  // referência continua exato ao cêntimo com os valores oficiais.
+  //
+  // `patamarComprado: 1` significa «nunca comprou»: o patamar de partida
+  // não se compra, e é por isso que o campo é 1 e não 0 nem nulo.
   const progressao: EstadoProgressao = {
     xp: 540,
     clientesElegiveis: 5,
-    patamarComprado: null,
-    cartoesConcluidos: 5,
+    creditosDisponiveis: 5,
+    creditosReservados: 0,
+    patamarConquistado: 3,
+    patamarComprado: 1,
   };
 
+  // Os tipos e os valores são os do ledger oficial: +10 por serviço, +25
+  // pelo primeiro serviço de um cliente novo, +100 por ciclo de fidelidade
+  // concluído.
   const eventosXP: EventoXPDemo[] = [
     {
       id: "19000000-0000-4000-8000-000000001501",
-      evento: "cliente_elegivel",
-      xp: 20,
-      origemTipo: "vinculo",
-      origemId: VINCULO.tomas,
+      tipo: "new_client_first_service",
+      xp: 25,
+      shadow: false,
       criadoEm: horasAtras(agora, 5),
     },
     {
       id: "19000000-0000-4000-8000-000000001502",
-      evento: "cartao_fidelidade_concluido",
+      tipo: "loyalty_cycle_completed",
       xp: 100,
-      origemTipo: "cartao",
-      origemId: "cc000000-0000-4000-8000-000000000201",
+      shadow: false,
       criadoEm: horasAtras(agora, 29),
     },
     {
       id: "19000000-0000-4000-8000-000000001503",
-      evento: "cliente_elegivel",
-      xp: 20,
-      origemTipo: "vinculo",
-      origemId: VINCULO.sofia,
+      tipo: "new_client_first_service",
+      xp: 25,
+      shadow: false,
       criadoEm: horasAtras(agora, 78),
     },
     {
       id: "19000000-0000-4000-8000-000000001504",
-      evento: "servico_concluido",
-      xp: 15,
-      origemTipo: "agendamento",
-      origemId: "bb000000-0000-4000-8000-000000000304",
+      tipo: "service_completed",
+      xp: 10,
+      shadow: false,
       criadoEm: horasAtras(agora, 122),
     },
     {
       id: "19000000-0000-4000-8000-000000001505",
-      evento: "servico_concluido",
-      xp: 15,
-      origemTipo: "agendamento",
-      origemId: "bb000000-0000-4000-8000-000000000305",
+      tipo: "service_completed",
+      xp: 10,
+      shadow: false,
       criadoEm: horasAtras(agora, 170),
+    },
+  ];
+
+  // ── Regras de fidelidade, versionadas ──────────────────────────────
+  //
+  // Duas versões, para o separador do histórico ter história: a v1 com
+  // meta 5 e 10%, já substituída, e a v2 em vigor com 15%. Os cartões que
+  // nasceram na v1 mantêm a promessa da v1 — é o ponto da versionagem.
+  const regrasFidelidade: RegraLida[] = [
+    {
+      id: "1a000000-0000-4000-8000-000000001601",
+      versao: 1,
+      meta: 5,
+      descontoPct: 10,
+      exigePagamento: true,
+      ativa: false,
+      validadeDias: 365,
+      publicadaEm: instante(agora, -300, 11),
+      substituidaEm: instante(agora, -90, 16),
+    },
+    {
+      id: "1a000000-0000-4000-8000-000000001602",
+      versao: 2,
+      meta: 5,
+      descontoPct: 15,
+      exigePagamento: true,
+      ativa: true,
+      validadeDias: 365,
+      publicadaEm: instante(agora, -90, 16),
+      substituidaEm: null,
     },
   ];
 
@@ -1003,5 +1037,6 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
     progressao,
     eventosXP,
     vistas,
+    regrasFidelidade,
   };
 }

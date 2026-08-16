@@ -16,6 +16,20 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.61.0",
+    data: "2026-08-16",
+    titulo: "Fidelidade com regras versionadas, e a progressão com os valores certos",
+    itens: [
+      "A fidelidade passa a ter regras versionadas: quando mudas a meta ou a percentagem, publicas uma versão nova em vez de alterar a antiga. Quem já tem um cartão a meio mantém exatamente a promessa com que começou, e o ecrã diz-te quantos clientes são antes de deixares publicar.",
+      "O modelo está dito sem ambiguidade em todo o ecrã: completas os serviços do cartão e recebes o desconto no fim, para usar numa consulta. O desconto incide sobre o preço real dessa consulta, e vale uma única vez.",
+      "O preço da consulta passa a ser apresentado como valor sugerido, e não como preço universal. O valor real é o que defines em cada consulta ao concluí-la — é sobre esse que a percentagem incide.",
+      "A fidelidade ganha quatro separadores: regras e cartão, cartões em curso, benefícios emitidos e o histórico de todas as versões que publicaste. Nenhuma versão é apagada, porque os cartões que nasceram com ela continuam a apontar-lhe.",
+      "Na progressão, os patamares, os XP e os preços passam a ser os oficiais: 0, 200, 500, 900, 1500 e 2300 XP, e 14,99 €, 24,99 €, 39,99 €, 64,99 € e 99,99 €. Um serviço concluído dá 10 XP, o primeiro serviço de um cliente novo dá 25, e um ciclo de fidelidade concluído dá 100 XP e um crédito.",
+      "Os descontos no desbloqueio passam a contar créditos disponíveis, e não cartões concluídos. Os créditos gastam-se ao comprar, e mostrar cartões concluídos prometia um desconto que o saldo podia já não suportar.",
+      "A jornada dos patamares diz que cada patamar reduz a comissão do Recibo Certo — porque é o que acontece. As duas formas de subir ficam lado a lado, com o mérito primeiro e a compra sem destaque superior.",
+    ],
+  },
+  {
     version: "2.60.0",
     data: "2026-08-15",
     titulo: "O painel do contabilista passa a ser um espaço que se compõe",

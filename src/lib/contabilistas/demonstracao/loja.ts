@@ -29,7 +29,8 @@ import type { NovoTipoConsulta, TipoConsulta } from "../tipos-consulta";
 import type {
   Agendamento, Contabilista, EstadoAgendamento, Partilha, Vinculo,
 } from "../tipos";
-import type { EstadoProgressao } from "../progressao";
+import type { EstadoProgressao } from "../progressao/catalogo";
+import type { ImpactoDaRegra, RegraLida, ResultadoPublicacao } from "../fidelidade/dados";
 import { validarLayout } from "../dashboard/layout";
 import { erroQueImpedeGravar } from "../dashboard/validacao";
 import type { WorkspaceLayoutV2, WorkspaceView } from "../dashboard/tipos";
@@ -741,6 +742,77 @@ export async function listarEventosXP(limite = 8): Promise<EventoXPDemo[]> {
       .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
       .slice(0, Math.max(1, limite))
   );
+}
+
+// ─── Fidelidade V2: regras versionadas ─────────────────────────────────
+//
+// A imutabilidade é a mesma do painel real: publicar não é editar. Uma
+// regra publicada fecha-se (`substituidaEm`) e nasce outra com versão
+// seguinte — e republicar exatamente o mesmo NÃO cria versão nova, como a
+// RPC também não cria.
+
+export async function regraCorrente(): Promise<RegraLida | null> {
+  return copiar(bd().regrasFidelidade.find((r) => r.substituidaEm === null) ?? null);
+}
+
+export async function historicoDeRegras(): Promise<RegraLida[]> {
+  return copiar([...bd().regrasFidelidade].sort((a, b) => b.versao - a.versao));
+}
+
+export async function impactoDaRegraNova(): Promise<ImpactoDaRegra> {
+  const d = bd();
+  const comCartao = new Set(d.cartoes.filter((c) => !c.completo).map((c) => c.clienteId));
+  const comBeneficio = new Set(
+    d.cupoes.filter((c) => c.estado === "disponivel").map((c) => c.clienteId),
+  );
+  return {
+    cartoesEmCurso: d.cartoes.filter((c) => !c.completo).length,
+    beneficiosPendentes: d.cupoes.filter((c) => c.estado === "disponivel").length,
+    clientesSemCiclo: d.vinculos.filter(
+      (v) => v.estado === "ativo" && !comCartao.has(v.clienteId) && !comBeneficio.has(v.clienteId),
+    ).length,
+  };
+}
+
+export async function publicarRegra(p: {
+  meta: number;
+  descontoPct: number;
+  ativa: boolean;
+  exigePagamento: boolean;
+}): Promise<ResultadoPublicacao> {
+  const d = bd();
+  if (p.meta < 3 || p.meta > 12) return { ok: false, motivo: "meta_fora_de_limites" };
+  if (p.descontoPct < 10 || p.descontoPct > 50) return { ok: false, motivo: "desconto_fora_de_limites" };
+
+  const corrente = d.regrasFidelidade.find((r) => r.substituidaEm === null);
+  if (
+    corrente &&
+    corrente.meta === p.meta &&
+    corrente.descontoPct === p.descontoPct &&
+    corrente.exigePagamento === p.exigePagamento &&
+    corrente.ativa === p.ativa
+  ) {
+    return { ok: true, inalterada: true, versao: corrente.versao, regraId: corrente.id };
+  }
+
+  if (corrente) {
+    corrente.substituidaEm = agora();
+    corrente.ativa = false;
+  }
+  const versao = Math.max(0, ...d.regrasFidelidade.map((r) => r.versao)) + 1;
+  const nova: RegraLida = {
+    id: novoId(),
+    versao,
+    meta: p.meta,
+    descontoPct: p.descontoPct,
+    exigePagamento: p.exigePagamento,
+    ativa: p.ativa,
+    validadeDias: 365,
+    publicadaEm: agora(),
+    substituidaEm: null,
+  };
+  d.regrasFidelidade.push(nova);
+  return { ok: true, versao, regraId: nova.id };
 }
 
 // ─── Vistas do painel modular ──────────────────────────────────────────
