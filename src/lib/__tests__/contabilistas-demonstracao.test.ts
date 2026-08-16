@@ -377,7 +377,6 @@ describe("a loja de demonstração aplica as regras do servidor", () => {
     const depois = (await loja.meusClientes()).find((v) => v.id === ativo!.id);
     expect(depois?.estado).toBe("terminado");
     expect(depois?.nomeCliente).toBeNull();
-    expect(depois?.emailCliente).toBeNull();
   });
 
   it("validar um cupão gasta-o, e não há como o espreitar sem o gastar", async () => {

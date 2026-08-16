@@ -126,11 +126,20 @@ export interface Vinculo {
    * mesma pessoa, e terminar o acompanhamento apaga-o (migração 043).
    */
   nomeCliente: string | null;
-  /** Email que o cliente decidiu partilhar com este contabilista. */
-  emailCliente: string | null;
   /** Recado que o cliente escreveu ao pedir o vínculo. */
   mensagem: string | null;
 }
+
+// Aqui esteve `emailCliente`, e a sua ausência é uma decisão, não um
+// esquecimento: o vínculo não guarda nenhum canal de contacto do cliente,
+// e a coluna deixou de existir na base de dados com a migração 054.
+//
+// O motivo não é retenção artificial. É que tudo o que a plataforma promete
+// — a partilha que se revoga, o ficheiro que fecha quando o acompanhamento
+// acaba, o registo do que foi pedido e quando — vale zero no instante em
+// que a conversa muda para um canal onde nada disso existe. Quem
+// acrescentar um campo destes outra vez parte a promessa inteira, e o teste
+// `13-fronteira-de-contacto.sql` recusa qualquer coluna com nome parecido.
 
 export interface Agendamento {
   id: string;

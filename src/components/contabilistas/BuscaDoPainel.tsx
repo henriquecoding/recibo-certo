@@ -113,7 +113,7 @@ export default function BuscaDoPainel({
         id: `cliente-${v.id}`,
         tipo: "cliente",
         titulo: tratamentoDoCliente(v),
-        aliases: [v.emailCliente ?? "", v.mensagem ?? ""].filter(Boolean),
+        aliases: [v.mensagem ?? ""].filter(Boolean),
         descricao: porResponder ? "Pedido por responder" : "Acompanhamento ativo",
         href: painel.href("/contabilista/clientes"),
         // Quem está à espera de resposta vale mais do que quem já entrou.

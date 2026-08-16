@@ -139,7 +139,6 @@ export async function checkoutDaConsulta(params: {
   comissaoCents: number;
   descricao: string;
   nomeContabilista: string;
-  emailCliente?: string | null;
 }): Promise<Stripe.Checkout.Session> {
   return getStripe().checkout.sessions.create(
     {
@@ -166,7 +165,6 @@ export async function checkoutDaConsulta(params: {
           pagamento_id: params.pagamentoId,
         },
       },
-      customer_email: params.emailCliente ?? undefined,
       // O `pagamento_id` viaja nos metadados da SESSÃO e do INTENT. O
       // webhook chega por qualquer um dos dois, e depender de um só era
       // depender do evento que a Stripe decidir mandar primeiro.

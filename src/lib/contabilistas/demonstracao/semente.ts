@@ -213,7 +213,6 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       criadoEm: instante(agora, -280, 11),
       origem: "cliente",
       nomeCliente: "Inês Barata",
-      emailCliente: "ines@exemplo-demonstracao.pt",
       mensagem: null,
     },
     {
@@ -224,7 +223,6 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       criadoEm: instante(agora, -150, 9),
       origem: "cliente",
       nomeCliente: "Duarte Pinto",
-      emailCliente: "duarte@exemplo-demonstracao.pt",
       mensagem: "Passei a faturar a clientes de Espanha e não sei o que muda no IVA.",
     },
     {
@@ -235,7 +233,6 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       criadoEm: instante(agora, -62, 16),
       origem: "contabilista",
       nomeCliente: "Carolina Sequeira",
-      emailCliente: "carolina@exemplo-demonstracao.pt",
       mensagem: null,
     },
     {
@@ -248,7 +245,6 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       criadoEm: horasAtras(agora, 20),
       origem: "cliente",
       nomeCliente: null,
-      emailCliente: null,
       mensagem:
         "Abri atividade no mês passado e ainda não emiti nenhum recibo. " +
         "Preciso de perceber o que tenho de fazer e quando.",
@@ -261,7 +257,6 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       criadoEm: instante(agora, -330, 15),
       origem: "cliente",
       nomeCliente: "Sofia Mendes",
-      emailCliente: "sofia@exemplo-demonstracao.pt",
       mensagem: null,
     },
     {
@@ -273,7 +268,6 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       criadoEm: instante(agora, -500, 12),
       origem: "cliente",
       nomeCliente: null,
-      emailCliente: null,
       mensagem: null,
     },
   ];

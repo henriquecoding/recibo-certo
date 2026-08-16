@@ -154,7 +154,7 @@ export function filtrarPorTexto(
   if (!q) return [...lista];
   return lista.filter((r) =>
     normalizar(r.tratamento).includes(q) ||
-    normalizar(r.vinculo.emailCliente ?? "").includes(q)
+    normalizar(r.vinculo.mensagem ?? "").includes(q)
   );
 }
 

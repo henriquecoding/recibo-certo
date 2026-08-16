@@ -185,11 +185,11 @@ export async function decidirVinculo(
   }
 
   v.estado = regra.para;
-  // Terminar apaga o nome e o email — a migração 043 faz o mesmo, e é a
-  // diferença entre «deixei de acompanhar» e «continuo a ter os dados».
+  // Terminar apaga o nome — a migração 043 faz o mesmo, e é a diferença
+  // entre «deixei de acompanhar» e «continuo a ter os dados». Não há aqui
+  // email nenhum para apagar desde a 054: o vínculo deixou de o guardar.
   if (regra.para === "terminado") {
     v.nomeCliente = null;
-    v.emailCliente = null;
     v.mensagem = null;
   }
   return {};

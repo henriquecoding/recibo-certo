@@ -22,8 +22,14 @@ BEGIN
   EXCEPTION
     -- Só as famílias de erro que são mesmo uma recusa. Um erro de sintaxe
     -- volta a subir, senão um teste com um typo passava sozinho.
+    -- `invalid_parameter_value` (22023) é a que os gatilhos de conteúdo
+    -- levantam — o texto com código da 20260814, o contacto externo da 054.
+    -- É uma recusa pelo que os dados CONTÊM, da mesma família de um
+    -- `check_violation`, e sem ela um gatilho desses passava por «não
+    -- recusou» na suíte.
     WHEN insufficient_privilege OR check_violation OR unique_violation
-      OR exclusion_violation OR raise_exception OR foreign_key_violation THEN
+      OR exclusion_violation OR raise_exception OR foreign_key_violation
+      OR invalid_parameter_value THEN
       RAISE NOTICE '  ok  · recusado (erro): %', rotulo;
       RETURN;
   END;

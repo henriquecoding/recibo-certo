@@ -164,15 +164,6 @@ export default function FichaClientePage() {
         </Badge>}
       />
 
-      {v.emailCliente && (
-        <p className="flex items-center gap-2 text-sm text-stone-600">
-          <Mail size={15} className="shrink-0 text-stone-400" aria-hidden />
-          <a href={`mailto:${v.emailCliente}`} className="min-w-0 truncate underline underline-offset-2">
-            {v.emailCliente}
-          </a>
-        </p>
-      )}
-
       {v.mensagem && (
         <p className="rounded-2xl bg-cream px-4 py-3 text-sm leading-relaxed text-stone-700">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-400">
