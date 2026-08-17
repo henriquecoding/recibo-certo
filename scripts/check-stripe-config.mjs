@@ -35,7 +35,21 @@
 const ORIGEM_CANONICA = "https://www.recibocerto.pt";
 const ORIGEM_APEX = ORIGEM_CANONICA.replace("://www.", "://");
 
-/** O que cada webhook TEM de escutar para o produto funcionar. */
+/**
+ * O que cada webhook TEM de escutar para o produto funcionar.
+ *
+ * A lista é a dos eventos que os handlers REALMENTE tratam, e não um
+ * subconjunto simpático. A primeira versão disto pedia três eventos ao
+ * `/api/stripe/webhook` quando o handler trata onze, e a diferença não era
+ * teórica: `checkout.session.completed` — o ÚNICO evento que concede o
+ * vitalício e o único que aplica um desbloqueio de patamar — não estava
+ * registado na Stripe e nada dava por isso, porque o verificador também
+ * não o pedia para esse endpoint.
+ *
+ * Regra: se o `switch` do handler tem um `case` que mexe em dinheiro ou em
+ * acesso, o evento entra aqui. Um handler que trata o que nunca lhe chega é
+ * código morto que parece vivo.
+ */
 const EVENTOS_OBRIGATORIOS = {
   "/api/stripe/connect-webhook": [
     // Sem este, `charges_enabled` nunca sobe e nenhum contabilista fica
@@ -43,11 +57,29 @@ const EVENTOS_OBRIGATORIOS = {
     "account.updated",
     // Sem este, o cliente paga e o pagamento nunca é dado por pago.
     "checkout.session.completed",
+    // Métodos assíncronos (Multibanco) só confirmam aqui. Sem ele, quem
+    // paga por referência fica eternamente «por pagar».
+    "checkout.session.async_payment_succeeded",
+    "checkout.session.async_payment_failed",
+    // Liberta o benefício de fidelidade que ficou reservado na abertura.
+    // Sem ele, quem desiste de pagar perde o cupão à mesma.
+    "checkout.session.expired",
   ],
   "/api/stripe/webhook": [
+    // O vitalício é `mode: "payment"` — NÃO gera subscrição. Este é o
+    // único evento que o concede, e o único que aplica a compra de
+    // patamar. Sem ele, paga-se e não se recebe nada.
     "checkout.session.completed",
+    "checkout.session.async_payment_succeeded",
+    "customer.subscription.created",
     "customer.subscription.updated",
     "customer.subscription.deleted",
+    "invoice.paid",
+    "invoice.payment_failed",
+    // Sem este, um reembolso devolve o dinheiro e deixa o Plus de pé.
+    "charge.refunded",
+    "charge.dispute.created",
+    "charge.dispute.closed",
   ],
 };
 
