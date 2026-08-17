@@ -159,12 +159,53 @@ export function primeiroEncaixe(
  * Tablet é derivado do desktop até o contabilista personalizar nesse
  * breakpoint. Guardar três painéis independentes desde o início
  * duplicaria coordenadas sem ninguém ter pedido nada.
+ *
+ * ⚠️ Isto escala UM módulo. Escalar cada um por si NÃO dá um painel
+ * válido: três módulos de 4 colunas cabem lado a lado em doze e não cabem
+ * em oito (3 × 3 = 9 > 8). Na vista «Meu dia», ATN-01 e PRZ-01 saíam
+ * ambos a ocupar a coluna 6. Quem quer o painel inteiro chama
+ * `derivarLayoutTablet`, que resolve isso.
  */
 export function derivarTablet(desktop: GridPlacement, colunasTablet = GRID_TABLET.columns): GridPlacement {
   const escala = colunasTablet / GRID_DESKTOP.columns;
   const colSpan = clamp(Math.round(desktop.colSpan * escala), 1, colunasTablet);
   const col = clamp(Math.round((desktop.col - 1) * escala) + 1, 1, colunasTablet - colSpan + 1);
   return { col, row: desktop.row, colSpan, rowSpan: desktop.rowSpan };
+}
+
+/**
+ * O painel inteiro em coordenadas de tablet, sem sobreposições.
+ *
+ * Escala cada módulo e volta a arrumá-los por ordem de leitura do
+ * desktop — de cima para baixo, da esquerda para a direita. A ordem é a
+ * mesma que `derivarMobile` usa, e pela mesma razão: é a única que a
+ * pessoa reconhece como sendo o painel dela.
+ *
+ * Alguma deriva face ao desktop é inevitável e não é um defeito do
+ * algoritmo: de doze para oito colunas, uma linha de três módulos largos
+ * deixa de caber e um deles TEM de descer. O que não pode acontecer — e
+ * acontecia — é ficarem dois em cima um do outro.
+ */
+export function derivarLayoutTablet(
+  items: ReadonlyArray<WorkspaceWidgetInstance>,
+  colunasTablet = GRID_TABLET.columns,
+): Map<string, GridPlacement> {
+  const saida = new Map<string, GridPlacement>();
+  const ocupados: GridPlacement[] = [];
+
+  for (const item of [...items].sort(
+    (a, b) => a.desktop.row - b.desktop.row || a.desktop.col - b.desktop.col,
+  )) {
+    const escalado = derivarTablet(item.desktop, colunasTablet);
+    // Um módulo oculto não ocupa espaço nem o disputa: guarda a posição
+    // escalada para o dia em que voltar a aparecer, e não entra na conta.
+    if (item.hidden) { saida.set(item.instanceId, escalado); continue; }
+
+    const encaixe = primeiroEncaixe(escalado.colSpan, escalado.rowSpan, ocupados, colunasTablet);
+    saida.set(item.instanceId, encaixe);
+    ocupados.push(encaixe);
+  }
+  return saida;
 }
 
 /**
@@ -287,9 +328,6 @@ export function validarLayout(entrada: unknown): ResultadoValidacao {
       tag,
       configVersion: typeof item.configVersion === "number" ? item.configVersion : 1,
       desktop,
-      tablet: item.tablet
-        ? normalizarPlacement(item.tablet, def, bruto.grid?.tablet?.columns ?? GRID_TABLET.columns)
-        : derivarTablet(desktop, bruto.grid?.tablet?.columns ?? GRID_TABLET.columns),
       ...(config ? { config } : {}),
       ...(item.hidden ? { hidden: true as const } : {}),
     };
@@ -310,8 +348,21 @@ export function validarLayout(entrada: unknown): ResultadoValidacao {
     erros.push({ codigo: "modulos_sobrepostos" });
   }
 
+  // Tablet e telemóvel são SEMPRE derivados do desktop já arrumado.
+  //
+  // Derivar em vez de preservar o que veio é deliberado: nenhuma superfície
+  // escreve uma colocação de tablet à mão, e as que estão gravadas saíram
+  // todas da derivação por módulo — a que produzia sobreposições. Assim
+  // qualquer painel gravado corrige-se na primeira leitura, sem migração.
+  // Quando existir edição por breakpoint, isto passa a ser condicional.
+  const tablet = derivarLayoutTablet(
+    arrumados,
+    bruto.grid?.tablet?.columns ?? GRID_TABLET.columns,
+  );
   const mobile = derivarMobile(arrumados);
   for (const item of arrumados) {
+    const t = tablet.get(item.instanceId);
+    if (t) item.tablet = t;
     const m = mobile.find((x) => x.instanceId === item.instanceId);
     if (m) item.mobile = { order: m.order, size: m.size, ...(item.hidden ? { hidden: true } : {}) };
   }
@@ -350,9 +401,10 @@ export function migrarV1(v1: WorkspaceLayoutV1, novoId: () => string): Workspace
       rowSpan: clamp(Math.round(antigo.desktop.h), def.rowSpan.min, def.rowSpan.max),
     };
     items.push({
+      // `tablet` e `mobile` não se escrevem aqui: `validarLayout`, logo
+      // abaixo, deriva os dois a partir do desktop já arrumado.
       instanceId: RE_UUID.test(antigo.id) ? antigo.id : novoId(),
       type: def.type, tag, configVersion: 1, desktop,
-      tablet: derivarTablet(desktop),
       ...(antigo.hidden ? { hidden: true as const } : {}),
     });
   }

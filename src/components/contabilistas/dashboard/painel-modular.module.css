@@ -17,9 +17,50 @@
   grid-template-columns: repeat(12, minmax(0, 1fr));
 }
 
-/* Tablet: oito colunas, como o contrato do layout declara. */
+/* A colocação por omissão é a de desktop. As variáveis vêm do layout
+   guardado, escritas inline pela grelha — quatro inteiros por breakpoint.
+
+   ⚠️ Esta regra tem de vir ANTES das media queries. Uma media query não
+   acrescenta especificidade: com a mesma especificidade ganha a que estiver
+   escrita depois, e uma `.celula` declarada no fim do ficheiro anulava
+   silenciosamente a colocação de tablet. */
+.celula {
+  min-width: 0;
+  min-height: 0;
+  grid-column: var(--col) / span var(--span);
+  grid-row: var(--row) / span var(--rowspan);
+}
+
+/* Tablet: oito colunas, como o contrato do layout declara — e as células
+   passam a usar as coordenadas de TABLET.
+
+   Isto não é um detalhe: sem a segunda regra, um módulo em `col 9` pedia
+   `grid-column: 9 / span 4` numa grelha de oito faixas, o CSS Grid criava
+   faixas implícitas dimensionadas por conteúdo, e a linha inteira saía
+   torta. A vista «Meu dia» tem três módulos nessa zona.
+
+   A troca é feita em CSS e não em JavaScript de propósito: sem `matchMedia`
+   não há render extra ao redimensionar, não há divergência entre servidor e
+   cliente, e o painel continua a ser «coordenadas guardadas aplicadas por
+   CSS Grid», que é o princípio deste ficheiro. */
 @media (max-width: 1023px) {
   .grelha { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+  .celula {
+    grid-column: var(--col-t) / span var(--span-t);
+    grid-row: var(--row-t) / span var(--rowspan-t);
+  }
+
+  /* Em EDIÇÃO a grelha continua a ser a de doze.
+
+     O contrato diz que se edita o desktop e que o tablet é derivado dele
+     (`derivarLayoutTablet`). Mostrar oito colunas enquanto o motor de
+     arrasto calcula em doze — que é o que `medidas()` faz — dava um cartão
+     a saltar para uma coluna que não era aquela onde o dedo estava. */
+  .grelhaEdicao { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .grelhaEdicao .celula {
+    grid-column: var(--col) / span var(--span);
+    grid-row: var(--row) / span var(--rowspan);
+  }
 }
 
 /* Telemóvel é uma LISTA, não a matriz espremida (§11). A ordem vem do
@@ -37,11 +78,6 @@
   .celulaS { min-height: 9rem; }
   .celulaM { min-height: 13rem; }
   .celulaL { min-height: 18rem; }
-}
-
-.celula {
-  min-width: 0;
-  min-height: 0;
 }
 
 /* A grelha de encaixe, visível só em edição e só quando ligada (§9.2). */

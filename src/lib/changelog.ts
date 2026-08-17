@@ -16,6 +16,21 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.74.0",
+    data: "2026-08-17",
+    titulo: "O painel do contabilista deixa de sair espremido no tablet",
+    itens: [
+      "Entre o telemóvel e o computador — um iPad ao alto, um ecrã dividido, uma janela estreita — o painel usava as coordenadas do computador numa grelha que já tinha menos colunas. Na vista «Meu dia», «Prazos próximos» e «Documentos por rever» ficavam com 42 pixels de largura: duas tiras verticais onde deviam estar duas listas. Passa a haver uma disposição própria para essa largura, calculada a partir da do computador, sem cartões espremidos e sem dois em cima um do outro.",
+      "Quem estiver a personalizar o painel nessa largura continua a ver a grelha do computador, porque é essa que está a editar — o cartão vai para onde o dedo o larga, e não para uma coluna ao lado.",
+      "O «Resumo por cliente» contava as consultas de uma maneira e a página de clientes contava de outra. Passa a mostrar as consultas realizadas, as mesmas que a página mostra, vindas do mesmo sítio. Com espaço, mostra também a data da última.",
+      "Sair de um painel a meio de o personalizar passa a perguntar antes. Bastava carregar em «Clientes» na barra lateral para perder tudo o que se tinha arrumado.",
+      "Quando alguma coisa corre mal a criar, renomear ou apagar uma vista, lê-se uma frase e não um código. Quem tentava criar a nona vista via escrito «demasiadas_vistas»; agora lê que o limite é oito e que é preciso apagar uma primeiro. E o botão avisa antes de tentar.",
+      "Um módulo que falhe a desenhar-se deixa de levar o painel inteiro com ele: fica com o erro dentro da sua própria moldura e os outros continuam a funcionar.",
+      "Cada cartão do painel ganha um menu para o atualizar sozinho, sem recarregar a página, e para abrir o ecrã completo por trás dele.",
+      "Desfazer volta a andar um passo de cada vez.",
+    ],
+  },
+  {
     version: "2.73.0",
     data: "2026-08-17",
     titulo: "O painel de gestão passa a ter seis secções em vez de dez separadores",

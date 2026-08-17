@@ -18,7 +18,7 @@
  * é a parte destas omissões que não vem de uma imagem.
  */
 
-import { GRID_DESKTOP, GRID_TABLET, derivarTablet, validarLayout } from "./layout";
+import { GRID_DESKTOP, GRID_TABLET, validarLayout } from "./layout";
 import { MODULOS } from "./modulos";
 import type {
   GridPlacement, WidgetType, WorkspaceLayoutV2, WorkspaceWidgetInstance,
@@ -92,7 +92,7 @@ export function layoutDaOmissao(
   posicoes: readonly Pos[],
   novoId: () => string,
 ): WorkspaceLayoutV2 {
-  const items: WorkspaceWidgetInstance[] = posicoes.map(([type, col, row, colSpan, rowSpan], i) => {
+  const items: WorkspaceWidgetInstance[] = posicoes.map(([type, col, row, colSpan, rowSpan]) => {
     const desktop: GridPlacement = { col, row, colSpan, rowSpan };
     return {
       instanceId: novoId(),
@@ -101,8 +101,9 @@ export function layoutDaOmissao(
       tag: `${TAG_BASE[type]}-01`,
       configVersion: 1,
       desktop,
-      tablet: derivarTablet(desktop),
-      mobile: { order: i + 1, size: "M" },
+      // `tablet` e `mobile` saem de `validarLayout`, abaixo. Escrevê-los
+      // aqui era uma segunda derivação a envelhecer em paralelo — e a de
+      // tablet, feita módulo a módulo, produzia sobreposições.
     };
   });
 

@@ -25,7 +25,7 @@
 
 import {
   cartoesAbertos, contagensDoPainel, listarAgendamentos, listarPartilhas,
-  meusClientes, obterProgressao,
+  meusClientes, obterProgressao, resumoDeClientes,
 } from "@/lib/contabilistas/fonte/dados";
 import { listarTarefas } from "@/lib/contabilistas/fonte/trabalho";
 import { listarCasos } from "@/lib/contabilistas/fonte/casos";
@@ -43,6 +43,7 @@ export interface DadosDoDominio {
   avisos: Awaited<ReturnType<typeof listarNotificacoes>>;
   trabalho: Awaited<ReturnType<typeof listarTarefas>>;
   clientes: Awaited<ReturnType<typeof meusClientes>>;
+  resumo_clientes: Awaited<ReturnType<typeof resumoDeClientes>>;
   casos: Awaited<ReturnType<typeof listarCasos>>;
   fidelidade: Awaited<ReturnType<typeof cartoesAbertos>>;
   progressao: Awaited<ReturnType<typeof obterProgressao>>;
@@ -66,6 +67,7 @@ function leitores(contabilistaId: string): {
     avisos: () => listarNotificacoes(),
     trabalho: () => listarTarefas(contabilistaId),
     clientes: () => meusClientes(contabilistaId),
+    resumo_clientes: () => resumoDeClientes(contabilistaId),
     casos: () => listarCasos(),
     fidelidade: () => cartoesAbertos(contabilistaId),
     progressao: () => obterProgressao(contabilistaId),
