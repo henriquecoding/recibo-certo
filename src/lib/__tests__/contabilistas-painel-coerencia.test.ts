@@ -282,3 +282,89 @@ describe("painel modular — o que estava cortado e o que não fazia nada", () =
     expect(mudos, `recebem href e não o usam: ${mudos.join(", ")}`).toEqual([]);
   });
 });
+
+describe("o telemóvel do painel — chegar à pesquisa, e conseguir sair", () => {
+  const ler = (...p: string[]) => readFileSync(join(SRC, ...p), "utf8");
+  const LAYOUT = ler("app", "contabilista", "layout.tsx");
+  const BUSCA = ler("components", "contabilistas", "BuscaDoPainel.tsx");
+  const CSS = ler("app", "contabilista", "painel.module.css");
+
+  /**
+   * ┌───────────────────────────────────────────────────────────────────────┐
+   * │ NÃO HAVIA SAÍDA DO PAINEL NO TELEMÓVEL                                 │
+   * │                                                                       │
+   * │ A forma de sair vive no fundo da barra lateral (`PessoaNaSidebar`), e  │
+   * │ a barra lateral é `display: none` abaixo de 1024 px. Os nove destinos  │
+   * │ da barra de baixo são todos DENTRO do painel e a identidade do topo    │
+   * │ leva ao painel — portanto entrava-se e não se saía. A única saída era  │
+   * │ o «voltar» do browser, que não existe para quem chega por ligação      │
+   * │ direta.                                                               │
+   * └───────────────────────────────────────────────────────────────────────┘
+   */
+  it("há uma saída do painel abaixo de `lg`", () => {
+    expect(LAYOUT).toContain("function ContaNoTopo");
+    expect(LAYOUT).toContain("<ContaNoTopo");
+
+    // E leva mesmo para FORA: `/admin` na demonstração, `/dashboard` no
+    // painel real — os mesmos dois destinos da barra lateral.
+    const corpo = LAYOUT.slice(LAYOUT.indexOf("function ContaNoTopo"));
+    expect(corpo).toContain('href: "/admin"');
+    expect(corpo).toContain('href: "/dashboard"');
+  });
+
+  it("a saída do telemóvel e a da barra lateral não divergem de destino", () => {
+    // São duas superfícies para a mesma decisão. Se uma passar a levar a
+    // outro sítio, quem usa as duas larguras encontra dois produtos.
+    const daSidebar = LAYOUT.slice(LAYOUT.indexOf("function PessoaNaSidebar"));
+    const demoSidebar = /painel\.demonstracao \? "\/admin" : "\/dashboard"/.test(daSidebar);
+    const daFolha = LAYOUT.slice(LAYOUT.indexOf("function ContaNoTopo"));
+    const demoFolha = /painel\.demonstracao\s*$|painel\.demonstracao\n/m.test(daFolha);
+    expect(demoSidebar, "a barra lateral escolhe /admin na demonstração").toBe(true);
+    expect(demoFolha, "a folha do telemóvel escolhe pelo mesmo sinal").toBe(true);
+  });
+
+  /**
+   * ┌───────────────────────────────────────────────────────────────────────┐
+   * │ A PESQUISA ERA UMA LUPA DE 40 px NO TOPO                               │
+   * │                                                                       │
+   * │ A mesma que no computador ocupa 26 rem no meio da barra, reduzida no   │
+   * │ telemóvel a um alvo sem uma palavra a dizer o que faz. Passa a ser uma │
+   * │ barra de largura inteira por cima da navegação inferior — o mesmo      │
+   * │ sítio, e a mesma razão, do dock do site público.                       │
+   * └───────────────────────────────────────────────────────────────────────┘
+   */
+  it("a pesquisa tem um dock por cima da navegação no telemóvel", () => {
+    expect(CSS).toContain(".buscaDock");
+    expect(BUSCA).toContain("styles.buscaDock");
+    // O gatilho do topo só existe a partir de `lg` — senão ficavam os dois.
+    expect(CSS).toMatch(/\.busca \{\s*display: none;/);
+  });
+
+  it("o dock sai por portal, porque `.topbar` tem `backdrop-filter`", () => {
+    // Um elemento com `backdrop-filter` é o bloco de contenção de qualquer
+    // `position: fixed` que tenha dentro. Um dock «fixo ao fundo do ecrã»
+    // escrito dentro do cabeçalho ficaria fixo ao fundo do CABEÇALHO — sem
+    // erro nenhum, apenas no sítio errado.
+    expect(CSS).toMatch(/\.topbar \{[^}]*backdrop-filter/);
+    expect(BUSCA).toContain("createPortal");
+    expect(BUSCA).toContain("document.body");
+  });
+
+  it("continua a haver UMA instância da busca, e um só ⌘K", () => {
+    // Duas instâncias registavam dois ouvintes e abriam duas paletas. O dock
+    // é uma segunda VISTA do mesmo componente, não um segundo componente.
+    expect(LAYOUT.match(/<BuscaDoPainel/g) ?? []).toHaveLength(1);
+  });
+
+  it("a altura do chrome inferior é um token que o conteúdo também lê", () => {
+    // Três coisas dependem dela: a barra, o dock que assenta em cima e o
+    // fundo do conteúdo. Escrita à mão nas três, divergia — e o sintoma é o
+    // último cartão de cada ecrã a ficar por baixo do dock.
+    // Sem a flag `s`: `[^}]` já atravessa mudanças de linha por si, e a
+    // flag só existiria para o `.` — que aqui não se usa. (O `target` deste
+    // projeto é anterior a es2018 e recusa-a.)
+    expect(CSS).toContain("--rc-painel-barra-h");
+    expect(CSS).toMatch(/\.content \{[^}]*var\(--rc-painel-barra-h\)/);
+    expect(CSS).toMatch(/\.buscaDock \{[^}]*var\(--rc-painel-barra-h\)/);
+  });
+});

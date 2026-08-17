@@ -39,8 +39,9 @@ import { contemCodigo } from "@/lib/feedback-sanitize";
 import {
   Logo, LayoutGrid, Calendar, User, PaperClip, Gift, Settings, ArrowLeft, Warning,
   Target, Briefcase, ShieldCheck, Eye, RotateCcw, Check, ChevronDown, ArrowRight,
-  Award, Invoice,
+  Award, Invoice, Close,
 } from "@/components/ui/Icons";
+import { SuperficieModal } from "@/components/overlays/SuperficieModal";
 import { percentagemDoPerfil } from "@/lib/contabilistas/perfil";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import AvatarContabilista from "@/components/contabilistas/AvatarContabilista";
@@ -283,10 +284,14 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
           {/* No desktop a identidade está na sidebar; o topo passa a ser
               do ecrã. `TituloDoPainel` é preenchido por cada página. */}
           <div id="painel-titulo" className="hidden min-w-0 shrink-0 lg:block" />
-          {/* A busca vive aqui e só aqui: uma segunda instância registava
-              um segundo ouvinte de ⌘K e abria duas paletas. A 360px o
-              componente encolhe sozinho para o ícone. */}
-          <div className="shrink-0 lg:flex lg:min-w-0 lg:flex-1 lg:justify-center">
+          {/* A busca é montada aqui e só aqui: uma segunda instância
+              registava um segundo ouvinte de ⌘K e abria duas paletas.
+              Abaixo de `lg` o gatilho do topo não se vê e o componente
+              mostra, por portal, um dock por cima da navegação inferior —
+              ver o quadro em `BuscaDoPainel.tsx`. Este invólucro fica
+              `hidden` para não ocupar espaço na linha do telemóvel, onde
+              a identidade precisa dele. */}
+          <div className="hidden shrink-0 lg:flex lg:min-w-0 lg:flex-1 lg:justify-center">
             <BuscaDoPainel painel={painel} destinos={NAV} contabilistaId={quemPergunta} />
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
@@ -298,6 +303,9 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
                 com o mesmo nome e volta a provocar a regressão já corrigida. */}
             <SinoNotificacoes />
             <ThemeToggle />
+            {/* A saída do painel, no telemóvel. Acima de `lg` isto vive no
+                fundo da barra lateral — ver `PessoaNaSidebar`. */}
+            <ContaNoTopo ficha={ficha} painel={painel} />
           </div>
         </div>
       </header>
@@ -457,6 +465,119 @@ function PessoaNaSidebar({ ficha, painel }: { ficha: Contabilista; painel: Paine
         />
       </button>
     </div>
+  );
+}
+
+/**
+ * ═════════════════════════════════════════════════════════════════════════
+ *  A SAÍDA DO PAINEL, NO TELEMÓVEL
+ *  -----------------------------------------------------------------------
+ *  ┌───────────────────────────────────────────────────────────────────────┐
+ *  │ NÃO HAVIA NENHUMA — E ISSO NÃO É UM DETALHE                            │
+ *  │                                                                       │
+ *  │ A forma de sair do painel de gestão vive no fundo da barra lateral     │
+ *  │ (`PessoaNaSidebar`): carrega-se na pessoa e abre «Voltar à             │
+ *  │ administração» ou «A minha conta». A barra lateral é `display: none`   │
+ *  │ abaixo de 1024 px.                                                    │
+ *  │                                                                       │
+ *  │ Ou seja: no telemóvel entrava-se no painel e não se saía. Os nove      │
+ *  │ destinos da barra de baixo são todos DENTRO do painel, a identidade    │
+ *  │ do topo leva ao painel, e não havia mais nada. A única saída era o     │
+ *  │ botão «voltar» do browser, que só funciona para quem lá chegou nesta   │
+ *  │ sessão — quem abrisse o painel por ligação direta, ou lá estivesse há  │
+ *  │ dez ecrãs, ficava sem caminho nenhum de volta ao produto.              │
+ *  │                                                                       │
+ *  │ O lugar na barra do topo existe porque a pesquisa saiu de lá para o    │
+ *  │ dock por cima da navegação (ver `BuscaDoPainel.tsx`). Sem essa troca   │
+ *  │ seriam quatro alvos e a identidade a disputar 360 px.                  │
+ *  │                                                                       │
+ *  │ Uma folha e não um menu ancorado: em 360 px um popover de 16 rem       │
+ *  │ encostado à direita ou sai do ecrã ou fica colado à margem, e a folha  │
+ *  │ é o padrão que o resto do produto já usa no telemóvel.                 │
+ *  └───────────────────────────────────────────────────────────────────────┘
+ * ═════════════════════════════════════════════════════════════════════════
+ */
+function ContaNoTopo({ ficha, painel }: { ficha: Contabilista; painel: Painel }) {
+  const [aberto, setAberto] = useState(false);
+  const gatilho = useRef<HTMLButtonElement>(null);
+  const pathname = usePathname();
+
+  // Mudar de ecrã fecha: uma folha que sobrevive à navegação fica a tapar
+  // a página onde a pessoa acabou de aterrar.
+  useEffect(() => setAberto(false), [pathname]);
+
+  const saida = painel.demonstracao
+    ? { href: "/admin", label: "Voltar à administração" }
+    : { href: "/dashboard", label: "A minha conta" };
+
+  return (
+    <>
+      <button
+        ref={gatilho}
+        type="button"
+        onClick={() => setAberto(true)}
+        aria-haspopup="dialog"
+        aria-expanded={aberto}
+        aria-label="Conta e saída do painel"
+        className="focus-marca flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl lg:hidden"
+      >
+        <span className="pointer-events-none overflow-hidden rounded-lg">
+          <AvatarContabilista contabilistaId={ficha.userId} nome={ficha.nome} tamanho="sm" />
+        </span>
+      </button>
+
+      <SuperficieModal
+        aberto={aberto}
+        aoFechar={() => setAberto(false)}
+        rotulo="Conta e saída do painel"
+        focoDeRegresso={() => gatilho.current}
+        className="fixed inset-0 z-[120] lg:hidden"
+      >
+        <div
+          className="absolute inset-0 bg-stone-950/45 backdrop-blur-sm"
+          onClick={() => setAberto(false)}
+          aria-hidden
+        />
+        {/* Sem variantes `dark:` nestes neutros: a camada `.dark` do
+            `globals.css` já remapeia `bg-white`, `border-stone-*` e a
+            escala de texto para a palete quente do painel. Redeclará-las
+            aqui ganha à camada e dá duas paletes escuras no mesmo produto
+            — ver `contabilistas-painel-coerencia.test.ts`. */}
+        <div className="absolute inset-x-0 bottom-0 flex max-h-[88dvh] flex-col rounded-t-3xl border-t border-stone-200 bg-white pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="flex items-center justify-between gap-3 border-b border-stone-100 px-5 py-4">
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="shrink-0 overflow-hidden rounded-full">
+                <AvatarContabilista contabilistaId={ficha.userId} nome={ficha.nome} tamanho="sm" />
+              </span>
+              <span className="min-w-0 leading-tight">
+                <span className="block truncate text-sm font-semibold text-ink">{ficha.nome}</span>
+                <span className="block truncate text-xs text-stone-500">
+                  {ficha.tituloProfissional ?? "Contabilista"}
+                </span>
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setAberto(false)}
+              aria-label="Fechar"
+              className="focus-marca flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-stone-400 hover:bg-stone-100"
+            >
+              <Close size={18} />
+            </button>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
+            <Link
+              href={saida.href}
+              className="focus-marca flex min-h-[44px] w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-ink no-underline transition-colors hover:bg-stone-50"
+            >
+              <ArrowLeft size={16} className="shrink-0 text-brand" aria-hidden />
+              {saida.label}
+            </Link>
+          </div>
+        </div>
+      </SuperficieModal>
+    </>
   );
 }
 

@@ -27,6 +27,8 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "«Contabilistas» ganha um lugar fixo na barra de baixo, à direita do «Quiz». É a única coisa aqui que acaba com uma pessoa do outro lado, e estava enterrada dentro do menu «Conta», onde se procuram definições e não um profissional certificado.",
       "A barra de baixo fica: Início · Guias · Quiz · Contabilistas · Conta. Os lugares que já lá estavam não mudaram de sítio — quem já lhes acertava sem olhar continua a acertar.",
       "Passa a haver um topo no telemóvel, com a marca, o tema e o botão de começar. Antes não havia nenhum: o nome do produto não aparecia em lado nenhum, mudar para o modo escuro eram dois toques, e a ação principal estava dentro de um menu. Rola com a página, para não roubar altura a quem está a ler.",
+      "No painel de contabilista, a pesquisa passa a ter uma barra por cima da navegação, em vez de uma lupa espremida no topo. É a mesma pesquisa de sempre — muda o sítio, que passa a ser onde o polegar chega.",
+      "E passa a haver como sair do painel de contabilista no telemóvel. A saída vivia no fundo da barra lateral, que não existe em ecrãs pequenos: quem entrasse ficava sem caminho de volta que não fosse o botão «voltar» do browser.",
       "Corrigido: fechar a pesquisa com o teclado deixava de devolver o foco a quem a tinha aberto, e a navegação recomeçava no topo da página.",
       "Corrigido: em telemóveis com indicador no fundo do ecrã, os últimos píxeis de cada página ficavam por baixo da barra de navegação.",
     ],

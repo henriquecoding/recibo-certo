@@ -141,11 +141,15 @@
   color: #6ee7b7;
 }
 
+/* O fundo reserva a pilha inteira do chrome — barra de navegação, o ar e
+   o dock de pesquisa que passou a assentar em cima dela. Os 7,5 rem que
+   aqui estavam contavam só com a barra, e o dock passaria a tapar o
+   último cartão de cada ecrã. */
 .content {
   width: 100%;
   max-width: 80rem;
   margin: 0 auto;
-  padding: 1.35rem 1rem 7.5rem;
+  padding: 1.35rem 1rem calc(var(--rc-painel-barra-h) + var(--rc-painel-dock-ar) + 4.25rem);
 }
 
 @media (min-width: 640px) {
@@ -524,8 +528,30 @@
    linha; um campo de 20rem punha tudo em overflow.
    ═══════════════════════════════════════════════════════════════════ */
 
+/* ═══════════════════════════════════════════════════════════════════
+   GEOMETRIA DO CHROME INFERIOR DO PAINEL (<lg)
+
+   Dois elementos leem esta altura: a barra de navegação, que a produz, e
+   o dock de pesquisa, que assenta em cima dela. Escrita à mão nos dois,
+   divergia na primeira afinação — em silêncio, porque nada parte: o dock
+   fica apenas a flutuar um pouco acima ou um pouco abaixo do sítio.
+
+   A conta é a do próprio elemento (ver `.mobileList` e `.mobileLink`):
+   3,65 rem de alvo, mais 0,35 acima e 0,4 abaixo, mais a área segura do
+   dispositivo que a `<nav>` acrescenta.
+
+   Vive em `:root` e não em `.shell` porque o dock é montado por portal
+   em `<body>` — tem de o ser, já que `.topbar` declara `backdrop-filter`
+   e isso faz dela o bloco de contenção de qualquer `position: fixed` lá
+   dentro, o que prenderia o dock ao topo do ecrã em vez do fundo.
+   ═══════════════════════════════════════════════════════════════════ */
+:global(:root) {
+  --rc-painel-barra-h: calc(4.4rem + env(safe-area-inset-bottom, 0px));
+  --rc-painel-dock-ar: 0.5rem;
+}
+
 .busca {
-  display: inline-flex;
+  display: none;
   min-height: 2.5rem;
   min-width: 2.5rem;
   align-items: center;
@@ -559,8 +585,73 @@
   display: none;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   A PESQUISA DO PAINEL NO TELEMÓVEL — uma barra por cima da navegação
+
+   Era um ícone de lupa no topo, espremido entre a identidade e o sino: a
+   mesma pesquisa que no computador ocupa 26 rem no meio da barra,
+   reduzida a um alvo de 40 px sem uma palavra a dizer o que faz — e a
+   prometer «clientes, casos, documentos» só a quem já soubesse.
+
+   Passa a ser uma barra de largura inteira imediatamente acima da
+   navegação inferior. É o mesmo sítio, e a mesma razão, da pesquisa do
+   site público: zona do polegar, sempre no mesmo lugar, e um rótulo que
+   diz o que se procura ali. Ver `components/busca/DockMovel.tsx`.
+   ═══════════════════════════════════════════════════════════════════ */
+.buscaDock {
+  position: fixed;
+  inset: auto 0 calc(var(--rc-painel-barra-h) + var(--rc-painel-dock-ar));
+  z-index: 30;
+  padding: 0 0.75rem;
+}
+
+.buscaDockBotao {
+  display: flex;
+  min-height: 2.75rem;
+  width: 100%;
+  max-width: 40rem;
+  margin-inline: auto;
+  align-items: center;
+  gap: 0.6rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(120, 113, 108, 0.18);
+  background: rgba(255, 255, 252, 0.96);
+  padding: 0 0.9rem;
+  text-align: left;
+  color: rgb(87, 83, 78);
+  box-shadow: 0 10px 28px rgba(28, 25, 23, 0.09);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  transition: border-color 160ms ease;
+}
+
+.buscaDockBotao:hover,
+.buscaDockBotao:active {
+  border-color: rgba(29, 158, 117, 0.4);
+}
+
+.buscaDockTexto {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+:global(.dark) .buscaDockBotao {
+  border-color: rgba(231, 229, 228, 0.13);
+  background: rgba(18, 22, 17, 0.96);
+  color: rgb(168, 162, 158);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.32);
+}
+
 @media (min-width: 1024px) {
+  /* Acima de `lg` manda a barra do topo — ver `.busca`. */
+  .buscaDock { display: none; }
+
   .busca {
+    display: inline-flex;
     width: 100%;
     max-width: 26rem;
     justify-content: flex-start;

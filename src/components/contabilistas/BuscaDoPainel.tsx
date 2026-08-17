@@ -27,6 +27,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import {
   useCallback, useEffect, useId, useMemo, useRef, useState,
   type ComponentType,
@@ -87,7 +88,13 @@ export default function BuscaDoPainel({
   const campo = useRef<HTMLInputElement>(null);
   const lista = useRef<HTMLUListElement>(null);
   const gatilho = useRef<HTMLButtonElement>(null);
+  const gatilhoMovel = useRef<HTMLButtonElement>(null);
   const idLista = useId();
+
+  // O portal só existe depois de haver `document`. Sem esta guarda o
+  // servidor tentava renderizar para um `<body>` que ainda não é dele.
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
 
   // ── O índice ─────────────────────────────────────────────────────────
   const carregar = useCallback(async () => {
@@ -284,8 +291,9 @@ export default function BuscaDoPainel({
 
   return (
     <>
-      {/* O gatilho. No telemóvel encolhe para o ícone: a 360px o campo
-          inteiro deixava o título do ecrã sem espaço nenhum. */}
+      {/* O gatilho de secretária, na barra do topo. Abaixo de `lg` está
+          escondido (`.busca` não tem `display` até aos 1024 px) e quem
+          manda é o dock, aqui em baixo. */}
       <button
         ref={gatilho}
         type="button"
@@ -299,12 +307,49 @@ export default function BuscaDoPainel({
         <kbd className={styles.buscaAtalho} aria-hidden>⌘K</kbd>
       </button>
 
+      {/**
+       * ┌─────────────────────────────────────────────────────────────────┐
+       * │ O DOCK DO TELEMÓVEL VAI POR PORTAL, E NÃO É ZELO                 │
+       * │                                                                 │
+       * │ Este componente é montado dentro de `.topbar`, e `.topbar`       │
+       * │ declara `backdrop-filter`. Um elemento com `backdrop-filter`     │
+       * │ passa a ser o bloco de contenção de qualquer `position: fixed`   │
+       * │ que tenha dentro — portanto um dock «fixo ao fundo do ecrã»      │
+       * │ escrito aqui ficaria fixo ao fundo do CABEÇALHO, a 56 px do      │
+       * │ topo. Sem erro nenhum: apenas no sítio errado.                   │
+       * │                                                                 │
+       * │ Sai para `<body>`, onde o `fixed` volta a resolver contra o      │
+       * │ ecrã. E continua a ser o mesmo componente, com um só ouvinte de  │
+       * │ ⌘K e uma só paleta — duas instâncias abriam duas.                │
+       * └─────────────────────────────────────────────────────────────────┘
+       */}
+      {montado &&
+        createPortal(
+          <div className={styles.buscaDock}>
+            <button
+              ref={gatilhoMovel}
+              type="button"
+              onClick={abrir}
+              className={`${styles.buscaDockBotao} focus-marca`}
+              aria-label="Pesquisar no painel"
+            >
+              <Search size={16} className="shrink-0 text-stone-400" aria-hidden />
+              <span className={styles.buscaDockTexto}>{PLACEHOLDER_BUSCA}</span>
+            </button>
+          </div>,
+          document.body,
+        )}
+
       <SuperficieModal
         aberto={aberta}
         aoFechar={() => setAberta(false)}
         rotulo="Pesquisar no painel"
         focoInicial={() => campo.current}
-        focoDeRegresso={() => gatilho.current}
+        // O gatilho que está NO ECRÃ, e não o primeiro que existe: abaixo
+        // de `lg` o do topo tem `display: none`, e um elemento escondido
+        // recusa foco em silêncio — quem fechasse a paleta com Escape no
+        // telemóvel recomeçava a tabulação no `<body>`.
+        focoDeRegresso={() => (gatilho.current?.offsetParent ? gatilho.current : gatilhoMovel.current)}
         className="fixed inset-0 z-[120] flex items-end justify-center px-3 pb-3 sm:items-start sm:pt-[12vh]"
       >
         <div
