@@ -5,6 +5,7 @@ import { ShieldCheck, Check, Warning, Clock, ExternalLink, ChevronDown, ChevronU
 import { escreverCSV, numero, texto, vazio, type CelulaCSV, type TabelaCSV } from "@/lib/export/csv";
 import { dataISO } from "@/lib/export/dinheiro";
 import { MIME, descarregar } from "@/lib/export/nomes";
+import CabecalhoAdmin from "@/components/admin/CabecalhoAdmin";
 
 type Severidade = "ok" | "info" | "aviso" | "erro";
 type Confianca = "alta" | "media" | "baixa" | "nenhuma";
@@ -546,17 +547,11 @@ export default function AdminAuditoria() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow mb-1 text-brand">Administração</p>
-          <h1 className="font-display text-3xl font-semibold text-stone-800 dark:text-stone-100">
-            Auditoria fiscal
-          </h1>
-          <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-            Agentes de verificação que validam os dados e cálculos fiscais contra as normas de Portugal.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
+      <CabecalhoAdmin
+        titulo="Auditoria fiscal"
+        descricao="Agentes de verificação que validam os dados e cálculos fiscais contra as normas de Portugal."
+        acao={
+          <div className="flex items-center gap-3">
           {temResultados && (
             <button
               type="button"
@@ -576,8 +571,9 @@ export default function AdminAuditoria() {
             <ShieldCheck size={16} />
             Executar todos
           </button>
-        </div>
-      </header>
+          </div>
+        }
+      />
 
       {temResultados && todosOk && (
         <div className="mb-6 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 dark:border-emerald-800 dark:bg-emerald-900/20">

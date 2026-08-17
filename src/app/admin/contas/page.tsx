@@ -25,6 +25,7 @@ import {
   Search, ShieldCheck, Check, Warning, Spinner, ArrowLeft, User, Sparkle,
 } from "@/components/ui/Icons";
 import type { ContaAdmin, AtoDeAdmin } from "@/app/api/admin/contas/route";
+import CabecalhoAdmin, { TituloAdmin } from "@/components/admin/CabecalhoAdmin";
 
 type Filtro = "todas" | "admin" | "user" | "plus";
 
@@ -156,6 +157,9 @@ export default function ContasPage() {
               {(detalhe.nome ?? detalhe.email).charAt(0)}
             </span>
             <div className="min-w-0 flex-1">
+              {/* A ficha é uma sub-vista das Contas: sem isto, a barra de
+                  topo do desktop ficava vazia ao abrir uma pessoa. */}
+              <TituloAdmin>{detalhe.nome ?? detalhe.email.split("@")[0]}</TituloAdmin>
               <h1 className="font-display text-2xl font-semibold text-stone-800 dark:text-stone-100">
                 {detalhe.nome ?? detalhe.email.split("@")[0]}
               </h1>
@@ -220,12 +224,10 @@ export default function ContasPage() {
   /* ── Lista ──────────────────────────────────────────────────────── */
   return (
     <div className="mx-auto max-w-5xl">
-      <header className="mb-6">
-        <h1 className="font-display text-3xl font-semibold text-stone-800 dark:text-stone-100">Contas</h1>
-        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-          Quem tem conta, em que plano está e quem administra.
-        </p>
-      </header>
+      <CabecalhoAdmin
+        titulo="Contas"
+        descricao="Quem tem conta, em que plano está e quem administra."
+      />
 
       {erro ? (
         <p role="alert" className="mb-4 flex items-start gap-2 rounded-2xl bg-alert-bg px-4 py-3 text-sm text-alert-text">

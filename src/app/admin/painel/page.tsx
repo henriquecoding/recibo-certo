@@ -20,6 +20,7 @@ import { BLOCOS_PAINEL, KPIS, ALVOS, ROTINA_SEMANAL, ROTINA_PERIODICA, kpi } fro
 import { DEFINICAO_DVM } from "@/lib/analytics/dvm";
 import { CATALOGO, type NomeEvento } from "@/lib/analytics/eventos";
 import { Check, Clock, Info, Warning } from "@/components/ui/Icons";
+import CabecalhoAdmin from "@/components/admin/CabecalhoAdmin";
 
 interface Resposta {
   janela: { dias: number; desde: string };
@@ -75,18 +76,15 @@ export default function PainelPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
-      <header className="mb-6">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-brand">
-          Sistema operativo de crescimento
-        </p>
-        <h1 className="font-display text-2xl font-bold text-stone-800 dark:text-stone-100">
-          Painel semanal
-        </h1>
-        <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-stone-500 dark:text-stone-400">
-          {DEFINICAO_DVM.frase}
-        </p>
-
-        <div className="mt-4 flex flex-wrap gap-2">
+      <CabecalhoAdmin
+        titulo="Painel semanal"
+        rotulo="Sistema operativo de crescimento"
+        descricao={DEFINICAO_DVM.frase}
+      />
+      {/* Filtros que reordenam a mesma lista: botões com `aria-pressed`, e
+          não separadores — não há um painel por baixo que mude de sítio. */}
+      <div className="mb-6" role="group" aria-label="Janela de tempo">
+        <div className="flex flex-wrap gap-2">
           {JANELAS.map((j) => (
             <button
               key={j}
@@ -103,7 +101,7 @@ export default function PainelPage() {
             </button>
           ))}
         </div>
-      </header>
+      </div>
 
       {aCarregar ? (
         <div className="rounded-2xl border border-stone-200 bg-white p-6 text-center text-[13px] text-stone-400 dark:border-stone-700 dark:bg-stone-800/50">

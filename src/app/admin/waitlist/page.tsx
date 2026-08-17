@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { listarWaitlist, eliminarWaitlistEntry, type WaitlistRow } from "@/lib/supabase/admin";
 import { Trash } from "@/components/ui/Icons";
+import CabecalhoAdmin from "@/components/admin/CabecalhoAdmin";
 
 const FONTE_LABEL: Record<string, string> = {
   landing: "Landing",
@@ -38,15 +39,10 @@ export default function AdminWaitlist() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow mb-1 text-brand">Administração</p>
-          <h1 className="font-display text-3xl font-semibold text-stone-800">Lista de espera</h1>
-          <p className="mt-1 text-sm text-stone-500">
-            {carregado ? `${lista.length} email${lista.length !== 1 ? "s" : ""} registado${lista.length !== 1 ? "s" : ""}` : "A carregar…"}
-          </p>
-        </div>
-        {lista.length > 0 && (
+      <CabecalhoAdmin
+        titulo="Lista de espera"
+        descricao={carregado ? `${lista.length} email${lista.length !== 1 ? "s" : ""} registado${lista.length !== 1 ? "s" : ""} para o plano Plus.` : "A carregar…"}
+        acao={lista.length > 0 && (
           <button
             type="button"
             onClick={copiarTodos}
@@ -55,7 +51,7 @@ export default function AdminWaitlist() {
             Copiar todos os emails
           </button>
         )}
-      </header>
+      />
 
       {erro && (
         <div className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</div>
